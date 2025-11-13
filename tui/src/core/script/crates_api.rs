@@ -1,16 +1,12 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{SCRIPT_MOD_DEBUG,
-            crates_api::constants::{CRATE, MAX_VERSION},
-            fg_magenta, http_client, ok};
+use crate::{SCRIPT_MOD_DEBUG, fg_magenta, ok};
+use super::http_client;
 use miette::IntoDiagnostic;
 
 mod constants {
     pub const CRATE: &str = "crate";
     pub const MAX_VERSION: &str = "max_version";
-}
-
-mod urls {
     pub const CRATE_INFO: &str = "https://crates.io/api/v1/crates/{crate_name}";
 }
 
@@ -24,7 +20,9 @@ mod urls {
 pub async fn try_get_latest_release_version_from_crates_io(
     crate_name: &str,
 ) -> miette::Result<String> {
-    let url = urls::CRATE_INFO.replace("{crate_name}", crate_name);
+    use self::constants::{CRATE, CRATE_INFO, MAX_VERSION};
+
+    let url = CRATE_INFO.replace("{crate_name}", crate_name);
 
     SCRIPT_MOD_DEBUG.then(|| {
         tracing::debug!(

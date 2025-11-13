@@ -2,12 +2,11 @@
 
 use crate::{giti::{BranchCheckoutDetails, CommandRunDetails, ui_str},
             prefix_single_select_instruction_header};
-use r3bl_tui::{CommandRunResult, CommonResult, DefaultIoDevices, RepoStatus, choose,
-               cli_text_inline, cli_text_line,
-               git::{self},
-               height, inline_vec,
+use r3bl_tui::{BranchExists, CommandRunResult, CommonResult, DefaultIoDevices,
+               RepoStatus, choose, cli_text_inline, cli_text_line, height, inline_vec,
                readline_async::{HowToChoose, StyleSheet},
-               try_is_working_directory_clean};
+               try_checkout_existing_local_branch, try_get_current_branch_name,
+               try_get_local_branches, try_is_working_directory_clean};
 
 /// The main function for `giti branch checkout` command.
 ///
@@ -51,9 +50,7 @@ mod command_execute {
     pub async fn checkout_branch_if_not_current(
         branch_name: &str,
     ) -> CommonResult<CommandRunResult<CommandRunDetails>> {
-        use git::local_branch_ops::BranchExists;
-
-        let (res, _cmd) = git::local_branch_ops::try_get_local_branches().await;
+        let (res, _cmd) = try_get_local_branches().await;
         let (_, branch_info) = res?;
 
         // Early return if the branch does not exist locally.
@@ -71,7 +68,7 @@ mod command_execute {
         }
 
         // Early return if the branch_name is already checked out.
-        let (res, _cmd) = git::try_get_current_branch_name().await;
+        let (res, _cmd) = try_get_current_branch_name().await;
         let current_branch = res?;
 
         if branch_name == current_branch.as_str() {
@@ -102,8 +99,7 @@ mod command_execute {
         branch_name: &str,
         current_branch: &str,
     ) -> CommonResult<CommandRunResult<CommandRunDetails>> {
-        let (res_output, cmd) =
-            git::try_checkout_existing_local_branch(branch_name).await;
+        let (res_output, cmd) = try_checkout_existing_local_branch(branch_name).await;
         match res_output {
             Ok(()) => {
                 let it = CommandRunResult::Run(
@@ -136,7 +132,7 @@ mod user_interaction {
 
     pub async fn handle_branch_selection()
     -> CommonResult<CommandRunResult<CommandRunDetails>> {
-        let (res, _cmd) = git::local_branch_ops::try_get_local_branches().await;
+        let (res, _cmd) = try_get_local_branches().await;
 
         // Early return if the command fails.
         let Ok((_, branch_info)) = res else {

@@ -6,13 +6,11 @@ use crate::{AnalyticsAction, common,
             giti::{BranchDeleteDetails, CommandRunDetails,
                    ui_str::{self}},
             report_analytics};
-use r3bl_tui::{CliTextInline, CommandRunResult, CommonResult, DefaultIoDevices,
-               InlineString, InlineVec, ItemsOwned, choose, cli_text_inline,
-               cli_text_line,
-               git::{self},
-               height, inline_vec,
-               local_branch_ops::BranchExists,
-               readline_async::{HowToChoose, StyleSheet}};
+use r3bl_tui::{BranchExists, CliTextInline, CommandRunResult, CommonResult,
+               DefaultIoDevices, InlineString, InlineVec, ItemsOwned, choose,
+               cli_text_inline, cli_text_line, height, inline_vec,
+               readline_async::{HowToChoose, StyleSheet},
+               try_delete_branches, try_get_local_branches};
 use smallvec::smallvec;
 
 /// The main function for `giti branch delete` command.
@@ -38,7 +36,7 @@ pub async fn handle_branch_delete_command(
         // - branch_name does not exist locally.
         // - branch_name is the same as the current branch.
         let branch_name: InlineString = branch_name.trim().into();
-        let (res, _cmd) = git::local_branch_ops::try_get_local_branches().await;
+        let (res, _cmd) = try_get_local_branches().await;
         let (_, branch_info) = res?;
         if branch_name.is_empty()
             || branch_info.exists_locally(&branch_name) == BranchExists::No
@@ -76,7 +74,7 @@ pub async fn handle_branch_delete_command(
 
     // Only proceed if some local branches exist (can't delete anything if there aren't
     // any).
-    let (res, _cmd) = git::local_branch_ops::try_get_local_branches().await;
+    let (res, _cmd) = try_get_local_branches().await;
     if let Ok((_, branch_info)) = res
         && !branch_info.other_branches.is_empty()
     {
@@ -252,7 +250,7 @@ mod command_execute {
         branches: &ItemsOwned,
     ) -> CommonResult<CommandRunResult<CommandRunDetails>> {
         debug_assert!(!branches.is_empty());
-        let (res_output, cmd) = git::try_delete_branches(branches).await;
+        let (res_output, cmd) = try_delete_branches(branches).await;
         match res_output {
             Ok(()) => {
                 let it = CommandRunResult::Run(

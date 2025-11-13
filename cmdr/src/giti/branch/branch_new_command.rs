@@ -1,8 +1,8 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use crate::giti::{BranchNewDetails, CommandRunDetails, ui_str};
-use r3bl_tui::{CommandRunResult, CommonResult, ReadlineAsyncContext, ReadlineEvent, git,
-               local_branch_ops};
+use r3bl_tui::{BranchExists, CommandRunResult, CommonResult, ReadlineAsyncContext,
+               ReadlineEvent, try_create_and_switch_to_branch, try_get_local_branches};
 
 /// The main function for `giti branch new` command.
 ///
@@ -44,19 +44,17 @@ mod command_execute {
     pub async fn create_new_branch(
         branch_name: String,
     ) -> CommonResult<CommandRunResult<CommandRunDetails>> {
-        let (res, _cmd) = local_branch_ops::try_get_local_branches().await;
+        let (res, _cmd) = try_get_local_branches().await;
         let (_, branch_info) = res?;
 
-        if let local_branch_ops::BranchExists::Yes =
-            branch_info.exists_locally(&branch_name)
-        {
+        if let BranchExists::Yes = branch_info.exists_locally(&branch_name) {
             let string =
                 ui_str::branch_create_display::info_branch_already_exists(&branch_name);
             let it = CommandRunResult::Noop(string, details::with_details(branch_name));
             return Ok(it);
         }
 
-        let (res_output, cmd) = git::try_create_and_switch_to_branch(&branch_name).await;
+        let (res_output, cmd) = try_create_and_switch_to_branch(&branch_name).await;
         match res_output {
             Ok(()) => {
                 let it = CommandRunResult::Run(

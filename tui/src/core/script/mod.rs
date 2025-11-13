@@ -2,20 +2,29 @@
 
 #![allow(clippy::literal_string_with_formatting_args)]
 
-// Attach sources.
-pub mod apt_install;
-pub mod command_impl;
-pub mod crates_api;
-pub mod directory_change;
-pub mod directory_create;
-pub mod download;
+// Private modules (hide internal structure)
+mod apt_install;
+mod command_impl;
+mod crates_api;
+mod directory_change;
+mod directory_create;
+mod download;
+#[cfg(any(test, doc))]
 pub mod environment;
+#[cfg(not(any(test, doc)))]
+mod environment;
+#[cfg(any(test, doc))]
 pub mod fs_path;
+#[cfg(not(any(test, doc)))]
+mod fs_path;
+#[cfg(any(test, doc))]
 pub mod git;
-pub mod github_api;
-pub mod http_client;
-pub mod permissions;
-pub mod temp_dir;
+#[cfg(not(any(test, doc)))]
+mod git;
+mod github_api;
+mod http_client;
+mod permissions;
+mod temp_dir;
 
 // Re-export.
 pub use apt_install::*;
