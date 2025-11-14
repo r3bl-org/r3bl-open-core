@@ -2,35 +2,28 @@
 
 //! Render operations type system for the TUI rendering pipeline.
 //!
-//! # You Are Here
+//! # You Are Here: **Type System Module** (Cross-Stage)
 //!
 //! This module defines the **core data types** that flow through all stages of the
 //! rendering pipeline. These types are the "lingua franca" that all stages speak.
 //!
 //! ```text
-//! [Stage 1: App/Component]
-//!   ↓
-//! [Stage 2: Pipeline]
-//!   ↓
-//! [Stage 3: Compositor]
-//!   ↓
-//!   ┌─────────────────────────────┐
-//!   │ YOU ARE HERE: Defines      │
-//!   │ RenderOpIR, RenderOpOutput │
-//!   └─────────────────────────────┘
-//!   ↓
-//! [Stage 4: Backend Converter]
-//!   ↓
-//! [Stage 5: Backend Executor]
-//!   ↓
-//! [Stage 6: Terminal]
+//! render_op module ← YOU ARE HERE
+//! (Defines RenderOpIR, RenderOpOutput, RenderOpCommon)
 //! ```
 //!
 //! **Input**: Component code produces [`RenderOpIR`] operations
 //! **Output**: These types are consumed by all downstream stages
 //! **Role**: Define the contract between all layers
 //!
-//! > **For the complete rendering architecture**, see [`mod@super`] (parent module).
+//! <div class="warning">
+//!
+//! **For the complete 6-stage rendering pipeline with visual diagrams and stage
+//! reference table**, see the [rendering pipeline overview].
+//!
+//! </div>
+//!
+//! [rendering pipeline overview]: mod@crate::terminal_lib_backends#rendering-pipeline-architecture
 //!
 //! ## What This Module Provides
 //!

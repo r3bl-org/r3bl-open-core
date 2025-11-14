@@ -9,7 +9,9 @@ use crate::{LockedOutputDevice, RenderOpOutput, Size};
 /// Each backend (Crossterm, `DirectAnsi`, etc.) implements this trait to translate
 /// [`RenderOpOutput`] operations into backend-specific terminal commands.
 ///
-/// # You Are Here
+/// # You Are Here: **Stage 5 Trait**
+///
+/// This trait is implemented by Stage 5 (Backend Executor) backends:
 ///
 /// ```text
 /// [Stage 1: App/Component]
@@ -20,7 +22,7 @@ use crate::{LockedOutputDevice, RenderOpOutput, Size};
 ///   ↓
 /// [Stage 4: Backend Converter]
 ///   ↓
-/// [Stage 5: Backend Executor] ← YOU ARE HERE
+/// [Stage 5: Backend Executor] ← YOU ARE HERE (RenderOpPaint trait)
 ///   ↓
 /// [Stage 6: Terminal]
 /// ```
@@ -29,8 +31,14 @@ use crate::{LockedOutputDevice, RenderOpOutput, Size};
 /// - **Output**: Terminal commands via backend-specific implementation
 /// - **Role**: Define how different backends execute individual render operations
 ///
-/// See [`crate::render_op`] module documentation for shared architectural patterns
-/// and the rendering pipeline overview.
+/// <div class="warning">
+///
+/// **For the complete 6-stage rendering pipeline with visual diagrams and stage
+/// reference table**, see the [rendering pipeline overview].
+///
+/// </div>
+///
+/// [rendering pipeline overview]: mod@crate::terminal_lib_backends#rendering-pipeline-architecture
 ///
 /// # Purpose
 ///

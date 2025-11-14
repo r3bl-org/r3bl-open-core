@@ -2,7 +2,9 @@
 
 //! Local state tracking for render operations optimization.
 //!
-//! # You Are Here
+//! # You Are Here: **Stage 5 Optimization Data**
+//!
+//! This state structure is used by Stage 5 (Backend Executor) for optimization:
 //!
 //! ```text
 //! [Stage 1: App/Component]
@@ -13,15 +15,17 @@
 //!   ↓
 //! [Stage 4: Backend Converter]
 //!   ↓
-//! RenderOpsLocalData ← YOU ARE HERE
-//!   ↓ (used by Stage 5)
-//! [Stage 5: Backend Executor]
+//! [Stage 5: Backend Executor] ← YOU ARE HERE (RenderOpsLocalData used here)
 //!   ↓
 //! [Stage 6: Terminal]
 //! ```
 //!
-//! See [`crate::render_op`] module documentation for shared architectural patterns
-//! and the rendering pipeline overview.
+//! <div class="warning">
+//!
+//! **For the complete 6-stage rendering pipeline with visual diagrams and stage
+//! reference table**, see the [rendering pipeline overview].
+//!
+//! </div>
 //!
 //! # Purpose
 //!
@@ -31,6 +35,8 @@
 //!
 //! Used by [`crate::PaintRenderOpImplCrossterm`] (Backend Executor) to track cursor
 //! position and colors, avoiding redundant commands.
+//!
+//! [rendering pipeline overview]: mod@crate::terminal_lib_backends#rendering-pipeline-architecture
 
 use crate::{Pos, TuiColor};
 

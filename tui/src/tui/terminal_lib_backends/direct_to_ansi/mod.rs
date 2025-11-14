@@ -31,8 +31,12 @@
 //! - **Alternative Stage 5**: [`crossterm_backend::paint_render_op_impl` mod docs] (Crossterm-based executor)
 //! - **Next stage**: Terminal output (Stage 6)
 //!
-//! > **For the complete rendering architecture**, see [`terminal_lib_backends` mod docs]
-//! > module documentation (this is the authoritative source of truth).
+//! <div class="warning">
+//!
+//! **For the complete rendering architecture**, see [`terminal_lib_backends` mod docs]
+//! module documentation (this is the authoritative source of truth).
+//!
+//! </div>
 //!
 //! ## What This Module Does
 //!
@@ -69,8 +73,8 @@
 //! [`crossterm_backend::paint_render_op_impl` mod docs]: mod@crate::tui::terminal_lib_backends::crossterm_backend::paint_render_op_impl
 //! [`offscreen_buffer::paint_impl` mod docs]: mod@crate::tui::terminal_lib_backends::offscreen_buffer::paint_impl
 //! [`render_op_ir` mod docs]: mod@crate::tui::terminal_lib_backends::render_op::render_op_ir
-//! [`render_pipeline` mod docs]: mod@crate::tui::terminal_lib_backends::render_pipeline
 //! [`terminal_lib_backends` mod docs]: mod@crate::tui::terminal_lib_backends
+//! [rendering pipeline overview]: mod@crate::terminal_lib_backends#rendering-pipeline-architecture
 
 // Skip rustfmt for rest of file to preserve manual alignment.
 // https://stackoverflow.com/a/75910283/2085356

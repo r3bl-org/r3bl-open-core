@@ -2,7 +2,7 @@
 
 //! # Pipeline Stage 5: Backend Executor (`DirectToAnsi` Implementation)
 //!
-//! # You Are Here
+//! # You Are Here: **Stage 5** (DirectToAnsi Executor)
 //!
 //! ```text
 //! [Stage 1: App/Component]
@@ -22,8 +22,12 @@
 //! **Output**: ANSI escape sequences to terminal
 //! **Role**: Execute rendering operations via `DirectToAnsi` backend
 //!
-//! > **For the complete 6-stage rendering pipeline with visual diagrams and stage
-//! > reference table**, see the [`render_pipeline` mod docs].
+//! <div class="warning">
+//!
+//! **For the complete 6-stage rendering pipeline with visual diagrams and stage
+//! reference table**, see the [rendering pipeline overview].
+//!
+//! </div>
 //!
 //! ## What This Stage Does
 //!
@@ -43,7 +47,7 @@
 //! [`RenderOpOutputVec`]: crate::RenderOpOutputVec
 //! [`RenderOpsLocalData`]: crate::RenderOpsLocalData
 //! [`RenderOpOutput`]: crate::RenderOpOutput
-//! [`render_pipeline` mod docs]: mod@crate::tui::terminal_lib_backends::render_pipeline
+//! [rendering pipeline overview]: mod@crate::terminal_lib_backends#rendering-pipeline-architecture
 
 use crate::{AnsiSequenceGenerator, CliTextInline, GCStringOwned, InlineString,
             LockedOutputDevice, PixelCharRenderer, Pos, RenderOpCommon, RenderOpFlush,

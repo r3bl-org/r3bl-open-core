@@ -7,7 +7,9 @@
 //! **Stage 4: Backend Converter** ([`paint_impl`]) to determine which parts of the
 //! terminal need to be redrawn.
 //!
-//! # You Are Here: Supporting Stage 4
+//! # You Are Here: **Stage 4 Helper** (Diff Optimization)
+//!
+//! This is a helper type used by Stage 4 (Backend Converter) for optimization:
 //!
 //! ```text
 //! [Stage 1: App/Component]
@@ -16,19 +18,25 @@
 //!   ↓
 //! [Stage 3: Compositor]
 //!   ↓
-//! DiffChunks (optimization utility) ← YOU ARE HERE
-//!   ↓ (used by)
-//! [Stage 4: Backend Converter]
+//! [Stage 4: Backend Converter] ← YOU ARE HERE (uses DiffChunks)
 //!   ↓
 //! [Stage 5: Backend Executor]
 //!   ↓
 //! [Stage 6: Terminal]
 //! ```
 //!
+//! <div class="warning">
+//!
+//! **For the complete 6-stage rendering pipeline with visual diagrams and stage
+//! reference table**, see the [rendering pipeline overview].
+//!
+//! </div>
+//!
 //! ## Navigation
 //!
-//! - **See complete architecture**: [`terminal_lib_backends` mod docs] (source of truth)
 //! - **Stage 4 implementation**: [`paint_impl`] (Backend Converter that uses diff chunks)
+//!
+//! [rendering pipeline overview]: mod@crate::terminal_lib_backends#rendering-pipeline-architecture
 //!
 //! ## Relationship to Rendering Pipeline
 //!
@@ -43,7 +51,6 @@
 //! [`OffscreenBuffer`]: crate::OffscreenBuffer
 //! [`RenderOpOutputVec`]: crate::RenderOpOutputVec
 //! [`paint_impl`]: crate::offscreen_buffer::paint_impl
-//! [`terminal_lib_backends` mod docs]: mod@crate::tui::terminal_lib_backends
 
 use super::PixelChar;
 use crate::{List, Pos};

@@ -6,6 +6,15 @@
 //! Each stage has its own module with "You Are Here" breadcrumbs. Use the stage reference
 //! table below to understand data flow and find relevant implementations.
 //!
+//! <div class="warning">
+//!
+//! **Architecture Context:** This pipeline implements **Path 1 (Composed Component
+//! Pipeline)** from the dual rendering paths architecture. For the high-level overview
+//! of both rendering paths (Path 1: full TUI vs Path 2: simple CLI), see the
+//! [dual rendering paths].
+//!
+//! </div>
+//!
 //! ## Quick Pipeline Overview
 //!
 //! ```text
@@ -169,6 +178,7 @@
 //! [`direct_to_ansi::output::paint_render_op_impl`]: mod@direct_to_ansi::output::paint_render_op_impl
 //! [`paint_impl`]: mod@offscreen_buffer::paint_impl
 //! [`paint_render_op_impl`]: mod@crossterm_backend::paint_render_op_impl
+//! [dual rendering paths]: mod@crate#dual-rendering-paths
 
 /// Terminal library backend selection for the TUI system.
 ///

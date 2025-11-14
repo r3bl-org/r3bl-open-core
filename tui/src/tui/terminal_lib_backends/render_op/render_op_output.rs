@@ -2,26 +2,24 @@
 
 //! Terminal output operations for backend/execution layer.
 //!
-//! # You Are Here
+//! # You Are Here: **Stage 4-5 Data Type**
 //!
 //! ```text
-//! [Stage 1: App/Component]
-//!   ↓
-//! [Stage 2: Pipeline]
-//!   ↓
-//! [Stage 3: Compositor]
-//!   ↓
 //! [Stage 4: Backend Converter]
-//!   ↓
+//!   ↓ generates
 //! RenderOpOutput ← YOU ARE HERE
-//!   ↓
+//!   ↓ consumed by
 //! [Stage 5: Backend Executor]
-//!   ↓
-//! [Stage 6: Terminal]
 //! ```
 //!
-//! See [`crate::render_op`] module documentation for shared architectural patterns
-//! and the rendering pipeline overview.
+//! <div class="warning">
+//!
+//! **For the complete 6-stage rendering pipeline with visual diagrams and stage
+//! reference table**, see the [rendering pipeline overview].
+//!
+//! </div>
+//!
+//! [rendering pipeline overview]: mod@crate::terminal_lib_backends#rendering-pipeline-architecture
 //!
 //! # Type Safety & Semantic Boundary
 //!

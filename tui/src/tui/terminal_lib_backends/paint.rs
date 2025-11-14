@@ -2,24 +2,39 @@
 
 //! # Rendering Pipeline Orchestration
 //!
-//! # You Are Here
+//! This module provides the [`paint()`] function that orchestrates the complete rendering
+//! pipeline from [`RenderPipeline`] to terminal output.
+//!
+//! ## Pipeline Flow (All 6 Stages)
 //!
 //! ```text
-//! [Stage 1: App/Component] → [Stage 2: Pipeline] → [Stage 3: Compositor] →
-//! [Stage 4: Backend Converter] → [Stage 5: Backend Executor] → [Stage 6: Terminal]
-//!
-//! ↑ paint.rs coordinates all these stages ↑
-//! (Orchestration: ties everything together)
+//! [Stage 1: App/Component]
+//!   ↓
+//! [Stage 2: Pipeline]
+//!   ↓
+//! [Stage 3: Compositor]
+//!   ↓
+//! [Stage 4: Backend Converter]
+//!   ↓
+//! [Stage 5: Backend Executor] ← paint() orchestrates here
+//!   ↓
+//! [Stage 6: Terminal]
 //! ```
 //!
-//! This module orchestrates the entire rendering pipeline:
-//! 1. Takes [`RenderPipeline`] from the app
-//! 2. Feeds it through the Compositor to create [`OffscreenBuffer`]
-//! 3. Performs diff calculations for selective redraw
-//! 4. Routes operations to the appropriate backend (Crossterm/Termion)
-//! 5. Manages flushing and display synchronization
+//! > **For the complete 6-stage rendering pipeline with visual diagrams and stage
+//! > reference table**, see the [rendering pipeline overview].
 //!
-//! > **For the complete rendering architecture**, see [`super`] (parent module).
+//! ## What This Module Does
+//!
+//! The [`paint()`] function coordinates the final stages of rendering:
+//! 1. Takes [`RenderPipeline`] from the app (Stages 1-2)
+//! 2. Feeds it through the Compositor to create [`OffscreenBuffer`] (Stage 3)
+//! 3. Performs diff calculations for selective redraw (Stage 4)
+//! 4. Routes operations to the appropriate backend (Crossterm/DirectToAnsi) (Stage 5)
+//! 5. Manages flushing and display synchronization (Stage 6)
+//!
+//! [`paint()`]: paint
+//! [rendering pipeline overview]: mod@crate::terminal_lib_backends#rendering-pipeline-architecture
 
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 

@@ -115,16 +115,14 @@
 //!   - [Dual Rendering Paths](#dual-rendering-paths)
 //!     - [Path 1: Composed Component Pipeline (Complex, Responsive Layouts and Full
 //!       TUI)](#path-1-composed-component-pipeline-complex-responsive-layouts-and-full-tui)
-//!     - [Path 2: Direct Interactive Path (Simple CLI, Hybrid/Partial-TUI)](#
-//!       path-2-direct-interactive-path-simple-cli-hybridpartial-tui)
+//!     - [Path 2: Direct Interactive Path (Simple CLI, Hybrid/Partial-TUI)](#path-2-direct-interactive-path-simple-cli-hybridpartial-tui)
 //!   - [Unified ANSI Generation:
 //!     `PixelCharRenderer`](#unified-ansi-generation-pixelcharrenderer)
 //!   - [`CliTextInline`: Styled Text Fragments](#clitextinline-styled-text-fragments)
 //!   - [`OutputDevice`: Thread-Safe Terminal
 //!     Output](#outputdevice-thread-safe-terminal-output)
 //!   - [Offscreen buffer](#offscreen-buffer)
-//!   - [Complete Rendering Pipeline Architecture (Path 1: Composed Component Pipeline)](#
-//!     complete-rendering-pipeline-architecture-path-1-composed-component-pipeline)
+//!   - [Complete Rendering Pipeline Architecture (Path 1: Composed Component Pipeline)](#complete-rendering-pipeline-architecture-path-1-composed-component-pipeline)
 //!   - [Render pipeline (Path 1: Composed Component
 //!     Pipeline)](#render-pipeline-path-1-composed-component-pipeline)
 //!   - [First render (Path 1)](#first-render-path-1)

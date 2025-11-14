@@ -2,42 +2,46 @@
 
 //! # Backend Implementation: Crossterm Terminal Library
 //!
-//! # You Are Here
+//! This module provides the **Crossterm-specific backend implementation** for the rendering
+//! pipeline, containing Stage 5 executor code.
 //!
 //! ```text
-//! [STAGE 1: App/Component] → [STAGE 2: Pipeline] → [STAGE 3: Compositor] →
-//! [STAGE 4: Backend Converter] ← YOU ARE HERE → [STAGE 5: Backend Executor] ← YOU ARE HERE
-//! [STAGE 6: Terminal]
+//! [Stage 1: App/Component]
+//!   ↓
+//! [Stage 2: Pipeline]
+//!   ↓
+//! [Stage 3: Compositor]
+//!   ↓
+//! [Stage 4: Backend Converter] ← Shared (in offscreen_buffer/paint_impl)
+//!   ↓
+//! [Stage 5: Backend Executor] ← Crossterm implementation here
+//!   ↓
+//! [Stage 6: Terminal]
 //! ```
 //!
-//! **Input (Stage 4)**: [`OffscreenBuffer`] (2D grid of styled characters)
-//! **Output (Stage 4)**: [`RenderOpOutputVec`] (optimized terminal operations)
+//! > **For the complete 6-stage rendering pipeline with visual diagrams and stage
+//! > reference table**, see the [rendering pipeline overview].
 //!
-//! **Input (Stage 5)**: [`RenderOpOutputVec`] operations to execute
-//! **Output (Stage 5)**: Terminal state changes via Crossterm
-//!
-//! **Role**: Convert high-level rendering data to low-level terminal commands
-//!
-//! > **For the complete pipeline architecture**, see [`super`] (parent module).
+//! [rendering pipeline overview]: mod@crate::terminal_lib_backends#rendering-pipeline-architecture
 //!
 //! ## Module Organization
 //!
-//! This module contains the **Crossterm-specific backend implementation** with two key
-//! stages:
+//! This module contains the **Crossterm-specific Stage 5 backend executor** implementation.
 //!
-//! ### Stage 4: Backend Converter (`offscreen_buffer_paint_impl`)
-//! - Implements [`OffscreenBufferPaint`] trait
-//! - Scans the [`OffscreenBuffer`] and generates [`RenderOpOutputVec`]
-//! - Computes diffs for selective redraw optimization
-//! - Converts 2D pixel grid to optimized text painting operations
+//! ### Stage 4: Backend Converter (Shared)
+//! - **Not in this module** - Stage 4 is shared across all backends
+//! - See [`offscreen_buffer::paint_impl`] for the `OffscreenBufferPaintImplCrossterm` converter
+//! - Converts [`OffscreenBuffer`] → [`RenderOpOutputVec`] (shared by both Crossterm and DirectToAnsi)
 //!
 //! ### Stage 5: Backend Executor (`paint_render_op_impl`)
+//! - **Implemented in this module** - Crossterm-specific execution
 //! - Implements [`RenderOpPaint`] trait
-//! - Executes [`RenderOpOutputVec`] operations
-//! - Translates operations to Crossterm API calls
+//! - Executes [`RenderOpOutputVec`] operations via Crossterm API
 //! - Manages terminal modes (raw mode, cursor visibility, mouse tracking)
 //! - Uses [`RenderOpsLocalData`] for state tracking (avoid redundant commands)
 //! - Handles colors, cursor movement, and text output
+//!
+//! [`offscreen_buffer::paint_impl`]: mod@crate::tui::terminal_lib_backends::offscreen_buffer::paint_impl
 //!
 //! [`OffscreenBuffer`]: crate::OffscreenBuffer
 //! [`RenderOpOutputVec`]: crate::RenderOpOutputVec
