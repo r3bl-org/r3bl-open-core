@@ -1,9 +1,9 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use crate::{Deadline, InputEvent, KeyState,
-            core::ansi::vt_100_terminal_input_parser::{ir_event_types::{VT100InputEvent,
-                                                                        VT100KeyCode,
-                                                                        VT100KeyModifiers},
+            core::ansi::vt_100_terminal_input_parser::{ir_event_types::{VT100InputEventIR,
+                                                                        VT100KeyCodeIR,
+                                                                        VT100KeyModifiersIR},
                                                        test_fixtures::generate_keyboard_sequence},
             generate_pty_test,
             tui::terminal_lib_backends::direct_to_ansi::DirectToAnsiInputDevice};
@@ -90,9 +90,9 @@ fn pty_master_entry_point(
     let modifier_combos = vec![
         (
             "Shift+Up",
-            VT100InputEvent::Keyboard {
-                code: VT100KeyCode::Up,
-                modifiers: VT100KeyModifiers {
+            VT100InputEventIR::Keyboard {
+                code: VT100KeyCodeIR::Up,
+                modifiers: VT100KeyModifiersIR {
                     shift: KeyState::Pressed,
                     alt: KeyState::NotPressed,
                     ctrl: KeyState::NotPressed,
@@ -101,9 +101,9 @@ fn pty_master_entry_point(
         ),
         (
             "Ctrl+Up",
-            VT100InputEvent::Keyboard {
-                code: VT100KeyCode::Up,
-                modifiers: VT100KeyModifiers {
+            VT100InputEventIR::Keyboard {
+                code: VT100KeyCodeIR::Up,
+                modifiers: VT100KeyModifiersIR {
                     shift: KeyState::NotPressed,
                     alt: KeyState::NotPressed,
                     ctrl: KeyState::Pressed,
@@ -112,9 +112,9 @@ fn pty_master_entry_point(
         ),
         (
             "Alt+Down",
-            VT100InputEvent::Keyboard {
-                code: VT100KeyCode::Down,
-                modifiers: VT100KeyModifiers {
+            VT100InputEventIR::Keyboard {
+                code: VT100KeyCodeIR::Down,
+                modifiers: VT100KeyModifiersIR {
                     shift: KeyState::NotPressed,
                     alt: KeyState::Pressed,
                     ctrl: KeyState::NotPressed,
@@ -123,9 +123,9 @@ fn pty_master_entry_point(
         ),
         (
             "Shift+Alt+Left",
-            VT100InputEvent::Keyboard {
-                code: VT100KeyCode::Left,
-                modifiers: VT100KeyModifiers {
+            VT100InputEventIR::Keyboard {
+                code: VT100KeyCodeIR::Left,
+                modifiers: VT100KeyModifiersIR {
                     shift: KeyState::Pressed,
                     alt: KeyState::Pressed,
                     ctrl: KeyState::NotPressed,
@@ -134,9 +134,9 @@ fn pty_master_entry_point(
         ),
         (
             "Ctrl+Shift+Right",
-            VT100InputEvent::Keyboard {
-                code: VT100KeyCode::Right,
-                modifiers: VT100KeyModifiers {
+            VT100InputEventIR::Keyboard {
+                code: VT100KeyCodeIR::Right,
+                modifiers: VT100KeyModifiersIR {
                     shift: KeyState::Pressed,
                     alt: KeyState::NotPressed,
                     ctrl: KeyState::Pressed,
@@ -145,9 +145,9 @@ fn pty_master_entry_point(
         ),
         (
             "Ctrl+Alt+Shift+F1",
-            VT100InputEvent::Keyboard {
-                code: VT100KeyCode::Function(1),
-                modifiers: VT100KeyModifiers {
+            VT100InputEventIR::Keyboard {
+                code: VT100KeyCodeIR::Function(1),
+                modifiers: VT100KeyModifiersIR {
                     shift: KeyState::Pressed,
                     alt: KeyState::Pressed,
                     ctrl: KeyState::Pressed,

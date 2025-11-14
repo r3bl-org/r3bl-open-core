@@ -77,8 +77,14 @@
 #![cfg_attr(rustfmt, rustfmt_skip)]
 
 // Private inner modules (hide implementation structure).
+// Conditionally public for documentation links.
 mod debug;
+
+#[cfg(any(test, doc))]
+pub mod output;
+#[cfg(not(any(test, doc)))]
 mod output;
+
 mod input;
 
 // Public re-exports (flat API surface).

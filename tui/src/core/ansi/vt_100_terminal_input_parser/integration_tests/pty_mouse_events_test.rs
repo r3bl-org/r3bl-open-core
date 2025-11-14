@@ -19,10 +19,10 @@
 //! [parent module documentation]: mod@super#testing-philosophy
 
 use crate::{Deadline, InputEvent, TermPos,
-            core::ansi::vt_100_terminal_input_parser::{ir_event_types::{VT100InputEvent,
-                                                                        VT100KeyModifiers,
-                                                                        VT100MouseAction,
-                                                                        VT100MouseButton},
+            core::ansi::vt_100_terminal_input_parser::{ir_event_types::{VT100InputEventIR,
+                                                                        VT100KeyModifiersIR,
+                                                                        VT100MouseActionIR,
+                                                                        VT100MouseButtonIR},
                                                        test_fixtures::generate_keyboard_sequence},
             generate_pty_test,
             tui::terminal_lib_backends::direct_to_ansi::DirectToAnsiInputDevice};
@@ -108,42 +108,42 @@ fn pty_master_entry_point(
     );
 
     // Generated mouse events using the input sequence generator
-    let mouse_events: Vec<(&str, VT100InputEvent)> = vec![
-        ("Left Click", VT100InputEvent::Mouse {
-            button: VT100MouseButton::Left,
+    let mouse_events: Vec<(&str, VT100InputEventIR)> = vec![
+        ("Left Click", VT100InputEventIR::Mouse {
+            button: VT100MouseButtonIR::Left,
             pos: TermPos::from_one_based(10, 5),
-            action: VT100MouseAction::Press,
-            modifiers: VT100KeyModifiers::default(),
+            action: VT100MouseActionIR::Press,
+            modifiers: VT100KeyModifiersIR::default(),
         }),
-        ("Left Release", VT100InputEvent::Mouse {
-            button: VT100MouseButton::Left,
+        ("Left Release", VT100InputEventIR::Mouse {
+            button: VT100MouseButtonIR::Left,
             pos: TermPos::from_one_based(10, 5),
-            action: VT100MouseAction::Release,
-            modifiers: VT100KeyModifiers::default(),
+            action: VT100MouseActionIR::Release,
+            modifiers: VT100KeyModifiersIR::default(),
         }),
-        ("Right Click", VT100InputEvent::Mouse {
-            button: VT100MouseButton::Right,
+        ("Right Click", VT100InputEventIR::Mouse {
+            button: VT100MouseButtonIR::Right,
             pos: TermPos::from_one_based(20, 10),
-            action: VT100MouseAction::Press,
-            modifiers: VT100KeyModifiers::default(),
+            action: VT100MouseActionIR::Press,
+            modifiers: VT100KeyModifiersIR::default(),
         }),
-        ("Middle Click", VT100InputEvent::Mouse {
-            button: VT100MouseButton::Middle,
+        ("Middle Click", VT100InputEventIR::Mouse {
+            button: VT100MouseButtonIR::Middle,
             pos: TermPos::from_one_based(30, 15),
-            action: VT100MouseAction::Press,
-            modifiers: VT100KeyModifiers::default(),
+            action: VT100MouseActionIR::Press,
+            modifiers: VT100KeyModifiersIR::default(),
         }),
-        ("Scroll Up", VT100InputEvent::Mouse {
-            button: VT100MouseButton::Left,
+        ("Scroll Up", VT100InputEventIR::Mouse {
+            button: VT100MouseButtonIR::Left,
             pos: TermPos::from_one_based(25, 12),
-            action: VT100MouseAction::Scroll(crate::core::ansi::vt_100_terminal_input_parser::VT100ScrollDirection::Up),
-            modifiers: VT100KeyModifiers::default(),
+            action: VT100MouseActionIR::Scroll(crate::core::ansi::vt_100_terminal_input_parser::VT100ScrollDirectionIR::Up),
+            modifiers: VT100KeyModifiersIR::default(),
         }),
-        ("Scroll Down", VT100InputEvent::Mouse {
-            button: VT100MouseButton::Left,
+        ("Scroll Down", VT100InputEventIR::Mouse {
+            button: VT100MouseButtonIR::Left,
             pos: TermPos::from_one_based(25, 12),
-            action: VT100MouseAction::Scroll(crate::core::ansi::vt_100_terminal_input_parser::VT100ScrollDirection::Down),
-            modifiers: VT100KeyModifiers::default(),
+            action: VT100MouseActionIR::Scroll(crate::core::ansi::vt_100_terminal_input_parser::VT100ScrollDirectionIR::Down),
+            modifiers: VT100KeyModifiersIR::default(),
         }),
     ];
 

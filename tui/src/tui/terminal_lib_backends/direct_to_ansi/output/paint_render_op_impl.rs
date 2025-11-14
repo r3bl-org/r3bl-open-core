@@ -22,8 +22,8 @@
 //! **Output**: ANSI escape sequences to terminal
 //! **Role**: Execute rendering operations via `DirectToAnsi` backend
 //!
-//! > **For the complete rendering architecture**, see [`crate::render_op`] module
-//! > documentation.
+//! > **For the complete 6-stage rendering pipeline with visual diagrams and stage
+//! > reference table**, see the [`render_pipeline` mod docs].
 //!
 //! ## What This Stage Does
 //!
@@ -42,7 +42,8 @@
 //!
 //! [`RenderOpOutputVec`]: crate::RenderOpOutputVec
 //! [`RenderOpsLocalData`]: crate::RenderOpsLocalData
-//! [`RenderOpsOutput`]: crate::RenderOpOutput
+//! [`RenderOpOutput`]: crate::RenderOpOutput
+//! [`render_pipeline` mod docs]: mod@crate::tui::terminal_lib_backends::render_pipeline
 
 use crate::{AnsiSequenceGenerator, CliTextInline, GCStringOwned, InlineString,
             LockedOutputDevice, PixelCharRenderer, Pos, RenderOpCommon, RenderOpFlush,

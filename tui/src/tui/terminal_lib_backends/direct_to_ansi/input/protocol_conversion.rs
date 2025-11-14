@@ -15,15 +15,15 @@
 //!                              │
 //! ┌────────────────────────────▼────────────────────────────────────┐
 //! │ vt_100_terminal_input_parser/ (Protocol Layer - IR)             │
-//! │   parse_keyboard_sequence() → VT100InputEvent::Keyboard         │
-//! │   parse_mouse_sequence()    → VT100InputEvent::Mouse            │
-//! │   VT100KeyCode, VT100KeyModifiers, VT100MouseButton, etc.       │
+//! │   parse_keyboard_sequence() → VT100InputEventIR::Keyboard       │
+//! │   parse_mouse_sequence()    → VT100InputEventIR::Mouse          │
+//! │   VT100KeyCodeIR, VT100KeyModifiersIR, VT100MouseButtonIR, etc. │
 //! └────────────────────────────┬────────────────────────────────────┘
 //!                              │
 //! ┌────────────────────────────▼────────────────────────────────────┐
 //! │ protocol_conversion.rs (THIS MODULE - IR → Public API)          │
-//! │   convert_input_event()       VT100InputEvent → InputEvent      │
-//! │   convert_key_code_to_keypress()  VT100KeyCode → KeyPress       │
+//! │   convert_input_event()       VT100InputEventIR → InputEvent    │
+//! │   convert_key_code_to_keypress()  VT100KeyCodeIR → KeyPress     │
 //! └────────────────────────────┬────────────────────────────────────┘
 //!                              │
 //! ┌────────────────────────────▼────────────────────────────────────┐
@@ -45,32 +45,33 @@
 
 use crate::{Button, FocusEvent, InputEvent, Key, KeyPress, KeyState, ModifierKeysMask,
             MouseInput, MouseInputKind, Pos, SpecialKey,
-            core::ansi::vt_100_terminal_input_parser::{VT100FocusState,
-                                                       VT100InputEvent, VT100KeyCode,
-                                                       VT100KeyModifiers,
-                                                       VT100MouseAction,
-                                                       VT100MouseButton,
-                                                       VT100ScrollDirection}};
+            core::ansi::vt_100_terminal_input_parser::{VT100FocusStateIR,
+                                                       VT100InputEventIR,
+                                                       VT100KeyCodeIR,
+                                                       VT100KeyModifiersIR,
+                                                       VT100MouseActionIR,
+                                                       VT100MouseButtonIR,
+                                                       VT100ScrollDirectionIR}};
 
-/// Convert protocol-level [`VT100KeyCode`] and [`VT100KeyModifiers`] to canonical
+/// Convert protocol-level [`VT100KeyCodeIR`] and [`VT100KeyModifiersIR`] to canonical
 /// [`KeyPress`].
 ///
 /// Maps VT-100 IR key codes to the public API [`Key`] enum, handling:
-/// - Character keys: [`VT100KeyCode::Char`] → [`Key::Character`]
-/// - Function keys: [`VT100KeyCode::Function`] → [`Key::FunctionKey`]
-/// - Special keys: [`VT100KeyCode::Up`] → [`Key::SpecialKey`]
+/// - Character keys: [`VT100KeyCodeIR::Char`] → [`Key::Character`]
+/// - Function keys: [`VT100KeyCodeIR::Function`] → [`Key::FunctionKey`]
+/// - Special keys: [`VT100KeyCodeIR::Up`] → [`Key::SpecialKey`]
 /// - Modifiers: Shift, Ctrl, Alt masks
 ///
 /// Returns:
 /// - [`KeyPress::Plain`] if no modifiers are active
 /// - [`KeyPress::WithModifiers`] if any modifiers (Shift/Ctrl/Alt) are pressed
 pub(super) fn convert_key_code_to_keypress(
-    code: VT100KeyCode,
-    modifiers: VT100KeyModifiers,
+    code: VT100KeyCodeIR,
+    modifiers: VT100KeyModifiersIR,
 ) -> KeyPress {
     let key = match code {
-        VT100KeyCode::Char(ch) => Key::Character(ch),
-        VT100KeyCode::Function(n) => {
+        VT100KeyCodeIR::Char(ch) => Key::Character(ch),
+        VT100KeyCodeIR::Function(n) => {
             use crate::FunctionKey;
             match n {
                 1 => Key::FunctionKey(FunctionKey::F1),
@@ -88,21 +89,21 @@ pub(super) fn convert_key_code_to_keypress(
                 _ => Key::Character('?'), // Fallback
             }
         }
-        VT100KeyCode::Up => Key::SpecialKey(SpecialKey::Up),
-        VT100KeyCode::Down => Key::SpecialKey(SpecialKey::Down),
-        VT100KeyCode::Left => Key::SpecialKey(SpecialKey::Left),
-        VT100KeyCode::Right => Key::SpecialKey(SpecialKey::Right),
-        VT100KeyCode::Home => Key::SpecialKey(SpecialKey::Home),
-        VT100KeyCode::End => Key::SpecialKey(SpecialKey::End),
-        VT100KeyCode::PageUp => Key::SpecialKey(SpecialKey::PageUp),
-        VT100KeyCode::PageDown => Key::SpecialKey(SpecialKey::PageDown),
-        VT100KeyCode::Tab => Key::SpecialKey(SpecialKey::Tab),
-        VT100KeyCode::BackTab => Key::SpecialKey(SpecialKey::BackTab),
-        VT100KeyCode::Delete => Key::SpecialKey(SpecialKey::Delete),
-        VT100KeyCode::Insert => Key::SpecialKey(SpecialKey::Insert),
-        VT100KeyCode::Enter => Key::SpecialKey(SpecialKey::Enter),
-        VT100KeyCode::Backspace => Key::SpecialKey(SpecialKey::Backspace),
-        VT100KeyCode::Escape => Key::SpecialKey(SpecialKey::Esc),
+        VT100KeyCodeIR::Up => Key::SpecialKey(SpecialKey::Up),
+        VT100KeyCodeIR::Down => Key::SpecialKey(SpecialKey::Down),
+        VT100KeyCodeIR::Left => Key::SpecialKey(SpecialKey::Left),
+        VT100KeyCodeIR::Right => Key::SpecialKey(SpecialKey::Right),
+        VT100KeyCodeIR::Home => Key::SpecialKey(SpecialKey::Home),
+        VT100KeyCodeIR::End => Key::SpecialKey(SpecialKey::End),
+        VT100KeyCodeIR::PageUp => Key::SpecialKey(SpecialKey::PageUp),
+        VT100KeyCodeIR::PageDown => Key::SpecialKey(SpecialKey::PageDown),
+        VT100KeyCodeIR::Tab => Key::SpecialKey(SpecialKey::Tab),
+        VT100KeyCodeIR::BackTab => Key::SpecialKey(SpecialKey::BackTab),
+        VT100KeyCodeIR::Delete => Key::SpecialKey(SpecialKey::Delete),
+        VT100KeyCodeIR::Insert => Key::SpecialKey(SpecialKey::Insert),
+        VT100KeyCodeIR::Enter => Key::SpecialKey(SpecialKey::Enter),
+        VT100KeyCodeIR::Backspace => Key::SpecialKey(SpecialKey::Backspace),
+        VT100KeyCodeIR::Escape => Key::SpecialKey(SpecialKey::Esc),
     };
 
     // Convert modifiers (now using canonical KeyState directly)
@@ -122,48 +123,48 @@ pub(super) fn convert_key_code_to_keypress(
     }
 }
 
-/// Convert protocol-level [`VT100InputEvent`] to canonical [`InputEvent`].
+/// Convert protocol-level [`VT100InputEventIR`] to canonical [`InputEvent`].
 ///
 /// Converts all VT-100 IR event types to public API types:
-/// - **Keyboard**: [`VT100InputEvent::Keyboard`] → [`InputEvent::Keyboard`]
-/// - **Mouse**: [`VT100InputEvent::Mouse`] → [`InputEvent::Mouse`]
-///   - Converts button types: [`VT100MouseButton::Left`] → [`Button::Left`]
-///   - Converts actions: [`VT100MouseAction::Press`] → [`MouseInputKind::MouseDown`]
+/// - **Keyboard**: [`VT100InputEventIR::Keyboard`] → [`InputEvent::Keyboard`]
+/// - **Mouse**: [`VT100InputEventIR::Mouse`] → [`InputEvent::Mouse`]
+///   - Converts button types: [`VT100MouseButtonIR::Left`] → [`Button::Left`]
+///   - Converts actions: [`VT100MouseActionIR::Press`] → [`MouseInputKind::MouseDown`]
 ///   - Converts coordinates: 1-based [`TermPos`] → 0-based [`Pos`]
-/// - **Resize**: [`VT100InputEvent::Resize`] → [`InputEvent::Resize`]
-/// - **Focus**: [`VT100InputEvent::Focus`] → [`InputEvent::Focus`]
+/// - **Resize**: [`VT100InputEventIR::Resize`] → [`InputEvent::Resize`]
+/// - **Focus**: [`VT100InputEventIR::Focus`] → [`InputEvent::Focus`]
 /// - **Paste**: Should never be called (handled by state machine in `try_read_event()`)
 ///
 /// Returns `None` if the event cannot be converted (e.g., unknown mouse button).
-pub(super) fn convert_input_event(vt100_event: VT100InputEvent) -> Option<InputEvent> {
+pub(super) fn convert_input_event(vt100_event: VT100InputEventIR) -> Option<InputEvent> {
     match vt100_event {
-        VT100InputEvent::Keyboard { code, modifiers } => {
+        VT100InputEventIR::Keyboard { code, modifiers } => {
             let keypress = convert_key_code_to_keypress(code, modifiers);
             Some(InputEvent::Keyboard(keypress))
         }
-        VT100InputEvent::Mouse {
+        VT100InputEventIR::Mouse {
             button,
             pos,
             action,
             modifiers,
         } => {
             let button_kind = match button {
-                VT100MouseButton::Left => Button::Left,
-                VT100MouseButton::Right => Button::Right,
-                VT100MouseButton::Middle => Button::Middle,
-                VT100MouseButton::Unknown => return None,
+                VT100MouseButtonIR::Left => Button::Left,
+                VT100MouseButtonIR::Right => Button::Right,
+                VT100MouseButtonIR::Middle => Button::Middle,
+                VT100MouseButtonIR::Unknown => return None,
             };
 
             let kind = match action {
-                VT100MouseAction::Press => MouseInputKind::MouseDown(button_kind),
-                VT100MouseAction::Release => MouseInputKind::MouseUp(button_kind),
-                VT100MouseAction::Drag => MouseInputKind::MouseDrag(button_kind),
-                VT100MouseAction::Motion => MouseInputKind::MouseMove,
-                VT100MouseAction::Scroll(direction) => match direction {
-                    VT100ScrollDirection::Up => MouseInputKind::ScrollUp,
-                    VT100ScrollDirection::Down => MouseInputKind::ScrollDown,
-                    VT100ScrollDirection::Left => MouseInputKind::ScrollLeft,
-                    VT100ScrollDirection::Right => MouseInputKind::ScrollRight,
+                VT100MouseActionIR::Press => MouseInputKind::MouseDown(button_kind),
+                VT100MouseActionIR::Release => MouseInputKind::MouseUp(button_kind),
+                VT100MouseActionIR::Drag => MouseInputKind::MouseDrag(button_kind),
+                VT100MouseActionIR::Motion => MouseInputKind::MouseMove,
+                VT100MouseActionIR::Scroll(direction) => match direction {
+                    VT100ScrollDirectionIR::Up => MouseInputKind::ScrollUp,
+                    VT100ScrollDirectionIR::Down => MouseInputKind::ScrollDown,
+                    VT100ScrollDirectionIR::Left => MouseInputKind::ScrollLeft,
+                    VT100ScrollDirectionIR::Right => MouseInputKind::ScrollRight,
                 },
             };
 
@@ -194,21 +195,21 @@ pub(super) fn convert_input_event(vt100_event: VT100InputEvent) -> Option<InputE
             };
             Some(InputEvent::Mouse(mouse_input))
         }
-        VT100InputEvent::Resize {
+        VT100InputEventIR::Resize {
             col_width,
             row_height,
         } => Some(InputEvent::Resize(crate::Size {
             col_width,
             row_height,
         })),
-        VT100InputEvent::Focus(focus_state) => {
+        VT100InputEventIR::Focus(focus_state) => {
             let event = match focus_state {
-                VT100FocusState::Gained => FocusEvent::Gained,
-                VT100FocusState::Lost => FocusEvent::Lost,
+                VT100FocusStateIR::Gained => FocusEvent::Gained,
+                VT100FocusStateIR::Lost => FocusEvent::Lost,
             };
             Some(InputEvent::Focus(event))
         }
-        VT100InputEvent::Paste(_paste_mode) => {
+        VT100InputEventIR::Paste(_paste_mode) => {
             unreachable!(
                 "Paste events are handled by state machine in try_read_event() \
                  and should never reach convert_input_event()"
@@ -237,8 +238,8 @@ mod tests {
 
         for (ch, expected_key) in test_cases {
             let result = convert_key_code_to_keypress(
-                VT100KeyCode::Char(ch),
-                VT100KeyModifiers::default(),
+                VT100KeyCodeIR::Char(ch),
+                VT100KeyModifiersIR::default(),
             );
 
             match result {
@@ -276,8 +277,8 @@ mod tests {
 
         for (n, expected_fn_key) in test_cases {
             let result = convert_key_code_to_keypress(
-                VT100KeyCode::Function(n),
-                VT100KeyModifiers::default(),
+                VT100KeyCodeIR::Function(n),
+                VT100KeyModifiersIR::default(),
             );
 
             match result {
@@ -299,8 +300,8 @@ mod tests {
     fn test_convert_function_key_out_of_range() {
         // Test fallback for out-of-range function key numbers
         let result = convert_key_code_to_keypress(
-            VT100KeyCode::Function(99),
-            VT100KeyModifiers::default(),
+            VT100KeyCodeIR::Function(99),
+            VT100KeyModifiersIR::default(),
         );
 
         match result {
@@ -317,15 +318,15 @@ mod tests {
     fn test_convert_arrow_keys() {
         // Test all arrow keys
         let test_cases = vec![
-            (VT100KeyCode::Up, SpecialKey::Up),
-            (VT100KeyCode::Down, SpecialKey::Down),
-            (VT100KeyCode::Left, SpecialKey::Left),
-            (VT100KeyCode::Right, SpecialKey::Right),
+            (VT100KeyCodeIR::Up, SpecialKey::Up),
+            (VT100KeyCodeIR::Down, SpecialKey::Down),
+            (VT100KeyCodeIR::Left, SpecialKey::Left),
+            (VT100KeyCodeIR::Right, SpecialKey::Right),
         ];
 
         for (vt100_code, expected_special_key) in test_cases {
             let result =
-                convert_key_code_to_keypress(vt100_code, VT100KeyModifiers::default());
+                convert_key_code_to_keypress(vt100_code, VT100KeyModifiersIR::default());
 
             match result {
                 KeyPress::Plain {
@@ -342,15 +343,15 @@ mod tests {
     fn test_convert_navigation_keys() {
         // Test navigation keys (Home, End, PageUp, PageDown)
         let test_cases = vec![
-            (VT100KeyCode::Home, SpecialKey::Home),
-            (VT100KeyCode::End, SpecialKey::End),
-            (VT100KeyCode::PageUp, SpecialKey::PageUp),
-            (VT100KeyCode::PageDown, SpecialKey::PageDown),
+            (VT100KeyCodeIR::Home, SpecialKey::Home),
+            (VT100KeyCodeIR::End, SpecialKey::End),
+            (VT100KeyCodeIR::PageUp, SpecialKey::PageUp),
+            (VT100KeyCodeIR::PageDown, SpecialKey::PageDown),
         ];
 
         for (vt100_code, expected_special_key) in test_cases {
             let result =
-                convert_key_code_to_keypress(vt100_code, VT100KeyModifiers::default());
+                convert_key_code_to_keypress(vt100_code, VT100KeyModifiersIR::default());
 
             match result {
                 KeyPress::Plain {
@@ -367,16 +368,16 @@ mod tests {
     fn test_convert_editing_keys() {
         // Test editing keys (Insert, Delete, Backspace, Enter, Esc)
         let test_cases = vec![
-            (VT100KeyCode::Insert, SpecialKey::Insert),
-            (VT100KeyCode::Delete, SpecialKey::Delete),
-            (VT100KeyCode::Backspace, SpecialKey::Backspace),
-            (VT100KeyCode::Enter, SpecialKey::Enter),
-            (VT100KeyCode::Escape, SpecialKey::Esc),
+            (VT100KeyCodeIR::Insert, SpecialKey::Insert),
+            (VT100KeyCodeIR::Delete, SpecialKey::Delete),
+            (VT100KeyCodeIR::Backspace, SpecialKey::Backspace),
+            (VT100KeyCodeIR::Enter, SpecialKey::Enter),
+            (VT100KeyCodeIR::Escape, SpecialKey::Esc),
         ];
 
         for (vt100_code, expected_special_key) in test_cases {
             let result =
-                convert_key_code_to_keypress(vt100_code, VT100KeyModifiers::default());
+                convert_key_code_to_keypress(vt100_code, VT100KeyModifiersIR::default());
 
             match result {
                 KeyPress::Plain {
@@ -393,13 +394,13 @@ mod tests {
     fn test_convert_tab_keys() {
         // Test Tab and BackTab (Shift+Tab)
         let test_cases = vec![
-            (VT100KeyCode::Tab, SpecialKey::Tab),
-            (VT100KeyCode::BackTab, SpecialKey::BackTab),
+            (VT100KeyCodeIR::Tab, SpecialKey::Tab),
+            (VT100KeyCodeIR::BackTab, SpecialKey::BackTab),
         ];
 
         for (vt100_code, expected_special_key) in test_cases {
             let result =
-                convert_key_code_to_keypress(vt100_code, VT100KeyModifiers::default());
+                convert_key_code_to_keypress(vt100_code, VT100KeyModifiersIR::default());
 
             match result {
                 KeyPress::Plain {
@@ -415,13 +416,13 @@ mod tests {
     #[test]
     fn test_convert_with_shift_modifier() {
         // Test key with Shift modifier
-        let modifiers = VT100KeyModifiers {
+        let modifiers = VT100KeyModifiersIR {
             shift: KeyState::Pressed,
             ctrl: KeyState::NotPressed,
             alt: KeyState::NotPressed,
         };
 
-        let result = convert_key_code_to_keypress(VT100KeyCode::Char('a'), modifiers);
+        let result = convert_key_code_to_keypress(VT100KeyCodeIR::Char('a'), modifiers);
 
         match result {
             KeyPress::WithModifiers { key, mask } => {
@@ -437,13 +438,13 @@ mod tests {
     #[test]
     fn test_convert_with_ctrl_modifier() {
         // Test key with Ctrl modifier
-        let modifiers = VT100KeyModifiers {
+        let modifiers = VT100KeyModifiersIR {
             shift: KeyState::NotPressed,
             ctrl: KeyState::Pressed,
             alt: KeyState::NotPressed,
         };
 
-        let result = convert_key_code_to_keypress(VT100KeyCode::Char('c'), modifiers);
+        let result = convert_key_code_to_keypress(VT100KeyCodeIR::Char('c'), modifiers);
 
         match result {
             KeyPress::WithModifiers { key, mask } => {
@@ -459,13 +460,13 @@ mod tests {
     #[test]
     fn test_convert_with_alt_modifier() {
         // Test key with Alt modifier
-        let modifiers = VT100KeyModifiers {
+        let modifiers = VT100KeyModifiersIR {
             shift: KeyState::NotPressed,
             ctrl: KeyState::NotPressed,
             alt: KeyState::Pressed,
         };
 
-        let result = convert_key_code_to_keypress(VT100KeyCode::Left, modifiers);
+        let result = convert_key_code_to_keypress(VT100KeyCodeIR::Left, modifiers);
 
         match result {
             KeyPress::WithModifiers { key, mask } => {
@@ -481,13 +482,13 @@ mod tests {
     #[test]
     fn test_convert_with_multiple_modifiers() {
         // Test key with Ctrl+Shift+Alt
-        let modifiers = VT100KeyModifiers {
+        let modifiers = VT100KeyModifiersIR {
             shift: KeyState::Pressed,
             ctrl: KeyState::Pressed,
             alt: KeyState::Pressed,
         };
 
-        let result = convert_key_code_to_keypress(VT100KeyCode::Function(5), modifiers);
+        let result = convert_key_code_to_keypress(VT100KeyCodeIR::Function(5), modifiers);
 
         match result {
             KeyPress::WithModifiers { key, mask } => {
@@ -508,17 +509,17 @@ mod tests {
     fn test_convert_mouse_buttons() {
         // Test all mouse button types
         let test_cases = vec![
-            (VT100MouseButton::Left, Button::Left),
-            (VT100MouseButton::Right, Button::Right),
-            (VT100MouseButton::Middle, Button::Middle),
+            (VT100MouseButtonIR::Left, Button::Left),
+            (VT100MouseButtonIR::Right, Button::Right),
+            (VT100MouseButtonIR::Middle, Button::Middle),
         ];
 
         for (vt100_button, expected_button) in test_cases {
-            let vt100_event = VT100InputEvent::Mouse {
+            let vt100_event = VT100InputEventIR::Mouse {
                 button: vt100_button,
                 pos: TermPos::from_one_based(1, 1),
-                action: VT100MouseAction::Press,
-                modifiers: VT100KeyModifiers::default(),
+                action: VT100MouseActionIR::Press,
+                modifiers: VT100KeyModifiersIR::default(),
             };
 
             let result = convert_input_event(vt100_event);
@@ -537,11 +538,11 @@ mod tests {
     #[test]
     fn test_convert_mouse_unknown_button() {
         // Test that Unknown button returns None
-        let vt100_event = VT100InputEvent::Mouse {
-            button: VT100MouseButton::Unknown,
+        let vt100_event = VT100InputEventIR::Mouse {
+            button: VT100MouseButtonIR::Unknown,
             pos: TermPos::from_one_based(1, 1),
-            action: VT100MouseAction::Press,
-            modifiers: VT100KeyModifiers::default(),
+            action: VT100MouseActionIR::Press,
+            modifiers: VT100KeyModifiersIR::default(),
         };
 
         let result = convert_input_event(vt100_event);
@@ -551,14 +552,14 @@ mod tests {
     #[test]
     fn test_convert_mouse_actions() {
         // Test all mouse action types
-        let button = VT100MouseButton::Left;
+        let button = VT100MouseButtonIR::Left;
 
         // Press
-        let vt100_event = VT100InputEvent::Mouse {
+        let vt100_event = VT100InputEventIR::Mouse {
             button,
             pos: TermPos::from_one_based(1, 1),
-            action: VT100MouseAction::Press,
-            modifiers: VT100KeyModifiers::default(),
+            action: VT100MouseActionIR::Press,
+            modifiers: VT100KeyModifiersIR::default(),
         };
         match convert_input_event(vt100_event) {
             Some(InputEvent::Mouse(mouse_input)) => {
@@ -571,11 +572,11 @@ mod tests {
         }
 
         // Release
-        let vt100_event = VT100InputEvent::Mouse {
+        let vt100_event = VT100InputEventIR::Mouse {
             button,
             pos: TermPos::from_one_based(1, 1),
-            action: VT100MouseAction::Release,
-            modifiers: VT100KeyModifiers::default(),
+            action: VT100MouseActionIR::Release,
+            modifiers: VT100KeyModifiersIR::default(),
         };
         match convert_input_event(vt100_event) {
             Some(InputEvent::Mouse(mouse_input)) => {
@@ -588,11 +589,11 @@ mod tests {
         }
 
         // Drag
-        let vt100_event = VT100InputEvent::Mouse {
+        let vt100_event = VT100InputEventIR::Mouse {
             button,
             pos: TermPos::from_one_based(1, 1),
-            action: VT100MouseAction::Drag,
-            modifiers: VT100KeyModifiers::default(),
+            action: VT100MouseActionIR::Drag,
+            modifiers: VT100KeyModifiersIR::default(),
         };
         match convert_input_event(vt100_event) {
             Some(InputEvent::Mouse(mouse_input)) => {
@@ -605,11 +606,11 @@ mod tests {
         }
 
         // Motion
-        let vt100_event = VT100InputEvent::Mouse {
+        let vt100_event = VT100InputEventIR::Mouse {
             button,
             pos: TermPos::from_one_based(1, 1),
-            action: VT100MouseAction::Motion,
-            modifiers: VT100KeyModifiers::default(),
+            action: VT100MouseActionIR::Motion,
+            modifiers: VT100KeyModifiersIR::default(),
         };
         match convert_input_event(vt100_event) {
             Some(InputEvent::Mouse(mouse_input)) => {
@@ -623,18 +624,18 @@ mod tests {
     fn test_convert_mouse_scroll_directions() {
         // Test all scroll directions
         let test_cases = vec![
-            (VT100ScrollDirection::Up, MouseInputKind::ScrollUp),
-            (VT100ScrollDirection::Down, MouseInputKind::ScrollDown),
-            (VT100ScrollDirection::Left, MouseInputKind::ScrollLeft),
-            (VT100ScrollDirection::Right, MouseInputKind::ScrollRight),
+            (VT100ScrollDirectionIR::Up, MouseInputKind::ScrollUp),
+            (VT100ScrollDirectionIR::Down, MouseInputKind::ScrollDown),
+            (VT100ScrollDirectionIR::Left, MouseInputKind::ScrollLeft),
+            (VT100ScrollDirectionIR::Right, MouseInputKind::ScrollRight),
         ];
 
         for (vt100_dir, expected_kind) in test_cases {
-            let vt100_event = VT100InputEvent::Mouse {
-                button: VT100MouseButton::Left,
+            let vt100_event = VT100InputEventIR::Mouse {
+                button: VT100MouseButtonIR::Left,
                 pos: TermPos::from_one_based(1, 1),
-                action: VT100MouseAction::Scroll(vt100_dir),
-                modifiers: VT100KeyModifiers::default(),
+                action: VT100MouseActionIR::Scroll(vt100_dir),
+                modifiers: VT100KeyModifiersIR::default(),
             };
 
             match convert_input_event(vt100_event) {
@@ -656,11 +657,11 @@ mod tests {
         ];
 
         for (term_pos, expected_pos) in test_cases {
-            let vt100_event = VT100InputEvent::Mouse {
-                button: VT100MouseButton::Left,
+            let vt100_event = VT100InputEventIR::Mouse {
+                button: VT100MouseButtonIR::Left,
                 pos: term_pos,
-                action: VT100MouseAction::Press,
-                modifiers: VT100KeyModifiers::default(),
+                action: VT100MouseActionIR::Press,
+                modifiers: VT100KeyModifiersIR::default(),
             };
 
             match convert_input_event(vt100_event) {
@@ -679,16 +680,16 @@ mod tests {
     #[test]
     fn test_convert_mouse_with_modifiers() {
         // Test mouse event with Shift modifier
-        let modifiers = VT100KeyModifiers {
+        let modifiers = VT100KeyModifiersIR {
             shift: KeyState::Pressed,
             ctrl: KeyState::NotPressed,
             alt: KeyState::NotPressed,
         };
 
-        let vt100_event = VT100InputEvent::Mouse {
-            button: VT100MouseButton::Left,
+        let vt100_event = VT100InputEventIR::Mouse {
+            button: VT100MouseButtonIR::Left,
             pos: TermPos::from_one_based(1, 1),
-            action: VT100MouseAction::Press,
+            action: VT100MouseActionIR::Press,
             modifiers,
         };
 
@@ -707,11 +708,11 @@ mod tests {
     #[test]
     fn test_convert_mouse_without_modifiers() {
         // Test mouse event with no modifiers (should have None for maybe_modifier_keys)
-        let vt100_event = VT100InputEvent::Mouse {
-            button: VT100MouseButton::Left,
+        let vt100_event = VT100InputEventIR::Mouse {
+            button: VT100MouseButtonIR::Left,
             pos: TermPos::from_one_based(1, 1),
-            action: VT100MouseAction::Press,
-            modifiers: VT100KeyModifiers::default(),
+            action: VT100MouseActionIR::Press,
+            modifiers: VT100KeyModifiersIR::default(),
         };
 
         match convert_input_event(vt100_event) {
@@ -733,7 +734,7 @@ mod tests {
         let test_cases = vec![(80, 24), (120, 40), (1, 1), (200, 60)];
 
         for (cols, rows) in test_cases {
-            let vt100_event = VT100InputEvent::Resize {
+            let vt100_event = VT100InputEventIR::Resize {
                 col_width: ColWidth::from(cols),
                 row_height: RowHeight::from(rows),
             };
@@ -761,7 +762,7 @@ mod tests {
     #[test]
     fn test_convert_focus_gained() {
         // Test focus gained event
-        let vt100_event = VT100InputEvent::Focus(VT100FocusState::Gained);
+        let vt100_event = VT100InputEventIR::Focus(VT100FocusStateIR::Gained);
 
         match convert_input_event(vt100_event) {
             Some(InputEvent::Focus(FocusEvent::Gained)) => {
@@ -774,7 +775,7 @@ mod tests {
     #[test]
     fn test_convert_focus_lost() {
         // Test focus lost event
-        let vt100_event = VT100InputEvent::Focus(VT100FocusState::Lost);
+        let vt100_event = VT100InputEventIR::Focus(VT100FocusStateIR::Lost);
 
         match convert_input_event(vt100_event) {
             Some(InputEvent::Focus(FocusEvent::Lost)) => {
@@ -789,9 +790,9 @@ mod tests {
     #[test]
     fn test_convert_keyboard_event() {
         // Test full keyboard event conversion path
-        let vt100_event = VT100InputEvent::Keyboard {
-            code: VT100KeyCode::Char('x'),
-            modifiers: VT100KeyModifiers {
+        let vt100_event = VT100InputEventIR::Keyboard {
+            code: VT100KeyCodeIR::Char('x'),
+            modifiers: VT100KeyModifiersIR {
                 shift: KeyState::NotPressed,
                 ctrl: KeyState::Pressed,
                 alt: KeyState::NotPressed,

@@ -2,8 +2,9 @@
 
 use super::protocol_conversion::convert_input_event;
 use crate::{ByteIndex, ByteOffset, InputDeviceExt, InputEvent,
-            core::ansi::vt_100_terminal_input_parser::{VT100InputEvent, VT100KeyCode,
-                                                       VT100PasteMode,
+            core::ansi::vt_100_terminal_input_parser::{VT100InputEventIR,
+                                                       VT100KeyCodeIR,
+                                                       VT100PasteModeIR,
                                                        try_parse_input_event}};
 use smallvec::SmallVec;
 
@@ -68,19 +69,19 @@ const STDIN_READ_BUFFER_SIZE: usize = 256;
 /// │   • Paste state machine: Collecting bracketed paste text        │
 /// └────────────────────────────┬────────────────────────────────────┘
 ///                              │
-/// ┌────────────────────────────▼────────────────────────────────────┐
-/// │ vt_100_terminal_input_parser/ (Protocol Layer - IR)             │
-/// │   try_parse_input_event() dispatches to:                        │
-/// │   ├─ parse_keyboard_sequence() → VT100InputEvent::Keyboard      │
-/// │   ├─ parse_mouse_sequence()    → VT100InputEvent::Mouse         │
-/// │   ├─ parse_terminal_event()    → VT100InputEvent::Focus/Resize  │
-/// │   └─ parse_utf8_text()         → VT100InputEvent::Keyboard      │
-/// └────────────────────────────┬────────────────────────────────────┘
+/// ┌────────────────────────────▼─────────────────────────────────────┐
+/// │ vt_100_terminal_input_parser/ (Protocol Layer - IR)              │
+/// │   try_parse_input_event() dispatches to:                         │
+/// │   ├─ parse_keyboard_sequence() → VT100InputEventIR::Keyboard     │
+/// │   ├─ parse_mouse_sequence()    → VT100InputEventIR::Mouse        │
+/// │   ├─ parse_terminal_event()    → VT100InputEventIR::Focus/Resize │
+/// │   └─ parse_utf8_text()         → VT100InputEventIR::Keyboard     │
+/// └────────────────────────────┬─────────────────────────────────────┘
 ///                              │
 /// ┌────────────────────────────▼────────────────────────────────────┐
 /// │ protocol_conversion.rs (IR → Public API)                        │
-/// │   convert_input_event()       VT100InputEvent → InputEvent      │
-/// │   convert_key_code_to_keypress()  VT100KeyCode → KeyPress       │
+/// │   convert_input_event()       VT100InputEventIR → InputEvent    │
+/// │   convert_key_code_to_keypress()  VT100KeyCodeIR → KeyPress     │
 /// └────────────────────────────┬────────────────────────────────────┘
 ///                              │
 /// ┌────────────────────────────▼────────────────────────────────────┐
@@ -368,7 +369,7 @@ impl DirectToAnsiInputDevice {
                     // Start marker: enter collecting state, don't emit event
                     (
                         state @ PasteCollectionState::Inactive,
-                        VT100InputEvent::Paste(VT100PasteMode::Start),
+                        VT100InputEventIR::Paste(VT100PasteModeIR::Start),
                     ) => {
                         *state = PasteCollectionState::Accumulating(String::new());
                         continue; // Loop to get next event
@@ -377,8 +378,8 @@ impl DirectToAnsiInputDevice {
                     // While collecting: accumulate keyboard characters
                     (
                         PasteCollectionState::Accumulating(buffer),
-                        VT100InputEvent::Keyboard {
-                            code: VT100KeyCode::Char(ch),
+                        VT100InputEventIR::Keyboard {
+                            code: VT100KeyCodeIR::Char(ch),
                             ..
                         },
                     ) => {
@@ -391,7 +392,7 @@ impl DirectToAnsiInputDevice {
                     // End marker: emit complete paste and exit collecting state
                     (
                         state @ PasteCollectionState::Accumulating(_),
-                        VT100InputEvent::Paste(VT100PasteMode::End),
+                        VT100InputEventIR::Paste(VT100PasteModeIR::End),
                     ) => {
                         // Swap out `&mut state` to `Inactive` to get ownership of what is
                         // currently there, then extract accumulated text.
@@ -408,7 +409,7 @@ impl DirectToAnsiInputDevice {
                     // Orphaned end marker (End without Start): emit empty paste
                     (
                         PasteCollectionState::Inactive,
-                        VT100InputEvent::Paste(VT100PasteMode::End),
+                        VT100InputEventIR::Paste(VT100PasteModeIR::End),
                     ) => {
                         return Some(InputEvent::BracketedPaste(String::new()));
                     }
@@ -490,7 +491,7 @@ impl InputDeviceExt for DirectToAnsiInputDevice {
 mod tests {
     use super::*;
     use crate::{byte_offset,
-                core::ansi::vt_100_terminal_input_parser::{VT100KeyModifiers,
+                core::ansi::vt_100_terminal_input_parser::{VT100KeyModifiersIR,
                                                            parse_keyboard_sequence,
                                                            parse_utf8_text}};
 
@@ -627,12 +628,12 @@ mod tests {
         assert!(matches!(device.paste_state, PasteCollectionState::Inactive));
 
         // Simulate receiving Paste(Start) event
-        let start_event = VT100InputEvent::Paste(VT100PasteMode::Start);
+        let start_event = VT100InputEventIR::Paste(VT100PasteModeIR::Start);
         // Apply state machine logic (simulating what read_event does)
         match (&mut device.paste_state, &start_event) {
             (
                 state @ PasteCollectionState::Inactive,
-                VT100InputEvent::Paste(VT100PasteMode::Start),
+                VT100InputEventIR::Paste(VT100PasteModeIR::Start),
             ) => {
                 *state = PasteCollectionState::Accumulating(String::new());
             }
@@ -647,15 +648,15 @@ mod tests {
 
         // Simulate receiving keyboard events (the pasted text)
         for ch in &['H', 'e', 'l', 'l', 'o'] {
-            let keyboard_event = VT100InputEvent::Keyboard {
-                code: VT100KeyCode::Char(*ch),
-                modifiers: VT100KeyModifiers::default(),
+            let keyboard_event = VT100InputEventIR::Keyboard {
+                code: VT100KeyCodeIR::Char(*ch),
+                modifiers: VT100KeyModifiersIR::default(),
             };
             match (&mut device.paste_state, &keyboard_event) {
                 (
                     PasteCollectionState::Accumulating(buffer),
-                    VT100InputEvent::Keyboard {
-                        code: VT100KeyCode::Char(ch),
+                    VT100InputEventIR::Keyboard {
+                        code: VT100KeyCodeIR::Char(ch),
                         ..
                     },
                 ) => {
@@ -666,11 +667,11 @@ mod tests {
         }
 
         // Simulate receiving Paste(End) event
-        let end_event = VT100InputEvent::Paste(VT100PasteMode::End);
+        let end_event = VT100InputEventIR::Paste(VT100PasteModeIR::End);
         let collected_text = match (&mut device.paste_state, &end_event) {
             (
                 state @ PasteCollectionState::Accumulating(_),
-                VT100InputEvent::Paste(VT100PasteMode::End),
+                VT100InputEventIR::Paste(VT100PasteModeIR::End),
             ) => {
                 if let PasteCollectionState::Accumulating(text) =
                     std::mem::replace(state, PasteCollectionState::Inactive)
@@ -739,11 +740,11 @@ mod tests {
         assert!(matches!(device.paste_state, PasteCollectionState::Inactive));
 
         // Receive End marker without Start - should emit empty paste
-        let end_event = VT100InputEvent::Paste(VT100PasteMode::End);
+        let end_event = VT100InputEventIR::Paste(VT100PasteModeIR::End);
         let result = match (&mut device.paste_state, &end_event) {
             (
                 PasteCollectionState::Inactive,
-                VT100InputEvent::Paste(VT100PasteMode::End),
+                VT100InputEventIR::Paste(VT100PasteModeIR::End),
             ) => Some(InputEvent::BracketedPaste(String::new())),
             _ => None,
         };

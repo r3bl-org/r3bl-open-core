@@ -1,8 +1,8 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use crate::{Deadline, InputEvent,
-            core::ansi::vt_100_terminal_input_parser::{ir_event_types::{VT100FocusState,
-                                                                        VT100InputEvent},
+            core::ansi::vt_100_terminal_input_parser::{ir_event_types::{VT100FocusStateIR,
+                                                                        VT100InputEventIR},
                                                        test_fixtures::generate_keyboard_sequence},
             generate_pty_test,
             tui::terminal_lib_backends::direct_to_ansi::DirectToAnsiInputDevice};
@@ -90,16 +90,19 @@ fn pty_master_entry_point(
     let events = vec![
         (
             "Window Resize",
-            VT100InputEvent::Resize {
+            VT100InputEventIR::Resize {
                 row_height: crate::RowHeight::from(24),
                 col_width: crate::ColWidth::from(80),
             },
         ),
         (
             "Focus Gained",
-            VT100InputEvent::Focus(VT100FocusState::Gained),
+            VT100InputEventIR::Focus(VT100FocusStateIR::Gained),
         ),
-        ("Focus Lost", VT100InputEvent::Focus(VT100FocusState::Lost)),
+        (
+            "Focus Lost",
+            VT100InputEventIR::Focus(VT100FocusStateIR::Lost),
+        ),
     ];
 
     eprintln!("📝 PTY Master: Sending {} terminal events...", events.len());

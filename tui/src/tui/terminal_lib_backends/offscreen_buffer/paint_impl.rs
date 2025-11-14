@@ -6,7 +6,10 @@
 //! [`OffscreenBuffer`] (produced by the Compositor in Stage 3) into optimized
 //! [`RenderOpOutputVec`] operations for backend execution.
 //!
-//! ## Why This Lives in `offscreen_buffer/`
+//! > **For the complete 6-stage rendering pipeline with visual diagrams and stage
+//! > reference table**, see the [`render_pipeline` mod docs].
+//!
+//! ## Why This Lives in [`offscreen_buffer/`]
 //!
 //! Stage 4 is fundamentally an **OffscreenBuffer operation**:
 //! - It reads FROM the buffer (like other buffer operations)
@@ -44,12 +47,14 @@
 //! This stage is crucial for performance: by diffing buffers, only changed pixels are
 //! rendered in subsequent frames, eliminating unnecessary terminal updates.
 //!
-//! [`diff_chunks`]: mod@crate::tui::terminal_lib_backends::offscreen_buffer::diff_chunks
 //! [`OffscreenBuffer`]: crate::OffscreenBuffer
 //! [`RenderOpOutputVec`]: crate::RenderOpOutputVec
 //! [`RenderOpsLocalData`]: crate::RenderOpsLocalData
 //! [`crossterm_backend` mod docs]: mod@crate::tui::terminal_lib_backends::crossterm_backend
+//! [`diff_chunks`]: mod@crate::tui::terminal_lib_backends::offscreen_buffer::diff_chunks
 //! [`direct_to_ansi` mod docs]: mod@crate::tui::terminal_lib_backends::direct_to_ansi
+//! [`render_pipeline` mod docs]: mod@crate::tui::terminal_lib_backends::render_pipeline
+//! [`offscreen_buffer/`]: mod@crate::tui::terminal_lib_backends::offscreen_buffer
 
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 use crate::{ColIndex, DEBUG_TUI_COMPOSITOR, DEBUG_TUI_SHOW_PIPELINE, FlushKind,
@@ -77,7 +82,7 @@ impl OffscreenBufferPaint for OffscreenBufferPaintImplCrossterm {
             PaintRenderOpImplCrossterm.clear_before_flush(locked_output_device);
         }
 
-        // Execute each RenderOp using the ExecutableRenderOps trait.
+        // Execute each RenderOpOutput using the ExecutableRenderOps trait.
         render_ops.execute_all(
             &mut skip_flush,
             window_size,
@@ -109,7 +114,7 @@ impl OffscreenBufferPaint for OffscreenBufferPaintImplCrossterm {
     ) {
         let mut skip_flush = false;
 
-        // Execute each RenderOp using the ExecutableRenderOps trait.
+        // Execute each RenderOpOutput using the ExecutableRenderOps trait.
         render_ops.execute_all(
             &mut skip_flush,
             window_size,
@@ -337,7 +342,8 @@ mod render_helper {
     }
 
     pub fn flush_plain_text_line_buffer(context: &mut Context) {
-        // Generate `RenderOpsOutput` for each `PixelChar` and add it to `render_ops`.
+        // Generate `RenderOpOutput` operations for each `PixelChar` and add it to
+        // `render_ops`.
         let pos = context.display_col_index_for_line + context.display_row_index;
 
         // Deal w/ position.
@@ -428,7 +434,7 @@ mod tests {
 
         // Output:
         // render_ops:
-        // - RenderOps.len(): 10
+        // - RenderOpOutputVec.len(): 10
         // - [ResetColor]
         // - [SetFgColor(green)]
         // - [SetBgColor(blue)]

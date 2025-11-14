@@ -235,6 +235,8 @@ pub enum BracketedPasteState {
 ///
 /// Used by render pipeline and ANSI parser performer to maintain complete
 /// terminal state information.
+///
+/// [`RenderOpCommon`]: enum@crate::RenderOpCommon
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TerminalModeState {
     /// Raw mode status (POSIX non-canonical mode).
@@ -244,8 +246,10 @@ pub struct TerminalModeState {
     /// need immediate character feedback.
     ///
     /// Set via:
-    /// - `RenderOp::EnterRawMode` (enables)
-    /// - `RenderOp::ExitRawMode` (disables)
+    /// - [`RenderOpCommon`] variant `EnterRawMode` (enables)
+    /// - [`RenderOpCommon`] variant `ExitRawMode` (disables)
+    ///
+    /// [`RenderOpCommon`]: enum@crate::RenderOpCommon
     pub raw_mode: RawModeState,
 
     /// Alternate screen buffer status.
@@ -255,8 +259,10 @@ pub struct TerminalModeState {
     /// applications (vim, less, etc.) to avoid cluttering the shell history.
     ///
     /// Set via:
-    /// - `RenderOp::EnterAlternateScreen` (activates)
-    /// - `RenderOp::ExitAlternateScreen` (deactivates)
+    /// - [`RenderOpCommon`] variant `EnterAlternateScreen` (activates)
+    /// - [`RenderOpCommon`] variant `ExitAlternateScreen` (deactivates)
+    ///
+    /// [`RenderOpCommon`]: enum@crate::RenderOpCommon
     pub alternate_screen: AlternateScreenState,
 
     /// Mouse event tracking status.
@@ -265,8 +271,10 @@ pub struct TerminalModeState {
     /// This enables interactive mouse support in TUI applications.
     ///
     /// Set via:
-    /// - `RenderOp::EnableMouseTracking` (enables)
-    /// - `RenderOp::DisableMouseTracking` (disables)
+    /// - [`RenderOpCommon`] variant `EnableMouseTracking` (enables)
+    /// - [`RenderOpCommon`] variant `DisableMouseTracking` (disables)
+    ///
+    /// [`RenderOpCommon`]: enum@crate::RenderOpCommon
     pub mouse_tracking: MouseTrackingState,
 
     /// Bracketed paste mode status.
@@ -276,8 +284,10 @@ pub struct TerminalModeState {
     /// keyboard input. This prevents misinterpretation of pasted content.
     ///
     /// Set via:
-    /// - `RenderOp::EnableBracketedPaste` (enables)
-    /// - `RenderOp::DisableBracketedPaste` (disables)
+    /// - [`RenderOpCommon`] variant `EnableBracketedPaste` (enables)
+    /// - [`RenderOpCommon`] variant `DisableBracketedPaste` (disables)
+    ///
+    /// [`RenderOpCommon`]: enum@crate::RenderOpCommon
     pub bracketed_paste: BracketedPasteState,
 }
 
@@ -299,14 +309,13 @@ impl Default for TerminalModeState {
 /// Core terminal screen buffer structure with VT100/ANSI support.
 ///
 /// For comprehensive architectural overview and integration details, see the
-/// [module documentation](super).
+/// [module documentation].
 ///
 /// This struct represents the main terminal screen buffer as a 2D grid where each
 /// cell maps directly to a terminal screen position. It handles variable-width
 /// characters (like emoji) using [`PixelChar::Void`] placeholders.
 ///
 /// ## Key Features
-///
 /// - **Dual Integration**: Works with both render pipeline and ANSI terminal emulation
 /// - **Variable-ColWidth Support**: Proper handling of emoji and Unicode characters
 /// - **VT100 Compliance**: Full terminal specification compliance
@@ -318,9 +327,12 @@ impl Default for TerminalModeState {
 /// - **Core Buffer**: The 2D grid and window dimensions
 /// - **Cursor Management**: Primary cursor position for all subsystems
 /// - **Terminal Mode State**: Tracking of terminal control modes (raw, alternate screen,
-///   etc.)
+/// etc.)
 /// - **ANSI Support**: Terminal state for escape sequence processing
 /// - **Performance**: Pre-calculated memory usage tracking
+///
+/// [`RenderOpCommon`]: enum@crate::RenderOpCommon
+/// [module documentation]: super
 #[derive(Clone, PartialEq)]
 pub struct OffscreenBuffer {
     // The actual 2D grid of pixel characters representing the terminal screen.
@@ -333,8 +345,8 @@ pub struct OffscreenBuffer {
     ///
     /// This is the primary cursor position tracker for the entire offscreen buffer
     /// system, used by multiple subsystems:
-    /// - **Render pipeline**: Updated when processing
-    ///   `RenderOp::MoveCursorPositionAbs/RelTo`
+    /// - **Render pipeline**: Updated when processing [`RenderOpCommon`] variants
+    ///   `MoveCursorPositionAbs` and `MoveCursorPositionRelTo`
     /// - **Text rendering**: Starting position for `print_text_with_attributes()`
     /// - **ANSI parser**: Directly reads from and writes to this position during
     ///   sequence processing
@@ -343,6 +355,7 @@ pub struct OffscreenBuffer {
     /// Note: This is different from [`cursor_pos_for_esc_save_and_restore`] which is
     /// only used for DECSC/DECRC (ESC 7/8) save/restore operations.
     ///
+    /// [`RenderOpCommon`]: enum@crate::RenderOpCommon
     /// [`cursor_pos_for_esc_save_and_restore`]: AnsiParserSupport::cursor_pos_for_esc_save_and_restore
     pub cursor_pos: Pos,
 

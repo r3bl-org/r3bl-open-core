@@ -93,6 +93,7 @@
 //! - [Grapheme support](#grapheme-support)
 //!   - [The Challenge](#the-challenge)
 //!   - [The Solution: Three Index Types](#the-solution-three-index-types)
+//!     - [Visual Example](#visual-example)
 //!   - [Type-Safe String Handling](#type-safe-string-handling)
 //!   - [Key Features](#key-features-1)
 //!   - [Learn More](#learn-more-1)
@@ -111,12 +112,23 @@
 //!   mgmt](#component-registry-event-routing-focus-mgmt)
 //! - [Input event specificity](#input-event-specificity)
 //! - [Rendering and painting](#rendering-and-painting)
+//!   - [Dual Rendering Paths](#dual-rendering-paths)
+//!     - [Path 1: Composed Component Pipeline (Complex, Responsive Layouts and Full
+//!       TUI)](#path-1-composed-component-pipeline-complex-responsive-layouts-and-full-tui)
+//!     - [Path 2: Direct Interactive Path (Simple CLI, Hybrid/Partial-TUI)](#
+//!       path-2-direct-interactive-path-simple-cli-hybridpartial-tui)
+//!   - [Unified ANSI Generation:
+//!     `PixelCharRenderer`](#unified-ansi-generation-pixelcharrenderer)
+//!   - [`CliTextInline`: Styled Text Fragments](#clitextinline-styled-text-fragments)
+//!   - [`OutputDevice`: Thread-Safe Terminal
+//!     Output](#outputdevice-thread-safe-terminal-output)
 //!   - [Offscreen buffer](#offscreen-buffer)
-//!   - [Complete Rendering Pipeline
-//!     Architecture](#complete-rendering-pipeline-architecture)
-//!   - [Render pipeline](#render-pipeline)
-//!   - [First render](#first-render)
-//!   - [Subsequent render](#subsequent-render)
+//!   - [Complete Rendering Pipeline Architecture (Path 1: Composed Component Pipeline)](#
+//!     complete-rendering-pipeline-architecture-path-1-composed-component-pipeline)
+//!   - [Render pipeline (Path 1: Composed Component
+//!     Pipeline)](#render-pipeline-path-1-composed-component-pipeline)
+//!   - [First render (Path 1)](#first-render-path-1)
+//!   - [Subsequent render (Path 1)](#subsequent-render-path-1)
 //! - [How does the editor component work?](#how-does-the-editor-component-work)
 //!   - [Zero-Copy Gap Buffer for High
 //!     Performance](#zero-copy-gap-buffer-for-high-performance)
@@ -204,8 +216,10 @@
 //!   - CSS like declarative styling engine.
 //!   - CSS like flexbox like declarative layout engine which is fully responsive. You can
 //!     resize your terminal window and everything will be laid out correctly.
-//!   - A terminal independent underlying rendering and painting engine (can use crossterm
-//!     or termion or whatever you want).
+//!   - A terminal independent underlying rendering and painting engine (can use Crossterm
+//!     or DirectToAnsi backends). The DirectToAnsi backend is part of this R3BL TUI crate
+//!     and is the default on Linux, with no reliance on Crossterm at all. We plan to roll
+//!     this out to macOS and Windows.
 //!   - Markdown text editor with syntax highlighting support, metadata (tags, title,
 //!     author, date), smart lists. This uses a custom Markdown parser and custom syntax
 //!     highlighter. Syntax highlighting for code blocks is provided by the syntect crate.
@@ -1117,7 +1131,8 @@
 //! - **Use Case**: Full-screen interactive applications, responsive layouts, complex
 //!   hierarchies
 //! - **Example**: Full-featured text editor, dashboard app, terminal multiplexer
-//! - **Pipeline**: `RenderOpsIR` → `OffscreenBuffer` → (diff) → `RenderOpsOutput` →
+//! - **Pipeline**: [`RenderOpIRVec`] → [`OffscreenBuffer`] → (diff) →
+//!   [`RenderOpOutputVec`] → [`PixelChar`] array → [`PixelCharRenderer`] → ANSI bytes →
 //!   Terminal
 //! - **Benefits**:
 //!   - **High performance** through diff-based optimization (only changed pixels to
@@ -1132,22 +1147,22 @@
 //!
 //! - **Use Case**: Simple interactive prompts, CLI tools with basic interaction,
 //!   partial-TUI
-//! - **Example**: Readline input, interactive selection menus (`choose()`), form inputs
-//! - **Pipeline**: `CliTextInline` → `PixelChar[]` → `PixelCharRenderer` → ANSI bytes →
-//!   Terminal
+//! - **Example**: Readline input, interactive selection menus ([`choose()`]), form inputs
+//! - **Pipeline**: [`CliTextInline`] → [`PixelChar`] array → [`PixelCharRenderer`] → ANSI
+//!   bytes → Terminal
 //! - **Benefits**:
 //!   - **Simple, straightforward architecture** - easy to understand and maintain
 //!   - **Minimal setup cost** - no buffer allocation or diff machinery
 //!   - **Good for one-off interactions** - quick responses without composition overhead
 //! - **Trade-off**: Limited to simple interactive scenarios, no complex composition
 //!
-//! ## Unified ANSI Generation: `PixelCharRenderer`
+//! ## Unified ANSI Generation: [`PixelCharRenderer`]
 //!
 //! Both rendering paths ultimately need to convert styled text into ANSI escape
 //! sequences. The [`PixelCharRenderer`] handles this conversion in a unified way across
 //! both paths:
 //!
-//! - **Input**: `PixelChar[]` (array of styled characters)
+//! - **Input**: [`PixelChar`] (array of styled characters)
 //! - **Output**: Raw ANSI escape sequence bytes
 //! - **Features**:
 //!   - Smart style diffing (~30% output reduction by only emitting ANSI codes when styles
@@ -1156,10 +1171,10 @@
 //!   - Used by both composed and direct rendering paths
 //!
 //! This enables:
-//! - **Composed Path**: `RenderOpsOutput` execution → `PixelCharRenderer` → bytes
-//! - **Direct Path**: `CliTextInline` → `PixelChar[]` → `PixelCharRenderer` → bytes
+//! - **Composed Path**: [`RenderOpOutputVec`] execution → [`PixelCharRenderer`] → bytes
+//! - **Direct Path**: [`CliTextInline`] → [`PixelChar`] → [`PixelCharRenderer`] → bytes
 //!
-//! ## `CliTextInline`: Styled Text Fragments
+//! ## [`CliTextInline`]: Styled Text Fragments
 //!
 //! For direct rendering paths, [`CliTextInline`] represents a fragment of text with
 //! styling information:
@@ -1170,21 +1185,21 @@
 //! - Text attributes (bold, italic, underline, etc.)
 //! - Display-width aware (handles Unicode grapheme clusters correctly)
 //!
-//! When converted to a string (via the `FastStringify` trait), it automatically:
-//! - Converts to `PixelChar[]` array
+//! When converted to a string (via the [`FastStringify`] trait), it automatically:
+//! - Converts to [`PixelChar`] array
 //! - Uses [`PixelCharRenderer`] to generate ANSI bytes
 //! - Automatically resets styles at the end
 //!
 //! This hidden conversion enables ergonomic styling in interactive components without
 //! requiring explicit knowledge of the underlying rendering machinery.
 //!
-//! ## `OutputDevice`: Thread-Safe Terminal Output
+//! ## [`OutputDevice`]: Thread-Safe Terminal Output
 //!
 //! Interactive components (Path 2) use [`OutputDevice`] for coordinated terminal output:
 //!
 //! - Provides atomic write operations to stdout
 //! - Handles mutual exclusion between components to prevent interspersed output
-//! - Abstracts over raw `std::io::Stdout`
+//! - Abstracts over raw [`std::io::Stdout`]
 //! - Integrates with both crossterm commands and raw ANSI bytes
 //!
 //! This allows multiple components to safely write to the terminal without race
@@ -1251,17 +1266,34 @@
 //! commands being sent to the terminal as output.
 //!
 //! ```text
-//! App -> Component -> RenderOpsIR -> RenderPipeline (to OffscreenBuffer) -> RenderOpsOutput -> Terminal
+//! App
+//!  ↓
+//! Component
+//!  ↓
+//! RenderOpIRVec
+//!  ↓
+//! RenderPipeline → OffscreenBuffer
+//!  ↓
+//! RenderOpOutputVec
+//!  ↓
+//! Terminal
 //! ```
 //!
-//! This is very much like a compiler pipeline with multiple stages. The first stage takes
-//! the App and Component code and generates a `RenderOpsIR` (intermediate representation)
-//! which is output. This "output" becomes the "source code" for the next stage in the
-//! pipeline, which takes the IR and compiles it to a `RenderOpsOutput` (where redundant
-//! operations have been removed). This output is then executed by the terminal backend to
-//! produce the final rendered output in the terminal. This flexible architecture allows
-//! us to plugin in different backends (our own `Direct ANSI`, `crossterm`, `termion`,
-//! etc.) and the optimizations are applied in a backend agnostic way.
+//! <div class="warning">
+//!
+//! This is very much like a compiler pipeline with multiple stages.
+//!
+//! 1. The first stage takes the App and Component code and generates a [`RenderOpIRVec`]
+//!    (intermediate representation) which is output.
+//! 2. This IR "output" becomes the "source code" for the next stage in the pipeline,
+//!    which takes the IR and compiles it to a [`RenderOpOutputVec`] (where redundant
+//!    operations have been removed).
+//! 3. This output is then executed by the terminal backend to produce the final rendered
+//!    output in the terminal. This flexible architecture allows us to plugin in different
+//!    backends (our own DirectToAnsi, Crossterm, etc.) and the optimizations are applied
+//!    in a backend agnostic way.
+//!
+//! </div>
 //!
 //! The R3BL TUI rendering system for Path 1 is organized into 6 distinct stages, each
 //! with a clear responsibility:
@@ -1270,7 +1302,7 @@
 //! ┌────────────────────────────────────────────────────────────────────────────────┐
 //! │ STAGE 1: Application/Component Layer (App Code)                                │
 //! │ ────────────────────────────────────────────────────────────────────────────── │
-//! │ Generates: RenderOpsIR with built-in clipping info                             │
+//! │ Generates: RenderOpIRVec with built-in clipping info                           │
 //! │ Module: render_op - Contains type definitions                                  │
 //! │                                                                                │
 //! │ Components produce draw commands describing *what* to render and *where*.      │
@@ -1280,7 +1312,7 @@
 //! ┌────────────────▼───────────────────────────────────────────────────────────────┐
 //! │ STAGE 2: Render Pipeline Collection (Organization Layer)                       │
 //! │ ─────────────────────────────────────────────────────────────────────────────  │
-//! │ Collects RenderOpsIR into organized structures by Z-order                      │
+//! │ Collects RenderOpIRVec into organized structures by ZOrder                     │
 //! │ Module: render_pipeline                                                        │
 //! │                                                                                │
 //! │ The pipeline aggregates render operations from multiple components and         │
@@ -1291,11 +1323,11 @@
 //! ┌────────────────▼───────────────────────────────────────────────────────────────┐
 //! │ STAGE 3: Compositor (Rendering to Offscreen Buffer)                            │
 //! │ ─────────────────────────────────────────────────────────────────────────────  │
-//! │ Processes RenderOpsIR → writes to OffscreenBuffer                              │
+//! │ Processes RenderOpIRVec → writes to OffscreenBuffer                            │
 //! │ Module: compositor_render_ops_to_ofs_buf                                       │
 //! │                                                                                │
 //! │ The Compositor is the rendering engine. It:                                    │
-//! │ - Executes RenderOpsIR operations sequentially                                 │
+//! │ - Executes RenderOpIRVec operations sequentially                               │
 //! │ - Applies clipping and Unicode/emoji width handling                            │
 //! │ - Writes rendered PixelChars to an offscreen buffer                            │
 //! │ - Manages cursor position and color state                                      │
@@ -1308,7 +1340,7 @@
 //! ┌────────────────▼───────────────────────────────────────────────────────────────┐
 //! │ STAGE 4: Backend Converter (Diff & Optimization Layer)                         │
 //! │ ─────────────────────────────────────────────────────────────────────────────  │
-//! │ Scans OffscreenBuffer → generates RenderOpsOutput                              │
+//! │ Scans OffscreenBuffer → generates RenderOpOutputVec                            │
 //! │ Module: crossterm_backend/offscreen_buffer_paint_impl                          │
 //! │         (Backend-specific implementation of OffscreenBufferPaint trait)        │
 //! │                                                                                │
@@ -1316,25 +1348,25 @@
 //! │ - Compares current OffscreenBuffer with previous frame (optional)              │
 //! │ - Generates only the operations needed for selective redraw                    │
 //! │ - Converts PixelChar grid into optimized text painting operations              │
-//! │ - Produces RenderOpsOutput (no clipping needed—already handled)                │
+//! │ - Produces RenderOpOutputVec (no clipping needed—already handled)              │
 //! │ - Eliminates redundant operations for performance                              │
 //! │                                                                                │
 //! │ Input: OffscreenBuffer (what we rendered)                                      │
-//! │ Output: RenderOpsOutput (optimized operations to display it)                   │
+//! │ Output: RenderOpOutputVec (optimized operations to display it)                 │
 //! └────────────────┬───────────────────────────────────────────────────────────────┘
 //!                  │
 //! ┌────────────────▼───────────────────────────────────────────────────────────────┐
 //! │ STAGE 5: Backend Executor (Terminal Output Layer)                              │
 //! │ ─────────────────────────────────────────────────────────────────────────────  │
-//! │ Executes RenderOpsOutput via backend library (Crossterm/Termion)               │
+//! │ Executes RenderOpOutputVec via backend library (Crossterm/DirectToAnsi)        │
 //! │ Module: crossterm_backend/paint_render_op_impl                                 │
 //! │         (Backend-specific trait: PaintRenderOp)                                │
 //! │                                                                                │
 //! │ The Backend Executor:                                                          │
-//! │ - Translates RenderOpsOutput to terminal escape sequences                      │
+//! │ - Translates RenderOpOutputVec to terminal escape sequences                    │
 //! │ - Manages raw mode, cursor visibility, colors, mouse events                    │
 //! │ - Handles terminal-specific optimizations (e.g., state tracking)               │
-//! │ - Sends commands to Crossterm/Termion for actual terminal manipulation         │
+//! │ - Sends commands to Crossterm/DirectToAnsi for actual terminal manipulation    │
 //! │ - Flushes output to ensure immediate display                                   │
 //! │                                                                                │
 //! │ Uses: RenderOpsLocalData to avoid redundant state changes                      │
@@ -1352,12 +1384,12 @@
 //! ```
 //!
 //! **Key Design Benefits:**
-//! - **Type Safety**: `RenderOpIR` and `RenderOpOutput` enums ensure operations are used
-//!   in the correct context
+//! - **Type Safety**: [`RenderOpIR`] and [`RenderOpOutput`] enums ensure operations are
+//!   used in the correct context
 //! - **Modularity**: Each stage has clear inputs/outputs and single responsibility
 //! - **Performance**: Diff-based approach means only changed pixels are rendered
 //! - **Flexibility**: Stages can be implemented for different backends (Crossterm,
-//!   Termion, etc.)
+//!   DirectToAnsi, etc.)
 //! - **Maintainability**: Clear pipeline structure makes code easier to understand and
 //!   modify
 //!
@@ -1389,7 +1421,7 @@
 //! <!-- https://asciiflow.com/#/share/eJyrVspLzE1VssorzcnRUcpJrEwtUrJSqo5RqohRsrK0MNaJUaoEsozMTYGsktSKEiAnRunRlD10QzExeUBSwTk%2FryQxMy%2B1SAEHQCglCBBKSXKJAonKUawBeiBHwRDhAAW4oBGSIKoWNDcrYBUkUgulETFtl0JQal5KalFAZkFqDjAicMYUKS4nJaJoaCgdkjExgUkLH9PK2Gl7FLRBJFWMpUqo0ilL4wpirOIklEg4BP3T0oqTi1JT85xK09IgpR%2FcXLohUv1M2MM49FIhFSjVKtUCAEVNQq0%3D) -->
 //!
 //! Each component produces a [`RenderPipeline`], which is a map of [`ZOrder`] and
-//! `Vec<`[`RenderOpIR`]`>`. [`RenderOpIR`] are the instructions that are grouped
+//! [`RenderOpIRVec`]. [`RenderOpIR`] are the instructions that are grouped
 //! together, such as move the caret to a position, set a color, and paint some text.
 //!
 //! Inside of each [`RenderOpIRVec`] the caret is stateful, meaning that the caret
@@ -1404,27 +1436,27 @@
 //!
 //! ## First render (Path 1)
 //!
-//! The `paint.rs` file contains the `paint` function, which is the entry point for all
-//! rendering in the composed component pipeline (Path 1). Once the first render occurs,
-//! the [`OffscreenBuffer`] that is generated is saved to `GlobalSharedState`. The
+//! The [`paint`] module contains the [`paint()`] function, which is the entry point for
+//! all rendering in the composed component pipeline (Path 1). Once the first render
+//! occurs, the [`OffscreenBuffer`] that is generated is saved to [`GlobalData`]. The
 //! following table shows the various tasks that have to be performed in order to render
 //! to an [`OffscreenBuffer`]. There is a different code path that is taken for ANSI text
-//! and plain text (which includes `StyledText` which is just plain text with a color).
-//! Syntax highlighted text is also just `StyledText`.
+//! and plain text (which includes [`TuiStyledText`] which is just plain text with a
+//! color). Syntax highlighted text is also just [`TuiStyledText`].
 //!
 //! | UTF-8 | Task                                                                                                           |
 //! | ----- | -------------------------------------------------------------------------------------------------------------- |
 //! | Y     | convert [`RenderPipeline`] to `List<List<`[`PixelChar`]`>>` ([`OffscreenBuffer`])                            |
-//! | Y     | paint each [`PixelChar`] in `List<List<`[`PixelChar`]`>>` to stdout using `OffscreenBufferPainterImplCrossterm` |
-//! | Y     | save the `List<List<`[`PixelChar`]`>>` to `GlobalSharedState`                                                 |
+//! | Y     | paint each [`PixelChar`] in `List<List<`[`PixelChar`]`>>` to stdout using [`OffscreenBufferPaintImplCrossterm`] |
+//! | Y     | save the `List<List<`[`PixelChar`]`>>` to [`GlobalData`]                                                      |
 //!
-//! Currently only `crossterm` is supported for actually painting to the terminal. But
-//! this process is really simple making it very easy to swap out other terminal libraries
-//! such as `termion`, or even a GUI backend, or some other custom output driver.
+//! Currently `crossterm` and `DirectToAnsi` are supported for actually painting to the
+//! terminal. But this process is really simple making it very easy to swap out other
+//! terminal libraries or even a GUI backend, or some other custom output driver.
 //!
 //! ## Subsequent render (Path 1)
 //!
-//! Since the [`OffscreenBuffer`] is cached in `GlobalSharedState`, a diff can be
+//! Since the [`OffscreenBuffer`] is cached in [`GlobalData`], a diff can be
 //! performed for subsequent renders. And only those diff chunks are painted to the
 //! screen. This ensures that there is no flicker when the content of the screen changes.
 //! It also minimizes the amount of work that the terminal or terminal emulator has to do
@@ -1440,7 +1472,7 @@
 //!   configuration options for the editor (such as multiline mode enabled or not, syntax
 //!   highlighting enabled or not, etc.). Note that this information lives outside of the
 //!   state.
-//! - It also implements the `Component<S, AS>` trait.
+//! - It also implements the [`Component<S, AS>`] trait.
 //! - However, for the reusable editor component we need the data representing the
 //!   document being edited to be stored in the state ([`EditorBuffer`]) and not inside of
 //!   the [`EditorComponent`] itself.
@@ -1460,19 +1492,16 @@
 //!     caret (insertion point) position and scroll position. And in the future can
 //!     contain lots of other information such as undo / redo history, etc.
 //!
-//! Here are the connection points with the impl of `Component<S, AS>` in
+//! Here are the connection points with the impl of [`Component<S, AS>`] in
 //! [`EditorComponent`]:
 //!
-//! - `handle_event(global_data: &mut GlobalData<S, AS>, input_event: InputEvent,
-//!   has_focus: &mut HasFocus)`
-//!    - Can simply relay the arguments to `EditorEngine::apply(state.editor_buffer,
-//!      input_event)` which will return another [`EditorBuffer`].
-//!    - Return value can be dispatched to the store via an action
-//!      `UpdateEditorBuffer(EditorBuffer)`.
-//! - `render(global_data: &mut GlobalData<S, AS>, current_box: FlexBox, surface_bounds:
-//!   SurfaceBounds, has_focus: &mut HasFocus,)`
-//!    - Can simply relay the arguments to `EditorEngine::render(state.editor_buffer)`
-//!    - Which will return a [`RenderPipeline`].
+//! - [`Component::handle_event()`] - Relays input events to
+//!   [`EditorEngine::apply_event()`], which processes the event with the current
+//!   [`EditorBuffer`] and returns an updated buffer. The result can be dispatched to the
+//!   store via an action.
+//! - [`Component::render()`] - Relays rendering arguments to
+//!   [`EditorEngine::render_engine()`], which takes the current [`EditorBuffer`] state
+//!   and generates a [`RenderPipeline`] for display.
 //!
 //! ## Zero-Copy Gap Buffer for High Performance
 //!
@@ -1481,10 +1510,10 @@
 //!
 //! ### Key Performance Features
 //!
-//! **Zero-copy access**: Read operations return `&str` slices directly into the buffer
+//! **Zero-copy access**: Read operations return [`&str`] slices directly into the buffer
 //! without allocation or copying:
-//! - `as_str()` access: **0.19 ns** (essentially free)
-//! - `get_line_content()`: **0.37 ns** (direct pointer return)
+//! - [`ZeroCopyGapBuffer::as_str()`] access: **0.19 ns** (essentially free)
+//! - [`ZeroCopyGapBuffer::get_line_content()`]: **0.37 ns** (direct pointer return)
 //! - Perfect for markdown parsing and text rendering hot paths
 //!
 //! **Efficient Unicode handling**: All text operations are grapheme-cluster aware:
@@ -1507,12 +1536,12 @@
 //! This enables:
 //! - **In-place editing**: No allocations for small edits
 //! - **Safe slicing**: Null padding ensures valid UTF-8 boundaries
-//! - **Zero-copy parsing**: Direct `&str` access for syntax highlighting and rendering
+//! - **Zero-copy parsing**: Direct [`&str`] access for syntax highlighting and rendering
 //!
 //! ### UTF-8 Safety Strategy
 //!
 //! The implementation uses a **"validate once, trust thereafter"** approach:
-//! - **Input validation**: Rust's `&str` type guarantees UTF-8 at API boundaries
+//! - **Input validation**: Rust's [`&str`] type guarantees UTF-8 at API boundaries
 //! - **Zero-copy reads**: `unsafe { from_utf8_unchecked() }` in hot paths for maximum
 //!   performance
 //! - **Debug validation**: Development builds verify UTF-8 invariants
@@ -1537,8 +1566,7 @@
 //! - Segment rebuilding strategies
 //! - Dynamic growth algorithms
 //!
-//! See the detailed and extensive [`zero_copy_gap_buffer` module
-//! documentation](crate::tui::editor::zero_copy_gap_buffer).
+//! See the detailed and extensive [`zero_copy_gap_buffer` module documentation].
 //!
 //! # Markdown Parser with R3BL Extensions
 //!
@@ -1737,10 +1765,8 @@
 //! - Process lifecycle and resource cleanup
 //! - VT-100 conformance test suite
 //!
-//! See the detailed [`pty_mux` module documentation](crate::core::pty_mux) and
+//! See the detailed [`pty_mux` module documentation] and
 //! [`vt_100_pty_output_parser`] documentation.
-//!
-//! [`vt_100_pty_output_parser`]: mod@crate::core::ansi::vt_100_pty_output_parser
 //!
 //! # Painting the caret
 //!
@@ -1760,9 +1786,8 @@
 //! different constraints).
 //!
 //! - Using a global terminal cursor (we don't use this).
-//!   - Both [termion::cursor](https://docs.rs/termion/1.5.6/termion/cursor/index.html) and
-//!     [crossterm::cursor](https://docs.rs/crossterm/0.25.0/crossterm/cursor/index.html)
-//!     support this. The cursor has lots of effects like blink, etc.
+//!   - [crossterm::cursor](https://docs.rs/crossterm/0.25.0/crossterm/cursor/index.html)
+//!     supports this. The cursor has lots of effects like blink, etc.
 //!   - The downside is that there is one global cursor for any given terminal window. And
 //!     this cursor is constantly moved around in order to paint anything (eg:
 //!     `MoveTo(col, row), SetColor, PaintText(...)` sequence).
@@ -1794,7 +1819,7 @@
 //! - When a trigger is detected, send a signal via the channel sender (out of band) so
 //!   that it will show when that signal is processed.
 //! - When the signal is handled, set the focus to the dialog box, and return a
-//!   `EventPropagation::ConsumedRerender` which will re-render the UI with the dialog box
+//!   [`EventPropagation::ConsumedRender`] which will re-render the UI with the dialog box
 //!   on top.
 //!
 //! There is a question about where does the response from the user (once a dialog is
@@ -1819,7 +1844,7 @@
 //!   and text should always be set before it is shown.
 //!   - **Note**: it might be possible to save this type of intermediate data in
 //!     `ComponentRegistry::user_data`. And it is possible for `handle_event()` to return
-//!     a `EventPropagation::ConsumedRerender` to make sure that changes are re-rendered.
+//!     a [`EventPropagation::ConsumedRender`] to make sure that changes are re-rendered.
 //!     This approach may have other issues related to having both immutable and mutable
 //!     borrows at the same time to some portion of the component registry if one is not
 //!     careful.
@@ -1828,10 +1853,10 @@
 //!
 //! When creating a new dialog box component, two callback functions are passed in:
 //!
-//! - `on_dialog_press_handler()` - this will be called if the user choose no, or yes
-//!   (with their typed text).
-//! - `on_dialog_editors_changed_handler()` - this will be called if the user types
-//!   something into the editor.
+//! - [`DialogComponentData::on_dialog_press_handler`] - this will be called if the user
+//!   choose no, or yes (with their typed text).
+//! - [`DialogComponentData::on_dialog_editor_change_handler`] - this will be called if
+//!   the user types something into the editor.
 //!
 //! ## Async Autocomplete Provider
 //!
@@ -1888,6 +1913,7 @@
 //! feature requests, feel free to add them there too 👍.
 //!
 //! <!-- Type references for documentation links -->
+//!
 //! [App]: crate::App
 //! [Component]: crate::Component
 //! [TerminalWindow]: crate::TerminalWindow
@@ -1899,19 +1925,30 @@
 //! [GlobalData]: crate::GlobalData
 //! [EventPropagation]: crate::EventPropagation
 //!
-//! [RenderOpCommon]: crate::RenderOpCommon
-//! [RenderOpIRVec]: crate::RenderOpIRVec
-//! [RenderOpOutputVec]: crate::RenderOpOutputVec
+//! [`RenderOpCommon`]: crate::RenderOpCommon
+//! [`RenderOpIRVec`]: crate::RenderOpIRVec
+//! [`RenderOpOutputVec`]: crate::RenderOpOutputVec
 //! [RenderPipeline]: crate::RenderPipeline
 //! [OffscreenBuffer]: crate::OffscreenBuffer
 //! [PixelChar]: crate::PixelChar
 //! [ZOrder]: crate::ZOrder
+//! [`paint`]: mod@crate::tui::terminal_lib_backends::paint
+//! [`paint()`]: fn@crate::tui::terminal_lib_backends::paint::paint
+//! [`OffscreenBufferPaintImplCrossterm`]: struct@crate::tui::terminal_lib_backends::offscreen_buffer::OffscreenBufferPaintImplCrossterm
 //!
 //! [EditorComponent]: crate::EditorComponent
 //! [EditorEngine]: crate::EditorEngine
 //! [EditorBuffer]: crate::EditorBuffer
 //! [HasEditorBuffers]: crate::HasEditorBuffers
 //! [ZeroCopyGapBuffer]: crate::tui::editor::zero_copy_gap_buffer::ZeroCopyGapBuffer
+//! [`zero_copy_gap_buffer` module documentation]: mod@crate::tui::editor::zero_copy_gap_buffer
+//! [`ZeroCopyGapBuffer::as_str()`]: crate::tui::editor::zero_copy_gap_buffer::ZeroCopyGapBuffer::as_str
+//! [`ZeroCopyGapBuffer::get_line_content()`]: crate::tui::editor::zero_copy_gap_buffer::ZeroCopyGapBuffer::get_line_content
+//! [`&str`]: prim@str
+//! [`Component::handle_event()`]: crate::Component::handle_event
+//! [`Component::render()`]: crate::Component::render
+//! [`EditorEngine::apply_event()`]: fn@crate::tui::editor::editor_engine::apply_event
+//! [`EditorEngine::render_engine()`]: fn@crate::tui::editor::editor_engine::render_engine
 //!
 //! [MdDocument]: crate::tui::md_parser::MdDocument
 //! [parse_markdown()]: fn@crate::tui::md_parser::parse_markdown::parse_markdown
@@ -1919,9 +1956,11 @@
 //! [try_parse_and_highlight]: crate::tui::syntax_highlighting::md_parser_syn_hi::try_parse_and_highlight
 //!
 //! [PTYMux]: crate::core::pty_mux::PTYMux
+//! [`pty_mux` module documentation]: mod@crate::core::pty_mux
 //! [CsiSequence]: crate::CsiSequence
 //! [EscSequence]: crate::EscSequence
 //! [SgrCode]: crate::SgrCode
+//! [`vt_100_pty_output_parser`]: mod@crate::core::ansi::vt_100_pty_output_parser
 //!
 //! [RowIndex]: crate::RowIndex
 //! [ColIndex]: crate::ColIndex

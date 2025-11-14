@@ -35,6 +35,11 @@ cargo rustdoc-fmt --workspace
 
 ## Step 2: Verify documentation builds
 
+If there are symbols that are enclosed in backticks, which are in "///" and "//!" rustdoc
+comments, and not "```...```" fenced code blocks or line comments like "//" or "/*...*/",
+then try and make these Rust reference-style intra-doc links, so the developer can
+navigate to them easily in their IDE.
+
 Verify there are no doc build warnings or errors:
 
 ```bash
@@ -57,6 +62,17 @@ Instead of removing the link, add a reference at the bottom of the doc comment:
 ///
 /// [`SomeType`]: crate::path::to::SomeType
 ```
+
+If these types are private, then you can use you can even use `#[cfg(any(test, doc))]` to
+make symbols visible for tests & docs (also in CLAUDE.md). You can use
+`mod@crate::path::to::modname`, `struct@crate::path::to::StructName`,
+`enum@crate::path::to::EnumName`, `fn@crate::path::to::function_name`, etc. to be more
+explicit.
+
+Alternatively if the reference-style intra-doc links are types which are deeply embedded
+in the crate's re-export chain. By using simple intra-doc links like `[Type]`, rustdoc
+automatically resolves them through the public API surface. This is cleaner than explicit
+paths (`crate::...`) when dealing with well-organized module exports.
 
 ## Step 3: Apply code quality checks
 

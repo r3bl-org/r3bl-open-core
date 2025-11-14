@@ -67,13 +67,14 @@ use crate::{FastStringify, PixelChar, SGR_RESET_BYTES, SgrCode, TuiColor, TuiSty
 /// - `OffscreenBuffer::render_to_ansi()` will call this renderer
 /// - `CliTextInline::Display` will use this renderer
 /// - `choose()` and `readline_async` will use this renderer
-/// - `RenderOp::PaintTextWithAttributes` will use this renderer
+/// - [`RenderOpOutput`] variant `CompositorNoClipTruncPaintTextWithAttributes` will use this renderer
 ///
 /// This renderer implements intelligent style diffing to produce minimal ANSI output
 /// while maintaining correctness. It tracks the current style and only emits new codes
 /// when styles change.
 ///
 /// [`OutputDevice`]: crate::OutputDevice
+/// [`RenderOpOutput`]: enum@crate::RenderOpOutput
 #[derive(Debug, Clone)]
 pub struct PixelCharRenderer {
     /// Pre-allocated ANSI escape sequence buffer (typically 4KB).

@@ -2,8 +2,9 @@
 
 use crate::{AsyncDebouncedDeadline, ControlledChild, Deadline, DebouncedState, KeyState,
             Pair,
-            core::{ansi::vt_100_terminal_input_parser::{VT100InputEvent, VT100KeyCode,
-                                                        VT100KeyModifiers,
+            core::{ansi::vt_100_terminal_input_parser::{VT100InputEventIR,
+                                                        VT100KeyCodeIR,
+                                                        VT100KeyModifiersIR,
                                                         test_fixtures::generate_keyboard_sequence},
                    test_fixtures::StdoutMock},
             generate_pty_test,
@@ -20,9 +21,9 @@ use std::{io::{BufRead, BufReader, Write},
 /// Ctrl+Left: Move cursor one word backward
 /// Generates: ESC [ 1 ; 5 D
 fn ctrl_left() -> Vec<u8> {
-    generate_keyboard_sequence(&VT100InputEvent::Keyboard {
-        code: VT100KeyCode::Left,
-        modifiers: VT100KeyModifiers {
+    generate_keyboard_sequence(&VT100InputEventIR::Keyboard {
+        code: VT100KeyCodeIR::Left,
+        modifiers: VT100KeyModifiersIR {
             ctrl: KeyState::Pressed,
             shift: KeyState::NotPressed,
             alt: KeyState::NotPressed,
@@ -34,9 +35,9 @@ fn ctrl_left() -> Vec<u8> {
 /// Ctrl+Right: Move cursor one word forward
 /// Generates: ESC [ 1 ; 5 C
 fn ctrl_right() -> Vec<u8> {
-    generate_keyboard_sequence(&VT100InputEvent::Keyboard {
-        code: VT100KeyCode::Right,
-        modifiers: VT100KeyModifiers {
+    generate_keyboard_sequence(&VT100InputEventIR::Keyboard {
+        code: VT100KeyCodeIR::Right,
+        modifiers: VT100KeyModifiersIR {
             ctrl: KeyState::Pressed,
             shift: KeyState::NotPressed,
             alt: KeyState::NotPressed,

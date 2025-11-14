@@ -47,12 +47,12 @@ use crate::{KeyState,
                                      SPECIAL_DELETE_CODE, SPECIAL_END_FINAL,
                                      SPECIAL_HOME_FINAL, SPECIAL_INSERT_CODE,
                                      SPECIAL_PAGE_DOWN_CODE, SPECIAL_PAGE_UP_CODE},
-                         vt_100_terminal_input_parser::{VT100FocusState,
-                                                        VT100InputEvent, VT100KeyCode,
-                                                        VT100KeyModifiers,
-                                                        VT100MouseAction,
-                                                        VT100MouseButton,
-                                                        VT100PasteMode}}};
+                         vt_100_terminal_input_parser::{VT100FocusStateIR,
+                                                        VT100InputEventIR, VT100KeyCodeIR,
+                                                        VT100KeyModifiersIR,
+                                                        VT100MouseActionIR,
+                                                        VT100MouseButtonIR,
+                                                        VT100PasteModeIR}}};
 
 /// Generate ANSI bytes for an input event.
 ///
@@ -77,12 +77,12 @@ use crate::{KeyState,
 /// This function is used internally by tests to generate sequences for round-trip
 /// validation. See the test suite for examples of all supported event types.
 #[must_use]
-pub fn generate_keyboard_sequence(event: &VT100InputEvent) -> Option<Vec<u8>> {
+pub fn generate_keyboard_sequence(event: &VT100InputEventIR) -> Option<Vec<u8>> {
     match event {
-        VT100InputEvent::Keyboard { code, modifiers } => {
+        VT100InputEventIR::Keyboard { code, modifiers } => {
             generate_key_sequence(*code, *modifiers)
         }
-        VT100InputEvent::Resize {
+        VT100InputEventIR::Resize {
             col_width,
             row_height,
         } => {
@@ -90,9 +90,9 @@ pub fn generate_keyboard_sequence(event: &VT100InputEvent) -> Option<Vec<u8>> {
             let cols = u16::try_from(col_width.as_usize()).unwrap_or(u16::MAX);
             Some(generate_resize_sequence(rows, cols))
         }
-        VT100InputEvent::Focus(state) => Some(generate_focus_sequence(*state)),
-        VT100InputEvent::Paste(mode) => Some(generate_paste_sequence(*mode)),
-        VT100InputEvent::Mouse {
+        VT100InputEventIR::Focus(state) => Some(generate_focus_sequence(*state)),
+        VT100InputEventIR::Paste(mode) => Some(generate_paste_sequence(*mode)),
+        VT100InputEventIR::Mouse {
             button,
             pos,
             action,
@@ -133,17 +133,17 @@ pub fn generate_keyboard_sequence(event: &VT100InputEvent) -> Option<Vec<u8>> {
 /// - `modifiers`: Key modifiers (Shift, Ctrl, Alt)
 #[must_use]
 pub fn generate_x10_mouse_sequence(
-    button: VT100MouseButton,
+    button: VT100MouseButtonIR,
     col: u16,
     row: u16,
-    action: VT100MouseAction,
-    modifiers: VT100KeyModifiers,
+    action: VT100MouseActionIR,
+    modifiers: VT100KeyModifiersIR,
 ) -> Vec<u8> {
     // Base button code (Unknown defaults to Left)
     let button_code = match button {
-        VT100MouseButton::Left | VT100MouseButton::Unknown => MOUSE_LEFT_BUTTON_CODE,
-        VT100MouseButton::Middle => MOUSE_MIDDLE_BUTTON_CODE,
-        VT100MouseButton::Right => MOUSE_RIGHT_BUTTON_CODE,
+        VT100MouseButtonIR::Left | VT100MouseButtonIR::Unknown => MOUSE_LEFT_BUTTON_CODE,
+        VT100MouseButtonIR::Middle => MOUSE_MIDDLE_BUTTON_CODE,
+        VT100MouseButtonIR::Right => MOUSE_RIGHT_BUTTON_CODE,
     };
 
     let mut cb = button_code;
@@ -151,11 +151,11 @@ pub fn generate_x10_mouse_sequence(
     // Handle action
     match action {
         /* Release always sends button=3 */
-        VT100MouseAction::Release => cb = MOUSE_RELEASE_BUTTON_CODE,
+        VT100MouseActionIR::Release => cb = MOUSE_RELEASE_BUTTON_CODE,
         /* Motion and drag set motion flag (bit 5) */
-        VT100MouseAction::Motion | VT100MouseAction::Drag => cb |= MOUSE_MOTION_FLAG,
+        VT100MouseActionIR::Motion | VT100MouseActionIR::Drag => cb |= MOUSE_MOTION_FLAG,
         /* Press uses base button code; Scroll not typically used in X10 */
-        VT100MouseAction::Press | VT100MouseAction::Scroll(_) => {}
+        VT100MouseActionIR::Press | VT100MouseActionIR::Scroll(_) => {}
     }
 
     // Apply modifiers
@@ -211,26 +211,26 @@ pub fn generate_x10_mouse_sequence(
 /// - `modifiers`: Key modifiers (Shift, Ctrl, Alt)
 #[must_use]
 pub fn generate_rxvt_mouse_sequence(
-    button: VT100MouseButton,
+    button: VT100MouseButtonIR,
     col: u16,
     row: u16,
-    action: VT100MouseAction,
-    modifiers: VT100KeyModifiers,
+    action: VT100MouseActionIR,
+    modifiers: VT100KeyModifiersIR,
 ) -> Vec<u8> {
     // Base button code (Unknown defaults to Left)
     let button_code = match button {
-        VT100MouseButton::Left | VT100MouseButton::Unknown => MOUSE_LEFT_BUTTON_CODE,
-        VT100MouseButton::Middle => MOUSE_MIDDLE_BUTTON_CODE,
-        VT100MouseButton::Right => MOUSE_RIGHT_BUTTON_CODE,
+        VT100MouseButtonIR::Left | VT100MouseButtonIR::Unknown => MOUSE_LEFT_BUTTON_CODE,
+        VT100MouseButtonIR::Middle => MOUSE_MIDDLE_BUTTON_CODE,
+        VT100MouseButtonIR::Right => MOUSE_RIGHT_BUTTON_CODE,
     };
 
     let mut cb = button_code;
 
     // Handle action
     match action {
-        VT100MouseAction::Release => cb = MOUSE_RELEASE_BUTTON_CODE,
-        VT100MouseAction::Motion | VT100MouseAction::Drag => cb |= MOUSE_MOTION_FLAG,
-        VT100MouseAction::Press | VT100MouseAction::Scroll(_) => {}
+        VT100MouseActionIR::Release => cb = MOUSE_RELEASE_BUTTON_CODE,
+        VT100MouseActionIR::Motion | VT100MouseActionIR::Drag => cb |= MOUSE_MOTION_FLAG,
+        VT100MouseActionIR::Press | VT100MouseActionIR::Scroll(_) => {}
     }
 
     // Apply modifiers (same encoding as X10)
@@ -268,27 +268,27 @@ pub fn generate_rxvt_mouse_sequence(
 /// - `modifiers`: Key modifiers (Shift, Ctrl, Alt)
 #[must_use]
 pub fn generate_mouse_sequence_bytes(
-    button: VT100MouseButton,
+    button: VT100MouseButtonIR,
     col: u16,
     row: u16,
-    action: VT100MouseAction,
-    modifiers: VT100KeyModifiers,
+    action: VT100MouseActionIR,
+    modifiers: VT100KeyModifiersIR,
 ) -> Vec<u8> {
     // Handle scroll events: buttons 64-67 (up/down/left/right)
     let button_code = match action {
-        VT100MouseAction::Scroll(scroll_dir) => {
-            use crate::core::ansi::vt_100_terminal_input_parser::VT100ScrollDirection;
+        VT100MouseActionIR::Scroll(scroll_dir) => {
+            use crate::core::ansi::vt_100_terminal_input_parser::VT100ScrollDirectionIR;
             match scroll_dir {
-                VT100ScrollDirection::Up => MOUSE_SCROLL_UP_BUTTON,
-                VT100ScrollDirection::Down => MOUSE_SCROLL_DOWN_BUTTON,
-                VT100ScrollDirection::Left => MOUSE_SCROLL_LEFT_BUTTON,
-                VT100ScrollDirection::Right => MOUSE_SCROLL_RIGHT_BUTTON,
+                VT100ScrollDirectionIR::Up => MOUSE_SCROLL_UP_BUTTON,
+                VT100ScrollDirectionIR::Down => MOUSE_SCROLL_DOWN_BUTTON,
+                VT100ScrollDirectionIR::Left => MOUSE_SCROLL_LEFT_BUTTON,
+                VT100ScrollDirectionIR::Right => MOUSE_SCROLL_RIGHT_BUTTON,
             }
         }
         _ => match button {
-            VT100MouseButton::Middle => MOUSE_MIDDLE_BUTTON_CODE,
-            VT100MouseButton::Right => MOUSE_RIGHT_BUTTON_CODE,
-            VT100MouseButton::Left | VT100MouseButton::Unknown => MOUSE_LEFT_BUTTON_CODE,
+            VT100MouseButtonIR::Middle => MOUSE_MIDDLE_BUTTON_CODE,
+            VT100MouseButtonIR::Right => MOUSE_RIGHT_BUTTON_CODE,
+            VT100MouseButtonIR::Left | VT100MouseButtonIR::Unknown => MOUSE_LEFT_BUTTON_CODE,
         },
     };
 
@@ -297,14 +297,14 @@ pub fn generate_mouse_sequence_bytes(
 
     // Handle action/drag flag
     let action_char = match action {
-        VT100MouseAction::Release => MOUSE_SGR_RELEASE as char,
-        VT100MouseAction::Drag => {
+        VT100MouseActionIR::Release => MOUSE_SGR_RELEASE as char,
+        VT100MouseActionIR::Drag => {
             code |= MOUSE_MOTION_FLAG; // Drag flag (bit 5)
             MOUSE_SGR_PRESS as char
         }
-        VT100MouseAction::Press
-        | VT100MouseAction::Motion
-        | VT100MouseAction::Scroll(_) => {
+        VT100MouseActionIR::Press
+        | VT100MouseActionIR::Motion
+        | VT100MouseActionIR::Scroll(_) => {
             // Motion and scroll events use M like press
             MOUSE_SGR_PRESS as char
         }
@@ -335,8 +335,8 @@ pub fn generate_mouse_sequence_bytes(
 
 /// Generate ANSI bytes for a specific key code and modifiers.
 fn generate_key_sequence(
-    code: VT100KeyCode,
-    modifiers: VT100KeyModifiers,
+    code: VT100KeyCodeIR,
+    modifiers: VT100KeyModifiersIR,
 ) -> Option<Vec<u8>> {
     // Build the base sequence
     let mut bytes = CSI_PREFIX.to_vec();
@@ -347,7 +347,7 @@ fn generate_key_sequence(
 
     match code {
         // ==================== Arrow Keys ====================
-        VT100KeyCode::Up => {
+        VT100KeyCodeIR::Up => {
             if has_modifiers {
                 // Use helper to push ASCII '1' (0x31), not numeric value 1 (0x01)
                 bytes.push(push_ascii_number(1));
@@ -357,7 +357,7 @@ fn generate_key_sequence(
             bytes.push(ARROW_UP_FINAL);
             Some(bytes)
         }
-        VT100KeyCode::Down => {
+        VT100KeyCodeIR::Down => {
             if has_modifiers {
                 // Use helper to push ASCII '1' (0x31), not numeric value 1 (0x01)
                 bytes.push(push_ascii_number(1));
@@ -367,7 +367,7 @@ fn generate_key_sequence(
             bytes.push(ARROW_DOWN_FINAL);
             Some(bytes)
         }
-        VT100KeyCode::Right => {
+        VT100KeyCodeIR::Right => {
             if has_modifiers {
                 // Use helper to push ASCII '1' (0x31), not numeric value 1 (0x01)
                 bytes.push(push_ascii_number(1));
@@ -377,7 +377,7 @@ fn generate_key_sequence(
             bytes.push(ARROW_RIGHT_FINAL);
             Some(bytes)
         }
-        VT100KeyCode::Left => {
+        VT100KeyCodeIR::Left => {
             if has_modifiers {
                 // Use helper to push ASCII '1' (0x31), not numeric value 1 (0x01)
                 bytes.push(push_ascii_number(1));
@@ -389,39 +389,39 @@ fn generate_key_sequence(
         }
 
         // ==================== Special Keys (CSI H/F) ====================
-        VT100KeyCode::Home => {
+        VT100KeyCodeIR::Home => {
             bytes.push(SPECIAL_HOME_FINAL);
             Some(bytes)
         }
-        VT100KeyCode::End => {
+        VT100KeyCodeIR::End => {
             bytes.push(SPECIAL_END_FINAL);
             Some(bytes)
         }
 
         // ==================== Special Keys (CSI n~) ====================
-        VT100KeyCode::Insert => Some(generate_special_key_sequence(
+        VT100KeyCodeIR::Insert => Some(generate_special_key_sequence(
             &mut bytes,
             SPECIAL_INSERT_CODE,
             modifiers,
         )),
-        VT100KeyCode::Delete => Some(generate_special_key_sequence(
+        VT100KeyCodeIR::Delete => Some(generate_special_key_sequence(
             &mut bytes,
             SPECIAL_DELETE_CODE,
             modifiers,
         )),
-        VT100KeyCode::PageUp => Some(generate_special_key_sequence(
+        VT100KeyCodeIR::PageUp => Some(generate_special_key_sequence(
             &mut bytes,
             SPECIAL_PAGE_UP_CODE,
             modifiers,
         )),
-        VT100KeyCode::PageDown => Some(generate_special_key_sequence(
+        VT100KeyCodeIR::PageDown => Some(generate_special_key_sequence(
             &mut bytes,
             SPECIAL_PAGE_DOWN_CODE,
             modifiers,
         )),
 
         // ==================== Function Keys (CSI n~) ====================
-        VT100KeyCode::Function(n) => {
+        VT100KeyCodeIR::Function(n) => {
             let code = match n {
                 1 => FUNCTION_F1_CODE,
                 2 => FUNCTION_F2_CODE,
@@ -444,12 +444,12 @@ fn generate_key_sequence(
         // Tab, Enter, Escape, Backspace, and Char events are typically raw control
         // characters or UTF-8 text, not CSI sequences. Not implemented in
         // generator as they're handled differently in the input parsing layer.
-        VT100KeyCode::Tab
-        | VT100KeyCode::BackTab
-        | VT100KeyCode::Enter
-        | VT100KeyCode::Escape
-        | VT100KeyCode::Backspace
-        | VT100KeyCode::Char(_) => None,
+        VT100KeyCodeIR::Tab
+        | VT100KeyCodeIR::BackTab
+        | VT100KeyCodeIR::Enter
+        | VT100KeyCodeIR::Escape
+        | VT100KeyCodeIR::Backspace
+        | VT100KeyCodeIR::Char(_) => None,
     }
 }
 
@@ -457,7 +457,7 @@ fn generate_key_sequence(
 fn generate_special_key_sequence(
     bytes: &mut Vec<u8>,
     code: u16,
-    modifiers: VT100KeyModifiers,
+    modifiers: VT100KeyModifiersIR,
 ) -> Vec<u8> {
     // Format: CSI code~ or CSI code; modifier~
     let code_str = code.to_string();
@@ -496,7 +496,7 @@ fn generate_special_key_sequence(
 /// - `8` → Ctrl+Alt+Shift (1 + 7)
 ///
 /// **Confirmed by terminal observation**: `ESC[1;5A` = Ctrl+Up (parameter 5 = 1+4)
-fn encode_modifiers(modifiers: VT100KeyModifiers) -> u8 {
+fn encode_modifiers(modifiers: VT100KeyModifiersIR) -> u8 {
     let mut mask: u8 = 0;
     if modifiers.shift == KeyState::Pressed {
         mask |= MODIFIER_SHIFT;
@@ -614,11 +614,11 @@ pub fn generate_resize_sequence(rows: u16, cols: u16) -> Vec<u8> {
 /// - Focus gained: `CSI I`
 /// - Focus lost: `CSI O`
 #[must_use]
-pub fn generate_focus_sequence(state: VT100FocusState) -> Vec<u8> {
+pub fn generate_focus_sequence(state: VT100FocusStateIR) -> Vec<u8> {
     let mut bytes = CSI_PREFIX.to_vec();
     match state {
-        VT100FocusState::Gained => bytes.push(FOCUS_GAINED_FINAL),
-        VT100FocusState::Lost => bytes.push(FOCUS_LOST_FINAL),
+        VT100FocusStateIR::Gained => bytes.push(FOCUS_GAINED_FINAL),
+        VT100FocusStateIR::Lost => bytes.push(FOCUS_LOST_FINAL),
     }
     bytes
 }
@@ -628,13 +628,13 @@ pub fn generate_focus_sequence(state: VT100FocusState) -> Vec<u8> {
 /// - Paste start: `CSI 200 ~`
 /// - Paste end: `CSI 201 ~`
 #[must_use]
-pub fn generate_paste_sequence(mode: VT100PasteMode) -> Vec<u8> {
+pub fn generate_paste_sequence(mode: VT100PasteModeIR) -> Vec<u8> {
     let mut bytes = CSI_PREFIX.to_vec();
     match mode {
-        VT100PasteMode::Start => {
+        VT100PasteModeIR::Start => {
             bytes.extend_from_slice(PASTE_START_GENERATE_CODE.as_bytes());
         }
-        VT100PasteMode::End => {
+        VT100PasteModeIR::End => {
             bytes.extend_from_slice(PASTE_END_GENERATE_CODE.as_bytes());
         }
     }

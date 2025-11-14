@@ -1070,7 +1070,7 @@ mod tests {
 
         // Create a RenderPipeline.
         // render_ops:
-        //     - RenderOps.len(): 10
+        //     - RenderOpIRVec.len(): 10
         //       - [ResetColor]
         //       - [SetFgColor(green)]
         //       - [SetBgColor(blue)]

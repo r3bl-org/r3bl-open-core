@@ -109,7 +109,7 @@ macro_rules! render_pipeline {
         $crate::RenderPipeline::default()
     };
 
-    // @new: Create a new pipeline & return it. If any RenderOp ($arg_render_op)* are passed, then add it
+    // @new: Create a new pipeline & return it. If any RenderOpIR ($arg_render_op)* are passed, then add it
     // to new pipeline.
     (
         @new
@@ -135,7 +135,7 @@ macro_rules! render_pipeline {
         }
     };
 
-    // @push_into: Add a bunch of RenderOp $arg_render_op+ to the existing $arg_pipeline & return nothing.
+    // @push_into: Add a bunch of RenderOpIR $arg_render_op+ to the existing $arg_pipeline & return nothing.
     (
         @push_into
         $arg_pipeline: ident
@@ -164,7 +164,7 @@ macro_rules! render_pipeline {
         pipeline
     }};
 
-    // @push_styled_texts_into: Add a bunch of RenderOp $arg_render_op+ to the existing $arg_pipeline & return nothing.
+    // @push_styled_texts_into: Add a bunch of RenderOpIR $arg_render_op+ to the existing $arg_pipeline & return nothing.
     (
         @push_styled_texts_into
         $arg_pipeline: ident

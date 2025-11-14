@@ -20,11 +20,11 @@
 //! │  • Extract position & modifiers          │
 //! └──────────────────────────────────────────┘
 //!    ↓
-//! VT100InputEvent::Mouse { button, pos, action, modifiers }
+//! VT100InputEventIR::Mouse { button, pos, action, modifiers }
 //! **Navigate**:
 //! - ⬆️ **Up**: [`parser`] - Main routing entry point
 //! - ➡️ **Peer**: [`keyboard`], [`terminal_events`], [`utf8`] - Other specialized parsers
-//! - 📚 **Types**: [`VT100MouseButton`], [`VT100MouseAction`], [`TermPos`]
+//! - 📚 **Types**: [`VT100MouseButtonIR`], [`VT100MouseActionIR`], [`TermPos`]
 //!
 //! ## Supported Mouse Protocols
 //! - **SGR (Selective Graphic Rendition) Protocol**: Modern standard format
@@ -70,16 +70,16 @@
 //!
 //! [1-based coordinates]: mod@super#one-based-mouse-input-events
 //! [`TermPos`]: crate::core::coordinates::vt_100_ansi_coords::TermPos
-//! [`VT100MouseAction`]: super::VT100MouseAction
-//! [`VT100MouseButton`]: super::VT100MouseButton
+//! [`VT100MouseActionIR`]: super::VT100MouseActionIR
+//! [`VT100MouseButtonIR`]: super::VT100MouseButtonIR
 //! [`keyboard`]: mod@super::keyboard
 //! [`parser`]: mod@super::parser
 //! [`terminal_events`]: mod@super::terminal_events
 //! [`utf8`]: mod@super::utf8
 //! [parent module's testing strategy documentation]: mod@super#testing-strategy
 
-use super::ir_event_types::{VT100InputEvent, VT100KeyModifiers, VT100MouseAction,
-                            VT100MouseButton, VT100ScrollDirection};
+use super::ir_event_types::{VT100InputEventIR, VT100KeyModifiersIR, VT100MouseActionIR,
+                            VT100MouseButtonIR, VT100ScrollDirectionIR};
 use crate::{ByteOffset, KeyState, TermPos, byte_offset,
             core::ansi::constants::{CSI_PREFIX, CSI_PREFIX_LEN, MOUSE_BASE_BUTTON_MASK,
                                     MOUSE_BUTTON_BITS_MASK, MOUSE_BUTTON_CODE_MASK,
@@ -91,7 +91,7 @@ use crate::{ByteOffset, KeyState, TermPos, byte_offset,
                                     MOUSE_X10_PREFIX}};
 
 #[must_use]
-pub fn parse_mouse_sequence(buffer: &[u8]) -> Option<(VT100InputEvent, ByteOffset)> {
+pub fn parse_mouse_sequence(buffer: &[u8]) -> Option<(VT100InputEventIR, ByteOffset)> {
     // Check for SGR mouse protocol (most reliable)
     if buffer.len() >= 6 && buffer.starts_with(MOUSE_SGR_PREFIX) {
         return parse_sgr_mouse(buffer);
@@ -128,7 +128,7 @@ pub fn parse_mouse_sequence(buffer: &[u8]) -> Option<(VT100InputEvent, ByteOffse
 /// - `Cx` = column (1-based)
 /// - `Cy` = row (1-based)
 /// - `M` = press, `m` = release
-fn parse_sgr_mouse(sequence: &[u8]) -> Option<(VT100InputEvent, ByteOffset)> {
+fn parse_sgr_mouse(sequence: &[u8]) -> Option<(VT100InputEventIR, ByteOffset)> {
     // Minimum: ESC[<0;1;1M (9 bytes)
     if sequence.len() < 9 {
         return None;
@@ -177,10 +177,10 @@ fn parse_sgr_mouse(sequence: &[u8]) -> Option<(VT100InputEvent, ByteOffset)> {
     // Check for scroll events first (buttons 64-67)
     if let Some(scroll_dir) = detect_scroll_event(cb) {
         return Some((
-            VT100InputEvent::Mouse {
-                button: VT100MouseButton::Unknown,
+            VT100InputEventIR::Mouse {
+                button: VT100MouseButtonIR::Unknown,
                 pos: TermPos::from_one_based(cx, cy),
-                action: VT100MouseAction::Scroll(scroll_dir),
+                action: VT100MouseActionIR::Scroll(scroll_dir),
                 modifiers,
             },
             bytes_consumed,
@@ -192,15 +192,15 @@ fn parse_sgr_mouse(sequence: &[u8]) -> Option<(VT100InputEvent, ByteOffset)> {
 
     // Detect action
     let action = if is_drag_event(cb) {
-        VT100MouseAction::Drag
+        VT100MouseActionIR::Drag
     } else if action_char == 'M' {
-        VT100MouseAction::Press
+        VT100MouseActionIR::Press
     } else {
-        VT100MouseAction::Release
+        VT100MouseActionIR::Release
     };
 
     Some((
-        VT100InputEvent::Mouse {
+        VT100InputEventIR::Mouse {
             button,
             pos: TermPos::from_one_based(cx, cy),
             action,
@@ -233,7 +233,7 @@ fn parse_sgr_mouse(sequence: &[u8]) -> Option<(VT100InputEvent, ByteOffset)> {
 /// - Bit 4 (value 16): Ctrl
 ///
 /// Motion flag (bit 5, value 32): Set when mouse moved without button press
-fn parse_x10_mouse(sequence: &[u8]) -> Option<(VT100InputEvent, ByteOffset)> {
+fn parse_x10_mouse(sequence: &[u8]) -> Option<(VT100InputEventIR, ByteOffset)> {
     // X10 format: ESC [ M Cb Cx Cy (5 bytes minimum)
     if sequence.len() < 5 {
         return None;
@@ -265,7 +265,7 @@ fn parse_x10_mouse(sequence: &[u8]) -> Option<(VT100InputEvent, ByteOffset)> {
     }
 
     // Extract modifiers from button byte (bits 2-4)
-    let modifiers = VT100KeyModifiers {
+    let modifiers = VT100KeyModifiersIR {
         shift: if (cb & MOUSE_MODIFIER_SHIFT) != 0 {
             KeyState::Pressed
         } else {
@@ -293,10 +293,10 @@ fn parse_x10_mouse(sequence: &[u8]) -> Option<(VT100InputEvent, ByteOffset)> {
     if is_motion {
         // Motion without button
         return Some((
-            VT100InputEvent::Mouse {
-                button: VT100MouseButton::Unknown,
+            VT100InputEventIR::Mouse {
+                button: VT100MouseButtonIR::Unknown,
                 pos: TermPos::from_one_based(col, row),
-                action: VT100MouseAction::Motion,
+                action: VT100MouseActionIR::Motion,
                 modifiers,
             },
             byte_offset(6), // ESC [ M Cb Cx Cy = 6 bytes
@@ -307,10 +307,10 @@ fn parse_x10_mouse(sequence: &[u8]) -> Option<(VT100InputEvent, ByteOffset)> {
         0 => {
             // Left button
             Some((
-                VT100InputEvent::Mouse {
-                    button: VT100MouseButton::Left,
+                VT100InputEventIR::Mouse {
+                    button: VT100MouseButtonIR::Left,
                     pos: TermPos::from_one_based(col, row),
-                    action: VT100MouseAction::Press,
+                    action: VT100MouseActionIR::Press,
                     modifiers,
                 },
                 byte_offset(6),
@@ -319,10 +319,10 @@ fn parse_x10_mouse(sequence: &[u8]) -> Option<(VT100InputEvent, ByteOffset)> {
         1 => {
             // Middle button
             Some((
-                VT100InputEvent::Mouse {
-                    button: VT100MouseButton::Middle,
+                VT100InputEventIR::Mouse {
+                    button: VT100MouseButtonIR::Middle,
                     pos: TermPos::from_one_based(col, row),
-                    action: VT100MouseAction::Press,
+                    action: VT100MouseActionIR::Press,
                     modifiers,
                 },
                 byte_offset(6),
@@ -331,10 +331,10 @@ fn parse_x10_mouse(sequence: &[u8]) -> Option<(VT100InputEvent, ByteOffset)> {
         2 => {
             // Right button
             Some((
-                VT100InputEvent::Mouse {
-                    button: VT100MouseButton::Right,
+                VT100InputEventIR::Mouse {
+                    button: VT100MouseButtonIR::Right,
                     pos: TermPos::from_one_based(col, row),
-                    action: VT100MouseAction::Press,
+                    action: VT100MouseActionIR::Press,
                     modifiers,
                 },
                 byte_offset(6),
@@ -343,10 +343,10 @@ fn parse_x10_mouse(sequence: &[u8]) -> Option<(VT100InputEvent, ByteOffset)> {
         3 => {
             // Release (button 3)
             Some((
-                VT100InputEvent::Mouse {
-                    button: VT100MouseButton::Unknown,
+                VT100InputEventIR::Mouse {
+                    button: VT100MouseButtonIR::Unknown,
                     pos: TermPos::from_one_based(col, row),
-                    action: VT100MouseAction::Release,
+                    action: VT100MouseActionIR::Release,
                     modifiers,
                 },
                 byte_offset(6),
@@ -377,7 +377,7 @@ fn parse_x10_mouse(sequence: &[u8]) -> Option<(VT100InputEvent, ByteOffset)> {
 ///
 /// Similar to SGR but simpler - no `<` prefix, only M terminator (no m),
 /// and always includes coordinates as decimal numbers.
-fn parse_rxvt_mouse(sequence: &[u8]) -> Option<(VT100InputEvent, ByteOffset)> {
+fn parse_rxvt_mouse(sequence: &[u8]) -> Option<(VT100InputEventIR, ByteOffset)> {
     // RXVT format: ESC [ Cb ; Cx ; Cy M (minimum 8 bytes: ESC[0;1;1M)
     if sequence.len() < 8 {
         return None;
@@ -422,7 +422,7 @@ fn parse_rxvt_mouse(sequence: &[u8]) -> Option<(VT100InputEvent, ByteOffset)> {
     let cy = parts[2].parse::<u16>().ok()?;
 
     // Extract modifiers from button byte (similar to X10)
-    let modifiers = VT100KeyModifiers {
+    let modifiers = VT100KeyModifiersIR {
         shift: if (cb & MOUSE_MODIFIER_SHIFT) != 0 {
             KeyState::Pressed
         } else {
@@ -450,10 +450,10 @@ fn parse_rxvt_mouse(sequence: &[u8]) -> Option<(VT100InputEvent, ByteOffset)> {
     if is_motion {
         // Motion without button
         return Some((
-            VT100InputEvent::Mouse {
-                button: VT100MouseButton::Unknown,
+            VT100InputEventIR::Mouse {
+                button: VT100MouseButtonIR::Unknown,
                 pos: TermPos::from_one_based(cx, cy),
-                action: VT100MouseAction::Motion,
+                action: VT100MouseActionIR::Motion,
                 modifiers,
             },
             bytes_consumed,
@@ -464,10 +464,10 @@ fn parse_rxvt_mouse(sequence: &[u8]) -> Option<(VT100InputEvent, ByteOffset)> {
         0 => {
             // Left button
             Some((
-                VT100InputEvent::Mouse {
-                    button: VT100MouseButton::Left,
+                VT100InputEventIR::Mouse {
+                    button: VT100MouseButtonIR::Left,
                     pos: TermPos::from_one_based(cx, cy),
-                    action: VT100MouseAction::Press,
+                    action: VT100MouseActionIR::Press,
                     modifiers,
                 },
                 bytes_consumed,
@@ -476,10 +476,10 @@ fn parse_rxvt_mouse(sequence: &[u8]) -> Option<(VT100InputEvent, ByteOffset)> {
         1 => {
             // Middle button
             Some((
-                VT100InputEvent::Mouse {
-                    button: VT100MouseButton::Middle,
+                VT100InputEventIR::Mouse {
+                    button: VT100MouseButtonIR::Middle,
                     pos: TermPos::from_one_based(cx, cy),
-                    action: VT100MouseAction::Press,
+                    action: VT100MouseActionIR::Press,
                     modifiers,
                 },
                 bytes_consumed,
@@ -488,10 +488,10 @@ fn parse_rxvt_mouse(sequence: &[u8]) -> Option<(VT100InputEvent, ByteOffset)> {
         2 => {
             // Right button
             Some((
-                VT100InputEvent::Mouse {
-                    button: VT100MouseButton::Right,
+                VT100InputEventIR::Mouse {
+                    button: VT100MouseButtonIR::Right,
                     pos: TermPos::from_one_based(cx, cy),
-                    action: VT100MouseAction::Press,
+                    action: VT100MouseActionIR::Press,
                     modifiers,
                 },
                 bytes_consumed,
@@ -500,10 +500,10 @@ fn parse_rxvt_mouse(sequence: &[u8]) -> Option<(VT100InputEvent, ByteOffset)> {
         3 => {
             // Release (button 3)
             Some((
-                VT100InputEvent::Mouse {
-                    button: VT100MouseButton::Unknown,
+                VT100InputEventIR::Mouse {
+                    button: VT100MouseButtonIR::Unknown,
                     pos: TermPos::from_one_based(cx, cy),
-                    action: VT100MouseAction::Release,
+                    action: VT100MouseActionIR::Release,
                     modifiers,
                 },
                 bytes_consumed,
@@ -520,7 +520,7 @@ fn parse_rxvt_mouse(sequence: &[u8]) -> Option<(VT100InputEvent, ByteOffset)> {
 /// - 1 = middle button
 /// - 2 = right button
 /// - 3 = release (for legacy modes, SGR uses 'M'/'m' instead)
-fn detect_mouse_button(cb: u16) -> Option<VT100MouseButton> {
+fn detect_mouse_button(cb: u16) -> Option<VT100MouseButtonIR> {
     // Mask out modifier and drag bits (keep only bits 0-5)
     let button_code = cb & MOUSE_BUTTON_CODE_MASK;
 
@@ -531,10 +531,10 @@ fn detect_mouse_button(cb: u16) -> Option<VT100MouseButton> {
 
     // Get base button (bits 0-1)
     match button_code & MOUSE_BUTTON_BITS_MASK {
-        0 => Some(VT100MouseButton::Left),
-        1 => Some(VT100MouseButton::Middle),
-        2 => Some(VT100MouseButton::Right),
-        _ => Some(VT100MouseButton::Unknown),
+        0 => Some(VT100MouseButtonIR::Left),
+        1 => Some(VT100MouseButtonIR::Middle),
+        2 => Some(VT100MouseButtonIR::Right),
+        _ => Some(VT100MouseButtonIR::Unknown),
     }
 }
 
@@ -550,7 +550,7 @@ fn is_drag_event(cb: u16) -> bool { (cb & MOUSE_MOTION_FLAG) != 0 }
 /// - 65 = scroll down
 /// - 66 = scroll left (rare) - but often used for scroll up with modifiers!
 /// - 67 = scroll right (rare)
-fn detect_scroll_event(cb: u16) -> Option<VT100ScrollDirection> {
+fn detect_scroll_event(cb: u16) -> Option<VT100ScrollDirectionIR> {
     // Check raw button code first (before masking modifiers)
     // Buttons 64+ indicate scroll events
     if cb >= MOUSE_SCROLL_THRESHOLD {
@@ -558,8 +558,8 @@ fn detect_scroll_event(cb: u16) -> Option<VT100ScrollDirection> {
         let base_button = cb & MOUSE_BASE_BUTTON_MASK; // Keep bit 6 (value 64)
 
         match base_button {
-            68..=71 => Some(VT100ScrollDirection::Down), // All scroll down variants
-            _ /* 64..=67 */ => Some(VT100ScrollDirection::Up), /* All scroll up variants + default to up for unknown scroll events */
+            68..=71 => Some(VT100ScrollDirectionIR::Down), // All scroll down variants
+            _ /* 64..=67 */ => Some(VT100ScrollDirectionIR::Up), /* All scroll up variants + default to up for unknown scroll events */
         }
     } else {
         None
@@ -572,8 +572,8 @@ fn detect_scroll_event(cb: u16) -> Option<VT100ScrollDirection> {
 /// - Bit 2 (value 4): Shift
 /// - Bit 3 (value 8): Alt
 /// - Bit 4 (value 16): Ctrl
-fn extract_modifiers(cb: u16) -> VT100KeyModifiers {
-    VT100KeyModifiers {
+fn extract_modifiers(cb: u16) -> VT100KeyModifiersIR {
+    VT100KeyModifiersIR {
         shift: if (cb & MOUSE_MODIFIER_SHIFT) != 0 {
             KeyState::Pressed
         } else {
@@ -610,11 +610,11 @@ mod tests {
     ///
     /// X10 format: `ESC [ M Cb Cx Cy` (6 bytes with null terminator)
     fn x10_mouse_sequence(
-        button: VT100MouseButton,
+        button: VT100MouseButtonIR,
         col: u16,
         row: u16,
-        action: VT100MouseAction,
-        modifiers: VT100KeyModifiers,
+        action: VT100MouseActionIR,
+        modifiers: VT100KeyModifiersIR,
     ) -> Vec<u8> {
         use crate::core::ansi::vt_100_terminal_input_parser::test_fixtures::generate_x10_mouse_sequence;
         generate_x10_mouse_sequence(button, col, row, action, modifiers)
@@ -624,11 +624,11 @@ mod tests {
     ///
     /// RXVT format: `ESC [ Cb ; Cx ; Cy M` (decimal with semicolons)
     fn rxvt_mouse_sequence(
-        button: VT100MouseButton,
+        button: VT100MouseButtonIR,
         col: u16,
         row: u16,
-        action: VT100MouseAction,
-        modifiers: VT100KeyModifiers,
+        action: VT100MouseActionIR,
+        modifiers: VT100KeyModifiersIR,
     ) -> Vec<u8> {
         use crate::core::ansi::vt_100_terminal_input_parser::test_fixtures::generate_rxvt_mouse_sequence;
         generate_rxvt_mouse_sequence(button, col, row, action, modifiers)
@@ -638,14 +638,14 @@ mod tests {
     ///
     /// SGR format: `ESC [ < Cb ; Cx ; Cy M/m` (modern standard)
     fn sgr_mouse_sequence(
-        button: VT100MouseButton,
+        button: VT100MouseButtonIR,
         col: u16,
         row: u16,
-        action: VT100MouseAction,
-        modifiers: VT100KeyModifiers,
+        action: VT100MouseActionIR,
+        modifiers: VT100KeyModifiersIR,
     ) -> Vec<u8> {
         use crate::core::ansi::vt_100_terminal_input_parser::test_fixtures::generate_keyboard_sequence;
-        let event = VT100InputEvent::Mouse {
+        let event = VT100InputEventIR::Mouse {
             button,
             pos: TermPos::from_one_based(col, row),
             action,
@@ -662,27 +662,27 @@ mod tests {
     fn test_x10_left_click() {
         // X10: Left click at col 1, row 1
         let seq = x10_mouse_sequence(
-            VT100MouseButton::Left,
+            VT100MouseButtonIR::Left,
             1,
             1,
-            VT100MouseAction::Press,
-            VT100KeyModifiers::default(),
+            VT100MouseActionIR::Press,
+            VT100KeyModifiersIR::default(),
         );
         let (event, bytes_consumed) =
             parse_mouse_sequence(&seq).expect("Should parse X10");
 
         assert_eq!(bytes_consumed, byte_offset(6));
         match event {
-            VT100InputEvent::Mouse {
+            VT100InputEventIR::Mouse {
                 button,
                 pos,
                 action,
                 modifiers,
             } => {
-                assert_eq!(button, VT100MouseButton::Left);
+                assert_eq!(button, VT100MouseButtonIR::Left);
                 assert_eq!(pos.col.as_u16(), 1);
                 assert_eq!(pos.row.as_u16(), 1);
-                assert_eq!(action, VT100MouseAction::Press);
+                assert_eq!(action, VT100MouseActionIR::Press);
                 assert!(
                     modifiers.shift == KeyState::NotPressed
                         && modifiers.ctrl == KeyState::NotPressed
@@ -697,20 +697,20 @@ mod tests {
     fn test_x10_middle_click() {
         // X10: Middle click at col 18, row 8
         let seq = x10_mouse_sequence(
-            VT100MouseButton::Middle,
+            VT100MouseButtonIR::Middle,
             18,
             8,
-            VT100MouseAction::Press,
-            VT100KeyModifiers::default(),
+            VT100MouseActionIR::Press,
+            VT100KeyModifiersIR::default(),
         );
         let (event, bytes_consumed) =
             parse_mouse_sequence(&seq).expect("Should parse X10");
 
         assert_eq!(bytes_consumed, byte_offset(6));
         match event {
-            VT100InputEvent::Mouse { button, action, .. } => {
-                assert_eq!(button, VT100MouseButton::Middle);
-                assert_eq!(action, VT100MouseAction::Press);
+            VT100InputEventIR::Mouse { button, action, .. } => {
+                assert_eq!(button, VT100MouseButtonIR::Middle);
+                assert_eq!(action, VT100MouseActionIR::Press);
             }
             _ => panic!("Expected Mouse event"),
         }
@@ -720,20 +720,20 @@ mod tests {
     fn test_x10_right_click() {
         // X10: Right click at col 13, row 3
         let seq = x10_mouse_sequence(
-            VT100MouseButton::Right,
+            VT100MouseButtonIR::Right,
             13,
             3,
-            VT100MouseAction::Press,
-            VT100KeyModifiers::default(),
+            VT100MouseActionIR::Press,
+            VT100KeyModifiersIR::default(),
         );
         let (event, bytes_consumed) =
             parse_mouse_sequence(&seq).expect("Should parse X10");
 
         assert_eq!(bytes_consumed, byte_offset(6));
         match event {
-            VT100InputEvent::Mouse { button, action, .. } => {
-                assert_eq!(button, VT100MouseButton::Right);
-                assert_eq!(action, VT100MouseAction::Press);
+            VT100InputEventIR::Mouse { button, action, .. } => {
+                assert_eq!(button, VT100MouseButtonIR::Right);
+                assert_eq!(action, VT100MouseActionIR::Press);
             }
             _ => panic!("Expected Mouse event"),
         }
@@ -743,19 +743,19 @@ mod tests {
     fn test_x10_release() {
         // X10: Release at col 1, row 1
         let seq = x10_mouse_sequence(
-            VT100MouseButton::Left,
+            VT100MouseButtonIR::Left,
             1,
             1,
-            VT100MouseAction::Release,
-            VT100KeyModifiers::default(),
+            VT100MouseActionIR::Release,
+            VT100KeyModifiersIR::default(),
         );
         let (event, bytes_consumed) =
             parse_mouse_sequence(&seq).expect("Should parse X10");
 
         assert_eq!(bytes_consumed, byte_offset(6));
         match event {
-            VT100InputEvent::Mouse { action, .. } => {
-                assert_eq!(action, VT100MouseAction::Release);
+            VT100InputEventIR::Mouse { action, .. } => {
+                assert_eq!(action, VT100MouseActionIR::Release);
             }
             _ => panic!("Expected Mouse event"),
         }
@@ -765,20 +765,20 @@ mod tests {
     fn test_x10_motion() {
         // X10: Motion at col 18, row 18
         let seq = x10_mouse_sequence(
-            VT100MouseButton::Unknown,
+            VT100MouseButtonIR::Unknown,
             18,
             18,
-            VT100MouseAction::Motion,
-            VT100KeyModifiers::default(),
+            VT100MouseActionIR::Motion,
+            VT100KeyModifiersIR::default(),
         );
         let (event, bytes_consumed) =
             parse_mouse_sequence(&seq).expect("Should parse X10");
 
         assert_eq!(bytes_consumed, byte_offset(6));
         match event {
-            VT100InputEvent::Mouse { button, action, .. } => {
-                assert_eq!(button, VT100MouseButton::Unknown);
-                assert_eq!(action, VT100MouseAction::Motion);
+            VT100InputEventIR::Mouse { button, action, .. } => {
+                assert_eq!(button, VT100MouseButtonIR::Unknown);
+                assert_eq!(action, VT100MouseActionIR::Motion);
             }
             _ => panic!("Expected Mouse event"),
         }
@@ -788,11 +788,11 @@ mod tests {
     fn test_x10_with_shift() {
         // X10: Left click with shift at col 1, row 1
         let seq = x10_mouse_sequence(
-            VT100MouseButton::Left,
+            VT100MouseButtonIR::Left,
             1,
             1,
-            VT100MouseAction::Press,
-            VT100KeyModifiers {
+            VT100MouseActionIR::Press,
+            VT100KeyModifiersIR {
                 shift: KeyState::Pressed,
                 ctrl: KeyState::NotPressed,
                 alt: KeyState::NotPressed,
@@ -803,7 +803,7 @@ mod tests {
 
         assert_eq!(bytes_consumed, byte_offset(6));
         match event {
-            VT100InputEvent::Mouse { modifiers, .. } => {
+            VT100InputEventIR::Mouse { modifiers, .. } => {
                 assert_eq!(modifiers.shift, KeyState::Pressed);
                 assert_eq!(modifiers.ctrl, KeyState::NotPressed);
                 assert_eq!(modifiers.alt, KeyState::NotPressed);
@@ -816,11 +816,11 @@ mod tests {
     fn test_x10_with_ctrl() {
         // X10: Left click with ctrl at col 1, row 1
         let seq = x10_mouse_sequence(
-            VT100MouseButton::Left,
+            VT100MouseButtonIR::Left,
             1,
             1,
-            VT100MouseAction::Press,
-            VT100KeyModifiers {
+            VT100MouseActionIR::Press,
+            VT100KeyModifiersIR {
                 shift: KeyState::NotPressed,
                 ctrl: KeyState::Pressed,
                 alt: KeyState::NotPressed,
@@ -831,7 +831,7 @@ mod tests {
 
         assert_eq!(bytes_consumed, byte_offset(6));
         match event {
-            VT100InputEvent::Mouse { modifiers, .. } => {
+            VT100InputEventIR::Mouse { modifiers, .. } => {
                 assert_eq!(modifiers.shift, KeyState::NotPressed);
                 assert_eq!(modifiers.ctrl, KeyState::Pressed);
                 assert_eq!(modifiers.alt, KeyState::NotPressed);
@@ -844,11 +844,11 @@ mod tests {
     fn test_x10_with_alt() {
         // X10: Left click with alt at col 1, row 1
         let seq = x10_mouse_sequence(
-            VT100MouseButton::Left,
+            VT100MouseButtonIR::Left,
             1,
             1,
-            VT100MouseAction::Press,
-            VT100KeyModifiers {
+            VT100MouseActionIR::Press,
+            VT100KeyModifiersIR {
                 shift: KeyState::NotPressed,
                 ctrl: KeyState::NotPressed,
                 alt: KeyState::Pressed,
@@ -859,7 +859,7 @@ mod tests {
 
         assert_eq!(bytes_consumed, byte_offset(6));
         match event {
-            VT100InputEvent::Mouse { modifiers, .. } => {
+            VT100InputEventIR::Mouse { modifiers, .. } => {
                 assert_eq!(modifiers.shift, KeyState::NotPressed);
                 assert_eq!(modifiers.ctrl, KeyState::NotPressed);
                 assert_eq!(modifiers.alt, KeyState::Pressed);
@@ -872,18 +872,18 @@ mod tests {
     fn test_x10_coordinates_1_based() {
         // Verify 1-based coordinates in X10 format
         let seq = x10_mouse_sequence(
-            VT100MouseButton::Left,
+            VT100MouseButtonIR::Left,
             1,
             1,
-            VT100MouseAction::Press,
-            VT100KeyModifiers::default(),
+            VT100MouseActionIR::Press,
+            VT100KeyModifiersIR::default(),
         );
         let (event, bytes_consumed) =
             parse_mouse_sequence(&seq).expect("Should parse X10");
 
         assert_eq!(bytes_consumed, byte_offset(6));
         match event {
-            VT100InputEvent::Mouse { pos, .. } => {
+            VT100InputEventIR::Mouse { pos, .. } => {
                 assert_eq!(pos.col.as_u16(), 1, "Column should be 1-based");
                 assert_eq!(pos.row.as_u16(), 1, "Row should be 1-based");
             }
@@ -895,16 +895,16 @@ mod tests {
     fn test_x10_large_coordinates() {
         // Test with larger coordinates: col 100, row 50
         let seq = x10_mouse_sequence(
-            VT100MouseButton::Left,
+            VT100MouseButtonIR::Left,
             100,
             50,
-            VT100MouseAction::Press,
-            VT100KeyModifiers::default(),
+            VT100MouseActionIR::Press,
+            VT100KeyModifiersIR::default(),
         );
         let (event, _) = parse_mouse_sequence(&seq).expect("Should parse X10");
 
         match event {
-            VT100InputEvent::Mouse { pos, .. } => {
+            VT100InputEventIR::Mouse { pos, .. } => {
                 assert_eq!(pos.col.as_u16(), 100);
                 assert_eq!(pos.row.as_u16(), 50);
             }
@@ -942,27 +942,27 @@ mod tests {
     fn test_rxvt_left_click() {
         // RXVT: Left click at col 1, row 1
         let seq = rxvt_mouse_sequence(
-            VT100MouseButton::Left,
+            VT100MouseButtonIR::Left,
             1,
             1,
-            VT100MouseAction::Press,
-            VT100KeyModifiers::default(),
+            VT100MouseActionIR::Press,
+            VT100KeyModifiersIR::default(),
         );
         let (event, bytes_consumed) =
             parse_mouse_sequence(&seq).expect("Should parse RXVT");
 
         assert_eq!(bytes_consumed.as_usize(), seq.len());
         match event {
-            VT100InputEvent::Mouse {
+            VT100InputEventIR::Mouse {
                 button,
                 pos,
                 action,
                 modifiers,
             } => {
-                assert_eq!(button, VT100MouseButton::Left);
+                assert_eq!(button, VT100MouseButtonIR::Left);
                 assert_eq!(pos.col.as_u16(), 1);
                 assert_eq!(pos.row.as_u16(), 1);
-                assert_eq!(action, VT100MouseAction::Press);
+                assert_eq!(action, VT100MouseActionIR::Press);
                 assert!(
                     modifiers.shift == KeyState::NotPressed
                         && modifiers.ctrl == KeyState::NotPressed
@@ -977,20 +977,20 @@ mod tests {
     fn test_rxvt_middle_click() {
         // RXVT: Middle click at col 18, row 8
         let seq = rxvt_mouse_sequence(
-            VT100MouseButton::Middle,
+            VT100MouseButtonIR::Middle,
             18,
             8,
-            VT100MouseAction::Press,
-            VT100KeyModifiers::default(),
+            VT100MouseActionIR::Press,
+            VT100KeyModifiersIR::default(),
         );
         let (event, bytes_consumed) =
             parse_mouse_sequence(&seq).expect("Should parse RXVT");
 
         assert_eq!(bytes_consumed.as_usize(), seq.len());
         match event {
-            VT100InputEvent::Mouse { button, action, .. } => {
-                assert_eq!(button, VT100MouseButton::Middle);
-                assert_eq!(action, VT100MouseAction::Press);
+            VT100InputEventIR::Mouse { button, action, .. } => {
+                assert_eq!(button, VT100MouseButtonIR::Middle);
+                assert_eq!(action, VT100MouseActionIR::Press);
             }
             _ => panic!("Expected Mouse event"),
         }
@@ -1000,20 +1000,20 @@ mod tests {
     fn test_rxvt_right_click() {
         // RXVT: Right click at col 13, row 3
         let seq = rxvt_mouse_sequence(
-            VT100MouseButton::Right,
+            VT100MouseButtonIR::Right,
             13,
             3,
-            VT100MouseAction::Press,
-            VT100KeyModifiers::default(),
+            VT100MouseActionIR::Press,
+            VT100KeyModifiersIR::default(),
         );
         let (event, bytes_consumed) =
             parse_mouse_sequence(&seq).expect("Should parse RXVT");
 
         assert_eq!(bytes_consumed.as_usize(), seq.len());
         match event {
-            VT100InputEvent::Mouse { button, action, .. } => {
-                assert_eq!(button, VT100MouseButton::Right);
-                assert_eq!(action, VT100MouseAction::Press);
+            VT100InputEventIR::Mouse { button, action, .. } => {
+                assert_eq!(button, VT100MouseButtonIR::Right);
+                assert_eq!(action, VT100MouseActionIR::Press);
             }
             _ => panic!("Expected Mouse event"),
         }
@@ -1023,19 +1023,19 @@ mod tests {
     fn test_rxvt_release() {
         // RXVT: Release at col 1, row 1
         let seq = rxvt_mouse_sequence(
-            VT100MouseButton::Left,
+            VT100MouseButtonIR::Left,
             1,
             1,
-            VT100MouseAction::Release,
-            VT100KeyModifiers::default(),
+            VT100MouseActionIR::Release,
+            VT100KeyModifiersIR::default(),
         );
         let (event, bytes_consumed) =
             parse_mouse_sequence(&seq).expect("Should parse RXVT");
 
         assert_eq!(bytes_consumed.as_usize(), seq.len());
         match event {
-            VT100InputEvent::Mouse { action, .. } => {
-                assert_eq!(action, VT100MouseAction::Release);
+            VT100InputEventIR::Mouse { action, .. } => {
+                assert_eq!(action, VT100MouseActionIR::Release);
             }
             _ => panic!("Expected Mouse event"),
         }
@@ -1045,20 +1045,20 @@ mod tests {
     fn test_rxvt_motion() {
         // RXVT: Motion at col 18, row 18
         let seq = rxvt_mouse_sequence(
-            VT100MouseButton::Unknown,
+            VT100MouseButtonIR::Unknown,
             18,
             18,
-            VT100MouseAction::Motion,
-            VT100KeyModifiers::default(),
+            VT100MouseActionIR::Motion,
+            VT100KeyModifiersIR::default(),
         );
         let (event, bytes_consumed) =
             parse_mouse_sequence(&seq).expect("Should parse RXVT");
 
         assert_eq!(bytes_consumed.as_usize(), seq.len());
         match event {
-            VT100InputEvent::Mouse { button, action, .. } => {
-                assert_eq!(button, VT100MouseButton::Unknown);
-                assert_eq!(action, VT100MouseAction::Motion);
+            VT100InputEventIR::Mouse { button, action, .. } => {
+                assert_eq!(button, VT100MouseButtonIR::Unknown);
+                assert_eq!(action, VT100MouseActionIR::Motion);
             }
             _ => panic!("Expected Mouse event"),
         }
@@ -1068,11 +1068,11 @@ mod tests {
     fn test_rxvt_with_shift() {
         // RXVT: Left click with shift at col 1, row 1
         let seq = rxvt_mouse_sequence(
-            VT100MouseButton::Left,
+            VT100MouseButtonIR::Left,
             1,
             1,
-            VT100MouseAction::Press,
-            VT100KeyModifiers {
+            VT100MouseActionIR::Press,
+            VT100KeyModifiersIR {
                 shift: KeyState::Pressed,
                 ctrl: KeyState::NotPressed,
                 alt: KeyState::NotPressed,
@@ -1083,7 +1083,7 @@ mod tests {
 
         assert_eq!(bytes_consumed.as_usize(), seq.len());
         match event {
-            VT100InputEvent::Mouse { modifiers, .. } => {
+            VT100InputEventIR::Mouse { modifiers, .. } => {
                 assert_eq!(modifiers.shift, KeyState::Pressed);
                 assert_eq!(modifiers.ctrl, KeyState::NotPressed);
                 assert_eq!(modifiers.alt, KeyState::NotPressed);
@@ -1096,11 +1096,11 @@ mod tests {
     fn test_rxvt_with_ctrl() {
         // RXVT: Left click with ctrl at col 1, row 1
         let seq = rxvt_mouse_sequence(
-            VT100MouseButton::Left,
+            VT100MouseButtonIR::Left,
             1,
             1,
-            VT100MouseAction::Press,
-            VT100KeyModifiers {
+            VT100MouseActionIR::Press,
+            VT100KeyModifiersIR {
                 shift: KeyState::NotPressed,
                 ctrl: KeyState::Pressed,
                 alt: KeyState::NotPressed,
@@ -1111,7 +1111,7 @@ mod tests {
 
         assert_eq!(bytes_consumed.as_usize(), seq.len());
         match event {
-            VT100InputEvent::Mouse { modifiers, .. } => {
+            VT100InputEventIR::Mouse { modifiers, .. } => {
                 assert_eq!(modifiers.shift, KeyState::NotPressed);
                 assert_eq!(modifiers.ctrl, KeyState::Pressed);
                 assert_eq!(modifiers.alt, KeyState::NotPressed);
@@ -1124,11 +1124,11 @@ mod tests {
     fn test_rxvt_with_alt() {
         // RXVT: Left click with alt at col 1, row 1
         let seq = rxvt_mouse_sequence(
-            VT100MouseButton::Left,
+            VT100MouseButtonIR::Left,
             1,
             1,
-            VT100MouseAction::Press,
-            VT100KeyModifiers {
+            VT100MouseActionIR::Press,
+            VT100KeyModifiersIR {
                 shift: KeyState::NotPressed,
                 ctrl: KeyState::NotPressed,
                 alt: KeyState::Pressed,
@@ -1139,7 +1139,7 @@ mod tests {
 
         assert_eq!(bytes_consumed.as_usize(), seq.len());
         match event {
-            VT100InputEvent::Mouse { modifiers, .. } => {
+            VT100InputEventIR::Mouse { modifiers, .. } => {
                 assert_eq!(modifiers.shift, KeyState::NotPressed);
                 assert_eq!(modifiers.ctrl, KeyState::NotPressed);
                 assert_eq!(modifiers.alt, KeyState::Pressed);
@@ -1152,18 +1152,18 @@ mod tests {
     fn test_rxvt_coordinates_1_based() {
         // Verify 1-based coordinates in RXVT format
         let seq = rxvt_mouse_sequence(
-            VT100MouseButton::Left,
+            VT100MouseButtonIR::Left,
             1,
             1,
-            VT100MouseAction::Press,
-            VT100KeyModifiers::default(),
+            VT100MouseActionIR::Press,
+            VT100KeyModifiersIR::default(),
         );
         let (event, bytes_consumed) =
             parse_mouse_sequence(&seq).expect("Should parse RXVT");
 
         assert_eq!(bytes_consumed.as_usize(), seq.len());
         match event {
-            VT100InputEvent::Mouse { pos, .. } => {
+            VT100InputEventIR::Mouse { pos, .. } => {
                 assert_eq!(pos.col.as_u16(), 1, "Column should be 1-based");
                 assert_eq!(pos.row.as_u16(), 1, "Row should be 1-based");
             }
@@ -1175,16 +1175,16 @@ mod tests {
     fn test_rxvt_large_coordinates() {
         // Test with larger coordinates: col 100, row 50
         let seq = rxvt_mouse_sequence(
-            VT100MouseButton::Left,
+            VT100MouseButtonIR::Left,
             100,
             50,
-            VT100MouseAction::Press,
-            VT100KeyModifiers::default(),
+            VT100MouseActionIR::Press,
+            VT100KeyModifiersIR::default(),
         );
         let (event, _) = parse_mouse_sequence(&seq).expect("Should parse RXVT");
 
         match event {
-            VT100InputEvent::Mouse { pos, .. } => {
+            VT100InputEventIR::Mouse { pos, .. } => {
                 assert_eq!(pos.col.as_u16(), 100);
                 assert_eq!(pos.row.as_u16(), 50);
             }
@@ -1242,26 +1242,26 @@ mod tests {
         // SGR: Left click press at col 1, row 1
         // Generated sequence: ESC[<0;1;1M
         let seq = sgr_mouse_sequence(
-            VT100MouseButton::Left,
+            VT100MouseButtonIR::Left,
             1,
             1,
-            VT100MouseAction::Press,
-            VT100KeyModifiers::default(),
+            VT100MouseActionIR::Press,
+            VT100KeyModifiersIR::default(),
         );
         let (event, bytes_consumed) = parse_mouse_sequence(&seq).expect("Should parse");
 
         assert_eq!(bytes_consumed.as_usize(), seq.len());
         match event {
-            VT100InputEvent::Mouse {
+            VT100InputEventIR::Mouse {
                 button,
                 pos,
                 action,
                 modifiers,
             } => {
-                assert_eq!(button, VT100MouseButton::Left);
+                assert_eq!(button, VT100MouseButtonIR::Left);
                 assert_eq!(pos.col.as_u16(), 1);
                 assert_eq!(pos.row.as_u16(), 1);
-                assert_eq!(action, VT100MouseAction::Press);
+                assert_eq!(action, VT100MouseActionIR::Press);
                 assert!(
                     modifiers.shift == KeyState::NotPressed
                         && modifiers.ctrl == KeyState::NotPressed
@@ -1277,18 +1277,18 @@ mod tests {
         // SGR: Left click release at col 1, row 1
         // Generated sequence: ESC[<0;1;1m (lowercase 'm' = release)
         let seq = sgr_mouse_sequence(
-            VT100MouseButton::Left,
+            VT100MouseButtonIR::Left,
             1,
             1,
-            VT100MouseAction::Release,
-            VT100KeyModifiers::default(),
+            VT100MouseActionIR::Release,
+            VT100KeyModifiersIR::default(),
         );
         let (event, bytes_consumed) = parse_mouse_sequence(&seq).expect("Should parse");
 
         assert_eq!(bytes_consumed.as_usize(), seq.len());
         match event {
-            VT100InputEvent::Mouse { action, .. } => {
-                assert_eq!(action, VT100MouseAction::Release);
+            VT100InputEventIR::Mouse { action, .. } => {
+                assert_eq!(action, VT100MouseActionIR::Release);
             }
             _ => panic!("Expected Mouse event"),
         }
@@ -1299,18 +1299,18 @@ mod tests {
         // SGR: Scroll up at col 37, row 14
         // Generated sequence: ESC[<64;37;14M (button 64 = scroll up)
         let seq = sgr_mouse_sequence(
-            VT100MouseButton::Left, // Base button for scroll
+            VT100MouseButtonIR::Left, // Base button for scroll
             37,
             14,
-            VT100MouseAction::Scroll(VT100ScrollDirection::Up),
-            VT100KeyModifiers::default(),
+            VT100MouseActionIR::Scroll(VT100ScrollDirectionIR::Up),
+            VT100KeyModifiersIR::default(),
         );
         let (event, bytes_consumed) = parse_mouse_sequence(&seq).expect("Should parse");
 
         assert_eq!(bytes_consumed.as_usize(), seq.len());
         match event {
-            VT100InputEvent::Mouse { action, pos, .. } => {
-                assert_eq!(action, VT100MouseAction::Scroll(VT100ScrollDirection::Up));
+            VT100InputEventIR::Mouse { action, pos, .. } => {
+                assert_eq!(action, VT100MouseActionIR::Scroll(VT100ScrollDirectionIR::Up));
                 assert_eq!(pos.col.as_u16(), 37);
                 assert_eq!(pos.row.as_u16(), 14);
             }
@@ -1323,19 +1323,19 @@ mod tests {
         // SGR: Left button drag at col 10, row 5
         // Generated sequence: ESC[<32;10;5M (button 32 = drag with bit 5 set)
         let seq = sgr_mouse_sequence(
-            VT100MouseButton::Left,
+            VT100MouseButtonIR::Left,
             10,
             5,
-            VT100MouseAction::Drag,
-            VT100KeyModifiers::default(),
+            VT100MouseActionIR::Drag,
+            VT100KeyModifiersIR::default(),
         );
         let (event, bytes_consumed) = parse_mouse_sequence(&seq).expect("Should parse");
 
         assert_eq!(bytes_consumed.as_usize(), seq.len());
         match event {
-            VT100InputEvent::Mouse { button, action, .. } => {
-                assert_eq!(button, VT100MouseButton::Left);
-                assert_eq!(action, VT100MouseAction::Drag);
+            VT100InputEventIR::Mouse { button, action, .. } => {
+                assert_eq!(button, VT100MouseButtonIR::Left);
+                assert_eq!(action, VT100MouseActionIR::Drag);
             }
             _ => panic!("Expected Mouse event"),
         }
@@ -1346,11 +1346,11 @@ mod tests {
         // SGR: Ctrl+Left click at col 1, row 1
         // Generated sequence: ESC[<16;1;1M (button 16 = Ctrl modifier)
         let seq = sgr_mouse_sequence(
-            VT100MouseButton::Left,
+            VT100MouseButtonIR::Left,
             1,
             1,
-            VT100MouseAction::Press,
-            VT100KeyModifiers {
+            VT100MouseActionIR::Press,
+            VT100KeyModifiersIR {
                 ctrl: KeyState::Pressed,
                 shift: KeyState::NotPressed,
                 alt: KeyState::NotPressed,
@@ -1360,7 +1360,7 @@ mod tests {
 
         assert_eq!(bytes_consumed.as_usize(), seq.len());
         match event {
-            VT100InputEvent::Mouse { modifiers, .. } => {
+            VT100InputEventIR::Mouse { modifiers, .. } => {
                 assert_eq!(modifiers.ctrl, KeyState::Pressed);
                 assert_eq!(modifiers.shift, KeyState::NotPressed);
                 assert_eq!(modifiers.alt, KeyState::NotPressed);
@@ -1374,17 +1374,17 @@ mod tests {
         // SGR: Verify 1-based coordinates at col 1, row 1
         // Generated sequence: ESC[<0;1;1M
         let seq = sgr_mouse_sequence(
-            VT100MouseButton::Left,
+            VT100MouseButtonIR::Left,
             1,
             1,
-            VT100MouseAction::Press,
-            VT100KeyModifiers::default(),
+            VT100MouseActionIR::Press,
+            VT100KeyModifiersIR::default(),
         );
         let (event, bytes_consumed) = parse_mouse_sequence(&seq).expect("Should parse");
 
         assert_eq!(bytes_consumed.as_usize(), seq.len());
         match event {
-            VT100InputEvent::Mouse { pos, .. } => {
+            VT100InputEventIR::Mouse { pos, .. } => {
                 assert_eq!(pos.col.as_u16(), 1, "Column should be 1-based");
                 assert_eq!(pos.row.as_u16(), 1, "Row should be 1-based");
             }

@@ -45,7 +45,7 @@
 //!
 //! ## Recommendation: SWITCH to Vec for `PixelChar`
 //!
-//! Unlike `RenderOp` (which typically has 3-6 elements), `PixelChar` collections
+//! Unlike [`RenderOpIR`] (which typically has 3-6 elements), `PixelChar` collections
 //! typically have 80+ elements for a standard terminal line. This exceeds
 //! `SmallVec`'s inline capacity of 8, causing:
 //!
@@ -66,6 +66,8 @@
 //! - 4.1x faster for building typical lines
 //! - Eliminates reallocation overhead
 //! - Perfect for `OffscreenBuffer` which knows terminal dimensions
+//!
+//! [`RenderOpIR`]: crate::RenderOpIR
 
 #[cfg(test)]
 mod pixel_char_benchmarks {
