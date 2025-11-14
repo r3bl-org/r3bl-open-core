@@ -25,14 +25,14 @@
 //!    ├─→ terminal_events.rs (resize/focus/paste)
 //!    └─→ utf8.rs (text input)
 //!    ↓
-//! VT100InputEvent
+//! VT100InputEventIR
 //! ```
 //!
 //! **Navigate**:
 //! - ⬇️ **Down**: [`keyboard`], [`mouse`], [`terminal_events`], [`utf8`] - Specialized
 //!   parsers
 //! - 🔧 **Backend**: [`DirectToAnsiInputDevice`] - Async I/O layer that calls this
-//! - 📚 **Types**: [`VT100InputEvent`] - Output event type
+//! - 📚 **Types**: [`VT100InputEventIR`] - Output event type
 //!
 //! ## Zero-Latency ESC Key Detection
 //!
@@ -104,17 +104,17 @@
 //!   ESC instead of Up Arrow is annoying but not catastrophic
 //!
 //! [`DirectToAnsiInputDevice`]: crate::DirectToAnsiInputDevice
-//! [`VT100InputEvent`]: super::VT100InputEvent
+//! [`VT100InputEventIR`]: super::VT100InputEventIR
 //! [`keyboard`]: mod@super::keyboard
 //! [`mouse`]: mod@super::mouse
 //! [`terminal_events`]: mod@super::terminal_events
 //! [`utf8`]: mod@super::utf8
 
-use super::{VT100InputEvent, VT100KeyCode, VT100KeyModifiers, parse_alt_letter,
+use super::{VT100InputEventIR, VT100KeyCodeIR, VT100KeyModifiersIR, parse_alt_letter,
             parse_control_character, parse_keyboard_sequence, parse_mouse_sequence,
             parse_ss3_sequence, parse_terminal_event, parse_utf8_text};
-use crate::core::ansi::constants::{ANSI_CSI_BRACKET, ANSI_ESC, ANSI_SS3_O};
-use crate::{ByteOffset, byte_offset};
+use crate::{ByteOffset, byte_offset,
+            core::ansi::constants::{ANSI_CSI_BRACKET, ANSI_ESC, ANSI_SS3_O}};
 
 /// Try to parse a complete input event from the buffer.
 ///
@@ -160,7 +160,7 @@ use crate::{ByteOffset, byte_offset};
 /// ## Returns
 ///
 /// `Some((event, bytes_consumed))` if a complete event was successfully parsed.
-/// Returns the protocol-level [`VT100InputEvent`] with the number of bytes consumed
+/// Returns the protocol-level [`VT100InputEventIR`] with the number of bytes consumed
 /// as a [`ByteOffset`].
 ///
 /// `None` if the buffer contains an incomplete sequence (more bytes needed).
@@ -169,15 +169,15 @@ use crate::{ByteOffset, byte_offset};
 ///
 /// ```
 /// use r3bl_tui::core::ansi::vt_100_terminal_input_parser::{try_parse_input_event,
-///                                                           VT100InputEvent,
-///                                                           VT100KeyCode};
+///                                                           VT100InputEventIR,
+///                                                           VT100KeyCodeIR};
 /// use r3bl_tui::byte_offset;
 ///
 /// // Parse ESC key (single byte, immediate)
 /// let buffer = &[0x1B];
 /// if let Some((event, consumed)) = try_parse_input_event(buffer) {
-///     assert!(matches!(event, VT100InputEvent::Keyboard {
-///         code: VT100KeyCode::Escape, ..
+///     assert!(matches!(event, VT100InputEventIR::Keyboard {
+///         code: VT100KeyCodeIR::Escape, ..
 ///     }));
 ///     assert_eq!(consumed, byte_offset(1));
 /// }
@@ -185,8 +185,8 @@ use crate::{ByteOffset, byte_offset};
 /// // Parse Up Arrow (CSI sequence)
 /// let buffer = &[0x1B, b'[', b'A'];
 /// if let Some((event, consumed)) = try_parse_input_event(buffer) {
-///     assert!(matches!(event, VT100InputEvent::Keyboard {
-///         code: VT100KeyCode::Up, ..
+///     assert!(matches!(event, VT100InputEventIR::Keyboard {
+///         code: VT100KeyCodeIR::Up, ..
 ///     }));
 ///     assert_eq!(consumed, byte_offset(3));
 /// }
@@ -194,14 +194,14 @@ use crate::{ByteOffset, byte_offset};
 /// // Parse regular text
 /// let buffer = b"Hello";
 /// if let Some((event, consumed)) = try_parse_input_event(buffer) {
-///     assert!(matches!(event, VT100InputEvent::Keyboard {
-///         code: VT100KeyCode::Char('H'), ..
+///     assert!(matches!(event, VT100InputEventIR::Keyboard {
+///         code: VT100KeyCodeIR::Char('H'), ..
 ///     }));
 ///     assert_eq!(consumed, byte_offset(1));
 /// }
 /// ```
 #[must_use]
-pub fn try_parse_input_event(buffer: &[u8]) -> Option<(VT100InputEvent, ByteOffset)> {
+pub fn try_parse_input_event(buffer: &[u8]) -> Option<(VT100InputEventIR, ByteOffset)> {
     // Fast path: empty buffer.
     if buffer.is_empty() {
         return None;
@@ -213,9 +213,9 @@ pub fn try_parse_input_event(buffer: &[u8]) -> Option<(VT100InputEvent, ByteOffs
             // ESC sequence or ESC key.
             if buffer.len() == 1 {
                 // Just ESC, emit immediately (no timeout!).
-                let esc_event = VT100InputEvent::Keyboard {
-                    code: VT100KeyCode::Escape,
-                    modifiers: VT100KeyModifiers::default(),
+                let esc_event = VT100InputEventIR::Keyboard {
+                    code: VT100KeyCodeIR::Escape,
+                    modifiers: VT100KeyModifiersIR::default(),
                 };
                 return Some((esc_event, byte_offset(1)));
             }
@@ -240,9 +240,9 @@ pub fn try_parse_input_event(buffer: &[u8]) -> Option<(VT100InputEvent, ByteOffs
                     // Alt+F (ESC+'f'), etc.
                     parse_alt_letter(buffer).or_else(|| {
                         // Not Alt+letter, emit standalone ESC
-                        let esc_event = VT100InputEvent::Keyboard {
-                            code: VT100KeyCode::Escape,
-                            modifiers: VT100KeyModifiers::default(),
+                        let esc_event = VT100InputEventIR::Keyboard {
+                            code: VT100KeyCodeIR::Escape,
+                            modifiers: VT100KeyModifiersIR::default(),
                         };
                         Some((esc_event, crate::byte_offset(1)))
                     })
@@ -285,8 +285,8 @@ mod tests {
 
         assert!(matches!(
             event,
-            VT100InputEvent::Keyboard {
-                code: VT100KeyCode::Escape,
+            VT100InputEventIR::Keyboard {
+                code: VT100KeyCodeIR::Escape,
                 ..
             }
         ));
@@ -302,8 +302,8 @@ mod tests {
 
         assert!(matches!(
             event,
-            VT100InputEvent::Keyboard {
-                code: VT100KeyCode::Up,
+            VT100InputEventIR::Keyboard {
+                code: VT100KeyCodeIR::Up,
                 ..
             }
         ));
@@ -320,7 +320,7 @@ mod tests {
 
         assert!(result.is_some(), "Should parse mouse event");
         let (event, consumed) = result.unwrap();
-        assert!(matches!(event, VT100InputEvent::Mouse { .. }));
+        assert!(matches!(event, VT100InputEventIR::Mouse { .. }));
         assert_eq!(consumed.as_usize(), buffer.len());
     }
 
@@ -332,8 +332,8 @@ mod tests {
 
         assert!(matches!(
             event,
-            VT100InputEvent::Keyboard {
-                code: VT100KeyCode::Function(1),
+            VT100InputEventIR::Keyboard {
+                code: VT100KeyCodeIR::Function(1),
                 ..
             }
         ));
@@ -349,9 +349,9 @@ mod tests {
 
         assert!(matches!(
             event,
-            VT100InputEvent::Keyboard {
-                code: VT100KeyCode::Char('b'),
-                modifiers: VT100KeyModifiers { alt, .. }
+            VT100InputEventIR::Keyboard {
+                code: VT100KeyCodeIR::Char('b'),
+                modifiers: VT100KeyModifiersIR { alt, .. }
             } if alt == KeyState::Pressed
         ));
         assert_eq!(consumed, byte_offset(2));
@@ -366,9 +366,9 @@ mod tests {
 
         assert!(matches!(
             event,
-            VT100InputEvent::Keyboard {
-                code: VT100KeyCode::Char('a'),
-                modifiers: VT100KeyModifiers { ctrl, .. }
+            VT100InputEventIR::Keyboard {
+                code: VT100KeyCodeIR::Char('a'),
+                modifiers: VT100KeyModifiersIR { ctrl, .. }
             } if ctrl == KeyState::Pressed
         ));
         assert_eq!(consumed, byte_offset(1));
@@ -382,8 +382,8 @@ mod tests {
 
         assert!(matches!(
             event,
-            VT100InputEvent::Keyboard {
-                code: VT100KeyCode::Char('H'),
+            VT100InputEventIR::Keyboard {
+                code: VT100KeyCodeIR::Char('H'),
                 ..
             }
         ));
@@ -413,8 +413,8 @@ mod tests {
 
         assert!(matches!(
             event,
-            VT100InputEvent::Keyboard {
-                code: VT100KeyCode::Escape,
+            VT100InputEventIR::Keyboard {
+                code: VT100KeyCodeIR::Escape,
                 ..
             }
         ));

@@ -9,27 +9,28 @@
 //! ## Where You Are in the Architecture
 //!
 //! ```text
-//! ┌─────────────────────────────────────────────────────────┐
-//! │  ir_event_types - Foundation Layer                      │  ← **YOU ARE HERE**
-//! │  • VT100InputEvent (output of all parsers)              │
-//! │  • VT100KeyCode, VT100KeyModifiers (keyboard)           │
-//! │  • VT100MouseButton, VT100MouseAction (mouse)           │
-//! │  • VT100FocusState, VT100PasteMode (terminal events)    │
-//! │  • VT100ScrollDirection (scroll wheel)                  │
-//! └───────────────────────────▲─────────────────────────────┘
-//!                             │ (types used by all modules)
-//!         ┌───────────────────┼───────────────────┐
-//!         │                   │                   │
-//!     parser.rs          keyboard.rs          mouse.rs
-//!   (routing)          (CSI/SS3)        (SGR/X10/RXVT)
-//!                  terminal_events.rs     utf8.rs
-//!                   (resize/focus)       (text)
+//! ┌──────────────────────────────────────────────────────────┐
+//! │  ir_event_types - Foundation Layer                       │  ← **YOU ARE HERE**
+//! │  • VT100InputEventIR (output of all parsers)             │
+//! │  • VT100KeyCodeIR, VT100KeyModifiersIR (keyboard)        │
+//! │  • VT100MouseButtonIR, VT100MouseActionIR (mouse)        │
+//! │  • VT100FocusStateIR, VT100PasteModeIR (terminal events) │
+//! │  • VT100ScrollDirectionIR (scroll wheel)                 │
+//! └─────────────────────────▲────────────────────────────────┘
+//!                           │ (types used by all modules)
+//!       ┌───────────────────┼───────────────────┐
+//!       │                   │                   │
+//!   parser.rs           keyboard.rs           mouse.rs
+//!   (routing)           (CSI/SS3)             (SGR/X10/RXVT)
+//!                       terminal_events.rs    utf8.rs
+//!                       (resize/focus)        (text)
 //! ```
 //!
 //! **Navigate**:
 //! - ⬆️ **Up**: [`parser`], [`keyboard`], [`mouse`], [`terminal_events`], [`utf8`] -
 //!   Modules using these types
-//! - 🔧 **Backend**: [`DirectToAnsiInputDevice`] - Converts VT100InputEvent to InputEvent
+//! - 🔧 **Backend**: [`DirectToAnsiInputDevice`] - Converts VT100InputEventIR to
+//!   InputEvent
 //! - 📚 **Canonical Types**: [`InputEvent`], [`Key`], [`MouseInput`] - Final user-facing
 //!   types from [`terminal_io`]
 //!
@@ -52,7 +53,7 @@
 //! The IR layer normalizes these quirks during conversion to canonical types.
 //!
 //! ### 3. Type Safety
-//! Protocol types use VT-100 nomenclature ([`VT100KeyCode`], [`VT100MouseButton`]),
+//! Protocol types use VT-100 nomenclature ([`VT100KeyCodeIR`], [`VT100MouseButtonIR`]),
 //! while canonical types use domain-appropriate names ([`Key`], [`Button`]).
 //! Different types prevent accidental mixing of protocol details with domain logic.
 //!
@@ -63,14 +64,14 @@
 //! ## IR Types (Protocol Layer)
 //!
 //! All types prefixed with `VT100` are protocol-specific IR:
-//! - [`VT100InputEvent`] - Top-level IR event enum
-//! - [`VT100KeyCode`] - Keyboard key codes from VT-100 sequences
-//! - [`VT100KeyModifiers`] - Modifier key states (shift, ctrl, alt)
-//! - [`VT100MouseButton`] - Mouse button identifiers
-//! - [`VT100MouseAction`] - Mouse event types (press, drag, scroll, etc.)
-//! - [`VT100ScrollDirection`] - Scroll wheel directions
-//! - [`VT100FocusState`] - Focus gained/lost states
-//! - [`VT100PasteMode`] - Bracketed paste markers
+//! - [`VT100InputEventIR`] - Top-level IR event enum
+//! - [`VT100KeyCodeIR`] - Keyboard key codes from VT-100 sequences
+//! - [`VT100KeyModifiersIR`] - Modifier key states (shift, ctrl, alt)
+//! - [`VT100MouseButtonIR`] - Mouse button identifiers
+//! - [`VT100MouseActionIR`] - Mouse event types (press, drag, scroll, etc.)
+//! - [`VT100ScrollDirectionIR`] - Scroll wheel directions
+//! - [`VT100FocusStateIR`] - Focus gained/lost states
+//! - [`VT100PasteModeIR`] - Bracketed paste markers
 //!
 //! ## Canonical Types (Public API)
 //!
@@ -86,7 +87,7 @@
 //! ```text
 //! Raw ANSI bytes
 //!      ↓ (parser.rs, keyboard.rs, mouse.rs, etc.)
-//! VT100InputEvent (IR)  ← YOU ARE HERE
+//! VT100InputEventIR (IR)  ← YOU ARE HERE
 //!      ↓ (protocol_conversion.rs)
 //! InputEvent (canonical)
 //!      ↓
@@ -117,18 +118,18 @@ use crate::{ColWidth, RowHeight, TermPos, terminal_io::KeyState};
 /// [`InputEvent`]: crate::terminal_io::InputEvent
 /// [`terminal_io`]: enum@crate::terminal_io::InputEvent
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum VT100InputEvent {
+pub enum VT100InputEventIR {
     /// Keyboard event with character, modifiers, and key code.
     Keyboard {
-        code: VT100KeyCode,
-        modifiers: VT100KeyModifiers,
+        code: VT100KeyCodeIR,
+        modifiers: VT100KeyModifiersIR,
     },
     /// Mouse event with button, position, and action.
     Mouse {
-        button: VT100MouseButton,
+        button: VT100MouseButtonIR,
         pos: TermPos,
-        action: VT100MouseAction,
-        modifiers: VT100KeyModifiers,
+        action: VT100MouseActionIR,
+        modifiers: VT100KeyModifiersIR,
     },
     /// Terminal resize event with new dimensions.
     ///
@@ -143,20 +144,20 @@ pub enum VT100InputEvent {
         row_height: RowHeight,
     },
     /// Terminal focus event (gained or lost).
-    Focus(VT100FocusState),
+    Focus(VT100FocusStateIR),
     /// Paste mode notification (start or end).
-    Paste(VT100PasteMode),
+    Paste(VT100PasteModeIR),
 }
 
 /// Keyboard modifiers for input events.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct VT100KeyModifiers {
+pub struct VT100KeyModifiersIR {
     pub shift: KeyState,
     pub ctrl: KeyState,
     pub alt: KeyState,
 }
 
-impl VT100KeyModifiers {
+impl VT100KeyModifiersIR {
     #[must_use]
     pub fn new() -> Self {
         Self {
@@ -167,13 +168,13 @@ impl VT100KeyModifiers {
     }
 }
 
-impl Default for VT100KeyModifiers {
+impl Default for VT100KeyModifiersIR {
     fn default() -> Self { Self::new() }
 }
 
 /// Mouse buttons.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum VT100MouseButton {
+pub enum VT100MouseButtonIR {
     Left,
     Middle,
     Right,
@@ -182,7 +183,7 @@ pub enum VT100MouseButton {
 
 /// Scroll direction.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum VT100ScrollDirection {
+pub enum VT100ScrollDirectionIR {
     Up,
     Down,
     Left,
@@ -191,21 +192,21 @@ pub enum VT100ScrollDirection {
 
 /// Paste mode state.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum VT100PasteMode {
+pub enum VT100PasteModeIR {
     Start,
     End,
 }
 
 /// Internal protocol focus state (maps to canonical `FocusEvent`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum VT100FocusState {
+pub enum VT100FocusStateIR {
     Gained,
     Lost,
 }
 
 /// Keyboard key codes.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum VT100KeyCode {
+pub enum VT100KeyCodeIR {
     /// Regular printable character.
     Char(char),
     /// Function keys F1-F12.
@@ -234,7 +235,7 @@ pub enum VT100KeyCode {
 
 /// Mouse event actions.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum VT100MouseAction {
+pub enum VT100MouseActionIR {
     /// Mouse button pressed down.
     Press,
     /// Mouse button released.
@@ -244,5 +245,5 @@ pub enum VT100MouseAction {
     /// Mouse moved without buttons.
     Motion,
     /// Scroll wheel rotated.
-    Scroll(VT100ScrollDirection),
+    Scroll(VT100ScrollDirectionIR),
 }

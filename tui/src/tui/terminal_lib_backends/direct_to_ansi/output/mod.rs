@@ -23,7 +23,12 @@
 //! [`RenderOpOutput`]: crate::RenderOpOutput
 
 // Attach.
+// Conditionally public for documentation links.
+#[cfg(any(test, doc))]
+pub mod paint_render_op_impl;
+#[cfg(not(any(test, doc)))]
 mod paint_render_op_impl;
+
 mod pixel_char_renderer;
 mod render_to_ansi;
 

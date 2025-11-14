@@ -10,10 +10,10 @@
 //! This ensures generator and parser are compatible and speak the same protocol.
 
 use crate::{KeyState,
-            core::ansi::vt_100_terminal_input_parser::{VT100FocusState,
-                                                       VT100InputEvent, VT100KeyCode,
-                                                       VT100KeyModifiers,
-                                                       VT100PasteMode,
+            core::ansi::vt_100_terminal_input_parser::{VT100FocusStateIR,
+                                                       VT100InputEventIR, VT100KeyCodeIR,
+                                                       VT100KeyModifiersIR,
+                                                       VT100PasteModeIR,
                                                        parse_keyboard_sequence,
                                                        parse_terminal_event,
                                                        test_fixtures::*}};
@@ -22,7 +22,7 @@ use crate::{KeyState,
 
 #[test]
 fn test_generate_resize_event() {
-    let event = VT100InputEvent::Resize {
+    let event = VT100InputEventIR::Resize {
         row_height: crate::RowHeight::from(24),
         col_width: crate::ColWidth::from(80),
     };
@@ -32,35 +32,35 @@ fn test_generate_resize_event() {
 
 #[test]
 fn test_generate_focus_gained() {
-    let event = VT100InputEvent::Focus(VT100FocusState::Gained);
+    let event = VT100InputEventIR::Focus(VT100FocusStateIR::Gained);
     let bytes = generate_keyboard_sequence(&event).unwrap();
     assert_eq!(bytes, b"\x1b[I");
 }
 
 #[test]
 fn test_generate_focus_lost() {
-    let event = VT100InputEvent::Focus(VT100FocusState::Lost);
+    let event = VT100InputEventIR::Focus(VT100FocusStateIR::Lost);
     let bytes = generate_keyboard_sequence(&event).unwrap();
     assert_eq!(bytes, b"\x1b[O");
 }
 
 #[test]
 fn test_generate_paste_start() {
-    let event = VT100InputEvent::Paste(VT100PasteMode::Start);
+    let event = VT100InputEventIR::Paste(VT100PasteModeIR::Start);
     let bytes = generate_keyboard_sequence(&event).unwrap();
     assert_eq!(bytes, b"\x1b[200~");
 }
 
 #[test]
 fn test_generate_paste_end() {
-    let event = VT100InputEvent::Paste(VT100PasteMode::End);
+    let event = VT100InputEventIR::Paste(VT100PasteModeIR::End);
     let bytes = generate_keyboard_sequence(&event).unwrap();
     assert_eq!(bytes, b"\x1b[201~");
 }
 
 #[test]
 fn test_roundtrip_resize_event() {
-    let original_event = VT100InputEvent::Resize {
+    let original_event = VT100InputEventIR::Resize {
         row_height: crate::RowHeight::from(30),
         col_width: crate::ColWidth::from(120),
     };
@@ -74,7 +74,7 @@ fn test_roundtrip_resize_event() {
 
 #[test]
 fn test_roundtrip_focus_events() {
-    let original_gained = VT100InputEvent::Focus(VT100FocusState::Gained);
+    let original_gained = VT100InputEventIR::Focus(VT100FocusStateIR::Gained);
     let bytes_gained = generate_keyboard_sequence(&original_gained).unwrap();
     let (parsed_gained, bytes_consumed) =
         parse_terminal_event(&bytes_gained).expect("Should parse");
@@ -82,7 +82,7 @@ fn test_roundtrip_focus_events() {
     assert_eq!(parsed_gained, original_gained);
     assert_eq!(bytes_consumed.as_usize(), bytes_gained.len());
 
-    let original_lost = VT100InputEvent::Focus(VT100FocusState::Lost);
+    let original_lost = VT100InputEventIR::Focus(VT100FocusStateIR::Lost);
     let bytes_lost = generate_keyboard_sequence(&original_lost).unwrap();
     let (parsed_lost, bytes_consumed) =
         parse_terminal_event(&bytes_lost).expect("Should parse");
@@ -93,7 +93,7 @@ fn test_roundtrip_focus_events() {
 
 #[test]
 fn test_roundtrip_paste_events() {
-    let original_start = VT100InputEvent::Paste(VT100PasteMode::Start);
+    let original_start = VT100InputEventIR::Paste(VT100PasteModeIR::Start);
     let bytes_start = generate_keyboard_sequence(&original_start).unwrap();
     let (parsed_start, bytes_consumed) =
         parse_terminal_event(&bytes_start).expect("Should parse");
@@ -101,7 +101,7 @@ fn test_roundtrip_paste_events() {
     assert_eq!(parsed_start, original_start);
     assert_eq!(bytes_consumed.as_usize(), bytes_start.len());
 
-    let original_end = VT100InputEvent::Paste(VT100PasteMode::End);
+    let original_end = VT100InputEventIR::Paste(VT100PasteModeIR::End);
     let bytes_end = generate_keyboard_sequence(&original_end).unwrap();
     let (parsed_end, bytes_consumed) =
         parse_terminal_event(&bytes_end).expect("Should parse");
@@ -114,9 +114,9 @@ fn test_roundtrip_paste_events() {
 
 #[test]
 fn test_generate_arrow_up() {
-    let event = VT100InputEvent::Keyboard {
-        code: VT100KeyCode::Up,
-        modifiers: VT100KeyModifiers::default(),
+    let event = VT100InputEventIR::Keyboard {
+        code: VT100KeyCodeIR::Up,
+        modifiers: VT100KeyModifiersIR::default(),
     };
     let bytes = generate_keyboard_sequence(&event).unwrap();
     assert_eq!(bytes, b"\x1b[A");
@@ -124,9 +124,9 @@ fn test_generate_arrow_up() {
 
 #[test]
 fn test_generate_arrow_down() {
-    let event = VT100InputEvent::Keyboard {
-        code: VT100KeyCode::Down,
-        modifiers: VT100KeyModifiers::default(),
+    let event = VT100InputEventIR::Keyboard {
+        code: VT100KeyCodeIR::Down,
+        modifiers: VT100KeyModifiersIR::default(),
     };
     let bytes = generate_keyboard_sequence(&event).unwrap();
     assert_eq!(bytes, b"\x1b[B");
@@ -134,9 +134,9 @@ fn test_generate_arrow_down() {
 
 #[test]
 fn test_generate_arrow_right() {
-    let event = VT100InputEvent::Keyboard {
-        code: VT100KeyCode::Right,
-        modifiers: VT100KeyModifiers::default(),
+    let event = VT100InputEventIR::Keyboard {
+        code: VT100KeyCodeIR::Right,
+        modifiers: VT100KeyModifiersIR::default(),
     };
     let bytes = generate_keyboard_sequence(&event).unwrap();
     assert_eq!(bytes, b"\x1b[C");
@@ -144,9 +144,9 @@ fn test_generate_arrow_right() {
 
 #[test]
 fn test_generate_arrow_left() {
-    let event = VT100InputEvent::Keyboard {
-        code: VT100KeyCode::Left,
-        modifiers: VT100KeyModifiers::default(),
+    let event = VT100InputEventIR::Keyboard {
+        code: VT100KeyCodeIR::Left,
+        modifiers: VT100KeyModifiersIR::default(),
     };
     let bytes = generate_keyboard_sequence(&event).unwrap();
     assert_eq!(bytes, b"\x1b[D");
@@ -156,9 +156,9 @@ fn test_generate_arrow_left() {
 
 #[test]
 fn test_generate_shift_up() {
-    let event = VT100InputEvent::Keyboard {
-        code: VT100KeyCode::Up,
-        modifiers: VT100KeyModifiers {
+    let event = VT100InputEventIR::Keyboard {
+        code: VT100KeyCodeIR::Up,
+        modifiers: VT100KeyModifiersIR {
             shift: KeyState::Pressed,
             alt: KeyState::NotPressed,
             ctrl: KeyState::NotPressed,
@@ -171,9 +171,9 @@ fn test_generate_shift_up() {
 
 #[test]
 fn test_generate_alt_right() {
-    let event = VT100InputEvent::Keyboard {
-        code: VT100KeyCode::Right,
-        modifiers: VT100KeyModifiers {
+    let event = VT100InputEventIR::Keyboard {
+        code: VT100KeyCodeIR::Right,
+        modifiers: VT100KeyModifiersIR {
             shift: KeyState::NotPressed,
             alt: KeyState::Pressed,
             ctrl: KeyState::NotPressed,
@@ -186,9 +186,9 @@ fn test_generate_alt_right() {
 
 #[test]
 fn test_generate_ctrl_down() {
-    let event = VT100InputEvent::Keyboard {
-        code: VT100KeyCode::Down,
-        modifiers: VT100KeyModifiers {
+    let event = VT100InputEventIR::Keyboard {
+        code: VT100KeyCodeIR::Down,
+        modifiers: VT100KeyModifiersIR {
             shift: KeyState::NotPressed,
             alt: KeyState::NotPressed,
             ctrl: KeyState::Pressed,
@@ -201,9 +201,9 @@ fn test_generate_ctrl_down() {
 
 #[test]
 fn test_generate_ctrl_alt_shift_left() {
-    let event = VT100InputEvent::Keyboard {
-        code: VT100KeyCode::Left,
-        modifiers: VT100KeyModifiers {
+    let event = VT100InputEventIR::Keyboard {
+        code: VT100KeyCodeIR::Left,
+        modifiers: VT100KeyModifiersIR {
             shift: KeyState::Pressed,
             alt: KeyState::Pressed,
             ctrl: KeyState::Pressed,
@@ -218,9 +218,9 @@ fn test_generate_ctrl_alt_shift_left() {
 
 #[test]
 fn test_generate_home_key() {
-    let event = VT100InputEvent::Keyboard {
-        code: VT100KeyCode::Home,
-        modifiers: VT100KeyModifiers::default(),
+    let event = VT100InputEventIR::Keyboard {
+        code: VT100KeyCodeIR::Home,
+        modifiers: VT100KeyModifiersIR::default(),
     };
     let bytes = generate_keyboard_sequence(&event).unwrap();
     assert_eq!(bytes, b"\x1b[H");
@@ -228,9 +228,9 @@ fn test_generate_home_key() {
 
 #[test]
 fn test_generate_end_key() {
-    let event = VT100InputEvent::Keyboard {
-        code: VT100KeyCode::End,
-        modifiers: VT100KeyModifiers::default(),
+    let event = VT100InputEventIR::Keyboard {
+        code: VT100KeyCodeIR::End,
+        modifiers: VT100KeyModifiersIR::default(),
     };
     let bytes = generate_keyboard_sequence(&event).unwrap();
     assert_eq!(bytes, b"\x1b[F");
@@ -238,9 +238,9 @@ fn test_generate_end_key() {
 
 #[test]
 fn test_generate_insert_key() {
-    let event = VT100InputEvent::Keyboard {
-        code: VT100KeyCode::Insert,
-        modifiers: VT100KeyModifiers::default(),
+    let event = VT100InputEventIR::Keyboard {
+        code: VT100KeyCodeIR::Insert,
+        modifiers: VT100KeyModifiersIR::default(),
     };
     let bytes = generate_keyboard_sequence(&event).unwrap();
     assert_eq!(bytes, b"\x1b[2~");
@@ -248,9 +248,9 @@ fn test_generate_insert_key() {
 
 #[test]
 fn test_generate_delete_key() {
-    let event = VT100InputEvent::Keyboard {
-        code: VT100KeyCode::Delete,
-        modifiers: VT100KeyModifiers::default(),
+    let event = VT100InputEventIR::Keyboard {
+        code: VT100KeyCodeIR::Delete,
+        modifiers: VT100KeyModifiersIR::default(),
     };
     let bytes = generate_keyboard_sequence(&event).unwrap();
     assert_eq!(bytes, b"\x1b[3~");
@@ -258,9 +258,9 @@ fn test_generate_delete_key() {
 
 #[test]
 fn test_generate_page_up() {
-    let event = VT100InputEvent::Keyboard {
-        code: VT100KeyCode::PageUp,
-        modifiers: VT100KeyModifiers::default(),
+    let event = VT100InputEventIR::Keyboard {
+        code: VT100KeyCodeIR::PageUp,
+        modifiers: VT100KeyModifiersIR::default(),
     };
     let bytes = generate_keyboard_sequence(&event).unwrap();
     assert_eq!(bytes, b"\x1b[5~");
@@ -268,9 +268,9 @@ fn test_generate_page_up() {
 
 #[test]
 fn test_generate_page_down() {
-    let event = VT100InputEvent::Keyboard {
-        code: VT100KeyCode::PageDown,
-        modifiers: VT100KeyModifiers::default(),
+    let event = VT100InputEventIR::Keyboard {
+        code: VT100KeyCodeIR::PageDown,
+        modifiers: VT100KeyModifiersIR::default(),
     };
     let bytes = generate_keyboard_sequence(&event).unwrap();
     assert_eq!(bytes, b"\x1b[6~");
@@ -280,9 +280,9 @@ fn test_generate_page_down() {
 
 #[test]
 fn test_generate_f1_key() {
-    let event = VT100InputEvent::Keyboard {
-        code: VT100KeyCode::Function(1),
-        modifiers: VT100KeyModifiers::default(),
+    let event = VT100InputEventIR::Keyboard {
+        code: VT100KeyCodeIR::Function(1),
+        modifiers: VT100KeyModifiersIR::default(),
     };
     let bytes = generate_keyboard_sequence(&event).unwrap();
     assert_eq!(bytes, b"\x1b[11~");
@@ -290,9 +290,9 @@ fn test_generate_f1_key() {
 
 #[test]
 fn test_generate_f6_key() {
-    let event = VT100InputEvent::Keyboard {
-        code: VT100KeyCode::Function(6),
-        modifiers: VT100KeyModifiers::default(),
+    let event = VT100InputEventIR::Keyboard {
+        code: VT100KeyCodeIR::Function(6),
+        modifiers: VT100KeyModifiersIR::default(),
     };
     let bytes = generate_keyboard_sequence(&event).unwrap();
     assert_eq!(bytes, b"\x1b[17~");
@@ -300,9 +300,9 @@ fn test_generate_f6_key() {
 
 #[test]
 fn test_generate_f12_key() {
-    let event = VT100InputEvent::Keyboard {
-        code: VT100KeyCode::Function(12),
-        modifiers: VT100KeyModifiers::default(),
+    let event = VT100InputEventIR::Keyboard {
+        code: VT100KeyCodeIR::Function(12),
+        modifiers: VT100KeyModifiersIR::default(),
     };
     let bytes = generate_keyboard_sequence(&event).unwrap();
     assert_eq!(bytes, b"\x1b[24~");
@@ -312,9 +312,9 @@ fn test_generate_f12_key() {
 
 #[test]
 fn test_generate_shift_f5() {
-    let event = VT100InputEvent::Keyboard {
-        code: VT100KeyCode::Function(5),
-        modifiers: VT100KeyModifiers {
+    let event = VT100InputEventIR::Keyboard {
+        code: VT100KeyCodeIR::Function(5),
+        modifiers: VT100KeyModifiersIR {
             shift: KeyState::Pressed,
             alt: KeyState::NotPressed,
             ctrl: KeyState::NotPressed,
@@ -327,9 +327,9 @@ fn test_generate_shift_f5() {
 
 #[test]
 fn test_generate_ctrl_alt_f10() {
-    let event = VT100InputEvent::Keyboard {
-        code: VT100KeyCode::Function(10),
-        modifiers: VT100KeyModifiers {
+    let event = VT100InputEventIR::Keyboard {
+        code: VT100KeyCodeIR::Function(10),
+        modifiers: VT100KeyModifiersIR {
             shift: KeyState::NotPressed,
             alt: KeyState::Pressed,
             ctrl: KeyState::Pressed,
@@ -345,27 +345,27 @@ fn test_generate_ctrl_alt_f10() {
 #[test]
 fn test_generate_unsupported_keys() {
     // Tab, Enter, Escape, Backspace are not generated as CSI sequences
-    let tab_event = VT100InputEvent::Keyboard {
-        code: VT100KeyCode::Tab,
-        modifiers: VT100KeyModifiers::default(),
+    let tab_event = VT100InputEventIR::Keyboard {
+        code: VT100KeyCodeIR::Tab,
+        modifiers: VT100KeyModifiersIR::default(),
     };
     assert_eq!(generate_keyboard_sequence(&tab_event), None);
 
-    let enter_event = VT100InputEvent::Keyboard {
-        code: VT100KeyCode::Enter,
-        modifiers: VT100KeyModifiers::default(),
+    let enter_event = VT100InputEventIR::Keyboard {
+        code: VT100KeyCodeIR::Enter,
+        modifiers: VT100KeyModifiersIR::default(),
     };
     assert_eq!(generate_keyboard_sequence(&enter_event), None);
 
-    let escape_event = VT100InputEvent::Keyboard {
-        code: VT100KeyCode::Escape,
-        modifiers: VT100KeyModifiers::default(),
+    let escape_event = VT100InputEventIR::Keyboard {
+        code: VT100KeyCodeIR::Escape,
+        modifiers: VT100KeyModifiersIR::default(),
     };
     assert_eq!(generate_keyboard_sequence(&escape_event), None);
 
-    let backspace_event = VT100InputEvent::Keyboard {
-        code: VT100KeyCode::Backspace,
-        modifiers: VT100KeyModifiers::default(),
+    let backspace_event = VT100InputEventIR::Keyboard {
+        code: VT100KeyCodeIR::Backspace,
+        modifiers: VT100KeyModifiersIR::default(),
     };
     assert_eq!(generate_keyboard_sequence(&backspace_event), None);
 }
@@ -374,9 +374,9 @@ fn test_generate_unsupported_keys() {
 
 #[test]
 fn test_roundtrip_arrow_up() {
-    let original_event = VT100InputEvent::Keyboard {
-        code: VT100KeyCode::Up,
-        modifiers: VT100KeyModifiers::default(),
+    let original_event = VT100InputEventIR::Keyboard {
+        code: VT100KeyCodeIR::Up,
+        modifiers: VT100KeyModifiersIR::default(),
     };
 
     let bytes = generate_keyboard_sequence(&original_event).unwrap();
@@ -389,9 +389,9 @@ fn test_roundtrip_arrow_up() {
 
 #[test]
 fn test_roundtrip_ctrl_alt_f10() {
-    let original_event = VT100InputEvent::Keyboard {
-        code: VT100KeyCode::Function(10),
-        modifiers: VT100KeyModifiers {
+    let original_event = VT100InputEventIR::Keyboard {
+        code: VT100KeyCodeIR::Function(10),
+        modifiers: VT100KeyModifiersIR {
             shift: KeyState::NotPressed,
             alt: KeyState::Pressed,
             ctrl: KeyState::Pressed,
@@ -408,9 +408,9 @@ fn test_roundtrip_ctrl_alt_f10() {
 
 #[test]
 fn test_roundtrip_insert_key_with_shift() {
-    let original_event = VT100InputEvent::Keyboard {
-        code: VT100KeyCode::Insert,
-        modifiers: VT100KeyModifiers {
+    let original_event = VT100InputEventIR::Keyboard {
+        code: VT100KeyCodeIR::Insert,
+        modifiers: VT100KeyModifiersIR {
             shift: KeyState::Pressed,
             alt: KeyState::NotPressed,
             ctrl: KeyState::NotPressed,

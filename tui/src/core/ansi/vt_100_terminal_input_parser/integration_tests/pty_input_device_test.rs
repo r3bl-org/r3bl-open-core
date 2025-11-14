@@ -1,9 +1,9 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use crate::{Deadline, InputEvent,
-            core::ansi::vt_100_terminal_input_parser::{ir_event_types::{VT100InputEvent,
-                                                                        VT100KeyCode,
-                                                                        VT100KeyModifiers},
+            core::ansi::vt_100_terminal_input_parser::{ir_event_types::{VT100InputEventIR,
+                                                                        VT100KeyCodeIR,
+                                                                        VT100KeyModifiersIR},
                                                        test_fixtures::generate_keyboard_sequence},
             generate_pty_test,
             tui::terminal_lib_backends::direct_to_ansi::DirectToAnsiInputDevice};
@@ -97,7 +97,7 @@ fn pty_master_entry_point(
     mut child: Box<dyn portable_pty::Child + Send + Sync>,
 ) {
     /// Helper to generate ANSI bytes from `InputEvent`.
-    fn generate_test_sequence(desc: &str, event: VT100InputEvent) -> (&str, Vec<u8>) {
+    fn generate_test_sequence(desc: &str, event: VT100InputEventIR) -> (&str, Vec<u8>) {
         let bytes = generate_keyboard_sequence(&event)
             .unwrap_or_else(|| panic!("Failed to generate sequence for: {desc}"));
         (desc, bytes)
@@ -156,26 +156,26 @@ fn pty_master_entry_point(
     );
 
     // Send sequences and verify.
-    let no_mods = VT100KeyModifiers::default();
+    let no_mods = VT100KeyModifiersIR::default();
     let sequences: Vec<(&str, Vec<u8>)> = vec![
         generate_test_sequence(
             "Up Arrow",
-            VT100InputEvent::Keyboard {
-                code: VT100KeyCode::Up,
+            VT100InputEventIR::Keyboard {
+                code: VT100KeyCodeIR::Up,
                 modifiers: no_mods,
             },
         ),
         generate_test_sequence(
             "Down Arrow",
-            VT100InputEvent::Keyboard {
-                code: VT100KeyCode::Down,
+            VT100InputEventIR::Keyboard {
+                code: VT100KeyCodeIR::Down,
                 modifiers: no_mods,
             },
         ),
         generate_test_sequence(
             "F1",
-            VT100InputEvent::Keyboard {
-                code: VT100KeyCode::Function(1),
+            VT100InputEventIR::Keyboard {
+                code: VT100KeyCodeIR::Function(1),
                 modifiers: no_mods,
             },
         ),

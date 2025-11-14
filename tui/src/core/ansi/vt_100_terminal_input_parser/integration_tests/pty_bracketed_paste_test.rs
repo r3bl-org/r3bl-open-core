@@ -1,8 +1,8 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use crate::{Deadline, InputEvent,
-            core::ansi::vt_100_terminal_input_parser::{ir_event_types::{VT100InputEvent,
-                                                                        VT100PasteMode},
+            core::ansi::vt_100_terminal_input_parser::{ir_event_types::{VT100InputEventIR,
+                                                                        VT100PasteModeIR},
                                                        test_fixtures::generate_keyboard_sequence},
             generate_pty_test,
             tui::terminal_lib_backends::direct_to_ansi::DirectToAnsiInputDevice};
@@ -50,9 +50,10 @@ fn pty_master_entry_point(
         let mut bytes = Vec::new();
 
         // Start marker (ESC[200~)
-        let start_bytes =
-            generate_keyboard_sequence(&VT100InputEvent::Paste(VT100PasteMode::Start))
-                .expect("Failed to generate paste start marker");
+        let start_bytes = generate_keyboard_sequence(&VT100InputEventIR::Paste(
+            VT100PasteModeIR::Start,
+        ))
+        .expect("Failed to generate paste start marker");
         bytes.extend_from_slice(&start_bytes);
 
         // Text characters: just raw UTF-8 bytes (no ANSI escape sequences needed)
@@ -60,7 +61,7 @@ fn pty_master_entry_point(
 
         // End marker (ESC[201~)
         let end_bytes =
-            generate_keyboard_sequence(&VT100InputEvent::Paste(VT100PasteMode::End))
+            generate_keyboard_sequence(&VT100InputEventIR::Paste(VT100PasteModeIR::End))
                 .expect("Failed to generate paste end marker");
         bytes.extend_from_slice(&end_bytes);
 

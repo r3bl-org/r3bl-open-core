@@ -21,8 +21,8 @@
 //! **Output**: ANSI escape sequences to terminal
 //! **Role**: Execute rendering operations via Crossterm backend
 //!
-//! > **For the complete rendering architecture**, see [`super::super`] (parent parent
-//! > module).
+//! > **For the complete 6-stage rendering pipeline with visual diagrams and stage
+//! > reference table**, see the [`render_pipeline` mod docs].
 //!
 //! ## What This Stage Does
 //!
@@ -39,6 +39,7 @@
 //!
 //! [`RenderOpOutputVec`]: crate::RenderOpOutputVec
 //! [`RenderOpsLocalData`]: crate::RenderOpsLocalData
+//! [`render_pipeline` mod docs]: mod@crate::tui::terminal_lib_backends::render_pipeline
 
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 use crate::{CliTextInline, GCStringOwned, LockedOutputDevice, Pos, RenderOpCommon,

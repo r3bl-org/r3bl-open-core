@@ -193,7 +193,7 @@ impl Debug for RenderOpIRVec {
         let mut iter = self.iter();
 
         // We don't care about the result of this operation.
-        f.write_str("RenderOpsIR.len(): ").ok();
+        f.write_str("RenderOpIRVec.len(): ").ok();
         write!(f, "{}", self.list.len()).ok();
 
         // First line.

@@ -42,7 +42,7 @@ mod tests {
             // "Hello" and "World" together.
             assert_eq2!(set.len(), 1);
 
-            // 3 RenderOp each for "Hello" & "World".
+            // 3 RenderOpIR each for "Hello" & "World".
             assert_eq2!(pipeline.get_all_render_op_in(ZOrder::Normal).unwrap(), 6);
         })
     }

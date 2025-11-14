@@ -21,14 +21,14 @@
 //! │  • Handle incomplete sequences           │
 //! └──────────────────────────────────────────┘
 //!    ↓
-//! VT100InputEvent::Keyboard { code: Char(ch), .. }
+//! VT100InputEventIR::Keyboard { code: Char(ch), .. }
 //! ```
 //!
 //! **Navigate**:
 //! - ⬆️ **Up**: [`parser`] - Main routing entry point
 //! - ➡️ **Peer**: [`keyboard`], [`mouse`], [`terminal_events`] - Other specialized
 //!   parsers
-//! - 📚 **Types**: [`VT100KeyCode::Char`]
+//! - 📚 **Types**: [`VT100KeyCodeIR::Char`]
 //!
 //!
 //! ## Handles:
@@ -75,13 +75,13 @@
 //! width calculation, not byte length. See [`crate::graphemes::GCStringOwned`] for
 //! text rendering utilities.
 //!
-//! [`VT100KeyCode::Char`]: super::VT100KeyCode::Char
+//! [`VT100KeyCodeIR::Char`]: super::VT100KeyCodeIR::Char
 //! [`keyboard`]: mod@super::keyboard
 //! [`mouse`]: mod@super::mouse
 //! [`parser`]: mod@super::parser
 //! [`terminal_events`]: mod@super::terminal_events
 
-use super::ir_event_types::{VT100InputEvent, VT100KeyCode, VT100KeyModifiers};
+use super::ir_event_types::{VT100InputEventIR, VT100KeyCodeIR, VT100KeyModifiersIR};
 use crate::{ByteOffset, UTF8_1BYTE_MAX, UTF8_1BYTE_MIN, UTF8_2BYTE_FIRST_MASK,
             UTF8_2BYTE_MAX, UTF8_2BYTE_MIN, UTF8_3BYTE_FIRST_MASK, UTF8_3BYTE_MAX,
             UTF8_3BYTE_MIN, UTF8_4BYTE_FIRST_MASK, UTF8_4BYTE_MAX, UTF8_4BYTE_MIN,
@@ -111,7 +111,7 @@ use crate::{ByteOffset, UTF8_1BYTE_MAX, UTF8_1BYTE_MIN, UTF8_2BYTE_FIRST_MASK,
 ///
 /// For display width calculation and cursor positioning, see [`mod@crate::graphemes`].
 #[must_use]
-pub fn parse_utf8_text(buffer: &[u8]) -> Option<(VT100InputEvent, ByteOffset)> {
+pub fn parse_utf8_text(buffer: &[u8]) -> Option<(VT100InputEventIR, ByteOffset)> {
     // Check if we have a complete UTF-8 sequence
     let bytes_consumed = is_utf8_complete(buffer)?;
 
@@ -120,9 +120,9 @@ pub fn parse_utf8_text(buffer: &[u8]) -> Option<(VT100InputEvent, ByteOffset)> {
 
     // Return keyboard event with the decoded character
     Some((
-        VT100InputEvent::Keyboard {
-            code: VT100KeyCode::Char(ch),
-            modifiers: VT100KeyModifiers::default(),
+        VT100InputEventIR::Keyboard {
+            code: VT100KeyCodeIR::Char(ch),
+            modifiers: VT100KeyModifiersIR::default(),
         },
         byte_offset(bytes_consumed),
     ))
@@ -276,8 +276,8 @@ mod tests {
 
         assert_eq!(consumed, byte_offset(1));
         match event {
-            VT100InputEvent::Keyboard { code, .. } => {
-                assert_eq!(code, VT100KeyCode::Char('a'));
+            VT100InputEventIR::Keyboard { code, .. } => {
+                assert_eq!(code, VT100KeyCodeIR::Char('a'));
             }
             _ => panic!("Expected Keyboard event"),
         }
@@ -292,8 +292,8 @@ mod tests {
         let (event, consumed) = parse_utf8_text(buffer).expect("Should parse first char");
         assert_eq!(consumed, byte_offset(1));
         match event {
-            VT100InputEvent::Keyboard { code, .. } => {
-                assert_eq!(code, VT100KeyCode::Char('h'));
+            VT100InputEventIR::Keyboard { code, .. } => {
+                assert_eq!(code, VT100KeyCodeIR::Char('h'));
             }
             _ => panic!("Expected Keyboard event"),
         }
@@ -303,8 +303,8 @@ mod tests {
             parse_utf8_text(&buffer[1..]).expect("Should parse second char");
         assert_eq!(consumed, byte_offset(1));
         match event {
-            VT100InputEvent::Keyboard { code, .. } => {
-                assert_eq!(code, VT100KeyCode::Char('e'));
+            VT100InputEventIR::Keyboard { code, .. } => {
+                assert_eq!(code, VT100KeyCodeIR::Char('e'));
             }
             _ => panic!("Expected Keyboard event"),
         }
@@ -319,8 +319,8 @@ mod tests {
 
         assert_eq!(consumed, byte_offset(2));
         match event {
-            VT100InputEvent::Keyboard { code, .. } => {
-                assert_eq!(code, VT100KeyCode::Char('©'));
+            VT100InputEventIR::Keyboard { code, .. } => {
+                assert_eq!(code, VT100KeyCodeIR::Char('©'));
             }
             _ => panic!("Expected Keyboard event"),
         }
@@ -335,8 +335,8 @@ mod tests {
 
         assert_eq!(consumed, byte_offset(3));
         match event {
-            VT100InputEvent::Keyboard { code, .. } => {
-                assert_eq!(code, VT100KeyCode::Char('€'));
+            VT100InputEventIR::Keyboard { code, .. } => {
+                assert_eq!(code, VT100KeyCodeIR::Char('€'));
             }
             _ => panic!("Expected Keyboard event"),
         }
@@ -351,8 +351,8 @@ mod tests {
 
         assert_eq!(consumed, byte_offset(4));
         match event {
-            VT100InputEvent::Keyboard { code, .. } => {
-                assert_eq!(code, VT100KeyCode::Char('😀'));
+            VT100InputEventIR::Keyboard { code, .. } => {
+                assert_eq!(code, VT100KeyCodeIR::Char('😀'));
             }
             _ => panic!("Expected Keyboard event"),
         }
@@ -433,8 +433,8 @@ mod tests {
         let (event, consumed) = parse_utf8_text(buffer).expect("Should parse ASCII");
         assert_eq!(consumed, byte_offset(1));
         match event {
-            VT100InputEvent::Keyboard { code, .. } => {
-                assert_eq!(code, VT100KeyCode::Char('a'));
+            VT100InputEventIR::Keyboard { code, .. } => {
+                assert_eq!(code, VT100KeyCodeIR::Char('a'));
             }
             _ => panic!("Expected Keyboard event"),
         }
@@ -444,8 +444,8 @@ mod tests {
             parse_utf8_text(&buffer[1..]).expect("Should parse 2-byte");
         assert_eq!(consumed, byte_offset(2));
         match event {
-            VT100InputEvent::Keyboard { code, .. } => {
-                assert_eq!(code, VT100KeyCode::Char('©'));
+            VT100InputEventIR::Keyboard { code, .. } => {
+                assert_eq!(code, VT100KeyCodeIR::Char('©'));
             }
             _ => panic!("Expected Keyboard event"),
         }
@@ -455,8 +455,8 @@ mod tests {
             parse_utf8_text(&buffer[3..]).expect("Should parse ASCII");
         assert_eq!(consumed, byte_offset(1));
         match event {
-            VT100InputEvent::Keyboard { code, .. } => {
-                assert_eq!(code, VT100KeyCode::Char('b'));
+            VT100InputEventIR::Keyboard { code, .. } => {
+                assert_eq!(code, VT100KeyCodeIR::Char('b'));
             }
             _ => panic!("Expected Keyboard event"),
         }

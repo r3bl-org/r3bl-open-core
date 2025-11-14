@@ -1,8 +1,8 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Benchmarks for `RenderOp` collections to compare `SmallVec` vs Vec performance
+//! Benchmarks for `RenderOpIR` collections to compare `SmallVec` vs Vec performance
 //!
-//! This module tests different collection strategies for `RenderOps` to identify
+//! This module tests different collection strategies for `RenderOpIR` to identify
 //! the optimal approach for our rendering pipeline.
 //!
 //! ## Benchmark Results Summary (2025-07-18)
@@ -40,11 +40,11 @@
 //! - `Vec`:                    48.28 ns/iter
 //! - **`SmallVec` faster by: 4%** (minor difference)
 //!
-//! ## Recommendation: KEEP `SmallVec`<[`RenderOp`; 8]>
+//! ## Recommendation: KEEP `SmallVec`<[`RenderOpIR`; 8]>
 //!
 //! Based on comprehensive benchmarking:
 //!
-//! 1. **Most operations use 6 or fewer `RenderOps`** - well within `SmallVec`'s inline
+//! 1. **Most operations use 6 or fewer `RenderOpIR`** - well within `SmallVec`'s inline
 //!    capacity
 //! 2. **`SmallVec` is 2.27x faster for typical usage** (17.63ns vs 40.02ns for text line
 //!    rendering)
@@ -314,7 +314,7 @@ mod render_op_benchmarks {
 
     // Benchmark 6: Real-world scenario - building render ops for a text line
     // This is the most important benchmark as it reflects actual usage patterns.
-    // Most render operations create 3-6 RenderOps per styled text segment:
+    // Most render operations create 3-6 RenderOpIR operations per styled text segment:
     // 1. MoveCursor (optional)
     // 2. ResetColor
     // 3. SetFgColor

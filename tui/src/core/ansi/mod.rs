@@ -1,6 +1,4 @@
-/*
- * // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
- */
+// Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 //! ANSI Terminal Abstraction Layer
 //!
@@ -8,37 +6,55 @@
 //!
 //! ## Key Subsystems
 //!
-//! - **Output Parser** (VTE-based): Convert incoming PTY output (ANSI sequences from
-//!   child processes) → terminal state (via [`vt_100_pty_output_parser`] and
-//!   [`AnsiToOfsBufPerformer`])
-//! - **Input Parser** (custom): Convert terminal input events (keyboard/mouse) →
-//!   structured events (via [`vt_100_terminal_input_parser`])
-//! - **Generator**: Convert app styling → outgoing ANSI sequences (via [`SgrCode`],
-//!   [`CliTextInline`])
-//! - **Color**: Color type definitions and conversions (RGB ↔ ANSI256)
-//! - **Terminal Output**: I/O operations for writing to terminal
+//! - **Output Parser** (VTE-based): Parse incoming PTY output (ANSI sequences from child
+//!   processes) → terminal state updates → [`OffscreenBuffer`] storage (via
+//!   [`vt_100_pty_output_parser`] and [`AnsiToOfsBufPerformer`])
+//! - **Input Parser** (custom): Parse terminal input (keyboard/mouse) → structured
+//!   [`VT100InputEventIR`] → application logic (via [`vt_100_terminal_input_parser`])
+//! - **Generator**: Convert application styling → outgoing ANSI sequences → real terminal
+//!   display (via [`RenderOpOutput`], [`SgrCode`], [`CliTextInline`])
+//! - **Constants & Color**: Shared ANSI specifications - color types (RGB ↔ ANSI256),
+//!   escape sequence definitions, used by all subsystems
 //!
 //! ## Architecture Overview
 //!
 //! ```text
-//!   PTY Output (child process)              User Input (keyboard/mouse)
-//!      ↓                                            ↓
-//! ┌──────────────────────┐              ┌──────────────────────────┐
-//! │  VTE Output Parser   │              │  Custom Input Parser     │
-//! │ (vt_100_pty_output_  │              │ (vt_100_terminal_input_  │
-//! │  output_parser)      │              │  parser)                 │
-//! └──────────┬───────────┘              └──────────┬───────────────┘
-//!            │                                     │
-//!            ▼                                     ▼
-//!    Terminal State                      VT100InputEvent
-//!    Updates                             (keyboard/mouse/terminal)
-//!            │                                     │
-//!            └──────────┬──────────────────────────┘
-//!                       │
-//!            ┌──────────▼───────────┐
-//!            │  Constants & Color   │ ◀─┐ Generator:
-//!            │  (ANSI specs)        │   │ App Styling → Sequences
-//!            └──────────────────────┘ ──┘
+//!   PTY Output (child process)       User Input (keyboard/mouse)
+//!            │                              │
+//!            ▼                              ▼
+//! ┌──────────────────────────┐   ┌──────────────────────────────┐
+//! │ VTE Output Parser        │   │ Custom Input Parser          │
+//! │ vt_100_pty_output_parser │   │ vt_100_terminal_input_parser │
+//! └──────────┬───────────────┘   └──────────┬───────────────────┘
+//!            │                              │
+//!            ▼                              ▼
+//!  Terminal State Updates          VT100InputEventIR
+//!  (cursor/color/text changes)     (keyboard/mouse/terminal)
+//!            │                              │
+//!   ┌────────▼─────────┐             ┌──────▼───────┐
+//!   │ OffscreenBuffer  │             │ Application  │
+//!   │ (emulator state) │             │ Logic        │
+//!   └──────────────────┘             └──────┬───────┘
+//!                                           │
+//!                                    ┌──────▼───────────┐
+//!                                    │  Generator       │
+//!                                    │  • RenderOpOutput│
+//!                                    │  • SgrCode       │
+//!                                    │  • CliText       │
+//!                                    └──────┬───────────┘
+//!                                           │
+//!                                           ▼
+//!                                    ANSI Sequences
+//!                                           │
+//!                                           ▼
+//!                                    Real Terminal
+//!                                    (stdout display)
+//!
+//!         ┌─────────────────────────────────────┐
+//!         │  Constants & Color (ANSI specs)     │ ← Shared by all components
+//!         │  • Color types (RGB ↔ ANSI256)      │
+//!         │  • Escape sequence definitions      │
+//!         └─────────────────────────────────────┘
 //! ```
 //!
 //! ## Terminal Input Modes: Raw vs Cooked
@@ -190,8 +206,8 @@
 //! - [`CsiSequence`] - CSI escape sequence types
 //!
 //! **Input Parsing** (keyboard/mouse events):
-//! - `VT100InputEvent` - Keyboard, mouse, and terminal events (see [`vt_100_terminal_input_parser`])
-//! - `VT100KeyCode` - Keyboard event key codes
+//! - `VT100InputEventIR` - Keyboard, mouse, and terminal events (see [`vt_100_terminal_input_parser`])
+//! - `VT100KeyCodeIR` - Keyboard event key codes
 //!
 //! **Terminal I/O:**
 //! - Color detection and support queries
@@ -199,6 +215,11 @@
 //! [VTE crate]: https://docs.rs/vte/latest/vte/
 //! [`vt_100_pty_output_parser`]: mod@crate::core::ansi::vt_100_pty_output_parser
 //! [`vt_100_terminal_input_parser`]: mod@crate::core::ansi::vt_100_terminal_input_parser
+//! [`OffscreenBuffer`]: crate::OffscreenBuffer
+//! [`VT100InputEventIR`]: crate::core::ansi::vt_100_terminal_input_parser::VT100InputEventIR
+//! [`RenderOpOutput`]: crate::RenderOpOutput
+//! [`SgrCode`]: crate::core::ansi::SgrCode
+//! [`CliTextInline`]: crate::core::ansi::CliTextInline
 
 // XMARK: rustfmt prevent from reformatting entire file.
 

@@ -21,13 +21,13 @@
 //! │  • Parse bracketed paste markers         │
 //! └──────────────────────────────────────────┘
 //!    ↓
-//! VT100InputEvent::{ Resize | Focus | Paste }
+//! VT100InputEventIR::{ Resize | Focus | Paste }
 //! ```
 //!
 //! **Navigate**:
 //! - ⬆️ **Up**: [`parser`] - Main routing entry point
 //! - ➡️ **Peer**: [`keyboard`], [`mouse`], [`utf8`] - Other specialized parsers
-//! - 📚 **Types**: [`VT100FocusState`], [`VT100PasteMode`]
+//! - 📚 **Types**: [`VT100FocusStateIR`], [`VT100PasteModeIR`]
 //!
 //!
 //! ## Supported events:
@@ -37,14 +37,14 @@
 //! - **Bracketed Paste Start**: `ESC [ 200 ~`
 //! - **Bracketed Paste End**: `ESC [ 201 ~`
 //!
-//! [`VT100FocusState`]: super::VT100FocusState
-//! [`VT100PasteMode`]: super::VT100PasteMode
+//! [`VT100FocusStateIR`]: super::VT100FocusStateIR
+//! [`VT100PasteModeIR`]: super::VT100PasteModeIR
 //! [`keyboard`]: mod@super::keyboard
 //! [`mouse`]: mod@super::mouse
 //! [`parser`]: mod@super::parser
 //! [`utf8`]: mod@super::utf8
 
-use super::ir_event_types::{VT100FocusState, VT100InputEvent, VT100PasteMode};
+use super::ir_event_types::{VT100FocusStateIR, VT100InputEventIR, VT100PasteModeIR};
 use crate::{ByteOffset, byte_offset,
             core::ansi::constants::{ANSI_CSI_BRACKET, ANSI_ESC,
                                     ANSI_FUNCTION_KEY_TERMINATOR, ANSI_PARAM_SEPARATOR,
@@ -66,7 +66,7 @@ use crate::{ByteOffset, byte_offset,
 /// - `CSI O` - Terminal lost focus
 /// - `ESC[200~` - Bracketed paste start
 #[must_use]
-pub fn parse_terminal_event(buffer: &[u8]) -> Option<(VT100InputEvent, ByteOffset)> {
+pub fn parse_terminal_event(buffer: &[u8]) -> Option<(VT100InputEventIR, ByteOffset)> {
     // Check minimum length: ESC [ + final byte
     if buffer.len() < 3 {
         return None;
@@ -82,13 +82,13 @@ pub fn parse_terminal_event(buffer: &[u8]) -> Option<(VT100InputEvent, ByteOffse
         match buffer[2] {
             FOCUS_GAINED_FINAL => {
                 return Some((
-                    VT100InputEvent::Focus(VT100FocusState::Gained),
+                    VT100InputEventIR::Focus(VT100FocusStateIR::Gained),
                     byte_offset(3),
                 ));
             }
             FOCUS_LOST_FINAL => {
                 return Some((
-                    VT100InputEvent::Focus(VT100FocusState::Lost),
+                    VT100InputEventIR::Focus(VT100FocusStateIR::Lost),
                     byte_offset(3),
                 ));
             }
@@ -101,7 +101,7 @@ pub fn parse_terminal_event(buffer: &[u8]) -> Option<(VT100InputEvent, ByteOffse
 }
 
 /// Parse CSI sequences with parameters for terminal events.
-fn parse_csi_terminal_parameters(buffer: &[u8]) -> Option<(VT100InputEvent, ByteOffset)> {
+fn parse_csi_terminal_parameters(buffer: &[u8]) -> Option<(VT100InputEventIR, ByteOffset)> {
     // Extract parameters and final byte
     // Format: ESC [ [param;param;...] final_byte
     let mut params = Vec::new();
@@ -154,7 +154,7 @@ fn parse_csi_terminal_parameters(buffer: &[u8]) -> Option<(VT100InputEvent, Byte
         let rows = params[1];
         let cols = params[2];
         Some((
-            VT100InputEvent::Resize {
+            VT100InputEventIR::Resize {
                 col_width: crate::ColWidth::from(cols),
                 row_height: crate::RowHeight::from(rows),
             },
@@ -164,12 +164,12 @@ fn parse_csi_terminal_parameters(buffer: &[u8]) -> Option<(VT100InputEvent, Byte
         // Bracketed paste: CSI 200 ~ or CSI 201 ~
         if params[0] == PASTE_START_PARSE_PARAM {
             Some((
-                VT100InputEvent::Paste(VT100PasteMode::Start),
+                VT100InputEventIR::Paste(VT100PasteModeIR::Start),
                 byte_offset(total_consumed),
             ))
         } else if params[0] == PASTE_END_PARSE_PARAM {
             Some((
-                VT100InputEvent::Paste(VT100PasteMode::End),
+                VT100InputEventIR::Paste(VT100PasteModeIR::End),
                 byte_offset(total_consumed),
             ))
         } else {
@@ -191,8 +191,8 @@ mod tests {
 
     #[test]
     fn test_resize_event() {
-        // Round-trip test: Generate sequence from VT100InputEvent, then parse it back
-        let original_event = VT100InputEvent::Resize {
+        // Round-trip test: Generate sequence from VT100InputEventIR, then parse it back
+        let original_event = VT100InputEventIR::Resize {
             row_height: crate::RowHeight::from(24),
             col_width: crate::ColWidth::from(80),
         };
@@ -209,7 +209,7 @@ mod tests {
     #[test]
     fn test_focus_events() {
         // Round-trip test: Focus gained
-        let original_gained = VT100InputEvent::Focus(VT100FocusState::Gained);
+        let original_gained = VT100InputEventIR::Focus(VT100FocusStateIR::Gained);
         let seq_gained = generate_keyboard_sequence(&original_gained)
             .expect("Failed to generate focus gained sequence");
 
@@ -220,7 +220,7 @@ mod tests {
         assert_eq!(parsed, original_gained);
 
         // Round-trip test: Focus lost
-        let original_lost = VT100InputEvent::Focus(VT100FocusState::Lost);
+        let original_lost = VT100InputEventIR::Focus(VT100FocusStateIR::Lost);
         let seq_lost = generate_keyboard_sequence(&original_lost)
             .expect("Failed to generate focus lost sequence");
 
@@ -234,7 +234,7 @@ mod tests {
     #[test]
     fn test_bracketed_paste() {
         // Round-trip test: Paste start
-        let original_start = VT100InputEvent::Paste(VT100PasteMode::Start);
+        let original_start = VT100InputEventIR::Paste(VT100PasteModeIR::Start);
         let seq_start = generate_keyboard_sequence(&original_start)
             .expect("Failed to generate paste start sequence");
 
@@ -245,7 +245,7 @@ mod tests {
         assert_eq!(parsed, original_start);
 
         // Round-trip test: Paste end
-        let original_end = VT100InputEvent::Paste(VT100PasteMode::End);
+        let original_end = VT100InputEventIR::Paste(VT100PasteModeIR::End);
         let seq_end = generate_keyboard_sequence(&original_end)
             .expect("Failed to generate paste end sequence");
 

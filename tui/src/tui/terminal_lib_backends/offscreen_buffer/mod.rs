@@ -109,14 +109,14 @@
 //! mapping:
 //!
 //! ```text
-//! vt_100_pty_output_parser/operations/    offscreen_buffer/vt_100_ansi_impl/
-//! ├── vt_100_shim_char_ops         →      ├── vt_100_impl_char_ops    (print_char, ICH, DCH, ECH)
-//! ├── vt_100_shim_control_ops      →      ├── vt_100_impl_control_ops (BS, TAB, LF, CR)
-//! ├── vt_100_shim_cursor_ops       →      ├── vt_100_impl_cursor_ops  (movement, positioning)
-//! ├── vt_100_shim_line_ops         →      ├── vt_100_impl_line_ops    (insert/delete lines)
-//! ├── vt_100_shim_scroll_ops       →      ├── vt_100_impl_scroll_ops  (scrolling, regions)
-//! ├── vt_100_shim_terminal_ops     →      ├── vt_100_impl_terminal_ops(reset, clear, charset)
-//! └── bounds_check.rs              →      └── vt_100_impl_ansi_scroll_helper (scroll region utilities)
+//! vt_100_pty_output_parser/operations/   offscreen_buffer/vt_100_ansi_impl/
+//! ├── vt_100_shim_char_ops            →  ├── vt_100_impl_char_ops    (print_char, ICH, DCH, ECH)
+//! ├── vt_100_shim_control_ops         →  ├── vt_100_impl_control_ops (BS, TAB, LF, CR)
+//! ├── vt_100_shim_cursor_ops          →  ├── vt_100_impl_cursor_ops  (movement, positioning)
+//! ├── vt_100_shim_line_ops            →  ├── vt_100_impl_line_ops    (insert/delete lines)
+//! ├── vt_100_shim_scroll_ops          →  ├── vt_100_impl_scroll_ops  (scrolling, regions)
+//! ├── vt_100_shim_terminal_ops        →  ├── vt_100_impl_terminal_ops(reset, clear, charset)
+//! └── bounds_check.rs                 →  └── vt_100_impl_ansi_scroll_helper (scroll region utilities)
 //! ```
 //!
 //! This 1:1 mapping provides:
