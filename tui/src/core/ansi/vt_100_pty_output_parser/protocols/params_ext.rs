@@ -364,8 +364,8 @@ impl ParamsExt for vte::Params {
 ///
 /// **Result**: 0-based [`RowIndex`]/[`ColIndex`] ready for buffer operations.
 ///
-/// [`RowIndex`]: crate::RowIndex
 /// [`ColIndex`]: crate::ColIndex
+/// [`RowIndex`]: crate::RowIndex
 #[must_use]
 pub fn parse_cursor_position(params: &vte::Params) -> (RowIndex, ColIndex) {
     // Step 1: Extract 1-based parameters (NonZeroU16, guaranteed >= 1)

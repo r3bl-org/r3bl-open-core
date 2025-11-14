@@ -1,5 +1,8 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+// Skip rustdoc formatting - this file contains examples of the formatter's output
+#![cfg_attr(rustfmt, rustfmt_skip)]
+
 //! Convert inline markdown links to reference-style links.
 
 use pulldown_cmark::{Event, HeadingLevel, LinkType, Parser, Tag, TagEnd};

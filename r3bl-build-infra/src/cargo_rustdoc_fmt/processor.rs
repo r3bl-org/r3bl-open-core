@@ -7,6 +7,16 @@ use crate::cargo_rustdoc_fmt::{extractor, link_converter, table_formatter,
                                        RustdocBlock}};
 use std::path::{Path, PathBuf};
 
+/// Check if a file contains the rustfmt_skip attribute.
+///
+/// Files with `#![cfg_attr(rustfmt, rustfmt_skip)]` will be skipped entirely
+/// to respect the user's intent to preserve manual formatting.
+fn has_rustfmt_skip(source: &str) -> bool {
+    source.contains("#![cfg_attr(rustfmt, rustfmt_skip)]")
+        || source.contains("#![ cfg_attr(rustfmt, rustfmt_skip) ]")
+        || source.contains("#![ cfg_attr( rustfmt , rustfmt_skip ) ]")
+}
+
 /// Processes Rust files to format their rustdoc comments.
 #[derive(Debug)]
 pub struct FileProcessor {
@@ -31,6 +41,11 @@ impl FileProcessor {
                 return result;
             }
         };
+
+        // Skip files with rustfmt_skip attribute
+        if has_rustfmt_skip(&source) {
+            return result; // Return early, file unchanged
+        }
 
         // Extract rustdoc blocks
         let mut blocks = extractor::extract_rustdoc_blocks(&source);
@@ -69,6 +84,13 @@ impl FileProcessor {
 /// Returns true if the block was modified.
 fn process_rustdoc_block(block: &mut RustdocBlock, options: &FormatOptions) -> bool {
     let original = block.lines.join("\n");
+
+    // Skip processing if the block contains protected content
+    if has_protected_content(&original) {
+        return false;
+    }
+
+    // Apply formatters
     let mut modified = original.clone();
 
     if options.format_tables {
@@ -86,6 +108,41 @@ fn process_rustdoc_block(block: &mut RustdocBlock, options: &FormatOptions) -> b
         block.lines = modified.lines().map(String::from).collect();
         true
     }
+}
+
+/// Check if text contains content that should not be modified.
+///
+/// Currently protects:
+/// - HTML tags (will be mangled by markdown parsers)
+/// - Blockquotes (will be removed by markdown parsers)
+///
+/// Note: Code fences are generally handled correctly by markdown parsers,
+/// but if you have complex examples with reference-style links INSIDE code
+/// fences (like documentation about the formatter itself), use
+/// `#![cfg_attr(rustfmt, rustfmt_skip)]` to skip the entire file.
+fn has_protected_content(text: &str) -> bool {
+    // Check for HTML tags (will be mangled by markdown parsers)
+    if text.contains('<') && text.contains('>') {
+        // Simple check for HTML-like content
+        if text.contains("</")
+            || text.contains("/>")
+            || text.contains("style=")
+            || text.contains("src=")
+        {
+            return true;
+        }
+    }
+
+    // Check for blockquotes (will be removed by markdown parsers)
+    for line in text.lines() {
+        let trimmed = line.trim_start();
+        if trimmed.starts_with('>') && !trimmed.starts_with(">=") {
+            // It's a blockquote marker, not a comparison operator
+            return true;
+        }
+    }
+
+    false
 }
 
 /// Reconstruct source file with modified rustdoc blocks.

@@ -4,8 +4,8 @@
 //! `fs_path.rs::test_all_fs_path_functions_in_isolated_process()` to prevent flakiness
 //! when tests are run in parallel.
 
-use crate::ok;
-use super::fs_path::{self, FsOpError, FsOpResult};
+use crate::{ok,
+            script::fs_path::{self, FsOpError, FsOpResult}};
 use std::{fs, io::ErrorKind, path::Path};
 use strum_macros::Display;
 

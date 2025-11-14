@@ -1,7 +1,6 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::script::http_client;
-use crate::{SCRIPT_MOD_DEBUG, fg_magenta, ok};
+use crate::{SCRIPT_MOD_DEBUG, fg_magenta, ok, script::http_client};
 use miette::IntoDiagnostic;
 
 mod constants {

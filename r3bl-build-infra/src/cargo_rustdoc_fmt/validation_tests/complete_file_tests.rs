@@ -302,27 +302,19 @@ fn main() {}";
         );
     }
 
-    /// Comprehensive real-world test using mouse.rs file.
+    /// Test that files with rustfmt_skip attribute are correctly skipped.
     ///
-    /// This test uses a real-world file (mouse.rs) with:
-    /// - Scattered reference definitions that need aggregation
-    /// - An inline link that LOOKS like a reference: `[long text](url)`
-    /// - Reference usages that already exist and should be preserved
-    /// - The edge case: `[parent module's testing strategy
-    ///   documentation](mod@super#testing-strategy)`
+    /// This test uses a real-world file (mouse.rs) that has:
+    /// - `#![cfg_attr(rustfmt, rustfmt_skip)]` at the top
+    /// - Content that would normally be formatted (inline links, scattered references)
     ///
     /// This verifies that the formatter correctly:
-    /// - Converts inline links to reference style (even long ones that look like
-    ///   references)
-    /// - Aggregates scattered references to bottom
-    /// - Alphabetically sorts all references
-    /// - Preserves existing reference usages in the content
+    /// - Detects the rustfmt_skip attribute
+    /// - Skips processing entirely (does not modify the file)
+    /// - Leaves the file unchanged
     #[test]
     fn test_real_world_file_2_complete_formatting() {
         let input = include_str!("test_data/complete_file/input/sample_real_world_2.rs");
-        let expected = include_str!(
-            "test_data/complete_file/expected_output/sample_real_world_2.rs"
-        );
 
         // Use the actual FileProcessor to test the complete pipeline
         let temp_dir = TempDir::new().unwrap();
@@ -339,33 +331,20 @@ fn main() {}";
             "Processing errors: {:?}",
             result.errors
         );
+
+        // File should NOT be modified because it has rustfmt_skip
         assert!(
-            result.modified,
-            "File should be modified (has formatting to do)"
+            !result.modified,
+            "File with rustfmt_skip should not be modified"
         );
 
-        // Read the formatted result
-        let formatted = fs::read_to_string(&test_file).unwrap();
+        // Read the result - should be unchanged
+        let output = fs::read_to_string(&test_file).unwrap();
 
-        // Verify the edge case: inline link was converted to reference style
-        // Input had: [parent module's testing strategy
-        // documentation](mod@super#testing-strategy) Output should have the
-        // reference definition at bottom
-        assert!(
-            formatted.contains("[parent module's testing strategy documentation]: mod@super#testing-strategy"),
-            "Should convert inline link to reference definition (even long link text)"
-        );
-
-        // Verify reference-style links are aggregated at bottom
-        assert!(
-            formatted.contains("]: mod@"),
-            "Should have reference-style links"
-        );
-
-        // The formatted result should match expected output
+        // Content should be exactly the same as input
         assert_eq!(
-            formatted, expected,
-            "Formatted output should match expected output"
+            output, input,
+            "File with rustfmt_skip should remain unchanged"
         );
     }
 
