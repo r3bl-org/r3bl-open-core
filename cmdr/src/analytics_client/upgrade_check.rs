@@ -136,7 +136,6 @@ pub fn get_self_bin_emoji() -> String {
     match get_self_bin_name().as_str() {
         "giti" => "🐱".to_string(),
         "edi" => "🦜".to_string(),
-        "ch" => "🔮".to_string(),
         "rc" => "🐒".to_string(),
         _ => "👾".to_string(),
     }
