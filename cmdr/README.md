@@ -51,7 +51,6 @@ style="color:#2B57FC">t</span><span style="color:#285BFB">y</span>
   feedback](#learn-how-these-crates-are-built-provide-feedback)
 - [Run `giti` binary target](#run-giti-binary-target)
 - [Run `edi` binary target](#run-edi-binary-target)
-- [Run `ch` binary target](#run-ch-binary-target)
 - [Build, run, test tasks](#build-run-test-tasks)
   - [Prerequisites](#prerequisites)
   - [Binary Development Commands](#binary-development-commands)
@@ -70,7 +69,7 @@ context in which this crate is meant to exist.
 
 ## Installation
 
-The three apps, `edi`, `giti`, and `ch`, that comprise `r3bl-cmdr` will make you smile
+The two apps, `edi` and `giti`, that comprise `r3bl-cmdr` will make you smile
 and make you more productive. These apps are currently available as early access
 preview 🐣.
 
@@ -78,8 +77,6 @@ preview 🐣.
   better experience when working with git.
 - 🦜 `edi` - a TUI Markdown editor that lets you edit Markdown files in your terminal
   in style.
-- 🔮 `ch` - a Claude Code history browser that lets you select and copy previous
-  Claude Code prompts to clipboard.
 
 To install `r3bl-cmdr` on your system, run the following command, assuming you have
 `cargo` on your system:
@@ -180,32 +177,6 @@ To run from source:
 - To open an existing file, run `edi <file_name>`. For example, `edi README.md`.
 - If you want to generate log output for `edi`, run `edi -l`. For example, `edi -l
   README.md`. To view this log output run `fish run.fish log`.
-
-## Run `ch` binary target
-
-<!--
-ch video
-Source: ch-demo.gif from Downloads folder
--->
-![ch video](https://raw.githubusercontent.com/r3bl-org/r3bl-open-core/main/cmdr/videos/ch.gif?raw=true)
-
-To run from binary:
-- Run `cargo install r3bl-cmdr` (detailed instructions above). This will install `ch`
-  locally to `~/.cargo/bin`.
-- Run `ch` from anywhere on your system.
-- Try `ch --help` to see the available commands.
-- `ch` browses your Claude Code prompt history for the current project.
-- Select a prompt to copy it to your clipboard instantly.
-- Supports prompts with pasted images (saves them to Downloads folder).
-
-To run from source:
-- Clone the `r3bl-open-core` repo.
-- Run `./bootstrap.sh` to install all required tools (Linux/macOS).
-- Run `fish run.fish install-cmdr` to install `ch` locally to `~/.cargo/bin`.
-- Run `ch` from anywhere on your system.
-- Try `ch --help` to see the available commands.
-- If you want to generate log output for `ch`, run `ch -l`. For example, `ch -l`. To
-  view this log output run `fish run.fish log`.
 
 ## Build, run, test tasks
 

@@ -7,7 +7,7 @@ homepage = "https://r3bl.com"
 license = "Apache-2.0"
 
 description = """
-A TUI app suite for developers. Includes a Markdown editor `edi`, a git client `giti`, a Claude Code helper `ch`.
+A TUI app suite for developers. Includes a Markdown editor `edi` and a git client `giti`.
 """
 # At most 5 keywords w/ no spaces, each has max length of 20 char.
 keywords = ["tui", "editor", "git", "claude"]
@@ -36,10 +36,6 @@ path = "src/bin/edi.rs"
 [[bin]]
 name = "rc"
 path = "src/bin/rc.rs"
-
-[[bin]]
-name = "ch"
-path = "src/bin/ch.rs"
 
 [lib]
 name = "r3bl_cmdr"
