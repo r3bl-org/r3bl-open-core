@@ -16,7 +16,7 @@ reference-style.
 **If `cargo rustdoc-fmt` is not found**, build and install it from source:
 
 ```bash
-cd r3bl-build-infra
+cd build-infra
 cargo install --path .
 ```
 

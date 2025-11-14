@@ -19,7 +19,7 @@ cargo install --path . --force
 Or from the workspace root:
 
 ```bash
-cargo install --path r3bl-build-infra --force
+cargo install --path build-infra --force
 ```
 
 ### Why This Matters
@@ -80,7 +80,7 @@ Follow the standard Rust module organization:
 ## Project Structure
 
 ```
-r3bl-build-infra/
+build-infra/
 ├── src/
 │   ├── bin/                    # Binary entry points
 │   │   └── cargo-rustdoc-fmt.rs

@@ -45,7 +45,14 @@ pub fn get_workspace_root() -> Result<PathBuf> {
     }
 }
 
-/// Find all .rs files in the workspace, excluding target/ and hidden directories.
+/// Find all .rs files in the workspace, excluding target/, hidden directories, and test
+/// data.
+///
+/// Automatically excludes common test fixture directory patterns:
+/// - Directories containing `test_data` (e.g., `test_data`, `conformance_test_data`)
+/// - Directories containing `testdata`
+/// - Directories containing `test_fixtures`
+/// - Directories containing `fixtures`
 ///
 /// # Errors
 ///
@@ -59,11 +66,16 @@ pub fn find_rust_files(workspace_root: &Path) -> Result<Vec<PathBuf>> {
     {
         let path = entry.path();
 
-        // Skip target, hidden directories, and non-.rs files
+        // Skip target, hidden directories, test data directories, and non-.rs files
         if path.starts_with(workspace_root.join("target"))
-            || path
-                .components()
-                .any(|c| c.as_os_str().to_string_lossy().starts_with('.'))
+            || path.components().any(|c| {
+                let component = c.as_os_str().to_string_lossy();
+                component.starts_with('.')
+                    || component.contains("test_data")
+                    || component.contains("testdata")
+                    || component.contains("test_fixtures")
+                    || component.contains("fixtures")
+            })
             || path.extension().is_none_or(|ext| ext != "rs")
         {
             continue;
