@@ -22,8 +22,14 @@
 //! **Output**: Organized operations sorted by [`ZOrder`] (layer depth)
 //! **Role**: Aggregate and organize rendering operations before compositor processing
 //!
+//! <div class="warning">
+//!
+//! **For the complete 6-stage rendering pipeline with visual diagrams and stage
+//! reference table**, see the [rendering pipeline overview].
+//!
+//! </div>
+//!
 //! ## Navigation
-//! - **See complete architecture**: [`terminal_lib_backends` mod docs] (source of truth)
 //! - **Previous stage**: [`render_op_ir` mod docs] (Stage 1: IR Generation)
 //! - **Next stage**: [`compositor_render_ops_to_ofs_buf` mod docs] (Stage 3: Rendering to
 //!   Buffer)
@@ -46,7 +52,7 @@
 //!
 //! [`compositor_render_ops_to_ofs_buf` mod docs]: mod@crate::tui::terminal_lib_backends::compositor_render_ops_to_ofs_buf
 //! [`render_op_ir` mod docs]: mod@crate::tui::terminal_lib_backends::render_op::render_op_ir
-//! [`terminal_lib_backends` mod docs]: mod@crate::tui::terminal_lib_backends
+//! [rendering pipeline overview]: mod@crate::terminal_lib_backends#rendering-pipeline-architecture
 
 use super::{ZOrder, paint::paint};
 use crate::{FlushKind, GlobalData, InlineVec, LockedOutputDevice, RenderOpIRVec, ok,

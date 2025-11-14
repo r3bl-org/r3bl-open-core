@@ -6,8 +6,12 @@
 //! [`OffscreenBuffer`] (produced by the Compositor in Stage 3) into optimized
 //! [`RenderOpOutputVec`] operations for backend execution.
 //!
-//! > **For the complete 6-stage rendering pipeline with visual diagrams and stage
-//! > reference table**, see the [`render_pipeline` mod docs].
+//! <div class="warning">
+//!
+//! **For the complete 6-stage rendering pipeline with visual diagrams and stage
+//! reference table**, see the [rendering pipeline overview].
+//!
+//! </div>
 //!
 //! ## Why This Lives in [`offscreen_buffer/`]
 //!
@@ -23,12 +27,20 @@
 //! - Crossterm: [`crossterm_backend` mod docs]
 //! - DirectToAnsi: [`direct_to_ansi` mod docs]
 //!
-//! ## You Are Here
+//! # You Are Here: **Stage 4** (Backend Converter/Shared)
 //!
 //! ```text
-//! [Stage 1: App/Component] → [Stage 2: Pipeline] → [Stage 3: Compositor] →
-//! [Stage 4: Backend Converter] ← YOU ARE HERE
-//! [Stage 5: Backend Executor] → [Stage 6: Terminal]
+//! [Stage 1: App/Component]
+//!   ↓
+//! [Stage 2: Pipeline]
+//!   ↓
+//! [Stage 3: Compositor]
+//!   ↓
+//! [Stage 4: Backend Converter] ← YOU ARE HERE (shared by all backends)
+//!   ↓
+//! [Stage 5: Backend Executor]
+//!   ↓
+//! [Stage 6: Terminal]
 //! ```
 //!
 //! **Input**: [`OffscreenBuffer`] (rendered pixels from compositor)
@@ -53,7 +65,7 @@
 //! [`crossterm_backend` mod docs]: mod@crate::tui::terminal_lib_backends::crossterm_backend
 //! [`diff_chunks`]: mod@crate::tui::terminal_lib_backends::offscreen_buffer::diff_chunks
 //! [`direct_to_ansi` mod docs]: mod@crate::tui::terminal_lib_backends::direct_to_ansi
-//! [`render_pipeline` mod docs]: mod@crate::tui::terminal_lib_backends::render_pipeline
+//! [rendering pipeline overview]: mod@crate::terminal_lib_backends#rendering-pipeline-architecture
 //! [`offscreen_buffer/`]: mod@crate::tui::terminal_lib_backends::offscreen_buffer
 
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.

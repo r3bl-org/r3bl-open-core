@@ -18,9 +18,15 @@
 //! [Stage 6: Terminal]
 //! ```
 //!
+//! <div class="warning">
+//!
+//! **For the complete 6-stage rendering pipeline with visual diagrams and stage
+//! reference table**, see the [rendering pipeline overview].
+//!
+//! </div>
+//!
 //! ## Navigation
-//! - **See complete architecture**: [`terminal_lib_backends` mod docs] (source of truth)
-//! - **Next stage**: [`render_pipeline` mod docs] (Stage 2: Organization)
+//! - **Next stage**: [`render_pipeline`] (Stage 2: Organization)
 //! - **Final stage**: [`compositor_render_ops_to_ofs_buf` mod docs] (Stage 3: Rendering)
 //!
 //! See [`render_op` mod docs] for shared architectural patterns and the rendering
@@ -56,8 +62,8 @@
 //! [`compositor_render_ops_to_ofs_buf` mod docs]: mod@crate::tui::terminal_lib_backends::compositor_render_ops_to_ofs_buf
 //! [`render_op_ir` mod docs]: mod@crate::tui::terminal_lib_backends::render_op::render_op_ir
 //! [`render_op` mod docs]: mod@crate::tui::terminal_lib_backends::render_op
-//! [`render_pipeline` mod docs]: mod@crate::tui::terminal_lib_backends::render_pipeline
-//! [`terminal_lib_backends` mod docs]: mod@crate::tui::terminal_lib_backends
+//! [`render_pipeline`]: mod@crate::tui::terminal_lib_backends::render_pipeline
+//! [rendering pipeline overview]: mod@crate::terminal_lib_backends#rendering-pipeline-architecture
 
 use super::RenderOpCommon;
 use crate::{InlineString, InlineVec, TuiStyle, ok};

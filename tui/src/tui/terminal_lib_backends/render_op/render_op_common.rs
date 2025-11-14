@@ -3,14 +3,19 @@
 //! Common render operations used in both IR (app/component) and Output (backend)
 //! contexts.
 //!
-//! # You Are Here
+//! # You Are Here: **Shared Data Type** (Cross-Stage)
 //!
 //! ```text
-//! [Stage 1: App/Component] → [Stage 2: Pipeline] → [Stage 3: Compositor] →
-//! [Stage 4: Backend Converter] → [Stage 5: Backend Executor] → [Stage 6: Terminal]
+//! RenderOpCommon enum ← YOU ARE HERE
+//! (Used by all pipeline stages 1-5)
+//! ```
 //!
-//! See [`crate::render_op`] module documentation for shared architectural patterns,
-//! type safety guarantees, and the rendering pipeline overview.
+//! <div class="warning">
+//!
+//! **For the complete 6-stage rendering pipeline with visual diagrams and stage
+//! reference table**, see the [rendering pipeline overview].
+//!
+//! </div>
 //!
 //! # Context
 //!
@@ -20,6 +25,8 @@
 //!
 //! The enum defines operations like cursor movement, colors, text, and screen control
 //! that every stage of the pipeline needs to understand.
+//!
+//! [rendering pipeline overview]: mod@crate::terminal_lib_backends#rendering-pipeline-architecture
 
 use crate::{ColIndex, InlineString, Pos, RowHeight, TuiColor, TuiStyle};
 

@@ -22,9 +22,15 @@
 //! **Output**: [`OffscreenBuffer`] (virtual 2D terminal grid with styled pixels)
 //! **Role**: Execute rendering operations to create a frame-sized virtual terminal buffer
 //!
+//! <div class="warning">
+//!
+//! **For the complete 6-stage rendering pipeline with visual diagrams and stage
+//! reference table**, see the [rendering pipeline overview].
+//!
+//! </div>
+//!
 //! ## Navigation
-//! - **See complete architecture**: [`terminal_lib_backends` mod docs] (source of truth)
-//! - **Previous stage**: [`render_pipeline` mod docs] (Stage 2: Organization)
+//! - **Previous stage**: [`render_pipeline`] (Stage 2: Organization)
 //! - **Next stage (Stage 4: Shared)**: [`offscreen_buffer::paint_impl` mod docs] (Backend
 //!   Converter - shared by both Crossterm and DirectToAnsi)
 //! - **Stage 5 options**:
@@ -59,8 +65,8 @@
 //! [`crossterm_backend::paint_render_op_impl` mod docs]: mod@crate::tui::terminal_lib_backends::crossterm_backend::paint_render_op_impl
 //! [`direct_to_ansi` mod docs]: mod@crate::tui::terminal_lib_backends::direct_to_ansi
 //! [`offscreen_buffer::paint_impl` mod docs]: mod@crate::tui::terminal_lib_backends::offscreen_buffer::paint_impl
-//! [`render_pipeline` mod docs]: mod@crate::tui::terminal_lib_backends::render_pipeline
-//! [`terminal_lib_backends` mod docs]: mod@crate::tui::terminal_lib_backends
+//! [`render_pipeline`]: mod@crate::tui::terminal_lib_backends::render_pipeline
+//! [rendering pipeline overview]: mod@crate::terminal_lib_backends#rendering-pipeline-architecture
 
 use super::{AlternateScreenState, BracketedPasteState, MouseTrackingState,
             OffscreenBuffer, RawModeState, RenderOpCommon, RenderOpIR, RenderPipeline,

@@ -20,17 +20,30 @@ pub enum FlushKind {
 /// clear the terminal before flushing. Essential for ensuring that render
 /// operations are actually displayed on the terminal.
 ///
-/// # You Are Here
+/// # You Are Here: **Stage 5 Helper Trait**
+///
+/// This trait is used by Stage 5 (Backend Executor) to flush output:
 ///
 /// ```text
-/// [Stage 1: App/Component] → [Stage 2: Pipeline] → [Stage 3: Compositor] →
-/// [Stage 4: Backend Converter] → [Stage 5: Backend Executor] → [Stage 6: Terminal]
-///                                                       ↓↓↓↓
-///                          Flush trait is called here to display output
+/// [Stage 1: App/Component]
+///   ↓
+/// [Stage 2: Pipeline]
+///   ↓
+/// [Stage 3: Compositor]
+///   ↓
+/// [Stage 4: Backend Converter]
+///   ↓
+/// [Stage 5: Backend Executor] ← YOU ARE HERE (RenderOpFlush trait)
+///   ↓
+/// [Stage 6: Terminal]
 /// ```
 ///
-/// See [`crate::render_op`] module documentation for shared architectural patterns
-/// and the rendering pipeline overview.
+/// <div class="warning">
+///
+/// **For the complete 6-stage rendering pipeline with visual diagrams and stage
+/// reference table**, see the [rendering pipeline overview].
+///
+/// </div>
 ///
 /// # Purpose
 ///
@@ -39,6 +52,8 @@ pub enum FlushKind {
 ///
 /// Used by [`crate::PaintRenderOpImplCrossterm`] (Backend Executor) to control when
 /// rendered content is actually displayed to the user.
+///
+/// [rendering pipeline overview]: mod@crate::terminal_lib_backends#rendering-pipeline-architecture
 pub trait RenderOpFlush {
     /// Flushes pending output to the terminal.
     ///

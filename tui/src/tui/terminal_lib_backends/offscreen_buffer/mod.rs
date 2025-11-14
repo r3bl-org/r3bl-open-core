@@ -2,21 +2,18 @@
 
 //! Offscreen buffer module for terminal rendering and VT100/ANSI terminal emulation.
 //!
-//! # You Are Here
+//! # You Are Here: **Stage 3-4 Data Bridge**
 //!
 //! ```text
 //! [Stage 1: App/Component]
 //!   ↓
 //! [Stage 2: Pipeline]
 //!   ↓
-//! [Stage 3: Compositor]
+//! [Stage 3: Compositor] ← Writes to OffscreenBuffer
 //!   ↓
-//!   ┌──────────────────────────────────────┐
-//!   │  OffscreenBuffer (YOU ARE HERE)      │
-//!   │  (Virtual terminal grid)             │
-//!   └──────────────────────────────────────┘
+//! OffscreenBuffer (2D grid) ← YOU ARE HERE
 //!   ↓
-//! [Stage 4: Backend Converter]
+//! [Stage 4: Backend Converter] ← Reads from OffscreenBuffer
 //!   ↓
 //! [Stage 5: Backend Executor]
 //!   ↓
@@ -27,7 +24,12 @@
 //! **Output**: Read by the Backend Converter (Stage 4) for diff and optimization
 //! **Role**: The 2D virtual terminal that bridges rendering and execution
 //!
-//! > **For the complete pipeline architecture**, see [`super`] (parent module).
+//! <div class="warning">
+//!
+//! **For the complete 6-stage rendering pipeline with visual diagrams and stage
+//! reference table**, see the [rendering pipeline overview].
+//!
+//! </div>
 //!
 //! ## What This Structure Is
 //!
@@ -311,6 +313,7 @@
 //! [`shift_lines_up()`]: crate::OffscreenBuffer::shift_lines_up
 //! [`validate_col_range_mut()`]: crate::OffscreenBuffer::validate_col_range_mut
 //! [`validate_row_range_mut()`]: crate::OffscreenBuffer::validate_row_range_mut
+//! [rendering pipeline overview]: mod@crate::terminal_lib_backends#rendering-pipeline-architecture
 
 // Attach private modules (hide internal structure).
 // Some modules are conditionally public for documentation to allow rustdoc links.

@@ -8,22 +8,26 @@ use crate::{ColIndex, InlineString, Pos, RowHeight, TuiColor, TuiStyle};
 /// Implemented by both `RenderOpIR` and `RenderOpOutput` to avoid code duplication.
 /// Provides factory methods that wrap `RenderOpCommon` variants in the appropriate type.
 ///
-/// # You Are Here
+/// # You Are Here: **Supporting Trait** (Cross-Stage)
 ///
 /// ```text
-/// [Stage 1: App/Component] → [Stage 2: Pipeline] → [Stage 3: Compositor] →
-/// [Stage 4: Backend Converter] → [Stage 5: Backend Executor] → [Stage 6: Terminal]
-///
-/// RenderOpCommonExt is used throughout all stages
+/// RenderOpCommonExt trait ← YOU ARE HERE
+/// (Used by all pipeline stages 1-5)
 /// ```
 ///
-/// See [`crate::render_op`] module documentation for shared architectural patterns
-/// and the rendering pipeline overview.
+/// <div class="warning">
+///
+/// **For the complete 6-stage rendering pipeline with visual diagrams and stage
+/// reference table**, see the [rendering pipeline overview].
+///
+/// </div>
 ///
 /// # Purpose
 ///
 /// Provides 27 ergonomic factory methods that wrap `RenderOpCommon` variants.
 /// Used throughout the rendering pipeline to create render operations conveniently.
+///
+/// [rendering pipeline overview]: mod@crate::terminal_lib_backends#rendering-pipeline-architecture
 ///
 /// # Usage
 ///
