@@ -15,7 +15,13 @@ use std::path::PathBuf;
                   to reference-style links within rustdoc comments (/// and //!).\n\n\
                   By default (no args), formats git-changed files (staged/unstaged changes, \
                   or files from last commit if clean).\n\n\
-                  Use --workspace to format entire workspace, or provide specific paths.",
+                  Use --workspace to format entire workspace, or provide specific paths.\n\n\
+                  PROTECTED CONTENT:\n\
+                  - Files with #![cfg_attr(rustfmt, rustfmt_skip)] are skipped entirely\n\
+                  - HTML tags are preserved (entire rustdoc block skipped)\n\
+                  - Blockquotes (>) are preserved (entire rustdoc block skipped)\n\
+                  - Code fence contents are generally protected by markdown parsers\n\
+                  - For files with complex code fence examples, use rustfmt_skip",
     version
 )]
 #[allow(clippy::struct_excessive_bools)]
