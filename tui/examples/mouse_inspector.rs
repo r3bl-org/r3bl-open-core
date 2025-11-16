@@ -228,7 +228,7 @@ async fn run_inspector(
     // Event loop
     while !inspector.should_quit {
         // Wait for next input event
-        if let Some(event) = input_device.next_input_event().await {
+        if let Some(event) = input_device.next().await {
             match event {
                 InputEvent::Mouse(mouse) => inspector.handle_mouse_event(mouse),
                 InputEvent::Keyboard(key) => inspector.handle_keyboard_event(key),

@@ -48,7 +48,7 @@
 //!
 //! ## Usage Example
 //!
-//! ```rust,no_run
+//! ```no_run
 //! use r3bl_tui::core::{pty_mux::{PTYMux, Process}, get_size};
 //!
 //! #[tokio::main]
@@ -72,8 +72,8 @@
 //! }
 //! ```
 //!
-//! [`OffscreenBuffer`]: crate::OffscreenBuffer
 //! [`ANSI Parser`]: crate::AnsiToOfsBufPerformer
+//! [`OffscreenBuffer`]: crate::OffscreenBuffer
 //! [`PTY Session`]: crate::PtyReadWriteSession
 
 // Attach.

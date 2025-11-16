@@ -310,7 +310,7 @@ where
             }
 
             // Handle input events.
-            maybe_input_event = input_device.next_input_event() => {
+            maybe_input_event = input_device.next() => {
                 if let Some(input_event) = maybe_input_event {
                     handle_input_event(
                         input_event,

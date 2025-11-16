@@ -55,7 +55,7 @@ impl PtyCommandBuilder {
     ///
     /// # Example: Capturing OSC sequences from cargo build
     ///
-    /// ```rust,no_run
+    /// ```no_run
     /// # #[tokio::main]
     /// # async fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// use r3bl_tui::{PtyCommandBuilder, PtyConfigOption, PtyReadOnlyOutputEvent, OscEvent};
@@ -92,12 +92,12 @@ impl PtyCommandBuilder {
     ///
     /// Returns an error if the PTY fails to spawn or initialize properly.
     ///
-    /// [`tokio::spawn`]: tokio::spawn
-    /// [`tokio::task::spawn_blocking`]: tokio::task::spawn_blocking
+    /// [`ControlledChild`]: crate::ControlledChild
+    /// [`spawn_blocking`]: tokio::task::spawn_blocking
     /// [`std::io::Read`]: std::io::Read
     /// [`tokio::io::AsyncRead`]: tokio::io::AsyncRead
-    /// [`spawn_blocking`]: tokio::task::spawn_blocking
-    /// [`ControlledChild`]: crate::ControlledChild
+    /// [`tokio::spawn`]: tokio::spawn
+    /// [`tokio::task::spawn_blocking`]: tokio::task::spawn_blocking
     pub fn spawn_read_only(
         self,
         arg_config: impl Into<PtyConfig>,
@@ -185,8 +185,8 @@ impl PtyCommandBuilder {
 ///
 /// Returns a `JoinHandle` that resolves to the child process exit code.
 ///
-/// [`tokio::task::spawn_blocking`]: tokio::task::spawn_blocking
 /// [`portable_pty`]: mod@portable_pty
+/// [`tokio::task::spawn_blocking`]: tokio::task::spawn_blocking
 #[must_use]
 fn spawn_child_process_waiter(
     mut controlled_child: ControlledChild,
@@ -255,8 +255,8 @@ fn spawn_child_process_waiter(
 ///
 /// [`Read`]: std::io::Read
 /// [`Send`]: std::marker::Send
-/// [`tokio::task::JoinHandle`]: tokio::task::JoinHandle
 /// [`miette::Result`]: miette::Result
+/// [`tokio::task::JoinHandle`]: tokio::task::JoinHandle
 #[must_use]
 pub fn spawn_blocking_controller_output_reader_task(
     mut controller_reader: ControllerReader,

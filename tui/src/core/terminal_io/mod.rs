@@ -3,7 +3,6 @@
 // Private modules (hide internal structure).
 mod enhanced_keys;
 mod input_device;
-mod input_device_ext;
 mod input_event;
 mod key_press;
 mod modifier_keys_mask;
@@ -15,7 +14,6 @@ mod terminal_io_type_aliases;
 // Re-exports for flat public API.
 pub use enhanced_keys::*;
 pub use input_device::*;
-pub use input_device_ext::*;
 pub use input_event::*;
 pub use key_press::*;
 pub use modifier_keys_mask::*;

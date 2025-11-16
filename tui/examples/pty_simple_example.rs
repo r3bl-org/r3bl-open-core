@@ -122,7 +122,7 @@ async fn run_event_loop(
             }
 
             // Handle user input.
-            Some(input_event) = input_device.next_input_event() => {
+            Some(input_event) = input_device.next() => {
                 match input_event {
                     InputEvent::Keyboard(key) => {
                         // Check for Ctrl+Q to quit.

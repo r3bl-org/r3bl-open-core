@@ -1,7 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::protocol_conversion::convert_input_event;
-use crate::{ByteIndex, ByteOffset, InputDeviceExt, InputEvent,
+use crate::{ByteIndex, ByteOffset, InputEvent,
             core::ansi::vt_100_terminal_input_parser::{VT100InputEventIR,
                                                        VT100KeyCodeIR,
                                                        VT100PasteModeIR,
@@ -231,12 +231,12 @@ impl DirectToAnsiInputDevice {
     ///
     /// # Usage
     ///
-    /// This method is called via the [`InputDeviceExt`] trait (not directly), and the
-    /// `DirectToAnsiInputDevice` struct is persisted for the entire lifetime of the
-    /// program's event loop. Typical usage pattern:
+    /// This method is called once by the main event loop of the program using this
+    /// [`InputDevice`] and this [`DirectToAnsiInputDevice`] struct is persisted
+    /// for the entire lifetime of the program's event loop. Typical usage pattern:
     ///
-    /// ```rust,no_run
-    /// # use r3bl_tui::{DirectToAnsiInputDevice, InputEvent, InputDeviceExt};
+    /// ```no_run
+    /// # use r3bl_tui::{DirectToAnsiInputDevice, InputEvent};
     /// # use tokio::signal;
     ///
     /// #[tokio::main]
@@ -250,7 +250,7 @@ impl DirectToAnsiInputDevice {
     ///     loop {
     ///         tokio::select! {
     ///             // Handle terminal input events
-    ///             input_event = input_device.next_input_event() => {
+    ///             input_event = input_device.next() => {
     ///                 match input_event {
     ///                     Some(InputEvent::Keyboard(key_press)) => {
     ///                         // Handle keyboard input
@@ -292,7 +292,7 @@ impl DirectToAnsiInputDevice {
     /// **Key points:**
     /// - The device is **created once and reused** for the entire program lifetime
     /// - This method is **called repeatedly** by the main event loop via the
-    ///   `InputDeviceExt::next_input_event()` trait method, not called directly
+    ///   `InputDeviceExt::next()` trait method, not called directly
     /// - **Buffer state is preserved** across calls: the internal `parse_buffer` and
     ///   `buffer_position` accumulate partial ANSI sequences between calls
     /// - Returns `None` when stdin is closed (program should exit)
@@ -349,7 +349,7 @@ impl DirectToAnsiInputDevice {
     /// See struct-level documentation for details on zero-latency ESC detection
     /// algorithm.
     ///
-    /// [`InputDeviceExt`]: crate::InputDeviceExt
+    /// [`InputDevice`]: crate::InputDevice
     pub async fn try_read_event(&mut self) -> Option<InputEvent> {
         use tokio::io::AsyncReadExt as _;
 
@@ -469,10 +469,8 @@ impl Default for DirectToAnsiInputDevice {
     fn default() -> Self { Self::new() }
 }
 
-impl InputDeviceExt for DirectToAnsiInputDevice {
-    async fn next_input_event(&mut self) -> Option<InputEvent> {
-        self.try_read_event().await
-    }
+impl DirectToAnsiInputDevice {
+    pub async fn next(&mut self) -> Option<InputEvent> { self.try_read_event().await }
 }
 
 /// Comprehensive testing is performed in PTY integration tests:

@@ -70,7 +70,7 @@ async fn main() -> miette::Result<()> {
             }
 
             // Handle user input.
-            Some(input_event) = input_device.next_input_event() => {
+            Some(input_event) = input_device.next() => {
                 if let InputEvent::Keyboard(key) = input_event {
                     // Check for Ctrl+Q.
                     if let KeyPress::WithModifiers {

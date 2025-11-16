@@ -23,7 +23,7 @@ use std::time::Duration;
 ///
 /// # Integration with `tokio::select`!
 ///
-/// ```rust,no_run
+/// ```no_run
 /// use std::time::Duration;
 /// use r3bl_tui::DebouncedState;
 ///
@@ -56,7 +56,7 @@ pub struct DebouncedState<T> {
 impl<T> DebouncedState<T> {
     /// Creates a new debounced state with the given duration.
     ///
-    /// The state starts empty (no pending value). Call [`set()`](Self::set)
+    /// The state starts empty (no pending value). Call [`set()`]
     /// to buffer a value and start the debounce timer.
     ///
     /// # Examples
@@ -65,9 +65,12 @@ impl<T> DebouncedState<T> {
     /// use std::time::Duration;
     /// use r3bl_tui::DebouncedState;
     ///
-    /// let buffered: DebouncedState<String> = DebouncedState::new(Duration::from_millis(10));
+    /// let buffered: DebouncedState<String> =
+    ///     DebouncedState::new(Duration::from_millis(10));
     /// assert!(!buffered.is_pending());
     /// ```
+    ///
+    /// [`set()`]: Self::set
     #[must_use]
     pub fn new(duration: Duration) -> Self {
         Self {
@@ -104,7 +107,7 @@ impl<T> DebouncedState<T> {
     /// Takes the buffered value and clears the debounce timer.
     ///
     /// Returns `Some(value)` if a value was buffered, or `None` if no value
-    /// was pending. After calling this, [`is_pending()`](Self::is_pending)
+    /// was pending. After calling this, [`is_pending()`]
     /// will return `false`.
     ///
     /// # Examples
@@ -120,6 +123,8 @@ impl<T> DebouncedState<T> {
     /// assert!(!buffered.is_pending());
     /// assert_eq!(buffered.take(), None); // Already taken
     /// ```
+    ///
+    /// [`is_pending()`]: Self::is_pending
     pub fn take(&mut self) -> Option<T> {
         self.debounce.clear();
         self.pending.take()
@@ -128,8 +133,14 @@ impl<T> DebouncedState<T> {
     /// Returns `true` if there is a buffered value pending.
     ///
     /// Use this as the condition in `tokio::select!` branches:
-    /// ```rust,ignore
-    /// () = buffered.sleep_until(), if buffered.is_pending() => { ... }
+    /// ```no_run
+    /// # use std::time::Duration;
+    /// # use r3bl_tui::DebouncedState;
+    /// # async fn example(buffered: DebouncedState<String>) {
+    /// tokio::select! {
+    ///     () = buffered.sleep_until(), if buffered.is_pending() => { /* Handle timeout */ }
+    /// }
+    /// # }
     /// ```
     ///
     /// # Examples
@@ -149,15 +160,21 @@ impl<T> DebouncedState<T> {
 
     /// Returns `true` if the debounce is active and should be polled in `tokio::select!`.
     ///
-    /// This is an alias for [`is_pending()`](Self::is_pending) with clearer semantics
+    /// This is an alias for [`is_pending()`] with clearer semantics
     /// for use in select branches. Use this when you want your code to read naturally:
     ///
-    /// ```rust,ignore
-    /// () = buffered_state.sleep_until(), if buffered_state.should_poll() => {
-    ///     if let Some(state) = buffered_state.take() {
-    ///         println!("{state}");
+    /// ```no_run
+    /// # use std::time::Duration;
+    /// # use r3bl_tui::DebouncedState;
+    /// # async fn example(mut buffered_state: DebouncedState<String>) {
+    /// tokio::select! {
+    ///     () = buffered_state.sleep_until(), if buffered_state.should_poll() => {
+    ///         if let Some(state) = buffered_state.take() {
+    ///             println!("{state}");
+    ///         }
     ///     }
     /// }
+    /// # }
     /// ```
     ///
     /// Reads in English as: "If we should poll the debounced state, then sleep until
@@ -175,6 +192,8 @@ impl<T> DebouncedState<T> {
     /// buffered.set("hello".to_string());
     /// assert!(buffered.should_poll()); // Debounce is active
     /// ```
+    ///
+    /// [`is_pending()`]: Self::is_pending
     #[must_use]
     pub fn should_poll(&self) -> bool { self.is_pending() }
 
@@ -186,12 +205,18 @@ impl<T> DebouncedState<T> {
     /// This is designed to be used in `tokio::select!` branches with
     /// an `if` condition to prevent spurious wakeups:
     ///
-    /// ```rust,ignore
-    /// () = buffered.sleep_until(), if buffered.is_pending() => {
-    ///     if let Some(state) = buffered.take() {
-    ///         println!("{state}");
+    /// ```no_run
+    /// # use std::time::Duration;
+    /// # use r3bl_tui::DebouncedState;
+    /// # async fn example(mut buffered: DebouncedState<String>) {
+    /// tokio::select! {
+    ///     () = buffered.sleep_until(), if buffered.is_pending() => {
+    ///         if let Some(state) = buffered.take() {
+    ///             println!("{state}");
+    ///         }
     ///     }
     /// }
+    /// # }
     /// ```
     pub async fn sleep_until(&self) { self.debounce.sleep_until().await; }
 }
