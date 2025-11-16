@@ -17,19 +17,6 @@
 //! - [`csi_seq_cursor_pos_alt`] - Converts to or validates
 //!   [`CsiSequence::CursorPositionAlt`]
 //!
-//! # Example Usage
-//!
-//! ```rust,ignore
-//! use crate::vt_100_pty_output_conformance_tests::test_sequence_generators::csi_builders::*;
-//!
-//! let cursor_pos = csi_seq_cursor_pos(
-//!     CsiSequence::CursorPosition {
-//!         row: term_row(nz(5)),
-//!         col: term_col(nz(10))
-//!     }
-//! );
-//! ```
-//!
 //! [`CsiSequence`]: crate::CsiSequence
 //! [`CsiSequence::CursorPosition`]: crate::CsiSequence::CursorPosition
 //! [`CsiSequence::CursorPositionAlt`]: crate::CsiSequence::CursorPositionAlt

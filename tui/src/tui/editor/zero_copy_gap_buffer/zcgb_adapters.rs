@@ -127,9 +127,10 @@ impl From<&str> for ZeroCopyGapBuffer {
     /// or `"some text".into()`.
     ///
     /// # Example
-    /// ```rust,ignore
+    /// ```
+    /// # use r3bl_tui::ZeroCopyGapBuffer;
     /// let buffer: ZeroCopyGapBuffer = "# Hello\nWorld".into();
-    /// let result = parse_markdown(&buffer);
+    /// assert_eq!(buffer.line_count().as_usize(), 2);
     /// ```
     fn from(text: &str) -> Self { gap_buffer_from_str(text) }
 }
@@ -140,13 +141,6 @@ impl From<&[GCStringOwned]> for ZeroCopyGapBuffer {
     /// This is a more idiomatic Rust way to convert editor lines
     /// into a gap buffer, allowing usage like `ZeroCopyGapBuffer::from(&lines)` or
     /// `(&lines).into()`.
-    ///
-    /// # Example
-    /// ```rust,ignore
-    /// let lines = vec![GCString::from("# Title"), GCString::from("Content")];
-    /// let buffer: ZeroCopyGapBuffer = (&lines[..]).into();
-    /// let result = parse_markdown(&buffer);
-    /// ```
     fn from(lines: &[GCStringOwned]) -> Self { gap_buffer_from_lines(lines) }
 }
 

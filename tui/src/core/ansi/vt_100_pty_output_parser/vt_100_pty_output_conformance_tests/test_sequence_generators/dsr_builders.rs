@@ -12,18 +12,6 @@
 //! this builder provides a direct formatting approach that's convenient for
 //! test assertions.
 //!
-//! # Example Usage
-//!
-//! ```rust,ignore
-//! use crate::vt_100_pty_output_conformance_tests::test_sequence_generators::dsr_builders::*;
-//!
-//! let cursor_response = dsr_cursor_position_response(
-//!     term_row(nz(10)),
-//!     term_col(nz(25))
-//! );
-//! assert_eq!(cursor_response, "\x1b[10;25R");
-//! ```
-//!
 //! [`DsrSequence`]: crate::DsrSequence
 
 use crate::{CSI_PARAM_SEPARATOR, DSR_CURSOR_POSITION_RESPONSE_END, DSR_RESPONSE_START,
@@ -40,12 +28,6 @@ use crate::{CSI_PARAM_SEPARATOR, DSR_CURSOR_POSITION_RESPONSE_END, DSR_RESPONSE_
 ///
 /// # Returns
 /// Formatted DSR response string: `\x1b[{row};{col}R`
-///
-/// # Example
-/// ```rust,ignore
-/// let response = dsr_cursor_position_response(term_row(nz(5)), term_col(nz(10)));
-/// assert_eq!(response, "\x1b[5;10R");
-/// ```
 #[must_use]
 pub fn dsr_cursor_position_response(row: TermRow, col: TermCol) -> String {
     format!(

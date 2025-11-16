@@ -21,7 +21,8 @@
 //!
 //! # Example Usage
 //!
-//! ```rust,ignore
+//! <!-- It is ok to use ignore here - test helper functions in conditionally compiled modules aren't accessible from doctests -->
+//! ```ignore
 //! use crate::vt_100_pty_output_conformance_tests::test_sequence_generators::extended_color_builders::*;
 //!
 //! // 256-color sequences
@@ -50,12 +51,6 @@ use crate::SgrColorSequence;
 ///
 /// # Returns
 /// Formatted ANSI sequence: `\x1b[38:5:{index}m`
-///
-/// # Example
-/// ```rust,ignore
-/// let bright_red = fg_ansi256(196);
-/// assert_eq!(bright_red, "\x1b[38:5:196m");
-/// ```
 #[must_use]
 pub fn fg_ansi256(index: u8) -> String {
     SgrColorSequence::SetForegroundAnsi256(index).to_string()
@@ -70,12 +65,6 @@ pub fn fg_ansi256(index: u8) -> String {
 ///
 /// # Returns
 /// Formatted ANSI sequence: `\x1b[48:5:{index}m`
-///
-/// # Example
-/// ```rust,ignore
-/// let blue_bg = bg_ansi256(21);
-/// assert_eq!(blue_bg, "\x1b[48:5:21m");
-/// ```
 #[must_use]
 pub fn bg_ansi256(index: u8) -> String {
     SgrColorSequence::SetBackgroundAnsi256(index).to_string()
@@ -92,12 +81,6 @@ pub fn bg_ansi256(index: u8) -> String {
 ///
 /// # Returns
 /// Formatted ANSI sequence: `\x1b[38:2:{r}:{g}:{b}m`
-///
-/// # Example
-/// ```rust,ignore
-/// let orange = fg_rgb(255, 128, 0);
-/// assert_eq!(orange, "\x1b[38:2:255:128:0m");
-/// ```
 #[must_use]
 pub fn fg_rgb(r: u8, g: u8, b: u8) -> String {
     SgrColorSequence::SetForegroundRgb(r, g, b).to_string()
@@ -116,7 +99,8 @@ pub fn fg_rgb(r: u8, g: u8, b: u8) -> String {
 /// Formatted ANSI sequence: `\x1b[48:2:{r}:{g}:{b}m`
 ///
 /// # Example
-/// ```rust,ignore
+/// <!-- It is ok to use ignore here - test helper functions in conditionally compiled modules aren't accessible from doctests -->
+/// ```ignore
 /// let blue = bg_rgb(0, 128, 255);
 /// assert_eq!(blue, "\x1b[48:2:0:128:255m");
 /// ```

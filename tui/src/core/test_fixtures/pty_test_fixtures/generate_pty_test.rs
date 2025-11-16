@@ -79,7 +79,8 @@
 /// - Use **content-based filtering** to distinguish messages, not stream type
 ///
 /// **Example:**
-/// ```rust,ignore
+/// <!-- It is ok to use ignore here - this is a conceptual example showing PTY stream merging behavior, not a complete compilable example -->
+/// ```ignore
 /// // Slave code (both go to the same stream!)
 /// println!("Line: hello, Cursor: 5");      // Protocol message
 /// println!("🔍 PTY Slave: Event: ...");    // Debug message (use println!, not eprintln!)

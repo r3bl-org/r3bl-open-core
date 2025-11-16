@@ -1,7 +1,7 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{CrosstermEventResult, DEBUG_TUI_SHOW_TERMINAL_BACKEND,
-            InputEvent, PinnedInputStream};
+use crate::{CrosstermEventResult, DEBUG_TUI_SHOW_TERMINAL_BACKEND, InputEvent,
+            PinnedInputStream};
 use crossterm::event::EventStream;
 use futures_util::{FutureExt, StreamExt};
 use miette::IntoDiagnostic;

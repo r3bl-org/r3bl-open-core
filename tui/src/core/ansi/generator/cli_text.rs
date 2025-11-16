@@ -1,10 +1,11 @@
 // Copyright (c) 2023-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use crate::{BufTextStorage, ColIndex, ColWidth, FastStringify, GCStringOwned,
-            InlineString, InlineVec, PixelChar, PixelCharRenderer, SgrCode, TuiColor,
+            InlineString, InlineVec, PixelChar, SgrCode, TuiColor,
             TuiStyle, TuiStyleAttribs, UNICODE_REPLACEMENT_CHAR,
             cli_text_inline_impl::CliTextConvertOptions,
             generate_impl_display_for_fast_stringify, inline_string, tui_color,
+            terminal_lib_backends::direct_to_ansi::PixelCharRenderer,
             tui_style_attrib::{Bold, Dim, Italic, Strikethrough, Underline}};
 use std::fmt::Result;
 use strum_macros::EnumCount;

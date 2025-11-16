@@ -115,14 +115,16 @@
 //!   - [Dual Rendering Paths](#dual-rendering-paths)
 //!     - [Path 1: Composed Component Pipeline (Complex, Responsive Layouts and Full
 //!       TUI)](#path-1-composed-component-pipeline-complex-responsive-layouts-and-full-tui)
-//!     - [Path 2: Direct Interactive Path (Simple CLI, Hybrid/Partial-TUI)](#path-2-direct-interactive-path-simple-cli-hybridpartial-tui)
+//!     - [Path 2: Direct Interactive Path (Simple CLI, Hybrid/Partial-TUI)](#
+//!       path-2-direct-interactive-path-simple-cli-hybridpartial-tui)
 //!   - [Unified ANSI Generation:
 //!     `PixelCharRenderer`](#unified-ansi-generation-pixelcharrenderer)
 //!   - [`CliTextInline`: Styled Text Fragments](#clitextinline-styled-text-fragments)
 //!   - [`OutputDevice`: Thread-Safe Terminal
 //!     Output](#outputdevice-thread-safe-terminal-output)
 //!   - [Offscreen buffer](#offscreen-buffer)
-//!   - [Complete Rendering Pipeline Architecture (Path 1: Composed Component Pipeline)](#complete-rendering-pipeline-architecture-path-1-composed-component-pipeline)
+//!   - [Complete Rendering Pipeline Architecture (Path 1: Composed Component Pipeline)](#
+//!     complete-rendering-pipeline-architecture-path-1-composed-component-pipeline)
 //!   - [Render pipeline (Path 1: Composed Component
 //!     Pipeline)](#render-pipeline-path-1-composed-component-pipeline)
 //!   - [First render (Path 1)](#first-render-path-1)
@@ -501,7 +503,8 @@
 //!
 //! **Example test structure:**
 //!
-//! ```rust,ignore
+//! <!-- It is ok to use ignore here, as this is a macro call -->
+//! ```ignore
 //! generate_pty_test! {
 //!     test_fn: interactive_input_parsing,
 //!     slave: || {
@@ -522,6 +525,19 @@
 //!     }
 //! }
 //! ```
+//!
+//! The macro takes three parameters:
+//! - `test_fn`: Name of the generated test function
+//! - `slave`: Closure that runs in the PTY slave process (interactive terminal)
+//! - `master`: Closure that runs in the PTY master process (sends input, verifies output)
+//!
+//! For a complete working example, see the [`test_pty_input_device`] module which
+//! demonstrates:
+//! - Raw mode configuration in the slave process
+//! - Creating and using [`DirectToAnsiInputDevice`]
+//! - Writing ANSI sequences from the master process
+//! - Reading and verifying parsed events
+//! - Proper process coordination and cleanup
 //!
 //! **Real-world applications:**
 //! - **Terminal input parsing**: [`integration_tests`] validates VT-100 input sequences
@@ -1734,7 +1750,7 @@
 //!
 //! ### Usage Example
 //!
-//! ```rust,no_run
+//! ```no_run
 //! use r3bl_tui::core::{pty_mux::{PTYMux, Process}, get_size};
 //!
 //! #[tokio::main]
@@ -1982,6 +1998,9 @@
 //! [`generate_pty_test!`]: crate::generate_pty_test
 //! [`integration_tests`]: mod@crate::core::ansi::vt_100_terminal_input_parser::integration_tests
 //! [`raw_mode_integration_tests`]: mod@crate::core::ansi::terminal_raw_mode::integration_tests
+//!
+//! [`test_pty_input_device`]: mod@crate::core::ansi::vt_100_terminal_input_parser::integration_tests::pty_input_device_test
+//! [`DirectToAnsiInputDevice`]: crate::tui::terminal_lib_backends::direct_to_ansi::DirectToAnsiInputDevice
 
 // Enable benchmarking for nightly Rust.
 #![cfg_attr(test, feature(test))]

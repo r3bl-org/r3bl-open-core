@@ -65,7 +65,7 @@
 //! [`RenderOpCommon`]: crate::render_op::RenderOpCommon
 //! [`RenderOpOutput`]: crate::RenderOpOutput
 //! [`RenderOpPaint`]: crate::RenderOpPaint
-//! [`RenderOpPaintImplDirectToAnsi`]: crate::terminal_lib_backends::direct_to_ansi::paint_render_op_impl::RenderOpPaintImplDirectToAnsi
+//! [`RenderOpPaintImplDirectToAnsi`]: crate::terminal_lib_backends::direct_to_ansi::output::direct_to_ansi_paint_render_op_impl::RenderOpPaintImplDirectToAnsi
 //! [`TuiStyle`]: crate::TuiStyle
 //! [`OutputDeviceExt`]: crate::test_fixtures::output_device_fixtures::OutputDeviceExt
 //! [`SetFgColor`]: crate::render_op::RenderOpCommon::SetFgColor

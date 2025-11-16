@@ -533,7 +533,12 @@ fn encode_modifiers(modifiers: VT100KeyModifiersIR) -> u8 {
 ///
 /// ## Common Error Pattern This Prevents
 ///
-/// ```rust,ignore
+/// Don't push numeric values directly as bytes. For example, pushing `1` as
+/// a byte gives `0x01`, not the ASCII character `'1'` (which is `0x31`).
+/// This function ensures proper ASCII conversion.
+///
+/// <!-- It is ok to use ignore here - demonstrates common error pattern, not meant as runnable code -->
+/// ```ignore
 /// // WRONG - pushes numeric value directly
 /// bytes.push(1);  // Pushes byte 0x01, not ASCII '1'
 ///
@@ -568,21 +573,22 @@ fn push_ascii_number(value: u8) -> u8 {
 /// This helper eliminates repetitive `to_string().as_bytes()` calls throughout the
 /// codebase.
 ///
+/// ## Common Use Cases
+///
+/// - Mouse coordinates (e.g., column 120, row 50)
+/// - Window resize dimensions (e.g., 80x24)
+/// - Multi-digit parameter codes (e.g., 200 for paste start)
+///
 /// ## Examples
 ///
-/// ```rust,ignore
+/// <!-- It is ok to use ignore here - simple before/after comparison, not a complete compilable example -->
+/// ```ignore
 /// // Instead of:
 /// bytes.extend_from_slice(col.to_string().as_bytes());
 ///
 /// // Use:
 /// bytes.extend_from_slice(&push_ascii_u16(col));
 /// ```
-///
-/// ## Common Use Cases
-///
-/// - Mouse coordinates (e.g., column 120, row 50)
-/// - Window resize dimensions (e.g., 80x24)
-/// - Multi-digit parameter codes (e.g., 200 for paste start)
 ///
 /// ## Parameters
 ///
