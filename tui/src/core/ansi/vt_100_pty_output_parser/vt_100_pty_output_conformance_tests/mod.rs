@@ -97,7 +97,8 @@
 //! Tests use authentic **80x25** terminal dimensions instead of constrained buffers,
 //! ensuring real-world compatibility:
 //!
-//! ```rust,ignore
+//! <!-- It is ok to use ignore here - references internal types and test patterns, not meant as runnable example -->
+//! ```ignore
 //! fn create_realistic_terminal_buffer() -> OffscreenBuffer {
 //!     OffscreenBuffer::new_empty(height(25) + width(80))
 //! }
@@ -119,7 +120,8 @@
 //! Instead of error-prone hardcoded escape strings, tests use compile-time validated
 //! builders:
 //!
-//! ```rust,ignore
+//! <!-- It is ok to use ignore here - demonstrates architectural pattern with internal types, not a complete example -->
+//! ```ignore
 //! // ❌ Hardcoded sequences (brittle, unclear intent)
 //! let bad_sequence = "\x1b[2;5H\x1b[31mError\x1b[0m";
 //!
@@ -169,7 +171,8 @@
 //!
 //! ### Example: Extended Color Sequences
 //!
-//! ```rust,ignore
+//! <!-- It is ok to use ignore here - demonstrates comparison of approaches with internal test helpers -->
+//! ```ignore
 //! use crate::protocols::csi_codes::SgrColorSequence;
 //! use crate::vt_100_pty_output_conformance_tests::test_sequence_generators::extended_color_builders::*;
 //!
@@ -190,7 +193,8 @@
 //!
 //! The [`FastStringify`] trait provides efficient string building for complex sequences:
 //!
-//! ```rust,ignore
+//! <!-- It is ok to use ignore here - shows trait definition with internal types, not meant as runnable example -->
+//! ```ignore
 //! pub trait FastStringify: Display {
 //!     fn write_to_buf(&self, acc: &mut BufTextStorage) -> Result;
 //!     fn write_buf_to_fmt(&self, acc: &BufTextStorage, f: &mut Formatter<'_>) -> Result;
@@ -205,7 +209,8 @@
 //!
 //! Each bidirectional type provides ergonomic test helpers:
 //!
-//! ```rust,ignore
+//! <!-- It is ok to use ignore here - demonstrates usage of test helper functions in conditionally compiled modules -->
+//! ```ignore
 //! // Extended colors
 //! use crate::vt_100_pty_output_conformance_tests::test_sequence_generators::extended_color_builders::*;
 //! let fg = fg_ansi256(196);      // → "\x1b[38:5:196m"
@@ -296,7 +301,8 @@
 //!
 //! ## Example Usage
 //!
-//! ```rust,ignore
+//! <!-- It is ok to use ignore here - demonstrates integration with internal test data and helpers -->
+//! ```ignore
 //! use crate::vt_100_pty_output_conformance_tests::conformance_data::vim_sequences;
 //!
 //! // Create realistic terminal buffer

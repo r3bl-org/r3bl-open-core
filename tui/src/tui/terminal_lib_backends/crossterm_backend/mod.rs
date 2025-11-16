@@ -2,8 +2,8 @@
 
 //! # Backend Implementation: Crossterm Terminal Library
 //!
-//! This module provides the **Crossterm-specific backend implementation** for the rendering
-//! pipeline, containing Stage 5 executor code.
+//! This module provides the **Crossterm-specific backend implementation** for the
+//! rendering pipeline, containing Stage 5 executor code.
 //!
 //! ```text
 //! [Stage 1: App/Component]
@@ -26,14 +26,17 @@
 //!
 //! ## Module Organization
 //!
-//! This module contains the **Crossterm-specific Stage 5 backend executor** implementation.
+//! This module contains the **Crossterm-specific Stage 5 backend executor**
+//! implementation.
 //!
 //! ### Stage 4: Backend Converter (Shared)
 //! - **Not in this module** - Stage 4 is shared across all backends
-//! - See [`offscreen_buffer::paint_impl`] for the `OffscreenBufferPaintImplCrossterm` converter
-//! - Converts [`OffscreenBuffer`] → [`RenderOpOutputVec`] (shared by both Crossterm and DirectToAnsi)
+//! - See [`offscreen_buffer::paint_impl`] for the `OffscreenBufferPaintImplCrossterm`
+//!   converter
+//! - Converts [`OffscreenBuffer`] → [`RenderOpOutputVec`] (shared by both Crossterm and
+//!   DirectToAnsi)
 //!
-//! ### Stage 5: Backend Executor (`paint_render_op_impl`)
+//! ### Stage 5: Backend Executor (`crossterm_paint_render_op_impl`)
 //! - **Implemented in this module** - Crossterm-specific execution
 //! - Implements [`RenderOpPaint`] trait
 //! - Executes [`RenderOpOutputVec`] operations via Crossterm API
@@ -54,11 +57,11 @@ mod debug;
 mod input_device_impl;
 
 #[cfg(any(test, doc))]
-pub mod paint_render_op_impl;
+pub mod crossterm_paint_render_op_impl;
 #[cfg(not(any(test, doc)))]
-mod paint_render_op_impl;
+mod crossterm_paint_render_op_impl;
 
 // Re-export.
 pub use debug::*;
 pub use input_device_impl::*;
-pub use paint_render_op_impl::*;
+pub use crossterm_paint_render_op_impl::*;

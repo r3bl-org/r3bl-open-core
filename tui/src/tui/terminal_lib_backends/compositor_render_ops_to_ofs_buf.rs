@@ -34,7 +34,7 @@
 //! - **Next stage (Stage 4: Shared)**: [`offscreen_buffer::paint_impl` mod docs] (Backend
 //!   Converter - shared by both Crossterm and DirectToAnsi)
 //! - **Stage 5 options**:
-//!   - [`crossterm_backend::paint_render_op_impl` mod docs] (Crossterm executor)
+//!   - [`crossterm_backend::crossterm_paint_render_op_impl` mod docs] (Crossterm executor)
 //!   - [`direct_to_ansi` mod docs] (DirectToAnsi executor - generates ANSI escape
 //!     sequences)
 //!
@@ -62,7 +62,7 @@
 //! The buffer can be compared with the previous frame to determine what changed,
 //! enabling selective redraw in the next stage.
 //!
-//! [`crossterm_backend::paint_render_op_impl` mod docs]: mod@crate::tui::terminal_lib_backends::crossterm_backend::paint_render_op_impl
+//! [`crossterm_backend::crossterm_paint_render_op_impl` mod docs]: mod@crate::tui::terminal_lib_backends::crossterm_backend::crossterm_paint_render_op_impl
 //! [`direct_to_ansi` mod docs]: mod@crate::tui::terminal_lib_backends::direct_to_ansi
 //! [`offscreen_buffer::paint_impl` mod docs]: mod@crate::tui::terminal_lib_backends::offscreen_buffer::paint_impl
 //! [`render_pipeline`]: mod@crate::tui::terminal_lib_backends::render_pipeline

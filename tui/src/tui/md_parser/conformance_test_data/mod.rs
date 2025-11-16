@@ -14,7 +14,8 @@
 //! Before using any test data from this module, you MUST convert
 //! it to `ZeroCopyGapBuffer`:
 //!
-//! ```rust,ignore
+//! <!-- It is ok to use ignore here - references internal helper functions not in public API -->
+//! ```ignore
 //! use crate::{convert_str_to_gap_buffer, convert_vec_lines_to_gap_buffer};
 //!
 //! // For string constants:

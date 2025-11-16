@@ -85,7 +85,7 @@
 //! | **Stage 2: Pipeline**          | Organizes operations by Z-order into a render queue      | [`RenderPipeline`], [`ZOrder`]            | [`render_pipeline`]                                                                             |
 //! | **Stage 3: Compositor**        | Executes IR operations, writes styled pixels to buffer   | [`OffscreenBuffer`], [`PixelChar`]        | [`compositor_render_ops_to_ofs_buf`]                                                            |
 //! | **Stage 4: Backend Converter** | Compares buffers, generates optimized output operations  | [`RenderOpOutput`], [`RenderOpOutputVec`] | [`offscreen_buffer::paint_impl`] (shared)                                                       |
-//! | **Stage 5: Backend Executor**  | Translates operations to terminal escape sequences       | [`RenderOpPaint`] trait                   | [`crossterm_backend::paint_render_op_impl`] or [`direct_to_ansi::output::paint_render_op_impl`] |
+//! | **Stage 5: Backend Executor**  | Translates operations to terminal escape sequences       | [`RenderOpPaint`] trait                   | [`crossterm_backend::crossterm_paint_render_op_impl`] or [`direct_to_ansi::output::direct_to_ansi_paint_render_op_impl`] |
 //! | **Stage 6: Terminal**          | User-visible rendered content                            | Terminal emulator                         | (external)                                                                                      |
 //!
 //! ## Architecture: Shared Stages (1-4) vs Backend-Specific Stage (5)
@@ -151,7 +151,7 @@
 //! - [`offscreen_buffer`] - Virtual terminal buffer (2D grid of styled `PixelChars`)
 //!   - [`offscreen_buffer::paint_impl`] - **(Stage 4: Shared)** Converts buffer →
 //!     optimized operations (used by both Crossterm and DirectToAnsi)
-//! - [`crossterm_backend::paint_render_op_impl`] - **(Stage 5: Crossterm Executor)**
+//! - [`crossterm_backend::crossterm_paint_render_op_impl`] - **(Stage 5: Crossterm Executor)**
 //!   Executes operations via Crossterm
 //!
 //! ### Supporting Modules
@@ -174,10 +174,10 @@
 //! [`RenderOpsExec`]: trait@render_op::RenderOpsExec
 //! [`RenderPipeline`]: struct@render_pipeline::RenderPipeline
 //! [`ZOrder`]: enum@z_order::ZOrder
-//! [`crossterm_backend::paint_render_op_impl`]: mod@crossterm_backend::paint_render_op_impl
-//! [`direct_to_ansi::output::paint_render_op_impl`]: mod@direct_to_ansi::output::paint_render_op_impl
+//! [`crossterm_backend::crossterm_paint_render_op_impl`]: mod@crossterm_backend::crossterm_paint_render_op_impl
+//! [`direct_to_ansi::output::direct_to_ansi_paint_render_op_impl`]: mod@direct_to_ansi::output::direct_to_ansi_paint_render_op_impl
 //! [`paint_impl`]: mod@offscreen_buffer::paint_impl
-//! [`paint_render_op_impl`]: mod@crossterm_backend::paint_render_op_impl
+//! [`paint_render_op_impl`]: mod@crossterm_backend::crossterm_paint_render_op_impl
 //! [dual rendering paths]: mod@crate#dual-rendering-paths
 
 /// Terminal library backend selection for the TUI system.
@@ -260,10 +260,8 @@ pub mod render_pipeline;
 pub mod render_tui_styled_texts;
 pub mod z_order;
 
-// Re-export.
+// Re-export shared components (Stages 1-4).
 pub use compositor_render_ops_to_ofs_buf::*;
-pub use crossterm_backend::*;
-pub use direct_to_ansi::*;
 pub use offscreen_buffer::*;
 pub use offscreen_buffer_pool::*;
 pub use paint::*;
@@ -272,6 +270,14 @@ pub use render_op::*;
 pub use render_pipeline::*;
 pub use render_tui_styled_texts::*;
 pub use z_order::*;
+
+// Backend-specific re-exports (Stage 5 alternatives).
+// Only available for tests and docs to prevent namespace collision in production builds.
+// These are alternative implementations - only one is compiled based on target platform.
+#[cfg(any(test, doc))]
+pub use crossterm_backend::*;
+#[cfg(any(test, doc))]
+pub use direct_to_ansi::*;
 
 // Tests.
 #[cfg(test)]

@@ -25,15 +25,15 @@
 // Attach.
 // Conditionally public for documentation links.
 #[cfg(any(test, doc))]
-pub mod paint_render_op_impl;
+pub mod direct_to_ansi_paint_render_op_impl;
 #[cfg(not(any(test, doc)))]
-mod paint_render_op_impl;
+mod direct_to_ansi_paint_render_op_impl;
 
 mod pixel_char_renderer;
 mod render_to_ansi;
 
 // Re-exports - flatten the public API
-pub use paint_render_op_impl::*;
+pub use direct_to_ansi_paint_render_op_impl::*;
 pub use pixel_char_renderer::*;
 pub use render_to_ansi::*;
 

@@ -26,7 +26,8 @@
 //!
 //! # Example Usage
 //!
-//! ```rust,ignore
+//! <!-- It is ok to use ignore here - demonstrates usage of test helper functions in conditionally compiled modules -->
+//! ```ignore
 //! use crate::vt_100_pty_output_conformance_tests::test_sequence_generators::*;
 //!
 //! // Extended color sequences

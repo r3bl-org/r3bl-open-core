@@ -176,7 +176,8 @@ impl AsyncDebouncedDeadline {
     /// This is designed to be used in `tokio::select!` branches with
     /// an `if` condition to prevent spurious wakeups:
     ///
-    /// ```rust,ignore
+    /// <!-- It is ok to use ignore here - this is a code fragment showing tokio::select! syntax, not a complete example -->
+    /// ```ignore
     /// () = debounce.sleep_until(), if debounce.is_pending() => {
     ///     // Deadline fired!
     ///     debounce.clear();

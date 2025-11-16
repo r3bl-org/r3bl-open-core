@@ -236,7 +236,8 @@ impl DirectToAnsiInputDevice {
     /// for the entire lifetime of the program's event loop. Typical usage pattern:
     ///
     /// ```no_run
-    /// # use r3bl_tui::{DirectToAnsiInputDevice, InputEvent};
+    /// # use r3bl_tui::direct_to_ansi::DirectToAnsiInputDevice;
+    /// # use r3bl_tui::InputEvent;
     /// # use tokio::signal;
     ///
     /// #[tokio::main]

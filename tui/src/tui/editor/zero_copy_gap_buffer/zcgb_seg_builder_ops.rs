@@ -19,15 +19,8 @@
 //! # Usage
 //!
 //! This module is used internally by text insertion and deletion operations
-//! to update line metadata after content changes:
-//!
-//! ```rust,ignore
-//! // After inserting text
-//! buffer.rebuild_line_segments(line_index)?;
-//!
-//! // For bulk operations
-//! buffer.rebuild_line_segments_batch(&[0, 1, 2])?;
-//! ```
+//! to update line metadata after content changes. See the individual function
+//! documentation for usage examples.
 //!
 //! # UTF-8 Safety in Segment Construction
 //!
@@ -138,6 +131,14 @@ impl ZeroCopyGapBuffer {
     /// This method carefully respects the `content_len` boundary to ensure
     /// null padding is never included in segment calculations.
     ///
+    /// # Example
+    ///
+    /// <!-- It is ok to use ignore here - demonstrates internal API usage, not meant as runnable code -->
+    /// ```ignore
+    /// // After inserting text
+    /// buffer.rebuild_line_segments(line_index)?;
+    /// ```
+    ///
     /// [`insert_text_at_grapheme()`]: ZeroCopyGapBuffer::insert_text_at_grapheme
     /// [`delete_grapheme_at()`]: ZeroCopyGapBuffer::delete_grapheme_at
     /// [`delete_range()`]: ZeroCopyGapBuffer::delete_range
@@ -222,6 +223,14 @@ impl ZeroCopyGapBuffer {
     ///
     /// [`rebuild_line_segments()`]: Self::rebuild_line_segments
     ///
+    /// # Example
+    ///
+    /// <!-- It is ok to use ignore here - demonstrates internal API usage with type-safe constructors -->
+    /// ```ignore
+    /// // Rebuild segments for lines 0, 5, and 10
+    /// buffer.rebuild_line_segments_batch(&[row(0), row(5), row(10)])?;
+    /// ```
+    ///
     /// # Arguments
     ///
     /// * `line_indices` - Slice of line indices to rebuild
@@ -235,13 +244,6 @@ impl ZeroCopyGapBuffer {
     ///
     /// In debug builds, panics if any line contains invalid UTF-8. This should
     /// not happen in normal operation as the buffer maintains UTF-8 invariants.
-    ///
-    /// # Example
-    ///
-    /// ```rust,ignore
-    /// // Rebuild segments for lines 0, 5, and 10
-    /// buffer.rebuild_line_segments_batch(&[row(0), row(5), row(10)])?;
-    /// ```
     pub fn rebuild_line_segments_batch(
         &mut self,
         line_indices: &[RowIndex],

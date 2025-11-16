@@ -12,7 +12,8 @@
 //! Traditional ANSI testing often uses hardcoded escape sequences that are difficult
 //! to read, maintain, and validate. This module takes a different approach:
 //!
-//! ```rust,ignore
+//! <!-- It is ok to use ignore here - demonstrates architectural pattern comparison with internal types -->
+//! ```ignore
 //! // ❌ Traditional approach: hardcoded, error-prone
 //! let old_way = b"\x1b[2J\x1b[H\x1b[31mError\x1b[0m";
 //!
@@ -23,7 +24,7 @@
 //!         row: term_row(nz(1)), col: term_col(nz(1))
 //!     },
 //!     SgrCode::ForegroundBasic(ANSIBasicColor::Red),  // Red text
-//!     SgrCode::Reset                                   // Reset styling
+//!     SgrCode::Reset                                  // Reset styling
 //! );
 //! ```
 //!
@@ -55,7 +56,8 @@
 //! ### Simple Sequences
 //! Basic operations using single commands:
 //!
-//! ```rust,ignore
+//! <!-- It is ok to use ignore here - demonstrates pattern for building conformance test sequences with internal types -->
+//! ```ignore
 //! use crate::CsiSequence;
 //!
 //! pub fn clear_screen() -> String {
@@ -66,7 +68,8 @@
 //! ### Composed Sequences
 //! Complex operations combining multiple commands:
 //!
-//! ```rust,ignore
+//! <!-- It is ok to use ignore here - demonstrates pattern for composing multiple sequence commands -->
+//! ```ignore
 //! pub fn clear_and_home() -> String {
 //!     format!("{}{}",
 //!         CsiSequence::EraseDisplay(2),      // Clear screen
@@ -81,7 +84,8 @@
 //! ### Parameterized Sequences
 //! Functions that generate sequences based on parameters:
 //!
-//! ```rust,ignore
+//! <!-- It is ok to use ignore here - demonstrates pattern for parameterized sequence generation -->
+//! ```ignore
 //! pub fn move_and_print(row: u16, col: u16, text: &str) -> String {
 //!     format!("{}{}",
 //!         CsiSequence::CursorPosition {
@@ -96,7 +100,8 @@
 //! ### Real-World Application Sequences
 //! Complex patterns extracted from actual terminal applications:
 //!
-//! ```rust,ignore
+//! <!-- It is ok to use ignore here - demonstrates real-world terminal application sequence patterns -->
+//! ```ignore
 //! pub fn vim_status_line(mode: &str, status_row: u16) -> String {
 //!     format!("{}{}{}{}{}{}",
 //!         EscSequence::SaveCursor,           // Save current position
@@ -116,7 +121,8 @@
 //!
 //! These sequence functions integrate seamlessly with the test framework:
 //!
-//! ```rust,ignore
+//! <!-- It is ok to use ignore here - demonstrates test integration pattern with internal test helpers -->
+//! ```ignore
 //! #[test]
 //! fn test_vim_status_line_display() {
 //!     let mut ofs_buf = create_realistic_terminal_buffer();
@@ -137,7 +143,8 @@
 //! ## Usage Examples
 //!
 //! ### Basic Operations
-//! ```rust,ignore
+//! <!-- It is ok to use ignore here - demonstrates usage with internal conformance data modules -->
+//! ```ignore
 //! use crate::vt_100_pty_output_conformance_tests::conformance_data::basic_sequences;
 //!
 //! // Clear screen and move cursor to home
@@ -150,7 +157,8 @@
 //! ```
 //!
 //! ### Styling Operations
-//! ```rust,ignore
+//! <!-- It is ok to use ignore here - demonstrates styling sequence usage with internal modules -->
+//! ```ignore
 //! use crate::vt_100_pty_output_conformance_tests::conformance_data::styling_sequences;
 //! use crate::ANSIBasicColor;
 //!
@@ -164,7 +172,8 @@
 //! ```
 //!
 //! ### Real-World Scenarios
-//! ```rust,ignore
+//! <!-- It is ok to use ignore here - demonstrates real-world usage patterns with internal test data -->
+//! ```ignore
 //! use crate::vt_100_pty_output_conformance_tests::conformance_data::{vim_sequences, tmux_sequences};
 //!
 //! // Simulate vim status line

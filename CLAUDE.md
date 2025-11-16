@@ -56,6 +56,44 @@ demonstrate usage patterns.
 If you are including an example (rustdoc test with code) then make sure that it can either compile
 or run. Don't use ignore. If you can't make it compile or run, then don't include the example.
 
+#### Handling `ignore` in Rustdoc Code Examples
+
+When you encounter `\`\`\`rust,ignore` or `\`\`\`ignore` in code, follow this strategy to improve
+documentation quality:
+
+**For regular code (not macros):**
+
+1. **Convert to compilable code**: Rewrite the example to actually compile or run:
+   - Use `\`\`\`rust` for examples that compile and run
+   - Use `\`\`\`no_run` for examples that only need to compile (e.g., code that requires external
+     setup or would block execution)
+
+2. **If conversion isn't possible**: Remove the code block and replace it with an
+   [intra-doc link](mod@crate::path::to::example) pointing to actual implementation code in the
+   codebase (either test or production). Optionally use `#[cfg(any(test, doc))]` to make private
+   types accessible to documentation.
+
+**For macros:**
+
+Macro expansion issues often prevent doctests from working. In these cases:
+
+1. **Link to real usage**: Link to actual code (test or production) that invokes the macro using
+   intra-doc links.
+
+2. **If showing macro syntax is essential**: Use the `\`\`\`ignore` format **only with this
+   HTML comment** to document why it's ignored:
+
+   ```rust
+   //! <!-- It is ok to use ignore here, as this is a macro call -->
+   //! ```ignore
+   //! generate_pty_test! {
+   //!     test_fn: interactive_input_parsing,
+   //! }
+   //! ```
+   ```
+
+This approach ensures readers understand that the `ignore` marker is intentional, not an oversight.
+
 ### Module Organization Pattern
 
 When organizing Rust modules, prefer **private modules with public re-exports** as the default

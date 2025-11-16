@@ -16,14 +16,15 @@
 //!
 //! When buffer content is modified through [`crate::EditorBuffer::get_mut()`], the memory
 //! size cache is automatically invalidated to ensure accurate telemetry reporting. This
-//! happens in the [`Drop`] implementation of [`EditorBufferMutWithDrop`]:
+//! happens in the [`Drop`] implementation of [`EditorBufferMutWithDrop`].
 //!
-//! ```rust,ignore
+//! <!-- It is ok to use ignore here - demonstrates RAII pattern with Drop trait, not a complete runnable example -->
+//! ```ignore
 //! // When content is modified:
 //! {
 //!     let mut buffer_mut = buffer.get_mut(viewport);
 //!     buffer_mut.inner.lines.push_line("new line");
-//! } // Drop called here, cache is invalidated automatically
+//! } // <- Drop called here, cache is invalidated automatically
 //! ```
 //!
 //! The [`EditorBufferMutNoDrop`] variant does NOT invalidate the cache, which is useful

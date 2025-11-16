@@ -23,13 +23,6 @@ use std::num::NonZeroU16;
 ///
 /// This is one of the most common terminal initialization sequences,
 /// used by applications to start with a clean screen state.
-///
-/// # Example Usage
-/// ```rust,ignore
-/// let sequence = basic_sequences::clear_and_home();
-/// ofs_buf.apply_ansi_bytes(sequence);
-/// // Screen is cleared and cursor at top-left
-/// ```
 #[must_use]
 pub fn clear_and_home() -> String {
     format!(

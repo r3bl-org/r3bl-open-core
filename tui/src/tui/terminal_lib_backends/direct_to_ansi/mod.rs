@@ -28,7 +28,7 @@
 //! - **See complete architecture**: [`terminal_lib_backends` mod docs] (source of truth)
 //! - **Previous stage**: [`offscreen_buffer::paint_impl` mod docs] (Stage 4: Backend Converter - shared
 //!   by both Crossterm and DirectToAnsi)
-//! - **Alternative Stage 5**: [`crossterm_backend::paint_render_op_impl` mod docs] (Crossterm-based executor)
+//! - **Alternative Stage 5**: [`crossterm_backend::crossterm_paint_render_op_impl` mod docs] (Crossterm-based executor)
 //! - **Next stage**: Terminal output (Stage 6)
 //!
 //! <div class="warning">
@@ -70,7 +70,7 @@
 //! [`RenderOpPaint`]: crate::RenderOpPaint
 //! [`RenderToAnsi`]: crate::RenderToAnsi
 //! [`compositor_render_ops_to_ofs_buf` mod docs]: mod@crate::tui::terminal_lib_backends::compositor_render_ops_to_ofs_buf
-//! [`crossterm_backend::paint_render_op_impl` mod docs]: mod@crate::tui::terminal_lib_backends::crossterm_backend::paint_render_op_impl
+//! [`crossterm_backend::crossterm_paint_render_op_impl` mod docs]: mod@crate::tui::terminal_lib_backends::crossterm_backend::crossterm_paint_render_op_impl
 //! [`offscreen_buffer::paint_impl` mod docs]: mod@crate::tui::terminal_lib_backends::offscreen_buffer::paint_impl
 //! [`render_op_ir` mod docs]: mod@crate::tui::terminal_lib_backends::render_op::render_op_ir
 //! [`terminal_lib_backends` mod docs]: mod@crate::tui::terminal_lib_backends

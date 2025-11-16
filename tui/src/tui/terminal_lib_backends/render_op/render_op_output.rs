@@ -37,9 +37,10 @@
 //! [`CompositorNoClipTruncPaintTextWithAttributes`]: crate::render_op::RenderOpOutput::CompositorNoClipTruncPaintTextWithAttributes
 
 use super::{RenderOpCommon, RenderOpsExec};
-use crate::{InlineString, InlineVec, LockedOutputDevice, PaintRenderOpImplCrossterm,
-            RenderOpPaintImplDirectToAnsi, RenderOpsLocalData, Size,
-            TERMINAL_LIB_BACKEND, TerminalLibBackend, TuiStyle, ok};
+use crate::{InlineString, InlineVec, LockedOutputDevice, RenderOpsLocalData, Size,
+            TERMINAL_LIB_BACKEND, TerminalLibBackend, TuiStyle, ok,
+            terminal_lib_backends::crossterm_backend::PaintRenderOpImplCrossterm,
+            terminal_lib_backends::direct_to_ansi::RenderOpPaintImplDirectToAnsi};
 use std::{fmt::{Debug, Formatter, Result},
           ops::{AddAssign, Deref, DerefMut}};
 
