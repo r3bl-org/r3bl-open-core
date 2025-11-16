@@ -699,7 +699,7 @@ impl Readline {
                 // - All the state comes from other variables (self.*).
                 // - So if this future is dropped, then the item in the
                 //   pinned_input_stream isn't used, and the state isn't modified.
-                maybe_input_event = self.input_device.next_input_event() => {
+                maybe_input_event = self.input_device.next() => {
                     if let Some(input_event) = maybe_input_event {
                         match readline_internal::apply_event_to_line_state_and_render(
                             input_event,

@@ -1,7 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{CrosstermEventResult, InlineVec, InputDeviceExt, InputEvent,
-            PinnedInputStream, gen_input_stream, gen_input_stream_with_delay};
+use crate::{CrosstermEventResult, InlineVec, InputEvent, PinnedInputStream,
+            gen_input_stream, gen_input_stream_with_delay};
 use futures_util::{FutureExt, StreamExt};
 use std::time::Duration;
 
@@ -13,7 +13,7 @@ use std::time::Duration;
 /// ## Examples
 ///
 /// ```no_run
-/// use r3bl_tui::{MockInputDevice, InputDeviceExt};
+/// use r3bl_tui::MockInputDevice;
 /// use smallvec::smallvec;
 /// use crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers};
 ///
@@ -59,8 +59,8 @@ impl MockInputDevice {
     }
 }
 
-impl InputDeviceExt for MockInputDevice {
-    async fn next_input_event(&mut self) -> Option<InputEvent> {
+impl MockInputDevice {
+    pub async fn next(&mut self) -> Option<InputEvent> {
         loop {
             let maybe_result_event = self.resource.next().fuse().await;
             match maybe_result_event {

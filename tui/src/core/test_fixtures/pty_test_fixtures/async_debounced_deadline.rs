@@ -22,7 +22,7 @@ use std::time::Duration;
 ///
 /// # Integration with `tokio::select`!
 ///
-/// ```rust,no_run
+/// ```no_run
 /// use std::time::Duration;
 /// use r3bl_tui::AsyncDebouncedDeadline;
 ///
@@ -62,18 +62,16 @@ pub struct AsyncDebouncedDeadline {
 impl AsyncDebouncedDeadline {
     /// Creates a new debounced deadline with the given duration.
     ///
-    /// The deadline starts as `None` (not pending). Call [`reset()`](Self::reset)
+    /// The deadline starts as `None` (not pending). Call [`reset()`]
     /// when an event occurs to start the debounce timer.
     ///
-    /// # Examples
-    ///
-    /// ```rust
-    /// use std::time::Duration;
+    /// # Examplesuse std::time::Duration;
     /// use r3bl_tui::AsyncDebouncedDeadline;
     ///
     /// let debounce = AsyncDebouncedDeadline::new(Duration::from_millis(10));
     /// assert!(!debounce.is_pending()); // No deadline set initially
-    /// ```
+    ///
+    /// [`reset()`]: Self::reset
     #[must_use]
     pub fn new(duration: Duration) -> Self {
         Self {
@@ -126,8 +124,14 @@ impl AsyncDebouncedDeadline {
     /// Returns `true` if there is a deadline pending.
     ///
     /// Use this as the condition in `tokio::select!` branches:
-    /// ```rust,ignore
-    /// () = debounce.sleep_until(), if debounce.is_pending() => { ... }
+    /// ```no_run
+    /// # use std::time::Duration;
+    /// # use r3bl_tui::AsyncDebouncedDeadline;
+    /// # async fn example(debounce: AsyncDebouncedDeadline) {
+    /// tokio::select! {
+    ///     () = debounce.sleep_until(), if debounce.is_pending() => { /* Handle timeout */ }
+    /// }
+    /// # }
     /// ```
     ///
     /// # Examples
@@ -181,17 +185,17 @@ impl AsyncDebouncedDeadline {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```no_run
     /// use std::time::Duration;
     /// use r3bl_tui::AsyncDebouncedDeadline;
     ///
-    /// # tokio_test::block_on(async {
+    /// # async fn example() {
     /// let mut debounce = AsyncDebouncedDeadline::new(Duration::from_millis(10));
     /// debounce.reset();
     ///
     /// // This will complete after ~10ms
     /// debounce.sleep_until().await;
-    /// # });
+    /// # }
     /// ```
     pub async fn sleep_until(&self) {
         match self.deadline {

@@ -27,7 +27,7 @@
 //!
 //! ## Example Usage
 //!
-//! ```rust,no_run
+//! ```no_run
 //! use rustix::termios::{self, SpecialCodeIndex};
 //! use std::io::stdin;
 //! use r3bl_tui::{VMIN_RAW_MODE, VTIME_RAW_MODE};
@@ -45,12 +45,12 @@
 //!
 //! ## VMIN/VTIME Interaction Matrix
 //!
-//! | VMIN | VTIME | Behavior                                          |
-//! |------|-------|---------------------------------------------------|
-//! | 0    | 0     | Non-blocking: return immediately with available   |
-//! | 0    | >0    | Timed read: return after timeout or data          |
-//! | >0   | 0     | Blocking: return after VMIN bytes (no timeout)    |
-//! | >0   | >0    | Interbyte timeout: return after VMIN or timeout   |
+//! | VMIN   | VTIME   | Behavior                                            |
+//! | ------ | ------- | --------------------------------------------------- |
+//! | 0      | 0       | Non-blocking: return immediately with available     |
+//! | 0      | >0      | Timed read: return after timeout or data            |
+//! | >0     | 0       | Blocking: return after VMIN bytes (no timeout)      |
+//! | >0     | >0      | Interbyte timeout: return after VMIN or timeout     |
 //!
 //! Raw mode uses **VMIN=1, VTIME=0** for immediate, blocking input.
 
@@ -87,7 +87,10 @@ mod tests {
     #[test]
     fn test_raw_mode_special_codes() {
         // Verify standard raw mode configuration
-        assert_eq!(VMIN_RAW_MODE, 1, "VMIN should be 1 for byte-by-byte reading");
+        assert_eq!(
+            VMIN_RAW_MODE, 1,
+            "VMIN should be 1 for byte-by-byte reading"
+        );
         assert_eq!(
             VTIME_RAW_MODE, 0,
             "VTIME should be 0 for no timeout (blocking)"

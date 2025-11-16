@@ -22,7 +22,7 @@ use std::path::PathBuf;
 ///
 /// # Examples
 ///
-/// ```rust,no_run
+/// ```no_run
 /// use r3bl_tui::try_get_changed_files_by_ext;
 ///
 /// # async fn example() {

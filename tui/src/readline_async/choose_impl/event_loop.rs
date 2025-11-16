@@ -47,7 +47,7 @@ pub async fn enter_event_loop_async<S: CalculateResizeHint>(
     let return_this: EventLoopResult;
 
     loop {
-        let maybe_ie = input_device.next_input_event().await;
+        let maybe_ie = input_device.next().await;
         if let Some(ie) = maybe_ie {
             let event_loop_result = on_keypress(state, ie);
             if let Some(result) =

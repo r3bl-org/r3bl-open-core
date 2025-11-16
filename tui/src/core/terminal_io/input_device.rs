@@ -1,8 +1,8 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use crate::{CrosstermEventResult, CrosstermInputDevice, DirectToAnsiInputDevice,
-            InlineVec, InputDeviceExt, InputEvent, MockInputDevice,
-            TERMINAL_LIB_BACKEND, TerminalLibBackend};
+            InlineVec, InputEvent, MockInputDevice, TERMINAL_LIB_BACKEND,
+            TerminalLibBackend};
 use std::time::Duration;
 
 /// Generic input device wrapper that abstracts over different backend implementations.
@@ -23,13 +23,15 @@ use std::time::Duration;
 /// ## Examples
 ///
 /// ### Auto-select backend based on platform
-/// ```ignore
+/// ```no_run
 /// use r3bl_tui::InputDevice;
 ///
+/// # async fn example() {
 /// let mut device = InputDevice::new();
-/// while let Some(event) = device.next_input_event().await {
+/// while let Some(event) = device.next().await {
 ///     // Process event
 /// }
+/// # }
 /// ```
 ///
 /// ### Explicitly choose backend
@@ -112,13 +114,12 @@ impl InputDevice {
     ///
     /// ## Implementation
     ///
-    /// Dispatches to the appropriate backend's `next_input_event()` implementation
-    /// via the [`InputDeviceExt`] trait.
-    pub async fn next_input_event(&mut self) -> Option<InputEvent> {
+    /// Dispatches to the appropriate backend's `next()` implementation.
+    pub async fn next(&mut self) -> Option<InputEvent> {
         match self {
-            Self::Crossterm(device) => device.next_input_event().await,
-            Self::DirectToAnsi(device) => device.next_input_event().await,
-            Self::Mock(device) => device.next_input_event().await,
+            Self::Crossterm(device) => device.next().await,
+            Self::DirectToAnsi(device) => device.next().await,
+            Self::Mock(device) => device.next().await,
         }
     }
 

@@ -35,8 +35,8 @@ pub const DEBUG_TUI_SHOW_PIPELINE: bool = false;
 /// This flag has no effect unless [`DEBUG_TUI_SHOW_PIPELINE`] is set to `true`.
 pub const DEBUG_TUI_SHOW_PIPELINE_EXPANDED: bool = false;
 
-/// Controls input event debugging [`crate::InputDeviceExt`], and execution of render ops
-/// [`crate::queue_terminal_command`!] debugging output.
+/// Controls input event debugging [`crate::InputDevice`], and execution of render ops
+/// [`crate::queue_terminal_command!`] debugging output.
 pub const DEBUG_TUI_SHOW_TERMINAL_BACKEND: bool = false;
 
 /// Unicode replacement character used when a grapheme cluster cannot be converted to a

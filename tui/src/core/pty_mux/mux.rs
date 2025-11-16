@@ -183,7 +183,7 @@ impl PTYMux {
                 }
 
                 // Handle user input using existing InputDevice.
-                Some(input_event) = self.input_device.next_input_event() => {
+                Some(input_event) = self.input_device.next() => {
                     tracing::debug!("Received input event: {:?}", input_event);
 
                     // Show desktop notification for input event (filter out mouse events)

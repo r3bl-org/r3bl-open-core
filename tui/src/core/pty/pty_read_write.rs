@@ -104,7 +104,7 @@ impl PtyCommandBuilder {
     ///
     /// # Example: Interactive shell session with input/output
     ///
-    /// ```rust,no_run
+    /// ```no_run
     /// # #[tokio::main]
     /// # async fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// use r3bl_tui::{PtyCommandBuilder, PtyInputEvent, PtyReadWriteOutputEvent};
@@ -151,11 +151,11 @@ impl PtyCommandBuilder {
     ///
     /// Returns an error if the PTY fails to spawn or initialize properly.
     ///
-    /// [`tokio::spawn`]: tokio::spawn
+    /// [`portable_pty::MasterPty`]: portable_pty::MasterPty
     /// [`spawn_blocking`]: tokio::task::spawn_blocking
     /// [`std::io::Read`]: std::io::Read
     /// [`tokio::io::AsyncRead`]: tokio::io::AsyncRead
-    /// [`portable_pty::MasterPty`]: portable_pty::MasterPty
+    /// [`tokio::spawn`]: tokio::spawn
     pub fn spawn_read_write(
         self,
         pty_size: PtySize,
@@ -273,8 +273,8 @@ impl PtyCommandBuilder {
 ///
 /// Returns a [`JoinHandle`] for the combined tasks.
 ///
-/// [`MasterPty`]: portable_pty::MasterPty
 /// [`JoinHandle`]: tokio::task::JoinHandle
+/// [`MasterPty`]: portable_pty::MasterPty
 #[must_use]
 fn create_controller_input_writer_task(
     controller: Controller,
@@ -340,8 +340,8 @@ fn create_controller_input_writer_task(
 ///
 /// Returns a `JoinHandle` for the spawned async task.
 ///
-/// [`tokio::task::spawn_blocking`]: tokio::task::spawn_blocking
 /// [`portable_pty`]: mod@portable_pty
+/// [`tokio::task::spawn_blocking`]: tokio::task::spawn_blocking
 #[must_use]
 fn spawn_async_to_sync_bridge_task(
     mut input_evt_ch_rx_half: tokio::sync::mpsc::UnboundedReceiver<PtyInputEvent>,
@@ -379,8 +379,8 @@ fn spawn_async_to_sync_bridge_task(
 ///
 /// Returns a `JoinHandle` for the spawned blocking task.
 ///
-/// [`tokio::task::spawn_blocking`]: tokio::task::spawn_blocking
 /// [`portable_pty`]: mod@portable_pty
+/// [`tokio::task::spawn_blocking`]: tokio::task::spawn_blocking
 #[must_use]
 fn spawn_blocking_writer_task(
     controller: Controller,

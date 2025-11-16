@@ -807,7 +807,7 @@
 //! The semantic traits don't duplicate functionality - they compose the foundational
 //! operations to implement specific validation patterns:
 //!
-//! ```rust,no_run
+//! ```no_run
 //! # use r3bl_tui::{ArrayOverflowResult, LengthOps, NumericValue};
 //! /// Actual implementation from ArrayBoundsCheck showing how it builds
 //! /// on foundational traits

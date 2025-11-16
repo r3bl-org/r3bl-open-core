@@ -80,19 +80,27 @@ impl ByteOffset {
     ///
     /// ## Accessing the final byte (e.g., terminator character)
     ///
-    /// ```ignore
+    /// ```rust
+    /// use r3bl_tui::{ByteOffset, byte_offset};
+    ///
     /// // Parse SGR mouse: ESC[<0;10;20M
-    /// let bytes_consumed = ByteOffset::from(13);  // 13 bytes consumed
+    /// let sequence = b"\x1b[<0;10;20M";
+    /// let bytes_consumed = byte_offset(sequence.len());  // 13 bytes consumed
     /// let terminator = sequence[bytes_consumed.as_last_byte_index()]; // Gets 'M' at index 12
+    /// assert_eq!(terminator, b'M');
     /// ```
     ///
     /// ## Creating ranges that exclude the terminator
     ///
-    /// ```ignore
+    /// ```rust
+    /// use r3bl_tui::{ByteOffset, byte_offset};
+    ///
     /// // Extract content between prefix and terminator
-    /// let bytes_consumed = ByteOffset::from(13);
-    /// let content = &sequence[MOUSE_SGR_PREFIX_LEN..bytes_consumed.as_last_byte_index()];
-    /// // Gets "0;10;20" excluding the terminator
+    /// let sequence = b"\x1b[<0;10;20M";
+    /// let bytes_consumed = byte_offset(sequence.len());
+    /// let prefix_len = 3; // ESC[<
+    /// let content = &sequence[prefix_len..bytes_consumed.as_last_byte_index()];
+    /// assert_eq!(content, b"0;10;20"); // Gets "0;10;20" excluding the terminator
     /// ```
     ///
     /// # Edge Cases
