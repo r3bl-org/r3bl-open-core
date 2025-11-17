@@ -382,8 +382,8 @@ Two-file system: active work in `todo.md`, completed work in `done.md`.
 - Include GitHub issue links
 - Add technical notes for complex tasks
 
-### The "./tasks/" folder
+### The "./task/" folder
 
-The custom slash comand "/task" is available to manage all the details of a long running task. The
+The custom slash command "/r3bl-task" is available to manage all the details of a long running task. The
 "todo.md" and "done.md" files are simply "pointers" to what tasks are active and which ones are
-done. For the details and to create, update, or load a task, use the "/task" command.
+done. For the details and to create, update, or load a task, use the "/r3bl-task" command.
