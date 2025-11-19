@@ -43,16 +43,16 @@
 //!                                            ╰─────────────────╯
 //! ```
 //!
-//! # CSI Sequence Processing Flow
+//! # `CSI` Sequence Processing Flow
 //!
 //! ```text
-//! Application sends "ESC[3S" (scroll up 3 lines)
+//! Application sends "ESC [3S" (scroll up 3 lines)
 //!         ↓
 //!     PTY Slave (escape sequence)
 //!         ↓
 //!     PTY Master (byte stream) <- in process_manager.rs
 //!         ↓
-//!     VTE Parser (parses ESC[...char pattern)
+//!     VTE Parser (parses ESC [...char pattern)
 //!         ↓
 //!     csi_dispatch() [routes to modules below]
 //!         ↓
@@ -74,9 +74,9 @@
 //! ## Parameter Handling
 //!
 //! **Missing or zero parameters default to 1:**
-//! - `ESC[S` (missing param) → scroll up 1 line
-//! - `ESC[0S` (explicit zero) → scroll up 1 line
-//! - `ESC[5S` (explicit value) → scroll up 5 lines
+//! - `ESC [S` (missing param) → scroll up 1 line
+//! - `ESC [0S` (explicit zero) → scroll up 1 line
+//! - `ESC [5S` (explicit value) → scroll up 5 lines
 //!
 //! This is handled by [`extract_nth_single_non_zero()`] which returns [`NonZeroU16`].
 //!
@@ -98,7 +98,7 @@ use crate::ParamsExt;
 
 /// Move cursor down one line, scrolling the buffer if at bottom.
 ///
-/// Implements the ESC D (IND) escape sequence.
+/// Implements the `ESC D` (`IND`) escape sequence.
 ///
 /// **VT100 Protocol**: See [module-level documentation](self) for scroll region handling.
 ///
@@ -114,7 +114,7 @@ pub fn index_down(performer: &mut AnsiToOfsBufPerformer) {
 
 /// Move cursor up one line, scrolling the buffer if at top.
 ///
-/// Implements the ESC M (RI) escape sequence.
+/// Implements the `ESC M` (`RI`) escape sequence.
 ///
 /// **VT100 Protocol**: See [module-level documentation](self) for scroll region handling.
 ///
@@ -128,7 +128,7 @@ pub fn reverse_index_up(performer: &mut AnsiToOfsBufPerformer) {
     );
 }
 
-/// Scroll buffer content up by one line (for ESC D at bottom).
+/// Scroll buffer content up by one line (for `ESC D` at bottom).
 ///
 /// **VT100 Protocol**: See [module-level documentation](self) for scroll region handling.
 ///
@@ -143,7 +143,7 @@ pub fn scroll_buffer_up(performer: &mut AnsiToOfsBufPerformer) {
     );
 }
 
-/// Scroll buffer content down by one line (for ESC M at top).
+/// Scroll buffer content down by one line (for `ESC M` at top).
 ///
 /// **VT100 Protocol**: See [module-level documentation](self) for scroll region handling.
 ///

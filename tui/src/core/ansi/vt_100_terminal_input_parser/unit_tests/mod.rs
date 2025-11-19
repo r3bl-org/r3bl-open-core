@@ -12,7 +12,9 @@
 //! - Parser correctly interprets those sequences
 //! - Generator and parser are compatible/speak the same language
 //!
-//! See the [parent module](super#testing-strategy) for the overall testing strategy.
+//! See the [parent module] for the overall testing strategy.
+//!
+//! [parent module]: super#testing-strategy
 
 #[cfg(any(test, doc))]
 pub mod generator_round_trip_tests;

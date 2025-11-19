@@ -15,7 +15,7 @@ generate_pty_test! {
     /// PTY-based integration test for bracketed paste text collection.
     ///
     /// Validates that [`DirectToAnsiInputDevice`] correctly collects text between
-    /// bracketed paste markers (ESC[200~ ... ESC[201~) and emits a single
+    /// bracketed paste markers (`ESC [200~` ... `ESC [201~`) and emits a single
     /// [`InputEvent::BracketedPaste`] with the complete text.
     ///
     /// Run with: `cargo test -p r3bl_tui --lib test_pty_bracketed_paste -- --nocapture`

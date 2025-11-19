@@ -12,8 +12,8 @@
 //!    ↓
 //! DirectToAnsiInputDevice (async I/O layer)
 //!    ↓
-//! parser.rs (routing & ESC detection)
-//!    ↓ (routes terminal event sequences here)
+//! parser.rs (routing & `ESC` detection)
+//!    │ (routes terminal event sequences here)
 //! ┌──▼───────────────────────────────────────┐
 //! │  terminal_events.rs                      │  ← **YOU ARE HERE**
 //! │  • Parse window resize events            │
@@ -30,7 +30,7 @@
 //! - 📚 **Types**: [`VT100FocusStateIR`], [`VT100PasteModeIR`]
 //!
 //!
-//! ## Supported events:
+//! ## Supported Events
 //! - **Window Resize**: `CSI 8 ; rows ; cols t`
 //! - **Focus Gained**: `CSI I`
 //! - **Focus Lost**: `CSI O`
@@ -64,7 +64,7 @@ use crate::{ByteOffset, byte_offset,
 /// - `CSI 8;24;80t` - Window resize to 24 rows × 80 columns
 /// - `CSI I` - Terminal gained focus
 /// - `CSI O` - Terminal lost focus
-/// - `ESC[200~` - Bracketed paste start
+/// - `ESC [200~` - Bracketed paste start
 #[must_use]
 pub fn parse_terminal_event(buffer: &[u8]) -> Option<(VT100InputEventIR, ByteOffset)> {
     // Check minimum length: ESC [ + final byte
@@ -100,8 +100,10 @@ pub fn parse_terminal_event(buffer: &[u8]) -> Option<(VT100InputEventIR, ByteOff
     parse_csi_terminal_parameters(buffer)
 }
 
-/// Parse CSI sequences with parameters for terminal events.
-fn parse_csi_terminal_parameters(buffer: &[u8]) -> Option<(VT100InputEventIR, ByteOffset)> {
+/// Parse `CSI` sequences with parameters for terminal events.
+fn parse_csi_terminal_parameters(
+    buffer: &[u8],
+) -> Option<(VT100InputEventIR, ByteOffset)> {
     // Extract parameters and final byte
     // Format: ESC [ [param;param;...] final_byte
     let mut params = Vec::new();

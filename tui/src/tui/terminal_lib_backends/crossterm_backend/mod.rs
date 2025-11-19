@@ -62,6 +62,6 @@ pub mod crossterm_paint_render_op_impl;
 mod crossterm_paint_render_op_impl;
 
 // Re-export.
+pub use crossterm_paint_render_op_impl::*;
 pub use debug::*;
 pub use input_device_impl::*;
-pub use crossterm_paint_render_op_impl::*;

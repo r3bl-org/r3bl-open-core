@@ -43,16 +43,16 @@
 //!                                            ╰─────────────────╯
 //! ```
 //!
-//! # CSI Sequence Processing Flow
+//! # `CSI` Sequence Processing Flow
 //!
 //! ```text
-//! Application sends "ESC[?7h" (set autowrap mode)
+//! Application sends "ESC [?7h" (set autowrap mode)
 //!         ↓
 //!     PTY Slave (escape sequence)
 //!         ↓
 //!     PTY Master (byte stream) <- in process_manager.rs
 //!         ↓
-//!     VTE Parser (parses ESC[...char pattern)
+//!     VTE Parser (parses ESC [...char pattern)
 //!         ↓
 //!     csi_dispatch() [routes to modules below]
 //!         ↓
@@ -74,7 +74,7 @@
 use super::super::{PrivateModeType, ansi_parser_public_api::AnsiToOfsBufPerformer};
 use vte::Params;
 
-/// Handle Set Mode (CSI h) command.
+/// Handle Set Mode (`CSI h`) command.
 /// Supports both standard modes and private modes (with ? prefix).
 pub fn set_mode(
     performer: &mut AnsiToOfsBufPerformer,
@@ -97,7 +97,7 @@ pub fn set_mode(
     }
 }
 
-/// Handle Reset Mode (CSI l) command.
+/// Handle Reset Mode (`CSI l`) command.
 /// Supports both standard modes and private modes (with ? prefix).
 pub fn reset_mode(
     performer: &mut AnsiToOfsBufPerformer,

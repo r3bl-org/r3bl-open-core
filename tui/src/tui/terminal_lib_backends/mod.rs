@@ -79,14 +79,14 @@
 //! Use this table to navigate to specific pipeline stages. Each stage has a module
 //! with "You Are Here" breadcrumbs to help orient yourself.
 //!
-//! | Stage                          | What It Does                                             | Key Types                                 | Module                                                                                          |
-//! | ------------------------------ | -------------------------------------------------------- | ----------------------------------------- | ----------------------------------------------------------------------------------------------- |
-//! | **Stage 1: App/Component**     | Components generate IR operations with clipping metadata | [`RenderOpIR`], [`RenderOpIRVec`]         | [`render_op::render_op_ir`]                                                                     |
-//! | **Stage 2: Pipeline**          | Organizes operations by Z-order into a render queue      | [`RenderPipeline`], [`ZOrder`]            | [`render_pipeline`]                                                                             |
-//! | **Stage 3: Compositor**        | Executes IR operations, writes styled pixels to buffer   | [`OffscreenBuffer`], [`PixelChar`]        | [`compositor_render_ops_to_ofs_buf`]                                                            |
-//! | **Stage 4: Backend Converter** | Compares buffers, generates optimized output operations  | [`RenderOpOutput`], [`RenderOpOutputVec`] | [`offscreen_buffer::paint_impl`] (shared)                                                       |
-//! | **Stage 5: Backend Executor**  | Translates operations to terminal escape sequences       | [`RenderOpPaint`] trait                   | [`crossterm_backend::crossterm_paint_render_op_impl`] or [`direct_to_ansi::output::direct_to_ansi_paint_render_op_impl`] |
-//! | **Stage 6: Terminal**          | User-visible rendered content                            | Terminal emulator                         | (external)                                                                                      |
+//! | Stage                          | What It Does                                             | Key Types                                 | Module                                                                        |
+//! | ------------------------------ | -------------------------------------------------------- | ----------------------------------------- | ----------------------------------------------------------------------------- |
+//! | **Stage 1: App/Component**     | Components generate IR operations with clipping metadata | [`RenderOpIR`], [`RenderOpIRVec`]         | [`render_op::render_op_ir`]                                                   |
+//! | **Stage 2: Pipeline**          | Organizes operations by Z-order into a render queue      | [`RenderPipeline`], [`ZOrder`]            | [`render_pipeline`]                                                           |
+//! | **Stage 3: Compositor**        | Executes IR operations, writes styled pixels to buffer   | [`OffscreenBuffer`], [`PixelChar`]        | [`compositor_render_ops_to_ofs_buf`]                                          |
+//! | **Stage 4: Backend Converter** | Compares buffers, generates optimized output operations  | [`RenderOpOutput`], [`RenderOpOutputVec`] | [`offscreen_buffer::paint_impl`] (shared)                                     |
+//! | **Stage 5: Backend Executor**  | Translates operations to terminal escape sequences       | [`RenderOpPaint`] trait                   | [`crossterm_paint_render_op_impl`] or [`direct_to_ansi_paint_render_op_impl`] |
+//! | **Stage 6: Terminal**          | User-visible rendered content                            | Terminal emulator                         | (external)                                                                    |
 //!
 //! ## Architecture: Shared Stages (1-4) vs Backend-Specific Stage (5)
 //!
@@ -151,8 +151,8 @@
 //! - [`offscreen_buffer`] - Virtual terminal buffer (2D grid of styled `PixelChars`)
 //!   - [`offscreen_buffer::paint_impl`] - **(Stage 4: Shared)** Converts buffer →
 //!     optimized operations (used by both Crossterm and DirectToAnsi)
-//! - [`crossterm_backend::crossterm_paint_render_op_impl`] - **(Stage 5: Crossterm Executor)**
-//!   Executes operations via Crossterm
+//! - [`crossterm_backend::crossterm_paint_render_op_impl`] - **(Stage 5: Crossterm
+//!   Executor)** Executes operations via Crossterm
 //!
 //! ### Supporting Modules
 //! - [`offscreen_buffer_pool`] - Buffer pooling for efficiency
@@ -174,93 +174,85 @@
 //! [`RenderOpsExec`]: trait@render_op::RenderOpsExec
 //! [`RenderPipeline`]: struct@render_pipeline::RenderPipeline
 //! [`ZOrder`]: enum@z_order::ZOrder
-//! [`crossterm_backend::crossterm_paint_render_op_impl`]: mod@crossterm_backend::crossterm_paint_render_op_impl
-//! [`direct_to_ansi::output::direct_to_ansi_paint_render_op_impl`]: mod@direct_to_ansi::output::direct_to_ansi_paint_render_op_impl
+//! [`crossterm_paint_render_op_impl`]: mod@crossterm_backend::crossterm_paint_render_op_impl
+//! [`direct_to_ansi_paint_render_op_impl`]: mod@direct_to_ansi::output::direct_to_ansi_paint_render_op_impl
 //! [`paint_impl`]: mod@offscreen_buffer::paint_impl
 //! [`paint_render_op_impl`]: mod@crossterm_backend::crossterm_paint_render_op_impl
 //! [dual rendering paths]: mod@crate#dual-rendering-paths
 
-/// Terminal library backend selection for the TUI system.
-///
-/// R3BL TUI supports multiple terminal manipulation libraries, allowing users to choose
-/// the backend that best fits their needs. Currently supported backends include:
-///
-/// - **Crossterm**: Cross-platform terminal library (default and recommended)
-/// - **`DirectToAnsi`**: Pure Rust ANSI sequence generation without external dependencies
-///
-/// # Example
-///
-/// ```rust
-/// use r3bl_tui::TerminalLibBackend;
-///
-/// let backend = TerminalLibBackend::Crossterm;
-/// match backend {
-///     TerminalLibBackend::Crossterm => println!("Using Crossterm backend"),
-///     TerminalLibBackend::DirectToAnsi => println!("Using DirectToAnsi backend"),
-/// }
-/// ```
-#[derive(Debug)]
-pub enum TerminalLibBackend {
-    /// Cross-platform terminal library (default).
-    Crossterm,
-    /// Pure Rust ANSI sequence generation.
-    DirectToAnsi,
-}
+// Skip rustfmt for rest of file.
+// https://stackoverflow.com/a/75910283/2085356
+#![cfg_attr(rustfmt, rustfmt_skip)]
 
-/// The default terminal library backend for this platform.
-///
-/// On **Linux**, [`DirectToAnsi`] is selected for pure Rust ANSI sequence generation
-/// without external dependencies.
-///
-/// # Platform Selection
-///
-/// R3BL TUI uses platform-specific backends:
-/// - **Linux**: [`DirectToAnsi`] (pure Rust async I/O)
-/// - **macOS/Windows**: Crossterm (cross-platform compatibility)
-///
-/// # Performance
-///
-/// [`DirectToAnsi`] achieves ~18% better performance than Crossterm on Linux through:
-/// - Stack-allocated number formatting (eliminates heap allocations)
-/// - `SmallVec[16]` for render operations (+0.47%)
-/// - `StyleUSSpan[16]` for styled text spans (+~5.0%)
-///
-/// Benchmarked using 8-second continuous workload with 999Hz sampling and scripted
-/// input (see `script_lib.fish::run_example_with_flamegraph_profiling_perf_fold`).
-///
-/// [`DirectToAnsi`]: variant@TerminalLibBackend::DirectToAnsi
-#[cfg(target_os = "linux")]
-pub const TERMINAL_LIB_BACKEND: TerminalLibBackend = TerminalLibBackend::DirectToAnsi;
+/**************************/
+/** Attach source files. **/
+/**************************/
 
-/// The default terminal library backend for this platform.
-///
-/// On **macOS/Windows**, Crossterm is selected for its mature cross-platform
-/// support and compatibility across different terminal emulators.
-///
-/// # Platform Selection
-///
-/// R3BL TUI uses platform-specific backends:
-/// - **Linux**: [`DirectToAnsi`] (pure Rust async I/O)
-/// - **macOS/Windows**: Crossterm (cross-platform compatibility)
-///
-/// [`DirectToAnsi`]: variant@TerminalLibBackend::DirectToAnsi
-#[cfg(not(target_os = "linux"))]
-pub const TERMINAL_LIB_BACKEND: TerminalLibBackend = TerminalLibBackend::Crossterm;
+// Private mod.
 
-// Attach source files.
+mod backend_selection;
+
+// Private in production, public for docs/tests (enables rustdoc links to submodules).
+
+#[cfg(any(test, doc))]
 pub mod compositor_render_ops_to_ofs_buf;
-pub mod crossterm_backend;
-pub mod direct_to_ansi;
-pub mod offscreen_buffer;
-pub mod offscreen_buffer_pool;
-pub mod paint;
-pub mod raw_mode;
-pub mod render_op;
-pub mod render_pipeline;
-pub mod render_tui_styled_texts;
-pub mod z_order;
+#[cfg(not(any(test, doc)))]
+mod compositor_render_ops_to_ofs_buf;
 
-// Re-export shared components (Stages 1-4).
+#[cfg(any(test, doc))]
+pub mod crossterm_backend;
+#[cfg(not(any(test, doc)))]
+mod crossterm_backend;
+
+#[cfg(any(test, doc))]
+pub mod direct_to_ansi;
+#[cfg(not(any(test, doc)))]
+mod direct_to_ansi;
+
+#[cfg(any(test, doc))]
+pub mod offscreen_buffer;
+#[cfg(not(any(test, doc)))]
+mod offscreen_buffer;
+
+#[cfg(any(test, doc))]
+pub mod offscreen_buffer_pool;
+#[cfg(not(any(test, doc)))]
+mod offscreen_buffer_pool;
+
+#[cfg(any(test, doc))]
+pub mod paint;
+#[cfg(not(any(test, doc)))]
+mod paint;
+
+#[cfg(any(test, doc))]
+pub mod raw_mode;
+#[cfg(not(any(test, doc)))]
+mod raw_mode;
+
+#[cfg(any(test, doc))]
+pub mod render_op;
+#[cfg(not(any(test, doc)))]
+mod render_op;
+
+#[cfg(any(test, doc))]
+pub mod render_pipeline;
+#[cfg(not(any(test, doc)))]
+mod render_pipeline;
+
+#[cfg(any(test, doc))]
+pub mod render_tui_styled_texts;
+#[cfg(not(any(test, doc)))]
+mod render_tui_styled_texts;
+
+#[cfg(any(test, doc))]
+pub mod z_order;
+#[cfg(not(any(test, doc)))]
+mod z_order;
+
+/***********************************************/
+/** Re-export shared components (Stages 1-5). **/
+/***********************************************/
+
 pub use compositor_render_ops_to_ofs_buf::*;
 pub use offscreen_buffer::*;
 pub use offscreen_buffer_pool::*;
@@ -270,20 +262,22 @@ pub use render_op::*;
 pub use render_pipeline::*;
 pub use render_tui_styled_texts::*;
 pub use z_order::*;
-
-// Backend-specific re-exports (Stage 5 alternatives).
-// Only available for tests and docs to prevent namespace collision in production builds.
-// These are alternative implementations - only one is compiled based on target platform.
-#[cfg(any(test, doc))]
+pub use backend_selection::*;
+// Both backends are compiled; selection happens at compile time via TERMINAL_LIB_BACKEND.
 pub use crossterm_backend::*;
-#[cfg(any(test, doc))]
 pub use direct_to_ansi::*;
 
-// Tests.
+/************/
+/** Tests. **/
+/************/
+
 #[cfg(test)]
 mod test_render_pipeline;
 
-// Benchmarks.
+/*****************/
+/** Benchmarks. **/
+/*****************/
+
 #[cfg(test)]
 mod pixel_char_bench;
 #[cfg(test)]

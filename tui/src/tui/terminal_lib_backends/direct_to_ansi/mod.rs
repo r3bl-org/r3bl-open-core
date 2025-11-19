@@ -89,6 +89,9 @@ pub mod output;
 #[cfg(not(any(test, doc)))]
 mod output;
 
+#[cfg(any(test, doc))]
+pub mod input;
+#[cfg(not(any(test, doc)))]
 mod input;
 
 // Public re-exports (flat API surface).

@@ -17,7 +17,7 @@
 //! - **Generator functions**: Convert `InputEvent` → ANSI bytes
 //!   - Keyboard sequences (arrows, function keys, modifiers)
 //!   - Terminal events (resize, focus, paste)
-//!   - Mouse events (SGR format)
+//!   - Mouse events (`SGR` format)
 //! - **Round-trip tests**: Validate generator ↔ parser compatibility (see
 //!   [`crate::core::ansi::vt_100_terminal_input_parser::unit_tests`])
 //!

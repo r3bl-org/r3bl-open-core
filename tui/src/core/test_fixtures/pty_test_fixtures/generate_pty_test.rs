@@ -24,23 +24,22 @@
 ///              │                                │
 ///       Master Path                      Slave Path
 ///              │                                │
-///              ▼                                ▼
-/// ┌────────────────────────┐    ┌──────────────────────────────┐
-/// │ Macro: PTY Setup       │    │ Slave Function               │
-/// │ - Creates PTY pair     │    │ - Enable raw mode (if needed)│
-/// │ - Spawns slave         │────▶ - Execute test logic         │
-/// │ - Passes to master fn  │    │ - Report via stdout          │
-/// └────────────┬───────────┘    └──────────────┬───────────────┘
-///              │                               │ PTY stdout
-///              ▼                               │
-/// ┌────────────────────────┐                   │
-/// │ Master Function        │                   │
-/// │ - Receives pty_pair    │                   │
-/// │ - Receives child       │                   │
-/// │ - Reads results        │◀───────────────── ┘
-/// │ - Verifies assertions  │
-/// │ - Waits for child      │
-/// └────────────────────────┘
+/// ┌────────────▼───────────┐    ┌───────────────▼───────────────┐
+/// │ Macro: PTY Setup       │    │ Slave Function                │
+/// │ - Creates PTY pair     │    │ - Enable raw mode (if needed) │
+/// │ - Spawns slave         ├────▶ - Execute test logic          │
+/// │ - Passes to master fn  │    │ - Output via stdout/stderr    │
+/// └────────────┬───────────┘    └────────────▲─┬────────────────┘
+///              │                             │ │
+/// ┌────────────▼──────────────────┐          │ │
+/// │ Master Function               │          │ │ PTY I/O
+/// │ - Receives pty_pair           │          │ │ stdin, stdout/stderr
+/// │ - Receives child              │          │ │
+/// │ - Writes input to child (opt) ├──────────┘ │
+/// │ - Reads results from child    ◀────────────┘
+/// │ - Verifies assertions         │
+/// │ - Waits for child exit        │
+/// └───────────────────────────────┘
 /// ```
 ///
 /// # Design Rationale: Dependency Injection at the Macro Level
@@ -78,8 +77,10 @@
 /// - There is NO semantic difference between stdout and stderr in PTY tests
 /// - Use **content-based filtering** to distinguish messages, not stream type
 ///
-/// **Example:**
-/// <!-- It is ok to use ignore here - this is a conceptual example showing PTY stream merging behavior, not a complete compilable example -->
+/// ## Example
+///
+/// <!-- It is ok to use ignore here - this is a conceptual example showing PTY stream
+/// merging behavior, not a complete compilable example -->
 /// ```ignore
 /// // Slave code (both go to the same stream!)
 /// println!("Line: hello, Cursor: 5");      // Protocol message
@@ -95,6 +96,10 @@
 ///
 /// This is why all output in PTY slaves should use `println!()` - using `eprintln!()`
 /// creates a false impression that stderr is handled differently.
+///
+/// For complete PTY test implementations, see:
+/// - [`raw_mode_integration_tests`] - Tests raw mode itself
+/// - [`integration_tests`] - Tests input parsing
 ///
 /// # Parameters
 ///
@@ -112,13 +117,6 @@
 /// - Get a reader: `pty_pair.master.try_clone_reader()`
 /// - Get a writer: `pty_pair.master.take_writer()`
 /// - Wait for child: `child.wait()`
-///
-///
-/// # Examples of code using this macro
-///
-/// For complete PTY test implementations, see:
-/// - [`raw_mode_integration_tests`] - Tests raw mode itself
-/// - [`integration_tests`] - Tests input parsing
 ///
 /// [`raw_mode_integration_tests`]: mod@crate::core::ansi::terminal_raw_mode::integration_tests
 /// [`integration_tests`]: mod@crate::core::ansi::vt_100_terminal_input_parser::integration_tests

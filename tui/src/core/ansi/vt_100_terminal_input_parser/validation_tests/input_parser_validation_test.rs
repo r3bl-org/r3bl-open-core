@@ -39,11 +39,11 @@
 //!
 //! ### Test Strategy
 //!
-//! | Test Type                    | Purpose                                 | Approach                                            |
-//! |------------------------------|-----------------------------------------|-----------------------------------------------------|
-//! | **Parser tests** (this file) | Verify ANSI → Event parsing             | Use literal sequences from terminal observation     |
-//! | **Generator tests**          | Verify Event → ANSI generation          | Use literal sequences from VT-100 spec              |
-//! | **Round-trip tests**         | Verify parser ↔ generator compatibility | Event → bytes → Event                               |
+//! | Test Type                      | Purpose                                   | Approach                                              |
+//! | ------------------------------ | ----------------------------------------- | ----------------------------------------------------- |
+//! | **Parser tests** (this file)   | Verify ANSI → Event parsing               | Use literal sequences from terminal observation       |
+//! | **Generator tests**            | Verify Event → ANSI generation            | Use literal sequences from VT-100 spec                |
+//! | **Round-trip tests**           | Verify parser ↔ generator compatibility   | Event → bytes → Event                                 |
 //!
 //! The combination of all three test types ensures both parser and generator are correct
 //! and compatible with each other.
@@ -69,8 +69,6 @@
 //! If you want to test generator correctness, see the round-trip tests in
 //! [`unit_tests::generator_round_trip_tests`] instead.
 //!
-//! [`test_fixtures::input_sequence_generator`]: mod@crate::core::ansi::vt_100_terminal_input_parser::test_fixtures
-//! [`unit_tests::generator_round_trip_tests`]: mod@crate::core::ansi::vt_100_terminal_input_parser::unit_tests::generator_round_trip_tests
 //!
 //! ### Sample Test Run Output
 //! ╔═══════════════════════════════════════════════════════╗
@@ -136,9 +134,13 @@
 //! 📦 Raw bytes (hex): [1b, 5b, 3c, 36, 35, 3b, 35, 39, 3b, 32, 30, 4d]
 //! 🔤 Escaped string: "\u{1b}[<65;59;20M"
 //! ⌨️  Parsed: Unknown (hex: 1b 5b 3c 36 35 3b 35 39 3b 32 30 4d)
+//!
+//! [`test_fixtures::input_sequence_generator`]: mod@crate::core::ansi::vt_100_terminal_input_parser::test_fixtures
+//! [`unit_tests::generator_round_trip_tests`]: mod@crate::core::ansi::vt_100_terminal_input_parser::unit_tests::generator_round_trip_tests
 
 use crate::{KeyState, byte_offset,
-            core::ansi::vt_100_terminal_input_parser::{VT100InputEventIR, VT100KeyCodeIR,
+            core::ansi::vt_100_terminal_input_parser::{VT100InputEventIR,
+                                                       VT100KeyCodeIR,
                                                        VT100MouseActionIR,
                                                        VT100MouseButtonIR,
                                                        VT100ScrollDirectionIR,
@@ -207,7 +209,10 @@ mod mouse_events {
 
         match event {
             VT100InputEventIR::Mouse { action, pos, .. } => {
-                assert_eq!(action, VT100MouseActionIR::Scroll(VT100ScrollDirectionIR::Up));
+                assert_eq!(
+                    action,
+                    VT100MouseActionIR::Scroll(VT100ScrollDirectionIR::Up)
+                );
                 assert_eq!(pos.col.as_u16(), 37);
                 assert_eq!(pos.row.as_u16(), 14);
             }

@@ -75,6 +75,17 @@
 //! [`ANSI Parser`]: crate::AnsiToOfsBufPerformer
 //! [`OffscreenBuffer`]: crate::OffscreenBuffer
 //! [`PTY Session`]: crate::PtyReadWriteSession
+//!
+//! ## Underlying protocol parser
+//!
+//! - [`vt_100_pty_output_parser`]: The ANSI parser module that processes escape sequences
+//!   from child processes. The [`ProcessManager`] uses this via
+//!   [`OffscreenBuffer::apply_ansi_bytes`]
+//! - [`core::ansi`]: Parent module containing all ANSI/VT-100 protocol handling
+//!
+//! [`vt_100_pty_output_parser`]: mod@crate::core::ansi::vt_100_pty_output_parser
+//! [`core::ansi`]: mod@crate::core::ansi
+//! [`OffscreenBuffer::apply_ansi_bytes`]: crate::OffscreenBuffer::apply_ansi_bytes
 
 // Attach.
 mod input_router;

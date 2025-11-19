@@ -35,46 +35,46 @@
 //!
 //! # ANSI Sequence Types from PTY Output
 //!
-//! There are three categories of escape sequences: **CSI**, **OSC**, and direct **ESC**.
+//! There are three categories of escape sequences: **`CSI`**, **`OSC`**, and direct **`ESC`**.
 //! These are the fundamental commands a terminal uses to display and control text. They
 //! differ primarily in their structure, purpose, and the range of commands they offer.
 //!
-//! ## 1. CSI Sequences (Control Sequence Introducer)
+//! ## 1. `CSI` Sequences (Control Sequence Introducer)
 //!
-//! CSI sequences, which begin with `ESC [`, are the most common and versatile type of
+//! `CSI` sequences, which begin with `ESC [`, are the most common and versatile type of
 //! escape sequence. They are used for a wide variety of terminal operations, mainly
 //! related to **cursor movement**, **text formatting**, and **screen manipulation**. The
 //! structure `ESC [ param ; param letter` makes them highly flexible. The parameters are
 //! typically numbers that modify the command, and the final letter determines the
 //! specific action. For example:
 //!
-//! * `ESC[31m` changes the text color to red.
-//! * `ESC[1;2H` moves the cursor to row 1, column 2.
-//! * `ESC[2J` clears the entire screen.
+//! * `ESC [31m` changes the text color to red.
+//! * `ESC [1;2H` moves the cursor to row 1, column 2.
+//! * `ESC [2J` clears the entire screen.
 //!
 //! `vte` spends most of its time parsing these sequences because they are responsible for
 //! the majority of what you see on a terminal screen.
 //!
-//! ## 2. OSC Sequences (Operating System Command)
+//! ## 2. `OSC` Sequences (Operating System Command)
 //!
-//! OSC sequences, which start with `ESC ]`, are used for non-display commands that
+//! `OSC` sequences, which start with `ESC ]`, are used for non-display commands that
 //! interact with the terminal emulator itself or the operating system. They are typically
 //! used for tasks that don't involve drawing characters on the screen. The structure is
 //! `ESC ] number ; text ST`, where `ST` is the string terminator (either `ESC \` or
 //! `BEL`—the bell character). For example:
 //!
-//! * `ESC]0;new_titleST` sets the window title of the terminal.
-//! * `ESC]2;new_icon_nameST` changes the icon name.
+//! * `ESC ]0;new_titleST` sets the window title of the terminal.
+//! * `ESC ]2;new_icon_nameST` changes the icon name.
 //!
 //! These commands are often used by programs to provide user feedback beyond the standard
 //! text output, such as setting the title of a shell session to reflect the current
 //! working directory.
 //!
-//! ## 3. Direct ESC Sequences (Single-Character Commands)
+//! ## 3. Direct `ESC` Sequences (Single-Character Commands)
 //!
 //! Direct escape sequences are simpler, single-character commands that start with `ESC`
-//! and are followed by a single character. They predate CSI and OSC sequences and are
-//! generally used for more fundamental or legacy terminal functions. Unlike CSI and OSC,
+//! and are followed by a single character. They predate `CSI` and `OSC` sequences and are
+//! generally used for more fundamental or legacy terminal functions. Unlike `CSI` and `OSC`,
 //! they don't have a parameter-based structure, making them less flexible but very fast
 //! to parse. Examples include:
 //!
@@ -87,36 +87,36 @@
 //! feature that's less common in modern applications but still important for
 //! compatibility.
 //!
-//! ## Evolution and Overlap Between ESC and CSI
+//! ## Evolution and Overlap Between `ESC` and `CSI`
 //!
-//! There is significant functional overlap between ESC and CSI sequences, largely due to
+//! There is significant functional overlap between `ESC` and `CSI` sequences, largely due to
 //! the evolutionary history of terminal control:
 //!
-//! **ESC sequences came first**: They were the original, simple terminal control codes
-//! used in early terminals like the VT100. Each ESC sequence does one specific thing
+//! **`ESC` sequences came first**: They were the original, simple terminal control codes
+//! used in early terminals like the VT100. Each `ESC` sequence does one specific thing
 //! without parameters. For example, `ESC D` moves the cursor down exactly one line.
 //!
-//! **CSI sequences evolved later**: As terminals became more sophisticated, the need for
-//! parameterized control became apparent. CSI sequences (ESC[) were introduced to provide
-//! the same functionality with much greater flexibility. For example, `ESC[5B` moves the
-//! cursor down 5 lines, and `ESC[31m` sets the foreground color to red.
+//! **`CSI` sequences evolved later**: As terminals became more sophisticated, the need for
+//! parameterized control became apparent. `CSI` sequences (`ESC [`) were introduced to provide
+//! the same functionality with much greater flexibility. For example, `ESC [5B` moves the
+//! cursor down 5 lines, and `ESC [31m` sets the foreground color to red.
 //!
 //! **Why both exist**: Modern terminals support both for backward compatibility. Many
 //! operations can be performed using either approach:
 //!
-//! | Operation | ESC Sequence | CSI Sequence | Notes |
+//! | Operation | `ESC` Sequence | `CSI` Sequence | Notes |
 //! |-----------|-------------|--------------|-------|
-//! | Save cursor | `ESC 7` | `ESC[s` | Both work identically |
-//! | Restore cursor | `ESC 8` | `ESC[u` | Both work identically |
-//! | Move cursor down 1 line | `ESC D` | `ESC[1B` | CSI version can take parameters |
-//! | Move cursor up 1 line | `ESC M` | `ESC[1A` | CSI version can take parameters |
+//! | Save cursor | `ESC 7` | `ESC [s` | Both work identically |
+//! | Restore cursor | `ESC 8` | `ESC [u` | Both work identically |
+//! | Move cursor down 1 line | `ESC D` | `ESC [1B` | `CSI` version can take parameters |
+//! | Move cursor up 1 line | `ESC M` | `ESC [1A` | `CSI` version can take parameters |
 //!
 //! This overlap is demonstrated in the test suite: the cursor operations tests contain
 //! both `test_csi_save_restore_cursor` and `test_esc_save_restore_cursor`, showing both
 //! approaches work identically.
 //!
-//! **Modern practice**: New applications typically use CSI sequences for their
-//! flexibility, while ESC sequences remain for compatibility and simple operations that
+//! **Modern practice**: New applications typically use `CSI` sequences for their
+//! flexibility, while `ESC` sequences remain for compatibility and simple operations that
 //! don't need parameters.
 
 use crate::{DsrRequestFromPtyEvent, OffscreenBuffer, core::osc::OscEvent};
@@ -167,15 +167,15 @@ impl OffscreenBuffer {
     /// ## Data Flow:
     ///
     /// ```text
-    /// 1. Child process (e.g., vim) sends ESC 7 to save cursor
+    /// 1. Child process (e.g., vim) sends `ESC 7` to save cursor
     ///                             ↓
-    /// 2. AnsiToOfsBufPerformer::esc_dispatch() handles ESC 7
+    /// 2. AnsiToOfsBufPerformer::esc_dispatch() handles `ESC 7`
     ///                             ↓
     /// 3. Saves current cursor_pos to buffer.my_pos_for_esc_save_and_restore
     ///                             ↓
-    /// 4. Later, child sends ESC 8 to restore cursor
+    /// 4. Later, child sends `ESC 8` to restore cursor
     ///                             ↓
-    /// 5. AnsiToOfsBufPerformer::esc_dispatch() handles ESC 8
+    /// 5. AnsiToOfsBufPerformer::esc_dispatch() handles `ESC 8`
     ///                             ↓
     /// 6. Restores cursor_pos from buffer.my_pos_for_esc_save_and_restore
     /// ```
@@ -210,7 +210,7 @@ impl OffscreenBuffer {
     /// The performer is designed to be a transient manipulator that works directly on the
     /// buffer's state. It's created fresh for each batch of bytes to process:
     ///
-    /// - Style attributes (`bold`, `fg_color`, etc.) are SGR (Select Graphic Rendition)
+    /// - Style attributes (`bold`, `fg_color`, etc.) are `SGR` (Select Graphic Rendition)
     ///   attributes that apply to characters being written. These styles get baked into
     ///   the [`PixelChar`] objects in the buffer and stored in the buffer's
     ///   `ansi_parser_support` field for persistence.

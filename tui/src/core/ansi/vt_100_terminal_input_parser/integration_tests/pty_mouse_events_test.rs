@@ -41,7 +41,7 @@ generate_pty_test! {
     /// - Mouse position coordinates
     ///
     /// Note: This test verifies the device architecture for mouse handling.
-    /// Actual mouse event parsing is complex and requires SGR mouse mode
+    /// Actual mouse event parsing is complex and requires `SGR` mouse mode
     /// sequences, which are tested in detail in the protocol parsers.
     ///
     /// Run with: `cargo test -p r3bl_tui --lib test_pty_mouse_events -- --nocapture`

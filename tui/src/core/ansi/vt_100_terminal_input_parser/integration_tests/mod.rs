@@ -4,7 +4,7 @@
 //!
 //! These tests validate the complete input handling stack in a real PTY environment:
 //! - `DirectToAnsiInputDevice` async I/O and buffer management
-//! - Zero-latency ESC key detection
+//! - Zero-latency `ESC` key detection
 //! - Full parsing from raw bytes to `InputEvent`
 //!
 //! All tests use **generated sequences** to verify the system can handle its own output.

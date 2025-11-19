@@ -14,11 +14,11 @@ impl PtyCommandBuilder {
     /// ┌──────────────────────────┐ ◄── output ◄── ┌───────────────────────────────┐
     /// │ Your Program             │     events     │ Spawned Task (1) in Read Only │
     /// │                          │                │            session            │
-    /// │                          │                │               ▼               │
+    /// │                          │                │               ↓               │
     /// │ a) Handle output events  │                │ ◄─── PTY creates pair ──────► │
     /// │    from                  │                │ ┊Master/   ┊     ┊Slave/    ┊ │
     /// │ b) Process completion of │                │ ┊Controller┊     ┊Controlled┊ │
-    /// │ read only session        │                │     ▼                 ▼       │
+    /// │ read only session        │                │     ↓                 ↓       │
     /// │                          │                │ Spawn Tokio       Controlled  │
     /// │                          │                │ blocking task     spawns      │
     /// │                          │                │ (3) to read       child       │

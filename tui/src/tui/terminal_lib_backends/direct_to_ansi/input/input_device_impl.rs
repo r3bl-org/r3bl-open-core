@@ -94,6 +94,16 @@ const STDIN_READ_BUFFER_SIZE: usize = 256;
 /// └─────────────────────────────────────────────────────────────────┘
 /// ```
 ///
+/// # Underlying protocol parser
+///
+/// - [`vt_100_terminal_input_parser`]: The protocol parser that converts raw bytes to
+///   [`VT100InputEventIR`]. This device calls [`try_parse_input_event`] to perform the
+///   actual parsing.
+///
+/// [`vt_100_terminal_input_parser`]: mod@crate::core::ansi::vt_100_terminal_input_parser
+/// [`VT100InputEventIR`]: crate::core::ansi::vt_100_terminal_input_parser::VT100InputEventIR
+/// [`try_parse_input_event`]: crate::core::ansi::vt_100_terminal_input_parser::try_parse_input_event
+///
 /// # Zero-Latency ESC Key Detection
 ///
 /// **The Problem**: Distinguishing ESC key presses from escape sequences (e.g., Up Arrow
@@ -236,7 +246,7 @@ impl DirectToAnsiInputDevice {
     /// for the entire lifetime of the program's event loop. Typical usage pattern:
     ///
     /// ```no_run
-    /// # use r3bl_tui::direct_to_ansi::DirectToAnsiInputDevice;
+    /// # use r3bl_tui::DirectToAnsiInputDevice;
     /// # use r3bl_tui::InputEvent;
     /// # use tokio::signal;
     ///

@@ -26,13 +26,13 @@ impl OffscreenBuffer {
     ///
     /// ```text
     /// Before:        Row: 0-based
-    /// max_height=6 ╮  ▼  ┌─────────────────────────────────────┐
+    /// max_height=6 ╮  ↓  ┌─────────────────────────────────────┐
     /// (1-based)    │  0  │ Header line (outside scroll region) │
     ///              │     ├─────────────────────────────────────┤ ← scroll_top (row 1, 0-based)
     ///              │  1  │ Line A                              │
     ///              │  2  │ Line B                              │
     ///              │  3  │ Line C                              │
-    ///              │  4  │ Line D  ← cursor (row 4, 0-based)  │ ← Move up 2 lines
+    ///              │  4  │ Line D  ← cursor (row 4, 0-based)   │ ← Move up 2 lines
     ///              │     ├─────────────────────────────────────┤ ← scroll_bottom (row 4, 0-based)
     ///              ╰  5  │ Footer line (outside scroll region) │
     ///                    └─────────────────────────────────────┘

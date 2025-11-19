@@ -534,6 +534,7 @@
 //!      IndexOps                   LengthOps
 //!      (0-based)                  (1-based)
 //!           │                         │
+//!           ▼                         ▼
 //!   Adds: overflows(),        Adds: is_overflowed_by(),
 //!         underflows(),             remaining_from(),
 //!         clamp_to_*(),             convert_to_index(),

@@ -12,8 +12,8 @@
 //!    ↓
 //! DirectToAnsiInputDevice (async I/O layer)
 //!    ↓
-//! parser.rs (routing & ESC detection)
-//!    ↓ (routes non-escape bytes here)
+//! parser.rs (routing & `ESC` detection)
+//!    │ (routes non-escape bytes here)
 //! ┌──▼───────────────────────────────────────┐
 //! │  utf8.rs                                 │  ← **YOU ARE HERE**
 //! │  • Parse UTF-8 multi-byte sequences      │

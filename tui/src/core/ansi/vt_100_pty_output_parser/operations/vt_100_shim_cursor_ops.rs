@@ -43,16 +43,16 @@
 //!                                            ╰─────────────────╯
 //! ```
 //!
-//! # CSI Sequence Processing Flow
+//! # `CSI` Sequence Processing Flow
 //!
 //! ```text
-//! Application sends "ESC[2A" (cursor up 2 lines)
+//! Application sends "ESC [2A" (cursor up 2 lines)
 //!         ↓
 //!     PTY Slave (escape sequence)
 //!         ↓
 //!     PTY Master (byte stream) <- in process_manager.rs
 //!         ↓
-//!     VTE Parser (parses ESC[...char pattern)
+//!     VTE Parser (parses `ESC [`...char pattern)
 //!         ↓
 //!     csi_dispatch() [routes to modules below]
 //!         ↓
@@ -74,9 +74,9 @@
 //! ## Parameter Handling
 //!
 //! **Missing or zero parameters default to 1:**
-//! - `ESC[A` (missing param) → interpreted as 1
-//! - `ESC[0A` (explicit zero) → interpreted as 1
-//! - `ESC[5A` (explicit value) → interpreted as 5
+//! - `ESC [A` (missing param) → interpreted as 1
+//! - `ESC [0A` (explicit zero) → interpreted as 1
+//! - `ESC [5A` (explicit value) → interpreted as 5
 //!
 //! This is handled by [`extract_nth_single_non_zero()`] which returns [`NonZeroU16`].
 //!
@@ -87,7 +87,7 @@
 //! ```text
 //! VT100 Wire Format    →    1-based Types    →    0-based Indices
 //! ─────────────────         ──────────────         ───────────────
-//! ESC[5;10H                 TermRow(5)             RowIndex(4)
+//! ESC [5;10H                TermRow(5)             RowIndex(4)
 //!                           TermCol(10)            ColIndex(9)
 //! ```
 //!

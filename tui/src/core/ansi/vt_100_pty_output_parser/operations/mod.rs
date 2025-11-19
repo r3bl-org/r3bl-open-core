@@ -50,8 +50,8 @@
 //! │ • Pure delegation, no business logic                    │
 //! └────────────────────┬────────────────────────────────────┘
 //!                      │ delegates to
-//!                      ▼
-//! ┌─────────────────────────────────────────────────────────┐
+//!                      │
+//! ┌────────────────────▼────────────────────────────────────┐
 //! │ Implementation Layer (vt_100_ansi_impl/impl_*)          │
 //! │ • UNIT TESTS: #[test] functions                         │
 //! │ • Contains all business logic                           │

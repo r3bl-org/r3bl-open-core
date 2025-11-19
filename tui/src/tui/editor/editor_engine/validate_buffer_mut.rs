@@ -18,7 +18,8 @@
 //! size cache is automatically invalidated to ensure accurate telemetry reporting. This
 //! happens in the [`Drop`] implementation of [`EditorBufferMutWithDrop`].
 //!
-//! <!-- It is ok to use ignore here - demonstrates RAII pattern with Drop trait, not a complete runnable example -->
+//! <!-- It is ok to use ignore here - demonstrates RAII pattern with Drop trait, not a
+//! complete runnable example -->
 //! ```ignore
 //! // When content is modified:
 //! {
