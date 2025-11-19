@@ -15,8 +15,8 @@ generate_pty_test! {
     /// PTY-based integration test for terminal event parsing.
     ///
     /// Validates that the [`DirectToAnsiInputDevice`] correctly parses terminal events:
-    /// - Window resize notifications (CSI 8;rows;cols t)
-    /// - Focus gained/lost events (CSI I/O)
+    /// - Window resize notifications (`CSI 8;rows;cols t`)
+    /// - Focus gained/lost events (`CSI I/O`)
     ///
     /// Note: Bracketed paste events are tested in [`pty_bracketed_paste_test`]
     /// because they require special state machine handling (Start + text + End).

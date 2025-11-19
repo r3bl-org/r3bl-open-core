@@ -261,6 +261,37 @@ When writing rustdoc links in modules with private submodules and public re-expo
 //! [`diff_chunks`]: mod@crate::tui::terminal_lib_backends::offscreen_buffer::diff_chunks
 ```
 
+**Linking to Test Functions:**
+
+Test functions (marked with `#[test]`, `#[tokio::test]`, etc.) are normally invisible to rustdoc
+because they only exist in test builds. To make a test function linkable in documentation, use
+`#[cfg_attr(not(doc), ...)]` to conditionally apply test attributes:
+
+```rust
+/// Documentation for this test function.
+///
+/// Run with: `cargo test my_test -- --ignored --nocapture`
+#[cfg_attr(not(doc), tokio::test)]
+#[cfg_attr(not(doc), ignore = "Manual test")]
+pub async fn my_test() -> Result<()> {
+    // test implementation
+}
+```
+
+This works because:
+- **In doc builds**: Test attributes are skipped → function is a regular `pub async fn` → rustdoc
+  can see and link to it
+- **In test builds**: Test attributes are applied → test runner recognizes it as a test
+
+The function must also be `pub` and in a conditionally public module (`#[cfg(any(test, doc))]`) for
+the link to resolve. Then you can link to it normally:
+
+```rust
+//! See [`my_test`] for ground truth validation.
+//!
+//! [`my_test`]: crate::path::to::module::my_test
+```
+
 ### Use strong type safety in the codebase for bounds checking, index (0-based), and length (1-based) handling
 
 Use the type-safe bounds checking utilities from `tui/src/core/units/bounds_check/` which provide

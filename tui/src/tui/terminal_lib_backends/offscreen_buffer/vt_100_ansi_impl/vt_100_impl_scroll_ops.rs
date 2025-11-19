@@ -28,7 +28,7 @@ impl OffscreenBuffer {
     ///
     /// ```text
     /// Before:        Row: 0-based
-    /// max_height=6 ╮  ▼  ┌─────────────────────────────────────┐
+    /// max_height=6 ╮  ↓  ┌─────────────────────────────────────┐
     /// (1-based)    │  0  │ Header line (outside scroll region) │
     ///              │     ├─────────────────────────────────────┤ ← scroll_top (row 1, 0-based)
     ///              │  1  │ Line A                              │
@@ -84,7 +84,7 @@ impl OffscreenBuffer {
     ///
     /// ```text
     /// Before:        Row: 0-based
-    /// max_height=6 ╮  ▼  ┌─────────────────────────────────────┐
+    /// max_height=6 ╮  ↓  ┌─────────────────────────────────────┐
     /// (1-based)    │  0  │ Header line (outside scroll region) │
     ///              │     ├─────────────────────────────────────┤ ← scroll_top (row 1, 0-based)
     ///              │  1  │ Line A  ← cursor at scroll_top       │
@@ -179,7 +179,7 @@ impl OffscreenBuffer {
     ///
     /// ```text
     /// Before:        Row: 0-based
-    /// max_height=6 ╮  ▼  ┌─────────────────────────────────────┐
+    /// max_height=6 ╮  ↓  ┌─────────────────────────────────────┐
     /// (1-based)    │  0  │ Header line (outside scroll region) │
     ///              │     ├─────────────────────────────────────┤ ← scroll_top (row 1, 0-based)
     ///              │  1  │ Line A (will be lost)               │
@@ -223,7 +223,7 @@ impl OffscreenBuffer {
     ///
     /// ```text
     /// Before:        Row: 0-based
-    /// max_height=6 ╮  ▼  ┌─────────────────────────────────────┐
+    /// max_height=6 ╮  ↓  ┌─────────────────────────────────────┐
     /// (1-based)    │  0  │ Header line (outside scroll region) │
     ///              │     ├─────────────────────────────────────┤ ← scroll_top (row 1, 0-based)
     ///              │  1  │ Line A                              │

@@ -43,16 +43,16 @@
 //!                                            ╰─────────────────╯
 //! ```
 //!
-//! # CSI Sequence Processing Flow
+//! # `CSI` Sequence Processing Flow
 //!
 //! ```text
-//! Application sends "ESC[1;20r" (set top/bottom margins)
+//! Application sends "ESC [1;20r" (set top/bottom margins)
 //!         ↓
 //!     PTY Slave (escape sequence)
 //!         ↓
 //!     PTY Master (byte stream) <- in process_manager.rs
 //!         ↓
-//!     VTE Parser (parses ESC[...char pattern)
+//!     VTE Parser (parses `ESC [`...char pattern)
 //!         ↓
 //!     csi_dispatch() [routes to modules below]
 //!         ↓
@@ -75,7 +75,7 @@ use super::super::{MarginRequest, ansi_parser_public_api::AnsiToOfsBufPerformer}
 use vte::Params;
 
 /// Handle Set Top and Bottom Margins (DECSTBM) command.
-/// CSI r - ESC [ top ; bottom r
+/// `CSI r` - `ESC [` top ; bottom r
 ///
 /// This command sets the scrolling region for the terminal. Lines outside
 /// the scrolling region are not affected by scroll operations.

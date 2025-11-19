@@ -43,16 +43,16 @@
 //!                                            ╰─────────────────╯
 //! ```
 //!
-//! # CSI Sequence Processing Flow
+//! # `CSI` Sequence Processing Flow
 //!
 //! ```text
-//! Application sends "ESC[1;31m" (bold red text)
+//! Application sends "ESC [1;31m" (bold red text)
 //!         ↓
 //!     PTY Slave (escape sequence)
 //!         ↓
 //!     PTY Master (byte stream) <- in process_manager.rs
 //!         ↓
-//!     VTE Parser (parses ESC[...char pattern)
+//!     VTE Parser (parses `ESC [`...char pattern)
 //!         ↓
 //!     csi_dispatch() [routes to modules below]
 //!         ↓
@@ -86,7 +86,7 @@ use crate::{SgrColorSequence,
             tui_style_attrib};
 use vte::Params;
 
-/// Apply a single SGR parameter.
+/// Apply a single `SGR` parameter.
 #[allow(clippy::too_many_lines)]
 fn apply_sgr_param(performer: &mut AnsiToOfsBufPerformer, param: u16) {
     match param {
@@ -199,14 +199,14 @@ fn apply_sgr_param(performer: &mut AnsiToOfsBufPerformer, param: u16) {
     }
 }
 
-/// Handle SGR (Select Graphic Rendition) parameters.
+/// Handle `SGR` (Select Graphic Rendition) parameters.
 ///
-/// This function processes SGR parameters and applies them to the offscreen buffer.
+/// This function processes `SGR` parameters and applies them to the offscreen buffer.
 /// It supports:
 /// - Basic text attributes (bold, italic, underline, etc.)
 /// - 16-color ANSI colors (30-37, 40-47, 90-97, 100-107)
-/// - 256-color palette (ESC[38:5:nm or ESC[48:5:nm)
-/// - RGB true color (ESC[38:2:r:g:bm or ESC[48:2:r:g:bm)
+/// - 256-color palette (`ESC [38:5:nm` or `ESC [48:5:nm`)
+/// - RGB true color (`ESC [38:2:r:g:bm` or `ESC [48:2:r:g:bm`)
 pub fn set_graphics_rendition(performer: &mut AnsiToOfsBufPerformer, params: &Params) {
     let mut idx = 0;
     while let Some(param_slice) = params.extract_nth_many_raw(idx) {

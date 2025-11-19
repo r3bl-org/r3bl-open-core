@@ -42,9 +42,18 @@ struct TestCase {
 // Main Test
 // ============================================================================
 
-#[tokio::test]
-#[ignore = "Manual test: cargo test observe_terminal -- --ignored --nocapture"]
-async fn observe_terminal() -> IoResult<()> {
+/// Interactive terminal observation test to establish ground truth.
+///
+/// This test captures raw bytes from real terminal interactions to establish ground truth
+/// about ANSI coordinate systems and actual sequences sent by terminal emulators.
+///
+/// Run with: `cargo test observe_terminal -- --ignored --nocapture`
+///
+/// Follow the on-screen prompts to interact with your terminal (click mouse, press keys).
+/// The test will capture raw bytes and display findings.
+#[cfg_attr(not(doc), tokio::test)]
+#[cfg_attr(not(doc), ignore = "Manual test: cargo test observe_terminal -- --ignored --nocapture")]
+pub async fn observe_terminal() -> IoResult<()> {
     // Skip in CI
     if is_ci::cached() {
         println!("⏭️  Skipped in CI (requires interactive terminal)");

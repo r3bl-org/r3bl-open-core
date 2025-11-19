@@ -732,7 +732,7 @@ where
 
         match render_result {
             Err(error) => {
-                let mut painter = crate::terminal_lib_backends::crossterm_backend::PaintRenderOpImplCrossterm {};
+                let mut painter = crate::PaintRenderOpImplCrossterm {};
                 painter.flush(locked_output_device);
 
                 // Print debug message w/ error.

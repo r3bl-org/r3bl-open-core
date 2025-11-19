@@ -31,8 +31,8 @@
 //! |---------------|-----------------|--------------------|----------------------|-------------------|
 //! | **Printable** | Regular chars   | `"Hello"`          | [`print()`]          | Display text      |
 //! | **Control**   | C0 bytes        | `\n`, `\t`, `\b`   | [`execute()`]        | Cursor control    |
-//! | **CSI**       | `ESC[...char`   | `ESC[2A`, `ESC[m`  | [`csi_dispatch()`]   | Complex commands  |
-//! | **OSC**       | `ESC]...ST`     | `ESC]0;title`      | [`osc_dispatch()`]   | OS integration    |
+//! | **`CSI`**     | `ESC [...char`  | `ESC [2A`, `ESC [m`| [`csi_dispatch()`]   | Complex commands  |
+//! | **`OSC`**     | `ESC ]...ST`    | `ESC ]0;title`     | [`osc_dispatch()`]   | OS integration    |
 //! | **ESC**       | `ESC char`      | `ESC c`, `ESC 7`   | [`esc_dispatch()`]   | Simple commands   |
 //! | **DCS**       | `ESC P...ST`    | Ignored (stubs)    | [`hook()`]           | Device control    |
 //!

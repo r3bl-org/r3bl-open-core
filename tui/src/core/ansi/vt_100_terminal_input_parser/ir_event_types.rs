@@ -21,7 +21,7 @@
 //!       ┌───────────────────┼───────────────────┐
 //!       │                   │                   │
 //!   parser.rs           keyboard.rs           mouse.rs
-//!   (routing)           (CSI/SS3)             (SGR/X10/RXVT)
+//!   (routing)           (`CSI`/`SS3`)         (`SGR`/`X10`/`RXVT`)
 //!                       terminal_events.rs    utf8.rs
 //!                       (resize/focus)        (text)
 //! ```
@@ -46,9 +46,9 @@
 //! ### 2. Protocol Quirk Absorption
 //! VT-100 has quirks that shouldn't leak to applications:
 //! - 1-based coordinates (humans count from 1, arrays use 0)
-//! - Inconsistent mouse protocols (SGR, X10, RXVT)
+//! - Inconsistent mouse protocols (`SGR`, `X10`, `RXVT`)
 //! - Modifier key encoding variations
-//! - Escape sequence ambiguities (ESC vs arrow keys)
+//! - Escape sequence ambiguities (`ESC` vs arrow keys)
 //!
 //! The IR layer normalizes these quirks during conversion to canonical types.
 //!

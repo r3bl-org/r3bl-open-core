@@ -448,7 +448,8 @@ impl LineMetadata {
     /// validation requires immediate unwrapping with `.as_usize()` for the actual
     /// operations, creating this pattern:
     ///
-    /// <!-- It is ok to use ignore here - demonstrates comparison of implementation approaches, not meant as runnable code -->
+    /// <!-- It is ok to use ignore here - demonstrates comparison of implementation
+    /// approaches, not meant as runnable code -->
     /// ```ignore
     /// // Wrapping approach:
     /// let start = byte_index(start_idx.as_usize().min(content_len.as_usize()));

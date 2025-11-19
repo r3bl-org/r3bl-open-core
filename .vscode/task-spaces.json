@@ -1,0 +1,138 @@
+{
+  "version": "2.0",
+  "taskSpaces": [
+    {
+      "name": "[1.0] task_refactor_input_device",
+      "id": "7db0597e-e949-458d-bff9-072e239021e5",
+      "tabs": [
+        {
+          "path": "todo.md",
+          "isPinned": true
+        },
+        {
+          "path": "task/task_refactor_input_device.md",
+          "isPinned": false
+        },
+        {
+          "path": "tui/src/core/ansi/vt_100_terminal_input_parser/mod.rs",
+          "isPinned": false
+        },
+        {
+          "path": "tui/src/readline_async/readline_async_impl/integration_tests/pty_ctrl_d_delete_test.rs",
+          "isPinned": false
+        },
+        {
+          "path": "tui/src/core/test_fixtures/pty_test_fixtures/generate_pty_test.rs",
+          "isPinned": false
+        },
+        {
+          "path": "tui/src/core/ansi/vt_100_terminal_input_parser/parser.rs",
+          "isPinned": false
+        },
+        {
+          "path": "tui/src/core/ansi/vt_100_terminal_input_parser/keyboard.rs",
+          "isPinned": false
+        },
+        {
+          "path": "tui/src/core/ansi/vt_100_terminal_input_parser/mouse.rs",
+          "isPinned": false
+        },
+        {
+          "path": "tui/src/core/ansi/vt_100_terminal_input_parser/terminal_events.rs",
+          "isPinned": false
+        },
+        {
+          "path": "tui/src/core/ansi/vt_100_terminal_input_parser/utf8.rs",
+          "isPinned": false
+        },
+        {
+          "path": "tui/src/core/ansi/vt_100_terminal_input_parser/ir_event_types.rs",
+          "isPinned": false
+        }
+      ],
+      "taskFile": "task/task_refactor_input_device.md",
+      "createdAt": 1763496885607,
+      "lastAccessed": 1763647983427,
+      "activeTab": "tui/src/core/test_fixtures/pty_test_fixtures/generate_pty_test.rs"
+    },
+    {
+      "name": "[1.1] task_readline_async_add_shortcuts",
+      "id": "4ddee406-1056-40b0-a7fc-d975f322ad60",
+      "tabs": [
+        {
+          "path": "todo.md",
+          "isPinned": true
+        },
+        {
+          "path": "task/task_readline_async_add_shortcuts.md",
+          "isPinned": false
+        },
+        {
+          "path": "tui/src/tui/terminal_lib_backends/offscreen_buffer/vt_100_ansi_impl/vt_100_impl_char_ops.rs",
+          "isPinned": false
+        },
+        {
+          "path": "tui/src/tui/terminal_lib_backends/offscreen_buffer/ofs_buf_char_ops.rs",
+          "isPinned": false
+        }
+      ],
+      "taskFile": "task/task_readline_async_add_shortcuts.md",
+      "activeTab": "todo.md",
+      "createdAt": 1763497025980,
+      "lastAccessed": 1763499138769
+    },
+    {
+      "name": "[2.0] task_remove_crossterm",
+      "id": "a3243e45-1eb1-4e47-81ac-76cb60d16196",
+      "tabs": [
+        {
+          "path": "todo.md",
+          "isPinned": false
+        },
+        {
+          "path": "task/task_remove_crossterm.md",
+          "isPinned": false
+        },
+        {
+          "path": "tui/src/tui/terminal_lib_backends/offscreen_buffer/ofs_buf_char_ops.rs",
+          "isPinned": false
+        },
+        {
+          "path": "tui/src/tui/terminal_lib_backends/offscreen_buffer/vt_100_ansi_impl/vt_100_impl_char_ops.rs",
+          "isPinned": false
+        }
+      ],
+      "taskFile": "task/task_remove_crossterm.md",
+      "activeTab": "tui/src/tui/terminal_lib_backends/offscreen_buffer/ofs_buf_char_ops.rs",
+      "createdAt": 1763497077542,
+      "lastAccessed": 1763497077542
+    },
+    {
+      "name": "[3.0] task_pty_mux_example",
+      "id": "eae428d0-c656-4860-bc92-746ea9361401",
+      "tabs": [
+        {
+          "path": "todo.md",
+          "isPinned": false
+        },
+        {
+          "path": "task/task_pty_mux_example.md",
+          "isPinned": false
+        },
+        {
+          "path": "tui/src/tui/terminal_lib_backends/offscreen_buffer/vt_100_ansi_impl/vt_100_impl_char_ops.rs",
+          "isPinned": false
+        },
+        {
+          "path": "tui/src/tui/terminal_lib_backends/offscreen_buffer/ofs_buf_char_ops.rs",
+          "isPinned": false
+        }
+      ],
+      "taskFile": "task/task_pty_mux_example.md",
+      "activeTab": "todo.md",
+      "createdAt": 1763497146862,
+      "lastAccessed": 1763497146944
+    }
+  ],
+  "activeTaskSpaceId": "7db0597e-e949-458d-bff9-072e239021e5"
+}

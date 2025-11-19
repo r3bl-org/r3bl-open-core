@@ -11,7 +11,8 @@
 
 use crate::{KeyState,
             core::ansi::vt_100_terminal_input_parser::{VT100FocusStateIR,
-                                                       VT100InputEventIR, VT100KeyCodeIR,
+                                                       VT100InputEventIR,
+                                                       VT100KeyCodeIR,
                                                        VT100KeyModifiersIR,
                                                        VT100PasteModeIR,
                                                        parse_keyboard_sequence,

@@ -21,8 +21,8 @@
 //! ```text
 //!   PTY Output (child process)       User Input (keyboard/mouse)
 //!            │                              │
-//!            ▼                              ▼
-//! ┌──────────────────────────┐   ┌──────────────────────────────┐
+//!            │                              │
+//! ┌──────────▼───────────────┐   ┌──────────▼───────────────────┐
 //! │ VTE Output Parser        │   │ Custom Input Parser          │
 //! │ vt_100_pty_output_parser │   │ vt_100_terminal_input_parser │
 //! └──────────┬───────────────┘   └──────────┬───────────────────┘
@@ -231,8 +231,14 @@
 mod color;
 mod constants;
 mod detect_color_support;
-mod generator;
 mod terminal_output;
+
+// Module is public only when building documentation or tests.
+// This allows rustdoc links to work while keeping it private in release builds.
+#[cfg(any(test, doc))]
+pub mod generator;
+#[cfg(not(any(test, doc)))]
+mod generator;
 
 // Module is public only when building documentation or tests.
 // This allows rustdoc links to work while keeping it private in release builds.

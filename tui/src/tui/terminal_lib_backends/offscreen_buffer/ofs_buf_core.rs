@@ -331,8 +331,18 @@ impl Default for TerminalModeState {
 /// - **ANSI Support**: Terminal state for escape sequence processing
 /// - **Performance**: Pre-calculated memory usage tracking
 ///
+/// ## Underlying protocol parser
+///
+/// - [`vt_100_pty_output_parser`]: The ANSI parser that processes PTY output and updates
+///   this buffer's state via [`apply_ansi_bytes`]
+/// - [`AnsiToOfsBufPerformer`]: The VTE `Perform` implementation that translates ANSI
+///   sequences into buffer operations
+///
 /// [`RenderOpCommon`]: enum@crate::RenderOpCommon
 /// [module documentation]: super
+/// [`vt_100_pty_output_parser`]: mod@crate::core::ansi::vt_100_pty_output_parser
+/// [`apply_ansi_bytes`]: OffscreenBuffer::apply_ansi_bytes
+/// [`AnsiToOfsBufPerformer`]: crate::AnsiToOfsBufPerformer
 #[derive(Clone, PartialEq)]
 pub struct OffscreenBuffer {
     // The actual 2D grid of pixel characters representing the terminal screen.

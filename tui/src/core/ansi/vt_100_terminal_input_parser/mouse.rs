@@ -1,39 +1,44 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Mouse input event [1-based coordinates] parsing from ANSI/CSI sequences.
+//! Mouse input event [1-based coordinates] parsing from ANSI/`CSI` sequences.
 //!
 //! This module handles conversion of mouse-related ANSI escape sequences into mouse
 //! events, including support for multiple mouse protocols.
 //!
-//! ## Where You Are in the PipelineRaw Terminal Input (stdin)
+//! ## Where You Are in the Pipeline
+//!
+//! ```text
+//! Raw Terminal Input (stdin)
 //!    ↓
 //! DirectToAnsiInputDevice (async I/O layer)
 //!    ↓
-//! parser.rs (routing & ESC detection)
-//!    ↓ (routes mouse sequences here)
+//! parser.rs (routing & `ESC` detection)
+//!    │ (routes mouse sequences here)
 //! ┌──▼───────────────────────────────────────┐
 //! │  mouse.rs                                │  ← **YOU ARE HERE**
-//! │  • Parse SGR protocol (modern)           │
-//! │  • Parse X10/Normal (legacy)             │
-//! │  • Parse RXVT protocol (legacy)          │
+//! │  • Parse `SGR` protocol (modern)         │
+//! │  • Parse `X10`/Normal (legacy)           │
+//! │  • Parse `RXVT` protocol (legacy)        │
 //! │  • Detect clicks/drags/scroll/motion     │
 //! │  • Extract position & modifiers          │
 //! └──────────────────────────────────────────┘
 //!    ↓
 //! VT100InputEventIR::Mouse { button, pos, action, modifiers }
+//! ```
+//!
 //! **Navigate**:
 //! - ⬆️ **Up**: [`parser`] - Main routing entry point
 //! - ➡️ **Peer**: [`keyboard`], [`terminal_events`], [`utf8`] - Other specialized parsers
 //! - 📚 **Types**: [`VT100MouseButtonIR`], [`VT100MouseActionIR`], [`TermPos`]
 //!
 //! ## Supported Mouse Protocols
-//! - **SGR (Selective Graphic Rendition) Protocol**: Modern standard format
+//! - **`SGR` (Selective Graphic Rendition) Protocol**: Modern standard format
 //! - Format: `CSI < Cb ; Cx ; Cy M/m`
 //! - Button detection (left=0, middle=1, right=2)
 //! - Drag detection (button with flag 32)
 //! - Scroll events (buttons 64/65 for vertical, 66/67 for horizontal)
-//! - **X10/Normal Protocol**: Legacy formats
-//! - **RXVT Protocol**: Alternative legacy format
+//! - **`X10`/Normal Protocol**: Legacy formats
+//! - **`RXVT` Protocol**: Alternative legacy format
 //! - **Click Events**: Press (M) and Release (m)
 //! - **Drag Events**: Motion while button held
 //! - **Motion Events**: Movement without buttons
@@ -118,12 +123,12 @@ pub fn parse_mouse_sequence(buffer: &[u8]) -> Option<(VT100InputEventIR, ByteOff
     None
 }
 
-/// Parse SGR mouse protocol: `CSI < Cb ; Cx ; Cy M/m`
+/// Parse `SGR` mouse protocol: `CSI < Cb ; Cx ; Cy M/m`
 ///
 /// Returns `Some((event, bytes_consumed))` for complete sequences, `None` for incomplete.
 ///
 /// Format breakdown:
-/// - `ESC[<` prefix (3 bytes)
+/// - `ESC [<` prefix (3 bytes)
 /// - `Cb` = button byte (with modifiers encoded)
 /// - `Cx` = column (1-based)
 /// - `Cy` = row (1-based)
@@ -210,12 +215,12 @@ fn parse_sgr_mouse(sequence: &[u8]) -> Option<(VT100InputEventIR, ByteOffset)> {
     ))
 }
 
-/// Parse X10/Normal mouse protocol: `CSI M Cb Cx Cy`
+/// Parse `X10`/Normal mouse protocol: `CSI M Cb Cx Cy`
 ///
 /// Returns `Some((event, bytes_consumed))` for complete sequences, `None` for incomplete.
 ///
 /// Format breakdown:
-/// - `ESC[M` prefix (3 bytes)
+/// - `ESC [M` prefix (3 bytes)
 /// - `Cb` = button byte (bits 0-1: button, bits 2-4: modifiers, bit 5: motion)
 /// - `Cx` = column byte (raw value - 32 = 1-based column position)
 /// - `Cy` = row byte (raw value - 32 = 1-based row position)
@@ -356,12 +361,12 @@ fn parse_x10_mouse(sequence: &[u8]) -> Option<(VT100InputEventIR, ByteOffset)> {
     }
 }
 
-/// Parse RXVT mouse protocol: `CSI Cb ; Cx ; Cy M`
+/// Parse `RXVT` mouse protocol: `CSI Cb ; Cx ; Cy M`
 ///
 /// Returns `Some((event, bytes_consumed))` for complete sequences, `None` for incomplete.
 ///
 /// Format breakdown:
-/// - `ESC[` prefix (2 bytes)
+/// - `ESC [` prefix (2 bytes)
 /// - `Cb` = button code (ASCII digits, semicolon-separated)
 /// - `Cx` = column (ASCII digits, semicolon-separated)
 /// - `Cy` = row (ASCII digits, semicolon-separated)
@@ -1310,7 +1315,10 @@ mod tests {
         assert_eq!(bytes_consumed.as_usize(), seq.len());
         match event {
             VT100InputEventIR::Mouse { action, pos, .. } => {
-                assert_eq!(action, VT100MouseActionIR::Scroll(VT100ScrollDirectionIR::Up));
+                assert_eq!(
+                    action,
+                    VT100MouseActionIR::Scroll(VT100ScrollDirectionIR::Up)
+                );
                 assert_eq!(pos.col.as_u16(), 37);
                 assert_eq!(pos.row.as_u16(), 14);
             }

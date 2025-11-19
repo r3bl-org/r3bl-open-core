@@ -71,10 +71,9 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 use crate::{ColIndex, DEBUG_TUI_COMPOSITOR, DEBUG_TUI_SHOW_PIPELINE, FlushKind,
             GCStringOwned, InlineString, LockedOutputDevice, OffscreenBuffer,
-            OffscreenBufferPaint, PixelChar,
-            PixelCharDiffChunks, RenderOpCommon, RenderOpFlush, RenderOpOutput,
-            RenderOpOutputVec, RenderOpsExec, RowIndex, Size, TuiStyle, ch, col,
-            glyphs::SPACER_GLYPH, row,
+            OffscreenBufferPaint, PixelChar, PixelCharDiffChunks, RenderOpCommon,
+            RenderOpFlush, RenderOpOutput, RenderOpOutputVec, RenderOpsExec, RowIndex,
+            Size, TuiStyle, ch, col, glyphs::SPACER_GLYPH, row,
             terminal_lib_backends::crossterm_backend::PaintRenderOpImplCrossterm};
 
 #[derive(Debug)]

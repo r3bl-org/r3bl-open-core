@@ -43,36 +43,36 @@
 //!                                            ╰─────────────────╯
 //! ```
 //!
-//! # OSC Sequence Processing Flow
+//! # `OSC` Sequence Processing Flow
 //!
 //! ```text
-//! Application sends "ESC]0;My Title\007"
+//! Application sends "ESC ]0;My Title\007"
 //!         ↓
-//!     PTY Slave (OSC sequence)
+//!     PTY Slave (`OSC` sequence)
 //!         ↓
 //!     PTY Master (byte stream) <- in process_manager.rs
 //!         ↓
-//!     VTE Parser (accumulates OSC params)
+//!     VTE Parser (accumulates `OSC` params)
 //!         ↓
 //!     osc_dispatch() [routes to functions below]
 //!         ↓
-//!     Route to OSC operations:                            ╭───────────╮
+//!     Route to `OSC` operations:                          ╭───────────╮
 //!       - osc_ops:: for OS commands (title, hyperlink) <- │THIS MODULE│
 //!         ↓                                               ╰───────────╯
 //!     Queue OscEvent for later rendering
 //! ```
 //!
-//! # Supported OSC Sequences
+//! # Supported `OSC` Sequences
 //!
 //! This module handles Operating System Command sequences that provide
 //! integration between terminal applications and the operating system:
 //!
-//! - **OSC 0**: Set both window title and icon name
-//! - **OSC 1**: Set icon name only (treated same as title)
-//! - **OSC 2**: Set window title only
-//! - **OSC 8**: Create hyperlinks (format: OSC 8 ; params ; URI)
+//! - **`OSC 0`**: Set both window title and icon name
+//! - **`OSC 1`**: Set icon name only (treated same as title)
+//! - **`OSC 2`**: Set window title only
+//! - **`OSC 8`**: Create hyperlinks (format: `OSC 8 ; params ; URI`)
 //!
-//! OSC sequences are queued as events for later processing by the output renderer.
+//! `OSC` sequences are queued as events for later processing by the output renderer.
 //!
 //! [`impl_osc_ops`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl::vt_100_impl_osc_ops
 //! [`test_osc_ops`]: crate::core::ansi::vt_100_pty_output_parser::vt_100_pty_output_conformance_tests::tests::vt_100_test_osc_ops
@@ -81,9 +81,9 @@
 use super::super::ansi_parser_public_api::AnsiToOfsBufPerformer;
 use crate::core::osc::osc_codes;
 
-/// Handle OSC dispatch - process all OSC (Operating System Command) sequences.
-/// This is the main entry point for OSC sequence processing.
-/// See individual helper functions for specific OSC code handling.
+/// Handle `OSC` dispatch - process all `OSC` (Operating System Command) sequences.
+/// This is the main entry point for `OSC` sequence processing.
+/// See individual helper functions for specific `OSC` code handling.
 pub fn dispatch_osc(
     performer: &mut AnsiToOfsBufPerformer,
     params: &[&[u8]],
@@ -123,7 +123,7 @@ pub fn dispatch_osc(
     }
 }
 
-/// Handle OSC title and icon sequences (OSC 0, 1, 2).
+/// Handle `OSC` title and icon sequences (`OSC 0`, `OSC 1`, `OSC 2`).
 /// Sets window title and/or icon name.
 /// Queues [`SetTitleAndTab`] event for later processing by output renderer.
 ///
@@ -132,7 +132,7 @@ pub fn handle_title_and_icon(performer: &mut AnsiToOfsBufPerformer, title: &str)
     performer.ofs_buf.handle_title_and_icon(title);
 }
 
-/// Handle OSC 8 hyperlink sequences.
+/// Handle `OSC 8` hyperlink sequences.
 /// Creates hyperlinks with URI for later processing.
 /// The display text is handled separately via `print()` calls.
 /// Queues Hyperlink event for later processing by output renderer.

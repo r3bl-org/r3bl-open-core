@@ -43,7 +43,7 @@
 //!                                            ╰─────────────────╯
 //! ```
 //!
-//! # ESC Sequence Architecture
+//! # `ESC` Sequence Architecture
 //!
 //! ```text
 //! Application sends "ESC c" (reset terminal)
@@ -52,20 +52,20 @@
 //!         ↓
 //!     PTY Master (byte stream) <- in process_manager.rs
 //!         ↓
-//!     VTE Parser (parses ESC char pattern)
+//!     VTE Parser (parses `ESC` char pattern)
 //!         ↓
 //!     esc_dispatch() [calls functions in this module]
 //!         ↓
 //!     terminal_ops functions:
-//!       - reset_terminal() for ESC c (RIS)
-//!       - select_ascii_character_set() for ESC ( B
-//!       - select_dec_graphics_character_set() for ESC ( 0
+//!       - reset_terminal() for `ESC c` (`RIS`)
+//!       - select_ascii_character_set() for `ESC ( B`
+//!       - select_dec_graphics_character_set() for `ESC ( 0`
 //!         ↓
 //!     Update OffscreenBuffer state
 //! ```
 //!
-//! Note: Cursor save/restore ESC sequences (ESC 7/8) are handled by [`cursor_ops`]
-//! functions to maintain consistency with CSI equivalents (CSI s/u).
+//! Note: Cursor save/restore `ESC` sequences (`ESC 7`/`ESC 8`) are handled by [`cursor_ops`]
+//! functions to maintain consistency with `CSI` equivalents (`CSI s`/`CSI u`).
 //!
 //! [`cursor_ops`]: crate::core::ansi::vt_100_pty_output_parser::operations::vt_100_shim_cursor_ops
 //! [`impl_terminal_ops`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl::vt_100_impl_terminal_ops
@@ -78,12 +78,12 @@ use crate::{Pos, TuiStyle};
 /// Clear all buffer content.
 fn clear_buffer(performer: &mut AnsiToOfsBufPerformer) { performer.ofs_buf.clear(); }
 
-/// Reset all SGR attributes to default state.
+/// Reset all `SGR` attributes to default state.
 fn reset_sgr_attributes(performer: &mut AnsiToOfsBufPerformer) {
     performer.ofs_buf.ansi_parser_support.current_style = TuiStyle::default();
 }
 
-/// Reset terminal to initial state (ESC c).
+/// Reset terminal to initial state (`ESC c`).
 /// Clears the buffer, resets cursor, and clears saved state.
 /// Clears DECSTBM scroll region margins.
 pub fn reset_terminal(performer: &mut AnsiToOfsBufPerformer) {
@@ -105,17 +105,17 @@ pub fn reset_terminal(performer: &mut AnsiToOfsBufPerformer) {
     performer.ofs_buf.ansi_parser_support.scroll_region_top = None;
     performer.ofs_buf.ansi_parser_support.scroll_region_bottom = None;
 
-    // Clear any SGR attributes.
+    // Clear any `SGR` attributes.
     reset_sgr_attributes(performer);
 }
 
-/// Select ASCII character set (ESC ( B).
+/// Select ASCII character set (`ESC ( B`).
 /// Switches to normal ASCII character set for standard text rendering.
 pub fn select_ascii_character_set(performer: &mut AnsiToOfsBufPerformer) {
     performer.ofs_buf.select_ascii_character_set();
 }
 
-/// Select DEC Special Graphics character set (ESC ( 0).
+/// Select DEC Special Graphics character set (`ESC ( 0`).
 /// Switches to DEC Special Graphics character set for box-drawing characters.
 pub fn select_dec_graphics_character_set(performer: &mut AnsiToOfsBufPerformer) {
     performer.ofs_buf.select_dec_graphics_character_set();

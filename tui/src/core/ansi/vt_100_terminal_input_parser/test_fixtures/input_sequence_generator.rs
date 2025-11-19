@@ -56,16 +56,16 @@ use crate::{KeyState,
 
 /// Generate ANSI bytes for an input event.
 ///
-/// Converts any input event back into the ANSI CSI sequence format that terminals
+/// Converts any input event back into the ANSI `CSI` sequence format that terminals
 /// send. This enables round-trip validation: `InputEvent` → bytes → parse → `InputEvent`.
 ///
 /// ## Supported Events
 ///
 /// - **Keyboard**: All key codes with modifiers (arrows, function keys, special keys)
-/// - **Resize**: Window resize notifications (CSI 8 ; rows ; cols t)
-/// - **Focus**: Focus gained/lost events (CSI I / CSI O)
-/// - **Paste**: Bracketed paste mode (CSI 200~ / CSI 201~)
-/// - **Mouse**: SGR mouse format (CSI < button ; col ; row M/m)
+/// - **Resize**: Window resize notifications (`CSI 8 ; rows ; cols t`)
+/// - **Focus**: Focus gained/lost events (`CSI I` / `CSI O`)
+/// - **Paste**: Bracketed paste mode (`CSI 200~` / `CSI 201~`)
+/// - **Mouse**: `SGR` mouse format (`CSI < button ; col ; row M/m`)
 ///
 /// ## Returns
 ///
@@ -107,11 +107,11 @@ pub fn generate_keyboard_sequence(event: &VT100InputEventIR) -> Option<Vec<u8>> 
     }
 }
 
-/// Generate ANSI bytes for a mouse event in X10/Normal format.
+/// Generate ANSI bytes for a mouse event in `X10`/Normal format.
 ///
 /// Generates sequences like: `ESC [ M Cb Cx Cy` (6 bytes)
 ///
-/// ## X10 Format Details
+/// ## `X10` Format Details
 ///
 /// - `Cb` = button byte: button code (0-2) + modifier flags + motion flag
 /// - `Cx` = column byte: `actual_column` + 32 (ASCII offset encoding)
@@ -190,11 +190,11 @@ pub fn generate_x10_mouse_sequence(
     bytes
 }
 
-/// Generate ANSI bytes for a mouse event in RXVT format.
+/// Generate ANSI bytes for a mouse event in `RXVT` format.
 ///
 /// Generates sequences like: `ESC [ Cb ; Cx ; Cy M` (variable length)
 ///
-/// ## RXVT Format Details
+/// ## `RXVT` Format Details
 ///
 /// Uses decimal numbers separated by semicolons (human-readable format):
 /// - `Cb` = button code (decimal): button (0-2) + modifier bits
@@ -207,7 +207,7 @@ pub fn generate_x10_mouse_sequence(
 /// - `button`: Mouse button
 /// - `col`: Column coordinate (1-based)
 /// - `row`: Row coordinate (1-based)
-/// - `action`: Press or Release (RXVT primarily uses Press)
+/// - `action`: Press or Release (`RXVT` primarily uses Press)
 /// - `modifiers`: Key modifiers (Shift, Ctrl, Alt)
 #[must_use]
 pub fn generate_rxvt_mouse_sequence(
@@ -255,9 +255,9 @@ pub fn generate_rxvt_mouse_sequence(
     bytes
 }
 
-/// Generate ANSI bytes for a mouse event in SGR format.
+/// Generate ANSI bytes for a mouse event in `SGR` format.
 ///
-/// Generates sequences like: `ESC[<button;col;rowM` or `ESC[<button;col;rowm`
+/// Generates sequences like: `ESC [<button;col;rowM` or `ESC [<button;col;rowm`
 ///
 /// ## Parameters
 ///
@@ -453,7 +453,7 @@ fn generate_key_sequence(
     }
 }
 
-/// Generate a special key or function key sequence (CSI n~).
+/// Generate a special key or function key sequence (`CSI n~`).
 fn generate_special_key_sequence(
     bytes: &mut Vec<u8>,
     code: u16,

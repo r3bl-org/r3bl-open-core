@@ -17,7 +17,7 @@
     "usernamehw.errorlens", // Error Lens.
     "rust-lang.rust-analyzer", // Rust Analyzer.
     "fill-labs.dependi", // crates.io.
-    "stkb.rewrap", // Rewrap.
+    "dnut.rewrap-revived", // Rewrap Revived.
     "mishkinf.goto-next-previous-member", // Go to Next/Previous Member.
     "naumovs.color-highlight", // Color Highlight.
     "tamasfe.even-better-toml", // Even Better TOML.

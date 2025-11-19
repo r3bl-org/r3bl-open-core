@@ -34,7 +34,8 @@
 //! - **Next stage (Stage 4: Shared)**: [`offscreen_buffer::paint_impl` mod docs] (Backend
 //!   Converter - shared by both Crossterm and DirectToAnsi)
 //! - **Stage 5 options**:
-//!   - [`crossterm_backend::crossterm_paint_render_op_impl` mod docs] (Crossterm executor)
+//!   - [`crossterm_backend::crossterm_paint_render_op_impl` mod docs] (Crossterm
+//!     executor)
 //!   - [`direct_to_ansi` mod docs] (DirectToAnsi executor - generates ANSI escape
 //!     sequences)
 //!

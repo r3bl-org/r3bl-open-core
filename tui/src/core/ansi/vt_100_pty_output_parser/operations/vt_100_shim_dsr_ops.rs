@@ -43,16 +43,16 @@
 //!                                            ╰─────────────────╯
 //! ```
 //!
-//! # CSI Sequence Processing Flow
+//! # `CSI` Sequence Processing Flow
 //!
 //! ```text
-//! Application sends "ESC[6n" (request cursor position)
+//! Application sends "ESC [6n" (request cursor position)
 //!         ↓
 //!     PTY Slave (escape sequence)
 //!         ↓
 //!     PTY Master (byte stream) <- in process_manager.rs
 //!         ↓
-//!     VTE Parser (parses ESC[...char pattern)
+//!     VTE Parser (parses `ESC [`...char pattern)
 //!         ↓
 //!     csi_dispatch() [routes to modules below]
 //!         ↓
@@ -74,7 +74,7 @@
 use crate::core::ansi::{generator::DsrRequestType,
                         vt_100_pty_output_parser::ansi_parser_public_api::AnsiToOfsBufPerformer};
 
-/// Handle Device Status Report (CSI n) command.
+/// Handle Device Status Report (`CSI n`) command.
 ///
 /// This command is used by applications to query the terminal's status.
 /// Generates DSR response events that will be processed by the process manager

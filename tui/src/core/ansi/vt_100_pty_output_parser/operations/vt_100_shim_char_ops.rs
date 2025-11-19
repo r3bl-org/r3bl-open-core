@@ -43,16 +43,16 @@
 //!                                            ╰─────────────────╯
 //! ```
 //!
-//! # CSI Sequence Processing Flow
+//! # `CSI` Sequence Processing Flow
 //!
 //! ```text
-//! Application sends "ESC[2P" (delete 2 chars)
+//! Application sends "ESC [2P" (delete 2 chars)
 //!         ↓
 //!     PTY Slave (escape sequence)
 //!         ↓
 //!     PTY Master (byte stream) <- in process_manager.rs
 //!         ↓
-//!     VTE Parser (parses ESC[...char pattern)
+//!     VTE Parser (parses `ESC [`...char pattern)
 //!         ↓
 //!     csi_dispatch() [routes to modules below]
 //!         ↓
@@ -73,9 +73,9 @@
 //! ## Parameter Handling
 //!
 //! **Missing or zero parameters default to 1:**
-//! - `ESC[@` (missing param) → insert 1 character
-//! - `ESC[0@` (explicit zero) → insert 1 character
-//! - `ESC[5@` (explicit value) → insert 5 characters
+//! - `ESC [@` (missing param) → insert 1 character
+//! - `ESC [0@` (explicit zero) → insert 1 character
+//! - `ESC [5@` (explicit value) → insert 5 characters
 //!
 //! This is handled by [`extract_nth_single_non_zero()`] which returns [`NonZeroU16`].
 //!

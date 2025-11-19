@@ -14,7 +14,7 @@
 //! DirectToAnsiInputDevice (async I/O layer)
 //!    ↓
 //! parser.rs (routing & ESC detection)
-//!    ↓ (routes CSI/SS3 keyboard sequences here)
+//!    │ (routes CSI/SS3 keyboard sequences here)
 //! ┌──▼───────────────────────────────────────┐
 //! │  keyboard.rs                             │  ← **YOU ARE HERE**
 //! │  • Parse CSI sequences (ESC [)           │
@@ -192,12 +192,12 @@
 //!
 //! ### Why Each Modifier Uses Different Encoding
 //!
-//! | Modifier     | Encoding                 | Reason                           |
-//! | ------------ | ------------------------ | -------------------------------- |
-//! | **Ctrl**     | Single byte (0x00-0x1F)  | Fits in ASCII control codes      |
-//! | **Alt**      | ESC prefix (2 bytes)     | No room in ASCII, prepend ESC    |
-//! | **Shift**    | Implicit in case         | 'a' vs 'A' already encodes it    |
-//! | **Combos**   | CSI parameters           | Need bitmask encoding            |
+//! | Modifier     | Encoding                    | Reason                           |
+//! | ------------ | --------------------------- | -------------------------------- |
+//! | **Ctrl**     | Single byte (`0x00`-`0x1F`) | Fits in ASCII control codes      |
+//! | **Alt**      | ESC prefix (2 bytes)        | No room in ASCII, prepend ESC    |
+//! | **Shift**    | Implicit in case            | 'a' vs 'A' already encodes it    |
+//! | **Combos**   | CSI parameters              | Need bitmask encoding            |
 //!
 //! **Why ESC prefix for Alt?**
 //! - **Historical**: Used since VT52 (1975), proven for 50+ years
@@ -275,15 +275,15 @@
 //! When first byte is not ESC:
 //! 1. **`parse_terminal_event()`** - (Re-attempted for non-ESC input)
 //! 2. **`parse_mouse_sequence()`** - X10/RXVT mouse protocols (legacy)
-//! 3. **`parse_control_character()`** - Ctrl+A through Ctrl+Z (0x00-0x1F)
+//! 3. **`parse_control_character()`** - Ctrl+A through Ctrl+Z (`0x00`-`0x1F`)
 //!    - Examples: `0x01` (Ctrl+A), `0x04` (Ctrl+D), `0x17` (Ctrl+W)
 //!    - **Must be tried before UTF-8** because control bytes are valid UTF-8
 //! 4. **`parse_utf8_text()`** - Regular text input and printable characters
 //!    - Examples: `a`, `ñ`, `日`, multi-byte UTF-8 sequences
 //!
-//! **Critical**: Control characters must be parsed before UTF-8 because bytes 0x00-0x1F
-//! are technically valid UTF-8 but represent Ctrl+letter combinations. Without this
-//! priority, Ctrl+A would be misinterpreted as incomplete UTF-8.
+//! **Critical**: Control characters must be parsed before UTF-8 because bytes
+//! `0x00`-`0x1F` are technically valid UTF-8 but represent Ctrl+letter combinations.
+//! Without this priority, Ctrl+A would be misinterpreted as incomplete UTF-8.
 //!
 //! ## Ambiguous Control Character Handling
 //!
@@ -304,9 +304,9 @@
 //! ### Why This Matters
 //!
 //! **Problem**: In VT-100 terminals, Ctrl modifies keys by masking with `0x1F`:
-//! - `Ctrl+I` = `'I'` (0x49) & 0x1F = 0x09 (same as Tab)
-//! - `Ctrl+M` = `'M'` (0x4D) & 0x1F = 0x0D (same as Enter/CR)
-//! - `Ctrl+H` = `'H'` (0x48) & 0x1F = 0x08 (same as Backspace)
+//! - `Ctrl+I` = `'I'` (`0x49`) & `0x1F` = `0x09` (same as Tab)
+//! - `Ctrl+M` = `'M'` (`0x4D`) & `0x1F` = `0x0D` (same as Enter/CR)
+//! - `Ctrl+H` = `'H'` (`0x48`) & `0x1F` = `0x08` (same as Backspace)
 //!
 //! **Solution**: Prioritize the dedicated key's interpretation. Applications that need
 //! Ctrl+I/Ctrl+M/Ctrl+H can use alternative key bindings (e.g., Ctrl+Space for custom
@@ -366,7 +366,7 @@ use crate::{ASCII_DEL, ByteOffset, KeyState, byte_offset,
                                     SS3_NUMPAD_ENTER, SS3_NUMPAD_MINUS,
                                     SS3_NUMPAD_MULTIPLY, SS3_NUMPAD_PLUS}};
 
-/// Parse a control character (bytes 0x00-0x1F) and convert to Ctrl+key event.
+/// Parse a control character (bytes `0x00`-`0x1F`) and convert to Ctrl+key event.
 ///
 /// **Dispatch position**: 3rd parser in non-ESC priority. Must be tried before UTF-8 text
 /// because control bytes are valid UTF-8 but represent Ctrl+letter combinations.
@@ -379,10 +379,6 @@ use crate::{ASCII_DEL, ByteOffset, KeyState, byte_offset,
 /// ## Returns
 ///
 /// `Some((event, 1))` if successful, `None` otherwise.
-///
-/// [`Parser Dispatch Priority Pipeline`]
-/// [`Control Key Combinations`]
-/// [`Ambiguous Control Character Handling`]
 ///
 /// [`Ambiguous Control Character Handling`]: mod@self#ambiguous-control-character-handling
 /// [`Control Key Combinations`]: mod@self#control-key-combinations-ctrlletter
@@ -487,8 +483,8 @@ pub fn parse_control_character(buffer: &[u8]) -> Option<(VT100InputEventIR, Byte
 /// **Dispatch position**: Only parser for ESC + unknown byte. See module docs
 /// [`Parser Dispatch Priority Pipeline`] for dispatch order.
 ///
-/// Terminals send Alt+key as ESC (0x1B) + key byte. This parses two-byte sequences like
-/// Alt+B → (0x1B, 0x62) or Alt+Backspace → (0x1B, 0x7F).
+/// Terminals send Alt+key as ESC (`0x1B`) + key byte. This parses two-byte sequences like
+/// Alt+B → (`0x1B`, `0x62`) or Alt+Backspace → (`0x1B`, `0x7F`).
 ///
 /// For design rationale on why Alt uses ESC prefix vs CSI sequences, see module docs
 /// [`Why Alt Uses ESC Prefix`].
@@ -497,9 +493,6 @@ pub fn parse_control_character(buffer: &[u8]) -> Option<(VT100InputEventIR, Byte
 ///
 /// `Some((event, 2))` if buffer starts with ESC + (printable ASCII or DEL),
 /// `None` otherwise.
-///
-/// [`Parser Dispatch Priority Pipeline`]
-/// [`Why Alt Uses ESC Prefix`]
 ///
 /// [`Parser Dispatch Priority Pipeline`]: mod@self#parser-dispatch-priority-pipeline
 /// [`Why Alt Uses ESC Prefix`]: mod@self#why-alt-uses-esc-prefix-not-csi
@@ -567,9 +560,6 @@ pub fn parse_alt_letter(buffer: &[u8]) -> Option<(VT100InputEventIR, ByteOffset)
 /// `Some((event, bytes_consumed))` if a complete sequence was parsed,
 /// `None` if the sequence is incomplete or invalid.
 ///
-/// [`Parser Dispatch Priority Pipeline`]
-/// [`CSI Sequences`]
-///
 /// [`CSI Sequences`]: mod@self#csi-sequences-esc
 /// [`Parser Dispatch Priority Pipeline`]: mod@self#parser-dispatch-priority-pipeline
 #[must_use]
@@ -609,9 +599,6 @@ pub fn parse_keyboard_sequence(buffer: &[u8]) -> Option<(VT100InputEventIR, Byte
 ///
 /// `Some((event, 3))` if a valid SS3 sequence was parsed,
 /// `None` if the sequence is incomplete or invalid.
-///
-/// [`Parser Dispatch Priority Pipeline`]
-/// [`SS3 Sequences`]
 ///
 /// [`Parser Dispatch Priority Pipeline`]: mod@self#parser-dispatch-priority-pipeline
 /// [`SS3 Sequences`]: mod@self#ss3-sequences-esc-o
@@ -904,8 +891,6 @@ mod helpers {
 /// Uses generator functions for round-trip testing consistency between
 /// sequence generation and parsing. See module docs [`Testing Strategy`] for details.
 ///
-/// [`Testing Strategy`]
-///
 /// [`Testing Strategy`]: mod@super#testing-strategy
 #[cfg(test)]
 mod tests {
@@ -916,7 +901,10 @@ mod tests {
     // ensuring consistency between parsing and generation (round-trip testing).
 
     /// Build an arrow key sequence using the generator.
-    fn arrow_key_sequence(code: VT100KeyCodeIR, modifiers: VT100KeyModifiersIR) -> Vec<u8> {
+    fn arrow_key_sequence(
+        code: VT100KeyCodeIR,
+        modifiers: VT100KeyModifiersIR,
+    ) -> Vec<u8> {
         use crate::core::ansi::vt_100_terminal_input_parser::test_fixtures::generate_keyboard_sequence;
         let event = VT100InputEventIR::Keyboard { code, modifiers };
         generate_keyboard_sequence(&event).expect("Failed to generate arrow key sequence")
@@ -935,7 +923,10 @@ mod tests {
 
     /// Build a special key sequence (Home, End, Insert, Delete, `PageUp`, `PageDown`)
     /// using the generator.
-    fn special_key_sequence(code: VT100KeyCodeIR, modifiers: VT100KeyModifiersIR) -> Vec<u8> {
+    fn special_key_sequence(
+        code: VT100KeyCodeIR,
+        modifiers: VT100KeyModifiersIR,
+    ) -> Vec<u8> {
         use crate::core::ansi::vt_100_terminal_input_parser::test_fixtures::generate_keyboard_sequence;
         let event = VT100InputEventIR::Keyboard { code, modifiers };
         generate_keyboard_sequence(&event)
@@ -1129,7 +1120,8 @@ mod tests {
     #[test]
     fn test_arrow_up() {
         // Use generator to build the sequence (self-documenting)
-        let input = arrow_key_sequence(VT100KeyCodeIR::Up, VT100KeyModifiersIR::default());
+        let input =
+            arrow_key_sequence(VT100KeyCodeIR::Up, VT100KeyModifiersIR::default());
         let (event, bytes_consumed) =
             parse_keyboard_sequence(&input).expect("Should parse");
         assert_eq!(
@@ -1144,7 +1136,8 @@ mod tests {
 
     #[test]
     fn test_arrow_down() {
-        let input = arrow_key_sequence(VT100KeyCodeIR::Down, VT100KeyModifiersIR::default());
+        let input =
+            arrow_key_sequence(VT100KeyCodeIR::Down, VT100KeyModifiersIR::default());
         let (event, bytes_consumed) =
             parse_keyboard_sequence(&input).expect("Should parse");
         assert!(matches!(
@@ -1159,7 +1152,8 @@ mod tests {
 
     #[test]
     fn test_arrow_right() {
-        let input = arrow_key_sequence(VT100KeyCodeIR::Right, VT100KeyModifiersIR::default());
+        let input =
+            arrow_key_sequence(VT100KeyCodeIR::Right, VT100KeyModifiersIR::default());
         let (event, bytes_consumed) =
             parse_keyboard_sequence(&input).expect("Should parse");
         assert!(matches!(
@@ -1174,7 +1168,8 @@ mod tests {
 
     #[test]
     fn test_arrow_left() {
-        let input = arrow_key_sequence(VT100KeyCodeIR::Left, VT100KeyModifiersIR::default());
+        let input =
+            arrow_key_sequence(VT100KeyCodeIR::Left, VT100KeyModifiersIR::default());
         let (event, bytes_consumed) =
             parse_keyboard_sequence(&input).expect("Should parse");
         assert!(matches!(
@@ -1365,7 +1360,8 @@ mod tests {
 
     #[test]
     fn test_end_key() {
-        let input = special_key_sequence(VT100KeyCodeIR::End, VT100KeyModifiersIR::default());
+        let input =
+            special_key_sequence(VT100KeyCodeIR::End, VT100KeyModifiersIR::default());
         let (event, bytes_consumed) =
             parse_keyboard_sequence(&input).expect("Should parse");
         assert!(matches!(
@@ -1428,8 +1424,10 @@ mod tests {
 
     #[test]
     fn test_page_down() {
-        let input =
-            special_key_sequence(VT100KeyCodeIR::PageDown, VT100KeyModifiersIR::default());
+        let input = special_key_sequence(
+            VT100KeyCodeIR::PageDown,
+            VT100KeyModifiersIR::default(),
+        );
         let (event, bytes_consumed) =
             parse_keyboard_sequence(&input).expect("Should parse");
         assert!(matches!(

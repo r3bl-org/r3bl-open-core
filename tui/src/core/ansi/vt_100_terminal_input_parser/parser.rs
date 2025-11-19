@@ -12,15 +12,15 @@
 //! Raw Terminal Input (stdin)
 //!    ↓
 //! DirectToAnsiInputDevice (async I/O layer)
-//!    ↓
+//!    │
 //! ┌──▼───────────────────────────────────────┐
 //! │  parser.rs - Main Entry Point            │  ← **YOU ARE HERE**
 //! │  • try_parse_input_event()               │
-//! │  • Smart routing & ESC detection         │
-//! │  • Zero-latency ESC key handling         │
+//! │  • Smart routing & `ESC` detection       │
+//! │  • Zero-latency `ESC` key handling       │
 //! └──────────────────────────────────────────┘
 //!    │ (routes to specialized parsers)
-//!    ├─→ keyboard.rs (CSI/SS3 keyboard sequences)
+//!    ├─→ keyboard.rs (`CSI`/`SS3` keyboard sequences)
 //!    ├─→ mouse.rs (mouse protocols)
 //!    ├─→ terminal_events.rs (resize/focus/paste)
 //!    └─→ utf8.rs (text input)
@@ -34,28 +34,28 @@
 //! - 🔧 **Backend**: [`DirectToAnsiInputDevice`] - Async I/O layer that calls this
 //! - 📚 **Types**: [`VT100InputEventIR`] - Output event type
 //!
-//! ## Zero-Latency ESC Key Detection
+//! ## Zero-Latency `ESC` Key Detection
 //!
-//! **The Problem**: Distinguishing ESC key presses from escape sequences (e.g., Up Arrow
+//! **The Problem**: Distinguishing `ESC` key presses from escape sequences (e.g., Up Arrow
 //! = `ESC [ A`).
 //!
 //! **Baseline (crossterm)**: When reading `0x1B` alone, wait up to 150ms to see if more
-//! bytes arrive. If timeout expires → emit ESC key. If bytes arrive → parse escape
+//! bytes arrive. If timeout expires → emit `ESC` key. If bytes arrive → parse escape
 //! sequence.
 //!
-//! **Our Approach**: Immediately emit ESC when buffer contains only `[0x1B]`, with no
+//! **Our Approach**: Immediately emit `ESC` when buffer contains only `[0x1B]`, with no
 //! artificial delay.
 //!
 //! ### Performance Comparison
 //!
 //! | Input Type           | crossterm Latency   | Our Latency   | Improvement       |
 //! | -------------------- | ------------------- | ------------- | ----------------- |
-//! | **ESC key press**    | 150ms (timeout)     | 0ms           | **150ms faster**  |
+//! | **`ESC` key press**  | 150ms (timeout)     | 0ms           | **150ms faster**  |
 //! | Arrow keys           | 0ms (immediate)     | 0ms           | Same              |
 //! | Regular text         | 0ms (immediate)     | 0ms           | Same              |
 //! | Mouse events         | 0ms (immediate)     | 0ms           | Same              |
 //!
-//! **Benefit applies to**: Vim-style modal editors, ESC-heavy workflows, dialog
+//! **Benefit applies to**: Vim-style modal editors, `ESC`-heavy workflows, dialog
 //! dismissal.
 //!
 //! ### How Escape Sequences Arrive in Practice
@@ -85,12 +85,12 @@
 //! Over high-latency connections, bytes might arrive separately:
 //!
 //! ```text
-//! First read:  [0x1B]           → Emits ESC immediately
-//! Second read: [0x5B, 0x41]     → User gets ESC instead of Up Arrow
+//! First read:  [0x1B]           → Emits `ESC` immediately
+//! Second read: [0x5B, 0x41]     → User gets `ESC` instead of Up Arrow
 //! ```
 //!
 //! **Trade-off**: We optimize for the common case (local terminals with atomic
-//! sequences) to achieve 0ms ESC latency, accepting rare edge cases over forcing
+//! sequences) to achieve 0ms `ESC` latency, accepting rare edge cases over forcing
 //! 150ms timeout on all users.
 //!
 //! #### Why This Assumption Holds
@@ -101,7 +101,7 @@
 //! - **Kernel buffering**: Even with slight delays, kernel buffers complete sequences
 //!   before `read()` sees them
 //! - **Network delay case**: Over SSH with 200ms latency, UX is already degraded; getting
-//!   ESC instead of Up Arrow is annoying but not catastrophic
+//!   `ESC` instead of Up Arrow is annoying but not catastrophic
 //!
 //! [`DirectToAnsiInputDevice`]: crate::DirectToAnsiInputDevice
 //! [`VT100InputEventIR`]: super::VT100InputEventIR
@@ -126,10 +126,10 @@ use crate::{ByteOffset, byte_offset,
 ///
 /// The parser uses intelligent 1-2 byte lookahead to determine routing:
 ///
-/// - `[0x1B]` alone → ESC key (emitted immediately, zero-latency)
-/// - `[0x1B, b'[', ...]` → CSI sequence → keyboard/mouse/terminal parsers
-/// - `[0x1B, b'O', ...]` → SS3 sequence → application mode keys
-/// - `[0x1B, other]` → Alt+letter or standalone ESC
+/// - `[0x1B]` alone → `ESC` key (emitted immediately, zero-latency)
+/// - `[0x1B, b'[', ...]` → `CSI` sequence → keyboard/mouse/terminal parsers
+/// - `[0x1B, b'O', ...]` → `SS3` sequence → application mode keys
+/// - `[0x1B, other]` → Alt+letter or standalone `ESC`
 /// - Other bytes → terminal events, mouse (legacy), control chars, UTF-8 text
 ///
 /// ## Routing Algorithm
@@ -139,17 +139,17 @@ use crate::{ByteOffset, byte_offset,
 /// ┌─────────────────────────────────────────┐
 /// │  First byte check                       │
 /// ├─────────────────────────────────────────┤
-/// │ 0x1B (ESC)?                             │
+/// │ 0x1B (`ESC`)?                           │
 /// │  ├─ buf.len() == 1?                     │
-/// │  │  └─ YES → Emit ESC immediately ▲     │
-/// │  │     (zero-latency ESC key!)          │
+/// │  │  └─ YES → Emit `ESC` immediately ▲   │
+/// │  │     (zero-latency `ESC` key!)        │
 /// │  └─ buf.len() > 1?                      │
 /// │     ├─ Second byte = b'['?              │
-/// │     │  └─ CSI → keyboard/mouse/terminal │
+/// │     │  └─ `CSI` → keyboard/mouse/term   │
 /// │     ├─ Second byte = b'O'?              │
-/// │     │  └─ SS3 → app mode keys (F1-F4)   │
+/// │     │  └─ `SS3` → app mode keys (F1-F4) │
 /// │     └─ Second byte = other?             │
-/// │        └─ Alt+letter or emit ESC        │
+/// │        └─ Alt+letter or emit `ESC`      │
 /// ├─────────────────────────────────────────┤
 /// │ Not ESC?                                │
 /// │  └─ Try: terminal → mouse → control     │
@@ -173,7 +173,7 @@ use crate::{ByteOffset, byte_offset,
 ///                                                           VT100KeyCodeIR};
 /// use r3bl_tui::byte_offset;
 ///
-/// // Parse ESC key (single byte, immediate)
+/// // Parse `ESC` key (single byte, immediate)
 /// let buffer = &[0x1B];
 /// if let Some((event, consumed)) = try_parse_input_event(buffer) {
 ///     assert!(matches!(event, VT100InputEventIR::Keyboard {
@@ -182,7 +182,7 @@ use crate::{ByteOffset, byte_offset,
 ///     assert_eq!(consumed, byte_offset(1));
 /// }
 ///
-/// // Parse Up Arrow (CSI sequence)
+/// // Parse Up Arrow (`CSI` sequence)
 /// let buffer = &[0x1B, b'[', b'A'];
 /// if let Some((event, consumed)) = try_parse_input_event(buffer) {
 ///     assert!(matches!(event, VT100InputEventIR::Keyboard {

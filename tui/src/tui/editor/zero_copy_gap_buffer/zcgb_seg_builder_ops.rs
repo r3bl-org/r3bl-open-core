@@ -133,7 +133,8 @@ impl ZeroCopyGapBuffer {
     ///
     /// # Example
     ///
-    /// <!-- It is ok to use ignore here - demonstrates internal API usage, not meant as runnable code -->
+    /// <!-- It is ok to use ignore here - demonstrates internal API usage, not meant as
+    /// runnable code -->
     /// ```ignore
     /// // After inserting text
     /// buffer.rebuild_line_segments(line_index)?;
@@ -225,7 +226,8 @@ impl ZeroCopyGapBuffer {
     ///
     /// # Example
     ///
-    /// <!-- It is ok to use ignore here - demonstrates internal API usage with type-safe constructors -->
+    /// <!-- It is ok to use ignore here - demonstrates internal API usage with type-safe
+    /// constructors -->
     /// ```ignore
     /// // Rebuild segments for lines 0, 5, and 10
     /// buffer.rebuild_line_segments_batch(&[row(0), row(5), row(10)])?;

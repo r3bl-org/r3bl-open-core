@@ -26,7 +26,7 @@
 //! - **Ground truth**: Sequences represent actual terminal behavior
 //! - **Error detection**: Catches bugs in both parser AND generator implementations
 //!
-//! See the [parent module](super#testing-strategy) for the overall testing strategy.
+//! See the [parent module] for the overall testing strategy.
 //!
 //! ## ⚠️ WARNING: DO NOT Refactor These Tests to Use Generators!
 //!
@@ -51,6 +51,7 @@
 //!
 //! [`test_fixtures::input_sequence_generator`]: super::test_fixtures
 //! [`unit_tests::generator_round_trip_tests`]: super::unit_tests::generator_round_trip_tests
+//! [parent module]: super#testing-strategy
 
 #[cfg(any(test, doc))]
 pub mod input_parser_validation_test;
