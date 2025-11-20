@@ -5,60 +5,57 @@
 //! This module provides pure, reusable ANSI sequence parsing for terminal user input.
 //! It converts raw bytes (escape sequences, UTF-8 text) into high-level input events.
 //!
+//! ## Primary Consumer
+//!
+//! The [`InputDevice`] enum provides a unified input API with multiple backends.
+//! [`DirectToAnsiInputDevice`] is the only backend that uses this parser.
+//!
+//! - [`DirectToAnsiInputDevice`] reads from stdin, and calls the main entry point
+//!   function [`try_parse_input_event()`] in this module.
+//! - This function checks if the buffer starts with escape sequences (`ESC`, `0x1b`), and
+//!   then dispatches to the appropriate parser: keyboard, mouse, terminal events, or UTF-8
+//!   text.
+//! - The resulting events are converted to structured [`InputEvent`]s for the application
+//!   by [`convert_input_event()`].
+//!
+//! Here's the data flow from the consumer's perspective:
+//!
+//! ```text
+//! InputDevice (unified API for application)
+//!    │
+//!    │ InputDevice::DirectToAnsi contains backend (DirectToAnsiInputDevice instance)
+//!    ▼
+//! DirectToAnsiInputDevice (async I/O layer)
+//!    │
+//!    │ Reads from tokio::io::stdin()
+//!    ▼
+//! Raw stdin bytes
+//!    │
+//!    │ Calls try_parse_input_event()
+//!    ▼
+//! This parser (vt_100_terminal_input_parser)
+//!    │
+//!    │ Returns VT100InputEventIR
+//!    ▼
+//! convert_input_event() (protocol_conversion.rs)
+//!    │
+//!    │ Converts IR → public API
+//!    ▼
+//! InputEvent (returned to application)
+//! ```
+//!
 //! ## Architecture
 //!
 //! The VT-100 terminal input parser is a **protocol-agnostic layer** that parses ANSI
 //! sequences independently of platform-specific I/O. This design mirrors the output
-//! architecture (generator + renderer) and enables:
+//! architecture ([`generator`] + [`output`]) and enables:
 //!
 //! - **Testability**: Unit test parsers without I/O or async complexity
 //! - **Reusability**: Multiple backends can use the same protocol parsers
 //! - **Clarity**: ANSI protocol handling is centralized in `core/ansi/`
 //! - **Separation of Concerns**: Protocol parsing ≠ async I/O ≠ buffering
 //!
-//! ## Layered Architecture
-//!
-//! ```text
-//! InputDevice (unified API for application)
-//!    │
-//!    │ Contains backend
-//!    │
-//! ┌──▼────────────────────────────────────────┐
-//! │  DirectToAnsiInputDevice (async I/O)      │  ← tui/src/tui/terminal_lib_backends/
-//! │  • Read raw bytes from tokio::io::stdin() │     direct_to_ansi/input/
-//! │  • Manage buffers (4KB, zero-timeout)     │
-//! │  • Call parser entry point                │
-//! └───────────────────────────────────────────┘
-//!    │
-//!    │ Delegate to main parser
-//!    │
-//! ┌──▼────────────────────────────────────────┐
-//! │  parser.rs - Main Entry Point             │  ← tui/src/core/ansi/
-//! │  • try_parse_input_event()                │     vt_100_terminal_input_parser/
-//! │  • Smart routing & `ESC` detection        │
-//! │  • Zero-latency `ESC` key handling        │
-//! └───────────────────────────────────────────┘
-//!    │
-//!    │ Routes to specialized parsers
-//!    │
-//! ┌──▼────────────────────────────────────────┐
-//! │  Specialized Parsers (pure)               │  ← tui/src/core/ansi/
-//! │  • keyboard.rs                            │     vt_100_terminal_input_parser/
-//! │  • mouse.rs                               │
-//! │  • terminal_events.rs                     │
-//! │  • utf8.rs                                │
-//! └───────────────────────────────────────────┘
-//!    │
-//!    │ Returns VT100InputEventIR
-//!    ▼
-//! VT100InputEventIR (intermediate representation)
-//!    │
-//!    │ Converted to InputEvent by DirectToAnsiInputDevice
-//!    ▼
-//! InputEvent (keyboard, mouse, resize, focus, paste)
-//! ```
-//!
-//! ## Comparison with Output Architecture
+//! ### Comparison with Output Architecture
 //!
 //! The input parser is intentionally designed to parallel the output architecture:
 //!
@@ -102,6 +99,13 @@
 //! - Handle multi-byte UTF-8 sequences
 //! - Buffer incomplete sequences for later completion
 //!
+//! ## One-Based Mouse Input Events
+//!
+//! **Confirmed by [`observe_terminal`] test**: VT-100 mouse
+//! coordinates are 1-based, where (1, 1) is the top-left corner. Uses [`TermRow`] and
+//! [`TermCol`] for type safety and explicit conversion to/from 0-based buffer
+//! coordinates.
+//!
 //! ## Establishing Ground Truth with Validation Tests
 //!
 //! The [`observe_terminal`] validation test is a critical tool for
@@ -125,14 +129,7 @@
 //!   - Check with: `gsettings get org.gnome.desktop.peripherals.mouse natural-scroll`
 //! - `SGR` protocol uses codes: 64=Wheel Down, 65=Wheel Up (`XTerm` standard)
 //!
-//! ## One-Based Mouse Input Events
-//!
-//! **Confirmed by [`observe_terminal`] test**: VT-100 mouse
-//! coordinates are 1-based, where (1, 1) is the top-left corner. Uses [`TermRow`] and
-//! [`TermCol`] for type safety and explicit conversion to/from 0-based buffer
-//! coordinates.
-//!
-//! ## Testing strategy
+//! ## Testing Strategy
 //!
 //! ```text
 //!       ╱╲
@@ -151,40 +148,6 @@
 //! | Integration   | System behavior                  | Generated   | Real-world usage pattern                  |
 //!
 //! The [`test_fixtures`] module is shared between the unit, and integration tests only.
-//!
-//! ## Primary Consumer
-//!
-//! The [`InputDevice`] enum provides a unified input API with multiple backends;
-//! [`DirectToAnsiInputDevice`] is the only backend that uses this parser.
-//!
-//! This parser is primarily used by [`DirectToAnsiInputDevice`], which reads from stdin,
-//! checks if the buffer starts with escape sequences (`ESC`, `0x1b`), and dispatches to the
-//! appropriate parser: keyboard, mouse, terminal events, or UTF-8 text. The resulting events
-//! are converted to structured [`InputEvent`]s for the application.
-//!
-//! ```text
-//! InputDevice (unified API for application)
-//!    │
-//!    │ Contains backend
-//!    ▼
-//! DirectToAnsiInputDevice (async I/O layer)
-//!    │
-//!    │ Reads from stdin
-//!    ▼
-//! Raw stdin bytes
-//!    │
-//!    │ Calls try_parse_input_event()
-//!    ▼
-//! This parser (vt_100_terminal_input_parser)
-//!    │
-//!    │ Returns VT100InputEventIR
-//!    ▼
-//! convert_input_event() (protocol_conversion.rs)
-//!    │
-//!    │ Converts IR → public API
-//!    ▼
-//! InputEvent (returned to application)
-//! ```
 //!
 //! [`TermCol`]: crate::core::coordinates::vt_100_ansi_coords::TermCol
 //! [`TermRow`]: crate::core::coordinates::vt_100_ansi_coords::TermRow
@@ -206,6 +169,8 @@
 //! [`utf8`]: mod@crate::core::ansi::vt_100_terminal_input_parser::utf8
 //! [`observe_terminal`]: crate::core::ansi::vt_100_terminal_input_parser::validation_tests::observe_real_interactive_terminal_input_events::observe_terminal
 //! [`test_fixtures`]: mod@crate::core::ansi::vt_100_terminal_input_parser::test_fixtures
+//! [`convert_input_event()`]: crate::tui::terminal_lib_backends::direct_to_ansi::input::protocol_conversion::convert_input_event
+//! [`core::ansi`]: crate::core::ansi
 
 // Skip rustfmt for rest of file.
 // https://stackoverflow.com/a/75910283/2085356

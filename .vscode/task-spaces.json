@@ -18,6 +18,10 @@
           "isPinned": false
         },
         {
+          "path": "tui/src/core/ansi/vt_100_pty_output_parser/mod.rs",
+          "isPinned": false
+        },
+        {
           "path": "tui/src/core/ansi/vt_100_terminal_input_parser/parser.rs",
           "isPinned": false
         }
