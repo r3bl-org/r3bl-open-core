@@ -53,76 +53,6 @@ use crate::{Button, FocusEvent, InputEvent, Key, KeyPress, KeyState, ModifierKey
                                                        VT100MouseButtonIR,
                                                        VT100ScrollDirectionIR}};
 
-/// Convert protocol-level [`VT100KeyCodeIR`] and [`VT100KeyModifiersIR`] to canonical
-/// [`KeyPress`].
-///
-/// Maps VT-100 IR key codes to the public API [`Key`] enum, handling:
-/// - Character keys: [`VT100KeyCodeIR::Char`] → [`Key::Character`]
-/// - Function keys: [`VT100KeyCodeIR::Function`] → [`Key::FunctionKey`]
-/// - Special keys: [`VT100KeyCodeIR::Up`] → [`Key::SpecialKey`]
-/// - Modifiers: Shift, Ctrl, Alt masks
-///
-/// Returns:
-/// - [`KeyPress::Plain`] if no modifiers are active
-/// - [`KeyPress::WithModifiers`] if any modifiers (Shift/Ctrl/Alt) are pressed
-pub(super) fn convert_key_code_to_keypress(
-    code: VT100KeyCodeIR,
-    modifiers: VT100KeyModifiersIR,
-) -> KeyPress {
-    let key = match code {
-        VT100KeyCodeIR::Char(ch) => Key::Character(ch),
-        VT100KeyCodeIR::Function(n) => {
-            use crate::FunctionKey;
-            match n {
-                1 => Key::FunctionKey(FunctionKey::F1),
-                2 => Key::FunctionKey(FunctionKey::F2),
-                3 => Key::FunctionKey(FunctionKey::F3),
-                4 => Key::FunctionKey(FunctionKey::F4),
-                5 => Key::FunctionKey(FunctionKey::F5),
-                6 => Key::FunctionKey(FunctionKey::F6),
-                7 => Key::FunctionKey(FunctionKey::F7),
-                8 => Key::FunctionKey(FunctionKey::F8),
-                9 => Key::FunctionKey(FunctionKey::F9),
-                10 => Key::FunctionKey(FunctionKey::F10),
-                11 => Key::FunctionKey(FunctionKey::F11),
-                12 => Key::FunctionKey(FunctionKey::F12),
-                _ => Key::Character('?'), // Fallback
-            }
-        }
-        VT100KeyCodeIR::Up => Key::SpecialKey(SpecialKey::Up),
-        VT100KeyCodeIR::Down => Key::SpecialKey(SpecialKey::Down),
-        VT100KeyCodeIR::Left => Key::SpecialKey(SpecialKey::Left),
-        VT100KeyCodeIR::Right => Key::SpecialKey(SpecialKey::Right),
-        VT100KeyCodeIR::Home => Key::SpecialKey(SpecialKey::Home),
-        VT100KeyCodeIR::End => Key::SpecialKey(SpecialKey::End),
-        VT100KeyCodeIR::PageUp => Key::SpecialKey(SpecialKey::PageUp),
-        VT100KeyCodeIR::PageDown => Key::SpecialKey(SpecialKey::PageDown),
-        VT100KeyCodeIR::Tab => Key::SpecialKey(SpecialKey::Tab),
-        VT100KeyCodeIR::BackTab => Key::SpecialKey(SpecialKey::BackTab),
-        VT100KeyCodeIR::Delete => Key::SpecialKey(SpecialKey::Delete),
-        VT100KeyCodeIR::Insert => Key::SpecialKey(SpecialKey::Insert),
-        VT100KeyCodeIR::Enter => Key::SpecialKey(SpecialKey::Enter),
-        VT100KeyCodeIR::Backspace => Key::SpecialKey(SpecialKey::Backspace),
-        VT100KeyCodeIR::Escape => Key::SpecialKey(SpecialKey::Esc),
-    };
-
-    // Convert modifiers (now using canonical KeyState directly)
-    let mask = ModifierKeysMask {
-        shift_key_state: modifiers.shift,
-        ctrl_key_state: modifiers.ctrl,
-        alt_key_state: modifiers.alt,
-    };
-
-    if mask.shift_key_state == KeyState::NotPressed
-        && mask.ctrl_key_state == KeyState::NotPressed
-        && mask.alt_key_state == KeyState::NotPressed
-    {
-        KeyPress::Plain { key }
-    } else {
-        KeyPress::WithModifiers { key, mask }
-    }
-}
-
 /// Convert protocol-level [`VT100InputEventIR`] to canonical [`InputEvent`].
 ///
 /// Converts all VT-100 IR event types to public API types:
@@ -136,7 +66,9 @@ pub(super) fn convert_key_code_to_keypress(
 /// - **Paste**: Should never be called (handled by state machine in `try_read_event()`)
 ///
 /// Returns `None` if the event cannot be converted (e.g., unknown mouse button).
-pub(super) fn convert_input_event(vt100_event: VT100InputEventIR) -> Option<InputEvent> {
+///
+/// [`TermPos`]: crate::TermPos
+pub fn convert_input_event(vt100_event: VT100InputEventIR) -> Option<InputEvent> {
     match vt100_event {
         VT100InputEventIR::Keyboard { code, modifiers } => {
             let keypress = convert_key_code_to_keypress(code, modifiers);
@@ -215,6 +147,76 @@ pub(super) fn convert_input_event(vt100_event: VT100InputEventIR) -> Option<Inpu
                  and should never reach convert_input_event()"
             )
         }
+    }
+}
+
+/// Convert protocol-level [`VT100KeyCodeIR`] and [`VT100KeyModifiersIR`] to canonical
+/// [`KeyPress`].
+///
+/// Maps VT-100 IR key codes to the public API [`Key`] enum, handling:
+/// - Character keys: [`VT100KeyCodeIR::Char`] → [`Key::Character`]
+/// - Function keys: [`VT100KeyCodeIR::Function`] → [`Key::FunctionKey`]
+/// - Special keys: [`VT100KeyCodeIR::Up`] → [`Key::SpecialKey`]
+/// - Modifiers: Shift, Ctrl, Alt masks
+///
+/// Returns:
+/// - [`KeyPress::Plain`] if no modifiers are active
+/// - [`KeyPress::WithModifiers`] if any modifiers (Shift/Ctrl/Alt) are pressed
+fn convert_key_code_to_keypress(
+    code: VT100KeyCodeIR,
+    modifiers: VT100KeyModifiersIR,
+) -> KeyPress {
+    let key = match code {
+        VT100KeyCodeIR::Char(ch) => Key::Character(ch),
+        VT100KeyCodeIR::Function(n) => {
+            use crate::FunctionKey;
+            match n {
+                1 => Key::FunctionKey(FunctionKey::F1),
+                2 => Key::FunctionKey(FunctionKey::F2),
+                3 => Key::FunctionKey(FunctionKey::F3),
+                4 => Key::FunctionKey(FunctionKey::F4),
+                5 => Key::FunctionKey(FunctionKey::F5),
+                6 => Key::FunctionKey(FunctionKey::F6),
+                7 => Key::FunctionKey(FunctionKey::F7),
+                8 => Key::FunctionKey(FunctionKey::F8),
+                9 => Key::FunctionKey(FunctionKey::F9),
+                10 => Key::FunctionKey(FunctionKey::F10),
+                11 => Key::FunctionKey(FunctionKey::F11),
+                12 => Key::FunctionKey(FunctionKey::F12),
+                _ => Key::Character('?'), // Fallback
+            }
+        }
+        VT100KeyCodeIR::Up => Key::SpecialKey(SpecialKey::Up),
+        VT100KeyCodeIR::Down => Key::SpecialKey(SpecialKey::Down),
+        VT100KeyCodeIR::Left => Key::SpecialKey(SpecialKey::Left),
+        VT100KeyCodeIR::Right => Key::SpecialKey(SpecialKey::Right),
+        VT100KeyCodeIR::Home => Key::SpecialKey(SpecialKey::Home),
+        VT100KeyCodeIR::End => Key::SpecialKey(SpecialKey::End),
+        VT100KeyCodeIR::PageUp => Key::SpecialKey(SpecialKey::PageUp),
+        VT100KeyCodeIR::PageDown => Key::SpecialKey(SpecialKey::PageDown),
+        VT100KeyCodeIR::Tab => Key::SpecialKey(SpecialKey::Tab),
+        VT100KeyCodeIR::BackTab => Key::SpecialKey(SpecialKey::BackTab),
+        VT100KeyCodeIR::Delete => Key::SpecialKey(SpecialKey::Delete),
+        VT100KeyCodeIR::Insert => Key::SpecialKey(SpecialKey::Insert),
+        VT100KeyCodeIR::Enter => Key::SpecialKey(SpecialKey::Enter),
+        VT100KeyCodeIR::Backspace => Key::SpecialKey(SpecialKey::Backspace),
+        VT100KeyCodeIR::Escape => Key::SpecialKey(SpecialKey::Esc),
+    };
+
+    // Convert modifiers (now using canonical KeyState directly)
+    let mask = ModifierKeysMask {
+        shift_key_state: modifiers.shift,
+        ctrl_key_state: modifiers.ctrl,
+        alt_key_state: modifiers.alt,
+    };
+
+    if mask.shift_key_state == KeyState::NotPressed
+        && mask.ctrl_key_state == KeyState::NotPressed
+        && mask.alt_key_state == KeyState::NotPressed
+    {
+        KeyPress::Plain { key }
+    } else {
+        KeyPress::WithModifiers { key, mask }
     }
 }
 

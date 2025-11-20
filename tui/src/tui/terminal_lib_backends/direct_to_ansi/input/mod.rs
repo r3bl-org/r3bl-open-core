@@ -7,6 +7,11 @@
 
 // Private inner modules.
 mod input_device_impl;
+
+// Conditionally public for documentation (to allow rustdoc links).
+#[cfg(any(test, doc))]
+pub mod protocol_conversion;
+#[cfg(not(any(test, doc)))]
 mod protocol_conversion;
 
 // Re-exports - flatten the public API.
