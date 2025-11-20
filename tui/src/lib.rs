@@ -115,7 +115,8 @@
 //!   - [Dual Rendering Paths](#dual-rendering-paths)
 //!     - [Path 1: Composed Component Pipeline (Complex, Responsive Layouts and Full
 //!       TUI)](#path-1-composed-component-pipeline-complex-responsive-layouts-and-full-tui)
-//!     - [Path 2: Direct Interactive Path (Simple CLI, Hybrid/Partial-TUI)](#
+//!     - [Path 2: Direct Interactive Path (Simple CLI,
+//!       Hybrid/Partial-TUI)](#
 //!       path-2-direct-interactive-path-simple-cli-hybridpartial-tui)
 //!   - [Unified ANSI Generation:
 //!     `PixelCharRenderer`](#unified-ansi-generation-pixelcharrenderer)
@@ -123,7 +124,8 @@
 //!   - [`OutputDevice`: Thread-Safe Terminal
 //!     Output](#outputdevice-thread-safe-terminal-output)
 //!   - [Offscreen buffer](#offscreen-buffer)
-//!   - [Complete Rendering Pipeline Architecture (Path 1: Composed Component Pipeline)](#
+//!   - [Complete Rendering Pipeline Architecture (Path 1: Composed Component
+//!     Pipeline)](#
 //!     complete-rendering-pipeline-architecture-path-1-composed-component-pipeline)
 //!   - [Render pipeline (Path 1: Composed Component
 //!     Pipeline)](#render-pipeline-path-1-composed-component-pipeline)
@@ -217,9 +219,9 @@
 //!   - CSS like flexbox like declarative layout engine which is fully responsive. You can
 //!     resize your terminal window and everything will be laid out correctly.
 //!   - A terminal independent underlying rendering and painting engine (can use Crossterm
-//!     or DirectToAnsi backends). The DirectToAnsi backend is part of this R3BL TUI crate
-//!     and is the default on Linux, with no reliance on Crossterm at all. We plan to roll
-//!     this out to macOS and Windows.
+//!     or `DirectToAnsi` backends). The `DirectToAnsi` backend is part of this R3BL TUI
+//!     crate and is the default on Linux, with no reliance on Crossterm at all. We plan
+//!     to roll this out to macOS and Windows.
 //!   - Markdown text editor with syntax highlighting support, metadata (tags, title,
 //!     author, date), smart lists. This uses a custom Markdown parser and custom syntax
 //!     highlighter. Syntax highlighting for code blocks is provided by the syntect crate.
@@ -486,7 +488,8 @@
 //!
 //! 1. **Realistic terminal interactions**: Tests interact with a real PTY device, not
 //!    mocks
-//! 2. **Raw mode testing**: Slave process runs in raw mode with actual termios settings
+//! 2. **Raw mode testing**: Controlled process runs in raw mode with actual termios
+//!    settings
 //! 3. **Byte-level precision**: Send exact ANSI sequences as applications receive them
 //! 4. **Full integration**: Tests the complete pipeline from input parsing to output
 //!    rendering
@@ -516,7 +519,7 @@
 //!     },
 //!     master: |pty_pair, child| {
 //!         // Runs in PTY master - sends input, verifies output
-//!         let mut writer = pty_pair.master.take_writer();
+//!         let mut writer = pty_pair.controller().take_writer();
 //!         writer.write_all(b"\x1b[A").unwrap();  // Send Up Arrow
 //!
 //!         let output = read_pty_output(&pty_pair);
@@ -1304,8 +1307,8 @@
 //!    operations have been removed).
 //! 3. This output is then executed by the terminal backend to produce the final rendered
 //!    output in the terminal. This flexible architecture allows us to plugin in different
-//!    backends (our own DirectToAnsi, Crossterm, etc.) and the optimizations are applied
-//!    in a backend agnostic way.
+//!    backends (our own `DirectToAnsi`, Crossterm, etc.) and the optimizations are
+//!    applied in a backend agnostic way.
 //!
 //! </div>
 //!
@@ -1403,7 +1406,7 @@
 //! - **Modularity**: Each stage has clear inputs/outputs and single responsibility
 //! - **Performance**: Diff-based approach means only changed pixels are rendered
 //! - **Flexibility**: Stages can be implemented for different backends (Crossterm,
-//!   DirectToAnsi, etc.)
+//!   `DirectToAnsi`, etc.)
 //! - **Maintainability**: Clear pipeline structure makes code easier to understand and
 //!   modify
 //!

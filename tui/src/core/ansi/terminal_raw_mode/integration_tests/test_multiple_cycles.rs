@@ -8,7 +8,7 @@
 //! - Calling `disable()` when already disabled
 //! - Original settings are preserved across cycles
 
-use crate::generate_pty_test;
+use crate::{PtyPair, generate_pty_test};
 use rustix::termios;
 use std::{io::{BufRead, BufReader, Write},
           time::{Duration, Instant}};
@@ -28,26 +28,26 @@ generate_pty_test! {
     ///
     /// Run with: `cargo test -p r3bl_tui --lib test_raw_mode_cycles -- --nocapture`
     test_fn: test_raw_mode_cycles,
-    master: pty_master_entry_point,
-    slave: pty_slave_entry_point
+    controller: pty_controller_entry_point,
+    controlled: pty_controlled_entry_point
 }
 
-/// Master process: verifies that slave completes multiple cycles successfully.
-fn pty_master_entry_point(
-    pty_pair: portable_pty::PtyPair,
+/// Controller process: verifies that controlled process completes multiple cycles successfully.
+fn pty_controller_entry_point(
+    pty_pair: PtyPair,
     mut child: Box<dyn portable_pty::Child + Send + Sync>,
 ) {
-    eprintln!("🚀 PTY Master: Starting multiple cycles test...");
+    eprintln!("🚀 PTY Controller: Starting multiple cycles test...");
 
     let reader = pty_pair
-        .master
+        .controller()
         .try_clone_reader()
         .expect("Failed to get reader");
     let mut buf_reader = BufReader::new(reader);
 
-    eprintln!("📝 PTY Master: Waiting for slave cycle results...");
+    eprintln!("📝 PTY Controller: Waiting for controlled process cycle results...");
 
-    let mut slave_started = false;
+    let mut controlled_started = false;
     let mut cycles_completed = 0;
     let mut test_passed = false;
     let start_timeout = Instant::now();
@@ -61,11 +61,11 @@ fn pty_master_entry_point(
             }
             Ok(_) => {
                 let trimmed = line.trim();
-                eprintln!("  ← Slave output: {trimmed}");
+                eprintln!("  ← Controlled output: {trimmed}");
 
                 if trimmed.contains("SLAVE_STARTING") {
-                    slave_started = true;
-                    eprintln!("  ✓ Slave confirmed starting");
+                    controlled_started = true;
+                    eprintln!("  ✓ Controlled process confirmed starting");
                 }
                 if trimmed.contains("CYCLE_COMPLETE:") {
                     cycles_completed += 1;
@@ -85,28 +85,28 @@ fn pty_master_entry_point(
         }
     }
 
-    assert!(slave_started, "Slave did not start properly");
+    assert!(controlled_started, "Controlled process did not start properly");
     assert_eq!(cycles_completed, 3, "Expected 3 cycles to complete");
     assert!(test_passed, "Test did not report success");
 
     match child.wait() {
         Ok(status) => {
-            eprintln!("✅ PTY Master: Slave exited: {status:?}");
+            eprintln!("✅ PTY Controller: Controlled process exited: {status:?}");
         }
         Err(e) => {
-            panic!("Failed to wait for slave: {e}");
+            panic!("Failed to wait for controlled process: {e}");
         }
     }
 
-    eprintln!("✅ PTY Master: Multiple cycles test passed!");
+    eprintln!("✅ PTY Controller: Multiple cycles test passed!");
 }
 
-/// Slave process: performs multiple enable/disable cycles.
-fn pty_slave_entry_point() -> ! {
+/// Controlled process: performs multiple enable/disable cycles.
+fn pty_controlled_entry_point() -> ! {
     println!("SLAVE_STARTING");
     std::io::stdout().flush().expect("Failed to flush");
 
-    eprintln!("🔍 Slave: Starting multiple cycles test...");
+    eprintln!("🔍 Controlled: Starting multiple cycles test...");
 
     let stdin = std::io::stdin();
 
@@ -114,7 +114,7 @@ fn pty_slave_entry_point() -> ! {
     let original_termios = match termios::tcgetattr(&stdin) {
         Ok(t) => t,
         Err(e) => {
-            eprintln!("⚠️  Slave: Failed to get original termios: {e}");
+            eprintln!("⚠️  Controlled: Failed to get original termios: {e}");
             println!("FAILED: Could not read original termios");
             std::io::stdout().flush().expect("Failed to flush");
             std::process::exit(1);
@@ -123,11 +123,11 @@ fn pty_slave_entry_point() -> ! {
 
     // Perform 3 enable/disable cycles
     for cycle in 1..=3 {
-        eprintln!("🔍 Slave: --- Cycle {cycle} ---");
+        eprintln!("🔍 Controlled: --- Cycle {cycle} ---");
 
         // Enable raw mode
         if let Err(e) = crate::enable_raw_mode() {
-            eprintln!("⚠️  Slave: Failed to enable raw mode in cycle {cycle}: {e}");
+            eprintln!("⚠️  Controlled: Failed to enable raw mode in cycle {cycle}: {e}");
             println!("FAILED: Could not enable raw mode in cycle {cycle}");
             std::io::stdout().flush().expect("Failed to flush");
             std::process::exit(1);
@@ -138,7 +138,7 @@ fn pty_slave_entry_point() -> ! {
         let raw_termios = match termios::tcgetattr(&stdin) {
             Ok(t) => t,
             Err(e) => {
-                eprintln!("⚠️  Slave: Failed to get termios in cycle {cycle}: {e}");
+                eprintln!("⚠️  Controlled: Failed to get termios in cycle {cycle}: {e}");
                 println!("FAILED: Could not read termios in cycle {cycle}");
                 std::io::stdout().flush().expect("Failed to flush");
                 std::process::exit(1);
@@ -146,7 +146,7 @@ fn pty_slave_entry_point() -> ! {
         };
 
         if raw_termios.local_modes.contains(rustix::termios::LocalModes::ICANON) {
-            eprintln!("⚠️  Slave: ICANON still on in cycle {cycle}");
+            eprintln!("⚠️  Controlled: ICANON still on in cycle {cycle}");
             println!("FAILED: Raw mode not properly enabled in cycle {cycle}");
             std::io::stdout().flush().expect("Failed to flush");
             std::process::exit(1);
@@ -155,7 +155,7 @@ fn pty_slave_entry_point() -> ! {
 
         // Disable raw mode
         if let Err(e) = crate::disable_raw_mode() {
-            eprintln!("⚠️  Slave: Failed to disable raw mode in cycle {cycle}: {e}");
+            eprintln!("⚠️  Controlled: Failed to disable raw mode in cycle {cycle}: {e}");
             println!("FAILED: Could not disable raw mode in cycle {cycle}");
             std::io::stdout().flush().expect("Failed to flush");
             std::process::exit(1);
@@ -166,7 +166,7 @@ fn pty_slave_entry_point() -> ! {
         let restored_termios = match termios::tcgetattr(&stdin) {
             Ok(t) => t,
             Err(e) => {
-                eprintln!("⚠️  Slave: Failed to get termios after restore in cycle {cycle}: {e}");
+                eprintln!("⚠️  Controlled: Failed to get termios after restore in cycle {cycle}: {e}");
                 println!("FAILED: Could not read termios after restore in cycle {cycle}");
                 std::io::stdout().flush().expect("Failed to flush");
                 std::process::exit(1);
@@ -175,7 +175,7 @@ fn pty_slave_entry_point() -> ! {
 
         // Settings should match original (at least for local_modes)
         if restored_termios.local_modes != original_termios.local_modes {
-            eprintln!("⚠️  Slave: Settings not restored in cycle {cycle}");
+            eprintln!("⚠️  Controlled: Settings not restored in cycle {cycle}");
             eprintln!("    Original: {:?}", original_termios.local_modes);
             eprintln!("    Restored: {:?}", restored_termios.local_modes);
             println!("FAILED: Settings not properly restored in cycle {cycle}");
@@ -189,9 +189,9 @@ fn pty_slave_entry_point() -> ! {
     }
 
     // Test calling enable() twice without disable() in between
-    eprintln!("🔍 Slave: Testing double enable...");
+    eprintln!("🔍 Controlled: Testing double enable...");
     if let Err(e) = crate::enable_raw_mode() {
-        eprintln!("⚠️  Slave: Failed first enable in double test: {e}");
+        eprintln!("⚠️  Controlled: Failed first enable in double test: {e}");
         println!("FAILED: First enable failed in double test");
         std::io::stdout().flush().expect("Failed to flush");
         std::process::exit(1);
@@ -199,7 +199,7 @@ fn pty_slave_entry_point() -> ! {
 
     // Second enable should not fail (it's a no-op if already in raw mode)
     if let Err(e) = crate::enable_raw_mode() {
-        eprintln!("⚠️  Slave: Failed second enable in double test: {e}");
+        eprintln!("⚠️  Controlled: Failed second enable in double test: {e}");
         println!("FAILED: Second enable failed in double test");
         std::io::stdout().flush().expect("Failed to flush");
         std::process::exit(1);
@@ -208,7 +208,7 @@ fn pty_slave_entry_point() -> ! {
 
     // Clean up
     if let Err(e) = crate::disable_raw_mode() {
-        eprintln!("⚠️  Slave: Failed to disable after double enable: {e}");
+        eprintln!("⚠️  Controlled: Failed to disable after double enable: {e}");
         println!("FAILED: Cleanup failed after double enable");
         std::io::stdout().flush().expect("Failed to flush");
         std::process::exit(1);
@@ -218,6 +218,6 @@ fn pty_slave_entry_point() -> ! {
     println!("SUCCESS: All cycles completed successfully");
     std::io::stdout().flush().expect("Failed to flush");
 
-    eprintln!("🔍 Slave: Completed, exiting");
+    eprintln!("🔍 Controlled: Completed, exiting");
     std::process::exit(0);
 }

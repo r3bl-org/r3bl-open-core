@@ -51,6 +51,14 @@ struct TestCase {
 ///
 /// Follow the on-screen prompts to interact with your terminal (click mouse, press keys).
 /// The test will capture raw bytes and display findings.
+///
+/// # Errors
+///
+/// Returns an I/O error if terminal operations fail.
+///
+/// # Panics
+///
+/// May panic if terminal state cannot be properly restored.
 #[cfg_attr(not(doc), tokio::test)]
 #[cfg_attr(not(doc), ignore = "Manual test: cargo test observe_terminal -- --ignored --nocapture")]
 pub async fn observe_terminal() -> IoResult<()> {

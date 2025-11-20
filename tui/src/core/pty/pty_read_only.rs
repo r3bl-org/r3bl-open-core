@@ -2,7 +2,8 @@
 
 use crate::{Controlled, ControlledChild, Controller, ControllerReader, OscBuffer,
             PtyCommandBuilder, PtyConfig, PtyReadOnlyOutputEvent, PtyReadOnlySession,
-            pty_common_io::{READ_BUFFER_SIZE, create_pty_pair, spawn_command_in_pty}};
+            READ_BUFFER_SIZE,
+            pty_common_io::{create_pty_pair, spawn_command_in_pty}};
 use miette::IntoDiagnostic;
 use std::io::Read;
 
@@ -16,10 +17,9 @@ impl PtyCommandBuilder {
     /// │                          │                │            session            │
     /// │                          │                │               ↓               │
     /// │ a) Handle output events  │                │ ◄─── PTY creates pair ──────► │
-    /// │    from                  │                │ ┊Master/   ┊     ┊Slave/    ┊ │
-    /// │ b) Process completion of │                │ ┊Controller┊     ┊Controlled┊ │
-    /// │ read only session        │                │     ↓                 ↓       │
-    /// │                          │                │ Spawn Tokio       Controlled  │
+    /// │    from                  │                │ ┊Controller┊     ┊Controlled┊ │
+    /// │ b) Process completion of │                │     ↓                 ↓       │
+    /// │ read only session        │                │ Spawn Tokio       Controlled  │
     /// │                          │                │ blocking task     spawns      │
     /// │                          │                │ (3) to read       child       │
     /// │                          │                │ from              process (2) │

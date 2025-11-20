@@ -136,7 +136,7 @@ impl Add for ByteIndex {
     fn add(self, other: Self) -> Self::Output { Self(self.0 + other.0) }
 }
 
-/// Implement AddAssign trait for convenient position advancement.
+/// Implement `AddAssign` trait for convenient position advancement.
 /// This allows `+=` operations to increment a byte position.
 impl AddAssign for ByteIndex {
     fn add_assign(&mut self, other: Self) { self.0 += other.0; }

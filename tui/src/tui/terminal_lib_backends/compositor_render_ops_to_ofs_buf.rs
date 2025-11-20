@@ -32,11 +32,11 @@
 //! ## Navigation
 //! - **Previous stage**: [`render_pipeline`] (Stage 2: Organization)
 //! - **Next stage (Stage 4: Shared)**: [`offscreen_buffer::paint_impl` mod docs] (Backend
-//!   Converter - shared by both Crossterm and DirectToAnsi)
+//!   Converter - shared by both Crossterm and `DirectToAnsi`)
 //! - **Stage 5 options**:
 //!   - [`crossterm_backend::crossterm_paint_render_op_impl` mod docs] (Crossterm
 //!     executor)
-//!   - [`direct_to_ansi` mod docs] (DirectToAnsi executor - generates ANSI escape
+//!   - [`direct_to_ansi` mod docs] (`DirectToAnsi` executor - generates ANSI escape
 //!     sequences)
 //!
 //! ## What This Stage Does

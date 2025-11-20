@@ -6,7 +6,7 @@
 //! *something* changed. This test documents the exact contract of raw mode
 //! and catches regressions in flag handling.
 
-use crate::{RawModeGuard, generate_pty_test, VMIN_RAW_MODE, VTIME_RAW_MODE};
+use crate::{PtyPair, RawModeGuard, generate_pty_test, VMIN_RAW_MODE, VTIME_RAW_MODE};
 use rustix::termios::{self, ControlModes, InputModes, LocalModes, OutputModes, SpecialCodeIndex};
 use std::{io::{BufRead, BufReader, Write},
           time::{Duration, Instant}};
@@ -26,26 +26,26 @@ generate_pty_test! {
     ///
     /// Run with: `cargo test -p r3bl_tui --lib test_raw_mode_flags -- --nocapture`
     test_fn: test_raw_mode_flags,
-    master: pty_master_entry_point,
-    slave: pty_slave_entry_point
+    controller: pty_controller_entry_point,
+    controlled: pty_controlled_entry_point
 }
 
-/// Master process: verifies that slave reports correct flags.
-fn pty_master_entry_point(
-    pty_pair: portable_pty::PtyPair,
+/// Controller process: verifies that controlled process reports correct flags.
+fn pty_controller_entry_point(
+    pty_pair: PtyPair,
     mut child: Box<dyn portable_pty::Child + Send + Sync>,
 ) {
-    eprintln!("🚀 PTY Master: Starting flag verification test...");
+    eprintln!("🚀 PTY Controller: Starting flag verification test...");
 
     let reader = pty_pair
-        .master
+        .controller()
         .try_clone_reader()
         .expect("Failed to get reader");
     let mut buf_reader = BufReader::new(reader);
 
-    eprintln!("📝 PTY Master: Waiting for slave flag checks...");
+    eprintln!("📝 PTY Controller: Waiting for controlled process flag checks...");
 
-    let mut slave_started = false;
+    let mut controlled_started = false;
     let mut test_passed = false;
     let start_timeout = Instant::now();
 
@@ -58,11 +58,11 @@ fn pty_master_entry_point(
             }
             Ok(_) => {
                 let trimmed = line.trim();
-                eprintln!("  ← Slave output: {trimmed}");
+                eprintln!("  ← Controlled output: {trimmed}");
 
                 if trimmed.contains("SLAVE_STARTING") {
-                    slave_started = true;
-                    eprintln!("  ✓ Slave confirmed starting");
+                    controlled_started = true;
+                    eprintln!("  ✓ Controlled process confirmed starting");
                 }
                 if trimmed.contains("SUCCESS:") {
                     test_passed = true;
@@ -78,27 +78,27 @@ fn pty_master_entry_point(
         }
     }
 
-    assert!(slave_started, "Slave did not start properly");
+    assert!(controlled_started, "Controlled process did not start properly");
     assert!(test_passed, "Test did not report success");
 
     match child.wait() {
         Ok(status) => {
-            eprintln!("✅ PTY Master: Slave exited: {status:?}");
+            eprintln!("✅ PTY Controller: Controlled process exited: {status:?}");
         }
         Err(e) => {
-            panic!("Failed to wait for slave: {e}");
+            panic!("Failed to wait for controlled process: {e}");
         }
     }
 
-    eprintln!("✅ PTY Master: Flag verification test passed!");
+    eprintln!("✅ PTY Controller: Flag verification test passed!");
 }
 
-/// Slave process: enables raw mode and verifies specific termios flags.
-fn pty_slave_entry_point() -> ! {
+/// Controlled process: enables raw mode and verifies specific termios flags.
+fn pty_controlled_entry_point() -> ! {
     println!("SLAVE_STARTING");
     std::io::stdout().flush().expect("Failed to flush");
 
-    eprintln!("🔍 Slave: Starting flag verification...");
+    eprintln!("🔍 Controlled: Starting flag verification...");
 
     let stdin = std::io::stdin();
 
@@ -106,20 +106,20 @@ fn pty_slave_entry_point() -> ! {
     let _guard = match RawModeGuard::new() {
         Ok(g) => g,
         Err(e) => {
-            eprintln!("⚠️  Slave: Failed to enable raw mode: {e}");
+            eprintln!("⚠️  Controlled: Failed to enable raw mode: {e}");
             println!("FAILED: Could not enable raw mode");
             std::io::stdout().flush().expect("Failed to flush");
             std::process::exit(1);
         }
     };
 
-    eprintln!("✓ Slave: Raw mode enabled, checking flags...");
+    eprintln!("✓ Controlled: Raw mode enabled, checking flags...");
 
     // Get terminal settings after enabling raw mode
     let termios = match termios::tcgetattr(&stdin) {
         Ok(t) => t,
         Err(e) => {
-            eprintln!("⚠️  Slave: Failed to get termios: {e}");
+            eprintln!("⚠️  Controlled: Failed to get termios: {e}");
             println!("FAILED: Could not read termios");
             std::io::stdout().flush().expect("Failed to flush");
             std::process::exit(1);
@@ -128,7 +128,7 @@ fn pty_slave_entry_point() -> ! {
 
     // Verify Local Modes (ICANON, ECHO, ISIG, IEXTEN should be OFF)
     if termios.local_modes.contains(LocalModes::ICANON) {
-        eprintln!("⚠️  Slave: ICANON is still ON (should be OFF)");
+        eprintln!("⚠️  Controlled: ICANON is still ON (should be OFF)");
         println!("FAILED: ICANON not disabled");
         std::io::stdout().flush().expect("Failed to flush");
         std::process::exit(1);
@@ -136,7 +136,7 @@ fn pty_slave_entry_point() -> ! {
     eprintln!("  ✓ ICANON is OFF (no line buffering)");
 
     if termios.local_modes.contains(LocalModes::ECHO) {
-        eprintln!("⚠️  Slave: ECHO is still ON (should be OFF)");
+        eprintln!("⚠️  Controlled: ECHO is still ON (should be OFF)");
         println!("FAILED: ECHO not disabled");
         std::io::stdout().flush().expect("Failed to flush");
         std::process::exit(1);
@@ -144,7 +144,7 @@ fn pty_slave_entry_point() -> ! {
     eprintln!("  ✓ ECHO is OFF (no character echo)");
 
     if termios.local_modes.contains(LocalModes::ISIG) {
-        eprintln!("⚠️  Slave: ISIG is still ON (should be OFF)");
+        eprintln!("⚠️  Controlled: ISIG is still ON (should be OFF)");
         println!("FAILED: ISIG not disabled");
         std::io::stdout().flush().expect("Failed to flush");
         std::process::exit(1);
@@ -152,7 +152,7 @@ fn pty_slave_entry_point() -> ! {
     eprintln!("  ✓ ISIG is OFF (no signal generation)");
 
     if termios.local_modes.contains(LocalModes::IEXTEN) {
-        eprintln!("⚠️  Slave: IEXTEN is still ON (should be OFF)");
+        eprintln!("⚠️  Controlled: IEXTEN is still ON (should be OFF)");
         println!("FAILED: IEXTEN not disabled");
         std::io::stdout().flush().expect("Failed to flush");
         std::process::exit(1);
@@ -161,7 +161,7 @@ fn pty_slave_entry_point() -> ! {
 
     // Verify Output Modes (OPOST should be OFF)
     if termios.output_modes.contains(OutputModes::OPOST) {
-        eprintln!("⚠️  Slave: OPOST is still ON (should be OFF)");
+        eprintln!("⚠️  Controlled: OPOST is still ON (should be OFF)");
         println!("FAILED: OPOST not disabled");
         std::io::stdout().flush().expect("Failed to flush");
         std::process::exit(1);
@@ -170,7 +170,7 @@ fn pty_slave_entry_point() -> ! {
 
     // Verify Control Modes (CS8 should be set for 8-bit characters)
     if !termios.control_modes.contains(ControlModes::CS8) {
-        eprintln!("⚠️  Slave: CS8 is not set (should be ON)");
+        eprintln!("⚠️  Controlled: CS8 is not set (should be ON)");
         println!("FAILED: CS8 not enabled");
         std::io::stdout().flush().expect("Failed to flush");
         std::process::exit(1);
@@ -185,7 +185,7 @@ fn pty_slave_entry_point() -> ! {
         | InputModes::ISTRIP;
 
     if termios.input_modes.intersects(unwanted_input_flags) {
-        eprintln!("⚠️  Slave: Unwanted input modes still set");
+        eprintln!("⚠️  Controlled: Unwanted input modes still set");
         println!("FAILED: Input modes not properly disabled");
         std::io::stdout().flush().expect("Failed to flush");
         std::process::exit(1);
@@ -197,7 +197,7 @@ fn pty_slave_entry_point() -> ! {
     let vtime = termios.special_codes[SpecialCodeIndex::VTIME];
 
     if vmin != VMIN_RAW_MODE {
-        eprintln!("⚠️  Slave: VMIN={vmin} (expected {VMIN_RAW_MODE})");
+        eprintln!("⚠️  Controlled: VMIN={vmin} (expected {VMIN_RAW_MODE})");
         println!("FAILED: VMIN not set to {VMIN_RAW_MODE}");
         std::io::stdout().flush().expect("Failed to flush");
         std::process::exit(1);
@@ -205,7 +205,7 @@ fn pty_slave_entry_point() -> ! {
     eprintln!("  ✓ VMIN={VMIN_RAW_MODE} (return after 1 byte)");
 
     if vtime != VTIME_RAW_MODE {
-        eprintln!("⚠️  Slave: VTIME={vtime} (expected {VTIME_RAW_MODE})");
+        eprintln!("⚠️  Controlled: VTIME={vtime} (expected {VTIME_RAW_MODE})");
         println!("FAILED: VTIME not set to {VTIME_RAW_MODE}");
         std::io::stdout().flush().expect("Failed to flush");
         std::process::exit(1);
@@ -216,6 +216,6 @@ fn pty_slave_entry_point() -> ! {
     println!("SUCCESS: All termios flags verified");
     std::io::stdout().flush().expect("Failed to flush");
 
-    eprintln!("🔍 Slave: Completed, exiting");
+    eprintln!("🔍 Controlled: Completed, exiting");
     std::process::exit(0);
 }

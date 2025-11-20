@@ -91,7 +91,7 @@
 //! ## Architecture: Shared Stages (1-4) vs Backend-Specific Stage (5)
 //!
 //! **Key Principle**: Stages 1-4 are **shared** across all terminal backends (Crossterm
-//! and DirectToAnsi). Only Stage 5 (Backend Executor) is backend-specific.
+//! and `DirectToAnsi`). Only Stage 5 (Backend Executor) is backend-specific.
 //!
 //! ### Shared Stages (1-4)
 //! - **Stage 1**: Components generate [`RenderOpIR`] operations
@@ -109,7 +109,7 @@
 //!
 //! - **Crossterm**: Implementation in [`crossterm_backend`]
 //!   - Translates operations to Crossterm API calls
-//! - **DirectToAnsi**: Implementation in [`direct_to_ansi`]
+//! - **`DirectToAnsi`**: Implementation in [`direct_to_ansi`]
 //!   - Generates raw ANSI escape sequences
 //!
 //! The backend selection is made at compile-time via the [`TERMINAL_LIB_BACKEND`]
@@ -150,7 +150,7 @@
 //!   `OffscreenBuffer`
 //! - [`offscreen_buffer`] - Virtual terminal buffer (2D grid of styled `PixelChars`)
 //!   - [`offscreen_buffer::paint_impl`] - **(Stage 4: Shared)** Converts buffer →
-//!     optimized operations (used by both Crossterm and DirectToAnsi)
+//!     optimized operations (used by both Crossterm and `DirectToAnsi`)
 //! - [`crossterm_backend::crossterm_paint_render_op_impl`] - **(Stage 5: Crossterm
 //!   Executor)** Executes operations via Crossterm
 //!
@@ -187,9 +187,7 @@
 /**************************/
 /** Attach source files. **/
 /**************************/
-
 // Private mod.
-
 mod backend_selection;
 
 // Private in production, public for docs/tests (enables rustdoc links to submodules).
@@ -252,7 +250,6 @@ mod z_order;
 /***********************************************/
 /** Re-export shared components (Stages 1-5). **/
 /***********************************************/
-
 pub use compositor_render_ops_to_ofs_buf::*;
 pub use offscreen_buffer::*;
 pub use offscreen_buffer_pool::*;
@@ -267,17 +264,15 @@ pub use backend_selection::*;
 pub use crossterm_backend::*;
 pub use direct_to_ansi::*;
 
-/************/
-/** Tests. **/
-/************/
-
+/**********/
+/* Tests. */
+/**********/
 #[cfg(test)]
 mod test_render_pipeline;
 
-/*****************/
-/** Benchmarks. **/
-/*****************/
-
+/***************/
+/* Benchmarks. */
+/***************/
 #[cfg(test)]
 mod pixel_char_bench;
 #[cfg(test)]

@@ -27,7 +27,7 @@
 //! ## Navigation
 //! - **See complete architecture**: [`terminal_lib_backends` mod docs] (source of truth)
 //! - **Previous stage**: [`offscreen_buffer::paint_impl` mod docs] (Stage 4: Backend Converter - shared
-//!   by both Crossterm and DirectToAnsi)
+//!   by both Crossterm and `DirectToAnsi`)
 //! - **Alternative Stage 5**: [`crossterm_backend::crossterm_paint_render_op_impl` mod docs] (Crossterm-based executor)
 //! - **Next stage**: Terminal output (Stage 6)
 //!

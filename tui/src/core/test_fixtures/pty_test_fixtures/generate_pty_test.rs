@@ -5,12 +5,13 @@
 /// This macro handles the boilerplate for PTY-based integration tests:
 ///
 /// 1. **CI detection**: Automatically skips the test in CI environments
-/// 2. **Process routing**: Routes to master or slave code based on environment variable
-/// 3. **PTY setup**: Creates PTY pair and spawns slave process automatically
+/// 2. **Process routing**: Routes to controller or controlled code based on environment
+///    variable
+/// 3. **PTY setup**: Creates PTY pair and spawns controlled process automatically
 /// 4. **Debug output**: Prints diagnostic messages for troubleshooting
 ///
 /// The macro creates the PTY and spawns the process, then passes these resources
-/// to your master function so you can focus on verification logic.
+/// to your controller function so you can focus on verification logic.
 ///
 /// # Architecture
 ///
@@ -18,21 +19,21 @@
 /// ┌─────────────────────────────────────────────────────────────┐
 /// │ Test Function (entry point)                                 │
 /// │  - Macro detects role via environment variable              │
-/// │  - Routes to master or slave function                       │
+/// │  - Routes to controller or controlled function              │
 /// │  - Skips in CI environments automatically                   │
 /// └────────────┬────────────────────────────────┬───────────────┘
 ///              │                                │
-///       Master Path                      Slave Path
+///     Controller Path                  Controlled Path
 ///              │                                │
 /// ┌────────────▼───────────┐    ┌───────────────▼───────────────┐
-/// │ Macro: PTY Setup       │    │ Slave Function                │
+/// │ Macro: PTY Setup       │    │ Controlled Function           │
 /// │ - Creates PTY pair     │    │ - Enable raw mode (if needed) │
-/// │ - Spawns slave         ├────▶ - Execute test logic          │
-/// │ - Passes to master fn  │    │ - Output via stdout/stderr    │
+/// │ - Spawns controlled    ├────▶ - Execute test logic          │
+/// │ - Passes to controller │    │ - Output via stdout/stderr    │
 /// └────────────┬───────────┘    └────────────▲─┬────────────────┘
 ///              │                             │ │
 /// ┌────────────▼──────────────────┐          │ │
-/// │ Master Function               │          │ │ PTY I/O
+/// │ Controller Function           │          │ │ PTY I/O
 /// │ - Receives pty_pair           │          │ │ stdin, stdout/stderr
 /// │ - Receives child              │          │ │
 /// │ - Writes input to child (opt) ├──────────┘ │
@@ -46,7 +47,7 @@
 ///
 /// **Why the macro passes PTY resources as parameters instead of handling everything:**
 ///
-/// The macro creates PTY infrastructure but delegates verification to your master
+/// The macro creates PTY infrastructure but delegates verification to your controller
 /// function. This is **dependency injection** - the macro injects resources your function
 /// needs, but doesn't dictate how to use them.
 ///
@@ -56,24 +57,26 @@
 ///    parse ANSI sequences, others send input and verify responses
 /// 2. **Flexible resource usage**: Some tests need writers (to send input), some only
 ///    need readers (to observe output)
-/// 3. **Explicit dependencies**: Master function signature clearly shows what it needs
-///    (`pty_pair`, `child`) instead of hiding dependencies in macro magic
-/// 4. **Testability**: Each master function is independently testable with mock PTY pairs
+/// 3. **Explicit dependencies**: Controller function signature clearly shows what it
+///    needs (`pty_pair`, `child`) instead of hiding dependencies in macro magic
+/// 4. **Testability**: Each controller function is independently testable with mock PTY
+///    pairs
 ///
 /// # Notes
 ///
 /// - The macro creates a 24x80 PTY pair (standard terminal size)
-/// - The slave function MUST call `std::process::exit(0)` to prevent test recursion
-/// - Raw mode management is YOUR responsibility in slave function
-/// - Verification logic is YOUR responsibility in master function
+/// - The controlled function MUST call `std::process::exit(0)` to prevent test recursion
+/// - Raw mode management is YOUR responsibility in controlled function
+/// - Verification logic is YOUR responsibility in controller function
 ///
 /// ## PTY Stream Behavior
 ///
 /// **Important:** In a PTY, stdout and stderr are **merged into a single stream** from
-/// the master's perspective. This means:
+/// the controller's perspective. This means:
 ///
-/// - Slave's `println!()` and `eprintln!()` both go to the same merged stream
-/// - Master reads both streams together via `pty_pair.master.try_clone_reader()`
+/// - Controlled's `println!()` and `eprintln!()` both go to the same merged stream
+/// - Controller reads both streams together via
+///   `pty_pair.controller().try_clone_reader()`
 /// - There is NO semantic difference between stdout and stderr in PTY tests
 /// - Use **content-based filtering** to distinguish messages, not stream type
 ///
@@ -82,11 +85,11 @@
 /// <!-- It is ok to use ignore here - this is a conceptual example showing PTY stream
 /// merging behavior, not a complete compilable example -->
 /// ```ignore
-/// // Slave code (both go to the same stream!)
+/// // Controlled code (both go to the same stream!)
 /// println!("Line: hello, Cursor: 5");      // Protocol message
-/// println!("🔍 PTY Slave: Event: ...");    // Debug message (use println!, not eprintln!)
+/// println!("🔍 PTY Controlled: Event: ...");    // Debug message (use println!, not eprintln!)
 ///
-/// // Master code (filters by content, not stream)
+/// // Controller code (filters by content, not stream)
 /// if line.starts_with("Line:") {
 ///     // Protocol message - parse it
 /// } else {
@@ -94,8 +97,8 @@
 /// }
 /// ```
 ///
-/// This is why all output in PTY slaves should use `println!()` - using `eprintln!()`
-/// creates a false impression that stderr is handled differently.
+/// This is why all output in PTY controlled processes should use `println!()` - using
+/// `eprintln!()` creates a false impression that stderr is handled differently.
 ///
 /// For complete PTY test implementations, see:
 /// - [`raw_mode_integration_tests`] - Tests raw mode itself
@@ -104,18 +107,19 @@
 /// # Parameters
 ///
 /// - `test_fn`: The test function name (used as identifier, not string)
-/// - `slave`: A function or expression that runs in the slave process (must not return)
-/// - `master`: A function that accepts `(pty_pair, child)` parameters
+/// - `controlled`: A function or expression that runs in the controlled process (must not
+///   return)
+/// - `controller`: A function that accepts `(pty_pair, child)` parameters
 ///
-/// # Master Function Signature
+/// # Controller Function Signature
 ///
-/// Your master function receives:
-/// - `pty_pair: portable_pty::PtyPair` - The PTY pair for communication
-/// - `child: Box<dyn portable_pty::Child + Send + Sync>` - The spawned slave process
+/// Your controller function receives:
+/// - `pty_pair: PtyPair` - The PTY pair wrapper for communication
+/// - `child: Box<dyn portable_pty::Child + Send + Sync>` - The spawned controlled process
 ///
 /// You can then:
-/// - Get a reader: `pty_pair.master.try_clone_reader()`
-/// - Get a writer: `pty_pair.master.take_writer()`
+/// - Get a reader: `pty_pair.controller().try_clone_reader()`
+/// - Get a writer: `pty_pair.controller_mut().take_writer()`
 /// - Wait for child: `child.wait()`
 ///
 /// [`raw_mode_integration_tests`]: mod@crate::core::ansi::terminal_raw_mode::integration_tests
@@ -125,47 +129,48 @@ macro_rules! generate_pty_test {
     (
         $(#[$meta:meta])*
         test_fn: $test_name:ident,
-        master: $master_fn:expr,
-        slave: $slave_fn:expr
+        controller: $controller_fn:expr,
+        controlled: $controlled_fn:expr
     ) => {
         $(#[$meta])*
         #[test]
         fn $test_name() {
             use std::io::Write;
             use portable_pty::{CommandBuilder, NativePtySystem, PtySize, PtySystem};
+            use $crate::PtyPair;
 
-            const PTY_SLAVE_ENV_VAR: &str = "R3BL_PTY_TEST_SLAVE";
+            const PTY_CONTROLLED_ENV_VAR: &str = "R3BL_PTY_TEST_CONTROLLED";
 
             // Immediate debug output to confirm test is running
-            let pty_slave_env_var = std::env::var(PTY_SLAVE_ENV_VAR);
-            eprintln!("🔍 TEST ENTRY: {} env = {:?}", PTY_SLAVE_ENV_VAR, pty_slave_env_var);
+            let pty_controlled_env_var = std::env::var(PTY_CONTROLLED_ENV_VAR);
+            eprintln!("🔍 TEST ENTRY: {} env = {:?}", PTY_CONTROLLED_ENV_VAR, pty_controlled_env_var);
 
             // Also print to stdout to ensure it gets through PTY
             println!("TEST_RUNNING");
             std::io::stdout().flush().expect("Failed to flush stdout");
 
-            // Skip in CI if running as master
-            if pty_slave_env_var.is_err() && is_ci::cached() {
+            // Skip in CI if running as controller
+            if pty_controlled_env_var.is_err() && is_ci::cached() {
                 println!("⏭️  Skipped in CI (requires interactive terminal)");
                 return;
             }
 
-            // Check if we're running as the slave process
-            if pty_slave_env_var.is_ok() {
-                eprintln!("🔍 TEST: {} detected, running slave mode", PTY_SLAVE_ENV_VAR);
-                println!("SLAVE_STARTING");
+            // Check if we're running as the controlled process
+            if pty_controlled_env_var.is_ok() {
+                eprintln!("🔍 TEST: {} detected, running controlled mode", PTY_CONTROLLED_ENV_VAR);
+                println!("CONTROLLED_STARTING");
                 std::io::stdout().flush().expect("Failed to flush stdout");
 
-                // Run the slave logic (never returns - exits process)
-                $slave_fn();
+                // Run the controlled logic (never returns - exits process)
+                $controlled_fn();
             }
 
-            // Otherwise, run as master - create PTY and spawn slave
-            eprintln!("🚀 TEST: No {} var, running as master", PTY_SLAVE_ENV_VAR);
+            // Otherwise, run as controller - create PTY and spawn controlled
+            eprintln!("🚀 TEST: No {} var, running as controller", PTY_CONTROLLED_ENV_VAR);
 
             // Create PTY pair
             let pty_system = NativePtySystem::default();
-            let pty_pair = pty_system
+            let raw_pty_pair = pty_system
                 .openpty(PtySize {
                     rows: 24,
                     cols: 80,
@@ -174,24 +179,27 @@ macro_rules! generate_pty_test {
                 })
                 .expect("Failed to create PTY pair");
 
-            eprintln!("🔍 Master: PTY pair created");
+            // Wrap the PTY pair to use controller/controlled terminology
+            let pty_pair = PtyPair::from(raw_pty_pair);
 
-            // Spawn slave process
+            eprintln!("🔍 Controller: PTY pair created");
+
+            // Spawn controlled process
             let test_binary =
                 std::env::current_exe().expect("Failed to get current executable");
             let mut cmd = CommandBuilder::new(&test_binary);
-            cmd.env(PTY_SLAVE_ENV_VAR, "1");
+            cmd.env(PTY_CONTROLLED_ENV_VAR, "1");
             cmd.env("RUST_BACKTRACE", "1");
             cmd.args(&["--test-threads", "1", "--nocapture", stringify!($test_name)]);
 
-            eprintln!("🚀 Master: Spawning slave process...");
+            eprintln!("🚀 Controller: Spawning controlled process...");
             let child = pty_pair
-                .slave
+                .controlled()
                 .spawn_command(cmd)
-                .expect("Failed to spawn slave process");
+                .expect("Failed to spawn controlled process");
 
-            // Call user's master function with PTY resources
-            $master_fn(pty_pair, child);
+            // Call user's controller function with PTY resources
+            $controller_fn(pty_pair, child);
         }
     };
 }

@@ -302,14 +302,14 @@ fn main() {}";
         );
     }
 
-    /// Test that files with rustfmt_skip attribute are correctly skipped.
+    /// Test that files with `rustfmt_skip` attribute are correctly skipped.
     ///
     /// This test uses a real-world file (mouse.rs) that has:
     /// - `#![cfg_attr(rustfmt, rustfmt_skip)]` at the top
     /// - Content that would normally be formatted (inline links, scattered references)
     ///
     /// This verifies that the formatter correctly:
-    /// - Detects the rustfmt_skip attribute
+    /// - Detects the `rustfmt_skip` attribute
     /// - Skips processing entirely (does not modify the file)
     /// - Leaves the file unchanged
     #[test]

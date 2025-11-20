@@ -65,11 +65,15 @@ impl AsyncDebouncedDeadline {
     /// The deadline starts as `None` (not pending). Call [`reset()`]
     /// when an event occurs to start the debounce timer.
     ///
-    /// # Examplesuse std::time::Duration;
+    /// # Examples
+    ///
+    /// ```
+    /// use std::time::Duration;
     /// use r3bl_tui::AsyncDebouncedDeadline;
     ///
     /// let debounce = AsyncDebouncedDeadline::new(Duration::from_millis(10));
     /// assert!(!debounce.is_pending()); // No deadline set initially
+    /// ```
     ///
     /// [`reset()`]: Self::reset
     #[must_use]

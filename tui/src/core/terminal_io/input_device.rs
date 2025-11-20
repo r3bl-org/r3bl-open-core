@@ -1,8 +1,8 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use crate::{CrosstermEventResult, CrosstermInputDevice, DirectToAnsiInputDevice,
-            InlineVec, InputEvent, MockInputDevice,
-            TERMINAL_LIB_BACKEND, TerminalLibBackend};
+            InlineVec, InputEvent, MockInputDevice, TERMINAL_LIB_BACKEND,
+            TerminalLibBackend};
 use std::time::Duration;
 
 /// Generic input device wrapper that abstracts over different backend implementations.
@@ -53,6 +53,7 @@ use std::time::Duration;
 /// let mut device = InputDevice::new_mock(events);
 /// ```
 #[derive(Debug)]
+#[allow(clippy::large_enum_variant)]
 pub enum InputDevice {
     /// Crossterm backend - cross-platform terminal input
     Crossterm(CrosstermInputDevice),

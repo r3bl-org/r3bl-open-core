@@ -275,6 +275,8 @@
     "supertrait",
     "surrealdb",
     "syntect",
+    "syscall",
+    "syscalls",
     "tcgetattr",
     "TCSANOW",
     "tcsetattr",

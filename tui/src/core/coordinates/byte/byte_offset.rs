@@ -63,13 +63,13 @@ impl ByteOffset {
 
     /// Convert this offset to the index of the last consumed byte.
     ///
-    /// When parsing sequences, `ByteOffset` represents the total bytes consumed,
+    /// When parsing sequences, [`ByteOffset`] represents the total bytes consumed,
     /// which is a "one-past-the-end" position (like Rust's exclusive range ends).
     /// This method converts to the index of the final consumed byte.
     ///
     /// # Semantics
     ///
-    /// - **Input**: ByteOffset representing N bytes consumed (position N)
+    /// - **Input**: [`ByteOffset`] representing N bytes consumed (position N)
     /// - **Output**: Index N-1 of the last consumed byte
     ///
     /// This matches the relationship between Rust's range ends and indices:

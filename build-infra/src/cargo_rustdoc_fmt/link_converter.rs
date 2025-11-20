@@ -169,10 +169,10 @@ fn rebuild_with_text_references(text: &str) -> String {
             Event::SoftBreak => result.push('\n'),
             Event::HardBreak => result.push_str("  \n"),
             Event::Start(Tag::Emphasis) | Event::End(TagEnd::Emphasis) => {
-                result.push('*')
+                result.push('*');
             }
             Event::Start(Tag::Strong) | Event::End(TagEnd::Strong) => {
-                result.push_str("**")
+                result.push_str("**");
             }
             Event::Start(Tag::List(_)) => {
                 if !result.is_empty() && !result.ends_with('\n') {
@@ -209,13 +209,11 @@ fn rebuild_with_text_references(text: &str) -> String {
             }
             Event::Start(Tag::Heading { level, .. }) => {
                 // Ensure blank line before heading for Rust doc style
-                if !result.is_empty() {
-                    if !result.ends_with("\n\n") {
-                        if !result.ends_with('\n') {
-                            result.push('\n');
-                        }
+                if !result.is_empty() && !result.ends_with("\n\n") {
+                    if !result.ends_with('\n') {
                         result.push('\n');
                     }
+                    result.push('\n');
                 }
 
                 // Output correct number of # characters based on heading level
@@ -237,12 +235,12 @@ fn rebuild_with_text_references(text: &str) -> String {
     result
 }
 
-/// Extract reference definitions from text and return (text_without_refs, references).
+/// Extract reference definitions from text and return (`text_without_refs`, `references`).
 ///
 /// Scans for existing reference definitions (e.g., `[name]: target`), extracts them,
 /// and returns both the text without those definitions and the list of references.
 ///
-/// Returns: (text without reference definitions, Vec<(link_name, full_reference_line)>)
+/// Returns: (text without reference definitions, `Vec<(link_name, full_reference_line)>`)
 fn extract_reference_definitions(text: &str) -> (String, Vec<(String, String)>) {
     if text.is_empty() {
         return (String::new(), Vec::new());

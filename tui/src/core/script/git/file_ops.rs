@@ -146,7 +146,7 @@ mod tests {
         with_saved_pwd!(async {
             let (
                 /* don't drop this immediately using `_` */ _temp_dir_root,
-                _git_folder,
+                git_folder,
             ) = try_create_temp_dir_and_cd!("test_git_changed_files");
 
             // Setup git repo.
@@ -164,7 +164,7 @@ mod tests {
                 .await?;
 
             // Create initial commit.
-            try_write_file(&_git_folder, "initial.txt", "initial")?;
+            try_write_file(&git_folder, "initial.txt", "initial")?;
             command!(program => GIT_PROGRAM, args => GIT_CMD_ADD, "initial.txt")
                 .run()
                 .await?;
@@ -173,10 +173,10 @@ mod tests {
                 .await?;
 
             // Create some test files.
-            try_write_file(&_git_folder, "test.rs", "fn main() {}")?;
-            try_write_file(&_git_folder, "config.toml", "[package]")?;
-            try_write_file(&_git_folder, "README.md", "# Test")?;
-            try_write_file(&_git_folder, "data.json", "{}")?;
+            try_write_file(&git_folder, "test.rs", "fn main() {}")?;
+            try_write_file(&git_folder, "config.toml", "[package]")?;
+            try_write_file(&git_folder, "README.md", "# Test")?;
+            try_write_file(&git_folder, "data.json", "{}")?;
 
             // Stage the test files so they show up in git diff --name-only HEAD.
             command!(program => GIT_PROGRAM, args => GIT_CMD_ADD, "test.rs")

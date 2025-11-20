@@ -433,7 +433,7 @@ mod tests {
 
             // Test mark_branch_current method.
             let marked = LocalBranchInfo::mark_branch_current("main");
-            assert_eq!(marked, format!("{} main", CURRENT_BRANCH_PREFIX));
+            assert_eq!(marked, format!("{CURRENT_BRANCH_PREFIX} main"));
 
             // Test trim_current_prefix_from_branch method.
             let formatted = LocalBranchInfo::mark_branch_current("main");

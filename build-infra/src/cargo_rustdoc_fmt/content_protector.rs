@@ -4,8 +4,9 @@
 //!
 //! This module handles preservation of:
 //! - HTML blocks (inline and multi-line)
-//! - Code fences (```rust, ```text, ```ignore, ```no_run, etc.)
-//! - Blockquotes (lines starting with >)
+//! - Code fences (triple backticks with language tags like `rust`, `text`, `ignore`,
+//!   `no_run`, etc.)
+//! - Blockquotes (lines starting with `>`)
 //!
 //! The protection works by:
 //! 1. Extracting protected content and replacing with placeholders

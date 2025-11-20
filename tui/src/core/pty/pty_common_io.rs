@@ -9,27 +9,8 @@
 //! - Input/output event handling
 //! - Resource management and cleanup
 
-use crate::PtyCommand;
-use portable_pty::{Child, MasterPty, PtySize, SlavePty, native_pty_system};
-
-/// Buffer size for reading from PTY.
-pub const READ_BUFFER_SIZE: usize = 4096;
-
-/// Type alias for the controller half of the PTY (master).
-///
-/// The controller is the "master" side that your program interacts with.
-/// It can read output from and write input to the spawned process.
-pub type Controller = Box<dyn MasterPty + Send>;
-
-/// Type alias for the controlled half of the PTY (slave).
-///
-/// The controlled is the "slave" side that the spawned process uses as its terminal.
-/// The spawned process reads from and writes to this side, believing it has a real
-/// terminal.
-pub type Controlled = Box<dyn SlavePty + Send>;
-
-/// Type alias for the child process spawned in the PTY.
-pub type ControlledChild = Box<dyn Child + Send + Sync>;
+use super::pty_core::pty_types::{Controlled, ControlledChild, Controller, PtyCommand};
+use portable_pty::{PtySize, native_pty_system};
 
 /// Creates a PTY pair with the specified size.
 ///

@@ -12,7 +12,7 @@
 //! These tests validate that the complete input stack handles these new features
 //! correctly in a real PTY environment.
 
-use crate::{core::ansi::constants::{
+use crate::{PtyPair, core::ansi::constants::{
                 ANSI_CSI_BRACKET, ANSI_ESC, ANSI_FUNCTION_KEY_TERMINATOR, ANSI_SS3_O,
                 BACKTAB_FINAL, CONTROL_NUL, CONTROL_TAB,
                 SS3_NUMPAD_0, SS3_NUMPAD_1, SS3_NUMPAD_2, SS3_NUMPAD_3, SS3_NUMPAD_4,
@@ -42,26 +42,26 @@ generate_pty_test! {
     ///
     /// [`DirectToAnsiInputDevice`]: crate::tui::terminal_lib_backends::direct_to_ansi::DirectToAnsiInputDevice
     test_fn: test_pty_new_keyboard_features,
-    master: pty_master_entry_point,
-    slave: pty_slave_entry_point
+    controller: pty_controller_entry_point,
+    controlled: pty_controlled_entry_point
 }
 
-/// PTY Master: Send new keyboard sequences and verify parsing
+/// PTY Controller: Send new keyboard sequences and verify parsing
 #[allow(clippy::too_many_lines)]
-fn pty_master_entry_point(
-    pty_pair: portable_pty::PtyPair,
+fn pty_controller_entry_point(
+    pty_pair: PtyPair,
     mut child: Box<dyn portable_pty::Child + Send + Sync>,
 ) {
-    eprintln!("🚀 PTY Master: Starting new keyboard features test...");
+    eprintln!("🚀 PTY Controller: Starting new keyboard features test...");
 
-    let mut writer = pty_pair.master.take_writer().expect("Failed to get writer");
+    let mut writer = pty_pair.controller().take_writer().expect("Failed to get writer");
     let reader_non_blocking = pty_pair
-        .master
+        .controller()
         .try_clone_reader()
         .expect("Failed to get reader");
     let mut buf_reader_non_blocking = BufReader::new(reader_non_blocking);
 
-    eprintln!("📝 PTY Master: Waiting for slave to start...");
+    eprintln!("📝 PTY Controller: Waiting for controlled process to start...");
 
     // Wait for slave to confirm it's running
     let mut test_running_seen = false;
@@ -75,14 +75,14 @@ fn pty_master_entry_point(
             Ok(0) => panic!("EOF reached before slave started"),
             Ok(_) => {
                 let trimmed = line.trim();
-                eprintln!("  ← Slave output: {trimmed}");
+                eprintln!("  ← Controlled output: {trimmed}");
 
                 if trimmed.contains("TEST_RUNNING") {
                     test_running_seen = true;
                     eprintln!("  ✓ Test is running in slave");
                 }
                 if trimmed.contains("SLAVE_STARTING") {
-                    eprintln!("  ✓ Slave confirmed running!");
+                    eprintln!("  ✓ Controlled process confirmed running!");
                     break;
                 }
             }
@@ -137,7 +137,7 @@ fn pty_master_entry_point(
         ("Numpad , (app mode)", vec![ANSI_ESC, ANSI_SS3_O, SS3_NUMPAD_COMMA]),
     ]);
 
-    eprintln!("📝 PTY Master: Sending {} sequences...", sequences.len());
+    eprintln!("📝 PTY Controller: Sending {} sequences...", sequences.len());
 
     // For each test sequence: write ANSI bytes to PTY, read back parsed event, verify
     for (desc, sequence) in &sequences {
@@ -183,7 +183,7 @@ fn pty_master_entry_point(
         eprintln!("  ✓ {desc}: {event_line}");
     }
 
-    eprintln!("🧹 PTY Master: Cleaning up...");
+    eprintln!("🧹 PTY Controller: Cleaning up...");
 
     // Close writer to signal EOF
     drop(writer);
@@ -191,35 +191,35 @@ fn pty_master_entry_point(
     // Wait for slave to exit
     match child.wait() {
         Ok(status) => {
-            eprintln!("✅ PTY Master: Slave exited: {status:?}");
+            eprintln!("✅ PTY Controller: Controlled process exited: {status:?}");
         }
         Err(e) => {
-            panic!("Failed to wait for slave: {e}");
+            panic!("Failed to wait for controlled process: {e}");
         }
     }
 
-    eprintln!("✅ PTY Master: All new keyboard features tests passed!");
+    eprintln!("✅ PTY Controller: All new keyboard features tests passed!");
 }
 
-/// PTY Slave: Parse keyboard input and echo results
-fn pty_slave_entry_point() -> ! {
+/// PTY Controlled: Parse keyboard input and echo results
+fn pty_controlled_entry_point() -> ! {
     // Print to stdout immediately to confirm slave is running
     println!("SLAVE_STARTING");
     std::io::stdout().flush().expect("Failed to flush");
 
-    eprintln!("🎯 PTY Slave: Setting terminal to raw mode...");
+    eprintln!("🎯 PTY Controlled: Setting terminal to raw mode...");
     if let Err(e) = crate::core::ansi::terminal_raw_mode::enable_raw_mode() {
-        eprintln!("⚠️  PTY Slave: Failed to enable raw mode: {e}");
+        eprintln!("⚠️  PTY Controlled: Failed to enable raw mode: {e}");
     } else {
-        eprintln!("✓ PTY Slave: Terminal in raw mode");
+        eprintln!("✓ PTY Controlled: Terminal in raw mode");
     }
 
     let runtime = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
 
     runtime.block_on(async {
-        eprintln!("🎯 PTY Slave: Starting...");
+        eprintln!("🎯 PTY Controlled: Starting...");
         let mut input_device = DirectToAnsiInputDevice::new();
-        eprintln!("🎯 PTY Slave: Device created, reading events...");
+        eprintln!("🎯 PTY Controlled: Device created, reading events...");
 
         let inactivity_timeout = Duration::from_secs(2);
         let mut inactivity_deadline = tokio::time::Instant::now() + inactivity_timeout;
@@ -232,7 +232,7 @@ fn pty_slave_entry_point() -> ! {
                         Some(event) => {
                             event_count += 1;
                             inactivity_deadline = tokio::time::Instant::now() + inactivity_timeout;
-                            eprintln!("🎯 PTY Slave: Event #{event_count}: {event:?}");
+                            eprintln!("🎯 PTY Controlled: Event #{event_count}: {event:?}");
 
                             // Output event in parseable format (same as pty_input_device_test)
                             let output = match event {
@@ -258,28 +258,28 @@ fn pty_slave_entry_point() -> ! {
 
                             // Exit after processing all expected events
                             if event_count >= 24 {
-                                eprintln!("🎯 PTY Slave: Processed {event_count} events, exiting");
+                                eprintln!("🎯 PTY Controlled: Processed {event_count} events, exiting");
                                 break;
                             }
                         }
                         None => {
-                            eprintln!("🎯 PTY Slave: EOF reached");
+                            eprintln!("🎯 PTY Controlled: EOF reached");
                             break;
                         }
                     }
                 }
                 () = tokio::time::sleep_until(inactivity_deadline) => {
-                    eprintln!("🎯 PTY Slave: Inactivity timeout (2 seconds), exiting");
+                    eprintln!("🎯 PTY Controlled: Inactivity timeout (2 seconds), exiting");
                     break;
                 }
             }
         }
 
-        eprintln!("🎯 PTY Slave: Completed, exiting");
+        eprintln!("🎯 PTY Controlled: Completed, exiting");
     });
 
     if let Err(e) = crate::core::ansi::terminal_raw_mode::disable_raw_mode() {
-        eprintln!("⚠️  PTY Slave: Failed to disable raw mode: {e}");
+        eprintln!("⚠️  PTY Controlled: Failed to disable raw mode: {e}");
     }
 
     eprintln!("🎯 Slave: Completed, exiting");
