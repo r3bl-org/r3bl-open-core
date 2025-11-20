@@ -327,7 +327,7 @@ impl Default for TerminalModeState {
 /// - **Core Buffer**: The 2D grid and window dimensions
 /// - **Cursor Management**: Primary cursor position for all subsystems
 /// - **Terminal Mode State**: Tracking of terminal control modes (raw, alternate screen,
-/// etc.)
+///   etc.)
 /// - **ANSI Support**: Terminal state for escape sequence processing
 /// - **Performance**: Pre-calculated memory usage tracking
 ///

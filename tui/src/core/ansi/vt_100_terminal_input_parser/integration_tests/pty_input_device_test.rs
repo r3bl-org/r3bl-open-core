@@ -1,6 +1,6 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{Deadline, InputEvent,
+use crate::{PtyPair, Deadline, InputEvent,
             core::ansi::vt_100_terminal_input_parser::{ir_event_types::{VT100InputEventIR,
                                                                         VT100KeyCodeIR,
                                                                         VT100KeyModifiersIR},
@@ -82,8 +82,8 @@ generate_pty_test! {
     ///
     /// [`DirectToAnsiInputDevice`]: crate::tui::terminal_lib_backends::direct_to_ansi::DirectToAnsiInputDevice
     test_fn: test_pty_input_device,
-    master: pty_master_entry_point,
-    slave: pty_slave_entry_point
+    controller: pty_controller_entry_point,
+    controlled: pty_controlled_entry_point
 }
 
 /// ### Actor 1: PTY Master (test entry, env var NOT set) - Synchronous code
@@ -92,8 +92,8 @@ generate_pty_test! {
 /// - Reads parsed output from slave's stdout
 /// - Verifies correctness
 #[allow(clippy::too_many_lines)]
-fn pty_master_entry_point(
-    pty_pair: portable_pty::PtyPair,
+fn pty_controller_entry_point(
+    pty_pair: PtyPair,
     mut child: Box<dyn portable_pty::Child + Send + Sync>,
 ) {
     /// Helper to generate ANSI bytes from `InputEvent`.
@@ -103,18 +103,18 @@ fn pty_master_entry_point(
         (desc, bytes)
     }
 
-    eprintln!("🚀 PTY Master: Starting...");
+    eprintln!("🚀 PTY Controller: Starting...");
 
     // Get writer (to send ANSI sequences to slave) and non-blocking reader (to receive
     // parsed events from slave).
-    let mut writer = pty_pair.master.take_writer().expect("Failed to get writer");
+    let mut writer = pty_pair.controller().take_writer().expect("Failed to get writer");
     let reader_non_blocking = pty_pair
-        .master
+        .controller()
         .try_clone_reader()
         .expect("Failed to get reader");
     let mut buf_reader_non_blocking = BufReader::new(reader_non_blocking);
 
-    eprintln!("📝 PTY Master: Waiting for slave to start...");
+    eprintln!("📝 PTY Controller: Waiting for controlled process to start...");
 
     // Wait for slave to confirm it's running.
     let mut test_running_seen = false;
@@ -132,14 +132,14 @@ fn pty_master_entry_point(
             Ok(0) => panic!("EOF reached before slave started"),
             Ok(_) => {
                 let trimmed = line.trim();
-                eprintln!("  ← Slave output: {trimmed}");
+                eprintln!("  ← Controlled output: {trimmed}");
 
                 if trimmed.contains("TEST_RUNNING") {
                     test_running_seen = true;
                     eprintln!("  ✓ Test is running in slave");
                 }
                 if trimmed.contains("SLAVE_STARTING") {
-                    eprintln!("  ✓ Slave confirmed running!");
+                    eprintln!("  ✓ Controlled process confirmed running!");
                     break;
                 }
             }
@@ -181,7 +181,7 @@ fn pty_master_entry_point(
         ),
     ];
 
-    eprintln!("📝 PTY Master: Sending {} sequences...", sequences.len());
+    eprintln!("📝 PTY Controller: Sending {} sequences...", sequences.len());
 
     // For each test sequence: write ANSI bytes to PTY, read back parsed event, verify
     // correctness.
@@ -228,7 +228,7 @@ fn pty_master_entry_point(
         eprintln!("  ✓ {desc}: {event_line}");
     }
 
-    eprintln!("🧹 PTY Master: Cleaning up...");
+    eprintln!("🧹 PTY Controller: Cleaning up...");
 
     // Close writer to signal EOF.
     drop(writer);
@@ -236,14 +236,14 @@ fn pty_master_entry_point(
     // Wait for slave to exit.
     match child.wait() {
         Ok(status) => {
-            eprintln!("✅ PTY Master: Slave exited: {status:?}");
+            eprintln!("✅ PTY Controller: Controlled process exited: {status:?}");
         }
         Err(e) => {
-            panic!("Failed to wait for slave: {e}");
+            panic!("Failed to wait for controlled process: {e}");
         }
     }
 
-    eprintln!("✅ PTY Master: Test passed!");
+    eprintln!("✅ PTY Controller: Test passed!");
 }
 
 /// ### Actor 2: PTY Slave (worker process)
@@ -261,7 +261,7 @@ fn pty_master_entry_point(
 /// 4. **Output Results**: Write parsed events to stdout for master to verify
 ///
 /// This function MUST exit before returning so other tests don't run.
-fn pty_slave_entry_point() -> ! {
+fn pty_controlled_entry_point() -> ! {
     // Print to stdout immediately to confirm slave is running.
     println!("SLAVE_STARTING");
     std::io::stdout().flush().expect("Failed to flush");
@@ -269,22 +269,22 @@ fn pty_slave_entry_point() -> ! {
     // CRITICAL: Set the terminal (PTY slave) to raw mode.
     // Without this, DirectToAnsiInputDevice cannot read ANSI escape sequences properly
     // because they would be buffered or interpreted by the terminal layer.
-    eprintln!("🔍 PTY Slave: Setting terminal to raw mode...");
+    eprintln!("🔍 PTY Controlled: Setting terminal to raw mode...");
     // Enter raw mode.
     if let Err(e) = crate::core::ansi::terminal_raw_mode::enable_raw_mode() {
-        eprintln!("⚠️  PTY Slave: Failed to enable raw mode: {e}");
+        eprintln!("⚠️  PTY Controlled: Failed to enable raw mode: {e}");
         // This would likely cause the test to fail - escape sequences won't be readable
     } else {
-        eprintln!("✓ PTY Slave: Terminal in raw mode");
+        eprintln!("✓ PTY Controlled: Terminal in raw mode");
     }
 
     // Create a Tokio runtime for async operations.
     let runtime = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
 
     runtime.block_on(async {
-        eprintln!("🔍 PTY Slave: Starting...");
+        eprintln!("🔍 PTY Controlled: Starting...");
         let mut input_device = DirectToAnsiInputDevice::new();
-        eprintln!("🔍 PTY Slave: Device created, reading events...");
+        eprintln!("🔍 PTY Controlled: Device created, reading events...");
 
         // Create inactivity timeout: exit if no events for 2 seconds.
         // https://developerlife.com/2024/07/10/rust-async-cancellation-safety-tokio/#example-1-right-and-wrong-way-to-sleep-and-interval
@@ -302,7 +302,7 @@ fn pty_slave_entry_point() -> ! {
                         Some(event) => {
                             event_count += 1;
                             inactivity_deadline = tokio::time::Instant::now() + inactivity_timeout; // Reset deadline.
-                            eprintln!("🔍 PTY Slave: Event #{event_count}: {event:?}");
+                            eprintln!("🔍 PTY Controlled: Event #{event_count}: {event:?}");
 
                             // Output event in parseable format.
                             let output = match event {
@@ -328,12 +328,12 @@ fn pty_slave_entry_point() -> ! {
 
                             // Exit after processing a few events for testing.
                             if event_count >= 3 {
-                                eprintln!("🔍 PTY Slave: Processed {event_count} events, exiting");
+                                eprintln!("🔍 PTY Controlled: Processed {event_count} events, exiting");
                                 break;
                             }
                         }
                         None => {
-                            eprintln!("🔍 PTY Slave: EOF reached");
+                            eprintln!("🔍 PTY Controlled: EOF reached");
                             break;
                         }
                     }
@@ -341,21 +341,21 @@ fn pty_slave_entry_point() -> ! {
                 // Inactivity timeout: exit if deadline is reached (2 seconds of no events).
                 // https://developerlife.com/2024/07/10/rust-async-cancellation-safety-tokio/#example-1-right-and-wrong-way-to-sleep-and-interval
                 () = tokio::time::sleep_until(inactivity_deadline) => {
-                    eprintln!("🔍 PTY Slave: Inactivity timeout (2 seconds with no events), exiting");
+                    eprintln!("🔍 PTY Controlled: Inactivity timeout (2 seconds with no events), exiting");
                     break;
                 }
             }
         }
 
-        eprintln!("🔍 PTY Slave: Completed, exiting");
+        eprintln!("🔍 PTY Controlled: Completed, exiting");
     });
 
     // Clean up: disable raw mode before exiting.
     if let Err(e) = crate::core::ansi::terminal_raw_mode::disable_raw_mode() {
-        eprintln!("⚠️  PTY Slave: Failed to disable raw mode: {e}");
+        eprintln!("⚠️  PTY Controlled: Failed to disable raw mode: {e}");
     }
 
-    eprintln!("🔍 Slave: Completed, exiting");
+    eprintln!("🔍 Controlled: Completed, exiting");
     // CRITICAL: Exit immediately to prevent test harness from running other tests.
     std::process::exit(0);
 }

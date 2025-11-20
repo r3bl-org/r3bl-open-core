@@ -10,12 +10,85 @@ use tokio::{sync::mpsc::{UnboundedReceiver, UnboundedSender},
 
 /// Buffer size for reading PTY output (4KB stack allocation).
 ///
-/// This is used for the read buffer in PTY operations. The performance bottleneck
-/// is not this buffer size but the `Vec<u8>` allocations in `PtyOutputEvent::Output`.
+/// This is used for the read buffer in PTY operations. The performance bottleneck is not
+/// this buffer size but the [`Vec`]`<`[`u8`]`>` allocations in
+/// [`PtyReadWriteOutputEvent::Output`].
 pub const READ_BUFFER_SIZE: usize = 4096;
 
-/// Type alias for a PTY pair (master and slave).
-pub type Pair = portable_pty::PtyPair;
+/// Wrapper around [`portable_pty::PtyPair`] that provides controller/controlled
+/// terminology.
+///
+/// This type intentionally shadows [`portable_pty::PtyPair`] to prevent direct use of
+/// [`portable_pty`]'s master/slave terminology. It provides clean accessor methods that
+/// align with our codebase's inclusive language policy.
+///
+/// See: [Inclusive Naming Initiative - Tier 1 Terms](https://inclusivenaming.org/word-lists/tier-1/)
+///
+/// # Example
+///
+/// ```no_run
+/// use r3bl_tui::PtyPair;
+/// use portable_pty::{PtySystem, NativePtySystem, PtySize};
+///
+/// let pty_system = NativePtySystem::default();
+/// let raw_pair = pty_system.openpty(PtySize::default()).unwrap();
+/// let pty_pair = PtyPair::from(raw_pair);
+///
+/// // Access controller side (library's "master")
+/// let reader = pty_pair.controller().try_clone_reader().unwrap();
+///
+/// // Access controlled side (library's "slave")
+/// // (typically used for spawning child processes)
+/// ```
+#[allow(missing_debug_implementations)]
+pub struct PtyPair {
+    inner: portable_pty::PtyPair,
+}
+
+impl PtyPair {
+    /// Create a new wrapper from a raw `portable_pty::PtyPair`.
+    #[must_use]
+    pub fn new(inner: portable_pty::PtyPair) -> Self { Self { inner } }
+
+    /// Access the controller side of the PTY (library's "master").
+    ///
+    /// The controller side is used by the parent process to read output from
+    /// and write input to the controlled child process.
+    #[must_use]
+    pub fn controller(&self) -> &Controller { &self.inner.master }
+
+    /// Access the controller side mutably.
+    pub fn controller_mut(&mut self) -> &mut Controller { &mut self.inner.master }
+
+    /// Access the controlled side of the PTY (library's "slave").
+    ///
+    /// The controlled side is typically used for spawning child processes that
+    /// will use this PTY for their stdin/stdout/stderr.
+    #[must_use]
+    pub fn controlled(&self) -> &Controlled { &self.inner.slave }
+
+    /// Access the controlled side mutably.
+    pub fn controlled_mut(&mut self) -> &mut Controlled { &mut self.inner.slave }
+
+    /// Split the pair into separate controller and controlled halves.
+    ///
+    /// This consumes the wrapper and returns the individual components.
+    #[must_use]
+    pub fn split(self) -> (Controller, Controlled) {
+        (self.inner.master, self.inner.slave)
+    }
+
+    /// Get the inner `portable_pty::PtyPair` for direct library access.
+    ///
+    /// This is provided for cases where you need to interact directly with the
+    /// `portable_pty` API, but should be used sparingly.
+    #[must_use]
+    pub fn into_inner(self) -> portable_pty::PtyPair { self.inner }
+}
+
+impl From<portable_pty::PtyPair> for PtyPair {
+    fn from(inner: portable_pty::PtyPair) -> Self { Self::new(inner) }
+}
 
 /// Type alias for the controlled half of a PTY (slave).
 ///

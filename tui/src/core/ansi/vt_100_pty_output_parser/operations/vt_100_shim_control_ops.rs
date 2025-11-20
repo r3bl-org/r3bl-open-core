@@ -25,22 +25,22 @@
 //! # Architecture Overview
 //!
 //! ```text
-//! ╭─────────────────╮    ╭───────────────╮    ╭─────────────────╮    ╭──────────────╮
-//! │ Child Process   │────▶ PTY Master    │────▶ VTE Parser      │────▶ OffscreenBuf │
-//! │ (vim, bash...)  │    │ (byte stream) │    │ (state machine) │    │ (terminal    │
-//! ╰─────────────────╯    ╰───────────────╯    ╰─────────────────╯    │  buffer)     │
-//!        │                                            │              ╰──────────────╯
-//!        │                                            │                      │
-//!        │                                   ╔════════▼════════╗             │
-//!        │                                   ║ Perform Trait   ║             │
-//!        │                                   ║ Implementation  ║             │
-//!        │                                   ╚═════════════════╝             │
-//!        │                                                                   │
-//!        │                                   ╭─────────────────╮             │
-//!        │                                   │ RenderPipeline  ◀─────────────╯
-//!        │                                   │ paint()         │
-//!        ╰───────────────────────────────────▶ Terminal Output │
-//!                                            ╰─────────────────╯
+//! ╭─────────────────╮    ╭────────────────╮    ╭─────────────────╮    ╭──────────────╮
+//! │ Child Process   │────▶ PTY Controller │────▶ VTE Parser      │────▶ OffscreenBuf │
+//! │ (vim, bash...)  │    │ (byte stream)  │    │ (state machine) │    │ (terminal    │
+//! ╰──────┬──────────╯    ╰────────────────╯    ╰───────┬─────────╯    │  buffer)     │
+//!        │                                             │              ╰───────┬──────╯
+//!        │                                             │                      │
+//!        │                                    ╔════════▼════════╗             │
+//!        │                                    ║ Perform Trait   ║             │
+//!        │                                    ║ Implementation  ║             │
+//!        │                                    ╚═════════════════╝             │
+//!        │                                                                    │
+//!        │                                    ╭─────────────────╮             │
+//!        │                                    │ RenderPipeline  ◀─────────────╯
+//!        │                                    │ paint()         │
+//!        ╰────────────────────────────────────▶ Terminal Output │
+//!                                             ╰─────────────────╯
 //! ```
 //!
 //! # Control Character Processing Flow
@@ -48,9 +48,9 @@
 //! ```text
 //! Application sends '\n' (0x0A Line Feed)
 //!         ↓
-//!     PTY Slave (control character)
+//!     PTY Controlled (control character)
 //!         ↓
-//!     PTY Master (byte stream) <- in process_manager.rs
+//!     PTY Controller (byte stream) <- in process_manager.rs
 //!         ↓
 //!     VTE Parser (identifies C0 control chars)
 //!         ↓

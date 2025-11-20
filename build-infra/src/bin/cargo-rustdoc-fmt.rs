@@ -8,12 +8,9 @@ use std::process;
 
 #[tokio::main]
 async fn main() {
-    match run().await {
-        Err(e) => {
-            eprintln!("Error: {e:?}");
-            process::exit(1);
-        }
-        Ok(_) => (),
+    if let Err(e) = run().await {
+        eprintln!("Error: {e:?}");
+        process::exit(1);
     }
 }
 

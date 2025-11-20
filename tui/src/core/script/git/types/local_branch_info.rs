@@ -44,7 +44,7 @@ impl LocalBranchInfo {
         use std::fmt::Write;
         let mut acc = InlineString::new();
         // We don't care about the result of this operation.
-        write!(acc, "{} {}", CURRENT_BRANCH_PREFIX, branch_name).ok();
+        write!(acc, "{CURRENT_BRANCH_PREFIX} {branch_name}").ok();
         acc
     }
 

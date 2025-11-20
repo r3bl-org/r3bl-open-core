@@ -2,7 +2,7 @@
 
 //! # Pipeline Stage 5: Backend Executor (`DirectToAnsi` Implementation)
 //!
-//! # You Are Here: **Stage 5** (DirectToAnsi Executor)
+//! # You Are Here: **Stage 5** (`DirectToAnsi` Executor)
 //!
 //! ```text
 //! [Stage 1: App/Component]

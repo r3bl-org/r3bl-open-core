@@ -34,7 +34,7 @@
 //! - See [`offscreen_buffer::paint_impl`] for the `OffscreenBufferPaintImplCrossterm`
 //!   converter
 //! - Converts [`OffscreenBuffer`] → [`RenderOpOutputVec`] (shared by both Crossterm and
-//!   DirectToAnsi)
+//!   `DirectToAnsi`)
 //!
 //! ### Stage 5: Backend Executor (`crossterm_paint_render_op_impl`)
 //! - **Implemented in this module** - Crossterm-specific execution

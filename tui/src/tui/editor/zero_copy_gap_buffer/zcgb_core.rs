@@ -160,8 +160,7 @@ impl ZeroCopyGapBuffer {
 
         // Update buffer offsets for all subsequent lines.
         for i in (line_idx + 1)..self.lines.len() {
-            self.lines[i].buffer_start =
-                self.lines[i].buffer_start + byte_offset(shift_amount);
+            self.lines[i].buffer_start += byte_offset(shift_amount);
         }
 
         self.line_count += len(1);
@@ -334,7 +333,7 @@ impl ZeroCopyGapBuffer {
 
         // Update buffer offsets for subsequent lines.
         for line in self.lines.iter_mut().skip(line_index.as_usize() + 1) {
-            line.buffer_start = line.buffer_start + byte_offset(shift_amount);
+            line.buffer_start += byte_offset(shift_amount);
         }
     }
 }

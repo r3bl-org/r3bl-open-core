@@ -21,13 +21,13 @@ use std::time::{Duration, Instant};
 ///
 /// # Comparison with `AsyncDebouncedDeadline`
 ///
-/// | Pattern | `Deadline` | `AsyncDebouncedDeadline` |
-/// |---------|-----------|-------------------------|
-/// | **Purpose** | Timeout enforcement | Event debouncing |
-/// | **Resets?** | No (fixed duration) | Yes (on each event) |
-/// | **Runtime** | Sync (`std::time`) | Async (`tokio::time`) |
-/// | **Use with** | Polling loops | `tokio::select!` |
-/// | **Example** | "Slave must start in 5s" | "Print after 10ms of silence" |
+/// | Pattern      | `Deadline`                            | `AsyncDebouncedDeadline`      |
+/// | ------------ | ------------------------------------- | ----------------------------- |
+/// | **Purpose**  | Timeout enforcement                   | Event debouncing              |
+/// | **Resets?**  | No (fixed duration)                   | Yes (on each event)           |
+/// | **Runtime**  | Sync (`std::time`)                    | Async (`tokio::time`)         |
+/// | **Use with** | Polling loops                         | `tokio::select!`              |
+/// | **Example**  | "Controlled process must start in 5s" | "Print after 10ms of silence" |
 ///
 /// # Examples
 ///

@@ -246,12 +246,11 @@ mod tests {
                 KeyPress::Plain { key } => {
                     assert_eq!(
                         key, expected_key,
-                        "Character '{}' should convert correctly",
-                        ch
+                        "Character '{ch}' should convert correctly"
                     );
                 }
                 KeyPress::WithModifiers { .. } => {
-                    panic!("Expected Plain keypress for character '{}'", ch);
+                    panic!("Expected Plain keypress for character '{ch}'");
                 }
             }
         }
@@ -287,11 +286,10 @@ mod tests {
                 } => {
                     assert_eq!(
                         fn_key, expected_fn_key,
-                        "Function key F{} should convert correctly",
-                        n
+                        "Function key F{n} should convert correctly"
                     );
                 }
-                _ => panic!("Expected Plain FunctionKey for F{}", n),
+                _ => panic!("Expected Plain FunctionKey for F{n}"),
             }
         }
     }
@@ -668,8 +666,7 @@ mod tests {
                 Some(InputEvent::Mouse(mouse_input)) => {
                     assert_eq!(
                         mouse_input.pos, expected_pos,
-                        "Position conversion failed for {:?}",
-                        term_pos
+                        "Position conversion failed for {term_pos:?}"
                     );
                 }
                 _ => panic!("Expected Mouse event"),
@@ -744,17 +741,15 @@ mod tests {
                     assert_eq!(
                         size.col_width,
                         ColWidth::from(cols),
-                        "Column width mismatch for cols={}",
-                        cols
+                        "Column width mismatch for cols={cols}"
                     );
                     assert_eq!(
                         size.row_height,
                         RowHeight::from(rows),
-                        "Row height mismatch for rows={}",
-                        rows
+                        "Row height mismatch for rows={rows}"
                     );
                 }
-                _ => panic!("Expected Resize event for {}x{}", cols, rows),
+                _ => panic!("Expected Resize event for {cols}x{rows}"),
             }
         }
     }
@@ -805,7 +800,7 @@ mod tests {
                     assert_eq!(key, Key::Character('x'));
                     assert_eq!(mask.ctrl_key_state, KeyState::Pressed);
                 }
-                _ => panic!("Expected WithModifiers keypress"),
+                KeyPress::Plain { .. } => panic!("Expected WithModifiers keypress"),
             },
             _ => panic!("Expected Keyboard event"),
         }

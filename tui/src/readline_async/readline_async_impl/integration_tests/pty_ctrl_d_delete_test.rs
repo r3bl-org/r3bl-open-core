@@ -1,6 +1,6 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{AsyncDebouncedDeadline, ControlledChild, Deadline, DebouncedState, Pair,
+use crate::{AsyncDebouncedDeadline, ControlledChild, Deadline, DebouncedState, PtyPair,
             core::test_fixtures::StdoutMock,
             generate_pty_test,
             readline_async::readline_async_impl::LineState};
@@ -29,23 +29,23 @@ generate_pty_test! {
     ///
     /// [`LineState`]: crate::readline_async::readline_async_impl::LineState
     test_fn: test_pty_ctrl_d_delete,
-    master: pty_master_entry_point,
-    slave: pty_slave_entry_point
+    controller: pty_controller_entry_point,
+    controlled: pty_controlled_entry_point
 }
 
-/// PTY Master: Send Ctrl+D on non-empty line and verify delete behavior
-fn pty_master_entry_point(pty_pair: Pair, mut child: ControlledChild) {
-    eprintln!("🚀 PTY Master: Starting Ctrl+D delete test...");
+/// PTY Controller: Send Ctrl+D on non-empty line and verify delete behavior
+fn pty_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
+    eprintln!("🚀 PTY Controller: Starting Ctrl+D delete test...");
 
-    let mut writer = pty_pair.master.take_writer().expect("Failed to get writer");
+    let mut writer = pty_pair.controller().take_writer().expect("Failed to get writer");
     let reader_non_blocking = pty_pair
-        .master
+        .controller()
         .try_clone_reader()
         .expect("Failed to clone reader");
 
     let mut buf_reader_non_blocking = BufReader::new(reader_non_blocking);
 
-    eprintln!("📝 PTY Master: Waiting for slave to start...");
+    eprintln!("📝 PTY Controller: Waiting for controlled process to start...");
 
     // Wait for slave to confirm it's running and ready
     let mut test_running_seen = false;
@@ -64,14 +64,14 @@ fn pty_master_entry_point(pty_pair: Pair, mut child: ControlledChild) {
             Ok(0) => panic!("EOF reached before slave started"),
             Ok(_) => {
                 let trimmed = line.trim();
-                eprintln!("  ← Slave output: {trimmed}");
+                eprintln!("  ← Controlled output: {trimmed}");
 
                 if trimmed.contains("TEST_RUNNING") {
                     test_running_seen = true;
                     eprintln!("  ✓ Test is running in slave");
                 }
                 if trimmed.contains("SLAVE_STARTING") {
-                    eprintln!("  ✓ Slave confirmed running!");
+                    eprintln!("  ✓ Controlled process confirmed running!");
                 }
                 if trimmed.contains("SLAVE_READY") {
                     slave_ready_seen = true;
@@ -117,7 +117,7 @@ fn pty_master_entry_point(pty_pair: Pair, mut child: ControlledChild) {
     };
 
     // Test: Ctrl+D on non-empty line → delete character at cursor
-    eprintln!("📝 PTY Master: Sending 'hello'...");
+    eprintln!("📝 PTY Controller: Sending 'hello'...");
     writer.write_all(b"hello").expect("Failed to write text");
     writer.flush().expect("Failed to flush");
     std::thread::sleep(Duration::from_millis(200));
@@ -127,7 +127,7 @@ fn pty_master_entry_point(pty_pair: Pair, mut child: ControlledChild) {
     assert_eq!(result, "Line: hello, Cursor: 5");
 
     // Move cursor to beginning with Ctrl+A
-    eprintln!("📝 PTY Master: Sending Ctrl+A (move to beginning)...");
+    eprintln!("📝 PTY Controller: Sending Ctrl+A (move to beginning)...");
     writer.write_all(&[0x01]).expect("Failed to write Ctrl+A");
     writer.flush().expect("Failed to flush");
     std::thread::sleep(Duration::from_millis(100));
@@ -137,7 +137,7 @@ fn pty_master_entry_point(pty_pair: Pair, mut child: ControlledChild) {
     assert_eq!(result, "Line: hello, Cursor: 0");
 
     // Send Ctrl+D to delete 'h'
-    eprintln!("📝 PTY Master: Sending Ctrl+D (delete character at cursor)...");
+    eprintln!("📝 PTY Controller: Sending Ctrl+D (delete character at cursor)...");
     writer.write_all(&[0x04]).expect("Failed to write Ctrl+D");
     writer.flush().expect("Failed to flush");
     std::thread::sleep(Duration::from_millis(100));
@@ -147,42 +147,42 @@ fn pty_master_entry_point(pty_pair: Pair, mut child: ControlledChild) {
     // cspell:disable-next-line
     assert_eq!(result, "Line: ello, Cursor: 0");
 
-    eprintln!("✅ PTY Master: Ctrl+D delete test passed!");
+    eprintln!("✅ PTY Controller: Ctrl+D delete test passed!");
 
     // Clean shutdown - close writer to signal slave to exit
-    eprintln!("🧹 PTY Master: Cleaning up...");
+    eprintln!("🧹 PTY Controller: Cleaning up...");
     drop(writer);
 
     // Wait for child to exit
     match child.wait() {
         Ok(status) => {
-            eprintln!("✅ PTY Master: Slave exited: {status:?}");
+            eprintln!("✅ PTY Controller: Controlled process exited: {status:?}");
         }
         Err(e) => {
-            panic!("Failed to wait for slave: {e}");
+            panic!("Failed to wait for controlled process: {e}");
         }
     }
 }
 
-/// PTY Slave: Process readline input and report line state
-fn pty_slave_entry_point() -> ! {
+/// PTY Controlled: Process readline input and report line state
+fn pty_controlled_entry_point() -> ! {
     use crate::tui::terminal_lib_backends::direct_to_ansi::DirectToAnsiInputDevice;
 
     println!("SLAVE_STARTING");
     std::io::stdout().flush().expect("Failed to flush");
 
-    println!("🔍 PTY Slave: Setting terminal to raw mode...");
+    println!("🔍 PTY Controlled: Setting terminal to raw mode...");
     if let Err(e) = crate::core::ansi::terminal_raw_mode::enable_raw_mode() {
-        println!("⚠️  PTY Slave: Failed to enable raw mode: {e}");
+        println!("⚠️  PTY Controlled: Failed to enable raw mode: {e}");
     } else {
-        println!("✓ PTY Slave: Terminal in raw mode");
+        println!("✓ PTY Controlled: Terminal in raw mode");
     }
     std::io::stdout().flush().expect("Failed to flush");
 
     let runtime = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
 
     runtime.block_on(async {
-        println!("🔍 PTY Slave: Starting...");
+        println!("🔍 PTY Controlled: Starting...");
 
         let mut line_state = LineState::new(String::new(), (100, 100));
         let stdout_mock = StdoutMock::default();
@@ -190,7 +190,7 @@ fn pty_slave_entry_point() -> ! {
         let (history, _) = crate::readline_async::readline_async_impl::History::new();
         let safe_history = Arc::new(StdMutex::new(history));
 
-        println!("🔍 PTY Slave: LineState created, reading input...");
+        println!("🔍 PTY Controlled: LineState created, reading input...");
         println!("SLAVE_READY");  // Signal to master that we're ready to receive input
         std::io::stdout().flush().expect("Failed to flush");
 
@@ -218,7 +218,7 @@ fn pty_slave_entry_point() -> ! {
                         Some(event) => {
                             // Reset inactivity watchdog on each event
                             inactivity_watchdog.reset();
-                            println!("🔍 PTY Slave: Event: {event:?}");
+                            println!("🔍 PTY Controlled: Event: {event:?}");
 
                             let result = line_state.apply_event_and_render(
                                 &event,
@@ -228,7 +228,7 @@ fn pty_slave_entry_point() -> ! {
 
                             match result {
                                 Ok(Some(readline_event)) => {
-                                    println!("🔍 PTY Slave: ReadlineEvent: {readline_event:?}");
+                                    println!("🔍 PTY Controlled: ReadlineEvent: {readline_event:?}");
 
                                     // For this test, we don't exit on EOF
                                     // We only test delete character behavior
@@ -244,12 +244,12 @@ fn pty_slave_entry_point() -> ! {
                                     ));
                                 }
                                 Err(e) => {
-                                    println!("🔍 PTY Slave: Error: {e:?}");
+                                    println!("🔍 PTY Controlled: Error: {e:?}");
                                 }
                             }
                         }
                         None => {
-                            println!("🔍 PTY Slave: EOF reached");
+                            println!("🔍 PTY Controlled: EOF reached");
                             break;
                         }
                     }
@@ -267,16 +267,16 @@ fn pty_slave_entry_point() -> ! {
 
                 // -------- Branch 3: Inactivity timeout - exit test --------
                 () = inactivity_watchdog.sleep_until() => {
-                    println!("🔍 PTY Slave: Inactivity timeout - exiting");
+                    println!("🔍 PTY Controlled: Inactivity timeout - exiting");
                     break;
                 }
             }
         }
 
-        println!("🔍 PTY Slave: Completed, exiting");
+        println!("🔍 PTY Controlled: Completed, exiting");
         std::io::stdout().flush().expect("Failed to flush");
     });
 
-    println!("🔍 Slave: Completed, exiting");
+    println!("🔍 Controlled: Completed, exiting");
     std::process::exit(0);
 }

@@ -7,7 +7,7 @@ use crate::cargo_rustdoc_fmt::{extractor, link_converter, table_formatter,
                                        RustdocBlock}};
 use std::path::{Path, PathBuf};
 
-/// Check if a file contains the rustfmt_skip attribute.
+/// Check if a file contains the `rustfmt_skip` attribute.
 ///
 /// Files with `#![cfg_attr(rustfmt, rustfmt_skip)]` will be skipped entirely
 /// to respect the user's intent to preserve manual formatting.

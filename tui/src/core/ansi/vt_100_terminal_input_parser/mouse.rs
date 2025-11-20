@@ -382,6 +382,7 @@ fn parse_x10_mouse(sequence: &[u8]) -> Option<(VT100InputEventIR, ByteOffset)> {
 ///
 /// Similar to SGR but simpler - no `<` prefix, only M terminator (no m),
 /// and always includes coordinates as decimal numbers.
+#[allow(clippy::too_many_lines)]
 fn parse_rxvt_mouse(sequence: &[u8]) -> Option<(VT100InputEventIR, ByteOffset)> {
     // RXVT format: ESC [ Cb ; Cx ; Cy M (minimum 8 bytes: ESC[0;1;1M)
     if sequence.len() < 8 {

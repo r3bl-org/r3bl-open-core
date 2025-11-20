@@ -22,6 +22,14 @@ use crate::{InlineString, Run, TempDir, command, ok,
 ///
 /// This function also uses [`crate::try_cd()`] so make sure to wrap all tests that
 /// call this function with [`serial_test`] or use the isolated test runner.
+///
+/// # Errors
+///
+/// Returns an error if git commands fail or if temporary directory operations fail.
+///
+/// # Panics
+///
+/// Panics if the branch name is not the expected default.
 pub async fn helper_setup_git_repo_with_commit() -> miette::Result<(
     /* temp_dir_root: don't drop this immediately using `_` */ TempDir,
     /* initial_branch_name */ InlineString,

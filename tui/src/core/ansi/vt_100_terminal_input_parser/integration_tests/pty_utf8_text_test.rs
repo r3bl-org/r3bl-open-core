@@ -1,6 +1,6 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{InputEvent, Deadline, generate_pty_test,
+use crate::{PtyPair, InputEvent, Deadline, generate_pty_test,
             tui::terminal_lib_backends::direct_to_ansi::DirectToAnsiInputDevice};
 use std::{io::{BufRead, BufReader, Write},
           time::Duration};
@@ -19,25 +19,25 @@ generate_pty_test! {
     ///
     /// [`DirectToAnsiInputDevice`]: crate::tui::terminal_lib_backends::direct_to_ansi::DirectToAnsiInputDevice
     test_fn: test_pty_utf8_text,
-    master: pty_master_entry_point,
-    slave: pty_slave_entry_point
+    controller: pty_controller_entry_point,
+    controlled: pty_controlled_entry_point
 }
 
-/// PTY Master: Send UTF-8 text and verify parsing
-fn pty_master_entry_point(
-    pty_pair: portable_pty::PtyPair,
+/// PTY Controller: Send UTF-8 text and verify parsing
+fn pty_controller_entry_point(
+    pty_pair: PtyPair,
     mut child: Box<dyn portable_pty::Child + Send + Sync>,
 ) {
-    eprintln!("🚀 PTY Master: Starting UTF-8 text test...");
+    eprintln!("🚀 PTY Controller: Starting UTF-8 text test...");
 
-    let mut writer = pty_pair.master.take_writer().expect("Failed to get writer");
+    let mut writer = pty_pair.controller().take_writer().expect("Failed to get writer");
     let reader_non_blocking = pty_pair
-        .master
+        .controller()
         .try_clone_reader()
         .expect("Failed to get reader");
     let mut buf_reader_non_blocking = BufReader::new(reader_non_blocking);
 
-    eprintln!("📝 PTY Master: Waiting for slave to start...");
+    eprintln!("📝 PTY Controller: Waiting for controlled process to start...");
 
     // Wait for slave to confirm it's running
     let mut test_running_seen = false;
@@ -51,14 +51,14 @@ fn pty_master_entry_point(
             Ok(0) => panic!("EOF reached before slave started"),
             Ok(_) => {
                 let trimmed = line.trim();
-                eprintln!("  ← Slave output: {trimmed}");
+                eprintln!("  ← Controlled output: {trimmed}");
 
                 if trimmed.contains("TEST_RUNNING") {
                     test_running_seen = true;
                     eprintln!("  ✓ Test is running in slave");
                 }
                 if trimmed.contains("SLAVE_STARTING") {
-                    eprintln!("  ✓ Slave confirmed running!");
+                    eprintln!("  ✓ Controlled process confirmed running!");
                     break;
                 }
             }
@@ -79,7 +79,7 @@ fn pty_master_entry_point(
         ("Punctuation", "!@#$%"),
     ];
 
-    eprintln!("📝 PTY Master: Sending {} text inputs...", texts.len());
+    eprintln!("📝 PTY Controller: Sending {} text inputs...", texts.len());
 
     for (desc, text) in &texts {
         eprintln!("  → Sending: {desc} ({text})");
@@ -126,40 +126,40 @@ fn pty_master_entry_point(
         }
     }
 
-    eprintln!("🧹 PTY Master: Cleaning up...");
+    eprintln!("🧹 PTY Controller: Cleaning up...");
 
     drop(writer);
 
     match child.wait() {
         Ok(status) => {
-            eprintln!("✅ PTY Master: Slave exited: {status:?}");
+            eprintln!("✅ PTY Controller: Controlled process exited: {status:?}");
         }
         Err(e) => {
-            panic!("Failed to wait for slave: {e}");
+            panic!("Failed to wait for controlled process: {e}");
         }
     }
 
-    eprintln!("✅ PTY Master: Test passed!");
+    eprintln!("✅ PTY Controller: Test passed!");
 }
 
-/// PTY Slave: Read and parse UTF-8 text
-fn pty_slave_entry_point() -> ! {
+/// PTY Controlled: Read and parse UTF-8 text
+fn pty_controlled_entry_point() -> ! {
     println!("SLAVE_STARTING");
     std::io::stdout().flush().expect("Failed to flush");
 
-    eprintln!("🔍 PTY Slave: Setting terminal to raw mode...");
+    eprintln!("🔍 PTY Controlled: Setting terminal to raw mode...");
     if let Err(e) = crate::core::ansi::terminal_raw_mode::enable_raw_mode() {
-        eprintln!("⚠️  PTY Slave: Failed to enable raw mode: {e}");
+        eprintln!("⚠️  PTY Controlled: Failed to enable raw mode: {e}");
     } else {
-        eprintln!("✓ PTY Slave: Terminal in raw mode");
+        eprintln!("✓ PTY Controlled: Terminal in raw mode");
     }
 
     let runtime = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
 
     runtime.block_on(async {
-        eprintln!("🔍 PTY Slave: Starting...");
+        eprintln!("🔍 PTY Controlled: Starting...");
         let mut input_device = DirectToAnsiInputDevice::new();
-        eprintln!("🔍 PTY Slave: Device created, reading events...");
+        eprintln!("🔍 PTY Controlled: Device created, reading events...");
 
         let inactivity_timeout = Duration::from_secs(2);
         let mut inactivity_deadline = tokio::time::Instant::now() + inactivity_timeout;
@@ -172,7 +172,7 @@ fn pty_slave_entry_point() -> ! {
                         Some(event) => {
                             event_count += 1;
                             inactivity_deadline = tokio::time::Instant::now() + inactivity_timeout;
-                            eprintln!("🔍 PTY Slave: Event #{event_count}: {event:?}");
+                            eprintln!("🔍 PTY Controlled: Event #{event_count}: {event:?}");
 
                             let output = match event {
                                 InputEvent::Keyboard(key_press) => {
@@ -187,30 +187,30 @@ fn pty_slave_entry_point() -> ! {
                             std::io::stdout().flush().expect("Failed to flush stdout");
 
                             if event_count >= 4 {
-                                eprintln!("🔍 PTY Slave: Processed {event_count} events, exiting");
+                                eprintln!("🔍 PTY Controlled: Processed {event_count} events, exiting");
                                 break;
                             }
                         }
                         None => {
-                            eprintln!("🔍 PTY Slave: EOF reached");
+                            eprintln!("🔍 PTY Controlled: EOF reached");
                             break;
                         }
                     }
                 }
                 () = tokio::time::sleep_until(inactivity_deadline) => {
-                    eprintln!("🔍 PTY Slave: Inactivity timeout (2 seconds with no events), exiting");
+                    eprintln!("🔍 PTY Controlled: Inactivity timeout (2 seconds with no events), exiting");
                     break;
                 }
             }
         }
 
-        eprintln!("🔍 PTY Slave: Completed, exiting");
+        eprintln!("🔍 PTY Controlled: Completed, exiting");
     });
 
     if let Err(e) = crate::core::ansi::terminal_raw_mode::disable_raw_mode() {
-        eprintln!("⚠️  PTY Slave: Failed to disable raw mode: {e}");
+        eprintln!("⚠️  PTY Controlled: Failed to disable raw mode: {e}");
     }
 
-    eprintln!("🔍 Slave: Completed, exiting");
+    eprintln!("🔍 Controlled: Completed, exiting");
     std::process::exit(0);
 }

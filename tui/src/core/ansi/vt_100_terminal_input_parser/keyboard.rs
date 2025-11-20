@@ -631,6 +631,7 @@ pub fn parse_ss3_sequence(buffer: &[u8]) -> Option<(VT100InputEventIR, ByteOffse
 /// This module contains internal parsing utilities that support the public API functions.
 /// Functions here handle lower-level sequence parsing and decoding tasks.
 mod helpers {
+    #![allow(clippy::wildcard_imports)]
     use super::*;
 
     /// Parse SS3 command character and return the corresponding [`VT100KeyCodeIR`].
@@ -800,10 +801,10 @@ mod helpers {
         Some((event, byte_offset(total_consumed)))
     }
 
-    /// Parse function keys (F1-F12) and special keys (Insert, Delete, Home, End, PageUp,
-    /// PageDown).
+    /// Parse function keys (F1-F12) and special keys (Insert, Delete, Home, End, `PageUp`,
+    /// `PageDown`).
     ///
-    /// Maps ANSI codes to VT100KeyCodeIR. Called by CSI parameter parser.
+    /// Maps ANSI codes to `VT100KeyCodeIR`. Called by CSI parameter parser.
     fn parse_function_or_special_key(
         code: u16,
         modifiers: VT100KeyModifiersIR,
@@ -845,11 +846,11 @@ mod helpers {
     /// Safe to cast u16→u8 because VT-100 modifiers are always 1-8.
     #[allow(clippy::cast_possible_truncation)]
     fn extract_modifier_parameter(param: u16) -> u8 {
-        debug_assert!(param <= 255, "Modifier parameter out of range: {}", param);
+        debug_assert!(param <= 255, "Modifier parameter out of range: {param}");
         param as u8
     }
 
-    /// Decode CSI modifier parameter (1-8) to VT100KeyModifiersIR.
+    /// Decode CSI modifier parameter (1-8) to `VT100KeyModifiersIR`.
     ///
     /// CSI encoding: param = 1 + bitfield, where bitfield = Shift(1)|Alt(2)|Ctrl(4).
     /// See module docs [`Modifier Encoding`] for full table.
@@ -867,20 +868,20 @@ mod helpers {
         }
 
         VT100KeyModifiersIR {
-            shift: if (bits & MODIFIER_SHIFT) != MODIFIER_NONE {
-                KeyState::Pressed
-            } else {
+            shift: if (bits & MODIFIER_SHIFT) == MODIFIER_NONE {
                 KeyState::NotPressed
+            } else {
+                KeyState::Pressed
             },
-            alt: if (bits & MODIFIER_ALT) != MODIFIER_NONE {
-                KeyState::Pressed
-            } else {
+            alt: if (bits & MODIFIER_ALT) == MODIFIER_NONE {
                 KeyState::NotPressed
+            } else {
+                KeyState::Pressed
             },
-            ctrl: if (bits & MODIFIER_CTRL) != MODIFIER_NONE {
-                KeyState::Pressed
-            } else {
+            ctrl: if (bits & MODIFIER_CTRL) == MODIFIER_NONE {
                 KeyState::NotPressed
+            } else {
+                KeyState::Pressed
             },
         }
     }

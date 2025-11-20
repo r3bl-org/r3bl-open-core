@@ -15,17 +15,17 @@
 //!
 //! ## Why This Lives in [`offscreen_buffer/`]
 //!
-//! Stage 4 is fundamentally an **OffscreenBuffer operation**:
+//! Stage 4 is fundamentally an **`OffscreenBuffer` operation**:
 //! - It reads FROM the buffer (like other buffer operations)
 //! - It uses [`diff_chunks`] (also in this module) for selective redraw optimization
 //! - It's buffer-centric, not backend-specific
 //!
 //! ## Backend Independence
 //!
-//! This converter is **shared by both Crossterm and DirectToAnsi backends**.
+//! This converter is **shared by both Crossterm and `DirectToAnsi` backends**.
 //! The backends only differ in Stage 5 (Backend Executor):
 //! - Crossterm: [`crossterm_backend` mod docs]
-//! - DirectToAnsi: [`direct_to_ansi` mod docs]
+//! - `DirectToAnsi`: [`direct_to_ansi` mod docs]
 //!
 //! # You Are Here: **Stage 4** (Backend Converter/Shared)
 //!

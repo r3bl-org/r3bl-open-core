@@ -2,8 +2,8 @@
 
 use crate::{Controlled, ControlledChild, Controller, ControllerReader, ControllerWriter,
             LINE_FEED_BYTE, PtyCommandBuilder, PtyInputEvent, PtyReadWriteOutputEvent,
-            PtyReadWriteSession, ok,
-            pty_common_io::{READ_BUFFER_SIZE, create_pty_pair, spawn_command_in_pty}};
+            PtyReadWriteSession, READ_BUFFER_SIZE, ok,
+            pty_common_io::{create_pty_pair, spawn_command_in_pty}};
 use miette::{IntoDiagnostic, miette};
 use portable_pty::PtySize;
 use std::{io::{Read, Write},
@@ -20,11 +20,10 @@ impl PtyCommandBuilder {
     /// │                          │                │          Write session        │
     /// │                          │ ──► input ───► │               ↓               │
     /// │ a) Handle output events  │     events     │ ◄─── PTY creates pair ──────► │
-    /// │    from                  │                │ ┊Master/   ┊     ┊Slave/    ┊ │
-    /// │ b) Send input events to  │                │ ┊Controller┊     ┊Controlled┊ │
-    /// │ c) Process completion of │                │     ↓                 ↓       │
-    /// │ read/write session       │                │ Spawn Tokio       Controlled  │
-    /// │                          │                │ blocking task     spawns      │
+    /// │    from                  │                │ ┊Controller┊     ┊Controlled┊ │
+    /// │ b) Send input events to  │                │     ↓                 ↓       │
+    /// │ c) Process completion of │                │ Spawn Tokio       Controlled  │
+    /// │ read/write session       │                │ blocking task     spawns      │
     /// │                          │                │ (3) to read       child       │
     /// │                          │                │ from              process (2) │
     /// │                          │                │ Controller and    + Spawn     │

@@ -29,8 +29,8 @@
 //! **Navigate**:
 //! - ⬆️ **Up**: [`parser`], [`keyboard`], [`mouse`], [`terminal_events`], [`utf8`] -
 //!   Modules using these types
-//! - 🔧 **Backend**: [`DirectToAnsiInputDevice`] - Converts VT100InputEventIR to
-//!   InputEvent
+//! - 🔧 **Backend**: [`DirectToAnsiInputDevice`] - Converts [`VT100InputEventIR`] to
+//!   [`InputEvent`]
 //! - 📚 **Canonical Types**: [`InputEvent`], [`Key`], [`MouseInput`] - Final user-facing
 //!   types from [`terminal_io`]
 //!

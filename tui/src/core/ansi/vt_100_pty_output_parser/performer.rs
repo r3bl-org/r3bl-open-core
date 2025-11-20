@@ -11,9 +11,9 @@
 //! ```text
 //! Child Process (vim, bash, etc.)
 //!         ↓
-//!     PTY Slave (writes various sequence types)
+//!     PTY Controlled (writes various sequence types)
 //!         ↓
-//!     PTY Master (byte stream) <- in process_manager.rs
+//!     PTY Controller (byte stream) <- in process_manager.rs
 //!         ↓
 //!     VTE Parser (tokenizes & identifies sequence types)
 //!         ↓
@@ -236,9 +236,9 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
     /// ```text
     /// Application writes "Hello"
     ///         ↓
-    ///     PTY Slave (character stream)
+    ///     PTY Controlled (character stream)
     ///         ↓
-    ///     PTY Master (we read bytes) <- in process_manager.rs
+    ///     PTY Controller (we read bytes) <- in process_manager.rs
     ///         ↓
     ///     VTE Parser (identifies printable chars)
     ///         ↓
@@ -279,9 +279,9 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
     /// ```text
     /// Application sends '\n' (0x0A)
     ///         ↓
-    ///     PTY Slave (control byte)
+    ///     PTY Controlled (control byte)
     ///         ↓
-    ///     PTY Master (raw byte stream) <- in process_manager.rs
+    ///     PTY Controller (raw byte stream) <- in process_manager.rs
     ///         ↓
     ///     VTE Parser (identifies C0 control chars)
     ///         ↓
@@ -334,9 +334,9 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
     /// ```text
     /// Application sends "ESC[2A" (cursor up 2 lines)
     ///         ↓
-    ///     PTY Slave (escape sequence)
+    ///     PTY Controlled (escape sequence)
     ///         ↓
-    ///     PTY Master (byte stream) <- in process_manager.rs
+    ///     PTY Controller (byte stream) <- in process_manager.rs
     ///         ↓
     ///     VTE Parser (parses ESC[...char pattern)
     ///         ↓
@@ -638,9 +638,9 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
     /// ```text
     /// Application sends "ESC]0;My Title\007"
     ///         ↓
-    ///     PTY Slave (OSC sequence)
+    ///     PTY Controlled (OSC sequence)
     ///         ↓
-    ///     PTY Master (byte stream) <- in process_manager.rs
+    ///     PTY Controller (byte stream) <- in process_manager.rs
     ///         ↓
     ///     VTE Parser (accumulates OSC params)
     ///         ↓
@@ -730,9 +730,9 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
     /// ```text
     /// Child Process (vim, bash, etc.)
     ///         ↓
-    ///     PTY Slave (writes ESC sequences)
+    ///     PTY Controlled (writes ESC sequences)
     ///         ↓
-    ///     PTY Master (we read from here) <- in process_manager.rs
+    ///     PTY Controller (we read from here) <- in process_manager.rs
     ///         ↓
     ///     VTE Parser (tokenizes sequences)
     ///         ↓
