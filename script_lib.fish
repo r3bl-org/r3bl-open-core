@@ -155,6 +155,15 @@ rustflags = ["-Z", "threads=8"]  # Parallel compilation only
 rustflags = ["-Z", "threads=8"]  # Parallel compilation only' >> .cargo/config.toml
     end
 
+    # Add profile configurations for nightly Rust stability
+    # Disables incremental compilation to avoid rustc dep graph ICE on nightly
+    echo '
+[profile.dev]
+incremental = false  # Disable to avoid rustc dep graph ICE on nightly
+
+[profile.test]
+incremental = false  # Disable to avoid rustc dep graph ICE on nightly' >> .cargo/config.toml
+
     echo "✓ Cargo configuration generated"
 end
 
@@ -957,6 +966,62 @@ function run_example_with_flamegraph_profiling_perf_fold
         sudo sysctl -w kernel.perf_event_paranoid=2
         sudo sysctl -w kernel.kptr_restrict=1
         echo "Kernel parameters reset."
+    end
+end
+
+# ============================================================================
+# Cross-Platform Notification Utilities
+# ============================================================================
+
+# Sends a system notification with cross-platform support (macOS and Linux).
+#
+# On macOS: Uses osascript (AppleScript) to send notifications
+# On Linux: Uses notify-send for desktop notifications
+# Falls back gracefully if notification tools are unavailable
+#
+# Parameters:
+# - title: Notification title (required)
+# - message: Notification message (required)
+# - urgency: Urgency level - "normal", "critical", or "success" (optional, default: "normal")
+#           Only affects Linux; macOS uses system defaults based on title
+#
+# Features:
+# - Platform detection (Darwin for macOS, others for Linux)
+# - Non-blocking: Runs in background so script doesn't wait
+# - Error handling: Continues gracefully if notification system unavailable
+# - Urgency levels: normal, critical, success (Linux only)
+#
+# Usage:
+#   send_system_notification "Title" "Message"
+#   send_system_notification "Error" "Something went wrong" "critical"
+#   send_system_notification "Success" "Operation completed" "success"
+function send_system_notification
+    set -l title $argv[1]
+    set -l message $argv[2]
+    set -l urgency $argv[3]
+
+    # Default to normal urgency if not specified
+    if test -z "$urgency"
+        set urgency "normal"
+    end
+
+    if test (uname) = "Darwin"
+        # macOS: Use osascript (AppleScript)
+        # osascript is built-in and always available
+        osascript -e "display notification \"$message\" with title \"$title\"" \
+            2>/dev/null &
+    else
+        # Linux: Use notify-send
+        # Non-blocking: only notify if notify-send is available
+        if command -v notify-send >/dev/null 2>&1
+            # Map urgency levels for notify-send compatibility
+            set -l notify_urgency $urgency
+            if test "$urgency" = "success"
+                set notify_urgency "normal"
+            end
+
+            notify-send --urgency=$notify_urgency "$title" "$message" 2>/dev/null &
+        end
     end
 end
 

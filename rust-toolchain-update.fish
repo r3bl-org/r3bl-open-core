@@ -328,16 +328,12 @@ function find_stable_toolchain
     log_message "All tested nightlies had ICE errors or failed to install"
     log_message "═══════════════════════════════════════════════════════"
 
-    # Send system notification (runs in background, won't fail if notify-send missing)
-    if command -v notify-send >/dev/null 2>&1
-        notify-send --urgency=critical \
-            "Rust Toolchain Update Failed" \
-            "Could not find stable nightly in $total_attempts attempts ($search_window_days-day window). Check log: $LOG_FILE" \
-            2>/dev/null &
-        log_message "System notification sent"
-    else
-        log_message "notify-send not available, skipping system notification"
-    end
+    # Send system notification (cross-platform: macOS and Linux)
+    send_system_notification \
+        "Rust Toolchain Update Failed" \
+        "Could not find stable nightly in $total_attempts attempts ($search_window_days-day window). Check log: $LOG_FILE" \
+        "critical"
+    log_message "System notification sent"
 
     return 1
 end
@@ -563,16 +559,12 @@ function main
     log_message "═══════════════════════════════════════════════════════"
     log_message ""
 
-    # Send final success notification
-    if command -v notify-send >/dev/null 2>&1
-        notify-send --urgency=normal \
-            "Rust Toolchain Update Complete" \
-            "✅ Successfully updated to: $target_toolchain\nAll validation, cleanup, and verification passed" \
-            2>/dev/null &
-        log_message "Final success notification sent"
-    else
-        log_message "notify-send not available, skipping final notification"
-    end
+    # Send final success notification (cross-platform: macOS and Linux)
+    send_system_notification \
+        "Rust Toolchain Update Complete" \
+        "✅ Successfully updated to: $target_toolchain. All validation, cleanup, and verification passed" \
+        "normal"
+    log_message "Final success notification sent"
 
     return 0
 end
