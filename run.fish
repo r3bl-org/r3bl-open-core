@@ -346,7 +346,7 @@ function install-cargo-tools
     # Install r3bl-build-infra tools (cargo-rustdoc-fmt)
     echo 'Installing r3bl-build-infra tools...'
     set original_dir $PWD
-    cd r3bl-build-infra
+    cd build-infra
     if cargo install --path . --force
         echo '✓ cargo-rustdoc-fmt installed'
     else
