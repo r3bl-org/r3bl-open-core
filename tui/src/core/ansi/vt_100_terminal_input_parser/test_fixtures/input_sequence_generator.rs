@@ -17,18 +17,19 @@
 //! [`vt_100_terminal_input_parser`]: mod@crate::core::ansi::vt_100_terminal_input_parser
 
 use crate::{KeyState,
-            core::ansi::{constants::{ANSI_FUNCTION_KEY_TERMINATOR,
+            core::ansi::{constants::{ANSI_ESC, ANSI_FUNCTION_KEY_TERMINATOR,
                                      ANSI_PARAM_SEPARATOR, ARROW_DOWN_FINAL,
                                      ARROW_LEFT_FINAL, ARROW_RIGHT_FINAL,
-                                     ARROW_UP_FINAL, ASCII_DIGIT_0, CONTROL_NUL,
-                                     CSI_PREFIX, FOCUS_GAINED_FINAL, FOCUS_LOST_FINAL,
-                                     FUNCTION_F1_CODE, FUNCTION_F2_CODE,
-                                     FUNCTION_F3_CODE, FUNCTION_F4_CODE,
-                                     FUNCTION_F5_CODE, FUNCTION_F6_CODE,
-                                     FUNCTION_F7_CODE, FUNCTION_F8_CODE,
-                                     FUNCTION_F9_CODE, FUNCTION_F10_CODE,
-                                     FUNCTION_F11_CODE, FUNCTION_F12_CODE,
-                                     MODIFIER_ALT, MODIFIER_CTRL,
+                                     ARROW_UP_FINAL, ASCII_DEL, ASCII_DIGIT_0,
+                                     BACKTAB_FINAL, CONTROL_ENTER, CONTROL_NUL,
+                                     CONTROL_TAB, CSI_PREFIX, FOCUS_GAINED_FINAL,
+                                     FOCUS_LOST_FINAL, FUNCTION_F1_CODE,
+                                     FUNCTION_F2_CODE, FUNCTION_F3_CODE,
+                                     FUNCTION_F4_CODE, FUNCTION_F5_CODE,
+                                     FUNCTION_F6_CODE, FUNCTION_F7_CODE,
+                                     FUNCTION_F8_CODE, FUNCTION_F9_CODE,
+                                     FUNCTION_F10_CODE, FUNCTION_F11_CODE,
+                                     FUNCTION_F12_CODE, MODIFIER_ALT, MODIFIER_CTRL,
                                      MODIFIER_PARAMETER_BASE_CHAR, MODIFIER_SHIFT,
                                      MOUSE_LEFT_BUTTON_CODE, MOUSE_MIDDLE_BUTTON_CODE,
                                      MOUSE_MODIFIER_ALT, MOUSE_MODIFIER_CTRL,
@@ -48,11 +49,16 @@ use crate::{KeyState,
                                      SPECIAL_HOME_FINAL, SPECIAL_INSERT_CODE,
                                      SPECIAL_PAGE_DOWN_CODE, SPECIAL_PAGE_UP_CODE},
                          vt_100_terminal_input_parser::{VT100FocusStateIR,
-                                                        VT100InputEventIR, VT100KeyCodeIR,
+                                                        VT100InputEventIR,
+                                                        VT100KeyCodeIR,
                                                         VT100KeyModifiersIR,
                                                         VT100MouseActionIR,
                                                         VT100MouseButtonIR,
                                                         VT100PasteModeIR}}};
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// PUBLIC API - Main entry points for generating ANSI sequences
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 /// Generate ANSI bytes for an input event.
 ///
@@ -80,7 +86,7 @@ use crate::{KeyState,
 pub fn generate_keyboard_sequence(event: &VT100InputEventIR) -> Option<Vec<u8>> {
     match event {
         VT100InputEventIR::Keyboard { code, modifiers } => {
-            generate_key_sequence(*code, *modifiers)
+            keyboard::generate_key_sequence(*code, *modifiers)
         }
         VT100InputEventIR::Resize {
             col_width,
@@ -88,16 +94,20 @@ pub fn generate_keyboard_sequence(event: &VT100InputEventIR) -> Option<Vec<u8>> 
         } => {
             let rows = u16::try_from(row_height.as_usize()).unwrap_or(u16::MAX);
             let cols = u16::try_from(col_width.as_usize()).unwrap_or(u16::MAX);
-            Some(generate_resize_sequence(rows, cols))
+            Some(terminal_events::generate_resize_sequence(rows, cols))
         }
-        VT100InputEventIR::Focus(state) => Some(generate_focus_sequence(*state)),
-        VT100InputEventIR::Paste(mode) => Some(generate_paste_sequence(*mode)),
+        VT100InputEventIR::Focus(state) => {
+            Some(terminal_events::generate_focus_sequence(*state))
+        }
+        VT100InputEventIR::Paste(mode) => {
+            Some(terminal_events::generate_paste_sequence(*mode))
+        }
         VT100InputEventIR::Mouse {
             button,
             pos,
             action,
             modifiers,
-        } => Some(generate_mouse_sequence_bytes(
+        } => Some(mouse::generate_sgr_sequence(
             *button,
             pos.col.as_u16(),
             pos.row.as_u16(),
@@ -127,10 +137,12 @@ pub fn generate_keyboard_sequence(event: &VT100InputEventIR) -> Option<Vec<u8>> 
 /// ## Parameters
 ///
 /// - `button`: Mouse button
-/// - `col`: Column coordinate (1-based)
-/// - `row`: Row coordinate (1-based)
+/// - `col`: Column coordinate ([1-based])
+/// - `row`: Row coordinate ([1-based])
 /// - `action`: Press, Release, Motion, or Drag
 /// - `modifiers`: Key modifiers (Shift, Ctrl, Alt)
+///
+/// [1-based]: crate::core::ansi::vt_100_terminal_input_parser#one-based-mouse-input-events
 #[must_use]
 pub fn generate_x10_mouse_sequence(
     button: VT100MouseButtonIR,
@@ -139,55 +151,7 @@ pub fn generate_x10_mouse_sequence(
     action: VT100MouseActionIR,
     modifiers: VT100KeyModifiersIR,
 ) -> Vec<u8> {
-    // Base button code (Unknown defaults to Left)
-    let button_code = match button {
-        VT100MouseButtonIR::Left | VT100MouseButtonIR::Unknown => MOUSE_LEFT_BUTTON_CODE,
-        VT100MouseButtonIR::Middle => MOUSE_MIDDLE_BUTTON_CODE,
-        VT100MouseButtonIR::Right => MOUSE_RIGHT_BUTTON_CODE,
-    };
-
-    let mut cb = button_code;
-
-    // Handle action
-    match action {
-        /* Release always sends button=3 */
-        VT100MouseActionIR::Release => cb = MOUSE_RELEASE_BUTTON_CODE,
-        /* Motion and drag set motion flag (bit 5) */
-        VT100MouseActionIR::Motion | VT100MouseActionIR::Drag => cb |= MOUSE_MOTION_FLAG,
-        /* Press uses base button code; Scroll not typically used in X10 */
-        VT100MouseActionIR::Press | VT100MouseActionIR::Scroll(_) => {}
-    }
-
-    // Apply modifiers
-    if modifiers.shift == KeyState::Pressed {
-        cb |= MOUSE_MODIFIER_SHIFT;
-    }
-    if modifiers.alt == KeyState::Pressed {
-        cb |= MOUSE_MODIFIER_ALT;
-    }
-    if modifiers.ctrl == KeyState::Pressed {
-        cb |= MOUSE_MODIFIER_CTRL;
-    }
-
-    // X10 coordinate encoding: add 32 to make printable ASCII
-    #[allow(clippy::cast_possible_truncation)]
-    let cx = (col + 32) as u8;
-    #[allow(clippy::cast_possible_truncation)]
-    let cy = (row + 32) as u8;
-
-    // Build sequence: ESC [ M Cb Cx Cy
-    let mut bytes = MOUSE_X10_PREFIX.to_vec();
-    // Safe to cast cb from u16 to u8: button byte encoding uses only 8 bits.
-    // - Regular buttons (0-3) + motion flag (32) + modifiers (4,8,16) = max 63
-    // - Scroll buttons not used in X10 format
-    // All values fit safely in u8 range (0-255). We use u16 during bitwise operations
-    // for consistency with the parser, then narrow to u8 for serialization.
-    #[allow(clippy::cast_possible_truncation)]
-    bytes.push(cb as u8);
-    bytes.push(cx);
-    bytes.push(cy);
-    bytes.push(CONTROL_NUL); // Null terminator (some implementations include this)
-    bytes
+    mouse::generate_x10_sequence(button, col, row, action, modifiers)
 }
 
 /// Generate ANSI bytes for a mouse event in `RXVT` format.
@@ -198,17 +162,19 @@ pub fn generate_x10_mouse_sequence(
 ///
 /// Uses decimal numbers separated by semicolons (human-readable format):
 /// - `Cb` = button code (decimal): button (0-2) + modifier bits
-/// - `Cx` = column coordinate (decimal, 1-based)
-/// - `Cy` = row coordinate (decimal, 1-based)
+/// - `Cx` = column coordinate (decimal, [1-based])
+/// - `Cy` = row coordinate (decimal, [1-based])
 /// - Final: `M` for press
 ///
 /// ## Parameters
 ///
 /// - `button`: Mouse button
-/// - `col`: Column coordinate (1-based)
-/// - `row`: Row coordinate (1-based)
+/// - `col`: Column coordinate ([1-based])
+/// - `row`: Row coordinate ([1-based])
 /// - `action`: Press or Release (`RXVT` primarily uses Press)
 /// - `modifiers`: Key modifiers (Shift, Ctrl, Alt)
+///
+/// [1-based]: crate::core::ansi::vt_100_terminal_input_parser#one-based-mouse-input-events
 #[must_use]
 pub fn generate_rxvt_mouse_sequence(
     button: VT100MouseButtonIR,
@@ -217,42 +183,7 @@ pub fn generate_rxvt_mouse_sequence(
     action: VT100MouseActionIR,
     modifiers: VT100KeyModifiersIR,
 ) -> Vec<u8> {
-    // Base button code (Unknown defaults to Left)
-    let button_code = match button {
-        VT100MouseButtonIR::Left | VT100MouseButtonIR::Unknown => MOUSE_LEFT_BUTTON_CODE,
-        VT100MouseButtonIR::Middle => MOUSE_MIDDLE_BUTTON_CODE,
-        VT100MouseButtonIR::Right => MOUSE_RIGHT_BUTTON_CODE,
-    };
-
-    let mut cb = button_code;
-
-    // Handle action
-    match action {
-        VT100MouseActionIR::Release => cb = MOUSE_RELEASE_BUTTON_CODE,
-        VT100MouseActionIR::Motion | VT100MouseActionIR::Drag => cb |= MOUSE_MOTION_FLAG,
-        VT100MouseActionIR::Press | VT100MouseActionIR::Scroll(_) => {}
-    }
-
-    // Apply modifiers (same encoding as X10)
-    if modifiers.shift == KeyState::Pressed {
-        cb |= MOUSE_MODIFIER_SHIFT;
-    }
-    if modifiers.alt == KeyState::Pressed {
-        cb |= MOUSE_MODIFIER_ALT;
-    }
-    if modifiers.ctrl == KeyState::Pressed {
-        cb |= MOUSE_MODIFIER_CTRL;
-    }
-
-    // Build sequence: ESC [ Cb ; Cx ; Cy M
-    let mut bytes = CSI_PREFIX.to_vec();
-    bytes.extend_from_slice(&push_ascii_u16(cb));
-    bytes.push(ANSI_PARAM_SEPARATOR);
-    bytes.extend_from_slice(&push_ascii_u16(col));
-    bytes.push(ANSI_PARAM_SEPARATOR);
-    bytes.extend_from_slice(&push_ascii_u16(row));
-    bytes.push(MOUSE_X10_MARKER);
-    bytes
+    mouse::generate_rxvt_sequence(button, col, row, action, modifiers)
 }
 
 /// Generate ANSI bytes for a mouse event in `SGR` format.
@@ -262,10 +193,12 @@ pub fn generate_rxvt_mouse_sequence(
 /// ## Parameters
 ///
 /// - `button`: Mouse button (0=left, 1=middle, 2=right, 64-67=scroll)
-/// - `col`: Column coordinate (1-based)
-/// - `row`: Row coordinate (1-based)
+/// - `col`: Column coordinate ([1-based])
+/// - `row`: Row coordinate ([1-based])
 /// - `action`: Press, Release, or Drag
 /// - `modifiers`: Key modifiers (Shift, Ctrl, Alt)
+///
+/// [1-based]: crate::core::ansi::vt_100_terminal_input_parser#one-based-mouse-input-events
 #[must_use]
 pub fn generate_mouse_sequence_bytes(
     button: VT100MouseButtonIR,
@@ -274,345 +207,15 @@ pub fn generate_mouse_sequence_bytes(
     action: VT100MouseActionIR,
     modifiers: VT100KeyModifiersIR,
 ) -> Vec<u8> {
-    // Handle scroll events: buttons 64-67 (up/down/left/right)
-    let button_code = match action {
-        VT100MouseActionIR::Scroll(scroll_dir) => {
-            use crate::core::ansi::vt_100_terminal_input_parser::VT100ScrollDirectionIR;
-            match scroll_dir {
-                VT100ScrollDirectionIR::Up => MOUSE_SCROLL_UP_BUTTON,
-                VT100ScrollDirectionIR::Down => MOUSE_SCROLL_DOWN_BUTTON,
-                VT100ScrollDirectionIR::Left => MOUSE_SCROLL_LEFT_BUTTON,
-                VT100ScrollDirectionIR::Right => MOUSE_SCROLL_RIGHT_BUTTON,
-            }
-        }
-        _ => match button {
-            VT100MouseButtonIR::Middle => MOUSE_MIDDLE_BUTTON_CODE,
-            VT100MouseButtonIR::Right => MOUSE_RIGHT_BUTTON_CODE,
-            VT100MouseButtonIR::Left | VT100MouseButtonIR::Unknown => MOUSE_LEFT_BUTTON_CODE,
-        },
-    };
-
-    // Apply modifiers and action flags to button code
-    let mut code = button_code;
-
-    // Handle action/drag flag
-    let action_char = match action {
-        VT100MouseActionIR::Release => MOUSE_SGR_RELEASE as char,
-        VT100MouseActionIR::Drag => {
-            code |= MOUSE_MOTION_FLAG; // Drag flag (bit 5)
-            MOUSE_SGR_PRESS as char
-        }
-        VT100MouseActionIR::Press
-        | VT100MouseActionIR::Motion
-        | VT100MouseActionIR::Scroll(_) => {
-            // Motion and scroll events use M like press
-            MOUSE_SGR_PRESS as char
-        }
-    };
-
-    // Apply modifiers: shift=4, alt=8, ctrl=16 (bits 2, 3, 4)
-    // These match the encoding used by the parser in extract_modifiers()
-    if modifiers.shift == KeyState::Pressed {
-        code |= MOUSE_MODIFIER_SHIFT;
-    }
-    if modifiers.alt == KeyState::Pressed {
-        code |= MOUSE_MODIFIER_ALT;
-    }
-    if modifiers.ctrl == KeyState::Pressed {
-        code |= MOUSE_MODIFIER_CTRL;
-    }
-
-    // Build sequence: ESC[<button;col;rowM/m
-    let mut bytes = MOUSE_SGR_PREFIX.to_vec();
-    bytes.extend_from_slice(&push_ascii_u16(code));
-    bytes.push(ANSI_PARAM_SEPARATOR);
-    bytes.extend_from_slice(&push_ascii_u16(col));
-    bytes.push(ANSI_PARAM_SEPARATOR);
-    bytes.extend_from_slice(&push_ascii_u16(row));
-    bytes.push(action_char as u8);
-    bytes
+    mouse::generate_sgr_sequence(button, col, row, action, modifiers)
 }
-
-/// Generate ANSI bytes for a specific key code and modifiers.
-fn generate_key_sequence(
-    code: VT100KeyCodeIR,
-    modifiers: VT100KeyModifiersIR,
-) -> Option<Vec<u8>> {
-    // Build the base sequence
-    let mut bytes = CSI_PREFIX.to_vec();
-
-    let has_modifiers = modifiers.shift == KeyState::Pressed
-        || modifiers.ctrl == KeyState::Pressed
-        || modifiers.alt == KeyState::Pressed;
-
-    match code {
-        // ==================== Arrow Keys ====================
-        VT100KeyCodeIR::Up => {
-            if has_modifiers {
-                // Use helper to push ASCII '1' (0x31), not numeric value 1 (0x01)
-                bytes.push(push_ascii_number(1));
-                bytes.push(ANSI_PARAM_SEPARATOR);
-                bytes.push(encode_modifiers(modifiers));
-            }
-            bytes.push(ARROW_UP_FINAL);
-            Some(bytes)
-        }
-        VT100KeyCodeIR::Down => {
-            if has_modifiers {
-                // Use helper to push ASCII '1' (0x31), not numeric value 1 (0x01)
-                bytes.push(push_ascii_number(1));
-                bytes.push(ANSI_PARAM_SEPARATOR);
-                bytes.push(encode_modifiers(modifiers));
-            }
-            bytes.push(ARROW_DOWN_FINAL);
-            Some(bytes)
-        }
-        VT100KeyCodeIR::Right => {
-            if has_modifiers {
-                // Use helper to push ASCII '1' (0x31), not numeric value 1 (0x01)
-                bytes.push(push_ascii_number(1));
-                bytes.push(ANSI_PARAM_SEPARATOR);
-                bytes.push(encode_modifiers(modifiers));
-            }
-            bytes.push(ARROW_RIGHT_FINAL);
-            Some(bytes)
-        }
-        VT100KeyCodeIR::Left => {
-            if has_modifiers {
-                // Use helper to push ASCII '1' (0x31), not numeric value 1 (0x01)
-                bytes.push(push_ascii_number(1));
-                bytes.push(ANSI_PARAM_SEPARATOR);
-                bytes.push(encode_modifiers(modifiers));
-            }
-            bytes.push(ARROW_LEFT_FINAL);
-            Some(bytes)
-        }
-
-        // ==================== Special Keys (CSI H/F) ====================
-        VT100KeyCodeIR::Home => {
-            bytes.push(SPECIAL_HOME_FINAL);
-            Some(bytes)
-        }
-        VT100KeyCodeIR::End => {
-            bytes.push(SPECIAL_END_FINAL);
-            Some(bytes)
-        }
-
-        // ==================== Special Keys (CSI n~) ====================
-        VT100KeyCodeIR::Insert => Some(generate_special_key_sequence(
-            &mut bytes,
-            SPECIAL_INSERT_CODE,
-            modifiers,
-        )),
-        VT100KeyCodeIR::Delete => Some(generate_special_key_sequence(
-            &mut bytes,
-            SPECIAL_DELETE_CODE,
-            modifiers,
-        )),
-        VT100KeyCodeIR::PageUp => Some(generate_special_key_sequence(
-            &mut bytes,
-            SPECIAL_PAGE_UP_CODE,
-            modifiers,
-        )),
-        VT100KeyCodeIR::PageDown => Some(generate_special_key_sequence(
-            &mut bytes,
-            SPECIAL_PAGE_DOWN_CODE,
-            modifiers,
-        )),
-
-        // ==================== Function Keys (CSI n~) ====================
-        VT100KeyCodeIR::Function(n) => {
-            let code = match n {
-                1 => FUNCTION_F1_CODE,
-                2 => FUNCTION_F2_CODE,
-                3 => FUNCTION_F3_CODE,
-                4 => FUNCTION_F4_CODE,
-                5 => FUNCTION_F5_CODE,
-                6 => FUNCTION_F6_CODE,
-                7 => FUNCTION_F7_CODE,
-                8 => FUNCTION_F8_CODE,
-                9 => FUNCTION_F9_CODE,
-                10 => FUNCTION_F10_CODE,
-                11 => FUNCTION_F11_CODE,
-                12 => FUNCTION_F12_CODE,
-                _ => return None, // Invalid function key number
-            };
-            Some(generate_special_key_sequence(&mut bytes, code, modifiers))
-        }
-
-        // ==================== Other Keys ====================
-        // Tab, Enter, Escape, Backspace, and Char events are typically raw control
-        // characters or UTF-8 text, not CSI sequences. Not implemented in
-        // generator as they're handled differently in the input parsing layer.
-        VT100KeyCodeIR::Tab
-        | VT100KeyCodeIR::BackTab
-        | VT100KeyCodeIR::Enter
-        | VT100KeyCodeIR::Escape
-        | VT100KeyCodeIR::Backspace
-        | VT100KeyCodeIR::Char(_) => None,
-    }
-}
-
-/// Generate a special key or function key sequence (`CSI n~`).
-fn generate_special_key_sequence(
-    bytes: &mut Vec<u8>,
-    code: u16,
-    modifiers: VT100KeyModifiersIR,
-) -> Vec<u8> {
-    // Format: CSI code~ or CSI code; modifier~
-    let code_str = code.to_string();
-    bytes.extend_from_slice(code_str.as_bytes());
-
-    if modifiers.shift == KeyState::Pressed
-        || modifiers.ctrl == KeyState::Pressed
-        || modifiers.alt == KeyState::Pressed
-    {
-        bytes.push(ANSI_PARAM_SEPARATOR);
-        bytes.push(encode_modifiers(modifiers));
-    }
-
-    bytes.push(ANSI_FUNCTION_KEY_TERMINATOR);
-    bytes.clone()
-}
-
-/// Encode modifier flags into a single byte following VT-100 ANSI convention.
-///
-/// **VT-100 Modifier Encoding**: `parameter = 1 + bitfield`
-///
-/// Where bitfield is:
-/// - bit 0 (value 1): Shift
-/// - bit 1 (value 2): Alt
-/// - bit 2 (value 4): Ctrl
-///
-/// ## Parameter Values
-///
-/// - `1` → no modifiers (1 + 0)
-/// - `2` → Shift (1 + 1)
-/// - `3` → Alt (1 + 2)
-/// - `4` → Alt+Shift (1 + 3)
-/// - `5` → Ctrl (1 + 4)
-/// - `6` → Ctrl+Shift (1 + 5)
-/// - `7` → Ctrl+Alt (1 + 6)
-/// - `8` → Ctrl+Alt+Shift (1 + 7)
-///
-/// **Confirmed by terminal observation**: `ESC[1;5A` = Ctrl+Up (parameter 5 = 1+4)
-fn encode_modifiers(modifiers: VT100KeyModifiersIR) -> u8 {
-    let mut mask: u8 = 0;
-    if modifiers.shift == KeyState::Pressed {
-        mask |= MODIFIER_SHIFT;
-    }
-    if modifiers.alt == KeyState::Pressed {
-        mask |= MODIFIER_ALT;
-    }
-    if modifiers.ctrl == KeyState::Pressed {
-        mask |= MODIFIER_CTRL;
-    }
-    // VT-100 formula: parameter = 1 + bitfield
-    // Produce ASCII digit character for the parameter (1-8 as '1'-'8')
-    MODIFIER_PARAMETER_BASE_CHAR + mask
-}
-
-/// Convert a numeric value (0-9) to its ASCII character representation.
-///
-/// ## ANSI Protocol Requirement
-///
-/// ANSI escape sequences use ASCII characters to represent numeric parameters.
-/// This function performs the critical conversion from numeric values to their
-/// ASCII byte representations.
-///
-/// ## Examples
-///
-/// ```text
-/// Number  → ASCII Char → Byte Value
-/// ------    ----------   ----------
-/// 0       → '0'        → 0x30 (48)
-/// 1       → '1'        → 0x31 (49)
-/// 5       → '5'        → 0x35 (53)
-/// 9       → '9'        → 0x39 (57)
-/// ```
-///
-/// ## Common Error Pattern This Prevents
-///
-/// Don't push numeric values directly as bytes. For example, pushing `1` as
-/// a byte gives `0x01`, not the ASCII character `'1'` (which is `0x31`).
-/// This function ensures proper ASCII conversion.
-///
-/// <!-- It is ok to use ignore here - demonstrates common error pattern, not meant as runnable code -->
-/// ```ignore
-/// // WRONG - pushes numeric value directly
-/// bytes.push(1);  // Pushes byte 0x01, not ASCII '1'
-///
-/// // CORRECT - converts to ASCII first
-/// bytes.push(push_ascii_number(1));  // Pushes byte 0x31 = '1'
-/// ```
-///
-/// ## Parameters
-///
-/// - `value`: Numeric value (0-9)
-///
-/// ## Returns
-///
-/// ASCII byte representation of the digit
-///
-/// ## Panics
-///
-/// Panics if `value` is not in range 0-9 (debug builds only)
-fn push_ascii_number(value: u8) -> u8 {
-    debug_assert!(
-        value <= 9,
-        "Value must be a single digit (0-9), got {value}"
-    );
-    ASCII_DIGIT_0 + value
-}
-
-/// Convert a multi-digit numeric value to its ASCII byte representation.
-///
-/// ## Purpose
-///
-/// ANSI escape sequences represent multi-digit numbers as sequences of ASCII digits.
-/// This helper eliminates repetitive `to_string().as_bytes()` calls throughout the
-/// codebase.
-///
-/// ## Common Use Cases
-///
-/// - Mouse coordinates (e.g., column 120, row 50)
-/// - Window resize dimensions (e.g., 80x24)
-/// - Multi-digit parameter codes (e.g., 200 for paste start)
-///
-/// ## Examples
-///
-/// <!-- It is ok to use ignore here - simple before/after comparison, not a complete compilable example -->
-/// ```ignore
-/// // Instead of:
-/// bytes.extend_from_slice(col.to_string().as_bytes());
-///
-/// // Use:
-/// bytes.extend_from_slice(&push_ascii_u16(col));
-/// ```
-///
-/// ## Parameters
-///
-/// - `value`: Numeric value to convert (any u16 value)
-///
-/// ## Returns
-///
-/// A `Vec<u8>` containing the ASCII byte representation of the number.
-/// For example, 123 returns vec![b'1', b'2', b'3'].
-fn push_ascii_u16(value: u16) -> Vec<u8> { value.to_string().into_bytes() }
 
 /// Generate a window resize sequence: `CSI 8 ; rows ; cols t`
 ///
 /// This is the ANSI sequence sent by terminals when they are resized.
 #[must_use]
 pub fn generate_resize_sequence(rows: u16, cols: u16) -> Vec<u8> {
-    let mut bytes = CSI_PREFIX.to_vec();
-    bytes.push(RESIZE_EVENT_GENERATE_CODE);
-    bytes.push(ANSI_PARAM_SEPARATOR);
-    bytes.extend_from_slice(&push_ascii_u16(rows));
-    bytes.push(ANSI_PARAM_SEPARATOR);
-    bytes.extend_from_slice(&push_ascii_u16(cols));
-    bytes.push(RESIZE_TERMINATOR);
-    bytes
+    terminal_events::generate_resize_sequence(rows, cols)
 }
 
 /// Generate a focus event sequence.
@@ -621,12 +224,7 @@ pub fn generate_resize_sequence(rows: u16, cols: u16) -> Vec<u8> {
 /// - Focus lost: `CSI O`
 #[must_use]
 pub fn generate_focus_sequence(state: VT100FocusStateIR) -> Vec<u8> {
-    let mut bytes = CSI_PREFIX.to_vec();
-    match state {
-        VT100FocusStateIR::Gained => bytes.push(FOCUS_GAINED_FINAL),
-        VT100FocusStateIR::Lost => bytes.push(FOCUS_LOST_FINAL),
-    }
-    bytes
+    terminal_events::generate_focus_sequence(state)
 }
 
 /// Generate a bracketed paste mode sequence.
@@ -635,15 +233,472 @@ pub fn generate_focus_sequence(state: VT100FocusStateIR) -> Vec<u8> {
 /// - Paste end: `CSI 201 ~`
 #[must_use]
 pub fn generate_paste_sequence(mode: VT100PasteModeIR) -> Vec<u8> {
-    let mut bytes = CSI_PREFIX.to_vec();
-    match mode {
-        VT100PasteModeIR::Start => {
-            bytes.extend_from_slice(PASTE_START_GENERATE_CODE.as_bytes());
-        }
-        VT100PasteModeIR::End => {
-            bytes.extend_from_slice(PASTE_END_GENERATE_CODE.as_bytes());
+    terminal_events::generate_paste_sequence(mode)
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// PRIVATE MODULES - Implementation details organized by functionality
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+/// Keyboard sequence generation (arrows, function keys, special keys, characters).
+mod keyboard {
+    use super::*;
+
+    /// Generate ANSI bytes for a specific key code and modifiers.
+    pub fn generate_key_sequence(
+        code: VT100KeyCodeIR,
+        modifiers: VT100KeyModifiersIR,
+    ) -> Option<Vec<u8>> {
+        match code {
+            // Arrow keys: CSI [1;mod] A/B/C/D
+            VT100KeyCodeIR::Up => Some(generate_arrow_key(ARROW_UP_FINAL, modifiers)),
+            VT100KeyCodeIR::Down => Some(generate_arrow_key(ARROW_DOWN_FINAL, modifiers)),
+            VT100KeyCodeIR::Right => {
+                Some(generate_arrow_key(ARROW_RIGHT_FINAL, modifiers))
+            }
+            VT100KeyCodeIR::Left => Some(generate_arrow_key(ARROW_LEFT_FINAL, modifiers)),
+
+            // Navigation keys: CSI H/F (no modifier support in this format)
+            VT100KeyCodeIR::Home => Some(generate_simple_csi(SPECIAL_HOME_FINAL)),
+            VT100KeyCodeIR::End => Some(generate_simple_csi(SPECIAL_END_FINAL)),
+
+            // Special keys: CSI n [;mod] ~
+            VT100KeyCodeIR::Insert => {
+                Some(generate_tilde_key(SPECIAL_INSERT_CODE, modifiers))
+            }
+            VT100KeyCodeIR::Delete => {
+                Some(generate_tilde_key(SPECIAL_DELETE_CODE, modifiers))
+            }
+            VT100KeyCodeIR::PageUp => {
+                Some(generate_tilde_key(SPECIAL_PAGE_UP_CODE, modifiers))
+            }
+            VT100KeyCodeIR::PageDown => {
+                Some(generate_tilde_key(SPECIAL_PAGE_DOWN_CODE, modifiers))
+            }
+
+            // Function keys: CSI n [;mod] ~
+            VT100KeyCodeIR::Function(n) => generate_function_key(n, modifiers),
+
+            // Raw byte keys (not CSI sequences)
+            VT100KeyCodeIR::Tab => Some(vec![CONTROL_TAB]),
+            VT100KeyCodeIR::BackTab => Some(generate_simple_csi(BACKTAB_FINAL)),
+            VT100KeyCodeIR::Enter => Some(vec![CONTROL_ENTER]),
+            VT100KeyCodeIR::Escape => Some(vec![ANSI_ESC]),
+            VT100KeyCodeIR::Backspace => Some(vec![ASCII_DEL]),
+            VT100KeyCodeIR::Char(c) => generate_char(c, modifiers),
         }
     }
-    bytes.push(ANSI_FUNCTION_KEY_TERMINATOR);
-    bytes
+
+    /// Generate arrow key sequence: `CSI [1;mod] final`.
+    fn generate_arrow_key(final_byte: u8, modifiers: VT100KeyModifiersIR) -> Vec<u8> {
+        let mut bytes = CSI_PREFIX.to_vec();
+        if encoding::has_modifiers(modifiers) {
+            bytes.push(encoding::push_ascii_number(1));
+            bytes.push(ANSI_PARAM_SEPARATOR);
+            bytes.push(encoding::encode_modifiers(modifiers));
+        }
+        bytes.push(final_byte);
+        bytes
+    }
+
+    /// Generate simple CSI sequence: `CSI final`.
+    fn generate_simple_csi(final_byte: u8) -> Vec<u8> {
+        let mut bytes = CSI_PREFIX.to_vec();
+        bytes.push(final_byte);
+        bytes
+    }
+
+    /// Generate tilde-terminated sequence: `CSI code [;mod] ~`.
+    fn generate_tilde_key(code: u16, modifiers: VT100KeyModifiersIR) -> Vec<u8> {
+        let mut bytes = CSI_PREFIX.to_vec();
+        let code_str = code.to_string();
+        bytes.extend_from_slice(code_str.as_bytes());
+
+        if encoding::has_modifiers(modifiers) {
+            bytes.push(ANSI_PARAM_SEPARATOR);
+            bytes.push(encoding::encode_modifiers(modifiers));
+        }
+
+        bytes.push(ANSI_FUNCTION_KEY_TERMINATOR);
+        bytes
+    }
+
+    /// Generate function key sequence (F1-F12).
+    fn generate_function_key(n: u8, modifiers: VT100KeyModifiersIR) -> Option<Vec<u8>> {
+        let code = match n {
+            1 => FUNCTION_F1_CODE,
+            2 => FUNCTION_F2_CODE,
+            3 => FUNCTION_F3_CODE,
+            4 => FUNCTION_F4_CODE,
+            5 => FUNCTION_F5_CODE,
+            6 => FUNCTION_F6_CODE,
+            7 => FUNCTION_F7_CODE,
+            8 => FUNCTION_F8_CODE,
+            9 => FUNCTION_F9_CODE,
+            10 => FUNCTION_F10_CODE,
+            11 => FUNCTION_F11_CODE,
+            12 => FUNCTION_F12_CODE,
+            _ => return None,
+        };
+        Some(generate_tilde_key(code, modifiers))
+    }
+
+    /// Generate character sequence with modifier support.
+    fn generate_char(c: char, modifiers: VT100KeyModifiersIR) -> Option<Vec<u8>> {
+        // Alt+letter: ESC + character
+        if modifiers.alt == KeyState::Pressed
+            && modifiers.ctrl == KeyState::NotPressed
+            && modifiers.shift == KeyState::NotPressed
+        {
+            let mut bytes = vec![ANSI_ESC];
+            let mut buf = [0u8; 4];
+            let encoded = c.encode_utf8(&mut buf);
+            bytes.extend_from_slice(encoded.as_bytes());
+            return Some(bytes);
+        }
+
+        // Ctrl+letter: control byte (letter & 0x1F)
+        if modifiers.ctrl == KeyState::Pressed
+            && modifiers.alt == KeyState::NotPressed
+            && modifiers.shift == KeyState::NotPressed
+        {
+            if c.is_ascii_alphabetic() {
+                let control_byte = (c.to_ascii_lowercase() as u8) & 0x1F;
+                return Some(vec![control_byte]);
+            }
+            return None; // Ctrl+non-letter not supported
+        }
+
+        // Plain character: UTF-8 encoded
+        let mut buf = [0u8; 4];
+        let encoded = c.encode_utf8(&mut buf);
+        Some(encoded.as_bytes().to_vec())
+    }
+}
+
+/// Mouse sequence generation (X10, RXVT, SGR formats).
+mod mouse {
+    use super::*;
+
+    /// Generate mouse sequence in SGR format: `ESC [<button;col;rowM/m`.
+    pub fn generate_sgr_sequence(
+        button: VT100MouseButtonIR,
+        col: u16,
+        row: u16,
+        action: VT100MouseActionIR,
+        modifiers: VT100KeyModifiersIR,
+    ) -> Vec<u8> {
+        // Handle scroll events: buttons 64-67 (up/down/left/right)
+        let button_code = match action {
+            VT100MouseActionIR::Scroll(scroll_dir) => {
+                use crate::core::ansi::vt_100_terminal_input_parser::VT100ScrollDirectionIR;
+                match scroll_dir {
+                    VT100ScrollDirectionIR::Up => MOUSE_SCROLL_UP_BUTTON,
+                    VT100ScrollDirectionIR::Down => MOUSE_SCROLL_DOWN_BUTTON,
+                    VT100ScrollDirectionIR::Left => MOUSE_SCROLL_LEFT_BUTTON,
+                    VT100ScrollDirectionIR::Right => MOUSE_SCROLL_RIGHT_BUTTON,
+                }
+            }
+            _ => button_to_code(button),
+        };
+
+        // Apply modifiers and action flags to button code
+        let mut code = button_code;
+
+        // Handle action/drag flag
+        let action_char = match action {
+            VT100MouseActionIR::Release => MOUSE_SGR_RELEASE as char,
+            VT100MouseActionIR::Drag => {
+                code |= MOUSE_MOTION_FLAG; // Drag flag (bit 5)
+                MOUSE_SGR_PRESS as char
+            }
+            VT100MouseActionIR::Press
+            | VT100MouseActionIR::Motion
+            | VT100MouseActionIR::Scroll(_) => MOUSE_SGR_PRESS as char,
+        };
+
+        code = apply_modifiers(code, modifiers);
+
+        // Build sequence: ESC[<button;col;rowM/m
+        let mut bytes = MOUSE_SGR_PREFIX.to_vec();
+        bytes.extend_from_slice(&encoding::push_ascii_u16(code));
+        bytes.push(ANSI_PARAM_SEPARATOR);
+        bytes.extend_from_slice(&encoding::push_ascii_u16(col));
+        bytes.push(ANSI_PARAM_SEPARATOR);
+        bytes.extend_from_slice(&encoding::push_ascii_u16(row));
+        bytes.push(action_char as u8);
+        bytes
+    }
+
+    /// Generate mouse sequence in X10 format: `ESC [ M Cb Cx Cy`.
+    pub fn generate_x10_sequence(
+        button: VT100MouseButtonIR,
+        col: u16,
+        row: u16,
+        action: VT100MouseActionIR,
+        modifiers: VT100KeyModifiersIR,
+    ) -> Vec<u8> {
+        let mut cb = button_to_code(button);
+
+        // Handle action
+        match action {
+            VT100MouseActionIR::Release => cb = MOUSE_RELEASE_BUTTON_CODE,
+            VT100MouseActionIR::Motion | VT100MouseActionIR::Drag => {
+                cb |= MOUSE_MOTION_FLAG
+            }
+            VT100MouseActionIR::Press | VT100MouseActionIR::Scroll(_) => {}
+        }
+
+        cb = apply_modifiers(cb, modifiers);
+
+        // X10 coordinate encoding: add 32 to make printable ASCII
+        #[allow(clippy::cast_possible_truncation)]
+        let cx = (col + 32) as u8;
+        #[allow(clippy::cast_possible_truncation)]
+        let cy = (row + 32) as u8;
+
+        // Build sequence: ESC [ M Cb Cx Cy
+        let mut bytes = MOUSE_X10_PREFIX.to_vec();
+        #[allow(clippy::cast_possible_truncation)]
+        bytes.push(cb as u8);
+        bytes.push(cx);
+        bytes.push(cy);
+        bytes.push(CONTROL_NUL);
+        bytes
+    }
+
+    /// Generate mouse sequence in RXVT format: `ESC [ Cb ; Cx ; Cy M`.
+    pub fn generate_rxvt_sequence(
+        button: VT100MouseButtonIR,
+        col: u16,
+        row: u16,
+        action: VT100MouseActionIR,
+        modifiers: VT100KeyModifiersIR,
+    ) -> Vec<u8> {
+        let mut cb = button_to_code(button);
+
+        // Handle action
+        match action {
+            VT100MouseActionIR::Release => cb = MOUSE_RELEASE_BUTTON_CODE,
+            VT100MouseActionIR::Motion | VT100MouseActionIR::Drag => {
+                cb |= MOUSE_MOTION_FLAG
+            }
+            VT100MouseActionIR::Press | VT100MouseActionIR::Scroll(_) => {}
+        }
+
+        cb = apply_modifiers(cb, modifiers);
+
+        // Build sequence: ESC [ Cb ; Cx ; Cy M
+        let mut bytes = CSI_PREFIX.to_vec();
+        bytes.extend_from_slice(&encoding::push_ascii_u16(cb));
+        bytes.push(ANSI_PARAM_SEPARATOR);
+        bytes.extend_from_slice(&encoding::push_ascii_u16(col));
+        bytes.push(ANSI_PARAM_SEPARATOR);
+        bytes.extend_from_slice(&encoding::push_ascii_u16(row));
+        bytes.push(MOUSE_X10_MARKER);
+        bytes
+    }
+
+    /// Convert button enum to protocol code.
+    fn button_to_code(button: VT100MouseButtonIR) -> u16 {
+        match button {
+            VT100MouseButtonIR::Left | VT100MouseButtonIR::Unknown => {
+                MOUSE_LEFT_BUTTON_CODE
+            }
+            VT100MouseButtonIR::Middle => MOUSE_MIDDLE_BUTTON_CODE,
+            VT100MouseButtonIR::Right => MOUSE_RIGHT_BUTTON_CODE,
+        }
+    }
+
+    /// Apply modifier flags to button code.
+    fn apply_modifiers(mut code: u16, modifiers: VT100KeyModifiersIR) -> u16 {
+        if modifiers.shift == KeyState::Pressed {
+            code |= MOUSE_MODIFIER_SHIFT;
+        }
+        if modifiers.alt == KeyState::Pressed {
+            code |= MOUSE_MODIFIER_ALT;
+        }
+        if modifiers.ctrl == KeyState::Pressed {
+            code |= MOUSE_MODIFIER_CTRL;
+        }
+        code
+    }
+}
+
+/// Terminal event sequence generation (resize, focus, paste).
+mod terminal_events {
+    use super::*;
+
+    /// Generate a window resize sequence: `CSI 8 ; rows ; cols t`.
+    pub fn generate_resize_sequence(rows: u16, cols: u16) -> Vec<u8> {
+        let mut bytes = CSI_PREFIX.to_vec();
+        bytes.push(RESIZE_EVENT_GENERATE_CODE);
+        bytes.push(ANSI_PARAM_SEPARATOR);
+        bytes.extend_from_slice(&encoding::push_ascii_u16(rows));
+        bytes.push(ANSI_PARAM_SEPARATOR);
+        bytes.extend_from_slice(&encoding::push_ascii_u16(cols));
+        bytes.push(RESIZE_TERMINATOR);
+        bytes
+    }
+
+    /// Generate a focus event sequence: `CSI I` (gained) or `CSI O` (lost).
+    pub fn generate_focus_sequence(state: VT100FocusStateIR) -> Vec<u8> {
+        let mut bytes = CSI_PREFIX.to_vec();
+        match state {
+            VT100FocusStateIR::Gained => bytes.push(FOCUS_GAINED_FINAL),
+            VT100FocusStateIR::Lost => bytes.push(FOCUS_LOST_FINAL),
+        }
+        bytes
+    }
+
+    /// Generate a bracketed paste sequence: `CSI 200 ~` (start) or `CSI 201 ~` (end).
+    pub fn generate_paste_sequence(mode: VT100PasteModeIR) -> Vec<u8> {
+        let mut bytes = CSI_PREFIX.to_vec();
+        match mode {
+            VT100PasteModeIR::Start => {
+                bytes.extend_from_slice(PASTE_START_GENERATE_CODE.as_bytes());
+            }
+            VT100PasteModeIR::End => {
+                bytes.extend_from_slice(PASTE_END_GENERATE_CODE.as_bytes());
+            }
+        }
+        bytes.push(ANSI_FUNCTION_KEY_TERMINATOR);
+        bytes
+    }
+}
+
+/// ANSI encoding utilities (modifiers, ASCII conversion).
+mod encoding {
+    use super::*;
+
+    /// Check if any modifiers are pressed.
+    pub fn has_modifiers(modifiers: VT100KeyModifiersIR) -> bool {
+        modifiers.shift == KeyState::Pressed
+            || modifiers.ctrl == KeyState::Pressed
+            || modifiers.alt == KeyState::Pressed
+    }
+
+    /// Encode modifier flags into a single byte following VT-100 ANSI convention.
+    ///
+    /// **VT-100 Modifier Encoding**: `parameter = 1 + bitfield`
+    ///
+    /// Where bitfield is:
+    /// - bit 0 (value 1): Shift
+    /// - bit 1 (value 2): Alt
+    /// - bit 2 (value 4): Ctrl
+    ///
+    /// ## Parameter Values
+    ///
+    /// - `1` → no modifiers (1 + 0)
+    /// - `2` → Shift (1 + 1)
+    /// - `3` → Alt (1 + 2)
+    /// - `4` → Alt+Shift (1 + 3)
+    /// - `5` → Ctrl (1 + 4)
+    /// - `6` → Ctrl+Shift (1 + 5)
+    /// - `7` → Ctrl+Alt (1 + 6)
+    /// - `8` → Ctrl+Alt+Shift (1 + 7)
+    ///
+    /// **Confirmed by [terminal observation]**: `ESC[1;5A` = Ctrl+Up (parameter 5 = 1+4).
+    ///
+    /// [terminal observation]: crate::core::ansi::vt_100_terminal_input_parser#one-based-mouse-input-events
+    pub fn encode_modifiers(modifiers: VT100KeyModifiersIR) -> u8 {
+        let mut mask: u8 = 0;
+        if modifiers.shift == KeyState::Pressed {
+            mask |= MODIFIER_SHIFT;
+        }
+        if modifiers.alt == KeyState::Pressed {
+            mask |= MODIFIER_ALT;
+        }
+        if modifiers.ctrl == KeyState::Pressed {
+            mask |= MODIFIER_CTRL;
+        }
+        MODIFIER_PARAMETER_BASE_CHAR + mask
+    }
+
+    /// Convert a numeric value (0-9) to its ASCII character representation.
+    ///
+    /// This function performs the critical conversion from numeric values to their
+    /// ASCII byte representations.
+    ///
+    /// ## Examples
+    ///
+    /// ```text
+    /// Number  → ASCII Char → Byte Value
+    /// ------    ----------   ----------
+    /// 0       → '0'        → 0x30 (48)
+    /// 1       → '1'        → 0x31 (49)
+    /// 5       → '5'        → 0x35 (53)
+    /// 9       → '9'        → 0x39 (57)
+    /// ```
+    ///
+    /// ## Common Error Pattern This Prevents
+    ///
+    /// Don't push numeric values directly as bytes. For example, pushing `1` as
+    /// a byte gives `0x01`, not the ASCII character `'1'` (which is `0x31`).
+    /// This function ensures proper ASCII conversion.
+    ///
+    /// <!-- It is ok to use ignore here - demonstrates common error pattern, not meant as
+    /// runnable code -->
+    /// ```ignore
+    /// // WRONG - pushes numeric value directly
+    /// bytes.push(1);  // Pushes byte 0x01, not ASCII '1'
+    ///
+    /// // CORRECT - converts to ASCII first
+    /// bytes.push(push_ascii_number(1));  // Pushes byte 0x31 = '1'
+    /// ```
+    ///
+    /// ## Parameters
+    ///
+    /// - `value`: Numeric value (0-9)
+    ///
+    /// ## Returns
+    ///
+    /// ASCII byte representation of the digit
+    ///
+    /// ## Panics
+    ///
+    /// Panics if `value` is not in range 0-9 (debug builds only)
+    pub fn push_ascii_number(value: u8) -> u8 {
+        debug_assert!(
+            value <= 9,
+            "Value must be a single digit (0-9), got {value}"
+        );
+        ASCII_DIGIT_0 + value
+    }
+
+    /// Convert a multi-digit numeric value to its ASCII byte representation.
+    ///
+    /// ## Purpose
+    ///
+    /// ANSI escape sequences represent multi-digit numbers as sequences of ASCII digits.
+    /// This helper eliminates repetitive `to_string().as_bytes()` calls throughout the
+    /// codebase.
+    ///
+    /// ## Common Use Cases
+    ///
+    /// - Mouse coordinates (e.g., column 120, row 50)
+    /// - Window resize dimensions (e.g., 80x24)
+    /// - Multi-digit parameter codes (e.g., 200 for paste start)
+    ///
+    /// ## Examples
+    ///
+    /// <!-- It is ok to use ignore here - simple before/after comparison, not a complete
+    /// compilable example -->
+    /// ```ignore
+    /// // Instead of:
+    /// bytes.extend_from_slice(col.to_string().as_bytes());
+    ///
+    /// // Use:
+    /// bytes.extend_from_slice(&push_ascii_u16(col));
+    /// ```
+    ///
+    /// ## Parameters
+    ///
+    /// - `value`: Numeric value to convert (any u16 value)
+    ///
+    /// ## Returns
+    ///
+    /// A `Vec<u8>` containing the ASCII byte representation of the number.
+    /// For example, 123 returns vec![b'1', b'2', b'3'].
+    pub fn push_ascii_u16(value: u16) -> Vec<u8> { value.to_string().into_bytes() }
 }

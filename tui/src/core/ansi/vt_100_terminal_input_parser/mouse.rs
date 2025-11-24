@@ -7,29 +7,37 @@
 //!
 //! ## Where You Are in the Pipeline
 //!
+//! For the full data flow, see the [parent module documentation]. This diagram shows
+//! where `mouse.rs` fits:
+//!
 //! ```text
-//! Raw Terminal Input (stdin)
-//!    ↓
 //! DirectToAnsiInputDevice (async I/O layer)
-//!    ↓
-//! parser.rs (routing & `ESC` detection)
+//!    │
+//!    ▼
+//! router.rs (routing & `ESC` detection)
 //!    │ (routes mouse sequences here)
-//! ┌──▼───────────────────────────────────────┐
-//! │  mouse.rs                                │  ← **YOU ARE HERE**
-//! │  • Parse `SGR` protocol (modern)         │
+//! ┌──▼───────────────────────────────────────┐  ┌──────────────────┐
+//! │  mouse.rs                                ◀──┤ **YOU ARE HERE** │
+//! │  • Parse `SGR` protocol (modern)         │  └──────────────────┘
 //! │  • Parse `X10`/Normal (legacy)           │
 //! │  • Parse `RXVT` protocol (legacy)        │
 //! │  • Detect clicks/drags/scroll/motion     │
 //! │  • Extract position & modifiers          │
 //! └──────────────────────────────────────────┘
-//!    ↓
+//!    │
+//!    ▼
 //! VT100InputEventIR::Mouse { button, pos, action, modifiers }
+//!    │
+//!    ▼
+//! convert_input_event() → InputEvent (returned to application)
 //! ```
 //!
 //! **Navigate**:
-//! - ⬆️ **Up**: [`parser`] - Main routing entry point
+//! - ⬆️ **Up**: [`router`] - Main routing entry point
 //! - ➡️ **Peer**: [`keyboard`], [`terminal_events`], [`utf8`] - Other specialized parsers
 //! - 📚 **Types**: [`VT100MouseButtonIR`], [`VT100MouseActionIR`], [`TermPos`]
+//! - 📤 **Converted by**: [`convert_input_event()`] in `protocol_conversion.rs` (not this
+//!   module)
 //!
 //! ## Supported Mouse Protocols
 //! - **`SGR` (Selective Graphic Rendition) Protocol**: Modern standard format
@@ -78,10 +86,12 @@
 //! [`VT100MouseActionIR`]: super::VT100MouseActionIR
 //! [`VT100MouseButtonIR`]: super::VT100MouseButtonIR
 //! [`keyboard`]: mod@super::keyboard
-//! [`parser`]: mod@super::parser
+//! [`router`]: mod@super::router
 //! [`terminal_events`]: mod@super::terminal_events
 //! [`utf8`]: mod@super::utf8
+//! [parent module documentation]: mod@super#primary-consumer
 //! [parent module's testing strategy documentation]: mod@super#testing-strategy
+//! [`convert_input_event()`]: crate::tui::terminal_lib_backends::direct_to_ansi::input::protocol_conversion::convert_input_event
 
 use super::ir_event_types::{VT100InputEventIR, VT100KeyModifiersIR, VT100MouseActionIR,
                             VT100MouseButtonIR, VT100ScrollDirectionIR};

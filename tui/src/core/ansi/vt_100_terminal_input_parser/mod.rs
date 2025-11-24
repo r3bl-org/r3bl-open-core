@@ -27,28 +27,32 @@
 //!    ▼
 //! DirectToAnsiInputDevice (async I/O layer)
 //!    │
-//!    │ Reads from tokio::io::stdin()
+//!    │ It reads from tokio::io::stdin()
+//!    │
 //!    ▼
 //! Raw stdin bytes
 //!    │
-//!    │ Calls try_parse_input_event()
-//!    ▼
-//! This parser (vt_100_terminal_input_parser)
+//!    │ It calls try_parse_input_event() with byte slice
 //!    │
-//!    │ Returns VT100InputEventIR
+//!    ▼                    ┐  ┌──────────────────┐
+//! try_parse_input_event() ◀──┤ **YOU ARE HERE** │
+//!    │                       └──────────────────┘
+//!    │ Code in this parser runs and returns Option<VT100InputEventIR>
+//!    │
 //!    ▼
 //! convert_input_event() (protocol_conversion.rs)
 //!    │
-//!    │ Converts IR → public API
+//!    │ It converts IR → public API
+//!    │
 //!    ▼
 //! InputEvent (returned to application)
 //! ```
 //!
 //! ## Architecture
 //!
-//! The VT-100 terminal input parser is a **protocol-agnostic layer** that parses ANSI
-//! sequences independently of platform-specific I/O. This design mirrors the output
-//! architecture ([`generator`] + [`output`]) and enables:
+//! The VT-100 terminal input parser uses **IO-free design** - it parses ANSI
+//! sequences independently of platform-specific I/O. This I/O-agnostic approach mirrors
+//! the output architecture ([`generator`] + [`output`]) and enables:
 //!
 //! - **Testability**: Unit test parsers without I/O or async complexity
 //! - **Reusability**: Multiple backends can use the same protocol parsers
@@ -59,16 +63,24 @@
 //!
 //! The input parser is intentionally designed to parallel the output architecture:
 //!
-//! | Aspect         | Output                                                   | Input                               |
-//! | -------------- | -------------------------------------------------------- | ----------------------------------- |
-//! | Protocol layer | [`generator`]                                            | (this module)                       |
-//! | Backend layer  | [`output`]                                               | [`input`]                           |
-//! | Core types     | [`SgrCode`], [`AnsiSequenceGenerator`]                   | [`try_parse_input_event()`], etc.   |
-//! | I/O device     | [`RenderOpPaintImplDirectToAnsi`], [`PixelCharRenderer`] | [`DirectToAnsiInputDevice`]         |
+//! | Aspect         | Input                               | Output                                 |
+//! | -------------- | ----------------------------------- | -------------------------------------- |
+//! | Protocol layer | (this module)                       | [`generator`]                          |
+//! | Backend layer  | [`input`]                           | [`output`]                             |
+//! | Core API       | [`try_parse_input_event()`], etc.   | [`SgrCode`], [`AnsiSequenceGenerator`] |
+//! | I/O device     | [`DirectToAnsiInputDevice`]         | [`OutputDevice`]                       |
+//!
+//! Note: [`OutputDevice`] is shared across all backends (crossterm, `direct_to_ansi`),
+//! unlike [`DirectToAnsiInputDevice`] which is backend-specific. The closest
+//! `direct_to_ansi` specific type for output is [`RenderOpPaintImplDirectToAnsi`] which
+//! uses the [`OutputDevice`].
 //!
 //! ## Module Responsibilities
 //!
-//! ### [`parser`]
+//! Each submodule contains detailed documentation including supported sequences, edge
+//! cases, and implementation notes. Click through to the module for full details.
+//!
+//! ### [`router`]
 //! - Main entry point: [`try_parse_input_event()`]
 //! - Route bytes to specialized parsers based on first byte
 //! - Handle `ESC` key detection (single `ESC` vs escape sequence start)
@@ -79,7 +91,6 @@
 //! - Parse `SS3` sequences (`ESC O`) for application mode keys (F1-F4, Home, End, arrows)
 //! - Handle modifier combinations (Shift, Ctrl, Alt)
 //! - Handle control characters and ambiguous key mappings
-//! - Support `Kitty` keyboard protocol for extended functionality
 //!
 //! ### [`mouse`]
 //! - Parse `SGR` mouse protocol (modern standard): `CSI < Cb ; Cx ; Cy M/m`
@@ -99,37 +110,47 @@
 //! - Handle multi-byte UTF-8 sequences
 //! - Buffer incomplete sequences for later completion
 //!
-//! ## One-Based Mouse Input Events
+//! ## Establishing Ground Truth Through Validation Testing
 //!
-//! **Confirmed by [`observe_terminal`] test**: VT-100 mouse
-//! coordinates are 1-based, where (1, 1) is the top-left corner. Uses [`TermRow`] and
-//! [`TermCol`] for type safety and explicit conversion to/from 0-based buffer
-//! coordinates.
-//!
-//! ## Establishing Ground Truth with Validation Tests
-//!
-//! The [`observe_terminal`] validation test is a critical tool for
-//! validating parser accuracy against real terminal emulators.
+//! The [`observe_terminal`] validation test is a critical tool for validating parser
+//! accuracy against real terminal emulators.
 //!
 //! Run it with:
 //! ```bash
 //! cargo test observe_terminal -- --ignored --nocapture
 //! ```
 //!
-//! This test captures raw bytes from actual terminal interactions and helps establish
-//! ground truth for:
-//! - **Coordinate systems**: Confirms 1-based (col, row) with (1, 1) at top-left
-//! - **`SGR` mouse protocol**: Button codes, scroll wheel interpretation, press/release
-//! - **OS platform quirks**: Natural scrolling inversion on GNOME/Ubuntu/macOS
-//! - **Terminal-specific behaviors**: Different emulators may have subtle variations
+//! ### One-Based Mouse Input Events
 //!
-//! Key findings incorporated into this parser:
-//! - VT-100 mouse coordinates are **1-based** (not 0-based)
+//! Key findings from [`observe_terminal`] are incorporated into the [`mouse`] parser:
+//! - VT-100 mouse coordinates are 1-based (not 0-based), where (1, 1) is the top-left
+//!   corner.
 //! - Scroll wheel codes are **inverted on systems with natural scrolling enabled**:
-//!   - Check with: `gsettings get org.gnome.desktop.peripherals.mouse natural-scroll`
-//! - `SGR` protocol uses codes: 64=Wheel Down, 65=Wheel Up (`XTerm` standard)
+//!   - On Linux with GNOME, check with: `gsettings get
+//!     org.gnome.desktop.peripherals.mouse natural-scroll`
+//! - `SGR` protocol uses codes (`XTerm` standard):
+//!   - `64`=Wheel Down
+//!   - `65`=Wheel Up
+//! - Use [`TermRow`] and [`TermCol`] for type safety and explicit conversion to/from
+//!   0-based buffer coordinates.
 //!
 //! ## Testing Strategy
+//!
+//! Testing a parser that talks to a generator creates an "oracle problem": if both share
+//! the same misunderstanding of the VT-100 protocol, tests pass but the code is wrong.
+//!
+//! We solve this with two complementary approaches:
+//!
+//! - **Hardcoded sequences** (validation tests): Written by a human reading the VT-100
+//!   spec, these provide ground truth independent of our generator. They catch systematic
+//!   protocol misinterpretations.
+//!
+//! - **Generated sequences** (unit/integration tests): Created by our
+//!   [`AnsiSequenceGenerator`], these verify round-trip consistency—what we generate, we
+//!   can parse. They're valuable for edge cases and keeping generator/parser synchronized.
+//!
+//! The [`test_fixtures`] module is shared between unit and integration tests only — not
+//! validation tests, which maintain independence by using hardcoded values.
 //!
 //! ```text
 //!       ╱╲
@@ -141,13 +162,11 @@
 //! ╱────────────╲
 //! ```
 //!
-//! | Level         | Purpose                          | Sequences   | Why                                       |
-//! | ------------- | -------------------------------- | ----------- | ----------------------------------------- |
-//! | Validation    | Spec compliance & Ground truth   | Hardcoded   | Independent reference (VT-100 protocol)   |
-//! | Unit          | Component contracts              | Generated   | Round-trip (generator ↔ parser)           |
-//! | Integration   | System behavior                  | Generated   | Real-world usage pattern                  |
-//!
-//! The [`test_fixtures`] module is shared between the unit, and integration tests only.
+//! | Level       | Purpose                        | Sequences | Catches                            |
+//! | ----------- | ------------------------------ | --------- | ---------------------------------- |
+//! | Validation  | Spec compliance & ground truth | Hardcoded | Protocol misunderstandings         |
+//! | Unit        | Component contracts            | Generated | Generator/parser desynchronization |
+//! | Integration | System behavior                | Generated | Real-world usage regressions       |
 //!
 //! [`TermCol`]: crate::core::coordinates::vt_100_ansi_coords::TermCol
 //! [`TermRow`]: crate::core::coordinates::vt_100_ansi_coords::TermRow
@@ -159,14 +178,10 @@
 //! [`input`]: mod@crate::tui::terminal_lib_backends::direct_to_ansi::input
 //! [`SgrCode`]: crate::SgrCode
 //! [`AnsiSequenceGenerator`]: crate::AnsiSequenceGenerator
-//! [`try_parse_input_event()`]: crate::core::ansi::vt_100_terminal_input_parser::parser::try_parse_input_event
+//! [`try_parse_input_event()`]: crate::core::ansi::vt_100_terminal_input_parser::router::try_parse_input_event
+//! [`OutputDevice`]: crate::OutputDevice
 //! [`RenderOpPaintImplDirectToAnsi`]: crate::RenderOpPaintImplDirectToAnsi
-//! [`PixelCharRenderer`]: crate::PixelCharRenderer
 //! [`DirectToAnsiInputDevice`]: crate::DirectToAnsiInputDevice
-//! [`keyboard`]: mod@crate::core::ansi::vt_100_terminal_input_parser::keyboard
-//! [`mouse`]: mod@crate::core::ansi::vt_100_terminal_input_parser::mouse
-//! [`terminal_events`]: mod@crate::core::ansi::vt_100_terminal_input_parser::terminal_events
-//! [`utf8`]: mod@crate::core::ansi::vt_100_terminal_input_parser::utf8
 //! [`observe_terminal`]: crate::core::ansi::vt_100_terminal_input_parser::validation_tests::observe_real_interactive_terminal_input_events::observe_terminal
 //! [`test_fixtures`]: mod@crate::core::ansi::vt_100_terminal_input_parser::test_fixtures
 //! [`convert_input_event()`]: crate::tui::terminal_lib_backends::direct_to_ansi::input::protocol_conversion::convert_input_event
@@ -179,9 +194,9 @@
 // Main entry point module (router/dispatcher)
 // This is listed FIRST to emphasize it's the primary API surface
 #[cfg(any(test, doc))]
-pub mod parser;
+pub mod router;
 #[cfg(not(any(test, doc)))]
-mod parser;
+mod router;
 
 // Conditionally public modules for documentation and testing.
 // In test/doc builds: fully public (for rustdoc and test access)
@@ -212,8 +227,8 @@ pub mod ir_event_types;
 mod ir_event_types;
 
 // Re-export types for flat public API.
-// parser is listed FIRST as it's the main entry point
-pub use parser::*; // Main entry point: try_parse_input_event()
+// router is listed FIRST as it's the main entry point
+pub use router::*; // Main entry point: try_parse_input_event()
 pub use keyboard::*; // Specialized parsers
 pub use mouse::*;
 pub use terminal_events::*;

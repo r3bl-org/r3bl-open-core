@@ -7,35 +7,116 @@
 //!
 //! ## Where You Are in the Pipeline
 //!
+//! For the full data flow, see the [parent module documentation]. This diagram shows
+//! where `utf8.rs` fits:
+//!
 //! ```text
-//! Raw Terminal Input (stdin)
-//!    ↓
 //! DirectToAnsiInputDevice (async I/O layer)
-//!    ↓
-//! parser.rs (routing & `ESC` detection)
+//!    │
+//!    ▼
+//! router.rs (routing & `ESC` detection)
 //!    │ (routes non-escape bytes here)
-//! ┌──▼───────────────────────────────────────┐
-//! │  utf8.rs                                 │  ← **YOU ARE HERE**
-//! │  • Parse UTF-8 multi-byte sequences      │
+//! ┌──▼───────────────────────────────────────┐  ┌──────────────────┐
+//! │  utf8.rs                                 ◀──┤ **YOU ARE HERE** │
+//! │  • Parse UTF-8 multi-byte sequences      │  └──────────────────┘
 //! │  • Generate character events             │
 //! │  • Handle incomplete sequences           │
 //! └──────────────────────────────────────────┘
-//!    ↓
+//!    │
+//!    ▼
 //! VT100InputEventIR::Keyboard { code: Char(ch), .. }
+//!    │
+//!    ▼
+//! convert_input_event() → InputEvent (returned to application)
 //! ```
 //!
 //! **Navigate**:
-//! - ⬆️ **Up**: [`parser`] - Main routing entry point
+//! - ⬆️ **Up**: [`router`] - Main routing entry point
 //! - ➡️ **Peer**: [`keyboard`], [`mouse`], [`terminal_events`] - Other specialized
 //!   parsers
 //! - 📚 **Types**: [`VT100KeyCodeIR::Char`]
-//!
+//! - 📤 **Converted by**: [`convert_input_event()`] in `protocol_conversion.rs` (not this
+//!   module)
 //!
 //! ## Handles:
 //! - Single-byte UTF-8 characters (ASCII)
 //! - Multi-byte UTF-8 sequences (2-4 bytes)
 //! - Incomplete UTF-8 sequences (buffering)
 //! - Invalid UTF-8 sequences (graceful error handling)
+//!
+//! ## UTF-8 Encoding Explained
+//!
+//! UTF-8 uses **bit pattern matching** (not arithmetic) to identify byte types
+//! and extract data. The high bits are structural markers; remaining bits carry
+//! the Unicode code point.
+//!
+//! ### Byte Type Detection
+//!
+//! ```text
+//! Byte Pattern   Meaning              Detection Mask
+//! ──────────────────────────────────────────────────
+//! 0xxxxxxx       ASCII (1-byte)       byte & 0x80 == 0x00
+//! 110xxxxx       2-byte start         byte & 0xE0 == 0xC0
+//! 1110xxxx       3-byte start         byte & 0xF0 == 0xE0
+//! 11110xxx       4-byte start         byte & 0xF8 == 0xF0
+//! 10xxxxxx       Continuation         byte & 0xC0 == 0x80
+//! ```
+//!
+//! The leading 1s before the first 0 indicate total byte count:
+//! - `0xxxxxxx` → 0 leading 1s → 1 byte total
+//! - `110xxxxx` → 2 leading 1s → 2 bytes total
+//! - `1110xxxx` → 3 leading 1s → 3 bytes total
+//! - `11110xxx` → 4 leading 1s → 4 bytes total
+//!
+//! ### First Byte: Pattern + Data
+//!
+//! The first byte carries both the length marker AND the most significant data bits:
+//!
+//! ```text
+//! Sequence   Pattern Bits   Data Bits   Total Data Available
+//! ────────────────────────────────────────────────────────────
+//! 1-byte     1 (the 0)      7 bits      7 bits
+//! 2-byte     3 (110)        5 bits      5 + 6 = 11 bits
+//! 3-byte     4 (1110)       4 bits      4 + 6 + 6 = 16 bits
+//! 4-byte     5 (11110)      3 bits      3 + 6 + 6 + 6 = 21 bits
+//! ```
+//!
+//! ### Continuation Bytes: 10xxxxxx
+//!
+//! Each continuation byte:
+//! - Prefix `10` marks it as "not a start byte" (enables self-synchronization)
+//! - Remaining 6 bits carry data
+//! - Extract with: `byte & 0x3F`
+//!
+//! ### Worked Example: 'é' (U+00E9 = 233)
+//!
+//! ```text
+//! Step 1: 233 in binary = 11101001 (needs 8 bits, won't fit in 7-bit ASCII)
+//!
+//! Step 2: Use 2-byte encoding (11 data bits available)
+//!         Pad to 11 bits: 000_11_101001
+//!                         └─┬─┘└──┬───┘
+//!                         5 bits  6 bits
+//!
+//! Step 3: Insert into templates:
+//!         First byte:  110_00011  (pattern 110 + 5 MSB data bits)
+//!         Second byte: 10_101001  (pattern 10  + 6 LSB data bits)
+//!
+//! Result: 0xC3 0xA9
+//!
+//! Verification: Extract data bits and recombine:
+//!         (0xC3 & 0x1F) << 6 | (0xA9 & 0x3F)
+//!         = 0x03 << 6 | 0x29
+//!         = 0xC0 | 0x29
+//!         = 0xE9 = 233 ✓
+//! ```
+//!
+//! ### Why Bit Patterns (Not Arithmetic)?
+//!
+//! - **Fast**: Detection is just bitwise AND + compare
+//! - **Self-synchronizing**: Jump anywhere in a stream, scan for `0xxxxxxx` or `11xxxxxx`
+//! - **Unambiguous**: Continuation bytes (`10xxxxxx`) can never be confused with start bytes
+//! - **ASCII-compatible**: Single-byte chars unchanged (the `0` prefix means "complete")
 //!
 //! # Important: UTF-8 Byte Length vs Display Width
 //!
@@ -78,8 +159,10 @@
 //! [`VT100KeyCodeIR::Char`]: super::VT100KeyCodeIR::Char
 //! [`keyboard`]: mod@super::keyboard
 //! [`mouse`]: mod@super::mouse
-//! [`parser`]: mod@super::parser
+//! [`router`]: mod@super::router
 //! [`terminal_events`]: mod@super::terminal_events
+//! [parent module documentation]: mod@super#primary-consumer
+//! [`convert_input_event()`]: crate::tui::terminal_lib_backends::direct_to_ansi::input::protocol_conversion::convert_input_event
 
 use super::ir_event_types::{VT100InputEventIR, VT100KeyCodeIR, VT100KeyModifiersIR};
 use crate::{ByteOffset, UTF8_1BYTE_MAX, UTF8_1BYTE_MIN, UTF8_2BYTE_FIRST_MASK,

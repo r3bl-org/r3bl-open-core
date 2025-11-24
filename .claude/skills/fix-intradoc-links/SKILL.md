@@ -301,13 +301,14 @@ After fixing intra-doc links:
 
 This skill includes additional reference material:
 
-- **`patterns.md`** - 14 detailed pattern examples covering every intra-doc link scenario: basic symbols, methods vs functions, module links, private types, test functions, struct fields, trait items, re-exported symbols, external crates, link placement, disambiguating with prefixes, `Self` vs absolute paths, generic types, and more. Includes a complete checklist and quick reference table. **Read this when:**
-  - Need specific examples for a linking scenario (see Pattern 1-14)
+- **`patterns.md`** - 15 detailed pattern examples covering every intra-doc link scenario: basic symbols, methods vs functions, module links, private types, test functions, struct fields, trait items, re-exported symbols, external crates, link placement, disambiguating with prefixes, `Self` vs absolute paths, generic types, section heading fragments, and more. Includes a complete checklist and quick reference table. **Read this when:**
+  - Need specific examples for a linking scenario (see Pattern 1-15)
   - How to link to test functions → Pattern 5
   - Linking to private types with conditional visibility → Pattern 4
   - Module references with `mod@` prefix → Pattern 3
   - Re-exported symbols → Pattern 8
   - Disambiguating with prefixes (`mod@`, `struct@`, etc.) → Pattern 11
+  - Linking to section headings with `#fragment` → Pattern 15
   - Complete checklist for perfect links → End of file
 
 ## Related Skills
