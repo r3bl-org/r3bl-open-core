@@ -1,3 +1,3 @@
-# Fix all clippy lints and ensure code quality
+# Code Style & Linting
 
-Have the clippy-runner subagent review my recent changes
+Invoke the `run-clippy` skill to run clippy and enforce code style standards.

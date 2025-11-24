@@ -1,3 +1,3 @@
-# Make sure docs build
+# Documentation Build & Formatting
 
-Use the code-formatter subagent to make sure that docs build
+Invoke the `write-documentation` skill to format docs and verify they build correctly.

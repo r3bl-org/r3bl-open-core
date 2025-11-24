@@ -1,3 +1,3 @@
-# Make sure rustdoc builds
+# Fix Comment Punctuation & Style
 
-Have the code-formatter subagent review my recent changes
+Invoke the `run-clippy` skill, which includes comment punctuation rules and code style enforcement.
