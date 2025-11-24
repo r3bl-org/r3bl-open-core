@@ -7,28 +7,35 @@
 //!
 //! ## Where You Are in the Pipeline
 //!
+//! For the full data flow, see the [parent module documentation]. This diagram shows
+//! where `terminal_events.rs` fits:
+//!
 //! ```text
-//! Raw Terminal Input (stdin)
-//!    ↓
 //! DirectToAnsiInputDevice (async I/O layer)
-//!    ↓
-//! parser.rs (routing & `ESC` detection)
+//!    │
+//!    ▼
+//! router.rs (routing & `ESC` detection)
 //!    │ (routes terminal event sequences here)
-//! ┌──▼───────────────────────────────────────┐
-//! │  terminal_events.rs                      │  ← **YOU ARE HERE**
-//! │  • Parse window resize events            │
+//! ┌──▼───────────────────────────────────────┐  ┌──────────────────┐
+//! │  terminal_events.rs                      ◀──┤ **YOU ARE HERE** │
+//! │  • Parse window resize events            │  └──────────────────┘
 //! │  • Parse focus gained/lost               │
 //! │  • Parse bracketed paste markers         │
 //! └──────────────────────────────────────────┘
-//!    ↓
+//!    │
+//!    ▼
 //! VT100InputEventIR::{ Resize | Focus | Paste }
+//!    │
+//!    ▼
+//! convert_input_event() → InputEvent (returned to application)
 //! ```
 //!
 //! **Navigate**:
-//! - ⬆️ **Up**: [`parser`] - Main routing entry point
+//! - ⬆️ **Up**: [`router`] - Main routing entry point
 //! - ➡️ **Peer**: [`keyboard`], [`mouse`], [`utf8`] - Other specialized parsers
 //! - 📚 **Types**: [`VT100FocusStateIR`], [`VT100PasteModeIR`]
-//!
+//! - 📤 **Converted by**: [`convert_input_event()`] in `protocol_conversion.rs` (not this
+//!   module)
 //!
 //! ## Supported Events
 //! - **Window Resize**: `CSI 8 ; rows ; cols t`
@@ -41,8 +48,10 @@
 //! [`VT100PasteModeIR`]: super::VT100PasteModeIR
 //! [`keyboard`]: mod@super::keyboard
 //! [`mouse`]: mod@super::mouse
-//! [`parser`]: mod@super::parser
+//! [`router`]: mod@super::router
 //! [`utf8`]: mod@super::utf8
+//! [parent module documentation]: mod@super#primary-consumer
+//! [`convert_input_event()`]: crate::tui::terminal_lib_backends::direct_to_ansi::input::protocol_conversion::convert_input_event
 
 use super::ir_event_types::{VT100FocusStateIR, VT100InputEventIR, VT100PasteModeIR};
 use crate::{ByteOffset, byte_offset,

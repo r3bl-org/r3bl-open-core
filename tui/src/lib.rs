@@ -6,6 +6,10 @@
 // - <https://symbl.cc/en/collections/brackets/>
 // - <https://symbl.cc/en/collections/crosses/>
 
+// Skip rustfmt for rest of file.
+// https://stackoverflow.com/a/75910283/2085356
+#![cfg_attr(rustfmt, rustfmt_skip)]
+
 //! # Why R3BL?
 //!
 //! <img src="https://raw.githubusercontent.com/r3bl-org/r3bl-open-core/main/tui/r3bl-tui.svg?raw=true" height="256px">
@@ -61,15 +65,13 @@
 //! <!-- TOC -->
 //! - [Introduction](#introduction)
 //! - [Framework highlights](#framework-highlights)
-//! - [Full TUI, Partial TUI, and async
-//!   readline](#full-tui-partial-tui-and-async-readline)
+//! - [Full TUI, Partial TUI, and async readline](#full-tui-partial-tui-and-async-readline)
 //!   - [Partial TUI for simple choice](#partial-tui-for-simple-choice)
 //!   - [Partial TUI for REPL](#partial-tui-for-repl)
 //!   - [Full TUI for immersive apps](#full-tui-for-immersive-apps)
 //!   - [Power via composition](#power-via-composition)
 //! - [Changelog](#changelog)
-//! - [Learn how these crates are built, provide
-//!   feedback](#learn-how-these-crates-are-built-provide-feedback)
+//! - [Learn how these crates are built, provide feedback](#learn-how-these-crates-are-built-provide-feedback)
 //! - [Run the demo locally](#run-the-demo-locally)
 //!   - [Prerequisites](#prerequisites)
 //!   - [Running examples](#running-examples)
@@ -78,8 +80,7 @@
 //!   - [Testing and Development](#testing-and-development)
 //!     - [VT100 ANSI Conformance Testing](#vt100-ansi-conformance-testing)
 //!     - [Markdown Parser Conformance Testing](#markdown-parser-conformance-testing)
-//!     - [Next-Level PTY-Based Integration
-//!       Testing](#next-level-pty-based-integration-testing)
+//!     - [Next-Level PTY-Based Integration Testing](#next-level-pty-based-integration-testing)
 //!   - [Performance Analysis Features](#performance-analysis-features)
 //! - [Examples to get you started](#examples-to-get-you-started)
 //!   - [Video of the demo in action](#video-of-the-demo-in-action)
@@ -98,42 +99,28 @@
 //!   - [Key Features](#key-features-1)
 //!   - [Learn More](#learn-more-1)
 //! - [Layout, rendering, and event handling](#layout-rendering-and-event-handling)
-//! - [Architecture overview, is message passing, was shared
-//!   memory](#architecture-overview-is-message-passing-was-shared-memory)
-//! - [I/O devices for full TUI, choice, and
-//!   REPL](#io-devices-for-full-tui-choice-and-repl)
-//! - [Life of an input event for a Full TUI
-//!   app](#life-of-an-input-event-for-a-full-tui-app)
-//! - [Life of a signal (aka "out of band
-//!   event")](#life-of-a-signal-aka-out-of-band-event)
+//! - [Architecture overview, is message passing, was shared memory](#architecture-overview-is-message-passing-was-shared-memory)
+//! - [I/O devices for full TUI, choice, and REPL](#io-devices-for-full-tui-choice-and-repl)
+//! - [Life of an input event for a Full TUI app](#life-of-an-input-event-for-a-full-tui-app)
+//! - [Life of a signal (aka "out of band event")](#life-of-a-signal-aka-out-of-band-event)
 //! - [The window](#the-window)
 //! - [Layout and styling](#layout-and-styling)
-//! - [Component registry, event routing, focus
-//!   mgmt](#component-registry-event-routing-focus-mgmt)
+//! - [Component registry, event routing, focus mgmt](#component-registry-event-routing-focus-mgmt)
 //! - [Input event specificity](#input-event-specificity)
 //! - [Rendering and painting](#rendering-and-painting)
 //!   - [Dual Rendering Paths](#dual-rendering-paths)
-//!     - [Path 1: Composed Component Pipeline (Complex, Responsive Layouts and Full
-//!       TUI)](#path-1-composed-component-pipeline-complex-responsive-layouts-and-full-tui)
-//!     - [Path 2: Direct Interactive Path (Simple CLI,
-//!       Hybrid/Partial-TUI)](#
-//!       path-2-direct-interactive-path-simple-cli-hybridpartial-tui)
-//!   - [Unified ANSI Generation:
-//!     `PixelCharRenderer`](#unified-ansi-generation-pixelcharrenderer)
+//!     - [Path 1: Composed Component Pipeline (Complex, Responsive Layouts and Full TUI)](#path-1-composed-component-pipeline-complex-responsive-layouts-and-full-tui)
+//!     - [Path 2: Direct Interactive Path (Simple CLI, Hybrid/Partial-TUI)](#path-2-direct-interactive-path-simple-cli-hybridpartial-tui)
+//!   - [Unified ANSI Generation: `PixelCharRenderer`](#unified-ansi-generation-pixelcharrenderer)
 //!   - [`CliTextInline`: Styled Text Fragments](#clitextinline-styled-text-fragments)
-//!   - [`OutputDevice`: Thread-Safe Terminal
-//!     Output](#outputdevice-thread-safe-terminal-output)
+//!   - [`OutputDevice`: Thread-Safe Terminal Output](#outputdevice-thread-safe-terminal-output)
 //!   - [Offscreen buffer](#offscreen-buffer)
-//!   - [Complete Rendering Pipeline Architecture (Path 1: Composed Component
-//!     Pipeline)](#
-//!     complete-rendering-pipeline-architecture-path-1-composed-component-pipeline)
-//!   - [Render pipeline (Path 1: Composed Component
-//!     Pipeline)](#render-pipeline-path-1-composed-component-pipeline)
+//!   - [Complete Rendering Pipeline Architecture (Path 1: Composed Component Pipeline)](#complete-rendering-pipeline-architecture-path-1-composed-component-pipeline)
+//!   - [Render pipeline (Path 1: Composed Component Pipeline)](#render-pipeline-path-1-composed-component-pipeline)
 //!   - [First render (Path 1)](#first-render-path-1)
 //!   - [Subsequent render (Path 1)](#subsequent-render-path-1)
 //! - [How does the editor component work?](#how-does-the-editor-component-work)
-//!   - [Zero-Copy Gap Buffer for High
-//!     Performance](#zero-copy-gap-buffer-for-high-performance)
+//!   - [Zero-Copy Gap Buffer for High Performance](#zero-copy-gap-buffer-for-high-performance)
 //!     - [Key Performance Features](#key-performance-features)
 //!     - [Storage Architecture](#storage-architecture)
 //!     - [UTF-8 Safety Strategy](#utf-8-safety-strategy)

@@ -13,6 +13,7 @@
   //
   // List of extensions which should be recommended for users of this workspace.
   "recommendations": [
+    "ryuta46.multi-command", // Multi Command.
     "streetsidesoftware.code-spell-checker", // [SLOW] Code Spell Checker. Configure it so it doesn't slow down IDE
     "usernamehw.errorlens", // Error Lens.
     "rust-lang.rust-analyzer", // Rust Analyzer.

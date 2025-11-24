@@ -458,6 +458,63 @@ pub fn process<T: Display>(item: T) { /* ... */ }
 
 ---
 
+## Pattern 15: Linking to Section Headings (Fragments)
+
+You can link directly to `## Section Heading` in module documentation using fragment identifiers.
+
+### Fragment Format
+
+Section headings are converted to fragments:
+- `## My Section Title` → `#my-section-title` (lowercase, spaces become hyphens)
+- `## UTF-8 Encoding Explained` → `#utf-8-encoding-explained`
+
+### ✅ Good: Full Crate Path with Fragment
+
+```rust
+/// See the [`utf8` encoding] section for bit pattern details.
+///
+/// [`utf8` encoding]: mod@crate::core::ansi::vt_100_terminal_input_parser::utf8#utf-8-encoding-explained
+```
+
+### ✅ Good: Simple super with Fragment (No Path Components)
+
+```rust
+/// See [parent module documentation] for the overview.
+///
+/// [parent module documentation]: mod@super#primary-consumer
+```
+
+### ❌ Bad: super:: Path with Fragment (Causes Recursion)
+
+```rust
+/// See the [`utf8` encoding] section for details.
+///
+/// [`utf8` encoding]: mod@super::utf8#utf-8-encoding-explained  // ⚠️ rustdoc recursion!
+```
+
+**Why bad:** Combining `mod@` + `super::path` (with `::`) + `#fragment` can cause rustdoc to enter an infinite loop during documentation generation.
+
+### ❌ Bad: super:: Path without mod@ (Also Problematic)
+
+```rust
+/// See the [`utf8` encoding] section for details.
+///
+/// [`utf8` encoding]: super::utf8#utf-8-encoding-explained  // ⚠️ May also fail
+```
+
+### Rule Summary
+
+| Pattern | Works? | Example |
+|---------|--------|---------|
+| `mod@super#fragment` | ✅ | `mod@super#testing-strategy` |
+| `mod@crate::full::path#fragment` | ✅ | `mod@crate::core::parser#overview` |
+| `mod@super::sibling#fragment` | ❌ | Causes rustdoc recursion |
+| `super::sibling#fragment` | ❌ | May cause issues |
+
+**Best Practice:** When linking to a section in another module, always use the full `crate::` path.
+
+---
+
 ## Checklist for Perfect Intra-doc Links
 
 When fixing links, ensure:
@@ -489,5 +546,6 @@ When fixing links, ensure:
 | Re-export            | `` [`Type`]: crate::Type ``                      |
 | Test function        | `` [`test_foo`]: crate::tests::test_foo ``       |
 | Private type (pub for doc) | `` [`Internal`]: struct@crate::internal::Internal `` |
+| Section heading (fragment) | `` [`docs`]: mod@crate::path::module#section-name `` |
 
 All links go **at the bottom** of the rustdoc comment block!

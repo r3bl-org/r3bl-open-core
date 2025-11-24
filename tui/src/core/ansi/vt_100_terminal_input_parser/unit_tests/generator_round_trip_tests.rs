@@ -341,34 +341,54 @@ fn test_generate_ctrl_alt_f10() {
     assert_eq!(bytes, b"\x1b[21;7~");
 }
 
-// ==================== Unsupported Keys ====================
+// ==================== Raw Byte Key Generation ====================
 
 #[test]
-fn test_generate_unsupported_keys() {
-    // Tab, Enter, Escape, Backspace are not generated as CSI sequences
+fn test_generate_raw_byte_keys() {
+    // Tab: generates raw byte 0x09
     let tab_event = VT100InputEventIR::Keyboard {
         code: VT100KeyCodeIR::Tab,
         modifiers: VT100KeyModifiersIR::default(),
     };
-    assert_eq!(generate_keyboard_sequence(&tab_event), None);
+    assert_eq!(generate_keyboard_sequence(&tab_event), Some(vec![0x09]));
 
+    // Enter: generates raw byte 0x0D (CR)
     let enter_event = VT100InputEventIR::Keyboard {
         code: VT100KeyCodeIR::Enter,
         modifiers: VT100KeyModifiersIR::default(),
     };
-    assert_eq!(generate_keyboard_sequence(&enter_event), None);
+    assert_eq!(generate_keyboard_sequence(&enter_event), Some(vec![0x0D]));
 
+    // Escape: generates raw byte 0x1B
     let escape_event = VT100InputEventIR::Keyboard {
         code: VT100KeyCodeIR::Escape,
         modifiers: VT100KeyModifiersIR::default(),
     };
-    assert_eq!(generate_keyboard_sequence(&escape_event), None);
+    assert_eq!(generate_keyboard_sequence(&escape_event), Some(vec![0x1B]));
 
+    // Backspace: generates raw byte 0x7F (DEL)
     let backspace_event = VT100InputEventIR::Keyboard {
         code: VT100KeyCodeIR::Backspace,
         modifiers: VT100KeyModifiersIR::default(),
     };
-    assert_eq!(generate_keyboard_sequence(&backspace_event), None);
+    assert_eq!(generate_keyboard_sequence(&backspace_event), Some(vec![0x7F]));
+
+    // BackTab: generates CSI Z sequence
+    let backtab_event = VT100InputEventIR::Keyboard {
+        code: VT100KeyCodeIR::BackTab,
+        modifiers: VT100KeyModifiersIR::default(),
+    };
+    assert_eq!(
+        generate_keyboard_sequence(&backtab_event),
+        Some(vec![0x1B, b'[', b'Z'])
+    );
+
+    // Char: generates UTF-8 encoded bytes
+    let char_event = VT100InputEventIR::Keyboard {
+        code: VT100KeyCodeIR::Char('H'),
+        modifiers: VT100KeyModifiersIR::default(),
+    };
+    assert_eq!(generate_keyboard_sequence(&char_event), Some(vec![b'H']));
 }
 
 // ==================== Round-Trip Tests ====================
