@@ -1,3 +1,3 @@
-# Detect code performance regressions
+# Detect Performance Regressions
 
-Use the perf-checker subagent to detect any performance regressions in the current code
+Invoke the `analyze-performance` skill to detect performance regressions using flamegraph analysis.

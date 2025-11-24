@@ -1,4 +1,3 @@
-# Make sure tests pass and docs build
+# Comprehensive Code Quality Check
 
-1. Use the test-runner subagent to make sure tests pass
-2. Use the code-formatter subagent to make sure that docs build
+Invoke the `check-code-quality` skill to run the full quality checklist (compilation, linting, documentation, tests).

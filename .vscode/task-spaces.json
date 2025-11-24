@@ -18,10 +18,6 @@
           "isPinned": false
         },
         {
-          "path": "tui/src/core/ansi/vt_100_pty_output_parser/mod.rs",
-          "isPinned": false
-        },
-        {
           "path": "tui/src/core/ansi/vt_100_terminal_input_parser/parser.rs",
           "isPinned": false
         }
@@ -29,7 +25,7 @@
       "taskFile": "task/task_refactor_input_device.md",
       "createdAt": 1763496885607,
       "lastAccessed": 1763666457216,
-      "activeTab": "tui/src/core/ansi/vt_100_terminal_input_parser/mod.rs"
+      "activeTab": "tui/src/core/ansi/vt_100_terminal_input_parser/parser.rs"
     },
     {
       "name": "[1.1] task_readline_async_add_shortcuts",
