@@ -11,11 +11,13 @@ source script_lib.fish
 #
 # Use Case: When rust-toolchain.toml changes (git checkout, manual edit, etc.)
 #           and you need to install the specified toolchain with all components.
+#           Also useful for troubleshooting toolchain corruption - provides a clean slate.
 #
-# Strategy:
+# Strategy (Nuclear approach - complete reinstall):
 # - Read channel from rust-toolchain.toml
-# - Remove all toolchains except stable (safety) and the target nightly
-# - Install the target nightly toolchain
+# - Purge ALL existing toolchains (stable and nightly)
+# - Install fresh stable toolchain
+# - Install the target nightly toolchain from TOML
 # - Install rust-analyzer and rust-src components (required by VSCode, RustRover, cargo, and serena MCP server)
 #
 # Concurrency Safety:
@@ -131,11 +133,18 @@ function install_additional_components
     return 0
 end
 
-function cleanup_old_toolchains
-    # Get disk usage before cleanup
-    log_message "Checking disk usage before cleanup..."
+function purge_all_toolchains
+    # Clear rustup caches to prevent stale download/temp file issues
+    log_message "Clearing rustup download and temp caches..."
+    rm -rf ~/.rustup/downloads/
+    rm -rf ~/.rustup/tmp/
+    log_message "✅ Rustup caches cleared"
+    log_message ""
+
+    # Get disk usage before purge
+    log_message "Checking disk usage before purge..."
     set -l before_size (du -sh ~/.rustup/toolchains 2>/dev/null | cut -f1)
-    log_message "Toolchains directory size before cleanup: $before_size"
+    log_message "Toolchains directory size before purge: $before_size"
 
     # List all currently installed toolchains
     log_message "Currently installed toolchains:"
@@ -144,24 +153,11 @@ function cleanup_old_toolchains
         log_message "  - $toolchain"
     end
 
-    # Cleanup old toolchains - keep only stable and our target nightly
-    log_message "Starting aggressive toolchain cleanup..."
+    # Nuclear cleanup - remove ALL toolchains (stable and nightly)
+    log_message "Starting nuclear toolchain purge (removing everything)..."
     set -l removed_count 0
 
     for toolchain in $all_toolchains
-        # Keep stable toolchains
-        if string match -q "stable-*" $toolchain
-            log_message "  KEEPING: $toolchain (stable)"
-            continue
-        end
-
-        # Keep our target nightly
-        if string match -q "$target_toolchain*" $toolchain
-            log_message "  KEEPING: $toolchain (target from rust-toolchain.toml)"
-            continue
-        end
-
-        # Remove everything else (old nightlies, generic nightly, etc.)
         log_message "  REMOVING: $toolchain"
         if rustup toolchain uninstall $toolchain 2>&1 | tee -a $LOG_FILE
             set removed_count (math $removed_count + 1)
@@ -171,13 +167,24 @@ function cleanup_old_toolchains
         end
     end
 
-    log_message "Removed $removed_count old toolchain(s)"
+    log_message "Removed $removed_count toolchain(s)"
 
-    # Get disk usage after cleanup
-    log_message "Checking disk usage after cleanup..."
+    # Get disk usage after purge
+    log_message "Checking disk usage after purge..."
     set -l after_size (du -sh ~/.rustup/toolchains 2>/dev/null | cut -f1)
-    log_message "Toolchains directory size after cleanup: $after_size"
+    log_message "Toolchains directory size after purge: $after_size"
 
+    return 0
+end
+
+function install_stable_toolchain
+    log_message "Installing fresh stable toolchain..."
+    if not log_command_output "Installing stable toolchain..." rustup toolchain install stable
+        log_message "❌ Failed to install stable toolchain"
+        return 1
+    end
+
+    log_message "✅ Successfully installed stable toolchain"
     return 0
 end
 
@@ -221,11 +228,47 @@ function main
 
     show_current_state
 
+    # Phase 1: Nuclear purge - remove all toolchains
+    log_message ""
+    log_message "═══════════════════════════════════════════════════════"
+    log_message "Phase 1: Purge All Toolchains"
+    log_message "═══════════════════════════════════════════════════════"
+    log_message ""
+
+    purge_all_toolchains
+
+    # Phase 2: Install fresh stable toolchain
+    log_message ""
+    log_message "═══════════════════════════════════════════════════════"
+    log_message "Phase 2: Install Fresh Stable Toolchain"
+    log_message "═══════════════════════════════════════════════════════"
+    log_message ""
+
+    install_stable_toolchain
+    or begin
+        release_toolchain_lock
+        return 1
+    end
+
+    # Phase 3: Install target nightly toolchain
+    log_message ""
+    log_message "═══════════════════════════════════════════════════════"
+    log_message "Phase 3: Install Target Nightly Toolchain"
+    log_message "═══════════════════════════════════════════════════════"
+    log_message ""
+
     install_target_toolchain
     or begin
         release_toolchain_lock
         return 1
     end
+
+    # Phase 4: Install components
+    log_message ""
+    log_message "═══════════════════════════════════════════════════════"
+    log_message "Phase 4: Install Components"
+    log_message "═══════════════════════════════════════════════════════"
+    log_message ""
 
     install_rust_analyzer_component
     or begin
@@ -234,8 +277,6 @@ function main
     end
 
     install_additional_components
-
-    cleanup_old_toolchains
 
     verify_final_state
 
