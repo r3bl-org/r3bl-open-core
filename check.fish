@@ -300,9 +300,16 @@ function watch_mode
 
     # Watch loop with inotifywait
     while true
-        # Wait for file changes
+        # Wait for file changes (blocks until first event)
         set -l changed_file (inotifywait -q -r -e modify,create,delete,move \
             --format '%w%f' $watch_dirs 2>/dev/null)
+
+        # Drain any additional buffered events (coalesce rapid saves)
+        # Uses 100ms timeout to catch events that arrived during the check run
+        while inotifywait -q -r -t 0.1 -e modify,create,delete,move \
+                --format '%w%f' $watch_dirs >/dev/null 2>&1
+            # Discard additional events - we only need to know "something changed"
+        end
 
         # Get current time
         set -l current_time (date +%s)
@@ -362,6 +369,9 @@ function run_checks_for_type
                 set_color green --bold
                 echo "✅ All checks passed!"
                 set_color normal
+            else
+                # Notify on failure in watch mode
+                send_system_notification "Watch: Checks Failed ❌" "One or more checks failed" "critical"
             end
             return $result
 
@@ -372,6 +382,7 @@ function run_checks_for_type
                 return 2  # ICE detected
             end
             if test $status -ne 0
+                send_system_notification "Watch: Tests Failed ❌" "cargo test failed" "critical"
                 return 1
             end
 
@@ -380,6 +391,7 @@ function run_checks_for_type
                 return 2  # ICE detected
             end
             if test $status -ne 0
+                send_system_notification "Watch: Doctests Failed ❌" "doctests failed" "critical"
                 return 1
             end
 
@@ -404,6 +416,9 @@ function run_checks_for_type
                 set_color green --bold
                 echo "✅ Doc checks passed!"
                 set_color normal
+            else
+                # Notify on failure in watch mode
+                send_system_notification "Watch: Doc Build Failed ❌" "cargo doc failed" "critical"
             end
             return $result
 
@@ -838,7 +853,16 @@ function main
 
             # Use new composable architecture with automatic ICE recovery
             run_checks_with_ice_recovery
-            return $status
+            set -l check_status $status
+
+            # Send desktop notification for final result
+            if test $check_status -eq 0
+                send_system_notification "Build Checks Complete ✅" "All tests, doctests, and docs passed" "success"
+            else
+                send_system_notification "Build Checks Failed ❌" "One or more checks failed - see terminal" "critical"
+            end
+
+            return $check_status
     end
 end
 

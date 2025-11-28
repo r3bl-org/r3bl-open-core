@@ -88,9 +88,10 @@ pub const DECKPNM_NORMAL_KEYPAD: u8 = b'>';
 // C0 Control Characters (handled by execute() method)
 // These are not ESC sequences but basic control characters.
 
-/// Backspace control character (BS)
-/// Moves cursor one position to the left
-pub const BACKSPACE: u8 = 0x08;
+/// Backspace control character (BS, 0x08 in hex).
+///
+/// Moves cursor one position to the left.
+pub const BACKSPACE: u8 = 8;
 
 /// Horizontal Tab control character (HT)
 /// Moves cursor to next tab stop

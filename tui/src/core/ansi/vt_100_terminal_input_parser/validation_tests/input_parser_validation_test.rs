@@ -4,7 +4,7 @@
 //!
 //! These tests use **real ANSI sequences** captured from interactive terminal observation
 //! to validate parser correctness. All sequences were confirmed with actual terminal
-//! emulators using `cat -v` or similar tools.
+//! emulators using `showkey -a` (Linux) or `sed -n l` (POSIX compliant OSes).
 //!
 //! ## Test Organization
 //!
@@ -158,7 +158,7 @@ mod mouse_events {
 
     #[test]
     fn test_left_click_at_top_left() {
-        // CONFIRMED: cat -v showed ESC[<0;1;1M for left click at top-left
+        // CONFIRMED: showkey -a showed ESC[<0;1;1M for left click at top-left
         let seq = b"\x1b[<0;1;1M";
         let (event, _bytes_consumed) =
             parse_mouse_sequence(seq).expect("Should parse observed sequence");
@@ -344,7 +344,7 @@ mod keyboard_events {
 
     #[test]
     fn test_ctrl_up() {
-        // CONFIRMED: cat -v showed ESC[1;5A for Ctrl+Up (parameter 5 = Ctrl)
+        // CONFIRMED: showkey -a showed ESC[1;5A for Ctrl+Up (parameter 5 = Ctrl)
         let seq = b"\x1b[1;5A";
         let (event, _bytes_consumed) =
             parse_keyboard_sequence(seq).expect("Should parse observed Ctrl+Up");

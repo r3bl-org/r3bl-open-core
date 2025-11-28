@@ -111,8 +111,16 @@
 //! 1. Single byte (0x00-0x7F) containing the 7-bit ASCII character set. Any character
 //!    that fits in a single byte within this range can be transmitted as-is without any
 //!    escape sequence prefix
-//!    ├─ 0x00-0x1F (0-31)   ⵆ Control codes: Ctrl+A (0x01), Ctrl+D (0x04)
-//!    ├─ 0x20-0x7E (32-126) ⵆ Printable: 'a', 'B', '3', etc
+//!    ├─ 0x00-0x1F (0-31)   ⵆ Ctrl+key sequences: Ctrl+A (0x01), Ctrl+D (0x04)
+//!    ├─ 0x20-0x7E (32-126) ⵆ Printable ASCII range:
+//!    │  ├─ 0x20      ⵆ (32)      :: (`b' '`)        :: Space
+//!    │  ├─ 0x21-0x2F ⵆ (33-47)   :: (`b'!'`-`b'/'`) :: Punctuation: ! " # $ % & ' ( ) * + , - . /
+//!    │  ├─ 0x30-0x39 ⵆ (48-57)   :: (`b'0'`-`b'9'`) :: Digits: '0'-'9'
+//!    │  ├─ 0x3A-0x40 ⵆ (58-64)   :: (`b':'`-`b'@'`) :: Punctuation: : ; < = > ? @
+//!    │  ├─ 0x41-0x5A ⵆ (65-90)   :: (`b'A'`-`b'Z'`) :: Uppercase: 'A'-'Z'
+//!    │  ├─ 0x5B-0x60 ⵆ (91-96)   :: (`b'['`-`b'`'`) :: Punctuation: [ \ ] ^ _ `
+//!    │  ├─ 0x61-0x7A ⵆ (97-122)  :: (`b'a'`-`b'z'`) :: Lowercase: 'a'-'z'
+//!    │  └─ 0x7B-0x7E ⵆ (123-126) :: (`b'{'`-`b'~'`) :: Punctuation: { | } ~
 //!    └─ 0x7F      (127)    ⵆ DEL character (often used for Backspace)
 //!
 //! 2. ESC prefix (2 bytes). Alt+printable character uses this simple encoding since
@@ -196,7 +204,8 @@
 //!
 //! ### Real-World Examples
 //!
-//! What terminals actually send (confirmed via `cat -v`):
+//! What terminals actually send (confirmed via `showkey -a` on Linux, or `sed -n l` for
+//! POSIX compliant OSes):
 //!
 //! ```text
 //! Key Press      Sequence     Bytes   Format
@@ -403,7 +412,7 @@
 //!
 //! In application mode (DECPAM), numpad keys send SS3 sequences instead of their literal
 //! digits. This allows applications to distinguish numpad from regular number keys.
-//! 
+//!
 //! <!-- cspell:enable -->
 //!
 //! | Numpad Key   | Normal Mode   | Application Mode   | SS3 Char   |
@@ -826,15 +835,32 @@ mod helpers {
         })
     }
 
-    /// Parse CSI sequences with numeric parameters (e.g., `CSI 5 ~ `, `CSI 1 ; 3 C`)
-    /// Returns (`InputEvent`, `bytes_consumed`) on success.
+    /// Parses CSI sequences with numeric parameters into keyboard events.
+    ///
+    /// # Format
+    ///
+    /// `ESC [ param ; param ; ... final_byte`
+    ///
+    /// # Examples
+    ///
+    /// | Sequence       | Meaning              |
+    /// |----------------|----------------------|
+    /// | `CSI 5 ~`      | PageUp               |
+    /// | `CSI 1 ; 3 C`  | Alt + Right Arrow    |
+    /// | `CSI 11 ~`     | F1                   |
+    /// | `CSI 1 ; 5 A`  | Ctrl + Up Arrow      |
+    ///
+    /// # Returns
+    ///
+    /// [`Some`]`(`[`VT100InputEventIR`]`, `[`ByteOffset`]`)` on success, [`None`] if
+    /// the sequence is invalid or incomplete.
     pub(super) fn parse_csi_parameters(
         buffer: &[u8],
     ) -> Option<(VT100InputEventIR, ByteOffset)> {
         // Extract the parameters and final byte
         // Format: ESC [ [param;param;...] final_byte
         let mut params = Vec::new();
-        let mut current_num = String::new();
+        let mut acc_numeric_param: u16 = 0;
         let mut final_byte = 0u8;
         let mut bytes_scanned = 0;
 
@@ -852,26 +878,28 @@ mod helpers {
             // against the constant values.
 
             if (ASCII_DIGIT_0..=ASCII_DIGIT_9).contains(&byte) {
-                // Digit: accumulate in current_num
-                current_num.push(byte as char);
+                // Parse decimal digits without allocation: shift left by one decimal
+                // place (multiply by 10), then add the new digit. ASCII
+                // digits are sequential (b'0'=48..b'9'=57), so `byte -
+                // b'0'` converts to numeric value 0-9. Example: "123" →
+                // 0*10+1=1 → 1*10+2=12 → 12*10+3=123.
+                acc_numeric_param = acc_numeric_param
+                    .saturating_mul(10)
+                    .saturating_add((byte - ASCII_DIGIT_0) as u16);
             } else if byte == ANSI_PARAM_SEPARATOR {
-                // Semicolon: parameter separator
-                if !current_num.is_empty() {
-                    params.push(current_num.parse::<u16>().unwrap_or(0));
-                    current_num.clear();
-                }
+                // Semicolon: parameter separator.
+                params.push(acc_numeric_param);
+                acc_numeric_param = 0;
             } else if byte == ANSI_FUNCTION_KEY_TERMINATOR
                 || (ASCII_UPPER_A..=ASCII_UPPER_Z).contains(&byte)
                 || (ASCII_LOWER_A..=ASCII_LOWER_Z).contains(&byte)
             {
-                // Terminal character: end of sequence
-                if !current_num.is_empty() {
-                    params.push(current_num.parse::<u16>().unwrap_or(0));
-                }
+                // Terminal character: end of sequence.
+                params.push(acc_numeric_param);
                 final_byte = byte;
                 break;
             } else {
-                return None; // Invalid byte in sequence
+                return None; // Invalid byte in sequence.
             }
         }
 
