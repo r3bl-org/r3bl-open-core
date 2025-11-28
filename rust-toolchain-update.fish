@@ -266,6 +266,13 @@ end
 function find_stable_toolchain
     set -l search_window_days 45  # Search from today back to 45 days ago (46 total attempts including today)
 
+    # Clear rustup caches to prevent stale download/temp file issues during validation
+    log_message "Clearing rustup download and temp caches..."
+    rm -rf ~/.rustup/downloads/
+    rm -rf ~/.rustup/tmp/
+    log_message "✅ Rustup caches cleared"
+    log_message ""
+
     log_message "═══════════════════════════════════════════════════════"
     log_message "Starting search for stable toolchain"
     log_message "Strategy: Start with today's snapshot, try progressively older up to $search_window_days days ago"
@@ -537,8 +544,17 @@ function main
     clean_and_verify_build
 
     log_message "═══════════════════════════════════════════════════════"
-    log_message "Phase 6: Update Cargo Development Tools"
+    log_message "Phase 6: Update Stable Toolchain and Cargo Development Tools"
     log_message "═══════════════════════════════════════════════════════"
+    log_message ""
+
+    # Update stable toolchain to latest version
+    log_message "Updating stable toolchain to latest version..."
+    if rustup update stable 2>&1 | tee -a $LOG_FILE
+        log_message "✅ Stable toolchain updated successfully"
+    else
+        log_message "⚠️  Stable toolchain update had issues (non-critical, continuing)"
+    end
     log_message ""
 
     # Update all cargo tools (bacon, flamegraph, etc.)
