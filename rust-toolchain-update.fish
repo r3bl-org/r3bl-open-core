@@ -298,8 +298,9 @@ function find_stable_toolchain
         log_message "✅ Successfully installed $candidate_toolchain"
         log_message ""
 
-        # Validate the toolchain using consolidated validation script
-        if fish ./rust-toolchain-validate.fish complete 2>&1 | tee -a $LOG_FILE
+        # Validate the toolchain using internal validation function
+        # This updates rust-toolchain.toml and runs the full validation suite
+        if validate_toolchain $candidate_toolchain
             # Found a stable toolchain!
             set -g target_toolchain $candidate_toolchain
             log_message "═══════════════════════════════════════════════════════"
