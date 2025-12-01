@@ -70,8 +70,8 @@
 # Watch mode uses a sequential processing model with kernel-buffered events:
 #
 # 1. Script waits for file changes (inotifywait with timeout for target check)
-# 2. Every TARGET_CHECK_INTERVAL_SECS, checks if target/check directory exists
-# 3. If target/check is missing, triggers a rebuild automatically
+# 2. Every TARGET_CHECK_INTERVAL_SECS, checks if target/ directory exists
+# 3. If target/ is missing, triggers a rebuild automatically
 # 4. When a file change is detected, debounce timer is checked
 # 5. If debounce passes, full check suite runs (30+ seconds, NOT listening for new changes)
 # 6. While checks run, the Linux kernel buffers any new file change events
@@ -301,9 +301,9 @@ function show_help
     echo "  Requirements: inotifywait (installed via bootstrap.sh)"
     echo ""
     echo "  Target Directory Auto-Recovery (watch mode only):"
-    echo "  • Monitors for missing target/check directory (every "$TARGET_CHECK_INTERVAL_SECS"s)"
-    echo "  • Auto-triggers rebuild if target/check is deleted externally"
-    echo "  • Recovers from: cargo clean, manual rm -rf, IDE cache clearing"
+    echo "  • Monitors for missing target/ directory (every "$TARGET_CHECK_INTERVAL_SECS"s)"
+    echo "  • Auto-triggers rebuild if target/ is deleted externally"
+    echo "  • Recovers from: cargo clean, manual rm -rf target/, IDE cache clearing"
     echo ""
     echo "  Event Handling:"
     echo "  • While checks run (30+ sec), new file changes are buffered by the kernel"
@@ -493,12 +493,12 @@ function watch_mode
             --format '%w%f' $watch_dirs >/dev/null 2>&1
         set -l wait_status $status
 
-        # Check if target/check directory is missing (regardless of event or timeout)
-        # This handles external deletions (cargo clean, manual rm, other scripts)
-        if not test -d "$CARGO_TARGET_DIR"
+        # Check if target/ directory is missing (regardless of event or timeout)
+        # This handles external deletions (cargo clean, manual rm -rf target/, etc.)
+        if not test -d "target"
             echo ""
             set_color yellow
-            echo "["(timestamp)"] 📁 $CARGO_TARGET_DIR missing, triggering rebuild..."
+            echo "["(timestamp)"] 📁 target/ missing, triggering rebuild..."
             set_color normal
             echo ""
 
