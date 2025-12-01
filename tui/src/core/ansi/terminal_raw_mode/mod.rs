@@ -8,7 +8,7 @@
 //!
 //! ## Raw Mode vs Cooked Mode
 //!
-//! **Cooked Mode** (default):
+//! **Cooked Mode** (the default when a terminal is opened):
 //! - Input is line-buffered (waits for Enter key)
 //! - Special characters are interpreted (Ctrl+C, Ctrl+D, etc.)
 //! - ANSI escape sequences may be processed by the terminal
@@ -24,11 +24,11 @@
 //!
 //! ### Historical Context
 //!
-//! The term "TTY" comes from "teletypewriter" — physical terminals from the
-//! 1960s-70s that communicated with mainframes over serial lines. Modern
-//! terminal emulators (like GNOME Terminal, iTerm2, or Alacritty) still use
-//! this abstraction: they create a **pseudo-terminal (PTY)** that behaves like
-//! those old hardware devices.
+//! The term "TTY" comes from "teletypewriter" — physical terminals from the 1960s-70s
+//! that communicated with mainframes over serial lines. Modern terminal emulators (like
+//! [Terminator], [GNOME Terminal], [WezTerm], [iTerm2], or [Alacritty]) still use this
+//! abstraction: they create a **pseudo-terminal ([PTY])** that behaves like those old
+//! hardware devices.
 //!
 //! ### The Line Discipline
 //!
@@ -40,10 +40,76 @@
 //! - **Echoes characters** back to the screen as you type
 //! - **Processes editing keys** (backspace, arrow keys for line editing)
 //!
-//! This is "cooked" mode. In "raw" mode, the line discipline is bypassed —
-//! bytes flow directly from the terminal to your program without any kernel
-//! processing. This is what TUI applications need to capture every keystroke,
-//! including escape sequences.
+//! This is "cooked" mode (canonical mode). In "raw" mode (non-canonical mode),
+//! the line discipline stops buffering and processing — bytes flow directly
+//! from the terminal to your program. This is what TUI applications need to
+//! capture every keystroke, including escape sequences.
+//!
+//! ### Keybinding Handling Layers
+//!
+//! By default, terminals start in **canonical (cooked) mode**, where the
+//! kernel's line discipline handles basic editing. But when applications like
+//! [Bash] need richer editing features, they switch to **non-canonical (raw)
+//! mode** and let a user-space library (like [GNU Readline]) handle input
+//! instead:
+//!
+//! | Aspect       | Kernel Line Discipline (`N_TTY`)  | User-Space Library ([GNU Readline])    |
+//! | ------------ | --------------------------------- | -------------------------------------- |
+//! | **Location** | Inside the Linux kernel           | Part of the shell ([Bash], Python, etc.) |
+//! | **Active**   | Canonical ("Cooked") Mode         | Non-Canonical ("Raw") Mode             |
+//! | **Purpose**  | Basic, ancient terminal functions | Advanced, feature-rich line editing    |
+//!
+//! **Kernel-handled keybindings** (when in canonical mode):
+//! - `Ctrl+C` — Generates `SIGINT` (interrupt signal)
+//! - `Ctrl+Z` — Generates `SIGTSTP` (suspend signal)
+//! - `Ctrl+U` — `VKILL` character (kill entire line)
+//! - `Ctrl+D` — `VEOF` character (end-of-file)
+//!
+//! **User-space keybindings** ([GNU Readline] in raw mode):
+//! - `Ctrl+W` — Delete previous word (requires word boundary understanding)
+//! - `Alt+B` / `Alt+F` — Move cursor by word
+//! - `Tab` — Command/filename completion
+//! - `Ctrl+R` — Reverse history search
+//!
+//! **How [GNU Readline] Bridges Both Worlds**
+//!
+//! When you run [Bash], it immediately switches the terminal to non-canonical
+//! mode (raw mode). However, the [GNU Readline] library is clever:
+//!
+//! 1. It queries the kernel's settings for special characters (like `Ctrl+C` for `SIGINT`
+//!    or `Ctrl+U` for `VKILL`)
+//! 2. It sets up its own keybindings to mirror these kernel defaults
+//!
+//! This is why `Ctrl+U` still works in [Bash] even though the terminal is in raw mode:
+//! [GNU Readline] intercepts it and executes its internal `backward-kill-line` function.
+//! [GNU Readline]'s version is actually smarter — it correctly handles the case where
+//! your cursor is in the middle of a line, which the kernel's primitive `VKILL` couldn't
+//! handle well.
+//!
+//! **Shells Without [GNU Readline]: Fish and Nushell**
+//!
+//! Not all shells use [GNU Readline]. [Fish] and [Nushell] implement their own
+//! line editors from scratch:
+//!
+//! - **[Fish]** has a built-in "reader" component (rewritten in Rust as of 2024) — a
+//!   custom, tightly-integrated line editor that provides similar keybindings to [GNU
+//!   Readline] but with additional features like syntax highlighting and autosuggestions
+//!   as you type.
+//!
+//! - **[Nushell]** uses [Reedline], a standalone Rust crate they created. Unlike Fish's
+//!   internal reader, Reedline is a reusable library you can use in your own projects.
+//!
+//! These shells still operate in raw mode — they just don't delegate to
+//! [GNU Readline]. Instead, they read raw bytes from the terminal and implement all
+//! line-editing logic themselves. This is exactly what TUI applications do.
+//!
+//! **Implications for TUI Developers**
+//!
+//! When your application enables raw mode, it becomes responsible for **all**
+//! keybinding handling. The kernel no longer processes `Ctrl+U` or even
+//! `Ctrl+C` (unless you explicitly leave signal handling enabled via the
+//! `isig` termios flag). This is why TUI frameworks typically include their
+//! own line-editing functionality — just like Fish and Nushell do.
 //!
 //! ### The `stty` Command
 //!
@@ -116,16 +182,16 @@
 //!
 //! ### See Also
 //!
-//! - [`crate::pty`] — Uses the `portable_pty` crate to create pseudo-terminals
-//!   (PTYs) for spawning child processes. While this module configures raw mode
-//!   on your *current* terminal, the PTY module creates *new* pseudo-terminals
-//!   for child processes. Both deal with the same underlying TTY abstraction:
-//!   the PTY module creates the terminal pair, while raw mode configures how
-//!   the line discipline processes input.
+//! - [`crate::pty`] — Uses the [`portable_pty` crate] to create pseudo-terminals (PTYs)
+//!   for spawning child processes. While this module configures raw mode on your
+//!   *current* terminal, the PTY module creates *new* pseudo-terminals for child
+//!   processes. Both deal with the same underlying TTY abstraction: the PTY module
+//!   creates the terminal pair, while raw mode configures how the line discipline
+//!   processes input.
 //!
 //! ## Platform Support
 //!
-//! - **Unix/Linux/macOS**: Uses rustix's safe termios API
+//! - **Unix/Linux/macOS**: Uses [rustix]'s safe termios API (see [`raw_mode_unix`])
 //! - **Windows**: Not yet implemented (TODO)
 //!
 //! ## Usage Example
@@ -151,11 +217,28 @@
 //! // ... process input ...
 //! disable_raw_mode().expect("Failed to disable raw mode");
 //! ```
+//!
+//! [Alacritty]: https://alacritty.org/
+//! [Fish]: https://fishshell.com/docs/current/interactive.html
+//! [GNOME Terminal]: https://help.gnome.org/users/gnome-terminal/stable/
+//! [GNU Readline]: https://tiswww.case.edu/php/chet/readline/rltop.html
+//! [Nushell]: https://www.nushell.sh/
+//! [PTY]: crate::pty
+//! [Reedline]: https://github.com/nushell/reedline
+//! [rustix]: https://docs.rs/rustix
+//! [Terminator]: https://gnome-terminator.org/
+//! [WezTerm]: https://wezfurlong.org/wezterm/
+//! [iTerm2]: https://iterm2.com/
+//! [`portable_pty` crate]: https://docs.rs/portable-pty
+//! [Bash]: https://www.gnu.org/software/bash/
 
 // Private modules (hide internal structure).
 mod raw_mode_core;
 
-#[cfg(unix)]
+// Public for docs, private otherwise.
+#[cfg(all(unix, doc))]
+pub mod raw_mode_unix;
+#[cfg(all(unix, not(doc)))]
 mod raw_mode_unix;
 
 #[cfg(windows)]

@@ -111,44 +111,44 @@
 //! 1. Single byte (0-127) containing the 7-bit ASCII character set. Any character
 //!    that fits in a single byte within this range can be transmitted as-is without any
 //!    escape sequence prefix
-//!    ┌─ Dec        | Hex   | Byte expr  | Symbolic ────────────────────────────┐
-//!    ├─ 0-31       | 00-1F |            | Control character range              │
-//!    │  ├─ 0       | 00    |            | Ctrl+@ or Ctrl+Space (NUL)           │
-//!    │  ├─ 1-26    | 01-1A |            | Ctrl+A through Ctrl+Z                │
-//!    │  ├─ 27      | 1B    |            | ESC (handled separately)             │
-//!    │  └─ 28-31   | 1C-1F |            | Ctrl+\, Ctrl+], Ctrl+^, Ctrl+_       │
-//!    ├─ 32-126     | 20-7E |            | Printable ASCII range                │
-//!    │  ├─ 32      | 20    | b' '       | Space                                │
-//!    │  ├─ 33-47   | 21-2F | b'!'-`b'/' | Punct: ! " # $ % & ' ( ) * + , - . / │
-//!    │  ├─ 48-57   | 30-39 | b'0'-`b'9' | Digits: '0'-'9'                      │
-//!    │  ├─ 58-64   | 3A-40 | b':'-`b'@' | Punct: : ; < = > ? @                 │
-//!    │  ├─ 65-90   | 41-5A | b'A'-`b'Z' | Uppercase: 'A'-'Z'                   │
-//!    │  ├─ 91-96   | 5B-60 | b'['-`b'`' | Punct: [ \ ] ^ _ `                   │
-//!    │  ├─ 97-122  | 61-7A | b'a'-`b'z' | Lowercase: 'a'-'z'                   │
-//!    │  └─ 123-126 | 7B-7E | b'{'-`b'~' | Punct: { | } ~                       │
-//!    ├─ 127        | 7F    |            | DEL character (used for Backspace)   │
-//!    └─────────────────────────────────────────────────────────────────────────┘
+//!    ┌─ Dec ───────┬ Hex ──┬ Byte expr ──┬ Symbolic ────────────────────────────┐
+//!    ├─ 0-31       │ 00-1F │             │ Control character range              │
+//!    │  ├─ 0       │ 00    │             │ Ctrl+@ or Ctrl+Space (NUL)           │
+//!    │  ├─ 1-26    │ 01-1A │             │ Ctrl+A through Ctrl+Z                │
+//!    │  ├─ 27      │ 1B    │             │ ESC (handled separately)             │
+//!    │  └─ 28-31   │ 1C-1F │             │ Ctrl+\, Ctrl+], Ctrl+^, Ctrl+_       │
+//!    ├─ 32-126     │ 20-7E │             │ Printable ASCII range                │
+//!    │  ├─ 32      │ 20    │ b' '        │ Space                                │
+//!    │  ├─ 33-47   │ 21-2F │ b'!' - b'/' │ Punct: ! " # $ % & ' ( ) * + , - . / │
+//!    │  ├─ 48-57   │ 30-39 │ b'0' - b'9' │ Digits: '0'-'9'                      │
+//!    │  ├─ 58-64   │ 3A-40 │ b':' - b'@' │ Punct: : ; < = > ? @                 │
+//!    │  ├─ 65-90   │ 41-5A │ b'A' - b'Z' │ Uppercase: 'A'-'Z'                   │
+//!    │  ├─ 91-96   │ 5B-60 │ b'[' - b'`' │ Punct: [ \ ] ^ _ `                   │
+//!    │  ├─ 97-122  │ 61-7A │ b'a' - b'z' │ Lowercase: 'a'-'z'                   │
+//!    │  └─ 123-126 │ 7B-7E │ b'{' - b'~' │ Punct: { | } ~                       │
+//!    ├─ 127        │ 7F    │             │ DEL character (used for Backspace)   │
+//!    └─────────────┴───────┴─────────────┴──────────────────────────────────────┘
 //!
 //! 2. ESC prefix (2 bytes). Alt+printable character uses this simple encoding since
-//!    there's no room in ASCII for Alt. Just prepend ESC (1B) to the character
-//!    ┌─ Sequence      | Dec    | Hex   | Symbolic ─┐
-//!    ├─ Alt+a         | 27 97  | 1B 61 | (ESC a)   │
-//!    ├─ Alt+B         | 27 66  | 1B 42 | (ESC B)   │
-//!    ├─ Alt+3         | 27 51  | 1B 33 | (ESC 3)   │
-//!    ├─ Alt+Space     | 27 32  | 1B 20 | (ESC  )   │
-//!    ├─ Alt+Backspace | 27 127 | 1B 7F | (ESC DEL) │
-//!    └─────────────────────────────────────────────┘
+//!    there's no room in ASCII for Alt. Just prepend ESC (1B hex) to the character
+//!    ┌─ Sequence ─────┬ Dec ───┬ Hex ──┬ Symbolic ─┐
+//!    ├─ Alt+a         │ 27 97  │ 1B 61 │ (ESC a)   │
+//!    ├─ Alt+B         │ 27 66  │ 1B 42 │ (ESC B)   │
+//!    ├─ Alt+3         │ 27 51  │ 1B 33 │ (ESC 3)   │
+//!    ├─ Alt+Space     │ 27 32  │ 1B 20 │ (ESC ░)   │
+//!    ├─ Alt+Backspace │ 27 127 │ 1B 7F │ (ESC DEL) │
+//!    └────────────────┴────────┴───────┴───────────┘
 //!
 //! 3. CSI sequences (3-7 bytes). Complex modifier combinations and special keys that
 //!    can't be represented in simpler encodings use parametric escape sequences
-//!    ┌─ Sequence | Dec                   | Hex                  | Symbolic     | Size ─┐
-//!    ├─ Home     | 27 91 72              | 1B 5B 48             | (ESC [H)     | 3     │
-//!    ├─ Delete   | 27 91 51 126          | 1B 5B 33 7E          | (ESC [3~)    | 4     │
-//!    ├─ F5       | 27 91 49 53 126       | 1B 5B 31 35 7E       | (ESC [15~)   | 5     │
-//!    ├─ Ctrl+Up  | 27 91 49 59 53 65     | 1B 5B 31 3B 35 41    | (ESC [1;5A)  | 6     │
-//!    ├─ Alt+Down | 27 91 49 59 51 66     | 1B 5B 31 3B 33 42    | (ESC [1;3B)  | 6     │
-//!    ├─ Ctrl+F5  | 27 91 49 53 59 53 126 | 1B 5B 31 35 3B 35 7E | (ESC [15;5~) | 7     │
-//!    └─────────────────────────────────────────────────────────────────────────────────┘
+//!    ┌─ Sequence ─┬─ Dec ─────────────────┬─ Hex ────────────────┬─ Symbolic ───┬ Size ┐
+//!    ├─ Home      │ 27 91 72              │ 1B 5B 48             │ (ESC [H)     │ 3    │
+//!    ├─ Delete    │ 27 91 51 126          │ 1B 5B 33 7E          │ (ESC [3~)    │ 4    │
+//!    ├─ F5        │ 27 91 49 53 126       │ 1B 5B 31 35 7E       │ (ESC [15~)   │ 5    │
+//!    ├─ Ctrl+Up   │ 27 91 49 59 53 65     │ 1B 5B 31 3B 35 41    │ (ESC [1;5A)  │ 6    │
+//!    ├─ Alt+Down  │ 27 91 49 59 51 66     │ 1B 5B 31 3B 33 42    │ (ESC [1;3B)  │ 6    │
+//!    ├─ Ctrl+F5   │ 27 91 49 53 59 53 126 │ 1B 5B 31 35 3B 35 7E │ (ESC [15;5~) │ 7    │
+//!    └────────────┴───────────────────────┴──────────────────────┴──────────────┴──────┘
 //! ```
 //!
 //! ### How Bitmask Encoding for Modifiers Works
@@ -275,7 +275,7 @@
 //!
 //! When buffer starts with `ESC` + (something other than `[` or `O`):
 //! - **`parse_alt_letter()`** - Alt+printable character combinations
-//!   - Examples: `ESC b` (Alt+B), `ESC 3` (Alt+3), `ESC  ` (Alt+Space)
+//!   - Examples: `ESC b` (Alt+B), `ESC 3` (Alt+3), `ESC ░` (Alt+Space)
 //!
 //! ### Non-ESC Sequences (Regular Input)
 //!

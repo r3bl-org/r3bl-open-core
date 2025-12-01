@@ -38,15 +38,27 @@
           "isPinned": false
         },
         {
+          "path": "tui/src/core/ansi/terminal_raw_mode/raw_mode_unix.rs",
+          "isPinned": false
+        },
+        {
+          "path": "tui/src/core/ansi/terminal_raw_mode/raw_mode_core.rs",
+          "isPinned": false
+        },
+        {
+          "path": "tui/src/core/ansi/terminal_raw_mode/mod.rs",
+          "isPinned": false
+        },
+        {
+          "path": "tui/src/tui/terminal_lib_backends/raw_mode.rs",
+          "isPinned": false
+        },
+        {
           "path": "tui/src/core/ansi/constants/mouse.rs",
           "isPinned": false
         },
         {
           "path": "tui/src/core/ansi/constants/utf8.rs",
-          "isPinned": false
-        },
-        {
-          "path": "tui/src/tui/editor/editor_engine/scroll_editor_content.rs",
           "isPinned": false
         },
         {
@@ -65,7 +77,7 @@
       "taskFile": "task/task_refactor_input_device.md",
       "createdAt": 1763496885607,
       "lastAccessed": 1763666457216,
-      "activeTab": "tui/src/core/ansi/constants/input_sequences.rs"
+      "activeTab": "tui/src/core/ansi/terminal_raw_mode/mod.rs"
     },
     {
       "name": "[1.1] task_readline_async_add_shortcuts",
