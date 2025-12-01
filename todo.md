@@ -33,6 +33,9 @@
   add `readline_async` support for all the shortcuts that we don't currently support but `readline`
   does
 
+- [⌛] migrate `check.fish` into `build_infra` crate as `cargo monitor` command using
+  [`build_infra_cargo_monitor.md`](/task/build_infra_cargo_monitor.md)
+
 - [x] bootstrap `r3bl_build_infra` crate with first tool (binary)
       [`task_cargo_rustdoc_fmt.md](task/done/task_cargo_rustdoc_fmt.md)
 
