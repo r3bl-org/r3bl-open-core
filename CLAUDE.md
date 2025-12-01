@@ -29,11 +29,10 @@ discover and use these when relevant. All skills are in `.claude/skills/`.
 
 ### Documentation
 
-- **write-documentation** - Rustdoc formatting with inverted pyramid principle and cargo rustdoc-fmt. Use when writing or improving documentation.
-  - Supporting files: `rustdoc-formatting.md` (cargo rustdoc-fmt guide), `examples.md` (5 production-quality examples)
-
-- **fix-intradoc-links** - Fix and create rustdoc intra-doc links for IDE navigation. Use when cargo doc shows link warnings.
-  - Supporting file: `patterns.md` (14 detailed link patterns)
+- **write-documentation** - Consolidated documentation skill covering structure (inverted pyramid),
+  intra-doc links, constant conventions, and formatting. Use proactively when writing code with
+  rustdoc comments, or retroactively via `/fix-intradoc-links`, `/fix-comments`, `/fix-md-tables`.
+  - Supporting files: `link-patterns.md`, `constant-conventions.md`, `examples.md`, `rustdoc-formatting.md`
 
 ### Architecture & Patterns
 
@@ -55,11 +54,28 @@ You can explicitly invoke skills using slash commands:
 - `/check` → check-code-quality
 - `/docs` → write-documentation
 - `/clippy` → run-clippy
-- `/fix-intradoc-links` → fix-intradoc-links
+- `/fix-intradoc-links` → write-documentation (focused on links)
 - `/check-regression` → analyze-performance
 - `/r3bl-task` → Task management (see below)
 
 ## Rust Code Guidelines
+
+### Writing Rustdoc Comments
+
+When writing or modifying rustdoc comments in code, **proactively apply** these conventions
+(all documented in `write-documentation` skill):
+
+1. **Intra-doc links**: Use `crate::` paths (not `super::`), reference-style links at bottom of
+   doc blocks. See `link-patterns.md` for patterns.
+
+2. **Human-readable constants**: Use binary for bitmasks (`0b0110_0000`), byte literals for
+   printable chars (`b'['`), decimal for non-printables (`27`). Show hex in comments for
+   cross-reference. See `constant-conventions.md`.
+
+3. **Inverted pyramid**: High-level concepts at module/trait level, simple syntax examples at
+   method level. See `examples.md`.
+
+Don't wait for `check-code-quality` to catch issues - write docs correctly the first time.
 
 ### MCP Tools
 

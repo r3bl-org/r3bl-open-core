@@ -60,7 +60,7 @@
 //!
 //! ### [ASCII] (1963)
 //!
-//! Uses only 7 bits (0x00-0x7F). The 8th bit was used for [parity checking] during
+//! Uses only 7 bits (0-127). The 8th bit was used for [parity checking] during
 //! serial transmission—a transport-layer mechanism for error detection on noisy lines,
 //! not part of stored character values. A committee including [Bob Bemer] developed
 //! ASCII; he championed the ESC character that made escape sequences possible.
@@ -84,7 +84,7 @@
 //! ### Timeline
 //!
 //! ```text
-//! 1963: ASCII → 7-bit character set with ESC (0x1B)
+//! 1963: ASCII → 7-bit character set with ESC (27)
 //! 1975: VT52  → Introduced ESC + letter commands
 //! 1978: VT100 → Added CSI (ESC [), kept ESC+letter for compatibility
 //! 1983: VT220 → Extended CSI, still kept ESC+letter
@@ -108,29 +108,47 @@
 //! multi-byte markers. See [`utf8` encoding] module for encoding details.
 //!
 //! ```text
-//! 1. Single byte (0x00-0x7F) containing the 7-bit ASCII character set. Any character
+//! 1. Single byte (0-127) containing the 7-bit ASCII character set. Any character
 //!    that fits in a single byte within this range can be transmitted as-is without any
 //!    escape sequence prefix
-//!    ├─ 0x00-0x1F (0-31)   ⵆ Control codes: Ctrl+A (0x01), Ctrl+D (0x04)
-//!    ├─ 0x20-0x7E (32-126) ⵆ Printable: 'a', 'B', '3', etc
-//!    └─ 0x7F      (127)    ⵆ DEL character (often used for Backspace)
+//!    ┌─ Dec        | Hex   | Byte expr  | Symbolic ────────────────────────────┐
+//!    ├─ 0-31       | 00-1F |            | Control character range              │
+//!    │  ├─ 0       | 00    |            | Ctrl+@ or Ctrl+Space (NUL)           │
+//!    │  ├─ 1-26    | 01-1A |            | Ctrl+A through Ctrl+Z                │
+//!    │  ├─ 27      | 1B    |            | ESC (handled separately)             │
+//!    │  └─ 28-31   | 1C-1F |            | Ctrl+\, Ctrl+], Ctrl+^, Ctrl+_       │
+//!    ├─ 32-126     | 20-7E |            | Printable ASCII range                │
+//!    │  ├─ 32      | 20    | b' '       | Space                                │
+//!    │  ├─ 33-47   | 21-2F | b'!'-`b'/' | Punct: ! " # $ % & ' ( ) * + , - . / │
+//!    │  ├─ 48-57   | 30-39 | b'0'-`b'9' | Digits: '0'-'9'                      │
+//!    │  ├─ 58-64   | 3A-40 | b':'-`b'@' | Punct: : ; < = > ? @                 │
+//!    │  ├─ 65-90   | 41-5A | b'A'-`b'Z' | Uppercase: 'A'-'Z'                   │
+//!    │  ├─ 91-96   | 5B-60 | b'['-`b'`' | Punct: [ \ ] ^ _ `                   │
+//!    │  ├─ 97-122  | 61-7A | b'a'-`b'z' | Lowercase: 'a'-'z'                   │
+//!    │  └─ 123-126 | 7B-7E | b'{'-`b'~' | Punct: { | } ~                       │
+//!    ├─ 127        | 7F    |            | DEL character (used for Backspace)   │
+//!    └─────────────────────────────────────────────────────────────────────────┘
 //!
 //! 2. ESC prefix (2 bytes). Alt+printable character uses this simple encoding since
-//!    there's no room in ASCII for Alt. Just prepend ESC (0x1B) to the character
-//!    ├─ Alt+a         ⵆ 0x1B 0x61 ⵆ (ESC a)
-//!    ├─ Alt+B         ⵆ 0x1B 0x42 ⵆ (ESC B)
-//!    ├─ Alt+3         ⵆ 0x1B 0x33 ⵆ (ESC 3)
-//!    ├─ Alt+Space     ⵆ 0x1B 0x20 ⵆ (ESC  )
-//!    └─ Alt+Backspace ⵆ 0x1B 0x7F ⵆ (ESC DEL)
+//!    there's no room in ASCII for Alt. Just prepend ESC (1B) to the character
+//!    ┌─ Sequence      | Dec    | Hex   | Symbolic ─┐
+//!    ├─ Alt+a         | 27 97  | 1B 61 | (ESC a)   │
+//!    ├─ Alt+B         | 27 66  | 1B 42 | (ESC B)   │
+//!    ├─ Alt+3         | 27 51  | 1B 33 | (ESC 3)   │
+//!    ├─ Alt+Space     | 27 32  | 1B 20 | (ESC  )   │
+//!    ├─ Alt+Backspace | 27 127 | 1B 7F | (ESC DEL) │
+//!    └─────────────────────────────────────────────┘
 //!
 //! 3. CSI sequences (3-7 bytes). Complex modifier combinations and special keys that
 //!    can't be represented in simpler encodings use parametric escape sequences
-//!    ├─ Home     ⵆ 0x1B 0x5B 0x48                     ⵆ (ESC [H)     ⵆ 3 bytes
-//!    ├─ Delete   ⵆ 0x1B 0x5B 0x33 0x7E                ⵆ (ESC [3~)    ⵆ 4 bytes
-//!    ├─ F5       ⵆ 0x1B 0x5B 0x31 0x35 0x7E           ⵆ (ESC [15~)   ⵆ 5 bytes
-//!    ├─ Ctrl+Up  ⵆ 0x1B 0x5B 0x31 0x3B 0x35 0x41      ⵆ (ESC [1;5A)  ⵆ 6 bytes
-//!    ├─ Alt+Down ⵆ 0x1B 0x5B 0x31 0x3B 0x33 0x42      ⵆ (ESC [1;3B)  ⵆ 6 bytes
-//!    └─ Ctrl+F5  ⵆ 0x1B 0x5B 0x31 0x35 0x3B 0x35 0x7E ⵆ (ESC [15;5~) ⵆ 7 bytes
+//!    ┌─ Sequence | Dec                   | Hex                  | Symbolic     | Size ─┐
+//!    ├─ Home     | 27 91 72              | 1B 5B 48             | (ESC [H)     | 3     │
+//!    ├─ Delete   | 27 91 51 126          | 1B 5B 33 7E          | (ESC [3~)    | 4     │
+//!    ├─ F5       | 27 91 49 53 126       | 1B 5B 31 35 7E       | (ESC [15~)   | 5     │
+//!    ├─ Ctrl+Up  | 27 91 49 59 53 65     | 1B 5B 31 3B 35 41    | (ESC [1;5A)  | 6     │
+//!    ├─ Alt+Down | 27 91 49 59 51 66     | 1B 5B 31 3B 33 42    | (ESC [1;3B)  | 6     │
+//!    ├─ Ctrl+F5  | 27 91 49 53 59 53 126 | 1B 5B 31 35 3B 35 7E | (ESC [15;5~) | 7     │
+//!    └─────────────────────────────────────────────────────────────────────────────────┘
 //! ```
 //!
 //! ### How Bitmask Encoding for Modifiers Works
@@ -196,7 +214,8 @@
 //!
 //! ### Real-World Examples
 //!
-//! What terminals actually send (confirmed via `cat -v`):
+//! What terminals actually send (confirmed via `showkey -a` on Linux, or `sed -n l` for
+//! POSIX compliant OSes):
 //!
 //! ```text
 //! Key Press      Sequence     Bytes   Format
@@ -403,7 +422,7 @@
 //!
 //! In application mode (DECPAM), numpad keys send SS3 sequences instead of their literal
 //! digits. This allows applications to distinguish numpad from regular number keys.
-//! 
+//!
 //! <!-- cspell:enable -->
 //!
 //! | Numpad Key   | Normal Mode   | Application Mode   | SS3 Char   |
@@ -826,15 +845,32 @@ mod helpers {
         })
     }
 
-    /// Parse CSI sequences with numeric parameters (e.g., `CSI 5 ~ `, `CSI 1 ; 3 C`)
-    /// Returns (`InputEvent`, `bytes_consumed`) on success.
+    /// Parses CSI sequences with numeric parameters into keyboard events.
+    ///
+    /// # Format
+    ///
+    /// `ESC [ param ; param ; ... final_byte`
+    ///
+    /// # Examples
+    ///
+    /// | Sequence       | Meaning              |
+    /// |----------------|----------------------|
+    /// | `CSI 5 ~`      | PageUp               |
+    /// | `CSI 1 ; 3 C`  | Alt + Right Arrow    |
+    /// | `CSI 11 ~`     | F1                   |
+    /// | `CSI 1 ; 5 A`  | Ctrl + Up Arrow      |
+    ///
+    /// # Returns
+    ///
+    /// [`Some`]`(`[`VT100InputEventIR`]`, `[`ByteOffset`]`)` on success, [`None`] if
+    /// the sequence is invalid or incomplete.
     pub(super) fn parse_csi_parameters(
         buffer: &[u8],
     ) -> Option<(VT100InputEventIR, ByteOffset)> {
         // Extract the parameters and final byte
         // Format: ESC [ [param;param;...] final_byte
         let mut params = Vec::new();
-        let mut current_num = String::new();
+        let mut acc_numeric_param: u16 = 0;
         let mut final_byte = 0u8;
         let mut bytes_scanned = 0;
 
@@ -852,26 +888,28 @@ mod helpers {
             // against the constant values.
 
             if (ASCII_DIGIT_0..=ASCII_DIGIT_9).contains(&byte) {
-                // Digit: accumulate in current_num
-                current_num.push(byte as char);
+                // Parse decimal digits without allocation: shift left by one decimal
+                // place (multiply by 10), then add the new digit. ASCII
+                // digits are sequential (b'0'=48..b'9'=57), so `byte -
+                // b'0'` converts to numeric value 0-9. Example: "123" →
+                // 0*10+1=1 → 1*10+2=12 → 12*10+3=123.
+                acc_numeric_param = acc_numeric_param
+                    .saturating_mul(10)
+                    .saturating_add((byte - ASCII_DIGIT_0) as u16);
             } else if byte == ANSI_PARAM_SEPARATOR {
-                // Semicolon: parameter separator
-                if !current_num.is_empty() {
-                    params.push(current_num.parse::<u16>().unwrap_or(0));
-                    current_num.clear();
-                }
+                // Semicolon: parameter separator.
+                params.push(acc_numeric_param);
+                acc_numeric_param = 0;
             } else if byte == ANSI_FUNCTION_KEY_TERMINATOR
                 || (ASCII_UPPER_A..=ASCII_UPPER_Z).contains(&byte)
                 || (ASCII_LOWER_A..=ASCII_LOWER_Z).contains(&byte)
             {
-                // Terminal character: end of sequence
-                if !current_num.is_empty() {
-                    params.push(current_num.parse::<u16>().unwrap_or(0));
-                }
+                // Terminal character: end of sequence.
+                params.push(acc_numeric_param);
                 final_byte = byte;
                 break;
             } else {
-                return None; // Invalid byte in sequence
+                return None; // Invalid byte in sequence.
             }
         }
 

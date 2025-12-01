@@ -88,9 +88,10 @@ pub const DECKPNM_NORMAL_KEYPAD: u8 = b'>';
 // C0 Control Characters (handled by execute() method)
 // These are not ESC sequences but basic control characters.
 
-/// Backspace control character (BS)
-/// Moves cursor one position to the left
-pub const BACKSPACE: u8 = 0x08;
+/// Backspace control character (BS, 8 dec, 08 hex).
+///
+/// Moves cursor one position to the left.
+pub const BACKSPACE: u8 = 8;
 
 /// Horizontal Tab control character (HT)
 /// Moves cursor to next tab stop
@@ -106,7 +107,7 @@ pub const CARRIAGE_RETURN: u8 = b'\r';
 
 // ESC sequence start and selection characters.
 
-/// ESC sequence start: ESC (0x1B)
+/// ESC sequence start: ESC (27 dec, 1B hex).
 pub const ESC_START: char = '\x1b';
 
 /// G0 character set selector intermediate

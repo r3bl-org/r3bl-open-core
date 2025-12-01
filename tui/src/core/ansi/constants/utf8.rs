@@ -9,16 +9,16 @@
 //!
 //! UTF-8 uses variable-length encoding (1-4 bytes per character):
 //!
-//! | Bytes | First byte  | Continuation bytes | Bit pattern                               |
-//! |-------|-------------|--------------------|-------------------------------------------|
-//! | 1     | 0x00-0x7F   | -                  | 0xxxxxxx                                  |
-//! | 2     | 0xC0-0xDF   | 0x80-0xBF          | 110xxxxx 10xxxxxx                         |
-//! | 3     | 0xE0-0xEF   | 0x80-0xBF (x2)     | 1110xxxx 10xxxxxx 10xxxxxx                |
-//! | 4     | 0xF0-0xF7   | 0x80-0xBF (x3)     | 11110xxx 10xxxxxx 10xxxxxx 10xxxxxx       |
+//! | Bytes | First byte | Continuation bytes | Bit pattern                          |
+//! | ----- | ---------- | ------------------ | ------------------------------------ |
+//! | 1     | 00-7F      | -                  | 0xxxxxxx                             |
+//! | 2     | C0-DF      | 80-BF              | 110xxxxx 10xxxxxx                    |
+//! | 3     | E0-EF      | 80-BF (x2)         | 1110xxxx 10xxxxxx 10xxxxxx           |
+//! | 4     | F0-F7      | 80-BF (x3)         | 11110xxx 10xxxxxx 10xxxxxx 10xxxxxx  |
 //!
 //! ## Continuation Byte Validation
 //!
-//! All bytes after the first must match the pattern `10xxxxxx` (0x80-0xBF).
+//! All bytes after the first must match the pattern `10xxxxxx` (80-BF hex).
 //! This is validated using [`UTF8_CONTINUATION_MASK`] and [`UTF8_CONTINUATION_PATTERN`]:
 //!
 //! ```rust
@@ -49,64 +49,64 @@
 // UTF-8 Start Byte Ranges (First byte of sequence)
 // ============================================================================
 
-/// ASCII range: single-byte UTF-8 (0x00-0x7F).
+/// ASCII range: single-byte UTF-8 (00-7F hex).
 ///
 /// Pattern: `0xxxxxxx`
-pub const UTF8_1BYTE_MIN: u8 = 0x00;
+pub const UTF8_1BYTE_MIN: u8 = 0b0000_0000;
 
-/// ASCII range maximum: single-byte UTF-8 (0x7F).
+/// ASCII range maximum: single-byte UTF-8 (7F hex).
 ///
 /// Pattern: `0xxxxxxx`
-pub const UTF8_1BYTE_MAX: u8 = 0x7F;
+pub const UTF8_1BYTE_MAX: u8 = 0b0111_1111;
 
-/// 2-byte UTF-8 sequence start range minimum (0xC0).
+/// 2-byte UTF-8 sequence start range minimum (C0 hex).
 ///
 /// Pattern: `110xxxxx 10xxxxxx`
-pub const UTF8_2BYTE_MIN: u8 = 0xC0;
+pub const UTF8_2BYTE_MIN: u8 = 0b1100_0000;
 
-/// 2-byte UTF-8 sequence start range maximum (0xDF).
+/// 2-byte UTF-8 sequence start range maximum (DF hex).
 ///
 /// Pattern: `110xxxxx 10xxxxxx`
-pub const UTF8_2BYTE_MAX: u8 = 0xDF;
+pub const UTF8_2BYTE_MAX: u8 = 0b1101_1111;
 
-/// 3-byte UTF-8 sequence start range minimum (0xE0).
+/// 3-byte UTF-8 sequence start range minimum (E0 hex).
 ///
 /// Pattern: `1110xxxx 10xxxxxx 10xxxxxx`
-pub const UTF8_3BYTE_MIN: u8 = 0xE0;
+pub const UTF8_3BYTE_MIN: u8 = 0b1110_0000;
 
-/// 3-byte UTF-8 sequence start range maximum (0xEF).
+/// 3-byte UTF-8 sequence start range maximum (EF hex).
 ///
 /// Pattern: `1110xxxx 10xxxxxx 10xxxxxx`
-pub const UTF8_3BYTE_MAX: u8 = 0xEF;
+pub const UTF8_3BYTE_MAX: u8 = 0b1110_1111;
 
-/// 4-byte UTF-8 sequence start range minimum (0xF0).
+/// 4-byte UTF-8 sequence start range minimum (F0 hex).
 ///
 /// Pattern: `11110xxx 10xxxxxx 10xxxxxx 10xxxxxx`
-pub const UTF8_4BYTE_MIN: u8 = 0xF0;
+pub const UTF8_4BYTE_MIN: u8 = 0b1111_0000;
 
-/// 4-byte UTF-8 sequence start range maximum (0xF7).
+/// 4-byte UTF-8 sequence start range maximum (F7 hex).
 ///
 /// Pattern: `11110xxx 10xxxxxx 10xxxxxx 10xxxxxx`
-pub const UTF8_4BYTE_MAX: u8 = 0xF7;
+pub const UTF8_4BYTE_MAX: u8 = 0b1111_0111;
 
 // ============================================================================
 // UTF-8 Continuation Bytes (Second, third, fourth bytes)
 // ============================================================================
 
-/// Continuation byte range minimum (0x80).
+/// Continuation byte range minimum (80 hex).
 ///
-/// All continuation bytes must match pattern `10xxxxxx` (0x80-0xBF).
-pub const UTF8_CONTINUATION_MIN: u8 = 0x80;
+/// All continuation bytes must match pattern `10xxxxxx` (80-BF hex).
+pub const UTF8_CONTINUATION_MIN: u8 = 0b1000_0000;
 
-/// Continuation byte range maximum (0xBF).
+/// Continuation byte range maximum (BF hex).
 ///
-/// All continuation bytes must match pattern `10xxxxxx` (0x80-0xBF).
-pub const UTF8_CONTINUATION_MAX: u8 = 0xBF;
+/// All continuation bytes must match pattern `10xxxxxx` (80-BF hex).
+pub const UTF8_CONTINUATION_MAX: u8 = 0b1011_1111;
 
-/// Continuation byte validation mask (0xC0).
+/// Continuation byte validation mask (C0 hex).
 ///
-/// Used to extract the high 2 bits: `byte & 0xC0` should equal `0x80`
-/// for valid continuation bytes.
+/// Used to extract the high 2 bits: `byte & 0b1100_0000` should equal
+/// `0b1000_0000` for valid continuation bytes.
 ///
 /// Example:
 /// ```rust
@@ -117,59 +117,59 @@ pub const UTF8_CONTINUATION_MAX: u8 = 0xBF;
 /// let invalid = 0x00;
 /// assert_ne!(invalid & UTF8_CONTINUATION_MASK, UTF8_CONTINUATION_PATTERN);
 /// ```
-pub const UTF8_CONTINUATION_MASK: u8 = 0xC0;
+pub const UTF8_CONTINUATION_MASK: u8 = 0b1100_0000;
 
-/// Continuation byte expected pattern (0x80).
+/// Continuation byte expected pattern (80 hex).
 ///
 /// After masking with [`UTF8_CONTINUATION_MASK`], valid continuation bytes
 /// should equal this value.
-pub const UTF8_CONTINUATION_PATTERN: u8 = 0x80;
+pub const UTF8_CONTINUATION_PATTERN: u8 = 0b1000_0000;
 
 // ============================================================================
 // UTF-8 Reserved/Invalid Bytes
 // ============================================================================
 
-/// Reserved byte range minimum (0xF8).
+/// Reserved byte range minimum (F8 hex).
 ///
-/// Bytes 0xF8-0xFF are invalid UTF-8 start bytes.
-pub const UTF8_RESERVED_MIN: u8 = 0xF8;
+/// Bytes F8-FF hex are invalid UTF-8 start bytes.
+pub const UTF8_RESERVED_MIN: u8 = 0b1111_1000;
 
-/// Reserved byte range maximum (0xFF).
+/// Reserved byte range maximum (FF hex).
 ///
-/// Bytes 0xF8-0xFF are invalid UTF-8 start bytes.
-pub const UTF8_RESERVED_MAX: u8 = 0xFF;
+/// Bytes F8-FF hex are invalid UTF-8 start bytes.
+pub const UTF8_RESERVED_MAX: u8 = 0b1111_1111;
 
 // ============================================================================
 // UTF-8 Decoding Bit Masks (Extract data bits from each byte)
 // ============================================================================
 
-/// 2-byte sequence: first byte data mask (0x1F).
+/// 2-byte sequence: first byte data mask (1F hex).
 ///
-/// Extracts lower 5 bits from first byte: `byte & 0x1F`
+/// Extracts lower 5 bits from first byte: `byte & 0b0001_1111`
 ///
 /// Pattern: `110xxxxx` → extract `xxxxx`
-pub const UTF8_2BYTE_FIRST_MASK: u8 = 0x1F;
+pub const UTF8_2BYTE_FIRST_MASK: u8 = 0b0001_1111;
 
-/// Continuation byte data mask (0x3F).
+/// Continuation byte data mask (3F hex).
 ///
-/// Extracts lower 6 bits from continuation bytes: `byte & 0x3F`
+/// Extracts lower 6 bits from continuation bytes: `byte & 0b0011_1111`
 ///
 /// Pattern: `10xxxxxx` → extract `xxxxxx`
-pub const UTF8_CONTINUATION_DATA_MASK: u8 = 0x3F;
+pub const UTF8_CONTINUATION_DATA_MASK: u8 = 0b0011_1111;
 
-/// 3-byte sequence: first byte data mask (0x0F).
+/// 3-byte sequence: first byte data mask (0F hex).
 ///
-/// Extracts lower 4 bits from first byte: `byte & 0x0F`
+/// Extracts lower 4 bits from first byte: `byte & 0b0000_1111`
 ///
 /// Pattern: `1110xxxx` → extract `xxxx`
-pub const UTF8_3BYTE_FIRST_MASK: u8 = 0x0F;
+pub const UTF8_3BYTE_FIRST_MASK: u8 = 0b0000_1111;
 
-/// 4-byte sequence: first byte data mask (0x07).
+/// 4-byte sequence: first byte data mask (07 hex).
 ///
-/// Extracts lower 3 bits from first byte: `byte & 0x07`
+/// Extracts lower 3 bits from first byte: `byte & 0b0000_0111`
 ///
 /// Pattern: `11110xxx` → extract `xxx`
-pub const UTF8_4BYTE_FIRST_MASK: u8 = 0x07;
+pub const UTF8_4BYTE_FIRST_MASK: u8 = 0b0000_0111;
 
 // ============================================================================
 // Tests

@@ -38,7 +38,15 @@
           "isPinned": false
         },
         {
-          "path": "tui/src/core/ansi/vt_100_terminal_input_parser/integration_tests/mod.rs",
+          "path": "tui/src/core/ansi/constants/mouse.rs",
+          "isPinned": false
+        },
+        {
+          "path": "tui/src/core/ansi/constants/utf8.rs",
+          "isPinned": false
+        },
+        {
+          "path": "tui/src/tui/editor/editor_engine/scroll_editor_content.rs",
           "isPinned": false
         },
         {
@@ -57,7 +65,7 @@
       "taskFile": "task/task_refactor_input_device.md",
       "createdAt": 1763496885607,
       "lastAccessed": 1763666457216,
-      "activeTab": "tui/src/core/ansi/vt_100_terminal_input_parser/keyboard.rs"
+      "activeTab": "tui/src/core/ansi/constants/input_sequences.rs"
     },
     {
       "name": "[1.1] task_readline_async_add_shortcuts",

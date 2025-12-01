@@ -16,8 +16,11 @@
 //!
 //! Alternatively, you can also run the following to capture keyboard input only:
 //! ```bash
-//! cat -v
-//! # Now type keys and observe the raw escape sequences printed
+//! # Linux (shows decimal, octal, hex values):
+//! showkey -a
+//!
+//! # POSIX compliant OSes (shows C-style escapes like \033):
+//! sed -n l
 //! ```
 
 use crossterm::terminal::{disable_raw_mode, enable_raw_mode};

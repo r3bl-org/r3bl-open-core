@@ -43,19 +43,17 @@ function main
             install-cargo-tools
         case test
             test_workspace
-        case watch-all-tests
-            watch-all-tests
-        case watch-one-test
+        case test-watch
             if test (count $argv) -gt 1
-                watch-one-test $argv[2]
+                test-watch $argv[2]
             else
-                echo "Error: watch-one-test requires a test pattern"
-                echo "Usage: fish run.fish watch-one-test <pattern>"
+                echo "Error: test-watch requires a test pattern"
+                echo "Usage: fish run.fish test-watch <pattern>"
             end
-        case watch-clippy
-            watch-clippy
-        case watch-check
-            watch-check
+        case clippy-watch
+            clippy-watch
+        case check-watch
+            check-watch
         case docs
             docs
         case check
@@ -66,6 +64,8 @@ function main
             clippy-pedantic
         case rustfmt
             rustfmt
+        case rustdoc-fmt
+            rustdoc-fmt
         case upgrade-deps
             upgrade-deps
         case update-cargo-tools
@@ -86,6 +86,12 @@ function main
             toolchain-validate-complete
         case check-full
             check-full
+        case check-full-watch
+            check-full-watch
+        case check-full-watch-test
+            check-full-watch-test
+        case check-full-watch-doc
+            check-full-watch-doc
         case unmaintained-deps
             unmaintained-deps
         case help
@@ -139,12 +145,14 @@ function print-help
         echo "    "(set_color green)"clean"(set_color normal)"                Clean entire workspace"
         echo "    "(set_color green)"test"(set_color normal)"                 Test entire workspace"
         echo "    "(set_color green)"check"(set_color normal)"                Check all workspaces"
+        echo "    "(set_color green)"check-full"(set_color normal)"           Run comprehensive checks (tests, docs, toolchain)"
         echo "    "(set_color green)"clippy"(set_color normal)"               Run clippy on all workspaces"
         echo "    "(set_color green)"clippy-pedantic"(set_color normal)"      Run clippy with pedantic lints"
         echo "    "(set_color green)"docs"(set_color normal)"                 Generate docs for all"
         echo "    "(set_color green)"serve-docs"(set_color normal)"           Serve documentation"
         echo "    "(set_color green)"rustfmt"(set_color normal)"              Format all code"
-        echo "    "(set_color green)"install-cargo-tools"(set_color normal)"  Install development tools"
+        echo "    "(set_color green)"rustdoc-fmt"(set_color normal)"           Format rustdoc comments"
+        echo "    "(set_color green)"install-cargo-tools"(set_color normal)"  Install dev tools (build-infra, cargo tools)"
         echo "    "(set_color green)"upgrade-deps"(set_color normal)"         Upgrade dependencies"
         echo "    "(set_color green)"update-cargo-tools"(set_color normal)"   Update cargo dev tools"
         echo "    "(set_color green)"audit-deps"(set_color normal)"           Security audit"
@@ -154,14 +162,15 @@ function print-help
         echo "    "(set_color green)"toolchain-validate"(set_color normal)"        Quick toolchain validation (components only)"
         echo "    "(set_color green)"toolchain-validate-complete"(set_color normal)"  Complete toolchain validation (full build+test)"
         echo "    "(set_color green)"toolchain-remove"(set_color normal)"     Remove ALL toolchains (testing)"
-        echo "    "(set_color green)"check-full"(set_color normal)"           Run comprehensive checks (tests, docs, toolchain)"
         echo "    "(set_color green)"build-server"(set_color normal)"         Remote build server - uses rsync"
         echo ""
         echo (set_color cyan --bold)"Watch commands:"(set_color normal)
-        echo "    "(set_color green)"watch-all-tests"(set_color normal)"      Watch files, run all tests"
-        echo "    "(set_color green)"watch-one-test"(set_color normal)" "(set_color blue)"[pattern]"(set_color normal)"  Watch files, run specific test"
-        echo "    "(set_color green)"watch-clippy"(set_color normal)"         Watch files, run clippy"
-        echo "    "(set_color green)"watch-check"(set_color normal)"          Watch files, run cargo check"
+        echo "    "(set_color green)"test-watch"(set_color normal)" "(set_color blue)"[pattern]"(set_color normal)"      Watch files, run specific test"
+        echo "    "(set_color green)"clippy-watch"(set_color normal)"         Watch files, run clippy"
+        echo "    "(set_color green)"check-watch"(set_color normal)"          Watch files, run cargo check"
+        echo "    "(set_color green)"check-full-watch"(set_color normal)"     Watch files, run all checks (tests, doctests, docs)"
+        echo "    "(set_color green)"check-full-watch-test"(set_color normal)" Watch files, run tests and doctests"
+        echo "    "(set_color green)"check-full-watch-doc"(set_color normal)"  Watch files, run doc build only"
         echo ""
         echo (set_color cyan --bold)"TUI-specific commands:"(set_color normal)
         echo "    "(set_color green)"run-examples"(set_color normal)" "(set_color blue)"[--release] [--no-log]"(set_color normal)"  Run TUI examples"
@@ -175,7 +184,7 @@ function print-help
         echo "    "(set_color green)"docker-build"(set_color normal)"         Build release in Docker"
         echo ""
         echo (set_color cyan --bold)"Development Session Commands:"(set_color normal)
-        echo "    "(set_color green)"dev-dashboard"(set_color normal)"        Start 4-pane tmux development dashboard"
+        echo "    "(set_color green)"dev-dashboard"(set_color normal)"        Start 2-pane tmux development dashboard"
         echo ""
         echo (set_color cyan --bold)"Other commands:"(set_color normal)
         echo "    "(set_color green)"log"(set_color normal)"                  Monitor log.txt in cmdr or tui directory"
@@ -253,20 +262,16 @@ function build-server
 end
 
 # Watch commands - using watch-files from script_lib.fish
-function watch-all-tests
-    watch-files "cargo test --workspace --quiet -- --test-threads 4"
-end
-
-function watch-one-test
+function test-watch
     set pattern $argv[1]
     watch-files "cargo test $pattern -- --nocapture --test-threads=1"
 end
 
-function watch-clippy
+function clippy-watch
     watch-files "cargo clippy --workspace --all-targets --all-features"
 end
 
-function watch-check
+function check-watch
     watch-files "cargo check --workspace"
 end
 
@@ -489,6 +494,18 @@ function check-full
     fish check.fish
 end
 
+function check-full-watch
+    fish check.fish --watch
+end
+
+function check-full-watch-test
+    fish check.fish --watch-test
+end
+
+function check-full-watch-doc
+    fish check.fish --watch-doc
+end
+
 function build
     cargo build
 end
@@ -691,6 +708,33 @@ end
 
 function rustfmt
     cargo fmt --all
+end
+
+# Formats rustdoc comments in the workspace using cargo-rustdoc-fmt.
+#
+# This function runs cargo-rustdoc-fmt (from build-infra) from the workspace root
+# to ensure consistent rustdoc comment formatting. The tool handles:
+# - Proper line wrapping in doc comments
+# - Consistent spacing and indentation
+# - Markdown formatting within doc blocks
+#
+# Features:
+# - Auto-installs cargo-rustdoc-fmt if not found
+# - Runs from workspace root for correct path resolution
+#
+# Usage:
+#   fish run.fish rustdoc-fmt
+function rustdoc-fmt
+    # Check if cargo-rustdoc-fmt is installed, install if missing
+    if not command -v cargo-rustdoc-fmt >/dev/null
+        echo (set_color yellow)"cargo-rustdoc-fmt not found, installing..."(set_color normal)
+        pushd build-infra
+        cargo install --path .
+        popd
+    end
+
+    echo (set_color magenta)"≡ Running cargo rustdoc-fmt .. ≡"(set_color normal)
+    cargo rustdoc-fmt
 end
 
 # More info: https://github.com/EmbarkStudios/cargo-deny
@@ -1044,37 +1088,28 @@ function log
     end
 end
 
-# Starts a 4-pane tmux development dashboard for comprehensive development monitoring.
+# Starts a 2-pane tmux development dashboard for development monitoring.
 #
-# This function creates a persistent tmux session with four panes running in parallel:
+# This function creates a persistent tmux session with two panes:
 #
-# Layout: 2x2 grid
-#   ├─ Top-left:     bacon test --headless (run all tests)
-#   ├─ Top-right:    bacon doc --headless (generate documentation)
-#   ├─ Bottom-left:  bacon doctests --headless (run documentation tests)
-#   └─ Bottom-right: watch -n 60 ./check.fish (periodic health check every 60s)
-#
-# The check.fish script monitors:
-# - cargo test --all-targets (all unit and integration tests)
-# - cargo test --doc (documentation tests)
-# - cargo doc --no-deps (documentation generation)
-# - Automatic ICE (Internal Compiler Error) detection and recovery
+# Layout: 2 vertical panes
+#   ├─ Top:     ./check.fish --watch-doc (watch mode doc build)
+#   └─ Bottom:  (empty, focused for your commands)
 #
 # Features:
-# - Session name: "r3bl-dev" (can reconnect from other terminals)
-# - Headless bacon runs minimize output while providing background monitoring
-# - Health check provides comprehensive status updates
+# - Session name: "r3bl" (can reconnect from other terminals)
+# - Top pane runs doc watch mode for continuous documentation feedback
+# - Bottom pane is focused and ready for your commands
 # - Persistent session survives terminal disconnects
-# - Interactive tmux multiplexing with customizable layouts
 #
 # Usage:
 #   fish run.fish dev-dashboard
 #
 # To reconnect to an existing session:
-#   tmux attach-session -t r3bl-dev
+#   tmux attach-session -t r3bl
 #
 # To kill the session:
-#   tmux kill-session -t r3bl-dev
+#   tmux kill-session -t r3bl
 function dev-dashboard
     fish tmux-r3bl-dev.fish
 end

@@ -126,8 +126,8 @@ debug = false
 
 [profile.dev]
 debug = false
-incremental = false  # Disable to avoid rustc dep graph ICE on nightly
+# incremental = false  # Disable to avoid rustc dep graph ICE on nightly
 
 [profile.test]
 debug = false
-incremental = false  # Disable to avoid rustc dep graph ICE on nightly
+# incremental = false  # Disable to avoid rustc dep graph ICE on nightly

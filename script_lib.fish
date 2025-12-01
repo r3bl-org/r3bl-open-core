@@ -159,10 +159,10 @@ rustflags = ["-Z", "threads=8"]  # Parallel compilation only' >> .cargo/config.t
     # Disables incremental compilation to avoid rustc dep graph ICE on nightly
     echo '
 [profile.dev]
-incremental = false  # Disable to avoid rustc dep graph ICE on nightly
+# incremental = false  # Disable to avoid rustc dep graph ICE on nightly
 
 [profile.test]
-incremental = false  # Disable to avoid rustc dep graph ICE on nightly' >> .cargo/config.toml
+# incremental = false  # Disable to avoid rustc dep graph ICE on nightly' >> .cargo/config.toml
 
     echo "✓ Cargo configuration generated"
 end
@@ -976,7 +976,7 @@ end
 # Sends a system notification with cross-platform support (macOS and Linux).
 #
 # On macOS: Uses osascript (AppleScript) to send notifications
-# On Linux: Uses notify-send for desktop notifications
+# On Linux: Uses gdbus to send notifications with proper auto-dismiss support
 # Falls back gracefully if notification tools are unavailable
 #
 # Parameters:
@@ -984,21 +984,28 @@ end
 # - message: Notification message (required)
 # - urgency: Urgency level - "normal", "critical", or "success" (optional, default: "normal")
 #           Only affects Linux; macOS uses system defaults based on title
+# - expire_ms: Auto-dismiss timeout in milliseconds (optional, Linux only)
+#              If not specified, uses system default (notification stays until dismissed)
+#              On GNOME: Uses gdbus + CloseNotification to force auto-dismiss
+#              On other DEs: Falls back to notify-send --expire-time (may be ignored)
 #
 # Features:
 # - Platform detection (Darwin for macOS, others for Linux)
 # - Non-blocking: Runs in background so script doesn't wait
 # - Error handling: Continues gracefully if notification system unavailable
 # - Urgency levels: normal, critical, success (Linux only)
+# - Auto-expiration: Works reliably on GNOME via gdbus CloseNotification
 #
 # Usage:
 #   send_system_notification "Title" "Message"
 #   send_system_notification "Error" "Something went wrong" "critical"
 #   send_system_notification "Success" "Operation completed" "success"
+#   send_system_notification "Watch" "Tests passed" "normal" 5000  # expires in 5s
 function send_system_notification
     set -l title $argv[1]
     set -l message $argv[2]
     set -l urgency $argv[3]
+    set -l expire_ms $argv[4]
 
     # Default to normal urgency if not specified
     if test -z "$urgency"
@@ -1008,19 +1015,64 @@ function send_system_notification
     if test (uname) = "Darwin"
         # macOS: Use osascript (AppleScript)
         # osascript is built-in and always available
+        # Note: macOS notifications auto-dismiss; no manual expiration control
         osascript -e "display notification \"$message\" with title \"$title\"" \
             2>/dev/null &
     else
-        # Linux: Use notify-send
-        # Non-blocking: only notify if notify-send is available
-        if command -v notify-send >/dev/null 2>&1
+        # Linux: Use gdbus for reliable auto-dismiss on GNOME
+        # GNOME ignores notify-send's --expire-time, so we use gdbus to send
+        # the notification and then explicitly close it after the timeout
+        if test -n "$expire_ms" && command -v gdbus >/dev/null 2>&1
+            # Convert expire_ms to seconds for sleep
+            set -l expire_secs (math "$expire_ms / 1000")
+
+            # Spawn a background fish child process that:
+            #   1. Displays the notification (via gdbus)
+            #   2. Waits for the expiration duration (sleep)
+            #   3. Removes the notification (via CloseNotification)
+            #
+            # The `fish -c "..." &` pattern creates a detached child process.
+            # Parent returns immediately (non-blocking), child handles the timed dismiss.
+            #
+            # Variable escaping:
+            #   - $title, $message, $expire_ms, $expire_secs: NOT escaped, interpolated from parent
+            #   - \$result, \$notify_id: Escaped, evaluated inside the child process
+            fish -c "
+                # Step 1: Display notification via gdbus and capture the notification ID
+                set -l result (gdbus call --session \
+                    --dest org.freedesktop.Notifications \
+                    --object-path /org/freedesktop/Notifications \
+                    --method org.freedesktop.Notifications.Notify \
+                    'check.fish' 0 '' '$title' '$message' '[]' '{}' $expire_ms 2>/dev/null)
+
+                # Extract notification ID from result like '(uint32 123,)'
+                set -l notify_id (echo \$result | sed -n 's/.*uint32 \\([0-9]*\\).*/\\1/p')
+
+                if test -n \"\$notify_id\"
+                    # Step 2: Wait for the expiration duration
+                    sleep $expire_secs
+
+                    # Step 3: Remove/dismiss the notification
+                    gdbus call --session \
+                        --dest org.freedesktop.Notifications \
+                        --object-path /org/freedesktop/Notifications \
+                        --method org.freedesktop.Notifications.CloseNotification \
+                        \"uint32 \$notify_id\" 2>/dev/null
+                end
+            " >/dev/null 2>&1 &
+        else if command -v notify-send >/dev/null 2>&1
+            # Fallback to notify-send (expiration may be ignored by some DEs)
             # Map urgency levels for notify-send compatibility
             set -l notify_urgency $urgency
             if test "$urgency" = "success"
                 set notify_urgency "normal"
             end
 
-            notify-send --urgency=$notify_urgency "$title" "$message" 2>/dev/null &
+            if test -n "$expire_ms"
+                notify-send --urgency=$notify_urgency --expire-time=$expire_ms "$title" "$message" 2>/dev/null &
+            else
+                notify-send --urgency=$notify_urgency "$title" "$message" 2>/dev/null &
+            end
         end
     end
 end
@@ -1223,4 +1275,130 @@ function release_toolchain_lock
         /bin/rm -rf $lock_dir 2>/dev/null
         echo "🔓 Released toolchain operation lock" >&2
     end
+end
+
+# Returns current local time in HH:MM:SS AM/PM format.
+#
+# Useful for timestamping log output in scripts that run for extended periods
+# (like watch modes) so users can correlate events with wall-clock time.
+#
+# Output format: "HH:MM:SS AM" or "HH:MM:SS PM" (12-hour clock)
+#
+# Usage:
+#   echo "["(timestamp)"] Starting build..."
+#   # Output: [02:34:56 PM] Starting build...
+function timestamp
+    date "+%I:%M:%S %p"
+end
+
+# Formats a duration in seconds to a human-readable string.
+#
+# Converts raw seconds into a compact, readable format that scales appropriately:
+# - Sub-second: "0.5s"
+# - Seconds only: "5s"
+# - Minutes and seconds: "2m 30s"
+# - Hours, minutes, seconds: "1h 5m 30s"
+#
+# Parameters:
+#   $argv[1]: Duration in seconds (can be decimal, e.g., "1.5")
+#
+# Usage:
+#   format_duration 90    # Output: "1m 30s"
+#   format_duration 3661  # Output: "1h 1m 1s"
+#   format_duration 0.5   # Output: "0.5s"
+function format_duration
+    set -l total_seconds $argv[1]
+
+    # Handle decimal seconds (sub-second precision)
+    set -l int_seconds (math "floor($total_seconds)")
+
+    if test $int_seconds -lt 1
+        # Sub-second: show decimal
+        printf "%.1fs" $total_seconds
+        return
+    end
+
+    set -l hours (math "floor($int_seconds / 3600)")
+    set -l minutes (math "floor(($int_seconds % 3600) / 60)")
+    set -l seconds (math "$int_seconds % 60")
+
+    if test $hours -gt 0
+        echo "$hours"h "$minutes"m "$seconds"s
+    else if test $minutes -gt 0
+        echo "$minutes"m "$seconds"s
+    else
+        echo "$seconds"s
+    end
+end
+
+# ============================================================================
+# Build Config Change Detection
+# ============================================================================
+
+# Checks if build config files have changed since last build.
+#
+# Computes a SHA256 hash of key config files and compares it to a stored hash
+# in the target directory. If the hash differs, cleans the target directory
+# to avoid stale artifact issues.
+#
+# This handles scenarios like:
+# - Toggling incremental compilation on/off
+# - Changing optimization levels or profiles
+# - Updating the Rust toolchain version
+# - Modifying cargo build flags
+# - Adding/removing dependencies in any workspace crate
+#
+# Parameters:
+#   $argv[1]: Target directory to check/clean (e.g., "target/check")
+#   $argv[2...]: Config files to watch (e.g., Cargo.toml rust-toolchain.toml)
+#
+# The hash is stored in $target_dir/.config_hash and updated after each check.
+# In watch mode, these config files should also be added to inotifywait so that
+# changes trigger the watch loop, which then calls this function.
+#
+# Returns: 0 always (cleaning is a side effect, not a failure)
+#
+# Usage:
+#   # Typical usage with workspace crates (dynamically detected)
+#   set -g CONFIG_FILES Cargo.toml rust-toolchain.toml .cargo/config.toml
+#   for crate_toml in */Cargo.toml
+#       set -a CONFIG_FILES $crate_toml
+#   end
+#   check_config_changed "target/check" $CONFIG_FILES
+function check_config_changed
+    set -l target_dir $argv[1]
+    set -l config_files $argv[2..-1]
+
+    # Compute hash of all config files that affect builds
+    # Using cat with 2>/dev/null to handle missing files gracefully
+    # SHA256 is preferred over MD5 as a modern, more robust hash algorithm
+    set -l config_hash (cat $config_files 2>/dev/null | sha256sum | cut -d' ' -f1)
+    set -l hash_file "$target_dir/.config_hash"
+
+    # If target directory doesn't exist, nothing to clean
+    if not test -d "$target_dir"
+        return 0
+    end
+
+    # Check if hash file exists and compare
+    if test -f $hash_file
+        set -l stored_hash (cat $hash_file)
+        if test "$config_hash" != "$stored_hash"
+            echo ""
+            set_color yellow
+            echo "⚠️  Build config changed (Cargo.toml, rust-toolchain.toml, or .cargo/config.toml)"
+            echo "🧹 Cleaning $target_dir to avoid stale artifacts..."
+            set_color normal
+            rm -rf "$target_dir"
+            mkdir -p "$target_dir"
+            echo $config_hash > $hash_file
+            echo ""
+        end
+    else
+        # No hash file yet - create it (first run or after manual clean)
+        mkdir -p "$target_dir"
+        echo $config_hash > $hash_file
+    end
+
+    return 0
 end

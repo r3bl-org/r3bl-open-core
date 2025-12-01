@@ -26,7 +26,7 @@ pub const MOUSE_X10_PREFIX: &[u8] = b"\x1b[M";
 
 // ==================== Action Codes ====================
 
-/// SGR mouse protocol marker: `<` (60 in decimal, 0x3C in hex)
+/// SGR mouse protocol marker: `<` (60 dec, 3C hex).
 ///
 /// Used in SGR extended mouse tracking sequences: `ESC [ < Cb ; Cx ; Cy M/m`
 pub const MOUSE_SGR_MARKER: u8 = b'<';
@@ -49,11 +49,11 @@ pub const MOUSE_X10_MARKER: u8 = b'M';
 
 // ==================== Button Codes and Bit Masks ====================
 
-/// Mask for button code bits (bits 0-1)
+/// Mask for button code bits (bits 0-1).
 ///
 /// Extracts the base button code (0=left, 1=middle, 2=right, 3=release)
 /// from the button byte.
-pub const MOUSE_BUTTON_BITS_MASK: u16 = 0x03; // Binary: 0b00000011
+pub const MOUSE_BUTTON_BITS_MASK: u16 = 0b0000_0011;
 
 /// Left mouse button code (0)
 ///
@@ -76,53 +76,53 @@ pub const MOUSE_RIGHT_BUTTON_CODE: u16 = 2;
 /// When the button byte equals 3, it means no button is pressed.
 pub const MOUSE_RELEASE_BUTTON_CODE: u16 = 3;
 
-/// Mask for complete button code (bits 0-5)
+/// Mask for complete button code (bits 0-5).
 ///
 /// Includes button bits (0-1), modifier bits (2-4), and drag bit (5).
 /// Used to distinguish scroll events (button >= 64) from regular clicks.
-pub const MOUSE_BUTTON_CODE_MASK: u16 = 0x3F; // Binary: 0b00111111
+pub const MOUSE_BUTTON_CODE_MASK: u16 = 0b0011_1111;
 
-/// Mask for button code with scroll bit (bits 0-6)
+/// Mask for button code with scroll bit (bits 0-6).
 ///
 /// Preserves all button information: button bits (0-1), modifier bits (2-4),
 /// motion flag (5), and scroll bit (6). When scroll bit is set (value 64+),
 /// indicates a scroll event. Used before distinguishing scroll from regular clicks.
-pub const MOUSE_BASE_BUTTON_MASK: u16 = 0x7F; // Binary: 0b01111111
+pub const MOUSE_BASE_BUTTON_MASK: u16 = 0b0111_1111;
 
 // ==================== Modifier Bit Flags ====================
 
-/// Shift modifier flag (bit 2, value 4)
+/// Shift modifier flag (bit 2, value 4).
 ///
 /// Set in button byte when Shift key is held during mouse event.
 /// Note: Shift+Click is often intercepted by terminals for text selection.
-pub const MOUSE_MODIFIER_SHIFT: u16 = 0x04; // Binary: 0b00000100
+pub const MOUSE_MODIFIER_SHIFT: u16 = 0b0000_0100;
 
-/// Alt/Meta modifier flag (bit 3, value 8)
+/// Alt/Meta modifier flag (bit 3, value 8).
 ///
 /// Set in button byte when Alt/Meta key is held during mouse event.
-pub const MOUSE_MODIFIER_ALT: u16 = 0x08; // Binary: 0b00001000
+pub const MOUSE_MODIFIER_ALT: u16 = 0b0000_1000;
 
-/// Ctrl modifier flag (bit 4, value 16)
+/// Ctrl modifier flag (bit 4, value 16).
 ///
 /// Set in button byte when Ctrl key is held during mouse event.
-pub const MOUSE_MODIFIER_CTRL: u16 = 0x10; // Binary: 0b00010000
+pub const MOUSE_MODIFIER_CTRL: u16 = 0b0001_0000;
 
 // ==================== Action Flags ====================
 
-/// Drag/Motion flag (bit 5, value 32)
+/// Drag/Motion flag (bit 5, value 32).
 ///
 /// In SGR protocol: Set when mouse button is held and moved (drag).
 /// In X10 protocol: Set when mouse moves without button held (motion).
-pub const MOUSE_MOTION_FLAG: u16 = 0x20; // Binary: 0b00100000
+pub const MOUSE_MOTION_FLAG: u16 = 0b0010_0000;
 
 // ==================== Scroll Detection ====================
 
-/// Scroll event threshold (value 64)
+/// Scroll event threshold (value 64).
 ///
 /// Scroll events have button codes >= 64.
 /// Regular button codes are 0-3 (with modifiers 0-63).
 /// Scroll codes: 64-67 (up/down/left/right) with optional modifiers.
-pub const MOUSE_SCROLL_THRESHOLD: u16 = 0x40; // Same as MOUSE_BASE_BUTTON_MASK
+pub const MOUSE_SCROLL_THRESHOLD: u16 = 0b0100_0000;
 
 // ==================== Scroll Button Codes ====================
 
