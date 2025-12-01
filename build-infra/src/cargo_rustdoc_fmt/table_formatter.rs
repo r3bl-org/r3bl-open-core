@@ -8,6 +8,7 @@ use unicode_width::UnicodeWidthStr;
 /// Format all markdown tables in the given text.
 ///
 /// Aligns columns and normalizes table formatting while preserving content.
+/// Code fence blocks (` ``` `) are preserved and not processed.
 ///
 /// # Panics
 ///
@@ -25,14 +26,33 @@ pub fn format_tables(text: &str) -> String {
     let lines: Vec<&str> = text.lines().collect();
     let mut result = Vec::new();
     let mut i = 0;
+    let mut in_code_fence = false;
 
     while i < lines.len() {
+        let line = lines[i];
+        let trimmed = line.trim();
+
+        // Check for code fence boundaries (``` with optional language tag)
+        if trimmed.starts_with("```") {
+            in_code_fence = !in_code_fence;
+            result.push(line.to_string());
+            i += 1;
+            continue;
+        }
+
+        // Skip table processing inside code fences
+        if in_code_fence {
+            result.push(line.to_string());
+            i += 1;
+            continue;
+        }
+
         if let Some(table) = extract_table(&lines, i) {
             let formatted = format_single_table(&table);
             result.extend(formatted);
             i += table.len();
         } else {
-            result.push(lines[i].to_string());
+            result.push(line.to_string());
             i += 1;
         }
     }
@@ -205,5 +225,69 @@ mod tests {
         // Check table content is preserved
         assert!(output.contains("| A"));
         assert!(output.contains("| B"));
+    }
+
+    #[test]
+    fn test_code_fence_preserves_pipe_content() {
+        // ASCII art with pipes inside code fence should NOT be formatted as a table
+        let input = r#"Some text
+```text
++---------------------+
+|         ↑           |
+|      within vp      |
+|         ↓           |
++---------------------+
+```
+More text"#;
+        let output = format_tables(input);
+        // Content inside code fence should be unchanged
+        assert!(output.contains("|         ↑           |"));
+        assert!(output.contains("|      within vp      |"));
+        assert!(output.contains("|         ↓           |"));
+    }
+
+    #[test]
+    fn test_code_fence_with_language_tag() {
+        let input = r#"```rust
+| not | a | table |
+```"#;
+        let output = format_tables(input);
+        // Should preserve exactly as-is (not format as table)
+        assert_eq!(output, input);
+    }
+
+    #[test]
+    fn test_table_outside_code_fence_still_formatted() {
+        let input = r#"```text
+| preserved | content |
+```
+| A | B |
+|---|---|
+| 1 | 2 |"#;
+        let output = format_tables(input);
+        // Code fence content preserved exactly
+        assert!(output.contains("| preserved | content |"));
+        // Table outside is formatted (columns aligned with padding)
+        assert!(output.contains("| A"));
+        assert!(output.contains("| B"));
+        assert!(output.contains("| 1"));
+        assert!(output.contains("| 2"));
+    }
+
+    #[test]
+    fn test_multiple_code_fences() {
+        let input = r#"```
+| fence1 |
+```
+| A | B |
+|---|---|
+| 1 | 2 |
+```
+| fence2 |
+```"#;
+        let output = format_tables(input);
+        // Both fence contents preserved
+        assert!(output.contains("| fence1 |"));
+        assert!(output.contains("| fence2 |"));
     }
 }

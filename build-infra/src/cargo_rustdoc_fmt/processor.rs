@@ -113,6 +113,8 @@ fn process_rustdoc_block(block: &mut RustdocBlock, options: &FormatOptions) -> b
 /// Check if text contains content that should not be modified.
 ///
 /// Currently protects:
+/// - HTML comments (`<!-- ... -->`) - used for cspell directives and code block
+///   explanations
 /// - HTML tags (will be mangled by markdown parsers)
 /// - Blockquotes (will be removed by markdown parsers)
 ///
@@ -121,6 +123,12 @@ fn process_rustdoc_block(block: &mut RustdocBlock, options: &FormatOptions) -> b
 /// fences (like documentation about the formatter itself), use
 /// `#![cfg_attr(rustfmt, rustfmt_skip)]` to skip the entire file.
 fn has_protected_content(text: &str) -> bool {
+    // Check for HTML comments (e.g., <!-- cspell:disable -->, <!-- explanation -->)
+    // These are used for spell-checker directives and to explain code block attributes
+    if text.contains("<!--") {
+        return true;
+    }
+
     // Check for HTML tags (will be mangled by markdown parsers)
     if text.contains('<') && text.contains('>') {
         // Simple check for HTML-like content
@@ -206,5 +214,47 @@ mod tests {
         let processor = FileProcessor::new(options);
         let result = processor.process_file(Path::new("/nonexistent/file.rs"));
         assert!(!result.errors.is_empty());
+    }
+
+    #[test]
+    fn test_has_protected_content_html_comments() {
+        // cspell disable/enable pairs
+        assert!(has_protected_content("<!-- cspell:disable -->"));
+        assert!(has_protected_content("<!-- cspell:enable -->"));
+
+        // Explanation comments before code blocks
+        assert!(has_protected_content(
+            "<!-- It is ok to use ignore here - demonstrates usage -->"
+        ));
+
+        // Multi-line content with HTML comment
+        let text_with_comment = r#"Some text
+<!-- cspell:disable -->
+[`SomeType`]: crate::SomeType
+<!-- cspell:enable -->"#;
+        assert!(has_protected_content(text_with_comment));
+
+        // Regular content without HTML comments should not be protected
+        assert!(!has_protected_content("Just regular text"));
+        assert!(!has_protected_content("[link]: https://example.com"));
+    }
+
+    #[test]
+    fn test_has_protected_content_html_tags() {
+        // Closing tags
+        assert!(has_protected_content("<span>text</span>"));
+        // Self-closing tags
+        assert!(has_protected_content("<br/>"));
+        // Tags with attributes
+        assert!(has_protected_content("<div style=\"color:red\">"));
+        assert!(has_protected_content("<img src=\"img.png\">"));
+    }
+
+    #[test]
+    fn test_has_protected_content_blockquotes() {
+        assert!(has_protected_content("> This is a quote"));
+        assert!(has_protected_content("text\n> quote"));
+        // Comparison operators should not trigger
+        assert!(!has_protected_content("if x >= 5"));
     }
 }

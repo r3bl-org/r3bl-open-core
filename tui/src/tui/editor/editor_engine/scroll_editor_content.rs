@@ -40,14 +40,14 @@ use std::cmp::Ordering;
 /// then the following will be displayed (the caret is at the end of the line on top
 /// of the "o"). You can see this in action in the test
 /// `test_editor_ops::editor_move_caret_home_end_overflow_viewport()`.
-// <!-- cspell:disable -->
+// cspell:disable
 /// ```text
 /// R ┌──────────┐
 /// 0 ▸ELLOhello░│
 ///   └─────────▴┘
 ///   C0123456789
 /// ```
-// <!-- cspell:enable -->
+// cspell:enable
 ///
 /// And scroll offset will be adjusted to show the end of the line. So the numbers will be
 /// as follows:
@@ -55,13 +55,20 @@ use std::cmp::Ordering;
 /// - `scr_ofs`:   col(6) + row(0)
 ///
 /// Once this function runs, it is necessary to run the [Drop] impl for
-/// [`crate::validate_buffer_mut::EditorBufferMut`], which runs this function:
-/// [`crate::validate_buffer_mut::perform_validation_checks_after_mutation`]. Due to the
-/// nature of `UTF-8` and its variable width characters, where the memory size is not the
-/// same as display size. Eg: `a` is 1 byte and 1 display width (unicode segment width
-/// display). `😄` is 3 bytes but it's display width is 2! To ensure that caret position
-/// and scroll offset positions are not in the middle of a unicode segment character, we
-/// need to run the validation checks.
+/// [`EditorBufferMut`], which runs this function:
+/// [`perform_validation_checks_after_mutation`]. Due to the nature of `UTF-8` and its
+/// variable width characters, where the memory size is not the same as display size.
+///
+/// Eg:
+/// - `a` is 1 byte and 1 display width (unicode segment width display).
+/// - `😄` is 3 bytes but it's display width is 2!
+///
+/// To ensure that caret position and scroll offset positions are
+/// not in the middle of a unicode segment character, we need to run the validation
+/// checks.
+///
+/// [`EditorBufferMut`]: crate::validate_buffer_mut::EditorBufferMut
+/// [`perform_validation_checks_after_mutation`]: crate::validate_buffer_mut::perform_validation_checks_after_mutation
 pub fn inc_caret_col_by(
     caret_raw: &mut CaretRaw,
     scr_ofs: &mut ScrOfs,
