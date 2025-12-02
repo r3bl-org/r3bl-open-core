@@ -39,25 +39,25 @@ fn pty_controller_entry_point(
 
     eprintln!("📝 PTY Controller: Waiting for controlled process to start...");
 
-    // Wait for slave to confirm it's running
+    // Wait for controlled to confirm it's running
     let mut test_running_seen = false;
     let deadline = Deadline::default();
 
     loop {
-        assert!(deadline.has_time_remaining(), "Timeout: slave did not start within 5 seconds");
+        assert!(deadline.has_time_remaining(), "Timeout: controlled did not start within 5 seconds");
 
         let mut line = String::new();
         match buf_reader_non_blocking.read_line(&mut line) {
-            Ok(0) => panic!("EOF reached before slave started"),
+            Ok(0) => panic!("EOF reached before controlled started"),
             Ok(_) => {
                 let trimmed = line.trim();
                 eprintln!("  ← Controlled output: {trimmed}");
 
                 if trimmed.contains("TEST_RUNNING") {
                     test_running_seen = true;
-                    eprintln!("  ✓ Test is running in slave");
+                    eprintln!("  ✓ Test is running in controlled");
                 }
-                if trimmed.contains("SLAVE_STARTING") {
+                if trimmed.contains("CONTROLLED_READY") {
                     eprintln!("  ✓ Controlled process confirmed running!");
                     break;
                 }
@@ -65,11 +65,11 @@ fn pty_controller_entry_point(
             Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {
                 std::thread::sleep(Duration::from_millis(10));
             }
-            Err(e) => panic!("Read error while waiting for slave: {e}"),
+            Err(e) => panic!("Read error while waiting for controlled: {e}"),
         }
     }
 
-    assert!(test_running_seen, "Slave test never started running (no TEST_RUNNING output)");
+    assert!(test_running_seen, "Controlled test never started running (no TEST_RUNNING output)");
 
     // Send text inputs
     let texts = vec![
@@ -144,7 +144,7 @@ fn pty_controller_entry_point(
 
 /// PTY Controlled: Read and parse UTF-8 text
 fn pty_controlled_entry_point() -> ! {
-    println!("SLAVE_STARTING");
+    println!("CONTROLLED_READY");
     std::io::stdout().flush().expect("Failed to flush");
 
     eprintln!("🔍 PTY Controlled: Setting terminal to raw mode...");

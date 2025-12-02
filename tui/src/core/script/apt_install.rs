@@ -81,11 +81,11 @@ pub async fn install_package(package_name: &str) -> miette::Result<()> {
 #[cfg(test)]
 mod tests_apt_install {
     use super::*;
-    use crate::{TTYResult, is_partially_uninteractive_terminal};
+    use crate::{TTYResult, is_output_interactive};
 
     #[tokio::test]
     async fn test_check_if_package_is_installed() {
-        if let TTYResult::IsNotInteractive = is_partially_uninteractive_terminal() {
+        if let TTYResult::IsNotInteractive = is_output_interactive() {
             return;
         }
 
@@ -96,7 +96,7 @@ mod tests_apt_install {
 
     #[tokio::test]
     async fn test_install_package() {
-        if let TTYResult::IsNotInteractive = is_partially_uninteractive_terminal() {
+        if let TTYResult::IsNotInteractive = is_output_interactive() {
             return;
         }
 

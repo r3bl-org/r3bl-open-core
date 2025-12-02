@@ -1,12 +1,22 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::protocol_conversion::convert_input_event;
-use crate::{ByteIndex, ByteOffset, InputEvent,
+use crate::{ByteIndex, ByteOffset, InputEvent, Size, height, width,
             core::ansi::vt_100_terminal_input_parser::{VT100InputEventIR,
                                                        VT100KeyCodeIR,
                                                        VT100PasteModeIR,
-                                                       try_parse_input_event}};
+                                                       try_parse_input_event},
+            tui::DEBUG_TUI_SHOW_TERMINAL_BACKEND};
 use smallvec::SmallVec;
+
+// SIGWINCH signal handling for terminal resize events (Unix-only).
+//
+// TODO(windows): Windows uses `WINDOW_BUFFER_SIZE_EVENT` via Console API instead of
+// SIGWINCH. When adding Windows support for DirectToAnsi, implement resize detection
+// using `ReadConsoleInput` which returns window buffer size change events.
+// See: https://learn.microsoft.com/en-us/windows/console/window-buffer-size-record-str
+#[cfg(unix)]
+use tokio::signal::unix::{Signal, SignalKind};
 
 /// Initial buffer capacity for efficient ANSI sequence buffering.
 ///
@@ -38,6 +48,59 @@ const PARSE_BUFFER_SIZE: usize = 4096;
 ///
 /// [`try_read_event()`]: DirectToAnsiInputDevice::try_read_event#buffer_management_algorithm
 const STDIN_READ_BUFFER_SIZE: usize = 256;
+
+/// Get terminal size using rustix (no crossterm dependency).
+///
+/// Uses real stdout file descriptor to query terminal dimensions via `tcgetwinsize`.
+/// This is the correct approach for `DirectToAnsi` backend since we want the actual
+/// terminal size, not a mocked value.
+///
+/// # Errors
+///
+/// Returns an error if the `tcgetwinsize` syscall fails (e.g., stdout is not a TTY).
+#[cfg(unix)]
+fn get_size_rustix() -> miette::Result<Size> {
+    let winsize = rustix::termios::tcgetwinsize(std::io::stdout())
+        .map_err(|e| miette::miette!("tcgetwinsize failed: {}", e))?;
+    Ok(width(winsize.ws_col) + height(winsize.ws_row))
+}
+
+/// Result of waiting for input or signal in [`wait_for_input_or_signal()`].
+#[cfg(unix)]
+enum WaitResult {
+    /// Stdin read completed with the given result.
+    Stdin(std::io::Result<usize>),
+    /// SIGWINCH signal received.
+    Signal(Option<()>),
+}
+
+/// Waits for either stdin data or SIGWINCH signal.
+///
+/// Uses `tokio::select!` to multiplex between stdin and the SIGWINCH signal receiver.
+/// Returns immediately when either event occurs.
+///
+/// # Cancel Safety
+///
+/// Both futures in the `select!` are cancel-safe:
+/// - [`tokio::io::AsyncReadExt::read`]: Cancel-safe. If cancelled before completion,
+///   no data is lost - the same data will be available on the next read.
+/// - [`tokio::signal::unix::Signal::recv`]: Cancel-safe. If cancelled, the signal
+///   is not consumed and will be delivered on the next call.
+///
+/// This means the `select!` can safely be used in a loop without losing events.
+#[cfg(unix)]
+async fn wait_for_input_or_signal(
+    stdin: &mut tokio::io::Stdin,
+    sigwinch_receiver: &mut Signal,
+    temp_buf: &mut [u8],
+) -> WaitResult {
+    use tokio::io::AsyncReadExt as _;
+
+    tokio::select! {
+        result = stdin.read(temp_buf) => WaitResult::Stdin(result),
+        result = sigwinch_receiver.recv() => WaitResult::Signal(result),
+    }
+}
 
 /// Async input device for `DirectToAnsi` backend.
 ///
@@ -172,7 +235,6 @@ const STDIN_READ_BUFFER_SIZE: usize = 256;
 ///   before `read()` sees them
 /// - **Network delay case**: Over SSH with 200ms latency, UX is already degraded; getting
 ///   ESC instead of Up Arrow is annoying but not catastrophic
-#[derive(Debug)]
 pub struct DirectToAnsiInputDevice {
     /// Tokio async stdin handle for non-blocking reading.
     stdin: tokio::io::Stdin,
@@ -190,6 +252,14 @@ pub struct DirectToAnsiInputDevice {
     /// State machine for collecting bracketed paste text.
     /// Tracks whether we're between Paste(Start) and Paste(End) markers.
     paste_state: PasteCollectionState,
+
+    /// SIGWINCH signal receiver for terminal resize events (Unix-only).
+    ///
+    /// Terminal resize is not sent through stdin as ANSI sequences - it's delivered
+    /// via the SIGWINCH signal. We use `tokio::signal::unix::Signal` to receive these
+    /// asynchronously and convert them to [`InputEvent::Resize`].
+    #[cfg(unix)]
+    sigwinch_receiver: Signal,
 }
 
 /// State machine for collecting bracketed paste text.
@@ -215,15 +285,27 @@ impl DirectToAnsiInputDevice {
     /// - `tokio::io::stdin()` handle for non-blocking reading
     /// - `PARSE_BUFFER_SIZE` `Vec<u8>` buffer (pre-allocated)
     /// - consumed counter at 0
+    /// - SIGWINCH signal receiver for terminal resize events (Unix-only)
     ///
     /// No timeout initialization needed - we use smart async lookahead instead!
+    ///
+    /// # Panics
+    ///
+    /// Panics if the SIGWINCH signal handler cannot be registered (Unix-only).
+    /// This should only happen if the signal is already registered elsewhere.
     #[must_use]
     pub fn new() -> Self {
+        #[cfg(unix)]
+        let sigwinch_receiver = tokio::signal::unix::signal(SignalKind::window_change())
+            .expect("Failed to register SIGWINCH handler");
+
         Self {
             stdin: tokio::io::stdin(),
             parse_buffer: SmallVec::new(),
             buffer_position: ByteIndex::default(),
             paste_state: PasteCollectionState::Inactive,
+            #[cfg(unix)]
+            sigwinch_receiver,
         }
     }
 
@@ -362,8 +444,6 @@ impl DirectToAnsiInputDevice {
     ///
     /// [`InputDevice`]: crate::InputDevice
     pub async fn try_read_event(&mut self) -> Option<InputEvent> {
-        use tokio::io::AsyncReadExt as _;
-
         // Allocate temp buffer ONCE before loop (performance optimization).
         // read() overwrites from index 0 each time, so no clearing between iterations.
         let mut temp_buf = [0u8; STDIN_READ_BUFFER_SIZE];
@@ -438,18 +518,105 @@ impl DirectToAnsiInputDevice {
                 }
             }
 
-            // 2. Buffer exhausted or incomplete sequence, read more from stdin.
-            // This yields until data is ready - no busy-waiting!
-            // Reuse temp_buf - read() overwrites from index 0, we only use [..n]
-            match self.stdin.read(&mut temp_buf).await {
-                Ok(0) | Err(_) => {
-                    // EOF - stdin closed or read error - treat as EOF
-                    return None;
+            // 2. Buffer exhausted or incomplete sequence - wait for input or signal.
+            // Use wait_for_input_or_signal() to handle both stdin data and SIGWINCH.
+            // This yields until either data is ready or a resize signal arrives.
+            #[cfg(unix)]
+            {
+                DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
+                    tracing::debug!(message = "direct-to-ansi: waiting for input or signal");
+                });
+
+                match wait_for_input_or_signal(
+                    &mut self.stdin,
+                    &mut self.sigwinch_receiver,
+                    &mut temp_buf,
+                )
+                .await
+                {
+                    // Branch 1: stdin data available
+                    WaitResult::Stdin(result) => {
+                        DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
+                            tracing::debug!(
+                                message = "direct-to-ansi: stdin branch selected",
+                                result = ?result
+                            );
+                        });
+                        match result {
+                            Ok(0) => {
+                                DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
+                                    tracing::debug!(message = "direct-to-ansi: stdin EOF (0 bytes)");
+                                });
+                                return None;
+                            }
+                            Err(ref e) => {
+                                DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
+                                    tracing::debug!(
+                                        message = "direct-to-ansi: stdin error",
+                                        error = ?e
+                                    );
+                                });
+                                return None;
+                            }
+                            Ok(n) => {
+                                DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
+                                    tracing::debug!(
+                                        message = "direct-to-ansi: stdin read bytes",
+                                        bytes_read = n
+                                    );
+                                });
+                                // Append new bytes to buffer
+                                self.parse_buffer.extend_from_slice(&temp_buf[..n]);
+                            }
+                        }
+                    }
+                    // Branch 2: SIGWINCH received - terminal resized
+                    WaitResult::Signal(sigwinch_result) => {
+                        DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
+                            tracing::debug!(
+                                message = "direct-to-ansi: SIGWINCH branch selected",
+                                result = ?sigwinch_result
+                            );
+                        });
+                        match sigwinch_result {
+                            Some(()) => {
+                                // Signal received successfully, query terminal size
+                                if let Ok(size) = get_size_rustix() {
+                                    DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
+                                        tracing::debug!(
+                                            message = "direct-to-ansi: returning Resize",
+                                            size = ?size
+                                        );
+                                    });
+                                    return Some(InputEvent::Resize(size));
+                                }
+                                DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
+                                    tracing::debug!(
+                                        message = "direct-to-ansi: get_size_rustix() failed, continuing"
+                                    );
+                                });
+                                // If size query failed, continue to next iteration
+                            }
+                            None => {
+                                // Signal stream closed - this is unexpected but shouldn't
+                                // cause shutdown. Just continue waiting for stdin.
+                                tracing::warn!(
+                                    message = "direct-to-ansi: SIGWINCH receiver returned None (stream closed)"
+                                );
+                                // Continue to next loop iteration - stdin will still work
+                            }
+                        }
+                    }
                 }
-                Ok(n) => {
-                    // Append new bytes to buffer
-                    self.parse_buffer.extend_from_slice(&temp_buf[..n]);
-                }
+            }
+
+            // Non-Unix: DirectToAnsi is Linux-only, this code path should never be reached.
+            #[cfg(not(unix))]
+            {
+                unreachable!(
+                    "DirectToAnsi backend is Linux-only. \
+                     This code path should never be reached on non-Unix systems."
+                );
             }
 
             // 3. Loop back to try_parse_input_event() with new data
@@ -473,6 +640,18 @@ impl DirectToAnsiInputDevice {
             self.parse_buffer.drain(..self.buffer_position.as_usize());
             self.buffer_position = ByteIndex::default();
         }
+    }
+}
+
+impl std::fmt::Debug for DirectToAnsiInputDevice {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("DirectToAnsiInputDevice")
+            .field("stdin", &"<tokio::io::Stdin>")
+            .field("parse_buffer_len", &self.parse_buffer.len())
+            .field("buffer_position", &self.buffer_position)
+            .field("paste_state", &self.paste_state)
+            .field("sigwinch_receiver", &"<Signal>")
+            .finish()
     }
 }
 
@@ -504,8 +683,8 @@ mod tests {
                                                            parse_keyboard_sequence,
                                                            parse_utf8_text}};
 
-    #[test]
-    fn test_device_creation() {
+    #[tokio::test]
+    async fn test_device_creation() {
         // Test DirectToAnsiInputDevice constructs successfully with correct initial state
         let device = DirectToAnsiInputDevice::new();
 
@@ -521,8 +700,8 @@ mod tests {
         // Constructor completes without panic - success!
     }
 
-    #[test]
-    fn test_event_parsing() {
+    #[tokio::test]
+    async fn test_event_parsing() {
         // Test event parsing from buffer - verify parsers handle different sequence types
         let mut device = DirectToAnsiInputDevice::new();
 
@@ -575,8 +754,8 @@ mod tests {
         assert_eq!(device.buffer_position.as_usize(), 3);
     }
 
-    #[test]
-    fn test_buffer_management() {
+    #[tokio::test]
+    async fn test_buffer_management() {
         // Test buffer handling: growth, consumption, and compaction at 2KB threshold
         let mut device = DirectToAnsiInputDevice::new();
 
@@ -628,8 +807,8 @@ mod tests {
         assert!(capacity_after_compact >= PARSE_BUFFER_SIZE);
     }
 
-    #[test]
-    fn test_paste_state_machine_basic() {
+    #[tokio::test]
+    async fn test_paste_state_machine_basic() {
         // Test: Basic paste collection - Start marker, text, End marker
         let mut device = DirectToAnsiInputDevice::new();
 
@@ -700,8 +879,8 @@ mod tests {
         assert!(matches!(device.paste_state, PasteCollectionState::Inactive));
     }
 
-    #[test]
-    fn test_paste_state_machine_multiline() {
+    #[tokio::test]
+    async fn test_paste_state_machine_multiline() {
         // Test: Paste with newlines
         let mut device = DirectToAnsiInputDevice::new();
 
@@ -740,8 +919,8 @@ mod tests {
         assert_eq!(text, "Line1\nLine2");
     }
 
-    #[test]
-    fn test_paste_state_machine_orphaned_end() {
+    #[tokio::test]
+    async fn test_paste_state_machine_orphaned_end() {
         // Test: Orphaned End marker (without Start) should be handled gracefully
         let mut device = DirectToAnsiInputDevice::new();
 
@@ -764,8 +943,8 @@ mod tests {
         assert!(matches!(device.paste_state, PasteCollectionState::Inactive));
     }
 
-    #[test]
-    fn test_paste_state_machine_empty_paste() {
+    #[tokio::test]
+    async fn test_paste_state_machine_empty_paste() {
         // Test: Empty paste (Start immediately followed by End)
         let mut device = DirectToAnsiInputDevice::new();
 

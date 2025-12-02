@@ -4,7 +4,7 @@ use futures_util::FutureExt;
 use miette::IntoDiagnostic;
 use tokio::sync::broadcast;
 
-use crate::{inline_string, is_fully_uninteractive_terminal, is_stdin_piped,
+use crate::{inline_string, is_headless, is_stdin_piped,
             is_stdout_piped, ok, ChannelCapacity, CommonResult, InputDevice,
             LineStateControlSignal, OutputDevice, Readline, ReadlineEvent, SharedWriter,
             StdinIsPipedResult, StdoutIsPipedResult, TTYResult,
@@ -148,7 +148,7 @@ impl ReadlineAsyncContext {
         if let StdoutIsPipedResult::StdoutIsPiped = is_stdout_piped() {
             return Ok(None);
         }
-        if let TTYResult::IsNotInteractive = is_fully_uninteractive_terminal() {
+        if let TTYResult::IsNotInteractive = is_headless() {
             return Ok(None);
         }
 

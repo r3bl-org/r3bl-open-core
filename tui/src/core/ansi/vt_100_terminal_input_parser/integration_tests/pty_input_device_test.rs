@@ -15,9 +15,9 @@ use std::{io::{BufRead, BufReader, Write},
 generate_pty_test! {
     /// PTY-based integration test for [`DirectToAnsiInputDevice`].
     ///
-    /// Test coordinator that routes to master or slave based on env var.
-    /// When `PTY_SLAVE` is set, runs slave logic and exits.
-    /// Otherwise runs the master test.
+    /// Test coordinator that routes to controller or controlled based on env var.
+    /// When `R3BL_PTY_TEST_CONTROLLED` is set, runs controlled logic and exits.
+    /// Otherwise runs the controller test.
     ///
     /// Run with: `cargo test -p r3bl_tui --lib test_pty_input_device -- --nocapture`
     ///
@@ -28,22 +28,22 @@ generate_pty_test! {
     ///
     /// ```text
     /// ┌───────────────────────────────────────────────────────────────┐
-    /// │ Actor 1: PTY Master (test coordinator)                        │
+    /// │ Actor 1: PTY Controller (test coordinator)                        │
     /// │ Synchronous code                                              │
     /// │                                                               │
-    /// │  1. Create PTY pair (master/slave file descriptors)           │
-    /// │  2. Spawn test binary with PTY_SLAVE=1 env var                │
-    /// │  3. Write ANSI sequences to PTY master (the pipe)             │
+    /// │  1. Create PTY pair (controller/controlled file descriptors)           │
+    /// │  2. Spawn test binary with R3BL_PTY_TEST_CONTROLLED=1 env var                │
+    /// │  3. Write ANSI sequences to PTY controller (the pipe)             │
     /// │  4. Read parsed events from Actor 2's stdout via PTY          │
     /// │  5. Verify parsed events match expected values                │
     /// └────────────────────────┬──────────────────────────────────────┘
-    ///                          │ spawns with slave PTY as stdin/stdout
+    ///                          │ spawns with controlled PTY as stdin/stdout
     /// ┌────────────────────────▼──────────────────────────────────────┐
-    /// │ Actor 2: PTY Slave (worker process, PTY_SLAVE=1)              │
+    /// │ Actor 2: PTY Controlled (worker process, R3BL_PTY_TEST_CONTROLLED=1)              │
     /// │ Tokio runtime and async code                                  │
     /// │                                                               │
-    /// │  1. Test function detects PTY_SLAVE env var                   │
-    /// │  2. CRITICAL: Enable raw mode on terminal (PTY slave)         │
+    /// │  1. Test function detects R3BL_PTY_TEST_CONTROLLED env var                   │
+    /// │  2. CRITICAL: Enable raw mode on terminal (controlled PTY)         │
     /// │  3. Create DirectToAnsiInputDevice (reads from stdin)         │
     /// │  4. Loop: try_read_event() → parse ANSI → write to stdout     │
     /// │  5. Exit after processing test sequences                      │
@@ -52,9 +52,9 @@ generate_pty_test! {
     ///
     /// ## Critical: Raw Mode Requirement
     ///
-    /// **Raw Mode Clarification**: In PTY architecture, the SLAVE side is what the child
+    /// **Raw Mode Clarification**: In PTY architecture, the controlled PTY side is what the child
     /// process sees as its terminal. When the child reads from stdin, it's reading from
-    /// the slave PTY. Therefore, we MUST set the SLAVE to raw mode so that:
+    /// the controlled PTY. Therefore, we MUST set the controlled PTY to raw mode so that:
     ///
     /// 1. **No Line Buffering**: Input isn't line-buffered - characters are available
     ///    immediately without waiting for Enter key
@@ -63,8 +63,8 @@ generate_pty_test! {
     /// 3. **Async Compatibility**: The async reader can get bytes as they arrive, not waiting
     ///    for newlines, enabling proper ANSI escape sequence parsing
     ///
-    /// **Master vs Slave**: The master doesn't need raw mode - it's just a bidirectional
-    /// pipe for communication. The slave is the actual "terminal" that needs proper
+    /// **Controller vs Controlled**: The controller doesn't need raw mode - it's just a bidirectional
+    /// pipe for communication. The controlled side is the actual "terminal" that needs proper
     /// settings for the child process to read ANSI sequences correctly.
     ///
     /// Without raw mode, the PTY stays in "cooked" mode where:
@@ -86,10 +86,10 @@ generate_pty_test! {
     controlled: pty_controlled_entry_point
 }
 
-/// ### Actor 1: PTY Master (test entry, env var NOT set) - Synchronous code
+/// ### Actor 1: PTY Controller (test entry, env var NOT set) - Synchronous code
 /// - Receives PTY pair and child process from macro
-/// - Writes ANSI sequences to PTY master
-/// - Reads parsed output from slave's stdout
+/// - Writes ANSI sequences to PTY controller
+/// - Reads parsed output from controlled's stdout
 /// - Verifies correctness
 #[allow(clippy::too_many_lines)]
 fn pty_controller_entry_point(
@@ -105,8 +105,8 @@ fn pty_controller_entry_point(
 
     eprintln!("🚀 PTY Controller: Starting...");
 
-    // Get writer (to send ANSI sequences to slave) and non-blocking reader (to receive
-    // parsed events from slave).
+    // Get writer (to send ANSI sequences to controlled) and non-blocking reader (to receive
+    // parsed events from controlled).
     let mut writer = pty_pair.controller().take_writer().expect("Failed to get writer");
     let reader_non_blocking = pty_pair
         .controller()
@@ -116,29 +116,29 @@ fn pty_controller_entry_point(
 
     eprintln!("📝 PTY Controller: Waiting for controlled process to start...");
 
-    // Wait for slave to confirm it's running.
+    // Wait for controlled to confirm it's running.
     let mut test_running_seen = false;
     let deadline = Deadline::default();
 
-    // Non-blocking read loop: poll for slave startup with timeout.
+    // Non-blocking read loop: poll for controlled startup with timeout.
     loop {
         assert!(
             deadline.has_time_remaining(),
-            "Timeout: slave did not start within 5 seconds"
+            "Timeout: controlled did not start within 5 seconds"
         );
 
         let mut line = String::new();
         match buf_reader_non_blocking.read_line(&mut line) {
-            Ok(0) => panic!("EOF reached before slave started"),
+            Ok(0) => panic!("EOF reached before controlled started"),
             Ok(_) => {
                 let trimmed = line.trim();
                 eprintln!("  ← Controlled output: {trimmed}");
 
                 if trimmed.contains("TEST_RUNNING") {
                     test_running_seen = true;
-                    eprintln!("  ✓ Test is running in slave");
+                    eprintln!("  ✓ Test is running in controlled");
                 }
-                if trimmed.contains("SLAVE_STARTING") {
+                if trimmed.contains("CONTROLLED_READY") {
                     eprintln!("  ✓ Controlled process confirmed running!");
                     break;
                 }
@@ -146,13 +146,13 @@ fn pty_controller_entry_point(
             Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {
                 std::thread::sleep(Duration::from_millis(10));
             }
-            Err(e) => panic!("Read error while waiting for slave: {e}"),
+            Err(e) => panic!("Read error while waiting for controlled: {e}"),
         }
     }
 
     assert!(
         test_running_seen,
-        "Slave test never started running (no TEST_RUNNING output)"
+        "Controlled test never started running (no TEST_RUNNING output)"
     );
 
     // Send sequences and verify.
@@ -193,7 +193,7 @@ fn pty_controller_entry_point(
             .expect("Failed to write sequence");
         writer.flush().expect("Failed to flush");
 
-        // Give slave time to process
+        // Give controlled time to process
         std::thread::sleep(Duration::from_millis(100));
 
         // Read responses until we get an event line (skip test harness noise)
@@ -233,7 +233,7 @@ fn pty_controller_entry_point(
     // Close writer to signal EOF.
     drop(writer);
 
-    // Wait for slave to exit.
+    // Wait for controlled to exit.
     match child.wait() {
         Ok(status) => {
             eprintln!("✅ PTY Controller: Controlled process exited: {status:?}");
@@ -246,13 +246,13 @@ fn pty_controller_entry_point(
     eprintln!("✅ PTY Controller: Test passed!");
 }
 
-/// ### Actor 2: PTY Slave (worker process)
+/// ### Actor 2: PTY Controlled (worker process)
 ///
-/// Runs in the spawned child process when `PTY_SLAVE` env var is set.
-/// This process's stdin/stdout are connected to the PTY slave file descriptor.
+/// Runs in the spawned child process when `R3BL_PTY_TEST_CONTROLLED` env var is set.
+/// This process's stdin/stdout are connected to the controlled PTY file descriptor.
 ///
 /// **Critical Steps**:
-/// 1. **Enable Raw Mode**: MUST set the PTY slave terminal to raw mode to:
+/// 1. **Enable Raw Mode**: MUST set the controlled PTY terminal to raw mode to:
 ///    - Disable line buffering (get bytes immediately)
 ///    - Prevent ANSI escape sequence interpretation
 ///    - Allow async byte-by-byte reading
@@ -262,11 +262,11 @@ fn pty_controller_entry_point(
 ///
 /// This function MUST exit before returning so other tests don't run.
 fn pty_controlled_entry_point() -> ! {
-    // Print to stdout immediately to confirm slave is running.
-    println!("SLAVE_STARTING");
+    // Print to stdout immediately to confirm controlled is running.
+    println!("CONTROLLED_READY");
     std::io::stdout().flush().expect("Failed to flush");
 
-    // CRITICAL: Set the terminal (PTY slave) to raw mode.
+    // CRITICAL: Set the terminal (controlled PTY) to raw mode.
     // Without this, DirectToAnsiInputDevice cannot read ANSI escape sequences properly
     // because they would be buffered or interpreted by the terminal layer.
     eprintln!("🔍 PTY Controlled: Setting terminal to raw mode...");

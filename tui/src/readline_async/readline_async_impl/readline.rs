@@ -984,7 +984,7 @@ mod test_readline {
                 InputDevice, LineStateControlSignal, LineStateLiveness, OutputDevice,
                 Readline, ReadlineEvent, StdMutex, broadcast, lock_output_device_as_mut,
                 readline_internal, readline_test_fixtures::get_input_vec, sleep};
-    use crate::{OutputDeviceExt, TTYResult, is_partially_uninteractive_terminal};
+    use crate::{OutputDeviceExt, TTYResult, is_output_interactive};
 
     #[tokio::test]
     #[allow(clippy::needless_return)]
@@ -994,7 +994,7 @@ mod test_readline {
 
         let prompt_str = "> ";
 
-        if let TTYResult::IsNotInteractive = is_partially_uninteractive_terminal() {
+        if let TTYResult::IsNotInteractive = is_output_interactive() {
             return;
         }
 
@@ -1046,7 +1046,7 @@ mod test_readline {
     async fn test_readline() {
         let prompt_str = "> ";
 
-        if let TTYResult::IsNotInteractive = is_partially_uninteractive_terminal() {
+        if let TTYResult::IsNotInteractive = is_output_interactive() {
             return;
         }
 
@@ -1081,7 +1081,7 @@ mod test_readline {
     async fn test_pause_resume() {
         let prompt_str = "> ";
 
-        if let TTYResult::IsNotInteractive = is_partially_uninteractive_terminal() {
+        if let TTYResult::IsNotInteractive = is_output_interactive() {
             return;
         }
 
@@ -1128,7 +1128,7 @@ mod test_readline {
     async fn test_pause_resume_with_output() {
         let prompt_str = "> ";
 
-        if let TTYResult::IsNotInteractive = is_partially_uninteractive_terminal() {
+        if let TTYResult::IsNotInteractive = is_output_interactive() {
             return;
         }
 

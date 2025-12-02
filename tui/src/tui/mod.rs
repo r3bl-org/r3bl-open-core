@@ -1,5 +1,7 @@
 // Copyright (c) 2023-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+// cspell:words undisplayable
+
 /// Enable or disable generating log output for telemetry data. This has higher precedence
 /// than [`DEBUG_TUI_MOD`]. The telemetry logs are not debug level, but info level.
 pub const DISPLAY_LOG_TELEMETRY: bool = true;

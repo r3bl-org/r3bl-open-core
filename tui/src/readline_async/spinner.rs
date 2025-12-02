@@ -3,7 +3,7 @@
 use crate::{InlineString, LineStateControlSignal, OutputDevice, SafeBool,
             SafeInlineString, SharedWriter, SpinnerStyle, StdMutex, StdoutIsPipedResult,
             TTYResult, contains_ansi_escape_sequence, get_terminal_width,
-            is_fully_uninteractive_terminal, is_stdout_piped, ok, spinner_print,
+            is_headless, is_stdout_piped, ok, spinner_print,
             spinner_render};
 use std::{sync::Arc, time::Duration};
 use tokio::{sync::broadcast, time::interval};
@@ -113,7 +113,7 @@ impl Spinner {
         if let StdoutIsPipedResult::StdoutIsPiped = is_stdout_piped() {
             return Ok(None);
         }
-        if let TTYResult::IsNotInteractive = is_fully_uninteractive_terminal() {
+        if let TTYResult::IsNotInteractive = is_headless() {
             return Ok(None);
         }
 
@@ -378,7 +378,7 @@ mod tests {
     use super::{Duration, LineStateControlSignal, SharedWriter, Spinner, SpinnerStyle,
                 TTYResult};
     use crate::{OutputDevice, OutputDeviceExt, SpinnerColor, SpinnerTemplate,
-                is_partially_uninteractive_terminal};
+                is_output_interactive};
     use smallvec::SmallVec;
 
     type ArrayVec = SmallVec<[LineStateControlSignal; FACTOR as usize]>;
@@ -389,7 +389,7 @@ mod tests {
     #[tokio::test]
     #[allow(clippy::needless_return)]
     async fn test_spinner_color() {
-        if let TTYResult::IsNotInteractive = is_partially_uninteractive_terminal() {
+        if let TTYResult::IsNotInteractive = is_output_interactive() {
             return;
         }
 
@@ -465,7 +465,7 @@ mod tests {
     #[tokio::test]
     #[allow(clippy::needless_return)]
     async fn test_spinner_no_color() {
-        if let TTYResult::IsNotInteractive = is_partially_uninteractive_terminal() {
+        if let TTYResult::IsNotInteractive = is_output_interactive() {
             return;
         }
 
@@ -541,7 +541,7 @@ mod tests {
     #[tokio::test]
     #[allow(clippy::needless_return)]
     async fn test_spinner_message_update() {
-        if let TTYResult::IsNotInteractive = is_partially_uninteractive_terminal() {
+        if let TTYResult::IsNotInteractive = is_output_interactive() {
             return;
         }
 

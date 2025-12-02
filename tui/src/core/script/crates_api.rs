@@ -45,7 +45,7 @@ pub async fn try_get_latest_release_version_from_crates_io(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{TTYResult, console_log, is_partially_uninteractive_terminal};
+    use crate::{TTYResult, console_log, is_output_interactive};
     use nom::{IResult, Parser,
               character::complete::{char, digit0},
               combinator::map_res};
@@ -70,7 +70,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_latest_version_from_crates_io() {
-        if let TTYResult::IsNotInteractive = is_partially_uninteractive_terminal() {
+        if let TTYResult::IsNotInteractive = is_output_interactive() {
             return;
         }
 

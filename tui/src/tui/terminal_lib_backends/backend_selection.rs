@@ -6,6 +6,7 @@
 //! for the current platform at compile time. It also provides unified raw mode
 //! functions that dispatch to the correct backend implementation.
 
+use crate::DEBUG_TUI_SHOW_TERMINAL_BACKEND;
 use miette::IntoDiagnostic;
 
 /// Terminal library backend selection for the TUI system.
@@ -83,12 +84,30 @@ pub const TERMINAL_LIB_BACKEND: TerminalLibBackend = TerminalLibBackend::Crosste
 /// [`terminal_raw_mode`]: crate::core::ansi::terminal_raw_mode
 /// [rustix_enable]: crate::enable_raw_mode
 pub fn raw_mode_enable() -> miette::Result<()> {
-    match TERMINAL_LIB_BACKEND {
+    DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
+        tracing::debug!(
+            message = "raw_mode_enable: 🟢 enabling raw mode",
+            backend = ?TERMINAL_LIB_BACKEND
+        );
+    });
+
+    let result = match TERMINAL_LIB_BACKEND {
         TerminalLibBackend::DirectToAnsi => crate::enable_raw_mode(),
         TerminalLibBackend::Crossterm => {
             crossterm::terminal::enable_raw_mode().into_diagnostic()
         }
-    }
+    };
+
+    match &result {
+        Ok(()) => DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
+            tracing::debug!(message = "raw_mode_enable: ✅ success");
+        }),
+        Err(e) => DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
+            tracing::error!(message = "raw_mode_enable: ❌ failed", error = %e);
+        }),
+    };
+
+    result
 }
 
 /// Disable raw mode using the appropriate backend.
@@ -107,10 +126,28 @@ pub fn raw_mode_enable() -> miette::Result<()> {
 /// [`terminal_raw_mode`]: crate::core::ansi::terminal_raw_mode
 /// [rustix_disable]: crate::disable_raw_mode
 pub fn raw_mode_disable() -> miette::Result<()> {
-    match TERMINAL_LIB_BACKEND {
+    DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
+        tracing::debug!(
+            message = "raw_mode_disable: 🔴 disabling raw mode",
+            backend = ?TERMINAL_LIB_BACKEND
+        );
+    });
+
+    let result = match TERMINAL_LIB_BACKEND {
         TerminalLibBackend::DirectToAnsi => crate::disable_raw_mode(),
         TerminalLibBackend::Crossterm => {
             crossterm::terminal::disable_raw_mode().into_diagnostic()
         }
-    }
+    };
+
+    match &result {
+        Ok(()) => DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
+            tracing::debug!(message = "raw_mode_disable: ✅ success");
+        }),
+        Err(e) => DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
+            tracing::error!(message = "raw_mode_disable: ❌ failed", error = %e);
+        }),
+    };
+
+    result
 }

@@ -4,7 +4,7 @@ use crossterm::cursor::{Hide, Show};
 
 use super::KeyPressReader;
 use crate::{execute_commands,
-            is_partially_uninteractive_terminal,
+            is_output_interactive,
             CalculateResizeHint,
             CommonResult,
             FunctionComponent,
@@ -36,7 +36,7 @@ pub async fn enter_event_loop_async<S: CalculateResizeHint>(
 ) -> CommonResult<EventLoopResult> {
     use EventLoopResult::ExitWithError;
 
-    if let TTYResult::IsNotInteractive = is_partially_uninteractive_terminal() {
+    if let TTYResult::IsNotInteractive = is_output_interactive() {
         return Ok(ExitWithError);
     }
 
@@ -77,7 +77,7 @@ pub fn enter_event_loop_sync<S: CalculateResizeHint>(
 ) -> CommonResult<EventLoopResult> {
     use EventLoopResult::ExitWithError;
 
-    if let TTYResult::IsNotInteractive = is_partially_uninteractive_terminal() {
+    if let TTYResult::IsNotInteractive = is_output_interactive() {
         return Ok(ExitWithError);
     }
 

@@ -47,3 +47,5 @@ pub mod pty_terminal_events_test;
 pub mod pty_utf8_text_test;
 #[cfg(any(test, doc))]
 pub mod pty_new_keyboard_features_test;
+#[cfg(any(test, doc))]
+pub mod pty_sigwinch_test;

@@ -63,25 +63,25 @@ fn pty_controller_entry_point(
 
     eprintln!("📝 PTY Controller: Waiting for controlled process to start...");
 
-    // Wait for slave to confirm it's running
+    // Wait for controlled to confirm it's running
     let mut test_running_seen = false;
     let deadline = Deadline::default();
 
     loop {
-        assert!(deadline.has_time_remaining(), "Timeout: slave did not start within 5 seconds");
+        assert!(deadline.has_time_remaining(), "Timeout: controlled did not start within 5 seconds");
 
         let mut line = String::new();
         match buf_reader_non_blocking.read_line(&mut line) {
-            Ok(0) => panic!("EOF reached before slave started"),
+            Ok(0) => panic!("EOF reached before controlled started"),
             Ok(_) => {
                 let trimmed = line.trim();
                 eprintln!("  ← Controlled output: {trimmed}");
 
                 if trimmed.contains("TEST_RUNNING") {
                     test_running_seen = true;
-                    eprintln!("  ✓ Test is running in slave");
+                    eprintln!("  ✓ Test is running in controlled");
                 }
-                if trimmed.contains("SLAVE_STARTING") {
+                if trimmed.contains("CONTROLLED_READY") {
                     eprintln!("  ✓ Controlled process confirmed running!");
                     break;
                 }
@@ -89,11 +89,11 @@ fn pty_controller_entry_point(
             Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {
                 std::thread::sleep(Duration::from_millis(10));
             }
-            Err(e) => panic!("Read error while waiting for slave: {e}"),
+            Err(e) => panic!("Read error while waiting for controlled: {e}"),
         }
     }
 
-    assert!(test_running_seen, "Slave test never started running (no TEST_RUNNING output)");
+    assert!(test_running_seen, "Controlled test never started running (no TEST_RUNNING output)");
 
     // Build test sequences for new keyboard features
     // Tab, BackTab, and Ctrl+Space are raw bytes/simple sequences, not CSI parameter sequences
@@ -148,7 +148,7 @@ fn pty_controller_entry_point(
             .expect("Failed to write sequence");
         writer.flush().expect("Failed to flush");
 
-        // Give slave time to process
+        // Give controlled time to process
         std::thread::sleep(Duration::from_millis(100));
 
         // Read responses until we get an event line (skip test harness noise)
@@ -188,7 +188,7 @@ fn pty_controller_entry_point(
     // Close writer to signal EOF
     drop(writer);
 
-    // Wait for slave to exit
+    // Wait for controlled to exit
     match child.wait() {
         Ok(status) => {
             eprintln!("✅ PTY Controller: Controlled process exited: {status:?}");
@@ -203,8 +203,8 @@ fn pty_controller_entry_point(
 
 /// PTY Controlled: Parse keyboard input and echo results
 fn pty_controlled_entry_point() -> ! {
-    // Print to stdout immediately to confirm slave is running
-    println!("SLAVE_STARTING");
+    // Print to stdout immediately to confirm controlled is running
+    println!("CONTROLLED_READY");
     std::io::stdout().flush().expect("Failed to flush");
 
     eprintln!("🎯 PTY Controlled: Setting terminal to raw mode...");
@@ -282,6 +282,6 @@ fn pty_controlled_entry_point() -> ! {
         eprintln!("⚠️  PTY Controlled: Failed to disable raw mode: {e}");
     }
 
-    eprintln!("🎯 Slave: Completed, exiting");
+    eprintln!("🎯 Controlled: Completed, exiting");
     std::process::exit(0);
 }

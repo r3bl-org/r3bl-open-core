@@ -823,7 +823,7 @@ mod tests {
                 RenderPipeline, SpecialKey, TTYResult, TerminalWindowMainThreadSignal,
                 TextColorizationPolicy, TuiStyle, TuiStyleAttribs, ZOrder, assert_eq2,
                 ch, col, defaults::get_default_gradient_stops, height, inline_string,
-                is_fully_uninteractive_terminal, is_partially_uninteractive_terminal,
+                is_headless, is_output_interactive,
                 key_press, main_event_loop_impl, new_style, ok, render_pipeline,
                 render_tui_styled_texts_into, send_signal, tui_color, tui_style_attrib,
                 tui_styled_text, width};
@@ -839,7 +839,7 @@ mod tests {
     async fn test_main_event_loop_impl() -> CommonResult<()> {
         // Skip this test if not running in an interactive terminal (e.g., when output is
         // redirected).
-        if let TTYResult::IsNotInteractive = is_partially_uninteractive_terminal() {
+        if let TTYResult::IsNotInteractive = is_output_interactive() {
             return ok!();
         }
 
@@ -919,7 +919,7 @@ mod tests {
 
         // This is for CI/CD environment. It does not support truecolor, and degrades to
         // ANSI 256 colors
-        if let TTYResult::IsNotInteractive = is_fully_uninteractive_terminal() {
+        if let TTYResult::IsNotInteractive = is_headless() {
             // Check pixel char at 4 x 7.
             {
                 let PixelChar::PlainText {

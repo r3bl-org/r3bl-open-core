@@ -1,6 +1,10 @@
 // Copyright (c) 2023-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{ColWidth, Size, height, width};
+// cspell:words isatty
+
+use crate::{ColWidth, Size, height,
+            tui::terminal_lib_backends::{TERMINAL_LIB_BACKEND, TerminalLibBackend},
+            width};
 use miette::IntoDiagnostic;
 use std::io::IsTerminal;
 pub const DEFAULT_WIDTH: u16 = 80;
@@ -50,7 +54,11 @@ pub enum StdoutIsPipedResult {
 /// More info: <https://unix.stackexchange.com/questions/597083/how-does-piping-affect-stdin>
 #[must_use]
 pub fn is_stdin_piped() -> StdinIsPipedResult {
-    if std::io::stdin().is_terminal() {
+    let is_tty = match TERMINAL_LIB_BACKEND {
+        TerminalLibBackend::Crossterm => std::io::stdin().is_terminal(),
+        TerminalLibBackend::DirectToAnsi => rustix::termios::isatty(std::io::stdin()),
+    };
+    if is_tty {
         StdinIsPipedResult::StdinIsNotPiped
     } else {
         StdinIsPipedResult::StdinIsPiped
@@ -61,7 +69,11 @@ pub fn is_stdin_piped() -> StdinIsPipedResult {
 /// More info: <https://unix.stackexchange.com/questions/597083/how-does-piping-affect-stdin>
 #[must_use]
 pub fn is_stdout_piped() -> StdoutIsPipedResult {
-    if std::io::stdout().is_terminal() {
+    let is_tty = match TERMINAL_LIB_BACKEND {
+        TerminalLibBackend::Crossterm => std::io::stdout().is_terminal(),
+        TerminalLibBackend::DirectToAnsi => rustix::termios::isatty(std::io::stdout()),
+    };
+    if is_tty {
         StdoutIsPipedResult::StdoutIsNotPiped
     } else {
         StdoutIsPipedResult::StdoutIsPiped
@@ -74,14 +86,20 @@ pub enum TTYResult {
     IsNotInteractive,
 }
 
-/// Returns [`TTYResult::IsInteractive`] if stdin, stdout, and stderr are *all* fully
-/// interactive.
+/// Returns [`TTYResult::IsInteractive`] if stdin is an interactive terminal (TTY).
 ///
-/// There are situations where some can be interactive and others not, such as when piping
-/// is active.
+/// This is useful for checking if the program can receive interactive input from the
+/// user. For example, a terminal multiplexer needs stdin to be a TTY to read keystrokes.
+///
+/// Note: This only checks stdin. Use [`is_headless`] to check if *all* streams (stdin,
+/// stdout, stderr) are non-interactive, or [`is_output_interactive`] to check if output
+/// streams are interactive.
 #[must_use]
-pub fn is_fully_interactive_terminal() -> TTYResult {
-    let is_tty: bool = std::io::stdin().is_terminal();
+pub fn is_stdin_interactive() -> TTYResult {
+    let is_tty = match TERMINAL_LIB_BACKEND {
+        TerminalLibBackend::Crossterm => std::io::stdin().is_terminal(),
+        TerminalLibBackend::DirectToAnsi => rustix::termios::isatty(std::io::stdin()),
+    };
     if is_tty {
         TTYResult::IsInteractive
     } else {
@@ -89,26 +107,36 @@ pub fn is_fully_interactive_terminal() -> TTYResult {
     }
 }
 
-/// Returns [`TTYResult::IsNotInteractive`] if stdin, stdout, and stderr are *all* fully
-/// uninteractive. This happens when `cargo test` runs.
+/// Returns [`TTYResult::IsNotInteractive`] if stdin, stdout, and stderr are *all*
+/// non-interactive (not TTYs). This typically happens when running under `cargo test`
+/// or in other headless/batch environments.
 ///
-/// There are situations where some can be interactive and others not, such as when piping
-/// is active.
+/// Use this to detect fully non-interactive environments where no terminal I/O is
+/// possible.
 #[must_use]
-pub fn is_fully_uninteractive_terminal() -> TTYResult {
-    // Windows-specific workaround: When running through `cargo run` on Windows,
-    // the terminal detection may incorrectly report all streams as non-terminal
-    // even when running in an interactive terminal. This is because cargo may
-    // redirect the streams. To work around this, we check if we're running
-    // under cargo and if so, assume it's interactive.
+pub fn is_headless() -> TTYResult {
+    // TODO(windows): Workaround for cargo redirecting streams on Windows.
+    // When running through `cargo run` on Windows, the terminal detection may incorrectly
+    // report all streams as non-terminal even when running in an interactive terminal.
+    // This is because cargo may redirect the streams. To work around this, we check if
+    // we're running under cargo and if so, assume it's interactive.
     #[cfg(target_os = "windows")]
     if std::env::var("CARGO").is_ok() || std::env::var("CARGO_PKG_NAME").is_ok() {
         return TTYResult::IsInteractive;
     }
 
-    let stdin_is_tty: bool = std::io::stdin().is_terminal();
-    let stdout_is_tty: bool = std::io::stdout().is_terminal();
-    let stderr_is_tty: bool = std::io::stderr().is_terminal();
+    let (stdin_is_tty, stdout_is_tty, stderr_is_tty) = match TERMINAL_LIB_BACKEND {
+        TerminalLibBackend::Crossterm => (
+            std::io::stdin().is_terminal(),
+            std::io::stdout().is_terminal(),
+            std::io::stderr().is_terminal(),
+        ),
+        TerminalLibBackend::DirectToAnsi => (
+            rustix::termios::isatty(std::io::stdin()),
+            rustix::termios::isatty(std::io::stdout()),
+            rustix::termios::isatty(std::io::stderr()),
+        ),
+    };
     if !stdin_is_tty && !stdout_is_tty && !stderr_is_tty {
         TTYResult::IsNotInteractive
     } else {
@@ -116,26 +144,31 @@ pub fn is_fully_uninteractive_terminal() -> TTYResult {
     }
 }
 
-/// Returns [`TTYResult::IsNotInteractive`] if *any* of stdout or stderr are
-/// non-interactive.
+/// Returns [`TTYResult::IsInteractive`] if both stdout and stderr are interactive TTYs.
 ///
-/// This is useful for tests that need to skip when output is redirected or piped, even if
-/// stdin is still interactive. For example, when running tests through a script that
-/// redirects output to a file: `command >file 2>&1`
+/// This is useful for checking if the program can display output to an interactive
+/// terminal. Returns [`TTYResult::IsNotInteractive`] if *either* stdout or stderr is
+/// redirected or piped.
 ///
-/// In this case:
-/// - stdin: still a TTY (interactive)
-/// - stdout: redirected to file (non-interactive)
-/// - stderr: redirected to file (non-interactive)
-///
-/// This function would return `IsNotInteractive` because output streams are not fully
-/// interactive, even though stdin is.
+/// Example scenario where this returns `IsNotInteractive`:
+/// ```bash
+/// command >file 2>&1
+/// ```
+/// Here stdin may still be a TTY, but output streams are redirected to a file.
 #[must_use]
-pub fn is_partially_uninteractive_terminal() -> TTYResult {
-    let stdout_is_tty: bool = std::io::stdout().is_terminal();
-    let stderr_is_tty: bool = std::io::stderr().is_terminal();
+pub fn is_output_interactive() -> TTYResult {
+    let (stdout_is_tty, stderr_is_tty) = match TERMINAL_LIB_BACKEND {
+        TerminalLibBackend::Crossterm => (
+            std::io::stdout().is_terminal(),
+            std::io::stderr().is_terminal(),
+        ),
+        TerminalLibBackend::DirectToAnsi => (
+            rustix::termios::isatty(std::io::stdout()),
+            rustix::termios::isatty(std::io::stderr()),
+        ),
+    };
 
-    // If either stdout or stderr is not a TTY, consider it non-interactive
+    // If either stdout or stderr is not a TTY, consider output non-interactive
     if !stdout_is_tty || !stderr_is_tty {
         TTYResult::IsNotInteractive
     } else {

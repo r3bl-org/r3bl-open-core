@@ -47,6 +47,10 @@ discover and use these when relevant. All skills are in `.claude/skills/`.
 - **analyze-performance** - Flamegraph-based performance regression detection. Use when optimizing or investigating performance.
   - Supporting file: `baseline-management.md` (when and how to update baselines)
 
+### Log Analysis
+
+- **analyze-log-files** - Strip ANSI escape sequences from log files before analysis. Use when asked to process, read, or analyze log files that may contain terminal escape codes.
+
 ## Slash Commands for Skills
 
 You can explicitly invoke skills using slash commands:
@@ -56,6 +60,7 @@ You can explicitly invoke skills using slash commands:
 - `/clippy` → run-clippy
 - `/fix-intradoc-links` → write-documentation (focused on links)
 - `/check-regression` → analyze-performance
+- `/analyze-logs` → analyze-log-files (strips ANSI codes from `log.txt`)
 - `/r3bl-task` → Task management (see below)
 
 ## Rust Code Guidelines

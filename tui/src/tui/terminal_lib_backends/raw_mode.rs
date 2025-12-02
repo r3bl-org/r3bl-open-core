@@ -80,19 +80,17 @@ use crate::{LockedOutputDevice, RenderOpOutput, RenderOpOutputVec, RenderOpsExec
 /// # Usage
 ///
 /// ```no_run
-/// # use r3bl_tui::{RawMode, Size, OutputDevice};
-/// let window_size = Size::new(80, 24);
-/// let mut output = OutputDevice::new();
-/// let locked = output.lock();
+/// # use r3bl_tui::{RawMode, OutputDevice, width, height, lock_output_device_as_mut};
+/// let window_size = width(80) + height(24);
+/// let output = OutputDevice::new_stdout();
 ///
 /// // Enter raw mode through the render pipeline.
-/// RawMode::start(window_size, locked, false);
+/// RawMode::start(window_size, lock_output_device_as_mut!(&output), false);
 ///
 /// // ... application code ...
 ///
-/// let locked = output.lock();
 /// // Exit raw mode through the render pipeline.
-/// RawMode::end(window_size, locked, false);
+/// RawMode::end(window_size, lock_output_device_as_mut!(&output), false);
 /// ```
 ///
 /// [`TERMINAL_LIB_BACKEND`]: crate::TERMINAL_LIB_BACKEND

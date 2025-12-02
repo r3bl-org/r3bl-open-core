@@ -24,6 +24,7 @@
 #     - screen, tmux            Terminal multiplexers for testing
 #     - expect                  Scripted terminal automation for benchmarks
 #     - fswatch/inotify-tools   File watcher (macOS/Linux respectively)
+#     - ansifilter              Strips ANSI escape sequences from log files
 #
 #   Optional:
 #     - Node.js & npm           For Claude Code CLI installation
@@ -181,6 +182,23 @@ install_dev_utilities() {
         echo "  RHEL/CentOS/Fedora: sudo dnf install expect"
         echo "  Arch: sudo pacman -S expect"
         echo "  openSUSE: sudo zypper install expect"
+    fi
+
+    # Install ansifilter for stripping ANSI escape sequences from log files
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        if [[ -z "$PKG_MGR" ]] && ! command -v brew &>/dev/null; then
+            echo "Warning: Homebrew not found. Skipping ansifilter installation..."
+        else
+            install_if_missing "ansifilter" "${PKG_MGR:-brew install} ansifilter"
+        fi
+    elif [[ -n "$PKG_MGR" ]]; then
+        install_if_missing "ansifilter" "$PKG_MGR ansifilter"
+    else
+        echo "Warning: No supported package manager found. Install ansifilter manually"
+        echo "  Ubuntu/Debian: sudo apt-get install ansifilter"
+        echo "  RHEL/CentOS/Fedora: sudo dnf install ansifilter"
+        echo "  Arch: sudo pacman -S ansifilter"
+        echo "  openSUSE: sudo zypper install ansifilter"
     fi
 }
 
