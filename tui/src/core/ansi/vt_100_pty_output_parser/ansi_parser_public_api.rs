@@ -1,5 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+// cspell:words Homet Min End
+
 //! Public API for ANSI/VT sequence processing.
 //!
 //! # Entry Point
@@ -35,9 +37,10 @@
 //!
 //! # ANSI Sequence Types from PTY Output
 //!
-//! There are three categories of escape sequences: **`CSI`**, **`OSC`**, and direct **`ESC`**.
-//! These are the fundamental commands a terminal uses to display and control text. They
-//! differ primarily in their structure, purpose, and the range of commands they offer.
+//! There are three categories of escape sequences: **`CSI`**, **`OSC`**, and direct
+//! **`ESC`**. These are the fundamental commands a terminal uses to display and control
+//! text. They differ primarily in their structure, purpose, and the range of commands
+//! they offer.
 //!
 //! ## 1. `CSI` Sequences (Control Sequence Introducer)
 //!
@@ -74,9 +77,9 @@
 //!
 //! Direct escape sequences are simpler, single-character commands that start with `ESC`
 //! and are followed by a single character. They predate `CSI` and `OSC` sequences and are
-//! generally used for more fundamental or legacy terminal functions. Unlike `CSI` and `OSC`,
-//! they don't have a parameter-based structure, making them less flexible but very fast
-//! to parse. Examples include:
+//! generally used for more fundamental or legacy terminal functions. Unlike `CSI` and
+//! `OSC`, they don't have a parameter-based structure, making them less flexible but very
+//! fast to parse. Examples include:
 //!
 //! * `ESC 7` saves the current cursor position and attributes.
 //! * `ESC 8` restores the cursor position and attributes.
@@ -89,17 +92,17 @@
 //!
 //! ## Evolution and Overlap Between `ESC` and `CSI`
 //!
-//! There is significant functional overlap between `ESC` and `CSI` sequences, largely due to
-//! the evolutionary history of terminal control:
+//! There is significant functional overlap between `ESC` and `CSI` sequences, largely due
+//! to the evolutionary history of terminal control:
 //!
 //! **`ESC` sequences came first**: They were the original, simple terminal control codes
 //! used in early terminals like the VT100. Each `ESC` sequence does one specific thing
 //! without parameters. For example, `ESC D` moves the cursor down exactly one line.
 //!
-//! **`CSI` sequences evolved later**: As terminals became more sophisticated, the need for
-//! parameterized control became apparent. `CSI` sequences (`ESC [`) were introduced to provide
-//! the same functionality with much greater flexibility. For example, `ESC [5B` moves the
-//! cursor down 5 lines, and `ESC [31m` sets the foreground color to red.
+//! **`CSI` sequences evolved later**: As terminals became more sophisticated, the need
+//! for parameterized control became apparent. `CSI` sequences (`ESC [`) were introduced
+//! to provide the same functionality with much greater flexibility. For example, `ESC
+//! [5B` moves the cursor down 5 lines, and `ESC [31m` sets the foreground color to red.
 //!
 //! **Why both exist**: Modern terminals support both for backward compatibility. Many
 //! operations can be performed using either approach:
@@ -610,7 +613,6 @@ mod tests {
         assert_eq!(dsr_responses.len(), 0, "no DSR responses expected");
 
         // Verify layout matches diagram.
-        // cspell:disable-next-line
         assert_plain_text_at(&ofs_buf, 0, 0, "Homet");
         assert_plain_text_at(&ofs_buf, 1, 2, "Mid");
         assert_plain_text_at(&ofs_buf, 7, 7, "End");

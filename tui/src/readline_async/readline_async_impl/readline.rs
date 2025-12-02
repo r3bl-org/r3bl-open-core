@@ -5,7 +5,7 @@ use crate::{ChannelCapacity, CommonResultWithError, History, InputDevice, InputE
             SendRawTerminal, SharedWriter, StdMutex, execute_commands_no_lock, join,
             key_press, lock_output_device_as_mut};
 use crossterm::{ExecutableCommand, QueueableCommand, cursor,
-                terminal::{self, Clear, disable_raw_mode}};
+                terminal::{self, Clear}};
 use miette::Report as ErrorReport;
 use std::{io::{self, Write},
           sync::Arc,
@@ -459,7 +459,7 @@ impl Drop for Readline {
         // We don't care about the result of this operation.
         self.safe_line_state.lock().unwrap().exit(term).ok();
         // We don't care about the result of this operation.
-        disable_raw_mode().ok();
+        crate::raw_mode_disable().ok();
     }
 }
 
@@ -507,7 +507,7 @@ impl Readline {
         } // This drops the writer lock.
 
         // Enable raw mode. Drop will disable raw mode.
-        terminal::enable_raw_mode()?;
+        crate::raw_mode_enable()?;
 
         // Line control channel - signals are send to this channel to control `LineState`.
         // A task is spawned to monitor this channel.

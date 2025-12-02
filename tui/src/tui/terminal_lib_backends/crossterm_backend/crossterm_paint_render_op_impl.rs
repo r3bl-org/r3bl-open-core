@@ -331,7 +331,9 @@ impl PaintRenderOpImplCrossterm {
             DisableMouseCapture
         );
 
-        flush_now!(locked_output_device, "ExitRawMode -> flush()");
+        if !is_mock {
+            flush_now!(locked_output_device, "ExitRawMode -> flush()");
+        }
 
         disable_raw_mode_now!(is_mock, "ExitRawMode -> disable_raw_mode()");
 
@@ -643,7 +645,7 @@ macro_rules! enable_raw_mode_now {
 #[macro_export]
 macro_rules! crossterm_op {
     (
-        $arg_is_mock:expr, // Optional mock flag.
+        $arg_is_mock:expr, // Mock flag - if true, skip the operation.
         $arg_log_msg:expr, // Log message.
         $op:expr,          // The crossterm operation to perform.
         $success_msg:expr, // Success log message.
@@ -651,30 +653,28 @@ macro_rules! crossterm_op {
     ) => {{
         use $crate::tui::DEBUG_TUI_SHOW_TERMINAL_BACKEND;
 
-        // Mock mode is handled at the OutputDevice level.
-        // This macro always executes the operation; the I/O boundary decides whether
-        // output is actually written.
-        let _ = $arg_is_mock;
-
-        match $op {
-            Ok(_) => {
-                DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
-                    // % is Display, ? is Debug.
-                    tracing::info!(
-                        message = $success_msg,
-                        details = %$arg_log_msg
-                    );
-                });
-            }
-            Err(err) => {
-                DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
-                    // % is Display, ? is Debug.
-                    tracing::error!(
-                        message = $error_msg,
-                        details = %$arg_log_msg,
-                        error = %err,
-                    );
-                });
+        // Skip the operation in mock mode (consistent with flush_now! behavior).
+        if !$arg_is_mock {
+            match $op {
+                Ok(_) => {
+                    DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
+                        // % is Display, ? is Debug.
+                        tracing::info!(
+                            message = $success_msg,
+                            details = %$arg_log_msg
+                        );
+                    });
+                }
+                Err(err) => {
+                    DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
+                        // % is Display, ? is Debug.
+                        tracing::error!(
+                            message = $error_msg,
+                            details = %$arg_log_msg,
+                            error = %err,
+                        );
+                    });
+                }
             }
         }
     }};

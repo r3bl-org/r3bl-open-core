@@ -1,5 +1,7 @@
 // Copyright (c) 2023-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+// cspell:words aaabbb
+
 use crate::md_parser::md_parser_constants::{NEW_LINE, NEWLINE_OR_NULL, NULL_CHAR};
 use nom::{IResult, Parser,
           bytes::complete::{is_not, tag, take_while},
@@ -18,7 +20,6 @@ use nom::{IResult, Parser,
 ///     take_while(is('a'))(input)  // Takes all 'a' characters
 /// }
 ///
-/// /* cspell:disable-next-line */
 /// let result = parser("aaabbb");
 /// assert_eq!(result, Ok(("bbb", "aaa")));
 /// ```

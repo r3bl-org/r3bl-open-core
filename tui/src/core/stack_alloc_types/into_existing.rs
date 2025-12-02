@@ -1,5 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+// cspell:words abcabcabc
+
 //! # Performance considerations: `write!` vs `push_str()` vs `FastStringify`
 //!
 //! When working with string formatting in Rust, it's important to understand the
@@ -140,7 +142,6 @@ mod tests_pad_fmt {
     fn test_pad_multiple() {
         let mut acc = InlineString::new();
         pad_fmt!(fmt: acc, pad_str: "abc", repeat_count: 3);
-        // cspell:disable-next-line
         assert_eq!(acc, "abcabcabc");
     }
 }

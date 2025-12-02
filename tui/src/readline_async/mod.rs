@@ -1,5 +1,7 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+// cspell:words terminalasynctry spinnertry
+
 //! # Async readline and choose modules
 //!
 //! This module provides async readline functionality, choice selection UI, and spinners
@@ -10,7 +12,6 @@
 //!
 //! # Table of contents
 //!
-//! <!-- cspell:disable -->
 //! <!-- TOC -->
 //!
 //! - [Introduction](#introduction)
@@ -32,7 +33,6 @@
 //!     Rust](#educational-references-for-linux-tty-and-async-rust)
 //!
 //! <!-- /TOC -->
-//! <!-- cspell:enable -->
 //!
 //! # Introduction
 //!

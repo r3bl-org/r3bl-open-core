@@ -1,11 +1,103 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+// cspell:words VMIN VTIME
+
+//! High-level raw mode management via the render pipeline.
+//!
+//! This module provides [`RawMode`], a struct that manages terminal raw mode through
+//! the render operation pipeline rather than calling low-level terminal APIs directly.
+//!
+//! # Backend Dispatch
+//!
+//! [`RawMode`] does **not** directly enable or disable raw mode. Instead, it creates
+//! [`RenderOpOutput::Common(EnterRawMode/ExitRawMode)`][RenderOpOutput] operations that
+//! are executed through the render pipeline (Stage 5: Backend Executor).
+//!
+//! The actual raw mode implementation is selected at compile time via
+//! [`TERMINAL_LIB_BACKEND`]:
+//! - **Linux** ([`DirectToAnsi`]): Uses rustix-based [`terminal_raw_mode`] module
+//! - **macOS/Windows** ([`Crossterm`]): Uses [`crossterm::terminal`] functions
+//!
+//! # Direct Raw Mode Access
+//!
+//! For code that needs to enable/disable raw mode directly (outside the render pipeline),
+//! use the unified [`raw_mode_enable()`] and [`raw_mode_disable()`] functions instead.
+//! These functions also dispatch based on [`TERMINAL_LIB_BACKEND`] and are used by
+//! readline and other components that manage their own terminal state.
+//!
+//! [`DirectToAnsi`]: crate::TerminalLibBackend::DirectToAnsi
+//! [`Crossterm`]: crate::TerminalLibBackend::Crossterm
+//! [`terminal_raw_mode`]: crate::core::ansi::terminal_raw_mode
+//! [`TERMINAL_LIB_BACKEND`]: crate::TERMINAL_LIB_BACKEND
+//! [`raw_mode_enable()`]: crate::raw_mode_enable
+//! [`raw_mode_disable()`]: crate::raw_mode_disable
+//!
+//! # Architecture Context
+//!
+//! This module is part of a 3-layer raw mode architecture:
+//!
+//! ```text
+//! ┌─────────────────────────────────────────────────────────────┐
+//! │  terminal_lib_backends/raw_mode.rs (This module - High)  ◄──│
+//! │  └─ RawMode struct for render pipeline integration          │
+//! ├─────────────────────────────────────────────────────────────┤
+//! │  terminal_raw_mode/ (Mid-level)                             │
+//! │  └─ enable_raw_mode(), disable_raw_mode(), RawModeGuard     │
+//! ├─────────────────────────────────────────────────────────────┤
+//! │  constants/raw_mode.rs (Low-level)                          │
+//! │  └─ VMIN_RAW_MODE, VTIME_RAW_MODE                           │
+//! └─────────────────────────────────────────────────────────────┘
+//! ```
+//!
+//! **You are here**: The render pipeline layer. This module does **not**
+//! directly call terminal APIs—it creates [`RenderOpOutput`] operations
+//! executed by the backend.
+//!
+//! **See also**:
+//! - [`terminal_raw_mode`] - Direct raw mode control (for code outside the pipeline)
+//! - [`VMIN_RAW_MODE`][vmin] / [`VTIME_RAW_MODE`][vtime] - POSIX termios constants
+//!
+//! [vmin]: crate::VMIN_RAW_MODE
+//! [vtime]: crate::VTIME_RAW_MODE
+
 use super::RenderOpCommon;
 use crate::{LockedOutputDevice, RenderOpOutput, RenderOpOutputVec, RenderOpsExec, Size};
 
-/// To use this directly, you need to make sure to create an instance using
-/// [start](RawMode::start) which enables raw mode and then make sure to call
-/// [end](RawMode::end) when you are done.
+/// High-level raw mode manager for the TUI framework.
+///
+/// This struct manages terminal raw mode transitions through the render operation
+/// pipeline, ensuring proper integration with the 6-stage rendering architecture.
+///
+/// # Important
+///
+/// **This struct does not directly call terminal raw mode APIs.** It creates
+/// [`RenderOpOutput`] operations that are executed by the backend (Crossterm or
+/// `DirectToAnsi`) based on [`TERMINAL_LIB_BACKEND`].
+///
+/// For direct raw mode control outside the render pipeline, use [`raw_mode_enable()`]
+/// and [`raw_mode_disable()`] instead.
+///
+/// # Usage
+///
+/// ```no_run
+/// # use r3bl_tui::{RawMode, Size, OutputDevice};
+/// let window_size = Size::new(80, 24);
+/// let mut output = OutputDevice::new();
+/// let locked = output.lock();
+///
+/// // Enter raw mode through the render pipeline.
+/// RawMode::start(window_size, locked, false);
+///
+/// // ... application code ...
+///
+/// let locked = output.lock();
+/// // Exit raw mode through the render pipeline.
+/// RawMode::end(window_size, locked, false);
+/// ```
+///
+/// [`TERMINAL_LIB_BACKEND`]: crate::TERMINAL_LIB_BACKEND
+/// [`raw_mode_enable()`]: crate::raw_mode_enable
+/// [`raw_mode_disable()`]: crate::raw_mode_disable
 #[derive(Debug, Clone)]
 pub struct RawMode;
 

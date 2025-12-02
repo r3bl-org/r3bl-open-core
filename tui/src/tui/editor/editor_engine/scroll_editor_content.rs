@@ -1,5 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+// cspell:words Ohello
+
 //! For more information on scrolling, take a look at the
 //! [`super::scroll_editor_content::inc_caret_col_by`] docs. The functions in this module
 //! need information from both [`EditorBuffer`] and [`super::EditorEngine`] in order to
@@ -40,14 +42,12 @@ use std::cmp::Ordering;
 /// then the following will be displayed (the caret is at the end of the line on top
 /// of the "o"). You can see this in action in the test
 /// `test_editor_ops::editor_move_caret_home_end_overflow_viewport()`.
-// cspell:disable
 /// ```text
 /// R ┌──────────┐
 /// 0 ▸ELLOhello░│
 ///   └─────────▴┘
 ///   C0123456789
 /// ```
-// cspell:enable
 ///
 /// And scroll offset will be adjusted to show the end of the line. So the numbers will be
 /// as follows:

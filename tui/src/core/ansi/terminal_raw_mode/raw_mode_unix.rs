@@ -1,6 +1,52 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Unix/Linux/macOS implementation of raw mode using rustix's safe termios API.
+// cspell:words isatty ECHONL VMIN VTIME iflag cflag oflag icflag lflag
+
+//! Unix/Linux/macOS implementation of raw mode using [`rustix`]'s safe [`termios`] API.
+//!
+//! For background on raw mode vs cooked mode, TTY history, line disciplines, and `stty`,
+//! see the [parent module's raw vs cooked section].
+//!
+//! # The termios Interface
+//!
+//! [termios] is the POSIX standard API for controlling terminal I/O behavior.
+//! It defines a [`Termios`] struct containing flags that control:
+//!
+//! - **Input modes** (`c_iflag`): How input bytes are processed
+//! - **Output modes** (`c_oflag`): How output bytes are processed
+//! - **Control modes** (`c_cflag`): Hardware control (baud rate, parity)
+//! - **Local modes** (`c_lflag`): Canonical mode, echo, signals
+//! - **Special characters** (`c_cc`): `VMIN`, `VTIME`, and control characters
+//!
+//! The key functions are:
+//! - `tcgetattr()`: Get current terminal attributes
+//! - `tcsetattr()`: Set terminal attributes
+//! - `cfmakeraw()`: Configure for raw mode (what [`Termios::make_raw()`] does)
+//!
+//! # Why rustix?
+//!
+//! This module uses [`rustix`] instead of raw libc bindings because:
+//!
+//! 1. **Type safety**: Strong typing prevents mixing up file descriptors
+//! 2. **Memory safety**: No raw pointers or manual memory management
+//! 3. **Ergonomics**: Methods like [`Termios::make_raw()`] encapsulate complex flag
+//!    manipulation
+//! 4. **Correctness**: Handles platform differences (Linux vs macOS vs BSD)
+//!
+//! # See Also
+//!
+//! - [Parent module documentation] for conceptual overview
+//! - [`enable_raw_mode()`] and [`disable_raw_mode()`] for the public API
+//!
+//! [termios]: https://man7.org/linux/man-pages/man3/termios.3.html
+//! [Parent module documentation]: mod@crate::core::ansi::terminal_raw_mode
+//! [parent module's raw vs cooked section]: mod@crate::core::ansi::terminal_raw_mode#raw-mode-vs-cooked-mode
+//! [`rustix`]: https://docs.rs/rustix
+//! [`termios`]: rustix::termios
+//! [`Termios`]: rustix::termios::Termios
+//! [`Termios::make_raw()`]: rustix::termios::Termios::make_raw
+//! [`enable_raw_mode()`]: crate::enable_raw_mode
+//! [`disable_raw_mode()`]: crate::disable_raw_mode
 
 use miette::miette;
 use rustix::{fd::{AsFd, BorrowedFd},
@@ -58,7 +104,7 @@ fn get_terminal_fd() -> io::Result<TerminalFd> {
 /// 1. Get the controlling terminal (stdin if it's a tty, otherwise `/dev/tty`)
 /// 2. Save the original terminal settings for restoration
 /// 3. Disable canonical mode, echo, and signal generation
-/// 4. Set VMIN=1, VTIME=0 for immediate byte-by-byte reading
+/// 4. Set `VMIN=1`, `VTIME=0` for immediate byte-by-byte reading
 ///
 /// Follows crossterm's approach: checks if stdin is a tty and uses it if so;
 /// otherwise opens `/dev/tty`. This handles cases where stdin is redirected

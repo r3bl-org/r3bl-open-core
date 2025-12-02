@@ -31,12 +31,12 @@
     "vadimcn.vscode-lldb", // LLDB. Debugger.
     "ms-vscode.cpptools", // C/C++. Debugger.
     "github.copilot", // Github Copilot.
-    "s-nlf-fh.glassit", // GlassIt.
     "antfu.icons-carbon", // Carbon Icons "product icon" theme for VSCode panels and UI decorations
     "pkief.material-icon-theme", // Material "file icon" theme for file extension, folder, symbol, etc icons
   ],
   // List of extensions that should not be recommended for users of this workspace.
   "unwantedRecommendations": [
+    "s-nlf-fh.glassit", // GlassIt (does not work w/ Wayland, only X11).
     "ms-vscode-remote.remote-containers", // Remote - Containers.
     "github.vscode-pull-request-github", // Github Pull Requests and Issues.
     "esbenp.prettier-vscode", // [SLOW] Prettier -> very slow for large docs.

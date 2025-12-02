@@ -1,5 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+// cspell:words Hllo
+
 //! Segment construction operations for [`ZeroCopyGapBuffer`].
 //!
 //! This module provides centralized segment rebuilding functionality that maintains
@@ -390,7 +392,6 @@ mod tests {
 
         // Segments should be rebuilt automatically by delete, but let's verify.
         let line_info = buffer.get_line_info(0).unwrap();
-        /* cspell:disable-next-line */
         assert_eq!(line_info.grapheme_segments.len(), 4); // "Hllo" (after deleting 'e')
         assert_eq!(line_info.grapheme_count, len(4));
         assert_eq!(line_info.display_width, width(4));

@@ -1,5 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+// cspell:words Bemer finalchar ctrlletter
+
 //! Keyboard input event parsing from ANSI/CSI sequences.
 //!
 //! This module handles conversion of raw ANSI escape sequences into keyboard events.
@@ -56,8 +58,6 @@
 //! minimized bytes sent over slow serial lines (a 1970s constraint that became a lasting
 //! design principle) and keeps parsing simple.
 //!
-//! <!-- cspell:disable -->
-//!
 //! ### [ASCII] (1963)
 //!
 //! Uses only 7 bits (0-127). The 8th bit was used for [parity checking] during
@@ -78,8 +78,6 @@
 //! Created by [Ken Thompson] and [Rob Pike] at Bell Labs. UTF-8 repurposed the high
 //! bits as structural markers for multi-byte sequences (not parity), while remaining
 //! backwards-compatible with ASCII and ANSI escape codes.
-//!
-//! <!-- cspell:enable -->
 //!
 //! ### Timeline
 //!
@@ -237,8 +235,6 @@
 //! - ✅ Alt+printable-character (Alt+B, Alt+F, Alt+3, Alt+.)
 //! - Simple 2-byte sequences: `ESC char`
 //!
-//! <!-- cspell:disable -->
-//!
 //! **CSI sequences** (this module's `parse_keyboard_sequence()`):
 //! - ✅ Special keys with modifiers (Ctrl+Up, Shift+F5)
 //! - ✅ Complex modifier combinations (Ctrl+Alt+Up)
@@ -268,8 +264,6 @@
 //! When buffer starts with `ESC O`:
 //! - **`parse_ss3_sequence()`** - Application mode keys (F1-F4, Home, End, arrows)
 //!   - Examples: `ESC OP` (F1), `ESC OA` (Up in app mode)
-//!
-//! <!-- cspell:enable -->
 //!
 //! ### `ESC` + Unknown Byte
 //!
@@ -418,12 +412,8 @@
 //!
 //! ### Numpad Application Mode (SS3 Sequences)
 //!
-//! <!-- cspell:disable -->
-//!
 //! In application mode (DECPAM), numpad keys send SS3 sequences instead of their literal
 //! digits. This allows applications to distinguish numpad from regular number keys.
-//!
-//! <!-- cspell:enable -->
 //!
 //! | Numpad Key   | Normal Mode   | Application Mode   | SS3 Char   |
 //! | ------------ | ------------- | ------------------ | ---------- |
@@ -458,8 +448,6 @@
 //! - Different terminals use different codes (xterm vs linux console vs rxvt)
 //! - Minimal real-world usage in applications
 //!
-//! <!-- cspell:disable -->
-//!
 //! [`VT100InputEventIR`]: super::VT100InputEventIR
 //! [`VT100KeyCodeIR`]: super::VT100KeyCodeIR
 //! [`VT100KeyModifiersIR`]: super::VT100KeyModifiersIR
@@ -479,8 +467,6 @@
 //! [UTF-8]: https://en.wikipedia.org/wiki/UTF-8
 //! [Ken Thompson]: https://en.wikipedia.org/wiki/Ken_Thompson
 //! [Rob Pike]: https://en.wikipedia.org/wiki/Rob_Pike
-//!
-//! <!-- cspell:enable -->
 
 use super::ir_event_types::{VT100InputEventIR, VT100KeyCodeIR, VT100KeyModifiersIR};
 use crate::{ASCII_DEL, ByteOffset, KeyState, byte_offset,

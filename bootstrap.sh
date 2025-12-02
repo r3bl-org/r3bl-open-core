@@ -1,5 +1,46 @@
 #!/usr/bin/env bash
-# bootstrap.sh - Initial OS-level setup for r3bl-open-core development for Linux and macOS
+
+# cspell:words noconfirm
+
+# bootstrap.sh - Initial OS-level setup for r3bl-open-core development
+#
+# PURPOSE:
+#   Sets up a fresh machine for r3bl-open-core development. This script handles
+#   OS-level dependencies (system packages, Rust toolchain) and then delegates
+#   Rust-specific tooling to run.fish.
+#
+# USAGE:
+#   ./bootstrap.sh              # Run from repository root
+#
+# WHAT IT INSTALLS:
+#   Core:
+#     - rustup/cargo            Rust toolchain manager
+#     - clang                   Required by Wild linker for faster linking
+#
+#   Shell & Development:
+#     - fish                    Shell used by run.fish build scripts
+#     - fzf                     Fuzzy finder (used by run.fish commands)
+#     - htop                    Used in PTY integration tests
+#     - screen, tmux            Terminal multiplexers for testing
+#     - expect                  Scripted terminal automation for benchmarks
+#     - fswatch/inotify-tools   File watcher (macOS/Linux respectively)
+#
+#   Optional:
+#     - Node.js & npm           For Claude Code CLI installation
+#     - Claude Code             AI coding assistant with MCP server config
+#
+# SUPPORTED PLATFORMS:
+#   - macOS (via Homebrew)
+#   - Linux: apt (Debian/Ubuntu), dnf (Fedora/RHEL), pacman (Arch),
+#            zypper (openSUSE), apk (Alpine)
+#
+# POST-BOOTSTRAP:
+#   After this script completes, use 'fish run.fish <command>' for development.
+#   See 'fish run.fish help' for available commands.
+#
+# SEE ALSO:
+#   - run.fish: Rust-specific development commands (build, test, lint, etc.)
+#   - CLAUDE.md: Project conventions and Claude Code instructions
 
 # Install tool if missing
 install_if_missing() {
@@ -7,7 +48,6 @@ install_if_missing() {
 }
 
 # Detect package manager
-# cspell:disable
 detect_pkg_mgr() {
     [[ "$OSTYPE" == "darwin"* ]] && echo "brew install" && return
     command -v apt-get &>/dev/null && echo "sudo apt-get update && sudo apt-get install -y" && return
@@ -16,7 +56,6 @@ detect_pkg_mgr() {
     command -v zypper &>/dev/null && echo "sudo zypper install -y" && return
     command -v apk &>/dev/null && echo "sudo apk add" && return
 }
-# cspell:enable
 
 # Install Rust toolchain
 install_rustup() {
@@ -24,12 +63,10 @@ install_rustup() {
     if [[ -f "$HOME/.cargo/bin/rustup" ]] || [[ -d "$HOME/.rustup" ]] || command -v rustup &>/dev/null; then
         echo "✓ rustup already installed"
     else
-        # cspell:disable
         echo "Installing rustup..."
         curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
         # Source cargo env if the file exists
         [[ -f "$HOME/.cargo/env" ]] && source "$HOME/.cargo/env"
-        # cspell:enable
     fi
 }
 
@@ -73,7 +110,6 @@ install_shell_tools() {
 
 # Install file watcher
 install_file_watcher() {
-    # cspell:disable
     if [[ "$OSTYPE" == "darwin"* ]]; then
         if [[ -z "$PKG_MGR" ]] && ! command -v brew &>/dev/null; then
             echo "Warning: Homebrew not found. Install it from https://brew.sh/ then re-run this script"
@@ -90,7 +126,6 @@ install_file_watcher() {
         echo "  Arch: sudo pacman -S inotify-tools"
         echo "  openSUSE: sudo zypper install inotify-tools"
     fi
-    # cspell:enable
 }
 
 # Install development utilities

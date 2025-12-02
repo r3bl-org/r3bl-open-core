@@ -1,5 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+// cspell:words iflag cflag lflag
+
 //! Terminal raw mode implementation for ANSI terminals.
 //!
 //! This module provides functionality to enable and disable raw mode on terminals,
@@ -10,7 +12,7 @@
 //!
 //! **Cooked Mode** (the default when a terminal is opened):
 //! - Input is line-buffered (waits for Enter key)
-//! - Special characters are interpreted (Ctrl+C, Ctrl+D, etc.)
+//! - Special characters are interpreted (`Ctrl+C`, `Ctrl+D`, etc.)
 //! - ANSI escape sequences may be processed by the terminal
 //! - Echoing is enabled (typed characters appear on screen)
 //!
@@ -24,7 +26,7 @@
 //!
 //! ### Historical Context
 //!
-//! The term "TTY" comes from "teletypewriter" — physical terminals from the 1960s-70s
+//! The term `TTY` comes from "teletypewriter" — physical terminals from the 1960s-70s
 //! that communicated with mainframes over serial lines. Modern terminal emulators (like
 //! [Terminator], [GNOME Terminal], [WezTerm], [iTerm2], or [Alacritty]) still use this
 //! abstraction: they create a **pseudo-terminal ([PTY])** that behaves like those old
@@ -36,7 +38,7 @@
 //! discipline** — a kernel-level layer that:
 //!
 //! - **Buffers input** line-by-line (so you can edit before pressing Enter)
-//! - **Interprets special characters** (Ctrl+C sends SIGINT, Ctrl+D sends EOF)
+//! - **Interprets special characters** (Ctrl+C sends `SIGINT`, Ctrl+D sends `EOF`)
 //! - **Echoes characters** back to the screen as you type
 //! - **Processes editing keys** (backspace, arrow keys for line editing)
 //!
@@ -53,11 +55,11 @@
 //! mode** and let a user-space library (like [GNU Readline]) handle input
 //! instead:
 //!
-//! | Aspect       | Kernel Line Discipline (`N_TTY`)  | User-Space Library ([GNU Readline])    |
-//! | ------------ | --------------------------------- | -------------------------------------- |
+//! | Aspect       | Kernel Line Discipline (`N_TTY`)  | User-Space Library ([GNU Readline])      |
+//! | ------------ | --------------------------------- | ---------------------------------------- |
 //! | **Location** | Inside the Linux kernel           | Part of the shell ([Bash], Python, etc.) |
-//! | **Active**   | Canonical ("Cooked") Mode         | Non-Canonical ("Raw") Mode             |
-//! | **Purpose**  | Basic, ancient terminal functions | Advanced, feature-rich line editing    |
+//! | **Active**   | Canonical ("Cooked") Mode         | Non-Canonical ("Raw") Mode               |
+//! | **Purpose**  | Basic, ancient terminal functions | Advanced, feature-rich line editing      |
 //!
 //! **Kernel-handled keybindings** (when in canonical mode):
 //! - `Ctrl+C` — Generates `SIGINT` (interrupt signal)
@@ -108,7 +110,7 @@
 //! When your application enables raw mode, it becomes responsible for **all**
 //! keybinding handling. The kernel no longer processes `Ctrl+U` or even
 //! `Ctrl+C` (unless you explicitly leave signal handling enabled via the
-//! `isig` termios flag). This is why TUI frameworks typically include their
+//! `isig` [termios] flag). This is why TUI frameworks typically include their
 //! own line-editing functionality — just like Fish and Nushell do.
 //!
 //! ### The `stty` Command
@@ -166,19 +168,21 @@
 //! # See what bytes a keypress generates:
 //! stty raw -echo; cat -v; stty cooked echo
 //! # Press keys, then Ctrl+C to exit
-//! # Left arrow shows: ^[[D (ESC [ D)
+//! # Left arrow shows: `^[[D` (ESC [ D)
 //! ```
 //!
 //! ### Connection to This Module
 //!
-//! The [`enable_raw_mode`] and [`disable_raw_mode`] functions use the same
-//! underlying mechanism as `stty` — the POSIX **termios** API. On Unix systems,
-//! this module calls `tcgetattr()` and `tcsetattr()` (via the rustix crate) to
-//! manipulate the same terminal flags that `stty` controls.
+//! The [`enable_raw_mode`] and [`disable_raw_mode`] functions use the same underlying
+//! mechanism as `stty` — the POSIX [termios] API. On Unix systems, this module calls
+//! `tcgetattr()` and `tcsetattr()` (via the [rustix] crate) to manipulate the same
+//! terminal flags that `stty` controls. For details on the [termios] struct fields
+//! (`c_iflag`, `c_lflag`, etc.) and why we use [rustix], see our [Unix implementation's
+//! termios section].
 //!
-//! Understanding `stty` helps when debugging terminal behavior — if something
-//! isn't working, you can use `stty -a` to inspect the current terminal state
-//! and verify that raw mode is properly enabled or disabled.
+//! Understanding `stty` helps when debugging terminal behavior — if something isn't
+//! working, you can use `stty -a` to inspect the current terminal state and verify that
+//! raw mode is properly enabled or disabled.
 //!
 //! ### See Also
 //!
@@ -219,18 +223,20 @@
 //! ```
 //!
 //! [Alacritty]: https://alacritty.org/
+//! [Bash]: https://www.gnu.org/software/bash/
 //! [Fish]: https://fishshell.com/docs/current/interactive.html
 //! [GNOME Terminal]: https://help.gnome.org/users/gnome-terminal/stable/
 //! [GNU Readline]: https://tiswww.case.edu/php/chet/readline/rltop.html
 //! [Nushell]: https://www.nushell.sh/
 //! [PTY]: crate::pty
 //! [Reedline]: https://github.com/nushell/reedline
-//! [rustix]: https://docs.rs/rustix
 //! [Terminator]: https://gnome-terminator.org/
+//! [Unix implementation's termios section]: mod@crate::core::ansi::terminal_raw_mode::raw_mode_unix#the-termios-interface
 //! [WezTerm]: https://wezfurlong.org/wezterm/
-//! [iTerm2]: https://iterm2.com/
 //! [`portable_pty` crate]: https://docs.rs/portable-pty
-//! [Bash]: https://www.gnu.org/software/bash/
+//! [iTerm2]: https://iterm2.com/
+//! [rustix]: https://docs.rs/rustix
+//! [termios]: https://man7.org/linux/man-pages/man3/termios.3.html
 
 // Private modules (hide internal structure).
 mod raw_mode_core;

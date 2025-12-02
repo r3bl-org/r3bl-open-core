@@ -1,5 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+// cspell:words fullwidth multibyte
+
 //! UTF-8 text parsing between ANSI sequences.
 //!
 //! This module handles conversion of raw UTF-8 bytes (received as regular text input

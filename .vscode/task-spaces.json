@@ -34,19 +34,7 @@
           "isPinned": false
         },
         {
-          "path": "tui/src/core/ansi/vt_100_terminal_input_parser/keyboard.rs",
-          "isPinned": false
-        },
-        {
-          "path": "tui/src/core/ansi/terminal_raw_mode/raw_mode_unix.rs",
-          "isPinned": false
-        },
-        {
           "path": "tui/src/core/ansi/terminal_raw_mode/raw_mode_core.rs",
-          "isPinned": false
-        },
-        {
-          "path": "tui/src/core/ansi/terminal_raw_mode/mod.rs",
           "isPinned": false
         },
         {
@@ -54,7 +42,31 @@
           "isPinned": false
         },
         {
+          "path": "tui/src/core/ansi/terminal_raw_mode/raw_mode_unix.rs",
+          "isPinned": false
+        },
+        {
+          "path": "tui/src/core/ansi/terminal_raw_mode/mod.rs",
+          "isPinned": false
+        },
+        {
+          "path": "tui/src/tui/terminal_lib_backends/backend_selection.rs",
+          "isPinned": false
+        },
+        {
+          "path": "tui/src/core/ansi/vt_100_terminal_input_parser/keyboard.rs",
+          "isPinned": false
+        },
+        {
+          "path": "tui/src/core/ansi/constants/raw_mode.rs",
+          "isPinned": false
+        },
+        {
           "path": "tui/src/core/ansi/constants/mouse.rs",
+          "isPinned": false
+        },
+        {
+          "path": ".claude/skills/organize-modules/examples.md",
           "isPinned": false
         },
         {
@@ -68,16 +80,12 @@
         {
           "path": "tui/src/core/ansi/vt_100_terminal_input_parser/terminal_events.rs",
           "isPinned": false
-        },
-        {
-          "path": "tui/src/core/ansi/vt_100_terminal_input_parser/utf8.rs",
-          "isPinned": false
         }
       ],
       "taskFile": "task/task_refactor_input_device.md",
       "createdAt": 1763496885607,
       "lastAccessed": 1763666457216,
-      "activeTab": "tui/src/core/ansi/terminal_raw_mode/mod.rs"
+      "activeTab": "tui/src/core/ansi/terminal_raw_mode/raw_mode_core.rs"
     },
     {
       "name": "[1.1] task_readline_async_add_shortcuts",

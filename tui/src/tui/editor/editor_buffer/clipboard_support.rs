@@ -1,5 +1,7 @@
 // Copyright (c) 2023-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+// cspell:words npqr
+
 use crate::{DEBUG_TUI_COPY_PASTE, EditorBuffer, InlineVecStr};
 use std::error::Error;
 
@@ -117,7 +119,6 @@ mod tests {
             );
 
             let content = test_clipboard.content;
-            /* cspell:disable-next-line */
             assert_eq2!(content, "abc r3bl xyz\npqr rust uvw".to_string());
         }
     }
@@ -267,7 +268,6 @@ mod tests {
             );
 
             let content = test_clipboard.content;
-            /* cspell:disable-next-line */
             assert_eq2!(content, "r3bl xyz\npqr ".to_string()); // copied to clipboard
             let new_lines = vec!["abc ", "rust uvw"];
             assert_eq2!(

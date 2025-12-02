@@ -1,9 +1,38 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+// cSpell:words VMIN VTIME deciseconds Interbyte
+
 //! Raw mode terminal configuration constants.
 //!
 //! This module contains constants specific to raw mode terminal configuration,
 //! particularly for POSIX termios special codes (VMIN and VTIME).
+//!
+//! # Architecture Context
+//!
+//! This module is part of a 3-layer raw mode architecture:
+//!
+//! ```text
+//! ┌─────────────────────────────────────────────────────────────┐
+//! │  terminal_lib_backends/raw_mode.rs (High-level)             │
+//! │  └─ RawMode struct for render pipeline integration          │
+//! ├─────────────────────────────────────────────────────────────┤
+//! │  terminal_raw_mode/ (Mid-level)                             │
+//! │  └─ enable_raw_mode(), disable_raw_mode(), RawModeGuard     │
+//! ├─────────────────────────────────────────────────────────────┤
+//! │  constants/raw_mode.rs (This module - Low-level)    ◄───────│
+//! │  └─ VMIN_RAW_MODE, VTIME_RAW_MODE                           │
+//! └─────────────────────────────────────────────────────────────┘
+//! ```
+//!
+//! **You are here**: The constants layer, defining POSIX termios special codes
+//! used by [`terminal_raw_mode`] when configuring the terminal.
+//!
+//! **See also**:
+//! - [`terminal_raw_mode`] - Core enable/disable functions and RAII guard
+//! - [`RawMode`] - High-level render pipeline integration
+//!
+//! [`terminal_raw_mode`]: crate::core::ansi::terminal_raw_mode
+//! [`RawMode`]: crate::tui::terminal_lib_backends::raw_mode::RawMode
 //!
 //! # Raw Mode Configuration
 //!

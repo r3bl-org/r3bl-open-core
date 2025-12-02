@@ -1,11 +1,41 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+// cspell:words VMIN VTIME
+
 //! Core raw mode functionality and RAII guard.
 //!
 //! This module provides:
 //! - Platform-agnostic public API functions that dispatch to platform-specific
 //!   implementations
 //! - The `RawModeGuard` RAII wrapper for automatic resource cleanup
+//!
+//! # Architecture Context
+//!
+//! This module is part of a 3-layer raw mode architecture:
+//!
+//! ```text
+//! ┌─────────────────────────────────────────────────────────────┐
+//! │  terminal_lib_backends/raw_mode.rs (High-level)             │
+//! │  └─ RawMode struct for render pipeline integration          │
+//! ├─────────────────────────────────────────────────────────────┤
+//! │  terminal_raw_mode/ (This module - Mid-level)       ◄───────│
+//! │  └─ enable_raw_mode(), disable_raw_mode(), RawModeGuard     │
+//! ├─────────────────────────────────────────────────────────────┤
+//! │  constants/raw_mode.rs (Low-level)                          │
+//! │  └─ VMIN_RAW_MODE, VTIME_RAW_MODE                           │
+//! └─────────────────────────────────────────────────────────────┘
+//! ```
+//!
+//! **You are here**: The core implementation layer, providing the public API
+//! for direct raw mode control and the [`RawModeGuard`] RAII wrapper.
+//!
+//! **See also**:
+//! - [`VMIN_RAW_MODE`][vmin] / [`VTIME_RAW_MODE`][vtime] - POSIX termios constants
+//! - [`RawMode`] - High-level render pipeline integration
+//!
+//! [vmin]: crate::VMIN_RAW_MODE
+//! [vtime]: crate::VTIME_RAW_MODE
+//! [`RawMode`]: crate::tui::terminal_lib_backends::raw_mode::RawMode
 
 // Import platform-specific implementations
 #[cfg(unix)]

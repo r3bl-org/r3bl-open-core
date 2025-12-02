@@ -3,6 +3,8 @@ use crate::{GCStringOwned, u16};
 use sha2::{Digest, Sha256};
 use std::collections::{HashMap, hash_map::Entry};
 
+// cspell:words mfoo
+
 /// Enum representing different methods for calculating the length of a string. The
 /// [`Self::calculate`] function memoizes the length of the string for the
 /// [`StringLength::StripAnsi`] variant to speed up computations.
@@ -17,7 +19,6 @@ use std::collections::{HashMap, hash_map::Entry};
 /// ```
 /// use std::collections::HashMap;
 /// use r3bl_tui::StringLength;
-/* cspell:disable-next-line */
 /// let input = "\u{1b}[31mfoo\u{1b}[0m";
 /// let mut memoized_len_map = HashMap::new();
 ///
@@ -47,7 +48,6 @@ impl StringLength {
     /// |---------------------------|--------|---------|
     /// | [`StringLength::Unicode`]   | No     | None    |
     /// | [`StringLength::StripAnsi`] | Yes    | 70x     |
-    /* cspell:disable-next-line */
     /// Eg: For input: `"\u{1b}[31mfoo\u{1b}[0m";` on a 13th Gen Intel® Core™ i5-13600K
     /// machine with 64GB of RAM running Ubuntu 24.04, the execution times are:
     /// - Uncached time is 700µs.
@@ -132,7 +132,6 @@ mod tests {
 
     #[test]
     fn test_strip_ansi_esc_seq_len_cache_speedup() {
-        /* cspell:disable-next-line */
         let input = "\u{1b}[31mfoo\u{1b}[0m";
         let memoized_len_map = &mut MemoizedLenMap::new();
 

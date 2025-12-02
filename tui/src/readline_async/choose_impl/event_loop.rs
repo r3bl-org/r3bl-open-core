@@ -1,8 +1,6 @@
 // Copyright (c) 2023-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crossterm::{cursor::{Hide, Show},
-                terminal::{disable_raw_mode, enable_raw_mode}};
-use miette::IntoDiagnostic;
+use crossterm::cursor::{Hide, Show};
 
 use super::KeyPressReader;
 use crate::{execute_commands,
@@ -115,7 +113,7 @@ fn run_before_event_loop<S: CalculateResizeHint>(
     function_component: &mut impl FunctionComponent<S>,
 ) -> CommonResult<()> {
     execute_commands!(function_component.get_output_device(), Hide);
-    enable_raw_mode().into_diagnostic()?;
+    crate::raw_mode_enable()?;
 
     // First render before blocking the main thread for user input.
     function_component.render(state)?;
@@ -127,7 +125,7 @@ fn run_after_event_loop<S: CalculateResizeHint>(
     function_component: &mut impl FunctionComponent<S>,
 ) -> CommonResult<()> {
     execute_commands!(function_component.get_output_device(), Show);
-    disable_raw_mode().into_diagnostic()?;
+    crate::raw_mode_disable()?;
     Ok(())
 }
 

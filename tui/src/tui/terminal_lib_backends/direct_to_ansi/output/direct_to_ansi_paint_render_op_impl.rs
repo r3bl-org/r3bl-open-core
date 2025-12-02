@@ -49,11 +49,11 @@
 //! [`RenderOpOutput`]: crate::RenderOpOutput
 //! [rendering pipeline overview]: mod@crate::terminal_lib_backends#rendering-pipeline-architecture
 
-use crate::{AnsiSequenceGenerator, CliTextInline, GCStringOwned, InlineString,
-            LockedOutputDevice, Pos, RenderOpCommon, RenderOpFlush,
-            RenderOpOutput, RenderOpPaint, RenderOpsLocalData, Size, TuiStyle,
-            cli_text_inline_impl::CliTextConvertOptions, col, disable_raw_mode_now,
-            enable_raw_mode_now, flush_now, sanitize_and_save_abs_pos,
+use crate::{AnsiSequenceGenerator, CliTextInline, DEBUG_TUI_SHOW_TERMINAL_BACKEND,
+            GCStringOwned, InlineString, LockedOutputDevice, Pos, RenderOpCommon,
+            RenderOpFlush, RenderOpOutput, RenderOpPaint, RenderOpsLocalData, Size,
+            TuiStyle, cli_text_inline_impl::CliTextConvertOptions, col,
+            disable_raw_mode, enable_raw_mode, sanitize_and_save_abs_pos,
             terminal_lib_backends::direct_to_ansi::PixelCharRenderer};
 
 /// Implements [`RenderOpPaint`] trait using direct ANSI sequence generation.
@@ -116,9 +116,7 @@ impl RenderOpPaint for RenderOpPaintImplDirectToAnsi {
 
 impl RenderOpFlush for RenderOpPaintImplDirectToAnsi {
     fn flush(&mut self, locked_output_device: LockedOutputDevice<'_>) {
-        locked_output_device
-            .flush()
-            .expect("Failed to flush output device");
+        helpers::flush(locked_output_device, "flush() -> output_device");
     }
 
     fn clear_before_flush(&mut self, locked_output_device: LockedOutputDevice<'_>) {
@@ -126,9 +124,7 @@ impl RenderOpFlush for RenderOpPaintImplDirectToAnsi {
         locked_output_device
             .write_all(clear_sequence.as_bytes())
             .expect("Failed to write clear screen sequence");
-        locked_output_device
-            .flush()
-            .expect("Failed to flush output device");
+        // No flush here - caller handles it (matches crossterm behavior).
     }
 }
 
@@ -529,9 +525,29 @@ mod helpers {
         locked_output_device: LockedOutputDevice<'_>,
         is_mock: bool,
     ) {
-        enable_raw_mode_now!(is_mock, "EnterRawMode -> enable_raw_mode()");
+        if !is_mock {
+            match enable_raw_mode() {
+                Ok(()) => {
+                    DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
+                        tracing::info!(
+                            message = "direct-to-ansi: ✅ Succeeded",
+                            details = "EnterRawMode -> enable_raw_mode()"
+                        );
+                    });
+                }
+                Err(err) => {
+                    DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
+                        tracing::error!(
+                            message = "direct-to-ansi: ❌ Failed",
+                            details = "EnterRawMode -> enable_raw_mode()",
+                            error = %err
+                        );
+                    });
+                }
+            }
+        }
 
-        // Generate ANSI sequences for entering raw mode
+        // Generate ANSI sequences for TUI setup (alternate screen, mouse, cursor, etc.).
         let mut ansi_output = String::new();
         ansi_output.push_str(&AnsiSequenceGenerator::enable_bracketed_paste());
         ansi_output.push_str(&AnsiSequenceGenerator::enable_mouse_tracking());
@@ -545,10 +561,10 @@ mod helpers {
 
         locked_output_device
             .write_all(ansi_output.as_bytes())
-            .expect("Failed to write enter raw mode ANSI");
+            .expect("Failed to write TUI setup ANSI sequences");
 
         if !is_mock {
-            flush_now!(locked_output_device, "EnterRawMode -> flush()");
+            helpers::flush(locked_output_device, "EnterRawMode -> flush()");
         }
 
         *skip_flush = true;
@@ -559,7 +575,7 @@ mod helpers {
         locked_output_device: LockedOutputDevice<'_>,
         is_mock: bool,
     ) {
-        // Generate ANSI sequences for exiting raw mode
+        // Generate ANSI sequences for TUI teardown (restore screen, mouse, cursor, etc.).
         let mut ansi_output = String::new();
         ansi_output.push_str(&AnsiSequenceGenerator::disable_bracketed_paste());
         ansi_output.push_str(&AnsiSequenceGenerator::disable_mouse_tracking());
@@ -568,13 +584,61 @@ mod helpers {
 
         locked_output_device
             .write_all(ansi_output.as_bytes())
-            .expect("Failed to write exit raw mode ANSI");
+            .expect("Failed to write TUI teardown ANSI sequences");
 
-        flush_now!(locked_output_device, "ExitRawMode -> flush()");
+        if !is_mock {
+            helpers::flush(locked_output_device, "ExitRawMode -> flush()");
+        }
 
-        disable_raw_mode_now!(is_mock, "ExitRawMode -> disable_raw_mode()");
+        if !is_mock {
+            match disable_raw_mode() {
+                Ok(()) => {
+                    DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
+                        tracing::info!(
+                            message = "direct-to-ansi: ✅ Succeeded",
+                            details = "ExitRawMode -> disable_raw_mode()"
+                        );
+                    });
+                }
+                Err(err) => {
+                    DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
+                        tracing::error!(
+                            message = "direct-to-ansi: ❌ Failed",
+                            details = "ExitRawMode -> disable_raw_mode()",
+                            error = %err
+                        );
+                    });
+                }
+            }
+        }
 
         *skip_flush = true;
+    }
+
+    /// Flush the output device with logging.
+    ///
+    /// This is the direct-to-ansi equivalent of the crossterm `flush_now!` macro,
+    /// with proper "direct-to-ansi:" prefixed log messages.
+    pub fn flush(locked_output_device: LockedOutputDevice<'_>, log_msg: &str) {
+        match locked_output_device.flush() {
+            Ok(()) => {
+                DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
+                    tracing::info!(
+                        message = "direct-to-ansi: ✅ Succeeded",
+                        details = %log_msg
+                    );
+                });
+            }
+            Err(err) => {
+                DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
+                    tracing::error!(
+                        message = "direct-to-ansi: ❌ Failed",
+                        details = %log_msg,
+                        error = %err
+                    );
+                });
+            }
+        }
     }
 }
 

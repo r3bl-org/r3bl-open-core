@@ -1,5 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+// cspell:words Blockquotes
+
 //! Orchestrate rustdoc formatting for files.
 
 use crate::cargo_rustdoc_fmt::{extractor, link_converter, table_formatter,

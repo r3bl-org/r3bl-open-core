@@ -1,8 +1,9 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+// cspell:words ello
+
 use crate::{AsyncDebouncedDeadline, ControlledChild, Deadline, DebouncedState, PtyPair,
-            core::test_fixtures::StdoutMock,
-            generate_pty_test,
+            core::test_fixtures::StdoutMock, generate_pty_test,
             readline_async::readline_async_impl::LineState};
 use std::{io::{BufRead, BufReader, Write},
           sync::{Arc, Mutex as StdMutex},
@@ -37,7 +38,10 @@ generate_pty_test! {
 fn pty_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
     eprintln!("🚀 PTY Controller: Starting Ctrl+D delete test...");
 
-    let mut writer = pty_pair.controller().take_writer().expect("Failed to get writer");
+    let mut writer = pty_pair
+        .controller()
+        .take_writer()
+        .expect("Failed to get writer");
     let reader_non_blocking = pty_pair
         .controller()
         .try_clone_reader()
@@ -75,7 +79,9 @@ fn pty_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
                 }
                 if trimmed.contains("SLAVE_READY") {
                     slave_ready_seen = true;
-                    eprintln!("  ✓ Slave is ready (raw mode enabled, input device created)");
+                    eprintln!(
+                        "  ✓ Slave is ready (raw mode enabled, input device created)"
+                    );
                     break;
                 }
             }
@@ -144,7 +150,6 @@ fn pty_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
 
     let result = read_line_state();
     eprintln!("  ← After Ctrl+D: {result}");
-    // cspell:disable-next-line
     assert_eq!(result, "Line: ello, Cursor: 0");
 
     eprintln!("✅ PTY Controller: Ctrl+D delete test passed!");

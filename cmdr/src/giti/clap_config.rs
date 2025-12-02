@@ -1,5 +1,7 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+// cspell:words mbranch mcommand moptions
+
 use clap::{Args, Parser, Subcommand, ValueEnum};
 use r3bl_tui::ItemsOwned;
 
@@ -65,9 +67,8 @@ pub enum CLICommand {
     )]
     /// More info: <https://docs.rs/clap/latest/clap/struct.Command.html#method.help_template>
     #[command(
-            /* cSpell:disable-next-line */
-            help_template = "{about} \n\nUSAGE 📓:\n  giti branch [\x1b[34mcommand\x1b[0m] [\x1b[32mbranch_name\x1b[0m] [\x1b[32moptions\x1b[0m]\n\n{positionals}\n\n  [options]\n{options}"
-        )]
+        help_template = "{about} \n\nUSAGE 📓:\n  giti branch [\x1b[34mcommand\x1b[0m] [\x1b[32mbranch_name\x1b[0m] [\x1b[32moptions\x1b[0m]\n\n{positionals}\n\n  [options]\n{options}"
+    )]
     Branch {
         #[arg(
             value_name = "command",

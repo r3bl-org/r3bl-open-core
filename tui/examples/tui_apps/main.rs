@@ -17,7 +17,6 @@ mod ex_pitch;
 mod ex_rc;
 
 // Use other crates.
-use miette::IntoDiagnostic;
 use r3bl_tui::{CommonError, CommonResult, DEBUG_TUI_MOD, InputEvent, TerminalWindow,
                fg_color, fg_frozen_blue, fg_pink, fg_slate_gray, get_size,
                inline_string, key_press,
@@ -81,7 +80,8 @@ async fn main_impl() -> CommonResult<()> {
                     if run_user_selected_example(input, &mut rl_ctx).await.is_err() {
                         break;
                     }
-                    crossterm::terminal::enable_raw_mode().into_diagnostic()?;
+                    // Re-enable raw mode after example exits (examples disable raw mode on exit).
+                    r3bl_tui::raw_mode_enable()?;
                 }
                 ReadlineEvent::Eof | ReadlineEvent::Interrupted => break,
                 ReadlineEvent::Resized => { /* continue */ }

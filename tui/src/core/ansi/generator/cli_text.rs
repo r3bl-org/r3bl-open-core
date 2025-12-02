@@ -1740,11 +1740,9 @@ mod bench_tests {
 
     fn long_text() -> CliTextInline {
         CliTextInline {
-            // <!-- cspell:disable -->
             text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. \
                    Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua."
                 .into(),
-            // <!-- cspell:enable -->
             attribs: TuiStyleAttribs::from(Bold),
             color_fg: Some(TuiColor::Ansi(34.into())),
             color_bg: None,
