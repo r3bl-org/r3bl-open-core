@@ -89,14 +89,17 @@ pub mod output;
 #[cfg(not(any(test, doc)))]
 mod output;
 
-#[cfg(any(test, doc))]
+// Input handling is Unix-only (uses SIGWINCH signals, Unix stdin semantics).
+// See TODO(windows) comments in input/ files for what would need to change.
+#[cfg(all(unix, any(test, doc)))]
 pub mod input;
-#[cfg(not(any(test, doc)))]
+#[cfg(all(unix, not(any(test, doc))))]
 mod input;
 
 // Public re-exports (flat API surface).
 pub use debug::*;
 pub use output::*;
+#[cfg(unix)]
 pub use input::*;
 
 // Tests.

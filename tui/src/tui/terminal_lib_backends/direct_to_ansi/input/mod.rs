@@ -1,17 +1,26 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Input handling for `DirectToAnsi` backend.
+//! Unix input handling for [`DirectToAnsi`] backend.
 //!
-//! See [`DirectToAnsiInputDevice`] for the async input device implementation with
-//! zero-latency ESC key detection.
+//! This module is **Unix-only** (gated by `#[cfg(unix)]`) because it uses:
+//! - `SIGWINCH` signals for terminal resize detection
+//! - Unix-specific stdin semantics
+//!
+//! See `TODO(windows)` comments throughout for what would need to change for
+//! Windows support.
+//!
+//! # Entry Point
+//!
+//! [`DirectToAnsiInputDevice::try_read_event`] is the main async method for reading
+//! terminal input with zero-latency `ESC` key detection.
+//!
+//! [`DirectToAnsi`]: mod@super
 
 // Private submodules - organized by functional concern.
-mod buffer;
 mod input_device;
-mod input_event_handlers;
+mod parse_buffer;
 mod paste_state_machine;
-mod singleton;
-mod stdin_reader_thread;
+mod global_input_resource;
 mod types;
 
 // Conditionally public for documentation (to allow rustdoc links).

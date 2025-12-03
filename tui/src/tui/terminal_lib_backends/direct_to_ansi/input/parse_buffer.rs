@@ -20,17 +20,6 @@ use smallvec::SmallVec;
 /// small enough to avoid excessive memory overhead for idle periods.
 pub const PARSE_BUFFER_SIZE: usize = 4096;
 
-/// Temporary read buffer size for stdin reads.
-///
-/// This is the read granularity: how much data we pull from the kernel in one
-/// syscall. Too small (< 256): Excessive syscalls increase latency. Too large
-/// (> 256): Delays response to time-sensitive input (e.g., arrow key repeat).
-///
-/// 256 bytes is optimal for terminal input: it's one page boundary on many
-/// architectures, fits comfortably in the input buffer, and provides good syscall
-/// efficiency without introducing noticeable latency.
-pub const STDIN_READ_BUFFER_SIZE: usize = 256;
-
 /// Buffer for accumulating and consuming terminal input bytes.
 ///
 /// This type encapsulates the byte storage and position tracking needed for parsing
@@ -51,6 +40,51 @@ pub const STDIN_READ_BUFFER_SIZE: usize = 256;
 /// - Bytes from `position` onward are pending parsing.
 /// - When `position` exceeds `PARSE_BUFFER_SIZE / 2`, the buffer compacts
 ///   by draining consumed bytes.
+///
+/// # Buffer Management Algorithm
+///
+/// This implementation uses a growable buffer with lazy compaction to avoid
+/// copying bytes on every parse while preventing unbounded memory growth:
+///
+/// ```text
+/// Initial state: buffer = [], consumed = 0
+///
+/// After read #1: buffer = [0x1B, 0x5B, 0x41], consumed = 0
+///                         ├─────────────────┤
+///                         Parser tries [0..3]
+///                         Parses Up Arrow (3 bytes)
+///                         consumed = 3
+///
+/// After read #2: buffer = [0x1B, 0x5B, 0x41, 0x61], consumed = 3
+///                         └──── parsed ────┘ ├───┤
+///                                            Parser tries [3..4]
+///                                            Parses 'a' (1 byte)
+///                                            consumed = 4
+///
+/// After read #3: buffer = [      ...many bytes...      ], consumed = 2100
+///                         └ consumed > 2048 threshold! ┘
+///                         Compact: drain [0..2100], consumed = 0
+///                         buffer now starts fresh
+/// ```
+///
+/// **Key operations:**
+/// - [`unconsumed()`] - Get only unprocessed bytes for parsing
+/// - [`consume(n)`] - Mark n bytes as processed
+/// - When consumed > 2048 - Buffer compacts automatically
+///
+/// **Why not a true ring buffer?**
+/// - Variable-length ANSI sequences (1-20+ bytes) make fixed-size wrapping complex
+/// - Growing Vec handles overflow naturally without wrap-around logic
+/// - Lazy compaction (every 2KB) amortizes cost: O(1) per event on average
+///
+/// **Memory behavior:**
+/// - Typical: 100 events → ~500 bytes consumed, no compaction needed
+/// - Worst case: `PARSE_BUFFER_SIZE` buffer + 2KB consumed = 6KB maximum before
+///   compaction
+/// - After compaction: resets to current unconsumed data only
+///
+/// [`unconsumed()`]: Self::unconsumed
+/// [`consume(n)`]: Self::consume
 #[derive(Debug)]
 pub struct ParseBuffer {
     /// Raw byte storage with inline capacity for typical terminal input.

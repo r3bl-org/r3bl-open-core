@@ -126,15 +126,7 @@
           "isPinned": false
         },
         {
-          "path": "tui/src/core/ansi/vt_100_terminal_input_parser/integration_tests/pty_bracketed_paste_test.rs",
-          "isPinned": false
-        },
-        {
           "path": "tui/src/tui/terminal_lib_backends/direct_to_ansi/mod.rs",
-          "isPinned": false
-        },
-        {
-          "path": "tui/src/tui/terminal_lib_backends/direct_to_ansi/input/input_event_handlers.rs",
           "isPinned": false
         },
         {
@@ -146,18 +138,22 @@
           "isPinned": false
         },
         {
-          "path": "tui/src/tui/terminal_lib_backends/direct_to_ansi/input/singleton.rs",
+          "path": "tui/src/tui/terminal_lib_backends/direct_to_ansi/input/global_input_resource.rs",
           "isPinned": false
         },
         {
-          "path": "tui/src/tui/terminal_lib_backends/direct_to_ansi/input/stdin_reader_thread.rs",
+          "path": "tui/src/tui/terminal_lib_backends/direct_to_ansi/input/parse_buffer.rs",
+          "isPinned": false
+        },
+        {
+          "path": "tui/src/tui/terminal_lib_backends/direct_to_ansi/input/paste_state_machine.rs",
           "isPinned": false
         }
       ],
       "taskFile": "task/task_refactor_input_device.md",
       "createdAt": 1763496885607,
       "lastAccessed": 1763666457216,
-      "activeTab": "tui/src/tui/terminal_lib_backends/direct_to_ansi/input/singleton.rs"
+      "activeTab": "tui/src/tui/terminal_lib_backends/direct_to_ansi/input/input_device.rs"
     },
     {
       "name": "[1.1] task_readline_async_add_shortcuts",

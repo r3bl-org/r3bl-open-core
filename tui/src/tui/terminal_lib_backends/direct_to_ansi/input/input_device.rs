@@ -2,29 +2,28 @@
 
 // cspell:words tcgetwinsize winsize
 
-//! Implementation of [`DirectToAnsiInputDevice`].
-//!
-//! This module contains the impl blocks for [`DirectToAnsiInputDevice`], which
-//! is a thin wrapper that delegates to the [`DirectToAnsiInputResource`]
-//! singleton for stdin reading and buffer management.
-//!
-//! [`DirectToAnsiInputResource`]: super::singleton::DirectToAnsiInputResource
+//! [`DirectToAnsiInputDevice`] struct and implementation.
 
-#[cfg(unix)]
-use super::types::WaitAction;
-use super::{input_event_handlers::{handle_sigwinch_result, handle_stdin_channel_result},
+use super::{global_input_resource::{DirectToAnsiInputResource, get_resource_guard},
             paste_state_machine::apply_paste_state_machine,
-            singleton::{DirectToAnsiInputResource, get_or_init_global_core},
-            types::PasteAction};
-use crate::{InputEvent, core::ansi::vt_100_terminal_input_parser::try_parse_input_event,
+            types::{LoopContinuationSignal, StdinReadResult}};
+use crate::{InputEvent,
+            core::{ansi::vt_100_terminal_input_parser::try_parse_input_event,
+                   term::get_size},
             tui::DEBUG_TUI_SHOW_TERMINAL_BACKEND};
 use std::fmt::Debug;
 
 /// Async input device for [`DirectToAnsi`] backend.
 ///
-/// This is a **thin wrapper** that delegates to `GLOBAL_INPUT_CORE` for [`stdin`] reading
-/// and buffer management. The global core pattern mirrors crossterm's architecture,
-/// ensuring [`stdin`] handles persist across device lifecycle boundaries.
+/// One of two real [`InputDevice`] backends (the other being [`CrosstermInputDevice`]).
+/// Selected via [`TERMINAL_LIB_BACKEND`] on Linux; talks directly to the terminal using
+/// ANSI/VT100 protocols with zero external dependencies. Key advantage: **0ms ESC
+/// latency** vs crossterm's 150ms timeout.
+///
+/// This is a **thin wrapper** that delegates to [`GLOBAL_INPUT_RESOURCE`] for
+/// [std::io::Stdin] reading and buffer management. The global resource pattern mirrors
+/// crossterm's architecture, ensuring [`stdin`] handles persist across device lifecycle
+/// boundaries.
 ///
 /// Manages asynchronous reading from terminal [`stdin`] via dedicated thread + channel:
 /// - [`stdin`] channel receiver and parse buffer (process global singleton, outlives
@@ -35,7 +34,7 @@ use std::fmt::Debug;
 ///
 /// # Why Global State?
 ///
-/// See the [Why Global State?] section in [`GLOBAL_INPUT_CORE`] for the detailed
+/// See the [Why Global State?] section in [`GLOBAL_INPUT_RESOURCE`] for the detailed
 /// explanation.
 ///
 /// # Full I/O Pipeline
@@ -44,42 +43,77 @@ use std::fmt::Debug;
 /// parser, then converting protocol IR to the public API:
 ///
 /// ```text
-/// ┌──────────────────────────────────────────────────────────────────┐
-/// │ Raw ANSI bytes: "\x1B[A"                                         │
-/// │ std::io::stdin in one thread → mpsc - from GLOBAL_INPUT_CORE     │
-/// └────────────────────────────┬─────────────────────────────────────┘
+/// ┌───────────────────────────────────────────────────────────────────┐
+/// │ Raw ANSI bytes: "\x1B[A"                                          │
+/// │ std::io::stdin in one thread → mpsc - from GLOBAL_INPUT_RESOURCE  │
+/// └────────────────────────────┬──────────────────────────────────────┘
 ///                              │
-/// ┌────────────────────────────▼─────────────────────────────────────┐
-/// │ THIS DEVICE: DirectToAnsiInputDevice (Backend Executor)          │
-/// │   • Zero-sized handle struct (delegates to GLOBAL_INPUT_CORE)    │
-/// │   • Global core owns: stdin channel, parse buffer, SIGWINCH rx   │
-/// │   • SmallVec buffer: `PARSE_BUFFER_SIZE`, zero-timeout parsing   │
-/// │   • Paste state machine: Collecting bracketed paste text         │
-/// └────────────────────────────┬─────────────────────────────────────┘
+/// ┌────────────────────────────▼──────────────────────────────────────┐
+/// │ THIS DEVICE: DirectToAnsiInputDevice (Backend Executor)           │
+/// │   • Zero-sized handle struct (delegates to GLOBAL_INPUT_RESOURCE) │
+/// │   • Global resource owns: stdin channel, parse buffer, SIGWINCH   │
+/// │   • SmallVec buffer: `PARSE_BUFFER_SIZE`, zero-timeout parsing    │
+/// │   • Paste state machine: Collecting bracketed paste text          │
+/// └────────────────────────────┬──────────────────────────────────────┘
 ///                              │
-/// ┌────────────────────────────▼─────────────────────────────────────┐
-/// │ vt_100_terminal_input_parser/ (Protocol Layer - IR)              │
-/// │   try_parse_input_event() dispatches to:                         │
-/// │   ├─ parse_keyboard_sequence() → VT100InputEventIR::Keyboard     │
-/// │   ├─ parse_mouse_sequence()    → VT100InputEventIR::Mouse        │
-/// │   ├─ parse_terminal_event()    → VT100InputEventIR::Focus/Resize │
-/// │   └─ parse_utf8_text()         → VT100InputEventIR::Keyboard     │
-/// └────────────────────────────┬─────────────────────────────────────┘
+/// ┌────────────────────────────▼──────────────────────────────────────┐
+/// │ vt_100_terminal_input_parser/ (Protocol Layer - IR)               │
+/// │   try_parse_input_event() dispatches to:                          │
+/// │   ├─ parse_keyboard_sequence() → VT100InputEventIR::Keyboard      │
+/// │   ├─ parse_mouse_sequence()    → VT100InputEventIR::Mouse         │
+/// │   ├─ parse_terminal_event()    → VT100InputEventIR::Focus/Resize  │
+/// │   └─ parse_utf8_text()         → VT100InputEventIR::Keyboard      │
+/// └────────────────────────────┬──────────────────────────────────────┘
 ///                              │
-/// ┌────────────────────────────▼─────────────────────────────────────┐
-/// │ protocol_conversion.rs (IR → Public API)                         │
-/// │   convert_input_event()       VT100InputEventIR → InputEvent     │
-/// │   convert_key_code_to_keypress()  VT100KeyCodeIR → KeyPress      │
-/// └────────────────────────────┬─────────────────────────────────────┘
+/// ┌────────────────────────────▼──────────────────────────────────────┐
+/// │ protocol_conversion.rs (IR → Public API)                          │
+/// │   convert_input_event()       VT100InputEventIR → InputEvent      │
+/// │   convert_key_code_to_keypress()  VT100KeyCodeIR → KeyPress       │
+/// └────────────────────────────┬──────────────────────────────────────┘
 ///                              │
-/// ┌────────────────────────────▼─────────────────────────────────────┐
-/// │ Public API (Application Layer)                                   │
-/// │   InputEvent::Keyboard(KeyPress)                                 │
-/// │   InputEvent::Mouse(MouseInput)                                  │
-/// │   InputEvent::Resize(Size)                                       │
-/// │   InputEvent::Focus(FocusEvent)                                  │
-/// │   InputEvent::Paste(String)                                      │
-/// └──────────────────────────────────────────────────────────────────┘
+/// ┌────────────────────────────▼──────────────────────────────────────┐
+/// │ Public API (Application Layer)                                    │
+/// │   InputEvent::Keyboard(KeyPress)                                  │
+/// │   InputEvent::Mouse(MouseInput)                                   │
+/// │   InputEvent::Resize(Size)                                        │
+/// │   InputEvent::Focus(FocusEvent)                                   │
+/// │   InputEvent::Paste(String)                                       │
+/// └───────────────────────────────────────────────────────────────────┘
+/// ```
+///
+/// # Data Flow Diagram
+///
+/// Here's the complete data flow for [`try_read_event()`]:
+///
+/// ```text
+/// ┌───────────────────────────────────────────────────────────────────────────┐
+/// │ 1. try_read_event() called                                                │
+/// │    ├─► get_resource_guard() → acquires Mutex<Option<...>>                 │
+/// │    │   └─► On first call: spawns stdin reader thread + registers SIGWINCH │
+/// │    │                                                                      │
+/// │    ├─► Check event_queue first (already-parsed buffered events)           │
+/// │    │                                                                      │
+/// │    └─► Loop:                                                              │
+/// │         ├─► try_parse_input_event(parse_buffer.unconsumed())              │
+/// │         │   └─► If parsed: apply_paste_state_machine() → emit event       │
+/// │         │                                                                 │
+/// │         └─► If buffer empty/incomplete:                                   │
+/// │              tokio::select! { stdin_rx.recv(), sigwinch.recv() }          │
+/// └───────────────────────────────────▲───────────────────────────────────────┘
+///                                     │ mpsc channel
+/// ┌───────────────────────────────────┴───────────────────────────────────────┐
+/// │ 2. Dedicated Stdin Reader Thread (global_input_resource.rs)               │
+/// │    std::thread::spawn("stdin-reader")                                     │
+/// │                                                                           │
+/// │    stdin_reader_loop(tx):                                                 │
+/// │    ┌───────────────────────────────────────────────────────────────────┐  │
+/// │    │ loop {                                                            │  │
+/// │    │   let n = std::io::stdin().lock().read(&mut buffer)?; // BLOCKING │  │
+/// │    │   tx.send(StdinReadResult::Data(buffer[..n].to_vec()))?;          │  │
+/// │    │ }                                                                 │  │
+/// │    └───────────────────────────────────────────────────────────────────┘  │
+/// │    Lives for process lifetime (relies on OS cleanup at process exit)      │
+/// └───────────────────────────────────────────────────────────────────────────┘
 /// ```
 ///
 /// # Underlying Protocol Parser
@@ -157,28 +191,33 @@ use std::fmt::Debug;
 /// - **Network delay case**: Over SSH with 200ms latency, UX is already degraded; getting
 ///   ESC instead of Up Arrow is annoying but not catastrophic
 ///
+/// [`CrosstermInputDevice`]: crate::tui::terminal_lib_backends::crossterm_backend::CrosstermInputDevice
 /// [`DirectToAnsi`]: mod@crate::tui::terminal_lib_backends::direct_to_ansi
+/// [`InputDevice`]: crate::InputDevice
 /// [`SmallVec`]: smallvec::SmallVec
+/// [`TERMINAL_LIB_BACKEND`]: crate::tui::TERMINAL_LIB_BACKEND
 /// [`VT100InputEventIR`]: crate::core::ansi::vt_100_terminal_input_parser::VT100InputEventIR
 /// [`try_parse_input_event`]: crate::core::ansi::vt_100_terminal_input_parser::try_parse_input_event
 /// [`vt_100_terminal_input_parser`]: mod@crate::core::ansi::vt_100_terminal_input_parser
 /// [`stdin`]: std::io::Stdin
-/// [`GLOBAL_INPUT_CORE`]: super::singleton::GLOBAL_INPUT_CORE
-/// [Why Global State?]: super::singleton::GLOBAL_INPUT_CORE#why-global-state
+/// [`GLOBAL_INPUT_RESOURCE`]: super::global_input_resource::GLOBAL_INPUT_RESOURCE
+/// [Why Global State?]: super::global_input_resource::GLOBAL_INPUT_RESOURCE#why-global-state
+/// [`try_read_event()`]: Self::try_read_event
 pub struct DirectToAnsiInputDevice;
 
 impl DirectToAnsiInputDevice {
     /// Create a new `DirectToAnsiInputDevice`.
     ///
-    /// This is a **zero-sized handle** - all state lives in the global input core
-    /// (`DirectToAnsiInputResource`) which persists for the process lifetime.
-    /// The global core is lazily initialized on first access to [`try_read_event`].
+    /// This is a **zero-sized handle** - all state lives in the global input resource
+    /// ([`DirectToAnsiInputResource`]) which persists for the process lifetime.
+    /// The global resource is lazily initialized on first access to [`try_read_event`].
     ///
     /// No timeout initialization needed - we use smart async lookahead instead! See the
     /// [struct-level documentation] for details on zero-latency ESC detection.
     ///
     /// [`try_read_event`]: Self::try_read_event
     /// [struct-level documentation]: Self
+    /// [`DirectToAnsiInputResource`]: super::global_input_resource::DirectToAnsiInputResource
     #[must_use]
     pub fn new() -> Self { Self }
 
@@ -186,9 +225,9 @@ impl DirectToAnsiInputDevice {
     ///
     /// # Returns
     ///
-    /// `None` if stdin is closed (EOF). Or [`InputEvent`] variants for:
+    /// `None` if stdin is closed (`EOF`). Or [`InputEvent`] variants for:
     /// - **Keyboard**: Character input, arrow keys, function keys, modifiers (with 0ms
-    ///   ESC latency)
+    ///   `ESC` latency)
     /// - **Mouse**: Clicks, drags, motion, scrolling with position and modifiers
     /// - **Resize**: Terminal window size change (rows, cols)
     /// - **Focus**: Terminal gained/lost focus
@@ -257,19 +296,23 @@ impl DirectToAnsiInputDevice {
     ///
     /// **Key points:**
     /// - The device can be **created and dropped multiple times** - global state persists
-    /// - This method is **called repeatedly** by the main event loop via the
-    ///   `InputDeviceExt::next()` trait method, not called directly
-    /// - **Buffer state is preserved** across device lifetimes via `GLOBAL_INPUT_CORE`
+    /// - This method is **called repeatedly** by the main event loop via
+    ///   [`InputDevice::next()`], which dispatches to [`Self::next()`]
+    /// - **Buffer state is preserved** across device lifetimes via
+    ///   [`GLOBAL_INPUT_RESOURCE`]
     /// - Returns `None` when stdin is closed (program should exit)
     ///
     /// # Global State
     ///
-    /// This method accesses the global input core (`GLOBAL_INPUT_CORE`) which holds:
+    /// This method accesses the global input resource ([`GLOBAL_INPUT_RESOURCE`]) which
+    /// holds:
     /// - The channel receiver for stdin data (from dedicated reader thread)
     /// - The parse buffer and position
     /// - The event queue for buffered events
     /// - The paste collection state
     /// - The `SIGWINCH` signal receiver (for terminal resize events)
+    ///
+    /// See [Why Global State?] for the rationale behind this architecture.
     ///
     /// # Implementation
     ///
@@ -279,133 +322,172 @@ impl DirectToAnsiInputDevice {
     /// 3. If incomplete, wait for data from stdin channel (yields until data ready)
     /// 4. Loop back to parsing
     ///
-    /// # Buffer Management Algorithm
+    /// See [`ParseBuffer`] for buffer management algorithm details, and [struct-level
+    /// documentation] for zero-latency ESC detection.
     ///
-    /// This implementation uses a growable buffer with lazy compaction to avoid
-    /// copying bytes on every parse while preventing unbounded memory growth:
+    /// # Cancel Safety
     ///
-    /// ```text
-    /// Initial state: buffer = [], consumed = 0
+    /// This method is cancel-safe. Both futures in the internal [`tokio::select!`] are
+    /// truly cancel-safe:
+    /// - [`tokio::sync::mpsc::UnboundedReceiver::recv`]: If cancelled, the data remains
+    ///   in the channel for the next receive.
+    /// - [`tokio::signal::unix::Signal::recv`]: If cancelled, the signal is not consumed
+    ///   and will be delivered on the next call.
     ///
-    /// After read #1: buffer = [0x1B, 0x5B, 0x41], consumed = 0
-    ///                         ├─────────────────┤
-    ///                         Parser tries [0..3]
-    ///                         Parses Up Arrow (3 bytes)
-    ///                         consumed = 3
+    /// See the [`global_input_resource`] module documentation for why we use a dedicated
+    /// thread with channel instead of [`tokio::io::stdin()`] (which is NOT
+    /// cancel-safe).
     ///
-    /// After read #2: buffer = [0x1B, 0x5B, 0x41, 0x61], consumed = 3
-    ///                         └──── parsed ────┘ ├───┤
-    ///                                            Parser tries [3..4]
-    ///                                            Parses 'a' (1 byte)
-    ///                                            consumed = 4
-    ///
-    /// After read #3: buffer = [      ...many bytes...      ], consumed = 2100
-    ///                         └ consumed > 2048 threshold! ┘
-    ///                         Compact: drain [0..2100], consumed = 0
-    ///                         buffer now starts fresh
-    /// ```
-    ///
-    /// **Key operations:**
-    /// - `parse_buffer.unconsumed()` - Get only unprocessed bytes for parsing
-    /// - `parse_buffer.consume(n)` - Mark n bytes as processed
-    /// - When consumed > 2048 - Buffer compacts automatically
-    ///
-    /// **Why not a true ring buffer?**
-    /// - Variable-length ANSI sequences (1-20+ bytes) make fixed-size wrapping complex
-    /// - Growing Vec handles overflow naturally without wrap-around logic
-    /// - Lazy compaction (every 2KB) amortizes cost: O(1) per event on average
-    ///
-    /// **Memory behavior:**
-    /// - Typical: 100 events → ~500 bytes consumed, no compaction needed
-    /// - Worst case: `PARSE_BUFFER_SIZE` buffer + 2KB consumed = 6KB maximum before
-    ///   compaction
-    /// - After compaction: resets to current unconsumed data only
-    ///
-    /// See struct-level documentation for details on zero-latency ESC detection
-    /// algorithm.
-    ///
+    /// [`ParseBuffer`]: super::parse_buffer::ParseBuffer#buffer-management-algorithm
+    /// [`InputDevice::next()`]: crate::InputDevice::next
+    /// [`Self::next()`]: Self::next
+    /// [`GLOBAL_INPUT_RESOURCE`]: super::global_input_resource::GLOBAL_INPUT_RESOURCE
     /// [`InputDevice`]: crate::InputDevice
+    /// [Why Global State?]: super::global_input_resource::GLOBAL_INPUT_RESOURCE#why-global-state
+    /// [struct-level documentation]: Self
+    /// [`global_input_resource`]: super::global_input_resource
+    /// [`tokio::io::stdin()`]: tokio::io::stdin
+    /// [`tokio::select!`]: tokio::select
     pub async fn try_read_event(&mut self) -> Option<InputEvent> {
-        // Get the global input core - this persists for process lifetime.
-        let mut core_guard = get_or_init_global_core().await;
-        let core = core_guard.as_mut()?;
+        // Get the global input resource (which persists for process lifetime).
+        let mut resource_guard = get_resource_guard().await;
+        let resource = resource_guard.as_mut()?;
 
         // Check event queue first - return any buffered events.
-        if let Some(event) = core.event_queue.pop_front() {
+        if let Some(event) = resource.event_queue.pop_front() {
             return Some(event);
         }
 
         loop {
             // 1. Try to parse from existing buffer and apply paste state machine.
             if let Some((vt100_event, bytes_consumed)) =
-                try_parse_input_event(core.parse_buffer.unconsumed())
+                try_parse_input_event(resource.parse_buffer.unconsumed())
             {
-                core.parse_buffer.consume(bytes_consumed);
+                resource.parse_buffer.consume(bytes_consumed);
 
-                match apply_paste_state_machine(&mut core.paste_state, &vt100_event) {
-                    PasteAction::Emit(event) => return Some(event),
-                    PasteAction::Continue => continue,
+                match apply_paste_state_machine(&mut resource.paste_state, &vt100_event) {
+                    LoopContinuationSignal::Emit(event) => return Some(event),
+                    LoopContinuationSignal::Continue => continue,
+                    LoopContinuationSignal::Shutdown => {
+                        unreachable!("Paste state machine never signals shutdown.")
+                    }
                 }
             }
 
             // 2. Buffer exhausted or incomplete sequence - wait for input or signal.
-            #[cfg(unix)]
-            match Self::await_input(core).await {
-                WaitAction::Emit(event) => return Some(event),
-                WaitAction::Shutdown => return None,
-                WaitAction::Continue => {} // Loop back to try parsing.
-            }
-
-            // Non-Unix: DirectToAnsi is Linux-only, this code path should never be
-            // reached.
-            #[cfg(not(unix))]
-            {
-                unreachable!(
-                    "DirectToAnsi backend is Linux-only. \
-                     This code path should never be reached on non-Unix systems."
+            DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
+                tracing::debug!(
+                    message =
+                        "direct-to-ansi: waiting for stdin input or SIGWINCH signal"
                 );
+            });
+
+            let signal = tokio::select! {
+                maybe_stdin_read_result = resource.stdin_rx.recv() => {
+                    Self::process_stdin_read(resource, maybe_stdin_read_result)
+                }
+                maybe_resize_signal = resource.sigwinch_receiver.recv() => {
+                    Self::process_resize_signal(maybe_resize_signal)
+                }
+            };
+
+            match signal {
+                LoopContinuationSignal::Emit(event) => return Some(event),
+                LoopContinuationSignal::Shutdown => return None,
+                LoopContinuationSignal::Continue => {} // Loop back to try parsing.
             }
         }
     }
 
-    /// Waits for stdin data or `SIGWINCH` signal, returning an action for the event loop.
+    /// Handles the result of receiving from the stdin channel.
     ///
-    /// # Cancel Safety
+    /// This function processes [`StdinReadResult`] from the dedicated stdin reader
+    /// thread. The dedicated thread architecture ensures true cancel safety in
+    /// [`tokio::select!`], unlike [`tokio::io::stdin()`] which uses a blocking thread
+    /// pool.
     ///
-    /// Both futures in the `select!` are truly cancel-safe:
-    /// - [`tokio::sync::mpsc::UnboundedReceiver::recv`]: Truly async channel receive. If
-    ///   cancelled, the data remains in the channel for the next receive.
-    /// - [`tokio::signal::unix::Signal::recv`]: Truly async signal receiver. If
-    ///   cancelled, the signal is not consumed and will be delivered on the next call.
-    ///
-    /// # Why Dedicated Thread + Channel?
-    ///
-    /// The previous implementation used [`tokio::io::stdin()`] which spawns blocking
-    /// reads on Tokio's blocking thread pool. When cancelled in `select!`, the
-    /// blocking thread continues running in the background, causing undefined behavior
-    /// on the next read.
-    ///
-    /// The dedicated thread approach solves this:
-    /// - Only one thread ever reads from stdin (no conflicts)
-    /// - Channel receive is truly async (proper cancellation)
-    /// - Data read by the thread waits in the channel (no data loss)
-    ///
-    /// See [`stdin_reader_thread`] module documentation for detailed architecture.
-    ///
-    /// [`stdin_reader_thread`]: super::stdin_reader_thread
     /// [`tokio::io::stdin()`]: tokio::io::stdin
-    #[cfg(unix)]
-    async fn await_input(core: &mut DirectToAnsiInputResource) -> WaitAction {
+    /// [`tokio::select!`]: tokio::select
+    fn process_stdin_read(
+        resource: &mut DirectToAnsiInputResource,
+        maybe_stdin_read_result: Option<StdinReadResult>,
+    ) -> LoopContinuationSignal {
         DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
-            tracing::debug!(message = "direct-to-ansi: waiting for input or signal");
+            tracing::debug!(
+                message = "direct-to-ansi: stdin channel received",
+                result = ?maybe_stdin_read_result
+            );
         });
 
-        tokio::select! {
-            result = core.stdin_rx.recv() => {
-                handle_stdin_channel_result(core, result)
+        match maybe_stdin_read_result {
+            Some(StdinReadResult::Data(data)) => {
+                DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
+                    tracing::debug!(
+                        message = "direct-to-ansi: stdin data received",
+                        bytes_read = data.len()
+                    );
+                });
+                resource.parse_buffer.append(&data);
+                LoopContinuationSignal::Continue
             }
-            sigwinch_result = core.sigwinch_receiver.recv() => {
-                handle_sigwinch_result(sigwinch_result)
+            Some(StdinReadResult::Eof) => {
+                DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
+                    tracing::debug!(message = "direct-to-ansi: stdin EOF");
+                });
+                LoopContinuationSignal::Shutdown
+            }
+            Some(StdinReadResult::Error(kind)) => {
+                DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
+                    tracing::debug!(message = "direct-to-ansi: stdin error", error_kind = ?kind);
+                });
+                LoopContinuationSignal::Shutdown
+            }
+            None => {
+                // Channel closed - stdin reader thread exited.
+                DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
+                    tracing::debug!(message = "direct-to-ansi: stdin channel closed");
+                });
+                LoopContinuationSignal::Shutdown
+            }
+        }
+    }
+
+    /// Processes a terminal resize signal (`SIGWINCH` on Unix).
+    fn process_resize_signal(maybe_resize_signal: Option<()>) -> LoopContinuationSignal {
+        DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
+            tracing::debug!(
+                message = "direct-to-ansi: SIGWINCH branch selected",
+                result = ?maybe_resize_signal
+            );
+        });
+
+        match maybe_resize_signal {
+            Some(()) => {
+                // Signal received successfully, query terminal size.
+                if let Ok(size) = get_size() {
+                    DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
+                        tracing::debug!(
+                            message = "direct-to-ansi: returning Resize",
+                            size = ?size
+                        );
+                    });
+                    return LoopContinuationSignal::Emit(InputEvent::Resize(size));
+                }
+                // If size query failed, continue to next iteration.
+                DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
+                    tracing::debug!(
+                        message = "direct-to-ansi: get_size() failed, continuing"
+                    );
+                });
+                LoopContinuationSignal::Continue
+            }
+            None => {
+                // Signal stream closed - unexpected but shouldn't cause shutdown.
+                tracing::warn!(
+                    message =
+                        "direct-to-ansi: SIGWINCH receiver returned None (stream closed)"
+                );
+                LoopContinuationSignal::Continue
             }
         }
     }
@@ -414,7 +496,7 @@ impl DirectToAnsiInputDevice {
 impl Debug for DirectToAnsiInputDevice {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("DirectToAnsiInputDevice")
-            .field("global_core", &"<GLOBAL_INPUT_CORE>")
+            .field("global_resource", &"<GLOBAL_INPUT_RESOURCE>")
             .finish()
     }
 }
@@ -441,8 +523,8 @@ impl DirectToAnsiInputDevice {
 /// [`test_pty_utf8_text`]: crate::core::ansi::vt_100_terminal_input_parser::integration_tests::pty_utf8_text_test::test_pty_utf8_text
 #[cfg(test)]
 mod tests {
-    use super::{super::{protocol_conversion::convert_input_event,
-                        types::PasteCollectionState},
+    use super::{super::{paste_state_machine::PasteCollectionState,
+                        protocol_conversion::convert_input_event},
                 *};
     use crate::{ByteOffset,
                 core::ansi::vt_100_terminal_input_parser::{VT100InputEventIR,
@@ -455,21 +537,21 @@ mod tests {
     #[tokio::test]
     async fn test_device_creation() {
         // Test DirectToAnsiInputDevice constructs successfully.
-        // With the global core architecture, the device is now a thin wrapper
+        // With the global resource architecture, the device is now a thin wrapper
         // that only holds the SIGWINCH receiver.
         let _device = DirectToAnsiInputDevice::new();
 
-        // Verify global core is initialized on first access.
-        let core_guard = get_or_init_global_core().await;
-        let core = core_guard
+        // Verify global resource is initialized on first access.
+        let resource_guard = get_resource_guard().await;
+        let resource = resource_guard
             .as_ref()
-            .expect("Global core should be initialized");
+            .expect("Global resource should be initialized");
 
         // Verify buffer is empty initially (no data yet).
-        assert_eq!(core.parse_buffer.len(), 0);
+        assert_eq!(resource.parse_buffer.len(), 0);
 
         // Verify position is at 0.
-        assert_eq!(core.parse_buffer.position().as_usize(), 0);
+        assert_eq!(resource.parse_buffer.position().as_usize(), 0);
     }
 
     #[tokio::test]
@@ -513,7 +595,7 @@ mod tests {
     async fn test_buffer_management() {
         // Test buffer handling: growth, consumption, and compaction at 2KB threshold.
         // Create a local ParseBuffer to test the buffer logic directly.
-        use super::super::buffer::ParseBuffer;
+        use super::super::parse_buffer::ParseBuffer;
 
         let mut buffer = ParseBuffer::new();
 
