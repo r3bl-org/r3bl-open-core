@@ -823,10 +823,9 @@ mod tests {
                 RenderPipeline, SpecialKey, TTYResult, TerminalWindowMainThreadSignal,
                 TextColorizationPolicy, TuiStyle, TuiStyleAttribs, ZOrder, assert_eq2,
                 ch, col, defaults::get_default_gradient_stops, height, inline_string,
-                is_headless, is_output_interactive,
-                key_press, main_event_loop_impl, new_style, ok, render_pipeline,
-                render_tui_styled_texts_into, send_signal, tui_color, tui_style_attrib,
-                tui_styled_text, width};
+                is_headless, is_output_interactive, key_press, main_event_loop_impl,
+                new_style, ok, render_pipeline, render_tui_styled_texts_into,
+                send_signal, tui_color, tui_style_attrib, tui_styled_text, width};
     use smallvec::smallvec;
     use std::{fmt::{Debug, Display, Formatter},
               time::Duration};

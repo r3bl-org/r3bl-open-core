@@ -66,17 +66,17 @@
 //!
 //! ### Task Coordination & Lifecycle
 //!
-//! | Time | Completion Task      | Reader Task    | Input Handler  | Bridge Task    |
-//! |------|----------------------|----------------|----------------|----------------|
-//! | 0    | 🛫 Spawn child       |                |                |                |
-//! | 1    | 🛫 Spawn reader      | 🛫 Start read  |                |                |
-//! | 2    | 🛫 Spawn input hdlr* | 📖 Read data   | 🛫 Start*      |                |
-//! | 3    | 🛫 Spawn bridge*     | 📤 Send events | 📥 Wait input* | 🛫 Start*      |
-//! | 4    | 🛬 Wait child.wait() | 📖 Read data   | ✍️  Write PTY*  | 🔄 Bridge I/O* |
-//! | 5    | 📤 Send Exit event   | 📖 Read EOF    | 📥 Wait input* | 🔄 Bridge I/O* |
-//! | 6    | 💀 drop(controlled)  | 🛬 Exit        | 🛬 Exit*       | 🛬 Exit*       |
-//! | 7    | 🛬 Wait all tasks    |                |                |                |
-//! | 8    | ✅ Return status     |                |                |                |
+//! | Time   | Completion Task        | Reader Task      | Input Handler    | Bridge Task      |
+//! | ------ | ---------------------- | ---------------- | ---------------- | ---------------- |
+//! | 0      | 🛫 Spawn child         |                  |                  |                  |
+//! | 1      | 🛫 Spawn reader        | 🛫 Start read    |                  |                  |
+//! | 2      | 🛫 Spawn input hdlr*   | 📖 Read data     | 🛫 Start*        |                  |
+//! | 3      | 🛫 Spawn bridge*       | 📤 Send events   | 📥 Wait input*   | 🛫 Start*        |
+//! | 4      | 🛬 Wait `child.wait()` | 📖 Read data     | ✍️  Write PTY*   | 🔄 Bridge I/O*   |
+//! | 5      | 📤 Send Exit event     | 📖 Read EOF      | 📥 Wait input*   | 🔄 Bridge I/O*   |
+//! | 6      | 💀 drop(controlled)    | 🛬 Exit          | 🛬 Exit*         | 🛬 Exit*         |
+//! | 7      | 🛬 Wait all tasks      |                  |                  |                  |
+//! | 8      | ✅ Return status       |                  |                  |                  |
 //! *Read-write mode only
 //!
 //! ### Event Communication

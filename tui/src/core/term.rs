@@ -1,6 +1,6 @@
 // Copyright (c) 2023-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-// cspell:words isatty
+// cspell:words isatty winsize tcgetwinsize
 
 use crate::{ColWidth, Size, height,
             tui::terminal_lib_backends::{TERMINAL_LIB_BACKEND, TerminalLibBackend},
@@ -28,11 +28,48 @@ pub fn get_terminal_width() -> ColWidth {
 
 /// Get the terminal size.
 ///
+/// Uses [`crossterm`] for the Crossterm backend, or [`rustix`] [`tcgetwinsize`] syscall
+/// for the [`DirectToAnsi`] backend.
+///
 /// # Errors
 ///
 /// Returns an error if:
 /// - The terminal size cannot be determined
 /// - The terminal is not available or not a TTY
+///
+/// [`DirectToAnsi`]: mod@crate::tui::terminal_lib_backends::direct_to_ansi
+/// [`tcgetwinsize`]: fn@rustix::termios::tcgetwinsize
+#[cfg(unix)]
+pub fn get_size() -> miette::Result<Size> {
+    match TERMINAL_LIB_BACKEND {
+        TerminalLibBackend::Crossterm => {
+            let (columns, rows) = crossterm::terminal::size().into_diagnostic()?;
+            Ok(width(columns) + height(rows))
+        }
+        TerminalLibBackend::DirectToAnsi => {
+            let winsize = rustix::termios::tcgetwinsize(std::io::stdout())
+                .map_err(|e| miette::miette!("tcgetwinsize failed: {}", e))?;
+            Ok(width(winsize.ws_col) + height(winsize.ws_row))
+        }
+    }
+}
+
+/// Get the terminal size.
+///
+/// # Errors
+///
+/// Returns an error if:
+/// - The terminal size cannot be determined
+/// - The terminal is not available or not a TTY
+///
+/// # TODO(windows)
+///
+/// This fallback only uses crossterm and ignores [`TERMINAL_LIB_BACKEND`]. The
+/// [`DirectToAnsi`] backend uses Unix-specific APIs (`rustix::termios::tcgetwinsize`)
+/// that aren't available on Windows.
+///
+/// [`DirectToAnsi`]: mod@crate::tui::terminal_lib_backends::direct_to_ansi
+#[cfg(not(unix))]
 pub fn get_size() -> miette::Result<Size> {
     let (columns, rows) = crossterm::terminal::size().into_diagnostic()?;
     Ok(width(columns) + height(rows))

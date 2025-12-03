@@ -112,12 +112,16 @@
         {
           "path": "tui/src/core/ansi/vt_100_terminal_input_parser/terminal_events.rs",
           "isPinned": false
+        },
+        {
+          "path": "tui/src/tui/terminal_lib_backends/direct_to_ansi/input/input_device_impl.rs",
+          "isPinned": false
         }
       ],
       "taskFile": "task/task_refactor_input_device.md",
       "createdAt": 1763496885607,
       "lastAccessed": 1763666457216,
-      "activeTab": "tui/src/tui/terminal_window/terminal_window_api.rs"
+      "activeTab": "tui/src/tui/terminal_lib_backends/direct_to_ansi/input/input_device_impl.rs"
     },
     {
       "name": "[1.1] task_readline_async_add_shortcuts",

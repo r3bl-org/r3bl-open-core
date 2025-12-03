@@ -841,7 +841,7 @@ mod helpers {
     ///
     /// | Sequence       | Meaning              |
     /// |----------------|----------------------|
-    /// | `CSI 5 ~`      | PageUp               |
+    /// | `CSI 5 ~`      | `PageUp`             |
     /// | `CSI 1 ; 3 C`  | Alt + Right Arrow    |
     /// | `CSI 11 ~`     | F1                   |
     /// | `CSI 1 ; 5 A`  | Ctrl + Up Arrow      |
@@ -881,7 +881,7 @@ mod helpers {
                 // 0*10+1=1 → 1*10+2=12 → 12*10+3=123.
                 acc_numeric_param = acc_numeric_param
                     .saturating_mul(10)
-                    .saturating_add((byte - ASCII_DIGIT_0) as u16);
+                    .saturating_add(u16::from(byte - ASCII_DIGIT_0));
             } else if byte == ANSI_PARAM_SEPARATOR {
                 // Semicolon: parameter separator.
                 params.push(acc_numeric_param);

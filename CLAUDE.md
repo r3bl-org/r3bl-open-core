@@ -3,6 +3,11 @@
 Ask for clarification immediately on important choices or ambiguities. Take your time with
 changes—slow, steady, and careful work beats fast and careless.
 
+## Design Philosophy
+
+Prioritize low cognitive load, progressive disclosure, and type-safe design. Make illegal states
+unrepresentable. See `design-philosophy` skill for principles and patterns.
+
 ## Crate-Specific Instructions
 
 Some crates have additional instructions in their own `CLAUDE.md` files:
@@ -18,6 +23,12 @@ directory for additional workflow requirements.
 
 This project uses skills to organize coding patterns and workflows. Claude will autonomously
 discover and use these when relevant. All skills are in `.claude/skills/`.
+
+### Design
+
+- **design-philosophy** - Core principles: cognitive load, progressive disclosure, type safety,
+  abstraction worth. Use when designing APIs, modules, or data structures.
+  - Supporting file: `patterns.md` (good/bad examples and quick reference)
 
 ### Code Quality & Style
 

@@ -1,136 +1,235 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+// cspell:words tcgetwinsize winsize
+
 use super::protocol_conversion::convert_input_event;
-use crate::{ByteIndex, ByteOffset, InputEvent, Size, height, width,
-            core::ansi::vt_100_terminal_input_parser::{VT100InputEventIR,
-                                                       VT100KeyCodeIR,
-                                                       VT100PasteModeIR,
-                                                       try_parse_input_event},
+use crate::{ByteIndex, ByteOffset, InputEvent,
+            core::{ansi::vt_100_terminal_input_parser::{VT100InputEventIR,
+                                                        VT100KeyCodeIR,
+                                                        VT100PasteModeIR,
+                                                        try_parse_input_event},
+                   term::get_size},
             tui::DEBUG_TUI_SHOW_TERMINAL_BACKEND};
 use smallvec::SmallVec;
-
-// SIGWINCH signal handling for terminal resize events (Unix-only).
-//
-// TODO(windows): Windows uses `WINDOW_BUFFER_SIZE_EVENT` via Console API instead of
-// SIGWINCH. When adding Windows support for DirectToAnsi, implement resize detection
-// using `ReadConsoleInput` which returns window buffer size change events.
-// See: https://learn.microsoft.com/en-us/windows/console/window-buffer-size-record-str
+use std::{collections::VecDeque, fmt::Debug, sync::LazyLock};
 #[cfg(unix)]
 use tokio::signal::unix::{Signal, SignalKind};
 
-/// Initial buffer capacity for efficient ANSI sequence buffering.
+/// Global static singleton for input reader state - persists for program lifetime.
 ///
-/// Most terminal input consists of either:
-/// - Individual keypresses (~5-10 bytes for special keys like arrows, function keys)
-/// - Paste events (variable, but rare to exceed buffer capacity)
-/// - Mouse events (~20 bytes for typical terminal coordinates)
-///
-/// 4096 bytes accommodates multiple complete ANSI sequences without frequent
-/// reallocations. This is a good balance: large enough to handle typical bursts, small
-/// enough to avoid excessive memory overhead for idle periods.
-///
-/// See [`try_read_event()`] for buffer management algorithm.
-///
-/// [`try_read_event()`]: DirectToAnsiInputDevice::try_read_event#buffer_management_algorithm
-const PARSE_BUFFER_SIZE: usize = 4096;
-
-/// Temporary read buffer size for stdin reads.
-///
-/// This is the read granularity: how much data we pull from the kernel in one syscall.
-/// Too small (< 256): Excessive syscalls increase latency.
-/// Too large (> 256): Delays response to time-sensitive input (e.g., arrow key repeat).
-///
-/// 256 bytes is optimal for terminal input: it's one page boundary on many architectures,
-/// fits comfortably in the input buffer, and provides good syscall efficiency without
-/// introducing noticeable latency.
-///
-/// See [`try_read_event()`] for buffer management algorithm.
-///
-/// [`try_read_event()`]: DirectToAnsiInputDevice::try_read_event#buffer_management_algorithm
-const STDIN_READ_BUFFER_SIZE: usize = 256;
-
-/// Get terminal size using rustix (no crossterm dependency).
-///
-/// Uses real stdout file descriptor to query terminal dimensions via `tcgetwinsize`.
-/// This is the correct approach for `DirectToAnsi` backend since we want the actual
-/// terminal size, not a mocked value.
-///
-/// # Errors
-///
-/// Returns an error if the `tcgetwinsize` syscall fails (e.g., stdout is not a TTY).
-#[cfg(unix)]
-fn get_size_rustix() -> miette::Result<Size> {
-    let winsize = rustix::termios::tcgetwinsize(std::io::stdout())
-        .map_err(|e| miette::miette!("tcgetwinsize failed: {}", e))?;
-    Ok(width(winsize.ws_col) + height(winsize.ws_row))
-}
-
-/// Result of waiting for input or signal in [`wait_for_input_or_signal()`].
-#[cfg(unix)]
-enum WaitResult {
-    /// Stdin read completed with the given result.
-    Stdin(std::io::Result<usize>),
-    /// SIGWINCH signal received.
-    Signal(Option<()>),
-}
-
-/// Waits for either stdin data or SIGWINCH signal.
-///
-/// Uses `tokio::select!` to multiplex between stdin and the SIGWINCH signal receiver.
-/// Returns immediately when either event occurs.
-///
-/// # Cancel Safety
-///
-/// Both futures in the `select!` are cancel-safe:
-/// - [`tokio::io::AsyncReadExt::read`]: Cancel-safe. If cancelled before completion,
-///   no data is lost - the same data will be available on the next read.
-/// - [`tokio::signal::unix::Signal::recv`]: Cancel-safe. If cancelled, the signal
-///   is not consumed and will be delivered on the next call.
-///
-/// This means the `select!` can safely be used in a loop without losing events.
-#[cfg(unix)]
-async fn wait_for_input_or_signal(
-    stdin: &mut tokio::io::Stdin,
-    sigwinch_receiver: &mut Signal,
-    temp_buf: &mut [u8],
-) -> WaitResult {
-    use tokio::io::AsyncReadExt as _;
-
-    tokio::select! {
-        result = stdin.read(temp_buf) => WaitResult::Stdin(result),
-        result = sigwinch_receiver.recv() => WaitResult::Signal(result),
-    }
-}
-
-/// Async input device for `DirectToAnsi` backend.
-///
-/// This is the `DirectToAnsi` async input device implementation. It handles non-blocking
-/// reading from stdin using tokio, manages a ring buffer (kind of, except that it is
-/// growable) for partial ANSI sequences, and delegates to the protocol layer parsers for
-/// sequence interpretation.
-///
-/// Manages asynchronous reading from terminal stdin using tokio, with:
-/// - Simple `Vec<u8>` buffer for handling partial/incomplete ANSI sequences
-/// - Smart lookahead for zero-latency ESC key detection (no timeout!)
-/// - Dispatch to protocol parsers (keyboard, mouse, terminal events, UTF-8)
+/// This mirrors [crossterm]'s architecture where a global [`INTERNAL_EVENT_READER`] holds
+/// the tty file descriptor and event buffer, ensuring data in the kernel buffer is not
+/// lost when [`EventStream`] instances are created and dropped.
 ///
 /// # Architecture
 ///
-/// This device sits in the backend executor layer, bridging raw I/O to the protocol
-/// parser, then converting protocol IR to the public API. The full pipeline:
+/// This module uses a **global static** input reader pattern. The key insight is that
+/// `stdin` handles must persist across device lifecycle boundaries to prevent data loss
+/// during TUI ↔ readline transitions. This happens in the main TUI examples that you can
+/// run using `cargo run --example tui_apps`.
 ///
 /// ```text
-/// ┌─────────────────────────────────────────────────────────────────┐
-/// │ Raw ANSI bytes: "\x1B[A"                                        │
-/// │ stdin (tokio::io::stdin)                                        │
-/// └────────────────────────────┬────────────────────────────────────┘
+/// ┌─────────────────────────────────────────────────────────────────────────────────────┐
+/// │ GLOBAL_INPUT_CORE (static LazyLock<Mutex<...>>)                                     │
+/// │   • stdin: tokio::io::Stdin (PERSISTS for program lifetime)                         │
+/// │   • parse_buffer: SmallVec (PERSISTS - carries over partial sequences)              │
+/// │   • buffer_position: ByteIndex (PERSISTS - tracks consumption)                      │
+/// │   • paste_state: PasteCollectionState (PERSISTS - mid-paste survives)               │
+/// │   • event_queue: VecDeque (PERSISTS - buffered events preserved)                    │
+/// └───────────────────────────────────────┬─────────────────────────────────────────────┘
+///                                         │
+///            ┌────────────────────────────┴────────────────────────┐
+///            │                                                     │
+/// ┌──────────▼───────────────────┐           ┌─────────────────────▼────────┐
+/// │ DirectToAnsiInputDevice A    │           │ DirectToAnsiInputDevice B    │
+/// │   (TUI App context)          │           │   (Readline context)         │
+/// │   • sigwinch_receiver only   │           │   • sigwinch_receiver only   │
+/// │   • Delegates to global core │           │   • Delegates to global core │
+/// └──────────────────────────────┘           └──────────────────────────────┘
+///
+/// ✅ Data preserved during transitions - same stdin handle used throughout!
+/// ```
+///
+/// # Why Global State?
+///
+/// Without global state, when a TUI app exits and a new readline context is created,
+/// creating a new [`tokio::io::stdin()`] handle causes data in the kernel buffer to
+/// become inaccessible. User keypresses during the transition are lost.
+///
+/// With global state, the stdin handle and parse buffer survive across
+/// [`DirectToAnsiInputDevice`] lifetimes, ensuring no data loss.
+///
+/// # Reference: How crossterm Solves This
+///
+/// Crossterm uses a global [`INTERNAL_EVENT_READER`], here's an excerpt:
+///
+/// ```text
+/// static INTERNAL_EVENT_READER: Mutex<Option<...>>
+///    source: UnixInternalEventSource (tty fd - PERSISTS)
+///    events: VecDeque<InternalEvent> (buffer - PERSISTS)
+/// ```
+///
+/// All [`EventStream`] instances share this, so data is never lost during transitions.
+///
+/// # Why [`tokio::sync::Mutex`] (Not [`std::sync::Mutex`])
+///
+/// We hold the mutex guard across `.await` points (during `stdin.read().await`):
+/// - [`std::sync::MutexGuard`] is `!Send` and cannot be held across `.await` points
+/// - [`tokio::sync::Mutex`] is async-native and yields to scheduler instead of blocking
+/// - This prevents starving other tokio tasks while waiting for the lock
+///
+/// [`EventStream`]: ::crossterm::event::EventStream
+/// [`INTERNAL_EVENT_READER`]: https://github.com/crossterm-rs/crossterm/blob/0.29.0/src/event.rs#L149
+/// [crossterm]: ::crossterm
+#[allow(missing_debug_implementations)]
+pub struct DirectToAnsiInputCore {
+    /// Tokio async stdin handle for non-blocking reading.
+    ///
+    /// This handle persists for the program lifetime, ensuring no data is lost
+    /// when [`DirectToAnsiInputDevice`] instances are created and dropped.
+    /// All device instances share this single stdin handle.
+    stdin: tokio::io::Stdin,
+
+    /// Raw byte buffer for ANSI sequences and text.
+    ///
+    /// Pre-allocated with [`PARSE_BUFFER_SIZE`] capacity inline. This buffer
+    /// persists across device lifetimes, ensuring partial ANSI sequences are
+    /// not lost during TUI ↔ readline transitions.
+    parse_buffer: SmallVec<[u8; PARSE_BUFFER_SIZE]>,
+
+    /// Current position in buffer marking the boundary between consumed and unconsumed
+    /// bytes.
+    ///
+    /// Bytes before this position have been parsed; bytes from this position
+    /// onward are pending. When this exceeds half of [`PARSE_BUFFER_SIZE`], the
+    /// buffer is compacted via [`consume_bytes()`].
+    buffer_position: ByteIndex,
+
+    /// State machine for collecting bracketed paste text.
+    ///
+    /// Tracks whether we're between `Paste(Start)` and `Paste(End)` markers.
+    /// Persists across device lifetimes so mid-paste transitions don't lose data.
+    paste_state: PasteCollectionState,
+
+    /// Buffered events that haven't been consumed yet.
+    ///
+    /// When multiple events are parsed from a single read, extras are queued here.
+    /// Pre-allocated with capacity 32 for typical burst scenarios.
+    event_queue: VecDeque<InputEvent>,
+}
+
+/// Buffer size constants for the input device.
+mod constants {
+    /// Initial buffer capacity for efficient ANSI sequence buffering.
+    ///
+    /// Most terminal input consists of either:
+    /// - Individual keypresses (~5-10 bytes for special keys like arrows, function keys)
+    /// - Paste events (variable, but rare to exceed buffer capacity)
+    /// - Mouse events (~20 bytes for typical terminal coordinates)
+    ///
+    /// 4096 bytes accommodates multiple complete ANSI sequences without frequent
+    /// reallocations. This is a good balance: large enough to handle typical bursts,
+    /// small enough to avoid excessive memory overhead for idle periods.
+    ///
+    /// See [`try_read_event()`] for buffer management algorithm.
+    ///
+    /// [`try_read_event()`]: DirectToAnsiInputDevice::try_read_event#buffer_management_algorithm
+    pub const PARSE_BUFFER_SIZE: usize = 4096;
+
+    /// Temporary read buffer size for stdin reads.
+    ///
+    /// This is the read granularity: how much data we pull from the kernel in one
+    /// syscall. Too small (< 256): Excessive syscalls increase latency. Too large
+    /// (> 256): Delays response to time-sensitive input (e.g., arrow key repeat).
+    ///
+    /// 256 bytes is optimal for terminal input: it's one page boundary on many
+    /// architectures, fits comfortably in the input buffer, and provides good syscall
+    /// efficiency without introducing noticeable latency.
+    ///
+    /// See [`try_read_event()`] for buffer management algorithm.
+    ///
+    /// [`try_read_event()`]: DirectToAnsiInputDevice::try_read_event#buffer_management_algorithm
+    pub const STDIN_READ_BUFFER_SIZE: usize = 256;
+}
+#[allow(clippy::wildcard_imports)]
+use constants::*;
+
+/// Global singleton for the input core - initialized on first access.
+mod singleton {
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
+
+    /// Global singleton - initialized on first access.
+    ///
+    /// Uses [`LazyLock`] for thread-safe lazy initialization and [`tokio::sync::Mutex`]
+    /// for async-safe access. The [`Option`] allows initialization to happen on first
+    /// access.
+    pub static GLOBAL_INPUT_CORE: LazyLock<
+        tokio::sync::Mutex<Option<DirectToAnsiInputCore>>,
+    > = LazyLock::new(|| tokio::sync::Mutex::new(None));
+
+    /// Gets or initializes the global input core.
+    ///
+    /// On first call, creates the stdin handle, parse buffer, and event queue.
+    /// Subsequent calls return a guard to the existing state.
+    pub async fn get_or_init_global_core()
+    -> tokio::sync::MutexGuard<'static, Option<DirectToAnsiInputCore>> {
+        let mut guard = GLOBAL_INPUT_CORE.lock().await;
+        if guard.is_none() {
+            *guard = Some(DirectToAnsiInputCore {
+                stdin: tokio::io::stdin(),
+                parse_buffer: SmallVec::new(),
+                buffer_position: ByteIndex::default(),
+                paste_state: PasteCollectionState::Inactive,
+                event_queue: VecDeque::with_capacity(32),
+            });
+        }
+        guard
+    }
+}
+#[allow(clippy::wildcard_imports)]
+use singleton::*;
+
+/// Async input device for [`DirectToAnsi`] backend.
+///
+/// This is a **thin wrapper** that delegates to `GLOBAL_INPUT_CORE` for stdin reading
+/// and buffer management. The global core pattern mirrors crossterm's architecture,
+/// ensuring stdin handles persist across device lifecycle boundaries.
+///
+/// Manages asynchronous reading from terminal stdin using tokio, with:
+/// - Global state for stdin handle and parse buffer (survives device lifecycle)
+/// - Simple [`SmallVec<u8>`] buffer for handling partial/incomplete ANSI sequences
+/// - Smart lookahead for zero-latency ESC key detection (no timeout!)
+/// - Dispatch to protocol parsers (keyboard, mouse, terminal events, UTF-8)
+///
+/// # Why Global State?
+///
+/// When a TUI app exits and a new readline context is created, previous implementations
+/// would create a new [`tokio::io::stdin()`] handle. Data in the kernel buffer during
+/// this transition was lost, causing key presses to be dropped. The global core ensures
+/// the stdin handle and parse buffer survive across [`DirectToAnsiInputDevice`]
+/// lifetimes.
+///
+/// See the module-level documentation for detailed architecture diagrams.
+///
+/// # Full I/O Pipeline
+///
+/// This device sits in the backend executor layer, bridging raw I/O to the protocol
+/// parser, then converting protocol IR to the public API:
+///
+/// ```text
+/// ┌──────────────────────────────────────────────────────────────────┐
+/// │ Raw ANSI bytes: "\x1B[A"                                         │
+/// │ stdin (tokio::io::stdin) - FROM GLOBAL_INPUT_CORE                │
+/// └────────────────────────────┬─────────────────────────────────────┘
 ///                              │
-/// ┌────────────────────────────▼────────────────────────────────────┐
-/// │ THIS DEVICE: DirectToAnsiInputDevice (Backend Executor)         │
-/// │   • Vec<u8> buffer: `PARSE_BUFFER_SIZE`, zero-timeout parsing   │
-/// │   • Async I/O: tokio::io::stdin().read()                        │
-/// │   • Paste state machine: Collecting bracketed paste text        │
-/// └────────────────────────────┬────────────────────────────────────┘
+/// ┌────────────────────────────▼─────────────────────────────────────┐
+/// │ THIS DEVICE: DirectToAnsiInputDevice (Backend Executor)          │
+/// │   • Delegates to GLOBAL_INPUT_CORE for stdin/buffer              │
+/// │   • Owns SIGWINCH receiver (per-instance, can't be shared)       │
+/// │   • SmallVec buffer: `PARSE_BUFFER_SIZE`, zero-timeout parsing   │
+/// │   • Paste state machine: Collecting bracketed paste text         │
+/// └────────────────────────────┬─────────────────────────────────────┘
 ///                              │
 /// ┌────────────────────────────▼─────────────────────────────────────┐
 /// │ vt_100_terminal_input_parser/ (Protocol Layer - IR)              │
@@ -141,31 +240,27 @@ async fn wait_for_input_or_signal(
 /// │   └─ parse_utf8_text()         → VT100InputEventIR::Keyboard     │
 /// └────────────────────────────┬─────────────────────────────────────┘
 ///                              │
-/// ┌────────────────────────────▼────────────────────────────────────┐
-/// │ protocol_conversion.rs (IR → Public API)                        │
-/// │   convert_input_event()       VT100InputEventIR → InputEvent    │
-/// │   convert_key_code_to_keypress()  VT100KeyCodeIR → KeyPress     │
-/// └────────────────────────────┬────────────────────────────────────┘
+/// ┌────────────────────────────▼─────────────────────────────────────┐
+/// │ protocol_conversion.rs (IR → Public API)                         │
+/// │   convert_input_event()       VT100InputEventIR → InputEvent     │
+/// │   convert_key_code_to_keypress()  VT100KeyCodeIR → KeyPress      │
+/// └────────────────────────────┬─────────────────────────────────────┘
 ///                              │
-/// ┌────────────────────────────▼────────────────────────────────────┐
-/// │ Public API (Application Layer)                                  │
-/// │   InputEvent::Keyboard(KeyPress)                                │
-/// │   InputEvent::Mouse(MouseInput)                                 │
-/// │   InputEvent::Resize(Size)                                      │
-/// │   InputEvent::Focus(FocusEvent)                                 │
-/// │   InputEvent::Paste(String)                                     │
-/// └─────────────────────────────────────────────────────────────────┘
+/// ┌────────────────────────────▼─────────────────────────────────────┐
+/// │ Public API (Application Layer)                                   │
+/// │   InputEvent::Keyboard(KeyPress)                                 │
+/// │   InputEvent::Mouse(MouseInput)                                  │
+/// │   InputEvent::Resize(Size)                                       │
+/// │   InputEvent::Focus(FocusEvent)                                  │
+/// │   InputEvent::Paste(String)                                      │
+/// └──────────────────────────────────────────────────────────────────┘
 /// ```
 ///
-/// # Underlying protocol parser
+/// # Underlying Protocol Parser
 ///
 /// - [`vt_100_terminal_input_parser`]: The protocol parser that converts raw bytes to
 ///   [`VT100InputEventIR`]. This device calls [`try_parse_input_event`] to perform the
 ///   actual parsing.
-///
-/// [`vt_100_terminal_input_parser`]: mod@crate::core::ansi::vt_100_terminal_input_parser
-/// [`VT100InputEventIR`]: crate::core::ansi::vt_100_terminal_input_parser::VT100InputEventIR
-/// [`try_parse_input_event`]: crate::core::ansi::vt_100_terminal_input_parser::try_parse_input_event
 ///
 /// # Zero-Latency ESC Key Detection
 ///
@@ -235,29 +330,29 @@ async fn wait_for_input_or_signal(
 ///   before `read()` sees them
 /// - **Network delay case**: Over SSH with 200ms latency, UX is already degraded; getting
 ///   ESC instead of Up Arrow is annoying but not catastrophic
+///
+/// [`DirectToAnsi`]: mod@crate::tui::terminal_lib_backends::direct_to_ansi
+/// [`VT100InputEventIR`]: crate::core::ansi::vt_100_terminal_input_parser::VT100InputEventIR
+/// [`try_parse_input_event`]: crate::core::ansi::vt_100_terminal_input_parser::try_parse_input_event
+/// [`vt_100_terminal_input_parser`]: mod@crate::core::ansi::vt_100_terminal_input_parser
 pub struct DirectToAnsiInputDevice {
-    /// Tokio async stdin handle for non-blocking reading.
-    stdin: tokio::io::Stdin,
-
-    /// Raw byte buffer for ANSI sequences and text.
-    /// Pre-allocated with `PARSE_BUFFER_SIZE` capacity inline, never grows.
-    parse_buffer: SmallVec<[u8; PARSE_BUFFER_SIZE]>,
-
-    /// Current position in buffer marking the boundary between consumed and unconsumed
-    /// bytes. Bytes before this position have been parsed; bytes from this position
-    /// onward are pending. When this exceeds half of `PARSE_BUFFER_SIZE`, buffer
-    /// is compacted.
-    buffer_position: ByteIndex,
-
-    /// State machine for collecting bracketed paste text.
-    /// Tracks whether we're between Paste(Start) and Paste(End) markers.
-    paste_state: PasteCollectionState,
-
-    /// SIGWINCH signal receiver for terminal resize events (Unix-only).
+    /// `SIGWINCH` signal receiver for terminal resize events (Unix-only).
     ///
     /// Terminal resize is not sent through stdin as ANSI sequences - it's delivered
-    /// via the SIGWINCH signal. We use `tokio::signal::unix::Signal` to receive these
-    /// asynchronously and convert them to [`InputEvent::Resize`].
+    /// via the `SIGWINCH` signal. We use [`tokio::signal::unix::Signal`] to receive
+    /// these asynchronously and convert them to [`InputEvent::Resize`].
+    ///
+    /// This is per-instance (not in global core) because signal receivers can't easily
+    /// be shared across async contexts.
+    ///
+    /// # TODO(windows)
+    ///
+    /// Windows uses `WINDOW_BUFFER_SIZE_EVENT` via Console API instead of `SIGWINCH`.
+    /// When adding Windows support for [`DirectToAnsi`], implement resize detection
+    /// using `ReadConsoleInput` which returns window buffer size change events.
+    /// See: <https://learn.microsoft.com/en-us/windows/console/window-buffer-size-record-str>
+    ///
+    /// [`DirectToAnsi`]: mod@super::super
     #[cfg(unix)]
     sigwinch_receiver: Signal,
 }
@@ -270,6 +365,27 @@ pub struct DirectToAnsiInputDevice {
 /// - `Paste(End)` marker
 ///
 /// This state tracks whether we're currently collecting text between markers.
+///
+/// # Line Ending Handling
+///
+/// Both CR (`\r`) and LF (`\n`) are parsed by the keyboard parser as
+/// [`VT100KeyCodeIR::Enter`], which is then accumulated as `'\n'`. This means:
+/// - LF (`\n`) → `'\n'` ✓
+/// - CR (`\r`) → `'\n'` ✓
+/// - CRLF (`\r\n`) → `'\n\n'` (double newline)
+///
+/// Most Unix terminals normalize line endings before sending bracketed paste,
+/// so CRLF sequences are uncommon in practice.
+///
+/// # TODO(windows)
+///
+/// Windows uses CRLF line endings natively. When adding Windows support for
+/// [`DirectToAnsi`], consider normalizing CRLF → LF in the paste accumulator.
+/// This would require either tracking the previous byte in the keyboard parser
+/// or post-processing the accumulated text.
+///
+/// [`DirectToAnsi`]: mod@super::super
+/// [`VT100KeyCodeIR::Enter`]: crate::core::ansi::vt_100_terminal_input_parser::VT100KeyCodeIR::Enter
 #[derive(Debug)]
 enum PasteCollectionState {
     /// Not currently in a paste operation.
@@ -278,16 +394,108 @@ enum PasteCollectionState {
     Accumulating(String),
 }
 
+/// Result of applying the paste state machine to a parsed event.
+enum PasteAction {
+    /// Emit this event to the caller.
+    Emit(InputEvent),
+    /// Continue collecting (event was absorbed by paste state machine).
+    Continue,
+}
+
+/// Result of waiting for stdin or signal in the event loop.
+#[cfg(unix)]
+enum WaitAction {
+    /// Emit this event to the caller (e.g., Resize).
+    Emit(InputEvent),
+    /// EOF or error occurred, signal shutdown.
+    Shutdown,
+    /// Data was read or signal handled, continue parsing.
+    Continue,
+}
+
+/// Applies the paste collection state machine to a parsed VT100 event.
+///
+/// Returns [`PasteAction::Emit`] if the event should be emitted to the caller,
+/// or [`PasteAction::Continue`] if the event was absorbed (paste in progress).
+fn apply_paste_state_machine(
+    paste_state: &mut PasteCollectionState,
+    vt100_event: &VT100InputEventIR,
+) -> PasteAction {
+    match (paste_state, vt100_event) {
+        // Start marker: enter collecting state, don't emit event.
+        (
+            state @ PasteCollectionState::Inactive,
+            VT100InputEventIR::Paste(VT100PasteModeIR::Start),
+        ) => {
+            *state = PasteCollectionState::Accumulating(String::new());
+            PasteAction::Continue
+        }
+
+        // End marker: emit complete paste and exit collecting state.
+        (
+            state @ PasteCollectionState::Accumulating(_),
+            VT100InputEventIR::Paste(VT100PasteModeIR::End),
+        ) => {
+            // Swap out `&mut state` to `Inactive` to get ownership of what is
+            // currently there, then extract accumulated text.
+            let state = std::mem::replace(state, PasteCollectionState::Inactive);
+            let PasteCollectionState::Accumulating(text) = state else {
+                unreachable!(
+                    "state was matched as Accumulating(String), so this can't happen"
+                );
+            };
+            PasteAction::Emit(InputEvent::BracketedPaste(text))
+        }
+
+        // While collecting: accumulate keyboard characters and whitespace.
+        // Tab/Enter/Backspace are parsed as dedicated keys (not Char variants),
+        // so we must handle them explicitly to preserve whitespace in pastes.
+        (PasteCollectionState::Accumulating(buffer), vt100_event) => {
+            match vt100_event {
+                VT100InputEventIR::Keyboard {
+                    code: VT100KeyCodeIR::Char(ch),
+                    ..
+                } => buffer.push(*ch),
+                VT100InputEventIR::Keyboard {
+                    code: VT100KeyCodeIR::Enter,
+                    ..
+                } => buffer.push('\n'),
+                VT100InputEventIR::Keyboard {
+                    code: VT100KeyCodeIR::Tab,
+                    ..
+                } => buffer.push('\t'),
+                // Other events (mouse, resize, focus, arrow keys, etc.) are
+                // ignored during paste - they're unlikely to be intentional.
+                _ => {}
+            }
+            PasteAction::Continue
+        }
+
+        // Orphaned end marker (End without Start): emit empty paste.
+        (
+            PasteCollectionState::Inactive,
+            VT100InputEventIR::Paste(VT100PasteModeIR::End),
+        ) => PasteAction::Emit(InputEvent::BracketedPaste(String::new())),
+
+        // Normal event processing when not pasting.
+        (PasteCollectionState::Inactive, _) => {
+            match convert_input_event(vt100_event.clone()) {
+                Some(event) => PasteAction::Emit(event),
+                None => PasteAction::Continue,
+            }
+        }
+    }
+}
+
 impl DirectToAnsiInputDevice {
     /// Create a new `DirectToAnsiInputDevice`.
     ///
-    /// Initializes:
-    /// - `tokio::io::stdin()` handle for non-blocking reading
-    /// - `PARSE_BUFFER_SIZE` `Vec<u8>` buffer (pre-allocated)
-    /// - consumed counter at 0
-    /// - SIGWINCH signal receiver for terminal resize events (Unix-only)
+    /// This is now a thin wrapper that only initializes the SIGWINCH receiver.
+    /// The stdin handle and parse buffer are managed by the global input core,
+    /// which persists for the program lifetime.
     ///
     /// No timeout initialization needed - we use smart async lookahead instead!
+    /// See the struct-level documentation for details on zero-latency ESC detection.
     ///
     /// # Panics
     ///
@@ -300,10 +508,6 @@ impl DirectToAnsiInputDevice {
             .expect("Failed to register SIGWINCH handler");
 
         Self {
-            stdin: tokio::io::stdin(),
-            parse_buffer: SmallVec::new(),
-            buffer_position: ByteIndex::default(),
-            paste_state: PasteCollectionState::Inactive,
             #[cfg(unix)]
             sigwinch_receiver,
         }
@@ -383,19 +587,30 @@ impl DirectToAnsiInputDevice {
     /// ```
     ///
     /// **Key points:**
-    /// - The device is **created once and reused** for the entire program lifetime
+    /// - The device can be **created and dropped multiple times** - global state persists
     /// - This method is **called repeatedly** by the main event loop via the
     ///   `InputDeviceExt::next()` trait method, not called directly
-    /// - **Buffer state is preserved** across calls: the internal `parse_buffer` and
-    ///   `buffer_position` accumulate partial ANSI sequences between calls
+    /// - **Buffer state is preserved** across device lifetimes via `GLOBAL_INPUT_CORE`
     /// - Returns `None` when stdin is closed (program should exit)
+    ///
+    /// # Global State
+    ///
+    /// This method accesses the global input core (`GLOBAL_INPUT_CORE`) which holds:
+    /// - The persistent stdin handle (survives across device lifetimes)
+    /// - The parse buffer and position
+    /// - The event queue for buffered events
+    /// - The paste collection state
+    ///
+    /// The SIGWINCH receiver remains per-instance since signal receivers can't easily
+    /// be shared across async contexts.
     ///
     /// # Implementation
     ///
     /// Async loop with zero-timeout parsing:
-    /// 1. Try to parse from existing buffer
-    /// 2. If incomplete, read more from stdin (yields until data ready)
-    /// 3. Loop back to parsing
+    /// 1. Check event queue for buffered events (from previous reads)
+    /// 2. Try to parse from existing buffer
+    /// 3. If incomplete, read more from stdin (yields until data ready)
+    /// 4. Loop back to parsing
     ///
     /// # Buffer Management Algorithm
     ///
@@ -425,7 +640,7 @@ impl DirectToAnsiInputDevice {
     ///
     /// **Key operations:**
     /// - `try_parse_input_event(&buffer[consumed..])` - Parse only unprocessed bytes
-    /// - `consume(n)` - Mark n bytes as processed (increments `consumed`)
+    /// - `consume_bytes(n)` - Mark n bytes as processed (increments `consumed`)
     /// - When `consumed > 2048` - Compact buffer by draining processed bytes
     ///
     /// **Why not a true ring buffer?**
@@ -444,173 +659,41 @@ impl DirectToAnsiInputDevice {
     ///
     /// [`InputDevice`]: crate::InputDevice
     pub async fn try_read_event(&mut self) -> Option<InputEvent> {
+        // Get the global input core - this persists for program lifetime.
+        let mut core_guard = get_or_init_global_core().await;
+        let core = core_guard.as_mut()?;
+
+        // Check event queue first - return any buffered events.
+        if let Some(event) = core.event_queue.pop_front() {
+            return Some(event);
+        }
+
         // Allocate temp buffer ONCE before loop (performance optimization).
-        // read() overwrites from index 0 each time, so no clearing between iterations.
         let mut temp_buf = [0u8; STDIN_READ_BUFFER_SIZE];
 
         loop {
-            // 1. Try to parse from existing buffer
+            // 1. Try to parse from existing buffer and apply paste state machine.
             if let Some((vt100_event, bytes_consumed)) = try_parse_input_event(
-                &self.parse_buffer[self.buffer_position.as_usize()..],
+                &core.parse_buffer[core.buffer_position.as_usize()..],
             ) {
-                self.consume(bytes_consumed);
+                consume_bytes(core, bytes_consumed);
 
-                // 2. Apply paste collection state machine
-                match (&mut self.paste_state, &vt100_event) {
-                    // Start marker: enter collecting state, don't emit event
-                    (
-                        state @ PasteCollectionState::Inactive,
-                        VT100InputEventIR::Paste(VT100PasteModeIR::Start),
-                    ) => {
-                        *state = PasteCollectionState::Accumulating(String::new());
-                        continue; // Loop to get next event
-                    }
-
-                    // While collecting: accumulate keyboard characters
-                    (
-                        PasteCollectionState::Accumulating(buffer),
-                        VT100InputEventIR::Keyboard {
-                            code: VT100KeyCodeIR::Char(ch),
-                            ..
-                        },
-                    ) => {
-                        buffer.push(*ch);
-                        continue; // Loop to get next event
-                    }
-
-                    // XMARK: How to get variant with owned data out of mut ref.
-
-                    // End marker: emit complete paste and exit collecting state
-                    (
-                        state @ PasteCollectionState::Accumulating(_),
-                        VT100InputEventIR::Paste(VT100PasteModeIR::End),
-                    ) => {
-                        // Swap out `&mut state` to `Inactive` to get ownership of what is
-                        // currently there, then extract accumulated text.
-                        let state =
-                            std::mem::replace(state, PasteCollectionState::Inactive);
-                        let PasteCollectionState::Accumulating(text) = state else {
-                            unreachable!(
-                                "state was matched as Accumulating(String), so this can't happen"
-                            );
-                        };
-                        return Some(InputEvent::BracketedPaste(text));
-                    }
-
-                    // Orphaned end marker (End without Start): emit empty paste
-                    (
-                        PasteCollectionState::Inactive,
-                        VT100InputEventIR::Paste(VT100PasteModeIR::End),
-                    ) => {
-                        return Some(InputEvent::BracketedPaste(String::new()));
-                    }
-
-                    // Normal event processing when not pasting
-                    (PasteCollectionState::Inactive, _) => {
-                        return convert_input_event(vt100_event);
-                    }
-
-                    // Other events while collecting paste should be ignored (or queued)
-                    // For now, ignore them (they'll be lost)
-                    (PasteCollectionState::Accumulating(_), _) => {
-                        continue; // Ignore and get next event
-                    }
+                match apply_paste_state_machine(&mut core.paste_state, &vt100_event) {
+                    PasteAction::Emit(event) => return Some(event),
+                    PasteAction::Continue => continue,
                 }
             }
 
             // 2. Buffer exhausted or incomplete sequence - wait for input or signal.
-            // Use wait_for_input_or_signal() to handle both stdin data and SIGWINCH.
-            // This yields until either data is ready or a resize signal arrives.
             #[cfg(unix)]
-            {
-                DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
-                    tracing::debug!(message = "direct-to-ansi: waiting for input or signal");
-                });
-
-                match wait_for_input_or_signal(
-                    &mut self.stdin,
-                    &mut self.sigwinch_receiver,
-                    &mut temp_buf,
-                )
-                .await
-                {
-                    // Branch 1: stdin data available
-                    WaitResult::Stdin(result) => {
-                        DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
-                            tracing::debug!(
-                                message = "direct-to-ansi: stdin branch selected",
-                                result = ?result
-                            );
-                        });
-                        match result {
-                            Ok(0) => {
-                                DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
-                                    tracing::debug!(message = "direct-to-ansi: stdin EOF (0 bytes)");
-                                });
-                                return None;
-                            }
-                            Err(ref e) => {
-                                DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
-                                    tracing::debug!(
-                                        message = "direct-to-ansi: stdin error",
-                                        error = ?e
-                                    );
-                                });
-                                return None;
-                            }
-                            Ok(n) => {
-                                DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
-                                    tracing::debug!(
-                                        message = "direct-to-ansi: stdin read bytes",
-                                        bytes_read = n
-                                    );
-                                });
-                                // Append new bytes to buffer
-                                self.parse_buffer.extend_from_slice(&temp_buf[..n]);
-                            }
-                        }
-                    }
-                    // Branch 2: SIGWINCH received - terminal resized
-                    WaitResult::Signal(sigwinch_result) => {
-                        DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
-                            tracing::debug!(
-                                message = "direct-to-ansi: SIGWINCH branch selected",
-                                result = ?sigwinch_result
-                            );
-                        });
-                        match sigwinch_result {
-                            Some(()) => {
-                                // Signal received successfully, query terminal size
-                                if let Ok(size) = get_size_rustix() {
-                                    DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
-                                        tracing::debug!(
-                                            message = "direct-to-ansi: returning Resize",
-                                            size = ?size
-                                        );
-                                    });
-                                    return Some(InputEvent::Resize(size));
-                                }
-                                DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
-                                    tracing::debug!(
-                                        message = "direct-to-ansi: get_size_rustix() failed, continuing"
-                                    );
-                                });
-                                // If size query failed, continue to next iteration
-                            }
-                            None => {
-                                // Signal stream closed - this is unexpected but shouldn't
-                                // cause shutdown. Just continue waiting for stdin.
-                                tracing::warn!(
-                                    message = "direct-to-ansi: SIGWINCH receiver returned None (stream closed)"
-                                );
-                                // Continue to next loop iteration - stdin will still work
-                            }
-                        }
-                    }
-                }
+            match self.await_input(core, &mut temp_buf).await {
+                WaitAction::Emit(event) => return Some(event),
+                WaitAction::Shutdown => return None,
+                WaitAction::Continue => {} // Loop back to try parsing.
             }
 
-            // Non-Unix: DirectToAnsi is Linux-only, this code path should never be reached.
+            // Non-Unix: DirectToAnsi is Linux-only, this code path should never be
+            // reached.
             #[cfg(not(unix))]
             {
                 unreachable!(
@@ -618,39 +701,150 @@ impl DirectToAnsiInputDevice {
                      This code path should never be reached on non-Unix systems."
                 );
             }
-
-            // 3. Loop back to try_parse_input_event() with new data
         }
     }
 
-    /// Consume N bytes from the buffer.
+    /// Waits for stdin data or SIGWINCH signal, returning an action for the event loop.
     ///
-    /// Increments the consumed counter and compacts the buffer if threshold exceeded.
-    /// This is kind of like a ring buffer (except that it is not fixed size).
+    /// # Cancel Safety
     ///
-    /// # Semantic Correctness
+    /// Both futures in the `select!` are cancel-safe:
+    /// - [`tokio::io::AsyncReadExt::read`]: Cancel-safe. If cancelled before completion,
+    ///   no data is lost - the same data will be available on the next read.
+    /// - [`tokio::signal::unix::Signal::recv`]: Cancel-safe. If cancelled, the signal is
+    ///   not consumed and will be delivered on the next call.
     ///
-    /// Takes [`ByteOffset`] (displacement from parser) and applies it to
-    /// `self.buffer_position` (position in buffer): `position += displacement`.
-    fn consume(&mut self, displacement: ByteOffset) {
-        self.buffer_position += displacement;
+    /// This means the `select!` can safely be used in a loop without losing events.
+    #[cfg(unix)]
+    async fn await_input(
+        &mut self,
+        core: &mut DirectToAnsiInputCore,
+        temp_buf: &mut [u8],
+    ) -> WaitAction {
+        use tokio::io::AsyncReadExt as _;
 
-        // Compact buffer if consumed bytes exceed half of PARSE_BUFFER_SIZE
-        if self.buffer_position.as_usize() > PARSE_BUFFER_SIZE / 2 {
-            self.parse_buffer.drain(..self.buffer_position.as_usize());
-            self.buffer_position = ByteIndex::default();
+        DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
+            tracing::debug!(message = "direct-to-ansi: waiting for input or signal");
+        });
+
+        tokio::select! {
+            result = core.stdin.read(temp_buf) => {
+                handle_stdin_result(core, temp_buf, result)
+            }
+            sigwinch_result = self.sigwinch_receiver.recv() => {
+                handle_sigwinch_result(sigwinch_result)
+            }
         }
     }
 }
 
-impl std::fmt::Debug for DirectToAnsiInputDevice {
+/// Handles the result of a stdin read operation.
+#[cfg(unix)]
+fn handle_stdin_result(
+    core: &mut DirectToAnsiInputCore,
+    temp_buf: &[u8],
+    result: std::io::Result<usize>,
+) -> WaitAction {
+    DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
+        tracing::debug!(
+            message = "direct-to-ansi: stdin branch selected",
+            result = ?result
+        );
+    });
+
+    match result {
+        Ok(0) => {
+            DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
+                tracing::debug!(message = "direct-to-ansi: stdin EOF (0 bytes)");
+            });
+            WaitAction::Shutdown
+        }
+        Err(ref e) => {
+            DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
+                tracing::debug!(message = "direct-to-ansi: stdin error", error = ?e);
+            });
+            WaitAction::Shutdown
+        }
+        Ok(n) => {
+            DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
+                tracing::debug!(
+                    message = "direct-to-ansi: stdin read bytes",
+                    bytes_read = n
+                );
+            });
+            core.parse_buffer.extend_from_slice(&temp_buf[..n]);
+            WaitAction::Continue
+        }
+    }
+}
+
+/// Handles the result of a SIGWINCH signal.
+#[cfg(unix)]
+fn handle_sigwinch_result(sigwinch_result: Option<()>) -> WaitAction {
+    DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
+        tracing::debug!(
+            message = "direct-to-ansi: SIGWINCH branch selected",
+            result = ?sigwinch_result
+        );
+    });
+
+    match sigwinch_result {
+        Some(()) => {
+            // Signal received successfully, query terminal size.
+            if let Ok(size) = get_size() {
+                DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
+                    tracing::debug!(
+                        message = "direct-to-ansi: returning Resize",
+                        size = ?size
+                    );
+                });
+                return WaitAction::Emit(InputEvent::Resize(size));
+            }
+            // If size query failed, continue to next iteration.
+            DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
+                tracing::debug!(
+                    message = "direct-to-ansi: get_size() failed, continuing"
+                );
+            });
+            WaitAction::Continue
+        }
+        None => {
+            // Signal stream closed - unexpected but shouldn't cause shutdown.
+            tracing::warn!(
+                message =
+                    "direct-to-ansi: SIGWINCH receiver returned None (stream closed)"
+            );
+            WaitAction::Continue
+        }
+    }
+}
+
+/// Consume N bytes from the buffer in the global core.
+///
+/// Increments the consumed counter and compacts the buffer if threshold exceeded.
+/// This is kind of like a ring buffer (except that it is not fixed size).
+///
+/// # Semantic Correctness
+///
+/// Takes [`ByteOffset`] (displacement from parser) and applies it to
+/// [`buffer_position`] (position in buffer): `position += displacement`.
+///
+/// [`buffer_position`]: DirectToAnsiInputCore::buffer_position
+fn consume_bytes(core: &mut DirectToAnsiInputCore, displacement: ByteOffset) {
+    core.buffer_position += displacement;
+
+    // Compact buffer if consumed bytes exceed half of PARSE_BUFFER_SIZE.
+    if core.buffer_position.as_usize() > PARSE_BUFFER_SIZE / 2 {
+        core.parse_buffer.drain(..core.buffer_position.as_usize());
+        core.buffer_position = ByteIndex::default();
+    }
+}
+
+impl Debug for DirectToAnsiInputDevice {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("DirectToAnsiInputDevice")
-            .field("stdin", &"<tokio::io::Stdin>")
-            .field("parse_buffer_len", &self.parse_buffer.len())
-            .field("buffer_position", &self.buffer_position)
-            .field("paste_state", &self.paste_state)
             .field("sigwinch_receiver", &"<Signal>")
+            .field("global_core", &"<GLOBAL_INPUT_CORE>")
             .finish()
     }
 }
@@ -685,33 +879,34 @@ mod tests {
 
     #[tokio::test]
     async fn test_device_creation() {
-        // Test DirectToAnsiInputDevice constructs successfully with correct initial state
-        let device = DirectToAnsiInputDevice::new();
+        // Test DirectToAnsiInputDevice constructs successfully.
+        // With the global core architecture, the device is now a thin wrapper
+        // that only holds the SIGWINCH receiver.
+        let _device = DirectToAnsiInputDevice::new();
 
-        // Verify buffer initialized with correct capacity (`PARSE_BUFFER_SIZE`)
-        assert_eq!(device.parse_buffer.capacity(), PARSE_BUFFER_SIZE);
+        // Verify global core is initialized on first access.
+        let core_guard = get_or_init_global_core().await;
+        let core = core_guard
+            .as_ref()
+            .expect("Global core should be initialized");
 
-        // Verify buffer is empty initially (no data yet)
-        assert_eq!(device.parse_buffer.len(), 0);
+        // Verify buffer is empty initially (no data yet).
+        assert_eq!(core.parse_buffer.len(), 0);
 
-        // Verify consumed counter is at 0
-        assert_eq!(device.buffer_position.as_usize(), 0);
-
-        // Constructor completes without panic - success!
+        // Verify consumed counter is at 0.
+        assert_eq!(core.buffer_position.as_usize(), 0);
     }
 
     #[tokio::test]
     async fn test_event_parsing() {
-        // Test event parsing from buffer - verify parsers handle different sequence types
-        let mut device = DirectToAnsiInputDevice::new();
+        // Test event parsing from buffer - verify parsers handle different sequence
+        // types. These tests use the parser functions directly since they don't
+        // need the device.
 
-        // Test 1: Parse UTF-8 text (simplest case)
-        // Single character "A" should parse as keyboard input
-        device.parse_buffer.extend_from_slice(b"A");
-        if let Some((vt100_event, bytes_consumed)) = parse_utf8_text(&device.parse_buffer)
-        {
+        // Test 1: Parse UTF-8 text (simplest case).
+        let buffer: &[u8] = b"A";
+        if let Some((vt100_event, bytes_consumed)) = parse_utf8_text(buffer) {
             assert_eq!(bytes_consumed, byte_offset(1));
-            // Convert and verify we got a keyboard event for the character
             if let Some(canonical_event) = convert_input_event(vt100_event) {
                 assert!(matches!(canonical_event, InputEvent::Keyboard(_)));
             } else {
@@ -721,104 +916,91 @@ mod tests {
             panic!("Failed to parse UTF-8 text 'A'");
         }
 
-        // Test 2: Clear buffer and test ESC key (single byte)
-        device.parse_buffer.clear();
-        device.parse_buffer.push(0x1B); // ESC byte
-        // Note: try_parse() is private, so we verify parsing logic through the buffer
-        // setup A buffer with only [0x1B] should parse as ESC key (based on
-        // try_parse logic)
-        assert_eq!(device.parse_buffer.len(), 1);
-        assert_eq!(device.parse_buffer[0], 0x1B);
+        // Test 2: ESC key (single byte).
+        let esc_buffer: [u8; 1] = [0x1B];
+        assert_eq!(esc_buffer.len(), 1);
+        assert_eq!(esc_buffer[0], 0x1B);
 
-        // Test 3: Set up CSI sequence for keyboard (Up Arrow: ESC [ A)
-        device.parse_buffer.clear();
-        device.parse_buffer.extend_from_slice(&[0x1B, 0x5B, 0x41]); // ESC [ A
-        if let Some((vt100_event, bytes_consumed)) =
-            parse_keyboard_sequence(&device.parse_buffer)
+        // Test 3: CSI sequence for keyboard (Up Arrow: ESC [ A).
+        let csi_buffer: [u8; 3] = [0x1B, 0x5B, 0x41];
+        if let Some((vt100_event, bytes_consumed)) = parse_keyboard_sequence(&csi_buffer)
         {
             assert_eq!(bytes_consumed, byte_offset(3));
-            // Convert and verify we got a keyboard event
             if let Some(canonical_event) = convert_input_event(vt100_event) {
                 assert!(matches!(canonical_event, InputEvent::Keyboard(_)));
             } else {
                 panic!("Failed to convert keyboard event");
             }
         }
-
-        // Test 4: Verify buffer consumption tracking
-        device.buffer_position = ByteIndex::default();
-        device.consume(byte_offset(1));
-        assert_eq!(device.buffer_position.as_usize(), 1);
-
-        device.consume(byte_offset(2));
-        assert_eq!(device.buffer_position.as_usize(), 3);
     }
 
     #[tokio::test]
     async fn test_buffer_management() {
-        // Test buffer handling: growth, consumption, and compaction at 2KB threshold
-        let mut device = DirectToAnsiInputDevice::new();
+        // Test buffer handling: growth, consumption, and compaction at 2KB threshold.
+        // Create a local core to test the consume_bytes function.
+        let mut core = DirectToAnsiInputCore {
+            stdin: tokio::io::stdin(),
+            parse_buffer: SmallVec::new(),
+            buffer_position: ByteIndex::default(),
+            paste_state: PasteCollectionState::Inactive,
+            event_queue: VecDeque::new(),
+        };
 
-        // Verify initial state
-        assert_eq!(device.parse_buffer.len(), 0);
-        assert_eq!(device.parse_buffer.capacity(), PARSE_BUFFER_SIZE);
-        assert_eq!(device.buffer_position.as_usize(), 0);
+        // Verify initial state.
+        assert_eq!(core.parse_buffer.len(), 0);
+        assert_eq!(core.buffer_position.as_usize(), 0);
 
-        // Test 1: Buffer growth - add data and verify length increases
+        // Test 1: Buffer growth - add data and verify length increases.
         let test_data = vec![b'X'; 100];
-        device.parse_buffer.extend_from_slice(&test_data);
-        assert_eq!(device.parse_buffer.len(), 100);
-        assert!(device.parse_buffer.capacity() >= 100);
+        core.parse_buffer.extend_from_slice(&test_data);
+        assert_eq!(core.parse_buffer.len(), 100);
+        assert!(core.parse_buffer.capacity() >= 100);
 
-        // Test 2: Consumption tracking - consume bytes and verify counter
-        device.consume(byte_offset(50));
-        assert_eq!(device.buffer_position.as_usize(), 50);
-        assert_eq!(device.parse_buffer.len(), 100); // Buffer still holds all bytes
+        // Test 2: Consumption tracking - consume bytes and verify counter.
+        consume_bytes(&mut core, byte_offset(50));
+        assert_eq!(core.buffer_position.as_usize(), 50);
+        assert_eq!(core.parse_buffer.len(), 100);
 
-        // Test 3: Verify consumed bytes are skipped in try_parse
-        // The try_parse function uses &buffer[consumed..], so consumed bytes are
-        // logically skipped
-        let unread_portion = &device.parse_buffer[device.buffer_position.as_usize()..];
+        // Test 3: Verify consumed bytes are skipped.
+        let unread_portion = &core.parse_buffer[core.buffer_position.as_usize()..];
         assert_eq!(unread_portion.len(), 50);
 
-        // Test 4: Buffer compaction at threshold (half of PARSE_BUFFER_SIZE)
-        // Add enough data to exceed the threshold (2048 bytes)
-        device.parse_buffer.clear();
-        device.buffer_position = ByteIndex::default();
+        // Test 4: Buffer compaction at threshold (half of PARSE_BUFFER_SIZE).
+        core.parse_buffer.clear();
+        core.buffer_position = ByteIndex::default();
 
-        // Add 2100 bytes (exceed 2048 threshold, which is half of 4096)
+        // Add 2100 bytes (exceed 2048 threshold, which is half of 4096).
         let large_data = vec![b'Y'; 2100];
-        device.parse_buffer.extend_from_slice(&large_data);
-        assert_eq!(device.parse_buffer.len(), 2100);
+        core.parse_buffer.extend_from_slice(&large_data);
+        assert_eq!(core.parse_buffer.len(), 2100);
 
-        // Consume 1000 bytes (won't trigger compaction yet, need > 2048)
-        device.consume(byte_offset(1000));
-        assert_eq!(device.buffer_position.as_usize(), 1000);
-        assert_eq!(device.parse_buffer.len(), 2100); // Buffer not compacted yet
+        // Consume 1000 bytes (won't trigger compaction yet, need > 2048).
+        consume_bytes(&mut core, byte_offset(1000));
+        assert_eq!(core.buffer_position.as_usize(), 1000);
+        assert_eq!(core.parse_buffer.len(), 2100);
 
-        // Consume another 1100 bytes (total = 2100, which exceeds 2048 threshold)
-        device.consume(byte_offset(1100));
-        assert_eq!(device.buffer_position.as_usize(), 0); // Reset to 0 after compaction
-        assert_eq!(device.parse_buffer.len(), 0); // Consumed data removed, remaining data preserved
+        // Consume another 1100 bytes (total = 2100, exceeds 2048 threshold).
+        consume_bytes(&mut core, byte_offset(1100));
+        assert_eq!(core.buffer_position.as_usize(), 0);
+        assert_eq!(core.parse_buffer.len(), 0);
 
-        // Test 5: Verify capacity doesn't shrink unexpectedly
-        // Even after compaction, we should maintain reasonable capacity
-        let capacity_after_compact = device.parse_buffer.capacity();
+        // Test 5: Verify capacity doesn't shrink unexpectedly.
+        let capacity_after_compact = core.parse_buffer.capacity();
         assert!(capacity_after_compact >= PARSE_BUFFER_SIZE);
     }
 
     #[tokio::test]
     async fn test_paste_state_machine_basic() {
-        // Test: Basic paste collection - Start marker, text, End marker
-        let mut device = DirectToAnsiInputDevice::new();
+        // Test: Basic paste collection - Start marker, text, End marker.
+        // Use a local paste_state to test the state machine logic directly.
+        let mut paste_state = PasteCollectionState::Inactive;
 
-        // Verify initial state is NotPasting
-        assert!(matches!(device.paste_state, PasteCollectionState::Inactive));
+        // Verify initial state is Inactive.
+        assert!(matches!(paste_state, PasteCollectionState::Inactive));
 
-        // Simulate receiving Paste(Start) event
+        // Simulate receiving Paste(Start) event.
         let start_event = VT100InputEventIR::Paste(VT100PasteModeIR::Start);
-        // Apply state machine logic (simulating what read_event does)
-        match (&mut device.paste_state, &start_event) {
+        match (&mut paste_state, &start_event) {
             (
                 state @ PasteCollectionState::Inactive,
                 VT100InputEventIR::Paste(VT100PasteModeIR::Start),
@@ -828,19 +1010,16 @@ mod tests {
             _ => panic!("State machine should handle Paste(Start)"),
         }
 
-        // Verify we're now collecting
-        assert!(matches!(
-            device.paste_state,
-            PasteCollectionState::Accumulating(_)
-        ));
+        // Verify we're now collecting.
+        assert!(matches!(paste_state, PasteCollectionState::Accumulating(_)));
 
-        // Simulate receiving keyboard events (the pasted text)
+        // Simulate receiving keyboard events (the pasted text).
         for ch in &['H', 'e', 'l', 'l', 'o'] {
             let keyboard_event = VT100InputEventIR::Keyboard {
                 code: VT100KeyCodeIR::Char(*ch),
                 modifiers: VT100KeyModifiersIR::default(),
             };
-            match (&mut device.paste_state, &keyboard_event) {
+            match (&mut paste_state, &keyboard_event) {
                 (
                     PasteCollectionState::Accumulating(buffer),
                     VT100InputEventIR::Keyboard {
@@ -854,9 +1033,9 @@ mod tests {
             }
         }
 
-        // Simulate receiving Paste(End) event
+        // Simulate receiving Paste(End) event.
         let end_event = VT100InputEventIR::Paste(VT100PasteModeIR::End);
-        let collected_text = match (&mut device.paste_state, &end_event) {
+        let collected_text = match (&mut paste_state, &end_event) {
             (
                 state @ PasteCollectionState::Accumulating(_),
                 VT100InputEventIR::Paste(VT100PasteModeIR::End),
@@ -872,29 +1051,29 @@ mod tests {
             _ => panic!("State machine should handle Paste(End)"),
         };
 
-        // Verify we collected the correct text
+        // Verify we collected the correct text.
         assert_eq!(collected_text, "Hello");
 
-        // Verify we're back to NotPasting state
-        assert!(matches!(device.paste_state, PasteCollectionState::Inactive));
+        // Verify we're back to Inactive state.
+        assert!(matches!(paste_state, PasteCollectionState::Inactive));
     }
 
     #[tokio::test]
     async fn test_paste_state_machine_multiline() {
-        // Test: Paste with newlines
-        let mut device = DirectToAnsiInputDevice::new();
+        // Test: Paste with newlines.
+        let mut paste_state = PasteCollectionState::Inactive;
 
-        // Start collection
-        match &mut device.paste_state {
+        // Start collection.
+        match &mut paste_state {
             state @ PasteCollectionState::Inactive => {
                 *state = PasteCollectionState::Accumulating(String::new());
             }
             PasteCollectionState::Accumulating(_) => panic!(),
         }
 
-        // Accumulate "Line1\nLine2"
+        // Accumulate "Line1\nLine2".
         for ch in "Line1\nLine2".chars() {
-            match &mut device.paste_state {
+            match &mut paste_state {
                 PasteCollectionState::Accumulating(buffer) => {
                     buffer.push(ch);
                 }
@@ -902,8 +1081,8 @@ mod tests {
             }
         }
 
-        // End collection
-        let text = match &mut device.paste_state {
+        // End collection.
+        let text = match &mut paste_state {
             state @ PasteCollectionState::Accumulating(_) => {
                 if let PasteCollectionState::Accumulating(t) =
                     std::mem::replace(state, PasteCollectionState::Inactive)
@@ -921,15 +1100,15 @@ mod tests {
 
     #[tokio::test]
     async fn test_paste_state_machine_orphaned_end() {
-        // Test: Orphaned End marker (without Start) should be handled gracefully
-        let mut device = DirectToAnsiInputDevice::new();
+        // Test: Orphaned End marker (without Start) should be handled gracefully.
+        let mut paste_state = PasteCollectionState::Inactive;
 
-        // Should be NotPasting initially
-        assert!(matches!(device.paste_state, PasteCollectionState::Inactive));
+        // Should be Inactive initially.
+        assert!(matches!(paste_state, PasteCollectionState::Inactive));
 
-        // Receive End marker without Start - should emit empty paste
+        // Receive End marker without Start - should emit empty paste.
         let end_event = VT100InputEventIR::Paste(VT100PasteModeIR::End);
-        let result = match (&mut device.paste_state, &end_event) {
+        let result = match (&mut paste_state, &end_event) {
             (
                 PasteCollectionState::Inactive,
                 VT100InputEventIR::Paste(VT100PasteModeIR::End),
@@ -939,25 +1118,25 @@ mod tests {
 
         assert!(matches!(result, Some(InputEvent::BracketedPaste(s)) if s.is_empty()));
 
-        // Should still be NotPasting
-        assert!(matches!(device.paste_state, PasteCollectionState::Inactive));
+        // Should still be Inactive.
+        assert!(matches!(paste_state, PasteCollectionState::Inactive));
     }
 
     #[tokio::test]
     async fn test_paste_state_machine_empty_paste() {
-        // Test: Empty paste (Start immediately followed by End)
-        let mut device = DirectToAnsiInputDevice::new();
+        // Test: Empty paste (Start immediately followed by End).
+        let mut paste_state = PasteCollectionState::Inactive;
 
-        // Start
-        match &mut device.paste_state {
+        // Start.
+        match &mut paste_state {
             state @ PasteCollectionState::Inactive => {
                 *state = PasteCollectionState::Accumulating(String::new());
             }
             _ => panic!(),
         }
 
-        // End (without any characters in between)
-        let text = match &mut device.paste_state {
+        // End (without any characters in between).
+        let text = match &mut paste_state {
             state @ PasteCollectionState::Accumulating(_) => {
                 if let PasteCollectionState::Accumulating(t) =
                     std::mem::replace(state, PasteCollectionState::Inactive)

@@ -121,6 +121,10 @@ fn pty_controller_entry_point(
     let test_cases = vec![
         generate_paste_test_sequence("Simple ASCII paste", "Hello"),
         generate_paste_test_sequence("Multiline paste", "Line 1\nLine 2\nLine 3"),
+        generate_paste_test_sequence("Tabbed paste", "col1\tcol2\tcol3"),
+        generate_paste_test_sequence("Mixed whitespace", "fn main() {\n\tlet x = 1;\n}"),
+        generate_paste_test_sequence("CR line endings", "line1\rline2"),
+        generate_paste_test_sequence("CRLF line endings", "line1\r\nline2"),
         generate_paste_test_sequence("UTF-8 paste", "Hello 世界 🌍"),
         generate_paste_test_sequence("Empty paste", ""),
     ];
@@ -228,7 +232,7 @@ fn pty_controlled_entry_point() -> ! {
                             std::io::stdout().flush().expect("Failed to flush stdout");
 
                             // Exit after processing the expected number of test cases
-                            if event_count >= 4 {
+                            if event_count >= 8 {
                                 eprintln!("🔍 PTY Controlled: Processed {event_count} events, exiting");
                                 break;
                             }

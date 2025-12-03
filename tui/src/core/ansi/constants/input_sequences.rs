@@ -45,7 +45,7 @@ pub const ARROW_LEFT_FINAL: u8 = b'D';
 
 // ==================== Tab Keys ====================
 
-/// `CSI Z`: BackTab / Shift+Tab (90 dec, 5A hex).
+/// `CSI Z`: `BackTab` / Shift+Tab (90 dec, 5A hex).
 pub const BACKTAB_FINAL: u8 = b'Z';
 
 // ==================== Special Keys (CSI H/F) ====================
