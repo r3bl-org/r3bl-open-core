@@ -35,6 +35,7 @@ generate_pty_test! {
 }
 
 /// PTY Controller: Send Ctrl+D on non-empty line and verify delete behavior
+#[allow(clippy::too_many_lines)]
 fn pty_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
     eprintln!("🚀 PTY Controller: Starting Ctrl+D delete test...");
 

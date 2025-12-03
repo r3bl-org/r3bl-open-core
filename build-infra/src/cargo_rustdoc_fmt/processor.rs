@@ -230,10 +230,10 @@ mod tests {
         ));
 
         // Multi-line content with HTML comment
-        let text_with_comment = r#"Some text
+        let text_with_comment = r"Some text
 <!-- cspell:disable -->
 [`SomeType`]: crate::SomeType
-<!-- cspell:enable -->"#;
+<!-- cspell:enable -->";
         assert!(has_protected_content(text_with_comment));
 
         // Regular content without HTML comments should not be protected

@@ -5,8 +5,14 @@
 //! See [`DirectToAnsiInputDevice`] for the async input device implementation with
 //! zero-latency ESC key detection.
 
-// Private inner modules.
-mod input_device_impl;
+// Private submodules - organized by functional concern.
+mod buffer;
+mod input_device;
+mod input_event_handlers;
+mod paste_state_machine;
+mod singleton;
+mod stdin_reader_thread;
+mod types;
 
 // Conditionally public for documentation (to allow rustdoc links).
 #[cfg(any(test, doc))]
@@ -15,4 +21,4 @@ pub mod protocol_conversion;
 mod protocol_conversion;
 
 // Re-exports - flatten the public API.
-pub use input_device_impl::*;
+pub use input_device::*;

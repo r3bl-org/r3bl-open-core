@@ -444,7 +444,7 @@ mod mouse {
         match action {
             VT100MouseActionIR::Release => cb = MOUSE_RELEASE_BUTTON_CODE,
             VT100MouseActionIR::Motion | VT100MouseActionIR::Drag => {
-                cb |= MOUSE_MOTION_FLAG
+                cb |= MOUSE_MOTION_FLAG;
             }
             VT100MouseActionIR::Press | VT100MouseActionIR::Scroll(_) => {}
         }
@@ -481,7 +481,7 @@ mod mouse {
         match action {
             VT100MouseActionIR::Release => cb = MOUSE_RELEASE_BUTTON_CODE,
             VT100MouseActionIR::Motion | VT100MouseActionIR::Drag => {
-                cb |= MOUSE_MOTION_FLAG
+                cb |= MOUSE_MOTION_FLAG;
             }
             VT100MouseActionIR::Press | VT100MouseActionIR::Scroll(_) => {}
         }

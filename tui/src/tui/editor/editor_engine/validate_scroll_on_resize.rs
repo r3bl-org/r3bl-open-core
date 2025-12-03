@@ -326,10 +326,10 @@ mod tests {
     // │ Horizontal scroll tests                                                       │
     // └───────────────────────────────────────────────────────────────────────────────┘
 
-    /// Test: Caret column overflows max_col (line width).
+    /// Test: Caret column overflows `max_col` (line width).
     ///
     /// Setup: Line has 10 chars, caret at col 15 (past end of line).
-    /// Expected: Caret col should be adjusted back to max_col (10).
+    /// Expected: Caret col should be adjusted back to `max_col` (10).
     #[test]
     fn test_validate_horizontal_scroll_caret_col_overflows_max_col() {
         let mut buffer = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT), None);
@@ -366,10 +366,10 @@ mod tests {
         assert_eq!(buffer.get_caret_scr_adj().col_index, col(9));
     }
 
-    /// Test: Scroll offset column overflows max_col (line width).
+    /// Test: Scroll offset column overflows `max_col` (line width).
     ///
-    /// Setup: Line has 10 chars, scr_ofs at col 15 (past end of line).
-    /// Expected: scr_ofs col should be adjusted back.
+    /// Setup: Line has 10 chars, `scr_ofs` at col 15 (past end of line).
+    /// Expected: `scr_ofs` col should be adjusted back.
     #[test]
     fn test_validate_horizontal_scroll_scr_ofs_col_overflows_max_col() {
         let mut buffer = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT), None);
@@ -408,7 +408,7 @@ mod tests {
 
     /// Test: Caret within viewport horizontally.
     ///
-    /// Setup: Line has 20 chars, caret at col 5, scr_ofs at col 0, viewport width 10.
+    /// Setup: Line has 20 chars, caret at col 5, `scr_ofs` at col 0, viewport width 10.
     /// Expected: No change needed (caret is within viewport).
     #[test]
     fn test_validate_horizontal_scroll_within_viewport() {
@@ -446,12 +446,13 @@ mod tests {
 
     /// Test: Caret at edge of viewport (boundary condition).
     ///
-    /// Setup: Line has 20 chars, caret_raw at col 0, scr_ofs at col 5.
-    /// Result: caret_scr_adj = 5, which is exactly at scr_ofs (left edge of viewport).
-    /// Expected: No adjustment needed (caret is within viewport at left edge).
+    /// Setup: Line has 20 chars, `caret_raw` at col 0, `scr_ofs` at col 5.
+    /// Result: `caret_scr_adj` = 5, which is exactly at `scr_ofs` (left edge of
+    /// viewport). Expected: No adjustment needed (caret is within viewport at left
+    /// edge).
     ///
-    /// Note: The "left of viewport" case (caret_scr_adj < scr_ofs) cannot occur with
-    /// non-negative caret_raw values since caret_scr_adj = caret_raw + scr_ofs.
+    /// Note: The "left of viewport" case (`caret_scr_adj` < `scr_ofs`) cannot occur with
+    /// non-negative `caret_raw` values since `caret_scr_adj` = `caret_raw` + `scr_ofs`.
     #[test]
     fn test_validate_horizontal_scroll_at_left_edge() {
         let mut buffer = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT), None);
@@ -489,8 +490,8 @@ mod tests {
 
     /// Test: Caret to right of viewport.
     ///
-    /// Setup: Line has 30 chars, caret at col 25, scr_ofs at col 5, viewport width 10.
-    /// Expected: scr_ofs adjusted to bring caret into view.
+    /// Setup: Line has 30 chars, caret at col 25, `scr_ofs` at col 5, viewport width 10.
+    /// Expected: `scr_ofs` adjusted to bring caret into view.
     #[test]
     fn test_validate_horizontal_scroll_right_of_viewport() {
         let mut buffer = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT), None);

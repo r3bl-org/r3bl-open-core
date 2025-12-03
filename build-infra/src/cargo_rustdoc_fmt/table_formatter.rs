@@ -230,7 +230,7 @@ mod tests {
     #[test]
     fn test_code_fence_preserves_pipe_content() {
         // ASCII art with pipes inside code fence should NOT be formatted as a table
-        let input = r#"Some text
+        let input = r"Some text
 ```text
 +---------------------+
 |         ↑           |
@@ -238,7 +238,7 @@ mod tests {
 |         ↓           |
 +---------------------+
 ```
-More text"#;
+More text";
         let output = format_tables(input);
         // Content inside code fence should be unchanged
         assert!(output.contains("|         ↑           |"));
@@ -248,9 +248,9 @@ More text"#;
 
     #[test]
     fn test_code_fence_with_language_tag() {
-        let input = r#"```rust
+        let input = r"```rust
 | not | a | table |
-```"#;
+```";
         let output = format_tables(input);
         // Should preserve exactly as-is (not format as table)
         assert_eq!(output, input);
@@ -258,12 +258,12 @@ More text"#;
 
     #[test]
     fn test_table_outside_code_fence_still_formatted() {
-        let input = r#"```text
+        let input = r"```text
 | preserved | content |
 ```
 | A | B |
 |---|---|
-| 1 | 2 |"#;
+| 1 | 2 |";
         let output = format_tables(input);
         // Code fence content preserved exactly
         assert!(output.contains("| preserved | content |"));
@@ -276,7 +276,7 @@ More text"#;
 
     #[test]
     fn test_multiple_code_fences() {
-        let input = r#"```
+        let input = r"```
 | fence1 |
 ```
 | A | B |
@@ -284,7 +284,7 @@ More text"#;
 | 1 | 2 |
 ```
 | fence2 |
-```"#;
+```";
         let output = format_tables(input);
         // Both fence contents preserved
         assert!(output.contains("| fence1 |"));

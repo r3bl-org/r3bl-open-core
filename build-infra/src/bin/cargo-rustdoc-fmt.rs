@@ -55,6 +55,7 @@ fn strip_cargo_subcommand_injection() -> Vec<String> {
     args
 }
 
+#[allow(clippy::too_many_lines)]
 async fn run() -> miette::Result<()> {
     let args = strip_cargo_subcommand_injection();
 

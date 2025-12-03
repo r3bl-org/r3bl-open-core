@@ -170,11 +170,10 @@ fn pty_controller_entry_point(
                         eprintln!("  ✓ Received correct resize event: {trimmed}");
                         resize_received = true;
                         break;
-                    } else {
-                        eprintln!(
-                            "  ⚠️  Resize dimensions don't match expected 100x30: {trimmed}"
-                        );
                     }
+                    eprintln!(
+                        "  ⚠️  Resize dimensions don't match expected 100x30: {trimmed}"
+                    );
                 }
             }
             Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {

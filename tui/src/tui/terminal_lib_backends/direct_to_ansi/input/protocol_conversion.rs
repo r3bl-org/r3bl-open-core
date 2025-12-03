@@ -68,6 +68,7 @@ use crate::{Button, FocusEvent, InputEvent, Key, KeyPress, KeyState, ModifierKey
 /// Returns `None` if the event cannot be converted (e.g., unknown mouse button).
 ///
 /// [`TermPos`]: crate::TermPos
+#[must_use] 
 pub fn convert_input_event(vt100_event: VT100InputEventIR) -> Option<InputEvent> {
     match vt100_event {
         VT100InputEventIR::Keyboard { code, modifiers } => {

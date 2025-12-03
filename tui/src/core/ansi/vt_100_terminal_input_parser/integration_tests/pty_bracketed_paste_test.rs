@@ -37,6 +37,7 @@ generate_pty_test! {
 }
 
 /// PTY Controller: Send bracketed paste sequences and verify collection
+#[allow(clippy::too_many_lines)]
 fn pty_controller_entry_point(
     pty_pair: PtyPair,
     mut child: Box<dyn portable_pty::Child + Send + Sync>,
