@@ -142,18 +142,22 @@
           "isPinned": false
         },
         {
-          "path": "tui/src/tui/terminal_lib_backends/direct_to_ansi/input/global_input_resource.rs",
+          "path": "tui/src/tui/terminal_lib_backends/direct_to_ansi/input/paste_state_machine.rs",
           "isPinned": false
         },
         {
-          "path": "tui/src/tui/terminal_lib_backends/direct_to_ansi/input/paste_state_machine.rs",
+          "path": "tui/src/tui/terminal_lib_backends/direct_to_ansi/input/process_global_stdin.rs",
+          "isPinned": false
+        },
+        {
+          "path": "tui/src/tui/terminal_lib_backends/direct_to_ansi/input/stateful_parser.rs",
           "isPinned": false
         }
       ],
       "taskFile": "task/task_refactor_input_device.md",
       "createdAt": 1763496885607,
       "lastAccessed": 1763666457216,
-      "activeTab": "tui/src/tui/terminal_lib_backends/direct_to_ansi/input/global_input_resource.rs"
+      "activeTab": "tui/src/tui/terminal_lib_backends/direct_to_ansi/input/process_global_stdin.rs"
     },
     {
       "name": "[1.1] task_readline_async_add_shortcuts",

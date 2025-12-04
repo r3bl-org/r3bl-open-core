@@ -4,7 +4,7 @@
 
 //! [`DirectToAnsiInputDevice`] struct and implementation.
 
-use super::{global_input_resource::get_or_init_resource_guard, types::ReaderThreadMessage};
+use super::{process_global_stdin::get_or_init_resource_guard, types::ReaderThreadMessage};
 use crate::{InputEvent, core::term::get_size};
 use std::fmt::Debug;
 
@@ -43,7 +43,7 @@ use std::fmt::Debug;
 /// └────────────────────────────┬──────────────────────────────────────┘
 ///                              │
 /// ┌────────────────────────────▼──────────────────────────────────────┐
-/// │ mio-poller thread (global_input_resource.rs)                      │
+/// │ mio-poller thread (process_global_stdin.rs)                      │
 /// │   • mio::Poll waits on stdin + SIGWINCH                           │
 /// │   • Parses bytes using `more` flag for ESC disambiguation         │
 /// │   • Applies paste state machine                                   │
@@ -97,7 +97,7 @@ use std::fmt::Debug;
 /// └───────────────────────────────────▲───────────────────────────────────────┘
 ///                                     │ mpsc channel
 /// ┌───────────────────────────────────┴───────────────────────────────────────┐
-/// │ 2. mio-poller thread (global_input_resource.rs)                           │
+/// │ 2. mio-poller thread (process_global_stdin.rs)                           │
 /// │    std::thread::spawn("mio-poller")                                       │
 /// │                                                                           │
 /// │    Uses mio::Poll to wait on stdin + SIGWINCH:                            │
@@ -188,10 +188,10 @@ use std::fmt::Debug;
 /// ## Attribution
 ///
 /// This pattern is adapted from crossterm's `mio.rs` implementation. See the
-/// [`global_input_resource`] module documentation for details on our mio-based
+/// [`process_global_stdin`] module documentation for details on our mio-based
 /// architecture.
 ///
-/// [`global_input_resource`]: super::global_input_resource
+/// [`process_global_stdin`]: super::process_global_stdin
 /// [`CrosstermInputDevice`]: crate::tui::terminal_lib_backends::crossterm_backend::CrosstermInputDevice
 /// [`DirectToAnsi`]: mod@crate::tui::terminal_lib_backends::direct_to_ansi
 /// [`InputDevice`]: crate::InputDevice
@@ -200,8 +200,8 @@ use std::fmt::Debug;
 /// [`try_parse_input_event`]: crate::core::ansi::vt_100_terminal_input_parser::try_parse_input_event
 /// [`vt_100_terminal_input_parser`]: mod@crate::core::ansi::vt_100_terminal_input_parser
 /// [`stdin`]: std::io::Stdin
-/// [`GLOBAL_INPUT_RESOURCE`]: super::global_input_resource::GLOBAL_INPUT_RESOURCE
-/// [Why Global State?]: super::global_input_resource::GLOBAL_INPUT_RESOURCE#why-global-state
+/// [`GLOBAL_INPUT_RESOURCE`]: super::process_global_stdin::GLOBAL_INPUT_RESOURCE
+/// [Why Global State?]: super::process_global_stdin::GLOBAL_INPUT_RESOURCE#why-global-state
 /// [`try_read_event()`]: Self::try_read_event
 pub struct DirectToAnsiInputDevice;
 
@@ -217,7 +217,7 @@ impl DirectToAnsiInputDevice {
     ///
     /// [`try_read_event`]: Self::try_read_event
     /// [struct-level documentation]: Self
-    /// [`DirectToAnsiInputResource`]: super::global_input_resource::DirectToAnsiInputResource
+    /// [`DirectToAnsiInputResource`]: super::process_global_stdin::DirectToAnsiInputResource
     #[must_use]
     pub fn new() -> Self { Self }
 
@@ -337,17 +337,17 @@ impl DirectToAnsiInputDevice {
     /// ([`tokio::sync::mpsc::UnboundedReceiver::recv`]) is truly cancel-safe: if
     /// cancelled, the data remains in the channel for the next receive.
     ///
-    /// See the [`global_input_resource`] module documentation for why we use a dedicated
+    /// See the [`process_global_stdin`] module documentation for why we use a dedicated
     /// thread with [`mio::Poll`] and channel instead of [`tokio::io::stdin()`] (which
     /// is NOT cancel-safe).
     ///
     /// [`InputDevice::next()`]: crate::InputDevice::next
     /// [`Self::next()`]: Self::next
-    /// [`GLOBAL_INPUT_RESOURCE`]: super::global_input_resource::GLOBAL_INPUT_RESOURCE
+    /// [`GLOBAL_INPUT_RESOURCE`]: super::process_global_stdin::GLOBAL_INPUT_RESOURCE
     /// [`InputDevice`]: crate::InputDevice
-    /// [Why Global State?]: super::global_input_resource::GLOBAL_INPUT_RESOURCE#why-global-state
+    /// [Why Global State?]: super::process_global_stdin::GLOBAL_INPUT_RESOURCE#why-global-state
     /// [struct-level documentation]: Self
-    /// [`global_input_resource`]: super::global_input_resource
+    /// [`process_global_stdin`]: super::process_global_stdin
     /// [`tokio::io::stdin()`]: tokio::io::stdin
     /// [`mio::Poll`]: mio::Poll
     pub async fn try_read_event(&mut self) -> Option<InputEvent> {
