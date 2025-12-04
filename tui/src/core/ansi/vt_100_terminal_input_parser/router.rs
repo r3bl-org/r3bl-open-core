@@ -15,6 +15,15 @@ use crate::{ByteOffset, byte_offset,
 /// buffer and routes to specialized parsers ([`keyboard`], [`mouse`],
 /// [`terminal_events`], [`utf8`]) based on content analysis.
 ///
+/// # Parameters
+///
+/// - `buffer`: The accumulated bytes to parse.
+/// - `input_available`: Whether more input is likely available in the kernel buffer.
+///   Computed by the caller as `read_count == TTY_BUFFER_SIZE` (crossterm pattern).
+///   - When `true` and buffer is `[ESC]`: Return `None` (wait for more bytes).
+///   - When `false` and buffer is `[ESC]`: Emit ESC key immediately.
+///   - For all other inputs: This flag has no effect.
+///
 /// # Where You Are in the Pipeline
 ///
 /// For the full data flow, see the [parent module documentation]. This diagram shows
@@ -49,7 +58,7 @@ use crate::{ByteOffset, byte_offset,
 ///   parsers
 /// - 📚 **Types**: [`VT100InputEventIR`] - Output event type
 ///
-/// # Zero-Latency `ESC` Key Detection
+/// # ESC Key Detection (Crossterm Pattern)
 ///
 /// ## The Problem
 ///
@@ -57,80 +66,57 @@ use crate::{ByteOffset, byte_offset,
 /// [`ANSI_ESC`] (`0x1B`), so when we read that byte, is it a standalone `ESC` or the
 /// start of a multi-byte sequence?
 ///
-/// ## The Conventional Solution (crossterm)
+/// ## Crossterm's Solution: The `input_available` Flag
 ///
-/// When reading [`ANSI_ESC`] alone, wait up to 150ms to see if more bytes arrive. If
-/// timeout expires → emit `ESC` key. If bytes arrive → parse escape sequence. This
-/// guarantees correctness but adds 150ms latency to every `ESC` key press.
+/// Instead of using a timeout (which adds latency), crossterm uses the `input_available`
+/// flag to disambiguate. This flag is computed as `read_count == TTY_BUFFER_SIZE`:
 ///
-/// ## Key Insight: Escape Sequences Arrive Atomically
+/// - If the read filled the entire buffer, more data is likely waiting in the kernel.
+/// - If the read returned fewer bytes, we've drained all available input.
 ///
-/// On POSIX systems (Linux, macOS), terminal emulators send escape sequences
-/// **atomically** in a single [`write()`][write-syscall] syscall, and the kernel buffers
-/// all bytes together.
+/// This works because:
+/// - **Over SSH**: Bytes may arrive in fragments, but if we read fewer bytes than the
+///   buffer size, we know there's no more data waiting right now.
+/// - **Locally**: Terminal emulators send escape sequences atomically, so they arrive
+///   complete in a single read.
 ///
-/// This parser is currently used only on Linux via [`DirectToAnsiInputDevice`] and
-/// [`TERMINAL_LIB_BACKEND`]; macOS and Windows use the crossterm backend.
-///
-/// ```text
-/// User presses Up Arrow
-///   ↓
-/// Terminal: write(stdout, "\x1B[A", 3)     ← One syscall, 3 bytes
-///   ↓
-/// Kernel buffer: [0x1B, 0x5B, 0x41]        ← All bytes arrive together
-///   ↓
-/// stdin.read().await → [0x1B, 0x5B, 0x41]  ← We get all 3 bytes in one read
-/// ```
-///
-/// This holds because:
-/// - **Local terminals** (gnome-terminal, xterm, Alacritty, iTerm2): Always send escape
-///   sequences atomically in one write.
-/// - **Terminal protocol design**: Sequences are designed to be atomic units.
-/// - **Kernel buffering**: Even with slight delays, kernel buffers complete sequences
-///   before `read()` sees them.
-///
-/// ## Our Approach
-///
-/// Given atomic delivery, we immediately emit `ESC` when buffer contains only
-/// [`ANSI_ESC`], with no artificial delay. If escape sequences always arrive complete, a
-/// lone [`ANSI_ESC`] byte means the user pressed `ESC`.
-///
-/// ## Trade-off: Edge Cases
-///
-/// Over high-latency connections (SSH, slow serial), bytes might arrive separately:
+/// ## Algorithm
 ///
 /// ```text
-/// First read:  [0x1B]           → Emits `ESC` immediately
-/// Second read: [0x5B, 0x41]     → User gets `ESC` instead of Up Arrow
+/// if buffer == [ESC] {
+///     if input_available {
+///         return None  // Wait for more bytes (might be escape sequence)
+///     } else {
+///         return ESC key  // No more input, user pressed ESC
+///     }
+/// }
 /// ```
 ///
-/// We accept this rare edge case because:
-/// - Over SSH with 200ms latency, UX is already degraded
-/// - Getting `ESC` instead of Up Arrow is annoying but not catastrophic
-/// - The alternative (150ms timeout for everyone) penalizes 99.9% of users
+/// ## Why This Avoids Fixed Timeouts
 ///
-/// ## Performance Summary
+/// Unlike a fixed 150ms timeout approach, the `input_available` flag provides
+/// **adaptive waiting**:
 ///
-/// | Input Type          | crossterm Latency | Our Latency | Improvement      |
-/// | ------------------- | ----------------- | ----------- | ---------------- |
-/// | **`ESC` key press** | 150ms (timeout)   | 0ms         | **150ms faster** |
-/// | Arrow keys          | 0ms (immediate)   | 0ms         | Same             |
-/// | Regular text        | 0ms (immediate)   | 0ms         | Same             |
-/// | Mouse events        | 0ms (immediate)   | 0ms         | Same             |
+/// - **Local terminals**: Escape sequences arrive atomically, so `input_available`
+///   is usually `false` after reading—we emit ESC immediately when appropriate.
+/// - **SSH/high-latency**: If bytes arrive separately, `input_available` tells us
+///   when more data is pending—we wait correctly without a fixed timeout.
 ///
 /// **Benefits**: Vim-style modal editors, `ESC`-heavy workflows, dialog dismissal.
+/// **SSH compatibility**: Works correctly because we wait for more bytes when available.
 ///
 /// # Smart Lookahead Logic
 ///
 /// The parser uses intelligent 1-2 byte lookahead to determine routing:
 ///
-/// | Input Pattern        | Interpretation      | Routing                                     |
-/// | -------------------- | ------------------- | ------------------------------------------- |
-/// | `[ 0x1B ]` alone     | `ESC` key           | Emitted immediately, zero-latency           |
-/// | `[ 0x1B, b'[', .. ]` | `CSI` sequence      | keyboard/mouse/terminal parsers             |
-/// | `[ 0x1B, b'O', .. ]` | `SS3` sequence      | F1-F4, Home, End, arrows (application mode) |
-/// | `[ 0x1B, other ]`    | Alt+letter or `ESC` | try Alt+letter, else emit standalone `ESC`  |
-/// | Other bytes          | various             | terminal/mouse/control/UTF-8                |
+/// | Input Pattern            | `input_available` | Routing                             |
+/// | ------------------------ | ----------------- | ----------------------------------- |
+/// | `[ 0x1B ]` alone         | `false`           | Emit `ESC` key immediately          |
+/// | `[ 0x1B ]` alone         | `true`            | Return `None` (wait for more bytes) |
+/// | `[ 0x1B, b'[', .. ]`     | (ignored)         | `CSI` → keyboard/mouse/terminal     |
+/// | `[ 0x1B, b'O', .. ]`     | (ignored)         | `SS3` → F1-F4, Home, End, arrows    |
+/// | `[ 0x1B, other ]`        | (ignored)         | Alt+letter or emit standalone `ESC` |
+/// | Other bytes              | (ignored)         | control char → UTF-8                |
 ///
 /// - `CSI` (Control Sequence Introducer):
 ///   - The most common escape sequence format, starting with `ESC [`. Used for arrow
@@ -146,20 +132,21 @@ use crate::{ByteOffset, byte_offset,
 ///     followed by the letter (e.g., `ESC b` for Alt+B).
 ///   - When we see `ESC` + unknown byte, we first try to parse it as Alt+letter. If that
 ///     fails, we emit a standalone `ESC` and leave the next byte for the next parse
-///     cycle. This enables zero-latency `ESC` detection without the 150ms timeout other
-///     parsers use.
+///     cycle.
 ///
 /// # Routing Algorithm
 ///
 /// ```text
-/// try_parse_input_event() uses smart 1-2 byte lookahead:
+/// try_parse_input_event(buffer, input_available):
 /// ┌────────────────────────────────────────────────────┐
 /// │ First byte check                                   │
 /// ├────────────────────────────────────────────────────┤
 /// │ 0x1B (`ESC`)?                                      │
 /// │  ├─ buf.len() == 1?                                │
-/// │  │  └─ YES → Emit `ESC` immediately ▲              │
-/// │  │     (zero-latency `ESC` key!)                   │
+/// │  │  ├─ input_available == true?                    │
+/// │  │  │  └─ Return None (wait for more bytes)        │
+/// │  │  └─ input_available == false?                   │
+/// │  │     └─ Emit `ESC` key immediately               │
 /// │  └─ buf.len() >= 2?                                │
 /// │     ├─ Second byte = b'['?                         │
 /// │     │  └─ `CSI` → keyboard/mouse/terminal_events   │
@@ -179,7 +166,9 @@ use crate::{ByteOffset, byte_offset,
 /// Returns the protocol-level [`VT100InputEventIR`] with the number of bytes consumed
 /// as a [`ByteOffset`].
 ///
-/// `None` if the buffer contains an incomplete sequence (more bytes needed).
+/// `None` if the buffer contains an incomplete sequence (more bytes needed), or if
+/// `input_available` is `true` and buffer is `[ESC]` (waiting for potential escape
+/// sequence).
 ///
 /// # Examples
 ///
@@ -189,27 +178,31 @@ use crate::{ByteOffset, byte_offset,
 ///                                                           VT100KeyCodeIR};
 /// use r3bl_tui::byte_offset;
 ///
-/// // Parse `ESC` key (single byte, immediate)
+/// // Parse `ESC` key - no more input available, emit immediately.
 /// let buffer = &[0x1B];
-/// if let Some((event, consumed)) = try_parse_input_event(buffer) {
+/// if let Some((event, consumed)) = try_parse_input_event(buffer, false) {
 ///     assert!(matches!(event, VT100InputEventIR::Keyboard {
 ///         code: VT100KeyCodeIR::Escape, ..
 ///     }));
 ///     assert_eq!(consumed, byte_offset(1));
 /// }
 ///
-/// // Parse Up Arrow (`CSI` sequence)
+/// // Lone ESC with more input available - wait for more bytes.
+/// let buffer = &[0x1B];
+/// assert!(try_parse_input_event(buffer, true).is_none());
+///
+/// // Parse Up Arrow (`CSI` sequence) - input_available doesn't matter.
 /// let buffer = &[0x1B, b'[', b'A'];
-/// if let Some((event, consumed)) = try_parse_input_event(buffer) {
+/// if let Some((event, consumed)) = try_parse_input_event(buffer, false) {
 ///     assert!(matches!(event, VT100InputEventIR::Keyboard {
 ///         code: VT100KeyCodeIR::Up, ..
 ///     }));
 ///     assert_eq!(consumed, byte_offset(3));
 /// }
 ///
-/// // Parse regular text
+/// // Parse regular text.
 /// let buffer = b"Hello";
-/// if let Some((event, consumed)) = try_parse_input_event(buffer) {
+/// if let Some((event, consumed)) = try_parse_input_event(buffer, false) {
 ///     assert!(matches!(event, VT100InputEventIR::Keyboard {
 ///         code: VT100KeyCodeIR::Char('H'), ..
 ///     }));
@@ -229,13 +222,19 @@ use crate::{ByteOffset, byte_offset,
 /// [parent module documentation]: mod@super#primary-consumer
 /// [write-syscall]: https://man7.org/linux/man-pages/man2/write.2.html
 #[must_use]
-pub fn try_parse_input_event(buffer: &[u8]) -> Option<(VT100InputEventIR, ByteOffset)> {
+pub fn try_parse_input_event(
+    buffer: &[u8],
+    input_available: bool,
+) -> Option<(VT100InputEventIR, ByteOffset)> {
     // Routing table.
     match buffer {
         // Empty buffer.
         [] => None,
 
-        // Single ESC byte - emit immediately (zero-latency, no timeout!).
+        // Single ESC byte - check input_available flag (crossterm pattern).
+        // - input_available == true: Wait for more bytes (might be escape sequence).
+        // - input_available == false: Emit ESC key immediately (no more input).
+        [ANSI_ESC] if input_available => None,
         [ANSI_ESC] => Some((esc_key_event(), byte_offset(1))),
 
         // CSI sequence (ESC [) - keyboard/mouse/terminal events.
@@ -286,7 +285,7 @@ mod tests_csi_routing {
         };
         let buffer = generate_keyboard_sequence(&expected).unwrap();
         let (event, consumed) =
-            try_parse_input_event(&buffer).expect("Should parse Up Arrow");
+            try_parse_input_event(&buffer, false).expect("Should parse Up Arrow");
 
         assert_eq!(event, expected);
         assert_eq!(consumed.as_usize(), buffer.len());
@@ -302,7 +301,7 @@ mod tests_csi_routing {
         };
         let buffer = generate_keyboard_sequence(&expected).unwrap();
         let (event, consumed) =
-            try_parse_input_event(&buffer).expect("Should parse mouse event");
+            try_parse_input_event(&buffer, false).expect("Should parse mouse event");
 
         assert_eq!(event, expected);
         assert_eq!(consumed.as_usize(), buffer.len());
@@ -317,7 +316,8 @@ mod tests_csi_routing {
             modifiers: VT100KeyModifiersIR::default(),
         };
         let buffer = &[0x1B, b'O', b'P']; // ESC O P
-        let (event, consumed) = try_parse_input_event(buffer).expect("Should parse F1");
+        let (event, consumed) =
+            try_parse_input_event(buffer, false).expect("Should parse F1");
 
         assert_eq!(event, expected);
         assert_eq!(consumed, byte_offset(3));
@@ -329,7 +329,7 @@ mod tests_csi_routing {
         let focus_gained = VT100InputEventIR::Focus(VT100FocusStateIR::Gained);
         let buffer = generate_keyboard_sequence(&focus_gained).unwrap();
         let (event, consumed) =
-            try_parse_input_event(&buffer).expect("Should parse focus gained");
+            try_parse_input_event(&buffer, false).expect("Should parse focus gained");
 
         assert_eq!(event, focus_gained);
         assert_eq!(consumed.as_usize(), buffer.len());
@@ -338,7 +338,7 @@ mod tests_csi_routing {
         let focus_lost = VT100InputEventIR::Focus(VT100FocusStateIR::Lost);
         let buffer = generate_keyboard_sequence(&focus_lost).unwrap();
         let (event, consumed) =
-            try_parse_input_event(&buffer).expect("Should parse focus lost");
+            try_parse_input_event(&buffer, false).expect("Should parse focus lost");
 
         assert_eq!(event, focus_lost);
         assert_eq!(consumed.as_usize(), buffer.len());
@@ -350,7 +350,7 @@ mod tests_csi_routing {
         let paste_start = VT100InputEventIR::Paste(VT100PasteModeIR::Start);
         let buffer = generate_keyboard_sequence(&paste_start).unwrap();
         let (event, consumed) =
-            try_parse_input_event(&buffer).expect("Should parse paste start");
+            try_parse_input_event(&buffer, false).expect("Should parse paste start");
 
         assert_eq!(event, paste_start);
         assert_eq!(consumed.as_usize(), buffer.len());
@@ -359,7 +359,7 @@ mod tests_csi_routing {
         let paste_end = VT100InputEventIR::Paste(VT100PasteModeIR::End);
         let buffer = generate_keyboard_sequence(&paste_end).unwrap();
         let (event, consumed) =
-            try_parse_input_event(&buffer).expect("Should parse paste end");
+            try_parse_input_event(&buffer, false).expect("Should parse paste end");
 
         assert_eq!(event, paste_end);
         assert_eq!(consumed.as_usize(), buffer.len());
@@ -375,18 +375,28 @@ mod tests_non_csi_input {
                 core::ansi::vt_100_terminal_input_parser::test_fixtures::generate_keyboard_sequence};
 
     #[test]
-    fn esc_key_immediate() {
-        // Single ESC byte emits immediately (zero-latency, no timeout).
+    fn esc_key_immediate_when_no_more_input() {
+        // Single ESC byte emits immediately when input_available == false.
         let expected = VT100InputEventIR::Keyboard {
             code: VT100KeyCodeIR::Escape,
             modifiers: VT100KeyModifiersIR::default(),
         };
         let buffer = generate_keyboard_sequence(&expected).unwrap();
         let (event, consumed) =
-            try_parse_input_event(&buffer).expect("Should parse ESC key");
+            try_parse_input_event(&buffer, false).expect("Should parse ESC key");
 
         assert_eq!(event, expected);
         assert_eq!(consumed.as_usize(), buffer.len());
+    }
+
+    #[test]
+    fn esc_key_waits_when_more_input_available() {
+        // Single ESC byte returns None when input_available == true.
+        let buffer = &[0x1B]; // ESC
+        assert!(
+            try_parse_input_event(buffer, true).is_none(),
+            "Should return None when more input might be coming"
+        );
     }
 
     #[test]
@@ -401,7 +411,7 @@ mod tests_non_csi_input {
         };
         let buffer = generate_keyboard_sequence(&expected).unwrap();
         let (event, consumed) =
-            try_parse_input_event(&buffer).expect("Should parse Alt+b");
+            try_parse_input_event(&buffer, false).expect("Should parse Alt+b");
 
         assert_eq!(event, expected);
         assert_eq!(consumed.as_usize(), buffer.len());
@@ -419,7 +429,7 @@ mod tests_non_csi_input {
         };
         let buffer = generate_keyboard_sequence(&expected).unwrap();
         let (event, consumed) =
-            try_parse_input_event(&buffer).expect("Should parse Ctrl+A");
+            try_parse_input_event(&buffer, false).expect("Should parse Ctrl+A");
 
         assert_eq!(event, expected);
         assert_eq!(consumed.as_usize(), buffer.len());
@@ -433,7 +443,8 @@ mod tests_non_csi_input {
             modifiers: VT100KeyModifiersIR::default(),
         };
         let buffer = generate_keyboard_sequence(&expected).unwrap();
-        let (event, consumed) = try_parse_input_event(&buffer).expect("Should parse 'H'");
+        let (event, consumed) =
+            try_parse_input_event(&buffer, false).expect("Should parse 'H'");
 
         assert_eq!(event, expected);
         assert_eq!(consumed.as_usize(), buffer.len());
@@ -449,14 +460,14 @@ mod tests_invalid_input {
     #[test]
     fn empty_buffer_returns_none() {
         let buffer: &[u8] = &[];
-        assert!(try_parse_input_event(buffer).is_none());
+        assert!(try_parse_input_event(buffer, false).is_none());
     }
 
     #[test]
     fn incomplete_csi_sequence_returns_none() {
         // ESC [ without final byte - waiting for more input.
         let buffer = &[0x1B, b'['];
-        assert!(try_parse_input_event(buffer).is_none());
+        assert!(try_parse_input_event(buffer, false).is_none());
     }
 
     #[test]
@@ -464,7 +475,7 @@ mod tests_invalid_input {
         // ESC + invalid byte → emit standalone ESC, leave invalid byte for next cycle.
         let buffer = &[0x1B, 0xFF];
         let (event, consumed) =
-            try_parse_input_event(buffer).expect("Should emit standalone ESC");
+            try_parse_input_event(buffer, false).expect("Should emit standalone ESC");
 
         assert_eq!(
             event,

@@ -4,21 +4,16 @@
 
 //! [`DirectToAnsiInputDevice`] struct and implementation.
 
-use super::{global_input_resource::{DirectToAnsiInputResource, get_resource_guard},
-            paste_state_machine::apply_paste_state_machine,
-            types::{LoopContinuationSignal, StdinReadResult}};
-use crate::{InputEvent,
-            core::{ansi::vt_100_terminal_input_parser::try_parse_input_event,
-                   term::get_size},
-            tui::DEBUG_TUI_SHOW_TERMINAL_BACKEND};
+use super::{global_input_resource::get_or_init_resource_guard, types::ReaderThreadMessage};
+use crate::{InputEvent, core::term::get_size};
 use std::fmt::Debug;
 
 /// Async input device for [`DirectToAnsi`] backend.
 ///
 /// One of two real [`InputDevice`] backends (the other being [`CrosstermInputDevice`]).
 /// Selected via [`TERMINAL_LIB_BACKEND`] on Linux; talks directly to the terminal using
-/// ANSI/VT100 protocols with zero external dependencies. Key advantage: **0ms ESC
-/// latency** vs crossterm's 150ms timeout.
+/// ANSI/VT100 protocols with zero external dependencies. Uses the **crossterm `more` flag
+/// pattern** for reliable ESC key disambiguation without fixed timeouts.
 ///
 /// This is a **thin wrapper** that delegates to [`GLOBAL_INPUT_RESOURCE`] for
 /// [std::io::Stdin] reading and buffer management. The global resource pattern mirrors
@@ -26,10 +21,9 @@ use std::fmt::Debug;
 /// boundaries.
 ///
 /// Manages asynchronous reading from terminal [`stdin`] via dedicated thread + channel:
-/// - [`stdin`] channel receiver and parse buffer (process global singleton, outlives
-///   device instances)
-/// - Simple [`SmallVec`]`<u8>` buffer for handling partial/incomplete ANSI sequences
-/// - Smart lookahead for zero-latency ESC key detection (no timeout!)
+/// - [`stdin`] channel receiver (process global singleton, outlives device instances)
+/// - Parsing happens in the reader thread using the `more` flag pattern
+/// - Smart ESC disambiguation: waits for more bytes only when data is likely pending
 /// - Dispatch to protocol parsers (keyboard, mouse, terminal events, UTF-8)
 ///
 /// # Why Global State?
@@ -45,30 +39,33 @@ use std::fmt::Debug;
 /// ```text
 /// ┌───────────────────────────────────────────────────────────────────┐
 /// │ Raw ANSI bytes: "\x1B[A"                                          │
-/// │ std::io::stdin in one thread → mpsc - from GLOBAL_INPUT_RESOURCE  │
+/// │ std::io::stdin in mio-poller thread (GLOBAL_INPUT_RESOURCE)       │
 /// └────────────────────────────┬──────────────────────────────────────┘
 ///                              │
+/// ┌────────────────────────────▼──────────────────────────────────────┐
+/// │ mio-poller thread (global_input_resource.rs)                      │
+/// │   • mio::Poll waits on stdin + SIGWINCH                           │
+/// │   • Parses bytes using `more` flag for ESC disambiguation         │
+/// │   • Applies paste state machine                                   │
+/// │   • Sends InputEvent through mpsc channel                         │
+/// │                                                                   │
+/// │   vt_100_terminal_input_parser/ (Protocol Layer - IR)             │
+/// │     try_parse_input_event() dispatches to:                        │
+/// │     ├─ parse_keyboard_sequence() → VT100InputEventIR::Keyboard    │
+/// │     ├─ parse_mouse_sequence()    → VT100InputEventIR::Mouse       │
+/// │     ├─ parse_terminal_event()    → VT100InputEventIR::Focus/Resize│
+/// │     └─ parse_utf8_text()         → VT100InputEventIR::Keyboard    │
+/// │                                                                   │
+/// │   protocol_conversion.rs (IR → Public API)                        │
+/// │     convert_input_event()       VT100InputEventIR → InputEvent    │
+/// │     convert_key_code_to_keypress()  VT100KeyCodeIR → KeyPress     │
+/// └────────────────────────────┬──────────────────────────────────────┘
+///                              │ mpsc channel
 /// ┌────────────────────────────▼──────────────────────────────────────┐
 /// │ THIS DEVICE: DirectToAnsiInputDevice (Backend Executor)           │
 /// │   • Zero-sized handle struct (delegates to GLOBAL_INPUT_RESOURCE) │
-/// │   • Global resource owns: stdin channel, parse buffer, SIGWINCH   │
-/// │   • SmallVec buffer: `PARSE_BUFFER_SIZE`, zero-timeout parsing    │
-/// │   • Paste state machine: Collecting bracketed paste text          │
-/// └────────────────────────────┬──────────────────────────────────────┘
-///                              │
-/// ┌────────────────────────────▼──────────────────────────────────────┐
-/// │ vt_100_terminal_input_parser/ (Protocol Layer - IR)               │
-/// │   try_parse_input_event() dispatches to:                          │
-/// │   ├─ parse_keyboard_sequence() → VT100InputEventIR::Keyboard      │
-/// │   ├─ parse_mouse_sequence()    → VT100InputEventIR::Mouse         │
-/// │   ├─ parse_terminal_event()    → VT100InputEventIR::Focus/Resize  │
-/// │   └─ parse_utf8_text()         → VT100InputEventIR::Keyboard      │
-/// └────────────────────────────┬──────────────────────────────────────┘
-///                              │
-/// ┌────────────────────────────▼──────────────────────────────────────┐
-/// │ protocol_conversion.rs (IR → Public API)                          │
-/// │   convert_input_event()       VT100InputEventIR → InputEvent      │
-/// │   convert_key_code_to_keypress()  VT100KeyCodeIR → KeyPress       │
+/// │   • Receives pre-parsed InputEvent from channel                   │
+/// │   • Handles Resize events by querying terminal size               │
 /// └────────────────────────────┬──────────────────────────────────────┘
 ///                              │
 /// ┌────────────────────────────▼──────────────────────────────────────┐
@@ -88,28 +85,29 @@ use std::fmt::Debug;
 /// ```text
 /// ┌───────────────────────────────────────────────────────────────────────────┐
 /// │ 1. try_read_event() called                                                │
-/// │    ├─► get_resource_guard() → acquires Mutex<Option<...>>                 │
-/// │    │   └─► On first call: spawns stdin reader thread + registers SIGWINCH │
+/// │    ├─► get_or_init_resource_guard() → acquires Mutex<Option<...>>         │
+/// │    │   └─► On first call: spawns mio-poller thread                        │
 /// │    │                                                                      │
 /// │    ├─► Check event_queue first (already-parsed buffered events)           │
 /// │    │                                                                      │
-/// │    └─► Loop:                                                              │
-/// │         ├─► try_parse_input_event(parse_buffer.unconsumed())              │
-/// │         │   └─► If parsed: apply_paste_state_machine() → emit event       │
-/// │         │                                                                 │
-/// │         └─► If buffer empty/incomplete:                                   │
-/// │              tokio::select! { stdin_rx.recv(), sigwinch.recv() }          │
+/// │    └─► Loop: stdin_rx.recv().await                                        │
+/// │         ├─► Event(e) → return e                                           │
+/// │         ├─► Resize → query terminal size, return InputEvent::Resize       │
+/// │         └─► Eof/Error → return None                                       │
 /// └───────────────────────────────────▲───────────────────────────────────────┘
 ///                                     │ mpsc channel
 /// ┌───────────────────────────────────┴───────────────────────────────────────┐
-/// │ 2. Dedicated Stdin Reader Thread (global_input_resource.rs)               │
-/// │    std::thread::spawn("stdin-reader")                                     │
+/// │ 2. mio-poller thread (global_input_resource.rs)                           │
+/// │    std::thread::spawn("mio-poller")                                       │
 /// │                                                                           │
-/// │    stdin_reader_loop(tx):                                                 │
+/// │    Uses mio::Poll to wait on stdin + SIGWINCH:                            │
 /// │    ┌───────────────────────────────────────────────────────────────────┐  │
 /// │    │ loop {                                                            │  │
-/// │    │   let n = std::io::stdin().lock().read(&mut buffer)?; // BLOCKING │  │
-/// │    │   tx.send(StdinReadResult::Data(buffer[..n].to_vec()))?;          │  │
+/// │    │   poll.poll(&mut events, None)?;        // Wait for stdin/signal  │  │
+/// │    │   let n = stdin.read(&mut buffer)?;     // Read available bytes   │  │
+/// │    │   let more = n == TTY_BUFFER_SIZE;      // ESC disambiguation     │  │
+/// │    │   parser.advance(&buffer[..n], more);   // Parse with `more` flag │  │
+/// │    │   for event in parser { tx.send(Event(event))?; }                 │  │
 /// │    │ }                                                                 │  │
 /// │    └───────────────────────────────────────────────────────────────────┘  │
 /// │    Lives for process lifetime (relies on OS cleanup at process exit)      │
@@ -122,39 +120,40 @@ use std::fmt::Debug;
 ///   [`VT100InputEventIR`]. This device calls [`try_parse_input_event`] to perform the
 ///   actual parsing.
 ///
-/// # Zero-Latency ESC Key Detection
+/// # ESC Key Disambiguation (crossterm `more` flag pattern)
 ///
 /// **The Problem**: Distinguishing ESC key presses from escape sequences (e.g., Up Arrow
-/// = `ESC [ A`).
+/// = `ESC [ A`). When we see a lone `0x1B` byte, is it the ESC key or the start of an
+/// escape sequence?
 ///
-/// **Baseline (crossterm)**: When reading `1B` alone, wait up to 150ms to see if more
-/// bytes arrive. If timeout expires → emit ESC key. If bytes arrive → parse escape
-/// sequence.
+/// **The Solution**: We use crossterm's `more` flag pattern—a clever heuristic based on
+/// read buffer fullness:
 ///
-/// **Our Approach**: Immediately emit ESC when buffer contains only `[1B]`, with no
-/// artificial delay.
+/// ```text
+/// let n = stdin.read(&mut buffer)?;  // Read available bytes
+/// let more = n == TTY_BUFFER_SIZE;   // true if buffer was filled completely
 ///
-/// ## Performance Comparison
+/// // In parser:
+/// if buffer == [ESC] && more {
+///     return None;  // Wait for more bytes (likely escape sequence)
+/// } else if buffer == [ESC] && !more {
+///     return ESC key;  // No more data, user pressed ESC
+/// }
+/// ```
 ///
-/// | Input Type           | crossterm Latency   | Our Latency   | Improvement       |
-/// | -------------------- | ------------------- | ------------- | ----------------- |
-/// | **ESC key press**    | 150ms (timeout)     | 0ms           | **150ms faster**  |
-/// | Arrow keys           | 0ms (immediate)     | 0ms           | Same              |
-/// | Regular text         | 0ms (immediate)     | 0ms           | Same              |
-/// | Mouse events         | 0ms (immediate)     | 0ms           | Same              |
+/// ## How It Works
 ///
-/// **Benefit applies to**: Vim-style modal editors, ESC-heavy workflows, dialog
-/// dismissal.
+/// - **`more = true`**: Read filled the entire buffer, meaning more data is likely
+///   waiting in the kernel buffer. Wait before deciding—this `ESC` is probably the
+///   start of an escape sequence.
+/// - **`more = false`**: Read returned fewer bytes than buffer size, meaning we've
+///   drained all available input. A lone `ESC` is the ESC key.
 ///
-/// ## How Escape Sequences Arrive in Practice
+/// ## Why This Works
 ///
-/// When you press a special key (e.g., Up Arrow), the terminal emulator sends
-/// an escape sequence like `ESC [ A` (3 bytes: `[1B, 5B, 41]`).
-///
-/// **Key Assumption**: Modern terminal emulators send escape sequences **atomically**
-/// in a single `write()` syscall, and the kernel buffers all bytes together.
-///
-/// ### Typical Flow (99.9% of cases - local terminals)
+/// Terminal emulators send escape sequences atomically in a single `write()` syscall.
+/// When you press Up Arrow, the terminal sends `ESC [ A` (3 bytes) together. The kernel
+/// buffers these bytes, and our `read()` typically gets all of them at once.
 ///
 /// ```text
 /// User presses Up Arrow
@@ -163,38 +162,39 @@ use std::fmt::Debug;
 ///   ↓
 /// Kernel buffer: [1B, 5B, 41]           ← All bytes arrive together
 ///   ↓
-/// stdin_rx.recv().await → [1B, 5B, 41]  ← We get all 3 bytes in one read
+/// stdin.read() → 3 bytes                ← We get all 3 bytes
 ///   ↓
-/// try_parse() sees complete sequence    → Up Arrow event ✓
+/// more = (3 == 1024) = false            ← Buffer not full
+///   ↓
+/// Parser sees [ESC, '[', 'A']           → Up Arrow event ✓
 /// ```
 ///
-/// ### Edge Case: Slow Byte Arrival (rare - high-latency SSH, slow serial)
+/// ## SSH and High-Latency Connections
 ///
-/// Over high-latency connections, bytes might arrive separately:
+/// Over SSH with network latency, bytes might arrive in separate packets. The `more`
+/// flag handles this correctly:
 ///
 /// ```text
-/// First read:  [1B]         → Emits ESC immediately
-/// Second read: [5B, 41]     → User gets ESC instead of Up Arrow
+/// First packet:  [ESC]       read() → 1 byte, more = false
+///                            BUT: next poll() wakes immediately when more data arrives
+/// Second packet: ['[', 'A']  read() → 2 bytes
+///                            Parser accumulates: [ESC, '[', 'A'] → Up Arrow ✓
 /// ```
 ///
-/// **Trade-off**: We optimize for the common case (local terminals with atomic
-/// sequences) to achieve 0ms ESC latency, accepting rare edge cases over forcing
-/// 150ms timeout on all users.
+/// The key insight: if bytes arrive separately, the next `mio::Poll` wake happens
+/// almost immediately when more data arrives. The parser accumulates bytes across
+/// reads, so escape sequences are correctly reassembled.
 ///
-/// ### Why This Assumption Holds
+/// ## Attribution
 ///
-/// - **Local terminals** (gnome-terminal, xterm, Alacritty, iTerm2): Always send escape
-///   sequences atomically in one write
-/// - **Terminal protocol design**: Sequences are designed to be atomic units
-/// - **Kernel buffering**: Even with slight delays, kernel buffers complete sequences
-///   before `read()` sees them
-/// - **Network delay case**: Over SSH with 200ms latency, UX is already degraded; getting
-///   ESC instead of Up Arrow is annoying but not catastrophic
+/// This pattern is adapted from crossterm's `mio.rs` implementation. See the
+/// [`global_input_resource`] module documentation for details on our mio-based
+/// architecture.
 ///
+/// [`global_input_resource`]: super::global_input_resource
 /// [`CrosstermInputDevice`]: crate::tui::terminal_lib_backends::crossterm_backend::CrosstermInputDevice
 /// [`DirectToAnsi`]: mod@crate::tui::terminal_lib_backends::direct_to_ansi
 /// [`InputDevice`]: crate::InputDevice
-/// [`SmallVec`]: smallvec::SmallVec
 /// [`TERMINAL_LIB_BACKEND`]: crate::tui::TERMINAL_LIB_BACKEND
 /// [`VT100InputEventIR`]: crate::core::ansi::vt_100_terminal_input_parser::VT100InputEventIR
 /// [`try_parse_input_event`]: crate::core::ansi::vt_100_terminal_input_parser::try_parse_input_event
@@ -306,39 +306,41 @@ impl DirectToAnsiInputDevice {
     ///
     /// This method accesses the global input resource ([`GLOBAL_INPUT_RESOURCE`]) which
     /// holds:
-    /// - The channel receiver for stdin data (from dedicated reader thread)
+    /// - The channel receiver for stdin data and resize signals (from dedicated reader
+    ///   thread using [`mio::Poll`])
     /// - The parse buffer and position
     /// - The event queue for buffered events
     /// - The paste collection state
-    /// - The `SIGWINCH` signal receiver (for terminal resize events)
+    ///
+    /// Note: `SIGWINCH` signals are now handled by the dedicated reader thread via
+    /// [`mio::Poll`] and [`signal_hook_mio`], arriving as [`ReaderThreadMessage::Resize`]
+    /// through the same channel as stdin data.
     ///
     /// See [Why Global State?] for the rationale behind this architecture.
     ///
+    /// [`mio::Poll`]: mio::Poll
+    /// [`signal_hook_mio`]: signal_hook_mio
+    ///
     /// # Implementation
     ///
-    /// Async loop with zero-timeout parsing:
+    /// Async loop receiving pre-parsed events:
     /// 1. Check event queue for buffered events (from previous reads)
-    /// 2. Try to parse from existing buffer
-    /// 3. If incomplete, wait for data from stdin channel (yields until data ready)
-    /// 4. Loop back to parsing
+    /// 2. Wait for events from stdin reader channel (yields until data ready)
+    /// 3. Apply paste state machine and return event
     ///
-    /// See [`ParseBuffer`] for buffer management algorithm details, and [struct-level
-    /// documentation] for zero-latency ESC detection.
+    /// Events arrive fully parsed from the reader thread. See [struct-level documentation]
+    /// for zero-latency ESC detection.
     ///
     /// # Cancel Safety
     ///
-    /// This method is cancel-safe. Both futures in the internal [`tokio::select!`] are
-    /// truly cancel-safe:
-    /// - [`tokio::sync::mpsc::UnboundedReceiver::recv`]: If cancelled, the data remains
-    ///   in the channel for the next receive.
-    /// - [`tokio::signal::unix::Signal::recv`]: If cancelled, the signal is not consumed
-    ///   and will be delivered on the next call.
+    /// This method is cancel-safe. The internal channel receive
+    /// ([`tokio::sync::mpsc::UnboundedReceiver::recv`]) is truly cancel-safe: if
+    /// cancelled, the data remains in the channel for the next receive.
     ///
     /// See the [`global_input_resource`] module documentation for why we use a dedicated
-    /// thread with channel instead of [`tokio::io::stdin()`] (which is NOT
-    /// cancel-safe).
+    /// thread with [`mio::Poll`] and channel instead of [`tokio::io::stdin()`] (which
+    /// is NOT cancel-safe).
     ///
-    /// [`ParseBuffer`]: super::parse_buffer::ParseBuffer#buffer-management-algorithm
     /// [`InputDevice::next()`]: crate::InputDevice::next
     /// [`Self::next()`]: Self::next
     /// [`GLOBAL_INPUT_RESOURCE`]: super::global_input_resource::GLOBAL_INPUT_RESOURCE
@@ -347,10 +349,10 @@ impl DirectToAnsiInputDevice {
     /// [struct-level documentation]: Self
     /// [`global_input_resource`]: super::global_input_resource
     /// [`tokio::io::stdin()`]: tokio::io::stdin
-    /// [`tokio::select!`]: tokio::select
+    /// [`mio::Poll`]: mio::Poll
     pub async fn try_read_event(&mut self) -> Option<InputEvent> {
         // Get the global input resource (which persists for process lifetime).
-        let mut resource_guard = get_resource_guard().await;
+        let mut resource_guard = get_or_init_resource_guard().await;
         let resource = resource_guard.as_mut()?;
 
         // Check event queue first - return any buffered events.
@@ -358,136 +360,32 @@ impl DirectToAnsiInputDevice {
             return Some(event);
         }
 
+        // Wait for fully-formed `InputEvents` through the channel.
         loop {
-            // 1. Try to parse from existing buffer and apply paste state machine.
-            if let Some((vt100_event, bytes_consumed)) =
-                try_parse_input_event(resource.parse_buffer.unconsumed())
-            {
-                resource.parse_buffer.consume(bytes_consumed);
-
-                match apply_paste_state_machine(&mut resource.paste_state, &vt100_event) {
-                    LoopContinuationSignal::Emit(event) => return Some(event),
-                    LoopContinuationSignal::Continue => continue,
-                    LoopContinuationSignal::Shutdown => {
-                        unreachable!("Paste state machine never signals shutdown.")
-                    }
-                }
-            }
-
-            // 2. Buffer exhausted or incomplete sequence - wait for input or signal.
-            DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
-                tracing::debug!(
-                    message =
-                        "direct-to-ansi: waiting for stdin input or SIGWINCH signal"
-                );
-            });
-
-            let signal = tokio::select! {
-                maybe_stdin_read_result = resource.stdin_rx.recv() => {
-                    Self::process_stdin_read(resource, maybe_stdin_read_result)
-                }
-                maybe_resize_signal = resource.sigwinch_receiver.recv() => {
-                    Self::process_resize_signal(maybe_resize_signal)
+            let stdin_read_result = match resource.stdin_rx.recv().await {
+                Some(result) => result,
+                None => {
+                    // Channel closed - reader thread exited.
+                    return None;
                 }
             };
 
-            match signal {
-                LoopContinuationSignal::Emit(event) => return Some(event),
-                LoopContinuationSignal::Shutdown => return None,
-                LoopContinuationSignal::Continue => {} // Loop back to try parsing.
-            }
-        }
-    }
-
-    /// Handles the result of receiving from the stdin channel.
-    ///
-    /// This function processes [`StdinReadResult`] from the dedicated stdin reader
-    /// thread. The dedicated thread architecture ensures true cancel safety in
-    /// [`tokio::select!`], unlike [`tokio::io::stdin()`] which uses a blocking thread
-    /// pool.
-    ///
-    /// [`tokio::io::stdin()`]: tokio::io::stdin
-    /// [`tokio::select!`]: tokio::select
-    fn process_stdin_read(
-        resource: &mut DirectToAnsiInputResource,
-        maybe_stdin_read_result: Option<StdinReadResult>,
-    ) -> LoopContinuationSignal {
-        DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
-            tracing::debug!(
-                message = "direct-to-ansi: stdin channel received",
-                result = ?maybe_stdin_read_result
-            );
-        });
-
-        match maybe_stdin_read_result {
-            Some(StdinReadResult::Data(data)) => {
-                DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
-                    tracing::debug!(
-                        message = "direct-to-ansi: stdin data received",
-                        bytes_read = data.len()
-                    );
-                });
-                resource.parse_buffer.append(&data);
-                LoopContinuationSignal::Continue
-            }
-            Some(StdinReadResult::Eof) => {
-                DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
-                    tracing::debug!(message = "direct-to-ansi: stdin EOF");
-                });
-                LoopContinuationSignal::Shutdown
-            }
-            Some(StdinReadResult::Error(kind)) => {
-                DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
-                    tracing::debug!(message = "direct-to-ansi: stdin error", error_kind = ?kind);
-                });
-                LoopContinuationSignal::Shutdown
-            }
-            None => {
-                // Channel closed - stdin reader thread exited.
-                DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
-                    tracing::debug!(message = "direct-to-ansi: stdin channel closed");
-                });
-                LoopContinuationSignal::Shutdown
-            }
-        }
-    }
-
-    /// Processes a terminal resize signal (`SIGWINCH` on Unix).
-    fn process_resize_signal(maybe_resize_signal: Option<()>) -> LoopContinuationSignal {
-        DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
-            tracing::debug!(
-                message = "direct-to-ansi: SIGWINCH branch selected",
-                result = ?maybe_resize_signal
-            );
-        });
-
-        match maybe_resize_signal {
-            Some(()) => {
-                // Signal received successfully, query terminal size.
-                if let Ok(size) = get_size() {
-                    DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
-                        tracing::debug!(
-                            message = "direct-to-ansi: returning Resize",
-                            size = ?size
-                        );
-                    });
-                    return LoopContinuationSignal::Emit(InputEvent::Resize(size));
+            match stdin_read_result {
+                ReaderThreadMessage::Event(event) => {
+                    return Some(event);
                 }
-                // If size query failed, continue to next iteration.
-                DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
-                    tracing::debug!(
-                        message = "direct-to-ansi: get_size() failed, continuing"
-                    );
-                });
-                LoopContinuationSignal::Continue
-            }
-            None => {
-                // Signal stream closed - unexpected but shouldn't cause shutdown.
-                tracing::warn!(
-                    message =
-                        "direct-to-ansi: SIGWINCH receiver returned None (stream closed)"
-                );
-                LoopContinuationSignal::Continue
+                ReaderThreadMessage::Eof => {
+                    return None;
+                }
+                ReaderThreadMessage::Error => {
+                    return None;
+                }
+                ReaderThreadMessage::Resize => {
+                    if let Ok(size) = get_size() {
+                        return Some(InputEvent::Resize(size));
+                    }
+                    // Size query failed - retry on next iteration.
+                }
             }
         }
     }
@@ -537,21 +435,17 @@ mod tests {
     #[tokio::test]
     async fn test_device_creation() {
         // Test DirectToAnsiInputDevice constructs successfully.
-        // With the global resource architecture, the device is now a thin wrapper
-        // that only holds the SIGWINCH receiver.
+        // With the global resource architecture, the device is now a thin wrapper.
         let _device = DirectToAnsiInputDevice::new();
 
         // Verify global resource is initialized on first access.
-        let resource_guard = get_resource_guard().await;
+        let resource_guard = get_or_init_resource_guard().await;
         let resource = resource_guard
             .as_ref()
             .expect("Global resource should be initialized");
 
-        // Verify buffer is empty initially (no data yet).
-        assert_eq!(resource.parse_buffer.len(), 0);
-
-        // Verify position is at 0.
-        assert_eq!(resource.parse_buffer.position().as_usize(), 0);
+        // Verify event queue is empty initially.
+        assert!(resource.event_queue.is_empty());
     }
 
     #[tokio::test]
@@ -589,51 +483,6 @@ mod tests {
                 panic!("Failed to convert keyboard event");
             }
         }
-    }
-
-    #[tokio::test]
-    async fn test_buffer_management() {
-        // Test buffer handling: growth, consumption, and compaction at 2KB threshold.
-        // Create a local ParseBuffer to test the buffer logic directly.
-        use super::super::parse_buffer::ParseBuffer;
-
-        let mut buffer = ParseBuffer::new();
-
-        // Verify initial state.
-        assert_eq!(buffer.len(), 0);
-        assert_eq!(buffer.position().as_usize(), 0);
-
-        // Test 1: Buffer growth - add data and verify length increases.
-        let test_data = vec![b'X'; 100];
-        buffer.append(&test_data);
-        assert_eq!(buffer.len(), 100);
-
-        // Test 2: Consumption tracking - consume bytes and verify counter.
-        buffer.consume(ByteOffset(50));
-        assert_eq!(buffer.position().as_usize(), 50);
-        assert_eq!(buffer.len(), 100);
-
-        // Test 3: Verify consumed bytes are skipped.
-        let unread_portion = buffer.unconsumed();
-        assert_eq!(unread_portion.len(), 50);
-
-        // Test 4: Buffer compaction at threshold (half of PARSE_BUFFER_SIZE).
-        let mut buffer = ParseBuffer::new();
-
-        // Add 2100 bytes (exceed 2048 threshold, which is half of 4096).
-        let large_data = vec![b'Y'; 2100];
-        buffer.append(&large_data);
-        assert_eq!(buffer.len(), 2100);
-
-        // Consume 1000 bytes (won't trigger compaction yet, need > 2048).
-        buffer.consume(ByteOffset(1000));
-        assert_eq!(buffer.position().as_usize(), 1000);
-        assert_eq!(buffer.len(), 2100);
-
-        // Consume another 1100 bytes (total = 2100, exceeds 2048 threshold).
-        buffer.consume(ByteOffset(1100));
-        assert_eq!(buffer.position().as_usize(), 0);
-        assert_eq!(buffer.len(), 0);
     }
 
     #[tokio::test]

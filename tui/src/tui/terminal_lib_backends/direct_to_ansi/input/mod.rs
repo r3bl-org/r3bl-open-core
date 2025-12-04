@@ -18,12 +18,19 @@
 
 // Private submodules - organized by functional concern.
 mod input_device;
-mod parse_buffer;
 mod paste_state_machine;
+
+// Conditionally public for documentation (to allow rustdoc links from public items).
+#[cfg(any(test, doc))]
+pub mod global_input_resource;
+#[cfg(not(any(test, doc)))]
 mod global_input_resource;
+
+#[cfg(any(test, doc))]
+pub mod types;
+#[cfg(not(any(test, doc)))]
 mod types;
 
-// Conditionally public for documentation (to allow rustdoc links).
 #[cfg(any(test, doc))]
 pub mod protocol_conversion;
 #[cfg(not(any(test, doc)))]

@@ -8,7 +8,7 @@
 //! See the data flow diagram in [`try_read_event()`] for how this state machine
 //! integrates with the input pipeline.
 //!
-//! [`try_read_event()`]: input_device::try_read_event
+//! [`try_read_event()`]: super::input_device::DirectToAnsiInputDevice::try_read_event
 
 use super::{protocol_conversion::convert_input_event, types::LoopContinuationSignal};
 use crate::{InputEvent,
