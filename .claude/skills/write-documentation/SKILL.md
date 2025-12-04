@@ -82,6 +82,7 @@ pub fn some_method(&self) -> Result<()> { /* ... */ }
 | Method | `[`run()`]: Self::run` |
 | Module | `[`parser`]: mod@crate::parser` |
 | Section heading | `[`docs`]: mod@crate::module#section-name` |
+| Dependency crate | `[`tokio::spawn()`]: tokio::spawn` |
 
 ### ✅ Good: Reference-Style Links
 
@@ -105,6 +106,66 @@ pub fn some_method(&self) -> Result<()> { /* ... */ }
 ```rust
 /// This struct uses `Position` to track cursor location.
 ```
+
+### Linking to Dependency Crates
+
+For crates listed in your `Cargo.toml` dependencies, **use direct intra-doc links** instead of
+external hyperlinks to docs.rs. Rustdoc automatically resolves these when the dependency is built.
+
+| Link To | Pattern |
+|---------|---------|
+| Crate root | `[`crossterm`]: ::crossterm` |
+| Type in crate | `[`mio::Poll`]: mio::Poll` |
+| Function in crate | `[`tokio::io::stdin()`]: tokio::io::stdin` |
+| Macro in crate | `[`tokio::select!`]: tokio::select` |
+
+#### ✅ Good: Direct Dependency Links
+
+```rust
+//! **UI freezes** on terminal resize when using [`tokio::io::stdin()`].
+//! Internally, cancelling a [`tokio::select!`] branch doesn't stop the read.
+//! However, the use of [Tokio's stdin] caused the first two issues.
+//!
+//! [`tokio::select!`]: tokio::select
+//! [`tokio::io::stdin()`]: tokio::io::stdin
+//! [Tokio's stdin]: tokio::io::stdin
+```
+
+```rust
+/// Uses [`mio::Poll`] to efficiently wait on file descriptor events.
+///
+/// [`mio::Poll`]: mio::Poll
+```
+
+```rust
+//! Use [`crossterm`]'s `enable_raw_mode` for terminal input.
+//!
+//! [`crossterm`]: ::crossterm
+```
+
+#### ❌ Bad: External docs.rs Links for Dependencies
+
+```rust
+/// Uses [mio::Poll](https://docs.rs/mio/latest/mio/struct.Poll.html) to wait.
+```
+
+Don't use docs.rs URLs for crates that are **already in your `Cargo.toml`**.
+
+**Why direct links are better for dependencies:**
+- Clickable in local `cargo doc` output (works offline)
+- Version-matched to your actual dependency version
+- Validated by rustdoc (broken links caught at build time)
+- Consistent style with internal crate links
+
+#### ✅ OK: External docs.rs Links for Non-Dependencies
+
+For crates that are **not** in your `Cargo.toml`, external links are fine:
+
+```rust
+/// This is similar to how [rayon](https://docs.rs/rayon) handles parallel iteration.
+```
+
+Since `rayon` isn't a dependency, there's no local documentation to link to.
 
 **For detailed patterns, see `link-patterns.md` in this skill.**
 

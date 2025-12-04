@@ -146,10 +146,6 @@
           "isPinned": false
         },
         {
-          "path": ".claude/commands/r3bl-task.md",
-          "isPinned": false
-        },
-        {
           "path": "tui/src/tui/terminal_lib_backends/direct_to_ansi/input/paste_state_machine.rs",
           "isPinned": false
         }

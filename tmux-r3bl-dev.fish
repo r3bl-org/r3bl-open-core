@@ -41,7 +41,7 @@ function main
         echo "Running commands in panes..."
 
         # Top: watch-doc
-        run_in_pane "0.0" "cd ~/github/r3bl-open-core ; ./check.fish --watch-doc"
+        run_in_pane "0.0" "cd ~/github/roc ; ./check.fish --watch-doc"
 
         # Bottom: empty (no command)
 
