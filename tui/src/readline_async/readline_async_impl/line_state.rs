@@ -167,7 +167,11 @@ impl LineState {
         if line_height != 0 {
             term.queue(cursor::MoveDown(line_height))?;
         }
-        term.queue(cursor::MoveRight(line_remaining_len))?;
+        // Guard: MoveRight(0) is interpreted as MoveRight(1) by most terminals
+        // due to ANSI/CSI cursor movement commands treating 0 as 1.
+        if line_remaining_len != 0 {
+            term.queue(cursor::MoveRight(line_remaining_len))?;
+        }
 
         ok!()
     }
@@ -1115,7 +1119,7 @@ mod apply_event_and_render_helper {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{History, StdMutex, core::test_fixtures::StdoutMock};
+    use crate::{CSI_START, CsiSequence, History, StdMutex, core::test_fixtures::StdoutMock};
     use std::sync::Arc;
 
     #[tokio::test]
@@ -2185,5 +2189,84 @@ mod tests {
         assert!(matches!(result, Ok(None)));
         // Should move to start of "world" at position 8
         assert_eq!(line.line_cursor_grapheme, 8);
+    }
+
+    /// Regression test for `SharedWriter` indentation bug.
+    ///
+    /// The bug was that `cursor::MoveRight(0)` was being called when
+    /// `line_remaining_len == 0`. Most terminals interpret `MoveRight(0)` as
+    /// `MoveRight(1)` due to ANSI/CSI cursor movement commands treating 0 as 1.
+    /// This caused an unwanted 1-character shift on every render cycle.
+    ///
+    /// This test verifies that when cursor position is at column 0 (or any
+    /// multiple of terminal width), no spurious `MoveRight` escape sequence
+    /// is emitted.
+    #[test]
+    fn test_move_from_beginning_no_spurious_move_right_regression() {
+        // Generate expected sequences using CsiSequence (not magic strings).
+        let cursor_forward_5 = CsiSequence::CursorForward(5).to_string();
+
+        // Create LineState with empty prompt (so cursor starts at column 0).
+        let line_state = LineState::new(String::new(), (80, 24));
+
+        // Test case 1: move_from_beginning with to=0 should NOT emit MoveRight.
+        {
+            let mut stdout_mock = StdoutMock::default();
+            line_state.move_from_beginning(&mut stdout_mock, 0).unwrap();
+            let output_str = stdout_mock.get_copy_of_buffer_as_string();
+
+            // Should NOT contain any CursorForward sequence.
+            // We check for the 'C' suffix after CSI which indicates cursor forward.
+            let has_cursor_forward = output_str.contains(CSI_START) && output_str.contains('C');
+
+            assert!(
+                !has_cursor_forward,
+                "move_from_beginning(0) should NOT emit CursorForward. \
+                 Output: {output_str:?}"
+            );
+        }
+
+        // Test case 2: move_from_beginning with to=240 (3x terminal width) should
+        // emit CursorDown(2) but NOT CursorForward since line_remaining_len = 240 % 80 = 0.
+        // Math: prev_pos = 239, line_height = 239 / 80 = 2, remainder = 240 % 80 = 0.
+        {
+            let mut stdout_mock = StdoutMock::default();
+            line_state
+                .move_from_beginning(&mut stdout_mock, 240)
+                .unwrap();
+            let output_str = stdout_mock.get_copy_of_buffer_as_string();
+
+            // Should contain CursorDown(2) but NOT CursorForward.
+            let cursor_down_2 = CsiSequence::CursorDown(2).to_string();
+            assert!(
+                output_str.contains(&cursor_down_2),
+                "move_from_beginning(240) SHOULD emit CursorDown(2). Output: {output_str:?}"
+            );
+
+            // Verify no CursorForward: line_remaining_len = 240 % 80 = 0.
+            let has_cursor_forward = output_str
+                .split(CSI_START)
+                .skip(1)
+                .any(|seq| seq.ends_with('C') || seq.contains("C\x1b"));
+
+            assert!(
+                !has_cursor_forward,
+                "move_from_beginning(240) should NOT emit CursorForward. Output: {output_str:?}"
+            );
+        }
+
+        // Test case 3: move_from_beginning with to=5 SHOULD emit MoveRight(5).
+        {
+            let mut stdout_mock = StdoutMock::default();
+            line_state.move_from_beginning(&mut stdout_mock, 5).unwrap();
+            let output_str = stdout_mock.get_copy_of_buffer_as_string();
+
+            // Should contain CSI 5 C (CursorForward(5)).
+            assert!(
+                output_str.contains(&cursor_forward_5),
+                "move_from_beginning(5) SHOULD emit CursorForward(5). \
+                 Expected: {cursor_forward_5:?}, Output: {output_str:?}"
+            );
+        }
     }
 }
