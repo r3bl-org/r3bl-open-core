@@ -42,6 +42,7 @@
     "Cloneable",
     "cmark",
     "codegen",
+    "codepaths",
     "codepoint",
     "codepoints",
     "col_index",

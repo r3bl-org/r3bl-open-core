@@ -13,6 +13,16 @@
   //
   // List of extensions which should be recommended for users of this workspace.
   "recommendations": [
+    // R3BL Extensions.
+    "R3BL.r3bl-auto-insert-copyright",
+    "R3BL.r3bl-copy-selection-path-and-range",
+    "R3BL.r3bl-extension-pack",
+    "R3BL.r3bl-fuzzy-search",
+    "R3BL.r3bl-semantic-config",
+    "R3BL.r3bl-shared",
+    "R3BL.r3bl-task-management",
+    "R3BL.r3bl-theme",
+    // Others.
     "ryuta46.multi-command", // Multi Command.
     "streetsidesoftware.code-spell-checker", // [SLOW] Code Spell Checker. Configure it so it doesn't slow down IDE
     "usernamehw.errorlens", // Error Lens.
