@@ -224,7 +224,7 @@ mod tests {
 
     mod chunked_input {
         //! Tests for input arriving in multiple chunks (simulating slow network
-        //! or read() returning partial data).
+        //! or `read()` returning partial data).
 
         use super::*;
 
@@ -238,7 +238,7 @@ mod tests {
             assert_eq!((&mut parser).collect::<Vec<_>>().len(), 0); // No event yet
 
             // Second chunk: [ A completes the sequence
-            parser.advance(&[b'[', b'A'], false);
+            parser.advance(b"[A", false);
             let events: Vec<_> = (&mut parser).collect();
             assert_eq!(events.len(), 1);
             assert_eq!(events[0], keyboard_event(VT100KeyCodeIR::Up));
@@ -252,10 +252,10 @@ mod tests {
             parser.advance(&[0x1B], true);
             assert_eq!((&mut parser).collect::<Vec<_>>().len(), 0);
 
-            parser.advance(&[b'['], true);
+            parser.advance(b"[", true);
             assert_eq!((&mut parser).collect::<Vec<_>>().len(), 0);
 
-            parser.advance(&[b'A'], false);
+            parser.advance(b"A", false);
             let events: Vec<_> = (&mut parser).collect();
             assert_eq!(events.len(), 1);
             assert_eq!(events[0], keyboard_event(VT100KeyCodeIR::Up));
@@ -272,7 +272,7 @@ mod tests {
             assert_eq!(events[0], keyboard_event(VT100KeyCodeIR::Char('a')));
 
             // Second chunk: completes arrow, adds 'b'
-            parser.advance(&[b'[', b'A', b'b'], false);
+            parser.advance(b"[Ab", false);
             let events: Vec<_> = (&mut parser).collect();
             assert_eq!(events.len(), 2);
             assert_eq!(events[0], keyboard_event(VT100KeyCodeIR::Up));

@@ -78,6 +78,21 @@ cargo test --doc
 
 Runs documentation examples to ensure they work correctly.
 
+### 9. Cross-Platform Verification (Optional)
+
+For code with platform-specific `#[cfg]` gates (especially Unix-only code), verify Windows compatibility:
+
+```bash
+cargo rustc -p <crate_name> --target x86_64-pc-windows-gnu -- --emit=metadata
+```
+
+This checks that `#[cfg(unix)]` and `#[cfg(not(unix))]` gates compile correctly on Windows without needing a full cross-compiler toolchain.
+
+**When to run:**
+- After adding or modifying `#[cfg(unix)]` or `#[cfg(target_os = "...")]` attributes
+- When working on platform-abstraction code
+- Before committing changes to `DirectToAnsi` input handling or other Unix-specific code
+
 ## Reporting Results
 
 After running all checks, report results concisely to the user:

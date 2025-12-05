@@ -177,7 +177,7 @@
 //! - [`Eof`] - stdin closed
 //! - [`Error`] - I/O error
 //!
-//! # Why mio Instead of Raw poll()?
+//! # Why mio Instead of Raw [`poll()`]?
 //!
 //! We use [`mio`] instead of raw [`poll()`] or [`rustix::event::poll()`] because:
 //!
@@ -426,10 +426,10 @@ mod mio_poller_thread {
     /// kernel buffer—this is the `more` flag used for ESC disambiguation.
     const TTY_BUFFER_SIZE: usize = 1_024;
 
-    /// Token for stdin file descriptor in mio::Poll.
+    /// Token for stdin file descriptor in [`mio::Poll`].
     const STDIN_TOKEN: Token = Token(0);
 
-    /// Token for SIGWINCH signal in mio::Poll.
+    /// Token for SIGWINCH signal in [`mio::Poll`].
     const SIGNAL_TOKEN: Token = Token(1);
 
     /// Sender end of the channel, held by the reader thread.
@@ -474,9 +474,9 @@ mod mio_poller_thread {
     ///
     /// # Event Handling
     ///
-    /// - **STDIN_TOKEN**: Read bytes, parse into events, send as
+    /// - **`STDIN_TOKEN`**: Read bytes, parse into events, send as
     ///   [`ReaderThreadMessage::Event`]
-    /// - **SIGNAL_TOKEN**: Drain pending signals, send [`ReaderThreadMessage::Resize`]
+    /// - **`SIGNAL_TOKEN`**: Drain pending signals, send [`ReaderThreadMessage::Resize`]
     ///
     /// # Exit Conditions
     ///
@@ -485,6 +485,7 @@ mod mio_poller_thread {
     /// - Channel receiver dropped
     ///
     /// [`mio::Poll`]: mio::Poll
+    #[allow(clippy::too_many_lines)] // Polling loop is clearer as single function.
     fn main_polling_loop(tx: StdinSender) {
         // Create mio Poll instance.
         let mut poll = Poll::new().expect("Failed to create mio::Poll");
@@ -523,7 +524,7 @@ mod mio_poller_thread {
         loop {
             // Wait for events on stdin or SIGWINCH.
             match poll.poll(&mut events, None) {
-                Ok(_) => {}
+                Ok(()) => {}
                 Err(ref e) if e.kind() == ErrorKind::Interrupted => {
                     // EINTR - retry poll.
                     continue;
@@ -541,7 +542,7 @@ mod mio_poller_thread {
             }
 
             // Process all ready events.
-            for event in events.iter() {
+            for event in &events {
                 match event.token() {
                     STDIN_TOKEN => {
                         // Read from stdin.
@@ -571,7 +572,7 @@ mod mio_poller_thread {
                                 parser.advance(&buffer[..n], more);
 
                                 // Process all parsed events through paste state machine.
-                                while let Some(vt100_event) = parser.next() {
+                                for vt100_event in parser.by_ref() {
                                     match apply_paste_state_machine(
                                         &mut paste_state,
                                         &vt100_event,

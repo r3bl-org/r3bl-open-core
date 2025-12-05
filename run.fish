@@ -58,6 +58,8 @@ function main
             docs
         case check
             check
+        case check-windows-build
+            check-windows-build
         case clippy
             clippy
         case clippy-pedantic
@@ -145,6 +147,7 @@ function print-help
         echo "    "(set_color green)"clean"(set_color normal)"                Clean entire workspace"
         echo "    "(set_color green)"test"(set_color normal)"                 Test entire workspace"
         echo "    "(set_color green)"check"(set_color normal)"                Check all workspaces"
+        echo "    "(set_color green)"check-windows-build"(set_color normal)"  Verify Windows cross-compilation (cfg gates)"
         echo "    "(set_color green)"check-full"(set_color normal)"           Run comprehensive checks (tests, docs, toolchain)"
         echo "    "(set_color green)"clippy"(set_color normal)"               Run clippy on all workspaces"
         echo "    "(set_color green)"clippy-pedantic"(set_color normal)"      Run clippy with pedantic lints"
@@ -152,7 +155,7 @@ function print-help
         echo "    "(set_color green)"serve-docs"(set_color normal)"           Serve documentation"
         echo "    "(set_color green)"rustfmt"(set_color normal)"              Format all code"
         echo "    "(set_color green)"rustdoc-fmt"(set_color normal)"           Format rustdoc comments"
-        echo "    "(set_color green)"install-cargo-tools"(set_color normal)"  Install dev tools (build-infra, cargo tools)"
+        echo "    "(set_color green)"install-cargo-tools"(set_color normal)"  Install dev tools + Windows cross-compile target"
         echo "    "(set_color green)"upgrade-deps"(set_color normal)"         Upgrade dependencies"
         echo "    "(set_color green)"update-cargo-tools"(set_color normal)"   Update cargo dev tools"
         echo "    "(set_color green)"audit-deps"(set_color normal)"           Security audit"
@@ -310,6 +313,7 @@ end
 # - inferno: Fast stack trace visualizer
 # - wild: Fast linker (wild-linker package)
 # - rust-analyzer: Language server
+# - x86_64-pc-windows-gnu: Cross-compilation target for Windows verification
 #
 # Usage:
 #   fish run.fish install-cargo-tools
@@ -369,6 +373,9 @@ function install-cargo-tools
     else
         echo '✓ rust-analyzer installed'
     end
+
+    # Cross-compilation target for verifying platform-specific code
+    install_windows_target
 end
 
 # Runs all major checks and tasks for the entire workspace.
@@ -532,6 +539,56 @@ end
 
 function check
     cargo check --workspace
+end
+
+# Verifies that platform-specific code compiles correctly for Windows.
+#
+# This function uses cross-compilation metadata emission to verify that
+# #[cfg(unix)], #[cfg(not(unix))], and other platform gates are syntactically
+# correct without needing a full Windows cross-compiler toolchain (mingw-w64).
+#
+# Technical details:
+# - Uses `--emit=metadata` to skip code generation and linking
+# - Only checks syntax and type correctness for Windows target
+# - Requires x86_64-pc-windows-gnu target (installed via install-cargo-tools)
+#
+# When to use:
+# - After modifying #[cfg(unix)] or #[cfg(not(unix))] gates
+# - Before committing platform-specific code changes
+# - As part of CI/CD for cross-platform verification
+#
+# Prerequisites:
+# - Windows target installed: `rustup target add x86_64-pc-windows-gnu`
+# - Or run: `fish run.fish install-cargo-tools`
+#
+# Usage:
+#   fish run.fish check-windows-build
+function check-windows-build
+    set -l target "x86_64-pc-windows-gnu"
+
+    # Verify target is installed
+    if not rustup target list --installed | grep -q $target
+        echo (set_color red)"Error: $target target not installed"(set_color normal)
+        echo "Run: fish run.fish install-cargo-tools"
+        return 1
+    end
+
+    echo (set_color cyan --bold)"Verifying Windows cross-compilation for r3bl_tui..."(set_color normal)
+    echo "Target: $target"
+    echo "Mode: metadata only (no linking required)"
+    echo ""
+
+    if cargo rustc -p r3bl_tui --target $target -- --emit=metadata
+        echo ""
+        echo (set_color green)"✅ Windows cross-compilation check passed"(set_color normal)
+        echo "Platform-specific cfg gates compile correctly for Windows."
+        return 0
+    else
+        echo ""
+        echo (set_color red)"❌ Windows cross-compilation check failed"(set_color normal)
+        echo "Check #[cfg(unix)] and #[cfg(not(unix))] gates for errors."
+        return 1
+    end
 end
 
 # Runs comprehensive clippy linting with automatic fixes for all workspace projects.

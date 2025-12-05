@@ -99,6 +99,18 @@ Use these MCP tools to navigate and modify Rust code effectively:
 
 - **serena**: definition, diagnostics, edit_file, hover, references, rename symbol, etc.
 
+### Cross-Platform Verification
+
+When working with platform-specific code (`#[cfg(unix)]`, `#[cfg(not(unix))]`), verify Windows
+compatibility without needing mingw-w64:
+
+```bash
+cargo rustc -p <crate_name> --target x86_64-pc-windows-gnu -- --emit=metadata
+```
+
+This performs type checking and borrow checking for Windows without code generation or linking.
+Use after modifying `DirectToAnsi` input handling or other Unix-specific code.
+
 ### Testing Interactive Terminal Applications
 
 For testing interactive terminal applications, use (both are installed):

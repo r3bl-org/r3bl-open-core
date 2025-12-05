@@ -220,6 +220,46 @@ pub fn add(a: i32, b: i32) -> i32 {
 
 ---
 
+## cargo rustc --target x86_64-pc-windows-gnu -- --emit=metadata
+
+**Purpose:** Cross-platform verification without full cross-compilation
+
+**When to use:**
+- After adding `#[cfg(unix)]` or `#[cfg(not(unix))]` attributes
+- When modifying platform-specific code paths
+- To verify Windows compatibility of Unix-gated code
+
+**What it does:**
+- Checks Rust code compiles for Windows target
+- Uses `--emit=metadata` to skip code generation and linking
+- Avoids need for mingw-w64 or Windows cross-compiler
+- Validates all `#[cfg]` gates resolve correctly
+
+**Why `--emit=metadata`:**
+- Full cross-compilation requires platform-specific linkers (mingw-w64)
+- Metadata-only mode performs type checking and borrow checking
+- Still processes all `#[cfg(...)]` attributes
+- Catches import errors, missing types, and cfg-gated code path issues
+
+**Example:**
+```bash
+# Check specific crate for Windows compatibility
+cargo rustc -p r3bl_tui --target x86_64-pc-windows-gnu -- --emit=metadata
+
+# If successful, your #[cfg] gates are correctly configured
+```
+
+**Prerequisites:**
+- Windows target installed: `rustup target add x86_64-pc-windows-gnu`
+- Automatically installed by `bootstrap.sh` and toolchain scripts
+
+**Common issues this catches:**
+- Missing `#[cfg(not(unix))]` fallback for Unix-only code
+- Imports of Unix-only types without cfg gates
+- Platform-specific dependencies not properly gated in Cargo.toml
+
+---
+
 ## Build Optimizations (Configured in .cargo/config.toml)
 
 The project uses several build optimizations:

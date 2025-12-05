@@ -38,7 +38,10 @@ Table of contents:
   - [Main binary crate](#main-binary-crate)
 - [Project Task Organization](#project-task-organization)
   - [Task Management Files](#task-management-files)
+  - [Task File Format](#task-file-format)
+  - [Task Workflow Commands](#task-workflow-commands)
   - [Workflow Connection](#workflow-connection)
+  - [Development Tools Integration](#development-tools-integration)
 - [Documentation and Planning](#documentation-and-planning)
   - [Release and Contribution Guides](#release-and-contribution-guides)
   - [Technical Design Documents](#technical-design-documents)
@@ -47,6 +50,7 @@ Table of contents:
   - [Automated Setup (Recommended)](#automated-setup-recommended)
   - [Manual Setup](#manual-setup)
 - [IDE Setup and Extensions](#ide-setup-and-extensions)
+  - [R3BL IntelliJ Plugins](#r3bl-intellij-plugins)
   - [R3BL VSCode Extensions](#r3bl-vscode-extensions)
 - [Build the workspace and run tests](#build-the-workspace-and-run-tests)
   - [Key Commands](#key-commands)
@@ -58,6 +62,7 @@ Table of contents:
     - [Example Workflow Setup](#example-workflow-setup)
     - [Disk Space Management](#disk-space-management)
     - [Troubleshooting](#troubleshooting)
+    - [Incremental Compilation Management](#incremental-compilation-management)
   - [Bacon Development Tools](#bacon-development-tools)
   - [Automated Development Monitoring](#automated-development-monitoring)
     - [Option 1: Lightweight Watch Mode (Recommended for Most Users)](#option-1-lightweight-watch-mode-recommended-for-most-users)
@@ -65,6 +70,7 @@ Table of contents:
   - [Tmux Development Dashboard](#tmux-development-dashboard)
   - [Status Monitoring Scripts](#status-monitoring-scripts)
   - [Wild Linker (Linux)](#wild-linker-linux)
+  - [Cross-Platform Verification (Windows)](#cross-platform-verification-windows)
   - [Rust Toolchain Management](#rust-toolchain-management)
     - [Why mkdir for Locking?](#why-mkdir-for-locking)
     - [1. rust-toolchain-update.fish - Smart Validated Toolchain Updates](#1-rust-toolchain-updatefish---smart-validated-toolchain-updates)
@@ -688,7 +694,7 @@ Workspace-wide commands:
     docs                 Generate docs for all
     serve-docs           Serve documentation
     rustfmt              Format all code
-    install-cargo-tools  Install Rust development tools
+    install-cargo-tools  Install dev tools + Windows cross-compile target
     upgrade-deps         Upgrade dependencies
     audit-deps           Security audit
     unmaintained         Check for unmaintained deps
@@ -723,7 +729,7 @@ Other commands:
 | `fish run.fish all`                                        | Run all major checks (build, test, clippy, docs, audit, format)                         |
 | `fish run.fish build`                                      | Build the entire workspace                                                              |
 | `fish run.fish test`                                       | Run all tests across the workspace                                                      |
-| `fish run.fish install-cargo-tools`                        | Install Rust development tools (cargo-binstall, uv, bacon, Wild linker, etc.)           |
+| `fish run.fish install-cargo-tools`                        | Install Rust dev tools + Windows cross-compile target                                   |
 | `fish run.fish watch-all-tests`                            | Watch for file changes and run tests automatically                                      |
 | `fish run.fish run-examples`                               | Run TUI examples interactively                                                          |
 | `fish run.fish run-examples-flamegraph-svg`                | Generate SVG flamegraph for performance analysis                                        |
@@ -732,6 +738,7 @@ Other commands:
 | `fish run.fish run-binaries`                               | Run cmdr binaries (edi, giti, rc) interactively                                         |
 | `fish run.fish dev-dashboard`                              | Start 4-pane tmux development dashboard (tests, docs, checks)                           |
 | `fish run.fish check-full`                                 | Run comprehensive checks (tests, doctests, docs, toolchain validation)                  |
+| `fish run.fish check-windows-build`                        | Verify Windows cross-compilation (platform cfg gates)                                   |
 | `fish run.fish toolchain-validate`                         | Quick toolchain validation (components only, ~1-2 seconds)                              |
 | `fish run.fish toolchain-validate-complete`                | Complete toolchain validation (full build+test, ~5-10 minutes)                          |
 | `fish run.fish toolchain-update`                           | Update Rust to month-old nightly toolchain with cleanup                                 |
@@ -1233,6 +1240,66 @@ or by observing faster link times during development builds.
 **Platform Support**: Wild linker is Linux-only. On other platforms, the build system uses standard
 parallel compilation without Wild.
 
+### Cross-Platform Verification (Windows)
+
+This project uses platform-specific code gates (`#[cfg(unix)]`, `#[cfg(not(unix))]`) for
+Unix-specific functionality like terminal I/O. To verify these gates compile correctly on Windows
+without needing a full Windows cross-compiler (mingw-w64), we use Rust's metadata-only compilation.
+
+**How It Works:**
+
+The `--emit=metadata` flag tells rustc to stop after type checking and MIR generation, skipping code
+generation and linking entirely. This validates all platform-specific cfg gates without needing a
+linker for the target platform.
+
+```sh
+# Verify Windows cross-compilation
+fish run.fish check-windows-build
+
+# Or run directly:
+cargo rustc -p r3bl_tui --target x86_64-pc-windows-gnu -- --emit=metadata
+```
+
+**Prerequisites:**
+
+The Windows target is automatically installed by `fish run.fish install-cargo-tools`. To install
+manually:
+
+```sh
+rustup target add x86_64-pc-windows-gnu
+```
+
+**When to Use:**
+
+- After modifying `#[cfg(unix)]` or `#[cfg(not(unix))]` conditional compilation gates
+- Before committing platform-specific code changes
+- As part of CI/CD for cross-platform verification
+- When adding new platform-specific modules or functions
+
+**Example Output:**
+
+```text
+Verifying Windows cross-compilation for r3bl_tui...
+Target: x86_64-pc-windows-gnu
+Mode: metadata only (no linking required)
+
+✅ Windows cross-compilation check passed
+Platform-specific cfg gates compile correctly for Windows.
+```
+
+**Technical Details:**
+
+| Aspect              | Description                                                        |
+| ------------------- | ------------------------------------------------------------------ |
+| **Target**          | `x86_64-pc-windows-gnu` (Windows with GNU toolchain ABI)           |
+| **Compilation**     | Stops at MIR stage (`--emit=metadata`), no object code generated   |
+| **Linking**         | Not required - no mingw-w64 or Windows SDK needed                  |
+| **What's Verified** | Syntax, types, trait bounds, cfg gate correctness                  |
+| **What's NOT**      | Runtime behavior, Windows-specific API calls, linking errors       |
+
+This approach catches the most common cross-platform issues (missing cfg gates, type mismatches in
+platform-specific code) with minimal setup overhead.
+
 ### Rust Toolchain Management
 
 This project includes three complementary scripts for comprehensive Rust toolchain management, each
@@ -1599,7 +1666,53 @@ The four scripts work together to provide a complete toolchain management soluti
 
 ### Unified Script Architecture
 
-The project uses a clean separation of concerns across three main scripts:
+The project uses a clean separation of concerns across three main scripts with shared utilities:
+
+```
+┌──────────────────────────────────────────────────────────────────────────┐
+│                           Bootstrap Flow                                  │
+└──────────────────────────────────────────────────────────────────────────┘
+
+    ┌─────────────────┐     calls     ┌──────────────────────────────────┐
+    │  bootstrap.sh   │──────────────▶│  fish run.fish install-cargo-tools│
+    │  (OS-level)     │               │  (Rust development tools)         │
+    └─────────────────┘               └──────────────────────────────────┘
+            │                                       │
+            │ installs                              │ uses
+            ▼                                       ▼
+    ┌─────────────────┐               ┌──────────────────────────────────┐
+    │ rustup, clang,  │               │        script_lib.fish           │
+    │ fish, fzf,      │               │   (shared utility functions)     │
+    │ inotify-tools   │               │                                  │
+    └─────────────────┘               │  • install_windows_target        │
+                                      │  • install_if_missing            │
+                                      │  • install_cargo_tool            │
+                                      │  • generate_cargo_config         │
+                                      │  • read_toolchain_from_toml      │
+                                      │  • acquire_toolchain_lock        │
+                                      │  • ... 25+ shared functions      │
+                                      └──────────────────────────────────┘
+                                                    ▲
+                    ┌───────────────────────────────┼───────────────────────┐
+                    │                               │                       │
+                    │ sources                       │ sources               │ sources
+                    │                               │                       │
+    ┌───────────────────────┐  ┌─────────────────────────────┐  ┌──────────────────────┐
+    │       run.fish        │  │ rust-toolchain-update.fish  │  │ rust-toolchain-sync- │
+    │  (dev commands)       │  │ (smart toolchain updater)   │  │ to-toml.fish         │
+    │                       │  │                             │  │ (sync to TOML)       │
+    │  • build, test, docs  │  │  • install_windows_target   │  │                      │
+    │  • clippy, rustfmt    │  │  • acquire_toolchain_lock   │  │  • install_windows_  │
+    │  • install-cargo-tools│  │  • read_toolchain_from_toml │  │    target            │
+    │    (calls install_    │  │  • set_toolchain_in_toml    │  │  • acquire_toolchain_│
+    │     windows_target)   │  │  • ...                      │  │    lock              │
+    └───────────────────────┘  └─────────────────────────────┘  └──────────────────────┘
+```
+
+**Key DRY Principle**: All shared functionality lives in `script_lib.fish`. Individual scripts
+source this library and call shared functions, ensuring consistent behavior and eliminating
+code duplication. When a function like `install_windows_target` needs updating, it only needs
+to be changed in one place.
 
 **[`bootstrap.sh`](https://github.com/r3bl-org/r3bl-open-core/blob/main/bootstrap.sh)** - **OS-Level
 Setup**

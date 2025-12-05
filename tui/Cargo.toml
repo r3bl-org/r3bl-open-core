@@ -43,10 +43,6 @@ rustix = { version = "1.1.2", features = ["termios", "std"] }
 # Used by DirectToAnsi backend to poll stdin and SIGWINCH together.
 mio = { version = "1.0", features = ["os-poll", "os-ext"] }
 
-# Signal handling for DirectToAnsi backend (SIGWINCH for terminal resize).
-signal-hook = "0.3"
-signal-hook-mio = { version = "0.2", features = ["support-v1_0"] }
-
 # strum.
 strum = "0.27.1"
 strum_macros = "0.27.1"
@@ -168,6 +164,12 @@ portable-pty = "0.9.0"
 
 # Desktop notifications
 notify-rust = "4.11.3"
+
+# Unix-only dependencies for DirectToAnsi backend
+[target.'cfg(unix)'.dependencies]
+# Signal handling for DirectToAnsi backend (SIGWINCH for terminal resize).
+signal-hook = "0.3"
+signal-hook-mio = { version = "0.2", features = ["support-v1_0"] }
 
 [dev-dependencies]
 # For assert_eq2! macro.

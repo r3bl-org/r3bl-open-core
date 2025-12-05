@@ -16,7 +16,7 @@ use std::fmt::Debug;
 /// pattern** for reliable ESC key disambiguation without fixed timeouts.
 ///
 /// This is a **thin wrapper** that delegates to [`GLOBAL_INPUT_RESOURCE`] for
-/// [std::io::Stdin] reading and buffer management. The global resource pattern mirrors
+/// [`std::io::Stdin`] reading and buffer management. The global resource pattern mirrors
 /// crossterm's architecture, ensuring [`stdin`] handles persist across device lifecycle
 /// boundaries.
 ///
@@ -362,22 +362,16 @@ impl DirectToAnsiInputDevice {
 
         // Wait for fully-formed `InputEvents` through the channel.
         loop {
-            let stdin_read_result = match resource.stdin_rx.recv().await {
-                Some(result) => result,
-                None => {
-                    // Channel closed - reader thread exited.
-                    return None;
-                }
+            let Some(stdin_read_result) = resource.stdin_rx.recv().await else {
+                // Channel closed - reader thread exited.
+                return None;
             };
 
             match stdin_read_result {
                 ReaderThreadMessage::Event(event) => {
                     return Some(event);
                 }
-                ReaderThreadMessage::Eof => {
-                    return None;
-                }
-                ReaderThreadMessage::Error => {
+                ReaderThreadMessage::Eof | ReaderThreadMessage::Error => {
                     return None;
                 }
                 ReaderThreadMessage::Resize => {

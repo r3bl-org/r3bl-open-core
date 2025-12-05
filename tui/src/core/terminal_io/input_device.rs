@@ -1,8 +1,9 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{CrosstermEventResult, CrosstermInputDevice, DirectToAnsiInputDevice,
-            InlineVec, InputEvent, MockInputDevice, TERMINAL_LIB_BACKEND,
-            TerminalLibBackend};
+use crate::{CrosstermEventResult, CrosstermInputDevice, InlineVec, InputEvent,
+            MockInputDevice, TERMINAL_LIB_BACKEND, TerminalLibBackend};
+#[cfg(unix)]
+use crate::DirectToAnsiInputDevice;
 use std::time::Duration;
 
 /// Generic input device wrapper that abstracts over different backend implementations.
@@ -14,7 +15,7 @@ use std::time::Duration;
 ///
 /// Uses an enum to dispatch to the appropriate backend implementation at runtime:
 /// - **Crossterm**: Cross-platform terminal input (default on non-Linux)
-/// - **`DirectToAnsi`**: Pure Rust async input with tokio (default on Linux)
+/// - **`DirectToAnsi`**: Pure Rust async input with tokio (Unix-only, default on Linux)
 /// - **Mock**: Synthetic event generator for testing
 ///
 /// Backend selection is automatic based on [`TERMINAL_LIB_BACKEND`], or can be
@@ -57,7 +58,8 @@ use std::time::Duration;
 pub enum InputDevice {
     /// Crossterm backend - cross-platform terminal input
     Crossterm(CrosstermInputDevice),
-    /// `DirectToAnsi` backend - pure Rust async I/O
+    /// `DirectToAnsi` backend - pure Rust async I/O (Unix-only)
+    #[cfg(unix)]
     DirectToAnsi(DirectToAnsiInputDevice),
     /// Mock backend - synthetic events for testing
     Mock(MockInputDevice),
@@ -66,7 +68,7 @@ pub enum InputDevice {
 impl InputDevice {
     /// Create a new [`InputDevice`] using the platform-default backend.
     ///
-    /// - Linux: `DirectToAnsi` (pure Rust async I/O)
+    /// - Unix: `DirectToAnsi` (pure Rust async I/O)
     /// - Others: Crossterm (cross-platform compatibility)
     ///
     /// Backend is selected via [`TERMINAL_LIB_BACKEND`] constant.
@@ -74,7 +76,13 @@ impl InputDevice {
     pub fn new() -> Self {
         match TERMINAL_LIB_BACKEND {
             TerminalLibBackend::Crossterm => Self::new_crossterm(),
+            #[cfg(unix)]
             TerminalLibBackend::DirectToAnsi => Self::new_direct_to_ansi(),
+            #[cfg(not(unix))]
+            TerminalLibBackend::DirectToAnsi => {
+                // DirectToAnsi is Unix-only, fall back to Crossterm on other platforms
+                Self::new_crossterm()
+            }
         }
     }
 
@@ -85,6 +93,9 @@ impl InputDevice {
     }
 
     /// Create a new `InputDevice` using the `DirectToAnsi` backend explicitly.
+    ///
+    /// Only available on Unix platforms.
+    #[cfg(unix)]
     #[must_use]
     pub fn new_direct_to_ansi() -> Self {
         Self::DirectToAnsi(DirectToAnsiInputDevice::new())
@@ -119,6 +130,7 @@ impl InputDevice {
     pub async fn next(&mut self) -> Option<InputEvent> {
         match self {
             Self::Crossterm(device) => device.next().await,
+            #[cfg(unix)]
             Self::DirectToAnsi(device) => device.next().await,
             Self::Mock(device) => device.next().await,
         }

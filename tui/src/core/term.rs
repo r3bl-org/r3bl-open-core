@@ -2,12 +2,60 @@
 
 // cspell:words isatty winsize tcgetwinsize
 
-use crate::{ColWidth, Size, height,
-            tui::terminal_lib_backends::{TERMINAL_LIB_BACKEND, TerminalLibBackend},
-            width};
+use crate::{ColWidth, Size, height, width};
+#[cfg(unix)]
+use crate::tui::terminal_lib_backends::{TERMINAL_LIB_BACKEND, TerminalLibBackend};
 use miette::IntoDiagnostic;
 use std::io::IsTerminal;
+
 pub const DEFAULT_WIDTH: u16 = 80;
+
+// ┌──────────────────────────────────────────────────────────────────────────────┐
+// │ Platform-specific TTY helpers                                                │
+// │                                                                              │
+// │ These functions encapsulate platform differences for TTY detection.          │
+// │ On Unix, DirectToAnsi uses rustix syscalls; on other platforms, both         │
+// │ backends use std::io::IsTerminal.                                            │
+// └──────────────────────────────────────────────────────────────────────────────┘
+
+#[cfg(unix)]
+fn is_tty_stdin() -> bool {
+    match TERMINAL_LIB_BACKEND {
+        TerminalLibBackend::Crossterm => std::io::stdin().is_terminal(),
+        TerminalLibBackend::DirectToAnsi => rustix::termios::isatty(std::io::stdin()),
+    }
+}
+
+#[cfg(not(unix))]
+fn is_tty_stdin() -> bool {
+    std::io::stdin().is_terminal()
+}
+
+#[cfg(unix)]
+fn is_tty_stdout() -> bool {
+    match TERMINAL_LIB_BACKEND {
+        TerminalLibBackend::Crossterm => std::io::stdout().is_terminal(),
+        TerminalLibBackend::DirectToAnsi => rustix::termios::isatty(std::io::stdout()),
+    }
+}
+
+#[cfg(not(unix))]
+fn is_tty_stdout() -> bool {
+    std::io::stdout().is_terminal()
+}
+
+#[cfg(unix)]
+fn is_tty_stderr() -> bool {
+    match TERMINAL_LIB_BACKEND {
+        TerminalLibBackend::Crossterm => std::io::stderr().is_terminal(),
+        TerminalLibBackend::DirectToAnsi => rustix::termios::isatty(std::io::stderr()),
+    }
+}
+
+#[cfg(not(unix))]
+fn is_tty_stderr() -> bool {
+    std::io::stderr().is_terminal()
+}
 
 #[must_use]
 pub fn get_terminal_width_no_default() -> Option<ColWidth> {
@@ -91,11 +139,7 @@ pub enum StdoutIsPipedResult {
 /// More info: <https://unix.stackexchange.com/questions/597083/how-does-piping-affect-stdin>
 #[must_use]
 pub fn is_stdin_piped() -> StdinIsPipedResult {
-    let is_tty = match TERMINAL_LIB_BACKEND {
-        TerminalLibBackend::Crossterm => std::io::stdin().is_terminal(),
-        TerminalLibBackend::DirectToAnsi => rustix::termios::isatty(std::io::stdin()),
-    };
-    if is_tty {
+    if is_tty_stdin() {
         StdinIsPipedResult::StdinIsNotPiped
     } else {
         StdinIsPipedResult::StdinIsPiped
@@ -106,11 +150,7 @@ pub fn is_stdin_piped() -> StdinIsPipedResult {
 /// More info: <https://unix.stackexchange.com/questions/597083/how-does-piping-affect-stdin>
 #[must_use]
 pub fn is_stdout_piped() -> StdoutIsPipedResult {
-    let is_tty = match TERMINAL_LIB_BACKEND {
-        TerminalLibBackend::Crossterm => std::io::stdout().is_terminal(),
-        TerminalLibBackend::DirectToAnsi => rustix::termios::isatty(std::io::stdout()),
-    };
-    if is_tty {
+    if is_tty_stdout() {
         StdoutIsPipedResult::StdoutIsNotPiped
     } else {
         StdoutIsPipedResult::StdoutIsPiped
@@ -133,11 +173,7 @@ pub enum TTYResult {
 /// streams are interactive.
 #[must_use]
 pub fn is_stdin_interactive() -> TTYResult {
-    let is_tty = match TERMINAL_LIB_BACKEND {
-        TerminalLibBackend::Crossterm => std::io::stdin().is_terminal(),
-        TerminalLibBackend::DirectToAnsi => rustix::termios::isatty(std::io::stdin()),
-    };
-    if is_tty {
+    if is_tty_stdin() {
         TTYResult::IsInteractive
     } else {
         TTYResult::IsNotInteractive
@@ -162,19 +198,7 @@ pub fn is_headless() -> TTYResult {
         return TTYResult::IsInteractive;
     }
 
-    let (stdin_is_tty, stdout_is_tty, stderr_is_tty) = match TERMINAL_LIB_BACKEND {
-        TerminalLibBackend::Crossterm => (
-            std::io::stdin().is_terminal(),
-            std::io::stdout().is_terminal(),
-            std::io::stderr().is_terminal(),
-        ),
-        TerminalLibBackend::DirectToAnsi => (
-            rustix::termios::isatty(std::io::stdin()),
-            rustix::termios::isatty(std::io::stdout()),
-            rustix::termios::isatty(std::io::stderr()),
-        ),
-    };
-    if !stdin_is_tty && !stdout_is_tty && !stderr_is_tty {
+    if !is_tty_stdin() && !is_tty_stdout() && !is_tty_stderr() {
         TTYResult::IsNotInteractive
     } else {
         TTYResult::IsInteractive
@@ -194,19 +218,8 @@ pub fn is_headless() -> TTYResult {
 /// Here stdin may still be a TTY, but output streams are redirected to a file.
 #[must_use]
 pub fn is_output_interactive() -> TTYResult {
-    let (stdout_is_tty, stderr_is_tty) = match TERMINAL_LIB_BACKEND {
-        TerminalLibBackend::Crossterm => (
-            std::io::stdout().is_terminal(),
-            std::io::stderr().is_terminal(),
-        ),
-        TerminalLibBackend::DirectToAnsi => (
-            rustix::termios::isatty(std::io::stdout()),
-            rustix::termios::isatty(std::io::stderr()),
-        ),
-    };
-
-    // If either stdout or stderr is not a TTY, consider output non-interactive
-    if !stdout_is_tty || !stderr_is_tty {
+    // If either stdout or stderr is not a TTY, consider output non-interactive.
+    if !is_tty_stdout() || !is_tty_stderr() {
         TTYResult::IsNotInteractive
     } else {
         TTYResult::IsInteractive

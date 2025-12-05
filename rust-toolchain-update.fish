@@ -27,6 +27,7 @@ source script_lib.fish
 # - Keep only: stable-* + the validated nightly-YYYY-MM-DD
 # - Remove: all other nightly toolchains, including generic "nightly"
 # - Installs rust-analyzer component (required by VSCode, RustRover, cargo, and serena MCP server)
+# - Installs x86_64-pc-windows-gnu target for cross-platform verification
 #
 # Final Verification:
 # - Remove ICE failure files (rustc-ice-*.txt) generated during validation
@@ -521,6 +522,9 @@ function main
         release_toolchain_lock
         return 1
     end
+
+    # Install Windows cross-compilation target for verifying platform-specific code
+    install_windows_target
 
     log_message "═══════════════════════════════════════════════════════"
     log_message "Phase 3: Cleanup Old Toolchains"

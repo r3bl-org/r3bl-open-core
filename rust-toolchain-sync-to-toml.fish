@@ -19,6 +19,7 @@ source script_lib.fish
 # - Install fresh stable toolchain
 # - Install the target nightly toolchain from TOML
 # - Install rust-analyzer and rust-src components (required by VSCode, RustRover, cargo, and serena MCP server)
+# - Install x86_64-pc-windows-gnu target for cross-platform verification
 #
 # Concurrency Safety:
 # - Uses mkdir (atomic directory creation) for mutual exclusion
@@ -277,6 +278,9 @@ function main
     end
 
     install_additional_components
+
+    # Install Windows cross-compilation target for verifying platform-specific code
+    install_windows_target
 
     verify_final_state
 

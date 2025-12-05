@@ -1145,6 +1145,39 @@ function set_toolchain_in_toml
     return $status
 end
 
+# Installs the Windows cross-compilation target for verifying platform-specific code.
+#
+# This target allows checking that #[cfg(unix)] and #[cfg(not(unix))] gates compile
+# correctly on Windows without needing a full cross-compiler toolchain (mingw-w64).
+# Uses `cargo rustc --target x86_64-pc-windows-gnu -- --emit=metadata` for verification.
+#
+# Features:
+# - Idempotent: Safe to call multiple times
+# - Non-blocking: Continues with warning if installation fails
+# - Logs success/failure status
+#
+# Prerequisites:
+# - rustup must be available in PATH
+#
+# Usage:
+#   install_windows_target
+#   # Then verify: cargo rustc -p <crate> --target x86_64-pc-windows-gnu -- --emit=metadata
+function install_windows_target
+    set -l target "x86_64-pc-windows-gnu"
+
+    if rustup target list --installed | grep -q $target
+        echo "✅ $target target already installed"
+    else
+        echo "Installing Windows cross-compilation target..."
+        if rustup target add $target
+            echo "✅ $target target installed"
+        else
+            echo "⚠️  Failed to install Windows target (non-critical, continuing)"
+        end
+    end
+    return 0
+end
+
 # ============================================================================
 # Toolchain Script Locking Utilities
 # ============================================================================
