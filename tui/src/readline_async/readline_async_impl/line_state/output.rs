@@ -1,7 +1,8 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use super::core::{LineState, LineStateLiveness, early_return_if_paused};
-use crate::{CsiSequence, LINE_FEED_BYTE, NumericValue, ReadlineError, ok, width};
+use super::core::LineState;
+use crate::{CsiSequence, GCStringOwned, LINE_FEED_BYTE, LineStateLiveness, NumericValue,
+            ReadlineError, early_return_if_paused, ok, width};
 use std::io::Write;
 
 impl LineState {
@@ -52,7 +53,7 @@ impl LineState {
             term.write_all(col_0.as_bytes())?;
         }
 
-        self.last_line_completed = data.ends_with(b"\n"); // Set whether data ends with newline
+        self.last_line_completed = data.ends_with(&[LINE_FEED_BYTE]); // Set whether data ends with newline
 
         // If data does not end with newline, save the cursor and write newline for
         // prompt. Usually data does end in newline due to the buffering of
@@ -137,7 +138,7 @@ impl LineState {
     ///
     /// Returns an error if writing to the terminal fails.
     pub fn exit(&mut self, term: &mut dyn Write) -> Result<(), ReadlineError> {
-        self.line.clear();
+        self.line = GCStringOwned::new("");
         self.clear(term)?;
 
         term.write_all(
@@ -179,7 +180,7 @@ mod tests {
     #[test]
     fn test_exit_clears_line() {
         let mut line_state = LineState::new("$ ".into(), (80, 24));
-        line_state.line = "some content".to_string();
+        line_state.line = GCStringOwned::new("some content");
         let mut stdout_mock = StdoutMock::default();
 
         line_state.exit(&mut stdout_mock).unwrap();

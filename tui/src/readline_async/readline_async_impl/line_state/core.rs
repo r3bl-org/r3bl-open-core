@@ -2,8 +2,61 @@
 
 // cspell:words testx
 
-use crate::{ColIndex, ColWidth, MemoizedLenMap, SegIndex, Size, StringLength, height, ok, width};
+use crate::{ColIndex, ColWidth, GCStringOwned, MemoizedLenMap, SegIndex, Size,
+            StringLength, height, ok, width};
 use std::io::{self, Write};
+
+/// This struct actually handles the line editing, and rendering. This works hand in hand
+/// with the [`crate::Readline`] to make sure that the line is rendered correctly, with
+/// pause and resume support.
+#[derive(Debug)]
+pub struct LineState {
+    /// The user's input line with pre-computed grapheme cluster metadata.
+    ///
+    /// Uses [`GCStringOwned`] for efficient Unicode handling: O(1) segment count,
+    /// display width, and direct segment access by index. Mutations rebuild the
+    /// segment array (acceptable for typical readline input lengths).
+    ///
+    /// [`GCStringOwned`]: crate::GCStringOwned
+    pub line: GCStringOwned,
+
+    /// Index of grapheme in line (0-based position within grapheme array).
+    pub line_cursor_grapheme: SegIndex,
+
+    /// Column of grapheme in line (0-based terminal column).
+    pub current_column: ColIndex,
+
+    /// Buffer for holding partial grapheme clusters as they come in.
+    pub cluster_buffer: String,
+
+    /// The prompt string displayed before user input (e.g., `"$ "` or `"> "`).
+    ///
+    /// May contain ANSI escape codes for styling (colors, bold, etc.). Display width
+    /// is calculated using [`StringLength::StripAnsi`] to exclude escape sequences.
+    ///
+    /// [`StringLength::StripAnsi`]: crate::StringLength::StripAnsi
+    pub prompt: String,
+
+    /// After pressing enter, should we print the line just submitted?
+    pub should_print_line_on_enter: bool,
+
+    /// After pressing `control_c` should we print the line just cancelled?
+    pub should_print_line_on_control_c: bool,
+
+    /// Length of last incomplete line (for cursor restoration).
+    pub last_line_length: ColWidth,
+    pub last_line_completed: bool,
+
+    /// Terminal dimensions: `col_width` (columns) and `row_height` (rows).
+    pub term_size: Size,
+
+    /// This is the only place where this information is stored. Since pause and resume
+    /// ultimately only affect this struct.
+    pub is_paused: LineStateLiveness,
+
+    /// Use to memoize the length of strings.
+    pub memoized_len_map: MemoizedLenMap,
+}
 
 /// Controls whether [`LineState`] processes input and renders output.
 ///
@@ -38,46 +91,6 @@ impl LineStateLiveness {
     pub fn is_paused(&self) -> bool { matches!(self, LineStateLiveness::Paused) }
 }
 
-/// This struct actually handles the line editing, and rendering. This works hand in hand
-/// with the [`crate::Readline`] to make sure that the line is rendered correctly, with
-/// pause and resume support.
-#[derive(Debug)]
-pub struct LineState {
-    /// Unicode line.
-    pub line: String,
-
-    /// Index of grapheme in line (0-based position within grapheme array).
-    pub line_cursor_grapheme: SegIndex,
-
-    /// Column of grapheme in line (0-based terminal column).
-    pub current_column: ColIndex,
-
-    /// buffer for holding partial grapheme clusters as they come in
-    pub cluster_buffer: String,
-
-    pub prompt: String,
-
-    /// After pressing enter, should we print the line just submitted?
-    pub should_print_line_on_enter: bool,
-
-    /// After pressing `control_c` should we print the line just cancelled?
-    pub should_print_line_on_control_c: bool,
-
-    /// Length of last incomplete line (for cursor restoration).
-    pub last_line_length: ColWidth,
-    pub last_line_completed: bool,
-
-    /// Terminal dimensions: `col_width` (columns) and `row_height` (rows).
-    pub term_size: Size,
-
-    /// This is the only place where this information is stored. Since pause and resume
-    /// ultimately only affect this struct.
-    pub is_paused: LineStateLiveness,
-
-    /// Use to memoize the length of strings.
-    pub memoized_len_map: MemoizedLenMap,
-}
-
 /// Early return from a function if [`LineState`] is paused.
 ///
 /// This macro provides a consistent pattern for checking pause state at the start
@@ -87,20 +100,7 @@ pub struct LineState {
 ///
 /// - `@None`: Returns `Ok(None)` - for methods returning `Result<Option<T>, E>`
 /// - `@Unit`: Returns `Ok(())` - for methods returning `Result<(), E>`
-///
-/// # Example
-///
-/// ```rust,ignore
-/// pub fn handle_input(&mut self) -> Result<Option<Event>, Error> {
-///     early_return_if_paused!(self @None);
-///     // ... process input ...
-/// }
-///
-/// pub fn render(&mut self) -> io::Result<()> {
-///     early_return_if_paused!(self @Unit);
-///     // ... render output ...
-/// }
-/// ```
+#[macro_export]
 macro_rules! early_return_if_paused {
     ($self:ident @None) => {
         if matches!($self.is_paused, LineStateLiveness::Paused) {
@@ -115,12 +115,11 @@ macro_rules! early_return_if_paused {
     };
 }
 
-pub(crate) use early_return_if_paused;
-
 impl LineState {
     /// Create a new `LineState` with the given prompt and terminal size.
     ///
-    /// The `term_size` parameter accepts a `(u16, u16)` tuple: `(width_cols, height_rows)`.
+    /// The `term_size` parameter accepts a `(u16, u16)` tuple: `(width_cols,
+    /// height_rows)`.
     #[must_use]
     pub fn new(prompt: String, term_size: (u16, u16)) -> Self {
         let mut memoized_len_map = MemoizedLenMap::new();
@@ -135,7 +134,7 @@ impl LineState {
             current_column: crate::col(current_column),
             should_print_line_on_enter: true,
             should_print_line_on_control_c: false,
-            line: String::new(),
+            line: GCStringOwned::new(""),
             line_cursor_grapheme: 0.into(),
             cluster_buffer: String::new(),
             last_line_length: width(0),
@@ -179,8 +178,8 @@ impl LineState {
 #[cfg(test)]
 mod tests {
     use super::{LineState, LineStateLiveness};
-    use crate::{History, InputEvent, Key, KeyPress, StdMutex, core::test_fixtures::StdoutMock,
-                seg_index};
+    use crate::{GCStringOwned, History, InputEvent, Key, KeyPress, StdMutex,
+                core::test_fixtures::StdoutMock, seg_index};
     use std::sync::Arc;
 
     #[tokio::test]
@@ -191,7 +190,7 @@ mod tests {
         let (history, _) = History::new();
         let safe_history = Arc::new(StdMutex::new(history));
 
-        line.line = "test".to_string();
+        line.line = GCStringOwned::new("test");
         line.line_cursor_grapheme = seg_index(4);
 
         // Pause the line state.
@@ -214,7 +213,7 @@ mod tests {
 
         assert!(matches!(result, Ok(None)));
         // Line should be unchanged because it's paused.
-        assert_eq!(line.line, "test");
+        assert_eq!(line.line.as_str(), "test");
         assert_eq!(line.line_cursor_grapheme, seg_index(4));
 
         // Resume the line state.
@@ -233,6 +232,6 @@ mod tests {
 
         assert!(matches!(result, Ok(None)));
         // Line should now have the character appended.
-        assert_eq!(line.line, "testx");
+        assert_eq!(line.line.as_str(), "testx");
     }
 }

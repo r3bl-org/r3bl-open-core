@@ -2,9 +2,8 @@
 
 use super::core::LineState;
 use crate::{ArrayBoundsCheck, ArrayOverflowResult, ColWidth, CsiSequence, CursorBoundsCheck,
-            StringLength, col, ok, seg_index, seg_length, width};
+            NumericValue, Seg, StringLength, col, ok, seg_index, width};
 use std::io::{self, Write};
-use unicode_segmentation::UnicodeSegmentation;
 
 impl LineState {
     /// Gets the number of lines wrapped (how many rows the text spans).
@@ -68,16 +67,15 @@ impl LineState {
     /// Returns an error if I/O operations fail.
     pub fn move_cursor(&mut self, change: isize) -> io::Result<()> {
         if change > 0 {
-            let count = self.line.graphemes(true).count();
+            let count = self.line.segment_count();
 
             // We know that change is positive, so we can safely cast it to usize.
             #[allow(clippy::cast_sign_loss)]
             let change_usize = change as usize;
 
             let new_position = self.line_cursor_grapheme + seg_index(change_usize);
-            let count_length = seg_length(count);
             // Use CursorBoundsCheck for text cursor positioning (allows position == length).
-            self.line_cursor_grapheme = count_length.clamp_cursor_position(new_position);
+            self.line_cursor_grapheme = count.clamp_cursor_position(new_position);
         } else {
             // Use unsigned_abs() to convert negative change to
             // positive amount to subtract.
@@ -92,56 +90,62 @@ impl LineState {
             };
         }
 
-        let (pos, str) = self.current_grapheme().unwrap_or((0, ""));
-        let pos = pos + str.len();
+        // Calculate display width up to cursor position using segment metadata.
+        let line_display_width = self.calculate_display_width_up_to_cursor();
 
         let prompt_len =
             StringLength::StripAnsi.calculate(&self.prompt, &mut self.memoized_len_map);
 
-        let line_len = StringLength::Unicode
-            .calculate(&self.line[0..pos], &mut self.memoized_len_map);
-
-        self.current_column = col(prompt_len + line_len);
+        self.current_column = col(prompt_len + line_display_width.as_u16());
 
         ok!()
     }
 
-    /// Returns the grapheme cluster immediately before the cursor position.
+    /// Calculate the display width of the line up to the current cursor position.
+    ///
+    /// Uses pre-computed segment metadata for O(n) where n is segments up to cursor,
+    /// rather than re-parsing the entire string.
+    fn calculate_display_width_up_to_cursor(&self) -> ColWidth {
+        let mut total_width = width(0);
+        for i in 0..self.line_cursor_grapheme.as_usize() {
+            if let Some(seg) = self.line.get(seg_index(i)) {
+                total_width += seg.display_width;
+            }
+        }
+        total_width
+    }
+
+    /// Returns the grapheme cluster segment immediately before the cursor position.
     ///
     /// Returns `None` if the cursor is at the beginning of the line (position 0).
     ///
     /// # Returns
     ///
-    /// A tuple of `(byte_offset, grapheme_str)` where:
-    /// - `byte_offset`: The byte index where this grapheme starts in the line
-    /// - `grapheme_str`: The grapheme cluster as a string slice
+    /// A [`Seg`] containing byte offset, display width, and other segment metadata.
+    /// Use `seg.get_str(&self.line)` to get the actual grapheme string.
     #[must_use]
-    pub fn current_grapheme(&self) -> Option<(usize, &str)> {
-        self.line
-            .grapheme_indices(true)
-            .take(self.line_cursor_grapheme.as_usize())
-            .last()
+    pub fn current_grapheme(&self) -> Option<Seg> {
+        if self.line_cursor_grapheme.is_zero() {
+            return None;
+        }
+        self.line.get(self.line_cursor_grapheme - seg_index(1))
     }
 
-    /// Returns the grapheme cluster at the cursor position (the one to be deleted by Delete key).
+    /// Returns the grapheme cluster segment at the cursor position (to be deleted by Delete key).
     ///
     /// Returns `None` if the cursor is at the end of the line.
     ///
     /// # Returns
     ///
-    /// A tuple of `(byte_offset, grapheme_str)` where:
-    /// - `byte_offset`: The byte index where this grapheme starts in the line
-    /// - `grapheme_str`: The grapheme cluster as a string slice
+    /// A [`Seg`] containing byte offset, display width, and other segment metadata.
+    /// Use `seg.get_str(&self.line)` to get the actual grapheme string.
     #[must_use]
-    pub fn next_grapheme(&self) -> Option<(usize, &str)> {
-        let total = self.line.grapheme_indices(true).count();
-        if self.line_cursor_grapheme.as_usize() == total {
+    pub fn next_grapheme(&self) -> Option<Seg> {
+        let total = self.line.segment_count();
+        if self.line_cursor_grapheme.as_usize() >= total.as_usize() {
             return None;
         }
-        self.line
-            .grapheme_indices(true)
-            .take(self.line_cursor_grapheme.as_usize() + 1)
-            .last()
+        self.line.get(self.line_cursor_grapheme)
     }
 
     /// Moves the terminal cursor to the beginning of the input line.
@@ -178,30 +182,31 @@ impl LineState {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::core::test_fixtures::StdoutMock;
+    use crate::{
+        ANSI_CSI_BRACKET, CSI_START, CUD_CURSOR_DOWN, CUF_CURSOR_FORWARD, ESC_START,
+        core::test_fixtures::StdoutMock,
+    };
 
-    /// Check if the string contains a CursorForward sequence (CSI <n> C).
+    /// Check if the string contains a `CursorForward` sequence (CSI <n> C).
     fn contains_cursor_forward(s: &str) -> bool {
-        // CSI sequences start with "\x1b[" and CursorForward ends with 'C'.
+        // CSI sequences start with ESC [ and CursorForward ends with 'C'.
         // We look for patterns like "\x1b[5C" or "\x1b[10C".
         let mut chars = s.chars().peekable();
         while let Some(c) = chars.next() {
-            if c == '\x1b' {
-                if chars.next() == Some('[') {
-                    // Read digits.
-                    let mut has_digits = false;
-                    while let Some(&next) = chars.peek() {
-                        if next.is_ascii_digit() {
-                            has_digits = true;
-                            chars.next();
-                        } else {
-                            break;
-                        }
+            if c == ESC_START && chars.next() == Some(ANSI_CSI_BRACKET as char) {
+                // Read digits.
+                let mut has_digits = false;
+                while let Some(&next) = chars.peek() {
+                    if next.is_ascii_digit() {
+                        has_digits = true;
+                        chars.next();
+                    } else {
+                        break;
                     }
-                    // Check if it ends with 'C' (CursorForward).
-                    if has_digits && chars.next() == Some('C') {
-                        return true;
-                    }
+                }
+                // Check if it ends with 'C' (CursorForward).
+                if has_digits && chars.next() == Some(CUF_CURSOR_FORWARD) {
+                    return true;
                 }
             }
         }
@@ -222,7 +227,7 @@ mod tests {
 
             // Should NOT contain any ANSI sequences.
             assert!(
-                !output_str.contains("\x1b["),
+                !output_str.contains(CSI_START),
                 "Expected no ANSI sequences for to=0, but got: {output_str:?}"
             );
         }
@@ -238,8 +243,9 @@ mod tests {
             let output_str = stdout_mock.get_copy_of_buffer_as_string();
 
             // Should contain CSI 3 B (CursorDown(3)).
+            let expected_cursor_down_3 = format!("{CSI_START}3{CUD_CURSOR_DOWN}");
             assert!(
-                output_str.contains("\x1b[3B"),
+                output_str.contains(&expected_cursor_down_3),
                 "Expected CursorDown(3) for to=240, but got: {output_str:?}"
             );
 
@@ -259,8 +265,9 @@ mod tests {
             let output_str = stdout_mock.get_copy_of_buffer_as_string();
 
             // Should contain CSI 5 C (CursorForward(5)).
+            let expected_cursor_forward_5 = format!("{CSI_START}5{CUF_CURSOR_FORWARD}");
             assert!(
-                output_str.contains("\x1b[5C"),
+                output_str.contains(&expected_cursor_forward_5),
                 "Expected CursorForward(5) for to=5, but got: {output_str:?}"
             );
         }
@@ -275,8 +282,9 @@ mod tests {
             let output_str = stdout_mock.get_copy_of_buffer_as_string();
 
             // Should contain CSI 1 B (CursorDown(1)).
+            let expected_cursor_down_1 = format!("{CSI_START}1{CUD_CURSOR_DOWN}");
             assert!(
-                output_str.contains("\x1b[1B"),
+                output_str.contains(&expected_cursor_down_1),
                 "Expected CursorDown(1) for to=80, but got: {output_str:?}"
             );
 

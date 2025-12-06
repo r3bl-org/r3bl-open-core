@@ -1,11 +1,27 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use super::core::{LineState, LineStateLiveness, early_return_if_paused};
-use crate::{AnsiSequenceGenerator, CsiSequence, InputEvent, Key, KeyPress, KeyState, NumericValue,
-            ReadlineError, ReadlineEvent, SafeHistory, Size, SpecialKey, col,
-            find_next_word_end, find_next_word_start, find_prev_word_start, height, row, width};
+use super::core::LineState;
+use crate::{AnsiSequenceGenerator, CsiSequence, GCStringOwned, InputEvent, Key, KeyPress,
+            KeyState, LineStateLiveness, NumericValue, ReadlineError, ReadlineEvent, SafeHistory,
+            Size, SpecialKey, col, early_return_if_paused, find_next_word_end,
+            find_next_word_start, find_prev_word_start, height, row, seg_index, width};
 use std::io::Write;
 use unicode_segmentation::UnicodeSegmentation;
+
+/// Get the byte offset at a given segment index.
+///
+/// Returns the byte position where the segment at `seg_idx` starts.
+/// If `seg_idx` is beyond the end, returns the total byte length.
+fn get_byte_offset_at_seg_index(line: &GCStringOwned, seg_idx: usize) -> usize {
+    if seg_idx >= line.segment_count().as_usize() {
+        return line.bytes_size().as_usize();
+    }
+    if let Some(seg) = line.get(seg_index(seg_idx)) {
+        seg.start_byte_index.as_usize()
+    } else {
+        line.bytes_size().as_usize()
+    }
+}
 
 /// Handle control key events (Ctrl+key combinations)
 #[allow(clippy::trivially_copy_pass_by_ref)]
@@ -115,7 +131,7 @@ fn handle_ctrl_c(
     if line_state.should_print_line_on_control_c && !line_state.is_paused.is_paused()
     {
         line_state.print_and_flush(
-            &format!("{}{}", line_state.prompt, line_state.line),
+            &format!("{}{}", line_state.prompt, line_state.line.as_str()),
             term,
         )?;
     }
@@ -146,19 +162,16 @@ fn handle_ctrl_u(
 ) -> Result<Option<ReadlineEvent>, ReadlineError> {
     early_return_if_paused!(line_state @None);
 
-    // Delete from start of line (position 0) to cursor position
-    // If cursor is at position 0, this deletes nothing (0..0)
-    // If cursor is in middle or end, deletes from start to cursor
+    // Delete from start of line (position 0) to cursor position.
+    // If cursor is at position 0, this deletes nothing.
+    // If cursor is in middle or end, deletes from start to cursor.
     if !line_state.line_cursor_grapheme.is_zero() {
-        // Convert to usize for interfacing with iterator/string APIs.
-        let cursor_pos = line_state.line_cursor_grapheme.as_usize();
-        // Convert grapheme cursor position to byte offset
-        let graphemes: Vec<_> = line_state.line.grapheme_indices(true).collect();
-        let cursor_byte_pos = graphemes
-            .get(cursor_pos)
-            .map_or(line_state.line.len(), |(i, _)| *i);
+        // Get byte offset at cursor using segment metadata.
+        let cursor_byte_pos = get_byte_offset_at_seg_index(&line_state.line, line_state.line_cursor_grapheme.as_usize());
 
-        line_state.line.drain(0..cursor_byte_pos);
+        // Create new string without the deleted portion.
+        let remaining = &line_state.line.as_str()[cursor_byte_pos..];
+        line_state.line = GCStringOwned::new(remaining);
         line_state.move_cursor(-100_000)?;
         line_state.clear_and_render_and_flush(term)?;
     }
@@ -175,24 +188,22 @@ fn handle_ctrl_w(
     if line_state.line_cursor_grapheme.is_zero() {
         return Ok(None); // Nothing to delete
     }
-    // Convert to usize for interfacing with iterator/string APIs.
     let cursor_pos = line_state.line_cursor_grapheme.as_usize();
 
-    // Find start of previous word using word_boundaries module
-    let word_start = find_prev_word_start(&line_state.line, cursor_pos);
+    // Find start of previous word using word_boundaries module.
+    let word_start = find_prev_word_start(line_state.line.as_str(), cursor_pos);
 
     if word_start < cursor_pos {
-        // Get byte indices for string manipulation
-        let graphemes: Vec<_> = line_state.line.grapheme_indices(true).collect();
-        let start_byte = graphemes.get(word_start).map_or(0, |(i, _)| *i);
-        let end_byte = graphemes
-            .get(cursor_pos)
-            .map_or(line_state.line.len(), |(i, _)| *i);
+        // Get byte indices using segment metadata.
+        let start_byte = get_byte_offset_at_seg_index(&line_state.line, word_start);
+        let end_byte = get_byte_offset_at_seg_index(&line_state.line, cursor_pos);
 
-        // Delete the word
-        line_state.line.drain(start_byte..end_byte);
+        // Create new string with the word deleted.
+        let left = &line_state.line.as_str()[..start_byte];
+        let right = &line_state.line.as_str()[end_byte..];
+        line_state.line = GCStringOwned::new(format!("{left}{right}"));
 
-        // Move cursor to deletion point
+        // Move cursor to deletion point.
         #[allow(clippy::cast_possible_wrap)]
         let movement = word_start as isize - cursor_pos as isize;
         line_state.move_cursor(movement)?;
@@ -243,10 +254,9 @@ fn handle_ctrl_left(
     line_state.reset_cursor(term)?;
 
     if !line_state.line_cursor_grapheme.is_zero() {
-        // Convert to usize for interfacing with iterator/string APIs.
         let cursor_pos = line_state.line_cursor_grapheme.as_usize();
-        // Find start of previous word using word_boundaries module
-        let word_start = find_prev_word_start(&line_state.line, cursor_pos);
+        // Find start of previous word using word_boundaries module.
+        let word_start = find_prev_word_start(line_state.line.as_str(), cursor_pos);
         #[allow(clippy::cast_possible_wrap)]
         let movement = word_start as isize - cursor_pos as isize;
         line_state.move_cursor(movement)?;
@@ -267,11 +277,11 @@ fn handle_ctrl_right(
     line_state.reset_cursor(term)?;
 
     let cursor_pos = line_state.line_cursor_grapheme.as_usize();
-    let line_len = line_state.line.graphemes(true).count();
+    let line_len = line_state.line.segment_count().as_usize();
 
     if cursor_pos < line_len {
-        // Find start of next word using word_boundaries module
-        let word_start = find_next_word_start(&line_state.line, cursor_pos);
+        // Find start of next word using word_boundaries module.
+        let word_start = find_next_word_start(line_state.line.as_str(), cursor_pos);
         #[allow(clippy::cast_possible_wrap)]
         let movement = word_start as isize - cursor_pos as isize;
         line_state.move_cursor(movement)?;
@@ -294,10 +304,9 @@ fn handle_alt_b(
     line_state.reset_cursor(term)?;
 
     if !line_state.line_cursor_grapheme.is_zero() {
-        // Convert to usize for interfacing with iterator/string APIs.
         let cursor_pos = line_state.line_cursor_grapheme.as_usize();
-        // Find start of previous word
-        let word_start = find_prev_word_start(&line_state.line, cursor_pos);
+        // Find start of previous word.
+        let word_start = find_prev_word_start(line_state.line.as_str(), cursor_pos);
         #[allow(clippy::cast_possible_wrap)]
         let movement = word_start as isize - cursor_pos as isize;
         line_state.move_cursor(movement)?;
@@ -318,11 +327,11 @@ fn handle_alt_f(
     line_state.reset_cursor(term)?;
 
     let cursor_pos = line_state.line_cursor_grapheme.as_usize();
-    let line_len = line_state.line.graphemes(true).count();
+    let line_len = line_state.line.segment_count().as_usize();
 
     if cursor_pos < line_len {
-        // Find start of next word
-        let word_start = find_next_word_start(&line_state.line, cursor_pos);
+        // Find start of next word.
+        let word_start = find_next_word_start(line_state.line.as_str(), cursor_pos);
         #[allow(clippy::cast_possible_wrap)]
         let movement = word_start as isize - cursor_pos as isize;
         line_state.move_cursor(movement)?;
@@ -341,21 +350,21 @@ fn handle_alt_d(
     early_return_if_paused!(line_state @None);
 
     let cursor_pos = line_state.line_cursor_grapheme.as_usize();
-    let line_len = line_state.line.graphemes(true).count();
+    let line_len = line_state.line.segment_count().as_usize();
 
     if cursor_pos < line_len {
-        // Find end of current/next word
-        let word_end = find_next_word_end(&line_state.line, cursor_pos);
+        // Find end of current/next word.
+        let word_end = find_next_word_end(line_state.line.as_str(), cursor_pos);
 
         if word_end > cursor_pos {
-            // Get byte indices for string manipulation
-            let graphemes: Vec<_> = line_state.line.grapheme_indices(true).collect();
-            let start_byte = graphemes.get(cursor_pos).map_or(0, |(i, _)| *i);
-            let end_byte = graphemes
-                .get(word_end)
-                .map_or(line_state.line.len(), |(i, _)| *i);
+            // Get byte indices using segment metadata.
+            let start_byte = get_byte_offset_at_seg_index(&line_state.line, cursor_pos);
+            let end_byte = get_byte_offset_at_seg_index(&line_state.line, word_end);
 
-            line_state.line.drain(start_byte..end_byte);
+            // Create new string with the word deleted.
+            let left = &line_state.line.as_str()[..start_byte];
+            let right = &line_state.line.as_str()[end_byte..];
+            line_state.line = GCStringOwned::new(format!("{left}{right}"));
             line_state.clear_and_render_and_flush(term)?;
         }
     }
@@ -373,21 +382,21 @@ fn handle_alt_backspace(
     if line_state.line_cursor_grapheme.is_zero() {
         return Ok(None);
     }
-    // Convert to usize for interfacing with iterator/string APIs.
     let cursor_pos = line_state.line_cursor_grapheme.as_usize();
 
-    // Find start of previous word
-    let word_start = find_prev_word_start(&line_state.line, cursor_pos);
+    // Find start of previous word.
+    let word_start = find_prev_word_start(line_state.line.as_str(), cursor_pos);
 
     if word_start < cursor_pos {
-        // Get byte indices for string manipulation
-        let graphemes: Vec<_> = line_state.line.grapheme_indices(true).collect();
-        let start_byte = graphemes.get(word_start).map_or(0, |(i, _)| *i);
-        let end_byte = graphemes
-            .get(cursor_pos)
-            .map_or(line_state.line.len(), |(i, _)| *i);
+        // Get byte indices using segment metadata.
+        let start_byte = get_byte_offset_at_seg_index(&line_state.line, word_start);
+        let end_byte = get_byte_offset_at_seg_index(&line_state.line, cursor_pos);
 
-        line_state.line.drain(start_byte..end_byte);
+        // Create new string with the word deleted.
+        let left = &line_state.line.as_str()[..start_byte];
+        let right = &line_state.line.as_str()[end_byte..];
+        line_state.line = GCStringOwned::new(format!("{left}{right}"));
+
         #[allow(clippy::cast_possible_wrap)]
         let movement = word_start as isize - cursor_pos as isize;
         line_state.move_cursor(movement)?;
@@ -405,28 +414,35 @@ fn handle_enter(
     // Print line so you can see what commands you've typed.
     if line_state.should_print_line_on_enter && !line_state.is_paused.is_paused() {
         line_state.print_and_flush(
-            &format!("{}{}\n", line_state.prompt, line_state.line),
+            &format!("{}{}\n", line_state.prompt, line_state.line.as_str()),
             term,
         )?;
     }
 
-    // Take line
-    let line = std::mem::take(&mut line_state.line);
+    // Take line content and reset to empty.
+    let line_string = line_state.line.as_str().to_string();
+    line_state.line = GCStringOwned::new("");
     line_state.render_new_line_from_beginning_and_flush(term)?;
 
-    // Return line
-    Ok(Some(ReadlineEvent::Line(line)))
+    // Return line.
+    Ok(Some(ReadlineEvent::Line(line_string)))
 }
 
-// Delete (backspace) character from line
+// Delete (backspace) character from line.
 fn handle_backspace(
     line_state: &mut LineState,
     term: &mut dyn Write,
 ) -> Result<Option<ReadlineEvent>, ReadlineError> {
-    if let Some((pos, str)) = line_state.current_grapheme() {
+    if let Some(seg) = line_state.current_grapheme() {
         line_state.clear(term)?;
-        let len = pos + str.len();
-        line_state.line.replace_range(pos..len, "");
+        let start = seg.start_byte_index.as_usize();
+        let end = start + seg.bytes_size.as_usize();
+
+        // Create new string without the deleted character.
+        let left = &line_state.line.as_str()[..start];
+        let right = &line_state.line.as_str()[end..];
+        line_state.line = GCStringOwned::new(format!("{left}{right}"));
+
         line_state.move_cursor(-1)?;
         line_state.render_and_flush(term)?;
     }
@@ -438,10 +454,16 @@ fn handle_delete(
     line_state: &mut LineState,
     term: &mut dyn Write,
 ) -> Result<Option<ReadlineEvent>, ReadlineError> {
-    if let Some((pos, str)) = line_state.next_grapheme() {
+    if let Some(seg) = line_state.next_grapheme() {
         line_state.clear(term)?;
-        let len = pos + str.len();
-        line_state.line.replace_range(pos..len, "");
+        let start = seg.start_byte_index.as_usize();
+        let end = start + seg.bytes_size.as_usize();
+
+        // Create new string without the deleted character.
+        let left = &line_state.line.as_str()[..start];
+        let right = &line_state.line.as_str()[end..];
+        line_state.line = GCStringOwned::new(format!("{left}{right}"));
+
         line_state.render_and_flush(term)?;
     }
     Ok(None)
@@ -503,8 +525,7 @@ fn handle_up(
     safe_history: &SafeHistory,
 ) -> Result<Option<ReadlineEvent>, ReadlineError> {
     if let Some(line) = safe_history.lock().unwrap().search_next() {
-        line_state.line.clear();
-        line_state.line += line;
+        line_state.line = GCStringOwned::new(line);
         line_state.clear(term)?;
         line_state.move_cursor(100_000)?;
         line_state.render_and_flush(term)?;
@@ -520,8 +541,7 @@ fn handle_down(
     safe_history: &SafeHistory,
 ) -> Result<Option<ReadlineEvent>, ReadlineError> {
     if let Some(line) = safe_history.lock().unwrap().search_previous() {
-        line_state.line.clear();
-        line_state.line += line;
+        line_state.line = GCStringOwned::new(line);
         line_state.clear(term)?;
         line_state.move_cursor(100_000)?;
         line_state.render_and_flush(term)?;
@@ -540,10 +560,17 @@ fn handle_char(
     line_state.cluster_buffer.push(c);
     let new_len = line_state.cluster_buffer.graphemes(true).count();
 
-    let (g_pos, g_str) = line_state.current_grapheme().unwrap_or((0, ""));
-    let pos = g_pos + g_str.len();
+    // Get byte position after current grapheme (insertion point).
+    let insert_byte_pos = if let Some(seg) = line_state.current_grapheme() {
+        seg.start_byte_index.as_usize() + seg.bytes_size.as_usize()
+    } else {
+        0
+    };
 
-    line_state.line.insert(pos, c);
+    // Insert character by rebuilding the string.
+    let left = &line_state.line.as_str()[..insert_byte_pos];
+    let right = &line_state.line.as_str()[insert_byte_pos..];
+    line_state.line = GCStringOwned::new(format!("{left}{c}{right}"));
 
     if prev_len != new_len {
         line_state.move_cursor(1)?;
@@ -615,7 +642,7 @@ impl LineState {
     ///     assert!(result.is_none());
     /// }
     ///
-    /// assert_eq!(line_state.line, "hello");
+    /// assert_eq!(line_state.line.as_str(), "hello");
     /// assert_eq!(line_state.line_cursor_grapheme, seg_index(5));
     ///
     /// // Simulate pressing Enter
@@ -704,7 +731,7 @@ impl LineState {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{History, ModifierKeysMask, StdMutex, core::test_fixtures::StdoutMock, seg_index};
+    use crate::{History, ModifierKeysMask, StdMutex, core::test_fixtures::StdoutMock};
     use std::sync::Arc;
 
     // cspell:words ello testx
@@ -733,7 +760,7 @@ mod tests {
 
         assert!(matches!(it, Ok(None)));
 
-        assert_eq!(line.line, "a");
+        assert_eq!(line.line.as_str(), "a");
     }
 
     #[tokio::test]
@@ -787,7 +814,7 @@ mod tests {
 
         assert!(matches!(it, Ok(None)));
 
-        assert_eq!(line.line, "");
+        assert_eq!(line.line.as_str(), "");
     }
 
     // Phase 1.1: Tests for recent bug fixes.
@@ -822,7 +849,7 @@ mod tests {
     #[tokio::test]
     async fn test_ctrl_d_non_empty_deletes_char() {
         let mut line = LineState::new(String::new(), (100, 100));
-        line.line = "abc".to_string();
+        line.line = GCStringOwned::new("abc");
         line.line_cursor_grapheme = seg_index(1); // Cursor after 'a'
         let stdout_mock = StdoutMock::default();
         let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
@@ -847,13 +874,13 @@ mod tests {
         // Ctrl+D on non-empty line should delete char at cursor.
         assert!(matches!(result, Ok(None)));
         // 'b' should be deleted (char at cursor position).
-        assert_eq!(line.line, "ac");
+        assert_eq!(line.line.as_str(), "ac");
     }
 
     #[tokio::test]
     async fn test_ctrl_w_word_boundaries() {
         let mut line = LineState::new(String::new(), (100, 100));
-        line.line = "hello world".to_string();
+        line.line = GCStringOwned::new("hello world");
         line.line_cursor_grapheme = seg_index(11); // At end
         let stdout_mock = StdoutMock::default();
         let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
@@ -877,13 +904,13 @@ mod tests {
 
         assert!(matches!(result, Ok(None)));
         // "world" should be deleted, leaving "hello ".
-        assert_eq!(line.line, "hello ");
+        assert_eq!(line.line.as_str(), "hello ");
     }
 
     #[tokio::test]
     async fn test_ctrl_left_word_navigation() {
         let mut line = LineState::new(String::new(), (100, 100));
-        line.line = "hello-world foo".to_string();
+        line.line = GCStringOwned::new("hello-world foo");
         line.line_cursor_grapheme = seg_index(15); // End of line
         let stdout_mock = StdoutMock::default();
         let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
@@ -930,7 +957,7 @@ mod tests {
     #[tokio::test]
     async fn test_ctrl_right_word_navigation() {
         let mut line = LineState::new(String::new(), (100, 100));
-        line.line = "hello-world foo".to_string();
+        line.line = GCStringOwned::new("hello-world foo");
         line.line_cursor_grapheme = seg_index(0); // Start of line
         let stdout_mock = StdoutMock::default();
         let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
@@ -979,7 +1006,7 @@ mod tests {
     #[tokio::test]
     async fn test_alt_b_backward_word() {
         let mut line = LineState::new(String::new(), (100, 100));
-        line.line = "one two three".to_string();
+        line.line = GCStringOwned::new("one two three");
         line.line_cursor_grapheme = seg_index(13); // End of line
         let stdout_mock = StdoutMock::default();
         let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
@@ -1026,7 +1053,7 @@ mod tests {
     #[tokio::test]
     async fn test_alt_f_forward_word() {
         let mut line = LineState::new(String::new(), (100, 100));
-        line.line = "one two three".to_string();
+        line.line = GCStringOwned::new("one two three");
         line.line_cursor_grapheme = seg_index(0); // Start of line
         let stdout_mock = StdoutMock::default();
         let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
@@ -1073,7 +1100,7 @@ mod tests {
     #[tokio::test]
     async fn test_alt_d_kill_word() {
         let mut line = LineState::new(String::new(), (100, 100));
-        line.line = "foo bar baz".to_string();
+        line.line = GCStringOwned::new("foo bar baz");
         line.line_cursor_grapheme = seg_index(0); // Start of line
         let stdout_mock = StdoutMock::default();
         let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
@@ -1096,7 +1123,7 @@ mod tests {
             &safe_history,
         )
         .unwrap();
-        assert_eq!(line.line, " bar baz");
+        assert_eq!(line.line.as_str(), " bar baz");
 
         // Second Alt+D should delete " bar".
         line.apply_event_and_render(
@@ -1105,13 +1132,13 @@ mod tests {
             &safe_history,
         )
         .unwrap();
-        assert_eq!(line.line, " baz");
+        assert_eq!(line.line.as_str(), " baz");
     }
 
     #[tokio::test]
     async fn test_alt_backspace_backward_kill_word() {
         let mut line = LineState::new(String::new(), (100, 100));
-        line.line = "one two three".to_string();
+        line.line = GCStringOwned::new("one two three");
         line.line_cursor_grapheme = seg_index(13); // At end
         let stdout_mock = StdoutMock::default();
         let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
@@ -1134,7 +1161,7 @@ mod tests {
             &safe_history,
         )
         .unwrap();
-        assert_eq!(line.line, "one two ");
+        assert_eq!(line.line.as_str(), "one two ");
 
         // Second Alt+Backspace should delete "two ".
         line.apply_event_and_render(
@@ -1143,7 +1170,7 @@ mod tests {
             &safe_history,
         )
         .unwrap();
-        assert_eq!(line.line, "one ");
+        assert_eq!(line.line.as_str(), "one ");
     }
 
     // Phase 1.3: Tests for interrupt handling.
@@ -1151,7 +1178,7 @@ mod tests {
     #[tokio::test]
     async fn test_ctrl_c_interrupt() {
         let mut line = LineState::new(String::new(), (100, 100));
-        line.line = "some input".to_string();
+        line.line = GCStringOwned::new("some input");
         let stdout_mock = StdoutMock::default();
         let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
         let (history, _) = History::new();
@@ -1179,7 +1206,7 @@ mod tests {
     #[tokio::test]
     async fn test_ctrl_l_clear_screen() {
         let mut line = LineState::new(String::new(), (100, 100));
-        line.line = "test".to_string();
+        line.line = GCStringOwned::new("test");
         let stdout_mock = StdoutMock::default();
         let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
         let (history, _) = History::new();
@@ -1203,13 +1230,13 @@ mod tests {
         // Ctrl+L should clear screen and re-render.
         assert!(matches!(result, Ok(None)));
         // Line content should be preserved.
-        assert_eq!(line.line, "test");
+        assert_eq!(line.line.as_str(), "test");
     }
 
     #[tokio::test]
     async fn test_ctrl_u_delete_to_start() {
         let mut line = LineState::new(String::new(), (100, 100));
-        line.line = "hello world".to_string();
+        line.line = GCStringOwned::new("hello world");
         line.line_cursor_grapheme = seg_index(6); // After "hello "
         let stdout_mock = StdoutMock::default();
         let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
@@ -1233,7 +1260,7 @@ mod tests {
 
         // Ctrl+U should delete from cursor to start.
         assert!(matches!(result, Ok(None)));
-        assert_eq!(line.line, "world");
+        assert_eq!(line.line.as_str(), "world");
         assert_eq!(line.line_cursor_grapheme, seg_index(0));
     }
 
@@ -1241,7 +1268,7 @@ mod tests {
     #[cfg(feature = "emacs")]
     async fn test_ctrl_a_move_to_start() {
         let mut line = LineState::new(String::new(), (100, 100));
-        line.line = "hello".to_string();
+        line.line = GCStringOwned::new("hello");
         line.line_cursor_grapheme = seg_index(5); // At end
         let stdout_mock = StdoutMock::default();
         let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
@@ -1272,7 +1299,7 @@ mod tests {
     #[cfg(feature = "emacs")]
     async fn test_ctrl_e_move_to_end() {
         let mut line = LineState::new(String::new(), (100, 100));
-        line.line = "hello".to_string();
+        line.line = GCStringOwned::new("hello");
         line.line_cursor_grapheme = seg_index(0); // At start
         let stdout_mock = StdoutMock::default();
         let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
@@ -1302,7 +1329,7 @@ mod tests {
     #[tokio::test]
     async fn test_enter_submit_line() {
         let mut line = LineState::new(String::new(), (100, 100));
-        line.line = "hello".to_string();
+        line.line = GCStringOwned::new("hello");
         let stdout_mock = StdoutMock::default();
         let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
         let (history, _) = History::new();
@@ -1321,13 +1348,13 @@ mod tests {
         // Enter should return the line.
         assert!(matches!(result, Ok(Some(ReadlineEvent::Line(ref s))) if s == "hello"));
         // Line should be cleared after submission.
-        assert_eq!(line.line, "");
+        assert_eq!(line.line.as_str(), "");
     }
 
     #[tokio::test]
     async fn test_backspace_delete_before() {
         let mut line = LineState::new(String::new(), (100, 100));
-        line.line = "hello".to_string();
+        line.line = GCStringOwned::new("hello");
         line.line_cursor_grapheme = seg_index(5); // At end
         let stdout_mock = StdoutMock::default();
         let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
@@ -1346,14 +1373,14 @@ mod tests {
 
         // Backspace should delete character before cursor.
         assert!(matches!(result, Ok(None)));
-        assert_eq!(line.line, "hell");
+        assert_eq!(line.line.as_str(), "hell");
         assert_eq!(line.line_cursor_grapheme, seg_index(4));
     }
 
     #[tokio::test]
     async fn test_delete_key_delete_at_cursor() {
         let mut line = LineState::new(String::new(), (100, 100));
-        line.line = "hello".to_string();
+        line.line = GCStringOwned::new("hello");
         line.line_cursor_grapheme = seg_index(0); // At start
         let stdout_mock = StdoutMock::default();
         let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
@@ -1372,13 +1399,13 @@ mod tests {
 
         // Delete should delete character at cursor.
         assert!(matches!(result, Ok(None)));
-        assert_eq!(line.line, "ello");
+        assert_eq!(line.line.as_str(), "ello");
     }
 
     #[tokio::test]
     async fn test_left_arrow_move_left() {
         let mut line = LineState::new(String::new(), (100, 100));
-        line.line = "hello".to_string();
+        line.line = GCStringOwned::new("hello");
         line.line_cursor_grapheme = seg_index(5); // At end
         let stdout_mock = StdoutMock::default();
         let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
@@ -1403,7 +1430,7 @@ mod tests {
     #[tokio::test]
     async fn test_home_key_move_to_start() {
         let mut line = LineState::new(String::new(), (100, 100));
-        line.line = "hello world".to_string();
+        line.line = GCStringOwned::new("hello world");
         line.line_cursor_grapheme = seg_index(11); // At end
         let stdout_mock = StdoutMock::default();
         let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
@@ -1428,7 +1455,7 @@ mod tests {
     #[tokio::test]
     async fn test_end_key_move_to_end() {
         let mut line = LineState::new(String::new(), (100, 100));
-        line.line = "hello world".to_string();
+        line.line = GCStringOwned::new("hello world");
         line.line_cursor_grapheme = seg_index(0); // At start
         let stdout_mock = StdoutMock::default();
         let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
@@ -1473,7 +1500,7 @@ mod tests {
             &safe_history,
         )
         .unwrap();
-        assert_eq!(line.line, "second");
+        assert_eq!(line.line.as_str(), "second");
 
         // Now test down arrow.
         let down_event = InputEvent::Keyboard(KeyPress::Plain {
@@ -1494,7 +1521,7 @@ mod tests {
     #[tokio::test]
     async fn test_unicode_emoji_word_operations() {
         let mut line = LineState::new(String::new(), (100, 100));
-        line.line = "hello 🎉 world".to_string();
+        line.line = GCStringOwned::new("hello 🎉 world");
         line.line_cursor_grapheme = seg_index(14); // At end
         let stdout_mock = StdoutMock::default();
         let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
@@ -1519,7 +1546,7 @@ mod tests {
         .unwrap();
 
         // Should have "hello 🎉 " remaining.
-        assert_eq!(line.line, "hello 🎉 ");
+        assert_eq!(line.line.as_str(), "hello 🎉 ");
     }
 
     #[tokio::test]
@@ -1547,13 +1574,13 @@ mod tests {
 
         // Should not panic or error on empty line.
         assert!(matches!(result, Ok(None)));
-        assert_eq!(line.line, "");
+        assert_eq!(line.line.as_str(), "");
     }
 
     #[tokio::test]
     async fn test_word_boundaries_with_only_punctuation() {
         let mut line = LineState::new(String::new(), (100, 100));
-        line.line = "...---===".to_string();
+        line.line = GCStringOwned::new("...---===");
         line.line_cursor_grapheme = seg_index(9); // At end
         let stdout_mock = StdoutMock::default();
         let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
@@ -1590,7 +1617,7 @@ mod tests {
         let safe_history = Arc::new(StdMutex::new(history));
 
         // Setup: "hello 世界 test"
-        line.line = "hello 世界 test".to_string();
+        line.line = GCStringOwned::new("hello 世界 test");
         line.line_cursor_grapheme = seg_index(16); // At end
 
         let ctrl_left_event = InputEvent::Keyboard(KeyPress::WithModifiers {

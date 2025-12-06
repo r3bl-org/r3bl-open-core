@@ -10,154 +10,34 @@
           "isPinned": true
         },
         {
-          "path": "task/task_refactor_input_device.md",
+          "path": "tui/src/readline_async/readline_async_impl/line_state/mod.rs",
           "isPinned": false
         },
         {
-          "path": "tui/src/core/ansi/vt_100_terminal_input_parser/mod.rs",
+          "path": "tui/src/readline_async/readline_async_impl/line_state/core.rs",
           "isPinned": false
         },
         {
-          "path": "tui/src/core/ansi/vt_100_terminal_input_parser/router.rs",
+          "path": "tui/src/readline_async/readline_async_impl/line_state/cursor.rs",
           "isPinned": false
         },
         {
-          "path": ".claude/skills/write-documentation/examples.md",
+          "path": "tui/src/readline_async/readline_async_impl/line_state/event_handlers.rs",
           "isPinned": false
         },
         {
-          "path": "tui/src/core/ansi/constants/input_sequences.rs",
+          "path": "tui/src/readline_async/readline_async_impl/line_state/output.rs",
           "isPinned": false
         },
         {
-          "path": "tui/src/core/ansi/vt_100_terminal_input_parser/test_fixtures/input_sequence_generator.rs",
-          "isPinned": false
-        },
-        {
-          "path": "tui/src/core/ansi/vt_100_terminal_input_parser/ir_event_types.rs",
-          "isPinned": false
-        },
-        {
-          "path": "tui/src/core/ansi/terminal_raw_mode/raw_mode_core.rs",
-          "isPinned": false
-        },
-        {
-          "path": "tui/src/core/ansi/vt_100_terminal_input_parser/integration_tests/pty_sigwinch_test.rs",
-          "isPinned": false
-        },
-        {
-          "path": "tui/src/tui/editor/editor_engine/validate_scroll_on_resize.rs",
-          "isPinned": false
-        },
-        {
-          "path": "tui/src/tui/terminal_lib_backends/raw_mode.rs",
-          "isPinned": false
-        },
-        {
-          "path": "tui/src/core/term.rs",
-          "isPinned": false
-        },
-        {
-          "path": "tui/src/core/mod.rs",
-          "isPinned": false
-        },
-        {
-          "path": "tui/src/core/ansi/terminal_raw_mode/raw_mode_unix.rs",
-          "isPinned": false
-        },
-        {
-          "path": "tui/src/core/ansi/terminal_raw_mode/mod.rs",
-          "isPinned": false
-        },
-        {
-          "path": "tui/src/tui/terminal_lib_backends/backend_selection.rs",
-          "isPinned": false
-        },
-        {
-          "path": "tui/src/core/ansi/vt_100_terminal_input_parser/keyboard.rs",
-          "isPinned": false
-        },
-        {
-          "path": "tui/src/core/ansi/constants/raw_mode.rs",
-          "isPinned": false
-        },
-        {
-          "path": "tui/src/tui/terminal_window/main_event_loop.rs",
-          "isPinned": false
-        },
-        {
-          "path": "tui/src/tui/terminal_window/terminal_window_api.rs",
-          "isPinned": false
-        },
-        {
-          "path": "tui/examples/tui_apps/main.rs",
-          "isPinned": false
-        },
-        {
-          "path": "tui/src/readline_async/readline_async_impl/readline.rs",
-          "isPinned": false
-        },
-        {
-          "path": "tui/src/tui/mod.rs",
-          "isPinned": false
-        },
-        {
-          "path": "tui/src/core/ansi/constants/mouse.rs",
-          "isPinned": false
-        },
-        {
-          "path": "tui/src/core/ansi/constants/utf8.rs",
-          "isPinned": false
-        },
-        {
-          "path": "tui/src/core/ansi/vt_100_terminal_input_parser/mouse.rs",
-          "isPinned": false
-        },
-        {
-          "path": "tui/src/core/ansi/vt_100_terminal_input_parser/terminal_events.rs",
-          "isPinned": false
-        },
-        {
-          "path": "tui/src/core/terminal_io/input_device.rs",
-          "isPinned": false
-        },
-        {
-          "path": "tui/src/tui/terminal_lib_backends/direct_to_ansi/input/mod.rs",
-          "isPinned": false
-        },
-        {
-          "path": "tui/src/tui/terminal_lib_backends/direct_to_ansi/input/input_device.rs",
-          "isPinned": false
-        },
-        {
-          "path": "tui/src/tui/terminal_lib_backends/direct_to_ansi/mod.rs",
-          "isPinned": false
-        },
-        {
-          "path": "tui/src/tui/terminal_lib_backends/direct_to_ansi/input/protocol_conversion.rs",
-          "isPinned": false
-        },
-        {
-          "path": "tui/src/tui/terminal_lib_backends/direct_to_ansi/input/types.rs",
-          "isPinned": false
-        },
-        {
-          "path": "tui/src/tui/terminal_lib_backends/direct_to_ansi/input/paste_state_machine.rs",
-          "isPinned": false
-        },
-        {
-          "path": "tui/src/tui/terminal_lib_backends/direct_to_ansi/input/process_global_stdin.rs",
-          "isPinned": false
-        },
-        {
-          "path": "tui/src/tui/terminal_lib_backends/direct_to_ansi/input/stateful_parser.rs",
+          "path": "tui/src/readline_async/readline_async_impl/line_state/render.rs",
           "isPinned": false
         }
       ],
       "taskFile": "task/task_refactor_input_device.md",
       "createdAt": 1763496885607,
       "lastAccessed": 1763666457216,
-      "activeTab": "tui/src/tui/terminal_lib_backends/direct_to_ansi/input/process_global_stdin.rs"
+      "activeTab": "tui/src/readline_async/readline_async_impl/line_state/mod.rs"
     },
     {
       "name": "[1.1] task_readline_async_add_shortcuts",

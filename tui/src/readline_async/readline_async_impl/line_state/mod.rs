@@ -36,23 +36,6 @@
 //! the terminal. While paused, keyboard events are ignored and rendering is
 //! suppressed. See [`LineStateLiveness`] and [`LineState::set_paused`].
 //!
-//! # Example
-//!
-//! ```rust,ignore
-//! use r3bl_tui::LineState;
-//!
-//! let mut line_state = LineState::new("$ ".to_string(), (80, 24));
-//!
-//! // Process keyboard events
-//! let result = line_state.apply_event_and_render(&event, &mut stdout, &history)?;
-//!
-//! match result {
-//!     Some(ReadlineEvent::Line(text)) => println!("User entered: {text}"),
-//!     Some(ReadlineEvent::Eof) => break,
-//!     _ => {}
-//! }
-//! ```
-//!
 //! [`Readline`]: crate::Readline
 //! [`bounds_check`]: crate::core::coordinates::bounds_check
 //! [`SegIndex`]: crate::SegIndex
