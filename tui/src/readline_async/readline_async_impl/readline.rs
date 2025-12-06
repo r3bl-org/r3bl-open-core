@@ -1034,7 +1034,7 @@ mod test_readline {
         );
 
         assert!(matches!(control_flow, ControlFlowExtended::Continue));
-        assert_eq!(readline.safe_line_state.lock().unwrap().line, "a");
+        assert_eq!(readline.safe_line_state.lock().unwrap().line.as_str(), "a");
 
         let output_buffer_data = stdout_mock.get_copy_of_buffer_as_string_strip_ansi();
         // println!("\n`{}`\n", output_buffer_data);
@@ -1069,7 +1069,7 @@ mod test_readline {
             result.unwrap(),
             ReadlineEvent::Line("abc".to_string())
         );
-        pretty_assertions::assert_eq!(readline.safe_line_state.lock().unwrap().line, "");
+        pretty_assertions::assert_eq!(readline.safe_line_state.lock().unwrap().line.as_str(), "");
 
         let output_buffer_data = stdout_mock.get_copy_of_buffer_as_string_strip_ansi();
         // println!("\n`{}`\n", output_buffer_data);

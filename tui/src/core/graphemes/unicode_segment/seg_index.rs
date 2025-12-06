@@ -3,11 +3,17 @@
 use super::seg_length::{SegLength, seg_length};
 use crate::{ArrayBoundsCheck, ChUnit, Index, IndexOps, NumericConversions, NumericValue,
             ch};
-use std::ops::{Add, Deref, DerefMut};
+use std::ops::{Add, Deref, DerefMut, Sub, SubAssign};
 
 /// Represents a grapheme segment index inside of [`crate::GCStringOwned`].
 #[derive(Debug, Copy, Clone, Default, PartialEq, Ord, PartialOrd, Eq, Hash)]
 pub struct SegIndex(pub ChUnit);
+
+impl std::fmt::Display for SegIndex {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.as_usize())
+    }
+}
 
 /// [`ArrayBoundsCheck`] implementation for type-safe bounds checking.
 impl ArrayBoundsCheck<SegLength> for SegIndex {}
@@ -86,6 +92,34 @@ mod arithmetic {
             SegIndex::from(self.as_usize() + rhs.as_usize())
         }
     }
+
+    impl Sub for SegIndex {
+        type Output = SegIndex;
+
+        fn sub(self, rhs: SegIndex) -> Self::Output {
+            SegIndex::from(self.as_usize().saturating_sub(rhs.as_usize()))
+        }
+    }
+
+    impl SubAssign for SegIndex {
+        fn sub_assign(&mut self, rhs: SegIndex) {
+            *self = *self - rhs;
+        }
+    }
+
+    impl Sub<SegLength> for SegIndex {
+        type Output = SegIndex;
+
+        fn sub(self, rhs: SegLength) -> Self::Output {
+            SegIndex::from(self.as_usize().saturating_sub(rhs.as_usize()))
+        }
+    }
+
+    impl SubAssign<SegLength> for SegIndex {
+        fn sub_assign(&mut self, rhs: SegLength) {
+            *self = *self - rhs;
+        }
+    }
 }
 
 // Implement bounds checking traits for SegIndex.
@@ -131,6 +165,59 @@ mod tests {
         let index = seg_index(10);
         assert_eq!((zero + index).as_usize(), 10);
         assert_eq!((index + zero).as_usize(), 10);
+    }
+
+    #[test]
+    fn seg_index_subtraction() {
+        let index1 = seg_index(10);
+        let index2 = seg_index(3);
+        let result = index1 - index2;
+        assert_eq!(result.as_usize(), 7);
+
+        // Test saturating subtraction (underflow protection).
+        let small = seg_index(3);
+        let large = seg_index(10);
+        let result = small - large;
+        assert_eq!(result.as_usize(), 0);
+
+        // Test subtraction with zero.
+        let index = seg_index(10);
+        let zero = seg_index(0);
+        assert_eq!((index - zero).as_usize(), 10);
+    }
+
+    #[test]
+    fn seg_index_sub_assign() {
+        let mut index = seg_index(10);
+        index -= seg_index(3);
+        assert_eq!(index.as_usize(), 7);
+
+        // Test saturating sub_assign.
+        let mut small = seg_index(3);
+        small -= seg_index(10);
+        assert_eq!(small.as_usize(), 0);
+    }
+
+    #[test]
+    fn seg_index_sub_length() {
+        let index = seg_index(10);
+        let length = seg_length(3);
+        let result = index - length;
+        assert_eq!(result.as_usize(), 7);
+
+        // Test saturating subtraction with length.
+        let small_index = seg_index(3);
+        let large_length = seg_length(10);
+        let result = small_index - large_length;
+        assert_eq!(result.as_usize(), 0);
+    }
+
+    #[test]
+    fn seg_index_sub_assign_length() {
+        let mut index = seg_index(10);
+        let length = seg_length(3);
+        index -= length;
+        assert_eq!(index.as_usize(), 7);
     }
 
     #[test]
