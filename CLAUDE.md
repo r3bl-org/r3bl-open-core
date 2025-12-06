@@ -50,7 +50,7 @@ discover and use these when relevant. All skills are in `.claude/skills/`.
 - **organize-modules** - Private modules with public re-exports, conditional visibility for docs/tests. Use when creating or organizing modules.
   - Supporting file: `examples.md` (6 complete module organization examples)
 
-- **check-bounds-safety** - Type-safe Index/Length patterns for arrays, cursors, viewports. Use when working with bounds-sensitive code.
+- **check-bounds-safety** - Type-safe Index/Length patterns for arrays, cursors, viewports, and terminal cursor movement. Includes `TermRowDelta`/`TermColDelta` for safe relative cursor movements that prevent CSI zero bugs. Use when working with bounds-sensitive code.
   - Supporting file: `decision-trees.md` (visual decision trees and flowcharts)
 
 ### Performance

@@ -17,9 +17,34 @@
 //!
 //! # Core Types
 //!
+//! ## Absolute Positioning (1-based)
+//!
 //! - [`TermRow`]: 1-based row coordinate for ANSI sequences
 //! - [`TermCol`]: 1-based column coordinate for ANSI sequences
 //! - [`TermPos`]: 1-based position combining column and row (used in mouse events)
+//!
+//! ## Relative Movement (0-based delta)
+//!
+//! - [`TermRowDelta`]: How many rows to move (for `CursorUp`/`CursorDown`)
+//! - [`TermColDelta`]: How many columns to move (for `CursorForward`/`CursorBackward`)
+//!
+//! # The CSI Zero Problem
+//!
+//! ANSI cursor movement commands interpret parameter 0 as 1:
+//! - `CSI 0 A` moves the cursor **1 row up**, not 0
+//! - `CSI 0 C` moves the cursor **1 column right**, not 0
+//!
+//! The delta types provide [`as_nonzero_u16()`] to guard against this:
+//!
+//! ```rust
+//! use r3bl_tui::{term_row_delta, CsiSequence};
+//!
+//! let delta = term_row_delta(0);
+//! if let Some(n) = delta.as_nonzero_u16() {
+//!     // This branch is NOT taken for zero, preventing the bug
+//!     let _ = CsiSequence::CursorDown(n);
+//! }
+//! ```
 //!
 //! # Coordinate Conversion
 //!
@@ -28,13 +53,18 @@
 //! - `.from_zero_based()`: Convert from 0-based buffer coordinates
 //!
 //! [`buffer_coords`]: crate::coordinates::buffer_coords
+//! [`as_nonzero_u16()`]: TermRowDelta::as_nonzero_u16
 
 // Submodule declarations (private).
 mod term_col;
+mod term_col_delta;
 mod term_pos;
 mod term_row;
+mod term_row_delta;
 
 // Re-export for flat public API.
 pub use term_col::*;
+pub use term_col_delta::*;
 pub use term_pos::*;
 pub use term_row::*;
+pub use term_row_delta::*;

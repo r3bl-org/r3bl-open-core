@@ -82,6 +82,9 @@ use r3bl_tui::{
 
     // Type constructors
     col, row, width, height, idx, len,
+
+    // Terminal delta types (relative cursor movement)
+    TermRowDelta, TermColDelta, term_row_delta, term_col_delta,
 };
 ```
 
@@ -95,6 +98,7 @@ use r3bl_tui::{
 | **Range validation**    | `RangeBoundsExt`      | `range.check_range_is_valid_for_length(len)` | Iterator bounds, algorithm parameters                       |
 | **Range membership**    | `RangeBoundsExt`      | `range.check_index_is_within(index)`         | VT-100 scroll regions, text selections                      |
 | **Range conversion**    | `RangeConvertExt`     | `inclusive_range.to_exclusive()`             | Converting VT-100 ranges for Rust iteration                 |
+| **Relative movement**   | `TermRowDelta`/`TermColDelta` | `delta.as_nonzero_u16()`               | ANSI cursor movement preventing CSI zero bug                |
 
 ## Detailed Examples
 
@@ -236,6 +240,57 @@ for line in rust_range {
 }
 ```
 
+### Example 7: Terminal Cursor Movement (CSI Zero Guard)
+
+**Use `TermRowDelta`/`TermColDelta` for relative cursor movement in ANSI sequences.**
+
+The CSI zero problem: ANSI cursor movement commands interpret parameter 0 as 1:
+- `CSI 0 A` (`CursorUp` with n=0) moves cursor **1 row up**, not 0
+- `CSI 0 C` (`CursorForward` with n=0) moves cursor **1 column right**, not 0
+
+```rust
+use r3bl_tui::{term_row_delta, term_col_delta, CsiSequence, width};
+use std::io::Write;
+
+// Calculate cursor movement from position on 80-column terminal.
+let position: u16 = 240;  // 240 chars from start
+let term_width: u16 = 80;
+
+// Calculate row and column deltas.
+let rows_down = term_row_delta(position / term_width);  // 3 rows
+let cols_right = term_col_delta(position % term_width); // 0 cols
+
+// Use as_nonzero_u16() to safely emit - prevents CSI zero bug!
+if let Some(n) = rows_down.as_nonzero_u16() {
+    term.write_all(CsiSequence::CursorDown(n).to_string().as_bytes())?;
+}
+if let Some(n) = cols_right.as_nonzero_u16() {
+    // This branch is NOT taken for position 240 (cols = 0)
+    // Without this guard, CursorForward(0) would move 1 column right!
+    term.write_all(CsiSequence::CursorForward(n).to_string().as_bytes())?;
+}
+```
+
+**Converting from size types:**
+
+```rust
+use r3bl_tui::{width, height, TermColDelta, TermRowDelta};
+
+let col_width = width(40);
+let delta: TermColDelta = col_width.into();  // Uses From<ColWidth>
+
+let row_height = height(10);
+let delta: TermRowDelta = row_height.into(); // Uses From<RowHeight>
+```
+
+**Mathematical law:**
+- For safe emission: Only emit if `delta != 0`
+- `as_nonzero_u16()` returns `None` for zero, `Some(n)` otherwise
+
+**Key difference from absolute positioning:**
+- `TermRow`/`TermCol`: 1-based absolute coordinates (for `CursorPosition`)
+- `TermRowDelta`/`TermColDelta`: Relative movement amounts (for `CursorUp/Down/Forward/Backward`)
+
 ## Decision Trees
 
 See the accompanying `decision-trees.md` file for flowcharts showing which trait to use for
@@ -309,6 +364,25 @@ if row < width {  // Compile error! Can't compare RowIndex with ColWidth
 
 This is actually GOOD - the type system prevents nonsensical comparisons!
 
+### ❌ Mistake 4: Emitting CSI zero for cursor movement
+
+```rust
+// Bad - CSI 0 C moves 1 column right, not 0!
+let cols = position % term_width;  // Could be 0!
+let seq = CsiSequence::CursorForward(cols);
+term.write_all(seq.to_string().as_bytes())?;  // Bug when cols = 0
+```
+
+**Fix:**
+```rust
+// Good - use delta types with zero guard
+let cols_right = term_col_delta(position % term_width);
+if let Some(n) = cols_right.as_nonzero_u16() {
+    term.write_all(CsiSequence::CursorForward(n).to_string().as_bytes())?;
+}
+// No sequence emitted when cols = 0 (correct behavior)
+```
+
 ## Reporting Results
 
 When applying bounds checking:
@@ -343,3 +417,4 @@ No dedicated command, but used throughout the codebase for safe index/length han
 - Main implementation: `tui/src/core/units/bounds_check/mod.rs`
 - Type definitions: `tui/src/core/units/`
 - Examples in tests: `tui/src/core/units/bounds_check/tests/`
+- Terminal delta types: `tui/src/core/coordinates/vt_100_ansi_coords/term_row_delta.rs` and `term_col_delta.rs`

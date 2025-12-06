@@ -1,8 +1,8 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::core::LineState;
-use crate::{CsiSequence, GCStringOwned, LINE_FEED_BYTE, LineStateLiveness, NumericValue,
-            ReadlineError, early_return_if_paused, ok, width};
+use crate::{CsiSequence, GCStringOwned, LINE_FEED_BYTE, LineStateLiveness, ReadlineError,
+            TermColDelta, early_return_if_paused, ok, width};
 use std::io::Write;
 
 impl LineState {
@@ -37,12 +37,10 @@ impl LineState {
                     .to_string()
                     .as_bytes(),
             )?;
-            if !self.last_line_length.is_zero() {
-                term.write_all(
-                    CsiSequence::CursorForward(self.last_line_length.as_u16())
-                        .to_string()
-                        .as_bytes(),
-                )?;
+            // Use TermColDelta to guard against CSI zero bug.
+            let cols_right: TermColDelta = self.last_line_length.into();
+            if let Some(n) = cols_right.as_nonzero_u16() {
+                term.write_all(CsiSequence::CursorForward(n).to_string().as_bytes())?;
             }
         }
 

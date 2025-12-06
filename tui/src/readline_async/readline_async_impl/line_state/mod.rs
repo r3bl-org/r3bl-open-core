@@ -12,7 +12,7 @@
 //!
 //! | Module          | Responsibility                                             |
 //! |-----------------|------------------------------------------------------------|
-//! | `core`          | [`LineState`] struct, [`LineStateLiveness`] enum, state   |
+//! | `core`          | [`LineState`] struct, [`LineStateLiveness`] enum, state    |
 //! | `cursor`        | Cursor movement, grapheme navigation, terminal positioning |
 //! | `event_handlers`| Keyboard event dispatch (Ctrl, Alt, regular keys)          |
 //! | `output`        | Data printing, prompt updates, exit handling               |
