@@ -105,9 +105,11 @@ mod cursor_movement {
         ///
         /// CSI `<n>E`
         ///
-        /// Uses [`TermRowDelta`] for type-safe cursor movement. The caller should use
-        /// [`TermRowDelta::as_nonzero_u16()`] to guard against CSI zero bug before
-        /// calling this method.
+        /// Uses [`TermRowDelta`] for type-safe cursor movement. Since [`TermRowDelta`]
+        /// wraps [`NonZeroU16`] internally, the CSI zero bug is prevented at the type
+        /// level—callers use [`TermRowDelta::new()`] which returns `None` for zero.
+        ///
+        /// [`NonZeroU16`]: std::num::NonZeroU16
         #[must_use]
         pub fn cursor_next_line(rows: TermRowDelta) -> String {
             CsiSequence::CursorNextLine(rows).to_string()
@@ -117,9 +119,11 @@ mod cursor_movement {
         ///
         /// CSI `<n>F`
         ///
-        /// Uses [`TermRowDelta`] for type-safe cursor movement. The caller should use
-        /// [`TermRowDelta::as_nonzero_u16()`] to guard against CSI zero bug before
-        /// calling this method.
+        /// Uses [`TermRowDelta`] for type-safe cursor movement. Since [`TermRowDelta`]
+        /// wraps [`NonZeroU16`] internally, the CSI zero bug is prevented at the type
+        /// level—callers use [`TermRowDelta::new()`] which returns `None` for zero.
+        ///
+        /// [`NonZeroU16`]: std::num::NonZeroU16
         #[must_use]
         pub fn cursor_previous_line(rows: TermRowDelta) -> String {
             CsiSequence::CursorPrevLine(rows).to_string()

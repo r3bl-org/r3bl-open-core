@@ -1,5 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+// cspell:words rowm
+
 //! Input event generator - converts high-level input events to ANSI sequences.
 //!
 //! This module provides the inverse operation to the input parsers in

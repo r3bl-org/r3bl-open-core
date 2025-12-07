@@ -1,5 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+// cspell:words desynchronization
+
 //! VT-100 Terminal Input Parsing Layer
 //!
 //! This module provides pure, reusable ANSI sequence parsing for terminal user input.
