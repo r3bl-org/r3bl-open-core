@@ -6,7 +6,7 @@
 
 #[cfg(test)]
 mod cursor_positioning_tests {
-    use crate::{AnsiSequenceGenerator, CsiSequence, col, height, row, term_col, term_row};
+    use crate::{AnsiSequenceGenerator, CsiSequence, col, row, term_col, term_row, term_row_delta};
     use crate::core::ansi::vt_100_pty_output_parser::vt_100_pty_output_conformance_tests::test_fixtures_vt_100_ansi_conformance::nz;
 
     #[test]
@@ -44,14 +44,22 @@ mod cursor_positioning_tests {
 
     #[test]
     fn test_cursor_next_line() {
-        let seq = AnsiSequenceGenerator::cursor_next_line(height(3));
-        assert_eq!(seq, CsiSequence::CursorNextLine(3).to_string());
+        let seq = AnsiSequenceGenerator::cursor_next_line(term_row_delta(3).unwrap());
+        // SAFETY: 3 is non-zero
+        assert_eq!(
+            seq,
+            CsiSequence::CursorNextLine(term_row_delta(3).unwrap()).to_string()
+        );
     }
 
     #[test]
     fn test_cursor_previous_line() {
-        let seq = AnsiSequenceGenerator::cursor_previous_line(height(2));
-        assert_eq!(seq, CsiSequence::CursorPrevLine(2).to_string());
+        let seq = AnsiSequenceGenerator::cursor_previous_line(term_row_delta(2).unwrap());
+        // SAFETY: 2 is non-zero
+        assert_eq!(
+            seq,
+            CsiSequence::CursorPrevLine(term_row_delta(2).unwrap()).to_string()
+        );
     }
 }
 
@@ -87,7 +95,7 @@ mod screen_clearing_tests {
 
 #[cfg(test)]
 mod color_tests {
-    use crate::{AnsiSequenceGenerator, SgrColorSequence, tui_color};
+    use crate::{AnsiSequenceGenerator, AnsiValue, SgrColorSequence, TuiColor, tui_color};
 
     #[test]
     fn test_reset_color() {
@@ -155,8 +163,7 @@ mod color_tests {
     // ANSI Extended Palette (16-255)
     #[test]
     fn test_fg_ansi_extended_palette_16() {
-        use crate::AnsiValue;
-        let color = crate::TuiColor::Ansi(AnsiValue::new(16));
+        let color = TuiColor::Ansi(AnsiValue::new(16));
         let seq = AnsiSequenceGenerator::fg_color(color);
         // Extended colors use colon-separated format for better compatibility
         assert_eq!(seq, SgrColorSequence::SetForegroundAnsi256(16).to_string());
@@ -164,8 +171,7 @@ mod color_tests {
 
     #[test]
     fn test_fg_ansi_extended_palette_196() {
-        use crate::AnsiValue;
-        let color = crate::TuiColor::Ansi(AnsiValue::new(196));
+        let color = TuiColor::Ansi(AnsiValue::new(196));
         let seq = AnsiSequenceGenerator::fg_color(color);
         // Extended palette index 196 = pure red in 256-color palette
         assert_eq!(seq, SgrColorSequence::SetForegroundAnsi256(196).to_string());
@@ -173,8 +179,7 @@ mod color_tests {
 
     #[test]
     fn test_bg_ansi_extended_palette_226() {
-        use crate::AnsiValue;
-        let color = crate::TuiColor::Ansi(AnsiValue::new(226));
+        let color = TuiColor::Ansi(AnsiValue::new(226));
         let seq = AnsiSequenceGenerator::bg_color(color);
         // Extended palette index 226 = yellow in 256-color palette
         assert_eq!(seq, SgrColorSequence::SetBackgroundAnsi256(226).to_string());

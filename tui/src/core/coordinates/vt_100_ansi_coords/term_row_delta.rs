@@ -5,68 +5,73 @@
 //! [`TermRowDelta`] represents **how many rows** to move the cursor, as opposed to
 //! [`TermRow`] which represents **which row** the cursor is on.
 //!
-//! # The CSI Zero Problem
+//! # Make Illegal States Unrepresentable
+//!
+//! This type wraps [`NonZeroU16`] internally, making it **impossible** to create a
+//! zero-valued delta. This prevents the CSI zero bug at the type level.
 //!
 //! ANSI cursor movement commands (CUU, CUD) interpret parameter 0 as 1:
 //! - `CSI 0 A` (`CursorUp` with n=0) moves the cursor **1 row up**, not 0
 //! - `CSI 0 B` (`CursorDown` with n=0) moves the cursor **1 row down**, not 0
 //!
-//! This type provides [`as_nonzero_u16()`] to guard against this bug.
+//! By making zero deltas unrepresentable, we eliminate this class of bugs entirely.
 //!
 //! # Example
 //!
 //! ```rust
-//! use r3bl_tui::{TermRowDelta, term_row_delta, CsiSequence};
+//! use r3bl_tui::{TermRowDelta, CsiSequence};
 //!
 //! let position: u16 = 240;
 //! let term_width: u16 = 80;
 //!
-//! let rows_down = term_row_delta(position / term_width); // 3 rows
+//! let rows_down = position / term_width; // 3 rows
 //!
-//! // Safe emission: only emit if non-zero
-//! if let Some(n) = rows_down.as_nonzero_u16() {
-//!     let _ = CsiSequence::CursorDown(n);
+//! // Fallible construction - must handle the None case
+//! if let Some(delta) = TermRowDelta::new(rows_down) {
+//!     let _ = CsiSequence::CursorDown(delta);
 //! }
+//! // For rows_down=0, new() returns None, so no sequence is emitted
 //! ```
 //!
 //! [`TermRow`]: super::TermRow
-//! [`as_nonzero_u16()`]: TermRowDelta::as_nonzero_u16
+//! [`NonZeroU16`]: std::num::NonZeroU16
 
-use crate::{NumericConversions, RowHeight};
-use std::fmt::{Display, Formatter};
+use crate::NumericConversions;
+use std::{fmt::{Display, Formatter}, num::NonZeroU16};
 
 /// Relative vertical cursor movement (row delta).
 ///
 /// Represents how many rows to move up or down. Used with [`CsiSequence::CursorUp`]
 /// and [`CsiSequence::CursorDown`].
 ///
-/// # Safety Against CSI Zero Bug
+/// # Make Illegal States Unrepresentable
 ///
-/// Use [`as_nonzero_u16()`] to safely emit cursor movement commands:
+/// This type wraps [`NonZeroU16`] internally. A zero-valued delta **cannot exist**,
+/// preventing the CSI zero bug at compile time:
 ///
 /// ```rust
-/// use r3bl_tui::{term_row_delta, CsiSequence};
-/// use std::io::Write;
+/// use r3bl_tui::{TermRowDelta, CsiSequence};
 ///
-/// let delta = term_row_delta(0);
+/// // Fallible construction - returns None for zero
+/// assert!(TermRowDelta::new(0).is_none());
+/// assert!(TermRowDelta::new(5).is_some());
 ///
-/// // Safe: only emit if non-zero
-/// if let Some(n) = delta.as_nonzero_u16() {
-///     let seq = CsiSequence::CursorDown(n);
-///     // write seq to terminal...
+/// // If you have a TermRowDelta, it's guaranteed non-zero
+/// if let Some(delta) = TermRowDelta::new(3) {
+///     // Safe to emit - delta is guaranteed non-zero
+///     let seq = CsiSequence::CursorDown(delta);
 /// }
-/// // For delta=0, no sequence is emitted (correct behavior)
 /// ```
 ///
+/// [`NonZeroU16`]: std::num::NonZeroU16
 /// [`CsiSequence::CursorUp`]: crate::CsiSequence::CursorUp
 /// [`CsiSequence::CursorDown`]: crate::CsiSequence::CursorDown
-/// [`as_nonzero_u16()`]: Self::as_nonzero_u16
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
-pub struct TermRowDelta(u16);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct TermRowDelta(NonZeroU16);
 
 impl NumericConversions for TermRowDelta {
-    fn as_usize(&self) -> usize { self.0 as usize }
-    fn as_u16(&self) -> u16 { self.0 }
+    fn as_usize(&self) -> usize { self.0.get() as usize }
+    fn as_u16(&self) -> u16 { self.0.get() }
 }
 
 impl Display for TermRowDelta {
@@ -76,154 +81,145 @@ impl Display for TermRowDelta {
 }
 
 impl TermRowDelta {
+    /// A delta of 1 row - the most common cursor movement amount.
+    ///
+    /// Use this constant instead of `TermRowDelta::new(1).unwrap()` to avoid
+    /// panic documentation requirements and make intent clear.
+    pub const ONE: Self = Self(NonZeroU16::new(1).unwrap());
+
     /// Create a new row delta from a raw value.
     ///
-    /// Zero is a valid value (meaning "don't move").
-    #[must_use]
-    pub const fn new(value: u16) -> Self { Self(value) }
-
-    /// Get the raw delta value.
-    #[must_use]
-    pub const fn value(self) -> u16 { self.0 }
-
-    /// Returns `true` if the delta is zero (no movement).
-    #[must_use]
-    pub const fn is_zero(self) -> bool { self.0 == 0 }
-
-    /// Returns the value as `Option<u16>`, returning `None` if zero.
-    ///
-    /// This is the **recommended** way to use delta values with CSI sequences.
-    /// It prevents the CSI zero bug where `CSI 0 A` is interpreted as `CSI 1 A`.
+    /// Returns `None` if the value is zero, since zero-valued deltas are not
+    /// representable (they would cause the CSI zero bug).
     ///
     /// # Example
     ///
     /// ```rust
-    /// use r3bl_tui::{term_row_delta, CsiSequence};
+    /// use r3bl_tui::TermRowDelta;
     ///
-    /// let delta = term_row_delta(3);
-    /// if let Some(n) = delta.as_nonzero_u16() {
-    ///     let _ = CsiSequence::CursorDown(n);
-    /// }
+    /// assert!(TermRowDelta::new(0).is_none());  // Zero not allowed
+    /// assert!(TermRowDelta::new(5).is_some());  // Non-zero OK
     /// ```
     #[must_use]
-    pub const fn as_nonzero_u16(self) -> Option<u16> {
-        if self.0 == 0 { None } else { Some(self.0) }
+    pub const fn new(value: u16) -> Option<Self> {
+        match NonZeroU16::new(value) {
+            Some(nz) => Some(Self(nz)),
+            None => None,
+        }
     }
+
+    /// Create a row delta from a [`NonZeroU16`] value.
+    ///
+    /// This is an infallible constructor since [`NonZeroU16`] is already guaranteed
+    /// to be non-zero.
+    #[must_use]
+    pub const fn from_non_zero(value: NonZeroU16) -> Self { Self(value) }
+
+    /// Get the inner [`NonZeroU16`] value.
+    #[must_use]
+    pub const fn value(self) -> NonZeroU16 { self.0 }
+
+    /// Get the raw `u16` value (guaranteed to be >= 1).
+    #[must_use]
+    pub const fn get(self) -> u16 { self.0.get() }
 }
 
-impl From<u16> for TermRowDelta {
-    fn from(value: u16) -> Self { Self::new(value) }
-}
-
-impl From<RowHeight> for TermRowDelta {
-    /// Convert a [`RowHeight`] to a [`TermRowDelta`].
-    ///
-    /// This allows natural conversion when a row height value needs to be used
-    /// as a relative cursor movement amount.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// use r3bl_tui::{height, TermRowDelta, CsiSequence};
-    ///
-    /// let row_height = height(10);
-    /// let delta = TermRowDelta::from(row_height);
-    ///
-    /// if let Some(n) = delta.as_nonzero_u16() {
-    ///     let _ = CsiSequence::CursorDown(n);
-    /// }
-    /// ```
-    fn from(value: RowHeight) -> Self { Self::new(value.as_u16()) }
+impl From<NonZeroU16> for TermRowDelta {
+    fn from(value: NonZeroU16) -> Self { Self::from_non_zero(value) }
 }
 
 /// Create a [`TermRowDelta`] from a raw value.
 ///
-/// This is the preferred constructor for creating row deltas.
+/// Returns `None` if the value is zero.
 ///
 /// # Example
 ///
 /// ```rust
 /// use r3bl_tui::term_row_delta;
 ///
-/// let delta = term_row_delta(3);
-/// assert_eq!(delta.value(), 3);
+/// assert!(term_row_delta(0).is_none());
+/// assert_eq!(term_row_delta(3).map(|d| d.get()), Some(3));
 /// ```
 #[must_use]
-pub const fn term_row_delta(value: u16) -> TermRowDelta { TermRowDelta::new(value) }
+pub const fn term_row_delta(value: u16) -> Option<TermRowDelta> { TermRowDelta::new(value) }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    fn test_term_row_delta_zero() {
-        let delta = term_row_delta(0);
-        assert!(delta.is_zero());
-        assert_eq!(delta.as_nonzero_u16(), None);
-        assert_eq!(delta.value(), 0);
+    fn test_new_zero_returns_none() {
+        assert!(TermRowDelta::new(0).is_none());
+        assert!(term_row_delta(0).is_none());
     }
 
     #[test]
-    fn test_term_row_delta_nonzero() {
-        let delta = term_row_delta(3);
-        assert!(!delta.is_zero());
-        assert_eq!(delta.as_nonzero_u16(), Some(3));
-        assert_eq!(delta.value(), 3);
+    fn test_new_non_zero_returns_some() {
+        let delta = TermRowDelta::new(3).unwrap();
+        assert_eq!(delta.get(), 3);
+
+        let delta2 = term_row_delta(5).unwrap();
+        assert_eq!(delta2.get(), 5);
+    }
+
+    #[test]
+    fn test_from_non_zero() {
+        let nz = NonZeroU16::new(7).unwrap();
+        let delta = TermRowDelta::from_non_zero(nz);
+        assert_eq!(delta.get(), 7);
+    }
+
+    #[test]
+    fn test_from_trait() {
+        let nz = NonZeroU16::new(10).unwrap();
+        let delta: TermRowDelta = nz.into();
+        assert_eq!(delta.get(), 10);
     }
 
     #[test]
     fn test_display() {
-        assert_eq!(format!("{}", term_row_delta(3)), "TermRowDelta(3)");
-    }
-
-    #[test]
-    fn test_from_u16() {
-        let delta: TermRowDelta = 10.into();
-        assert_eq!(delta.value(), 10);
-    }
-
-    #[test]
-    fn test_from_row_height() {
-        use crate::height;
-
-        let row_height = height(10);
-        let delta = TermRowDelta::from(row_height);
-        assert_eq!(delta.value(), 10);
-
-        // Also test zero height.
-        let zero_height = height(0);
-        let zero_delta = TermRowDelta::from(zero_height);
-        assert!(zero_delta.is_zero());
-        assert_eq!(zero_delta.as_nonzero_u16(), None);
-    }
-
-    #[test]
-    fn test_default() {
-        let delta = TermRowDelta::default();
-        assert!(delta.is_zero());
+        let delta = TermRowDelta::new(3).unwrap();
+        assert_eq!(format!("{delta}"), "TermRowDelta(3)");
     }
 
     #[test]
     fn test_numeric_conversions() {
-        let delta = term_row_delta(100);
+        let delta = TermRowDelta::new(100).unwrap();
         assert_eq!(delta.as_usize(), 100_usize);
         assert_eq!(delta.as_u16(), 100_u16);
     }
 
-    /// Regression test: verify the CSI zero guard works correctly.
     #[test]
-    fn test_csi_zero_guard_at_row_boundary() {
-        // Position 240 on 80-col terminal = exactly 3 rows down
-        let position: u16 = 240;
+    fn test_value_returns_non_zero_u16() {
+        let delta = TermRowDelta::new(5).unwrap();
+        let nz: NonZeroU16 = delta.value();
+        assert_eq!(nz.get(), 5);
+    }
+
+    /// Regression test: verify CSI zero bug is prevented at type level.
+    ///
+    /// Position 240 on 80-col terminal = exactly 3 rows down.
+    /// Position 80 on 80-col terminal = exactly 1 row down.
+    /// Position 0 on 80-col terminal = 0 rows (None).
+    #[test]
+    fn test_csi_zero_bug_prevented() {
         let term_width: u16 = 80;
 
-        let rows = term_row_delta(position / term_width); // 3
+        // 240 / 80 = 3 rows - should succeed.
+        let rows_3 = term_row_delta(240 / term_width);
+        assert_eq!(rows_3.map(super::TermRowDelta::get), Some(3));
 
-        // Rows should emit
-        assert_eq!(rows.as_nonzero_u16(), Some(3));
+        // 80 / 80 = 1 row - should succeed.
+        let rows_1 = term_row_delta(80 / term_width);
+        assert_eq!(rows_1.map(super::TermRowDelta::get), Some(1));
 
-        // Position 0 = no movement
-        let zero_rows = term_row_delta(0);
-        assert_eq!(zero_rows.as_nonzero_u16(), None);
+        // 0 / 80 = 0 rows - should be None (prevents CSI zero bug).
+        #[allow(clippy::erasing_op)]
+        let rows_0 = term_row_delta(0 / term_width);
+        assert!(rows_0.is_none());
+
+        // 79 / 80 = 0 rows - should be None.
+        let rows_partial = term_row_delta(79 / term_width);
+        assert!(rows_partial.is_none());
     }
 }

@@ -2,9 +2,9 @@
 
 // cspell:words isatty winsize tcgetwinsize
 
-use crate::{ColWidth, Size, height, width};
 #[cfg(unix)]
 use crate::tui::terminal_lib_backends::{TERMINAL_LIB_BACKEND, TerminalLibBackend};
+use crate::{ColWidth, Size, height, width};
 use miette::IntoDiagnostic;
 use std::io::IsTerminal;
 
@@ -27,9 +27,7 @@ fn is_tty_stdin() -> bool {
 }
 
 #[cfg(not(unix))]
-fn is_tty_stdin() -> bool {
-    std::io::stdin().is_terminal()
-}
+fn is_tty_stdin() -> bool { std::io::stdin().is_terminal() }
 
 #[cfg(unix)]
 fn is_tty_stdout() -> bool {
@@ -40,9 +38,7 @@ fn is_tty_stdout() -> bool {
 }
 
 #[cfg(not(unix))]
-fn is_tty_stdout() -> bool {
-    std::io::stdout().is_terminal()
-}
+fn is_tty_stdout() -> bool { std::io::stdout().is_terminal() }
 
 #[cfg(unix)]
 fn is_tty_stderr() -> bool {
@@ -53,9 +49,7 @@ fn is_tty_stderr() -> bool {
 }
 
 #[cfg(not(unix))]
-fn is_tty_stderr() -> bool {
-    std::io::stderr().is_terminal()
-}
+fn is_tty_stderr() -> bool { std::io::stderr().is_terminal() }
 
 #[must_use]
 pub fn get_terminal_width_no_default() -> Option<ColWidth> {

@@ -2,7 +2,7 @@
 
 use super::core::LineState;
 use crate::{CsiSequence, GCStringOwned, LINE_FEED_BYTE, LineStateLiveness, ReadlineError,
-            TermColDelta, early_return_if_paused, ok, width};
+            TermColDelta, TermRowDelta, early_return_if_paused, ok, width};
 use std::io::Write;
 
 impl LineState {
@@ -31,16 +31,19 @@ impl LineState {
         // If last written data was not newline, restore the cursor.
         if !self.last_line_completed {
             // Move up 1 row, to column 0, then right to the last position.
-            term.write_all(CsiSequence::CursorUp(1).to_string().as_bytes())?;
+            term.write_all(
+                CsiSequence::CursorUp(TermRowDelta::ONE)
+                    .to_string()
+                    .as_bytes(),
+            )?;
             term.write_all(
                 CsiSequence::CursorHorizontalAbsolute(1)
                     .to_string()
                     .as_bytes(),
             )?;
-            // Use TermColDelta to guard against CSI zero bug.
-            let cols_right: TermColDelta = self.last_line_length.into();
-            if let Some(n) = cols_right.as_nonzero_u16() {
-                term.write_all(CsiSequence::CursorForward(n).to_string().as_bytes())?;
+            // Only emit CursorForward if the delta is non-zero (illegal states unrepresentable).
+            if let Some(cols_right) = TermColDelta::new(self.last_line_length.as_u16()) {
+                term.write_all(CsiSequence::CursorForward(cols_right).to_string().as_bytes())?;
             }
         }
 

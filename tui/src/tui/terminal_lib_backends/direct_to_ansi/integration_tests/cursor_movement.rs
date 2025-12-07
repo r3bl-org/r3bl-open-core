@@ -20,7 +20,7 @@
 
 use super::test_helpers::*;
 use crate::{AnsiSequenceGenerator, ColIndex, RowIndex, col, height, pos,
-            render_op::RenderOpCommon, row, tui_color};
+            render_op::RenderOpCommon, row, term_row_delta, tui_color};
 
 #[test]
 fn test_move_cursor_absolute_origin() {
@@ -136,7 +136,7 @@ fn test_move_cursor_to_next_line() {
     let output = execute_and_capture(op, &mut state, &output_device2, &stdout_mock2);
 
     // CSI 3E (move down 3 lines and to column 0)
-    assert_eq!(output, AnsiSequenceGenerator::cursor_next_line(height(3)));
+    assert_eq!(output, AnsiSequenceGenerator::cursor_next_line(term_row_delta(3).unwrap()));
     assert_eq!(state.cursor_pos.row_index, RowIndex::new(8));
     assert_eq!(state.cursor_pos.col_index, ColIndex::new(0));
 }
@@ -159,7 +159,7 @@ fn test_move_cursor_to_previous_line() {
     // CSI 3F (move up 3 lines and to column 0)
     assert_eq!(
         output,
-        AnsiSequenceGenerator::cursor_previous_line(height(3))
+        AnsiSequenceGenerator::cursor_previous_line(term_row_delta(3).unwrap())
     );
     assert_eq!(state.cursor_pos.row_index, RowIndex::new(7));
     assert_eq!(state.cursor_pos.col_index, ColIndex::new(0));

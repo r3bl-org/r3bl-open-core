@@ -2,8 +2,7 @@
 
 //! ANSI escape sequence generator for terminal operations. See [`AnsiSequenceGenerator`].
 
-use crate::{ColIndex, ColorTarget, RowHeight, RowIndex, SgrColorSequence, TuiColor,
-            TuiStyle,
+use crate::{ColIndex, ColorTarget, RowIndex, SgrColorSequence, TermRowDelta, TuiColor, TuiStyle,
             core::{ansi::{constants::{APPLICATION_MOUSE_TRACKING, BRACKETED_PASTE_MODE,
                                       CSI_PARAM_SEPARATOR, CSI_START, ED_ERASE_ALL,
                                       EL_ERASE_ALL, EL_ERASE_FROM_START, EL_ERASE_TO_END,
@@ -97,18 +96,28 @@ impl AnsiSequenceGenerator {
         CsiSequence::CursorHorizontalAbsolute(term_col.as_u16()).to_string()
     }
 
-    /// Generate cursor next line
+    /// Generate cursor next line.
+    ///
     /// CSI `<n>E`
+    ///
+    /// Uses [`TermRowDelta`] for type-safe cursor movement. The caller should use
+    /// [`TermRowDelta::as_nonzero_u16()`] to guard against CSI zero bug before
+    /// calling this method.
     #[must_use]
-    pub fn cursor_next_line(rows: RowHeight) -> String {
-        CsiSequence::CursorNextLine(rows.as_u16()).to_string()
+    pub fn cursor_next_line(rows: TermRowDelta) -> String {
+        CsiSequence::CursorNextLine(rows).to_string()
     }
 
-    /// Generate cursor previous line
+    /// Generate cursor previous line.
+    ///
     /// CSI `<n>F`
+    ///
+    /// Uses [`TermRowDelta`] for type-safe cursor movement. The caller should use
+    /// [`TermRowDelta::as_nonzero_u16()`] to guard against CSI zero bug before
+    /// calling this method.
     #[must_use]
-    pub fn cursor_previous_line(rows: RowHeight) -> String {
-        CsiSequence::CursorPrevLine(rows.as_u16()).to_string()
+    pub fn cursor_previous_line(rows: TermRowDelta) -> String {
+        CsiSequence::CursorPrevLine(rows).to_string()
     }
 
     // ==================== Screen Clearing ====================

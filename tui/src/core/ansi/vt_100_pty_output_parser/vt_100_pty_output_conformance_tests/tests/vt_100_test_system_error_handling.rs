@@ -299,20 +299,20 @@ pub mod invalid_character_handling {
 pub mod boundary_edge_cases {
     use super::*;
 
-    /// Note: Using type-safe `CsiSequence` builders (not raw bytes) because we're
-    /// testing VT100 specification compliance with valid sequences that have
-    /// edge-case parameters. Type-safe builders ensure proper sequence
-    /// formatting while testing semantic behavior.
+    /// Note: Testing VT100 spec compliance requires raw ANSI bytes because
+    /// zero-parameter sequences ARE valid in the VT100 spec (treated as 1),
+    /// but our type-safe API intentionally prevents zero-valued deltas to
+    /// avoid the CSI zero bug. Raw bytes test the parser's VT100 compliance.
     #[test]
     fn test_zero_parameter_treated_as_one() {
         let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
 
         // Test VT100-compliant behavior: zero parameters are treated as 1
-        // Reset cursor position for each test to ensure independent testing
+        // Using raw ANSI bytes since type-safe API prevents zero deltas
         let test_cases = vec![
             (
                 "Cursor up by 0",
-                CsiSequence::CursorUp(0),
+                "\x1b[0A",  // Raw ANSI: CSI 0 A
                 term_row(nz(3)),
                 term_col(nz(3)),
                 row(1),
@@ -320,7 +320,7 @@ pub mod boundary_edge_cases {
             ),
             (
                 "Cursor down by 0",
-                CsiSequence::CursorDown(0),
+                "\x1b[0B",  // Raw ANSI: CSI 0 B
                 term_row(nz(3)),
                 term_col(nz(3)),
                 row(3),
@@ -328,7 +328,7 @@ pub mod boundary_edge_cases {
             ),
             (
                 "Cursor forward by 0",
-                CsiSequence::CursorForward(0),
+                "\x1b[0C",  // Raw ANSI: CSI 0 C
                 term_row(nz(3)),
                 term_col(nz(3)),
                 row(2),
@@ -336,7 +336,7 @@ pub mod boundary_edge_cases {
             ),
             (
                 "Cursor backward by 0",
-                CsiSequence::CursorBackward(0),
+                "\x1b[0D",  // Raw ANSI: CSI 0 D
                 term_row(nz(3)),
                 term_col(nz(3)),
                 row(2),
@@ -346,7 +346,7 @@ pub mod boundary_edge_cases {
 
         for (
             description,
-            movement_cmd,
+            movement_cmd_bytes,
             start_row,
             start_col,
             expected_row,
@@ -362,8 +362,8 @@ pub mod boundary_edge_cases {
                 }
             ));
 
-            // Apply the zero-parameter movement command
-            let _unused = ofs_buf.apply_ansi_bytes(format!("{movement_cmd}"));
+            // Apply the zero-parameter movement command (raw ANSI bytes)
+            let _unused = ofs_buf.apply_ansi_bytes(movement_cmd_bytes);
 
             // Per VT100 spec: parameter 0 is treated as 1 (minimum movement)
             assert_eq!(

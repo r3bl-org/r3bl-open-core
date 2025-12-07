@@ -5,7 +5,7 @@
 //! minimize redundant codes.
 
 use crate::{FastStringify, PixelChar, SGR_RESET_BYTES, SgrCode, TuiColor, TuiStyle,
-            degrade_color, global_color_support};
+            degrade_color, global_color_support, tui_style};
 
 /// # Unified ANSI Generator for [`PixelChar`] Rendering
 ///
@@ -236,8 +236,8 @@ impl PixelCharRenderer {
         // Handle blink mode
         if let Some(blink_mode) = style.attribs.blink {
             let sgr = match blink_mode {
-                crate::tui_style::tui_style_attrib::BlinkMode::Slow => SgrCode::SlowBlink,
-                crate::tui_style::tui_style_attrib::BlinkMode::Rapid => {
+                tui_style::tui_style_attrib::BlinkMode::Slow => SgrCode::SlowBlink,
+                tui_style::tui_style_attrib::BlinkMode::Rapid => {
                     SgrCode::RapidBlink
                 }
             };

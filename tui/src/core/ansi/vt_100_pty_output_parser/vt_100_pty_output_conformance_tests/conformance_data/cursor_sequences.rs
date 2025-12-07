@@ -13,8 +13,9 @@
 //! - Absolute Positioning: VT100 User Guide Section 3.3.4
 
 use super::super::test_fixtures_vt_100_ansi_conformance::nz;
-use crate::{EscSequence, core::ansi::vt_100_pty_output_parser::CsiSequence, term_col,
-            term_row};
+use crate::{EscSequence, TermColDelta, TermRowDelta,
+            core::ansi::vt_100_pty_output_parser::CsiSequence, term_col, term_col_delta,
+            term_row, term_row_delta};
 use std::num::NonZeroU16;
 
 /// Move cursor to absolute position (row, col).
@@ -51,10 +52,18 @@ pub fn move_to_home() -> String {
 ///
 /// # Arguments
 /// * `count` - Number of lines to move up (default 1 if count is 0)
+///
+/// # Panics
+/// Panics if `count` is greater than [`u16::MAX`] (which is impossible) or if
+/// `term_row_delta` fails for values > 1.
 #[must_use]
 pub fn move_up(count: u16) -> String {
-    let move_count = if count == 0 { 1 } else { count };
-    CsiSequence::CursorUp(move_count).to_string()
+    let delta = if count <= 1 {
+        TermRowDelta::ONE
+    } else {
+        term_row_delta(count).unwrap()
+    };
+    CsiSequence::CursorUp(delta).to_string()
 }
 
 /// Move cursor down by specified number of lines.
@@ -63,10 +72,18 @@ pub fn move_up(count: u16) -> String {
 ///
 /// # Arguments
 /// * `count` - Number of lines to move down (default 1 if count is 0)
+///
+/// # Panics
+/// Panics if `count` is greater than [`u16::MAX`] (which is impossible) or if
+/// `term_row_delta` fails for values > 1.
 #[must_use]
 pub fn move_down(count: u16) -> String {
-    let move_count = if count == 0 { 1 } else { count };
-    CsiSequence::CursorDown(move_count).to_string()
+    let delta = if count <= 1 {
+        TermRowDelta::ONE
+    } else {
+        term_row_delta(count).unwrap()
+    };
+    CsiSequence::CursorDown(delta).to_string()
 }
 
 /// Move cursor right by specified number of columns.
@@ -75,10 +92,18 @@ pub fn move_down(count: u16) -> String {
 ///
 /// # Arguments
 /// * `count` - Number of columns to move right (default 1 if count is 0)
+///
+/// # Panics
+/// Panics if `count` is greater than [`u16::MAX`] (which is impossible) or if
+/// `term_col_delta` fails for values > 1.
 #[must_use]
 pub fn move_right(count: u16) -> String {
-    let move_count = if count == 0 { 1 } else { count };
-    CsiSequence::CursorForward(move_count).to_string()
+    let delta = if count <= 1 {
+        TermColDelta::ONE
+    } else {
+        term_col_delta(count).unwrap()
+    };
+    CsiSequence::CursorForward(delta).to_string()
 }
 
 /// Move cursor left by specified number of columns.
@@ -87,10 +112,18 @@ pub fn move_right(count: u16) -> String {
 ///
 /// # Arguments
 /// * `count` - Number of columns to move left (default 1 if count is 0)
+///
+/// # Panics
+/// Panics if `count` is greater than [`u16::MAX`] (which is impossible) or if
+/// `term_col_delta` fails for values > 1.
 #[must_use]
 pub fn move_left(count: u16) -> String {
-    let move_count = if count == 0 { 1 } else { count };
-    CsiSequence::CursorBackward(move_count).to_string()
+    let delta = if count <= 1 {
+        TermColDelta::ONE
+    } else {
+        term_col_delta(count).unwrap()
+    };
+    CsiSequence::CursorBackward(delta).to_string()
 }
 
 /// Save current cursor position and attributes (CSI variant).

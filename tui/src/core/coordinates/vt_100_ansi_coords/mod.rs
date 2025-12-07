@@ -28,23 +28,26 @@
 //! - [`TermRowDelta`]: How many rows to move (for `CursorUp`/`CursorDown`)
 //! - [`TermColDelta`]: How many columns to move (for `CursorForward`/`CursorBackward`)
 //!
-//! # The CSI Zero Problem
+//! # The CSI Zero Problem - Make Illegal States Unrepresentable
 //!
 //! ANSI cursor movement commands interpret parameter 0 as 1:
 //! - `CSI 0 A` moves the cursor **1 row up**, not 0
 //! - `CSI 0 C` moves the cursor **1 column right**, not 0
 //!
-//! The delta types provide [`as_nonzero_u16()`] to guard against this:
+//! The delta types wrap [`NonZeroU16`] internally, making zero-valued deltas
+//! **impossible to represent**. Construction is fallible:
 //!
 //! ```rust
-//! use r3bl_tui::{term_row_delta, CsiSequence};
+//! use r3bl_tui::{TermRowDelta, CsiSequence};
 //!
-//! let delta = term_row_delta(0);
-//! if let Some(n) = delta.as_nonzero_u16() {
+//! // Fallible construction - must handle the None case
+//! if let Some(delta) = TermRowDelta::new(0) {
 //!     // This branch is NOT taken for zero, preventing the bug
-//!     let _ = CsiSequence::CursorDown(n);
+//!     let _ = CsiSequence::CursorDown(delta);
 //! }
 //! ```
+//!
+//! [`NonZeroU16`]: std::num::NonZeroU16
 //!
 //! # Coordinate Conversion
 //!
@@ -53,7 +56,6 @@
 //! - `.from_zero_based()`: Convert from 0-based buffer coordinates
 //!
 //! [`buffer_coords`]: crate::coordinates::buffer_coords
-//! [`as_nonzero_u16()`]: TermRowDelta::as_nonzero_u16
 
 // Submodule declarations (private).
 mod term_col;

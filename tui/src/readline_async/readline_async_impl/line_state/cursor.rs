@@ -11,22 +11,30 @@ impl LineState {
     ///
     /// The `pos` parameter is a display offset (column width) from the start of the line.
     /// Returns a [`TermRowDelta`] representing how many rows down the position is.
-    pub(crate) fn line_height(&self, pos: ColWidth) -> TermRowDelta {
-        term_row_delta(pos.as_u16() / self.term_size.col_width.as_u16())
+    /// Returns `None` if the calculated delta is zero (position is on the first line).
+    #[must_use]
+    pub fn line_height(&self, pos: ColWidth) -> Option<TermRowDelta> {
+        term_row_delta(pos / self.term_size.col_width)
     }
 
     /// Gets the column offset within the current row.
     ///
     /// The `pos` parameter is a display offset (column width) from the start of the line.
     /// Returns a [`TermColDelta`] representing the horizontal position within the row.
-    pub(crate) fn line_column_offset(&self, pos: ColWidth) -> TermColDelta {
-        term_col_delta(pos.as_u16() % self.term_size.col_width.as_u16())
+    /// Returns `None` if the calculated delta is zero (position is at the start of a row).
+    #[must_use]
+    pub fn line_column_offset(&self, pos: ColWidth) -> Option<TermColDelta> {
+        term_col_delta(pos % self.term_size.col_width)
     }
 
     /// Move from a position on the line to the start.
     ///
     /// The `from` parameter is a display offset (column width) from the start of the line.
-    pub(crate) fn move_to_beginning(&self, term: &mut dyn Write, from: ColWidth) -> io::Result<()> {
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if writing to the terminal fails.
+    pub fn move_to_beginning(&self, term: &mut dyn Write, from: ColWidth) -> io::Result<()> {
         // Calculate row delta from position.
         // Position 80 on 80-col terminal is Row 1, Col 0: 80/80 = 1 row.
         let move_up = self.line_height(from);
@@ -35,9 +43,9 @@ impl LineState {
         term.write_all(CsiSequence::CursorHorizontalAbsolute(1).to_string().as_bytes())?;
 
         // Move up the calculated number of rows (CUU = Cursor Up).
-        // Uses as_nonzero_u16() to guard against CSI zero bug.
-        if let Some(n) = move_up.as_nonzero_u16() {
-            term.write_all(CsiSequence::CursorUp(n).to_string().as_bytes())?;
+        // Only emit if Some (non-zero) - guards against CSI zero bug.
+        if let Some(delta) = move_up {
+            term.write_all(CsiSequence::CursorUp(delta).to_string().as_bytes())?;
         }
 
         ok!()
@@ -46,23 +54,27 @@ impl LineState {
     /// Move from the start of the line to some position.
     ///
     /// The `to` parameter is a display offset (column width) from the start of the line.
-    pub(crate) fn move_from_beginning(&self, term: &mut dyn Write, to: ColWidth) -> io::Result<()> {
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if writing to the terminal fails.
+    pub fn move_from_beginning(&self, term: &mut dyn Write, to: ColWidth) -> io::Result<()> {
         // Calculate deltas from position.
         // Position 80 on 80-col terminal is Row 1, Col 0: 80/80 = 1 row, 80%80 = 0 cols.
         let rows_down = self.line_height(to);
         let cols_right = self.line_column_offset(to);
 
         // Move down the calculated number of rows (CUD = Cursor Down).
-        // Uses as_nonzero_u16() to guard against CSI zero bug.
-        if let Some(n) = rows_down.as_nonzero_u16() {
-            term.write_all(CsiSequence::CursorDown(n).to_string().as_bytes())?;
+        // Only emit if Some (non-zero) - guards against CSI zero bug.
+        if let Some(delta) = rows_down {
+            term.write_all(CsiSequence::CursorDown(delta).to_string().as_bytes())?;
         }
 
         // Move right to the column position (CUF = Cursor Forward).
-        // Uses as_nonzero_u16() to guard against CSI zero bug where
+        // Only emit if Some (non-zero) - guards against CSI zero bug where
         // CursorForward(0) is interpreted as CursorForward(1) by terminals.
-        if let Some(n) = cols_right.as_nonzero_u16() {
-            term.write_all(CsiSequence::CursorForward(n).to_string().as_bytes())?;
+        if let Some(delta) = cols_right {
+            term.write_all(CsiSequence::CursorForward(delta).to_string().as_bytes())?;
         }
 
         ok!()

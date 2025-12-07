@@ -6,7 +6,8 @@
 //! sequences and can serialize them into ANSI escape codes.
 
 use super::private_mode::PrivateModeType;
-use crate::{BufTextStorage, FastStringify, TermCol, TermRow,
+use crate::{BufTextStorage, FastStringify, NumericConversions, TermCol, TermColDelta, TermRow,
+            TermRowDelta,
             core::ansi::{constants::{CHA_CURSOR_COLUMN, CNL_CURSOR_NEXT_LINE,
                                      CPL_CURSOR_PREV_LINE, CSI_PARAM_SEPARATOR,
                                      CSI_PRIVATE_MODE_PREFIX, CSI_START,
@@ -28,16 +29,51 @@ use std::fmt::{Formatter, Result};
 
 /// Builder for CSI (Control Sequence Introducer) sequences.
 /// Similar to `SgrCode` but for cursor movement and other CSI commands.
+///
+/// # Make Illegal States Unrepresentable
+///
+/// Cursor movement variants use [`TermRowDelta`] and [`TermColDelta`] which wrap
+/// [`NonZeroU16`] internally. This makes it **impossible** to create a cursor movement
+/// sequence with a zero parameter, preventing the CSI zero bug at the type level.
+///
+/// ANSI terminals interpret parameter 0 as 1 for movement commands:
+/// - `CSI 0 A` moves cursor **1 row up**, not 0
+/// - `CSI 0 C` moves cursor **1 column right**, not 0
+///
+/// Since the delta types can only be constructed with non-zero values, you are
+/// **forced** to handle the zero case at construction time:
+///
+/// ```rust
+/// use r3bl_tui::{TermRowDelta, CsiSequence};
+///
+/// // Fallible construction - must handle the None case
+/// if let Some(delta) = TermRowDelta::new(3) {
+///     // delta is guaranteed non-zero, safe to emit
+///     let _ = CsiSequence::CursorDown(delta);
+/// }
+/// ```
+///
+/// [`TermRowDelta`]: crate::TermRowDelta
+/// [`TermColDelta`]: crate::TermColDelta
+/// [`NonZeroU16`]: std::num::NonZeroU16
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum CsiSequence {
-    /// Cursor Up (CUU) - ESC [ n A
-    CursorUp(u16),
-    /// Cursor Down (CUD) - ESC [ n B
-    CursorDown(u16),
-    /// Cursor Forward (CUF) - ESC [ n C
-    CursorForward(u16),
-    /// Cursor Backward (CUB) - ESC [ n D
-    CursorBackward(u16),
+    /// Cursor Up (CUU) - ESC [ n A.
+    ///
+    /// Uses [`TermRowDelta`] to prevent CSI zero bug.
+    CursorUp(TermRowDelta),
+    /// Cursor Down (CUD) - ESC [ n B.
+    ///
+    /// Uses [`TermRowDelta`] to prevent CSI zero bug.
+    CursorDown(TermRowDelta),
+    /// Cursor Forward (CUF) - ESC [ n C.
+    ///
+    /// Uses [`TermColDelta`] to prevent CSI zero bug.
+    CursorForward(TermColDelta),
+    /// Cursor Backward (CUB) - ESC [ n D.
+    ///
+    /// Uses [`TermColDelta`] to prevent CSI zero bug.
+    CursorBackward(TermColDelta),
     /// Cursor Position (CUP) - ESC [ row ; col H
     CursorPosition { row: TermRow, col: TermCol },
     /// Cursor Position alternate form (HVP) - ESC [ row ; col f
@@ -50,16 +86,24 @@ pub enum CsiSequence {
     SaveCursor,
     /// Restore Cursor (RCP) - ESC [ u
     RestoreCursor,
-    /// Cursor Next Line (CNL) - ESC [ n E
-    CursorNextLine(u16),
-    /// Cursor Previous Line (CPL) - ESC [ n F
-    CursorPrevLine(u16),
+    /// Cursor Next Line (CNL) - ESC [ n E.
+    ///
+    /// Uses [`TermRowDelta`] to prevent CSI zero bug.
+    CursorNextLine(TermRowDelta),
+    /// Cursor Previous Line (CPL) - ESC [ n F.
+    ///
+    /// Uses [`TermRowDelta`] to prevent CSI zero bug.
+    CursorPrevLine(TermRowDelta),
     /// Cursor Horizontal Absolute (CHA) - ESC [ n G
     CursorHorizontalAbsolute(u16),
-    /// Scroll Up (SU) - ESC [ n S
-    ScrollUp(u16),
-    /// Scroll Down (SD) - ESC [ n T
-    ScrollDown(u16),
+    /// Scroll Up (SU) - ESC [ n S.
+    ///
+    /// Uses [`TermRowDelta`] to prevent CSI zero bug.
+    ScrollUp(TermRowDelta),
+    /// Scroll Down (SD) - ESC [ n T.
+    ///
+    /// Uses [`TermRowDelta`] to prevent CSI zero bug.
+    ScrollDown(TermRowDelta),
     /// Set Top and Bottom Margins (DECSTBM) - ESC [ top ; bottom r
     SetScrollingMargins {
         top: Option<TermRow>,
@@ -92,23 +136,23 @@ impl FastStringify for CsiSequence {
     fn write_to_buf(&self, acc: &mut BufTextStorage) -> Result {
         acc.push_str(CSI_START);
         match self {
-            CsiSequence::CursorUp(n) => {
-                let n_bytes = u16_to_u8_array(*n);
+            CsiSequence::CursorUp(delta) => {
+                let n_bytes = u16_to_u8_array(delta.as_u16());
                 acc.push_str(convert_u16_to_string_slice(&n_bytes));
                 acc.push(CUU_CURSOR_UP);
             }
-            CsiSequence::CursorDown(n) => {
-                let n_bytes = u16_to_u8_array(*n);
+            CsiSequence::CursorDown(delta) => {
+                let n_bytes = u16_to_u8_array(delta.as_u16());
                 acc.push_str(convert_u16_to_string_slice(&n_bytes));
                 acc.push(CUD_CURSOR_DOWN);
             }
-            CsiSequence::CursorForward(n) => {
-                let n_bytes = u16_to_u8_array(*n);
+            CsiSequence::CursorForward(delta) => {
+                let n_bytes = u16_to_u8_array(delta.as_u16());
                 acc.push_str(convert_u16_to_string_slice(&n_bytes));
                 acc.push(CUF_CURSOR_FORWARD);
             }
-            CsiSequence::CursorBackward(n) => {
-                let n_bytes = u16_to_u8_array(*n);
+            CsiSequence::CursorBackward(delta) => {
+                let n_bytes = u16_to_u8_array(delta.as_u16());
                 acc.push_str(convert_u16_to_string_slice(&n_bytes));
                 acc.push(CUB_CURSOR_BACKWARD);
             }
@@ -144,13 +188,13 @@ impl FastStringify for CsiSequence {
             CsiSequence::RestoreCursor => {
                 acc.push(RCP_RESTORE_CURSOR);
             }
-            CsiSequence::CursorNextLine(n) => {
-                let n_bytes = u16_to_u8_array(*n);
+            CsiSequence::CursorNextLine(delta) => {
+                let n_bytes = u16_to_u8_array(delta.as_u16());
                 acc.push_str(convert_u16_to_string_slice(&n_bytes));
                 acc.push(CNL_CURSOR_NEXT_LINE);
             }
-            CsiSequence::CursorPrevLine(n) => {
-                let n_bytes = u16_to_u8_array(*n);
+            CsiSequence::CursorPrevLine(delta) => {
+                let n_bytes = u16_to_u8_array(delta.as_u16());
                 acc.push_str(convert_u16_to_string_slice(&n_bytes));
                 acc.push(CPL_CURSOR_PREV_LINE);
             }
@@ -159,13 +203,13 @@ impl FastStringify for CsiSequence {
                 acc.push_str(convert_u16_to_string_slice(&n_bytes));
                 acc.push(CHA_CURSOR_COLUMN);
             }
-            CsiSequence::ScrollUp(n) => {
-                let n_bytes = u16_to_u8_array(*n);
+            CsiSequence::ScrollUp(delta) => {
+                let n_bytes = u16_to_u8_array(delta.as_u16());
                 acc.push_str(convert_u16_to_string_slice(&n_bytes));
                 acc.push(SU_SCROLL_UP);
             }
-            CsiSequence::ScrollDown(n) => {
-                let n_bytes = u16_to_u8_array(*n);
+            CsiSequence::ScrollDown(delta) => {
+                let n_bytes = u16_to_u8_array(delta.as_u16());
                 acc.push_str(convert_u16_to_string_slice(&n_bytes));
                 acc.push(SD_SCROLL_DOWN);
             }

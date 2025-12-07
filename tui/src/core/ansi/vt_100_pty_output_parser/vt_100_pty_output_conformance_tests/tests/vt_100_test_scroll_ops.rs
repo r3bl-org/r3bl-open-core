@@ -18,7 +18,7 @@ use crate::{EscSequence, TuiStyle, col,
                          vt_100_pty_output_parser::{CsiSequence, PrivateModeType,
                                                     ansi_parser_public_api::AnsiToOfsBufPerformer}},
             offscreen_buffer::test_fixtures_ofs_buf::*,
-            row, term_col, term_row};
+            row, term_col, term_row, term_row_delta};
 use vte::Perform;
 
 fn fill_buffer_with_lines(ofs_buf: &mut crate::OffscreenBuffer) {
@@ -420,7 +420,7 @@ pub mod scrolling {
         let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf);
 
         // Execute Scroll Up by 2 lines (CSI 2 S)
-        let sequence = CsiSequence::ScrollUp(2).to_string();
+        let sequence = CsiSequence::ScrollUp(term_row_delta(2).unwrap()).to_string();
         performer.apply_ansi_bytes(sequence);
 
         // Verify buffer scrolled up by 2: "Line-2" is now at row 0.
@@ -455,7 +455,7 @@ pub mod scrolling {
 
         let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf);
         // Execute Scroll Down by 3 lines (CSI 3 T)
-        let sequence = CsiSequence::ScrollDown(3).to_string();
+        let sequence = CsiSequence::ScrollDown(term_row_delta(3).unwrap()).to_string();
         performer.apply_ansi_bytes(sequence);
 
         // Verify buffer scrolled down by 3: first 3 lines are empty
@@ -494,7 +494,7 @@ pub mod scrolling {
 
         let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf);
         // Execute Scroll Up by 20 lines (more than height)
-        let sequence = CsiSequence::ScrollUp(20).to_string();
+        let sequence = CsiSequence::ScrollUp(term_row_delta(20).unwrap()).to_string();
         performer.apply_ansi_bytes(sequence);
 
         // Verify the entire buffer is empty.
@@ -512,7 +512,7 @@ pub mod scrolling {
 
         let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf);
         // Execute Scroll Down by 20 lines (more than height)
-        let sequence = CsiSequence::ScrollDown(20).to_string();
+        let sequence = CsiSequence::ScrollDown(term_row_delta(20).unwrap()).to_string();
         performer.apply_ansi_bytes(sequence);
 
         // Verify the entire buffer is empty.
@@ -575,7 +575,7 @@ pub mod scrolling {
         let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf);
 
         // Send CSI sequence with explicit default parameter 1.
-        let scroll_up_sequence = format!("{}", CsiSequence::ScrollUp(1));
+        let scroll_up_sequence = format!("{}", CsiSequence::ScrollUp(term_row_delta(1).unwrap()));
         performer.apply_ansi_bytes(scroll_up_sequence.as_bytes());
 
         // After scrolling up by 1, Line-1 should be at row 0.
@@ -595,7 +595,7 @@ pub mod scrolling {
         let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf);
 
         // Send CSI sequence with explicit default parameter 1.
-        let scroll_down_sequence = format!("{}", CsiSequence::ScrollDown(1));
+        let scroll_down_sequence = format!("{}", CsiSequence::ScrollDown(term_row_delta(1).unwrap()));
         performer.apply_ansi_bytes(scroll_down_sequence.as_bytes());
 
         // After scrolling down by 1, top row should be empty.
@@ -635,7 +635,7 @@ pub mod scrolling {
 
         // Test CSI S (Scroll Up) - cursor position should be unchanged
         performer.ofs_buf.cursor_pos = row(4) + col(7);
-        let sequence = CsiSequence::ScrollUp(2).to_string();
+        let sequence = CsiSequence::ScrollUp(term_row_delta(2).unwrap()).to_string();
         performer.apply_ansi_bytes(sequence);
         assert_eq!(
             performer.ofs_buf.cursor_pos,
@@ -645,7 +645,7 @@ pub mod scrolling {
 
         // Test CSI T (Scroll Down) - cursor position should be unchanged
         performer.ofs_buf.cursor_pos = row(6) + col(2);
-        let sequence = CsiSequence::ScrollDown(1).to_string();
+        let sequence = CsiSequence::ScrollDown(term_row_delta(1).unwrap()).to_string();
         performer.apply_ansi_bytes(sequence);
         assert_eq!(
             performer.ofs_buf.cursor_pos,
@@ -670,8 +670,8 @@ pub mod scrolling {
 
         // Test CSI 0 S (Scroll Up by 0 lines) - VT100 spec says 0 should be treated as 1
         // So this should scroll up by 1 line: Line-0 lost, Line-1 moves to top
-        let sequence = CsiSequence::ScrollUp(0).to_string();
-        performer.apply_ansi_bytes(sequence);
+        // Use raw ANSI bytes since type-safe API prevents zero deltas
+        performer.apply_ansi_bytes("\x1b[0S");
 
         // After scroll up by 1: Line-1 should now be at top (0 treated as 1)
         assert_plain_text_at(performer.ofs_buf, 0, 0, "Line-1");
@@ -682,8 +682,8 @@ pub mod scrolling {
         fill_buffer_with_lines(performer.ofs_buf);
 
         // Test CSI 0 T (Scroll Down by 0 lines) - also treated as 1
-        let sequence = CsiSequence::ScrollDown(0).to_string();
-        performer.apply_ansi_bytes(sequence);
+        // Use raw ANSI bytes since type-safe API prevents zero deltas
+        performer.apply_ansi_bytes("\x1b[0T");
 
         // After scroll down by 1: top should be empty, Line-0 moves to row 1
         assert_empty_at(performer.ofs_buf, 0, 0);
@@ -693,8 +693,8 @@ pub mod scrolling {
         fill_buffer_with_lines(performer.ofs_buf);
 
         // Test single line scroll up followed by single line scroll down.
-        let sequence_up = CsiSequence::ScrollUp(1).to_string();
-        let sequence_down = CsiSequence::ScrollDown(1).to_string();
+        let sequence_up = CsiSequence::ScrollUp(term_row_delta(1).unwrap()).to_string();
+        let sequence_down = CsiSequence::ScrollDown(term_row_delta(1).unwrap()).to_string();
 
         performer.apply_ansi_bytes(sequence_up); // Line-0 lost, Line-1->0, empty at bottom
         performer.apply_ansi_bytes(sequence_down); // Empty at top, Line-1->1, Line-2->0
@@ -930,7 +930,7 @@ pub mod decstbm_scroll_margins {
         performer.apply_ansi_bytes(set_margins);
 
         // Scroll up one line - should only affect rows 2-6 (0-based)
-        let scroll_up = CsiSequence::ScrollUp(1).to_string();
+        let scroll_up = CsiSequence::ScrollUp(term_row_delta(1).unwrap()).to_string();
         performer.apply_ansi_bytes(scroll_up);
 
         // Content outside scroll region should be unchanged.
@@ -972,7 +972,7 @@ pub mod decstbm_scroll_margins {
         assert_eq!(performer.ofs_buf.cursor_pos.row_index.as_usize(), 2); // 0-based row 2
 
         // Try to move cursor up - should be clamped to scroll region top.
-        let cursor_up = CsiSequence::CursorUp(5).to_string();
+        let cursor_up = CsiSequence::CursorUp(term_row_delta(5).unwrap()).to_string();
         performer.apply_ansi_bytes(cursor_up);
         assert_eq!(performer.ofs_buf.cursor_pos.row_index.as_usize(), 2); // Still at top margin
 
@@ -986,7 +986,7 @@ pub mod decstbm_scroll_margins {
         assert_eq!(performer.ofs_buf.cursor_pos.row_index.as_usize(), 6); // 0-based row 6
 
         // Try to move cursor down - should be clamped to scroll region bottom.
-        let cursor_down = CsiSequence::CursorDown(5).to_string();
+        let cursor_down = CsiSequence::CursorDown(term_row_delta(5).unwrap()).to_string();
         performer.apply_ansi_bytes(cursor_down);
         assert_eq!(performer.ofs_buf.cursor_pos.row_index.as_usize(), 6); // Still at bottom margin
     }
@@ -1191,7 +1191,7 @@ pub mod cursor_boundary_operations {
         let _result = ofs_buf.apply_ansi_bytes(move_sequence);
 
         // Execute CursorNextLine (should move to next line, column 1)
-        let next_line_sequence = format!("{}", CsiSequence::CursorNextLine(1));
+        let next_line_sequence = format!("{}", CsiSequence::CursorNextLine(term_row_delta(1).unwrap()));
         let _result = ofs_buf.apply_ansi_bytes(next_line_sequence);
 
         // Should be at row 5, column 1 (within scroll region)
@@ -1223,7 +1223,7 @@ pub mod cursor_boundary_operations {
         let _result = ofs_buf.apply_ansi_bytes(move_sequence);
 
         // Execute CursorNextLine (should cause scrolling within region)
-        let next_line_sequence = format!("{}", CsiSequence::CursorNextLine(1));
+        let next_line_sequence = format!("{}", CsiSequence::CursorNextLine(term_row_delta(1).unwrap()));
         let _result = ofs_buf.apply_ansi_bytes(next_line_sequence);
 
         // Should remain at row 7, column 1 (region boundary), but content should scroll
@@ -1255,7 +1255,7 @@ pub mod cursor_boundary_operations {
         let _result = ofs_buf.apply_ansi_bytes(move_sequence);
 
         // Execute CursorPrevLine (should move to previous line, column 1)
-        let prev_line_sequence = format!("{}", CsiSequence::CursorPrevLine(1));
+        let prev_line_sequence = format!("{}", CsiSequence::CursorPrevLine(term_row_delta(1).unwrap()));
         let _result = ofs_buf.apply_ansi_bytes(prev_line_sequence);
 
         // Should be at row 4, column 1 (within scroll region)
@@ -1287,7 +1287,7 @@ pub mod cursor_boundary_operations {
         let _result = ofs_buf.apply_ansi_bytes(move_sequence);
 
         // Execute CursorPrevLine (should cause scrolling or stay at boundary)
-        let prev_line_sequence = format!("{}", CsiSequence::CursorPrevLine(1));
+        let prev_line_sequence = format!("{}", CsiSequence::CursorPrevLine(term_row_delta(1).unwrap()));
         let _result = ofs_buf.apply_ansi_bytes(prev_line_sequence);
 
         // Should remain at row 3, column 1 (region boundary)
@@ -1319,7 +1319,7 @@ pub mod cursor_boundary_operations {
         let _result = ofs_buf.apply_ansi_bytes(move_sequence);
 
         // Execute CursorNextLine (should work normally outside region)
-        let next_line_sequence = format!("{}", CsiSequence::CursorNextLine(1));
+        let next_line_sequence = format!("{}", CsiSequence::CursorNextLine(term_row_delta(1).unwrap()));
         let _result = ofs_buf.apply_ansi_bytes(next_line_sequence);
 
         // Should move to row 3, column 1 (still outside scroll region)
@@ -1441,7 +1441,7 @@ pub mod boundary_validation {
 
         // Execute operations that would cause scrolling
         let scroll_ops =
-            format!("{}{}", "Text at bottom", CsiSequence::CursorNextLine(1));
+            format!("{}{}", "Text at bottom", CsiSequence::CursorNextLine(term_row_delta(1).unwrap()));
         let _result = ofs_buf.apply_ansi_bytes(scroll_ops);
 
         // Should handle full-buffer scrolling correctly
@@ -1500,9 +1500,9 @@ pub mod complex_interactions {
                 row: term_row(nz(7)),
                 col: term_col(nz(6))
             },
-            CsiSequence::CursorNextLine(1), // Should cause scrolling
+            CsiSequence::CursorNextLine(term_row_delta(1).unwrap()), // Should cause scrolling
             "NewText",
-            CsiSequence::CursorPrevLine(2) // Should move up within region
+            CsiSequence::CursorPrevLine(term_row_delta(2).unwrap()) // Should move up within region
         );
         let _result = ofs_buf.apply_ansi_bytes(complex_ops);
 
@@ -1581,9 +1581,9 @@ pub mod complex_interactions {
         let text_overflow = format!(
             "{}{}{}{}",
             "Line1",
-            CsiSequence::CursorNextLine(1),
+            CsiSequence::CursorNextLine(term_row_delta(1).unwrap()),
             "Line2",
-            CsiSequence::CursorNextLine(1)
+            CsiSequence::CursorNextLine(term_row_delta(1).unwrap())
         );
         let _result = ofs_buf.apply_ansi_bytes(text_overflow);
 

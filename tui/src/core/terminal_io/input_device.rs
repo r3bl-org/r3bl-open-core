@@ -1,9 +1,9 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{CrosstermEventResult, CrosstermInputDevice, InlineVec, InputEvent,
-            MockInputDevice, TERMINAL_LIB_BACKEND, TerminalLibBackend};
 #[cfg(unix)]
 use crate::DirectToAnsiInputDevice;
+use crate::{CrosstermEventResult, CrosstermInputDevice, InlineVec, InputEvent,
+            MockInputDevice, TERMINAL_LIB_BACKEND, TerminalLibBackend};
 use std::time::Duration;
 
 /// Generic input device wrapper that abstracts over different backend implementations.

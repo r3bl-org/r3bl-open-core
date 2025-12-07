@@ -49,11 +49,12 @@
 //! [`RenderOpOutput`]: crate::RenderOpOutput
 //! [rendering pipeline overview]: mod@crate::terminal_lib_backends#rendering-pipeline-architecture
 
-use crate::{AnsiSequenceGenerator, CliTextInline, DEBUG_TUI_SHOW_TERMINAL_BACKEND,
-            GCStringOwned, InlineString, LockedOutputDevice, Pos, RenderOpCommon,
-            RenderOpFlush, RenderOpOutput, RenderOpPaint, RenderOpsLocalData, Size,
+use crate::{AnsiSequenceGenerator, CliTextInline, ColIndex,
+            DEBUG_TUI_SHOW_TERMINAL_BACKEND, GCStringOwned, InlineString,
+            LockedOutputDevice, Pos, RenderOpCommon, RenderOpFlush, RenderOpOutput,
+            RenderOpPaint, RenderOpsLocalData, RowHeight, Size, TermRowDelta, TuiColor,
             TuiStyle, cli_text_inline_impl::CliTextConvertOptions, col,
-            disable_raw_mode, enable_raw_mode, sanitize_and_save_abs_pos,
+            disable_raw_mode, enable_raw_mode, row, sanitize_and_save_abs_pos,
             terminal_lib_backends::direct_to_ansi::PixelCharRenderer};
 
 /// Implements [`RenderOpPaint`] trait using direct ANSI sequence generation.
@@ -436,7 +437,7 @@ mod helpers {
     }
 
     pub fn move_cursor_to_column(
-        col_index: crate::ColIndex,
+        col_index: ColIndex,
         render_local_data: &mut RenderOpsLocalData,
         locked_output_device: LockedOutputDevice<'_>,
     ) {
@@ -448,33 +449,39 @@ mod helpers {
     }
 
     pub fn move_cursor_to_next_line(
-        row_height: crate::RowHeight,
+        row_height: RowHeight,
         render_local_data: &mut RenderOpsLocalData,
         locked_output_device: LockedOutputDevice<'_>,
     ) {
         render_local_data.cursor_pos.row_index += row_height;
         render_local_data.cursor_pos.col_index = col(0);
-        let ansi = AnsiSequenceGenerator::cursor_next_line(row_height);
-        locked_output_device
-            .write_all(ansi.as_bytes())
-            .expect("Failed to write cursor next line ANSI");
+        // Convert RowHeight to TermRowDelta - only emit if non-zero.
+        if let Some(delta) = TermRowDelta::new(row_height.as_u16()) {
+            let ansi = AnsiSequenceGenerator::cursor_next_line(delta);
+            locked_output_device
+                .write_all(ansi.as_bytes())
+                .expect("Failed to write cursor next line ANSI");
+        }
     }
 
     pub fn move_cursor_to_previous_line(
-        row_height: crate::RowHeight,
+        row_height: RowHeight,
         render_local_data: &mut RenderOpsLocalData,
         locked_output_device: LockedOutputDevice<'_>,
     ) {
         render_local_data.cursor_pos.row_index -= row_height;
         render_local_data.cursor_pos.col_index = col(0);
-        let ansi = AnsiSequenceGenerator::cursor_previous_line(row_height);
-        locked_output_device
-            .write_all(ansi.as_bytes())
-            .expect("Failed to write cursor previous line ANSI");
+        // Convert RowHeight to TermRowDelta - only emit if non-zero.
+        if let Some(delta) = TermRowDelta::new(row_height.as_u16()) {
+            let ansi = AnsiSequenceGenerator::cursor_previous_line(delta);
+            locked_output_device
+                .write_all(ansi.as_bytes())
+                .expect("Failed to write cursor previous line ANSI");
+        }
     }
 
     pub fn set_fg_color(
-        color: crate::TuiColor,
+        color: TuiColor,
         render_local_data: &mut RenderOpsLocalData,
         locked_output_device: LockedOutputDevice<'_>,
     ) {
@@ -490,7 +497,7 @@ mod helpers {
     }
 
     pub fn set_bg_color(
-        color: crate::TuiColor,
+        color: TuiColor,
         render_local_data: &mut RenderOpsLocalData,
         locked_output_device: LockedOutputDevice<'_>,
     ) {
@@ -552,10 +559,7 @@ mod helpers {
         ansi_output.push_str(&AnsiSequenceGenerator::enable_bracketed_paste());
         ansi_output.push_str(&AnsiSequenceGenerator::enable_mouse_tracking());
         ansi_output.push_str(&AnsiSequenceGenerator::enter_alternate_screen());
-        ansi_output.push_str(&AnsiSequenceGenerator::cursor_position(
-            crate::row(0),
-            crate::col(0),
-        ));
+        ansi_output.push_str(&AnsiSequenceGenerator::cursor_position(row(0), col(0)));
         ansi_output.push_str(&AnsiSequenceGenerator::clear_screen());
         ansi_output.push_str(&AnsiSequenceGenerator::hide_cursor());
 
@@ -645,7 +649,7 @@ mod helpers {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::row;
+    use crate::{AnsiValue, height};
 
     #[test]
     fn test_paint_common_noop_variant() {
@@ -710,8 +714,10 @@ mod tests {
     #[test]
     fn test_paint_common_cursor_next_line() {
         // MoveCursorToNextLine should generate next line ANSI
-        let row_height = crate::height(3);
-        let ansi = AnsiSequenceGenerator::cursor_next_line(row_height);
+        let row_height = height(3);
+        // SAFETY: 3 is always non-zero
+        let delta = TermRowDelta::new(row_height.as_u16()).unwrap();
+        let ansi = AnsiSequenceGenerator::cursor_next_line(delta);
         assert!(!ansi.is_empty());
         assert!(ansi.contains('\x1b'));
         assert!(ansi.contains('E')); // Should use E command
@@ -720,8 +726,10 @@ mod tests {
     #[test]
     fn test_paint_common_cursor_previous_line() {
         // MoveCursorToPreviousLine should generate previous line ANSI
-        let row_height = crate::height(2);
-        let ansi = AnsiSequenceGenerator::cursor_previous_line(row_height);
+        let row_height = height(2);
+        // SAFETY: 2 is always non-zero
+        let delta = TermRowDelta::new(row_height.as_u16()).unwrap();
+        let ansi = AnsiSequenceGenerator::cursor_previous_line(delta);
         assert!(!ansi.is_empty());
         assert!(ansi.contains('\x1b'));
         assert!(ansi.contains('F')); // Should use F command
@@ -819,7 +827,7 @@ mod tests {
     #[test]
     fn test_color_caching_fg_color() {
         // Foreground color should be cached to skip redundant sequences
-        let color1 = crate::TuiColor::Ansi(crate::AnsiValue::new(1)); // ANSI color index 1 (Red)
+        let color1 = TuiColor::Ansi(AnsiValue::new(1)); // ANSI color index 1 (Red)
         let ansi1 = AnsiSequenceGenerator::fg_color(color1);
         let ansi2 = AnsiSequenceGenerator::fg_color(color1);
 
@@ -831,7 +839,7 @@ mod tests {
     #[test]
     fn test_color_caching_bg_color() {
         // Background color should be cached to skip redundant sequences
-        let color1 = crate::TuiColor::Ansi(crate::AnsiValue::new(4)); // ANSI color index 4 (Blue)
+        let color1 = TuiColor::Ansi(AnsiValue::new(4)); // ANSI color index 4 (Blue)
         let ansi1 = AnsiSequenceGenerator::bg_color(color1);
         let ansi2 = AnsiSequenceGenerator::bg_color(color1);
 
@@ -884,7 +892,7 @@ mod tests {
     fn test_render_ops_local_data_color_tracking() {
         // Colors should be tracked for optimization
         let mut data = RenderOpsLocalData::default();
-        let color = crate::TuiColor::Ansi(crate::AnsiValue::new(2)); // Green
+        let color = TuiColor::Ansi(AnsiValue::new(2)); // Green
         data.fg_color = Some(color);
         data.bg_color = Some(color);
         assert_eq!(data.fg_color, Some(color));
@@ -903,8 +911,8 @@ mod tests {
         let _exit_raw = RenderOpCommon::ExitRawMode;
         let _move_abs = RenderOpCommon::MoveCursorPositionAbs(Pos::default());
         let _clear = RenderOpCommon::ClearScreen;
-        let white_color = crate::TuiColor::Ansi(crate::AnsiValue::new(7)); // White (ANSI 7)
-        let black_color = crate::TuiColor::Ansi(crate::AnsiValue::new(0)); // Black (ANSI 0)
+        let white_color = TuiColor::Ansi(AnsiValue::new(7)); // White (ANSI 7)
+        let black_color = TuiColor::Ansi(AnsiValue::new(0)); // Black (ANSI 0)
         let _set_fg = RenderOpCommon::SetFgColor(white_color);
         let _set_bg = RenderOpCommon::SetBgColor(black_color);
         let _reset = RenderOpCommon::ResetColor;
