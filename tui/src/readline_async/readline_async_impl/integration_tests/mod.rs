@@ -46,3 +46,5 @@ pub mod pty_ctrl_navigation_test;
 pub mod pty_alt_navigation_test;
 #[cfg(any(test, doc))]
 pub mod pty_alt_kill_test;
+#[cfg(any(test, doc))]
+pub mod pty_shared_writer_no_blank_line_test;
