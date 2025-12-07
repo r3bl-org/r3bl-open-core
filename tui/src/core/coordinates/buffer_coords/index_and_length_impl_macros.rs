@@ -102,6 +102,31 @@ macro_rules! generate_index_type_impl {
                 pub fn convert_to_length(&self) -> $assoc_len_ty {
                     $assoc_len_constr_fn(self.0 + 1)
                 }
+
+                /// Calculates the distance between two positions.
+                ///
+                /// Returns the number of positions from `other` to `self` as a length type.
+                /// For example, `row(10).distance_from(row(3))` returns `height(7)` (7 rows
+                /// apart).
+                ///
+                /// # Use Cases
+                ///
+                /// - Measuring how many rows/cols to scroll:
+                ///   `desired_pos.distance_from(current_pos)`.
+                /// - Calculating viewport spans: `end_index.distance_from(start_index)`.
+                ///
+                /// # Panics
+                ///
+                /// Panics if `other > self` (negative distance).
+                ///
+                /// # See Also
+                ///
+                /// For **navigating** backward by an offset (returning a position), use the
+                /// subtraction operator (`-`) instead: `position - offset`.
+                #[must_use]
+                pub fn distance_from(self, other: Self) -> $assoc_len_ty {
+                    $assoc_len_constr_fn(self.as_u16() - other.as_u16())
+                }
             }
         }
 
@@ -186,18 +211,37 @@ macro_rules! generate_index_type_impl {
                 }
             }
 
+            /// Navigates backward by subtracting an offset from a position.
+            ///
+            /// This operation moves backward within an index space, returning a new position.
+            /// For example, `row(5) - row(2)` returns `row(3)` (the position 2 steps before
+            /// row 5).
+            ///
+            /// Uses saturating subtraction: if the offset exceeds the position, returns
+            /// position 0 rather than overflowing.
+            ///
+            /// # Use Cases
+            ///
+            /// - Moving cursor backward: `cursor_pos - row(1)`.
+            /// - Calculating previous position: `current_index - offset`.
+            ///
+            /// # See Also
+            ///
+            /// For calculating the **distance** between two positions (returning a length),
+            /// use [`distance_from()`] instead.
+            ///
+            /// [`distance_from()`]: #method.distance_from
             impl ::std::ops::Sub<$idx_ty> for $idx_ty {
                 type Output = $idx_ty;
 
                 fn sub(self, rhs: $idx_ty) -> Self::Output {
-                    $constr_fn(*self - *rhs)
+                    $constr_fn(self.as_u16().saturating_sub(rhs.as_u16()))
                 }
             }
 
             impl ::std::ops::SubAssign<$idx_ty> for $idx_ty {
                 fn sub_assign(&mut self, rhs: $idx_ty) {
-                    let diff = **self - *rhs;
-                    *self = $constr_fn(diff);
+                    *self = *self - rhs;
                 }
             }
 
@@ -546,11 +590,38 @@ macro_rules! generate_length_type_impl {
                 }
             }
 
+            /// Dividing a length by a length yields a dimensionless count.
+            ///
+            /// For example, `ColWidth(240) / ColWidth(80)` returns `3` (the number of
+            /// 80-column widths that fit in 240 columns).
             impl ::std::ops::Div<$len_ty> for $len_ty {
-                type Output = $len_ty;
+                type Output = u16;
 
                 fn div(self, rhs: $len_ty) -> Self::Output {
-                    $len_ty(self.0 / rhs.0)
+                    self.as_u16() / rhs.as_u16()
+                }
+            }
+
+            /// Remainder after dividing a length by a length yields a dimensionless offset.
+            ///
+            /// For example, `ColWidth(245) % ColWidth(80)` returns `5` (the remainder
+            /// after fitting 80-column widths into 245 columns).
+            impl ::std::ops::Rem<$len_ty> for $len_ty {
+                type Output = u16;
+
+                fn rem(self, rhs: $len_ty) -> Self::Output {
+                    self.as_u16() % rhs.as_u16()
+                }
+            }
+
+            /// Dividing a length by a scalar scales the length down.
+            ///
+            /// For example, `ColWidth(80) / 2u16` returns `ColWidth(40)`.
+            impl ::std::ops::Div<u16> for $len_ty {
+                type Output = $len_ty;
+
+                fn div(self, rhs: u16) -> Self::Output {
+                    $constr_fn(self.as_u16() / rhs)
                 }
             }
 

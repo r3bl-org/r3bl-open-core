@@ -398,7 +398,7 @@ pub trait LengthOps: NumericValue {
     #[must_use]
     fn remaining_from(&self, arg_index: impl Into<Self::IndexType>) -> Length
     where
-        Self::IndexType: Sub<Output = Self::IndexType> + ArrayBoundsCheck<Self>,
+        Self::IndexType: ArrayBoundsCheck<Self> + Sub<Output = Self::IndexType> + IndexOps,
         <Self::IndexType as IndexOps>::LengthType: Into<Length>,
     {
         let index: Self::IndexType = arg_index.into();

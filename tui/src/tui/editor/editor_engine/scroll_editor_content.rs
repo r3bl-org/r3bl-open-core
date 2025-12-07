@@ -339,20 +339,20 @@ pub fn change_caret_row_by(
             clip_caret_row_to_content_height(buffer, &mut desired_caret_adj_row);
 
             // Calculate how many rows we need to increment caret row by.
-            let mut diff = desired_caret_adj_row - current_caret_adj_row;
+            let mut diff = desired_caret_adj_row.distance_from(current_caret_adj_row);
 
             // When buffer_mut goes out of scope, it will be dropped &.
             // validation performed.
             {
                 let buffer_mut = buffer.get_mut(engine.viewport());
 
-                while diff > row(0) {
+                while !diff.is_zero() {
                     inc_caret_row(
                         buffer_mut.inner.caret_raw,
                         buffer_mut.inner.scr_ofs,
                         buffer_mut.inner.vp.row_height,
                     );
-                    diff -= row(1);
+                    diff -= height(1);
                 }
             }
         }

@@ -102,9 +102,7 @@ mod arithmetic {
     }
 
     impl SubAssign for SegIndex {
-        fn sub_assign(&mut self, rhs: SegIndex) {
-            *self = *self - rhs;
-        }
+        fn sub_assign(&mut self, rhs: SegIndex) { *self = *self - rhs; }
     }
 
     impl Sub<SegLength> for SegIndex {
@@ -116,9 +114,7 @@ mod arithmetic {
     }
 
     impl SubAssign<SegLength> for SegIndex {
-        fn sub_assign(&mut self, rhs: SegLength) {
-            *self = *self - rhs;
-        }
+        fn sub_assign(&mut self, rhs: SegLength) { *self = *self - rhs; }
     }
 }
 

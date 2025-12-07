@@ -91,6 +91,29 @@ mod tests {
     }
 
     #[test]
+    fn test_div_row_height_returns_count() {
+        // Dividing height by height yields a dimensionless count.
+        assert_eq!(height(240) / height(80), 3_u16);
+        assert_eq!(height(80) / height(80), 1_u16);
+        assert_eq!(height(79) / height(80), 0_u16);
+    }
+
+    #[test]
+    fn test_rem_row_height_returns_remainder() {
+        // Remainder of height by height yields a dimensionless offset.
+        assert_eq!(height(240) % height(80), 0_u16);
+        assert_eq!(height(245) % height(80), 5_u16);
+        assert_eq!(height(79) % height(80), 79_u16);
+    }
+
+    #[test]
+    fn test_div_u16_scales_down() {
+        // Dividing height by scalar scales down the height.
+        assert_eq!(height(80) / 2_u16, height(40));
+        assert_eq!(height(100) / 4_u16, height(25));
+    }
+
+    #[test]
     fn test_convert_to_index() {
         assert_eq!(height(10).convert_to_index(), row(9));
     }

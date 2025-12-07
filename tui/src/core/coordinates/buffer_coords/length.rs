@@ -94,9 +94,17 @@ mod tests {
         length6 -= length1;
         assert_eq!(length6.0, ch(10));
 
-        // Div
-        let length7 = length2 / length1;
-        assert_eq!(length7.0, ch(2));
+        // Div (length / length -> u16 count)
+        let count = length2 / length1;
+        assert_eq!(count, 2_u16);
+
+        // Rem (length % length -> u16 remainder)
+        let remainder = Length::new(25) % length1;
+        assert_eq!(remainder, 5_u16);
+
+        // Div by scalar (length / u16 -> length)
+        let half = length2 / 2_u16;
+        assert_eq!(half.0, ch(10));
     }
 
     #[test]

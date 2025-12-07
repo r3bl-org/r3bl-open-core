@@ -67,6 +67,11 @@ Follow these principles when working with indices and lengths:
    - Instead of `== 0`
    - More idiomatic with newtype wrappers
 
+5. **Distinguish navigation from measurement**
+   - **Navigation** (`index - offset → index`): Moving backward in position space
+   - **Measurement** (`index.distance_from(other) → length`): Calculating distance between positions
+   - Use `-` for cursor movement, use `distance_from()` for calculating spans
+
 ## Common Imports
 
 ```rust
@@ -98,7 +103,7 @@ use r3bl_tui::{
 | **Range validation**    | `RangeBoundsExt`      | `range.check_range_is_valid_for_length(len)` | Iterator bounds, algorithm parameters                       |
 | **Range membership**    | `RangeBoundsExt`      | `range.check_index_is_within(index)`         | VT-100 scroll regions, text selections                      |
 | **Range conversion**    | `RangeConvertExt`     | `inclusive_range.to_exclusive()`             | Converting VT-100 ranges for Rust iteration                 |
-| **Relative movement**   | `TermRowDelta`/`TermColDelta` | `delta.as_nonzero_u16()`               | ANSI cursor movement preventing CSI zero bug                |
+| **Relative movement**   | `TermRowDelta`/`TermColDelta` | `TermRowDelta::new(n)` returns `Option` | ANSI cursor movement preventing CSI zero bug                |
 
 ## Detailed Examples
 
@@ -240,7 +245,30 @@ for line in rust_range {
 }
 ```
 
-### Example 7: Terminal Cursor Movement (CSI Zero Guard)
+### Example 7: Navigation vs Measurement
+
+**Use `-` for navigation (moving cursor), `distance_from()` for measurement (calculating spans).**
+
+```rust
+use r3bl_tui::{row, height, RowIndex, RowHeight};
+
+// Navigation: Move cursor backward by offset (returns RowIndex).
+let cursor_pos = row(10);
+let new_pos = cursor_pos - row(3);  // row(7) - moved 3 positions back
+// Uses saturating subtraction: row(2) - row(5) = row(0), not overflow
+
+// Measurement: Calculate distance between two positions (returns RowHeight).
+let start = row(5);
+let end = row(15);
+let distance: RowHeight = end.distance_from(start);  // height(10) - 10 rows apart
+// Panics if start > end (negative distance)
+```
+
+**When to use which:**
+- Moving cursor up/down/left/right → `-` operator
+- Calculating scroll amount, viewport span, selection size → `distance_from()`
+
+### Example 8: Terminal Cursor Movement (Make Illegal States Unrepresentable)
 
 **Use `TermRowDelta`/`TermColDelta` for relative cursor movement in ANSI sequences.**
 
@@ -248,44 +276,44 @@ The CSI zero problem: ANSI cursor movement commands interpret parameter 0 as 1:
 - `CSI 0 A` (`CursorUp` with n=0) moves cursor **1 row up**, not 0
 - `CSI 0 C` (`CursorForward` with n=0) moves cursor **1 column right**, not 0
 
+**Solution:** `TermRowDelta` and `TermColDelta` wrap `NonZeroU16` internally, making zero-valued
+deltas **impossible to represent**. Construction is fallible:
+
 ```rust
-use r3bl_tui::{term_row_delta, term_col_delta, CsiSequence, width};
+use r3bl_tui::{TermRowDelta, TermColDelta, CsiSequence};
 use std::io::Write;
 
 // Calculate cursor movement from position on 80-column terminal.
 let position: u16 = 240;  // 240 chars from start
 let term_width: u16 = 80;
 
-// Calculate row and column deltas.
-let rows_down = term_row_delta(position / term_width);  // 3 rows
-let cols_right = term_col_delta(position % term_width); // 0 cols
-
-// Use as_nonzero_u16() to safely emit - prevents CSI zero bug!
-if let Some(n) = rows_down.as_nonzero_u16() {
-    term.write_all(CsiSequence::CursorDown(n).to_string().as_bytes())?;
+// Fallible construction - must handle the None case.
+// For position 240: rows = 3 (Some), cols = 0 (None).
+if let Some(delta) = TermRowDelta::new(position / term_width) {
+    // delta is guaranteed non-zero, safe to emit
+    term.write_all(CsiSequence::CursorDown(delta).to_string().as_bytes())?;
 }
-if let Some(n) = cols_right.as_nonzero_u16() {
+if let Some(delta) = TermColDelta::new(position % term_width) {
     // This branch is NOT taken for position 240 (cols = 0)
-    // Without this guard, CursorForward(0) would move 1 column right!
-    term.write_all(CsiSequence::CursorForward(n).to_string().as_bytes())?;
+    // Zero cannot be represented, so the bug is prevented at the type level!
+    term.write_all(CsiSequence::CursorForward(delta).to_string().as_bytes())?;
 }
 ```
 
-**Converting from size types:**
+**Using the ONE constant for common case:**
 
 ```rust
-use r3bl_tui::{width, height, TermColDelta, TermRowDelta};
+use r3bl_tui::{TermRowDelta, TermColDelta, CsiSequence};
 
-let col_width = width(40);
-let delta: TermColDelta = col_width.into();  // Uses From<ColWidth>
-
-let row_height = height(10);
-let delta: TermRowDelta = row_height.into(); // Uses From<RowHeight>
+// For the common case of moving exactly 1 row/column, use the ONE constant.
+// This avoids the need for fallible construction or unwrap().
+let up_one = CsiSequence::CursorUp(TermRowDelta::ONE);
+let right_one = CsiSequence::CursorForward(TermColDelta::ONE);
 ```
 
 **Mathematical law:**
-- For safe emission: Only emit if `delta != 0`
-- `as_nonzero_u16()` returns `None` for zero, `Some(n)` otherwise
+- Zero deltas **cannot exist** - prevented at compile time by `NonZeroU16` wrapper
+- `new()` returns `None` for zero, `Some(delta)` for non-zero
 
 **Key difference from absolute positioning:**
 - `TermRow`/`TermCol`: 1-based absolute coordinates (for `CursorPosition`)
@@ -364,23 +392,39 @@ if row < width {  // Compile error! Can't compare RowIndex with ColWidth
 
 This is actually GOOD - the type system prevents nonsensical comparisons!
 
-### ❌ Mistake 4: Emitting CSI zero for cursor movement
+### ❌ Mistake 4: Using `-` when you need distance
 
 ```rust
-// Bad - CSI 0 C moves 1 column right, not 0!
-let cols = position % term_width;  // Could be 0!
-let seq = CsiSequence::CursorForward(cols);
-term.write_all(seq.to_string().as_bytes())?;  // Bug when cols = 0
+// Bad - using subtraction to calculate distance.
+// This returns RowIndex, not RowHeight!
+let current_row = row(5);
+let target_row = row(15);
+let rows_to_scroll = target_row - current_row;  // Returns row(10), a position!
 ```
 
 **Fix:**
 ```rust
-// Good - use delta types with zero guard
-let cols_right = term_col_delta(position % term_width);
-if let Some(n) = cols_right.as_nonzero_u16() {
-    term.write_all(CsiSequence::CursorForward(n).to_string().as_bytes())?;
+// Good - use distance_from() for measurement.
+let rows_to_scroll: RowHeight = target_row.distance_from(current_row);  // height(10)
+```
+
+### ❌ Mistake 5: Emitting CSI zero for cursor movement
+
+```rust
+// Bad - CSI 0 C moves 1 column right, not 0!
+// This won't even compile now - CursorForward requires TermColDelta, not u16!
+let cols = position % term_width;  // Could be 0!
+let seq = CsiSequence::CursorForward(cols);  // Compile error!
+```
+
+**Fix:**
+```rust
+// Good - use fallible delta construction (zero is unrepresentable)
+if let Some(delta) = TermColDelta::new(position % term_width) {
+    // delta is guaranteed non-zero
+    term.write_all(CsiSequence::CursorForward(delta).to_string().as_bytes())?;
 }
-// No sequence emitted when cols = 0 (correct behavior)
+// No sequence emitted when cols = 0 (correct behavior - branch not taken)
 ```
 
 ## Reporting Results

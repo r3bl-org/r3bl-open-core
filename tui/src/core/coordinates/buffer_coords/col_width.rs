@@ -102,6 +102,29 @@ mod tests {
     }
 
     #[test]
+    fn test_div_col_width_returns_count() {
+        // Dividing width by width yields a dimensionless count.
+        assert_eq!(width(240) / width(80), 3_u16);
+        assert_eq!(width(80) / width(80), 1_u16);
+        assert_eq!(width(79) / width(80), 0_u16);
+    }
+
+    #[test]
+    fn test_rem_col_width_returns_remainder() {
+        // Remainder of width by width yields a dimensionless offset.
+        assert_eq!(width(240) % width(80), 0_u16);
+        assert_eq!(width(245) % width(80), 5_u16);
+        assert_eq!(width(79) % width(80), 79_u16);
+    }
+
+    #[test]
+    fn test_div_u16_scales_down() {
+        // Dividing width by scalar scales down the width.
+        assert_eq!(width(80) / 2_u16, width(40));
+        assert_eq!(width(100) / 4_u16, width(25));
+    }
+
+    #[test]
     fn test_convert_to_index() {
         assert_eq!(width(5).convert_to_index(), col(4));
     }
