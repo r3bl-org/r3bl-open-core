@@ -2,7 +2,7 @@
 
 use super::core::LineState;
 use crate::{CsiSequence, GCStringOwned, LINE_FEED_BYTE, LineStateLiveness, ReadlineError,
-            TermColDelta, TermRowDelta, early_return_if_paused, ok, width};
+            TermCol, TermColDelta, TermRowDelta, early_return_if_paused, ok, width};
 use std::io::Write;
 
 impl LineState {
@@ -37,7 +37,7 @@ impl LineState {
                     .as_bytes(),
             )?;
             term.write_all(
-                CsiSequence::CursorHorizontalAbsolute(1)
+                CsiSequence::CursorHorizontalAbsolute(TermCol::ONE)
                     .to_string()
                     .as_bytes(),
             )?;
@@ -48,7 +48,7 @@ impl LineState {
         }
 
         // Write data in a way that newlines also act as carriage returns.
-        let col_0 = CsiSequence::CursorHorizontalAbsolute(1).to_string();
+        let col_0 = CsiSequence::CursorHorizontalAbsolute(TermCol::ONE).to_string();
         for line in data.split_inclusive(|b| *b == LINE_FEED_BYTE) {
             term.write_all(line)?;
             term.write_all(col_0.as_bytes())?;
@@ -76,7 +76,7 @@ impl LineState {
         }
 
         term.write_all(
-            CsiSequence::CursorHorizontalAbsolute(1)
+            CsiSequence::CursorHorizontalAbsolute(TermCol::ONE)
                 .to_string()
                 .as_bytes(),
         )?;
@@ -143,7 +143,7 @@ impl LineState {
         self.clear(term)?;
 
         term.write_all(
-            CsiSequence::CursorHorizontalAbsolute(1)
+            CsiSequence::CursorHorizontalAbsolute(TermCol::ONE)
                 .to_string()
                 .as_bytes(),
         )?;

@@ -197,7 +197,8 @@ pub fn next_line() -> String { "\x1bE".to_string() }
 /// * `row` - Target row (1-based, VT100 convention)
 #[must_use]
 pub fn move_to_row(row: u16) -> String {
-    CsiSequence::VerticalPositionAbsolute(row).to_string()
+    let row_nz = std::num::NonZeroU16::new(row).unwrap_or(std::num::NonZeroU16::new(1).unwrap());
+    CsiSequence::VerticalPositionAbsolute(crate::TermRow::from_raw_non_zero_value(row_nz)).to_string()
 }
 
 /// Complex cursor movement pattern: draw a box outline.

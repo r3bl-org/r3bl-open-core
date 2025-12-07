@@ -64,6 +64,22 @@ impl Display for TermRow {
 }
 
 impl TermRow {
+    /// Row 1 - the first (top) row of the terminal.
+    ///
+    /// Use this constant instead of manually constructing a row 1 value.
+    /// This is commonly used for operations that need to reference the top of
+    /// the screen.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use r3bl_tui::{TermRow, CsiSequence};
+    ///
+    /// // Move cursor to row 1 (top of screen)
+    /// let seq = CsiSequence::VerticalPositionAbsolute(TermRow::ONE);
+    /// ```
+    pub const ONE: Self = Self(NonZeroU16::new(1).unwrap());
+
     /// Create a 1-based terminal coordinate from a raw [`NonZeroU16`] value.
     ///
     /// Use this constructor when wrapping external [`NonZeroU16`] data, such as

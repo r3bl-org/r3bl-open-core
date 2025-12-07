@@ -4,7 +4,7 @@
 
 use super::super::test_fixtures_vt_100_ansi_conformance::*;
 use crate::{
-    ANSIBasicColor, EscSequence, OffscreenBuffer, SgrCode, height, width,
+    ANSIBasicColor, EraseDisplayMode, EscSequence, OffscreenBuffer, SgrCode, height, width,
             offscreen_buffer::test_fixtures_ofs_buf::*,
             term_col, term_row, tui_style_attrib};
 use crate::core::ansi::vt_100_pty_output_parser::{ansi_parser_public_api::AnsiToOfsBufPerformer,
@@ -30,7 +30,7 @@ mod full_sequences {
         // Simulate a vim-like sequence using proper builders.
         let sequence = format!(
             "{clear_screen}{home_position}{reverse_video}{status_text}{reset_attrs}{save_cursor}{move_to_cmd}{prompt}{restore_cursor}{restored_text}",
-            clear_screen = CsiSequence::EraseDisplay(2), // ESC[2J
+            clear_screen = CsiSequence::EraseDisplay(EraseDisplayMode::EntireScreen), // ESC[2J
             home_position = csi_seq_cursor_pos(term_row(nz(1)) + term_col(nz(1))), /* ESC[H */
             reverse_video = SgrCode::Invert, // ESC[7m
             status_text = "-- INSERT --",

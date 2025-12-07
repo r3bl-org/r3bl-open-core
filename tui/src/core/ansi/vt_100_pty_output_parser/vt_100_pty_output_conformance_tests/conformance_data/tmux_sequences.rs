@@ -14,8 +14,8 @@
 //! - Copy mode uses reverse video for selection
 
 use super::super::test_fixtures_vt_100_ansi_conformance::nz;
-use crate::{ANSIBasicColor, SgrCode, core::ansi::vt_100_pty_output_parser::CsiSequence,
-            term_col, term_row};
+use crate::{ANSIBasicColor, EraseDisplayMode, EraseLineMode, SgrCode,
+            core::ansi::vt_100_pty_output_parser::CsiSequence, term_col, term_row};
 
 /// Generate tmux-style status bar display.
 ///
@@ -51,7 +51,7 @@ pub fn tmux_status_bar() -> String {
         " \"r3bl-host\" 15:30:45",
         SgrCode::Reset,
         // Clear to end of line.
-        CsiSequence::EraseLine(0)
+        CsiSequence::EraseLine(EraseLineMode::FromCursorToEnd)
     )
 }
 
@@ -64,7 +64,7 @@ pub fn tmux_pane_split_horizontal() -> String {
     format!(
         "{}{}{}{}{}{}{}{}{}{}{}{}{}{}{}",
         // Clear screen.
-        CsiSequence::EraseDisplay(2),
+        CsiSequence::EraseDisplay(EraseDisplayMode::EntireScreen),
         // Draw top pane content.
         CsiSequence::CursorPosition {
             row: term_row(nz(1)),
@@ -133,7 +133,7 @@ pub fn tmux_copy_mode_selection(
         "[Copy Mode]",
         SgrCode::Reset,
         // Clear to end of status line.
-        CsiSequence::EraseLine(0)
+        CsiSequence::EraseLine(EraseLineMode::FromCursorToEnd)
     )
 }
 
@@ -146,7 +146,7 @@ pub fn tmux_session_list() -> String {
     format!(
         "{}{}{}{}{}{}{}{}{}{}{}{}{}{}{}",
         // Clear screen. and show session list
-        CsiSequence::EraseDisplay(2),
+        CsiSequence::EraseDisplay(EraseDisplayMode::EntireScreen),
         CsiSequence::CursorPosition {
             row: term_row(nz(1)),
             col: term_col(nz(1))

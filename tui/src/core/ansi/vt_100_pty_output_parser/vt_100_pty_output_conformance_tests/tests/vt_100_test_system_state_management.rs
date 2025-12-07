@@ -9,7 +9,7 @@
 //! - Scroll region effects on cursor save/restore
 
 use super::super::test_fixtures_vt_100_ansi_conformance::*;
-use crate::{ANSIBasicColor, SgrCode, col,
+use crate::{ANSIBasicColor, EraseDisplayMode, SgrCode, col,
             core::ansi::vt_100_pty_output_parser::{CsiSequence, PrivateModeType},
             row, term_col, term_row};
 
@@ -463,7 +463,7 @@ pub mod complex_state_combinations {
                 col: term_col(nz(1))
             },
             "Text2 ",
-            CsiSequence::EraseDisplay(0), // Clear from cursor to end
+            CsiSequence::EraseDisplay(EraseDisplayMode::FromCursorToEnd), // Clear from cursor to end
             "Text3"
         );
         let _result = ofs_buf.apply_ansi_bytes(buffer_ops);

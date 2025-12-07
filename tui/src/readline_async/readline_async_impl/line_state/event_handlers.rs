@@ -1,9 +1,9 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::core::LineState;
-use crate::{AnsiSequenceGenerator, CsiSequence, GCStringOwned, InputEvent, Key, KeyPress,
-            KeyState, LineStateLiveness, NumericValue, ReadlineError, ReadlineEvent, SafeHistory,
-            Size, SpecialKey, col, early_return_if_paused, find_next_word_end,
+use crate::{AnsiSequenceGenerator, CsiSequence, EraseDisplayMode, GCStringOwned, InputEvent, Key,
+            KeyPress, KeyState, LineStateLiveness, NumericValue, ReadlineError, ReadlineEvent,
+            SafeHistory, Size, SpecialKey, col, early_return_if_paused, find_next_word_end,
             find_next_word_start, find_prev_word_start, height, row, seg_index, width};
 use std::io::Write;
 use unicode_segmentation::UnicodeSegmentation;
@@ -147,7 +147,7 @@ fn handle_ctrl_l(
     early_return_if_paused!(line_state @None);
 
     // ED 2 = Erase entire screen (CSI 2J), then move cursor to home (row 0, col 0).
-    term.write_all(CsiSequence::EraseDisplay(2).to_string().as_bytes())?;
+    term.write_all(CsiSequence::EraseDisplay(EraseDisplayMode::EntireScreen).to_string().as_bytes())?;
     term.write_all(
         AnsiSequenceGenerator::cursor_position(row(0), col(0)).as_bytes(),
     )?;

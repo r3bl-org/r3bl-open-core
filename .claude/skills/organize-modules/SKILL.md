@@ -272,6 +272,94 @@ pub mod serialization;
 
 **Why:** Users need to know which features enable which APIs.
 
+### Inner Modules vs. Separate Files
+
+When organizing code into logical groups, choose between **inner modules** (same file) and
+**separate files** based on file size and complexity.
+
+#### Inner Modules (Same File)
+
+**✅ Use inner modules when:**
+
+- File is small-to-medium (under ~300 lines total)
+- Groups are logically related and benefit from proximity
+- Comment banners (`// ======`) are being used to separate sections
+- Each group is relatively small (~20-50 lines)
+
+```rust
+// ansi_sequence_generator.rs - Inner module pattern
+
+pub struct AnsiSequenceGenerator;
+
+mod cursor_movement {
+    use super::*;
+    impl AnsiSequenceGenerator {
+        pub fn cursor_position(...) -> String { ... }
+        pub fn cursor_to_column(...) -> String { ... }
+    }
+}
+
+mod screen_clearing {
+    use super::*;
+    impl AnsiSequenceGenerator {
+        pub fn clear_screen() -> String { ... }
+        pub fn clear_current_line() -> String { ... }
+    }
+}
+
+mod color_ops {
+    use super::*;
+    impl AnsiSequenceGenerator {
+        pub fn fg_color(...) -> String { ... }
+        pub fn bg_color(...) -> String { ... }
+    }
+}
+```
+
+**Benefits:**
+- Single-file cohesion - everything related stays together
+- Easier navigation - no jumping between files
+- Clear grouping - `mod` keyword is more formal than comment banners
+- Scoped imports - each inner mod can import only what it needs
+
+#### Separate Files
+
+**✅ Use separate files when:**
+
+- Individual groups exceed ~100 lines each
+- Groups have distinct dependencies (different imports)
+- File would exceed ~500 lines total
+- Groups are conceptually independent (could be tested separately)
+
+```
+generator/
+├── mod.rs                    # Re-exports + struct definition
+├── cursor_movement.rs        # impl AnsiSequenceGenerator { cursor_* }
+├── screen_clearing.rs        # impl AnsiSequenceGenerator { clear_* }
+├── color_ops.rs              # impl AnsiSequenceGenerator { colors }
+└── terminal_modes.rs         # impl AnsiSequenceGenerator { modes }
+```
+
+#### Code Smell: Comment Banners
+
+If you find yourself writing comment banners like this:
+
+```rust
+impl MyStruct {
+    // ==================== Group A ====================
+    fn method_a1() { ... }
+    fn method_a2() { ... }
+
+    // ==================== Group B ====================
+    fn method_b1() { ... }
+    fn method_b2() { ... }
+}
+```
+
+**This is a signal to formalize the grouping** using either inner modules (small file) or
+separate files (large file). Comment banners are informal and don't provide the same benefits
+as actual module boundaries (scoped imports, clear boundaries, IDE navigation).
+
 ## Complete Examples
 
 ### Example 1: Simple Module Organization

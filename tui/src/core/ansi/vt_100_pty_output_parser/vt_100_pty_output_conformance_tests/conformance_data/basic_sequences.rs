@@ -13,8 +13,8 @@
 //! - Basic movement: VT100 User Guide Section 3.3.2
 
 use super::super::test_fixtures_vt_100_ansi_conformance::nz;
-use crate::{LengthOps, core::ansi::vt_100_pty_output_parser::CsiSequence, len, term_col,
-            term_row};
+use crate::{CsiCount, EraseDisplayMode, LengthOps,
+            core::ansi::vt_100_pty_output_parser::CsiSequence, len, term_col, term_row};
 use std::num::NonZeroU16;
 
 /// Clear entire screen and return cursor to home position (1,1).
@@ -27,7 +27,7 @@ use std::num::NonZeroU16;
 pub fn clear_and_home() -> String {
     format!(
         "{}{}",
-        CsiSequence::EraseDisplay(2), // Clear entire screen
+        CsiSequence::EraseDisplay(EraseDisplayMode::EntireScreen), // Clear entire screen
         CsiSequence::CursorPosition {
             row: term_row(nz(1)),
             col: term_col(nz(1))
@@ -80,10 +80,12 @@ pub fn insert_text(text: &str) -> String { text.to_string() }
 #[must_use]
 pub fn move_and_delete_chars(col: u16, count: usize) -> String {
     let delete_count = len(count).clamp_to_max(u16::MAX).as_u16();
+    let col_nz = NonZeroU16::new(col).unwrap_or(NonZeroU16::new(1).unwrap());
+    let count_csi = CsiCount::new(delete_count).unwrap_or(CsiCount::ONE);
     format!(
         "{}{}",
-        CsiSequence::CursorHorizontalAbsolute(col),
-        CsiSequence::DeleteChar(delete_count)
+        CsiSequence::CursorHorizontalAbsolute(crate::TermCol::from_raw_non_zero_value(col_nz)),
+        CsiSequence::DeleteChar(count_csi)
     )
 }
 
@@ -99,10 +101,12 @@ pub fn move_and_delete_chars(col: u16, count: usize) -> String {
 #[must_use]
 pub fn move_and_insert_chars(col: u16, count: usize) -> String {
     let insert_count = len(count).clamp_to_max(u16::MAX).as_u16();
+    let col_nz = NonZeroU16::new(col).unwrap_or(NonZeroU16::new(1).unwrap());
+    let count_csi = CsiCount::new(insert_count).unwrap_or(CsiCount::ONE);
     format!(
         "{}{}",
-        CsiSequence::CursorHorizontalAbsolute(col),
-        CsiSequence::InsertChar(insert_count)
+        CsiSequence::CursorHorizontalAbsolute(crate::TermCol::from_raw_non_zero_value(col_nz)),
+        CsiSequence::InsertChar(count_csi)
     )
 }
 
@@ -118,9 +122,11 @@ pub fn move_and_insert_chars(col: u16, count: usize) -> String {
 #[must_use]
 pub fn move_and_erase_chars(col: u16, count: usize) -> String {
     let erase_count = len(count).clamp_to_max(u16::MAX).as_u16();
+    let col_nz = NonZeroU16::new(col).unwrap_or(NonZeroU16::new(1).unwrap());
+    let count_csi = CsiCount::new(erase_count).unwrap_or(CsiCount::ONE);
     format!(
         "{}{}",
-        CsiSequence::CursorHorizontalAbsolute(col),
-        CsiSequence::EraseChar(erase_count)
+        CsiSequence::CursorHorizontalAbsolute(crate::TermCol::from_raw_non_zero_value(col_nz)),
+        CsiSequence::EraseChar(count_csi)
     )
 }

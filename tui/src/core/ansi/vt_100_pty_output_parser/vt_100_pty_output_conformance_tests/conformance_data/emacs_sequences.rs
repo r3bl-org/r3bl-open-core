@@ -13,8 +13,8 @@
 //! - Often employs more conservative styling
 
 use super::super::test_fixtures_vt_100_ansi_conformance::nz;
-use crate::{ANSIBasicColor, SgrCode, core::ansi::vt_100_pty_output_parser::CsiSequence,
-            term_col, term_row};
+use crate::{ANSIBasicColor, EraseDisplayMode, EraseLineMode, SgrCode,
+            core::ansi::vt_100_pty_output_parser::CsiSequence, term_col, term_row};
 
 /// Generate Emacs-style mode line display.
 ///
@@ -46,7 +46,7 @@ pub fn emacs_mode_line() -> String {
         "  L1  C1  All (2,15) [Git:main] 15:30",
         SgrCode::Reset,
         // Clear to end of line.
-        CsiSequence::EraseLine(0)
+        CsiSequence::EraseLine(EraseLineMode::FromCursorToEnd)
     )
 }
 
@@ -63,7 +63,7 @@ pub fn emacs_minibuffer_prompt(prompt: &str) -> String {
             col: term_col(nz(1))
         },
         // Clear the line first.
-        CsiSequence::EraseLine(2),
+        CsiSequence::EraseLine(EraseLineMode::EntireLine),
         // Bold prompt.
         SgrCode::Bold,
         prompt,
@@ -80,7 +80,7 @@ pub fn emacs_buffer_list() -> String {
     format!(
         "{}{}{}{}{}{}{}{}{}{}{}{}",
         // Clear screen and move to top.
-        CsiSequence::EraseDisplay(2),
+        CsiSequence::EraseDisplay(EraseDisplayMode::EntireScreen),
         CsiSequence::CursorPosition {
             row: term_row(nz(1)),
             col: term_col(nz(1))

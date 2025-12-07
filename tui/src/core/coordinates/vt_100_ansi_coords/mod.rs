@@ -58,6 +58,7 @@
 //! [`buffer_coords`]: crate::coordinates::buffer_coords
 
 // Submodule declarations (private).
+mod csi_count;
 mod term_col;
 mod term_col_delta;
 mod term_pos;
@@ -65,6 +66,7 @@ mod term_row;
 mod term_row_delta;
 
 // Re-export for flat public API.
+pub use csi_count::*;
 pub use term_col::*;
 pub use term_col_delta::*;
 pub use term_pos::*;

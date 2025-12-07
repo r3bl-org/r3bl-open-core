@@ -6,7 +6,7 @@
 
 #[cfg(test)]
 mod cursor_positioning_tests {
-    use crate::{AnsiSequenceGenerator, CsiSequence, col, row, term_col, term_row, term_row_delta};
+    use crate::{AnsiSequenceGenerator, CsiSequence, TermCol, col, row, term_col, term_row, term_row_delta};
     use crate::core::ansi::vt_100_pty_output_parser::vt_100_pty_output_conformance_tests::test_fixtures_vt_100_ansi_conformance::nz;
 
     #[test]
@@ -39,7 +39,7 @@ mod cursor_positioning_tests {
     #[test]
     fn test_cursor_to_column() {
         let seq = AnsiSequenceGenerator::cursor_to_column(col(15));
-        assert_eq!(seq, CsiSequence::CursorHorizontalAbsolute(16).to_string());
+        assert_eq!(seq, CsiSequence::CursorHorizontalAbsolute(TermCol::from_raw_non_zero_value(nz(16))).to_string());
     }
 
     #[test]
@@ -65,31 +65,30 @@ mod cursor_positioning_tests {
 
 #[cfg(test)]
 mod screen_clearing_tests {
-    use crate::{AnsiSequenceGenerator, CsiSequence, ED_ERASE_ALL, EL_ERASE_ALL,
-                EL_ERASE_FROM_START, EL_ERASE_TO_END};
+    use crate::{AnsiSequenceGenerator, CsiSequence, EraseDisplayMode, EraseLineMode};
 
     #[test]
     fn test_clear_screen() {
         let seq = AnsiSequenceGenerator::clear_screen();
-        assert_eq!(seq, CsiSequence::EraseDisplay(ED_ERASE_ALL).to_string());
+        assert_eq!(seq, CsiSequence::EraseDisplay(EraseDisplayMode::EntireScreen).to_string());
     }
 
     #[test]
     fn test_clear_current_line() {
         let seq = AnsiSequenceGenerator::clear_current_line();
-        assert_eq!(seq, CsiSequence::EraseLine(EL_ERASE_ALL).to_string());
+        assert_eq!(seq, CsiSequence::EraseLine(EraseLineMode::EntireLine).to_string());
     }
 
     #[test]
     fn test_clear_to_end_of_line() {
         let seq = AnsiSequenceGenerator::clear_to_end_of_line();
-        assert_eq!(seq, CsiSequence::EraseLine(EL_ERASE_TO_END).to_string());
+        assert_eq!(seq, CsiSequence::EraseLine(EraseLineMode::FromCursorToEnd).to_string());
     }
 
     #[test]
     fn test_clear_to_start_of_line() {
         let seq = AnsiSequenceGenerator::clear_to_start_of_line();
-        assert_eq!(seq, CsiSequence::EraseLine(EL_ERASE_FROM_START).to_string());
+        assert_eq!(seq, CsiSequence::EraseLine(EraseLineMode::FromStartToCursor).to_string());
     }
 }
 

@@ -4,7 +4,7 @@
 
 use super::super::test_fixtures_vt_100_ansi_conformance::*;
 use crate::{
-    EscSequence, Pos, col, height, width,
+    EscSequence, Pos, TermRow, col, height, width,
             offscreen_buffer::test_fixtures_ofs_buf::*,
             row, term_col, term_row};
 use crate::core::ansi::{
@@ -716,7 +716,7 @@ pub mod vertical_position_absolute {
             row: term_row(nz(4)),
             col: term_col(nz(6)),
         }; // Move to row 4, col 6 (1-based)
-        let vpa_sequence = CsiSequence::VerticalPositionAbsolute(7);
+        let vpa_sequence = CsiSequence::VerticalPositionAbsolute(TermRow::from_raw_non_zero_value(nz(7)));
         let sequence = format!("{move_cursor}{vpa_sequence}");
         let _result = ofs_buf.apply_ansi_bytes(sequence);
 
@@ -737,7 +737,7 @@ pub mod vertical_position_absolute {
             row: term_row(nz(6)),
             col: term_col(nz(9)),
         }; // Move to row 6, col 9 (1-based)
-        let vpa_sequence = CsiSequence::VerticalPositionAbsolute(1); // Default to row 1
+        let vpa_sequence = CsiSequence::VerticalPositionAbsolute(TermRow::ONE); // Default to row 1
         let sequence = format!("{move_cursor}{vpa_sequence}");
         let _result = ofs_buf.apply_ansi_bytes(sequence);
 
@@ -758,7 +758,7 @@ pub mod vertical_position_absolute {
             row: term_row(nz(6)),
             col: term_col(nz(4)),
         }; // Move to row 6, col 4 (1-based)
-        let vpa_sequence = CsiSequence::VerticalPositionAbsolute(15); // Beyond bounds
+        let vpa_sequence = CsiSequence::VerticalPositionAbsolute(TermRow::from_raw_non_zero_value(nz(15))); // Beyond bounds
         let sequence = format!("{move_cursor}{vpa_sequence}");
         let _result = ofs_buf.apply_ansi_bytes(sequence);
 
@@ -781,7 +781,7 @@ pub mod vertical_position_absolute {
         }; // Move to row 8, col 3 (1-based)
         // VPA parameter 0 should be treated as 1, but since we need explicit param,
         // let's use 1 which represents the first row.
-        let vpa_sequence = CsiSequence::VerticalPositionAbsolute(1);
+        let vpa_sequence = CsiSequence::VerticalPositionAbsolute(TermRow::ONE);
         let sequence = format!("{move_cursor}{vpa_sequence}");
         let _result = ofs_buf.apply_ansi_bytes(sequence);
 
@@ -806,7 +806,7 @@ pub mod vertical_position_absolute {
                 row: term_row(nz(3)),
                 col: term_col(col_nz),
             }; // Move to row 3, col (1-based)
-            let vpa_sequence = CsiSequence::VerticalPositionAbsolute(8);
+            let vpa_sequence = CsiSequence::VerticalPositionAbsolute(TermRow::from_raw_non_zero_value(nz(8)));
             let sequence = format!("{move_cursor}{vpa_sequence}");
             let _result = ofs_buf.apply_ansi_bytes(sequence);
 

@@ -17,7 +17,7 @@
 //! [parser module docs]: super::super
 
 use super::super::test_fixtures_vt_100_ansi_conformance::*;
-use crate::{col,
+use crate::{CsiCount, col,
             core::ansi::vt_100_pty_output_parser::{CsiSequence,
                                                    ansi_parser_public_api::AnsiToOfsBufPerformer},
             row, term_col, term_row};
@@ -32,7 +32,7 @@ pub mod insert_line {
 
         // Move cursor to row 2 (0-based) and insert one line
         let move_cursor = term_row(nz(3)) + term_col(nz(1)); // Move to row 3, col 1 (1-based)
-        let insert_line = CsiSequence::InsertLine(1);
+        let insert_line = CsiSequence::InsertLine(CsiCount::ONE);
         let sequence = format!("{move_cursor}{insert_line}");
         let _result = ofs_buf.apply_ansi_bytes(sequence);
 
@@ -51,7 +51,7 @@ pub mod insert_line {
 
         // Move cursor to row 1 (0-based) and insert three lines
         let move_cursor = term_row(nz(2)) + term_col(nz(1)); // Move to row 2, col 1 (1-based)
-        let insert_lines = CsiSequence::InsertLine(3);
+        let insert_lines = CsiSequence::InsertLine(CsiCount::new(3).unwrap());
         let sequence = format!("{move_cursor}{insert_lines}");
         let _result = ofs_buf.apply_ansi_bytes(sequence);
 
@@ -80,7 +80,7 @@ pub mod insert_line {
             row: term_row(nz(5)),
             col: term_col(nz(1)),
         };
-        let insert_line = CsiSequence::InsertLine(1);
+        let insert_line = CsiSequence::InsertLine(CsiCount::ONE);
         let sequence = format!("{move_cursor}{insert_line}");
         let _result = ofs_buf.apply_ansi_bytes(sequence);
 
@@ -112,7 +112,7 @@ pub mod insert_line {
         performer.ofs_buf.cursor_pos = row(0) + col(0);
 
         // Try to insert line: ESC[L (should be ignored)
-        let insert_line_sequence = format!("{}", CsiSequence::InsertLine(1));
+        let insert_line_sequence = format!("{}", CsiSequence::InsertLine(CsiCount::ONE));
         let _result = ofs_buf.apply_ansi_bytes(insert_line_sequence);
 
         // Verify no changes occurred.
@@ -135,7 +135,7 @@ pub mod delete_line {
             row: term_row(nz(3)),
             col: term_col(nz(1)),
         };
-        let delete_line = CsiSequence::DeleteLine(1);
+        let delete_line = CsiSequence::DeleteLine(CsiCount::ONE);
         let sequence = format!("{move_cursor}{delete_line}");
         let _result = ofs_buf.apply_ansi_bytes(sequence);
 
@@ -157,7 +157,7 @@ pub mod delete_line {
             row: term_row(nz(2)),
             col: term_col(nz(1)),
         };
-        let delete_lines = CsiSequence::DeleteLine(3);
+        let delete_lines = CsiSequence::DeleteLine(CsiCount::new(3).unwrap());
         let sequence = format!("{move_cursor}{delete_lines}");
         let _result = ofs_buf.apply_ansi_bytes(sequence);
 
@@ -186,7 +186,7 @@ pub mod delete_line {
             row: term_row(nz(5)),
             col: term_col(nz(1)),
         };
-        let delete_line = CsiSequence::DeleteLine(1);
+        let delete_line = CsiSequence::DeleteLine(CsiCount::ONE);
         let sequence = format!("{move_cursor}{delete_line}");
         let _result = ofs_buf.apply_ansi_bytes(sequence);
 
@@ -218,7 +218,7 @@ pub mod delete_line {
         performer.ofs_buf.cursor_pos = row(4) + col(0);
 
         // Try to delete line: ESC[M (should be ignored)
-        let delete_line_sequence = format!("{}", CsiSequence::DeleteLine(1));
+        let delete_line_sequence = format!("{}", CsiSequence::DeleteLine(CsiCount::ONE));
         let _result = ofs_buf.apply_ansi_bytes(delete_line_sequence);
 
         // Verify no changes occurred.

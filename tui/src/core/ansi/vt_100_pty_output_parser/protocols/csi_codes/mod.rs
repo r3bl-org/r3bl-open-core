@@ -43,12 +43,14 @@
 //! [`esc_codes`]: crate::vt_100_pty_output_parser::protocols::esc_codes
 
 // Attach private module to avoid naming conflicts (hide inner details).
+mod erase_mode;
 mod margin;
 mod private_mode;
 mod sequence;
 mod sgr_color_sequences;
 
 // Re-export public items for easier access.
+pub use erase_mode::*;
 pub use margin::*;
 pub use private_mode::*;
 pub use sequence::*;

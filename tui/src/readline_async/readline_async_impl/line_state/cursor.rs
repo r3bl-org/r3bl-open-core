@@ -2,8 +2,8 @@
 
 use super::core::LineState;
 use crate::{ArrayBoundsCheck, ArrayOverflowResult, ColWidth, CsiSequence, CursorBoundsCheck,
-            NumericValue, Seg, StringLength, TermColDelta, TermRowDelta, col, ok, seg_index,
-            term_col_delta, term_row_delta, width};
+            NumericValue, Seg, StringLength, TermCol, TermColDelta, TermRowDelta, col, ok,
+            seg_index, term_col_delta, term_row_delta, width};
 use std::io::{self, Write};
 
 impl LineState {
@@ -39,8 +39,8 @@ impl LineState {
         // Position 80 on 80-col terminal is Row 1, Col 0: 80/80 = 1 row.
         let move_up = self.line_height(from);
 
-        // Move to column 0 (CHA = Cursor Horizontal Absolute, 1-based).
-        term.write_all(CsiSequence::CursorHorizontalAbsolute(1).to_string().as_bytes())?;
+        // Move to column 1 (CHA = Cursor Horizontal Absolute, 1-based).
+        term.write_all(CsiSequence::CursorHorizontalAbsolute(TermCol::ONE).to_string().as_bytes())?;
 
         // Move up the calculated number of rows (CUU = Cursor Up).
         // Only emit if Some (non-zero) - guards against CSI zero bug.

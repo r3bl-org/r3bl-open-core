@@ -15,7 +15,7 @@
 //! parsers and buffer management.
 
 use super::super::test_fixtures_vt_100_ansi_conformance::nz;
-use crate::{ANSIBasicColor, EscSequence, LengthOps, SgrCode,
+use crate::{ANSIBasicColor, EraseDisplayMode, EscSequence, LengthOps, SgrCode,
             core::ansi::vt_100_pty_output_parser::CsiSequence, height, term_col,
             term_row};
 use std::num::NonZeroU16;
@@ -148,7 +148,7 @@ pub fn vim_command_line(command_char: char, command_row: NonZeroU16) -> String {
 pub fn vim_clear_and_redraw() -> String {
     format!(
         "{}{}",
-        CsiSequence::EraseDisplay(2), // Clear screen
+        CsiSequence::EraseDisplay(EraseDisplayMode::EntireScreen), // Clear screen
         CsiSequence::CursorPosition {
             row: term_row(nz(1)),
             col: term_col(nz(1))

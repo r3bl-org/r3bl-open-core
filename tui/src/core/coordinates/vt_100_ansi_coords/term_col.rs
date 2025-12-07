@@ -61,6 +61,22 @@ impl Display for TermCol {
 }
 
 impl TermCol {
+    /// Column 1 - the first (leftmost) column of the terminal.
+    ///
+    /// Use this constant instead of manually constructing a column 1 value.
+    /// This is commonly used for operations like "move cursor to beginning of
+    /// line".
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use r3bl_tui::{TermCol, CsiSequence};
+    ///
+    /// // Move cursor to column 1 (beginning of line)
+    /// let seq = CsiSequence::CursorHorizontalAbsolute(TermCol::ONE);
+    /// ```
+    pub const ONE: Self = Self(NonZeroU16::new(1).unwrap());
+
     /// Create a 1-based terminal coordinate from a raw [`NonZeroU16`] value.
     ///
     /// Use this constructor when wrapping external [`NonZeroU16`] data, such as
