@@ -1,5 +1,7 @@
 #!/usr/bin/env fish
 
+# cspell:words osascript nextest mktemp ionice gdbus
+
 # Comprehensive Build and Test Verification Script
 #
 # Purpose: Runs a comprehensive suite of checks to ensure code quality, correctness, and builds properly.
@@ -72,32 +74,111 @@
 # - CARGO_BUILD_JOBS=28: Forces max parallelism (benchmarked: 60% faster for cargo doc)
 # - ionice -c2 -n0: Highest I/O priority in best-effort class (no sudo needed)
 #
-# Watch Mode & inotify Behavior:
-# Watch mode uses a sequential processing model with kernel-buffered events:
+# Watch Mode & Sliding Window Debounce:
+# Watch mode uses a single-threaded main loop with sliding window debounce.
+# The main thread alternates between BLOCKED (waiting for events/timeout) and
+# DISPATCHING (forking build processes). Actual builds run in parallel background processes.
 #
-# 1. Script waits for file changes (inotifywait with timeout for target check)
-# 2. Every TARGET_CHECK_INTERVAL_SECS, checks if target/ directory exists
-# 3. If target/ is missing, triggers a rebuild automatically
-# 4. When a file change is detected, debounce timer is checked
-# 5. If debounce passes, full check suite runs (30+ seconds, NOT listening for new changes)
-# 6. While checks run, the Linux kernel buffers any new file change events
-# 7. When checks complete, inotifywait is called again and immediately returns buffered events
-# 8. Debounce check determines if another run happens immediately or is skipped
+# Key Insight: inotifywait with timeout (-t) acts as both an event listener AND
+# a timer. This lets us implement sliding window debounce without threads:
+#   - Exit code 0: File changed (event detected)
+#   - Exit code 2: Timeout expired (no events for N seconds)
+#   - Exit code 1: Error
 #
-# Example Timeline:
-#   00:00  Save file #1 → triggers check
-#   00:00  ▶️ Tests start running (inotifywait NOT active)
-#   00:15  Save file #2 → buffered by kernel
-#   00:20  Save file #3 → buffered by kernel
-#   00:35  ✅ Tests complete, return to inotifywait
-#   00:35  inotifywait returns IMMEDIATELY with file #2 event
-#   00:35  Debounce: 35s > 5s ✓ → triggers another check
-#   01:10  ✅ Tests complete
-#   01:10  inotifywait returns IMMEDIATELY with file #3 event
-#   01:10  Debounce: 35s > 5s ✓ → triggers another check
+# Sliding Window Debounce Algorithm:
+# Instead of threshold-based debounce ("ignore if last run was < N seconds ago"),
+# we use sliding window debounce ("wait for N seconds of quiet before running").
 #
-# This ensures no changes are lost, but can cause cascading runs if multiple
-# saves occur during long test executions. Adjust DEBOUNCE_SECONDS if needed.
+# Algorithm:
+#   1. Wait for FIRST event (inotifywait, no timeout - blocks forever)
+#   2. Start sliding window: call inotifywait with DEBOUNCE_WINDOW_SECS timeout
+#   3. If event arrives (code 0): loop back to step 2 (reset window)
+#   4. If timeout expires (code 2): quiet period detected, run build
+#   5. After build completes, go back to step 1
+#
+# ┌─────────────────────────────────────────────────────────────────┐
+# │                     MAIN THREAD TIMELINE                        │
+# └─────────────────────────────────────────────────────────────────┘
+#
+#      BLOCKED           BLOCKED           BLOCKED        DISPATCHING
+#     (waiting)         (waiting)         (waiting)       (fork builds)
+#         │                 │                 │                │
+#         ▼                 ▼                 ▼                ▼
+#    ┌─────────┐       ┌─────────┐       ┌─────────┐      ┌────────┐
+#    │inotify  │       │inotify  │       │inotify  │      │ fork   │──▶ quick build (background)
+#    │wait 10s │──────▶│wait 10s │──────▶│wait 10s │─────▶│ builds │──▶ full build (background)
+#    └─────────┘       └─────────┘       └─────────┘      └────────┘
+#         │                 │                 │                │
+#         │                 │                 │                │
+#    File changed!    File changed!      TIMEOUT!         Returns
+#    (exit code 0)    (exit code 0)     (exit code 2)    immediately
+#    "Reset window"   "Reset window"    "Quiet period,
+#                                        dispatch builds!"
+#
+# Example Timeline (Rapid Saves):
+#   0:00  (idle)              Thread BLOCKED, waiting forever for first event
+#   0:05  User saves file A   Thread UNBLOCKS, starts 10s debounce window
+#   0:08  User saves file B   Window RESET (was 7s remaining, now 10s again)
+#   0:12  User saves file C   Window RESET again
+#   0:22  (10s of quiet)      TIMEOUT! Thread forks builds, returns immediately
+#   0:22  (same instant)      Thread BLOCKED again, waiting for next event
+#   0:44  Quick build done    Notification: "Quick docs ready!" (background)
+#   1:52  Full build done     Notification: "Full docs built!" (background)
+#
+# Why This Works:
+# - inotifywait does the heavy lifting (efficient kernel-level blocking)
+# - No CPU burn while waiting (uses kernel's inotify subsystem)
+# - Single mechanism handles both "coalesce rapid saves" AND "wait for quiet"
+# - No separate event draining or timestamp tracking needed
+#
+# Events During Build:
+# Since builds are forked to background, the main thread returns to inotifywait
+# immediately. File events are processed normally while builds run in parallel.
+# If a new change arrives, a new build cycle starts (previous builds continue
+# in background until completion).
+#
+# Doc Build Architecture (--watch-doc):
+# Uses a staging → serving pattern with separate directories to prevent race conditions:
+#
+#   BLOCKING (main thread)              BACKGROUND (forked process)
+#   ┌─────────────────┐                 ┌─────────────────┐
+#   │  Quick Build    │  completes      │  Full Build     │
+#   │  (--no-deps)    │ ───────────────▶│  (with deps)    │
+#   └────────┬────────┘   then forks    └────────┬────────┘
+#            │                                   │
+#            ▼                                   ▼
+#   ┌─────────────────────────┐       ┌─────────────────────────┐
+#   │ staging-quick/doc/      │       │ staging-full/doc/       │
+#   └────────┬────────────────┘       └────────┬────────────────┘
+#            │ rsync -a                        │ rsync -a --delete (if orphans)
+#            ▼                                 ▼
+#   ┌─────────────────────────────────────────────────────────┐
+#   │                    serving/doc/                         │
+#   │              (browser loads from here)                  │
+#   └─────────────────────────────────────────────────────────┘
+#
+# Why Quick Blocks but Full Forks?
+# - Cargo uses a global package cache lock (~/.cargo/.package-cache)
+# - Running both simultaneously causes "Blocking waiting for file lock"
+# - Quick build is fast (~20s), so blocking is acceptable
+# - Full build is slow (~90s), so forking lets user continue editing
+#
+# Why Two Staging Directories?
+# - Full build runs in background while quick build for NEXT change runs
+# - If they shared a staging dir, rsync could fail with "directory has vanished"
+# - Each build writes to its own staging dir, then rsyncs to shared serving dir
+# - Quick builds: rsync -a (no --delete) - preserves dependency docs
+# - Full builds: rsync -a --delete (conditional) - cleans orphans when detected
+#
+# Orphan File Cleanup (full builds only):
+# - Long-running watch sessions accumulate stale docs from renamed/deleted files
+# - Detection: compare file counts - if serving > staging, orphans exist
+# - Cleanup: full builds use --delete flag to remove orphaned files
+# - Quick builds never delete (would wipe dependency docs)
+#
+# Target Directory Auto-Recovery:
+# In addition to debounce, watch mode periodically checks if target/ exists.
+# If deleted externally (cargo clean, manual rm), triggers immediate rebuild.
 #
 # Exit Codes:
 # - 0: All checks passed ✅
@@ -110,7 +191,7 @@
 #   ./check.fish --doc        Build docs only (quick, --no-deps)
 #   ./check.fish --watch      Watch mode: run all checks on file changes
 #   ./check.fish --watch-test Watch mode: run tests/doctests only
-#   ./check.fish --watch-doc  Watch mode: build docs with deps
+#   ./check.fish --watch-doc  Watch mode: quick docs first, full docs forked to background
 #   ./check.fish --help       Show detailed help
 
 # Import shared toolchain utilities
@@ -166,17 +247,28 @@ end
 # Configuration Constants
 # ============================================================================
 
-# Debounce delay in seconds for watch mode
-# Prevents rapid re-runs when multiple files are saved in quick succession
-# If a file change occurs within this window after the last check started,
-# it will be ignored. Increase this if you find checks running too frequently.
-set -g DEBOUNCE_SECONDS 5
+# Sliding window debounce for watch mode (in seconds).
+# After detecting a file change, waits for this many seconds of "quiet" (no new changes)
+# before running checks. Each new change resets the window, coalescing rapid saves.
+# This handles IDE auto-save, formatters, and "oops forgot to save that file" moments.
+set -g DEBOUNCE_WINDOW_SECS 5
 
 # Use tmpfs for build artifacts - eliminates disk I/O for massive speedup.
 # /tmp is already tmpfs on most Linux systems (including this one: 46GB).
 # Benefits: ~2-3x faster builds, no SSD wear, isolated from IDE target directories.
 # Trade-off: Build cache is lost on reboot (first build after reboot is cold).
-set -gx CARGO_TARGET_DIR /tmp/roc/target/check
+#
+# CHECK_TARGET_DIR: Primary target for tests and serving docs to browser.
+# CHECK_TARGET_DIR_DOC_STAGING_QUICK: Staging for quick doc builds (--no-deps).
+# CHECK_TARGET_DIR_DOC_STAGING_FULL: Staging for full doc builds (with deps, runs in background).
+# CHECK_LOG_FILE: Log file for all check.fish output (created fresh each run).
+#
+# Two separate staging dirs prevent race conditions: quick builds can run while
+# background full builds are syncing, without files "vanishing" mid-rsync.
+set -g CHECK_TARGET_DIR /tmp/roc/target/check
+set -g CHECK_TARGET_DIR_DOC_STAGING_QUICK /tmp/roc/target/check-doc-staging-quick
+set -g CHECK_TARGET_DIR_DOC_STAGING_FULL /tmp/roc/target/check-doc-staging-full
+set -g CHECK_LOG_FILE /tmp/roc/check.log
 
 # Force maximum parallelism for cargo operations.
 # Despite cargo's docs saying it defaults to nproc, benchmarks show this makes
@@ -291,6 +383,7 @@ function show_help
     echo "  ✓ ICE and stale cache detection (auto-removes target/, retries once)"
     echo "  ✓ Desktop notifications on toolchain changes"
     echo "  ✓ Target directory auto-recovery in watch modes"
+    echo "  ✓ Orphan doc file cleanup (full builds detect and remove stale files)"
     echo "  ✓ Performance optimizations (tmpfs, ionice, parallel jobs)"
     echo ""
 
@@ -307,26 +400,39 @@ function show_help
     set_color normal
     echo "  --watch       Runs all checks: tests, doctests, docs (full with deps)"
     echo "  --watch-test  Runs tests only: cargo test + doctests (faster iteration)"
-    echo "  --watch-doc   Runs doc build: quick (--no-deps) first, then full with deps"
+    echo "  --watch-doc   Runs quick docs first, then forks full docs to background"
     echo ""
     echo "  Watch mode options:"
     echo "  Monitors: cmdr/src/, analytics_schema/src/, tui/src/, plus all config files"
-    echo "  Debouncing: $DEBOUNCE_SECONDS seconds (prevents rapid re-runs)"
-    echo "  Coalescing: Drains buffered events after each check (one run per batch)"
     echo "  Toolchain: Validated once at startup, before watch loop begins"
     echo "  Behavior: Continues watching even if checks fail"
     echo "  Requirements: inotifywait (installed via bootstrap.sh)"
     echo ""
-    echo "  Target Directory Auto-Recovery (watch mode only):"
+    echo "  Doc Builds (--watch-doc):"
+    echo "  • Quick build (--no-deps) runs first, blocking (~20s)"
+    echo "  • Full build (with deps) then forks to background (~90s)"
+    echo "  • Quick docs available immediately, full docs notify when done"
+    echo "  • Desktop notification when each build completes"
+    echo "  • Separate staging directories prevent race conditions"
+    echo "  • Output logged to /tmp/roc/check.log for debugging"
+    echo ""
+    echo "  Orphan File Cleanup (full builds only):"
+    echo "  • Long-running sessions accumulate stale docs from renamed/deleted files"
+    echo "  • Detection: compares file counts between staging and serving directories"
+    echo "  • If serving has MORE files than staging, orphans exist"
+    echo "  • Full builds use rsync --delete to clean orphaned files"
+    echo "  • Quick builds never delete (would wipe dependency docs)"
+    echo ""
+    echo "  Sliding Window Debounce:"
+    echo "  • Waits for $DEBOUNCE_WINDOW_SECS seconds of 'quiet' (no new changes) before dispatching"
+    echo "  • Each new file change resets the window, coalescing rapid saves"
+    echo "  • Handles: IDE auto-save, formatters, 'forgot to save that file' moments"
+    echo "  • Adjust DEBOUNCE_WINDOW_SECS in script if needed"
+    echo ""
+    echo "  Target Directory Auto-Recovery:"
     echo "  • Monitors for missing target/ directory (every "$TARGET_CHECK_INTERVAL_SECS"s)"
     echo "  • Auto-triggers rebuild if target/ is deleted externally"
     echo "  • Recovers from: cargo clean, manual rm -rf target/, IDE cache clearing"
-    echo ""
-    echo "  Event Handling:"
-    echo "  • While checks run (30+ sec), new file changes are buffered by the kernel"
-    echo "  • When checks complete, buffered events trigger immediately (if debounce allows)"
-    echo "  • Multiple saves during test runs may cause cascading re-runs"
-    echo "  • Increase DEBOUNCE_SECONDS in script if this becomes disruptive"
     echo ""
 
     set_color yellow
@@ -363,8 +469,9 @@ function show_help
     echo "  4. Runs cargo test (all unit and integration tests)"
     echo "  5. Runs doctests"
     echo "  6. Builds documentation:"
-    echo "     • One-off --doc: cargo doc --no-deps (quick, your crates only)"
-    echo "     • Watch modes:   cargo doc (full, includes dependencies)"
+    echo "     • One-off --doc:  cargo doc --no-deps (quick, your crates only)"
+    echo "     • --watch-doc:    Forks both quick + full builds to background"
+    echo "     • Other watch:    cargo doc (full, includes dependencies)"
     echo "  7. On ICE or stale cache: removes target/, retries once"
     echo ""
 
@@ -415,6 +522,46 @@ function show_help
     echo "     • Gives cargo highest I/O priority in best-effort class"
     echo "     • Helps when other processes compete for disk/tmpfs access"
     echo "     • No sudo required (unlike realtime I/O class)"
+    echo ""
+    echo "  4. Two-Stage Doc Build:"
+    echo "     • Docs are built to staging directory first"
+    echo "     • Only synced to serving directory on success"
+    echo "     • Browser never sees incomplete/missing docs during rebuilds"
+    echo ""
+    echo "  5. Incremental Compilation:"
+    echo "     • Rust only recompiles what changed"
+    echo "     • Pre-compiled .rlib files stay cached between runs"
+    echo "     • Test executables are cached - re-running just executes the binary"
+    echo ""
+
+    set_color yellow
+    echo "WHY IS IT SO FAST?"
+    set_color normal
+    echo "  Example output (2,700+ tests in ~9 seconds with warm cache):"
+    echo ""
+    echo "    ./check.fish"
+    echo ""
+    echo "    🚀 Running checks..."
+    echo ""
+    echo "    [03:41:57 PM] ▶️  Running tests..."
+    echo "    [03:42:01 PM] ✅ tests passed (3s)"
+    echo ""
+    echo "    [03:42:01 PM] ▶️  Running doctests..."
+    echo "    [03:42:06 PM] ✅ doctests passed (5s)"
+    echo ""
+    echo "    [03:42:06 PM] ▶️  Running docs..."
+    echo "    [03:42:08 PM] ✅ docs passed (1s)"
+    echo ""
+    echo "    [03:42:08 PM] ✅ All checks passed!"
+    echo ""
+    echo "  The speed comes from a combination of techniques:"
+    echo "  • tmpfs (RAM disk): All I/O happens in RAM, no SSD/HDD seeks"
+    echo "  • Incremental compilation: Only changed modules rebuild"
+    echo "  • Cached test binaries: Re-running tests just executes the binary"
+    echo "  • 28 parallel jobs: Maximizes CPU utilization during compilation"
+    echo ""
+    echo "  Trade-off: First build after reboot is cold (~2-4 min),"
+    echo "  but subsequent runs stay blazing fast."
     echo ""
 
     set_color yellow
@@ -489,16 +636,21 @@ function watch_mode
         return 1
     end
 
+    # Initialize log file (fresh for each watch session)
+    mkdir -p (dirname $CHECK_LOG_FILE)
+    echo "["(timestamp)"] Watch mode started" > $CHECK_LOG_FILE
+
     echo ""
     set_color cyan --bold
     echo "👀 Watch mode activated"
     set_color normal
     echo "Monitoring: "(string join ", " $watch_dirs)
+    echo "Log file:   $CHECK_LOG_FILE"
     echo "Press Ctrl+C to stop"
     echo ""
 
     # Check if config files changed (cleans target if needed)
-    check_config_changed $CARGO_TARGET_DIR $CONFIG_FILES_TO_WATCH
+    check_config_changed $CHECK_TARGET_DIR $CONFIG_FILES_TO_WATCH
 
     # Validate toolchain BEFORE entering watch loop
     echo "🔧 Validating toolchain..."
@@ -510,9 +662,6 @@ function watch_mode
         return 1
     end
 
-    # Track last run time for debouncing (epoch seconds)
-    set -l last_run 0
-
     # Run initial check
     echo ""
     echo "🚀 Running initial checks..."
@@ -522,22 +671,37 @@ function watch_mode
 
     echo ""
     set_color cyan
-    echo "["(timestamp)"] 👀 Watching for changes..."
+    log_and_print $CHECK_LOG_FILE "["(timestamp)"] 👀 Watching for changes..."
     set_color normal
     echo ""
 
-    # Watch loop with inotifywait (uses timeout to allow periodic target/check existence check)
+    # ══════════════════════════════════════════════════════════════════════════
+    # Main Watch Loop with Sliding Window Debounce
+    # ══════════════════════════════════════════════════════════════════════════
+    # See header comments for detailed algorithm explanation and ASCII diagram.
+    #
+    # Summary:
+    #   1. Wait for FIRST event (no timeout - blocks forever)
+    #   2. Start sliding window: wait DEBOUNCE_WINDOW_SECS for quiet
+    #   3. If new event arrives: reset window (loop back to step 2)
+    #   4. If timeout expires: quiet period detected, run checks
+    #   5. Go back to step 1
+    # ══════════════════════════════════════════════════════════════════════════
+
     while true
-        # Wait for file changes with timeout
-        # Returns: 0 = event detected, 1 = error, 2 = timeout
-        # Redirect stdout to /dev/null - we only need the exit status, not the filename
+        # ──────────────────────────────────────────────────────────────────────
+        # PHASE 1: Wait for first event (blocks forever until file changes)
+        # ──────────────────────────────────────────────────────────────────────
+        # Use TARGET_CHECK_INTERVAL_SECS timeout to periodically check if
+        # target/ directory was deleted externally (cargo clean, rm -rf, etc.)
+
         inotifywait -q -r -t $TARGET_CHECK_INTERVAL_SECS -e modify,create,delete,move \
             --format '%w%f' $watch_dirs >/dev/null 2>&1
         set -l wait_status $status
 
         # Check if target/ directory is missing (regardless of event or timeout)
         # This handles external deletions (cargo clean, manual rm -rf target/, etc.)
-        if not test -d "target"
+        if not test -d "$CHECK_TARGET_DIR"
             echo ""
             set_color yellow
             echo "["(timestamp)"] 📁 target/ missing, triggering rebuild..."
@@ -552,47 +716,69 @@ function watch_mode
                 cleanup_after_ice
             end
 
-            set last_run (date +%s)
-
             echo ""
             set_color cyan
-            echo "["(timestamp)"] 👀 Watching for changes..."
+            log_and_print $CHECK_LOG_FILE "["(timestamp)"] 👀 Watching for changes..."
             set_color normal
             echo ""
             continue
         end
 
-        # If timeout (status 2) with no missing target, just loop back
+        # If timeout (status 2) with target/ present, just loop back to keep watching
         if test $wait_status -eq 2
             continue
         end
 
-        # Drain any additional buffered events (coalesce rapid saves)
-        # Uses 100ms timeout to catch events that arrived during the check run
-        while inotifywait -q -r -t 0.1 -e modify,create,delete,move \
+        # ──────────────────────────────────────────────────────────────────────
+        # PHASE 2: Sliding window - wait for "quiet period" before running
+        # ──────────────────────────────────────────────────────────────────────
+        # Each new event resets the window. Only when DEBOUNCE_WINDOW_SECS pass
+        # with NO new events do we proceed to run checks.
+
+        echo ""
+        set_color brblack
+        log_and_print $CHECK_LOG_FILE "["(timestamp)"] 📝 Change detected, waiting for quiet ("$DEBOUNCE_WINDOW_SECS"s window)..."
+        set_color normal
+
+        while true
+            # Record window start time for remaining time calculation
+            set -l window_start (date +%s.%N)
+
+            inotifywait -q -r -t $DEBOUNCE_WINDOW_SECS -e modify,create,delete,move \
                 --format '%w%f' $watch_dirs >/dev/null 2>&1
-            # Discard additional events - we only need to know "something changed"
+            set -l debounce_status $status
+
+            if test $debounce_status -eq 2
+                # Timeout! No events for DEBOUNCE_WINDOW_SECS seconds = quiet period
+                break
+            else if test $debounce_status -eq 0
+                # Another event arrived - calculate how much time was remaining
+                set -l now (date +%s.%N)
+                set -l elapsed (math "$now - $window_start")
+                set -l remaining (math "$DEBOUNCE_WINDOW_SECS - $elapsed")
+                # Format remaining time (round to 1 decimal)
+                set -l remaining_str (math --scale=1 "$remaining")
+
+                set_color brblack
+                log_and_print $CHECK_LOG_FILE "["(timestamp)"] 📝 Another change, resetting window... (was "$remaining_str"s remaining)"
+                set_color normal
+                continue
+            else
+                # Error (status 1) - break out and proceed
+                break
+            end
         end
 
-        # Get current time
-        set -l current_time (date +%s)
-
-        # Check debounce
-        set -l time_diff (math $current_time - $last_run)
-        if test $time_diff -lt $DEBOUNCE_SECONDS
-            continue
-        end
-
-        # Update last run time
-        set last_run $current_time
+        # ──────────────────────────────────────────────────────────────────────
+        # PHASE 3: Run checks (quiet period detected)
+        # ──────────────────────────────────────────────────────────────────────
 
         # Check if config files changed (cleans target if needed)
-        check_config_changed $CARGO_TARGET_DIR $CONFIG_FILES_TO_WATCH
+        check_config_changed $CHECK_TARGET_DIR $CONFIG_FILES_TO_WATCH
 
-        # Run checks
         echo ""
         set_color yellow
-        echo "["(timestamp)"] 🔄 Changes detected, running checks..."
+        log_and_print $CHECK_LOG_FILE "["(timestamp)"] 🔄 Quiet period reached, running checks..."
         set_color normal
         echo ""
 
@@ -607,7 +793,7 @@ function watch_mode
 
         echo ""
         set_color cyan
-        echo "["(timestamp)"] 👀 Watching for changes..."
+        log_and_print $CHECK_LOG_FILE "["(timestamp)"] 👀 Watching for changes..."
         set_color normal
         echo ""
     end
@@ -670,58 +856,60 @@ function run_checks_for_type
             return 0
 
         case "doc"
-            # Doc checks: quick build first (--no-deps), then full build with deps
-            # This gives the user something to load in the browser quickly while
-            # the full dependency documentation builds (which can take ~10 minutes)
+            # Doc checks: quick build BLOCKING, full build FORKED to background
+            # Architecture: Each build has its own staging directory, both sync to shared serving dir.
+            #
+            # Why quick blocks but full forks?
+            # - Cargo uses a global package cache lock (~/.cargo/.package-cache)
+            # - Running both simultaneously causes "Blocking waiting for file lock" messages
+            # - Quick build is fast (~20s), so blocking is acceptable
+            # - Full build is slow (~90s), so forking lets user continue editing
+            #
+            # Build flow:
+            # 1. Run quick build (blocking) → staging-quick → sync to serving → notify
+            # 2. Fork full build            → staging-full  → sync to serving → notify
 
-            # Step 1: Quick build without dependencies (fast, local crates only)
-            run_check_with_recovery check_docs_quick "docs (quick, no deps)"
+            # Step 1: Quick build (BLOCKING - fast, gets docs to user quickly)
+            log_and_print $CHECK_LOG_FILE "["(timestamp)"] 🔨 Quick build starting (--no-deps)..."
+
+            env CARGO_TARGET_DIR=$CHECK_TARGET_DIR_DOC_STAGING_QUICK ionice -c2 -n0 cargo doc --no-deps > /dev/null 2>&1
             set -l quick_result $status
 
-            if test $quick_result -eq 2
-                # ICE detected - let caller (watch loop) handle cleanup
-                return 2
-            end
-
             if test $quick_result -eq 0
-                echo ""
-                set_color green
-                echo "["(timestamp)"] 📄 Quick docs ready! You can load them in browser now."
-                echo "    file://$CARGO_TARGET_DIR/doc/r3bl_tui/index.html"
-                set_color normal
+                sync_docs_to_serving quick
+                log_and_print $CHECK_LOG_FILE "["(timestamp)"] 📄 Quick build done!"
+                log_and_print $CHECK_LOG_FILE "    📖 Read the docs at: file://$CHECK_TARGET_DIR/doc/r3bl_tui/index.html"
+                log_and_print $CHECK_LOG_FILE ""
                 send_system_notification "Watch: Quick Docs Ready 📄" "Local crate docs available - full build starting" "success" $NOTIFICATION_EXPIRE_MS
             else
-                # Quick build failed - notify and return
-                send_system_notification "Watch: Doc Build Failed ❌" "cargo doc --no-deps failed" "critical" $NOTIFICATION_EXPIRE_MS
+                log_and_print $CHECK_LOG_FILE "["(timestamp)"] ❌ Quick build failed!"
+                send_system_notification "Watch: Quick Doc Build Failed ❌" "cargo doc --no-deps failed" "critical" $NOTIFICATION_EXPIRE_MS
                 return $quick_result
             end
 
-            # Step 2: Full build with dependencies (slow, but comprehensive)
-            echo ""
-            set_color cyan
-            echo "["(timestamp)"] ⏳ Building full docs with dependencies (this takes a while)..."
-            set_color normal
+            # Step 2: Full build (FORKED - runs in background while user continues editing)
+            log_and_print $CHECK_LOG_FILE "["(timestamp)"] 🔀 Forking full build to background..."
 
-            run_check_with_recovery check_docs_full "docs (full, with deps)"
-            set -l full_result $status
+            fish -c "
+                cd $PWD
+                source script_lib.fish
 
-            if test $full_result -eq 2
-                # ICE detected - let caller (watch loop) handle cleanup
-                return 2
-            end
+                log_and_print '$CHECK_LOG_FILE' '['(timestamp)'] [bg] 🔨 Full build starting (with deps)...'
 
-            if test $full_result -eq 0
-                echo ""
-                set_color green --bold
-                echo "["(timestamp)"] ✅ Full doc build complete!"
-                echo "    file://$CARGO_TARGET_DIR/doc/r3bl_tui/index.html"
-                set_color normal
-                send_system_notification "Watch: Full Docs Built ✅" "All documentation including dependencies built" "success" $NOTIFICATION_EXPIRE_MS
-            else
-                # Notify on failure in watch mode
-                send_system_notification "Watch: Full Doc Build Failed ❌" "cargo doc failed" "critical" $NOTIFICATION_EXPIRE_MS
-            end
-            return $full_result
+                env CARGO_TARGET_DIR=$CHECK_TARGET_DIR_DOC_STAGING_FULL ionice -c2 -n0 cargo doc > /dev/null 2>&1
+
+                if test \$status -eq 0
+                    rsync -a $CHECK_TARGET_DIR_DOC_STAGING_FULL/doc/ $CHECK_TARGET_DIR/doc/
+                    log_and_print '$CHECK_LOG_FILE' '['(timestamp)'] [bg] ✅ Full build done!'
+                    send_system_notification 'Watch: Full Docs Built ✅' 'All documentation including dependencies built' 'success' $NOTIFICATION_EXPIRE_MS
+                else
+                    log_and_print '$CHECK_LOG_FILE' '['(timestamp)'] [bg] ❌ Full build failed!'
+                    send_system_notification 'Watch: Full Doc Build Failed ❌' 'cargo doc failed' 'critical' $NOTIFICATION_EXPIRE_MS
+                end
+            " &
+
+            # Return immediately - quick build done, full build running in background
+            return 0
 
         case '*'
             echo "❌ Unknown check type: $check_type" >&2
@@ -741,21 +929,103 @@ end
 # This helps when other processes compete for disk I/O during builds.
 
 function check_cargo_test
-    ionice -c2 -n0 cargo test --all-targets -q
+    env CARGO_TARGET_DIR=$CHECK_TARGET_DIR ionice -c2 -n0 cargo test --all-targets -q
 end
 
 function check_doctests
-    ionice -c2 -n0 cargo test --doc -q
+    env CARGO_TARGET_DIR=$CHECK_TARGET_DIR ionice -c2 -n0 cargo test --doc -q
 end
 
-# Quick doc check without dependencies (for one-off --doc mode)
+# Quick doc check without dependencies (for one-off --doc mode).
+# Builds to QUICK staging directory to avoid race conditions with background full builds.
 function check_docs_quick
-    ionice -c2 -n0 cargo doc --no-deps
+    env CARGO_TARGET_DIR=$CHECK_TARGET_DIR_DOC_STAGING_QUICK ionice -c2 -n0 cargo doc --no-deps
 end
 
-# Full doc build including dependencies (for watch modes)
+# Full doc build including dependencies (for watch modes).
+# Builds to FULL staging directory to avoid race conditions with quick builds.
 function check_docs_full
-    ionice -c2 -n0 cargo doc
+    env CARGO_TARGET_DIR=$CHECK_TARGET_DIR_DOC_STAGING_FULL ionice -c2 -n0 cargo doc
+end
+
+# Atomically sync generated docs from staging to serving directory.
+#
+# Delete behavior (--delete flag):
+# - Quick builds: NEVER use --delete (would wipe dependency docs from full builds)
+# - Full builds: Use --delete ONLY when orphan files detected (serving > staging count)
+#
+# Why orphan detection matters for long-running watch sessions:
+# - Renamed/deleted source files leave behind stale .html files in serving dir
+# - Without cleanup, these accumulate over days of development
+# - File count comparison detects this: if serving has MORE files than staging,
+#   those extra files are orphans that should be removed
+#
+# Parameters:
+#   $argv[1]: "quick" or "full" - which staging directory to sync from
+function sync_docs_to_serving
+    set -l build_type $argv[1]
+    set -l serving_doc_dir $CHECK_TARGET_DIR/doc
+
+    # Select staging directory based on build type
+    # NOTE: Must declare staging_doc_dir OUTSIDE the if block, otherwise
+    # "set -l" creates a variable scoped to the if block that vanishes.
+    set -l staging_doc_dir
+    if test "$build_type" = "full"
+        set staging_doc_dir $CHECK_TARGET_DIR_DOC_STAGING_FULL/doc
+    else
+        set staging_doc_dir $CHECK_TARGET_DIR_DOC_STAGING_QUICK/doc
+    end
+
+    # Ensure serving doc directory exists
+    mkdir -p $serving_doc_dir
+
+    # Determine if we should use --delete (only for full builds with orphans)
+    # NOTE: Must NOT initialize to "" - Fish treats that as a 1-element list containing
+    # an empty string, which rsync receives as an empty argument causing errors.
+    # Leaving uninitialized creates a 0-element list that expands to nothing.
+    set -l delete_flag
+    if test "$build_type" = "full"
+        if has_orphan_files $staging_doc_dir $serving_doc_dir
+            set delete_flag "--delete"
+            set_color yellow
+            echo "    🧹 Cleaning orphaned doc files (serving > staging)"
+            set_color normal
+        end
+    end
+
+    # -a = archive mode (preserves permissions, timestamps)
+    # --delete (conditional): removes orphaned files when serving has more than staging
+    rsync -a $delete_flag $staging_doc_dir/ $serving_doc_dir/
+end
+
+# Check if serving directory has orphan files (more files than staging).
+# This indicates stale docs from renamed/deleted source files.
+#
+# Parameters:
+#   $argv[1]: staging doc directory (source of truth)
+#   $argv[2]: serving doc directory (may have orphans)
+#
+# Returns: 0 if orphans detected (serving > staging), 1 otherwise
+function has_orphan_files
+    set -l staging_dir $argv[1]
+    set -l serving_dir $argv[2]
+
+    # If serving dir doesn't exist yet, no orphans possible
+    if not test -d $serving_dir
+        return 1
+    end
+
+    # If staging dir doesn't exist, something is wrong - don't delete
+    if not test -d $staging_dir
+        return 1
+    end
+
+    # Count files in each directory (fast - just readdir operations)
+    set -l staging_count (find $staging_dir -type f 2>/dev/null | wc -l)
+    set -l serving_count (find $serving_dir -type f 2>/dev/null | wc -l)
+
+    # Orphans exist if serving has MORE files than staging
+    test $serving_count -gt $staging_count
 end
 
 # Temp file path for passing duration from run_check_with_recovery to callers.
@@ -1148,8 +1418,17 @@ end
 function cleanup_target_folder
     echo "🧹 Cleaning target folders..."
 
-    if test -d target
-        rm -rf target
+    # Clean the main check target directory (tmpfs location)
+    if test -d "$CHECK_TARGET_DIR"
+        rm -rf "$CHECK_TARGET_DIR"
+    end
+
+    # Also clean staging directories to ensure fresh doc builds
+    if test -d "$CHECK_TARGET_DIR_DOC_STAGING_QUICK"
+        rm -rf "$CHECK_TARGET_DIR_DOC_STAGING_QUICK"
+    end
+    if test -d "$CHECK_TARGET_DIR_DOC_STAGING_FULL"
+        rm -rf "$CHECK_TARGET_DIR_DOC_STAGING_FULL"
     end
 end
 
@@ -1209,7 +1488,7 @@ function main
         case doc
             # Docs-only mode: build docs once without watching
             # Check if config files changed (cleans target if needed)
-            check_config_changed $CARGO_TARGET_DIR $CONFIG_FILES_TO_WATCH
+            check_config_changed $CHECK_TARGET_DIR $CONFIG_FILES_TO_WATCH
 
             ensure_toolchain_installed
             set -l toolchain_status $status
@@ -1236,10 +1515,13 @@ function main
             set -l duration_str (format_duration $duration)
 
             if test $doc_status -eq 0
+                # Sync docs to serving directory
+                sync_docs_to_serving quick
+
                 echo ""
                 set_color green --bold
                 echo "["(timestamp)"] ✅ Documentation built successfully! ($duration_str)"
-                echo "    file://$CARGO_TARGET_DIR/doc/r3bl_tui/index.html"
+                echo "    file://$CHECK_TARGET_DIR/doc/r3bl_tui/index.html"
                 set_color normal
                 # Only notify if duration > threshold (user likely switched away)
                 if test (math "floor($duration)") -ge "$NOTIFICATION_THRESHOLD_SECS"
@@ -1258,7 +1540,7 @@ function main
         case test
             # Test-only mode: run tests once without watching
             # Check if config files changed (cleans target if needed)
-            check_config_changed $CARGO_TARGET_DIR $CONFIG_FILES_TO_WATCH
+            check_config_changed $CHECK_TARGET_DIR $CONFIG_FILES_TO_WATCH
 
             ensure_toolchain_installed
             set -l toolchain_status $status
@@ -1306,7 +1588,7 @@ function main
         case normal
             # Normal mode: run checks once
             # Check if config files changed (cleans target if needed)
-            check_config_changed $CARGO_TARGET_DIR $CONFIG_FILES_TO_WATCH
+            check_config_changed $CHECK_TARGET_DIR $CONFIG_FILES_TO_WATCH
 
             # Validate toolchain first
             # No lock needed - validation is read-only, installation delegates to sync script

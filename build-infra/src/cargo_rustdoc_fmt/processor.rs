@@ -86,20 +86,19 @@ impl FileProcessor {
 /// Returns true if the block was modified.
 fn process_rustdoc_block(block: &mut RustdocBlock, options: &FormatOptions) -> bool {
     let original = block.lines.join("\n");
-
-    // Skip processing if the block contains protected content
-    if has_protected_content(&original) {
-        return false;
-    }
-
-    // Apply formatters
     let mut modified = original.clone();
 
+    // Table formatting is safe even with protected content (HTML comments, etc.)
+    // Tables are self-contained and don't interact with link references.
     if options.format_tables {
         modified = table_formatter::format_tables(&modified);
     }
 
-    if options.convert_links {
+    // Link conversion should skip blocks with protected content because:
+    // - HTML comments might contain special directives
+    // - Blockquotes can be mangled by markdown parsers
+    // - HTML tags will be corrupted
+    if options.convert_links && !has_protected_content(&original) {
         modified = link_converter::convert_links(&modified);
         modified = link_converter::aggregate_existing_references(&modified);
     }

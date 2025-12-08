@@ -30,7 +30,8 @@
 //! [`SharedWriter`]: r3bl_tui::SharedWriter
 
 use miette::IntoDiagnostic;
-use r3bl_tui::{readline_async::{ReadlineAsyncContext, ReadlineEvent}, rla_println};
+use r3bl_tui::{readline_async::{ReadlineAsyncContext, ReadlineEvent},
+               rla_println};
 use std::io::Write;
 
 #[tokio::main]

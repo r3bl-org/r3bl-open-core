@@ -23,9 +23,15 @@ mod stateful_parser;
 
 // Conditionally public for documentation (to allow rustdoc links from public items).
 #[cfg(any(test, doc))]
-pub mod process_global_stdin;
+pub mod mio_poller;
 #[cfg(not(any(test, doc)))]
-mod process_global_stdin;
+mod mio_poller;
+
+// Conditionally public for documentation (to allow rustdoc links from public items).
+#[cfg(any(test, doc))]
+pub mod global_input_resource;
+#[cfg(not(any(test, doc)))]
+mod global_input_resource;
 
 #[cfg(any(test, doc))]
 pub mod types;

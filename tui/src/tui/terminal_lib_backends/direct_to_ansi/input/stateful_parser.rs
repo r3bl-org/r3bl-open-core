@@ -1,25 +1,27 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Stateful parser for terminal input bytes.
-//!
-//! This module provides the [`Parser`] struct that accumulates bytes and parses them
-//! into [`VT100InputEventIR`] events using the `more` flag for ESC disambiguation.
+//! Stateful parser for terminal input bytes. See [`StatefulInputParser`] docs.
 
-use crate::core::ansi::vt_100_terminal_input_parser::{VT100InputEventIR, try_parse_input_event};
+use crate::core::ansi::vt_100_terminal_input_parser::{VT100InputEventIR,
+                                                      try_parse_input_event};
 use std::collections::VecDeque;
 
 /// Stateful parser for terminal input bytes.
 ///
 /// Accumulates bytes and parses them into [`VT100InputEventIR`] events using the
-/// `more` flag for ESC disambiguation:
+/// `more` flag for `ESC` disambiguation (see [ESC Detection Limitations]):
 ///
 /// - `more = true`: More bytes might be coming, wait before deciding
-/// - `more = false`: No more bytes available, a lone ESC is the ESC key
+/// - `more = false`: No more bytes available, a lone `ESC` is the `ESC` key
 ///
-/// This works because if `read()` fills the entire buffer, more data is likely
+/// This works because if [`read()`] fills the entire buffer, more data is likely
 /// waiting; if it returns fewer bytes, we've drained all available input.
+///
+/// [`read()`]: std::io::Read::read
+///
+/// [ESC Detection Limitations]: super::mio_poller::MioPoller#esc-detection-limitations
 #[derive(Debug)]
-pub struct Parser {
+pub struct StatefulInputParser {
     /// Accumulator for current ANSI escape sequence being parsed (capacity: 256
     /// bytes).
     buffer: Vec<u8>,
@@ -28,21 +30,19 @@ pub struct Parser {
     internal_events: VecDeque<VT100InputEventIR>,
 }
 
-impl Default for Parser {
+impl Default for StatefulInputParser {
     fn default() -> Self {
-        Parser {
+        StatefulInputParser {
             buffer: Vec::with_capacity(256),
             internal_events: VecDeque::with_capacity(128),
         }
     }
 }
 
-impl Parser {
+impl StatefulInputParser {
     /// Process incoming bytes and parse into events.
-    ///
     /// - `buffer`: Raw bytes read from `stdin`.
-    /// - `more`: Whether more data is likely available (`read_count ==
-    ///   TTY_BUFFER_SIZE`).
+    /// - `more`: Whether more data is likely available (`read_count == TTY_BUFFER_SIZE`).
     pub fn advance(&mut self, buffer: &[u8], more: bool) {
         for (idx, byte) in buffer.iter().enumerate() {
             // Recompute `more` for each byte:
@@ -67,7 +67,7 @@ impl Parser {
     }
 }
 
-impl Iterator for Parser {
+impl Iterator for StatefulInputParser {
     type Item = VT100InputEventIR;
 
     fn next(&mut self) -> Option<Self::Item> { self.internal_events.pop_front() }
@@ -75,7 +75,7 @@ impl Iterator for Parser {
 
 #[cfg(test)]
 mod tests {
-    use super::Parser;
+    use super::StatefulInputParser;
     use crate::core::ansi::vt_100_terminal_input_parser::{VT100InputEventIR,
                                                           VT100KeyCodeIR,
                                                           VT100KeyModifiersIR};
@@ -93,7 +93,7 @@ mod tests {
 
         #[test]
         fn single_ascii_char() {
-            let mut parser = Parser::default();
+            let mut parser = StatefulInputParser::default();
             parser.advance(b"a", false);
 
             let events: Vec<_> = parser.collect();
@@ -103,7 +103,7 @@ mod tests {
 
         #[test]
         fn multiple_ascii_chars_single_read() {
-            let mut parser = Parser::default();
+            let mut parser = StatefulInputParser::default();
             parser.advance(b"abc", false);
 
             let events: Vec<_> = parser.collect();
@@ -115,7 +115,7 @@ mod tests {
 
         #[test]
         fn enter_key() {
-            let mut parser = Parser::default();
+            let mut parser = StatefulInputParser::default();
             parser.advance(b"\r", false);
 
             let events: Vec<_> = parser.collect();
@@ -125,7 +125,7 @@ mod tests {
 
         #[test]
         fn tab_key() {
-            let mut parser = Parser::default();
+            let mut parser = StatefulInputParser::default();
             parser.advance(b"\t", false);
 
             let events: Vec<_> = parser.collect();
@@ -135,7 +135,7 @@ mod tests {
 
         #[test]
         fn backspace_key() {
-            let mut parser = Parser::default();
+            let mut parser = StatefulInputParser::default();
             // Backspace is typically 0x7F (127)
             parser.advance(&[0x7F], false);
 
@@ -158,7 +158,7 @@ mod tests {
         #[test]
         fn lone_esc_with_more_false_emits_escape_key() {
             // User pressed ESC key alone - no more data coming.
-            let mut parser = Parser::default();
+            let mut parser = StatefulInputParser::default();
             parser.advance(&[0x1B], false); // ESC byte, more=false
 
             let events: Vec<_> = parser.collect();
@@ -169,7 +169,7 @@ mod tests {
         #[test]
         fn esc_with_more_true_waits_for_sequence() {
             // ESC arrived but more bytes are coming - wait for full sequence.
-            let mut parser = Parser::default();
+            let mut parser = StatefulInputParser::default();
             parser.advance(&[0x1B], true); // ESC byte, more=true
 
             // No event emitted yet - waiting for rest of sequence.
@@ -180,7 +180,7 @@ mod tests {
         #[test]
         fn arrow_up_complete_sequence() {
             // Arrow Up: ESC [ A (0x1B 0x5B 0x41)
-            let mut parser = Parser::default();
+            let mut parser = StatefulInputParser::default();
             parser.advance(&[0x1B, b'[', b'A'], false);
 
             let events: Vec<_> = parser.collect();
@@ -191,7 +191,7 @@ mod tests {
         #[test]
         fn arrow_down_complete_sequence() {
             // Arrow Down: ESC [ B
-            let mut parser = Parser::default();
+            let mut parser = StatefulInputParser::default();
             parser.advance(&[0x1B, b'[', b'B'], false);
 
             let events: Vec<_> = parser.collect();
@@ -202,7 +202,7 @@ mod tests {
         #[test]
         fn arrow_right_complete_sequence() {
             // Arrow Right: ESC [ C
-            let mut parser = Parser::default();
+            let mut parser = StatefulInputParser::default();
             parser.advance(&[0x1B, b'[', b'C'], false);
 
             let events: Vec<_> = parser.collect();
@@ -213,7 +213,7 @@ mod tests {
         #[test]
         fn arrow_left_complete_sequence() {
             // Arrow Left: ESC [ D
-            let mut parser = Parser::default();
+            let mut parser = StatefulInputParser::default();
             parser.advance(&[0x1B, b'[', b'D'], false);
 
             let events: Vec<_> = parser.collect();
@@ -231,7 +231,7 @@ mod tests {
         #[test]
         fn arrow_key_split_across_two_reads() {
             // Arrow Up arrives as: first read gets ESC, second read gets [ A
-            let mut parser = Parser::default();
+            let mut parser = StatefulInputParser::default();
 
             // First chunk: ESC only, but more=true (buffer was full)
             parser.advance(&[0x1B], true);
@@ -247,7 +247,7 @@ mod tests {
         #[test]
         fn arrow_key_split_into_three_reads() {
             // Extreme fragmentation: ESC, then [, then A
-            let mut parser = Parser::default();
+            let mut parser = StatefulInputParser::default();
 
             parser.advance(&[0x1B], true);
             assert_eq!((&mut parser).collect::<Vec<_>>().len(), 0);
@@ -263,7 +263,7 @@ mod tests {
 
         #[test]
         fn multiple_events_across_chunks() {
-            let mut parser = Parser::default();
+            let mut parser = StatefulInputParser::default();
 
             // First chunk: 'a' and start of arrow sequence
             parser.advance(&[b'a', 0x1B], true);
@@ -285,7 +285,7 @@ mod tests {
 
         #[test]
         fn iterator_drains_internal_queue() {
-            let mut parser = Parser::default();
+            let mut parser = StatefulInputParser::default();
             parser.advance(b"xyz", false);
 
             // First iteration drains the queue.
@@ -299,7 +299,7 @@ mod tests {
 
         #[test]
         fn iterator_returns_events_in_fifo_order() {
-            let mut parser = Parser::default();
+            let mut parser = StatefulInputParser::default();
             parser.advance(b"abc", false);
 
             assert_eq!(
@@ -319,7 +319,7 @@ mod tests {
 
         #[test]
         fn can_interleave_advance_and_iteration() {
-            let mut parser = Parser::default();
+            let mut parser = StatefulInputParser::default();
 
             parser.advance(b"a", false);
             assert_eq!(
@@ -343,7 +343,7 @@ mod tests {
         #[test]
         fn home_key() {
             // Home: ESC [ H
-            let mut parser = Parser::default();
+            let mut parser = StatefulInputParser::default();
             parser.advance(&[0x1B, b'[', b'H'], false);
 
             let events: Vec<_> = parser.collect();
@@ -354,7 +354,7 @@ mod tests {
         #[test]
         fn end_key() {
             // End: ESC [ F
-            let mut parser = Parser::default();
+            let mut parser = StatefulInputParser::default();
             parser.advance(&[0x1B, b'[', b'F'], false);
 
             let events: Vec<_> = parser.collect();
@@ -365,7 +365,7 @@ mod tests {
         #[test]
         fn delete_key() {
             // Delete: ESC [ 3 ~
-            let mut parser = Parser::default();
+            let mut parser = StatefulInputParser::default();
             parser.advance(&[0x1B, b'[', b'3', b'~'], false);
 
             let events: Vec<_> = parser.collect();
@@ -376,7 +376,7 @@ mod tests {
         #[test]
         fn insert_key() {
             // Insert: ESC [ 2 ~
-            let mut parser = Parser::default();
+            let mut parser = StatefulInputParser::default();
             parser.advance(&[0x1B, b'[', b'2', b'~'], false);
 
             let events: Vec<_> = parser.collect();
@@ -387,7 +387,7 @@ mod tests {
         #[test]
         fn page_up_key() {
             // Page Up: ESC [ 5 ~
-            let mut parser = Parser::default();
+            let mut parser = StatefulInputParser::default();
             parser.advance(&[0x1B, b'[', b'5', b'~'], false);
 
             let events: Vec<_> = parser.collect();
@@ -398,7 +398,7 @@ mod tests {
         #[test]
         fn page_down_key() {
             // Page Down: ESC [ 6 ~
-            let mut parser = Parser::default();
+            let mut parser = StatefulInputParser::default();
             parser.advance(&[0x1B, b'[', b'6', b'~'], false);
 
             let events: Vec<_> = parser.collect();
@@ -413,7 +413,7 @@ mod tests {
         #[test]
         fn two_byte_utf8_char() {
             // 'é' is U+00E9, encoded as 0xC3 0xA9
-            let mut parser = Parser::default();
+            let mut parser = StatefulInputParser::default();
             parser.advance(&[0xC3, 0xA9], false);
 
             let events: Vec<_> = parser.collect();
@@ -424,7 +424,7 @@ mod tests {
         #[test]
         fn three_byte_utf8_char() {
             // '中' is U+4E2D, encoded as 0xE4 0xB8 0xAD
-            let mut parser = Parser::default();
+            let mut parser = StatefulInputParser::default();
             parser.advance(&[0xE4, 0xB8, 0xAD], false);
 
             let events: Vec<_> = parser.collect();
@@ -435,7 +435,7 @@ mod tests {
         #[test]
         fn four_byte_utf8_emoji() {
             // '😀' is U+1F600, encoded as 0xF0 0x9F 0x98 0x80
-            let mut parser = Parser::default();
+            let mut parser = StatefulInputParser::default();
             parser.advance(&[0xF0, 0x9F, 0x98, 0x80], false);
 
             let events: Vec<_> = parser.collect();
@@ -446,7 +446,7 @@ mod tests {
         #[test]
         fn utf8_split_across_chunks() {
             // 'é' split across two reads
-            let mut parser = Parser::default();
+            let mut parser = StatefulInputParser::default();
 
             parser.advance(&[0xC3], true);
             assert_eq!((&mut parser).collect::<Vec<_>>().len(), 0);

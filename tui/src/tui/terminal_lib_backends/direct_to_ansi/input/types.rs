@@ -1,52 +1,89 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 //! Shared type definitions for the `DirectToAnsi` input device.
-//!
-//! This module contains types used across multiple input submodules:
-//! - [`LoopContinuationSignal`]: Event loop control flow
-//! - [`ReaderThreadMessage`]: Channel message from stdin reader thread
 
 use crate::InputEvent;
 
-/// Signal from a processing stage to the event loop indicating how to proceed.
+/// Control flow signal for the mio poller thread's main loop.
 ///
-/// Used by the paste state machine to communicate back to the reader loop.
-/// Each stage returns this signal to indicate:
-/// - An event is ready to emit
-/// - Processing should continue (more data needed or event absorbed)
-#[allow(missing_debug_implementations)]
-pub enum LoopContinuationSignal {
-    /// Emit this event to the caller and return from the loop.
-    Emit(InputEvent),
-    /// Continue the loop (data received, event absorbed, or signal handled).
+/// Used by [`MioPoller`] methods to indicate what the main loop should do next.
+/// This operates at the thread level, controlling whether to continue polling
+/// or terminate the thread entirely.
+///
+/// [`MioPoller`]: super::mio_poller::MioPoller
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ThreadLoopContinuation {
+    /// Continue to the next iteration of the event loop.
     Continue,
+    /// Return from the thread function (used for EOF, fatal errors, or receiver dropped).
+    Return,
 }
 
-/// Message from the stdin reader thread, sent through the channel.
+/// Capacity of the broadcast channel for input events.
 ///
-/// The dedicated reader thread uses [`mio::Poll`] to wait on both stdin and
-/// `SIGWINCH` signals simultaneously. It parses stdin bytes using the crossterm
-/// pattern and sends parsed events through the channel.
+/// When the buffer is full, the oldest message is dropped to make room for new ones.
+/// Slow consumers will receive [`Lagged`] on their next [`recv()`] call, indicating how
+/// many messages they missed.
 ///
-/// # Crossterm Pattern
+/// `4_096` is generous for terminal input (you'd never have that many pending
+/// keypresses), but it's cheap (each [`ReaderThreadMessage`] is small) and provides
+/// headroom for debug/logging consumers that might occasionally lag.
 ///
-/// The reader thread does parsing (not just reading):
-/// 1. Read bytes from stdin into `TTY_BUFFER_SIZE` buffer
-/// 2. Compute `more = read_count == TTY_BUFFER_SIZE`
-/// 3. Call `parser.advance(buffer, more)` to parse with ESC disambiguation
-/// 4. Send each parsed `InputEvent` through the channel
+/// [`Lagged`]: tokio::sync::broadcast::error::RecvError::Lagged
+/// [`recv()`]: tokio::sync::broadcast::Receiver::recv
+pub const CHANNEL_CAPACITY: usize = 4_096;
+
+/// Sender end of the broadcast channel for input events.
 ///
-/// This matches crossterm's `mio.rs` architecture where parsing happens in the
-/// reader thread, ensuring the `more` flag is computed correctly from the actual
-/// read count.
+/// Carries [`ReaderThreadMessage`] variants: keyboard/mouse input from [`stdin`], resize
+/// events from [`SIGWINCH`], EOF, and errors.
 ///
-/// [`mio::Poll`]: mio::Poll
-#[derive(Debug)]
+/// The sender can be cloned to create additional receivers via [`Sender::subscribe`].
+///
+/// [`stdin`]: std::io::stdin
+/// [`SIGWINCH`]: signal_hook::consts::SIGWINCH
+/// [`Sender::subscribe`]: tokio::sync::broadcast::Sender::subscribe
+pub type InputEventSender = tokio::sync::broadcast::Sender<ReaderThreadMessage>;
+
+/// Receiver end of the broadcast channel for input events.
+///
+/// Carries [`ReaderThreadMessage`] variants: keyboard/mouse input from [`stdin`], resize
+/// events from [`SIGWINCH`], EOF, and errors.
+///
+/// Multiple receivers can exist simultaneously—each receives all messages sent after
+/// it was created. If a receiver lags behind (buffer fills up), it will receive
+/// [`RecvError::Lagged`] indicating how many messages were skipped.
+///
+/// [`stdin`]: std::io::stdin
+/// [`SIGWINCH`]: signal_hook::consts::SIGWINCH
+/// [`RecvError::Lagged`]: tokio::sync::broadcast::error::RecvError::Lagged
+pub type InputEventReceiver = tokio::sync::broadcast::Receiver<ReaderThreadMessage>;
+
+/// Result from the paste state machine indicating how to proceed.
+///
+/// Used by [`apply_paste_state_machine`] to communicate back to the reader loop.
+/// Each call returns this result to indicate:
+/// - An event is ready to emit
+/// - The event was absorbed (e.g., collecting paste data)
+///
+/// [`apply_paste_state_machine`]: super::paste_state_machine::apply_paste_state_machine
+#[allow(missing_debug_implementations)]
+pub enum PasteStateResult {
+    /// Emit this event to the caller.
+    Emit(InputEvent),
+    /// Event absorbed by the state machine (e.g., paste in progress).
+    Absorbed,
+}
+
+/// Message from the stdin reader thread, sent through a broadcast channel.
+///
+/// Requires [`Clone`] because [`tokio::sync::broadcast`] clones messages for each
+/// receiver. See [`global_input_resource`] for architecture details.
+///
+/// [`global_input_resource`]: mod@super::global_input_resource
+#[derive(Debug, Clone)]
 pub enum ReaderThreadMessage {
-    /// Successfully parsed an input event from stdin.
-    ///
-    /// The reader thread has already parsed raw bytes into an [`InputEvent`]
-    /// using the crossterm pattern with proper ESC disambiguation.
+    /// Parsed input event ready for consumption.
     Event(InputEvent),
     /// EOF reached (0 bytes read).
     Eof,

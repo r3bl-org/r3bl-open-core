@@ -80,7 +80,7 @@
 //! with "You Are Here" breadcrumbs to help orient yourself.
 //!
 //! | Stage                          | What It Does                                             | Key Types                                 | Module                                                                        |
-//! | ------------------------------ | -------------------------------------------------------- | ----------------------------------------- | ----------------------------------------------------------------------------- |
+//! |:-------------------------------|:---------------------------------------------------------|:------------------------------------------|:------------------------------------------------------------------------------|
 //! | **Stage 1: App/Component**     | Components generate IR operations with clipping metadata | [`RenderOpIR`], [`RenderOpIRVec`]         | [`render_op::render_op_ir`]                                                   |
 //! | **Stage 2: Pipeline**          | Organizes operations by Z-order into a render queue      | [`RenderPipeline`], [`ZOrder`]            | [`render_pipeline`]                                                           |
 //! | **Stage 3: Compositor**        | Executes IR operations, writes styled pixels to buffer   | [`OffscreenBuffer`], [`PixelChar`]        | [`compositor_render_ops_to_ofs_buf`]                                          |

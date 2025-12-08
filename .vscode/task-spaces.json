@@ -1,5 +1,5 @@
 {
-  "version": "2.0",
+  "version": "3.0",
   "taskSpaces": [
     {
       "name": "[1.0] task_refactor_input_device",
@@ -118,6 +118,10 @@
           "isPinned": false
         },
         {
+          "path": "tui/src/tui/terminal_lib_backends/direct_to_ansi/mod.rs",
+          "isPinned": false
+        },
+        {
           "path": "tui/src/tui/terminal_lib_backends/direct_to_ansi/input/mod.rs",
           "isPinned": false
         },
@@ -126,11 +130,11 @@
           "isPinned": false
         },
         {
-          "path": "tui/src/tui/terminal_lib_backends/direct_to_ansi/mod.rs",
+          "path": "tui/src/tui/terminal_lib_backends/direct_to_ansi/input/global_input_resource.rs",
           "isPinned": false
         },
         {
-          "path": "tui/src/tui/terminal_lib_backends/direct_to_ansi/input/protocol_conversion.rs",
+          "path": "tui/src/tui/terminal_lib_backends/direct_to_ansi/input/mio_poller.rs",
           "isPinned": false
         },
         {
@@ -138,26 +142,22 @@
           "isPinned": false
         },
         {
+          "path": "tui/src/tui/terminal_lib_backends/direct_to_ansi/input/stateful_parser.rs",
+          "isPinned": false
+        },
+        {
+          "path": "tui/src/tui/terminal_lib_backends/direct_to_ansi/input/protocol_conversion.rs",
+          "isPinned": false
+        },
+        {
           "path": "tui/src/tui/terminal_lib_backends/direct_to_ansi/input/paste_state_machine.rs",
-          "isPinned": false
-        },
-        {
-          "path": "tui/src/tui/terminal_lib_backends/direct_to_ansi/input/process_global_stdin.rs",
-          "isPinned": false
-        },
-        {
-          "path": "tui/src/readline_async/readline_async_impl/integration_tests/pty_multiline_output_test.rs",
-          "isPinned": false
-        },
-        {
-          "path": "tui/src/readline_async/readline_async_impl/integration_tests/pty_shared_writer_no_blank_line_test.rs",
           "isPinned": false
         }
       ],
       "taskFile": "task/task_refactor_input_device.md",
       "createdAt": 1763496885607,
       "lastAccessed": 1763666457216,
-      "activeTab": "tui/src/readline_async/readline_async_impl/integration_tests/pty_shared_writer_no_blank_line_test.rs"
+      "activeTab": "tui/src/tui/terminal_lib_backends/direct_to_ansi/input/mio_poller.rs"
     },
     {
       "name": "[1.1] task_readline_async_add_shortcuts",
@@ -236,7 +236,38 @@
       "activeTab": "todo.md",
       "createdAt": 1763497146862,
       "lastAccessed": 1763497146944
+    },
+    {
+      "name": "rl_async_work",
+      "id": "f382057e-e550-409b-b4ab-85cd97b11298",
+      "tabs": [
+        {
+          "path": "todo.md",
+          "isPinned": true
+        },
+        {
+          "path": "task/done/rl_async_update.md",
+          "isPinned": false
+        },
+        {
+          "path": "tui/src/readline_async/readline_async_impl/line_state/core.rs",
+          "isPinned": false
+        },
+        {
+          "path": "tui/src/readline_async/readline_async_impl/integration_tests/pty_multiline_output_test.rs",
+          "isPinned": false
+        },
+        {
+          "path": "tui/examples/readline_async.rs",
+          "isPinned": false
+        },
+        {
+          "path": "tui/src/readline_async/readline_async_impl/integration_tests/pty_shared_writer_no_blank_line_test.rs",
+          "isPinned": false
+        }
+      ],
+      "createdAt": 1765206963761,
+      "activeTab": "tui/examples/readline_async.rs"
     }
-  ],
-  "activeTaskSpaceId": "7db0597e-e949-458d-bff9-072e239021e5"
+  ]
 }

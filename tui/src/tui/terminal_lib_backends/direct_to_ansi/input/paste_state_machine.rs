@@ -1,20 +1,12 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Paste state machine for collecting bracketed paste text.
-//!
-//! This module handles the state transitions for bracketed paste mode, accumulating
-//! text between `Paste(Start)` and `Paste(End)` markers.
-//!
-//! See the data flow diagram in [`try_read_event()`] for how this state machine
-//! integrates with the input pipeline.
-//!
-//! [`try_read_event()`]: super::input_device::DirectToAnsiInputDevice::try_read_event
+//! Paste state machine for collecting bracketed paste text. See [`PasteCollectionState`]
+//! docs.
 
-use super::{protocol_conversion::convert_input_event, types::LoopContinuationSignal};
+use super::{protocol_conversion::convert_input_event, types::PasteStateResult};
 use crate::{InputEvent,
             core::ansi::vt_100_terminal_input_parser::{VT100InputEventIR,
-                                                       VT100KeyCodeIR,
-                                                       VT100PasteModeIR}};
+                                                       VT100KeyCodeIR, VT100PasteModeIR}};
 
 /// State machine for collecting bracketed paste text.
 ///
@@ -22,6 +14,9 @@ use crate::{InputEvent,
 /// - `Paste(Start)` marker
 /// - Multiple `Keyboard` events (the actual pasted text)
 /// - `Paste(End)` marker
+///
+/// See the data flow diagram in [`try_read_event()`] for how this state machine
+/// integrates with the input pipeline.
 ///
 /// This state tracks whether we're currently collecting text between markers.
 ///
@@ -45,6 +40,7 @@ use crate::{InputEvent,
 ///
 /// [`DirectToAnsi`]: mod@super::super
 /// [`VT100KeyCodeIR::Enter`]: crate::core::ansi::vt_100_terminal_input_parser::VT100KeyCodeIR::Enter
+/// [`try_read_event()`]: super::input_device::DirectToAnsiInputDevice::try_read_event
 #[derive(Debug)]
 pub enum PasteCollectionState {
     /// Not currently in a paste operation.
@@ -55,13 +51,13 @@ pub enum PasteCollectionState {
 
 /// Applies the paste collection state machine to a parsed VT100 event.
 ///
-/// Returns [`LoopContinuationSignal::Emit`] if the event should be emitted to
-/// the caller, or [`LoopContinuationSignal::Continue`] if the event was absorbed
+/// Returns [`PasteStateResult::Emit`] if the event should be emitted to
+/// the caller, or [`PasteStateResult::Absorbed`] if the event was absorbed
 /// (paste in progress).
 pub fn apply_paste_state_machine(
     paste_state: &mut PasteCollectionState,
     vt100_event: &VT100InputEventIR,
-) -> LoopContinuationSignal {
+) -> PasteStateResult {
     match (paste_state, vt100_event) {
         // Start marker: enter collecting state, don't emit event.
         (
@@ -69,7 +65,7 @@ pub fn apply_paste_state_machine(
             VT100InputEventIR::Paste(VT100PasteModeIR::Start),
         ) => {
             *state = PasteCollectionState::Accumulating(String::new());
-            LoopContinuationSignal::Continue
+            PasteStateResult::Absorbed
         }
 
         // End marker: emit complete paste and exit collecting state.
@@ -85,7 +81,7 @@ pub fn apply_paste_state_machine(
                     "state was matched as Accumulating(String), so this can't happen"
                 );
             };
-            LoopContinuationSignal::Emit(InputEvent::BracketedPaste(text))
+            PasteStateResult::Emit(InputEvent::BracketedPaste(text))
         }
 
         // While collecting: accumulate keyboard characters and whitespace.
@@ -109,20 +105,20 @@ pub fn apply_paste_state_machine(
                 // ignored during paste - they're unlikely to be intentional.
                 _ => {}
             }
-            LoopContinuationSignal::Continue
+            PasteStateResult::Absorbed
         }
 
         // Orphaned end marker (End without Start): emit empty paste.
         (
             PasteCollectionState::Inactive,
             VT100InputEventIR::Paste(VT100PasteModeIR::End),
-        ) => LoopContinuationSignal::Emit(InputEvent::BracketedPaste(String::new())),
+        ) => PasteStateResult::Emit(InputEvent::BracketedPaste(String::new())),
 
         // Normal event processing when not pasting.
         (PasteCollectionState::Inactive, _) => {
             match convert_input_event(vt100_event.clone()) {
-                Some(event) => LoopContinuationSignal::Emit(event),
-                None => LoopContinuationSignal::Continue,
+                Some(event) => PasteStateResult::Emit(event),
+                None => PasteStateResult::Absorbed,
             }
         }
     }

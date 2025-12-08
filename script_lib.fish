@@ -1435,3 +1435,43 @@ function check_config_changed
 
     return 0
 end
+
+# ============================================================================
+# Logging Utilities
+# ============================================================================
+
+# Prints a message to stdout AND appends it to a log file.
+#
+# This function provides dual-output logging: messages appear on the terminal
+# for immediate feedback AND are persisted to a log file for later debugging.
+# Uses tee internally to avoid duplicating output logic.
+#
+# Parameters:
+#   $argv[1]: Log file path (will be created if doesn't exist, appended if exists)
+#   $argv[2...]: Message to print (all remaining arguments joined with spaces)
+#
+# Features:
+# - Creates parent directories if needed
+# - Appends to existing log file (doesn't overwrite)
+# - Handles multi-word messages correctly
+# - Preserves exit status
+#
+# Usage:
+#   log_and_print /tmp/my.log "Starting build..."
+#   log_and_print $LOG_FILE "["(timestamp)"] ✅ Build complete!"
+#   log_and_print /tmp/my.log "Error:" $error_message
+#
+# Example:
+#   set -g LOG_FILE /tmp/roc/check.log
+#   log_and_print $LOG_FILE "["(timestamp)"] 🔨 Starting doc build..."
+#   # Output appears on terminal AND is appended to /tmp/roc/check.log
+function log_and_print
+    set -l log_file $argv[1]
+    set -l message $argv[2..-1]
+
+    # Ensure log directory exists
+    mkdir -p (dirname $log_file)
+
+    # Print to stdout AND append to log file
+    echo $message | tee -a $log_file
+end

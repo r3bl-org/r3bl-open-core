@@ -4,8 +4,9 @@
 
 //! [`DirectToAnsiInputDevice`] struct and implementation.
 
-use super::{process_global_stdin::get_or_init_resource_guard, types::ReaderThreadMessage};
-use crate::{InputEvent, core::term::get_size};
+use super::{global_input_resource::subscribe_to_input_events,
+            types::{InputEventReceiver, ReaderThreadMessage}};
+use crate::{InputEvent, core::term::get_size, tui::DEBUG_TUI_SHOW_TERMINAL_BACKEND};
 use std::fmt::Debug;
 
 /// Async input device for [`DirectToAnsi`] backend.
@@ -15,7 +16,7 @@ use std::fmt::Debug;
 /// ANSI/VT100 protocols with zero external dependencies. Uses the **crossterm `more` flag
 /// pattern** for reliable ESC key disambiguation without fixed timeouts.
 ///
-/// This is a **thin wrapper** that delegates to [`GLOBAL_INPUT_RESOURCE`] for
+/// This is a **thin wrapper** that delegates to [`INPUT_RESOURCE`] for
 /// [`std::io::Stdin`] reading and buffer management. The global resource pattern mirrors
 /// crossterm's architecture, ensuring [`stdin`] handles persist across device lifecycle
 /// boundaries.
@@ -28,7 +29,7 @@ use std::fmt::Debug;
 ///
 /// # Why Global State?
 ///
-/// See the [Why Global State?] section in [`GLOBAL_INPUT_RESOURCE`] for the detailed
+/// See the [Why Global State?] section in [`INPUT_RESOURCE`] for the detailed
 /// explanation.
 ///
 /// # Full I/O Pipeline
@@ -38,32 +39,32 @@ use std::fmt::Debug;
 ///
 /// ```text
 /// ┌───────────────────────────────────────────────────────────────────┐
-/// │ Raw ANSI bytes: "\x1B[A"                                          │
-/// │ std::io::stdin in mio-poller thread (GLOBAL_INPUT_RESOURCE)       │
+/// │ Raw ANSI bytes: "1B[A" (hex)                                      │
+/// │ std::io::stdin in mio-poller thread (INPUT_RESOURCE)              │
 /// └────────────────────────────┬──────────────────────────────────────┘
 ///                              │
 /// ┌────────────────────────────▼──────────────────────────────────────┐
-/// │ mio-poller thread (process_global_stdin.rs)                      │
-/// │   • mio::Poll waits on stdin + SIGWINCH                           │
+/// │ mio-poller thread (global_input_resource.rs)                      │
+/// │   • mio::Poll waits on stdin data + SIGWINCH signals              │
 /// │   • Parses bytes using `more` flag for ESC disambiguation         │
 /// │   • Applies paste state machine                                   │
-/// │   • Sends InputEvent through mpsc channel                         │
+/// │   • Sends InputEvent through broadcast channel                    │
 /// │                                                                   │
-/// │   vt_100_terminal_input_parser/ (Protocol Layer - IR)             │
-/// │     try_parse_input_event() dispatches to:                        │
-/// │     ├─ parse_keyboard_sequence() → VT100InputEventIR::Keyboard    │
-/// │     ├─ parse_mouse_sequence()    → VT100InputEventIR::Mouse       │
-/// │     ├─ parse_terminal_event()    → VT100InputEventIR::Focus/Resize│
-/// │     └─ parse_utf8_text()         → VT100InputEventIR::Keyboard    │
+/// │ vt_100_terminal_input_parser/ (Protocol Layer - IR)               │
+/// │   try_parse_input_event() dispatches to:                          │
+/// │   ├─ parse_keyboard_sequence() → VT100InputEventIR::Keyboard      │
+/// │   ├─ parse_mouse_sequence()    → VT100InputEventIR::Mouse         │
+/// │   ├─ parse_terminal_event()    → VT100InputEventIR::Focus/Resize  │
+/// │   └─ parse_utf8_text()         → VT100InputEventIR::Keyboard      │
 /// │                                                                   │
-/// │   protocol_conversion.rs (IR → Public API)                        │
-/// │     convert_input_event()       VT100InputEventIR → InputEvent    │
-/// │     convert_key_code_to_keypress()  VT100KeyCodeIR → KeyPress     │
+/// │ protocol_conversion.rs (IR → Public API)                          │
+/// │   convert_input_event()           VT100InputEventIR → InputEvent  │
+/// │   convert_key_code_to_keypress()  VT100KeyCodeIR → KeyPress       │
 /// └────────────────────────────┬──────────────────────────────────────┘
-///                              │ mpsc channel
+///                              │ broadcast channel
 /// ┌────────────────────────────▼──────────────────────────────────────┐
 /// │ THIS DEVICE: DirectToAnsiInputDevice (Backend Executor)           │
-/// │   • Zero-sized handle struct (delegates to GLOBAL_INPUT_RESOURCE) │
+/// │   • Zero-sized handle struct (delegates to INPUT_RESOURCE)        │
 /// │   • Receives pre-parsed InputEvent from channel                   │
 /// │   • Handles Resize events by querying terminal size               │
 /// └────────────────────────────┬──────────────────────────────────────┘
@@ -85,22 +86,20 @@ use std::fmt::Debug;
 /// ```text
 /// ┌───────────────────────────────────────────────────────────────────────────┐
 /// │ 1. try_read_event() called                                                │
-/// │    ├─► get_or_init_resource_guard() → acquires Mutex<Option<...>>         │
+/// │    ├─► subscribe_to_input_events() (lazy, once per device)                │
 /// │    │   └─► On first call: spawns mio-poller thread                        │
-/// │    │                                                                      │
-/// │    ├─► Check event_queue first (already-parsed buffered events)           │
 /// │    │                                                                      │
 /// │    └─► Loop: stdin_rx.recv().await                                        │
 /// │         ├─► Event(e) → return e                                           │
 /// │         ├─► Resize → query terminal size, return InputEvent::Resize       │
 /// │         └─► Eof/Error → return None                                       │
 /// └───────────────────────────────────▲───────────────────────────────────────┘
-///                                     │ mpsc channel
+///                                     │ broadcast channel
 /// ┌───────────────────────────────────┴───────────────────────────────────────┐
-/// │ 2. mio-poller thread (process_global_stdin.rs)                           │
+/// │ 2. mio-poller thread (global_input_resource.rs)                           │
 /// │    std::thread::spawn("mio-poller")                                       │
 /// │                                                                           │
-/// │    Uses mio::Poll to wait on stdin + SIGWINCH:                            │
+/// │    Uses mio::Poll to wait on stdin data + SIGWINCH signals:               │
 /// │    ┌───────────────────────────────────────────────────────────────────┐  │
 /// │    │ loop {                                                            │  │
 /// │    │   poll.poll(&mut events, None)?;        // Wait for stdin/signal  │  │
@@ -144,8 +143,8 @@ use std::fmt::Debug;
 /// ## How It Works
 ///
 /// - **`more = true`**: Read filled the entire buffer, meaning more data is likely
-///   waiting in the kernel buffer. Wait before deciding—this `ESC` is probably the
-///   start of an escape sequence.
+///   waiting in the kernel buffer. Wait before deciding—this `ESC` is probably the start
+///   of an escape sequence.
 /// - **`more = false`**: Read returned fewer bytes than buffer size, meaning we've
 ///   drained all available input. A lone `ESC` is the ESC key.
 ///
@@ -158,15 +157,15 @@ use std::fmt::Debug;
 /// ```text
 /// User presses Up Arrow
 ///   ↓
-/// Terminal: write(stdout, "\x1B[A", 3)  ← One syscall, 3 bytes
+/// Terminal: write(stdout, "1B[A" (hex), 3)  ← One syscall, 3 bytes
 ///   ↓
-/// Kernel buffer: [1B, 5B, 41]           ← All bytes arrive together
+/// Kernel buffer: [1B, 5B, 41]               ← All bytes arrive together
 ///   ↓
-/// stdin.read() → 3 bytes                ← We get all 3 bytes
+/// stdin.read() → 3 bytes                    ← We get all 3 bytes
 ///   ↓
-/// more = (3 == 1024) = false            ← Buffer not full
+/// more = (3 == 1024) = false                ← Buffer not full
 ///   ↓
-/// Parser sees [ESC, '[', 'A']           → Up Arrow event ✓
+/// Parser sees [ESC, '[', 'A']               → Up Arrow event ✓
 /// ```
 ///
 /// ## SSH and High-Latency Connections
@@ -188,10 +187,10 @@ use std::fmt::Debug;
 /// ## Attribution
 ///
 /// This pattern is adapted from crossterm's `mio.rs` implementation. See the
-/// [`process_global_stdin`] module documentation for details on our mio-based
+/// [`global_input_resource`] module documentation for details on our mio-based
 /// architecture.
 ///
-/// [`process_global_stdin`]: super::process_global_stdin
+/// [`global_input_resource`]: super::global_input_resource
 /// [`CrosstermInputDevice`]: crate::tui::terminal_lib_backends::crossterm_backend::CrosstermInputDevice
 /// [`DirectToAnsi`]: mod@crate::tui::terminal_lib_backends::direct_to_ansi
 /// [`InputDevice`]: crate::InputDevice
@@ -200,26 +199,33 @@ use std::fmt::Debug;
 /// [`try_parse_input_event`]: crate::core::ansi::vt_100_terminal_input_parser::try_parse_input_event
 /// [`vt_100_terminal_input_parser`]: mod@crate::core::ansi::vt_100_terminal_input_parser
 /// [`stdin`]: std::io::Stdin
-/// [`GLOBAL_INPUT_RESOURCE`]: super::process_global_stdin::GLOBAL_INPUT_RESOURCE
-/// [Why Global State?]: super::process_global_stdin::GLOBAL_INPUT_RESOURCE#why-global-state
+/// [`INPUT_RESOURCE`]: super::global_input_resource::INPUT_RESOURCE
+/// [Why Global State?]: super::global_input_resource::INPUT_RESOURCE#why-global-state
 /// [`try_read_event()`]: Self::try_read_event
-pub struct DirectToAnsiInputDevice;
+pub struct DirectToAnsiInputDevice {
+    /// This device's subscription to the global input broadcast channel.
+    ///
+    /// Lazily initialized on first call to [`try_read_event()`]. Each device instance
+    /// gets its own independent receiver that receives all events.
+    ///
+    /// [`try_read_event()`]: Self::try_read_event
+    stdin_rx: Option<InputEventReceiver>,
+}
 
 impl DirectToAnsiInputDevice {
     /// Create a new `DirectToAnsiInputDevice`.
     ///
-    /// This is a **zero-sized handle** - all state lives in the global input resource
-    /// ([`DirectToAnsiInputResource`]) which persists for the process lifetime.
-    /// The global resource is lazily initialized on first access to [`try_read_event`].
+    /// The device subscribes to the global input broadcast channel lazily on first call
+    /// to [`try_read_event()`]. Each device instance receives all input events
+    /// independently.
     ///
     /// No timeout initialization needed - we use smart async lookahead instead! See the
     /// [struct-level documentation] for details on zero-latency ESC detection.
     ///
-    /// [`try_read_event`]: Self::try_read_event
+    /// [`try_read_event()`]: Self::try_read_event
     /// [struct-level documentation]: Self
-    /// [`DirectToAnsiInputResource`]: super::process_global_stdin::DirectToAnsiInputResource
     #[must_use]
-    pub fn new() -> Self { Self }
+    pub fn new() -> Self { Self { stdin_rx: None } }
 
     /// Read the next input event asynchronously.
     ///
@@ -299,12 +305,12 @@ impl DirectToAnsiInputDevice {
     /// - This method is **called repeatedly** by the main event loop via
     ///   [`InputDevice::next()`], which dispatches to [`Self::next()`]
     /// - **Buffer state is preserved** across device lifetimes via
-    ///   [`GLOBAL_INPUT_RESOURCE`]
+    ///   [`INPUT_RESOURCE`]
     /// - Returns `None` when stdin is closed (program should exit)
     ///
     /// # Global State
     ///
-    /// This method accesses the global input resource ([`GLOBAL_INPUT_RESOURCE`]) which
+    /// This method accesses the global input resource ([`INPUT_RESOURCE`]) which
     /// holds:
     /// - The channel receiver for stdin data and resize signals (from dedicated reader
     ///   thread using [`mio::Poll`])
@@ -328,43 +334,54 @@ impl DirectToAnsiInputDevice {
     /// 2. Wait for events from stdin reader channel (yields until data ready)
     /// 3. Apply paste state machine and return event
     ///
-    /// Events arrive fully parsed from the reader thread. See [struct-level documentation]
-    /// for zero-latency ESC detection.
+    /// Events arrive fully parsed from the reader thread. See [struct-level
+    /// documentation] for zero-latency ESC detection.
     ///
     /// # Cancel Safety
     ///
-    /// This method is cancel-safe. The internal channel receive
-    /// ([`tokio::sync::mpsc::UnboundedReceiver::recv`]) is truly cancel-safe: if
+    /// This method is cancel-safe. The internal broadcast channel receive
+    /// ([`tokio::sync::broadcast::Receiver::recv`]) is truly cancel-safe: if
     /// cancelled, the data remains in the channel for the next receive.
     ///
-    /// See the [`process_global_stdin`] module documentation for why we use a dedicated
+    /// See the [`global_input_resource`] module documentation for why we use a dedicated
     /// thread with [`mio::Poll`] and channel instead of [`tokio::io::stdin()`] (which
     /// is NOT cancel-safe).
     ///
     /// [`InputDevice::next()`]: crate::InputDevice::next
     /// [`Self::next()`]: Self::next
-    /// [`GLOBAL_INPUT_RESOURCE`]: super::process_global_stdin::GLOBAL_INPUT_RESOURCE
+    /// [`INPUT_RESOURCE`]: super::global_input_resource::INPUT_RESOURCE
     /// [`InputDevice`]: crate::InputDevice
-    /// [Why Global State?]: super::process_global_stdin::GLOBAL_INPUT_RESOURCE#why-global-state
+    /// [Why Global State?]: super::global_input_resource::INPUT_RESOURCE#why-global-state
     /// [struct-level documentation]: Self
-    /// [`process_global_stdin`]: super::process_global_stdin
+    /// [`global_input_resource`]: super::global_input_resource
     /// [`tokio::io::stdin()`]: tokio::io::stdin
     /// [`mio::Poll`]: mio::Poll
+    /// [`tokio::sync::broadcast::Receiver::recv`]: tokio::sync::broadcast::Receiver::recv
     pub async fn try_read_event(&mut self) -> Option<InputEvent> {
-        // Get the global input resource (which persists for process lifetime).
-        let mut resource_guard = get_or_init_resource_guard().await;
-        let resource = resource_guard.as_mut()?;
-
-        // Check event queue first - return any buffered events.
-        if let Some(event) = resource.event_queue.pop_front() {
-            return Some(event);
+        // Subscribe lazily on first call - each device gets its own receiver.
+        if self.stdin_rx.is_none() {
+            self.stdin_rx = Some(subscribe_to_input_events());
         }
+        let stdin_rx = self.stdin_rx.as_mut()?;
 
-        // Wait for fully-formed `InputEvents` through the channel.
+        // Wait for fully-formed `InputEvents` through the broadcast channel.
         loop {
-            let Some(stdin_read_result) = resource.stdin_rx.recv().await else {
-                // Channel closed - reader thread exited.
-                return None;
+            let stdin_read_result = match stdin_rx.recv().await {
+                Ok(msg) => msg,
+                Err(tokio::sync::broadcast::error::RecvError::Closed) => {
+                    // Channel closed - reader thread exited.
+                    return None;
+                }
+                Err(tokio::sync::broadcast::error::RecvError::Lagged(skipped)) => {
+                    // This receiver fell behind - some messages were dropped.
+                    // Log and continue from the current position.
+                    DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
+                        eprintln!(
+                            "DirectToAnsiInputDevice: receiver lagged, skipped {skipped} messages"
+                        );
+                    });
+                    continue;
+                }
             };
 
             match stdin_read_result {
@@ -388,7 +405,7 @@ impl DirectToAnsiInputDevice {
 impl Debug for DirectToAnsiInputDevice {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("DirectToAnsiInputDevice")
-            .field("global_resource", &"<GLOBAL_INPUT_RESOURCE>")
+            .field("global_resource", &"<INPUT_RESOURCE>")
             .finish()
     }
 }
@@ -429,17 +446,10 @@ mod tests {
     #[tokio::test]
     async fn test_device_creation() {
         // Test DirectToAnsiInputDevice constructs successfully.
-        // With the global resource architecture, the device is now a thin wrapper.
         let _device = DirectToAnsiInputDevice::new();
 
-        // Verify global resource is initialized on first access.
-        let resource_guard = get_or_init_resource_guard().await;
-        let resource = resource_guard
-            .as_ref()
-            .expect("Global resource should be initialized");
-
-        // Verify event queue is empty initially.
-        assert!(resource.event_queue.is_empty());
+        // Verify we can subscribe to the global input resource.
+        let _rx = subscribe_to_input_events();
     }
 
     #[tokio::test]
