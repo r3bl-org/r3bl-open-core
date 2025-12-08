@@ -22,31 +22,15 @@ pub enum LoopContinuationSignal {
     Continue,
 }
 
-/// Message from the stdin reader thread, sent through the channel.
+/// Message from the stdin reader thread, sent through a broadcast channel.
 ///
-/// The dedicated reader thread uses [`mio::Poll`] to wait on both stdin and
-/// `SIGWINCH` signals simultaneously. It parses stdin bytes using the crossterm
-/// pattern and sends parsed events through the channel.
+/// Requires [`Clone`] because [`tokio::sync::broadcast`] clones messages for each
+/// receiver. See [`process_global_stdin`] for architecture details.
 ///
-/// # Crossterm Pattern
-///
-/// The reader thread does parsing (not just reading):
-/// 1. Read bytes from stdin into `TTY_BUFFER_SIZE` buffer
-/// 2. Compute `more = read_count == TTY_BUFFER_SIZE`
-/// 3. Call `parser.advance(buffer, more)` to parse with ESC disambiguation
-/// 4. Send each parsed `InputEvent` through the channel
-///
-/// This matches crossterm's `mio.rs` architecture where parsing happens in the
-/// reader thread, ensuring the `more` flag is computed correctly from the actual
-/// read count.
-///
-/// [`mio::Poll`]: mio::Poll
-#[derive(Debug)]
+/// [`process_global_stdin`]: mod@super::process_global_stdin
+#[derive(Debug, Clone)]
 pub enum ReaderThreadMessage {
-    /// Successfully parsed an input event from stdin.
-    ///
-    /// The reader thread has already parsed raw bytes into an [`InputEvent`]
-    /// using the crossterm pattern with proper ESC disambiguation.
+    /// Parsed input event ready for consumption.
     Event(InputEvent),
     /// EOF reached (0 bytes read).
     Eof,

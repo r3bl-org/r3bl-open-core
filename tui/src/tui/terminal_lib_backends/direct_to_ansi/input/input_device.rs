@@ -5,7 +5,7 @@
 //! [`DirectToAnsiInputDevice`] struct and implementation.
 
 use super::{process_global_stdin::get_or_init_resource_guard, types::ReaderThreadMessage};
-use crate::{InputEvent, core::term::get_size};
+use crate::{InputEvent, core::term::get_size, tui::DEBUG_TUI_SHOW_TERMINAL_BACKEND};
 use std::fmt::Debug;
 
 /// Async input device for [`DirectToAnsi`] backend.
@@ -38,29 +38,29 @@ use std::fmt::Debug;
 ///
 /// ```text
 /// ┌───────────────────────────────────────────────────────────────────┐
-/// │ Raw ANSI bytes: "\x1B[A"                                          │
+/// │ Raw ANSI bytes: "1B[A" (hex)                                      │
 /// │ std::io::stdin in mio-poller thread (GLOBAL_INPUT_RESOURCE)       │
 /// └────────────────────────────┬──────────────────────────────────────┘
 ///                              │
 /// ┌────────────────────────────▼──────────────────────────────────────┐
-/// │ mio-poller thread (process_global_stdin.rs)                      │
+/// │ mio-poller thread (process_global_stdin.rs)                       │
 /// │   • mio::Poll waits on stdin + SIGWINCH                           │
 /// │   • Parses bytes using `more` flag for ESC disambiguation         │
 /// │   • Applies paste state machine                                   │
-/// │   • Sends InputEvent through mpsc channel                         │
+/// │   • Sends InputEvent through broadcast channel                    │
 /// │                                                                   │
-/// │   vt_100_terminal_input_parser/ (Protocol Layer - IR)             │
-/// │     try_parse_input_event() dispatches to:                        │
-/// │     ├─ parse_keyboard_sequence() → VT100InputEventIR::Keyboard    │
-/// │     ├─ parse_mouse_sequence()    → VT100InputEventIR::Mouse       │
-/// │     ├─ parse_terminal_event()    → VT100InputEventIR::Focus/Resize│
-/// │     └─ parse_utf8_text()         → VT100InputEventIR::Keyboard    │
+/// │ vt_100_terminal_input_parser/ (Protocol Layer - IR)               │
+/// │   try_parse_input_event() dispatches to:                          │
+/// │   ├─ parse_keyboard_sequence() → VT100InputEventIR::Keyboard      │
+/// │   ├─ parse_mouse_sequence()    → VT100InputEventIR::Mouse         │
+/// │   ├─ parse_terminal_event()    → VT100InputEventIR::Focus/Resize  │
+/// │   └─ parse_utf8_text()         → VT100InputEventIR::Keyboard      │
 /// │                                                                   │
-/// │   protocol_conversion.rs (IR → Public API)                        │
-/// │     convert_input_event()       VT100InputEventIR → InputEvent    │
-/// │     convert_key_code_to_keypress()  VT100KeyCodeIR → KeyPress     │
+/// │ protocol_conversion.rs (IR → Public API)                          │
+/// │   convert_input_event()           VT100InputEventIR → InputEvent  │
+/// │   convert_key_code_to_keypress()  VT100KeyCodeIR → KeyPress       │
 /// └────────────────────────────┬──────────────────────────────────────┘
-///                              │ mpsc channel
+///                              │ broadcast channel
 /// ┌────────────────────────────▼──────────────────────────────────────┐
 /// │ THIS DEVICE: DirectToAnsiInputDevice (Backend Executor)           │
 /// │   • Zero-sized handle struct (delegates to GLOBAL_INPUT_RESOURCE) │
@@ -95,9 +95,9 @@ use std::fmt::Debug;
 /// │         ├─► Resize → query terminal size, return InputEvent::Resize       │
 /// │         └─► Eof/Error → return None                                       │
 /// └───────────────────────────────────▲───────────────────────────────────────┘
-///                                     │ mpsc channel
+///                                     │ broadcast channel
 /// ┌───────────────────────────────────┴───────────────────────────────────────┐
-/// │ 2. mio-poller thread (process_global_stdin.rs)                           │
+/// │ 2. mio-poller thread (process_global_stdin.rs)                            │
 /// │    std::thread::spawn("mio-poller")                                       │
 /// │                                                                           │
 /// │    Uses mio::Poll to wait on stdin + SIGWINCH:                            │
@@ -144,8 +144,8 @@ use std::fmt::Debug;
 /// ## How It Works
 ///
 /// - **`more = true`**: Read filled the entire buffer, meaning more data is likely
-///   waiting in the kernel buffer. Wait before deciding—this `ESC` is probably the
-///   start of an escape sequence.
+///   waiting in the kernel buffer. Wait before deciding—this `ESC` is probably the start
+///   of an escape sequence.
 /// - **`more = false`**: Read returned fewer bytes than buffer size, meaning we've
 ///   drained all available input. A lone `ESC` is the ESC key.
 ///
@@ -158,15 +158,15 @@ use std::fmt::Debug;
 /// ```text
 /// User presses Up Arrow
 ///   ↓
-/// Terminal: write(stdout, "\x1B[A", 3)  ← One syscall, 3 bytes
+/// Terminal: write(stdout, "1B[A" (hex), 3)  ← One syscall, 3 bytes
 ///   ↓
-/// Kernel buffer: [1B, 5B, 41]           ← All bytes arrive together
+/// Kernel buffer: [1B, 5B, 41]               ← All bytes arrive together
 ///   ↓
-/// stdin.read() → 3 bytes                ← We get all 3 bytes
+/// stdin.read() → 3 bytes                    ← We get all 3 bytes
 ///   ↓
-/// more = (3 == 1024) = false            ← Buffer not full
+/// more = (3 == 1024) = false                ← Buffer not full
 ///   ↓
-/// Parser sees [ESC, '[', 'A']           → Up Arrow event ✓
+/// Parser sees [ESC, '[', 'A']               → Up Arrow event ✓
 /// ```
 ///
 /// ## SSH and High-Latency Connections
@@ -328,13 +328,13 @@ impl DirectToAnsiInputDevice {
     /// 2. Wait for events from stdin reader channel (yields until data ready)
     /// 3. Apply paste state machine and return event
     ///
-    /// Events arrive fully parsed from the reader thread. See [struct-level documentation]
-    /// for zero-latency ESC detection.
+    /// Events arrive fully parsed from the reader thread. See [struct-level
+    /// documentation] for zero-latency ESC detection.
     ///
     /// # Cancel Safety
     ///
-    /// This method is cancel-safe. The internal channel receive
-    /// ([`tokio::sync::mpsc::UnboundedReceiver::recv`]) is truly cancel-safe: if
+    /// This method is cancel-safe. The internal broadcast channel receive
+    /// ([`tokio::sync::broadcast::Receiver::recv`]) is truly cancel-safe: if
     /// cancelled, the data remains in the channel for the next receive.
     ///
     /// See the [`process_global_stdin`] module documentation for why we use a dedicated
@@ -350,6 +350,7 @@ impl DirectToAnsiInputDevice {
     /// [`process_global_stdin`]: super::process_global_stdin
     /// [`tokio::io::stdin()`]: tokio::io::stdin
     /// [`mio::Poll`]: mio::Poll
+    /// [`tokio::sync::broadcast::Receiver::recv`]: tokio::sync::broadcast::Receiver::recv
     pub async fn try_read_event(&mut self) -> Option<InputEvent> {
         // Get the global input resource (which persists for process lifetime).
         let mut resource_guard = get_or_init_resource_guard().await;
@@ -360,11 +361,24 @@ impl DirectToAnsiInputDevice {
             return Some(event);
         }
 
-        // Wait for fully-formed `InputEvents` through the channel.
+        // Wait for fully-formed `InputEvents` through the broadcast channel.
         loop {
-            let Some(stdin_read_result) = resource.stdin_rx.recv().await else {
-                // Channel closed - reader thread exited.
-                return None;
+            let stdin_read_result = match resource.stdin_rx.recv().await {
+                Ok(msg) => msg,
+                Err(tokio::sync::broadcast::error::RecvError::Closed) => {
+                    // Channel closed - reader thread exited.
+                    return None;
+                }
+                Err(tokio::sync::broadcast::error::RecvError::Lagged(skipped)) => {
+                    // This receiver fell behind - some messages were dropped.
+                    // Log and continue from the current position.
+                    DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
+                        eprintln!(
+                            "DirectToAnsiInputDevice: receiver lagged, skipped {skipped} messages"
+                        );
+                    });
+                    continue;
+                }
             };
 
             match stdin_read_result {

@@ -1,65 +1,70 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-// cspell:words EINTR SIGWINCH kqueue epoll wakeup eventfd ttimeoutlen
+// cspell:words EINTR SIGWINCH kqueue epoll wakeup eventfd ttimeoutlen bcast
 
-//! Global singleton (process bound) for terminal input with a dedicated reader thread.
+//! # Global singleton (process bound) for terminal input with a dedicated reader thread
 //!
-//! This module addresses three problems with terminal input in async Rust:
-//! 1. **UI freezes** on terminal resize when using [`tokio::io::stdin()`]
-//! 2. **Dropped keystrokes** when transitioning between TUI apps
-//! 3. **Flawed `ESC` detection** over [SSH] (separate issue, see [ESC Detection
-//!    Limitations](#esc-detection-limitations))
+//! This module provides cancel-safe async terminal input for a process, by bridging a
+//! synchronous [`mio`]-based reader thread with async consumers via a [`broadcast`]
+//! channel. It handles keyboard input (including ANSI escape sequences for arrow keys,
+//! function keys, etc.) and terminal resize signals ([`SIGWINCH`]) reliably, even over
+//! [SSH].
 //!
-//! The solution: a dedicated [`mio`]-based thread that owns [`stdin`] exclusively (using
-//! sync code) and communicates with async code via channel.
+//! The broadcast channel allows **multiple async consumers** to receive all input events
+//! simultaneously; this can be use useful for debugging, logging, or event recording
+//! alongside the "primary" TUI app consumer.
+//!
+//! [`broadcast`]: tokio::sync::broadcast
 //!
 //! # Why This Design? (Historical Context)
 //!
-//! Our original "Tokio-heavy" approach created [`DirectToAnsiInputDevice`] on demand—one
-//! instance per app, not process-bound. It used:
+//! Our original "Tokio-heavy" approach created a [`DirectToAnsiInputDevice`] instance
+//! on-demand, one-instance-per-app (which was not process-bound, rather it was bound
+//! to each app-instance). It used:
 //! - [`tokio::io::stdin()`] for input handling
-//! - [`tokio::signal`] for `SIGWINCH` handling
+//! - [`tokio::signal`] for [`SIGWINCH`] handling
 //!
 //! **This caused three problems that led us to the current design:**
 //!
-//! **Problem 1: UI freeze on resize.** [Tokio's stdin] uses a blocking threadpool. In the
-//! past, in [`DirectToAnsiInputDevice::try_read_event()`], when [`tokio::select!`]
-//! cancelled a [`tokio::io::stdin()`] read to handle `SIGWINCH`, the blocking read kept
-//! running in the background. The next read conflicted with this "zombie" read → UI
-//! freeze.
+//! 1. **UI freeze on resize.** [Tokio's stdin] uses a blocking threadpool. In the past,
+//!    in [`DirectToAnsiInputDevice::try_read_event()`], when [`tokio::select!`] cancelled
+//!    a [`tokio::io::stdin()`] read to handle [`SIGWINCH`], the blocking read kept
+//!    running in the background. The next read conflicted with this "zombie" read leading
+//!    to a UI freeze.
 //!
-//! **Problem 2: Dropped keystrokes.** Creating a new [`stdin`] handle lost access to data
-//! already in the kernel buffer. When TUI "App A" exited and "App B" started, keystrokes
-//! typed during the transition vanished. This was easily reproducible by running `cargo
-//! run --examples tui_apps`, starting one app, exiting, starting another, exiting, etc.
+//! 2. **Dropped keystrokes.** Creating a new [`stdin`] handle lost access to data already
+//!    in the kernel buffer. When TUI "App A" exited and "App B" started, keystrokes typed
+//!    during the transition vanished. This was easily reproducible by running `cargo run
+//!    --examples tui_appsT`, starting one app, exiting, dropped keystrokes, starting
+//!    another, exiting, dropped keystrokes, starting another, and so on.
 //!
-//! **Problem 3: Flawed `ESC` detection over [SSH].** Our original approach had flawed
-//! logic for distinguishing the `ESC` key from escape sequences (like `ESC [ A` for Up
-//! Arrow). It worked locally but failed over [SSH]. We now use [`crossterm`]'s `more`
-//! flag heuristic (see [ESC Detection Limitations](#esc-detection-limitations)).
+//! 3. **Flawed `ESC` detection over [SSH].** Our original approach had flawed logic for
+//!    distinguishing the `ESC` key from escape sequences (like `ESC [ A` for Up Arrow).
+//!    It worked locally but failed over [SSH]. We now use [`crossterm`]'s `more` flag
+//!    heuristic (see [ESC Detection Limitations](#esc-detection-limitations)).
 //!
 //! # The Solution
 //!
 //! A **process bound global singleton** with a dedicated reader thread. The thread
 //! exclusively owns the [`stdin`] handle and uses [`mio::Poll`] to efficiently wait on
-//! both [`stdin`] and `SIGWINCH` signals. Although sync and blocking, [`mio`] is
+//! both [`stdin`] and [`SIGWINCH`] signals. Although sync and blocking, [`mio`] is
 //! efficient - it uses OS primitives ([`epoll`]/[`kqueue`]) that put the thread to sleep
 //! until data arrives, consuming no CPU while waiting (see [How It Works](#how-it-works)
 //! for details):
 //!
 //! ```text
-//!   Process-bound Global Singleton               Your Code
-//! ┌─────────────────────────────────────┐      ┌─────────────────────────────┐
-//! │ Sync Blocking (std::thread + mio)   │      │ Async Code (tokio)          │
-//! │                                     │      │                             │
-//! │ Owns exclusively:                   │      │                             │
-//! │   • stdin handle (locked)           │      │                             │
-//! │   • Parser state                    │      │                             │
-//! │   • SIGWINCH watcher                │      │                             │
-//! │                                     │      │                             │
-//! │ tx.send(InputEvent)  ───────────────┼──────▶ stdin_rx.recv().await       │
-//! │                                     │ mpsc │ (cancel-safe!)              │
-//! └─────────────────────────────────────┘   │  └─────────────────────────────┘
+//!   Process-bound Global Singleton                    Async Consumers
+//! ┌─────────────────────────────────────┐       ┌─────────────────────────────┐
+//! │ Sync Blocking (std::thread + mio)   │       │ Primary: TUI input handler  │
+//! │                                     │       │ Optional: Debug logger      │
+//! │ Owns exclusively:                   │       │ Optional: Event recorder    │
+//! │   • stdin handle (locked)           │       │                             │
+//! │   • Parser state                    │       │                             │
+//! │   • SIGWINCH watcher                │       │                             │
+//! │                                     │       │                             │
+//! │ tx.send(InputEvent)  ───────────────┼───────▶ rx.recv().await             │
+//! │                                     │ bcast │ (cancel-safe, fan-out!)     │
+//! └─────────────────────────────────────┘   │   └─────────────────────────────┘
 //!                                           ▼
 //!                                   Sync -> Async Bridge
 //! ```
@@ -99,9 +104,9 @@
 //! # How It Works
 //!
 //! Our design separates **blocking I/O** (the [`mio`] thread owns stdin exclusively) from
-//! **async consumption** (tokio tasks await on channel). The [`tokio::sync::mpsc`]
-//! channel bridges sync and async worlds - it's designed for "send from sync, receive
-//! from async".
+//! **async consumption** (tokio tasks await on channel). The [`tokio::sync::broadcast`]
+//! channel bridges sync and async worlds, supporting multiple consumers that each receive
+//! all events.
 //!
 //! ## 1. The mio-poller Thread
 //!
@@ -110,10 +115,10 @@
 //!
 //! ```text
 //! ┌─────────────────────────────────────┐      ┌─────────────────────────────────┐
-//! │ Dedicated Thread (std::thread)      │      │ Async Code (tokio runtime)      │
+//! │ Dedicated Thread (std::thread)      │      │ Async Consumers (tokio runtime) │
 //! │                                     │      │                                 │
-//! │ mio::Poll waits on:                 ├──────▶   stdin_rx.recv().await         │
-//! │   • stdin fd (Token 0)              │ mpsc │                                 │
+//! │ mio::Poll waits on:                 ├──────▶   rx.recv().await (fan-out)     │
+//! │   • stdin fd (Token 0)              │ bcast│                                 │
 //! │   • SIGWINCH signal (Token 1)       │      │                                 │
 //! └─────────────────────────────────────┘      └─────────────────────────────────┘
 //! ```
@@ -299,7 +304,7 @@
 //! [`std::process::exit()`]: std::process::exit
 //! [`tokio::io::stdin()`]: tokio::io::stdin
 //! [`tokio::select!`]: tokio::select
-//! [`tokio::sync::mpsc`]: tokio::sync::mpsc
+//! [`tokio::sync::broadcast`]: tokio::sync::broadcast
 //! [`stdin`]: std::io::stdin
 //! [`mio`]: mio
 //! [`mio::Poll`]: mio::Poll
@@ -316,6 +321,7 @@
 //! [`Eof`]: ReaderThreadMessage::Eof
 //! [`Error`]: ReaderThreadMessage::Error
 //! [`readline_async`]: mod@crate::readline_async
+//! [`SIGWINCH`]: https://man7.org/linux/man-pages/man7/signal.7.html
 //! [SSH]: https://en.wikipedia.org/wiki/Secure_Shell
 
 use super::{paste_state_machine::{PasteCollectionState, apply_paste_state_machine},
@@ -420,43 +426,76 @@ mod mio_poller_thread {
     #[allow(clippy::wildcard_imports)]
     use super::*;
 
-    /// Read buffer size for `stdin` reads (1,024 bytes).
+    /// Read buffer size for `stdin` reads (1_024 bytes).
     ///
     /// When `read_count == TTY_BUFFER_SIZE`, we know more data is likely waiting in the
     /// kernel buffer—this is the `more` flag used for ESC disambiguation.
     const TTY_BUFFER_SIZE: usize = 1_024;
 
-    /// Token for stdin file descriptor in [`mio::Poll`].
+    /// Capacity of the broadcast channel for input events.
+    ///
+    /// When the buffer is full, the oldest message is dropped to make room for new ones.
+    /// Slow consumers will receive [`tokio::sync::broadcast::error::RecvError::Lagged`]
+    /// on their next [`recv()`] call, indicating how many messages they missed.
+    ///
+    /// 4_096 is generous for terminal input (you'd never have that many pending
+    /// keypresses), but it's cheap (each [`ReaderThreadMessage`] is small) and provides
+    /// headroom for debug/logging consumers that might occasionally lag.
+    ///
+    /// [`recv()`]: tokio::sync::broadcast::Receiver::recv
+    pub const CHANNEL_CAPACITY: usize = 4_096;
+
+    /// Token for stdin in [`mio::Poll`].
+    ///
+    /// mio tokens are user-defined identifiers to distinguish which registered source
+    /// triggered an event (not POSIX fd numbers like stdin=0, stdout=1, stderr=2).
     const STDIN_TOKEN: Token = Token(0);
 
     /// Token for SIGWINCH signal in [`mio::Poll`].
+    ///
+    /// mio tokens are user-defined identifiers to distinguish which registered source
+    /// triggered an event (not POSIX signal numbers like SIGINT=2, SIGWINCH=28).
+    /// Run `kill -l` to get a list of all signals.
     const SIGNAL_TOKEN: Token = Token(1);
 
-    /// Sender end of the channel, held by the reader thread.
-    pub type StdinSender = tokio::sync::mpsc::UnboundedSender<ReaderThreadMessage>;
+    /// Sender end of the broadcast channel, held by the reader thread.
+    ///
+    /// The sender can be cloned to create additional receivers via [`Sender::subscribe`].
+    ///
+    /// [`Sender::subscribe`]: tokio::sync::broadcast::Sender::subscribe
+    pub type StdinSender = tokio::sync::broadcast::Sender<ReaderThreadMessage>;
 
-    /// Receiver end of the channel, used by the async input device.
-    pub type StdinReceiver = tokio::sync::mpsc::UnboundedReceiver<ReaderThreadMessage>;
+    /// Receiver end of the broadcast channel, used by async consumers.
+    ///
+    /// Multiple receivers can exist simultaneously—each receives all messages sent after
+    /// it was created. If a receiver lags behind (buffer fills up), it will receive
+    /// [`RecvError::Lagged`] indicating how many messages were skipped.
+    ///
+    /// [`RecvError::Lagged`]: tokio::sync::broadcast::error::RecvError::Lagged
+    pub type StdinReceiver = tokio::sync::broadcast::Receiver<ReaderThreadMessage>;
 
-    /// Creates a channel and spawns the dedicated mio poller thread.
+    /// Creates a broadcast channel and spawns the dedicated mio poller thread.
     ///
     /// # Returns
     ///
     /// The receiver end of the channel. The sender is moved into the spawned thread.
+    /// Additional receivers can be created by calling [`subscribe()`] on the sender
+    /// (accessible via [`GLOBAL_INPUT_RESOURCE`]).
     ///
     /// # Thread Lifetime
     ///
     /// The thread runs until:
     /// - `stdin` reaches EOF (returns `ReaderThreadMessage::Eof`)
     /// - An I/O error occurs (returns `ReaderThreadMessage::Error`)
-    /// - The receiver is dropped (send fails, thread exits gracefully)
+    /// - All receivers are dropped (send fails, thread exits gracefully)
     ///
     /// Since the receiver is stored in [`GLOBAL_INPUT_RESOURCE`], the thread
     /// effectively runs for the process lifetime.
     ///
+    /// [`subscribe()`]: tokio::sync::broadcast::Sender::subscribe
     /// [`GLOBAL_INPUT_RESOURCE`]: super::GLOBAL_INPUT_RESOURCE
     pub fn spawn() -> StdinReceiver {
-        let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
+        let (tx, rx) = tokio::sync::broadcast::channel(CHANNEL_CAPACITY);
 
         std::thread::Builder::new()
             .name("mio-poller".into())

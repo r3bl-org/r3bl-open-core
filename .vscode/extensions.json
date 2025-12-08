@@ -40,7 +40,6 @@
     "perkovec.emoji", // Emoji.
     "vadimcn.vscode-lldb", // LLDB. Debugger.
     "ms-vscode.cpptools", // C/C++. Debugger.
-    "github.copilot", // Github Copilot.
     "antfu.icons-carbon", // Carbon Icons "product icon" theme for VSCode panels and UI decorations
     "pkief.material-icon-theme", // Material "file icon" theme for file extension, folder, symbol, etc icons
   ],
