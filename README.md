@@ -1,5 +1,8 @@
 # r3bl-open-core
 
+[![Run in Smithery](https://smithery.ai/badge/skills/r3bl-org)](https://smithery.ai/skills?ns=r3bl-org&utm_source=github&utm_medium=badge)
+
+
 <img
 src="https://raw.githubusercontent.com/r3bl-org/r3bl-open-core/main/r3bl-term.svg?raw=true"
 height="256px">
