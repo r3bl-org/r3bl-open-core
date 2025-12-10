@@ -97,7 +97,7 @@ fn parse_code_block_body_including_code_block_end(input: &str) -> IResult<&str, 
 ///
 /// # Examples:
 /// | input          | output               |
-/// | -------------- | -------------------- |
+/// |:---------------|:---------------------|
 /// | "foobar\n"     | `["foobar"]`         |
 /// | "\n"           | `[""] `              |
 /// | ""             | `[] `                |

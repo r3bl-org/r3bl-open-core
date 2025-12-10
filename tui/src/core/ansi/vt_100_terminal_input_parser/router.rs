@@ -110,7 +110,7 @@ use crate::{ByteOffset, byte_offset,
 /// The parser uses intelligent 1-2 byte lookahead to determine routing:
 ///
 /// | Input Pattern            | `input_available` | Routing                             |
-/// | ------------------------ | ----------------- | ----------------------------------- |
+/// |:-------------------------|:------------------|:------------------------------------|
 /// | `[ 0x1B ]` alone         | `false`           | Emit `ESC` key immediately          |
 /// | `[ 0x1B ]` alone         | `true`            | Return `None` (wait for more bytes) |
 /// | `[ 0x1B, b'[', .. ]`     | (ignored)         | `CSI` → keyboard/mouse/terminal     |

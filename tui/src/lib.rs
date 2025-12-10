@@ -370,7 +370,7 @@
 //! ## TUI-Specific Commands
 //!
 //! | Command                                     | Description                                      |
-//! | ------------------------------------------- | ------------------------------------------------ |
+//! |:--------------------------------------------|:-------------------------------------------------|
 //! | `fish run.fish run-examples`                | Run TUI examples interactively with options      |
 //! | `fish run.fish run-examples-flamegraph-svg` | Generate SVG flamegraph for performance analysis |
 //! | `fish run.fish run-examples-flamegraph-fold`| Generate perf-folded format for analysis         |
@@ -380,7 +380,7 @@
 //! ## Testing and Development
 //!
 //! | Command                                    | Description                         |
-//! | ------------------------------------------ | ----------------------------------- |
+//! |:-------------------------------------------|:------------------------------------|
 //! | `fish run.fish test`                       | Run all tests                       |
 //! | `fish run.fish watch-all-tests`            | Watch files, run all tests          |
 //! | `fish run.fish watch-one-test <pattern>`   | Watch files, run specific test      |
@@ -1449,7 +1449,7 @@
 //! color). Syntax highlighted text is also just [`TuiStyledText`].
 //!
 //! | UTF-8 | Task                                                                                                           |
-//! | ----- | -------------------------------------------------------------------------------------------------------------- |
+//! |:------|:---------------------------------------------------------------------------------------------------------------|
 //! | Y     | convert [`RenderPipeline`] to `List<List<`[`PixelChar`]`>>` ([`OffscreenBuffer`])                            |
 //! | Y     | paint each [`PixelChar`] in `List<List<`[`PixelChar`]`>>` to stdout using [`OffscreenBufferPaintImplCrossterm`] |
 //! | Y     | save the `List<List<`[`PixelChar`]`>>` to [`GlobalData`]                                                      |

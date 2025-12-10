@@ -51,7 +51,7 @@ pub fn parse_csv_opt_eol<'a>(
 }
 
 /// | input                | rem     |  output                           |
-/// | -------------------- | ------- | --------------------------------- |
+/// |:---------------------|:--------|:----------------------------------|
 /// | `"tag1, tag2, tag3"` | `""`    | `vec!(["tag1", "tag2", "tag3"])`  |
 fn parse_comma_separated_list(input: &str) -> IResult<&str, InlineVec<&str>> {
     let acc: InlineVec<&str> = input.split(COMMA).collect();

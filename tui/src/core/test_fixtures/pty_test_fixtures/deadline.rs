@@ -22,7 +22,7 @@ use std::time::{Duration, Instant};
 /// # Comparison with `AsyncDebouncedDeadline`
 ///
 /// | Pattern      | `Deadline`                            | `AsyncDebouncedDeadline`      |
-/// | ------------ | ------------------------------------- | ----------------------------- |
+/// |:-------------|:--------------------------------------|:------------------------------|
 /// | **Purpose**  | Timeout enforcement                   | Event debouncing              |
 /// | **Resets?**  | No (fixed duration)                   | Yes (on each event)           |
 /// | **Runtime**  | Sync (`std::time`)                    | Async (`tokio::time`)         |

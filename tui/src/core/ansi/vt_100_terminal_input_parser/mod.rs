@@ -66,7 +66,7 @@
 //! The input parser is intentionally designed to parallel the output architecture:
 //!
 //! | Aspect         | Input                               | Output                                 |
-//! | -------------- | ----------------------------------- | -------------------------------------- |
+//! |:---------------|:------------------------------------|:---------------------------------------|
 //! | Protocol layer | (this module)                       | [`generator`]                          |
 //! | Backend layer  | [`input`]                           | [`output`]                             |
 //! | Core API       | [`try_parse_input_event()`], etc.   | [`SgrCode`], [`AnsiSequenceGenerator`] |
@@ -165,7 +165,7 @@
 //! ```
 //!
 //! | Level       | Purpose                        | Sequences | Catches                            |
-//! | ----------- | ------------------------------ | --------- | ---------------------------------- |
+//! |:------------|:-------------------------------|:----------|:-----------------------------------|
 //! | Validation  | Spec compliance & ground truth | Hardcoded | Protocol misunderstandings         |
 //! | Unit        | Component contracts            | Generated | Generator/parser desynchronization |
 //! | Integration | System behavior                | Generated | Real-world usage regressions       |

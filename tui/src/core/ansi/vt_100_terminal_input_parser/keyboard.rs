@@ -170,7 +170,7 @@
 //! Here's how each modifier is encoded (sorted by byte count):
 //!
 //! | Bytes | Encoding                  | Modifier     | Reason                        |
-//! | ----- | ------------------------- | ------------ | ----------------------------- |
+//! |:------|:--------------------------|:-------------|:------------------------------|
 //! | 0     | Implicit in case          | **Shift**    | 'a' vs 'A' already encodes it |
 //! | 1     | Single byte (`0x00-0x1F`) | **Ctrl**     | Fits in ASCII control codes   |
 //! | 2     | ESC prefix                | **Alt**      | No room in ASCII, prepend ESC |
@@ -295,7 +295,7 @@
 //! ### Ambiguous Mappings (Identical Bytes)
 //!
 //! | Bytes  | Key Combination          | Parser Interpretation | Rationale                         |
-//! | ------ | ------------------------ | --------------------- | --------------------------------- |
+//! |:-------|:-------------------------|:----------------------|:----------------------------------|
 //! | `0x09` | Tab **OR** Ctrl+I        | **Tab**               | Tab key is far more commonly used |
 //! | `0x0A` | Enter (LF) **OR** Ctrl+J | **Enter**             | Enter key is essential for apps   |
 //! | `0x0D` | Enter (CR) **OR** Ctrl+M | **Enter**             | Enter key is essential for apps   |
@@ -328,7 +328,7 @@
 //!
 //! ### Basic Keys
 //! | Key             | Sequence        | Notes                            |
-//! | --------------- | --------------- | -------------------------------- |
+//! |:----------------|:----------------|:---------------------------------|
 //! | **Tab**         | `0x09`          | Fixed: was returning None        |
 //! | **Enter**       | `0x0D`/`0x0A`   | CR or LF depending on terminal   |
 //! | **Backspace**   | `0x08`/`0x7F`   | BS or DEL encoding               |
@@ -337,7 +337,7 @@
 //!
 //! ### Control Key Combinations (Ctrl+Letter)
 //! | Key                             | Byte            | Notes                          |
-//! | ------------------------------- | --------------- | ------------------------------ |
+//! |:--------------------------------|:----------------|:-------------------------------|
 //! | **Ctrl+Space**                  | `0x00`          | Ctrl+@, treated as Ctrl+Space  |
 //! | **Ctrl+A** through **Ctrl+Z**   | `0x01`-`0x1A`   | Standard control chars         |
 //! | **Ctrl+\\**                     | `0x1C`          | FS (File Separator)            |
@@ -347,7 +347,7 @@
 //!
 //! ### Alt Key Combinations (Alt+Letter)
 //! | Key                         | Sequence          | Format                |
-//! | --------------------------- | ----------------- | --------------------- |
+//! |:----------------------------|:------------------|:----------------------|
 //! | **Alt+\[a-z\]**             | `ESC` + letter    | Lowercase letters     |
 //! | **Alt+\[A-Z\]**             | `ESC` + letter    | Uppercase letters     |
 //! | **Alt+\[0-9\]**             | `ESC` + digit     | Digits                |
@@ -357,7 +357,7 @@
 //!
 //! ### Arrow Keys
 //! | Key         | CSI Sequence   | SS3 Sequence   | Application Mode   |
-//! | ----------- | -------------- | -------------- | ------------------ |
+//! |:------------|:---------------|:---------------|:-------------------|
 //! | **Up**      | `ESC [A`       | `ESC O A`      | vim/less/emacs     |
 //! | **Down**    | `ESC [B`       | `ESC O B`      | vim/less/emacs     |
 //! | **Right**   | `ESC [C`       | `ESC O C`      | vim/less/emacs     |
@@ -365,7 +365,7 @@
 //!
 //! ### Arrow Keys with Modifiers
 //! | Key                            | Sequence             | Format             |
-//! | ------------------------------ | -------------------- | ------------------ |
+//! |:-------------------------------|:---------------------|:-------------------|
 //! | **Ctrl+Up/Down/Left/Right**    | `ESC [1;5A/B/D/C`    | CSI with modifier  |
 //! | **Alt+Up/Down/Left/Right**     | `ESC [1;3A/B/D/C`    | CSI with modifier  |
 //! | **Shift+Up/Down/Left/Right**   | `ESC [1;2A/B/D/C`    | CSI with modifier  |
@@ -373,7 +373,7 @@
 //!
 //! ### Special Navigation Keys
 //! | Key             | Primary    | Alt 1      | Alt 2      | SS3        |
-//! | --------------- | ---------- | ---------- | ---------- | ---------- |
+//! |:----------------|:-----------|:-----------|:-----------|:-----------|
 //! | **Home**        | `ESC [H`   | `ESC [1~`  | `ESC [7~`  | `ESC O H`  |
 //! | **End**         | `ESC [F`   | `ESC [4~`  | `ESC [8~`  | `ESC O F`  |
 //! | **Insert**      | `ESC [2~`  | -          | -          | -          |
@@ -383,13 +383,13 @@
 //!
 //! ### Tab Navigation
 //! | Key                          | Sequence    | Notes               |
-//! | ---------------------------- | ----------- | ------------------- |
+//! |:-----------------------------|:------------|:--------------------|
 //! | **Tab**                      | `0x09`      | Forward navigation  |
 //! | **Shift+Tab (`BackTab`)**    | `ESC [Z`    | Backward navigation |
 //!
 //! ### Function Keys F1-F12
 //! | Key       | CSI Code      | SS3 Sequence   | Notes            |
-//! | --------- | ------------- | -------------- | ---------------- |
+//! |:----------|:--------------|:---------------|:-----------------|
 //! | **F1**    | `ESC [11~`    | `ESC O P`      | SS3 in app mode  |
 //! | **F2**    | `ESC [12~`    | `ESC O Q`      | SS3 in app mode  |
 //! | **F3**    | `ESC [13~`    | `ESC O R`      | SS3 in app mode  |
@@ -416,7 +416,7 @@
 //! digits. This allows applications to distinguish numpad from regular number keys.
 //!
 //! | Numpad Key   | Normal Mode   | Application Mode   | SS3 Char   |
-//! | ------------ | ------------- | ------------------ | ---------- |
+//! |:-------------|:--------------|:-------------------|:-----------|
 //! | **0**        | `'0'`         | `ESC O p`          | p          |
 //! | **1**        | `'1'`         | `ESC O q`          | q          |
 //! | **2**        | `'2'`         | `ESC O r`          | r          |

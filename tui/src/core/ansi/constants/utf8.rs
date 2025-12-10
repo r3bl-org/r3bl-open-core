@@ -10,7 +10,7 @@
 //! UTF-8 uses variable-length encoding (1-4 bytes per character):
 //!
 //! | Bytes | First byte | Continuation bytes | Bit pattern                          |
-//! | ----- | ---------- | ------------------ | ------------------------------------ |
+//! |:------|:-----------|:-------------------|:-------------------------------------|
 //! | 1     | 00-7F      | -                  | 0xxxxxxx                             |
 //! | 2     | C0-DF      | 80-BF              | 110xxxxx 10xxxxxx                    |
 //! | 3     | E0-EF      | 80-BF (x2)         | 1110xxxx 10xxxxxx 10xxxxxx           |

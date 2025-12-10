@@ -45,7 +45,7 @@
 //! same as its byte size in memory. Let's unpack that.
 //!
 //! | Character | Byte size | Grapheme cluster size | Compound |
-//! | --------- | --------- | --------------------- | -------- |
+//! |:----------|:----------|:----------------------|:---------|
 //! | `H`       | 1         | 1                     | No       |
 //! | `😃`      | 4         | 2                     | No       |
 //! | `📦`      | 4         | 2                     | No       |

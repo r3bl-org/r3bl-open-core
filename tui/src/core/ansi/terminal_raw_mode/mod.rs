@@ -56,7 +56,7 @@
 //! instead:
 //!
 //! | Aspect       | Kernel Line Discipline (`N_TTY`)  | User-Space Library ([GNU Readline])      |
-//! | ------------ | --------------------------------- | ---------------------------------------- |
+//! |:-------------|:----------------------------------|:-----------------------------------------|
 //! | **Location** | Inside the Linux kernel           | Part of the shell ([Bash], Python, etc.) |
 //! | **Active**   | Canonical ("Cooked") Mode         | Non-Canonical ("Raw") Mode               |
 //! | **Purpose**  | Basic, ancient terminal functions | Advanced, feature-rich line editing      |

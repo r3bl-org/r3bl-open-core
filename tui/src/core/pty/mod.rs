@@ -67,7 +67,7 @@
 //! ### Task Coordination & Lifecycle
 //!
 //! | Time   | Completion Task        | Reader Task      | Input Handler    | Bridge Task      |
-//! | ------ | ---------------------- | ---------------- | ---------------- | ---------------- |
+//! |:-------|:-----------------------|:-----------------|:-----------------|:-----------------|
 //! | 0      | 🛫 Spawn child         |                  |                  |                  |
 //! | 1      | 🛫 Spawn reader        | 🛫 Start read    |                  |                  |
 //! | 2      | 🛫 Spawn input hdlr*   | 📖 Read data     | 🛫 Start*        |                  |

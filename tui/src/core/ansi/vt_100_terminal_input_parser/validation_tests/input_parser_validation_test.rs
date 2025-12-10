@@ -40,7 +40,7 @@
 //! ### Test Strategy
 //!
 //! | Test Type                      | Purpose                                   | Approach                                              |
-//! | ------------------------------ | ----------------------------------------- | ----------------------------------------------------- |
+//! |:-------------------------------|:------------------------------------------|:------------------------------------------------------|
 //! | **Parser tests** (this file)   | Verify ANSI → Event parsing               | Use literal sequences from terminal observation       |
 //! | **Generator tests**            | Verify Event → ANSI generation            | Use literal sequences from VT-100 spec                |
 //! | **Round-trip tests**           | Verify parser ↔ generator compatibility   | Event → bytes → Event                                 |

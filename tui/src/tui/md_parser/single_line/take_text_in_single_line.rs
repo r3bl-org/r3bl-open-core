@@ -18,7 +18,7 @@ use nom::{Parser,
 /// Here are some examples:
 ///
 /// | input               | rem            |  output           |
-/// | ------------------- | -------------- | ----------------- |
+/// |:--------------------|:---------------|:------------------|
 /// | `"\nfoo\nbar"`      | `"\nfoo\nbar"` | `""`              |
 /// | `"Hello, world!\n"` | `"\n"`         | `"Hello, world!"` |
 /// | `"Hello, world!"`   | `""`           | `"Hello, world!"` |

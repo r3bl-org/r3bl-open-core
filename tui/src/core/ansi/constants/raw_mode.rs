@@ -75,7 +75,7 @@
 //! ## VMIN/VTIME Interaction Matrix
 //!
 //! | VMIN   | VTIME   | Behavior                                            |
-//! | ------ | ------- | --------------------------------------------------- |
+//! |:-------|:--------|:----------------------------------------------------|
 //! | 0      | 0       | Non-blocking: return immediately with available     |
 //! | 0      | >0      | Timed read: return after timeout or data            |
 //! | >0     | 0       | Blocking: return after VMIN bytes (no timeout)      |

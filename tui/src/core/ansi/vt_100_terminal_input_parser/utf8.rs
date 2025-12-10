@@ -128,7 +128,7 @@
 //! ## Two Separate Concerns
 //!
 //! | Concern                                | What it measures            | Example: '😀'    |
-//! | -------------------------------------- | --------------------------- | ---------------- |
+//! |:---------------------------------------|:----------------------------|:-----------------|
 //! | **UTF-8 byte length** (this module)    | Memory size in bytes        | 4 bytes          |
 //! | **Display width** (graphemes module)   | Terminal columns occupied   | 2 columns        |
 //!
