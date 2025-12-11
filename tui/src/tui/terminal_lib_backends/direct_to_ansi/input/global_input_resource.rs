@@ -155,10 +155,10 @@
 //! [`signal-hook-mio`]: signal_hook_mio
 //! [`kqueue`]: https://man.freebsd.org/cgi/man.cgi?query=kqueue&sektion=2
 //! [`epoll`]: https://man7.org/linux/man-pages/man7/epoll.7.html
-//! [`Event(InputEvent)`]: ReaderThreadMessage::Event
-//! [`Resize`]: ReaderThreadMessage::Resize
-//! [`Eof`]: ReaderThreadMessage::Eof
-//! [`Error`]: ReaderThreadMessage::Error
+//! [`Event(InputEvent)`]: super::types::ReaderThreadMessage::Event
+//! [`Resize`]: super::types::ReaderThreadMessage::Resize
+//! [`Eof`]: super::types::ReaderThreadMessage::Eof
+//! [`Error`]: super::types::ReaderThreadMessage::Error
 //! [`readline_async`]: mod@crate::readline_async
 //! [`SIGWINCH`]: signal_hook::consts::SIGWINCH
 //! [SSH]: https://en.wikipedia.org/wiki/Secure_Shell
