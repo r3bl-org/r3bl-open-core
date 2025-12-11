@@ -872,7 +872,8 @@ function run_checks_for_type
             # Step 1: Quick build (BLOCKING - fast, gets docs to user quickly)
             log_and_print $CHECK_LOG_FILE "["(timestamp)"] 🔨 Quick build starting (--no-deps)..."
 
-            env CARGO_TARGET_DIR=$CHECK_TARGET_DIR_DOC_STAGING_QUICK ionice -c2 -n0 cargo doc --no-deps > /dev/null 2>&1
+            set -lx CARGO_TARGET_DIR $CHECK_TARGET_DIR_DOC_STAGING_QUICK
+            ionice_wrapper cargo doc --no-deps > /dev/null 2>&1
             set -l quick_result $status
 
             if test $quick_result -eq 0
@@ -896,7 +897,8 @@ function run_checks_for_type
 
                 log_and_print '$CHECK_LOG_FILE' '['(timestamp)'] [bg] 🔨 Full build starting (with deps)...'
 
-                env CARGO_TARGET_DIR=$CHECK_TARGET_DIR_DOC_STAGING_FULL ionice -c2 -n0 cargo doc > /dev/null 2>&1
+                set -lx CARGO_TARGET_DIR $CHECK_TARGET_DIR_DOC_STAGING_FULL
+                ionice_wrapper cargo doc > /dev/null 2>&1
 
                 if test \$status -eq 0
                     rsync -a $CHECK_TARGET_DIR_DOC_STAGING_FULL/doc/ $CHECK_TARGET_DIR/doc/
@@ -929,23 +931,27 @@ end
 # This helps when other processes compete for disk I/O during builds.
 
 function check_cargo_test
-    env CARGO_TARGET_DIR=$CHECK_TARGET_DIR ionice -c2 -n0 cargo test --all-targets -q
+    set -lx CARGO_TARGET_DIR $CHECK_TARGET_DIR
+    ionice_wrapper cargo test --all-targets -q
 end
 
 function check_doctests
-    env CARGO_TARGET_DIR=$CHECK_TARGET_DIR ionice -c2 -n0 cargo test --doc -q
+    set -lx CARGO_TARGET_DIR $CHECK_TARGET_DIR
+    ionice_wrapper cargo test --doc -q
 end
 
 # Quick doc check without dependencies (for one-off --doc mode).
 # Builds to QUICK staging directory to avoid race conditions with background full builds.
 function check_docs_quick
-    env CARGO_TARGET_DIR=$CHECK_TARGET_DIR_DOC_STAGING_QUICK ionice -c2 -n0 cargo doc --no-deps
+    set -lx CARGO_TARGET_DIR $CHECK_TARGET_DIR_DOC_STAGING_QUICK
+    ionice_wrapper cargo doc --no-deps
 end
 
 # Full doc build including dependencies (for watch modes).
 # Builds to FULL staging directory to avoid race conditions with quick builds.
 function check_docs_full
-    env CARGO_TARGET_DIR=$CHECK_TARGET_DIR_DOC_STAGING_FULL ionice -c2 -n0 cargo doc
+    set -lx CARGO_TARGET_DIR $CHECK_TARGET_DIR_DOC_STAGING_FULL
+    ionice_wrapper cargo doc
 end
 
 # Atomically sync generated docs from staging to serving directory.

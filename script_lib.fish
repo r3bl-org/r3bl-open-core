@@ -970,6 +970,41 @@ function run_example_with_flamegraph_profiling_perf_fold
 end
 
 # ============================================================================
+# Cross-Platform I/O Priority Wrapper
+# ============================================================================
+
+# Runs a command with I/O priority on Linux, or directly on macOS.
+#
+# On Linux: Uses ionice -c2 -n0 to give the command highest I/O priority
+#           in the best-effort scheduling class (no sudo required).
+# On macOS: ionice doesn't exist, so the command runs directly.
+#
+# Parameters:
+#   $argv: The command and its arguments to run
+#
+# Features:
+# - Cross-platform: Works on both Linux and macOS
+# - Transparent: Command output and exit codes pass through unchanged
+# - No overhead on macOS: Simply exec's the command
+#
+# Usage:
+#   ionice_wrapper cargo test --all-targets
+#   ionice_wrapper cargo doc --no-deps
+#
+# Example:
+#   # Instead of: ionice -c2 -n0 cargo build
+#   # Use:        ionice_wrapper cargo build
+function ionice_wrapper
+    if command -v ionice >/dev/null 2>&1
+        # Linux: Use ionice for I/O priority
+        ionice -c2 -n0 $argv
+    else
+        # macOS/other: Run command directly
+        $argv
+    end
+end
+
+# ============================================================================
 # Cross-Platform Notification Utilities
 # ============================================================================
 
