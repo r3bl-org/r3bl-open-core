@@ -92,6 +92,19 @@ fn extract_table(lines: &[&str], start: usize) -> Option<Vec<String>> {
     }
 }
 
+/// Column alignment extracted from separator row.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ColumnAlignment {
+    /// No alignment specified (default left in most renderers).
+    None,
+    /// Left alignment (`:---`).
+    Left,
+    /// Center alignment (`:---:`).
+    Center,
+    /// Right alignment (`---:`).
+    Right,
+}
+
 /// Format a single table with proper column alignment.
 fn format_single_table(table: &[String]) -> Vec<String> {
     if table.len() < 2 {
@@ -104,6 +117,13 @@ fn format_single_table(table: &[String]) -> Vec<String> {
     if rows.is_empty() {
         return table.to_vec();
     }
+
+    // Extract alignments from separator row (index 1)
+    let alignments: Vec<ColumnAlignment> = if rows.len() >= 2 {
+        rows[1].iter().map(|cell| parse_alignment(cell)).collect()
+    } else {
+        vec![]
+    };
 
     // Calculate column widths
     let col_count = rows[0].len();
@@ -120,11 +140,30 @@ fn format_single_table(table: &[String]) -> Vec<String> {
     // Format each row
     let mut formatted = Vec::new();
     for (row_idx, row) in rows.iter().enumerate() {
-        let formatted_row = format_table_row(row, &col_widths, row_idx == 1);
+        let formatted_row = format_table_row(row, &col_widths, row_idx == 1, &alignments);
         formatted.push(formatted_row);
     }
 
     formatted
+}
+
+/// Parse alignment from a separator cell.
+///
+/// - `:---` or `:--` → Left
+/// - `:---:` or `:--:` → Center
+/// - `---:` or `--:` → Right
+/// - `---` or `--` → None
+fn parse_alignment(cell: &str) -> ColumnAlignment {
+    let trimmed = cell.trim();
+    let starts_colon = trimmed.starts_with(':');
+    let ends_colon = trimmed.ends_with(':');
+
+    match (starts_colon, ends_colon) {
+        (true, true) => ColumnAlignment::Center,
+        (true, false) => ColumnAlignment::Left,
+        (false, true) => ColumnAlignment::Right,
+        (false, false) => ColumnAlignment::None,
+    }
 }
 
 /// Parse a table row into cells.
@@ -143,6 +182,7 @@ fn format_table_row(
     cells: &[String],
     col_widths: &[usize],
     is_separator: bool,
+    alignments: &[ColumnAlignment],
 ) -> String {
     let formatted_cells: Vec<String> = cells
         .iter()
@@ -150,8 +190,12 @@ fn format_table_row(
         .map(|(idx, cell)| {
             if idx < col_widths.len() {
                 if is_separator {
-                    // Separator row: use dashes
-                    "-".repeat(col_widths[idx])
+                    // Separator row: generate dashes with alignment markers preserved.
+                    let alignment = alignments
+                        .get(idx)
+                        .copied()
+                        .unwrap_or(ColumnAlignment::None);
+                    format_separator_cell(col_widths[idx], alignment)
                 } else {
                     // Data row: pad with spaces (character-aware)
                     pad_string_by_chars(cell.trim(), col_widths[idx])
@@ -163,6 +207,39 @@ fn format_table_row(
         .collect();
 
     format!("| {} |", formatted_cells.join(" | "))
+}
+
+/// Format a separator cell with alignment markers.
+///
+/// Generates dashes with the appropriate leading/trailing colons based on alignment.
+fn format_separator_cell(width: usize, alignment: ColumnAlignment) -> String {
+    match alignment {
+        ColumnAlignment::None => "-".repeat(width),
+        ColumnAlignment::Left => {
+            // `:---` format - colon at start, dashes fill the rest.
+            if width <= 1 {
+                ":".to_string()
+            } else {
+                format!(":{}", "-".repeat(width - 1))
+            }
+        }
+        ColumnAlignment::Right => {
+            // `---:` format - dashes fill most, colon at end.
+            if width <= 1 {
+                ":".to_string()
+            } else {
+                format!("{}:", "-".repeat(width - 1))
+            }
+        }
+        ColumnAlignment::Center => {
+            // `:---:` format - colons at both ends.
+            if width <= 2 {
+                "::".to_string()
+            } else {
+                format!(":{}:", "-".repeat(width - 2))
+            }
+        }
+    }
 }
 
 /// Pad a string to the specified display width (accounts for emoji and unicode).
@@ -289,5 +366,70 @@ More text";
         // Both fence contents preserved
         assert!(output.contains("| fence1 |"));
         assert!(output.contains("| fence2 |"));
+    }
+
+    #[test]
+    fn test_left_alignment_preserved() {
+        let input = "| Column | Description |\n|:---|:---|\n| A | B |";
+        let output = format_tables(input);
+        let lines: Vec<&str> = output.lines().collect();
+        // Separator row should preserve left alignment markers
+        assert!(
+            lines[1].contains(":---"),
+            "Left alignment marker should be preserved: {}",
+            lines[1]
+        );
+    }
+
+    #[test]
+    fn test_right_alignment_preserved() {
+        let input = "| Column | Description |\n|---:|---:|\n| A | B |";
+        let output = format_tables(input);
+        let lines: Vec<&str> = output.lines().collect();
+        // Separator row should preserve right alignment markers
+        assert!(
+            lines[1].contains("---:"),
+            "Right alignment marker should be preserved: {}",
+            lines[1]
+        );
+    }
+
+    #[test]
+    fn test_center_alignment_preserved() {
+        let input = "| Column | Description |\n|:---:|:---:|\n| A | B |";
+        let output = format_tables(input);
+        let lines: Vec<&str> = output.lines().collect();
+        // Separator row should have colons at both ends for each cell
+        assert!(
+            lines[1].contains(":") && lines[1].matches(':').count() >= 4,
+            "Center alignment markers should be preserved: {}",
+            lines[1]
+        );
+    }
+
+    #[test]
+    fn test_mixed_alignment_preserved() {
+        let input =
+            "| Left | Center | Right | None |\n|:---|:---:|---:|---|\n| A | B | C | D |";
+        let output = format_tables(input);
+        let lines: Vec<&str> = output.lines().collect();
+        let separator = lines[1];
+        // Check each column's alignment is preserved.
+        let cells: Vec<&str> = separator
+            .trim()
+            .trim_start_matches('|')
+            .trim_end_matches('|')
+            .split('|')
+            .map(|s| s.trim())
+            .collect();
+        assert_eq!(cells.len(), 4);
+        // Left: starts with :, no trailing :
+        assert!(cells[0].starts_with(':') && !cells[0].ends_with(':'));
+        // Center: starts and ends with :
+        assert!(cells[1].starts_with(':') && cells[1].ends_with(':'));
+        // Right: ends with :, no leading :
+        assert!(!cells[2].starts_with(':') && cells[2].ends_with(':'));
+        // None: no colons
+        assert!(!cells[3].contains(':'));
     }
 }

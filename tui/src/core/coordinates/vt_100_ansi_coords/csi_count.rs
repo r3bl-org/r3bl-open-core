@@ -82,7 +82,7 @@ impl CsiCount {
     ///
     /// Use this constant instead of `CsiCount::new(1).unwrap()` to avoid
     /// panic documentation requirements and make intent clear.
-    pub const ONE: Self = Self(NonZeroU16::new(1).unwrap());
+    pub const ONE: Self = Self(NonZeroU16::MIN);
 
     /// Create a new count from a raw value.
     ///
@@ -110,7 +110,7 @@ impl CsiCount {
     /// This is an infallible constructor since [`NonZeroU16`] is already guaranteed
     /// to be non-zero.
     #[must_use]
-    pub const fn from_non_zero(value: NonZeroU16) -> Self { Self(value) }
+    pub const fn from_non_zero_value(value: NonZeroU16) -> Self { Self(value) }
 
     /// Get the inner [`NonZeroU16`] value.
     #[must_use]
@@ -122,7 +122,7 @@ impl CsiCount {
 }
 
 impl From<NonZeroU16> for CsiCount {
-    fn from(value: NonZeroU16) -> Self { Self::from_non_zero(value) }
+    fn from(value: NonZeroU16) -> Self { Self::from_non_zero_value(value) }
 }
 
 /// Create a [`CsiCount`] from a raw value.
@@ -160,9 +160,9 @@ mod tests {
     }
 
     #[test]
-    fn test_from_non_zero() {
+    fn test_from_non_zero_value() {
         let nz = NonZeroU16::new(7).unwrap();
-        let count = CsiCount::from_non_zero(nz);
+        let count = CsiCount::from_non_zero_value(nz);
         assert_eq!(count.get(), 7);
     }
 

@@ -85,7 +85,7 @@ impl TermRowDelta {
     ///
     /// Use this constant instead of `TermRowDelta::new(1).unwrap()` to avoid
     /// panic documentation requirements and make intent clear.
-    pub const ONE: Self = Self(NonZeroU16::new(1).unwrap());
+    pub const ONE: Self = Self(NonZeroU16::MIN);
 
     /// Create a new row delta from a raw value.
     ///

@@ -10,8 +10,8 @@ use super::super::{conformance_data::{basic_sequences, cursor_sequences,
                                       emacs_sequences, styling_sequences,
                                       tmux_sequences, vim_sequences},
                    test_fixtures_vt_100_ansi_conformance::nz};
-use crate::{ANSIBasicColor, PixelChar, col, offscreen_buffer::test_fixtures_ofs_buf::*,
-            row, tui_style_attrib};
+use crate::{ANSIBasicColor, CsiCount, PixelChar, TermCol, col,
+            offscreen_buffer::test_fixtures_ofs_buf::*, row, tui_style_attrib};
 use std::cmp::min;
 
 /// Create a realistic terminal buffer for real-world scenario testing.
@@ -389,8 +389,8 @@ fn test_shell_prompt_workflow() {
     // Simulate backspace editing - move cursor left and delete
     let backspace_pos = cursor_sequences::move_left(1); // Move back 1 char
     let delete_char = basic_sequences::move_and_delete_chars(
-        ofs_buf.cursor_pos.col_index.as_u16().saturating_sub(1),
-        1,
+        TermCol::from_zero_based(ofs_buf.cursor_pos.col_index),
+        CsiCount::ONE,
     );
     let new_char = basic_sequences::insert_text("a");
 
@@ -765,7 +765,8 @@ fn test_text_manipulation_operations() {
 
     // Insert "brown " before "fox" using character insertion
     let insert_pos = cursor_sequences::move_to_position(nz(1), nz(11)); // Before "fox"
-    let insert_chars = basic_sequences::move_and_insert_chars(10, 6); // Insert 6 chars
+    let insert_chars =
+        basic_sequences::move_and_insert_chars(TermCol::from_raw_non_zero_value(nz(10)), CsiCount::from_non_zero_value(nz(6))); // Insert 6 chars
     let brown_text = basic_sequences::insert_text("brown ");
 
     let _unused = ofs_buf.apply_ansi_bytes(insert_pos);
@@ -798,7 +799,8 @@ fn test_text_manipulation_operations() {
 
     // Test character deletion - remove some text
     let delete_pos = cursor_sequences::move_to_position(nz(1), nz(17)); // Before "jumps"
-    let delete_chars = basic_sequences::move_and_delete_chars(16, 6); // Delete "jumps "
+    let delete_chars =
+        basic_sequences::move_and_delete_chars(TermCol::from_raw_non_zero_value(nz(16)), CsiCount::from_non_zero_value(nz(6))); // Delete "jumps "
 
     let _unused = ofs_buf.apply_ansi_bytes(delete_pos);
     let _unused = ofs_buf.apply_ansi_bytes(delete_chars);

@@ -78,7 +78,7 @@ impl TermRow {
     /// // Move cursor to row 1 (top of screen)
     /// let seq = CsiSequence::VerticalPositionAbsolute(TermRow::ONE);
     /// ```
-    pub const ONE: Self = Self(NonZeroU16::new(1).unwrap());
+    pub const ONE: Self = Self(NonZeroU16::MIN);
 
     /// Create a 1-based terminal coordinate from a raw [`NonZeroU16`] value.
     ///

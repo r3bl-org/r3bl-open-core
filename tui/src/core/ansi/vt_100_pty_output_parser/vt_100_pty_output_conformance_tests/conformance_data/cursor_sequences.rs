@@ -13,7 +13,7 @@
 //! - Absolute Positioning: VT100 User Guide Section 3.3.4
 
 use super::super::test_fixtures_vt_100_ansi_conformance::nz;
-use crate::{EscSequence, TermColDelta, TermRowDelta,
+use crate::{EscSequence, TermColDelta, TermRow, TermRowDelta,
             core::ansi::vt_100_pty_output_parser::CsiSequence, term_col, term_col_delta,
             term_row, term_row_delta};
 use std::num::NonZeroU16;
@@ -194,11 +194,10 @@ pub fn next_line() -> String { "\x1bE".to_string() }
 /// **VT100 Spec**: ESC[{row}d (Vertical Position Absolute)
 ///
 /// # Arguments
-/// * `row` - Target row (1-based, VT100 convention)
+/// * `row` - Target row.
 #[must_use]
-pub fn move_to_row(row: u16) -> String {
-    let row_nz = std::num::NonZeroU16::new(row).unwrap_or(std::num::NonZeroU16::new(1).unwrap());
-    CsiSequence::VerticalPositionAbsolute(crate::TermRow::from_raw_non_zero_value(row_nz)).to_string()
+pub fn move_to_row(row: TermRow) -> String {
+    CsiSequence::VerticalPositionAbsolute(row).to_string()
 }
 
 /// Complex cursor movement pattern: draw a box outline.

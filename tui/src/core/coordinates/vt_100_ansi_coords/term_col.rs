@@ -75,7 +75,7 @@ impl TermCol {
     /// // Move cursor to column 1 (beginning of line)
     /// let seq = CsiSequence::CursorHorizontalAbsolute(TermCol::ONE);
     /// ```
-    pub const ONE: Self = Self(NonZeroU16::new(1).unwrap());
+    pub const ONE: Self = Self(NonZeroU16::MIN);
 
     /// Create a 1-based terminal coordinate from a raw [`NonZeroU16`] value.
     ///
