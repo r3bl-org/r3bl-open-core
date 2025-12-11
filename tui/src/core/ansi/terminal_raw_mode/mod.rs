@@ -195,8 +195,10 @@
 //!
 //! ## Platform Support
 //!
-//! - **Unix/Linux/macOS**: Uses [rustix]'s safe termios API (see [`raw_mode_unix`])
-//! - **Windows**: Not yet implemented (TODO)
+//! - **Unix (Linux/macOS)**: Uses [rustix]'s safe termios API (see [`raw_mode_unix`])
+//! - **Windows**: Uses Crossterm's `SetConsoleMode()` wrapper (see [`raw_mode_windows`])
+//!
+//! [`raw_mode_windows`]: mod@crate::core::ansi::terminal_raw_mode::raw_mode_windows
 //!
 //! ## Usage Example
 //!

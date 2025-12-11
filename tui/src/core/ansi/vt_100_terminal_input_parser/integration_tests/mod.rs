@@ -33,19 +33,21 @@
 // https://stackoverflow.com/a/75910283/2085356
 #![cfg_attr(rustfmt, rustfmt_skip)]
 
-#[cfg(any(test, doc))]
+// These PTY tests use DirectToAnsiInputDevice which is Linux-only.
+// On macOS/Windows, Crossterm backend is used instead and these tests are skipped.
+#[cfg(all(target_os = "linux", any(test, doc)))]
 pub mod pty_bracketed_paste_test;
-#[cfg(any(test, doc))]
+#[cfg(all(target_os = "linux", any(test, doc)))]
 pub mod pty_input_device_test;
-#[cfg(any(test, doc))]
+#[cfg(all(target_os = "linux", any(test, doc)))]
 pub mod pty_keyboard_modifiers_test;
-#[cfg(any(test, doc))]
+#[cfg(all(target_os = "linux", any(test, doc)))]
 pub mod pty_mouse_events_test;
-#[cfg(any(test, doc))]
+#[cfg(all(target_os = "linux", any(test, doc)))]
 pub mod pty_terminal_events_test;
-#[cfg(any(test, doc))]
+#[cfg(all(target_os = "linux", any(test, doc)))]
 pub mod pty_utf8_text_test;
-#[cfg(any(test, doc))]
+#[cfg(all(target_os = "linux", any(test, doc)))]
 pub mod pty_new_keyboard_features_test;
-#[cfg(any(test, doc))]
+#[cfg(all(target_os = "linux", any(test, doc)))]
 pub mod pty_sigwinch_test;

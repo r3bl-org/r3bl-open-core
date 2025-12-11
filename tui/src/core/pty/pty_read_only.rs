@@ -388,9 +388,11 @@ mod tests {
         // Create a temporary directory for the test.
         let temp_dir = std::env::temp_dir();
 
-        // Use printf to emit a known OSC sequence.
-        let session = PtyCommandBuilder::new("printf")
-            .args([r"\x1b]9;4;1;50\x1b\\"])
+        // Use bash's builtin printf to emit a known OSC sequence.
+        // Note: macOS /usr/bin/printf doesn't support \x escapes, so we use bash -c
+        // with \033 octal escapes which work on both Linux and macOS.
+        let session = PtyCommandBuilder::new("bash")
+            .args(["-c", r"printf '\033]9;4;1;50\033\\'"])
             .cwd(temp_dir)
             .spawn_read_only(PtyConfigOption::Osc)?;
 
@@ -418,9 +420,13 @@ mod tests {
         // Create a temporary directory for the test.
         let temp_dir = std::env::temp_dir();
 
-        // Emit multiple OSC sequences.
-        let session = PtyCommandBuilder::new("printf")
-            .args([r"\x1b]9;4;1;25\x1b\\\x1b]9;4;1;50\x1b\\\x1b]9;4;0;0\x1b\\"])
+        // Emit multiple OSC sequences using bash's builtin printf.
+        // Note: macOS /usr/bin/printf doesn't support \x escapes.
+        let session = PtyCommandBuilder::new("bash")
+            .args([
+                "-c",
+                r"printf '\033]9;4;1;25\033\\\033]9;4;1;50\033\\\033]9;4;0;0\033\\'",
+            ])
             .cwd(temp_dir)
             .spawn_read_only(PtyConfigOption::Osc)?;
 
@@ -544,17 +550,18 @@ mod tests {
         // Create a temporary directory for the test.
         let temp_dir = std::env::temp_dir();
 
-        // Test all four OSC event types.
+        // Test all four OSC event types using bash's builtin printf with octal escapes.
+        // Note: macOS /usr/bin/printf doesn't support \x escapes.
         let sequences = [
-            (r"\x1b]9;4;0;0\x1b\\", OscEvent::ProgressCleared),
-            (r"\x1b]9;4;1;42\x1b\\", OscEvent::ProgressUpdate(42)),
-            (r"\x1b]9;4;2;0\x1b\\", OscEvent::BuildError),
-            (r"\x1b]9;4;3;0\x1b\\", OscEvent::IndeterminateProgress),
+            (r"printf '\033]9;4;0;0\033\\'", OscEvent::ProgressCleared),
+            (r"printf '\033]9;4;1;42\033\\'", OscEvent::ProgressUpdate(42)),
+            (r"printf '\033]9;4;2;0\033\\'", OscEvent::BuildError),
+            (r"printf '\033]9;4;3;0\033\\'", OscEvent::IndeterminateProgress),
         ];
 
-        for (sequence, expected) in sequences {
-            let session = PtyCommandBuilder::new("printf")
-                .args([sequence])
+        for (bash_cmd, expected) in sequences {
+            let session = PtyCommandBuilder::new("bash")
+                .args(["-c", bash_cmd])
                 .cwd(temp_dir.clone())
                 .spawn_read_only(PtyConfigOption::Osc)?;
 

@@ -58,6 +58,21 @@
 //! 3. [`PixelCharRenderer`]: Converts styled text to ANSI with smart attribute diffing
 //! 4. [`RenderToAnsi`]: Trait for rendering offscreen buffers to ANSI
 //!
+//! # Platform Support
+//!
+//! | Component | Linux | macOS | Windows |
+//! |-----------|-------|-------|---------|
+//! | Output (ANSI generation) | ✅ | ✅ | ✅ |
+//! | Input (terminal reading) | ✅ | ❌ | ❌ |
+//!
+//! The **output** side works on all platforms (pure ANSI sequence generation).
+//!
+//! The **input** side is Linux-only due to macOS `kqueue` limitations with PTY/tty
+//! polling. See the `input` module documentation (Linux only) for details and potential
+//! future macOS support via [`filedescriptor::poll()`].
+//!
+//! [`filedescriptor::poll()`]: https://docs.rs/filedescriptor/latest/filedescriptor/fn.poll.html
+//!
 //! [`AnsiSequenceGenerator`]: crate::AnsiSequenceGenerator
 //! [`DirectToAnsi`]: self
 //! [`PixelCharRenderer`]: crate::PixelCharRenderer
@@ -89,17 +104,18 @@ pub mod output;
 #[cfg(not(any(test, doc)))]
 mod output;
 
-// Input handling is Unix-only (uses SIGWINCH signals, Unix stdin semantics).
-// See TODO(windows) comments in input/ files for what would need to change.
-#[cfg(all(unix, any(test, doc)))]
+// Input handling is Linux-only because macOS kqueue doesn't support PTY/tty polling.
+// See `input/mod.rs` docs for technical details and potential future macOS support.
+// On macOS/Windows, use Crossterm backend instead (set via TERMINAL_LIB_BACKEND).
+#[cfg(all(target_os = "linux", any(test, doc)))]
 pub mod input;
-#[cfg(all(unix, not(any(test, doc))))]
+#[cfg(all(target_os = "linux", not(any(test, doc))))]
 mod input;
 
 // Public re-exports (flat API surface).
 pub use debug::*;
 pub use output::*;
-#[cfg(unix)]
+#[cfg(target_os = "linux")]
 pub use input::*;
 
 // Tests.

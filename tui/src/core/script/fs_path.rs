@@ -384,7 +384,12 @@ mod tests {
 
             let pwd = try_pwd().unwrap();
             assert!(pwd.exists());
-            assert_eq!(pwd, new_dir);
+            // Canonicalize new_dir for comparison because env::current_dir() returns
+            // the canonical path (resolving symlinks). On macOS, /var is a symlink to
+            // /private/var, so temp_dir() returns /var/... but current_dir() returns
+            // /private/var/...
+            let new_dir_canonical = new_dir.canonicalize().unwrap();
+            assert_eq!(pwd, new_dir_canonical);
         });
     }
 
@@ -404,9 +409,14 @@ mod tests {
             fs::set_permissions(&no_permissions_dir, permissions).unwrap();
             assert!(no_permissions_dir.exists());
 
-            // Try to get the pwd with insufficient permissions. It should work!
+            // Try to get the pwd with insufficient permissions.
+            // On Linux, getcwd() succeeds because it uses /proc/self/cwd.
+            // On macOS, getcwd() fails with EACCES because it traverses directory entries.
             let result = try_pwd();
+            #[cfg(target_os = "linux")]
             assert!(result.is_ok());
+            #[cfg(target_os = "macos")]
+            assert!(result.is_err());
 
             // Change the permissions back, so that it can be cleaned up!
             let mut permissions =
@@ -530,11 +540,16 @@ mod tests {
 
             // Change to the temporary directory.
             try_cd(&new_tmp_dir).unwrap();
-            assert_eq!(env::current_dir().unwrap(), new_tmp_dir);
+            // Canonicalize for comparison because env::current_dir() returns the
+            // canonical path. On macOS, /var is a symlink to /private/var.
+            assert_eq!(
+                env::current_dir().unwrap(),
+                new_tmp_dir.canonicalize().unwrap()
+            );
 
             // Change back to the original directory.
             try_cd(&root).unwrap();
-            assert_eq!(env::current_dir().unwrap(), *root);
+            assert_eq!(env::current_dir().unwrap(), root.canonicalize().unwrap());
         });
     }
 
@@ -560,7 +575,8 @@ mod tests {
 
             // Change back to the original directory.
             try_cd(&root).unwrap();
-            assert_eq!(env::current_dir().unwrap(), *root);
+            // Canonicalize for comparison (macOS /var -> /private/var symlink).
+            assert_eq!(env::current_dir().unwrap(), root.canonicalize().unwrap());
         });
     }
 
@@ -586,7 +602,8 @@ mod tests {
 
             // Change back to the original directory.
             try_cd(&root).unwrap();
-            assert_eq!(env::current_dir().unwrap(), *root);
+            // Canonicalize for comparison (macOS /var -> /private/var symlink).
+            assert_eq!(env::current_dir().unwrap(), root.canonicalize().unwrap());
         });
     }
 

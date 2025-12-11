@@ -1,13 +1,61 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Unix input handling for [`DirectToAnsi`] backend.
+//! Linux input handling for [`DirectToAnsi`] backend.
 //!
-//! This module is **Unix-only** (gated by `#[cfg(unix)]`) because it uses:
-//! - `SIGWINCH` signals for terminal resize detection
-//! - Unix-specific stdin semantics
+//! # Platform Support
 //!
-//! See `TODO(windows)` comments throughout for what would need to change for
-//! Windows support.
+//! This module is **Linux-only** (gated by `#[cfg(target_os = "linux")]`).
+//! On macOS and Windows, use the Crossterm backend instead (set via [`TERMINAL_LIB_BACKEND`]).
+//!
+//! ## Why Linux-Only?
+//!
+//! This module uses [`mio`] for async I/O multiplexing, which relies on:
+//! - **Linux**: `epoll(7)` - works correctly with PTY/tty file descriptors
+//! - **macOS**: `kqueue(2)` - **broken for PTY/tty polling**
+//!
+//! macOS's `kqueue` returns `EINVAL` when attempting to monitor `/dev/tty` or PTY
+//! file descriptors. This is a [known Darwin limitation] with no planned fix.
+//! The `mio` maintainers have [declined to work around this] since it would require
+//! mixing `kqueue` with `select(2)`.
+//!
+//! ## How Crossterm Solves This
+//!
+//! Crossterm uses the [`filedescriptor`] crate which provides a [`poll()`] wrapper:
+//! - On Linux: uses `poll(2)` directly
+//! - On macOS: uses `select(2)` instead (which works with PTY/tty)
+//!
+//! ```rust,ignore
+//! // From filedescriptor crate (simplified)
+//! #[cfg(target_os = "macos")]
+//! pub fn poll_impl(pfd: &mut [pollfd], duration: Option<Duration>) -> Result<usize> {
+//!     // Uses libc::select() instead of libc::poll()
+//! }
+//! ```
+//!
+//! ## Future macOS Support
+//!
+//! To enable `DirectToAnsi` on macOS, we would need to:
+//! 1. Replace [`mio`] polling with [`filedescriptor::poll()`]
+//! 2. Handle `SIGWINCH` via `signal-hook` with the self-pipe trick
+//!    (since `signal-hook-mio` requires `mio`)
+//!
+//! This is tracked as a potential future enhancement.
+//!
+//! ## References
+//!
+//! - [mio issue #1377] - "Polling from /dev/tty on macOS"
+//! - [crossterm issue #500] - "/dev/tty does not work on macOS with kqueue"
+//! - [macOS /dev/tty polling blog post] - Detailed technical explanation
+//!
+//! [known Darwin limitation]: https://nathancraddock.com/blog/macos-dev-tty-polling/
+//! [declined to work around this]: https://github.com/tokio-rs/mio/issues/1377
+//! [`filedescriptor`]: https://docs.rs/filedescriptor
+//! [`poll()`]: https://docs.rs/filedescriptor/latest/filedescriptor/fn.poll.html
+//! [mio issue #1377]: https://github.com/tokio-rs/mio/issues/1377
+//! [crossterm issue #500]: https://github.com/crossterm-rs/crossterm/issues/500
+//! [macOS /dev/tty polling blog post]: https://nathancraddock.com/blog/macos-dev-tty-polling/
+//! [`TERMINAL_LIB_BACKEND`]: crate::TERMINAL_LIB_BACKEND
+//! [`mio`]: https://docs.rs/mio
 //!
 //! # Entry Point
 //!

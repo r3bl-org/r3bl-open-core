@@ -1,34 +1,35 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Windows implementation of raw mode using Windows Console API.
+//! Windows implementation of raw mode using Crossterm.
 //!
-//! TODO(windows): Implement using Windows Console API for complete raw mode support.
-//! Currently returns errors as Windows support is not yet implemented.
-//! See: https://learn.microsoft.com/en-us/windows/console/setconsolemode
+//! On Windows, we delegate to Crossterm's raw mode implementation which handles
+//! the Windows Console API (`SetConsoleMode()`) correctly.
 
-/// Enable raw mode on Windows.
+use miette::IntoDiagnostic as _;
+
+/// Enable raw mode on Windows using Crossterm.
 ///
-/// TODO(windows): Implement using `SetConsoleMode()` to disable:
+/// Delegates to [`crossterm::terminal::enable_raw_mode()`] which handles the
+/// Windows Console API (`SetConsoleMode()`) to disable:
 /// - `ENABLE_LINE_INPUT` - line buffering
 /// - `ENABLE_ECHO_INPUT` - character echo
 /// - `ENABLE_PROCESSED_INPUT` - Ctrl+C handling
 ///
-/// # Panics
+/// # Errors
 ///
-/// Panics with unimplemented message as Windows support is still being developed.
-#[allow(dead_code)]
+/// Returns an error if the console mode cannot be changed.
 pub fn enable_raw_mode() -> miette::Result<()> {
-    unimplemented!("Windows raw mode not yet implemented")
+    crossterm::terminal::enable_raw_mode().into_diagnostic()
 }
 
-/// Disable raw mode on Windows.
+/// Disable raw mode on Windows using Crossterm.
 ///
-/// TODO(windows): Implement using `SetConsoleMode()` to restore original console mode.
+/// Delegates to [`crossterm::terminal::disable_raw_mode()`] which restores
+/// the original console mode.
 ///
-/// # Panics
+/// # Errors
 ///
-/// Panics with unimplemented message as Windows support is still being developed.
-#[allow(dead_code)]
+/// Returns an error if the console mode cannot be restored.
 pub fn disable_raw_mode() -> miette::Result<()> {
-    unimplemented!("Windows raw mode not yet implemented")
+    crossterm::terminal::disable_raw_mode().into_diagnostic()
 }

@@ -54,7 +54,7 @@ use super::raw_mode_windows;
 ///
 /// Returns miette diagnostic errors if:
 /// - Terminal attributes cannot be retrieved or set
-/// - Platform is not supported (Windows currently)
+/// - Platform is not supported (e.g., WASM, embedded targets without OS)
 /// - Lock is poisoned (internal state corruption)
 ///
 /// [module documentation]: mod@crate::core::ansi::terminal_raw_mode
@@ -86,7 +86,7 @@ pub fn enable_raw_mode() -> miette::Result<()> {
 ///
 /// Returns miette diagnostic errors if:
 /// - Terminal attributes cannot be set
-/// - Platform is not supported (Windows currently)
+/// - Platform is not supported (e.g., WASM, embedded targets without OS)
 /// - Lock is poisoned (internal state corruption)
 ///
 /// [module documentation]: mod@crate::core::ansi::terminal_raw_mode

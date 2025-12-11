@@ -408,8 +408,10 @@ mod tests_command_runner {
             program => "echo",
             args => "hello world",
         );
+        // Use "bash" without path to find it in PATH (works on both Linux and macOS).
+        // Linux has bash at /usr/bin/bash, macOS has it at /bin/bash.
         let mut command_two = command!(
-            program => "/usr/bin/bash",
+            program => "bash",
             args => "-c", "read -p 'Enter your input: ' input"
         );
         let result = pipe(&mut command_one, &mut command_two).await;

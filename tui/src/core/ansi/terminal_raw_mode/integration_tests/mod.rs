@@ -50,7 +50,16 @@
 // https://stackoverflow.com/a/75910283/2085356
 #![cfg_attr(rustfmt, rustfmt_skip)]
 
+// These tests work on all Unix platforms (no PTY stdin reading).
 mod test_basic_enable_disable;
 mod test_flag_verification;
-mod test_input_behavior;
+
+// This test verifies exact termios flag restoration which differs between Linux and macOS.
+// macOS's tcsetattr sets the PENDIN flag during restoration, causing assertion failures.
+#[cfg(target_os = "linux")]
 mod test_multiple_cycles;
+
+// This test reads from PTY stdin which hangs on macOS due to kqueue/PTY interaction.
+// Linux uses epoll which handles PTY stdin correctly.
+#[cfg(target_os = "linux")]
+mod test_input_behavior;

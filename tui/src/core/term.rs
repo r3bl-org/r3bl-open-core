@@ -104,13 +104,12 @@ pub fn get_size() -> miette::Result<Size> {
 /// - The terminal size cannot be determined
 /// - The terminal is not available or not a TTY
 ///
-/// # TODO(windows)
+/// # Note
 ///
-/// This fallback only uses crossterm and ignores [`TERMINAL_LIB_BACKEND`]. The
-/// [`DirectToAnsi`] backend uses Unix-specific APIs (`rustix::termios::tcgetwinsize`)
-/// that aren't available on Windows.
+/// On non-Unix platforms (Windows), this always uses Crossterm regardless of
+/// [`TERMINAL_LIB_BACKEND`] since DirectToAnsi is Linux-only.
 ///
-/// [`DirectToAnsi`]: mod@crate::tui::terminal_lib_backends::direct_to_ansi
+/// [`TERMINAL_LIB_BACKEND`]: crate::TERMINAL_LIB_BACKEND
 #[cfg(not(unix))]
 pub fn get_size() -> miette::Result<Size> {
     let (columns, rows) = crossterm::terminal::size().into_diagnostic()?;
@@ -182,11 +181,8 @@ pub fn is_stdin_interactive() -> TTYResult {
 /// possible.
 #[must_use]
 pub fn is_headless() -> TTYResult {
-    // TODO(windows): Workaround for cargo redirecting streams on Windows.
-    // When running through `cargo run` on Windows, the terminal detection may incorrectly
-    // report all streams as non-terminal even when running in an interactive terminal.
-    // This is because cargo may redirect the streams. To work around this, we check if
-    // we're running under cargo and if so, assume it's interactive.
+    // Windows workaround: cargo redirects streams, causing false non-TTY detection.
+    // When running via `cargo run`, assume interactive if cargo env vars are present.
     #[cfg(target_os = "windows")]
     if std::env::var("CARGO").is_ok() || std::env::var("CARGO_PKG_NAME").is_ok() {
         return TTYResult::IsInteractive;

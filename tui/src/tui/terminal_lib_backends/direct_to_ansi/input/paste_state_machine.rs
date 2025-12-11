@@ -31,13 +31,6 @@ use crate::{InputEvent,
 /// Most Unix terminals normalize line endings before sending bracketed paste,
 /// so CRLF sequences are uncommon in practice.
 ///
-/// # TODO(windows)
-///
-/// Windows uses CRLF line endings natively. When adding Windows support for
-/// [`DirectToAnsi`], consider normalizing CRLF → LF in the paste accumulator.
-/// This would require either tracking the previous byte in the keyboard parser
-/// or post-processing the accumulated text.
-///
 /// [`DirectToAnsi`]: mod@super::super
 /// [`VT100KeyCodeIR::Enter`]: crate::core::ansi::vt_100_terminal_input_parser::VT100KeyCodeIR::Enter
 /// [`try_read_event()`]: super::input_device::DirectToAnsiInputDevice::try_read_event

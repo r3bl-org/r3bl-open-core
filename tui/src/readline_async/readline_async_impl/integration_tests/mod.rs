@@ -32,20 +32,23 @@
 // https://stackoverflow.com/a/75910283/2085356
 #![cfg_attr(rustfmt, rustfmt_skip)]
 
-#[cfg(any(test, doc))]
+// These PTY tests use DirectToAnsiInputDevice which is Linux-only.
+// On macOS/Windows, Crossterm backend is used instead and these tests are skipped.
+#[cfg(all(target_os = "linux", any(test, doc)))]
 pub mod pty_ctrl_d_eof_test;
-#[cfg(any(test, doc))]
+#[cfg(all(target_os = "linux", any(test, doc)))]
 pub mod pty_ctrl_d_delete_test;
-#[cfg(any(test, doc))]
+#[cfg(all(target_os = "linux", any(test, doc)))]
 pub mod pty_ctrl_u_test;
-#[cfg(any(test, doc))]
+#[cfg(all(target_os = "linux", any(test, doc)))]
 pub mod pty_ctrl_w_test;
-#[cfg(any(test, doc))]
+#[cfg(all(target_os = "linux", any(test, doc)))]
 pub mod pty_ctrl_navigation_test;
-#[cfg(any(test, doc))]
+#[cfg(all(target_os = "linux", any(test, doc)))]
 pub mod pty_alt_navigation_test;
-#[cfg(any(test, doc))]
+#[cfg(all(target_os = "linux", any(test, doc)))]
 pub mod pty_alt_kill_test;
+// These PTY tests use only portable_pty (no DirectToAnsiInputDevice) and work cross-platform.
 #[cfg(any(test, doc))]
 pub mod pty_shared_writer_no_blank_line_test;
 #[cfg(any(test, doc))]
