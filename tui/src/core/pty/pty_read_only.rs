@@ -554,9 +554,15 @@ mod tests {
         // Note: macOS /usr/bin/printf doesn't support \x escapes.
         let sequences = [
             (r"printf '\033]9;4;0;0\033\\'", OscEvent::ProgressCleared),
-            (r"printf '\033]9;4;1;42\033\\'", OscEvent::ProgressUpdate(42)),
+            (
+                r"printf '\033]9;4;1;42\033\\'",
+                OscEvent::ProgressUpdate(42),
+            ),
             (r"printf '\033]9;4;2;0\033\\'", OscEvent::BuildError),
-            (r"printf '\033]9;4;3;0\033\\'", OscEvent::IndeterminateProgress),
+            (
+                r"printf '\033]9;4;3;0\033\\'",
+                OscEvent::IndeterminateProgress,
+            ),
         ];
 
         for (bash_cmd, expected) in sequences {

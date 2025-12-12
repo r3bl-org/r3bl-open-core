@@ -1,5 +1,7 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+// cspell:words kqueue filedescriptor
+
 //! # [`DirectToAnsi`] Terminal Backend
 //!
 //! Pure-Rust ANSI sequence generation without crossterm dependencies.

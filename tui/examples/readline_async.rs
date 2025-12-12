@@ -1,6 +1,8 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 #![allow(unused_imports)]
 
+// cspell:words nextest
+
 use miette::{IntoDiagnostic, miette};
 use r3bl_tui::{ChannelCapacity, InlineVec, LineStateControlSignal, OutputDevice,
                SendRawTerminal, SharedWriter, SpinnerStyle, bold, fg_color, fg_red,

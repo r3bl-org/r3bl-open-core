@@ -73,6 +73,31 @@ pub fn some_method(&self) -> Result<()> { /* ... */ }
 3. **Place all link definitions at bottom** of comment block
 4. **Include `()` for functions/methods** - distinguishes from types
 
+### Link All Symbols for Refactoring Safety
+
+**Every codebase symbol in backticks must be a link.** This isn't just style—it's safety.
+
+When you rename, move, or delete a symbol:
+- **With links**: `cargo doc` fails with a clear error pointing to the stale reference
+- **Without links**: The docs silently rot, referencing symbols that no longer exist
+
+| Docs say | Symbol renamed to | With link | Without link |
+|----------|-------------------|-----------|--------------|
+| `` [`Parser`] `` | `Tokenizer` | ❌ Build error | ✅ Silently stale |
+| `` [`process()`] `` | `handle()` | ❌ Build error | ✅ Silently stale |
+
+**Rule:** If it's a symbol from your codebase and it's in backticks, make it a link.
+
+```rust
+// ❌ Bad: Will silently rot when Parser is renamed
+/// Uses `Parser` for tokenization.
+
+// ✅ Good: cargo doc will catch if Parser is renamed
+/// Uses [`Parser`] for tokenization.
+///
+/// [`Parser`]: crate::Parser
+```
+
 ### Quick Reference
 
 | Link To | Pattern |

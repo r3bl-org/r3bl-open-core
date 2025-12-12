@@ -411,7 +411,8 @@ mod tests {
 
             // Try to get the pwd with insufficient permissions.
             // On Linux, getcwd() succeeds because it uses /proc/self/cwd.
-            // On macOS, getcwd() fails with EACCES because it traverses directory entries.
+            // On macOS, getcwd() fails with EACCES because it traverses directory
+            // entries.
             let result = try_pwd();
             #[cfg(target_os = "linux")]
             assert!(result.is_ok());

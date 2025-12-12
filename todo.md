@@ -43,6 +43,8 @@
   - https://github.com/r3bl-org/r3bl-open-core/issues/439
   - https://github.com/r3bl-org/r3bl-open-core/pull/440
 
+- [x] fix [`add-backend-compat-tests.md`](task/add-backend-compat-tests.md:28)
+
 - [ ] use [`task_unify_cli_and_styled_text`](task/pending/task_unify_cli_and_styled_text.md) to
       unify `CliText` and `TuiStyledText` rendering paths
 

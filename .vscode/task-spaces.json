@@ -279,7 +279,36 @@
         }
       ],
       "createdAt": 1765206963761,
-      "activeTab": "tui/examples/readline_async.rs"
+      "activeTab": "tui/src/readline_async/readline_async_impl/integration_tests/pty_shared_writer_no_blank_line_test.rs"
+    },
+    {
+      "name": "add-backend-compat-tests",
+      "id": "945af523-b8da-498f-ba30-1b648e02a276",
+      "tabs": [
+        {
+          "path": "todo.md",
+          "isPinned": true
+        },
+        {
+          "path": "task/add-backend-compat-tests.md",
+          "isPinned": false
+        },
+        {
+          "path": "tui/src/core/terminal_io/mod.rs",
+          "isPinned": false
+        },
+        {
+          "path": "tui/src/core/terminal_io/backend_compat_tests/mod.rs",
+          "isPinned": false
+        },
+        {
+          "path": "tui/src/core/terminal_io/backend_compat_tests/backend_compatibility_test.rs",
+          "isPinned": false
+        }
+      ],
+      "taskFile": "task/add-backend-compat-tests.md",
+      "activeTab": "tui/src/core/terminal_io/backend_compat_tests/backend_compatibility_test.rs",
+      "createdAt": 1765498453551
     }
   ]
 }
