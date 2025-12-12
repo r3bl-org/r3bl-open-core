@@ -1,12 +1,14 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! **Output** integration tests for [`RenderOpPaintImplDirectToAnsi`] (using [`StdoutMock`]).
+//! **Output** integration tests for [`RenderOpPaintImplDirectToAnsi`] (using
+//! [`StdoutMock`]).
 //!
 //! These tests verify the **output painting pipeline** ([`RenderOpOutput`] → ANSI escape
-//! sequences). They use [`StdoutMock`] to capture output—no real terminal or PTY is needed
-//! because we're testing ANSI sequence generation, not terminal I/O.
+//! sequences). They use [`StdoutMock`] to capture output—no real terminal or PTY is
+//! needed because we're testing ANSI sequence generation, not terminal I/O.
 //!
-//! **Looking for input tests?** See the [PTY Tests for Input Handling] section below.
+//! **Looking for input tests?** See [`input::integration_tests`] for PTY test
+//! documentation.
 //!
 //! # Testing Strategy
 //!
@@ -15,43 +17,21 @@
 //! - State tracking in [`RenderOpsLocalData`]
 //! - Output captured via [`StdoutMock`]
 //!
-//! ## PTY Tests for Input Handling
-//!
-//! End-to-end PTY tests for [`DirectToAnsiInputDevice`] (the input side of [`DirectToAnsi`])
-//! are intentionally located in [`integration_tests`]. Those 8 PTY tests validate the
-//! complete input parsing pipeline in real pseudo-terminals:
-//!
-//! | Test Module                        | What it validates                     |
-//! |:-----------------------------------|:--------------------------------------|
-//! | [`pty_input_device_test`]          | Basic async I/O and buffer management |
-//! | [`pty_keyboard_modifiers_test`]    | Keyboard modifiers (Shift, Ctrl, Alt) |
-//! | [`pty_mouse_events_test`]          | Mouse clicks, drags, scrolling        |
-//! | [`pty_terminal_events_test`]       | Focus events, window resize           |
-//! | [`pty_utf8_text_test`]             | UTF-8 text input handling             |
-//! | [`pty_bracketed_paste_test`]       | Bracketed paste mode                  |
-//! | [`pty_new_keyboard_features_test`] | Extended keyboard protocol            |
-//! | [`pty_sigwinch_test`]              | SIGWINCH signal handling              |
-//!
-//! The PTY tests live with the parser because they primarily validate **parser correctness**
-//! (raw bytes → [`InputEvent`]), even though they exercise [`DirectToAnsiInputDevice`].
-//! See the [parser module's testing strategy] for the full rationale on validation vs.
-//! generated sequences.
-//!
 //! # Module Organization
 //!
 //! Tests are organized by operation type and variant:
 //!
 //! **[`RenderOpOutput::Common`] Tests:**
-//! - [`color_operations`]: Tests for [`SetFgColor`], [`SetBgColor`], [`ResetColor`]
+//! - `color_operations`: Tests for [`SetFgColor`], [`SetBgColor`], [`ResetColor`]
 //!   operations
-//! - [`cursor_movement`]: Tests for [`MoveCursorPositionAbs`], [`MoveCursorPositionRelTo`]
+//! - `cursor_movement`: Tests for [`MoveCursorPositionAbs`],
+//!   [`MoveCursorPositionRelTo`] operations
+//! - `screen_operations`: Tests for [`ClearScreen`], [`ShowCursor`], [`HideCursor`]
 //!   operations
-//! - [`screen_operations`]: Tests for [`ClearScreen`], [`ShowCursor`], [`HideCursor`]
-//!   operations
-//! - [`state_optimization`]: Tests for redundant operation skipping and state persistence
+//! - `state_optimization`: Tests for redundant operation skipping and state persistence
 //!
 //! **[`RenderOpOutput::CompositorNoClipTruncPaintTextWithAttributes`] Tests:**
-//! - [`text_operations`]: Tests for painted text with various styles (colors, attributes)
+//! - `text_operations`: Tests for painted text with various styles (colors, attributes)
 //!
 //! # Implementation Notes
 //!
@@ -80,14 +60,14 @@
 //! - [`RenderOpsLocalData`]: Tracks cursor position, `fg_color`, `bg_color` for
 //!   optimization
 //! - [`Pos`]: Position with `row_index` and `col_index` fields (0-based indices)
-//! - [`RenderOpCommon`]: Enum variants for common operations ([`SetFgColor`], [`SetBgColor`],
-//!   [`MoveCursorPositionAbs`], [`ClearScreen`], [`ShowCursor`], [`HideCursor`], etc.)
+//! - [`RenderOpCommon`]: Enum variants for common operations ([`SetFgColor`],
+//!   [`SetBgColor`], [`MoveCursorPositionAbs`], [`ClearScreen`], [`ShowCursor`],
+//!   [`HideCursor`], etc.)
 //! - [`TuiStyle`]: Styling information for text (foreground color, background color,
 //!   attributes)
 //! - [`StdoutMock`]: Captures ANSI output for verification
-//! - [`OutputDeviceExt::new_mock()`]: Creates ([`OutputDevice`], [`StdoutMock`]) pair
+//! - `OutputDeviceExt::new_mock()`: Creates ([`OutputDevice`], [`StdoutMock`]) pair
 //!
-//! [`DirectToAnsi`]: crate::terminal_lib_backends::direct_to_ansi::DirectToAnsi
 //! [`OutputDevice`]: crate::OutputDevice
 //! [`StdoutMock`]: crate::StdoutMock
 //! [`RenderOpsLocalData`]: crate::RenderOpsLocalData
@@ -97,7 +77,6 @@
 //! [`RenderOpPaint`]: crate::RenderOpPaint
 //! [`RenderOpPaintImplDirectToAnsi`]: crate::terminal_lib_backends::direct_to_ansi::output::direct_to_ansi_paint_render_op_impl::RenderOpPaintImplDirectToAnsi
 //! [`TuiStyle`]: crate::TuiStyle
-//! [`OutputDeviceExt`]: crate::test_fixtures::output_device_fixtures::OutputDeviceExt
 //! [`SetFgColor`]: crate::render_op::RenderOpCommon::SetFgColor
 //! [`SetBgColor`]: crate::render_op::RenderOpCommon::SetBgColor
 //! [`ResetColor`]: crate::render_op::RenderOpCommon::ResetColor
@@ -108,24 +87,7 @@
 //! [`HideCursor`]: crate::render_op::RenderOpCommon::HideCursor
 //! [`RenderOpOutput::Common`]: crate::RenderOpOutput::Common
 //! [`RenderOpOutput::CompositorNoClipTruncPaintTextWithAttributes`]: crate::RenderOpOutput::CompositorNoClipTruncPaintTextWithAttributes
-//! [parser module's testing strategy]: mod@crate::core::ansi::vt_100_terminal_input_parser#testing-strategy
-//! [`integration_tests`]: mod@crate::core::ansi::vt_100_terminal_input_parser::integration_tests
-//! [`pty_input_device_test`]: mod@crate::core::ansi::vt_100_terminal_input_parser::integration_tests::pty_input_device_test
-//! [`pty_keyboard_modifiers_test`]: mod@crate::core::ansi::vt_100_terminal_input_parser::integration_tests::pty_keyboard_modifiers_test
-//! [`pty_mouse_events_test`]: mod@crate::core::ansi::vt_100_terminal_input_parser::integration_tests::pty_mouse_events_test
-//! [`pty_terminal_events_test`]: mod@crate::core::ansi::vt_100_terminal_input_parser::integration_tests::pty_terminal_events_test
-//! [`pty_utf8_text_test`]: mod@crate::core::ansi::vt_100_terminal_input_parser::integration_tests::pty_utf8_text_test
-//! [`pty_bracketed_paste_test`]: mod@crate::core::ansi::vt_100_terminal_input_parser::integration_tests::pty_bracketed_paste_test
-//! [`pty_new_keyboard_features_test`]: mod@crate::core::ansi::vt_100_terminal_input_parser::integration_tests::pty_new_keyboard_features_test
-//! [`pty_sigwinch_test`]: mod@crate::core::ansi::vt_100_terminal_input_parser::integration_tests::pty_sigwinch_test
-//! [`DirectToAnsiInputDevice`]: crate::DirectToAnsiInputDevice
-//! [`InputEvent`]: crate::InputEvent
-//! [PTY Tests for Input Handling]: #pty-tests-for-input-handling
-//! [`color_operations`]: mod@crate::terminal_lib_backends::direct_to_ansi::integration_tests::color_operations
-//! [`cursor_movement`]: mod@crate::terminal_lib_backends::direct_to_ansi::integration_tests::cursor_movement
-//! [`screen_operations`]: mod@crate::terminal_lib_backends::direct_to_ansi::integration_tests::screen_operations
-//! [`state_optimization`]: mod@crate::terminal_lib_backends::direct_to_ansi::integration_tests::state_optimization
-//! [`text_operations`]: mod@crate::terminal_lib_backends::direct_to_ansi::integration_tests::text_operations
+//! [`input::integration_tests`]: mod@crate::terminal_lib_backends::direct_to_ansi::input::integration_tests
 
 #[cfg(test)]
 mod color_operations;

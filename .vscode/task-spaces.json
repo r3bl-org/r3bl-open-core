@@ -250,65 +250,33 @@
       "lastAccessed": 1763497146944
     },
     {
-      "name": "rl_async_work",
-      "id": "f382057e-e550-409b-b4ab-85cd97b11298",
+      "name": "add-pty-offscreen-buffer-output-tests",
+      "id": "46431481-a108-44f5-86f7-20334395eb37",
       "tabs": [
         {
           "path": "todo.md",
           "isPinned": true
         },
         {
-          "path": "task/done/rl_async_update.md",
+          "path": "task/add-pty-offscreen-buffer-output-tests.md",
           "isPinned": false
         },
         {
-          "path": "tui/src/readline_async/readline_async_impl/line_state/core.rs",
+          "path": "tui/src/tui/terminal_lib_backends/direct_to_ansi/mod.rs",
           "isPinned": false
         },
         {
-          "path": "tui/src/readline_async/readline_async_impl/integration_tests/pty_multiline_output_test.rs",
+          "path": "tui/src/tui/terminal_lib_backends/direct_to_ansi/output/integration_tests/mod.rs",
           "isPinned": false
         },
         {
-          "path": "tui/examples/readline_async.rs",
-          "isPinned": false
-        },
-        {
-          "path": "tui/src/readline_async/readline_async_impl/integration_tests/pty_shared_writer_no_blank_line_test.rs",
+          "path": "tui/src/tui/terminal_lib_backends/direct_to_ansi/input/integration_tests/mod.rs",
           "isPinned": false
         }
       ],
-      "createdAt": 1765206963761,
-      "activeTab": "tui/src/readline_async/readline_async_impl/integration_tests/pty_shared_writer_no_blank_line_test.rs"
-    },
-    {
-      "name": "add-backend-compat-tests",
-      "id": "945af523-b8da-498f-ba30-1b648e02a276",
-      "tabs": [
-        {
-          "path": "todo.md",
-          "isPinned": true
-        },
-        {
-          "path": "task/add-backend-compat-tests.md",
-          "isPinned": false
-        },
-        {
-          "path": "tui/src/core/terminal_io/mod.rs",
-          "isPinned": false
-        },
-        {
-          "path": "tui/src/core/terminal_io/backend_compat_tests/mod.rs",
-          "isPinned": false
-        },
-        {
-          "path": "tui/src/core/terminal_io/backend_compat_tests/backend_compatibility_test.rs",
-          "isPinned": false
-        }
-      ],
-      "taskFile": "task/add-backend-compat-tests.md",
-      "activeTab": "tui/src/core/terminal_io/backend_compat_tests/backend_compatibility_test.rs",
-      "createdAt": 1765498453551
+      "taskFile": "task/add-pty-offscreen-buffer-output-tests.md",
+      "activeTab": "tui/src/tui/terminal_lib_backends/direct_to_ansi/mod.rs",
+      "createdAt": 1765568039387
     }
   ]
 }

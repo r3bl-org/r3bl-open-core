@@ -69,12 +69,25 @@
 //!
 //! The **output** side works on all platforms (pure ANSI sequence generation).
 //!
-//! The **input** side is Linux-only due to macOS `kqueue` limitations with PTY/tty
-//! polling. See the `input` module documentation (Linux only) for details and potential
+//! The **input** side is Linux-only due to macOS [`kqueue`] limitations with PTY/tty
+//! polling. See the [`input`] module documentation (Linux only) for details and potential
 //! future macOS support via [`filedescriptor::poll()`].
 //!
-//! [`filedescriptor::poll()`]: https://docs.rs/filedescriptor/latest/filedescriptor/fn.poll.html
+//! # Testing Strategy
 //!
+//! Integration tests are organized by component:
+//!
+//! - **Output**: [`output::integration_tests`] — [`StdoutMock`]-based ANSI sequence
+//!   verification (cross-platform)
+//! - **Input**: [`input::integration_tests`] — documentation module pointing to PTY-based
+//!   parser tests in [`vt_100_terminal_input_parser::integration_tests`] (Linux-only).
+//!
+//! [`kqueue`]: https://en.wikipedia.org/wiki/Kqueue
+//! [`filedescriptor::poll()`]: https://docs.rs/filedescriptor/latest/filedescriptor/fn.poll.html
+//! [`StdoutMock`]: crate::StdoutMock
+//! [`output::integration_tests`]: mod@crate::terminal_lib_backends::direct_to_ansi::output::integration_tests
+//! [`input::integration_tests`]: mod@crate::terminal_lib_backends::direct_to_ansi::input::integration_tests
+//! [`vt_100_terminal_input_parser::integration_tests`]: mod@crate::core::ansi::vt_100_terminal_input_parser::integration_tests
 //! [`AnsiSequenceGenerator`]: crate::AnsiSequenceGenerator
 //! [`DirectToAnsi`]: self
 //! [`PixelCharRenderer`]: crate::PixelCharRenderer
@@ -119,7 +132,3 @@ pub use debug::*;
 pub use output::*;
 #[cfg(target_os = "linux")]
 pub use input::*;
-
-// Tests.
-#[cfg(test)]
-mod integration_tests;

@@ -102,3 +102,7 @@ mod protocol_conversion;
 
 // Re-exports - flatten the public API.
 pub use input_device::*;
+
+// Documentation-only module pointing to actual PTY tests location.
+#[cfg(any(test, doc))]
+pub mod integration_tests;

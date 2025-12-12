@@ -39,11 +39,13 @@
 - [x] bootstrap `r3bl_build_infra` crate with first tool (binary)
       [`task_cargo_rustdoc_fmt.md](task/done/task_cargo_rustdoc_fmt.md)
 
+- [ ] fix [`add-pty-offscreen-buffer-output-tests.md`](task/add-pty-offscreen-buffer-output-tests.md)
+
+- [x] fix [`add-backend-compat-tests.md`](task/done/add-backend-compat-tests.md:28)
+
 - [x] fix `rl_async` bugs [`rl_async_update.md`](task/done/rl_async_update.md):
   - https://github.com/r3bl-org/r3bl-open-core/issues/439
   - https://github.com/r3bl-org/r3bl-open-core/pull/440
-
-- [x] fix [`add-backend-compat-tests.md`](task/add-backend-compat-tests.md:28)
 
 - [ ] use [`task_unify_cli_and_styled_text`](task/pending/task_unify_cli_and_styled_text.md) to
       unify `CliText` and `TuiStyledText` rendering paths
