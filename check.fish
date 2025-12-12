@@ -1089,7 +1089,7 @@ function run_check_with_recovery
         set_color green
         echo "["(timestamp)"] ✅ $check_name passed ($duration_str)"
         set_color normal
-        rm -f $temp_output
+        command rm -f $temp_output
         return 0
     end
 
@@ -1099,7 +1099,7 @@ function run_check_with_recovery
         set_color red
         echo "🧊 Compiler corruption detected (ICE or stale cache) ($duration_str)"
         set_color normal
-        rm -f $temp_output
+        command rm -f $temp_output
         return 2
     end
 
@@ -1112,7 +1112,7 @@ function run_check_with_recovery
     # Look for actual error patterns (case-insensitive for FAILED, error:, panicked, etc.)
     # Also strip carriage returns to avoid overlapping text from cargo's progress indicators
     grep -iE "^error:|^(.*---\s+)?FAILED|panicked at|assertion|test result: FAILED" $temp_output | tr -d '\r'
-    rm -f $temp_output
+    command rm -f $temp_output
     return 1
 end
 
@@ -1337,14 +1337,14 @@ function detect_ice_from_file
     set -l pattern_file (mktemp)
     printf 'expected.*found \x60[^a-zA-Z0-9]\x60' >$pattern_file
     if grep -qEf $pattern_file $temp_file 2>/dev/null
-        rm -f $pattern_file
+        command rm -f $pattern_file
         # Verify it's likely cache corruption by checking for "could not compile"
         # This distinguishes from legitimate syntax errors in user code
         if grep -qi "could not compile" $temp_file 2>/dev/null
             return 0
         end
     else
-        rm -f $pattern_file
+        command rm -f $pattern_file
     end
 
     return 1
@@ -1426,15 +1426,15 @@ function cleanup_target_folder
 
     # Clean the main check target directory (tmpfs location)
     if test -d "$CHECK_TARGET_DIR"
-        rm -rf "$CHECK_TARGET_DIR"
+        command rm -rf "$CHECK_TARGET_DIR"
     end
 
     # Also clean staging directories to ensure fresh doc builds
     if test -d "$CHECK_TARGET_DIR_DOC_STAGING_QUICK"
-        rm -rf "$CHECK_TARGET_DIR_DOC_STAGING_QUICK"
+        command rm -rf "$CHECK_TARGET_DIR_DOC_STAGING_QUICK"
     end
     if test -d "$CHECK_TARGET_DIR_DOC_STAGING_FULL"
-        rm -rf "$CHECK_TARGET_DIR_DOC_STAGING_FULL"
+        command rm -rf "$CHECK_TARGET_DIR_DOC_STAGING_FULL"
     end
 end
 
@@ -1446,7 +1446,7 @@ function cleanup_after_ice
     set -l ice_files (find . -name "rustc-ice-*.txt" 2>/dev/null)
     if test (count $ice_files) -gt 0
         echo "🗑️  Removing ICE dump files..."
-        rm -f rustc-ice-*.txt
+        command rm -f rustc-ice-*.txt
     end
 
     # Remove all target folders (build artifacts and caches can become corrupted)

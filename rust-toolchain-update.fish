@@ -240,7 +240,7 @@ function validate_toolchain
             log_message ""
             log_message "Command output (last 50 lines):"
             tail -n 50 $temp_output | tee -a $LOG_FILE
-            rm -f $temp_output
+            command rm -f $temp_output
             return 1  # ICE detected - toolchain is bad
         end
 
@@ -255,7 +255,7 @@ function validate_toolchain
         end
     end
 
-    rm -f $temp_output
+    command rm -f $temp_output
     log_message ""
     log_message "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     log_message "✅ Toolchain $toolchain is STABLE (no ICE detected)"
@@ -269,8 +269,8 @@ function find_stable_toolchain
 
     # Clear rustup caches to prevent stale download/temp file issues during validation
     log_message "Clearing rustup download and temp caches..."
-    rm -rf ~/.rustup/downloads/
-    rm -rf ~/.rustup/tmp/
+    command rm -rf ~/.rustup/downloads/
+    command rm -rf ~/.rustup/tmp/
     log_message "✅ Rustup caches cleared"
     log_message ""
 

@@ -137,8 +137,8 @@ end
 function purge_all_toolchains
     # Clear rustup caches to prevent stale download/temp file issues
     log_message "Clearing rustup download and temp caches..."
-    rm -rf ~/.rustup/downloads/
-    rm -rf ~/.rustup/tmp/
+    command rm -rf ~/.rustup/downloads/
+    command rm -rf ~/.rustup/tmp/
     log_message "✅ Rustup caches cleared"
     log_message ""
 

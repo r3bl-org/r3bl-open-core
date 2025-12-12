@@ -164,7 +164,7 @@ function validate_complete
             echo ""
             echo "Last 20 lines of output:"
             tail -n 20 $temp_output
-            rm -f $temp_output
+            command rm -f $temp_output
             return 1
         end
 
@@ -177,7 +177,7 @@ function validate_complete
         end
     end
 
-    rm -f $temp_output
+    command rm -f $temp_output
     echo ""
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     echo "✅ Comprehensive validation passed!"

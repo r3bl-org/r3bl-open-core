@@ -1304,7 +1304,7 @@ function acquire_toolchain_lock
             # Stale lock detected - clean up and retry
             set -l age_minutes (math "round($lock_age / 60)")
             echo "🧹 Removing stale lock (age: $age_minutes minutes)" >&2
-            /bin/rm -rf $lock_dir 2>/dev/null
+            command rm -rf $lock_dir 2>/dev/null
 
             # Retry lock acquisition once (avoid infinite recursion)
             if mkdir $lock_dir 2>/dev/null
@@ -1340,7 +1340,7 @@ function release_toolchain_lock
     # Remove the lock directory (including timestamp file) if it exists
     # Using rm -rf to handle directory with contents
     if test -d $lock_dir
-        /bin/rm -rf $lock_dir 2>/dev/null
+        command rm -rf $lock_dir 2>/dev/null
         echo "🔓 Released toolchain operation lock" >&2
     end
 end
@@ -1457,7 +1457,7 @@ function check_config_changed
             echo "⚠️  Build config changed (Cargo.toml, rust-toolchain.toml, or .cargo/config.toml)"
             echo "🧹 Cleaning $target_dir to avoid stale artifacts..."
             set_color normal
-            rm -rf "$target_dir"
+            command rm -rf "$target_dir"
             mkdir -p "$target_dir"
             echo $config_hash > $hash_file
             echo ""
