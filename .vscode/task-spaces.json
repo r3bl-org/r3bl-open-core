@@ -248,35 +248,6 @@
       "activeTab": "todo.md",
       "createdAt": 1763497146862,
       "lastAccessed": 1763497146944
-    },
-    {
-      "name": "add-pty-offscreen-buffer-output-tests",
-      "id": "46431481-a108-44f5-86f7-20334395eb37",
-      "tabs": [
-        {
-          "path": "todo.md",
-          "isPinned": true
-        },
-        {
-          "path": "task/add-pty-offscreen-buffer-output-tests.md",
-          "isPinned": false
-        },
-        {
-          "path": "tui/src/tui/terminal_lib_backends/direct_to_ansi/mod.rs",
-          "isPinned": false
-        },
-        {
-          "path": "tui/src/tui/terminal_lib_backends/direct_to_ansi/output/integration_tests/mod.rs",
-          "isPinned": false
-        },
-        {
-          "path": "tui/src/tui/terminal_lib_backends/direct_to_ansi/input/integration_tests/mod.rs",
-          "isPinned": false
-        }
-      ],
-      "taskFile": "task/add-pty-offscreen-buffer-output-tests.md",
-      "activeTab": "tui/src/tui/terminal_lib_backends/direct_to_ansi/mod.rs",
-      "createdAt": 1765568039387
     }
   ]
 }

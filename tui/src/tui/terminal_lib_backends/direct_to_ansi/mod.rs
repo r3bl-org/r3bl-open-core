@@ -62,10 +62,10 @@
 //!
 //! # Platform Support
 //!
-//! | Component | Linux | macOS | Windows |
-//! |-----------|-------|-------|---------|
-//! | Output (ANSI generation) | ✅ | ✅ | ✅ |
-//! | Input (terminal reading) | ✅ | ❌ | ❌ |
+//! | Component                | Linux   | macOS   | Windows   |
+//! | ------------------------ | ------- | ------- | --------- |
+//! | Output (ANSI generation) | ✅      | ✅      | ✅        |
+//! | Input (terminal reading) | ✅      | ❌      | ❌        |
 //!
 //! The **output** side works on all platforms (pure ANSI sequence generation).
 //!

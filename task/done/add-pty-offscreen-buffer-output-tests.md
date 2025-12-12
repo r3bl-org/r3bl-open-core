@@ -40,6 +40,13 @@
   - [Step 5: Verify and Document](#step-5-verify-and-document)
     - [Step 5.0: Run All Tests](#step-50-run-all-tests)
     - [Step 5.1: Update Testing Strategy in `mod.rs`](#step-51-update-testing-strategy-in-modrs)
+  - [Step 6: Fix Extended Color ANSI Sequences (Generator + Parser) [COMPLETE]](#step-6-fix-extended-color-ansi-sequences-generator--parser-complete)
+    - [Step 6.0: Problem Summary](#step-60-problem-summary)
+    - [Step 6.1: Generator → Modern Colon Format [COMPLETE]](#step-61-generator-%E2%86%92-modern-colon-format-complete)
+    - [Step 6.2: Parser → Handle Both Formats (Legacy Support) [COMPLETE]](#step-62-parser-%E2%86%92-handle-both-formats-legacy-support-complete)
+    - [Step 6.3: Add Unit Tests for Semicolon Format [COMPLETE]](#step-63-add-unit-tests-for-semicolon-format-complete)
+    - [Step 6.4: Fix Race Condition with Process-Isolated Tests [COMPLETE]](#step-64-fix-race-condition-with-process-isolated-tests-complete)
+    - [Step 6.5: Update Tests Expecting Old Format [COMPLETE]](#step-65-update-tests-expecting-old-format-complete)
 - [Notes](#notes)
   - [Tests NOT Worth Adding as Rendered](#tests-not-worth-adding-as-rendered)
   - [Dependencies](#dependencies)
@@ -404,6 +411,89 @@ cargo test -p r3bl_tui integration_tests
 ### Step 5.1: Update Testing Strategy in `mod.rs`
 
 Document the dual-layer testing approach in the module documentation.
+
+## Step 6: Fix Extended Color ANSI Sequences (Generator + Parser) [COMPLETE]
+
+This step was added to fix a critical bug discovered during rendered output testing where colors
+were not being verified correctly.
+
+### Step 6.0: Problem Summary
+
+Extended color sequences (256-color and RGB) use two formats:
+
+- **Colon format (modern)**: `ESC[38:5:196m` → VTE parses as `[[38, 5, 196]]` ✓ Works
+- **Semicolon format (legacy)**: `ESC[38;5;196m` → VTE parses as `[[38], [5], [196]]` ✗ Broken
+
+Our generator was outputting semicolon format, but our parser only handled colon format.
+
+### Step 6.1: Generator → Modern Colon Format [COMPLETE]
+
+**File**: `tui/src/core/ansi/generator/sgr_code.rs`
+
+Changed extended color output from semicolons to colons following [ITU-T Rec. T.416]:
+
+| Type         | Before       | After        |
+| ------------ | ------------ | ------------ |
+| FG 256-color | `38;5;N`     | `38:5:N`     |
+| BG 256-color | `48;5;N`     | `48:5:N`     |
+| FG RGB       | `38;2;R;G;B` | `38:2:R:G:B` |
+| BG RGB       | `48;2;R;G;B` | `48:2:R:G:B` |
+
+[ITU-T Rec. T.416]: https://www.itu.int/rec/T-REC-T.416-199303-I
+
+### Step 6.2: Parser → Handle Both Formats (Legacy Support) [COMPLETE]
+
+**File**: `tui/src/core/ansi/vt_100_pty_output_parser/operations/vt_100_shim_sgr_ops.rs`
+
+Added look-ahead logic to handle semicolon-separated extended colors. When VTE parses
+`ESC[38;5;196m`, it produces `[[38], [5], [196]]` as separate parameters. The parser now:
+
+1. Detects single-element `[38]` or `[48]` slices
+2. Looks ahead to collect mode (`5` or `2`) and color values
+3. Consumes all related params and applies the color
+4. Falls back to normal SGR handling if look-ahead fails
+
+Following Postel's Law: "Be conservative in what you send, be liberal in what you accept."
+
+### Step 6.3: Add Unit Tests for Semicolon Format [COMPLETE]
+
+**File**:
+`tui/src/core/ansi/vt_100_pty_output_parser/vt_100_pty_output_conformance_tests/tests/vt_100_test_sgr_ops.rs`
+
+Added tests for:
+
+- `ESC[38;5;196m` → fg 256-color index 196
+- `ESC[48;5;21m` → bg 256-color index 21
+- `ESC[38;2;255;128;0m` → fg RGB orange
+- `ESC[48;2;0;128;255m` → bg RGB blue
+- Mixed sequences with attributes (bold + extended colors)
+
+### Step 6.4: Fix Race Condition with Process-Isolated Tests [COMPLETE]
+
+**Problem**: The rendered tests use `global_color_support::set_override(ColorSupport::Ansi256)`
+which modifies global static state. When tests run in parallel, race conditions cause failures.
+
+**Solution**: Use process isolation pattern from `fs_path.rs` - run all rendered tests in a single
+isolated subprocess where global state is controlled.
+
+**File**:
+`tui/src/tui/terminal_lib_backends/direct_to_ansi/output/integration_tests/text_operations_rendered.rs`
+
+Changes:
+
+1. Removed `set_override`/`clear_override` from `test_helpers_rendered.rs`
+2. Added `run_all_rendered_tests_sequentially()` that sets override once for all tests
+3. Added `test_all_rendered_output_in_isolated_process()` coordinator test
+4. Removed `#[test]` attribute from individual test functions (called by coordinator)
+5. Updated tests to verify actual colors (not just character content)
+
+### Step 6.5: Update Tests Expecting Old Format [COMPLETE]
+
+Updated test expectations in:
+
+- `cli_text.rs` - 6 expected strings updated to colon format
+- `color_wheel_impl.rs` - RGB color strings updated
+- `select_component.rs` - Expected output strings updated
 
 # Notes
 

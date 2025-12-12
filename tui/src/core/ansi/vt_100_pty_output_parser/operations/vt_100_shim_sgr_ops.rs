@@ -73,16 +73,17 @@
 use super::super::{AnsiToOfsBufPerformer, ParamsExt};
 use crate::{SgrColorSequence,
             core::ansi::constants::{SGR_BG_BLACK, SGR_BG_BRIGHT_BLACK,
-                                    SGR_BG_BRIGHT_WHITE, SGR_BG_DEFAULT, SGR_BG_WHITE,
-                                    SGR_BLINK, SGR_BOLD, SGR_DIM, SGR_FG_BLACK,
-                                    SGR_FG_BRIGHT_BLACK, SGR_FG_BRIGHT_WHITE,
-                                    SGR_FG_DEFAULT, SGR_FG_WHITE, SGR_HIDDEN,
-                                    SGR_ITALIC, SGR_RAPID_BLINK, SGR_RESET,
-                                    SGR_RESET_BLINK, SGR_RESET_BOLD_DIM,
-                                    SGR_RESET_HIDDEN, SGR_RESET_ITALIC,
-                                    SGR_RESET_REVERSE, SGR_RESET_STRIKETHROUGH,
-                                    SGR_RESET_UNDERLINE, SGR_REVERSE,
-                                    SGR_STRIKETHROUGH, SGR_UNDERLINE},
+                                    SGR_BG_BRIGHT_WHITE, SGR_BG_DEFAULT, SGR_BG_EXTENDED,
+                                    SGR_BG_WHITE, SGR_BLINK, SGR_BOLD,
+                                    SGR_COLOR_MODE_256, SGR_COLOR_MODE_RGB, SGR_DIM,
+                                    SGR_FG_BLACK, SGR_FG_BRIGHT_BLACK,
+                                    SGR_FG_BRIGHT_WHITE, SGR_FG_DEFAULT, SGR_FG_EXTENDED,
+                                    SGR_FG_WHITE, SGR_HIDDEN, SGR_ITALIC,
+                                    SGR_RAPID_BLINK, SGR_RESET, SGR_RESET_BLINK,
+                                    SGR_RESET_BOLD_DIM, SGR_RESET_HIDDEN,
+                                    SGR_RESET_ITALIC, SGR_RESET_REVERSE,
+                                    SGR_RESET_STRIKETHROUGH, SGR_RESET_UNDERLINE,
+                                    SGR_REVERSE, SGR_STRIKETHROUGH, SGR_UNDERLINE},
             tui_style_attrib};
 use vte::Params;
 
@@ -205,19 +206,104 @@ fn apply_sgr_param(performer: &mut AnsiToOfsBufPerformer, param: u16) {
 /// It supports:
 /// - Basic text attributes (bold, italic, underline, etc.)
 /// - 16-color ANSI colors (30-37, 40-47, 90-97, 100-107)
-/// - 256-color palette (`ESC [38:5:nm` or `ESC [48:5:nm`)
-/// - RGB true color (`ESC [38:2:r:g:bm` or `ESC [48:2:r:g:bm`)
+/// - 256-color palette (colon format `ESC[38:5:nm` or legacy `ESC[38;5;nm`)
+/// - RGB true color (colon format `ESC[38:2:r:g:bm` or legacy `ESC[38;2;r;g;bm`)
+///
+/// # Extended Color Format Handling
+///
+/// Extended colors (256-color and RGB) can be formatted two ways:
+///
+/// - **Colon format** ([ITU-T Rec. T.416]): `ESC[38:5:196m` - VTE groups as `[[38, 5, 196]]`
+/// - **Semicolon format** (legacy): `ESC[38;5;196m` - VTE parses as `[[38], [5], [196]]`
+///
+/// The colon format is handled directly by [`SgrColorSequence::parse_from_raw_slice`].
+/// The semicolon format requires look-ahead logic to collect params from subsequent
+/// positions.
+///
+/// [ITU-T Rec. T.416]: https://www.itu.int/rec/T-REC-T.416-199303-I
 pub fn set_graphics_rendition(performer: &mut AnsiToOfsBufPerformer, params: &Params) {
     let mut idx = 0;
     while let Some(param_slice) = params.extract_nth_many_raw(idx) {
-        // Check for extended color sequences first (they consume multiple positions).
+        // Case 1: Colon-separated format (already grouped by VTE as a single slice).
         if let Some(color_seq) = SgrColorSequence::parse_from_raw_slice(param_slice) {
-            // Unified method handles routing to foreground/background automatically.
             performer.ofs_buf.apply_extended_color_sequence(color_seq);
-        } else if let Some(&first_param) = param_slice.first() {
-            // Handle single parameters (existing behavior for basic SGR codes).
+            idx += 1;
+            continue;
+        }
+
+        // Case 2: Check for semicolon-separated extended color (single-element slice).
+        if let Some(&first_param) = param_slice.first() {
+            if param_slice.len() == 1
+                && (first_param == SGR_FG_EXTENDED || first_param == SGR_BG_EXTENDED)
+            {
+                // Try to collect semicolon-separated extended color params.
+                if let Some(consumed) =
+                    try_parse_semicolon_extended_color(performer, params, idx, first_param)
+                {
+                    idx += consumed;
+                    continue;
+                }
+            }
+            // Case 3: Regular single SGR parameter.
             apply_sgr_param(performer, first_param);
         }
         idx += 1;
+    }
+}
+
+/// Try to parse semicolon-separated extended color starting at `start_idx`.
+///
+/// When VTE encounters semicolon-separated extended colors like `ESC[38;5;196m`,
+/// it produces separate parameter positions: `[[38], [5], [196]]`. This function
+/// looks ahead to collect the remaining params and apply the color.
+///
+/// # Returns
+///
+/// - `Some(params_consumed)` - Successfully parsed; caller should skip this many params
+/// - `None` - Not a valid extended color sequence; caller should handle normally
+#[allow(clippy::cast_possible_truncation)] // Values are validated <= 255 before cast.
+fn try_parse_semicolon_extended_color(
+    performer: &mut AnsiToOfsBufPerformer,
+    params: &Params,
+    start_idx: usize,
+    fg_or_bg: u16,
+) -> Option<usize> {
+    // Get mode from next position (5 = 256-color, 2 = RGB).
+    let mode = params.extract_nth_single_opt_raw(start_idx + 1)?;
+
+    match mode {
+        SGR_COLOR_MODE_256 => {
+            // 256-color: need 1 more param (color index).
+            let index = params.extract_nth_single_opt_raw(start_idx + 2)?;
+            if index > 255 {
+                return None;
+            }
+
+            let color_seq = if fg_or_bg == SGR_FG_EXTENDED {
+                SgrColorSequence::SetForegroundAnsi256(index as u8)
+            } else {
+                SgrColorSequence::SetBackgroundAnsi256(index as u8)
+            };
+            performer.ofs_buf.apply_extended_color_sequence(color_seq);
+            Some(3) // Consumed: [38/48], [5], [index]
+        }
+        SGR_COLOR_MODE_RGB => {
+            // RGB: need 3 more params (r, g, b).
+            let r = params.extract_nth_single_opt_raw(start_idx + 2)?;
+            let g = params.extract_nth_single_opt_raw(start_idx + 3)?;
+            let b = params.extract_nth_single_opt_raw(start_idx + 4)?;
+            if r > 255 || g > 255 || b > 255 {
+                return None;
+            }
+
+            let color_seq = if fg_or_bg == SGR_FG_EXTENDED {
+                SgrColorSequence::SetForegroundRgb(r as u8, g as u8, b as u8)
+            } else {
+                SgrColorSequence::SetBackgroundRgb(r as u8, g as u8, b as u8)
+            };
+            performer.ofs_buf.apply_extended_color_sequence(color_seq);
+            Some(5) // Consumed: [38/48], [2], [r], [g], [b]
+        }
+        _ => None, // Unknown mode, not an extended color.
     }
 }

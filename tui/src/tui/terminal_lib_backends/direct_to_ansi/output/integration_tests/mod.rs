@@ -1,21 +1,40 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! **Output** integration tests for [`RenderOpPaintImplDirectToAnsi`] (using
-//! [`StdoutMock`]).
+//! **Output** integration tests for [`RenderOpPaintImplDirectToAnsi`].
 //!
 //! These tests verify the **output painting pipeline** ([`RenderOpOutput`] → ANSI escape
-//! sequences). They use [`StdoutMock`] to capture output—no real terminal or PTY is
-//! needed because we're testing ANSI sequence generation, not terminal I/O.
+//! sequences). No real terminal or PTY is needed—we test ANSI sequence generation.
 //!
 //! **Looking for input tests?** See [`input::integration_tests`] for PTY test
 //! documentation.
 //!
-//! # Testing Strategy
+//! # Testing Strategy: Two Complementary Layers
 //!
-//! This module tests the **output painting pipeline**:
-//! - [`RenderOpOutput`] → ANSI escape sequences via [`RenderOpPaintImplDirectToAnsi`]
-//! - State tracking in [`RenderOpsLocalData`]
-//! - Output captured via [`StdoutMock`]
+//! This module uses **two testing layers** that verify complementary properties:
+//!
+//! | Layer | Tests | Catches |
+//! |-------|-------|---------|
+//! | **[`StdoutMock`]** (byte-level) | "Did we emit correct bytes?" | Typos, wrong SGR codes |
+//! | **[`OffscreenBuffer`]** (rendered) | "Did it render correctly?" | Off-by-one, semantic bugs |
+//!
+//! ## Byte-Level Tests ([`StdoutMock`])
+//!
+//! Verify exact ANSI escape sequences are generated:
+//! - `color_operations`, `cursor_movement`, `screen_operations`, `text_operations`
+//! - `state_optimization` (tracks operation counts)
+//!
+//! ## Rendered Tests ([`OffscreenBuffer`])
+//!
+//! Verify **behavioral correctness** by applying ANSI output to [`OffscreenBuffer`]:
+//! - `cursor_movement_rendered`: Cursor positions characters correctly
+//! - `text_operations_rendered`: Styled text renders with correct colors/attributes
+//! - `screen_operations_rendered`: Clear operations affect correct regions
+//!
+//! The rendered tests use [`OffscreenBuffer::apply_ansi_bytes`] to parse the ANSI
+//! output and verify the visual result.
+//!
+//! [`OffscreenBuffer::apply_ansi_bytes`]: crate::OffscreenBuffer::apply_ansi_bytes
+//! [`OffscreenBuffer`]: crate::OffscreenBuffer
 //!
 //! # Module Organization
 //!
@@ -24,8 +43,8 @@
 //! **[`RenderOpOutput::Common`] Tests:**
 //! - `color_operations`: Tests for [`SetFgColor`], [`SetBgColor`], [`ResetColor`]
 //!   operations
-//! - `cursor_movement`: Tests for [`MoveCursorPositionAbs`],
-//!   [`MoveCursorPositionRelTo`] operations
+//! - `cursor_movement`: Tests for [`MoveCursorPositionAbs`], [`MoveCursorPositionRelTo`]
+//!   operations
 //! - `screen_operations`: Tests for [`ClearScreen`], [`ShowCursor`], [`HideCursor`]
 //!   operations
 //! - `state_optimization`: Tests for redundant operation skipping and state persistence
@@ -89,21 +108,29 @@
 //! [`RenderOpOutput::CompositorNoClipTruncPaintTextWithAttributes`]: crate::RenderOpOutput::CompositorNoClipTruncPaintTextWithAttributes
 //! [`input::integration_tests`]: mod@crate::terminal_lib_backends::direct_to_ansi::input::integration_tests
 
+// Byte-level tests (StdoutMock).
 #[cfg(test)]
 mod color_operations;
-
 #[cfg(test)]
 mod cursor_movement;
-
 #[cfg(test)]
 mod screen_operations;
-
 #[cfg(test)]
 mod state_optimization;
-
 #[cfg(test)]
 mod text_operations;
 
+// Rendered tests (OffscreenBuffer).
+#[cfg(test)]
+mod cursor_movement_rendered;
+#[cfg(test)]
+mod screen_operations_rendered;
+#[cfg(test)]
+mod test_helpers_rendered;
+#[cfg(test)]
+mod text_operations_rendered;
+
+// Shared test helpers.
 #[cfg(test)]
 mod test_helpers {
     use crate::{LockedOutputDevice, OutputDevice, RenderOpOutput, RenderOpPaint,

@@ -5,7 +5,8 @@
 //! # Platform Support
 //!
 //! This module is **Linux-only** (gated by `#[cfg(target_os = "linux")]`).
-//! On macOS and Windows, use the Crossterm backend instead (set via [`TERMINAL_LIB_BACKEND`]).
+//! On macOS and Windows, use the Crossterm backend instead (set via
+//! [`TERMINAL_LIB_BACKEND`]).
 //!
 //! ## Why Linux-Only?
 //!
@@ -36,8 +37,8 @@
 //!
 //! To enable `DirectToAnsi` on macOS, we would need to:
 //! 1. Replace [`mio`] polling with [`filedescriptor::poll()`]
-//! 2. Handle `SIGWINCH` via `signal-hook` with the self-pipe trick
-//!    (since `signal-hook-mio` requires `mio`)
+//! 2. Handle `SIGWINCH` via `signal-hook` with the self-pipe trick (since
+//!    `signal-hook-mio` requires `mio`)
 //!
 //! This is tracked as a potential future enhancement.
 //!

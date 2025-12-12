@@ -304,8 +304,7 @@ impl DirectToAnsiInputDevice {
     /// - The device can be **created and dropped multiple times** - global state persists
     /// - This method is **called repeatedly** by the main event loop via
     ///   [`InputDevice::next()`], which dispatches to [`Self::next()`]
-    /// - **Buffer state is preserved** across device lifetimes via
-    ///   [`INPUT_RESOURCE`]
+    /// - **Buffer state is preserved** across device lifetimes via [`INPUT_RESOURCE`]
     /// - Returns `None` when stdin is closed (program should exit)
     ///
     /// # Global State

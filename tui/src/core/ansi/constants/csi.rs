@@ -26,8 +26,10 @@ pub const CSI_PARAM_SEPARATOR: char = ';';
 /// - `ESC[48:2:255:128:0m` - RGB background (48 = bg extended, 2 = RGB mode, 255:128:0 =
 ///   RGB)
 ///
-/// Per ITU-T Rec. T.416 (ISO 8613-6), the colon (`:`) is the recommended modern format
+/// Per [ITU-T Rec. T.416] (ISO 8613-6), the colon (`:`) is the recommended modern format
 /// for sub-parameters, while semicolon (`;`) is supported for legacy compatibility.
+///
+/// [ITU-T Rec. T.416]: https://www.itu.int/rec/T-REC-T.416-199303-I
 pub const CSI_SUB_PARAM_SEPARATOR: char = ':';
 
 // Cursor Movement.

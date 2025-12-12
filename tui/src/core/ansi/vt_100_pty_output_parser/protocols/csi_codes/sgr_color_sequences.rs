@@ -143,11 +143,13 @@ pub enum ColorTarget {
 ///
 /// # VT100 Specification
 ///
-/// These sequences follow the ISO 8613-6 (ITU-T Rec. T.416) standard:
+/// These sequences follow the [ISO 8613-6 (ITU-T Rec. T.416)][itu-t-416] standard:
 /// - `38` = foreground color control
 /// - `48` = background color control
 /// - `5` = 256-color palette mode (next parameter is index)
 /// - `2` = RGB mode (next 3 parameters are r, g, b values)
+///
+/// [itu-t-416]: https://www.itu.int/rec/T-REC-T.416-199303-I
 ///
 /// # Color Palette Layout (256-color mode)
 ///

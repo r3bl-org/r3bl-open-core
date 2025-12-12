@@ -39,7 +39,7 @@
 - [x] bootstrap `r3bl_build_infra` crate with first tool (binary)
       [`task_cargo_rustdoc_fmt.md](task/done/task_cargo_rustdoc_fmt.md)
 
-- [ ] fix [`add-pty-offscreen-buffer-output-tests.md`](task/add-pty-offscreen-buffer-output-tests.md)
+- [x] fix [`add-pty-offscreen-buffer-output-tests.md`](task/done/add-pty-offscreen-buffer-output-tests.md)
 
 - [x] fix [`add-backend-compat-tests.md`](task/done/add-backend-compat-tests.md:28)
 

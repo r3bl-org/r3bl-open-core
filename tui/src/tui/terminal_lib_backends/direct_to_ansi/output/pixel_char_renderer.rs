@@ -67,7 +67,8 @@ use crate::{FastStringify, PixelChar, SGR_RESET_BYTES, SgrCode, TuiColor, TuiSty
 /// - `OffscreenBuffer::render_to_ansi()` will call this renderer
 /// - `CliTextInline::Display` will use this renderer
 /// - `choose()` and `readline_async` will use this renderer
-/// - [`RenderOpOutput`] variant `CompositorNoClipTruncPaintTextWithAttributes` will use this renderer
+/// - [`RenderOpOutput`] variant `CompositorNoClipTruncPaintTextWithAttributes` will use
+///   this renderer
 ///
 /// This renderer implements intelligent style diffing to produce minimal ANSI output
 /// while maintaining correctness. It tracks the current style and only emits new codes
@@ -237,9 +238,7 @@ impl PixelCharRenderer {
         if let Some(blink_mode) = style.attribs.blink {
             let sgr = match blink_mode {
                 tui_style::tui_style_attrib::BlinkMode::Slow => SgrCode::SlowBlink,
-                tui_style::tui_style_attrib::BlinkMode::Rapid => {
-                    SgrCode::RapidBlink
-                }
+                tui_style::tui_style_attrib::BlinkMode::Rapid => SgrCode::RapidBlink,
             };
             self.write_sgr(sgr);
         }

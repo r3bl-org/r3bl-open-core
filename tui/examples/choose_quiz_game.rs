@@ -268,7 +268,8 @@ mod tests {
     fn test_answer_display_correct() {
         global_color_support::set_override(ColorSupport::Truecolor);
         let answer = Answer::Correct;
-        let expected_output = "\u{001b}[38;2;5;236;0mCorrect\u{001b}[0m";
+        // RGB format uses colons per ITU-T Rec. T.416: ESC[38:2:r:g:bm
+        let expected_output = "\u{001b}[38:2:5:236:0mCorrect\u{001b}[0m";
         assert_eq!(format!("{}", answer), expected_output);
     }
 
@@ -277,7 +278,8 @@ mod tests {
     fn test_answer_display_incorrect() {
         global_color_support::set_override(ColorSupport::Truecolor);
         let answer = Answer::Incorrect;
-        let expected_output = "\u{001b}[38;2;234;0;196mIncorrect\u{001b}[0m";
+        // RGB format uses colons per ITU-T Rec. T.416: ESC[38:2:r:g:bm
+        let expected_output = "\u{001b}[38:2:234:0:196mIncorrect\u{001b}[0m";
         assert_eq!(format!("{}", answer), expected_output);
     }
 

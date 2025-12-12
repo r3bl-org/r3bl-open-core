@@ -27,8 +27,8 @@
 //!
 //! # Why Tests Live in the Parser Module
 //!
-//! The PTY tests live with the parser ([`vt_100_terminal_input_parser::integration_tests`])
-//! rather than here because:
+//! The PTY tests live with the parser
+//! ([`vt_100_terminal_input_parser::integration_tests`]) rather than here because:
 //!
 //! 1. **Primary focus is parser correctness**: The tests validate that raw terminal bytes
 //!    are correctly parsed into [`InputEvent`] variants.

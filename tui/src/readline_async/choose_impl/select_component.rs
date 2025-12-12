@@ -615,8 +615,8 @@ mod tests {
         // Updated expected output: now uses ASText for styling, which only emits ANSI
         // codes for attributes that are set (more efficient than the old
         // choose_apply_style! macro which emitted explicit reset codes for every
-        // attribute).
-        let expected_output = "\u{1b}[4F\u{1b}[1G\u{1b}[0m\u{1b}[2K\u{1b}[38;5;153m\u{1b}[48;5;235m Header\u{1b}[0m\u{1b}[1E\u{1b}[0m\u{1b}[1G\u{1b}[0m\u{1b}[2K\u{1b}[38;5;46m  ◉ Item 1\u{1b}[0m\u{1b}[38;5;46m                              \u{1b}[0m\u{1b}[1E\u{1b}[0m\u{1b}[1G\u{1b}[0m\u{1b}[2K  ◌ Item 2\u{1b}[0m                              \u{1b}[0m\u{1b}[1E\u{1b}[0m\u{1b}[1G\u{1b}[0m\u{1b}[2K  ◌ Item 3\u{1b}[0m                              \u{1b}[0m\u{1b}[1E\u{1b}[0m\u{1b}[4F";
+        // attribute). Extended colors use colon format (ITU-T Rec. T.416).
+        let expected_output = "\u{1b}[4F\u{1b}[1G\u{1b}[0m\u{1b}[2K\u{1b}[38:5:153m\u{1b}[48:5:235m Header\u{1b}[0m\u{1b}[1E\u{1b}[0m\u{1b}[1G\u{1b}[0m\u{1b}[2K\u{1b}[38:5:46m  ◉ Item 1\u{1b}[0m\u{1b}[38:5:46m                              \u{1b}[0m\u{1b}[1E\u{1b}[0m\u{1b}[1G\u{1b}[0m\u{1b}[2K  ◌ Item 2\u{1b}[0m                              \u{1b}[0m\u{1b}[1E\u{1b}[0m\u{1b}[1G\u{1b}[0m\u{1b}[2K  ◌ Item 3\u{1b}[0m                              \u{1b}[0m\u{1b}[1E\u{1b}[0m\u{1b}[4F";
         assert_eq!(generated_output, expected_output);
 
         clear_override();

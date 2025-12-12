@@ -583,6 +583,153 @@ pub mod sgr_styling {
             "RGB fg + basic bg",
         );
     }
+
+    /// Test semicolon-separated 256-color sequences (legacy format).
+    ///
+    /// This tests the look-ahead parsing logic that handles the legacy semicolon format
+    /// where VTE parses `ESC[38;5;196m` as separate positions: `[[38], [5], [196]]`.
+    #[test]
+    fn test_sgr_extended_256_colors_semicolon_format() {
+        let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
+        let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf);
+
+        // Test 256-color sequences with semicolon format (legacy)
+        //
+        // Column:  0   1   2
+        //         ┌───┬───┬───┐
+        // Row 0:  │ F │ B │ M │
+        //         └───┴───┴───┘
+
+        // Use raw escape sequences with semicolons (legacy format).
+        performer.apply_ansi_bytes(format!(
+            "\x1b[38;5;196mF\x1b[0m\x1b[48;5;21mB\x1b[0m\x1b[38;5;196;48;5;21mM\x1b[0m"
+        ));
+
+        // Verify 'F' has 256-color foreground.
+        assert_styled_char_at(
+            &ofs_buf,
+            0,
+            0,
+            'F',
+            |style_from_buf| style_from_buf.color_fg.is_some(),
+            "256-color fg (semicolon format)",
+        );
+
+        // Verify 'B' has 256-color background.
+        assert_styled_char_at(
+            &ofs_buf,
+            0,
+            1,
+            'B',
+            |style_from_buf| style_from_buf.color_bg.is_some(),
+            "256-color bg (semicolon format)",
+        );
+
+        // Verify 'M' has both 256-color fg and bg.
+        assert_styled_char_at(
+            &ofs_buf,
+            0,
+            2,
+            'M',
+            |style_from_buf| {
+                style_from_buf.color_fg.is_some() && style_from_buf.color_bg.is_some()
+            },
+            "256-color fg + bg (semicolon format)",
+        );
+    }
+
+    /// Test semicolon-separated RGB color sequences (legacy format).
+    #[test]
+    fn test_sgr_extended_rgb_colors_semicolon_format() {
+        let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
+        let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf);
+
+        // Test RGB color sequences with semicolon format (legacy)
+        //
+        // Column:  0   1   2
+        //         ┌───┬───┬───┐
+        // Row 0:  │ R │ G │ B │
+        //         └───┴───┴───┘
+
+        // Use raw escape sequences with semicolons (legacy format).
+        performer.apply_ansi_bytes(format!(
+            "\x1b[38;2;255;0;0mR\x1b[0m\x1b[48;2;255;128;0mG\x1b[0m\x1b[38;2;0;128;255;48;2;255;128;0mB\x1b[0m"
+        ));
+
+        // Verify 'R' has RGB foreground.
+        assert_styled_char_at(
+            &ofs_buf,
+            0,
+            0,
+            'R',
+            |style_from_buf| style_from_buf.color_fg.is_some(),
+            "RGB fg (semicolon format)",
+        );
+
+        // Verify 'G' has RGB background.
+        assert_styled_char_at(
+            &ofs_buf,
+            0,
+            1,
+            'G',
+            |style_from_buf| style_from_buf.color_bg.is_some(),
+            "RGB bg (semicolon format)",
+        );
+
+        // Verify 'B' has both RGB fg and bg.
+        assert_styled_char_at(
+            &ofs_buf,
+            0,
+            2,
+            'B',
+            |style_from_buf| {
+                style_from_buf.color_fg.is_some() && style_from_buf.color_bg.is_some()
+            },
+            "RGB fg + bg (semicolon format)",
+        );
+    }
+
+    /// Test mixing semicolon-separated extended colors with basic SGR attributes.
+    #[test]
+    fn test_sgr_semicolon_extended_colors_with_attributes() {
+        let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
+
+        // Test: bold + semicolon 256-color fg
+        // Sequence: ESC[1;38;5;196m (bold + fg index 196)
+        {
+            let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf);
+            performer.apply_ansi_bytes("\x1b[1;38;5;196mA\x1b[0m");
+        }
+
+        assert_styled_char_at(
+            &ofs_buf,
+            0,
+            0,
+            'A',
+            |style_from_buf| {
+                style_from_buf.attribs.bold.is_some() && style_from_buf.color_fg.is_some()
+            },
+            "bold + 256-color fg (semicolon format)",
+        );
+
+        // Test: semicolon 256-color fg + bold (reversed order)
+        // Sequence: ESC[38;5;196;1m (fg index 196 + bold)
+        {
+            let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf);
+            performer.apply_ansi_bytes("\x1b[38;5;196;1mB\x1b[0m");
+        }
+
+        assert_styled_char_at(
+            &ofs_buf,
+            0,
+            1,
+            'B',
+            |style_from_buf| {
+                style_from_buf.attribs.bold.is_some() && style_from_buf.color_fg.is_some()
+            },
+            "256-color fg + bold (reversed, semicolon format)",
+        );
+    }
 }
 
 /// Tests for character set switching operations.

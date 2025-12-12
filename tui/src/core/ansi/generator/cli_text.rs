@@ -994,7 +994,7 @@ mod tests {
 
         assert_eq!(
             format!("{0}", eg_1),
-            "\x1b[1m\x1b[38;5;16m\x1b[48;5;16mHello\x1b[0m".to_string()
+            "\x1b[1m\x1b[38:5:16m\x1b[48:5:16mHello\x1b[0m".to_string()
         );
 
         let eg_2 = CliTextInline {
@@ -1006,7 +1006,7 @@ mod tests {
 
         assert_eq!(
             format!("{0}", eg_2),
-            "\x1b[1m\x1b[38;5;150m\x1b[48;5;16mWorld\x1b[0m".to_string()
+            "\x1b[1m\x1b[38:5:150m\x1b[48:5:16mWorld\x1b[0m".to_string()
         );
 
         Ok(())
@@ -1026,7 +1026,7 @@ mod tests {
 
         assert_eq!(
             format!("{0}", eg_1),
-            "\x1b[1m\x1b[38;2;0;0;0m\x1b[48;2;1;1;1mHello\x1b[0m".to_string()
+            "\x1b[1m\x1b[38:2:0:0:0m\x1b[48:2:1:1:1mHello\x1b[0m".to_string()
         );
 
         let eg_2 = CliTextInline {
@@ -1038,7 +1038,7 @@ mod tests {
 
         assert_eq!(
             format!("{0}", eg_2),
-            "\x1b[1m\x1b[38;5;150m\x1b[48;2;1;1;1mWorld\x1b[0m".to_string()
+            "\x1b[1m\x1b[38:5:150m\x1b[48:2:1:1:1mWorld\x1b[0m".to_string()
         );
 
         Ok(())
@@ -1060,7 +1060,7 @@ mod tests {
 
         assert_eq!(
             format!("{0}", eg_1),
-            "\u{1b}[1m\u{1b}[38;5;16m\u{1b}[48;5;16mHello\u{1b}[0m".to_string()
+            "\u{1b}[1m\u{1b}[38:5:16m\u{1b}[48:5:16mHello\u{1b}[0m".to_string()
         );
 
         let eg_2 = CliTextInline {
@@ -1074,7 +1074,7 @@ mod tests {
 
         assert_eq!(
             format!("{0}", eg_2),
-            "\u{1b}[1m\u{1b}[38;5;251m\u{1b}[48;5;16mWorld\u{1b}[0m".to_string()
+            "\u{1b}[1m\u{1b}[38:5:251m\u{1b}[48:5:16mWorld\u{1b}[0m".to_string()
         );
 
         Ok(())
