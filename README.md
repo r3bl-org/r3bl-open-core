@@ -545,6 +545,8 @@ fish run.fish install-cargo-tools
 **Note**: The manual approach requires you to install OS-level dependencies yourself. The
 `install-cargo-tools` command focuses specifically on **Rust development tools**:
 
+**From crates.io (via cargo-binstall with fallback to cargo install):**
+
 - **cargo-binstall**: Fast binary installer (installed first as foundation)
 - **uv**: Modern Python package manager (required for Serena semantic code MCP server)
 - **Core Development Tools**: bacon, flamegraph, inferno
@@ -552,7 +554,16 @@ fish run.fish install-cargo-tools
 - **Code Quality**: cargo-deny, cargo-unmaintained, cargo-expand, cargo-readme
 - **Wild Linker**: Fast linker with optimized .cargo/config.toml generation
 - **Language Server**: rust-analyzer component
+
+**From local source (via cargo install --path):**
+
+- **cmdr**: edi, giti, rc binaries (calls `install-cmdr`)
+- **build-infra**: cargo-rustdoc-fmt (calls `install-build-infra`)
+
+**Features:**
+
 - **Smart Installation**: Uses cargo-binstall for speed with fallback to cargo install --locked
+- **Local Source Rebuild**: Always rebuilds cmdr and build-infra from source with current toolchain
 - **Shared Utilities**: Leverages utility functions from script_lib.fish for consistency
 
 ## IDE Setup and Extensions
@@ -615,7 +626,9 @@ cd r3bl-intellij-plugins
 
 **Task Workflow Integration:**
 
-IntelliJ IDEA and RustRover include a built-in Task Management plugin that works seamlessly alongside the `./task/` file management system in this project. Use it to organize your work contexts while the `./task/` files track your implementation progress.
+IntelliJ IDEA and RustRover include a built-in Task Management plugin that works seamlessly
+alongside the `./task/` file management system in this project. Use it to organize your work
+contexts while the `./task/` files track your implementation progress.
 
 ### R3BL VSCode Extensions
 
@@ -625,7 +638,9 @@ marketplace and must be installed manually.
 
 **What's included:**
 
-- **Task Spaces** - Organize and switch between collections of editor tabs for different work contexts (e.g., one space for editing features, one for writing documentation, one for debugging). Complements the `./task/` file management system by helping you organize your editor sessions.
+- **Task Spaces** - Organize and switch between collections of editor tabs for different work
+  contexts (e.g., one space for editing features, one for writing documentation, one for debugging).
+  Complements the `./task/` file management system by helping you organize your editor sessions.
 - **R3BL Theme** - A carefully crafted dark theme optimized for Rust and Markdown development
 - **Auto Insert Copyright** - Automatically inserts copyright headers in new files
 - **Semantic Configuration** - Enhanced Rust syntax highlighting with additional semantic tokens
@@ -694,28 +709,43 @@ Workspace-wide commands:
     docs                 Generate docs for all
     serve-docs           Serve documentation
     rustfmt              Format all code
-    install-cargo-tools  Install dev tools + Windows cross-compile target
+    rustdoc-fmt          Format rustdoc comments
+    install-cargo-tools  Install all dev tools (crates.io + local source)
     upgrade-deps         Upgrade dependencies
+    update-cargo-tools   Update all tools (crates.io + rebuild local source)
     audit-deps           Security audit
-    unmaintained         Check for unmaintained deps
+    unmaintained-deps    Check for unmaintained deps
+    toolchain-update     Update Rust to month-old nightly
+    toolchain-sync       Sync environment to rust-toolchain.toml
+    toolchain-validate   Quick toolchain validation (components only)
+    toolchain-validate-complete  Complete toolchain validation (full build+test)
+    toolchain-remove     Remove ALL toolchains (testing)
     build-server         Remote build server - uses rsync
 
 Watch commands:
-    watch-all-tests      Watch files, run all tests
-    watch-one-test [pattern]  Watch files, run specific test
-    watch-clippy         Watch files, run clippy
-    watch-check          Watch files, run cargo check
+    test-watch [pattern]  Watch files, run specific test
+    clippy-watch          Watch files, run clippy
+    check-watch           Watch files, run cargo check
+    check-full-watch      Watch files, run all checks (tests, doctests, docs)
+    check-full-watch-test Watch files, run tests and doctests
+    check-full-watch-doc  Watch files, run doc build only
 
 TUI-specific commands:
     run-examples [--release] [--no-log]  Run TUI examples
     run-examples-flamegraph-svg  Generate SVG flamegraph
-    run-examples-flamegraph-fold [--benchmark]  Generate perf-folded format (use --benchmark for reproducible profiling)
+    run-examples-flamegraph-fold [--benchmark]  Generate perf-folded (use --benchmark for reproducible profiling)
     bench                Run benchmarks
+
+Local source package commands:
+    install-cmdr         Install cmdr binaries (edi, giti, rc) from source
+    install-build-infra  Install build-infra tools (cargo-rustdoc-fmt) from source
 
 cmdr-specific commands:
     run-binaries         Run edi, giti, or rc
-    install-cmdr         Install cmdr binaries
     docker-build         Build release in Docker
+
+Development Session Commands:
+    dev-dashboard        Start 2-pane tmux development dashboard
 
 Other commands:
     log                  Monitor log.txt in cmdr or tui directory
@@ -729,14 +759,17 @@ Other commands:
 | `fish run.fish all`                                        | Run all major checks (build, test, clippy, docs, audit, format)                         |
 | `fish run.fish build`                                      | Build the entire workspace                                                              |
 | `fish run.fish test`                                       | Run all tests across the workspace                                                      |
-| `fish run.fish install-cargo-tools`                        | Install Rust dev tools + Windows cross-compile target                                   |
-| `fish run.fish watch-all-tests`                            | Watch for file changes and run tests automatically                                      |
+| `fish run.fish install-cargo-tools`                        | Install all dev tools (crates.io + local source packages)                               |
+| `fish run.fish update-cargo-tools`                         | Update all tools (crates.io + rebuild local source packages)                            |
+| `fish run.fish install-cmdr`                               | Install cmdr binaries (edi, giti, rc) from source                                       |
+| `fish run.fish install-build-infra`                        | Install build-infra tools (cargo-rustdoc-fmt) from source                               |
+| `fish run.fish test-watch [pattern]`                       | Watch for file changes and run specific test                                            |
 | `fish run.fish run-examples`                               | Run TUI examples interactively                                                          |
 | `fish run.fish run-examples-flamegraph-svg`                | Generate SVG flamegraph for performance analysis                                        |
 | `fish run.fish run-examples-flamegraph-fold [--benchmark]` | Generate perf-folded format for analysis (use `--benchmark` for reproducible profiling) |
 | `fish run.fish bench`                                      | Run benchmarks                                                                          |
 | `fish run.fish run-binaries`                               | Run cmdr binaries (edi, giti, rc) interactively                                         |
-| `fish run.fish dev-dashboard`                              | Start 4-pane tmux development dashboard (tests, docs, checks)                           |
+| `fish run.fish dev-dashboard`                              | Start 2-pane tmux development dashboard (tests, docs, checks)                           |
 | `fish run.fish check-full`                                 | Run comprehensive checks (tests, doctests, docs, toolchain validation)                  |
 | `fish run.fish check-windows-build`                        | Verify Windows cross-compilation (platform cfg gates)                                   |
 | `fish run.fish toolchain-validate`                         | Quick toolchain validation (components only, ~1-2 seconds)                              |
@@ -1289,13 +1322,13 @@ Platform-specific cfg gates compile correctly for Windows.
 
 **Technical Details:**
 
-| Aspect              | Description                                                        |
-| ------------------- | ------------------------------------------------------------------ |
-| **Target**          | `x86_64-pc-windows-gnu` (Windows with GNU toolchain ABI)           |
-| **Compilation**     | Stops at MIR stage (`--emit=metadata`), no object code generated   |
-| **Linking**         | Not required - no mingw-w64 or Windows SDK needed                  |
-| **What's Verified** | Syntax, types, trait bounds, cfg gate correctness                  |
-| **What's NOT**      | Runtime behavior, Windows-specific API calls, linking errors       |
+| Aspect              | Description                                                      |
+| ------------------- | ---------------------------------------------------------------- |
+| **Target**          | `x86_64-pc-windows-gnu` (Windows with GNU toolchain ABI)         |
+| **Compilation**     | Stops at MIR stage (`--emit=metadata`), no object code generated |
+| **Linking**         | Not required - no mingw-w64 or Windows SDK needed                |
+| **What's Verified** | Syntax, types, trait bounds, cfg gate correctness                |
+| **What's NOT**      | Runtime behavior, Windows-specific API calls, linking errors     |
 
 This approach catches the most common cross-platform issues (missing cfg gates, type mismatches in
 platform-specific code) with minimal setup overhead.
@@ -1710,9 +1743,9 @@ The project uses a clean separation of concerns across three main scripts with s
 ```
 
 **Key DRY Principle**: All shared functionality lives in `script_lib.fish`. Individual scripts
-source this library and call shared functions, ensuring consistent behavior and eliminating
-code duplication. When a function like `install_windows_target` needs updating, it only needs
-to be changed in one place.
+source this library and call shared functions, ensuring consistent behavior and eliminating code
+duplication. When a function like `install_windows_target` needs updating, it only needs to be
+changed in one place.
 
 **[`bootstrap.sh`](https://github.com/r3bl-org/r3bl-open-core/blob/main/bootstrap.sh)** - **OS-Level
 Setup**

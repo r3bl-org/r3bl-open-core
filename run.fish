@@ -119,6 +119,8 @@ function main
             run-binaries
         case install-cmdr
             install-cmdr
+        case install-build-infra
+            install-build-infra
         case docker-build
             docker-build
             # Unified commands
@@ -155,9 +157,9 @@ function print-help
         echo "    "(set_color green)"serve-docs"(set_color normal)"           Serve documentation"
         echo "    "(set_color green)"rustfmt"(set_color normal)"              Format all code"
         echo "    "(set_color green)"rustdoc-fmt"(set_color normal)"           Format rustdoc comments"
-        echo "    "(set_color green)"install-cargo-tools"(set_color normal)"  Install dev tools + Windows cross-compile target"
+        echo "    "(set_color green)"install-cargo-tools"(set_color normal)"  Install all dev tools (crates.io + local source)"
         echo "    "(set_color green)"upgrade-deps"(set_color normal)"         Upgrade dependencies"
-        echo "    "(set_color green)"update-cargo-tools"(set_color normal)"   Update cargo dev tools"
+        echo "    "(set_color green)"update-cargo-tools"(set_color normal)"   Update all tools (crates.io + rebuild local source)"
         echo "    "(set_color green)"audit-deps"(set_color normal)"           Security audit"
         echo "    "(set_color green)"unmaintained-deps"(set_color normal)"    Check for unmaintained deps"
         echo "    "(set_color green)"toolchain-update"(set_color normal)"     Update Rust to month-old nightly"
@@ -181,9 +183,12 @@ function print-help
         echo "    "(set_color green)"run-examples-flamegraph-fold"(set_color normal)" "(set_color blue)"[--benchmark]"(set_color normal)"  Generate perf-folded (use --benchmark for reproducible profiling)"
         echo "    "(set_color green)"bench"(set_color normal)"                Run benchmarks"
         echo ""
+        echo (set_color cyan --bold)"Local source package commands:"(set_color normal)
+        echo "    "(set_color green)"install-cmdr"(set_color normal)"         Install cmdr binaries (edi, giti, rc) from source"
+        echo "    "(set_color green)"install-build-infra"(set_color normal)"  Install build-infra tools (cargo-rustdoc-fmt) from source"
+        echo ""
         echo (set_color cyan --bold)"cmdr-specific commands:"(set_color normal)
         echo "    "(set_color green)"run-binaries"(set_color normal)"         Run edi, giti, or rc"
-        echo "    "(set_color green)"install-cmdr"(set_color normal)"         Install cmdr binaries"
         echo "    "(set_color green)"docker-build"(set_color normal)"         Build release in Docker"
         echo ""
         echo (set_color cyan --bold)"Development Session Commands:"(set_color normal)
@@ -352,19 +357,14 @@ function install-cargo-tools
         install_if_missing "wild" "cargo install wild-linker"
     end
 
-    # Install r3bl-build-infra tools (cargo-rustdoc-fmt)
-    echo 'Installing r3bl-build-infra tools...'
-    set original_dir $PWD
-    cd build-infra
-    if cargo install --path . --force
-        echo '✓ cargo-rustdoc-fmt installed'
-    else
-        echo '⚠️  Failed to install r3bl-build-infra tools'
-    end
-    cd $original_dir
-
     # Generate appropriate cargo configuration after installation
     generate_cargo_config
+
+    # Install local source packages (cmdr and build-infra)
+    echo ""
+    echo (set_color cyan --bold)"Installing local source packages..."(set_color normal)
+    install-build-infra
+    install-cmdr
 
     # Rust components
     if not rustup component list --installed | grep -q rust-analyzer
@@ -706,23 +706,27 @@ end
 # Updates all installed cargo development tools to their latest versions.
 #
 # This function checks for and installs updates to all cargo-installed binaries
-# using cargo-update (cargo install-update). It provides a simple way to keep
-# development tools current with latest bug fixes and features.
+# using cargo-update (cargo install-update), and also rebuilds local source
+# packages (cmdr, build-infra) from source.
 #
 # Features:
-# - Automatic update process (uses --all flag)
+# - Automatic update process (uses --all flag for crates.io tools)
 # - Updates all installed cargo tools in one command
 # - Only updates tools that have newer versions available
+# - Rebuilds local source packages (cmdr, build-infra) with current toolchain
 # - Provides clear feedback on update status
 # - Safe to run regularly (idempotent)
 #
-# Tools updated include:
+# Tools updated from crates.io:
 # - bacon: Background rust code checker
 # - flamegraph & inferno: Performance profiling
-# - bacon: Background task runner
 # - cargo-deny: Security auditing
 # - wild-linker: Fast linker
 # - And all other cargo-installed tools
+#
+# Local source packages rebuilt:
+# - cmdr: edi, giti, rc binaries
+# - build-infra: cargo-rustdoc-fmt
 #
 # Prerequisites:
 # - cargo-update must be installed (installed via install-cargo-tools)
@@ -744,23 +748,32 @@ function update-cargo-tools
     end
 
     # Show what needs updating
-    echo (set_color magenta)"≡ Current status ≡"(set_color normal)
+    echo (set_color magenta)"≡ Current status (crates.io tools) ≡"(set_color normal)
     cargo install-update --list
 
     echo ""
-    echo (set_color cyan --bold)"Updating all cargo tools..."(set_color normal)
+    echo (set_color cyan --bold)"Updating all crates.io tools..."(set_color normal)
 
-    # Update all tools
+    # Update all tools from crates.io
     # Note: --all updates all packages, no --force means only update if newer version exists
     if cargo install-update --all
         echo ""
-        echo (set_color green)"✓ All cargo tools updated successfully!"(set_color normal)
-        return 0
+        echo (set_color green)"✓ All crates.io tools updated successfully!"(set_color normal)
     else
         echo ""
-        echo (set_color red)"⚠️  Some updates may have failed. Check output above."(set_color normal)
-        return 1
+        echo (set_color yellow)"⚠️  Some crates.io updates may have failed. Continuing with local packages..."(set_color normal)
     end
+
+    # Rebuild local source packages
+    # This ensures cmdr and build-infra are compiled with the current toolchain
+    echo ""
+    echo (set_color cyan --bold)"Rebuilding local source packages..."(set_color normal)
+    install-build-infra
+    install-cmdr
+
+    echo ""
+    echo (set_color green)"✓ Cargo tools update complete!"(set_color normal)
+    return 0
 end
 
 function rustfmt
@@ -1012,7 +1025,41 @@ function install-cmdr
     set original_dir $PWD
     cd cmdr
 
-    cargo install --path . --force
+    echo (set_color cyan --bold)"Installing cmdr binaries (edi, giti, rc) from source..."(set_color normal)
+    if cargo install --path . --force
+        echo (set_color green)"✓ cmdr binaries installed successfully"(set_color normal)
+    else
+        echo (set_color red)"⚠️  Failed to install cmdr binaries"(set_color normal)
+        cd $original_dir
+        return 1
+    end
+
+    cd $original_dir
+end
+
+# Installs build-infra tools from source.
+#
+# This function installs the r3bl-build-infra tools (cargo-rustdoc-fmt) from source
+# using `cargo install --path .`. This ensures you have the latest version with
+# any local modifications.
+#
+# Tools installed:
+# - cargo-rustdoc-fmt: Formats rustdoc comments in Rust source files
+#
+# Usage:
+#   fish run.fish install-build-infra
+function install-build-infra
+    set original_dir $PWD
+    cd build-infra
+
+    echo (set_color cyan --bold)"Installing build-infra tools (cargo-rustdoc-fmt) from source..."(set_color normal)
+    if cargo install --path . --force
+        echo (set_color green)"✓ build-infra tools installed successfully"(set_color normal)
+    else
+        echo (set_color red)"⚠️  Failed to install build-infra tools"(set_color normal)
+        cd $original_dir
+        return 1
+    end
 
     cd $original_dir
 end

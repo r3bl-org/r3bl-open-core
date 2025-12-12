@@ -9,14 +9,20 @@ use crate::cargo_rustdoc_fmt::{extractor, link_converter, table_formatter,
                                        RustdocBlock}};
 use std::path::{Path, PathBuf};
 
-/// Check if a file contains the `rustfmt_skip` attribute.
+/// Find the line number where `rustfmt_skip` attribute appears.
 ///
-/// Files with `#![cfg_attr(rustfmt, rustfmt_skip)]` will be skipped entirely
-/// to respect the user's intent to preserve manual formatting.
-fn has_rustfmt_skip(source: &str) -> bool {
-    source.contains("#![cfg_attr(rustfmt, rustfmt_skip)]")
-        || source.contains("#![ cfg_attr(rustfmt, rustfmt_skip) ]")
-        || source.contains("#![ cfg_attr( rustfmt , rustfmt_skip ) ]")
+/// Returns `Some(line_number)` (0-indexed) if found, `None` otherwise.
+/// When present, only rustdoc blocks ending before this line should be processed.
+fn find_rustfmt_skip_line(source: &str) -> Option<usize> {
+    for (line_num, line) in source.lines().enumerate() {
+        if line.contains("#![cfg_attr(rustfmt, rustfmt_skip)]")
+            || line.contains("#![ cfg_attr(rustfmt, rustfmt_skip) ]")
+            || line.contains("#![ cfg_attr( rustfmt , rustfmt_skip ) ]")
+        {
+            return Some(line_num);
+        }
+    }
+    None
 }
 
 /// Processes Rust files to format their rustdoc comments.
@@ -44,13 +50,13 @@ impl FileProcessor {
             }
         };
 
-        // Skip files with rustfmt_skip attribute
-        if has_rustfmt_skip(&source) {
-            return result; // Return early, file unchanged
-        }
-
         // Extract rustdoc blocks
         let mut blocks = extractor::extract_rustdoc_blocks(&source);
+
+        // If file has rustfmt_skip, only process blocks that end before that line
+        if let Some(skip_line) = find_rustfmt_skip_line(&source) {
+            blocks.retain(|block| block.end_line < skip_line);
+        }
 
         // Process blocks
         let mut modified = false;
