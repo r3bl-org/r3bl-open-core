@@ -423,12 +423,12 @@ fn main() {}";
 
     /// Test that HTML comments are preserved while links are still converted.
     ///
-    /// This test uses mio_poller/mod.rs which has:
+    /// This test uses `mio_poller/mod.rs` which has:
     /// - HTML comments (`<!-- It is ok to use ignore here -->`)
     /// - Reference-style links that may be reordered
     /// - Code blocks with `ignore` attribute
     ///
-    /// This verifies that ContentProtector correctly protects HTML comments
+    /// This verifies that `ContentProtector` correctly protects HTML comments
     /// while still allowing link conversion in non-HTML parts.
     #[test]
     fn test_html_comments_preserved_links_converted() {

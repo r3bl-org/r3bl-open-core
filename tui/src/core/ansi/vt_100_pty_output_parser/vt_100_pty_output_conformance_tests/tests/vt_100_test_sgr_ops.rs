@@ -601,9 +601,9 @@ pub mod sgr_styling {
         //         └───┴───┴───┘
 
         // Use raw escape sequences with semicolons (legacy format).
-        performer.apply_ansi_bytes(format!(
-            "\x1b[38;5;196mF\x1b[0m\x1b[48;5;21mB\x1b[0m\x1b[38;5;196;48;5;21mM\x1b[0m"
-        ));
+        performer.apply_ansi_bytes(
+            "\x1b[38;5;196mF\x1b[0m\x1b[48;5;21mB\x1b[0m\x1b[38;5;196;48;5;21mM\x1b[0m",
+        );
 
         // Verify 'F' has 256-color foreground.
         assert_styled_char_at(
@@ -652,9 +652,9 @@ pub mod sgr_styling {
         //         └───┴───┴───┘
 
         // Use raw escape sequences with semicolons (legacy format).
-        performer.apply_ansi_bytes(format!(
-            "\x1b[38;2;255;0;0mR\x1b[0m\x1b[48;2;255;128;0mG\x1b[0m\x1b[38;2;0;128;255;48;2;255;128;0mB\x1b[0m"
-        ));
+        performer.apply_ansi_bytes(
+            "\x1b[38;2;255;0;0mR\x1b[0m\x1b[48;2;255;128;0mG\x1b[0m\x1b[38;2;0;128;255;48;2;255;128;0mB\x1b[0m",
+        );
 
         // Verify 'R' has RGB foreground.
         assert_styled_char_at(

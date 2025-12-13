@@ -4,11 +4,10 @@
 ///
 /// This macro handles the boilerplate for PTY-based integration tests:
 ///
-/// 1. **CI detection**: Automatically skips the test in CI environments
-/// 2. **Process routing**: Routes to controller or controlled code based on environment
+/// 1. **Process routing**: Routes to controller or controlled code based on environment
 ///    variable
-/// 3. **PTY setup**: Creates PTY pair and spawns controlled process automatically
-/// 4. **Debug output**: Prints diagnostic messages for troubleshooting
+/// 2. **PTY setup**: Creates PTY pair and spawns controlled process automatically
+/// 3. **Debug output**: Prints diagnostic messages for troubleshooting
 ///
 /// The macro creates the PTY and spawns the process, then passes these resources
 /// to your controller function so you can focus on verification logic.
@@ -20,7 +19,6 @@
 /// │ Test Function (entry point)                                 │
 /// │  - Macro detects role via environment variable              │
 /// │  - Routes to controller or controlled function              │
-/// │  - Skips in CI environments automatically                   │
 /// └────────────┬────────────────────────────────┬───────────────┘
 ///              │                                │
 ///     Controller Path                  Controlled Path
@@ -148,12 +146,6 @@ macro_rules! generate_pty_test {
             // Also print to stdout to ensure it gets through PTY
             println!("TEST_RUNNING");
             std::io::stdout().flush().expect("Failed to flush stdout");
-
-            // Skip in CI if running as controller
-            if pty_controlled_env_var.is_err() && is_ci::cached() {
-                println!("⏭️  Skipped in CI (requires interactive terminal)");
-                return;
-            }
 
             // Check if we're running as the controlled process
             if pty_controlled_env_var.is_ok() {

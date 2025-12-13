@@ -10,7 +10,7 @@
 //! Run the **main compatibility test** (compares both backends):
 //!
 //! ```bash
-//! cargo test -p r3bl_tui --lib test_backend_compatibility_comparison -- --ignored --nocapture
+//! cargo test -p r3bl_tui --lib test_backend_compatibility_comparison -- --nocapture
 //! ```
 //!
 //! # Architecture
@@ -71,7 +71,7 @@ mod generate_test_sequences {
 
     /// Builds a CSI sequence with modifier: `ESC [ 1 ; <mod+1> <final>`.
     ///
-    /// Modifier encoding: parameter = 1 + modifier_bits.
+    /// Modifier encoding: parameter = 1 + `modifier_bits`.
     /// - Shift = 2 (1 + [`MODIFIER_SHIFT`])
     /// - Alt = 3 (1 + [`MODIFIER_ALT`])
     /// - Ctrl = 5 (1 + [`MODIFIER_CTRL`])
@@ -288,7 +288,9 @@ mod controlled {
         }};
     }
 
-    /// DirectToAnsi controlled process.
+    /// [`DirectToAnsi`] controlled process.
+    ///
+    /// [`DirectToAnsi`]: crate::terminal_lib_backends::direct_to_ansi
     #[cfg(target_os = "linux")]
     pub fn run_direct_to_ansi() -> ! {
         use crate::tui::terminal_lib_backends::direct_to_ansi::DirectToAnsiInputDevice;
@@ -338,10 +340,9 @@ mod comparison {
     ///
     /// Run with:
     /// ```bash
-    /// cargo test -p r3bl_tui --lib test_backend_compatibility_comparison -- --ignored --nocapture
+    /// cargo test -p r3bl_tui --lib test_backend_compatibility_comparison -- --nocapture
     /// ```
     #[test]
-    #[ignore] // Run manually - requires interactive terminal.
     pub fn test_backend_compatibility_comparison() {
         eprintln!(
             "🔍 Compatibility Test: Running both backends and comparing outputs..."
@@ -485,7 +486,7 @@ mod pty_tests {
                 Ok(status) => {
                     eprintln!(
                         "✅ DirectToAnsi Controller: Controlled process exited: {status:?}"
-                    )
+                    );
                 }
                 Err(e) => panic!("Failed to wait for controlled process: {e}"),
             }
@@ -523,7 +524,7 @@ mod pty_tests {
                 Ok(status) => {
                     eprintln!(
                         "✅ Crossterm Controller: Controlled process exited: {status:?}"
-                    )
+                    );
                 }
                 Err(e) => panic!("Failed to wait for controlled process: {e}"),
             }

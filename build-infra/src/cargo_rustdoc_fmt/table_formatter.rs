@@ -401,7 +401,7 @@ More text";
         let lines: Vec<&str> = output.lines().collect();
         // Separator row should have colons at both ends for each cell
         assert!(
-            lines[1].contains(":") && lines[1].matches(':').count() >= 4,
+            lines[1].contains(':') && lines[1].matches(':').count() >= 4,
             "Center alignment markers should be preserved: {}",
             lines[1]
         );
@@ -420,7 +420,7 @@ More text";
             .trim_start_matches('|')
             .trim_end_matches('|')
             .split('|')
-            .map(|s| s.trim())
+            .map(str::trim)
             .collect();
         assert_eq!(cells.len(), 4);
         // Left: starts with :, no trailing :
