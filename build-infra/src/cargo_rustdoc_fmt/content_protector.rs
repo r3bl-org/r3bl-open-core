@@ -118,6 +118,35 @@ impl ContentProtector {
                 continue;
             }
 
+            // Check for HTML comment start
+            if line.contains("<!--") {
+                // If comment closes on same line, protect just this line
+                if line.contains("-->") {
+                    let placeholder = self.create_placeholder(line);
+                    result.push(placeholder);
+                    i += 1;
+                    continue;
+                }
+
+                // Multi-line comment: collect until closing -->
+                let mut comment_lines = vec![line];
+                i += 1;
+                while i < lines.len() {
+                    let comment_line = lines[i];
+                    comment_lines.push(comment_line);
+                    if comment_line.contains("-->") {
+                        i += 1;
+                        break;
+                    }
+                    i += 1;
+                }
+
+                let original = comment_lines.join("\n");
+                let placeholder = self.create_placeholder(&original);
+                result.push(placeholder);
+                continue;
+            }
+
             // Check if line contains HTML tags - protect entire line
             if HTML_TAG_REGEX.is_match(line) {
                 let placeholder = self.create_placeholder(line);
@@ -235,5 +264,54 @@ mod tests {
 
         assert_eq!(protected, input);
         assert_eq!(protector.restore(&protected), input);
+    }
+
+    #[test]
+    fn test_protect_html_comment_single_line() {
+        let mut protector = ContentProtector::new();
+        let input = "Text <!-- comment --> more";
+        let protected = protector.protect(input);
+
+        // Should replace HTML comment line with placeholder
+        assert!(protected.contains("___PROTECTED_CONTENT_"));
+        assert!(!protected.contains("<!--"));
+
+        // Should restore original
+        let restored = protector.restore(&protected);
+        assert_eq!(restored, input);
+    }
+
+    #[test]
+    fn test_protect_html_comment_multiline() {
+        let mut protector = ContentProtector::new();
+        let input = "Text\n<!--\nMulti-line\ncomment\n-->\nMore text";
+        let protected = protector.protect(input);
+
+        // Should replace HTML comment with placeholder
+        assert!(protected.contains("___PROTECTED_CONTENT_"));
+        assert!(!protected.contains("<!--"));
+
+        // Should restore original
+        let restored = protector.restore(&protected);
+        assert_eq!(restored, input);
+    }
+
+    #[test]
+    fn test_protect_html_comment_with_links() {
+        let mut protector = ContentProtector::new();
+        // Links inside HTML comments should be preserved unchanged
+        let input = "See [link](url)\n<!-- This [link](url) should be preserved -->\nMore [text](url2)";
+        let protected = protector.protect(input);
+
+        // The lines with links (not in HTML comment) should remain
+        assert!(protected.contains("See [link](url)"));
+        assert!(protected.contains("More [text](url2)"));
+
+        // The HTML comment line should be protected
+        assert!(!protected.contains("<!-- This"));
+
+        // Should restore original
+        let restored = protector.restore(&protected);
+        assert_eq!(restored, input);
     }
 }

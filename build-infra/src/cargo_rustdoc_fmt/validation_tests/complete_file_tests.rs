@@ -420,4 +420,60 @@ fn main() {}";
             "Formatted output should match expected output"
         );
     }
+
+    /// Test that HTML comments are preserved while links are still converted.
+    ///
+    /// This test uses mio_poller/mod.rs which has:
+    /// - HTML comments (`<!-- It is ok to use ignore here -->`)
+    /// - Reference-style links that may be reordered
+    /// - Code blocks with `ignore` attribute
+    ///
+    /// This verifies that ContentProtector correctly protects HTML comments
+    /// while still allowing link conversion in non-HTML parts.
+    #[test]
+    fn test_html_comments_preserved_links_converted() {
+        let input = include_str!("test_data/complete_file/input/sample_html_comments.rs");
+        let expected = include_str!(
+            "test_data/complete_file/expected_output/sample_html_comments.rs"
+        );
+
+        let temp_dir = TempDir::new().unwrap();
+        let test_file = temp_dir.path().join("sample_html_comments.rs");
+        fs::write(&test_file, input).unwrap();
+
+        let processor = processor::FileProcessor::new(FormatOptions::default());
+        let result = processor.process_file(&test_file);
+
+        assert!(
+            result.errors.is_empty(),
+            "Processing errors: {:?}",
+            result.errors
+        );
+
+        let formatted = fs::read_to_string(&test_file).unwrap();
+
+        // Verify HTML comments are preserved
+        assert!(
+            formatted.contains("<!-- It is ok to use ignore here -->"),
+            "HTML comments should be preserved exactly"
+        );
+
+        // Verify code blocks with ignore attribute are preserved
+        assert!(
+            formatted.contains("```ignore"),
+            "Code blocks should be preserved"
+        );
+
+        // Verify references are sorted alphabetically at the bottom
+        // Looking for a reference that comes after another alphabetically
+        assert!(
+            formatted.contains("[`epoll`]:"),
+            "References should be present"
+        );
+
+        assert_eq!(
+            formatted, expected,
+            "Formatted output should match expected output"
+        );
+    }
 }

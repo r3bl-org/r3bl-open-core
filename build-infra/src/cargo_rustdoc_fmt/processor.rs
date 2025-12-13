@@ -4,7 +4,8 @@
 
 //! Orchestrate rustdoc formatting for files.
 
-use crate::cargo_rustdoc_fmt::{extractor, link_converter, table_formatter,
+use crate::cargo_rustdoc_fmt::{content_protector::ContentProtector,
+                               extractor, link_converter, table_formatter,
                                types::{CommentType, FormatOptions, ProcessingResult,
                                        RustdocBlock}};
 use std::path::{Path, PathBuf};
@@ -100,13 +101,14 @@ fn process_rustdoc_block(block: &mut RustdocBlock, options: &FormatOptions) -> b
         modified = table_formatter::format_tables(&modified);
     }
 
-    // Link conversion should skip blocks with protected content because:
-    // - HTML comments might contain special directives
-    // - Blockquotes can be mangled by markdown parsers
-    // - HTML tags will be corrupted
-    if options.convert_links && !has_protected_content(&original) {
-        modified = link_converter::convert_links(&modified);
-        modified = link_converter::aggregate_existing_references(&modified);
+    // Link conversion uses ContentProtector to preserve HTML comments, tags,
+    // blockquotes, and code fences while converting links in unprotected areas.
+    if options.convert_links {
+        let mut protector = ContentProtector::new();
+        let protected = protector.protect(&modified);
+        let converted = link_converter::convert_links(&protected);
+        let aggregated = link_converter::aggregate_existing_references(&converted);
+        modified = protector.restore(&aggregated);
     }
 
     if modified == original {
@@ -115,49 +117,6 @@ fn process_rustdoc_block(block: &mut RustdocBlock, options: &FormatOptions) -> b
         block.lines = modified.lines().map(String::from).collect();
         true
     }
-}
-
-/// Check if text contains content that should not be modified.
-///
-/// Currently protects:
-/// - HTML comments (`<!-- ... -->`) - used for cspell directives and code block
-///   explanations
-/// - HTML tags (will be mangled by markdown parsers)
-/// - Blockquotes (will be removed by markdown parsers)
-///
-/// Note: Code fences are generally handled correctly by markdown parsers,
-/// but if you have complex examples with reference-style links INSIDE code
-/// fences (like documentation about the formatter itself), use
-/// `#![cfg_attr(rustfmt, rustfmt_skip)]` to skip the entire file.
-fn has_protected_content(text: &str) -> bool {
-    // Check for HTML comments (e.g., <!-- cspell:disable -->, <!-- explanation -->)
-    // These are used for spell-checker directives and to explain code block attributes
-    if text.contains("<!--") {
-        return true;
-    }
-
-    // Check for HTML tags (will be mangled by markdown parsers)
-    if text.contains('<') && text.contains('>') {
-        // Simple check for HTML-like content
-        if text.contains("</")
-            || text.contains("/>")
-            || text.contains("style=")
-            || text.contains("src=")
-        {
-            return true;
-        }
-    }
-
-    // Check for blockquotes (will be removed by markdown parsers)
-    for line in text.lines() {
-        let trimmed = line.trim_start();
-        if trimmed.starts_with('>') && !trimmed.starts_with(">=") {
-            // It's a blockquote marker, not a comparison operator
-            return true;
-        }
-    }
-
-    false
 }
 
 /// Reconstruct source file with modified rustdoc blocks.
@@ -221,47 +180,5 @@ mod tests {
         let processor = FileProcessor::new(options);
         let result = processor.process_file(Path::new("/nonexistent/file.rs"));
         assert!(!result.errors.is_empty());
-    }
-
-    #[test]
-    fn test_has_protected_content_html_comments() {
-        // cspell disable/enable pairs
-        assert!(has_protected_content("<!-- cspell:disable -->"));
-        assert!(has_protected_content("<!-- cspell:enable -->"));
-
-        // Explanation comments before code blocks
-        assert!(has_protected_content(
-            "<!-- It is ok to use ignore here - demonstrates usage -->"
-        ));
-
-        // Multi-line content with HTML comment
-        let text_with_comment = r"Some text
-<!-- cspell:disable -->
-[`SomeType`]: crate::SomeType
-<!-- cspell:enable -->";
-        assert!(has_protected_content(text_with_comment));
-
-        // Regular content without HTML comments should not be protected
-        assert!(!has_protected_content("Just regular text"));
-        assert!(!has_protected_content("[link]: https://example.com"));
-    }
-
-    #[test]
-    fn test_has_protected_content_html_tags() {
-        // Closing tags
-        assert!(has_protected_content("<span>text</span>"));
-        // Self-closing tags
-        assert!(has_protected_content("<br/>"));
-        // Tags with attributes
-        assert!(has_protected_content("<div style=\"color:red\">"));
-        assert!(has_protected_content("<img src=\"img.png\">"));
-    }
-
-    #[test]
-    fn test_has_protected_content_blockquotes() {
-        assert!(has_protected_content("> This is a quote"));
-        assert!(has_protected_content("text\n> quote"));
-        // Comparison operators should not trigger
-        assert!(!has_protected_content("if x >= 5"));
     }
 }
