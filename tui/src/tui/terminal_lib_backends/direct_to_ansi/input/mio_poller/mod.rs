@@ -1,6 +1,6 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-// cspell:words EINTR wakeup kqueue epoll ttimeoutlen EINVAL
+// cspell:words EINTR wakeup kqueue epoll ttimeoutlen
 
 //! # Architecture Overview
 //!
@@ -86,13 +86,8 @@
 //! read - it keeps running as a "zombie", causing the problems described in
 //! [`global_input_resource`].
 //!
-//! **Why is [`MioPoller`] not implemented for macOS?** Because macOS [`kqueue`] returns
-//! [`EINVAL`] when polling PTY/tty file descriptors — a known Darwin kernel limitation.
-//! [`EINVAL`] is a `POSIX` error code meaning "Invalid argument" (error number 22 on
-//! Linux). On macOS, use the [`crossterm`] backend instead. For details:
-//! - [Blog post explaining the issue]
-//! - [mio-issue]
-//! - [crossterm-issue]
+//! **Why is [`MioPoller`] not implemented for macOS?** See [Why Linux-Only?] in the
+//! parent module — macOS [`kqueue`] can't poll PTY/tty file descriptors.
 //!
 //! </div>
 //!
@@ -143,12 +138,9 @@
 //!
 //! # Why [`mio`] Instead of Raw [`poll()`]?
 //!
-//! We use [`mio`] instead of raw [`poll()`] or [`rustix::event::poll()`] because:
-//!
-//! - **macOS compatibility**: [`poll()`] cannot monitor `/dev/tty` on macOS, but [`mio`]
-//!   uses [`kqueue`] which works correctly.
-//! - **Platform abstraction**: [`mio`] uses the optimal syscall per platform ([`epoll`]
-//!   on Linux, [`kqueue`] on macOS/BSD).
+//! We use [`mio`] instead of raw [`poll()`] or [`rustix::event::poll()`] because [`mio`]
+//! provides a clean platform abstraction over [`epoll`] on Linux. See [Why Linux-Only?]
+//! for why this module doesn't support macOS.
 //!
 //! # ESC Detection Limitations
 //!
@@ -192,9 +184,7 @@
 //! **Trade-off**: Faster `ESC` response vs. occasional incorrect detection on
 //! high-latency connections.
 //!
-//! [Blog post explaining the issue]: https://nathancraddock.com/blog/macos-dev-tty-polling/
-//! [mio-issue]: https://github.com/tokio-rs/mio/issues/1377
-//! [crossterm-issue]: https://github.com/crossterm-rs/crossterm/issues/500
+//! [Why Linux-Only?]: super#why-linux-only
 //! [`stdin`]: std::io::stdin
 //! [`mio::Poll`]: mio::Poll
 //! [`mio`]: mio
@@ -219,7 +209,6 @@
 //! [`ReaderThreadMessage::Eof`]: super::types::ReaderThreadMessage::Eof
 //! [`ReaderThreadMessage::Error`]: super::types::ReaderThreadMessage::Error
 //! [`EINTR`]: https://man7.org/linux/man-pages/man7/signal.7.html
-//! [`EINVAL`]: https://man7.org/linux/man-pages/man3/errno.3.html
 //! [`Event(InputEvent)`]: super::types::ReaderThreadMessage::Event
 //! [`Resize`]: super::types::ReaderThreadMessage::Resize
 //! [`Eof`]: super::types::ReaderThreadMessage::Eof

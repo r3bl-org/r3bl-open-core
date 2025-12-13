@@ -46,9 +46,7 @@
 //!
 //! # Platform Support
 //!
-//! These PTY tests are **Linux-only** (`#[cfg(target_os = "linux")]`) because
-//! [`DirectToAnsiInputDevice`] requires Linux-specific PTY/tty polling capabilities.
-//! On macOS/Windows, the Crossterm backend is used instead for input handling.
+//! These PTY tests are **Linux-only** — see [Why Linux-Only?] in the parent module.
 //!
 //! [`DirectToAnsi`]: crate::terminal_lib_backends::direct_to_ansi
 //! [`DirectToAnsiInputDevice`]: crate::DirectToAnsiInputDevice
@@ -64,3 +62,4 @@
 //! [`pty_bracketed_paste_test`]: mod@crate::core::ansi::vt_100_terminal_input_parser::integration_tests::pty_bracketed_paste_test
 //! [`pty_new_keyboard_features_test`]: mod@crate::core::ansi::vt_100_terminal_input_parser::integration_tests::pty_new_keyboard_features_test
 //! [`pty_sigwinch_test`]: mod@crate::core::ansi::vt_100_terminal_input_parser::integration_tests::pty_sigwinch_test
+//! [Why Linux-Only?]: super#why-linux-only

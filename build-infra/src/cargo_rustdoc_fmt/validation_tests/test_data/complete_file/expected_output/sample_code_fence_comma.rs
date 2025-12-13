@@ -38,17 +38,18 @@
 //!
 //! ## Future macOS Support
 //!
-//! To enable [`DirectToAnsi`] on macOS, we would need to:
+//! To enable `DirectToAnsi` on macOS, we would need to:
 //! 1. Replace [`mio`] polling with [`filedescriptor::poll()`]
 //! 2. Handle [`SIGWINCH`] via [`signal-hook`] with the self-pipe trick (since
 //!    [`signal-hook-mio`] requires [`mio`])
 //!
 //! This is tracked as a potential future enhancement.
 //!
+//!
 //! ## References
 //!
-//! - [mio issue] - "Polling from /dev/tty on macOS"
-//! - [crossterm issue] - "/dev/tty does not work on macOS with kqueue"
+//! - [mio issue #1377] - "Polling from /dev/tty on macOS"
+//! - [crossterm issue #500] - "/dev/tty does not work on macOS with kqueue"
 //! - [macOS /dev/tty polling blog post] - Detailed technical explanation
 //!
 //! # Entry Point
@@ -71,11 +72,11 @@
 //! [`select(2)`]: https://man7.org/linux/man-pages/man2/select.2.html
 //! [`signal-hook-mio`]: https://docs.rs/signal-hook-mio
 //! [`signal-hook`]: https://docs.rs/signal-hook
-//! [crossterm issue]: https://github.com/crossterm-rs/crossterm/issues/500
+//! [crossterm issue #500]: https://github.com/crossterm-rs/crossterm/issues/500
 //! [declined to work around this]: https://github.com/tokio-rs/mio/issues/1377
 //! [known Darwin limitation]: https://nathancraddock.com/blog/macos-dev-tty-polling/
 //! [macOS /dev/tty polling blog post]: https://nathancraddock.com/blog/macos-dev-tty-polling/
-//! [mio issue]: https://github.com/tokio-rs/mio/issues/1377
+//! [mio issue #1377]: https://github.com/tokio-rs/mio/issues/1377
 
 // Private submodules - organized by functional concern.
 mod input_device;

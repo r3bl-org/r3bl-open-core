@@ -476,4 +476,82 @@ fn main() {}";
             "Formatted output should match expected output"
         );
     }
+
+    /// Test code fences with comma-separated language tags (e.g., `rust,ignore`).
+    ///
+    /// This test verifies that:
+    /// - Code fences with `rust,ignore` are correctly protected (not mangled)
+    /// - Reference definitions scattered throughout the rustdoc block are aggregated
+    /// - References are sorted alphabetically at the bottom
+    ///
+    /// This was a regression where the regex `^```\w*$` didn't match commas,
+    /// causing `rust,ignore` fences to not be recognized as fence starts.
+    #[test]
+    fn test_code_fence_comma_language_tag() {
+        let input =
+            include_str!("test_data/complete_file/input/sample_code_fence_comma.rs");
+        let expected = include_str!(
+            "test_data/complete_file/expected_output/sample_code_fence_comma.rs"
+        );
+
+        let temp_dir = TempDir::new().unwrap();
+        let test_file = temp_dir.path().join("sample_code_fence_comma.rs");
+        fs::write(&test_file, input).unwrap();
+
+        let processor = processor::FileProcessor::new(FormatOptions::default());
+        let result = processor.process_file(&test_file);
+
+        assert!(
+            result.errors.is_empty(),
+            "Processing errors: {:?}",
+            result.errors
+        );
+        assert!(
+            result.modified,
+            "File should be modified (references need aggregation)"
+        );
+
+        let formatted = fs::read_to_string(&test_file).unwrap();
+
+        // Verify code fence with rust,ignore is preserved correctly.
+        assert!(
+            formatted.contains("```rust,ignore"),
+            "Code fence with rust,ignore should be preserved"
+        );
+        assert!(
+            formatted.contains("pub fn poll_impl"),
+            "Code inside fence should be preserved"
+        );
+
+        // Verify references are aggregated at bottom, sorted alphabetically.
+        // [`DirectToAnsi`] should come before [`EINVAL`] (backtick sorts before 'E').
+        let lines: Vec<&str> = formatted.lines().collect();
+        let ref_start = lines
+            .iter()
+            .position(|l| l.contains("[`DirectToAnsi`]: mod@super"))
+            .expect("Should find DirectToAnsi reference");
+        let ref_einval = lines
+            .iter()
+            .position(|l| l.contains("[`EINVAL`]:"))
+            .expect("Should find EINVAL reference");
+        assert!(
+            ref_start < ref_einval,
+            "References should be sorted: [`DirectToAnsi`] before [`EINVAL`]"
+        );
+
+        // Verify all references are at the end of the rustdoc block.
+        let last_rustdoc_line = lines
+            .iter()
+            .rposition(|l| l.starts_with("//!"))
+            .expect("Should have rustdoc lines");
+        assert!(
+            lines[last_rustdoc_line].starts_with("//! ["),
+            "Last rustdoc line should be a reference definition"
+        );
+
+        assert_eq!(
+            formatted, expected,
+            "Formatted output should match expected output"
+        );
+    }
 }

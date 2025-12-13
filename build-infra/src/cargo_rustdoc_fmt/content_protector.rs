@@ -24,8 +24,11 @@ const PLACEHOLDER_SUFFIX: &str = "___";
 static HTML_TAG_REGEX: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"<[^>]+>").expect("Invalid HTML regex"));
 
-static CODE_FENCE_START_REGEX: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^```\w*$").expect("Invalid code fence start regex"));
+static CODE_FENCE_START_REGEX: LazyLock<Regex> = LazyLock::new(|| {
+    // Matches ``` optionally followed by language spec (e.g., rust, rust,ignore, text)
+    // Uses [^\s]* to match any non-whitespace, handling commas in rust,ignore etc.
+    Regex::new(r"^```[^\s]*$").expect("Invalid code fence start regex")
+});
 
 /// Protected content and its placeholder
 #[derive(Debug, Clone)]
@@ -211,6 +214,69 @@ mod tests {
         // Should restore original
         let restored = protector.restore(&protected);
         assert_eq!(restored, input);
+    }
+
+    #[test]
+    fn test_protect_code_fence_with_comma_language_tag() {
+        // Tests language tags with commas (e.g., rust,ignore, rust,no_run).
+        // These are common in rustdoc and must be correctly recognized as fence starts.
+        let mut protector = ContentProtector::new();
+        let input =
+            "Before\n```rust,ignore\nfn example() {}\n```\nAfter [ref].\n[ref]: target";
+        let protected = protector.protect(input);
+
+        // Should replace code fence with placeholder.
+        assert!(
+            protected.contains("___PROTECTED_CONTENT_"),
+            "Code fence should be protected"
+        );
+        assert!(
+            !protected.contains("fn example()"),
+            "Code inside fence should be hidden"
+        );
+
+        // Content after fence should NOT be protected.
+        assert!(
+            protected.contains("After [ref]."),
+            "Content after fence should remain visible"
+        );
+        assert!(
+            protected.contains("[ref]: target"),
+            "Reference after fence should remain visible"
+        );
+
+        // Should restore original.
+        let restored = protector.restore(&protected);
+        assert_eq!(restored, input);
+    }
+
+    #[test]
+    fn test_protect_code_fence_various_language_tags() {
+        // Test various language tag formats that should all be recognized.
+        let test_cases = [
+            "```rust\ncode\n```",
+            "```rust,ignore\ncode\n```",
+            "```rust,no_run\ncode\n```",
+            "```text\ncode\n```",
+            "```\ncode\n```", // No language tag.
+        ];
+
+        for input in test_cases {
+            let mut protector = ContentProtector::new();
+            let protected = protector.protect(input);
+
+            assert!(
+                protected.contains("___PROTECTED_CONTENT_"),
+                "Failed for input: {input}"
+            );
+            assert!(
+                !protected.contains("code"),
+                "Code should be hidden for input: {input}"
+            );
+
+            let restored = protector.restore(&protected);
+            assert_eq!(restored, input, "Restore failed for input: {input}");
+        }
     }
 
     #[test]

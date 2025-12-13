@@ -506,4 +506,75 @@ mod tests {
         assert_eq!(parse_reference_definition("[missing colon] value"), None);
         assert_eq!(parse_reference_definition("regular text"), None);
     }
+
+    #[test]
+    fn test_aggregate_with_content_after_refs() {
+        // Simulates the file where refs are in middle and content + more refs are after.
+        let input = r#"Some content.
+
+[ref1]: target1
+[ref2]: target2
+
+More content here.
+
+[ref3]: target3"#;
+        let output = aggregate_existing_references(input);
+
+        // All refs should be at the bottom, sorted alphabetically.
+        let lines: Vec<&str> = output.lines().collect();
+        let last_three: Vec<&str> = lines.iter().rev().take(3).copied().collect();
+        assert!(last_three.iter().all(|l| l.starts_with('[')));
+
+        // Content should be before refs (with some blank lines from removed refs).
+        assert!(output.contains("Some content."));
+        assert!(output.contains("More content here."));
+    }
+
+    #[test]
+    fn test_aggregate_with_code_fence_and_protector() {
+        use crate::cargo_rustdoc_fmt::content_protector::ContentProtector;
+
+        // Simulates actual file with code fence (e.g., rust,ignore language tag).
+        let input = r#"Content before.
+
+```rust,ignore
+// Code here
+fn example() {}
+```
+
+## References
+
+- [mio issue #1377] - "Polling"
+
+[ref1]: target1
+[ref2]: target2
+
+# Entry Point
+
+More content.
+
+[ref3]: target3"#;
+        let original = input.to_string();
+
+        // Simulate processor flow.
+        let mut protector = ContentProtector::new();
+        let protected = protector.protect(input);
+        let converted = convert_links(&protected);
+        let aggregated = aggregate_existing_references(&converted);
+        let restored = protector.restore(&aggregated);
+
+        // Restored should be different from original (refs moved to bottom).
+        assert_ne!(
+            restored, original,
+            "Output should be different from input (refs should be aggregated)"
+        );
+
+        // Check that refs are at the bottom after the code fence is restored.
+        let lines: Vec<&str> = restored.lines().collect();
+        let last_three: Vec<&str> = lines.iter().rev().take(3).copied().collect();
+        assert!(
+            last_three.iter().all(|l| l.starts_with('[')),
+            "Last 3 lines should be references"
+        );
+    }
 }
