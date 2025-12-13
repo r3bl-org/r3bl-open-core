@@ -5,7 +5,7 @@
 //! These tests verify the **output painting pipeline** ([`RenderOpOutput`] → ANSI escape
 //! sequences). No real terminal or PTY is needed—we test ANSI sequence generation.
 //!
-//! **Looking for input tests?** See [`input::integration_tests`] for PTY test
+//! **Looking for input tests?** See [`input::integration_tests_docs`] for PTY test
 //! documentation.
 //!
 //! # Testing Strategy: Two Complementary Layers
@@ -106,7 +106,7 @@
 //! [`HideCursor`]: crate::render_op::RenderOpCommon::HideCursor
 //! [`RenderOpOutput::Common`]: crate::RenderOpOutput::Common
 //! [`RenderOpOutput::CompositorNoClipTruncPaintTextWithAttributes`]: crate::RenderOpOutput::CompositorNoClipTruncPaintTextWithAttributes
-//! [`input::integration_tests`]: mod@crate::terminal_lib_backends::direct_to_ansi::input::integration_tests
+//! [`input::integration_tests_docs`]: mod@crate::terminal_lib_backends::direct_to_ansi::input::integration_tests_docs
 
 // Byte-level tests (StdoutMock).
 #[cfg(test)]

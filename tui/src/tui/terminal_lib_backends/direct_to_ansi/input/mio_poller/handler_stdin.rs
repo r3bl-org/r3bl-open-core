@@ -51,7 +51,9 @@ pub fn consume_stdin_input(poller: &mut MioPoller) -> ThreadLoopContinuation {
         Ok(n) => parse_stdin_bytes(poller, n),
 
         Err(ref e) if e.kind() == ErrorKind::Interrupted => {
-            // EINTR - will retry on next poll iteration.
+            // EINTR ("Interrupted" — a signal arrived while the syscall was blocked).
+            // Will retry on next poll iteration.
+            // https://man7.org/linux/man-pages/man7/signal.7.html
             ThreadLoopContinuation::Continue
         }
 

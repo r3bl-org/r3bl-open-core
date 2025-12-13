@@ -11,13 +11,13 @@ use std::ops::{Add, Range, RangeInclusive};
 /// This trait provides type-safe conversion between inclusive and exclusive range
 /// semantics, primarily for VT-100 terminal scroll regions.
 ///
-/// > <div class="warning">
-/// >
-/// > We cannot add inherent methods to [`Range`] or [`RangeInclusive`] (orphan rule,
-/// > since they are in [`std`]), so we use an extension trait that can be implemented on
-/// > foreign types.
-/// >
-/// > </div>
+/// <div class="warning">
+///
+/// We cannot add inherent methods to [`Range`] or [`RangeInclusive`] (orphan rule,
+/// since they are in [`std`]), so we use an extension trait that can be implemented on
+/// foreign types.
+///
+/// </div>
 ///
 /// # Core Purpose
 ///

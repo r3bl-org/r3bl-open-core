@@ -4,7 +4,8 @@
 
 //! Core [`MioPoller`] struct and lifecycle methods.
 
-use super::{SourceKindReady, SourceRegistry, handler_stdin::STDIN_READ_BUFFER_SIZE};
+use super::{SourceKindReady, SourceRegistry, dispatcher::dispatch,
+            handler_stdin::STDIN_READ_BUFFER_SIZE};
 use crate::tui::{DEBUG_TUI_SHOW_TERMINAL_BACKEND,
                  terminal_lib_backends::direct_to_ansi::input::{paste_state_machine::PasteCollectionState,
                                                                 stateful_parser::StatefulInputParser,
@@ -184,11 +185,15 @@ impl MioPoller {
 
     /// Runs the main event loop until exit condition is met.
     ///
+    /// <div class="warning">
+    ///
     /// Note that the call to [`Poll::poll()`] is what [`inotifywait`] uses under the
     /// hood. The `timeout` set to `None` ensures that this will block. If we set a
     /// delay here, then the loop will continue after that delay and act as a
     /// busy-wait. This is similar to what `check.fish` does to implement a sliding
     /// window debounce for file changes with [`inotifywait`].
+    ///
+    /// </div>
     ///
     /// [`inotifywait`]: https://linux.die.net/man/1/inotifywait
     pub fn start(&mut self) {
@@ -201,7 +206,9 @@ impl MioPoller {
             // Block until stdin or signals become ready.
             if let Err(err) = self.poll_handle.poll(&mut self.ready_events_buffer, None) {
                 match err.kind() {
-                    ErrorKind::Interrupted => continue, // EINTR - retry poll.
+                    // EINTR ("Interrupted" — a signal arrived while the syscall was
+                    // blocked). Retry poll. https://man7.org/linux/man-pages/man7/signal.7.html
+                    ErrorKind::Interrupted => continue,
                     _ => {
                         DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
                             tracing::debug!(
@@ -219,9 +226,7 @@ impl MioPoller {
             // Dispatch ready events.
             for token in collect_ready_tokens(&self.ready_events_buffer) {
                 let source_kind = SourceKindReady::from_token(token);
-                if super::dispatcher::dispatch(source_kind, self, token)
-                    == ThreadLoopContinuation::Return
-                {
+                if dispatch(source_kind, self, token) == ThreadLoopContinuation::Return {
                     return;
                 }
             }

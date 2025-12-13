@@ -18,12 +18,12 @@ use std::{cmp::max, num::NonZeroU16};
 /// control over this. The following is an overview of how VT100 parameters are
 /// structured, which informs how the [`vte::Params`] type organizes them.
 ///
-/// > <div class="warning">
-/// >
-/// > The following is confusing, which is why `ParamsExt` exists. It cleans up
-/// > this complexity for us, by using clear methods and type-safe return values.
-/// >
-/// > </div>
+/// <div class="warning">
+///
+/// The following is confusing, which is why [`ParamsExt`] exists. It cleans up
+/// this complexity for us, by using clear methods and type-safe return values.
+///
+/// </div>
 ///
 /// Semicolons are used to separate parameters from each other, and this is where
 /// "positions" come in to play.
@@ -236,14 +236,14 @@ pub trait ParamsExt {
     /// # Returns
     /// [`NonZeroU16`] - Always returns a value `>= 1` per VT100 specification.
     ///
-    /// > <div class="warning">
-    /// >
-    /// > Missing or zero parameters default to 1, ensuring VT100 compatibility.
-    /// > Out-of-bounds parameter positions are also treated as missing and default to 1.
-    /// > If you need to distinguish between missing and out-of-bounds, use
-    /// > [`extract_nth_single_opt_raw`].
-    /// >
-    /// > </div>
+    /// <div class="warning">
+    ///
+    /// Missing or zero parameters default to 1, ensuring VT100 compatibility.
+    /// Out-of-bounds parameter positions are also treated as missing and default to 1.
+    /// If you need to distinguish between missing and out-of-bounds, use
+    /// [`extract_nth_single_opt_raw`].
+    ///
+    /// </div>
     ///
     /// [`extract_nth_many_raw`]: Self::extract_nth_many_raw
     /// [`extract_nth_single_opt_raw`]: Self::extract_nth_single_opt_raw
@@ -268,12 +268,12 @@ pub trait ParamsExt {
     /// - [`None`] if index n is out of bounds (position doesn't exist)
     /// - [`Some(value)`] if position n exists (value may be 0 for missing/zero params)
     ///
-    /// > <div class="warning">
-    /// >
-    /// > VTE normalizes missing parameters to `0`, so `ESC[A` and `ESC[0A`
-    /// > both return `Some(0)`.
-    /// >
-    /// > </div>
+    /// <div class="warning">
+    ///
+    /// VTE normalizes missing parameters to `0`, so `ESC[A` and `ESC[0A`
+    /// both return `Some(0)`.
+    ///
+    /// </div>
     ///
     /// [`Some(value)`]: Option::Some
     /// [`extract_nth_many_raw`]: Self::extract_nth_many_raw

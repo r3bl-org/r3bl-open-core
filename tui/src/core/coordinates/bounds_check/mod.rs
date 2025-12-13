@@ -420,20 +420,20 @@
 //! }
 //! ```
 //!
-//! > <div class="warning">
-//! >
-//! > Steps 3 and 4 show different semantic domains. Choose the one that matches your use
-//! > case:
-//! >
-//! > - **Step 3** ([`ArrayBoundsCheck`]): Buffer/array element access where `index <
-//! > length`
-//! > - **Step 4** ([`CursorBoundsCheck`]): Text cursor positioning where `index <=
-//! > length` (allows cursor after last character)
-//! >
-//! > See the [semantic trait distinctions](#semantic-trait-distinctions) section for
-//! > details.
-//! >
-//! > </div>
+//! <div class="warning">
+//!
+//! Steps 3 and 4 show different semantic domains. Choose the one that matches your use
+//! case:
+//!
+//! - **Step 3** ([`ArrayBoundsCheck`]): Buffer/array element access where `index <
+//!   length`
+//! - **Step 4** ([`CursorBoundsCheck`]): Text cursor positioning where `index <=
+//!   length` (allows cursor after last character)
+//!
+//! See the [semantic trait distinctions](#semantic-trait-distinctions) section for
+//! details.
+//!
+//! </div>
 //!
 //! ```text
 //! Quick Start Progression:
@@ -703,15 +703,14 @@
 //!   - **Not paired**: Both are 1-based positions, neither represents a size/length
 //!   - **Different domain**: Terminal protocol coordinates, not buffer bounds checking
 //!
-//! > <div class="warning">
-//! >
-//! > Don't confuse [`TermRow`] (1-based terminal coordinate) with [`RowIndex`]
-//! > (0-based buffer position) or [`RowHeight`] (1-based buffer size). The bounds
-//! > checking
-//! > system works on buffer coordinates, while [`TermRow`]/[`TermCol`] are for VT-100
-//! > parsing.
-//! >
-//! > </div>
+//! <div class="warning">
+//!
+//! Don't confuse [`TermRow`] (1-based terminal coordinate) with [`RowIndex`]
+//! (0-based buffer position) or [`RowHeight`] (1-based buffer size). The bounds
+//! checking system works on buffer coordinates, while [`TermRow`]/[`TermCol`] are for
+//! VT-100 parsing.
+//!
+//! </div>
 //!
 //! ### Type Safety Guarantees
 //!

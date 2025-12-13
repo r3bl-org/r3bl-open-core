@@ -105,6 +105,34 @@ pub use internal_parser::*;
 **This pattern is frequently used with the `fix-intradoc-links` skill when fixing documentation
 links to private types.**
 
+#### When to Omit the Fallback Branch
+
+You can skip the `#[cfg(not(any(test, doc)))]` fallback when the module has **no code to compile
+in production**:
+
+```rust
+// ✅ OK to skip fallback - documentation-only module (no actual code)
+#[cfg(any(test, doc))]
+pub mod integration_tests_docs;
+
+// ✅ OK to skip fallback - all submodules are #[cfg(test)] anyway
+#[cfg(any(test, doc))]
+pub mod integration_tests;
+```
+
+**Keep the fallback** when the module contains code that must compile in production (even if
+private):
+
+```rust
+// ✅ Need fallback - module has actual code used in production
+#[cfg(any(test, doc))]
+pub mod internal_parser;
+#[cfg(not(any(test, doc)))]
+mod internal_parser;
+
+pub use internal_parser::*;  // Re-exports need the module to exist!
+```
+
 ### Step 4: Handle Transitive Visibility
 
 **Important:** If a conditionally public module links to another module in its documentation,

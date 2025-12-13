@@ -41,7 +41,6 @@ pub use render_to_ansi::*;
 #[cfg(test)]
 mod tests;
 
-// Integration tests are conditionally public for documentation links from
-// input/integration_tests.
+// Integration tests are conditionally public for documentation links.
 #[cfg(any(test, doc))]
 pub mod integration_tests;

@@ -79,14 +79,14 @@
 //!
 //! - **Output**: [`output::integration_tests`] — [`StdoutMock`]-based ANSI sequence
 //!   verification (cross-platform)
-//! - **Input**: [`input::integration_tests`] — documentation module pointing to PTY-based
+//! - **Input**: [`input::integration_tests_docs`] — documentation module pointing to PTY-based
 //!   parser tests in [`vt_100_terminal_input_parser::integration_tests`] (Linux-only).
 //!
 //! [`kqueue`]: https://en.wikipedia.org/wiki/Kqueue
 //! [`filedescriptor::poll()`]: https://docs.rs/filedescriptor/latest/filedescriptor/fn.poll.html
 //! [`StdoutMock`]: crate::StdoutMock
 //! [`output::integration_tests`]: mod@crate::terminal_lib_backends::direct_to_ansi::output::integration_tests
-//! [`input::integration_tests`]: mod@crate::terminal_lib_backends::direct_to_ansi::input::integration_tests
+//! [`input::integration_tests_docs`]: mod@crate::terminal_lib_backends::direct_to_ansi::input::integration_tests_docs
 //! [`vt_100_terminal_input_parser::integration_tests`]: mod@crate::core::ansi::vt_100_terminal_input_parser::integration_tests
 //! [`AnsiSequenceGenerator`]: crate::AnsiSequenceGenerator
 //! [`DirectToAnsi`]: self

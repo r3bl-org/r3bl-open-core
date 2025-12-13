@@ -1,6 +1,6 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-// cspell:words EINTR wakeup kqueue epoll ttimeoutlen
+// cspell:words EINTR wakeup kqueue epoll ttimeoutlen EINVAL
 
 //! # Architecture Overview
 //!
@@ -27,7 +27,8 @@
 //!
 //! ## The [`mio`]-poller Thread
 //!
-//! A dedicated [`std::thread`] runs for the process lifetime, using [`mio::Poll`] to
+//! A dedicated [`std::thread`] runs for the process lifetime,
+//! using [`mio::Poll`] to
 //! efficiently wait on multiple file descriptors:
 //!
 //! ```text
@@ -53,19 +54,19 @@
 //! | [`stdin`] EOF            | `read()` returns 0 → thread exits naturally |
 //!
 //! This is ok because:
-//! - [`INPUT_RESOURCE`] lives forever - it's a [`LazyLock`]`<...>` static, never dropped
-//!   until process exit.
+//! - [`INPUT_RESOURCE`] lives for `'static` (the lifetime of the process) - it's a
+//!   [`LazyLock`]`<...>` static, never dropped until process exit.
 //! - Thread is doing nothing when blocked - [`mio`] uses efficient OS primitives.
 //! - No resources to leak - [`stdin`] is `fd` `0`, not owned by us.
 //!
 //! The thread self-terminates gracefully in these scenarios:
-//! - **EOF on [`stdin`]**: When [`stdin`] is closed (e.g., pipe closed, `Ctrl+D`),
-//!   `read()` returns 0 bytes. The thread sends [`ReaderThreadMessage::Eof`] and exits.
-//! - **I/O error**: On read errors (except `EINTR` which is retried), the thread sends
-//!   [`ReaderThreadMessage::Error`] and exits.
-//! - **Receiver dropped**: When [`INPUT_RESOURCE`] is dropped (process exit), the channel
-//!   receiver is dropped. The next `tx.send()` returns `Err`, and the thread exits
-//!   gracefully.
+//! 1. **EOF on [`stdin`]**: When [`stdin`] is closed (e.g., pipe closed, `Ctrl+D`),
+//!    `read()` returns 0 bytes. The thread sends [`ReaderThreadMessage::Eof`] and exits.
+//! 2. **I/O error**: On read errors (except [`EINTR`] which is retried), the thread sends
+//!    [`ReaderThreadMessage::Error`] and exits. [`EINTR`] is a `POSIX` error code meaning
+//!    "Interrupted" — a signal arrived while the syscall was blocked.
+//! 3. **Receiver dropped**: When [`INPUT_RESOURCE`] is dropped (process exit), the channel
+//!    receiver is dropped. The next `tx.send()` returns `Err`, and exits.
 //!
 //! ## What is [`mio`]?
 //!
@@ -75,13 +76,25 @@
 //! - **macOS**: [`kqueue`]
 //!
 //! It's *blocking* but efficient - `poll.poll(&mut events, None)` blocks the thread until
-//! something happens on either fd. Unlike [`select()`] or raw [`poll()`], mio uses the
-//! optimal syscall per platform.
+//! something happens on either `fd`. Unlike [`select()`] or raw [`poll()`], [`mio`] uses the
+//! optimal `syscall` per platform.
+//!
+//! <div class="warning">
 //!
 //! **Why not tokio for stdin?** Because [`tokio::io::stdin()`] uses a blocking threadpool
 //! internally, and cancelling a [`tokio::select!`] branch doesn't stop the underlying
 //! read - it keeps running as a "zombie", causing the problems described in
 //! [`global_input_resource`].
+//!
+//! **Why is [`MioPoller`] not implemented for macOS?** Because macOS [`kqueue`] returns
+//! [`EINVAL`] when polling PTY/tty file descriptors — a known Darwin kernel limitation.
+//! [`EINVAL`] is a `POSIX` error code meaning "Invalid argument" (error number 22 on
+//! Linux). On macOS, use the [`crossterm`] backend instead. For details:
+//! - [Blog post explaining the issue]
+//! - [mio-issue]
+//! - [crossterm-issue]
+//!
+//! </div>
 //!
 //! ## The Two File Descriptors
 //!
@@ -179,6 +192,9 @@
 //! **Trade-off**: Faster `ESC` response vs. occasional incorrect detection on
 //! high-latency connections.
 //!
+//! [Blog post explaining the issue]: https://nathancraddock.com/blog/macos-dev-tty-polling/
+//! [mio-issue]: https://github.com/tokio-rs/mio/issues/1377
+//! [crossterm-issue]: https://github.com/crossterm-rs/crossterm/issues/500
 //! [`stdin`]: std::io::stdin
 //! [`mio::Poll`]: mio::Poll
 //! [`mio`]: mio
@@ -202,6 +218,8 @@
 //! [`ReaderThreadMessage::Resize`]: super::types::ReaderThreadMessage::Resize
 //! [`ReaderThreadMessage::Eof`]: super::types::ReaderThreadMessage::Eof
 //! [`ReaderThreadMessage::Error`]: super::types::ReaderThreadMessage::Error
+//! [`EINTR`]: https://man7.org/linux/man-pages/man7/signal.7.html
+//! [`EINVAL`]: https://man7.org/linux/man-pages/man3/errno.3.html
 //! [`Event(InputEvent)`]: super::types::ReaderThreadMessage::Event
 //! [`Resize`]: super::types::ReaderThreadMessage::Resize
 //! [`Eof`]: super::types::ReaderThreadMessage::Eof

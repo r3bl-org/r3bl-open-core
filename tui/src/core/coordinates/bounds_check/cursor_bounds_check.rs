@@ -12,13 +12,13 @@ use std::ops::Add;
 /// This trait provides cursor positioning utilities specifically for text editing
 /// contexts where cursors can be placed at the end-of-line position (index == length).
 ///
-/// > <div class="warning">
-/// >
-/// > This trait is automatically implemented for all types that implement [`LengthOps`]
-/// > through a [blanket implementation](#implementors). You can use this trait on
-/// > those types without writing any implementation code yourself.
-/// >
-/// > </div>
+/// <div class="warning">
+///
+/// This trait is automatically implemented for all types that implement [`LengthOps`]
+/// through a [blanket implementation](#implementors). You can use this trait on
+/// those types without writing any implementation code yourself.
+///
+/// </div>
 ///
 /// ## Purpose
 ///

@@ -126,6 +126,10 @@
           "isPinned": false
         },
         {
+          "path": "tui/src/tui/terminal_lib_backends/direct_to_ansi/output/mod.rs",
+          "isPinned": false
+        },
+        {
           "path": "tui/src/tui/terminal_lib_backends/direct_to_ansi/input/input_device.rs",
           "isPinned": false
         },
@@ -143,6 +147,14 @@
         },
         {
           "path": "tui/src/tui/terminal_lib_backends/direct_to_ansi/input/mio_poller/dispatcher.rs",
+          "isPinned": false
+        },
+        {
+          "path": "tui/src/tui/terminal_lib_backends/direct_to_ansi/input/mio_poller/handler_signals.rs",
+          "isPinned": false
+        },
+        {
+          "path": "tui/src/tui/terminal_lib_backends/direct_to_ansi/input/mio_poller/handler_stdin.rs",
           "isPinned": false
         },
         {
@@ -169,7 +181,7 @@
       "taskFile": "task/task_refactor_input_device.md",
       "createdAt": 1763496885607,
       "lastAccessed": 1763666457216,
-      "activeTab": "tui/src/tui/terminal_lib_backends/direct_to_ansi/input/mio_poller/mod.rs"
+      "activeTab": "tui/src/tui/terminal_lib_backends/direct_to_ansi/output/mod.rs"
     },
     {
       "name": "[1.1] task_readline_async_add_shortcuts",

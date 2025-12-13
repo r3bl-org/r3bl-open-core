@@ -1,5 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+// cspell:words epoll EINVAL filedescriptor pollfd kqueue
+
 //! Linux input handling for [`DirectToAnsi`] backend.
 //!
 //! # Platform Support
@@ -105,5 +107,6 @@ mod protocol_conversion;
 pub use input_device::*;
 
 // Documentation-only module pointing to actual PTY tests location.
+// Named differently from output::integration_tests to avoid ambiguous glob re-exports.
 #[cfg(any(test, doc))]
-pub mod integration_tests;
+pub mod integration_tests_docs;
