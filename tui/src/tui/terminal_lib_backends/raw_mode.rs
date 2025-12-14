@@ -21,16 +21,16 @@
 //! # Direct Raw Mode Access
 //!
 //! For code that needs to enable/disable raw mode directly (outside the render pipeline),
-//! use the unified [`raw_mode_enable()`] and [`raw_mode_disable()`] functions instead.
-//! These functions also dispatch based on [`TERMINAL_LIB_BACKEND`] and are used by
+//! use the unified [`enable_raw_mode()`] and [`disable_raw_mode()`] functions instead.
+//! These functions dispatch based on [`TERMINAL_LIB_BACKEND`] and are used by
 //! readline and other components that manage their own terminal state.
 //!
 //! [`DirectToAnsi`]: crate::TerminalLibBackend::DirectToAnsi
 //! [`Crossterm`]: crate::TerminalLibBackend::Crossterm
 //! [`terminal_raw_mode`]: crate::core::ansi::terminal_raw_mode
 //! [`TERMINAL_LIB_BACKEND`]: crate::TERMINAL_LIB_BACKEND
-//! [`raw_mode_enable()`]: crate::raw_mode_enable
-//! [`raw_mode_disable()`]: crate::raw_mode_disable
+//! [`enable_raw_mode()`]: crate::enable_raw_mode
+//! [`disable_raw_mode()`]: crate::disable_raw_mode
 //!
 //! # Architecture Context
 //!
@@ -74,8 +74,8 @@ use crate::{LockedOutputDevice, RenderOpOutput, RenderOpOutputVec, RenderOpsExec
 /// [`RenderOpOutput`] operations that are executed by the backend (Crossterm or
 /// `DirectToAnsi`) based on [`TERMINAL_LIB_BACKEND`].
 ///
-/// For direct raw mode control outside the render pipeline, use [`raw_mode_enable()`]
-/// and [`raw_mode_disable()`] instead.
+/// For direct raw mode control outside the render pipeline, use [`enable_raw_mode()`]
+/// and [`disable_raw_mode()`] instead.
 ///
 /// # Usage
 ///
@@ -94,8 +94,8 @@ use crate::{LockedOutputDevice, RenderOpOutput, RenderOpOutputVec, RenderOpsExec
 /// ```
 ///
 /// [`TERMINAL_LIB_BACKEND`]: crate::TERMINAL_LIB_BACKEND
-/// [`raw_mode_enable()`]: crate::raw_mode_enable
-/// [`raw_mode_disable()`]: crate::raw_mode_disable
+/// [`enable_raw_mode()`]: crate::enable_raw_mode
+/// [`disable_raw_mode()`]: crate::disable_raw_mode
 #[derive(Debug, Clone)]
 pub struct RawMode;
 

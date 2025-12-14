@@ -459,7 +459,7 @@ impl Drop for Readline {
         // We don't care about the result of this operation.
         self.safe_line_state.lock().unwrap().exit(term).ok();
         // We don't care about the result of this operation.
-        crate::raw_mode_disable().ok();
+        crate::disable_raw_mode().ok();
     }
 }
 
@@ -507,7 +507,7 @@ impl Readline {
         } // This drops the writer lock.
 
         // Enable raw mode. Drop will disable raw mode.
-        crate::raw_mode_enable()?;
+        crate::enable_raw_mode()?;
 
         // Line control channel - signals are send to this channel to control `LineState`.
         // A task is spawned to monitor this channel.

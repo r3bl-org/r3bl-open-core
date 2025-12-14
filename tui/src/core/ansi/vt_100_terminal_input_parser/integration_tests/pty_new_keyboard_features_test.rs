@@ -12,7 +12,8 @@
 //! These tests validate that the complete input stack handles these new features
 //! correctly in a real PTY environment.
 
-use crate::{PtyPair, core::ansi::constants::{
+use crate::{ControlledChild, InputEvent, PtyPair,
+            core::ansi::constants::{
                 ANSI_CSI_BRACKET, ANSI_ESC, ANSI_FUNCTION_KEY_TERMINATOR, ANSI_SS3_O,
                 BACKTAB_FINAL, CONTROL_NUL, CONTROL_TAB,
                 SS3_NUMPAD_0, SS3_NUMPAD_1, SS3_NUMPAD_2, SS3_NUMPAD_3, SS3_NUMPAD_4,
@@ -21,10 +22,13 @@ use crate::{PtyPair, core::ansi::constants::{
                 SS3_NUMPAD_MULTIPLY, SS3_NUMPAD_DIVIDE,
                 SS3_NUMPAD_DECIMAL, SS3_NUMPAD_COMMA,
             },
-            Deadline, generate_pty_test, InputEvent,
+            generate_pty_test,
             tui::terminal_lib_backends::direct_to_ansi::DirectToAnsiInputDevice};
 use std::{io::{BufRead, BufReader, Write},
           time::Duration};
+
+/// Ready signal sent by controlled process after initialization.
+const CONTROLLED_READY: &str = "CONTROLLED_READY";
 
 // XMARK: Process isolated test functions using env vars & PTY.
 
@@ -48,30 +52,25 @@ generate_pty_test! {
 
 /// PTY Controller: Send new keyboard sequences and verify parsing
 #[allow(clippy::too_many_lines)]
-fn pty_controller_entry_point(
-    pty_pair: PtyPair,
-    mut child: Box<dyn portable_pty::Child + Send + Sync>,
-) {
+fn pty_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
     eprintln!("🚀 PTY Controller: Starting new keyboard features test...");
 
     let mut writer = pty_pair.controller().take_writer().expect("Failed to get writer");
-    let reader_non_blocking = pty_pair
+    let reader = pty_pair
         .controller()
         .try_clone_reader()
         .expect("Failed to get reader");
-    let mut buf_reader_non_blocking = BufReader::new(reader_non_blocking);
+    let mut buf_reader = BufReader::new(reader);
 
     eprintln!("📝 PTY Controller: Waiting for controlled process to start...");
 
-    // Wait for controlled to confirm it's running
+    // Wait for controlled to confirm it's running. The controlled process sends
+    // TEST_RUNNING and CONTROLLED_READY immediately on startup.
     let mut test_running_seen = false;
-    let deadline = Deadline::default();
 
     loop {
-        assert!(deadline.has_time_remaining(), "Timeout: controlled did not start within 5 seconds");
-
         let mut line = String::new();
-        match buf_reader_non_blocking.read_line(&mut line) {
+        match buf_reader.read_line(&mut line) {
             Ok(0) => panic!("EOF reached before controlled started"),
             Ok(_) => {
                 let trimmed = line.trim();
@@ -81,13 +80,10 @@ fn pty_controller_entry_point(
                     test_running_seen = true;
                     eprintln!("  ✓ Test is running in controlled");
                 }
-                if trimmed.contains("CONTROLLED_READY") {
+                if trimmed.contains(CONTROLLED_READY) {
                     eprintln!("  ✓ Controlled process confirmed running!");
                     break;
                 }
-            }
-            Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {
-                std::thread::sleep(Duration::from_millis(10));
             }
             Err(e) => panic!("Read error while waiting for controlled: {e}"),
         }
@@ -154,7 +150,7 @@ fn pty_controller_entry_point(
         // Read responses until we get an event line (skip test harness noise)
         let event_line = loop {
             let mut line = String::new();
-            match buf_reader_non_blocking.read_line(&mut line) {
+            match buf_reader.read_line(&mut line) {
                 Ok(0) => {
                     panic!("EOF reached before receiving event for {desc}");
                 }
@@ -204,7 +200,7 @@ fn pty_controller_entry_point(
 /// PTY Controlled: Parse keyboard input and echo results
 fn pty_controlled_entry_point() -> ! {
     // Print to stdout immediately to confirm controlled is running
-    println!("CONTROLLED_READY");
+    println!("{CONTROLLED_READY}");
     std::io::stdout().flush().expect("Failed to flush");
 
     eprintln!("🎯 PTY Controlled: Setting terminal to raw mode...");

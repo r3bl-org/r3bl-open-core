@@ -3,9 +3,9 @@
 //! Event handlers for signal processing.
 
 use super::poller::MioPoller;
-use crate::tui::{terminal_lib_backends::direct_to_ansi::input::types::{ReaderThreadMessage,
-                                                                       ThreadLoopContinuation},
-                 DEBUG_TUI_SHOW_TERMINAL_BACKEND};
+use crate::tui::{DEBUG_TUI_SHOW_TERMINAL_BACKEND,
+                 terminal_lib_backends::direct_to_ansi::input::types::{ReaderThreadMessage,
+                                                                       ThreadLoopContinuation}};
 use signal_hook::consts::SIGWINCH;
 
 /// Handles SIGWINCH signal (terminal resize).
@@ -34,9 +34,7 @@ pub fn consume_pending_signals(poller: &mut MioPoller) -> ThreadLoopContinuation
         {
             // Receiver dropped - exit gracefully.
             DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
-                tracing::debug!(
-                    message = "mio-poller-thread: receiver dropped, exiting"
-                );
+                tracing::debug!(message = "mio-poller-thread: receiver dropped, exiting");
             });
             return ThreadLoopContinuation::Return;
         }

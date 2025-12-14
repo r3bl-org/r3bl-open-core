@@ -1,13 +1,19 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Platform-specific terminal backend selection and unified raw mode API.
+//! Platform-specific terminal backend selection.
 //!
 //! This module defines the available terminal backends and selects the optimal one
-//! for the current platform at compile time. It also provides unified raw mode
-//! functions that dispatch to the correct backend implementation.
-
-use crate::DEBUG_TUI_SHOW_TERMINAL_BACKEND;
-use miette::IntoDiagnostic;
+//! for the current platform at compile time.
+//!
+//! # Raw Mode
+//!
+//! For raw mode operations, use [`enable_raw_mode()`] and [`disable_raw_mode()`] from
+//! the [`terminal_raw_mode`] module. These functions automatically dispatch to the
+//! correct implementation based on [`TERMINAL_LIB_BACKEND`].
+//!
+//! [`enable_raw_mode()`]: crate::enable_raw_mode
+//! [`disable_raw_mode()`]: crate::disable_raw_mode
+//! [`terminal_raw_mode`]: crate::core::ansi::terminal_raw_mode
 
 /// Terminal library backend selection for the TUI system.
 ///
@@ -63,91 +69,3 @@ pub const TERMINAL_LIB_BACKEND: TerminalLibBackend = TerminalLibBackend::DirectT
 /// [`DirectToAnsi`]: variant@TerminalLibBackend::DirectToAnsi
 #[cfg(not(target_os = "linux"))]
 pub const TERMINAL_LIB_BACKEND: TerminalLibBackend = TerminalLibBackend::Crossterm;
-
-/// Enable raw mode using the appropriate backend.
-///
-/// Dispatches to the correct raw mode implementation based on [`TERMINAL_LIB_BACKEND`]:
-/// - **Linux** ([`DirectToAnsi`]): Uses rustix-based [`enable_raw_mode()`][rustix_enable]
-///   from [`terminal_raw_mode`]
-/// - **macOS/Windows** ([`Crossterm`]): Uses [`crossterm::terminal::enable_raw_mode()`]
-///
-/// This ensures consistent raw mode handling regardless of which terminal backend is
-/// active, preventing state corruption when different parts of the codebase manage
-/// terminal state.
-///
-/// # Errors
-///
-/// Returns an error if the terminal cannot be put into raw mode (e.g., not a TTY).
-///
-/// [`DirectToAnsi`]: TerminalLibBackend::DirectToAnsi
-/// [`Crossterm`]: TerminalLibBackend::Crossterm
-/// [`terminal_raw_mode`]: crate::core::ansi::terminal_raw_mode
-/// [rustix_enable]: crate::enable_raw_mode
-pub fn raw_mode_enable() -> miette::Result<()> {
-    DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
-        tracing::debug!(
-            message = "raw_mode_enable: 🟢 enabling raw mode",
-            backend = ?TERMINAL_LIB_BACKEND
-        );
-    });
-
-    let result = match TERMINAL_LIB_BACKEND {
-        TerminalLibBackend::DirectToAnsi => crate::enable_raw_mode(),
-        TerminalLibBackend::Crossterm => {
-            crossterm::terminal::enable_raw_mode().into_diagnostic()
-        }
-    };
-
-    match &result {
-        Ok(()) => DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
-            tracing::debug!(message = "raw_mode_enable: ✅ success");
-        }),
-        Err(e) => DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
-            tracing::error!(message = "raw_mode_enable: ❌ failed", error = %e);
-        }),
-    };
-
-    result
-}
-
-/// Disable raw mode using the appropriate backend.
-///
-/// Dispatches to the correct raw mode implementation based on [`TERMINAL_LIB_BACKEND`]:
-/// - **Linux** ([`DirectToAnsi`]): Uses rustix-based [`disable_raw_mode()`][rustix_disable]
-///   from [`terminal_raw_mode`]
-/// - **macOS/Windows** ([`Crossterm`]): Uses [`crossterm::terminal::disable_raw_mode()`]
-///
-/// # Errors
-///
-/// Returns an error if the terminal state cannot be restored.
-///
-/// [`DirectToAnsi`]: TerminalLibBackend::DirectToAnsi
-/// [`Crossterm`]: TerminalLibBackend::Crossterm
-/// [`terminal_raw_mode`]: crate::core::ansi::terminal_raw_mode
-/// [rustix_disable]: crate::disable_raw_mode
-pub fn raw_mode_disable() -> miette::Result<()> {
-    DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
-        tracing::debug!(
-            message = "raw_mode_disable: 🔴 disabling raw mode",
-            backend = ?TERMINAL_LIB_BACKEND
-        );
-    });
-
-    let result = match TERMINAL_LIB_BACKEND {
-        TerminalLibBackend::DirectToAnsi => crate::disable_raw_mode(),
-        TerminalLibBackend::Crossterm => {
-            crossterm::terminal::disable_raw_mode().into_diagnostic()
-        }
-    };
-
-    match &result {
-        Ok(()) => DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
-            tracing::debug!(message = "raw_mode_disable: ✅ success");
-        }),
-        Err(e) => DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
-            tracing::error!(message = "raw_mode_disable: ❌ failed", error = %e);
-        }),
-    };
-
-    result
-}

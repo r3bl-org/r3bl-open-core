@@ -80,7 +80,7 @@ pub enum PasteStateResult {
 /// Requires [`Clone`] because [`tokio::sync::broadcast`] clones messages for each
 /// receiver. See [`global_input_resource`] for architecture details.
 ///
-/// [`global_input_resource`]: mod@super::global_input_resource
+/// [`global_input_resource`]: super::global_input_resource
 #[derive(Debug, Clone)]
 pub enum ReaderThreadMessage {
     /// Parsed input event ready for consumption.

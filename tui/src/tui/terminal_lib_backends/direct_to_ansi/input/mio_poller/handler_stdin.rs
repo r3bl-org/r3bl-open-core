@@ -5,11 +5,11 @@
 //! Event handlers for stdin input processing.
 
 use super::poller::MioPoller;
-use crate::tui::{terminal_lib_backends::direct_to_ansi::input::{paste_state_machine::apply_paste_state_machine,
-                                                               types::{PasteStateResult,
-                                                                       ReaderThreadMessage,
-                                                                       ThreadLoopContinuation}},
-                 DEBUG_TUI_SHOW_TERMINAL_BACKEND};
+use crate::tui::{DEBUG_TUI_SHOW_TERMINAL_BACKEND,
+                 terminal_lib_backends::direct_to_ansi::input::{paste_state_machine::apply_paste_state_machine,
+                                                                types::{PasteStateResult,
+                                                                        ReaderThreadMessage,
+                                                                        ThreadLoopContinuation}}};
 use std::io::{ErrorKind, Read as _};
 
 /// Read buffer size for stdin reads (`1_024` bytes).
@@ -25,8 +25,7 @@ pub const STDIN_READ_BUFFER_SIZE: usize = 1_024;
 ///
 /// # Returns
 ///
-/// - [`ThreadLoopContinuation::Continue`]: Successfully processed or recoverable
-///   error.
+/// - [`ThreadLoopContinuation::Continue`]: Successfully processed or recoverable error.
 /// - [`ThreadLoopContinuation::Return`]: EOF, fatal error, or receiver dropped.
 ///
 /// [`VT100InputEventIR`]: crate::core::ansi::vt_100_terminal_input_parser::VT100InputEventIR
@@ -42,9 +41,7 @@ pub fn consume_stdin_input(poller: &mut MioPoller) -> ThreadLoopContinuation {
             DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
                 tracing::debug!(message = "mio-poller-thread: EOF (0 bytes)");
             });
-            let _unused = poller
-                .tx_parsed_input_events
-                .send(ReaderThreadMessage::Eof);
+            let _unused = poller.tx_parsed_input_events.send(ReaderThreadMessage::Eof);
             ThreadLoopContinuation::Return
         }
 
@@ -96,7 +93,8 @@ pub fn parse_stdin_bytes(poller: &mut MioPoller, n: usize) -> ThreadLoopContinua
 
     // Process all parsed events through paste state machine.
     for vt100_event in poller.vt_100_input_seq_parser.by_ref() {
-        match apply_paste_state_machine(&mut poller.paste_collection_state, &vt100_event) {
+        match apply_paste_state_machine(&mut poller.paste_collection_state, &vt100_event)
+        {
             PasteStateResult::Emit(input_event) => {
                 if poller
                     .tx_parsed_input_events

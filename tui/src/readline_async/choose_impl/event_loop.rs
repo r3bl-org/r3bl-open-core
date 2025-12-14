@@ -113,7 +113,7 @@ fn run_before_event_loop<S: CalculateResizeHint>(
     function_component: &mut impl FunctionComponent<S>,
 ) -> CommonResult<()> {
     execute_commands!(function_component.get_output_device(), Hide);
-    crate::raw_mode_enable()?;
+    crate::enable_raw_mode()?;
 
     // First render before blocking the main thread for user input.
     function_component.render(state)?;
@@ -125,7 +125,7 @@ fn run_after_event_loop<S: CalculateResizeHint>(
     function_component: &mut impl FunctionComponent<S>,
 ) -> CommonResult<()> {
     execute_commands!(function_component.get_output_device(), Show);
-    crate::raw_mode_disable()?;
+    crate::disable_raw_mode()?;
     Ok(())
 }
 

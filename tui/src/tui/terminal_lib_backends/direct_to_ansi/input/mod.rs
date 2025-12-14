@@ -4,6 +4,11 @@
 
 //! Linux input handling for [`DirectToAnsi`] backend.
 //!
+//! # Entry Point
+//!
+//! [`DirectToAnsiInputDevice::try_read_event`] is the main async method for reading
+//! terminal input with zero-latency [`ESC` key detection].
+//!
 //! # Platform Support
 //!
 //! This module is **Linux-only** (gated by `#[cfg(target_os = "linux")]`).
@@ -51,13 +56,9 @@
 //! - [crossterm issue] - "/dev/tty does not work on macOS with kqueue"
 //! - [macOS /dev/tty polling blog post] - Detailed technical explanation
 //!
-//! # Entry Point
-//!
-//! [`DirectToAnsiInputDevice::try_read_event`] is the main async method for reading
-//! terminal input with zero-latency `ESC` key detection.
-//!
 //! [`DirectToAnsiInputDevice::try_read_event`]: DirectToAnsiInputDevice::try_read_event
-//! [`DirectToAnsi`]: mod@super
+//! [`ESC` key detection]: DirectToAnsiInputDevice#esc-key-disambiguation-crossterm-more-flag-pattern
+//! [`DirectToAnsi`]: super
 //! [`EINVAL`]: https://man7.org/linux/man-pages/man3/errno.3.html
 //! [`SIGWINCH`]: https://man7.org/linux/man-pages/man7/signal.7.html
 //! [`TERMINAL_LIB_BACKEND`]: crate::TERMINAL_LIB_BACKEND

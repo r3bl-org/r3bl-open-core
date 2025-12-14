@@ -52,11 +52,14 @@
 //! [`DirectToAnsiInputDevice`]: crate::tui::terminal_lib_backends::direct_to_ansi::DirectToAnsiInputDevice
 //! [`pty_terminal_events_test`]: super::pty_terminal_events_test
 
-use crate::{Deadline, InputEvent, PtyPair, generate_pty_test,
+use crate::{ControlledChild, InputEvent, PtyPair, generate_pty_test,
             tui::terminal_lib_backends::direct_to_ansi::DirectToAnsiInputDevice};
 use portable_pty::PtySize;
 use std::{io::{BufRead, BufReader, Write},
           time::Duration};
+
+/// Ready signal sent by controlled process after initialization.
+const CONTROLLED_READY: &str = "CONTROLLED_READY";
 
 generate_pty_test! {
     /// PTY-based integration test for SIGWINCH signal handling.
@@ -73,32 +76,24 @@ generate_pty_test! {
 }
 
 /// PTY Controller: Resize the PTY and verify the controlled process receives SIGWINCH.
-fn pty_controller_entry_point(
-    mut pty_pair: PtyPair,
-    mut child: Box<dyn portable_pty::Child + Send + Sync>,
-) {
+fn pty_controller_entry_point(mut pty_pair: PtyPair, mut child: ControlledChild) {
     eprintln!("🚀 PTY Controller: Starting SIGWINCH test...");
 
-    let reader_non_blocking = pty_pair
+    let reader = pty_pair
         .controller()
         .try_clone_reader()
         .expect("Failed to get reader");
-    let mut buf_reader_non_blocking = BufReader::new(reader_non_blocking);
+    let mut buf_reader = BufReader::new(reader);
 
     eprintln!("📝 PTY Controller: Waiting for controlled process to start...");
 
-    // Wait for controlled to confirm it's running.
+    // Wait for controlled to confirm it's running. The controlled process sends
+    // TEST_RUNNING and CONTROLLED_READY immediately on startup.
     let mut test_running_seen = false;
-    let deadline = Deadline::default();
 
     loop {
-        assert!(
-            deadline.has_time_remaining(),
-            "Timeout: controlled process did not start within 5 seconds"
-        );
-
         let mut line = String::new();
-        match buf_reader_non_blocking.read_line(&mut line) {
+        match buf_reader.read_line(&mut line) {
             Ok(0) => panic!("EOF reached before controlled started"),
             Ok(_) => {
                 let trimmed = line.trim();
@@ -108,13 +103,10 @@ fn pty_controller_entry_point(
                     test_running_seen = true;
                     eprintln!("  ✓ Test is running in controlled");
                 }
-                if trimmed.contains("CONTROLLED_READY") {
+                if trimmed.contains(CONTROLLED_READY) {
                     eprintln!("  ✓ Controlled process confirmed running!");
                     break;
                 }
-            }
-            Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {
-                std::thread::sleep(Duration::from_millis(10));
             }
             Err(e) => panic!("Read error while waiting for controlled: {e}"),
         }
@@ -149,12 +141,12 @@ fn pty_controller_entry_point(
     eprintln!("  ✓ PTY resized, SIGWINCH should have been sent");
 
     // Wait for the controlled process to report the resize event.
-    let resize_deadline = Deadline::new(Duration::from_secs(5));
+    // The controlled process handles SIGWINCH and prints the new size immediately.
     let mut resize_received = false;
 
-    while resize_deadline.has_time_remaining() {
+    loop {
         let mut line = String::new();
-        match buf_reader_non_blocking.read_line(&mut line) {
+        match buf_reader.read_line(&mut line) {
             Ok(0) => {
                 eprintln!("  ⚠️  EOF reached");
                 break;
@@ -175,9 +167,6 @@ fn pty_controller_entry_point(
                         "  ⚠️  Resize dimensions don't match expected 100x30: {trimmed}"
                     );
                 }
-            }
-            Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {
-                std::thread::sleep(Duration::from_millis(50));
             }
             Err(e) => panic!("Read error: {e}"),
         }
@@ -205,7 +194,7 @@ fn pty_controller_entry_point(
 
 /// PTY Controlled: Set up signal handler and wait for SIGWINCH.
 fn pty_controlled_entry_point() -> ! {
-    println!("CONTROLLED_READY");
+    println!("{CONTROLLED_READY}");
     std::io::stdout().flush().expect("Failed to flush");
 
     eprintln!("🔍 PTY Controlled: Setting terminal to raw mode...");

@@ -133,6 +133,40 @@ mod internal_parser;
 pub use internal_parser::*;  // Re-exports need the module to exist!
 ```
 
+#### Platform-Specific Test Modules
+
+For test modules that are **both test-only AND platform-specific**, combine the conditions:
+
+```rust
+// ✅ Linux-only test module, visible in docs and tests on Linux
+#[cfg(all(any(test, doc), target_os = "linux"))]
+pub mod backend_compat_tests;
+```
+
+**When you see this warning:**
+> "unresolved link to `crate::path::test_module`"
+>
+> And the module is `#[cfg(test)]` or `#[cfg(all(test, target_os = "..."))]`
+
+**Fix by adding conditional doc visibility:**
+
+```rust
+// Before (links won't resolve in docs):
+#[cfg(test)]
+mod my_test_module;
+
+// After (links resolve in docs):
+#[cfg(any(test, doc))]
+pub mod my_test_module;
+
+// Or for platform-specific:
+#[cfg(all(any(test, doc), target_os = "linux"))]
+pub mod my_linux_test_module;
+```
+
+**Apply at all levels** — If the test module is nested, both parent and child need the visibility
+change.
+
 ### Step 4: Handle Transitive Visibility
 
 **Important:** If a conditionally public module links to another module in its documentation,

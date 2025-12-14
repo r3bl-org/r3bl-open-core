@@ -277,7 +277,7 @@ cargo test --doc
 | Can't make it compile | Link to real code instead |
 | Macro syntax | ` ```ignore ` with HTML comment explaining why |
 
-### Linking to Test Functions
+### Linking to Test Modules and Functions
 
 ```rust
 /// See [`test_example`] for actual usage.
@@ -285,11 +285,37 @@ cargo test --doc
 /// [`test_example`]: crate::tests::test_example
 ```
 
-Make test visible to docs:
+Make test module visible to docs:
 ```rust
 #[cfg(any(test, doc))]
 pub mod tests;
 ```
+
+#### Platform-Specific Test Modules
+
+**When you see this warning:**
+> "unresolved link to `crate::path::test_module`"
+>
+> And the module is `#[cfg(test)]` only
+
+**Don't give up on links** — Add conditional visibility instead of using plain text:
+
+```rust
+// Before (links won't resolve):
+#[cfg(test)]
+mod backend_tests;
+
+// After (links resolve in docs):
+#[cfg(any(test, doc))]
+pub mod backend_tests;
+
+// For platform-specific test modules:
+#[cfg(all(any(test, doc), target_os = "linux"))]
+pub mod linux_only_tests;
+```
+
+**Apply at all levels** — If linking to a nested test module, both parent and child modules need
+the visibility change. See `organize-modules` skill for complete patterns.
 
 ---
 

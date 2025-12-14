@@ -6,7 +6,8 @@
 //! *something* changed. This test documents the exact contract of raw mode
 //! and catches regressions in flag handling.
 
-use crate::{PtyPair, RawModeGuard, generate_pty_test, VMIN_RAW_MODE, VTIME_RAW_MODE};
+use crate::{ControlledChild, PtyPair, RawModeGuard, generate_pty_test, VMIN_RAW_MODE,
+            VTIME_RAW_MODE};
 use rustix::termios::{self, ControlModes, InputModes, LocalModes, OutputModes, SpecialCodeIndex};
 use std::{io::{BufRead, BufReader, Write},
           time::{Duration, Instant}};
@@ -31,10 +32,7 @@ generate_pty_test! {
 }
 
 /// Controller process: verifies that controlled process reports correct flags.
-fn pty_controller_entry_point(
-    pty_pair: PtyPair,
-    mut child: Box<dyn portable_pty::Child + Send + Sync>,
-) {
+fn pty_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
     eprintln!("🚀 PTY Controller: Starting flag verification test...");
 
     let reader = pty_pair

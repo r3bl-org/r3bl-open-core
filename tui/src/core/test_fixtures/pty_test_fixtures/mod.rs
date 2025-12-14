@@ -4,6 +4,7 @@
 mod async_debounced_deadline;
 mod deadline;
 mod debounced_state;
+mod spawn_controlled_in_pty;
 
 // Macro module - #[macro_export] makes it available at crate root.
 mod generate_pty_test;
@@ -12,3 +13,4 @@ mod generate_pty_test;
 pub use async_debounced_deadline::*;
 pub use deadline::*;
 pub use debounced_state::*;
+pub use spawn_controlled_in_pty::*;

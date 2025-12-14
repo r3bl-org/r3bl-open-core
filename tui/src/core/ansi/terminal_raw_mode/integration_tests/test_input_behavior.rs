@@ -6,7 +6,8 @@
 //! flags are set correctly. Verifies character-by-character reading without
 //! buffering, echo, or signal interpretation.
 
-use crate::{PtyPair, generate_pty_test, ANSI_ESC, CONTROL_C, CONTROL_D, CONTROL_LF};
+use crate::{ControlledChild, PtyPair, generate_pty_test, ANSI_ESC, CONTROL_C, CONTROL_D,
+            CONTROL_LF};
 use std::{io::{BufRead, BufReader, Read, Write},
           time::Duration};
 
@@ -28,10 +29,7 @@ generate_pty_test! {
 }
 
 /// Controller process: sends input and verifies controlled process reports correct bytes.
-fn pty_controller_entry_point(
-    pty_pair: PtyPair,
-    mut child: Box<dyn portable_pty::Child + Send + Sync>,
-) {
+fn pty_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
     eprintln!("🚀 PTY Controller: Starting input behavior test...");
 
     let mut writer = pty_pair.controller().take_writer().expect("Failed to get writer");

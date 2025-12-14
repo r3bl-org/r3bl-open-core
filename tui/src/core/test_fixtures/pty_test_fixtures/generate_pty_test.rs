@@ -2,7 +2,22 @@
 
 /// Macro that generates PTY-based integration tests with automatic test name injection.
 ///
+/// Use this macro for **single-feature PTY tests** that test one specific behavior
+/// (e.g., raw mode, Ctrl+W deletion, terminal event parsing). For **multi-backend
+/// comparison tests** that need to run the same controlled code with different backends
+/// and compare results, use [`spawn_controlled_in_pty`] instead.
+///
+/// # When to Use This Macro vs [`spawn_controlled_in_pty`]
+///
+/// | Scenario                                         | Use                         |
+/// | ------------------------------------------------ | --------------------------- |
+/// | Testing a single feature in a PTY environment    | [`generate_pty_test!`]      |
+/// | Comparing two backends produce identical results | [`spawn_controlled_in_pty`] |
+/// | One test function, one controlled process        | [`generate_pty_test!`]      |
+/// | One test function, multiple controlled processes | [`spawn_controlled_in_pty`] |
+///
 /// This macro handles the boilerplate for PTY-based integration tests:
+///
 ///
 /// 1. **Process routing**: Routes to controller or controlled code based on environment
 ///    variable
@@ -113,15 +128,18 @@
 ///
 /// Your controller function receives:
 /// - `pty_pair: PtyPair` - The PTY pair wrapper for communication
-/// - `child: Box<dyn portable_pty::Child + Send + Sync>` - The spawned controlled process
+/// - `child: ControlledChild` - The spawned controlled process (type alias from
+///   [`pty_types`])
 ///
 /// You can then:
 /// - Get a reader: `pty_pair.controller().try_clone_reader()`
 /// - Get a writer: `pty_pair.controller_mut().take_writer()`
 /// - Wait for child: `child.wait()`
 ///
-/// [`raw_mode_integration_tests`]: mod@crate::core::ansi::terminal_raw_mode::integration_tests
 /// [`integration_tests`]: mod@crate::core::ansi::vt_100_terminal_input_parser::integration_tests
+/// [`pty_types`]: mod@crate::core::pty::pty_core::pty_types
+/// [`raw_mode_integration_tests`]: mod@crate::core::ansi::terminal_raw_mode::integration_tests
+/// [`spawn_controlled_in_pty`]: crate::spawn_controlled_in_pty
 #[macro_export]
 macro_rules! generate_pty_test {
     (

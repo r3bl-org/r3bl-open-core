@@ -6,7 +6,7 @@
 //! terminal state using actual PTY pairs. This is the foundational test
 //! that ensures the basic lifecycle works.
 
-use crate::{PtyPair, RawModeGuard, generate_pty_test};
+use crate::{ControlledChild, PtyPair, RawModeGuard, generate_pty_test};
 use rustix::termios;
 use std::{io::{BufRead, BufReader, Write},
           time::{Duration, Instant}};
@@ -27,10 +27,7 @@ generate_pty_test! {
 
 /// Controller process: verifies results.
 /// Receives PTY pair and child process from the macro.
-fn pty_controller_entry_point(
-    pty_pair: PtyPair,
-    mut child: Box<dyn portable_pty::Child + Send + Sync>,
-) {
+fn pty_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
     eprintln!("🚀 PTY Controller: Starting raw mode test...");
 
     // Read from PTY and verify

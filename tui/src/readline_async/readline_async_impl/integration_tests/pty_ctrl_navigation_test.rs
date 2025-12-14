@@ -1,6 +1,6 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{PtyPair, AsyncDebouncedDeadline, ControlledChild, Deadline, DebouncedState, KeyState,
+use crate::{AsyncDebouncedDeadline, ControlledChild, DebouncedState, KeyState, PtyPair,
             core::{ansi::vt_100_terminal_input_parser::{VT100InputEventIR,
                                                         VT100KeyCodeIR,
                                                         VT100KeyModifiersIR,
@@ -87,26 +87,21 @@ fn pty_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
     eprintln!("🚀 PTY Controller: Starting Ctrl+Left/Right test...");
 
     let mut writer = pty_pair.controller().take_writer().expect("Failed to get writer");
-    let reader_non_blocking = pty_pair
+    let reader = pty_pair
         .controller()
         .try_clone_reader()
         .expect("Failed to get reader");
-    let mut buf_reader_non_blocking = BufReader::new(reader_non_blocking);
+    let mut buf_reader = BufReader::new(reader);
 
     eprintln!("📝 PTY Controller: Waiting for controlled process to start...");
 
-    // Wait for controlled process to confirm it's running
+    // Wait for controlled process to confirm it's running. The controlled process sends
+    // TEST_RUNNING and CONTROLLED_STARTING immediately on startup.
     let mut test_running_seen = false;
-    let deadline = Deadline::default();
 
     loop {
-        assert!(
-            deadline.has_time_remaining(),
-            "Timeout: controlled process did not start within 5 seconds"
-        );
-
         let mut line = String::new();
-        match buf_reader_non_blocking.read_line(&mut line) {
+        match buf_reader.read_line(&mut line) {
             Ok(0) => panic!("EOF reached before controlled process started"),
             Ok(_) => {
                 let trimmed = line.trim();
@@ -116,13 +111,10 @@ fn pty_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
                     test_running_seen = true;
                     eprintln!("  ✓ Test is running in controlled process");
                 }
-                if trimmed.contains("SLAVE_STARTING") {
+                if trimmed.contains("CONTROLLED_STARTING") {
                     eprintln!("  ✓ Controlled process confirmed running!");
                     break;
                 }
-            }
-            Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {
-                std::thread::sleep(Duration::from_millis(10));
             }
             Err(e) => panic!("Read error while waiting for controlled process: {e}"),
         }
@@ -136,12 +128,11 @@ fn pty_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
     // ==================== Helper: Read Line State from Controlled ====================
     //
     // Blocks until controlled process prints "Line: ..." output, skipping debug messages.
-    // The 10ms retry delay on WouldBlock is just safety - normally the controller's
-    // 200ms/100ms sleep before calling this ensures controlled process has already printed.
+    // Blocking reads work reliably because controlled process responds immediately.
     let mut read_line_state = || -> String {
         loop {
             let mut line = String::new();
-            match buf_reader_non_blocking.read_line(&mut line) {
+            match buf_reader.read_line(&mut line) {
                 Ok(0) => panic!("EOF reached before getting line state"),
                 Ok(_) => {
                     let trimmed = line.trim();
@@ -149,12 +140,6 @@ fn pty_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
                         return trimmed.to_string();
                     }
                     eprintln!("  ⚠️  Skipping: {trimmed}");
-                }
-                Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {
-                    // Data not ready yet. Sleep 10ms before retry to prevent CPU spin
-                    // loop. Note: This is rare since controller waits
-                    // 200ms/100ms before reading.
-                    std::thread::sleep(Duration::from_millis(10));
                 }
                 Err(e) => panic!("Read error: {e}"),
             }
@@ -236,7 +221,7 @@ fn pty_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
 fn pty_controlled_entry_point() -> ! {
     use crate::tui::terminal_lib_backends::direct_to_ansi::DirectToAnsiInputDevice;
 
-    println!("SLAVE_STARTING");
+    println!("CONTROLLED_STARTING");
     std::io::stdout().flush().expect("Failed to flush");
 
     println!("🔍 PTY Controlled: Setting terminal to raw mode...");

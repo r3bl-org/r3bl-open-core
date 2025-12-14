@@ -1,12 +1,28 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{AsyncDebouncedDeadline, ControlledChild, Deadline, DebouncedState, PtyPair,
+use crate::{AsyncDebouncedDeadline, ControlledChild, DebouncedState, PtyPair,
             core::test_fixtures::StdoutMock,
             generate_pty_test,
             readline_async::readline_async_impl::LineState};
 use std::{io::{BufRead, BufReader, Write},
           sync::{Arc, Mutex as StdMutex},
           time::Duration};
+
+// ==================== Signal Constants ====================
+//
+// These constants ensure consistency between controller and controlled processes.
+
+/// Signal indicating the test is running in the controlled process.
+const TEST_RUNNING: &str = "TEST_RUNNING";
+
+/// Signal indicating the controlled process has started and is initializing.
+const CONTROLLED_STARTING: &str = "CONTROLLED_STARTING";
+
+/// Signal indicating the controlled process is ready to receive input.
+const CONTROLLED_READY: &str = "CONTROLLED_READY";
+
+/// Prefix for line state output.
+const LINE_PREFIX: &str = "Line:";
 
 generate_pty_test! {
     /// PTY-based integration test for Ctrl+U line clearing behavior.
@@ -26,12 +42,12 @@ generate_pty_test! {
     ///
     /// ## Test Protocol (Request-Response Pattern)
     ///
-    /// This test uses a **request-response protocol** between master and slave:
+    /// This test uses a **request-response protocol** between controller and controlled:
     ///
-    /// 1. **Master sends input** (text and Ctrl+U sequences)
-    /// 2. **Master flushes** and waits ~200ms for slave to process
-    /// 3. **Master blocks** reading slave stdout until it sees "Line: ..."
-    /// 4. **Master makes assertion** on the line state
+    /// 1. **Controller sends input** (text and Ctrl+U sequences)
+    /// 2. **Controller flushes** and waits ~200ms for controlled to process
+    /// 3. **Controller blocks** reading controlled stdout until it sees "Line: ..."
+    /// 4. **Controller makes assertion** on the line state
     /// 5. **Repeat** for next test case
     ///
     /// The ([`LineState`]) is checked in the test to make assertions against.
@@ -48,78 +64,69 @@ fn pty_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
     eprintln!("🚀 PTY Controller: Starting Ctrl+U test...");
 
     let mut writer = pty_pair.controller().take_writer().expect("Failed to get writer");
-    let reader_non_blocking = pty_pair
+    let reader = pty_pair
         .controller()
         .try_clone_reader()
         .expect("Failed to clone reader");
 
-    let mut buf_reader_non_blocking = BufReader::new(reader_non_blocking);
+    let mut buf_reader = BufReader::new(reader);
 
     eprintln!("📝 PTY Controller: Waiting for controlled process to start...");
 
-    // Wait for slave to confirm it's running and ready
+    // Wait for controlled to confirm it's running and ready. The controlled process sends
+    // TEST_RUNNING, CONTROLLED_STARTING, and CONTROLLED_READY on startup.
     let mut test_running_seen = false;
-    // Note: slave_ready_seen will be assigned in the loop before being read
-    let slave_ready_seen;
-    let deadline = Deadline::default();
+    // Note: controlled_ready_seen will be assigned in the loop before being read
+    let controlled_ready_seen;
 
+    // Blocking reads work reliably because controlled process responds immediately.
     loop {
-        assert!(
-            deadline.has_time_remaining(),
-            "Timeout: slave did not start within 5 seconds"
-        );
-
         let mut line = String::new();
-        match buf_reader_non_blocking.read_line(&mut line) {
-            Ok(0) => panic!("EOF reached before slave started"),
+        match buf_reader.read_line(&mut line) {
+            Ok(0) => panic!("EOF reached before controlled started"),
             Ok(_) => {
                 let trimmed = line.trim();
                 eprintln!("  ← Controlled output: {trimmed}");
 
-                if trimmed.contains("TEST_RUNNING") {
+                if trimmed.contains(TEST_RUNNING) {
                     test_running_seen = true;
-                    eprintln!("  ✓ Test is running in slave");
+                    eprintln!("  ✓ Test is running in controlled");
                 }
-                if trimmed.contains("SLAVE_STARTING") {
+                if trimmed.contains(CONTROLLED_STARTING) {
                     eprintln!("  ✓ Controlled process confirmed running!");
                 }
-                if trimmed.contains("SLAVE_READY") {
-                    slave_ready_seen = true;
-                    eprintln!("  ✓ Slave is ready (raw mode enabled, input device created)");
+                if trimmed.contains(CONTROLLED_READY) {
+                    controlled_ready_seen = true;
+                    eprintln!("  ✓ Controlled is ready (raw mode enabled, input device created)");
                     break;
                 }
             }
-            Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {
-                std::thread::sleep(Duration::from_millis(10));
-            }
-            Err(e) => panic!("Read error while waiting for slave: {e}"),
+            Err(e) => panic!("Read error while waiting for controlled: {e}"),
         }
     }
 
     assert!(
         test_running_seen,
-        "Slave test never started running (no TEST_RUNNING output)"
+        "Controlled test never started running (no {TEST_RUNNING} output)"
     );
     assert!(
-        slave_ready_seen,
-        "Slave never signaled ready (no SLAVE_READY output)"
+        controlled_ready_seen,
+        "Controlled never signaled ready (no {CONTROLLED_READY} output)"
     );
 
-    // Helper function to read line state, skipping debug output
+    // Helper function to read line state, skipping debug output.
+    // Blocking reads work reliably because controlled process responds immediately.
     let mut read_line_state = || -> String {
         loop {
             let mut line = String::new();
-            match buf_reader_non_blocking.read_line(&mut line) {
+            match buf_reader.read_line(&mut line) {
                 Ok(0) => panic!("EOF reached before getting line state"),
                 Ok(_) => {
                     let trimmed = line.trim();
-                    if trimmed.starts_with("Line:") {
+                    if trimmed.starts_with(LINE_PREFIX) {
                         return trimmed.to_string();
                     }
                     eprintln!("  ⚠️  Skipping: {trimmed}");
-                }
-                Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {
-                    std::thread::sleep(Duration::from_millis(10));
                 }
                 Err(e) => panic!("Read error: {e}"),
             }
@@ -182,7 +189,7 @@ fn pty_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
 fn pty_controlled_entry_point() -> ! {
     use crate::tui::terminal_lib_backends::direct_to_ansi::DirectToAnsiInputDevice;
 
-    println!("SLAVE_STARTING");
+    println!("{CONTROLLED_STARTING}");
     std::io::stdout().flush().expect("Failed to flush");
 
     println!("🔍 PTY Controlled: Setting terminal to raw mode...");
@@ -205,7 +212,7 @@ fn pty_controlled_entry_point() -> ! {
         let safe_history = Arc::new(StdMutex::new(history));
 
         println!("🔍 PTY Controlled: LineState created, reading input...");
-        println!("SLAVE_READY");  // Signal to master that we're ready to receive input
+        println!("{CONTROLLED_READY}");  // Signal to controller that we're ready
         std::io::stdout().flush().expect("Failed to flush");
 
         let mut input_device = DirectToAnsiInputDevice::new();
@@ -249,7 +256,7 @@ fn pty_controlled_entry_point() -> ! {
                                     // If another event arrives before 10ms, we update the buffered
                                     // state and reset the timer again (batching rapid input).
                                     buffered_state.set(format!(
-                                        "Line: {}, Cursor: {}",
+                                        "{LINE_PREFIX} {}, Cursor: {}",
                                         line_state.line,
                                         line_state.line_cursor_grapheme
                                     ));

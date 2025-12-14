@@ -190,11 +190,10 @@
 //!
 //! [`SharedWriter`]: crate::SharedWriter
 //! [`OffscreenBuffer::apply_ansi_bytes`]: crate::OffscreenBuffer::apply_ansi_bytes
-use crate::{ControlledChild, Deadline, LineStateControlSignal, OffscreenBuffer, PtyPair,
+use crate::{ControlledChild, LineStateControlSignal, OffscreenBuffer, PtyPair,
             SharedWriter, generate_pty_test, height,
             readline_async::readline_async_impl::LineState, width};
-use std::{io::{BufRead, BufReader, Write},
-          time::Duration};
+use std::{io::{BufRead, BufReader, Write}, time::Duration};
 
 generate_pty_test! {
     /// PTY-based integration test: no extra blank line before prompt.
@@ -220,7 +219,6 @@ fn pty_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
         .expect("Failed to clone reader");
 
     let mut buf_reader = BufReader::new(reader);
-    let deadline = Deadline::default();
 
     eprintln!("📝 PTY Controller: Waiting for controlled process output...");
 
@@ -228,12 +226,8 @@ fn pty_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
     let mut output_lines: Vec<String> = vec![];
     let mut controlled_done = false;
 
+    // Blocking reads work reliably because controlled process responds immediately.
     loop {
-        assert!(
-            deadline.has_time_remaining(),
-            "Timeout: controlled process did not complete within deadline"
-        );
-
         let mut line = String::new();
         match buf_reader.read_line(&mut line) {
             Ok(0) => {
@@ -258,9 +252,6 @@ fn pty_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
                 }
 
                 output_lines.push(trimmed.to_string());
-            }
-            Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {
-                std::thread::sleep(Duration::from_millis(10));
             }
             Err(e) => panic!("Read error: {e}"),
         }

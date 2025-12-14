@@ -37,15 +37,22 @@
 //! [vtime]: crate::VTIME_RAW_MODE
 //! [`RawMode`]: crate::tui::terminal_lib_backends::raw_mode::RawMode
 
-// Import platform-specific implementations
+// Import platform-specific implementations for DirectToAnsi backend.
 #[cfg(unix)]
 use super::raw_mode_unix;
 #[cfg(windows)]
 use super::raw_mode_windows;
 
+use crate::{TerminalLibBackend, DEBUG_TUI_SHOW_TERMINAL_BACKEND, TERMINAL_LIB_BACKEND};
+use miette::IntoDiagnostic;
+
 /// Enable raw mode on the terminal.
 ///
-/// See [module documentation] module documentation for:
+/// Dispatches to the correct raw mode implementation based on [`TERMINAL_LIB_BACKEND`]:
+/// - **Linux** ([`DirectToAnsi`]): Uses rustix-based termios API
+/// - **macOS/Windows** ([`Crossterm`]): Uses [`crossterm::terminal::enable_raw_mode()`]
+///
+/// See [module documentation] for:
 /// - Why raw mode is needed and how it differs from cooked mode
 /// - Platform-specific implementation details
 /// - Complete usage examples
@@ -57,25 +64,57 @@ use super::raw_mode_windows;
 /// - Platform is not supported (e.g., WASM, embedded targets without OS)
 /// - Lock is poisoned (internal state corruption)
 ///
+/// [`DirectToAnsi`]: crate::TerminalLibBackend::DirectToAnsi
+/// [`Crossterm`]: crate::TerminalLibBackend::Crossterm
+/// [`TERMINAL_LIB_BACKEND`]: crate::TERMINAL_LIB_BACKEND
 /// [module documentation]: mod@crate::core::ansi::terminal_raw_mode
 pub fn enable_raw_mode() -> miette::Result<()> {
-    #[cfg(unix)]
-    {
-        raw_mode_unix::enable_raw_mode()
-    }
+    DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
+        tracing::debug!(
+            message = "enable_raw_mode: 🟢 enabling raw mode",
+            backend = ?TERMINAL_LIB_BACKEND
+        );
+    });
 
-    #[cfg(windows)]
-    {
-        raw_mode_windows::enable_raw_mode()
-    }
+    let result = match TERMINAL_LIB_BACKEND {
+        TerminalLibBackend::DirectToAnsi => {
+            #[cfg(unix)]
+            {
+                raw_mode_unix::enable_raw_mode()
+            }
 
-    #[cfg(not(any(unix, windows)))]
-    {
-        Err(miette!("Platform not supported"))
-    }
+            #[cfg(windows)]
+            {
+                raw_mode_windows::enable_raw_mode()
+            }
+
+            #[cfg(not(any(unix, windows)))]
+            {
+                Err(miette::miette!("Platform not supported for DirectToAnsi"))
+            }
+        }
+        TerminalLibBackend::Crossterm => {
+            crossterm::terminal::enable_raw_mode().into_diagnostic()
+        }
+    };
+
+    match &result {
+        Ok(()) => DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
+            tracing::debug!(message = "enable_raw_mode: ✅ success");
+        }),
+        Err(e) => DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
+            tracing::error!(message = "enable_raw_mode: ❌ failed", error = %e);
+        }),
+    };
+
+    result
 }
 
 /// Disable raw mode and restore original terminal settings.
+///
+/// Dispatches to the correct raw mode implementation based on [`TERMINAL_LIB_BACKEND`]:
+/// - **Linux** ([`DirectToAnsi`]): Uses rustix-based termios API
+/// - **macOS/Windows** ([`Crossterm`]): Uses [`crossterm::terminal::disable_raw_mode()`]
 ///
 /// Safe to call even if raw mode was never enabled (it will be a no-op).
 /// Prefer using [`RawModeGuard`] for automatic cleanup.
@@ -89,22 +128,50 @@ pub fn enable_raw_mode() -> miette::Result<()> {
 /// - Platform is not supported (e.g., WASM, embedded targets without OS)
 /// - Lock is poisoned (internal state corruption)
 ///
+/// [`DirectToAnsi`]: crate::TerminalLibBackend::DirectToAnsi
+/// [`Crossterm`]: crate::TerminalLibBackend::Crossterm
+/// [`TERMINAL_LIB_BACKEND`]: crate::TERMINAL_LIB_BACKEND
 /// [module documentation]: mod@crate::core::ansi::terminal_raw_mode
 pub fn disable_raw_mode() -> miette::Result<()> {
-    #[cfg(unix)]
-    {
-        raw_mode_unix::disable_raw_mode()
-    }
+    DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
+        tracing::debug!(
+            message = "disable_raw_mode: 🔴 disabling raw mode",
+            backend = ?TERMINAL_LIB_BACKEND
+        );
+    });
 
-    #[cfg(windows)]
-    {
-        raw_mode_windows::disable_raw_mode()
-    }
+    let result = match TERMINAL_LIB_BACKEND {
+        TerminalLibBackend::DirectToAnsi => {
+            #[cfg(unix)]
+            {
+                raw_mode_unix::disable_raw_mode()
+            }
 
-    #[cfg(not(any(unix, windows)))]
-    {
-        Err(miette!("Platform not supported"))
-    }
+            #[cfg(windows)]
+            {
+                raw_mode_windows::disable_raw_mode()
+            }
+
+            #[cfg(not(any(unix, windows)))]
+            {
+                Err(miette::miette!("Platform not supported for DirectToAnsi"))
+            }
+        }
+        TerminalLibBackend::Crossterm => {
+            crossterm::terminal::disable_raw_mode().into_diagnostic()
+        }
+    };
+
+    match &result {
+        Ok(()) => DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
+            tracing::debug!(message = "disable_raw_mode: ✅ success");
+        }),
+        Err(e) => DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
+            tracing::error!(message = "disable_raw_mode: ❌ failed", error = %e);
+        }),
+    };
+
+    result
 }
 
 /// RAII guard that automatically disables raw mode when dropped.

@@ -34,10 +34,6 @@
           "isPinned": false
         },
         {
-          "path": "tui/src/core/ansi/terminal_raw_mode/raw_mode_core.rs",
-          "isPinned": false
-        },
-        {
           "path": "tui/src/core/ansi/vt_100_terminal_input_parser/integration_tests/pty_sigwinch_test.rs",
           "isPinned": false
         },
@@ -50,15 +46,7 @@
           "isPinned": false
         },
         {
-          "path": "tui/src/core/term.rs",
-          "isPinned": false
-        },
-        {
           "path": "tui/src/core/mod.rs",
-          "isPinned": false
-        },
-        {
-          "path": "tui/src/core/ansi/terminal_raw_mode/raw_mode_unix.rs",
           "isPinned": false
         },
         {
@@ -66,35 +54,7 @@
           "isPinned": false
         },
         {
-          "path": "tui/src/tui/terminal_lib_backends/backend_selection.rs",
-          "isPinned": false
-        },
-        {
           "path": "tui/src/core/ansi/vt_100_terminal_input_parser/keyboard.rs",
-          "isPinned": false
-        },
-        {
-          "path": "tui/src/core/ansi/constants/raw_mode.rs",
-          "isPinned": false
-        },
-        {
-          "path": "tui/src/tui/terminal_window/main_event_loop.rs",
-          "isPinned": false
-        },
-        {
-          "path": "tui/src/tui/terminal_window/terminal_window_api.rs",
-          "isPinned": false
-        },
-        {
-          "path": "tui/examples/tui_apps/main.rs",
-          "isPinned": false
-        },
-        {
-          "path": "tui/src/readline_async/readline_async_impl/readline.rs",
-          "isPinned": false
-        },
-        {
-          "path": "tui/src/tui/mod.rs",
           "isPinned": false
         },
         {

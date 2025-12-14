@@ -57,5 +57,6 @@ pub use shared_writer::*;
 pub use terminal_io_type_aliases::*;
 
 // Backend compatibility tests (Linux-only PTY tests).
-#[cfg(test)]
-mod backend_compat_tests;
+// Public for docs and tests so intra-doc links resolve.
+#[cfg(all(any(test, doc), target_os = "linux"))]
+pub mod backend_compat_tests;

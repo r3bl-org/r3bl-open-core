@@ -1,6 +1,6 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-// Skip rustdoc formatting - this file contains examples of the formatter's output
+// Skip rustdoc formatting - this file contains examples of the formatter's output.
 #![cfg_attr(rustfmt, rustfmt_skip)]
 
 //! Convert inline markdown links to reference-style links.
@@ -510,14 +510,14 @@ mod tests {
     #[test]
     fn test_aggregate_with_content_after_refs() {
         // Simulates the file where refs are in middle and content + more refs are after.
-        let input = r#"Some content.
+        let input = r"Some content.
 
 [ref1]: target1
 [ref2]: target2
 
 More content here.
 
-[ref3]: target3"#;
+[ref3]: target3";
         let output = aggregate_existing_references(input);
 
         // All refs should be at the bottom, sorted alphabetically.

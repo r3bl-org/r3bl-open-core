@@ -1,6 +1,6 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{AsyncDebouncedDeadline, ControlledChild, Deadline, DebouncedState, PtyPair,
+use crate::{AsyncDebouncedDeadline, ControlledChild, DebouncedState, PtyPair,
             core::test_fixtures::StdoutMock,
             generate_pty_test,
             readline_async::readline_async_impl::LineState};
@@ -23,16 +23,16 @@ generate_pty_test! {
     ///
     /// ## Test Protocol (Request-Response Pattern)
     ///
-    /// This test uses a **request-response protocol** between master and slave:
+    /// This test uses a **request-response protocol** between controller and controlled:
     ///
-    /// 1. **Master sends input** (e.g., "hello world" or Ctrl+W sequences)
-    /// 2. **Master flushes** and waits ~200ms for slave to process
-    /// 3. **Master blocks** reading slave stdout until it sees "Line: ..."
-    /// 4. **Master makes assertion** on the line state
+    /// 1. **Controller sends input** (e.g., "hello world" or Ctrl+W sequences)
+    /// 2. **Controller flushes** and waits ~200ms for controlled to process
+    /// 3. **Controller blocks** reading controlled stdout until it sees "Line: ..."
+    /// 4. **Controller makes assertion** on the line state
     /// 5. **Repeat** for next input sequence
     ///
-    /// **Critical requirement**: Slave must output line state **only once** after
-    /// processing all available input, not after every character. Otherwise, master
+    /// **Critical requirement**: Controlled must output line state **only once** after
+    /// processing all available input, not after every character. Otherwise, controller
     /// will read intermediate states (e.g., "Line: h, Cursor: 1" instead of
     /// "Line: hello world, Cursor: 11").
     ///
@@ -50,57 +50,51 @@ fn pty_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
     eprintln!("🚀 PTY Controller: Starting Ctrl+W test...");
 
     let mut writer = pty_pair.controller().take_writer().expect("Failed to get writer");
-    let reader_non_blocking = pty_pair
+    let reader = pty_pair
         .controller()
         .try_clone_reader()
         .expect("Failed to get reader");
-    let mut buf_reader_non_blocking = BufReader::new(reader_non_blocking);
+    let mut buf_reader = BufReader::new(reader);
 
     eprintln!("📝 PTY Controller: Waiting for controlled process to start...");
 
-    // Wait for slave to confirm it's running
+    // Wait for controlled to confirm it's running. The controlled process sends
+    // TEST_RUNNING and CONTROLLED_STARTING immediately on startup.
     let mut test_running_seen = false;
-    let deadline = Deadline::default();
 
+    // Blocking reads work reliably because controlled process responds immediately.
     loop {
-        assert!(
-            deadline.has_time_remaining(),
-            "Timeout: slave did not start within 5 seconds"
-        );
-
         let mut line = String::new();
-        match buf_reader_non_blocking.read_line(&mut line) {
-            Ok(0) => panic!("EOF reached before slave started"),
+        match buf_reader.read_line(&mut line) {
+            Ok(0) => panic!("EOF reached before controlled started"),
             Ok(_) => {
                 let trimmed = line.trim();
                 eprintln!("  ← Controlled output: {trimmed}");
 
                 if trimmed.contains("TEST_RUNNING") {
                     test_running_seen = true;
-                    eprintln!("  ✓ Test is running in slave");
+                    eprintln!("  ✓ Test is running in controlled");
                 }
-                if trimmed.contains("SLAVE_STARTING") {
+                if trimmed.contains("CONTROLLED_STARTING") {
                     eprintln!("  ✓ Controlled process confirmed running!");
                     break;
                 }
             }
-            Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {
-                std::thread::sleep(Duration::from_millis(10));
-            }
-            Err(e) => panic!("Read error while waiting for slave: {e}"),
+            Err(e) => panic!("Read error while waiting for controlled: {e}"),
         }
     }
 
     assert!(
         test_running_seen,
-        "Slave test never started running (no TEST_RUNNING output)"
+        "Controlled test never started running (no TEST_RUNNING output)"
     );
 
-    // Helper function to read line state, skipping debug output
+    // Helper function to read line state, skipping debug output.
+    // Blocking reads work reliably because controlled process responds immediately.
     let mut read_line_state = || -> String {
         loop {
             let mut line = String::new();
-            match buf_reader_non_blocking.read_line(&mut line) {
+            match buf_reader.read_line(&mut line) {
                 Ok(0) => panic!("EOF reached before getting line state"),
                 Ok(_) => {
                     let trimmed = line.trim();
@@ -108,9 +102,6 @@ fn pty_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
                         return trimmed.to_string();
                     }
                     eprintln!("  ⚠️  Skipping: {trimmed}");
-                }
-                Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {
-                    std::thread::sleep(Duration::from_millis(10));
                 }
                 Err(e) => panic!("Read error: {e}"),
             }
@@ -189,7 +180,7 @@ fn pty_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
 fn pty_controlled_entry_point() -> ! {
     use crate::tui::terminal_lib_backends::direct_to_ansi::DirectToAnsiInputDevice;
 
-    println!("SLAVE_STARTING");
+    println!("CONTROLLED_STARTING");
     std::io::stdout().flush().expect("Failed to flush");
 
     println!("🔍 PTY Controlled: Setting terminal to raw mode...");

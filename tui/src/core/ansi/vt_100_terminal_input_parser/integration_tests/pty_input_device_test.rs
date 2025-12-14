@@ -1,6 +1,6 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{PtyPair, Deadline, InputEvent,
+use crate::{ControlledChild, InputEvent, PtyPair,
             core::ansi::vt_100_terminal_input_parser::{ir_event_types::{VT100InputEventIR,
                                                                         VT100KeyCodeIR,
                                                                         VT100KeyModifiersIR},
@@ -9,6 +9,9 @@ use crate::{PtyPair, Deadline, InputEvent,
             tui::terminal_lib_backends::direct_to_ansi::DirectToAnsiInputDevice};
 use std::{io::{BufRead, BufReader, Write},
           time::Duration};
+
+/// Ready signal sent by controlled process after initialization.
+const CONTROLLED_READY: &str = "CONTROLLED_READY";
 
 // XMARK: Process isolated test functions using env vars & PTY.
 
@@ -92,10 +95,7 @@ generate_pty_test! {
 /// - Reads parsed output from controlled's stdout
 /// - Verifies correctness
 #[allow(clippy::too_many_lines)]
-fn pty_controller_entry_point(
-    pty_pair: PtyPair,
-    mut child: Box<dyn portable_pty::Child + Send + Sync>,
-) {
+fn pty_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
     /// Helper to generate ANSI bytes from `InputEvent`.
     fn generate_test_sequence(desc: &str, event: VT100InputEventIR) -> (&str, Vec<u8>) {
         let bytes = generate_keyboard_sequence(&event)
@@ -105,30 +105,24 @@ fn pty_controller_entry_point(
 
     eprintln!("🚀 PTY Controller: Starting...");
 
-    // Get writer (to send ANSI sequences to controlled) and non-blocking reader (to receive
+    // Get writer (to send ANSI sequences to controlled) and reader (to receive
     // parsed events from controlled).
     let mut writer = pty_pair.controller().take_writer().expect("Failed to get writer");
-    let reader_non_blocking = pty_pair
+    let reader = pty_pair
         .controller()
         .try_clone_reader()
         .expect("Failed to get reader");
-    let mut buf_reader_non_blocking = BufReader::new(reader_non_blocking);
+    let mut buf_reader = BufReader::new(reader);
 
     eprintln!("📝 PTY Controller: Waiting for controlled process to start...");
 
-    // Wait for controlled to confirm it's running.
+    // Wait for controlled to confirm it's running. The controlled process sends
+    // TEST_RUNNING and CONTROLLED_READY immediately on startup.
     let mut test_running_seen = false;
-    let deadline = Deadline::default();
 
-    // Non-blocking read loop: poll for controlled startup with timeout.
     loop {
-        assert!(
-            deadline.has_time_remaining(),
-            "Timeout: controlled did not start within 5 seconds"
-        );
-
         let mut line = String::new();
-        match buf_reader_non_blocking.read_line(&mut line) {
+        match buf_reader.read_line(&mut line) {
             Ok(0) => panic!("EOF reached before controlled started"),
             Ok(_) => {
                 let trimmed = line.trim();
@@ -138,13 +132,10 @@ fn pty_controller_entry_point(
                     test_running_seen = true;
                     eprintln!("  ✓ Test is running in controlled");
                 }
-                if trimmed.contains("CONTROLLED_READY") {
+                if trimmed.contains(CONTROLLED_READY) {
                     eprintln!("  ✓ Controlled process confirmed running!");
                     break;
                 }
-            }
-            Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {
-                std::thread::sleep(Duration::from_millis(10));
             }
             Err(e) => panic!("Read error while waiting for controlled: {e}"),
         }
@@ -199,7 +190,7 @@ fn pty_controller_entry_point(
         // Read responses until we get an event line (skip test harness noise)
         let event_line = loop {
             let mut line = String::new();
-            match buf_reader_non_blocking.read_line(&mut line) {
+            match buf_reader.read_line(&mut line) {
                 Ok(0) => {
                     panic!("EOF reached before receiving event for {desc}");
                 }
@@ -263,7 +254,7 @@ fn pty_controller_entry_point(
 /// This function MUST exit before returning so other tests don't run.
 fn pty_controlled_entry_point() -> ! {
     // Print to stdout immediately to confirm controlled is running.
-    println!("CONTROLLED_READY");
+    println!("{CONTROLLED_READY}");
     std::io::stdout().flush().expect("Failed to flush");
 
     // CRITICAL: Set the terminal (controlled PTY) to raw mode.

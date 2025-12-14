@@ -8,7 +8,7 @@
 //! - Calling `disable()` when already disabled
 //! - Original settings are preserved across cycles
 
-use crate::{PtyPair, generate_pty_test};
+use crate::{ControlledChild, PtyPair, generate_pty_test};
 use rustix::termios;
 use std::{io::{BufRead, BufReader, Write},
           time::{Duration, Instant}};
@@ -33,10 +33,7 @@ generate_pty_test! {
 }
 
 /// Controller process: verifies that controlled process completes multiple cycles successfully.
-fn pty_controller_entry_point(
-    pty_pair: PtyPair,
-    mut child: Box<dyn portable_pty::Child + Send + Sync>,
-) {
+fn pty_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
     eprintln!("🚀 PTY Controller: Starting multiple cycles test...");
 
     let reader = pty_pair

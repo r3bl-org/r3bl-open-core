@@ -46,11 +46,11 @@
 //! The dedicated thread can't be terminated or cancelled, and it safely owns [`stdin`]
 //! exclusively. The OS is responsible for cleaning it up when the process exits.
 //!
-//! | Exit Mechanism           | How Thread Exits                           |
-//! | ------------------------ | ------------------------------------------ |
-//! | Ctrl+C / `SIGINT`        | OS terminates process → all threads killed |
-//! | [`std::process::exit()`] | OS terminates process → all threads killed |
-//! | `main()` returns         | Rust runtime exits → OS terminates process |
+//! | Exit Mechanism           | How Thread Exits                            |
+//! | ------------------------ | ------------------------------------------- |
+//! | Ctrl+C / `SIGINT`        | OS terminates process → all threads killed  |
+//! | [`std::process::exit()`] | OS terminates process → all threads killed  |
+//! | `main()` returns         | Rust runtime exits → OS terminates process  |
 //! | [`stdin`] EOF            | `read()` returns 0 → thread exits naturally |
 //!
 //! This is ok because:
@@ -196,7 +196,7 @@
 //! [`poll()`]: https://man7.org/linux/man-pages/man2/poll.2.html
 //! [`tokio::io::stdin()`]: tokio::io::stdin
 //! [`tokio::select!`]: tokio::select
-//! [`global_input_resource`]: super::global_input_resource
+//! [`global_input_resource`]: super::global_input_resource#the-problems
 //! [`INPUT_RESOURCE`]: super::global_input_resource::INPUT_RESOURCE
 //! [`LazyLock`]: std::sync::LazyLock
 //! [`SourceFd`]: mio::unix::SourceFd
