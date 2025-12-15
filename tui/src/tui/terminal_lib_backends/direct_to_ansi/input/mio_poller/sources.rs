@@ -32,7 +32,7 @@ use std::io::Stdin;
 /// To add a new event source:
 /// 1. Add a new field to this struct.
 /// 2. Add a new variant and token constant to [`SourceKindReady`].
-/// 3. Register the source in [`MioPoller::setup()`].
+/// 3. Register the source in [`MioPollerThread::setup()`].
 /// 4. Add a handler function in [`handler_stdin`] or [`handler_signals`].
 /// 5. Add a match arm in [`dispatch()`].
 ///
@@ -40,7 +40,7 @@ use std::io::Stdin;
 /// [`handler_signals`]: mod@crate::tui::terminal_lib_backends::direct_to_ansi::input::mio_poller::handler_signals
 /// [`handler_stdin`]: mod@crate::tui::terminal_lib_backends::direct_to_ansi::input::mio_poller::handler_stdin
 /// [`HashMap<Token, Source>`]: std::collections::HashMap
-/// [`MioPoller::setup()`]: crate::tui::terminal_lib_backends::direct_to_ansi::input::mio_poller::poller::MioPoller::setup
+/// [`MioPollerThread::setup()`]: crate::tui::terminal_lib_backends::direct_to_ansi::input::mio_poller::poller_thread::MioPollerThread::setup
 /// [`Poll::poll()`]: mio::Poll::poll
 /// [`Poll`]: mio::Poll
 /// [`Signals`]: signal_hook_mio::v1_0::Signals
@@ -52,7 +52,7 @@ use std::io::Stdin;
 /// [signals]: signal_hook_mio::v1_0::Signals
 #[allow(missing_debug_implementations)]
 pub struct SourceRegistry {
-    /// [`Stdin`] handle registered with [`MioPoller::poll_handle`].
+    /// [`Stdin`] handle registered with [`MioPollerThread::poll_handle`].
     ///
     /// See [What is a "Source"?] for [`mio`] terminology.
     ///
@@ -61,14 +61,14 @@ pub struct SourceRegistry {
     ///
     /// [What is a "Source"?]: SourceRegistry#what-is-a-source
     /// [`consume_stdin_input()`]: crate::tui::terminal_lib_backends::direct_to_ansi::input::mio_poller::handler_stdin::consume_stdin_input
-    /// [`MioPoller::poll_handle`]: crate::tui::terminal_lib_backends::direct_to_ansi::input::mio_poller::poller::MioPoller::poll_handle
+    /// [`MioPollerThread::poll_handle`]: crate::tui::terminal_lib_backends::direct_to_ansi::input::mio_poller::poller_thread::MioPollerThread::poll_handle
     /// [`to_token()`]: SourceKindReady::to_token
     pub stdin: Stdin,
 
-    /// `SIGWINCH` signal handler registered with [`MioPoller::poll_handle`].
+    /// [`SIGWINCH`] signal handler registered with [`MioPollerThread::poll_handle`].
     ///
     /// See [What is a "Source"?] for [`mio`] terminology. [`signal_hook_mio`] provides
-    /// an adapter that creates an internal pipe becoming readable when `SIGWINCH`
+    /// an adapter that creates an internal pipe becoming readable when [`SIGWINCH`]
     /// arrives.
     ///
     /// - **Token**: [`SourceKindReady::Signals`].[`to_token()`].
@@ -76,8 +76,9 @@ pub struct SourceRegistry {
     ///
     /// [What is a "Source"?]: SourceRegistry#what-is-a-source
     /// [`consume_pending_signals()`]: crate::tui::terminal_lib_backends::direct_to_ansi::input::mio_poller::handler_signals::consume_pending_signals
-    /// [`MioPoller::poll_handle`]: crate::tui::terminal_lib_backends::direct_to_ansi::input::mio_poller::poller::MioPoller::poll_handle
+    /// [`MioPollerThread::poll_handle`]: crate::tui::terminal_lib_backends::direct_to_ansi::input::mio_poller::poller_thread::MioPollerThread::poll_handle
     /// [`signal_hook_mio`]: signal_hook_mio
+    /// [`SIGWINCH`]: signal_hook::consts::SIGWINCH
     /// [`to_token()`]: SourceKindReady::to_token
     pub signals: Signals,
 }
@@ -102,7 +103,9 @@ pub struct SourceRegistry {
 pub enum SourceKindReady {
     /// [`SourceRegistry::stdin`] has data available to read.
     Stdin,
-    /// [`SourceRegistry::signals`] received `SIGWINCH`.
+    /// [`SourceRegistry::signals`] received [`SIGWINCH`].
+    ///
+    /// [`SIGWINCH`]: signal_hook::consts::SIGWINCH
     Signals,
     /// Unknown token - should not happen in normal operation.
     Unknown,

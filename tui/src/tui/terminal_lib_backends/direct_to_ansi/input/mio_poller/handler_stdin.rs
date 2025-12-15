@@ -4,7 +4,7 @@
 
 //! Event handlers for stdin input processing.
 
-use super::poller::MioPoller;
+use super::poller_thread::MioPollerThread;
 use crate::tui::{DEBUG_TUI_SHOW_TERMINAL_BACKEND,
                  terminal_lib_backends::direct_to_ansi::input::{paste_state_machine::apply_paste_state_machine,
                                                                 types::{PasteStateResult,
@@ -21,16 +21,19 @@ pub const STDIN_READ_BUFFER_SIZE: usize = 1_024;
 /// Handles [`stdin`] becoming readable.
 ///
 /// Reads bytes from [`stdin`], parses them into [`VT100InputEventIR`] events, applies
-/// the paste state machine, and sends final events to the channel.
+/// the paste state machine, and sends final events to the channel. See [EINTR Handling]
+/// for how interrupted syscalls are handled.
 ///
 /// # Returns
 ///
 /// - [`ThreadLoopContinuation::Continue`]: Successfully processed or recoverable error.
-/// - [`ThreadLoopContinuation::Return`]: EOF, fatal error, or receiver dropped.
+/// - [`ThreadLoopContinuation::Return`]: [`EOF`], fatal error, or receiver dropped.
 ///
+/// [EINTR Handling]: super#eintr-handling
+/// [`EOF`]: https://en.wikipedia.org/wiki/End-of-file
 /// [`VT100InputEventIR`]: crate::core::ansi::vt_100_terminal_input_parser::VT100InputEventIR
 /// [`stdin`]: std::io::stdin
-pub fn consume_stdin_input(poller: &mut MioPoller) -> ThreadLoopContinuation {
+pub fn consume_stdin_input(poller: &mut MioPollerThread) -> ThreadLoopContinuation {
     let read_res = poller
         .sources
         .stdin
@@ -48,9 +51,7 @@ pub fn consume_stdin_input(poller: &mut MioPoller) -> ThreadLoopContinuation {
         Ok(n) => parse_stdin_bytes(poller, n),
 
         Err(ref e) if e.kind() == ErrorKind::Interrupted => {
-            // EINTR ("Interrupted" — a signal arrived while the syscall was blocked).
-            // Will retry on next poll iteration.
-            // https://man7.org/linux/man-pages/man7/signal.7.html
+            // EINTR - retry (see module docs: EINTR Handling).
             ThreadLoopContinuation::Continue
         }
 
@@ -78,7 +79,10 @@ pub fn consume_stdin_input(poller: &mut MioPoller) -> ThreadLoopContinuation {
 /// Parses bytes read from stdin into input events.
 ///
 /// Parses bytes into VT100 events and sends them through the paste state machine.
-pub fn parse_stdin_bytes(poller: &mut MioPoller, n: usize) -> ThreadLoopContinuation {
+pub fn parse_stdin_bytes(
+    poller: &mut MioPollerThread,
+    n: usize,
+) -> ThreadLoopContinuation {
     DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
         tracing::debug!(message = "mio-poller-thread: read bytes", bytes_read = n);
     });

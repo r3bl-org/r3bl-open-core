@@ -2,7 +2,7 @@
 
 // cspell:words EINTR
 
-//! Core [`MioPoller`] struct and lifecycle methods.
+//! Core [`MioPollerThread`] struct and lifecycle methods.
 
 use super::{SourceKindReady, SourceRegistry, dispatcher::dispatch,
             handler_stdin::STDIN_READ_BUFFER_SIZE};
@@ -28,31 +28,32 @@ const EVENTS_CAPACITY: usize = 8;
 ///
 /// [module-level documentation]: super
 #[allow(missing_debug_implementations)]
-pub struct MioPoller {
+pub struct MioPollerThread {
     /// [`mio`] poll instance for efficient I/O multiplexing.
     ///
     /// - **Registered sources**: [`SourceRegistry::stdin`], [`SourceRegistry::signals`].
     /// - **Used by**: [`start()`] blocks on this until sources are ready.
     ///
-    /// [`start()`]: MioPoller::start
+    /// [`start()`]: MioPollerThread::start
     pub poll_handle: Poll,
 
     /// Buffer for events returned by [`Poll::poll()`].
     ///
     /// - **Populated by**: [`Poll::poll()`] fills this when [`std::io::stdin`] or
-    ///   `SIGWINCH` becomes ready.
+    ///   [`SIGWINCH`] becomes ready.
     /// - **Drained by**: [`start()`] iterates and dispatches to token-specific handlers
     ///   via [`dispatch()`].
     ///
     /// [`dispatch()`]: crate::tui::terminal_lib_backends::direct_to_ansi::input::mio_poller::dispatcher::dispatch
-    /// [`start()`]: MioPoller::start
+    /// [`SIGWINCH`]: signal_hook::consts::SIGWINCH
+    /// [`start()`]: MioPollerThread::start
     pub ready_events_buffer: Events,
 
     /// Registry of all event sources monitored by [`poll_handle`].
     ///
     /// Centralizes management of heterogeneous sources ([`stdin`], [`signals`]).
     ///
-    /// [`poll_handle`]: MioPoller::poll_handle
+    /// [`poll_handle`]: MioPollerThread::poll_handle
     /// [`signals`]: SourceRegistry::signals
     /// [`stdin`]: SourceRegistry::stdin
     pub sources: SourceRegistry,
@@ -95,7 +96,7 @@ pub struct MioPoller {
     pub tx_parsed_input_events: InputEventSender,
 }
 
-impl MioPoller {
+impl MioPollerThread {
     /// Spawns the [`mio`] poller thread, which runs for the process lifetime.
     ///
     /// # Arguments
@@ -119,6 +120,7 @@ impl MioPoller {
     ///
     /// [Thread Lifecycle]: super#thread-lifecycle
     /// [`JoinHandle`]: std::thread::JoinHandle
+    /// [`SIGWINCH`]: signal_hook::consts::SIGWINCH
     /// [`htop`]: https://htop.dev/
     /// [`ps`]: https://man7.org/linux/man-pages/man1/ps.1.html
     /// [`stdin`]: std::io::stdin
@@ -139,6 +141,7 @@ impl MioPoller {
     ///
     /// Panics if [`mio::Poll`] creation or registration fails.
     ///
+    /// [`SIGWINCH`]: signal_hook::consts::SIGWINCH
     /// [`stdin`]: std::io::stdin
     #[must_use]
     pub fn setup(tx_parsed_input_events: InputEventSender) -> Self {
@@ -185,6 +188,10 @@ impl MioPoller {
 
     /// Runs the main event loop until exit condition is met.
     ///
+    /// Blocks on [`Poll::poll()`] waiting for [`stdin`] or [`SIGWINCH`] to become ready,
+    /// then dispatches to the appropriate handler. See [EINTR Handling] for how
+    /// interrupted syscalls are handled.
+    ///
     /// <div class="warning">
     ///
     /// Note that the call to [`Poll::poll()`] is what [`inotifywait`] uses under the
@@ -195,7 +202,10 @@ impl MioPoller {
     ///
     /// </div>
     ///
+    /// [EINTR Handling]: super#eintr-handling
     /// [`inotifywait`]: https://linux.die.net/man/1/inotifywait
+    /// [`SIGWINCH`]: signal_hook::consts::SIGWINCH
+    /// [`stdin`]: std::io::stdin
     pub fn start(&mut self) {
         // Breaks borrow so dispatch can use `&mut self`.
         fn collect_ready_tokens(events: &Events) -> Vec<Token> {
@@ -206,8 +216,7 @@ impl MioPoller {
             // Block until stdin or signals become ready.
             if let Err(err) = self.poll_handle.poll(&mut self.ready_events_buffer, None) {
                 match err.kind() {
-                    // EINTR ("Interrupted" — a signal arrived while the syscall was
-                    // blocked). Retry poll. https://man7.org/linux/man-pages/man7/signal.7.html
+                    // EINTR - retry (see module docs: EINTR Handling).
                     ErrorKind::Interrupted => continue,
                     _ => {
                         DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {

@@ -42,7 +42,7 @@
 //! 3. **Flawed `ESC` detection over [SSH].** Our original approach had flawed logic for
 //!    distinguishing the `ESC` key from escape sequences (like `ESC [ A` for Up Arrow).
 //!    It worked locally but failed over [SSH]. We now use [`crossterm`]'s `more` flag
-//!    heuristic (see [ESC Detection Limitations] in [`MioPoller`]).
+//!    heuristic (see [ESC Detection Limitations] in [`MioPollerThread`]).
 //!
 //! ## The Solution
 //!
@@ -52,7 +52,7 @@
 //!
 //! Although sync and blocking, [`mio`] is efficient. It uses OS primitives ([`epoll`] on
 //! Linux, [`kqueue`] on BSD/macOS) that put the thread to sleep until data arrives,
-//! consuming no CPU while waiting. See [How It Works] in [`MioPoller`] for details.
+//! consuming no CPU while waiting. See [How It Works] in [`MioPollerThread`] for details.
 //!
 //! ```text
 //!     Process-bound Global Singleton                       Async Consumers
@@ -77,7 +77,7 @@
 //!    process.
 //!
 //! To solve the third problem for `ESC` detection, we use [`crossterm`]'s `more` flag
-//! heuristic (see [ESC Detection Limitations] in [`MioPoller`]).
+//! heuristic (see [ESC Detection Limitations] in [`MioPollerThread`]).
 //!
 //! # Architecture Overview
 //!
@@ -106,7 +106,7 @@
 //! Multiple [`DirectToAnsiInputDevice`] instances can be created and dropped, but they
 //! all share the same underlying channel and process global (singleton) reader thread.
 //!
-//! See [`MioPoller`] for details on how the mio poller thread works, including
+//! See [`MioPollerThread`] for details on how the mio poller thread works, including
 //! file descriptor handling, parsing, thread lifecycle, and ESC detection limitations.
 //!
 //! # Data Flow Diagram
@@ -125,7 +125,7 @@
 //!    [`signal-hook-mio`] for [`SIGWINCH`] and we do the same.
 //! 3. **ESC disambiguation**: The `more` flag heuristic for distinguishing ESC key from
 //!    escape sequences without timeouts. We inherit both its benefits (zero latency) and
-//!    limitations (see [ESC Detection Limitations] in [`MioPoller`]).
+//!    limitations (see [ESC Detection Limitations] in [`MioPollerThread`]).
 //! 4. **Process-lifetime cleanup**: They rely on OS cleanup at process exit rather than
 //!    explicit thread termination, and so do we.
 //!
@@ -162,11 +162,11 @@
 //! [`readline_async`]: mod@crate::readline_async
 //! [`SIGWINCH`]: signal_hook::consts::SIGWINCH
 //! [SSH]: https://en.wikipedia.org/wiki/Secure_Shell
-//! [`MioPoller`]: super::mio_poller::MioPoller
-//! [How It Works]: super::mio_poller::MioPoller#how-it-works
-//! [ESC Detection Limitations]: super::mio_poller::MioPoller#esc-detection-limitations
+//! [`MioPollerThread`]: super::mio_poller::MioPollerThread
+//! [How It Works]: super::mio_poller::MioPollerThread#how-it-works
+//! [ESC Detection Limitations]: super::mio_poller::MioPollerThread#esc-detection-limitations
 
-use super::{mio_poller::MioPoller,
+use super::{mio_poller::MioPollerThread,
             types::{CHANNEL_CAPACITY, InputEventReceiver, InputEventSender}};
 use std::sync::LazyLock;
 
@@ -176,7 +176,7 @@ use std::sync::LazyLock;
 /// - Independent async consumers should use [`subscribe_to_input_events()`] to get input
 ///   events & signals.
 /// - See the [module-level documentation] for details on why global state is necessary.
-/// - See [`MioPoller`] docs for details on how the dedicated thread works.
+/// - See [`MioPollerThread`] docs for details on how the dedicated thread works.
 ///
 /// [initialized]: initialize_input_resource
 /// [module-level documentation]: self
@@ -189,7 +189,7 @@ pub static INPUT_RESOURCE: LazyLock<std::sync::Mutex<Option<InputEventSender>>> 
 /// events.
 ///
 /// The global static singleton [`INPUT_RESOURCE`] contains one [`broadcast::Sender`].
-/// This channel acts as a bridge between sync the only [`MioPoller`] and the many
+/// This channel acts as a bridge between sync the only [`MioPollerThread`] and the many
 /// async consumers. We don't need to capture the broadcast channel itself in the
 /// singleton, only the sender, since it is trivial to create new receivers from it.
 ///
@@ -208,19 +208,19 @@ pub static INPUT_RESOURCE: LazyLock<std::sync::Mutex<Option<InputEventSender>>> 
 ///
 /// # Thread Spawning
 ///
-/// On first call, this spawns the [`mio`] poller thread via [`MioPoller::spawn_thread()`]
-/// which uses [`mio::Poll`] to wait on both [`stdin`] data and [`SIGWINCH`] signals.
-/// See the [Thread Lifecycle] section in [`MioPoller`] for details on thread
-/// lifetime and exit conditions.
+/// On first call, this spawns the [`mio`] poller thread via
+/// [`MioPollerThread::spawn_thread()`] which uses [`mio::Poll`] to wait on both [`stdin`]
+/// data and [`SIGWINCH`] signals. See the [Thread Lifecycle] section in
+/// [`MioPollerThread`] for details on thread lifetime and exit conditions.
 ///
 /// # Panics
 ///
 /// Panics if:
-/// 1. Thread spawning fails; see [`MioPoller::spawn_thread()`] for details.
+/// 1. Thread spawning fails; see [`MioPollerThread::spawn_thread()`] for details.
 /// 2. The [`INPUT_RESOURCE`] mutex is poisoned.
 /// 3. The [`INPUT_RESOURCE`] is `None` after initialization (invariant violation).
 ///
-/// [Thread Lifecycle]: MioPoller#thread-lifecycle
+/// [Thread Lifecycle]: MioPollerThread#thread-lifecycle
 /// [`stdin`]: std::io::stdin
 /// [`INPUT_RESOURCE`]: INPUT_RESOURCE
 /// [`broadcast::Sender::subscribe()`]: tokio::sync::broadcast::Sender::subscribe
@@ -242,12 +242,12 @@ pub fn subscribe_to_input_events() -> InputEventReceiver {
         .subscribe()
 }
 
-/// Creates the broadcast channel and spawns the [`MioPoller`] thread.
+/// Creates the broadcast channel and spawns the [`MioPollerThread`] thread.
 ///
 /// Called once on first access to [`INPUT_RESOURCE`].
 pub fn initialize_input_resource(input_resource_guard: &mut Option<InputEventSender>) {
     let (tx_parsed_input_events, _): (InputEventSender, _) =
         tokio::sync::broadcast::channel(CHANNEL_CAPACITY);
     input_resource_guard.replace(tx_parsed_input_events.clone());
-    MioPoller::spawn_thread(tx_parsed_input_events);
+    MioPollerThread::spawn_thread(tx_parsed_input_events);
 }

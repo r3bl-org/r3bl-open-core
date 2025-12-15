@@ -106,7 +106,7 @@
 //! - [`generate_test_render_ops`] - Test render operations.
 //! - [`controller`] - PTY master logic that captures all bytes.
 //! - [`controlled_crossterm`] - Crossterm backend controlled process.
-//! - [`controlled_direct_to_ansi`] - DirectToAnsi backend controlled process.
+//! - [`controlled_direct_to_ansi`] - `DirectToAnsi` backend controlled process.
 //!
 //! [`Crossterm`]: crate::TerminalLibBackend::Crossterm
 //! [`DirectToAnsi`]: crate::TerminalLibBackend::DirectToAnsi
@@ -154,6 +154,10 @@ const CONTROLLED_READY: &str = "CONTROLLED_READY";
 /// ```bash
 /// cargo test -p r3bl_tui --lib test_backend_compat_output_compare -- --nocapture
 /// ```
+///
+/// # Panics
+///
+/// Panics if the `PTY_CONTROLLED_ENV_VAR` is set to an unknown backend value.
 #[test]
 pub fn test_backend_compat_output_compare() {
     // Check if we're running as a controlled process.
@@ -375,14 +379,14 @@ mod controlled_crossterm {
     }
 }
 
-/// DirectToAnsi backend controlled process.
+/// `DirectToAnsi` backend controlled process.
 mod controlled_direct_to_ansi {
     use super::*;
 
-    /// DirectToAnsi controlled process entry point.
+    /// `DirectToAnsi` controlled process entry point.
     ///
     /// Uses [`terminal_raw_mode::raw_mode_unix::enable_raw_mode()`] directly (the
-    /// rustix-based implementation) to explicitly test the DirectToAnsi backend's raw
+    /// rustix-based implementation) to explicitly test the `DirectToAnsi` backend's raw
     /// mode.
     pub fn run() -> ! {
         // 1. Signal ready (before enabling raw mode so newlines work normally).

@@ -3,7 +3,7 @@
 //! Event dispatching for the [`mio`] poller event loop.
 
 use super::{handler_signals::consume_pending_signals,
-            handler_stdin::consume_stdin_input, poller::MioPoller,
+            handler_stdin::consume_stdin_input, poller_thread::MioPollerThread,
             sources::SourceKindReady};
 use crate::tui::{DEBUG_TUI_SHOW_TERMINAL_BACKEND,
                  terminal_lib_backends::direct_to_ansi::input::types::ThreadLoopContinuation};
@@ -17,7 +17,7 @@ use mio::Token;
 /// # Arguments
 ///
 /// - `source_kind`: Which source kind became ready ([`SourceKindReady`]).
-/// - `poller`: The [`MioPoller`] containing the state for handlers.
+/// - `poller`: The [`MioPollerThread`] containing the state for handlers.
 /// - `token`: The original [`Token`] for diagnostic logging on unknown tokens.
 ///
 /// # Returns
@@ -26,7 +26,7 @@ use mio::Token;
 /// - [`ThreadLoopContinuation::Return`]: Exit condition met.
 pub fn dispatch(
     source_kind: SourceKindReady,
-    poller: &mut MioPoller,
+    poller: &mut MioPollerThread,
     token: Token,
 ) -> ThreadLoopContinuation {
     match source_kind {

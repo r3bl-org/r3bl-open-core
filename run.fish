@@ -1,5 +1,7 @@
 #!/usr/bin/env fish
 
+# cspell:words cloc warloc binstall pushd popd pangrams idiomaticity
+
 # fish docs
 # - getting started: https://developerlife.com/2021/01/19/fish-scripting-manual/
 # - language fundamentals: https://fishshell.com/docs/current/language.html
@@ -96,7 +98,9 @@ function main
             check-full-watch-doc
         case unmaintained-deps
             unmaintained-deps
-        case help
+        case cloc
+            cloc
+        case help --help -h
             print-help all
         case build-server
             build-server
@@ -156,32 +160,33 @@ function print-help
         echo "    "(set_color green)"docs"(set_color normal)"                 Generate docs for all"
         echo "    "(set_color green)"serve-docs"(set_color normal)"           Serve documentation"
         echo "    "(set_color green)"rustfmt"(set_color normal)"              Format all code"
-        echo "    "(set_color green)"rustdoc-fmt"(set_color normal)"           Format rustdoc comments"
+        echo "    "(set_color green)"rustdoc-fmt"(set_color normal)"          Format rustdoc comments"
         echo "    "(set_color green)"install-cargo-tools"(set_color normal)"  Install all dev tools (crates.io + local source)"
         echo "    "(set_color green)"upgrade-deps"(set_color normal)"         Upgrade dependencies"
         echo "    "(set_color green)"update-cargo-tools"(set_color normal)"   Update all tools (crates.io + rebuild local source)"
         echo "    "(set_color green)"audit-deps"(set_color normal)"           Security audit"
         echo "    "(set_color green)"unmaintained-deps"(set_color normal)"    Check for unmaintained deps"
+        echo "    "(set_color green)"cloc"(set_color normal)"                 Count lines of code (cargo-warloc)"
         echo "    "(set_color green)"toolchain-update"(set_color normal)"     Update Rust to month-old nightly"
         echo "    "(set_color green)"toolchain-sync"(set_color normal)"       Sync environment to rust-toolchain.toml"
-        echo "    "(set_color green)"toolchain-validate"(set_color normal)"        Quick toolchain validation (components only)"
+        echo "    "(set_color green)"toolchain-validate"(set_color normal)"   Quick toolchain validation (components only)"
         echo "    "(set_color green)"toolchain-validate-complete"(set_color normal)"  Complete toolchain validation (full build+test)"
         echo "    "(set_color green)"toolchain-remove"(set_color normal)"     Remove ALL toolchains (testing)"
         echo "    "(set_color green)"build-server"(set_color normal)"         Remote build server - uses rsync"
         echo ""
         echo (set_color cyan --bold)"Watch commands:"(set_color normal)
-        echo "    "(set_color green)"test-watch"(set_color normal)" "(set_color blue)"[pattern]"(set_color normal)"      Watch files, run specific test"
-        echo "    "(set_color green)"clippy-watch"(set_color normal)"         Watch files, run clippy"
-        echo "    "(set_color green)"check-watch"(set_color normal)"          Watch files, run cargo check"
-        echo "    "(set_color green)"check-full-watch"(set_color normal)"     Watch files, run all checks (tests, doctests, docs)"
+        echo "    "(set_color green)"test-watch"(set_color normal)" "(set_color blue)"[pattern]"(set_color normal)"  Watch files, run specific test"
+        echo "    "(set_color green)"clippy-watch"(set_color normal)"          Watch files, run clippy"
+        echo "    "(set_color green)"check-watch"(set_color normal)"           Watch files, run cargo check"
+        echo "    "(set_color green)"check-full-watch"(set_color normal)"      Watch files, run all checks (tests, doctests, docs)"
         echo "    "(set_color green)"check-full-watch-test"(set_color normal)" Watch files, run tests and doctests"
         echo "    "(set_color green)"check-full-watch-doc"(set_color normal)"  Watch files, run doc build only"
         echo ""
         echo (set_color cyan --bold)"TUI-specific commands:"(set_color normal)
-        echo "    "(set_color green)"run-examples"(set_color normal)" "(set_color blue)"[--release] [--no-log]"(set_color normal)"  Run TUI examples"
-        echo "    "(set_color green)"run-examples-flamegraph-svg"(set_color normal)"  Generate SVG flamegraph"
-        echo "    "(set_color green)"run-examples-flamegraph-fold"(set_color normal)" "(set_color blue)"[--benchmark]"(set_color normal)"  Generate perf-folded (use --benchmark for reproducible profiling)"
-        echo "    "(set_color green)"bench"(set_color normal)"                Run benchmarks"
+        echo "    "(set_color green)"run-examples"(set_color normal)" "(set_color blue)"[--release] [--no-log]"(set_color normal)"        Run TUI examples"
+        echo "    "(set_color green)"run-examples-flamegraph-svg"(set_color normal)"                Generate SVG flamegraph"
+        echo "    "(set_color green)"run-examples-flamegraph-fold"(set_color normal)" "(set_color blue)"[--benchmark]"(set_color normal)" Generate perf-folded (use --benchmark for reproducible profiling)"
+        echo "    "(set_color green)"bench"(set_color normal)"                                      Run benchmarks"
         echo ""
         echo (set_color cyan --bold)"Local source package commands:"(set_color normal)
         echo "    "(set_color green)"install-cmdr"(set_color normal)"         Install cmdr binaries (edi, giti, rc) from source"
@@ -342,6 +347,7 @@ function install-cargo-tools
         "cargo-unmaintained" \
         "cargo-expand" \
         "cargo-readme" \
+        "cargo-warloc" \
         "flamegraph" \
         "inferno"
 
@@ -414,6 +420,25 @@ end
 # This is very slow to run.
 function unmaintained-deps
     cargo unmaintained --color always --fail-fast --tree --verbose
+end
+
+# Counts lines of code in the workspace using cargo-warloc.
+#
+# This function provides a quick summary of code metrics for the entire
+# workspace, including lines of code, comments, and blank lines.
+#
+# Features:
+# - Fast line counting optimized for Rust projects
+# - Breakdown by file type
+# - Workspace-aware (respects Cargo.toml workspace members)
+#
+# Prerequisites:
+# - cargo-warloc must be installed (via install-cargo-tools)
+#
+# Usage:
+#   fish run.fish cloc
+function cloc
+    cargo warloc
 end
 
 # Updates Rust toolchain to a month-old nightly version and cleans up old toolchains.

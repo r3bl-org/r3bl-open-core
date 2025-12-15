@@ -6,11 +6,11 @@ use crate::InputEvent;
 
 /// Control flow signal for the mio poller thread's main loop.
 ///
-/// Used by [`MioPoller`] methods to indicate what the main loop should do next.
+/// Used by [`MioPollerThread`] methods to indicate what the main loop should do next.
 /// This operates at the thread level, controlling whether to continue polling
 /// or terminate the thread entirely.
 ///
-/// [`MioPoller`]: super::mio_poller::MioPoller
+/// [`MioPollerThread`]: super::mio_poller::MioPollerThread
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ThreadLoopContinuation {
     /// Continue to the next iteration of the event loop.

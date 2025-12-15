@@ -7,12 +7,27 @@
 //! This module encapsulates all state and logic for the [`mio`] poller thread. It owns
 //! and manages the following:
 //!
-//! | Resource    | Responsibility                                                                                                                   |
-//! | ----------- | -------------------------------------------------------------------------------------------------------------------------------- |
-//! | **Poll**    | Wait efficiently for [`stdin`] data and [`SIGWINCH`] signals                                                                     |
-//! | **Stdin**   | Read bytes into buffer -> handle using [VT100 input parser] and [paste state machine] to generate [`ReaderThreadMessage::Event`] |
-//! | **Signals** | Drain signals and generate [`ReaderThreadMessage::Resize`]                                                                       |
-//! | **Channel** | Publish [`ReaderThreadMessage`] variants to async consumers                                                                      |
+//! ## Quick Reference
+//!
+//! | Item                                | Description                                                        |
+//! | :---------------------------------- | :----------------------------------------------------------------- |
+//! | [`MioPollerThread`]                 | Core struct: owns poll handle, buffers, parser, and channel sender |
+//! | [`MioPollerThread::spawn_thread()`] | Entry point: spawns the dedicated `mio-poller` thread              |
+//! | [`MioPollerThread::start()`]        | Main event loop: blocks on [`mio::Poll`], dispatches events        |
+//! | [`SourceRegistry`]                  | Holds [`stdin`] and [`SIGWINCH`] signal handles                    |
+//! | [`SourceKindReady`]                 | Enum mapping [`mio::Token`] ↔ source kind for dispatch             |
+//! | [`dispatch()`]                      | Routes ready events to appropriate handlers                        |
+//! | [`consume_stdin_input()`]           | Reads and parses stdin bytes into [`InputEvent`]s                  |
+//! | [`consume_pending_signals()`]       | Drains [`SIGWINCH`] signals, sends [`Resize`]                      |
+//!
+//! ## Resources Managed
+//!
+//! | Resource     | Responsibility                                                                                                                    |
+//! | :----------- | :-------------------------------------------------------------------------------------------------------------------------------- |
+//! | **Poll**     | Wait efficiently for [`stdin`] data and [`SIGWINCH`] signals                                                                      |
+//! | **Stdin**    | Read bytes into buffer -> handle using [VT100 input parser] and [paste state machine] to generate [`ReaderThreadMessage::Event`]  |
+//! | **Signals**  | Drain signals and generate [`ReaderThreadMessage::Resize`]                                                                        |
+//! | **Channel**  | Publish [`ReaderThreadMessage`] variants to async consumers                                                                       |
 //!
 //! # How It Works
 //!
@@ -44,29 +59,42 @@
 //! ### Thread Lifecycle
 //!
 //! The dedicated thread can't be terminated or cancelled, and it safely owns [`stdin`]
-//! exclusively. The OS is responsible for cleaning it up when the process exits.
+//! exclusively. There are two distinct exit mechanisms:
 //!
-//! | Exit Mechanism           | How Thread Exits                            |
-//! | ------------------------ | ------------------------------------------- |
-//! | Ctrl+C / `SIGINT`        | OS terminates process → all threads killed  |
-//! | [`std::process::exit()`] | OS terminates process → all threads killed  |
-//! | `main()` returns         | Rust runtime exits → OS terminates process  |
-//! | [`stdin`] EOF            | `read()` returns 0 → thread exits naturally |
+//! #### Thread Self-Termination (process continues)
 //!
-//! This is ok because:
-//! - [`INPUT_RESOURCE`] lives for `'static` (the lifetime of the process) - it's a
-//!   [`LazyLock`]`<...>` static, never dropped until process exit.
-//! - Thread is doing nothing when blocked - [`mio`] uses efficient OS primitives.
-//! - No resources to leak - [`stdin`] is `fd` `0`, not owned by us.
+//! The thread exits gracefully while the process continues running. This allows async
+//! consumers to react (e.g., save state, clean up) before the application decides to exit:
 //!
-//! The thread self-terminates gracefully in these scenarios:
-//! 1. **EOF on [`stdin`]**: When [`stdin`] is closed (e.g., pipe closed, `Ctrl+D`),
-//!    `read()` returns 0 bytes. The thread sends [`ReaderThreadMessage::Eof`] and exits.
-//! 2. **I/O error**: On read errors (except [`EINTR`] which is retried), the thread sends
-//!    [`ReaderThreadMessage::Error`] and exits. [`EINTR`] is a `POSIX` error code meaning
-//!    "Interrupted" — a signal arrived while the syscall was blocked.
-//! 3. **Receiver dropped**: When [`INPUT_RESOURCE`] is dropped (process exit), the channel
-//!    receiver is dropped. The next `tx.send()` returns `Err`, and exits.
+//! | Trigger                    | Behavior                                               |
+//! | :------------------------- | :----------------------------------------------------- |
+//! | [`stdin`] [`EOF`]          | [`read()`] returns 0 → sends [`Eof`] → thread exits    |
+//! | I/O error (not [`EINTR`])  | Sends [`Error`] → thread exits                         |
+//! | Receiver dropped           | [`tx.send()`] returns [`Err`] → thread exits           |
+//!
+//! #### Process Termination (OS kills everything)
+//!
+//! When the process itself terminates, the OS kills all threads immediately—no cleanup
+//! code runs in the [`mio`] thread:
+//!
+//! | Trigger                    | Behavior                                               |
+//! | :------------------------- | :----------------------------------------------------- |
+//! | `main()` returns           | Process exits → OS terminates all threads              |
+//! | [`std::process::exit()`]   | OS terminates process → all threads killed             |
+//! | `Ctrl+C` / [`SIGINT`]      | OS terminates process → all threads killed             |
+//!
+//! This is safe because:
+//! - [`INPUT_RESOURCE`] is a [`LazyLock`]`<...>` static, never dropped until process exit.
+//! - The thread is doing nothing when blocked—[`mio`] uses efficient OS primitives.
+//! - There are no resources to leak—[`stdin`] is [`fd`][file descriptor] `0`, which is
+//!   not owned by us.
+//!
+//! #### EINTR Handling
+//!
+//! [`EINTR`] ([`ErrorKind::Interrupted`]) occurs when a signal interrupts a blocking
+//! [`syscall`]. Both [`poll()`] and [`read()`] can return this error. Unlike other
+//! errors, [`EINTR`] is **retried** (not sent as [`Error`])—the operation simply
+//! resumes on the next loop iteration.
 //!
 //! ## What is [`mio`]?
 //!
@@ -75,9 +103,9 @@
 //! - **Linux**: [`epoll`]
 //! - **macOS**: [`kqueue`]
 //!
-//! It's *blocking* but efficient - `poll.poll(&mut events, None)` blocks the thread until
-//! something happens on either `fd`. Unlike [`select()`] or raw [`poll()`], [`mio`] uses the
-//! optimal `syscall` per platform.
+//! It's *blocking* but efficient - [`poll.poll(&mut events, None)`] blocks the thread until
+//! something happens on either [file descriptor]. Unlike [`select()`] or raw [`poll()`], [`mio`] uses the
+//! optimal [`syscall`] per platform.
 //!
 //! <div class="warning">
 //!
@@ -86,19 +114,19 @@
 //! read - it keeps running as a "zombie", causing the problems described in
 //! [`global_input_resource`].
 //!
-//! **Why is [`MioPoller`] not implemented for macOS?** See [Why Linux-Only?] in the
-//! parent module — macOS [`kqueue`] can't poll PTY/tty file descriptors.
+//! **Why is [`MioPollerThread`] not implemented for macOS?** See [Why Linux-Only?] in
+//! the parent module—macOS [`kqueue`] can't poll PTY/tty file descriptors.
 //!
 //! </div>
 //!
 //! ## The Two File Descriptors
 //!
-//! A file descriptor (fd) is a Unix integer handle to an I/O resource (file, socket,
-//! pipe, etc.). Two fds are registered with [`mio`]'s registry so a single `poll()` call
+//! A [file descriptor] (`fd`) is a Unix integer handle to an I/O resource (file, socket,
+//! pipe, etc.). Two `fd`s are registered with [`mio`]'s registry so a single [`poll()`] call
 //! can wait on either becoming ready:
 //!
-//! **1. `stdin` fd** - The raw file descriptor (fd 0) for standard input, obtained via
-//! `std::io::stdin().as_raw_fd()`. We wrap it in [`SourceFd`] so mio can poll it:
+//! **1. `stdin` `fd`** - The raw file descriptor (`fd 0`) for standard input, obtained via
+//! [`std::io::stdin().as_raw_fd()`][AsRawFd::as_raw_fd]. We wrap it in [`SourceFd`] so [`mio`] can poll it:
 //!
 //! <!-- It is ok to use ignore here -->
 //! ```ignore
@@ -107,7 +135,7 @@
 //!
 //! **2. Signal watcher fd** - Signals aren't file descriptors, so [`signal_hook_mio`]
 //! provides a clever adapter: it creates an internal pipe that becomes readable when
-//! `SIGWINCH` arrives. This lets [`mio`] wait on signals just like any other fd:
+//! [`SIGWINCH`] arrives. This lets [`mio`] wait on signals just like any other fd:
 //!
 //! <!-- It is ok to use ignore here -->
 //! ```ignore
@@ -144,7 +172,7 @@
 //!
 //! # ESC Detection Limitations
 //!
-//! Both the `ESC` key and escape sequences (like Up Arrow = `ESC [ A`) start with the
+//! Both the `ESC` key and escape sequences (like `Up Arrow` = `ESC [ A`) start with the
 //! same byte (`1B`). When we read a lone `ESC` byte, is it the `ESC` key or the start of
 //! a sequence?
 //!
@@ -184,40 +212,57 @@
 //! **Trade-off**: Faster `ESC` response vs. occasional incorrect detection on
 //! high-latency connections.
 //!
-//! [Why Linux-Only?]: super#why-linux-only
-//! [`stdin`]: std::io::stdin
-//! [`mio::Poll`]: mio::Poll
-//! [`mio`]: mio
-//! [`tokio::sync::broadcast`]: tokio::sync::broadcast
-//! [`std::thread`]: std::thread
-//! [`epoll`]: https://man7.org/linux/man-pages/man7/epoll.7.html
-//! [`kqueue`]: https://man.freebsd.org/cgi/man.cgi?query=kqueue&sektion=2
-//! [`select()`]: https://man7.org/linux/man-pages/man2/select.2.html
-//! [`poll()`]: https://man7.org/linux/man-pages/man2/poll.2.html
-//! [`tokio::io::stdin()`]: tokio::io::stdin
-//! [`tokio::select!`]: tokio::select
-//! [`global_input_resource`]: super::global_input_resource#the-problems
-//! [`INPUT_RESOURCE`]: super::global_input_resource::INPUT_RESOURCE
-//! [`LazyLock`]: std::sync::LazyLock
-//! [`SourceFd`]: mio::unix::SourceFd
-//! [`signal_hook_mio`]: signal_hook_mio
-//! [`rustix::event::poll()`]: rustix::event::poll
-//! [`crossterm`]: ::crossterm
-//! [`ReaderThreadMessage`]: super::types::ReaderThreadMessage
-//! [`ReaderThreadMessage::Event`]: super::types::ReaderThreadMessage::Event
-//! [`ReaderThreadMessage::Resize`]: super::types::ReaderThreadMessage::Resize
-//! [`ReaderThreadMessage::Eof`]: super::types::ReaderThreadMessage::Eof
-//! [`ReaderThreadMessage::Error`]: super::types::ReaderThreadMessage::Error
-//! [`EINTR`]: https://man7.org/linux/man-pages/man7/signal.7.html
-//! [`Event(InputEvent)`]: super::types::ReaderThreadMessage::Event
-//! [`Resize`]: super::types::ReaderThreadMessage::Resize
-//! [`Eof`]: super::types::ReaderThreadMessage::Eof
-//! [`Error`]: super::types::ReaderThreadMessage::Error
-//! [`SIGWINCH`]: signal_hook::consts::SIGWINCH
-//! [100ms `ttimeoutlen` delay]:
-//!     https://vi.stackexchange.com/questions/24925/usage-of-timeoutlen-and-ttimeoutlen
+//! [100ms `ttimeoutlen` delay]: https://vi.stackexchange.com/questions/24925/usage-of-timeoutlen-and-ttimeoutlen
+//! [AsRawFd::as_raw_fd]: std::os::unix::io::AsRawFd::as_raw_fd
 //! [SSH]: https://en.wikipedia.org/wiki/Secure_Shell
 //! [VT100 input parser]: super::stateful_parser::StatefulInputParser
+//! [Why Linux-Only?]: super#why-linux-only
+//! [`EINTR`]: https://man7.org/linux/man-pages/man3/errno.3.html
+//! [`EOF`]: https://en.wikipedia.org/wiki/End-of-file
+//! [`Eof`]: super::types::ReaderThreadMessage::Eof
+//! [`Err`]: std::result::Result::Err
+//! [`ErrorKind::Interrupted`]: std::io::ErrorKind::Interrupted
+//! [`Error`]: super::types::ReaderThreadMessage::Error
+//! [`Event(InputEvent)`]: super::types::ReaderThreadMessage::Event
+//! [`INPUT_RESOURCE`]: super::global_input_resource::INPUT_RESOURCE
+//! [`InputEvent`]: crate::InputEvent
+//! [`LazyLock`]: std::sync::LazyLock
+//! [`MioPollerThread::spawn_thread()`]: poller_thread::MioPollerThread::spawn_thread
+//! [`MioPollerThread::start()`]: poller_thread::MioPollerThread::start
+//! [`MioPollerThread`]: poller_thread::MioPollerThread
+//! [`ReaderThreadMessage::Event`]: super::types::ReaderThreadMessage::Event
+//! [`ReaderThreadMessage::Resize`]: super::types::ReaderThreadMessage::Resize
+//! [`ReaderThreadMessage`]: super::types::ReaderThreadMessage
+//! [`Resize`]: super::types::ReaderThreadMessage::Resize
+//! [`SIGINT`]: signal_hook::consts::SIGINT
+//! [`SIGWINCH`]: signal_hook::consts::SIGWINCH
+//! [`SourceFd`]: mio::unix::SourceFd
+//! [`SourceKindReady`]: sources::SourceKindReady
+//! [`SourceRegistry`]: sources::SourceRegistry
+//! [`consume_pending_signals()`]: handler_signals::consume_pending_signals
+//! [`consume_stdin_input()`]: handler_stdin::consume_stdin_input
+//! [`crossterm`]: ::crossterm
+//! [`dispatch()`]: dispatcher::dispatch
+//! [`epoll`]: https://man7.org/linux/man-pages/man7/epoll.7.html
+//! [`global_input_resource`]: super::global_input_resource#the-problems
+//! [`kqueue`]: https://man.freebsd.org/cgi/man.cgi?query=kqueue&sektion=2
+//! [`mio::Poll`]: mio::Poll
+//! [`mio::Token`]: mio::Token
+//! [`mio`]: mio
+//! [`poll()`]: https://man7.org/linux/man-pages/man2/poll.2.html
+//! [`poll.poll(&mut events, None)`]: mio::Poll::poll
+//! [`read()`]: https://man7.org/linux/man-pages/man2/read.2.html
+//! [`rustix::event::poll()`]: rustix::event::poll
+//! [`select()`]: https://man7.org/linux/man-pages/man2/select.2.html
+//! [`signal_hook_mio`]: signal_hook_mio
+//! [`std::thread`]: std::thread
+//! [`stdin`]: std::io::stdin
+//! [`syscall`]: https://en.wikipedia.org/wiki/System_call
+//! [`tokio::io::stdin()`]: tokio::io::stdin
+//! [`tokio::select!`]: tokio::select
+//! [`tokio::sync::broadcast`]: tokio::sync::broadcast
+//! [`tx.send()`]: tokio::sync::broadcast::Sender::send
+//! [file descriptor]: https://en.wikipedia.org/wiki/File_descriptor
 //! [paste state machine]: super::paste_state_machine::PasteCollectionState
 
 // Skip rustfmt for rest of file.
@@ -226,9 +271,9 @@
 
 // Conditionally public for docs and tests (enables intra-doc links).
 #[cfg(any(test, doc))]
-pub mod poller;
+pub mod poller_thread;
 #[cfg(not(any(test, doc)))]
-mod poller;
+mod poller_thread;
 
 #[cfg(any(test, doc))]
 pub mod sources;
@@ -251,5 +296,5 @@ pub mod handler_stdin;
 mod handler_stdin;
 
 // Re-export public API.
-pub use poller::*;
+pub use poller_thread::*;
 pub use sources::*;

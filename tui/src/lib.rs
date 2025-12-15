@@ -125,7 +125,7 @@
 //! - [Platform-specific backends](#platform-specific-backends)
 //!   - [Backend selection](#backend-selection)
 //!   - [Crossterm backend (cross-platform)](#crossterm-backend-cross-platform)
-//!   - [DirectToAnsi backend (Linux-native)](#directtoansi-backend-linux-native)
+//!   - [`DirectToAnsi` backend (Linux-native)](#directtoansi-backend-linux-native)
 //!   - [Architecture](#architecture-2)
 //! - [VT100/ANSI escape sequence handling](#vt100ansi-escape-sequence-handling)
 //!   - [Input parsing](#input-parsing)
@@ -1566,7 +1566,7 @@
 //! - Well-tested across terminal emulators
 //! - Default choice for maximum compatibility
 //!
-//! ## DirectToAnsi backend (Linux-native)
+//! ## `DirectToAnsi` backend (Linux-native)
 //!
 //! `DirectToAnsi` is a pure-Rust ANSI sequence generator that bypasses external terminal
 //! libraries. It provides:
@@ -1584,7 +1584,7 @@
 //! **When to choose each:**
 //!
 //! - **Crossterm**: When you need cross-platform compatibility or target macOS/Windows
-//! - **DirectToAnsi**: When targeting Linux and want maximum performance
+//! - **`DirectToAnsi`**: When targeting Linux and want maximum performance
 //!
 //! ## Architecture
 //!
@@ -1702,10 +1702,10 @@
 //! - **Terminal emulation**: Build terminal emulators using the same battle-tested
 //!   VT100 parser that powers the terminal multiplexer
 //!
-//! **How r3bl_tui uses this for testing:**
+//! **How `r3bl_tui` uses this for testing:**
 //!
 //! The [`backend_compat_tests`] use in-memory terminal emulation to verify that
-//! Crossterm and DirectToAnsi backends produce identical output. Tests spawn
+//! Crossterm and `DirectToAnsi` backends produce identical output. Tests spawn
 //! controlled processes in real PTYs, capture their ANSI output, apply it to
 //! [`OffscreenBuffer`]s, and compare the resulting screen state — all without
 //! needing to visually inspect terminal output.
