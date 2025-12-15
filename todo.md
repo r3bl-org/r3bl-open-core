@@ -43,6 +43,8 @@
 
 - [x] fix [`add-backend-compat-tests.md`](task/done/add-backend-compat-tests.md:28)
 
+- [x] update README.md files [`update-readme.md`](task/done/update-readme.md)
+
 - [x] fix `rl_async` bugs [`rl_async_update.md`](task/done/rl_async_update.md):
   - https://github.com/r3bl-org/r3bl-open-core/issues/439
   - https://github.com/r3bl-org/r3bl-open-core/pull/440

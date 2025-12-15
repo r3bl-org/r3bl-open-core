@@ -1,5 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+// cspell:words hybridpartial clitextinline pixelcharrenderer outputdevice directtoansi insta
+
 // You can get the unicode symbols for the drawings here:
 // - <https://symbl.cc/en/unicode/blocks/miscellaneous-symbols-and-arrows/>
 // - <https://symbl.cc/en/unicode/blocks/box-drawing/>
@@ -82,6 +84,7 @@
 //!     - [Markdown Parser Conformance Testing](#markdown-parser-conformance-testing)
 //!     - [Next-Level PTY-Based Integration Testing](#next-level-pty-based-integration-testing)
 //!   - [Performance Analysis Features](#performance-analysis-features)
+//!     - [Automated Performance Regression Detection](#automated-performance-regression-detection)
 //! - [Examples to get you started](#examples-to-get-you-started)
 //!   - [Video of the demo in action](#video-of-the-demo-in-action)
 //! - [Type-safe bounds checking](#type-safe-bounds-checking)
@@ -119,6 +122,29 @@
 //!   - [Render pipeline (Path 1: Composed Component Pipeline)](#render-pipeline-path-1-composed-component-pipeline)
 //!   - [First render (Path 1)](#first-render-path-1)
 //!   - [Subsequent render (Path 1)](#subsequent-render-path-1)
+//! - [Platform-specific backends](#platform-specific-backends)
+//!   - [Backend selection](#backend-selection)
+//!   - [Crossterm backend (cross-platform)](#crossterm-backend-cross-platform)
+//!   - [DirectToAnsi backend (Linux-native)](#directtoansi-backend-linux-native)
+//!   - [Architecture](#architecture-2)
+//! - [VT100/ANSI escape sequence handling](#vt100ansi-escape-sequence-handling)
+//!   - [Input parsing](#input-parsing)
+//!   - [Output parsing](#output-parsing)
+//!   - [In-memory terminal emulation](#in-memory-terminal-emulation)
+//!   - [Key VT100 references](#key-vt100-references)
+//! - [Raw mode implementation](#raw-mode-implementation)
+//!   - [Raw mode vs cooked mode](#raw-mode-vs-cooked-mode)
+//!   - [Platform implementations](#platform-implementations)
+//!   - [Usage](#usage)
+//!   - [Terminal state management](#terminal-state-management)
+//! - [PTY testing infrastructure](#pty-testing-infrastructure)
+//!   - [Why PTY testing?](#why-pty-testing)
+//!   - [Architecture](#architecture-3)
+//!   - [The `generate_pty_test!` macro](#the-generate_pty_test-macro)
+//!   - [Controller and controlled functions](#controller-and-controlled-functions)
+//!   - [When to use each approach](#when-to-use-each-approach)
+//!   - [Running PTY tests](#running-pty-tests)
+//!   - [PTY testing examples](#pty-testing-examples)
 //! - [How does the editor component work?](#how-does-the-editor-component-work)
 //!   - [Zero-Copy Gap Buffer for High Performance](#zero-copy-gap-buffer-for-high-performance)
 //!     - [Key Performance Features](#key-performance-features)
@@ -557,6 +583,54 @@
 //! - **Interactive example selection**: Choose examples with fuzzy search
 //! - **Smart log monitoring**: Automatically detects and manages log files
 //!
+//! ### Automated Performance Regression Detection
+//!
+//! The project includes an AI-powered performance regression detection system that uses
+//! flamegraph analysis to detect performance changes:
+//!
+//! **How it works:**
+//!
+//! 1. **Baseline capture**: A performance baseline (`flamegraph-benchmark-baseline.perf-folded`)
+//!    is committed to git, representing the "current best" performance state
+//!
+//! 2. **Reproducible benchmarks**: The `--benchmark` flag uses `expect` to script input,
+//!    ensuring identical workloads across runs for apples-to-apples comparisons
+//!
+//! 3. **Automated analysis**: Claude Code's `analyze-performance` skill compares current
+//!    flamegraphs against baseline, identifying:
+//!    - Hot path changes (functions appearing more/less frequently)
+//!    - Sample count changes (increased = regression, decreased = improvement)
+//!    - New allocations or I/O in critical paths
+//!    - Call stack depth changes
+//!
+//! **Commands:**
+//!
+//! ```bash
+//! # Generate reproducible benchmark data
+//! ./run.fish run-examples-flamegraph-fold --benchmark
+//!
+//! # Analyze with Claude Code (detects regressions, suggests optimizations)
+//! # Use the /check-regression command or invoke the analyze-performance skill
+//! ```
+//!
+//! **Workflow:**
+//!
+//! ```text
+//! Make code change
+//!      ↓
+//! Run: ./run.fish run-examples-flamegraph-fold --benchmark
+//!      ↓
+//! Analyze: Compare flamegraph-benchmark.perf-folded vs baseline
+//!      ↓
+//! ┌─ Performance improved?
+//! │  ├─ YES → Update baseline, commit
+//! │  └─ NO  → Investigate regressions, optimize
+//! └→ Repeat
+//! ```
+//!
+//! This enables continuous performance monitoring — regressions are caught before they
+//! reach production, and optimizations are quantified with real data.
+//!
 //! # Examples to get you started
 //!
 //! <!-- How to upload video: https://stackoverflow.com/a/68269430/2085356 -->
@@ -923,9 +997,10 @@
 //!   approaches to building complex UI and large apps that may consist of many reusable
 //!   components and applets.
 //! - It is easy to swap out implementations of input and output devices away from `stdin`
-//!   and `stdout` while preserving all the existing code and functionality. This can produce
-//!   some interesting headless apps in the future, where the UI might be delegated to a window
-//!   using [eGUI](https://github.com/emilk/egui) or [iced-rs](https://iced.rs/) or [wgpu](https://wgpu.rs/).
+//!   and `stdout` while preserving all the existing code and functionality. This can
+//!   produce some interesting headless apps in the future, where the UI might be
+//!   delegated to a window using [eGUI](https://github.com/emilk/egui) or
+//!   [iced-rs](https://iced.rs/) or [wgpu](https://wgpu.rs/).
 //!
 //! # Life of an input event for a Full TUI app
 //!
@@ -1467,6 +1542,366 @@
 //! in order to render the [`PixelChar`]s on the screen. This diff-based optimization is
 //! what gives Path 1 its high performance characteristics compared to Path 2.
 //!
+//! # Platform-specific backends
+//!
+//! R3BL TUI supports multiple terminal backends to balance cross-platform compatibility
+//! with platform-specific optimizations.
+//!
+//! ## Backend selection
+//!
+//! The backend is selected **at compile time** via the `TERMINAL_LIB_BACKEND` constant:
+//!
+//! | Platform          | Default Backend | Why                                          |
+//! | ----------------- | --------------- | -------------------------------------------- |
+//! | **Linux**         | `DirectToAnsi`  | Pure Rust async I/O, ~18% better performance |
+//! | **macOS/Windows** | `Crossterm`     | Mature cross-platform support                |
+//!
+//! ## Crossterm backend (cross-platform)
+//!
+//! [Crossterm](https://github.com/crossterm-rs/crossterm) is a cross-platform terminal
+//! manipulation library. It provides:
+//!
+//! - Works on Linux, macOS, and Windows
+//! - Handles platform differences automatically
+//! - Well-tested across terminal emulators
+//! - Default choice for maximum compatibility
+//!
+//! ## DirectToAnsi backend (Linux-native)
+//!
+//! `DirectToAnsi` is a pure-Rust ANSI sequence generator that bypasses external terminal
+//! libraries. It provides:
+//!
+//! - **Output (all platforms)**: Generates raw ANSI escape sequences directly
+//! - **Input (Linux only)**: Uses `mio` for async stdin polling (macOS `kqueue` doesn't
+//!   support PTY/tty polling)
+//!
+//! **Performance benefits** (measured on Linux with 8-second workload, 999Hz sampling):
+//!
+//! - Stack-allocated number formatting (eliminates heap allocations)
+//! - `SmallVec[16]` for render operations (+0.47%)
+//! - Overall ~18% improvement over Crossterm
+//!
+//! **When to choose each:**
+//!
+//! - **Crossterm**: When you need cross-platform compatibility or target macOS/Windows
+//! - **DirectToAnsi**: When targeting Linux and want maximum performance
+//!
+//! ## Architecture
+//!
+//! Both backends plug into **Stage 5** of the 6-stage rendering pipeline:
+//!
+//! ```text
+//! Stages 1-4 (Shared)           Stage 5 (Backend-Specific)
+//! ──────────────────────────    ─────────────────────────────
+//! Component → RenderPipeline    → Crossterm (cross-platform)
+//!          → Compositor            OR
+//!          → OffscreenBuffer    → DirectToAnsi (Linux-native)
+//!          → RenderOpOutput
+//! ```
+//!
+//! The shared stages (1-4) produce `RenderOpOutput` operations. Stage 5 backends translate
+//! these operations into terminal-specific commands. This architecture ensures consistent
+//! behavior across backends while allowing platform-specific optimizations.
+//!
+//! **Functional equivalence**: Both backends are verified to produce identical results
+//! through comprehensive PTY-based compatibility tests. The [`backend_compat_tests`] module
+//! spawns controlled processes in real PTYs and compares:
+//!
+//! - **Input handling**: Both backends parse the same terminal input sequences identically
+//! - **Output rendering**: Both backends generate equivalent ANSI escape sequences
+//!
+//! This ensures you can switch backends without changing application behavior — only
+//! performance characteristics differ.
+//!
+//! For backend implementation details, see:
+//!
+//! - [`terminal_lib_backends`] - Pipeline architecture
+//! - [`direct_to_ansi`] - Linux backend
+//! - [`crossterm_backend`] - Cross-platform backend
+//!
+//! # VT100/ANSI escape sequence handling
+//!
+//! The TUI engine includes comprehensive VT100/ANSI escape sequence parsing for both
+//! terminal input (keyboard, mouse events) and terminal output (PTY child processes).
+//!
+//! ## Input parsing
+//!
+//! The `vt_100_terminal_input_parser` module converts raw terminal bytes into structured
+//! input events:
+//!
+//! ```text
+//! Raw stdin bytes
+//!      │
+//!      │ try_parse_input_event()
+//!      ▼
+//! VT100InputEventIR (intermediate representation)
+//!      │
+//!      │ convert_input_event()
+//!      ▼
+//! InputEvent (keyboard, mouse, terminal events)
+//! ```
+//!
+//! **Supported input types:**
+//!
+//! | Module            | What It Parses                                          |
+//! | ----------------- | ------------------------------------------------------- |
+//! | `keyboard`        | Arrow keys, function keys, modifiers (Shift/Ctrl/Alt)   |
+//! | `mouse`           | SGR, X10, RXVT protocols; clicks, drags, scroll, motion |
+//! | `terminal_events` | Window resize, focus gained/lost, bracketed paste       |
+//! | `utf8`            | UTF-8 text between ANSI sequences                       |
+//!
+//! **Design principle**: The parser is **IO-free** — it processes byte slices without any
+//! I/O operations, making it easy to test and reuse across different backends.
+//!
+//! ## Output parsing
+//!
+//! The `vt_100_pty_output_parser` module processes ANSI sequences from PTY child processes
+//! (like `bash`, `vim`, etc.) and updates the terminal display state:
+//!
+//! ```text
+//! pty_mux (receives child process output)
+//!      │
+//!      ▼
+//! OffscreenBuffer::apply_ansi_bytes()
+//!      │
+//!      │ Uses VTE state machine
+//!      ▼
+//! AnsiToOfsBufPerformer (updates buffer state)
+//!      │
+//!      ▼
+//! OffscreenBuffer (cursor, text, styles)
+//! ```
+//!
+//! This enables the terminal multiplexer to correctly render output from any VT100-
+//! compatible program running in a PTY.
+//!
+//! ## In-memory terminal emulation
+//!
+//! [`OffscreenBuffer`] can function as a **standalone in-memory terminal emulator**.
+//! By calling [`OffscreenBuffer::apply_ansi_bytes()`], you can feed raw VT100 ANSI
+//! escape sequences directly into the buffer — no real terminal or PTY required:
+//!
+//! ```rust,ignore
+//! let mut buffer = OffscreenBuffer::new(Size { col_count: 80, row_count: 24 });
+//!
+//! // Feed ANSI bytes from any source (file, network, PTY, test data)
+//! buffer.apply_ansi_bytes(b"\x1b[31mRed text\x1b[0m Normal text");
+//!
+//! // Buffer now contains a pixel-perfect snapshot of what a real terminal would show
+//! // - Cursor position tracked
+//! // - Text styles (colors, bold, etc.) applied
+//! // - Screen state (scrolling, clearing) handled
+//! ```
+//!
+//! **Use cases:**
+//!
+//! - **Testing**: Verify rendered output without a real terminal — compare buffer
+//!   contents against expected state
+//! - **Diffing**: Compare output between backends or program versions
+//! - **Screen capture**: Snapshot terminal state at any point
+//! - **Terminal emulation**: Build terminal emulators using the same battle-tested
+//!   VT100 parser that powers the terminal multiplexer
+//!
+//! **How r3bl_tui uses this for testing:**
+//!
+//! The [`backend_compat_tests`] use in-memory terminal emulation to verify that
+//! Crossterm and DirectToAnsi backends produce identical output. Tests spawn
+//! controlled processes in real PTYs, capture their ANSI output, apply it to
+//! [`OffscreenBuffer`]s, and compare the resulting screen state — all without
+//! needing to visually inspect terminal output.
+//!
+//! This is the same mechanism that powers [`PTYMux`] — each managed process gets its
+//! own [`OffscreenBuffer`] that continuously receives and renders ANSI output,
+//! enabling instant switching between processes with fully preserved screen state.
+//!
+//! ## Key VT100 references
+//!
+//! - Input coordinates are **1-based** (terminal standard), converted to 0-based internally
+//! - Mouse scroll codes may be inverted with natural scrolling enabled
+//! - The `observe_terminal` validation test captures real terminal sequences for
+//!   ground-truth verification
+//!
+//! For implementation details:
+//!
+//! - [`vt_100_terminal_input_parser`] - Input parsing
+//! - [`vt_100_pty_output_parser`] - Output parsing
+//!
+//! # Raw mode implementation
+//!
+//! Raw mode is essential for TUI applications — it disables terminal line buffering and
+//! echo so the application can read individual keystrokes and escape sequences.
+//!
+//! ## Raw mode vs cooked mode
+//!
+//! | Aspect             | Cooked Mode (default)               | Raw Mode                          |
+//! | ------------------ | ----------------------------------- | --------------------------------- |
+//! | Input buffering    | Line-buffered (waits for Enter)     | Immediate byte-by-byte            |
+//! | Special characters | Interpreted (Ctrl+C sends `SIGINT`) | Pass through as bytes             |
+//! | Echo               | Typed characters appear on screen   | No automatic echo                 |
+//! | Use case           | Normal terminal interaction         | TUI apps, escape sequence parsing |
+//!
+//! ## Platform implementations
+//!
+//! **Linux/macOS** (via `rustix`):
+//!
+//! Uses Rust's [`rustix`](https://docs.rs/rustix) crate for type-safe termios
+//! manipulation:
+//!
+//! ```rust,ignore
+//! // rustix provides safe, ergonomic termios API
+//! termios.make_raw();  // Equivalent to cfmakeraw()
+//! termios::tcsetattr(&fd, OptionalActions::Now, &termios)?;
+//! ```
+//!
+//! **Why rustix over libc?**
+//!
+//! - Type safety: Strong typing prevents file descriptor mix-ups
+//! - Memory safety: No raw pointers or manual memory management
+//! - Ergonomics: Methods like `make_raw()` encapsulate complex flag manipulation
+//! - Correctness: Handles platform differences (Linux vs macOS vs BSD)
+//!
+//! **macOS/Windows** (via Crossterm):
+//!
+//! Falls back to Crossterm's raw mode implementation for cross-platform compatibility.
+//!
+//! ## Usage
+//!
+//! The recommended approach uses RAII for automatic cleanup:
+//!
+//! ```rust,ignore
+//! use r3bl_tui::RawModeGuard;
+//!
+//! {
+//!     let _guard = RawModeGuard::new()?;
+//!     // Terminal is now in raw mode
+//!     // ... process input ...
+//! } // Raw mode automatically disabled when guard drops
+//! ```
+//!
+//! ## Terminal state management
+//!
+//! Raw mode settings are stored statically and restored on disable. The implementation
+//! handles:
+//!
+//! - **stdin redirection**: If stdin isn't a tty, falls back to `/dev/tty`
+//! - **Panic safety**: [`RawModeGuard`] ensures restoration even on panic
+//! - **Multiple enables**: Safe to call `enable_raw_mode()` multiple times
+//!
+//! For implementation details and historical context (TTY, line discipline, `stty`):
+//!
+//! - [`terminal_raw_mode`] - Main documentation
+//! - [`raw_mode_unix`] - Linux/macOS impl
+//!
+//! # PTY testing infrastructure
+//!
+//! Testing TUI applications is challenging because they interact with terminal I/O in
+//! complex ways. The PTY testing infrastructure provides controlled environments for
+//! accurate end-to-end testing.
+//!
+//! ## Why PTY testing?
+//!
+//! Traditional unit tests can't verify:
+//!
+//! - Raw mode behavior (requires actual terminal)
+//! - ANSI escape sequence round-trips
+//! - Terminal resize handling
+//! - Input/output synchronization
+//!
+//! PTY tests solve this by creating real pseudo-terminals where tests act as both the
+//! "terminal emulator" (controller) and the "application" (controlled).
+//!
+//! ## Architecture
+//!
+//! ```text
+//! ┌─────────────────────────────────────────────────────────────┐
+//! │ Test Function (entry point)                                 │
+//! │  - Macro detects role via environment variable              │
+//! │  - Routes to controller or controlled function              │
+//! └────────────┬────────────────────────────────┬───────────────┘
+//!              │                                │
+//!     Controller Path                  Controlled Path
+//!              │                                │
+//! ┌────────────▼───────────┐    ┌───────────────▼───────────────┐
+//! │ Macro: PTY Setup       │    │ Controlled Function           │
+//! │ - Creates PTY pair     │    │ - Enable raw mode (if needed) │
+//! │ - Spawns controlled    ├────▶ - Execute test logic          │
+//! │ - Passes to controller │    │ - Output via stdout/stderr    │
+//! └────────────┬───────────┘    └────────────▲─┬────────────────┘
+//!              │                             │ │
+//! ┌────────────▼──────────────────┐          │ │
+//! │ Controller Function           │          │ │ PTY I/O
+//! │ - Receives pty_pair           │          │ │ stdin, stdout/stderr
+//! │ - Receives child handle       │          │ │
+//! │ - Writes input to child (opt) ├──────────┘ │
+//! │ - Reads results from child    ◀────────────┘
+//! │ - Verifies assertions         │
+//! │ - Waits for child exit        │
+//! └───────────────────────────────┘
+//! ```
+//!
+//! ## The `generate_pty_test!` macro
+//!
+//! Use this macro for single-feature PTY tests:
+//!
+//! ```rust,ignore
+//! generate_pty_test! {
+//!     test_fn: test_raw_mode_enables_correctly,
+//!     controller: my_controller_function,
+//!     controlled: my_controlled_function
+//! }
+//! ```
+//!
+//! The macro handles:
+//!
+//! 1. **Process routing**: Environment variable detects controller vs controlled role
+//! 2. **PTY setup**: Creates 24x80 PTY pair automatically
+//! 3. **Child spawning**: Runs test binary as controlled process
+//!
+//! ## Controller and controlled functions
+//!
+//! **Controller** (runs in test process):
+//!
+//! - Receives `PtyPair` and `ControlledChild`
+//! - Sends input via PTY writer
+//! - Reads output via PTY reader
+//! - Performs assertions
+//!
+//! **Controlled** (runs in spawned child):
+//!
+//! - Executes test logic in PTY environment
+//! - Must call `std::process::exit(0)` when done
+//! - Manages raw mode if needed
+//!
+//! ## When to use each approach
+//!
+//! | Scenario                                         | Tool                        |
+//! | ------------------------------------------------ | --------------------------- |
+//! | Testing a single feature in PTY environment      | `generate_pty_test!` macro  |
+//! | Comparing two backends produce identical results | `spawn_controlled_in_pty()` |
+//! | One test, one controlled process                 | `generate_pty_test!` macro  |
+//! | One test, multiple controlled processes          | `spawn_controlled_in_pty()` |
+//!
+//! ## Running PTY tests
+//!
+//! ```bash
+//! # Run a specific PTY test
+//! cargo test -p r3bl_tui test_pty_keyboard_modifiers -- --nocapture
+//!
+//! # Run all PTY-based integration tests
+//! cargo test -p r3bl_tui integration_tests -- --nocapture
+//! ```
+//!
+//! **Note**: PTY tests run with `--nocapture` to see debug output from both controller
+//! and controlled processes.
+//!
+//! ## PTY testing examples
+//!
+//! For complete implementations, see:
+//!
+//! - [`pty_test_fixtures`] - Test infrastructure
+//! - [`integration_tests`] - Input parsing tests
+//! - [`backend_compat_tests`] - Backend comparison tests
+//!
 //! # How does the editor component work?
 //!
 //! The [`EditorComponent`] struct can hold data in its own memory, in addition to relying
@@ -1928,7 +2363,6 @@
 //! [ComponentRegistryMap]: crate::ComponentRegistryMap
 //! [GlobalData]: crate::GlobalData
 //! [EventPropagation]: crate::EventPropagation
-//!
 //! [`RenderOpCommon`]: crate::RenderOpCommon
 //! [`RenderOpIRVec`]: crate::RenderOpIRVec
 //! [`RenderOpOutputVec`]: crate::RenderOpOutputVec
@@ -1939,7 +2373,6 @@
 //! [`paint`]: mod@crate::tui::terminal_lib_backends::paint
 //! [`paint()`]: fn@crate::tui::terminal_lib_backends::paint::paint
 //! [`OffscreenBufferPaintImplCrossterm`]: struct@crate::tui::terminal_lib_backends::offscreen_buffer::OffscreenBufferPaintImplCrossterm
-//!
 //! [EditorComponent]: crate::EditorComponent
 //! [EditorEngine]: crate::EditorEngine
 //! [EditorBuffer]: crate::EditorBuffer
@@ -1953,19 +2386,16 @@
 //! [`Component::render()`]: crate::Component::render
 //! [`EditorEngine::apply_event()`]: fn@crate::tui::editor::editor_engine::apply_event
 //! [`EditorEngine::render_engine()`]: fn@crate::tui::editor::editor_engine::render_engine
-//!
 //! [MdDocument]: crate::tui::md_parser::MdDocument
 //! [parse_markdown()]: fn@crate::tui::md_parser::parse_markdown::parse_markdown
 //! [parse_smart_list]: crate::tui::md_parser::parse_smart_list
 //! [try_parse_and_highlight]: crate::tui::syntax_highlighting::md_parser_syn_hi::try_parse_and_highlight
-//!
 //! [PTYMux]: crate::core::pty_mux::PTYMux
 //! [`pty_mux` module documentation]: mod@crate::core::pty_mux
 //! [CsiSequence]: crate::CsiSequence
 //! [EscSequence]: crate::EscSequence
 //! [SgrCode]: crate::SgrCode
 //! [`vt_100_pty_output_parser`]: mod@crate::core::ansi::vt_100_pty_output_parser
-//!
 //! [RowIndex]: crate::RowIndex
 //! [ColIndex]: crate::ColIndex
 //! [ColWidth]: crate::ColWidth
@@ -1977,20 +2407,26 @@
 //! [ViewportBoundsCheck]: crate::ViewportBoundsCheck
 //! [RangeBoundsExt]: crate::RangeBoundsExt
 //! [RangeConvertExt]: crate::RangeConvertExt
-//!
 //! [ByteIndex]: crate::ByteIndex
 //! [SegIndex]: crate::SegIndex
 //! [GCStringOwned]: crate::GCStringOwned
-//!
 //! [HasDialogBuffers]: crate::HasDialogBuffers
 //! [DialogEngineConfigOptions]: crate::DialogEngineConfigOptions
-//!
 //! [`generate_pty_test!`]: crate::generate_pty_test
 //! [`integration_tests`]: mod@crate::core::ansi::vt_100_terminal_input_parser::integration_tests
 //! [`raw_mode_integration_tests`]: mod@crate::core::ansi::terminal_raw_mode::integration_tests
-//!
 //! [`test_pty_input_device`]: mod@crate::core::ansi::vt_100_terminal_input_parser::integration_tests::pty_input_device_test
 //! [`DirectToAnsiInputDevice`]: crate::tui::terminal_lib_backends::direct_to_ansi::DirectToAnsiInputDevice
+//! [`pty_test_fixtures`]: crate::core::test_fixtures::pty_test_fixtures
+//! [`backend_compat_tests`]: crate::core::terminal_io::backend_compat_tests
+//! [`terminal_lib_backends`]: crate::tui::terminal_lib_backends
+//! [`direct_to_ansi`]: crate::tui::terminal_lib_backends::direct_to_ansi
+//! [`crossterm_backend`]: crate::tui::terminal_lib_backends::crossterm_backend
+//! [`vt_100_terminal_input_parser`]: crate::core::ansi::vt_100_terminal_input_parser
+//! [`RawModeGuard`]: crate::core::ansi::terminal_raw_mode::RawModeGuard
+//! [`terminal_raw_mode`]: crate::core::ansi::terminal_raw_mode
+//! [`raw_mode_unix`]: crate::core::ansi::terminal_raw_mode::raw_mode_unix
+//! [`OffscreenBuffer::apply_ansi_bytes()`]: crate::OffscreenBuffer::apply_ansi_bytes
 
 // Enable benchmarking for nightly Rust.
 #![cfg_attr(test, feature(test))]

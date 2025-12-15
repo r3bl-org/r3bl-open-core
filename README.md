@@ -778,6 +778,10 @@ Other commands:
 | `fish run.fish toolchain-sync`                             | Sync Rust environment to match rust-toolchain.toml                                      |
 | `fish run.fish toolchain-remove`                           | Remove ALL toolchains (⚠️ destructive testing utility)                                  |
 
+> **TUI Testing**: The `r3bl_tui` crate uses PTY-based testing for accurate terminal I/O
+> verification. See the [PTY Testing Infrastructure](./tui/README.md#pty-testing-infrastructure)
+> section in the TUI README for details on writing and running TUI tests.
+
 ### Cargo Target Directory Isolation for IDE/Tool Performance
 
 **Critical Optimization**: When multiple development tools run cargo simultaneously (IDE, terminal,
@@ -1332,6 +1336,12 @@ Platform-specific cfg gates compile correctly for Windows.
 
 This approach catches the most common cross-platform issues (missing cfg gates, type mismatches in
 platform-specific code) with minimal setup overhead.
+
+> **Platform Backends**: The TUI crate supports multiple backends: `Crossterm` (cross-platform,
+> default on macOS/Windows) and `DirectToAnsi` (provided by `r3bl_tui` itself, Linux-native, ~18%
+> better performance). We use cfg gates to ensure the selection of the correct backend for supported
+> platforms. See [Platform-Specific Backends](./tui/README.md#platform-specific-backends) for
+> details.
 
 ### Rust Toolchain Management
 
