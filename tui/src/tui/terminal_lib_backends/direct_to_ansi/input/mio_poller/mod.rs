@@ -7,27 +7,29 @@
 //! This module encapsulates all state and logic for the [`mio`] poller thread. It owns
 //! and manages the following:
 //!
-//! ## Quick Reference
-//!
-//! | Item                                | Description                                                        |
-//! | :---------------------------------- | :----------------------------------------------------------------- |
-//! | [`MioPollerThread`]                 | Core struct: owns poll handle, buffers, parser, and channel sender |
-//! | [`MioPollerThread::spawn_thread()`] | Entry point: spawns the dedicated `mio-poller` thread              |
-//! | [`MioPollerThread::start()`]        | Main event loop: blocks on [`mio::Poll`], dispatches events        |
-//! | [`SourceRegistry`]                  | Holds [`stdin`] and [`SIGWINCH`] signal handles                    |
-//! | [`SourceKindReady`]                 | Enum mapping [`mio::Token`] ↔ source kind for dispatch             |
-//! | [`dispatch()`]                      | Routes ready events to appropriate handlers                        |
-//! | [`consume_stdin_input()`]           | Reads and parses stdin bytes into [`InputEvent`]s                  |
-//! | [`consume_pending_signals()`]       | Drains [`SIGWINCH`] signals, sends [`Resize`]                      |
-//!
 //! ## Resources Managed
 //!
-//! | Resource     | Responsibility                                                                                                                    |
-//! | :----------- | :-------------------------------------------------------------------------------------------------------------------------------- |
-//! | **Poll**     | Wait efficiently for [`stdin`] data and [`SIGWINCH`] signals                                                                      |
-//! | **Stdin**    | Read bytes into buffer -> handle using [VT100 input parser] and [paste state machine] to generate [`ReaderThreadMessage::Event`]  |
-//! | **Signals**  | Drain signals and generate [`ReaderThreadMessage::Resize`]                                                                        |
-//! | **Channel**  | Publish [`ReaderThreadMessage`] variants to async consumers                                                                       |
+//! | Resource                                | Responsibility                                                                                                                   |
+//! | :-------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------- |
+//! | [**Poll**][`mio::Poll`]                 | Wait efficiently for [`stdin`] data and [`SIGWINCH`] signals                                                                     |
+//! | [**Stdin**][`stdin`]                    | Read bytes into buffer -> handle using [VT100 input parser] and [paste state machine] to generate [`ReaderThreadMessage::Event`] |
+//! | [**Signals**][`signal_hook_mio`]        | Drain signal ([`SIGWINCH`]) and generate [`ReaderThreadMessage::Resize`]                                                         |
+//! | [**Channel**][`tokio::sync::broadcast`] | Publish [`ReaderThreadMessage`] variants to async consumers                                                                      |
+//!
+//! ## Quick Reference
+//!
+//! | Item                                             | Description                                                        |
+//! | :----------------------------------------------- | :----------------------------------------------------------------- |
+//! | [`MioPollerThread`]                              | Core struct: owns poll handle, buffers, parser, and channel sender |
+//! | [`MioPollerThread::spawn_thread()`]              | Entry point: spawns the dedicated [`mio-poller`] thread            |
+//! | [`MioPollerThread::start()`]                     | Main event loop: blocks on [`mio::Poll`], dispatches events        |
+//! | [`SourceRegistry`]                               | Holds [`stdin`] and [`SIGWINCH`] signal handles                    |
+//! | [`SourceKindReady`]                              | Enum mapping [`mio::Token`] ↔ source kind for dispatch             |
+//! | [`dispatch()`]                                   | Routes ready events to appropriate handlers                        |
+//! | [`consume_stdin_input()`]                        | Reads and parses stdin bytes into [`InputEvent`]s                  |
+//! | [`consume_pending_signals()`]                    | Drains [`SIGWINCH`] signals, sends [`Resize`]                      |
+//! | [VT100 input parser] ([`StatefulInputParser`])   | Accumulates bytes, parses [`VT100InputEventIR`] with ESC handling  |
+//! | [paste state machine] ([`PasteCollectionState`]) | Collects text between bracketed paste markers                      |
 //!
 //! # How It Works
 //!
@@ -230,6 +232,7 @@
 //! [`MioPollerThread::spawn_thread()`]: poller_thread::MioPollerThread::spawn_thread
 //! [`MioPollerThread::start()`]: poller_thread::MioPollerThread::start
 //! [`MioPollerThread`]: poller_thread::MioPollerThread
+//! [`PasteCollectionState`]: super::paste_state_machine::PasteCollectionState
 //! [`ReaderThreadMessage::Event`]: super::types::ReaderThreadMessage::Event
 //! [`ReaderThreadMessage::Resize`]: super::types::ReaderThreadMessage::Resize
 //! [`ReaderThreadMessage`]: super::types::ReaderThreadMessage
@@ -239,6 +242,8 @@
 //! [`SourceFd`]: mio::unix::SourceFd
 //! [`SourceKindReady`]: sources::SourceKindReady
 //! [`SourceRegistry`]: sources::SourceRegistry
+//! [`StatefulInputParser`]: super::stateful_parser::StatefulInputParser
+//! [`VT100InputEventIR`]: crate::core::ansi::vt_100_terminal_input_parser::VT100InputEventIR
 //! [`consume_pending_signals()`]: handler_signals::consume_pending_signals
 //! [`consume_stdin_input()`]: handler_stdin::consume_stdin_input
 //! [`crossterm`]: ::crossterm
@@ -246,6 +251,7 @@
 //! [`epoll`]: https://man7.org/linux/man-pages/man7/epoll.7.html
 //! [`global_input_resource`]: super::global_input_resource#the-problems
 //! [`kqueue`]: https://man.freebsd.org/cgi/man.cgi?query=kqueue&sektion=2
+//! [`mio-poller`]: mod@self
 //! [`mio::Poll`]: mio::Poll
 //! [`mio::Token`]: mio::Token
 //! [`mio`]: mio
