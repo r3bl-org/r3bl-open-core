@@ -49,6 +49,9 @@
   - https://github.com/r3bl-org/r3bl-open-core/issues/439
   - https://github.com/r3bl-org/r3bl-open-core/pull/440
 
+- [x] cleanup ansi sequence generators (input & output):
+  [`add_ansi_input_generator.md`](task/done/add_ansi_input_generator.md)
+
 - [ ] use [`task_unify_cli_and_styled_text`](task/pending/task_unify_cli_and_styled_text.md) to
       unify `CliText` and `TuiStyledText` rendering paths
 

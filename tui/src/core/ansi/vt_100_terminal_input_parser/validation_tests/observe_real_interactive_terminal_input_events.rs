@@ -62,7 +62,10 @@ struct TestCase {
 ///
 /// May panic if terminal state cannot be properly restored.
 #[cfg_attr(not(doc), tokio::test)]
-#[cfg_attr(not(doc), ignore = "Manual test: cargo test observe_terminal -- --ignored --nocapture")]
+#[cfg_attr(
+    not(doc),
+    ignore = "Manual test: cargo test observe_terminal -- --ignored --nocapture"
+)]
 pub async fn observe_terminal() -> IoResult<()> {
     // Skip in CI
     if is_ci::cached() {

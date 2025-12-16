@@ -85,13 +85,13 @@
 //! [`TermPos`]: crate::core::coordinates::vt_100_ansi_coords::TermPos
 //! [`VT100MouseActionIR`]: super::VT100MouseActionIR
 //! [`VT100MouseButtonIR`]: super::VT100MouseButtonIR
+//! [`convert_input_event()`]: crate::tui::terminal_lib_backends::direct_to_ansi::input::protocol_conversion::convert_input_event
 //! [`keyboard`]: mod@super::keyboard
 //! [`router`]: mod@super::router
 //! [`terminal_events`]: mod@super::terminal_events
 //! [`utf8`]: mod@super::utf8
 //! [parent module documentation]: mod@super#primary-consumer
 //! [parent module's testing strategy documentation]: mod@super#testing-strategy
-//! [`convert_input_event()`]: crate::tui::terminal_lib_backends::direct_to_ansi::input::protocol_conversion::convert_input_event
 
 use super::ir_event_types::{VT100InputEventIR, VT100KeyModifiersIR, VT100MouseActionIR,
                             VT100MouseButtonIR, VT100ScrollDirectionIR};
@@ -632,7 +632,7 @@ mod tests {
         action: VT100MouseActionIR,
         modifiers: VT100KeyModifiersIR,
     ) -> Vec<u8> {
-        use crate::core::ansi::vt_100_terminal_input_parser::test_fixtures::generate_x10_mouse_sequence;
+        use crate::core::ansi::generator::generate_x10_mouse_sequence;
         generate_x10_mouse_sequence(button, col, row, action, modifiers)
     }
 
@@ -646,7 +646,7 @@ mod tests {
         action: VT100MouseActionIR,
         modifiers: VT100KeyModifiersIR,
     ) -> Vec<u8> {
-        use crate::core::ansi::vt_100_terminal_input_parser::test_fixtures::generate_rxvt_mouse_sequence;
+        use crate::core::ansi::generator::generate_rxvt_mouse_sequence;
         generate_rxvt_mouse_sequence(button, col, row, action, modifiers)
     }
 
@@ -660,7 +660,7 @@ mod tests {
         action: VT100MouseActionIR,
         modifiers: VT100KeyModifiersIR,
     ) -> Vec<u8> {
-        use crate::core::ansi::vt_100_terminal_input_parser::test_fixtures::generate_keyboard_sequence;
+        use crate::core::ansi::generator::generate_keyboard_sequence;
         let event = VT100InputEventIR::Mouse {
             button,
             pos: TermPos::from_one_based(col, row),

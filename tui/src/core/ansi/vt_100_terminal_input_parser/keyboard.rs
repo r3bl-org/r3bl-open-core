@@ -169,12 +169,12 @@
 //!
 //! Here's how each modifier is encoded (sorted by byte count):
 //!
-//! | Bytes | Encoding                  | Modifier     | Reason                        |
-//! |:------|:--------------------------|:-------------|:------------------------------|
-//! | 0     | Implicit in case          | **Shift**    | 'a' vs 'A' already encodes it |
-//! | 1     | Single byte (`0x00-0x1F`) | **Ctrl**     | Fits in ASCII control codes   |
-//! | 2     | ESC prefix                | **Alt**      | No room in ASCII, prepend ESC |
-//! | 4-8   | CSI parameters            | **Combos**   | Need bitmask encoding         |
+//! | Bytes   | Encoding                    | Modifier       | Reason                          |
+//! | :------ | :-------------------------- | :------------- | :------------------------------ |
+//! | 0       | Implicit in case            | **Shift**      | 'a' vs 'A' already encodes it   |
+//! | 1       | Single byte (`0x00-0x1F`)   | **Ctrl**       | Fits in ASCII control codes     |
+//! | 2       | ESC prefix                  | **Alt**        | No room in ASCII, prepend ESC   |
+//! | 4-8     | CSI parameters              | **Combos**     | Need bitmask encoding           |
 //!
 //! - Why does Ctrl+Shift+A = Ctrl+Shift+a = Ctrl+A?
 //!
@@ -294,13 +294,13 @@
 //!
 //! ### Ambiguous Mappings (Identical Bytes)
 //!
-//! | Bytes  | Key Combination          | Parser Interpretation | Rationale                         |
-//! |:-------|:-------------------------|:----------------------|:----------------------------------|
-//! | `0x09` | Tab **OR** Ctrl+I        | **Tab**               | Tab key is far more commonly used |
-//! | `0x0A` | Enter (LF) **OR** Ctrl+J | **Enter**             | Enter key is essential for apps   |
-//! | `0x0D` | Enter (CR) **OR** Ctrl+M | **Enter**             | Enter key is essential for apps   |
-//! | `0x08` | Backspace **OR** Ctrl+H  | **Backspace**         | Backspace is critical for editing |
-//! | `0x1B` | ESC **OR** Ctrl+\[       | **ESC**               | Standard for vi-mode, modals      |
+//! | Bytes    | Key Combination            | Parser Interpretation   | Rationale                           |
+//! | :------- | :------------------------- | :---------------------- | :---------------------------------- |
+//! | `0x09`   | Tab **OR** Ctrl+I          | **Tab**                 | Tab key is far more commonly used   |
+//! | `0x0A`   | Enter (LF) **OR** Ctrl+J   | **Enter**               | Enter key is essential for apps     |
+//! | `0x0D`   | Enter (CR) **OR** Ctrl+M   | **Enter**               | Enter key is essential for apps     |
+//! | `0x08`   | Backspace **OR** Ctrl+H    | **Backspace**           | Backspace is critical for editing   |
+//! | `0x1B`   | ESC **OR** Ctrl+\[         | **ESC**                 | Standard for vi-mode, modals        |
 //!
 //! ### Why This Matters
 //!
@@ -327,81 +327,81 @@
 //! ## Comprehensive List of Supported Keyboard Shortcuts
 //!
 //! ### Basic Keys
-//! | Key             | Sequence        | Notes                            |
-//! |:----------------|:----------------|:---------------------------------|
-//! | **Tab**         | `0x09`          | Fixed: was returning None        |
-//! | **Enter**       | `0x0D`/`0x0A`   | CR or LF depending on terminal   |
-//! | **Backspace**   | `0x08`/`0x7F`   | BS or DEL encoding               |
-//! | **Escape**      | `0x1B`          | Modal UI support                 |
-//! | **Space**       | `0x20`          | Regular space character          |
+//! | Key               | Sequence          | Notes                              |
+//! | :---------------- | :---------------- | :--------------------------------- |
+//! | **Tab**           | `0x09`            | Fixed: was returning None          |
+//! | **Enter**         | `0x0D`/`0x0A`     | CR or LF depending on terminal     |
+//! | **Backspace**     | `0x08`/`0x7F`     | BS or DEL encoding                 |
+//! | **Escape**        | `0x1B`            | Modal UI support                   |
+//! | **Space**         | `0x20`            | Regular space character            |
 //!
 //! ### Control Key Combinations (Ctrl+Letter)
-//! | Key                             | Byte            | Notes                          |
-//! |:--------------------------------|:----------------|:-------------------------------|
-//! | **Ctrl+Space**                  | `0x00`          | Ctrl+@, treated as Ctrl+Space  |
-//! | **Ctrl+A** through **Ctrl+Z**   | `0x01`-`0x1A`   | Standard control chars         |
-//! | **Ctrl+\\**                     | `0x1C`          | FS (File Separator)            |
-//! | **Ctrl+]**                      | `0x1D`          | GS (Group Separator)           |
-//! | **Ctrl+^**                      | `0x1E`          | RS (Record Separator)          |
-//! | **Ctrl+_**                      | `0x1F`          | US (Unit Separator)            |
+//! | Key                               | Byte              | Notes                            |
+//! | :-------------------------------- | :---------------- | :------------------------------- |
+//! | **Ctrl+Space**                    | `0x00`            | Ctrl+@, treated as Ctrl+Space    |
+//! | **Ctrl+A** through **Ctrl+Z**     | `0x01`-`0x1A`     | Standard control chars           |
+//! | **Ctrl+\\**                       | `0x1C`            | FS (File Separator)              |
+//! | **Ctrl+]**                        | `0x1D`            | GS (Group Separator)             |
+//! | **Ctrl+^**                        | `0x1E`            | RS (Record Separator)            |
+//! | **Ctrl+_**                        | `0x1F`            | US (Unit Separator)              |
 //!
 //! ### Alt Key Combinations (Alt+Letter)
-//! | Key                         | Sequence          | Format                |
-//! |:----------------------------|:------------------|:----------------------|
-//! | **Alt+\[a-z\]**             | `ESC` + letter    | Lowercase letters     |
-//! | **Alt+\[A-Z\]**             | `ESC` + letter    | Uppercase letters     |
-//! | **Alt+\[0-9\]**             | `ESC` + digit     | Digits                |
-//! | **Alt+Space**               | `ESC` + space     | Space key             |
-//! | **Alt+Backspace**           | `ESC` + `0x7F`    | Delete word           |
-//! | **Alt+\[punctuation\]**     | `ESC` + char      | Any printable ASCII   |
+//! | Key                           | Sequence            | Format                  |
+//! | :---------------------------- | :------------------ | :---------------------- |
+//! | **Alt+\[a-z\]**               | `ESC` + letter      | Lowercase letters       |
+//! | **Alt+\[A-Z\]**               | `ESC` + letter      | Uppercase letters       |
+//! | **Alt+\[0-9\]**               | `ESC` + digit       | Digits                  |
+//! | **Alt+Space**                 | `ESC` + space       | Space key               |
+//! | **Alt+Backspace**             | `ESC` + `0x7F`      | Delete word             |
+//! | **Alt+\[punctuation\]**       | `ESC` + char        | Any printable ASCII     |
 //!
 //! ### Arrow Keys
-//! | Key         | CSI Sequence   | SS3 Sequence   | Application Mode   |
-//! |:------------|:---------------|:---------------|:-------------------|
-//! | **Up**      | `ESC [A`       | `ESC O A`      | vim/less/emacs     |
-//! | **Down**    | `ESC [B`       | `ESC O B`      | vim/less/emacs     |
-//! | **Right**   | `ESC [C`       | `ESC O C`      | vim/less/emacs     |
-//! | **Left**    | `ESC [D`       | `ESC O D`      | vim/less/emacs     |
+//! | Key           | CSI Sequence     | SS3 Sequence     | Application Mode     |
+//! | :------------ | :--------------- | :--------------- | :------------------- |
+//! | **Up**        | `ESC [A`         | `ESC O A`        | vim/less/emacs       |
+//! | **Down**      | `ESC [B`         | `ESC O B`        | vim/less/emacs       |
+//! | **Right**     | `ESC [C`         | `ESC O C`        | vim/less/emacs       |
+//! | **Left**      | `ESC [D`         | `ESC O D`        | vim/less/emacs       |
 //!
 //! ### Arrow Keys with Modifiers
-//! | Key                            | Sequence             | Format             |
-//! |:-------------------------------|:---------------------|:-------------------|
-//! | **Ctrl+Up/Down/Left/Right**    | `ESC [1;5A/B/D/C`    | CSI with modifier  |
-//! | **Alt+Up/Down/Left/Right**     | `ESC [1;3A/B/D/C`    | CSI with modifier  |
-//! | **Shift+Up/Down/Left/Right**   | `ESC [1;2A/B/D/C`    | CSI with modifier  |
-//! | **Ctrl+Alt+arrows**            | `ESC [1;7A/B/D/C`    | Combined modifiers |
+//! | Key                              | Sequence               | Format               |
+//! | :------------------------------- | :--------------------- | :------------------- |
+//! | **Ctrl+Up/Down/Left/Right**      | `ESC [1;5A/B/D/C`      | CSI with modifier    |
+//! | **Alt+Up/Down/Left/Right**       | `ESC [1;3A/B/D/C`      | CSI with modifier    |
+//! | **Shift+Up/Down/Left/Right**     | `ESC [1;2A/B/D/C`      | CSI with modifier    |
+//! | **Ctrl+Alt+arrows**              | `ESC [1;7A/B/D/C`      | Combined modifiers   |
 //!
 //! ### Special Navigation Keys
-//! | Key             | Primary    | Alt 1      | Alt 2      | SS3        |
-//! |:----------------|:-----------|:-----------|:-----------|:-----------|
-//! | **Home**        | `ESC [H`   | `ESC [1~`  | `ESC [7~`  | `ESC O H`  |
-//! | **End**         | `ESC [F`   | `ESC [4~`  | `ESC [8~`  | `ESC O F`  |
-//! | **Insert**      | `ESC [2~`  | -          | -          | -          |
-//! | **Delete**      | `ESC [3~`  | -          | -          | -          |
-//! | **Page Up**     | `ESC [5~`  | -          | -          | -          |
-//! | **Page Down**   | `ESC [6~`  | -          | -          | -          |
+//! | Key               | Primary      | Alt 1        | Alt 2        | SS3          |
+//! | :---------------- | :----------- | :----------- | :----------- | :----------- |
+//! | **Home**          | `ESC [H`     | `ESC [1~`    | `ESC [7~`    | `ESC O H`    |
+//! | **End**           | `ESC [F`     | `ESC [4~`    | `ESC [8~`    | `ESC O F`    |
+//! | **Insert**        | `ESC [2~`    | -            | -            | -            |
+//! | **Delete**        | `ESC [3~`    | -            | -            | -            |
+//! | **Page Up**       | `ESC [5~`    | -            | -            | -            |
+//! | **Page Down**     | `ESC [6~`    | -            | -            | -            |
 //!
 //! ### Tab Navigation
-//! | Key                          | Sequence    | Notes               |
-//! |:-----------------------------|:------------|:--------------------|
-//! | **Tab**                      | `0x09`      | Forward navigation  |
-//! | **Shift+Tab (`BackTab`)**    | `ESC [Z`    | Backward navigation |
+//! | Key                            | Sequence      | Notes                 |
+//! | :----------------------------- | :------------ | :-------------------- |
+//! | **Tab**                        | `0x09`        | Forward navigation    |
+//! | **Shift+Tab (`BackTab`)**      | `ESC [Z`      | Backward navigation   |
 //!
 //! ### Function Keys F1-F12
-//! | Key       | CSI Code      | SS3 Sequence   | Notes            |
-//! |:----------|:--------------|:---------------|:-----------------|
-//! | **F1**    | `ESC [11~`    | `ESC O P`      | SS3 in app mode  |
-//! | **F2**    | `ESC [12~`    | `ESC O Q`      | SS3 in app mode  |
-//! | **F3**    | `ESC [13~`    | `ESC O R`      | SS3 in app mode  |
-//! | **F4**    | `ESC [14~`    | `ESC O S`      | SS3 in app mode  |
-//! | **F5**    | `ESC [15~`    | -              | CSI only         |
-//! | **F6**    | `ESC [17~`    | -              | Note: gap at 16  |
-//! | **F7**    | `ESC [18~`    | -              | CSI only         |
-//! | **F8**    | `ESC [19~`    | -              | CSI only         |
-//! | **F9**    | `ESC [20~`    | -              | CSI only         |
-//! | **F10**   | `ESC [21~`    | -              | CSI only         |
-//! | **F11**   | `ESC [23~`    | -              | Note: gap at 22  |
-//! | **F12**   | `ESC [24~`    | -              | CSI only         |
+//! | Key         | CSI Code        | SS3 Sequence     | Notes              |
+//! | :---------- | :-------------- | :--------------- | :----------------- |
+//! | **F1**      | `ESC [11~`      | `ESC O P`        | SS3 in app mode    |
+//! | **F2**      | `ESC [12~`      | `ESC O Q`        | SS3 in app mode    |
+//! | **F3**      | `ESC [13~`      | `ESC O R`        | SS3 in app mode    |
+//! | **F4**      | `ESC [14~`      | `ESC O S`        | SS3 in app mode    |
+//! | **F5**      | `ESC [15~`      | -                | CSI only           |
+//! | **F6**      | `ESC [17~`      | -                | Note: gap at 16    |
+//! | **F7**      | `ESC [18~`      | -                | CSI only           |
+//! | **F8**      | `ESC [19~`      | -                | CSI only           |
+//! | **F9**      | `ESC [20~`      | -                | CSI only           |
+//! | **F10**     | `ESC [21~`      | -                | CSI only           |
+//! | **F11**     | `ESC [23~`      | -                | Note: gap at 22    |
+//! | **F12**     | `ESC [24~`      | -                | CSI only           |
 //!
 //! ### Function Keys with Modifiers
 //! Function keys support all modifier combinations using CSI format:
@@ -415,25 +415,25 @@
 //! In application mode (DECPAM), numpad keys send SS3 sequences instead of their literal
 //! digits. This allows applications to distinguish numpad from regular number keys.
 //!
-//! | Numpad Key   | Normal Mode   | Application Mode   | SS3 Char   |
-//! |:-------------|:--------------|:-------------------|:-----------|
-//! | **0**        | `'0'`         | `ESC O p`          | p          |
-//! | **1**        | `'1'`         | `ESC O q`          | q          |
-//! | **2**        | `'2'`         | `ESC O r`          | r          |
-//! | **3**        | `'3'`         | `ESC O s`          | s          |
-//! | **4**        | `'4'`         | `ESC O t`          | t          |
-//! | **5**        | `'5'`         | `ESC O u`          | u          |
-//! | **6**        | `'6'`         | `ESC O v`          | v          |
-//! | **7**        | `'7'`         | `ESC O w`          | w          |
-//! | **8**        | `'8'`         | `ESC O x`          | x          |
-//! | **9**        | `'9'`         | `ESC O y`          | y          |
-//! | **Enter**    | `CR`          | `ESC O M`          | M          |
-//! | **+**        | `'+'`         | `ESC O k`          | k          |
-//! | **-**        | `'-'`         | `ESC O m`          | m          |
-//! | **\***       | `'*'`         | `ESC O j`          | j          |
-//! | **/**        | `'/'`         | `ESC O o`          | o          |
-//! | **.**        | `'.'`         | `ESC O n`          | n          |
-//! | **,**        | `','`         | `ESC O l`          | l          |
+//! | Numpad Key     | Normal Mode     | Application Mode     | SS3 Char     |
+//! | :------------- | :-------------- | :------------------- | :----------- |
+//! | **0**          | `'0'`           | `ESC O p`            | p            |
+//! | **1**          | `'1'`           | `ESC O q`            | q            |
+//! | **2**          | `'2'`           | `ESC O r`            | r            |
+//! | **3**          | `'3'`           | `ESC O s`            | s            |
+//! | **4**          | `'4'`           | `ESC O t`            | t            |
+//! | **5**          | `'5'`           | `ESC O u`            | u            |
+//! | **6**          | `'6'`           | `ESC O v`            | v            |
+//! | **7**          | `'7'`           | `ESC O w`            | w            |
+//! | **8**          | `'8'`           | `ESC O x`            | x            |
+//! | **9**          | `'9'`           | `ESC O y`            | y            |
+//! | **Enter**      | `CR`            | `ESC O M`            | M            |
+//! | **+**          | `'+'`           | `ESC O k`            | k            |
+//! | **-**          | `'-'`           | `ESC O m`            | m            |
+//! | **\***         | `'*'`           | `ESC O j`            | j            |
+//! | **/**          | `'/'`           | `ESC O o`            | o            |
+//! | **.**          | `'.'`           | `ESC O n`            | n            |
+//! | **,**          | `','`           | `ESC O l`            | l            |
 //!
 //! **Use cases**: Calculator apps (distinguish numpad), games (numpad for movement),
 //! vim (numpad for navigation).
@@ -448,9 +448,16 @@
 //! - Different terminals use different codes (xterm vs linux console vs rxvt)
 //! - Minimal real-world usage in applications
 //!
+//! [ANSI escape codes]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [ASCII]: https://en.wikipedia.org/wiki/ASCII
+//! [Bob Bemer]: https://en.wikipedia.org/wiki/Bob_Bemer
+//! [Ken Thompson]: https://en.wikipedia.org/wiki/Ken_Thompson
+//! [Rob Pike]: https://en.wikipedia.org/wiki/Rob_Pike
+//! [UTF-8]: https://en.wikipedia.org/wiki/UTF-8
 //! [`VT100InputEventIR`]: super::VT100InputEventIR
 //! [`VT100KeyCodeIR`]: super::VT100KeyCodeIR
 //! [`VT100KeyModifiersIR`]: super::VT100KeyModifiersIR
+//! [`convert_input_event()`]: crate::tui::terminal_lib_backends::direct_to_ansi::input::protocol_conversion::convert_input_event
 //! [`keyboard`]: mod@super
 //! [`mouse`]: mod@super::mouse
 //! [`router`]: mod@super::router
@@ -459,14 +466,7 @@
 //! [`utf8`]: mod@super::utf8
 //! [`utf8` encoding]: mod@crate::core::ansi::vt_100_terminal_input_parser::utf8#utf-8-encoding-explained
 //! [parent module documentation]: mod@super#primary-consumer
-//! [`convert_input_event()`]: crate::tui::terminal_lib_backends::direct_to_ansi::input::protocol_conversion::convert_input_event
 //! [parity checking]: https://en.wikipedia.org/wiki/Parity_bit
-//! [ASCII]: https://en.wikipedia.org/wiki/ASCII
-//! [Bob Bemer]: https://en.wikipedia.org/wiki/Bob_Bemer
-//! [ANSI escape codes]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [UTF-8]: https://en.wikipedia.org/wiki/UTF-8
-//! [Ken Thompson]: https://en.wikipedia.org/wiki/Ken_Thompson
-//! [Rob Pike]: https://en.wikipedia.org/wiki/Rob_Pike
 
 use super::ir_event_types::{VT100InputEventIR, VT100KeyCodeIR, VT100KeyModifiersIR};
 use crate::{ASCII_DEL, ByteOffset, KeyState, byte_offset,
@@ -839,12 +839,12 @@ mod helpers {
     ///
     /// # Examples
     ///
-    /// | Sequence       | Meaning              |
-    /// |----------------|----------------------|
-    /// | `CSI 5 ~`      | `PageUp`             |
-    /// | `CSI 1 ; 3 C`  | Alt + Right Arrow    |
-    /// | `CSI 11 ~`     | F1                   |
-    /// | `CSI 1 ; 5 A`  | Ctrl + Up Arrow      |
+    /// | Sequence         | Meaning                |
+    /// | ---------------- | ---------------------- |
+    /// | `CSI 5 ~`        | `PageUp`               |
+    /// | `CSI 1 ; 3 C`    | Alt + Right Arrow      |
+    /// | `CSI 11 ~`       | F1                     |
+    /// | `CSI 1 ; 5 A`    | Ctrl + Up Arrow        |
     ///
     /// # Returns
     ///
@@ -1062,14 +1062,14 @@ mod tests {
         code: VT100KeyCodeIR,
         modifiers: VT100KeyModifiersIR,
     ) -> Vec<u8> {
-        use crate::core::ansi::vt_100_terminal_input_parser::test_fixtures::generate_keyboard_sequence;
+        use crate::core::ansi::generator::generate_keyboard_sequence;
         let event = VT100InputEventIR::Keyboard { code, modifiers };
         generate_keyboard_sequence(&event).expect("Failed to generate arrow key sequence")
     }
 
     /// Build a function key sequence using the generator.
     fn function_key_sequence(n: u8, modifiers: VT100KeyModifiersIR) -> Vec<u8> {
-        use crate::core::ansi::vt_100_terminal_input_parser::test_fixtures::generate_keyboard_sequence;
+        use crate::core::ansi::generator::generate_keyboard_sequence;
         let event = VT100InputEventIR::Keyboard {
             code: VT100KeyCodeIR::Function(n),
             modifiers,
@@ -1084,7 +1084,7 @@ mod tests {
         code: VT100KeyCodeIR,
         modifiers: VT100KeyModifiersIR,
     ) -> Vec<u8> {
-        use crate::core::ansi::vt_100_terminal_input_parser::test_fixtures::generate_keyboard_sequence;
+        use crate::core::ansi::generator::generate_keyboard_sequence;
         let event = VT100InputEventIR::Keyboard { code, modifiers };
         generate_keyboard_sequence(&event)
             .expect("Failed to generate special key sequence")

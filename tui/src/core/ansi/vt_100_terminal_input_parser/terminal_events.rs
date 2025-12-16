@@ -46,12 +46,12 @@
 //!
 //! [`VT100FocusStateIR`]: super::VT100FocusStateIR
 //! [`VT100PasteModeIR`]: super::VT100PasteModeIR
+//! [`convert_input_event()`]: crate::tui::terminal_lib_backends::direct_to_ansi::input::protocol_conversion::convert_input_event
 //! [`keyboard`]: mod@super::keyboard
 //! [`mouse`]: mod@super::mouse
 //! [`router`]: mod@super::router
 //! [`utf8`]: mod@super::utf8
 //! [parent module documentation]: mod@super#primary-consumer
-//! [`convert_input_event()`]: crate::tui::terminal_lib_backends::direct_to_ansi::input::protocol_conversion::convert_input_event
 
 use super::ir_event_types::{VT100FocusStateIR, VT100InputEventIR, VT100PasteModeIR};
 use crate::{ByteOffset, byte_offset,
@@ -198,7 +198,7 @@ fn parse_csi_terminal_parameters(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::core::ansi::vt_100_terminal_input_parser::test_fixtures::generate_keyboard_sequence;
+    use crate::core::ansi::generator::generate_keyboard_sequence;
 
     #[test]
     fn test_resize_event() {

@@ -65,12 +65,12 @@
 //!
 //! The input parser is intentionally designed to parallel the output architecture:
 //!
-//! | Aspect         | Input                               | Output                                 |
-//! |:---------------|:------------------------------------|:---------------------------------------|
-//! | Protocol layer | (this module)                       | [`generator`]                          |
-//! | Backend layer  | [`input`]                           | [`output`]                             |
-//! | Core API       | [`try_parse_input_event()`], etc.   | [`SgrCode`], [`AnsiSequenceGenerator`] |
-//! | I/O device     | [`DirectToAnsiInputDevice`]         | [`OutputDevice`]                       |
+//! | Aspect           | Input                                 | Output                                   |
+//! | :--------------- | :------------------------------------ | :--------------------------------------- |
+//! | Protocol layer   | (this module)                         | [`generator`]                            |
+//! | Backend layer    | [`input`]                             | [`output`]                               |
+//! | Core API         | [`try_parse_input_event()`], etc.     | [`SgrCode`], [`AnsiSequenceGenerator`]   |
+//! | I/O device       | [`DirectToAnsiInputDevice`]           | [`OutputDevice`]                         |
 //!
 //! Note: [`OutputDevice`] is shared across all backends (crossterm, `direct_to_ansi`),
 //! unlike [`DirectToAnsiInputDevice`] which is backend-specific. The closest
@@ -151,8 +151,8 @@
 //!   [`AnsiSequenceGenerator`], these verify round-trip consistency—what we generate, we
 //!   can parse. They're valuable for edge cases and keeping generator/parser synchronized.
 //!
-//! The [`test_fixtures`] module is shared between unit and integration tests only — not
-//! validation tests, which maintain independence by using hardcoded values.
+//! The [`generator`] module provides sequence builders shared between unit and integration
+//! tests only — not validation tests, which maintain independence by using hardcoded values.
 //!
 //! ```text
 //!       ╱╲
@@ -164,30 +164,29 @@
 //! ╱────────────╲
 //! ```
 //!
-//! | Level       | Purpose                        | Sequences | Catches                            |
-//! |:------------|:-------------------------------|:----------|:-----------------------------------|
-//! | Validation  | Spec compliance & ground truth | Hardcoded | Protocol misunderstandings         |
-//! | Unit        | Component contracts            | Generated | Generator/parser desynchronization |
-//! | Integration | System behavior                | Generated | Real-world usage regressions       |
+//! | Level         | Purpose                          | Sequences   | Catches                              |
+//! | :------------ | :------------------------------- | :---------- | :----------------------------------- |
+//! | Validation    | Spec compliance & ground truth   | Hardcoded   | Protocol misunderstandings           |
+//! | Unit          | Component contracts              | Generated   | Generator/parser desynchronization   |
+//! | Integration   | System behavior                  | Generated   | Real-world usage regressions         |
 //!
-//! [`TermCol`]: crate::core::coordinates::vt_100_ansi_coords::TermCol
-//! [`TermRow`]: crate::core::coordinates::vt_100_ansi_coords::TermRow
+//! [`AnsiSequenceGenerator`]: crate::AnsiSequenceGenerator
+//! [`DirectToAnsiInputDevice`]: crate::DirectToAnsiInputDevice
 //! [`DirectToAnsiInputDevice`]: crate::DirectToAnsiInputDevice
 //! [`InputDevice`]: crate::InputDevice
 //! [`InputEvent`]: crate::InputEvent
-//! [`generator`]: mod@crate::core::ansi::generator
-//! [`output`]: mod@crate::tui::terminal_lib_backends::direct_to_ansi::output
-//! [`input`]: mod@crate::tui::terminal_lib_backends::direct_to_ansi::input
-//! [`SgrCode`]: crate::SgrCode
-//! [`AnsiSequenceGenerator`]: crate::AnsiSequenceGenerator
-//! [`try_parse_input_event()`]: crate::core::ansi::vt_100_terminal_input_parser::router::try_parse_input_event
 //! [`OutputDevice`]: crate::OutputDevice
 //! [`RenderOpPaintImplDirectToAnsi`]: crate::RenderOpPaintImplDirectToAnsi
-//! [`DirectToAnsiInputDevice`]: crate::DirectToAnsiInputDevice
-//! [`observe_terminal`]: crate::core::ansi::vt_100_terminal_input_parser::validation_tests::observe_real_interactive_terminal_input_events::observe_terminal
-//! [`test_fixtures`]: mod@crate::core::ansi::vt_100_terminal_input_parser::test_fixtures
+//! [`SgrCode`]: crate::SgrCode
+//! [`TermCol`]: crate::core::coordinates::vt_100_ansi_coords::TermCol
+//! [`TermRow`]: crate::core::coordinates::vt_100_ansi_coords::TermRow
 //! [`convert_input_event()`]: crate::tui::terminal_lib_backends::direct_to_ansi::input::protocol_conversion::convert_input_event
 //! [`core::ansi`]: crate::core::ansi
+//! [`generator`]: mod@crate::core::ansi::generator
+//! [`input`]: mod@crate::tui::terminal_lib_backends::direct_to_ansi::input
+//! [`observe_terminal`]: crate::core::ansi::vt_100_terminal_input_parser::validation_tests::observe_real_interactive_terminal_input_events::observe_terminal
+//! [`output`]: mod@crate::tui::terminal_lib_backends::direct_to_ansi::output
+//! [`try_parse_input_event()`]: crate::core::ansi::vt_100_terminal_input_parser::router::try_parse_input_event
 
 // Skip rustfmt for rest of file.
 // https://stackoverflow.com/a/75910283/2085356
@@ -240,8 +239,6 @@ pub use ir_event_types::*; // Shared types
 // Three-tier test architecture.
 #[cfg(any(test, doc))]
 pub mod validation_tests;
-#[cfg(any(test, doc))]
-pub mod test_fixtures;
 #[cfg(any(test, doc))]
 pub mod unit_tests;
 #[cfg(any(test, doc))]

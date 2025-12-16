@@ -26,10 +26,6 @@
           "isPinned": false
         },
         {
-          "path": "tui/src/core/ansi/vt_100_terminal_input_parser/test_fixtures/input_sequence_generator.rs",
-          "isPinned": false
-        },
-        {
           "path": "tui/src/core/ansi/vt_100_terminal_input_parser/ir_event_types.rs",
           "isPinned": false
         },
@@ -122,7 +118,7 @@
           "isPinned": false
         },
         {
-          "path": "tui/src/tui/terminal_lib_backends/direct_to_ansi/input/stateful_parser.rs",
+          "path": "tui/src/core/ansi/generator/ansi_sequence_generator_input.rs",
           "isPinned": false
         },
         {
@@ -137,7 +133,7 @@
       "taskFile": "task/task_refactor_input_device.md",
       "createdAt": 1763496885607,
       "lastAccessed": 1763666457216,
-      "activeTab": "tui/src/tui/terminal_lib_backends/direct_to_ansi/input/stateful_parser.rs"
+      "activeTab": "tui/src/tui/terminal_lib_backends/direct_to_ansi/input/mio_poller/poller_thread.rs"
     },
     {
       "name": "[1.1] task_readline_async_add_shortcuts",

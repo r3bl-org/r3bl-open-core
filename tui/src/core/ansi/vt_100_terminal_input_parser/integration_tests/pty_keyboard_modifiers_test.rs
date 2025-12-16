@@ -1,10 +1,10 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use crate::{ControlledChild, InputEvent, KeyState, PtyPair,
-            core::ansi::vt_100_terminal_input_parser::{ir_event_types::{VT100InputEventIR,
+            core::ansi::{generator::generate_keyboard_sequence,
+                         vt_100_terminal_input_parser::ir_event_types::{VT100InputEventIR,
                                                                         VT100KeyCodeIR,
-                                                                        VT100KeyModifiersIR},
-                                                       test_fixtures::generate_keyboard_sequence},
+                                                                        VT100KeyModifiersIR}},
             generate_pty_test,
             tui::terminal_lib_backends::direct_to_ansi::DirectToAnsiInputDevice};
 use std::{io::{BufRead, BufReader, Write},

@@ -19,11 +19,11 @@
 //! [parent module documentation]: mod@super#testing-philosophy
 
 use crate::{ControlledChild, InputEvent, PtyPair, TermPos,
-            core::ansi::vt_100_terminal_input_parser::{ir_event_types::{VT100InputEventIR,
+            core::ansi::{generator::generate_keyboard_sequence,
+                         vt_100_terminal_input_parser::ir_event_types::{VT100InputEventIR,
                                                                         VT100KeyModifiersIR,
                                                                         VT100MouseActionIR,
-                                                                        VT100MouseButtonIR},
-                                                       test_fixtures::generate_keyboard_sequence},
+                                                                        VT100MouseButtonIR}},
             generate_pty_test,
             tui::terminal_lib_backends::direct_to_ansi::DirectToAnsiInputDevice};
 use std::{io::{BufRead, BufReader, Write},

@@ -53,18 +53,19 @@
 //! [`DirectToAnsi`]: crate::TerminalLibBackend::DirectToAnsi
 //! [`InputEvent`]: crate::InputEvent
 //! [`TERMINAL_LIB_BACKEND`]: crate::tui::terminal_lib_backends::TERMINAL_LIB_BACKEND
-//! [`terminal_raw_mode::raw_mode_unix::enable_raw_mode`]: crate::core::ansi::terminal_raw_mode::raw_mode_unix::enable_raw_mode
 //! [`terminal_raw_mode::enable_raw_mode()`]: crate::core::ansi::terminal_raw_mode::enable_raw_mode
+//! [`terminal_raw_mode::raw_mode_unix::enable_raw_mode`]: crate::core::ansi::terminal_raw_mode::raw_mode_unix::enable_raw_mode
 
-use crate::{ANSI_CSI_BRACKET, ANSI_ESC, ANSI_FUNCTION_KEY_TERMINATOR,
-            ANSI_PARAM_SEPARATOR, ANSI_SS3_O, ARROW_DOWN_FINAL, ARROW_LEFT_FINAL,
-            ARROW_RIGHT_FINAL, ARROW_UP_FINAL, ASCII_DEL, CONTROL_C, CONTROL_ENTER,
-            CONTROL_TAB, CrosstermInputDevice, FUNCTION_F5_CODE, MODIFIER_ALT,
-            MODIFIER_CTRL, MODIFIER_CTRL_SHIFT, MODIFIER_SHIFT, PtyPair,
-            SPECIAL_DELETE_CODE, SPECIAL_END_FINAL, SPECIAL_HOME_FINAL,
-            SPECIAL_INSERT_CODE, SPECIAL_PAGE_DOWN_CODE, SPECIAL_PAGE_UP_CODE,
-            SS3_F1_FINAL, SS3_F2_FINAL, SS3_F3_FINAL, SS3_F4_FINAL,
-            core::ansi::terminal_raw_mode, spawn_controlled_in_pty,
+use crate::{ARROW_DOWN_FINAL, ARROW_LEFT_FINAL, ARROW_RIGHT_FINAL, ARROW_UP_FINAL,
+            ASCII_DEL, CONTROL_C, CONTROL_ENTER, CONTROL_TAB, CrosstermInputDevice,
+            FUNCTION_F5_CODE, MODIFIER_ALT, MODIFIER_CTRL, MODIFIER_CTRL_SHIFT,
+            MODIFIER_SHIFT, PtyPair, SPECIAL_DELETE_CODE, SPECIAL_END_FINAL,
+            SPECIAL_HOME_FINAL, SPECIAL_INSERT_CODE, SPECIAL_PAGE_DOWN_CODE,
+            SPECIAL_PAGE_UP_CODE, SS3_F1_FINAL, SS3_F2_FINAL, SS3_F3_FINAL,
+            SS3_F4_FINAL,
+            core::ansi::{generator::{csi, csi_modified, csi_tilde, ss3},
+                         terminal_raw_mode},
+            spawn_controlled_in_pty,
             tui::terminal_lib_backends::direct_to_ansi::DirectToAnsiInputDevice};
 use std::{collections::HashMap,
           io::{BufRead, BufReader, Write},
@@ -381,39 +382,6 @@ mod controlled_direct_to_ansi {
 /// Test Sequence Generation.
 mod generate_test_sequences {
     use super::*;
-
-    /// Builds a CSI sequence: `ESC [ <final>`.
-    const fn csi(final_byte: u8) -> [u8; 3] { [ANSI_ESC, ANSI_CSI_BRACKET, final_byte] }
-
-    /// Builds a CSI tilde sequence: `ESC [ <code> ~`.
-    fn csi_tilde(code: u16) -> Vec<u8> {
-        let mut seq = vec![ANSI_ESC, ANSI_CSI_BRACKET];
-        seq.extend(code.to_string().as_bytes());
-        seq.push(ANSI_FUNCTION_KEY_TERMINATOR);
-        seq
-    }
-
-    /// Builds an SS3 sequence: `ESC O <final>`.
-    const fn ss3(final_byte: u8) -> [u8; 3] { [ANSI_ESC, ANSI_SS3_O, final_byte] }
-
-    /// Builds a CSI sequence with modifier: `ESC [ 1 ; <mod+1> <final>`.
-    ///
-    /// Modifier encoding: parameter = 1 + `modifier_bits`.
-    /// - Shift = 2 (1 + [`MODIFIER_SHIFT`])
-    /// - Alt = 3 (1 + [`MODIFIER_ALT`])
-    /// - Ctrl = 5 (1 + [`MODIFIER_CTRL`])
-    /// - Ctrl+Shift = 6 (1 + [`MODIFIER_CTRL_SHIFT`])
-    fn csi_modified(modifier: u8, final_byte: u8) -> Vec<u8> {
-        let param = 1 + modifier;
-        vec![
-            ANSI_ESC,
-            ANSI_CSI_BRACKET,
-            b'1',
-            ANSI_PARAM_SEPARATOR,
-            b'0' + param,
-            final_byte,
-        ]
-    }
 
     /// All test sequences for backend compatibility testing.
     ///

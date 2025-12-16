@@ -2,10 +2,10 @@
 
 // cspell:words rowm
 
-//! Input event generator - converts high-level input events to ANSI sequences.
+//! ANSI escape sequence generator for terminal INPUT (test fixtures).
 //!
-//! This module provides the inverse operation to the input parsers in
-//! [`vt_100_terminal_input_parser`].
+//! Provides input sequence generation for testing. Creates symmetry with
+//! [`ansi_sequence_generator_output`] for output sequences.
 //!
 //! ## Purpose
 //!
@@ -16,22 +16,25 @@
 //! 2. **Test helpers**: Build test sequences without hardcoding raw bytes
 //! 3. **Parser verification**: Confirm parsers handle all modifier combinations correctly
 //!
-//! [`vt_100_terminal_input_parser`]: mod@crate::core::ansi::vt_100_terminal_input_parser
+//! ## Available Items
+//!
+//! | Category                      | Items                                                                                                                                                     |
+//! | :---------------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------- |
+//! | Pre-computed constants        | [`SEQ_ARROW_UP`], [`SEQ_ARROW_DOWN`], [`SEQ_ARROW_RIGHT`], [`SEQ_ARROW_LEFT`], [`SEQ_HOME`], [`SEQ_END`], [`SEQ_BACKTAB`], [`SEQ_F1`]–[`SEQ_F4`]          |
+//! | Low-level builder functions   | [`csi`], [`ss3`], [`csi_tilde`], [`csi_modified`]                                                                                                         |
+//! | High-level generators         | [`generate_keyboard_sequence`], [`generate_mouse_sequence_bytes`], [`generate_resize_sequence`], [`generate_focus_sequence`], [`generate_paste_sequence`] |
 
 use crate::{KeyState,
-            core::ansi::{constants::{ANSI_ESC, ANSI_FUNCTION_KEY_TERMINATOR,
-                                     ANSI_PARAM_SEPARATOR, ARROW_DOWN_FINAL,
-                                     ARROW_LEFT_FINAL, ARROW_RIGHT_FINAL,
-                                     ARROW_UP_FINAL, ASCII_DEL, ASCII_DIGIT_0,
-                                     BACKTAB_FINAL, CONTROL_ENTER, CONTROL_NUL,
-                                     CONTROL_TAB, CSI_PREFIX, FOCUS_GAINED_FINAL,
-                                     FOCUS_LOST_FINAL, FUNCTION_F1_CODE,
-                                     FUNCTION_F2_CODE, FUNCTION_F3_CODE,
-                                     FUNCTION_F4_CODE, FUNCTION_F5_CODE,
-                                     FUNCTION_F6_CODE, FUNCTION_F7_CODE,
-                                     FUNCTION_F8_CODE, FUNCTION_F9_CODE,
-                                     FUNCTION_F10_CODE, FUNCTION_F11_CODE,
-                                     FUNCTION_F12_CODE, MODIFIER_ALT, MODIFIER_CTRL,
+            core::ansi::{constants::{ASCII_DEL, ASCII_DIGIT_0, CONTROL_ENTER,
+                                     CONTROL_NUL, CONTROL_TAB, CSI_PREFIX,
+                                     FOCUS_GAINED_FINAL, FOCUS_LOST_FINAL,
+                                     FUNCTION_F1_CODE, FUNCTION_F2_CODE,
+                                     FUNCTION_F3_CODE, FUNCTION_F4_CODE,
+                                     FUNCTION_F5_CODE, FUNCTION_F6_CODE,
+                                     FUNCTION_F7_CODE, FUNCTION_F8_CODE,
+                                     FUNCTION_F9_CODE, FUNCTION_F10_CODE,
+                                     FUNCTION_F11_CODE, FUNCTION_F12_CODE,
+                                     MODIFIER_ALT, MODIFIER_CTRL,
                                      MODIFIER_PARAMETER_BASE_CHAR, MODIFIER_SHIFT,
                                      MOUSE_LEFT_BUTTON_CODE, MOUSE_MIDDLE_BUTTON_CODE,
                                      MOUSE_MODIFIER_ALT, MOUSE_MODIFIER_CTRL,
@@ -47,8 +50,7 @@ use crate::{KeyState,
                                      PASTE_END_GENERATE_CODE,
                                      PASTE_START_GENERATE_CODE,
                                      RESIZE_EVENT_GENERATE_CODE, RESIZE_TERMINATOR,
-                                     SPECIAL_DELETE_CODE, SPECIAL_END_FINAL,
-                                     SPECIAL_HOME_FINAL, SPECIAL_INSERT_CODE,
+                                     SPECIAL_DELETE_CODE, SPECIAL_INSERT_CODE,
                                      SPECIAL_PAGE_DOWN_CODE, SPECIAL_PAGE_UP_CODE},
                          vt_100_terminal_input_parser::{VT100FocusStateIR,
                                                         VT100InputEventIR,
@@ -56,10 +58,92 @@ use crate::{KeyState,
                                                         VT100KeyModifiersIR,
                                                         VT100MouseActionIR,
                                                         VT100MouseButtonIR,
-                                                        VT100PasteModeIR}}};
+                                                        VT100PasteModeIR}},
+            input_sequences::{ANSI_CSI_BRACKET, ANSI_ESC, ANSI_FUNCTION_KEY_TERMINATOR,
+                              ANSI_PARAM_SEPARATOR, ANSI_SS3_O, ARROW_DOWN_FINAL,
+                              ARROW_LEFT_FINAL, ARROW_RIGHT_FINAL, ARROW_UP_FINAL,
+                              BACKTAB_FINAL, SPECIAL_END_FINAL, SPECIAL_HOME_FINAL,
+                              SS3_F1_FINAL, SS3_F2_FINAL, SS3_F3_FINAL, SS3_F4_FINAL}};
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// PUBLIC API - Main entry points for generating ANSI sequences
+// PRE-COMPUTED SEQUENCE CONSTANTS
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+/// Arrow Up: `ESC [ A`.
+pub const SEQ_ARROW_UP: &[u8] = &[ANSI_ESC, ANSI_CSI_BRACKET, ARROW_UP_FINAL];
+
+/// Arrow Down: `ESC [ B`.
+pub const SEQ_ARROW_DOWN: &[u8] = &[ANSI_ESC, ANSI_CSI_BRACKET, ARROW_DOWN_FINAL];
+
+/// Arrow Right: `ESC [ C`.
+pub const SEQ_ARROW_RIGHT: &[u8] = &[ANSI_ESC, ANSI_CSI_BRACKET, ARROW_RIGHT_FINAL];
+
+/// Arrow Left: `ESC [ D`.
+pub const SEQ_ARROW_LEFT: &[u8] = &[ANSI_ESC, ANSI_CSI_BRACKET, ARROW_LEFT_FINAL];
+
+/// Home: `ESC [ H`.
+pub const SEQ_HOME: &[u8] = &[ANSI_ESC, ANSI_CSI_BRACKET, SPECIAL_HOME_FINAL];
+
+/// End: `ESC [ F`.
+pub const SEQ_END: &[u8] = &[ANSI_ESC, ANSI_CSI_BRACKET, SPECIAL_END_FINAL];
+
+/// `BackTab` (Shift+Tab): `ESC [ Z`.
+pub const SEQ_BACKTAB: &[u8] = &[ANSI_ESC, ANSI_CSI_BRACKET, BACKTAB_FINAL];
+
+/// F1 (SS3): `ESC O P`.
+pub const SEQ_F1: &[u8] = &[ANSI_ESC, ANSI_SS3_O, SS3_F1_FINAL];
+
+/// F2 (SS3): `ESC O Q`.
+pub const SEQ_F2: &[u8] = &[ANSI_ESC, ANSI_SS3_O, SS3_F2_FINAL];
+
+/// F3 (SS3): `ESC O R`.
+pub const SEQ_F3: &[u8] = &[ANSI_ESC, ANSI_SS3_O, SS3_F3_FINAL];
+
+/// F4 (SS3): `ESC O S`.
+pub const SEQ_F4: &[u8] = &[ANSI_ESC, ANSI_SS3_O, SS3_F4_FINAL];
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// LOW-LEVEL BUILDER FUNCTIONS
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+/// Builds CSI sequence: `ESC [ <final>`.
+#[must_use]
+pub const fn csi(final_byte: u8) -> [u8; 3] { [ANSI_ESC, ANSI_CSI_BRACKET, final_byte] }
+
+/// Builds SS3 sequence: `ESC O <final>`.
+#[must_use]
+pub const fn ss3(final_byte: u8) -> [u8; 3] { [ANSI_ESC, ANSI_SS3_O, final_byte] }
+
+/// Builds CSI tilde sequence: `ESC [ <code> ~`.
+///
+/// Used for function keys (F5+), Insert, Delete, `PageUp`, `PageDown`.
+#[must_use]
+pub fn csi_tilde(code: u16) -> Vec<u8> {
+    let mut seq = vec![ANSI_ESC, ANSI_CSI_BRACKET];
+    seq.extend(code.to_string().as_bytes());
+    seq.push(ANSI_FUNCTION_KEY_TERMINATOR);
+    seq
+}
+
+/// Builds CSI with modifier: `ESC [ 1 ; <mod+1> <final>`.
+///
+/// Modifier encoding: Shift=1, Alt=2, Ctrl=4 (additive).
+/// The parameter sent is `1 + modifier_bits`.
+#[must_use]
+pub fn csi_modified(modifier: u8, final_byte: u8) -> Vec<u8> {
+    let param = 1 + modifier;
+    vec![
+        ANSI_ESC,
+        ANSI_CSI_BRACKET,
+        b'1',
+        ANSI_PARAM_SEPARATOR,
+        b'0' + param,
+        final_byte,
+    ]
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// HIGH-LEVEL GENERATORS - Main entry points for generating ANSI sequences
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 /// Generate ANSI bytes for an input event.
@@ -79,11 +163,6 @@ use crate::{KeyState,
 ///
 /// - `Some(Vec<u8>)` for recognized events
 /// - `None` for unsupported or invalid combinations
-///
-/// ## Usage
-///
-/// This function is used internally by tests to generate sequences for round-trip
-/// validation. See the test suite for examples of all supported event types.
 #[must_use]
 pub fn generate_keyboard_sequence(event: &VT100InputEventIR) -> Option<Vec<u8>> {
     match event {
@@ -599,10 +678,6 @@ mod encoding {
     /// - `6` → Ctrl+Shift (1 + 5)
     /// - `7` → Ctrl+Alt (1 + 6)
     /// - `8` → Ctrl+Alt+Shift (1 + 7)
-    ///
-    /// **Confirmed by [terminal observation]**: `ESC[1;5A` = Ctrl+Up (parameter 5 = 1+4).
-    ///
-    /// [terminal observation]: crate::core::ansi::vt_100_terminal_input_parser#one-based-mouse-input-events
     pub fn encode_modifiers(modifiers: VT100KeyModifiersIR) -> u8 {
         let mut mask: u8 = 0;
         if modifiers.shift == KeyState::Pressed {
@@ -618,48 +693,6 @@ mod encoding {
     }
 
     /// Convert a numeric value (0-9) to its ASCII character representation.
-    ///
-    /// This function performs the critical conversion from numeric values to their
-    /// ASCII byte representations.
-    ///
-    /// ## Examples
-    ///
-    /// ```text
-    /// Number  → ASCII Char → Byte Value
-    /// ------    ----------   ----------
-    /// 0       → '0'        → 0x30 (48)
-    /// 1       → '1'        → 0x31 (49)
-    /// 5       → '5'        → 0x35 (53)
-    /// 9       → '9'        → 0x39 (57)
-    /// ```
-    ///
-    /// ## Common Error Pattern This Prevents
-    ///
-    /// Don't push numeric values directly as bytes. For example, pushing `1` as
-    /// a byte gives `0x01`, not the ASCII character `'1'` (which is `0x31`).
-    /// This function ensures proper ASCII conversion.
-    ///
-    /// <!-- It is ok to use ignore here - demonstrates common error pattern, not meant as
-    /// runnable code -->
-    /// ```ignore
-    /// // WRONG - pushes numeric value directly
-    /// bytes.push(1);  // Pushes byte 0x01, not ASCII '1'
-    ///
-    /// // CORRECT - converts to ASCII first
-    /// bytes.push(push_ascii_number(1));  // Pushes byte 0x31 = '1'
-    /// ```
-    ///
-    /// ## Parameters
-    ///
-    /// - `value`: Numeric value (0-9)
-    ///
-    /// ## Returns
-    ///
-    /// ASCII byte representation of the digit
-    ///
-    /// ## Panics
-    ///
-    /// Panics if `value` is not in range 0-9 (debug builds only)
     pub fn push_ascii_number(value: u8) -> u8 {
         debug_assert!(
             value <= 9,
@@ -669,38 +702,5 @@ mod encoding {
     }
 
     /// Convert a multi-digit numeric value to its ASCII byte representation.
-    ///
-    /// ## Purpose
-    ///
-    /// ANSI escape sequences represent multi-digit numbers as sequences of ASCII digits.
-    /// This helper eliminates repetitive `to_string().as_bytes()` calls throughout the
-    /// codebase.
-    ///
-    /// ## Common Use Cases
-    ///
-    /// - Mouse coordinates (e.g., column 120, row 50)
-    /// - Window resize dimensions (e.g., 80x24)
-    /// - Multi-digit parameter codes (e.g., 200 for paste start)
-    ///
-    /// ## Examples
-    ///
-    /// <!-- It is ok to use ignore here - simple before/after comparison, not a complete
-    /// compilable example -->
-    /// ```ignore
-    /// // Instead of:
-    /// bytes.extend_from_slice(col.to_string().as_bytes());
-    ///
-    /// // Use:
-    /// bytes.extend_from_slice(&push_ascii_u16(col));
-    /// ```
-    ///
-    /// ## Parameters
-    ///
-    /// - `value`: Numeric value to convert (any u16 value)
-    ///
-    /// ## Returns
-    ///
-    /// A `Vec<u8>` containing the ASCII byte representation of the number.
-    /// For example, 123 returns vec![b'1', b'2', b'3'].
     pub fn push_ascii_u16(value: u16) -> Vec<u8> { value.to_string().into_bytes() }
 }

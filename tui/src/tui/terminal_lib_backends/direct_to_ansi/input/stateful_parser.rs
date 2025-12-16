@@ -17,9 +17,8 @@ use std::collections::VecDeque;
 /// This works because if [`read()`] fills the entire buffer, more data is likely
 /// waiting; if it returns fewer bytes, we've drained all available input.
 ///
+/// [ESC Detection Limitations]: mio_poller::MioPollerThread#esc-detection-limitations
 /// [`read()`]: std::io::Read::read
-///
-/// [ESC Detection Limitations]: super::mio_poller::MioPollerThread#esc-detection-limitations
 #[derive(Debug)]
 pub struct StatefulInputParser {
     /// Accumulator for current ANSI escape sequence being parsed (capacity: 256
@@ -77,9 +76,11 @@ impl Iterator for StatefulInputParser {
 #[cfg(test)]
 mod test_fixtures {
     pub use super::StatefulInputParser;
-    pub use crate::{core::ansi::vt_100_terminal_input_parser::{VT100InputEventIR,
-                                                               VT100KeyCodeIR,
-                                                               VT100KeyModifiersIR},
+    pub use crate::{core::ansi::{generator::{SEQ_ARROW_DOWN, SEQ_ARROW_LEFT,
+                                             SEQ_ARROW_RIGHT, SEQ_ARROW_UP},
+                                 vt_100_terminal_input_parser::{VT100InputEventIR,
+                                                                VT100KeyCodeIR,
+                                                                VT100KeyModifiersIR}},
                     input_sequences::{ANSI_ESC, ASCII_DEL}};
 
     /// Helper to create a keyboard event for assertions.
@@ -188,7 +189,7 @@ mod tests_esc_disambiguation {
     fn arrow_up_complete_sequence() {
         // Arrow Up: ESC [ A
         let mut parser = StatefulInputParser::default();
-        parser.advance(&[ANSI_ESC, b'[', b'A'], false);
+        parser.advance(SEQ_ARROW_UP, false);
 
         let events: Vec<_> = parser.collect();
         assert_eq!(events.len(), 1);
@@ -199,7 +200,7 @@ mod tests_esc_disambiguation {
     fn arrow_down_complete_sequence() {
         // Arrow Down: ESC [ B
         let mut parser = StatefulInputParser::default();
-        parser.advance(&[ANSI_ESC, b'[', b'B'], false);
+        parser.advance(SEQ_ARROW_DOWN, false);
 
         let events: Vec<_> = parser.collect();
         assert_eq!(events.len(), 1);
@@ -210,7 +211,7 @@ mod tests_esc_disambiguation {
     fn arrow_right_complete_sequence() {
         // Arrow Right: ESC [ C
         let mut parser = StatefulInputParser::default();
-        parser.advance(&[ANSI_ESC, b'[', b'C'], false);
+        parser.advance(SEQ_ARROW_RIGHT, false);
 
         let events: Vec<_> = parser.collect();
         assert_eq!(events.len(), 1);
@@ -221,7 +222,7 @@ mod tests_esc_disambiguation {
     fn arrow_left_complete_sequence() {
         // Arrow Left: ESC [ D
         let mut parser = StatefulInputParser::default();
-        parser.advance(&[ANSI_ESC, b'[', b'D'], false);
+        parser.advance(SEQ_ARROW_LEFT, false);
 
         let events: Vec<_> = parser.collect();
         assert_eq!(events.len(), 1);

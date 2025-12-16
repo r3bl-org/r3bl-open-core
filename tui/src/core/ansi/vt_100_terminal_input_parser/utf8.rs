@@ -117,7 +117,8 @@
 //!
 //! - **Fast**: Detection is just bitwise AND + compare
 //! - **Self-synchronizing**: Jump anywhere in a stream, scan for `0xxxxxxx` or `11xxxxxx`
-//! - **Unambiguous**: Continuation bytes (`10xxxxxx`) can never be confused with start bytes
+//! - **Unambiguous**: Continuation bytes (`10xxxxxx`) can never be confused with start
+//!   bytes
 //! - **ASCII-compatible**: Single-byte chars unchanged (the `0` prefix means "complete")
 //!
 //! # Important: UTF-8 Byte Length vs Display Width

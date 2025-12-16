@@ -39,11 +39,11 @@
 //!
 //! ### Test Strategy
 //!
-//! | Test Type                      | Purpose                                   | Approach                                              |
-//! |:-------------------------------|:------------------------------------------|:------------------------------------------------------|
-//! | **Parser tests** (this file)   | Verify ANSI → Event parsing               | Use literal sequences from terminal observation       |
-//! | **Generator tests**            | Verify Event → ANSI generation            | Use literal sequences from VT-100 spec                |
-//! | **Round-trip tests**           | Verify parser ↔ generator compatibility   | Event → bytes → Event                                 |
+//! | Test Type                        | Purpose                                     | Approach                                                |
+//! | :------------------------------- | :------------------------------------------ | :------------------------------------------------------ |
+//! | **Parser tests** (this file)     | Verify ANSI → Event parsing                 | Use literal sequences from terminal observation         |
+//! | **Generator tests**              | Verify Event → ANSI generation              | Use literal sequences from VT-100 spec                  |
+//! | **Round-trip tests**             | Verify parser ↔ generator compatibility     | Event → bytes → Event                                   |
 //!
 //! The combination of all three test types ensures both parser and generator are correct
 //! and compatible with each other.
@@ -63,8 +63,7 @@
 //! ```
 //!
 //! **These hardcoded sequences ARE the ground truth.** The generators in
-//! [`test_fixtures::input_sequence_generator`] are validated by producing sequences
-//! that match these literals.
+//! [`generator`] are validated by producing sequences that match these literals.
 //!
 //! If you want to test generator correctness, see the round-trip tests in
 //! [`unit_tests::generator_round_trip_tests`] instead.
@@ -135,7 +134,7 @@
 //! 🔤 Escaped string: "\u{1b}[<65;59;20M"
 //! ⌨️  Parsed: Unknown (hex: 1b 5b 3c 36 35 3b 35 39 3b 32 30 4d)
 //!
-//! [`test_fixtures::input_sequence_generator`]: mod@crate::core::ansi::vt_100_terminal_input_parser::test_fixtures
+//! [`generator`]: crate::core::ansi::generator
 //! [`unit_tests::generator_round_trip_tests`]: mod@crate::core::ansi::vt_100_terminal_input_parser::unit_tests::generator_round_trip_tests
 
 use crate::{KeyState, byte_offset,

@@ -10,14 +10,14 @@
 //! This ensures generator and parser are compatible and speak the same protocol.
 
 use crate::{KeyState,
-            core::ansi::vt_100_terminal_input_parser::{VT100FocusStateIR,
-                                                       VT100InputEventIR,
-                                                       VT100KeyCodeIR,
-                                                       VT100KeyModifiersIR,
-                                                       VT100PasteModeIR,
-                                                       parse_keyboard_sequence,
-                                                       parse_terminal_event,
-                                                       test_fixtures::*}};
+            core::ansi::{generator::*,
+                         vt_100_terminal_input_parser::{VT100FocusStateIR,
+                                                        VT100InputEventIR,
+                                                        VT100KeyCodeIR,
+                                                        VT100KeyModifiersIR,
+                                                        VT100PasteModeIR,
+                                                        parse_keyboard_sequence,
+                                                        parse_terminal_event}}};
 
 // ==================== Terminal Events ====================
 
@@ -371,7 +371,10 @@ fn test_generate_raw_byte_keys() {
         code: VT100KeyCodeIR::Backspace,
         modifiers: VT100KeyModifiersIR::default(),
     };
-    assert_eq!(generate_keyboard_sequence(&backspace_event), Some(vec![0x7F]));
+    assert_eq!(
+        generate_keyboard_sequence(&backspace_event),
+        Some(vec![0x7F])
+    );
 
     // BackTab: generates CSI Z sequence
     let backtab_event = VT100InputEventIR::Keyboard {

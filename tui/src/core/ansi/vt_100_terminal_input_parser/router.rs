@@ -97,10 +97,10 @@ use crate::{ByteOffset, byte_offset,
 /// Unlike a fixed 150ms timeout approach, the `input_available` flag provides
 /// **adaptive waiting**:
 ///
-/// - **Local terminals**: Escape sequences arrive atomically, so `input_available`
-///   is usually `false` after reading—we emit ESC immediately when appropriate.
-/// - **SSH/high-latency**: If bytes arrive separately, `input_available` tells us
-///   when more data is pending—we wait correctly without a fixed timeout.
+/// - **Local terminals**: Escape sequences arrive atomically, so `input_available` is
+///   usually `false` after reading—we emit ESC immediately when appropriate.
+/// - **SSH/high-latency**: If bytes arrive separately, `input_available` tells us when
+///   more data is pending—we wait correctly without a fixed timeout.
 ///
 /// **Benefits**: Vim-style modal editors, `ESC`-heavy workflows, dialog dismissal.
 /// **SSH compatibility**: Works correctly because we wait for more bytes when available.
@@ -109,14 +109,14 @@ use crate::{ByteOffset, byte_offset,
 ///
 /// The parser uses intelligent 1-2 byte lookahead to determine routing:
 ///
-/// | Input Pattern            | `input_available` | Routing                             |
-/// |:-------------------------|:------------------|:------------------------------------|
-/// | `[ 0x1B ]` alone         | `false`           | Emit `ESC` key immediately          |
-/// | `[ 0x1B ]` alone         | `true`            | Return `None` (wait for more bytes) |
-/// | `[ 0x1B, b'[', .. ]`     | (ignored)         | `CSI` → keyboard/mouse/terminal     |
-/// | `[ 0x1B, b'O', .. ]`     | (ignored)         | `SS3` → F1-F4, Home, End, arrows    |
-/// | `[ 0x1B, other ]`        | (ignored)         | Alt+letter or emit standalone `ESC` |
-/// | Other bytes              | (ignored)         | control char → UTF-8                |
+/// | Input Pattern              | `input_available`   | Routing                               |
+/// | :------------------------- | :------------------ | :------------------------------------ |
+/// | `[ 0x1B ]` alone           | `false`             | Emit `ESC` key immediately            |
+/// | `[ 0x1B ]` alone           | `true`              | Return `None` (wait for more bytes)   |
+/// | `[ 0x1B, b'[', .. ]`       | (ignored)           | `CSI` → keyboard/mouse/terminal       |
+/// | `[ 0x1B, b'O', .. ]`       | (ignored)           | `SS3` → F1-F4, Home, End, arrows      |
+/// | `[ 0x1B, other ]`          | (ignored)           | Alt+letter or emit standalone `ESC`   |
+/// | Other bytes                | (ignored)           | control char → UTF-8                  |
 ///
 /// - `CSI` (Control Sequence Introducer):
 ///   - The most common escape sequence format, starting with `ESC [`. Used for arrow
@@ -271,11 +271,11 @@ fn esc_key_event() -> VT100InputEventIR {
 mod tests_csi_routing {
     use super::*;
     use crate::{TermPos,
-                core::ansi::vt_100_terminal_input_parser::{VT100FocusStateIR,
-                                                           VT100MouseActionIR,
-                                                           VT100MouseButtonIR,
-                                                           VT100PasteModeIR,
-                                                           test_fixtures::generate_keyboard_sequence}};
+                core::ansi::{generator::generate_keyboard_sequence,
+                             vt_100_terminal_input_parser::{VT100FocusStateIR,
+                                                            VT100MouseActionIR,
+                                                            VT100MouseButtonIR,
+                                                            VT100PasteModeIR}}};
 
     #[test]
     fn keyboard_arrow_key() {
@@ -371,8 +371,7 @@ mod tests_csi_routing {
 #[cfg(test)]
 mod tests_non_csi_input {
     use super::*;
-    use crate::{KeyState,
-                core::ansi::vt_100_terminal_input_parser::test_fixtures::generate_keyboard_sequence};
+    use crate::{KeyState, core::ansi::generator::generate_keyboard_sequence};
 
     #[test]
     fn esc_key_immediate_when_no_more_input() {

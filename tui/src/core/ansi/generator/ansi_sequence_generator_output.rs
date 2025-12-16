@@ -31,7 +31,6 @@ use crate::{ColIndex, ColorTarget, EraseDisplayMode, EraseLineMode, RowIndex,
 /// - **Infallible generation**: Exhaustive pattern matching ensures valid output
 /// - **1-based indexing**: Automatically converts 0-based indices to 1-based ANSI
 ///
-/// [`vt_100_pty_output_parser`]: mod@crate::core::ansi::vt_100_pty_output_parser
 ///
 /// # Reference Implementation Pattern
 ///
@@ -70,10 +69,11 @@ use crate::{ColIndex, ColorTarget, EraseDisplayMode, EraseLineMode, RowIndex,
 /// This struct has no state; it's a collection of static methods. State tracking (cursor
 /// position, current colors) is handled by external implementations.
 ///
-/// [`vt_100_pty_output_parser`]: mod@crate::core::ansi::vt_100_pty_output_parser
-/// [`FastStringify`]: crate::core::common::fast_stringify::FastStringify
 /// [`CsiSequence`]: crate::CsiSequence
+/// [`FastStringify`]: crate::core::common::fast_stringify::FastStringify
 /// [`SgrColorSequence`]: crate::SgrColorSequence
+/// [`vt_100_pty_output_parser`]: mod@crate::core::ansi::vt_100_pty_output_parser
+/// [`vt_100_pty_output_parser`]: mod@crate::core::ansi::vt_100_pty_output_parser
 #[derive(Debug)]
 pub struct AnsiSequenceGenerator;
 

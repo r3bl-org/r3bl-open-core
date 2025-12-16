@@ -43,13 +43,12 @@
 //! ```
 //!
 //! **These hardcoded sequences ARE the ground truth.** The generators in
-//! [`test_fixtures::input_sequence_generator`] are validated by producing sequences
-//! that match these literals.
+//! [`generator`] are validated by producing sequences that match these literals.
 //!
 //! If you want to test generator correctness, see the round-trip tests in
 //! [`unit_tests::generator_round_trip_tests`] instead.
 //!
-//! [`test_fixtures::input_sequence_generator`]: super::test_fixtures
+//! [`generator`]: crate::core::ansi::generator
 //! [`unit_tests::generator_round_trip_tests`]: super::unit_tests::generator_round_trip_tests
 //! [parent module]: super#testing-strategy
 
