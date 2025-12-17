@@ -26,7 +26,7 @@
 //! | [`SourceRegistry`]                               | Holds [`stdin`] and [`SIGWINCH`] signal handles                    |
 //! | [`SourceKindReady`]                              | Enum mapping [`mio::Token`] ↔ source kind for dispatch             |
 //! | [`dispatch()`]                                   | Routes ready events to appropriate handlers                        |
-//! | [`consume_stdin_input()`]                        | Reads and parses stdin bytes into [`InputEvent`]s                  |
+//! | [`consume_stdin_input()`]                        | Reads and parses [`stdin`] bytes into [`InputEvent`]s              |
 //! | [`consume_pending_signals()`]                    | Drains [`SIGWINCH`] signals, sends [`Resize`]                      |
 //! | [VT100 input parser] ([`StatefulInputParser`])   | Accumulates bytes, parses [`VT100InputEventIR`] with ESC handling  |
 //! | [paste state machine] ([`PasteCollectionState`]) | Collects text between bracketed paste markers                      |
@@ -35,7 +35,8 @@
 //!
 //! Our design separates these two:
 //!
-//! 1. **Blocking I/O** (the [`mio`] thread owns [`stdin`] exclusively).
+//! 1. **Blocking I/O** (dedicated thread exclusively manages [`stdin`] and [`SIGWINCH`]
+//!    by blocking on [`mio::Poll::poll()`]).
 //! 2. **Async consumption** ([`tokio`] tasks await on channel). The
 //!    [`tokio::sync::broadcast`] channel bridges sync and async worlds, supporting
 //!    multiple consumers that each receive all events.
@@ -44,8 +45,7 @@
 //!
 //! ## The [`mio`]-poller Thread
 //!
-//! A dedicated [`std::thread`] runs for the process lifetime,
-//! using [`mio::Poll`] to
+//! A dedicated [`std::thread`] runs for the process lifetime, using [`mio::Poll`] to
 //! efficiently wait on multiple file descriptors:
 //!
 //! ```text
@@ -141,7 +141,7 @@
 //! [`SIGWINCH`] arrives. This lets [`mio`] wait on signals just like any other fd:
 //!
 //! <!-- It is ok to use ignore here -->
-//! 
+//!
 //! ```ignore
 //! let mut signals = Signals::new([SIGWINCH])?;  // Creates internal pipe
 //! registry.register(&mut signals, SourceKindReady::Signals.to_token(), Interest::READABLE)
