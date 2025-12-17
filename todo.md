@@ -43,6 +43,11 @@
 
 - [x] fix [`add-backend-compat-tests.md`](task/done/add-backend-compat-tests.md:28)
 
+- [x] create "dedicated thread reactor" pattern based on `mio_poller` design & impl that
+      can be generalized to provide lots of great features (for `r3bl_*` apps & services)
+      in the future:
+      [`dedicated-reactor-thread-pattern.md`](task/pending/dedicated-reactor-thread-pattern.md)
+
 - [x] update README.md files [`update-readme.md`](task/done/update-readme.md)
 
 - [x] fix `rl_async` bugs [`rl_async_update.md`](task/done/rl_async_update.md):
