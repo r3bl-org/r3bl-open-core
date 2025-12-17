@@ -18,8 +18,10 @@ fn test_basic_delete_char_integration() {
     let _write_result = ofs_buf.apply_ansi_bytes(text_sequence);
 
     // Move to position 4 (letter 'D') and delete it using sequence builder
-    let delete_sequence =
-        basic_sequences::move_and_delete_chars(TermCol::from_raw_non_zero_value(nz(4)), CsiCount::ONE);
+    let delete_sequence = basic_sequences::move_and_delete_chars(
+        TermCol::from_raw_non_zero_value(nz(4)),
+        CsiCount::ONE,
+    );
     let _result = ofs_buf.apply_ansi_bytes(delete_sequence);
 
     // Should now read "ABCEF " (D deleted, chars shifted left, blank at end)
@@ -35,8 +37,10 @@ fn test_basic_insert_char_integration() {
     let _write_result = ofs_buf.apply_ansi_bytes(text_sequence);
 
     // Move to position 3 and insert a blank character using sequence builder
-    let insert_sequence =
-        basic_sequences::move_and_insert_chars(TermCol::from_raw_non_zero_value(nz(3)), CsiCount::ONE);
+    let insert_sequence = basic_sequences::move_and_insert_chars(
+        TermCol::from_raw_non_zero_value(nz(3)),
+        CsiCount::ONE,
+    );
     let _result = ofs_buf.apply_ansi_bytes(insert_sequence);
 
     // Should now read "HE LLO" (blank inserted at position 3)
@@ -60,8 +64,10 @@ fn test_basic_erase_char_integration() {
     let _write_result = ofs_buf.apply_ansi_bytes(text_sequence);
 
     // Move to position 3 ('L') and erase it using sequence builder
-    let erase_sequence =
-        basic_sequences::move_and_erase_chars(TermCol::from_raw_non_zero_value(nz(3)), CsiCount::ONE);
+    let erase_sequence = basic_sequences::move_and_erase_chars(
+        TermCol::from_raw_non_zero_value(nz(3)),
+        CsiCount::ONE,
+    );
     let _result = ofs_buf.apply_ansi_bytes(erase_sequence);
 
     // Should now read "HE LO" (L erased to blank, no shifting)
@@ -85,7 +91,8 @@ fn test_basic_vpa_integration() {
     let _move_result = ofs_buf.apply_ansi_bytes(move_sequence);
 
     // Use VPA to move to specific row while maintaining column
-    let vpa_sequence = cursor_sequences::move_to_row(TermRow::from_raw_non_zero_value(nz(3)));
+    let vpa_sequence =
+        cursor_sequences::move_to_row(TermRow::from_raw_non_zero_value(nz(3)));
     let _result = ofs_buf.apply_ansi_bytes(vpa_sequence);
 
     // Should be at row 2 (0-based), column 6 (0-based)

@@ -149,16 +149,31 @@ mod tests {
 
     #[test]
     fn test_erase_display_mode_from_param() {
-        assert_eq!(EraseDisplayMode::from_param(0), EraseDisplayMode::FromCursorToEnd);
-        assert_eq!(EraseDisplayMode::from_param(1), EraseDisplayMode::FromStartToCursor);
-        assert_eq!(EraseDisplayMode::from_param(2), EraseDisplayMode::EntireScreen);
+        assert_eq!(
+            EraseDisplayMode::from_param(0),
+            EraseDisplayMode::FromCursorToEnd
+        );
+        assert_eq!(
+            EraseDisplayMode::from_param(1),
+            EraseDisplayMode::FromStartToCursor
+        );
+        assert_eq!(
+            EraseDisplayMode::from_param(2),
+            EraseDisplayMode::EntireScreen
+        );
         assert_eq!(
             EraseDisplayMode::from_param(3),
             EraseDisplayMode::EntireScreenAndScrollback
         );
         // Invalid values default to FromCursorToEnd
-        assert_eq!(EraseDisplayMode::from_param(4), EraseDisplayMode::FromCursorToEnd);
-        assert_eq!(EraseDisplayMode::from_param(99), EraseDisplayMode::FromCursorToEnd);
+        assert_eq!(
+            EraseDisplayMode::from_param(4),
+            EraseDisplayMode::FromCursorToEnd
+        );
+        assert_eq!(
+            EraseDisplayMode::from_param(99),
+            EraseDisplayMode::FromCursorToEnd
+        );
     }
 
     #[test]
@@ -171,17 +186,26 @@ mod tests {
 
     #[test]
     fn test_erase_display_mode_default() {
-        assert_eq!(EraseDisplayMode::default(), EraseDisplayMode::FromCursorToEnd);
+        assert_eq!(
+            EraseDisplayMode::default(),
+            EraseDisplayMode::FromCursorToEnd
+        );
     }
 
     #[test]
     fn test_erase_line_mode_from_param() {
         assert_eq!(EraseLineMode::from_param(0), EraseLineMode::FromCursorToEnd);
-        assert_eq!(EraseLineMode::from_param(1), EraseLineMode::FromStartToCursor);
+        assert_eq!(
+            EraseLineMode::from_param(1),
+            EraseLineMode::FromStartToCursor
+        );
         assert_eq!(EraseLineMode::from_param(2), EraseLineMode::EntireLine);
         // Invalid values default to FromCursorToEnd
         assert_eq!(EraseLineMode::from_param(3), EraseLineMode::FromCursorToEnd);
-        assert_eq!(EraseLineMode::from_param(99), EraseLineMode::FromCursorToEnd);
+        assert_eq!(
+            EraseLineMode::from_param(99),
+            EraseLineMode::FromCursorToEnd
+        );
     }
 
     #[test]

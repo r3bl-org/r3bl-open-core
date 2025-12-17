@@ -131,6 +131,7 @@
 //! [`std::io::stdin().as_raw_fd()`][AsRawFd::as_raw_fd]. We wrap it in [`SourceFd`] so [`mio`] can poll it:
 //!
 //! <!-- It is ok to use ignore here -->
+//!
 //! ```ignore
 //! registry.register(&mut SourceFd(&stdin_fd), SourceKindReady::Stdin.to_token(), Interest::READABLE)
 //! ```
@@ -140,6 +141,7 @@
 //! [`SIGWINCH`] arrives. This lets [`mio`] wait on signals just like any other fd:
 //!
 //! <!-- It is ok to use ignore here -->
+//! 
 //! ```ignore
 //! let mut signals = Signals::new([SIGWINCH])?;  // Creates internal pipe
 //! registry.register(&mut signals, SourceKindReady::Signals.to_token(), Interest::READABLE)

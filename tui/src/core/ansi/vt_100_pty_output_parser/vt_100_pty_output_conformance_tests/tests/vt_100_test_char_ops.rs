@@ -17,7 +17,8 @@
 //! [parser module docs]: super::super
 
 use super::super::test_fixtures_vt_100_ansi_conformance::*;
-use crate::{CsiCount, TermCol, TuiStyle, core::ansi::vt_100_pty_output_parser::CsiSequence};
+use crate::{CsiCount, TermCol, TuiStyle,
+            core::ansi::vt_100_pty_output_parser::CsiSequence};
 
 /// Helper to create a buffer with "ABCDEFGHIJ" in the first row.
 fn create_alphabet_buffer() -> crate::OffscreenBuffer {
@@ -41,7 +42,9 @@ pub mod delete_char {
         let mut ofs_buf = create_alphabet_buffer();
 
         // Move cursor to column 3 (letter 'D') and delete one character
-        let move_cursor = CsiSequence::CursorHorizontalAbsolute(TermCol::from_raw_non_zero_value(nz(4))); // Move to column 4 (1-based)
+        let move_cursor = CsiSequence::CursorHorizontalAbsolute(
+            TermCol::from_raw_non_zero_value(nz(4)),
+        ); // Move to column 4 (1-based)
         let delete_char = CsiSequence::DeleteChar(CsiCount::ONE);
         let sequence = format!("{move_cursor}{delete_char}");
         let _result = ofs_buf.apply_ansi_bytes(sequence);
@@ -55,7 +58,9 @@ pub mod delete_char {
         let mut ofs_buf = create_alphabet_buffer();
 
         // Move cursor to column 2 (letter 'C') and delete three characters
-        let move_cursor = CsiSequence::CursorHorizontalAbsolute(TermCol::from_raw_non_zero_value(nz(3))); // Move to column 3 (1-based)
+        let move_cursor = CsiSequence::CursorHorizontalAbsolute(
+            TermCol::from_raw_non_zero_value(nz(3)),
+        ); // Move to column 3 (1-based)
         let delete_chars = CsiSequence::DeleteChar(CsiCount::new(3).unwrap());
         let sequence = format!("{move_cursor}{delete_chars}");
         let _result = ofs_buf.apply_ansi_bytes(sequence);
@@ -70,7 +75,9 @@ pub mod delete_char {
         let mut ofs_buf = create_alphabet_buffer();
 
         // Move cursor to column 8 (letter 'I') and delete 5 chars
-        let move_cursor = CsiSequence::CursorHorizontalAbsolute(TermCol::from_raw_non_zero_value(nz(9))); // Move to column 9 (1-based)
+        let move_cursor = CsiSequence::CursorHorizontalAbsolute(
+            TermCol::from_raw_non_zero_value(nz(9)),
+        ); // Move to column 9 (1-based)
         let delete_chars = CsiSequence::DeleteChar(CsiCount::new(5).unwrap());
         let sequence = format!("{move_cursor}{delete_chars}");
         let _result = ofs_buf.apply_ansi_bytes(sequence);
@@ -85,7 +92,9 @@ pub mod delete_char {
 
         // Move cursor beyond right margin and try to delete.
         // The cursor will be clamped to column 10, and delete will happen there.
-        let move_cursor = CsiSequence::CursorHorizontalAbsolute(TermCol::from_raw_non_zero_value(nz(11))); // Move to column 11 (beyond)
+        let move_cursor = CsiSequence::CursorHorizontalAbsolute(
+            TermCol::from_raw_non_zero_value(nz(11)),
+        ); // Move to column 11 (beyond)
         let delete_char = CsiSequence::DeleteChar(CsiCount::ONE);
         let sequence = format!("{move_cursor}{delete_char}");
         let _result = ofs_buf.apply_ansi_bytes(sequence);
@@ -105,7 +114,9 @@ pub mod insert_char {
         let mut ofs_buf = create_alphabet_buffer();
 
         // Move cursor to column 3 (letter 'D') and insert one character.
-        let move_cursor = CsiSequence::CursorHorizontalAbsolute(TermCol::from_raw_non_zero_value(nz(4))); // Move to column 4 (1-based)
+        let move_cursor = CsiSequence::CursorHorizontalAbsolute(
+            TermCol::from_raw_non_zero_value(nz(4)),
+        ); // Move to column 4 (1-based)
         let insert_char = CsiSequence::InsertChar(CsiCount::ONE);
         let sequence = format!("{move_cursor}{insert_char}");
         let _result = ofs_buf.apply_ansi_bytes(sequence);
@@ -119,7 +130,9 @@ pub mod insert_char {
         let mut ofs_buf = create_alphabet_buffer();
 
         // Move cursor to column 2 (letter 'C') and insert three characters
-        let move_cursor = CsiSequence::CursorHorizontalAbsolute(TermCol::from_raw_non_zero_value(nz(3))); // Move to column 3 (1-based)
+        let move_cursor = CsiSequence::CursorHorizontalAbsolute(
+            TermCol::from_raw_non_zero_value(nz(3)),
+        ); // Move to column 3 (1-based)
         let insert_chars = CsiSequence::InsertChar(CsiCount::new(3).unwrap());
         let sequence = format!("{move_cursor}{insert_chars}");
         let _result = ofs_buf.apply_ansi_bytes(sequence);
@@ -134,7 +147,9 @@ pub mod insert_char {
         let mut ofs_buf = create_alphabet_buffer();
 
         // Move cursor to column 8 (letter 'I') and insert three characters
-        let move_cursor = CsiSequence::CursorHorizontalAbsolute(TermCol::from_raw_non_zero_value(nz(9))); // Move to column 9 (1-based)
+        let move_cursor = CsiSequence::CursorHorizontalAbsolute(
+            TermCol::from_raw_non_zero_value(nz(9)),
+        ); // Move to column 9 (1-based)
         let insert_chars = CsiSequence::InsertChar(CsiCount::new(3).unwrap());
         let sequence = format!("{move_cursor}{insert_chars}");
         let _result = ofs_buf.apply_ansi_bytes(sequence);
@@ -149,7 +164,9 @@ pub mod insert_char {
 
         // Move cursor beyond right margin and try to insert.
         // The cursor will be clamped to column 10, and insert will happen there.
-        let move_cursor = CsiSequence::CursorHorizontalAbsolute(TermCol::from_raw_non_zero_value(nz(11))); // Move to column 11 (beyond)
+        let move_cursor = CsiSequence::CursorHorizontalAbsolute(
+            TermCol::from_raw_non_zero_value(nz(11)),
+        ); // Move to column 11 (beyond)
         let insert_char = CsiSequence::InsertChar(CsiCount::ONE);
         let sequence = format!("{move_cursor}{insert_char}");
         let _result = ofs_buf.apply_ansi_bytes(sequence);
@@ -169,7 +186,9 @@ pub mod erase_char {
         let mut ofs_buf = create_alphabet_buffer();
 
         // Move cursor to column 3 (letter 'D') and erase one character
-        let move_cursor = CsiSequence::CursorHorizontalAbsolute(TermCol::from_raw_non_zero_value(nz(4))); // Move to column 4 (1-based)
+        let move_cursor = CsiSequence::CursorHorizontalAbsolute(
+            TermCol::from_raw_non_zero_value(nz(4)),
+        ); // Move to column 4 (1-based)
         let erase_char = CsiSequence::EraseChar(CsiCount::ONE);
         let sequence = format!("{move_cursor}{erase_char}");
         let _result = ofs_buf.apply_ansi_bytes(sequence);
@@ -183,7 +202,9 @@ pub mod erase_char {
         let mut ofs_buf = create_alphabet_buffer();
 
         // Move cursor to column 2 (letter 'C') and erase three characters
-        let move_cursor = CsiSequence::CursorHorizontalAbsolute(TermCol::from_raw_non_zero_value(nz(3))); // Move to column 3 (1-based)
+        let move_cursor = CsiSequence::CursorHorizontalAbsolute(
+            TermCol::from_raw_non_zero_value(nz(3)),
+        ); // Move to column 3 (1-based)
         let erase_chars = CsiSequence::EraseChar(CsiCount::new(3).unwrap());
         let sequence = format!("{move_cursor}{erase_chars}");
         let _result = ofs_buf.apply_ansi_bytes(sequence);
@@ -197,7 +218,9 @@ pub mod erase_char {
         let mut ofs_buf = create_alphabet_buffer();
 
         // Move cursor to column 8 (letter 'I') and erase five characters
-        let move_cursor = CsiSequence::CursorHorizontalAbsolute(TermCol::from_raw_non_zero_value(nz(9))); // Move to column 9 (1-based)
+        let move_cursor = CsiSequence::CursorHorizontalAbsolute(
+            TermCol::from_raw_non_zero_value(nz(9)),
+        ); // Move to column 9 (1-based)
         let erase_chars = CsiSequence::EraseChar(CsiCount::new(5).unwrap());
         let sequence = format!("{move_cursor}{erase_chars}");
         let _result = ofs_buf.apply_ansi_bytes(sequence);
@@ -212,7 +235,9 @@ pub mod erase_char {
 
         // Move cursor beyond right margin and try to erase.
         // The cursor will be clamped to column 10, and erase will happen there.
-        let move_cursor = CsiSequence::CursorHorizontalAbsolute(TermCol::from_raw_non_zero_value(nz(11))); // Move to column 11 (beyond)
+        let move_cursor = CsiSequence::CursorHorizontalAbsolute(
+            TermCol::from_raw_non_zero_value(nz(11)),
+        ); // Move to column 11 (beyond)
         let erase_char = CsiSequence::EraseChar(CsiCount::ONE);
         let sequence = format!("{move_cursor}{erase_char}");
         let _result = ofs_buf.apply_ansi_bytes(sequence);
@@ -228,14 +253,18 @@ pub mod erase_char {
         let mut ofs_buf_delete = create_alphabet_buffer();
 
         // Both operations at column 3 (letter 'D')
-        let move_cursor = CsiSequence::CursorHorizontalAbsolute(TermCol::from_raw_non_zero_value(nz(4))); // Move to column 4 (1-based)
+        let move_cursor = CsiSequence::CursorHorizontalAbsolute(
+            TermCol::from_raw_non_zero_value(nz(4)),
+        ); // Move to column 4 (1-based)
 
         // Erase one character: ESC[X
-        let erase_sequence = format!("{move_cursor}{}", CsiSequence::EraseChar(CsiCount::ONE));
+        let erase_sequence =
+            format!("{move_cursor}{}", CsiSequence::EraseChar(CsiCount::ONE));
         let _result1 = ofs_buf_erase.apply_ansi_bytes(erase_sequence);
 
         // Delete one character: ESC[P
-        let delete_sequence = format!("{move_cursor}{}", CsiSequence::DeleteChar(CsiCount::ONE));
+        let delete_sequence =
+            format!("{move_cursor}{}", CsiSequence::DeleteChar(CsiCount::ONE));
         let _result2 = ofs_buf_delete.apply_ansi_bytes(delete_sequence);
 
         // Verify different results:

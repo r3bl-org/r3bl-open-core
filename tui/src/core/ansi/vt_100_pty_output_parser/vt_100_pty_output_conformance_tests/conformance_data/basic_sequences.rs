@@ -31,7 +31,8 @@ pub fn clear_and_home() -> String {
         CsiSequence::CursorPosition {
             row: term_row(nz(1)),
             col: term_col(nz(1))
-        }  // Move to home position
+        }  /* Move to home
+                                                                    * position */
     )
 }
 

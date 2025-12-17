@@ -3,14 +3,14 @@
 //! Super minimal PTY test - just echo raw bytes to verify data flow
 
 use portable_pty::PtySize;
-use r3bl_tui::{InputEvent, Key, KeyPress, KeyState, ModifierKeysMask, RawMode,
-               clear_screen_and_home_cursor,
+use r3bl_tui::{AnsiSequenceGenerator, InputEvent, Key, KeyPress, KeyState,
+               ModifierKeysMask, RawMode, col,
                core::{get_size,
                       pty::{ControlSequence, CursorKeyMode, PtyCommandBuilder,
                             PtyInputEvent, PtyReadWriteOutputEvent},
                       terminal_io::{InputDevice, OutputDevice},
                       try_initialize_logging_global},
-               lock_output_device_as_mut, set_mimalloc_in_main};
+               lock_output_device_as_mut, row, set_mimalloc_in_main};
 use std::io::Write;
 
 #[tokio::main]
@@ -37,7 +37,13 @@ async fn main() -> miette::Result<()> {
     );
 
     // Clear screen.
-    clear_screen_and_home_cursor(&output_device);
+    {
+        let out = lock_output_device_as_mut!(&output_device);
+        let _unused = out.write_all(AnsiSequenceGenerator::clear_screen().as_bytes());
+        let _unused = out
+            .write_all(AnsiSequenceGenerator::cursor_position(row(0), col(0)).as_bytes());
+        let _unused = out.flush();
+    }
 
     // Spawn cat process (simple echo).
     let pty_size = PtySize {

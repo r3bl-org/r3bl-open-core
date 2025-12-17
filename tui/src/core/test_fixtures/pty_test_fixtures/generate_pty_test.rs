@@ -136,6 +136,7 @@
 /// - Get a writer: `pty_pair.controller_mut().take_writer()`
 /// - Wait for child: `child.wait()`
 ///
+/// [`generate_pty_test!`]: crate::generate_pty_test
 /// [`integration_tests`]: mod@crate::core::ansi::vt_100_terminal_input_parser::integration_tests
 /// [`pty_types`]: mod@crate::core::pty::pty_core::pty_types
 /// [`raw_mode_integration_tests`]: mod@crate::core::ansi::terminal_raw_mode::integration_tests

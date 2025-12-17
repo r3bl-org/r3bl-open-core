@@ -48,6 +48,13 @@ Verify there are no documentation build warnings or errors.
 
 If there are link warnings, invoke the `fix-intradoc-links` skill to resolve them.
 
+**CRITICAL: Never remove intra-doc links to fix warnings.** When you encounter:
+- Unresolved link to a symbol → Fix the path using `crate::` prefix (see `write-documentation` skill)
+- Unresolved link to a test module → Add `#[cfg(any(test, doc))]` visibility (see `organize-modules` skill)
+- Unresolved link to a platform-specific module → Use `#[cfg(all(any(test, doc), target_os = "..."))]`
+
+Links provide refactoring safety - `cargo doc` catches stale references. Converting to plain backticks removes this protection.
+
 ### 5. Linting
 
 Invoke the `run-clippy` skill to run clippy and enforce code style standards.

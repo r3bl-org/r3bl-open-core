@@ -42,8 +42,7 @@
 use super::raw_mode_unix;
 #[cfg(windows)]
 use super::raw_mode_windows;
-
-use crate::{TerminalLibBackend, DEBUG_TUI_SHOW_TERMINAL_BACKEND, TERMINAL_LIB_BACKEND};
+use crate::{DEBUG_TUI_SHOW_TERMINAL_BACKEND, TERMINAL_LIB_BACKEND, TerminalLibBackend};
 use miette::IntoDiagnostic;
 
 /// Enable raw mode on the terminal.

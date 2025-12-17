@@ -17,7 +17,7 @@ use std::collections::VecDeque;
 /// This works because if [`read()`] fills the entire buffer, more data is likely
 /// waiting; if it returns fewer bytes, we've drained all available input.
 ///
-/// [ESC Detection Limitations]: mio_poller::MioPollerThread#esc-detection-limitations
+/// [ESC Detection Limitations]: super::mio_poller#esc-detection-limitations
 /// [`read()`]: std::io::Read::read
 #[derive(Debug)]
 pub struct StatefulInputParser {

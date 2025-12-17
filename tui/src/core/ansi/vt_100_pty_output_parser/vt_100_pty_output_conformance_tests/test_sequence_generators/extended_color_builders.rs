@@ -1,5 +1,9 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+// Allow doc_markdown - documentation explains internal test patterns where backticking
+// every function/type would reduce readability.
+#![allow(clippy::doc_markdown)]
+
 //! Test convenience builders for extended color sequences (256-color & RGB).
 //!
 //! This module provides ergonomic functions for generating extended color ANSI sequences
@@ -21,7 +25,9 @@
 //!
 //! # Example Usage
 //!
-//! <!-- It is ok to use ignore here - test helper functions in conditionally compiled modules aren't accessible from doctests -->
+//! <!-- It is ok to use ignore here - test helper functions in conditionally compiled
+//! modules aren't accessible from doctests -->
+//!
 //! ```ignore
 //! use crate::vt_100_pty_output_conformance_tests::test_sequence_generators::extended_color_builders::*;
 //!
@@ -99,7 +105,9 @@ pub fn fg_rgb(r: u8, g: u8, b: u8) -> String {
 /// Formatted ANSI sequence: `\x1b[48:2:{r}:{g}:{b}m`
 ///
 /// # Example
-/// <!-- It is ok to use ignore here - test helper functions in conditionally compiled modules aren't accessible from doctests -->
+/// <!-- It is ok to use ignore here - test helper functions in conditionally compiled
+/// modules aren't accessible from doctests -->
+///
 /// ```ignore
 /// let blue = bg_rgb(0, 128, 255);
 /// assert_eq!(blue, "\x1b[48:2:0:128:255m");

@@ -197,7 +197,8 @@
 //!
 //! Backend dispatch is based on [`TERMINAL_LIB_BACKEND`]:
 //!
-//! - **Linux** ([`DirectToAnsi`]): Uses [rustix]'s safe termios API (see [`raw_mode_unix`])
+//! - **Linux** ([`DirectToAnsi`]): Uses [rustix]'s safe termios API (see
+//!   [`raw_mode_unix`])
 //! - **macOS/Windows** ([`Crossterm`]): Uses [`crossterm::terminal`] functions
 //!
 //! [`TERMINAL_LIB_BACKEND`]: crate::TERMINAL_LIB_BACKEND

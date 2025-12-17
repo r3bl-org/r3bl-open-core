@@ -44,12 +44,45 @@
 //! [`OutputDevice`]: r3bl_tui::OutputDevice
 //! [`RawMode`]: r3bl_tui::RawMode
 
-use r3bl_tui::{InputDevice, InputEvent, Key, KeyPress, KeyState, ModifierKeysMask,
-               MouseInput, MouseInputKind, OutputDevice, Pos, RawMode, RowIndex,
-               TermCol, TermRow, clear_screen_and_home_cursor, flush_output, get_size,
-               lock_output_device_as_mut, move_cursor_to, row, set_mimalloc_in_main,
-               write_text};
+use r3bl_tui::{AnsiSequenceGenerator, InputDevice, InputEvent, Key, KeyPress, KeyState,
+               ModifierKeysMask, MouseInput, MouseInputKind, OutputDevice, Pos, RawMode,
+               RowIndex, TermCol, TermRow, col, get_size, lock_output_device_as_mut,
+               row, set_mimalloc_in_main};
 use std::collections::VecDeque;
+
+/// Helper: Clear screen and position cursor at home (0,0).
+fn clear_screen_and_home(output: &OutputDevice) {
+    let out = lock_output_device_as_mut!(output);
+    let _unused = out.write_all(AnsiSequenceGenerator::clear_screen().as_bytes());
+    let _unused =
+        out.write_all(AnsiSequenceGenerator::cursor_position(row(0), col(0)).as_bytes());
+    let _unused = out.flush();
+}
+
+/// Helper: Move cursor to specified terminal position (1-based row, 1-based col).
+fn cursor_to(output: &OutputDevice, term_row: u16, term_col: u16) {
+    let out = lock_output_device_as_mut!(output);
+    // Convert 1-based terminal coords to 0-based indices for AnsiSequenceGenerator.
+    let _unused = out.write_all(
+        AnsiSequenceGenerator::cursor_position(
+            row(term_row.saturating_sub(1) as usize),
+            col(term_col.saturating_sub(1) as usize),
+        )
+        .as_bytes(),
+    );
+}
+
+/// Helper: Write text at current cursor position.
+fn print_text(output: &OutputDevice, text: &str) {
+    let out = lock_output_device_as_mut!(output);
+    let _unused = out.write_all(text.as_bytes());
+}
+
+/// Helper: Flush output to ensure all bytes are written.
+fn flush(output: &OutputDevice) {
+    let out = lock_output_device_as_mut!(output);
+    let _unused = out.flush();
+}
 
 /// Maximum number of events to keep in history
 const MAX_HISTORY: usize = 15;
@@ -200,7 +233,7 @@ async fn main() -> miette::Result<()> {
     );
 
     // Clear screen
-    clear_screen_and_home_cursor(&output_device);
+    clear_screen_and_home(&output_device);
 
     // Run the inspector
     let result = run_inspector(&mut input_device, &mut output_device).await;
@@ -253,21 +286,21 @@ fn render(inspector: &MouseInspector, output: &OutputDevice) {
     let canvas_end_row = row(18);
 
     // Clear screen
-    clear_screen_and_home_cursor(output);
+    clear_screen_and_home(output);
 
     // Draw title and instructions
-    move_cursor_to(output, TermRow::from(row(0)).as_u16(), 1);
-    write_text(output, "┌──── Mouse Event Inspector ─────┐");
+    cursor_to(output, TermRow::from(row(0)).as_u16(), 1);
+    print_text(output, "┌──── Mouse Event Inspector ─────┐");
 
-    move_cursor_to(output, TermRow::from(row(1)).as_u16(), 1);
-    write_text(output, "│ Click, drag, scroll anywhere!  │");
+    cursor_to(output, TermRow::from(row(1)).as_u16(), 1);
+    print_text(output, "│ Click, drag, scroll anywhere!  │");
 
-    move_cursor_to(output, TermRow::from(row(2)).as_u16(), 1);
-    write_text(output, "└────────────────────────────────┘");
+    cursor_to(output, TermRow::from(row(2)).as_u16(), 1);
+    print_text(output, "└────────────────────────────────┘");
 
     // Draw canvas border
-    move_cursor_to(output, TermRow::from(canvas_start_row).as_u16(), 1);
-    write_text(output, "┌─ Canvas (click anywhere) ──────┐");
+    cursor_to(output, TermRow::from(canvas_start_row).as_u16(), 1);
+    print_text(output, "┌─ Canvas (click anywhere) ──────┐");
 
     // Draw click marks
     for mark in &inspector.click_marks {
@@ -276,21 +309,21 @@ fn render(inspector: &MouseInspector, output: &OutputDevice) {
             // Convert to 1-based terminal coordinates for display
             let term_row = TermRow::from(mark.row_index);
             let term_col = TermCol::from(mark.col_index);
-            move_cursor_to(output, term_row.as_u16(), term_col.as_u16());
-            write_text(output, "●");
+            cursor_to(output, term_row.as_u16(), term_col.as_u16());
+            print_text(output, "●");
         }
     }
 
-    move_cursor_to(output, TermRow::from(canvas_end_row).as_u16(), 1);
-    write_text(output, "└────────────────────────────────┘");
+    cursor_to(output, TermRow::from(canvas_end_row).as_u16(), 1);
+    print_text(output, "└────────────────────────────────┘");
 
     // Display latest event (row 20+)
-    move_cursor_to(output, TermRow::from(row(20)).as_u16(), 1);
-    write_text(output, "┌─ Latest Event ─────────────────┐");
+    cursor_to(output, TermRow::from(row(20)).as_u16(), 1);
+    print_text(output, "┌─ Latest Event ─────────────────┐");
 
     if let Some(evt) = &inspector.latest_event {
-        move_cursor_to(output, TermRow::from(row(21)).as_u16(), 1);
-        write_text(
+        cursor_to(output, TermRow::from(row(21)).as_u16(), 1);
+        print_text(
             output,
             &format!(
                 "│ Position: ({:>2}, {:>2})             │",
@@ -299,7 +332,7 @@ fn render(inspector: &MouseInspector, output: &OutputDevice) {
             ),
         );
 
-        move_cursor_to(output, TermRow::from(row(22)).as_u16(), 1);
+        cursor_to(output, TermRow::from(row(22)).as_u16(), 1);
         let kind_str = match evt.kind {
             MouseInputKind::MouseDown(btn) => format!("MouseDown({btn:?})"),
             MouseInputKind::MouseUp(btn) => format!("MouseUp({btn:?})"),
@@ -310,21 +343,21 @@ fn render(inspector: &MouseInspector, output: &OutputDevice) {
             MouseInputKind::ScrollLeft => "ScrollLeft".to_string(),
             MouseInputKind::ScrollRight => "ScrollRight".to_string(),
         };
-        write_text(output, &format!("│ Kind:     {kind_str:<21}│"));
+        print_text(output, &format!("│ Kind:     {kind_str:<21}│"));
 
-        move_cursor_to(output, TermRow::from(row(23)).as_u16(), 1);
-        write_text(output, &format!("│ Mods:     {:<21}│", evt.modifiers_str()));
+        cursor_to(output, TermRow::from(row(23)).as_u16(), 1);
+        print_text(output, &format!("│ Mods:     {:<21}│", evt.modifiers_str()));
     } else {
-        move_cursor_to(output, TermRow::from(row(21)).as_u16(), 1);
-        write_text(output, "│ No events yet                  │");
-        move_cursor_to(output, TermRow::from(row(22)).as_u16(), 1);
-        write_text(output, "│                                │");
-        move_cursor_to(output, TermRow::from(row(23)).as_u16(), 1);
-        write_text(output, "│                                │");
+        cursor_to(output, TermRow::from(row(21)).as_u16(), 1);
+        print_text(output, "│ No events yet                  │");
+        cursor_to(output, TermRow::from(row(22)).as_u16(), 1);
+        print_text(output, "│                                │");
+        cursor_to(output, TermRow::from(row(23)).as_u16(), 1);
+        print_text(output, "│                                │");
     }
 
-    move_cursor_to(output, TermRow::from(row(24)).as_u16(), 1);
-    write_text(output, "└────────────────────────────────┘");
+    cursor_to(output, TermRow::from(row(24)).as_u16(), 1);
+    print_text(output, "└────────────────────────────────┘");
 
     // Event history (row 26+)
     let history_start_row = row(26);
@@ -332,15 +365,15 @@ fn render(inspector: &MouseInspector, output: &OutputDevice) {
     let history_end_row = row(37);
     let instructions_row = row(39);
 
-    move_cursor_to(output, TermRow::from(history_start_row).as_u16(), 1);
-    write_text(
+    cursor_to(output, TermRow::from(history_start_row).as_u16(), 1);
+    print_text(
         output,
         "┌─ Event History (last 10) ────────────────────────────────────────────┐",
     );
 
     for (i, evt) in inspector.event_history.iter().take(10).enumerate() {
         let row_idx = RowIndex::from(history_first_item_row.as_usize() + i);
-        move_cursor_to(output, TermRow::from(row_idx).as_u16(), 1);
+        cursor_to(output, TermRow::from(row_idx).as_u16(), 1);
 
         let mods = if evt.ctrl || evt.shift || evt.alt {
             format!(" [{}]", evt.modifiers_str())
@@ -366,32 +399,32 @@ fn render(inspector: &MouseInspector, output: &OutputDevice) {
             kind_str,
             mods
         );
-        write_text(output, &line);
+        print_text(output, &line);
     }
 
     // Fill remaining history lines with empty bordered lines
     for i in inspector.event_history.len()..10 {
         let row_idx = RowIndex::from(history_first_item_row.as_usize() + i);
-        move_cursor_to(output, TermRow::from(row_idx).as_u16(), 1);
-        write_text(
+        cursor_to(output, TermRow::from(row_idx).as_u16(), 1);
+        print_text(
             output,
             "│                                                                      │",
         );
     }
 
-    move_cursor_to(output, TermRow::from(history_end_row).as_u16(), 1);
-    write_text(
+    cursor_to(output, TermRow::from(history_end_row).as_u16(), 1);
+    print_text(
         output,
         "└──────────────────────────────────────────────────────────────────────┘",
     );
 
     // Instructions at bottom
-    move_cursor_to(output, TermRow::from(instructions_row).as_u16(), 1);
-    write_text(
+    cursor_to(output, TermRow::from(instructions_row).as_u16(), 1);
+    print_text(
         output,
         "[Q] Quit  [C] Clear  • Try Ctrl/Alt with clicks (Shift reserved for text selection)",
     );
 
     // Flush output to make changes visible
-    flush_output(output);
+    flush(output);
 }

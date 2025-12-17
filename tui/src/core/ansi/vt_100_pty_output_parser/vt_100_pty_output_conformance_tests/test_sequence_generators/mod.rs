@@ -1,5 +1,9 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+// Allow doc_markdown - documentation explains internal test patterns where backticking
+// every function/type would reduce readability.
+#![allow(clippy::doc_markdown)]
+
 //! Test utilities for building VT100 ANSI sequences.
 //!
 //! This module provides convenience wrappers around the bidirectional sequence types
@@ -26,7 +30,9 @@
 //!
 //! # Example Usage
 //!
-//! <!-- It is ok to use ignore here - demonstrates usage of test helper functions in conditionally compiled modules -->
+//! <!-- It is ok to use ignore here - demonstrates usage of test helper functions in
+//! conditionally compiled modules -->
+//!
 //! ```ignore
 //! use crate::vt_100_pty_output_conformance_tests::test_sequence_generators::*;
 //!

@@ -228,7 +228,7 @@ pub mod cli_text_inline_impl {
         ) -> CliTextInline {
             let CliTextConvertOptions { start, width } = arg_options.into();
 
-            // Early return if text is empty
+            // Early return if text is empty.
             if self.text.is_empty() {
                 return CliTextInline {
                     text: InlineString::new(),
@@ -238,7 +238,7 @@ pub mod cli_text_inline_impl {
                 };
             }
 
-            // Use GCStringOwned to slice the text directly without creating PixelChars
+            // Use GCStringOwned to slice the text directly without creating PixelChars.
             let gc_string = GCStringOwned::from(&self.text);
             let start_index = start.as_usize();
             let gc_len = gc_string.len().as_usize();
@@ -248,7 +248,7 @@ pub mod cli_text_inline_impl {
             };
             let end_index = (start_index + width_count).min(gc_len);
 
-            // Early return if start is out of bounds
+            // Early return if start is out of bounds.
             if start_index >= gc_len {
                 return CliTextInline {
                     text: InlineString::new(),
@@ -258,7 +258,7 @@ pub mod cli_text_inline_impl {
                 };
             }
 
-            // Build the sliced text directly
+            // Build the sliced text directly.
             let mut clipped_text = InlineString::with_capacity(self.text.len());
             for (idx, item) in gc_string.iter().enumerate() {
                 if idx >= start_index && idx < end_index {
@@ -903,7 +903,7 @@ impl FastStringify for CliStyle {
     }
 }
 
-generate_impl_display_for_fast_stringify!(CliStyle);
+generate_impl_display_for_fast_stringify!(CliStyle); 
 
 impl FastStringify for CliTextInline {
     fn write_to_buf(&self, acc: &mut BufTextStorage) -> Result {

@@ -72,8 +72,9 @@ async fn main() -> miette::Result<()> {
                 writeln!(shared_writer, "After input: line B").into_diagnostic()?;
             }
 
-            ReadlineEvent::Resized => {
-                writeln!(shared_writer, "Terminal resized").into_diagnostic()?;
+            ReadlineEvent::Resized(size) => {
+                writeln!(shared_writer, "Terminal resized to {size:?}")
+                    .into_diagnostic()?;
             }
 
             ReadlineEvent::Eof | ReadlineEvent::Interrupted => break,

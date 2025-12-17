@@ -7,11 +7,12 @@
 //! terminal resize events.
 
 use super::ProcessManager;
-use crate::{FunctionKey, InputEvent, Key, KeyPress, KeyState, ModifierKeysMask, Size,
-            clear_screen_and_home_cursor,
+use crate::{AnsiSequenceGenerator, FunctionKey, InputEvent, Key, KeyPress, KeyState,
+            ModifierKeysMask, Size, col,
             core::{osc::OscController,
                    pty::{PtyInputEvent, pty_core::pty_sessions::show_notification},
-                   terminal_io::OutputDevice}};
+                   terminal_io::OutputDevice},
+            lock_output_device_as_mut, row};
 
 /// Routes input events to appropriate handlers and manages dynamic keyboard shortcuts.
 #[derive(Debug)]
@@ -85,7 +86,20 @@ impl InputRouter {
                                 );
 
                                 // Clear the screen before switching.
-                                clear_screen_and_home_cursor(output_device);
+                                {
+                                    let out = lock_output_device_as_mut!(output_device);
+                                    let _unused = out.write_all(
+                                        AnsiSequenceGenerator::clear_screen().as_bytes(),
+                                    );
+                                    let _unused = out.write_all(
+                                        AnsiSequenceGenerator::cursor_position(
+                                            row(0),
+                                            col(0),
+                                        )
+                                        .as_bytes(),
+                                    );
+                                    let _unused = out.flush();
+                                }
 
                                 process_manager.switch_to(process_index);
                                 Self::update_terminal_title(process_manager, osc)?;

@@ -588,7 +588,7 @@ fn spawn_blocking_passthrough_with_mode_detection_reader_task(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{ControlSequence, CursorKeyMode};
+    use crate::{ControlSequence, CursorKeyMode, try_create_temp_dir};
     use tokio::sync::mpsc::unbounded_channel;
 
     // XMARK: Process isolated test functions using env vars.
@@ -694,10 +694,21 @@ mod tests {
 
     /// Helper function to run a single PTY test in an isolated process.
     /// Each test gets its own process to avoid any resource sharing or contamination.
+    ///
+    /// Creates a unique temp directory for each test to ensure complete cwd isolation.
+    /// This prevents "No such file or directory" errors when the parent's cwd becomes
+    /// invalid during test execution. Uses [`crate::TempDir`] RAII guard for automatic
+    /// cleanup.
     fn run_single_pty_test_in_isolated_process(test_name: &str) -> std::process::Output {
+        // Create a unique temp directory for this test to ensure cwd isolation.
+        // TempDir automatically cleans up on drop (RAII pattern).
+        let temp_dir =
+            try_create_temp_dir().expect("Failed to create temp dir for PTY test");
+
         let current_exe = std::env::current_exe().unwrap();
         let mut cmd = std::process::Command::new(&current_exe);
-        cmd.env("ISOLATED_PTY_SINGLE_TEST", test_name)
+        cmd.current_dir(temp_dir.as_ref())
+            .env("ISOLATED_PTY_SINGLE_TEST", test_name)
             .env("RUST_BACKTRACE", "1")
             .args([
                 "--test-threads",
@@ -705,6 +716,7 @@ mod tests {
                 "test_all_pty_read_write_in_isolated_process",
             ]);
 
+        // temp_dir is automatically cleaned up when dropped at end of scope.
         cmd.output().expect("Failed to run isolated PTY test")
     }
 

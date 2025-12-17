@@ -213,13 +213,13 @@
 //! - Color detection and support queries
 //!
 //! [VTE crate]: https://docs.rs/vte/latest/vte/
-//! [`vt_100_pty_output_parser`]: mod@crate::core::ansi::vt_100_pty_output_parser
-//! [`vt_100_terminal_input_parser`]: mod@crate::core::ansi::vt_100_terminal_input_parser
+//! [`CliTextInline`]: crate::core::ansi::CliTextInline
 //! [`OffscreenBuffer`]: crate::OffscreenBuffer
-//! [`VT100InputEventIR`]: crate::core::ansi::vt_100_terminal_input_parser::VT100InputEventIR
 //! [`RenderOpOutput`]: crate::RenderOpOutput
 //! [`SgrCode`]: crate::core::ansi::SgrCode
-//! [`CliTextInline`]: crate::core::ansi::CliTextInline
+//! [`VT100InputEventIR`]: crate::core::ansi::vt_100_terminal_input_parser::VT100InputEventIR
+//! [`vt_100_pty_output_parser`]: mod@crate::core::ansi::vt_100_pty_output_parser
+//! [`vt_100_terminal_input_parser`]: mod@crate::core::ansi::vt_100_terminal_input_parser
 
 // XMARK: rustfmt prevent from reformatting entire file.
 
@@ -231,7 +231,6 @@
 mod color;
 mod constants;
 mod detect_color_support;
-mod terminal_output;
 
 // Module is public only when building documentation or tests.
 // This allows rustdoc links to work while keeping it private in release builds.
@@ -266,7 +265,6 @@ pub use color::*;
 pub use constants::*;
 pub use detect_color_support::*;
 pub use generator::*;
-pub use terminal_output::*;
 pub use vt_100_pty_output_parser::*;
 pub use terminal_raw_mode::*;
 

@@ -5,15 +5,15 @@
 //! This is a simplified example to debug PTY integration issues.
 
 use portable_pty::PtySize;
-use r3bl_tui::{InputEvent, Key, KeyPress, KeyState, ModifierKeysMask, RawMode,
-               clear_screen_and_home_cursor,
+use r3bl_tui::{AnsiSequenceGenerator, InputEvent, Key, KeyPress, KeyState,
+               ModifierKeysMask, RawMode, col,
                core::{get_size,
                       pty::{ControlSequence, CursorKeyMode, PtyCommandBuilder,
                             PtyInputEvent, PtyReadWriteOutputEvent,
                             PtyReadWriteSession},
                       terminal_io::{InputDevice, OutputDevice},
                       try_initialize_logging_global},
-               lock_output_device_as_mut, set_mimalloc_in_main};
+               lock_output_device_as_mut, row, set_mimalloc_in_main};
 
 #[tokio::main]
 async fn main() -> miette::Result<()> {
@@ -43,7 +43,13 @@ async fn main() -> miette::Result<()> {
     tracing::debug!("Raw mode started");
 
     // Clear screen and reset cursor.
-    clear_screen_and_home_cursor(&output_device);
+    {
+        let out = lock_output_device_as_mut!(&output_device);
+        let _unused = out.write_all(AnsiSequenceGenerator::clear_screen().as_bytes());
+        let _unused = out
+            .write_all(AnsiSequenceGenerator::cursor_position(row(0), col(0)).as_bytes());
+        let _unused = out.flush();
+    }
     tracing::debug!("Screen cleared");
 
     // Spawn htop process.

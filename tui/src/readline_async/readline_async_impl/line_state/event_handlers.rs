@@ -1,10 +1,11 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::core::LineState;
-use crate::{AnsiSequenceGenerator, CsiSequence, EraseDisplayMode, GCStringOwned, InputEvent, Key,
-            KeyPress, KeyState, LineStateLiveness, NumericValue, ReadlineError, ReadlineEvent,
-            SafeHistory, Size, SpecialKey, col, early_return_if_paused, find_next_word_end,
-            find_next_word_start, find_prev_word_start, height, row, seg_index, width};
+use crate::{AnsiSequenceGenerator, CsiSequence, EraseDisplayMode, GCStringOwned,
+            InputEvent, Key, KeyPress, KeyState, LineStateLiveness, NumericValue,
+            ReadlineError, ReadlineEvent, SafeHistory, Size, SpecialKey, col,
+            early_return_if_paused, find_next_word_end, find_next_word_start,
+            find_prev_word_start, row, seg_index};
 use std::io::Write;
 use unicode_segmentation::UnicodeSegmentation;
 
@@ -59,9 +60,7 @@ pub fn handle_alt_key(
         Key::Character('b') => handle_alt_b(line_state, term),
         Key::Character('f') => handle_alt_f(line_state, term),
         Key::Character('d') => handle_alt_d(line_state, term),
-        Key::SpecialKey(SpecialKey::Backspace) => {
-            handle_alt_backspace(line_state, term)
-        }
+        Key::SpecialKey(SpecialKey::Backspace) => handle_alt_backspace(line_state, term),
         _ => Ok(None),
     }
 }
@@ -85,26 +84,23 @@ pub fn handle_regular_key(
         Key::SpecialKey(SpecialKey::Home) => handle_home(line_state, term),
         Key::SpecialKey(SpecialKey::End) => handle_end(line_state, term),
         Key::SpecialKey(SpecialKey::Up) => handle_up(line_state, term, safe_history),
-        Key::SpecialKey(SpecialKey::Down) => {
-            handle_down(line_state, term, safe_history)
-        }
+        Key::SpecialKey(SpecialKey::Down) => handle_down(line_state, term, safe_history),
         Key::Character(c) => handle_char(line_state, term, *c),
         _ => Ok(None),
     }
 }
 
-/// Handle terminal resize events
+/// Handle terminal resize events.
 pub fn handle_resize(
     line_state: &mut LineState,
-    x: u16,
-    y: u16,
+    size: Size,
     term: &mut dyn Write,
 ) -> Result<Option<ReadlineEvent>, ReadlineError> {
     early_return_if_paused!(line_state @None);
 
-    line_state.term_size = Size::new((width(x), height(y)));
+    line_state.term_size = size;
     line_state.clear_and_render_and_flush(term)?;
-    Ok(Some(ReadlineEvent::Resized))
+    Ok(Some(ReadlineEvent::Resized(size)))
 }
 
 // Control key handlers.
@@ -128,8 +124,7 @@ fn handle_ctrl_c(
     line_state: &mut LineState,
     term: &mut dyn Write,
 ) -> Result<Option<ReadlineEvent>, ReadlineError> {
-    if line_state.should_print_line_on_control_c && !line_state.is_paused.is_paused()
-    {
+    if line_state.should_print_line_on_control_c && !line_state.is_paused.is_paused() {
         line_state.print_and_flush(
             &format!("{}{}", line_state.prompt, line_state.line.as_str()),
             term,
@@ -147,10 +142,12 @@ fn handle_ctrl_l(
     early_return_if_paused!(line_state @None);
 
     // ED 2 = Erase entire screen (CSI 2J), then move cursor to home (row 0, col 0).
-    term.write_all(CsiSequence::EraseDisplay(EraseDisplayMode::EntireScreen).to_string().as_bytes())?;
     term.write_all(
-        AnsiSequenceGenerator::cursor_position(row(0), col(0)).as_bytes(),
+        CsiSequence::EraseDisplay(EraseDisplayMode::EntireScreen)
+            .to_string()
+            .as_bytes(),
     )?;
+    term.write_all(AnsiSequenceGenerator::cursor_position(row(0), col(0)).as_bytes())?;
     line_state.clear_and_render_and_flush(term)?;
     Ok(None)
 }
@@ -167,7 +164,10 @@ fn handle_ctrl_u(
     // If cursor is in middle or end, deletes from start to cursor.
     if !line_state.line_cursor_grapheme.is_zero() {
         // Get byte offset at cursor using segment metadata.
-        let cursor_byte_pos = get_byte_offset_at_seg_index(&line_state.line, line_state.line_cursor_grapheme.as_usize());
+        let cursor_byte_pos = get_byte_offset_at_seg_index(
+            &line_state.line,
+            line_state.line_cursor_grapheme.as_usize(),
+        );
 
         // Create new string without the deleted portion.
         let remaining = &line_state.line.as_str()[cursor_byte_pos..];
@@ -598,13 +598,14 @@ impl LineState {
     ///
     /// # Return Value
     ///
-    /// Returns `Ok(Some(ReadlineEvent))` when a **significant event** occurs that the caller
-    /// should handle:
+    /// Returns `Ok(Some(ReadlineEvent))` when a **significant event** occurs that the
+    /// caller should handle:
     /// - [`ReadlineEvent::Line`] - User pressed Enter, line is complete
     /// - [`ReadlineEvent::Eof`] - User pressed Ctrl+D on empty line
     /// - [`ReadlineEvent::Resized`] - Terminal was resized
     ///
-    /// Returns `Ok(None)` for **normal editing operations** that don't require caller action:
+    /// Returns `Ok(None)` for **normal editing operations** that don't require caller
+    /// action:
     /// - Character insertion/deletion
     /// - Cursor movement (arrow keys, Home, End, Ctrl+Left/Right, Alt+B/F)
     /// - Word deletion (Ctrl+W, Alt+D, Alt+Backspace)
@@ -672,9 +673,6 @@ impl LineState {
     /// - [`pty_ctrl_d_eof_test`] - Shows handling of Ctrl+D as EOF
     /// - [`pty_ctrl_d_delete_test`] - Shows handling of Ctrl+D as delete
     ///
-    /// [`pty_ctrl_navigation_test`]: crate::readline_async::readline_async_impl::integration_tests::pty_ctrl_navigation_test
-    /// [`pty_ctrl_d_eof_test`]: crate::readline_async::readline_async_impl::integration_tests::pty_ctrl_d_eof_test
-    /// [`pty_ctrl_d_delete_test`]: crate::readline_async::readline_async_impl::integration_tests::pty_ctrl_d_delete_test
     ///
     /// # Panics
     ///
@@ -686,6 +684,10 @@ impl LineState {
     ///
     /// Returns an error if writing to the terminal fails or if the event cannot be
     /// processed.
+    ///
+    /// [`pty_ctrl_d_delete_test`]: crate::readline_async::readline_async_impl::integration_tests::pty_ctrl_d_delete_test
+    /// [`pty_ctrl_d_eof_test`]: crate::readline_async::readline_async_impl::integration_tests::pty_ctrl_d_eof_test
+    /// [`pty_ctrl_navigation_test`]: crate::readline_async::readline_async_impl::integration_tests::pty_ctrl_navigation_test
     #[allow(clippy::unwrap_in_result)] /* This is for lock.unwrap() */
     pub fn apply_event_and_render(
         &mut self,
@@ -718,11 +720,7 @@ impl LineState {
                     }
                 }
             },
-            InputEvent::Resize(size) => {
-                let width = size.col_width.0.value;
-                let height = size.row_height.0.value;
-                handle_resize(self, width, height, term)
-            }
+            InputEvent::Resize(size) => handle_resize(self, *size, term),
             _ => Ok(None),
         }
     }
@@ -1486,8 +1484,14 @@ mod tests {
         let safe_history = Arc::new(StdMutex::new(history));
 
         // Add some history entries.
-        safe_history.lock().unwrap().update(Some("first".to_string()));
-        safe_history.lock().unwrap().update(Some("second".to_string()));
+        safe_history
+            .lock()
+            .unwrap()
+            .update(Some("first".to_string()));
+        safe_history
+            .lock()
+            .unwrap()
+            .update(Some("second".to_string()));
 
         // Navigate up first to get into history.
         let up_event = InputEvent::Keyboard(KeyPress::Plain {

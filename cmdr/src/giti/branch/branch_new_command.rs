@@ -110,7 +110,7 @@ mod user_interaction {
 
                     return Ok(it);
                 }
-                ReadlineEvent::Resized => { /* Do nothing */ }
+                ReadlineEvent::Resized(_) => { /* Do nothing */ }
             }
         }
     }

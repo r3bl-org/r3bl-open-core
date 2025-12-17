@@ -20,6 +20,7 @@
 //!
 //! <!-- It is ok to use ignore here - demonstrates RAII pattern with Drop trait, not a
 //! complete runnable example -->
+//! 
 //! ```ignore
 //! // When content is modified:
 //! {

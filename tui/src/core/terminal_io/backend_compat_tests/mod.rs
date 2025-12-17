@@ -48,10 +48,10 @@
 //! [`PaintRenderOpImplCrossterm`]: crate::tui::terminal_lib_backends::crossterm_backend::PaintRenderOpImplCrossterm
 //! [`RenderOpOutput`]: crate::RenderOpOutput
 //! [`RenderOpPaintImplDirectToAnsi`]: crate::tui::terminal_lib_backends::direct_to_ansi::RenderOpPaintImplDirectToAnsi
-//! [`test_backend_compat_input_compare`]: backend_compat_input_test::comparison::test_backend_compat_input_compare
-//! [`test_backend_compat_output_compare`]: backend_compat_output_test::comparison::test_backend_compat_output_compare
-//! [`test_pty_backend_crossterm`]: backend_compat_input_test::pty_tests::crossterm::test_pty_backend_crossterm
-//! [`test_pty_backend_direct_to_ansi`]: backend_compat_input_test::pty_tests::direct_to_ansi::test_pty_backend_direct_to_ansi
+//! [`test_backend_compat_input_compare`]: mod@backend_compat_input_test
+//! [`test_backend_compat_output_compare`]: mod@backend_compat_output_test
+//! [`test_pty_backend_crossterm`]: mod@backend_compat_input_test
+//! [`test_pty_backend_direct_to_ansi`]: mod@backend_compat_input_test
 
 // Public for docs and tests so intra-doc links resolve.
 #[cfg(all(any(test, doc), target_os = "linux"))]

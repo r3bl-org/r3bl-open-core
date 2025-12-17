@@ -102,7 +102,7 @@
 //!
 //! # Module Structure
 //!
-//! - [`test_backend_compat_output_compare`] - Main test that compares backend outputs.
+//! - `test_backend_compat_output_compare()` - Main test that compares backend outputs.
 //! - [`generate_test_render_ops`] - Test render operations.
 //! - [`controller`] - PTY master logic that captures all bytes.
 //! - [`controlled_crossterm`] - Crossterm backend controlled process.
@@ -117,7 +117,6 @@
 //! [`TERMINAL_LIB_BACKEND`]: crate::tui::terminal_lib_backends::TERMINAL_LIB_BACKEND
 //! [`terminal_raw_mode::raw_mode_unix::enable_raw_mode()`]: crate::core::ansi::terminal_raw_mode::raw_mode_unix::enable_raw_mode
 //! [`terminal_raw_mode::enable_raw_mode()`]: crate::core::ansi::terminal_raw_mode::enable_raw_mode
-//! [`test_backend_compat_output_compare`]: fn@test_backend_compat_output_compare
 
 use crate::{ColorSupport, InlineString, OffscreenBuffer, OutputDevice, PtyPair,
             RenderOpOutput, RenderOpPaint, RenderOpsLocalData, Size, TuiStyle,
@@ -245,7 +244,7 @@ pub fn test_backend_compat_output_compare() {
 }
 
 /// Controller (PTY Master) Logic - captures all raw bytes.
-mod controller {
+pub mod controller {
     use super::*;
 
     /// Capture all raw ANSI bytes from the controlled process.
@@ -319,7 +318,7 @@ mod controller {
 }
 
 /// Crossterm backend controlled process.
-mod controlled_crossterm {
+pub mod controlled_crossterm {
     use super::*;
 
     /// Crossterm controlled process entry point.
@@ -380,7 +379,7 @@ mod controlled_crossterm {
 }
 
 /// `DirectToAnsi` backend controlled process.
-mod controlled_direct_to_ansi {
+pub mod controlled_direct_to_ansi {
     use super::*;
 
     /// `DirectToAnsi` controlled process entry point.
@@ -442,7 +441,7 @@ mod controlled_direct_to_ansi {
 }
 
 /// Test Render Operations Generation.
-mod generate_test_render_ops {
+pub mod generate_test_render_ops {
     use super::*;
 
     /// All test render operation sequences for backend compatibility testing.

@@ -5,9 +5,10 @@
 //! This module provides the `CsiSequence` enum which represents various CSI control
 //! sequences and can serialize them into ANSI escape codes.
 
-use super::{erase_mode::{EraseDisplayMode, EraseLineMode}, private_mode::PrivateModeType};
-use crate::{BufTextStorage, CsiCount, FastStringify, NumericConversions, TermCol, TermColDelta,
-            TermRow, TermRowDelta,
+use super::{erase_mode::{EraseDisplayMode, EraseLineMode},
+            private_mode::PrivateModeType};
+use crate::{BufTextStorage, CsiCount, FastStringify, NumericConversions, TermCol,
+            TermColDelta, TermRow, TermRowDelta,
             core::ansi::{constants::{CHA_CURSOR_COLUMN, CNL_CURSOR_NEXT_LINE,
                                      CPL_CURSOR_PREV_LINE, CSI_PARAM_SEPARATOR,
                                      CSI_PRIVATE_MODE_PREFIX, CSI_START,

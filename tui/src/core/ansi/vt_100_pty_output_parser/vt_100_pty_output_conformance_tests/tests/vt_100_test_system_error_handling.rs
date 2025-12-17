@@ -312,7 +312,7 @@ pub mod boundary_edge_cases {
         let test_cases = vec![
             (
                 "Cursor up by 0",
-                "\x1b[0A",  // Raw ANSI: CSI 0 A
+                "\x1b[0A", // Raw ANSI: CSI 0 A
                 term_row(nz(3)),
                 term_col(nz(3)),
                 row(1),
@@ -320,7 +320,7 @@ pub mod boundary_edge_cases {
             ),
             (
                 "Cursor down by 0",
-                "\x1b[0B",  // Raw ANSI: CSI 0 B
+                "\x1b[0B", // Raw ANSI: CSI 0 B
                 term_row(nz(3)),
                 term_col(nz(3)),
                 row(3),
@@ -328,7 +328,7 @@ pub mod boundary_edge_cases {
             ),
             (
                 "Cursor forward by 0",
-                "\x1b[0C",  // Raw ANSI: CSI 0 C
+                "\x1b[0C", // Raw ANSI: CSI 0 C
                 term_row(nz(3)),
                 term_col(nz(3)),
                 row(2),
@@ -336,7 +336,7 @@ pub mod boundary_edge_cases {
             ),
             (
                 "Cursor backward by 0",
-                "\x1b[0D",  // Raw ANSI: CSI 0 D
+                "\x1b[0D", // Raw ANSI: CSI 0 D
                 term_row(nz(3)),
                 term_col(nz(3)),
                 row(2),

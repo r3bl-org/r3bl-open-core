@@ -1,5 +1,12 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+// cspell:words backticking minibuffer
+
+// Allow doc_markdown in this test module - the documentation explains internal
+// architecture and patterns, where backticking every function/type name would reduce
+// readability.
+#![allow(clippy::doc_markdown)]
+
 //! VT100 ANSI conformance tests for terminal sequence processing.
 //!
 //! This module provides comprehensive testing of ANSI/VT escape sequence processing
@@ -97,7 +104,9 @@
 //! Tests use authentic **80x25** terminal dimensions instead of constrained buffers,
 //! ensuring real-world compatibility:
 //!
-//! <!-- It is ok to use ignore here - references internal types and test patterns, not meant as runnable example -->
+//! <!-- It is ok to use ignore here - references internal types and test patterns, not
+//! meant as runnable example -->
+//!
 //! ```ignore
 //! fn create_realistic_terminal_buffer() -> OffscreenBuffer {
 //!     OffscreenBuffer::new_empty(height(25) + width(80))
@@ -120,7 +129,9 @@
 //! Instead of error-prone hardcoded escape strings, tests use compile-time validated
 //! builders:
 //!
-//! <!-- It is ok to use ignore here - demonstrates architectural pattern with internal types, not a complete example -->
+//! <!-- It is ok to use ignore here - demonstrates architectural pattern with internal
+//! types, not a complete example -->
+//!
 //! ```ignore
 //! // ❌ Hardcoded sequences (brittle, unclear intent)
 //! let bad_sequence = "\x1b[2;5H\x1b[31mError\x1b[0m";
@@ -171,7 +182,9 @@
 //!
 //! ### Example: Extended Color Sequences
 //!
-//! <!-- It is ok to use ignore here - demonstrates comparison of approaches with internal test helpers -->
+//! <!-- It is ok to use ignore here - demonstrates comparison of approaches with internal
+//! test helpers -->
+//!
 //! ```ignore
 //! use crate::protocols::csi_codes::SgrColorSequence;
 //! use crate::vt_100_pty_output_conformance_tests::test_sequence_generators::extended_color_builders::*;
@@ -193,7 +206,9 @@
 //!
 //! The [`FastStringify`] trait provides efficient string building for complex sequences:
 //!
-//! <!-- It is ok to use ignore here - shows trait definition with internal types, not meant as runnable example -->
+//! <!-- It is ok to use ignore here - shows trait definition with internal types, not
+//! meant as runnable example -->
+//!
 //! ```ignore
 //! pub trait FastStringify: Display {
 //!     fn write_to_buf(&self, acc: &mut BufTextStorage) -> Result;
@@ -209,7 +224,9 @@
 //!
 //! Each bidirectional type provides ergonomic test helpers:
 //!
-//! <!-- It is ok to use ignore here - demonstrates usage of test helper functions in conditionally compiled modules -->
+//! <!-- It is ok to use ignore here - demonstrates usage of test helper functions in
+//! conditionally compiled modules -->
+//!
 //! ```ignore
 //! // Extended colors
 //! use crate::vt_100_pty_output_conformance_tests::test_sequence_generators::extended_color_builders::*;
@@ -301,7 +318,9 @@
 //!
 //! ## Example Usage
 //!
-//! <!-- It is ok to use ignore here - demonstrates integration with internal test data and helpers -->
+//! <!-- It is ok to use ignore here - demonstrates integration with internal test data
+//! and helpers -->
+//!
 //! ```ignore
 //! use crate::vt_100_pty_output_conformance_tests::conformance_data::vim_sequences;
 //!
@@ -318,12 +337,9 @@
 //! }, "status line reverse video");
 //! ```
 //!
-//!
 //! [`vt_100_ansi_impl`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl
-//!
 //! [`impl_char_ops`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl::vt_100_impl_char_ops
 //! [`test_char_ops`]: tests::vt_100_test_char_ops
-//!
 //! [`OffscreenBuffer::apply_ansi_bytes`]: crate::tui::terminal_lib_backends::offscreen_buffer::OffscreenBuffer::apply_ansi_bytes
 
 #[cfg(any(test, doc))]

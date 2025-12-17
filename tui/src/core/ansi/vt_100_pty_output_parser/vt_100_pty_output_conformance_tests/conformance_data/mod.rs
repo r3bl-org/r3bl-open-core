@@ -1,5 +1,10 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+// Allow doc_markdown - documentation explains internal test patterns where backticking
+// every function/type would reduce readability.
+// Allow test_attr_in_doctest - examples show test function structure for documentation.
+#![allow(clippy::doc_markdown, clippy::test_attr_in_doctest)]
+
 //! Conformance test data for VT100 ANSI sequence validation.
 //!
 //! This module provides type-safe, reusable sequence builder functions organized by
@@ -12,7 +17,9 @@
 //! Traditional ANSI testing often uses hardcoded escape sequences that are difficult
 //! to read, maintain, and validate. This module takes a different approach:
 //!
-//! <!-- It is ok to use ignore here - demonstrates architectural pattern comparison with internal types -->
+//! <!-- It is ok to use ignore here - demonstrates architectural pattern comparison with
+//! internal types -->
+//!
 //! ```ignore
 //! // ❌ Traditional approach: hardcoded, error-prone
 //! let old_way = b"\x1b[2J\x1b[H\x1b[31mError\x1b[0m";
@@ -56,7 +63,9 @@
 //! ### Simple Sequences
 //! Basic operations using single commands:
 //!
-//! <!-- It is ok to use ignore here - demonstrates pattern for building conformance test sequences with internal types -->
+//! <!-- It is ok to use ignore here - demonstrates pattern for building conformance test
+//! sequences with internal types -->
+//!
 //! ```ignore
 //! use crate::CsiSequence;
 //!
@@ -68,7 +77,9 @@
 //! ### Composed Sequences
 //! Complex operations combining multiple commands:
 //!
-//! <!-- It is ok to use ignore here - demonstrates pattern for composing multiple sequence commands -->
+//! <!-- It is ok to use ignore here - demonstrates pattern for composing multiple
+//! sequence commands -->
+//!
 //! ```ignore
 //! pub fn clear_and_home() -> String {
 //!     format!("{}{}",
@@ -84,7 +95,9 @@
 //! ### Parameterized Sequences
 //! Functions that generate sequences based on parameters:
 //!
-//! <!-- It is ok to use ignore here - demonstrates pattern for parameterized sequence generation -->
+//! <!-- It is ok to use ignore here - demonstrates pattern for parameterized sequence
+//! generation -->
+//!
 //! ```ignore
 //! pub fn move_and_print(row: u16, col: u16, text: &str) -> String {
 //!     format!("{}{}",
@@ -100,7 +113,9 @@
 //! ### Real-World Application Sequences
 //! Complex patterns extracted from actual terminal applications:
 //!
-//! <!-- It is ok to use ignore here - demonstrates real-world terminal application sequence patterns -->
+//! <!-- It is ok to use ignore here - demonstrates real-world terminal application
+//! sequence patterns -->
+//!
 //! ```ignore
 //! pub fn vim_status_line(mode: &str, status_row: u16) -> String {
 //!     format!("{}{}{}{}{}{}",
@@ -121,7 +136,9 @@
 //!
 //! These sequence functions integrate seamlessly with the test framework:
 //!
-//! <!-- It is ok to use ignore here - demonstrates test integration pattern with internal test helpers -->
+//! <!-- It is ok to use ignore here - demonstrates test integration pattern with internal
+//! test helpers -->
+//!
 //! ```ignore
 //! #[test]
 //! fn test_vim_status_line_display() {
@@ -143,7 +160,10 @@
 //! ## Usage Examples
 //!
 //! ### Basic Operations
-//! <!-- It is ok to use ignore here - demonstrates usage with internal conformance data modules -->
+//!
+//! <!-- It is ok to use ignore here - demonstrates usage with internal conformance data
+//! modules -->
+//!
 //! ```ignore
 //! use crate::vt_100_pty_output_conformance_tests::conformance_data::basic_sequences;
 //!
@@ -157,7 +177,10 @@
 //! ```
 //!
 //! ### Styling Operations
-//! <!-- It is ok to use ignore here - demonstrates styling sequence usage with internal modules -->
+//!
+//! <!-- It is ok to use ignore here - demonstrates styling sequence usage with internal
+//! modules -->
+//!
 //! ```ignore
 //! use crate::vt_100_pty_output_conformance_tests::conformance_data::styling_sequences;
 //! use crate::ANSIBasicColor;
@@ -172,7 +195,10 @@
 //! ```
 //!
 //! ### Real-World Scenarios
-//! <!-- It is ok to use ignore here - demonstrates real-world usage patterns with internal test data -->
+//!
+//! <!-- It is ok to use ignore here - demonstrates real-world usage patterns with
+//! internal test data -->
+//!
 //! ```ignore
 //! use crate::vt_100_pty_output_conformance_tests::conformance_data::{vim_sequences, tmux_sequences};
 //!

@@ -180,7 +180,7 @@ pub fn test_backend_compat_input_compare() {
 }
 
 /// Controller (PTY Master) Logic.
-mod controller {
+pub mod controller {
     use super::*;
 
     /// Runs controller logic and collects events as a `HashMap`.
@@ -265,7 +265,7 @@ mod controller {
 }
 
 /// Shared setup/teardown for controlled (PTY slave) processes.
-mod controlled_common {
+pub mod controlled_common {
     use super::*;
 
     /// Signal ready to controller. Call before enabling raw mode so newlines work.
@@ -327,7 +327,7 @@ mod controlled_common {
 }
 
 /// Crossterm backend controlled process.
-mod controlled_crossterm {
+pub mod controlled_crossterm {
     use super::*;
 
     /// Crossterm controlled process entry point.
@@ -353,7 +353,7 @@ mod controlled_crossterm {
 }
 
 /// `DirectToAnsi` backend controlled process.
-mod controlled_direct_to_ansi {
+pub mod controlled_direct_to_ansi {
     use super::*;
 
     /// `DirectToAnsi` controlled process entry point.
@@ -380,7 +380,7 @@ mod controlled_direct_to_ansi {
 }
 
 /// Test Sequence Generation.
-mod generate_test_sequences {
+pub mod generate_test_sequences {
     use super::*;
 
     /// All test sequences for backend compatibility testing.

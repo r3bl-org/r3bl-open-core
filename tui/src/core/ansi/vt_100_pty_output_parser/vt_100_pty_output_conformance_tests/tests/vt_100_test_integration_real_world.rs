@@ -765,8 +765,10 @@ fn test_text_manipulation_operations() {
 
     // Insert "brown " before "fox" using character insertion
     let insert_pos = cursor_sequences::move_to_position(nz(1), nz(11)); // Before "fox"
-    let insert_chars =
-        basic_sequences::move_and_insert_chars(TermCol::from_raw_non_zero_value(nz(10)), CsiCount::from_non_zero_value(nz(6))); // Insert 6 chars
+    let insert_chars = basic_sequences::move_and_insert_chars(
+        TermCol::from_raw_non_zero_value(nz(10)),
+        CsiCount::from_non_zero_value(nz(6)),
+    ); // Insert 6 chars
     let brown_text = basic_sequences::insert_text("brown ");
 
     let _unused = ofs_buf.apply_ansi_bytes(insert_pos);
@@ -799,8 +801,10 @@ fn test_text_manipulation_operations() {
 
     // Test character deletion - remove some text
     let delete_pos = cursor_sequences::move_to_position(nz(1), nz(17)); // Before "jumps"
-    let delete_chars =
-        basic_sequences::move_and_delete_chars(TermCol::from_raw_non_zero_value(nz(16)), CsiCount::from_non_zero_value(nz(6))); // Delete "jumps "
+    let delete_chars = basic_sequences::move_and_delete_chars(
+        TermCol::from_raw_non_zero_value(nz(16)),
+        CsiCount::from_non_zero_value(nz(6)),
+    ); // Delete "jumps "
 
     let _unused = ofs_buf.apply_ansi_bytes(delete_pos);
     let _unused = ofs_buf.apply_ansi_bytes(delete_chars);

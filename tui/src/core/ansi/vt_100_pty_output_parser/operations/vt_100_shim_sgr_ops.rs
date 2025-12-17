@@ -73,17 +73,18 @@
 use super::super::{AnsiToOfsBufPerformer, ParamsExt};
 use crate::{SgrColorSequence,
             core::ansi::constants::{SGR_BG_BLACK, SGR_BG_BRIGHT_BLACK,
-                                    SGR_BG_BRIGHT_WHITE, SGR_BG_DEFAULT, SGR_BG_EXTENDED,
-                                    SGR_BG_WHITE, SGR_BLINK, SGR_BOLD,
+                                    SGR_BG_BRIGHT_WHITE, SGR_BG_DEFAULT,
+                                    SGR_BG_EXTENDED, SGR_BG_WHITE, SGR_BLINK, SGR_BOLD,
                                     SGR_COLOR_MODE_256, SGR_COLOR_MODE_RGB, SGR_DIM,
                                     SGR_FG_BLACK, SGR_FG_BRIGHT_BLACK,
-                                    SGR_FG_BRIGHT_WHITE, SGR_FG_DEFAULT, SGR_FG_EXTENDED,
-                                    SGR_FG_WHITE, SGR_HIDDEN, SGR_ITALIC,
-                                    SGR_RAPID_BLINK, SGR_RESET, SGR_RESET_BLINK,
-                                    SGR_RESET_BOLD_DIM, SGR_RESET_HIDDEN,
-                                    SGR_RESET_ITALIC, SGR_RESET_REVERSE,
-                                    SGR_RESET_STRIKETHROUGH, SGR_RESET_UNDERLINE,
-                                    SGR_REVERSE, SGR_STRIKETHROUGH, SGR_UNDERLINE},
+                                    SGR_FG_BRIGHT_WHITE, SGR_FG_DEFAULT,
+                                    SGR_FG_EXTENDED, SGR_FG_WHITE, SGR_HIDDEN,
+                                    SGR_ITALIC, SGR_RAPID_BLINK, SGR_RESET,
+                                    SGR_RESET_BLINK, SGR_RESET_BOLD_DIM,
+                                    SGR_RESET_HIDDEN, SGR_RESET_ITALIC,
+                                    SGR_RESET_REVERSE, SGR_RESET_STRIKETHROUGH,
+                                    SGR_RESET_UNDERLINE, SGR_REVERSE,
+                                    SGR_STRIKETHROUGH, SGR_UNDERLINE},
             tui_style_attrib};
 use vte::Params;
 
@@ -213,7 +214,8 @@ fn apply_sgr_param(performer: &mut AnsiToOfsBufPerformer, param: u16) {
 ///
 /// Extended colors (256-color and RGB) can be formatted two ways:
 ///
-/// - **Colon format** ([ITU-T Rec. T.416]): `ESC[38:5:196m` - VTE groups as `[[38, 5, 196]]`
+/// - **Colon format** ([ITU-T Rec. T.416]): `ESC[38:5:196m` - VTE groups as `[[38, 5,
+///   196]]`
 /// - **Semicolon format** (legacy): `ESC[38;5;196m` - VTE parses as `[[38], [5], [196]]`
 ///
 /// The colon format is handled directly by [`SgrColorSequence::parse_from_raw_slice`].
@@ -237,9 +239,12 @@ pub fn set_graphics_rendition(performer: &mut AnsiToOfsBufPerformer, params: &Pa
                 && (first_param == SGR_FG_EXTENDED || first_param == SGR_BG_EXTENDED)
             {
                 // Try to collect semicolon-separated extended color params.
-                if let Some(consumed) =
-                    try_parse_semicolon_extended_color(performer, params, idx, first_param)
-                {
+                if let Some(consumed) = try_parse_semicolon_extended_color(
+                    performer,
+                    params,
+                    idx,
+                    first_param,
+                ) {
                     idx += consumed;
                     continue;
                 }

@@ -175,12 +175,13 @@ async fn main() -> miette::Result<()> {
                                 }
                             }
                             // Resize event.
-                            ReadlineEvent::Resized => {
+                            ReadlineEvent::Resized(size) => {
                                 let shared_writer = &mut rl_ctx.clone_shared_writer();
+                                let msg = format!("Terminal resized to {size:?}");
                                 writeln!(
                                     shared_writer,
                                     "{}",
-                                    fg_color(tui_color!(frozen_blue), "Terminal resized!")
+                                    fg_color(tui_color!(frozen_blue), &msg)
                                 ).into_diagnostic()?;
                             }
                             // Ctrl+D, Ctrl+C.

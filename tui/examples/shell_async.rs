@@ -164,7 +164,7 @@ pub mod monitor_user_input_and_send_to_child {
                         }
                     }
                     Eof | Interrupted => ControlFlow::ShutdownKillChild,
-                    Resized => ControlFlow::Resized,
+                    Resized(_) => ControlFlow::Resized,
                 },
                 _ => ControlFlow::ShutdownKillChild,
             }

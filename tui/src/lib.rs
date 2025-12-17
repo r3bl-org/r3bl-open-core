@@ -520,6 +520,7 @@
 //! **Example test structure:**
 //!
 //! <!-- It is ok to use ignore here, as this is a macro call -->
+//! 
 //! ```ignore
 //! generate_pty_test! {
 //!     test_fn: interactive_input_parsing,

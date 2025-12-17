@@ -2,8 +2,8 @@
 use crate::{ChannelCapacity, CommonResultWithError, History, InputDevice, InputEvent,
             LineState, LineStateControlSignal, LineStateLiveness, ModifierKeysMask,
             OutputDevice, PauseBuffer, SafeHistory, SafeLineState, SafePauseBuffer,
-            SendRawTerminal, SharedWriter, StdMutex, execute_commands_no_lock, join,
-            key_press, lock_output_device_as_mut};
+            SendRawTerminal, SharedWriter, Size, StdMutex, execute_commands_no_lock,
+            join, key_press, lock_output_device_as_mut};
 use crossterm::{ExecutableCommand, QueueableCommand, cursor,
                 terminal::{self, Clear}};
 use miette::Report as ErrorReport;
@@ -67,21 +67,20 @@ pub const READLINE_ASYNC_INITIAL_PROMPT_DISPLAY_CURSOR_SHOW_DELAY: Duration =
 /// # Inputs and dependency injection
 ///
 /// There are 2 main resources that must be passed into [`Self::try_new()`]:
-/// 1. [`InputDevice`] which contains a resource that implements
-///    [`crate::PinnedInputStream`]. This trait represents an async stream of events. It
-///    is typically implemented by
-///    [`crossterm::event::EventStream`](https://docs.rs/crossterm/latest/crossterm/event/struct.EventStream.html).
-///    This is used to get input from the user. However, for testing you can provide your
-///    own implementation of this trait.
-/// 2. [`OutputDevice`] which contains a resource that implements
-///    [`crate::SafeRawTerminal`]. This trait represents a raw terminal. It is typically
-///    implemented by [`std::io::Stdout`]. This is used to write to the terminal. However,
-///    for testing you can provide your own implementation of this trait.
+/// - [`InputDevice`] which contains a resource that implements
+///   [`crate::PinnedInputStream`]. This trait represents an async stream of events. It
+///   is typically implemented by [`crossterm::event::EventStream`].
+///   This is used to get input from the user. However, for testing you can provide your
+///   own implementation of this trait.
+/// - [`OutputDevice`] which contains a resource that implements
+///   [`crate::SafeRawTerminal`]. This trait represents a raw terminal. It is typically
+///   implemented by [`std::io::Stdout`]. This is used to write to the terminal. However,
+///   for testing you can provide your own implementation of this trait.
 ///
 /// Other structs are passed in as well, and these are:
-/// 1. `prompt` - This prompt will be displayed to the user.
-/// 2. `shutdown_complete_sender` - This is a shutdown channel that is used to signal that
-///    the shutdown process is complete.
+/// - `prompt` - This prompt will be displayed to the user.
+/// - `shutdown_complete_sender` - This is a shutdown channel that is used to signal that
+///   the shutdown process is complete.
 ///
 /// # Support for testing
 ///
@@ -119,11 +118,11 @@ pub const READLINE_ASYNC_INITIAL_PROMPT_DISPLAY_CURSOR_SHOW_DELAY: Duration =
 /// lost!
 ///
 /// References:
-/// 1. Review the [`crate::LineState`] struct for more information on exactly how the
-///    terminal is paused and resumed, when it comes to accepting or rejecting user input,
-///    and rendering output or not.
-/// 2. Review the [`crate::ReadlineAsyncContext`] module docs for more information on the
-///    mental mode and architecture of this.
+/// - Review the [`crate::LineState`] struct for more information on exactly how the
+///   terminal is paused and resumed, when it comes to accepting or rejecting user input,
+///   and rendering output or not.
+/// - Review the [`crate::ReadlineAsyncContext`] module docs for more information on the
+///   mental mode and architecture of this.
 ///
 /// # Usage details
 ///
@@ -136,14 +135,17 @@ pub const READLINE_ASYNC_INITIAL_PROMPT_DISPLAY_CURSOR_SHOW_DELAY: Duration =
 /// Each `Readline` instance is associated with one or more [`SharedWriter`] instances.
 ///
 /// Lines written to an associated `SharedWriter` are output:
-/// 1. While retrieving input with [`readline()`][Readline::readline].
-/// 2. By calling [`manage_shared_writer_output::flush_internal()`].
+/// - While retrieving input with [`readline()`][Readline::readline].
+/// - By calling [`manage_shared_writer_output::flush_internal()`].
 ///
 /// You can provide your own implementation of [`crate::SafeRawTerminal`], like
-/// [`OutputDevice`], via [dependency injection](https://developerlife.com/category/DI/),
+/// [`OutputDevice`], via [dependency injection],
 /// so that you can mock terminal output for testing. You can also extend this struct to
 /// adapt your own terminal output using this mechanism. Essentially anything that
 /// compiles with `dyn std::io::Write + Send` trait bounds can be used.
+///
+/// [`crossterm::event::EventStream`]: https://docs.rs/crossterm/latest/crossterm/event/struct.EventStream.html
+/// [dependency injection]: https://developerlife.com/category/DI/
 #[allow(missing_debug_implementations)]
 pub struct Readline {
     /// Device used to write rendered display output to (usually `stdout`).
@@ -212,7 +214,7 @@ pub enum ReadlineEvent {
     Interrupted,
 
     /// The terminal was resized.
-    Resized,
+    Resized(Size),
 }
 
 /// Internal control flow for the `readline` method. This is used primarily to make
@@ -836,9 +838,11 @@ pub mod readline_internal {
 
     /// Convert crossterm modifiers to canonical modifier mask
     #[must_use]
-    fn convert_modifier_keys(modifiers: crossterm::event::KeyModifiers) -> crate::ModifierKeysMask {
-        use crossterm::event::KeyModifiers;
+    fn convert_modifier_keys(
+        modifiers: crossterm::event::KeyModifiers,
+    ) -> crate::ModifierKeysMask {
         use crate::KeyState;
+        use crossterm::event::KeyModifiers;
 
         crate::ModifierKeysMask {
             shift_key_state: if modifiers.contains(KeyModifiers::SHIFT) {
@@ -862,8 +866,8 @@ pub mod readline_internal {
     /// Convert crossterm mouse button to canonical button
     #[must_use]
     fn convert_mouse_button(button: crossterm::event::MouseButton) -> crate::Button {
-        use crossterm::event::MouseButton;
         use crate::Button;
+        use crossterm::event::MouseButton;
 
         match button {
             MouseButton::Left => Button::Left,
@@ -873,7 +877,7 @@ pub mod readline_internal {
     }
 
     /// Convert `crossterm::event::Event` to canonical `InputEvent`
-    #[must_use] 
+    #[must_use]
     pub fn convert_crossterm_event_to_input_event(
         event: crossterm::event::Event,
     ) -> Option<InputEvent> {
@@ -926,7 +930,8 @@ pub mod readline_internal {
                         MouseEventKind::ScrollLeft => MouseInputKind::ScrollLeft,
                         MouseEventKind::ScrollRight => MouseInputKind::ScrollRight,
                     },
-                    maybe_modifier_keys: if modifiers_mask.shift_key_state == KeyState::NotPressed
+                    maybe_modifier_keys: if modifiers_mask.shift_key_state
+                        == KeyState::NotPressed
                         && modifiers_mask.ctrl_key_state == KeyState::NotPressed
                         && modifiers_mask.alt_key_state == KeyState::NotPressed
                     {
@@ -1069,7 +1074,10 @@ mod test_readline {
             result.unwrap(),
             ReadlineEvent::Line("abc".to_string())
         );
-        pretty_assertions::assert_eq!(readline.safe_line_state.lock().unwrap().line.as_str(), "");
+        pretty_assertions::assert_eq!(
+            readline.safe_line_state.lock().unwrap().line.as_str(),
+            ""
+        );
 
         let output_buffer_data = stdout_mock.get_copy_of_buffer_as_string_strip_ansi();
         // println!("\n`{}`\n", output_buffer_data);

@@ -6,12 +6,12 @@
 //! and manages the event loop for the terminal multiplexer.
 
 use super::{InputRouter, OutputRenderer, Process, ProcessManager, output_renderer};
-use crate::{InputEvent, RawMode, Size, clear_screen_and_home_cursor,
+use crate::{AnsiSequenceGenerator, InputEvent, RawMode, Size, col,
             core::{get_size,
                    osc::OscController,
                    pty::pty_core::pty_sessions::show_notification,
                    terminal_io::{InputDevice, OutputDevice}},
-            lock_output_device_as_mut};
+            lock_output_device_as_mut, row};
 
 /// Main PTY multiplexer that orchestrates all components.
 pub struct PTYMux {
@@ -125,7 +125,14 @@ impl PTYMux {
         self.process_manager.start_all_processes()?;
 
         // Clear screen before showing first process.
-        clear_screen_and_home_cursor(&self.output_device);
+        {
+            let out = lock_output_device_as_mut!(&self.output_device);
+            let _unused = out.write_all(AnsiSequenceGenerator::clear_screen().as_bytes());
+            let _unused = out.write_all(
+                AnsiSequenceGenerator::cursor_position(row(0), col(0)).as_bytes(),
+            );
+            let _unused = out.flush();
+        }
 
         // Trigger initial process switch to show first process.
         self.process_manager.switch_to(0);
@@ -267,7 +274,14 @@ impl PTYMux {
 
         // Clear screen
         tracing::debug!("Step 4: Clearing screen and homing cursor");
-        clear_screen_and_home_cursor(&self.output_device);
+        {
+            let out = lock_output_device_as_mut!(&self.output_device);
+            let _unused = out.write_all(AnsiSequenceGenerator::clear_screen().as_bytes());
+            let _unused = out.write_all(
+                AnsiSequenceGenerator::cursor_position(row(0), col(0)).as_bytes(),
+            );
+            let _unused = out.flush();
+        }
         tracing::debug!("Step 4 completed in {:?}", start_time.elapsed());
 
         // Force flush after escape sequences.

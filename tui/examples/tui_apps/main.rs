@@ -124,9 +124,11 @@ async fn main_impl() -> CommonResult<()> {
                         // No need to re-enable raw mode here - the new rl_ctx will do it.
                     }
                     ReadlineEvent::Eof | ReadlineEvent::Interrupted => break,
-                    ReadlineEvent::Resized => {
+                    ReadlineEvent::Resized(size) => {
+                        // % is Display, ? is Debug.
                         tracing::debug!(
-                            message = "tui_apps: 📐 received Resized event, continuing"
+                            message = "tui_apps: 📐 received Resized event, continuing",
+                            ?size
                         );
                     }
                 }

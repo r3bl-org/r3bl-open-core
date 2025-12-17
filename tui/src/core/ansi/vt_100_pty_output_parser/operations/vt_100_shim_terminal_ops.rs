@@ -64,8 +64,9 @@
 //!     Update OffscreenBuffer state
 //! ```
 //!
-//! Note: Cursor save/restore `ESC` sequences (`ESC 7`/`ESC 8`) are handled by [`cursor_ops`]
-//! functions to maintain consistency with `CSI` equivalents (`CSI s`/`CSI u`).
+//! Note: Cursor save/restore `ESC` sequences (`ESC 7`/`ESC 8`) are handled by
+//! [`cursor_ops`] functions to maintain consistency with `CSI` equivalents (`CSI s`/`CSI
+//! u`).
 //!
 //! [`cursor_ops`]: crate::core::ansi::vt_100_pty_output_parser::operations::vt_100_shim_cursor_ops
 //! [`impl_terminal_ops`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl::vt_100_impl_terminal_ops
