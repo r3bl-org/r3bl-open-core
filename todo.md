@@ -128,9 +128,12 @@
 
 # consider replacing syntect
 
-- [ ] use [`task_syntect_improve`](task/pending/task_syntect_improve.md) to add support for
-      TypeScript, TOML, SCSS, Kotlin, Swift, and Dockerfile languages by adding custom
+- [ ] use [`task_syntect_improve`](task/pending/task_syntect_improve.md) to add support
+      for TypeScript, TOML, SCSS, Kotlin, Swift, and Dockerfile languages by adding custom
       `.sublime-syntax` files to syntect
+
+- [ ] fork syntect:
+      [`fork-syntect-and-remove-bincode-dep.md`](task/pending/fork-syntect-and-remove-bincode-dep.md)
 
 # rewrite textwrap
 

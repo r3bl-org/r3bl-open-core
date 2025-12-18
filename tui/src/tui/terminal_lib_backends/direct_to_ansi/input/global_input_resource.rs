@@ -46,9 +46,20 @@
 //!
 //! ## The Solution
 //!
-//! A **process bound global singleton** with a dedicated reader thread that exclusively
-//! owns the [`stdin`] handle. The thread uses [`mio::Poll`] to wait on both [`stdin`]
-//! data and [`SIGWINCH`] signals.
+//! A **process bound global singleton** with a dedicated reader thread that is the
+//! **designated reader** of [`stdin`]. The thread uses [`mio::Poll`] to wait on both
+//! [`stdin`] data and [`SIGWINCH`] signals.
+//!
+//! <div class="warning">
+//!
+//! **No exclusive access**: Any thread can call [`std::io::stdin()`] and read from it—
+//! there is no OS or Rust mechanism to prevent this. If another thread reads from
+//! [`stdin`], bytes will be stolen, causing interleaved reads that corrupt the input
+//! stream and break the VT100 parser. See [No exclusive access] in [`MioPollerThread`].
+//!
+//! </div>
+//!
+//! [No exclusive access]: super::mio_poller#no-exclusive-access
 //!
 //! Although sync and blocking, [`mio`] is efficient. It uses OS primitives ([`epoll`] on
 //! Linux, [`kqueue`] on BSD/macOS) that put the thread to sleep until data arrives,
@@ -59,8 +70,8 @@
 //! ┌─────────────────────────────────────┐           ┌─────────────────────────────┐
 //! │ Sync Blocking (std::thread + mio)   │           │ Primary: TUI input handler  │
 //! │                                     │           │ Optional: Debug logger      │
-//! │ Owns exclusively:                   │           │ Optional: Event recorder    │
-//! │   • std::stdin handle (locked)      │           │                             │
+//! │ Designated reader of:               │           │ Optional: Event recorder    │
+//! │   • stdin (not exclusive access!)   │           │                             │
 //! │   • Parser state                    │           │                             │
 //! │   • SIGWINCH watcher                │           │                             │
 //! │                                     │ broadcast │                             │
@@ -85,7 +96,7 @@
 //! ┌─────────────────────────────────────────────────────────────────────────┐
 //! │ INPUT_RESOURCE (static LazyLock<Mutex<...>>)                            │
 //! │ internal:                                                               │
-//! │  • mio-poller thread: owns tx, stdin, vt100 parser (spawned 1st access) │
+//! │  • mio-poller thread: holds tx, reads stdin, runs vt100 parser          │
 //! │ external:                                                               │
 //! │  • stdin_rx: broadcast receiver (async consumers recv() from here)      │
 //! └───────────────────────────────────────┬─────────────────────────────────┘

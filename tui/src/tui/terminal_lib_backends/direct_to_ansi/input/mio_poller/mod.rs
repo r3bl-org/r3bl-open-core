@@ -4,8 +4,8 @@
 
 //! # Architecture Overview
 //!
-//! This module encapsulates all state and logic for the [`mio`] poller thread. It owns
-//! and manages the following:
+//! This module encapsulates all state and logic for the [`mio`] poller thread. It
+//! manages the following:
 //!
 //! ## Resources Managed
 //!
@@ -20,7 +20,7 @@
 //!
 //! | Item                                             | Description                                                        |
 //! | :----------------------------------------------- | :----------------------------------------------------------------- |
-//! | [`MioPollerThread`]                              | Core struct: owns poll handle, buffers, parser, and channel sender |
+//! | [`MioPollerThread`]                              | Core struct: holds poll handle, buffers, parser, and channel sender |
 //! | [`MioPollerThread::spawn_thread()`]              | Entry point: spawns the dedicated [`mio-poller`] thread            |
 //! | [`MioPollerThread::start()`]                     | Main event loop: blocks on [`mio::Poll`], dispatches events        |
 //! | [`SourceRegistry`]                               | Holds [`stdin`] and [`SIGWINCH`] signal handles                    |
@@ -35,18 +35,18 @@
 //!
 //! Our design separates these two:
 //!
-//! 1. **Blocking I/O** (dedicated thread exclusively manages [`stdin`] and [`SIGWINCH`]
-//!    by blocking on [`mio::Poll::poll()`]).
-//! 2. **Async consumption** ([`tokio`] tasks await on channel). The
-//!    [`tokio::sync::broadcast`] channel bridges sync and async worlds, supporting
-//!    multiple consumers that each receive all events.
+//! 1. **Blocking I/O** - a dedicated thread is the designated reader of [`stdin`] and
+//!    handler of [`SIGWINCH`], blocking on [`mio::Poll::poll()`].
+//! 2. **Multiple async consumers** - The [`tokio::sync::broadcast`] channel bridges sync
+//!    and async worlds, supporting multiple consumers that each receive all events. Each
+//!    consumer is a [`tokio`] task that awaits on the receiver end of the broadcast channel.
 //!
 //! The sections below explain each component in detail.
 //!
 //! ## The [`mio`]-poller Thread
 //!
-//! A dedicated [`std::thread`] runs for the process lifetime, using [`mio::Poll`] to
-//! efficiently wait on multiple file descriptors:
+//! A dedicated [`std::thread`] runs for lifetime of the process that spawns it, using
+//! [`mio::Poll`] to efficiently wait on multiple file descriptors:
 //!
 //! ```text
 //! ┌────────────────────────────────────┐           ┌─────────────────────────────────┐
@@ -58,32 +58,45 @@
 //! └────────────────────────────────────┘           └─────────────────────────────────┘
 //! ```
 //!
-//! ### Thread Lifecycle
+//! Thread Lifecycle:
+//! - **No external termination**: Other code cannot terminate or cancel this thread—this
+//!   is an OS/threading limitation, not specific to our design. The thread can only exit
+//!   on its own (see exit mechanisms below) or when the process terminates.
+//! - It is the **designated reader** of [`stdin`]—other code should access input events
+//!   via the broadcast channel, not by reading [`stdin`] directly.
 //!
-//! The dedicated thread can't be terminated or cancelled, and it safely owns [`stdin`]
-//! exclusively. There are two distinct exit mechanisms:
+//! <div class="warning">
 //!
-//! #### Thread Self-Termination (process continues)
+//! **No exclusive access**: Any thread in the process can call [`std::io::stdin()`] and
+//! read from it—there is no OS or Rust mechanism to prevent this. If another thread reads
+//! from [`stdin`], bytes will be **stolen** from this thread, causing interleaved reads
+//! that corrupt the input stream and break the VT100 parser state machine.
 //!
-//! The thread exits gracefully while the process continues running. This allows async
-//! consumers to react (e.g., save state, clean up) before the application decides to exit:
+//! </div>
 //!
-//! | Trigger                    | Behavior                                               |
-//! | :------------------------- | :----------------------------------------------------- |
-//! | [`stdin`] [`EOF`]          | [`read()`] returns 0 → sends [`Eof`] → thread exits    |
-//! | I/O error (not [`EINTR`])  | Sends [`Error`] → thread exits                         |
-//! | Receiver dropped           | [`tx.send()`] returns [`Err`] → thread exits           |
+//! There are two distinct exit mechanisms:
 //!
-//! #### Process Termination (OS kills everything)
+//! 1. Thread Self-Termination (process continues)
 //!
-//! When the process itself terminates, the OS kills all threads immediately—no cleanup
-//! code runs in the [`mio`] thread:
+//!     The thread exits gracefully while the process continues running. This allows async
+//!     consumers to react (e.g., save state, clean up) before the application decides to exit:
 //!
-//! | Trigger                    | Behavior                                               |
-//! | :------------------------- | :----------------------------------------------------- |
-//! | `main()` returns           | Process exits → OS terminates all threads              |
-//! | [`std::process::exit()`]   | OS terminates process → all threads killed             |
-//! | `Ctrl+C` / [`SIGINT`]      | OS terminates process → all threads killed             |
+//!     | Trigger                    | Behavior                                               |
+//!     | :------------------------- | :----------------------------------------------------- |
+//!     | [`stdin`] [`EOF`]          | [`read()`] returns 0 → sends [`Eof`] → thread exits    |
+//!     | I/O error (not [`EINTR`])  | Sends [`Error`] → thread exits                         |
+//!     | Receiver dropped           | [`tx.send()`] returns [`Err`] → thread exits           |
+//!
+//! 2. Process Termination (OS kills everything)
+//!
+//!     When the process itself terminates, the OS kills all threads immediately—no cleanup
+//!     code runs in the [`mio`] thread:
+//!
+//!     | Trigger                    | Behavior                                               |
+//!     | :------------------------- | :----------------------------------------------------- |
+//!     | `main()` returns           | Process exits → OS terminates all threads              |
+//!     | [`std::process::exit()`]   | OS terminates process → all threads killed             |
+//!     | `Ctrl+C` / [`SIGINT`]      | OS terminates process → all threads killed             |
 //!
 //! This is safe because:
 //! - [`INPUT_RESOURCE`] is a [`LazyLock`]`<...>` static, never dropped until process exit.
@@ -91,7 +104,7 @@
 //! - There are no resources to leak—[`stdin`] is [`fd`][file descriptor] `0`, which is
 //!   not owned by us.
 //!
-//! #### EINTR Handling
+//! #### `EINTR` Handling
 //!
 //! [`EINTR`] ([`ErrorKind::Interrupted`]) occurs when a signal interrupts a blocking
 //! [`syscall`]. Both [`poll()`] and [`read()`] can return this error. Unlike other

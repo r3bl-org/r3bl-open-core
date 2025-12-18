@@ -27,12 +27,13 @@ use std::num::NonZeroU16;
 pub fn clear_and_home() -> String {
     format!(
         "{}{}",
-        CsiSequence::EraseDisplay(EraseDisplayMode::EntireScreen), // Clear entire screen
+        // Clear entire screen
+        CsiSequence::EraseDisplay(EraseDisplayMode::EntireScreen),
+        // Move to home position
         CsiSequence::CursorPosition {
             row: term_row(nz(1)),
             col: term_col(nz(1))
-        }  /* Move to home
-                                                                    * position */
+        }
     )
 }
 

@@ -1521,10 +1521,11 @@ pub mod complex_interactions {
                 row: term_row(nz(7)),
                 col: term_col(nz(6))
             },
-            CsiSequence::CursorNextLine(term_row_delta(1).unwrap()), /* Should cause
-                                                                      * scrolling */
+            // Should cause scrolling
+            CsiSequence::CursorNextLine(term_row_delta(1).unwrap()),
             "NewText",
-            CsiSequence::CursorPrevLine(term_row_delta(2).unwrap()) /* Should move up within region */
+            // Should move up within region
+            CsiSequence::CursorPrevLine(term_row_delta(2).unwrap())
         );
         let _result = ofs_buf.apply_ansi_bytes(complex_ops);
 
