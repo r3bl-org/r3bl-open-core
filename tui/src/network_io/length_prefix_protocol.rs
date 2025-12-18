@@ -3,7 +3,7 @@
 //! This module is standalone, you can use it any project that needs to communicate
 //! between a client and a server using a length-prefix, binary payload, protocol.
 
-use crate::{bincode_serde, compress, ok, protocol_types::LengthPrefixType};
+use crate::{compress, json_serde, ok, protocol_types::LengthPrefixType};
 use miette::IntoDiagnostic;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
@@ -205,7 +205,7 @@ pub mod byte_io {
         data: &T,
     ) -> miette::Result<()> {
         // Try to serialize the data.
-        let payload_buffer = bincode_serde::try_serialize(data)?;
+        let payload_buffer = json_serde::try_serialize(data)?;
 
         // Compress the payload.
         let payload_buffer = compress::compress(&payload_buffer)?;
@@ -271,7 +271,7 @@ pub mod byte_io {
         let payload_buffer = compress::decompress(&payload_buffer)?;
 
         // Deserialize the payload.
-        let payload_buffer = bincode_serde::try_deserialize::<T>(&payload_buffer)?;
+        let payload_buffer = json_serde::try_deserialize::<T>(&payload_buffer)?;
         Ok(payload_buffer)
     }
 }

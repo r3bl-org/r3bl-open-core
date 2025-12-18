@@ -17,28 +17,24 @@
 //!   - [`is_key_contained_in_bucket`]
 //! - And provide lots of really fine grained errors, using [miette] and [thiserror] (see
 //!   [`kv_error`]).
-//!
-//! 1. The values are serialized to [Bincode] (from Rust struct) before they are saved.
-//! 2. The values are deserialized from [Bincode] (to Rust struct) after they are loaded.
+//! - The values are serialized to JSON (from Rust struct) before they are saved.
+//! - The values are deserialized from JSON (to Rust struct) after they are loaded.
 //!
 //! See the tests in this module for an example of how to use this module.
 //!
-//! [Bincode] is like [`CBOR`](https://en.wikipedia.org/wiki/CBOR), except that it isn't
-//! standards based, but it is faster. It also has full support of [serde] just like [kv]
-//! does.
-//! - [More info comparing [`CBOR`](https://en.wikipedia.org/wiki/CBOR) with [`Bincode`](https://gemini.google.com/share/0684553f3d57)
-//!
 //! The [kv] crate works really well, even with multiple processes accessing the same
-//! database on disk. Even though [sled](https://github.com/spacejam/sled), which the [kv]
-//! crate itself wraps, is not multi-process safe.
+//! database on disk. Even though [sled], which the [kv] crate itself wraps, is not
+//! multi-process safe.
 //!
 //! In my testing, I've run multiple processes that write to the key/value store at the
 //! same time, and it works as expected. Even with multiple processes writing to the
 //! store, the iterator [`kv::Bucket::iter`] can be used to read the current state of the
 //! db, as expected.
+//!
+//! [sled]: https://github.com/spacejam/sled
 
 use crate::fg_cyan;
-use kv::{Bincode, Config, Store};
+use kv::{Config, Json, Store};
 use miette::{Context, IntoDiagnostic};
 use serde::{Deserialize, Serialize};
 use std::fmt::{Debug, Display};
@@ -53,10 +49,10 @@ use std::fmt::{Debug, Display};
 /// - `KeyT`: The generic type `<KeyT>`. This will not be serialized or deserialized. This
 ///   also has a trait bound on [`kv::Key`]. See [`insert_into_bucket`] for an example of
 ///   this.
-/// - `ValueT`: This type makes it concrete that [Bincode] will be used to serialize and
+/// - `ValueT`: This type makes it concrete that [Json] will be used to serialize and
 ///   deserialize the data from the generic type `<ValueT>`, which has trait bounds on
 ///   [Serialize], [Deserialize]. See [`insert_into_bucket`] for an example of this.
-pub type KVBucket<'a, KeyT, ValueT> = kv::Bucket<'a, KeyT, Bincode<ValueT>>;
+pub type KVBucket<'a, KeyT, ValueT> = kv::Bucket<'a, KeyT, Json<ValueT>>;
 
 mod default_settings {
     use super::Debug;
@@ -67,7 +63,7 @@ mod default_settings {
         /// store. It is your database persistence folder.
         StoreFolderPath,
         /// Your [Bucket] name that is used to store the key/value pairs.
-        /// - [Bincode] is used to serialize/deserialize the value stored in the key/value
+        /// - JSON is used to serialize/deserialize the value stored in the key/value
         ///   pair.
         /// - A [Bucket] provides typed access to a section of the key/value store [kv].
         BucketName,
@@ -157,12 +153,12 @@ pub fn load_or_create_bucket_from_store<
     Ok(my_payload_bucket)
 }
 
-/// The value is serialized using [Bincode] prior to saving it to the key/value store.
+/// The value is serialized using JSON prior to saving it to the key/value store.
 ///
 /// # Errors
 ///
 /// Returns an error if:
-/// - The value cannot be serialized to Bincode format
+/// - The value cannot be serialized to JSON format
 /// - The key/value pair cannot be saved to the bucket due to I/O errors
 /// - The bucket is corrupted or the store is locked
 #[tracing::instrument(skip(bucket))]
@@ -178,9 +174,9 @@ pub fn insert_into_bucket<
     let value_str = inline_string!("{:?}", value);
     let value_str_fmt = fg_cyan(&value_str).bold();
 
-    // Serialize the Rust struct into a binary payload.
+    // Serialize the Rust struct into a JSON payload.
     bucket
-        .set(&key, &Bincode(value))
+        .set(&key, &Json(value))
         .into_diagnostic()
         .wrap_err(KvErrorCouldNot::SaveKeyValuePairToBucket)?;
 
@@ -194,14 +190,14 @@ pub fn insert_into_bucket<
     Ok(())
 }
 
-/// The value in the key/value store is serialized using [Bincode]. Upon loading that
-/// value it is deserialized and returned by this function.
+/// The value in the key/value store is serialized using JSON. Upon loading that value it
+/// is deserialized and returned by this function.
 ///
 /// # Errors
 ///
 /// Returns an error if:
 /// - The key cannot be found and an I/O error occurs
-/// - The value cannot be deserialized from Bincode format
+/// - The value cannot be deserialized from JSON format
 /// - The bucket is corrupted or inaccessible
 #[tracing::instrument(skip(bucket))]
 pub fn get_from_bucket<
@@ -211,14 +207,14 @@ pub fn get_from_bucket<
     bucket: &KVBucket<'_, KeyT, ValueT>,
     key: KeyT,
 ) -> miette::Result<Option<ValueT>> {
-    let maybe_value: Option<Bincode<ValueT>> = bucket
+    let maybe_value: Option<Json<ValueT>> = bucket
         .get(&key)
         .into_diagnostic()
         .wrap_err(KvErrorCouldNot::LoadKeyValuePairFromBucket)?;
 
     let it = match maybe_value {
-        // Deserialize the binary payload into a Rust struct.
-        Some(Bincode(payload)) => Ok(Some(payload)),
+        // Deserialize the JSON payload into a Rust struct.
+        Some(Json(payload)) => Ok(Some(payload)),
         _ => Ok(None),
     };
 
@@ -245,14 +241,14 @@ pub fn remove_from_bucket<
     bucket: &KVBucket<'_, KeyT, ValueT>,
     key: KeyT,
 ) -> miette::Result<Option<ValueT>> {
-    let maybe_value: Option<Bincode<ValueT>> = bucket
+    let maybe_value: Option<Json<ValueT>> = bucket
         .remove(&key)
         .into_diagnostic()
         .wrap_err(KvErrorCouldNot::RemoveKeyValuePairFromBucket)?;
 
     let it = match maybe_value {
-        // Deserialize the binary payload into a Rust struct.
-        Some(Bincode(payload)) => Ok(Some(payload)),
+        // Deserialize the JSON payload into a Rust struct.
+        Some(Json(payload)) => Ok(Some(payload)),
         _ => Ok(None),
     };
 
@@ -305,10 +301,10 @@ pub fn iterate_bucket<
         let Ok(key) = item.key::<KeyT>().into_diagnostic() else {
             continue;
         };
-        let Ok(encoded_value) = item.value::<Bincode<ValueT>>().into_diagnostic() else {
+        let Ok(encoded_value) = item.value::<Json<ValueT>>().into_diagnostic() else {
             continue;
         };
-        let Bincode(value) = encoded_value; /* decode the value */
+        let Json(value) = encoded_value; /* decode the value */
         fn_to_apply(key, value);
     }
 }
@@ -410,9 +406,9 @@ mod kv_tests {
                 .into_diagnostic()
                 .wrap_err(KvErrorCouldNot::GetKeyFromItemFromIteratorFromBucket)?;
 
-            // Deserialize the binary payload into a Rust struct.
-            let Bincode(payload) = item
-                .value::<Bincode<String>>()
+            // Deserialize the JSON payload into a Rust struct.
+            let Json(payload) = item
+                .value::<Json<String>>()
                 .into_diagnostic()
                 .wrap_err(KvErrorCouldNot::GetValueFromItemFromIteratorFromBucket)?;
 

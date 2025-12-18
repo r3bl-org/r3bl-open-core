@@ -187,6 +187,11 @@ pub mod controller {
     ///
     /// Used by the comparison test to directly capture events without printing.
     /// Returns a map of sequence description → EVENT string.
+    ///
+    /// # Panics
+    ///
+    /// Panics if PTY reader/writer cannot be obtained, or if I/O operations fail.
+    #[must_use]
     pub fn run_and_collect(
         (backend_name, pty_pair): (&str, PtyPair),
     ) -> HashMap<String, String> {
@@ -269,6 +274,10 @@ pub mod controlled_common {
     use super::*;
 
     /// Signal ready to controller. Call before enabling raw mode so newlines work.
+    ///
+    /// # Panics
+    ///
+    /// Panics if stdout flush fails.
     pub fn signal_ready() {
         println!("{}", super::CONTROLLED_READY);
         std::io::stdout().flush().expect("Failed to flush");
@@ -334,6 +343,10 @@ pub mod controlled_crossterm {
     ///
     /// Uses `crossterm::terminal::enable_raw_mode()` explicitly to test the
     /// crossterm backend's raw mode implementation.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the tokio runtime cannot be created.
     pub fn run() -> ! {
         // 1. Signal ready (before enabling raw mode so newlines work normally).
         controlled_common::signal_ready();
@@ -361,6 +374,10 @@ pub mod controlled_direct_to_ansi {
     /// Uses [`terminal_raw_mode::raw_mode_unix::enable_raw_mode`] directly (the
     /// rustix-based implementation) to explicitly test the `DirectToAnsi` backend's raw
     /// mode.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the tokio runtime cannot be created.
     pub fn run() -> ! {
         // 1. Signal ready (before enabling raw mode so newlines work normally).
         controlled_common::signal_ready();
@@ -386,6 +403,7 @@ pub mod generate_test_sequences {
     /// All test sequences for backend compatibility testing.
     ///
     /// Returns (description, ANSI bytes) pairs sent to both backends for comparison.
+    #[must_use]
     pub fn all() -> Vec<(&'static str, Vec<u8>)> {
         vec![
             // Arrow keys (CSI sequences): ESC [ A/B/C/D.

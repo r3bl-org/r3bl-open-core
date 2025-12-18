@@ -43,6 +43,9 @@
 
 - [x] fix [`add-backend-compat-tests.md`](task/done/add-backend-compat-tests.md:28)
 
+- [x] fix [`remove-bincode.md`](task/done/remove-bincode.md) to remove `bincode` due to
+      its abandonment
+
 - [x] create "dedicated thread reactor" pattern based on `mio_poller` design & impl that
       can be generalized to provide lots of great features (for `r3bl_*` apps & services)
       in the future:

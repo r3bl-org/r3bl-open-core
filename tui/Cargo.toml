@@ -50,6 +50,8 @@ strum = "0.27.1"
 strum_macros = "0.27.1"
 
 # Syntax highlighting.
+# Note: syntect depends on bincode v1.3.3 for loading embedded syntax/theme dumps.
+# This is unavoidable without replacing syntect entirely.
 syntect = "5.3.0"
 
 # nom parser combinator.
@@ -114,9 +116,9 @@ vte = "0.15.0"
 # Fast non-cryptographic hash for ColorWheel cache
 rustc-hash = "2.1.0"
 
-# Key Value store used to store JSON or bincode encoded values. `kv` is built
-# on top of `sled` which currently does not support access across multiple processes.
-kv = { version = "0.24.0", features = ["json-value", "bincode-value"] }
+# Key Value store used to store JSON encoded values. `kv` is built on top of
+# `sled` which currently does not support access across multiple processes.
+kv = { version = "0.24.0", features = ["json-value"] }
 
 # Async stream for DI and testing.
 futures-core = "0.3.31"
@@ -135,10 +137,6 @@ reqwest = { version = "0.12.24", default-features = false, features = [
     "rustls-tls",
 ] }
 
-
-# Convert Rust structs to and from binary representation. For the protocol.
-# https://github.com/bincode-org/bincode/blob/trunk/docs/migration_guide.md
-bincode = { version = "2.0.1", features = ["serde"] }
 
 # Compression for the protocol.
 flate2 = "1.1.5"

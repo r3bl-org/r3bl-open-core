@@ -252,6 +252,11 @@ pub mod controller {
     /// Reads from PTY until it sees the completion signal, then strips the signal
     /// and returns just the ANSI bytes. The controlled process sends the completion
     /// signal immediately after finishing its output, so blocking reads work.
+    ///
+    /// # Panics
+    ///
+    /// Panics if PTY reader cannot be obtained, or if I/O operations fail.
+    #[must_use]
     pub fn run((backend_name, pty_pair): (&str, PtyPair)) -> Vec<u8> {
         eprintln!("{backend_name} Controller: Starting...");
 
@@ -325,6 +330,10 @@ pub mod controlled_crossterm {
     ///
     /// Uses `crossterm::terminal::enable_raw_mode()` explicitly,
     /// which is what crossterm uses internally.
+    ///
+    /// # Panics
+    ///
+    /// Panics if stdout flush fails.
     pub fn run() -> ! {
         // 1. Signal ready (before enabling raw mode so newlines work normally).
         println!("{}", super::CONTROLLED_READY);
@@ -387,6 +396,10 @@ pub mod controlled_direct_to_ansi {
     /// Uses [`terminal_raw_mode::raw_mode_unix::enable_raw_mode()`] directly (the
     /// rustix-based implementation) to explicitly test the `DirectToAnsi` backend's raw
     /// mode.
+    ///
+    /// # Panics
+    ///
+    /// Panics if stdout flush fails.
     pub fn run() -> ! {
         // 1. Signal ready (before enabling raw mode so newlines work normally).
         println!("{}", super::CONTROLLED_READY);
@@ -448,6 +461,7 @@ pub mod generate_test_render_ops {
     ///
     /// Returns render ops that will be executed by both backends for comparison.
     /// The resulting terminal state (`OffscreenBuffer`) should be identical.
+    #[must_use]
     #[allow(clippy::too_many_lines, clippy::vec_init_then_push)]
     pub fn all() -> Vec<RenderOpOutput> {
         let mut ops = Vec::new();
