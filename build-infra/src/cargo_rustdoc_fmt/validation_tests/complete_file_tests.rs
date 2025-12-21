@@ -554,4 +554,79 @@ fn main() {}";
             "Formatted output should match expected output"
         );
     }
+
+    /// Test that indented tables (nested under numbered lists) preserve their
+    /// indentation.
+    ///
+    /// This test uses a file with tables indented 4 spaces to appear under numbered
+    /// list items. The formatter should:
+    /// - Preserve the 4-space indentation before each table line
+    /// - Still format the table columns correctly
+    /// - Not strip the indentation (which would break the markdown structure)
+    #[test]
+    fn test_indented_table_preservation() {
+        let input =
+            include_str!("test_data/complete_file/input/sample_indented_table.rs");
+        let expected = include_str!(
+            "test_data/complete_file/expected_output/sample_indented_table.rs"
+        );
+
+        let temp_dir = TempDir::new().unwrap();
+        let test_file = temp_dir.path().join("sample_indented_table.rs");
+        fs::write(&test_file, input).unwrap();
+
+        // Process with table formatting only.
+        let options = FormatOptions {
+            format_tables: true,
+            convert_links: false,
+            check_only: false,
+            verbose: false,
+        };
+        let processor = processor::FileProcessor::new(options);
+        let result = processor.process_file(&test_file);
+
+        assert!(
+            result.errors.is_empty(),
+            "Processing errors: {:?}",
+            result.errors
+        );
+        assert!(
+            result.modified,
+            "File should be modified (tables need formatting)"
+        );
+
+        let formatted = fs::read_to_string(&test_file).unwrap();
+
+        // Verify indented tables preserve their 4-space indentation.
+        // These lines should start with "//!     |" (4 spaces after "//! ").
+        assert!(
+            formatted.contains("//!     | Trigger"),
+            "First indented table header should preserve 4-space indent"
+        );
+        assert!(
+            formatted.contains("//!     | Column One"),
+            "Second indented table header should preserve 4-space indent"
+        );
+
+        // Verify non-indented table has no indentation.
+        assert!(
+            formatted.contains("//! | Header A"),
+            "Non-indented table should have no extra indentation"
+        );
+
+        // Verify the numbered list structure is preserved.
+        assert!(
+            formatted.contains("//! 1. First mechanism"),
+            "Numbered list should be preserved"
+        );
+        assert!(
+            formatted.contains("//! 2. Second mechanism"),
+            "Numbered list should be preserved"
+        );
+
+        assert_eq!(
+            formatted, expected,
+            "Formatted output should match expected output"
+        );
+    }
 }

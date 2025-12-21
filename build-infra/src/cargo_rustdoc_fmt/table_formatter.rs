@@ -9,6 +9,7 @@ use unicode_width::UnicodeWidthStr;
 ///
 /// Aligns columns and normalizes table formatting while preserving content.
 /// Code fence blocks (` ``` `) are preserved and not processed.
+/// Content indentation (leading whitespace before `|`) is preserved.
 ///
 /// # Panics
 ///
@@ -16,8 +17,8 @@ use unicode_width::UnicodeWidthStr;
 /// pattern).
 #[must_use]
 pub fn format_tables(text: &str) -> String {
-    // Use regex-based approach for now as it's more reliable for formatting
-    let table_regex = Regex::new(r"(?m)^\|.+\|[ \t]*$").unwrap();
+    // Match table lines with optional leading whitespace.
+    let table_regex = Regex::new(r"(?m)^[ \t]*\|.+\|[ \t]*$").unwrap();
 
     if !table_regex.is_match(text) {
         return text.to_string();
@@ -47,8 +48,8 @@ pub fn format_tables(text: &str) -> String {
             continue;
         }
 
-        if let Some(table) = extract_table(&lines, i) {
-            let formatted = format_single_table(&table);
+        if let Some((table, content_indent)) = extract_table(&lines, i) {
+            let formatted = format_single_table(&table, &content_indent);
             result.extend(formatted);
             i += table.len();
         } else {
@@ -61,15 +62,22 @@ pub fn format_tables(text: &str) -> String {
 }
 
 /// Extract a table starting at the given index.
-fn extract_table(lines: &[&str], start: usize) -> Option<Vec<String>> {
+///
+/// Returns the table lines (without content indentation) and the content indentation
+/// string that should be re-applied after formatting.
+fn extract_table(lines: &[&str], start: usize) -> Option<(Vec<String>, String)> {
     if start >= lines.len() {
         return None;
     }
 
-    let line = lines[start].trim();
-    if !line.starts_with('|') || !line.ends_with('|') {
+    let first_line = lines[start];
+    let trimmed = first_line.trim();
+    if !trimmed.starts_with('|') || !trimmed.ends_with('|') {
         return None;
     }
+
+    // Capture content indentation from first line (whitespace before the `|`).
+    let content_indent = &first_line[..first_line.len() - first_line.trim_start().len()];
 
     let mut table_lines = Vec::new();
     let mut i = start;
@@ -84,9 +92,9 @@ fn extract_table(lines: &[&str], start: usize) -> Option<Vec<String>> {
         }
     }
 
-    // Must have at least header and separator
+    // Must have at least header and separator.
     if table_lines.len() >= 2 {
-        Some(table_lines)
+        Some((table_lines, content_indent.to_string()))
     } else {
         None
     }
@@ -106,26 +114,36 @@ enum ColumnAlignment {
 }
 
 /// Format a single table with proper column alignment.
-fn format_single_table(table: &[String]) -> Vec<String> {
+///
+/// The `content_indent` is prepended to each formatted line to preserve the original
+/// indentation (e.g., for tables nested under numbered lists).
+fn format_single_table(table: &[String], content_indent: &str) -> Vec<String> {
     if table.len() < 2 {
-        return table.to_vec();
+        // Return original lines with content indentation preserved.
+        return table
+            .iter()
+            .map(|line| format!("{content_indent}{line}"))
+            .collect();
     }
 
-    // Parse table into cells
+    // Parse table into cells.
     let rows: Vec<Vec<String>> = table.iter().map(|line| parse_table_row(line)).collect();
 
     if rows.is_empty() {
-        return table.to_vec();
+        return table
+            .iter()
+            .map(|line| format!("{content_indent}{line}"))
+            .collect();
     }
 
-    // Extract alignments from separator row (index 1)
+    // Extract alignments from separator row (index 1).
     let alignments: Vec<ColumnAlignment> = if rows.len() >= 2 {
         rows[1].iter().map(|cell| parse_alignment(cell)).collect()
     } else {
         vec![]
     };
 
-    // Calculate column widths
+    // Calculate column widths.
     let col_count = rows[0].len();
     let mut col_widths = vec![0; col_count];
 
@@ -137,11 +155,11 @@ fn format_single_table(table: &[String]) -> Vec<String> {
         }
     }
 
-    // Format each row
+    // Format each row, prepending content indentation.
     let mut formatted = Vec::new();
     for (row_idx, row) in rows.iter().enumerate() {
         let formatted_row = format_table_row(row, &col_widths, row_idx == 1, &alignments);
-        formatted.push(formatted_row);
+        formatted.push(format!("{content_indent}{formatted_row}"));
     }
 
     formatted
@@ -431,5 +449,97 @@ More text";
         assert!(!cells[2].starts_with(':') && cells[2].ends_with(':'));
         // None: no colons
         assert!(!cells[3].contains(':'));
+    }
+
+    // ==================== Content Indentation Tests ====================
+    // Tables nested under numbered lists need their indentation preserved.
+
+    #[test]
+    fn test_indented_table_preserves_spaces() {
+        // Table with 4-space indentation (common for nested under numbered lists).
+        let input = "    | A | B |\n    |---|---|\n    | 1 | 2 |";
+        let output = format_tables(input);
+        let lines: Vec<&str> = output.lines().collect();
+        // All lines should start with 4 spaces.
+        for line in &lines {
+            assert!(
+                line.starts_with("    "),
+                "Line should preserve 4-space indent: '{}'",
+                line
+            );
+        }
+    }
+
+    #[test]
+    fn test_indented_table_formats_correctly() {
+        // Table with indentation and uneven columns.
+        let input = "    | Short | Very Long Text |\n    |---|---|\n    | A | B |";
+        let output = format_tables(input);
+        let lines: Vec<&str> = output.lines().collect();
+        // Check indentation preserved.
+        assert!(lines[0].starts_with("    "));
+        assert!(lines[1].starts_with("    "));
+        assert!(lines[2].starts_with("    "));
+        // Check content is still formatted (columns aligned).
+        assert!(output.contains("Very Long Text"));
+    }
+
+    #[test]
+    fn test_mixed_indentation_levels() {
+        // Two tables with different indentation levels.
+        let input = "| A | B |\n|---|---|\n| 1 | 2 |\n\n    | C | D |\n    |---|---|\n    | 3 | 4 |";
+        let output = format_tables(input);
+        let lines: Vec<&str> = output.lines().collect();
+        // First table has no indentation.
+        assert!(lines[0].starts_with("| A"));
+        // Second table (after blank line) has 4-space indentation.
+        assert!(
+            lines[4].starts_with("    "),
+            "Second table should have 4-space indent: '{}'",
+            lines[4]
+        );
+    }
+
+    #[test]
+    fn test_tab_indentation_preserved() {
+        // Table with tab indentation.
+        let input = "\t| A | B |\n\t|---|---|\n\t| 1 | 2 |";
+        let output = format_tables(input);
+        let lines: Vec<&str> = output.lines().collect();
+        // All lines should start with tab.
+        for line in &lines {
+            assert!(
+                line.starts_with('\t'),
+                "Line should preserve tab indent: '{}'",
+                line
+            );
+        }
+    }
+
+    #[test]
+    fn test_no_indentation_still_works() {
+        // Table with no indentation (regression test).
+        let input = "| A | B |\n|---|---|\n| 1 | 2 |";
+        let output = format_tables(input);
+        let lines: Vec<&str> = output.lines().collect();
+        // Lines should start with pipe (no indentation).
+        assert!(lines[0].starts_with('|'));
+        assert!(lines[1].starts_with('|'));
+        assert!(lines[2].starts_with('|'));
+    }
+
+    #[test]
+    fn test_indented_table_with_surrounding_text() {
+        // Table indented within rustdoc content.
+        let input = "Some text before\n    | A | B |\n    |---|---|\n    | 1 | 2 |\nSome text after";
+        let output = format_tables(input);
+        // Surrounding text preserved.
+        assert!(output.contains("Some text before"));
+        assert!(output.contains("Some text after"));
+        // Table lines have indentation.
+        let lines: Vec<&str> = output.lines().collect();
+        assert!(lines[1].starts_with("    "));
+        assert!(lines[2].starts_with("    "));
+        assert!(lines[3].starts_with("    "));
     }
 }
