@@ -251,7 +251,7 @@ end
 # After detecting a file change, waits for this many seconds of "quiet" (no new changes)
 # before running checks. Each new change resets the window, coalescing rapid saves.
 # This handles IDE auto-save, formatters, and "oops forgot to save that file" moments.
-set -g DEBOUNCE_WINDOW_SECS 5
+set -g DEBOUNCE_WINDOW_SECS 2
 
 # Use tmpfs for build artifacts - eliminates disk I/O for massive speedup.
 # /tmp is already tmpfs on most Linux systems (including this one: 46GB).
@@ -409,8 +409,8 @@ function show_help
     echo "  Requirements: inotifywait (installed via bootstrap.sh)"
     echo ""
     echo "  Doc Builds (--watch-doc):"
-    echo "  • Quick build (--no-deps) runs first, blocking (~20s)"
-    echo "  • Full build (with deps) then forks to background (~90s)"
+    echo "  • Quick build (r3bl_tui only) runs first, blocking (~3-5s)"
+    echo "  • Full build (all crates + deps) then forks to background (~90s)"
     echo "  • Quick docs available immediately, full docs notify when done"
     echo "  • Desktop notification when each build completes"
     echo "  • Separate staging directories prevent race conditions"
@@ -862,18 +862,18 @@ function run_checks_for_type
             # Why quick blocks but full forks?
             # - Cargo uses a global package cache lock (~/.cargo/.package-cache)
             # - Running both simultaneously causes "Blocking waiting for file lock" messages
-            # - Quick build is fast (~20s), so blocking is acceptable
+            # - Quick build targets only r3bl_tui (~3-5s), so blocking is acceptable
             # - Full build is slow (~90s), so forking lets user continue editing
             #
             # Build flow:
             # 1. Run quick build (blocking) → staging-quick → sync to serving → notify
             # 2. Fork full build            → staging-full  → sync to serving → notify
 
-            # Step 1: Quick build (BLOCKING - fast, gets docs to user quickly)
-            log_and_print $CHECK_LOG_FILE "["(timestamp)"] 🔨 Quick build starting (--no-deps)..."
+            # Step 1: Quick build (BLOCKING - targets only r3bl_tui for fast feedback)
+            log_and_print $CHECK_LOG_FILE "["(timestamp)"] 🔨 Quick build starting (r3bl_tui only)..."
 
             set -lx CARGO_TARGET_DIR $CHECK_TARGET_DIR_DOC_STAGING_QUICK
-            ionice_wrapper cargo doc --no-deps > /dev/null 2>&1
+            ionice_wrapper cargo doc -p r3bl_tui --no-deps > /dev/null 2>&1
             set -l quick_result $status
 
             if test $quick_result -eq 0
@@ -881,10 +881,10 @@ function run_checks_for_type
                 log_and_print $CHECK_LOG_FILE "["(timestamp)"] 📄 Quick build done!"
                 log_and_print $CHECK_LOG_FILE "    📖 Read the docs at: file://$CHECK_TARGET_DIR/doc/r3bl_tui/index.html"
                 log_and_print $CHECK_LOG_FILE ""
-                send_system_notification "Watch: Quick Docs Ready 📄" "Local crate docs available - full build starting" "success" $NOTIFICATION_EXPIRE_MS
+                send_system_notification "Watch: Quick Docs Ready 📄" "r3bl_tui docs available - full build starting" "success" $NOTIFICATION_EXPIRE_MS
             else
                 log_and_print $CHECK_LOG_FILE "["(timestamp)"] ❌ Quick build failed!"
-                send_system_notification "Watch: Quick Doc Build Failed ❌" "cargo doc --no-deps failed" "critical" $NOTIFICATION_EXPIRE_MS
+                send_system_notification "Watch: Quick Doc Build Failed ❌" "cargo doc -p r3bl_tui failed" "critical" $NOTIFICATION_EXPIRE_MS
                 return $quick_result
             end
 
