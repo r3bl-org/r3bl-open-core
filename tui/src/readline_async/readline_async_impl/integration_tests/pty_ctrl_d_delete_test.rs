@@ -179,7 +179,7 @@ fn pty_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
 
 /// PTY Controlled: Process readline input and report line state
 fn pty_controlled_entry_point() -> ! {
-    use crate::tui::terminal_lib_backends::direct_to_ansi::DirectToAnsiInputDevice;
+    use crate::direct_to_ansi::DirectToAnsiInputDevice;
 
     println!("{CONTROLLED_STARTING}");
     std::io::stdout().flush().expect("Failed to flush");

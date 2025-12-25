@@ -64,7 +64,7 @@
 //! enabling selective redraw in the next stage.
 //!
 //! [`crossterm_backend::crossterm_paint_render_op_impl` mod docs]: mod@crate::tui::terminal_lib_backends::crossterm_backend::crossterm_paint_render_op_impl
-//! [`direct_to_ansi` mod docs]: mod@crate::tui::terminal_lib_backends::direct_to_ansi
+//! [`direct_to_ansi` mod docs]: mod@crate::direct_to_ansi
 //! [`offscreen_buffer::paint_impl` mod docs]: mod@crate::tui::terminal_lib_backends::offscreen_buffer::paint_impl
 //! [`render_pipeline`]: mod@crate::tui::terminal_lib_backends::render_pipeline
 //! [rendering pipeline overview]: mod@crate::terminal_lib_backends#rendering-pipeline-architecture

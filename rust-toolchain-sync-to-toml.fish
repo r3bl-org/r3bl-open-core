@@ -157,6 +157,7 @@ function purge_all_toolchains
     # Nuclear cleanup - remove ALL toolchains (stable and nightly)
     log_message "Starting nuclear toolchain purge (removing everything)..."
     set -l removed_count 0
+    set -l failed_toolchains
 
     for toolchain in $all_toolchains
         log_message "  REMOVING: $toolchain"
@@ -164,8 +165,46 @@ function purge_all_toolchains
             set removed_count (math $removed_count + 1)
             log_message "    ✅ Successfully removed $toolchain"
         else
-            log_message "    ❌ Failed to remove $toolchain"
+            log_message "    ⚠️  rustup uninstall failed for $toolchain"
+            set -a failed_toolchains $toolchain
         end
+    end
+
+    # Fallback: directly delete folders for any toolchains that failed to uninstall
+    # This handles corrupted toolchains with "Missing manifest" errors
+    if test (count $failed_toolchains) -gt 0
+        log_message ""
+        log_message "🔧 Attempting direct folder cleanup for stubborn toolchains..."
+        set -l toolchains_dir "$HOME/.rustup/toolchains"
+
+        for toolchain in $failed_toolchains
+            # Try both with and without platform suffix
+            for suffix in "" "-x86_64-unknown-linux-gnu" "-aarch64-unknown-linux-gnu"
+                set -l folder_path "$toolchains_dir/$toolchain$suffix"
+                if test -d "$folder_path"
+                    log_message "    Deleting folder: $folder_path"
+                    if command rm -rf "$folder_path"
+                        set removed_count (math $removed_count + 1)
+                        log_message "    ✅ Removed via direct deletion"
+                    else
+                        log_message "    ❌ Failed to delete folder"
+                    end
+                end
+            end
+        end
+    end
+
+    # Final safety check: remove any remaining toolchain folders
+    # (handles edge cases where toolchains exist on disk but not in rustup list)
+    set -l remaining_folders (find ~/.rustup/toolchains -mindepth 1 -maxdepth 1 -type d 2>/dev/null)
+    if test (count $remaining_folders) -gt 0
+        log_message ""
+        log_message "🧹 Cleaning orphaned toolchain folders..."
+        for folder in $remaining_folders
+            log_message "    Removing orphaned: $folder"
+            command rm -rf "$folder" 2>/dev/null
+        end
+        log_message "    ✅ Orphaned folders cleaned"
     end
 
     log_message "Removed $removed_count toolchain(s)"

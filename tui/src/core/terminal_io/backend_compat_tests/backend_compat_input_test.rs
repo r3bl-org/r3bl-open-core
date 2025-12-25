@@ -49,7 +49,7 @@
 //!
 //! [`CrosstermInputDevice`]: crate::CrosstermInputDevice
 //! [`Crossterm`]: crate::TerminalLibBackend::Crossterm
-//! [`DirectToAnsiInputDevice`]: crate::tui::terminal_lib_backends::direct_to_ansi::DirectToAnsiInputDevice
+//! [`DirectToAnsiInputDevice`]: crate::direct_to_ansi::DirectToAnsiInputDevice
 //! [`DirectToAnsi`]: crate::TerminalLibBackend::DirectToAnsi
 //! [`InputEvent`]: crate::InputEvent
 //! [`TERMINAL_LIB_BACKEND`]: crate::tui::terminal_lib_backends::TERMINAL_LIB_BACKEND

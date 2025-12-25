@@ -1,10 +1,11 @@
-# Manage a task 1) [create, update, load, done] 2) [task_name]
+# Manage a task 1) [create, update, load, done] 2) [name]
 
 ## Arguments $1 and $2
 
 $1 is the command to execute: "create", "update", "load", "done"
 
-$2 is "do_something.md" or "do_something", the file you create is "./task/do_something.md"
+$2 is the task name, e.g., "feature-auth" or "feature-auth.md". The file will be created
+at "./task/$2.md" (or "./task/$2" if $2 already ends with .md)
 
 ## Algorithm to execute $1 and $2
 
@@ -14,8 +15,6 @@ if $1 is "create" then:
   create a plan before using this command
 - Take your detailed todo list (from your planning tool) and save it to a file in task/$2
   (if $2 ends with .md use it as-is, otherwise append .md)
-- The filename should start with "task\_" prefix, so if $2 is "foo" or "foo.md", create
-  "task/task_foo.md"
 - Inside of this file, create a comprehensive markdown document with:
     - Title (# Task: [Feature Name])
     - Overview section explaining what needs to be done
@@ -41,9 +40,9 @@ else if $1 is "load" then:
 
 - Make sure that you are in plan mode and your context is clear. If not then ask the user
   that these 2 things are requirements to run this command. There is nothing to do.
-- Make sure the task/$2 file exists (with task\_ prefix), and if it does not then tell the
-  user that this file needs to exist for this slash command to work. There is nothing to
-  do.
+- Make sure the task/$2 file exists (append .md if $2 doesn't end with .md), and if it
+  does not then tell the user that this file needs to exist for this slash command to
+  work. There is nothing to do.
 - Read the task/$2 file, then locate the step heading which is marked "WORK_IN_PROGRESS"
   if this exists. And resume executing the tasks in that step. If nothing is marked
   "WORK_IN_PROGRESS" then pick the first step that is not marked "COMPLETE" or "DEFERRED"

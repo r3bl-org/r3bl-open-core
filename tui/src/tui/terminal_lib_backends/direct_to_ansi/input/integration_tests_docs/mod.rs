@@ -14,16 +14,18 @@
 //! [`DirectToAnsi`]) validate the complete input parsing pipeline in real
 //! pseudo-terminals:
 //!
-//! | Test Module                        | What it validates                     |
-//! |:-----------------------------------|:--------------------------------------|
-//! | [`pty_input_device_test`]          | Basic async I/O and buffer management |
-//! | [`pty_keyboard_modifiers_test`]    | Keyboard modifiers (Shift, Ctrl, Alt) |
-//! | [`pty_mouse_events_test`]          | Mouse clicks, drags, scrolling        |
-//! | [`pty_terminal_events_test`]       | Focus events, window resize           |
-//! | [`pty_utf8_text_test`]             | UTF-8 text input handling             |
-//! | [`pty_bracketed_paste_test`]       | Bracketed paste mode                  |
-//! | [`pty_new_keyboard_features_test`] | Extended keyboard protocol            |
-//! | [`pty_sigwinch_test`]              | SIGWINCH signal handling              |
+//! | Test Module                                | What it validates                          |
+//! | :----------------------------------------- | :----------------------------------------- |
+//! | [`pty_input_device_test`]                  | Basic async I/O and buffer management      |
+//! | [`pty_keyboard_modifiers_test`]            | Keyboard modifiers (Shift, Ctrl, Alt)      |
+//! | [`pty_mouse_events_test`]                  | Mouse clicks, drags, scrolling             |
+//! | [`pty_terminal_events_test`]               | Focus events, window resize                |
+//! | [`pty_utf8_text_test`]                     | UTF-8 text input handling                  |
+//! | [`pty_bracketed_paste_test`]               | Bracketed paste mode                       |
+//! | [`pty_new_keyboard_features_test`]         | Extended keyboard protocol                 |
+//! | [`pty_sigwinch_test`]                      | SIGWINCH signal handling                   |
+//! | [`pty_mio_poller_thread_lifecycle_test`]   | Thread spawn, drop, and relaunch           |
+//! | [`pty_mio_poller_thread_reuse_test`]       | Thread reuse (race condition handling)     |
 //!
 //! # Why Tests Live in the Parser Module
 //!
@@ -48,18 +50,20 @@
 //!
 //! These PTY tests are **Linux-only** — see [Why Linux-Only?] in the parent module.
 //!
-//! [`DirectToAnsi`]: crate::terminal_lib_backends::direct_to_ansi
+//! [Why Linux-Only?]: super#why-linux-only
 //! [`DirectToAnsiInputDevice`]: crate::DirectToAnsiInputDevice
+//! [`DirectToAnsi`]: crate::terminal_lib_backends::direct_to_ansi
 //! [`InputEvent`]: crate::InputEvent
 //! [`output::integration_tests`]: mod@crate::terminal_lib_backends::direct_to_ansi::output::integration_tests
-//! [`vt_100_terminal_input_parser::integration_tests`]: mod@crate::core::ansi::vt_100_terminal_input_parser::integration_tests
-//! [parser module's testing strategy]: mod@crate::core::ansi::vt_100_terminal_input_parser#testing-strategy
+//! [`pty_bracketed_paste_test`]: mod@crate::core::ansi::vt_100_terminal_input_parser::integration_tests::pty_bracketed_paste_test
 //! [`pty_input_device_test`]: mod@crate::core::ansi::vt_100_terminal_input_parser::integration_tests::pty_input_device_test
 //! [`pty_keyboard_modifiers_test`]: mod@crate::core::ansi::vt_100_terminal_input_parser::integration_tests::pty_keyboard_modifiers_test
+//! [`pty_mio_poller_thread_lifecycle_test`]: mod@crate::core::ansi::vt_100_terminal_input_parser::integration_tests::pty_mio_poller_thread_lifecycle_test
+//! [`pty_mio_poller_thread_reuse_test`]: mod@crate::core::ansi::vt_100_terminal_input_parser::integration_tests::pty_mio_poller_thread_reuse_test
 //! [`pty_mouse_events_test`]: mod@crate::core::ansi::vt_100_terminal_input_parser::integration_tests::pty_mouse_events_test
-//! [`pty_terminal_events_test`]: mod@crate::core::ansi::vt_100_terminal_input_parser::integration_tests::pty_terminal_events_test
-//! [`pty_utf8_text_test`]: mod@crate::core::ansi::vt_100_terminal_input_parser::integration_tests::pty_utf8_text_test
-//! [`pty_bracketed_paste_test`]: mod@crate::core::ansi::vt_100_terminal_input_parser::integration_tests::pty_bracketed_paste_test
 //! [`pty_new_keyboard_features_test`]: mod@crate::core::ansi::vt_100_terminal_input_parser::integration_tests::pty_new_keyboard_features_test
 //! [`pty_sigwinch_test`]: mod@crate::core::ansi::vt_100_terminal_input_parser::integration_tests::pty_sigwinch_test
-//! [Why Linux-Only?]: super#why-linux-only
+//! [`pty_terminal_events_test`]: mod@crate::core::ansi::vt_100_terminal_input_parser::integration_tests::pty_terminal_events_test
+//! [`pty_utf8_text_test`]: mod@crate::core::ansi::vt_100_terminal_input_parser::integration_tests::pty_utf8_text_test
+//! [`vt_100_terminal_input_parser::integration_tests`]: mod@crate::core::ansi::vt_100_terminal_input_parser::integration_tests
+//! [parser module's testing strategy]: mod@crate::core::ansi::vt_100_terminal_input_parser#testing-strategy

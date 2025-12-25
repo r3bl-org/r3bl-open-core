@@ -180,12 +180,12 @@
 //! [`SgrCode`]: crate::SgrCode
 //! [`TermCol`]: crate::core::coordinates::vt_100_ansi_coords::TermCol
 //! [`TermRow`]: crate::core::coordinates::vt_100_ansi_coords::TermRow
-//! [`convert_input_event()`]: crate::tui::terminal_lib_backends::direct_to_ansi::input::protocol_conversion::convert_input_event
+//! [`convert_input_event()`]: crate::direct_to_ansi::input::protocol_conversion::convert_input_event
 //! [`core::ansi`]: crate::core::ansi
 //! [`generator`]: mod@crate::core::ansi::generator
-//! [`input`]: mod@crate::tui::terminal_lib_backends::direct_to_ansi::input
+//! [`input`]: mod@crate::direct_to_ansi::input
 //! [`observe_terminal`]: crate::core::ansi::vt_100_terminal_input_parser::validation_tests::observe_real_interactive_terminal_input_events::observe_terminal
-//! [`output`]: mod@crate::tui::terminal_lib_backends::direct_to_ansi::output
+//! [`output`]: mod@crate::direct_to_ansi::output
 //! [`try_parse_input_event()`]: crate::core::ansi::vt_100_terminal_input_parser::router::try_parse_input_event
 
 // Skip rustfmt for rest of file.

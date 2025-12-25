@@ -113,7 +113,7 @@
 //! [`OffscreenBuffer`]: crate::OffscreenBuffer
 //! [`PaintRenderOpImplCrossterm`]: crate::tui::terminal_lib_backends::crossterm_backend::PaintRenderOpImplCrossterm
 //! [`RenderOpOutput`]: crate::RenderOpOutput
-//! [`RenderOpPaintImplDirectToAnsi`]: crate::tui::terminal_lib_backends::direct_to_ansi::RenderOpPaintImplDirectToAnsi
+//! [`RenderOpPaintImplDirectToAnsi`]: crate::direct_to_ansi::RenderOpPaintImplDirectToAnsi
 //! [`TERMINAL_LIB_BACKEND`]: crate::tui::terminal_lib_backends::TERMINAL_LIB_BACKEND
 //! [`terminal_raw_mode::raw_mode_unix::enable_raw_mode()`]: crate::core::ansi::terminal_raw_mode::raw_mode_unix::enable_raw_mode
 //! [`terminal_raw_mode::enable_raw_mode()`]: crate::core::ansi::terminal_raw_mode::enable_raw_mode

@@ -57,9 +57,9 @@
 //! - [macOS /dev/tty polling blog post] - Detailed technical explanation
 //!
 //! [`DirectToAnsiInputDevice::try_read_event`]: DirectToAnsiInputDevice::try_read_event
-//! [`ESC` key detection]: DirectToAnsiInputDevice#esc-key-disambiguation-crossterm-more-flag-pattern
 //! [`DirectToAnsi`]: super
 //! [`EINVAL`]: https://man7.org/linux/man-pages/man3/errno.3.html
+//! [`ESC` key detection]: DirectToAnsiInputDevice#esc-key-disambiguation-crossterm-more-flag-pattern
 //! [`SIGWINCH`]: https://man7.org/linux/man-pages/man7/signal.7.html
 //! [`TERMINAL_LIB_BACKEND`]: crate::TERMINAL_LIB_BACKEND
 //! [`epoll(7)`]: https://man7.org/linux/man-pages/man7/epoll.7.html
@@ -105,16 +105,22 @@ pub mod global_input_resource;
 mod global_input_resource;
 
 #[cfg(any(test, doc))]
-pub mod types;
+pub mod channel_types;
 #[cfg(not(any(test, doc)))]
-mod types;
+mod channel_types;
 
 #[cfg(any(test, doc))]
 pub mod protocol_conversion;
 #[cfg(not(any(test, doc)))]
 mod protocol_conversion;
 
+#[cfg(any(test, doc))]
+pub mod at_most_one_instance_assert;
+#[cfg(not(any(test, doc)))]
+mod at_most_one_instance_assert;
+
 // Re-exports - flatten the public API.
+pub use global_input_resource::*;
 pub use input_device::*;
 
 // Documentation-only module pointing to actual PTY tests location.

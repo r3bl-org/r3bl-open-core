@@ -464,8 +464,7 @@ More text";
         for line in &lines {
             assert!(
                 line.starts_with("    "),
-                "Line should preserve 4-space indent: '{}'",
-                line
+                "Line should preserve 4-space indent: '{line}'"
             );
         }
     }
@@ -510,8 +509,7 @@ More text";
         for line in &lines {
             assert!(
                 line.starts_with('\t'),
-                "Line should preserve tab indent: '{}'",
-                line
+                "Line should preserve tab indent: '{line}'"
             );
         }
     }

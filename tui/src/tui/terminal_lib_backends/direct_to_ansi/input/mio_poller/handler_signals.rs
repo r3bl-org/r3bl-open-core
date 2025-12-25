@@ -2,15 +2,13 @@
 
 //! Event handlers for signal processing.
 
-use super::poller_thread::MioPollerThread;
+use super::{ThreadLoopContinuation, poller_thread::MioPollerThread};
 use crate::tui::{DEBUG_TUI_SHOW_TERMINAL_BACKEND,
-                 terminal_lib_backends::direct_to_ansi::input::types::{ReaderThreadMessage,
-                                                                       ThreadLoopContinuation}};
+                 terminal_lib_backends::direct_to_ansi::input::channel_types::StdinReaderMessage};
 use signal_hook::consts::SIGWINCH;
 
 /// Handles [`SIGWINCH`] signal (terminal resize).
 ///
-/// [`SIGWINCH`]: signal_hook::consts::SIGWINCH
 ///
 /// Drains all pending signals and sends a single resize event to the channel.
 /// Multiple coalesced signals result in one event since resize is idempotent—the
@@ -20,6 +18,8 @@ use signal_hook::consts::SIGWINCH;
 ///
 /// - [`ThreadLoopContinuation::Continue`]: Successfully processed.
 /// - [`ThreadLoopContinuation::Return`]: Receiver dropped.
+///
+/// [`SIGWINCH`]: signal_hook::consts::SIGWINCH
 pub fn consume_pending_signals(poller: &mut MioPollerThread) -> ThreadLoopContinuation {
     // Drain all pending signals and check if any SIGWINCH arrived.
     // Multiple signals may coalesce between polls, but we only need one Resize event.
@@ -30,8 +30,9 @@ pub fn consume_pending_signals(poller: &mut MioPollerThread) -> ThreadLoopContin
             tracing::debug!(message = "mio-poller-thread: SIGWINCH received");
         });
         if poller
-            .tx_parsed_input_events
-            .send(ReaderThreadMessage::Resize)
+            .state
+            .tx_stdin_reader_msg
+            .send(StdinReaderMessage::Resize)
             .is_err()
         {
             // Receiver dropped - exit gracefully.

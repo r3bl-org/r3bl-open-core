@@ -4,12 +4,11 @@
 
 //! Event handlers for stdin input processing.
 
-use super::poller_thread::MioPollerThread;
-use crate::tui::{DEBUG_TUI_SHOW_TERMINAL_BACKEND,
-                 terminal_lib_backends::direct_to_ansi::input::{paste_state_machine::apply_paste_state_machine,
-                                                                types::{PasteStateResult,
-                                                                        ReaderThreadMessage,
-                                                                        ThreadLoopContinuation}}};
+use super::{ThreadLoopContinuation, poller_thread::MioPollerThread};
+use crate::{terminal_lib_backends::direct_to_ansi::input::{channel_types::StdinReaderMessage,
+                                                           paste_state_machine::{PasteStateResult,
+                                                                                 apply_paste_state_machine}},
+            tui::DEBUG_TUI_SHOW_TERMINAL_BACKEND};
 use std::io::{ErrorKind, Read as _};
 
 /// Read buffer size for stdin reads (`1_024` bytes).
@@ -42,9 +41,12 @@ pub fn consume_stdin_input(poller: &mut MioPollerThread) -> ThreadLoopContinuati
         Ok(0) => {
             // EOF reached.
             DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
-                tracing::debug!(message = "mio-poller-thread: EOF (0 bytes)");
+                tracing::debug!(message = "mio_poller thread: EOF (0 bytes)");
             });
-            let _unused = poller.tx_parsed_input_events.send(ReaderThreadMessage::Eof);
+            let _unused = poller
+                .state
+                .tx_stdin_reader_msg
+                .send(StdinReaderMessage::Eof);
             ThreadLoopContinuation::Return
         }
 
@@ -64,13 +66,14 @@ pub fn consume_stdin_input(poller: &mut MioPollerThread) -> ThreadLoopContinuati
             // Other error - send and exit.
             DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
                 tracing::debug!(
-                    message = "mio-poller-thread: read error",
+                    message = "mio_poller thread: read error",
                     error = ?e
                 );
             });
             let _unused = poller
-                .tx_parsed_input_events
-                .send(ReaderThreadMessage::Error);
+                .state
+                .tx_stdin_reader_msg
+                .send(StdinReaderMessage::Error);
             ThreadLoopContinuation::Return
         }
     }
@@ -84,7 +87,7 @@ pub fn parse_stdin_bytes(
     n: usize,
 ) -> ThreadLoopContinuation {
     DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
-        tracing::debug!(message = "mio-poller-thread: read bytes", bytes_read = n);
+        tracing::debug!(message = "mio_poller thread: read bytes", bytes_read = n);
     });
 
     // `more` flag for ESC disambiguation.
@@ -101,14 +104,15 @@ pub fn parse_stdin_bytes(
         {
             PasteStateResult::Emit(input_event) => {
                 if poller
-                    .tx_parsed_input_events
-                    .send(ReaderThreadMessage::Event(input_event))
+                    .state
+                    .tx_stdin_reader_msg
+                    .send(StdinReaderMessage::Event(input_event))
                     .is_err()
                 {
                     // Receiver dropped - exit gracefully.
                     DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
                         tracing::debug!(
-                            message = "mio-poller-thread: receiver dropped, exiting"
+                            message = "mio_poller thread: receiver dropped, exiting"
                         );
                     });
                     return ThreadLoopContinuation::Return;

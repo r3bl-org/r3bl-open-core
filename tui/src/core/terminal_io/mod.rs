@@ -27,7 +27,7 @@
 //! ```
 //!
 //! [`CrosstermInputDevice`]: crate::CrosstermInputDevice
-//! [`DirectToAnsiInputDevice`]: crate::tui::terminal_lib_backends::direct_to_ansi::DirectToAnsiInputDevice
+//! [`DirectToAnsiInputDevice`]: crate::direct_to_ansi::DirectToAnsiInputDevice
 //! [`InputDevice`]: crate::InputDevice
 //! [`InputEvent`]: crate::InputEvent
 //! [`KeyPress`]: crate::KeyPress

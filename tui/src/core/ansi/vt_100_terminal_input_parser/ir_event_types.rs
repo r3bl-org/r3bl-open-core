@@ -72,7 +72,7 @@ use crate::{ColWidth, RowHeight, TermPos, terminal_io::KeyState};
 ///
 /// [`Button`]: crate::Button
 /// [`ir_event_types`]: mod@super::ir_event_types
-/// [`convert_input_event()`]: crate::tui::terminal_lib_backends::direct_to_ansi::input::protocol_conversion::convert_input_event
+/// [`convert_input_event()`]: crate::direct_to_ansi::input::protocol_conversion::convert_input_event
 /// [`InputEvent`]: crate::InputEvent
 /// [`Key`]: crate::Key
 /// [`keyboard`]: mod@super::keyboard

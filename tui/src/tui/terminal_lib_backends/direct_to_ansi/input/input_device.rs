@@ -4,10 +4,10 @@
 
 //! [`DirectToAnsiInputDevice`] struct and implementation.
 
-use super::{global_input_resource::subscribe_to_input_events,
-            types::{InputEventReceiver, ReaderThreadMessage}};
+use super::{channel_types::{StdinReaderMessage, StdinReaderMessageReceiver},
+            global_input_resource::guarded_ops};
 use crate::{InputEvent, core::term::get_size, tui::DEBUG_TUI_SHOW_TERMINAL_BACKEND};
-use std::fmt::Debug;
+use std::{fmt::Debug, sync::Arc};
 
 /// Async input device for [`DirectToAnsi`] backend.
 ///
@@ -29,8 +29,8 @@ use std::fmt::Debug;
 ///
 /// # Why Global State?
 ///
-/// See the [Why Global State?] section in [`INPUT_RESOURCE`] for the detailed
-/// explanation.
+/// See the [Why Global State?] section in the [`global_input_resource`] module for
+/// the detailed explanation.
 ///
 /// # Full I/O Pipeline
 ///
@@ -85,10 +85,11 @@ use std::fmt::Debug;
 ///
 /// ```text
 /// ┌───────────────────────────────────────────────────────────────────────────┐
+/// │ 0. DirectToAnsiInputDevice::new() called                                  │
+/// │    └─► allocate() (eager, at construction time)                           │
+/// │        └─► If no thread running: spawns mio-poller thread                 │
+/// │                                                                           │
 /// │ 1. try_read_event() called                                                │
-/// │    ├─► subscribe_to_input_events() (lazy, once per device)                │
-/// │    │   └─► On first call: spawns mio-poller thread                        │
-/// │    │                                                                      │
 /// │    └─► Loop: stdin_rx.recv().await                                        │
 /// │         ├─► Event(e) → return e                                           │
 /// │         ├─► Resize → query terminal size, return InputEvent::Resize       │
@@ -109,9 +110,12 @@ use std::fmt::Debug;
 /// │    │   for event in parser { tx.send(Event(event))?; }                 │  │
 /// │    │ }                                                                 │  │
 /// │    └───────────────────────────────────────────────────────────────────┘  │
-/// │    Lives for process lifetime (relies on OS cleanup at process exit)      │
+/// │    See module docs for thread lifecycle (exits when all receivers drop)   │
 /// └───────────────────────────────────────────────────────────────────────────┘
 /// ```
+///
+/// For details on thread lifecycle (spawn/exit/relaunch), see
+/// [`global_input_resource`] module docs.
 ///
 /// # Underlying Protocol Parser
 ///
@@ -190,42 +194,104 @@ use std::fmt::Debug;
 /// [`global_input_resource`] module documentation for details on our mio-based
 /// architecture.
 ///
-/// [`global_input_resource`]: super::global_input_resource
+/// # Drop behavior
+///
+/// When this device is dropped:
+/// 1. [`super::at_most_one_instance_assert::release()`] is called, allowing a new device
+///    to be created.
+/// 2. Rust's drop glue drops [`Self::resource_handle`], triggering
+///    [`InputDeviceResourceHandle`'s drop behavior] (thread lifecycle protocol).
+///
+/// For the complete lifecycle diagram including the [race condition] where a fast
+/// subscriber can reuse the existing thread, see [`PollerThreadLifecycleState`].
+///
+/// [Why Global State?]: super::global_input_resource
 /// [`CrosstermInputDevice`]: crate::tui::terminal_lib_backends::crossterm_backend::CrosstermInputDevice
-/// [`DirectToAnsi`]: mod@crate::tui::terminal_lib_backends::direct_to_ansi
+/// [`DirectToAnsi`]: mod@crate::direct_to_ansi
+/// [`INPUT_RESOURCE`]: super::global_input_resource::INPUT_RESOURCE
+/// [`InputDeviceResourceHandle`'s drop behavior]: InputDeviceResourceHandle#drop-behavior
 /// [`InputDevice`]: crate::InputDevice
+/// [`PollerThreadLifecycleState`]: super::mio_poller::PollerThreadLifecycleState
 /// [`TERMINAL_LIB_BACKEND`]: crate::tui::TERMINAL_LIB_BACKEND
 /// [`VT100InputEventIR`]: crate::core::ansi::vt_100_terminal_input_parser::VT100InputEventIR
-/// [`try_parse_input_event`]: crate::core::ansi::vt_100_terminal_input_parser::try_parse_input_event
-/// [`vt_100_terminal_input_parser`]: mod@crate::core::ansi::vt_100_terminal_input_parser
+/// [`global_input_resource`]: super::global_input_resource
+/// [`global_input_resource`]: super::global_input_resource
 /// [`stdin`]: std::io::Stdin
-/// [`INPUT_RESOURCE`]: super::global_input_resource::INPUT_RESOURCE
-/// [Why Global State?]: super::global_input_resource::INPUT_RESOURCE#why-global-state
+/// [`super::at_most_one_instance_assert::release()`]: super::at_most_one_instance_assert::release
+/// [`try_parse_input_event`]: crate::core::ansi::vt_100_terminal_input_parser::try_parse_input_event
 /// [`try_read_event()`]: Self::try_read_event
+/// [`vt_100_terminal_input_parser`]: mod@crate::core::ansi::vt_100_terminal_input_parser
+/// [race condition]: super::mio_poller::PollerThreadLifecycleState#the-inherent-race-condition
 pub struct DirectToAnsiInputDevice {
     /// This device's subscription to the global input broadcast channel.
     ///
-    /// Lazily initialized on first call to [`try_read_event()`]. Each device instance
-    /// gets its own independent receiver that receives all events.
+    /// Initialized eagerly in [`new()`] to ensure the thread sees a receiver if one is
+    /// needed. This is critical for correct thread lifecycle management: if a device is
+    /// dropped and a new one created "immediately", the new device's subscription must
+    /// be visible to the thread when it checks [`receiver_count()`].
     ///
-    /// [`try_read_event()`]: Self::try_read_event
-    stdin_rx: Option<InputEventReceiver>,
+    /// Uses [`InputDeviceResourceHandle`] to wake the [`mio_poller`] thread when
+    /// dropped, allowing thread lifecycle management.
+    ///
+    /// [`mio_poller`]: crate::direct_to_ansi::input::mio_poller
+    /// [`new()`]: Self::new
+    /// [`receiver_count()`]: tokio::sync::broadcast::Sender::receiver_count
+    pub resource_handle: InputDeviceResourceHandle,
 }
 
 impl DirectToAnsiInputDevice {
-    /// Create a new `DirectToAnsiInputDevice`.
+    /// Create the input device.
     ///
-    /// The device subscribes to the global input broadcast channel lazily on first call
-    /// to [`try_read_event()`]. Each device instance receives all input events
-    /// independently.
+    /// # Singleton Semantics
     ///
-    /// No timeout initialization needed - we use smart async lookahead instead! See the
-    /// [struct-level documentation] for details on zero-latency ESC detection.
+    /// Only ONE [`DirectToAnsiInputDevice`] can exist at a time. There is only one
+    /// [`stdin`], so having multiple "devices" is semantically incorrect.
     ///
-    /// [`try_read_event()`]: Self::try_read_event
-    /// [struct-level documentation]: Self
+    /// To get additional receivers for logging, debugging, or multiple consumers, use
+    /// [`subscribe()`] instead of calling [`new()`] again.
+    ///
+    /// # Panics
+    ///
+    /// Panics if called while another device exists. The panic message guides you to use
+    /// [`subscribe()`] for additional receivers.
+    ///
+    /// # Thread Lifecycle
+    ///
+    /// Creates the [`mio_poller`] thread **eagerly** if it doesn't exist. This is
+    /// critical for correct lifecycle: if device A is dropped and device B is created
+    /// immediately, device B's subscription must be visible to the thread when it
+    /// checks [`receiver_count()`] (before it decides to exit). See the [race condition
+    /// documentation] in [`InputDeviceResourceHandle`] for details.
+    ///
+    /// [`mio_poller`]: crate::direct_to_ansi::input::mio_poller
+    /// [`new()`]: Self::new
+    /// [`receiver_count()`]: tokio::sync::broadcast::Sender::receiver_count
+    /// [`stdin`]: std::io::Stdin
+    /// [`subscribe()`]: Self::subscribe
+    /// [race condition documentation]: InputDeviceResourceHandle#race-condition-and-correctness
     #[must_use]
-    pub fn new() -> Self { Self { stdin_rx: None } }
+    pub fn new() -> Self {
+        super::at_most_one_instance_assert::claim_and_assert();
+        Self {
+            resource_handle: guarded_ops::allocate(),
+        }
+    }
+
+    /// Get an additional subscriber (async consumer) to input events.
+    ///
+    /// Use this for logging, debugging, or multiple concurrent consumers. Each
+    /// subscriber independently receives all input events. When dropped, notifies
+    /// the [`mio_poller`] thread to check if it should exit.
+    ///
+    /// See [`pty_mio_poller_subscribe_test`] for integration tests demonstrating
+    /// broadcast semantics (both device and subscriber receive the same events).
+    ///
+    /// [`mio_poller`]: super::mio_poller
+    /// [`pty_mio_poller_subscribe_test`]: crate::core::ansi::vt_100_terminal_input_parser::integration_tests::pty_mio_poller_subscribe_test
+    #[must_use]
+    pub fn subscribe(&self) -> InputDeviceResourceHandle {
+        guarded_ops::subscribe_to_existing()
+    }
 
     /// Read the next input event asynchronously.
     ///
@@ -318,13 +384,11 @@ impl DirectToAnsiInputDevice {
     /// - The paste collection state
     ///
     /// Note: `SIGWINCH` signals are now handled by the dedicated reader thread via
-    /// [`mio::Poll`] and [`signal_hook_mio`], arriving as [`ReaderThreadMessage::Resize`]
+    /// [`mio::Poll`] and [`signal_hook_mio`], arriving as [`StdinReaderMessage::Resize`]
     /// through the same channel as stdin data.
     ///
     /// See [Why Global State?] for the rationale behind this architecture.
     ///
-    /// [`mio::Poll`]: mio::Poll
-    /// [`signal_hook_mio`]: signal_hook_mio
     ///
     /// # Implementation
     ///
@@ -346,31 +410,45 @@ impl DirectToAnsiInputDevice {
     /// thread with [`mio::Poll`] and channel instead of [`tokio::io::stdin()`] (which
     /// is NOT cancel-safe).
     ///
-    /// [`InputDevice::next()`]: crate::InputDevice::next
-    /// [`Self::next()`]: Self::next
+    /// # Panics
+    ///
+    /// Panics if called after [`Drop`] has already been invoked (internal invariant).
+    ///
+    /// [Why Global State?]: super::global_input_resource
     /// [`INPUT_RESOURCE`]: super::global_input_resource::INPUT_RESOURCE
+    /// [`InputDevice::next()`]: crate::InputDevice::next
     /// [`InputDevice`]: crate::InputDevice
-    /// [Why Global State?]: super::global_input_resource::INPUT_RESOURCE#why-global-state
-    /// [struct-level documentation]: Self
+    /// [`Self::next()`]: Self::next
+    /// [`StdinReaderMessage::Resize`]: super::channel_types::StdinReaderMessage::Resize
     /// [`global_input_resource`]: super::global_input_resource
-    /// [`tokio::io::stdin()`]: tokio::io::stdin
     /// [`mio::Poll`]: mio::Poll
+    /// [`mio::Poll`]: mio::Poll
+    /// [`signal_hook_mio`]: signal_hook_mio
+    /// [`tokio::io::stdin()`]: tokio::io::stdin
     /// [`tokio::sync::broadcast::Receiver::recv`]: tokio::sync::broadcast::Receiver::recv
+    /// [struct-level documentation]: Self
     pub async fn try_read_event(&mut self) -> Option<InputEvent> {
-        // Subscribe lazily on first call - each device gets its own receiver.
-        if self.stdin_rx.is_none() {
-            self.stdin_rx = Some(subscribe_to_input_events());
-        }
-        let stdin_rx = self.stdin_rx.as_mut()?;
+        // Receiver was subscribed eagerly in new() - just use it.
+        let res_handle = &mut self.resource_handle;
 
-        // Wait for fully-formed `InputEvents` through the broadcast channel.
+        // Wait for fully-formed InputEvents through the broadcast channel.
         loop {
-            let stdin_read_result = match stdin_rx.recv().await {
+            let stdin_rx_result = res_handle
+                .maybe_stdin_rx
+                .as_mut()
+                .expect("InputEventReceiver is None - this is a bug")
+                .recv()
+                .await;
+
+            let stdin_read_result = match stdin_rx_result {
+                // Got an message from the channel.
                 Ok(msg) => msg,
+                // The sender was dropped.
                 Err(tokio::sync::broadcast::error::RecvError::Closed) => {
                     // Channel closed - reader thread exited.
                     return None;
                 }
+                // This receiver fell behind and messages were dropped.
                 Err(tokio::sync::broadcast::error::RecvError::Lagged(skipped)) => {
                     // This receiver fell behind - some messages were dropped.
                     // Log and continue from the current position.
@@ -384,13 +462,13 @@ impl DirectToAnsiInputDevice {
             };
 
             match stdin_read_result {
-                ReaderThreadMessage::Event(event) => {
+                StdinReaderMessage::Event(event) => {
                     return Some(event);
                 }
-                ReaderThreadMessage::Eof | ReaderThreadMessage::Error => {
+                StdinReaderMessage::Eof | StdinReaderMessage::Error => {
                     return None;
                 }
-                ReaderThreadMessage::Resize => {
+                StdinReaderMessage::Resize => {
                     if let Ok(size) = get_size() {
                         return Some(InputEvent::Resize(size));
                     }
@@ -413,8 +491,84 @@ impl Default for DirectToAnsiInputDevice {
     fn default() -> Self { Self::new() }
 }
 
+impl Drop for DirectToAnsiInputDevice {
+    /// Clears gate, then Rust drops [`Self::resource_handle`], which triggers
+    /// [`InputDeviceResourceHandle::drop()`]. See [Drop behavior] for full mechanism.
+    ///
+    /// [Drop behavior]: DirectToAnsiInputDevice#drop-behavior
+    /// [`InputDeviceResourceHandle::drop()`]: InputDeviceResourceHandle#drop-behavior
+    fn drop(&mut self) { super::at_most_one_instance_assert::release(); }
+}
+
 impl DirectToAnsiInputDevice {
     pub async fn next(&mut self) -> Option<InputEvent> { self.try_read_event().await }
+}
+
+/// Receiver wrapper that wakes the [`mio_poller`] thread on drop.
+///
+/// # Drop behavior
+///
+/// When this handle is dropped:
+/// 1. [`maybe_stdin_rx`] is dropped first, which causes Tokio's broadcast channel to
+///    atomically decrement the [`Sender`]'s internal [`receiver_count()`].
+/// 2. Then [`mio::Waker::wake()`] interrupts the poll loop.
+/// 3. The [`mio_poller`] thread wakes and [`handle_receiver_drop_waker()`] checks
+///    [`receiver_count()`] to decide if the thread should exit (when count reaches `0`).
+///
+/// # Race Condition and Correctness
+///
+/// There is a race window between when the receiver is dropped and when
+/// [`handle_receiver_drop_waker()`] checks [`receiver_count()`]. This is the **fast-path
+/// thread reuse** scenario — if a new subscriber appears during the window, the thread
+/// correctly continues serving it instead of exiting.
+///
+/// See [`PollerThreadLifecycleState`] for comprehensive documentation:
+/// - [The Inherent Race Condition] — timeline diagram
+/// - [What Happens If We Exit Blindly] — zombie device scenario
+/// - [Why Thread Reuse Is Safe] — resource safety table
+///
+/// [The Inherent Race Condition]: super::mio_poller::PollerThreadLifecycleState#the-inherent-race-condition
+/// [What Happens If We Exit Blindly]: super::mio_poller::PollerThreadLifecycleState#what-happens-if-we-exit-blindly
+/// [Why Thread Reuse Is Safe]: super::mio_poller::PollerThreadLifecycleState#why-thread-reuse-is-safe
+/// [`PollerThreadLifecycleState`]: super::mio_poller::PollerThreadLifecycleState
+/// [`Sender`]: tokio::sync::broadcast::Sender
+/// [`handle_receiver_drop_waker()`]: super::mio_poller::handler_receiver_drop::handle_receiver_drop_waker
+/// [`maybe_stdin_rx`]: Self::maybe_stdin_rx
+/// [`mio_poller`]: super::mio_poller
+/// [`receiver_count()`]: tokio::sync::broadcast::Sender::receiver_count
+#[allow(missing_debug_implementations)]
+pub struct InputDeviceResourceHandle {
+    /// The actual broadcast receiver.
+    pub maybe_stdin_rx: Option<StdinReaderMessageReceiver>,
+    /// Waker to signal the [`mio_poller`] thread.
+    ///
+    /// [`mio_poller`]: super::mio_poller
+    pub mio_poller_thread_waker: Arc<mio::Waker>,
+}
+
+impl Drop for InputDeviceResourceHandle {
+    /// Drops receiver then wakes thread. See [Drop behavior] for the full mechanism.
+    /// Also see [`DirectToAnsiInputDevice`'s drop behavior] for when this is triggered.
+    ///
+    /// [Drop behavior]: InputDeviceResourceHandle#drop-behavior
+    /// [`DirectToAnsiInputDevice`'s drop behavior]: DirectToAnsiInputDevice#drop-behavior
+    fn drop(&mut self) {
+        // Drop receiver first so Sender::receiver_count() decrements.
+        drop(self.maybe_stdin_rx.take());
+
+        // Wake the thread so it can check if it should exit.
+        let wake_result = self.mio_poller_thread_waker.wake();
+
+        // Log failure (non-fatal: thread may have already exited).
+        if let Err(err) = wake_result {
+            DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
+                tracing::debug!(
+                    message = "InputDeviceResourceHandle::drop: wake failed",
+                    error = ?err
+                );
+            });
+        }
+    }
 }
 
 /// Comprehensive testing is performed in PTY integration tests:
@@ -441,15 +595,6 @@ mod tests {
                                                            VT100PasteModeIR,
                                                            parse_keyboard_sequence,
                                                            parse_utf8_text}};
-
-    #[tokio::test]
-    async fn test_device_creation() {
-        // Test DirectToAnsiInputDevice constructs successfully.
-        let _device = DirectToAnsiInputDevice::new();
-
-        // Verify we can subscribe to the global input resource.
-        let _rx = subscribe_to_input_events();
-    }
 
     #[tokio::test]
     async fn test_event_parsing() {

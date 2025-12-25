@@ -85,7 +85,7 @@
 //! [`TermPos`]: crate::core::coordinates::vt_100_ansi_coords::TermPos
 //! [`VT100MouseActionIR`]: super::VT100MouseActionIR
 //! [`VT100MouseButtonIR`]: super::VT100MouseButtonIR
-//! [`convert_input_event()`]: crate::tui::terminal_lib_backends::direct_to_ansi::input::protocol_conversion::convert_input_event
+//! [`convert_input_event()`]: crate::direct_to_ansi::input::protocol_conversion::convert_input_event
 //! [`keyboard`]: mod@super::keyboard
 //! [`router`]: mod@super::router
 //! [`terminal_events`]: mod@super::terminal_events

@@ -41,13 +41,13 @@
 //! | [`test_backend_compat_output_compare`]| ✅      | ❌      | ❌        |
 //!
 //! [`CrosstermInputDevice`]: crate::CrosstermInputDevice
-//! [`DirectToAnsiInputDevice`]: crate::tui::terminal_lib_backends::direct_to_ansi::DirectToAnsiInputDevice
+//! [`DirectToAnsiInputDevice`]: crate::direct_to_ansi::DirectToAnsiInputDevice
 //! [`InputDevice`]: crate::InputDevice
 //! [`InputEvent`]: crate::InputEvent
 //! [`OffscreenBuffer`]: crate::OffscreenBuffer
 //! [`PaintRenderOpImplCrossterm`]: crate::tui::terminal_lib_backends::crossterm_backend::PaintRenderOpImplCrossterm
 //! [`RenderOpOutput`]: crate::RenderOpOutput
-//! [`RenderOpPaintImplDirectToAnsi`]: crate::tui::terminal_lib_backends::direct_to_ansi::RenderOpPaintImplDirectToAnsi
+//! [`RenderOpPaintImplDirectToAnsi`]: crate::direct_to_ansi::RenderOpPaintImplDirectToAnsi
 //! [`test_backend_compat_input_compare`]: mod@backend_compat_input_test
 //! [`test_backend_compat_output_compare`]: mod@backend_compat_output_test
 //! [`test_pty_backend_crossterm`]: mod@backend_compat_input_test

@@ -79,7 +79,7 @@ pub fn get_terminal_width() -> ColWidth {
 /// - The terminal size cannot be determined
 /// - The terminal is not available or not a TTY
 ///
-/// [`DirectToAnsi`]: mod@crate::tui::terminal_lib_backends::direct_to_ansi
+/// [`DirectToAnsi`]: mod@crate::direct_to_ansi
 /// [`tcgetwinsize`]: fn@rustix::termios::tcgetwinsize
 #[cfg(unix)]
 pub fn get_size() -> miette::Result<Size> {

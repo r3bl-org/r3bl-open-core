@@ -64,7 +64,7 @@
 //! [`RenderOpsLocalData`]: crate::RenderOpsLocalData
 //! [`crossterm_backend` mod docs]: mod@crate::tui::terminal_lib_backends::crossterm_backend
 //! [`diff_chunks`]: mod@crate::tui::terminal_lib_backends::offscreen_buffer::diff_chunks
-//! [`direct_to_ansi` mod docs]: mod@crate::tui::terminal_lib_backends::direct_to_ansi
+//! [`direct_to_ansi` mod docs]: mod@crate::direct_to_ansi
 //! [rendering pipeline overview]: mod@crate::terminal_lib_backends#rendering-pipeline-architecture
 //! [`offscreen_buffer/`]: mod@crate::tui::terminal_lib_backends::offscreen_buffer
 
