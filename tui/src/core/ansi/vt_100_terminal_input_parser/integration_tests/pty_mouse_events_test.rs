@@ -35,21 +35,6 @@ const CONTROLLED_READY: &str = "CONTROLLED_READY";
 // XMARK: Process isolated test functions using env vars & PTY.
 
 generate_pty_test! {
-    /// PTY-based integration test for mouse event parsing.
-    ///
-    /// Validates that the [`DirectToAnsiInputDevice`] correctly parses mouse sequences:
-    /// - Mouse button press/release
-    /// - Mouse motion
-    /// - Scroll wheel events
-    /// - Mouse position coordinates
-    ///
-    /// Note: This test verifies the device architecture for mouse handling.
-    /// Actual mouse event parsing is complex and requires `SGR` mouse mode
-    /// sequences, which are tested in detail in the protocol parsers.
-    ///
-    /// Run with: `cargo test -p r3bl_tui --lib test_pty_mouse_events -- --nocapture`
-    ///
-    /// [`DirectToAnsiInputDevice`]: crate::tui::terminal_lib_backends::direct_to_ansi::DirectToAnsiInputDevice
     test_fn: test_pty_mouse_events,
     controller: pty_controller_entry_point,
     controlled: pty_controlled_entry_point
@@ -230,7 +215,7 @@ fn pty_controlled_entry_point() -> ! {
 
         loop {
             tokio::select! {
-                event_result = input_device.try_read_event() => {
+                event_result = input_device.next() => {
                     match event_result {
                         Some(event) => {
                             event_count += 1;

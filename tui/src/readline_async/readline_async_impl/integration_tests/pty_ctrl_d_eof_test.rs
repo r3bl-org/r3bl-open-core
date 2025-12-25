@@ -1,8 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use crate::{AsyncDebouncedDeadline, ControlledChild, DebouncedState, PtyPair,
-            core::test_fixtures::StdoutMock,
-            generate_pty_test,
+            core::test_fixtures::StdoutMock, generate_pty_test,
             readline_async::readline_async_impl::LineState};
 use std::{io::{BufRead, BufReader, Write},
           sync::{Arc, Mutex as StdMutex},
@@ -45,8 +44,8 @@ generate_pty_test! {
     ///
     /// The ([`LineState`]) is checked in the test to make assertions against.
     ///
-    /// [`ReadlineEvent::Eof`]: crate::ReadlineEvent::Eof
     /// [`LineState`]: crate::readline_async::readline_async_impl::LineState
+    /// [`ReadlineEvent::Eof`]: crate::ReadlineEvent::Eof
     test_fn: test_pty_ctrl_d_eof,
     controller: pty_controller_entry_point,
     controlled: pty_controlled_entry_point
@@ -56,7 +55,10 @@ generate_pty_test! {
 fn pty_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
     eprintln!("🚀 PTY Controller: Starting Ctrl+D EOF test...");
 
-    let mut writer = pty_pair.controller().take_writer().expect("Failed to get writer");
+    let mut writer = pty_pair
+        .controller()
+        .take_writer()
+        .expect("Failed to get writer");
     let reader = pty_pair
         .controller()
         .try_clone_reader()
@@ -90,7 +92,9 @@ fn pty_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
                 }
                 if trimmed.contains(CONTROLLED_READY) {
                     controlled_ready_seen = true;
-                    eprintln!("  ✓ Controlled is ready (raw mode enabled, input device created)");
+                    eprintln!(
+                        "  ✓ Controlled is ready (raw mode enabled, input device created)"
+                    );
                     break;
                 }
             }
@@ -134,7 +138,10 @@ fn pty_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
 
     let result = read_line_state();
     eprintln!("  ← Controlled response: {result}");
-    assert!(result.contains(EOF_SIGNAL), "Expected {EOF_SIGNAL}, got: {result}");
+    assert!(
+        result.contains(EOF_SIGNAL),
+        "Expected {EOF_SIGNAL}, got: {result}"
+    );
 
     eprintln!("✅ PTY Controller: Ctrl+D EOF test passed!");
 
@@ -151,7 +158,7 @@ fn pty_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
 
 /// PTY Controlled: Process readline input and report EOF
 fn pty_controlled_entry_point() -> ! {
-    use crate::tui::terminal_lib_backends::direct_to_ansi::DirectToAnsiInputDevice;
+    use crate::direct_to_ansi::DirectToAnsiInputDevice;
 
     println!("{CONTROLLED_STARTING}");
     std::io::stdout().flush().expect("Failed to flush");
@@ -198,7 +205,7 @@ fn pty_controlled_entry_point() -> ! {
         loop {
             tokio::select! {
                 // -------- Branch 1: Read next input event --------
-                event_result = input_device.try_read_event() => {
+                event_result = input_device.next() => {
                     match event_result {
                         Some(event) => {
                             // Reset inactivity watchdog on each event

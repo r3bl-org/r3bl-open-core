@@ -1,8 +1,8 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{Controlled, ControlledChild, Controller, ControllerReader, ControllerWriter,
-            LINE_FEED_BYTE, PtyCommandBuilder, PtyInputEvent, PtyReadWriteOutputEvent,
-            PtyReadWriteSession, READ_BUFFER_SIZE, ok,
+use crate::{Continuation, Controlled, ControlledChild, Controller, ControllerReader,
+            ControllerWriter, LINE_FEED_BYTE, PtyCommandBuilder, PtyInputEvent,
+            PtyReadWriteOutputEvent, PtyReadWriteSession, READ_BUFFER_SIZE, ok,
             pty_common_io::{create_pty_pair, spawn_command_in_pty}};
 use miette::{IntoDiagnostic, miette};
 use portable_pty::PtySize;
@@ -412,10 +412,10 @@ fn spawn_blocking_writer_task(
                         &controller,
                         &output_evt_ch_tx_half,
                     )? {
-                        LoopContinuation::Continue => {
+                        Continuation::Continue => {
                             // Continue processing.
                         }
-                        LoopContinuation::Break => {
+                        Continuation::Stop => {
                             // Close command received, exit the task.
                             break;
                         }
@@ -432,13 +432,6 @@ fn spawn_blocking_writer_task(
     })
 }
 
-/// Indicates whether the PTY input processing loop should continue or break.
-#[derive(Debug, PartialEq)]
-enum LoopContinuation {
-    Continue,
-    Break,
-}
-
 /// Handles a single PTY input event, writing data and reporting errors as needed.
 /// Returns the loop continuation state.
 fn handle_pty_input_event(
@@ -446,7 +439,7 @@ fn handle_pty_input_event(
     writer: &mut ControllerWriter,
     controller: &Controller,
     output_evt_ch_tx_half: &tokio::sync::mpsc::UnboundedSender<PtyReadWriteOutputEvent>,
-) -> miette::Result<LoopContinuation> {
+) -> miette::Result<Continuation> {
     match input {
         PtyInputEvent::Write(bytes) => write_to_pty_with_flush(
             writer,
@@ -482,10 +475,10 @@ fn handle_pty_input_event(
             );
             miette!("Failed to flush PTY")
         })?,
-        PtyInputEvent::Close => return Ok(LoopContinuation::Break),
+        PtyInputEvent::Close => return Ok(Continuation::Stop),
     }
 
-    Ok(LoopContinuation::Continue)
+    Ok(Continuation::Continue)
 }
 
 /// Writes data to PTY and flushes, sending error events on failure.

@@ -36,6 +36,17 @@
 - [⌛] migrate `check.fish` into `build_infra` crate as `cargo monitor` command using
   [`build_infra_cargo_monitor.md`](/task/build_infra_cargo_monitor.md)
 
+- [ ] change `mio_poller` thread liveness model to make it possible for the thread to self
+      terminate and then be restarted during the process lifetime:
+      [`mio-poller-thread-restartable.md`](/task/mio-poller-thread-restartable.md)
+
+- [ ] simplify `mio_poller` design & impl:
+      [`simplify-thread-lifecycle-orchestration.md`](task/simplify-thread-lifecycle-orchestration.md)
+
+- [x] change `DirectToAnsiInputDevice` API to support multiple async consumers and enforce
+      a single instance:
+      [`task_single_input_device_multi_subscriber.md`](task/done/task_single_input_device_multi_subscriber.md)
+
 - [x] bootstrap `r3bl_build_infra` crate with first tool (binary)
       [`task_cargo_rustdoc_fmt.md](task/done/task_cargo_rustdoc_fmt.md)
 

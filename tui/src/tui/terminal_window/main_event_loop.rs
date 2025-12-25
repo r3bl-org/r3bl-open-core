@@ -1,7 +1,6 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
-use super::{BoxedSafeApp, Continuation, DefaultInputEventHandler, EventPropagation,
-            MainEventLoopFuture};
-use crate::{Ansi256GradientIndex, ColorWheel, ColorWheelConfig, ColorWheelSpeed,
+use super::{BoxedSafeApp, DefaultInputEventHandler, EventPropagation, MainEventLoopFuture};
+use crate::{Ansi256GradientIndex, ColorWheel, ColorWheelConfig, ColorWheelSpeed, Continuation,
             CommonResult, ComponentRegistryMap, DEBUG_TUI_MOD, DISPLAY_LOG_TELEMETRY,
             DefaultSize, DefaultTiming, FlushKind, GCStringOwned, GetMemSize,
             GlobalData, GradientGenerationPolicy, HasFocus, InputDevice, InputEvent,
@@ -637,7 +636,7 @@ fn handle_result_generated_by_app_after_handling_action_or_input_event<S, AS>(
                 if let Some(input_event) = maybe_input_event {
                     let check_if_exit_keys_pressed =
                         DefaultInputEventHandler::no_consume(input_event, exit_keys);
-                    if let Continuation::Exit = check_if_exit_keys_pressed {
+                    if let Continuation::Stop = check_if_exit_keys_pressed {
                         request_exit_by_sending_signal(main_thread_channel_sender);
                     }
                 }

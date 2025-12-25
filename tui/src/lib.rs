@@ -2417,11 +2417,11 @@
 //! [`integration_tests`]: mod@crate::core::ansi::vt_100_terminal_input_parser::integration_tests
 //! [`raw_mode_integration_tests`]: mod@crate::core::ansi::terminal_raw_mode::integration_tests
 //! [`test_pty_input_device`]: mod@crate::core::ansi::vt_100_terminal_input_parser::integration_tests::pty_input_device_test
-//! [`DirectToAnsiInputDevice`]: crate::tui::terminal_lib_backends::direct_to_ansi::DirectToAnsiInputDevice
+//! [`DirectToAnsiInputDevice`]: crate::direct_to_ansi::DirectToAnsiInputDevice
 //! [`pty_test_fixtures`]: crate::core::test_fixtures::pty_test_fixtures
 //! [`backend_compat_tests`]: crate::core::terminal_io::backend_compat_tests
 //! [`terminal_lib_backends`]: crate::tui::terminal_lib_backends
-//! [`direct_to_ansi`]: crate::tui::terminal_lib_backends::direct_to_ansi
+//! [`direct_to_ansi`]: crate::direct_to_ansi
 //! [`crossterm_backend`]: crate::tui::terminal_lib_backends::crossterm_backend
 //! [`vt_100_terminal_input_parser`]: crate::core::ansi::vt_100_terminal_input_parser
 //! [`RawModeGuard`]: crate::core::ansi::terminal_raw_mode::RawModeGuard

@@ -104,3 +104,90 @@ Provide a quick reference for Unicode box-drawing characters commonly used in AS
 │  └─ sub-item
 └─ item 2
 ```
+
+## Arrows and Flow Diagram Characters
+
+### Simple Arrows
+| Char | Unicode | Name |
+|------|---------|------|
+| `←` | U+2190 | LEFTWARDS ARROW |
+| `↑` | U+2191 | UPWARDS ARROW |
+| `→` | U+2192 | RIGHTWARDS ARROW |
+| `↓` | U+2193 | DOWNWARDS ARROW |
+| `↔` | U+2194 | LEFT RIGHT ARROW |
+| `↕` | U+2195 | UP DOWN ARROW |
+
+### Triangle Arrows (Filled)
+| Char | Unicode | Name |
+|------|---------|------|
+| `◄` | U+25C4 | BLACK LEFT-POINTING POINTER |
+| `▲` | U+25B2 | BLACK UP-POINTING TRIANGLE |
+| `►` | U+25BA | BLACK RIGHT-POINTING POINTER |
+| `▼` | U+25BC | BLACK DOWN-POINTING TRIANGLE |
+
+### Triangle Arrows (Outline)
+| Char | Unicode | Name |
+|------|---------|------|
+| `◁` | U+25C1 | WHITE LEFT-POINTING TRIANGLE |
+| `△` | U+25B3 | WHITE UP-POINTING TRIANGLE |
+| `▷` | U+25B7 | WHITE RIGHT-POINTING TRIANGLE |
+| `▽` | U+25BD | WHITE DOWN-POINTING TRIANGLE |
+
+### Double Arrows
+| Char | Unicode | Name |
+|------|---------|------|
+| `⇐` | U+21D0 | LEFTWARDS DOUBLE ARROW |
+| `⇑` | U+21D1 | UPWARDS DOUBLE ARROW |
+| `⇒` | U+21D2 | RIGHTWARDS DOUBLE ARROW |
+| `⇓` | U+21D3 | DOWNWARDS DOUBLE ARROW |
+| `⇔` | U+21D4 | LEFT RIGHT DOUBLE ARROW |
+| `⇕` | U+21D5 | UP DOWN DOUBLE ARROW |
+
+## Flow Diagram Templates
+
+### Vertical Flow with Box Connectors
+```
+┌───────────────────┐
+│ Step 1            │
+└─────────┬─────────┘
+          │
+┌─────────▼─────────┐
+│ Step 2            │
+└───────────────────┘
+```
+
+### Data Flow Diagram
+```
+┌───────────────────────────────────────────┐
+│ Source                                    │
+└────────────────────┬──────────────────────┘
+                     │
+┌────────────────────▼──────────────────────┐
+│ Processing Layer                          │
+│   └─► transform() dispatches to:          │
+│       ├─ handler_a() → Result A           │
+│       ├─ handler_b() → Result B           │
+│       └─ handler_c() → Result C           │
+└────────────────────┬──────────────────────┘
+                     │ output channel
+┌────────────────────▼──────────────────────┐
+│ Destination                               │
+└───────────────────────────────────────────┘
+```
+
+### Branching Decision Flow
+```
+┌───────────────────┐
+│ Input             │
+└─────────┬─────────┘
+          │
+    ┌─────▼─────┐
+    │ Condition │
+    └─────┬─────┘
+          │
+    ┌─────┴─────┐
+    │           │
+ ┌──▼──┐     ┌──▼──┐
+ │ Yes │     │ No  │
+ └─────┘     └─────┘
+```

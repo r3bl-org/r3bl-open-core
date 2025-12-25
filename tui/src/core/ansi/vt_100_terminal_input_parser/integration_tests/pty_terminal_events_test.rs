@@ -1,5 +1,19 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+//! PTY-based integration test for terminal event parsing.
+//!
+//! Validates that the [`DirectToAnsiInputDevice`] correctly parses terminal events:
+//! - Window resize notifications (`CSI 8;rows;cols t`)
+//! - Focus gained/lost events (`CSI I/O`)
+//!
+//! Note: Bracketed paste events are tested in [`pty_bracketed_paste_test`]
+//! because they require special state machine handling (Start + text + End).
+//!
+//! Run with: `cargo test -p r3bl_tui --lib test_pty_terminal_events -- --nocapture`
+//!
+//! [`DirectToAnsiInputDevice`]: crate::direct_to_ansi::DirectToAnsiInputDevice
+//! [`pty_bracketed_paste_test`]: mod@crate::core::ansi::vt_100_terminal_input_parser::integration_tests::pty_bracketed_paste_test
+
 use crate::{ControlledChild, InputEvent, PtyPair,
             core::ansi::{generator::generate_keyboard_sequence,
                          vt_100_terminal_input_parser::ir_event_types::{VT100FocusStateIR,
@@ -15,19 +29,6 @@ const CONTROLLED_READY: &str = "CONTROLLED_READY";
 // XMARK: Process isolated test functions using env vars & PTY.
 
 generate_pty_test! {
-    /// PTY-based integration test for terminal event parsing.
-    ///
-    /// Validates that the [`DirectToAnsiInputDevice`] correctly parses terminal events:
-    /// - Window resize notifications (`CSI 8;rows;cols t`)
-    /// - Focus gained/lost events (`CSI I/O`)
-    ///
-    /// Note: Bracketed paste events are tested in [`pty_bracketed_paste_test`]
-    /// because they require special state machine handling (Start + text + End).
-    ///
-    /// Run with: `cargo test -p r3bl_tui --lib test_pty_terminal_events -- --nocapture`
-    ///
-    /// [`DirectToAnsiInputDevice`]: crate::tui::terminal_lib_backends::direct_to_ansi::DirectToAnsiInputDevice
-    /// [`pty_bracketed_paste_test`]: mod@crate::core::ansi::vt_100_terminal_input_parser::integration_tests::pty_bracketed_paste_test
     test_fn: test_pty_terminal_events,
     controller: pty_controller_entry_point,
     controlled: pty_controlled_entry_point
@@ -185,7 +186,7 @@ fn pty_controlled_entry_point() -> ! {
 
         loop {
             tokio::select! {
-                event_result = input_device.try_read_event() => {
+                event_result = input_device.next() => {
                     match event_result {
                         Some(event) => {
                             event_count += 1;

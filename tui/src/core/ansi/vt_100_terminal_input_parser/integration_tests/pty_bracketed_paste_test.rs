@@ -1,5 +1,25 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+//! PTY-based integration test for bracketed paste text collection.
+//!
+//! Validates that [`DirectToAnsiInputDevice`] correctly collects text between
+//! bracketed paste markers (`ESC [200~` ... `ESC [201~`) and emits a single
+//! [`InputEvent::BracketedPaste`] with the complete text.
+//!
+//! Run with: `cargo test -p r3bl_tui --lib test_pty_bracketed_paste -- --nocapture`
+//!
+//! ## Test Cases
+//!
+//! - Simple ASCII paste: "Hello"
+//! - Multiline paste with newlines preserved
+//! - UTF-8 paste with multi-byte characters
+//! - Empty paste (Start immediately followed by End)
+//!
+//! Uses the coordinator-worker pattern with two processes.
+//!
+//! [`DirectToAnsiInputDevice`]: crate::direct_to_ansi::DirectToAnsiInputDevice
+//! [`InputEvent::BracketedPaste`]: crate::InputEvent::BracketedPaste
+
 use crate::{ControlledChild, InputEvent, PtyPair,
             core::ansi::{generator::generate_keyboard_sequence,
                          vt_100_terminal_input_parser::ir_event_types::{VT100InputEventIR,
@@ -15,25 +35,6 @@ const CONTROLLED_READY: &str = "CONTROLLED_READY";
 // XMARK: Process isolated test functions using env vars & PTY.
 
 generate_pty_test! {
-    /// PTY-based integration test for bracketed paste text collection.
-    ///
-    /// Validates that [`DirectToAnsiInputDevice`] correctly collects text between
-    /// bracketed paste markers (`ESC [200~` ... `ESC [201~`) and emits a single
-    /// [`InputEvent::BracketedPaste`] with the complete text.
-    ///
-    /// Run with: `cargo test -p r3bl_tui --lib test_pty_bracketed_paste -- --nocapture`
-    ///
-    /// ## Test Cases
-    ///
-    /// - Simple ASCII paste: "Hello"
-    /// - Multiline paste with newlines preserved
-    /// - UTF-8 paste with multi-byte characters
-    /// - Empty paste (Start immediately followed by End)
-    ///
-    /// Uses the coordinator-worker pattern with two processes.
-    ///
-    /// [`DirectToAnsiInputDevice`]: crate::tui::terminal_lib_backends::direct_to_ansi::DirectToAnsiInputDevice
-    /// [`InputEvent::BracketedPaste`]: crate::InputEvent::BracketedPaste
     test_fn: test_pty_bracketed_paste,
     controller: pty_controller_entry_point,
     controlled: pty_controlled_entry_point
@@ -205,7 +206,7 @@ fn pty_controlled_entry_point() -> ! {
 
         loop {
             tokio::select! {
-                event_result = input_device.try_read_event() => {
+                event_result = input_device.next() => {
                     match event_result {
                         Some(event) => {
                             event_count += 1;

@@ -4,12 +4,10 @@
 
 //! Event handlers for stdin input processing.
 
-use super::poller_thread::MioPollerThread;
-use crate::tui::{DEBUG_TUI_SHOW_TERMINAL_BACKEND,
-                 terminal_lib_backends::direct_to_ansi::input::{paste_state_machine::apply_paste_state_machine,
-                                                                types::{PasteStateResult,
-                                                                        ReaderThreadMessage,
-                                                                        ThreadLoopContinuation}}};
+use super::{super::{channel_types::{PollerEvent, StdinEvent},
+                    paste_state_machine::{PasteStateResult, apply_paste_state_machine}},
+            poller_thread::MioPollerThread};
+use crate::{Continuation, tui::DEBUG_TUI_SHOW_TERMINAL_BACKEND};
 use std::io::{ErrorKind, Read as _};
 
 /// Read buffer size for stdin reads (`1_024` bytes).
@@ -26,14 +24,14 @@ pub const STDIN_READ_BUFFER_SIZE: usize = 1_024;
 ///
 /// # Returns
 ///
-/// - [`ThreadLoopContinuation::Continue`]: Successfully processed or recoverable error.
-/// - [`ThreadLoopContinuation::Return`]: [`EOF`], fatal error, or receiver dropped.
+/// - [`Continuation::Continue`]: Successfully processed or recoverable error.
+/// - [`Continuation::Stop`]: [`EOF`], fatal error, or receiver dropped.
 ///
 /// [EINTR Handling]: super#eintr-handling
 /// [`EOF`]: https://en.wikipedia.org/wiki/End-of-file
 /// [`VT100InputEventIR`]: crate::core::ansi::vt_100_terminal_input_parser::VT100InputEventIR
 /// [`stdin`]: std::io::stdin
-pub fn consume_stdin_input(poller: &mut MioPollerThread) -> ThreadLoopContinuation {
+pub fn consume_stdin_input(poller: &mut MioPollerThread) -> Continuation {
     let read_res = poller
         .sources
         .stdin
@@ -42,36 +40,40 @@ pub fn consume_stdin_input(poller: &mut MioPollerThread) -> ThreadLoopContinuati
         Ok(0) => {
             // EOF reached.
             DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
-                tracing::debug!(message = "mio-poller-thread: EOF (0 bytes)");
+                tracing::debug!(message = "mio_poller thread: EOF (0 bytes)");
             });
-            let _unused = poller.tx_parsed_input_events.send(ReaderThreadMessage::Eof);
-            ThreadLoopContinuation::Return
+            let _unused = poller
+                .state
+                .tx_poller_event
+                .send(PollerEvent::Stdin(StdinEvent::Eof));
+            Continuation::Stop
         }
 
         Ok(n) => parse_stdin_bytes(poller, n),
 
         Err(ref e) if e.kind() == ErrorKind::Interrupted => {
             // EINTR - retry (see module docs: EINTR Handling).
-            ThreadLoopContinuation::Continue
+            Continuation::Continue
         }
 
         Err(ref e) if e.kind() == ErrorKind::WouldBlock => {
             // No more data available right now (spurious wakeup).
-            ThreadLoopContinuation::Continue
+            Continuation::Continue
         }
 
         Err(e) => {
             // Other error - send and exit.
             DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
                 tracing::debug!(
-                    message = "mio-poller-thread: read error",
+                    message = "mio_poller thread: read error",
                     error = ?e
                 );
             });
             let _unused = poller
-                .tx_parsed_input_events
-                .send(ReaderThreadMessage::Error);
-            ThreadLoopContinuation::Return
+                .state
+                .tx_poller_event
+                .send(PollerEvent::Stdin(StdinEvent::Error));
+            Continuation::Stop
         }
     }
 }
@@ -79,12 +81,9 @@ pub fn consume_stdin_input(poller: &mut MioPollerThread) -> ThreadLoopContinuati
 /// Parses bytes read from stdin into input events.
 ///
 /// Parses bytes into VT100 events and sends them through the paste state machine.
-pub fn parse_stdin_bytes(
-    poller: &mut MioPollerThread,
-    n: usize,
-) -> ThreadLoopContinuation {
+pub fn parse_stdin_bytes(poller: &mut MioPollerThread, n: usize) -> Continuation {
     DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
-        tracing::debug!(message = "mio-poller-thread: read bytes", bytes_read = n);
+        tracing::debug!(message = "mio_poller thread: read bytes", bytes_read = n);
     });
 
     // `more` flag for ESC disambiguation.
@@ -101,17 +100,18 @@ pub fn parse_stdin_bytes(
         {
             PasteStateResult::Emit(input_event) => {
                 if poller
-                    .tx_parsed_input_events
-                    .send(ReaderThreadMessage::Event(input_event))
+                    .state
+                    .tx_poller_event
+                    .send(PollerEvent::Stdin(StdinEvent::Input(input_event)))
                     .is_err()
                 {
                     // Receiver dropped - exit gracefully.
                     DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
                         tracing::debug!(
-                            message = "mio-poller-thread: receiver dropped, exiting"
+                            message = "mio_poller thread: receiver dropped, exiting"
                         );
                     });
-                    return ThreadLoopContinuation::Return;
+                    return Continuation::Stop;
                 }
             }
             PasteStateResult::Absorbed => {
@@ -120,5 +120,5 @@ pub fn parse_stdin_bytes(
         }
     }
 
-    ThreadLoopContinuation::Continue
+    Continuation::Continue
 }

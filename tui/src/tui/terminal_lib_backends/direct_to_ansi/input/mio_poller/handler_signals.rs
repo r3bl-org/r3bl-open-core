@@ -2,45 +2,57 @@
 
 //! Event handlers for signal processing.
 
-use super::poller_thread::MioPollerThread;
-use crate::tui::{DEBUG_TUI_SHOW_TERMINAL_BACKEND,
-                 terminal_lib_backends::direct_to_ansi::input::types::{ReaderThreadMessage,
-                                                                       ThreadLoopContinuation}};
+use super::{super::channel_types::{PollerEvent, SignalEvent}, poller_thread::MioPollerThread};
+use crate::{Continuation, get_size, tui::DEBUG_TUI_SHOW_TERMINAL_BACKEND};
 use signal_hook::consts::SIGWINCH;
 
 /// Handles [`SIGWINCH`] signal (terminal resize).
 ///
-/// [`SIGWINCH`]: signal_hook::consts::SIGWINCH
+/// Drains all pending signals, queries the new terminal size, and sends a single
+/// resize event to the channel. Multiple coalesced signals result in one event
+/// since we query the current size at send time.
 ///
-/// Drains all pending signals and sends a single resize event to the channel.
-/// Multiple coalesced signals result in one event since resize is idempotent—the
-/// consumer queries the current terminal size regardless of how many signals arrived.
+/// The event contains [`Some(size)`] if [`get_size()`] succeeded, or [`None`] if
+/// the query failed (rare—typically means TTY disconnected). The consumer decides
+/// how to handle the [`None`] case.
 ///
 /// # Returns
 ///
-/// - [`ThreadLoopContinuation::Continue`]: Successfully processed.
-/// - [`ThreadLoopContinuation::Return`]: Receiver dropped.
-pub fn consume_pending_signals(poller: &mut MioPollerThread) -> ThreadLoopContinuation {
+/// - [`Continuation::Continue`]: Successfully processed.
+/// - [`Continuation::Stop`]: Receiver dropped.
+///
+/// [`SIGWINCH`]: signal_hook::consts::SIGWINCH
+/// [`Some(size)`]: Option::Some
+/// [`get_size()`]: crate::get_size
+pub fn consume_pending_signals(poller: &mut MioPollerThread) -> Continuation {
     // Drain all pending signals and check if any SIGWINCH arrived.
     // Multiple signals may coalesce between polls, but we only need one Resize event.
     let sigwinch_arrived = poller.sources.signals.pending().any(|sig| sig == SIGWINCH);
 
     if sigwinch_arrived {
+        // Query terminal size - wrap in Option so consumer knows if it failed.
+        let maybe_size = get_size().ok();
+
         DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
-            tracing::debug!(message = "mio-poller-thread: SIGWINCH received");
+            tracing::debug!(
+                message = "mio-poller-thread: SIGWINCH received",
+                ?maybe_size
+            );
         });
+
         if poller
-            .tx_parsed_input_events
-            .send(ReaderThreadMessage::Resize)
+            .state
+            .tx_poller_event
+            .send(PollerEvent::Signal(SignalEvent::Resize(maybe_size)))
             .is_err()
         {
             // Receiver dropped - exit gracefully.
             DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
                 tracing::debug!(message = "mio-poller-thread: receiver dropped, exiting");
             });
-            return ThreadLoopContinuation::Return;
+            return Continuation::Stop;
         }
     }
 
-    ThreadLoopContinuation::Continue
+    Continuation::Continue
 }

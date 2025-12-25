@@ -46,7 +46,7 @@
 //!
 //! [`VT100FocusStateIR`]: super::VT100FocusStateIR
 //! [`VT100PasteModeIR`]: super::VT100PasteModeIR
-//! [`convert_input_event()`]: crate::tui::terminal_lib_backends::direct_to_ansi::input::protocol_conversion::convert_input_event
+//! [`convert_input_event()`]: crate::direct_to_ansi::input::protocol_conversion::convert_input_event
 //! [`keyboard`]: mod@super::keyboard
 //! [`mouse`]: mod@super::mouse
 //! [`router`]: mod@super::router

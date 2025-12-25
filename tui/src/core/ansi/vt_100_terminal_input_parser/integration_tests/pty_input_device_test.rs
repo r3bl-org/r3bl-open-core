@@ -1,5 +1,74 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+//! PTY-based integration test for [`DirectToAnsiInputDevice`].
+//!
+//! Test coordinator that routes to controller or controlled based on env var.
+//! When `R3BL_PTY_TEST_CONTROLLED` is set, runs controlled logic and exits.
+//! Otherwise runs the controller test.
+//!
+//! Run with: `cargo test -p r3bl_tui --lib test_pty_input_device -- --nocapture`
+//!
+//! ## Test Architecture (2 Actors)
+//!
+//! This test validates [`DirectToAnsiInputDevice`] in a real PTY environment using a
+//! coordinator-worker pattern with two processes:
+//!
+//! ```text
+//! ┌─────────────────────────────────────────────────────────────────────┐
+//! │ Actor 1: PTY Controller (test coordinator)                          │
+//! │ Synchronous code                                                    │
+//! │                                                                     │
+//! │  1. Create PTY pair (controller/controlled file descriptors)        │
+//! │  2. Spawn test binary with R3BL_PTY_TEST_CONTROLLED=1 env var       │
+//! │  3. Write ANSI sequences to PTY controller (the pipe)               │
+//! │  4. Read parsed events from Actor 2's stdout via PTY                │
+//! │  5. Verify parsed events match expected values                      │
+//! └──────────────────────────────────┬──────────────────────────────────┘
+//!                                    │ spawns with controlled PTY as stdin/stdout
+//! ┌──────────────────────────────────▼──────────────────────────────────┐
+//! │ Actor 2: PTY Controlled (worker process, R3BL_PTY_TEST_CONTROLLED=1)│
+//! │ Tokio runtime and async code                                        │
+//! │                                                                     │
+//! │  1. Test function detects R3BL_PTY_TEST_CONTROLLED env var          │
+//! │  2. CRITICAL: Enable raw mode on terminal (controlled PTY)          │
+//! │  3. Create DirectToAnsiInputDevice (reads from stdin)               │
+//! │  4. Loop: next() → parse ANSI → write to stdout                     │
+//! │  5. Exit after processing test sequences                            │
+//! └─────────────────────────────────────────────────────────────────────┘
+//! ```
+//!
+//! ## Critical: Raw Mode Requirement
+//!
+//! **Raw Mode Clarification**: In PTY architecture, the controlled PTY side is what the child
+//! process sees as its terminal. When the child reads from stdin, it's reading from
+//! the controlled PTY. Therefore, we MUST set the controlled PTY to raw mode so that:
+//!
+//! 1. **No Line Buffering**: Input isn't line-buffered - characters are available
+//!    immediately without waiting for Enter key
+//! 2. **No Special Character Processing**: Special characters (like ESC sequences) aren't
+//!    interpreted by the terminal layer - they pass through as raw bytes
+//! 3. **Async Compatibility**: The async reader can get bytes as they arrive, not waiting
+//!    for newlines, enabling proper ANSI escape sequence parsing
+//!
+//! **Controller vs Controlled**: The controller doesn't need raw mode - it's just a bidirectional
+//! pipe for communication. The controlled side is the actual "terminal" that needs proper
+//! settings for the child process to read ANSI sequences correctly.
+//!
+//! Without raw mode, the PTY stays in "cooked" mode where:
+//! - Input waits for line termination (Enter key)
+//! - Control sequences may be interpreted instead of passed through
+//! - [`DirectToAnsiInputDevice`] times out waiting for input that's stuck in buffers
+//!
+//! ## Why This Test Pattern?
+//!
+//! - **Real PTY Environment**: Tests [`DirectToAnsiInputDevice`] with actual PTY, not
+//!   mocks
+//! - **Process Isolation**: Each test run gets fresh PTY resources via process spawning
+//! - **Coordinator-Worker Pattern**: Same test function handles both roles via env var
+//! - **Async Validation**: Properly tests tokio async I/O with real terminal input
+//!
+//! [`DirectToAnsiInputDevice`]: crate::direct_to_ansi::DirectToAnsiInputDevice
+
 use crate::{ControlledChild, InputEvent, PtyPair,
             core::ansi::{generator::generate_keyboard_sequence,
                          vt_100_terminal_input_parser::ir_event_types::{VT100InputEventIR,
@@ -16,74 +85,6 @@ const CONTROLLED_READY: &str = "CONTROLLED_READY";
 // XMARK: Process isolated test functions using env vars & PTY.
 
 generate_pty_test! {
-    /// PTY-based integration test for [`DirectToAnsiInputDevice`].
-    ///
-    /// Test coordinator that routes to controller or controlled based on env var.
-    /// When `R3BL_PTY_TEST_CONTROLLED` is set, runs controlled logic and exits.
-    /// Otherwise runs the controller test.
-    ///
-    /// Run with: `cargo test -p r3bl_tui --lib test_pty_input_device -- --nocapture`
-    ///
-    /// ## Test Architecture (2 Actors)
-    ///
-    /// This test validates [`DirectToAnsiInputDevice`] in a real PTY environment using a
-    /// coordinator-worker pattern with two processes:
-    ///
-    /// ```text
-    /// ┌───────────────────────────────────────────────────────────────┐
-    /// │ Actor 1: PTY Controller (test coordinator)                        │
-    /// │ Synchronous code                                              │
-    /// │                                                               │
-    /// │  1. Create PTY pair (controller/controlled file descriptors)           │
-    /// │  2. Spawn test binary with R3BL_PTY_TEST_CONTROLLED=1 env var                │
-    /// │  3. Write ANSI sequences to PTY controller (the pipe)             │
-    /// │  4. Read parsed events from Actor 2's stdout via PTY          │
-    /// │  5. Verify parsed events match expected values                │
-    /// └────────────────────────┬──────────────────────────────────────┘
-    ///                          │ spawns with controlled PTY as stdin/stdout
-    /// ┌────────────────────────▼──────────────────────────────────────┐
-    /// │ Actor 2: PTY Controlled (worker process, R3BL_PTY_TEST_CONTROLLED=1)              │
-    /// │ Tokio runtime and async code                                  │
-    /// │                                                               │
-    /// │  1. Test function detects R3BL_PTY_TEST_CONTROLLED env var                   │
-    /// │  2. CRITICAL: Enable raw mode on terminal (controlled PTY)         │
-    /// │  3. Create DirectToAnsiInputDevice (reads from stdin)         │
-    /// │  4. Loop: try_read_event() → parse ANSI → write to stdout     │
-    /// │  5. Exit after processing test sequences                      │
-    /// └───────────────────────────────────────────────────────────────┘
-    /// ```
-    ///
-    /// ## Critical: Raw Mode Requirement
-    ///
-    /// **Raw Mode Clarification**: In PTY architecture, the controlled PTY side is what the child
-    /// process sees as its terminal. When the child reads from stdin, it's reading from
-    /// the controlled PTY. Therefore, we MUST set the controlled PTY to raw mode so that:
-    ///
-    /// 1. **No Line Buffering**: Input isn't line-buffered - characters are available
-    ///    immediately without waiting for Enter key
-    /// 2. **No Special Character Processing**: Special characters (like ESC sequences) aren't
-    ///    interpreted by the terminal layer - they pass through as raw bytes
-    /// 3. **Async Compatibility**: The async reader can get bytes as they arrive, not waiting
-    ///    for newlines, enabling proper ANSI escape sequence parsing
-    ///
-    /// **Controller vs Controlled**: The controller doesn't need raw mode - it's just a bidirectional
-    /// pipe for communication. The controlled side is the actual "terminal" that needs proper
-    /// settings for the child process to read ANSI sequences correctly.
-    ///
-    /// Without raw mode, the PTY stays in "cooked" mode where:
-    /// - Input waits for line termination (Enter key)
-    /// - Control sequences may be interpreted instead of passed through
-    /// - [`DirectToAnsiInputDevice`] times out waiting for input that's stuck in buffers
-    ///
-    /// ## Why This Test Pattern?
-    ///
-    /// - **Real PTY Environment**: Tests [`DirectToAnsiInputDevice`] with actual PTY, not
-    ///   mocks
-    /// - **Process Isolation**: Each test run gets fresh PTY resources via process spawning
-    /// - **Coordinator-Worker Pattern**: Same test function handles both roles via env var
-    /// - **Async Validation**: Properly tests tokio async I/O with real terminal input
-    ///
-    /// [`DirectToAnsiInputDevice`]: crate::tui::terminal_lib_backends::direct_to_ansi::DirectToAnsiInputDevice
     test_fn: test_pty_input_device,
     controller: pty_controller_entry_point,
     controlled: pty_controlled_entry_point
@@ -288,7 +289,7 @@ fn pty_controlled_entry_point() -> ! {
         loop {
             tokio::select! {
                 // Try to read an event from the device.
-                event_result = input_device.try_read_event() => {
+                event_result = input_device.next() => {
                     match event_result {
                         Some(event) => {
                             event_count += 1;

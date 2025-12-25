@@ -74,7 +74,7 @@ mod app_main_impl_app_trait {
             has_focus: &mut HasFocus,
         ) -> CommonResult<EventPropagation> {
             // Try to handle left and right arrow key input events & return if handled.
-            if let Continuation::Return =
+            if let Continuation::Stop =
                 handle_focus::handle_focus_switch(input_event.clone(), has_focus)
             {
                 return Ok(EventPropagation::ConsumedRender);
@@ -259,7 +259,7 @@ mod handle_focus {
     pub fn handle_focus_switch(
         input_event: InputEvent,
         has_focus: &mut HasFocus,
-    ) -> Continuation<String> {
+    ) -> Continuation {
         let mut event_consumed = false;
 
         // Handle Left, Right to switch focus between columns.
@@ -290,7 +290,7 @@ mod handle_focus {
         }
 
         if event_consumed {
-            Continuation::Return
+            Continuation::Stop
         } else {
             Continuation::Continue
         }

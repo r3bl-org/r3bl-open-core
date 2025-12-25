@@ -1,5 +1,19 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+//! PTY-based integration test for keyboard modifiers (Shift, Ctrl, Alt).
+//!
+//! Validates that the [`DirectToAnsiInputDevice`] correctly parses keyboard sequences
+//! with various modifier combinations:
+//! - Single modifiers: Shift, Ctrl, Alt
+//! - Combined modifiers: Shift+Alt, Shift+Ctrl, Alt+Ctrl
+//! - Triple modifiers: Shift+Alt+Ctrl
+//!
+//! Tests with arrow keys and function keys to validate round-trip generation+parsing.
+//!
+//! Run with: `cargo test -p r3bl_tui --lib test_pty_keyboard_modifiers -- --nocapture`
+//!
+//! [`DirectToAnsiInputDevice`]: crate::direct_to_ansi::DirectToAnsiInputDevice
+
 use crate::{ControlledChild, InputEvent, KeyState, PtyPair,
             core::ansi::{generator::generate_keyboard_sequence,
                          vt_100_terminal_input_parser::ir_event_types::{VT100InputEventIR,
@@ -16,19 +30,6 @@ const CONTROLLED_READY: &str = "CONTROLLED_READY";
 // XMARK: Process isolated test functions using env vars & PTY.
 
 generate_pty_test! {
-    /// PTY-based integration test for keyboard modifiers (Shift, Ctrl, Alt).
-    ///
-    /// Validates that the [`DirectToAnsiInputDevice`] correctly parses keyboard sequences
-    /// with various modifier combinations:
-    /// - Single modifiers: Shift, Ctrl, Alt
-    /// - Combined modifiers: Shift+Alt, Shift+Ctrl, Alt+Ctrl
-    /// - Triple modifiers: Shift+Alt+Ctrl
-    ///
-    /// Tests with arrow keys and function keys to validate round-trip generation+parsing.
-    ///
-    /// Run with: `cargo test -p r3bl_tui --lib test_pty_keyboard_modifiers -- --nocapture`
-    ///
-    /// [`DirectToAnsiInputDevice`]: crate::tui::terminal_lib_backends::direct_to_ansi::DirectToAnsiInputDevice
     test_fn: test_pty_keyboard_modifiers,
     controller: pty_controller_entry_point,
     controlled: pty_controlled_entry_point
@@ -235,7 +236,7 @@ fn pty_controlled_entry_point() -> ! {
 
         loop {
             tokio::select! {
-                event_result = input_device.try_read_event() => {
+                event_result = input_device.next() => {
                     match event_result {
                         Some(event) => {
                             event_count += 1;

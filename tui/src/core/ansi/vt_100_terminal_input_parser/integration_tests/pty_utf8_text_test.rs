@@ -1,5 +1,16 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+//! PTY-based integration test for UTF-8 text input parsing.
+//!
+//! Validates that the [`DirectToAnsiInputDevice`] correctly handles UTF-8 text input:
+//! - ASCII characters
+//! - UTF-8 multi-byte sequences (accented characters, emojis, etc.)
+//! - Mixed text and ANSI escape sequences
+//!
+//! Run with: `cargo test -p r3bl_tui --lib test_pty_utf8_text -- --nocapture`
+//!
+//! [`DirectToAnsiInputDevice`]: crate::direct_to_ansi::DirectToAnsiInputDevice
+
 use crate::{ControlledChild, InputEvent, PtyPair, generate_pty_test,
             tui::terminal_lib_backends::direct_to_ansi::DirectToAnsiInputDevice};
 use std::{io::{BufRead, BufReader, Write},
@@ -11,16 +22,6 @@ const CONTROLLED_READY: &str = "CONTROLLED_READY";
 // XMARK: Process isolated test functions using env vars & PTY.
 
 generate_pty_test! {
-    /// PTY-based integration test for UTF-8 text input parsing.
-    ///
-    /// Validates that the [`DirectToAnsiInputDevice`] correctly handles UTF-8 text input:
-    /// - ASCII characters
-    /// - UTF-8 multi-byte sequences (accented characters, emojis, etc.)
-    /// - Mixed text and ANSI escape sequences
-    ///
-    /// Run with: `cargo test -p r3bl_tui --lib test_pty_utf8_text -- --nocapture`
-    ///
-    /// [`DirectToAnsiInputDevice`]: crate::tui::terminal_lib_backends::direct_to_ansi::DirectToAnsiInputDevice
     test_fn: test_pty_utf8_text,
     controller: pty_controller_entry_point,
     controlled: pty_controlled_entry_point
@@ -162,7 +163,7 @@ fn pty_controlled_entry_point() -> ! {
 
         loop {
             tokio::select! {
-                event_result = input_device.try_read_event() => {
+                event_result = input_device.next() => {
                     match event_result {
                         Some(event) => {
                             event_count += 1;

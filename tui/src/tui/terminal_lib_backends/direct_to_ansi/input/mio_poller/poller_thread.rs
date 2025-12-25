@@ -1,17 +1,15 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-// cspell:words EINTR
+// cspell:words EINTR epoll sigaction signalfd
 
 //! Core [`MioPollerThread`] struct and lifecycle methods.
 
-use super::{SourceKindReady, SourceRegistry, dispatcher::dispatch,
+use super::{super::{channel_types::{PollerEvent, StdinEvent},
+                    paste_state_machine::PasteCollectionState,
+                    stateful_parser::StatefulInputParser},
+            PollerThreadLifecycleState, SourceKindReady, SourceRegistry, dispatcher::dispatch,
             handler_stdin::STDIN_READ_BUFFER_SIZE};
-use crate::tui::{DEBUG_TUI_SHOW_TERMINAL_BACKEND,
-                 terminal_lib_backends::direct_to_ansi::input::{paste_state_machine::PasteCollectionState,
-                                                                stateful_parser::StatefulInputParser,
-                                                                types::{InputEventSender,
-                                                                        ReaderThreadMessage,
-                                                                        ThreadLoopContinuation}}};
+use crate::{Continuation, tui::DEBUG_TUI_SHOW_TERMINAL_BACKEND};
 use mio::{Events, Interest, Poll, Token, unix::SourceFd};
 use signal_hook::consts::SIGWINCH;
 use signal_hook_mio::v1_0::Signals;
@@ -44,8 +42,8 @@ pub struct MioPollerThread {
     /// - **Drained by**: [`start()`] iterates and dispatches to token-specific handlers
     ///   via [`dispatch()`].
     ///
-    /// [`dispatch()`]: crate::tui::terminal_lib_backends::direct_to_ansi::input::mio_poller::dispatcher::dispatch
     /// [`SIGWINCH`]: signal_hook::consts::SIGWINCH
+    /// [`dispatch()`]: crate::direct_to_ansi::input::mio_poller::dispatcher::dispatch
     /// [`start()`]: MioPollerThread::start
     pub ready_events_buffer: Events,
 
@@ -63,8 +61,8 @@ pub struct MioPollerThread {
     /// - **Written by**: [`consume_stdin_input()`] reads into this buffer.
     /// - **Consumed by**: [`parse_stdin_bytes()`] parses bytes from here.
     ///
-    /// [`consume_stdin_input()`]: crate::tui::terminal_lib_backends::direct_to_ansi::input::mio_poller::handler_stdin::consume_stdin_input
-    /// [`parse_stdin_bytes()`]: crate::tui::terminal_lib_backends::direct_to_ansi::input::mio_poller::handler_stdin::parse_stdin_bytes
+    /// [`consume_stdin_input()`]: crate::direct_to_ansi::input::mio_poller::handler_stdin::consume_stdin_input
+    /// [`parse_stdin_bytes()`]: crate::direct_to_ansi::input::mio_poller::handler_stdin::parse_stdin_bytes
     pub stdin_unparsed_byte_buffer: [u8; STDIN_READ_BUFFER_SIZE],
 
     /// Stateful VT100 input sequence parser.
@@ -73,7 +71,7 @@ pub struct MioPollerThread {
     /// - **Yields**: [`VT100InputEventIR`] events via [`Iterator`] impl.
     ///
     /// [`VT100InputEventIR`]: crate::core::ansi::vt_100_terminal_input_parser::VT100InputEventIR
-    /// [`parse_stdin_bytes()`]: crate::tui::terminal_lib_backends::direct_to_ansi::input::mio_poller::handler_stdin::parse_stdin_bytes
+    /// [`parse_stdin_bytes()`]: crate::direct_to_ansi::input::mio_poller::handler_stdin::parse_stdin_bytes
     pub vt_100_input_seq_parser: StatefulInputParser,
 
     /// Paste state machine for bracketed paste handling.
@@ -82,37 +80,76 @@ pub struct MioPollerThread {
     /// - **Yields**: [`InputEvent`] after paste sequence handling.
     ///
     /// [`InputEvent`]: crate::InputEvent
-    /// [`parse_stdin_bytes()`]: crate::tui::terminal_lib_backends::direct_to_ansi::input::mio_poller::handler_stdin::parse_stdin_bytes
+    /// [`parse_stdin_bytes()`]: crate::direct_to_ansi::input::mio_poller::handler_stdin::parse_stdin_bytes
     pub paste_collection_state: PasteCollectionState,
 
-    /// Broadcast channel sender for parsed events.
+    /// Thread lifecycle state — centralized broadcast sender, liveness flag, and waker.
     ///
-    /// - **Sent to by**: [`parse_stdin_bytes()`] and [`consume_pending_signals()`].
-    /// - **Received by**: Async consumers via [`subscribe_to_input_events()`].
+    /// See [`PollerThreadLifecycleState`] for comprehensive documentation on the
+    /// lifecycle protocol and the inherent race condition we handle.
     ///
-    /// [`consume_pending_signals()`]: crate::tui::terminal_lib_backends::direct_to_ansi::input::mio_poller::handler_signals::consume_pending_signals
-    /// [`parse_stdin_bytes()`]: crate::tui::terminal_lib_backends::direct_to_ansi::input::mio_poller::handler_stdin::parse_stdin_bytes
-    /// [`subscribe_to_input_events()`]: crate::tui::terminal_lib_backends::direct_to_ansi::input::global_input_resource::subscribe_to_input_events
-    pub tx_parsed_input_events: InputEventSender,
+    /// - **[`tx_poller_event`]**: Broadcasts parsed events to async consumers.
+    /// - **[`metadata`]**: Thread identity and liveness; set to terminated by [`Drop`].
+    ///
+    /// [`metadata`]: PollerThreadLifecycleState::metadata
+    /// [`tx_poller_event`]: PollerThreadLifecycleState::tx_poller_event
+    pub state: PollerThreadLifecycleState,
+}
+
+impl Drop for MioPollerThread {
+    /// Marks the thread as terminated when the struct is dropped.
+    ///
+    /// Calls [`ThreadMetadata::mark_terminated()`] to set the **termination marker** in
+    /// the thread lifecycle protocol, enabling [`allocate()`] to detect terminated
+    /// threads and spawn new ones.
+    ///
+    /// **Panic-safe**: Even if [`start()`] panics, [`mark_terminated()`] is called during
+    /// stack unwinding, so the next subscriber correctly detects the terminated thread.
+    ///
+    /// See [`PollerThreadLifecycleState`] for the complete lifecycle documentation.
+    ///
+    /// [`ThreadMetadata::mark_terminated()`]: super::poller_thread_lifecycle_state::ThreadMetadata::mark_terminated
+    /// [`allocate()`]: crate::direct_to_ansi::input::input_device::guarded_ops::allocate
+    /// [`mark_terminated()`]: super::poller_thread_lifecycle_state::ThreadMetadata::mark_terminated
+    /// [`start()`]: MioPollerThread::start
+    fn drop(&mut self) {
+        DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
+            tracing::debug!(
+                message =
+                    "mio-poller-thread: dropping, calling lifecycle.mark_terminated()"
+            );
+        });
+        self.state.metadata.mark_terminated();
+    }
 }
 
 impl MioPollerThread {
-    /// Spawns the [`mio`] poller thread, which runs for the process lifetime.
+    /// Creates the [`mio`] poller thread, which can be relaunched if it exits.
     ///
     /// # Arguments
     ///
-    /// - `sender`: Broadcast channel sender injected by the caller. This decouples the
-    ///   poller thread from channel ownership. The caller creates the channel and retains
-    ///   the receiver side for [`subscribe_to_input_events()`].
+    /// - `poll`: The [`mio::Poll`] instance, pre-configured with the [`Waker`]
+    ///   registered. The Poll is created in `initialize_input_resource()` so the
+    ///   [`Waker`] can be shared with [`PollerSubscriptionHandle`].
+    /// - `state`: The [`PollerThreadLifecycleState`] containing the broadcast sender and
+    ///   liveness flag. Ownership is transferred to [`MioPollerThread`], whose [`Drop`]
+    ///   impl sets `liveness` to `Terminated` when dropped. This enables [`allocate()`]
+    ///   to detect a terminated thread and spawn a new one.
     ///
     /// This is the main entry point for starting the input handling system. It:
     /// 1. Spawns a dedicated thread named `"mio-poller"` -> useful for debugging, eg
     ///    using [`ps`] or [`htop`].
-    /// 2. Registers [`stdin`] and [`SIGWINCH`] with [`mio`].
+    /// 2. Registers [`stdin`] and [`SIGWINCH`] with the provided [`mio::Poll`].
     /// 3. Runs the polling loop until exit condition is met.
+    /// 4. [`Drop`] impl sets `liveness` to `Terminated` (panic-safe).
     ///
     /// The thread is detached (its [`JoinHandle`] is dropped) - see the
     /// [Thread Lifecycle] section in the module docs for details.
+    ///
+    /// # Panic Safety
+    ///
+    /// Using [`Drop`] to set the liveness flag ensures correctness even if [`start()`]
+    /// panics: the flag is set during stack unwinding.
     ///
     /// # Panics
     ///
@@ -120,32 +157,48 @@ impl MioPollerThread {
     ///
     /// [Thread Lifecycle]: super#thread-lifecycle
     /// [`JoinHandle`]: std::thread::JoinHandle
+    /// [`PollerSubscriptionHandle`]: crate::direct_to_ansi::input::input_device::PollerSubscriptionHandle
     /// [`SIGWINCH`]: signal_hook::consts::SIGWINCH
+    /// [`Waker`]: mio::Waker
+    /// [`allocate()`]: crate::direct_to_ansi::input::input_device::guarded_ops::allocate
     /// [`htop`]: https://htop.dev/
     /// [`ps`]: https://man7.org/linux/man-pages/man1/ps.1.html
+    /// [`start()`]: MioPollerThread::start
     /// [`stdin`]: std::io::stdin
-    /// [`subscribe_to_input_events()`]: crate::tui::terminal_lib_backends::direct_to_ansi::input::global_input_resource::subscribe_to_input_events
-    pub fn spawn_thread(sender: InputEventSender) {
+    #[allow(clippy::new_ret_no_self)]
+    pub fn new(poll: Poll, state: PollerThreadLifecycleState) {
         let _unused = std::thread::Builder::new()
             .name("mio-poller".into())
             .spawn(move || {
-                let mut mio_poller = Self::setup(sender);
-                mio_poller.start();
+                let mut mio_poller_thread = Self::setup(poll, state);
+                mio_poller_thread.start();
+                // Drop impl sets liveness = Terminated (panic-safe).
             })
-            .expect("Failed to spawn mio poller thread");
+            .expect(
+                "Failed to spawn mio-poller thread: OS denied thread creation. \
+                 Check ulimit -u (max user processes) or available memory.",
+            );
     }
 
     /// Initializes the [`mio`] poller, registering [`stdin`] and [`SIGWINCH`].
     ///
+    /// # Arguments
+    ///
+    /// - `poll`: The [`mio::Poll`] instance, pre-configured with the [`Waker`]
+    ///   registered.
+    /// - `state`: The [`PollerThreadLifecycleState`] containing `tx`, `liveness`, and
+    ///   `waker`.
+    ///
     /// # Panics
     ///
-    /// Panics if [`mio::Poll`] creation or registration fails.
+    /// Panics if registration of [`stdin`] or [`SIGWINCH`] fails.
     ///
     /// [`SIGWINCH`]: signal_hook::consts::SIGWINCH
+    /// [`Waker`]: mio::Waker
     /// [`stdin`]: std::io::stdin
     #[must_use]
-    pub fn setup(tx_parsed_input_events: InputEventSender) -> Self {
-        let poll_handle = Poll::new().expect("Failed to create mio::Poll");
+    pub fn setup(poll: Poll, state: PollerThreadLifecycleState) -> Self {
+        let poll_handle = poll;
         let mio_registry = poll_handle.registry();
 
         // Register stdin with mio.
@@ -156,18 +209,25 @@ impl MioPollerThread {
                 SourceKindReady::Stdin.to_token(),
                 Interest::READABLE,
             )
-            .expect("Failed to register stdin with mio");
+            .expect(
+                "Failed to register stdin (fd 0) with mio: epoll_ctl failed. \
+                 stdin may already be registered elsewhere or fd is invalid.",
+            );
 
         // Register SIGWINCH with signal-hook-mio.
-        let mut signals =
-            Signals::new([SIGWINCH]).expect("Failed to register SIGWINCH handler");
+        let mut signals = Signals::new([SIGWINCH]).expect(
+            "Failed to register SIGWINCH handler via signal-hook: \
+             signal already has incompatible handler or sigaction failed.",
+        );
         mio_registry
             .register(
                 &mut signals,
                 SourceKindReady::Signals.to_token(),
                 Interest::READABLE,
             )
-            .expect("Failed to register SIGWINCH with mio");
+            .expect(
+                "Failed to register SIGWINCH signal fd with mio: epoll_ctl failed on signalfd.",
+            );
 
         let ready_events_buffer = Events::with_capacity(EVENTS_CAPACITY);
 
@@ -182,7 +242,7 @@ impl MioPollerThread {
             stdin_unparsed_byte_buffer: [0u8; STDIN_READ_BUFFER_SIZE],
             vt_100_input_seq_parser: StatefulInputParser::default(),
             paste_collection_state: PasteCollectionState::Inactive,
-            tx_parsed_input_events,
+            state,
         }
     }
 
@@ -203,8 +263,8 @@ impl MioPollerThread {
     /// </div>
     ///
     /// [EINTR Handling]: super#eintr-handling
-    /// [`inotifywait`]: https://linux.die.net/man/1/inotifywait
     /// [`SIGWINCH`]: signal_hook::consts::SIGWINCH
+    /// [`inotifywait`]: https://linux.die.net/man/1/inotifywait
     /// [`stdin`]: std::io::stdin
     pub fn start(&mut self) {
         // Breaks borrow so dispatch can use `&mut self`.
@@ -214,28 +274,33 @@ impl MioPollerThread {
 
         loop {
             // Block until stdin or signals become ready.
-            if let Err(err) = self.poll_handle.poll(&mut self.ready_events_buffer, None) {
-                match err.kind() {
-                    // EINTR - retry (see module docs: EINTR Handling).
-                    ErrorKind::Interrupted => continue,
-                    _ => {
-                        DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
-                            tracing::debug!(
-                                message = "mio-poller-thread: poll error",
-                                error = ?err
-                            );
-                        });
-                        let _unused =
-                            self.tx_parsed_input_events.send(ReaderThreadMessage::Error);
-                        break;
-                    }
+            let poll_result = self.poll_handle.poll(&mut self.ready_events_buffer, None);
+
+            // Handle poll errors.
+            if let Err(err) = poll_result {
+                // EINTR - retry (see module docs: EINTR Handling).
+                if err.kind() == ErrorKind::Interrupted {
+                    continue;
                 }
+
+                // Fatal error - notify consumers and exit loop.
+                DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
+                    tracing::debug!(
+                        message = "mio-poller-thread: poll error",
+                        error = ?err
+                    );
+                });
+                let _unused = self
+                    .state
+                    .tx_poller_event
+                    .send(PollerEvent::Stdin(StdinEvent::Error));
+                break;
             }
 
             // Dispatch ready events.
             for token in collect_ready_tokens(&self.ready_events_buffer) {
-                let source_kind = SourceKindReady::from_token(token);
-                if dispatch(source_kind, self, token) == ThreadLoopContinuation::Return {
+                let continuation = dispatch(token, self);
+                if continuation == Continuation::Stop {
                     return;
                 }
             }

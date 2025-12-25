@@ -6,7 +6,7 @@
 //!
 //! # Entry Point
 //!
-//! [`DirectToAnsiInputDevice::try_read_event`] is the main async method for reading
+//! [`DirectToAnsiInputDevice::next`] is the main async method for reading
 //! terminal input with zero-latency [`ESC` key detection].
 //!
 //! # Platform Support
@@ -56,10 +56,10 @@
 //! - [crossterm issue] - "/dev/tty does not work on macOS with kqueue"
 //! - [macOS /dev/tty polling blog post] - Detailed technical explanation
 //!
-//! [`DirectToAnsiInputDevice::try_read_event`]: DirectToAnsiInputDevice::try_read_event
-//! [`ESC` key detection]: DirectToAnsiInputDevice#esc-key-disambiguation-crossterm-more-flag-pattern
+//! [`DirectToAnsiInputDevice::next`]: DirectToAnsiInputDevice::next
 //! [`DirectToAnsi`]: super
 //! [`EINVAL`]: https://man7.org/linux/man-pages/man3/errno.3.html
+//! [`ESC` key detection]: DirectToAnsiInputDevice#esc-key-disambiguation-crossterm-more-flag-pattern
 //! [`SIGWINCH`]: https://man7.org/linux/man-pages/man7/signal.7.html
 //! [`TERMINAL_LIB_BACKEND`]: crate::TERMINAL_LIB_BACKEND
 //! [`epoll(7)`]: https://man7.org/linux/man-pages/man7/epoll.7.html
@@ -81,7 +81,7 @@
 // Private submodules - organized by functional concern.
 mod input_device;
 
-// Conditionally public for documentation (to allow rustdoc links from mio_poller docs).
+// Conditionally public for documentation.
 #[cfg(any(test, doc))]
 pub mod paste_state_machine;
 #[cfg(not(any(test, doc)))]
@@ -92,30 +92,29 @@ pub mod stateful_parser;
 #[cfg(not(any(test, doc)))]
 mod stateful_parser;
 
-// Conditionally public for documentation (to allow rustdoc links from public items).
 #[cfg(any(test, doc))]
 pub mod mio_poller;
 #[cfg(not(any(test, doc)))]
 mod mio_poller;
 
-// Conditionally public for documentation (to allow rustdoc links from public items).
 #[cfg(any(test, doc))]
-pub mod global_input_resource;
+pub mod channel_types;
 #[cfg(not(any(test, doc)))]
-mod global_input_resource;
-
-#[cfg(any(test, doc))]
-pub mod types;
-#[cfg(not(any(test, doc)))]
-mod types;
+mod channel_types;
 
 #[cfg(any(test, doc))]
 pub mod protocol_conversion;
 #[cfg(not(any(test, doc)))]
 mod protocol_conversion;
 
+#[cfg(any(test, doc))]
+pub mod at_most_one_instance_assert;
+#[cfg(not(any(test, doc)))]
+mod at_most_one_instance_assert;
+
 // Re-exports - flatten the public API.
 pub use input_device::*;
+pub use mio_poller::*;
 
 // Documentation-only module pointing to actual PTY tests location.
 // Named differently from output::integration_tests to avoid ambiguous glob re-exports.

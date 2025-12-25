@@ -3,10 +3,24 @@
 //! Paste state machine for collecting bracketed paste text. See [`PasteCollectionState`]
 //! docs.
 
-use super::{protocol_conversion::convert_input_event, types::PasteStateResult};
+use super::protocol_conversion::convert_input_event;
 use crate::{InputEvent,
             core::ansi::vt_100_terminal_input_parser::{VT100InputEventIR,
                                                        VT100KeyCodeIR, VT100PasteModeIR}};
+
+/// Result from the paste state machine indicating how to proceed.
+///
+/// Used by [`apply_paste_state_machine`] to communicate back to the reader loop.
+/// Each call returns this result to indicate:
+/// - An event is ready to emit
+/// - The event was absorbed (e.g., collecting paste data)
+#[allow(missing_debug_implementations)]
+pub enum PasteStateResult {
+    /// Emit this event to the caller.
+    Emit(InputEvent),
+    /// Event absorbed by the state machine (e.g., paste in progress).
+    Absorbed,
+}
 
 /// State machine for collecting bracketed paste text.
 ///
@@ -15,7 +29,7 @@ use crate::{InputEvent,
 /// - Multiple `Keyboard` events (the actual pasted text)
 /// - `Paste(End)` marker
 ///
-/// See the data flow diagram in [`try_read_event()`] for how this state machine
+/// See the data flow diagram in [`next()`] for how this state machine
 /// integrates with the input pipeline.
 ///
 /// This state tracks whether we're currently collecting text between markers.
@@ -33,7 +47,7 @@ use crate::{InputEvent,
 ///
 /// [`DirectToAnsi`]: mod@super::super
 /// [`VT100KeyCodeIR::Enter`]: crate::core::ansi::vt_100_terminal_input_parser::VT100KeyCodeIR::Enter
-/// [`try_read_event()`]: super::input_device::DirectToAnsiInputDevice::try_read_event
+/// [`next()`]: super::input_device::DirectToAnsiInputDevice::next
 #[derive(Debug)]
 pub enum PasteCollectionState {
     /// Not currently in a paste operation.

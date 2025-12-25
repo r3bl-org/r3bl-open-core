@@ -2,44 +2,44 @@
 
 //! Event dispatching for the [`mio`] poller event loop.
 
-use super::{handler_signals::consume_pending_signals,
+use super::{handler_receiver_drop::handle_receiver_drop_waker,
+            handler_signals::consume_pending_signals,
             handler_stdin::consume_stdin_input, poller_thread::MioPollerThread,
             sources::SourceKindReady};
-use crate::tui::{DEBUG_TUI_SHOW_TERMINAL_BACKEND,
-                 terminal_lib_backends::direct_to_ansi::input::types::ThreadLoopContinuation};
+use crate::{Continuation, tui::DEBUG_TUI_SHOW_TERMINAL_BACKEND};
 use mio::Token;
 
-/// Dispatches to the appropriate handler for the given source kind.
+/// Dispatches to the appropriate handler based on the [`Token`].
 ///
 /// This centralizes the token → handler mapping, making it easier to add new
 /// sources—just add a variant and its match arm here.
 ///
 /// # Arguments
 ///
-/// - `source_kind`: Which source kind became ready ([`SourceKindReady`]).
+/// - `token`: The [`mio::Token`] identifying which source became ready.
 /// - `poller`: The [`MioPollerThread`] containing the state for handlers.
-/// - `token`: The original [`Token`] for diagnostic logging on unknown tokens.
 ///
 /// # Returns
 ///
-/// - [`ThreadLoopContinuation::Continue`]: Event handled, continue polling.
-/// - [`ThreadLoopContinuation::Return`]: Exit condition met.
-pub fn dispatch(
-    source_kind: SourceKindReady,
-    poller: &mut MioPollerThread,
-    token: Token,
-) -> ThreadLoopContinuation {
-    match source_kind {
-        SourceKindReady::Stdin => consume_stdin_input(poller),
-        SourceKindReady::Signals => consume_pending_signals(poller),
-        SourceKindReady::Unknown => {
-            DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
-                tracing::warn!(
-                    message = "mio-poller-thread: unknown token",
-                    token = ?token
-                );
-            });
-            ThreadLoopContinuation::Continue
-        }
+/// - [`Continuation::Continue`]: Event handled, continue polling.
+/// - [`Continuation::Stop`]: Exit condition met.
+pub fn dispatch(token: Token, poller: &mut MioPollerThread) -> Continuation {
+    use SourceKindReady::{ReceiverDropWaker, Signals, Stdin, Unknown};
+    match SourceKindReady::from_token(token) {
+        Stdin => consume_stdin_input(poller),
+        Signals => consume_pending_signals(poller),
+        ReceiverDropWaker => handle_receiver_drop_waker(poller),
+        Unknown => handle_unknown(token),
     }
+}
+
+#[must_use]
+pub fn handle_unknown(token: Token) -> Continuation {
+    DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
+        tracing::warn!(
+            message = "mio_poller thread: unknown token",
+            token = ?token
+        );
+    });
+    Continuation::Continue
 }

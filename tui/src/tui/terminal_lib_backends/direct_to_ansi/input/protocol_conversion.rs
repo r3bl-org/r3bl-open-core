@@ -63,7 +63,7 @@ use crate::{Button, FocusEvent, InputEvent, Key, KeyPress, KeyState, ModifierKey
 ///   - Converts coordinates: 1-based [`TermPos`] → 0-based [`Pos`]
 /// - **Resize**: [`VT100InputEventIR::Resize`] → [`InputEvent::Resize`]
 /// - **Focus**: [`VT100InputEventIR::Focus`] → [`InputEvent::Focus`]
-/// - **Paste**: Should never be called (handled by state machine in `try_read_event()`)
+/// - **Paste**: Should never be called (handled by state machine in `next()`)
 ///
 /// Returns `None` if the event cannot be converted (e.g., unknown mouse button).
 ///
@@ -144,7 +144,7 @@ pub fn convert_input_event(vt100_event: VT100InputEventIR) -> Option<InputEvent>
         }
         VT100InputEventIR::Paste(_paste_mode) => {
             unreachable!(
-                "Paste events are handled by state machine in try_read_event() \
+                "Paste events are handled by state machine in next() \
                  and should never reach convert_input_event()"
             )
         }

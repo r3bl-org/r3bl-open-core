@@ -33,18 +33,6 @@ const CONTROLLED_READY: &str = "CONTROLLED_READY";
 // XMARK: Process isolated test functions using env vars & PTY.
 
 generate_pty_test! {
-    /// PTY-based integration test for newly added keyboard features.
-    ///
-    /// Validates that the [`DirectToAnsiInputDevice`] correctly parses:
-    /// - Tab key (basic forward navigation)
-    /// - Shift+Tab (`BackTab` for backward navigation)
-    /// - Ctrl+Space (special input trigger)
-    /// - Alternative Home/End sequences
-    /// - Numpad keys in application mode
-    ///
-    /// Run with: `cargo test -p r3bl_tui --lib test_pty_new_keyboard_features -- --nocapture`
-    ///
-    /// [`DirectToAnsiInputDevice`]: crate::tui::terminal_lib_backends::direct_to_ansi::DirectToAnsiInputDevice
     test_fn: test_pty_new_keyboard_features,
     controller: pty_controller_entry_point,
     controlled: pty_controlled_entry_point
@@ -223,7 +211,7 @@ fn pty_controlled_entry_point() -> ! {
 
         loop {
             tokio::select! {
-                event_result = input_device.try_read_event() => {
+                event_result = input_device.next() => {
                     match event_result {
                         Some(event) => {
                             event_count += 1;

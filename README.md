@@ -518,7 +518,7 @@ handles **OS-level setup** with a clean main function structure and will:
 - **File Watching**: Install file watchers (inotifywait on Linux, fswatch on macOS)
 - **Development Utilities**: Install htop, screen, tmux for system monitoring
 - **Node.js Ecosystem**: Install Node.js and npm for web tooling
-- **AI Integration**: Install Claude Code CLI with MCP server configuration
+- **AI Integration**: Install Claude Code CLI with serena plugin (connects to rust-analyzer via LSP)
 - **Rust Development Tools Setup**: Call `fish run.fish install-cargo-tools` for all Rust-specific
   tooling
 
@@ -548,7 +548,7 @@ fish run.fish install-cargo-tools
 **From crates.io (via cargo-binstall with fallback to cargo install):**
 
 - **cargo-binstall**: Fast binary installer (installed first as foundation)
-- **uv**: Modern Python package manager (required for Serena semantic code MCP server)
+- **uv**: Modern Python package manager (used by various development tools)
 - **Core Development Tools**: bacon, flamegraph, inferno
 - **Workspace Management**: cargo-workspaces, cargo-cache, cargo-update
 - **Code Quality**: cargo-deny, cargo-unmaintained, cargo-expand, cargo-readme
@@ -1459,7 +1459,7 @@ fish run.fish toolchain-update
   toolchain in first attempt)
 - **Updates** `rust-toolchain.toml` to use the validated stable nightly
 - Installs the target toolchain with rust-analyzer component (required by IDEs, cargo, and serena
-  MCP server)
+  plugin)
 - **Desktop notifications** (via notify-send):
   - 🎉 Success notification when stable toolchain found (normal urgency)
   - 🚨 Critical alert if no stable toolchain found in entire 45-day window (extremely rare)
@@ -1528,7 +1528,7 @@ fish run.fish toolchain-sync
 - **Reads** the channel value from `rust-toolchain.toml` (doesn't modify it)
 - Installs the exact toolchain specified in the TOML
 - Installs rust-analyzer and rust-src components automatically (required by IDEs, cargo, and serena
-  MCP server)
+  plugin)
 - Performs aggressive cleanup by removing all old nightly toolchains except:
   - All stable toolchains (`stable-*`)
   - The target toolchain from the TOML
@@ -1539,7 +1539,7 @@ fish run.fish toolchain-sync
 - After `git checkout/reset/pull` changes `rust-toolchain.toml`
 - When rust-analyzer is missing for the current toolchain
 - When your IDE shows "rust-analyzer failed to start"
-- When Claude Code's serena MCP server crashes with LSP initialization errors
+- When Claude Code's serena plugin crashes with LSP initialization errors
 - After manually editing `rust-toolchain.toml`
 - When you need to stay on a specific nightly version
 

@@ -28,7 +28,7 @@
 #
 #   Optional:
 #     - Node.js & npm           For Claude Code CLI installation
-#     - Claude Code             AI coding assistant with MCP server config
+#     - Claude Code             AI coding assistant with serena plugin
 #
 # SUPPORTED PLATFORMS:
 #   - macOS (via Homebrew)
@@ -221,7 +221,7 @@ install_nodejs() {
     fi
 }
 
-# Install Claude Code and configure MCP servers
+# Install Claude Code and plugins
 install_claude_code() {
     if command -v npm &>/dev/null; then
         if ! command -v claude &>/dev/null; then
@@ -229,14 +229,15 @@ install_claude_code() {
             npm install -g @anthropic-ai/claude-code
             # Fix npm permissions
             sudo chown -R $USER:$(id -gn) $(npm -g config get prefix)
-
-            # Configure MCP servers for Claude
-            if command -v claude &>/dev/null; then
-                echo "Configuring Claude MCP servers..."
-                claude mcp add serena -- uvx --from git+https://github.com/oraios/serena serena start-mcp-server --context ide-assistant --project "$PWD" 2>/dev/null || true
-            fi
         else
             echo "✓ claude already installed"
+        fi
+
+        # Install plugins (global, works across all projects)
+        if command -v claude &>/dev/null; then
+            echo "Installing Claude Code plugins..."
+            # Serena: MCP server providing code navigation and modification via rust-analyzer
+            claude plugin install serena 2>/dev/null || echo "  Note: serena plugin may need manual install via /plugin"
         fi
     else
         echo "Warning: npm not found. Cannot install Claude Code"

@@ -49,7 +49,7 @@
 //!     │                                       │
 //! ```
 //!
-//! [`DirectToAnsiInputDevice`]: crate::tui::terminal_lib_backends::direct_to_ansi::DirectToAnsiInputDevice
+//! [`DirectToAnsiInputDevice`]: crate::direct_to_ansi::DirectToAnsiInputDevice
 //! [`pty_terminal_events_test`]: super::pty_terminal_events_test
 
 use crate::{ControlledChild, InputEvent, PtyPair, generate_pty_test,
@@ -62,14 +62,6 @@ use std::{io::{BufRead, BufReader, Write},
 const CONTROLLED_READY: &str = "CONTROLLED_READY";
 
 generate_pty_test! {
-    /// PTY-based integration test for SIGWINCH signal handling.
-    ///
-    /// Validates that [`DirectToAnsiInputDevice`] correctly receives terminal resize
-    /// events via the SIGWINCH signal (not ANSI sequences).
-    ///
-    /// Run with: `cargo test -p r3bl_tui --lib test_pty_sigwinch -- --nocapture`
-    ///
-    /// [`DirectToAnsiInputDevice`]: crate::tui::terminal_lib_backends::direct_to_ansi::DirectToAnsiInputDevice
     test_fn: test_pty_sigwinch,
     controller: pty_controller_entry_point,
     controlled: pty_controlled_entry_point
@@ -216,7 +208,7 @@ fn pty_controlled_entry_point() -> ! {
 
         loop {
             tokio::select! {
-                event_result = input_device.try_read_event() => {
+                event_result = input_device.next() => {
                     match event_result {
                         Some(InputEvent::Resize(size)) => {
                             eprintln!("🔍 PTY Controlled: Received resize event: {size:?}");

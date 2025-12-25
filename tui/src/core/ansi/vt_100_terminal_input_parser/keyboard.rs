@@ -457,7 +457,7 @@
 //! [`VT100InputEventIR`]: super::VT100InputEventIR
 //! [`VT100KeyCodeIR`]: super::VT100KeyCodeIR
 //! [`VT100KeyModifiersIR`]: super::VT100KeyModifiersIR
-//! [`convert_input_event()`]: crate::tui::terminal_lib_backends::direct_to_ansi::input::protocol_conversion::convert_input_event
+//! [`convert_input_event()`]: crate::direct_to_ansi::input::protocol_conversion::convert_input_event
 //! [`keyboard`]: mod@super
 //! [`mouse`]: mod@super::mouse
 //! [`router`]: mod@super::router
