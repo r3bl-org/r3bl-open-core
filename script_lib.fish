@@ -237,6 +237,68 @@ function get_package_manager
     end
 end
 
+# Ensures required build dependencies are installed for cargo operations.
+#
+# This function checks for critical dependencies needed by the project's
+# cargo configuration (.cargo/config.toml uses clang + wild linker).
+#
+# Dependencies checked:
+# - clang: Required as linker driver
+# - wild: The actual linker (installed via cargo by bootstrap.sh)
+#
+# Installation strategy:
+# - If anything is missing, run bootstrap.sh (handles all distros, idempotent)
+# - bootstrap.sh uses install_if_missing, so it won't reinstall existing tools
+# - Simple: one code path, predictable behavior
+#
+# Returns: 0 = all dependencies available, 1 = installation failed
+#
+# Usage:
+#   ensure_build_dependencies || return 1
+function ensure_build_dependencies
+    # Check what's missing
+    set -l missing_deps
+    if not command -v clang >/dev/null
+        set -a missing_deps "clang"
+    end
+    if not command -v wild >/dev/null
+        set -a missing_deps "wild"
+    end
+
+    # If nothing is missing, we're good
+    if test (count $missing_deps) -eq 0
+        return 0
+    end
+
+    echo "🔧 Missing build dependencies: $missing_deps"
+    echo "   Running bootstrap.sh to install..."
+
+    # Run bootstrap.sh (idempotent - safe to run even if some deps exist)
+    set -l script_dir (dirname (status filename))
+    if not test -x "$script_dir/bootstrap.sh"
+        echo "   ❌ bootstrap.sh not found at $script_dir/bootstrap.sh"
+        return 1
+    end
+
+    if not bash "$script_dir/bootstrap.sh"
+        echo "   ❌ bootstrap.sh failed"
+        return 1
+    end
+
+    # Verify all dependencies are now available
+    if not command -v clang >/dev/null
+        echo "   ❌ clang still not available after bootstrap.sh"
+        return 1
+    end
+    if not command -v wild >/dev/null
+        echo "   ❌ wild still not available after bootstrap.sh"
+        return 1
+    end
+
+    echo "   ✅ All build dependencies installed"
+    return 0
+end
+
 # Executes a closure in a specific directory and safely returns to the original.
 #
 # This utility ensures that directory changes are properly managed, always
@@ -265,74 +327,6 @@ function run_in_directory
         set exit_code $status
         cd $original_dir
         return $exit_code
-    end
-end
-
-# Stops all running Docker containers and prunes the system.
-#
-# This utility function provides complete Docker cleanup by stopping all
-# running containers and removing unused resources.
-#
-# Operations performed:
-# 1. Lists all container IDs (running and stopped)
-# 2. Stops each container gracefully
-# 3. Prunes system to remove:
-#    - Stopped containers
-#    - Unused networks
-#    - Dangling images
-#    - Build cache
-#
-# Features:
-# - Safe handling of empty container list
-# - Progress feedback for each container
-# - Automatic system cleanup
-#
-# Usage:
-#   docker_stop_all_containers
-#
-# Note: Requires Docker to be installed and running
-function docker_stop_all_containers
-    set running_containers (docker ps -aq 2>/dev/null | grep -v '^$')
-
-    if test (count $running_containers) -gt 0
-        echo "Stopping "(count $running_containers)" running containers..."
-        for container_id in $running_containers
-            echo "Stopping container: $container_id"
-            docker stop $container_id
-        end
-        echo "Pruning system..."
-        docker system prune -af
-    end
-end
-
-# Removes all Docker images from the local system.
-#
-# This function performs a complete cleanup of Docker images, useful for
-# freeing disk space or ensuring clean builds.
-#
-# Operations:
-# 1. Lists all image IDs
-# 2. Force removes each image
-#
-# Features:
-# - Handles images with dependent containers (force removal)
-# - Safe handling of empty image list
-# - Progress feedback for each image
-#
-# Warning: This will remove ALL images, including those in use.
-# Containers using these images will need to re-download them.
-#
-# Usage:
-#   docker_remove_all_images
-function docker_remove_all_images
-    set images (docker image ls -q 2>/dev/null | grep -v '^$')
-
-    if test (count $images) -gt 0
-        echo "Removing "(count $images)" existing images..."
-        for image_id in $images
-            echo "Removing image: $image_id"
-            docker image rm -f $image_id
-        end
     end
 end
 
@@ -706,7 +700,11 @@ function run_benchmark_with_scripted_input
     if not command -v expect >/dev/null
         echo "Error: expect is not installed (required for benchmark mode)."
         echo "Please run from the repo root:"
-        echo "  ./bootstrap.sh    # Or manually: sudo apt install expect"
+        echo "  ./bootstrap.sh"
+        echo "Or manually:"
+        echo "  Ubuntu/Debian: sudo apt install expect"
+        echo "  Fedora/RHEL:   sudo dnf install expect"
+        echo "  Arch:          sudo pacman -S expect"
         return
     end
 
@@ -1509,4 +1507,186 @@ function log_and_print
 
     # Print to stdout AND append to log file
     echo $message | tee -a $log_file
+end
+
+# ============================================================================
+# Shared Toolchain Script Functions
+# ============================================================================
+# These functions are shared between rust-toolchain-update.fish and
+# rust-toolchain-sync-to-toml.fish to avoid code duplication.
+#
+# Convention: Functions use global variables set by the calling script:
+#   - $LOG_FILE: Path to log file
+#   - $PROJECT_DIR: Project root directory
+#   - $TOOLCHAIN_FILE: Path to rust-toolchain.toml
+#   - $target_toolchain: The toolchain being installed/validated
+# ============================================================================
+
+# Logs a message to both stdout and the log file.
+#
+# Uses global: $LOG_FILE
+#
+# Usage:
+#   toolchain_log "Installing components..."
+function toolchain_log
+    set -l message $argv[1]
+    echo $message | tee -a $LOG_FILE
+end
+
+# Logs a message without trailing newline.
+#
+# Uses global: $LOG_FILE
+#
+# Usage:
+#   toolchain_log_no_newline "Progress: "
+function toolchain_log_no_newline
+    set -l message $argv[1]
+    echo -n $message | tee -a $LOG_FILE
+end
+
+# Runs a command and logs its output.
+#
+# Uses global: $LOG_FILE
+#
+# Usage:
+#   toolchain_log_command "Installing toolchain..." rustup install nightly
+function toolchain_log_command
+    set -l description $argv[1]
+    toolchain_log $description
+    $argv[2..] 2>&1 | tee -a $LOG_FILE
+    return $pipestatus[1]
+end
+
+# Validates that required prerequisites exist.
+#
+# Uses globals: $PROJECT_DIR, $TOOLCHAIN_FILE
+#
+# Checks:
+# - Project directory exists
+# - rust-toolchain.toml exists
+# - Build dependencies (clang, wild) are available
+#
+# Returns: 0 if valid, 1 if not
+function toolchain_validate_prerequisites
+    toolchain_log "Validating prerequisites..."
+
+    # Check if project directory exists
+    if not test -d $PROJECT_DIR
+        toolchain_log "ERROR: Project directory not found: $PROJECT_DIR"
+        return 1
+    end
+
+    # Check if rust-toolchain.toml exists
+    if not test -f $TOOLCHAIN_FILE
+        toolchain_log "ERROR: rust-toolchain.toml not found: $TOOLCHAIN_FILE"
+        return 1
+    end
+
+    # Ensure build dependencies (clang, wild) are available
+    if not ensure_build_dependencies
+        toolchain_log "ERROR: Failed to install required build dependencies"
+        return 1
+    end
+
+    toolchain_log "✅ Prerequisites validated successfully"
+    return 0
+end
+
+# Shows current toolchain state.
+#
+# Uses globals: $PROJECT_DIR, $LOG_FILE
+function toolchain_show_current_state
+    toolchain_log "Changing to project directory: $PROJECT_DIR"
+    cd $PROJECT_DIR
+
+    if not toolchain_log_command "Current toolchain information:" rustup show
+        toolchain_log "WARNING: Failed to get current toolchain information"
+    end
+end
+
+# Verifies final toolchain state after installation.
+#
+# Uses global: $LOG_FILE
+function toolchain_verify_final_state
+    if not toolchain_log_command "Final installed toolchains:" rustup toolchain list
+        toolchain_log "WARNING: Failed to list final toolchains"
+    end
+
+    if not toolchain_log_command "Verifying project toolchain:" rustup show
+        toolchain_log "WARNING: Failed to verify project toolchain"
+    end
+end
+
+# Installs the target toolchain if not already installed.
+#
+# Uses globals: $target_toolchain, $LOG_FILE
+#
+# Returns: 0 on success, 1 on failure
+function toolchain_install_target
+    if not toolchain_log_command "Installing toolchain $target_toolchain (if not already installed)..." rustup toolchain install $target_toolchain
+        toolchain_log "❌ Failed to install $target_toolchain"
+        return 1
+    end
+
+    toolchain_log "✅ Successfully installed/verified $target_toolchain"
+    return 0
+end
+
+# Installs the rust-analyzer component for the target toolchain.
+#
+# Uses globals: $target_toolchain, $LOG_FILE
+#
+# Returns: 0 on success, 1 on failure
+function toolchain_install_rust_analyzer
+    toolchain_log "Installing rust-analyzer component for $target_toolchain..."
+    if not toolchain_log_command "Adding rust-analyzer component..." rustup component add rust-analyzer --toolchain $target_toolchain
+        toolchain_log "❌ Failed to install rust-analyzer component"
+        return 1
+    end
+
+    toolchain_log "✅ Successfully installed rust-analyzer component"
+    return 0
+end
+
+# Installs additional components (rust-src) for IDE support.
+#
+# Uses globals: $target_toolchain, $LOG_FILE
+#
+# Note: Failures are non-fatal (logs warning but returns 0)
+function toolchain_install_additional_components
+    toolchain_log "Installing additional components for $target_toolchain..."
+
+    # Install rust-src for better IDE support (go-to-definition for std library)
+    if toolchain_log_command "Adding rust-src component..." rustup component add rust-src --toolchain $target_toolchain
+        toolchain_log "✅ Successfully installed rust-src component"
+    else
+        toolchain_log "⚠️  Failed to install rust-src component (continuing anyway)"
+    end
+
+    return 0
+end
+
+# Installs all required components for a toolchain.
+#
+# This is a convenience function that calls:
+# - toolchain_install_rust_analyzer
+# - toolchain_install_additional_components
+# - install_windows_target
+#
+# Uses globals: $target_toolchain, $LOG_FILE
+#
+# Returns: 0 on success, 1 if rust-analyzer fails (other failures are warnings)
+function toolchain_install_all_components
+    # Install rust-analyzer component (required)
+    if not toolchain_install_rust_analyzer
+        return 1
+    end
+
+    # Install additional components (rust-src for IDE support)
+    toolchain_install_additional_components
+
+    # Install Windows cross-compilation target for verifying platform-specific code
+    install_windows_target
+
+    return 0
 end

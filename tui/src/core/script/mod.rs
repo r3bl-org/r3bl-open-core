@@ -3,7 +3,7 @@
 #![allow(clippy::literal_string_with_formatting_args)]
 
 // Private modules (hide internal structure)
-mod apt_install;
+mod package_manager;
 mod command_impl;
 mod crates_api;
 mod directory_change;
@@ -27,7 +27,7 @@ mod permissions;
 mod temp_dir;
 
 // Re-export.
-pub use apt_install::*;
+pub use package_manager::*;
 pub use command_impl::*;
 pub use crates_api::*;
 pub use directory_change::*;

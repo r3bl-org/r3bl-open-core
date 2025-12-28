@@ -227,6 +227,12 @@ function main
 
     # No lock needed - validation is read-only and doesn't modify the toolchain
 
+    # Ensure build dependencies (clang, wild) are available
+    if not ensure_build_dependencies
+        echo "❌ Failed to install required build dependencies"
+        return 1
+    end
+
     switch $mode
         case quick
             validate_quick

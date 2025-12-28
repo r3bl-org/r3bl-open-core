@@ -651,7 +651,10 @@ function watch_mode
     if not command -v inotifywait >/dev/null 2>&1
         echo "❌ Error: inotifywait not found" >&2
         echo "Install with: ./bootstrap.sh" >&2
-        echo "Or manually: sudo apt-get install inotify-tools" >&2
+        echo "Or manually:" >&2
+        echo "  Ubuntu/Debian: sudo apt install inotify-tools" >&2
+        echo "  Fedora/RHEL:   sudo dnf install inotify-tools" >&2
+        echo "  Arch:          sudo pacman -S inotify-tools" >&2
         return 1
     end
 

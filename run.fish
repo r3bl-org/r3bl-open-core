@@ -125,8 +125,8 @@ function main
             install-cmdr
         case install-build-infra
             install-build-infra
-        case docker-build
-            docker-build
+        case test-cmdr-install-on-all-linux-distros
+            test-cmdr-install-on-all-linux-distros
             # Unified commands
         case log
             log
@@ -194,7 +194,8 @@ function print-help
         echo ""
         echo (set_color cyan --bold)"cmdr-specific commands:"(set_color normal)
         echo "    "(set_color green)"run-binaries"(set_color normal)"         Run edi, giti, or rc"
-        echo "    "(set_color green)"docker-build"(set_color normal)"         Build release in Docker"
+        echo "    "(set_color green)"test-cmdr-install-on-all-linux-distros"(set_color normal)
+        echo "                             Test install on Ubuntu/Fedora/Arch (Linux only)"
         echo ""
         echo (set_color cyan --bold)"Development Session Commands:"(set_color normal)
         echo "    "(set_color green)"dev-dashboard"(set_color normal)"        Start 2-pane tmux development dashboard"
@@ -1089,45 +1090,64 @@ function install-build-infra
     cd $original_dir
 end
 
-# Builds and runs the cmdr project in a Docker container.
+# Tests r3bl-cmdr installation on all supported Linux distributions.
 #
-# This function provides a clean, reproducible build environment using Docker.
-# It handles the complete Docker workflow including cleanup, build, and execution.
+# This is the main command for verifying the install script works across
+# Ubuntu, Fedora, and Arch Linux using systemd-nspawn containers.
 #
-# Workflow:
-# 1. Stops all running containers
-# 2. Removes existing images
-# 3. Builds fresh Docker image
-# 4. Runs the container
-#
-# Features:
-# - Complete environment isolation
-# - Reproducible builds
-# - Automatic cleanup of old containers/images
+# What it does:
+# 1. Checks that we're on Linux (not macOS)
+# 2. Creates containers if they don't exist
+# 3. Runs install.bash in each container (ephemeral mode)
+# 4. Reports pass/fail for each distro
 #
 # Prerequisites:
-# - Docker installed and running
-# - Dockerfile present in cmdr/docker/
+# - Linux with systemd (Ubuntu, Fedora, Arch, etc.)
+# - sudo access
 #
 # Usage:
-#   fish run.fish docker-build
-function docker-build
+#   fish run.fish test-cmdr-install-on-all-linux-distros
+function test-cmdr-install-on-all-linux-distros
+    # Check for macOS
+    if test (uname) = "Darwin"
+        echo "Error: systemd-nspawn is Linux-only."
+        echo "This command cannot run on macOS."
+        echo ""
+        echo "Options:"
+        echo "  - Run on a Linux machine"
+        echo "  - Use a Linux VM"
+        return 1
+    end
+
     set original_dir $PWD
-    cd cmdr/docker
+    cd cmdr/systemd-nspawn
 
-    echo "Checking for running containers..."
-    docker_stop_all_containers
+    echo "=== Testing r3bl-cmdr Installation on All Linux Distros ==="
+    echo ""
 
-    echo "Checking for existing images..."
-    docker_remove_all_images
+    # Create containers if they don't exist
+    set containers_needed false
+    for container in cmdr-ubuntu cmdr-fedora cmdr-arch
+        if not test -d "/var/lib/machines/$container"
+            set containers_needed true
+            break
+        end
+    end
 
-    echo "Building Docker image..."
-    docker build -t r3bl-cmdr-install .
+    if test "$containers_needed" = true
+        echo "Creating missing containers..."
+        ./create-containers.fish all
+        echo ""
+    end
 
-    echo "Running Docker container..."
-    docker run r3bl-cmdr-install
+    # Run tests in ephemeral mode (clean-room)
+    echo "Running installation tests (ephemeral mode)..."
+    echo ""
+    ./run-test.fish --ephemeral all
+    set test_status $status
 
     cd $original_dir
+    return $test_status
 end
 
 # Unified commands

@@ -39,133 +39,44 @@ set -g TOOLCHAIN_FILE $PROJECT_DIR/rust-toolchain.toml
 set -g target_toolchain ""
 
 # ============================================================================
-# Helper Functions
+# Script-Specific Functions
 # ============================================================================
-
-function log_message
-    set -l message $argv[1]
-    echo $message | tee -a $LOG_FILE
-end
-
-function log_command_output
-    set -l description $argv[1]
-    log_message $description
-    $argv[2..] 2>&1 | tee -a $LOG_FILE
-    return $pipestatus[1]
-end
-
-function validate_prerequisites
-    log_message "Validating prerequisites..."
-
-    # Check if project directory exists
-    if not test -d $PROJECT_DIR
-        log_message "ERROR: Project directory not found: $PROJECT_DIR"
-        return 1
-    end
-
-    # Check if rust-toolchain.toml exists
-    if not test -f $TOOLCHAIN_FILE
-        log_message "ERROR: rust-toolchain.toml not found: $TOOLCHAIN_FILE"
-        return 1
-    end
-
-    log_message "✅ Prerequisites validated successfully"
-    return 0
-end
-
+# Note: Common helper functions (logging, validation, state management, component
+# installation) are now in script_lib.fish with toolchain_* prefix.
 # ============================================================================
-# State Management Functions
-# ============================================================================
-
-function show_current_state
-    log_message "Changing to project directory: $PROJECT_DIR"
-    cd $PROJECT_DIR
-
-    if not log_command_output "Current toolchain information:" rustup show
-        log_message "WARNING: Failed to get current toolchain information"
-    end
-end
-
-function verify_final_state
-    if not log_command_output "Final installed toolchains:" rustup toolchain list
-        log_message "WARNING: Failed to list final toolchains"
-    end
-
-    if not log_command_output "Verifying project toolchain:" rustup show
-        log_message "WARNING: Failed to verify project toolchain"
-    end
-end
-
-# ============================================================================
-# Core Logic Functions
-# ============================================================================
-
-function install_target_toolchain
-    if not log_command_output "Installing toolchain $target_toolchain (if not already installed)..." rustup toolchain install $target_toolchain
-        log_message "❌ Failed to install $target_toolchain"
-        return 1
-    end
-
-    log_message "✅ Successfully installed/verified $target_toolchain"
-    return 0
-end
-
-function install_rust_analyzer_component
-    log_message "Installing rust-analyzer component for $target_toolchain..."
-    if not log_command_output "Adding rust-analyzer component..." rustup component add rust-analyzer --toolchain $target_toolchain
-        log_message "❌ Failed to install rust-analyzer component"
-        return 1
-    end
-
-    log_message "✅ Successfully installed rust-analyzer component"
-    return 0
-end
-
-function install_additional_components
-    log_message "Installing additional components for $target_toolchain..."
-
-    # Install rust-src for better IDE support
-    if log_command_output "Adding rust-src component..." rustup component add rust-src --toolchain $target_toolchain
-        log_message "✅ Successfully installed rust-src component"
-    else
-        log_message "⚠️  Failed to install rust-src component (continuing anyway)"
-    end
-
-    return 0
-end
 
 function purge_all_toolchains
     # Clear rustup caches to prevent stale download/temp file issues
-    log_message "Clearing rustup download and temp caches..."
+    toolchain_log "Clearing rustup download and temp caches..."
     command rm -rf ~/.rustup/downloads/
     command rm -rf ~/.rustup/tmp/
-    log_message "✅ Rustup caches cleared"
-    log_message ""
+    toolchain_log "✅ Rustup caches cleared"
+    toolchain_log ""
 
     # Get disk usage before purge
-    log_message "Checking disk usage before purge..."
+    toolchain_log "Checking disk usage before purge..."
     set -l before_size (du -sh ~/.rustup/toolchains 2>/dev/null | cut -f1)
-    log_message "Toolchains directory size before purge: $before_size"
+    toolchain_log "Toolchains directory size before purge: $before_size"
 
     # List all currently installed toolchains
-    log_message "Currently installed toolchains:"
+    toolchain_log "Currently installed toolchains:"
     set -l all_toolchains (rustup toolchain list | cut -d' ' -f1)
     for toolchain in $all_toolchains
-        log_message "  - $toolchain"
+        toolchain_log "  - $toolchain"
     end
 
     # Nuclear cleanup - remove ALL toolchains (stable and nightly)
-    log_message "Starting nuclear toolchain purge (removing everything)..."
+    toolchain_log "Starting nuclear toolchain purge (removing everything)..."
     set -l removed_count 0
     set -l failed_toolchains
 
     for toolchain in $all_toolchains
-        log_message "  REMOVING: $toolchain"
+        toolchain_log "  REMOVING: $toolchain"
         if rustup toolchain uninstall $toolchain 2>&1 | tee -a $LOG_FILE
             set removed_count (math $removed_count + 1)
-            log_message "    ✅ Successfully removed $toolchain"
+            toolchain_log "    ✅ Successfully removed $toolchain"
         else
-            log_message "    ⚠️  rustup uninstall failed for $toolchain"
+            toolchain_log "    ⚠️  rustup uninstall failed for $toolchain"
             set -a failed_toolchains $toolchain
         end
     end
@@ -173,8 +84,8 @@ function purge_all_toolchains
     # Fallback: directly delete folders for any toolchains that failed to uninstall
     # This handles corrupted toolchains with "Missing manifest" errors
     if test (count $failed_toolchains) -gt 0
-        log_message ""
-        log_message "🔧 Attempting direct folder cleanup for stubborn toolchains..."
+        toolchain_log ""
+        toolchain_log "🔧 Attempting direct folder cleanup for stubborn toolchains..."
         set -l toolchains_dir "$HOME/.rustup/toolchains"
 
         for toolchain in $failed_toolchains
@@ -182,12 +93,12 @@ function purge_all_toolchains
             for suffix in "" "-x86_64-unknown-linux-gnu" "-aarch64-unknown-linux-gnu"
                 set -l folder_path "$toolchains_dir/$toolchain$suffix"
                 if test -d "$folder_path"
-                    log_message "    Deleting folder: $folder_path"
+                    toolchain_log "    Deleting folder: $folder_path"
                     if command rm -rf "$folder_path"
                         set removed_count (math $removed_count + 1)
-                        log_message "    ✅ Removed via direct deletion"
+                        toolchain_log "    ✅ Removed via direct deletion"
                     else
-                        log_message "    ❌ Failed to delete folder"
+                        toolchain_log "    ❌ Failed to delete folder"
                     end
                 end
             end
@@ -198,33 +109,33 @@ function purge_all_toolchains
     # (handles edge cases where toolchains exist on disk but not in rustup list)
     set -l remaining_folders (find ~/.rustup/toolchains -mindepth 1 -maxdepth 1 -type d 2>/dev/null)
     if test (count $remaining_folders) -gt 0
-        log_message ""
-        log_message "🧹 Cleaning orphaned toolchain folders..."
+        toolchain_log ""
+        toolchain_log "🧹 Cleaning orphaned toolchain folders..."
         for folder in $remaining_folders
-            log_message "    Removing orphaned: $folder"
+            toolchain_log "    Removing orphaned: $folder"
             command rm -rf "$folder" 2>/dev/null
         end
-        log_message "    ✅ Orphaned folders cleaned"
+        toolchain_log "    ✅ Orphaned folders cleaned"
     end
 
-    log_message "Removed $removed_count toolchain(s)"
+    toolchain_log "Removed $removed_count toolchain(s)"
 
     # Get disk usage after purge
-    log_message "Checking disk usage after purge..."
+    toolchain_log "Checking disk usage after purge..."
     set -l after_size (du -sh ~/.rustup/toolchains 2>/dev/null | cut -f1)
-    log_message "Toolchains directory size after purge: $after_size"
+    toolchain_log "Toolchains directory size after purge: $after_size"
 
     return 0
 end
 
 function install_stable_toolchain
-    log_message "Installing fresh stable toolchain..."
-    if not log_command_output "Installing stable toolchain..." rustup toolchain install stable
-        log_message "❌ Failed to install stable toolchain"
+    toolchain_log "Installing fresh stable toolchain..."
+    if not toolchain_log_command "Installing stable toolchain..." rustup toolchain install stable
+        toolchain_log "❌ Failed to install stable toolchain"
         return 1
     end
 
-    log_message "✅ Successfully installed stable toolchain"
+    toolchain_log "✅ Successfully installed stable toolchain"
     return 0
 end
 
@@ -242,7 +153,7 @@ function main
     end
 
     # Initialize
-    log_message "=== Rust Toolchain Sync Started at "(date)" ==="
+    toolchain_log "=== Rust Toolchain Sync Started at "(date)" ==="
 
     # Output log file location to stdout for user visibility
     echo ""
@@ -250,39 +161,39 @@ function main
     echo ""
 
     # Execute workflow
-    validate_prerequisites
+    toolchain_validate_prerequisites
     or begin
         release_toolchain_lock
         return 1
     end
 
     # Read toolchain from TOML using script_lib function
-    log_message "Reading toolchain from rust-toolchain.toml..."
+    toolchain_log "Reading toolchain from rust-toolchain.toml..."
     set -g target_toolchain (read_toolchain_from_toml)
     if test $status -ne 0
-        log_message "ERROR: Failed to read toolchain from rust-toolchain.toml"
+        toolchain_log "ERROR: Failed to read toolchain from rust-toolchain.toml"
         release_toolchain_lock
         return 1
     end
-    log_message "Target toolchain from TOML: $target_toolchain"
+    toolchain_log "Target toolchain from TOML: $target_toolchain"
 
-    show_current_state
+    toolchain_show_current_state
 
     # Phase 1: Nuclear purge - remove all toolchains
-    log_message ""
-    log_message "═══════════════════════════════════════════════════════"
-    log_message "Phase 1: Purge All Toolchains"
-    log_message "═══════════════════════════════════════════════════════"
-    log_message ""
+    toolchain_log ""
+    toolchain_log "═══════════════════════════════════════════════════════"
+    toolchain_log "Phase 1: Purge All Toolchains"
+    toolchain_log "═══════════════════════════════════════════════════════"
+    toolchain_log ""
 
     purge_all_toolchains
 
     # Phase 2: Install fresh stable toolchain
-    log_message ""
-    log_message "═══════════════════════════════════════════════════════"
-    log_message "Phase 2: Install Fresh Stable Toolchain"
-    log_message "═══════════════════════════════════════════════════════"
-    log_message ""
+    toolchain_log ""
+    toolchain_log "═══════════════════════════════════════════════════════"
+    toolchain_log "Phase 2: Install Fresh Stable Toolchain"
+    toolchain_log "═══════════════════════════════════════════════════════"
+    toolchain_log ""
 
     install_stable_toolchain
     or begin
@@ -291,69 +202,69 @@ function main
     end
 
     # Phase 3: Install target nightly toolchain
-    log_message ""
-    log_message "═══════════════════════════════════════════════════════"
-    log_message "Phase 3: Install Target Nightly Toolchain"
-    log_message "═══════════════════════════════════════════════════════"
-    log_message ""
+    toolchain_log ""
+    toolchain_log "═══════════════════════════════════════════════════════"
+    toolchain_log "Phase 3: Install Target Nightly Toolchain"
+    toolchain_log "═══════════════════════════════════════════════════════"
+    toolchain_log ""
 
-    install_target_toolchain
+    toolchain_install_target
     or begin
         release_toolchain_lock
         return 1
     end
 
     # Phase 4: Install components
-    log_message ""
-    log_message "═══════════════════════════════════════════════════════"
-    log_message "Phase 4: Install Components"
-    log_message "═══════════════════════════════════════════════════════"
-    log_message ""
+    toolchain_log ""
+    toolchain_log "═══════════════════════════════════════════════════════"
+    toolchain_log "Phase 4: Install Components"
+    toolchain_log "═══════════════════════════════════════════════════════"
+    toolchain_log ""
 
-    install_rust_analyzer_component
+    toolchain_install_rust_analyzer
     or begin
         release_toolchain_lock
         return 1
     end
 
-    install_additional_components
+    toolchain_install_additional_components
 
     # Install Windows cross-compilation target for verifying platform-specific code
     install_windows_target
 
-    verify_final_state
+    toolchain_verify_final_state
 
     # Release lock after successful completion
     release_toolchain_lock
 
     # Validate installation using quick validation
-    log_message ""
-    log_message "═══════════════════════════════════════════════════════"
-    log_message "Validating final installation (quick check)..."
-    log_message "═══════════════════════════════════════════════════════"
-    log_message ""
+    toolchain_log ""
+    toolchain_log "═══════════════════════════════════════════════════════"
+    toolchain_log "Validating final installation (quick check)..."
+    toolchain_log "═══════════════════════════════════════════════════════"
+    toolchain_log ""
 
     if fish ./rust-toolchain-validate.fish quick 2>&1 | tee -a $LOG_FILE
-        log_message ""
-        log_message "✅ Validation passed - toolchain fully operational"
+        toolchain_log ""
+        toolchain_log "✅ Validation passed - toolchain fully operational"
     else
         set -l validation_code $status
-        log_message ""
-        log_message "⚠️  Validation returned code $validation_code - check details above"
+        toolchain_log ""
+        toolchain_log "⚠️  Validation returned code $validation_code - check details above"
     end
-    log_message ""
+    toolchain_log ""
 
     # Cleanup
-    log_message "=== Rust Toolchain Sync Completed at "(date)" ==="
-    log_message ""
-    log_message "✨ Your Rust environment is now synced to rust-toolchain.toml"
-    log_message "   Toolchain: $target_toolchain"
-    log_message "   Components: rust-analyzer, rust-src"
-    log_message ""
-    log_message "💡 Next steps:"
-    log_message "   - Restart your IDE/editor to pick up the new toolchain"
-    log_message "   - Run 'cargo check' to verify everything works"
-    log_message ""
+    toolchain_log "=== Rust Toolchain Sync Completed at "(date)" ==="
+    toolchain_log ""
+    toolchain_log "✨ Your Rust environment is now synced to rust-toolchain.toml"
+    toolchain_log "   Toolchain: $target_toolchain"
+    toolchain_log "   Components: rust-analyzer, rust-src"
+    toolchain_log ""
+    toolchain_log "💡 Next steps:"
+    toolchain_log "   - Restart your IDE/editor to pick up the new toolchain"
+    toolchain_log "   - Run 'cargo check' to verify everything works"
+    toolchain_log ""
 
     return 0
 end
