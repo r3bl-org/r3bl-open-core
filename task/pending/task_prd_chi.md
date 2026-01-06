@@ -16,9 +16,12 @@
     - [Command Line Interface](#command-line-interface)
     - [Configuration (Future)](#configuration-future)
     - [Key Bindings](#key-bindings)
-      - [In Terminal Multiplexer Mode](#in-terminal-multiplexer-mode)
+      - [In Terminal Multiplexer Mode (Local)](#in-terminal-multiplexer-mode-local)
       - [In Chi Input Helper Mode](#in-chi-input-helper-mode)
       - [In Chi History Browser Mode](#in-chi-history-browser-mode)
+      - [In Network Discovery Mode](#in-network-discovery-mode)
+      - [In Remote Control Mode (as Controller)](#in-remote-control-mode-as-controller)
+      - [In Remote Control Mode (as Controlled)](#in-remote-control-mode-as-controlled)
     - [Data Flow & Integration](#data-flow--integration)
       - [Clipboard Integration](#clipboard-integration)
       - [History File Format](#history-file-format)
@@ -46,6 +49,17 @@
       - [Features](#features-1)
       - [UI Layout](#ui-layout-1)
       - [Implementation](#implementation-1)
+  - [Remote Control Mode](#remote-control-mode)
+    - [Remote Control Architecture](#remote-control-architecture)
+    - [Network Thread Architecture](#network-thread-architecture)
+    - [State Machine](#state-machine)
+    - [Network Protocol](#network-protocol)
+    - [Output Transport: OffscreenBuffer Serialization](#output-transport-offscreenbuffer-serialization)
+    - [Controlled Mode Display](#controlled-mode-display)
+    - [Network Discovery TUI (`chi --network`)](#network-discovery-tui-chi---network)
+    - [Security Model](#security-model)
+    - [Core Data Structures](#core-data-structures-1)
+    - [Viewport Handling](#viewport-handling)
   - [Technical Requirements](#technical-requirements)
     - [Dependencies](#dependencies)
     - [File System Requirements](#file-system-requirements)
@@ -71,9 +85,19 @@
     - [Phase 2 Features](#phase-2-features)
     - [Phase 3 Features](#phase-3-features)
 - [Implementation plan](#implementation-plan)
-  - [Step 1: Core Infrastructure [PENDING]](#step-1-core-infrastructure-pending)
-  - [Step 2: Multiplexer Logic [PENDING]](#step-2-multiplexer-logic-pending)
-  - [Step 3: Helper Apps & Testing [PENDING]](#step-3-helper-apps--testing-pending)
+  - [Phase 1: Local Mode](#phase-1-local-mode)
+    - [Step 1: Core Infrastructure [PENDING]](#step-1-core-infrastructure-pending)
+    - [Step 2: Multiplexer Logic [PENDING]](#step-2-multiplexer-logic-pending)
+    - [Step 3: Helper Apps & Testing [PENDING]](#step-3-helper-apps--testing-pending)
+  - [Phase 2: Remote Control Mode](#phase-2-remote-control-mode)
+    - [Step 4: Network Thread Infrastructure [PENDING]](#step-4-network-thread-infrastructure-pending)
+    - [Step 5: mDNS Discovery [PENDING]](#step-5-mdns-discovery-pending)
+    - [Step 6: TLS Communication [PENDING]](#step-6-tls-communication-pending)
+    - [Step 7: Network Discovery TUI [PENDING]](#step-7-network-discovery-tui-pending)
+    - [Step 8: Controller Mode [PENDING]](#step-8-controller-mode-pending)
+    - [Step 9: Controlled Mode [PENDING]](#step-9-controlled-mode-pending)
+    - [Step 10: Integration & Testing [PENDING]](#step-10-integration--testing-pending)
+    - [Step 11: Analytics & Documentation [PENDING]](#step-11-analytics--documentation-pending)
   - [Conclusion](#conclusion)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
@@ -104,11 +128,13 @@ Helper and Chi History Browser), with about 85% code reuse from existing compone
 ## Goals
 
 1. Create a terminal multiplexer that enhances Claude Code usage
-2. Implement three distinct application modes (multiplexer, input helper, history browser)
+2. Implement four distinct application modes (multiplexer, input helper, history browser,
+   network/remote)
 3. Enable seamless workflow between Claude and helper tools
 4. Maintain Claude running in background during tool usage
-5. Integrate analytics to track feature usage
-6. Achieve feature parity with all planned interactions within 3-5 days
+5. Enable Remote Control Mode for multi-host collaboration and remote access
+6. Integrate analytics to track feature usage
+7. Achieve feature parity with all planned interactions
 
 ### Key Benefits
 
@@ -116,6 +142,8 @@ Helper and Chi History Browser), with about 85% code reuse from existing compone
 2. **Enhanced Productivity**: Dedicated UIs for input composition and history browsing
 3. **Context Preservation**: Claude continues running in background during tool usage
 4. **Simple Integration**: All communication via clipboard and plain text
+5. **Remote Access**: Control chi sessions from any machine on the LAN via mDNS discovery
+6. **Multi-Host Collaboration**: Share Claude sessions across multiple workstations
 
 ## Architecture Overview
 
@@ -128,7 +156,12 @@ Helper and Chi History Browser), with about 85% code reuse from existing compone
 │  Command Line Parsing                               │
 │  ├─ No args     → Terminal Multiplexer Mode         │
 │  ├─ --input     → Input Helper TUI Mode             │
-│  └─ --history   → History Browser TUI Mode          │
+│  ├─ --history   → History Browser TUI Mode          │
+│  └─ --network   → Network Discovery TUI Mode        │
+│                                                     │
+│  Runtime Modes (from Multiplexer)                   │
+│  ├─ Local Mode     → Normal operation (Claude PTY)  │
+│  └─ Remote Control → Controller or Controlled role  │
 │                                                     │
 └─────────────────────────────────────────────────────┘
 ```
@@ -214,6 +247,10 @@ chi --input           # Start input composition TUI
 chi --history         # Start history browser TUI
 chi --history --project <path>  # Use specific project history
 
+# Network/Remote Control Mode
+chi --network         # Start network discovery TUI
+chi --network --psk <key>  # Use pre-shared key for connections
+
 # Additional Options
 chi --help            # Show help
 chi --version         # Show version
@@ -235,22 +272,33 @@ buffer_size = 100_000      # Output buffer size in bytes
 [keybindings]
 switch_to_input = "ctrl+i"
 switch_to_history = "ctrl+h"
+switch_to_network = "ctrl+n"
 exit = "ctrl+q"
+break_remote_control = "ctrl+shift+esc"  # Break out of controlled mode
 
 [ui]
 show_mode_banner = true
 banner_position = "top"  # top, bottom
 theme = "default"        # Theme selection
+
+[network]
+# Pre-shared key for Remote Control Mode (optional, can also be passed via --psk)
+# Generate with: openssl rand -base64 32
+psk = ""                    # Leave empty to prompt on connection
+mdns_service_name = "_chi._tcp.local"
+listen_port = 0             # 0 = auto-assign, or specify fixed port
+advertise = true            # Advertise via mDNS when in network mode
 ```
 
 ### Key Bindings
 
-#### In Terminal Multiplexer Mode
+#### In Terminal Multiplexer Mode (Local)
 
 | Key Combination | Action                        |
 | --------------- | ----------------------------- |
 | `Ctrl+I`        | Switch to Chi Input Helper    |
 | `Ctrl+H`        | Switch to Chi History Browser |
+| `Ctrl+N`        | Switch to Network Discovery   |
 | `Ctrl+Q`        | Exit multiplexer              |
 | All other keys  | Pass through to active PTY    |
 
@@ -269,6 +317,31 @@ theme = "default"        # Theme selection
 | `Esc`           | Return to Claude (no paste)            |
 | `↑/↓`, `j/k`    | Navigate history                       |
 | All other keys  | Handle in TUI navigation               |
+
+#### In Network Discovery Mode
+
+| Key Combination | Action                                       |
+| --------------- | -------------------------------------------- |
+| `Enter`         | Connect to selected peer (become Controller) |
+| `Esc`           | Return to Claude (exit network mode)         |
+| `↑/↓`, `j/k`    | Navigate discovered peers                    |
+| `a`             | Accept incoming connection request           |
+| `r`             | Refresh peer list                            |
+| All other keys  | Handle in TUI navigation                     |
+
+#### In Remote Control Mode (as Controller)
+
+| Key Combination  | Action                                   |
+| ---------------- | ---------------------------------------- |
+| `Ctrl+Shift+Esc` | End remote control, return to local mode |
+| All other keys   | Forward to controlled chi instance       |
+
+#### In Remote Control Mode (as Controlled)
+
+| Key Combination  | Action                                        |
+| ---------------- | --------------------------------------------- |
+| `Ctrl+Shift+Esc` | Break remote control, regain local control    |
+| All other keys   | Ignored (remote controller has input control) |
 
 ### Data Flow & Integration
 
@@ -340,9 +413,24 @@ cmdr/src/
 │   ├── input_helper/             # Chi --input TUI app
 │   │   ├── mod.rs
 │   │   └── app.rs                # Wraps tui/editor component
-│   └── history_browser/          # Chi --history TUI app
-│       ├── mod.rs
-│       └── app.rs                # Direct reuse of cmdr/ch logic
+│   ├── history_browser/          # Chi --history TUI app
+│   │   ├── mod.rs
+│   │   └── app.rs                # Direct reuse of cmdr/ch logic
+│   └── network/                  # NEW: Remote Control Mode
+│       ├── mod.rs                # Module exports
+│       ├── discovery_browser/    # Chi --network TUI app
+│       │   ├── mod.rs
+│       │   └── app.rs            # Peer list and connection UI
+│       ├── network_thread/       # Dedicated network I/O thread (like mio_poller)
+│       │   ├── mod.rs
+│       │   ├── thread.rs         # Main thread loop (mDNS + TLS)
+│       │   ├── mdns_handler.rs   # mDNS advertise/discover logic
+│       │   ├── tls_server.rs     # Accept incoming connections
+│       │   ├── tls_client.rs     # Connect to peers
+│       │   └── protocol.rs       # ChiNetworkMessage serialization
+│       ├── controller.rs         # Controller mode logic
+│       ├── controlled.rs         # Controlled mode logic (puppet mode)
+│       └── types.rs              # NetworkEvent, NetworkCommand, PeerInfo
 ├── ch/                           # REUSED DIRECTLY: History logic for chi --history
 │   ├── types.rs                  # ClaudeConfig, HistoryItem structures
 │   ├── prompt_history.rs         # File reading/parsing logic
@@ -357,8 +445,10 @@ cmdr/src/
     └── config_folder.rs          # Config & analytics settings
 
 tui/src/
-└── tui/editor/                   # REUSED: Editor component for chi --input
-    └── ...
+├── tui/editor/                   # REUSED: Editor component for chi --input
+│   └── ...
+└── tui/terminal_lib_backends/direct_to_ansi/input/mio_poller/
+    └── ...                       # REFERENCE: Pattern for network_thread
 
 # Refactoring Opportunities:
 
@@ -371,6 +461,12 @@ tui/src/
 #
 # This eliminates the need for extracting shared modules since
 # both ch and chi are in the same crate and can share code directly.
+#
+# For Remote Control Mode, we follow the mio_poller pattern:
+# - Dedicated std::thread for blocking I/O (mDNS, TLS)
+# - tokio::sync::broadcast channel for event distribution
+# - mpsc channel for commands to the thread
+# - Lifecycle state management for thread restart capability
 ```
 
 ### Core Data Structures
@@ -379,17 +475,23 @@ tui/src/
 
 ```rust
 enum ActivePty {
-    Claude,      // Primary: claude command (raw mode app)
-    ChiInput,    // Helper: chi --input (TUI app)
-    ChiHistory,  // Helper: chi --history (TUI app)
+    // Local modes
+    Claude,           // Primary: claude command (raw mode app)
+    ChiInput,         // Helper: chi --input (TUI app)
+    ChiHistory,       // Helper: chi --history (TUI app)
+
+    // Network modes (Remote Control)
+    NetworkDiscovery, // Chi --network TUI (peer list)
+    RemoteController, // Controlling another chi instance
+    RemoteControlled, // Being controlled by another chi instance
 }
 
 struct TerminalMultiplexer {
     // Active mode
     active_pty: ActivePty,
 
-    // PTY Sessions
-    claude_pty: PtyReadWriteSession,           // Always running
+    // PTY Sessions (Local Mode)
+    claude_pty: PtyReadWriteSession,               // Always running (in local mode)
     chi_input_pty: Option<PtyReadWriteSession>,    // On-demand
     chi_history_pty: Option<PtyReadWriteSession>,  // On-demand
 
@@ -403,6 +505,24 @@ struct TerminalMultiplexer {
     terminal_size: Size,
     output_device: OutputDevice,
     input_device: InputDevice,
+
+    // Network (Remote Control Mode)
+    network_handle: Option<NetworkHandle>,         // Handle to network thread
+    remote_session: Option<RemoteSession>,         // Active remote control session
+    original_viewport: Option<Size>,               // Stored when entering controlled mode
+}
+
+/// Active remote control session state
+struct RemoteSession {
+    session_id: String,
+    role: RemoteRole,
+    peer_hostname: String,
+    started_at: Instant,
+}
+
+enum RemoteRole {
+    Controller,  // We are controlling a remote chi
+    Controlled,  // We are being controlled by a remote chi
 }
 ```
 
@@ -747,13 +867,371 @@ Uses existing TUI framework with **direct access to cmdr/ch history logic** from
 Since chi.rs is in the same cmdr crate, it can directly import and use all ch module functionality
 without any code duplication or extraction needed.
 
+## Remote Control Mode
+
+Remote Control Mode enables multi-host collaboration by allowing one chi instance to control another
+chi instance running on a different machine on the same LAN. This leverages mDNS for zero-config
+discovery and TLS with pre-shared keys (PSK) for secure communication.
+
+### Remote Control Architecture
+
+```
+┌───────────────────────────────────────────────────────────────────────────────┐
+│                        REMOTE CONTROL TOPOLOGY                                 │
+│                                                                               │
+│  ┌──────────────────────────┐              ┌────────────────────────────────┐ │
+│  │  CONTROLLER CHI          │   TLS/TCP    │  CONTROLLED CHI                │ │
+│  │  (e.g., nazmul-desktop)  │─────────────▶│  (e.g., nazmul-laptop)         │ │
+│  │                          │              │                                │ │
+│  │  • Displays remote view  │   Input ──▶  │  • Runs chi in "puppet mode"   │ │
+│  │  • Captures local input  │              │  • Executes all commands       │ │
+│  │  • User interaction here │  ◀── Output  │  • Sends OffscreenBuffer bytes │ │
+│  │  • Sets viewport size    │              │  • Local display blanked       │ │
+│  └──────────────────────────┘              └────────────────────────────────┘ │
+└───────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Network Thread Architecture
+
+Similar to the `mio_poller` pattern, Remote Control Mode uses a dedicated thread for network I/O:
+
+```
+┌───────────────────────────────────────────────────────────────────────────────┐
+│                       NETWORK THREAD ARCHITECTURE                              │
+│                                                                               │
+│  ┌────────────────────────────────────┐    ┌────────────────────────────────┐ │
+│  │ Network Thread (std::thread)       │    │ Main Thread (tokio runtime)    │ │
+│  │                                    │    │                                │ │
+│  │ mDNS (mdns-sd crate):              │───▶│ rx.recv().await for:           │ │
+│  │   • Advertise "_chi._tcp.local"    │    │   • PeerDiscovered { info }    │ │
+│  │   • Discover other chi instances   │    │   • PeerLost { hostname }      │ │
+│  │                                    │    │   • RemoteControlRequest       │ │
+│  │ TLS Server (rustls):               │    │   • InputEvent (as controlled) │ │
+│  │   • Accept incoming connections    │◀───│   • OutputFrame (as controller)│ │
+│  │   • Validate PSK                   │    │                                │ │
+│  │                                    │    │ Orchestrates mode transitions  │ │
+│  │ TLS Client (rustls):               │    │                                │ │
+│  │   • Connect to discovered peers    │    │                                │ │
+│  │   • Send input events              │    │                                │ │
+│  └────────────────────────────────────┘    └────────────────────────────────┘ │
+└───────────────────────────────────────────────────────────────────────────────┘
+```
+
+### State Machine
+
+```
+                     ┌──────────────────────────────────────┐
+                     │            LOCAL MODE                │
+                     │  (Normal chi operation with Claude)  │
+                     └──────────────────┬───────────────────┘
+                                        │
+                          User presses Ctrl+N or
+                          starts with chi --network
+                                        │
+                                        ▼
+                     ┌──────────────────────────────────────┐
+                     │          DISCOVERY MODE              │
+                     │  • mDNS advertising this instance    │
+                     │  • Shows list of discovered peers    │
+                     │  • User can select peer to control   │
+                     │  • User can accept incoming requests │
+                     └──────────────────┬───────────────────┘
+                                        │
+              ┌─────────────────────────┼─────────────────────────┐
+              │                         │                         │
+    User selects peer         Accepts incoming           Esc to cancel
+    and presses Enter         request (press 'a')
+              │                         │                         │
+              ▼                         ▼                         ▼
+┌─────────────────────┐   ┌─────────────────────┐   ┌────────────────────┐
+│   CONTROLLER MODE   │   │   CONTROLLED MODE   │   │    LOCAL MODE      │
+│                     │   │                     │   │                    │
+│ • Displays remote   │   │ • "Puppet mode"     │   │ (back to Claude)   │
+│   OffscreenBuffer   │   │ • Receives input    │   │                    │
+│ • Sends InputEvents │   │ • Sends output      │   │                    │
+│ • Full chi control  │   │ • Local display:    │   │                    │
+│   (incl. Ctrl+I/H)  │   │   "Being controlled │   │                    │
+│                     │   │    from [host]      │   │                    │
+│                     │   │    Ctrl+Shift+Esc   │   │                    │
+│                     │   │    to break"        │   │                    │
+└────────┬────────────┘   └────────┬────────────┘   └────────────────────┘
+         │                         │
+         └─────────┬───────────────┘
+                   │
+         Either end presses Ctrl+Shift+Esc
+         or connection is lost
+                   │
+                   ▼
+         ┌─────────────────────┐
+         │    LOCAL MODE       │
+         │ (graceful restore)  │
+         └─────────────────────┘
+```
+
+### Network Protocol
+
+```rust
+/// Chi Network Protocol - all messages are serialized with bincode
+/// and prefixed with length (big-endian u32)
+pub enum ChiNetworkMessage {
+    // === Discovery Phase ===
+    /// Sent via mDNS TXT record or initial handshake
+    Announce {
+        hostname: String,
+        username: String,
+        chi_version: String,
+        session_info: Option<SessionInfo>,
+    },
+
+    // === Control Negotiation ===
+    /// Controller requests to take control
+    RequestControl {
+        controller_hostname: String,
+        viewport_size: Size,
+        psk_hash: [u8; 32],  // SHA-256 hash of PSK for verification
+    },
+    /// Controlled accepts the request
+    AcceptControl {
+        session_id: String,
+        controlled_hostname: String,
+    },
+    /// Controlled rejects the request
+    RejectControl {
+        reason: String,
+    },
+
+    // === During Remote Control ===
+    /// Input event from Controller → Controlled
+    InputEvent(InputEvent),
+    /// Raw OffscreenBuffer bytes from Controlled → Controller
+    OutputFrame {
+        width: u16,
+        height: u16,
+        buffer: Vec<u8>,  // Serialized OffscreenBuffer
+    },
+    /// Viewport resize notification (Controller → Controlled)
+    ViewportResize(Size),
+
+    // === Session Management ===
+    /// Graceful end of remote control (either direction)
+    EndRemoteControl {
+        reason: EndReason,
+    },
+    /// Keep connection alive
+    Heartbeat,
+}
+
+pub enum EndReason {
+    UserRequested,      // Ctrl+Shift+Esc pressed
+    Timeout,            // Heartbeat timeout
+    Error(String),      // Something went wrong
+}
+
+pub struct SessionInfo {
+    pub current_mode: ActiveMode,  // Claude, ChiInput, ChiHistory
+    pub project_path: Option<String>,
+}
+```
+
+### Output Transport: OffscreenBuffer Serialization
+
+When in Controlled Mode, chi sends its `OffscreenBuffer` to the Controller:
+
+```rust
+/// Output frame sent from Controlled → Controller
+impl ControlledChi {
+    fn send_output_frame(&self) -> ChiNetworkMessage {
+        // Serialize the current OffscreenBuffer state
+        let buffer_bytes = self.offscreen_buffer.serialize();
+
+        ChiNetworkMessage::OutputFrame {
+            width: self.terminal_size.width,
+            height: self.terminal_size.height,
+            buffer: buffer_bytes,
+        }
+    }
+}
+
+/// Controller receives and renders the frame
+impl ControllerChi {
+    fn handle_output_frame(&mut self, frame: OutputFrame) {
+        // Deserialize into local OffscreenBuffer
+        let remote_buffer = OffscreenBuffer::deserialize(&frame.buffer);
+
+        // Render to local terminal
+        self.render_offscreen_buffer(&remote_buffer);
+    }
+}
+```
+
+### Controlled Mode Display
+
+When a chi instance enters Controlled Mode, the local display shows:
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                                                                 │
+│                                                                 │
+│                                                                 │
+│          ┌─────────────────────────────────────────┐            │
+│          │                                         │            │
+│          │   🖥️  REMOTE CONTROLLED                 │            │
+│          │                                         │            │
+│          │   Being controlled from:                │            │
+│          │   nazmul-desktop.local                  │            │
+│          │                                         │            │
+│          │   Session ID: abc-123-def               │            │
+│          │   Duration: 00:05:23                    │            │
+│          │                                         │            │
+│          │   Press Ctrl+Shift+Esc to break         │            │
+│          │   remote control and regain access      │            │
+│          │                                         │            │
+│          └─────────────────────────────────────────┘            │
+│                                                                 │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Network Discovery TUI (`chi --network`)
+
+```
+┌─ CHI NETWORK ───────────────────────────────────────────────────┐
+│                                                                 │
+│  Advertising as: nazmul-desktop.local (port 54321)              │
+│  PSK: ●●●●●●●● (configured)                                     │
+│                                                                 │
+│ ┌─ Discovered Peers ────────────────────────────────────────┐   │
+│ │                                                           │   │
+│ │  > nazmul-laptop.local                                    │   │
+│ │      User: nazmul | Mode: Claude | Project: ~/github/roc  │   │
+│ │                                                           │   │
+│ │    nazmul-mac.local                                       │   │
+│ │      User: nazmul | Mode: ChiInput | Project: ~/code/app  │   │
+│ │                                                           │   │
+│ └───────────────────────────────────────────────────────────┘   │
+│                                                                 │
+│ ┌─ Incoming Requests ───────────────────────────────────────┐   │
+│ │                                                           │   │
+│ │  (none)                                                   │   │
+│ │                                                           │   │
+│ └───────────────────────────────────────────────────────────┘   │
+│                                                                 │
+│  Enter: Connect | a: Accept request | r: Refresh | Esc: Back    │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Security Model
+
+Remote Control Mode uses Pre-Shared Keys (PSK) for simplicity on trusted LANs:
+
+1. **PSK Configuration**: Users configure the same PSK on all machines (via `chi.toml` or `--psk`)
+2. **TLS with PSK**: Connections use TLS 1.3 with PSK cipher suites (no certificates needed)
+3. **Hash Verification**: PSK hash is included in `RequestControl` to verify both sides have the key
+4. **No Key Exchange**: Unlike mTLS, no certificate infrastructure required
+
+```toml
+# ~/.config/r3bl-cmdr/chi.toml
+[network]
+# Generate with: openssl rand -base64 32
+psk = "K7xH2mN9pQ3rT5vW8yA1bC4dE6fG0hI2jL8kM5nO7qR="
+```
+
+### Core Data Structures
+
+```rust
+/// Extended ActivePty enum for Remote Control Mode
+enum ActivePty {
+    // Local modes (existing)
+    Claude,
+    ChiInput,
+    ChiHistory,
+
+    // Network modes (new)
+    NetworkDiscovery,      // Showing peer list TUI
+    RemoteController,      // Controlling a remote chi
+    RemoteControlled,      // Being controlled by remote chi
+}
+
+/// Network thread handle and communication
+struct NetworkHandle {
+    /// Channel to receive network events
+    event_receiver: broadcast::Receiver<NetworkEvent>,
+
+    /// Channel to send commands to network thread
+    command_sender: mpsc::Sender<NetworkCommand>,
+
+    /// Thread join handle for graceful shutdown
+    thread_handle: Option<JoinHandle<()>>,
+}
+
+/// Events from network thread → main thread
+enum NetworkEvent {
+    PeerDiscovered { info: PeerInfo },
+    PeerLost { hostname: String },
+    IncomingControlRequest { from: String, viewport: Size },
+    ControlAccepted { session_id: String },
+    ControlRejected { reason: String },
+    InputReceived { event: InputEvent },       // When controlled
+    OutputReceived { frame: OutputFrame },     // When controller
+    ConnectionLost { reason: String },
+    Heartbeat,
+}
+
+/// Commands from main thread → network thread
+enum NetworkCommand {
+    StartAdvertising,
+    StopAdvertising,
+    ConnectToPeer { hostname: String, viewport: Size },
+    AcceptIncomingRequest { from: String },
+    RejectIncomingRequest { from: String, reason: String },
+    SendInput { event: InputEvent },
+    SendOutput { frame: OutputFrame },
+    EndSession { reason: EndReason },
+    Shutdown,
+}
+
+/// Information about a discovered peer
+struct PeerInfo {
+    hostname: String,
+    username: String,
+    port: u16,
+    chi_version: String,
+    session_info: Option<SessionInfo>,
+    last_seen: Instant,
+}
+```
+
+### Viewport Handling
+
+When the Controller connects, its terminal size becomes the viewport for the Controlled:
+
+```rust
+impl ControlledChi {
+    fn handle_control_request(&mut self, request: RequestControl) {
+        // Store original terminal size for restoration later
+        self.original_viewport = self.terminal_size;
+
+        // Resize internal viewport to match controller's terminal
+        self.resize_viewport(request.viewport_size);
+
+        // Resize the Claude PTY to match
+        self.claude_pty.resize(request.viewport_size);
+    }
+
+    fn end_remote_control(&mut self) {
+        // Restore original viewport
+        self.resize_viewport(self.original_viewport);
+        self.claude_pty.resize(self.original_viewport);
+    }
+}
+```
+
 ## Technical Requirements
 
 ### Dependencies
 
 ```toml
-# NO NEW DEPENDENCIES REQUIRED!
-# All components already exist in the codebase:
+# EXISTING DEPENDENCIES (no changes needed):
 
 # Already available from cmdr crate itself:
 # - History parsing       # cmdr/src/ch/ (same crate - direct access)
@@ -763,12 +1241,20 @@ without any code duplication or extraction needed.
 # - PTY infrastructure    # tui/src/core/pty/ (spawn_read_write, etc.)
 # - TUI framework         # tui/src/tui/ (main_event_loop, editor, etc.)
 # - Clipboard service     # tui/src/tui/editor/editor_buffer/clipboard_*.rs
+# - mio_poller pattern    # tui/src/tui/terminal_lib_backends/direct_to_ansi/input/mio_poller/
 
 # Already available transitive dependencies:
 # - serde_json           # For ~/.claude.json parsing
 # - tokio                # Async runtime
 # - miette              # Error handling
 # - copypasta_ext       # Clipboard backend (already used by editor)
+# - bincode             # Binary serialization (used in tcp-api-server)
+# - rustls              # TLS implementation
+
+# NEW DEPENDENCIES FOR REMOTE CONTROL MODE:
+[dependencies]
+mdns-sd = "0.11"         # mDNS service discovery (zero-config LAN discovery)
+# Note: rustls already available, will be used with PSK cipher suites
 ```
 
 ### File System Requirements
@@ -901,6 +1387,19 @@ pub enum AnalyticsAction {
     ChiClipboardPaste,              // Clipboard paste to Claude
     ChiSessionDuration,             // Track session length
     ChiBufferOverflow,              // Claude buffer exceeded limit
+
+    // Remote Control Mode Events (NEW)
+    ChiNetworkStart,                // chi --network launched or Ctrl+N pressed
+    ChiNetworkPeerDiscovered,       // New peer discovered via mDNS
+    ChiNetworkConnectAttempt,       // User initiated connection to peer
+    ChiNetworkConnectSuccess,       // Successfully connected to peer
+    ChiNetworkConnectFailed,        // Connection to peer failed
+    ChiNetworkIncomingAccepted,     // Accepted incoming control request
+    ChiNetworkIncomingRejected,     // Rejected incoming control request
+    ChiRemoteControlStarted,        // Remote control session began (either role)
+    ChiRemoteControlEnded,          // Remote control session ended
+    ChiRemoteControlDuration,       // Track remote session length
+    ChiRemoteControlBreak,          // User broke remote control via Ctrl+Shift+Esc
 }
 ```
 
@@ -999,7 +1498,13 @@ This ensures consistent analytics across all R3BL tools and minimal new code.
 
 # Implementation plan
 
-## Step 1: Core Infrastructure [PENDING]
+The implementation is divided into two phases: **Phase 1** delivers the core local-mode
+functionality (multiplexer, input helper, history browser), and **Phase 2** adds Remote Control
+Mode.
+
+## Phase 1: Local Mode
+
+### Step 1: Core Infrastructure [PENDING]
 
 **Timeline**: Days 1-2
 
@@ -1009,11 +1514,11 @@ Core infrastructure and module setup for the Chi application.
 
 - [ ] Create `cmdr/src/bin/chi.rs` binary entry point
 - [ ] Set up `cmdr/src/chi/` module structure
-- [ ] CLI argument parsing (multiplexer vs --input vs --history modes)
+- [ ] CLI argument parsing (multiplexer vs --input vs --history vs --network modes)
 - [ ] Terminal multiplexer core with PTY manager
 - [ ] Input router and event handling
 
-## Step 2: Multiplexer Logic [PENDING]
+### Step 2: Multiplexer Logic [PENDING]
 
 **Timeline**: Day 3
 
@@ -1026,7 +1531,7 @@ Implement the core terminal multiplexer functionality.
 - [ ] Mode switching between Claude and helpers
 - [ ] Clipboard integration using tui's SystemClipboard
 
-## Step 3: Helper Apps & Testing [PENDING]
+### Step 3: Helper Apps & Testing [PENDING]
 
 **Timeline**: Days 4-5
 
@@ -1040,15 +1545,148 @@ Implement the helper applications and comprehensive testing.
 - [ ] Visual feedback and error handling
 - [ ] Documentation and examples
 
+---
+
+## Phase 2: Remote Control Mode
+
+### Step 4: Network Thread Infrastructure [PENDING]
+
+**Timeline**: Days 6-7
+
+Build the dedicated network thread following the `mio_poller` pattern.
+
+**Tasks:**
+
+- [ ] Create `cmdr/src/chi/network/` module structure
+- [ ] Implement `NetworkHandle` with broadcast channel for events
+- [ ] Implement `NetworkCommand` mpsc channel for commands
+- [ ] Add thread lifecycle management (spawn, graceful shutdown, restart capability)
+- [ ] Define `ChiNetworkMessage` protocol with bincode serialization
+
+### Step 5: mDNS Discovery [PENDING]
+
+**Timeline**: Day 8
+
+Implement zero-config peer discovery using mDNS.
+
+**Tasks:**
+
+- [ ] Integrate `mdns-sd` crate for service discovery
+- [ ] Implement service advertisement (`_chi._tcp.local`)
+- [ ] Implement peer discovery and tracking
+- [ ] Add `PeerInfo` with hostname, user, port, session info
+- [ ] Handle peer timeout/expiry (stale peer removal)
+
+### Step 6: TLS Communication [PENDING]
+
+**Timeline**: Days 9-10
+
+Implement secure communication using TLS with PSK.
+
+**Tasks:**
+
+- [ ] Configure `rustls` with PSK cipher suites
+- [ ] Implement TLS server to accept incoming connections
+- [ ] Implement TLS client to connect to peers
+- [ ] Add PSK configuration via `chi.toml` and `--psk` flag
+- [ ] Implement PSK hash verification in `RequestControl`
+
+### Step 7: Network Discovery TUI [PENDING]
+
+**Timeline**: Day 11
+
+Build the Network Discovery browser (`chi --network`).
+
+**Tasks:**
+
+- [ ] Create `discovery_browser/app.rs` TUI
+- [ ] Display discovered peers list with navigation
+- [ ] Show incoming connection requests
+- [ ] Implement key bindings (Enter, 'a', 'r', Esc)
+- [ ] Add status bar showing local advertisement info
+
+### Step 8: Controller Mode [PENDING]
+
+**Timeline**: Days 12-13
+
+Implement the Controller role (controlling a remote chi).
+
+**Tasks:**
+
+- [ ] Implement connection initiation with viewport negotiation
+- [ ] Forward local `InputEvent`s to remote via `ChiNetworkMessage::InputEvent`
+- [ ] Receive and render `OutputFrame` (OffscreenBuffer deserialization)
+- [ ] Handle viewport resize propagation
+- [ ] Implement `Ctrl+Shift+Esc` to end remote control
+- [ ] Graceful disconnection with state restoration
+
+### Step 9: Controlled Mode [PENDING]
+
+**Timeline**: Days 14-15
+
+Implement the Controlled role (being controlled by remote chi).
+
+**Tasks:**
+
+- [ ] Accept incoming control requests with PSK verification
+- [ ] Resize viewport to match controller's terminal size
+- [ ] Send `OutputFrame` on each render (OffscreenBuffer serialization)
+- [ ] Receive and process `InputEvent`s from controller
+- [ ] Display "Being Controlled" screen locally
+- [ ] Implement `Ctrl+Shift+Esc` to break remote control
+- [ ] Restore original viewport on disconnect
+
+### Step 10: Integration & Testing [PENDING]
+
+**Timeline**: Days 16-17
+
+End-to-end testing of Remote Control Mode.
+
+**Tasks:**
+
+- [ ] Integration tests for mDNS discovery across hosts
+- [ ] Integration tests for TLS connection establishment
+- [ ] Test Controller → Controlled input forwarding
+- [ ] Test OffscreenBuffer transport and rendering
+- [ ] Test graceful disconnect from both ends
+- [ ] Test connection loss handling
+- [ ] Test viewport resize during remote session
+- [ ] Performance testing (latency, throughput)
+
+### Step 11: Analytics & Documentation [PENDING]
+
+**Timeline**: Day 18
+
+Add analytics events and update documentation.
+
+**Tasks:**
+
+- [ ] Add Remote Control analytics events to `analytics_action.rs`
+- [ ] Instrument network and remote control code paths
+- [ ] Update README with Remote Control Mode usage
+- [ ] Add configuration examples for PSK setup
+- [ ] Document troubleshooting for network issues
+
+---
+
 ## Conclusion
 
 Chi provides a powerful enhancement to Claude Code workflows by creating a seamless interface
 between Claude and helper tools. The design prioritizes simplicity, performance, and maintainability
 while providing significant productivity benefits for Claude users.
 
-The architecture leverages existing PTY infrastructure and TUI frameworks, minimizing new code while
-maximizing functionality. The clipboard-based communication model ensures loose coupling and broad
-compatibility.
+**Phase 1** delivers the core local-mode functionality: terminal multiplexer with seamless switching
+between Claude, input helper, and history browser. The architecture leverages existing PTY
+infrastructure and TUI frameworks, minimizing new code while maximizing functionality. The
+clipboard-based communication model ensures loose coupling and broad compatibility.
 
-This PRD provides sufficient detail for implementation by any developer familiar with Rust and
-terminal applications.
+**Phase 2** extends chi with Remote Control Mode, enabling multi-host collaboration through:
+
+- Zero-config mDNS discovery of chi instances on the LAN
+- Secure TLS communication with pre-shared keys
+- Full remote control including mode switching (Ctrl+I, Ctrl+H)
+- OffscreenBuffer-based output transport for efficient rendering
+- Graceful connection management from either end
+
+This PRD provides sufficient detail for implementation by any developer familiar with Rust, terminal
+applications, and network programming.
