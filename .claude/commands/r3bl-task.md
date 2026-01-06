@@ -53,18 +53,30 @@ else if $1 is "load" then:
 
 else if $1 is "done" then:
 
-- Inform the user that to mark a task as complete and archive it, they should use the R3BL
-  Task Management VS Code extension:
+- Ask the user which approach they prefer:
+
+    **Option A: Use VS Code extension (recommended if you have a task space)**
+    - Deleting the task space automatically archives the file and handles cleanup
+
+    **Option B: Move file directly**
+    - I'll move task/$2 to task/done/ right now
+    - You'll need to manually clean up any VS Code task space later
+
+- If user chooses Option A:
     1. Press Alt+Shift+T (or Command Palette → "R3BL Task Management: Manage Task Spaces")
     2. Find the task space linked to task/$2 in the dialog
     3. Click the delete button (🗑️) next to that task space
     4. Confirm the deletion
-- Explain that deleting the task space will automatically:
-    - Archive the task file to task/done/
-    - Handle filename collisions (adds numeric suffix if needed)
-    - Clean up the task space properly
-- If no task space exists for this task, suggest that the user can manually move task/$2
-  to task/done/ or create a task space first and then delete it
+    - Explain that deleting the task space will automatically:
+        - Archive the task file to task/done/
+        - Handle filename collisions (adds numeric suffix if needed)
+        - Clean up the task space properly
+
+- If user chooses Option B:
+    - Move task/$2 to task/done/ (create task/done/ if it doesn't exist)
+    - Handle filename collisions by adding numeric suffix if needed (e.g., task-name-1.md)
+    - Confirm the move was successful
+    - Remind user to delete any associated VS Code task space manually
 
 ## Notes
 
