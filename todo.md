@@ -34,7 +34,7 @@
   does
 
 - [⌛] migrate `check.fish` into `build_infra` crate as `cargo monitor` command using
-  [`build_infra_cargo_monitor.md`](/task/build_infra_cargo_monitor.md)
+  [`build_infra_cargo_monitor.md`](/task/pending/build_infra_cargo_monitor.md)
 
 - [ ] change `mio_poller` thread liveness model to make it possible for the thread to self
       terminate and then be restarted during the process lifetime:
@@ -126,7 +126,7 @@
 
 # build `chi` binary in r3bl-cmdr
 
-- [ ] PRD [`task_prd_chi`](task/pending/task_prd_chi.md) to build `chi`
+- [ ] PRD [`prd_chi`](task/pending/prd_chi.md) to build `chi`
 
 # build `build-infra-tools` binary to replace all the fish scripts
 

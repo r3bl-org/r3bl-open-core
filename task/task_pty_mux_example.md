@@ -147,7 +147,7 @@ The `pty` module in `r3bl_tui` provides the foundation for PTY operations, but l
 multiplexing layer. This task builds upon that infrastructure to create a true terminal multiplexer
 that works with ANY program (bash, TUI apps, CLI tools) through per-process virtual terminals.
 
-> For context, see [`task_prd_chi`](docs/task_prd_chi.md) for where this will be used in the future.
+> For context, see [`prd_chi`](pending/prd_chi.md) for where this will be used in the future.
 
 ## Goals
 
