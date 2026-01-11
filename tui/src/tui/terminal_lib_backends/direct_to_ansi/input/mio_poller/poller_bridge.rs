@@ -1,7 +1,10 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Thread lifecycle state container. See [`PollerThreadLifecycleState`] for
-//! documentation.
+//! Poller bridge: shared state between [`SINGLETON`] singleton and
+//! [`mio_poller`] thread. See [`PollerBridge`] for documentation.
+//!
+//! [`SINGLETON`]: super::super::input_device_impl::global_input_resource::SINGLETON
+//! [`mio_poller`]: super
 
 use crate::terminal_lib_backends::direct_to_ansi::input::channel_types::PollerEventSender;
 use std::sync::{Arc,
@@ -31,23 +34,23 @@ static THREAD_GENERATION: AtomicU8 = AtomicU8::new(0);
 /// [`recv()`]: tokio::sync::broadcast::Receiver::recv
 const CHANNEL_CAPACITY: usize = 4_096;
 
-/// Thread lifecycle state and the inherent race condition due to blocking [`poll()`] and
-/// syscall delays.
+/// Bridges the process-global [`SINGLETON`] singleton and the [`mio_poller`] thread.
 ///
-/// This struct bundles resources needed to manage the [`mio_poller`] thread's lifecycle
-/// and documents the **inherent race condition** we handle correctly.
+/// Centralizes race condition handling in one place. Shared via [`Arc`] between the
+/// singleton and thread.
 ///
 /// # Thread Lifecycle Overview
 ///
 /// The [`mio_poller`] thread can be **relaunched** if it exits. Two mechanisms work
 /// together:
 ///
-/// 1. **Liveness flag** ([`metadata`]): Set to `false` via [`Drop`] when thread exits
+/// 1. **Liveness flag** ([`thread_liveness`]): Set to `false` via [`Drop`] when thread
+///    exits
 /// 2. **[`mio::Waker`]**: Immediately wakes thread when receiver drops
 ///
 /// Lifecycle sequence:
 /// 1. On spawn: `liveness = Running`
-/// 2. On receiver drop: [`PollerSubscriptionHandle::drop()`] calls [`waker.wake()`]
+/// 2. On receiver drop: [`InputDeviceSubscriptionHandle::drop()`] calls [`waker.wake()`]
 /// 3. [`handle_receiver_drop_waker()`] checks [`receiver_count()`] → if 0, exits
 /// 4. [`MioPollerThread::drop()`] sets `liveness = Terminated`
 /// 5. On next [`allocate()`]: detects terminated thread → reinitializes
@@ -133,6 +136,23 @@ const CHANNEL_CAPACITY: usize = 4_096;
 /// reads [`stdin`], parses, and broadcasts. It doesn't care *who* is listening, only
 /// *that someone* is listening.
 ///
+/// ## Broadcast Channel Decoupling
+///
+/// The [`broadcast`] channel creates a clean separation between producer and consumers:
+///
+/// - **Producer-agnostic consumers**: Devices receive events via [`broadcast::Receiver`]
+///   — they hold no reference to the thread, don't know its generation, and don't care if
+///   it's "old" or "new"
+/// - **Consumer-agnostic producer**: The thread sends via [`broadcast::Sender`] — it has
+///   no references to specific receivers, no session state, no "who subscribed when"
+///   tracking
+/// - **Stateless events**: Each [`PollerEvent`] is self-contained (parsed input). No
+///   accumulated state that could become "stale"
+///
+/// This is fundamentally different from architectures where servers track client
+/// sessions or messages reference client IDs. Here, the broadcast channel is a pure
+/// event stream — subscribers join anytime, leave anytime, no coordination needed.
+///
 /// # Related Tests
 ///
 /// Four PTY-based integration tests validate the lifecycle behavior:
@@ -145,16 +165,19 @@ const CHANNEL_CAPACITY: usize = 4_096;
 /// | [`pty_mio_poller_subscribe_test`]        | Multiple subscriber broadcast semantics            |
 ///
 /// [`Arc`]: std::sync::Arc
-/// [`INPUT_RESOURCE`]: super::super::input_device::INPUT_RESOURCE
+/// [`InputDeviceSubscriptionHandle::drop()`]: super::super::input_device_impl::InputDeviceSubscriptionHandle#impl-Drop-for-InputDeviceSubscriptionHandle
 /// [`MioPollerThread::drop()`]: super::poller_thread::MioPollerThread
 /// [`MioPollerThread::new()`]: super::poller_thread::MioPollerThread::new
-/// [`PollerSubscriptionHandle::drop()`]: super::super::input_device::PollerSubscriptionHandle
+/// [`PollerEvent`]: super::super::channel_types::PollerEvent
+/// [`SINGLETON`]: super::super::input_device_impl::global_input_resource::SINGLETON
 /// [`Sender`]: tokio::sync::broadcast::Sender
 /// [`Waker`]: mio::Waker
-/// [`allocate()`]: super::super::input_device::guarded_ops::allocate
+/// [`allocate()`]: super::super::input_device_impl::global_input_resource::allocate
+/// [`broadcast::Receiver`]: tokio::sync::broadcast::Receiver
+/// [`broadcast::Sender`]: tokio::sync::broadcast::Sender
+/// [`broadcast`]: tokio::sync::broadcast
 /// [`fd`]: https://en.wikipedia.org/wiki/File_descriptor
 /// [`handle_receiver_drop_waker()`]: super::handler_receiver_drop::handle_receiver_drop_waker
-/// [`metadata`]: PollerThreadLifecycleState::metadata
 /// [`mio::Poll`]: mio::Poll
 /// [`mio::Waker`]: mio::Waker
 /// [`mio_poller`]: super
@@ -167,49 +190,30 @@ const CHANNEL_CAPACITY: usize = 4_096;
 /// [`receiver_count`]: tokio::sync::broadcast::Sender::receiver_count
 /// [`signals`]: super::sources::SourceKindReady::Signals
 /// [`stdin`]: super::sources::SourceKindReady::Stdin
+/// [`thread_liveness`]: PollerBridge::thread_liveness
 /// [`wake()`]: mio::Waker::wake
 /// [`waker.wake()`]: mio::Waker::wake
 #[allow(missing_debug_implementations)]
-pub struct PollerThreadLifecycleState {
-    /// Broadcast sender for poller events.
-    pub tx_poller_event: PollerEventSender,
+pub struct PollerBridge {
+    /// Broadcasts parsed input events to async subscribers.
+    pub broadcast_tx: PollerEventSender,
 
-    /// Thread metadata bundling identity (generation) and liveness.
-    pub metadata: Arc<ThreadMetadata>,
+    /// Thread liveness and incarnation tracking.
+    pub thread_liveness: Arc<ThreadLiveness>,
 }
 
-impl Default for PollerThreadLifecycleState {
+impl Default for PollerBridge {
     fn default() -> Self { Self::new() }
 }
 
-impl PollerThreadLifecycleState {
-    /// Creates a new lifecycle state with fresh [`ThreadMetadata`] and broadcast channel.
+impl PollerBridge {
+    /// Creates a new bridge with fresh [`ThreadLiveness`] and broadcast channel.
     #[must_use]
     pub fn new() -> Self {
         let channel = tokio::sync::broadcast::channel(CHANNEL_CAPACITY);
         Self {
-            tx_poller_event: channel.0,
-            metadata: Arc::new(ThreadMetadata::new()),
-        }
-    }
-
-    /// Creates a handle to the same shared state (2 Arc bumps, no copies).
-    ///
-    /// Used by [`allocate()`] to pass a handle to [`MioPollerThread::new()`] while
-    /// retaining ownership in [`INPUT_RESOURCE`].
-    ///
-    /// Use this instead of `.clone()` for semantic clarity, to make it explicit that this
-    /// is a cheap reference-count increment, not a deep copy. All fields are
-    /// [`Arc`]-wrapped, so cloning just bumps reference counts.
-    ///
-    /// [`INPUT_RESOURCE`]: super::super::input_device::INPUT_RESOURCE
-    /// [`MioPollerThread::new()`]: super::poller_thread::MioPollerThread::new
-    /// [`allocate()`]: super::super::input_device::guarded_ops::allocate
-    #[must_use]
-    pub fn clone_handle(&self) -> Self {
-        Self {
-            tx_poller_event: self.tx_poller_event.clone(),
-            metadata: Arc::clone(&self.metadata),
+            broadcast_tx: channel.0,
+            thread_liveness: Arc::new(ThreadLiveness::new()),
         }
     }
 
@@ -223,12 +227,12 @@ impl PollerThreadLifecycleState {
     /// otherwise. See [The Inherent Race Condition] for why we check the **current**
     /// count instead of trusting the wake signal.
     ///
-    /// [The Inherent Race Condition]: PollerThreadLifecycleState#the-inherent-race-condition
+    /// [The Inherent Race Condition]: PollerBridge#the-inherent-race-condition
     /// [`handle_receiver_drop_waker()`]: super::handler_receiver_drop::handle_receiver_drop_waker
     /// [`receiver_count()`]: tokio::sync::broadcast::Sender::receiver_count
     #[must_use]
     pub fn should_self_terminate(&self) -> ShutdownDecision {
-        if self.tx_poller_event.receiver_count() == 0 {
+        if self.broadcast_tx.receiver_count() == 0 {
             ShutdownDecision::ShutdownNow
         } else {
             ShutdownDecision::ContinueRunning
@@ -236,58 +240,49 @@ impl PollerThreadLifecycleState {
     }
 }
 
-/// Thread metadata bundling identity (immutable) and liveness (mutable).
+/// Thread liveness: running state and incarnation generation.
 ///
-/// This struct separates into two semantic parts:
-///
-/// - **Identity** ([`generation`]): Immutable after creation. Identifies which thread
-///   instance this metadata belongs to.
-/// - **Liveness** ([`is_running`]): Mutable. Tracks whether the thread is still running.
+/// - [`is_running`]: Current liveness (mutable via [`mark_terminated()`])
+/// - [`generation`]: Which incarnation of the thread (immutable)
 ///
 /// # Why [`AtomicBool`] instead of [`Mutex<bool>`]?
 ///
 /// **Do not use [`Mutex<bool>`] here.** The [`is_running()`] method is called while
-/// holding the [`INPUT_RESOURCE`] lock (in [`allocate()`] and [`is_thread_running()`]).
+/// holding the [`SINGLETON`] lock (in [`allocate()`] and [`is_thread_running()`]).
 /// Using [`Mutex<bool>`] would create nested locking, risking **deadlock** if
 /// [`mark_terminated()`] is called from the [`mio_poller`] thread while another thread
-/// holds [`INPUT_RESOURCE`].
+/// holds [`SINGLETON`].
 ///
 /// [`AtomicBool`] is **lock-free** — no deadlock possible.
-///
 /// [`Mutex<bool>`]: std::sync::Mutex
-///
-/// [`INPUT_RESOURCE`]: super::super::input_device::INPUT_RESOURCE
-/// [`allocate()`]: super::super::input_device::guarded_ops::allocate
-/// [`generation`]: ThreadMetadata::generation
-/// [`is_running()`]: ThreadMetadata::is_running
+/// [`SINGLETON`]: super::super::input_device_impl::global_input_resource::SINGLETON
+/// [`allocate()`]: super::super::input_device_impl::global_input_resource::allocate
+/// [`generation`]: ThreadLiveness::generation
+/// [`is_running()`]: ThreadLiveness::is_running
 /// [`is_running`]: Self::is_running
-/// [`is_thread_running()`]: super::super::input_device::guarded_ops::is_thread_running
-/// [`mark_terminated()`]: ThreadMetadata::mark_terminated
+/// [`is_thread_running()`]: super::super::input_device_impl::global_input_resource::is_thread_running
+/// [`mark_terminated()`]: ThreadLiveness::mark_terminated
 /// [`mio_poller`]: super
 #[allow(missing_debug_implementations)]
-pub struct ThreadMetadata {
+pub struct ThreadLiveness {
     /// Whether the thread is currently running. Set to `false` by [`mark_terminated()`].
     ///
-    /// [`mark_terminated()`]: ThreadMetadata::mark_terminated
+    /// [`mark_terminated()`]: ThreadLiveness::mark_terminated
     pub is_running: AtomicBool,
 
     /// Thread generation number. Immutable after creation.
     ///
     /// Incremented each time a new thread is spawned. Used to verify thread reuse vs
-    /// relaunch in tests. If two observations have the same generation, the same thread
-    /// is serving both. See [Related Tests] for details.
+    /// relaunch in tests. See [Related Tests] for details.
     ///
-    /// [Related Tests]: PollerThreadLifecycleState#related-tests
+    /// [Related Tests]: PollerBridge#related-tests
     pub generation: u8,
 }
 
-impl ThreadMetadata {
-    /// Creates new metadata in the [`Running`] state with a fresh generation.
+impl ThreadLiveness {
+    /// Creates new liveness in the [`Running`] state with a fresh generation.
     ///
-    /// Increments [`THREAD_GENERATION`] atomically and captures the new value.
-    /// Wraps naturally from `255` → `0`.
-    ///
-    /// [`Running`]: ThreadLiveness::Running
+    /// [`Running`]: LivenessState::Running
     #[must_use]
     fn new() -> Self {
         Self {
@@ -298,43 +293,30 @@ impl ThreadMetadata {
         }
     }
 
-    /// Marks the thread as terminated.
-    ///
-    /// This is the **termination marker** in the thread lifecycle protocol. Called by
-    /// [`MioPollerThread::drop()`] when the thread exits (either gracefully or via
-    /// panic during stack unwinding).
-    ///
-    /// Sets [`is_running`] to `false`, allowing [`allocate()`] to detect the terminated
-    /// thread and spawn a new one on the next subscription.
+    /// Marks the thread as terminated. Called by [`MioPollerThread::drop()`].
     ///
     /// [`MioPollerThread::drop()`]: super::poller_thread::MioPollerThread
-    /// [`allocate()`]: super::super::input_device::guarded_ops::allocate
-    /// [`is_running`]: Self::is_running
     pub fn mark_terminated(&self) { self.is_running.store(false, Ordering::SeqCst); }
 
     /// Checks if the thread is currently running.
-    ///
-    /// Used by [`allocate()`] to detect terminated threads that need respawning.
-    ///
-    /// [`allocate()`]: super::super::input_device::guarded_ops::allocate
     #[must_use]
-    pub fn is_running(&self) -> ThreadLiveness {
+    pub fn is_running(&self) -> LivenessState {
         if self.is_running.load(Ordering::SeqCst) {
-            ThreadLiveness::Running
+            LivenessState::Running
         } else {
-            ThreadLiveness::Terminated
+            LivenessState::Terminated
         }
     }
 }
 
 /// Indicates whether the [`mio_poller`] thread is running or terminated.
 ///
-/// Used by [`ThreadMetadata::is_running()`] to provide a self-documenting
+/// Used by [`ThreadLiveness::is_running()`] to provide a self-documenting
 /// return type instead of a bare `bool`.
 ///
 /// [`mio_poller`]: super
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ThreadLiveness {
+pub enum LivenessState {
     /// The [`mio_poller`] thread is running and accepting input.
     ///
     /// [`mio_poller`]: super
@@ -347,8 +329,8 @@ pub enum ThreadLiveness {
 
 /// Indicates whether the [`mio_poller`] thread should self-terminate or continue running.
 ///
-/// Returned by [`PollerThreadLifecycleState::should_self_terminate()`] to provide a
-/// self-documenting return type instead of a bare `bool`.
+/// Returned by [`PollerBridge::should_self_terminate()`] to provide a self-documenting
+/// return type instead of a bare `bool`.
 ///
 /// [`mio_poller`]: super
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

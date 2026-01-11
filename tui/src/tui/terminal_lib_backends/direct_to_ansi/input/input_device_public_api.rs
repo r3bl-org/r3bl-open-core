@@ -1,315 +1,35 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 // cspell:words tcgetwinsize winsize EINTR SIGWINCH kqueue epoll wakeup eventfd bcast
-// cspell:words reinit
 
-//! [`DirectToAnsiInputDevice`] struct and the global input resource singleton.
+//! Public API: [`DirectToAnsiInputDevice`].
 //!
-//! Also see [`PollerSubscriptionHandle`], [`InputResourceState`], and [`INPUT_RESOURCE`]
-//! for more details.
+//! The main user-facing type for async terminal input. See
+//! [`input_device_impl`] for internal implementation details.
+//!
+//! [`input_device_impl`]: super::input_device_impl
 
-use super::{channel_types::{PollerEvent, PollerEventReceiver, SignalEvent, StdinEvent},
-            mio_poller::{MioPollerThread, PollerThreadLifecycleState, SourceKindReady,
-                         ThreadLiveness}};
+use super::{channel_types::{PollerEvent, SignalEvent, StdinEvent},
+            input_device_impl::{InputDeviceSubscriptionHandle, global_input_resource}};
 use crate::{InputEvent, get_size, tui::DEBUG_TUI_SHOW_TERMINAL_BACKEND};
-use mio::{Poll, Waker};
-use std::{fmt::Debug,
-          sync::{Arc, LazyLock, Mutex}};
-
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// Global Input Resource (Singleton)
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-/// Global singleton holding the input resource state, initialized on first access (see
-/// [`allocate()`]).
-///
-/// - Independent async consumers should use [`allocate()`] to get input events & signals.
-/// - See the [Architecture] section in [`DirectToAnsiInputDevice`] for details on why
-///   global state is necessary.
-/// - See [`MioPollerThread`] docs for details on how the dedicated thread works.
-///
-/// [Architecture]: DirectToAnsiInputDevice#architecture
-/// [`allocate()`]: guarded_ops::allocate
-/// [`broadcast::Sender`]: tokio::sync::broadcast::Sender
-/// [`stdin`]: std::io::stdin
-pub static INPUT_RESOURCE: LazyLock<Mutex<Option<InputResourceState>>> =
-    LazyLock::new(|| Mutex::new(None));
-
-/// Container for global input resource state.
-///
-/// Separates concerns:
-/// - [`lifecycle`]: Thread state (sender, metadata) — passed to [`MioPollerThread`]
-/// - [`waker`]: Shutdown signal — only needed by [`PollerSubscriptionHandle`], not the
-///   thread
-///
-/// [`MioPollerThread`]: super::mio_poller::MioPollerThread
-/// [`PollerSubscriptionHandle`]: PollerSubscriptionHandle
-/// [`lifecycle`]: InputResourceState::lifecycle
-/// [`waker`]: InputResourceState::waker
-#[allow(missing_debug_implementations)]
-pub struct InputResourceState {
-    /// Thread lifecycle state passed to [`MioPollerThread::new()`].
-    ///
-    /// [`MioPollerThread::new()`]: super::mio_poller::MioPollerThread::new
-    pub lifecycle: PollerThreadLifecycleState,
-
-    /// Waker to signal thread shutdown. Cloned to each [`PollerSubscriptionHandle`].
-    ///
-    /// NOT passed to the thread — only used as a distribution point for handles.
-    pub waker: Arc<mio::Waker>,
-}
-
-/// Functions that acquire or operate under [`INPUT_RESOURCE`]'s mutex lock.
-///
-/// All public functions in this module acquire the [`INPUT_RESOURCE`] mutex guard
-/// internally. The `guarded_ops::` prefix at call sites serves as documentation that the
-/// call accesses the mutex-protected global singleton.
-pub mod guarded_ops {
-    #[allow(clippy::wildcard_imports)]
-    use super::*;
-
-    /// Subscribe your async consumer to the global input resource, in order to receive
-    /// input events.
-    ///
-    /// The global static singleton [`INPUT_RESOURCE`] contains one [`broadcast::Sender`].
-    /// This channel acts as a bridge between sync the only [`MioPollerThread`] and the
-    /// many async consumers. We don't need to capture the broadcast channel itself in the
-    /// singleton, only the sender, since it is trivial to create new receivers from it.
-    ///
-    /// # Returns
-    ///
-    /// A new [`PollerSubscriptionHandle`] that independently receives all input events
-    /// and resize signals.
-    ///
-    /// # Multiple Async Consumers
-    ///
-    /// Each caller gets their own receiver via [`broadcast::Sender::subscribe()`]. Here
-    /// are examples of callers:
-    /// - TUI app that receives all input events.
-    /// - Logger receives all input events (independently).
-    /// - Debug recorder receives all input events (independently).
-    ///
-    /// # Thread Spawning
-    ///
-    /// On first call, this spawns the [`mio`] poller thread via
-    /// [`MioPollerThread::new()`] which uses [`mio::Poll`] to wait on both
-    /// [`stdin`] data and [`SIGWINCH`] signals. See the [Thread Lifecycle] section in
-    /// [`MioPollerThread`] for details on thread lifetime and exit conditions.
-    ///
-    /// # Fast-Path Thread Reuse
-    ///
-    /// If the thread is still running (`liveness == Running`), we skip spawning a new one
-    /// and reuse the existing thread. This handles the inherent race condition where a
-    /// new subscriber appears during the thread's shutdown check window.
-    ///
-    /// See [The Inherent Race Condition] in [`PollerThreadLifecycleState`] for complete
-    /// documentation on the race window and why thread reuse is safe.
-    ///
-    /// # Panics
-    ///
-    /// Panics if:
-    /// 1. Thread spawning fails; see [`MioPollerThread::new()`] for details.
-    /// 2. The [`INPUT_RESOURCE`] mutex is poisoned.
-    /// 3. The [`INPUT_RESOURCE`] is `None` after initialization (invariant violation).
-    ///
-    /// [The Inherent Race Condition]: PollerThreadLifecycleState#the-inherent-race-condition
-    /// [Thread Lifecycle]: MioPollerThread#thread-lifecycle
-    /// [`INPUT_RESOURCE`]: super::INPUT_RESOURCE
-    /// [`PollerThreadLifecycleState`]: PollerThreadLifecycleState
-    /// [`SIGWINCH`]: signal_hook::consts::SIGWINCH
-    /// [`broadcast::Sender::subscribe()`]: tokio::sync::broadcast::Sender::subscribe
-    /// [`broadcast::Sender`]: tokio::sync::broadcast::Sender
-    /// [`mio::Poll`]: mio::Poll
-    /// [`stdin`]: std::io::stdin
-    pub fn allocate() -> PollerSubscriptionHandle {
-        let mut guard = INPUT_RESOURCE.lock().expect(
-            "INPUT_RESOURCE mutex poisoned: another thread panicked while holding this lock. \
-             Terminal input is unavailable. This is unrecoverable.",
-        );
-
-        // Fast-path thread reuse: If thread is still running, skip spawning a new one.
-        let apply_fast_path_thread_reuse =
-            guard.as_ref().is_some_and(|input_resource_state| {
-                input_resource_state.lifecycle.metadata.is_running()
-                    == ThreadLiveness::Running
-            });
-
-        if !apply_fast_path_thread_reuse {
-            // Create a poll and waker.
-            let new_poll = Poll::new().expect(
-                "Failed to create mio::Poll: OS denied epoll/kqueue creation. \
-                 Check ulimit -n (max open files) or /proc/sys/fs/epoll/max_user_watches.",
-            );
-            let new_registry = new_poll.registry();
-            let new_waker =
-                Waker::new(new_registry, SourceKindReady::ReceiverDropWaker.to_token())
-                    .expect(
-                        "Failed to create mio::Waker: eventfd/pipe creation failed. \
-                     Check ulimit -n (max open files).",
-                    );
-
-            // Create a new lifecycle state for this thread.
-            let thread_lifecycle_state = PollerThreadLifecycleState::new();
-
-            // Spawn the thread with a handle to the shared state.
-            MioPollerThread::new(new_poll, thread_lifecycle_state.clone_handle());
-
-            // Save the state & waker to the global singleton.
-            guard.replace(InputResourceState {
-                lifecycle: thread_lifecycle_state,
-                waker: Arc::new(new_waker),
-            });
-        }
-
-        // Guard is guaranteed to be Some at this point.
-        debug_assert!(guard.is_some());
-        let input_resource_state = guard.as_ref().unwrap();
-
-        PollerSubscriptionHandle {
-            maybe_poller_rx: Some(
-                input_resource_state.lifecycle.tx_poller_event.subscribe(),
-            ),
-            mio_poller_thread_waker: Arc::clone(&input_resource_state.waker),
-        }
-    }
-
-    /// Checks if the [`mio_poller`] thread is currently running.
-    ///
-    /// This is useful for testing thread lifecycle behavior and debugging.
-    ///
-    /// # Returns
-    ///
-    /// - [`ThreadLiveness::Running`] if the thread is running.
-    /// - [`ThreadLiveness::Terminated`] if [`INPUT_RESOURCE`] is uninitialized or the
-    ///   thread has exited.
-    ///
-    /// See [Device Lifecycle] in [`DirectToAnsiInputDevice`] for details on how threads
-    /// spawn and exit.
-    ///
-    /// [Device Lifecycle]: DirectToAnsiInputDevice#device-lifecycle
-    /// [`mio_poller`]: crate::direct_to_ansi::input::mio_poller
-    #[allow(clippy::redundant_closure_for_method_calls)]
-    pub fn is_thread_running() -> ThreadLiveness {
-        INPUT_RESOURCE
-            .lock()
-            .ok()
-            .and_then(|guard| {
-                guard
-                    .as_ref()
-                    .map(|state| state.lifecycle.metadata.is_running())
-            })
-            .unwrap_or(ThreadLiveness::Terminated)
-    }
-
-    /// Queries how many receivers are subscribed to the input broadcast channel.
-    ///
-    /// This is useful for testing thread lifecycle behavior and debugging.
-    ///
-    /// # Returns
-    ///
-    /// The number of active receivers, or `0` if [`INPUT_RESOURCE`] is uninitialized.
-    ///
-    /// The [`mio_poller`] thread exits gracefully when this count reaches `0` (all
-    /// receivers dropped). See [Device Lifecycle] in [`DirectToAnsiInputDevice`] for
-    /// details.
-    ///
-    /// [Device Lifecycle]: DirectToAnsiInputDevice#device-lifecycle
-    /// [`mio_poller`]: crate::direct_to_ansi::input::mio_poller
-    pub fn get_receiver_count() -> usize {
-        INPUT_RESOURCE
-            .lock()
-            .ok()
-            .and_then(|guard| {
-                guard
-                    .as_ref()
-                    .map(|state| state.lifecycle.tx_poller_event.receiver_count())
-            })
-            .unwrap_or(0)
-    }
-
-    /// Returns the current thread generation number.
-    ///
-    /// Each time a new [`mio_poller`] thread is spawned, the generation increments. This
-    /// allows tests to verify whether a thread was reused or relaunched:
-    ///
-    /// - **Same generation**: Thread was reused (device B subscribed before thread
-    ///   exited).
-    /// - **Different generation**: Thread was relaunched (a new thread was spawned).
-    ///
-    /// # Returns
-    ///
-    /// The current generation number, or `0` if [`INPUT_RESOURCE`] is uninitialized.
-    ///
-    /// See [Device Lifecycle] in [`DirectToAnsiInputDevice`] for details on thread
-    /// spawn/exit/relaunch.
-    ///
-    /// [Device Lifecycle]: DirectToAnsiInputDevice#device-lifecycle
-    /// [`mio_poller`]: crate::direct_to_ansi::input::mio_poller
-    pub fn get_thread_generation() -> u8 {
-        INPUT_RESOURCE
-            .lock()
-            .ok()
-            .and_then(|guard| {
-                guard
-                    .as_ref()
-                    .map(|state| state.lifecycle.metadata.generation)
-            })
-            .unwrap_or(0)
-    }
-
-    /// Subscribe to input events from an existing thread.
-    ///
-    /// This is a lightweight operation that creates a new subscriber to the existing
-    /// broadcast channel. Use this for additional consumers (logging, debugging, etc.)
-    /// after a [`DirectToAnsiInputDevice`] has been created.
-    ///
-    /// When the returned handle is dropped, it notifies the [`mio_poller`] thread to
-    /// check if it should exit (when all subscribers are dropped, the thread exits).
-    ///
-    /// # Panics
-    ///
-    /// - If the [`INPUT_RESOURCE`] mutex is poisoned (another thread panicked while
-    ///   holding the lock).
-    /// - If no device exists yet. Call [`allocate`] first.
-    ///
-    /// [`mio_poller`]: super::super::mio_poller
-    pub fn subscribe_to_existing() -> PollerSubscriptionHandle {
-        let guard = INPUT_RESOURCE.lock().expect(
-            "INPUT_RESOURCE mutex poisoned: another thread panicked while holding this lock.",
-        );
-
-        let state = guard.as_ref().expect(
-            "subscribe_to_existing() called before DirectToAnsiInputDevice::new(). \
-             Create a device first, then call device.subscribe().",
-        );
-
-        PollerSubscriptionHandle {
-            maybe_poller_rx: Some(state.lifecycle.tx_poller_event.subscribe()),
-            mio_poller_thread_waker: Arc::clone(&state.waker),
-        }
-    }
-}
-
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// DirectToAnsiInputDevice
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+use std::fmt::Debug;
 
 /// Async input device for [`DirectToAnsi`] backend.
 ///
 /// One of two real [`InputDevice`] backends (the other being [`CrosstermInputDevice`]).
 /// Selected via [`TERMINAL_LIB_BACKEND`] on Linux; talks directly to the terminal using
-/// ANSI/VT100 protocols with zero external dependencies. Uses the **crossterm `more` flag
-/// pattern** for reliable ESC key disambiguation without fixed timeouts.
+/// ANSI/VT100 protocols without relying on [`crossterm`] for terminal I/O.
 ///
-/// This is a **thin wrapper** that delegates to [`INPUT_RESOURCE`] for
-/// [`std::io::Stdin`] reading and buffer management. The global resource pattern mirrors
-/// crossterm's architecture, ensuring [`stdin`] handles persist across device lifecycle
-/// boundaries.
+/// This is a **thin wrapper** that delegates to [`SINGLETON`] for
+/// [`std::io::Stdin`] reading and buffer management. This process global singleton
+/// supports restart cycles with thread reuse (fast path) to handle race conditions
+/// when apps rapidly create and drop input devices.
 ///
-/// Manages asynchronous reading from terminal [`stdin`] via dedicated thread + channel:
+/// It manages asynchronous reading from terminal [`stdin`] via dedicated thread +
+/// channel:
 /// - [`stdin`] channel receiver (process global singleton, outlives device instances)
-/// - Parsing happens in the reader thread using the `more` flag pattern
-/// - Smart ESC disambiguation: waits for more bytes only when data is likely pending
+/// - Parsing happens in the reader thread using the [`more` flag pattern]
+/// - [ESC key disambiguation]: waits for more bytes only when data is likely pending
 /// - Dispatch to protocol parsers (keyboard, mouse, terminal events, UTF-8)
 ///
 /// # Architecture
@@ -320,9 +40,17 @@ pub mod guarded_ops {
 /// function keys, etc.) and terminal resize signals ([`SIGWINCH`]) reliably, even over
 /// [SSH].
 ///
-/// The broadcast channel allows **multiple async consumers** to receive all input events
-/// simultaneously; this can be use useful for debugging, logging, or event recording
-/// alongside the "primary" TUI app consumer.
+/// ## [Loosely Coupled And Strongly Coherent]
+///
+/// The [`broadcast`] channel **decouples** the reader thread from async consumers,
+/// enabling independent lifecycle management:
+/// - **Reuse existing thread** (fast path) when apps rapidly stop/start
+/// - **Create new thread** when none exists or previous one terminated
+/// - **Destroy thread** cleanly when no consumers need input
+///
+/// This decoupling also allows **multiple async consumers** to receive all input events
+/// simultaneously—useful for debugging, logging, or event recording alongside the
+/// primary TUI app consumer.
 ///
 /// ## Why This Design? (Historical Context)
 ///
@@ -382,7 +110,7 @@ pub mod guarded_ops {
 /// │   • Parser state                    │           │                             │
 /// │   • SIGWINCH watcher                │           │                             │
 /// │                                     │ broadcast │                             │
-/// │ tx.send(InputEvent)  ───────────────┼───────────▶ rx.recv().await             │
+/// │ tx.send(InputEvent)  ───────────────┼───────────► rx.recv().await             │
 /// │                                     │ channel   │ (cancel-safe, fan-out!)     │
 /// └─────────────────────────────────────┘    │      └─────────────────────────────┘
 ///                                            ▼
@@ -401,7 +129,7 @@ pub mod guarded_ops {
 ///
 /// ```text
 /// ┌─────────────────────────────────────────────────────────────────────────┐
-/// │ INPUT_RESOURCE (static LazyLock<Mutex<...>>)                            │
+/// │ SINGLETON (static Mutex<Option<...>>)                              │
 /// │ internal:                                                               │
 /// │  • mio-poller thread: holds tx, reads stdin, runs vt100 parser          │
 /// │ external:                                                               │
@@ -430,14 +158,14 @@ pub mod guarded_ops {
 /// # Device Lifecycle
 ///
 /// A single process can create and drop [`DirectToAnsiInputDevice`] instances repeatedly.
-/// The global [`INPUT_RESOURCE`] **static** persists, but the **thread** spawns and exits
+/// The global [`SINGLETON`] `static` persists, but the **thread** spawns and exits
 /// with each app lifecycle:
 ///
 /// ```text
 /// ┌───────────────────────────────────────────────────────────────────────────────┐
 /// │ PROCESS LIFETIME                                                              │
 /// │                                                                               │
-/// │ INPUT_RESOURCE: LazyLock<Mutex<Option<PollerThreadLifecycleState>>>           │
+/// │ SINGLETON: Mutex<Option<InputResource>>                                       │
 /// │ (static persists, but contents are replaced on each thread spawn)             │
 /// │                                                                               │
 /// │ ═════════════════════════════════════════════════════════════════════════════ │
@@ -447,8 +175,8 @@ pub mod guarded_ops {
 /// │ │                                                                           │ │
 /// │ │  1. DirectToAnsiInputDevice::new()                                        │ │
 /// │ │  2. next() → allocate()                                                   │ │
-/// │ │  3. INPUT_RESOURCE is None → initialize_input_resource()                  │ │
-/// │ │       • Creates PollerThreadLifecycleState { tx, liveness: Running }      │ │
+/// │ │  3. SINGLETON is None → initialize_global_input_resource()                │ │
+/// │ │       • Creates PollerBridge { tx, liveness: Running }                    │ │
 /// │ │       • Spawns mio-poller thread #1                                       │ │
 /// │ │       • thread #1 owns MioPollerThread struct                             │ │
 /// │ │  4. TUI app A runs, receiving events from rx                              │ │
@@ -463,9 +191,9 @@ pub mod guarded_ops {
 /// │ │                                                                           │ │
 /// │ │  1. DirectToAnsiInputDevice::new()                                        │ │
 /// │ │  2. next() → allocate()                                                   │ │
-/// │ │  3. INPUT_RESOURCE has state, but liveness == Terminated                  │ │
-/// │ │       → needs_init = true → initialize_input_resource()                   │ │
-/// │ │       • Creates NEW PollerThreadLifecycleState { tx, liveness: Running }  │ │
+/// │ │  3. SINGLETON has state, but liveness == Terminated                       │ │
+/// │ │       → needs_init = true → initialize_global_input_resource()            │ │
+/// │ │       • Creates NEW PollerBridge { tx, liveness: Running }                │ │
 /// │ │       • Spawns mio-poller thread #2 (NOT the same as #1!)                 │ │
 /// │ │       • thread #2 owns its own MioPollerThread struct                     │ │
 /// │ │  4. TUI app B runs, receiving events from rx                              │ │
@@ -481,7 +209,7 @@ pub mod guarded_ops {
 /// ```
 ///
 /// **Key insight**: The [`mio_poller`] thread is NOT persistent across the lifetime of
-/// the process. Each app lifecycle spawns a new thread. The [`metadata`] field
+/// the process. Each app lifecycle spawns a new thread. The [`thread_liveness`] field
 /// enables this by allowing [`allocate()`] to detect when a thread
 /// has exited and spawn a new one.
 ///
@@ -509,7 +237,7 @@ pub mod guarded_ops {
 /// ```text
 /// ┌──────────────────────────────────────────────────────────────────────────┐
 /// │ App A exits, drops receiver                                              │
-/// │   • PollerSubscriptionHandle::drop() calls waker.wake()                  │
+/// │   • InputDeviceSubscriptionHandle::drop() calls waker.wake()             │
 /// │   • Thread may continue running (fast) OR exit (slow)                    │
 /// └──────────────────────────────┬───────────────────────────────────────────┘
 ///                                │
@@ -541,13 +269,13 @@ pub mod guarded_ops {
 ///     │
 ///     └─► allocate()                            (input_device.rs)
 ///             │
-///             ├─► INPUT_RESOURCE.lock()
+///             ├─► SINGLETON.lock()
 ///             │
 ///             ├─► needs_init = None || liveness == Terminated
 ///             │       │
-///             │       └─► if needs_init: initialize_input_resource()
+///             │       └─► if needs_init: initialize_global_input_resource()
 ///             │               │
-///             │               ├─► Create PollerThreadLifecycleState
+///             │               ├─► Create PollerBridge
 ///             │               ├─► MioPollerThread::new(state.clone())
 ///             │               └─► guard.replace(state)
 ///             │
@@ -559,8 +287,9 @@ pub mod guarded_ops {
 /// ```
 ///
 /// **Key points:**
-/// - [`DirectToAnsiInputDevice`] is a thin wrapper holding [`PollerSubscriptionHandle`]
-/// - Global state ([`INPUT_RESOURCE`]) persists - channel and thread survive device drops
+/// - [`DirectToAnsiInputDevice`] is a thin wrapper holding
+///   [`InputDeviceSubscriptionHandle`]
+/// - Global state ([`SINGLETON`]) persists - channel and thread survive device drops
 /// - Eager subscription - each device subscribes at construction time in [`new()`]
 /// - Thread liveness check - if thread died, next subscribe reinitializes everything
 ///
@@ -572,7 +301,7 @@ pub mod guarded_ops {
 /// ```text
 /// ┌───────────────────────────────────────────────────────────────────┐
 /// │ Raw ANSI bytes: "1B[A" (hex)                                      │
-/// │ std::io::stdin in mio-poller thread (INPUT_RESOURCE)              │
+/// │ std::io::stdin in mio-poller thread (SINGLETON)              │
 /// └────────────────────────────┬──────────────────────────────────────┘
 ///                              │
 /// ┌────────────────────────────▼──────────────────────────────────────┐
@@ -596,7 +325,7 @@ pub mod guarded_ops {
 ///                              │ broadcast channel
 /// ┌────────────────────────────▼──────────────────────────────────────┐
 /// │ THIS DEVICE: DirectToAnsiInputDevice (Backend Executor)           │
-/// │   • Zero-sized handle struct (delegates to INPUT_RESOURCE)        │
+/// │   • Zero-sized handle struct (delegates to SINGLETON)        │
 /// │   • Receives pre-parsed InputEvent from channel                   │
 /// │   • Resize events include Option<Size> (fallback to get_size())   │
 /// └────────────────────────────┬──────────────────────────────────────┘
@@ -687,7 +416,7 @@ pub mod guarded_ops {
 ///
 /// ## Why This Works
 ///
-/// Terminal emulators send escape sequences atomically in a single `write()` syscall.
+/// Terminal emulators send escape sequences atomically in a single `write()` [`syscall`].
 /// When you press Up Arrow, the terminal sends `ESC [ A` (3 bytes) together. The kernel
 /// buffers these bytes, and our `read()` typically gets all of them at once.
 ///
@@ -745,15 +474,17 @@ pub mod guarded_ops {
 /// 1. [`super::at_most_one_instance_assert::release()`] is called, allowing a new device
 ///    to be created.
 /// 2. Rust's drop glue drops [`Self::resource_handle`], triggering
-///    [`PollerSubscriptionHandle`'s drop behavior] (thread lifecycle protocol).
+///    [`InputDeviceSubscriptionHandle`'s drop behavior] (thread lifecycle protocol).
 ///
 /// For the complete lifecycle diagram including the [race condition] where a fast
-/// subscriber can reuse the existing thread, see [`PollerThreadLifecycleState`].
+/// subscriber can reuse the existing thread, see [`PollerBridge`].
 ///
 /// [Architecture]: Self#architecture
 /// [Device Lifecycle]: Self#device-lifecycle
 /// [ESC Detection Limitations]: super::mio_poller::MioPollerThread#esc-detection-limitations
+/// [ESC key disambiguation]: Self#esc-key-disambiguation-crossterm-more-flag-pattern
 /// [How It Works]: super::mio_poller::MioPollerThread#how-it-works
+/// [Loosely Coupled And Strongly Coherent]: https://developerlife.com/2015/11/05/loosely-coupled-strongly-coherent/
 /// [No exclusive access]: super::mio_poller#no-exclusive-access
 /// [SSH]: https://en.wikipedia.org/wiki/Secure_Shell
 /// [The Problems]: Self#the-problems
@@ -761,26 +492,27 @@ pub mod guarded_ops {
 /// [`CrosstermInputDevice`]: crate::tui::terminal_lib_backends::crossterm_backend::CrosstermInputDevice
 /// [`DirectToAnsi`]: mod@crate::direct_to_ansi
 /// [`EventStream`]: crossterm::event::EventStream
-/// [`INPUT_RESOURCE`]: INPUT_RESOURCE
 /// [`INTERNAL_EVENT_READER`]: https://github.com/crossterm-rs/crossterm/blob/0.29/src/event.rs#L149
+/// [`InputDeviceSubscriptionHandle`]: super::input_device_impl::InputDeviceSubscriptionHandle
+/// [`InputDeviceSubscriptionHandle`'s drop behavior]: super::input_device_impl::InputDeviceSubscriptionHandle#drop-behavior
 /// [`InputDevice`]: crate::InputDevice
 /// [`MioPollerThread`]: super::mio_poller::MioPollerThread
-/// [`PollerSubscriptionHandle`'s drop behavior]: PollerSubscriptionHandle#drop-behavior
-/// [`PollerThreadLifecycleState`]: super::mio_poller::PollerThreadLifecycleState
+/// [`PollerBridge`]: super::mio_poller::PollerBridge
 /// [`SIGWINCH`]: signal_hook::consts::SIGWINCH
+/// [`SINGLETON`]: super::input_device_impl::global_input_resource::SINGLETON
 /// [`TERMINAL_LIB_BACKEND`]: crate::tui::TERMINAL_LIB_BACKEND
 /// [`VT100InputEventIR`]: crate::core::ansi::vt_100_terminal_input_parser::VT100InputEventIR
-/// [`allocate()`]: guarded_ops::allocate
+/// [`allocate()`]: super::input_device_impl::global_input_resource::allocate
 /// [`broadcast`]: tokio::sync::broadcast
 /// [`crossterm`]: crossterm
 /// [`epoll`]: https://man7.org/linux/man-pages/man7/epoll.7.html
 /// [`fd`]: https://en.wikipedia.org/wiki/File_descriptor
 /// [`kqueue`]: https://man.freebsd.org/cgi/man.cgi?query=kqueue&sektion=2
-/// [`metadata`]: super::mio_poller::PollerThreadLifecycleState::metadata
 /// [`mio.rs`]: https://github.com/crossterm-rs/crossterm/blob/0.29/src/event/source/unix/mio.rs
 /// [`mio::Poll`]: mio::Poll
 /// [`mio_poller`]: super::mio_poller
 /// [`mio`]: mio
+/// [`more` flag pattern]: Self#esc-key-disambiguation-crossterm-more-flag-pattern
 /// [`new()`]: Self::new
 /// [`next()`]: Self::next
 /// [`pty_mio_poller_thread_reuse_test`]: crate::core::ansi::vt_100_terminal_input_parser::integration_tests::pty_mio_poller_thread_reuse_test
@@ -789,12 +521,14 @@ pub mod guarded_ops {
 /// [`std::io::stdin()`]: std::io::stdin
 /// [`stdin`]: std::io::stdin
 /// [`super::at_most_one_instance_assert::release()`]: super::at_most_one_instance_assert::release
+/// [`syscall`]: https://en.wikipedia.org/wiki/System_call
+/// [`thread_liveness`]: super::mio_poller::PollerBridge::thread_liveness
 /// [`tokio::io::stdin()`]: tokio::io::stdin
 /// [`tokio::select!`]: tokio::select
 /// [`tokio::signal`]: tokio::signal
 /// [`try_parse_input_event`]: crate::core::ansi::vt_100_terminal_input_parser::try_parse_input_event
 /// [`vt_100_terminal_input_parser`]: mod@crate::core::ansi::vt_100_terminal_input_parser
-/// [race condition]: super::mio_poller::PollerThreadLifecycleState#the-inherent-race-condition
+/// [race condition]: super::mio_poller::PollerBridge#the-inherent-race-condition
 pub struct DirectToAnsiInputDevice {
     /// This device's subscription to the global input broadcast channel.
     ///
@@ -803,13 +537,13 @@ pub struct DirectToAnsiInputDevice {
     /// dropped and a new one created "immediately", the new device's subscription must
     /// be visible to the thread when it checks [`receiver_count()`].
     ///
-    /// Uses [`PollerSubscriptionHandle`] to wake the [`mio_poller`] thread when
+    /// Uses [`InputDeviceSubscriptionHandle`] to wake the [`mio_poller`] thread when
     /// dropped, allowing thread lifecycle management.
     ///
     /// [`mio_poller`]: crate::direct_to_ansi::input::mio_poller
     /// [`new()`]: Self::new
     /// [`receiver_count()`]: tokio::sync::broadcast::Sender::receiver_count
-    pub resource_handle: PollerSubscriptionHandle,
+    pub resource_handle: InputDeviceSubscriptionHandle,
 }
 
 impl DirectToAnsiInputDevice {
@@ -834,19 +568,19 @@ impl DirectToAnsiInputDevice {
     /// critical for correct lifecycle: if device A is dropped and device B is created
     /// immediately, device B's subscription must be visible to the thread when it
     /// checks [`receiver_count()`] (before it decides to exit). See the [race condition
-    /// documentation] in [`PollerSubscriptionHandle`] for details.
+    /// documentation] in [`InputDeviceSubscriptionHandle`] for details.
     ///
     /// [`mio_poller`]: crate::direct_to_ansi::input::mio_poller
     /// [`new()`]: Self::new
     /// [`receiver_count()`]: tokio::sync::broadcast::Sender::receiver_count
     /// [`stdin`]: std::io::Stdin
     /// [`subscribe()`]: Self::subscribe
-    /// [race condition documentation]: PollerSubscriptionHandle#race-condition-and-correctness
+    /// [race condition documentation]: super::input_device_impl::InputDeviceSubscriptionHandle#race-condition-and-correctness
     #[must_use]
     pub fn new() -> Self {
         super::at_most_one_instance_assert::claim_and_assert();
         Self {
-            resource_handle: guarded_ops::allocate(),
+            resource_handle: global_input_resource::allocate(),
         }
     }
 
@@ -868,8 +602,8 @@ impl DirectToAnsiInputDevice {
     /// [`pty_mio_poller_subscribe_test`]: crate::core::ansi::vt_100_terminal_input_parser::integration_tests::pty_mio_poller_subscribe_test
     /// [`subscribe()`]: Self::subscribe
     #[must_use]
-    pub fn subscribe(&self) -> PollerSubscriptionHandle {
-        guarded_ops::subscribe_to_existing()
+    pub fn subscribe(&self) -> InputDeviceSubscriptionHandle {
+        global_input_resource::subscribe_to_existing()
     }
 
     /// Read the next input event asynchronously.
@@ -949,12 +683,12 @@ impl DirectToAnsiInputDevice {
     /// - The device can be **created and dropped multiple times** - global state persists
     /// - This method is **called repeatedly** by the main event loop via
     ///   [`InputDevice::next()`], which dispatches to [`Self::next()`]
-    /// - **Buffer state is preserved** across device lifetimes via [`INPUT_RESOURCE`]
+    /// - **Buffer state is preserved** across device lifetimes via [`SINGLETON`]
     /// - Returns `None` when stdin is closed (program should exit)
     ///
     /// # Global State
     ///
-    /// This method accesses the global input resource ([`INPUT_RESOURCE`]) which
+    /// This method accesses the global input resource ([`SINGLETON`]) which
     /// holds:
     /// - The channel receiver for stdin data and resize signals (from dedicated reader
     ///   thread using [`mio::Poll`])
@@ -994,10 +728,10 @@ impl DirectToAnsiInputDevice {
     ///
     /// [Architecture]: Self#architecture
     /// [`EOF`]: https://en.wikipedia.org/wiki/End-of-file
-    /// [`INPUT_RESOURCE`]: INPUT_RESOURCE
     /// [`InputDevice::next()`]: crate::InputDevice::next
     /// [`InputDevice`]: crate::InputDevice
     /// [`PollerEvent::Signal`]: super::channel_types::PollerEvent::Signal
+    /// [`SINGLETON`]: super::input_device_impl::global_input_resource::SINGLETON
     /// [`Self::next()`]: Self::next
     /// [`mio::Poll`]: mio::Poll
     /// [`signal_hook_mio`]: signal_hook_mio
@@ -1061,7 +795,7 @@ impl DirectToAnsiInputDevice {
 impl Debug for DirectToAnsiInputDevice {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("DirectToAnsiInputDevice")
-            .field("global_resource", &"<INPUT_RESOURCE>")
+            .field("global_resource", &"<SINGLETON>")
             .finish()
     }
 }
@@ -1072,311 +806,9 @@ impl Default for DirectToAnsiInputDevice {
 
 impl Drop for DirectToAnsiInputDevice {
     /// Clears gate, then Rust drops [`Self::resource_handle`], which triggers
-    /// [`PollerSubscriptionHandle::drop()`]. See [Drop behavior] for full mechanism.
+    /// [`InputDeviceSubscriptionHandle::drop()`]. See [Drop behavior] for full mechanism.
     ///
     /// [Drop behavior]: DirectToAnsiInputDevice#drop-behavior
-    /// [`PollerSubscriptionHandle::drop()`]: PollerSubscriptionHandle#drop-behavior
+    /// [`InputDeviceSubscriptionHandle::drop()`]: super::input_device_impl::InputDeviceSubscriptionHandle#drop-behavior
     fn drop(&mut self) { super::at_most_one_instance_assert::release(); }
-}
-
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// PollerSubscriptionHandle
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-/// Receiver wrapper that wakes the [`mio_poller`] thread on drop.
-///
-/// # Drop behavior
-///
-/// When this handle is dropped:
-/// 1. [`maybe_poller_rx`] is dropped first, which causes Tokio's broadcast channel to
-///    atomically decrement the [`Sender`]'s internal [`receiver_count()`].
-/// 2. Then [`mio::Waker::wake()`] interrupts the poll loop.
-/// 3. The [`mio_poller`] thread wakes and [`handle_receiver_drop_waker()`] checks
-///    [`receiver_count()`] to decide if the thread should exit (when count reaches `0`).
-///
-/// # Race Condition and Correctness
-///
-/// There is a race window between when the receiver is dropped and when
-/// [`handle_receiver_drop_waker()`] checks [`receiver_count()`]. This is the **fast-path
-/// thread reuse** scenario — if a new subscriber appears during the window, the thread
-/// correctly continues serving it instead of exiting.
-///
-/// See [`PollerThreadLifecycleState`] for comprehensive documentation:
-/// - [The Inherent Race Condition] — timeline diagram
-/// - [What Happens If We Exit Blindly] — zombie device scenario
-/// - [Why Thread Reuse Is Safe] — resource safety table
-///
-/// [The Inherent Race Condition]: super::mio_poller::PollerThreadLifecycleState#the-inherent-race-condition
-/// [What Happens If We Exit Blindly]: super::mio_poller::PollerThreadLifecycleState#what-happens-if-we-exit-blindly
-/// [Why Thread Reuse Is Safe]: super::mio_poller::PollerThreadLifecycleState#why-thread-reuse-is-safe
-/// [`PollerThreadLifecycleState`]: super::mio_poller::PollerThreadLifecycleState
-/// [`Sender`]: tokio::sync::broadcast::Sender
-/// [`handle_receiver_drop_waker()`]: super::mio_poller::handler_receiver_drop::handle_receiver_drop_waker
-/// [`maybe_poller_rx`]: Self::maybe_poller_rx
-/// [`mio_poller`]: super::mio_poller
-/// [`receiver_count()`]: tokio::sync::broadcast::Sender::receiver_count
-#[allow(missing_debug_implementations)]
-pub struct PollerSubscriptionHandle {
-    /// The actual broadcast receiver for poller events.
-    pub maybe_poller_rx: Option<PollerEventReceiver>,
-
-    /// Waker to signal the [`mio_poller`] thread.
-    ///
-    /// [`mio_poller`]: super::mio_poller
-    pub mio_poller_thread_waker: Arc<mio::Waker>,
-}
-
-impl Drop for PollerSubscriptionHandle {
-    /// Drops receiver then wakes thread. See [Drop behavior] for the full mechanism.
-    /// Also see [`DirectToAnsiInputDevice`'s drop behavior] for when this is triggered.
-    ///
-    /// [Drop behavior]: PollerSubscriptionHandle#drop-behavior
-    /// [`DirectToAnsiInputDevice`'s drop behavior]: DirectToAnsiInputDevice#drop-behavior
-    fn drop(&mut self) {
-        // Drop receiver first so Sender::receiver_count() decrements.
-        drop(self.maybe_poller_rx.take());
-
-        // Wake the thread so it can check if it should exit.
-        let wake_result = self.mio_poller_thread_waker.wake();
-
-        // Log failure (non-fatal: thread may have already exited).
-        if let Err(err) = wake_result {
-            DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
-                tracing::debug!(
-                    message = "PollerSubscriptionHandle::drop: wake failed",
-                    error = ?err
-                );
-            });
-        }
-    }
-}
-
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// Tests
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-/// Comprehensive testing is performed in PTY integration tests:
-/// - [`test_pty_input_device`]
-/// - [`test_pty_mouse_events`]
-/// - [`test_pty_keyboard_modifiers`]
-/// - [`test_pty_utf8_text`]
-/// - [`test_pty_terminal_events`]
-///
-/// [`test_pty_input_device`]: crate::core::ansi::vt_100_terminal_input_parser::integration_tests::pty_input_device_test::test_pty_input_device
-/// [`test_pty_keyboard_modifiers`]: crate::core::ansi::vt_100_terminal_input_parser::integration_tests::pty_keyboard_modifiers_test::test_pty_keyboard_modifiers
-/// [`test_pty_mouse_events`]: crate::core::ansi::vt_100_terminal_input_parser::integration_tests::pty_mouse_events_test::test_pty_mouse_events
-/// [`test_pty_terminal_events`]: crate::core::ansi::vt_100_terminal_input_parser::integration_tests::pty_terminal_events_test::test_pty_terminal_events
-/// [`test_pty_utf8_text`]: crate::core::ansi::vt_100_terminal_input_parser::integration_tests::pty_utf8_text_test::test_pty_utf8_text
-#[cfg(test)]
-mod tests {
-    use super::{super::{paste_state_machine::PasteCollectionState,
-                        protocol_conversion::convert_input_event},
-                *};
-    use crate::{ByteOffset,
-                core::ansi::vt_100_terminal_input_parser::{VT100InputEventIR,
-                                                           VT100KeyCodeIR,
-                                                           VT100KeyModifiersIR,
-                                                           VT100PasteModeIR,
-                                                           parse_keyboard_sequence,
-                                                           parse_utf8_text}};
-
-    #[tokio::test]
-    async fn test_event_parsing() {
-        // Test event parsing from buffer - verify parsers handle different sequence
-        // types. These tests use the parser functions directly since they don't
-        // need the device.
-
-        // Test 1: Parse UTF-8 text (simplest case).
-        let buffer: &[u8] = b"A";
-        if let Some((vt100_event, bytes_consumed)) = parse_utf8_text(buffer) {
-            assert_eq!(bytes_consumed, ByteOffset(1));
-            if let Some(canonical_event) = convert_input_event(vt100_event) {
-                assert!(matches!(canonical_event, InputEvent::Keyboard(_)));
-            } else {
-                panic!("Failed to convert UTF-8 text event");
-            }
-        } else {
-            panic!("Failed to parse UTF-8 text 'A'");
-        }
-
-        // Test 2: ESC key (single byte).
-        let esc_buffer: [u8; 1] = [0x1B];
-        assert_eq!(esc_buffer.len(), 1);
-        assert_eq!(esc_buffer[0], 0x1B);
-
-        // Test 3: CSI sequence for keyboard (Up Arrow: ESC [ A).
-        let csi_buffer: [u8; 3] = [0x1B, 0x5B, 0x41];
-        if let Some((vt100_event, bytes_consumed)) = parse_keyboard_sequence(&csi_buffer)
-        {
-            assert_eq!(bytes_consumed, ByteOffset(3));
-            if let Some(canonical_event) = convert_input_event(vt100_event) {
-                assert!(matches!(canonical_event, InputEvent::Keyboard(_)));
-            } else {
-                panic!("Failed to convert keyboard event");
-            }
-        }
-    }
-
-    #[tokio::test]
-    async fn test_paste_state_machine_basic() {
-        // Test: Basic paste collection - Start marker, text, End marker.
-        // Use a local paste_state to test the state machine logic directly.
-        let mut paste_state = PasteCollectionState::Inactive;
-
-        // Verify initial state is Inactive.
-        assert!(matches!(paste_state, PasteCollectionState::Inactive));
-
-        // Simulate receiving Paste(Start) event.
-        let start_event = VT100InputEventIR::Paste(VT100PasteModeIR::Start);
-        match (&mut paste_state, &start_event) {
-            (
-                state @ PasteCollectionState::Inactive,
-                VT100InputEventIR::Paste(VT100PasteModeIR::Start),
-            ) => {
-                *state = PasteCollectionState::Accumulating(String::new());
-            }
-            _ => panic!("State machine should handle Paste(Start)"),
-        }
-
-        // Verify we're now collecting.
-        assert!(matches!(paste_state, PasteCollectionState::Accumulating(_)));
-
-        // Simulate receiving keyboard events (the pasted text).
-        for ch in &['H', 'e', 'l', 'l', 'o'] {
-            let keyboard_event = VT100InputEventIR::Keyboard {
-                code: VT100KeyCodeIR::Char(*ch),
-                modifiers: VT100KeyModifiersIR::default(),
-            };
-            match (&mut paste_state, &keyboard_event) {
-                (
-                    PasteCollectionState::Accumulating(buffer),
-                    VT100InputEventIR::Keyboard {
-                        code: VT100KeyCodeIR::Char(ch),
-                        ..
-                    },
-                ) => {
-                    buffer.push(*ch);
-                }
-                _ => panic!("State machine should accumulate text while collecting"),
-            }
-        }
-
-        // Simulate receiving Paste(End) event.
-        let end_event = VT100InputEventIR::Paste(VT100PasteModeIR::End);
-        let collected_text = match (&mut paste_state, &end_event) {
-            (
-                state @ PasteCollectionState::Accumulating(_),
-                VT100InputEventIR::Paste(VT100PasteModeIR::End),
-            ) => {
-                if let PasteCollectionState::Accumulating(text) =
-                    std::mem::replace(state, PasteCollectionState::Inactive)
-                {
-                    text
-                } else {
-                    panic!("Should have collected text")
-                }
-            }
-            _ => panic!("State machine should handle Paste(End)"),
-        };
-
-        // Verify we collected the correct text.
-        assert_eq!(collected_text, "Hello");
-
-        // Verify we're back to Inactive state.
-        assert!(matches!(paste_state, PasteCollectionState::Inactive));
-    }
-
-    #[tokio::test]
-    async fn test_paste_state_machine_multiline() {
-        // Test: Paste with newlines.
-        let mut paste_state = PasteCollectionState::Inactive;
-
-        // Start collection.
-        match &mut paste_state {
-            state @ PasteCollectionState::Inactive => {
-                *state = PasteCollectionState::Accumulating(String::new());
-            }
-            PasteCollectionState::Accumulating(_) => panic!(),
-        }
-
-        // Accumulate "Line1\nLine2".
-        for ch in "Line1\nLine2".chars() {
-            match &mut paste_state {
-                PasteCollectionState::Accumulating(buffer) => {
-                    buffer.push(ch);
-                }
-                PasteCollectionState::Inactive => panic!(),
-            }
-        }
-
-        // End collection.
-        let text = match &mut paste_state {
-            state @ PasteCollectionState::Accumulating(_) => {
-                if let PasteCollectionState::Accumulating(t) =
-                    std::mem::replace(state, PasteCollectionState::Inactive)
-                {
-                    t
-                } else {
-                    panic!()
-                }
-            }
-            _ => panic!(),
-        };
-
-        assert_eq!(text, "Line1\nLine2");
-    }
-
-    #[tokio::test]
-    async fn test_paste_state_machine_orphaned_end() {
-        // Test: Orphaned End marker (without Start) should be handled gracefully.
-        let mut paste_state = PasteCollectionState::Inactive;
-
-        // Should be Inactive initially.
-        assert!(matches!(paste_state, PasteCollectionState::Inactive));
-
-        // Receive End marker without Start - should emit empty paste.
-        let end_event = VT100InputEventIR::Paste(VT100PasteModeIR::End);
-        let result = match (&mut paste_state, &end_event) {
-            (
-                PasteCollectionState::Inactive,
-                VT100InputEventIR::Paste(VT100PasteModeIR::End),
-            ) => Some(InputEvent::BracketedPaste(String::new())),
-            _ => None,
-        };
-
-        assert!(matches!(result, Some(InputEvent::BracketedPaste(s)) if s.is_empty()));
-
-        // Should still be Inactive.
-        assert!(matches!(paste_state, PasteCollectionState::Inactive));
-    }
-
-    #[tokio::test]
-    async fn test_paste_state_machine_empty_paste() {
-        // Test: Empty paste (Start immediately followed by End).
-        let mut paste_state = PasteCollectionState::Inactive;
-
-        // Start.
-        match &mut paste_state {
-            state @ PasteCollectionState::Inactive => {
-                *state = PasteCollectionState::Accumulating(String::new());
-            }
-            _ => panic!(),
-        }
-
-        // End (without any characters in between).
-        let text = match &mut paste_state {
-            state @ PasteCollectionState::Accumulating(_) => {
-                if let PasteCollectionState::Accumulating(t) =
-                    std::mem::replace(state, PasteCollectionState::Inactive)
-                {
-                    t
-                } else {
-                    panic!()
-                }
-            }
-            _ => panic!(),
-        };
-
-        assert_eq!(text, "");
-    }
 }

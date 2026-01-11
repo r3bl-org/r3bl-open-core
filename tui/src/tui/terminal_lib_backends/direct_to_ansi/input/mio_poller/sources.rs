@@ -107,14 +107,14 @@ pub enum SourceKindReady {
     ///
     /// [`SIGWINCH`]: signal_hook::consts::SIGWINCH
     Signals,
-    /// Wakeup signal from [`PollerSubscriptionHandle`] drop - check if thread should
+    /// Wakeup signal from [`InputDeviceSubscriptionHandle`] drop - check if thread should
     /// exit.
     ///
-    /// When a [`PollerSubscriptionHandle`] is dropped, it calls [`Waker::wake()`] to
+    /// When a [`InputDeviceSubscriptionHandle`] is dropped, it calls [`Waker::wake()`] to
     /// interrupt the poll. Then [`handle_receiver_drop_waker()`] checks if
     /// [`receiver_count()`] is `0` and exits the thread if so.
     ///
-    /// [`PollerSubscriptionHandle`]: crate::direct_to_ansi::input::input_device::PollerSubscriptionHandle
+    /// [`InputDeviceSubscriptionHandle`]: crate::direct_to_ansi::input::input_device_impl::InputDeviceSubscriptionHandle
     /// [`Waker::wake()`]: mio::Waker::wake
     /// [`handle_receiver_drop_waker()`]: super::handler_receiver_drop::handle_receiver_drop_waker
     /// [`receiver_count()`]: tokio::sync::broadcast::Sender::receiver_count

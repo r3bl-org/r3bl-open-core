@@ -41,8 +41,8 @@
 
 use crate::{ControlledChild, PtyPair,
             direct_to_ansi::{DirectToAnsiInputDevice,
-                             input::{ThreadLiveness, channel_types::{PollerEvent, StdinEvent},
-                                     guarded_ops}},
+                             input::{LivenessState, channel_types::{PollerEvent, StdinEvent},
+                                     global_input_resource}},
             generate_pty_test};
 use std::{io::{BufRead, BufReader, Write},
           time::Duration};
@@ -148,12 +148,12 @@ fn subscribe_controlled_entry_point() -> ! {
         // Step 1: Verify initial state (no thread yet).
         eprintln!("Step 1: Checking initial state...");
         assert_eq!(
-            guarded_ops::is_thread_running(),
-            ThreadLiveness::Terminated,
+            global_input_resource::is_thread_running(),
+            LivenessState::Terminated,
             "Expected thread_alive = Dead initially"
         );
         assert_eq!(
-            guarded_ops::get_receiver_count(),
+            global_input_resource::get_receiver_count(),
             0,
             "Expected receiver_count = 0 initially"
         );
@@ -163,12 +163,12 @@ fn subscribe_controlled_entry_point() -> ! {
         eprintln!("Step 2: Creating device...");
         let mut device = DirectToAnsiInputDevice::new();
         assert_eq!(
-            guarded_ops::is_thread_running(),
-            ThreadLiveness::Running,
+            global_input_resource::is_thread_running(),
+            LivenessState::Running,
             "Expected thread_alive = Alive after device created"
         );
         assert_eq!(
-            guarded_ops::get_receiver_count(),
+            global_input_resource::get_receiver_count(),
             1,
             "Expected receiver_count = 1 after device created"
         );
@@ -178,7 +178,7 @@ fn subscribe_controlled_entry_point() -> ! {
         eprintln!("Step 3: Creating subscriber via device.subscribe()...");
         let mut subscriber = device.subscribe();
         assert_eq!(
-            guarded_ops::get_receiver_count(),
+            global_input_resource::get_receiver_count(),
             2,
             "Expected receiver_count = 2 after subscribe()"
         );
@@ -228,12 +228,12 @@ fn subscribe_controlled_entry_point() -> ! {
         tokio::time::sleep(Duration::from_millis(10)).await;
 
         assert_eq!(
-            guarded_ops::is_thread_running(),
-            ThreadLiveness::Running,
+            global_input_resource::is_thread_running(),
+            LivenessState::Running,
             "Expected thread_alive = Alive after subscriber dropped (device still exists)"
         );
         assert_eq!(
-            guarded_ops::get_receiver_count(),
+            global_input_resource::get_receiver_count(),
             1,
             "Expected receiver_count = 1 after subscriber dropped"
         );
@@ -258,7 +258,7 @@ fn subscribe_controlled_entry_point() -> ! {
         let mut thread_exited = false;
         for i in 0..100 {
             tokio::time::sleep(Duration::from_millis(1)).await;
-            if guarded_ops::is_thread_running() == ThreadLiveness::Terminated {
+            if global_input_resource::is_thread_running() == LivenessState::Terminated {
                 eprintln!("  Thread exited after {}ms", i + 1);
                 thread_exited = true;
                 break;
@@ -267,7 +267,7 @@ fn subscribe_controlled_entry_point() -> ! {
 
         assert!(thread_exited, "Thread did not exit within 100ms");
         assert_eq!(
-            guarded_ops::get_receiver_count(),
+            global_input_resource::get_receiver_count(),
             0,
             "Expected receiver_count = 0 after device dropped"
         );

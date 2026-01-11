@@ -1,11 +1,12 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
-use super::{BoxedSafeApp, DefaultInputEventHandler, EventPropagation, MainEventLoopFuture};
-use crate::{Ansi256GradientIndex, ColorWheel, ColorWheelConfig, ColorWheelSpeed, Continuation,
-            CommonResult, ComponentRegistryMap, DEBUG_TUI_MOD, DISPLAY_LOG_TELEMETRY,
-            DefaultSize, DefaultTiming, FlushKind, GCStringOwned, GetMemSize,
-            GlobalData, GradientGenerationPolicy, HasFocus, InputDevice, InputEvent,
-            LockedOutputDevice, MinSize, OffscreenBufferPool, OutputDevice, RawMode,
-            RenderOpCommon, RenderOpFlush, RenderOpIR, RenderPipeline, Size,
+use super::{BoxedSafeApp, DefaultInputEventHandler, EventPropagation,
+            MainEventLoopFuture};
+use crate::{Ansi256GradientIndex, ColorWheel, ColorWheelConfig, ColorWheelSpeed,
+            CommonResult, ComponentRegistryMap, Continuation, DEBUG_TUI_MOD,
+            DISPLAY_LOG_TELEMETRY, DefaultSize, DefaultTiming, FlushKind, GCStringOwned,
+            GetMemSize, GlobalData, GradientGenerationPolicy, HasFocus, InputDevice,
+            InputEvent, LockedOutputDevice, MinSize, OffscreenBufferPool, OutputDevice,
+            RawMode, RenderOpCommon, RenderOpFlush, RenderOpIR, RenderPipeline, Size,
             SufficientSize, TelemetryAtomHint, TerminalWindowMainThreadSignal,
             TextColorizationPolicy, ZOrder, ch, col, glyphs, height, inline_string,
             lock_output_device_as_mut, new_style, ok, render_pipeline, row,

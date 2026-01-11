@@ -39,7 +39,7 @@
 
 use crate::{ControlledChild, PtyPair,
             direct_to_ansi::{DirectToAnsiInputDevice,
-                             input::{ThreadLiveness, guarded_ops}},
+                             input::{LivenessState, global_input_resource}},
             generate_pty_test};
 use std::{io::{BufRead, BufReader, Write},
           time::Duration};
@@ -151,12 +151,12 @@ fn lifecycle_controlled_entry_point() -> ! {
         // Step 1: Verify initial state (no thread yet).
         eprintln!("📍 Step 1: Checking initial state...");
         assert_eq!(
-            guarded_ops::is_thread_running(),
-            ThreadLiveness::Terminated,
+            global_input_resource::is_thread_running(),
+            LivenessState::Terminated,
             "Expected thread_alive = Dead initially"
         );
         assert_eq!(
-            guarded_ops::get_receiver_count(),
+            global_input_resource::get_receiver_count(),
             0,
             "Expected receiver_count = 0 initially"
         );
@@ -178,16 +178,16 @@ fn lifecycle_controlled_entry_point() -> ! {
 
         // Verify thread is alive and capture generation.
         assert_eq!(
-            guarded_ops::is_thread_running(),
-            ThreadLiveness::Running,
+            global_input_resource::is_thread_running(),
+            LivenessState::Running,
             "Expected thread_alive = Alive after device A created"
         );
         assert_eq!(
-            guarded_ops::get_receiver_count(),
+            global_input_resource::get_receiver_count(),
             1,
             "Expected receiver_count = 1 after device A subscribed"
         );
-        let generation_a = guarded_ops::get_thread_generation();
+        let generation_a = global_input_resource::get_thread_generation();
         eprintln!("  ✓ After device A: thread_alive=true, receiver_count=1, generation={generation_a}");
 
         // Step 3: Drop device A - this should cause thread #1 to exit.
@@ -200,7 +200,7 @@ fn lifecycle_controlled_entry_point() -> ! {
         let mut thread_exited = false;
         for i in 0..100 {
             tokio::time::sleep(Duration::from_millis(1)).await;
-            if guarded_ops::is_thread_running() == ThreadLiveness::Terminated {
+            if global_input_resource::is_thread_running() == LivenessState::Terminated {
                 eprintln!("  ✓ Thread exited after {}ms", i + 1);
                 thread_exited = true;
                 break;
@@ -209,7 +209,7 @@ fn lifecycle_controlled_entry_point() -> ! {
 
         assert!(thread_exited, "Thread did not exit within 100ms");
         assert_eq!(
-            guarded_ops::get_receiver_count(),
+            global_input_resource::get_receiver_count(),
             0,
             "Expected receiver_count = 0 after device A dropped"
         );
@@ -233,16 +233,16 @@ fn lifecycle_controlled_entry_point() -> ! {
 
         // Verify NEW thread is alive with a NEW generation.
         assert_eq!(
-            guarded_ops::is_thread_running(),
-            ThreadLiveness::Running,
+            global_input_resource::is_thread_running(),
+            LivenessState::Running,
             "Expected thread_alive = Alive after device B created (new thread)"
         );
         assert_eq!(
-            guarded_ops::get_receiver_count(),
+            global_input_resource::get_receiver_count(),
             1,
             "Expected receiver_count = 1 after device B subscribed"
         );
-        let generation_b = guarded_ops::get_thread_generation();
+        let generation_b = global_input_resource::get_thread_generation();
         assert!(
             generation_b > generation_a,
             "Expected new generation (relaunch). Before: {generation_a}, After: {generation_b}"

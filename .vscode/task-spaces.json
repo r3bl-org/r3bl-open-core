@@ -82,19 +82,23 @@
           "isPinned": false
         },
         {
-          "path": "tui/src/tui/terminal_lib_backends/direct_to_ansi/input/input_device.rs",
-          "isPinned": false
-        },
-        {
-          "path": "tui/src/tui/terminal_lib_backends/direct_to_ansi/input/mio_poller/poller_thread.rs",
-          "isPinned": false
-        },
-        {
           "path": "tui/src/tui/terminal_lib_backends/direct_to_ansi/input/mod.rs",
           "isPinned": false
         },
         {
-          "path": "tui/src/tui/terminal_lib_backends/direct_to_ansi/input/mio_poller/poller_thread_lifecycle_state.rs",
+          "path": "tui/src/tui/terminal_lib_backends/direct_to_ansi/input/input_device_public_api.rs",
+          "isPinned": false
+        },
+        {
+          "path": "tui/src/tui/terminal_lib_backends/direct_to_ansi/input/input_device_impl.rs",
+          "isPinned": false
+        },
+        {
+          "path": "tui/src/tui/terminal_lib_backends/direct_to_ansi/input/mio_poller/poller_bridge.rs",
+          "isPinned": false
+        },
+        {
+          "path": "tui/src/tui/terminal_lib_backends/direct_to_ansi/input/mio_poller/poller_thread.rs",
           "isPinned": false
         },
         {
@@ -161,7 +165,7 @@
       "taskFile": "task/task_refactor_input_device.md",
       "createdAt": 1763496885607,
       "lastAccessed": 1763666457216,
-      "activeTab": "tui/src/tui/terminal_lib_backends/direct_to_ansi/input/input_device.rs"
+      "activeTab": "tui/src/tui/terminal_lib_backends/direct_to_ansi/input/input_device_impl.rs"
     },
     {
       "name": "[1.1] task_readline_async_add_shortcuts",

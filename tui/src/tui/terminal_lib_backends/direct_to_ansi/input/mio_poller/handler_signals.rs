@@ -2,7 +2,8 @@
 
 //! Event handlers for signal processing.
 
-use super::{super::channel_types::{PollerEvent, SignalEvent}, poller_thread::MioPollerThread};
+use super::{super::channel_types::{PollerEvent, SignalEvent},
+            poller_thread::MioPollerThread};
 use crate::{Continuation, get_size, tui::DEBUG_TUI_SHOW_TERMINAL_BACKEND};
 use signal_hook::consts::SIGWINCH;
 
@@ -42,7 +43,7 @@ pub fn consume_pending_signals(poller: &mut MioPollerThread) -> Continuation {
 
         if poller
             .state
-            .tx_poller_event
+            .broadcast_tx
             .send(PollerEvent::Signal(SignalEvent::Resize(maybe_size)))
             .is_err()
         {

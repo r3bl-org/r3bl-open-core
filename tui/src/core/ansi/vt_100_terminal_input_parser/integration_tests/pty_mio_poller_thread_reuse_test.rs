@@ -5,7 +5,7 @@
 //! Tests that when a new subscriber appears **before** the thread checks
 //! `receiver_count`, the thread correctly continues running (not relaunched). This
 //! validates the documented race condition is semantically correct.
-//! See [`PollerSubscriptionHandle`] for the race condition documentation.
+//! See [`InputDeviceSubscriptionHandle`] for the race condition documentation.
 //!
 //! Run with: `cargo test -p r3bl_tui --lib test_pty_mio_poller_thread_reuse --
 //! --nocapture`
@@ -47,11 +47,11 @@
 //! The key difference from the lifecycle test: we create device B **immediately**
 //! after dropping device A, racing the thread's `receiver_count` check.
 //!
-//! [`PollerSubscriptionHandle`]: crate::direct_to_ansi::input::PollerSubscriptionHandle
+//! [`InputDeviceSubscriptionHandle`]: crate::direct_to_ansi::input::InputDeviceSubscriptionHandle
 
 use crate::{ControlledChild, PtyPair,
             direct_to_ansi::{DirectToAnsiInputDevice,
-                             input::{ThreadLiveness, guarded_ops}},
+                             input::{LivenessState, global_input_resource}},
             generate_pty_test};
 use std::{io::{BufRead, BufReader, Write},
           time::Duration};
@@ -168,13 +168,13 @@ fn controlled_entry_point() -> ! {
 
         // Verify thread is alive and capture generation for later comparison.
         assert_eq!(
-            guarded_ops::is_thread_running(),
-            ThreadLiveness::Running,
+            global_input_resource::is_thread_running(),
+            LivenessState::Running,
             "Expected thread_alive = Alive after device A created"
         );
-        let initial_receiver_count = guarded_ops::get_receiver_count();
+        let initial_receiver_count = global_input_resource::get_receiver_count();
         assert_eq!(initial_receiver_count, 1, "Expected receiver_count = 1");
-        let generation_before = guarded_ops::get_thread_generation();
+        let generation_before = global_input_resource::get_thread_generation();
         eprintln!("  ✓ Thread alive, receiver_count = 1, generation = {generation_before}");
 
         // Step 2: Drop device A and IMMEDIATELY create device B.
@@ -201,16 +201,16 @@ fn controlled_entry_point() -> ! {
 
         // Step 3: Verify thread is still alive AND same generation (reused, not relaunched).
         assert_eq!(
-            guarded_ops::is_thread_running(),
-            ThreadLiveness::Running,
+            global_input_resource::is_thread_running(),
+            LivenessState::Running,
             "Expected thread_alive = Alive (thread should continue serving device B)"
         );
         assert_eq!(
-            guarded_ops::get_receiver_count(),
+            global_input_resource::get_receiver_count(),
             1,
             "Expected receiver_count = 1 after device B subscribed"
         );
-        let generation_after = guarded_ops::get_thread_generation();
+        let generation_after = global_input_resource::get_thread_generation();
         assert_eq!(
             generation_before, generation_after,
             "Expected same thread generation (reuse, not relaunch). \

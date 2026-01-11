@@ -20,6 +20,7 @@ pub enum PackageManager {
 
 impl PackageManager {
     /// Detect the system's package manager by checking for available commands.
+    #[must_use]
     pub fn detect() -> Option<Self> {
         // Check in order of specificity
         if std::process::Command::new("apt-get")
@@ -58,17 +59,18 @@ impl PackageManager {
     }
 
     /// Get the command used to check if a package is installed.
+    #[must_use]
     pub fn check_command(&self) -> (&'static str, &'static [&'static str]) {
         match self {
             PackageManager::Apt => ("dpkg-query", &["-s"]),
-            PackageManager::Dnf => ("rpm", &["-q"]),
+            PackageManager::Dnf | PackageManager::Zypper => ("rpm", &["-q"]),
             PackageManager::Pacman => ("pacman", &["-Q"]),
-            PackageManager::Zypper => ("rpm", &["-q"]),
             PackageManager::Brew => ("brew", &["list"]),
         }
     }
 
     /// Get the command used to install a package.
+    #[must_use]
     pub fn install_command(&self) -> (&'static str, &'static [&'static str]) {
         match self {
             PackageManager::Apt => ("apt", &["install", "-y"]),
@@ -80,12 +82,8 @@ impl PackageManager {
     }
 
     /// Whether this package manager requires sudo for installation.
-    pub fn requires_sudo(&self) -> bool {
-        match self {
-            PackageManager::Brew => false,
-            _ => true,
-        }
-    }
+    #[must_use]
+    pub fn requires_sudo(&self) -> bool { !matches!(self, PackageManager::Brew) }
 }
 
 /// Check if a package is installed on the system.
@@ -215,9 +213,8 @@ pub async fn install_package(package_name: &str) -> miette::Result<()> {
 ///
 /// This is useful for informational purposes or when you need to
 /// handle package manager-specific logic.
-pub fn get_package_manager() -> Option<PackageManager> {
-    PackageManager::detect()
-}
+#[must_use]
+pub fn get_package_manager() -> Option<PackageManager> { PackageManager::detect() }
 
 #[cfg(test)]
 mod tests_package_manager {
@@ -231,7 +228,7 @@ mod tests_package_manager {
         // On a typical development machine, we should find a package manager
         // But in CI/containers, it might not be available, so we don't assert
         if let Some(pm) = pkg_mgr {
-            println!("Detected package manager: {:?}", pm);
+            println!("Detected package manager: {pm:?}");
         } else {
             println!("No package manager detected (this is OK in some environments)");
         }

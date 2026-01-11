@@ -79,7 +79,13 @@
 //! [mio issue]: https://github.com/tokio-rs/mio/issues/1377
 
 // Private submodules - organized by functional concern.
-mod input_device;
+mod input_device_public_api;
+
+// Conditionally public for documentation.
+#[cfg(any(test, doc))]
+pub mod input_device_impl;
+#[cfg(not(any(test, doc)))]
+mod input_device_impl;
 
 // Conditionally public for documentation.
 #[cfg(any(test, doc))]
@@ -113,7 +119,8 @@ pub mod at_most_one_instance_assert;
 mod at_most_one_instance_assert;
 
 // Re-exports - flatten the public API.
-pub use input_device::*;
+pub use input_device_impl::*;
+pub use input_device_public_api::*;
 pub use mio_poller::*;
 
 // Documentation-only module pointing to actual PTY tests location.

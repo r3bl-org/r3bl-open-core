@@ -1173,8 +1173,14 @@ function set_toolchain_in_toml
     set -l toolchain $argv[1]
     set -l toolchain_file "./rust-toolchain.toml"
 
-    # Only replace the first uncommented channel line
-    sed -i "0,/^channel = .*/s//channel = \"$toolchain\"/" $toolchain_file
+    # Replace the channel line (cross-platform: macOS uses BSD sed, Linux uses GNU sed)
+    if test (uname) = "Darwin"
+        # macOS: BSD sed requires -i '' for in-place without backup
+        sed -i '' "s/^channel = .*/channel = \"$toolchain\"/" $toolchain_file
+    else
+        # Linux: GNU sed works with -i directly
+        sed -i "s/^channel = .*/channel = \"$toolchain\"/" $toolchain_file
+    end
     return $status
 end
 

@@ -47,7 +47,7 @@ pub enum PasteStateResult {
 ///
 /// [`DirectToAnsi`]: mod@super::super
 /// [`VT100KeyCodeIR::Enter`]: crate::core::ansi::vt_100_terminal_input_parser::VT100KeyCodeIR::Enter
-/// [`next()`]: super::input_device::DirectToAnsiInputDevice::next
+/// [`next()`]: super::DirectToAnsiInputDevice::next
 #[derive(Debug)]
 pub enum PasteCollectionState {
     /// Not currently in a paste operation.

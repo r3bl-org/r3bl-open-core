@@ -44,7 +44,7 @@ pub fn consume_stdin_input(poller: &mut MioPollerThread) -> Continuation {
             });
             let _unused = poller
                 .state
-                .tx_poller_event
+                .broadcast_tx
                 .send(PollerEvent::Stdin(StdinEvent::Eof));
             Continuation::Stop
         }
@@ -71,7 +71,7 @@ pub fn consume_stdin_input(poller: &mut MioPollerThread) -> Continuation {
             });
             let _unused = poller
                 .state
-                .tx_poller_event
+                .broadcast_tx
                 .send(PollerEvent::Stdin(StdinEvent::Error));
             Continuation::Stop
         }
@@ -101,7 +101,7 @@ pub fn parse_stdin_bytes(poller: &mut MioPollerThread, n: usize) -> Continuation
             PasteStateResult::Emit(input_event) => {
                 if poller
                     .state
-                    .tx_poller_event
+                    .broadcast_tx
                     .send(PollerEvent::Stdin(StdinEvent::Input(input_event)))
                     .is_err()
                 {

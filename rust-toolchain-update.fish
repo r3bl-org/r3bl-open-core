@@ -68,6 +68,19 @@ set -g target_toolchain ""
 # installation) are now in script_lib.fish with toolchain_* prefix.
 # ============================================================================
 
+# Cross-platform helper to get a date X days ago
+# macOS uses BSD date with -v flag, Linux uses GNU date with -d flag
+function get_date_days_ago
+    set -l days_ago $argv[1]
+    if test (uname) = "Darwin"
+        # macOS: use -v flag (e.g., -v-5d for 5 days ago)
+        date -v-{$days_ago}d "+%Y-%m-%d"
+    else
+        # Linux: use -d flag
+        date -d "$days_ago days ago" "+%Y-%m-%d"
+    end
+end
+
 function clean_and_verify_build
     toolchain_log "═══════════════════════════════════════════════════════"
     toolchain_log "Cleaning all caches and build artifacts"
@@ -221,7 +234,7 @@ function find_stable_toolchain
     toolchain_log "═══════════════════════════════════════════════════════"
     toolchain_log "Starting search for stable toolchain"
     toolchain_log "Strategy: Start with today's snapshot, try progressively older up to $search_window_days days ago"
-    toolchain_log "Search window: "(date "+%Y-%m-%d")" to "(date -d "$search_window_days days ago" "+%Y-%m-%d")
+    toolchain_log "Search window: "(date "+%Y-%m-%d")" to "(get_date_days_ago $search_window_days)
     toolchain_log "═══════════════════════════════════════════════════════"
     toolchain_log ""
 
@@ -229,7 +242,7 @@ function find_stable_toolchain
         set -l days_ago $i
 
         # Calculate the target date
-        set -l target_date (date -d "$days_ago days ago" "+%Y-%m-%d")
+        set -l target_date (get_date_days_ago $days_ago)
         set -l candidate_toolchain "nightly-$target_date"
 
         toolchain_log "═══════════════════════════════════════════════════════"
@@ -277,7 +290,7 @@ function find_stable_toolchain
     set -l total_attempts (math $search_window_days + 1)
     toolchain_log "═══════════════════════════════════════════════════════"
     toolchain_log "❌ ERROR: Could not find stable toolchain"
-    toolchain_log "Tried $total_attempts candidates (from "(date "+%Y-%m-%d")" back to "(date -d "$search_window_days days ago" "+%Y-%m-%d")")"
+    toolchain_log "Tried $total_attempts candidates (from "(date "+%Y-%m-%d")" back to "(get_date_days_ago $search_window_days)")"
     toolchain_log "All tested nightlies had ICE errors or failed to install"
     toolchain_log "═══════════════════════════════════════════════════════"
 

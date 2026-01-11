@@ -3,7 +3,6 @@
 #![allow(clippy::literal_string_with_formatting_args)]
 
 // Private modules (hide internal structure)
-mod package_manager;
 mod command_impl;
 mod crates_api;
 mod directory_change;
@@ -23,11 +22,11 @@ pub mod git;
 mod git;
 mod github_api;
 mod http_client;
+mod package_manager;
 mod permissions;
 mod temp_dir;
 
 // Re-export.
-pub use package_manager::*;
 pub use command_impl::*;
 pub use crates_api::*;
 pub use directory_change::*;
@@ -38,6 +37,7 @@ pub use fs_path::*;
 pub use git::*;
 pub use github_api::*;
 pub use http_client::*;
+pub use package_manager::*;
 pub use permissions::*;
 pub use temp_dir::*;
 

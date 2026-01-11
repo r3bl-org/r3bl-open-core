@@ -61,7 +61,7 @@
 //!
 //! ## Thread Lifecycle
 //!
-//! The [`mio_poller`] thread can be **relaunched** if it exits. See [`PollerThreadLifecycleState`]
+//! The [`mio_poller`] thread can be **relaunched** if it exits. See [`PollerBridge`]
 //! for comprehensive documentation including:
 //!
 //! - [Thread Lifecycle Overview] — spawn → exit → respawn sequence
@@ -80,7 +80,7 @@
 //!   However, external code CAN **signal** the thread to exit gracefully by dropping the
 //!   [`DirectToAnsiInputDevice`]—each TUI app creates one on startup and drops it on
 //!   exit (a process may run multiple TUI apps sequentially). Dropping the device drops
-//!   its internal [`PollerSubscriptionHandle`], waking the thread to check [`receiver_count()`].
+//!   its internal [`InputDeviceSubscriptionHandle`], waking the thread to check [`receiver_count()`].
 //!   When all receivers are dropped, the thread exits on its own.
 //! - It is the **designated reader** of [`stdin`]—other code should access input events
 //!   via the broadcast channel, not by reading [`stdin`] directly.
@@ -103,11 +103,11 @@
 //!    case. This allows async consumers to react (e.g., save state, clean up) before the
 //!    application decides to exit:
 //!
-//!    | Trigger                    | Behavior                                                                                                      |
-//!    | :------------------------- | :------------------------------------------------------------------------------------------------------------ |
-//!    | [`stdin`] [`EOF`]          | [`read()`] returns `0` → sends [`StdinEvent::Eof`] → thread exits; see [`EOF`] note below)                    |
-//!    | I/O error (not [`EINTR`])  | Sends [`StdinEvent::Error`] → thread exits (see [`EINTR`] handling below)                                     |
-//!    | All receivers dropped      | [`PollerSubscriptionHandle::drop()`] wakes thread → checks `receiver_count() == 0` → exits (~1ms); see below  |
+//!    | Trigger                    | Behavior                                                                                                          |
+//!    | :------------------------- | :---------------------------------------------------------------------------------------------------------------- |
+//!    | [`stdin`] [`EOF`]          | [`read()`] returns `0` → sends [`StdinEvent::Eof`] → thread exits; see [`EOF`] note below)                        |
+//!    | I/O error (not [`EINTR`])  | Sends [`StdinEvent::Error`] → thread exits (see [`EINTR`] handling below)                                         |
+//!    | All receivers dropped      | [`InputDeviceSubscriptionHandle::drop()`] wakes thread → checks `receiver_count() == 0` → exits (~1ms); see below |
 //!
 //!    **Note on [`EOF`]**: TUI apps run in [raw mode], where `Ctrl+D` is just
 //!    [`CONTROL_D`]—it doesn't trigger [`EOF`].
@@ -148,7 +148,7 @@
 //!    | `Ctrl+C` / [`SIGINT`]      | OS terminates process → all threads killed             |
 //!
 //! This is safe because:
-//! - [`INPUT_RESOURCE`] is a [`LazyLock`]`<...>` static, never dropped until process exit.
+//! - [`SINGLETON`] is a static [`Mutex`], never dropped until process exit.
 //! - The thread is doing nothing when blocked—[`mio`] uses efficient OS primitives.
 //! - There are no resources to leak—[`stdin`] is [`fd`][file descriptor] `0`, which is
 //!   not owned by us.
@@ -285,37 +285,37 @@
 //! [Device Lifecycle]: super::DirectToAnsiInputDevice#device-lifecycle
 //! [OS/threading limitation]: https://man7.org/linux/man-pages/man3/pthread_cancel.3.html
 //! [PTY]: https://en.wikipedia.org/wiki/Pseudoterminal
-//! [Related Tests]: PollerThreadLifecycleState#related-tests
+//! [Related Tests]: PollerBridge#related-tests
 //! [Rust discussion]: https://internals.rust-lang.org/t/thread-cancel-support/3056
 //! [Rust workarounds]: https://matklad.github.io/2018/03/03/stopping-a-rust-worker.html
 //! [SSH]: https://en.wikipedia.org/wiki/Secure_Shell
-//! [The Inherent Race Condition]: PollerThreadLifecycleState#the-inherent-race-condition
+//! [The Inherent Race Condition]: PollerBridge#the-inherent-race-condition
 //! [The Problems section in `DirectToAnsiInputDevice`]: super::DirectToAnsiInputDevice#the-problems
-//! [Thread Lifecycle Overview]: PollerThreadLifecycleState#thread-lifecycle-overview
+//! [Thread Lifecycle Overview]: PollerBridge#thread-lifecycle-overview
 //! [VT100 input parser]: super::stateful_parser::StatefulInputParser
-//! [What Happens If We Exit Blindly]: PollerThreadLifecycleState#what-happens-if-we-exit-blindly
+//! [What Happens If We Exit Blindly]: PollerBridge#what-happens-if-we-exit-blindly
 //! [Why Linux-Only?]: super#why-linux-only
-//! [Why Thread Reuse Is Safe]: PollerThreadLifecycleState#why-thread-reuse-is-safe
+//! [Why Thread Reuse Is Safe]: PollerBridge#why-thread-reuse-is-safe
 //! [`CONTROL_D`]: crate::core::ansi::CONTROL_D
-//! [`DirectToAnsiInputDevice`]: super::input_device::DirectToAnsiInputDevice
+//! [`DirectToAnsiInputDevice`]: super::DirectToAnsiInputDevice
 //! [`EINTR`]: https://man7.org/linux/man-pages/man3/errno.3.html
 //! [`EOF`]: https://en.wikipedia.org/wiki/End-of-file
 //! [`ErrorKind::Interrupted`]: std::io::ErrorKind::Interrupted
-//! [`INPUT_RESOURCE`]: super::input_device::INPUT_RESOURCE
+//! [`InputDeviceSubscriptionHandle::drop()`]: super::input_device_impl::InputDeviceSubscriptionHandle#impl-Drop-for-InputDeviceSubscriptionHandle
+//! [`InputDeviceSubscriptionHandle`]: super::input_device_impl::InputDeviceSubscriptionHandle
 //! [`InputEvent`]: crate::InputEvent
-//! [`LazyLock`]: std::sync::LazyLock
 //! [`MioPollerThread::drop()`]: poller_thread::MioPollerThread
 //! [`MioPollerThread::new()`]: poller_thread::MioPollerThread::new
 //! [`MioPollerThread::start()`]: poller_thread::MioPollerThread::start
 //! [`MioPollerThread`]: poller_thread::MioPollerThread
+//! [`Mutex`]: std::sync::Mutex
 //! [`PasteCollectionState`]: super::paste_state_machine::PasteCollectionState
 //! [`PollerEvent::Signal`]: super::channel_types::PollerEvent::Signal
 //! [`PollerEvent::Stdin`]: super::channel_types::PollerEvent::Stdin
 //! [`PollerEvent`]: super::channel_types::PollerEvent
-//! [`PollerSubscriptionHandle::drop()`]: super::input_device::PollerSubscriptionHandle
-//! [`PollerSubscriptionHandle`]: super::input_device::PollerSubscriptionHandle
 //! [`SIGINT`]: signal_hook::consts::SIGINT
 //! [`SIGWINCH`]: signal_hook::consts::SIGWINCH
+//! [`SINGLETON`]: super::input_device_impl::global_input_resource::SINGLETON
 //! [`Signal(Resize)`]: super::channel_types::SignalEvent::Resize
 //! [`SignalEvent::Resize`]: super::channel_types::SignalEvent::Resize
 //! [`SourceFd`]: mio::unix::SourceFd
@@ -329,7 +329,7 @@
 //! [`StdinEvent::Error`]: super::channel_types::StdinEvent::Error
 //! [`VEOF`]: https://man7.org/linux/man-pages/man3/termios.3.html
 //! [`VT100InputEventIR`]: crate::core::ansi::vt_100_terminal_input_parser::VT100InputEventIR
-//! [`allocate()`]: super::input_device::guarded_ops::allocate
+//! [`allocate()`]: super::input_device_impl::global_input_resource::allocate
 //! [`broadcast::Receiver`]: tokio::sync::broadcast::Receiver
 //! [`consume_pending_signals()`]: handler_signals::consume_pending_signals
 //! [`consume_stdin_input()`]: handler_stdin::consume_stdin_input
@@ -375,9 +375,9 @@ pub mod poller_thread;
 mod poller_thread;
 
 #[cfg(any(test, doc))]
-pub mod poller_thread_lifecycle_state;
+pub mod poller_bridge;
 #[cfg(not(any(test, doc)))]
-mod poller_thread_lifecycle_state;
+mod poller_bridge;
 
 #[cfg(any(test, doc))]
 pub mod sources;
@@ -406,6 +406,6 @@ mod handler_receiver_drop;
 
 // Re-export public API.
 pub use poller_thread::*;
-pub use poller_thread_lifecycle_state::*;
+pub use poller_bridge::*;
 pub use sources::*;
 

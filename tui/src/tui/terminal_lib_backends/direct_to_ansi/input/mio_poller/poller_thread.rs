@@ -7,13 +7,14 @@
 use super::{super::{channel_types::{PollerEvent, StdinEvent},
                     paste_state_machine::PasteCollectionState,
                     stateful_parser::StatefulInputParser},
-            PollerThreadLifecycleState, SourceKindReady, SourceRegistry, dispatcher::dispatch,
+            PollerBridge, SourceKindReady, SourceRegistry,
+            dispatcher::dispatch,
             handler_stdin::STDIN_READ_BUFFER_SIZE};
 use crate::{Continuation, tui::DEBUG_TUI_SHOW_TERMINAL_BACKEND};
 use mio::{Events, Interest, Poll, Token, unix::SourceFd};
 use signal_hook::consts::SIGWINCH;
 use signal_hook_mio::v1_0::Signals;
-use std::{io::ErrorKind, os::fd::AsRawFd as _};
+use std::{io::ErrorKind, os::fd::AsRawFd as _, sync::Arc};
 
 /// Capacity for the [`mio::Events`] buffer.
 ///
@@ -83,34 +84,25 @@ pub struct MioPollerThread {
     /// [`parse_stdin_bytes()`]: crate::direct_to_ansi::input::mio_poller::handler_stdin::parse_stdin_bytes
     pub paste_collection_state: PasteCollectionState,
 
-    /// Thread lifecycle state — centralized broadcast sender, liveness flag, and waker.
-    ///
-    /// See [`PollerThreadLifecycleState`] for comprehensive documentation on the
-    /// lifecycle protocol and the inherent race condition we handle.
-    ///
-    /// - **[`tx_poller_event`]**: Broadcasts parsed events to async consumers.
-    /// - **[`metadata`]**: Thread identity and liveness; set to terminated by [`Drop`].
-    ///
-    /// [`metadata`]: PollerThreadLifecycleState::metadata
-    /// [`tx_poller_event`]: PollerThreadLifecycleState::tx_poller_event
-    pub state: PollerThreadLifecycleState,
+    /// Shared thread lifecycle state. See [`PollerBridge`] for documentation.
+    pub state: Arc<PollerBridge>,
 }
 
 impl Drop for MioPollerThread {
     /// Marks the thread as terminated when the struct is dropped.
     ///
-    /// Calls [`ThreadMetadata::mark_terminated()`] to set the **termination marker** in
+    /// Calls [`ThreadLiveness::mark_terminated()`] to set the **termination marker** in
     /// the thread lifecycle protocol, enabling [`allocate()`] to detect terminated
     /// threads and spawn new ones.
     ///
     /// **Panic-safe**: Even if [`start()`] panics, [`mark_terminated()`] is called during
     /// stack unwinding, so the next subscriber correctly detects the terminated thread.
     ///
-    /// See [`PollerThreadLifecycleState`] for the complete lifecycle documentation.
+    /// See [`PollerBridge`] for the complete lifecycle documentation.
     ///
-    /// [`ThreadMetadata::mark_terminated()`]: super::poller_thread_lifecycle_state::ThreadMetadata::mark_terminated
-    /// [`allocate()`]: crate::direct_to_ansi::input::input_device::guarded_ops::allocate
-    /// [`mark_terminated()`]: super::poller_thread_lifecycle_state::ThreadMetadata::mark_terminated
+    /// [`ThreadLiveness::mark_terminated()`]: super::poller_bridge::ThreadLiveness::mark_terminated
+    /// [`allocate()`]: crate::direct_to_ansi::input::input_device_impl::global_input_resource::allocate
+    /// [`mark_terminated()`]: super::poller_bridge::ThreadLiveness::mark_terminated
     /// [`start()`]: MioPollerThread::start
     fn drop(&mut self) {
         DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
@@ -119,54 +111,24 @@ impl Drop for MioPollerThread {
                     "mio-poller-thread: dropping, calling lifecycle.mark_terminated()"
             );
         });
-        self.state.metadata.mark_terminated();
+        self.state.thread_liveness.mark_terminated();
     }
 }
 
 impl MioPollerThread {
-    /// Creates the [`mio`] poller thread, which can be relaunched if it exits.
+    /// Spawns the [`mio`] poller thread (can be relaunched if it exits).
     ///
-    /// # Arguments
-    ///
-    /// - `poll`: The [`mio::Poll`] instance, pre-configured with the [`Waker`]
-    ///   registered. The Poll is created in `initialize_input_resource()` so the
-    ///   [`Waker`] can be shared with [`PollerSubscriptionHandle`].
-    /// - `state`: The [`PollerThreadLifecycleState`] containing the broadcast sender and
-    ///   liveness flag. Ownership is transferred to [`MioPollerThread`], whose [`Drop`]
-    ///   impl sets `liveness` to `Terminated` when dropped. This enables [`allocate()`]
-    ///   to detect a terminated thread and spawn a new one.
-    ///
-    /// This is the main entry point for starting the input handling system. It:
-    /// 1. Spawns a dedicated thread named `"mio-poller"` -> useful for debugging, eg
-    ///    using [`ps`] or [`htop`].
-    /// 2. Registers [`stdin`] and [`SIGWINCH`] with the provided [`mio::Poll`].
-    /// 3. Runs the polling loop until exit condition is met.
-    /// 4. [`Drop`] impl sets `liveness` to `Terminated` (panic-safe).
-    ///
-    /// The thread is detached (its [`JoinHandle`] is dropped) - see the
-    /// [Thread Lifecycle] section in the module docs for details.
-    ///
-    /// # Panic Safety
-    ///
-    /// Using [`Drop`] to set the liveness flag ensures correctness even if [`start()`]
-    /// panics: the flag is set during stack unwinding.
+    /// Takes shared ownership of [`PollerBridge`] via [`Arc`]. The
+    /// [`Drop`] impl sets `liveness` to `Terminated` when the thread exits, enabling
+    /// [`allocate()`] to detect termination and spawn a new thread.
     ///
     /// # Panics
     ///
     /// Panics if thread spawning or [`mio`] registration fails.
     ///
-    /// [Thread Lifecycle]: super#thread-lifecycle
-    /// [`JoinHandle`]: std::thread::JoinHandle
-    /// [`PollerSubscriptionHandle`]: crate::direct_to_ansi::input::input_device::PollerSubscriptionHandle
-    /// [`SIGWINCH`]: signal_hook::consts::SIGWINCH
-    /// [`Waker`]: mio::Waker
-    /// [`allocate()`]: crate::direct_to_ansi::input::input_device::guarded_ops::allocate
-    /// [`htop`]: https://htop.dev/
-    /// [`ps`]: https://man7.org/linux/man-pages/man1/ps.1.html
-    /// [`start()`]: MioPollerThread::start
-    /// [`stdin`]: std::io::stdin
+    /// [`allocate()`]: crate::direct_to_ansi::input::input_device_impl::global_input_resource::allocate
     #[allow(clippy::new_ret_no_self)]
-    pub fn new(poll: Poll, state: PollerThreadLifecycleState) {
+    pub fn new(poll: Poll, state: Arc<PollerBridge>) {
         let _unused = std::thread::Builder::new()
             .name("mio-poller".into())
             .spawn(move || {
@@ -182,22 +144,14 @@ impl MioPollerThread {
 
     /// Initializes the [`mio`] poller, registering [`stdin`] and [`SIGWINCH`].
     ///
-    /// # Arguments
-    ///
-    /// - `poll`: The [`mio::Poll`] instance, pre-configured with the [`Waker`]
-    ///   registered.
-    /// - `state`: The [`PollerThreadLifecycleState`] containing `tx`, `liveness`, and
-    ///   `waker`.
-    ///
     /// # Panics
     ///
     /// Panics if registration of [`stdin`] or [`SIGWINCH`] fails.
     ///
     /// [`SIGWINCH`]: signal_hook::consts::SIGWINCH
-    /// [`Waker`]: mio::Waker
     /// [`stdin`]: std::io::stdin
     #[must_use]
-    pub fn setup(poll: Poll, state: PollerThreadLifecycleState) -> Self {
+    pub fn setup(poll: Poll, state: Arc<PollerBridge>) -> Self {
         let poll_handle = poll;
         let mio_registry = poll_handle.registry();
 
@@ -292,7 +246,7 @@ impl MioPollerThread {
                 });
                 let _unused = self
                     .state
-                    .tx_poller_event
+                    .broadcast_tx
                     .send(PollerEvent::Stdin(StdinEvent::Error));
                 break;
             }
