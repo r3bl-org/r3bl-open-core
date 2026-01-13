@@ -529,6 +529,68 @@ When fixing links, ensure:
 - [ ] Absolute paths start with `crate::` or `std::`
 - [ ] `cargo doc --no-deps` shows zero warnings
 - [ ] Links enable IDE "go to definition"
+- [ ] No trailing whitespace on blank doc lines (`/// ` → `///`)
+
+---
+
+## Troubleshooting: Mysterious Link Failures
+
+When reference links fail despite correct syntax, check these hidden causes:
+
+### Trailing Whitespace in Blank Doc Lines
+
+**Symptom:** All reference links in a doc block fail with "unresolved link" warnings.
+
+```rust
+// ❌ BROKEN - trailing space on blank line breaks entire reference block
+/// Some documentation.
+///                        ← invisible trailing space here!
+/// [`Foo`]: crate::Foo    ← this link fails
+/// [`Bar`]: crate::Bar    ← this link also fails
+```
+
+```rust
+// ✅ FIXED - no trailing whitespace
+/// Some documentation.
+///                        ← clean blank line (no trailing space)
+/// [`Foo`]: crate::Foo    ← link works
+/// [`Bar`]: crate::Bar    ← link works
+```
+
+**Why:** Rustdoc's reference link parser is whitespace-sensitive. A `/// ` line (with trailing
+space) breaks the parsing of the entire reference definition block that follows.
+
+**How to detect:** Run `grep -n '/// $' src/**/*.rs` to find lines ending with `/// ` (space).
+
+**Editor tip:** Configure your editor to strip trailing whitespace on save, but be aware that
+some doc comments intentionally use trailing whitespace for formatting (rare).
+
+### Field/Method Name Collisions
+
+When a field and method share the same name, rustdoc handles disambiguation automatically:
+
+```rust
+pub struct ThreadLiveness {
+    /// The running state field.
+    pub is_running: AtomicBool,  // field
+}
+
+impl ThreadLiveness {
+    /// Check if running.
+    pub fn is_running(&self) -> bool { ... }  // method
+}
+```
+
+**Linking correctly:**
+```rust
+/// - [`is_running`]: The field
+/// - [`is_running()`]: The method
+///
+/// [`is_running`]: Self::is_running      ← resolves to field
+/// [`is_running()`]: Self::is_running()  ← resolves to method (note the () in target too)
+```
+
+This is **not** a cause of mysterious failures—rustdoc's disambiguation works well.
 
 ---
 

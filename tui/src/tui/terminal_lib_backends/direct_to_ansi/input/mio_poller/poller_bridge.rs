@@ -247,27 +247,27 @@ impl PollerBridge {
 ///
 /// # Why [`AtomicBool`] instead of [`Mutex<bool>`]?
 ///
-/// **Do not use [`Mutex<bool>`] here.** The [`is_running()`] method is called while
-/// holding the [`SINGLETON`] lock (in [`allocate()`] and [`is_thread_running()`]).
-/// Using [`Mutex<bool>`] would create nested locking, risking **deadlock** if
-/// [`mark_terminated()`] is called from the [`mio_poller`] thread while another thread
-/// holds [`SINGLETON`].
+/// - **Do not use [`Mutex<bool>`] here.** The [`is_running()`] method is called while
+///   holding the [`SINGLETON`] lock (in [`allocate()`] and [`is_thread_running()`]).
+///   Using [`Mutex<bool>`] would create nested locking, risking **deadlock** if
+///   [`mark_terminated()`] is called from the [`mio_poller`] thread while another thread
+///   holds [`SINGLETON`].
+/// - [`AtomicBool`] is **lock-free** — no deadlock possible.
 ///
-/// [`AtomicBool`] is **lock-free** — no deadlock possible.
 /// [`Mutex<bool>`]: std::sync::Mutex
 /// [`SINGLETON`]: super::super::input_device_impl::global_input_resource::SINGLETON
 /// [`allocate()`]: super::super::input_device_impl::global_input_resource::allocate
-/// [`generation`]: ThreadLiveness::generation
-/// [`is_running()`]: ThreadLiveness::is_running
+/// [`generation`]: Self::generation
 /// [`is_running`]: Self::is_running
+/// [`is_running()`]: Self::is_running()
 /// [`is_thread_running()`]: super::super::input_device_impl::global_input_resource::is_thread_running
-/// [`mark_terminated()`]: ThreadLiveness::mark_terminated
+/// [`mark_terminated()`]: Self::mark_terminated
 /// [`mio_poller`]: super
 #[allow(missing_debug_implementations)]
 pub struct ThreadLiveness {
     /// Whether the thread is currently running. Set to `false` by [`mark_terminated()`].
     ///
-    /// [`mark_terminated()`]: ThreadLiveness::mark_terminated
+    /// [`mark_terminated()`]: Self::mark_terminated
     pub is_running: AtomicBool,
 
     /// Thread generation number. Immutable after creation.

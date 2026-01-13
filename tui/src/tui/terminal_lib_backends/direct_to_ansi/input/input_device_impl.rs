@@ -5,14 +5,24 @@
 
 //! Implementation details for [`DirectToAnsiInputDevice`].
 //!
-//! This module contains the global singleton ([`global_input_resource::SINGLETON`]), its
-//! container ([`InputResource`]), operations module ([`global_input_resource`]), and the
-//! RAII subscription handle ([`InputDeviceSubscriptionHandle`]).
+//! This module uses a **static container holding an ephemeral payload**:
+//!
+//! - **[`SINGLETON`]** (container): Static `Mutex<Option<_>>`, lives for process lifetime
+//! - **[`InputResource`]** (payload): Created when thread spawns, destroyed when it exits
+//!
+//! The container persists, but the payload comes and goes with the thread lifecycle.
+//!
+//! Module contents: [`global_input_resource`] (operations + [`SINGLETON`]),
+//! [`InputResource`], and [`InputDeviceSubscriptionHandle`] (RAII handle).
 //!
 //! See [`DirectToAnsiInputDevice`] for the big picture (architecture, lifecycle, I/O
 //! pipeline).
 //!
 //! [`DirectToAnsiInputDevice`]: super::DirectToAnsiInputDevice
+//! [`InputDeviceSubscriptionHandle`]: InputDeviceSubscriptionHandle
+//! [`InputResource`]: InputResource
+//! [`SINGLETON`]: global_input_resource::SINGLETON
+//! [`global_input_resource`]: mod@global_input_resource
 
 use super::{channel_types::PollerEventReceiver,
             mio_poller::{LivenessState, MioPollerThread, PollerBridge, SourceKindReady}};
