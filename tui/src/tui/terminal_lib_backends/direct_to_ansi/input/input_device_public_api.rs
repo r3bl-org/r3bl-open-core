@@ -10,7 +10,7 @@
 //! [`input_device_impl`]: super::input_device_impl
 
 use super::{channel_types::{PollerEvent, SignalEvent, StdinEvent},
-            input_device_impl::{InputDeviceSubscriptionHandle, global_input_resource}};
+            input_device_impl::{global_input_resource, subscriber::SubscriberGuard}};
 use crate::{InputEvent, get_size, tui::DEBUG_TUI_SHOW_TERMINAL_BACKEND};
 use std::fmt::Debug;
 
@@ -129,7 +129,7 @@ use std::fmt::Debug;
 ///
 /// ```text
 /// ┌─────────────────────────────────────────────────────────────────────────┐
-/// │ SINGLETON (static Mutex<Option<...>>)                              │
+/// │ SINGLETON (static Mutex<Option<...>>)                                   │
 /// │ internal:                                                               │
 /// │  • mio-poller thread: holds tx, reads stdin, runs vt100 parser          │
 /// │ external:                                                               │
@@ -176,7 +176,7 @@ use std::fmt::Debug;
 /// │ │  1. DirectToAnsiInputDevice::new()                                        │ │
 /// │ │  2. next() → allocate()                                                   │ │
 /// │ │  3. SINGLETON is None → initialize_global_input_resource()                │ │
-/// │ │       • Creates PollerBridge { tx, liveness: Running }                    │ │
+/// │ │       • Creates PollerThreadState { tx, liveness: Running }               │ │
 /// │ │       • Spawns mio-poller thread #1                                       │ │
 /// │ │       • thread #1 owns MioPollerThread struct                             │ │
 /// │ │  4. TUI app A runs, receiving events from rx                              │ │
@@ -193,7 +193,7 @@ use std::fmt::Debug;
 /// │ │  2. next() → allocate()                                                   │ │
 /// │ │  3. SINGLETON has state, but liveness == Terminated                       │ │
 /// │ │       → needs_init = true → initialize_global_input_resource()            │ │
-/// │ │       • Creates NEW PollerBridge { tx, liveness: Running }                │ │
+/// │ │       • Creates NEW PollerThreadState { tx, liveness: Running }           │ │
 /// │ │       • Spawns mio-poller thread #2 (NOT the same as #1!)                 │ │
 /// │ │       • thread #2 owns its own MioPollerThread struct                     │ │
 /// │ │  4. TUI app B runs, receiving events from rx                              │ │
@@ -237,7 +237,7 @@ use std::fmt::Debug;
 /// ```text
 /// ┌──────────────────────────────────────────────────────────────────────────┐
 /// │ App A exits, drops receiver                                              │
-/// │   • InputDeviceSubscriptionHandle::drop() calls waker.wake()             │
+/// │   • SubscriberGuard::drop() calls waker.wake()                           │
 /// │   • Thread may continue running (fast) OR exit (slow)                    │
 /// └──────────────────────────────┬───────────────────────────────────────────┘
 ///                                │
@@ -275,7 +275,7 @@ use std::fmt::Debug;
 ///             │       │
 ///             │       └─► if needs_init: initialize_global_input_resource()
 ///             │               │
-///             │               ├─► Create PollerBridge
+///             │               ├─► Create PollerThreadState
 ///             │               ├─► MioPollerThread::new(state.clone())
 ///             │               └─► guard.replace(state)
 ///             │
@@ -287,8 +287,7 @@ use std::fmt::Debug;
 /// ```
 ///
 /// **Key points:**
-/// - [`DirectToAnsiInputDevice`] is a thin wrapper holding
-///   [`InputDeviceSubscriptionHandle`]
+/// - [`DirectToAnsiInputDevice`] is a thin wrapper holding [`SubscriberGuard`]
 /// - Global state ([`SINGLETON`]) persists - channel and thread survive device drops
 /// - Eager subscription - each device subscribes at construction time in [`new()`]
 /// - Thread liveness check - if thread died, next subscribe reinitializes everything
@@ -301,7 +300,7 @@ use std::fmt::Debug;
 /// ```text
 /// ┌───────────────────────────────────────────────────────────────────┐
 /// │ Raw ANSI bytes: "1B[A" (hex)                                      │
-/// │ std::io::stdin in mio-poller thread (SINGLETON)              │
+/// │ std::io::stdin in mio-poller thread (SINGLETON)                   │
 /// └────────────────────────────┬──────────────────────────────────────┘
 ///                              │
 /// ┌────────────────────────────▼──────────────────────────────────────┐
@@ -325,7 +324,7 @@ use std::fmt::Debug;
 ///                              │ broadcast channel
 /// ┌────────────────────────────▼──────────────────────────────────────┐
 /// │ THIS DEVICE: DirectToAnsiInputDevice (Backend Executor)           │
-/// │   • Zero-sized handle struct (delegates to SINGLETON)        │
+/// │   • Zero-sized handle struct (delegates to SINGLETON)             │
 /// │   • Receives pre-parsed InputEvent from channel                   │
 /// │   • Resize events include Option<Size> (fallback to get_size())   │
 /// └────────────────────────────┬──────────────────────────────────────┘
@@ -474,10 +473,10 @@ use std::fmt::Debug;
 /// 1. [`super::at_most_one_instance_assert::release()`] is called, allowing a new device
 ///    to be created.
 /// 2. Rust's drop glue drops [`Self::resource_handle`], triggering
-///    [`InputDeviceSubscriptionHandle`'s drop behavior] (thread lifecycle protocol).
+///    [`SubscriberGuard`'s drop behavior] (thread lifecycle protocol).
 ///
 /// For the complete lifecycle diagram including the [race condition] where a fast
-/// subscriber can reuse the existing thread, see [`PollerBridge`].
+/// subscriber can reuse the existing thread, see [`PollerThreadState`].
 ///
 /// [Architecture]: Self#architecture
 /// [Device Lifecycle]: Self#device-lifecycle
@@ -493,11 +492,11 @@ use std::fmt::Debug;
 /// [`DirectToAnsi`]: mod@crate::direct_to_ansi
 /// [`EventStream`]: crossterm::event::EventStream
 /// [`INTERNAL_EVENT_READER`]: https://github.com/crossterm-rs/crossterm/blob/0.29/src/event.rs#L149
-/// [`InputDeviceSubscriptionHandle`]: super::input_device_impl::InputDeviceSubscriptionHandle
-/// [`InputDeviceSubscriptionHandle`'s drop behavior]: super::input_device_impl::InputDeviceSubscriptionHandle#drop-behavior
+/// [`SubscriberGuard`]: super::input_device_impl::subscriber::SubscriberGuard
+/// [`SubscriberGuard`'s drop behavior]: super::input_device_impl::subscriber::SubscriberGuard#drop-behavior
 /// [`InputDevice`]: crate::InputDevice
 /// [`MioPollerThread`]: super::mio_poller::MioPollerThread
-/// [`PollerBridge`]: super::mio_poller::PollerBridge
+/// [`PollerThreadState`]: super::mio_poller::PollerThreadState
 /// [`SIGWINCH`]: signal_hook::consts::SIGWINCH
 /// [`SINGLETON`]: super::input_device_impl::global_input_resource::SINGLETON
 /// [`TERMINAL_LIB_BACKEND`]: crate::tui::TERMINAL_LIB_BACKEND
@@ -522,13 +521,13 @@ use std::fmt::Debug;
 /// [`stdin`]: std::io::stdin
 /// [`super::at_most_one_instance_assert::release()`]: super::at_most_one_instance_assert::release
 /// [`syscall`]: https://en.wikipedia.org/wiki/System_call
-/// [`thread_liveness`]: super::mio_poller::PollerBridge::thread_liveness
+/// [`thread_liveness`]: super::mio_poller::PollerThreadState::thread_liveness
 /// [`tokio::io::stdin()`]: tokio::io::stdin
 /// [`tokio::select!`]: tokio::select
 /// [`tokio::signal`]: tokio::signal
 /// [`try_parse_input_event`]: crate::core::ansi::vt_100_terminal_input_parser::try_parse_input_event
 /// [`vt_100_terminal_input_parser`]: mod@crate::core::ansi::vt_100_terminal_input_parser
-/// [race condition]: super::mio_poller::PollerBridge#the-inherent-race-condition
+/// [race condition]: super::mio_poller::PollerThreadState#the-inherent-race-condition
 pub struct DirectToAnsiInputDevice {
     /// This device's subscription to the global input broadcast channel.
     ///
@@ -537,13 +536,14 @@ pub struct DirectToAnsiInputDevice {
     /// dropped and a new one created "immediately", the new device's subscription must
     /// be visible to the thread when it checks [`receiver_count()`].
     ///
-    /// Uses [`InputDeviceSubscriptionHandle`] to wake the [`mio_poller`] thread when
-    /// dropped, allowing thread lifecycle management.
+    /// Uses [`SubscriberGuard`] to wake the [`mio_poller`] thread when dropped, allowing
+    /// thread lifecycle management.
     ///
+    /// [`SubscriberGuard`]: super::input_device_impl::subscriber::SubscriberGuard
     /// [`mio_poller`]: crate::direct_to_ansi::input::mio_poller
     /// [`new()`]: Self::new
     /// [`receiver_count()`]: tokio::sync::broadcast::Sender::receiver_count
-    pub resource_handle: InputDeviceSubscriptionHandle,
+    pub resource_handle: SubscriberGuard,
 }
 
 impl DirectToAnsiInputDevice {
@@ -568,14 +568,15 @@ impl DirectToAnsiInputDevice {
     /// critical for correct lifecycle: if device A is dropped and device B is created
     /// immediately, device B's subscription must be visible to the thread when it
     /// checks [`receiver_count()`] (before it decides to exit). See the [race condition
-    /// documentation] in [`InputDeviceSubscriptionHandle`] for details.
+    /// documentation] in [`SubscriberGuard`] for details.
     ///
+    /// [`SubscriberGuard`]: super::input_device_impl::subscriber::SubscriberGuard
     /// [`mio_poller`]: crate::direct_to_ansi::input::mio_poller
     /// [`new()`]: Self::new
     /// [`receiver_count()`]: tokio::sync::broadcast::Sender::receiver_count
     /// [`stdin`]: std::io::Stdin
     /// [`subscribe()`]: Self::subscribe
-    /// [race condition documentation]: super::input_device_impl::InputDeviceSubscriptionHandle#race-condition-and-correctness
+    /// [race condition documentation]: super::input_device_impl::subscriber::SubscriberGuard#race-condition-and-correctness
     #[must_use]
     pub fn new() -> Self {
         super::at_most_one_instance_assert::claim_and_assert();
@@ -602,7 +603,7 @@ impl DirectToAnsiInputDevice {
     /// [`pty_mio_poller_subscribe_test`]: crate::core::ansi::vt_100_terminal_input_parser::integration_tests::pty_mio_poller_subscribe_test
     /// [`subscribe()`]: Self::subscribe
     #[must_use]
-    pub fn subscribe(&self) -> InputDeviceSubscriptionHandle {
+    pub fn subscribe(&self) -> SubscriberGuard {
         global_input_resource::subscribe_to_existing()
     }
 
@@ -806,9 +807,9 @@ impl Default for DirectToAnsiInputDevice {
 
 impl Drop for DirectToAnsiInputDevice {
     /// Clears gate, then Rust drops [`Self::resource_handle`], which triggers
-    /// [`InputDeviceSubscriptionHandle::drop()`]. See [Drop behavior] for full mechanism.
+    /// [`SubscriberGuard::drop()`]. See [Drop behavior] for full mechanism.
     ///
     /// [Drop behavior]: DirectToAnsiInputDevice#drop-behavior
-    /// [`InputDeviceSubscriptionHandle::drop()`]: super::input_device_impl::InputDeviceSubscriptionHandle#drop-behavior
+    /// [`SubscriberGuard::drop()`]: super::input_device_impl::subscriber::SubscriberGuard#drop-behavior
     fn drop(&mut self) { super::at_most_one_instance_assert::release(); }
 }

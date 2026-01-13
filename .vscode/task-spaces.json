@@ -74,10 +74,6 @@
           "isPinned": false
         },
         {
-          "path": "task/simplify-thread-lifecycle-orchestration.md",
-          "isPinned": false
-        },
-        {
           "path": "tui/src/tui/terminal_lib_backends/direct_to_ansi/mod.rs",
           "isPinned": false
         },
@@ -94,7 +90,7 @@
           "isPinned": false
         },
         {
-          "path": "tui/src/tui/terminal_lib_backends/direct_to_ansi/input/mio_poller/poller_bridge.rs",
+          "path": "tui/src/tui/terminal_lib_backends/direct_to_ansi/input/mio_poller/poller_thread_state.rs",
           "isPinned": false
         },
         {

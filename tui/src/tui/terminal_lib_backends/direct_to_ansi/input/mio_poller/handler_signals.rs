@@ -42,7 +42,7 @@ pub fn consume_pending_signals(poller: &mut MioPollerThread) -> Continuation {
         });
 
         if poller
-            .state
+            .thread_state
             .broadcast_tx
             .send(PollerEvent::Signal(SignalEvent::Resize(maybe_size)))
             .is_err()

@@ -4,8 +4,8 @@
 //!
 //! Tests that when a new subscriber appears **before** the thread checks
 //! `receiver_count`, the thread correctly continues running (not relaunched). This
-//! validates the documented race condition is semantically correct.
-//! See [`InputDeviceSubscriptionHandle`] for the race condition documentation.
+//! validates the documented race condition is semantically correct. See
+//! [`SubscriberGuard`] for the race condition documentation.
 //!
 //! Run with: `cargo test -p r3bl_tui --lib test_pty_mio_poller_thread_reuse --
 //! --nocapture`
@@ -47,7 +47,7 @@
 //! The key difference from the lifecycle test: we create device B **immediately**
 //! after dropping device A, racing the thread's `receiver_count` check.
 //!
-//! [`InputDeviceSubscriptionHandle`]: crate::direct_to_ansi::input::InputDeviceSubscriptionHandle
+//! [`SubscriberGuard`]: crate::direct_to_ansi::input::subscriber::SubscriberGuard
 
 use crate::{ControlledChild, PtyPair,
             direct_to_ansi::{DirectToAnsiInputDevice,

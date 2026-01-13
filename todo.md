@@ -1,5 +1,6 @@
 <!-- Move completed tasks to done.md. The task on top is the one to work on next. -->
 <!-- Keep this file in sync with dashboard: https://github.com/users/nazmulidris/projects/4/views/1 -->
+<!-- cspell:words inputdevice -->
 
 # create tmux POC
 
@@ -23,9 +24,6 @@
       actually:
       `App -> Component -> RenderOps(IR) -> OffscreenBuffer -> RenderOps(Output) -> OutputDevice`
 
-- [x] use [`task_refactor_input_device`](task/task_refactor_input_device.md) to refactor
-      `InputDevice` to unify `crossterm`, `direct_to_ansi`, and `mock` variants
-
 - [⌛] use [`task_remove_crossterm`](task/task_remove_crossterm.md) to remove crossterm from the
   `r3bl_open_core` codebase
 
@@ -36,12 +34,13 @@
 - [⌛] migrate `check.fish` into `build_infra` crate as `cargo monitor` command using
   [`build_infra_cargo_monitor.md`](/task/pending/build_infra_cargo_monitor.md)
 
-- [ ] change `mio_poller` thread liveness model to make it possible for the thread to self
-      terminate and then be restarted during the process lifetime:
-      [`mio-poller-thread-restartable.md`](/task/mio-poller-thread-restartable.md)
+- [x] use [`task_refactor_input_device`](task/done/task_refactor_input_device.md) to refactor
+      `InputDevice` to unify `crossterm`, `direct_to_ansi`, and `mock` variants
 
-- [ ] simplify `mio_poller` design & impl:
-      [`simplify-thread-lifecycle-orchestration.md`](task/simplify-thread-lifecycle-orchestration.md)
+- [x] simplify `mio_poller` design & impl:
+      - [`simplify-thread-lifecycle-orchestration.md`](task/done/simplify-thread-lifecycle-orchestration.md)
+      - [`consolidate-direct-to-ansi-inputdevice.md`](task/done/consolidate-direct-to-ansi-inputdevice.md)
+      - [`mio-poller-thread-restartable.md`](/task/done/mio-poller-thread-restartable.md)
 
 - [x] change `DirectToAnsiInputDevice` API to support multiple async consumers and enforce
       a single instance:

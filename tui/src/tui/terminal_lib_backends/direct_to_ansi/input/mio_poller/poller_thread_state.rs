@@ -1,14 +1,15 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Poller bridge: shared state between [`SINGLETON`] singleton and
-//! [`mio_poller`] thread. See [`PollerBridge`] for documentation.
+//! Poller thread state: shared state between [`SINGLETON`] and [`mio_poller`] thread.
+//!
+//! See [`PollerThreadState`] for documentation.
 //!
 //! [`SINGLETON`]: super::super::input_device_impl::global_input_resource::SINGLETON
 //! [`mio_poller`]: super
 
 use crate::terminal_lib_backends::direct_to_ansi::input::channel_types::PollerEventSender;
-use std::sync::{Arc,
-                atomic::{AtomicBool, AtomicU8, Ordering}};
+use mio::Waker;
+use std::sync::atomic::{AtomicBool, AtomicU8, Ordering};
 
 /// Counter for thread generations. Incremented each time a new thread is spawned.
 ///
@@ -34,10 +35,16 @@ static THREAD_GENERATION: AtomicU8 = AtomicU8::new(0);
 /// [`recv()`]: tokio::sync::broadcast::Receiver::recv
 const CHANNEL_CAPACITY: usize = 4_096;
 
-/// Bridges the process-global [`SINGLETON`] singleton and the [`mio_poller`] thread.
+/// Shared state between the process-global [`SINGLETON`] and the [`mio_poller`] thread.
 ///
-/// Centralizes race condition handling in one place. Shared via [`Arc`] between the
-/// singleton and thread.
+/// Centralizes thread lifecycle, event broadcasting, and race condition handling in one
+/// place. Shared via [`Arc`] between the singleton and thread.
+///
+/// # Contents
+///
+/// - [`broadcast_tx`]: Channel sender for parsed input events
+/// - [`thread_liveness`]: Running state and generation tracking
+/// - [`waker`]: Shutdown signal (see [Waker Coupled To Poll])
 ///
 /// # Thread Lifecycle Overview
 ///
@@ -50,7 +57,7 @@ const CHANNEL_CAPACITY: usize = 4_096;
 ///
 /// Lifecycle sequence:
 /// 1. On spawn: `liveness = Running`
-/// 2. On receiver drop: [`InputDeviceSubscriptionHandle::drop()`] calls [`waker.wake()`]
+/// 2. On receiver drop: [`SubscriberGuard::drop()`] calls [`waker.wake()`]
 /// 3. [`handle_receiver_drop_waker()`] checks [`receiver_count()`] → if 0, exits
 /// 4. [`MioPollerThread::drop()`] sets `liveness = Terminated`
 /// 5. On next [`allocate()`]: detects terminated thread → reinitializes
@@ -164,8 +171,9 @@ const CHANNEL_CAPACITY: usize = 4_096;
 /// | [`pty_mio_poller_singleton_test`]        | Singleton semantics: only one device at a time     |
 /// | [`pty_mio_poller_subscribe_test`]        | Multiple subscriber broadcast semantics            |
 ///
+/// [Waker Coupled To Poll]: PollerThreadState#waker-coupled-to-poll
 /// [`Arc`]: std::sync::Arc
-/// [`InputDeviceSubscriptionHandle::drop()`]: super::super::input_device_impl::InputDeviceSubscriptionHandle#impl-Drop-for-InputDeviceSubscriptionHandle
+/// [`SubscriberGuard::drop()`]: super::super::input_device_impl::subscriber::SubscriberGuard#impl-Drop-for-SubscriberGuard
 /// [`MioPollerThread::drop()`]: super::poller_thread::MioPollerThread
 /// [`MioPollerThread::new()`]: super::poller_thread::MioPollerThread::new
 /// [`PollerEvent`]: super::super::channel_types::PollerEvent
@@ -175,6 +183,7 @@ const CHANNEL_CAPACITY: usize = 4_096;
 /// [`allocate()`]: super::super::input_device_impl::global_input_resource::allocate
 /// [`broadcast::Receiver`]: tokio::sync::broadcast::Receiver
 /// [`broadcast::Sender`]: tokio::sync::broadcast::Sender
+/// [`broadcast_tx`]: Self::broadcast_tx
 /// [`broadcast`]: tokio::sync::broadcast
 /// [`fd`]: https://en.wikipedia.org/wiki/File_descriptor
 /// [`handle_receiver_drop_waker()`]: super::handler_receiver_drop::handle_receiver_drop_waker
@@ -190,30 +199,96 @@ const CHANNEL_CAPACITY: usize = 4_096;
 /// [`receiver_count`]: tokio::sync::broadcast::Sender::receiver_count
 /// [`signals`]: super::sources::SourceKindReady::Signals
 /// [`stdin`]: super::sources::SourceKindReady::Stdin
-/// [`thread_liveness`]: PollerBridge::thread_liveness
+/// [`thread_liveness`]: Self::thread_liveness
 /// [`wake()`]: mio::Waker::wake
 /// [`waker.wake()`]: mio::Waker::wake
+/// [`waker`]: Self::waker
 #[allow(missing_debug_implementations)]
-pub struct PollerBridge {
+pub struct PollerThreadState {
     /// Broadcasts parsed input events to async subscribers.
     pub broadcast_tx: PollerEventSender,
 
     /// Thread liveness and incarnation tracking.
-    pub thread_liveness: Arc<ThreadLiveness>,
+    ///
+    /// See [`ThreadLiveness`] for why this uses [`AtomicBool`] instead of
+    /// [`Mutex<bool>`].
+    ///
+    /// [`Mutex<bool>`]: std::sync::Mutex
+    ///
+    /// [`AtomicBool`]: std::sync::atomic::AtomicBool
+    pub thread_liveness: ThreadLiveness,
+
+    /// Waker to signal thread shutdown.
+    ///
+    /// Called by [`SubscriberGuard::drop()`] to wake the thread so it can check
+    /// [`receiver_count()`] and decide whether to exit.
+    ///
+    /// # Waker Coupled To Poll
+    ///
+    /// The [`Waker`] was created from the same [`Poll`] instance passed to
+    /// [`MioPollerThread::new()`]. They share an OS-level bond:
+    ///
+    /// ```text
+    /// Poll (epoll/kqueue) ──owns──► Registry ──creates──► Waker
+    /// ```
+    ///
+    /// When [`waker.wake()`] is called, it triggers an event that [`poll()`] returns.
+    /// **If [`Poll`] is dropped, this [`Waker`] becomes useless** — it would signal an
+    /// event mechanism that no longer exists.
+    ///
+    /// This is why the slow path in [`allocate()`] replaces the entire
+    /// [`PollerThreadState`] — the [`Poll`], [`Waker`], and thread must be created
+    /// together. See [Poll → Registry → Waker Chain] for how they're created.
+    ///
+    /// # Why Waker Is Not Passed to the Thread
+    ///
+    /// The thread doesn't need a reference to [`Waker`] — it only needs to *respond* to
+    /// wake events. When [`allocate()`] creates the [`Poll`] and [`Waker`], the waker is
+    /// registered with [`Poll`]'s registry. This means:
+    ///
+    /// - When **any** [`SubscriberGuard`] calls [`waker.wake()`], the thread's [`poll()`]
+    ///   returns with a [`ReceiverDropWaker`] token
+    /// - The thread handles this via [`handle_receiver_drop_waker()`], checking if it
+    ///   should exit
+    ///
+    /// The singleton keeps the [`Waker`] as a **distribution point** — the
+    /// [`Arc<PollerThreadState>`] is cloned to each [`SubscriberGuard`] on subscription.
+    /// The thread never touches it directly.
+    ///
+    /// [`Arc<PollerThreadState>`]: std::sync::Arc
+    ///
+    /// [Poll → Registry → Waker Chain]: super::super::input_device_impl::global_input_resource::SINGLETON#poll--registry--waker-chain
+    /// [`SubscriberGuard::drop()`]: super::super::input_device_impl::subscriber::SubscriberGuard#impl-Drop-for-SubscriberGuard
+    /// [`SubscriberGuard`]: super::super::input_device_impl::subscriber::SubscriberGuard
+    /// [`MioPollerThread::new()`]: super::poller_thread::MioPollerThread::new
+    /// [`Poll`]: mio::Poll
+    /// [`PollerThreadState`]: PollerThreadState
+    /// [`ReceiverDropWaker`]: super::SourceKindReady::ReceiverDropWaker
+    /// [`Waker`]: mio::Waker
+    /// [`allocate()`]: super::super::input_device_impl::global_input_resource::allocate
+    /// [`handle_receiver_drop_waker()`]: super::handler_receiver_drop::handle_receiver_drop_waker
+    /// [`poll()`]: mio::Poll::poll
+    /// [`receiver_count()`]: tokio::sync::broadcast::Sender::receiver_count
+    /// [`waker.wake()`]: mio::Waker::wake
+    pub waker: Waker,
 }
 
-impl Default for PollerBridge {
-    fn default() -> Self { Self::new() }
-}
-
-impl PollerBridge {
-    /// Creates a new bridge with fresh [`ThreadLiveness`] and broadcast channel.
+impl PollerThreadState {
+    /// Creates new thread state with fresh [`ThreadLiveness`] and broadcast channel.
+    ///
+    /// The `waker` must be created from the same [`Poll`] instance that will be passed
+    /// to [`MioPollerThread::new()`]. See [Waker Coupled To Poll] for why.
+    ///
+    /// [Waker Coupled To Poll]: PollerThreadState#waker-coupled-to-poll
+    /// [`MioPollerThread::new()`]: super::poller_thread::MioPollerThread::new
+    /// [`Poll`]: mio::Poll
     #[must_use]
-    pub fn new() -> Self {
+    pub fn new(waker: Waker) -> Self {
         let channel = tokio::sync::broadcast::channel(CHANNEL_CAPACITY);
         Self {
             broadcast_tx: channel.0,
-            thread_liveness: Arc::new(ThreadLiveness::new()),
+            thread_liveness: ThreadLiveness::new(),
+            waker,
         }
     }
 
@@ -227,7 +302,7 @@ impl PollerBridge {
     /// otherwise. See [The Inherent Race Condition] for why we check the **current**
     /// count instead of trusting the wake signal.
     ///
-    /// [The Inherent Race Condition]: PollerBridge#the-inherent-race-condition
+    /// [The Inherent Race Condition]: PollerThreadState#the-inherent-race-condition
     /// [`handle_receiver_drop_waker()`]: super::handler_receiver_drop::handle_receiver_drop_waker
     /// [`receiver_count()`]: tokio::sync::broadcast::Sender::receiver_count
     #[must_use]
@@ -255,11 +330,12 @@ impl PollerBridge {
 /// - [`AtomicBool`] is **lock-free** — no deadlock possible.
 ///
 /// [`Mutex<bool>`]: std::sync::Mutex
+///
 /// [`SINGLETON`]: super::super::input_device_impl::global_input_resource::SINGLETON
 /// [`allocate()`]: super::super::input_device_impl::global_input_resource::allocate
 /// [`generation`]: Self::generation
-/// [`is_running`]: Self::is_running
 /// [`is_running()`]: Self::is_running()
+/// [`is_running`]: Self::is_running
 /// [`is_thread_running()`]: super::super::input_device_impl::global_input_resource::is_thread_running
 /// [`mark_terminated()`]: Self::mark_terminated
 /// [`mio_poller`]: super
@@ -275,7 +351,7 @@ pub struct ThreadLiveness {
     /// Incremented each time a new thread is spawned. Used to verify thread reuse vs
     /// relaunch in tests. See [Related Tests] for details.
     ///
-    /// [Related Tests]: PollerBridge#related-tests
+    /// [Related Tests]: PollerThreadState#related-tests
     pub generation: u8,
 }
 
@@ -329,8 +405,8 @@ pub enum LivenessState {
 
 /// Indicates whether the [`mio_poller`] thread should self-terminate or continue running.
 ///
-/// Returned by [`PollerBridge::should_self_terminate()`] to provide a self-documenting
-/// return type instead of a bare `bool`.
+/// Returned by [`PollerThreadState::should_self_terminate()`] to provide a
+/// self-documenting return type instead of a bare `bool`.
 ///
 /// [`mio_poller`]: super
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

@@ -7,7 +7,7 @@
 use super::{super::{channel_types::{PollerEvent, StdinEvent},
                     paste_state_machine::PasteCollectionState,
                     stateful_parser::StatefulInputParser},
-            PollerBridge, SourceKindReady, SourceRegistry,
+            PollerThreadState, SourceKindReady, SourceRegistry,
             dispatcher::dispatch,
             handler_stdin::STDIN_READ_BUFFER_SIZE};
 use crate::{Continuation, tui::DEBUG_TUI_SHOW_TERMINAL_BACKEND};
@@ -84,8 +84,8 @@ pub struct MioPollerThread {
     /// [`parse_stdin_bytes()`]: crate::direct_to_ansi::input::mio_poller::handler_stdin::parse_stdin_bytes
     pub paste_collection_state: PasteCollectionState,
 
-    /// Shared thread lifecycle state. See [`PollerBridge`] for documentation.
-    pub state: Arc<PollerBridge>,
+    /// Shared thread lifecycle state. See [`PollerThreadState`] for documentation.
+    pub thread_state: Arc<PollerThreadState>,
 }
 
 impl Drop for MioPollerThread {
@@ -98,11 +98,11 @@ impl Drop for MioPollerThread {
     /// **Panic-safe**: Even if [`start()`] panics, [`mark_terminated()`] is called during
     /// stack unwinding, so the next subscriber correctly detects the terminated thread.
     ///
-    /// See [`PollerBridge`] for the complete lifecycle documentation.
+    /// See [`PollerThreadState`] for the complete lifecycle documentation.
     ///
-    /// [`ThreadLiveness::mark_terminated()`]: super::poller_bridge::ThreadLiveness::mark_terminated
+    /// [`ThreadLiveness::mark_terminated()`]: super::poller_thread_state::ThreadLiveness::mark_terminated
     /// [`allocate()`]: crate::direct_to_ansi::input::input_device_impl::global_input_resource::allocate
-    /// [`mark_terminated()`]: super::poller_bridge::ThreadLiveness::mark_terminated
+    /// [`mark_terminated()`]: super::poller_thread_state::ThreadLiveness::mark_terminated
     /// [`start()`]: MioPollerThread::start
     fn drop(&mut self) {
         DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
@@ -111,14 +111,14 @@ impl Drop for MioPollerThread {
                     "mio-poller-thread: dropping, calling lifecycle.mark_terminated()"
             );
         });
-        self.state.thread_liveness.mark_terminated();
+        self.thread_state.thread_liveness.mark_terminated();
     }
 }
 
 impl MioPollerThread {
     /// Spawns the [`mio`] poller thread (can be relaunched if it exits).
     ///
-    /// Takes shared ownership of [`PollerBridge`] via [`Arc`]. The
+    /// Takes shared ownership of [`PollerThreadState`] via [`Arc`]. The
     /// [`Drop`] impl sets `liveness` to `Terminated` when the thread exits, enabling
     /// [`allocate()`] to detect termination and spawn a new thread.
     ///
@@ -128,11 +128,11 @@ impl MioPollerThread {
     ///
     /// [`allocate()`]: crate::direct_to_ansi::input::input_device_impl::global_input_resource::allocate
     #[allow(clippy::new_ret_no_self)]
-    pub fn new(poll: Poll, state: Arc<PollerBridge>) {
+    pub fn new(poll: Poll, thread_state: Arc<PollerThreadState>) {
         let _unused = std::thread::Builder::new()
             .name("mio-poller".into())
             .spawn(move || {
-                let mut mio_poller_thread = Self::setup(poll, state);
+                let mut mio_poller_thread = Self::setup(poll, thread_state);
                 mio_poller_thread.start();
                 // Drop impl sets liveness = Terminated (panic-safe).
             })
@@ -151,7 +151,7 @@ impl MioPollerThread {
     /// [`SIGWINCH`]: signal_hook::consts::SIGWINCH
     /// [`stdin`]: std::io::stdin
     #[must_use]
-    pub fn setup(poll: Poll, state: Arc<PollerBridge>) -> Self {
+    pub fn setup(poll: Poll, thread_state: Arc<PollerThreadState>) -> Self {
         let poll_handle = poll;
         let mio_registry = poll_handle.registry();
 
@@ -196,7 +196,7 @@ impl MioPollerThread {
             stdin_unparsed_byte_buffer: [0u8; STDIN_READ_BUFFER_SIZE],
             vt_100_input_seq_parser: StatefulInputParser::default(),
             paste_collection_state: PasteCollectionState::Inactive,
-            state,
+            thread_state,
         }
     }
 
@@ -245,7 +245,7 @@ impl MioPollerThread {
                     );
                 });
                 let _unused = self
-                    .state
+                    .thread_state
                     .broadcast_tx
                     .send(PollerEvent::Stdin(StdinEvent::Error));
                 break;

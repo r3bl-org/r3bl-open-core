@@ -61,7 +61,7 @@
 //!
 //! ## Thread Lifecycle
 //!
-//! The [`mio_poller`] thread can be **relaunched** if it exits. See [`PollerBridge`]
+//! The [`mio_poller`] thread can be **relaunched** if it exits. See [`PollerThreadState`]
 //! for comprehensive documentation including:
 //!
 //! - [Thread Lifecycle Overview] — spawn → exit → respawn sequence
@@ -80,7 +80,7 @@
 //!   However, external code CAN **signal** the thread to exit gracefully by dropping the
 //!   [`DirectToAnsiInputDevice`]—each TUI app creates one on startup and drops it on
 //!   exit (a process may run multiple TUI apps sequentially). Dropping the device drops
-//!   its internal [`InputDeviceSubscriptionHandle`], waking the thread to check [`receiver_count()`].
+//!   its internal [`SubscriberGuard`], waking the thread to check [`receiver_count()`].
 //!   When all receivers are dropped, the thread exits on its own.
 //! - It is the **designated reader** of [`stdin`]—other code should access input events
 //!   via the broadcast channel, not by reading [`stdin`] directly.
@@ -107,7 +107,7 @@
 //!    | :------------------------- | :---------------------------------------------------------------------------------------------------------------- |
 //!    | [`stdin`] [`EOF`]          | [`read()`] returns `0` → sends [`StdinEvent::Eof`] → thread exits; see [`EOF`] note below)                        |
 //!    | I/O error (not [`EINTR`])  | Sends [`StdinEvent::Error`] → thread exits (see [`EINTR`] handling below)                                         |
-//!    | All receivers dropped      | [`InputDeviceSubscriptionHandle::drop()`] wakes thread → checks `receiver_count() == 0` → exits (~1ms); see below |
+//!    | All receivers dropped      | [`SubscriberGuard::drop()`] wakes thread → checks `receiver_count() == 0` → exits (~1ms); see below |
 //!
 //!    **Note on [`EOF`]**: TUI apps run in [raw mode], where `Ctrl+D` is just
 //!    [`CONTROL_D`]—it doesn't trigger [`EOF`].
@@ -285,24 +285,24 @@
 //! [Device Lifecycle]: super::DirectToAnsiInputDevice#device-lifecycle
 //! [OS/threading limitation]: https://man7.org/linux/man-pages/man3/pthread_cancel.3.html
 //! [PTY]: https://en.wikipedia.org/wiki/Pseudoterminal
-//! [Related Tests]: PollerBridge#related-tests
+//! [Related Tests]: PollerThreadState#related-tests
 //! [Rust discussion]: https://internals.rust-lang.org/t/thread-cancel-support/3056
 //! [Rust workarounds]: https://matklad.github.io/2018/03/03/stopping-a-rust-worker.html
 //! [SSH]: https://en.wikipedia.org/wiki/Secure_Shell
-//! [The Inherent Race Condition]: PollerBridge#the-inherent-race-condition
+//! [The Inherent Race Condition]: PollerThreadState#the-inherent-race-condition
 //! [The Problems section in `DirectToAnsiInputDevice`]: super::DirectToAnsiInputDevice#the-problems
-//! [Thread Lifecycle Overview]: PollerBridge#thread-lifecycle-overview
+//! [Thread Lifecycle Overview]: PollerThreadState#thread-lifecycle-overview
 //! [VT100 input parser]: super::stateful_parser::StatefulInputParser
-//! [What Happens If We Exit Blindly]: PollerBridge#what-happens-if-we-exit-blindly
+//! [What Happens If We Exit Blindly]: PollerThreadState#what-happens-if-we-exit-blindly
 //! [Why Linux-Only?]: super#why-linux-only
-//! [Why Thread Reuse Is Safe]: PollerBridge#why-thread-reuse-is-safe
+//! [Why Thread Reuse Is Safe]: PollerThreadState#why-thread-reuse-is-safe
 //! [`CONTROL_D`]: crate::core::ansi::CONTROL_D
 //! [`DirectToAnsiInputDevice`]: super::DirectToAnsiInputDevice
 //! [`EINTR`]: https://man7.org/linux/man-pages/man3/errno.3.html
 //! [`EOF`]: https://en.wikipedia.org/wiki/End-of-file
 //! [`ErrorKind::Interrupted`]: std::io::ErrorKind::Interrupted
-//! [`InputDeviceSubscriptionHandle::drop()`]: super::input_device_impl::InputDeviceSubscriptionHandle#impl-Drop-for-InputDeviceSubscriptionHandle
-//! [`InputDeviceSubscriptionHandle`]: super::input_device_impl::InputDeviceSubscriptionHandle
+//! [`SubscriberGuard::drop()`]: super::input_device_impl::subscriber::SubscriberGuard#impl-Drop-for-SubscriberGuard
+//! [`SubscriberGuard`]: super::input_device_impl::subscriber::SubscriberGuard
 //! [`InputEvent`]: crate::InputEvent
 //! [`MioPollerThread::drop()`]: poller_thread::MioPollerThread
 //! [`MioPollerThread::new()`]: poller_thread::MioPollerThread::new
@@ -375,9 +375,9 @@ pub mod poller_thread;
 mod poller_thread;
 
 #[cfg(any(test, doc))]
-pub mod poller_bridge;
+pub mod poller_thread_state;
 #[cfg(not(any(test, doc)))]
-mod poller_bridge;
+mod poller_thread_state;
 
 #[cfg(any(test, doc))]
 pub mod sources;
@@ -406,6 +406,6 @@ mod handler_receiver_drop;
 
 // Re-export public API.
 pub use poller_thread::*;
-pub use poller_bridge::*;
+pub use poller_thread_state::*;
 pub use sources::*;
 
