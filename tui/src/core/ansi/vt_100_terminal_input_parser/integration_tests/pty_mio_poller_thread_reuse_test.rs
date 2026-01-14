@@ -47,11 +47,11 @@
 //! The key difference from the lifecycle test: we create device B **immediately**
 //! after dropping device A, racing the thread's `receiver_count` check.
 //!
-//! [`SubscriberGuard`]: crate::direct_to_ansi::input::subscriber::SubscriberGuard
+//! [`SubscriberGuard`]: crate::core::resilient_reactor_thread::SubscriberGuard
 
 use crate::{ControlledChild, PtyPair,
-            direct_to_ansi::{DirectToAnsiInputDevice,
-                             input::{LivenessState, global_input_resource}},
+            core::resilient_reactor_thread::LivenessState,
+            direct_to_ansi::{DirectToAnsiInputDevice, input::global_input_resource},
             generate_pty_test};
 use std::{io::{BufRead, BufReader, Write},
           time::Duration};

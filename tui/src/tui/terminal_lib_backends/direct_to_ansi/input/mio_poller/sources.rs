@@ -32,52 +32,51 @@ use std::io::Stdin;
 /// To add a new event source:
 /// 1. Add a new field to this struct.
 /// 2. Add a new variant and token constant to [`SourceKindReady`].
-/// 3. Register the source in [`MioPollerThread::setup()`].
+/// 3. Register the source in [`MioPollWorkerFactory::setup()`].
 /// 4. Add a handler function in [`handler_stdin`] or [`handler_signals`].
-/// 5. Add a match arm in [`dispatch()`].
+/// 5. Add a match arm in [`dispatch_with_tx()`].
 ///
 /// [`HashMap<Token, Source>`]: std::collections::HashMap
-/// [`MioPollerThread::setup()`]: crate::direct_to_ansi::input::mio_poller::poller_thread::MioPollerThread::setup
+///
+/// [`MioPollWorkerFactory::setup()`]: super::MioPollWorkerFactory
 /// [`Poll::poll()`]: mio::Poll::poll
 /// [`Poll`]: mio::Poll
 /// [`Signals`]: signal_hook_mio::v1_0::Signals
 /// [`Stdin`]: std::io::Stdin
 /// [`Token`]: mio::Token
-/// [`dispatch()`]: crate::direct_to_ansi::input::mio_poller::dispatcher::dispatch
-/// [`handler_signals`]: mod@crate::direct_to_ansi::input::mio_poller::handler_signals
-/// [`handler_stdin`]: mod@crate::direct_to_ansi::input::mio_poller::handler_stdin
+/// [`dispatch_with_tx()`]: super::dispatcher::dispatch_with_tx
+/// [`handler_signals`]: mod@super::handler_signals
+/// [`handler_stdin`]: mod@super::handler_stdin
 /// [`pending()`]: signal_hook_mio::v1_0::Signals::pending
 /// [`read()`]: std::io::Read::read
 /// [`stdin`]: std::io::stdin
 /// [signals]: signal_hook_mio::v1_0::Signals
 #[allow(missing_debug_implementations)]
 pub struct SourceRegistry {
-    /// [`Stdin`] handle registered with [`MioPollerThread::poll_handle`].
+    /// [`Stdin`] handle registered with [`mio::Poll`].
     ///
     /// See [What is a "Source"?] for [`mio`] terminology.
     ///
     /// - **Token**: [`SourceKindReady::Stdin`].[`to_token()`].
-    /// - **Handler**: [`consume_stdin_input()`].
+    /// - **Handler**: [`consume_stdin_input_with_tx()`].
     ///
     /// [What is a "Source"?]: SourceRegistry#what-is-a-source
-    /// [`MioPollerThread::poll_handle`]: crate::direct_to_ansi::input::mio_poller::poller_thread::MioPollerThread::poll_handle
-    /// [`consume_stdin_input()`]: crate::direct_to_ansi::input::mio_poller::handler_stdin::consume_stdin_input
+    /// [`consume_stdin_input_with_tx()`]: super::handler_stdin::consume_stdin_input_with_tx
     /// [`to_token()`]: SourceKindReady::to_token
     pub stdin: Stdin,
 
-    /// [`SIGWINCH`] signal handler registered with [`MioPollerThread::poll_handle`].
+    /// [`SIGWINCH`] signal handler registered with [`mio::Poll`].
     ///
     /// See [What is a "Source"?] for [`mio`] terminology. [`signal_hook_mio`] provides
     /// an adapter that creates an internal pipe becoming readable when [`SIGWINCH`]
     /// arrives.
     ///
     /// - **Token**: [`SourceKindReady::Signals`].[`to_token()`].
-    /// - **Handler**: [`consume_pending_signals()`].
+    /// - **Handler**: [`consume_pending_signals_with_tx()`].
     ///
     /// [What is a "Source"?]: SourceRegistry#what-is-a-source
-    /// [`MioPollerThread::poll_handle`]: crate::direct_to_ansi::input::mio_poller::poller_thread::MioPollerThread::poll_handle
     /// [`SIGWINCH`]: signal_hook::consts::SIGWINCH
-    /// [`consume_pending_signals()`]: crate::direct_to_ansi::input::mio_poller::handler_signals::consume_pending_signals
+    /// [`consume_pending_signals_with_tx()`]: super::handler_signals::consume_pending_signals_with_tx
     /// [`signal_hook_mio`]: signal_hook_mio
     /// [`to_token()`]: SourceKindReady::to_token
     pub signals: Signals,
@@ -110,12 +109,12 @@ pub enum SourceKindReady {
     /// Wakeup signal from [`SubscriberGuard`] drop - check if thread should exit.
     ///
     /// When a [`SubscriberGuard`] is dropped, it calls [`Waker::wake()`] to interrupt the
-    /// poll. Then [`handle_receiver_drop_waker()`] checks if [`receiver_count()`] is `0`
-    /// and exits the thread if so.
+    /// poll. Then [`handle_receiver_drop_waker_with_tx()`] checks if [`receiver_count()`]
+    /// is `0` and exits the thread if so.
     ///
-    /// [`SubscriberGuard`]: crate::direct_to_ansi::input::input_device_impl::subscriber::SubscriberGuard
+    /// [`SubscriberGuard`]: crate::core::resilient_reactor_thread::SubscriberGuard
     /// [`Waker::wake()`]: mio::Waker::wake
-    /// [`handle_receiver_drop_waker()`]: super::handler_receiver_drop::handle_receiver_drop_waker
+    /// [`handle_receiver_drop_waker_with_tx()`]: super::handler_receiver_drop::handle_receiver_drop_waker_with_tx
     /// [`receiver_count()`]: tokio::sync::broadcast::Sender::receiver_count
     ReceiverDropWaker,
     /// Unknown token - should not happen in normal operation.

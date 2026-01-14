@@ -20,14 +20,14 @@
 //!
 //! | Item                                             | Description                                                         |
 //! | :----------------------------------------------- | :------------------------------------------------------------------ |
-//! | [`MioPollerThread`]                              | Core struct: holds poll handle, buffers, parser, and channel sender |
-//! | [`MioPollerThread::new()`]                       | Entry point: spawns the dedicated [`mio_poller`] thread             |
-//! | [`MioPollerThread::start()`]                     | Main event loop: blocks on [`mio::Poll`], dispatches events         |
+//! | [`MioPollWorker`]                                | Core struct: holds poll handle, buffers, parser (implements RRT)    |
+//! | [`MioPollWaker`]                                 | Waker to interrupt blocked poll (implements RRT [`ThreadWaker`])    |
+//! | [`MioPollWorkerFactory`]                         | Factory to create worker and waker together                         |
 //! | [`SourceRegistry`]                               | Holds [`stdin`] and [`SIGWINCH`] signal handles                     |
 //! | [`SourceKindReady`]                              | Enum mapping [`mio::Token`] ↔ source kind for dispatch              |
-//! | [`dispatch()`]                                   | Routes ready events to appropriate handlers                         |
-//! | [`consume_stdin_input()`]                        | Reads and parses [`stdin`] bytes into [`InputEvent`]s               |
-//! | [`consume_pending_signals()`]                    | Drains [`SIGWINCH`] signals, sends [`SignalEvent::Resize`]          |
+//! | [`dispatch_with_tx()`]                           | Routes ready events to appropriate handlers                         |
+//! | [`consume_stdin_input_with_tx()`]                | Reads and parses [`stdin`] bytes into [`InputEvent`]s               |
+//! | [`consume_pending_signals_with_tx()`]            | Drains [`SIGWINCH`] signals, sends [`SignalEvent::Resize`]          |
 //! | [VT100 input parser] ([`StatefulInputParser`])   | Accumulates bytes, parses [`VT100InputEventIR`] with ESC handling   |
 //! | [paste state machine] ([`PasteCollectionState`]) | Collects text between bracketed paste markers                       |
 //!
@@ -61,14 +61,14 @@
 //!
 //! ## Thread Lifecycle
 //!
-//! The [`mio_poller`] thread can be **relaunched** if it exits. See [`PollerThreadState`]
-//! for comprehensive documentation including:
+//! The [`mio_poller`] thread can be **relaunched** if it exits. See the
+//! [`resilient_reactor_thread`] module for comprehensive documentation including:
 //!
-//! - [Thread Lifecycle Overview] — spawn → exit → respawn sequence
-//! - [The Inherent Race Condition] — why the race exists and how we handle it
-//! - [What Happens If We Exit Blindly] — the zombie device scenario
-//! - [Why Thread Reuse Is Safe] — resource safety table
-//! - [Related Tests] — PTY-based integration tests
+//! - Thread Lifecycle Overview — spawn → exit → respawn sequence
+//! - The Inherent Race Condition — why the race exists and how we handle it
+//! - What Happens If We Exit Blindly — the zombie device scenario
+//! - Why Thread Reuse Is Safe — resource safety table
+//!
 //!
 //! See [Device Lifecycle] for a detailed diagram showing how threads spawn and exit with
 //! each app lifecycle, and [Related Tests] for PTY-based integration tests validating
@@ -107,7 +107,7 @@
 //!    | :------------------------- | :---------------------------------------------------------------------------------------------------------------- |
 //!    | [`stdin`] [`EOF`]          | [`read()`] returns `0` → sends [`StdinEvent::Eof`] → thread exits; see [`EOF`] note below)                        |
 //!    | I/O error (not [`EINTR`])  | Sends [`StdinEvent::Error`] → thread exits (see [`EINTR`] handling below)                                         |
-//!    | All receivers dropped      | [`SubscriberGuard::drop()`] wakes thread → checks `receiver_count() == 0` → exits (~1ms); see below |
+//!    | All receivers dropped      | [`SubscriberGuard::drop()`] wakes thread → checks `receiver_count() == 0` → exits (~1ms); see below               |
 //!
 //!    **Note on [`EOF`]**: TUI apps run in [raw mode], where `Ctrl+D` is just
 //!    [`CONTROL_D`]—it doesn't trigger [`EOF`].
@@ -178,7 +178,7 @@
 //! read - it keeps running as a "zombie", causing the problems described in
 //! [The Problems section in `DirectToAnsiInputDevice`].
 //!
-//! **Why is [`MioPollerThread`] not implemented for macOS?** See [Why Linux-Only?] in
+//! **Why is this not implemented for macOS?** See [Why Linux-Only?] in
 //! the parent module—macOS [`kqueue`] can't poll PTY/tty file descriptors.
 //!
 //! </div>
@@ -285,29 +285,22 @@
 //! [Device Lifecycle]: super::DirectToAnsiInputDevice#device-lifecycle
 //! [OS/threading limitation]: https://man7.org/linux/man-pages/man3/pthread_cancel.3.html
 //! [PTY]: https://en.wikipedia.org/wiki/Pseudoterminal
-//! [Related Tests]: PollerThreadState#related-tests
+//! [Related Tests]: crate::core::resilient_reactor_thread#related-tests
 //! [Rust discussion]: https://internals.rust-lang.org/t/thread-cancel-support/3056
 //! [Rust workarounds]: https://matklad.github.io/2018/03/03/stopping-a-rust-worker.html
 //! [SSH]: https://en.wikipedia.org/wiki/Secure_Shell
-//! [The Inherent Race Condition]: PollerThreadState#the-inherent-race-condition
 //! [The Problems section in `DirectToAnsiInputDevice`]: super::DirectToAnsiInputDevice#the-problems
-//! [Thread Lifecycle Overview]: PollerThreadState#thread-lifecycle-overview
 //! [VT100 input parser]: super::stateful_parser::StatefulInputParser
-//! [What Happens If We Exit Blindly]: PollerThreadState#what-happens-if-we-exit-blindly
 //! [Why Linux-Only?]: super#why-linux-only
-//! [Why Thread Reuse Is Safe]: PollerThreadState#why-thread-reuse-is-safe
 //! [`CONTROL_D`]: crate::core::ansi::CONTROL_D
 //! [`DirectToAnsiInputDevice`]: super::DirectToAnsiInputDevice
 //! [`EINTR`]: https://man7.org/linux/man-pages/man3/errno.3.html
 //! [`EOF`]: https://en.wikipedia.org/wiki/End-of-file
 //! [`ErrorKind::Interrupted`]: std::io::ErrorKind::Interrupted
-//! [`SubscriberGuard::drop()`]: super::input_device_impl::subscriber::SubscriberGuard#impl-Drop-for-SubscriberGuard
-//! [`SubscriberGuard`]: super::input_device_impl::subscriber::SubscriberGuard
 //! [`InputEvent`]: crate::InputEvent
-//! [`MioPollerThread::drop()`]: poller_thread::MioPollerThread
-//! [`MioPollerThread::new()`]: poller_thread::MioPollerThread::new
-//! [`MioPollerThread::start()`]: poller_thread::MioPollerThread::start
-//! [`MioPollerThread`]: poller_thread::MioPollerThread
+//! [`MioPollWaker`]: mio_poll_waker::MioPollWaker
+//! [`MioPollWorkerFactory`]: mio_poll_worker::MioPollWorkerFactory
+//! [`MioPollWorker`]: mio_poll_worker::MioPollWorker
 //! [`Mutex`]: std::sync::Mutex
 //! [`PasteCollectionState`]: super::paste_state_machine::PasteCollectionState
 //! [`PollerEvent::Signal`]: super::channel_types::PollerEvent::Signal
@@ -327,32 +320,35 @@
 //! [`Stdin(Input(InputEvent))`]: super::channel_types::StdinEvent::Input
 //! [`StdinEvent::Eof`]: super::channel_types::StdinEvent::Eof
 //! [`StdinEvent::Error`]: super::channel_types::StdinEvent::Error
+//! [`SubscriberGuard::drop()`]: crate::core::resilient_reactor_thread::SubscriberGuard#impl-Drop-for-SubscriberGuard
+//! [`SubscriberGuard`]: crate::core::resilient_reactor_thread::SubscriberGuard
+//! [`ThreadWaker`]: crate::core::resilient_reactor_thread::ThreadWaker
 //! [`VEOF`]: https://man7.org/linux/man-pages/man3/termios.3.html
 //! [`VT100InputEventIR`]: crate::core::ansi::vt_100_terminal_input_parser::VT100InputEventIR
 //! [`allocate()`]: super::input_device_impl::global_input_resource::allocate
 //! [`broadcast::Receiver`]: tokio::sync::broadcast::Receiver
-//! [`consume_pending_signals()`]: handler_signals::consume_pending_signals
-//! [`consume_stdin_input()`]: handler_stdin::consume_stdin_input
+//! [`consume_pending_signals_with_tx()`]: handler_signals::consume_pending_signals_with_tx
+//! [`consume_stdin_input_with_tx()`]: handler_stdin::consume_stdin_input_with_tx
 //! [`crossterm`]: ::crossterm
-//! [`dispatch()`]: dispatcher::dispatch
+//! [`dispatch_with_tx()`]: dispatcher::dispatch_with_tx
 //! [`epoll`]: https://man7.org/linux/man-pages/man7/epoll.7.html
-//! [`handle_receiver_drop_waker()`]: handler_receiver_drop::handle_receiver_drop_waker
+//! [`handle_receiver_drop_waker_with_tx()`]: handler_receiver_drop::handle_receiver_drop_waker_with_tx
 //! [`kqueue`]: https://man.freebsd.org/cgi/man.cgi?query=kqueue&sektion=2
 //! [`mio::Poll`]: mio::Poll
 //! [`mio::Token`]: mio::Token
 //! [`mio::Waker`]: mio::Waker
 //! [`mio_poller`]: mod@self
-//! [`mio`]: mio
 //! [`poll()`]: https://man7.org/linux/man-pages/man2/poll.2.html
 //! [`poll.poll(&mut events, None)`]: mio::Poll::poll
 //! [`read()`]: https://man7.org/linux/man-pages/man2/read.2.html
 //! [`receiver_count()`]: tokio::sync::broadcast::Sender::receiver_count
+//! [`resilient_reactor_thread`]: crate::core::resilient_reactor_thread
 //! [`rustix::event::poll()`]: rustix::event::poll
 //! [`select()`]: https://man7.org/linux/man-pages/man2/select.2.html
 //! [`signal_hook_mio`]: signal_hook_mio
 //! [`std::thread`]: std::thread
 //! [`stdin`]: std::io::stdin
-//! [`syscall`]: https://en.wikipedia.org/wiki/System_call
+//! [`syscall`]: https://man7.org/linux/man-pages/man2/syscalls.2.html
 //! [`tokio::io::stdin()`]: tokio::io::stdin
 //! [`tokio::select!`]: tokio::select
 //! [`tokio::sync::broadcast`]: tokio::sync::broadcast
@@ -368,16 +364,16 @@
 // https://stackoverflow.com/a/75910283/2085356
 #![cfg_attr(rustfmt, rustfmt_skip)]
 
-// Conditionally public for docs and tests (enables intra-doc links).
+// RRT-based worker and waker types.
 #[cfg(any(test, doc))]
-pub mod poller_thread;
+pub mod mio_poll_waker;
 #[cfg(not(any(test, doc)))]
-mod poller_thread;
+mod mio_poll_waker;
 
 #[cfg(any(test, doc))]
-pub mod poller_thread_state;
+pub mod mio_poll_worker;
 #[cfg(not(any(test, doc)))]
-mod poller_thread_state;
+mod mio_poll_worker;
 
 #[cfg(any(test, doc))]
 pub mod sources;
@@ -405,7 +401,7 @@ pub mod handler_receiver_drop;
 mod handler_receiver_drop;
 
 // Re-export public API.
-pub use poller_thread::*;
-pub use poller_thread_state::*;
+pub use mio_poll_waker::*;
+pub use mio_poll_worker::*;
 pub use sources::*;
 
