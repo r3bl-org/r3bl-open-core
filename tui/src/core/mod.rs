@@ -14,6 +14,7 @@ pub mod misc;
 pub mod osc;
 pub mod pty;
 pub mod pty_mux;
+pub mod resilient_reactor_thread;
 pub mod script;
 pub mod stack_alloc_types;
 pub mod storage;

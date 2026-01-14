@@ -40,8 +40,9 @@
 //! [`subscribe()`]: crate::direct_to_ansi::DirectToAnsiInputDevice::subscribe
 
 use crate::{ControlledChild, PtyPair,
+            core::resilient_reactor_thread::LivenessState,
             direct_to_ansi::{DirectToAnsiInputDevice,
-                             input::{LivenessState, channel_types::{PollerEvent, StdinEvent},
+                             input::{channel_types::{PollerEvent, StdinEvent},
                                      global_input_resource}},
             generate_pty_test};
 use std::{io::{BufRead, BufReader, Write},
@@ -200,13 +201,14 @@ fn subscribe_controlled_entry_point() -> ! {
 
         // Read from subscriber (using the raw receiver).
         let subscriber_rx = subscriber
-            .maybe_poller_rx
+            .receiver
             .as_mut()
             .expect("Subscriber receiver is None");
-        let msg = tokio::time::timeout(Duration::from_secs(5), subscriber_rx.recv())
-            .await
-            .expect("Timeout reading from subscriber")
-            .expect("Channel closed");
+        let msg: PollerEvent =
+            tokio::time::timeout(Duration::from_secs(5), subscriber_rx.recv())
+                .await
+                .expect("Timeout reading from subscriber")
+                .expect("Channel closed");
         let PollerEvent::Stdin(StdinEvent::Input(event)) = msg else {
             panic!("Expected Stdin(Input(_)), got {msg:?}")
         };

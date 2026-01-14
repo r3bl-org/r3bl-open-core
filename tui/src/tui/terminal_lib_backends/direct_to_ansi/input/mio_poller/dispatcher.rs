@@ -2,33 +2,30 @@
 
 //! Event dispatching for the [`mio`] poller event loop.
 
-use super::{handler_receiver_drop::handle_receiver_drop_waker,
-            handler_signals::consume_pending_signals,
-            handler_stdin::consume_stdin_input, poller_thread::MioPollerThread,
-            sources::SourceKindReady};
+use super::{super::channel_types::PollerEvent, MioPollWorker,
+            handler_receiver_drop::handle_receiver_drop_waker_with_tx,
+            handler_signals::consume_pending_signals_with_tx,
+            handler_stdin::consume_stdin_input_with_tx, sources::SourceKindReady};
 use crate::{Continuation, tui::DEBUG_TUI_SHOW_TERMINAL_BACKEND};
 use mio::Token;
+use tokio::sync::broadcast::Sender;
 
-/// Dispatches to the appropriate handler based on the [`Token`].
+/// Dispatches to the appropriate handler based on the [`Token`], using explicit `tx`.
 ///
-/// This centralizes the token → handler mapping, making it easier to add new
-/// sources—just add a variant and its match arm here.
+/// This variant is used by [`MioPollWorker`] which implements the generic
+/// [`ThreadWorker`] trait and receives `tx` as a parameter to `poll_once()`.
 ///
-/// # Arguments
-///
-/// - `token`: The [`mio::Token`] identifying which source became ready.
-/// - `poller`: The [`MioPollerThread`] containing the state for handlers.
-///
-/// # Returns
-///
-/// - [`Continuation::Continue`]: Event handled, continue polling.
-/// - [`Continuation::Stop`]: Exit condition met.
-pub fn dispatch(token: Token, poller: &mut MioPollerThread) -> Continuation {
+/// [`ThreadWorker`]: crate::core::resilient_reactor_thread::ThreadWorker
+pub fn dispatch_with_tx(
+    token: Token,
+    worker: &mut MioPollWorker,
+    tx: &Sender<PollerEvent>,
+) -> Continuation {
     use SourceKindReady::{ReceiverDropWaker, Signals, Stdin, Unknown};
     match SourceKindReady::from_token(token) {
-        Stdin => consume_stdin_input(poller),
-        Signals => consume_pending_signals(poller),
-        ReceiverDropWaker => handle_receiver_drop_waker(poller),
+        Stdin => consume_stdin_input_with_tx(worker, tx),
+        Signals => consume_pending_signals_with_tx(worker, tx),
+        ReceiverDropWaker => handle_receiver_drop_waker_with_tx(tx),
         Unknown => handle_unknown(token),
     }
 }

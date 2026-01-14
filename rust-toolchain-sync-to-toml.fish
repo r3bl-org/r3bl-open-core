@@ -20,6 +20,7 @@ source script_lib.fish
 # - Install the target nightly toolchain from TOML
 # - Install rust-analyzer and rust-src components (required by VSCode, RustRover, cargo, and serena MCP server)
 # - Install x86_64-pc-windows-gnu target for cross-platform verification
+# - Update cargo development tools (wild-linker, bacon, flamegraph, etc.)
 #
 # Concurrency Safety:
 # - Uses mkdir (atomic directory creation) for mutual exclusion
@@ -231,6 +232,21 @@ function main
 
     # Install Windows cross-compilation target for verifying platform-specific code
     install_windows_target
+
+    # Phase 5: Update cargo development tools
+    toolchain_log ""
+    toolchain_log "═══════════════════════════════════════════════════════"
+    toolchain_log "Phase 5: Update Cargo Development Tools"
+    toolchain_log "═══════════════════════════════════════════════════════"
+    toolchain_log ""
+
+    toolchain_log "Updating cargo development tools to latest versions..."
+    if fish run.fish update-cargo-tools 2>&1 | tee -a $LOG_FILE
+        toolchain_log "✅ Cargo tools updated successfully"
+    else
+        toolchain_log "⚠️  Cargo tools update had issues (non-critical, continuing)"
+    end
+    toolchain_log ""
 
     toolchain_verify_final_state
 
