@@ -893,7 +893,12 @@ discovery and TLS with pre-shared keys (PSK) for secure communication.
 
 ### Network Thread Architecture
 
-Similar to the `mio_poller` pattern, Remote Control Mode uses a dedicated thread for network I/O:
+Similar to the `mio_poller` pattern, Remote Control Mode uses a dedicated thread for network I/O.
+
+> **See also:** [`rrt-applications.md`](rrt-applications.md) documents the **Resilient Reactor Thread
+> (RRT)** pattern—a generalized infrastructure for mDNS discovery, TLS connections, and other
+> network services. The RRT pattern extracted from `mio_poller` provides the thread lifecycle
+> management needed for Chi's network threads.
 
 ```
 ┌───────────────────────────────────────────────────────────────────────────────┐

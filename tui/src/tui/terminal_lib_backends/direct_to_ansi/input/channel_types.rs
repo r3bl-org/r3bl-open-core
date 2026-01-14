@@ -15,34 +15,6 @@
 
 use crate::{InputEvent, Size};
 
-/// Sender end of the broadcast channel for poller events.
-///
-/// Carries [`PollerEvent`] variants from both [`stdin`] (keyboard/mouse input, [`EOF`],
-/// errors) and signals (resize via [`SIGWINCH`]).
-///
-/// The sender can be cloned to create additional receivers via [`Sender::subscribe`].
-///
-/// [`EOF`]: https://en.wikipedia.org/wiki/End-of-file
-/// [`SIGWINCH`]: signal_hook::consts::SIGWINCH
-/// [`Sender::subscribe`]: tokio::sync::broadcast::Sender::subscribe
-/// [`stdin`]: std::io::stdin
-pub type PollerEventSender = tokio::sync::broadcast::Sender<PollerEvent>;
-
-/// Receiver end of the broadcast channel for poller events.
-///
-/// Carries [`PollerEvent`] variants from both [`stdin`] (keyboard/mouse input, [`EOF`],
-/// errors) and signals (resize via [`SIGWINCH`]).
-///
-/// Multiple receivers can exist simultaneously—each receives all messages sent after
-/// it was created. If a receiver lags behind (buffer fills up), it will receive
-/// [`RecvError::Lagged`] indicating how many messages were skipped.
-///
-/// [`EOF`]: https://en.wikipedia.org/wiki/End-of-file
-/// [`RecvError::Lagged`]: tokio::sync::broadcast::error::RecvError::Lagged
-/// [`SIGWINCH`]: signal_hook::consts::SIGWINCH
-/// [`stdin`]: std::io::stdin
-pub type PollerEventReceiver = tokio::sync::broadcast::Receiver<PollerEvent>;
-
 /// Event from the [`mio_poller`] thread, sent through a broadcast channel.
 ///
 /// The poller monitors multiple file descriptors and produces semantic events

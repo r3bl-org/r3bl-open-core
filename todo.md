@@ -42,6 +42,10 @@
       - [`consolidate-direct-to-ansi-inputdevice.md`](task/done/consolidate-direct-to-ansi-inputdevice.md)
       - [`mio-poller-thread-restartable.md`](/task/done/mio-poller-thread-restartable.md)
 
+- [ ] implement Resilient Reactor Thread (RRT) pattern - extract reusable infrastructure from
+      `mio_poller` into generic `resilient_reactor_thread` module:
+      [`introduce-resilient-reactor-thread.md`](task/introduce-resilient-reactor-thread.md)
+
 - [x] change `DirectToAnsiInputDevice` API to support multiple async consumers and enforce
       a single instance:
       [`task_single_input_device_multi_subscriber.md`](task/done/task_single_input_device_multi_subscriber.md)
@@ -56,10 +60,9 @@
 - [x] fix [`remove-bincode.md`](task/done/remove-bincode.md) to remove `bincode` due to
       its abandonment
 
-- [x] create "dedicated thread reactor" pattern based on `mio_poller` design & impl that
-      can be generalized to provide lots of great features (for `r3bl_*` apps & services)
-      in the future:
-      [`dedicated-reactor-thread-pattern.md`](task/pending/dedicated-reactor-thread-pattern.md)
+- [x] create "Resilient Reactor Thread (RRT)" pattern doc based on `mio_poller` design & impl
+      that can be generalized to provide lots of great features (for `r3bl_*` apps & services)
+      in the future: [`rrt-applications.md`](task/pending/rrt-applications.md)
 
 - [x] update README.md files [`update-readme.md`](task/done/update-readme.md)
 

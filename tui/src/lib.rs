@@ -1682,7 +1682,10 @@
 //! By calling [`OffscreenBuffer::apply_ansi_bytes()`], you can feed raw VT100 ANSI
 //! escape sequences directly into the buffer — no real terminal or PTY required:
 //!
-//! ```rust,ignore
+//! <!-- It is ok to use ignore here - demonstrates API usage with types not importable
+//! in doctests -->
+//!
+//! ```ignore
 //! let mut buffer = OffscreenBuffer::new(Size { col_count: 80, row_count: 24 });
 //!
 //! // Feed ANSI bytes from any source (file, network, PTY, test data)
@@ -1748,7 +1751,10 @@
 //! Uses Rust's [`rustix`](https://docs.rs/rustix) crate for type-safe termios
 //! manipulation:
 //!
-//! ```rust,ignore
+//! <!-- It is ok to use ignore here - shows rustix API patterns, not a complete
+//! runnable example -->
+//!
+//! ```ignore
 //! // rustix provides safe, ergonomic termios API
 //! termios.make_raw();  // Equivalent to cfmakeraw()
 //! termios::tcsetattr(&fd, OptionalActions::Now, &termios)?;
@@ -1769,7 +1775,10 @@
 //!
 //! The recommended approach uses RAII for automatic cleanup:
 //!
-//! ```rust,ignore
+//! <!-- It is ok to use ignore here - demonstrates RAII pattern, requires terminal
+//! context to run -->
+//!
+//! ```ignore
 //! use r3bl_tui::RawModeGuard;
 //!
 //! {
@@ -1844,7 +1853,10 @@
 //!
 //! Use this macro for single-feature PTY tests:
 //!
-//! ```rust,ignore
+//! <!-- It is ok to use ignore here - macro invocation requires test context and
+//! controller/controlled functions -->
+//!
+//! ```ignore
 //! generate_pty_test! {
 //!     test_fn: test_raw_mode_enables_correctly,
 //!     controller: my_controller_function,

@@ -1,13 +1,18 @@
 <!-- cspell:words CRDT epoll zeroconf myapp lamport syncthing mdns zeroconf zstd socat -->
 
-# Dedicated Reactor Thread Pattern
+# Resilient Reactor Thread (RRT) Applications
 
 ## Overview
 
-This document captures an architectural pattern for building distributed, peer-to-peer applications
-using dedicated blocking threads with channel-based communication.
+This document captures applications of the **Resilient Reactor Thread (RRT)** pattern for building
+distributed, peer-to-peer applications using dedicated blocking threads with channel-based
+communication.
 
 **Status**: Design exploration / Future work
+
+**Related**: See `task/introduce-resilient-reactor-thread.md` for the implementation plan to extract
+reusable RRT infrastructure from `mio_poller`. Once RRT is complete, the use cases below become much
+easier to implement.
 
 ## The Core Pattern
 
@@ -40,6 +45,9 @@ implements the blocking thread pattern:
 - **Resources**: stdin fd, SIGWINCH signal fd
 - **Blocking**: `mio::Poll::poll()` waits for input or resize signals
 - **Channel**: `tokio::sync::broadcast` fans out events to async consumers
+
+> **Note**: This implementation is being refactored into the generic **Resilient Reactor Thread
+> (RRT)** pattern. See `task/introduce-resilient-reactor-thread.md` for details.
 
 #### 2. Length-Prefixed Bincode Protocol (Network I/O)
 

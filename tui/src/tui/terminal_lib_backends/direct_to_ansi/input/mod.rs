@@ -33,7 +33,10 @@
 //! - On Linux: uses [`poll(2)`] directly
 //! - On macOS: uses [`select(2)`] instead (which works with PTY/tty)
 //!
-//! ```rust,ignore
+//! <!-- It is ok to use ignore here - shows internal filedescriptor crate implementation,
+//! not runnable example -->
+//!
+//! ```ignore
 //! // From filedescriptor crate (simplified)
 //! #[cfg(target_os = "macos")]
 //! pub fn poll_impl(pfd: &mut [pollfd], duration: Option<Duration>) -> Result<usize> {
@@ -66,7 +69,6 @@
 //! [`filedescriptor::poll()`]: https://docs.rs/filedescriptor/latest/filedescriptor/fn.poll.html
 //! [`filedescriptor`]: https://docs.rs/filedescriptor
 //! [`kqueue(2)`]: https://man.freebsd.org/cgi/man.cgi?query=kqueue&sektion=2
-//! [`mio`]: https://docs.rs/mio
 //! [`poll()`]: https://docs.rs/filedescriptor/latest/filedescriptor/fn.poll.html
 //! [`poll(2)`]: https://man7.org/linux/man-pages/man2/poll.2.html
 //! [`select(2)`]: https://man7.org/linux/man-pages/man2/select.2.html

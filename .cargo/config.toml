@@ -1,22 +1,25 @@
+# Parallel frontend compiler (requires nightly, see rust-toolchain.toml).
+# `-Z threads=8` enables multi-threaded compilation for ~20-30% faster builds.
+# Tracking issue: https://github.com/rust-lang/rust/issues/113349
 [build]
-rustflags = ["-Z", "threads=8"]  # Parallel frontend compiler
+rustflags = ["-Z", "threads=8"]
 
 [target.x86_64-unknown-linux-gnu]
 linker = "clang"
 rustflags = [
-    "-Z", "threads=8",  # Parallel compilation
+    "-Z", "threads=8",
     "-C", "link-arg=--ld-path=wild"  # Wild linker
 ]
 
 [target.aarch64-unknown-linux-gnu]
 linker = "clang"
 rustflags = [
-    "-Z", "threads=8",  # Parallel compilation
+    "-Z", "threads=8",
     "-C", "link-arg=--ld-path=wild"  # Wild linker
 ]
 
 [profile.dev]
-incremental = false  # Disable to avoid rustc dep graph ICE on nightly
+incremental = true  # Only disable to avoid rustc dep graph ICE on nightly which should not happen due to rust-toolchain-update.fish
 
 [profile.test]
-incremental = false  # Disable to avoid rustc dep graph ICE on nightly
+incremental = true  # Only disable to avoid rustc dep graph ICE on nightly which should not happen due to rust-toolchain-update.fish

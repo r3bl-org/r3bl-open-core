@@ -5,34 +5,40 @@
 
 //! Implementation details for [`DirectToAnsiInputDevice`].
 //!
-//! This module uses a **static container holding an ephemeral payload**:
+//! This module uses the **Resilient Reactor Thread (RRT)** infrastructure:
 //!
-//! - **[`SINGLETON`]** (container): Static [`Mutex<Option<_>>`], lives for process
+//! - **[`SINGLETON`]** (container): Static [`ThreadSafeGlobalState`], lives for process
 //!   lifetime
-//! - **[`PollerThreadState`]** (payload): Created when thread spawns, destroyed when it
-//!   exits
+//! - **[`ThreadState`]** (payload): Created when thread spawns, destroyed when it exits
 //!
 //! The container persists, but the payload comes and goes with the thread lifecycle.
 //!
-//! Module contents: [`global_input_resource`] (operations + [`SINGLETON`]) and
-//! [`subscriber`] ([`SubscriberGuard`] RAII guard).
+//! Module contents: [`global_input_resource`] (operations + [`SINGLETON`]).
 //!
 //! See [`DirectToAnsiInputDevice`] for the big picture (architecture, lifecycle, I/O
 //! pipeline).
 //!
 //! [`DirectToAnsiInputDevice`]: super::DirectToAnsiInputDevice
-//! [`PollerThreadState`]: super::mio_poller::PollerThreadState
-//! [`SubscriberGuard`]: subscriber::SubscriberGuard
-//! [`subscriber`]: mod@subscriber
 //! [`SINGLETON`]: global_input_resource::SINGLETON
+//! [`ThreadSafeGlobalState`]: crate::core::resilient_reactor_thread::ThreadSafeGlobalState
+//! [`ThreadState`]: crate::core::resilient_reactor_thread::ThreadState
 //! [`global_input_resource`]: mod@global_input_resource
 
-use super::{channel_types::PollerEventReceiver,
-            mio_poller::{LivenessState, MioPollerThread, PollerThreadState,
-                         SourceKindReady}};
-use crate::tui::DEBUG_TUI_SHOW_TERMINAL_BACKEND;
-use mio::{Poll, Waker};
-use std::sync::{Arc, Mutex};
+use super::{channel_types::PollerEvent,
+            mio_poller::{MioPollWaker, MioPollWorkerFactory}};
+use crate::core::resilient_reactor_thread::{LivenessState, SubscriberGuard,
+                                            ThreadSafeGlobalState};
+use miette::Report;
+
+/// Type alias for the input device's subscriber guard.
+///
+/// This is the RAII guard returned by [`allocate()`] and [`subscribe_to_existing()`].
+/// Holding this guard keeps you subscribed to input events; dropping it triggers the
+/// cleanup protocol that may cause the thread to exit.
+///
+/// [`allocate()`]: global_input_resource::allocate
+/// [`subscribe_to_existing()`]: global_input_resource::subscribe_to_existing
+pub type InputSubscriberGuard = SubscriberGuard<MioPollWaker, PollerEvent>;
 
 /// Operations on the process-global input resource singleton.
 ///
@@ -40,128 +46,69 @@ use std::sync::{Arc, Mutex};
 /// on it. The singleton is `pub` for doc links, but callers should use these functions
 /// rather than accessing it directly.
 ///
-/// See [`PollerThreadState`] for what the singleton holds when active.
+/// See [`ThreadState`] for what the singleton holds when active.
 ///
-/// [`PollerThreadState`]: super::mio_poller::PollerThreadState
 /// [`SINGLETON`]: global_input_resource::SINGLETON
+/// [`ThreadState`]: crate::core::resilient_reactor_thread::ThreadState
 pub mod global_input_resource {
     #[allow(clippy::wildcard_imports)]
     use super::*;
 
     /// **Static container** (lives for process lifetime) that holds a
-    /// [`PollerThreadState`] **payload** (ephemeral, follows thread lifecycle). The
-    /// payload is created when [`allocate()`] spawns a thread, and [removed when the
-    /// thread exits].
+    /// [`ThreadState`] **payload** (ephemeral, follows thread lifecycle). The payload is
+    /// created when [`allocate()`] spawns a thread, and removed when the thread exits.
     ///
     /// Lifecycle states:
     /// - **Inert** (`None`) until [`allocate()`] spawns the poller thread
-    ///   ([`MioPollerThread`])
     /// - **Active** (`Some`) while thread is running
     /// - **Dormant** (`Some` with terminated liveness) when all [`SubscriberGuard`]s
     ///   drop and thread exits
     /// - **Reactivates** on next [`allocate()`] call (spawns fresh thread, replaces
     ///   payload)
     ///
-    /// [`SubscriberGuard`]: super::subscriber::SubscriberGuard
-    ///
     /// This is NOT "allocate once, lives forever" — supports full restart cycles.
     ///
     /// Use the functions in this module ([`allocate()`], [`is_thread_running()`], etc.)
     /// rather than accessing this directly.
     ///
-    /// See [`PollerThreadState`] for what the payload contains when active.
+    /// See [`ThreadState`] for what the payload contains when active.
     ///
-    /// # Why `Mutex<Option<T>>`?
+    /// # Why `ThreadSafeGlobalState`?
     ///
-    /// **Deferred initialization** — we can't create [`PollerThreadState`] at `static`
-    /// init time:
-    ///
-    /// | Operation         | Const?    | Why not?                               |
-    /// | :---------------- | :-------- | :------------------------------------- |
-    /// | [`Poll::new()`]   | No        | [`Syscall`] (creates epoll/kqueue fd)  |
-    /// | [`Waker::new()`]  | No        | Requires Poll's registry (see below)   |
-    /// | [`Arc::new()`]    | No        | Heap allocation                        |
-    ///
-    /// **Why [`syscalls`] can't be `const`:** In Rust, **all** `static` variables must be
-    /// initialized with `const` expressions — this is a language rule, not a choice. The
-    /// compiler evaluates these expressions at compile time and embeds the result in the
-    /// binary. [`Syscalls`] ask the OS to do something (create an [`epoll`] [`fd`],
-    /// allocate memory), which is impossible during compilation. The OS doesn't exist at
-    /// compile time, and these operations have side effects that can't be "undone."
-    ///
-    /// Since [`Mutex::new(None)`] **is** `const` (just initializes memory layout), we use
-    /// [`Option<T>`] to defer the [`syscalls`] until the first [`allocate()`] call at
-    /// runtime.
-    ///
-    /// **Replacement on restart** — when the thread terminates and restarts (slow path),
-    /// we need to replace the entire [`PollerThreadState`] with fresh [`Poll`] +
-    /// [`Waker`]. [`Option::replace()`] makes this clean.
-    ///
-    /// **Note:** Fallibility is NOT the reason — we panic on [`syscall`] failure anyway.
-    /// Even if these operations were infallible, we'd still need [`Option<T>`] because
-    /// they're not `const`.
-    ///
-    /// # Poll → Registry → Waker Chain
-    ///
-    /// The [`Waker`] is tightly coupled to its [`Poll`]:
-    ///
-    /// ```text
-    /// Poll::new()           // Creates OS event mechanism (epoll fd / kqueue)
-    ///       │
-    ///       ▼
-    /// poll.registry()       // Handle to register interest
-    ///       │
-    ///       ▼
-    /// Waker::new(registry)  // Registers with THIS Poll's mechanism
-    ///       │
-    ///       ▼
-    /// waker.wake()          // Triggers event → poll.poll() returns
-    /// ```
-    ///
-    /// This is why the slow path replaces **both** [`Poll`] and Waker together — a
-    /// [`Waker`] is useless without its parent [`Poll`].
+    /// The RRT infrastructure handles all the complexity of:
+    /// - Deferred initialization (syscalls can't be `const`)
+    /// - Thread lifecycle management (spawn, exit, restart)
+    /// - Race condition handling (fast-path thread reuse)
+    /// - Waker coupling with Poll
     ///
     /// # Usage
     ///
     /// - Use [`allocate()`] to subscribe to input events & signals.
     /// - See [Architecture] for why global state is necessary.
-    /// - See [`MioPollerThread`] for thread lifecycle details.
-    ///
-    /// [`Option<T>`]: Option
+    /// - See [`MioPollWorker`] for worker details.
     ///
     /// [Architecture]: super::super::DirectToAnsiInputDevice#architecture
-    /// [`Mutex::new(None)`]: std::sync::Mutex::new
-    /// [`Poll::new()`]: mio::Poll::new
-    /// [`Poll`]: mio::Poll
-    /// [`PollerThreadState`]: PollerThreadState
-    /// [`Syscall`]: https://en.wikipedia.org/wiki/System_call
-    /// [`Syscalls`]: https://en.wikipedia.org/wiki/System_call
-    /// [`Waker::new()`]: mio::Waker::new
-    /// [`Waker`]: mio::Waker
+    /// [`MioPollWorker`]: super::super::mio_poller::MioPollWorker
+    /// [`SubscriberGuard`]: crate::core::resilient_reactor_thread::SubscriberGuard
+    /// [`ThreadState`]: crate::core::resilient_reactor_thread::ThreadState
     /// [`allocate()`]: allocate
-    /// [`epoll`]: https://man7.org/linux/man-pages/man7/epoll.7.html
-    /// [`fd`]: https://en.wikipedia.org/wiki/File_descriptor
     /// [`is_thread_running()`]: is_thread_running
-    /// [`syscall`]: https://en.wikipedia.org/wiki/System_call
-    /// [`syscalls`]: https://en.wikipedia.org/wiki/System_call
-    /// [removed when the thread exits]: subscriber::SubscriberGuard#impl-Drop-for-SubscriberGuard
-    pub static SINGLETON: Mutex<Option<Arc<PollerThreadState>>> = Mutex::new(None);
+    pub static SINGLETON: ThreadSafeGlobalState<MioPollWaker, PollerEvent> =
+        ThreadSafeGlobalState::new();
 
     /// Subscribe your async consumer to the global input resource, in order to receive
     /// input events.
     ///
     /// The global `static` singleton [`SINGLETON`] contains one
-    /// [`broadcast::Sender`]. This channel acts as a bridge between the only sync
-    /// [`MioPollerThread`] and the many async consumers. We don't need to capture the
-    /// broadcast channel itself in the singleton, only the sender, since it is
-    /// trivial to create new receivers from it.
+    /// [`broadcast::Sender`]. This channel acts as a bridge between the sync
+    /// [`MioPollWorker`] and the many async consumers. We don't need to capture the
+    /// broadcast channel itself in the singleton, only the sender, since it is trivial
+    /// to create new receivers from it.
     ///
     /// # Returns
     ///
     /// A new [`SubscriberGuard`] that independently receives all input events and
     /// resize signals.
-    ///
-    /// [`SubscriberGuard`]: super::subscriber::SubscriberGuard
     ///
     /// # Multiple Async Consumers
     ///
@@ -173,108 +120,62 @@ pub mod global_input_resource {
     ///
     /// # Thread Spawning
     ///
-    /// On first call, this spawns the [`mio`] poller thread via
-    /// [`MioPollerThread::new()`] which uses [`mio::Poll`] to wait on both [`stdin`] data
-    /// and [`SIGWINCH`] signals. See the [Thread Lifecycle] section in
-    /// [`MioPollerThread`] for details on thread lifetime and exit conditions.
+    /// On first call, this spawns the [`mio`] poller thread via the RRT infrastructure
+    /// which uses [`mio::Poll`] to wait on both [`stdin`] data and [`SIGWINCH`] signals.
+    /// See the [Thread Lifecycle] section in [`ThreadState`] for details on thread
+    /// lifetime and exit conditions.
     ///
     /// # Two Allocation Paths
     ///
-    /// | Condition                | Path          | What Happens                                  |
-    /// | ------------------------ | ------------- | --------------------------------------------- |
-    /// | `liveness == Running`    | **Fast path** | Reuse existing thread + [`PollerThreadState`] |
-    /// | `liveness == Terminated` | **Slow path** | Replace all, spawn new thread                 |
+    /// | Condition                | Path          | What Happens                            |
+    /// | ------------------------ | ------------- | --------------------------------------- |
+    /// | `liveness == Running`    | **Fast path** | Reuse existing thread + [`ThreadState`] |
+    /// | `liveness == Terminated` | **Slow path** | Replace all, spawn new thread           |
     ///
     /// ## Fast Path (Thread Reuse)
     ///
     /// If the thread is still running, we **reuse everything**:
-    /// - Same [`PollerThreadState`] (same broadcast channel, same liveness tracker)
+    /// - Same [`ThreadState`] (same broadcast channel, same liveness tracker)
     /// - Same [`mio::Poll`] + [`Waker`] (still registered, still valid)
     /// - Same thread (continues serving the new subscriber)
     ///
     /// This handles the [race condition] where a new subscriber appears before the
-    /// thread checks [`receiver_count()`]. See [`PollerThreadState`] for complete
+    /// thread checks [`receiver_count()`]. See [`ThreadState`] for complete
     /// documentation on [The Inherent Race Condition] and [Why Thread Reuse Is Safe].
     ///
     /// ## Slow Path (Thread Restart)
     ///
-    /// If the thread has terminated, the existing [`PollerThreadState`] is **orphaned**
+    /// If the thread has terminated, the existing [`ThreadState`] is **orphaned**
     /// — no thread is feeding events into its broadcast channel. We must **replace
     /// everything**:
-    /// - New [`PollerThreadState`] (fresh broadcast channel + liveness tracker + waker)
+    /// - New [`ThreadState`] (fresh broadcast channel + liveness tracker + waker)
     /// - New [`mio::Poll`] (old one was dropped with old thread)
     /// - New thread (spawned to serve the new subscriber)
     ///
+    /// # Errors
     ///
-    /// # Panics
+    /// Returns an error if:
+    /// 1. Worker setup fails (OS resource creation failed).
+    /// 2. Thread spawning fails (system thread limits).
+    /// 3. The [`SINGLETON`] mutex is poisoned.
     ///
-    /// Panics if:
-    /// 1. Thread spawning fails; see [`MioPollerThread::new()`] for details.
-    /// 2. The [`SINGLETON`] mutex is poisoned.
-    /// 3. The [`SINGLETON`] is `None` after initialization (invariant violation).
-    ///
-    /// [The Inherent Race Condition]: PollerThreadState#the-inherent-race-condition
-    /// [Thread Lifecycle]: MioPollerThread#thread-lifecycle
-    /// [Why Thread Reuse Is Safe]: PollerThreadState#why-thread-reuse-is-safe
-    /// [`PollerThreadState`]: PollerThreadState
+    /// [The Inherent Race Condition]: crate::core::resilient_reactor_thread::ThreadState#the-inherent-race-condition
+    /// [Thread Lifecycle]: crate::core::resilient_reactor_thread#thread-lifecycle
+    /// [Why Thread Reuse Is Safe]: crate::core::resilient_reactor_thread::ThreadState#why-thread-reuse-is-safe
+    /// [`MioPollWorker`]: super::super::mio_poller::MioPollWorker
     /// [`SIGWINCH`]: signal_hook::consts::SIGWINCH
     /// [`SINGLETON`]: SINGLETON
+    /// [`SubscriberGuard`]: crate::core::resilient_reactor_thread::SubscriberGuard
+    /// [`ThreadState`]: crate::core::resilient_reactor_thread::ThreadState
     /// [`Waker`]: mio::Waker
     /// [`broadcast::Sender::subscribe()`]: tokio::sync::broadcast::Sender::subscribe
     /// [`broadcast::Sender`]: tokio::sync::broadcast::Sender
     /// [`mio::Poll`]: mio::Poll
     /// [`receiver_count()`]: tokio::sync::broadcast::Sender::receiver_count
     /// [`stdin`]: std::io::stdin
-    /// [race condition]: PollerThreadState#the-inherent-race-condition
-    pub fn allocate() -> subscriber::SubscriberGuard {
-        let mut guard = SINGLETON.lock().expect(
-            "SINGLETON mutex poisoned: another thread panicked while holding this lock. \
-             Terminal input is unavailable. This is unrecoverable.",
-        );
-
-        // Fast path check: can we reuse the existing thread + PollerThreadState?
-        // See `PollerThreadState` docs for race condition handling.
-        let apply_fast_path_thread_reuse = guard.as_ref().is_some_and(|state| {
-            state.thread_liveness.is_running() == LivenessState::Running
-        });
-
-        // SLOW PATH: Thread terminated (or never started) → create new everything.
-        // The existing PollerThreadState is "orphaned" (no thread feeding it).
-        if !apply_fast_path_thread_reuse {
-            // New Poll (the old one was dropped with the old thread).
-            let new_poll = Poll::new().expect(
-                "Failed to create mio::Poll: OS denied epoll/kqueue creation. \
-                 Check ulimit -n (max open files) or /proc/sys/fs/epoll/max_user_watches.",
-            );
-            let new_registry = new_poll.registry();
-            // New Waker (must be tied to the new Poll's registry).
-            let new_waker =
-                Waker::new(new_registry, SourceKindReady::ReceiverDropWaker.to_token())
-                    .expect(
-                        "Failed to create mio::Waker: eventfd/pipe creation failed. \
-                     Check ulimit -n (max open files).",
-                    );
-
-            // New PollerThreadState (fresh broadcast channel + liveness tracker + waker).
-            let thread_state = Arc::new(PollerThreadState::new(new_waker));
-
-            // New thread (to feed events into the new PollerThreadState).
-            MioPollerThread::new(new_poll, Arc::clone(&thread_state));
-
-            // Replace the old (orphaned) state with the new one.
-            guard.replace(thread_state);
-        }
-
-        // FAST PATH (or after slow path): Use the current PollerThreadState.
-        // - Fast path: reuses existing thread + state.
-        // - Slow path: uses the newly created ones from above.
-        debug_assert!(guard.is_some());
-        let thread_state = guard.as_ref().unwrap();
-
-        subscriber::SubscriberGuard {
-            maybe_poller_rx: Some(thread_state.broadcast_tx.subscribe()),
-            thread_state: Arc::clone(thread_state),
-        }
+    /// [race condition]: crate::core::resilient_reactor_thread::ThreadState#the-inherent-race-condition
+    pub fn allocate() -> Result<InputSubscriberGuard, Report> {
+        SINGLETON.allocate::<MioPollWorkerFactory>()
     }
 
     /// Checks if the [`mio_poller`] thread is currently running.
@@ -293,18 +194,8 @@ pub mod global_input_resource {
     /// [Device Lifecycle]: crate::DirectToAnsiInputDevice#device-lifecycle
     /// [`DirectToAnsiInputDevice`]: crate::DirectToAnsiInputDevice
     /// [`mio_poller`]: crate::direct_to_ansi::input::mio_poller
-    #[allow(clippy::redundant_closure_for_method_calls)]
-    pub fn is_thread_running() -> LivenessState {
-        SINGLETON
-            .lock()
-            .ok()
-            .and_then(|guard| {
-                guard
-                    .as_ref()
-                    .map(|state| state.thread_liveness.is_running())
-            })
-            .unwrap_or(LivenessState::Terminated)
-    }
+    #[must_use]
+    pub fn is_thread_running() -> LivenessState { SINGLETON.is_thread_running() }
 
     /// Queries how many receivers are subscribed to the input broadcast channel.
     ///
@@ -321,17 +212,8 @@ pub mod global_input_resource {
     /// [Device Lifecycle]: crate::DirectToAnsiInputDevice#device-lifecycle
     /// [`DirectToAnsiInputDevice`]: crate::DirectToAnsiInputDevice
     /// [`mio_poller`]: crate::direct_to_ansi::input::mio_poller
-    pub fn get_receiver_count() -> usize {
-        SINGLETON
-            .lock()
-            .ok()
-            .and_then(|guard| {
-                guard
-                    .as_ref()
-                    .map(|state| state.broadcast_tx.receiver_count())
-            })
-            .unwrap_or(0)
-    }
+    #[must_use]
+    pub fn get_receiver_count() -> usize { SINGLETON.get_receiver_count() }
 
     /// Returns the current thread generation number.
     ///
@@ -352,15 +234,8 @@ pub mod global_input_resource {
     /// [Device Lifecycle]: crate::DirectToAnsiInputDevice#device-lifecycle
     /// [`DirectToAnsiInputDevice`]: crate::DirectToAnsiInputDevice
     /// [`mio_poller`]: crate::direct_to_ansi::input::mio_poller
-    pub fn get_thread_generation() -> u8 {
-        SINGLETON
-            .lock()
-            .ok()
-            .and_then(|guard| {
-                guard.as_ref().map(|state| state.thread_liveness.generation)
-            })
-            .unwrap_or(0)
-    }
+    #[must_use]
+    pub fn get_thread_generation() -> u8 { SINGLETON.get_thread_generation() }
 
     /// Subscribe to input events from an existing thread.
     ///
@@ -379,104 +254,9 @@ pub mod global_input_resource {
     ///
     /// [`DirectToAnsiInputDevice`]: crate::DirectToAnsiInputDevice
     /// [`mio_poller`]: super::super::mio_poller
-    pub fn subscribe_to_existing() -> subscriber::SubscriberGuard {
-        let guard = SINGLETON.lock().expect(
-            "SINGLETON mutex poisoned: another thread panicked while holding this lock.",
-        );
-
-        let thread_state = guard.as_ref().expect(
-            "subscribe_to_existing() called before DirectToAnsiInputDevice::new(). \
-             Create a device first, then call device.subscribe().",
-        );
-
-        subscriber::SubscriberGuard {
-            maybe_poller_rx: Some(thread_state.broadcast_tx.subscribe()),
-            thread_state: Arc::clone(thread_state),
-        }
-    }
-}
-
-/// RAII guard for broadcast subscription to the [`mio_poller`] thread.
-///
-/// Holding a [`SubscriberGuard`] keeps you subscribed to input events. Dropping it
-/// triggers the cleanup protocol that may cause the thread to exit.
-///
-/// See [`SubscriberGuard`] for full documentation.
-///
-/// [`SubscriberGuard`]: subscriber::SubscriberGuard
-/// [`mio_poller`]: super::mio_poller
-pub mod subscriber {
-    #[allow(clippy::wildcard_imports)]
-    use super::*;
-
-    /// RAII guard that wakes the [`mio_poller`] thread on drop.
-    ///
-    /// # Drop behavior
-    ///
-    /// When this guard is dropped:
-    /// 1. [`maybe_poller_rx`] is dropped first, which causes Tokio's broadcast channel
-    ///    to atomically decrement the [`Sender`]'s internal [`receiver_count()`].
-    /// 2. Then [`mio::Waker::wake()`] interrupts the poll loop.
-    /// 3. The [`mio_poller`] thread wakes and [`handle_receiver_drop_waker()`] checks
-    ///    [`receiver_count()`] to decide if the thread should exit (when count reaches
-    ///    `0`).
-    ///
-    /// # Race Condition and Correctness
-    ///
-    /// There is a race window between when the receiver is dropped and when
-    /// [`handle_receiver_drop_waker()`] checks [`receiver_count()`]. This is the
-    /// **fast-path thread reuse** scenario — if a new subscriber appears during the
-    /// window, the thread correctly continues serving it instead of exiting.
-    ///
-    /// See [`PollerThreadState`] for comprehensive documentation:
-    /// - [The Inherent Race Condition] — timeline diagram
-    /// - [What Happens If We Exit Blindly] — zombie device scenario
-    /// - [Why Thread Reuse Is Safe] — resource safety table
-    ///
-    /// [The Inherent Race Condition]: super::super::mio_poller::PollerThreadState#the-inherent-race-condition
-    /// [What Happens If We Exit Blindly]: super::super::mio_poller::PollerThreadState#what-happens-if-we-exit-blindly
-    /// [Why Thread Reuse Is Safe]: super::super::mio_poller::PollerThreadState#why-thread-reuse-is-safe
-    /// [`PollerThreadState`]: super::super::mio_poller::PollerThreadState
-    /// [`Sender`]: tokio::sync::broadcast::Sender
-    /// [`handle_receiver_drop_waker()`]: super::super::mio_poller::handler_receiver_drop::handle_receiver_drop_waker
-    /// [`maybe_poller_rx`]: Self::maybe_poller_rx
-    /// [`mio_poller`]: super::super::mio_poller
-    /// [`receiver_count()`]: tokio::sync::broadcast::Sender::receiver_count
-    #[allow(missing_debug_implementations)]
-    pub struct SubscriberGuard {
-        /// The actual broadcast receiver for poller events.
-        pub maybe_poller_rx: Option<PollerEventReceiver>,
-
-        /// Shared state including waker to signal the [`mio_poller`] thread.
-        ///
-        /// [`mio_poller`]: super::super::mio_poller
-        pub thread_state: Arc<PollerThreadState>,
-    }
-
-    impl Drop for SubscriberGuard {
-        /// Drops receiver then wakes thread. See [Drop behavior] for the full
-        /// mechanism. Also see [`DirectToAnsiInputDevice`'s drop behavior] for when
-        /// this is triggered.
-        ///
-        /// [Drop behavior]: SubscriberGuard#drop-behavior
-        /// [`DirectToAnsiInputDevice`'s drop behavior]: super::super::DirectToAnsiInputDevice#drop-behavior
-        fn drop(&mut self) {
-            // Drop receiver first so Sender::receiver_count() decrements.
-            drop(self.maybe_poller_rx.take());
-
-            // Wake the thread so it can check if it should exit.
-            let wake_result = self.thread_state.waker.wake();
-
-            // Log failure (non-fatal: thread may have already exited).
-            if let Err(err) = wake_result {
-                DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
-                    tracing::debug!(
-                        message = "SubscriberGuard::drop: wake failed",
-                        error = ?err
-                    );
-                });
-            }
-        }
+    #[must_use]
+    pub fn subscribe_to_existing() -> InputSubscriberGuard {
+        SINGLETON.subscribe_to_existing()
     }
 }
 

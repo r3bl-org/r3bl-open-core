@@ -1,2 +1,6 @@
+# Nightly required for `-Z threads=8` parallel frontend compiler flag.
+# This unstable feature provides ~20-30% faster compilation times.
+# Tracking issue: https://github.com/rust-lang/rust/issues/113349
+# Once stabilized, we can switch back to stable Rust.
 [toolchain]
-channel = "nightly-2026-01-01"
+channel = "nightly-2026-01-18"
