@@ -6,6 +6,7 @@
 - [Fork Syntect and Remove Bincode Dependency](#fork-syntect-and-remove-bincode-dependency)
   - [Overview](#overview)
   - [Why Fork?](#why-fork)
+  - [Why Postcard?](#why-postcard)
   - [Implementation Plan](#implementation-plan)
     - [Step 0: Vendor Syntect Source](#step-0-vendor-syntect-source)
     - [Step 1: Add to Workspace](#step-1-add-to-workspace)
@@ -25,7 +26,6 @@
     - [Step 6: Verification](#step-6-verification)
   - [File Changes Summary](#file-changes-summary)
   - [Risks and Mitigations](#risks-and-mitigations)
-  - [Estimated Effort](#estimated-effort)
   - [Future Considerations](#future-considerations)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
@@ -37,7 +37,7 @@
 Syntect is a Rust library for syntax highlighting using Sublime Text syntax definitions. It
 currently depends on `bincode v1.3.3` for serializing/deserializing pre-compiled syntax and theme
 dumps. Since bincode has been abandoned, we want to fork syntect and replace bincode with
-`serde_json`.
+`postcard`.
 
 **Repository:** https://github.com/trishume/syntect
 **License:** MIT
@@ -57,6 +57,29 @@ The `dump-load` and `dump-create` features in syntect use bincode to:
 
 These features are transitively required by `default-syntaxes`, `default-themes`, and even `parsing`
 — making it impossible to disable bincode while using syntect's core functionality.
+
+## Why Postcard?
+
+We're using **Postcard** instead of serde_json because:
+
+1. **Binary format** - Postcard produces compact binary output similar to bincode, keeping embedded
+   asset sizes small. JSON would significantly inflate the asset sizes.
+
+2. **Performance** - Binary serialization/deserialization is faster than text-based JSON parsing.
+
+3. **Active maintenance & funding** - Unlike bincode (which was abandoned due to maintainer
+   harassment), Postcard has strong maintainer support:
+   - **Author:** James Munns (OneVariable UG), founding member of Rust Embedded Working Group
+   - **Mozilla funded:** The 1.0 release was sponsored by Mozilla Corporation
+   - **Current version:** v1.1.3 (July 2025), with 378 commits and active development
+   - **Community adoption:** 1.3k GitHub stars, used by 7,800+ projects
+   - **Ecosystem involvement:** James is active in Rust governance and speaks at major conferences
+
+4. **Serde compatible** - Like bincode, Postcard uses serde traits, making it a drop-in replacement
+   at the serialization layer.
+
+5. **Consistency** - The rest of our codebase is migrating to Postcard (see
+   `task/replace-serde_json-with-postcard.md`).
 
 ## Implementation Plan
 
@@ -83,9 +106,9 @@ syntect-fork/
 ├── Cargo.toml      (modified syntect Cargo.toml)
 ├── src/
 │   ├── lib.rs
-│   ├── dumps.rs    (modified to use serde_json)
+│   ├── dumps.rs    (modified to use postcard)
 │   └── ...
-├── assets/         (regenerated as JSON)
+├── assets/         (regenerated with postcard)
 └── README.md
 ```
 
@@ -117,14 +140,14 @@ name = "syntect"  # Keep as "syntect" so patch works seamlessly
 version = "5.3.0-fork"  # Add -fork suffix to indicate modification
 ```
 
-2. Replace bincode with serde_json:
+2. Replace bincode with postcard:
 
 ```toml
 # OLD
 bincode = { version = "1.0", optional = true }
 
 # NEW
-serde_json = { version = "1.0", optional = true }
+postcard = { version = "1.0", features = ["use-std"], optional = true }
 ```
 
 3. Update the feature flags:
@@ -135,8 +158,8 @@ dump-load = ["flate2", "bincode"]
 dump-create = ["flate2", "bincode"]
 
 # NEW
-dump-load = ["flate2", "serde_json"]
-dump-create = ["flate2", "serde_json"]
+dump-load = ["flate2", "postcard"]
+dump-create = ["flate2", "postcard"]
 ```
 
 4. Add workspace lints:
@@ -158,8 +181,7 @@ use bincode::Result as BincodeResult;
 use bincode::{deserialize_from, serialize_into};
 
 // NEW
-use serde_json::Result as JsonResult;
-use std::io::{BufReader, BufWriter};
+use std::io::{BufReader, BufWriter, Read, Write};
 ```
 
 #### 3.2 Update dump_to_uncompressed_file
@@ -178,10 +200,12 @@ pub fn dump_to_uncompressed_file<T: Serialize, P: AsRef<Path>>(
 pub fn dump_to_uncompressed_file<T: Serialize, P: AsRef<Path>>(
     o: &T,
     path: P,
-) -> JsonResult<()> {
-    let f = File::create(path)?;
-    let writer = BufWriter::new(f);
-    serde_json::to_writer(writer, o)
+) -> Result<(), postcard::Error> {
+    let f = File::create(path).map_err(postcard::Error::Io)?;
+    let mut writer = BufWriter::new(f);
+    let bytes = postcard::to_stdvec(o)?;
+    writer.write_all(&bytes).map_err(postcard::Error::Io)?;
+    Ok(())
 }
 ```
 
@@ -199,10 +223,12 @@ pub fn from_uncompressed_dump_file<T: DeserializeOwned, P: AsRef<Path>>(
 // NEW
 pub fn from_uncompressed_dump_file<T: DeserializeOwned, P: AsRef<Path>>(
     path: P,
-) -> JsonResult<T> {
-    let f = File::open(path)?;
-    let reader = BufReader::new(f);
-    serde_json::from_reader(reader)
+) -> Result<T, postcard::Error> {
+    let f = File::open(path).map_err(postcard::Error::Io)?;
+    let mut reader = BufReader::new(f);
+    let mut bytes = Vec::new();
+    reader.read_to_end(&mut bytes).map_err(postcard::Error::Io)?;
+    postcard::from_bytes(&bytes)
 }
 ```
 
@@ -219,12 +245,15 @@ pub fn dump_to_file<T: Serialize, P: AsRef<Path>>(o: &T, path: P) -> BincodeResu
 }
 
 // NEW
-pub fn dump_to_file<T: Serialize, P: AsRef<Path>>(o: &T, path: P) -> JsonResult<()> {
-    let f = File::create(path)?;
-    let encoder = ZlibEncoder::new(f, Compression::best());
-    let writer = BufWriter::new(encoder);
-    serde_json::to_writer(writer, o)?;
-    // Note: BufWriter flush happens on drop, encoder finish happens on drop
+pub fn dump_to_file<T: Serialize, P: AsRef<Path>>(
+    o: &T,
+    path: P,
+) -> Result<(), postcard::Error> {
+    let f = File::create(path).map_err(postcard::Error::Io)?;
+    let mut encoder = ZlibEncoder::new(f, Compression::best());
+    let bytes = postcard::to_stdvec(o)?;
+    encoder.write_all(&bytes).map_err(postcard::Error::Io)?;
+    encoder.finish().map_err(postcard::Error::Io)?;
     Ok(())
 }
 ```
@@ -240,11 +269,14 @@ pub fn from_dump_file<T: DeserializeOwned, P: AsRef<Path>>(path: P) -> BincodeRe
 }
 
 // NEW
-pub fn from_dump_file<T: DeserializeOwned, P: AsRef<Path>>(path: P) -> JsonResult<T> {
-    let f = File::open(path)?;
-    let decoder = ZlibDecoder::new(f);
-    let reader = BufReader::new(decoder);
-    serde_json::from_reader(reader)
+pub fn from_dump_file<T: DeserializeOwned, P: AsRef<Path>>(
+    path: P,
+) -> Result<T, postcard::Error> {
+    let f = File::open(path).map_err(postcard::Error::Io)?;
+    let mut decoder = ZlibDecoder::new(f);
+    let mut bytes = Vec::new();
+    decoder.read_to_end(&mut bytes).map_err(postcard::Error::Io)?;
+    postcard::from_bytes(&bytes)
 }
 ```
 
@@ -258,7 +290,7 @@ pub fn from_binary<T: DeserializeOwned>(v: &[u8]) -> T {
 
 // NEW
 pub fn from_binary<T: DeserializeOwned>(v: &[u8]) -> T {
-    serde_json::from_slice(v).unwrap()
+    postcard::from_bytes(v).unwrap()
 }
 ```
 
@@ -271,22 +303,22 @@ pub fn from_uncompressed_data<T: DeserializeOwned>(v: &[u8]) -> BincodeResult<T>
 }
 
 // NEW
-pub fn from_uncompressed_data<T: DeserializeOwned>(v: &[u8]) -> JsonResult<T> {
-    serde_json::from_slice(v)
+pub fn from_uncompressed_data<T: DeserializeOwned>(v: &[u8]) -> Result<T, postcard::Error> {
+    postcard::from_bytes(v)
 }
 ```
 
 ### Step 4: Regenerate Embedded Assets
 
-The embedded assets in `syntect-fork/assets/` are bincode-serialized. We need to regenerate them as
-JSON.
+The embedded assets in `syntect-fork/assets/` are bincode-serialized. We need to regenerate them
+with postcard.
 
 #### 4.1 Create Asset Regeneration Script
 
 Create `syntect-fork/examples/regenerate_assets.rs`:
 
 ```rust
-//! Regenerate embedded assets as JSON-serialized dumps.
+//! Regenerate embedded assets as postcard-serialized dumps.
 //!
 //! Run with: cargo run --example regenerate_assets --features dump-create
 
@@ -329,7 +361,7 @@ No changes needed! The `[patch.crates-io]` in the workspace root automatically r
 syntect = "5.3.0"
 ```
 
-Remove the comment about bincode since it will no longer apply:
+Update the comment about bincode since it will no longer apply:
 
 ```toml
 # OLD
@@ -339,7 +371,7 @@ Remove the comment about bincode since it will no longer apply:
 syntect = "5.3.0"
 
 # NEW
-# Syntax highlighting (using vendored fork with serde_json instead of bincode).
+# Syntax highlighting (using vendored fork with postcard instead of bincode).
 syntect = "5.3.0"
 ```
 
@@ -366,43 +398,34 @@ cargo doc -p syntect --no-deps
 
 ## File Changes Summary
 
-| File                                 | Action                                     |
-| ------------------------------------ | ------------------------------------------ |
-| `Cargo.toml` (workspace)             | Add `syntect-fork` to members, add patch   |
-| `syntect-fork/Cargo.toml`            | Replace `bincode` with `serde_json`        |
-| `syntect-fork/src/dumps.rs`          | Replace bincode calls with serde_json      |
-| `syntect-fork/examples/regenerate_assets.rs` | Create asset regeneration script   |
-| `syntect-fork/assets/*.packdump`     | Regenerate as JSON                         |
-| `syntect-fork/assets/*.themedump`    | Regenerate as JSON                         |
-| `tui/Cargo.toml`                     | Update comment (optional)                  |
+| File                                         | Action                                   |
+| -------------------------------------------- | ---------------------------------------- |
+| `Cargo.toml` (workspace)                     | Add `syntect-fork` to members, add patch |
+| `syntect-fork/Cargo.toml`                    | Replace `bincode` with `postcard`        |
+| `syntect-fork/src/dumps.rs`                  | Replace bincode calls with postcard      |
+| `syntect-fork/examples/regenerate_assets.rs` | Create asset regeneration script         |
+| `syntect-fork/assets/*.packdump`             | Regenerate with postcard                 |
+| `syntect-fork/assets/*.themedump`            | Regenerate with postcard                 |
+| `tui/Cargo.toml`                             | Update comment (optional)                |
 
 ## Risks and Mitigations
 
-| Risk                            | Likelihood | Mitigation                                      |
-| ------------------------------- | ---------- | ----------------------------------------------- |
-| JSON assets larger than bincode | High       | flate2 compression mitigates; test actual size  |
-| Slower deserialization          | Medium     | Acceptable for one-time startup load            |
-| Upstream syntect updates        | Low        | Pin to v5.3.0; merge upstream changes as needed |
-| Serde compatibility issues      | Low        | syntect already uses serde traits               |
-
-## Estimated Effort
-
-| Task                           | Time          |
-| ------------------------------ | ------------- |
-| Vendor syntect source          | 15 min        |
-| Modify Cargo.toml and dumps.rs | 1 hour        |
-| Regenerate assets              | 30 min        |
-| Testing and debugging          | 1-2 hours     |
-| **Total**                      | **2-3 hours** |
+| Risk                                | Likelihood | Mitigation                                            |
+| ----------------------------------- | ---------- | ----------------------------------------------------- |
+| Postcard format incompatibility     | Low        | syntect already uses serde traits; postcard is stable |
+| Asset size changes                  | Low        | Postcard is compact like bincode; compare after       |
+| Slower deserialization              | Very Low   | Postcard is fast; acceptable for one-time load        |
+| Upstream syntect updates            | Low        | Pin to v5.3.0; merge upstream changes as needed       |
+| postcard::Error doesn't impl StdErr | Medium     | May need error conversion wrapper                     |
 
 ## Future Considerations
 
-1. **Upstream PR**: Consider submitting a PR to syntect adding `serde_json` as an alternative
+1. **Upstream PR**: Consider submitting a PR to syntect adding `postcard` as an alternative
    serialization backend (feature-gated). Reference issue #606.
 
-2. **Asset size monitoring**: Track the size difference between bincode and JSON assets.
+2. **Asset size monitoring**: Track the size difference between bincode and postcard assets.
 
 3. **Lazy loading**: If startup time becomes an issue, consider lazy-loading syntax definitions.
 
-4. **Upstream merge**: If syntect ever adds JSON support upstream, we can switch back to the
+4. **Upstream merge**: If syntect ever adds postcard support upstream, we can switch back to the
    published crate and remove our fork.
