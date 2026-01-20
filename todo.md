@@ -251,3 +251,7 @@
 # brainstorm UX and impl of multi-user editing on LAN without any configuration (mDNS, etc)
 
 # brainstorm the UX and impl of the r3bl-runner concept (jupyter-like notebooks for md)
+
+# build `rtfm` binary in r3bl-cmdr
+
+- [ ] RTFM PRD: [task/pending/rtfm-app-prd.md](task/pending/rtfm-app-prd.md)
