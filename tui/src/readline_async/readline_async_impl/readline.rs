@@ -213,6 +213,9 @@ pub enum ReadlineEvent {
     /// The user pressed `Ctrl+C`.
     Interrupted,
 
+    /// The user pressed Shift+Tab (BackTab).
+    BackTab,
+
     /// The terminal was resized.
     Resized(Size),
 }
