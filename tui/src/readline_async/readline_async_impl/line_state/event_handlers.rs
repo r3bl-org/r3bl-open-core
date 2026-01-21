@@ -85,6 +85,7 @@ pub fn handle_regular_key(
         Key::SpecialKey(SpecialKey::End) => handle_end(line_state, term),
         Key::SpecialKey(SpecialKey::Up) => handle_up(line_state, term, safe_history),
         Key::SpecialKey(SpecialKey::Down) => handle_down(line_state, term, safe_history),
+        Key::SpecialKey(SpecialKey::BackTab) => handle_backtab(line_state, term),
         Key::Character(c) => handle_char(line_state, term, *c),
         _ => Ok(None),
     }
@@ -547,6 +548,14 @@ fn handle_down(
         line_state.render_and_flush(term)?;
     }
     Ok(None)
+}
+
+// Handle BackTab (Shift+Tab) - return event for caller to handle.
+fn handle_backtab(
+    _line_state: &mut LineState,
+    _term: &mut dyn Write,
+) -> Result<Option<ReadlineEvent>, ReadlineError> {
+    Ok(Some(ReadlineEvent::BackTab))
 }
 
 // Add character to line and output.
