@@ -1,9 +1,10 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 use crate::{ChannelCapacity, CommonResultWithError, History, InputDevice, InputEvent,
-            LineState, LineStateControlSignal, LineStateLiveness, ModifierKeysMask,
-            OutputDevice, PauseBuffer, SafeHistory, SafeLineState, SafePauseBuffer,
-            SendRawTerminal, SharedWriter, Size, StdMutex, execute_commands_no_lock,
-            join, key_press, lock_output_device_as_mut};
+            KeyPress, LineState, LineStateControlSignal, LineStateLiveness,
+            ModifierKeysMask, OutputDevice, PauseBuffer, SafeHistory, SafeLineState,
+            SafePauseBuffer, SendRawTerminal, SharedWriter, Size, StdMutex,
+            execute_commands_no_lock, join, key_press, lock_output_device_as_mut};
+use std::num::NonZeroU8;
 use crossterm::{ExecutableCommand, QueueableCommand, cursor,
                 terminal::{self, Clear}};
 use miette::Report as ErrorReport;
@@ -213,8 +214,31 @@ pub enum ReadlineEvent {
     /// The user pressed `Ctrl+C`.
     Interrupted,
 
-    /// The user pressed Shift+Tab (BackTab).
+    /// The user pressed `Tab`.
+    Tab,
+
+    /// The user pressed `Shift+Tab` (`BackTab`).
     BackTab,
+
+    /// The user pressed `Page Up`.
+    PageUp,
+
+    /// The user pressed `Page Down`.
+    PageDown,
+
+    /// The user pressed `Insert`.
+    Insert,
+
+    /// The user pressed a function key (`F1`–`F12`).
+    ///
+    /// The value is 1–12 (not 0–11), matching the key labels.
+    FnKey(NonZeroU8),
+
+    /// A key that readline doesn't handle internally.
+    ///
+    /// This allows consumers to handle application-specific keys without
+    /// requiring changes to the readline library.
+    UnhandledKey(KeyPress),
 
     /// The terminal was resized.
     Resized(Size),
@@ -884,7 +908,7 @@ pub mod readline_internal {
     pub fn convert_crossterm_event_to_input_event(
         event: crossterm::event::Event,
     ) -> Option<InputEvent> {
-        use crate::{KeyPress, KeyState, MouseInputKind};
+        use crate::{KeyState, MouseInputKind};
         use crossterm::event::{Event, KeyEvent, MouseEvent, MouseEventKind};
 
         match event {

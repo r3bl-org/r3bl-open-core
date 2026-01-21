@@ -131,6 +131,14 @@ async fn main_impl() -> CommonResult<()> {
                             ?size
                         );
                     }
+                    // Ignore navigation/function keys - not used in this example.
+                    ReadlineEvent::Tab
+                    | ReadlineEvent::BackTab
+                    | ReadlineEvent::PageUp
+                    | ReadlineEvent::PageDown
+                    | ReadlineEvent::Insert
+                    | ReadlineEvent::FnKey(_)
+                    | ReadlineEvent::UnhandledKey(_) => {}
                 }
             }
             Err(e) => {

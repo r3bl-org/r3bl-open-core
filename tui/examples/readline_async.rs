@@ -190,6 +190,14 @@ async fn main() -> miette::Result<()> {
                                 rl_ctx.await_shutdown().await;
                                 break;
                             }
+                            // Ignore navigation/function keys - not used in this example.
+                            ReadlineEvent::Tab
+                            | ReadlineEvent::BackTab
+                            | ReadlineEvent::PageUp
+                            | ReadlineEvent::PageDown
+                            | ReadlineEvent::Insert
+                            | ReadlineEvent::FnKey(_)
+                            | ReadlineEvent::UnhandledKey(_) => {}
                         }
                     },
                     Err(err) => {

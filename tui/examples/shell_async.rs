@@ -7,8 +7,8 @@
 //! # `YouTube` video of live coding this example
 //!
 //! Please watch the following video to see how this example was created.
-//! - [Build with Naz : Create an async shell in Rust](https://youtu.be/jXzFCDIJQag)
-//! - [YouTube channel](https://www.youtube.com/@developerlifecom?sub_confirmation=1)
+//! - [Build with Naz : Create an async shell in Rust]
+//! - [YouTube channel]
 //!
 //! The followings steps outline what this example program does.
 //!
@@ -76,12 +76,17 @@
 //! │ > killall -9 bash shell_async │
 //! └───────────────────────────────┘
 //! ```
+//!
+//! [Build with Naz : Create an async shell in Rust]: https://youtu.be/jXzFCDIJQag
+//! [YouTube channel]: https://www.youtube.com/@developerlifecom?sub_confirmation=1
 
 use miette::IntoDiagnostic;
 use r3bl_tui::{SharedWriter, fg_guards_red, fg_lizard_green, fg_slate_gray,
                inline_string, ok,
                readline_async::{ReadlineAsyncContext, ReadlineEvent,
-                                ReadlineEvent::{Eof, Interrupted, Line, Resized}},
+                                ReadlineEvent::{BackTab, Eof, FnKey, Insert,
+                                                Interrupted, Line, PageDown, PageUp,
+                                                Resized, Tab, UnhandledKey}},
                set_mimalloc_in_main};
 use std::io::Write;
 use tokio::{io::{AsyncBufReadExt, AsyncWriteExt},
@@ -164,7 +169,9 @@ pub mod monitor_user_input_and_send_to_child {
                         }
                     }
                     Eof | Interrupted => ControlFlow::ShutdownKillChild,
-                    Resized(_) => ControlFlow::Resized,
+                    // Ignore navigation/function keys - not used in shell.
+                    Resized(_) | Tab | BackTab | PageUp | PageDown | Insert
+                    | FnKey(_) | UnhandledKey(_) => ControlFlow::Resized,
                 },
                 _ => ControlFlow::ShutdownKillChild,
             }

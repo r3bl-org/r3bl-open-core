@@ -1,12 +1,12 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::core::LineState;
-use crate::{AnsiSequenceGenerator, CsiSequence, EraseDisplayMode, GCStringOwned,
-            InputEvent, Key, KeyPress, KeyState, LineStateLiveness, NumericValue,
-            ReadlineError, ReadlineEvent, SafeHistory, Size, SpecialKey, col,
-            early_return_if_paused, find_next_word_end, find_next_word_start,
+use crate::{AnsiSequenceGenerator, CsiSequence, EraseDisplayMode, FunctionKey,
+            GCStringOwned, InputEvent, Key, KeyPress, KeyState, LineStateLiveness,
+            NumericValue, ReadlineError, ReadlineEvent, SafeHistory, Size, SpecialKey,
+            col, early_return_if_paused, find_next_word_end, find_next_word_start,
             find_prev_word_start, row, seg_index};
-use std::io::Write;
+use std::{io::Write, num::NonZeroU8};
 use unicode_segmentation::UnicodeSegmentation;
 
 /// Get the byte offset at a given segment index.
@@ -76,6 +76,7 @@ pub fn handle_regular_key(
     early_return_if_paused!(line_state @None);
 
     match key {
+        // Internal handlers (modify state, return Ok(None)).
         Key::SpecialKey(SpecialKey::Enter) => handle_enter(line_state, term),
         Key::SpecialKey(SpecialKey::Backspace) => handle_backspace(line_state, term),
         Key::SpecialKey(SpecialKey::Delete) => handle_delete(line_state, term),
@@ -85,9 +86,35 @@ pub fn handle_regular_key(
         Key::SpecialKey(SpecialKey::End) => handle_end(line_state, term),
         Key::SpecialKey(SpecialKey::Up) => handle_up(line_state, term, safe_history),
         Key::SpecialKey(SpecialKey::Down) => handle_down(line_state, term, safe_history),
-        Key::SpecialKey(SpecialKey::BackTab) => handle_backtab(line_state, term),
         Key::Character(c) => handle_char(line_state, term, *c),
-        _ => Ok(None),
+
+        // Pass-through keys (return event for caller to handle).
+        Key::SpecialKey(SpecialKey::Tab) => Ok(Some(ReadlineEvent::Tab)),
+        Key::SpecialKey(SpecialKey::BackTab) => Ok(Some(ReadlineEvent::BackTab)),
+        Key::SpecialKey(SpecialKey::PageUp) => Ok(Some(ReadlineEvent::PageUp)),
+        Key::SpecialKey(SpecialKey::PageDown) => Ok(Some(ReadlineEvent::PageDown)),
+        Key::SpecialKey(SpecialKey::Insert) => Ok(Some(ReadlineEvent::Insert)),
+
+        // Function keys F1-F12.
+        // unwrap() is safe: literal values 1-12 are guaranteed non-zero.
+        #[allow(clippy::unwrap_in_result)]
+        Key::FunctionKey(fn_key) => Ok(Some(ReadlineEvent::FnKey(match fn_key {
+            FunctionKey::F1 => NonZeroU8::new(1).unwrap(),
+            FunctionKey::F2 => NonZeroU8::new(2).unwrap(),
+            FunctionKey::F3 => NonZeroU8::new(3).unwrap(),
+            FunctionKey::F4 => NonZeroU8::new(4).unwrap(),
+            FunctionKey::F5 => NonZeroU8::new(5).unwrap(),
+            FunctionKey::F6 => NonZeroU8::new(6).unwrap(),
+            FunctionKey::F7 => NonZeroU8::new(7).unwrap(),
+            FunctionKey::F8 => NonZeroU8::new(8).unwrap(),
+            FunctionKey::F9 => NonZeroU8::new(9).unwrap(),
+            FunctionKey::F10 => NonZeroU8::new(10).unwrap(),
+            FunctionKey::F11 => NonZeroU8::new(11).unwrap(),
+            FunctionKey::F12 => NonZeroU8::new(12).unwrap(),
+        }))),
+
+        // Catch-all for unhandled keys.
+        _ => Ok(Some(ReadlineEvent::UnhandledKey(KeyPress::Plain { key: *key }))),
     }
 }
 
@@ -506,7 +533,7 @@ fn handle_home(
     Ok(None)
 }
 
-// Move cursor end
+// Move cursor to end.
 fn handle_end(
     line_state: &mut LineState,
     term: &mut dyn Write,
@@ -518,7 +545,7 @@ fn handle_end(
     Ok(None)
 }
 
-// Search for next history item, replace line if found.
+// Navigate to older history entry.
 #[allow(clippy::unwrap_in_result)] /* This is for lock.unwrap() */
 fn handle_up(
     line_state: &mut LineState,
@@ -534,7 +561,7 @@ fn handle_up(
     Ok(None)
 }
 
-// Search for next history item, replace line if found.
+// Navigate to newer history entry.
 #[allow(clippy::unwrap_in_result)] /* This is for lock.unwrap() */
 fn handle_down(
     line_state: &mut LineState,
@@ -548,14 +575,6 @@ fn handle_down(
         line_state.render_and_flush(term)?;
     }
     Ok(None)
-}
-
-// Handle BackTab (Shift+Tab) - return event for caller to handle.
-fn handle_backtab(
-    _line_state: &mut LineState,
-    _term: &mut dyn Write,
-) -> Result<Option<ReadlineEvent>, ReadlineError> {
-    Ok(Some(ReadlineEvent::BackTab))
 }
 
 // Add character to line and output.
@@ -1671,5 +1690,168 @@ mod tests {
 
         assert!(matches!(result, Ok(None)));
         assert_eq!(line.line_cursor_grapheme, seg_index(0)); // Start of line
+    }
+
+    // ===================================================================================
+    // Phase 4: Tests for new ReadlineEvent variants (Tab, PageUp/Down, FnKey, etc.)
+    // ===================================================================================
+
+    /// Test that F1-F12 keys are correctly converted to FnKey(1)-FnKey(12).
+    #[tokio::test]
+    async fn test_fnkey_f1_through_f12() {
+        let mut line = LineState::new(String::new(), (100, 100));
+        let stdout_mock = StdoutMock::default();
+        let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
+        let (history, _) = History::new();
+        let safe_history = Arc::new(StdMutex::new(history));
+
+        // Test all function keys F1-F12.
+        let test_cases = [
+            (FunctionKey::F1, 1),
+            (FunctionKey::F2, 2),
+            (FunctionKey::F3, 3),
+            (FunctionKey::F4, 4),
+            (FunctionKey::F5, 5),
+            (FunctionKey::F6, 6),
+            (FunctionKey::F7, 7),
+            (FunctionKey::F8, 8),
+            (FunctionKey::F9, 9),
+            (FunctionKey::F10, 10),
+            (FunctionKey::F11, 11),
+            (FunctionKey::F12, 12),
+        ];
+
+        for (fn_key, expected_num) in test_cases {
+            let event = InputEvent::Keyboard(KeyPress::Plain {
+                key: Key::FunctionKey(fn_key),
+            });
+
+            let result = line.apply_event_and_render(
+                &event,
+                &mut *safe_output_terminal.lock().unwrap(),
+                &safe_history,
+            );
+
+            assert!(
+                matches!(result, Ok(Some(ReadlineEvent::FnKey(n))) if n.get() == expected_num),
+                "Expected FnKey({expected_num}) for {fn_key:?}, got {result:?}"
+            );
+        }
+    }
+
+    /// Test comprehensive `SpecialKey` -> `ReadlineEvent` mapping for pass-through keys.
+    /// These are keys that readline doesn't handle internally - they're passed to caller.
+    #[tokio::test]
+    #[allow(clippy::type_complexity)]
+    async fn test_passthrough_special_keys() {
+        let mut line = LineState::new(String::new(), (100, 100));
+        let stdout_mock = StdoutMock::default();
+        let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
+        let (history, _) = History::new();
+        let safe_history = Arc::new(StdMutex::new(history));
+
+        // Test pass-through keys: Tab, BackTab, PageUp, PageDown, Insert.
+        let test_cases: &[(SpecialKey, fn(&ReadlineEvent) -> bool)] = &[
+            (SpecialKey::Tab, |e| matches!(e, ReadlineEvent::Tab)),
+            (SpecialKey::BackTab, |e| matches!(e, ReadlineEvent::BackTab)),
+            (SpecialKey::PageUp, |e| matches!(e, ReadlineEvent::PageUp)),
+            (SpecialKey::PageDown, |e| {
+                matches!(e, ReadlineEvent::PageDown)
+            }),
+            (SpecialKey::Insert, |e| matches!(e, ReadlineEvent::Insert)),
+        ];
+
+        for (special_key, matcher) in test_cases {
+            let event = InputEvent::Keyboard(KeyPress::Plain {
+                key: Key::SpecialKey(*special_key),
+            });
+
+            let result = line.apply_event_and_render(
+                &event,
+                &mut *safe_output_terminal.lock().unwrap(),
+                &safe_history,
+            );
+
+            match result {
+                Ok(Some(ref readline_event)) => {
+                    assert!(
+                        matcher(readline_event),
+                        "Unexpected event for {special_key:?}: got {readline_event:?}"
+                    );
+                }
+                other => panic!("Expected Ok(Some(_)) for {special_key:?}, got {other:?}"),
+            }
+        }
+    }
+
+    /// Test that internally-handled keys return Ok(None) (they modify state, not return
+    /// events).
+    #[tokio::test]
+    async fn test_internal_special_keys_return_none() {
+        let mut line = LineState::new(String::new(), (100, 100));
+        line.line = GCStringOwned::new("test");
+        line.line_cursor_grapheme = seg_index(2); // Middle of line
+        let stdout_mock = StdoutMock::default();
+        let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
+        let (history, _) = History::new();
+        let safe_history = Arc::new(StdMutex::new(history));
+
+        // These keys modify state and return Ok(None).
+        let internal_keys = [
+            SpecialKey::Left,
+            SpecialKey::Right,
+            SpecialKey::Home,
+            SpecialKey::End,
+            SpecialKey::Up,
+            SpecialKey::Down,
+            // Note: Backspace/Delete need specific cursor positions to work
+        ];
+
+        for special_key in internal_keys {
+            // Reset line state for each test.
+            line.line = GCStringOwned::new("test");
+            line.line_cursor_grapheme = seg_index(2);
+
+            let event = InputEvent::Keyboard(KeyPress::Plain {
+                key: Key::SpecialKey(special_key),
+            });
+
+            let result = line.apply_event_and_render(
+                &event,
+                &mut *safe_output_terminal.lock().unwrap(),
+                &safe_history,
+            );
+
+            assert!(
+                matches!(result, Ok(None)),
+                "Expected Ok(None) for internal key {special_key:?}, got {result:?}"
+            );
+        }
+    }
+
+    /// Test that Esc key (and other unhandled `SpecialKey`s) return `UnhandledKey`.
+    #[tokio::test]
+    async fn test_unhandled_special_key_returns_unhandled_event() {
+        let mut line = LineState::new(String::new(), (100, 100));
+        let stdout_mock = StdoutMock::default();
+        let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
+        let (history, _) = History::new();
+        let safe_history = Arc::new(StdMutex::new(history));
+
+        // Esc is not explicitly handled, so it should return UnhandledKey.
+        let event = InputEvent::Keyboard(KeyPress::Plain {
+            key: Key::SpecialKey(SpecialKey::Esc),
+        });
+
+        let result = line.apply_event_and_render(
+            &event,
+            &mut *safe_output_terminal.lock().unwrap(),
+            &safe_history,
+        );
+
+        assert!(
+            matches!(result, Ok(Some(ReadlineEvent::UnhandledKey(_)))),
+            "Expected UnhandledKey for Esc, got {result:?}"
+        );
     }
 }

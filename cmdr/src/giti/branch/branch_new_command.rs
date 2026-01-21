@@ -110,7 +110,15 @@ mod user_interaction {
 
                     return Ok(it);
                 }
-                ReadlineEvent::Resized(_) => { /* Do nothing */ }
+                // Ignore navigation/function keys - not used in branch name input.
+                ReadlineEvent::Resized(_)
+                | ReadlineEvent::Tab
+                | ReadlineEvent::BackTab
+                | ReadlineEvent::PageUp
+                | ReadlineEvent::PageDown
+                | ReadlineEvent::Insert
+                | ReadlineEvent::FnKey(_)
+                | ReadlineEvent::UnhandledKey(_) => {}
             }
         }
     }

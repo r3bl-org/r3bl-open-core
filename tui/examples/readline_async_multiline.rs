@@ -78,6 +78,15 @@ async fn main() -> miette::Result<()> {
             }
 
             ReadlineEvent::Eof | ReadlineEvent::Interrupted => break,
+
+            // Ignore navigation/function keys - not used in this example.
+            ReadlineEvent::Tab
+            | ReadlineEvent::BackTab
+            | ReadlineEvent::PageUp
+            | ReadlineEvent::PageDown
+            | ReadlineEvent::Insert
+            | ReadlineEvent::FnKey(_)
+            | ReadlineEvent::UnhandledKey(_) => {}
         }
     }
 
