@@ -1,14 +1,13 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+use crate::{ChannelCapacity, CommonResult, InputDevice, LineStateControlSignal,
+            OutputDevice, READLINE_ASYNC_INITIAL_PROMPT_DISPLAY_CURSOR_SHOW_DELAY,
+            Readline, ReadlineEvent, SharedWriter, StdinIsPipedResult,
+            StdoutIsPipedResult, TTYResult, inline_string, is_headless, is_stdin_piped,
+            is_stdout_piped, ok};
 use futures_util::FutureExt;
 use miette::IntoDiagnostic;
 use tokio::sync::broadcast;
-
-use crate::{inline_string, is_headless, is_stdin_piped,
-            is_stdout_piped, ok, ChannelCapacity, CommonResult, InputDevice,
-            LineStateControlSignal, OutputDevice, Readline, ReadlineEvent, SharedWriter,
-            StdinIsPipedResult, StdoutIsPipedResult, TTYResult,
-            READLINE_ASYNC_INITIAL_PROMPT_DISPLAY_CURSOR_SHOW_DELAY};
 
 /// This is the context for the readline async API. It contains the
 /// [Readline] instance, the shared writer, and the shutdown completion
@@ -114,9 +113,9 @@ impl ReadlineAsyncContext {
     /// # Parameters
     ///
     /// - `read_line_prompt`: Optional prompt string (defaults to `"> "`).
-    /// - `channel_capacity`: Optional channel capacity (defaults to [`ChannelCapacity::VeryLarge`]).
-    ///   Choose based on expected burst traffic - see [`ChannelCapacity`] documentation for
-    ///   detailed guidance.
+    /// - `channel_capacity`: Optional channel capacity (defaults to
+    ///   [`ChannelCapacity::VeryLarge`]). Choose based on expected burst traffic - see
+    ///   [`ChannelCapacity`] documentation for detailed guidance.
     ///
     /// # Returns
     /// 1. If the terminal is not fully interactive, then it will return [None], and won't
@@ -235,6 +234,22 @@ impl ReadlineAsyncContext {
             .await
             .ok();
     }
+
+    /// Returns a copy of the current buffer content.
+    #[must_use]
+    pub fn get_buffer(&self) -> String { self.readline.get_buffer() }
+
+    /// Returns the cursor position as a grapheme index (0-based).
+    #[must_use]
+    pub fn get_cursor_position(&self) -> usize { self.readline.get_cursor_position() }
+
+    /// Returns true if the buffer is empty.
+    #[must_use]
+    pub fn is_buffer_empty(&self) -> bool { self.readline.is_buffer_empty() }
+
+    /// Returns true if the cursor is at position 0 (beginning of buffer).
+    #[must_use]
+    pub fn is_cursor_at_start(&self) -> bool { self.readline.is_cursor_at_start() }
 
     /// Make sure to call this method when you are done with the [`ReadlineAsyncContext`]
     /// instance. It will flush the buffer and print the message if provided. This

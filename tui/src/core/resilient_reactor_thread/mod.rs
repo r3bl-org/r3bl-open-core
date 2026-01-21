@@ -60,7 +60,7 @@
 //!
 //! ## `io_uring` Compatibility
 //!
-//! For [`io_uring`], we recommend blocking on [`io_uring_enter()`] (see [io_uring: An
+//! For [`io_uring`], we recommend blocking on [`io_uring_enter()`] (see [`io_uring`: An
 //! Alternative Model]). This preserves the blocking behavior that RRT depends on, while
 //! gaining [`io_uring`]'s performance benefits. [`io_uring`]'s two other non-blocking
 //! modes break the RRT assumption and require a different pattern.
