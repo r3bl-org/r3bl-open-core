@@ -1,14 +1,14 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+use crate::{ChannelCapacity, CommonResult, CursorPositionBoundsStatus, GCStringOwned,
+            InputDevice, LineStateControlSignal, OutputDevice,
+            READLINE_ASYNC_INITIAL_PROMPT_DISPLAY_CURSOR_SHOW_DELAY, Readline,
+            ReadlineEvent, SegIndex, SharedWriter, StdinIsPipedResult,
+            StdoutIsPipedResult, TTYResult, inline_string, is_headless, is_stdin_piped,
+            is_stdout_piped, ok};
 use futures_util::FutureExt;
 use miette::IntoDiagnostic;
 use tokio::sync::broadcast;
-
-use crate::{inline_string, is_headless, is_stdin_piped,
-            is_stdout_piped, ok, ChannelCapacity, CommonResult, InputDevice,
-            LineStateControlSignal, OutputDevice, Readline, ReadlineEvent, SharedWriter,
-            StdinIsPipedResult, StdoutIsPipedResult, TTYResult,
-            READLINE_ASYNC_INITIAL_PROMPT_DISPLAY_CURSOR_SHOW_DELAY};
 
 /// This is the context for the readline async API. It contains the
 /// [Readline] instance, the shared writer, and the shutdown completion
@@ -114,9 +114,9 @@ impl ReadlineAsyncContext {
     /// # Parameters
     ///
     /// - `read_line_prompt`: Optional prompt string (defaults to `"> "`).
-    /// - `channel_capacity`: Optional channel capacity (defaults to [`ChannelCapacity::VeryLarge`]).
-    ///   Choose based on expected burst traffic - see [`ChannelCapacity`] documentation for
-    ///   detailed guidance.
+    /// - `channel_capacity`: Optional channel capacity (defaults to
+    ///   [`ChannelCapacity::VeryLarge`]). Choose based on expected burst traffic - see
+    ///   [`ChannelCapacity`] documentation for detailed guidance.
     ///
     /// # Returns
     /// 1. If the terminal is not fully interactive, then it will return [None], and won't
@@ -234,6 +234,20 @@ impl ReadlineAsyncContext {
             .send(LineStateControlSignal::Resume)
             .await
             .ok();
+    }
+
+    /// Returns a clone of the current buffer content with grapheme metadata.
+    #[must_use]
+    pub fn get_buffer(&self) -> GCStringOwned { self.readline.get_buffer() }
+
+    /// Returns the cursor position as a type-safe grapheme segment index (0-based).
+    #[must_use]
+    pub fn get_cursor_position(&self) -> SegIndex { self.readline.get_cursor_position() }
+
+    /// Returns the cursor position status relative to the buffer content.
+    #[must_use]
+    pub fn get_cursor_position_status(&self) -> CursorPositionBoundsStatus {
+        self.readline.get_cursor_position_status()
     }
 
     /// Make sure to call this method when you are done with the [`ReadlineAsyncContext`]

@@ -1,14 +1,15 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
-use crate::{ChannelCapacity, CommonResultWithError, History, InputDevice, InputEvent,
+use crate::{ChannelCapacity, CommonResultWithError, CursorBoundsCheck,
+            CursorPositionBoundsStatus, GCStringOwned, History, InputDevice, InputEvent,
             KeyPress, LineState, LineStateControlSignal, LineStateLiveness,
             ModifierKeysMask, OutputDevice, PauseBuffer, SafeHistory, SafeLineState,
-            SafePauseBuffer, SendRawTerminal, SharedWriter, Size, StdMutex,
+            SafePauseBuffer, SegIndex, SendRawTerminal, SharedWriter, Size, StdMutex,
             execute_commands_no_lock, join, key_press, lock_output_device_as_mut};
-use std::num::NonZeroU8;
 use crossterm::{ExecutableCommand, QueueableCommand, cursor,
                 terminal::{self, Clear}};
 use miette::Report as ErrorReport;
 use std::{io::{self, Write},
+          num::NonZeroU8,
           sync::Arc,
           time::Duration};
 use thiserror::Error;
@@ -69,10 +70,10 @@ pub const READLINE_ASYNC_INITIAL_PROMPT_DISPLAY_CURSOR_SHOW_DELAY: Duration =
 ///
 /// There are 2 main resources that must be passed into [`Self::try_new()`]:
 /// - [`InputDevice`] which contains a resource that implements
-///   [`crate::PinnedInputStream`]. This trait represents an async stream of events. It
-///   is typically implemented by [`crossterm::event::EventStream`].
-///   This is used to get input from the user. However, for testing you can provide your
-///   own implementation of this trait.
+///   [`crate::PinnedInputStream`]. This trait represents an async stream of events. It is
+///   typically implemented by [`crossterm::event::EventStream`]. This is used to get
+///   input from the user. However, for testing you can provide your own implementation of
+///   this trait.
 /// - [`OutputDevice`] which contains a resource that implements
 ///   [`crate::SafeRawTerminal`]. This trait represents a raw terminal. It is typically
 ///   implemented by [`std::io::Stdout`]. This is used to write to the terminal. However,
@@ -766,6 +767,95 @@ impl Readline {
     pub fn add_history_entry(&mut self, entry: String) -> Option<()> {
         self.history_sender.send(entry).ok()
     }
+
+    /// Returns a clone of the current buffer content with grapheme metadata.
+    ///
+    /// The returned [`GCStringOwned`] includes pre-computed grapheme cluster
+    /// information such as [`segment_count()`] and [`display_width`], useful for
+    /// cursor positioning and completion UI rendering.
+    ///
+    /// # Panics
+    ///
+    /// This will panic if the lock is poisoned, which can happen if a thread
+    /// panics while holding the lock. To avoid panics, ensure that the code that
+    /// locks the mutex does not panic while holding the lock.
+    ///
+    /// [`display_width`]: GCStringOwned::display_width
+    /// [`segment_count()`]: GCStringOwned::segment_count
+    #[must_use]
+    pub fn get_buffer(&self) -> GCStringOwned {
+        self.safe_line_state.lock().unwrap().line.clone()
+    }
+
+    /// Returns the cursor position as a type-safe grapheme segment index (0-based).
+    ///
+    /// The returned [`SegIndex`] can be used with [`ArrayBoundsCheck`] for safe
+    /// comparisons against buffer length.
+    ///
+    /// # Panics
+    ///
+    /// This will panic if the lock is poisoned, which can happen if a thread
+    /// panics while holding the lock. To avoid panics, ensure that the code that
+    /// locks the mutex does not panic while holding the lock.
+    ///
+    /// [`ArrayBoundsCheck`]: crate::ArrayBoundsCheck
+    #[must_use]
+    pub fn get_cursor_position(&self) -> SegIndex {
+        self.safe_line_state.lock().unwrap().line_cursor_grapheme
+    }
+
+    /// Returns the cursor position status relative to the buffer content.
+    ///
+    /// This method uses the type-safe [`CursorBoundsCheck`] trait to determine
+    /// where the cursor is positioned within the buffer.
+    ///
+    /// # Returns
+    ///
+    /// - [`AtStart`] - cursor at position 0 (beginning of buffer)
+    /// - [`Within`] - cursor in middle of text
+    /// - [`AtEnd`] - cursor at end of buffer (after last character)
+    /// - [`Beyond`] - invalid state (should not occur with valid cursor)
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use r3bl_tui::CursorPositionBoundsStatus;
+    ///
+    /// fn handle_tab_completion(status: CursorPositionBoundsStatus) {
+    ///     match status {
+    ///         CursorPositionBoundsStatus::AtStart => {
+    ///             // Show full completion menu
+    ///         }
+    ///         CursorPositionBoundsStatus::AtEnd => {
+    ///             // Show inline completion
+    ///         }
+    ///         CursorPositionBoundsStatus::Within => {
+    ///             // Editing mid-line, maybe no completion
+    ///         }
+    ///         CursorPositionBoundsStatus::Beyond => unreachable!(),
+    ///     }
+    /// }
+    /// ```
+    ///
+    /// # Panics
+    ///
+    /// This will panic if the lock is poisoned, which can happen if a thread
+    /// panics while holding the lock. To avoid panics, ensure that the code that
+    /// locks the mutex does not panic while holding the lock.
+    ///
+    /// [`CursorBoundsCheck`]: crate::CursorBoundsCheck
+    /// [`AtStart`]: CursorPositionBoundsStatus::AtStart
+    /// [`Within`]: CursorPositionBoundsStatus::Within
+    /// [`AtEnd`]: CursorPositionBoundsStatus::AtEnd
+    /// [`Beyond`]: CursorPositionBoundsStatus::Beyond
+    #[must_use]
+    pub fn get_cursor_position_status(&self) -> CursorPositionBoundsStatus {
+        let line_state = self.safe_line_state.lock().unwrap();
+        line_state
+            .line
+            .segment_count()
+            .check_cursor_position_bounds(line_state.line_cursor_grapheme)
+    }
 }
 
 pub mod readline_internal {
@@ -1012,10 +1102,11 @@ pub mod readline_test_fixtures {
 
 #[cfg(test)]
 mod test_readline {
-    use super::{Arc, ChannelCapacity, ControlFlowExtended, Duration, History,
-                InputDevice, LineStateControlSignal, LineStateLiveness, OutputDevice,
-                Readline, ReadlineEvent, StdMutex, broadcast, lock_output_device_as_mut,
-                readline_internal, readline_test_fixtures::get_input_vec, sleep};
+    use super::{Arc, ChannelCapacity, ControlFlowExtended, CursorPositionBoundsStatus,
+                Duration, History, InputDevice, LineStateControlSignal,
+                LineStateLiveness, OutputDevice, Readline, ReadlineEvent, StdMutex,
+                broadcast, lock_output_device_as_mut, readline_internal,
+                readline_test_fixtures::get_input_vec, sleep};
     use crate::{OutputDeviceExt, TTYResult, is_output_interactive};
 
     #[tokio::test]
@@ -1214,6 +1305,116 @@ mod test_readline {
             readline.safe_line_state.lock().unwrap().is_paused,
             LineStateLiveness::NotPaused
         );
+    }
+
+    #[tokio::test]
+    #[allow(clippy::needless_return)]
+    async fn test_editor_state_empty_buffer() {
+        use crate::seg_index;
+
+        let prompt_str = "> ";
+
+        if let TTYResult::IsNotInteractive = is_output_interactive() {
+            return;
+        }
+
+        let (output_device, _) = OutputDevice::new_mock();
+        let input_device = InputDevice::new_mock(smallvec::smallvec![]);
+        let (shutdown_sender, _) = broadcast::channel::<()>(1);
+        let (readline, _) = Readline::try_new(
+            prompt_str.into(),
+            output_device,
+            input_device,
+            shutdown_sender,
+            ChannelCapacity::Minimal,
+        )
+        .unwrap();
+
+        assert!(readline.get_buffer().is_empty());
+        assert_eq!(
+            readline.get_cursor_position_status(),
+            CursorPositionBoundsStatus::AtStart
+        );
+        assert_eq!(readline.get_cursor_position(), seg_index(0));
+        assert_eq!(readline.get_buffer().as_str(), "");
+    }
+
+    #[tokio::test]
+    #[allow(clippy::needless_return)]
+    async fn test_editor_state_with_content() {
+        use crate::{GCStringOwned, seg_index};
+
+        let prompt_str = "> ";
+
+        if let TTYResult::IsNotInteractive = is_output_interactive() {
+            return;
+        }
+
+        let (output_device, _) = OutputDevice::new_mock();
+        let input_device = InputDevice::new_mock(smallvec::smallvec![]);
+        let (shutdown_sender, _) = broadcast::channel::<()>(1);
+        let (readline, _) = Readline::try_new(
+            prompt_str.into(),
+            output_device,
+            input_device,
+            shutdown_sender,
+            ChannelCapacity::Minimal,
+        )
+        .unwrap();
+
+        // Manually set buffer content for testing.
+        {
+            let mut line_state = readline.safe_line_state.lock().unwrap();
+            line_state.line = GCStringOwned::new("hello");
+            line_state.line_cursor_grapheme = seg_index(5);
+        }
+
+        assert!(!readline.get_buffer().is_empty());
+        assert_eq!(
+            readline.get_cursor_position_status(),
+            CursorPositionBoundsStatus::AtEnd
+        );
+        assert_eq!(readline.get_cursor_position(), seg_index(5));
+        assert_eq!(readline.get_buffer().as_str(), "hello");
+    }
+
+    #[tokio::test]
+    #[allow(clippy::needless_return)]
+    async fn test_editor_state_cursor_at_start_with_content() {
+        use crate::{GCStringOwned, seg_index};
+
+        let prompt_str = "> ";
+
+        if let TTYResult::IsNotInteractive = is_output_interactive() {
+            return;
+        }
+
+        let (output_device, _) = OutputDevice::new_mock();
+        let input_device = InputDevice::new_mock(smallvec::smallvec![]);
+        let (shutdown_sender, _) = broadcast::channel::<()>(1);
+        let (readline, _) = Readline::try_new(
+            prompt_str.into(),
+            output_device,
+            input_device,
+            shutdown_sender,
+            ChannelCapacity::Minimal,
+        )
+        .unwrap();
+
+        // Buffer has content but cursor is at start (like after pressing Home).
+        {
+            let mut line_state = readline.safe_line_state.lock().unwrap();
+            line_state.line = GCStringOwned::new("hello");
+            line_state.line_cursor_grapheme = seg_index(0);
+        }
+
+        assert!(!readline.get_buffer().is_empty());
+        assert_eq!(
+            readline.get_cursor_position_status(),
+            CursorPositionBoundsStatus::AtStart
+        );
+        assert_eq!(readline.get_cursor_position(), seg_index(0));
+        assert_eq!(readline.get_buffer().as_str(), "hello");
     }
 }
 
