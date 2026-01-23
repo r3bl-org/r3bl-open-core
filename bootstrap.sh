@@ -28,7 +28,7 @@
 #
 #   Optional:
 #     - Node.js & npm           For Claude Code CLI installation
-#     - Claude Code             AI coding assistant with serena plugin
+#     - Claude Code             AI coding assistant (has built-in LSP)
 #
 # SUPPORTED PLATFORMS:
 #   - macOS (via Homebrew)
@@ -233,11 +233,9 @@ install_claude_code() {
             echo "✓ claude already installed"
         fi
 
-        # Install plugins (global, works across all projects)
+        # Claude Code now has built-in LSP server functionality - no plugins needed
         if command -v claude &>/dev/null; then
-            echo "Installing Claude Code plugins..."
-            # Serena: MCP server providing code navigation and modification via rust-analyzer
-            claude plugin install serena 2>/dev/null || echo "  Note: serena plugin may need manual install via /plugin"
+            echo "Claude Code installed successfully (has built-in LSP)"
         fi
     else
         echo "Warning: npm not found. Cannot install Claude Code"

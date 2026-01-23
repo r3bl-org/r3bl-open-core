@@ -1,3 +1,5 @@
+<!-- cspell:words ratatui -->
+
 # r3bl-open-core
 
 <img
@@ -17,10 +19,9 @@ height="256px">
 ```
 <!-- prettier-ignore-end -->
 
-Table of contents:
-
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+**Table of contents:**
 
 - [Why R3BL TUI?](#why-r3bl-tui)
   - [The Problem with Existing Solutions](#the-problem-with-existing-solutions)
@@ -52,6 +53,7 @@ Table of contents:
 - [IDE Setup and Extensions](#ide-setup-and-extensions)
   - [R3BL IntelliJ Plugins](#r3bl-intellij-plugins)
   - [R3BL VSCode Extensions](#r3bl-vscode-extensions)
+  - [Claude Code Integration](#claude-code-integration)
 - [Build the workspace and run tests](#build-the-workspace-and-run-tests)
   - [Key Commands](#key-commands)
   - [Cargo Target Directory Isolation for IDE/Tool Performance](#cargo-target-directory-isolation-for-idetool-performance)
@@ -87,9 +89,9 @@ Table of contents:
 
 ## Why R3BL TUI?
 
-After leaving Google in 2021, I ([Nazmul Idris](https://developerlife.com/about-me/)) embarked on
-creating infrastructure for modern, powerful CLI and TUI experiences built from the ground up in
-Rust.
+After leaving Google in 2021, I ([Nazmul Idris](https://developerlife.com/about-me/))
+embarked on a journey to create infrastructure for modern, powerful, async CLI and TUI
+experiences built from the ground up in Rust.
 
 The core architectural innovation: a purely async, immediate mode reactive UI (every state change
 triggers a render from scratch) where nothing blocks the main thread - unlike traditional approaches
@@ -121,8 +123,10 @@ fundamental limitations:
 Our framework supports the full spectrum from CLI to hybrid TUI to full TUI experiences with deep
 system integration.
 
-**Key Innovation: "Applets"** - A revolutionary state management system that allows processes to
-persist state across their lifecycle and share it with other instances or processes.
+**Key Innovation: "Applets"** - A revolutionary state management system that allows
+processes to persist state across their lifecycle and share it with other instances or
+processes. And the underlying systems level infrastructure mechanisms that make this
+possible.
 
 ### Built-from-Scratch Primitives
 
@@ -154,12 +158,12 @@ stdin, stdout, and stderr.
 - Process orchestration via the "script" module
 - Async REPL infrastructure
 
-R3BL TUI brings the power and ergonomics of modern web development to the terminal, creating a new
-paradigm for command-line productivity tools.
+R3BL TUI brings the ergonomics of modern web development (React, flexbox, CSS) to terminal
+applications in Rust, creating a new paradigm for command-line productivity tools.
 
-We are working on building command line apps in Rust which have rich text user interfaces (TUI). We
-want to lean into the terminal as a place of productivity, and build all kinds of awesome apps for
-it.
+We are building command line apps with rich text user interfaces (TUI). We want to lean
+into the terminal as a place of productivity, and build all kinds of delightful,
+ergonomic, and useful experiences for it.
 
 1. 🔮 Instead of just building one app, we are building a library to enable any kind of rich TUI
    development w/ a twist: taking concepts that work really well for the frontend mobile and web
@@ -497,7 +501,7 @@ To learn how we built this crate, please take a look at the following resources.
 
 ### Automated Setup (Recommended)
 
-For Linux and macOS users, use the bootstrap script to automatically install all required tools:
+Use the bootstrap script to automatically install all required tools:
 
 ```sh
 # Clone the repository
@@ -511,14 +515,15 @@ cd r3bl-open-core
 The [`bootstrap.sh`](https://github.com/r3bl-org/r3bl-open-core/blob/main/bootstrap.sh) script
 handles **OS-level setup** with a clean main function structure and will:
 
-- **System Package Manager Detection**: Automatically detects apt, dnf, pacman, zypper, or brew
+- **Cross-Platform Support**: Works on **macOS** (Homebrew) and **Linux** including Ubuntu (apt),
+  Fedora (dnf), Arch (pacman), openSUSE (zypper), and Alpine (apk)
 - **Core Rust Installation**: Install Rust toolchain (rustup) and ensure cargo is in PATH
 - **Compiler Setup**: Install clang compiler (required by Wild linker)
 - **Development Shell**: Install Fish shell and fzf for interactive development
 - **File Watching**: Install file watchers (inotifywait on Linux, fswatch on macOS)
 - **Development Utilities**: Install htop, screen, tmux for system monitoring
 - **Node.js Ecosystem**: Install Node.js and npm for web tooling
-- **AI Integration**: Install Claude Code CLI with serena plugin (connects to rust-analyzer via LSP)
+- **AI Integration**: Install Claude Code CLI (has built-in LSP server functionality)
 - **Rust Development Tools Setup**: Call `fish run.fish install-cargo-tools` for all Rust-specific
   tooling
 
@@ -548,7 +553,6 @@ fish run.fish install-cargo-tools
 **From crates.io (via cargo-binstall with fallback to cargo install):**
 
 - **cargo-binstall**: Fast binary installer (installed first as foundation)
-- **uv**: Modern Python package manager (used by various development tools)
 - **Core Development Tools**: bacon, flamegraph, inferno
 - **Workspace Management**: cargo-workspaces, cargo-cache, cargo-update
 - **Code Quality**: cargo-deny, cargo-unmaintained, cargo-expand, cargo-readme
@@ -679,6 +683,73 @@ cd r3bl-vscode-extensions
 Both the IntelliJ plugins and VSCode extensions work seamlessly with the existing development tools
 mentioned in this guide, including rust-analyzer, bacon, and the comprehensive development workflow.
 
+### Claude Code Integration
+
+This project is configured for optimal use with [Claude Code](https://claude.ai/claude-code), the
+official CLI for Claude AI.
+
+**Project Instructions:**
+
+The [`CLAUDE.md`](https://github.com/r3bl-org/r3bl-open-core/blob/main/CLAUDE.md) file at the repo
+root provides project-specific instructions that Claude Code follows automatically. This includes
+design philosophy, coding standards, and crate-specific guidance.
+
+**Available Skills (`.claude/skills/`):**
+
+Claude Code autonomously discovers and applies these coding patterns when relevant:
+
+| Skill                   | Purpose                                                  |
+|-------------------------|----------------------------------------------------------|
+| `check-code-quality`    | Comprehensive quality checklist (check → build → clippy → tests) |
+| `run-clippy`            | Linting, comment punctuation, cargo fmt                  |
+| `write-documentation`   | Rustdoc conventions, intra-doc links, constant formatting |
+| `organize-modules`      | Private modules with public re-exports pattern           |
+| `check-bounds-safety`   | Type-safe Index/Length patterns for bounds-sensitive code |
+| `analyze-performance`   | Flamegraph-based performance regression detection        |
+| `design-philosophy`     | Core principles: cognitive load, type safety, abstraction worth |
+
+**Slash Commands:**
+
+Invoke skills directly in Claude Code:
+
+| Command              | Action                                     |
+|----------------------|--------------------------------------------|
+| `/check`             | Run comprehensive code quality checks      |
+| `/docs`              | Documentation build and formatting         |
+| `/clippy`            | Code style and linting                     |
+| `/fix-intradoc-links`| Fix rustdoc intra-doc links                |
+| `/check-regression`  | Detect performance regressions             |
+| `/analyze-logs`      | Analyze log files (strips ANSI codes)      |
+| `/r3bl-task`         | Task management (create, update, load, done) |
+
+**Getting Started with Claude Code:**
+
+1. Install Claude Code: `npm install -g @anthropic-ai/claude-code`
+2. Navigate to the project root: `cd r3bl-open-core`
+3. Start Claude Code: `claude`
+4. Claude automatically reads `CLAUDE.md` and applies project conventions
+
+**Companion Tools: R3BL Development Pack**
+
+For the best Claude Code experience, install the
+[R3BL VSCode Extensions](https://github.com/r3bl-org/r3bl-vscode-extensions) which are designed to
+work hand-in-hand with Claude Code:
+
+| Extension                 | Claude Code Synergy                                           |
+|---------------------------|---------------------------------------------------------------|
+| **R3BL Copy Selection Path** | Press `Alt+O` to copy file paths with line ranges — paste directly into Claude Code for precise code references |
+| **R3BL Task Spaces**      | Organize editor tabs by task context — switch between feature work, debugging, and documentation while Claude Code tracks your `./task/` files |
+| **R3BL Theme**            | Optimized dark theme for long coding sessions with Claude Code |
+
+```bash
+# Install the R3BL Development Pack
+git clone https://github.com/r3bl-org/r3bl-vscode-extensions.git
+cd r3bl-vscode-extensions && ./install.sh
+```
+
+The `Alt+O` shortcut is particularly powerful: select code in VSCode, press `Alt+O`, then paste the
+path with line numbers directly into your Claude Code conversation for precise context.
+
 ## Build the workspace and run tests
 
 There's a unified [`fish`](https://fishshell.com/) script that you can use to run the build and
@@ -742,7 +813,6 @@ Local source package commands:
 
 cmdr-specific commands:
     run-binaries         Run edi, giti, or rc
-    docker-build         Build release in Docker
 
 Development Session Commands:
     dev-dashboard        Start 2-pane tmux development dashboard
@@ -1197,51 +1267,6 @@ simplicity, integrated for comprehensive dashboards.
 3. Switch to specific pane for detailed investigation if needed
 4. All four monitors provide continuous feedback on code quality
 
-### Status Monitoring Scripts
-
-For developers who want ultra-minimal status monitoring, this project includes two bash scripts
-designed for integration with the
-[GNOME Executor extension](https://extensions.gnome.org/extension/2932/executor/). These scripts
-provide at-a-glance status indicators in your GNOME top bar.
-
-**Quick Status Scripts:**
-
-| Script                      | Purpose                          | Success Output | Failure Output |
-| --------------------------- | -------------------------------- | -------------- | -------------- |
-| `test-status-one-line.bash` | Run tests and show emoji status  | ` 🧪✔️`        | ` 🧪❌`        |
-| `doc-status-one-line.bash`  | Build docs and show emoji status | ` 📚✔️`        | ` 📚❌`        |
-
-**Key Features:**
-
-- **Single-line output**: Perfect for status bars and monitoring systems
-- **Emoji-only status**: Universal visual language requiring no text parsing
-- **Silent operation**: All cargo output is suppressed, only status emoji appears
-- **Directory-independent**: Scripts work from anywhere by changing to project directory
-- **Fast execution**: Optimized for quick status checks without verbose output
-
-**Usage Examples:**
-
-```sh
-# Quick test status check
-./test-status-one-line.bash
-# Output: " 🧪✔️"
-
-# Quick documentation build check
-./doc-status-one-line.bash
-# Output: " 📚✔️"
-```
-
-**Integration with Development Workflow:**
-
-- **Complements Bacon**: While bacon provides rich interactive feedback, these scripts offer minimal
-  monitoring
-- **CI/CD friendly**: Perfect for automated pipelines requiring simple pass/fail status
-- **GNOME integration**: Designed specifically for desktop environment status bar integration
-- **Background monitoring**: Ideal for continuous status monitoring without interrupting workflow
-
-These scripts provide the same underlying functionality as the bacon workflows but with radically
-different output designed for external consumption rather than developer interaction.
-
 ### Wild Linker (Linux)
 
 This project uses the [Wild linker](https://github.com/davidlattimore/wild) as a fast alternative to
@@ -1458,8 +1483,7 @@ fish run.fish toolchain-update
 - **First stable wins**: Stops at the first toolchain without ICE errors (usually finds stable
   toolchain in first attempt)
 - **Updates** `rust-toolchain.toml` to use the validated stable nightly
-- Installs the target toolchain with rust-analyzer component (required by IDEs, cargo, and serena
-  plugin)
+- Installs the target toolchain with rust-analyzer component (required by IDEs and cargo)
 - **Desktop notifications** (via notify-send):
   - 🎉 Success notification when stable toolchain found (normal urgency)
   - 🚨 Critical alert if no stable toolchain found in entire 45-day window (extremely rare)
@@ -1527,8 +1551,7 @@ fish run.fish toolchain-sync
 
 - **Reads** the channel value from `rust-toolchain.toml` (doesn't modify it)
 - Installs the exact toolchain specified in the TOML
-- Installs rust-analyzer and rust-src components automatically (required by IDEs, cargo, and serena
-  plugin)
+- Installs rust-analyzer and rust-src components automatically (required by IDEs and cargo)
 - Performs aggressive cleanup by removing all old nightly toolchains except:
   - All stable toolchains (`stable-*`)
   - The target toolchain from the TOML
@@ -1539,7 +1562,6 @@ fish run.fish toolchain-sync
 - After `git checkout/reset/pull` changes `rust-toolchain.toml`
 - When rust-analyzer is missing for the current toolchain
 - When your IDE shows "rust-analyzer failed to start"
-- When Claude Code's serena plugin crashes with LSP initialization errors
 - After manually editing `rust-toolchain.toml`
 - When you need to stay on a specific nightly version
 
@@ -1688,7 +1710,7 @@ The four scripts work together to provide a complete toolchain management soluti
 
 **Four complementary scripts:**
 
-- **validate** (`rust-toolchain-install-validate.fish`): Non-destructive validation of current
+- **validate** (`rust-toolchain-validate.fish`): Non-destructive validation of current
   toolchain
 - **update** (`rust-toolchain-update.fish`): Smart search for stable nightly with comprehensive
   validation

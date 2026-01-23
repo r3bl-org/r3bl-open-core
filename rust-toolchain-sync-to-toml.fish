@@ -18,7 +18,7 @@ source script_lib.fish
 # - Purge ALL existing toolchains (stable and nightly)
 # - Install fresh stable toolchain
 # - Install the target nightly toolchain from TOML
-# - Install rust-analyzer and rust-src components (required by VSCode, RustRover, cargo, and serena MCP server)
+# - Install rust-analyzer and rust-src components (required by VSCode, RustRover, Claude Code, and cargo)
 # - Install x86_64-pc-windows-gnu target for cross-platform verification
 # - Update cargo development tools (wild-linker, bacon, flamegraph, etc.)
 #

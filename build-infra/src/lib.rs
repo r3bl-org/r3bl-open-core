@@ -23,10 +23,16 @@
 //!
 //! ### Installation
 //!
-//! From a workspace containing this crate:
+//! From [crates.io](https://crates.io/crates/r3bl-build-infra):
 //!
 //! ```bash
-//! cargo install --path r3bl-build-infra
+//! cargo install r3bl-build-infra
+//! ```
+//!
+//! Or from source (in a workspace containing this crate):
+//!
+//! ```bash
+//! cargo install --path build-infra
 //! ```
 //!
 //! ### Usage Examples

@@ -67,6 +67,11 @@
 //!
 //! # Architecture Overview
 //!
+//! For a visual data flow diagram showing how events move from worker to
+//! consumers, see the [RRT section] in the crate documentation.
+//!
+//! The type hierarchy below shows how the components fit together:
+//!
 //! ```text
 //! ┌────────────────────────────────────────────────────────────────────────┐
 //! │                    RESILIENT REACTOR THREAD (Generic)                  │
@@ -448,6 +453,7 @@
 //! [signals]: https://en.wikipedia.org/wiki/Signal_(IPC)
 //! [sockets]: https://man7.org/linux/man-pages/man7/socket.7.html
 //! [system call]: https://man7.org/linux/man-pages/man2/syscalls.2.html
+//! [RRT section]: crate#resilient-reactor-thread-rrt-pattern
 
 mod subscriber_guard;
 mod thread_liveness;

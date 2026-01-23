@@ -2,7 +2,7 @@
 
 [package]
 name = "r3bl_tui"
-version = "0.7.6"
+version = "0.7.7"
 edition = "2024"
 # https://doc.rust-lang.org/cargo/reference/resolver.html#resolver-versions
 resolver = "3"

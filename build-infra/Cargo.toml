@@ -11,8 +11,8 @@ authors = [
     "Nadia Idris <nadia@developerlife.com>",
 ]
 documentation = "https://docs.rs/r3bl-build-infra"
-description = "Build infrastructure tools for R3BL projects"
-keywords = ["build-tools", "rustdoc", "markdown", "formatting", "cargo"]
+description = "Cargo subcommand for formatting rustdoc comments: markdown table alignment and reference-style links"
+keywords = ["rustdoc", "markdown", "formatting", "cargo", "documentation"]
 categories = ["development-tools", "command-line-utilities"]
 
 [lints]
@@ -29,7 +29,7 @@ name = "r3bl_build_infra"
 path = "src/lib.rs"
 
 [dependencies]
-r3bl_tui = { path = "../tui", version = "0.7.6" }
+r3bl_tui = { path = "../tui", version = "0.7.7" }
 tokio = { version = "1.48.0", features = ["full"] }
 pulldown-cmark = "0.13"
 pulldown-cmark-to-cmark = "21.1.0"

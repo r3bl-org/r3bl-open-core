@@ -120,7 +120,7 @@ For performance-critical code changes, consider also running:
 
 This skill includes additional reference material:
 
-- **`reference.md`** - Comprehensive guide to all cargo commands used in the quality checklist. Includes detailed explanations of what each command does, when to use it, common flags, and build optimizations (sccache, wild linker, etc.). **Read this when:**
+- **`reference.md`** - Comprehensive guide to all cargo commands used in the quality checklist. Includes detailed explanations of what each command does, when to use it, common flags, and build optimizations (wild linker, parallel frontend, tmpfs). **Read this when:**
   - You need to understand what a specific cargo command does
   - Troubleshooting build issues
   - Want to know about build optimizations in `.cargo/config.toml`

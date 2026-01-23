@@ -293,10 +293,9 @@ end
 #
 # This comprehensive installer sets up:
 # 1. cargo-binstall for fast binary installation
-# 2. uv package manager (required for Serena semantic code MCP server)
-# 3. Cargo tools for Rust development (bacon, flamegraph, etc.)
-# 4. Wild linker with .cargo/config.toml generation
-# 5. Language servers (rust-analyzer)
+# 2. Cargo tools for Rust development (bacon, flamegraph, etc.)
+# 3. Wild linker with .cargo/config.toml generation
+# 4. Language servers (rust-analyzer)
 #
 # Features:
 # - Cross-platform support (macOS, Linux)
@@ -310,7 +309,6 @@ end
 #
 # Tools installed:
 # - cargo-binstall: Fast binary installer
-# - uv: Modern Python package manager (for Serena MCP server)
 # - bacon: Background rust code checker
 # - cargo-workspaces: Multi-crate workspace management
 # - cargo-cache: Cargo cache management
@@ -331,11 +329,6 @@ end
 function install-cargo-tools
     # Install cargo-binstall first for fast binary installation
     install_if_missing "cargo-binstall" "curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash"
-
-    # Install uv package manager (required for Serena semantic code MCP server).
-    # https://github.com/oraios/serena
-    # https://claudelog.com/addons/serena/
-    install_if_missing "uv" "curl -LsSf https://astral.sh/uv/install.sh | sh"
 
     # Cargo tools - using cargo binstall with fallback to cargo install
     set cargo_tools \
@@ -447,7 +440,7 @@ end
 # This function runs the rust-toolchain-update.fish script which automatically:
 # - Updates rust-toolchain.toml to use a nightly version from 1 month ago
 # - Installs the target toolchain if not already present
-# - Installs rust-analyzer component (required by VSCode, RustRover, cargo, and serena MCP server)
+# - Installs rust-analyzer component (required by VSCode, RustRover, and cargo)
 # - Removes all other nightly toolchains (keeping only stable + target nightly)
 # - Performs aggressive cleanup to save disk space
 #
@@ -472,13 +465,13 @@ end
 # This function runs the rust-toolchain-sync-to-toml.fish script which:
 # - Reads the channel value from rust-toolchain.toml (doesn't modify it)
 # - Installs the exact toolchain specified in the TOML
-# - Installs rust-analyzer and rust-src components automatically (required by IDEs and serena MCP server)
+# - Installs rust-analyzer and rust-src components automatically (required by IDEs and cargo)
 # - Removes all other nightly toolchains (keeping only stable + target from TOML)
 # - Performs aggressive cleanup to save disk space
 #
 # Use this when rust-toolchain.toml changes via git operations or manual edits
 # and you need to install the specified toolchain with all required components.
-# Also fixes serena MCP server crashes caused by missing rust-analyzer.
+# Also fixes IDE crashes caused by missing rust-analyzer.
 #
 # Features:
 # - Respects existing rust-toolchain.toml value

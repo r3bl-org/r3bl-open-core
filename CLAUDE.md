@@ -93,12 +93,6 @@ When writing or modifying rustdoc comments in code, **proactively apply** these 
 
 Don't wait for `check-code-quality` to catch issues - write docs correctly the first time.
 
-### MCP Tools
-
-Use these MCP tools to navigate and modify Rust code effectively:
-
-- **serena**: definition, diagnostics, edit_file, hover, references, rename symbol, etc.
-
 ### Cross-Platform Verification
 
 When working with platform-specific code (`#[cfg(unix)]`, `#[cfg(not(unix))]`), verify Windows

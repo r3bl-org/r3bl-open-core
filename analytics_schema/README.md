@@ -85,5 +85,37 @@ To learn how we built this crate, please take a look at the following resources.
 - If you like consuming video content, here's our [YT channel](https://www.youtube.com/@developerlifecom).
   Please consider [subscribing](https://www.youtube.com/channel/CHANNEL_ID?sub_confirmation=1).
 - If you like consuming written content, here's our developer [site](https://developerlife.com/).
+## Analytics Schema
+
+This crate defines the data structures used for analytics collection within
+the R3BL ecosystem. It provides type-safe, serializable structures for
+capturing user interactions and application events.
+
+### Core Types
+
+- [`AnalyticsRecord`] - Container for multiple analytics events
+- [`AnalyticsEvent`] - Complete event with timestamp and UUID
+- [`AnalyticsEventNoTimestamp`] - Event builder without auto-generated fields
+
+### Features
+
+- **Privacy-focused**: User IDs are not collected (empty `proxy_user_id`)
+- **Memory efficient**: Uses `SmallVec` for small collections
+- **Serializable**: All types implement Serde traits
+- **Type-safe**: Strong typing prevents data corruption
+
+### Usage
+
+```rust
+use r3bl_analytics_schema::*;
+
+let mut record = AnalyticsRecord::default();
+let event = AnalyticsEventNoTimestamp {
+    proxy_user_id: String::new(),
+    proxy_machine_id: "happy_panda_12".to_string(),
+    action: "file_save".to_string(),
+};
+record.events.push(event.into());
+```
 
 License: Apache-2.0

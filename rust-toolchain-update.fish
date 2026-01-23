@@ -26,7 +26,7 @@ source script_lib.fish
 # Cleanup Strategy:
 # - Keep only: stable-* + the validated nightly-YYYY-MM-DD
 # - Remove: all other nightly toolchains, including generic "nightly"
-# - Installs rust-analyzer and rust-src components (required by VSCode, RustRover, cargo, and serena MCP server)
+# - Installs rust-analyzer and rust-src components (required by VSCode, RustRover, Claude Code, and cargo)
 # - Installs x86_64-pc-windows-gnu target for cross-platform verification
 #
 # Final Verification:

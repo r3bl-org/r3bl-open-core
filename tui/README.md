@@ -2,7 +2,9 @@
 
 ## Why R3BL?
 
-<img src="https://raw.githubusercontent.com/r3bl-org/r3bl-open-core/main/tui/r3bl-tui.svg?raw=true" height="256px">
+<img
+src="https://raw.githubusercontent.com/r3bl-org/r3bl-open-core/main/tui/r3bl-tui.svg?raw=true"
+height="256px">
 
 <!-- R3BL TUI library & suite of apps focused on developer productivity -->
 
@@ -45,23 +47,25 @@ style="color:#176BF6">t</span><span style="color:#136FF5">i</span><span
 style="color:#1073F4">v</span><span style="color:#0C77F3">i</span><span
 style="color:#097BF2">t</span><span style="color:#057FF1">y</span>.
 
-Please read the
-main [README.md](https://github.com/r3bl-org/r3bl-open-core/blob/main/README.md) of
-the `r3bl-open-core` monorepo and workspace to get a better understanding of the
-context in which this crate is meant to exist.
+Please read the main
+[README.md](https://github.com/r3bl-org/r3bl-open-core/blob/main/README.md) of the
+`r3bl-open-core` monorepo and workspace to get a better understanding of the context
+in which this crate is meant to exist.
 
 ## Table of contents
 
 <!-- TOC -->
 - [Introduction](#introduction)
 - [Framework highlights](#framework-highlights)
-- [Full TUI, Partial TUI, and async readline](#full-tui-partial-tui-and-async-readline)
+- [Full TUI, Partial TUI, and async
+  readline](#full-tui-partial-tui-and-async-readline)
   - [Partial TUI for simple choice](#partial-tui-for-simple-choice)
   - [Partial TUI for REPL](#partial-tui-for-repl)
   - [Full TUI for immersive apps](#full-tui-for-immersive-apps)
   - [Power via composition](#power-via-composition)
 - [Changelog](#changelog)
-- [Learn how these crates are built, provide feedback](#learn-how-these-crates-are-built-provide-feedback)
+- [Learn how these crates are built, provide
+  feedback](#learn-how-these-crates-are-built-provide-feedback)
 - [Run the demo locally](#run-the-demo-locally)
   - [Prerequisites](#prerequisites)
   - [Running examples](#running-examples)
@@ -70,9 +74,11 @@ context in which this crate is meant to exist.
   - [Testing and Development](#testing-and-development)
     - [VT100 ANSI Conformance Testing](#vt100-ansi-conformance-testing)
     - [Markdown Parser Conformance Testing](#markdown-parser-conformance-testing)
-    - [Next-Level PTY-Based Integration Testing](#next-level-pty-based-integration-testing)
+    - [Next-Level PTY-Based Integration
+      Testing](#next-level-pty-based-integration-testing)
   - [Performance Analysis Features](#performance-analysis-features)
-    - [Automated Performance Regression Detection](#automated-performance-regression-detection)
+    - [Automated Performance Regression
+      Detection](#automated-performance-regression-detection)
 - [Examples to get you started](#examples-to-get-you-started)
   - [Video of the demo in action](#video-of-the-demo-in-action)
 - [Type-safe bounds checking](#type-safe-bounds-checking)
@@ -90,31 +96,47 @@ context in which this crate is meant to exist.
   - [Key Features](#key-features-1)
   - [Learn More](#learn-more-1)
 - [Layout, rendering, and event handling](#layout-rendering-and-event-handling)
-- [Architecture overview, is message passing, was shared memory](#architecture-overview-is-message-passing-was-shared-memory)
-- [I/O devices for full TUI, choice, and REPL](#io-devices-for-full-tui-choice-and-repl)
-- [Life of an input event for a Full TUI app](#life-of-an-input-event-for-a-full-tui-app)
-- [Life of a signal (aka "out of band event")](#life-of-a-signal-aka-out-of-band-event)
+- [Architecture overview, is message passing, was shared
+  memory](#architecture-overview-is-message-passing-was-shared-memory)
+- [I/O devices for full TUI, choice, and
+  REPL](#io-devices-for-full-tui-choice-and-repl)
+- [Life of an input event for a Full TUI
+  app](#life-of-an-input-event-for-a-full-tui-app)
+- [Life of a signal (aka "out of band
+  event")](#life-of-a-signal-aka-out-of-band-event)
 - [The window](#the-window)
 - [Layout and styling](#layout-and-styling)
-- [Component registry, event routing, focus mgmt](#component-registry-event-routing-focus-mgmt)
+- [Component registry, event routing, focus
+  mgmt](#component-registry-event-routing-focus-mgmt)
 - [Input event specificity](#input-event-specificity)
 - [Rendering and painting](#rendering-and-painting)
   - [Dual Rendering Paths](#dual-rendering-paths)
-    - [Path 1: Composed Component Pipeline (Complex, Responsive Layouts and Full TUI)](#path-1-composed-component-pipeline-complex-responsive-layouts-and-full-tui)
-    - [Path 2: Direct Interactive Path (Simple CLI, Hybrid/Partial-TUI)](#path-2-direct-interactive-path-simple-cli-hybridpartial-tui)
-  - [Unified ANSI Generation: `PixelCharRenderer`](#unified-ansi-generation-pixelcharrenderer)
+    - [Path 1: Composed Component Pipeline (Complex, Responsive Layouts and Full
+      TUI)](#path-1-composed-component-pipeline-complex-responsive-layouts-and-full-tui)
+    - [Path 2: Direct Interactive Path (Simple CLI,
+      Hybrid/Partial-TUI)](#path-2-direct-interactive-path-simple-cli-hybridpartial-tui)
+  - [Unified ANSI Generation:
+    `PixelCharRenderer`](#unified-ansi-generation-pixelcharrenderer)
   - [`CliTextInline`: Styled Text Fragments](#clitextinline-styled-text-fragments)
-  - [`OutputDevice`: Thread-Safe Terminal Output](#outputdevice-thread-safe-terminal-output)
+  - [`OutputDevice`: Thread-Safe Terminal
+    Output](#outputdevice-thread-safe-terminal-output)
   - [Offscreen buffer](#offscreen-buffer)
-  - [Complete Rendering Pipeline Architecture (Path 1: Composed Component Pipeline)](#complete-rendering-pipeline-architecture-path-1-composed-component-pipeline)
-  - [Render pipeline (Path 1: Composed Component Pipeline)](#render-pipeline-path-1-composed-component-pipeline)
+  - [Complete Rendering Pipeline Architecture (Path 1: Composed Component
+    Pipeline)](#complete-rendering-pipeline-architecture-path-1-composed-component-pipeline)
+  - [Render pipeline (Path 1: Composed Component
+    Pipeline)](#render-pipeline-path-1-composed-component-pipeline)
   - [First render (Path 1)](#first-render-path-1)
   - [Subsequent render (Path 1)](#subsequent-render-path-1)
 - [Platform-specific backends](#platform-specific-backends)
   - [Backend selection](#backend-selection)
   - [Crossterm backend (cross-platform)](#crossterm-backend-cross-platform)
-  - [DirectToAnsi backend (Linux-native)](#directtoansi-backend-linux-native)
+  - [`direct_to_ansi` backend (Linux-native)](#direct_to_ansi-backend-linux-native)
   - [Architecture](#architecture-2)
+- [Resilient Reactor Thread (RRT) pattern](#resilient-reactor-thread-rrt-pattern)
+  - [The problem](#the-problem-1)
+  - [How it works](#how-it-works)
+  - [Key components](#key-components)
+  - [Key benefits](#key-benefits-1)
 - [VT100/ANSI escape sequence handling](#vt100ansi-escape-sequence-handling)
   - [Input parsing](#input-parsing)
   - [Output parsing](#output-parsing)
@@ -134,7 +156,8 @@ context in which this crate is meant to exist.
   - [Running PTY tests](#running-pty-tests)
   - [PTY testing examples](#pty-testing-examples)
 - [How does the editor component work?](#how-does-the-editor-component-work)
-  - [Zero-Copy Gap Buffer for High Performance](#zero-copy-gap-buffer-for-high-performance)
+  - [Zero-Copy Gap Buffer for High
+    Performance](#zero-copy-gap-buffer-for-high-performance)
     - [Key Performance Features](#key-performance-features)
     - [Storage Architecture](#storage-architecture)
     - [UTF-8 Safety Strategy](#utf-8-safety-strategy)
@@ -167,18 +190,22 @@ context in which this crate is meant to exist.
 You can build fully async TUI (text user interface) apps with a modern API that brings
 the best of the web frontend development ideas to TUI apps written in Rust:
 
-- Reactive & unidirectional data flow architecture from frontend development ([React](https://react.dev/),
-  [SolidJS](https://www.solidjs.com/), [Elm](https://guide.elm-lang.org/architecture/),
-  [iced-rs](https://docs.rs/iced/latest/iced/), [Jetpack Compose](https://developer.android.com/compose)).
-- [Responsive design](https://developer.mozilla.org/en-US/docs/Learn/CSS/CSS_layout/Responsive_Design)
-  with [CSS](https://www.w3.org/TR/CSS/#css), [flexbox](https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_flexible_box_layout/Basic_concepts_of_flexbox)
+- Reactive & unidirectional data flow architecture from frontend development
+  ([React](https://react.dev/), [SolidJS](https://www.solidjs.com/),
+  [Elm](https://guide.elm-lang.org/architecture/),
+  [iced-rs](https://docs.rs/iced/latest/iced/), [Jetpack
+  Compose](https://developer.android.com/compose)).
+- [Responsive
+  design](https://developer.mozilla.org/en-US/docs/Learn/CSS/CSS_layout/Responsive_Design)
+  with [CSS](https://www.w3.org/TR/CSS/#css),
+  [flexbox](https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_flexible_box_layout/Basic_concepts_of_flexbox)
   like concepts.
 - [Declarative style](https://ui.dev/imperative-vs-declarative-programming) of
   expressing styling and layouts.
 
 And since this is using Rust and [Tokio](https://crates.io/crates/tokio) you get the
-advantages of concurrency and parallelism built-in. No more blocking the main thread
-for user input, for async middleware, or even rendering 🎉.
+advantages of concurrency and parallelism built-in. No blocking the main thread for
+user input, async middleware, or rendering.
 
 This framework is [loosely coupled and strongly
 coherent](https://developerlife.com/2015/11/05/loosely-coupled-strongly-coherent/)
@@ -194,8 +221,10 @@ in the middle.
 Here are some videos that you can watch to get a better understanding of TTY
 programming.
 
-- [Build with Naz: TTY playlist](https://www.youtube.com/playlist?list=PLofhE49PEwmw3MKOU1Kn3xbP4FRQR4Mb3)
-- [Build with Naz: async readline](https://www.youtube.com/playlist?list=PLofhE49PEwmwelPkhfiqdFQ9IXnmGdnSE)
+- [Build with Naz: TTY
+  playlist](https://www.youtube.com/playlist?list=PLofhE49PEwmw3MKOU1Kn3xbP4FRQR4Mb3)
+- [Build with Naz: async
+  readline](https://www.youtube.com/playlist?list=PLofhE49PEwmwelPkhfiqdFQ9IXnmGdnSE)
 
 ## Framework highlights
 
@@ -220,9 +249,9 @@ Here are some highlights of this library:
   - CSS like flexbox like declarative layout engine which is fully responsive. You can
     resize your terminal window and everything will be laid out correctly.
   - A terminal independent underlying rendering and painting engine (can use Crossterm
-    or `DirectToAnsi` backends). The `DirectToAnsi` backend is part of this R3BL TUI
-    crate and is the default on Linux, with no reliance on Crossterm at all. We plan
-    to roll this out to macOS and Windows.
+    or [`direct_to_ansi`] backends). The [`direct_to_ansi`] backend is part of this
+    R3BL TUI crate and is the default on Linux, with no reliance on Crossterm at all.
+    We plan to roll this out to macOS and Windows.
   - Markdown text editor with syntax highlighting support, metadata (tags, title,
     author, date), smart lists. This uses a custom Markdown parser and custom syntax
     highlighter. Syntax highlighting for code blocks is provided by the syntect crate.
@@ -245,8 +274,10 @@ This crate allows you to build apps that range from "full" TUI to "partial" TUI,
 everything in the middle. Here are some videos that you can watch to get a better
 understanding of TTY programming.
 
-- [Build with Naz: TTY playlist](https://www.youtube.com/playlist?list=PLofhE49PEwmw3MKOU1Kn3xbP4FRQR4Mb3)
-- [Build with Naz: async readline](https://www.youtube.com/playlist?list=PLofhE49PEwmwelPkhfiqdFQ9IXnmGdnSE)
+- [Build with Naz: TTY
+  playlist](https://www.youtube.com/playlist?list=PLofhE49PEwmw3MKOU1Kn3xbP4FRQR4Mb3)
+- [Build with Naz: async
+  readline](https://www.youtube.com/playlist?list=PLofhE49PEwmwelPkhfiqdFQ9IXnmGdnSE)
 
 ### Partial TUI for simple choice
 
@@ -317,9 +348,11 @@ to see how the library has evolved over time.
 ## Learn how these crates are built, provide feedback
 
 To learn how we built this crate, please take a look at the following resources.
-- If you like consuming video content, here's our [YT channel](https://www.youtube.com/@developerlifecom).
-  Please consider [subscribing](https://www.youtube.com/channel/CHANNEL_ID?sub_confirmation=1).
-- If you like consuming written content, here's our developer [site](https://developerlife.com/).
+- If you like consuming video content, here's our [YT
+  channel](https://www.youtube.com/@developerlifecom). Please consider
+  [subscribing](https://www.youtube.com/channel/CHANNEL_ID?sub_confirmation=1).
+- If you like consuming written content, here's our developer
+  [site](https://developerlife.com/).
 
 ## Run the demo locally
 
@@ -341,8 +374,8 @@ This script above automatically installs:
 - File watchers (inotifywait/fswatch)
 - All required cargo development tools
 
-For complete development setup and all available commands, see the
-[repository README](https://github.com/r3bl-org/r3bl-open-core/blob/main/README.md).
+For complete development setup and all available commands, see the [repository
+README](https://github.com/r3bl-org/r3bl-open-core/blob/main/README.md).
 
 ### Running examples
 
@@ -366,8 +399,8 @@ cargo run --release --example demo -- --no-log
 ```
 
 These examples cover the entire surface area of the TUI API. The unified
-[`run.fish`](https://github.com/r3bl-org/r3bl-open-core/blob/main/run.fish) script
-at the repository root provides all development commands for the entire workspace.
+[`run.fish`](https://github.com/r3bl-org/r3bl-open-core/blob/main/run.fish) script at
+the repository root provides all development commands for the entire workspace.
 
 ## TUI Development Workflow
 
@@ -427,8 +460,8 @@ cargo test test_sgr_and_character_sets   # text styling & colors
 - **Conformance data modules**: Organized sequence patterns for different terminal
   applications and use cases
 
-The conformance tests ensure the ANSI parser correctly processes sequences from
-real terminal applications and maintains compatibility with VT100 specifications.
+The conformance tests ensure the ANSI parser correctly processes sequences from real
+terminal applications and maintains compatibility with VT100 specifications.
 
 #### Markdown Parser Conformance Testing
 
@@ -508,6 +541,7 @@ The [`generate_pty_test!`] macro handles PTY infrastructure automatically:
 **Example test structure:**
 
 <!-- It is ok to use ignore here, as this is a macro call -->
+
 ```rust
 generate_pty_test! {
     test_fn: interactive_input_parsing,
@@ -553,8 +587,8 @@ For complete PTY test implementation details and examples, see:
 - Input parser tests: [`integration_tests`]
 - Raw mode tests: [`raw_mode_integration_tests`]
 
-For complete development setup and all available commands, see the
-[repository README](https://github.com/r3bl-org/r3bl-open-core/blob/main/README.md).
+For complete development setup and all available commands, see the [repository
+README](https://github.com/r3bl-org/r3bl-open-core/blob/main/README.md).
 
 ### Performance Analysis Features
 
@@ -578,8 +612,9 @@ flamegraph analysis to detect performance changes:
 
 **How it works:**
 
-1. **Baseline capture**: A performance baseline (`flamegraph-benchmark-baseline.perf-folded`)
-   is committed to git, representing the "current best" performance state
+1. **Baseline capture**: A performance baseline
+   (`flamegraph-benchmark-baseline.perf-folded`) is committed to git, representing the
+   "current best" performance state
 
 2. **Reproducible benchmarks**: The `--benchmark` flag uses `expect` to script input,
    ensuring identical workloads across runs for apples-to-apples comparisons
@@ -640,8 +675,8 @@ comparing row positions with column widths) at compile time.
 
 ### The Problem
 
-Off-by-one errors and index confusion have plagued programming since its inception.
-UI and layout development (web, mobile, desktop, GUI, TUI) amplifies these challenges
+Off-by-one errors and index confusion have plagued programming since its inception. UI
+and layout development (web, mobile, desktop, GUI, TUI) amplifies these challenges
 with multiple sources of confusion:
 
 - **0-based vs 1-based**: Mixing indices (positions, 0-based) with lengths (sizes,
@@ -1356,8 +1391,8 @@ This is very much like a compiler pipeline with multiple stages.
    operations have been removed).
 3. This output is then executed by the terminal backend to produce the final rendered
    output in the terminal. This flexible architecture allows us to plugin in different
-   backends (our own `DirectToAnsi`, Crossterm, etc.) and the optimizations are
-   applied in a backend agnostic way.
+   backends (our own [`direct_to_ansi`], [`crossterm`], etc.) and the optimizations
+   are applied in a backend agnostic way.
 
 </div>
 
@@ -1455,7 +1490,7 @@ with a clear responsibility:
 - **Modularity**: Each stage has clear inputs/outputs and single responsibility
 - **Performance**: Diff-based approach means only changed pixels are rendered
 - **Flexibility**: Stages can be implemented for different backends (Crossterm,
-  `DirectToAnsi`, etc.)
+  [`direct_to_ansi`], etc.)
 - **Maintainability**: Clear pipeline structure makes code easier to understand and
   modify
 
@@ -1487,8 +1522,8 @@ screen using the composed component pipeline (Path 1).
 <!-- https://asciiflow.com/#/share/eJyrVspLzE1VssorzcnRUcpJrEwtUrJSqo5RqohRsrK0MNaJUaoEsozMTYGsktSKEiAnRunRlD10QzExeUBSwTk%2FryQxMy%2B1SAEHQCglCBBKSXKJAonKUawBeiBHwRDhAAW4oBGSIKoWNDcrYBUkUgulETFtl0JQal5KalFAZkFqDjAicMYUKS4nJaJoaCgdkjExgUkLH9PK2Gl7FLRBJFWMpUqo0ilL4wpirOIklEg4BP3T0oqTi1JT85xK09IgpR%2FcXLohUv1M2MM49FIhFSjVKtUCAEVNQq0%3D) -->
 
 Each component produces a [`RenderPipeline`], which is a map of [`ZOrder`] and
-[`RenderOpIRVec`]. [`RenderOpIR`] are the instructions that are grouped
-together, such as move the caret to a position, set a color, and paint some text.
+[`RenderOpIRVec`]. [`RenderOpIR`] are the instructions that are grouped together, such
+as move the caret to a position, set a color, and paint some text.
 
 Inside of each [`RenderOpIRVec`] the caret is stateful, meaning that the caret
 position is remembered after each [`RenderOpIR`] is executed. However, once a new
@@ -1516,18 +1551,18 @@ color). Syntax highlighted text is also just [`TuiStyledText`].
 | Y     | paint each [`PixelChar`] in `List<List<`[`PixelChar`]`>>` to stdout using [`OffscreenBufferPaintImplCrossterm`] |
 | Y     | save the `List<List<`[`PixelChar`]`>>` to [`GlobalData`]                                                      |
 
-Currently `crossterm` and `DirectToAnsi` are supported for actually painting to the
-terminal. But this process is really simple making it very easy to swap out other
+Currently [`crossterm`] and [`direct_to_ansi`] are supported for actually painting to
+the terminal. But this process is really simple making it very easy to swap out other
 terminal libraries or even a GUI backend, or some other custom output driver.
 
 ### Subsequent render (Path 1)
 
-Since the [`OffscreenBuffer`] is cached in [`GlobalData`], a diff can be
-performed for subsequent renders. And only those diff chunks are painted to the
-screen. This ensures that there is no flicker when the content of the screen changes.
-It also minimizes the amount of work that the terminal or terminal emulator has to do
-in order to render the [`PixelChar`]s on the screen. This diff-based optimization is
-what gives Path 1 its high performance characteristics compared to Path 2.
+Since the [`OffscreenBuffer`] is cached in [`GlobalData`], a diff can be performed for
+subsequent renders. And only those diff chunks are painted to the screen. This ensures
+that there is no flicker when the content of the screen changes. It also minimizes the
+amount of work that the terminal or terminal emulator has to do in order to render the
+[`PixelChar`]s on the screen. This diff-based optimization is what gives Path 1 its
+high performance characteristics compared to Path 2.
 
 ## Platform-specific backends
 
@@ -1536,7 +1571,7 @@ with platform-specific optimizations.
 
 ### Backend selection
 
-The backend is selected **at compile time** via the `TERMINAL_LIB_BACKEND` constant:
+The backend is selected **at compile time** via the [`TERMINAL_LIB_BACKEND`] constant:
 
 | Platform          | Default Backend | Why                                          |
 | ----------------- | --------------- | -------------------------------------------- |
@@ -1553,14 +1588,14 @@ manipulation library. It provides:
 - Well-tested across terminal emulators
 - Default choice for maximum compatibility
 
-### DirectToAnsi backend (Linux-native)
+### [`direct_to_ansi`] backend (Linux-native)
 
-`DirectToAnsi` is a pure-Rust ANSI sequence generator that bypasses external terminal
-libraries. It provides:
+[`direct_to_ansi`] is a pure-Rust ANSI sequence generator that bypasses external
+terminal libraries. It provides:
 
 - **Output (all platforms)**: Generates raw ANSI escape sequences directly
-- **Input (Linux only)**: Uses `mio` for async stdin polling (macOS `kqueue` doesn't
-  support PTY/tty polling)
+- **Input (Linux only)**: Uses [`mio`] for async stdin polling (macOS [`kqueue`]
+  doesn't support PTY/tty polling)
 
 **Performance benefits** (measured on Linux with 8-second workload, 999Hz sampling):
 
@@ -1571,7 +1606,7 @@ libraries. It provides:
 **When to choose each:**
 
 - **Crossterm**: When you need cross-platform compatibility or target macOS/Windows
-- **DirectToAnsi**: When targeting Linux and want maximum performance
+- **[`direct_to_ansi`]**: When targeting Linux and want maximum performance
 
 ### Architecture
 
@@ -1586,15 +1621,16 @@ Component → RenderPipeline    → Crossterm (cross-platform)
          → RenderOpOutput
 ```
 
-The shared stages (1-4) produce `RenderOpOutput` operations. Stage 5 backends translate
-these operations into terminal-specific commands. This architecture ensures consistent
-behavior across backends while allowing platform-specific optimizations.
+The shared stages (1-4) produce [`RenderOpOutput`] operations. Stage 5 backends
+translate these operations into terminal-specific commands. This architecture ensures
+consistent behavior across backends while allowing platform-specific optimizations.
 
 **Functional equivalence**: Both backends are verified to produce identical results
-through comprehensive PTY-based compatibility tests. The [`backend_compat_tests`] module
-spawns controlled processes in real PTYs and compares:
+through comprehensive PTY-based compatibility tests. The [`backend_compat_tests`]
+module spawns controlled processes in real PTYs and compares:
 
-- **Input handling**: Both backends parse the same terminal input sequences identically
+- **Input handling**: Both backends parse the same terminal input sequences
+  identically
 - **Output rendering**: Both backends generate equivalent ANSI escape sequences
 
 This ensures you can switch backends without changing application behavior — only
@@ -1606,6 +1642,64 @@ For backend implementation details, see:
 - [`direct_to_ansi`] - Linux backend
 - [`crossterm_backend`] - Cross-platform backend
 
+## Resilient Reactor Thread (RRT) pattern
+
+The RRT pattern provides generic infrastructure for managing dedicated worker threads
+that block on I/O operations. This powers the [`direct_to_ansi`] backend's
+[`mio_poller`].
+
+### The problem
+
+Async executors (like Tokio) use thread pools that shouldn't block. Terminal input
+requires blocking on stdin, which would starve other async tasks. RRT solves this by
+dedicating a thread to blocking I/O.
+
+### How it works
+
+```
+┌──────────────────────────────────────────────────────────────────────────┐
+│                       RESILIENT REACTOR THREAD                           │
+├──────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│   Worker Thread                                      Async Consumers     │
+│  ┌─────────────┐       ┌───────────────┐       ┌────────────────────┐    │
+│  │ mio::Poll   │       │   broadcast   │ ────► │  SubscriberGuard A │    │
+│  │             │       │    channel    │       └────────────────────┘    │
+│  │  (blocks    │ ────► │               │       ┌────────────────────┐    │
+│  │   on I/O)   │events │   (clones to  │ ────► │  SubscriberGuard B │    │
+│  │             │       │     all)      │       └────────────────────┘    │
+│  └─────────────┘       └───────────────┘       ┌────────────────────┐    │
+│         ▲                                ────► │  SubscriberGuard C │    │
+│         │                                      └─────────┬──────────┘    │
+│         │                                                │               │
+│         └────────────── wake() on drop ──────────────────┘               │
+│                                                                          │
+└──────────────────────────────────────────────────────────────────────────┘
+```
+
+For the type hierarchy and implementation details, see the [Architecture Overview] in
+[`resilient_reactor_thread`].
+
+### Key components
+
+| Component                    | Purpose                                          |
+| ---------------------------- | ------------------------------------------------ |
+| [`ThreadSafeGlobalState`]    | Thread-safe singleton for RRT instances          |
+| [`ThreadLiveness`]           | Running state + generation tracking              |
+| [`SubscriberGuard`]          | RAII guard managing subscription lifecycle       |
+| [`ThreadWorker`]             | Trait for the blocking work loop                 |
+| [`ThreadWaker`]              | Trait for interrupting blocked threads           |
+
+### Key benefits
+
+- **Lifecycle flexibility**: Multiple async tasks can subscribe independently
+- **Resilience**: Thread can crash and restart; services can reconnect
+- **Generation tracking**: Safe thread restart/reuse without breaking subscribers
+- **Broadcast semantics**: Events go to all subscribers (1:N)
+
+For comprehensive documentation including I/O backend compatibility, [`io_uring`]
+support, and implementation examples, see [`resilient_reactor_thread`].
+
 ## VT100/ANSI escape sequence handling
 
 The TUI engine includes comprehensive VT100/ANSI escape sequence parsing for both
@@ -1613,8 +1707,8 @@ terminal input (keyboard, mouse events) and terminal output (PTY child processes
 
 ### Input parsing
 
-The `vt_100_terminal_input_parser` module converts raw terminal bytes into structured
-input events:
+The [`vt_100_terminal_input_parser`] module converts raw terminal bytes into
+structured input events:
 
 ```
 Raw stdin bytes
@@ -1642,8 +1736,8 @@ I/O operations, making it easy to test and reuse across different backends.
 
 ### Output parsing
 
-The `vt_100_pty_output_parser` module processes ANSI sequences from PTY child processes
-(like `bash`, `vim`, etc.) and updates the terminal display state:
+The [`vt_100_pty_output_parser`] module processes ANSI sequences from PTY child
+processes (like `bash`, `vim`, etc.) and updates the terminal display state:
 
 ```
 pty_mux (receives child process output)
@@ -1664,9 +1758,12 @@ compatible program running in a PTY.
 
 ### In-memory terminal emulation
 
-[`OffscreenBuffer`] can function as a **standalone in-memory terminal emulator**.
-By calling [`OffscreenBuffer::apply_ansi_bytes()`], you can feed raw VT100 ANSI
-escape sequences directly into the buffer — no real terminal or PTY required:
+[`OffscreenBuffer`] can function as a **standalone in-memory terminal emulator**. By
+calling [`OffscreenBuffer::apply_ansi_bytes()`], you can feed raw VT100 ANSI escape
+sequences directly into the buffer — no real terminal or PTY required:
+
+<!-- It is ok to use ignore here - demonstrates API usage with types not importable
+in doctests -->
 
 ```rust
 let mut buffer = OffscreenBuffer::new(Size { col_count: 80, row_count: 24 });
@@ -1686,24 +1783,25 @@ buffer.apply_ansi_bytes(b"\x1b[31mRed text\x1b[0m Normal text");
   contents against expected state
 - **Diffing**: Compare output between backends or program versions
 - **Screen capture**: Snapshot terminal state at any point
-- **Terminal emulation**: Build terminal emulators using the same battle-tested
-  VT100 parser that powers the terminal multiplexer
+- **Terminal emulation**: Build terminal emulators using the same battle-tested VT100
+  parser that powers the terminal multiplexer
 
-**How r3bl_tui uses this for testing:**
+**How `r3bl_tui` uses this for testing:**
 
 The [`backend_compat_tests`] use in-memory terminal emulation to verify that
-Crossterm and DirectToAnsi backends produce identical output. Tests spawn
+[`crossterm`] and [`direct_to_ansi`] backends produce identical output. Tests spawn
 controlled processes in real PTYs, capture their ANSI output, apply it to
-[`OffscreenBuffer`]s, and compare the resulting screen state — all without
-needing to visually inspect terminal output.
+[`OffscreenBuffer`]s, and compare the resulting screen state — all without needing to
+visually inspect terminal output.
 
-This is the same mechanism that powers [`PTYMux`] — each managed process gets its
-own [`OffscreenBuffer`] that continuously receives and renders ANSI output,
-enabling instant switching between processes with fully preserved screen state.
+This is the same mechanism that powers [`PTYMux`] — each managed process gets its own
+[`OffscreenBuffer`] that continuously receives and renders ANSI output, enabling
+instant switching between processes with fully preserved screen state.
 
 ### Key VT100 references
 
-- Input coordinates are **1-based** (terminal standard), converted to 0-based internally
+- Input coordinates are **1-based** (terminal standard), converted to 0-based
+  internally
 - Mouse scroll codes may be inverted with natural scrolling enabled
 - The `observe_terminal` validation test captures real terminal sequences for
   ground-truth verification
@@ -1729,10 +1827,13 @@ echo so the application can read individual keystrokes and escape sequences.
 
 ### Platform implementations
 
-**Linux/macOS** (via `rustix`):
+**Linux/macOS** (via [`rustix`]):
 
 Uses Rust's [`rustix`](https://docs.rs/rustix) crate for type-safe termios
 manipulation:
+
+<!-- It is ok to use ignore here - shows rustix API patterns, not a complete
+runnable example -->
 
 ```rust
 // rustix provides safe, ergonomic termios API
@@ -1754,6 +1855,9 @@ Falls back to Crossterm's raw mode implementation for cross-platform compatibili
 ### Usage
 
 The recommended approach uses RAII for automatic cleanup:
+
+<!-- It is ok to use ignore here - demonstrates RAII pattern, requires terminal
+context to run -->
 
 ```rust
 use r3bl_tui::RawModeGuard;
@@ -1811,7 +1915,7 @@ PTY tests solve this by creating real pseudo-terminals where tests act as both t
 ┌────────────▼───────────┐    ┌───────────────▼───────────────┐
 │ Macro: PTY Setup       │    │ Controlled Function           │
 │ - Creates PTY pair     │    │ - Enable raw mode (if needed) │
-│ - Spawns controlled    ├────▶ - Execute test logic          │
+│ - Spawns controlled    ├────▶ - Execute test logic         │
 │ - Passes to controller │    │ - Output via stdout/stderr    │
 └────────────┬───────────┘    └────────────▲─┬────────────────┘
              │                             │ │
@@ -1820,7 +1924,7 @@ PTY tests solve this by creating real pseudo-terminals where tests act as both t
 │ - Receives pty_pair           │          │ │ stdin, stdout/stderr
 │ - Receives child handle       │          │ │
 │ - Writes input to child (opt) ├──────────┘ │
-│ - Reads results from child    ◀────────────┘
+│ - Reads results from child    ◄────────────┘
 │ - Verifies assertions         │
 │ - Waits for child exit        │
 └───────────────────────────────┘
@@ -1829,6 +1933,9 @@ PTY tests solve this by creating real pseudo-terminals where tests act as both t
 ### The `generate_pty_test!` macro
 
 Use this macro for single-feature PTY tests:
+
+<!-- It is ok to use ignore here - macro invocation requires test context and
+controller/controlled functions -->
 
 ```rust
 generate_pty_test! {
@@ -1996,7 +2103,7 @@ See the detailed and extensive [`zero_copy_gap_buffer` module documentation].
 
 ## Markdown Parser with R3BL Extensions
 
-The TUI includes a high-performance markdown parser built with `nom` that supports
+The TUI includes a high-performance markdown parser built with [`nom`] that supports
 both standard markdown syntax and R3BL-specific extensions.
 
 #### Key Features
@@ -2049,12 +2156,12 @@ Within each block, inline fragments are parsed with similar priority:
 
 #### Integration with Syntax Highlighting
 
-The parser works seamlessly with the editor's syntax highlighting through several
-key functions:
+The parser works seamlessly with the editor's syntax highlighting through several key
+functions:
 - [`try_parse_and_highlight`] - Main entry point for parsing and syntax highlighting
 - [`parse_markdown()`] - Core parser that produces the [`MdDocument`] AST
 - [`parse_smart_list`] - Specialized parser for multi-line list handling
-- Code blocks use `syntect` via
+- Code blocks use [`syntect`] via
   [`render_engine()`](crate::editor_engine::engine_public_api::render_engine) for
   syntax highlighting
 - The styled content is rendered through the standard [`RenderPipeline`]
@@ -2063,8 +2170,9 @@ key functions:
 
 The parser was chosen after extensive benchmarking against alternatives (including
 `markdown-rs`):
-- **Streaming parser**: Built with [`nom`](https://developerlife.com/2023/02/20/guide-to-nom-parsing/)
-  for efficient memory usage
+- **Streaming parser**: Built with [`nom`]
+  ([tutorial](https://developerlife.com/2023/02/20/guide-to-nom-parsing/)) for
+  efficient memory usage
 - **Low CPU overhead**: No unnecessary allocations or copies
 - **Proven reliability**: Powers all markdown rendering in `r3bl_tui`
 
@@ -2079,7 +2187,8 @@ For comprehensive implementation details including:
 See:
 - The [`parse_markdown()`] function entry point
 - The detailed [`md_parser` module documentation](crate::tui::md_parser)
-- [Blog post: Building a Markdown Parser in Rust](https://developerlife.com/2024/06/28/md-parser-rust-from-r3bl-tui/)
+- [Blog post: Building a Markdown Parser in
+  Rust](https://developerlife.com/2024/06/28/md-parser-rust-from-r3bl-tui/)
 - [Video: Markdown Parser Deep Dive](https://youtu.be/SbwvSHZRb1E)
 
 ## Terminal Multiplexer with VT-100 ANSI Parsing
@@ -2113,7 +2222,7 @@ that acts as a complete virtual terminal, enabling:
 
 ```
 ╭─────────────╮    ╭──────────╮    ╭────────────╮    ╭─────────────────╮
-│ Child Proc  │────▶ PTY      │────▶ VTE Parser │────▶ OffscreenBuffer │
+│ Child Proc  │────► PTY      │────► VTE Parser │────► OffscreenBuffer │
 │ (vim, bash) │    │ (bytes)  │    │ (ANSI)     │    │ (virtual        │
 ╰────▲────────╯    ╰──────────╯    ╰────────────╯    │  terminal)      │
      │                                    │          ╰─────────────────╯
@@ -2124,14 +2233,14 @@ that acts as a complete virtual terminal, enabling:
      │                           ╚═══════════════╝           │
      │                                                       │
      │                           ╭────────────────╮          │
-     │                           │ RenderPipeline ◀──────────╯
+     │                           │ RenderPipeline ◄──────────╯
      ╰───────────────────────────│ paint()        │
                                  ╰────────────────╯
 ```
 
 #### VT-100 ANSI Parser Implementation
 
-The parser provides comprehensive VT100 compliance using the `vte` crate (same as
+The parser provides comprehensive VT100 compliance using the [`vte`] crate (same as
 Alacritty):
 
 **Supported sequences**:
@@ -2191,8 +2300,8 @@ For comprehensive implementation details including:
 - Process lifecycle and resource cleanup
 - VT-100 conformance test suite
 
-See the detailed [`pty_mux` module documentation] and
-[`vt_100_pty_output_parser`] documentation.
+See the detailed [`pty_mux` module documentation] and [`vt_100_pty_output_parser`]
+documentation.
 
 ## Painting the caret
 
@@ -2403,16 +2512,34 @@ feature requests, feel free to add them there too 👍.
 [`integration_tests`]: mod@crate::core::ansi::vt_100_terminal_input_parser::integration_tests
 [`raw_mode_integration_tests`]: mod@crate::core::ansi::terminal_raw_mode::integration_tests
 [`test_pty_input_device`]: mod@crate::core::ansi::vt_100_terminal_input_parser::integration_tests::pty_input_device_test
-[`DirectToAnsiInputDevice`]: crate::tui::terminal_lib_backends::direct_to_ansi::DirectToAnsiInputDevice
+[`DirectToAnsiInputDevice`]: crate::direct_to_ansi::DirectToAnsiInputDevice
 [`pty_test_fixtures`]: crate::core::test_fixtures::pty_test_fixtures
 [`backend_compat_tests`]: crate::core::terminal_io::backend_compat_tests
 [`terminal_lib_backends`]: crate::tui::terminal_lib_backends
-[`direct_to_ansi`]: crate::tui::terminal_lib_backends::direct_to_ansi
+[`direct_to_ansi`]: crate::direct_to_ansi
 [`crossterm_backend`]: crate::tui::terminal_lib_backends::crossterm_backend
 [`vt_100_terminal_input_parser`]: crate::core::ansi::vt_100_terminal_input_parser
 [`RawModeGuard`]: crate::core::ansi::terminal_raw_mode::RawModeGuard
 [`terminal_raw_mode`]: crate::core::ansi::terminal_raw_mode
 [`raw_mode_unix`]: crate::core::ansi::terminal_raw_mode::raw_mode_unix
 [`OffscreenBuffer::apply_ansi_bytes()`]: crate::OffscreenBuffer::apply_ansi_bytes
+[`ThreadSafeGlobalState`]: core::resilient_reactor_thread::ThreadSafeGlobalState
+[`ThreadLiveness`]: core::resilient_reactor_thread::ThreadLiveness
+[`SubscriberGuard`]: core::resilient_reactor_thread::SubscriberGuard
+[`ThreadWorker`]: core::resilient_reactor_thread::ThreadWorker
+[`ThreadWaker`]: core::resilient_reactor_thread::ThreadWaker
+[`resilient_reactor_thread`]: core::resilient_reactor_thread
+[`mio_poller`]: crate::direct_to_ansi::input::mio_poller
+[`io_uring`]: https://kernel.dk/io_uring.pdf
+[`crossterm`]: crossterm
+[`mio`]: mio
+[`kqueue`]: https://man.freebsd.org/cgi/man.cgi?query=kqueue
+[`nom`]: nom
+[`rustix`]: rustix
+[`syntect`]: syntect
+[`vte`]: vte
+[`RenderOpOutput`]: crate::RenderOpOutput
+[`TERMINAL_LIB_BACKEND`]: crate::TERMINAL_LIB_BACKEND
+[Architecture Overview]: core::resilient_reactor_thread#architecture-overview
 
 License: Apache-2.0

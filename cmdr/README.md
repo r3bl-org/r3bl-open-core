@@ -69,14 +69,26 @@ context in which this crate is meant to exist.
 
 ## Installation
 
-The two apps, `edi` and `giti`, that comprise `r3bl-cmdr` will make you smile
-and make you more productive. These apps are currently available as early access
-preview 🐣.
+The two apps, `edi` and `giti`, that comprise `r3bl-cmdr` will make you smile and
+make you more productive. Both are fully async (built on [`r3bl_tui`]) and currently
+available as early access preview 🐣.
 
-- 😺 `giti` - an interactive git CLI app designed to give you more confidence and a
+- 😺 `giti` - An interactive git CLI app designed to give you more confidence and a
   better experience when working with git.
-- 🦜 `edi` - a TUI Markdown editor that lets you edit Markdown files in your terminal
+  - Fully async—never blocks the main thread
+  - Visual branch selection
+  - Streamlined commit workflows
+
+- 🦜 `edi` - A TUI Markdown editor that lets you edit Markdown files in your terminal
   in style.
+  - Fully async—never blocks the main thread
+  - Gradient colors and smart terminal capability detection (gracefully degrades)
+  - Smart list formatting and full emoji support
+  - Language-specific syntax highlighting inside fenced code blocks
+  - SSH optimized—only repaints what's changed
+  - Zero-copy gap buffer for responsive editing even in large files
+
+[`r3bl_tui`]: https://crates.io/crates/r3bl_tui
 
 To install `r3bl-cmdr` on your system, run the following command, assuming you have
 `cargo` on your system:

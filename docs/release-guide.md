@@ -46,8 +46,8 @@ cargo build; cargo test; cargo doc --no-deps; cargo clippy --fix --allow-dirty -
 cargo readme > README.md
 cargo publish --dry-run --allow-dirty
 git add -A
-git commit -S -m "v0.7.6-tui"
-git tag -a v0.7.6-tui -m "v0.7.6-tui"
+git commit -S -m "v0.7.7-tui"
+git tag -a v0.7.7-tui -m "v0.7.7-tui"
 cargo publish
 git push ; git push --tags # Push tags & commits
 cd ..
@@ -65,11 +65,30 @@ cargo build; cargo test; cargo doc --no-deps; cargo clippy --fix --allow-dirty -
 cargo readme > README.md
 cargo publish --dry-run --allow-dirty
 git add -A
-git commit -S -m "v0.0.24-cmdr"
-git tag -a v0.0.24-cmdr -m "v0.0.24-cmdr"
+git commit -S -m "v0.0.25-cmdr"
+git tag -a v0.0.25-cmdr -m "v0.0.25-cmdr"
 cargo publish
-# 2) Don't forget to test the release on a clean machine by running `cargo install r3bl-cmdr`
-# You can do this using `cd cmdr && fish run.fish build-release-in-docker`
+# TODO: Test release on clean machine with `spawny r3bl-cmdr` (see task/pending/build_infra_spawny.md)
+git push ; git push --tags # Push tags & commits
+cd ..
+
+cd build-infra
+# 1. Update version in Cargo.toml (for self, and for deps: `r3bl_tui`)
+#    and this file
+# 2. Update CHANGELOG.md (don't forget to update TOC)
+# 3. Run "Dependi: Update All dependencies to the latest version" in vscode
+#    w/ the Cargo.toml file open. Don't use `cargo-edit`
+#    <https://github.com/killercup/cargo-edit> and `cargo upgrade`.
+cargo update --verbose # Update Cargo.lock file (not Cargo.toml)
+cargo build; cargo test; cargo doc --no-deps; cargo clippy --fix --allow-dirty --allow-staged; cargo fmt --all
+# Generate the crates.io landing page for this crate
+cargo readme > README.md
+cargo publish --dry-run --allow-dirty
+git add -A
+git commit -S -m "v0.0.1-build-infra"
+git tag -a v0.0.1-build-infra -m "v0.0.1-build-infra"
+cargo publish
+# TODO: Test release on clean machine with `spawny r3bl-build-infra` (see task/pending/build_infra_spawny.md)
 git push ; git push --tags # Push tags & commits
 cd ..
 

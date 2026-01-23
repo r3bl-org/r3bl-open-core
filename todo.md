@@ -34,6 +34,9 @@
 - [⌛] migrate `check.fish` into `build_infra` crate as `cargo monitor` command using
   [`build_infra_cargo_monitor.md`](/task/pending/build_infra_cargo_monitor.md)
 
+- [⌛] migrate `nspawn.fish` into `build-infra` crate as `spawny` command using
+      [`build_infra_spawny.md`](task/pending/build_infra_spawny.md)
+
 - [x] use [`task_refactor_input_device`](task/done/task_refactor_input_device.md) to refactor
       `InputDevice` to unify `crossterm`, `direct_to_ansi`, and `mock` variants
 

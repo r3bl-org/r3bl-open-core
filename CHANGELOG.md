@@ -2,16 +2,16 @@
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 
 - [Changelog](#changelog)
-  - [`global-config`](#global-config)
-    - [Global config (next)](#global-config-next)
-    - [Global config (2025-08-04)](#global-config-2025-08-04)
-    - [Global config (2025-07-22)](#global-config-2025-07-22)
-    - [Global config (2025-04-21)](#global-config-2025-04-21)
-    - [Global config (2025-03-24)](#global-config-2025-03-24)
-    - [Global config (2025-03-19)](#global-config-2025-03-19)
-    - [Global config (2024-12-04)](#global-config-2024-12-04)
+  - [Rust Development Power Tools](#rust-development-power-tools)
+    - [Rust Development Power Tools (2026-01-23)](#rust-development-power-tools-2026-01-23)
+    - [Rust Development Power Tools (2025-08-04)](#rust-development-power-tools-2025-08-04)
+    - [Rust Development Power Tools (2025-07-22)](#rust-development-power-tools-2025-07-22)
+    - [Rust Development Power Tools (2025-04-21)](#rust-development-power-tools-2025-04-21)
+    - [Rust Development Power Tools (2025-03-24)](#rust-development-power-tools-2025-03-24)
+    - [Rust Development Power Tools (2025-03-19)](#rust-development-power-tools-2025-03-19)
+    - [Rust Development Power Tools (2024-12-04)](#rust-development-power-tools-2024-12-04)
   - [`r3bl_tui`](#r3bl_tui)
-    - [v0.7.7 (next)](#v077-next)
+    - [v0.7.7 (2026-01-23)](#v077-2026-01-23)
     - [v0.7.6 (2025-08-16)](#v076-2025-08-16)
     - [v0.7.5 (2025-08-15)](#v075-2025-08-15)
     - [v0.7.4 (2025-08-15)](#v074-2025-08-15)
@@ -40,6 +40,7 @@
     - [v0.3.2 (2023-03-06)](#v032-2023-03-06)
     - [v0.3.1 (2023-03-06)](#v031-2023-03-06)
   - [`r3bl-cmdr`](#r3bl-cmdr)
+    - [v0.0.25 (2026-01-23)](#v0025-2026-01-23)
     - [v0.0.24 (2025-08-16)](#v0024-2025-08-16)
     - [v0.0.23 (2025-08-15)](#v0023-2025-08-15)
     - [v0.0.22 (2025-08-15)](#v0022-2025-08-15)
@@ -57,6 +58,8 @@
     - [v0.0.10 (2024-01-02)](#v0010-2024-01-02)
     - [v0.0.9 (2023-12-31)](#v009-2023-12-31)
     - [v0.0.8 (2023-12-22)](#v008-2023-12-22)
+  - [`r3bl-build-infra`](#r3bl-build-infra)
+    - [v0.0.1 (2026-01-23)](#v001-2026-01-23)
   - [`r3bl_analytics_schema`](#r3bl_analytics_schema)
     - [v0.0.3 (2025-05-10)](#v003-2025-05-10)
     - [v0.0.2 (2024-09-12)](#v002-2024-09-12)
@@ -168,42 +171,76 @@
 
 # Changelog
 
-<!-- Global config section -->
+<!-- Rust Development Power Tools section -->
 
-## `global-config`
+## Rust Development Power Tools
 
-This section contains all the changes that are made to global configuration to build and test the
-`r3bl-open-core` repo. This includes all the `run.nu` scripts in each crate contained in the
-monorepo, along with the top level `run.nu` script. Things like RUSTSEC advisory whitelist and which
-tasks are run in CICD are included here.
+This section covers build scripts, toolchain management, and developer productivity tools for the
+`r3bl-open-core` monorepo. Changes here affect how you build, test, and develop—not the library
+APIs themselves.
 
-### Global config (next)
+### Rust Development Power Tools (2026-01-23)
+
+This release focuses on developer productivity: faster builds with the nightly parallel compiler,
+smarter toolchain management, and a streamlined bootstrap experience. We've also removed legacy
+dependencies in favor of Claude Code's built-in capabilities.
+
+Also see [`r3bl-build-infra`](#r3bl-build-infra) below—it provides `cargo rustdoc-fmt` for formatting
+rustdoc comments, which is used extensively by Claude Code skills in this repo to maintain consistent
+documentation style.
 
 **Changed:**
 
 - **Build system migration:** Migrated from nushell to fish shell for all build scripts - `run.fish`
   replaces `run.nu` throughout the project for improved maintainability and readability
-- **uv Python package manager & runtime:** `run.fish` `install-cargo-tools` command now includes
-  installation of `uv` Python runtime (required for `serena` MCP server)
 - **Copyright headers:** Shrunk copyright headers in all files for better readability
 - **Claude Code configuration:** Updated Claude Code configuration files and VS Code settings for
   improved development experience
 - **Updated project bootstrap experience:** `fzf` and `fish` are now required for the `bootstrap.sh`
   script to work correctly, ensuring a smoother setup process
+- **Documentation:** Updated README.md with comprehensive Claude Code integration section
+  documenting `.claude/` directory structure, available skills, and slash commands
+- **Documentation:** Fixed script name inconsistencies (`rust-toolchain-validate.fish` not
+  `rust-toolchain-install-validate.fish`)
+- **Documentation:** Added tmux-r3bl-dev.fish development dashboard documentation
+- **Documentation:** Clarified VSCode extensions installation workflow
 
 **Added:**
 
-- **MCP server integration:** Integration with [`serena`](https://github.com/oraios/serena) semantic
-  language MCP server for improved Claude Code performance and efficiency
-- **Compilation cache:** [`sccache`](https://github.com/mozilla/sccache) support for shared
-  compilation cache to significantly speed up cargo builds across the project
+- **`check.fish` development workflow script:** Comprehensive build automation with significant
+  performance optimizations:
+  - **Nightly parallel frontend compiler** (`-Z threads=N`) for ~30-40% faster builds
+  - **Shared tmpfs target** (`$CARGO_TARGET_DIR=/tmp/roc/target/check`) — all tools (Claude, VSCode,
+    check.fish) share one RAM-based cache, so builds are always warm
+  - **Watch modes** (`--watch`, `--watch-doc`, `--watch-tests`) keep the cache perpetually warm—
+    sophisticated debounce waits for a 2-second quiet period, so rapid file changes (from typing,
+    Claude Code, linters, etc.) don't trigger frenzied rebuilds
+  - **Two-stage doc builds**: Quick blocking (~3-5s) + full background (~90s) with staging directories
+    that prevent the docs folder from going empty during slow rustdoc rebuilds
+  - **ICE detection and auto-recovery** for Internal Compiler Errors
+  - **Single-instance enforcement** kills orphaned watchers automatically
+
+- **Smart rust-toolchain management** (`rust-toolchain-update.fish`, `rust-toolchain-sync-to-toml.fish`):
+  Nightly Rust is powerful but unstable—these scripts automatically find stable nightlies, validate
+  them against your code, and remove the hassle of toolchain management entirely.
+  - **Automated stable nightly discovery**: Tests nightlies from ~1 month ago for ICE errors before
+    committing—you get nightly features without nightly instability
+  - **Aggressive cleanup**: Removes old nightlies while preserving known-good toolchains
+  - **Corruption recovery**: Detects "Missing manifest" errors and force-removes broken toolchains
+  - **Desktop notifications** for success/failure via `notify-send`
+  - **Comprehensive logging** to `~/Downloads/rust-toolchain-*.log`
+
+- **Coming soon:** [`cargo-monitor`][cargo-monitor-plan] - Rust port of `check.fish` as a proper
+  cargo subcommand in `r3bl-build-infra`, bringing these optimizations to any Rust project
+
+[cargo-monitor-plan]: https://github.com/r3bl-org/r3bl-open-core/blob/main/task/pending/build_infra_cargo_monitor.md
 
 **Removed:**
 
-- **Legacy tools:** Removed `go` and `mcp-language-server` dependencies (replaced with more
-  efficient `serena` MCP server)
+- **Legacy tools:** Removed `go`, `mcp-language-server`, `serena`, `uv`, and `sccache` dependencies
+  (Claude Code now has built-in LSP; sccache proved unreliable)
 
-### Global config (2025-08-04)
+### Rust Development Power Tools (2025-08-04)
 
 **Added:**
 
@@ -228,7 +265,7 @@ tasks are run in CICD are included here.
   updated documentation
 - Updated Claude Code settings and configurations
 
-### Global config (2025-07-22)
+### Rust Development Power Tools (2025-07-22)
 
 This release enhances the development workflow with AI-assisted coding support and improved
 performance analysis tooling. Issue: <https://github.com/r3bl-org/r3bl-open-core/issues/397>. PR:
@@ -243,7 +280,7 @@ performance analysis tooling. Issue: <https://github.com/r3bl-org/r3bl-open-core
 - Changed:
   - Enhanced run.nu scripts with improved performance analysis tooling
 
-### Global config (2025-04-21)
+### Rust Development Power Tools (2025-04-21)
 
 - Changed:
   - Rename all the `run` scripts to `run.nu`, so that IDEs and editors can apply proper syntax
@@ -263,7 +300,7 @@ performance analysis tooling. Issue: <https://github.com/r3bl-org/r3bl-open-core
   - Update `rustfmt.toml` to wrap comments using `comment_width = 90` and `wrap_comments = true`,
     and passing the `+nightly` flag to `rustfmt` (in IDEA, etc.)
 
-### Global config (2025-03-24)
+### Rust Development Power Tools (2025-03-24)
 
 - Added:
   - Add a new `script_lib.nu` file in the workspace (root) folder that contains functions that are
@@ -289,7 +326,7 @@ performance analysis tooling. Issue: <https://github.com/r3bl-org/r3bl-open-core
     `r3bl_core` now contains all the functionality that was in `r3bl_ansi_color` and
     `r3bl_test_fixtures`.
 
-### Global config (2025-03-19)
+### Rust Development Power Tools (2025-03-19)
 
 This [PR](https://github.com/r3bl-org/r3bl-open-core/pull/378) contains the details for the
 following:
@@ -305,7 +342,7 @@ following:
   - Add a new target to the `run` script in `tui` folder, to run examples without logging with
     release build: `nu run release-examples-no-log`.
 
-### Global config (2024-12-04)
+### Rust Development Power Tools (2024-12-04)
 
 This [PR](https://github.com/r3bl-org/r3bl-open-core/pull/370) contains the details for the
 following:
@@ -324,42 +361,97 @@ following:
 
 ## `r3bl_tui`
 
-### v0.7.7 (next)
+A fully async TUI framework for Rust—nothing blocks the main thread. Features include flexbox
+layouts, CSS-like styling, reactive state management, async readline (non-blocking alternative to
+POSIX readline), VT100 input/output parsers, and a double-buffered compositor optimized for SSH
+(paints only diffs). Works on Linux, macOS, and Windows. Add to your project with `cargo add r3bl_tui`.
 
-TODO: add ansi_parser.rs and new ["Per-Process Buffer Architecture"](`docs/task_pty_mux_example.md`)
-TODO: add clean up of existing color & offscreen buffer code
+### v0.7.7 (2026-01-23)
 
-This release introduces a comprehensive PTY multiplexer implementation with terminal multiplexing
-functionality similar to tmux, but with enhanced support for truecolor and TUI apps that frequently
-re-render their UI, along with significant enhancements to PTY infrastructure and terminal output
-capabilities.
+This release introduces major architectural additions including the DirectToAnsi backend for
+Linux-native terminal I/O, the Resilient Reactor Thread (RRT) pattern for blocking I/O handling,
+comprehensive VT100 parser upgrades enabling in-memory terminal emulation, and PTY-based integration
+testing infrastructure. It also includes a PTY multiplexer with terminal multiplexing functionality
+similar to tmux.
 
-- Added:
-  - Complete `pty_mux` module providing terminal multiplexing functionality similar to tmux, but
-    with enhanced support for truecolor and TUI apps that frequently re-render their UI,
+**Major Infrastructure Additions:**
+
+- **DirectToAnsi Backend (Linux-Native):**
+  A custom terminal I/O implementation bypassing Crossterm on Linux for lower latency and reduced overhead.
+  See the [DirectToAnsiInputDevice docs](https://docs.rs/r3bl_tui/0.7.7/r3bl_tui/tui/terminal_lib_backends/direct_to_ansi/input/struct.DirectToAnsiInputDevice.html) for architecture details.
+  - Direct ANSI escape sequence handling with full VT100 compliance
+  - Input device using `mio` (epoll) for async I/O multiplexing
+  - Output device with `PixelCharRenderer` and smart attribute diffing (~30% output reduction)
+  - Zero-latency ESC key detection and full keyboard modifier support
+  - Mouse event handling with bracketed paste support
+  - SIGWINCH signal integration for terminal resize
+  - Crossterm still used on macOS/Windows where platform APIs differ
+
+- **Resilient Reactor Thread (RRT) Pattern:**
+  A reusable pattern for bridging blocking I/O with async Rust—spawn a dedicated thread, broadcast
+  events to async consumers, and handle graceful shutdown automatically.
+  The [module documentation](https://docs.rs/r3bl_tui/0.7.7/r3bl_tui/core/resilient_reactor_thread/index.html#architecture-overview) provides a comprehensive architecture overview.
+  - `ThreadSafeGlobalState<W, E>` - Thread-safe singleton pattern for RRT instances
+  - `ThreadLiveness` - Running state + generation tracking for safe thread reuse
+  - `SubscriberGuard<W, E>` - Manages subscriber lifecycle with waker access
+  - Broadcasts events to async consumers via broadcast channels
+  - Handles graceful shutdown when all consumers disconnect
+
+- **VT100/ANSI Output Parser & In-Memory Terminal Emulation:**
+  Complete VT100 ANSI implementation enabling snapshot testing.
+  See the [ansi module](https://docs.rs/r3bl_tui/0.7.7/r3bl_tui/core/ansi/index.html) for the parser and [`OffscreenBuffer`](https://docs.rs/r3bl_tui/0.7.7/r3bl_tui/tui/terminal_lib_backends/offscreen_buffer/struct.OffscreenBuffer.html) for the in-memory terminal.
+  - VTE parser integration with custom `Performer` implementation
+  - Full support for cursor movement, erase operations, scroll regions, SGR (colors/styles)
+  - Enables snapshot testing: compare expected vs actual terminal state without a real terminal
+
+- **PTY Testing Infrastructure:**
+  Real-world testing in pseudo-terminals instead of mocks.
+  See the [`generate_pty_test!`](https://docs.rs/r3bl_tui/0.7.7/r3bl_tui/macro.generate_pty_test.html) macro documentation for usage and the Controller/Controlled pattern.
+  - Controller/Controlled pattern for test isolation
+  - `generate_pty_test!` macro for single-feature tests
+  - `spawn_controlled_in_pty` for multi-backend comparison tests
+  - Backend compatibility tests verifying DirectToAnsi vs Crossterm produce identical results
+  - Test coverage: bracketed paste, keyboard modifiers, mouse events, SIGWINCH, UTF-8
+
+- **Enhanced readline_async API:**
+  Expanded keyboard support makes building CLI apps easier—Tab completion, arrow key navigation,
+  and function keys now work out of the box.
+  See the [readline_async module](https://docs.rs/r3bl_tui/0.7.7/r3bl_tui/readline_async/index.html) for the full API.
+  - Tab and BackTab (Shift+Tab) key support
+  - Navigation keys support (arrow keys, Home, End, PageUp, PageDown)
+  - FnKey support (F1-F12)
+  - Type-safe editor state methods via `ReadlineAsyncContext`
+  - Extended `ReadlineEvent` enum with new variants
+
+- **PTY Multiplexer:**
+  Terminal multiplexing functionality similar to tmux.
+  See the [pty_mux module](https://docs.rs/r3bl_tui/0.7.7/r3bl_tui/core/pty_mux/index.html) for the complete API.
+  - Enhanced support for truecolor and TUI apps that frequently re-render their UI
   - `pty_mux_example.rs` demonstrating multiplexer capabilities with multiple TUI processes
   - Support for spawning and switching between multiple TUI processes using Ctrl+1 through Ctrl+9
   - Live status bar showing process states (🟢 running, 🔴 stopped) and keyboard shortcuts
   - OSC sequence integration for dynamic terminal title updates
   - Fake resize technique for proper TUI app repainting when switching processes
   - Support for configurable TUI processes: less, htop, claude, gitui
-  - `pty_simple_example.rs` for basic PTY functionality demonstration with htop
+  - `pty_simple_example.rs` for basic PTY functionality demonstration
   - `pty_rw_echo_example.rs` for PTY echo testing and validation
   - `ansi/terminal_output.rs` module with high-level terminal operations
-  - Crossterm-based functions for cursor movement, screen clearing, and color management
-  - Flush operations and immediate output handling for responsive terminal updates
-  - Robust testing infrastructure with htop as prerequisite in `bootstrap.sh`
+  - PTY integration tests that spawn real TUI apps (eg: htop) to validate VT100 parsing
+
+**Internal Improvements:**
 
 - Changed:
-  - Enhanced PTY read-write session with comprehensive cursor mode support (application vs normal
-    mode)
+  - Refactored mio_poller module for improved clarity and thread reuse semantics
+  - Reduced DirectToAnsi input device complexity
+  - Thread liveness tracking integrated with mio_poller for restart capability
+  - Enhanced PTY read-write session with comprehensive cursor mode support
   - Improved PTY input/output event handling with extensive terminal input event mapping
-  - Enhanced color conversion in `crossterm_color_converter.rs` for better color handling
+  - Enhanced color conversion in `crossterm_color_converter.rs`
   - Improved styling in readline components (`apply_style_macro.rs`)
   - Enhanced spinner rendering with better visual feedback (`spinner_render.rs`)
   - Improved crossterm backend rendering operations (`render_op_impl.rs`)
-  - Integrated with r3bl_tui's TuiColor system for consistent styling across components
-  - Cleaned up read-only session to remove read-write specific code and enums
+  - Integrated with r3bl_tui's TuiColor system for consistent styling
+  - Cleaned up read-only session to remove read-write specific code
 
 ### v0.7.6 (2025-08-16)
 
@@ -967,6 +1059,21 @@ handle many more corner cases.
 
 ## `r3bl-cmdr`
 
+`r3bl-cmdr` provides TUI applications for developers: `giti` for interactive git workflows and `edi`
+for markdown editing with live preview. Install with `cargo install r3bl-cmdr`.
+
+### v0.0.25 (2026-01-23)
+
+Streamlined the crate by removing the experimental `ch` binary to focus on the core tools: `giti`
+(interactive git) and `edi` (markdown editor).
+
+- Removed:
+  - `ch` binary and all associated code (Claude Code prompt history recall tool)
+  - `ch` module from library exports
+
+- Changed:
+  - Updated documentation to reflect only `giti` and `edi` as the main binaries
+
 ### v0.0.24 (2025-08-16)
 
 Documentation update for the `ch` command.
@@ -1193,6 +1300,41 @@ that come up quite frequently when editing Markdown in a text editor.
     files, or edit any type of text file. It supports syntax highlighting for most file formats
     (though `.toml` and `.todo` are missing).
   - Add binary target `rc` aka `r3bl-cmdr`.
+
+## `r3bl-build-infra`
+
+Cargo subcommands that automate the tedious parts of Rust development and speed up the slow parts—
+documentation formatting, toolchain management, and build optimization. Install with
+`cargo install r3bl-build-infra`.
+
+### v0.0.1 (2026-01-23)
+
+Initial release with `cargo rustdoc-fmt`—a cargo subcommand that formats markdown tables and
+converts inline links to reference-style in rustdoc comments.
+
+- Added:
+  - `cargo-rustdoc-fmt` binary - Cargo subcommand for formatting rustdoc comments
+    - Markdown table alignment in `///` and `//!` doc comments
+    - Inline-to-reference link conversion for cleaner documentation
+    - Workspace-aware processing (specific files, directories, or entire workspace)
+    - Git integration (auto-detect changed files, staged/unstaged, from latest commit)
+    - Check mode for CI verification (`--check` flag)
+    - Selective formatting (tables only, links only, or both)
+  - Modular library API for programmatic use
+
+**Coming Soon 🚀**
+
+- `cargo-monitor` - Unified development workflow automation (Rust port of `check.fish` and
+  `rust-toolchain*.fish`):
+  - Watch mode with continuous compilation, testing, and doc building on file changes
+  - tmpfs target directory for ~2-3x faster builds in RAM
+  - Automated nightly toolchain validation and corruption recovery
+  - ICE (Internal Compiler Error) detection and auto-recovery
+  - Two-stage doc builds (quick blocking + full background)
+  - Cross-platform support (Linux/macOS)
+  - See the [cargo-monitor implementation plan][cargo-monitor-plan] for details
+
+[cargo-monitor-plan]: https://github.com/r3bl-org/r3bl-open-core/blob/main/task/pending/build_infra_cargo_monitor.md
 
 ## `r3bl_analytics_schema`
 
