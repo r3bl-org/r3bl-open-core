@@ -233,7 +233,7 @@ documentation style.
 - **Coming soon:** [`cargo-monitor`][cargo-monitor-plan] - Rust port of `check.fish` as a proper
   cargo subcommand in `r3bl-build-infra`, bringing these optimizations to any Rust project
 
-[cargo-monitor-plan]: https://github.com/r3bl-org/r3bl-open-core/blob/main/task/pending/build_infra_cargo_monitor.md
+[cargo-monitor-plan]: https://github.com/r3bl-org/r3bl-open-core/blob/e083dc39f8de27fe81a864aad22a925d99a65fb5/task/pending/build_infra_cargo_monitor.md
 
 **Removed:**
 
@@ -1347,7 +1347,7 @@ converts inline links to reference-style in rustdoc comments.
   - Cross-platform support (Linux/macOS)
   - See the [cargo-monitor implementation plan][cargo-monitor-plan] for details
 
-[cargo-monitor-plan]: https://github.com/r3bl-org/r3bl-open-core/blob/main/task/pending/build_infra_cargo_monitor.md
+[cargo-monitor-plan]: https://github.com/r3bl-org/r3bl-open-core/blob/e083dc39f8de27fe81a864aad22a925d99a65fb5/task/pending/build_infra_cargo_monitor.md
 
 ## `r3bl_analytics_schema`
 
