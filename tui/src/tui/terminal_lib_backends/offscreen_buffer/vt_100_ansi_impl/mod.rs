@@ -107,20 +107,18 @@
 //!
 //! These implementations follow VT100 terminal specifications.
 //!
-//!
-//! // Implementation layer hyperlinks (this module)
-//! [`vt_100_impl_char_ops`]: `impl_char_ops`
-//! [`vt_100_impl_control_ops`]: `impl_control_ops`
-//! [`vt_100_impl_cursor_ops`]: `impl_cursor_ops`
-//! [`vt_100_impl_dsr_ops`]: `impl_dsr_ops`
-//! [`vt_100_impl_line_ops`]: `impl_line_ops`
-//! [`vt_100_impl_margin_ops`]: `impl_margin_ops`
-//! [`vt_100_impl_mode_ops`]: `impl_mode_ops`
-//! [`vt_100_impl_osc_ops`]: `impl_osc_ops`
-//! [`vt_100_impl_scroll_ops`]: `impl_scroll_ops`
-//! [`vt_100_impl_sgr_ops`]: `impl_sgr_ops`
-//! [`vt_100_impl_terminal_ops`]: `impl_terminal_ops`
-//! [`vt_100_impl_ansi_scroll_helper`]: `ansi_scroll_helper`
+//! [`vt_100_impl_ansi_scroll_helper`]: vt_100_impl_ansi_scroll_helper
+//! [`vt_100_impl_char_ops`]: vt_100_impl_char_ops
+//! [`vt_100_impl_control_ops`]: vt_100_impl_control_ops
+//! [`vt_100_impl_cursor_ops`]: vt_100_impl_cursor_ops
+//! [`vt_100_impl_dsr_ops`]: vt_100_impl_dsr_ops
+//! [`vt_100_impl_line_ops`]: vt_100_impl_line_ops
+//! [`vt_100_impl_margin_ops`]: vt_100_impl_margin_ops
+//! [`vt_100_impl_mode_ops`]: vt_100_impl_mode_ops
+//! [`vt_100_impl_osc_ops`]: vt_100_impl_osc_ops
+//! [`vt_100_impl_scroll_ops`]: vt_100_impl_scroll_ops
+//! [`vt_100_impl_sgr_ops`]: vt_100_impl_sgr_ops
+//! [`vt_100_impl_terminal_ops`]: vt_100_impl_terminal_ops
 
 /// Standard terminal tab stop width (8 columns).
 /// Used for calculating tab positions in VT100 terminal emulation.

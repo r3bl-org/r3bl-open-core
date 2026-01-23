@@ -71,22 +71,22 @@ use strum_macros::EnumCount;
 /// .println();
 /// ```
 ///
-/// [`text`]: Self::text
-/// [`attribs`]: Self::attribs
-/// [`color_fg`]: Self::color_fg
-/// [`color_bg`]: Self::color_bg
-/// [`cli_text_inline`]: crate::cli_text_inline
-/// [`cli_text_line!`]: crate::cli_text_line
-/// [`cli_text_lines!`]: crate::cli_text_lines
-/// [`fg_red`]: crate::fg_red
-/// [`fg_green`]: crate::fg_green
-/// [`fg_blue`]: crate::fg_blue
-/// [`bg_dark_gray`]: Self::bg_dark_gray
-/// [`bg_color`]: Self::bg_color
-/// [`fg_color`]: crate::fg_color
 /// [`CliTextLine`]: crate::CliTextLine
 /// [`CliTextLines`]: crate::CliTextLines
 /// [`TuiStyleAttribs`]: crate::TuiStyleAttribs
+/// [`attribs`]: Self::attribs
+/// [`bg_color`]: Self::bg_color
+/// [`bg_dark_gray`]: Self::bg_dark_gray
+/// [`cli_text_inline`]: crate::cli_text_inline
+/// [`cli_text_line!`]: crate::cli_text_line
+/// [`cli_text_lines!`]: crate::cli_text_lines
+/// [`color_bg`]: Self::color_bg
+/// [`color_fg`]: Self::color_fg
+/// [`fg_blue`]: crate::fg_blue
+/// [`fg_color`]: crate::fg_color
+/// [`fg_green`]: crate::fg_green
+/// [`fg_red`]: crate::fg_red
+/// [`text`]: Self::text
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CliTextInline {
     pub text: InlineString,
@@ -218,9 +218,10 @@ pub mod cli_text_inline_impl {
         /// - `start`: 0-based index of the first character to include
         /// - `width`: Number of characters to include, or None for "to end of text"
         ///
-        /// This is optimized to avoid the wasteful
-        /// [`convert()`](Self::convert) call by
-        /// directly slicing the text using grapheme clustering.
+        /// This is optimized to avoid the wasteful [`convert()`] call by directly slicing
+        /// the text using grapheme clustering.
+        ///
+        /// [`convert()`]: Self::convert
         #[must_use]
         pub fn clip(
             &self,
@@ -282,17 +283,19 @@ pub mod cli_text_inline_impl {
         /// - To convert the entire text, just pass in
         ///   [`CliTextConvertOptions::default()`].
         /// - To clip the text to a certain display width, pass in the [`ColWidth`] via
-        ///   [`From<ColWidth>`] or explicitly set the
-        ///   [`width`](CliTextConvertOptions::width) field.
+        ///   the [`width`] field.
         /// - Uses (start, width) semantics where:
         ///   - `start`: 0-based display column index of the first column to include
         ///   - `width`: Display width in columns to include, or None for "to end of text"
         ///
         /// # Display Width Handling
+        ///
         /// This method uses display-width-aware clipping to correctly handle:
         /// - Wide Unicode characters (e.g., CJK characters that occupy 2 columns)
         /// - Zero-width characters (combining marks, ZWJ sequences)
         /// - Accurate terminal rendering positioning
+        ///
+        /// [`width`]: CliTextConvertOptions::width
         pub fn convert(
             &self,
             arg_options: impl Into<CliTextConvertOptions>,
@@ -903,7 +906,7 @@ impl FastStringify for CliStyle {
     }
 }
 
-generate_impl_display_for_fast_stringify!(CliStyle); 
+generate_impl_display_for_fast_stringify!(CliStyle);
 
 impl FastStringify for CliTextInline {
     fn write_to_buf(&self, acc: &mut BufTextStorage) -> Result {
@@ -992,9 +995,10 @@ mod tests {
             color_bg: Some(TuiColor::Rgb((1, 1, 1).into())),
         };
 
+        // RGB format uses semicolons (xterm-compatible): ESC[38;5;Nm for 256-color
         assert_eq!(
             format!("{0}", eg_1),
-            "\x1b[1m\x1b[38:5:16m\x1b[48:5:16mHello\x1b[0m".to_string()
+            "\x1b[1m\x1b[38;5;16m\x1b[48;5;16mHello\x1b[0m".to_string()
         );
 
         let eg_2 = CliTextInline {
@@ -1006,7 +1010,7 @@ mod tests {
 
         assert_eq!(
             format!("{0}", eg_2),
-            "\x1b[1m\x1b[38:5:150m\x1b[48:5:16mWorld\x1b[0m".to_string()
+            "\x1b[1m\x1b[38;5;150m\x1b[48;5;16mWorld\x1b[0m".to_string()
         );
 
         Ok(())
@@ -1024,9 +1028,10 @@ mod tests {
             color_bg: Some(TuiColor::Rgb((1, 1, 1).into())),
         };
 
+        // RGB format uses semicolons (xterm-compatible): ESC[38;2;r;g;bm
         assert_eq!(
             format!("{0}", eg_1),
-            "\x1b[1m\x1b[38:2:0:0:0m\x1b[48:2:1:1:1mHello\x1b[0m".to_string()
+            "\x1b[1m\x1b[38;2;0;0;0m\x1b[48;2;1;1;1mHello\x1b[0m".to_string()
         );
 
         let eg_2 = CliTextInline {
@@ -1038,7 +1043,7 @@ mod tests {
 
         assert_eq!(
             format!("{0}", eg_2),
-            "\x1b[1m\x1b[38:5:150m\x1b[48:2:1:1:1mWorld\x1b[0m".to_string()
+            "\x1b[1m\x1b[38;5;150m\x1b[48;2;1;1;1mWorld\x1b[0m".to_string()
         );
 
         Ok(())
@@ -1058,9 +1063,10 @@ mod tests {
 
         println!("{:?}", format!("{0}", eg_1));
 
+        // RGB format uses semicolons (xterm-compatible): ESC[38;5;Nm for grayscale
         assert_eq!(
             format!("{0}", eg_1),
-            "\u{1b}[1m\u{1b}[38:5:16m\u{1b}[48:5:16mHello\u{1b}[0m".to_string()
+            "\u{1b}[1m\u{1b}[38;5;16m\u{1b}[48;5;16mHello\u{1b}[0m".to_string()
         );
 
         let eg_2 = CliTextInline {
@@ -1074,7 +1080,7 @@ mod tests {
 
         assert_eq!(
             format!("{0}", eg_2),
-            "\u{1b}[1m\u{1b}[38:5:251m\u{1b}[48:5:16mWorld\u{1b}[0m".to_string()
+            "\u{1b}[1m\u{1b}[38;5;251m\u{1b}[48;5;16mWorld\u{1b}[0m".to_string()
         );
 
         Ok(())

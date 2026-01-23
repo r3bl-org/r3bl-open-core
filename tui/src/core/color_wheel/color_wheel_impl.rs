@@ -90,8 +90,8 @@
 //! The optimization successfully eliminated the hash operation bottleneck, making
 //! `ColorWheel` operations negligible in the overall performance profile.
 use super::{Ansi256GradientIndex, ColorWheelConfig, ColorWheelDirection,
-            ColorWheelSpeed, Colorize, GradientKind, GradientLengthKind, Lolcat, LolcatBuilder,
-            Seed,
+            ColorWheelSpeed, Colorize, GradientKind, GradientLengthKind, Lolcat,
+            LolcatBuilder, Seed,
             color_wheel_config::{defaults::{Defaults, get_default_gradient_stops},
                                  sizing::VecSteps},
             color_wheel_helpers, generate_random_truecolor_gradient,
@@ -185,10 +185,7 @@ mod color_wheel_cache {
         }
 
         /// Hash a `LolcatBuilder`, handling the f64 fields.
-        fn hash_lolcat_builder<H: Hasher>(
-            builder: &LolcatBuilder,
-            hasher: &mut H,
-        ) {
+        fn hash_lolcat_builder<H: Hasher>(builder: &LolcatBuilder, hasher: &mut H) {
             builder.color_change_speed.hash(hasher);
             // Convert f64 to bits for deterministic hashing.
             builder.seed.0.to_bits().hash(hasher);
@@ -197,10 +194,7 @@ mod color_wheel_cache {
         }
 
         /// Hash the Colorize enum discriminant.
-        fn hash_colorize_strategy<H: Hasher>(
-            strategy: Colorize,
-            hasher: &mut H,
-        ) {
+        fn hash_colorize_strategy<H: Hasher>(strategy: Colorize, hasher: &mut H) {
             match strategy {
                 Colorize::BothBackgroundAndForeground => {
                     0u8.hash(hasher);
@@ -331,7 +325,7 @@ mod color_wheel_cache {
 
         #[test]
         fn test_lolcat_config_hash_handles_f64() {
-            use crate::{Seed, SeedDelta, Colorize, LolcatBuilder};
+            use crate::{Colorize, LolcatBuilder, Seed, SeedDelta};
 
             // Test that different f64 values produce different hashes.
             let config1 = crate::ColorWheelConfig::Lolcat(LolcatBuilder {
@@ -359,7 +353,7 @@ mod color_wheel_cache {
 
         #[test]
         fn test_hash_handles_negative_zero() {
-            use crate::{Seed, SeedDelta, Colorize, LolcatBuilder};
+            use crate::{Colorize, LolcatBuilder, Seed, SeedDelta};
 
             // Test that -0.0 and 0.0 produce different hashes (as documented)
             let config1 = crate::ColorWheelConfig::Lolcat(LolcatBuilder {
@@ -458,19 +452,18 @@ impl Default for ColorWheel {
 impl ColorWheel {
     /// This will lazily create a color wheel. It does not compute the gradient and
     /// memoize it when this function is called.
-    ///
-    /// 1. The heavy lifting is done when
-    ///    [`generate_color_wheel`](ColorWheel::generate_color_wheel) is called.
-    /// 2. When you use
-    ///    [`colorize_into_styled_texts`](ColorWheel::colorize_into_styled_texts) it will
-    ///    also also call this method.
+    /// - The heavy lifting is done when [`generate_color_wheel`] is called.
+    /// - When you use [`colorize_into_styled_texts`] it will also call this method.
     ///
     /// # Arguments
-    /// 1. `configs`: A list of color wheel configs. The order of the configs is
-    ///    unimportant. However, at the very least, one Truecolor config & one ANSI 256
-    ///    config should be provided. The fallback is always grayscale. See
-    ///    [`ColorWheelConfig::narrow_config_based_on_color_support`],
-    ///    [`crate::global_color_support::detect`] for more info.
+    /// - `configs`: A list of color wheel configs. The order of the configs is
+    ///   unimportant. However, at the very least, one Truecolor config & one ANSI 256
+    ///   config should be provided. The fallback is always grayscale. See
+    ///   [`ColorWheelConfig::narrow_config_based_on_color_support`],
+    ///   [`crate::global_color_support::detect`] for more info.
+    ///
+    /// [`colorize_into_styled_texts`]: ColorWheel::colorize_into_styled_texts
+    /// [`generate_color_wheel`]: ColorWheel::generate_color_wheel
     #[must_use]
     pub fn new(configs: VecConfigs) -> Self {
         Self {
@@ -1539,9 +1532,10 @@ mod tests_color_wheel_rgb {
         println!("ansi_styled_string: {ansi_styled_string}");
         println!("ansi_styled_string: {ansi_styled_string:?}");
 
+        // RGB format uses semicolons (xterm-compatible): ESC[38;2;r;g;bm
         assert_eq2!(
             ansi_styled_string,
-            "\u{1b}[38:2:0:0:0mH\u{1b}[0m\u{1b}[38:2:0:0:0mE\u{1b}[0m\u{1b}[38:2:23:23:23mL\u{1b}[0m\u{1b}[38:2:23:23:23mL\u{1b}[0m\u{1b}[38:2:46:46:46mO\u{1b}[0m\u{1b}[38:2:46:46:46m \u{1b}[0m\u{1b}[38:2:70:70:70mW\u{1b}[0m\u{1b}[38:2:70:70:70mO\u{1b}[0m\u{1b}[38:2:93:93:93mR\u{1b}[0m\u{1b}[38:2:93:93:93mL\u{1b}[0m\u{1b}[38:2:116:116:116mD\u{1b}[0m"
+            "\u{1b}[38;2;0;0;0mH\u{1b}[0m\u{1b}[38;2;0;0;0mE\u{1b}[0m\u{1b}[38;2;23;23;23mL\u{1b}[0m\u{1b}[38;2;23;23;23mL\u{1b}[0m\u{1b}[38;2;46;46;46mO\u{1b}[0m\u{1b}[38;2;46;46;46m \u{1b}[0m\u{1b}[38;2;70;70;70mW\u{1b}[0m\u{1b}[38;2;70;70;70mO\u{1b}[0m\u{1b}[38;2;93;93;93mR\u{1b}[0m\u{1b}[38;2;93;93;93mL\u{1b}[0m\u{1b}[38;2;116;116;116mD\u{1b}[0m"
         );
 
         global_color_support::clear_override();
@@ -1742,7 +1736,7 @@ mod bench {
     /// Benchmark: Hash computation for Lolcat config (with f64)
     #[bench]
     fn bench_hash_lolcat_config(b: &mut Bencher) {
-        use crate::{Seed, SeedDelta, Colorize, LolcatBuilder};
+        use crate::{Colorize, LolcatBuilder, Seed, SeedDelta};
 
         let config = crate::ColorWheelConfig::Lolcat(LolcatBuilder {
             color_change_speed: crate::ColorChangeSpeed::Slow,

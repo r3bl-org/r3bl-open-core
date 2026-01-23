@@ -14,7 +14,6 @@
 //! are executed through the render pipeline (Stage 5: Backend Executor).
 //!
 //! The actual raw mode implementation is selected at compile time via
-//! [`TERMINAL_LIB_BACKEND`]:
 //! - **Linux** ([`DirectToAnsi`]): Uses rustix-based [`terminal_raw_mode`] module
 //! - **macOS/Windows** ([`Crossterm`]): Uses [`crossterm::terminal`] functions
 //!
@@ -25,12 +24,6 @@
 //! These functions dispatch based on [`TERMINAL_LIB_BACKEND`] and are used by
 //! readline and other components that manage their own terminal state.
 //!
-//! [`DirectToAnsi`]: crate::TerminalLibBackend::DirectToAnsi
-//! [`Crossterm`]: crate::TerminalLibBackend::Crossterm
-//! [`terminal_raw_mode`]: crate::core::ansi::terminal_raw_mode
-//! [`TERMINAL_LIB_BACKEND`]: crate::TERMINAL_LIB_BACKEND
-//! [`enable_raw_mode()`]: crate::enable_raw_mode
-//! [`disable_raw_mode()`]: crate::disable_raw_mode
 //!
 //! # Architecture Context
 //!
@@ -57,6 +50,12 @@
 //! - [`terminal_raw_mode`] - Direct raw mode control (for code outside the pipeline)
 //! - [`VMIN_RAW_MODE`][vmin] / [`VTIME_RAW_MODE`][vtime] - POSIX termios constants
 //!
+//! [`Crossterm`]: crate::TerminalLibBackend::Crossterm
+//! [`DirectToAnsi`]: crate::TerminalLibBackend::DirectToAnsi
+//! [`TERMINAL_LIB_BACKEND`]: crate::TERMINAL_LIB_BACKEND
+//! [`disable_raw_mode()`]: crate::disable_raw_mode
+//! [`enable_raw_mode()`]: crate::enable_raw_mode
+//! [`terminal_raw_mode`]: crate::core::ansi::terminal_raw_mode
 //! [vmin]: crate::VMIN_RAW_MODE
 //! [vtime]: crate::VTIME_RAW_MODE
 
@@ -94,8 +93,8 @@ use crate::{LockedOutputDevice, RenderOpOutput, RenderOpOutputVec, RenderOpsExec
 /// ```
 ///
 /// [`TERMINAL_LIB_BACKEND`]: crate::TERMINAL_LIB_BACKEND
-/// [`enable_raw_mode()`]: crate::enable_raw_mode
 /// [`disable_raw_mode()`]: crate::disable_raw_mode
+/// [`enable_raw_mode()`]: crate::enable_raw_mode
 #[derive(Debug, Clone)]
 pub struct RawMode;
 

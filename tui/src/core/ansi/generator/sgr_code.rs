@@ -36,6 +36,27 @@
 //! This optimization targets the 45M samples shown in flamegraph profiling for ANSI
 //! formatting.
 //!
+//! ## Extended Color Format: Semicolons vs Colons
+//!
+//! For 256-color and RGB (truecolor) sequences, there are two formats:
+//!
+//! - **Semicolon format** (xterm-compatible): `ESC[38;2;r;g;bm` — de-facto standard
+//! - **Colon format** (ITU-T T.416/ISO 8613-6): `ESC[38:2:r:g:bm` — technically "correct"
+//!
+//! We use **semicolons** because:
+//!
+//! 1. **Universal compatibility**: Semicolons work in virtually all terminals, while
+//!    colons are not supported by VSCode/xterm.js and many older terminals.
+//!
+//! 2. **xterm established the standard**: Most terminal emulators implement xterm's
+//!    semicolon format, not the ISO standard's colon format.
+//!
+//! 3. **Crossterm compatibility**: The Crossterm backend (used on macOS/Windows) also
+//!    uses semicolons, so this keeps output consistent across all platforms.
+//!
+//! Note: Our VT100 *parser* accepts both formats for maximum compatibility when parsing
+//! output from other applications. See [`crate::core::ansi::vt_100_pty_output_parser`].
+//!
 //! More info:
 //! - <https://doc.rust-lang.org/reference/tokens.html#ascii-escapes>
 //! - <https://notes.burke.libbey.me/ansi-escape-codes/>
@@ -271,36 +292,36 @@ impl FastStringify for SgrCode {
             }
             SgrCode::ForegroundAnsi256(ansi_value) => {
                 buf.push_str(CSI);
-                buf.push_str("38:5:");
+                buf.push_str("38;5;");
                 buf.push_str(U8_STRINGS[ansi_value.index as usize]);
                 buf.push_str(SGR);
                 Ok(())
             }
             SgrCode::BackgroundAnsi256(ansi_value) => {
                 buf.push_str(CSI);
-                buf.push_str("48:5:");
+                buf.push_str("48;5;");
                 buf.push_str(U8_STRINGS[ansi_value.index as usize]);
                 buf.push_str(SGR);
                 Ok(())
             }
             SgrCode::ForegroundRGB(r, g, b) => {
                 buf.push_str(CSI);
-                buf.push_str("38:2:");
+                buf.push_str("38;2;");
                 buf.push_str(U8_STRINGS[r as usize]);
-                buf.push(':');
+                buf.push(';');
                 buf.push_str(U8_STRINGS[g as usize]);
-                buf.push(':');
+                buf.push(';');
                 buf.push_str(U8_STRINGS[b as usize]);
                 buf.push_str(SGR);
                 Ok(())
             }
             SgrCode::BackgroundRGB(r, g, b) => {
                 buf.push_str(CSI);
-                buf.push_str("48:2:");
+                buf.push_str("48;2;");
                 buf.push_str(U8_STRINGS[r as usize]);
-                buf.push(':');
+                buf.push(';');
                 buf.push_str(U8_STRINGS[g as usize]);
-                buf.push(':');
+                buf.push(';');
                 buf.push_str(U8_STRINGS[b as usize]);
                 buf.push_str(SGR);
                 Ok(())
@@ -386,25 +407,25 @@ mod tests {
     #[test]
     fn fg_color_ansi256() {
         let sgr_code = SgrCode::ForegroundAnsi256(AnsiValue::new(150));
-        assert_eq!(sgr_code.to_string(), "\x1b[38:5:150m");
+        assert_eq!(sgr_code.to_string(), "\x1b[38;5;150m");
     }
 
     #[test]
     fn bg_color_ansi256() {
         let sgr_code = SgrCode::BackgroundAnsi256(AnsiValue::new(150));
-        assert_eq!(sgr_code.to_string(), "\x1b[48:5:150m");
+        assert_eq!(sgr_code.to_string(), "\x1b[48;5;150m");
     }
 
     #[test]
     fn fg_color_rgb() {
         let sgr_code = SgrCode::ForegroundRGB(175, 215, 135);
-        assert_eq!(sgr_code.to_string(), "\x1b[38:2:175:215:135m");
+        assert_eq!(sgr_code.to_string(), "\x1b[38;2;175;215;135m");
     }
 
     #[test]
     fn bg_color_rgb() {
         let sgr_code = SgrCode::BackgroundRGB(175, 215, 135);
-        assert_eq!(sgr_code.to_string(), "\x1b[48:2:175:215:135m");
+        assert_eq!(sgr_code.to_string(), "\x1b[48;2;175;215;135m");
     }
 
     #[test]

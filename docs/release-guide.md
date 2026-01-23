@@ -46,8 +46,8 @@ cargo build; cargo test; cargo doc --no-deps; cargo clippy --fix --allow-dirty -
 cargo readme > README.md
 cargo publish --dry-run --allow-dirty
 git add -A
-git commit -S -m "v0.7.7-tui"
-git tag -a v0.7.7-tui -m "v0.7.7-tui"
+git commit -S -m "v0.7.8-tui"
+git tag -a v0.7.8-tui -m "v0.7.8-tui"
 cargo publish
 git push ; git push --tags # Push tags & commits
 cd ..
@@ -65,8 +65,8 @@ cargo build; cargo test; cargo doc --no-deps; cargo clippy --fix --allow-dirty -
 cargo readme > README.md
 cargo publish --dry-run --allow-dirty
 git add -A
-git commit -S -m "v0.0.25-cmdr"
-git tag -a v0.0.25-cmdr -m "v0.0.25-cmdr"
+git commit -S -m "v0.0.26-cmdr"
+git tag -a v0.0.26-cmdr -m "v0.0.26-cmdr"
 cargo publish
 # TODO: Test release on clean machine with `spawny r3bl-cmdr` (see task/pending/build_infra_spawny.md)
 git push ; git push --tags # Push tags & commits

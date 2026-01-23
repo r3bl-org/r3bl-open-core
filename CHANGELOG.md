@@ -11,6 +11,7 @@
     - [Rust Development Power Tools (2025-03-19)](#rust-development-power-tools-2025-03-19)
     - [Rust Development Power Tools (2024-12-04)](#rust-development-power-tools-2024-12-04)
   - [`r3bl_tui`](#r3bl_tui)
+    - [v0.7.8 (2026-01-23)](#v078-2026-01-23)
     - [v0.7.7 (2026-01-23)](#v077-2026-01-23)
     - [v0.7.6 (2025-08-16)](#v076-2025-08-16)
     - [v0.7.5 (2025-08-15)](#v075-2025-08-15)
@@ -40,6 +41,7 @@
     - [v0.3.2 (2023-03-06)](#v032-2023-03-06)
     - [v0.3.1 (2023-03-06)](#v031-2023-03-06)
   - [`r3bl-cmdr`](#r3bl-cmdr)
+    - [v0.0.26 (2026-01-23)](#v0026-2026-01-23)
     - [v0.0.25 (2026-01-23)](#v0025-2026-01-23)
     - [v0.0.24 (2025-08-16)](#v0024-2025-08-16)
     - [v0.0.23 (2025-08-15)](#v0023-2025-08-15)
@@ -366,6 +368,21 @@ include flexbox-like layouts, CSS-like styling, reactive state management, async
 (non-blocking alternative to POSIX readline), VT100 input/output parsers, and a
 double-buffered compositor optimized for SSH (paints only diffs), and much more. Works on
 Linux, macOS, and Windows. Add to your project with `cargo add r3bl_tui`.
+
+### v0.7.8 (2026-01-23)
+
+**Fixed:**
+
+- **VSCode terminal color rendering:** Changed ANSI escape sequence format from colon-separated
+  (`ESC[38:2:r:g:bm`) to semicolon-separated (`ESC[38;2;r;g;bm`) for universal terminal
+  compatibility. The colon format (ITU-T T.416) is technically correct but not supported by
+  VSCode's xterm.js terminal emulator and many other terminals. The semicolon format (xterm
+  de-facto standard) works everywhere. Our VT100 parser still accepts both formats for maximum
+  compatibility when parsing output from other applications.
+
+- **Glyph font compatibility:** Replaced exotic Unicode glyphs with more universally-supported
+  characters that render correctly across more terminal fonts. Affected glyphs: check marks,
+  fail indicator, pointer, game character, and terminal icon.
 
 ### v0.7.7 (2026-01-23)
 
@@ -1074,6 +1091,15 @@ for developers. Both are currently available as early access preview 🐣. Insta
   support, language-specific syntax highlighting inside fenced code blocks, SSH optimized
   (only repaints what's changed), and a zero-copy gap buffer for responsive editing even
   in large files.
+
+### v0.0.26 (2026-01-23)
+
+**Fixed:**
+
+- **VSCode terminal color rendering:** Colors now display correctly in VSCode's integrated terminal
+  (via updated r3bl_tui v0.7.8 dependency). Previously, colors appeared washed out or missing
+  because VSCode's xterm.js terminal emulator doesn't support the colon-separated ANSI escape
+  sequence format.
 
 ### v0.0.25 (2026-01-23)
 

@@ -2237,7 +2237,7 @@ dependencies = [
 
 [[package]]
 name = "r3bl-cmdr"
-version = "0.0.25"
+version = "0.0.26"
 dependencies = [
  "base64",
  "clap",
@@ -2272,7 +2272,7 @@ dependencies = [
 
 [[package]]
 name = "r3bl_tui"
-version = "0.7.7"
+version = "0.7.8"
 dependencies = [
  "async-stream",
  "chrono",
