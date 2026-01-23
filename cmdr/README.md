@@ -53,9 +53,6 @@ style="color:#2B57FC">t</span><span style="color:#285BFB">y</span>
 - [Run `edi` binary target](#run-edi-binary-target)
 - [Build, run, test tasks](#build-run-test-tasks)
   - [Prerequisites](#prerequisites)
-  - [Binary Development Commands](#binary-development-commands)
-    - [Building and Installing Binaries](#building-and-installing-binaries)
-    - [Testing and Development](#testing-and-development)
     - [Binary Development Features](#binary-development-features)
 
 <!-- /TOC -->
@@ -87,8 +84,6 @@ available as early access preview 🐣.
   - Language-specific syntax highlighting inside fenced code blocks
   - SSH optimized—only repaints what's changed
   - Zero-copy gap buffer for responsive editing even in large files
-
-[`r3bl_tui`]: https://crates.io/crates/r3bl_tui
 
 To install `r3bl-cmdr` on your system, run the following command, assuming you have
 `cargo` on your system:
@@ -218,5 +213,7 @@ For complete development setup and all available commands, see the
 - **Smart log monitoring**: Automatically detects and manages log files from binaries
 - **Docker builds**: Build release binaries in isolated Docker environment
 - **Cross-platform file watching**: Uses inotifywait (Linux) or fswatch (macOS)
+
+[`r3bl_tui`]: https://crates.io/crates/r3bl_tui
 
 License: Apache-2.0

@@ -783,22 +783,22 @@ cd ..
 ```
 **Note:** Only if analytics_schema has changes. Currently at v0.0.3.
 
-### Step 3: Publish r3bl_tui (others depend on this) [WORK_IN_PROGRESS]
+### Step 3: Publish r3bl_tui (others depend on this) [COMPLETE]
 ```bash
 cd tui
 cargo publish --dry-run --allow-dirty   # ✅ DONE
-git add -A && git commit -S -m "v0.7.7-tui"   # ← Next
-git tag -a v0.7.7-tui -m "v0.7.7-tui"
-cargo publish
-git push && git push --tags
+git add -A && git commit -S -m "v0.7.7-tui"   # ✅ DONE
+git tag -a v0.7.7-tui -m "v0.7.7-tui"   # ✅ DONE
+cargo publish   # ✅ DONE
+git push && git push --tags   # ✅ DONE
 cd ..
 ```
 
-### Step 4: Publish r3bl-cmdr (depends on tui)
+### Step 4: Publish r3bl-cmdr (depends on tui) [WORK_IN_PROGRESS]
 ```bash
 cd cmdr
-cargo publish --dry-run --allow-dirty
-git add -A && git commit -S -m "v0.0.25-cmdr"
+cargo publish --dry-run --allow-dirty   # ✅ DONE
+git add -A && git commit -S -m "v0.0.25-cmdr"   # ← Next
 git tag -a v0.0.25-cmdr -m "v0.0.25-cmdr"
 cargo publish
 # Test: cargo install r3bl-cmdr (on clean machine or in Docker)
