@@ -794,23 +794,22 @@ git push && git push --tags   # ✅ DONE
 cd ..
 ```
 
-### Step 4: Publish r3bl-cmdr (depends on tui) [WORK_IN_PROGRESS]
+### Step 4: Publish r3bl-cmdr (depends on tui) [COMPLETE]
 ```bash
 cd cmdr
 cargo publish --dry-run --allow-dirty   # ✅ DONE
-git add -A && git commit -S -m "v0.0.25-cmdr"   # ← Next
-git tag -a v0.0.25-cmdr -m "v0.0.25-cmdr"
-cargo publish
-# Test: cargo install r3bl-cmdr (on clean machine or in Docker)
-git push && git push --tags
+git add -A && git commit -S -m "v0.0.25-cmdr"   # ✅ DONE
+git tag -a v0.0.25-cmdr -m "v0.0.25-cmdr"   # ✅ DONE
+cargo publish   # ✅ DONE
+git push && git push --tags   # ✅ DONE
 cd ..
 ```
 
-### Step 5: Publish r3bl-build-infra (depends on tui) - FIRST RELEASE
+### Step 5: Publish r3bl-build-infra (depends on tui) - FIRST RELEASE 🎉 [WORK_IN_PROGRESS]
 ```bash
 cd build-infra
-cargo publish --dry-run --allow-dirty
-git add -A && git commit -S -m "v0.0.1-build-infra"
+cargo publish --dry-run --allow-dirty   # ✅ DONE
+git add -A && git commit -S -m "v0.0.1-build-infra"   # ← Next
 git tag -a v0.0.1-build-infra -m "v0.0.1-build-infra"
 cargo publish
 # Test: cargo install r3bl-build-infra && cargo rustdoc-fmt --help
