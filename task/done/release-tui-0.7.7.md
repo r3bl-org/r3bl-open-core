@@ -805,23 +805,22 @@ git push && git push --tags   # ✅ DONE
 cd ..
 ```
 
-### Step 5: Publish r3bl-build-infra (depends on tui) - FIRST RELEASE 🎉 [WORK_IN_PROGRESS]
+### Step 5: Publish r3bl-build-infra (depends on tui) - FIRST RELEASE 🎉 [COMPLETE]
 ```bash
 cd build-infra
 cargo publish --dry-run --allow-dirty   # ✅ DONE
-git add -A && git commit -S -m "v0.0.1-build-infra"   # ← Next
-git tag -a v0.0.1-build-infra -m "v0.0.1-build-infra"
-cargo publish
-# Test: cargo install r3bl-build-infra && cargo rustdoc-fmt --help
-git push && git push --tags
+git add -A && git commit -S -m "v0.0.1-build-infra"   # ✅ DONE
+git tag -a v0.0.1-build-infra -m "v0.0.1-build-infra"   # ✅ DONE
+cargo publish   # ✅ DONE
+git push && git push --tags   # ✅ DONE
 cd ..
 ```
 
-### Step 6: Create GitHub Releases
+### Step 6: Create GitHub Releases [COMPLETE]
 For each tag, create a GitHub release at https://github.com/r3bl-org/r3bl-open-core/releases/new:
-- **v0.7.7-tui**: Copy release notes from CHANGELOG.md
-- **v0.0.25-cmdr**: Include `cargo install r3bl-cmdr` instructions
-- **v0.0.1-build-infra**: Include `cargo install r3bl-build-infra` instructions, highlight "Coming Soon" roadmap
+- [x] **v0.7.7-tui**: https://github.com/r3bl-org/r3bl-open-core/releases/tag/v0.7.7-tui
+- [x] **v0.0.25-cmdr**: https://github.com/r3bl-org/r3bl-open-core/releases/tag/v0.0.25-cmdr
+- [x] **v0.0.1-build-infra**: https://github.com/r3bl-org/r3bl-open-core/releases/tag/v0.0.1-build-infra
 
 ### Dependency Chain
 ```

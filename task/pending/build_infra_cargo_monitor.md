@@ -1,37 +1,3 @@
-<!-- START doctoc generated TOC please keep comment here to allow auto update -->
-<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
-
-**Table of Contents** _generated with [DocToc](https://github.com/thlorenz/doctoc)_
-
-- [Task: Implement `cargo monitor` Binary](#task-implement-cargo-monitor-binary)
-  - [Overview](#overview)
-  - [CLI Design](#cli-design)
-    - [Mapping from `check.fish`](#mapping-from-checkfish)
-  - [Architecture](#architecture)
-    - [Module Structure](#module-structure)
-    - [Key Dependencies to Add](#key-dependencies-to-add)
-  - [Implementation Phases](#implementation-phases)
-    - [Phase 1: Core Infrastructure](#phase-1-core-infrastructure)
-    - [Phase 2: Check Runner](#phase-2-check-runner)
-    - [Phase 3: ICE and Stale Cache Detection](#phase-3-ice-and-stale-cache-detection)
-    - [Phase 4: Config Change Detection](#phase-4-config-change-detection)
-    - [Phase 5: Toolchain Validation](#phase-5-toolchain-validation)
-    - [Phase 6: File Watcher](#phase-6-file-watcher)
-    - [Phase 7: Notifications](#phase-7-notifications)
-    - [Phase 8: Terminal UI](#phase-8-terminal-ui)
-    - [Phase 9: Integration and Testing](#phase-9-integration-and-testing)
-  - [Feature Parity Checklist](#feature-parity-checklist)
-  - [Nice-to-Have Enhancements](#nice-to-have-enhancements)
-  - [Implementation Notes](#implementation-notes)
-    - [Cargo Plugin Convention](#cargo-plugin-convention)
-    - [Target Directory Isolation (tmpfs)](#target-directory-isolation-tmpfs)
-    - [Performance Optimizations](#performance-optimizations)
-    - [Async Considerations](#async-considerations)
-  - [Exit Codes](#exit-codes)
-  - [References](#references)
-
-<!-- END doctoc generated TOC please keep comment here to allow auto update -->
-
 # Task: Implement `cargo monitor` Binary
 
 ## Overview

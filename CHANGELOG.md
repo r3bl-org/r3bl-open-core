@@ -361,10 +361,11 @@ following:
 
 ## `r3bl_tui`
 
-A fully async TUI framework for Rust—nothing blocks the main thread. Features include flexbox
-layouts, CSS-like styling, reactive state management, async readline (non-blocking alternative to
-POSIX readline), VT100 input/output parsers, and a double-buffered compositor optimized for SSH
-(paints only diffs). Works on Linux, macOS, and Windows. Add to your project with `cargo add r3bl_tui`.
+A fully async modern TUI framework for Rust (nothing blocks the main thread). Features
+include flexbox-like layouts, CSS-like styling, reactive state management, async readline
+(non-blocking alternative to POSIX readline), VT100 input/output parsers, and a
+double-buffered compositor optimized for SSH (paints only diffs), and much more. Works on
+Linux, macOS, and Windows. Add to your project with `cargo add r3bl_tui`.
 
 ### v0.7.7 (2026-01-23)
 
@@ -1059,8 +1060,20 @@ handle many more corner cases.
 
 ## `r3bl-cmdr`
 
-`r3bl-cmdr` provides TUI applications for developers: `giti` for interactive git workflows and `edi`
-for markdown editing with live preview. Install with `cargo install r3bl-cmdr`.
+`r3bl-cmdr` provides two fully async TUI applications (built on [`r3bl_tui`](#r3bl_tui))
+for developers. Both are currently available as early access preview 🐣. Install with
+`cargo install r3bl-cmdr`.
+
+- 😺 **giti** - An interactive git CLI app designed to give you more confidence and a
+  better experience when working with git. Fully async—never blocks the main thread.
+  Features visual branch selection and streamlined commit workflows.
+
+- 🦜 **edi** - A TUI Markdown editor that lets you edit Markdown files in your terminal in
+  style. Fully async—never blocks the main thread. Features gradient colors, smart
+  terminal capability detection (gracefully degrades), smart list formatting, full emoji
+  support, language-specific syntax highlighting inside fenced code blocks, SSH optimized
+  (only repaints what's changed), and a zero-copy gap buffer for responsive editing even
+  in large files.
 
 ### v0.0.25 (2026-01-23)
 
