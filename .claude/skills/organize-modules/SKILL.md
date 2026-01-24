@@ -102,7 +102,7 @@ pub use internal_parser::*;
 - In test builds: Module is public → tests can access internals
 - In production builds: Module is private → internal implementation detail
 
-**This pattern is frequently used with the `fix-intradoc-links` skill when fixing documentation
+**This pattern is frequently used with the `write-documentation` skill when fixing documentation
 links to private types.**
 
 #### When to Omit the Fallback Branch
@@ -203,7 +203,7 @@ When linking to conditionally public modules in documentation, use the `mod@` pr
 /// [`internal_parser`]: mod@crate::internal_parser
 ```
 
-See the `fix-intradoc-links` skill for complete details on rustdoc links.
+See the `write-documentation` skill for complete details on rustdoc links.
 
 ## Benefits of This Pattern
 
@@ -585,14 +585,14 @@ This skill includes additional reference material:
 
 ## Related Skills
 
-- `write-documentation` - For documenting module organization
-- `fix-intradoc-links` - Uses conditional visibility for linking private types
+- `write-documentation` - For documenting module organization and fixing intra-doc links (uses conditional visibility for linking private types)
 - `run-clippy` - Ensures mod.rs follows patterns
 
 ## Related Commands
 
 No dedicated command, but used by:
 - `/clippy` - Checks module organization as part of code quality
+- `/fix-intradoc-links` - Uses conditional visibility patterns from this skill
 
 ## Related Agents
 

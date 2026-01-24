@@ -940,7 +940,7 @@ Here's a typical productive development workflow setup:
 CARGO_TARGET_DIR=target/vscode code .
 
 # Terminal 2: File watcher with automatic tests
-check.fish --watch-tests # Runs with: CARGO_TARGET_DIR=target/check
+check.fish --watch-test # Runs with: CARGO_TARGET_DIR=target/check
 
 # Terminal 3: Run claude code
 CARGO_TARGET_DIR=target/claude claude
@@ -1124,6 +1124,7 @@ script:
 - **Clean progress output**: Shows stage-by-stage progress without verbose cargo logs
 - **Automatic toolchain validation**: Validates and repairs Rust toolchain before checks
 - **ICE recovery**: Detects and recovers from Internal Compiler Errors automatically
+- **ICE escalation**: On persistent ICE, escalates to `rust-toolchain-update.fish` to find a stable nightly
 - **Continuous operation**: Keeps watching even if checks fail (perfect for iterative development)
 
 **Example output:**
@@ -1171,7 +1172,13 @@ Adjust `DEBOUNCE_SECONDS` in the script if needed.
 ./check.fish --watch
 
 # Or run checks once (manual mode)
-./check.fish
+./check.fish              # Default: tests + doctests + docs
+./check.fish --check      # Fast typecheck only (cargo check)
+./check.fish --build      # Compile only (cargo build)
+./check.fish --clippy     # Lint only (cargo clippy --all-targets)
+./check.fish --test       # Tests + doctests only
+./check.fish --doc        # Docs only (quick, no deps)
+./check.fish --full       # ALL checks + ICE escalation to toolchain update
 ```
 
 #### Option 2: Comprehensive Tmux Dashboard

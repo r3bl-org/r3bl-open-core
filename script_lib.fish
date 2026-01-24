@@ -1516,6 +1516,437 @@ function log_and_print
 end
 
 # ============================================================================
+# Watch Mode Doc Build Utilities
+# ============================================================================
+# Functions for the --watch-doc mode in check.fish.
+# These are extracted for reusability and to simplify the forked subprocess logic.
+#
+# ARCHITECTURE OVERVIEW
+# =====================
+#
+# The watch-doc mode provides fast feedback while eventually reaching a
+# consistent state with correct cross-crate links. It uses a two-tier build
+# system with catch-up mechanisms for changes that occur during builds.
+#
+# Build Types:
+# - Quick build: `cargo doc -p r3bl_tui --no-deps` (~5-7s)
+#   * Fast feedback for doc changes
+#   * Broken cross-crate links (e.g., links to crossterm, tokio don't work)
+#   * Acceptable trade-off: user sees changes quickly, links fixed by full build
+#
+# - Full build: `cargo doc` (~90s)
+#   * Builds all workspace crates AND all dependencies
+#   * All cross-crate links are correct
+#   * Slow, so runs in background while user continues editing
+#
+# WHY BROKEN LINKS IN QUICK BUILD?
+# ================================
+# The `--no-deps` flag tells rustdoc not to document dependencies. This makes
+# the build fast, but rustdoc can't generate correct links to external crates
+# (crossterm, tokio, etc.) because it doesn't know they exist. The resulting
+# HTML contains broken relative links like `href="crossterm"` instead of
+# correct links like `href="../crossterm/index.html"`.
+#
+# The full build (without --no-deps) documents everything, so rustdoc knows
+# about all crates and generates correct cross-crate links.
+#
+# ARCHITECTURE DIAGRAM
+# ====================
+#
+#   File change detected
+#       │
+#       ▼
+#   ┌─────────────────────────────────────────────┐
+#   │ Quick build (~5-7s)                         │
+#   │ • cargo doc -p r3bl_tui --no-deps           │
+#   │ • Fast feedback, broken links OK            │
+#   └─────────────────────────────────────────────┘
+#       │
+#       ├──► Catch-up check (if changes during quick build)
+#       │         └──► Quick build → forks Full build
+#       │
+#       ▼
+#   ┌─────────────────────────────────────────────┐
+#   │ Full build (~90s) [FORKED TO BACKGROUND]    │
+#   │ • cargo doc (all deps)                      │
+#   │ • Fixes all cross-crate links               │
+#   └─────────────────────────────────────────────┘
+#       │
+#       └──► Catch-up check (if changes during full build)
+#                 │
+#                 ▼
+#            Quick build (~5-7s) → forks Full build (~90s)
+#                 │                      │
+#                 ▼                      ▼
+#            [fast feedback]      [fixes links eventually]
+#
+# EVENTUAL CONSISTENCY MODEL
+# ==========================
+# The system forms a cycle: quick → full → (if changes) → quick → full → ...
+#
+# Termination condition: When no source files change during a build, the cycle
+# stops. At this point:
+# - The full build has completed without interruption
+# - All cross-crate links are correct
+# - The docs reflect the latest source code
+#
+# This provides the best of both worlds:
+# - User always gets fast feedback (~5-7s) on their doc changes
+# - Links eventually become correct (after full build completes without changes)
+#
+# BLIND SPOTS
+# ===========
+# While a build is running, inotifywait is not watching for changes. This
+# creates "blind spots" where file changes could be missed:
+#
+# 1. Quick build blind spot (~5-7s):
+#    - Handled by catch-up check using `has_source_changes_since`
+#    - If changes detected: runs another quick build, which forks a full build
+#
+# 2. Full build blind spot (~90s):
+#    - Handled by catch-up check in `run_full_doc_build_task`
+#    - If changes detected: runs quick build (fast feedback), forks another full build
+#
+# STAGING DIRECTORIES
+# ===================
+# Quick and full builds use separate staging directories to avoid conflicts:
+# - Quick staging: /tmp/roc/target/check-doc-staging-quick
+# - Full staging:  /tmp/roc/target/check-doc-staging-full
+# - Serving dir:   /tmp/roc/target/check/doc (what browser loads)
+#
+# Both sync to the same serving directory using rsync. The staging approach
+# prevents users from seeing incomplete docs during a build.
+#
+# RUST MIGRATION NOTES
+# ====================
+# When migrating to Rust, consider:
+# - Use `std::process::Command` for cargo doc invocations
+# - Use `notify` crate for file watching (cross-platform, unlike inotifywait)
+# - Use `tokio::spawn` or threads for background full builds
+# - The catch-up detection can use `std::fs::metadata().modified()`
+# - Consider a message-passing architecture (channels) instead of forking
+# ============================================================================
+
+# Source directories to watch for changes and to check for modifications.
+#
+# This constant defines the directories containing Rust source files that:
+# 1. inotifywait monitors for file changes (triggers build cycles)
+# 2. Catch-up detection scans for recently modified files
+#
+# Keeping this as a single source of truth ensures consistency between
+# the watch loop and catch-up detection.
+#
+# Rust migration: This would be a const Vec<&str> or similar.
+set -g SRC_DIRS cmdr/src analytics_schema/src tui/src
+
+# Checks if source files changed since a given epoch timestamp.
+#
+# PURPOSE:
+# This implements "blind spot" detection. While a build is running, inotifywait
+# is not watching for changes. If a user saves a file during this window, the
+# change would be missed. After each build, we use `find -newermt` to scan for
+# files modified since the build started.
+#
+# ALGORITHM:
+# 1. Receive epoch timestamp from when build started
+# 2. Use `find` with `-newermt "@$epoch"` to find files modified after that time
+# 3. Return 0 (true) if any files found, 1 (false) otherwise
+#
+# Parameters:
+#   $argv[1]: Epoch timestamp (seconds since 1970-01-01, from `date +%s`)
+#
+# Returns:
+#   0 = Changes detected (files were modified during the build)
+#   1 = No changes (safe to consider build results current)
+#
+# Usage:
+#   set -l build_start (date +%s)
+#   # ... build runs for some time ...
+#   if has_source_changes_since $build_start
+#       echo "Files changed during build - need catch-up!"
+#   end
+#
+# Rust migration: Use std::fs::metadata().modified() and compare SystemTime.
+function has_source_changes_since
+    set -l since_epoch $argv[1]
+    set -l changed (find $SRC_DIRS -type f -name "*.rs" -newermt "@$since_epoch" 2>/dev/null)
+    test (count $changed) -gt 0
+end
+
+# Builds quick docs (r3bl_tui only) and syncs to serving directory.
+#
+# PURPOSE:
+# Provides fast feedback (~5-7s) when a user modifies documentation. This is
+# the first build that runs after a file change, giving the user immediate
+# visual feedback on their doc changes.
+#
+# TRADE-OFF: SPEED VS LINK CORRECTNESS
+# This build uses `cargo doc -p r3bl_tui --no-deps` which is fast but produces
+# broken cross-crate links. For example:
+#   - Broken: href="crossterm" (relative path that doesn't exist)
+#   - Correct: href="../crossterm/index.html" (only from full build)
+#
+# This is acceptable because:
+# 1. Every quick build automatically forks a full build
+# 2. The full build will fix all links when it completes
+# 3. User gets fast feedback on their doc content changes
+# 4. Links become correct after ~90s (full build duration)
+#
+# STAGING DIRECTORY:
+# We build into a staging directory, then rsync to serving. This prevents
+# users from seeing incomplete/broken docs during the build process.
+#
+# Parameters:
+#   $argv[1]: Staging directory (e.g., /tmp/roc/target/check-doc-staging-quick)
+#   $argv[2]: Serving directory (e.g., /tmp/roc/target/check/doc)
+#
+# Returns: 0 on success, non-zero on failure
+#
+# Usage:
+#   build_and_sync_quick_docs $CHECK_TARGET_DIR_DOC_STAGING_QUICK $CHECK_TARGET_DIR
+#
+# Rust migration: Use std::process::Command to run cargo doc, then use the
+# `fs_extra` or `walkdir` crate for the sync operation.
+function build_and_sync_quick_docs
+    set -l staging_dir $argv[1]
+    set -l serving_dir $argv[2]
+
+    set -lx CARGO_TARGET_DIR $staging_dir
+    # Fast mode: -p r3bl_tui --no-deps (~5-7s)
+    # Broken cross-crate links OK - full build will fix them soon
+    ionice_wrapper cargo doc -p r3bl_tui --no-deps > /dev/null 2>&1
+    set -l result $status
+
+    if test $result -eq 0
+        mkdir -p "$serving_dir/doc"
+        rsync -a "$staging_dir/doc/" "$serving_dir/doc/"
+    end
+
+    return $result
+end
+
+
+# Builds full docs (with dependencies) and syncs to serving directory.
+#
+# PURPOSE:
+# Produces complete documentation with correct cross-crate links. This build
+# runs `cargo doc` without any flags, which documents:
+# - All workspace crates (r3bl_tui, r3bl_cmdr, r3bl_analytics_schema, etc.)
+# - All dependencies (crossterm, tokio, serde, etc.)
+#
+# LINK CORRECTNESS:
+# Because rustdoc sees all crates, it generates correct cross-crate links:
+#   - Correct: href="../crossterm/index.html"
+#   - Correct: href="../tokio/index.html"
+# These links work because the dependency docs exist in the same doc directory.
+#
+# TIMING:
+# Full builds take ~90 seconds, so they run in a forked background process.
+# The user can continue editing while the full build runs. When it completes,
+# all links become correct.
+#
+# SEPARATE STAGING DIRECTORY:
+# Uses a different staging directory than quick builds to avoid conflicts.
+# Both quick and full builds can be in progress simultaneously without
+# interfering with each other's intermediate files.
+#
+# Parameters:
+#   $argv[1]: Staging directory (e.g., /tmp/roc/target/check-doc-staging-full)
+#   $argv[2]: Serving directory (e.g., /tmp/roc/target/check/doc)
+#
+# Returns: 0 on success, non-zero on failure
+#
+# Usage:
+#   build_and_sync_full_docs $CHECK_TARGET_DIR_DOC_STAGING_FULL $CHECK_TARGET_DIR
+#
+# Rust migration: Run cargo doc via std::process::Command. Consider using
+# --message-format=json for progress reporting.
+function build_and_sync_full_docs
+    set -l staging_dir $argv[1]
+    set -l serving_dir $argv[2]
+
+    set -lx CARGO_TARGET_DIR $staging_dir
+    ionice_wrapper cargo doc > /dev/null 2>&1
+    set -l result $status
+
+    if test $result -eq 0
+        # Ensure serving doc directory exists
+        mkdir -p "$serving_dir/doc"
+        # Sync with -a (archive mode preserves permissions, timestamps)
+        # Note: We don't use --delete here because the quick build patch
+        # that follows will overlay our crates' docs anyway
+        rsync -a "$staging_dir/doc/" "$serving_dir/doc/"
+    end
+
+    return $result
+end
+
+# Waits for file changes using inotifywait with standard options.
+#
+# This wraps inotifywait with the common options used throughout watch mode:
+# - Recursive watching (-r)
+# - Quiet output (-q)
+# - Events: modify, create, delete, move
+#
+# Parameters:
+#   $argv[1]: Timeout in seconds (0 for no timeout, waits forever)
+#   $argv[2...]: Directories/files to watch
+#
+# Returns:
+#   0 = File change detected
+#   1 = Error
+#   2 = Timeout expired (no changes within timeout period)
+#
+# Usage:
+#   # Wait up to 10 seconds for changes
+#   wait_for_file_changes 10 $watch_dirs
+#   if test $status -eq 0
+#       echo "Change detected!"
+#   else if test $status -eq 2
+#       echo "Timeout - no changes"
+#   end
+#
+#   # Wait forever for first change
+#   wait_for_file_changes 0 $watch_dirs
+function wait_for_file_changes
+    set -l timeout_secs $argv[1]
+    set -l watch_targets $argv[2..-1]
+
+    if test $timeout_secs -eq 0
+        # No timeout - wait forever
+        inotifywait -q -r -e modify,create,delete,move \
+            --format '%w%f' $watch_targets >/dev/null 2>&1
+    else
+        # With timeout
+        inotifywait -q -r -t $timeout_secs -e modify,create,delete,move \
+            --format '%w%f' $watch_targets >/dev/null 2>&1
+    end
+    return $status
+end
+
+# Runs the full doc build workflow as a background task.
+#
+# PURPOSE:
+# This is the main orchestrator for full builds. It runs in a forked background
+# process and handles the complete lifecycle:
+# 1. Build full docs (with all dependencies)
+# 2. Sync to serving directory
+# 3. Check for changes that occurred during the ~90s build ("blind spot")
+# 4. If changes: run catch-up quick build, then fork another full build
+# 5. Send desktop notifications at each stage
+#
+# EVENTUAL CONSISTENCY ALGORITHM:
+# ===============================
+# This function implements the "eventual consistency" model:
+#
+#   run_full_doc_build_task:
+#       1. Record start time
+#       2. Run full build (~90s)
+#       3. Sync to serving (links now correct)
+#       4. Check: did files change during build?
+#          - NO:  Done! Docs are current and links are correct.
+#          - YES: Run quick build (fast feedback, ~5-7s)
+#                 Fork ANOTHER full build (recursive call)
+#                 This new full build will eventually fix links.
+#
+# The recursion terminates when a full build completes without any file
+# changes during its execution. At that point:
+# - All docs reflect the latest source code
+# - All cross-crate links are correct
+#
+# WHY QUICK BUILD FOR CATCH-UP (NOT FULL)?
+# ========================================
+# When changes are detected after a full build, we run a quick build first
+# because the user wants fast feedback. Yes, this temporarily breaks links,
+# but:
+# 1. The user sees their changes immediately (~5-7s)
+# 2. We immediately fork another full build to fix links
+# 3. Links become correct again after ~90s
+#
+# The alternative (waiting for another full build) would mean the user waits
+# ~90s to see their changes, which defeats the purpose of watch mode.
+#
+# FORKING MODEL:
+# ==============
+# This function is designed to be called via `fish -c "..." &` which creates
+# a completely independent background process. The parent (watch loop) returns
+# immediately and goes back to watching for file changes.
+#
+# When catch-up detects changes, it forks ANOTHER instance of this function,
+# creating a chain: full → (changes) → quick + fork full → (changes) → ...
+#
+# Parameters:
+#   $argv[1]: Full build staging directory
+#   $argv[2]: Quick build staging directory
+#   $argv[3]: Serving directory (where browser loads from)
+#   $argv[4]: Log file path
+#   $argv[5]: Notification expire time in milliseconds
+#
+# Usage (typically called via fish -c from parent process):
+#   fish -c "
+#       cd $PWD
+#       source script_lib.fish
+#       run_full_doc_build_task \\
+#           $CHECK_TARGET_DIR_DOC_STAGING_FULL \\
+#           $CHECK_TARGET_DIR_DOC_STAGING_QUICK \\
+#           $CHECK_TARGET_DIR \\
+#           $CHECK_LOG_FILE \\
+#           $NOTIFICATION_EXPIRE_MS
+#   " &
+#
+# Rust migration: Use tokio::spawn or std::thread::spawn. Consider using
+# channels (mpsc) for communication instead of forking. The recursive
+# forking could become a loop with proper async/await.
+function run_full_doc_build_task
+    set -l staging_full $argv[1]
+    set -l staging_quick $argv[2]
+    set -l serving_dir $argv[3]
+    set -l log_file $argv[4]
+    set -l notify_expire_ms $argv[5]
+
+    # Capture build start time for catch-up detection
+    set -l full_build_start (date +%s)
+
+    log_and_print $log_file "["(timestamp)"] [bg] 🔨 Full build starting (with deps)..."
+
+    # Build full docs
+    if build_and_sync_full_docs $staging_full $serving_dir
+        log_and_print $log_file "["(timestamp)"] [bg] ✅ Full build done, synced to serving"
+
+        # Catch-up check: did source files change during our ~90s build?
+        if has_source_changes_since $full_build_start
+            log_and_print $log_file "["(timestamp)"] [bg] ⚡ Changes during build, running catch-up..."
+
+            # Run quick build for fast feedback (broken links OK - full build will fix)
+            if build_and_sync_quick_docs $staging_quick $serving_dir
+                log_and_print $log_file "["(timestamp)"] [bg] ✅ Quick catch-up complete!"
+                log_and_print $log_file "["(timestamp)"] [bg] 🔀 Forking another full build to fix links..."
+
+                # Fork another full build to eventually fix the broken links
+                # This creates a cycle: quick build → full build → (if changes) → quick → full...
+                # Eventually, no changes occur during a build, and we reach consistent state.
+                fish -c "
+                    cd $PWD
+                    source script_lib.fish
+                    run_full_doc_build_task $staging_full $staging_quick $serving_dir $log_file $notify_expire_ms
+                " &
+
+                send_system_notification "Watch: Quick Docs Ready ⚡" "r3bl_tui done w/ broken dep links - full build starting" "success" $notify_expire_ms
+            else
+                log_and_print $log_file "["(timestamp)"] [bg] ⚠️ Quick catch-up failed (full docs still available)"
+                send_system_notification "Watch: Full Docs Ready ⚠️" "Full docs built, but catch-up failed" "normal" $notify_expire_ms
+            end
+        else
+            # No changes during build - full docs are already up to date
+            send_system_notification "Watch: Full Docs Built ✅" "All documentation including dependencies built" "success" $notify_expire_ms
+        end
+    else
+        log_and_print $log_file "["(timestamp)"] [bg] ❌ Full build failed!"
+        send_system_notification "Watch: Full Doc Build Failed ❌" "cargo doc failed" "critical" $notify_expire_ms
+    end
+end
+
+# ============================================================================
 # Shared Toolchain Script Functions
 # ============================================================================
 # These functions are shared between rust-toolchain-update.fish and

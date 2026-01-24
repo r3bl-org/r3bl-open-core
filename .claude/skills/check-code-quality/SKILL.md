@@ -12,14 +12,44 @@ description: Run comprehensive Rust code quality checks including compilation, l
 - Before creating pull requests
 - When user says "check code quality", "run quality checks", "make sure code is good", etc.
 
-## Instructions
+## Quick Approach (Recommended)
 
-Run this essential quality checklist in order. These are the core checks that must pass before committing code:
+Run the comprehensive check script which handles everything automatically:
+
+```bash
+./check.fish --full
+```
+
+This runs **all checks** in order: typecheck → build → clippy → tests → doctests → docs
+
+**Benefits of using `check.fish --full`:**
+- **ICE recovery**: Automatically cleans cache and retries on Internal Compiler Errors
+- **Toolchain escalation**: If ICE persists, escalates to `rust-toolchain-update.fish` to find a stable nightly
+- **Config change detection**: Auto-cleans stale artifacts when Cargo.toml or toolchain changes
+- **Performance optimized**: Uses tmpfs, ionice, and parallel jobs for speed
+
+### Other check.fish Commands
+
+For granular control, use individual commands:
+
+| Command | What it runs |
+|:--------|:-------------|
+| `./check.fish --check` | `cargo check` (fast typecheck) |
+| `./check.fish --build` | `cargo build` (compile production) |
+| `./check.fish --clippy` | `cargo clippy --all-targets` (linting) |
+| `./check.fish --test` | `cargo test` + doctests |
+| `./check.fish --doc` | `cargo doc --no-deps` (quick docs) |
+| `./check.fish --full` | All of the above |
+
+## Step-by-Step Approach (Alternative)
+
+If you need more control or want to run checks manually:
 
 ### 1. Fast Typecheck
 
 ```bash
-cargo check
+./check.fish --check
+# or: cargo check
 ```
 
 Quickly verifies the code compiles without generating artifacts.
@@ -27,7 +57,8 @@ Quickly verifies the code compiles without generating artifacts.
 ### 2. Compile Production Code
 
 ```bash
-cargo build
+./check.fish --build
+# or: cargo build
 ```
 
 Ensures production code builds successfully.
@@ -41,12 +72,13 @@ This formats markdown tables and converts inline links to reference-style.
 ### 4. Generate Documentation
 
 ```bash
-cargo doc --no-deps
+./check.fish --doc
+# or: cargo doc --no-deps
 ```
 
 Verify there are no documentation build warnings or errors.
 
-If there are link warnings, invoke the `fix-intradoc-links` skill to resolve them.
+If there are link warnings, use the `/fix-intradoc-links` command to resolve them.
 
 **CRITICAL: Never remove intra-doc links to fix warnings.** When you encounter:
 - Unresolved link to a symbol → Fix the path using `crate::` prefix (see `write-documentation` skill)
@@ -57,35 +89,25 @@ Links provide refactoring safety - `cargo doc` catches stale references. Convert
 
 ### 5. Linting
 
-Invoke the `run-clippy` skill to run clippy and enforce code style standards.
-
-### 6. Compile Test Code
-
 ```bash
-cargo test --no-run
+./check.fish --clippy
+# or invoke the `run-clippy` skill
 ```
 
-Ensures test code compiles without running the tests.
+Runs clippy and enforces code style standards.
 
-### 7. Run All Tests
+### 6. Run All Tests
 
 ```bash
-cargo test --all-targets
+./check.fish --test
+# or: cargo test --all-targets && cargo test --doc
 ```
 
-Runs all tests (unit, integration, etc.) but **does not run doctests**.
+Runs all tests (unit, integration, doctests).
 
 If tests fail, use the Task tool with `subagent_type='test-runner'` to fix failures.
 
-### 8. Run Doctests
-
-```bash
-cargo test --doc
-```
-
-Runs documentation examples to ensure they work correctly.
-
-### 9. Cross-Platform Verification (Optional)
+### 7. Cross-Platform Verification (Optional)
 
 For code with platform-specific `#[cfg]` gates (especially Unix-only code), verify Windows compatibility:
 
@@ -99,6 +121,25 @@ This checks that `#[cfg(unix)]` and `#[cfg(not(unix))]` gates compile correctly 
 - After adding or modifying `#[cfg(unix)]` or `#[cfg(target_os = "...")]` attributes
 - When working on platform-abstraction code
 - Before committing changes to `DirectToAnsi` input handling or other Unix-specific code
+
+## ICE Recovery and Toolchain Escalation
+
+The `./check.fish --full` command includes automatic recovery from Internal Compiler Errors:
+
+```
+ICE detected → cleanup target/ → retry
+                                   ↓
+                            still ICE?
+                                   ↓
+              escalate to rust-toolchain-update.fish
+              (searches 46 nightly candidates, validates each)
+                                   ↓
+                         new stable nightly installed
+                                   ↓
+                               retry checks
+```
+
+This is especially important since we use nightly Rust (for the parallel compiler frontend). Nightly toolchains occasionally have ICE bugs, and this automatic escalation finds a working version.
 
 ## Reporting Results
 
@@ -128,11 +169,10 @@ This skill includes additional reference material:
 
 ## Related Skills
 
-- `write-documentation` - For rustdoc formatting (step 3)
-- `fix-intradoc-links` - For fixing doc link warnings (step 4)
+- `write-documentation` - For rustdoc formatting (step 3) and fixing doc link warnings (step 4)
 - `run-clippy` - For linting and code style (step 5)
 - `analyze-performance` - For optional performance checks
-- `test-runner` agent - For fixing test failures (step 7)
+- `test-runner` agent - For fixing test failures (step 6)
 
 ## Related Commands
 

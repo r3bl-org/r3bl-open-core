@@ -1,3 +1,8 @@
+---
+name: design-philosophy
+description: Core design principles for the codebase - cognitive load, progressive disclosure, type safety, abstraction worth. Use when designing APIs, modules, or data structures.
+---
+
 # Design Philosophy Skill
 
 Apply these principles when writing or reviewing code.

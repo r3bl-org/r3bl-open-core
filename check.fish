@@ -11,10 +11,9 @@
 # 1. Detects config file changes and cleans stale artifacts if needed
 # 2. Validates Rust toolchain installation with all required components
 # 3. Automatically installs/repairs toolchain if issues detected
-# 4. Runs tests using cargo test
-# 5. Runs documentation tests
-# 6. Builds documentation (quick --no-deps for one-off, full with deps for watch)
-# 7. Detects and recovers from Internal Compiler Errors (ICE)
+# 4. Runs requested checks (typecheck, build, clippy, tests, doctests, docs)
+# 5. Detects and recovers from Internal Compiler Errors (ICE)
+# 6. On persistent ICE, escalates to rust-toolchain-update.fish to find stable nightly
 #
 # Config Change Detection:
 # - Active in ALL modes: one-off (--test, --doc, default) and watch modes
@@ -49,21 +48,24 @@
 #   5. Delegates to sync script for fresh reinstall
 # - On sync failure: Shows last 30 lines of output (not silently suppressed)
 #
-# ICE and Stale Cache Detection and Recovery:
-# - Detects two types of compiler corruption that require cache cleanup:
-#   1. ICE (Internal Compiler Error): rustc crashes/panics, exit code 101,
-#      "internal compiler error" in output, or rustc-ice-*.txt dump files
-#   2. Stale cache: corrupted incremental compilation artifacts that cause
-#      bizarre parser errors like "expected item, found `/`" where the `/`
-#      came from corrupted cache data, not actual source code
+# ICE (Internal Compiler Error) Detection and Recovery:
+# - Detects ICE by checking for rustc-ice-*.txt dump files
+#   (rustc creates these files when it crashes)
 # - Recovery process:
-#   1. Detects corruption via pattern matching in cargo output
+#   1. Detects ICE via presence of rustc-ice-*.txt files
 #   2. Removes entire target/ folder (rm -rf target)
-#   3. Removes any rustc-ice-*.txt dump files
+#   3. Removes rustc-ice-*.txt dump files
 #   4. Retries the failed check once
-# - Distinguishes corruption from real code errors by requiring both:
-#   - Parser error with single punctuation token (e.g., `/`, `}`, `]`)
-#   - "could not compile" message (confirms it's a build failure)
+# - If ICE persists after cleanup, escalates to rust-toolchain-update.fish
+#   to find a stable nightly (only in --full mode)
+# - All ICE events are logged to CHECK_LOG_FILE for debugging
+#
+# Logging:
+# - Log file: /tmp/roc/check.log (shared between all modes)
+# - Watch modes: Log is initialized fresh at session start, events appended
+# - One-off modes: Log is appended (preserves history from watch sessions)
+# - Logged events: mode start, check start/pass/fail, ICE detection/cleanup
+# - Log file location is printed at startup for easy access
 #
 # Desktop Notifications:
 # - Success: "Toolchain Installation Complete" (normal urgency)
@@ -73,9 +75,10 @@
 # Single Instance Enforcement (watch modes only):
 # - Only ONE watch mode instance can run at a time
 # - One-off commands (--test, --doc, default) can run concurrently without issues
-# - When entering watch mode, kills any existing check.fish and orphaned inotifywait processes
+# - Uses PID file with liveness check (fish doesn't support bash-style flock FD syntax)
+# - PID file: /tmp/roc/check.fish.pid (checked via /proc/<pid> to detect stale files)
+# - When entering watch mode, kills existing instance and orphaned inotifywait processes
 # - Prevents race conditions where multiple watch instances clean target/check simultaneously
-# - This avoids "couldn't create a temp dir" errors during concurrent watch builds
 #
 # Toolchain Concurrency:
 # - Toolchain installation is delegated to rust-toolchain-sync-to-toml.fish which has its own lock
@@ -128,15 +131,15 @@
 #    "Reset window"   "Reset window"    "Quiet period,
 #                                        dispatch builds!"
 #
-# Example Timeline (Rapid Saves):
+# Example Timeline (Rapid Saves with 1s debounce):
 #   0:00  (idle)              Thread BLOCKED, waiting forever for first event
-#   0:05  User saves file A   Thread UNBLOCKS, starts 10s debounce window
-#   0:08  User saves file B   Window RESET (was 7s remaining, now 10s again)
-#   0:12  User saves file C   Window RESET again
-#   0:22  (10s of quiet)      TIMEOUT! Thread forks builds, returns immediately
-#   0:22  (same instant)      Thread BLOCKED again, waiting for next event
-#   0:44  Quick build done    Notification: "Quick docs ready!" (background)
-#   1:52  Full build done     Notification: "Full docs built!" (background)
+#   0:05  User saves file A   Thread UNBLOCKS, starts 1s debounce window
+#   0:05.3 User saves file B  Window RESET (now 1s again)
+#   0:05.8 User saves file C  Window RESET again
+#   0:06.8 (1s of quiet)      TIMEOUT! Thread forks builds, returns immediately
+#   0:06.8 (same instant)     Thread BLOCKED again, waiting for next event
+#   0:14  Quick build done    Notification: "Quick docs ready!" (background)
+#   1:37  Full build done     Notification: "Full docs built!" (background)
 #
 # Why This Works:
 # - inotifywait does the heavy lifting (efficient kernel-level blocking)
@@ -151,43 +154,62 @@
 # in background until completion).
 #
 # Doc Build Architecture (--watch-doc):
-# Uses a staging → serving pattern with separate directories to prevent race conditions:
+# Uses a two-tier build system with eventual consistency for cross-crate links.
+# See script_lib.fish for detailed documentation of the algorithm.
 #
-#   BLOCKING (main thread)              BACKGROUND (forked process)
-#   ┌─────────────────┐                 ┌─────────────────┐
-#   │  Quick Build    │  completes      │  Full Build     │
-#   │  (--no-deps)    │ ───────────────▶│  (with deps)    │
-#   └────────┬────────┘   then forks    └────────┬────────┘
-#            │                                   │
-#            ▼                                   ▼
-#   ┌─────────────────────────┐       ┌─────────────────────────┐
-#   │ staging-quick/doc/      │       │ staging-full/doc/       │
-#   └────────┬────────────────┘       └────────┬────────────────┘
-#            │ rsync -a                        │ rsync -a --delete (if orphans)
-#            ▼                                 ▼
-#   ┌─────────────────────────────────────────────────────────┐
-#   │                    serving/doc/                         │
-#   │              (browser loads from here)                  │
-#   └─────────────────────────────────────────────────────────┘
+# ARCHITECTURE OVERVIEW:
+#
+#   File change detected
+#       │
+#       ▼
+#   ┌─────────────────────────────────────────────┐
+#   │ Quick build (~5-7s) [BLOCKING]              │
+#   │ • cargo doc -p r3bl_tui --no-deps           │
+#   │ • Fast feedback, broken cross-crate links   │
+#   └─────────────────────────────────────────────┘
+#       │
+#       ├──► Catch-up check (if changes during quick build)
+#       │         └──► Quick build → forks Full build
+#       │
+#       ▼
+#   ┌─────────────────────────────────────────────┐
+#   │ Full build (~90s) [FORKED TO BACKGROUND]    │
+#   │ • cargo doc (all deps)                      │
+#   │ • Fixes all cross-crate links               │
+#   └─────────────────────────────────────────────┘
+#       │
+#       └──► Catch-up check (if changes during full build)
+#                 │
+#                 ▼
+#            Quick build (~5-7s) → forks Full build (~90s)
+#                 │                      │
+#                 ▼                      ▼
+#            [fast feedback]      [fixes links eventually]
+#
+# EVENTUAL CONSISTENCY MODEL:
+# The system forms a cycle: quick → full → (if changes) → quick → full → ...
+# Termination: When no files change during a build, docs are current and correct.
+#
+# WHY BROKEN LINKS IN QUICK BUILD?
+# The --no-deps flag makes builds fast but rustdoc can't resolve cross-crate
+# links (e.g., to crossterm, tokio) because it doesn't know they exist.
+# Full build documents everything, so links become correct.
+#
+# BLIND SPOTS:
+# While a build runs, inotifywait isn't watching. Changes during this window
+# are detected via `find -newermt "@$epoch"` after each build completes.
+#
+# STAGING DIRECTORIES:
+# - staging-quick/doc/ → Quick builds write here
+# - staging-full/doc/  → Full builds write here
+# - serving/doc/       → Browser loads from here (both sync to this)
+# Separate staging prevents race conditions when builds run concurrently.
 #
 # Why Quick Blocks but Full Forks?
 # - Cargo uses a global package cache lock (~/.cargo/.package-cache)
 # - Running both simultaneously causes "Blocking waiting for file lock"
-# - Quick build is fast (~20s), so blocking is acceptable
+# - Quick build is fast (~5-7s), so blocking is acceptable
 # - Full build is slow (~90s), so forking lets user continue editing
-#
-# Why Two Staging Directories?
-# - Full build runs in background while quick build for NEXT change runs
-# - If they shared a staging dir, rsync could fail with "directory has vanished"
-# - Each build writes to its own staging dir, then rsyncs to shared serving dir
-# - Quick builds: rsync -a (no --delete) - preserves dependency docs
-# - Full builds: rsync -a --delete (conditional) - cleans orphans when detected
-#
-# Orphan File Cleanup (full builds only):
-# - Long-running watch sessions accumulate stale docs from renamed/deleted files
-# - Detection: compare file counts - if serving > staging, orphans exist
-# - Cleanup: full builds use --delete flag to remove orphaned files
-# - Quick builds never delete (would wipe dependency docs)
 #
 # Target Directory Auto-Recovery:
 # In addition to debounce, watch mode periodically checks if target/ exists.
@@ -199,10 +221,15 @@
 # - Specific check results shown in output
 #
 # Usage:
-#   ./check.fish              Run all checks once (tests, doctests, docs with deps)
+#   ./check.fish              Run default checks (tests, doctests, docs)
+#   ./check.fish --check      Run typecheck only (cargo check)
+#   ./check.fish --build      Run build only (cargo build)
+#   ./check.fish --clippy     Run clippy only (cargo clippy --all-targets)
 #   ./check.fish --test       Run tests only (cargo test + doctests)
 #   ./check.fish --doc        Build docs only (quick, --no-deps)
-#   ./check.fish --watch      Watch mode: run all checks on file changes
+#   ./check.fish --full       Run ALL checks (check + build + clippy + tests + doctests + docs)
+#                             Includes ICE escalation to rust-toolchain-update.fish
+#   ./check.fish --watch      Watch mode: run default checks on file changes
 #   ./check.fish --watch-test Watch mode: run tests/doctests only
 #   ./check.fish --watch-doc  Watch mode: quick docs first, full docs forked to background
 #   ./check.fish --help       Show detailed help
@@ -214,46 +241,78 @@ source script_lib.fish
 # Single Instance Enforcement (watch modes only)
 # ============================================================================
 
-# Kill any existing check.fish watch mode instances to prevent race conditions.
-# Multiple watch instances sharing target/check can cause build failures when one
-# cleans the directory while another is writing to it.
+# Lock/PID file for single-instance enforcement.
+# Uses PID file with process liveness check - simpler and fish-compatible.
+set -g CHECK_LOCK_FILE /tmp/roc/check.fish.pid
+
+# Acquire exclusive "lock" for watch mode, killing any existing holder.
 #
-# NOTE: Only called when entering watch mode. One-off commands (--test, --doc)
-# can safely run concurrently since they don't loop and don't conflict.
+# Uses a PID file approach that works in fish:
+# 1. Check if PID file exists and that process is still alive
+# 2. If alive: kill it and wait for it to exit
+# 3. Write our PID to the file
 #
-# Uses pgrep to find processes, excludes current process ($$), then kills them.
-# Also kills orphaned inotifywait processes from previous watch mode sessions.
-function kill_existing_instances
-    set -l current_pid $fish_pid
+# Note: Unlike flock, PID files can become stale on SIGKILL. We handle this
+# by checking /proc/<pid> to verify the process is actually alive.
+#
+# Also kills orphaned inotifywait processes from previous sessions.
+function acquire_watch_lock
+    mkdir -p (dirname $CHECK_LOCK_FILE)
 
-    # Find other check.fish processes (exclude current process)
-    set -l other_pids (pgrep -f "check.fish" | grep -v "^$current_pid\$")
+    # Check if another instance is running
+    if test -f $CHECK_LOCK_FILE
+        set -l old_pid (cat $CHECK_LOCK_FILE 2>/dev/null | string trim)
 
-    # Also find any orphaned inotifywait processes from watch mode
-    set -l inotify_pids (pgrep -f "inotifywait.*cmdr/src")
+        if test -n "$old_pid" && test -d "/proc/$old_pid"
+            # Process is alive - kill it
+            echo ""
+            set_color yellow
+            echo "⚠️  Another watch instance running (PID: $old_pid)"
+            echo "🔪 Killing to prevent race conditions..."
+            set_color normal
 
-    # Combine all PIDs to kill
-    set -l all_pids $other_pids $inotify_pids
+            kill $old_pid 2>/dev/null
 
-    if test (count $all_pids) -gt 0
-        echo ""
-        set_color yellow
-        echo "⚠️  Found "(count $all_pids)" existing check.fish instance(s) running"
-        echo "🔪 Killing to prevent race conditions..."
-        set_color normal
+            # Wait for process to exit (up to 5 seconds)
+            set -l waited 0
+            while test -d "/proc/$old_pid" && test $waited -lt 50
+                sleep 0.1
+                set waited (math $waited + 1)
+            end
 
-        for pid in $all_pids
+            if test -d "/proc/$old_pid"
+                echo "❌ Failed to terminate previous instance" >&2
+                return 1
+            end
+
+            echo "✅ Previous instance terminated"
+            echo ""
+        end
+        # else: stale PID file, process already gone - just overwrite
+    end
+
+    # Write our PID
+    echo $fish_pid > $CHECK_LOCK_FILE
+
+    # Clean up any orphaned inotifywait processes
+    kill_orphaned_inotifywait
+
+    return 0
+end
+
+# Kill orphaned inotifywait processes from previous watch mode sessions.
+# These can be left behind if the parent was killed with SIGKILL.
+function kill_orphaned_inotifywait
+    set -l inotify_pids (pgrep -f "inotifywait.*cmdr/src" 2>/dev/null)
+
+    if test (count $inotify_pids) -gt 0
+        for pid in $inotify_pids
             kill $pid 2>/dev/null
         end
-
-        # Give processes time to terminate
-        sleep 0.5
-        echo "✅ Previous instances terminated"
-        echo ""
     end
 end
 
-# NOTE: kill_existing_instances is called only for watch modes (see watch_mode function)
+# NOTE: acquire_watch_lock is called only for watch modes (see watch_mode function)
 # One-off commands (--test, --doc, default) can run concurrently without conflict
 
 # ============================================================================
@@ -264,7 +323,7 @@ end
 # After detecting a file change, waits for this many seconds of "quiet" (no new changes)
 # before running checks. Each new change resets the window, coalescing rapid saves.
 # This handles IDE auto-save, formatters, and "oops forgot to save that file" moments.
-set -g DEBOUNCE_WINDOW_SECS 2
+set -g DEBOUNCE_WINDOW_SECS 1
 
 # Use tmpfs for build artifacts - eliminates disk I/O for massive speedup.
 # /tmp is already tmpfs on most Linux systems (including this one: 46GB).
@@ -321,7 +380,8 @@ set -g NOTIFICATION_EXPIRE_MS 5000
 # ============================================================================
 
 # Parse command line arguments and return the mode
-# Returns: "help", "test", "doc", "watch", "watch-test", "watch-doc", or "normal"
+# Returns: "help", "check", "build", "clippy", "test", "doc", "full",
+#          "watch", "watch-test", "watch-doc", or "normal"
 function parse_arguments
     if test (count $argv) -eq 0
         echo "normal"
@@ -332,6 +392,18 @@ function parse_arguments
         case --help -h
             echo "help"
             return 0
+        case --check
+            echo "check"
+            return 0
+        case --build
+            echo "build"
+            return 0
+        case --clippy
+            echo "clippy"
+            return 0
+        case --full
+            echo "full"
+            return 0
         case --watch -w
             echo "watch"
             return 0
@@ -340,6 +412,9 @@ function parse_arguments
             return 0
         case --watch-doc
             echo "watch-doc"
+            return 0
+        case --kill
+            echo "kill"
             return 0
         case --doc
             echo "doc"
@@ -375,13 +450,18 @@ function show_help
     set_color yellow
     echo "USAGE:"
     set_color normal
-    echo "  ./check.fish              Run all checks once (default)"
-    echo "  ./check.fish --test       Run tests only (once)"
+    echo "  ./check.fish              Run default checks (tests, doctests, docs)"
+    echo "  ./check.fish --check      Run typecheck only (cargo check)"
+    echo "  ./check.fish --build      Run build only (cargo build)"
+    echo "  ./check.fish --clippy     Run clippy only (cargo clippy --all-targets)"
+    echo "  ./check.fish --test       Run tests only (cargo test + doctests)"
     echo "  ./check.fish --doc        Build documentation only (quick, no deps)"
-    echo "  ./check.fish --watch      Watch source files and run all checks on changes"
-    echo "  ./check.fish --watch-test Watch source files and run tests/doctests only"
-    echo "  ./check.fish --watch-doc  Watch source files and run doc build (full with deps)"
+    echo "  ./check.fish --full       Run ALL checks (check + build + clippy + tests + doctests + docs)"
+    echo "  ./check.fish --watch      Watch mode: run default checks on changes"
+    echo "  ./check.fish --watch-test Watch mode: run tests/doctests only"
+    echo "  ./check.fish --watch-doc  Watch mode: run doc build (full with deps)"
     echo "  ./check.fish --help       Show this help message"
+    echo "  ./check.fish --kill       Kill any running watch instances and cleanup"
     echo ""
 
     set_color yellow
@@ -391,22 +471,31 @@ function show_help
     echo "  ✓ Config change detection (auto-cleans stale artifacts)"
     echo "  ✓ Automatic toolchain validation and repair"
     echo "  ✓ Corrupted toolchain detection and recovery (Missing manifest, etc.)"
+    echo "  ✓ ICE escalation to rust-toolchain-update.fish (finds stable nightly)"
     echo "  ✓ Fast tests using cargo test"
     echo "  ✓ Documentation tests (doctests)"
     echo "  ✓ Documentation building"
-    echo "  ✓ ICE and stale cache detection (auto-removes target/, retries once)"
+    echo "  ✓ Blind spot recovery (catch-up build for changes during doc build)"
+    echo "  ✓ ICE detection (auto-removes target/, retries once)"
     echo "  ✓ Desktop notifications on toolchain changes"
     echo "  ✓ Target directory auto-recovery in watch modes"
     echo "  ✓ Orphan doc file cleanup (full builds detect and remove stale files)"
     echo "  ✓ Performance optimizations (tmpfs, ionice, parallel jobs)"
+    echo "  ✓ Comprehensive logging (all modes log to /tmp/roc/check.log)"
+    echo "  ✓ One-off + watch-doc can run simultaneously (no lock contention)"
     echo ""
 
     set_color yellow
     echo "ONE-OFF MODES:"
     set_color normal
-    echo "  (default)     Runs all checks once: tests, doctests, docs (full)"
-    echo "  --test        Runs tests only: cargo test + doctests (once)"
+    echo "  (default)     Runs default checks: tests, doctests, docs"
+    echo "  --check       Runs typecheck only: cargo check (fast compile check)"
+    echo "  --build       Runs build only: cargo build (compile production code)"
+    echo "  --clippy      Runs clippy only: cargo clippy --all-targets (lint warnings)"
+    echo "  --test        Runs tests only: cargo test + doctests"
     echo "  --doc         Builds documentation only (--no-deps, quick check)"
+    echo "  --full        Runs ALL checks: check + build + clippy + tests + doctests + docs"
+    echo "                Includes ICE escalation to rust-toolchain-update.fish"
     echo ""
 
     set_color yellow
@@ -424,6 +513,7 @@ function show_help
     echo ""
     echo "  Doc Builds (--watch-doc):"
     echo "  • Quick build (r3bl_tui only) runs first, blocking (~3-5s)"
+    echo "  • Catch-up: detects files changed during build, rebuilds if needed"
     echo "  • Full build (all crates + deps) then forks to background (~90s)"
     echo "  • Quick docs available immediately, full docs notify when done"
     echo "  • Desktop notification when each build completes"
@@ -515,7 +605,7 @@ function show_help
     echo "     • One-off --doc:  cargo doc --no-deps (quick, your crates only)"
     echo "     • --watch-doc:    Forks both quick + full builds to background"
     echo "     • Other watch:    cargo doc (full, includes dependencies)"
-    echo "  8. On ICE or stale cache: removes target/, retries once"
+    echo "  8. On ICE: removes target/, retries once"
     echo ""
 
     set_color yellow
@@ -643,9 +733,11 @@ end
 function watch_mode
     set -l check_type $argv[1]
 
-    # Kill any existing watch mode instances to prevent race conditions
+    # Acquire exclusive lock, killing any existing watch instance
     # One-off commands can run concurrently, but watch modes conflict
-    kill_existing_instances
+    if not acquire_watch_lock
+        return 1
+    end
 
     # Check for inotifywait
     if not command -v inotifywait >/dev/null 2>&1
@@ -658,8 +750,9 @@ function watch_mode
         return 1
     end
 
-    # Define directories to watch
-    set -l watch_dirs cmdr/src analytics_schema/src tui/src
+    # Use shared SRC_DIRS constant from script_lib.fish
+    # Make a local copy so we can modify it (add config files)
+    set -l watch_dirs $SRC_DIRS
 
     # Verify directories exist
     for dir in $watch_dirs
@@ -741,8 +834,7 @@ function watch_mode
         # Use TARGET_CHECK_INTERVAL_SECS timeout to periodically check if
         # target/ directory was deleted externally (cargo clean, rm -rf, etc.)
 
-        inotifywait -q -r -t $TARGET_CHECK_INTERVAL_SECS -e modify,create,delete,move \
-            --format '%w%f' $watch_dirs >/dev/null 2>&1
+        wait_for_file_changes $TARGET_CHECK_INTERVAL_SECS $watch_dirs
         set -l wait_status $status
 
         # Check if target/ directory is missing (regardless of event or timeout)
@@ -790,8 +882,7 @@ function watch_mode
             # Record window start time for remaining time calculation
             set -l window_start (date +%s.%N)
 
-            inotifywait -q -r -t $DEBOUNCE_WINDOW_SECS -e modify,create,delete,move \
-                --format '%w%f' $watch_dirs >/dev/null 2>&1
+            wait_for_file_changes $DEBOUNCE_WINDOW_SECS $watch_dirs
             set -l debounce_status $status
 
             if test $debounce_status -eq 2
@@ -854,7 +945,7 @@ function run_checks_for_type
     switch $check_type
         case "full"
             # Full checks: all three
-            run_all_checks_with_recovery
+            run_watch_checks
             set -l result $status
 
             if test $result -eq 2
@@ -913,47 +1004,65 @@ function run_checks_for_type
             #
             # Build flow:
             # 1. Run quick build (blocking) → staging-quick → sync to serving → notify
-            # 2. Fork full build            → staging-full  → sync to serving → notify
+            # 2. Check for changes during build (catch-up if needed)
+            # 3. Fork full build → staging-full → sync to serving → patch if needed → notify
+            #
+            # Catch-up mechanism (quick build):
+            # While the quick build runs (~3-5s), inotifywait isn't watching for changes.
+            # If the user saves a file during this "blind spot", the change would be lost.
+            # After the quick build, we use has_source_changes_since to detect changes.
+            #
+            # Catch-up mechanism (full build):
+            # The full build (~90s) also has a blind spot. After syncing dep docs,
+            # run_full_doc_build_task checks for changes and patches with quick docs if needed.
 
             # Step 1: Quick build (BLOCKING - targets only r3bl_tui for fast feedback)
             log_and_print $CHECK_LOG_FILE "["(timestamp)"] 🔨 Quick build starting (r3bl_tui only)..."
 
-            set -lx CARGO_TARGET_DIR $CHECK_TARGET_DIR_DOC_STAGING_QUICK
-            ionice_wrapper cargo doc -p r3bl_tui --no-deps > /dev/null 2>&1
-            set -l quick_result $status
+            # Capture build start time for catch-up detection
+            set -l build_start_epoch (date +%s)
 
-            if test $quick_result -eq 0
-                sync_docs_to_serving quick
+            # Use extracted function for quick build + sync
+            if build_and_sync_quick_docs $CHECK_TARGET_DIR_DOC_STAGING_QUICK $CHECK_TARGET_DIR
                 log_and_print $CHECK_LOG_FILE "["(timestamp)"] 📄 Quick build done!"
                 log_and_print $CHECK_LOG_FILE "    📖 Read the docs at: file://$CHECK_TARGET_DIR/doc/r3bl_tui/index.html"
                 log_and_print $CHECK_LOG_FILE ""
-                send_system_notification "Watch: Quick Docs Ready 📄" "r3bl_tui docs available - full build starting" "success" $NOTIFICATION_EXPIRE_MS
+                send_system_notification "Watch: Quick Docs Ready ⚡" "r3bl_tui done w/ broken dep links - full build starting" "success" $NOTIFICATION_EXPIRE_MS
+
+                # Step 1.5: Catch-up check - did any source files change during the build?
+                # Uses has_source_changes_since from script_lib.fish (checks SRC_DIRS)
+                if has_source_changes_since $build_start_epoch
+                    log_and_print $CHECK_LOG_FILE "["(timestamp)"] ⚡ Files changed during build, catching up..."
+                    if build_and_sync_quick_docs $CHECK_TARGET_DIR_DOC_STAGING_QUICK $CHECK_TARGET_DIR
+                        log_and_print $CHECK_LOG_FILE "["(timestamp)"] 📄 Catch-up build done!"
+                    else
+                        log_and_print $CHECK_LOG_FILE "["(timestamp)"] ⚠️ Catch-up build failed (non-fatal)"
+                    end
+                end
             else
                 log_and_print $CHECK_LOG_FILE "["(timestamp)"] ❌ Quick build failed!"
                 send_system_notification "Watch: Quick Doc Build Failed ❌" "cargo doc -p r3bl_tui failed" "critical" $NOTIFICATION_EXPIRE_MS
-                return $quick_result
+                return 1
             end
 
             # Step 2: Full build (FORKED - runs in background while user continues editing)
+            # Uses run_full_doc_build_task from script_lib.fish which handles:
+            # - Building full docs
+            # - Syncing to serving (deps are always valid)
+            # - Catch-up check for changes during full build
+            # - Patching with quick docs if changes detected
+            # - Desktop notifications
             log_and_print $CHECK_LOG_FILE "["(timestamp)"] 🔀 Forking full build to background..."
 
             fish -c "
                 cd $PWD
                 source script_lib.fish
-
-                log_and_print '$CHECK_LOG_FILE' '['(timestamp)'] [bg] 🔨 Full build starting (with deps)...'
-
-                set -lx CARGO_TARGET_DIR $CHECK_TARGET_DIR_DOC_STAGING_FULL
-                ionice_wrapper cargo doc > /dev/null 2>&1
-
-                if test \$status -eq 0
-                    rsync -a $CHECK_TARGET_DIR_DOC_STAGING_FULL/doc/ $CHECK_TARGET_DIR/doc/
-                    log_and_print '$CHECK_LOG_FILE' '['(timestamp)'] [bg] ✅ Full build done!'
-                    send_system_notification 'Watch: Full Docs Built ✅' 'All documentation including dependencies built' 'success' $NOTIFICATION_EXPIRE_MS
-                else
-                    log_and_print '$CHECK_LOG_FILE' '['(timestamp)'] [bg] ❌ Full build failed!'
-                    send_system_notification 'Watch: Full Doc Build Failed ❌' 'cargo doc failed' 'critical' $NOTIFICATION_EXPIRE_MS
-                end
+                run_full_doc_build_task \
+                    $CHECK_TARGET_DIR_DOC_STAGING_FULL \
+                    $CHECK_TARGET_DIR_DOC_STAGING_QUICK \
+                    $CHECK_TARGET_DIR \
+                    $CHECK_LOG_FILE \
+                    $NOTIFICATION_EXPIRE_MS
             " &
 
             # Return immediately - quick build done, full build running in background
@@ -976,6 +1085,21 @@ end
 #   -n0 = highest priority within the class (range: 0-7, lower = higher priority)
 # This helps when other processes compete for disk I/O during builds.
 
+function check_cargo_check
+    set -lx CARGO_TARGET_DIR $CHECK_TARGET_DIR
+    ionice_wrapper cargo check
+end
+
+function check_cargo_build
+    set -lx CARGO_TARGET_DIR $CHECK_TARGET_DIR
+    ionice_wrapper cargo build
+end
+
+function check_clippy
+    set -lx CARGO_TARGET_DIR $CHECK_TARGET_DIR
+    ionice_wrapper cargo clippy --all-targets
+end
+
 function check_cargo_test
     set -lx CARGO_TARGET_DIR $CHECK_TARGET_DIR
     ionice_wrapper cargo test --all-targets -q
@@ -990,6 +1114,23 @@ end
 # Builds to QUICK staging directory to avoid race conditions with background full builds.
 function check_docs_quick
     set -lx CARGO_TARGET_DIR $CHECK_TARGET_DIR_DOC_STAGING_QUICK
+    ionice_wrapper cargo doc --no-deps
+end
+
+# One-off doc check for normal mode (./check.fish without flags).
+# Builds directly to CHECK_TARGET_DIR to avoid conflicts with --watch-doc's staging dirs.
+# Uses --no-deps for speed since this is just a verification step.
+#
+# Key insight: Normal one-off mode and --watch-doc can run simultaneously because they
+# use different target directories:
+#   - One-off: CHECK_TARGET_DIR (/tmp/roc/target/check)
+#   - Watch-doc: staging dirs (/tmp/roc/target/check-doc-staging-*)
+#
+# Trade-off: During build, the doc folder is temporarily empty (cargo clears it first).
+# This is acceptable for one-off mode since users typically wait for completion before
+# refreshing the browser.
+function check_docs_oneoff
+    set -lx CARGO_TARGET_DIR $CHECK_TARGET_DIR
     ionice_wrapper cargo doc --no-deps
 end
 
@@ -1114,6 +1255,11 @@ function run_check_with_recovery
     echo "["(timestamp)"] ▶️  Running $check_name..."
     set_color normal
 
+    # Log to file (without duplicate timestamp since log_message adds one)
+    if set -q CHECK_LOG_FILE; and test -n "$CHECK_LOG_FILE"
+        echo "["(timestamp)"] ▶️  Running $check_name..." >> $CHECK_LOG_FILE
+    end
+
     # Create temp file for ICE detection (output is suppressed)
     set -l temp_output (mktemp)
 
@@ -1135,16 +1281,27 @@ function run_check_with_recovery
         set_color green
         echo "["(timestamp)"] ✅ $check_name passed ($duration_str)"
         set_color normal
+
+        # Log success to file
+        if set -q CHECK_LOG_FILE; and test -n "$CHECK_LOG_FILE"
+            echo "["(timestamp)"] ✅ $check_name passed ($duration_str)" >> $CHECK_LOG_FILE
+        end
+
         command rm -f $temp_output
         return 0
     end
 
-    # Check for ICE or stale cache - use exit code + temp file check (no string capture needed)
-    # This avoids variable corruption issues while still detecting compiler corruption
+    # Check for ICE (Internal Compiler Error)
     if detect_ice_from_file $exit_code $temp_output
         set_color red
-        echo "🧊 Compiler corruption detected (ICE or stale cache) ($duration_str)"
+        echo "🧊 ICE detected (Internal Compiler Error) ($duration_str)"
         set_color normal
+
+        # Log ICE to file with details
+        if set -q CHECK_LOG_FILE; and test -n "$CHECK_LOG_FILE"
+            echo "["(timestamp)"] 🧊 ICE detected during $check_name ($duration_str)" >> $CHECK_LOG_FILE
+        end
+
         command rm -f $temp_output
         return 2
     end
@@ -1153,6 +1310,12 @@ function run_check_with_recovery
     set_color red
     echo "["(timestamp)"] ❌ $check_name failed ($duration_str)"
     set_color normal
+
+    # Log failure to file
+    if set -q CHECK_LOG_FILE; and test -n "$CHECK_LOG_FILE"
+        echo "["(timestamp)"] ❌ $check_name failed ($duration_str)" >> $CHECK_LOG_FILE
+    end
+
     echo ""
     # Use grep to extract just the relevant error lines (much cleaner than cat)
     # Look for actual error patterns (case-insensitive for FAILED, error:, panicked, etc.)
@@ -1163,16 +1326,23 @@ function run_check_with_recovery
 end
 
 # ============================================================================
-# Level 3: Orchestrator Function
+# Level 3: Orchestrator Functions
 # ============================================================================
 # Composes multiple Level 2 wrappers
 # Aggregates results: ICE > Failure > Success
 #
+# Two variants:
+#   - run_watch_checks: Full docs (for watch "full" mode)
+#   - run_oneoff_checks: Quick docs to CHECK_TARGET_DIR (for one-off mode)
+#
 # Returns:
 #   0 = All checks passed
 #   1 = At least one check failed (not ICE)
-#   2 = At least one check had ICE
-function run_all_checks_with_recovery
+#   2 = At least one check had ICE (caller handles retry)
+
+# Orchestrator for watch "full" mode (--watch).
+# Uses full doc build with dependencies.
+function run_watch_checks
     set -l result_cargo_test 0
     set -l result_doctest 0
     set -l result_docs 0
@@ -1199,21 +1369,57 @@ function run_all_checks_with_recovery
     return 0
 end
 
+# Orchestrator for one-off normal mode (./check.fish without flags).
+# Uses quick docs (--no-deps) built directly to CHECK_TARGET_DIR.
+# This avoids conflicts with --watch-doc which uses staging directories.
+function run_oneoff_checks
+    set -l result_cargo_test 0
+    set -l result_doctest 0
+    set -l result_docs 0
+
+    run_check_with_recovery check_cargo_test "tests"
+    set result_cargo_test $status
+
+    run_check_with_recovery check_doctests "doctests"
+    set result_doctest $status
+
+    # Quick doc build to CHECK_TARGET_DIR (no conflict with watch-doc)
+    run_check_with_recovery check_docs_oneoff "docs"
+    set result_docs $status
+
+    # Aggregate: return 2 if ANY ICE, then 1 if ANY failure, else 0
+    if test $result_cargo_test -eq 2 || test $result_doctest -eq 2 || test $result_docs -eq 2
+        return 2
+    end
+
+    if test $result_cargo_test -ne 0 || test $result_doctest -ne 0 || test $result_docs -ne 0
+        return 1
+    end
+
+    return 0
+end
+
 # ============================================================================
-# Level 4: Top-Level Recovery Function
+# Level 4: Top-Level Recovery Functions
 # ============================================================================
-# Handles ICE recovery with automatic cleanup and retry
-# Single entry point for both one-off and watch modes
+# Handles ICE recovery with automatic cleanup and retry.
+#
+# Two variants:
+#   - run_oneoff_checks_with_ice_recovery: For one-off normal mode (uses quick docs)
+#   - run_watch_checks_with_ice_recovery: For watch "full" mode (uses full docs)
 #
 # Returns:
 #   0 = All checks passed
 #   1 = Checks failed
-function run_checks_with_ice_recovery
+
+# Recovery function for one-off normal mode.
+# Uses run_oneoff_checks (quick docs to CHECK_TARGET_DIR).
+function run_oneoff_checks_with_ice_recovery
     set -l max_retries 1
     set -l retry_count 0
 
     while test $retry_count -le $max_retries
-        run_all_checks_with_recovery
+        run_oneoff_checks
         set -l result $status
 
         # If not ICE, we're done
@@ -1243,6 +1449,163 @@ function run_checks_with_ice_recovery
     return 1
 end
 
+# Recovery function for watch "full" mode (--watch).
+# Uses run_watch_checks (full docs with dependencies).
+function run_watch_checks_with_ice_recovery
+    set -l max_retries 1
+    set -l retry_count 0
+
+    while test $retry_count -le $max_retries
+        run_watch_checks
+        set -l result $status
+
+        # If not ICE, we're done
+        if test $result -ne 2
+            echo ""
+            if test $result -eq 0
+                set_color green --bold
+                echo "["(timestamp)"] ✅ All checks passed!"
+                set_color normal
+            else
+                set_color red --bold
+                echo "["(timestamp)"] ❌ Checks failed"
+                set_color normal
+            end
+            return $result
+        end
+
+        # ICE detected - cleanup and retry
+        cleanup_after_ice
+        set retry_count (math $retry_count + 1)
+    end
+
+    echo ""
+    set_color red --bold
+    echo "["(timestamp)"] ❌ Failed even after ICE recovery"
+    set_color normal
+    return 1
+end
+
+# ============================================================================
+# Level 3b: Full Orchestrator Function (includes clippy)
+# ============================================================================
+# Composes all checks including check, build, and clippy
+# Aggregates results: ICE > Failure > Success
+#
+# Returns:
+#   0 = All checks passed
+#   1 = At least one check failed (not ICE)
+#   2 = At least one check had ICE
+function run_full_checks
+    set -l result_check 0
+    set -l result_build 0
+    set -l result_clippy 0
+    set -l result_cargo_test 0
+    set -l result_doctest 0
+    set -l result_docs 0
+
+    run_check_with_recovery check_cargo_check "typecheck"
+    set result_check $status
+
+    run_check_with_recovery check_cargo_build "build"
+    set result_build $status
+
+    run_check_with_recovery check_clippy "clippy"
+    set result_clippy $status
+
+    run_check_with_recovery check_cargo_test "tests"
+    set result_cargo_test $status
+
+    run_check_with_recovery check_doctests "doctests"
+    set result_doctest $status
+
+    run_check_with_recovery check_docs_full "docs"
+    set result_docs $status
+
+    # Aggregate: return 2 if ANY ICE, then 1 if ANY failure, else 0
+    if test $result_check -eq 2 || test $result_build -eq 2 || test $result_clippy -eq 2 || \
+       test $result_cargo_test -eq 2 || test $result_doctest -eq 2 || test $result_docs -eq 2
+        return 2
+    end
+
+    if test $result_check -ne 0 || test $result_build -ne 0 || test $result_clippy -ne 0 || \
+       test $result_cargo_test -ne 0 || test $result_doctest -ne 0 || test $result_docs -ne 0
+        return 1
+    end
+
+    return 0
+end
+
+# ============================================================================
+# Level 4b: Full Recovery Function with Toolchain Escalation
+# ============================================================================
+# Handles ICE recovery with automatic cleanup, retry, and toolchain update escalation.
+#
+# Escalation flow:
+#   1. ICE detected → cleanup target/ → retry
+#   2. Still ICE? → escalate to rust-toolchain-update.fish (finds working nightly)
+#   3. Retry once more with new toolchain
+#
+# Returns:
+#   0 = All checks passed
+#   1 = Checks failed
+function run_full_checks_with_ice_recovery
+    # First attempt
+    run_full_checks
+    set -l result $status
+
+    # If not ICE, we're done
+    if test $result -ne 2
+        return $result
+    end
+
+    # ICE detected - cleanup and retry
+    echo ""
+    set_color yellow
+    echo "🧊 ICE detected, cleaning target/ and retrying..."
+    set_color normal
+    cleanup_after_ice
+
+    run_full_checks
+    set result $status
+
+    # If not ICE after cleanup, we're done
+    if test $result -ne 2
+        return $result
+    end
+
+    # Still ICE - escalate to toolchain update
+    echo ""
+    set_color yellow --bold
+    echo "═══════════════════════════════════════════════════════"
+    echo "🔧 ICE persists after cache cleanup."
+    echo "   The pinned nightly toolchain may have bugs."
+    echo "   Escalating to rust-toolchain-update.fish to find a stable nightly..."
+    echo "═══════════════════════════════════════════════════════"
+    set_color normal
+    echo ""
+
+    # Run toolchain update to find a working nightly
+    if fish ./rust-toolchain-update.fish
+        echo ""
+        set_color green
+        echo "✅ Toolchain updated successfully. Retrying checks..."
+        set_color normal
+        echo ""
+
+        # Final retry with new toolchain
+        run_full_checks
+        set result $status
+        return $result
+    else
+        echo ""
+        set_color red --bold
+        echo "❌ Toolchain update failed. Cannot recover from ICE."
+        echo "   Check ~/Downloads/rust-toolchain-update.log for details."
+        set_color normal
+        return 1
+    end
+end
 
 # ============================================================================
 # Toolchain Validation Functions
@@ -1442,102 +1805,22 @@ function ensure_toolchain_installed
 end
 
 # ============================================================================
-# ICE and Stale Cache Detection Functions
+# ICE Detection Functions
 # ============================================================================
-# This section detects compiler corruption requiring target/ cleanup.
+# Detects Internal Compiler Errors (ICE) by checking for rustc dump files.
 #
-# Two detection strategies:
-# 1. ICE detection: Look for rustc-ice-*.txt files, exit code 101, or
-#    panic messages like "internal compiler error", "thread 'rustc' panicked"
-# 2. Stale cache detection: Look for parser errors with single punctuation
-#    tokens (e.g., "expected item, found `/`") combined with "could not compile"
+# When rustc crashes, it creates: rustc-ice-YYYY-MM-DDTHH_MM_SS-PID.txt
+# This file-based detection is 100% reliable — no false positives possible.
 #
-# Why stale cache causes these errors:
-# - Incremental compilation caches parsed AST and type info
-# - Corruption (e.g., interrupted build, disk issues) leaves invalid data
-# - Rustc reads corrupted cache, sees garbage bytes as "tokens"
-# - Results in impossible syntax errors that don't exist in source code
+# Note: Detection is only called when cargo commands fail (exit code != 0).
+# If commands succeed, there's no ICE to detect.
 #
 # Recovery is handled by cleanup_after_ice() which removes target/ entirely.
 # ============================================================================
 
-# Helper function to check for ICE or stale cache errors from a file
-# This avoids string variable corruption issues while still detecting issues
-# Usage: detect_ice_from_file EXIT_CODE TEMP_FILE_PATH
-#
-# Detects two categories of compiler corruption:
-# 1. ICE (Internal Compiler Error) - rustc panics/crashes
-# 2. Stale cache errors - corrupted incremental compilation artifacts
-#
-# IMPORTANT: This function must avoid false positives from words containing "ice"
-# as a substring (like "device", "choice", "slice", "service", etc.)
 function detect_ice_from_file
-    set -l exit_code $argv[1]
-    set -l temp_file $argv[2]
-
-    # Most reliable check: look for actual ICE dump files on disk
-    # These are only created by rustc when an actual ICE occurs
     if test (count (find . -maxdepth 1 -name "rustc-ice-*.txt" 2>/dev/null)) -gt 0
         return 0
-    end
-
-    # Secondary check: look for exit code 101 (rustc error indicator) with ICE patterns in file
-    if test $exit_code -eq 101
-        # Check for actual ICE patterns in file content
-        # Be very specific to avoid false positives from words like "device", "choice", "slice"
-        if grep -qi "internal compiler error" $temp_file 2>/dev/null
-            or grep -qi "thread 'rustc' panicked" $temp_file 2>/dev/null
-            or grep -qi "rustc ICE" $temp_file 2>/dev/null
-            or grep -qi "panicked at 'mir_" $temp_file 2>/dev/null
-            return 0
-        end
-    end
-
-    # Stale cache detection: corrupted incremental compilation artifacts
-    # These manifest as parser errors for non-existent syntax issues
-    # Pattern: "expected X, found Y" where Y is a single punctuation character
-    # Example: "expected item, found `/`" (the `/` came from corrupted cache, not source)
-    #
-    # Note: Fish shell treats backticks specially, so we use printf to create
-    # a pattern file with literal backticks for grep to match against.
-    set -l pattern_file (mktemp)
-    printf 'expected.*found \x60[^a-zA-Z0-9]\x60' >$pattern_file
-    if grep -qEf $pattern_file $temp_file 2>/dev/null
-        command rm -f $pattern_file
-        # Verify it's likely cache corruption by checking for "could not compile"
-        # This distinguishes from legitimate syntax errors in user code
-        if grep -qi "could not compile" $temp_file 2>/dev/null
-            return 0
-        end
-    else
-        command rm -f $pattern_file
-    end
-
-    return 1
-end
-
-# Deprecated: detect_ice - use detect_ice_from_file instead
-# Kept for backward compatibility
-function detect_ice
-    set -l exit_code $argv[1]
-    set -l output $argv[2]
-
-    # Most reliable check: look for actual ICE dump files on disk
-    # These are only created by rustc when an actual ICE occurs
-    if test (count (find . -maxdepth 1 -name "rustc-ice-*.txt" 2>/dev/null)) -gt 0
-        return 0
-    end
-
-    # Secondary check: look for exit code 101 (rustc error indicator) with ICE patterns in output
-    if test $exit_code -eq 101
-        # Check for actual ICE patterns in output
-        # Be very specific to avoid false positives from words like "device", "choice", "slice"
-        if string match -qi "*internal compiler error*" -- $output
-            or string match -qi "*thread 'rustc' panicked*" -- $output
-            or string match -qi "*rustc ICE*" -- $output
-            or string match -qi "*panicked at 'mir_*" -- $output
-            return 0
-        end
     end
     return 1
 end
@@ -1604,31 +1887,51 @@ function cleanup_target_folder
     end
 end
 
-# Helper function to run cleanup after ICE or stale cache corruption
+# Helper function to run cleanup after ICE (Internal Compiler Error)
+# Logs ICE events for debugging purposes.
 function cleanup_after_ice
-    echo "🧊 Compiler corruption detected (ICE or stale cache)! Running cleanup..."
+    log_message "🧊 ICE detected! Running cleanup..."
 
-    # Remove ICE dump files
+    # Remove ICE dump files and log their names for debugging
     set -l ice_files (find . -name "rustc-ice-*.txt" 2>/dev/null)
     if test (count $ice_files) -gt 0
-        echo "🗑️  Removing ICE dump files..."
+        log_message "🗑️  Removing "(count $ice_files)" ICE dump file(s):"
+        for ice_file in $ice_files
+            log_message "    - $ice_file"
+        end
         command rm -f rustc-ice-*.txt
     end
 
     # Remove all target folders (build artifacts and caches can become corrupted)
     cleanup_target_folder
 
-    echo "✨ Cleanup complete. Retrying checks..."
+    log_message "✨ Cleanup complete. Retrying checks..."
     echo ""
+end
+
+# Helper function to log messages to both terminal and log file.
+# Ensures log file directory exists and appends to CHECK_LOG_FILE.
+# Falls back to echo-only if CHECK_LOG_FILE is not set.
+function log_message
+    set -l message $argv
+
+    # Always echo to terminal
+    echo $message
+
+    # Also append to log file if CHECK_LOG_FILE is set
+    if set -q CHECK_LOG_FILE; and test -n "$CHECK_LOG_FILE"
+        mkdir -p (dirname $CHECK_LOG_FILE)
+        echo "["(timestamp)"] $message" >> $CHECK_LOG_FILE
+    end
 end
 
 # Deprecated: run_checks
 # REFACTORED into composable architecture
-# Use run_checks_with_ice_recovery instead
+# Use run_oneoff_checks_with_ice_recovery instead
 # Kept for backward compatibility only
 function run_checks
-    echo "⚠️  run_checks is deprecated. Use run_checks_with_ice_recovery" >&2
-    run_checks_with_ice_recovery
+    echo "⚠️  run_checks is deprecated. Use run_oneoff_checks_with_ice_recovery" >&2
+    run_oneoff_checks_with_ice_recovery
 end
 
 # ============================================================================
@@ -1657,6 +1960,140 @@ function main
         case watch-doc
             watch_mode "doc"
             return $status
+        case kill
+            # Kill any running watch instance and cleanup
+            echo "🔪 Killing any running watch instances..."
+
+            # Kill process holding lock file
+            if test -f $CHECK_LOCK_FILE
+                set -l old_pid (cat $CHECK_LOCK_FILE 2>/dev/null | string trim)
+                if test -n "$old_pid" && test -d "/proc/$old_pid"
+                    kill $old_pid 2>/dev/null
+                    echo "   Killed watch process (PID: $old_pid)"
+                else
+                    echo "   No active watch process found"
+                end
+                rm -f $CHECK_LOCK_FILE
+            else
+                echo "   No lock file found"
+            end
+
+            # Kill orphaned inotifywait processes
+            kill_orphaned_inotifywait
+
+            echo "✅ Cleanup complete"
+            return 0
+        case check
+            # Check-only mode: fast typecheck
+            check_config_changed $CHECK_TARGET_DIR $CONFIG_FILES_TO_WATCH
+
+            ensure_toolchain_installed
+            set -l toolchain_status $status
+            if test $toolchain_status -eq 1
+                echo ""
+                echo "❌ Cannot proceed without correct toolchain"
+                return 1
+            end
+
+            echo ""
+            echo "🔍 Running typecheck (cargo check)..."
+            run_check_with_recovery check_cargo_check "typecheck"
+            set -l check_status $status
+
+            if test $check_status -eq 2
+                # ICE detected - cleanup and retry once
+                cleanup_after_ice
+                run_check_with_recovery check_cargo_check "typecheck"
+                set check_status $status
+            end
+
+            return $check_status
+        case build
+            # Build-only mode: compile production code
+            check_config_changed $CHECK_TARGET_DIR $CONFIG_FILES_TO_WATCH
+
+            ensure_toolchain_installed
+            set -l toolchain_status $status
+            if test $toolchain_status -eq 1
+                echo ""
+                echo "❌ Cannot proceed without correct toolchain"
+                return 1
+            end
+
+            echo ""
+            echo "🔨 Building production code (cargo build)..."
+            run_check_with_recovery check_cargo_build "build"
+            set -l build_status $status
+
+            if test $build_status -eq 2
+                # ICE detected - cleanup and retry once
+                cleanup_after_ice
+                run_check_with_recovery check_cargo_build "build"
+                set build_status $status
+            end
+
+            return $build_status
+        case clippy
+            # Clippy-only mode: lint warnings
+            check_config_changed $CHECK_TARGET_DIR $CONFIG_FILES_TO_WATCH
+
+            ensure_toolchain_installed
+            set -l toolchain_status $status
+            if test $toolchain_status -eq 1
+                echo ""
+                echo "❌ Cannot proceed without correct toolchain"
+                return 1
+            end
+
+            echo ""
+            echo "📎 Running clippy (cargo clippy --all-targets)..."
+            run_check_with_recovery check_clippy "clippy"
+            set -l clippy_status $status
+
+            if test $clippy_status -eq 2
+                # ICE detected - cleanup and retry once
+                cleanup_after_ice
+                run_check_with_recovery check_clippy "clippy"
+                set clippy_status $status
+            end
+
+            return $clippy_status
+        case full
+            # Full mode: comprehensive pre-commit check
+            # Runs: check + build + clippy + tests + doctests + docs
+            check_config_changed $CHECK_TARGET_DIR $CONFIG_FILES_TO_WATCH
+
+            ensure_toolchain_installed
+            set -l toolchain_status $status
+            if test $toolchain_status -eq 1
+                echo ""
+                echo "❌ Cannot proceed without correct toolchain"
+                return 1
+            end
+
+            echo ""
+            echo "🚀 Running comprehensive checks (check + build + clippy + tests + doctests + docs)..."
+
+            # Run all checks with ICE recovery
+            run_full_checks_with_ice_recovery
+            set -l full_status $status
+
+            # Send desktop notification for final result
+            if test $full_status -eq 0
+                echo ""
+                set_color green --bold
+                echo "["(timestamp)"] ✅ All comprehensive checks passed!"
+                set_color normal
+                send_system_notification "Full Checks Complete ✅" "check, build, clippy, tests, doctests, docs all passed" "success" $NOTIFICATION_EXPIRE_MS
+            else
+                echo ""
+                set_color red --bold
+                echo "["(timestamp)"] ❌ Some checks failed"
+                set_color normal
+                send_system_notification "Full Checks Failed ❌" "One or more checks failed - see terminal" "critical" $NOTIFICATION_EXPIRE_MS
+            end
+
+            return $full_status
         case doc
             # Docs-only mode: build docs once without watching
             # Check if config files changed (cleans target if needed)
@@ -1759,6 +2196,18 @@ function main
             return $test_status
         case normal
             # Normal mode: run checks once
+            # Initialize log file (append mode - preserves history from watch sessions)
+            mkdir -p (dirname $CHECK_LOG_FILE)
+            log_message ""
+            log_message "═══════════════════════════════════════════════════"
+            log_message "One-off mode started"
+            log_message "═══════════════════════════════════════════════════"
+
+            # Show log file location for debugging
+            set_color brblack
+            echo "Log file: $CHECK_LOG_FILE"
+            set_color normal
+
             # Check if config files changed (cleans target if needed)
             check_config_changed $CHECK_TARGET_DIR $CONFIG_FILES_TO_WATCH
 
@@ -1768,22 +2217,24 @@ function main
             set -l toolchain_status $status
             if test $toolchain_status -eq 1
                 echo ""
-                echo "❌ Cannot proceed without correct toolchain"
+                log_message "❌ Cannot proceed without correct toolchain"
                 return 1
             end
 
             # toolchain_status can be 0 (OK) or 2 (was reinstalled, already printed message)
             echo ""
-            echo "🚀 Running checks..."
+            log_message "🚀 Running checks..."
 
             # Use new composable architecture with automatic ICE recovery
-            run_checks_with_ice_recovery
+            run_oneoff_checks_with_ice_recovery
             set -l check_status $status
 
-            # Send desktop notification for final result
+            # Log and send desktop notification for final result
             if test $check_status -eq 0
+                log_message "✅ All checks passed!"
                 send_system_notification "Build Checks Complete ✅" "All tests, doctests, and docs passed" "success" $NOTIFICATION_EXPIRE_MS
             else
+                log_message "❌ Checks failed"
                 send_system_notification "Build Checks Failed ❌" "One or more checks failed - see terminal" "critical" $NOTIFICATION_EXPIRE_MS
             end
 

@@ -4,6 +4,44 @@ This document provides comprehensive examples of intra-doc link patterns for dif
 
 ---
 
+## Link Source Rubric
+
+When deciding between local intra-doc links vs external URLs, follow this priority order:
+
+| Priority | Source Type | Link Style | Example |
+|----------|-------------|------------|---------|
+| 1 | Code in this monorepo | Local path | `[`Foo`]: crate::module::Foo` |
+| 2 | Dependency in Cargo.toml | Crate path | `[`mio`]: mio` |
+| 3 | OS/CS/hardware terminology | External URL | `[`epoll`]: https://man7.org/...` |
+| 4 | Non-dependency crates | docs.rs URL | `[`some_crate`]: https://docs.rs/some_crate` |
+
+**Key principle:** If it's in your Cargo.toml, use local links. This enables:
+- **Offline docs** — works without internet
+- **Version-matched** — links to the exact version you depend on
+- **Rustdoc-validated** — broken links caught at build time
+
+### Examples
+
+```rust
+// ✅ Good: mio is a dependency, use crate path
+//! [`mio`]: mio
+
+// ❌ Bad: Using docs.rs for a dependency
+//! [`mio`]: https://docs.rs/mio
+
+// ✅ Good: OS concept (not a Rust crate), use external URL
+//! [`epoll`]: https://man7.org/linux/man-pages/man7/epoll.7.html
+
+// ✅ Good: Wikipedia for CS terminology
+//! [Actor]: https://en.wikipedia.org/wiki/Actor_model
+```
+
+> **Note:** This rubric is also in `SKILL.md`. The redundancy is intentional—prioritizing reliable
+> application over efficiency. SKILL.md content loads when the skill triggers (ensuring correct
+> behavior during doc generation), while this file serves as detailed reference for auditing.
+
+---
+
 ## Pattern 1: Basic Symbol Links
 
 ### ✅ Good: Reference-Style Links

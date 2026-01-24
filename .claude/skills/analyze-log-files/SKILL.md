@@ -89,3 +89,7 @@ brew install ansifilter
 
 - `check-code-quality` - For checking Rust code quality (may generate logs)
 - `analyze-performance` - For performance analysis (generates flamegraph data)
+
+## Related Commands
+
+- `/analyze-logs` - Explicitly invokes this skill

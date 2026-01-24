@@ -73,6 +73,19 @@ pub fn some_method(&self) -> Result<()> { /* ... */ }
 3. **Place all link definitions at bottom** of comment block
 4. **Include `()` for functions/methods** - distinguishes from types
 
+### Link Source Priority
+
+When deciding local vs external links, follow this priority:
+
+| Priority | Source | Link Style | Example |
+|----------|--------|------------|---------|
+| 1 | Code in this monorepo | `crate::` path | `[`Foo`]: crate::module::Foo` |
+| 2 | Dependency in Cargo.toml | Crate path | `[`mio`]: mio` |
+| 3 | OS/CS/hardware terms | External URL | `[`epoll`]: https://man7.org/...` |
+| 4 | Non-dependency crates | docs.rs URL | `[`rayon`]: https://docs.rs/rayon` |
+
+**Key principle:** If it's in Cargo.toml, use local links (validated, offline-capable, version-matched).
+
 ### Link All Symbols for Refactoring Safety
 
 **Every codebase symbol in backticks must be a link.** This isn't just style—it's safety.
@@ -192,7 +205,38 @@ For crates that are **not** in your `Cargo.toml`, external links are fine:
 
 Since `rayon` isn't a dependency, there's no local documentation to link to.
 
-**For detailed patterns, see `link-patterns.md` in this skill.**
+#### ✅ OK: External Links for OS/CS/Hardware Terminology
+
+For operating system concepts, computer science terminology, or hardware references that **aren't Rust crates**,
+use external URLs (man pages, Wikipedia, specs):
+
+```rust
+//! Uses [`epoll`] for efficient I/O multiplexing on Linux.
+//! Implements the [`Actor`] pattern for message passing.
+//! Reads from [`stdin`] which is a [`file descriptor`].
+//!
+//! [`epoll`]: https://man7.org/linux/man-pages/man7/epoll.7.html
+//! [`Actor`]: https://en.wikipedia.org/wiki/Actor_model
+//! [`stdin`]: std::io::stdin
+//! [`file descriptor`]: https://en.wikipedia.org/wiki/File_descriptor
+```
+
+**Common external link targets:**
+
+| Type | URL Pattern | Example |
+|------|-------------|---------|
+| Linux syscalls/APIs | `man7.org/linux/man-pages/` | `epoll`, `signalfd`, `io_uring` |
+| BSD APIs | `man.freebsd.org/` | `kqueue` |
+| CS concepts | `en.wikipedia.org/wiki/` | `Actor model`, `Reactor pattern` |
+| Specs/RFCs | Official spec sites | ANSI escape codes, UTF-8 |
+
+**Key distinction:**
+- `mio` (Rust crate in Cargo.toml) → `[`mio`]: mio` (local)
+- `epoll` (Linux kernel API) → `[`epoll`]: https://man7.org/...` (external)
+
+> **Note:** The link source priority is also documented in `link-patterns.md`. This redundancy is
+> intentional—SKILL.md content is loaded when the skill triggers, ensuring reliable application
+> during doc generation. Supporting files require explicit reads and serve as detailed reference.
 
 ---
 
@@ -338,7 +382,7 @@ Before committing documentation:
 
 | File | Content | When to Read |
 |------|---------|--------------|
-| `link-patterns.md` | 15 detailed intra-doc link patterns | Writing links to modules, private types, test functions, section headings |
+| `link-patterns.md` | Link source rubric + 15 detailed patterns | Choosing local vs external links, modules, private types, test functions, fragments |
 | `constant-conventions.md` | Full human-readable constants guide | Writing byte constants, decision guide |
 | `examples.md` | 5 production-quality doc examples | Need to see inverted pyramid in action |
 | `rustdoc-formatting.md` | cargo rustdoc-fmt deep dive | Installing, troubleshooting formatter |

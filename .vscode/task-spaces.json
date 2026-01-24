@@ -340,7 +340,7 @@
       ],
       "taskFile": "task/introduce-resilient-reactor-thread.md",
       "createdAt": 1768407329970,
-      "activeTab": "tui/src/core/resilient_reactor_thread/thread_safe_global_state_manager.rs"
+      "activeTab": "tui/src/core/resilient_reactor_thread/mod.rs"
     }
   ]
 }

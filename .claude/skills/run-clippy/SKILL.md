@@ -99,7 +99,7 @@ If working with rustdoc comments (`///` or `//!`):
 2. **Link placement**: All reference-style links at bottom of comment block
 3. **Table formatting**: Markdown tables properly aligned
 
-If there are issues, invoke the `fix-intradoc-links` skill.
+If there are issues, invoke the `write-documentation` skill (or use `/fix-intradoc-links` command).
 
 ### Step 5: Run Tests if Needed
 
@@ -149,8 +149,7 @@ This skill includes additional reference material:
 
 - `check-code-quality` - Includes clippy as part of full quality checks
 - `organize-modules` - For module organization patterns
-- `fix-intradoc-links` - For rustdoc link formatting
-- `write-documentation` - For comprehensive doc formatting
+- `write-documentation` - For rustdoc link formatting and comprehensive doc formatting
 
 ## Related Commands
 
