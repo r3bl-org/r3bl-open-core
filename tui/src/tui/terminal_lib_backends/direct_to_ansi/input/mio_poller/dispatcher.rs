@@ -13,9 +13,9 @@ use tokio::sync::broadcast::Sender;
 /// Dispatches to the appropriate handler based on the [`Token`], using explicit `tx`.
 ///
 /// This variant is used by [`MioPollWorker`] which implements the generic
-/// [`ThreadWorker`] trait and receives `tx` as a parameter to `poll_once()`.
+/// [`RRTWorker`] trait and receives `tx` as a parameter to `poll_once()`.
 ///
-/// [`ThreadWorker`]: crate::core::resilient_reactor_thread::ThreadWorker
+/// [`RRTWorker`]: crate::core::resilient_reactor_thread::RRTWorker
 pub fn dispatch_with_tx(
     token: Token,
     worker: &mut MioPollWorker,

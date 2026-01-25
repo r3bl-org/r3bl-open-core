@@ -2,24 +2,9 @@
 
 // cspell:words epoll kqueue
 
-//! Shared state container for the Resilient Reactor Thread pattern.
-//!
-//! [`ThreadState`] centralizes:
-//! - Event broadcasting via [`tokio::sync::broadcast`]
-//! - Thread liveness tracking via [`ThreadLiveness`]
-//! - Wake signaling via the [`ThreadWaker`] implementation
-//!
-//! Shared via [`Arc`] between:
-//! - The [`ThreadSafeGlobalState`] singleton (for allocation)
-//! - Each [`SubscriberGuard`] (for wake-on-drop)
-//!
-//! [`Arc`]: std::sync::Arc
-//! [`SubscriberGuard`]: super::SubscriberGuard
-//! [`ThreadLiveness`]: super::ThreadLiveness
-//! [`ThreadSafeGlobalState`]: super::ThreadSafeGlobalState
-//! [`ThreadWaker`]: super::ThreadWaker
+//! Shared state container for the Resilient Reactor Thread pattern. See [`ThreadState`].
 
-use super::{ShutdownDecision, ThreadLiveness, ThreadWaker};
+use super::{RRTWaker, ShutdownDecision, ThreadLiveness};
 use tokio::sync::broadcast::Sender;
 
 /// Capacity of the broadcast channel for events.
@@ -59,7 +44,7 @@ pub const CHANNEL_CAPACITY: usize = 4_096;
 /// 2. On receiver drop: [`SubscriberGuard::drop()`] calls [`waker.wake()`]
 /// 3. Worker checks [`receiver_count()`] → if `0`, exits
 /// 4. Worker's [`Drop`] sets `liveness = Terminated`
-/// 5. On next [`allocate()`]: detects terminated thread → reinitializes
+/// 5. On next [`subscribe()`]: detects terminated thread → reinitializes
 ///
 /// # Waker Lifecycle
 ///
@@ -73,23 +58,23 @@ pub const CHANNEL_CAPACITY: usize = 4_096;
 /// returns. **If the worker's resources are dropped, the waker becomes useless** — it
 /// would signal a mechanism that no longer exists.
 ///
-/// This is why the slow path in [`allocate()`] replaces the entire [`ThreadState`] — the
+/// This is why the slow path in [`subscribe()`] replaces the entire [`ThreadState`] — the
 /// worker resources, waker, and thread must be created together.
 ///
 /// [`Arc`]: std::sync::Arc
 /// [`SubscriberGuard::drop()`]: super::SubscriberGuard
-/// [`allocate()`]: super::ThreadSafeGlobalState::allocate
 /// [`broadcast_tx`]: Self::broadcast_tx
 /// [`epoll`]: https://man7.org/linux/man-pages/man7/epoll.7.html
 /// [`kqueue`]: https://man.freebsd.org/cgi/man.cgi?query=kqueue
 /// [`liveness`]: Self::liveness
 /// [`receiver_count()`]: tokio::sync::broadcast::Sender::receiver_count
-/// [`waker.wake()`]: ThreadWaker::wake
+/// [`subscribe()`]: super::ThreadSafeGlobalState::subscribe
+/// [`waker.wake()`]: RRTWaker::wake
 /// [`waker`]: Self::waker
 #[allow(missing_debug_implementations)]
 pub struct ThreadState<W, E>
 where
-    W: ThreadWaker,
+    W: RRTWaker,
     E: Clone + Send + 'static,
 {
     /// Broadcasts events to async subscribers.
@@ -115,7 +100,7 @@ where
 
 impl<W, E> ThreadState<W, E>
 where
-    W: ThreadWaker,
+    W: RRTWaker,
     E: Clone + Send + 'static,
 {
     /// Creates new thread state with fresh [`ThreadLiveness`] and broadcast channel.

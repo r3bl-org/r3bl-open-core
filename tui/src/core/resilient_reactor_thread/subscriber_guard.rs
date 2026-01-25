@@ -1,20 +1,15 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! [RAII] subscription guard for the Resilient Reactor Thread pattern.
-//!
-//! [`SubscriberGuard`] holds a [`broadcast`] subscription and signals the worker thread
-//! when dropped. This ensures proper cleanup even on [panic] (via [stack unwinding]).
+//! [RAII] subscription guard for the Resilient Reactor Thread pattern. See
+//! [`SubscriberGuard`].
 //!
 //! [RAII]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
-//! [`broadcast`]: tokio::sync::broadcast
-//! [panic]: https://doc.rust-lang.org/std/macro.panic.html
-//! [stack unwinding]: https://doc.rust-lang.org/nomicon/unwinding.html
 
-use super::{ThreadState, ThreadWaker};
+use super::{RRTWaker, ThreadState};
 use std::sync::Arc;
 use tokio::sync::broadcast::Receiver;
 
-/// RAII guard that wakes the worker thread on drop.
+/// [RAII] guard that wakes the worker thread on drop.
 ///
 /// # Purpose
 ///
@@ -41,61 +36,19 @@ use tokio::sync::broadcast::Receiver;
 ///
 /// # Example
 ///
-/// ```no_run
-/// # use r3bl_tui::core::resilient_reactor_thread::*;
-/// # use r3bl_tui::Continuation;
-/// # use tokio::sync::broadcast::Sender;
-/// #
-/// # #[derive(Clone)]
-/// # struct MyEvent;
-/// # #[derive(Debug)]
-/// # struct MyError;
-/// # impl std::fmt::Display for MyError {
-/// #     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result { write!(f, "error") }
-/// # }
-/// # impl std::error::Error for MyError {}
-/// # struct MyWaker;
-/// # impl ThreadWaker for MyWaker {
-/// #     fn wake(&self) -> std::io::Result<()> { Ok(()) }
-/// # }
-/// # struct MyWorker;
-/// # impl ThreadWorker for MyWorker {
-/// #     type Event = MyEvent;
-/// #     fn poll_once(&mut self, _tx: &Sender<Self::Event>) -> Continuation { todo!() }
-/// # }
-/// # struct MyFactory;
-/// # impl ThreadWorkerFactory for MyFactory {
-/// #     type Event = MyEvent;
-/// #     type Worker = MyWorker;
-/// #     type Waker = MyWaker;
-/// #     type SetupError = MyError;
-/// #     fn setup() -> Result<(Self::Worker, Self::Waker), Self::SetupError> { todo!() }
-/// # }
-/// # static GLOBAL: ThreadSafeGlobalState<MyWaker, MyEvent> = ThreadSafeGlobalState::new();
-/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-/// // Get a subscription
-/// let mut guard = GLOBAL.allocate::<MyFactory>()?;
+/// See [`DirectToAnsiInputDevice::next()`] for real usage.
 ///
-/// // Receive events while guard is held
-/// while let Ok(event) = guard.receiver.as_mut().unwrap().recv().await {
-///     // Process event...
-/// }
-///
-/// // When guard drops, worker thread is notified
-/// drop(guard);
-/// # Ok(())
-/// # }
-/// ```
-///
+/// [RAII]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
+/// [`DirectToAnsiInputDevice::next()`]: crate::terminal_lib_backends::direct_to_ansi::input::DirectToAnsiInputDevice::next
 /// [`Sender`]: tokio::sync::broadcast::Sender
 /// [`ThreadState`]: super::ThreadState
 /// [`receiver_count()`]: tokio::sync::broadcast::Sender::receiver_count
 /// [`receiver`]: Self::receiver
-/// [`waker.wake()`]: ThreadWaker::wake
+/// [`waker.wake()`]: RRTWaker::wake
 #[allow(missing_debug_implementations)]
 pub struct SubscriberGuard<W, E>
 where
-    W: ThreadWaker,
+    W: RRTWaker,
     E: Clone + Send + 'static,
 {
     /// The actual broadcast receiver for events.
@@ -115,13 +68,13 @@ where
     ///
     /// [`Arc`]: std::sync::Arc
     /// [`ThreadState`]: super::ThreadState
-    /// [`waker.wake()`]: ThreadWaker::wake
+    /// [`waker.wake()`]: RRTWaker::wake
     pub state: Arc<ThreadState<W, E>>,
 }
 
 impl<W, E> Drop for SubscriberGuard<W, E>
 where
-    W: ThreadWaker,
+    W: RRTWaker,
     E: Clone + Send + 'static,
 {
     /// Drops receiver then wakes thread.

@@ -174,15 +174,15 @@ use std::fmt::Debug;
 /// │ │ TUI app A lifecycle                                                       │ │
 /// │ │                                                                           │ │
 /// │ │  1. DirectToAnsiInputDevice::new()                                        │ │
-/// │ │  2. next() → allocate()                                                   │ │
+/// │ │  2. next() → subscribe()                                                  │ │
 /// │ │  3. SINGLETON is None → initialize_global_input_resource()                │ │
-/// │ │       • Creates ThreadState { tx, liveness: Running }               │ │
+/// │ │       • Creates ThreadState { tx, liveness: Running }                     │ │
 /// │ │       • Spawns mio-poller thread #1                                       │ │
-/// │ │       • thread #1 owns MioPollWorker struct                             │ │
+/// │ │       • thread #1 owns MioPollWorker struct                               │ │
 /// │ │  4. TUI app A runs, receiving events from rx                              │ │
 /// │ │  5. TUI app A exits → device dropped → receiver dropped                   │ │
 /// │ │  6. Thread #1 detects 0 receivers → exits gracefully                      │ │
-/// │ │  7. MioPollWorker::drop() → liveness = Terminated                       │ │
+/// │ │  7. MioPollWorker::drop() → liveness = Terminated                         │ │
 /// │ │                                                                           │ │
 /// │ └───────────────────────────────────────────────────────────────────────────┘ │
 /// │                                                                               │
@@ -190,16 +190,16 @@ use std::fmt::Debug;
 /// │ │ TUI app B lifecycle                                                       │ │
 /// │ │                                                                           │ │
 /// │ │  1. DirectToAnsiInputDevice::new()                                        │ │
-/// │ │  2. next() → allocate()                                                   │ │
+/// │ │  2. next() → subscribe()                                                  │ │
 /// │ │  3. SINGLETON has state, but liveness == Terminated                       │ │
 /// │ │       → needs_init = true → initialize_global_input_resource()            │ │
-/// │ │       • Creates NEW ThreadState { tx, liveness: Running }           │ │
+/// │ │       • Creates NEW ThreadState { tx, liveness: Running }                 │ │
 /// │ │       • Spawns mio-poller thread #2 (NOT the same as #1!)                 │ │
-/// │ │       • thread #2 owns its own MioPollWorker struct                     │ │
+/// │ │       • thread #2 owns its own MioPollWorker struct                       │ │
 /// │ │  4. TUI app B runs, receiving events from rx                              │ │
 /// │ │  5. TUI app B exits → device dropped → receiver dropped                   │ │
 /// │ │  6. Thread #2 detects 0 receivers → exits gracefully                      │ │
-/// │ │  7. MioPollWorker::drop() → liveness = Terminated                       │ │
+/// │ │  7. MioPollWorker::drop() → liveness = Terminated                         │ │
 /// │ │                                                                           │ │
 /// │ └───────────────────────────────────────────────────────────────────────────┘ │
 /// │                                                                               │
@@ -210,7 +210,7 @@ use std::fmt::Debug;
 ///
 /// **Key insight**: The [`mio_poller`] thread is NOT persistent across the lifetime of
 /// the process. Each app lifecycle spawns a new thread. The liveness tracking enables
-/// this by allowing [`allocate()`] to detect when a thread has exited and spawn a new
+/// this by allowing [`subscribe()`] to detect when a thread has exited and spawn a new
 /// one.
 ///
 /// ## Why Keystrokes Aren't Lost During Transitions
@@ -250,7 +250,7 @@ use std::fmt::Debug;
 ///                                │
 /// ┌──────────────────────────────▼───────────────────────────────────────────┐
 /// │ App B starts, calls DirectToAnsiInputDevice::new()                       │
-/// │   • allocate() checks liveness flag                                      │
+/// │   • subscribe() checks liveness flag                                     │
 /// │   • If Running: reuses existing thread (no gap in reading)               │
 /// │   • If Terminated: spawns new thread → reads kernel buffer → no data loss│
 /// └──────────────────────────────────────────────────────────────────────────┘
@@ -262,12 +262,12 @@ use std::fmt::Debug;
 /// a new thread calls [`std::io::stdin()`], it gets a handle to the **same kernel
 /// buffer** containing any unread bytes.
 ///
-/// ## Call Chain to [`allocate()`]
+/// ## Call Chain to [`subscribe()`]
 ///
 /// ```text
 /// DirectToAnsiInputDevice::new()                (input_device.rs)
 ///     │
-///     └─► allocate()                            (input_device.rs)
+///     └─► subscribe()                            (input_device.rs)
 ///             │
 ///             ├─► SINGLETON.lock()
 ///             │
@@ -349,7 +349,7 @@ use std::fmt::Debug;
 /// ```text
 /// ┌───────────────────────────────────────────────────────────────────────────┐
 /// │ 0. DirectToAnsiInputDevice::new() called                                  │
-/// │    └─► allocate() (eager, at construction time)                           │
+/// │    └─► subscribe() (eager, at construction time)                          │
 /// │        └─► If no thread running: spawns mio-poller thread                 │
 /// │                                                                           │
 /// │ 1. next() called                                                          │
@@ -472,7 +472,7 @@ use std::fmt::Debug;
 /// When this device is dropped:
 /// 1. [`super::at_most_one_instance_assert::release()`] is called, allowing a new device
 ///    to be created.
-/// 2. Rust's drop glue drops [`Self::resource_handle`], triggering [`SubscriberGuard`'s
+/// 2. Rust's drop glue drops [`Self::subscriber_guard`], triggering [`SubscriberGuard`'s
 ///    drop behavior] (thread lifecycle protocol).
 ///
 /// For the complete lifecycle diagram including the [race condition] where a fast
@@ -501,7 +501,6 @@ use std::fmt::Debug;
 /// [`TERMINAL_LIB_BACKEND`]: crate::tui::TERMINAL_LIB_BACKEND
 /// [`ThreadState`]: crate::core::resilient_reactor_thread::ThreadState
 /// [`VT100InputEventIR`]: crate::core::ansi::vt_100_terminal_input_parser::VT100InputEventIR
-/// [`allocate()`]: super::input_device_impl::global_input_resource::allocate
 /// [`broadcast`]: tokio::sync::broadcast
 /// [`crossterm`]: crossterm
 /// [`epoll`]: https://man7.org/linux/man-pages/man7/epoll.7.html
@@ -518,6 +517,7 @@ use std::fmt::Debug;
 /// [`std::io::Stdin`]: std::io::Stdin
 /// [`std::io::stdin()`]: std::io::stdin
 /// [`stdin`]: std::io::stdin
+/// [`subscribe()`]: crate::core::resilient_reactor_thread::ThreadSafeGlobalState::subscribe
 /// [`super::at_most_one_instance_assert::release()`]: super::at_most_one_instance_assert::release
 /// [`syscall`]: https://man7.org/linux/man-pages/man2/syscalls.2.html
 /// [`tokio::io::stdin()`]: tokio::io::stdin
@@ -541,7 +541,7 @@ pub struct DirectToAnsiInputDevice {
     /// [`mio_poller`]: crate::direct_to_ansi::input::mio_poller
     /// [`new()`]: Self::new
     /// [`receiver_count()`]: tokio::sync::broadcast::Sender::receiver_count
-    pub resource_handle: InputSubscriberGuard,
+    pub subscriber_guard: InputSubscriberGuard,
 }
 
 impl DirectToAnsiInputDevice {
@@ -579,8 +579,8 @@ impl DirectToAnsiInputDevice {
     pub fn new() -> Self {
         super::at_most_one_instance_assert::claim_and_assert();
         Self {
-            resource_handle: global_input_resource::allocate().expect(
-                "Failed to allocate input device: OS denied resource creation. \
+            subscriber_guard: global_input_resource::SINGLETON.subscribe().expect(
+                "Failed to subscribe to input events: OS denied resource creation. \
                  Check ulimit -n (max open files) or available memory.",
             ),
         }
@@ -605,7 +605,7 @@ impl DirectToAnsiInputDevice {
     /// [`subscribe()`]: Self::subscribe
     #[must_use]
     pub fn subscribe(&self) -> InputSubscriberGuard {
-        global_input_resource::subscribe_to_existing()
+        global_input_resource::SINGLETON.subscribe_to_existing()
     }
 
     /// Read the next input event asynchronously.
@@ -742,11 +742,11 @@ impl DirectToAnsiInputDevice {
     /// [struct-level documentation]: Self
     pub async fn next(&mut self) -> Option<InputEvent> {
         // Receiver was subscribed eagerly in new() - just use it.
-        let res_handle = &mut self.resource_handle;
+        let subscriber_guard = &mut self.subscriber_guard;
 
         // Wait for fully-formed InputEvents through the broadcast channel.
         loop {
-            let poller_rx_result = res_handle
+            let poller_rx_result = subscriber_guard
                 .receiver
                 .as_mut()
                 .expect("PollerEventReceiver is None - this is a bug")
@@ -807,7 +807,7 @@ impl Default for DirectToAnsiInputDevice {
 }
 
 impl Drop for DirectToAnsiInputDevice {
-    /// Clears gate, then Rust drops [`Self::resource_handle`], which triggers
+    /// Clears gate, then Rust drops [`Self::subscriber_guard`], which triggers
     /// [`SubscriberGuard::drop()`]. See [Drop behavior] for full mechanism.
     ///
     /// [Drop behavior]: DirectToAnsiInputDevice#drop-behavior

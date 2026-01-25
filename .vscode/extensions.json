@@ -40,8 +40,10 @@
     "perkovec.emoji", // Emoji.
     "vadimcn.vscode-lldb", // LLDB. Debugger.
     "ms-vscode.cpptools", // C/C++. Debugger.
-    "antfu.icons-carbon", // Carbon Icons "product icon" theme for VSCode panels and UI decorations
     "pkief.material-icon-theme", // Material "file icon" theme for file extension, folder, symbol, etc icons
+    "pkief.material-product-icons", // Material "product icon" theme for activity bar, status bar, etc.
+    "anthropic.claude-code", // Claude Code.
+    "hoovercj.vscode-settings-cycler", // Settings Cycler.
   ],
   // List of extensions that should not be recommended for users of this workspace.
   "unwantedRecommendations": [
@@ -49,7 +51,6 @@
     "ms-vscode-remote.remote-containers", // Remote - Containers.
     "github.vscode-pull-request-github", // Github Pull Requests and Issues.
     "esbenp.prettier-vscode", // [SLOW] Prettier -> very slow for large docs.
-    "pkief.material-product-icons", // Material "product icon" theme -> conflicts w/ Carbon "product icon" theme.
     "alefragnani.bookmarks", // Bookmarks.
     "wayou.vscode-todo-highlight", // Todo Highlight.
     "fabiospampinato.vscode-todo-plus", // Todo+.
@@ -59,7 +60,6 @@
     "huynhduong.nvtokyo-theme", // Tokyo Night NV Theme.
     "ms-azuretools.vscode-containers", // Container tools.
     "ms-azuretools.vscode-docker", // Docker.
-    "hoovercj.vscode-settings-cycler", // Settings Cycler.
     "ms-vscode.vscode-typescript-next", // Typescript Next.
     "compulim.vscode-clock", // Clock.
     "eamodio.gitlens", // GitLens by GitKraken.

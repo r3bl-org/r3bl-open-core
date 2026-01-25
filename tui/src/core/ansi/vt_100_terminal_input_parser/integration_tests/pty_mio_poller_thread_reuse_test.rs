@@ -51,7 +51,8 @@
 
 use crate::{ControlledChild, PtyPair,
             core::resilient_reactor_thread::LivenessState,
-            direct_to_ansi::{DirectToAnsiInputDevice, input::global_input_resource},
+            direct_to_ansi::{DirectToAnsiInputDevice,
+                             input::global_input_resource::SINGLETON},
             generate_pty_test};
 use std::{io::{BufRead, BufReader, Write},
           time::Duration};
@@ -168,13 +169,13 @@ fn controlled_entry_point() -> ! {
 
         // Verify thread is alive and capture generation for later comparison.
         assert_eq!(
-            global_input_resource::is_thread_running(),
+            SINGLETON.is_thread_running(),
             LivenessState::Running,
             "Expected thread_alive = Alive after device A created"
         );
-        let initial_receiver_count = global_input_resource::get_receiver_count();
+        let initial_receiver_count = SINGLETON.get_receiver_count();
         assert_eq!(initial_receiver_count, 1, "Expected receiver_count = 1");
-        let generation_before = global_input_resource::get_thread_generation();
+        let generation_before = SINGLETON.get_thread_generation();
         eprintln!("  ✓ Thread alive, receiver_count = 1, generation = {generation_before}");
 
         // Step 2: Drop device A and IMMEDIATELY create device B.
@@ -201,16 +202,16 @@ fn controlled_entry_point() -> ! {
 
         // Step 3: Verify thread is still alive AND same generation (reused, not relaunched).
         assert_eq!(
-            global_input_resource::is_thread_running(),
+            SINGLETON.is_thread_running(),
             LivenessState::Running,
             "Expected thread_alive = Alive (thread should continue serving device B)"
         );
         assert_eq!(
-            global_input_resource::get_receiver_count(),
+            SINGLETON.get_receiver_count(),
             1,
             "Expected receiver_count = 1 after device B subscribed"
         );
-        let generation_after = global_input_resource::get_thread_generation();
+        let generation_after = SINGLETON.get_thread_generation();
         assert_eq!(
             generation_before, generation_after,
             "Expected same thread generation (reuse, not relaunch). \

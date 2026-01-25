@@ -2,17 +2,17 @@
 
 //! mio-specific waker implementation for the Resilient Reactor Thread pattern.
 //!
-//! [`MioPollWaker`] wraps [`mio::Waker`] and implements [`ThreadWaker`] to integrate with
+//! [`MioPollWaker`] wraps [`mio::Waker`] and implements [`RRTWaker`] to integrate with
 //! the generic RRT infrastructure.
 //!
-//! [`ThreadWaker`]: crate::core::resilient_reactor_thread::ThreadWaker
+//! [`RRTWaker`]: crate::core::resilient_reactor_thread::RRTWaker
 
-use crate::core::resilient_reactor_thread::ThreadWaker;
+use crate::core::resilient_reactor_thread::RRTWaker;
 use mio::Waker;
 
 /// mio-specific waker that interrupts a blocked [`mio::Poll::poll()`] call.
 ///
-/// This newtype wraps [`mio::Waker`] and implements [`ThreadWaker`] for use with the
+/// This newtype wraps [`mio::Waker`] and implements [`RRTWaker`] for use with the
 /// generic RRT infrastructure.
 ///
 /// # How It Works
@@ -28,11 +28,11 @@ use mio::Waker;
 /// that poll's registry. If the poll is dropped, calling [`wake()`] will fail or have no
 /// effect.
 ///
-/// This is why [`ThreadWorkerFactory::setup()`] must create the poll, waker, and worker
+/// This is why [`RRTFactory::create()`] must create the poll, waker, and worker
 /// together — they share an OS-level bond.
 ///
+/// [`RRTFactory::create()`]: crate::core::resilient_reactor_thread::RRTFactory::create
 /// [`ReceiverDropWaker`]: super::SourceKindReady::ReceiverDropWaker
-/// [`ThreadWorkerFactory::setup()`]: crate::core::resilient_reactor_thread::ThreadWorkerFactory::setup
 /// [`mio::Poll::poll()`]: mio::Poll::poll
 /// [`mio::Poll`]: mio::Poll
 /// [`mio::Waker::wake()`]: mio::Waker::wake
@@ -42,7 +42,7 @@ use mio::Waker;
 #[allow(missing_debug_implementations)]
 pub struct MioPollWaker(pub Waker);
 
-impl ThreadWaker for MioPollWaker {
+impl RRTWaker for MioPollWaker {
     /// Wakes the mio poller thread by triggering a wake event.
     ///
     /// This causes the blocked [`mio::Poll::poll()`] call to return, allowing the thread

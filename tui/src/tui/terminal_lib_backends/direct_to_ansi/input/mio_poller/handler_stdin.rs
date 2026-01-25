@@ -24,7 +24,7 @@ pub const STDIN_READ_BUFFER_SIZE: usize = 1_024;
 /// for how interrupted syscalls are handled.
 ///
 /// This variant is used by [`MioPollWorker`] which implements the generic
-/// [`ThreadWorker`] trait and receives `tx` as a parameter.
+/// [`RRTWorker`] trait and receives `tx` as a parameter.
 ///
 /// # Returns
 ///
@@ -34,7 +34,7 @@ pub const STDIN_READ_BUFFER_SIZE: usize = 1_024;
 /// [EINTR Handling]: super#eintr-handling
 /// [`EOF`]: https://en.wikipedia.org/wiki/End-of-file
 /// [`MioPollWorker`]: super::MioPollWorker
-/// [`ThreadWorker`]: crate::core::resilient_reactor_thread::ThreadWorker
+/// [`RRTWorker`]: crate::core::resilient_reactor_thread::RRTWorker
 /// [`VT100InputEventIR`]: crate::core::ansi::vt_100_terminal_input_parser::VT100InputEventIR
 /// [`stdin`]: std::io::stdin
 pub fn consume_stdin_input_with_tx(

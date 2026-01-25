@@ -15,11 +15,11 @@
 //! [`ThreadState`]: super::ThreadState
 //! [process]: https://en.wikipedia.org/wiki/Process_(computing)
 
-use super::{LivenessState, SubscriberGuard, ThreadState, ThreadWaker, ThreadWorker,
-            ThreadWorkerFactory};
+use super::{LivenessState, RRTFactory, RRTWaker, RRTWorker, SubscriberGuard, ThreadState};
 use crate::core::common::Continuation;
 use miette::{Context, IntoDiagnostic, Report};
-use std::sync::{Arc, Mutex};
+use std::{marker::PhantomData,
+          sync::{Arc, Mutex}};
 
 /// Thread-safe global state for a Resilient Reactor Thread.
 ///
@@ -46,8 +46,8 @@ use std::sync::{Arc, Mutex};
 /// effects that can't be "undone."
 ///
 /// Since [`Mutex::new(None)`] **is** a [`const expression`] (just initializes memory
-/// layout), we use [`Option<T>`] to defer the [`syscalls`] until the first [`allocate()`]
-/// call at runtime.
+/// layout), we use [`Option<T>`] to defer the [`syscalls`] until the first
+/// [`subscribe()`] call at runtime.
 ///
 /// ## Replacement On Restart
 ///
@@ -107,8 +107,8 @@ use std::sync::{Arc, Mutex};
 /// | `Foo<'a>`      | No                      | Lifetime parameter implies references |
 ///
 /// For thread spawning, `T: 'static` is required because the spawned thread could outlive
-/// the caller — any borrowed data might become invalid. This is why [`ThreadWaker`],
-/// [`ThreadWorker`], and the `E` (event) type parameter all require `'static`.
+/// the caller — any borrowed data might become invalid. This is why [`RRTWaker`],
+/// [`RRTWorker`], and the `E` (event) type parameter all require `'static`.
 ///
 /// # Poll → Registry → Waker Chain
 ///
@@ -133,117 +133,74 @@ use std::sync::{Arc, Mutex};
 /// # Thread Lifecycle
 ///
 /// Lifecycle states:
-/// - **Inert** (`None`) — until first [`allocate()`] spawns the worker thread
+/// - **Inert** (`None`) — until first [`subscribe()`] spawns the worker thread
 /// - **Active** (`Some`) — while thread is running
 /// - **Dormant** (`Some` with terminated liveness) — when all subscribers drop and thread
 ///   exits
-/// - **Reactivates** — on next [`allocate()`] call (spawns fresh thread, replaces
+/// - **Reactivates** — on next [`subscribe()`] call (spawns fresh thread, replaces
 ///   payload)
 ///
 /// # Usage
 ///
-/// ```no_run
-/// # use r3bl_tui::core::resilient_reactor_thread::*;
-/// # use r3bl_tui::Continuation;
-/// # use tokio::sync::broadcast::Sender;
-/// #
-/// # #[derive(Clone)]
-/// # struct MyEvent;
-/// # #[derive(Debug)]
-/// # struct MyError;
-/// # impl std::fmt::Display for MyError {
-/// #     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result { write!(f, "error") }
-/// # }
-/// # impl std::error::Error for MyError {}
-/// # struct MyWaker;
-/// # impl ThreadWaker for MyWaker {
-/// #     fn wake(&self) -> std::io::Result<()> { Ok(()) }
-/// # }
-/// # struct MyWorker;
-/// # impl ThreadWorker for MyWorker {
-/// #     type Event = MyEvent;
-/// #     fn poll_once(&mut self, _tx: &Sender<Self::Event>) -> Continuation { todo!() }
-/// # }
-/// # struct MyFactory;
-/// # impl ThreadWorkerFactory for MyFactory {
-/// #     type Event = MyEvent;
-/// #     type Worker = MyWorker;
-/// #     type Waker = MyWaker;
-/// #     type SetupError = MyError;
-/// #     fn setup() -> Result<(Self::Worker, Self::Waker), Self::SetupError> { todo!() }
-/// # }
-/// // Define a static global state for your RRT implementation
-/// static GLOBAL: ThreadSafeGlobalState<MyWaker, MyEvent> =
-///     ThreadSafeGlobalState::new();
-///
-/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
-/// // Allocate a subscription (spawns thread if needed)
-/// let guard = GLOBAL.allocate::<MyFactory>()?;
-///
-/// // Query state (for testing/debugging)
-/// let running = GLOBAL.is_thread_running();
-/// let count = GLOBAL.get_receiver_count();
-/// let generation = GLOBAL.get_thread_generation();
-/// # Ok(())
-/// # }
-/// ```
+/// See [`SINGLETON`] for the real implementation used by the terminal input system.
 ///
 /// [`Vec<u8>`]: std::vec::Vec
 /// [`Mutex<Option<Arc<ThreadState<W, E>>>>`]: super::ThreadState
+///
 /// [`Arc::new()`]: std::sync::Arc::new
 /// [`Mutex::new(None)`]: std::sync::Mutex::new
 /// [`Option::replace()`]: std::option::Option::replace
+/// [`RRTWaker`]: super::RRTWaker
+/// [`RRTWorker`]: super::RRTWorker
+/// [`SINGLETON`]: crate::terminal_lib_backends::direct_to_ansi::input::SINGLETON
 /// [`String`]: std::string::String
 /// [`Syscall`]: https://man7.org/linux/man-pages/man2/syscalls.2.html
 /// [`Syscalls`]: https://man7.org/linux/man-pages/man2/syscalls.2.html
 /// [`ThreadState`]: super::ThreadState
-/// [`ThreadWaker`]: super::ThreadWaker
-/// [`ThreadWorker`]: super::ThreadWorker
-/// [`allocate()`]: Self::allocate
 /// [`const expression`]: #const-expression-vs-const-declaration-vs-static-declaration
 /// [`const expressions`]: #const-expression-vs-const-declaration-vs-static-declaration
 /// [`epoll`]: https://man7.org/linux/man-pages/man7/epoll.7.html
 /// [`fd`]: https://en.wikipedia.org/wiki/File_descriptor
-/// [`kqueue`]: https://man.freebsd.org/cgi/man.cgi?query=kqueue
 /// [`mio::Poll::new()`]: mio::Poll::new
 /// [`mio::Poll`]: mio::Poll
 /// [`mio::Waker::new()`]: mio::Waker::new
+/// [`subscribe()`]: Self::subscribe
 /// [`syscall`]: https://man7.org/linux/man-pages/man2/syscalls.2.html
 /// [`syscalls`]: https://man7.org/linux/man-pages/man2/syscalls.2.html
 #[allow(missing_debug_implementations)]
-pub struct ThreadSafeGlobalState<W, E>
+pub struct ThreadSafeGlobalState<F>
 where
-    W: ThreadWaker,
-    E: Clone + Send + 'static,
+    F: RRTFactory + Sync,
+    F::Waker: RRTWaker,
+    F::Event: Clone + Send + Sync + 'static,
 {
-    inner: Mutex<Option<Arc<ThreadState<W, E>>>>,
+    inner: Mutex<Option<Arc<ThreadState<F::Waker, F::Event>>>>,
+    /// Zero-sized marker that "uses" the factory type `F` at compile time.
+    ///
+    /// This allows the struct to be parameterized by `F` without storing any `F` data.
+    /// The factory is only used in [`subscribe()`] via `F::create()`.
+    ///
+    /// [`subscribe()`]: Self::subscribe
+    _factory: PhantomData<F>,
 }
 
-impl<W, E> ThreadSafeGlobalState<W, E>
+impl<F> ThreadSafeGlobalState<F>
 where
-    W: ThreadWaker,
-    E: Clone + Send + 'static,
+    F: RRTFactory + Sync,
+    F::Waker: RRTWaker,
+    F::Event: Clone + Send + Sync + 'static,
 {
     /// Creates a new uninitialized global state.
     ///
-    /// This is a `const fn` so it can be used in `static` declarations:
+    /// This is a `const fn` so it can be used in `static` declarations.
+    /// See [`SINGLETON`] for a real usage example.
     ///
-    /// ```no_run
-    /// # use r3bl_tui::core::resilient_reactor_thread::{ThreadSafeGlobalState, ThreadWaker};
-    /// #
-    /// # struct MyWaker;
-    /// # impl ThreadWaker for MyWaker {
-    /// #     fn wake(&self) -> std::io::Result<()> { Ok(()) }
-    /// # }
-    /// # #[derive(Clone)]
-    /// # struct MyEvent;
-    /// static GLOBAL: ThreadSafeGlobalState<MyWaker, MyEvent> =
-    ///     ThreadSafeGlobalState::new();
-    /// ```
+    /// [`SINGLETON`]: crate::terminal_lib_backends::direct_to_ansi::input::SINGLETON
     #[must_use]
     pub const fn new() -> Self {
         Self {
             inner: Mutex::new(None),
+            _factory: PhantomData,
         }
     }
 
@@ -272,28 +229,20 @@ where
     /// thread is feeding events into its broadcast channel. We must **replace
     /// everything**:
     /// - New [`ThreadState`] (fresh broadcast channel + liveness tracker + waker)
-    /// - New worker resources (via [`ThreadWorkerFactory::setup()`])
+    /// - New worker resources (via [`RRTFactory::create()`])
     /// - New thread (spawned to serve the new subscriber)
-    ///
-    /// # Type Parameters
-    ///
-    /// - `F`: The [`ThreadWorkerFactory`] implementation that creates the worker and
-    ///   waker
     ///
     /// # Errors
     ///
     /// Returns an error if:
-    /// - [`ThreadWorkerFactory::setup()`] fails (OS resource creation failed)
+    /// - [`RRTFactory::create()`] fails (OS resource creation failed)
     /// - The mutex is poisoned (another thread panicked while holding the lock)
     /// - Thread spawning fails (system thread limits)
     ///
+    /// [`RRTFactory::create()`]: RRTFactory::create
     /// [`ThreadState`]: super::ThreadState
-    /// [`ThreadWorkerFactory::setup()`]: ThreadWorkerFactory::setup
     /// [`receiver_count()`]: tokio::sync::broadcast::Sender::receiver_count
-    pub fn allocate<F>(&self) -> Result<SubscriberGuard<W, E>, Report>
-    where
-        F: ThreadWorkerFactory<Waker = W, Event = E>,
-    {
+    pub fn subscribe(&self) -> Result<SubscriberGuard<F::Waker, F::Event>, Report> {
         let mut guard = self
             .inner
             .lock()
@@ -307,9 +256,8 @@ where
         // SLOW PATH: Thread terminated (or never started) → create new everything.
         if !apply_fast_path_thread_reuse {
             // Create worker and waker together (solves chicken-egg problem).
-            let (worker, waker) = F::setup()
-                .into_diagnostic()
-                .context("Failed to setup worker thread resources")?;
+            let (worker, waker) =
+                F::create().context("Failed to create worker thread resources")?;
 
             // Create new ThreadState with the waker.
             let thread_state = Arc::new(ThreadState::new(waker));
@@ -415,18 +363,18 @@ where
     /// # Panics
     ///
     /// - If the mutex is poisoned
-    /// - If no thread exists yet (call [`allocate()`] first)
+    /// - If no thread exists yet (call [`subscribe()`] first)
     ///
-    /// [`allocate()`]: Self::allocate
-    pub fn subscribe_to_existing(&self) -> SubscriberGuard<W, E> {
+    /// [`subscribe()`]: Self::subscribe
+    pub fn subscribe_to_existing(&self) -> SubscriberGuard<F::Waker, F::Event> {
         let guard = self.inner.lock().expect(
             "ThreadSafeGlobalState mutex poisoned: another thread panicked while \
              holding this lock.",
         );
 
         let thread_state = guard.as_ref().expect(
-            "subscribe_to_existing() called before allocate(). \
-             Allocate first, then subscribe.",
+            "subscribe_to_existing() called before subscribe(). \
+             Subscribe first to create the thread, then add more subscribers.",
         );
 
         SubscriberGuard {
@@ -436,63 +384,51 @@ where
     }
 }
 
-impl<W, E> Default for ThreadSafeGlobalState<W, E>
+impl<F> Default for ThreadSafeGlobalState<F>
 where
-    W: ThreadWaker,
-    E: Clone + Send + 'static,
+    F: RRTFactory + Sync,
+    F::Waker: RRTWaker,
+    F::Event: Clone + Send + Sync + 'static,
 {
     fn default() -> Self { Self::new() }
 }
 
+/// RAII guard that calls [`mark_terminated()`] when the worker loop exits.
+///
+/// [`mark_terminated()`]: super::ThreadLiveness::mark_terminated
+struct TerminationGuard<W, E>
+where
+    W: RRTWaker,
+    E: Clone + Send + 'static,
+{
+    state: Arc<ThreadState<W, E>>,
+}
+
+impl<W, E> Drop for TerminationGuard<W, E>
+where
+    W: RRTWaker,
+    E: Clone + Send + 'static,
+{
+    fn drop(&mut self) { self.state.liveness.mark_terminated(); }
+}
+
 /// Runs the worker's poll loop until it returns [`Continuation::Stop`].
 ///
-/// Called from the spawned worker thread. When the loop exits, marks the thread as
-/// terminated so the next [`allocate()`] call knows to spawn a new thread.
+/// Called from the spawned worker thread. When the loop exits, [`TerminationGuard`]
+/// calls [`mark_terminated()`] so the next [`subscribe()`] call knows to spawn a new
+/// thread.
 ///
-/// # Panic Safety
-///
-/// Uses a guard pattern to ensure [`mark_terminated()`] is called even if the worker
-/// panics. This is critical for proper thread lifecycle management — if a panic occurs,
-/// the next [`allocate()`] call must detect the terminated thread and spawn a new one.
-///
-/// [`allocate()`]: ThreadSafeGlobalState::allocate
 /// [`mark_terminated()`]: super::ThreadLiveness::mark_terminated
+/// [`subscribe()`]: ThreadSafeGlobalState::subscribe
 fn run_worker_loop<W, E>(
-    mut worker: impl ThreadWorker<Event = E>,
+    mut worker: impl RRTWorker<Event = E>,
     tx: tokio::sync::broadcast::Sender<E>,
     state: Arc<ThreadState<W, E>>,
 ) where
-    W: ThreadWaker,
+    W: RRTWaker,
     E: Clone + Send + 'static,
 {
-    // Guard ensures mark_terminated is called even on panic (stack unwinding).
-    struct TerminationGuard<W, E>
-    where
-        W: ThreadWaker,
-        E: Clone + Send + 'static,
-    {
-        state: Arc<ThreadState<W, E>>,
-    }
-
-    impl<W, E> Drop for TerminationGuard<W, E>
-    where
-        W: ThreadWaker,
-        E: Clone + Send + 'static,
-    {
-        fn drop(&mut self) { self.state.liveness.mark_terminated(); }
-    }
-
     let _guard = TerminationGuard { state };
-
     while worker.poll_once(&tx) == Continuation::Continue {}
     // _guard dropped here (or during unwinding), calling mark_terminated()
-}
-
-// SAFETY: ThreadSafeGlobalState uses Mutex internally for synchronization.
-// The W and E type parameters have Send/Sync bounds enforced by ThreadWaker trait.
-unsafe impl<W, E> Sync for ThreadSafeGlobalState<W, E>
-where
-    W: ThreadWaker,
-    E: Clone + Send + 'static,
-{
 }

@@ -26,29 +26,23 @@
 
 use super::{channel_types::PollerEvent,
             mio_poller::{MioPollWaker, MioPollWorkerFactory}};
-use crate::core::resilient_reactor_thread::{LivenessState, SubscriberGuard,
-                                            ThreadSafeGlobalState};
-use miette::Report;
+use crate::core::resilient_reactor_thread::{SubscriberGuard, ThreadSafeGlobalState};
 
 /// Type alias for the input device's subscriber guard.
 ///
-/// This is the RAII guard returned by [`allocate()`] and [`subscribe_to_existing()`].
-/// Holding this guard keeps you subscribed to input events; dropping it triggers the
-/// cleanup protocol that may cause the thread to exit.
+/// This is the RAII guard returned by [`SINGLETON.subscribe()`] and
+/// [`SINGLETON.subscribe_to_existing()`]. Holding this guard keeps you subscribed to
+/// input events; dropping it triggers the cleanup protocol that may cause the thread to
+/// exit.
 ///
-/// [`allocate()`]: global_input_resource::allocate
-/// [`subscribe_to_existing()`]: global_input_resource::subscribe_to_existing
+/// [`SINGLETON.subscribe()`]: global_input_resource::SINGLETON
+/// [`SINGLETON.subscribe_to_existing()`]: global_input_resource::SINGLETON
 pub type InputSubscriberGuard = SubscriberGuard<MioPollWaker, PollerEvent>;
 
-/// Operations on the process-global input resource singleton.
-///
-/// This module encapsulates the global [`SINGLETON`] static and provides all operations
-/// on it. The singleton is `pub` for doc links, but callers should use these functions
-/// rather than accessing it directly.
+/// Process-global input resource singleton.
 ///
 /// See [`ThreadState`] for what the singleton holds when active.
 ///
-/// [`SINGLETON`]: global_input_resource::SINGLETON
 /// [`ThreadState`]: crate::core::resilient_reactor_thread::ThreadState
 pub mod global_input_resource {
     #[allow(clippy::wildcard_imports)]
@@ -56,20 +50,17 @@ pub mod global_input_resource {
 
     /// **Static container** (lives for process lifetime) that holds a
     /// [`ThreadState`] **payload** (ephemeral, follows thread lifecycle). The payload is
-    /// created when [`allocate()`] spawns a thread, and removed when the thread exits.
+    /// created when [`subscribe()`] spawns a thread, and removed when the thread exits.
     ///
     /// Lifecycle states:
-    /// - **Inert** (`None`) until [`allocate()`] spawns the poller thread
+    /// - **Inert** (`None`) until [`subscribe()`] spawns the poller thread
     /// - **Active** (`Some`) while thread is running
     /// - **Dormant** (`Some` with terminated liveness) when all [`SubscriberGuard`]s
     ///   drop and thread exits
-    /// - **Reactivates** on next [`allocate()`] call (spawns fresh thread, replaces
+    /// - **Reactivates** on next [`subscribe()`] call (spawns fresh thread, replaces
     ///   payload)
     ///
     /// This is NOT "allocate once, lives forever" — supports full restart cycles.
-    ///
-    /// Use the functions in this module ([`allocate()`], [`is_thread_running()`], etc.)
-    /// rather than accessing this directly.
     ///
     /// See [`ThreadState`] for what the payload contains when active.
     ///
@@ -83,7 +74,14 @@ pub mod global_input_resource {
     ///
     /// # Usage
     ///
-    /// - Use [`allocate()`] to subscribe to input events & signals.
+    /// ```ignore
+    /// use crate::direct_to_ansi::input::global_input_resource::SINGLETON;
+    ///
+    /// let subscriber_guard = SINGLETON.subscribe()?;
+    /// let running = SINGLETON.is_thread_running();
+    /// let count = SINGLETON.get_receiver_count();
+    /// ```
+    ///
     /// - See [Architecture] for why global state is necessary.
     /// - See [`MioPollWorker`] for worker details.
     ///
@@ -91,173 +89,9 @@ pub mod global_input_resource {
     /// [`MioPollWorker`]: super::super::mio_poller::MioPollWorker
     /// [`SubscriberGuard`]: crate::core::resilient_reactor_thread::SubscriberGuard
     /// [`ThreadState`]: crate::core::resilient_reactor_thread::ThreadState
-    /// [`allocate()`]: allocate
-    /// [`is_thread_running()`]: is_thread_running
-    pub static SINGLETON: ThreadSafeGlobalState<MioPollWaker, PollerEvent> =
+    /// [`subscribe()`]: ThreadSafeGlobalState::subscribe
+    pub static SINGLETON: ThreadSafeGlobalState<MioPollWorkerFactory> =
         ThreadSafeGlobalState::new();
-
-    /// Subscribe your async consumer to the global input resource, in order to receive
-    /// input events.
-    ///
-    /// The global `static` singleton [`SINGLETON`] contains one
-    /// [`broadcast::Sender`]. This channel acts as a bridge between the sync
-    /// [`MioPollWorker`] and the many async consumers. We don't need to capture the
-    /// broadcast channel itself in the singleton, only the sender, since it is trivial
-    /// to create new receivers from it.
-    ///
-    /// # Returns
-    ///
-    /// A new [`SubscriberGuard`] that independently receives all input events and
-    /// resize signals.
-    ///
-    /// # Multiple Async Consumers
-    ///
-    /// Each caller gets their own receiver via [`broadcast::Sender::subscribe()`]. Here
-    /// are examples of callers:
-    /// - TUI app that receives all input events.
-    /// - Logger receives all input events (independently).
-    /// - Debug recorder receives all input events (independently).
-    ///
-    /// # Thread Spawning
-    ///
-    /// On first call, this spawns the [`mio`] poller thread via the RRT infrastructure
-    /// which uses [`mio::Poll`] to wait on both [`stdin`] data and [`SIGWINCH`] signals.
-    /// See the [Thread Lifecycle] section in [`ThreadState`] for details on thread
-    /// lifetime and exit conditions.
-    ///
-    /// # Two Allocation Paths
-    ///
-    /// | Condition                | Path          | What Happens                            |
-    /// | ------------------------ | ------------- | --------------------------------------- |
-    /// | `liveness == Running`    | **Fast path** | Reuse existing thread + [`ThreadState`] |
-    /// | `liveness == Terminated` | **Slow path** | Replace all, spawn new thread           |
-    ///
-    /// ## Fast Path (Thread Reuse)
-    ///
-    /// If the thread is still running, we **reuse everything**:
-    /// - Same [`ThreadState`] (same broadcast channel, same liveness tracker)
-    /// - Same [`mio::Poll`] + [`Waker`] (still registered, still valid)
-    /// - Same thread (continues serving the new subscriber)
-    ///
-    /// This handles the [race condition] where a new subscriber appears before the
-    /// thread checks [`receiver_count()`]. See [`ThreadState`] for complete
-    /// documentation on [The Inherent Race Condition] and [Why Thread Reuse Is Safe].
-    ///
-    /// ## Slow Path (Thread Restart)
-    ///
-    /// If the thread has terminated, the existing [`ThreadState`] is **orphaned**
-    /// — no thread is feeding events into its broadcast channel. We must **replace
-    /// everything**:
-    /// - New [`ThreadState`] (fresh broadcast channel + liveness tracker + waker)
-    /// - New [`mio::Poll`] (old one was dropped with old thread)
-    /// - New thread (spawned to serve the new subscriber)
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if:
-    /// 1. Worker setup fails (OS resource creation failed).
-    /// 2. Thread spawning fails (system thread limits).
-    /// 3. The [`SINGLETON`] mutex is poisoned.
-    ///
-    /// [The Inherent Race Condition]: crate::core::resilient_reactor_thread::ThreadState#the-inherent-race-condition
-    /// [Thread Lifecycle]: crate::core::resilient_reactor_thread#thread-lifecycle
-    /// [Why Thread Reuse Is Safe]: crate::core::resilient_reactor_thread::ThreadState#why-thread-reuse-is-safe
-    /// [`MioPollWorker`]: super::super::mio_poller::MioPollWorker
-    /// [`SIGWINCH`]: signal_hook::consts::SIGWINCH
-    /// [`SINGLETON`]: SINGLETON
-    /// [`SubscriberGuard`]: crate::core::resilient_reactor_thread::SubscriberGuard
-    /// [`ThreadState`]: crate::core::resilient_reactor_thread::ThreadState
-    /// [`Waker`]: mio::Waker
-    /// [`broadcast::Sender::subscribe()`]: tokio::sync::broadcast::Sender::subscribe
-    /// [`broadcast::Sender`]: tokio::sync::broadcast::Sender
-    /// [`mio::Poll`]: mio::Poll
-    /// [`receiver_count()`]: tokio::sync::broadcast::Sender::receiver_count
-    /// [`stdin`]: std::io::stdin
-    /// [race condition]: crate::core::resilient_reactor_thread::ThreadState#the-inherent-race-condition
-    pub fn allocate() -> Result<InputSubscriberGuard, Report> {
-        SINGLETON.allocate::<MioPollWorkerFactory>()
-    }
-
-    /// Checks if the [`mio_poller`] thread is currently running.
-    ///
-    /// This is useful for testing thread lifecycle behavior and debugging.
-    ///
-    /// # Returns
-    ///
-    /// - [`LivenessState::Running`] if the thread is running.
-    /// - [`LivenessState::Terminated`] if [`SINGLETON`] is uninitialized or the thread
-    ///   has exited.
-    ///
-    /// See [Device Lifecycle] in [`DirectToAnsiInputDevice`] for details on how threads
-    /// spawn and exit.
-    ///
-    /// [Device Lifecycle]: crate::DirectToAnsiInputDevice#device-lifecycle
-    /// [`DirectToAnsiInputDevice`]: crate::DirectToAnsiInputDevice
-    /// [`mio_poller`]: crate::direct_to_ansi::input::mio_poller
-    #[must_use]
-    pub fn is_thread_running() -> LivenessState { SINGLETON.is_thread_running() }
-
-    /// Queries how many receivers are subscribed to the input broadcast channel.
-    ///
-    /// This is useful for testing thread lifecycle behavior and debugging.
-    ///
-    /// # Returns
-    ///
-    /// The number of active receivers, or `0` if [`SINGLETON`] is uninitialized.
-    ///
-    /// The [`mio_poller`] thread exits gracefully when this count reaches `0` (all
-    /// receivers dropped). See [Device Lifecycle] in [`DirectToAnsiInputDevice`] for
-    /// details.
-    ///
-    /// [Device Lifecycle]: crate::DirectToAnsiInputDevice#device-lifecycle
-    /// [`DirectToAnsiInputDevice`]: crate::DirectToAnsiInputDevice
-    /// [`mio_poller`]: crate::direct_to_ansi::input::mio_poller
-    #[must_use]
-    pub fn get_receiver_count() -> usize { SINGLETON.get_receiver_count() }
-
-    /// Returns the current thread generation number.
-    ///
-    /// Each time a new [`mio_poller`] thread is spawned, the generation increments. This
-    /// allows tests to verify whether a thread was reused or relaunched:
-    ///
-    /// - **Same generation**: Thread was reused (device B subscribed before thread
-    ///   exited).
-    /// - **Different generation**: Thread was relaunched (a new thread was spawned).
-    ///
-    /// # Returns
-    ///
-    /// The current generation number, or `0` if [`SINGLETON`] is uninitialized.
-    ///
-    /// See [Device Lifecycle] in [`DirectToAnsiInputDevice`] for details on thread
-    /// spawn/exit/relaunch.
-    ///
-    /// [Device Lifecycle]: crate::DirectToAnsiInputDevice#device-lifecycle
-    /// [`DirectToAnsiInputDevice`]: crate::DirectToAnsiInputDevice
-    /// [`mio_poller`]: crate::direct_to_ansi::input::mio_poller
-    #[must_use]
-    pub fn get_thread_generation() -> u8 { SINGLETON.get_thread_generation() }
-
-    /// Subscribe to input events from an existing thread.
-    ///
-    /// This is a lightweight operation that creates a new subscriber to the existing
-    /// broadcast channel. Use this for additional consumers (logging, debugging, etc.)
-    /// after a [`DirectToAnsiInputDevice`] has been created.
-    ///
-    /// When the returned handle is dropped, it notifies the [`mio_poller`] thread to
-    /// check if it should exit (when all subscribers are dropped, the thread exits).
-    ///
-    /// # Panics
-    ///
-    /// - If the [`SINGLETON`] mutex is poisoned (another thread panicked while holding
-    ///   the lock).
-    /// - If no device exists yet. Call [`allocate`] first.
-    ///
-    /// [`DirectToAnsiInputDevice`]: crate::DirectToAnsiInputDevice
-    /// [`mio_poller`]: super::super::mio_poller
-    #[must_use]
-    pub fn subscribe_to_existing() -> InputSubscriberGuard {
-        SINGLETON.subscribe_to_existing()
-    }
 }
 
 /// Comprehensive testing is performed in PTY integration tests:

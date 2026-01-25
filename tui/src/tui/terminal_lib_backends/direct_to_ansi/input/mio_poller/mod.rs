@@ -21,7 +21,7 @@
 //! | Item                                             | Description                                                         |
 //! | :----------------------------------------------- | :------------------------------------------------------------------ |
 //! | [`MioPollWorker`]                                | Core struct: holds poll handle, buffers, parser (implements RRT)    |
-//! | [`MioPollWaker`]                                 | Waker to interrupt blocked poll (implements RRT [`ThreadWaker`])    |
+//! | [`MioPollWaker`]                                 | Waker to interrupt blocked poll (implements RRT [`RRTWaker`])       |
 //! | [`MioPollWorkerFactory`]                         | Factory to create worker and waker together                         |
 //! | [`SourceRegistry`]                               | Holds [`stdin`] and [`SIGWINCH`] signal handles                     |
 //! | [`SourceKindReady`]                              | Enum mapping [`mio::Token`] ↔ source kind for dispatch              |
@@ -132,7 +132,7 @@
 //!    - All async consumers finish and drop their receivers
 //!
 //!    **The thread is restartable**: When the next [`DirectToAnsiInputDevice`] is created
-//!    (or [`allocate()`] is called), the terminated thread is detected via
+//!    (or [`subscribe()`] is called), the terminated thread is detected via
 //!    the liveness flag, and a new thread is spawned automatically. This allows sequential TUI
 //!    apps in the same process to share the input system seamlessly.
 //!
@@ -306,6 +306,7 @@
 //! [`PollerEvent::Signal`]: super::channel_types::PollerEvent::Signal
 //! [`PollerEvent::Stdin`]: super::channel_types::PollerEvent::Stdin
 //! [`PollerEvent`]: super::channel_types::PollerEvent
+//! [`RRTWaker`]: crate::core::resilient_reactor_thread::RRTWaker
 //! [`SIGINT`]: signal_hook::consts::SIGINT
 //! [`SIGWINCH`]: signal_hook::consts::SIGWINCH
 //! [`SINGLETON`]: super::input_device_impl::global_input_resource::SINGLETON
@@ -322,10 +323,8 @@
 //! [`StdinEvent::Error`]: super::channel_types::StdinEvent::Error
 //! [`SubscriberGuard::drop()`]: crate::core::resilient_reactor_thread::SubscriberGuard#impl-Drop-for-SubscriberGuard
 //! [`SubscriberGuard`]: crate::core::resilient_reactor_thread::SubscriberGuard
-//! [`ThreadWaker`]: crate::core::resilient_reactor_thread::ThreadWaker
 //! [`VEOF`]: https://man7.org/linux/man-pages/man3/termios.3.html
 //! [`VT100InputEventIR`]: crate::core::ansi::vt_100_terminal_input_parser::VT100InputEventIR
-//! [`allocate()`]: super::input_device_impl::global_input_resource::allocate
 //! [`broadcast::Receiver`]: tokio::sync::broadcast::Receiver
 //! [`consume_pending_signals_with_tx()`]: handler_signals::consume_pending_signals_with_tx
 //! [`consume_stdin_input_with_tx()`]: handler_stdin::consume_stdin_input_with_tx
@@ -348,6 +347,7 @@
 //! [`signal_hook_mio`]: signal_hook_mio
 //! [`std::thread`]: std::thread
 //! [`stdin`]: std::io::stdin
+//! [`subscribe()`]: crate::core::resilient_reactor_thread::ThreadSafeGlobalState::subscribe
 //! [`syscall`]: https://man7.org/linux/man-pages/man2/syscalls.2.html
 //! [`tokio::io::stdin()`]: tokio::io::stdin
 //! [`tokio::select!`]: tokio::select

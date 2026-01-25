@@ -11,11 +11,11 @@ use tokio::sync::broadcast::Sender;
 /// Handles [`ReceiverDropWaker`] event using explicit `tx` — check if thread should exit.
 ///
 /// This variant is used by [`MioPollWorker`] which implements the generic
-/// [`ThreadWorker`] trait and receives `tx` as a parameter.
+/// [`RRTWorker`] trait and receives `tx` as a parameter.
 ///
 /// [`MioPollWorker`]: super::MioPollWorker
+/// [`RRTWorker`]: crate::core::resilient_reactor_thread::RRTWorker
 /// [`ReceiverDropWaker`]: super::sources::SourceKindReady::ReceiverDropWaker
-/// [`ThreadWorker`]: crate::core::resilient_reactor_thread::ThreadWorker
 #[must_use]
 pub fn handle_receiver_drop_waker_with_tx(tx: &Sender<PollerEvent>) -> Continuation {
     let receiver_count = tx.receiver_count();

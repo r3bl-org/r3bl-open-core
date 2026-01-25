@@ -1,28 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Thread liveness tracking for the Resilient Reactor Thread pattern.
-//!
-//! This module provides:
-//! - [`ThreadLiveness`]: Tracks whether a thread is running and its generation
-//! - [`LivenessState`]: Self-documenting enum for running/terminated state
-//! - [`ShutdownDecision`]: Self-documenting enum for continue/shutdown decision
-//!
-//! # Why [`AtomicBool`] Instead of [`Mutex<bool>`]?
-//!
-//! The [`ThreadLiveness::is_running()`] method is called while holding the global state
-//! lock (in [`allocate()`] and query functions). Using [`Mutex<bool>`] would create
-//! nested locking, risking [deadlock] if [`mark_terminated()`] is called from the worker
-//! thread while another thread holds the global lock.
-//!
-//! [`AtomicBool`] is [lock-free] — no [deadlock] possible.
-//!
-//! [`Mutex<bool>`]: std::sync::Mutex
-//!
-//! [`AtomicBool`]: std::sync::atomic::AtomicBool
-//! [`allocate()`]: super::ThreadSafeGlobalState::allocate
-//! [`mark_terminated()`]: ThreadLiveness::mark_terminated
-//! [deadlock]: https://en.wikipedia.org/wiki/Deadlock
-//! [lock-free]: https://en.wikipedia.org/wiki/Non-blocking_algorithm
+//! Thread liveness tracking for the Resilient Reactor Thread pattern. See
+//! [`ThreadLiveness`], [`LivenessState`], and [`ShutdownDecision`].
 
 use std::sync::atomic::{AtomicBool, AtomicU8, Ordering};
 
@@ -42,26 +21,35 @@ static THREAD_GENERATION: AtomicU8 = AtomicU8::new(0);
 ///
 /// # Generation Tracking
 ///
-/// Each time a new thread is spawned via [`ThreadSafeGlobalState::allocate()`], the
+/// Each time a new thread is spawned via [`ThreadSafeGlobalState::subscribe()`], the
 /// generation counter increments. This allows tests to verify thread reuse vs relaunch:
 ///
 /// - **Same generation**: Thread was reused (new subscriber appeared before thread
 ///   exited)
 /// - **Different generation**: Thread was relaunched (a new thread was spawned)
 ///
-/// # Thread Safety
+/// # Why [`AtomicBool`] Instead of [`Mutex<bool>`]?
 ///
-/// Uses [`AtomicBool`] for the running flag to avoid nested locking. All atomic
-/// operations use [`SeqCst`] ordering for simplicity and correctness. See [module docs]
-/// for why atomics are used instead of a mutex.
+/// The [`is_running()`] method is called while holding the global state lock (in
+/// [`subscribe()`] and query functions). Using [`Mutex<bool>`] would create nested
+/// locking, risking [deadlock] if [`mark_terminated()`] is called from the worker thread
+/// while another thread holds the global lock.
+///
+/// [`AtomicBool`] is [lock-free] — no [deadlock] possible. All atomic operations use
+/// [`SeqCst`] ordering for simplicity and correctness.
+///
+/// [`Mutex<bool>`]: std::sync::Mutex
 ///
 /// [`AtomicBool`]: std::sync::atomic::AtomicBool
 /// [`SeqCst`]: std::sync::atomic::Ordering::SeqCst
-/// [`ThreadSafeGlobalState::allocate()`]: super::ThreadSafeGlobalState::allocate
+/// [`ThreadSafeGlobalState::subscribe()`]: super::ThreadSafeGlobalState::subscribe
 /// [`generation`]: Self::generation
+/// [`is_running()`]: Self::is_running
 /// [`is_running`]: Self::is_running
 /// [`mark_terminated()`]: Self::mark_terminated
-/// [module docs]: super
+/// [`subscribe()`]: super::ThreadSafeGlobalState::subscribe
+/// [deadlock]: https://en.wikipedia.org/wiki/Deadlock
+/// [lock-free]: https://en.wikipedia.org/wiki/Non-blocking_algorithm
 #[allow(missing_debug_implementations)]
 pub struct ThreadLiveness {
     /// Whether the thread is currently running. Set to `false` by [`mark_terminated()`].
@@ -126,7 +114,7 @@ impl Default for ThreadLiveness {
 /// # Why Not Just `bool`?
 ///
 /// `bool` requires remembering what `true` means. With this enum:
-/// - `LivenessState::Running` is unambiguous
+/// - [`LivenessState::Running`] is unambiguous
 /// - Pattern matching catches all cases
 /// - Code reads like documentation
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

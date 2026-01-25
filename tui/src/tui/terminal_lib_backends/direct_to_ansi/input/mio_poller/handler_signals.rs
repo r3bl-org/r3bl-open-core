@@ -19,7 +19,7 @@ use tokio::sync::broadcast::Sender;
 /// how to handle the [`None`] case.
 ///
 /// This variant is used by [`MioPollWorker`] which implements the generic
-/// [`ThreadWorker`] trait and receives `tx` as a parameter.
+/// [`RRTWorker`] trait and receives `tx` as a parameter.
 ///
 /// # Returns
 ///
@@ -27,9 +27,9 @@ use tokio::sync::broadcast::Sender;
 /// - [`Continuation::Stop`]: Receiver dropped.
 ///
 /// [`MioPollWorker`]: super::MioPollWorker
+/// [`RRTWorker`]: crate::core::resilient_reactor_thread::RRTWorker
 /// [`SIGWINCH`]: signal_hook::consts::SIGWINCH
 /// [`Some(size)`]: Option::Some
-/// [`ThreadWorker`]: crate::core::resilient_reactor_thread::ThreadWorker
 /// [`get_size()`]: crate::get_size
 pub fn consume_pending_signals_with_tx(
     worker: &mut MioPollWorker,

@@ -1742,13 +1742,13 @@ The project uses a clean separation of concerns across three main scripts with s
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────┐
-│                           Bootstrap Flow                                  │
+│                           Bootstrap Flow                                 │
 └──────────────────────────────────────────────────────────────────────────┘
 
-    ┌─────────────────┐     calls     ┌──────────────────────────────────┐
+    ┌─────────────────┐     calls     ┌───────────────────────────────────┐
     │  bootstrap.sh   │──────────────▶│  fish run.fish install-cargo-tools│
     │  (OS-level)     │               │  (Rust development tools)         │
-    └─────────────────┘               └──────────────────────────────────┘
+    └─────────────────┘               └───────────────────────────────────┘
             │                                       │
             │ installs                              │ uses
             ▼                                       ▼
@@ -1769,16 +1769,16 @@ The project uses a clean separation of concerns across three main scripts with s
                     │                               │                       │
                     │ sources                       │ sources               │ sources
                     │                               │                       │
-    ┌───────────────────────┐  ┌─────────────────────────────┐  ┌──────────────────────┐
-    │       run.fish        │  │ rust-toolchain-update.fish  │  │ rust-toolchain-sync- │
-    │  (dev commands)       │  │ (smart toolchain updater)   │  │ to-toml.fish         │
-    │                       │  │                             │  │ (sync to TOML)       │
-    │  • build, test, docs  │  │  • install_windows_target   │  │                      │
-    │  • clippy, rustfmt    │  │  • acquire_toolchain_lock   │  │  • install_windows_  │
-    │  • install-cargo-tools│  │  • read_toolchain_from_toml │  │    target            │
-    │    (calls install_    │  │  • set_toolchain_in_toml    │  │  • acquire_toolchain_│
-    │     windows_target)   │  │  • ...                      │  │    lock              │
-    └───────────────────────┘  └─────────────────────────────┘  └──────────────────────┘
+    ┌───────────────────────┐  ┌─────────────────────────────┐  ┌───────────────────────┐
+    │       run.fish        │  │ rust-toolchain-update.fish  │  │ rust-toolchain-sync-  │
+    │  (dev commands)       │  │ (smart toolchain updater)   │  │ to-toml.fish          │
+    │                       │  │                             │  │ (sync to TOML)        │
+    │  • build, test, docs  │  │  • install_windows_target   │  │                       │
+    │  • clippy, rustfmt    │  │  • acquire_toolchain_lock   │  │  • install_windows_   │
+    │  • install-cargo-tools│  │  • read_toolchain_from_toml │  │    target             │
+    │    (calls install_    │  │  • set_toolchain_in_toml    │  │  • acquire_toolchain_ │
+    │     windows_target)   │  │  • ...                      │  │    lock               │
+    └───────────────────────┘  └─────────────────────────────┘  └───────────────────────┘
 ```
 
 **Key DRY Principle**: All shared functionality lives in `script_lib.fish`. Individual scripts

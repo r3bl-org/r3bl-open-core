@@ -5,14 +5,14 @@
 //! mio-specific worker implementation for the Resilient Reactor Thread pattern.
 //!
 //! This module provides:
-//! - [`MioPollWorker`]: Implements [`ThreadWorker`] for terminal input handling
-//! - [`MioPollWorkerFactory`]: Implements [`ThreadWorkerFactory`] to create the worker
+//! - [`MioPollWorker`]: Implements [`RRTWorker`] for terminal input handling
+//! - [`MioPollWorkerFactory`]: Implements [`RRTFactory`] to create the worker
 //!
 //! These types integrate with the generic RRT infrastructure in
 //! [`crate::core::resilient_reactor_thread`].
 //!
-//! [`ThreadWorkerFactory`]: crate::core::resilient_reactor_thread::ThreadWorkerFactory
-//! [`ThreadWorker`]: crate::core::resilient_reactor_thread::ThreadWorker
+//! [`RRTFactory`]: crate::core::resilient_reactor_thread::RRTFactory
+//! [`RRTWorker`]: crate::core::resilient_reactor_thread::RRTWorker
 
 use super::{super::{channel_types::{PollerEvent, StdinEvent},
                     paste_state_machine::PasteCollectionState,
@@ -22,7 +22,8 @@ use super::{super::{channel_types::{PollerEvent, StdinEvent},
             handler_stdin::STDIN_READ_BUFFER_SIZE,
             mio_poll_waker::MioPollWaker};
 use crate::{Continuation,
-            core::resilient_reactor_thread::{ThreadWorker, ThreadWorkerFactory}};
+            core::resilient_reactor_thread::{RRTFactory, RRTWorker}};
+use miette::{Diagnostic, Report};
 use mio::{Events, Interest, Poll, Waker, unix::SourceFd};
 use signal_hook::consts::SIGWINCH;
 use signal_hook_mio::v1_0::Signals;
@@ -34,7 +35,7 @@ const EVENTS_CAPACITY: usize = 8;
 
 /// mio-based worker for terminal input handling.
 ///
-/// Implements [`ThreadWorker`] to integrate with the generic RRT infrastructure. Each
+/// Implements [`RRTWorker`] to integrate with the generic RRT infrastructure. Each
 /// call to [`poll_once()`] blocks until stdin data or signals are ready, processes them,
 /// and returns whether to continue or stop.
 ///
@@ -75,7 +76,7 @@ pub struct MioPollWorker {
     pub paste_collection_state: PasteCollectionState,
 }
 
-impl ThreadWorker for MioPollWorker {
+impl RRTWorker for MioPollWorker {
     type Event = PollerEvent;
 
     /// Performs one iteration of the poll loop.
@@ -125,45 +126,70 @@ impl ThreadWorker for MioPollWorker {
     }
 }
 
-/// Error type for [`MioPollWorkerFactory::setup()`] failures.
-#[derive(Debug, thiserror::Error)]
-pub enum MioPollSetupError {
-    /// Failed to create [`mio::Poll`] (epoll/kqueue creation failed).
-    #[error("Failed to create mio::Poll: {0}")]
-    PollCreation(#[source] std::io::Error),
+// ╭──────────────────────────────────────────────────────────╮
+// │ Diagnostic error types for worker creation failures      │
+// ╰──────────────────────────────────────────────────────────╯
 
-    /// Failed to create [`mio::Waker`] (eventfd/pipe creation failed).
-    #[error("Failed to create mio::Waker: {0}")]
-    WakerCreation(#[source] std::io::Error),
+/// Failed to create [`mio::Poll`] (epoll/kqueue creation failed).
+#[derive(Debug, thiserror::Error, Diagnostic)]
+#[error("Failed to create mio::Poll")]
+#[diagnostic(
+    code(r3bl_tui::mio::poll_creation),
+    help("This usually means the system ran out of file descriptors")
+)]
+pub struct PollCreationError(#[source] pub std::io::Error);
 
-    /// Failed to register stdin with mio.
-    #[error("Failed to register stdin with mio: {0}")]
-    StdinRegistration(#[source] std::io::Error),
+/// Failed to create [`mio::Waker`] (eventfd/pipe creation failed).
+#[derive(Debug, thiserror::Error, Diagnostic)]
+#[error("Failed to create mio::Waker")]
+#[diagnostic(
+    code(r3bl_tui::mio::waker_creation),
+    help("This usually means the system ran out of file descriptors")
+)]
+pub struct WakerCreationError(#[source] pub std::io::Error);
 
-    /// Failed to create SIGWINCH signal handler.
-    #[error("Failed to create SIGWINCH handler: {0}")]
-    SignalCreation(#[source] std::io::Error),
+/// Failed to register stdin with mio.
+#[derive(Debug, thiserror::Error, Diagnostic)]
+#[error("Failed to register stdin with mio")]
+#[diagnostic(
+    code(r3bl_tui::mio::stdin_registration),
+    help("Ensure stdin is a valid file descriptor")
+)]
+pub struct StdinRegistrationError(#[source] pub std::io::Error);
 
-    /// Failed to register signals with mio.
-    #[error("Failed to register signals with mio: {0}")]
-    SignalRegistration(#[source] std::io::Error),
-}
+/// Failed to create SIGWINCH signal handler.
+#[derive(Debug, thiserror::Error, Diagnostic)]
+#[error("Failed to create SIGWINCH handler")]
+#[diagnostic(
+    code(r3bl_tui::mio::signal_creation),
+    help("Signal handler creation failed - check system signal limits")
+)]
+pub struct SignalCreationError(#[source] pub std::io::Error);
+
+/// Failed to register signals with mio.
+#[derive(Debug, thiserror::Error, Diagnostic)]
+#[error("Failed to register signals with mio")]
+#[diagnostic(code(r3bl_tui::mio::signal_registration))]
+pub struct SignalRegistrationError(#[source] pub std::io::Error);
+
+// ╭──────────────────────────────────────────────────────────╮
+// │ Factory                                                  │
+// ╰──────────────────────────────────────────────────────────╯
 
 /// Factory that creates [`MioPollWorker`] and [`MioPollWaker`] together.
 ///
-/// Implements [`ThreadWorkerFactory`] to integrate with the generic RRT infrastructure.
-/// The [`setup()`] method creates both the worker and waker from the same [`mio::Poll`]
+/// Implements [`RRTFactory`] to integrate with the generic RRT infrastructure.
+/// The [`create()`] method creates both the worker and waker from the same [`mio::Poll`]
 /// instance, solving the chicken-egg problem where the waker needs the poll's registry.
 ///
-/// [`setup()`]: Self::setup
+/// [`create()`]: RRTFactory::create
 #[allow(missing_debug_implementations)]
 pub struct MioPollWorkerFactory;
 
-impl ThreadWorkerFactory for MioPollWorkerFactory {
+impl RRTFactory for MioPollWorkerFactory {
     type Event = PollerEvent;
     type Worker = MioPollWorker;
     type Waker = MioPollWaker;
-    type SetupError = MioPollSetupError;
 
     /// Creates a new mio poll worker and waker pair.
     ///
@@ -175,17 +201,17 @@ impl ThreadWorkerFactory for MioPollWorkerFactory {
     ///
     /// # Errors
     ///
-    /// Returns [`MioPollSetupError`] if any OS resource creation or registration fails.
-    fn setup() -> Result<(Self::Worker, Self::Waker), Self::SetupError> {
-        // Create mio::Poll.
-        let poll_handle = Poll::new().map_err(MioPollSetupError::PollCreation)?;
+    /// Returns [`Report`] if any OS resource creation or registration fails.
+    fn create() -> Result<(Self::Worker, Self::Waker), Report> {
+        // Create mio::Poll (epoll on Linux, kqueue on macOS).
+        let poll_handle = Poll::new().map_err(PollCreationError)?;
 
         // Create waker from poll's registry (must be created BEFORE registering sources).
         let waker = Waker::new(
             poll_handle.registry(),
             SourceKindReady::ReceiverDropWaker.to_token(),
         )
-        .map_err(MioPollSetupError::WakerCreation)?;
+        .map_err(WakerCreationError)?;
 
         let mio_registry = poll_handle.registry();
 
@@ -197,18 +223,17 @@ impl ThreadWorkerFactory for MioPollWorkerFactory {
                 SourceKindReady::Stdin.to_token(),
                 Interest::READABLE,
             )
-            .map_err(MioPollSetupError::StdinRegistration)?;
+            .map_err(StdinRegistrationError)?;
 
         // Register SIGWINCH with signal-hook-mio.
-        let mut signals =
-            Signals::new([SIGWINCH]).map_err(MioPollSetupError::SignalCreation)?;
+        let mut signals = Signals::new([SIGWINCH]).map_err(SignalCreationError)?;
         mio_registry
             .register(
                 &mut signals,
                 SourceKindReady::Signals.to_token(),
                 Interest::READABLE,
             )
-            .map_err(MioPollSetupError::SignalRegistration)?;
+            .map_err(SignalRegistrationError)?;
 
         let worker = MioPollWorker {
             poll_handle,

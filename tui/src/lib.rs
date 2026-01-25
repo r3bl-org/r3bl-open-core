@@ -1700,8 +1700,8 @@
 //! | [`ThreadSafeGlobalState`]    | Thread-safe singleton for RRT instances          |
 //! | [`ThreadLiveness`]           | Running state + generation tracking              |
 //! | [`SubscriberGuard`]          | RAII guard managing subscription lifecycle       |
-//! | [`ThreadWorker`]             | Trait for the blocking work loop                 |
-//! | [`ThreadWaker`]              | Trait for interrupting blocked threads           |
+//! | [`RRTWorker`]             | Trait for the blocking work loop                 |
+//! | [`RRTWaker`]              | Trait for interrupting blocked threads           |
 //!
 //! ## Key benefits
 //!
@@ -2539,8 +2539,8 @@
 //! [`ThreadSafeGlobalState`]: core::resilient_reactor_thread::ThreadSafeGlobalState
 //! [`ThreadLiveness`]: core::resilient_reactor_thread::ThreadLiveness
 //! [`SubscriberGuard`]: core::resilient_reactor_thread::SubscriberGuard
-//! [`ThreadWorker`]: core::resilient_reactor_thread::ThreadWorker
-//! [`ThreadWaker`]: core::resilient_reactor_thread::ThreadWaker
+//! [`RRTWorker`]: core::resilient_reactor_thread::RRTWorker
+//! [`RRTWaker`]: core::resilient_reactor_thread::RRTWaker
 //! [`resilient_reactor_thread`]: core::resilient_reactor_thread
 //! [`mio_poller`]: crate::direct_to_ansi::input::mio_poller
 //! [`io_uring`]: https://kernel.dk/io_uring.pdf
