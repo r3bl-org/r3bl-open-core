@@ -7,10 +7,10 @@ homepage = "https://r3bl.com"
 license = "Apache-2.0"
 
 description = """
-A TUI app suite for developers. Includes a Markdown editor `edi` and a git client `giti`.
+Fully async TUI apps for developers (built on r3bl_tui). giti: interactive git CLI with visual branch selection and streamlined commit workflows. edi: TUI Markdown editor with gradient colors, syntax highlighting, smart lists, emoji support, SSH optimized (diff-based rendering), zero-copy gap buffer for large files. Never blocks the main thread. Auto-detects terminal capabilities.
 """
 # At most 5 keywords w/ no spaces, each has max length of 20 char.
-keywords = ["tui", "editor", "git", "claude"]
+keywords = ["tui", "git", "markdown", "editor", "async"]
 categories = ["command-line-interface", "command-line-utilities"]
 
 repository = "https://github.com/r3bl-org/r3bl-open-core"

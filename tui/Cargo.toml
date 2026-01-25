@@ -6,9 +6,9 @@ version = "0.7.8"
 edition = "2024"
 # https://doc.rust-lang.org/cargo/reference/resolver.html#resolver-versions
 resolver = "3"
-description = "TUI library to build modern apps inspired by React, Elm, with Flexbox, CSS, editor component, emoji support, and more"
+description = "Fully async modern TUI framework for Rust. Flexbox layouts, CSS styling, reactive state, markdown editor, custom markdown renderer with syntax highlighting, gradient colors, emoji support, modal dialogs, mouse events, async readline (non-blocking POSIX alternative). Diff-based rendering optimized for SSH. Full VT100 I/O parsers, PTY testing (e2e & snapshot), PTY mux primitives (build your own tmux). Native Linux input via RRT/mio/epoll (no crossterm). Auto-detects terminal capabilities and gracefully degrades. Cross-platform (Linux, macOS, Windows). Built for performance."
 # At most 5 keywords w/ no spaces, each has max length of 20 char.
-keywords = ["tui", "editor", "flexbox", "terminal", "emoji"]
+keywords = ["tui", "async", "terminal", "markdown", "pty"]
 categories = ["command-line-interface", "command-line-utilities"]
 readme = "README.md"                                              # This is not included in cargo docs.
 # Email address(es) has to be verified at https://crates.io/me/

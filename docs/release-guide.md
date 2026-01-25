@@ -6,6 +6,7 @@
   - [Overview of the release process](#overview-of-the-release-process)
     - [Step 1. Build and publish to crates.io](#step-1-build-and-publish-to-cratesio)
     - [Step 2. Make a GitHub release from the tag](#step-2-make-a-github-release-from-the-tag)
+  - [This Week in Rust submission](#this-week-in-rust-submission)
   - [Deprecated workflow for archived crates](#deprecated-workflow-for-archived-crates)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
@@ -144,6 +145,68 @@ following:
   `cargo install r3bl-cmdr`.
 - For `tui` there are no installation instructions, since it is a library crate. The release is just
   a way for users to be notified by GitHub that a new release is available.
+
+## This Week in Rust submission
+
+After publishing a release, submit it to [This Week in Rust](https://this-week-in-rust.org/) for
+visibility in the Rust community. Submit a PR to the
+[this-week-in-rust repo](https://github.com/rust-lang/this-week-in-rust) adding entries to the
+current draft file under `### Project/Tooling Updates`.
+
+### Link text format
+
+Use descriptive one-liners, not just version numbers:
+
+```markdown
+* [r3bl_tui v0.7.7: modern async TUI lib — readline, md editor, flexbox, SSH-optimized rendering](https://github.com/r3bl-org/r3bl-open-core/releases/tag/v0.7.7-tui)
+* [r3bl-cmdr v0.0.25: TUI productivity apps - giti (git helper) and edi (beautiful md editor)](https://github.com/r3bl-org/r3bl-open-core/releases/tag/v0.0.25-cmdr)
+* [r3bl-build-infra v0.0.1: cargo-rustdoc-fmt — prettier md tables and ref-style links](https://github.com/r3bl-org/r3bl-open-core/releases/tag/v0.0.1-build-infra)
+```
+
+### Structure
+
+```
+crate vX.Y.Z: category — feature, feature, feature
+```
+
+- **Category first**: "modern async TUI lib", "TUI productivity apps", "cargo-rustdoc-fmt"
+- **Em dash separator** (—): Cleaner than "with" or "and"
+- **Feature list**: Comma-separated, most important first
+
+### Length guidelines
+
+| Range     | Assessment                                    |
+|-----------|-----------------------------------------------|
+| 9-50      | Too terse — says nothing about the crate      |
+| 75-95     | Sweet spot — informative but scannable        |
+| 96-160    | Acceptable — TWiR has entries up to 160 chars |
+
+Check existing entries in recent TWiR issues for reference. Our entries should fit comfortably in
+the middle of the range (75-95 chars).
+
+### Personality words
+
+Add personality without being cheesy:
+
+| Word          | Effect                                           |
+|---------------|--------------------------------------------------|
+| "modern"      | Signals fresh approach, not legacy               |
+| "beautiful"   | Evocative, appeals to aesthetics                 |
+| "prettier"    | Playful nod to the famous formatter              |
+| "productivity"| Aspirational, implies value                      |
+
+### Abbreviations
+
+| Do                  | Don't                    |
+|---------------------|--------------------------|
+| "md" (in features)  | "markdown" (wastes space)|
+| "lib"               | "library"                |
+| "ref-style"         | "reference-style"        |
+| spell out "with"    | "w/" (too informal)      |
+
+### Example PR
+
+See [PR #7555](https://github.com/rust-lang/this-week-in-rust/pull/7555) for a complete example.
 
 ## Deprecated workflow for archived crates
 

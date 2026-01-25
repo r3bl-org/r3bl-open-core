@@ -365,9 +365,15 @@ following:
 
 A fully async modern TUI framework for Rust (nothing blocks the main thread). Features
 include flexbox-like layouts, CSS-like styling, reactive state management, async readline
-(non-blocking alternative to POSIX readline), VT100 input/output parsers, and a
-double-buffered compositor optimized for SSH (paints only diffs), and much more. Works on
-Linux, macOS, and Windows. Add to your project with `cargo add r3bl_tui`.
+(non-blocking alternative to POSIX readline), a Markdown editor component, custom markdown
+renderer with syntax highlighting, gradient colors (lolcat rainbow), Unicode/emoji
+support, modal dialogs, mouse events, full VT100 input/output parsers, and a
+double-buffered compositor optimized for SSH (paints only diffs). Native Linux input via
+RRT/mio/epoll (no crossterm dependency). PTY testing infrastructure for real-world
+automated e2e testing and snapshot testing of TUI apps. Full PTY mux primitives so you can
+build your own tmux effortlessly. Auto-detects terminal capabilities and gracefully
+degrades. Works on Linux, macOS, and Windows. Add to your project with `cargo add
+r3bl_tui`.
 
 ### v0.7.8 (2026-01-23)
 
@@ -1342,14 +1348,14 @@ that come up quite frequently when editing Markdown in a text editor.
 
 ## `r3bl-build-infra`
 
-Cargo subcommands that automate the tedious parts of Rust development and speed up the slow parts—
-documentation formatting, toolchain management, and build optimization. Install with
-`cargo install r3bl-build-infra`.
+Cargo subcommands that automate the tedious parts of Rust development and speed up the
+slow parts— documentation formatting, toolchain management, and build optimization.
+Install with `cargo install r3bl-build-infra`.
 
 ### v0.0.1 (2026-01-23)
 
-Initial release with `cargo rustdoc-fmt`—a cargo subcommand that formats markdown tables and
-converts inline links to reference-style in rustdoc comments.
+Initial release with `cargo rustdoc-fmt`—a cargo subcommand that formats markdown tables
+and converts inline links to reference-style in rustdoc comments.
 
 - Added:
   - `cargo-rustdoc-fmt` binary - Cargo subcommand for formatting rustdoc comments

@@ -11,8 +11,8 @@ authors = [
     "Nadia Idris <nadia@developerlife.com>",
 ]
 documentation = "https://docs.rs/r3bl-build-infra"
-description = "Cargo subcommand for formatting rustdoc comments: markdown table alignment and reference-style links"
-keywords = ["rustdoc", "markdown", "formatting", "cargo", "documentation"]
+description = "Cargo subcommands that automate tedious parts of Rust development. cargo-rustdoc-fmt: format markdown tables and convert inline links to reference-style in rustdoc comments. Workspace-aware, git integration (changed/staged files), CI check mode. Modular library API for programmatic use."
+keywords = ["rustdoc", "markdown", "formatting", "cargo", "table"]
 categories = ["development-tools", "command-line-utilities"]
 
 [lints]
