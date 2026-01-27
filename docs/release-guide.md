@@ -6,7 +6,17 @@
   - [Overview of the release process](#overview-of-the-release-process)
     - [Step 1. Build and publish to crates.io](#step-1-build-and-publish-to-cratesio)
     - [Step 2. Make a GitHub release from the tag](#step-2-make-a-github-release-from-the-tag)
+      - [Release notes structure](#release-notes-structure)
+      - [Key elements](#key-elements)
+      - [Canonical examples](#canonical-examples)
+      - [Crate-specific notes](#crate-specific-notes)
   - [This Week in Rust submission](#this-week-in-rust-submission)
+    - [Link text format](#link-text-format)
+    - [Structure](#structure)
+    - [Length guidelines](#length-guidelines)
+    - [Personality words](#personality-words)
+    - [Abbreviations](#abbreviations)
+    - [Example PR](#example-pr)
   - [Deprecated workflow for archived crates](#deprecated-workflow-for-archived-crates)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
@@ -134,17 +144,69 @@ applied to each crate (`tui`, `cmdr`, `analytics_schema`):
 
 Then, push the git commit and tag to the remote repo: `git push ; git push --tags`.
 
-Finally, for the tag, make a GitHub release and use the tag that you just created. This only applies
-to the `tui` and `cmdr` crates. No binary artifacts are uploaded to the GitHub release, only the tag
-and the information from the `CHANGELOG.md` file is used to create the release notes. The purpose of
-the GitHub release is to notify users that a new release is available. This is useful if the user
-has signed up for GitHub notifications for the repository. The release notes should include the
-following:
+Finally, for the tag, make a GitHub release and use the tag that you just created. No binary
+artifacts are uploaded to the GitHub release, only the tag and the information from the
+`CHANGELOG.md` file is used to create the release notes. The purpose of the GitHub release is to
+notify users that a new release is available. This is useful if the user has signed up for GitHub
+notifications for the repository.
 
-- For `cmdr` include instructions that the user can use to install the crate using
-  `cargo install r3bl-cmdr`.
-- For `tui` there are no installation instructions, since it is a library crate. The release is just
-  a way for users to be notified by GitHub that a new release is available.
+#### Release notes structure
+
+Every release follows a consistent structure. Use `gh release create` or `gh release edit`:
+
+```markdown
+[Crate description - same across all releases for this crate]. Install with `cargo install <crate>`.
+
+- 📝 **tool-name** - Brief tool description.
+
+## vX.Y.Z (YYYY-MM-DD)
+
+[One-liner summary from CHANGELOG]
+
+**Fixed:**
+
+- Item 1
+- Item 2
+
+**Added:**
+
+- Item 1
+
+## Coming Soon 🚀
+
+[Optional - roadmap items if applicable]
+
+## Full Changelog
+
+- [crate vX.Y.Z](https://github.com/r3bl-org/r3bl-open-core/blob/main/CHANGELOG.md#anchor)
+```
+
+#### Key elements
+
+| Element              | Description                                                              |
+| -------------------- | ------------------------------------------------------------------------ |
+| Crate description    | Same text used across ALL releases for the crate (from CHANGELOG header) |
+| Install instructions | Inline with description: `Install with \`cargo install <crate>\``        |
+| Tool highlight       | Emoji + bold tool name + brief description                               |
+| Version section      | Copy from CHANGELOG with `**Fixed:**` / `**Added:**` headers             |
+| Coming Soon          | Optional roadmap section (used for `build-infra`)                        |
+| Full Changelog       | Link to the specific version anchor in CHANGELOG.md                      |
+
+#### Canonical examples
+
+Use these releases as style guides:
+
+| Crate       | Example                                                                                          | Notes                                   |
+| ----------- | ------------------------------------------------------------------------------------------------ | --------------------------------------- |
+| tui         | [v0.7.7-tui](https://github.com/r3bl-org/r3bl-open-core/releases/tag/v0.7.7-tui)                 | Library crate - no install instructions |
+| cmdr        | [v0.0.25-cmdr](https://github.com/r3bl-org/r3bl-open-core/releases/tag/v0.0.25-cmdr)             | Binary crate with install instructions  |
+| build-infra | [v0.0.1-build-infra](https://github.com/r3bl-org/r3bl-open-core/releases/tag/v0.0.1-build-infra) | Binary crate with Coming Soon section   |
+
+#### Crate-specific notes
+
+- **cmdr**: Binary crate - include install instructions
+- **tui**: Library crate - no install instructions needed, release is for notification only
+- **build-infra**: Binary crate - include install instructions and Coming Soon section
 
 ## This Week in Rust submission
 
@@ -158,9 +220,9 @@ current draft file under `### Project/Tooling Updates`.
 Use descriptive one-liners, not just version numbers:
 
 ```markdown
-* [r3bl_tui v0.7.7: modern async TUI lib — readline, md editor, flexbox, SSH-optimized rendering](https://github.com/r3bl-org/r3bl-open-core/releases/tag/v0.7.7-tui)
-* [r3bl-cmdr v0.0.25: TUI productivity apps - giti (git helper) and edi (beautiful md editor)](https://github.com/r3bl-org/r3bl-open-core/releases/tag/v0.0.25-cmdr)
-* [r3bl-build-infra v0.0.1: cargo-rustdoc-fmt — prettier md tables and ref-style links](https://github.com/r3bl-org/r3bl-open-core/releases/tag/v0.0.1-build-infra)
+- [r3bl_tui v0.7.7: modern async TUI lib — readline, md editor, flexbox, SSH-optimized rendering](https://github.com/r3bl-org/r3bl-open-core/releases/tag/v0.7.7-tui)
+- [r3bl-cmdr v0.0.25: TUI productivity apps - giti (git helper) and edi (beautiful md editor)](https://github.com/r3bl-org/r3bl-open-core/releases/tag/v0.0.25-cmdr)
+- [r3bl-build-infra v0.0.1: cargo-rustdoc-fmt — prettier md tables and ref-style links](https://github.com/r3bl-org/r3bl-open-core/releases/tag/v0.0.1-build-infra)
 ```
 
 ### Structure
@@ -175,11 +237,11 @@ crate vX.Y.Z: category — feature, feature, feature
 
 ### Length guidelines
 
-| Range     | Assessment                                    |
-|-----------|-----------------------------------------------|
-| 9-50      | Too terse — says nothing about the crate      |
-| 75-95     | Sweet spot — informative but scannable        |
-| 96-160    | Acceptable — TWiR has entries up to 160 chars |
+| Range  | Assessment                                    |
+| ------ | --------------------------------------------- |
+| 9-50   | Too terse — says nothing about the crate      |
+| 75-95  | Sweet spot — informative but scannable        |
+| 96-160 | Acceptable — TWiR has entries up to 160 chars |
 
 Check existing entries in recent TWiR issues for reference. Our entries should fit comfortably in
 the middle of the range (75-95 chars).
@@ -188,21 +250,21 @@ the middle of the range (75-95 chars).
 
 Add personality without being cheesy:
 
-| Word          | Effect                                           |
-|---------------|--------------------------------------------------|
-| "modern"      | Signals fresh approach, not legacy               |
-| "beautiful"   | Evocative, appeals to aesthetics                 |
-| "prettier"    | Playful nod to the famous formatter              |
-| "productivity"| Aspirational, implies value                      |
+| Word           | Effect                              |
+| -------------- | ----------------------------------- |
+| "modern"       | Signals fresh approach, not legacy  |
+| "beautiful"    | Evocative, appeals to aesthetics    |
+| "prettier"     | Playful nod to the famous formatter |
+| "productivity" | Aspirational, implies value         |
 
 ### Abbreviations
 
-| Do                  | Don't                    |
-|---------------------|--------------------------|
-| "md" (in features)  | "markdown" (wastes space)|
-| "lib"               | "library"                |
-| "ref-style"         | "reference-style"        |
-| spell out "with"    | "w/" (too informal)      |
+| Do                 | Don't                     |
+| ------------------ | ------------------------- |
+| "md" (in features) | "markdown" (wastes space) |
+| "lib"              | "library"                 |
+| "ref-style"        | "reference-style"         |
+| spell out "with"   | "w/" (too informal)       |
 
 ### Example PR
 
