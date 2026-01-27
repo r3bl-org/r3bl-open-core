@@ -16,9 +16,13 @@
 use regex::Regex;
 use std::sync::LazyLock;
 
-/// Placeholder prefix used to mark protected content
-const PLACEHOLDER_PREFIX: &str = "___PROTECTED_CONTENT_";
-const PLACEHOLDER_SUFFIX: &str = "___";
+/// Placeholder prefix used to mark protected content.
+///
+/// Uses angle brackets which are NOT markdown-significant characters.
+/// Previously used `___` underscores, but `pulldown_cmark` interprets `___text___`
+/// as bold+italic and converts it to `***text***`, breaking the restore.
+const PLACEHOLDER_PREFIX: &str = "◄◄◄PROTECTED_CONTENT►";
+const PLACEHOLDER_SUFFIX: &str = "►►►";
 
 /// Regular expressions for detecting protected content
 static HTML_TAG_REGEX: LazyLock<Regex> =
@@ -208,7 +212,7 @@ mod tests {
         let protected = protector.protect(input);
 
         // Should replace code fence with placeholder
-        assert!(protected.contains("___PROTECTED_CONTENT_"));
+        assert!(protected.contains("◄◄◄PROTECTED_CONTENT►"));
         assert!(!protected.contains("let x = 5"));
 
         // Should restore original
@@ -227,7 +231,7 @@ mod tests {
 
         // Should replace code fence with placeholder.
         assert!(
-            protected.contains("___PROTECTED_CONTENT_"),
+            protected.contains("◄◄◄PROTECTED_CONTENT►"),
             "Code fence should be protected"
         );
         assert!(
@@ -266,7 +270,7 @@ mod tests {
             let protected = protector.protect(input);
 
             assert!(
-                protected.contains("___PROTECTED_CONTENT_"),
+                protected.contains("◄◄◄PROTECTED_CONTENT►"),
                 "Failed for input: {input}"
             );
             assert!(
@@ -286,7 +290,7 @@ mod tests {
         let protected = protector.protect(input);
 
         // Should replace HTML with placeholders
-        assert!(protected.contains("___PROTECTED_CONTENT_"));
+        assert!(protected.contains("◄◄◄PROTECTED_CONTENT►"));
         assert!(!protected.contains("<span"));
 
         // Should restore original
@@ -301,7 +305,7 @@ mod tests {
         let protected = protector.protect(input);
 
         // Should replace blockquote with placeholder
-        assert!(protected.contains("___PROTECTED_CONTENT_"));
+        assert!(protected.contains("◄◄◄PROTECTED_CONTENT►"));
 
         // Should restore original
         let restored = protector.restore(&protected);
@@ -315,7 +319,7 @@ mod tests {
         let protected = protector.protect(input);
 
         // Should have multiple placeholders
-        assert!(protected.matches("___PROTECTED_CONTENT_").count() >= 2);
+        assert!(protected.matches("◄◄◄PROTECTED_CONTENT►").count() >= 2);
 
         // Should restore all
         let restored = protector.restore(&protected);
@@ -339,7 +343,7 @@ mod tests {
         let protected = protector.protect(input);
 
         // Should replace HTML comment line with placeholder
-        assert!(protected.contains("___PROTECTED_CONTENT_"));
+        assert!(protected.contains("◄◄◄PROTECTED_CONTENT►"));
         assert!(!protected.contains("<!--"));
 
         // Should restore original
@@ -354,7 +358,7 @@ mod tests {
         let protected = protector.protect(input);
 
         // Should replace HTML comment with placeholder
-        assert!(protected.contains("___PROTECTED_CONTENT_"));
+        assert!(protected.contains("◄◄◄PROTECTED_CONTENT►"));
         assert!(!protected.contains("<!--"));
 
         // Should restore original

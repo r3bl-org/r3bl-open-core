@@ -61,6 +61,7 @@
     - [v0.0.9 (2023-12-31)](#v009-2023-12-31)
     - [v0.0.8 (2023-12-22)](#v008-2023-12-22)
   - [`r3bl-build-infra`](#r3bl-build-infra)
+    - [v0.0.2 (2026-01-27)](#v002-2026-01-27)
     - [v0.0.1 (2026-01-23)](#v001-2026-01-23)
   - [`r3bl_analytics_schema`](#r3bl_analytics_schema)
     - [v0.0.3 (2025-05-10)](#v003-2025-05-10)
@@ -1351,6 +1352,21 @@ that come up quite frequently when editing Markdown in a text editor.
 Cargo subcommands that automate the tedious parts of Rust development and speed up the
 slow parts— documentation formatting, toolchain management, and build optimization.
 Install with `cargo install r3bl-build-infra`.
+
+### v0.0.2 (2026-01-27)
+
+Bug fixes for `cargo rustdoc-fmt` to preserve ASCII diagrams and protected content.
+
+- Fixed:
+  - Content protector placeholder corruption: Changed from `___PROTECTED_CONTENT___` to
+    Unicode arrows (`◄◄◄PROTECTED_CONTENT►`) to prevent `pulldown_cmark` from interpreting
+    triple underscores as bold+italic formatting
+  - Link converter ASCII diagram corruption: Rewrote to use regex replacement instead of
+    `pulldown_cmark` parsing, which was destroying ASCII diagrams, numbered lists,
+    indentation, and other formatting
+- Added:
+  - Real-world test case using the Resilient Reactor Thread module (ASCII diagrams that
+    were getting clobbered + extensive intra-doc links)
 
 ### v0.0.1 (2026-01-23)
 

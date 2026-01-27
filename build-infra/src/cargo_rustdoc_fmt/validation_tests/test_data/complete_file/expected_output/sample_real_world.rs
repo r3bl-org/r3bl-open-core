@@ -299,38 +299,27 @@
 //! [`try_parse`]: crate::tui::terminal_lib_backends::direct_to_ansi::DirectToAnsiInputDevice::try_parse
 
 use super::types::{VT100InputEvent, VT100KeyCode, VT100KeyModifiers};
-use crate::{ASCII_DEL, KeyState,
-            core::ansi::constants::{ANSI_CSI_BRACKET, ANSI_ESC,
-                                    ANSI_FUNCTION_KEY_TERMINATOR, ANSI_PARAM_SEPARATOR,
-                                    ANSI_SS3_O, ARROW_DOWN_FINAL, ARROW_LEFT_FINAL,
-                                    ARROW_RIGHT_FINAL, ARROW_UP_FINAL, ASCII_DIGIT_0,
-                                    ASCII_DIGIT_9, ASCII_LOWER_A, ASCII_LOWER_Z,
-                                    ASCII_UPPER_A, ASCII_UPPER_Z, BACKTAB_FINAL,
-                                    CONTROL_BACKSPACE, CONTROL_ENTER, CONTROL_ESC,
-                                    CONTROL_LF, CONTROL_NUL, CONTROL_TAB,
-                                    CTRL_CHAR_RANGE_MAX, CTRL_TO_LOWERCASE_MASK,
-                                    FUNCTION_F1_CODE, FUNCTION_F2_CODE,
-                                    FUNCTION_F3_CODE, FUNCTION_F4_CODE,
-                                    FUNCTION_F5_CODE, FUNCTION_F6_CODE,
-                                    FUNCTION_F7_CODE, FUNCTION_F8_CODE,
-                                    FUNCTION_F9_CODE, FUNCTION_F10_CODE,
-                                    FUNCTION_F11_CODE, FUNCTION_F12_CODE, MODIFIER_ALT,
-                                    MODIFIER_CTRL, MODIFIER_NONE,
-                                    MODIFIER_PARAMETER_OFFSET, MODIFIER_SHIFT,
-                                    PRINTABLE_ASCII_MAX, PRINTABLE_ASCII_MIN,
-                                    SPECIAL_DELETE_CODE, SPECIAL_END_ALT1_CODE,
-                                    SPECIAL_END_ALT2_CODE, SPECIAL_END_FINAL,
-                                    SPECIAL_HOME_ALT1_CODE, SPECIAL_HOME_ALT2_CODE,
-                                    SPECIAL_HOME_FINAL, SPECIAL_INSERT_CODE,
-                                    SPECIAL_PAGE_DOWN_CODE, SPECIAL_PAGE_UP_CODE,
-                                    SS3_F1_FINAL, SS3_F2_FINAL, SS3_F3_FINAL,
-                                    SS3_F4_FINAL, SS3_NUMPAD_0, SS3_NUMPAD_1,
-                                    SS3_NUMPAD_2, SS3_NUMPAD_3, SS3_NUMPAD_4,
-                                    SS3_NUMPAD_5, SS3_NUMPAD_6, SS3_NUMPAD_7,
-                                    SS3_NUMPAD_8, SS3_NUMPAD_9, SS3_NUMPAD_COMMA,
-                                    SS3_NUMPAD_DECIMAL, SS3_NUMPAD_DIVIDE,
-                                    SS3_NUMPAD_ENTER, SS3_NUMPAD_MINUS,
-                                    SS3_NUMPAD_MULTIPLY, SS3_NUMPAD_PLUS}};
+use crate::{
+    ASCII_DEL, KeyState,
+    core::ansi::constants::{
+        ANSI_CSI_BRACKET, ANSI_ESC, ANSI_FUNCTION_KEY_TERMINATOR, ANSI_PARAM_SEPARATOR, ANSI_SS3_O,
+        ARROW_DOWN_FINAL, ARROW_LEFT_FINAL, ARROW_RIGHT_FINAL, ARROW_UP_FINAL, ASCII_DIGIT_0,
+        ASCII_DIGIT_9, ASCII_LOWER_A, ASCII_LOWER_Z, ASCII_UPPER_A, ASCII_UPPER_Z, BACKTAB_FINAL,
+        CONTROL_BACKSPACE, CONTROL_ENTER, CONTROL_ESC, CONTROL_LF, CONTROL_NUL, CONTROL_TAB,
+        CTRL_CHAR_RANGE_MAX, CTRL_TO_LOWERCASE_MASK, FUNCTION_F1_CODE, FUNCTION_F2_CODE,
+        FUNCTION_F3_CODE, FUNCTION_F4_CODE, FUNCTION_F5_CODE, FUNCTION_F6_CODE, FUNCTION_F7_CODE,
+        FUNCTION_F8_CODE, FUNCTION_F9_CODE, FUNCTION_F10_CODE, FUNCTION_F11_CODE,
+        FUNCTION_F12_CODE, MODIFIER_ALT, MODIFIER_CTRL, MODIFIER_NONE, MODIFIER_PARAMETER_OFFSET,
+        MODIFIER_SHIFT, PRINTABLE_ASCII_MAX, PRINTABLE_ASCII_MIN, SPECIAL_DELETE_CODE,
+        SPECIAL_END_ALT1_CODE, SPECIAL_END_ALT2_CODE, SPECIAL_END_FINAL, SPECIAL_HOME_ALT1_CODE,
+        SPECIAL_HOME_ALT2_CODE, SPECIAL_HOME_FINAL, SPECIAL_INSERT_CODE, SPECIAL_PAGE_DOWN_CODE,
+        SPECIAL_PAGE_UP_CODE, SS3_F1_FINAL, SS3_F2_FINAL, SS3_F3_FINAL, SS3_F4_FINAL, SS3_NUMPAD_0,
+        SS3_NUMPAD_1, SS3_NUMPAD_2, SS3_NUMPAD_3, SS3_NUMPAD_4, SS3_NUMPAD_5, SS3_NUMPAD_6,
+        SS3_NUMPAD_7, SS3_NUMPAD_8, SS3_NUMPAD_9, SS3_NUMPAD_COMMA, SS3_NUMPAD_DECIMAL,
+        SS3_NUMPAD_DIVIDE, SS3_NUMPAD_ENTER, SS3_NUMPAD_MINUS, SS3_NUMPAD_MULTIPLY,
+        SS3_NUMPAD_PLUS,
+    },
+};
 
 /// Parse a control character (bytes 0x00-0x1F) and convert to Ctrl+key event.
 ///
@@ -348,9 +337,12 @@ use crate::{ASCII_DEL, KeyState,
 ///
 /// [`Parser Dispatch Priority Pipeline`]
 /// [`Control Key Combinations`]
-/// [`Ambiguous Control Character Handling`]
+/// [`Ambiguous Control Character
+/// Handling`]
 ///
-/// [`Ambiguous Control Character Handling`]: mod@self#ambiguous-control-character-handling
+/// [`Ambiguous Control Character
+/// Handling`]: mod@self#ambiguous-control-character-handling
+///
 /// [`Control Key Combinations`]: mod@self#control-key-combinations-ctrlletter
 /// [`Parser Dispatch Priority Pipeline`]: mod@self#parser-dispatch-priority-pipeline
 #[must_use]
@@ -884,8 +876,7 @@ mod tests {
             code: VT100KeyCode::Function(n),
             modifiers,
         };
-        generate_keyboard_sequence(&event)
-            .expect("Failed to generate function key sequence")
+        generate_keyboard_sequence(&event).expect("Failed to generate function key sequence")
     }
 
     /// Build a special key sequence (Home, End, Insert, Delete, `PageUp`, `PageDown`)
@@ -893,8 +884,7 @@ mod tests {
     fn special_key_sequence(code: VT100KeyCode, modifiers: VT100KeyModifiers) -> Vec<u8> {
         use crate::core::ansi::vt_100_terminal_input_parser::test_fixtures::generate_keyboard_sequence;
         let event = VT100InputEvent::Keyboard { code, modifiers };
-        generate_keyboard_sequence(&event)
-            .expect("Failed to generate special key sequence")
+        generate_keyboard_sequence(&event).expect("Failed to generate special key sequence")
     }
 
     // ==================== SS3 Sequences ====================
@@ -904,8 +894,7 @@ mod tests {
     #[test]
     fn test_ss3_arrow_up() {
         let input = b"\x1bOA"; // ESC O A
-        let (event, bytes_consumed) =
-            parse_ss3_sequence(input).expect("Should parse SS3 up");
+        let (event, bytes_consumed) = parse_ss3_sequence(input).expect("Should parse SS3 up");
         assert_eq!(
             event,
             VT100InputEvent::Keyboard {
@@ -919,8 +908,7 @@ mod tests {
     #[test]
     fn test_ss3_arrow_down() {
         let input = b"\x1bOB"; // ESC O B
-        let (event, bytes_consumed) =
-            parse_ss3_sequence(input).expect("Should parse SS3 down");
+        let (event, bytes_consumed) = parse_ss3_sequence(input).expect("Should parse SS3 down");
         assert_eq!(
             event,
             VT100InputEvent::Keyboard {
@@ -934,8 +922,7 @@ mod tests {
     #[test]
     fn test_ss3_arrow_right() {
         let input = b"\x1bOC"; // ESC O C
-        let (event, bytes_consumed) =
-            parse_ss3_sequence(input).expect("Should parse SS3 right");
+        let (event, bytes_consumed) = parse_ss3_sequence(input).expect("Should parse SS3 right");
         assert_eq!(
             event,
             VT100InputEvent::Keyboard {
@@ -949,8 +936,7 @@ mod tests {
     #[test]
     fn test_ss3_arrow_left() {
         let input = b"\x1bOD"; // ESC O D
-        let (event, bytes_consumed) =
-            parse_ss3_sequence(input).expect("Should parse SS3 left");
+        let (event, bytes_consumed) = parse_ss3_sequence(input).expect("Should parse SS3 left");
         assert_eq!(
             event,
             VT100InputEvent::Keyboard {
@@ -964,8 +950,7 @@ mod tests {
     #[test]
     fn test_ss3_home() {
         let input = b"\x1bOH"; // ESC O H
-        let (event, bytes_consumed) =
-            parse_ss3_sequence(input).expect("Should parse SS3 home");
+        let (event, bytes_consumed) = parse_ss3_sequence(input).expect("Should parse SS3 home");
         assert_eq!(
             event,
             VT100InputEvent::Keyboard {
@@ -979,8 +964,7 @@ mod tests {
     #[test]
     fn test_ss3_end() {
         let input = b"\x1bOF"; // ESC O F
-        let (event, bytes_consumed) =
-            parse_ss3_sequence(input).expect("Should parse SS3 end");
+        let (event, bytes_consumed) = parse_ss3_sequence(input).expect("Should parse SS3 end");
         assert_eq!(
             event,
             VT100InputEvent::Keyboard {
@@ -994,8 +978,7 @@ mod tests {
     #[test]
     fn test_ss3_f1() {
         let input = b"\x1bOP"; // ESC O P
-        let (event, bytes_consumed) =
-            parse_ss3_sequence(input).expect("Should parse SS3 F1");
+        let (event, bytes_consumed) = parse_ss3_sequence(input).expect("Should parse SS3 F1");
         assert_eq!(
             event,
             VT100InputEvent::Keyboard {
@@ -1009,8 +992,7 @@ mod tests {
     #[test]
     fn test_ss3_f2() {
         let input = b"\x1bOQ"; // ESC O Q
-        let (event, bytes_consumed) =
-            parse_ss3_sequence(input).expect("Should parse SS3 F2");
+        let (event, bytes_consumed) = parse_ss3_sequence(input).expect("Should parse SS3 F2");
         assert_eq!(
             event,
             VT100InputEvent::Keyboard {
@@ -1024,8 +1006,7 @@ mod tests {
     #[test]
     fn test_ss3_f3() {
         let input = b"\x1bOR"; // ESC O R
-        let (event, bytes_consumed) =
-            parse_ss3_sequence(input).expect("Should parse SS3 F3");
+        let (event, bytes_consumed) = parse_ss3_sequence(input).expect("Should parse SS3 F3");
         assert_eq!(
             event,
             VT100InputEvent::Keyboard {
@@ -1039,8 +1020,7 @@ mod tests {
     #[test]
     fn test_ss3_f4() {
         let input = b"\x1bOS"; // ESC O S
-        let (event, bytes_consumed) =
-            parse_ss3_sequence(input).expect("Should parse SS3 F4");
+        let (event, bytes_consumed) = parse_ss3_sequence(input).expect("Should parse SS3 F4");
         assert_eq!(
             event,
             VT100InputEvent::Keyboard {
@@ -1085,8 +1065,7 @@ mod tests {
     fn test_arrow_up() {
         // Use generator to build the sequence (self-documenting)
         let input = arrow_key_sequence(VT100KeyCode::Up, VT100KeyModifiers::default());
-        let (event, bytes_consumed) =
-            parse_keyboard_sequence(&input).expect("Should parse");
+        let (event, bytes_consumed) = parse_keyboard_sequence(&input).expect("Should parse");
         assert_eq!(
             event,
             VT100InputEvent::Keyboard {
@@ -1100,8 +1079,7 @@ mod tests {
     #[test]
     fn test_arrow_down() {
         let input = arrow_key_sequence(VT100KeyCode::Down, VT100KeyModifiers::default());
-        let (event, bytes_consumed) =
-            parse_keyboard_sequence(&input).expect("Should parse");
+        let (event, bytes_consumed) = parse_keyboard_sequence(&input).expect("Should parse");
         assert!(matches!(
             event,
             VT100InputEvent::Keyboard {
@@ -1115,8 +1093,7 @@ mod tests {
     #[test]
     fn test_arrow_right() {
         let input = arrow_key_sequence(VT100KeyCode::Right, VT100KeyModifiers::default());
-        let (event, bytes_consumed) =
-            parse_keyboard_sequence(&input).expect("Should parse");
+        let (event, bytes_consumed) = parse_keyboard_sequence(&input).expect("Should parse");
         assert!(matches!(
             event,
             VT100InputEvent::Keyboard {
@@ -1130,8 +1107,7 @@ mod tests {
     #[test]
     fn test_arrow_left() {
         let input = arrow_key_sequence(VT100KeyCode::Left, VT100KeyModifiers::default());
-        let (event, bytes_consumed) =
-            parse_keyboard_sequence(&input).expect("Should parse");
+        let (event, bytes_consumed) = parse_keyboard_sequence(&input).expect("Should parse");
         assert!(matches!(
             event,
             VT100InputEvent::Keyboard {
@@ -1304,10 +1280,8 @@ mod tests {
 
     #[test]
     fn test_home_key() {
-        let input =
-            special_key_sequence(VT100KeyCode::Home, VT100KeyModifiers::default());
-        let (event, bytes_consumed) =
-            parse_keyboard_sequence(&input).expect("Should parse");
+        let input = special_key_sequence(VT100KeyCode::Home, VT100KeyModifiers::default());
+        let (event, bytes_consumed) = parse_keyboard_sequence(&input).expect("Should parse");
         assert!(matches!(
             event,
             VT100InputEvent::Keyboard {
@@ -1321,8 +1295,7 @@ mod tests {
     #[test]
     fn test_end_key() {
         let input = special_key_sequence(VT100KeyCode::End, VT100KeyModifiers::default());
-        let (event, bytes_consumed) =
-            parse_keyboard_sequence(&input).expect("Should parse");
+        let (event, bytes_consumed) = parse_keyboard_sequence(&input).expect("Should parse");
         assert!(matches!(
             event,
             VT100InputEvent::Keyboard {
@@ -1335,10 +1308,8 @@ mod tests {
 
     #[test]
     fn test_insert_key() {
-        let input =
-            special_key_sequence(VT100KeyCode::Insert, VT100KeyModifiers::default());
-        let (event, bytes_consumed) =
-            parse_keyboard_sequence(&input).expect("Should parse");
+        let input = special_key_sequence(VT100KeyCode::Insert, VT100KeyModifiers::default());
+        let (event, bytes_consumed) = parse_keyboard_sequence(&input).expect("Should parse");
         assert!(matches!(
             event,
             VT100InputEvent::Keyboard {
@@ -1351,10 +1322,8 @@ mod tests {
 
     #[test]
     fn test_delete_key() {
-        let input =
-            special_key_sequence(VT100KeyCode::Delete, VT100KeyModifiers::default());
-        let (event, bytes_consumed) =
-            parse_keyboard_sequence(&input).expect("Should parse");
+        let input = special_key_sequence(VT100KeyCode::Delete, VT100KeyModifiers::default());
+        let (event, bytes_consumed) = parse_keyboard_sequence(&input).expect("Should parse");
         assert!(matches!(
             event,
             VT100InputEvent::Keyboard {
@@ -1367,10 +1336,8 @@ mod tests {
 
     #[test]
     fn test_page_up() {
-        let input =
-            special_key_sequence(VT100KeyCode::PageUp, VT100KeyModifiers::default());
-        let (event, bytes_consumed) =
-            parse_keyboard_sequence(&input).expect("Should parse");
+        let input = special_key_sequence(VT100KeyCode::PageUp, VT100KeyModifiers::default());
+        let (event, bytes_consumed) = parse_keyboard_sequence(&input).expect("Should parse");
         assert!(matches!(
             event,
             VT100InputEvent::Keyboard {
@@ -1383,10 +1350,8 @@ mod tests {
 
     #[test]
     fn test_page_down() {
-        let input =
-            special_key_sequence(VT100KeyCode::PageDown, VT100KeyModifiers::default());
-        let (event, bytes_consumed) =
-            parse_keyboard_sequence(&input).expect("Should parse");
+        let input = special_key_sequence(VT100KeyCode::PageDown, VT100KeyModifiers::default());
+        let (event, bytes_consumed) = parse_keyboard_sequence(&input).expect("Should parse");
         assert!(matches!(
             event,
             VT100InputEvent::Keyboard {
@@ -1506,8 +1471,7 @@ mod tests {
     #[test]
     fn test_alt_letter_b() {
         let input = &[ANSI_ESC, b'b']; // ESC b → Alt+b
-        let (event, bytes_consumed) =
-            parse_alt_letter(input).expect("Should parse Alt+b");
+        let (event, bytes_consumed) = parse_alt_letter(input).expect("Should parse Alt+b");
         match event {
             VT100InputEvent::Keyboard { code, modifiers } => {
                 assert_eq!(code, VT100KeyCode::Char('b'));
@@ -1523,8 +1487,7 @@ mod tests {
     #[test]
     fn test_alt_letter_f() {
         let input = &[ANSI_ESC, b'f']; // ESC f → Alt+f
-        let (event, bytes_consumed) =
-            parse_alt_letter(input).expect("Should parse Alt+f");
+        let (event, bytes_consumed) = parse_alt_letter(input).expect("Should parse Alt+f");
         match event {
             VT100InputEvent::Keyboard { code, modifiers } => {
                 assert_eq!(code, VT100KeyCode::Char('f'));
@@ -1540,8 +1503,7 @@ mod tests {
     #[test]
     fn test_alt_letter_uppercase() {
         let input = &[ANSI_ESC, b'B']; // ESC B → Alt+B (uppercase)
-        let (event, bytes_consumed) =
-            parse_alt_letter(input).expect("Should parse Alt+B");
+        let (event, bytes_consumed) = parse_alt_letter(input).expect("Should parse Alt+B");
         match event {
             VT100InputEvent::Keyboard { code, modifiers } => {
                 assert_eq!(code, VT100KeyCode::Char('B'));
@@ -1557,8 +1519,7 @@ mod tests {
     #[test]
     fn test_alt_digit() {
         let input = &[ANSI_ESC, b'3']; // ESC 3 → Alt+3
-        let (event, bytes_consumed) =
-            parse_alt_letter(input).expect("Should parse Alt+3");
+        let (event, bytes_consumed) = parse_alt_letter(input).expect("Should parse Alt+3");
         match event {
             VT100InputEvent::Keyboard { code, modifiers } => {
                 assert_eq!(code, VT100KeyCode::Char('3'));
@@ -1574,8 +1535,7 @@ mod tests {
     #[test]
     fn test_alt_space() {
         let input = &[ANSI_ESC, b' ']; // ESC space → Alt+space
-        let (event, bytes_consumed) =
-            parse_alt_letter(input).expect("Should parse Alt+space");
+        let (event, bytes_consumed) = parse_alt_letter(input).expect("Should parse Alt+space");
         match event {
             VT100InputEvent::Keyboard { code, modifiers } => {
                 assert_eq!(code, VT100KeyCode::Char(' '));
@@ -1591,8 +1551,7 @@ mod tests {
     #[test]
     fn test_alt_backspace() {
         let input = &[ANSI_ESC, ASCII_DEL]; // ESC DEL → Alt+Backspace
-        let (event, bytes_consumed) =
-            parse_alt_letter(input).expect("Should parse Alt+Backspace");
+        let (event, bytes_consumed) = parse_alt_letter(input).expect("Should parse Alt+Backspace");
         match event {
             VT100InputEvent::Keyboard { code, modifiers } => {
                 assert_eq!(code, VT100KeyCode::Backspace);

@@ -230,31 +230,36 @@ fn main() {}";
     /// - Markdown tables that need alignment
     /// - Inline links that should be converted to reference style
     ///
-    /// This verifies the complete formatting pipeline on actual production code.
+    /// This is a true end-to-end test that runs the actual CLI binary (which
+    /// includes `cargo fmt` at the end), matching real-world behavior.
+    ///
+    /// The test runs from the workspace directory, so `cargo fmt` uses the
+    /// workspace's `rustfmt.toml` configuration.
     #[test]
     fn test_real_world_file_complete_formatting() {
         let input = include_str!("test_data/complete_file/input/sample_real_world.rs");
         let expected =
             include_str!("test_data/complete_file/expected_output/sample_real_world.rs");
 
-        // Use the actual FileProcessor to test the complete pipeline
+        // Create temp dir and copy input file
         let temp_dir = TempDir::new().unwrap();
         let test_file = temp_dir.path().join("sample_real_world.rs");
         fs::write(&test_file, input).unwrap();
 
-        // Process with default options (tables + links)
-        let options = FormatOptions::default();
-        let processor = processor::FileProcessor::new(options);
-        let result = processor.process_file(&test_file);
+        // Run the actual CLI binary for true e2e testing (includes cargo fmt)
+        // Runs from workspace dir, so cargo fmt uses workspace's rustfmt.toml
+        let cargo = std::env::var("CARGO").unwrap_or_else(|_| "cargo".to_string());
+        let output = std::process::Command::new(&cargo)
+            .args(["run", "--bin", "cargo-rustdoc-fmt", "--"])
+            .arg("rustdoc-fmt")
+            .arg(&test_file)
+            .output()
+            .expect("Failed to run cargo-rustdoc-fmt binary");
 
         assert!(
-            result.errors.is_empty(),
-            "Processing errors: {:?}",
-            result.errors
-        );
-        assert!(
-            result.modified,
-            "File should be modified (has formatting to do)"
+            output.status.success(),
+            "CLI failed: {}",
+            String::from_utf8_lossy(&output.stderr)
         );
 
         // Read the formatted result
@@ -295,11 +300,25 @@ fn main() {}";
             "Should have reference-style links"
         );
 
-        // The formatted result should match expected output
-        assert_eq!(
-            formatted, expected,
-            "Formatted output should match expected output"
-        );
+        // Copy expected to temp dir for diff comparison
+        let expected_path = temp_dir.path().join("expected.rs");
+        fs::write(&expected_path, expected).unwrap();
+
+        // Use diff for comparison - clearer than assert_eq for large files
+        let diff_output = std::process::Command::new("diff")
+            .args(["-u", "--color=never"])
+            .arg(&expected_path)
+            .arg(&test_file)
+            .output()
+            .expect("Failed to run diff");
+
+        if !diff_output.status.success() {
+            eprintln!(
+                "=== DIFF (expected vs formatted) ===\n{}",
+                String::from_utf8_lossy(&diff_output.stdout)
+            );
+            panic!("Formatted output does not match expected output");
+        }
     }
 
     /// Test that files with `rustfmt_skip` attribute are correctly skipped.
@@ -628,5 +647,106 @@ fn main() {}";
             formatted, expected,
             "Formatted output should match expected output"
         );
+    }
+
+    /// Test that text diagrams (ASCII art) are preserved correctly.
+    ///
+    /// This test uses the resilient_reactor_thread/mod.rs file which triggered
+    /// the PROTECTED_CONTENT bug. It contains:
+    /// - Complex ASCII art diagrams inside code fences
+    /// - Multiple markdown tables
+    /// - HTML comments
+    /// - Reference-style links scattered throughout
+    ///
+    /// This verifies that ContentProtector's Unicode arrow placeholders don't
+    /// get mangled by pulldown_cmark (the original `___` underscores were
+    /// interpreted as bold+italic markdown).
+    #[test]
+    fn test_resilient_reactor_text_diagrams() {
+        let input =
+            include_str!("test_data/complete_file/input/sample_resilient_reactor.rs");
+        let expected = include_str!(
+            "test_data/complete_file/expected_output/sample_resilient_reactor.rs"
+        );
+
+        // Create temp dir and copy input file
+        let temp_dir = TempDir::new().unwrap();
+        let test_file = temp_dir.path().join("sample_resilient_reactor.rs");
+        fs::write(&test_file, input).unwrap();
+
+        // Run the actual CLI binary for true e2e testing (includes cargo fmt)
+        // Runs from workspace dir, so cargo fmt uses workspace's rustfmt.toml
+        let cargo = std::env::var("CARGO").unwrap_or_else(|_| "cargo".to_string());
+        let output = std::process::Command::new(&cargo)
+            .args(["run", "--bin", "cargo-rustdoc-fmt", "--"])
+            .arg("rustdoc-fmt")
+            .arg(&test_file)
+            .output()
+            .expect("Failed to run cargo-rustdoc-fmt binary");
+
+        assert!(
+            output.status.success(),
+            "CLI failed: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+
+        // Read the formatted result
+        let formatted = fs::read_to_string(&test_file).unwrap();
+
+        // Verify text diagrams are preserved (key test for the PROTECTED_CONTENT bug)
+        assert!(
+            formatted.contains("Thread: poll()"),
+            "ASCII diagram should be preserved"
+        );
+        assert!(
+            formatted.contains("──blocks──►"),
+            "ASCII diagram arrows should be preserved"
+        );
+        assert!(
+            formatted.contains("┌────────"),
+            "Box drawing characters should be preserved"
+        );
+
+        // Verify NO PROTECTED_CONTENT placeholders remain
+        assert!(
+            !formatted.contains("PROTECTED_CONTENT"),
+            "All placeholders should be restored"
+        );
+
+        // Verify tables are preserved
+        assert!(
+            formatted.contains("| Component"),
+            "Tables should be preserved"
+        );
+        assert!(
+            formatted.contains("| :--"),
+            "Table alignment markers should be preserved"
+        );
+
+        // Verify reference-style links are present
+        assert!(
+            formatted.contains("[`epoll`]:"),
+            "Reference-style links should be present"
+        );
+
+        // Copy expected to temp dir for diff comparison
+        let expected_path = temp_dir.path().join("expected.rs");
+        fs::write(&expected_path, expected).unwrap();
+
+        // Use diff for comparison - clearer than assert_eq for large files
+        let diff_output = std::process::Command::new("diff")
+            .args(["-u", "--color=never"])
+            .arg(&expected_path)
+            .arg(&test_file)
+            .output()
+            .expect("Failed to run diff");
+
+        if !diff_output.status.success() {
+            eprintln!(
+                "=== DIFF (expected vs formatted) ===\n{}",
+                String::from_utf8_lossy(&diff_output.stdout)
+            );
+            panic!("Formatted output does not match expected output");
+        }
     }
 }

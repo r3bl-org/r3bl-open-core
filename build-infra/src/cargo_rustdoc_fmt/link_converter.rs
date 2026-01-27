@@ -5,10 +5,29 @@
 
 //! Convert inline markdown links to reference-style links.
 
-use pulldown_cmark::{Event, HeadingLevel, LinkType, Parser, Tag, TagEnd};
-use std::{collections::HashMap, fmt::Write as _};
+use regex::Regex;
+use std::sync::LazyLock;
+
+/// Regex to match inline markdown links: `[text](url)`
+///
+/// Captures:
+/// - Group 1: link text (can contain backticks for code)
+/// - Group 2: URL
+///
+/// Does NOT match:
+/// - Reference-style links `[text][ref]` or `[text]`
+/// - Already existing reference definitions `[text]: url`
+static INLINE_LINK_REGEX: LazyLock<Regex> = LazyLock::new(|| {
+    // Match [text](url) but not [![ (image links) or [text][ref]
+    // The text can contain backticks, brackets (if balanced), etc.
+    // URL cannot contain spaces or closing parens (simplified)
+    Regex::new(r"\[([^\]]+)\]\(([^)\s]+)\)").expect("Invalid inline link regex")
+});
 
 /// Convert inline markdown links to reference-style links.
+///
+/// This function preserves all original formatting (numbered lists, indentation,
+/// etc.) by using regex replacement instead of parsing and rebuilding the markdown.
 ///
 /// # Example
 ///
@@ -20,64 +39,31 @@ pub fn convert_links(text: &str) -> String {
         return String::new();
     }
 
-    let parser = Parser::new(text);
-    let mut link_info: Vec<(String, String)> = Vec::new(); // (link_text, url)
-    let mut url_to_text: HashMap<String, String> = HashMap::new();
+    // Extract existing reference definitions first
+    let (text_without_refs, existing_refs) = extract_reference_definitions(text);
 
-    // First pass: collect link text and URLs
-    let mut in_link = false;
-    let mut current_text = String::new();
-    let mut current_url = String::new();
+    // Collect inline links and their URLs
+    let mut link_info: Vec<(String, String)> = Vec::new();
+    let mut seen_urls: std::collections::HashSet<String> = std::collections::HashSet::new();
 
-    for event in parser {
-        match event {
-            Event::Start(Tag::Link {
-                link_type,
-                dest_url,
-                ..
-            }) => {
-                if link_type == LinkType::Inline {
-                    in_link = true;
-                    current_url = dest_url.to_string();
-                    current_text.clear();
-                }
-            }
-            Event::End(TagEnd::Link) => {
-                if in_link {
-                    // Store this link info
-                    if !url_to_text.contains_key(&current_url) {
-                        url_to_text.insert(current_url.clone(), current_text.clone());
-                        link_info.push((current_text.clone(), current_url.clone()));
-                    }
-                    in_link = false;
-                }
-            }
-            Event::Text(text_content) => {
-                if in_link {
-                    current_text.push_str(&text_content);
-                }
-            }
-            Event::Code(code) => {
-                if in_link {
-                    current_text.push('`');
-                    current_text.push_str(&code);
-                    current_text.push('`');
-                }
-            }
-            _ => {}
+    for caps in INLINE_LINK_REGEX.captures_iter(&text_without_refs) {
+        let link_text = caps.get(1).map_or("", |m| m.as_str()).to_string();
+        let url = caps.get(2).map_or("", |m| m.as_str()).to_string();
+
+        // Only add unique URLs (first link text wins for duplicates)
+        if !seen_urls.contains(&url) {
+            seen_urls.insert(url.clone());
+            link_info.push((link_text, url));
         }
     }
 
-    // Extract existing reference definitions BEFORE parsing
-    // (pulldown_cmark strips reference definitions, so we must preserve them)
-    let (text_without_refs, existing_refs) = extract_reference_definitions(text);
+    // Replace inline links with reference-style links in-place
+    let result = INLINE_LINK_REGEX.replace_all(&text_without_refs, |caps: &regex::Captures| {
+        let link_text = caps.get(1).map_or("", |m| m.as_str());
+        format!("[{link_text}]")
+    });
 
-    // Rebuild the markdown with reference-style links (if any inline links found)
-    let mut result = if link_info.is_empty() {
-        text_without_refs
-    } else {
-        rebuild_with_text_references(&text_without_refs)
-    };
+    let mut result = result.to_string();
 
     // Collect all references: both newly converted and pre-existing
     let mut all_refs = Vec::new();
@@ -96,7 +82,6 @@ pub fn convert_links(text: &str) -> String {
         all_refs.sort_by(|(name_a, _), (name_b, _)| name_a.cmp(name_b));
 
         // Append references at bottom with blank line separator for visual clarity
-        // This separates content (including reference usages) from reference definitions
         result = result.trim_end().to_string();
         result.push_str("\n\n");
         for (_, ref_line) in &all_refs {
@@ -104,132 +89,6 @@ pub fn convert_links(text: &str) -> String {
             result.push('\n');
         }
         result = result.trim_end().to_string();
-    }
-
-    result
-}
-
-/// Rebuild markdown text with reference-style links using link text as reference ID.
-#[allow(clippy::too_many_lines)]
-fn rebuild_with_text_references(text: &str) -> String {
-    let parser = Parser::new(text);
-    let mut result = String::new();
-    let mut in_link = false;
-    let mut link_text = String::new();
-    let mut current_url = String::new();
-    let mut need_newline = false;
-
-    for event in parser {
-        match event {
-            Event::Start(Tag::Link {
-                link_type,
-                dest_url,
-                ..
-            }) => {
-                if link_type == LinkType::Inline {
-                    in_link = true;
-                    current_url = dest_url.to_string();
-                    link_text.clear();
-                } else {
-                    // Keep reference links as-is
-                    result.push('[');
-                }
-            }
-            Event::End(TagEnd::Link) => {
-                if in_link {
-                    // Convert to reference style using link text as reference ID
-                    let _ = write!(result, "[{link_text}]");
-                    in_link = false;
-                    link_text.clear();
-                    current_url.clear();
-                } else {
-                    result.push(']');
-                }
-            }
-            Event::Text(text_content) => {
-                if in_link {
-                    link_text.push_str(&text_content);
-                } else {
-                    result.push_str(&text_content);
-                }
-                need_newline = false;
-            }
-            Event::Code(code) => {
-                if in_link {
-                    link_text.push('`');
-                    link_text.push_str(&code);
-                    link_text.push('`');
-                } else {
-                    result.push('`');
-                    result.push_str(&code);
-                    result.push('`');
-                }
-                need_newline = false;
-            }
-            Event::SoftBreak => result.push('\n'),
-            Event::HardBreak => result.push_str("  \n"),
-            Event::Start(Tag::Emphasis) | Event::End(TagEnd::Emphasis) => {
-                result.push('*');
-            }
-            Event::Start(Tag::Strong) | Event::End(TagEnd::Strong) => {
-                result.push_str("**");
-            }
-            Event::Start(Tag::List(_)) => {
-                if !result.is_empty() && !result.ends_with('\n') {
-                    result.push('\n');
-                }
-                need_newline = false;
-            }
-            Event::End(TagEnd::List(_)) => {
-                if !result.is_empty() && !result.ends_with('\n') {
-                    result.push('\n');
-                }
-                need_newline = true;
-            }
-            Event::Start(Tag::Item) => {
-                if !result.is_empty() && !result.ends_with('\n') {
-                    result.push('\n');
-                }
-                result.push_str("- ");
-            }
-            Event::End(TagEnd::Item) => {
-                need_newline = false;
-            }
-            Event::Start(Tag::Paragraph) => {
-                if !result.is_empty() && need_newline && !result.ends_with("\n\n") {
-                    if !result.ends_with('\n') {
-                        result.push('\n');
-                    }
-                    result.push('\n');
-                }
-                need_newline = false;
-            }
-            Event::End(TagEnd::Paragraph | TagEnd::Heading(..)) => {
-                need_newline = true;
-            }
-            Event::Start(Tag::Heading { level, .. }) => {
-                // Ensure blank line before heading for Rust doc style
-                if !result.is_empty() && !result.ends_with("\n\n") {
-                    if !result.ends_with('\n') {
-                        result.push('\n');
-                    }
-                    result.push('\n');
-                }
-
-                // Output correct number of # characters based on heading level
-                let level_num = match level {
-                    HeadingLevel::H1 => 1,
-                    HeadingLevel::H2 => 2,
-                    HeadingLevel::H3 => 3,
-                    HeadingLevel::H4 => 4,
-                    HeadingLevel::H5 => 5,
-                    HeadingLevel::H6 => 6,
-                };
-                result.push_str(&"#".repeat(level_num));
-                result.push(' ');
-            }
-            _ => {}
-        }
     }
 
     result
@@ -576,5 +435,63 @@ More content.
             last_three.iter().all(|l| l.starts_with('[')),
             "Last 3 lines should be references"
         );
+    }
+
+    #[test]
+    fn test_numbered_list_preserved() {
+        // Numbered lists should NOT be converted to bullet lists
+        let input = r"Steps:
+
+1. First do [this](https://example.com/first)
+2. Then do [that](https://example.com/second)
+3. Finally [finish](https://example.com/third)";
+        let output = convert_links(input);
+        eprintln!("Input:\n{input}");
+        eprintln!("\nOutput:\n{output}");
+
+        // Numbered list markers should be preserved
+        assert!(output.contains("1. First do [this]"), "Numbered list '1.' should be preserved");
+        assert!(output.contains("2. Then do [that]"), "Numbered list '2.' should be preserved");
+        assert!(output.contains("3. Finally [finish]"), "Numbered list '3.' should be preserved");
+
+        // Should NOT have bullet markers
+        assert!(!output.contains("- First"), "Should not convert to bullet list");
+    }
+
+    #[test]
+    fn test_indentation_preserved() {
+        // Multi-line list items with indentation should be preserved
+        let input = r"- The framework handles all the mechanics: spawning
+  threads, reusing running threads, wake signaling.
+- The user implements [traits](https://example.com):
+  complete implementations here.";
+        let output = convert_links(input);
+        eprintln!("Input:\n{input}");
+        eprintln!("\nOutput:\n{output}");
+
+        // Indentation should be preserved
+        assert!(output.contains("  threads, reusing"), "Indentation should be preserved");
+        assert!(output.contains("  complete implementations"), "Indentation should be preserved");
+    }
+
+    #[test]
+    fn test_multiline_content_preserved() {
+        // Content that spans multiple lines should be preserved exactly
+        let input = r"Some text with a [link](https://example.com) that
+continues on the next line without breaking.
+
+1. **Item one** — description with a [link](https://example.com/one)
+   that continues on the next line.
+
+2. **Item two** — another description.";
+        let output = convert_links(input);
+        eprintln!("Input:\n{input}");
+        eprintln!("\nOutput:\n{output}");
+
+        // Line structure should be preserved
+        assert!(output.contains("that\ncontinues"), "Newlines in text should be preserved");
+        assert!(output.contains("1. **Item one**"), "Numbered list should be preserved");
+        assert!(output.contains("2. **Item two**"), "Numbered list should be preserved");
+        assert!(output.contains("   that continues"), "Indentation should be preserved");
     }
 }
