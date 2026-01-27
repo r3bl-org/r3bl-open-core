@@ -30,6 +30,45 @@ This consolidated skill covers all aspects of writing high-quality rustdoc:
 
 ---
 
+## Voice & Tone
+
+**r3bl is serious & meaningful & precise. r3bl is also fun.**
+
+Documentation should be rigorous about content, playful about presentation:
+
+| Aspect | Serious & Precise | Fun |
+|--------|-------------------|-----|
+| **Technical accuracy** | Correct terminology, proper distinctions | — |
+| **Links** | Intra-doc links, authoritative sources | — |
+| **Visual aids** | ASCII diagrams, tables | Emoji for scannability |
+| **Language** | Clear, unambiguous | Literary references, personality |
+
+### Examples
+
+**Emoji for visual scanning** (semantic, not decorative):
+```rust
+//! 🐧 **Linux**: Uses `epoll` for I/O multiplexing
+//! 🍎 **macOS**: Uses `kqueue` (with PTY limitations)
+//! 🪟 **Windows**: Uses IOCP for async I/O
+```
+
+**Severity with visual metaphors:**
+```rust
+//! 1. 🐢 **Multi-threaded runtime**: Reduced throughput but still running
+//! 2. 🧊 **Single-threaded runtime**: Total blockage — nothing else runs
+```
+
+**Literary references with layered meaning:**
+```rust
+//! What's in a name? 😛 The three core properties:
+```
+The 😛 is a visual pun on "tongue in cheek" — Shakespeare's Juliet argues names *don't* matter,
+but here we use the quote to explain why RRT's name *does* matter. The emoji signals the irony.
+
+**Rule:** Emoji must have semantic meaning (OS icons, severity levels). Never use random 🚀✨🎉 for "excitement."
+
+---
+
 ## Part 1: Structure (Inverted Pyramid)
 
 Structure documentation with high-level concepts at the top, details below:

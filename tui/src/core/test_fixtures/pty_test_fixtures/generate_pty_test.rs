@@ -18,7 +18,6 @@
 ///
 /// This macro handles the boilerplate for PTY-based integration tests:
 ///
-///
 /// 1. **Process routing**: Routes to controller or controlled code based on environment
 ///    variable
 /// 2. **PTY setup**: Creates PTY pair and spawns controlled process automatically
@@ -41,7 +40,7 @@
 /// ┌────────────▼───────────┐    ┌───────────────▼───────────────┐
 /// │ Macro: PTY Setup       │    │ Controlled Function           │
 /// │ - Creates PTY pair     │    │ - Enable raw mode (if needed) │
-/// │ - Spawns controlled    ├────▶ - Execute test logic          │
+/// │ - Spawns controlled    ├────▶ - Execute test logic         │
 /// │ - Passes to controller │    │ - Output via stdout/stderr    │
 /// └────────────┬───────────┘    └────────────▲─┬────────────────┘
 ///              │                             │ │
@@ -50,7 +49,7 @@
 /// │ - Receives pty_pair           │          │ │ stdin, stdout/stderr
 /// │ - Receives child              │          │ │
 /// │ - Writes input to child (opt) ├──────────┘ │
-/// │ - Reads results from child    ◀────────────┘
+/// │ - Reads results from child    ◀───────────┘
 /// │ - Verifies assertions         │
 /// │ - Waits for child exit        │
 /// └───────────────────────────────┘

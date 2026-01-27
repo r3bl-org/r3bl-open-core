@@ -250,15 +250,15 @@
           "isPinned": false
         },
         {
+          "path": "tui/src/core/resilient_reactor_thread/types.rs",
+          "isPinned": false
+        },
+        {
           "path": "tui/src/core/resilient_reactor_thread/thread_safe_global_state.rs",
           "isPinned": false
         },
         {
           "path": "tui/src/tui/terminal_lib_backends/direct_to_ansi/input/input_device_public_api.rs",
-          "isPinned": false
-        },
-        {
-          "path": "tui/src/core/resilient_reactor_thread/types.rs",
           "isPinned": false
         },
         {

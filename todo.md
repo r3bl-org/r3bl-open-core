@@ -84,6 +84,18 @@
       for having each Component paint into its own OffscreenBuffer, and then composing them together
       for automatic scrolling and z-index handling
 
+# add self-upgrade capability to r3bl-build-infra binaries
+
+- [ ] PRD [`add-self-upgrade-to-build-infra-binaries`](task/pending/add-self-upgrade-to-build-infra-binaries.md)
+      to lift self-upgrade functionality from r3bl-cmdr into r3bl_tui, enabling all build-infra
+      binaries (cargo-rustdoc-fmt, etc.) to check for and install updates automatically
+
+# copy keystone docs to developerlife.com and make videos
+
+- [ ] [`copy-keystone-docs-to-developerlife`](task/pending/copy-keystone-docs-to-developerlife.md)
+      Publish standalone evergreen documentation from roc monorepo to developerlife.com and create
+      YouTube videos for each topic (RRT, VT100 parsing, graphemes, raw mode, ANSI input, PTY testing)
+
 # optimize offscreen buffer
 
 - [ ] [`task_ofs_buf_1d_array.md`](task/pending/task_ofs_buf_1d_array.md)
