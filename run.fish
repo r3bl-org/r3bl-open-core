@@ -102,8 +102,6 @@ function main
             cloc
         case help --help -h
             print-help all
-        case build-server
-            build-server
             # TUI-specific commands
         case run-examples
             run-examples $argv[2..-1]
@@ -172,7 +170,6 @@ function print-help
         echo "    "(set_color green)"toolchain-validate"(set_color normal)"   Quick toolchain validation (components only)"
         echo "    "(set_color green)"toolchain-validate-complete"(set_color normal)"  Complete toolchain validation (full build+test)"
         echo "    "(set_color green)"toolchain-remove"(set_color normal)"     Remove ALL toolchains (testing)"
-        echo "    "(set_color green)"build-server"(set_color normal)"         Remote build server - uses rsync"
         echo ""
         echo (set_color cyan --bold)"Watch commands:"(set_color normal)
         echo "    "(set_color green)"test-watch"(set_color normal)" "(set_color blue)"[pattern]"(set_color normal)"  Watch files, run specific test"
@@ -210,71 +207,6 @@ end
 
 # Synchronizes local development files to a remote build server using rsync.
 #
-# This function sets up a continuous file watcher that monitors changes in the local
-# workspace and automatically syncs them to a remote server for distributed builds.
-# Useful for leveraging more powerful remote hardware for compilation.
-#
-# Features:
-# - Uses inotifywait to monitor file system changes
-# - Automatically excludes target/ directories from sync
-# - Provides real-time feedback on sync operations
-# - Graceful Ctrl+C handling
-#
-# Prerequisites:
-# - rsync installed locally
-# - SSH access to the remote build server
-# - inotifywait installed (part of inotify-tools)
-#
-# Usage:
-#   fish run.fish build-server
-#
-# Then on the remote server, run:
-#   cargo test --all-targets
-#   cargo doc --no-deps
-#   cargo clippy --all-targets
-function build-server
-    # Where you source files live.
-    set orig_path $HOME/github/r3bl-open-core/
-    # Copy files to here.
-    set dest_host "nazmul-laptop.local"
-    set dest_path "$dest_host:$orig_path"
-
-    # Function to run rsync. Simple.
-    function run_rsync --argument-names orig_path dest_path
-        echo (set_color cyan --underline)"Changes detected, running rsync"(set_color normal)
-
-        set prefix "┤ "
-        set hanging_prefix "├ "
-        set msg_1 (set_color yellow)"$orig_path"(set_color normal)
-        set msg_2 (set_color blue)"$dest_path"(set_color normal)
-        printf "$prefix%s\t%s\n" "from:" "$msg_1"
-        printf "$hanging_prefix%s\t%s\n" "to:" "$msg_2"
-        rsync -q -avz --delete --exclude target/ "$orig_path" "$dest_path"
-
-        echo (set_color cyan --underline)"Rsync complete"(set_color normal)
-    end
-
-    # Main loop
-    while true
-        # Construct the inotifywait command with all directories.
-        set inotify_command inotifywait
-        set inotify_args -r -e modify -e create -e delete -e move --exclude target $orig_path
-
-        echo (set_color green --bold)" "(set_color yellow)"$inotify_command"(set_color normal)" "(set_color blue)"$inotify_args"(set_color normal)
-
-        echo (set_color cyan)"❪◕‿◕❫ "(set_color normal)(set_color green)"Please run on build server: "(set_color normal)(set_color yellow --underline)"cargo test --all-targets"(set_color normal)", "(set_color yellow --underline)"cargo doc --no-deps"(set_color normal)", "(set_color yellow --underline)"cargo clippy --all-targets"(set_color normal)
-
-        # Execute the inotifywait command with proper Ctrl+C handling
-        if not $inotify_command $inotify_args >/dev/null 2>&1
-            # User pressed Ctrl+C, exit gracefully
-            return
-        end
-
-        # Run rsync
-        run_rsync "$orig_path" "$dest_path"
-    end
-end
-
 # Watch commands - using watch-files from script_lib.fish
 function test-watch
     set pattern $argv[1]

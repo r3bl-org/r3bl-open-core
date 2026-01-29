@@ -34,19 +34,20 @@
 
 // These PTY tests use DirectToAnsiInputDevice which is Linux-only.
 // On macOS/Windows, Crossterm backend is used instead and these tests are skipped.
-#[cfg(all(target_os = "linux", any(test, doc)))]
+// Doc builds are allowed on all platforms so documentation can be read anywhere.
+#[cfg(any(doc, all(target_os = "linux", test)))]
 pub mod pty_ctrl_d_eof_test;
-#[cfg(all(target_os = "linux", any(test, doc)))]
+#[cfg(any(doc, all(target_os = "linux", test)))]
 pub mod pty_ctrl_d_delete_test;
-#[cfg(all(target_os = "linux", any(test, doc)))]
+#[cfg(any(doc, all(target_os = "linux", test)))]
 pub mod pty_ctrl_u_test;
-#[cfg(all(target_os = "linux", any(test, doc)))]
+#[cfg(any(doc, all(target_os = "linux", test)))]
 pub mod pty_ctrl_w_test;
-#[cfg(all(target_os = "linux", any(test, doc)))]
+#[cfg(any(doc, all(target_os = "linux", test)))]
 pub mod pty_ctrl_navigation_test;
-#[cfg(all(target_os = "linux", any(test, doc)))]
+#[cfg(any(doc, all(target_os = "linux", test)))]
 pub mod pty_alt_navigation_test;
-#[cfg(all(target_os = "linux", any(test, doc)))]
+#[cfg(any(doc, all(target_os = "linux", test)))]
 pub mod pty_alt_kill_test;
 // These PTY tests use only portable_pty (no DirectToAnsiInputDevice) and work cross-platform.
 #[cfg(any(test, doc))]

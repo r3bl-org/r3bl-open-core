@@ -391,14 +391,39 @@ mod backend_tests;
 // After (links resolve in docs):
 #[cfg(any(test, doc))]
 pub mod backend_tests;
-
-// For platform-specific test modules:
-#[cfg(all(any(test, doc), target_os = "linux"))]
-pub mod linux_only_tests;
 ```
 
-**Apply at all levels** — If linking to a nested test module, both parent and child modules need
-the visibility change. See `organize-modules` skill for complete patterns.
+#### Cross-Platform Docs for Platform-Specific Code
+
+For code that only runs on specific platforms (e.g., Linux) but should have docs generated on **all
+platforms** (so developers on macOS can read them locally):
+
+```rust
+// ❌ Broken: Docs won't generate on macOS!
+#[cfg(all(target_os = "linux", any(test, doc)))]
+pub mod linux_only_module;
+
+// ✅ Fixed: Docs generate on all platforms, tests run only on Linux
+#[cfg(any(doc, all(target_os = "linux", test)))]
+pub mod linux_only_module;
+#[cfg(all(target_os = "linux", not(any(test, doc))))]
+mod linux_only_module;
+
+// Re-exports also need the doc condition
+#[cfg(any(target_os = "linux", doc))]
+pub use linux_only_module::*;
+```
+
+**Key insight:** The `doc` cfg flag doesn't override other conditions—it's just another flag. Use
+`any(doc, ...)` to make documentation an **alternative path**, not an additional requirement:
+
+| Pattern | Meaning | Docs on macOS? |
+|:--------|:--------|:---------------|
+| `all(target_os = "linux", any(test, doc))` | Linux AND (test OR doc) | ❌ No |
+| `any(doc, all(target_os = "linux", test))` | doc OR (Linux AND test) | ✅ Yes |
+
+**Apply at all levels** — If linking to a nested module, both parent and child modules need
+the visibility change. See `organize-modules` skill for complete patterns and examples.
 
 ---
 

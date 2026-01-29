@@ -76,8 +76,8 @@
 # - Only ONE watch mode instance can run at a time
 # - One-off commands (--test, --doc, default) can run concurrently without issues
 # - Uses PID file with liveness check (fish doesn't support bash-style flock FD syntax)
-# - PID file: /tmp/roc/check.fish.pid (checked via /proc/<pid> to detect stale files)
-# - When entering watch mode, kills existing instance and orphaned inotifywait processes
+# - PID file: /tmp/roc/check.fish.pid (checked via kill -0 for cross-platform support)
+# - When entering watch mode, kills existing instance and orphaned file watcher processes
 # - Prevents race conditions where multiple watch instances clean target/check simultaneously
 #
 # Toolchain Concurrency:
@@ -87,7 +87,7 @@
 # Performance Optimizations:
 # - tmpfs: Builds to /tmp/roc/target/check (RAM-based, eliminates disk I/O)
 #   ⚠️  Trade-off: Cache lost on reboot, first post-reboot build is cold
-# - CARGO_BUILD_JOBS=28: Forces max parallelism (benchmarked: 60% faster for cargo doc)
+# - CARGO_BUILD_JOBS=<nproc>: Forces max parallelism (benchmarked: 60% faster for cargo doc)
 # - ionice -c2 -n0: Highest I/O priority in best-effort class (no sudo needed)
 #
 # Watch Mode & Sliding Window Debounce:
@@ -95,8 +95,9 @@
 # The main thread alternates between BLOCKED (waiting for events/timeout) and
 # DISPATCHING (forking build processes). Actual builds run in parallel background processes.
 #
-# Key Insight: inotifywait with timeout (-t) acts as both an event listener AND
-# a timer. This lets us implement sliding window debounce without threads:
+# Key Insight: The file watcher (inotifywait on Linux, fswatch on macOS) acts as
+# both an event listener AND a timer. This lets us implement sliding window
+# debounce without threads:
 #   - Exit code 0: File changed (event detected)
 #   - Exit code 2: Timeout expired (no events for N seconds)
 #   - Exit code 1: Error
@@ -106,8 +107,8 @@
 # we use sliding window debounce ("wait for N seconds of quiet before running").
 #
 # Algorithm:
-#   1. Wait for FIRST event (inotifywait, no timeout - blocks forever)
-#   2. Start sliding window: call inotifywait with DEBOUNCE_WINDOW_SECS timeout
+#   1. Wait for FIRST event (file watcher, no timeout - blocks forever)
+#   2. Start sliding window: call file watcher with DEBOUNCE_WINDOW_SECS timeout
 #   3. If event arrives (code 0): loop back to step 2 (reset window)
 #   4. If timeout expires (code 2): quiet period detected, run build
 #   5. After build completes, go back to step 1
@@ -142,16 +143,16 @@
 #   1:37  Full build done     Notification: "Full docs built!" (background)
 #
 # Why This Works:
-# - inotifywait does the heavy lifting (efficient kernel-level blocking)
-# - No CPU burn while waiting (uses kernel's inotify subsystem)
+# - File watcher does the heavy lifting (efficient kernel-level blocking)
+# - No CPU burn while waiting (uses kernel's inotify/FSEvents subsystem)
 # - Single mechanism handles both "coalesce rapid saves" AND "wait for quiet"
 # - No separate event draining or timestamp tracking needed
 #
 # Events During Build:
-# Since builds are forked to background, the main thread returns to inotifywait
-# immediately. File events are processed normally while builds run in parallel.
-# If a new change arrives, a new build cycle starts (previous builds continue
-# in background until completion).
+# Since builds are forked to background, the main thread returns to the file
+# watcher immediately. File events are processed normally while builds run in
+# parallel. If a new change arrives, a new build cycle starts (previous builds
+# continue in background until completion).
 #
 # Doc Build Architecture (--watch-doc):
 # Uses a two-tier build system with eventual consistency for cross-crate links.
@@ -253,9 +254,18 @@ set -g CHECK_LOCK_FILE /tmp/roc/check.fish.pid
 # 3. Write our PID to the file
 #
 # Note: Unlike flock, PID files can become stale on SIGKILL. We handle this
-# by checking /proc/<pid> to verify the process is actually alive.
+# by checking if the process is alive (cross-platform: kill -0).
 #
-# Also kills orphaned inotifywait processes from previous sessions.
+# Also kills orphaned file watcher processes from previous sessions.
+
+# Cross-platform check if a process is alive.
+# Uses kill -0 which works on both Linux and macOS (doesn't actually send a signal).
+# Returns: 0 if alive, 1 if not alive or invalid PID
+function is_process_alive
+    set -l pid $argv[1]
+    test -n "$pid" && kill -0 $pid 2>/dev/null
+end
+
 function acquire_watch_lock
     mkdir -p (dirname $CHECK_LOCK_FILE)
 
@@ -263,7 +273,7 @@ function acquire_watch_lock
     if test -f $CHECK_LOCK_FILE
         set -l old_pid (cat $CHECK_LOCK_FILE 2>/dev/null | string trim)
 
-        if test -n "$old_pid" && test -d "/proc/$old_pid"
+        if is_process_alive $old_pid
             # Process is alive - kill it
             echo ""
             set_color yellow
@@ -275,12 +285,12 @@ function acquire_watch_lock
 
             # Wait for process to exit (up to 5 seconds)
             set -l waited 0
-            while test -d "/proc/$old_pid" && test $waited -lt 50
+            while is_process_alive $old_pid && test $waited -lt 50
                 sleep 0.1
                 set waited (math $waited + 1)
             end
 
-            if test -d "/proc/$old_pid"
+            if is_process_alive $old_pid
                 echo "❌ Failed to terminate previous instance" >&2
                 return 1
             end
@@ -294,19 +304,28 @@ function acquire_watch_lock
     # Write our PID
     echo $fish_pid > $CHECK_LOCK_FILE
 
-    # Clean up any orphaned inotifywait processes
-    kill_orphaned_inotifywait
+    # Clean up any orphaned file watcher processes (inotifywait/fswatch)
+    kill_orphaned_watchers
 
     return 0
 end
 
-# Kill orphaned inotifywait processes from previous watch mode sessions.
+# Kill orphaned file watcher processes from previous watch mode sessions.
 # These can be left behind if the parent was killed with SIGKILL.
-function kill_orphaned_inotifywait
+# Supports both inotifywait (Linux) and fswatch (macOS).
+function kill_orphaned_watchers
+    # Kill orphaned inotifywait (Linux)
     set -l inotify_pids (pgrep -f "inotifywait.*cmdr/src" 2>/dev/null)
-
     if test (count $inotify_pids) -gt 0
         for pid in $inotify_pids
+            kill $pid 2>/dev/null
+        end
+    end
+
+    # Kill orphaned fswatch (macOS)
+    set -l fswatch_pids (pgrep -f "fswatch.*cmdr/src" 2>/dev/null)
+    if test (count $fswatch_pids) -gt 0
+        for pid in $fswatch_pids
             kill $pid 2>/dev/null
         end
     end
@@ -345,7 +364,13 @@ set -g CHECK_LOG_FILE /tmp/roc/check.log
 # Force maximum parallelism for cargo operations.
 # Despite cargo's docs saying it defaults to nproc, benchmarks show this makes
 # a huge difference: 4 min vs 10 min for cargo doc (60% speedup).
-set -gx CARGO_BUILD_JOBS 28
+# Auto-detect core count: nproc (Linux) or sysctl (macOS).
+switch (uname -s)
+    case Darwin
+        set -gx CARGO_BUILD_JOBS (sysctl -n hw.ncpu)
+    case '*'
+        set -gx CARGO_BUILD_JOBS (nproc)
+end
 
 # List of config files that affect build artifacts.
 # Changes to these files should trigger a clean rebuild to avoid stale artifact issues.
@@ -509,7 +534,7 @@ function show_help
     echo "  Monitors: cmdr/src/, analytics_schema/src/, tui/src/, plus all config files"
     echo "  Toolchain: Validated once at startup, before watch loop begins"
     echo "  Behavior: Continues watching even if checks fail"
-    echo "  Requirements: inotifywait (installed via bootstrap.sh)"
+    echo "  Requirements: inotifywait (Linux) or fswatch (macOS) - installed via bootstrap.sh"
     echo ""
     echo "  Doc Builds (--watch-doc):"
     echo "  • Quick build (r3bl_tui only) runs first, blocking (~3-5s)"
@@ -646,8 +671,8 @@ function show_help
     echo "     • First build after reboot will be a cold start (slower)"
     echo "     • Subsequent builds use cached artifacts (fast)"
     echo ""
-    echo "  2. Parallel Jobs (CARGO_BUILD_JOBS=28):"
-    echo "     • Forces cargo to use all CPU cores for parallel compilation"
+    echo "  2. Parallel Jobs (CARGO_BUILD_JOBS=$CARGO_BUILD_JOBS):"
+    echo "     • Auto-detected core count: nproc (Linux) or sysctl (macOS)"
     echo "     • Benchmarked: 4 min vs 10 min for cargo doc (60% speedup)"
     echo "     • Despite cargo docs, this doesn't always default to nproc"
     echo ""
@@ -739,14 +764,20 @@ function watch_mode
         return 1
     end
 
-    # Check for inotifywait
+    # Check for file watcher (inotifywait on Linux, fswatch on macOS)
     if not command -v inotifywait >/dev/null 2>&1
-        echo "❌ Error: inotifywait not found" >&2
+        and not command -v fswatch >/dev/null 2>&1
+        echo "❌ Error: No file watcher found" >&2
         echo "Install with: ./bootstrap.sh" >&2
         echo "Or manually:" >&2
-        echo "  Ubuntu/Debian: sudo apt install inotify-tools" >&2
-        echo "  Fedora/RHEL:   sudo dnf install inotify-tools" >&2
-        echo "  Arch:          sudo pacman -S inotify-tools" >&2
+        switch (uname -s)
+            case Darwin
+                echo "  macOS: brew install fswatch" >&2
+            case '*'
+                echo "  Ubuntu/Debian: sudo apt install inotify-tools" >&2
+                echo "  Fedora/RHEL:   sudo dnf install inotify-tools" >&2
+                echo "  Arch:          sudo pacman -S inotify-tools" >&2
+        end
         return 1
     end
 
@@ -1967,19 +1998,19 @@ function main
             # Kill process holding lock file
             if test -f $CHECK_LOCK_FILE
                 set -l old_pid (cat $CHECK_LOCK_FILE 2>/dev/null | string trim)
-                if test -n "$old_pid" && test -d "/proc/$old_pid"
+                if is_process_alive $old_pid
                     kill $old_pid 2>/dev/null
                     echo "   Killed watch process (PID: $old_pid)"
                 else
                     echo "   No active watch process found"
                 end
-                rm -f $CHECK_LOCK_FILE
+                command rm -f $CHECK_LOCK_FILE
             else
                 echo "   No lock file found"
             end
 
-            # Kill orphaned inotifywait processes
-            kill_orphaned_inotifywait
+            # Kill orphaned file watcher processes (inotifywait/fswatch)
+            kill_orphaned_watchers
 
             echo "✅ Cleanup complete"
             return 0

@@ -2,7 +2,7 @@
 
 // cspell:words epoll kqueue SIGWINCH syscall syscalls SQPOLL IORING eventfd signalfd
 // cspell:words pollable Proactor demultiplexing injectables threadwaker IOCP EINVAL
-// cspell:words kqueuefd filedescriptor
+// cspell:words kqueuefd filedescriptor rrtwaker
 
 //! Generic infrastructure for the Resilient Reactor Thread (RRT) pattern implementation.
 //!

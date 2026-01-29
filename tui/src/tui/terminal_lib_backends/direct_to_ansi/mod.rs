@@ -122,7 +122,8 @@ mod output;
 // Input handling is Linux-only because macOS kqueue doesn't support PTY/tty polling.
 // See `input/mod.rs` docs for technical details and potential future macOS support.
 // On macOS/Windows, use Crossterm backend instead (set via TERMINAL_LIB_BACKEND).
-#[cfg(all(target_os = "linux", any(test, doc)))]
+// Doc builds are allowed on all platforms so documentation can be read anywhere.
+#[cfg(any(doc, all(target_os = "linux", test)))]
 pub mod input;
 #[cfg(all(target_os = "linux", not(any(test, doc))))]
 mod input;
@@ -130,5 +131,5 @@ mod input;
 // Public re-exports (flat API surface).
 pub use debug::*;
 pub use output::*;
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", doc))]
 pub use input::*;

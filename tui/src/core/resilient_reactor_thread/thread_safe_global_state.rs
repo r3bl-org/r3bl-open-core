@@ -146,7 +146,6 @@ use std::{marker::PhantomData,
 ///
 /// [`Vec<u8>`]: std::vec::Vec
 /// [`Mutex<Option<Arc<ThreadState<W, E>>>>`]: super::ThreadState
-///
 /// [`Arc::new()`]: std::sync::Arc::new
 /// [`Mutex::new(None)`]: std::sync::Mutex::new
 /// [`Option::replace()`]: std::option::Option::replace
@@ -167,7 +166,7 @@ use std::{marker::PhantomData,
 /// [`subscribe()`]: Self::subscribe
 /// [`syscall`]: https://man7.org/linux/man-pages/man2/syscalls.2.html
 /// [`syscalls`]: https://man7.org/linux/man-pages/man2/syscalls.2.html
-#[allow(missing_debug_implementations)]
+#[allow(missing_debug_implementations, clippy::type_complexity)]
 pub struct ThreadSafeGlobalState<F>
 where
     F: RRTFactory + Sync,

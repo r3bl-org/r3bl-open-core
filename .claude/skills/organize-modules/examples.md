@@ -475,6 +475,148 @@ No naming conflict! Each `utils` module is private to its parent.
 
 ---
 
+## Example 7: Cross-Platform Docs for Platform-Specific Code
+
+**Scenario:** Linux-only code that should have documentation generated on all platforms (macOS, Windows)
+
+### The Problem
+
+You have a module that only works on Linux (e.g., uses `epoll`), but developers on macOS want to
+read the documentation locally.
+
+```rust
+// ❌ Broken: Docs won't generate on macOS!
+#[cfg(all(target_os = "linux", any(test, doc)))]
+pub mod input;
+```
+
+The issue: `#[cfg(all(target_os = "linux", any(test, doc)))]` requires **both** Linux AND (test or
+doc). On macOS, even during doc builds, `target_os = "linux"` is false, so the whole condition is
+false.
+
+### The Solution
+
+Use `any(doc, ...)` to make documentation an **alternative path**, not an additional requirement:
+
+```rust
+// ✅ Fixed: Docs generate on all platforms, tests run only on Linux
+#[cfg(any(doc, all(target_os = "linux", test)))]
+pub mod input;
+#[cfg(all(target_os = "linux", not(any(test, doc))))]
+mod input;
+
+// Re-export also needs the doc condition
+#[cfg(any(target_os = "linux", doc))]
+pub use input::*;
+```
+
+### File Structure
+
+```
+terminal_backend/
+├── src/
+│   ├── lib.rs
+│   └── direct_to_ansi/
+│       ├── mod.rs
+│       ├── output.rs        ← Cross-platform
+│       └── input/           ← Linux-only (uses epoll)
+│           ├── mod.rs
+│           ├── mio_poller.rs
+│           └── integration_tests/
+│               ├── mod.rs
+│               └── pty_input_test.rs
+```
+
+### Implementation
+
+**src/direct_to_ansi/mod.rs:**
+```rust
+//! DirectToAnsi backend for terminal I/O.
+//!
+//! - **Output**: Cross-platform (pure ANSI generation)
+//! - **Input**: Linux-only (uses mio/epoll for stdin polling)
+//!
+//! See [`input`] module for Linux-specific input handling.
+//!
+//! [`input`]: mod@crate::direct_to_ansi::input
+
+// Output is cross-platform
+#[cfg(any(test, doc))]
+pub mod output;
+#[cfg(not(any(test, doc)))]
+mod output;
+
+// Input is Linux-only, but docs should build on all platforms
+// Doc builds are allowed on all platforms so documentation can be read anywhere.
+#[cfg(any(doc, all(target_os = "linux", test)))]
+pub mod input;
+#[cfg(all(target_os = "linux", not(any(test, doc))))]
+mod input;
+
+// Re-exports
+pub use output::*;
+#[cfg(any(target_os = "linux", doc))]
+pub use input::*;
+```
+
+**src/direct_to_ansi/input/mod.rs:**
+```rust
+//! Linux input handling using mio/epoll.
+//!
+//! This module is **Linux-only** at runtime but documentation is generated
+//! on all platforms.
+
+// Submodules also use the cross-platform doc pattern
+#[cfg(any(doc, all(target_os = "linux", test)))]
+pub mod mio_poller;
+#[cfg(all(target_os = "linux", not(any(test, doc))))]
+mod mio_poller;
+
+#[cfg(any(doc, all(target_os = "linux", test)))]
+pub mod integration_tests;
+
+pub use mio_poller::*;
+```
+
+### Build Results
+
+**macOS doc build:**
+```bash
+$ cargo doc --no-deps
+   Documenting terminal_backend v0.1.0
+    Finished dev [unoptimized + debuginfo] target(s)
+   Generated target/doc/terminal_backend/index.html
+```
+✅ Docs generate! Links to `input` module resolve correctly.
+
+**macOS regular build:**
+```bash
+$ cargo build
+   Compiling terminal_backend v0.1.0
+    Finished dev [unoptimized + debuginfo] target(s)
+```
+✅ Input module excluded (Linux-only code not compiled).
+
+**Linux test build:**
+```bash
+$ cargo test
+   Compiling terminal_backend v0.1.0
+   Running unittests
+```
+✅ Input module included and tests run.
+
+### Key Insight
+
+The `doc` cfg flag doesn't override other conditions—it's just another flag you can check. Use
+`any()` to make it an **alternative path**:
+
+| Pattern | Meaning | Docs on macOS? |
+|:--------|:--------|:---------------|
+| `all(target_os = "linux", any(test, doc))` | Linux AND (test OR doc) | ❌ No |
+| `any(doc, all(target_os = "linux", test))` | doc OR (Linux AND test) | ✅ Yes |
+
+---
+
 ## Summary Checklist
 
 When organizing modules, verify:

@@ -58,5 +58,6 @@ pub use terminal_io_type_aliases::*;
 
 // Backend compatibility tests (Linux-only PTY tests).
 // Public for docs and tests so intra-doc links resolve.
-#[cfg(all(any(test, doc), target_os = "linux"))]
+// Doc builds are allowed on all platforms so documentation can be read anywhere.
+#[cfg(any(doc, all(target_os = "linux", test)))]
 pub mod backend_compat_tests;

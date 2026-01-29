@@ -1781,12 +1781,15 @@ function build_and_sync_full_docs
     return $result
 end
 
-# Waits for file changes using inotifywait with standard options.
+# Waits for file changes using platform-appropriate file watcher.
 #
-# This wraps inotifywait with the common options used throughout watch mode:
-# - Recursive watching (-r)
-# - Quiet output (-q)
-# - Events: modify, create, delete, move
+# On Linux: Uses inotifywait (efficient kernel-level inotify subsystem)
+# On macOS: Uses fswatch (FSEvents backend)
+#
+# Common options used:
+# - Recursive watching
+# - Quiet output
+# - Events: modify, create, delete, move/rename
 #
 # Parameters:
 #   $argv[1]: Timeout in seconds (0 for no timeout, waits forever)
@@ -1812,16 +1815,71 @@ function wait_for_file_changes
     set -l timeout_secs $argv[1]
     set -l watch_targets $argv[2..-1]
 
-    if test $timeout_secs -eq 0
-        # No timeout - wait forever
-        inotifywait -q -r -e modify,create,delete,move \
-            --format '%w%f' $watch_targets >/dev/null 2>&1
+    # Use inotifywait on Linux, fswatch on macOS
+    if command -v inotifywait >/dev/null 2>&1
+        # Linux: inotifywait has built-in timeout support
+        if test $timeout_secs -eq 0
+            inotifywait -q -r -e modify,create,delete,move \
+                --format '%w%f' $watch_targets >/dev/null 2>&1
+        else
+            inotifywait -q -r -t $timeout_secs -e modify,create,delete,move \
+                --format '%w%f' $watch_targets >/dev/null 2>&1
+        end
+        return $status
+    else if command -v fswatch >/dev/null 2>&1
+        # macOS: fswatch doesn't have built-in timeout, use background process pattern
+        if test $timeout_secs -eq 0
+            # No timeout - wait forever for first event
+            fswatch -1 --recursive \
+                --event Created --event Updated --event Removed --event Renamed \
+                $watch_targets >/dev/null 2>&1
+            return $status
+        else
+            # With timeout: run fswatch directly (no sh wrapper to avoid orphan processes)
+            # Create a temp file - fswatch writes detected file path to it
+            set -l signal_file (mktemp)
+
+            # Run fswatch directly so $last_pid is actually fswatch's PID
+            # fswatch -1 outputs the changed file path and exits after first event
+            fswatch -1 --recursive \
+                --event Created --event Updated --event Removed --event Renamed \
+                $watch_targets >$signal_file 2>/dev/null &
+            set -l fswatch_pid $last_pid
+
+            # Wait for timeout or event
+            set -l elapsed 0
+            while test $elapsed -lt $timeout_secs
+                sleep 0.1
+                set elapsed (math "$elapsed + 0.1")
+
+                # Check if fswatch detected something (wrote to signal file)
+                if test -s $signal_file
+                    command rm -f $signal_file
+                    return 0  # Change detected
+                end
+
+                # Check if fswatch is still running
+                if not kill -0 $fswatch_pid 2>/dev/null
+                    # fswatch exited - check if it signaled
+                    if test -s $signal_file
+                        command rm -f $signal_file
+                        return 0  # Change detected
+                    end
+                    command rm -f $signal_file
+                    return 1  # Error - fswatch died unexpectedly
+                end
+            end
+
+            # Timeout expired - kill fswatch directly (no wrapper = no orphans)
+            kill $fswatch_pid 2>/dev/null
+            wait $fswatch_pid 2>/dev/null
+            command rm -f $signal_file
+            return 2  # Timeout
+        end
     else
-        # With timeout
-        inotifywait -q -r -t $timeout_secs -e modify,create,delete,move \
-            --format '%w%f' $watch_targets >/dev/null 2>&1
+        echo "Error: No file watcher available (need inotifywait or fswatch)" >&2
+        return 1
     end
-    return $status
 end
 
 # Runs the full doc build workflow as a background task.

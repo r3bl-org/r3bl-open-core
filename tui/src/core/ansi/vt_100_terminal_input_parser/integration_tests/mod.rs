@@ -35,38 +35,39 @@
 
 // These PTY tests use DirectToAnsiInputDevice which is Linux-only.
 // On macOS/Windows, Crossterm backend is used instead and these tests are skipped.
-#[cfg(all(target_os = "linux", any(test, doc)))]
+// Doc builds are allowed on all platforms so documentation can be read anywhere.
+#[cfg(any(doc, all(target_os = "linux", test)))]
 pub mod pty_bracketed_paste_test;
 
-#[cfg(all(target_os = "linux", any(test, doc)))]
+#[cfg(any(doc, all(target_os = "linux", test)))]
 pub mod pty_input_device_test;
 
-#[cfg(all(target_os = "linux", any(test, doc)))]
+#[cfg(any(doc, all(target_os = "linux", test)))]
 pub mod pty_keyboard_modifiers_test;
 
-#[cfg(all(target_os = "linux", any(test, doc)))]
+#[cfg(any(doc, all(target_os = "linux", test)))]
 pub mod pty_mouse_events_test;
 
-#[cfg(all(target_os = "linux", any(test, doc)))]
+#[cfg(any(doc, all(target_os = "linux", test)))]
 pub mod pty_terminal_events_test;
 
-#[cfg(all(target_os = "linux", any(test, doc)))]
+#[cfg(any(doc, all(target_os = "linux", test)))]
 pub mod pty_utf8_text_test;
 
-#[cfg(all(target_os = "linux", any(test, doc)))]
+#[cfg(any(doc, all(target_os = "linux", test)))]
 pub mod pty_new_keyboard_features_test;
 
-#[cfg(all(target_os = "linux", any(test, doc)))]
+#[cfg(any(doc, all(target_os = "linux", test)))]
 pub mod pty_sigwinch_test;
 
-#[cfg(all(target_os = "linux", any(test, doc)))]
+#[cfg(any(doc, all(target_os = "linux", test)))]
 pub mod pty_mio_poller_thread_lifecycle_test;
 
-#[cfg(all(target_os = "linux", any(test, doc)))]
+#[cfg(any(doc, all(target_os = "linux", test)))]
 pub mod pty_mio_poller_thread_reuse_test;
 
-#[cfg(all(target_os = "linux", any(test, doc)))]
+#[cfg(any(doc, all(target_os = "linux", test)))]
 pub mod pty_mio_poller_subscribe_test;
 
-#[cfg(all(target_os = "linux", any(test, doc)))]
+#[cfg(any(doc, all(target_os = "linux", test)))]
 pub mod pty_mio_poller_singleton_test;

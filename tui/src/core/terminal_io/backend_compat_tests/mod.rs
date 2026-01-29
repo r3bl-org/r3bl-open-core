@@ -54,8 +54,9 @@
 //! [`test_pty_backend_direct_to_ansi`]: mod@backend_compat_input_test
 
 // Public for docs and tests so intra-doc links resolve.
-#[cfg(all(any(test, doc), target_os = "linux"))]
+// Doc builds are allowed on all platforms so documentation can be read anywhere.
+#[cfg(any(doc, all(target_os = "linux", test)))]
 pub mod backend_compat_input_test;
 
-#[cfg(all(any(test, doc), target_os = "linux"))]
+#[cfg(any(doc, all(target_os = "linux", test)))]
 pub mod backend_compat_output_test;

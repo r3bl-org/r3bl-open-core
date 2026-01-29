@@ -43,6 +43,7 @@ use tokio::sync::broadcast::Sender;
 /// [`MioPollWaker`]: crate::terminal_lib_backends::direct_to_ansi::input::mio_poller::MioPollWaker
 /// [`SubscriberGuard::drop()`]: super::SubscriberGuard
 /// [`ThreadState`]: super::ThreadState
+/// [`SubscriberGuard`]: super::SubscriberGuard
 pub trait RRTWaker: Send + Sync + 'static {
     /// Wake the thread so it can check if it should exit.
     ///
@@ -130,5 +131,7 @@ pub trait RRTFactory {
     /// [`SubscriberGuard`]: super::SubscriberGuard
     /// [`ThreadState`]: super::ThreadState
     /// [`wake()`]: RRTWaker::wake
+    /// [`Worker`]: Self::Worker
+    /// [`Waker`]: Self::Waker
     fn create() -> Result<(Self::Worker, Self::Waker), Report>;
 }

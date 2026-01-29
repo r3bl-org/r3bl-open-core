@@ -133,39 +133,63 @@ mod internal_parser;
 pub use internal_parser::*;  // Re-exports need the module to exist!
 ```
 
-#### Platform-Specific Test Modules
+#### Platform-Specific Modules with Cross-Platform Docs
 
-For test modules that are **both test-only AND platform-specific**, combine the conditions:
-
-```rust
-// ✅ Linux-only test module, visible in docs and tests on Linux
-#[cfg(all(any(test, doc), target_os = "linux"))]
-pub mod backend_compat_tests;
-```
-
-**When you see this warning:**
-> "unresolved link to `crate::path::test_module`"
->
-> And the module is `#[cfg(test)]` or `#[cfg(all(test, target_os = "..."))]`
-
-**Fix by adding conditional doc visibility:**
+For modules that are **platform-specific but should have docs generated on all platforms**, use
+`any(doc, ...)` to separate documentation from runtime requirements:
 
 ```rust
-// Before (links won't resolve in docs):
-#[cfg(test)]
-mod my_test_module;
+// ✅ Linux-only runtime, but docs build on all platforms
+#[cfg(any(doc, all(target_os = "linux", test)))]
+pub mod input;
+#[cfg(all(target_os = "linux", not(any(test, doc))))]
+mod input;
 
-// After (links resolve in docs):
-#[cfg(any(test, doc))]
-pub mod my_test_module;
-
-// Or for platform-specific:
-#[cfg(all(any(test, doc), target_os = "linux"))]
-pub mod my_linux_test_module;
+// Re-export also needs the doc condition
+#[cfg(any(target_os = "linux", doc))]
+pub use input::*;
 ```
 
-**Apply at all levels** — If the test module is nested, both parent and child need the visibility
-change.
+**Key insight:** `rustdoc` runs the Rust compiler internally. When you write
+`#[cfg(all(target_os = "linux", any(test, doc)))]`, the `target_os = "linux"` check still excludes
+macOS/Windows **even during doc builds**. The `doc` cfg flag doesn't override other conditions—it's
+just another flag you can check.
+
+**The fix:** Use `any(doc, ...)` to make `doc` an alternative path:
+- `any(doc, all(target_os = "linux", test))` means: "docs on any platform OR tests on Linux"
+- `all(target_os = "linux", any(test, doc))` means: "Linux AND (tests OR docs)" — **still requires
+  Linux!**
+
+**When you see broken doc links for platform-specific modules:**
+
+```rust
+// ❌ Broken: Docs won't generate on macOS
+#[cfg(all(target_os = "linux", any(test, doc)))]
+pub mod linux_only_module;
+
+// ✅ Fixed: Docs generate everywhere, tests run only on Linux
+#[cfg(any(doc, all(target_os = "linux", test)))]
+pub mod linux_only_module;
+#[cfg(all(target_os = "linux", not(any(test, doc))))]
+mod linux_only_module;
+```
+
+**Apply at all levels** — If the module is nested, both parent and child need the visibility
+change. Also update any re-exports:
+
+```rust
+// Parent module
+#[cfg(any(doc, all(target_os = "linux", test)))]
+pub mod integration_tests;
+
+// Child modules inside integration_tests/mod.rs
+#[cfg(any(doc, all(target_os = "linux", test)))]
+pub mod pty_input_test;
+
+// Re-exports
+#[cfg(any(target_os = "linux", doc))]
+pub use integration_tests::*;
+```
 
 ### Step 4: Handle Transitive Visibility
 

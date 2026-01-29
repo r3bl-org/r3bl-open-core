@@ -5,6 +5,10 @@
 //! These tests verify the full workflow: extracting rustdoc blocks from complete
 //! Rust files, formatting them, and reconstructing the files.
 
+// Allow doc_markdown warnings in this test file - the doc comments intentionally
+// reference file names and identifiers without backticks as they describe test scenarios.
+#![allow(clippy::doc_markdown)]
+
 #[cfg(test)]
 mod tests {
     use crate::cargo_rustdoc_fmt::{extractor, link_converter, processor,

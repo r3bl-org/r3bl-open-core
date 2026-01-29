@@ -791,7 +791,6 @@ Workspace-wide commands:
     toolchain-validate   Quick toolchain validation (components only)
     toolchain-validate-complete  Complete toolchain validation (full build+test)
     toolchain-remove     Remove ALL toolchains (testing)
-    build-server         Remote build server - uses rsync
 
 Watch commands:
     test-watch [pattern]  Watch files, run specific test
