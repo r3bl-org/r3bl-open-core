@@ -14,7 +14,7 @@ use std::sync::atomic::{AtomicBool, AtomicU8, Ordering};
 /// Wraps naturally from `255` → `0`.
 static THREAD_GENERATION: AtomicU8 = AtomicU8::new(0);
 
-/// Thread liveness: running state and incarnation generation.
+/// A tracker for thread liveness state and incarnation generation.
 ///
 /// - [`is_running`]: Current liveness (mutable via [`mark_terminated()`])
 /// - [`generation`]: Which incarnation of the thread (immutable)
@@ -106,7 +106,7 @@ impl Default for ThreadLiveness {
     fn default() -> Self { Self::new() }
 }
 
-/// Indicates whether the worker thread is running or terminated.
+/// An indication of whether the worker thread is running or terminated.
 ///
 /// Used by [`ThreadLiveness::is_running()`] to provide a self-documenting return type
 /// instead of a bare `bool`.
@@ -125,10 +125,10 @@ pub enum LivenessState {
     Terminated,
 }
 
-/// Indicates whether the worker thread should self-terminate or continue running.
+/// An indication of whether the worker thread should self-terminate or continue running.
 ///
-/// Returned by [`ThreadState::should_self_terminate()`] to provide a self-documenting
-/// return type instead of a bare `bool`.
+/// This enum is returned by [`ThreadState::should_self_terminate()`] to provide a
+/// self-documenting return type instead of a bare `bool`.
 ///
 /// # Decision Logic
 ///

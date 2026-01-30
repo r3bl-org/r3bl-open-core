@@ -342,7 +342,7 @@
 //! [`read()`]: https://man7.org/linux/man-pages/man2/read.2.html
 //! [`receiver_count()`]: tokio::sync::broadcast::Sender::receiver_count
 //! [`resilient_reactor_thread`]: crate::core::resilient_reactor_thread
-//! [`rustix::event::poll()`]: rustix::event::poll
+//! [`rustix::event::poll()`]: https://docs.rs/rustix/latest/rustix/event/fn.poll.html
 //! [`select()`]: https://man7.org/linux/man-pages/man2/select.2.html
 //! [`signal_hook_mio`]: signal_hook_mio
 //! [`std::thread`]: std::thread

@@ -39,9 +39,30 @@
 //! | **Reactor**   | Reacts to I/O events ([`stdin`], [`sockets`], [`signals`]) using [`mio`]/[`epoll`] using [OS I/O Primitives]  |
 //! | **Thread**    | Dedicated thread for [blocking I/O]; graceful shutdown when consumers disconnect; fully managed lifecycle     |
 //!
+//! ## Mental Model for Web Developers
+//!
+//! If you're familiar with [Web Workers], RRT solves the same fundamental problem:
+//! **keeping blocking work off the main execution context**. In browsers, blocking
+//! the main thread freezes the UI. In async Rust, blocking an executor thread
+//! starves other tasks.
+//!
+//! | Web Pattern         | RRT Equivalent                                    |
+//! | :------------------ | :------------------------------------------------ |
+//! | `new Worker()`      | [`SINGLETON`].[`subscribe()`]                     |
+//! | `postMessage()`     | [`tx.send()`]                                     |
+//! | `onmessage`         | [`Receiver::recv()`]                              |
+//! | `terminate()`       | Drop [`SubscriberGuard`] (auto-cleanup)           |
+//!
+//! **Key differences:**
+//!
+//! - **Work type**: [Web Workers] handle CPU-bound work; RRT handles I/O-bound blocking
+//!   ([`syscalls`] like reading from [`stdin`] or waiting for [`signals`])
+//! - **Delivery**: [Web Workers] are 1:1 (one worker, one consumer); RRT uses 1:N
+//!   [`broadcast`] (all UI components need resize events)
+//!
 //! # Understanding "blocking I/O"
 //!
-//! The RRT pattern's core invariant is that the worker thread **blocks** while waiting
+//! The RRT pattern's core invariant is that the [worker] thread **blocks** while waiting
 //! for I/O. But what does "blocking" actually mean? This section clarifies the
 //! terminology and establishes why the "bridges blocking I/O with async Rust" claim above
 //! holds for various I/O backends, on various OSes.
@@ -114,8 +135,8 @@
 //! ## Context
 //!
 //! To get a bird's eye view (from the TUI application's perspective) of how terminal
-//! input flows from [`stdin`] through the worker thread to your async consumers — see the
-//! [RRT section] in the crate documentation.
+//! input flows from [`stdin`] through the [worker] thread to your async consumers — see
+//! the [RRT section] in the crate documentation.
 //!
 //! ## Separation of Concerns and [Dependency Injection] (DI)
 //!
@@ -140,7 +161,7 @@
 //! ## Design Principles
 //!
 //! 1. [Inversion of control] (IOC / control flow) — the framework owns the loop (`while
-//!    poll_once() == Continue {}`) and creates and manages the thread it runs in. You
+//!    poll_once() == Continue {}`) and creates and manages the thread it runs on. You
 //!    provide the iteration logic via [`poll_once()`] in your [`RRTWorker`]
 //!    implementation.
 //!
@@ -161,7 +182,7 @@
 //! │                    RESILIENT REACTOR THREAD (Generic)                  │
 //! │    IoC + DI: you implement traits ─► framework orchestrates & calls    │
 //! ├────────────────────────────┬──────────────┬────────────────────────────┤
-//! │                            │ IN YOUR CODE │                            │
+//! │                            │  YOUR CODE   │                            │
 //! │                            └──────────────┘                            │
 //! │  SINGLETON:                                                            │
 //! │       static SINGLETON: ThreadSafeGlobalState<F> = ...::new();         │
@@ -215,8 +236,9 @@
 //!    let subscriber_guard = SINGLETON.subscribe()?;
 //!    ```
 //!
-//!    The [`'static` trait bound] on `E` means the event type contains no non-`'static`
-//!    references — it *can* live arbitrarily long, not that it *must*. See
+//!    The [`'static` trait bound] on `E` means the event type can be held indefinitely
+//!    without becoming invalid — it *can* live arbitrarily long, not that it *must*. The
+//!    type may contain `'static` references but no shorter-lived ones. See
 //!    [`ThreadSafeGlobalState`] for a detailed explanation of `'static` in trait bounds.
 //!
 //!    This newtype wraps a [`Mutex<Option<Arc<ThreadState<W, E>>>>`] because [`syscalls`]
@@ -235,40 +257,85 @@
 //!    benefits:
 //!
 //!    - **Lifecycle flexibility** — Multiple async tasks can subscribe independently.
-//!      Consumers can come and go without affecting the worker thread.
+//!      Consumers can come and go without affecting the [worker] thread.
 //!
 //!    - **Resilience** — The thread itself can crash and restart; services can connect,
 //!      disconnect, and reconnect. The TUI app remains unaffected.
 //!
-//! ## The Chicken-Egg Problem
+//! ## The Coupled Resource Creation Problem
 //!
-//! Creating a worker thread requires resources that need to be shared. The problem is
-//! circular: a [`mio::Waker`] needs the [`mio::Poll`]'s registry to be created, but the
-//! [`mio::Poll`] must move to the spawned thread. Meanwhile, the [`ThreadState`] needs
-//! the waker stored in it so [`SubscriberGuard`]s can call [`wake()`].
+//! Creating the [worker] thread has an ordering conflict:
 //!
-//! The solution is a **two-phase setup** via [`RRTFactory`]:
-//! 1. [`Factory::create()`] creates **both** worker and waker together
-//! 2. The waker is stored in [`ThreadState`] for subscribers to call [`wake()`]
-//! 3. The worker moves to the spawned thread (owns [`mio::Poll`], does the actual work)
+//! ```text
+//! ┌─────────────────────────────────────────────────────────────────────────┐
+//! │                       THE ORDERING CONFLICT                             │
+//! ├─────────────────────────────────────────────────────────────────────────┤
+//! │                                                                         │
+//! │   To interrupt the thread, SubscriberGuards need a Waker.               │
+//! │   To create a Waker, we need mio::Poll's registry.                      │
+//! │   But mio::Poll must MOVE to the spawned thread.                        │
+//! │                                                                         │
+//! │   ┌─────────────────────────────────────────────────────────────────┐   │
+//! │   │  PROBLEM: After thread::spawn(), Poll is gone — too late to     │   │
+//! │   │           create a Waker from its registry!                     │   │
+//! │   └─────────────────────────────────────────────────────────────────┘   │
+//! │                                                                         │
+//! │   Timeline without solution:                                            │
+//! │                                                                         │
+//! │     create Poll ──► spawn thread ──► Poll moves ──► ✗ can't create      │
+//! │                     (Poll gone!)                       Waker anymore    │
+//! │                                                                         │
+//! └─────────────────────────────────────────────────────────────────────────┘
+//!
+//! ┌─────────────────────────────────────────────────────────────────────────┐
+//! │                    THE SOLUTION: TWO-PHASE SETUP                        │
+//! ├─────────────────────────────────────────────────────────────────────────┤
+//! │                                                                         │
+//! │   Phase 1: RRTFactory::create()                                         │
+//! │   ┌─────────────────────────────────────────────────────────────────┐   │
+//! │   │  Creates BOTH from the same mio::Poll registry:                 │   │
+//! │   │                                                                 │   │
+//! │   │     mio::Poll ──registry──► mio::Waker                          │   │
+//! │   │         │                       │                               │   │
+//! │   │         ▼                       ▼                               │   │
+//! │   │      Worker                   Waker                             │   │
+//! │   │    (owns Poll)            (from registry)                       │   │
+//! │   └─────────────────────────────────────────────────────────────────┘   │
+//! │                    │                       │                            │
+//! │                    ▼                       ▼                            │
+//! │   Phase 2: Split and distribute                                         │
+//! │   ┌────────────────────────┐    ┌───────────────────────────────────┐   │
+//! │   │    Spawned Thread      │    │         ThreadState               │   │
+//! │   │    ───────────────     │    │         ───────────               │   │
+//! │   │    Worker moves here   │    │    Waker stored here              │   │
+//! │   │    (owns mio::Poll)    │    │    (shared via Arc)               │   │
+//! │   │                        │◄───│    SubscriberGuards call wake()   │   │
+//! │   └────────────────────────┘    └───────────────────────────────────┘   │
+//! │                                                                         │
+//! └─────────────────────────────────────────────────────────────────────────┘
+//! ```
+//!
+//! The key insight: **atomic creation, then separation**. Both resources are created
+//! together from the same [`mio::Poll`] registry, then split — the [waker] stays in
+//! [`ThreadState`] for subscribers, while the [worker] moves to the spawned thread.
 //!
 //! ### Why is [`RRTWaker`] User-Provided?
 //!
-//! The waker is **intrinsically coupled** to the worker's blocking mechanism. Different
-//! I/O backends need different wake strategies:
+//! The [waker] is **intrinsically coupled** to the [worker]'s blocking mechanism.
+//! Different I/O backends need different wake strategies:
 //!
 //! | Blocking on...          | Wake strategy                              |
 //! | :---------------------- | :----------------------------------------- |
-//! | [`mio::Poll`]           | [`mio::Waker`] (triggers epoll/kqueue)     |
+//! | [`mio::Poll`]           | [`mio::Waker`] (triggers [`epoll`]/[`kqueue`]) |
 //! | TCP [`accept()`]        | Connect-to-self pattern                    |
 //! | Pipe [`read(2)`]        | Self-pipe trick (write a byte)             |
-//! | [`io_uring`]            | eventfd or [`IORING_OP_MSG_RING`]          |
+//! | [`io_uring`]            | [`eventfd`] or [`IORING_OP_MSG_RING`]      |
 //!
 //! The framework can't know how you're blocking — it just calls [`poll_once()`] in a
 //! loop. Only you know how to interrupt your specific blocking call.
 //!
 //! The coupling is also at the resource level: a [`mio::Waker`] is created FROM the
-//! [`mio::Poll`]'s registry. If the poll is dropped (thread exits), the waker becomes
+//! [`mio::Poll`]'s registry. If the poll is dropped (thread exits), the [waker] becomes
 //! useless. That's why [`Factory::create()`] returns both together.
 //!
 //! This design gives the framework flexibility: it works with [`mio`] today and
@@ -291,7 +358,7 @@
 //! ```
 //!
 //! The [kernel] schedules threads independently, so there's no guarantee when the
-//! worker thread will wake up after [`wake()`] is called. The RRT pattern handles this
+//! [worker] thread will wake up after [`wake()`] is called. The RRT pattern handles this
 //! correctly by checking the **current** [`receiver_count()`] at exit time, not the
 //! count when [`wake()`] was called. See [`ThreadState::should_self_terminate()`] for
 //! details.
@@ -488,7 +555,7 @@
 //!
 //! **What makes RRT distinct:**
 //!
-//! 1. **Blocking by design** — The worker thread *intentionally* [blocks on I/O]. This
+//! 1. **Blocking by design** — The [worker] thread *intentionally* [blocks on I/O]. This
 //!    isn't a limitation; it's the feature. Blocking keeps the I/O off async executor
 //!    threads.
 //!
@@ -522,6 +589,7 @@
 //! [TCP]: https://en.wikipedia.org/wiki/Transmission_Control_Protocol
 //! [UDP]: https://en.wikipedia.org/wiki/User_Datagram_Protocol
 //! [Unix domain sockets]: https://en.wikipedia.org/wiki/Unix_domain_socket
+//! [Web Workers]: https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API
 //! [`'static` trait bound]: ThreadSafeGlobalState#static-trait-bound-vs-static-lifetime-annotation
 //! [`Arc`]: std::sync::Arc
 //! [`Continuation`]: crate::core::common::Continuation
@@ -538,7 +606,8 @@
 //! [`RRTFactory`]: RRTFactory
 //! [`RRTWaker`]: RRTWaker
 //! [`RRTWorker`]: RRTWorker
-//! [`SINGLETON`]: crate::terminal_lib_backends::direct_to_ansi::input::input_device_impl::global_input_resource::SINGLETON
+//! [`Receiver::recv()`]: tokio::sync::broadcast::Receiver::recv
+//! [`SINGLETON`]: crate::terminal_lib_backends::global_input_resource::SINGLETON
 //! [`SQPOLL`]: https://man7.org/linux/man-pages/man2/io_uring_setup.2.html
 //! [`SubscriberGuard`]: SubscriberGuard
 //! [`ThreadLiveness`]: ThreadLiveness
@@ -555,6 +624,7 @@
 //! [`create()`]: RRTFactory::create
 //! [`epoll_wait()`]: https://man7.org/linux/man-pages/man2/epoll_wait.2.html
 //! [`epoll`]: https://man7.org/linux/man-pages/man7/epoll.7.html
+//! [`eventfd`]: https://man7.org/linux/man-pages/man2/eventfd.2.html
 //! [`fd`]: https://en.wikipedia.org/wiki/File_descriptor
 //! [`fifo(7)`]: https://man7.org/linux/man-pages/man7/fifo.7.html
 //! [`file descriptor`]: https://en.wikipedia.org/wiki/File_descriptor
@@ -564,6 +634,7 @@
 //! [`io_uring`: An Alternative Model]: #io_uring-an-alternative-model
 //! [`kqueue`]: https://man.freebsd.org/cgi/man.cgi?query=kqueue
 //! [`mio::Poll::poll()`]: mio::Poll::poll
+//! [`mio::Poll`]: mio::Poll
 //! [`mio_poller`]: crate::tui::terminal_lib_backends::direct_to_ansi::input::mio_poller
 //! [`mio`]: mio
 //! [`pipe(2)`]: https://man7.org/linux/man-pages/man2/pipe.2.html
@@ -600,7 +671,9 @@
 //! [signals]: https://en.wikipedia.org/wiki/Signal_(IPC)
 //! [sockets]: https://man7.org/linux/man-pages/man7/socket.7.html
 //! [system call]: https://man7.org/linux/man-pages/man2/syscalls.2.html
+//! [waker]: RRTWaker
 //! [why user-provided?]: #why-is-rrtwaker-user-provided
+//! [worker]: RRTWorker
 
 mod subscriber_guard;
 mod thread_liveness;

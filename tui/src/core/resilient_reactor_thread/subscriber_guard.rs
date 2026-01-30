@@ -9,7 +9,7 @@ use super::{RRTWaker, ThreadState};
 use std::sync::Arc;
 use tokio::sync::broadcast::Receiver;
 
-/// [RAII] guard that wakes the worker thread on drop.
+/// An [RAII] guard that wakes the worker thread on drop.
 ///
 /// # Purpose
 ///
@@ -39,7 +39,7 @@ use tokio::sync::broadcast::Receiver;
 /// See [`DirectToAnsiInputDevice::next()`] for real usage.
 ///
 /// [RAII]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
-/// [`DirectToAnsiInputDevice::next()`]: crate::terminal_lib_backends::direct_to_ansi::input::DirectToAnsiInputDevice::next
+/// [`DirectToAnsiInputDevice::next()`]: crate::terminal_lib_backends::DirectToAnsiInputDevice::next
 /// [`Sender`]: tokio::sync::broadcast::Sender
 /// [`ThreadState`]: super::ThreadState
 /// [`receiver_count()`]: tokio::sync::broadcast::Sender::receiver_count

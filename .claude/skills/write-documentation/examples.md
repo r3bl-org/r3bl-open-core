@@ -119,7 +119,7 @@ This document provides full examples of well-documented Rust code following the 
 /// └──────────────┴──────────────┴──────────────┘
 /// ```
 ///
-/// # Example Implementation
+/// # Example
 ///
 /// ```rust
 /// use terminal::{Backend, Result, Position, Style};
@@ -497,6 +497,114 @@ pub trait CursorBoundsCheck {
 - ✅ Trait-level: Mathematical laws documented
 - ✅ Concrete examples showing the difference (array vs cursor)
 - ✅ Graduated complexity: overview → traits → methods
+
+---
+
+## Example 6: Complex Trait with Associated Types (Gold Standard)
+
+**File:** `tui/src/core/resilient_reactor_thread/types.rs`
+
+This is the **gold standard** for documenting complex traits with associated types. Key patterns:
+
+### Trait-Level Documentation
+
+```rust
+/// A trait for creating a coupled [`Worker`] + [`Waker`] pair atomically.
+///
+/// This trait solves the [coupled resource creation] problem — your implementation
+/// provides the [`Worker`] + [`Waker`] pair that the [framework] needs to manage the
+/// dedicated RRT thread.
+///
+/// For more details, see:
+/// 1. [module docs] for the full diagram
+/// 2. [`MioPollWorkerFactory`] for a concrete implementation
+```
+
+**What makes this good:**
+- ✅ "your implementation" — clarifies the user provides this
+- ✅ Links to related concepts and concrete examples
+- ✅ Numbered list for navigation
+
+### Associated Type Documentation
+
+```rust
+/// The concrete type broadcast from your [`Worker`] implementation to async
+/// subscribers on the [framework] managed dedicated thread.
+///
+/// See [`RRTWorker::Event`] for details.
+type Event;
+
+/// Your concrete type implementing one iteration of the blocking I/O loop on the
+/// [framework] managed dedicated thread.
+///
+/// See [`RRTWorker`] for trait bounds rationale and design details.
+type Worker: RRTWorker<Event = Self::Event>;
+
+/// Your concrete type for interrupting the blocked dedicated RRT worker thread.
+///
+/// One waker instance is shared by all [`SubscriberGuard`]s. See [`RRTWaker`] for
+/// the shared-access pattern diagram.
+type Waker: RRTWaker;
+```
+
+**What makes this good:**
+- ✅ "Your concrete type" for user-provided types (with trait bounds)
+- ✅ "The concrete type" for types the user defines but framework uses
+- ✅ Links to detailed trait docs (inverted pyramid)
+- ✅ Mentions key constraints inline ("One waker instance is shared")
+
+### Method Documentation with Returns
+
+```rust
+/// Creates both of your [`Worker`] and [`Waker`] concrete types together.
+///
+/// This method does not spawn the [framework]-managed dedicated RRT thread. This
+/// thread is created by the [framework] — when the TUI app (ie, async consumers)
+/// call [`subscribe()`].
+///
+/// Your concrete type (that implements this method) is an injected dependency
+/// containing business logic that the [framework] is not aware of (and does not
+/// need to be).
+///
+/// # Returns
+///
+/// 1. The [`Worker`] concrete type → moves to the [framework]-managed dedicated RRT
+///    worker thread
+/// 2. The [`Waker`] concrete type → stored in [`ThreadState`], which is wrapped in
+///    [`Arc`] and held by each [`SubscriberGuard`]; this ONE [`waker`] is shared by
+///    all async subscribers
+fn create() -> Result<(Self::Worker, Self::Waker), Report>;
+```
+
+**What makes this good:**
+- ✅ Parenthetical clarifier "(that implements this method)"
+- ✅ Arrow notation (→) in Returns for scannability
+- ✅ Explains what happens to each returned value
+- ✅ Emphasizes key architectural insight ("this ONE [`waker`]")
+- ✅ "(and does not need to be)" — reassures about design intent
+
+### Link Path Compaction
+
+Use the shortest valid re-export path:
+
+```rust
+// ❌ Long path
+/// [`MioPollWorkerFactory`]: crate::terminal_lib_backends::direct_to_ansi::input::mio_poller::MioPollWorkerFactory
+
+// ✅ Short path (using re-exports)
+/// [`MioPollWorkerFactory`]: crate::terminal_lib_backends::MioPollWorkerFactory
+```
+
+### Summary of Patterns
+
+| Element | Pattern | Example |
+|---------|---------|---------|
+| User-provided associated type | `Your concrete type [verb]...` | `Your concrete type implementing...` |
+| Framework-used associated type | `The concrete type [verb]...` | `The concrete type broadcast...` |
+| Clarifying context | Parenthetical | `(that implements this method)` |
+| Injected dependency | Reassuring parenthetical | `(and does not need to be)` |
+| Returns with destinations | Arrow notation | `→ moves to the dedicated thread` |
+| Shared resources | Emphasis | `this ONE [`waker`] is shared` |
 
 ---
 

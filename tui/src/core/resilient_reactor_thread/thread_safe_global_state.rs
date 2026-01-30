@@ -1,30 +1,23 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Thread-safe global state manager for the Resilient Reactor Thread pattern.
-//!
-//! [`ThreadSafeGlobalState`] is a **static container** that holds an **ephemeral
-//! payload**:
-//!
-//! - **Container** ([`Mutex<Option<_>>`]): Lives for [process] lifetime
-//! - **Payload** ([`ThreadState`]): Created when thread spawns, destroyed when it exits
-//!
-//! The container persists, but the payload comes and goes with the thread lifecycle.
-//!
-//! [`Mutex<Option<_>>`]: std::sync::Mutex
-//!
-//! [`ThreadState`]: super::ThreadState
-//! [process]: https://en.wikipedia.org/wiki/Process_(computing)
+//! Thread-safe global state manager for the Resilient Reactor Thread pattern. See
+//! [`ThreadSafeGlobalState`] for details.
 
 use super::{LivenessState, RRTFactory, RRTWaker, RRTWorker, SubscriberGuard, ThreadState};
 use crate::core::common::Continuation;
 use miette::{Context, IntoDiagnostic, Report};
-use std::{marker::PhantomData,
-          sync::{Arc, Mutex}};
+use std::sync::{Arc, Mutex};
 
-/// Thread-safe global state for a Resilient Reactor Thread.
+/// Thread-safe global state for a Resilient Reactor Thread (RRT).
 ///
-/// Manages the lifecycle of a dedicated worker thread with automatic spawn/shutdown/reuse
-/// semantics.
+/// This struct manages the lifecycle of a dedicated worker thread with automatic
+/// spawn/shutdown/reuse semantics. This is a **static container** that holds an
+/// **ephemeral payload**:
+///
+/// - **Container** ([`Mutex<Option<_>>`]): Lives for [process] lifetime
+/// - **Payload** ([`ThreadState`]): Created when thread spawns, destroyed when it exits
+///
+/// The container persists, but the payload comes and goes with the thread lifecycle.
 ///
 /// # Why [`Mutex<Option<Arc<ThreadState<W, E>>>>`]?
 ///
@@ -92,23 +85,49 @@ use std::{marker::PhantomData,
 /// | Context                 | Syntax Example | Meaning                                             |
 /// | :---------------------- | :------------- | :-------------------------------------------------- |
 /// | **Lifetime annotation** | `&'static str` | Reference valid for entire program (data in binary) |
-/// | **Trait bound**         | `T: 'static`   | Type contains no non-`'static` references           |
+/// | **Trait bound**         | `T: 'static`   | Type contains no references shorter than `'static`  |
 ///
-/// **Key insight:** [`String`] satisfies `T: 'static` even though a [`String`] can be
-/// dropped at any time. The bound means "doesn't contain references that could become
-/// invalid," not "lives forever."
+/// `T: 'static` does NOT mean "contains no references". It means "can be held
+/// indefinitely without becoming invalid". A type satisfying this bound:
+/// - **CAN** contain `'static` references (e.g., `&'static str`)
+/// - **CANNOT** contain references with shorter lifetimes (e.g., `&'a str`)
 ///
-/// | Type           | Satisfies `T: 'static`? | Why?                                  |
-/// | :------------- | :---------------------- | :------------------------------------ |
-/// | [`String`]     | Yes                     | Owned, no references                  |
-/// | [`Vec<u8>`]    | Yes                     | Owned, no references                  |
-/// | `&'static str` | Yes                     | Reference is `'static`                |
-/// | `&'a str`      | No                      | Contains non-`'static` reference      |
-/// | `Foo<'a>`      | No                      | Lifetime parameter implies references |
+/// [`String`] satisfies `T: 'static` even though it can be dropped at any time — the
+/// bound means "won't dangle", not "lives forever".
+///
+/// Here's what the `T: 'static` trait bound looks like in real code:
+///
+/// ```no_run
+/// # use std::thread::spawn;
+/// fn spawn_thread<T: Send + 'static>(it: T) { spawn(move || drop(it)); }
+/// spawn_thread(String::from("owned"));    // ✅ String: 'static
+/// spawn_thread("literal");                // ✅ &'static str: 'static
+/// ```
+///
+/// This fails to compile — `&String` has a non-`'static` lifetime:
+///
+/// ```compile_fail
+/// # use std::thread::spawn;
+/// # fn spawn_thread<T: Send + 'static>(it: T) { spawn(move || drop(it)); }
+/// let local = String::from("local");
+/// spawn_thread(&local);                   // ❌ &String is not 'static
+/// ```
+///
+/// Here's a quick reference for which types satisfy `T: 'static`:
+///
+/// | Type                      | `T: 'static`? | Why?                                  |
+/// | :------------------------ | :------------ | :------------------------------------ |
+/// | [`String`]                | ✅ Yes        | Owned data, no references             |
+/// | [`Vec<u8>`]               | ✅ Yes        | Owned data, no references             |
+/// | `&'static str`            | ✅ Yes        | Reference with `'static` lifetime     |
+/// | `Foo { s: &'static str }` | ✅ Yes        | Struct with only `'static` references |
+/// | `&'a str`                 | ❌ No         | Reference with non-`'static` lifetime |
+/// | `Foo<'a> { s: &'a str }`  | ❌ No         | Struct with non-`'static` references  |
 ///
 /// For thread spawning, `T: 'static` is required because the spawned thread could outlive
-/// the caller — any borrowed data might become invalid. This is why [`RRTWaker`],
-/// [`RRTWorker`], and the `E` (event) type parameter all require `'static`.
+/// the caller — any borrowed data with a shorter lifetime might become invalid. This is
+/// why [`RRTWaker`], [`RRTWorker`], and the `E` (event) type parameter all require
+/// `'static`.
 ///
 /// # Poll → Registry → Waker Chain
 ///
@@ -144,14 +163,16 @@ use std::{marker::PhantomData,
 ///
 /// See [`SINGLETON`] for the real implementation used by the terminal input system.
 ///
+/// [`Mutex<Option<_>>`]: std::sync::Mutex
 /// [`Vec<u8>`]: std::vec::Vec
 /// [`Mutex<Option<Arc<ThreadState<W, E>>>>`]: super::ThreadState
+/// [process]: https://en.wikipedia.org/wiki/Process_(computing)
 /// [`Arc::new()`]: std::sync::Arc::new
 /// [`Mutex::new(None)`]: std::sync::Mutex::new
 /// [`Option::replace()`]: std::option::Option::replace
 /// [`RRTWaker`]: super::RRTWaker
 /// [`RRTWorker`]: super::RRTWorker
-/// [`SINGLETON`]: crate::terminal_lib_backends::direct_to_ansi::input::SINGLETON
+/// [`SINGLETON`]: crate::terminal_lib_backends::global_input_resource::SINGLETON
 /// [`String`]: std::string::String
 /// [`Syscall`]: https://man7.org/linux/man-pages/man2/syscalls.2.html
 /// [`Syscalls`]: https://man7.org/linux/man-pages/man2/syscalls.2.html
@@ -169,23 +190,16 @@ use std::{marker::PhantomData,
 #[allow(missing_debug_implementations, clippy::type_complexity)]
 pub struct ThreadSafeGlobalState<F>
 where
-    F: RRTFactory + Sync,
+    F: RRTFactory,
     F::Waker: RRTWaker,
     F::Event: Clone + Send + Sync + 'static,
 {
     inner: Mutex<Option<Arc<ThreadState<F::Waker, F::Event>>>>,
-    /// Zero-sized marker that "uses" the factory type `F` at compile time.
-    ///
-    /// This allows the struct to be parameterized by `F` without storing any `F` data.
-    /// The factory is only used in [`subscribe()`] via `F::create()`.
-    ///
-    /// [`subscribe()`]: Self::subscribe
-    _factory: PhantomData<F>,
 }
 
 impl<F> ThreadSafeGlobalState<F>
 where
-    F: RRTFactory + Sync,
+    F: RRTFactory,
     F::Waker: RRTWaker,
     F::Event: Clone + Send + Sync + 'static,
 {
@@ -194,16 +208,15 @@ where
     /// This is a `const fn` so it can be used in `static` declarations.
     /// See [`SINGLETON`] for a real usage example.
     ///
-    /// [`SINGLETON`]: crate::terminal_lib_backends::direct_to_ansi::input::SINGLETON
+    /// [`SINGLETON`]: crate::terminal_lib_backends::global_input_resource::SINGLETON
     #[must_use]
     pub const fn new() -> Self {
         Self {
             inner: Mutex::new(None),
-            _factory: PhantomData,
         }
     }
 
-    /// Allocate a subscription, spawning the worker thread if needed.
+    /// Allocates a subscription, spawning the worker thread if needed.
     ///
     /// # Two Allocation Paths
     ///
@@ -254,7 +267,8 @@ where
 
         // SLOW PATH: Thread terminated (or never started) → create new everything.
         if !apply_fast_path_thread_reuse {
-            // Create worker and waker together (solves chicken-egg problem).
+            // Create worker and waker atomically (see the "Coupled Resource Creation"
+            // problem in mod.rs).
             let (worker, waker) =
                 F::create().context("Failed to create worker thread resources")?;
 
@@ -353,7 +367,7 @@ where
             .unwrap_or(0)
     }
 
-    /// Subscribe to events from an existing thread.
+    /// Subscribes to events from an existing thread.
     ///
     /// This is a lightweight operation that creates a new subscriber to the existing
     /// broadcast channel. Use this for additional consumers (logging, debugging, etc.)
@@ -385,7 +399,7 @@ where
 
 impl<F> Default for ThreadSafeGlobalState<F>
 where
-    F: RRTFactory + Sync,
+    F: RRTFactory,
     F::Waker: RRTWaker,
     F::Event: Clone + Send + Sync + 'static,
 {

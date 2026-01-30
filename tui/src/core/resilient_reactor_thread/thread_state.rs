@@ -20,9 +20,10 @@ use tokio::sync::broadcast::Sender;
 /// [`recv()`]: tokio::sync::broadcast::Receiver::recv
 pub const CHANNEL_CAPACITY: usize = 4_096;
 
-/// Shared state between the process-global singleton and the worker thread.
+/// A shared state container between the process-global singleton and the worker thread.
 ///
-/// Centralizes thread lifecycle, event broadcasting, and wake signaling in one place.
+/// This struct centralizes thread lifecycle, event broadcasting, and wake signaling in
+/// one place.
 /// Shared via [`Arc`] between the singleton and thread.
 ///
 /// # Contents
