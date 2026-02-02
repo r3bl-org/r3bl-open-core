@@ -1,7 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 //! Thread liveness tracking for the Resilient Reactor Thread pattern. See
-//! [`ThreadLiveness`], [`LivenessState`], and [`ShutdownDecision`].
+//! [`RRTLiveness`], [`LivenessState`], and [`ShutdownDecision`].
 
 use std::sync::atomic::{AtomicBool, AtomicU8, Ordering};
 
@@ -21,7 +21,7 @@ static THREAD_GENERATION: AtomicU8 = AtomicU8::new(0);
 ///
 /// # Generation Tracking
 ///
-/// Each time a new thread is spawned via [`ThreadSafeGlobalState::subscribe()`], the
+/// Each time a new thread is spawned via [`RRTSafeGlobalState::subscribe()`], the
 /// generation counter increments. This allows tests to verify thread reuse vs relaunch:
 ///
 /// - **Same generation**: Thread was reused (new subscriber appeared before thread
@@ -42,16 +42,16 @@ static THREAD_GENERATION: AtomicU8 = AtomicU8::new(0);
 ///
 /// [`AtomicBool`]: std::sync::atomic::AtomicBool
 /// [`SeqCst`]: std::sync::atomic::Ordering::SeqCst
-/// [`ThreadSafeGlobalState::subscribe()`]: super::ThreadSafeGlobalState::subscribe
+/// [`RRTSafeGlobalState::subscribe()`]: super::RRTSafeGlobalState::subscribe
 /// [`generation`]: Self::generation
 /// [`is_running()`]: Self::is_running
 /// [`is_running`]: Self::is_running
 /// [`mark_terminated()`]: Self::mark_terminated
-/// [`subscribe()`]: super::ThreadSafeGlobalState::subscribe
+/// [`subscribe()`]: super::RRTSafeGlobalState::subscribe
 /// [deadlock]: https://en.wikipedia.org/wiki/Deadlock
 /// [lock-free]: https://en.wikipedia.org/wiki/Non-blocking_algorithm
 #[allow(missing_debug_implementations)]
-pub struct ThreadLiveness {
+pub struct RRTLiveness {
     /// Whether the thread is currently running. Set to `false` by [`mark_terminated()`].
     ///
     /// [`mark_terminated()`]: Self::mark_terminated
@@ -64,7 +64,7 @@ pub struct ThreadLiveness {
     pub generation: u8,
 }
 
-impl ThreadLiveness {
+impl RRTLiveness {
     /// Creates new liveness in the [`Running`] state with a fresh generation.
     ///
     /// The generation number is atomically incremented from the global counter.
@@ -102,13 +102,13 @@ impl ThreadLiveness {
     }
 }
 
-impl Default for ThreadLiveness {
+impl Default for RRTLiveness {
     fn default() -> Self { Self::new() }
 }
 
 /// An indication of whether the worker thread is running or terminated.
 ///
-/// Used by [`ThreadLiveness::is_running()`] to provide a self-documenting return type
+/// Used by [`RRTLiveness::is_running()`] to provide a self-documenting return type
 /// instead of a bare `bool`.
 ///
 /// # Why Not Just `bool`?
@@ -127,7 +127,7 @@ pub enum LivenessState {
 
 /// An indication of whether the worker thread should self-terminate or continue running.
 ///
-/// This enum is returned by [`ThreadState::should_self_terminate()`] to provide a
+/// This enum is returned by [`RRTState::should_self_terminate()`] to provide a
 /// self-documenting return type instead of a bare `bool`.
 ///
 /// # Decision Logic
@@ -140,7 +140,7 @@ pub enum LivenessState {
 /// handles the race condition where a new subscriber appears between the wake signal and
 /// the exit check.
 ///
-/// [`ThreadState::should_self_terminate()`]: super::ThreadState::should_self_terminate
+/// [`RRTState::should_self_terminate()`]: super::RRTState::should_self_terminate
 /// [`receiver_count()`]: tokio::sync::broadcast::Sender::receiver_count
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ShutdownDecision {

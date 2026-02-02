@@ -4,7 +4,7 @@
 // cspell:words pollable Proactor demultiplexing injectables threadwaker IOCP EINVAL
 // cspell:words kqueuefd filedescriptor rrtwaker
 
-//! Generic infrastructure for the Resilient Reactor Thread (RRT) pattern implementation.
+//! Reusable infrastructure for the Resilient Reactor Thread (RRT) pattern implementation.
 //!
 //! # What is the RRT Pattern?
 //!
@@ -142,9 +142,9 @@
 //!
 //! You and the framework have distinct responsibilities:
 //!
-//! - **The framework** ([`ThreadSafeGlobalState<F>`]) handles all the thread management
-//!   and lifecycle boilerplate — spawning threads, reusing running threads, wake
-//!   signaling, [`broadcast channel`]s, subscriber tracking, and graceful shutdown.
+//! - **The framework** ([`RRTSafeGlobalState<F>`]) handles all the thread management and
+//!   lifecycle boilerplate — spawning threads, reusing running threads, wake signaling,
+//!   [`broadcast channel`]s, subscriber tracking, and graceful shutdown.
 //! - **You** provide the [`RRTFactory`] trait implementation along with [`Worker`],
 //!   [`Waker`], and [`Event`] types. Without your factory concrete type (and the three
 //!   other types) to inject ([DI]), the framework has nothing to run.
@@ -185,7 +185,7 @@
 //! │                            │  YOUR CODE   │                            │
 //! │                            └──────────────┘                            │
 //! │  SINGLETON:                                                            │
-//! │       static SINGLETON: ThreadSafeGlobalState<F> = ...::new();         │
+//! │       static SINGLETON: RRTSafeGlobalState<F> = ...::new();            │
 //! │                                                                        │
 //! │  The generic param <F>:                                                │
 //! │       F          : RRTFactory          — your factory impl             │
@@ -196,11 +196,11 @@
 //! ├─────────────────────┬────────────────────────────┬─────────────────────┤
 //! │                     │ FRAMEWORK → RUNS YOUR CODE │                     │
 //! │                     └────────────────────────────┘                     │
-//! │  ThreadSafeGlobalState<F>                                              │
-//! │  ├── Mutex<Option<Arc<ThreadState<F::Waker, F::Event>>>>               │
-//! │  │   └── ThreadState<F::Waker, F::Event>                               │
+//! │  RRTSafeGlobalState<F>                                                 │
+//! │  ├── Mutex<Option<Arc<RRTState<F::Waker, F::Event>>>>                  │
+//! │  │   └── RRTState<F::Waker, F::Event>                                  │
 //! │  │       ├── broadcast_tx: Sender<F::Event> (event broadcast)          │
-//! │  │       ├── liveness:     ThreadLiveness   (running state+generation) │
+//! │  │       ├── liveness:     RRTLiveness   (running state+generation)    │
 //! │  │       └── waker:        F::Waker         (interrupt blocked thread) │
 //! │  │                                                                     │
 //! │  └── subscribe() → SubscriberGuard<F::Waker, F::Event>                 │
@@ -210,7 +210,7 @@
 //! │                                                                        │
 //! │  SubscriberGuard<F::Waker, F::Event>                                   │
 //! │  ├── receiver: Receiver<F::Event>    (broadcast subscription)          │
-//! │  ├── state:    Arc<ThreadState<...>> (for waker access on drop)        │
+//! │  ├── state:    Arc<RRTState<...>> (for waker access on drop)           │
 //! │  └── Drop impl: receiver dropped (decrements count), wakes worker      │
 //! │      └── Worker wakes → broadcast_tx.receiver_count() == 0 → exits     │
 //! │                                                                        │
@@ -219,7 +219,7 @@
 //!
 //! ## The RRT Contract And Benefits
 //!
-//! 1. **Thread-safe global state** — [`ThreadSafeGlobalState<F>`] is the type you use to
+//! 1. **Thread-safe global state** — [`RRTSafeGlobalState<F>`] is the type you use to
 //!    declare your own `static` singleton (initialized with a [`const expression`]). The
 //!    generic `F: `[`RRTFactory`] is **the injection point** — when you call
 //!    [`subscribe()`], the framework calls [`RRTFactory::create()`] to get your
@@ -230,8 +230,8 @@
 //!
 //!    ```ignore
 //!    /// From mio_poller implementation:
-//!    static SINGLETON: ThreadSafeGlobalState<MioPollWorkerFactory> =
-//!        ThreadSafeGlobalState::new();
+//!    static SINGLETON: RRTSafeGlobalState<MioPollWorkerFactory> =
+//!        RRTSafeGlobalState::new();
 //!
 //!    let subscriber_guard = SINGLETON.subscribe()?;
 //!    ```
@@ -239,18 +239,18 @@
 //!    The [`'static` trait bound] on `E` means the event type can be held indefinitely
 //!    without becoming invalid — it *can* live arbitrarily long, not that it *must*. The
 //!    type may contain `'static` references but no shorter-lived ones. See
-//!    [`ThreadSafeGlobalState`] for a detailed explanation of `'static` in trait bounds.
+//!    [`RRTSafeGlobalState`] for a detailed explanation of `'static` in trait bounds.
 //!
-//!    This newtype wraps a [`Mutex<Option<Arc<ThreadState<W, E>>>>`] because [`syscalls`]
+//!    This newtype wraps a [`Mutex<Option<Arc<RRTState<W, E>>>>`] because [`syscalls`]
 //!    aren't [`const expressions`] — the state must be created at runtime. See
-//!    [`ThreadSafeGlobalState`] for a detailed explanation. See [`mio_poller`]'s
+//!    [`RRTSafeGlobalState`] for a detailed explanation. See [`mio_poller`]'s
 //!    [`SINGLETON`] for a concrete example.
 //!
-//! 2. **State machine** — [`ThreadState`] can be created, destroyed, and reused. On
-//!    spawn, [`subscribe()`] populates the singleton with a fresh [`ThreadState`]. On
-//!    exit, [`ThreadLiveness`] marks it terminated. On restart, [`subscribe()`] replaces
-//!    the old state with fresh resources. Generation tracking distinguishes fresh
-//!    restarts from reusing an existing thread.
+//! 2. **State machine** — [`RRTState`] can be created, destroyed, and reused. On spawn,
+//!    [`subscribe()`] populates the singleton with a fresh [`RRTState`]. On exit,
+//!    [`RRTLiveness`] marks it terminated. On restart, [`subscribe()`] replaces the old
+//!    state with fresh resources. Generation tracking distinguishes fresh restarts from
+//!    reusing an existing thread.
 //!
 //! 3. **Contract preservation** — Async consumers never see broken promises; the
 //!    [`broadcast channel`] decouples producers from consumers. This unlocks two key
@@ -305,7 +305,7 @@
 //! │                    ▼                       ▼                            │
 //! │   Phase 2: Split and distribute                                         │
 //! │   ┌────────────────────────┐    ┌───────────────────────────────────┐   │
-//! │   │    Spawned Thread      │    │         ThreadState               │   │
+//! │   │    Spawned Thread      │    │         RRTState                  │   │
 //! │   │    ───────────────     │    │         ───────────               │   │
 //! │   │    Worker moves here   │    │    Waker stored here              │   │
 //! │   │    (owns mio::Poll)    │    │    (shared via Arc)               │   │
@@ -317,19 +317,19 @@
 //!
 //! The key insight: **atomic creation, then separation**. Both resources are created
 //! together from the same [`mio::Poll`] registry, then split — the [waker] stays in
-//! [`ThreadState`] for subscribers, while the [worker] moves to the spawned thread.
+//! [`RRTState`] for subscribers, while the [worker] moves to the spawned thread.
 //!
 //! ### Why is [`RRTWaker`] User-Provided?
 //!
 //! The [waker] is **intrinsically coupled** to the [worker]'s blocking mechanism.
 //! Different I/O backends need different wake strategies:
 //!
-//! | Blocking on...          | Wake strategy                              |
-//! | :---------------------- | :----------------------------------------- |
+//! | Blocking on...          | Wake strategy                                  |
+//! | :---------------------- | :--------------------------------------------- |
 //! | [`mio::Poll`]           | [`mio::Waker`] (triggers [`epoll`]/[`kqueue`]) |
-//! | TCP [`accept()`]        | Connect-to-self pattern                    |
-//! | Pipe [`read(2)`]        | Self-pipe trick (write a byte)             |
-//! | [`io_uring`]            | [`eventfd`] or [`IORING_OP_MSG_RING`]      |
+//! | TCP [`accept()`]        | Connect-to-self pattern                        |
+//! | Pipe [`read(2)`]        | Self-pipe trick (write a byte)                 |
+//! | [`io_uring`]            | [`eventfd`] or [`IORING_OP_MSG_RING`]          |
 //!
 //! The framework can't know how you're blocking — it just calls [`poll_once()`] in a
 //! loop. Only you know how to interrupt your specific blocking call.
@@ -360,7 +360,7 @@
 //! The [kernel] schedules threads independently, so there's no guarantee when the
 //! [worker] thread will wake up after [`wake()`] is called. The RRT pattern handles this
 //! correctly by checking the **current** [`receiver_count()`] at exit time, not the
-//! count when [`wake()`] was called. See [`ThreadState::should_self_terminate()`] for
+//! count when [`wake()`] was called. See [`RRTState::should_self_terminate()`] for
 //! details.
 //!
 //! # How To Use It
@@ -413,8 +413,8 @@
 //! }
 //!
 //! // 4. Create a static global state (factory type F bundles all associated types)
-//! static GLOBAL: ThreadSafeGlobalState<MyWorkerFactory> =
-//!     ThreadSafeGlobalState::new();
+//! static GLOBAL: RRTSafeGlobalState<MyWorkerFactory> =
+//!     RRTSafeGlobalState::new();
 //!
 //! # fn main() -> Result<(), Box<dyn std::error::Error>> {
 //! // 5. Subscribe to events
@@ -431,11 +431,10 @@
 //! # Module Contents
 //!
 //! - **`types`**: Core traits ([`RRTWaker`], [`RRTWorker`], [`RRTFactory`])
-//! - **`thread_liveness`**: Thread lifecycle state ([`ThreadLiveness`],
-//!   [`LivenessState`])
-//! - **`thread_state`**: Shared state container ([`ThreadState`])
+//! - **`thread_liveness`**: Thread lifecycle state ([`RRTLiveness`], [`LivenessState`])
+//! - **`thread_state`**: Shared state container ([`RRTState`])
 //! - **`subscriber_guard`**: RAII subscription guard ([`SubscriberGuard`])
-//! - **`thread_safe_global_state`**: Global state manager ([`ThreadSafeGlobalState`])
+//! - **`thread_safe_global_state`**: Global state manager ([`RRTSafeGlobalState`])
 //!
 //! # [`io_uring`]: An Alternative Model
 //!
@@ -569,7 +568,7 @@
 //! 4. **I/O-centric** — RRT is specialized for OS-level I/O ([`stdin`], [signals],
 //!    [sockets]), not general message processing.
 //!
-//! [`Mutex<Option<Arc<ThreadState<W, E>>>>`]: ThreadState
+//! [`Mutex<Option<Arc<RRTState<W, E>>>>`]: RRTState
 //!
 //! [Actor]: https://en.wikipedia.org/wiki/Actor_model
 //! [CQ]: https://man7.org/linux/man-pages/man7/io_uring.7.html
@@ -590,7 +589,7 @@
 //! [UDP]: https://en.wikipedia.org/wiki/User_Datagram_Protocol
 //! [Unix domain sockets]: https://en.wikipedia.org/wiki/Unix_domain_socket
 //! [Web Workers]: https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API
-//! [`'static` trait bound]: ThreadSafeGlobalState#static-trait-bound-vs-static-lifetime-annotation
+//! [`'static` trait bound]: RRTSafeGlobalState#static-trait-bound-vs-static-lifetime-annotation
 //! [`Arc`]: std::sync::Arc
 //! [`Continuation`]: crate::core::common::Continuation
 //! [`EINVAL`]: https://man7.org/linux/man-pages/man3/errno.3.html
@@ -604,23 +603,23 @@
 //! [`Option`]: std::option::Option
 //! [`PTY`]: https://man7.org/linux/man-pages/man7/pty.7.html
 //! [`RRTFactory`]: RRTFactory
+//! [`RRTLiveness`]: RRTLiveness
+//! [`RRTSafeGlobalState`]: RRTSafeGlobalState
+//! [`RRTState::should_self_terminate()`]: RRTState::should_self_terminate
+//! [`RRTState`]: RRTState
 //! [`RRTWaker`]: RRTWaker
 //! [`RRTWorker`]: RRTWorker
 //! [`Receiver::recv()`]: tokio::sync::broadcast::Receiver::recv
 //! [`SINGLETON`]: crate::terminal_lib_backends::global_input_resource::SINGLETON
 //! [`SQPOLL`]: https://man7.org/linux/man-pages/man2/io_uring_setup.2.html
 //! [`SubscriberGuard`]: SubscriberGuard
-//! [`ThreadLiveness`]: ThreadLiveness
-//! [`ThreadSafeGlobalState`]: ThreadSafeGlobalState
-//! [`ThreadState::should_self_terminate()`]: ThreadState::should_self_terminate
-//! [`ThreadState`]: ThreadState
 //! [`Waker`]: RRTWaker
 //! [`Worker`]: RRTWorker
 //! [`accept()`]: std::net::TcpListener::accept
 //! [`broadcast channel`]: tokio::sync::broadcast
 //! [`broadcast`]: tokio::sync::broadcast
-//! [`const expression`]: ThreadSafeGlobalState#const-expression-vs-const-declaration-vs-static-declaration
-//! [`const expressions`]: ThreadSafeGlobalState#const-expression-vs-const-declaration-vs-static-declaration
+//! [`const expression`]: RRTSafeGlobalState#const-expression-vs-const-declaration-vs-static-declaration
+//! [`const expressions`]: RRTSafeGlobalState#const-expression-vs-const-declaration-vs-static-declaration
 //! [`create()`]: RRTFactory::create
 //! [`epoll_wait()`]: https://man7.org/linux/man-pages/man2/epoll_wait.2.html
 //! [`epoll`]: https://man7.org/linux/man-pages/man7/epoll.7.html
@@ -649,7 +648,7 @@
 //! [`signals`]: https://en.wikipedia.org/wiki/Signal_(IPC)
 //! [`sockets`]: https://man7.org/linux/man-pages/man7/socket.7.html
 //! [`stdin`]: std::io::stdin
-//! [`subscribe()`]: ThreadSafeGlobalState::subscribe
+//! [`subscribe()`]: RRTSafeGlobalState::subscribe
 //! [`syscall`]: https://man7.org/linux/man-pages/man2/syscalls.2.html
 //! [`syscalls`]: https://man7.org/linux/man-pages/man2/syscalls.2.html
 //! [`tty`]: https://man7.org/linux/man-pages/man4/tty.4.html
@@ -675,14 +674,14 @@
 //! [why user-provided?]: #why-is-rrtwaker-user-provided
 //! [worker]: RRTWorker
 
-mod subscriber_guard;
-mod thread_liveness;
-mod thread_safe_global_state;
-mod thread_state;
-mod types;
+mod rrt_di_traits;
+mod rrt_liveness;
+mod rrt_safe_global_state;
+mod rrt_state;
+mod rrt_subscriber_guard;
 
-pub use subscriber_guard::*;
-pub use thread_liveness::*;
-pub use thread_safe_global_state::*;
-pub use thread_state::*;
-pub use types::*;
+pub use rrt_di_traits::*;
+pub use rrt_liveness::*;
+pub use rrt_safe_global_state::*;
+pub use rrt_state::*;
+pub use rrt_subscriber_guard::*;

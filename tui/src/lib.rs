@@ -1697,11 +1697,11 @@
 //!
 //! | Component                    | Purpose                                          |
 //! | ---------------------------- | ------------------------------------------------ |
-//! | [`ThreadSafeGlobalState`]    | Thread-safe singleton for RRT instances          |
-//! | [`ThreadLiveness`]           | Running state + generation tracking              |
+//! | [`RRTSafeGlobalState`]       | Thread-safe singleton for RRT instances          |
+//! | [`RRTLiveness`]              | Running state + generation tracking              |
 //! | [`SubscriberGuard`]          | RAII guard managing subscription lifecycle       |
-//! | [`RRTWorker`]             | Trait for the blocking work loop                 |
-//! | [`RRTWaker`]              | Trait for interrupting blocked threads           |
+//! | [`RRTWorker`]                | Trait for the blocking work loop                 |
+//! | [`RRTWaker`]                 | Trait for interrupting blocked threads           |
 //!
 //! ## Key benefits
 //!
@@ -2536,8 +2536,8 @@
 //! [`terminal_raw_mode`]: crate::core::ansi::terminal_raw_mode
 //! [`raw_mode_unix`]: crate::core::ansi::terminal_raw_mode::raw_mode_unix
 //! [`OffscreenBuffer::apply_ansi_bytes()`]: crate::OffscreenBuffer::apply_ansi_bytes
-//! [`ThreadSafeGlobalState`]: core::resilient_reactor_thread::ThreadSafeGlobalState
-//! [`ThreadLiveness`]: core::resilient_reactor_thread::ThreadLiveness
+//! [`RRTSafeGlobalState`]: core::resilient_reactor_thread::RRTSafeGlobalState
+//! [`RRTLiveness`]: core::resilient_reactor_thread::RRTLiveness
 //! [`SubscriberGuard`]: core::resilient_reactor_thread::SubscriberGuard
 //! [`RRTWorker`]: core::resilient_reactor_thread::RRTWorker
 //! [`RRTWaker`]: core::resilient_reactor_thread::RRTWaker

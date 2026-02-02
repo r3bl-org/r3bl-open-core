@@ -2,41 +2,62 @@
 
 // cspell:words EINTR SIGWINCH epoll kqueue threadwaker rrtwaker
 
-//! Core traits for the Resilient Reactor Thread (RRT) pattern.
+//! Core traits that allow you to add your business logic, using [dependency injection],
+//! into the reusable Resilient Reactor Thread (RRT) [framework]. See the following
+//! for more details: [`RRTFactory`], [`RRTWorker`], [`RRTWaker`].
 //!
-//! - [`RRTFactory`]: Creates coupled worker thread + waker
-//! - [`RRTWorker`]: Work loop running on the thread
-//! - [`RRTWaker`]: Interrupt a blocked thread
-//!
-//! See [module docs] for the full RRT pattern explanation.
-//!
-//! [module docs]: super
+//! [framework]: super#the-rrt-contract-and-benefits
+//! [dependency injection]: https://en.wikipedia.org/wiki/Dependency_injection
+//! [`RRTSafeGlobalState`]: super::RRTSafeGlobalState
+//! [`syscalls`]: https://man7.org/linux/man-pages/man2/syscalls.2.html
 
 use crate::core::common::Continuation;
 use miette::Report;
 use tokio::sync::broadcast::Sender;
 
-/// A trait for creating a coupled [`Worker`] + [`Waker`] pair atomically.
+/// A trait for creating OS resources which work with a coupled [`Worker`] and [`Waker`]
+/// pair, that are used by the [framework]-managed dedicated RRT thread.
 ///
-/// This trait solves the [coupled resource creation] problem — your implementation
-/// provides the [`Worker`] + [`Waker`] pair that the [framework] needs to manage its
-/// dedicated RRT thread.
+/// This is the main "entry point" for you to use the RRT [framework]. The journey begins
+/// with you defining a static singleton of type [`RRTSafeGlobalState`] in your code - and
+/// providing concrete types that implement this trait (as well as the others).
 ///
-/// For more details, see [module docs] for the full diagram.
+/// The trait implementor (aka your code, aka the dependencies that are injected into the
+/// [framework]) provides:
+/// - The OS resources and logic to monitor blocking sources (eg, file descriptors) inside
+///   the [`create()`] method. These resources are used by the RRT thread to block on
+///   until one or more sources are ready.
+/// - The logic to process ready events from blocking sources in the [`Worker`] type. This
+///   logic takes the data when the blocking sources are ready, and converts that into a
+///   domain-specific payload (the [`Event`] associated type) and broadcasts the event to
+///   all the async consumers.
+/// - The [`Waker`] type is used to awaken the blocked thread so that it can gracefully
+///   shutdown.
+///
+/// This trait solves the [coupled resource creation] problem. For more details, see
+/// [module docs] for the full diagram.
+///
+/// These trait implementations allow the [framework] to be reused for any number of use
+/// cases - see the [module docs] for more details. The [framework] is unaware, by design,
+/// of what blocking [`syscalls`] are used in your implementation of this trait, and what
+/// sources are registered with them.
 ///
 /// # Example
 ///
 /// See [`MioPollWorkerFactory`] for an example implementation.
 ///
+/// [`syscalls`]: https://man7.org/linux/man-pages/man2/syscalls.2.html
 /// [coupled resource creation]: super#the-coupled-resource-creation-problem
 /// [framework]: super#the-rrt-contract-and-benefits
 /// [module docs]: super#the-coupled-resource-creation-problem
 /// [`MioPollWorkerFactory`]: crate::terminal_lib_backends::MioPollWorkerFactory
+/// [`Event`]: Self::Event
 /// [`Waker`]: Self::Waker
 /// [`Worker`]: Self::Worker
 pub trait RRTFactory {
-    /// The concrete type broadcast from your [`Worker`] implementation to async
-    /// subscribers on the [framework]-managed dedicated RRT thread.
+    /// The concrete type of the domain-specific payload broadcast from your [`Worker`]
+    /// implementation to async subscribers. The [`Worker`] runs on the
+    /// [framework]-managed dedicated RRT thread.
     ///
     /// See [`RRTWorker::Event`] for details.
     ///
@@ -44,7 +65,7 @@ pub trait RRTFactory {
     /// [`Worker`]: Self::Worker
     type Event;
 
-    /// Your concrete type implementing one iteration of the blocking I/O loop on the
+    /// The concrete type implementing one iteration of the blocking I/O loop on the
     /// [framework]-managed dedicated RRT thread.
     ///
     /// See [`RRTWorker`] for trait bounds rationale and design details.
@@ -52,43 +73,52 @@ pub trait RRTFactory {
     /// [framework]: super#the-rrt-contract-and-benefits
     type Worker: RRTWorker<Event = Self::Event>;
 
-    /// Your concrete type for interrupting the blocked dedicated RRT worker thread.
+    /// The concrete type for interrupting the blocked [framework]-managed dedicated RRT
+    /// thread.
     ///
     /// One waker instance is shared by all [`SubscriberGuard`]s. See [`RRTWaker`] for the
     /// shared-access pattern diagram.
     ///
     /// [`SubscriberGuard`]: super::SubscriberGuard
+    /// [framework]: super#the-rrt-contract-and-benefits
     type Waker: RRTWaker;
 
-    /// Creates both of your [`Worker`] and [`Waker`] concrete types together.
+    /// Creates OS resources and coupled [`Worker`] and [`Waker`] pair.
     ///
-    /// This method does not spawn the [framework]-managed dedicated RRT thread. This
-    /// thread is created by the [framework] — when the TUI app (ie, async consumers)
-    /// call [`subscribe()`].
+    /// The specifics of which [`syscalls`] your implementation uses, and what sources are
+    /// registered, are totally left up to your implementation of this method. Your
+    /// concrete type (that implements this method) is an injected dependency
+    /// containing business logic that the [framework] is not aware of by design.
     ///
-    /// Your concrete type (that implements this method) is an injected dependency
-    /// containing business logic that the [framework] is not aware of (and does not need
-    /// to be).
+    /// See [trait docs] on details of orchestration between the [framework] and your code
+    /// occurs via this trait and this method.
+    ///
+    /// This method does not spawn the [framework]-managed dedicated RRT thread. The RRT
+    /// thread is created by the [framework] — when the TUI app (ie, async consumers) call
+    /// [`subscribe()`].
     ///
     /// # Returns
     ///
     /// 1. The [`Worker`] concrete type → moves to the [framework]-managed dedicated RRT
-    ///    worker thread
-    /// 2. The [`Waker`] concrete type → stored in [`ThreadState`], which is wrapped in
+    ///    worker thread.
+    /// 2. The [`Waker`] concrete type → stored in [`RRTState`], which is wrapped in
     ///    [`Arc`] and held by each [`SubscriberGuard`]; this ONE [`waker`] is shared by
-    ///    all async subscribers
+    ///    all async subscribers.
     ///
     /// # Errors
     ///
     /// Returns an error if OS resources cannot be created.
     ///
+    /// [`syscalls`]: https://man7.org/linux/man-pages/man2/syscalls.2.html
+    /// [trait docs]: Self
     /// [framework]: super#the-rrt-contract-and-benefits
     /// [`SubscriberGuard`]: super::SubscriberGuard
-    /// [`subscribe()`]: super::ThreadSafeGlobalState::subscribe
-    /// [`ThreadState`]: super::ThreadState
+    /// [`subscribe()`]: super::RRTSafeGlobalState::subscribe
+    /// [`RRTState`]: super::RRTState
     /// [`Waker`]: Self::Waker
     /// [`waker`]: Self::Waker
     /// [`Worker`]: Self::Worker
+    /// [`Arc`]: std::sync::Arc
     fn create() -> Result<(Self::Worker, Self::Waker), Report>;
 }
 
@@ -96,7 +126,10 @@ pub trait RRTFactory {
 /// [framework]-managed dedicated RRT thread.
 ///
 /// The [framework] repeatedly calls [`poll_once()`] on the implementing type until it
-/// returns [`Continuation::Stop`].
+/// returns [`Continuation::Stop`]. This is where the implementing type can add business
+/// logic, to inject it into the [framework]. Typically, this business logic gets any data
+/// from sources that are ready and then converts them a domain-specific [`event`] type
+/// that is broadcast to all the async consumers.
 ///
 /// # Trait Bounds - [`Send`] + `'static`
 ///
@@ -131,7 +164,8 @@ pub trait RRTFactory {
 /// [`poll_once()`]: Self::poll_once
 /// [`signals`]: https://en.wikipedia.org/wiki/Signal_(IPC)
 /// [`stdin`]: std::io::stdin
-/// [`subscribe()`]: super::ThreadSafeGlobalState::subscribe
+/// [`subscribe()`]: super::RRTSafeGlobalState::subscribe
+/// [`event`]: Self::Event
 pub trait RRTWorker: Send + 'static {
     /// The type containing domain-specific data to broadcast from your implementation to
     /// async consumers.
@@ -152,18 +186,29 @@ pub trait RRTWorker: Send + 'static {
     /// [`SubscriberGuard`]: super::SubscriberGuard
     /// [`broadcast channel`]: tokio::sync::broadcast
     /// [`tokio`]: tokio
+    /// [framework]: super#the-rrt-contract-and-benefits
     type Event: Clone + Send + 'static;
 
-    /// Runs one iteration of the work loop.
+    /// Runs one iteration of the work loop; this loop is owned by the [framework] and it
+    /// runs on the [framework]-managed dedicated RRT thread.
     ///
     /// The [framework] calls this method repeatedly until [`Continuation::Stop`] is
-    /// returned. Call [`tx.receiver_count()`] to check if any subscribers remain.
+    /// returned. See the [trait docs] for details on the business logic that you will
+    /// typically add here in your implementation of this trait method.
+    ///
+    /// Pro-tip - you can call [`tx.receiver_count()`] to check if any subscribers remain.
+    ///
+    /// # Example
+    ///
+    /// See [`mio_poller::MioPollWorker`] for a real example of implementing this method.
     ///
     /// # Returns
     ///
     /// - [`Continuation::Continue`] to keep the loop running
     /// - [`Continuation::Stop`] to exit the thread
     ///
+    /// [`mio_poller::MioPollWorker`]: crate::direct_to_ansi::input::mio_poller::MioPollWorker
+    /// [trait docs]: Self
     /// [framework]: super#the-rrt-contract-and-benefits
     /// [`tx.receiver_count()`]: tokio::sync::broadcast::Sender::receiver_count
     fn poll_once(&mut self, tx: &Sender<Self::Event>) -> Continuation;
@@ -176,7 +221,7 @@ pub trait RRTWorker: Send + 'static {
 ///
 /// # Trait Bounds - [`Send`] + [`Sync`] + `'static`
 ///
-/// There is exactly **one waker** inside the single [`ThreadState`], which all
+/// There is exactly **one waker** inside the single [`RRTState`], which all
 /// [`SubscriberGuard::state`] instances share via [`Arc`]. When any async [`tokio`] task
 /// drops its guard, the guard's [`Drop`] impl calls [`wake()`] on this shared waker to
 /// interrupt the blocking thread:
@@ -198,7 +243,7 @@ pub trait RRTWorker: Send + 'static {
 /// This shared-access pattern requires the following trait bounds:
 ///
 /// - **[`Send`]**: The implementor type lives inside [`SubscriberGuard::state`] (an
-///   [`Arc<ThreadState>`]). For `Arc<T>` to be `Send`, `T` must be `Send + Sync` — so the
+///   [`Arc<RRTState>`]). For `Arc<T>` to be `Send`, `T` must be `Send + Sync` — so the
 ///   implementor type must be `Send`.
 /// - **[`Sync`]**: Multiple async tasks (each holding a [`SubscriberGuard`]) may call
 ///   [`wake(&self)`] on the same implementor type concurrently from different [runtime
@@ -219,7 +264,7 @@ pub trait RRTWorker: Send + 'static {
 ///
 /// Wake strategies are backend-specific. See [Why is `RRTWaker` User-Provided?]
 ///
-/// [`Arc<ThreadState>`]: super::ThreadState
+/// [`Arc<RRTState>`]: super::RRTState
 /// [Why is `RRTWaker` User-Provided?]: super#why-is-rrtwaker-user-provided
 /// [`Arc`]: std::sync::Arc
 /// [`MioPollWaker`]: crate::terminal_lib_backends::MioPollWaker
@@ -228,13 +273,14 @@ pub trait RRTWorker: Send + 'static {
 /// [`SubscriberGuard::drop()`]: super::SubscriberGuard
 /// [`SubscriberGuard::state`]: super::SubscriberGuard::state
 /// [`SubscriberGuard`]: super::SubscriberGuard
-/// [`ThreadState`]: super::ThreadState
+/// [`RRTState`]: super::RRTState
 /// [`eventfd`]: https://man7.org/linux/man-pages/man2/eventfd.2.html
 /// [`mio::Waker`]: mio::Waker
 /// [`thread::spawn()`]: std::thread::spawn
 /// [`tokio`]: tokio
 /// [`wake(&self)`]: RRTWaker::wake
 /// [`wake()`]: RRTWaker::wake
+/// [framework]: super#the-rrt-contract-and-benefits
 pub trait RRTWaker: Send + Sync + 'static {
     /// Wake the thread so it can check if it should exit.
     ///

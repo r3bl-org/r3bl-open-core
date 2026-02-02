@@ -1,9 +1,9 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 //! Thread-safe global state manager for the Resilient Reactor Thread pattern. See
-//! [`ThreadSafeGlobalState`] for details.
+//! [`RRTSafeGlobalState`] for details.
 
-use super::{LivenessState, RRTFactory, RRTWaker, RRTWorker, SubscriberGuard, ThreadState};
+use super::{LivenessState, RRTFactory, RRTState, RRTWaker, RRTWorker, SubscriberGuard};
 use crate::core::common::Continuation;
 use miette::{Context, IntoDiagnostic, Report};
 use std::sync::{Arc, Mutex};
@@ -15,13 +15,13 @@ use std::sync::{Arc, Mutex};
 /// **ephemeral payload**:
 ///
 /// - **Container** ([`Mutex<Option<_>>`]): Lives for [process] lifetime
-/// - **Payload** ([`ThreadState`]): Created when thread spawns, destroyed when it exits
+/// - **Payload** ([`RRTState`]): Created when thread spawns, destroyed when it exits
 ///
 /// The container persists, but the payload comes and goes with the thread lifecycle.
 ///
-/// # Why [`Mutex<Option<Arc<ThreadState<W, E>>>>`]?
+/// # Why [`Mutex<Option<Arc<RRTState<W, E>>>>`]?
 ///
-/// **Deferred initialization** — we can't create [`ThreadState`] at `static` init time:
+/// **Deferred initialization** — we can't create [`RRTState`] at `static` init time:
 ///
 /// | Operation              | Const? | Why not?                                      |
 /// | :--------------------- | :----- | :-------------------------------------------- |
@@ -45,7 +45,7 @@ use std::sync::{Arc, Mutex};
 /// ## Replacement On Restart
 ///
 /// When the thread terminates and restarts (slow path), we need to replace the entire
-/// [`ThreadState`] with fresh resources. [`Option::replace()`] makes this clean.
+/// [`RRTState`] with fresh resources. [`Option::replace()`] makes this clean.
 ///
 /// ## Fallibility Is NOT The Reason
 ///
@@ -165,7 +165,7 @@ use std::sync::{Arc, Mutex};
 ///
 /// [`Mutex<Option<_>>`]: std::sync::Mutex
 /// [`Vec<u8>`]: std::vec::Vec
-/// [`Mutex<Option<Arc<ThreadState<W, E>>>>`]: super::ThreadState
+/// [`Mutex<Option<Arc<RRTState<W, E>>>>`]: super::RRTState
 /// [process]: https://en.wikipedia.org/wiki/Process_(computing)
 /// [`Arc::new()`]: std::sync::Arc::new
 /// [`Mutex::new(None)`]: std::sync::Mutex::new
@@ -176,7 +176,7 @@ use std::sync::{Arc, Mutex};
 /// [`String`]: std::string::String
 /// [`Syscall`]: https://man7.org/linux/man-pages/man2/syscalls.2.html
 /// [`Syscalls`]: https://man7.org/linux/man-pages/man2/syscalls.2.html
-/// [`ThreadState`]: super::ThreadState
+/// [`RRTState`]: super::RRTState
 /// [`const expression`]: #const-expression-vs-const-declaration-vs-static-declaration
 /// [`const expressions`]: #const-expression-vs-const-declaration-vs-static-declaration
 /// [`epoll`]: https://man7.org/linux/man-pages/man7/epoll.7.html
@@ -188,16 +188,16 @@ use std::sync::{Arc, Mutex};
 /// [`syscall`]: https://man7.org/linux/man-pages/man2/syscalls.2.html
 /// [`syscalls`]: https://man7.org/linux/man-pages/man2/syscalls.2.html
 #[allow(missing_debug_implementations, clippy::type_complexity)]
-pub struct ThreadSafeGlobalState<F>
+pub struct RRTSafeGlobalState<F>
 where
     F: RRTFactory,
     F::Waker: RRTWaker,
     F::Event: Clone + Send + Sync + 'static,
 {
-    inner: Mutex<Option<Arc<ThreadState<F::Waker, F::Event>>>>,
+    inner: Mutex<Option<Arc<RRTState<F::Waker, F::Event>>>>,
 }
 
-impl<F> ThreadSafeGlobalState<F>
+impl<F> RRTSafeGlobalState<F>
 where
     F: RRTFactory,
     F::Waker: RRTWaker,
@@ -222,13 +222,13 @@ where
     ///
     /// | Condition                | Path          | What Happens                              |
     /// | ------------------------ | ------------- | ----------------------------------------- |
-    /// | `liveness == Running`    | **Fast path** | Reuse existing thread + [`ThreadState`]   |
+    /// | `liveness == Running`    | **Fast path** | Reuse existing thread + [`RRTState`]   |
     /// | `liveness == Terminated` | **Slow path** | Replace all, spawn new thread             |
     ///
     /// ## Fast Path (Thread Reuse)
     ///
     /// If the thread is still running, we **reuse everything**:
-    /// - Same [`ThreadState`] (same broadcast channel, same liveness tracker)
+    /// - Same [`RRTState`] (same broadcast channel, same liveness tracker)
     /// - Same worker resources (still valid)
     /// - Same thread (continues serving the new subscriber)
     ///
@@ -237,10 +237,10 @@ where
     ///
     /// ## Slow Path (Thread Restart)
     ///
-    /// If the thread has terminated, the existing [`ThreadState`] is **orphaned** — no
+    /// If the thread has terminated, the existing [`RRTState`] is **orphaned** — no
     /// thread is feeding events into its broadcast channel. We must **replace
     /// everything**:
-    /// - New [`ThreadState`] (fresh broadcast channel + liveness tracker + waker)
+    /// - New [`RRTState`] (fresh broadcast channel + liveness tracker + waker)
     /// - New worker resources (via [`RRTFactory::create()`])
     /// - New thread (spawned to serve the new subscriber)
     ///
@@ -252,15 +252,15 @@ where
     /// - Thread spawning fails (system thread limits)
     ///
     /// [`RRTFactory::create()`]: RRTFactory::create
-    /// [`ThreadState`]: super::ThreadState
+    /// [`RRTState`]: super::RRTState
     /// [`receiver_count()`]: tokio::sync::broadcast::Sender::receiver_count
     pub fn subscribe(&self) -> Result<SubscriberGuard<F::Waker, F::Event>, Report> {
         let mut guard = self
             .inner
             .lock()
-            .map_err(|_| miette::miette!("ThreadSafeGlobalState mutex poisoned"))?;
+            .map_err(|_| miette::miette!("RRTSafeGlobalState mutex poisoned"))?;
 
-        // Fast path check: can we reuse the existing thread + ThreadState?
+        // Fast path check: can we reuse the existing thread + RRTState?
         let apply_fast_path_thread_reuse = guard
             .as_ref()
             .is_some_and(|state| state.liveness.is_running() == LivenessState::Running);
@@ -272,8 +272,8 @@ where
             let (worker, waker) =
                 F::create().context("Failed to create worker thread resources")?;
 
-            // Create new ThreadState with the waker.
-            let thread_state = Arc::new(ThreadState::new(waker));
+            // Create new RRTState with the waker.
+            let thread_state = Arc::new(RRTState::new(waker));
 
             // Spawn worker thread.
             let tx_clone = thread_state.broadcast_tx.clone();
@@ -293,13 +293,13 @@ where
             guard.replace(thread_state);
         }
 
-        // FAST PATH (or after slow path): Use the current ThreadState.
+        // FAST PATH (or after slow path): Use the current RRTState.
         // Invariant: guard is always Some here because:
         // - Slow path: we just called guard.replace(thread_state)
         // - Fast path: apply_fast_path_thread_reuse was true, so
         //   guard.as_ref().is_some_and() returned true
         let thread_state = guard.as_ref().ok_or_else(|| {
-            miette::miette!("Invariant violated: ThreadState missing after allocation")
+            miette::miette!("Invariant violated: RRTState missing after allocation")
         })?;
 
         Ok(SubscriberGuard {
@@ -381,7 +381,7 @@ where
     /// [`subscribe()`]: Self::subscribe
     pub fn subscribe_to_existing(&self) -> SubscriberGuard<F::Waker, F::Event> {
         let guard = self.inner.lock().expect(
-            "ThreadSafeGlobalState mutex poisoned: another thread panicked while \
+            "RRTSafeGlobalState mutex poisoned: another thread panicked while \
              holding this lock.",
         );
 
@@ -397,7 +397,7 @@ where
     }
 }
 
-impl<F> Default for ThreadSafeGlobalState<F>
+impl<F> Default for RRTSafeGlobalState<F>
 where
     F: RRTFactory,
     F::Waker: RRTWaker,
@@ -408,13 +408,13 @@ where
 
 /// RAII guard that calls [`mark_terminated()`] when the worker loop exits.
 ///
-/// [`mark_terminated()`]: super::ThreadLiveness::mark_terminated
+/// [`mark_terminated()`]: super::RRTLiveness::mark_terminated
 struct TerminationGuard<W, E>
 where
     W: RRTWaker,
     E: Clone + Send + 'static,
 {
-    state: Arc<ThreadState<W, E>>,
+    state: Arc<RRTState<W, E>>,
 }
 
 impl<W, E> Drop for TerminationGuard<W, E>
@@ -431,12 +431,12 @@ where
 /// calls [`mark_terminated()`] so the next [`subscribe()`] call knows to spawn a new
 /// thread.
 ///
-/// [`mark_terminated()`]: super::ThreadLiveness::mark_terminated
-/// [`subscribe()`]: ThreadSafeGlobalState::subscribe
+/// [`mark_terminated()`]: super::RRTLiveness::mark_terminated
+/// [`subscribe()`]: RRTSafeGlobalState::subscribe
 fn run_worker_loop<W, E>(
     mut worker: impl RRTWorker<Event = E>,
     tx: tokio::sync::broadcast::Sender<E>,
-    state: Arc<ThreadState<W, E>>,
+    state: Arc<RRTState<W, E>>,
 ) where
     W: RRTWaker,
     E: Clone + Send + 'static,

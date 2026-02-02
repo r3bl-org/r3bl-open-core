@@ -2,9 +2,9 @@
 
 // cspell:words epoll kqueue
 
-//! Shared state container for the Resilient Reactor Thread pattern. See [`ThreadState`].
+//! Shared state container for the Resilient Reactor Thread pattern. See [`RRTState`].
 
-use super::{RRTWaker, ShutdownDecision, ThreadLiveness};
+use super::{RRTLiveness, RRTWaker, ShutdownDecision};
 use tokio::sync::broadcast::Sender;
 
 /// Capacity of the broadcast channel for events.
@@ -59,7 +59,7 @@ pub const CHANNEL_CAPACITY: usize = 4_096;
 /// returns. **If the worker's resources are dropped, the waker becomes useless** — it
 /// would signal a mechanism that no longer exists.
 ///
-/// This is why the slow path in [`subscribe()`] replaces the entire [`ThreadState`] — the
+/// This is why the slow path in [`subscribe()`] replaces the entire [`RRTState`] — the
 /// worker resources, waker, and thread must be created together.
 ///
 /// [`Arc`]: std::sync::Arc
@@ -69,11 +69,11 @@ pub const CHANNEL_CAPACITY: usize = 4_096;
 /// [`kqueue`]: https://man.freebsd.org/cgi/man.cgi?query=kqueue
 /// [`liveness`]: Self::liveness
 /// [`receiver_count()`]: tokio::sync::broadcast::Sender::receiver_count
-/// [`subscribe()`]: super::ThreadSafeGlobalState::subscribe
+/// [`subscribe()`]: super::RRTSafeGlobalState::subscribe
 /// [`waker.wake()`]: RRTWaker::wake
 /// [`waker`]: Self::waker
 #[allow(missing_debug_implementations)]
-pub struct ThreadState<W, E>
+pub struct RRTState<W, E>
 where
     W: RRTWaker,
     E: Clone + Send + 'static,
@@ -83,11 +83,11 @@ where
 
     /// Thread liveness and incarnation tracking.
     ///
-    /// See [`ThreadLiveness`] for why this uses [`AtomicBool`] instead of `Mutex<bool>`.
+    /// See [`RRTLiveness`] for why this uses [`AtomicBool`] instead of `Mutex<bool>`.
     ///
     /// [`AtomicBool`]: std::sync::atomic::AtomicBool
-    /// [`ThreadLiveness`]: super::ThreadLiveness
-    pub liveness: ThreadLiveness,
+    /// [`RRTLiveness`]: super::RRTLiveness
+    pub liveness: RRTLiveness,
 
     /// Waker to signal thread for shutdown check.
     ///
@@ -99,24 +99,24 @@ where
     pub waker: W,
 }
 
-impl<W, E> ThreadState<W, E>
+impl<W, E> RRTState<W, E>
 where
     W: RRTWaker,
     E: Clone + Send + 'static,
 {
-    /// Creates new thread state with fresh [`ThreadLiveness`] and broadcast channel.
+    /// Creates new thread state with fresh [`RRTLiveness`] and broadcast channel.
     ///
     /// The `waker` must be created from the same resources that the worker owns.
     /// See [Waker Lifecycle] for why they're coupled.
     ///
-    /// [Waker Lifecycle]: ThreadState#waker-lifecycle
-    /// [`ThreadLiveness`]: super::ThreadLiveness
+    /// [Waker Lifecycle]: RRTState#waker-lifecycle
+    /// [`RRTLiveness`]: super::RRTLiveness
     #[must_use]
     pub fn new(waker: W) -> Self {
         let (broadcast_tx, _) = tokio::sync::broadcast::channel(CHANNEL_CAPACITY);
         Self {
             broadcast_tx,
-            liveness: ThreadLiveness::new(),
+            liveness: RRTLiveness::new(),
             waker,
         }
     }

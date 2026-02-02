@@ -7,9 +7,9 @@
 //!
 //! This module uses the **Resilient Reactor Thread (RRT)** infrastructure:
 //!
-//! - **[`SINGLETON`]** (container): Static [`ThreadSafeGlobalState`], lives for process
+//! - **[`SINGLETON`]** (container): Static [`RRTSafeGlobalState`], lives for process
 //!   lifetime
-//! - **[`ThreadState`]** (payload): Created when thread spawns, destroyed when it exits
+//! - **[`RRTState`]** (payload): Created when thread spawns, destroyed when it exits
 //!
 //! The container persists, but the payload comes and goes with the thread lifecycle.
 //!
@@ -20,13 +20,13 @@
 //!
 //! [`DirectToAnsiInputDevice`]: super::DirectToAnsiInputDevice
 //! [`SINGLETON`]: global_input_resource::SINGLETON
-//! [`ThreadSafeGlobalState`]: crate::core::resilient_reactor_thread::ThreadSafeGlobalState
-//! [`ThreadState`]: crate::core::resilient_reactor_thread::ThreadState
+//! [`RRTSafeGlobalState`]: crate::core::resilient_reactor_thread::RRTSafeGlobalState
+//! [`RRTState`]: crate::core::resilient_reactor_thread::RRTState
 //! [`global_input_resource`]: mod@global_input_resource
 
 use super::{channel_types::PollerEvent,
             mio_poller::{MioPollWaker, MioPollWorkerFactory}};
-use crate::core::resilient_reactor_thread::{SubscriberGuard, ThreadSafeGlobalState};
+use crate::core::resilient_reactor_thread::{RRTSafeGlobalState, SubscriberGuard};
 
 /// Type alias for the input device's subscriber guard.
 ///
@@ -41,30 +41,30 @@ pub type InputSubscriberGuard = SubscriberGuard<MioPollWaker, PollerEvent>;
 
 /// Process-global input resource singleton.
 ///
-/// See [`ThreadState`] for what the singleton holds when active.
+/// See [`RRTState`] for what the singleton holds when active.
 ///
-/// [`ThreadState`]: crate::core::resilient_reactor_thread::ThreadState
+/// [`RRTState`]: crate::core::resilient_reactor_thread::RRTState
 pub mod global_input_resource {
     #[allow(clippy::wildcard_imports)]
     use super::*;
 
     /// **Static container** (lives for process lifetime) that holds a
-    /// [`ThreadState`] **payload** (ephemeral, follows thread lifecycle). The payload is
+    /// [`RRTState`] **payload** (ephemeral, follows thread lifecycle). The payload is
     /// created when [`subscribe()`] spawns a thread, and removed when the thread exits.
     ///
     /// Lifecycle states:
     /// - **Inert** (`None`) until [`subscribe()`] spawns the poller thread
     /// - **Active** (`Some`) while thread is running
-    /// - **Dormant** (`Some` with terminated liveness) when all [`SubscriberGuard`]s
-    ///   drop and thread exits
+    /// - **Dormant** (`Some` with terminated liveness) when all [`SubscriberGuard`]s drop
+    ///   and thread exits
     /// - **Reactivates** on next [`subscribe()`] call (spawns fresh thread, replaces
     ///   payload)
     ///
     /// This is NOT "allocate once, lives forever" — supports full restart cycles.
     ///
-    /// See [`ThreadState`] for what the payload contains when active.
+    /// See [`RRTState`] for what the payload contains when active.
     ///
-    /// # Why `ThreadSafeGlobalState`?
+    /// # Why `RRTSafeGlobalState`?
     ///
     /// The RRT infrastructure handles all the complexity of:
     /// - Deferred initialization (syscalls can't be `const`)
@@ -88,10 +88,10 @@ pub mod global_input_resource {
     /// [Architecture]: super::super::DirectToAnsiInputDevice#architecture
     /// [`MioPollWorker`]: super::super::mio_poller::MioPollWorker
     /// [`SubscriberGuard`]: crate::core::resilient_reactor_thread::SubscriberGuard
-    /// [`ThreadState`]: crate::core::resilient_reactor_thread::ThreadState
-    /// [`subscribe()`]: ThreadSafeGlobalState::subscribe
-    pub static SINGLETON: ThreadSafeGlobalState<MioPollWorkerFactory> =
-        ThreadSafeGlobalState::new();
+    /// [`RRTState`]: crate::core::resilient_reactor_thread::RRTState
+    /// [`subscribe()`]: RRTSafeGlobalState::subscribe
+    pub static SINGLETON: RRTSafeGlobalState<MioPollWorkerFactory> =
+        RRTSafeGlobalState::new();
 }
 
 /// Comprehensive testing is performed in PTY integration tests:

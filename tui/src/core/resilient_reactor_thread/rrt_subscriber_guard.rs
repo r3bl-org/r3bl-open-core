@@ -5,7 +5,7 @@
 //!
 //! [RAII]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
 
-use super::{RRTWaker, ThreadState};
+use super::{RRTState, RRTWaker};
 use std::sync::Arc;
 use tokio::sync::broadcast::Receiver;
 
@@ -32,7 +32,7 @@ use tokio::sync::broadcast::Receiver;
 /// new subscriber appears during the window, the thread correctly continues serving it
 /// instead of exiting.
 ///
-/// See [`ThreadState`] for comprehensive documentation on the race condition.
+/// See [`RRTState`] for comprehensive documentation on the race condition.
 ///
 /// # Example
 ///
@@ -41,7 +41,7 @@ use tokio::sync::broadcast::Receiver;
 /// [RAII]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
 /// [`DirectToAnsiInputDevice::next()`]: crate::terminal_lib_backends::DirectToAnsiInputDevice::next
 /// [`Sender`]: tokio::sync::broadcast::Sender
-/// [`ThreadState`]: super::ThreadState
+/// [`RRTState`]: super::RRTState
 /// [`receiver_count()`]: tokio::sync::broadcast::Sender::receiver_count
 /// [`receiver`]: Self::receiver
 /// [`waker.wake()`]: RRTWaker::wake
@@ -63,13 +63,13 @@ where
 
     /// Shared state including waker to signal the worker thread.
     ///
-    /// We hold an [`Arc`] reference to keep the [`ThreadState`] alive. When this guard
+    /// We hold an [`Arc`] reference to keep the [`RRTState`] alive. When this guard
     /// drops, we call [`waker.wake()`] to notify the worker thread.
     ///
     /// [`Arc`]: std::sync::Arc
-    /// [`ThreadState`]: super::ThreadState
+    /// [`RRTState`]: super::RRTState
     /// [`waker.wake()`]: RRTWaker::wake
-    pub state: Arc<ThreadState<W, E>>,
+    pub state: Arc<RRTState<W, E>>,
 }
 
 impl<W, E> Drop for SubscriberGuard<W, E>
