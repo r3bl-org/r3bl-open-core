@@ -86,6 +86,20 @@ impl PackageManager {
     pub fn requires_sudo(&self) -> bool { !matches!(self, PackageManager::Brew) }
 }
 
+/// Check if a command is available on the system PATH.
+///
+/// Uses `which` to check if the given command name resolves to an
+/// executable. This works on all Unix-like systems (Linux and macOS)
+/// regardless of package manager.
+#[must_use]
+pub fn is_command_available(command_name: &str) -> bool {
+    std::process::Command::new("which")
+        .arg(command_name)
+        .output()
+        .map(|o| o.status.success())
+        .unwrap_or(false)
+}
+
 /// Check if a package is installed on the system.
 ///
 /// This function detects the system's package manager and uses the appropriate
@@ -117,6 +131,15 @@ impl PackageManager {
 /// - No supported package manager is detected
 /// - The command fails to execute
 pub async fn check_if_package_is_installed(package_name: &str) -> miette::Result<bool> {
+    // Fast path: check if command is available on PATH.
+    // This handles macOS system binaries (e.g., /bin/bash) that aren't
+    // managed by brew, and provides a quick answer on all platforms.
+    if is_command_available(package_name) {
+        return ok!(true);
+    }
+
+    // Slow path: ask the package manager (handles library packages and
+    // packages whose binary name differs from the package name).
     let pkg_mgr = PackageManager::detect()
         .ok_or_else(|| miette::miette!("No supported package manager found"))?;
 
