@@ -347,7 +347,7 @@
 //! [`signal_hook_mio`]: signal_hook_mio
 //! [`std::thread`]: std::thread
 //! [`stdin`]: std::io::stdin
-//! [`subscribe()`]: crate::core::resilient_reactor_thread::RRTSafeGlobalState::subscribe
+//! [`subscribe()`]: crate::core::resilient_reactor_thread::RRT::subscribe
 //! [`syscall`]: https://man7.org/linux/man-pages/man2/syscalls.2.html
 //! [`tokio::io::stdin()`]: tokio::io::stdin
 //! [`tokio::select!`]: tokio::select

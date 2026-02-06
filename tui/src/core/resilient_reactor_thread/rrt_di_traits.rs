@@ -8,7 +8,7 @@
 //!
 //! [framework]: super#the-rrt-contract-and-benefits
 //! [dependency injection]: https://en.wikipedia.org/wiki/Dependency_injection
-//! [`RRTSafeGlobalState`]: super::RRTSafeGlobalState
+//! [`RRT`]: super::RRT
 //! [`syscalls`]: https://man7.org/linux/man-pages/man2/syscalls.2.html
 
 use crate::core::common::Continuation;
@@ -19,28 +19,14 @@ use tokio::sync::broadcast::Sender;
 /// pair, that are used by the [framework]-managed dedicated RRT thread.
 ///
 /// This is the main "entry point" for you to use the RRT [framework]. The journey begins
-/// with you defining a static singleton of type [`RRTSafeGlobalState`] in your code - and
-/// providing concrete types that implement this trait (as well as the others).
+/// with you defining a static singleton of type [`RRT`] in your code and providing
+/// concrete types that implement this trait (as well as the others). See the
+/// [DI overview] for what each type ([`Worker`], [`Waker`], [`Event`]) provides and how
+/// the [framework] orchestrates them.
 ///
-/// The trait implementor (aka your code, aka the dependencies that are injected into the
-/// [framework]) provides:
-/// - The OS resources and logic to monitor blocking sources (eg, file descriptors) inside
-///   the [`create()`] method. These resources are used by the RRT thread to block on
-///   until one or more sources are ready.
-/// - The logic to process ready events from blocking sources in the [`Worker`] type. This
-///   logic takes the data when the blocking sources are ready, and converts that into a
-///   domain-specific payload (the [`Event`] associated type) and broadcasts the event to
-///   all the async consumers.
-/// - The [`Waker`] type is used to awaken the blocked thread so that it can gracefully
-///   shutdown.
-///
-/// This trait solves the [coupled resource creation] problem. For more details, see
-/// [module docs] for the full diagram.
-///
-/// These trait implementations allow the [framework] to be reused for any number of use
-/// cases - see the [module docs] for more details. The [framework] is unaware, by design,
-/// of what blocking [`syscalls`] are used in your implementation of this trait, and what
-/// sources are registered with them.
+/// This trait solves the [coupled resource creation] problem — see the [module docs] for
+/// the full diagram. The [framework] is unaware, by design, of what blocking [`syscalls`]
+/// are used in your implementation, and what sources are registered with them.
 ///
 /// # Example
 ///
@@ -48,12 +34,14 @@ use tokio::sync::broadcast::Sender;
 ///
 /// [`syscalls`]: https://man7.org/linux/man-pages/man2/syscalls.2.html
 /// [coupled resource creation]: super#the-coupled-resource-creation-problem
+/// [DI overview]: super#separation-of-concerns-and-dependency-injection-di
 /// [framework]: super#the-rrt-contract-and-benefits
 /// [module docs]: super#the-coupled-resource-creation-problem
 /// [`MioPollWorkerFactory`]: crate::terminal_lib_backends::MioPollWorkerFactory
 /// [`Event`]: Self::Event
 /// [`Waker`]: Self::Waker
 /// [`Worker`]: Self::Worker
+/// [`RRT`]: super::RRT
 pub trait RRTFactory {
     /// The concrete type of the domain-specific payload broadcast from your [`Worker`]
     /// implementation to async subscribers. The [`Worker`] runs on the
@@ -99,11 +87,8 @@ pub trait RRTFactory {
     ///
     /// # Returns
     ///
-    /// 1. The [`Worker`] concrete type → moves to the [framework]-managed dedicated RRT
-    ///    worker thread.
-    /// 2. The [`Waker`] concrete type → stored in [`RRTState`], which is wrapped in
-    ///    [`Arc`] and held by each [`SubscriberGuard`]; this ONE [`waker`] is shared by
-    ///    all async subscribers.
+    /// A coupled [`Worker`] + [`Waker`] pair — see [two-phase setup] for how these are
+    /// distributed between the spawned thread and [`RRTState`].
     ///
     /// # Errors
     ///
@@ -111,14 +96,12 @@ pub trait RRTFactory {
     ///
     /// [`syscalls`]: https://man7.org/linux/man-pages/man2/syscalls.2.html
     /// [trait docs]: Self
+    /// [two-phase setup]: super#the-coupled-resource-creation-problem
     /// [framework]: super#the-rrt-contract-and-benefits
-    /// [`SubscriberGuard`]: super::SubscriberGuard
-    /// [`subscribe()`]: super::RRTSafeGlobalState::subscribe
+    /// [`subscribe()`]: super::RRT::subscribe
     /// [`RRTState`]: super::RRTState
     /// [`Waker`]: Self::Waker
-    /// [`waker`]: Self::Waker
     /// [`Worker`]: Self::Worker
-    /// [`Arc`]: std::sync::Arc
     fn create() -> Result<(Self::Worker, Self::Waker), Report>;
 }
 
@@ -164,7 +147,7 @@ pub trait RRTFactory {
 /// [`poll_once()`]: Self::poll_once
 /// [`signals`]: https://en.wikipedia.org/wiki/Signal_(IPC)
 /// [`stdin`]: std::io::stdin
-/// [`subscribe()`]: super::RRTSafeGlobalState::subscribe
+/// [`subscribe()`]: super::RRT::subscribe
 /// [`event`]: Self::Event
 pub trait RRTWorker: Send + 'static {
     /// The type containing domain-specific data to broadcast from your implementation to

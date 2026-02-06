@@ -517,7 +517,7 @@ use std::fmt::Debug;
 /// [`std::io::Stdin`]: std::io::Stdin
 /// [`std::io::stdin()`]: std::io::stdin
 /// [`stdin`]: std::io::stdin
-/// [`subscribe()`]: crate::core::resilient_reactor_thread::RRTSafeGlobalState::subscribe
+/// [`subscribe()`]: crate::core::resilient_reactor_thread::RRT::subscribe
 /// [`super::at_most_one_instance_assert::release()`]: super::at_most_one_instance_assert::release
 /// [`syscall`]: https://man7.org/linux/man-pages/man2/syscalls.2.html
 /// [`tokio::io::stdin()`]: tokio::io::stdin

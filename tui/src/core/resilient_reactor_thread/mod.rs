@@ -142,9 +142,9 @@
 //!
 //! You and the framework have distinct responsibilities:
 //!
-//! - **The framework** ([`RRTSafeGlobalState<F>`]) handles all the thread management and
-//!   lifecycle boilerplate — spawning threads, reusing running threads, wake signaling,
-//!   [`broadcast channel`]s, subscriber tracking, and graceful shutdown.
+//! - **The framework** ([`RRT<F>`]) handles all the thread management and lifecycle
+//!   boilerplate — spawning threads, reusing running threads, wake signaling, [`broadcast
+//!   channel`]s, subscriber tracking, and graceful shutdown.
 //! - **You** provide the [`RRTFactory`] trait implementation along with [`Worker`],
 //!   [`Waker`], and [`Event`] types. Without your factory concrete type (and the three
 //!   other types) to inject ([DI]), the framework has nothing to run.
@@ -185,7 +185,7 @@
 //! │                            │  YOUR CODE   │                            │
 //! │                            └──────────────┘                            │
 //! │  SINGLETON:                                                            │
-//! │       static SINGLETON: RRTSafeGlobalState<F> = ...::new();            │
+//! │       static SINGLETON: RRT<F> = ...::new();                           │
 //! │                                                                        │
 //! │  The generic param <F>:                                                │
 //! │       F          : RRTFactory          — your factory impl             │
@@ -196,7 +196,7 @@
 //! ├─────────────────────┬────────────────────────────┬─────────────────────┤
 //! │                     │ FRAMEWORK → RUNS YOUR CODE │                     │
 //! │                     └────────────────────────────┘                     │
-//! │  RRTSafeGlobalState<F>                                                 │
+//! │  RRT<F>                                                                │
 //! │  ├── Mutex<Option<Arc<RRTState<F::Waker, F::Event>>>>                  │
 //! │  │   └── RRTState<F::Waker, F::Event>                                  │
 //! │  │       ├── broadcast_tx: Sender<F::Event> (event broadcast)          │
@@ -219,19 +219,18 @@
 //!
 //! ## The RRT Contract And Benefits
 //!
-//! 1. **Thread-safe global state** — [`RRTSafeGlobalState<F>`] is the type you use to
-//!    declare your own `static` singleton (initialized with a [`const expression`]). The
-//!    generic `F: `[`RRTFactory`] is **the injection point** — when you call
-//!    [`subscribe()`], the framework calls [`RRTFactory::create()`] to get your
-//!    [`Worker`] and [`Waker`], then spawns a thread running your worker's
-//!    [`poll_once()`] in a loop:
+//! 1. **Thread-safe global state** — [`RRT<F>`] is the type you use to declare your own
+//!    `static` singleton (initialized with a [`const expression`]). The generic `F:
+//!    `[`RRTFactory`] is **the injection point** — when you call [`subscribe()`], the
+//!    framework calls [`RRTFactory::create()`] to get your [`Worker`] and [`Waker`], then
+//!    spawns a thread running your worker's [`poll_once()`] in a loop:
 //!
 //!    <!-- It is ok to use ignore here - example of static singleton declaration -->
 //!
 //!    ```ignore
 //!    /// From mio_poller implementation:
-//!    static SINGLETON: RRTSafeGlobalState<MioPollWorkerFactory> =
-//!        RRTSafeGlobalState::new();
+//!    static SINGLETON: RRT<MioPollWorkerFactory> =
+//!        RRT::new();
 //!
 //!    let subscriber_guard = SINGLETON.subscribe()?;
 //!    ```
@@ -239,11 +238,11 @@
 //!    The [`'static` trait bound] on `E` means the event type can be held indefinitely
 //!    without becoming invalid — it *can* live arbitrarily long, not that it *must*. The
 //!    type may contain `'static` references but no shorter-lived ones. See
-//!    [`RRTSafeGlobalState`] for a detailed explanation of `'static` in trait bounds.
+//!    [`RRT`] for a detailed explanation of `'static` in trait bounds.
 //!
 //!    This newtype wraps a [`Mutex<Option<Arc<RRTState<W, E>>>>`] because [`syscalls`]
 //!    aren't [`const expressions`] — the state must be created at runtime. See
-//!    [`RRTSafeGlobalState`] for a detailed explanation. See [`mio_poller`]'s
+//!    [`RRT`] for a detailed explanation. See [`mio_poller`]'s
 //!    [`SINGLETON`] for a concrete example.
 //!
 //! 2. **State machine** — [`RRTState`] can be created, destroyed, and reused. On spawn,
@@ -291,7 +290,7 @@
 //! │                    THE SOLUTION: TWO-PHASE SETUP                        │
 //! ├─────────────────────────────────────────────────────────────────────────┤
 //! │                                                                         │
-//! │   Phase 1: RRTFactory::create()                                         │
+//! │   Phase 1: RRTFactory::create() — resources only, no thread spawned     │
 //! │   ┌─────────────────────────────────────────────────────────────────┐   │
 //! │   │  Creates BOTH from the same mio::Poll registry:                 │   │
 //! │   │                                                                 │   │
@@ -365,6 +364,9 @@
 //!
 //! # How To Use It
 //!
+//! Your journey begins with [`RRTFactory`] — implement this trait to inject your
+//! business logic into the framework.
+//!
 //! ## Example
 //!
 //! Implementing the RRT pattern for a new use case:
@@ -413,8 +415,8 @@
 //! }
 //!
 //! // 4. Create a static global state (factory type F bundles all associated types)
-//! static GLOBAL: RRTSafeGlobalState<MyWorkerFactory> =
-//!     RRTSafeGlobalState::new();
+//! static GLOBAL: RRT<MyWorkerFactory> =
+//!     RRT::new();
 //!
 //! # fn main() -> Result<(), Box<dyn std::error::Error>> {
 //! // 5. Subscribe to events
@@ -434,7 +436,7 @@
 //! - **`thread_liveness`**: Thread lifecycle state ([`RRTLiveness`], [`LivenessState`])
 //! - **`thread_state`**: Shared state container ([`RRTState`])
 //! - **`subscriber_guard`**: RAII subscription guard ([`SubscriberGuard`])
-//! - **`thread_safe_global_state`**: Global state manager ([`RRTSafeGlobalState`])
+//! - **`thread_safe_global_state`**: Framework entry point ([`RRT`])
 //!
 //! # [`io_uring`]: An Alternative Model
 //!
@@ -589,7 +591,7 @@
 //! [UDP]: https://en.wikipedia.org/wiki/User_Datagram_Protocol
 //! [Unix domain sockets]: https://en.wikipedia.org/wiki/Unix_domain_socket
 //! [Web Workers]: https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API
-//! [`'static` trait bound]: RRTSafeGlobalState#static-trait-bound-vs-static-lifetime-annotation
+//! [`'static` trait bound]: RRT#static-trait-bound-vs-static-lifetime-annotation
 //! [`Arc`]: std::sync::Arc
 //! [`Continuation`]: crate::core::common::Continuation
 //! [`EINVAL`]: https://man7.org/linux/man-pages/man3/errno.3.html
@@ -604,7 +606,7 @@
 //! [`PTY`]: https://man7.org/linux/man-pages/man7/pty.7.html
 //! [`RRTFactory`]: RRTFactory
 //! [`RRTLiveness`]: RRTLiveness
-//! [`RRTSafeGlobalState`]: RRTSafeGlobalState
+//! [`RRT`]: RRT
 //! [`RRTState::should_self_terminate()`]: RRTState::should_self_terminate
 //! [`RRTState`]: RRTState
 //! [`RRTWaker`]: RRTWaker
@@ -618,8 +620,8 @@
 //! [`accept()`]: std::net::TcpListener::accept
 //! [`broadcast channel`]: tokio::sync::broadcast
 //! [`broadcast`]: tokio::sync::broadcast
-//! [`const expression`]: RRTSafeGlobalState#const-expression-vs-const-declaration-vs-static-declaration
-//! [`const expressions`]: RRTSafeGlobalState#const-expression-vs-const-declaration-vs-static-declaration
+//! [`const expression`]: RRT#const-expression-vs-const-declaration-vs-static-declaration
+//! [`const expressions`]: RRT#const-expression-vs-const-declaration-vs-static-declaration
 //! [`create()`]: RRTFactory::create
 //! [`epoll_wait()`]: https://man7.org/linux/man-pages/man2/epoll_wait.2.html
 //! [`epoll`]: https://man7.org/linux/man-pages/man7/epoll.7.html
@@ -648,7 +650,7 @@
 //! [`signals`]: https://en.wikipedia.org/wiki/Signal_(IPC)
 //! [`sockets`]: https://man7.org/linux/man-pages/man7/socket.7.html
 //! [`stdin`]: std::io::stdin
-//! [`subscribe()`]: RRTSafeGlobalState::subscribe
+//! [`subscribe()`]: RRT::subscribe
 //! [`syscall`]: https://man7.org/linux/man-pages/man2/syscalls.2.html
 //! [`syscalls`]: https://man7.org/linux/man-pages/man2/syscalls.2.html
 //! [`tty`]: https://man7.org/linux/man-pages/man4/tty.4.html

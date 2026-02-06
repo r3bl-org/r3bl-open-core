@@ -1697,7 +1697,7 @@
 //!
 //! | Component                    | Purpose                                          |
 //! | ---------------------------- | ------------------------------------------------ |
-//! | [`RRTSafeGlobalState`]       | Thread-safe singleton for RRT instances          |
+//! | [`RRT`]                      | Framework entry point for RRT instances          |
 //! | [`RRTLiveness`]              | Running state + generation tracking              |
 //! | [`SubscriberGuard`]          | RAII guard managing subscription lifecycle       |
 //! | [`RRTWorker`]                | Trait for the blocking work loop                 |
@@ -2536,7 +2536,7 @@
 //! [`terminal_raw_mode`]: crate::core::ansi::terminal_raw_mode
 //! [`raw_mode_unix`]: crate::core::ansi::terminal_raw_mode::raw_mode_unix
 //! [`OffscreenBuffer::apply_ansi_bytes()`]: crate::OffscreenBuffer::apply_ansi_bytes
-//! [`RRTSafeGlobalState`]: core::resilient_reactor_thread::RRTSafeGlobalState
+//! [`RRT`]: core::resilient_reactor_thread::RRT
 //! [`RRTLiveness`]: core::resilient_reactor_thread::RRTLiveness
 //! [`SubscriberGuard`]: core::resilient_reactor_thread::SubscriberGuard
 //! [`RRTWorker`]: core::resilient_reactor_thread::RRTWorker

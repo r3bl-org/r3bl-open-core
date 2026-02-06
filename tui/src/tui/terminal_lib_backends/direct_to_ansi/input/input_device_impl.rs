@@ -7,7 +7,7 @@
 //!
 //! This module uses the **Resilient Reactor Thread (RRT)** infrastructure:
 //!
-//! - **[`SINGLETON`]** (container): Static [`RRTSafeGlobalState`], lives for process
+//! - **[`SINGLETON`]** (container): Static [`RRT`], lives for process
 //!   lifetime
 //! - **[`RRTState`]** (payload): Created when thread spawns, destroyed when it exits
 //!
@@ -20,13 +20,13 @@
 //!
 //! [`DirectToAnsiInputDevice`]: super::DirectToAnsiInputDevice
 //! [`SINGLETON`]: global_input_resource::SINGLETON
-//! [`RRTSafeGlobalState`]: crate::core::resilient_reactor_thread::RRTSafeGlobalState
+//! [`RRT`]: crate::core::resilient_reactor_thread::RRT
 //! [`RRTState`]: crate::core::resilient_reactor_thread::RRTState
 //! [`global_input_resource`]: mod@global_input_resource
 
 use super::{channel_types::PollerEvent,
             mio_poller::{MioPollWaker, MioPollWorkerFactory}};
-use crate::core::resilient_reactor_thread::{RRTSafeGlobalState, SubscriberGuard};
+use crate::core::resilient_reactor_thread::{RRT, SubscriberGuard};
 
 /// Type alias for the input device's subscriber guard.
 ///
@@ -64,7 +64,7 @@ pub mod global_input_resource {
     ///
     /// See [`RRTState`] for what the payload contains when active.
     ///
-    /// # Why `RRTSafeGlobalState`?
+    /// # Why `RRT`?
     ///
     /// The RRT infrastructure handles all the complexity of:
     /// - Deferred initialization (syscalls can't be `const`)
@@ -89,9 +89,9 @@ pub mod global_input_resource {
     /// [`MioPollWorker`]: super::super::mio_poller::MioPollWorker
     /// [`SubscriberGuard`]: crate::core::resilient_reactor_thread::SubscriberGuard
     /// [`RRTState`]: crate::core::resilient_reactor_thread::RRTState
-    /// [`subscribe()`]: RRTSafeGlobalState::subscribe
-    pub static SINGLETON: RRTSafeGlobalState<MioPollWorkerFactory> =
-        RRTSafeGlobalState::new();
+    /// [`subscribe()`]: RRT::subscribe
+    pub static SINGLETON: RRT<MioPollWorkerFactory> =
+        RRT::new();
 }
 
 /// Comprehensive testing is performed in PTY integration tests:

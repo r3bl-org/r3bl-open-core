@@ -1,14 +1,14 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 //! Thread-safe global state manager for the Resilient Reactor Thread pattern. See
-//! [`RRTSafeGlobalState`] for details.
+//! [`RRT`] for details.
 
 use super::{LivenessState, RRTFactory, RRTState, RRTWaker, RRTWorker, SubscriberGuard};
 use crate::core::common::Continuation;
 use miette::{Context, IntoDiagnostic, Report};
 use std::sync::{Arc, Mutex};
 
-/// Thread-safe global state for a Resilient Reactor Thread (RRT).
+/// The entry point for the Resilient Reactor Thread (RRT) framework.
 ///
 /// This struct manages the lifecycle of a dedicated worker thread with automatic
 /// spawn/shutdown/reuse semantics. This is a **static container** that holds an
@@ -188,7 +188,7 @@ use std::sync::{Arc, Mutex};
 /// [`syscall`]: https://man7.org/linux/man-pages/man2/syscalls.2.html
 /// [`syscalls`]: https://man7.org/linux/man-pages/man2/syscalls.2.html
 #[allow(missing_debug_implementations, clippy::type_complexity)]
-pub struct RRTSafeGlobalState<F>
+pub struct RRT<F>
 where
     F: RRTFactory,
     F::Waker: RRTWaker,
@@ -197,7 +197,7 @@ where
     inner: Mutex<Option<Arc<RRTState<F::Waker, F::Event>>>>,
 }
 
-impl<F> RRTSafeGlobalState<F>
+impl<F> RRT<F>
 where
     F: RRTFactory,
     F::Waker: RRTWaker,
@@ -258,7 +258,7 @@ where
         let mut guard = self
             .inner
             .lock()
-            .map_err(|_| miette::miette!("RRTSafeGlobalState mutex poisoned"))?;
+            .map_err(|_| miette::miette!("RRT mutex poisoned"))?;
 
         // Fast path check: can we reuse the existing thread + RRTState?
         let apply_fast_path_thread_reuse = guard
@@ -381,7 +381,7 @@ where
     /// [`subscribe()`]: Self::subscribe
     pub fn subscribe_to_existing(&self) -> SubscriberGuard<F::Waker, F::Event> {
         let guard = self.inner.lock().expect(
-            "RRTSafeGlobalState mutex poisoned: another thread panicked while \
+            "RRT mutex poisoned: another thread panicked while \
              holding this lock.",
         );
 
@@ -397,7 +397,7 @@ where
     }
 }
 
-impl<F> Default for RRTSafeGlobalState<F>
+impl<F> Default for RRT<F>
 where
     F: RRTFactory,
     F::Waker: RRTWaker,
@@ -432,7 +432,7 @@ where
 /// thread.
 ///
 /// [`mark_terminated()`]: super::RRTLiveness::mark_terminated
-/// [`subscribe()`]: RRTSafeGlobalState::subscribe
+/// [`subscribe()`]: RRT::subscribe
 fn run_worker_loop<W, E>(
     mut worker: impl RRTWorker<Event = E>,
     tx: tokio::sync::broadcast::Sender<E>,

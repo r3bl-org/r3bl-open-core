@@ -69,7 +69,7 @@ pub const CHANNEL_CAPACITY: usize = 4_096;
 /// [`kqueue`]: https://man.freebsd.org/cgi/man.cgi?query=kqueue
 /// [`liveness`]: Self::liveness
 /// [`receiver_count()`]: tokio::sync::broadcast::Sender::receiver_count
-/// [`subscribe()`]: super::RRTSafeGlobalState::subscribe
+/// [`subscribe()`]: super::RRT::subscribe
 /// [`waker.wake()`]: RRTWaker::wake
 /// [`waker`]: Self::waker
 #[allow(missing_debug_implementations)]

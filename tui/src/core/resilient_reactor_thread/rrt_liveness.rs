@@ -21,7 +21,7 @@ static THREAD_GENERATION: AtomicU8 = AtomicU8::new(0);
 ///
 /// # Generation Tracking
 ///
-/// Each time a new thread is spawned via [`RRTSafeGlobalState::subscribe()`], the
+/// Each time a new thread is spawned via [`RRT::subscribe()`], the
 /// generation counter increments. This allows tests to verify thread reuse vs relaunch:
 ///
 /// - **Same generation**: Thread was reused (new subscriber appeared before thread
@@ -42,12 +42,12 @@ static THREAD_GENERATION: AtomicU8 = AtomicU8::new(0);
 ///
 /// [`AtomicBool`]: std::sync::atomic::AtomicBool
 /// [`SeqCst`]: std::sync::atomic::Ordering::SeqCst
-/// [`RRTSafeGlobalState::subscribe()`]: super::RRTSafeGlobalState::subscribe
+/// [`RRT::subscribe()`]: super::RRT::subscribe
 /// [`generation`]: Self::generation
 /// [`is_running()`]: Self::is_running
 /// [`is_running`]: Self::is_running
 /// [`mark_terminated()`]: Self::mark_terminated
-/// [`subscribe()`]: super::RRTSafeGlobalState::subscribe
+/// [`subscribe()`]: super::RRT::subscribe
 /// [deadlock]: https://en.wikipedia.org/wiki/Deadlock
 /// [lock-free]: https://en.wikipedia.org/wiki/Non-blocking_algorithm
 #[allow(missing_debug_implementations)]
