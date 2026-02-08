@@ -34,20 +34,21 @@
 
 // These PTY tests use DirectToAnsiInputDevice which is Linux-only.
 // On macOS/Windows, Crossterm backend is used instead and these tests are skipped.
-// Doc builds are allowed on all platforms so documentation can be read anywhere.
-#[cfg(any(doc, all(target_os = "linux", test)))]
+// Doc builds are allowed on Unix platforms (macOS/Linux) where the dependencies exist.
+// Windows doc builds exclude these since signal_hook/mio::unix are unavailable.
+#[cfg(any(all(unix, doc), all(target_os = "linux", test)))]
 pub mod pty_ctrl_d_eof_test;
-#[cfg(any(doc, all(target_os = "linux", test)))]
+#[cfg(any(all(unix, doc), all(target_os = "linux", test)))]
 pub mod pty_ctrl_d_delete_test;
-#[cfg(any(doc, all(target_os = "linux", test)))]
+#[cfg(any(all(unix, doc), all(target_os = "linux", test)))]
 pub mod pty_ctrl_u_test;
-#[cfg(any(doc, all(target_os = "linux", test)))]
+#[cfg(any(all(unix, doc), all(target_os = "linux", test)))]
 pub mod pty_ctrl_w_test;
-#[cfg(any(doc, all(target_os = "linux", test)))]
+#[cfg(any(all(unix, doc), all(target_os = "linux", test)))]
 pub mod pty_ctrl_navigation_test;
-#[cfg(any(doc, all(target_os = "linux", test)))]
+#[cfg(any(all(unix, doc), all(target_os = "linux", test)))]
 pub mod pty_alt_navigation_test;
-#[cfg(any(doc, all(target_os = "linux", test)))]
+#[cfg(any(all(unix, doc), all(target_os = "linux", test)))]
 pub mod pty_alt_kill_test;
 // These PTY tests use only portable_pty (no DirectToAnsiInputDevice) and work cross-platform.
 #[cfg(any(test, doc))]

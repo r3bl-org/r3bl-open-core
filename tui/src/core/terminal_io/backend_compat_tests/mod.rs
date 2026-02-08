@@ -54,9 +54,10 @@
 //! [`test_pty_backend_direct_to_ansi`]: mod@backend_compat_input_test
 
 // Public for docs and tests so intra-doc links resolve.
-// Doc builds are allowed on all platforms so documentation can be read anywhere.
-#[cfg(any(doc, all(target_os = "linux", test)))]
+// Doc builds are allowed on Unix platforms (macOS/Linux) where the dependencies exist.
+// Windows doc builds exclude these since signal_hook/mio::unix are unavailable.
+#[cfg(any(all(unix, doc), all(target_os = "linux", test)))]
 pub mod backend_compat_input_test;
 
-#[cfg(any(doc, all(target_os = "linux", test)))]
+#[cfg(any(all(unix, doc), all(target_os = "linux", test)))]
 pub mod backend_compat_output_test;

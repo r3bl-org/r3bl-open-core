@@ -35,39 +35,40 @@
 
 // These PTY tests use DirectToAnsiInputDevice which is Linux-only.
 // On macOS/Windows, Crossterm backend is used instead and these tests are skipped.
-// Doc builds are allowed on all platforms so documentation can be read anywhere.
-#[cfg(any(doc, all(target_os = "linux", test)))]
+// Doc builds are allowed on Unix platforms (macOS/Linux) where the dependencies exist.
+// Windows doc builds exclude these since signal_hook/mio::unix are unavailable.
+#[cfg(any(all(unix, doc), all(target_os = "linux", test)))]
 pub mod pty_bracketed_paste_test;
 
-#[cfg(any(doc, all(target_os = "linux", test)))]
+#[cfg(any(all(unix, doc), all(target_os = "linux", test)))]
 pub mod pty_input_device_test;
 
-#[cfg(any(doc, all(target_os = "linux", test)))]
+#[cfg(any(all(unix, doc), all(target_os = "linux", test)))]
 pub mod pty_keyboard_modifiers_test;
 
-#[cfg(any(doc, all(target_os = "linux", test)))]
+#[cfg(any(all(unix, doc), all(target_os = "linux", test)))]
 pub mod pty_mouse_events_test;
 
-#[cfg(any(doc, all(target_os = "linux", test)))]
+#[cfg(any(all(unix, doc), all(target_os = "linux", test)))]
 pub mod pty_terminal_events_test;
 
-#[cfg(any(doc, all(target_os = "linux", test)))]
+#[cfg(any(all(unix, doc), all(target_os = "linux", test)))]
 pub mod pty_utf8_text_test;
 
-#[cfg(any(doc, all(target_os = "linux", test)))]
+#[cfg(any(all(unix, doc), all(target_os = "linux", test)))]
 pub mod pty_new_keyboard_features_test;
 
-#[cfg(any(doc, all(target_os = "linux", test)))]
+#[cfg(any(all(unix, doc), all(target_os = "linux", test)))]
 pub mod pty_sigwinch_test;
 
-#[cfg(any(doc, all(target_os = "linux", test)))]
+#[cfg(any(all(unix, doc), all(target_os = "linux", test)))]
 pub mod pty_mio_poller_thread_lifecycle_test;
 
-#[cfg(any(doc, all(target_os = "linux", test)))]
+#[cfg(any(all(unix, doc), all(target_os = "linux", test)))]
 pub mod pty_mio_poller_thread_reuse_test;
 
-#[cfg(any(doc, all(target_os = "linux", test)))]
+#[cfg(any(all(unix, doc), all(target_os = "linux", test)))]
 pub mod pty_mio_poller_subscribe_test;
 
-#[cfg(any(doc, all(target_os = "linux", test)))]
+#[cfg(any(all(unix, doc), all(target_os = "linux", test)))]
 pub mod pty_mio_poller_singleton_test;

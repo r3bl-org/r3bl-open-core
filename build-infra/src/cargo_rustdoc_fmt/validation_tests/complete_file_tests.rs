@@ -17,6 +17,18 @@ mod tests {
     use std::fs;
     use tempfile::TempDir;
 
+    /// Normalize CRLF to LF for cross-platform test compatibility.
+    ///
+    /// On Windows, `include_str!` loads files with `\r\n` (due to git autocrlf),
+    /// but the formatter produces `\n` output. On macOS/Linux, files already use
+    /// `\n` so this is a no-op early return.
+    fn normalize_line_endings(s: &str) -> String {
+        if !s.contains("\r\n") {
+            return s.to_owned();
+        }
+        s.replace("\r\n", "\n")
+    }
+
     /// Test that complex file with both tables and links can be processed.
     #[test]
     fn test_complex_file_processing() {
@@ -242,8 +254,9 @@ fn main() {}";
     #[test]
     fn test_real_world_file_complete_formatting() {
         let input = include_str!("test_data/complete_file/input/sample_real_world.rs");
-        let expected =
-            include_str!("test_data/complete_file/expected_output/sample_real_world.rs");
+        let expected = normalize_line_endings(include_str!(
+            "test_data/complete_file/expected_output/sample_real_world.rs"
+        ));
 
         // Create temp dir and copy input file
         let temp_dir = TempDir::new().unwrap();
@@ -380,9 +393,9 @@ fn main() {}";
     fn test_scattered_references_aggregation() {
         let input =
             include_str!("test_data/complete_file/input/sample_scattered_references.rs");
-        let expected = include_str!(
+        let expected = normalize_line_endings(include_str!(
             "test_data/complete_file/expected_output/sample_scattered_references.rs"
-        );
+        ));
 
         // Use the actual FileProcessor to test the complete pipeline
         let temp_dir = TempDir::new().unwrap();
@@ -456,9 +469,9 @@ fn main() {}";
     #[test]
     fn test_html_comments_preserved_links_converted() {
         let input = include_str!("test_data/complete_file/input/sample_html_comments.rs");
-        let expected = include_str!(
+        let expected = normalize_line_endings(include_str!(
             "test_data/complete_file/expected_output/sample_html_comments.rs"
-        );
+        ));
 
         let temp_dir = TempDir::new().unwrap();
         let test_file = temp_dir.path().join("sample_html_comments.rs");
@@ -513,9 +526,9 @@ fn main() {}";
     fn test_code_fence_comma_language_tag() {
         let input =
             include_str!("test_data/complete_file/input/sample_code_fence_comma.rs");
-        let expected = include_str!(
+        let expected = normalize_line_endings(include_str!(
             "test_data/complete_file/expected_output/sample_code_fence_comma.rs"
-        );
+        ));
 
         let temp_dir = TempDir::new().unwrap();
         let test_file = temp_dir.path().join("sample_code_fence_comma.rs");
@@ -590,9 +603,9 @@ fn main() {}";
     fn test_indented_table_preservation() {
         let input =
             include_str!("test_data/complete_file/input/sample_indented_table.rs");
-        let expected = include_str!(
+        let expected = normalize_line_endings(include_str!(
             "test_data/complete_file/expected_output/sample_indented_table.rs"
-        );
+        ));
 
         let temp_dir = TempDir::new().unwrap();
         let test_file = temp_dir.path().join("sample_indented_table.rs");
@@ -669,9 +682,9 @@ fn main() {}";
     fn test_resilient_reactor_text_diagrams() {
         let input =
             include_str!("test_data/complete_file/input/sample_resilient_reactor.rs");
-        let expected = include_str!(
+        let expected = normalize_line_endings(include_str!(
             "test_data/complete_file/expected_output/sample_resilient_reactor.rs"
-        );
+        ));
 
         // Create temp dir and copy input file
         let temp_dir = TempDir::new().unwrap();

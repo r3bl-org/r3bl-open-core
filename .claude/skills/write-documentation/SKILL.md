@@ -840,6 +840,41 @@ pub use linux_only_module::*;
 **Apply at all levels** — If linking to a nested module, both parent and child modules need
 the visibility change. See `organize-modules` skill for complete patterns and examples.
 
+#### ⚠️ Unix Dependency Caveat
+
+The `cfg(any(doc, ...))` pattern assumes the module's code **compiles on all platforms**. When
+the module uses Unix-only APIs (e.g., `mio::unix::SourceFd`, `signal_hook`, `std::os::fd::AsRawFd`),
+use `cfg(any(all(unix, doc), ...))` instead to restrict doc builds to Unix platforms where the
+dependencies exist.
+
+**Three-tier platform hierarchy for cfg doc patterns:**
+
+| Module dependencies | Pattern | Docs on Linux | Docs on macOS | Docs on Windows |
+| :------------------ | :------ | :------------ | :------------ | :-------------- |
+| Platform-agnostic (pure Rust, cross-platform deps) | `cfg(any(doc, ...))` | ✅ | ✅ | ✅ |
+| Unix APIs (`mio::unix`, `signal_hook`, `std::os::fd`) | `cfg(any(all(unix, doc), ...))` | ✅ | ✅ | excluded |
+| Linux-only APIs (hypothetical) | `cfg(any(all(target_os = "linux", doc), ...))` | ✅ | excluded | excluded |
+
+**Example — Unix-restricted doc build:**
+
+```rust
+// Module uses mio::unix::SourceFd, signal_hook — Unix-only APIs.
+// Dependencies in Cargo.toml are gated with cfg(unix).
+// Doc builds are restricted to Unix where the dependencies exist.
+#[cfg(any(all(unix, doc), all(target_os = "linux", test)))]
+pub mod input;
+#[cfg(all(target_os = "linux", not(any(test, doc))))]
+mod input;
+
+// Re-export also needs the unix-gated doc condition
+#[cfg(any(target_os = "linux", all(unix, doc)))]
+pub use input::*;
+```
+
+**Rule of thumb:** Match your `doc` cfg guard to your dependency's `cfg` guard. If the dep uses
+`cfg(unix)`, gate docs with `all(unix, doc)`. If the dep uses `cfg(target_os = "linux")`, gate
+docs with `all(target_os = "linux", doc)`.
+
 ---
 
 ## Checklist

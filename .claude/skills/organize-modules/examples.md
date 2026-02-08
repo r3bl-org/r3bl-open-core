@@ -499,7 +499,7 @@ false.
 Use `any(doc, ...)` to make documentation an **alternative path**, not an additional requirement:
 
 ```rust
-// ✅ Fixed: Docs generate on all platforms, tests run only on Linux
+// ✅ Fixed: Docs generate on all platforms (if module code is platform-agnostic)
 #[cfg(any(doc, all(target_os = "linux", test)))]
 pub mod input;
 #[cfg(all(target_os = "linux", not(any(test, doc))))]
@@ -614,6 +614,35 @@ The `doc` cfg flag doesn't override other conditions—it's just another flag yo
 |:--------|:--------|:---------------|
 | `all(target_os = "linux", any(test, doc))` | Linux AND (test OR doc) | ❌ No |
 | `any(doc, all(target_os = "linux", test))` | doc OR (Linux AND test) | ✅ Yes |
+
+### When the Module Uses Unix-Only APIs
+
+The `cfg(any(doc, ...))` pattern assumes the module code compiles on **all** platforms. When the
+module uses Unix-only APIs (e.g., `mio::unix::SourceFd`, `signal_hook`, `std::os::fd::AsRawFd`),
+you must restrict doc builds to Unix platforms where the dependencies exist:
+
+```rust
+// Module uses Unix-only APIs — dependencies in Cargo.toml are cfg(unix).
+// Doc builds are restricted to Unix (macOS/Linux); Windows excludes this module.
+#[cfg(any(all(unix, doc), all(target_os = "linux", test)))]
+pub mod input;
+#[cfg(all(target_os = "linux", not(any(test, doc))))]
+mod input;
+
+// Re-export also needs the unix-gated doc condition
+#[cfg(any(target_os = "linux", all(unix, doc)))]
+pub use input::*;
+```
+
+**Three-tier platform hierarchy:**
+
+| Module dependencies | Pattern | Docs: Linux | Docs: macOS | Docs: Windows |
+| :------------------ | :------ | :---------- | :---------- | :------------ |
+| Platform-agnostic (pure Rust) | `cfg(any(doc, ...))` | ✅ | ✅ | ✅ |
+| Unix APIs (`mio::unix`, `signal_hook`) | `cfg(any(all(unix, doc), ...))` | ✅ | ✅ | excluded |
+| Linux-only APIs | `cfg(any(all(target_os = "linux", doc), ...))` | ✅ | excluded | excluded |
+
+**Rule of thumb:** Match your `doc` cfg guard to your dependency's `cfg` guard in `Cargo.toml`.
 
 ---
 

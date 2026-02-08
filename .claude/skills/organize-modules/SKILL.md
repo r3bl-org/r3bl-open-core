@@ -167,12 +167,39 @@ just another flag you can check.
 #[cfg(all(target_os = "linux", any(test, doc)))]
 pub mod linux_only_module;
 
-// ✅ Fixed: Docs generate everywhere, tests run only on Linux
+// ✅ Fixed: Docs generate on all platforms (if module code is platform-agnostic)
 #[cfg(any(doc, all(target_os = "linux", test)))]
 pub mod linux_only_module;
 #[cfg(all(target_os = "linux", not(any(test, doc))))]
 mod linux_only_module;
 ```
+
+#### ⚠️ Unix Dependency Caveat
+
+The `cfg(any(doc, ...))` pattern above assumes the module's code **compiles on all platforms**.
+When the module uses Unix-only APIs (e.g., `mio::unix::SourceFd`, `signal_hook`,
+`std::os::fd::AsRawFd`), restrict doc builds to Unix:
+
+```rust
+// Module uses Unix-only APIs — restrict doc builds to Unix platforms
+#[cfg(any(all(unix, doc), all(target_os = "linux", test)))]
+pub mod input;
+#[cfg(all(target_os = "linux", not(any(test, doc))))]
+mod input;
+
+#[cfg(any(target_os = "linux", all(unix, doc)))]
+pub use input::*;
+```
+
+**Three-tier hierarchy:**
+
+| Module dependencies | Pattern | Docs: Linux | Docs: macOS | Docs: Windows |
+| :------------------ | :------ | :---------- | :---------- | :------------ |
+| Platform-agnostic | `cfg(any(doc, ...))` | ✅ | ✅ | ✅ |
+| Unix APIs | `cfg(any(all(unix, doc), ...))` | ✅ | ✅ | excluded |
+| Linux-only APIs | `cfg(any(all(target_os = "linux", doc), ...))` | ✅ | excluded | excluded |
+
+**Rule of thumb:** Match your `doc` cfg guard to your dependency's `cfg` guard in `Cargo.toml`.
 
 **Apply at all levels** — If the module is nested, both parent and child need the visibility
 change. Also update any re-exports:
