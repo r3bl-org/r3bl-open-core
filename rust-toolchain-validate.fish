@@ -19,8 +19,8 @@
 #   fish run.fish toolchain-validate              # Quick mode
 #   fish run.fish toolchain-validate-complete     # Complete mode
 
-# Import shared utilities from script_lib.fish
-source script_lib.fish
+# Import shared utilities (resolve relative to this script, not cwd)
+source (dirname (status --current-filename))/script_lib.fish
 
 # ============================================================================
 # Configuration

@@ -50,20 +50,21 @@
 #   check_orchestrators.fish   Check composition, result aggregation, retry with recovery
 #   check_watch.fish           Watch mode loop, sliding window debounce, check dispatch
 
-# Import shared utilities
-source script_lib.fish
+# Import shared utilities (resolve relative to this script, not cwd)
+source (dirname (status --current-filename))/script_lib.fish
 
 # Import check.fish modules (order matters: constants first, then utilities, then consumers)
-source check_constants.fish       # Globals — must be first (sets vars used by all others)
-source check_lock.fish            # Lock/PID — uses CHECK_LOCK_FILE
-source check_cli.fish             # parse_arguments, show_help — uses constants in help text
-source check_recovery.fish        # log_message, cleanup_*, dirs_for_check_type — uses constants
-source check_detection.fish       # ICE/stale detection — uses log_message from check_recovery
-source check_toolchain.fish       # ensure_toolchain_installed — uses script_lib functions
-source check_cargo.fish           # Pure check wrappers — uses constants + ionice_wrapper
-source check_docs.fish            # sync_docs_to_serving — uses constants
-source check_orchestrators.fish   # Composes checks — uses cargo, docs, recovery, detection
-source check_watch.fish           # Watch mode — uses lock, orchestrators, recovery, constants
+set -l __check_dir (dirname (status --current-filename))
+source $__check_dir/check_constants.fish       # Globals — must be first (sets vars used by all others)
+source $__check_dir/check_lock.fish            # Lock/PID — uses CHECK_LOCK_FILE
+source $__check_dir/check_cli.fish             # parse_arguments, show_help — uses constants in help text
+source $__check_dir/check_recovery.fish        # log_message, cleanup_*, dirs_for_check_type — uses constants
+source $__check_dir/check_detection.fish       # ICE/stale detection — uses log_message from check_recovery
+source $__check_dir/check_toolchain.fish       # ensure_toolchain_installed — uses script_lib functions
+source $__check_dir/check_cargo.fish           # Pure check wrappers — uses constants + ionice_wrapper
+source $__check_dir/check_docs.fish            # sync_docs_to_serving — uses constants
+source $__check_dir/check_orchestrators.fish   # Composes checks — uses cargo, docs, recovery, detection
+source $__check_dir/check_watch.fish           # Watch mode — uses lock, orchestrators, recovery, constants
 
 # ============================================================================
 # Main Entry Point

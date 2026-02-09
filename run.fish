@@ -16,7 +16,7 @@
 #     - coming from bash: https://fishshell.com/docs/current/fish_for_bash_users.html
 #     - thinking in fish: https://fishshell.com/docs/current/tutorial.html
 
-source script_lib.fish
+source (dirname (status --current-filename))/script_lib.fish
 
 # Make sure to keep this in sync with `Cargo.toml` workspace members.
 set workspace_folders (get_cargo_projects)

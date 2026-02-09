@@ -1,7 +1,7 @@
 #!/usr/bin/env fish
 
-# Import shared toolchain utilities
-source script_lib.fish
+# Import shared toolchain utilities (resolve relative to this script, not cwd)
+source (dirname (status --current-filename))/script_lib.fish
 
 # Rust Toolchain Sync Script
 #

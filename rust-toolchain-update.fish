@@ -1,7 +1,7 @@
 #!/usr/bin/env fish
 
-# Import shared toolchain utilities
-source script_lib.fish
+# Import shared toolchain utilities (resolve relative to this script, not cwd)
+source (dirname (status --current-filename))/script_lib.fish
 
 # Rust Toolchain Update Script
 #
@@ -107,9 +107,10 @@ function clean_and_verify_build
     toolchain_log "═══════════════════════════════════════════════════════"
     toolchain_log ""
 
-    # Run tests with cargo test
+    # Run tests with cargo test.
+    # Timeout prevents hanging tests (e.g. PTY deadlocks) from blocking the systemd weekly service.
     toolchain_log "Running cargo test --all-targets..."
-    if not toolchain_log_command "Running tests..." cargo test --all-targets
+    if not toolchain_log_command "Running tests (2m timeout)..." timeout 2m cargo test --all-targets
         toolchain_log "⚠️  Some tests failed (this might be expected)"
     else
         toolchain_log "✅ All tests passed"
@@ -118,7 +119,7 @@ function clean_and_verify_build
     # Run doctests
     toolchain_log ""
     toolchain_log "Running cargo test --doc..."
-    if not toolchain_log_command "Running doctests..." cargo test --doc
+    if not toolchain_log_command "Running doctests (2m timeout)..." timeout 2m cargo test --doc
         toolchain_log "⚠️  Some doctests failed (this might be expected)"
     else
         toolchain_log "✅ All doctests passed"
@@ -166,12 +167,13 @@ function validate_toolchain
     # List of validation commands to verify toolchain stability
     # Validation tests the production scenario where cargo reads rust-toolchain.toml
     # We're checking for ICE (Internal Compiler Errors), not code correctness
+    # Test steps use timeout to prevent hanging tests from blocking the systemd weekly service
     set -l validation_steps \
         "clippy:cargo clippy --all-targets" \
         "build-prod-code:cargo build" \
         "build-test-code:cargo test --no-run" \
-        "tests:cargo test --all-targets" \
-        "doctest:cargo test --doc" \
+        "tests:timeout 2m cargo test --all-targets" \
+        "doctest:timeout 2m cargo test --doc" \
         "doc:cargo doc --no-deps"
 
     # Run each validation step
