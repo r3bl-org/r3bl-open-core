@@ -1,0 +1,81 @@
+# Global Configuration Constants
+#
+# All configuration for check.fish: paths, timeouts, parallelism, file lists.
+# Must be sourced first after script_lib.fish (sets globals used by all other modules).
+#
+# Performance Optimizations:
+# - tmpfs: Builds to /tmp/roc/target/check (RAM-based, eliminates disk I/O)
+#   Trade-off: Cache lost on reboot, first post-reboot build is cold
+# - CARGO_BUILD_JOBS=<nproc>: Forces max parallelism (benchmarked: 60% faster for cargo doc)
+# - ionice -c2 -n0: Highest I/O priority in best-effort class (no sudo needed)
+
+# Lock/PID file for single-instance enforcement.
+# Uses PID file with process liveness check - simpler and fish-compatible.
+set -g CHECK_LOCK_FILE /tmp/roc/check.fish.pid
+
+# Sliding window debounce for watch mode (in seconds).
+# After detecting a file change, waits for this many seconds of "quiet" (no new changes)
+# before running checks. Each new change resets the window, coalescing rapid saves.
+# This handles IDE auto-save, formatters, and "oops forgot to save that file" moments.
+set -g DEBOUNCE_WINDOW_SECS 1
+
+# Use tmpfs for build artifacts - eliminates disk I/O for massive speedup.
+# /tmp is already tmpfs on most Linux systems (including this one: 46GB).
+# Benefits: ~2-3x faster builds, no SSD wear, isolated from IDE target directories.
+# Trade-off: Build cache is lost on reboot (first build after reboot is cold).
+#
+# CHECK_TARGET_DIR: Primary target for tests and serving docs to browser.
+# CHECK_TARGET_DIR_DOC_STAGING_QUICK: Staging for quick doc builds (--no-deps).
+# CHECK_TARGET_DIR_DOC_STAGING_FULL: Staging for full doc builds (with deps, runs in background).
+# CHECK_LOG_FILE: Log file for all check.fish output (created fresh each run).
+#
+# Two separate staging dirs prevent race conditions: quick builds can run while
+# background full builds are syncing, without files "vanishing" mid-rsync.
+set -g CHECK_TARGET_DIR /tmp/roc/target/check
+set -g CHECK_TARGET_DIR_DOC_STAGING_QUICK /tmp/roc/target/check-doc-staging-quick
+set -g CHECK_TARGET_DIR_DOC_STAGING_FULL /tmp/roc/target/check-doc-staging-full
+set -g CHECK_LOG_FILE /tmp/roc/check.log
+
+# Force maximum parallelism for cargo operations.
+# Despite cargo's docs saying it defaults to nproc, benchmarks show this makes
+# a huge difference: 4 min vs 10 min for cargo doc (60% speedup).
+# Auto-detect core count: nproc (Linux) or sysctl (macOS).
+switch (uname -s)
+    case Darwin
+        set -gx CARGO_BUILD_JOBS (sysctl -n hw.ncpu)
+    case '*'
+        set -gx CARGO_BUILD_JOBS (nproc)
+end
+
+# List of config files that affect build artifacts.
+# Changes to these files should trigger a clean rebuild to avoid stale artifact issues.
+# Used by check_config_changed to detect when target/check needs to be cleaned.
+# Dynamically includes: root Cargo.toml, all workspace crate Cargo.toml files,
+# rust-toolchain.toml, and .cargo/config.toml.
+set -g CONFIG_FILES_TO_WATCH Cargo.toml rust-toolchain.toml .cargo/config.toml
+# Dynamically add all workspace crate Cargo.toml files (*/Cargo.toml)
+for crate_toml in */Cargo.toml
+    if test -f $crate_toml
+        set -a CONFIG_FILES_TO_WATCH $crate_toml
+    end
+end
+
+# Minimum duration (in seconds) before showing desktop notifications for one-off modes.
+# If a check completes faster than this, skip the notification since the user is likely
+# still looking at the terminal. For longer runs, they've probably switched to their IDE.
+set -g NOTIFICATION_THRESHOLD_SECS 1
+
+# Interval (in seconds) for checking if target/check directory exists in watch modes.
+# inotifywait will timeout after this interval, allowing us to check for missing target.
+# If target/check is missing, a rebuild is triggered automatically.
+set -g TARGET_CHECK_INTERVAL_SECS 10
+
+# Auto-dismiss timeout (in milliseconds) for desktop notifications.
+# Notifications auto-dismiss to avoid clutter, especially in watch mode.
+# 5 seconds = 5000ms. Set to 0 or remove to use system default (persistent).
+set -g NOTIFICATION_EXPIRE_MS 5000
+
+# Temp file path for passing duration from run_check_with_recovery to callers.
+# Using a well-known path avoids global variable side effects while still
+# allowing callers to explicitly opt-in to reading the duration.
+set -g CHECK_DURATION_FILE /tmp/check_fish_duration.txt
