@@ -12,7 +12,7 @@
 # 2. Validates Rust toolchain installation with all required components
 # 3. Automatically installs/repairs toolchain if issues detected
 # 4. Runs requested checks (typecheck, build, clippy, tests, doctests, docs)
-# 5. Detects and recovers from Internal Compiler Errors (ICE)
+# 5. Detects and recovers from ICE and stale build artifacts (auto-cleans cache, retries)
 # 6. On persistent ICE, escalates to rust-toolchain-update.fish to find stable nightly
 #
 # Config Change Detection:
@@ -231,7 +231,8 @@
 #   ./check.fish --test       Run tests only (cargo test + doctests)
 #   ./check.fish --doc        Build docs only (quick, --no-deps)
 #   ./check.fish --full       Run ALL checks (check + build + clippy + tests + doctests + docs)
-#                             Includes ICE escalation to rust-toolchain-update.fish
+#                             Auto-recovers from ICE (escalates to rust-toolchain-update.fish)
+#                             and stale build artifacts (cleans cache, retries)
 #   ./check.fish --watch      Watch mode: run default checks on file changes
 #   ./check.fish --watch-test Watch mode: run tests/doctests only
 #   ./check.fish --watch-doc  Watch mode: quick docs first, full docs forked to background
@@ -503,7 +504,7 @@ function show_help
     echo "  ✓ Documentation tests (doctests)"
     echo "  ✓ Documentation building"
     echo "  ✓ Blind spot recovery (catch-up build for changes during doc build)"
-    echo "  ✓ ICE detection (auto-removes target/, retries once)"
+    echo "  ✓ Auto-recovery from ICE and stale build artifacts (cleans cache, retries)"
     echo "  ✓ Desktop notifications on toolchain changes"
     echo "  ✓ Target directory auto-recovery in watch modes"
     echo "  ✓ Orphan doc file cleanup (full builds detect and remove stale files)"
@@ -522,7 +523,8 @@ function show_help
     echo "  --test        Runs tests only: cargo test + doctests"
     echo "  --doc         Builds documentation only (--no-deps, quick check)"
     echo "  --full        Runs ALL checks: check + build + clippy + tests + doctests + docs"
-    echo "                Includes ICE escalation to rust-toolchain-update.fish"
+    echo "                Auto-recovers from ICE (escalates to rust-toolchain-update.fish)"
+    echo "                and stale build artifacts (cleans cache, retries)"
     echo ""
 
     set_color yellow
@@ -882,9 +884,9 @@ function watch_mode
             run_checks_for_type $check_type
             set -l result $status
 
-            # Handle ICE detected (status 2)
+            # Handle recoverable error (status 2)
             if test $result -eq 2
-                cleanup_after_ice
+                cleanup_for_recovery (dirs_for_check_type $check_type)
             end
 
             echo ""
@@ -955,10 +957,10 @@ function watch_mode
         run_checks_for_type $check_type
         set -l result $status
 
-        # Handle ICE detected (status 2)
+        # Handle recoverable error (status 2)
         if test $result -eq 2
-            cleanup_after_ice
-            # Note: cleanup_after_ice will trigger another check, continuing naturally
+            cleanup_for_recovery (dirs_for_check_type $check_type)
+            # Note: cleanup_for_recovery will trigger another check, continuing naturally
         end
 
         echo ""
@@ -971,7 +973,7 @@ end
 
 # Helper function to run checks based on type
 # Parameters: check_type - "full", "test", or "doc"
-# Returns: 0 = success, 1 = failure, 2 = ICE detected (triggers cleanup in watch loop)
+# Returns: 0 = success, 1 = failure, 2 = recoverable error (triggers cleanup in watch loop)
 function run_checks_for_type
     set -l check_type $argv[1]
 
@@ -982,11 +984,12 @@ function run_checks_for_type
             set -l result $status
 
             if test $result -eq 2
-                # ICE detected - let caller (watch loop) handle cleanup
+                # Recoverable error - let caller (watch loop) handle cleanup
                 return 2
             end
 
             if test $result -eq 0
+                sync_docs_to_serving full
                 echo ""
                 set_color green --bold
                 echo "["(timestamp)"] ✅ All checks passed!"
@@ -1002,7 +1005,7 @@ function run_checks_for_type
             # Test checks: cargo test + doctests only
             run_check_with_recovery check_cargo_test "tests"
             if test $status -eq 2
-                return 2  # ICE detected
+                return 2  # Recoverable error
             end
             if test $status -ne 0
                 send_system_notification "Watch: Tests Failed ❌" "cargo test failed" "critical" $NOTIFICATION_EXPIRE_MS
@@ -1011,7 +1014,7 @@ function run_checks_for_type
 
             run_check_with_recovery check_doctests "doctests"
             if test $status -eq 2
-                return 2  # ICE detected
+                return 2  # Recoverable error
             end
             if test $status -ne 0
                 send_system_notification "Watch: Doctests Failed ❌" "doctests failed" "critical" $NOTIFICATION_EXPIRE_MS
@@ -1260,13 +1263,13 @@ end
 set -g CHECK_DURATION_FILE /tmp/check_fish_duration.txt
 
 # ============================================================================
-# Level 2: ICE-Aware Wrapper Function
+# Level 2: Recovery-Aware Wrapper Function
 # ============================================================================
-# Generic wrapper that handles output, formatting, ICE detection, and timing
+# Generic wrapper that handles output, formatting, error detection, and timing
 # Can wrap ANY check function and apply consistent error handling
 #
 # Strategy: Uses temp file to preserve ANSI codes and terminal formatting
-# while still allowing output to be parsed for ICE detection
+# while still allowing output to be parsed for ICE and stale artifact detection
 #
 # Parameters:
 #   $argv[1]: Function name to wrap (e.g., "check_nextest")
@@ -1275,7 +1278,7 @@ set -g CHECK_DURATION_FILE /tmp/check_fish_duration.txt
 # Returns:
 #   0 = Success
 #   1 = Failure (not ICE)
-#   2 = ICE detected
+#   2 = Recoverable error detected (ICE or stale build artifacts)
 #
 # Duration: Written to $CHECK_DURATION_FILE (seconds as decimal).
 #           Callers can read with: set duration (cat $CHECK_DURATION_FILE)
@@ -1293,7 +1296,7 @@ function run_check_with_recovery
         echo "["(timestamp)"] ▶️  Running $check_name..." >> $CHECK_LOG_FILE
     end
 
-    # Create temp file for ICE detection (output is suppressed)
+    # Create temp file for error detection (output is suppressed)
     set -l temp_output (mktemp)
 
     # Record start time (epoch seconds with nanosecond precision)
@@ -1339,7 +1342,22 @@ function run_check_with_recovery
         return 2
     end
 
-    # Regular failure (not ICE) - show the error output to user
+    # Check for stale build artifacts (e.g., serde_core's private.rs lost from /tmp)
+    if detect_stale_build_artifacts $temp_output
+        set_color yellow
+        echo "🔧 Stale build artifacts detected — will clean cache and retry ($duration_str)"
+        set_color normal
+
+        # Log stale artifacts to file with details
+        if set -q CHECK_LOG_FILE; and test -n "$CHECK_LOG_FILE"
+            echo "["(timestamp)"] 🔧 Stale build artifacts detected during $check_name ($duration_str)" >> $CHECK_LOG_FILE
+        end
+
+        command rm -f $temp_output
+        return 2
+    end
+
+    # Regular failure (not ICE, not stale artifacts) - show the error output to user
     set_color red
     echo "["(timestamp)"] ❌ $check_name failed ($duration_str)"
     set_color normal
@@ -1362,7 +1380,7 @@ end
 # Level 3: Orchestrator Functions
 # ============================================================================
 # Composes multiple Level 2 wrappers
-# Aggregates results: ICE > Failure > Success
+# Aggregates results: Recoverable (2) > Failure (1) > Success (0)
 #
 # Two variants:
 #   - run_watch_checks: Full docs (for watch "full" mode)
@@ -1371,7 +1389,7 @@ end
 # Returns:
 #   0 = All checks passed
 #   1 = At least one check failed (not ICE)
-#   2 = At least one check had ICE (caller handles retry)
+#   2 = At least one check had a recoverable error (caller handles retry)
 
 # Orchestrator for watch "full" mode (--watch).
 # Uses full doc build with dependencies.
@@ -1390,7 +1408,7 @@ function run_watch_checks
     run_check_with_recovery check_docs_full "docs"
     set result_docs $status
 
-    # Aggregate: return 2 if ANY ICE, then 1 if ANY failure, else 0
+    # Aggregate: return 2 if ANY recoverable error, then 1 if ANY failure, else 0
     if test $result_cargo_test -eq 2 || test $result_doctest -eq 2 || test $result_docs -eq 2
         return 2
     end
@@ -1420,7 +1438,7 @@ function run_oneoff_checks
     run_check_with_recovery check_docs_oneoff "docs"
     set result_docs $status
 
-    # Aggregate: return 2 if ANY ICE, then 1 if ANY failure, else 0
+    # Aggregate: return 2 if ANY recoverable error, then 1 if ANY failure, else 0
     if test $result_cargo_test -eq 2 || test $result_doctest -eq 2 || test $result_docs -eq 2
         return 2
     end
@@ -1435,11 +1453,11 @@ end
 # ============================================================================
 # Level 4: Top-Level Recovery Functions
 # ============================================================================
-# Handles ICE recovery with automatic cleanup and retry.
+# Handles recovery from ICE and stale build artifacts with automatic cleanup and retry.
 #
 # Two variants:
-#   - run_oneoff_checks_with_ice_recovery: For one-off normal mode (uses quick docs)
-#   - run_watch_checks_with_ice_recovery: For watch "full" mode (uses full docs)
+#   - run_oneoff_checks_with_recovery: For one-off normal mode (uses quick docs)
+#   - run_watch_checks_with_recovery: For watch "full" mode (uses full docs)
 #
 # Returns:
 #   0 = All checks passed
@@ -1447,7 +1465,7 @@ end
 
 # Recovery function for one-off normal mode.
 # Uses run_oneoff_checks (quick docs to CHECK_TARGET_DIR).
-function run_oneoff_checks_with_ice_recovery
+function run_oneoff_checks_with_recovery
     set -l max_retries 1
     set -l retry_count 0
 
@@ -1470,21 +1488,21 @@ function run_oneoff_checks_with_ice_recovery
             return $result
         end
 
-        # ICE detected - cleanup and retry
-        cleanup_after_ice
+        # Recoverable error - cleanup and retry
+        cleanup_for_recovery $CHECK_TARGET_DIR
         set retry_count (math $retry_count + 1)
     end
 
     echo ""
     set_color red --bold
-    echo "["(timestamp)"] ❌ Failed even after ICE recovery"
+    echo "["(timestamp)"] ❌ Failed even after cache recovery"
     set_color normal
     return 1
 end
 
 # Recovery function for watch "full" mode (--watch).
 # Uses run_watch_checks (full docs with dependencies).
-function run_watch_checks_with_ice_recovery
+function run_watch_checks_with_recovery
     set -l max_retries 1
     set -l retry_count 0
 
@@ -1507,14 +1525,14 @@ function run_watch_checks_with_ice_recovery
             return $result
         end
 
-        # ICE detected - cleanup and retry
-        cleanup_after_ice
+        # Recoverable error - cleanup and retry
+        cleanup_for_recovery $CHECK_TARGET_DIR $CHECK_TARGET_DIR_DOC_STAGING_FULL
         set retry_count (math $retry_count + 1)
     end
 
     echo ""
     set_color red --bold
-    echo "["(timestamp)"] ❌ Failed even after ICE recovery"
+    echo "["(timestamp)"] ❌ Failed even after cache recovery"
     set_color normal
     return 1
 end
@@ -1523,12 +1541,12 @@ end
 # Level 3b: Full Orchestrator Function (includes clippy)
 # ============================================================================
 # Composes all checks including check, build, and clippy
-# Aggregates results: ICE > Failure > Success
+# Aggregates results: Recoverable (2) > Failure (1) > Success (0)
 #
 # Returns:
 #   0 = All checks passed
 #   1 = At least one check failed (not ICE)
-#   2 = At least one check had ICE
+#   2 = At least one check had a recoverable error
 function run_full_checks
     set -l result_check 0
     set -l result_build 0
@@ -1555,7 +1573,7 @@ function run_full_checks
     run_check_with_recovery check_docs_full "docs"
     set result_docs $status
 
-    # Aggregate: return 2 if ANY ICE, then 1 if ANY failure, else 0
+    # Aggregate: return 2 if ANY recoverable error, then 1 if ANY failure, else 0
     if test $result_check -eq 2 || test $result_build -eq 2 || test $result_clippy -eq 2 || \
        test $result_cargo_test -eq 2 || test $result_doctest -eq 2 || test $result_docs -eq 2
         return 2
@@ -1572,17 +1590,17 @@ end
 # ============================================================================
 # Level 4b: Full Recovery Function with Toolchain Escalation
 # ============================================================================
-# Handles ICE recovery with automatic cleanup, retry, and toolchain update escalation.
+# Handles recovery (ICE, stale artifacts) with automatic cleanup, retry, and toolchain escalation.
 #
 # Escalation flow:
-#   1. ICE detected → cleanup target/ → retry
-#   2. Still ICE? → escalate to rust-toolchain-update.fish (finds working nightly)
+#   1. Recoverable error detected → cleanup target/ → retry
+#   2. Still failing? → escalate to rust-toolchain-update.fish (finds working nightly)
 #   3. Retry once more with new toolchain
 #
 # Returns:
 #   0 = All checks passed
 #   1 = Checks failed
-function run_full_checks_with_ice_recovery
+function run_full_checks_with_recovery
     # First attempt
     run_full_checks
     set -l result $status
@@ -1592,12 +1610,12 @@ function run_full_checks_with_ice_recovery
         return $result
     end
 
-    # ICE detected - cleanup and retry
+    # Recoverable error - cleanup and retry
     echo ""
     set_color yellow
-    echo "🧊 ICE detected, cleaning target/ and retrying..."
+    echo "🔄 Recoverable error detected, cleaning target/ and retrying..."
     set_color normal
-    cleanup_after_ice
+    cleanup_for_recovery $CHECK_TARGET_DIR $CHECK_TARGET_DIR_DOC_STAGING_FULL
 
     run_full_checks
     set result $status
@@ -1850,7 +1868,8 @@ end
 # Note: Detection is only called when cargo commands fail (exit code != 0).
 # If commands succeed, there's no ICE to detect.
 #
-# Recovery is handled by cleanup_after_ice() which removes target/ entirely.
+# Recovery is handled by cleanup_for_recovery() which removes targeted target dirs.
+# Stale build artifacts are detected by detect_stale_build_artifacts() at Level 2.
 # ============================================================================
 
 # Removes stale rustc-ice-*.txt dump files left over from previous runs.
@@ -1873,72 +1892,67 @@ function detect_ice_from_file
     return 1
 end
 
-# Helper function to extract failed test count from cargo test output
-function parse_cargo_test_failures
-    set -l output $argv[1]
-    # Extract the number before "failed" in test result summary
-    set -l failed (echo "$output" | grep -oE '[0-9]+\s+failed' | grep -oE '[0-9]+' | tail -1)
-    if test -z "$failed"
-        echo "0"
-    else
-        echo $failed
-    end
-end
-
-# Helper function to extract failed doctest count
-function parse_doctest_failures
-    set -l output $argv[1]
-    # Extract the number before "failed" in doctest result
-    set -l failed (echo "$output" | grep -oE '[0-9]+\s+failed' | grep -oE '[0-9]+' | tail -1)
-    if test -z "$failed"
-        echo "0"
-    else
-        echo $failed
-    end
-end
-
-# Helper function to count warnings and errors in doc output
-function parse_doc_warnings_errors
-    set -l output $argv[1]
-    # Count lines containing "warning:" (cargo format: "warning: ...")
-    set -l warnings (echo "$output" | grep -ic 'warning:')
-    # Count lines containing "error:" (cargo format: "error: ...")
-    set -l errors (echo "$output" | grep -ic 'error:')
-
-    # Only return if there are warnings or errors
-    if test $warnings -gt 0 -o $errors -gt 0
-        echo "$warnings warnings, $errors errors"
+# Detects stale build artifacts in captured cargo output.
+# When serde_core's build script output (private.rs) gets lost from /tmp while
+# Cargo's metadata cache still thinks it exists, cargo commands fail with:
+#   error: couldn't read `.../out/private.rs`: No such file or directory
+#
+# Parameters:
+#   $argv[1]: Path to temp file containing captured cargo output
+#
+# Returns: 0 if stale artifacts detected, 1 otherwise
+function detect_stale_build_artifacts
+    set -l temp_output $argv[1]
+    if grep -qE "couldn't read .*/out/.*: No such file or directory" $temp_output 2>/dev/null
         return 0
-    else
-        return 1
+    end
+    return 1
+end
+
+# Maps check type to the target directories it uses.
+# Used by watch loop to pass targeted dirs to cleanup_for_recovery.
+# Parameters:
+#   $argv[1]: "full", "test", "doc", or anything else (defaults to all dirs)
+# Output: One directory path per line (Fish command substitution splits on newlines)
+function dirs_for_check_type
+    switch $argv[1]
+        case "full"
+            printf '%s\n' $CHECK_TARGET_DIR $CHECK_TARGET_DIR_DOC_STAGING_FULL
+        case "test"
+            printf '%s\n' $CHECK_TARGET_DIR
+        case "doc"
+            printf '%s\n' $CHECK_TARGET_DIR_DOC_STAGING_QUICK $CHECK_TARGET_DIR_DOC_STAGING_FULL
+        case '*'
+            printf '%s\n' $CHECK_TARGET_DIR $CHECK_TARGET_DIR_DOC_STAGING_QUICK $CHECK_TARGET_DIR_DOC_STAGING_FULL
     end
 end
 
 # Helper function to clean target folder
-# Removes all build artifacts and caches to ensure a clean rebuild
+# Removes build artifacts and caches to ensure a clean rebuild.
 # This is important because various parts of the cache (incremental, metadata, etc.)
-# can become corrupted and cause compiler panics or other mysterious failures
+# can become corrupted and cause compiler panics or other mysterious failures.
+#
+# Parameters (optional):
+#   $argv: Specific directories to clean. If none provided, cleans all 3 target dirs.
 function cleanup_target_folder
     echo "🧹 Cleaning target folders..."
-
-    # Clean the main check target directory (tmpfs location)
-    if test -d "$CHECK_TARGET_DIR"
-        command rm -rf "$CHECK_TARGET_DIR"
+    set -l dirs_to_clean
+    if test (count $argv) -gt 0
+        set dirs_to_clean $argv
+    else
+        set dirs_to_clean $CHECK_TARGET_DIR $CHECK_TARGET_DIR_DOC_STAGING_QUICK $CHECK_TARGET_DIR_DOC_STAGING_FULL
     end
-
-    # Also clean staging directories to ensure fresh doc builds
-    if test -d "$CHECK_TARGET_DIR_DOC_STAGING_QUICK"
-        command rm -rf "$CHECK_TARGET_DIR_DOC_STAGING_QUICK"
-    end
-    if test -d "$CHECK_TARGET_DIR_DOC_STAGING_FULL"
-        command rm -rf "$CHECK_TARGET_DIR_DOC_STAGING_FULL"
+    for dir in $dirs_to_clean
+        if test -d "$dir"
+            command rm -rf "$dir"
+        end
     end
 end
 
-# Helper function to run cleanup after ICE (Internal Compiler Error)
-# Logs ICE events for debugging purposes.
-function cleanup_after_ice
-    log_message "🧊 ICE detected! Running cleanup..."
+# Helper function to run cleanup for recoverable errors (ICE, stale artifacts, etc.)
+# Removes target folders and any ICE dump files, logs events for debugging.
+function cleanup_for_recovery
+    log_message "🧹 Running cache cleanup..."
 
     # Remove ICE dump files and log their names for debugging
     set -l ice_files (find . -name "rustc-ice-*.txt" 2>/dev/null)
@@ -1950,8 +1964,8 @@ function cleanup_after_ice
         command rm -f rustc-ice-*.txt
     end
 
-    # Remove all target folders (build artifacts and caches can become corrupted)
-    cleanup_target_folder
+    # Remove target folders (pass through optional dir arguments for targeted cleanup)
+    cleanup_target_folder $argv
 
     log_message "✨ Cleanup complete. Retrying checks..."
     echo ""
@@ -1971,15 +1985,6 @@ function log_message
         mkdir -p (dirname $CHECK_LOG_FILE)
         echo "["(timestamp)"] $message" >> $CHECK_LOG_FILE
     end
-end
-
-# Deprecated: run_checks
-# REFACTORED into composable architecture
-# Use run_oneoff_checks_with_ice_recovery instead
-# Kept for backward compatibility only
-function run_checks
-    echo "⚠️  run_checks is deprecated. Use run_oneoff_checks_with_ice_recovery" >&2
-    run_oneoff_checks_with_ice_recovery
 end
 
 # ============================================================================
@@ -2053,8 +2058,8 @@ function main
             set -l check_status $status
 
             if test $check_status -eq 2
-                # ICE detected - cleanup and retry once
-                cleanup_after_ice
+                # Recoverable error - cleanup and retry once
+                cleanup_for_recovery $CHECK_TARGET_DIR
                 run_check_with_recovery check_cargo_check "typecheck"
                 set check_status $status
             end
@@ -2078,8 +2083,8 @@ function main
             set -l build_status $status
 
             if test $build_status -eq 2
-                # ICE detected - cleanup and retry once
-                cleanup_after_ice
+                # Recoverable error - cleanup and retry once
+                cleanup_for_recovery $CHECK_TARGET_DIR
                 run_check_with_recovery check_cargo_build "build"
                 set build_status $status
             end
@@ -2103,8 +2108,8 @@ function main
             set -l clippy_status $status
 
             if test $clippy_status -eq 2
-                # ICE detected - cleanup and retry once
-                cleanup_after_ice
+                # Recoverable error - cleanup and retry once
+                cleanup_for_recovery $CHECK_TARGET_DIR
                 run_check_with_recovery check_clippy "clippy"
                 set clippy_status $status
             end
@@ -2126,9 +2131,14 @@ function main
             echo ""
             echo "🚀 Running comprehensive checks (check + build + clippy + tests + doctests + docs)..."
 
-            # Run all checks with ICE recovery
-            run_full_checks_with_ice_recovery
+            # Run all checks with recovery (ICE, stale artifacts)
+            run_full_checks_with_recovery
             set -l full_status $status
+
+            # Sync docs from staging to serving directory (so docs are browseable)
+            if test $full_status -eq 0
+                sync_docs_to_serving full
+            end
 
             # Send desktop notification for final result
             if test $full_status -eq 0
@@ -2165,8 +2175,8 @@ function main
             set -l doc_status $status
 
             if test $doc_status -eq 2
-                # ICE detected - cleanup and retry once
-                cleanup_after_ice
+                # Recoverable error - cleanup and retry once
+                cleanup_for_recovery $CHECK_TARGET_DIR_DOC_STAGING_QUICK
                 run_check_with_recovery check_docs_quick "docs"
                 set doc_status $status
             end
@@ -2217,8 +2227,8 @@ function main
             set -l test_status $status
 
             if test $test_status -eq 2
-                # ICE detected - cleanup and retry once
-                cleanup_after_ice
+                # Recoverable error - cleanup and retry once
+                cleanup_for_recovery $CHECK_TARGET_DIR
                 run_check_with_recovery check_cargo_test "tests"
                 set test_status $status
             end
@@ -2278,7 +2288,7 @@ function main
             log_message "🚀 Running checks..."
 
             # Use new composable architecture with automatic ICE recovery
-            run_oneoff_checks_with_ice_recovery
+            run_oneoff_checks_with_recovery
             set -l check_status $status
 
             # Log and send desktop notification for final result
