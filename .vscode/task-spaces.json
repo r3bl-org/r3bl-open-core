@@ -348,7 +348,7 @@
       ],
       "taskFile": "task/introduce-resilient-reactor-thread.md",
       "createdAt": 1768407329970,
-      "activeTab": "tui/src/core/resilient_reactor_thread/rrt.rs"
+      "activeTab": "tui/src/core/resilient_reactor_thread/mod.rs"
     }
   ]
 }

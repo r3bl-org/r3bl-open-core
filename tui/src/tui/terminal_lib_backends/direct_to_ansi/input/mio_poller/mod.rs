@@ -75,10 +75,10 @@
 //! the lifecycle behavior.
 //!
 //! Key properties:
-//! - **No external termination**: Other code cannot forcibly terminate or cancel this
-//!   thread—this is an [OS/threading limitation] ([Rust discussion], [Rust workarounds]).
-//!   However, external code CAN **signal** the thread to exit gracefully by dropping the
-//!   [`DirectToAnsiInputDevice`]—each TUI app creates one on startup and drops it on
+//! - **No external termination**: See the [RRT module docs] for why threads cannot be
+//!   forcibly terminated and how RRT provides cooperative termination via the [`RRTWaker`].
+//!   External code signals the thread to exit gracefully by dropping the
+//!   [`DirectToAnsiInputDevice`] — each TUI app creates one on startup and drops it on
 //!   exit (a process may run multiple TUI apps sequentially). Dropping the device drops
 //!   its internal [`SubscriberGuard`], waking the thread to check [`receiver_count()`].
 //!   When all receivers are dropped, the thread exits on its own.
@@ -283,11 +283,9 @@
 //! [100ms `ttimeoutlen` delay]: https://vi.stackexchange.com/questions/24925/usage-of-timeoutlen-and-ttimeoutlen
 //! [AsRawFd::as_raw_fd]: std::os::unix::io::AsRawFd::as_raw_fd
 //! [Device Lifecycle]: super::DirectToAnsiInputDevice#device-lifecycle
-//! [OS/threading limitation]: https://man7.org/linux/man-pages/man3/pthread_cancel.3.html
 //! [PTY]: https://en.wikipedia.org/wiki/Pseudoterminal
+//! [RRT module docs]: crate::core::resilient_reactor_thread
 //! [Related Tests]: crate::core::resilient_reactor_thread#related-tests
-//! [Rust discussion]: https://internals.rust-lang.org/t/thread-cancel-support/3056
-//! [Rust workarounds]: https://matklad.github.io/2018/03/03/stopping-a-rust-worker.html
 //! [SSH]: https://en.wikipedia.org/wiki/Secure_Shell
 //! [The Problems section in `DirectToAnsiInputDevice`]: super::DirectToAnsiInputDevice#the-problems
 //! [VT100 input parser]: super::stateful_parser::StatefulInputParser

@@ -973,32 +973,46 @@ end
 
 # Runs a command with I/O priority on Linux, or directly on macOS.
 #
-# On Linux: Uses ionice -c2 -n0 to give the command highest I/O priority
-#           in the best-effort scheduling class (no sudo required).
-# On macOS: ionice doesn't exist, so the command runs directly.
+# Wraps a command with reduced CPU and I/O priority to keep the system
+# responsive for interactive use (terminal input, IDE, desktop compositor).
+#
+# On Linux: Uses nice -n 10 (lower CPU priority) + ionice -c2 -n0 (higher I/O priority).
+# On macOS: Uses nice -n 10 only. ionice doesn't exist on macOS.
+#
+# Why nice -n 10?
+#   Without nice, cargo/rustdoc processes run at the same CPU priority (nice 0)
+#   as your terminal emulator, shell, and desktop compositor. When all cores are
+#   busy with equal-priority processes, the CFS scheduler gives your terminal
+#   1/(N+1) of a timeslice — making keystrokes visibly laggy. nice -n 10 tells
+#   the scheduler to prefer interactive processes over build processes whenever
+#   they compete for the same core.
+#
+# Why ionice -c2 -n0?
+#   Gives cargo the highest I/O priority within the best-effort class (no sudo
+#   needed). This helps when reading source files from disk. Note: builds target
+#   tmpfs (/tmp/roc/target/check), so most write I/O bypasses the block layer
+#   entirely — ionice mainly affects source file reads from the SSD.
 #
 # Parameters:
 #   $argv: The command and its arguments to run
 #
 # Features:
-# - Cross-platform: Works on both Linux and macOS
+# - Cross-platform: nice on all platforms, ionice added on Linux only
 # - Transparent: Command output and exit codes pass through unchanged
-# - No overhead on macOS: Simply exec's the command
 #
 # Usage:
 #   ionice_wrapper cargo test --all-targets
 #   ionice_wrapper cargo doc --no-deps
-#
-# Example:
-#   # Instead of: ionice -c2 -n0 cargo build
-#   # Use:        ionice_wrapper cargo build
 function ionice_wrapper
     if command -v ionice >/dev/null 2>&1
-        # Linux: Use ionice for I/O priority
-        ionice -c2 -n0 $argv
+        # Linux: Lower CPU priority (nice 10) + higher I/O priority (ionice -c2 -n0).
+        # nice ensures interactive processes (terminal, IDE) win CPU scheduling.
+        # ionice ensures cargo still gets fast disk reads for source files.
+        nice -n 10 ionice -c2 -n0 $argv
     else
-        # macOS/other: Run command directly
-        $argv
+        # macOS/other: nice is POSIX (available on macOS), ionice is not.
+        # Still lower CPU priority so interactive processes win scheduling.
+        nice -n 10 $argv
     end
 end
 

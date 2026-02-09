@@ -74,6 +74,27 @@ You can explicitly invoke skills using slash commands:
 - `/analyze-logs` → analyze-log-files (strips ANSI codes from `log.txt`)
 - `/r3bl-task` → Task management (see below)
 
+## Running Checks
+
+**Always use `check.fish`** instead of running cargo commands directly. `check.fish` provides ICE
+recovery, stale artifact cleanup, config change detection, toolchain validation, and tmpfs/ionice
+optimizations — all of which are lost with direct cargo calls.
+
+| Command | What it runs |
+|:--------|:-------------|
+| `./check.fish --check` | `cargo check` (fast typecheck) |
+| `./check.fish --build` | `cargo build` (compile production) |
+| `./check.fish --clippy` | `cargo clippy --all-targets` (linting) |
+| `./check.fish --test` | `cargo test` + doctests |
+| `./check.fish --doc` | `cargo doc --no-deps` (quick docs) |
+| `./check.fish --full` | All of the above |
+
+Commands with **no check.fish equivalent** (run directly):
+- `cargo rustdoc-fmt` — format rustdoc comments
+- `cargo clippy --all-targets --fix --allow-dirty` — auto-fix lints
+- `cargo fmt --all` — format code
+- `cargo rustc -p <crate> --target x86_64-pc-windows-gnu -- --emit=metadata` — cross-platform check
+
 ## Rust Code Guidelines
 
 ### Writing Rustdoc Comments

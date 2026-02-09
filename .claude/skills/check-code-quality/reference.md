@@ -2,6 +2,13 @@
 
 This document provides detailed explanations of each cargo command used in the quality checklist.
 
+> **Always use `check.fish`** instead of running cargo commands directly. It provides ICE
+> recovery, stale artifact cleanup, config change detection, toolchain validation, tmpfs/ionice
+> optimizations, and desktop notifications — all of which are lost with direct cargo calls.
+> See the table in `SKILL.md` for the mapping (e.g., `./check.fish --doc` runs `cargo doc --no-deps`).
+>
+> The cargo commands documented below explain **what check.fish runs under the hood**.
+
 ## cargo check
 
 **Purpose:** Fast typecheck without code generation
@@ -290,15 +297,23 @@ cat .cargo/config.toml | grep -A5 "target.x86_64-unknown-linux-gnu"
 
 ## Quality Check Workflow Summary
 
+**Always use `check.fish`** (ICE recovery, stale artifacts, toolchain validation, tmpfs/ionice):
+
 ```
-cargo check          → Fast typecheck (catch errors early)
-cargo build          → Full compilation (verify builds)
-cargo rustdoc-fmt    → Format docs (via skill)
-cargo doc --no-deps  → Generate docs (verify links)
-cargo clippy         → Lint code (via skill)
-cargo test --no-run  → Compile tests (verify test code)
-cargo test --all     → Run tests (verify functionality)
-cargo test --doc     → Run doctests (verify examples)
+./check.fish --full      → All checks below in one command
+./check.fish --check     → Fast typecheck (cargo check)
+./check.fish --build     → Full compilation (cargo build)
+./check.fish --clippy    → Lint code (cargo clippy --all-targets)
+./check.fish --test      → Run tests + doctests (cargo test)
+./check.fish --doc       → Generate docs (cargo doc --no-deps)
+```
+
+**No check.fish equivalent** (run directly):
+
+```
+cargo rustdoc-fmt    → Format docs (not in check.fish — run separately)
+cargo clippy --fix   → Auto-fix lints (not in check.fish — run separately)
+cargo fmt --all      → Format code (not in check.fish — run separately)
 ```
 
 This ensures:

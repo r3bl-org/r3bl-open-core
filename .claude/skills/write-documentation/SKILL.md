@@ -485,7 +485,8 @@ When deciding local vs external links, follow this priority:
 | 1 | Code in this monorepo | `crate::` path | `[`Foo`]: crate::module::Foo` |
 | 2 | Dependency in Cargo.toml | Crate path | `[`mio`]: mio` |
 | 3 | OS/CS/hardware terms | External URL | `[`epoll`]: https://man7.org/...` |
-| 4 | Non-dependency crates | docs.rs URL | `[`rayon`]: https://docs.rs/rayon` |
+| 4 | Pedagogical/domain terms | Wikipedia URL | `[design pattern]: https://en.wikipedia.org/...` |
+| 5 | Non-dependency crates | docs.rs URL | `[`rayon`]: https://docs.rs/rayon` |
 
 **Key principle:** If it's in Cargo.toml, use local links (validated, offline-capable, version-matched).
 
@@ -631,11 +632,48 @@ use external URLs (man pages, Wikipedia, specs):
 | Linux syscalls/APIs | `man7.org/linux/man-pages/` | `epoll`, `signalfd`, `io_uring` |
 | BSD APIs | `man.freebsd.org/` | `kqueue` |
 | CS concepts | `en.wikipedia.org/wiki/` | `Actor model`, `Reactor pattern` |
+| Pedagogical terms | `en.wikipedia.org/wiki/` | `design pattern`, `RAII`, `file descriptor` |
 | Specs/RFCs | Official spec sites | ANSI escape codes, UTF-8 |
 
 **Key distinction:**
 - `mio` (Rust crate in Cargo.toml) → `[`mio`]: mio` (local)
 - `epoll` (Linux kernel API) → `[`epoll`]: https://man7.org/...` (external)
+
+### Pedagogical Links for Inclusivity
+
+Link domain-specific terminology to external references (typically Wikipedia) even when the
+concept seems "obvious." This makes documentation accessible to readers of all backgrounds —
+not everyone comes from a CS degree or has the same experience level.
+
+**Rule:** If a term has a formal definition that would help a newcomer understand the docs,
+link it. The cost of an extra link is near zero; the cost of excluding a reader is high.
+
+```rust
+// ✅ Good: Links pedagogical terms for inclusivity
+//! This [design pattern] avoids all of this and allows async code to...
+//! Resources are cleaned up via [RAII] when the guard is dropped.
+//!
+//! [design pattern]: https://en.wikipedia.org/wiki/Software_design_pattern
+//! [RAII]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
+```
+
+```rust
+// ❌ Bad: Assumes reader already knows these terms
+//! This design pattern avoids all of this and allows async code to...
+//! Resources are cleaned up via RAII when the guard is dropped.
+```
+
+**Common pedagogical link targets:**
+
+| Term | URL |
+|------|-----|
+| design pattern | `https://en.wikipedia.org/wiki/Software_design_pattern` |
+| RAII | `https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization` |
+| file descriptor | `https://en.wikipedia.org/wiki/File_descriptor` |
+| dependency injection | `https://en.wikipedia.org/wiki/Dependency_injection` |
+| inversion of control | `https://en.wikipedia.org/wiki/Inversion_of_control` |
+| Actor model | `https://en.wikipedia.org/wiki/Actor_model` |
+| Reactor pattern | `https://en.wikipedia.org/wiki/Reactor_pattern` |
 
 > **Note:** The link source priority is also documented in `link-patterns.md`. This redundancy is
 > intentional—SKILL.md content is loaded when the skill triggers, ensuring reliable application
@@ -758,8 +796,11 @@ that should right-align for decimal alignment).
 ### Verify Documentation Builds
 
 ```bash
-cargo doc --no-deps
-cargo test --doc
+./check.fish --doc
+# (runs: cargo doc --no-deps)
+
+./check.fish --test
+# (runs: cargo test --doc)
 ```
 
 ---
@@ -893,8 +934,8 @@ Before committing documentation:
 - [ ] Constants use binary/byte literal/decimal (not hex)
 - [ ] Hex shown in comments for cross-reference
 - [ ] Markdown tables formatted (`cargo rustdoc-fmt`)
-- [ ] No broken links (`cargo doc --no-deps`)
-- [ ] All code examples compile (`cargo test --doc`)
+- [ ] No broken links (`./check.fish --doc`)
+- [ ] All code examples compile (`./check.fish --test`)
 
 ---
 

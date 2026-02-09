@@ -3,10 +3,10 @@
 # Level 1 functions that just run the cargo command and return status code.
 # They do NOT handle output formatting or ICE detection.
 #
-# All cargo commands are wrapped with ionice for higher I/O scheduling priority:
-#   -c2 = best-effort class (no sudo required, unlike realtime class 1)
-#   -n0 = highest priority within the class (range: 0-7, lower = higher priority)
-# This helps when other processes compete for disk I/O during builds.
+# All cargo commands are wrapped with ionice_wrapper (see script_lib.fish) which applies:
+#   nice -n 10:    Lower CPU priority so interactive processes (terminal, IDE) win scheduling.
+#   ionice -c2 -n0: Highest I/O priority within best-effort class (no sudo needed).
+# This keeps the terminal responsive during long builds (especially --watch-doc full builds).
 
 function check_cargo_check
     set -lx CARGO_TARGET_DIR $CHECK_TARGET_DIR

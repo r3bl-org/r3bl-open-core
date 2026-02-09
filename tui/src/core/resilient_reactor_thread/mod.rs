@@ -6,44 +6,76 @@
 
 //! Reusable infrastructure for the Resilient Reactor Thread (RRT) pattern implementation.
 //!
-//! # What is the RRT Pattern?
+//! # Blocking Calls and Async Code Don't Mix
 //!
-//! The **Resilient Reactor Thread** pattern bridges [blocking I/O] with async Rust.
+//! The **Resilient Reactor Thread** pattern bridges [blocking I/O] with [async Rust].
 //! Calling a blocking [`syscall`] (like [`read(2)`] on [`stdin`]) from an [async task]
-//! in a [`tokio`] [async runtime] executor thread **is not ok**:
+//! running on an [executor thread in the `tokio` async runtime] is "**not ok**".
 //!
-//! - The blocking [`syscall`] blocks both the task *and* the executor thread
-//! - The task hangs until the [`syscall`] unblocks on its own
-//! - Reduces runtime throughput (one less worker thread available)
-//! - Can cause issues during executor shutdown (if the [`syscall`] never unblocks)
+//! The blocking [`syscall`] occupies both the task *and* its executor [thread] until it
+//! unblocks on its own. There is no way to cancel it, and there is no guarantee when it
+//! will unblock. If it never unblocks, this can cause issues during [async runtime]
+//! shutdown and starve other tasks from running.
 //!
-//! The severity depends on the runtime configuration:
+//! How "**not ok**" it is depends on the [`tokio`] runtime configuration:
 //!
-//! 1. 🐢 **Multi-threaded runtime** (default): Reduced throughput but other tasks still
-//!    run
-//! 2. 🧊 **Single-threaded runtime**: Total blockage — nothing else runs
+//! - 🐢 **[Multi-threaded runtime]**: This is the default runtime. It uses a [thread
+//!   pool] of worker [thread]s (typically one per CPU core). When a [blocking call]
+//!   stalls one [thread], its [async task] is stuck. Other workers can steal queued tasks
+//!   from the stalled [thread], but there is latency — and if all workers are busy, those
+//!   tasks wait too. Reduced throughput, but not total failure.
+//! - 🧊 **[Single-threaded runtime]**: Turns the calling [thread] into the executor via
+//!   [`block_on()`]. All tasks run on this one [thread], cooperatively yielding at
+//!   `.await` points. If any task makes a blocking call (which doesn't unblock), then it
+//!   never yields — the runtime event loop stalls and **nothing else runs**.
 //!
-//! RRT avoids all of this and allows async code to consume events from blocking sources
-//! ([`stdin`], [`sockets`], [`signals`]) without blocking the [async runtime].
-//! It does this by:
-//! 1. Isolating [blocking I/O] in a dedicated thread and creating a bridge to async
-//!    consumers via a [`broadcast channel`].
-//! 2. Managing the lifecycle of this thread - allowing it to be created, interrupted,
-//!    terminated, and started again.
+//! In practice, both runtimes produce the same result for [TUI] and [`readline_async`]
+//! apps - **the app appears frozen** to the end user. The end user types and nothing
+//! happens.
+//!
+//! In the case of the multi-threaded runtime, the fact that it is responsive is cold
+//! comfort to the end user — if the input pipeline is dead, it doesn't matter that the
+//! [`tokio`] scheduler can work-steal. While the distinction between a runtime-freeze and
+//! a logical-freeze is technically important, it is invisible to the end user.
+//!
+//! Graceful shutdown will probably also hang in the [TUI] and [`readline_async`] apps
+//! because the blocked [`syscall`] can't be cancelled — forcing the end user to manually
+//! run [`kill -9`] the process, which can leave the terminal in a broken state (stuck in
+//! [raw mode]).
+//!
+//! # What Is the RRT Pattern?
+//!
+//! This [design pattern] avoids all of problems listed above and allows async code to
+//! consume events from blocking sources like [`stdin`], [`sockets`], and [`signals`] —
+//! without blocking the [async runtime]. It does this by:
+//! - Isolating [blocking I/O] in a dedicated [thread] and creating a bridge to async
+//!   consumers via a [`broadcast channel`]. The lifetime of this channel is decoupled
+//!   from the lifecycle of the [thread] — it can outlive the [thread], and the [thread]
+//!   can restart without affecting it. You can have a single broadcast channel that's
+//!   active across multiple [thread] generations.
+//! - Managing the lifecycle of this [thread] — allowing it to be created, interrupted,
+//!   terminated, and started again. Other code cannot forcibly terminate or cancel a
+//!   [thread] — this is an [OS/threading limitation] ([Rust discussion], [Rust
+//!   workarounds]). RRT solves this with the [`Waker`] — when a [`SubscriberGuard`] is
+//!   dropped, it signals the [thread] to check whether it should self-terminate (see
+//!   [`RRTState::should_self_terminate()`]). The OS resources allocated by your
+//!   [`RRTFactory::create()`] implementation are cleaned up via [RAII] when
+//!   [`run_worker_loop()`] returns — the [worker] goes out of scope, triggering [`Drop`]
+//!   on all the OS resources your types own. Fresh resources are allocated on restart.
 //!
 //! So, what's in a name? 😛
 //!
-//! | Word          | Meaning                                                                                                       |
-//! | :------------ | :------------------------------------------------------------------------------------------------------------ |
-//! | **Resilient** | Thread can stop or crash and restart with generation tracking; subscribers are not affected                   |
-//! | **Reactor**   | Reacts to I/O events ([`stdin`], [`sockets`], [`signals`]) using [`mio`]/[`epoll`] using [OS I/O Primitives]  |
-//! | **Thread**    | Dedicated thread for [blocking I/O]; graceful shutdown when consumers disconnect; fully managed lifecycle     |
+//! | Word          | Meaning                                                                                                      |
+//! | :------------ | :----------------------------------------------------------------------------------------------------------- |
+//! | **Resilient** | [Thread] can stop or crash and restart with generation tracking; subscribers are not affected                |
+//! | **Reactor**   | Reacts to I/O events ([`stdin`], [`sockets`], [`signals`]) using [`mio`]/[`epoll`] using [OS I/O Primitives] |
+//! | **Thread**    | Dedicated [thread] for [blocking I/O]; graceful shutdown when consumers disconnect; fully managed lifecycle  |
 //!
 //! ## Mental Model for Web Developers
 //!
 //! If you're familiar with [Web Workers], RRT solves the same fundamental problem:
 //! **keeping blocking work off the main execution context**. In browsers, blocking
-//! the main thread freezes the UI. In async Rust, blocking an executor thread
+//! the main [thread] freezes the UI. In async Rust, blocking an executor [thread]
 //! starves other tasks.
 //!
 //! | Web Pattern         | RRT Equivalent                                    |
@@ -60,10 +92,10 @@
 //! - **Delivery**: [Web Workers] are 1:1 (one worker, one consumer); RRT uses 1:N
 //!   [`broadcast`] (all UI components need resize events)
 //!
-//! # Understanding "blocking I/O"
+//! # Understanding "Blocking I/O"
 //!
-//! The RRT pattern's core invariant is that the [worker] thread **blocks** while waiting
-//! for I/O. But what does "blocking" actually mean? This section clarifies the
+//! The RRT pattern's core invariant is that the [worker] [thread] **blocks** while
+//! waiting for I/O. But what does "blocking" actually mean? This section clarifies the
 //! terminology and establishes why the "bridges blocking I/O with async Rust" claim above
 //! holds for various I/O backends, on various OSes.
 //!
@@ -85,15 +117,15 @@
 //!
 //! </div>
 //!
-//! ## [`mio_poller`]: A Concrete RRT Implementation for Linux terminal input handling
+//! ## [`mio_poller`]: A Concrete RRT Implementation for Linux Terminal Input Handling
 //!
 //! [`mio_poller`] satisfies RRT's "blocking I/O" invariant by using [`mio`] — a thin
 //! Rust wrapper over OS-specific I/O primitives.
 //!
-//! On 🐧 **Linux**, [`mio`] uses [`epoll`], which works with [`PTY`]/[`tty`]. The thread
-//! blocks inside the [`epoll_wait()`] [`syscall`], waiting on one or more [file
+//! On 🐧 **Linux**, [`mio`] uses [`epoll`], which works with [`PTY`]/[`tty`]. The
+//! [thread] blocks inside the [`epoll_wait()`] [`syscall`], waiting on one or more [file
 //! descriptors] for [readiness] — a notification that an [`fd`] has data available. The
-//! thread then performs the actual I/O operation itself:
+//! [thread] then performs the actual I/O operation itself:
 //!
 //! ```text
 //!            ┌─────────────────────────────────────────────────────┐
@@ -104,10 +136,10 @@
 //!                                       here         events here
 //! ```
 //!
-//! This isn't [busy-waiting] — the kernel puts the thread to sleep, consuming essentially
-//! zero CPU. But the thread **cannot do other work** while waiting. That's what makes it
-//! "blocking" which is why RRT uses a dedicated thread - to keep this blocking
-//! [`syscall`] off [async executor threads].
+//! This isn't [busy-waiting] — the kernel puts the [thread] to sleep, consuming
+//! essentially zero CPU. But the [thread] **cannot do other work** while waiting. That's
+//! what makes it "blocking", which is why RRT uses a dedicated [thread] — to keep this
+//! blocking [`syscall`] off [executor threads in the async runtime].
 //!
 //! ## I/O Backend Compatibility
 //!
@@ -120,7 +152,7 @@
 //! | [`mio`] + [signals]                         | Yes     | Signals are async interrupts (not [`pollable`]); [`signalfd(2)`] or [`signal-hook`] wraps them as [`fd`]s (see [`mio_poller`])       |
 //! | [`mio`] + [`pipe(2)`]/[`fifo(7)`]           | Yes     | [`pollable`] [`fd`]s ie, 1-1 one-way byte streams: [`pipe(2)`] = parent↔child (anonymous), [`fifo(7)`] = via filesystem path (named) |
 //!
-//! The thread blocks in [`mio::Poll::poll()`] until the kernel signals readiness (via
+//! The [thread] blocks in [`mio::Poll::poll()`] until the kernel signals readiness (via
 //! [`epoll`] on Linux). The blocking behavior is identical for all the sources above.
 //!
 //! ## [`io_uring`] Compatibility
@@ -135,16 +167,16 @@
 //! ## Context
 //!
 //! To get a bird's eye view (from the TUI application's perspective) of how terminal
-//! input flows from [`stdin`] through the [worker] thread to your async consumers — see
+//! input flows from [`stdin`] through the [worker] [thread] to your async consumers — see
 //! the [RRT section] in the crate documentation.
 //!
 //! ## Separation of Concerns and [Dependency Injection] (DI)
 //!
 //! You and the framework have distinct responsibilities:
 //!
-//! - **The framework** ([`RRT<F>`]) handles all the thread management and lifecycle
-//!   boilerplate — spawning threads, reusing running threads, wake signaling, [`broadcast
-//!   channel`]s, subscriber tracking, and graceful shutdown.
+//! - **The framework** ([`RRT<F>`]) handles all the [thread] management and lifecycle
+//!   boilerplate — spawning [thread]s, reusing running [thread]s, wake signaling,
+//!   [`broadcast channel`]s, subscriber tracking, and graceful shutdown.
 //! - **You** provide the [`RRTFactory`] trait implementation along with [`Worker`],
 //!   [`Waker`], and [`Event`] types. Without your factory concrete type (and the three
 //!   other types) to inject ([DI]), the framework has nothing to run.
@@ -161,7 +193,7 @@
 //! ## Design Principles
 //!
 //! 1. [Inversion of control] (IOC / control flow) — the framework owns the loop (`while
-//!    poll_once() == Continue {}`) and creates and manages the thread it runs on. You
+//!    poll_once() == Continue {}`) and creates and manages the [thread] it runs on. You
 //!    provide the iteration logic via [`poll_once()`] in your [`RRTWorker`]
 //!    implementation.
 //!
@@ -217,13 +249,13 @@
 //! └────────────────────────────────────────────────────────────────────────┘
 //! ```
 //!
-//! ## The RRT Contract And Benefits
+//! ## The RRT Contract and Benefits
 //!
 //! 1. **Thread-safe global state** — [`RRT<F>`] is the type you use to declare your own
 //!    `static` singleton (initialized with a [`const expression`]). The generic `F:
 //!    `[`RRTFactory`] is **the injection point** — when you call [`subscribe()`], the
 //!    framework calls [`RRTFactory::create()`] to get your [`Worker`] and [`Waker`], then
-//!    spawns a thread running your worker's [`poll_once()`] in a loop:
+//!    spawns a [thread] running your worker's [`poll_once()`] in a loop:
 //!
 //!    <!-- It is ok to use ignore here - example of static singleton declaration -->
 //!
@@ -249,21 +281,21 @@
 //!    [`subscribe()`] populates the singleton with a fresh [`RRTState`]. On exit,
 //!    [`RRTLiveness`] marks it terminated. On restart, [`subscribe()`] replaces the old
 //!    state with fresh resources. Generation tracking distinguishes fresh restarts from
-//!    reusing an existing thread.
+//!    reusing an existing [thread].
 //!
 //! 3. **Contract preservation** — Async consumers never see broken promises; the
 //!    [`broadcast channel`] decouples producers from consumers. This unlocks two key
 //!    benefits:
 //!
 //!    - **Lifecycle flexibility** — Multiple async tasks can subscribe independently.
-//!      Consumers can come and go without affecting the [worker] thread.
+//!      Consumers can come and go without affecting the [worker] [thread].
 //!
-//!    - **Resilience** — The thread itself can crash and restart; services can connect,
+//!    - **Resilience** — The [thread] itself can crash and restart; services can connect,
 //!      disconnect, and reconnect. The TUI app remains unaffected.
 //!
 //! ## The Coupled Resource Creation Problem
 //!
-//! Creating the [worker] thread has an ordering conflict:
+//! Creating the [worker] [thread] has an ordering conflict:
 //!
 //! ```text
 //! ┌─────────────────────────────────────────────────────────────────────────┐
@@ -316,9 +348,9 @@
 //!
 //! The key insight: **atomic creation, then separation**. Both resources are created
 //! together from the same [`mio::Poll`] registry, then split — the [waker] stays in
-//! [`RRTState`] for subscribers, while the [worker] moves to the spawned thread.
+//! [`RRTState`] for subscribers, while the [worker] moves to the spawned [thread].
 //!
-//! ### Why is [`RRTWaker`] User-Provided?
+//! ### Why Is [`RRTWaker`] User-Provided?
 //!
 //! The [waker] is **intrinsically coupled** to the [worker]'s blocking mechanism.
 //! Different I/O backends need different wake strategies:
@@ -334,7 +366,7 @@
 //! loop. Only you know how to interrupt your specific blocking call.
 //!
 //! The coupling is also at the resource level: a [`mio::Waker`] is created FROM the
-//! [`mio::Poll`]'s registry. If the poll is dropped (thread exits), the [waker] becomes
+//! [`mio::Poll`]'s registry. If the poll is dropped ([thread] exits), the [waker] becomes
 //! useless. That's why [`Factory::create()`] returns both together.
 //!
 //! This design gives the framework flexibility: it works with [`mio`] today and
@@ -343,7 +375,7 @@
 //! ## The Inherent Race Condition
 //!
 //! There's an unavoidable race window between when a receiver drops and when the
-//! thread checks if it should exit:
+//! [thread] checks if it should exit:
 //!
 //! ```text
 //! Timeline:
@@ -356,13 +388,13 @@
 //!               (new subscriber can appear here)
 //! ```
 //!
-//! The [kernel] schedules threads independently, so there's no guarantee when the
-//! [worker] thread will wake up after [`wake()`] is called. The RRT pattern handles this
-//! correctly by checking the **current** [`receiver_count()`] at exit time, not the
+//! The [kernel] schedules [thread]s independently, so there's no guarantee when the
+//! [worker] [thread] will wake up after [`wake()`] is called. The RRT pattern handles
+//! this correctly by checking the **current** [`receiver_count()`] at exit time, not the
 //! count when [`wake()`] was called. See [`RRTState::should_self_terminate()`] for
 //! details.
 //!
-//! # How To Use It
+//! # How to Use It
 //!
 //! Your journey begins with [`RRTFactory`] — implement this trait to inject your
 //! business logic into the framework.
@@ -433,7 +465,7 @@
 //! # Module Contents
 //!
 //! - **`types`**: Core traits ([`RRTWaker`], [`RRTWorker`], [`RRTFactory`])
-//! - **`thread_liveness`**: Thread lifecycle state ([`RRTLiveness`], [`LivenessState`])
+//! - **`thread_liveness`**: [Thread] lifecycle state ([`RRTLiveness`], [`LivenessState`])
 //! - **`thread_state`**: Shared state container ([`RRTState`])
 //! - **`subscriber_guard`**: RAII subscription guard ([`SubscriberGuard`])
 //! - **`thread_safe_global_state`**: Framework entry point ([`RRT`])
@@ -451,7 +483,7 @@
 //! | :-------------------------------------- | :-------------------------------- | :-------- |
 //! | [`io_uring_enter()`] with wait          | Yes (waiting for [completions])   | Yes       |
 //! | [`io_uring_enter()`] non-blocking       | No (just checks [CQ])             | No        |
-//! | [`SQPOLL`]                              | No ([kernel] thread polls)        | No        |
+//! | [`SQPOLL`]                              | No ([kernel] [thread] polls)      | No        |
 //!
 //! In non-blocking or [`SQPOLL`] modes, the worker could look like this:
 //!
@@ -461,7 +493,7 @@
 //! ```
 //!
 //! This **breaks the RRT assumption** — there's nothing to interrupt with [`wake()`]
-//! because the thread never blocks. You'd need a different pattern entirely.
+//! because the [thread] never blocks. You'd need a different pattern entirely.
 //!
 //! ## Recommendation: Blocking Wait Mode
 //!
@@ -547,23 +579,23 @@
 //! RRT shares traits with several classic concurrency patterns but doesn't fit neatly
 //! into any single category:
 //!
-//! | Pattern           | Similarity                          | Key Difference                                                                      |
-//! | :---------------- | :---------------------------------- | :---------------------------------------------------------------------------------- |
-//! | [Actor]           | Dedicated execution context         | Actors are lightweight (many per thread); RRT is one OS thread that [blocks on I/O] |
-//! | [Reactor]         | Event demultiplexing, I/O readiness | Reactor typically runs in the main loop; RRT isolates [blocking I/O] to a worker    |
-//! | [Proactor]        | Async I/O, kernel involvement       | Proactor uses completion callbacks; RRT blocks waiting for readiness                |
-//! | Producer-Consumer | Thread produces for consumers       | Producer-Consumer uses 1:1 queues; RRT uses 1:N [`broadcast`]                       |
+//! | Pattern           | Similarity                          | Key Difference                                                                          |
+//! | :---------------- | :---------------------------------- | :-------------------------------------------------------------------------------------- |
+//! | [Actor]           | Dedicated execution context         | Actors are lightweight (many per [thread]); RRT is one OS [thread] that [blocks on I/O] |
+//! | [Reactor]         | Event demultiplexing, I/O readiness | Reactor typically runs in the main loop; RRT isolates [blocking I/O] to a worker        |
+//! | [Proactor]        | Async I/O, kernel involvement       | Proactor uses completion callbacks; RRT blocks waiting for readiness                    |
+//! | Producer-Consumer | [Thread] produces for consumers     | Producer-Consumer uses 1:1 queues; RRT uses 1:N [`broadcast`]                           |
 //!
 //! **What makes RRT distinct:**
 //!
-//! 1. **Blocking by design** — The [worker] thread *intentionally* [blocks on I/O]. This
-//!    isn't a limitation; it's the feature. Blocking keeps the I/O off async executor
-//!    threads.
+//! 1. **Blocking by design** — The [worker] [thread] *intentionally* [blocks on I/O].
+//!    This isn't a limitation; it's the feature. Blocking on the owned / managed [thread]
+//!    keeps the I/O off [executor threads in the async runtime].
 //!
 //! 2. **Broadcast semantics** — Events go to *all* subscribers (1:N), not a single
 //!    consumer. When a terminal resize occurs, every UI component needs to know.
 //!
-//! 3. **Resilience** — Generation tracking enables graceful thread restart without
+//! 3. **Resilience** — Generation tracking enables graceful [thread] restart without
 //!    breaking existing subscribers. The "Resilient" in RRT refers to this recovery
 //!    capability.
 //!
@@ -579,15 +611,22 @@
 //! [Dependency Injection]: https://en.wikipedia.org/wiki/Dependency_injection
 //! [Example]: #example
 //! [Linked operations]: https://man7.org/linux/man-pages/man3/io_uring_prep_link.3.html
+//! [Multi-threaded runtime]: tokio::runtime::Builder::new_multi_thread
 //! [OS I/O primitives]: #io-backend-compatibility
+//! [OS/threading limitation]: https://man7.org/linux/man-pages/man3/pthread_cancel.3.html
 //! [Proactor]: https://en.wikipedia.org/wiki/Proactor_pattern
+//! [RAII]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
 //! [RRT section]: crate#resilient-reactor-thread-rrt-pattern
 //! [Reactor]: https://en.wikipedia.org/wiki/Reactor_pattern
 //! [Registered FDs]: https://man7.org/linux/man-pages/man3/io_uring_register_files.3.html
 //! [Registered buffers]: https://man7.org/linux/man-pages/man3/io_uring_register_buffers.3.html
+//! [Rust discussion]: https://internals.rust-lang.org/t/thread-cancel-support/3056
+//! [Rust workarounds]: https://matklad.github.io/2018/03/03/stopping-a-rust-worker.html
+//! [Single-threaded runtime]: tokio::runtime::Builder::new_current_thread
 //! [Syscall]: https://man7.org/linux/man-pages/man2/syscalls.2.html
 //! [Syscalls]: https://man7.org/linux/man-pages/man2/syscalls.2.html
 //! [TCP]: https://en.wikipedia.org/wiki/Transmission_Control_Protocol
+//! [TUI]: crate::tui::TerminalWindow::main_event_loop
 //! [UDP]: https://en.wikipedia.org/wiki/User_Datagram_Protocol
 //! [Unix domain sockets]: https://en.wikipedia.org/wiki/Unix_domain_socket
 //! [Web Workers]: https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API
@@ -606,11 +645,11 @@
 //! [`PTY`]: https://man7.org/linux/man-pages/man7/pty.7.html
 //! [`RRTFactory`]: RRTFactory
 //! [`RRTLiveness`]: RRTLiveness
-//! [`RRT`]: RRT
 //! [`RRTState::should_self_terminate()`]: RRTState::should_self_terminate
 //! [`RRTState`]: RRTState
 //! [`RRTWaker`]: RRTWaker
 //! [`RRTWorker`]: RRTWorker
+//! [`RRT`]: RRT
 //! [`Receiver::recv()`]: tokio::sync::broadcast::Receiver::recv
 //! [`SINGLETON`]: crate::terminal_lib_backends::global_input_resource::SINGLETON
 //! [`SQPOLL`]: https://man7.org/linux/man-pages/man2/io_uring_setup.2.html
@@ -618,6 +657,7 @@
 //! [`Waker`]: RRTWaker
 //! [`Worker`]: RRTWorker
 //! [`accept()`]: std::net::TcpListener::accept
+//! [`block_on()`]: tokio::runtime::Runtime::block_on
 //! [`broadcast channel`]: tokio::sync::broadcast
 //! [`broadcast`]: tokio::sync::broadcast
 //! [`const expression`]: RRT#const-expression-vs-const-declaration-vs-static-declaration
@@ -633,6 +673,7 @@
 //! [`io_uring_enter()`]: https://man7.org/linux/man-pages/man2/io_uring_enter.2.html
 //! [`io_uring`]: https://kernel.dk/io_uring.pdf
 //! [`io_uring`: An Alternative Model]: #io_uring-an-alternative-model
+//! [`kill -9`]: https://man7.org/linux/man-pages/man1/kill.1.html
 //! [`kqueue`]: https://man.freebsd.org/cgi/man.cgi?query=kqueue
 //! [`mio::Poll::poll()`]: mio::Poll::poll
 //! [`mio::Poll`]: mio::Poll
@@ -643,7 +684,9 @@
 //! [`poll_once()`]: RRTWorker::poll_once
 //! [`pollable`]: https://man7.org/linux/man-pages/man2/poll.2.html
 //! [`read(2)`]: https://man7.org/linux/man-pages/man2/read.2.html
+//! [`readline_async`]: crate::readline_async::ReadlineAsyncContext::try_new
 //! [`receiver_count()`]: tokio::sync::broadcast::Sender::receiver_count
+//! [`run_worker_loop()`]: run_worker_loop
 //! [`select(2)`]: https://man7.org/linux/man-pages/man2/select.2.html
 //! [`signal-hook`]: signal_hook
 //! [`signalfd(2)`]: https://man7.org/linux/man-pages/man2/signalfd.2.html
@@ -656,34 +699,41 @@
 //! [`tty`]: https://man7.org/linux/man-pages/man4/tty.4.html
 //! [`tx.send()`]: tokio::sync::broadcast::Sender::send
 //! [`wake()`]: RRTWaker::wake
-//! [async executor threads]: tokio::runtime
+//! [async Rust]: https://rust-lang.github.io/async-book/
 //! [async runtime]: tokio::runtime
 //! [async task]: tokio::task
 //! [blocking I/O]: #understanding-blocking-io
+//! [blocking call]: #understanding-blocking-io
 //! [blocks on I/O]: #understanding-blocking-io
 //! [busy-waiting]: https://en.wikipedia.org/wiki/Busy_waiting
 //! [completions]: https://man7.org/linux/man-pages/man7/io_uring.7.html
+//! [design pattern]: https://en.wikipedia.org/wiki/Software_design_pattern
+//! [executor thread in the `tokio` async runtime]: tokio::runtime
+//! [executor threads in the async runtime]: tokio::runtime
 //! [fds]: https://en.wikipedia.org/wiki/File_descriptor
 //! [file descriptors]: https://en.wikipedia.org/wiki/File_descriptor
 //! [inversion of control]: https://en.wikipedia.org/wiki/Inversion_of_control
 //! [kernel]: https://en.wikipedia.org/wiki/Kernel_(operating_system)
 //! [known Darwin limitation]: https://nathancraddock.com/blog/macos-dev-tty-polling/
+//! [raw mode]: crate::core::ansi::terminal_raw_mode
 //! [readiness]: https://man7.org/linux/man-pages/man7/epoll.7.html#DESCRIPTION
 //! [signals]: https://en.wikipedia.org/wiki/Signal_(IPC)
 //! [sockets]: https://man7.org/linux/man-pages/man7/socket.7.html
 //! [system call]: https://man7.org/linux/man-pages/man2/syscalls.2.html
+//! [thread]: https://en.wikipedia.org/wiki/Thread_(computing)
+//! [thread pool]: https://en.wikipedia.org/wiki/Thread_pool
 //! [waker]: RRTWaker
 //! [why user-provided?]: #why-is-rrtwaker-user-provided
 //! [worker]: RRTWorker
 
+mod rrt;
 mod rrt_di_traits;
 mod rrt_liveness;
-mod rrt;
 mod rrt_state;
 mod rrt_subscriber_guard;
 
+pub use rrt::*;
 pub use rrt_di_traits::*;
 pub use rrt_liveness::*;
-pub use rrt::*;
 pub use rrt_state::*;
 pub use rrt_subscriber_guard::*;

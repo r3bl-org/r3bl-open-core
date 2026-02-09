@@ -49,7 +49,7 @@ If you need more control or want to run checks manually:
 
 ```bash
 ./check.fish --check
-# or: cargo check
+# (runs: cargo check)
 ```
 
 Quickly verifies the code compiles without generating artifacts.
@@ -58,7 +58,7 @@ Quickly verifies the code compiles without generating artifacts.
 
 ```bash
 ./check.fish --build
-# or: cargo build
+# (runs: cargo build)
 ```
 
 Ensures production code builds successfully.
@@ -73,7 +73,7 @@ This formats markdown tables and converts inline links to reference-style.
 
 ```bash
 ./check.fish --doc
-# or: cargo doc --no-deps
+# (runs: cargo doc --no-deps)
 ```
 
 Verify there are no documentation build warnings or errors.
@@ -100,7 +100,7 @@ Runs clippy and enforces code style standards.
 
 ```bash
 ./check.fish --test
-# or: cargo test --all-targets && cargo test --doc
+# (runs: cargo test --all-targets && cargo test --doc)
 ```
 
 Runs all tests (unit, integration, doctests).

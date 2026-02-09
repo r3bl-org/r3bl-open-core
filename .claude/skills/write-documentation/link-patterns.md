@@ -13,7 +13,8 @@ When deciding between local intra-doc links vs external URLs, follow this priori
 | 1 | Code in this monorepo | Local path | `[`Foo`]: crate::module::Foo` |
 | 2 | Dependency in Cargo.toml | Crate path | `[`mio`]: mio` |
 | 3 | OS/CS/hardware terminology | External URL | `[`epoll`]: https://man7.org/...` |
-| 4 | Non-dependency crates | docs.rs URL | `[`some_crate`]: https://docs.rs/some_crate` |
+| 4 | Pedagogical/domain terms | Wikipedia URL | `[design pattern]: https://en.wikipedia.org/...` |
+| 5 | Non-dependency crates | docs.rs URL | `[`some_crate`]: https://docs.rs/some_crate` |
 
 **Key principle:** If it's in your Cargo.toml, use local links. This enables:
 - **Offline docs** — works without internet
@@ -184,6 +185,40 @@ pub struct TerminalState {
     // ...
 }
 ```
+
+### Simpler Alternative: Just Make It `pub`
+
+The conditional visibility pattern above is for **modules**. For **functions, structs, and other
+items** inside a private module, there's a simpler approach: just make the item `pub`.
+
+This is safe because of our **private modules with public re-exports** pattern. An item being
+`pub` inside its containing module doesn't mean it escapes into the wild — `mod.rs` is the
+gatekeeper. The `pub use` re-exports in `mod.rs` explicitly control which symbols are visible
+to other modules, docs, and tests.
+
+```rust
+// rrt.rs — internal function, safe to be pub
+/// Runs the worker's poll loop until it returns [`Continuation::Stop`].
+pub fn run_worker_loop<W, E>(...) { ... }
+
+// mod.rs — re-exports control actual visibility
+pub use rrt::*;  // run_worker_loop is now linkable in docs
+```
+
+Now intra-doc links resolve:
+
+```rust
+//! Resources are cleaned up via [RAII] when [`run_worker_loop()`] returns.
+//!
+//! [`run_worker_loop()`]: run_worker_loop
+```
+
+**When to use which approach:**
+
+| Situation | Approach |
+| :-------- | :------- |
+| Private **module** needs doc links | Conditional visibility (`#[cfg(any(test, doc))]`) |
+| Private **item** inside a module | Just make it `pub` — `mod.rs` re-exports are the real gate |
 
 ---
 

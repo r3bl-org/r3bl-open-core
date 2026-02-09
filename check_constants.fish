@@ -6,8 +6,11 @@
 # Performance Optimizations:
 # - tmpfs: Builds to /tmp/roc/target/check (RAM-based, eliminates disk I/O)
 #   Trade-off: Cache lost on reboot, first post-reboot build is cold
-# - CARGO_BUILD_JOBS=<nproc>: Forces max parallelism (benchmarked: 60% faster for cargo doc)
-# - ionice -c2 -n0: Highest I/O priority in best-effort class (no sudo needed)
+# - CARGO_BUILD_JOBS=2/3 of cores: High parallelism without starving interactive processes.
+#   Leaves ~1/3 of cores free for terminal input, IDE, and desktop compositor.
+# - nice -n 10: Lower CPU priority for cargo/rustdoc so interactive processes win scheduling.
+# - ionice -c2 -n0: Highest I/O priority in best-effort class (no sudo needed).
+#   Note: Mainly affects SSD reads (source files); tmpfs writes bypass the block I/O layer.
 
 # Lock/PID file for single-instance enforcement.
 # Uses PID file with process liveness check - simpler and fish-compatible.
@@ -36,15 +39,26 @@ set -g CHECK_TARGET_DIR_DOC_STAGING_QUICK /tmp/roc/target/check-doc-staging-quic
 set -g CHECK_TARGET_DIR_DOC_STAGING_FULL /tmp/roc/target/check-doc-staging-full
 set -g CHECK_LOG_FILE /tmp/roc/check.log
 
-# Force maximum parallelism for cargo operations.
-# Despite cargo's docs saying it defaults to nproc, benchmarks show this makes
-# a huge difference: 4 min vs 10 min for cargo doc (60% speedup).
+# Use 2/3 of available cores for cargo operations (ceil to avoid rounding down too far).
+# Example: 28 cores → 19 jobs (leaves 9 cores free for interactive processes).
+#
+# Why not all cores?
+#   Full parallelism (nproc) makes terminal input visibly laggy. Each rustdoc/rustc
+#   process spawns LLVM codegen threads internally, so N jobs can produce more than N
+#   busy threads. Combined with nice -n 10 (see ionice_wrapper in script_lib.fish),
+#   the remaining 1/3 of cores stay responsive for the terminal, IDE, and compositor.
+#
+# Why not fewer?
+#   Cargo's compilation parallelism has diminishing returns, but the curve doesn't
+#   flatten until well past 2/3. Benchmarks showed ~60% speedup going from cargo's
+#   conservative default to explicit nproc; 2/3 of nproc retains most of that gain.
+#
 # Auto-detect core count: nproc (Linux) or sysctl (macOS).
 switch (uname -s)
     case Darwin
-        set -gx CARGO_BUILD_JOBS (sysctl -n hw.ncpu)
+        set -gx CARGO_BUILD_JOBS (math "ceil("(sysctl -n hw.ncpu)" * 2 / 3)")
     case '*'
-        set -gx CARGO_BUILD_JOBS (nproc)
+        set -gx CARGO_BUILD_JOBS (math "ceil("(nproc)" * 2 / 3)")
 end
 
 # List of config files that affect build artifacts.

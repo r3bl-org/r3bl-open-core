@@ -166,17 +166,16 @@ use std::sync::{Arc, Mutex};
 /// [`Mutex<Option<_>>`]: std::sync::Mutex
 /// [`Vec<u8>`]: std::vec::Vec
 /// [`Mutex<Option<Arc<RRTState<W, E>>>>`]: super::RRTState
-/// [process]: https://en.wikipedia.org/wiki/Process_(computing)
 /// [`Arc::new()`]: std::sync::Arc::new
 /// [`Mutex::new(None)`]: std::sync::Mutex::new
 /// [`Option::replace()`]: std::option::Option::replace
+/// [`RRTState`]: super::RRTState
 /// [`RRTWaker`]: super::RRTWaker
 /// [`RRTWorker`]: super::RRTWorker
 /// [`SINGLETON`]: crate::terminal_lib_backends::global_input_resource::SINGLETON
 /// [`String`]: std::string::String
 /// [`Syscall`]: https://man7.org/linux/man-pages/man2/syscalls.2.html
 /// [`Syscalls`]: https://man7.org/linux/man-pages/man2/syscalls.2.html
-/// [`RRTState`]: super::RRTState
 /// [`const expression`]: #const-expression-vs-const-declaration-vs-static-declaration
 /// [`const expressions`]: #const-expression-vs-const-declaration-vs-static-declaration
 /// [`epoll`]: https://man7.org/linux/man-pages/man7/epoll.7.html
@@ -187,6 +186,7 @@ use std::sync::{Arc, Mutex};
 /// [`subscribe()`]: Self::subscribe
 /// [`syscall`]: https://man7.org/linux/man-pages/man2/syscalls.2.html
 /// [`syscalls`]: https://man7.org/linux/man-pages/man2/syscalls.2.html
+/// [process]: https://en.wikipedia.org/wiki/Process_(computing)
 #[allow(missing_debug_implementations, clippy::type_complexity)]
 pub struct RRT<F>
 where
@@ -220,10 +220,10 @@ where
     ///
     /// # Two Allocation Paths
     ///
-    /// | Condition                | Path          | What Happens                              |
-    /// | ------------------------ | ------------- | ----------------------------------------- |
-    /// | `liveness == Running`    | **Fast path** | Reuse existing thread + [`RRTState`]   |
-    /// | `liveness == Terminated` | **Slow path** | Replace all, spawn new thread             |
+    /// | Condition                | Path          | What Happens                         |
+    /// | ------------------------ | ------------- | ------------------------------------ |
+    /// | `liveness == Running`    | **Fast path** | Reuse existing thread + [`RRTState`] |
+    /// | `liveness == Terminated` | **Slow path** | Replace all, spawn new thread        |
     ///
     /// ## Fast Path (Thread Reuse)
     ///
@@ -409,7 +409,8 @@ where
 /// RAII guard that calls [`mark_terminated()`] when the worker loop exits.
 ///
 /// [`mark_terminated()`]: super::RRTLiveness::mark_terminated
-struct TerminationGuard<W, E>
+#[allow(missing_debug_implementations)]
+pub struct TerminationGuard<W, E>
 where
     W: RRTWaker,
     E: Clone + Send + 'static,
@@ -433,7 +434,7 @@ where
 ///
 /// [`mark_terminated()`]: super::RRTLiveness::mark_terminated
 /// [`subscribe()`]: RRT::subscribe
-fn run_worker_loop<W, E>(
+pub fn run_worker_loop<W, E>(
     mut worker: impl RRTWorker<Event = E>,
     tx: tokio::sync::broadcast::Sender<E>,
     state: Arc<RRTState<W, E>>,

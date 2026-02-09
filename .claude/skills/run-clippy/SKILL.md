@@ -23,7 +23,8 @@ Run these steps in order to enforce code quality and style standards:
 Run clippy to catch linting issues:
 
 ```bash
-cargo clippy --all-targets
+./check.fish --clippy
+# (runs: cargo clippy --all-targets)
 ```
 
 **Review and fix all warnings.** For auto-fixable issues:
@@ -106,7 +107,8 @@ If there are issues, invoke the `write-documentation` skill (or use `/fix-intrad
 If clippy fixes modify behavior or you're unsure about changes:
 
 ```bash
-cargo test --all-targets
+./check.fish --test
+# (runs: cargo test --all-targets)
 ```
 
 Use the Task tool with `subagent_type='test-runner'` if tests fail.
