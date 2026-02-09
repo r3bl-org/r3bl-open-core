@@ -678,12 +678,12 @@
 
 mod rrt_di_traits;
 mod rrt_liveness;
-mod rrt_safe_global_state;
+mod rrt;
 mod rrt_state;
 mod rrt_subscriber_guard;
 
 pub use rrt_di_traits::*;
 pub use rrt_liveness::*;
-pub use rrt_safe_global_state::*;
+pub use rrt::*;
 pub use rrt_state::*;
 pub use rrt_subscriber_guard::*;

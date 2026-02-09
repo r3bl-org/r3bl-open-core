@@ -250,15 +250,15 @@
           "isPinned": false
         },
         {
+          "path": "tui/src/core/resilient_reactor_thread/rrt.rs",
+          "isPinned": false
+        },
+        {
           "path": "tui/src/core/resilient_reactor_thread/rrt_di_traits.rs",
           "isPinned": false
         },
         {
           "path": "tui/src/core/resilient_reactor_thread/rrt_state.rs",
-          "isPinned": false
-        },
-        {
-          "path": "tui/src/core/resilient_reactor_thread/rrt_safe_global_state.rs",
           "isPinned": false
         },
         {
@@ -348,7 +348,7 @@
       ],
       "taskFile": "task/introduce-resilient-reactor-thread.md",
       "createdAt": 1768407329970,
-      "activeTab": "tui/src/core/resilient_reactor_thread/mod.rs"
+      "activeTab": "tui/src/core/resilient_reactor_thread/rrt.rs"
     }
   ]
 }

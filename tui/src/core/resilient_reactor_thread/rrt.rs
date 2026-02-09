@@ -194,7 +194,7 @@ where
     F::Waker: RRTWaker,
     F::Event: Clone + Send + Sync + 'static,
 {
-    inner: Mutex<Option<Arc<RRTState<F::Waker, F::Event>>>>,
+    pub inner: Mutex<Option<Arc<RRTState<F::Waker, F::Event>>>>,
 }
 
 impl<F> RRT<F>
@@ -203,7 +203,7 @@ where
     F::Waker: RRTWaker,
     F::Event: Clone + Send + Sync + 'static,
 {
-    /// Creates a new uninitialized global state.
+    /// Creates a new uninitialized global state.u
     ///
     /// This is a `const fn` so it can be used in `static` declarations.
     /// See [`SINGLETON`] for a real usage example.
