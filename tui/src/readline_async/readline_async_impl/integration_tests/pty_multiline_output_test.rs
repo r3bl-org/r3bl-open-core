@@ -165,7 +165,7 @@
 //! [`SharedWriter`]: crate::SharedWriter
 //! [`OffscreenBuffer::apply_ansi_bytes`]: crate::OffscreenBuffer::apply_ansi_bytes
 
-use crate::{ControlledChild, PtyPair, generate_pty_test};
+use crate::{ControlledChild, PtyPair, drain_pty_and_wait, generate_pty_test};
 use std::{io::{BufRead, BufReader, Write}, time::Duration};
 
 generate_pty_test! {
@@ -288,15 +288,8 @@ fn pty_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
 
     eprintln!("✅ PTY Controller: All lines start at column 1 correctly!");
 
-    // Wait for child to exit.
-    match child.wait() {
-        Ok(status) => {
-            eprintln!("✅ PTY Controller: Controlled process exited: {status:?}");
-        }
-        Err(e) => {
-            panic!("Failed to wait for controlled process: {e}");
-        }
-    }
+    // Drain PTY and wait for child to prevent macOS PTY buffer deadlock.
+    drain_pty_and_wait(buf_reader, pty_pair, &mut child);
 }
 
 /// Captures raw ANSI bytes for later processing with

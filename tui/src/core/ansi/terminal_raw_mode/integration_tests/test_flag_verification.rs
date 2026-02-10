@@ -6,8 +6,8 @@
 //! *something* changed. This test documents the exact contract of raw mode
 //! and catches regressions in flag handling.
 
-use crate::{ControlledChild, PtyPair, RawModeGuard, generate_pty_test, VMIN_RAW_MODE,
-            VTIME_RAW_MODE};
+use crate::{ControlledChild, PtyPair, RawModeGuard, VMIN_RAW_MODE, VTIME_RAW_MODE,
+            drain_pty_and_wait, generate_pty_test};
 use rustix::termios::{self, ControlModes, InputModes, LocalModes, OutputModes, SpecialCodeIndex};
 use std::{io::{BufRead, BufReader, Write},
           time::{Duration, Instant}};
@@ -79,14 +79,8 @@ fn pty_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
     assert!(controlled_started, "Controlled process did not start properly");
     assert!(test_passed, "Test did not report success");
 
-    match child.wait() {
-        Ok(status) => {
-            eprintln!("✅ PTY Controller: Controlled process exited: {status:?}");
-        }
-        Err(e) => {
-            panic!("Failed to wait for controlled process: {e}");
-        }
-    }
+    // Drain PTY and wait for child to prevent macOS PTY buffer deadlock.
+    drain_pty_and_wait(buf_reader, pty_pair, &mut child);
 
     eprintln!("✅ PTY Controller: Flag verification test passed!");
 }

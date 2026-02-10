@@ -133,7 +133,10 @@
 /// You can then:
 /// - Get a reader: `pty_pair.controller().try_clone_reader()`
 /// - Get a writer: `pty_pair.controller_mut().take_writer()`
-/// - Wait for child: `child.wait()`
+/// - Drain PTY and wait: `drain_pty_and_wait(buf_reader, pty_pair, &mut child)` —
+///   prevents macOS PTY buffer deadlocks (see [`drain_pty_and_wait`])
+///
+/// [`drain_pty_and_wait`]: crate::drain_pty_and_wait
 ///
 /// [`generate_pty_test!`]: crate::generate_pty_test
 /// [`integration_tests`]: mod@crate::core::ansi::vt_100_terminal_input_parser::integration_tests

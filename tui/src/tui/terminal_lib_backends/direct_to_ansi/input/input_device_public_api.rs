@@ -627,58 +627,62 @@ impl DirectToAnsiInputDevice {
     /// for the entire lifetime of the program's event loop. Typical usage pattern:
     ///
     /// ```no_run
-    /// # use r3bl_tui::DirectToAnsiInputDevice;
-    /// # use r3bl_tui::InputEvent;
-    /// # use tokio::signal;
+    /// # #[cfg(target_os = "linux")]
+    /// # fn main() -> miette::Result<()> { tokio::runtime::Runtime::new().unwrap().block_on(async_main()) }
+    /// # #[cfg(target_os = "linux")]
+    /// # async fn async_main() -> miette::Result<()> {
+    /// use r3bl_tui::DirectToAnsiInputDevice;
+    /// use r3bl_tui::InputEvent;
+    /// use tokio::signal;
     ///
-    /// #[tokio::main]
-    /// async fn main() -> miette::Result<()> {
-    ///     // Create device once at startup, reuse until program exit
-    ///     let mut input_device = DirectToAnsiInputDevice::new();
-    /// #   let mut sigint = signal::unix::signal(signal::unix::SignalKind::interrupt())
-    /// #       .map_err(|e| miette::miette!("Failed to setup signal handler: {}", e))?;
+    /// // Create device once at startup, reuse until program exit
+    /// let mut input_device = DirectToAnsiInputDevice::new();
+    /// # let mut sigint = signal::unix::signal(signal::unix::SignalKind::interrupt())
+    /// #     .map_err(|e| miette::miette!("Failed to setup signal handler: {}", e))?;
     ///
-    ///     // Main event loop - handle multiple concurrent event sources with tokio::select!
-    ///     loop {
-    ///         tokio::select! {
-    ///             // Handle terminal input events
-    ///             input_event = input_device.next() => {
-    ///                 match input_event {
-    ///                     Some(InputEvent::Keyboard(key_press)) => {
-    ///                         // Handle keyboard input
-    ///                     }
-    ///                     Some(InputEvent::Mouse(mouse_input)) => {
-    ///                         // Handle mouse input
-    ///                     }
-    ///                     Some(InputEvent::Resize(size)) => {
-    ///                         // Handle terminal resize
-    ///                     }
-    ///                     Some(InputEvent::BracketedPaste(text)) => {
-    ///                         // Handle bracketed paste
-    ///                     }
-    ///                     Some(InputEvent::Focus(_)) => {
-    ///                         // Handle focus events
-    ///                     }
-    ///                     Some(_) => {
-    ///                         // Handle future/unknown event types
-    ///                     }
-    ///                     None => {
-    ///                         // stdin closed (EOF) - signal program to exit
-    ///                         break;
-    ///                     }
+    /// // Main event loop - handle multiple concurrent event sources with tokio::select!
+    /// loop {
+    ///     tokio::select! {
+    ///         // Handle terminal input events
+    ///         input_event = input_device.next() => {
+    ///             match input_event {
+    ///                 Some(InputEvent::Keyboard(key_press)) => {
+    ///                     // Handle keyboard input
+    ///                 }
+    ///                 Some(InputEvent::Mouse(mouse_input)) => {
+    ///                     // Handle mouse input
+    ///                 }
+    ///                 Some(InputEvent::Resize(size)) => {
+    ///                     // Handle terminal resize
+    ///                 }
+    ///                 Some(InputEvent::BracketedPaste(text)) => {
+    ///                     // Handle bracketed paste
+    ///                 }
+    ///                 Some(InputEvent::Focus(_)) => {
+    ///                     // Handle focus events
+    ///                 }
+    ///                 Some(_) => {
+    ///                     // Handle future/unknown event types
+    ///                 }
+    ///                 None => {
+    ///                     // stdin closed (EOF) - signal program to exit
+    ///                     break;
     ///                 }
     ///             }
-    ///             // Handle system signals (e.g., Ctrl+C)
-    ///             _ = sigint.recv() => {
-    /// #               eprintln!("Received SIGINT, shutting down...");
-    /// #               break;
-    ///             }
-    ///             // Handle other concurrent tasks as needed
-    ///             // _ = some_background_task => { ... }
     ///         }
+    ///         // Handle system signals (e.g., Ctrl+C)
+    ///         _ = sigint.recv() => {
+    /// #           eprintln!("Received SIGINT, shutting down...");
+    /// #           break;
+    ///         }
+    ///         // Handle other concurrent tasks as needed
+    ///         // _ = some_background_task => { ... }
     ///     }
-    /// #   Ok(())
     /// }
+    /// # Ok(())
+    /// # }
+    /// # #[cfg(not(target_os = "linux"))]
+    /// # fn main() {}
     /// ```
     ///
     /// **Key points:**

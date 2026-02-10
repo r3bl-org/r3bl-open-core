@@ -191,7 +191,7 @@
 //! [`SharedWriter`]: crate::SharedWriter
 //! [`OffscreenBuffer::apply_ansi_bytes`]: crate::OffscreenBuffer::apply_ansi_bytes
 use crate::{ControlledChild, LineStateControlSignal, OffscreenBuffer, PtyPair,
-            SharedWriter, generate_pty_test, height,
+            SharedWriter, drain_pty_and_wait, generate_pty_test, height,
             readline_async::readline_async_impl::LineState, width};
 use std::{io::{BufRead, BufReader, Write}, time::Duration};
 
@@ -298,15 +298,8 @@ fn pty_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
 
     eprintln!("✅ PTY Controller: No blank line detected before prompt!");
 
-    // Wait for child to exit.
-    match child.wait() {
-        Ok(status) => {
-            eprintln!("✅ PTY Controller: Controlled process exited: {status:?}");
-        }
-        Err(e) => {
-            panic!("Failed to wait for controlled process: {e}");
-        }
-    }
+    // Drain PTY and wait for child to prevent macOS PTY buffer deadlock.
+    drain_pty_and_wait(buf_reader, pty_pair, &mut child);
 }
 
 /// Captures raw ANSI bytes for later processing with
