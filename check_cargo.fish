@@ -25,12 +25,12 @@ end
 
 function check_cargo_test
     set -lx CARGO_TARGET_DIR $CHECK_TARGET_DIR
-    ionice_wrapper cargo test --all-targets -q
+    ionice_wrapper timeout $CHECK_TEST_TIMEOUT_SECS cargo test --all-targets -q
 end
 
 function check_doctests
     set -lx CARGO_TARGET_DIR $CHECK_TARGET_DIR
-    ionice_wrapper cargo test --doc -q
+    ionice_wrapper timeout $CHECK_TEST_TIMEOUT_SECS cargo test --doc -q
 end
 
 # Quick doc check without dependencies (for one-off --doc mode).

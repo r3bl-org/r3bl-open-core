@@ -81,6 +81,23 @@ function run_check_with_recovery
         return 0
     end
 
+    # Check for timeout (coreutils `timeout` returns exit code 124 when it kills the child).
+    # This is a definitive diagnosis — no need to parse output. Not recoverable (retrying
+    # won't help if tests hang), so return 1 (failure), not 2 (recoverable).
+    if test $exit_code -eq $TIMEOUT_EXIT_CODE
+        set_color red
+        echo "["(timestamp)"] ⏱️  $check_name timed out after $duration_str (limit: "$CHECK_TEST_TIMEOUT_SECS"s)"
+        set_color normal
+
+        # Log timeout to file
+        if set -q CHECK_LOG_FILE; and test -n "$CHECK_LOG_FILE"
+            echo "["(timestamp)"] ⏱️  $check_name timed out after $duration_str (limit: "$CHECK_TEST_TIMEOUT_SECS"s)" >> $CHECK_LOG_FILE
+        end
+
+        command rm -f $temp_output
+        return 1
+    end
+
     # Check for ICE (Internal Compiler Error)
     if detect_ice_from_file $exit_code $temp_output
         set_color red
