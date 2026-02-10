@@ -213,12 +213,15 @@
 //! ```
 //!
 //! ### Interactive session (send input to process):
-//! ```rust
+//! ```no_run
+//! # #[cfg(not(unix))]
+//! # fn main() {}
+//! # #[cfg(unix)]
+//! # #[tokio::main]
+//! # async fn main() -> Result<(), Box<dyn std::error::Error>> {
 //! use r3bl_tui::{PtyCommandBuilder, PtyReadWriteOutputEvent, PtyInputEvent, ControlSequence, CursorKeyMode};
 //! use portable_pty::PtySize;
 //!
-//! # #[tokio::main]
-//! # async fn main() -> Result<(), Box<dyn std::error::Error>> {
 //! let mut session = PtyCommandBuilder::new("cat")
 //!     .spawn_read_write(PtySize { rows: 24, cols: 80, pixel_width: 0, pixel_height: 0 })?;
 //!

@@ -321,13 +321,15 @@ fn main() {}";
         let expected_path = temp_dir.path().join("expected.rs");
         fs::write(&expected_path, expected).unwrap();
 
-        // Use diff for comparison - clearer than assert_eq for large files
-        let diff_output = std::process::Command::new("diff")
-            .args(["-u", "--color=never"])
+        // Use `git diff --no-index` for comparison — clearer than assert_eq
+        // for large files, and cross-platform (unlike `diff` which is not
+        // on the default PATH on Windows).
+        let diff_output = std::process::Command::new("git")
+            .args(["diff", "--no-index", "--color=never"])
             .arg(&expected_path)
             .arg(&test_file)
             .output()
-            .expect("Failed to run diff");
+            .expect("Failed to run git diff");
 
         if !diff_output.status.success() {
             eprintln!(
@@ -750,13 +752,15 @@ fn main() {}";
         let expected_path = temp_dir.path().join("expected.rs");
         fs::write(&expected_path, expected).unwrap();
 
-        // Use diff for comparison - clearer than assert_eq for large files
-        let diff_output = std::process::Command::new("diff")
-            .args(["-u", "--color=never"])
+        // Use `git diff --no-index` for comparison — clearer than assert_eq
+        // for large files, and cross-platform (unlike `diff` which is not
+        // on the default PATH on Windows).
+        let diff_output = std::process::Command::new("git")
+            .args(["diff", "--no-index", "--color=never"])
             .arg(&expected_path)
             .arg(&test_file)
             .output()
-            .expect("Failed to run diff");
+            .expect("Failed to run git diff");
 
         if !diff_output.status.success() {
             eprintln!(

@@ -165,8 +165,8 @@
 //! [`SharedWriter`]: crate::SharedWriter
 //! [`OffscreenBuffer::apply_ansi_bytes`]: crate::OffscreenBuffer::apply_ansi_bytes
 
-use crate::{ControlledChild, PtyPair, drain_pty_and_wait, generate_pty_test};
-use std::{io::{BufRead, BufReader, Write}, time::Duration};
+use crate::{ControlledChild, PtyPair, generate_pty_test, read_lines_and_drain};
+use std::{io::Write, time::Duration};
 
 generate_pty_test! {
     /// PTY-based integration test: multi-line output starts at column 1.
@@ -186,54 +186,24 @@ generate_pty_test! {
 fn pty_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
     eprintln!("🚀 PTY Controller: Starting multi-line output column test...");
 
-    let reader = pty_pair
-        .controller()
-        .try_clone_reader()
-        .expect("Failed to clone reader");
-
-    let mut buf_reader = BufReader::new(reader);
-
-    eprintln!("📝 PTY Controller: Waiting for controlled process output...");
-
-    // Collect all output lines until we see CONTROLLED_DONE.
-    let mut output_lines: Vec<String> = vec![];
-    let mut controlled_done = false;
-
-    // Blocking reads work reliably because controlled process responds immediately.
-    loop {
-        let mut line = String::new();
-        match buf_reader.read_line(&mut line) {
-            Ok(0) => {
-                eprintln!("📝 PTY Controller: EOF reached");
-                break;
-            }
-            Ok(_) => {
-                let trimmed = line.trim();
-                eprintln!("  ← Controlled output: {trimmed:?}");
-
-                // Skip debug lines from the test framework.
-                if trimmed.contains("🔍")
-                    || trimmed.contains("TEST_RUNNING")
-                    || trimmed.contains("CONTROLLED_STARTING")
-                {
-                    continue;
-                }
-
-                if trimmed.contains("CONTROLLED_DONE") {
-                    controlled_done = true;
-                    break;
-                }
-
-                output_lines.push(trimmed.to_string());
-            }
-            Err(e) => panic!("Read error: {e}"),
-        }
-    }
+    let result = read_lines_and_drain(
+        pty_pair,
+        &mut child,
+        "CONTROLLED_DONE",
+        |trimmed| {
+            // Skip debug lines from the test framework.
+            !trimmed.contains("🔍")
+                && !trimmed.contains("TEST_RUNNING")
+                && !trimmed.contains("CONTROLLED_STARTING")
+        },
+    );
 
     assert!(
-        controlled_done,
+        result.found_sentinel,
         "Controlled process never signaled CONTROLLED_DONE"
     );
+
+    let output_lines = &result.lines;
 
     // Analyze the output for lines that don't start at column 1.
     // If lines don't start at column 1, they would be concatenated with the previous
@@ -278,7 +248,7 @@ fn pty_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
 
     // Also check we didn't get concatenated lines (a sign that CR was missing).
     // For example: "Line 1: firstLine 2: second" would indicate missing CR.
-    for line in &output_lines {
+    for line in output_lines {
         let line_count = line.matches("Line ").count();
         assert!(
             line_count <= 1,
@@ -287,9 +257,6 @@ fn pty_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
     }
 
     eprintln!("✅ PTY Controller: All lines start at column 1 correctly!");
-
-    // Drain PTY and wait for child to prevent macOS PTY buffer deadlock.
-    drain_pty_and_wait(buf_reader, pty_pair, &mut child);
 }
 
 /// Captures raw ANSI bytes for later processing with

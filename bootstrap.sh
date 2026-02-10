@@ -20,6 +20,7 @@
 #   Shell & Development:
 #     - fish                    Shell used by run.fish build scripts
 #     - fzf                     Fuzzy finder (used by run.fish commands)
+#     - coreutils (macOS)       GNU timeout needed by check.fish test timeouts
 #     - htop                    Used in PTY integration tests
 #     - screen, tmux            Terminal multiplexers for testing
 #     - expect                  Scripted terminal automation for benchmarks
@@ -96,6 +97,7 @@ install_shell_tools() {
         else
             install_if_missing "fish" "${PKG_MGR:-brew install} fish"
             install_if_missing "fzf" "${PKG_MGR:-brew install} fzf"
+            install_if_missing "gtimeout" "${PKG_MGR:-brew install} coreutils"
         fi
     elif [[ -n "$PKG_MGR" ]]; then
         install_if_missing "fish" "$PKG_MGR fish"

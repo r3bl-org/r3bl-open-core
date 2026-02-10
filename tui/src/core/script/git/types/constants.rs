@@ -29,6 +29,7 @@ pub mod git_command_args {
     pub const GIT_ARG_FORMAT: &str = "--format";
     pub const GIT_ARG_REFNAME_SHORT: &str = "%(refname:short)";
     pub const GIT_ARG_CREATE_BRANCH: &str = "-b";
+    pub const GIT_ARG_INIT_BRANCH: &str = "-b";
     pub const GIT_ARG_DELETE_FORCE: &str = "-D";
     pub const GIT_ARG_NAME_ONLY: &str = "--name-only";
     pub const GIT_ARG_HEAD: &str = "HEAD";

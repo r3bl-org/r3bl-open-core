@@ -66,8 +66,18 @@ mod tests {
         let pty_size = PtySize::default();
         let (_controller, controlled) = create_pty_pair(pty_size).unwrap();
 
-        let mut command = PtyCommand::new("echo");
-        command.arg("test");
+        #[cfg(unix)]
+        let command = {
+            let mut cmd = PtyCommand::new("echo");
+            cmd.arg("test");
+            cmd
+        };
+        #[cfg(windows)]
+        let command = {
+            let mut cmd = PtyCommand::new("cmd");
+            cmd.args(["/c", "echo", "test"]);
+            cmd
+        };
 
         let result = spawn_command_in_pty(&controlled, command);
         assert!(result.is_ok());

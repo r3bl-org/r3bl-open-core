@@ -491,6 +491,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_branch_ops_in_isolated_process() {
+        crate::suppress_wer_dialogs();
         if std::env::var(TEST_ENV_ISOLATED_TEST_RUNNER).is_ok() {
             if let Err(err) = run_branch_ops_tests().await {
                 eprintln!("Test failed with error: {err}");
@@ -499,8 +500,7 @@ mod tests {
             std::process::exit(0);
         }
 
-        let current_exe = std::env::current_exe().unwrap();
-        let mut cmd = std::process::Command::new(&current_exe);
+        let mut cmd = crate::new_isolated_test_command();
         cmd.env(TEST_ENV_ISOLATED_TEST_RUNNER, "1")
             .env("RUST_BACKTRACE", "1")
             .args([

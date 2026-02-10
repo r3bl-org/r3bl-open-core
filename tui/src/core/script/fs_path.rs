@@ -266,6 +266,20 @@ mod tests {
     #[cfg(unix)]
     use std::os::unix::fs::PermissionsExt;
 
+    /// On Windows, `canonicalize()` returns paths with the `\\?\` extended-length
+    /// prefix, but `env::current_dir()` does not. Strip the prefix for comparison.
+    /// On non-Windows platforms, this is a no-op.
+    fn strip_extended_length_prefix(path: PathBuf) -> PathBuf {
+        #[cfg(windows)]
+        {
+            let s = path.to_string_lossy();
+            if let Some(stripped) = s.strip_prefix(r"\\?\") {
+                return PathBuf::from(stripped);
+            }
+        }
+        path
+    }
+
     fn test_try_directory_exists_not_found_error() {
         with_saved_pwd!({
             // Create the root temp dir.
@@ -331,6 +345,10 @@ mod tests {
         });
     }
 
+    // On Windows, null bytes in paths are handled differently than on Unix.
+    // Windows may truncate the path at the null byte rather than returning
+    // InvalidInput, so this test only applies on Unix.
+    #[cfg(unix)]
     fn test_try_file_exists_invalid_name_error() {
         with_saved_pwd!({
             // Create the root temp dir.
@@ -388,7 +406,9 @@ mod tests {
             // the canonical path (resolving symlinks). On macOS, /var is a symlink to
             // /private/var, so temp_dir() returns /var/... but current_dir() returns
             // /private/var/...
-            let new_dir_canonical = new_dir.canonicalize().unwrap();
+            // On Windows, strip the `\\?\` extended-length path prefix.
+            let new_dir_canonical =
+                strip_extended_length_prefix(new_dir.canonicalize().unwrap());
             assert_eq!(pwd, new_dir_canonical);
         });
     }
@@ -543,14 +563,18 @@ mod tests {
             try_cd(&new_tmp_dir).unwrap();
             // Canonicalize for comparison because env::current_dir() returns the
             // canonical path. On macOS, /var is a symlink to /private/var.
+            // On Windows, strip the `\\?\` extended-length path prefix.
             assert_eq!(
                 env::current_dir().unwrap(),
-                new_tmp_dir.canonicalize().unwrap()
+                strip_extended_length_prefix(new_tmp_dir.canonicalize().unwrap())
             );
 
             // Change back to the original directory.
             try_cd(&root).unwrap();
-            assert_eq!(env::current_dir().unwrap(), root.canonicalize().unwrap());
+            assert_eq!(
+                env::current_dir().unwrap(),
+                strip_extended_length_prefix(root.canonicalize().unwrap())
+            );
         });
     }
 
@@ -577,10 +601,18 @@ mod tests {
             // Change back to the original directory.
             try_cd(&root).unwrap();
             // Canonicalize for comparison (macOS /var -> /private/var symlink).
-            assert_eq!(env::current_dir().unwrap(), root.canonicalize().unwrap());
+            // On Windows, strip the `\\?\` extended-length path prefix.
+            assert_eq!(
+                env::current_dir().unwrap(),
+                strip_extended_length_prefix(root.canonicalize().unwrap())
+            );
         });
     }
 
+    // On Windows, null bytes in paths are handled differently than on Unix.
+    // Windows may truncate the path at the null byte rather than returning
+    // InvalidInput, so this test only applies on Unix.
+    #[cfg(unix)]
     fn test_try_change_directory_invalid_name() {
         with_saved_pwd!({
             use crate::try_cd;
@@ -604,7 +636,11 @@ mod tests {
             // Change back to the original directory.
             try_cd(&root).unwrap();
             // Canonicalize for comparison (macOS /var -> /private/var symlink).
-            assert_eq!(env::current_dir().unwrap(), root.canonicalize().unwrap());
+            // On Windows, strip the `\\?\` extended-length path prefix.
+            assert_eq!(
+                env::current_dir().unwrap(),
+                strip_extended_length_prefix(root.canonicalize().unwrap())
+            );
         });
     }
 
@@ -625,6 +661,7 @@ mod tests {
         #[cfg(unix)]
         test_try_directory_exists_permissions_errors();
         test_try_file_exists();
+        #[cfg(unix)]
         test_try_file_exists_invalid_name_error();
         #[cfg(unix)]
         test_try_file_exists_permissions_errors();
@@ -637,6 +674,7 @@ mod tests {
         test_try_change_directory_permissions_errors();
         test_try_change_directory_happy_path();
         test_try_change_directory_non_existent();
+        #[cfg(unix)]
         test_try_change_directory_invalid_name();
     }
 
@@ -655,6 +693,7 @@ mod tests {
     /// tests.
     #[test]
     fn test_all_fs_path_functions_in_isolated_process() {
+        crate::suppress_wer_dialogs();
         if std::env::var("ISOLATED_TEST_RUNNER").is_ok() {
             // This is the actual test running in the isolated process.
             run_all_fs_path_functions_sequentially_impl();
@@ -663,8 +702,7 @@ mod tests {
         }
 
         // This is the test coordinator - spawn the actual test in a new process.
-        let current_exe = std::env::current_exe().unwrap();
-        let mut cmd = std::process::Command::new(&current_exe);
+        let mut cmd = crate::new_isolated_test_command();
         cmd.env("ISOLATED_TEST_RUNNER", "1")
             .env("RUST_BACKTRACE", "1") // Get better error info
             .args([

@@ -109,6 +109,7 @@ mod tests {
         assert_eq!(result, expected);
     }
 
+    #[cfg(unix)]
     #[test]
     fn test_format_file_hyperlink_absolute_path() {
         let path = Path::new("/home/user/document.txt");
@@ -121,6 +122,20 @@ mod tests {
         assert!(result.ends_with("\x1b]8;;\x07"));
     }
 
+    #[cfg(windows)]
+    #[test]
+    fn test_format_file_hyperlink_absolute_path() {
+        let path = Path::new(r"C:\Users\test\document.txt");
+        let result = format_file_hyperlink(path);
+
+        // Should contain file:// URI with forward slashes and display text.
+        assert!(result.contains("file://C:\\Users\\test\\document.txt"));
+        assert!(result.contains(r"C:\Users\test\document.txt"));
+        assert!(result.starts_with("\x1b]8;;"));
+        assert!(result.ends_with("\x1b]8;;\x07"));
+    }
+
+    #[cfg(unix)]
     #[test]
     fn test_format_file_hyperlink_with_spaces() {
         let path = Path::new("/home/user/my document.txt");
@@ -132,6 +147,19 @@ mod tests {
         assert!(result.contains("/home/user/my document.txt"));
     }
 
+    #[cfg(windows)]
+    #[test]
+    fn test_format_file_hyperlink_with_spaces() {
+        let path = Path::new(r"C:\Users\test\my document.txt");
+        let result = format_file_hyperlink(path);
+
+        // URI should have URL-encoded spaces.
+        assert!(result.contains("my%20document.txt"));
+        // Display text should keep original spaces.
+        assert!(result.contains("my document.txt"));
+    }
+
+    #[cfg(unix)]
     #[test]
     fn test_format_file_hyperlink_with_special_chars() {
         let path = Path::new("/home/user/file#with&special%chars?.txt");
@@ -143,6 +171,18 @@ mod tests {
         );
         // Display text should keep original characters.
         assert!(result.contains("/home/user/file#with&special%chars?.txt"));
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn test_format_file_hyperlink_with_special_chars() {
+        let path = Path::new(r"C:\Users\test\file#with&special%chars?.txt");
+        let result = format_file_hyperlink(path);
+
+        // URI should have URL-encoded special characters.
+        assert!(result.contains("file%23with%26special%25chars%3F.txt"));
+        // Display text should keep original characters.
+        assert!(result.contains("file#with&special%chars?.txt"));
     }
 
     #[test]
@@ -167,7 +207,10 @@ mod tests {
         ];
 
         for (input_char, expected_encoding) in test_cases {
+            #[cfg(unix)]
             let path_str = format!("/home/user/file{input_char}test.txt");
+            #[cfg(windows)]
+            let path_str = format!("C:\\Users\\test\\file{input_char}test.txt");
             let path = Path::new(&path_str);
             let result = format_file_hyperlink(path);
 

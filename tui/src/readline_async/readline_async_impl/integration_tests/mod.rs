@@ -50,8 +50,11 @@ pub mod pty_ctrl_navigation_test;
 pub mod pty_alt_navigation_test;
 #[cfg(any(all(unix, doc), all(target_os = "linux", test)))]
 pub mod pty_alt_kill_test;
-// These PTY tests use only portable_pty (no DirectToAnsiInputDevice) and work cross-platform.
-#[cfg(any(test, doc))]
+// These PTY tests use portable_pty's generate_pty_test! macro which spawns a
+// child process in a PTY. The read_lines_and_drain() helper handles ConPTY's
+// lack of reliable EOF on Windows via a polling/timeout strategy.
+// Doc builds stay Unix-only to avoid broken intra-doc links on Windows.
+#[cfg(any(all(unix, doc), test))]
 pub mod pty_shared_writer_no_blank_line_test;
-#[cfg(any(test, doc))]
+#[cfg(any(all(unix, doc), test))]
 pub mod pty_multiline_output_test;

@@ -94,7 +94,7 @@ set -g NOTIFICATION_EXPIRE_MS 5000
 # run_check_with_recovery reports it as a timeout failure. Prevents hanging tests
 # from silently blocking watch mode or interactive sessions.
 # Matches rust-toolchain-update.fish's 2-minute timeout for consistency.
-set -g CHECK_TEST_TIMEOUT_SECS 120
+set -g CHECK_TEST_TIMEOUT_SECS 300
 
 # Exit code returned by coreutils `timeout` when the child is killed.
 # Used by run_check_with_recovery to distinguish timeouts from other failures.

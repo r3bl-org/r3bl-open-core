@@ -266,9 +266,11 @@ mod tests {
         debounce.sleep_until().await;
         let elapsed = start.elapsed();
 
-        // Should take approximately 10ms (allow some tolerance)
+        // Should take approximately 10ms. Upper bound is generous because
+        // Windows timer resolution (~15.6ms) and tokio scheduling jitter
+        // under load can push actual sleep times well past 20ms.
         assert!(
-            elapsed >= Duration::from_millis(8) && elapsed <= Duration::from_millis(20),
+            elapsed >= Duration::from_millis(8) && elapsed <= Duration::from_millis(50),
             "Expected ~10ms, got {elapsed:?}"
         );
     }

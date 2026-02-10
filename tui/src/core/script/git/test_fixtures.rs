@@ -3,12 +3,11 @@
 //! Shared test infrastructure for git module tests.
 
 use crate::{InlineString, Run, TempDir, command, ok,
-            script::git::types::{git_command_names::{GIT_CMD_ADD, GIT_CMD_COMMIT,
+            script::git::types::{git_command_args::GIT_ARG_INIT_BRANCH,
+                                 git_command_names::{GIT_CMD_ADD, GIT_CMD_COMMIT,
                                                      GIT_CMD_CONFIG, GIT_CMD_INIT,
                                                      GIT_PROGRAM},
                                  git_config_keys::{GIT_CONFIG_COMMIT_GPGSIGN,
-                                                   GIT_CONFIG_FLAG_LOCAL,
-                                                   GIT_CONFIG_INIT_DEFAULT_BRANCH,
                                                    GIT_CONFIG_USER_EMAIL,
                                                    GIT_CONFIG_USER_NAME},
                                  test_config::{TEST_DEFAULT_BRANCH, TEST_EMAIL,
@@ -36,13 +35,10 @@ pub async fn helper_setup_git_repo_with_commit() -> miette::Result<(
 )> {
     let (tmp_dir_root, git_folder) = try_create_temp_dir_and_cd!("git_test_repo");
 
-    // First run git init.
-    command!(program => GIT_PROGRAM, args => GIT_CMD_INIT)
-        .run()
-        .await?;
-
-    // Configure initial branch name to be `main`.
-    command!(program => GIT_PROGRAM, args => GIT_CMD_CONFIG, GIT_CONFIG_FLAG_LOCAL, GIT_CONFIG_INIT_DEFAULT_BRANCH, TEST_DEFAULT_BRANCH)
+    // First run git init with `-b main` to set the default branch name.
+    // Using `-b` directly (available since git 2.28) ensures the branch is
+    // named `main` regardless of the user's global `init.defaultBranch` config.
+    command!(program => GIT_PROGRAM, args => GIT_CMD_INIT, GIT_ARG_INIT_BRANCH, TEST_DEFAULT_BRANCH)
         .run()
         .await?;
 

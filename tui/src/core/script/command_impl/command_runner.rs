@@ -362,6 +362,7 @@ mod tests_command_runner {
         println!("Command: {cmd:?}");
     }
 
+    #[cfg(unix)]
     #[tokio::test]
     async fn test_run() {
         let output = command!(
@@ -387,6 +388,43 @@ mod tests_command_runner {
         assert_eq!(String::from_utf8_lossy(&output), "Hello, world!\n");
     }
 
+    /// Windows variant: `echo` is a shell builtin (no `echo.exe`), so we
+    /// invoke it via `cmd /c echo`. The output includes a trailing `\r\n`.
+    ///
+    /// **Important**: Each word must be a separate arg to avoid Rust's MSVC
+    /// command-line quoting. A single `"Hello, world!"` arg gets quoted as
+    /// `"Hello, world!"` on the command line, and cmd.exe's `echo` includes
+    /// those quotes in its output. Splitting into `"Hello,"` and `"world!"`
+    /// avoids quoting since neither contains spaces.
+    #[cfg(windows)]
+    #[tokio::test]
+    async fn test_run() {
+        let output = command!(
+            program => "cmd",
+            args => "/c", "echo", "Hello,", "world!",
+        )
+        .run()
+        .await
+        .unwrap();
+
+        assert_eq!(
+            String::from_utf8_lossy(&output).trim(),
+            "Hello, world!"
+        );
+
+        let output = command!(
+            program => "cmd",
+            args => "/c", "echo", "Hello,", "world!",
+        )
+        .run_interactive()
+        .await
+        .unwrap();
+        assert_eq!(
+            String::from_utf8_lossy(&output).trim(),
+            "Hello, world!"
+        );
+    }
+
     #[tokio::test]
     async fn test_run_invalid_command() {
         let result = command!(
@@ -402,6 +440,10 @@ mod tests_command_runner {
         }
     }
 
+    /// This test pipes `echo` into `bash` — both are Unix executables (on
+    /// Windows, `echo` is a shell builtin and `bash` is not in the default
+    /// PATH).
+    #[cfg(unix)]
     #[tokio::test]
     async fn test_pipe_command_two_not_interactive_terminal() {
         let mut command_one = command!(

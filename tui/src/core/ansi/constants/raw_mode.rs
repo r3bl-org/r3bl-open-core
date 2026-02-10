@@ -57,6 +57,10 @@
 //! ## Example Usage
 //!
 //! ```no_run
+//! # #[cfg(not(unix))]
+//! # fn main() {}
+//! # #[cfg(unix)]
+//! # fn main() {
 //! use rustix::termios::{self, SpecialCodeIndex};
 //! use std::io::stdin;
 //! use r3bl_tui::{VMIN_RAW_MODE, VTIME_RAW_MODE};
@@ -70,6 +74,7 @@
 //!
 //! // Apply settings
 //! termios::tcsetattr(&stdin(), termios::OptionalActions::Now, &termios).unwrap();
+//! # }
 //! ```
 //!
 //! ## VMIN/VTIME Interaction Matrix

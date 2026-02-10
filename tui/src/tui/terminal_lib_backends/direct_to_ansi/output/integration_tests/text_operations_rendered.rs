@@ -358,6 +358,7 @@ fn run_all_rendered_tests_sequentially() {
 /// cannot be affected by other tests.
 #[test]
 fn test_all_rendered_output_in_isolated_process() {
+    crate::suppress_wer_dialogs();
     if std::env::var("ISOLATED_RENDERED_TEST").is_ok() {
         // This is the actual test running in the isolated process.
         run_all_rendered_tests_sequentially();
@@ -366,8 +367,7 @@ fn test_all_rendered_output_in_isolated_process() {
     }
 
     // This is the test coordinator - spawn the actual test in a new process.
-    let current_exe = std::env::current_exe().unwrap();
-    let mut cmd = std::process::Command::new(&current_exe);
+    let mut cmd = crate::new_isolated_test_command();
     cmd.env("ISOLATED_RENDERED_TEST", "1")
         .env("RUST_BACKTRACE", "1") // Get better error info.
         .args([

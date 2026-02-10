@@ -33,7 +33,7 @@ impl TempDir {
 pub fn try_create_temp_dir() -> miette::Result<TempDir> {
     let root = std::env::temp_dir();
     let new_temp_dir = root.join(generate_friendly_random_id().as_str());
-    std::fs::create_dir(&new_temp_dir).into_diagnostic()?;
+    std::fs::create_dir_all(&new_temp_dir).into_diagnostic()?;
     Ok(TempDir {
         inner: new_temp_dir,
     })
@@ -160,6 +160,19 @@ mod tests_temp_dir {
     use super::*;
     use crate::{fg_lizard_green, ok};
 
+    /// On Windows, `remove_dir_all()` may return before the OS fully removes the
+    /// directory (due to antivirus, indexer, or "delete on close" semantics). This
+    /// helper retries the existence check with brief sleeps.
+    #[cfg(windows)]
+    fn wait_for_deletion(path: &std::path::Path) {
+        for _ in 0..10 {
+            if !path.exists() {
+                break;
+            }
+            std::thread::sleep(std::time::Duration::from_millis(50));
+        }
+    }
+
     #[test]
     #[allow(clippy::missing_errors_doc)]
     fn test_macro_try_create_temp_dir_and_cd() -> miette::Result<()> {
@@ -180,9 +193,18 @@ mod tests_temp_dir {
 
             let copy_of_path = temp_dir_root.inner.clone();
 
+            // On Windows, `remove_dir_all` fails if CWD is inside the directory
+            // being deleted. Move CWD to a safe location before dropping.
+            #[cfg(windows)]
+            std::env::set_current_dir(std::env::temp_dir()).ok();
+
             drop(temp_dir_root);
 
+            #[cfg(windows)]
+            wait_for_deletion(&copy_of_path);
             assert!(!copy_of_path.exists());
+            #[cfg(windows)]
+            wait_for_deletion(&sub_dir);
             assert!(!sub_dir.exists());
         }
 
@@ -198,8 +220,14 @@ mod tests_temp_dir {
 
             let copy_of_path = temp_dir_root.inner.clone();
 
+            // On Windows, `remove_dir_all` fails if CWD is inside the directory.
+            #[cfg(windows)]
+            std::env::set_current_dir(std::env::temp_dir()).ok();
+
             drop(temp_dir_root);
 
+            #[cfg(windows)]
+            wait_for_deletion(&copy_of_path);
             assert!(!copy_of_path.exists());
         }
 
@@ -245,6 +273,8 @@ mod tests_temp_dir {
 
         drop(temp_dir);
 
+        #[cfg(windows)]
+        wait_for_deletion(&copy_of_path);
         assert!(!copy_of_path.exists());
     }
 }

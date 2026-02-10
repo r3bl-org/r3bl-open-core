@@ -191,9 +191,9 @@
 //! [`SharedWriter`]: crate::SharedWriter
 //! [`OffscreenBuffer::apply_ansi_bytes`]: crate::OffscreenBuffer::apply_ansi_bytes
 use crate::{ControlledChild, LineStateControlSignal, OffscreenBuffer, PtyPair,
-            SharedWriter, drain_pty_and_wait, generate_pty_test, height,
+            SharedWriter, generate_pty_test, height, read_lines_and_drain,
             readline_async::readline_async_impl::LineState, width};
-use std::{io::{BufRead, BufReader, Write}, time::Duration};
+use std::{io::Write, time::Duration};
 
 generate_pty_test! {
     /// PTY-based integration test: no extra blank line before prompt.
@@ -213,54 +213,24 @@ generate_pty_test! {
 fn pty_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
     eprintln!("🚀 PTY Controller: Starting SharedWriter blank line test...");
 
-    let reader = pty_pair
-        .controller()
-        .try_clone_reader()
-        .expect("Failed to clone reader");
-
-    let mut buf_reader = BufReader::new(reader);
-
-    eprintln!("📝 PTY Controller: Waiting for controlled process output...");
-
-    // Collect all output lines until we see CONTROLLED_DONE.
-    let mut output_lines: Vec<String> = vec![];
-    let mut controlled_done = false;
-
-    // Blocking reads work reliably because controlled process responds immediately.
-    loop {
-        let mut line = String::new();
-        match buf_reader.read_line(&mut line) {
-            Ok(0) => {
-                eprintln!("📝 PTY Controller: EOF reached");
-                break;
-            }
-            Ok(_) => {
-                let trimmed = line.trim();
-                eprintln!("  ← Controlled output: {trimmed:?}");
-
-                // Skip debug lines from the test framework.
-                if trimmed.contains("🔍")
-                    || trimmed.contains("TEST_RUNNING")
-                    || trimmed.contains("CONTROLLED_STARTING")
-                {
-                    continue;
-                }
-
-                if trimmed.contains("CONTROLLED_DONE") {
-                    controlled_done = true;
-                    break;
-                }
-
-                output_lines.push(trimmed.to_string());
-            }
-            Err(e) => panic!("Read error: {e}"),
-        }
-    }
+    let result = read_lines_and_drain(
+        pty_pair,
+        &mut child,
+        "CONTROLLED_DONE",
+        |trimmed| {
+            // Skip debug lines from the test framework.
+            !trimmed.contains("🔍")
+                && !trimmed.contains("TEST_RUNNING")
+                && !trimmed.contains("CONTROLLED_STARTING")
+        },
+    );
 
     assert!(
-        controlled_done,
+        result.found_sentinel,
         "Controlled process never signaled CONTROLLED_DONE"
     );
+
+    let output_lines = &result.lines;
 
     // Analyze the output for blank lines.
     // The output should be something like:
@@ -297,9 +267,6 @@ fn pty_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
     );
 
     eprintln!("✅ PTY Controller: No blank line detected before prompt!");
-
-    // Drain PTY and wait for child to prevent macOS PTY buffer deadlock.
-    drain_pty_and_wait(buf_reader, pty_pair, &mut child);
 }
 
 /// Captures raw ANSI bytes for later processing with

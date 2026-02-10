@@ -350,6 +350,9 @@ mod tests {
         }
     }
 
+    // On Windows, ConPTY does not reliably deliver child stdout to the controller
+    // reader, causing these tests to timeout. Gate as Unix-only.
+    #[cfg(unix)]
     #[tokio::test]
     async fn test_simple_echo_command() -> miette::Result<()> {
         // Create a temporary directory for the test.
@@ -383,6 +386,7 @@ mod tests {
         Ok(())
     }
 
+    #[cfg(unix)]
     #[tokio::test]
     async fn test_osc_sequence_with_printf() -> miette::Result<()> {
         // Create a temporary directory for the test.
@@ -415,6 +419,7 @@ mod tests {
         Ok(())
     }
 
+    #[cfg(unix)]
     #[tokio::test]
     async fn test_multiple_osc_sequences() -> miette::Result<()> {
         // Create a temporary directory for the test.
@@ -545,6 +550,7 @@ mod tests {
         Ok(())
     }
 
+    #[cfg(unix)]
     #[tokio::test]
     async fn test_all_osc_event_types() -> miette::Result<()> {
         // Create a temporary directory for the test.
@@ -590,6 +596,7 @@ mod tests {
         Ok(())
     }
 
+    #[cfg(unix)]
     #[tokio::test]
     async fn test_command_failure() -> miette::Result<()> {
         // Create a temporary directory for the test.
@@ -615,6 +622,7 @@ mod tests {
         Ok(())
     }
 
+    #[cfg(unix)]
     #[tokio::test]
     async fn test_no_capture_option() -> miette::Result<()> {
         // Create a temporary directory for the test.
