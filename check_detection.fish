@@ -49,3 +49,21 @@ function detect_stale_build_artifacts
     end
     return 1
 end
+
+# Detects linker failures in captured cargo output.
+# Stale or corrupt `.o` files from interrupted builds can cause the linker to fail:
+#   error: linking with `clang` failed: exit status: 1
+#   error: linking with `cc` failed: exit status: 1
+# This is recoverable by cleaning the target directory and retrying.
+#
+# Parameters:
+#   $argv[1]: Path to temp file containing captured cargo output
+#
+# Returns: 0 if linker failure detected, 1 otherwise
+function detect_linker_failure
+    set -l temp_output $argv[1]
+    if grep -qE "linking with .* failed: exit status:" $temp_output 2>/dev/null
+        return 0
+    end
+    return 1
+end

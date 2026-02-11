@@ -10,34 +10,34 @@
 
 function check_cargo_check
     set -lx CARGO_TARGET_DIR $CHECK_TARGET_DIR
-    ionice_wrapper cargo check
+    ionice_wrapper timeout $CHECK_TIMEOUT_SECS cargo check
 end
 
 function check_cargo_build
     set -lx CARGO_TARGET_DIR $CHECK_TARGET_DIR
-    ionice_wrapper cargo build
+    ionice_wrapper timeout $CHECK_TIMEOUT_SECS cargo build
 end
 
 function check_clippy
     set -lx CARGO_TARGET_DIR $CHECK_TARGET_DIR
-    ionice_wrapper cargo clippy --all-targets
+    ionice_wrapper timeout $CHECK_TIMEOUT_SECS cargo clippy --all-targets
 end
 
 function check_cargo_test
     set -lx CARGO_TARGET_DIR $CHECK_TARGET_DIR
-    ionice_wrapper timeout $CHECK_TEST_TIMEOUT_SECS cargo test --all-targets -q
+    ionice_wrapper timeout $CHECK_TIMEOUT_SECS cargo test --all-targets -q
 end
 
 function check_doctests
     set -lx CARGO_TARGET_DIR $CHECK_TARGET_DIR
-    ionice_wrapper timeout $CHECK_TEST_TIMEOUT_SECS cargo test --doc -q
+    ionice_wrapper timeout $CHECK_TIMEOUT_SECS cargo test --doc -q
 end
 
 # Quick doc check without dependencies (for one-off --doc mode).
 # Builds to QUICK staging directory to avoid race conditions with background full builds.
 function check_docs_quick
     set -lx CARGO_TARGET_DIR $CHECK_TARGET_DIR_DOC_STAGING_QUICK
-    ionice_wrapper cargo doc --no-deps
+    ionice_wrapper timeout $CHECK_TIMEOUT_SECS cargo doc --no-deps
 end
 
 # One-off doc check for normal mode (./check.fish without flags).
@@ -54,12 +54,12 @@ end
 # refreshing the browser.
 function check_docs_oneoff
     set -lx CARGO_TARGET_DIR $CHECK_TARGET_DIR
-    ionice_wrapper cargo doc --no-deps
+    ionice_wrapper timeout $CHECK_TIMEOUT_SECS cargo doc --no-deps
 end
 
 # Full doc build including dependencies (for watch modes).
 # Builds to FULL staging directory to avoid race conditions with quick builds.
 function check_docs_full
     set -lx CARGO_TARGET_DIR $CHECK_TARGET_DIR_DOC_STAGING_FULL
-    ionice_wrapper cargo doc
+    ionice_wrapper timeout $CHECK_TIMEOUT_SECS cargo doc
 end

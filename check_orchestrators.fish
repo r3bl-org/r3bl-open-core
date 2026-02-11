@@ -86,12 +86,12 @@ function run_check_with_recovery
     # won't help if tests hang), so return 1 (failure), not 2 (recoverable).
     if test $exit_code -eq $TIMEOUT_EXIT_CODE
         set_color red
-        echo "["(timestamp)"] ⏱️  $check_name timed out after $duration_str (limit: "$CHECK_TEST_TIMEOUT_SECS"s)"
+        echo "["(timestamp)"] ⏱️  $check_name timed out after $duration_str (limit: "$CHECK_TIMEOUT_SECS"s)"
         set_color normal
 
         # Log timeout to file
         if set -q CHECK_LOG_FILE; and test -n "$CHECK_LOG_FILE"
-            echo "["(timestamp)"] ⏱️  $check_name timed out after $duration_str (limit: "$CHECK_TEST_TIMEOUT_SECS"s)" >> $CHECK_LOG_FILE
+            echo "["(timestamp)"] ⏱️  $check_name timed out after $duration_str (limit: "$CHECK_TIMEOUT_SECS"s)" >> $CHECK_LOG_FILE
         end
 
         command rm -f $temp_output
@@ -128,7 +128,22 @@ function run_check_with_recovery
         return 2
     end
 
-    # Regular failure (not ICE, not stale artifacts) - show the error output to user
+    # Check for linker failure (stale .o files from interrupted builds)
+    if detect_linker_failure $temp_output
+        set_color yellow
+        echo "🔗 Linker failure detected — will clean cache and retry ($duration_str)"
+        set_color normal
+
+        # Log linker failure to file
+        if set -q CHECK_LOG_FILE; and test -n "$CHECK_LOG_FILE"
+            echo "["(timestamp)"] 🔗 Linker failure detected during $check_name ($duration_str)" >> $CHECK_LOG_FILE
+        end
+
+        command rm -f $temp_output
+        return 2
+    end
+
+    # Regular failure (not ICE, not stale artifacts, not linker failure) - show the error output to user
     set_color red
     echo "["(timestamp)"] ❌ $check_name failed ($duration_str)"
     set_color normal
