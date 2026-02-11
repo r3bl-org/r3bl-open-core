@@ -15,16 +15,16 @@ use crate::core::common::Continuation;
 use miette::Report;
 use tokio::sync::broadcast::Sender;
 
-/// A trait for creating OS resources which work with a coupled [`Worker`] and [`Waker`]
-/// pair, that are used by the [framework]-managed dedicated RRT thread.
+/// A trait for creating OS resources which work with a coupled [`RRTWorker`] and
+/// [`RRTWaker`] pair, that are used by the [framework]-managed dedicated RRT thread.
 ///
 /// This is the main "entry point" for you to use the RRT [framework]. The journey begins
 /// with you defining a static singleton of type [`RRT`] in your code and providing
 /// concrete types that implement this trait (as well as the others). See the
-/// [DI overview] for what each type ([`Worker`], [`Waker`], [`Event`]) provides and how
-/// the [framework] orchestrates them.
+/// [DI overview] for what each type ([`RRTWorker`], [`RRTWaker`], [`Event`]) provides
+/// and how the [framework] orchestrates them.
 ///
-/// This trait solves the [coupled resource creation] problem — see the [module docs] for
+/// This trait solves the [coupled resource creation] problem - see the [module docs] for
 /// the full diagram. The [framework] is unaware, by design, of what blocking [`syscalls`]
 /// are used in your implementation, and what sources are registered with them.
 ///
@@ -39,18 +39,15 @@ use tokio::sync::broadcast::Sender;
 /// [module docs]: super#the-coupled-resource-creation-problem
 /// [`MioPollWorkerFactory`]: crate::terminal_lib_backends::MioPollWorkerFactory
 /// [`Event`]: Self::Event
-/// [`Waker`]: Self::Waker
-/// [`Worker`]: Self::Worker
 /// [`RRT`]: super::RRT
 pub trait RRTFactory {
-    /// The concrete type of the domain-specific payload broadcast from your [`Worker`]
-    /// implementation to async subscribers. The [`Worker`] runs on the
+    /// The concrete type of the domain-specific payload broadcast from your [`RRTWorker`]
+    /// implementation to async subscribers. Your [`RRTWorker`] implementation runs on the
     /// [framework]-managed dedicated RRT thread.
     ///
     /// See [`RRTWorker::Event`] for details.
     ///
     /// [framework]: super#the-rrt-contract-and-benefits
-    /// [`Worker`]: Self::Worker
     type Event;
 
     /// The concrete type implementing one iteration of the blocking I/O loop on the
@@ -64,14 +61,14 @@ pub trait RRTFactory {
     /// The concrete type for interrupting the blocked [framework]-managed dedicated RRT
     /// thread.
     ///
-    /// One waker instance is shared by all [`SubscriberGuard`]s. See [`RRTWaker`] for the
-    /// shared-access pattern diagram.
+    /// One [`RRTWaker`] instance is shared by all [`SubscriberGuard`]s. See [`RRTWaker`]
+    /// for the shared-access pattern diagram.
     ///
     /// [`SubscriberGuard`]: super::SubscriberGuard
     /// [framework]: super#the-rrt-contract-and-benefits
     type Waker: RRTWaker;
 
-    /// Creates OS resources and coupled [`Worker`] and [`Waker`] pair.
+    /// Creates OS resources and coupled [`RRTWorker`] and [`RRTWaker`] pair.
     ///
     /// The specifics of which [`syscalls`] your implementation uses, and what sources are
     /// registered, are totally left up to your implementation of this method. Your
@@ -82,13 +79,13 @@ pub trait RRTFactory {
     /// occurs via this trait and this method.
     ///
     /// This method does not spawn the [framework]-managed dedicated RRT thread. The RRT
-    /// thread is created by the [framework] — when the TUI app (ie, async consumers) call
+    /// thread is created by the [framework] - when your app (ie, async consumers) calls
     /// [`subscribe()`].
     ///
     /// # Returns
     ///
-    /// A coupled [`Worker`] + [`Waker`] pair — see [two-phase setup] for how these are
-    /// distributed between the spawned thread and [`RRTState`].
+    /// A coupled [`RRTWorker`] + [`RRTWaker`] pair - see [two-phase setup] for how these
+    /// are distributed between the spawned thread and [`RRTState`].
     ///
     /// # Errors
     ///
@@ -100,8 +97,6 @@ pub trait RRTFactory {
     /// [framework]: super#the-rrt-contract-and-benefits
     /// [`subscribe()`]: super::RRT::subscribe
     /// [`RRTState`]: super::RRTState
-    /// [`Waker`]: Self::Waker
-    /// [`Worker`]: Self::Worker
     fn create() -> Result<(Self::Worker, Self::Waker), Report>;
 }
 
@@ -117,15 +112,16 @@ pub trait RRTFactory {
 /// # Trait Bounds - [`Send`] + `'static`
 ///
 /// An instance of the implementing type moves to the [framework]-managed dedicated RRT
-/// worker thread and is owned exclusively by it. This is why
+/// thread and is owned exclusively by it. This is why
 /// we need the following trait bounds:
 /// - ✓ [`Send`]: The implementing type must be [`Send`] to move from the [async executor
 ///   thread] (on which [`subscribe()`] runs) to the [framework]-managed dedicated RRT
-///   worker thread.
+///   thread.
 /// - ✓ `'static`: Required for [`std::thread::spawn()`] - any references the implementing
 ///   type contains must be `'static`, or it can own all its data with no references at
 ///   all.
-/// - ✗ No [`Sync`] needed — the worker is owned, not shared.
+/// - ✗ No [`Sync`] needed - your `RRTWorker` instance is owned by the dedicated thread,
+///   not shared.
 ///
 /// # Example
 ///
@@ -138,14 +134,15 @@ pub trait RRTFactory {
 /// This inversion of control provides:
 ///
 /// - **Framework control**: Inject logging, metrics between iterations
-/// - **Single responsibility**: Worker handles events, framework handles lifecycle
+/// - **Single responsibility**: Your [`RRTWorker`] implementation handles events,
+///   framework handles lifecycle
 /// - **Testability**: Unit test [`poll_once()`] in isolation
 ///
 /// [async executor thread]: tokio::runtime
 /// [framework]: super#the-rrt-contract-and-benefits
 /// [`MioPollWorker`]: crate::terminal_lib_backends::MioPollWorker
 /// [`poll_once()`]: Self::poll_once
-/// [`signals`]: https://en.wikipedia.org/wiki/Signal_(IPC)
+/// [`signals`]: https://man7.org/linux/man-pages/man7/signal.7.html
 /// [`stdin`]: std::io::stdin
 /// [`subscribe()`]: super::RRT::subscribe
 /// [`event`]: Self::Event
@@ -157,9 +154,9 @@ pub trait RRTWorker: Send + 'static {
     /// [`broadcast channel`]:
     /// - ✓ [`Clone`]: The [`broadcast channel`] clones each event for every [`Receiver`]
     ///   resulting in one clone per [`SubscriberGuard`].
-    /// - ✓ [`Send`]: Events are produced on the [framework]-managed dedicated RRT worker
-    ///   thread and consumed by async consumers / tasks running on [`tokio`] [executor
-    ///   threads] (in the [multithreaded runtime]).
+    /// - ✓ [`Send`]: Events are produced on the [framework]-managed dedicated RRT thread
+    ///   and consumed by async consumers / tasks running on [`tokio`] [executor threads]
+    ///   (in the [multithreaded runtime]).
     /// - ✓ `'static`: Any references this event type contains must be `'static` (or the
     ///   event can own all its data with no references at all).
     ///
@@ -197,16 +194,17 @@ pub trait RRTWorker: Send + 'static {
     fn poll_once(&mut self, tx: &Sender<Self::Event>) -> Continuation;
 }
 
-/// A trait for interrupting the blocked [framework]-managed dedicated RRT worker thread.
+/// A trait for interrupting the blocked [framework]-managed dedicated RRT thread.
 ///
 /// [`SubscriberGuard::drop()`] calls [`wake()`] on implementors of this trait to signal
-/// the worker to check if it should exit.
+/// the dedicated thread to check if it should exit.
 ///
 /// # Trait Bounds - [`Send`] + [`Sync`] + `'static`
 ///
-/// There is exactly **one waker** inside the single [`RRTState`], which all
-/// [`SubscriberGuard::state`] instances share via [`Arc`]. When any async [`tokio`] task
-/// drops its guard, the guard's [`Drop`] impl calls [`wake()`] on this shared waker to
+/// There is exactly **one [`RRTWaker`] implementation** inside the single [`RRTState`],
+/// which all [`SubscriberGuard::state`] instances share via [`Arc`]. When any async
+/// [`tokio`] task drops its guard, the guard's [`Drop`] impl calls [`wake()`] on this
+/// shared [`RRTWaker`] implementation to
 /// interrupt the blocking thread:
 ///
 /// ```text
@@ -226,15 +224,15 @@ pub trait RRTWorker: Send + 'static {
 /// This shared-access pattern requires the following trait bounds:
 ///
 /// - **[`Send`]**: The implementor type lives inside [`SubscriberGuard::state`] (an
-///   [`Arc<RRTState>`]). For `Arc<T>` to be `Send`, `T` must be `Send + Sync` — so the
+///   [`Arc<RRTState>`]). For `Arc<T>` to be `Send`, `T` must be `Send + Sync` - so the
 ///   implementor type must be `Send`.
 /// - **[`Sync`]**: Multiple async tasks (each holding a [`SubscriberGuard`]) may call
 ///   [`wake(&self)`] on the same implementor type concurrently from different [runtime
-///   threads]. This bound is a **compile-time contract** — implementors must ensure
+///   threads]. This bound is a **compile-time contract** - implementors must ensure
 ///   [`wake()`] is thread-safe:
-///   - Types that aren't [`Sync`] (e.g., [`RefCell`]) cannot implement this trait.
-///   - Types that ARE [`Sync`] (e.g., [`mio::Waker`] which uses thread-safe OS primitives
-///     like [`eventfd`]) can.
+///  - Types that aren't [`Sync`] (e.g., [`RefCell`]) cannot implement this trait.
+///  - Types that ARE [`Sync`] (e.g., [`mio::Waker`] which uses thread-safe OS primitives
+///    like [`eventfd`]) can.
 /// - **`'static`**: Required for [`thread::spawn()`] - any references the implementor
 ///   type contains must be `'static` (or it can own all its data with no references at
 ///   all).
@@ -269,9 +267,10 @@ pub trait RRTWaker: Send + Sync + 'static {
     ///
     /// # Idempotency
     ///
-    /// Multiple concurrent calls are safe and harmless. Wakes may coalesce (worker
-    /// wakes once) or cause multiple wakeups (worker loops again). Either way, the
-    /// worker just checks [`receiver_count()`] and decides whether to exit.
+    /// Multiple concurrent calls are safe and harmless. Wakes may coalesce (the
+    /// dedicated thread wakes once) or cause multiple wakeups (it loops again).
+    /// Either way, the dedicated thread just checks [`receiver_count()`] and
+    /// decides whether to exit.
     ///
     /// # Errors
     ///

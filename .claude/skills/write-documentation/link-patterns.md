@@ -17,9 +17,9 @@ When deciding between local intra-doc links vs external URLs, follow this priori
 | 5 | Non-dependency crates | docs.rs URL | `[`some_crate`]: https://docs.rs/some_crate` |
 
 **Key principle:** If it's in your Cargo.toml, use local links. This enables:
-- **Offline docs** — works without internet
-- **Version-matched** — links to the exact version you depend on
-- **Rustdoc-validated** — broken links caught at build time
+- **Offline docs** - works without internet
+- **Version-matched** - links to the exact version you depend on
+- **Rustdoc-validated** - broken links caught at build time
 
 ### Examples
 
@@ -37,7 +37,7 @@ When deciding between local intra-doc links vs external URLs, follow this priori
 //! [Actor]: https://en.wikipedia.org/wiki/Actor_model
 ```
 
-> **Note:** This rubric is also in `SKILL.md`. The redundancy is intentional—prioritizing reliable
+> **Note:** This rubric is also in `SKILL.md`. The redundancy is intentional -prioritizing reliable
 > application over efficiency. SKILL.md content loads when the skill triggers (ensuring correct
 > behavior during doc generation), while this file serves as detailed reference for auditing.
 
@@ -192,16 +192,16 @@ The conditional visibility pattern above is for **modules**. For **functions, st
 items** inside a private module, there's a simpler approach: just make the item `pub`.
 
 This is safe because of our **private modules with public re-exports** pattern. An item being
-`pub` inside its containing module doesn't mean it escapes into the wild — `mod.rs` is the
+`pub` inside its containing module doesn't mean it escapes into the wild - `mod.rs` is the
 gatekeeper. The `pub use` re-exports in `mod.rs` explicitly control which symbols are visible
 to other modules, docs, and tests.
 
 ```rust
-// rrt.rs — internal function, safe to be pub
+// rrt.rs - internal function, safe to be pub
 /// Runs the worker's poll loop until it returns [`Continuation::Stop`].
 pub fn run_worker_loop<W, E>(...) { ... }
 
-// mod.rs — re-exports control actual visibility
+// mod.rs - re-exports control actual visibility
 pub use rrt::*;  // run_worker_loop is now linkable in docs
 ```
 
@@ -218,7 +218,7 @@ Now intra-doc links resolve:
 | Situation | Approach |
 | :-------- | :------- |
 | Private **module** needs doc links | Conditional visibility (`#[cfg(any(test, doc))]`) |
-| Private **item** inside a module | Just make it `pub` — `mod.rs` re-exports are the real gate |
+| Private **item** inside a module | Just make it `pub` - `mod.rs` re-exports are the real gate |
 
 ---
 
@@ -586,6 +586,35 @@ Section headings are converted to fragments:
 
 **Best Practice:** When linking to a section in another module, always use the full `crate::` path.
 
+### Heading Renames Break Fragment Links Silently
+
+Rustdoc slugifies heading text into a heading anchor (e.g., `## My Section` becomes
+`id="my-section"`). When you rename a heading, the slugified heading anchor changes - and any
+reference-style link definitions targeting the old anchor will **silently break**. Unlike symbol
+links (which `cargo doc` validates at build time), fragment links to heading anchors are not
+validated by rustdoc. The link renders as clickable text but navigates nowhere.
+
+```rust
+// Heading was: ## Understanding "Blocking I/O"
+// Anchor was:  #understanding-blocking-io
+//
+// Heading renamed to: ## Example: Terminal Input Across Operating Systems
+// Anchor is now:      #example-terminal-input-across-operating-systems
+
+// ❌ Stale: Still points to old heading anchor (silently broken, no build error)
+//! [blocks on I/O]: #understanding-blocking-io
+
+// ✅ Fixed: Updated to match new heading anchor
+//! [blocks on I/O]: #example-terminal-input-across-operating-systems
+```
+
+**After renaming any heading**, search the file for fragment links (`#old-anchor-text`) and update
+them to match the new heading anchor. Anchor generation rules:
+- Lowercase everything
+- Replace spaces with hyphens
+- Strip punctuation (quotes, colons, parentheses)
+- Collapse consecutive hyphens
+
 ---
 
 ## Checklist for Perfect Intra-doc Links
@@ -663,7 +692,7 @@ impl ThreadLiveness {
 /// [`is_running()`]: Self::is_running()  ← resolves to method (note the () in target too)
 ```
 
-This is **not** a cause of mysterious failures—rustdoc's disambiguation works well.
+This is **not** a cause of mysterious failures -rustdoc's disambiguation works well.
 
 ---
 

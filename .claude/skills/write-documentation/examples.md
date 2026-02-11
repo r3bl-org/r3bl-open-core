@@ -511,7 +511,7 @@ This is the **gold standard** for documenting complex traits with associated typ
 ```rust
 /// A trait for creating a coupled [`Worker`] + [`Waker`] pair atomically.
 ///
-/// This trait solves the [coupled resource creation] problem — your implementation
+/// This trait solves the [coupled resource creation] problem - your implementation
 /// provides the [`Worker`] + [`Waker`] pair that the [framework] needs to manage the
 /// dedicated RRT thread.
 ///
@@ -521,7 +521,7 @@ This is the **gold standard** for documenting complex traits with associated typ
 ```
 
 **What makes this good:**
-- ✅ "your implementation" — clarifies the user provides this
+- ✅ "your implementation" - clarifies the user provides this
 - ✅ Links to related concepts and concrete examples
 - ✅ Numbered list for navigation
 
@@ -559,7 +559,7 @@ type Waker: RRTWaker;
 /// Creates both of your [`Worker`] and [`Waker`] concrete types together.
 ///
 /// This method does not spawn the [framework]-managed dedicated RRT thread. This
-/// thread is created by the [framework] — when the TUI app (ie, async consumers)
+/// thread is created by the [framework] - when the TUI app (ie, async consumers)
 /// call [`subscribe()`].
 ///
 /// Your concrete type (that implements this method) is an injected dependency
@@ -581,7 +581,7 @@ fn create() -> Result<(Self::Worker, Self::Waker), Report>;
 - ✅ Arrow notation (→) in Returns for scannability
 - ✅ Explains what happens to each returned value
 - ✅ Emphasizes key architectural insight ("this ONE [`waker`]")
-- ✅ "(and does not need to be)" — reassures about design intent
+- ✅ "(and does not need to be)" - reassures about design intent
 
 ### Link Path Compaction
 

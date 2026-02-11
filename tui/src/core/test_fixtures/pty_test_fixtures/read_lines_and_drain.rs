@@ -1,8 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{ControlledChild, PtyPair};
-
 use super::normalize_pty_output::normalize_pty_line;
+use crate::{ControlledChild, PtyPair};
 
 /// Result of reading PTY output lines until a sentinel.
 #[derive(Debug)]
@@ -40,18 +39,18 @@ pub struct ReadLinesResult {
 ///
 /// ## Platform-specific cleanup
 ///
-/// - **Unix**: Calls [`drain_pty_and_wait`] after reading to prevent macOS
-///   PTY buffer deadlock (the PTY master must be drained before `waitpid`).
-/// - **Windows**: Drops writer and controller to close the ConPTY session,
-///   then reaps the child with `wait()`.
+/// - **Unix**: Calls [`drain_pty_and_wait`] after reading to prevent macOS PTY buffer
+///   deadlock (the PTY master must be drained before `waitpid`).
+/// - **Windows**: Drops writer and controller to close the ConPTY session, then reaps the
+///   child with `wait()`.
 ///
 /// # Parameters
 ///
 /// - `pty_pair` — Owned PTY pair (consumed for cleanup).
 /// - `child` — The controlled child process handle.
 /// - `sentinel` — A substring to watch for. Reading stops when found.
-/// - `line_filter` — Predicate on each normalized line. Lines returning
-///   `false` are skipped.
+/// - `line_filter` — Predicate on each normalized line. Lines returning `false` are
+///   skipped.
 ///
 /// [`drain_pty_and_wait`]: crate::drain_pty_and_wait
 pub fn read_lines_and_drain(
@@ -88,7 +87,8 @@ fn read_lines_unix(
         .expect("Failed to clone reader");
     let mut buf_reader = BufReader::new(reader);
 
-    let (lines, found_sentinel) = read_until_sentinel(&mut buf_reader, sentinel, &line_filter);
+    let (lines, found_sentinel) =
+        read_until_sentinel(&mut buf_reader, sentinel, &line_filter);
 
     drain_pty_and_wait(buf_reader, pty_pair, child);
 
@@ -126,9 +126,7 @@ fn read_lines_windows(
     // treats input+output as a single console session, so dropping the
     // writer (input pipe) closes the session and stops stdout forwarding.
     let _writer = {
-        let mut writer = controller
-            .take_writer()
-            .expect("Failed to take writer");
+        let mut writer = controller.take_writer().expect("Failed to take writer");
         let mut buf = [0u8; 4096];
         loop {
             match reader.read(&mut buf) {
@@ -147,7 +145,8 @@ fn read_lines_windows(
 
     let mut buf_reader = BufReader::new(reader);
 
-    let (lines, found_sentinel) = read_until_sentinel(&mut buf_reader, sentinel, &line_filter);
+    let (lines, found_sentinel) =
+        read_until_sentinel(&mut buf_reader, sentinel, &line_filter);
 
     // Drop writer and controller to close the ConPTY session, then reap child.
     drop(_writer);

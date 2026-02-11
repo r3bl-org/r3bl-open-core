@@ -72,5 +72,5 @@
   "enableAllProjectMcpServers": true,
   "outputStyle": "Explanatory",
   "spinnerTipsEnabled": true,
-  "prefersReducedMotion": true
+  "prefersReducedMotion": false
 }

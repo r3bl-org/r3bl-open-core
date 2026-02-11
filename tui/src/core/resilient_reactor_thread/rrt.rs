@@ -10,7 +10,8 @@ use std::sync::{Arc, Mutex};
 
 /// The entry point for the Resilient Reactor Thread (RRT) framework.
 ///
-/// This struct manages the lifecycle of a dedicated worker thread with automatic
+/// This struct manages the lifecycle of a single dedicated thread (at most one at a
+/// time) with automatic
 /// spawn/shutdown/reuse semantics. This is a **static container** that holds an
 /// **ephemeral payload**:
 ///
@@ -21,7 +22,7 @@ use std::sync::{Arc, Mutex};
 ///
 /// # Why [`Mutex<Option<Arc<RRTState<W, E>>>>`]?
 ///
-/// **Deferred initialization** — we can't create [`RRTState`] at `static` init time:
+/// **Deferred initialization** - we can't create [`RRTState`] at `static` init time:
 ///
 /// | Operation              | Const? | Why not?                                      |
 /// | :--------------------- | :----- | :-------------------------------------------- |
@@ -31,7 +32,7 @@ use std::sync::{Arc, Mutex};
 ///
 /// ## Why [`syscalls`] Can't Be [`const expressions`]
 ///
-/// In Rust, **all** `static` variables must be initialized with [`const expressions`] —
+/// In Rust, **all** `static` variables must be initialized with [`const expressions`] -
 /// this is a language rule, not a choice. The compiler evaluates these expressions at
 /// compile time and embeds the result in the binary. [`Syscalls`] ask the OS to do
 /// something (create an [`epoll`] [`fd`], allocate memory), which is impossible during
@@ -42,10 +43,10 @@ use std::sync::{Arc, Mutex};
 /// layout), we use [`Option<T>`] to defer the [`syscalls`] until the first
 /// [`subscribe()`] call at runtime.
 ///
-/// ## Replacement On Restart
+/// ## Replacement On Relaunch
 ///
-/// When the thread terminates and restarts (slow path), we need to replace the entire
-/// [`RRTState`] with fresh resources. [`Option::replace()`] makes this clean.
+/// When the thread terminates and is relaunched (slow path), we need to replace the
+/// entire [`RRTState`] with fresh resources. [`Option::replace()`] makes this clean.
 ///
 /// ## Fallibility Is NOT The Reason
 ///
@@ -92,7 +93,7 @@ use std::sync::{Arc, Mutex};
 /// - **CAN** contain `'static` references (e.g., `&'static str`)
 /// - **CANNOT** contain references with shorter lifetimes (e.g., `&'a str`)
 ///
-/// [`String`] satisfies `T: 'static` even though it can be dropped at any time — the
+/// [`String`] satisfies `T: 'static` even though it can be dropped at any time - the
 /// bound means "won't dangle", not "lives forever".
 ///
 /// Here's what the `T: 'static` trait bound looks like in real code:
@@ -104,7 +105,7 @@ use std::sync::{Arc, Mutex};
 /// spawn_thread("literal");                // ✅ &'static str: 'static
 /// ```
 ///
-/// This fails to compile — `&String` has a non-`'static` lifetime:
+/// This fails to compile - `&String` has a non-`'static` lifetime:
 ///
 /// ```compile_fail
 /// # use std::thread::spawn;
@@ -125,13 +126,14 @@ use std::sync::{Arc, Mutex};
 /// | `Foo<'a> { s: &'a str }`  | ❌ No         | Struct with non-`'static` references  |
 ///
 /// For thread spawning, `T: 'static` is required because the spawned thread could outlive
-/// the caller — any borrowed data with a shorter lifetime might become invalid. This is
+/// the caller - any borrowed data with a shorter lifetime might become invalid. This is
 /// why [`RRTWaker`], [`RRTWorker`], and the `E` (event) type parameter all require
 /// `'static`.
 ///
 /// # Poll → Registry → Waker Chain
 ///
-/// The waker is tightly coupled to its blocking mechanism (e.g., [`mio::Poll`]):
+/// Your [`RRTWaker`] implementation is tightly coupled to its blocking mechanism (e.g.,
+/// [`mio::Poll`]):
 ///
 /// ```text
 /// mio::Poll::new()      // Creates OS event mechanism (epoll fd / kqueue)
@@ -146,17 +148,17 @@ use std::sync::{Arc, Mutex};
 /// waker.wake()          // Triggers event → poll.poll() returns
 /// ```
 ///
-/// This is why the slow path replaces **both** Poll and Waker together — a waker is
-/// useless without its parent blocking mechanism.
+/// This is why the slow path replaces **both** Poll and Waker together - your
+/// [`RRTWaker`] implementation is useless without its parent blocking mechanism.
 ///
 /// # Thread Lifecycle
 ///
 /// Lifecycle states:
-/// - **Inert** (`None`) — until first [`subscribe()`] spawns the worker thread
-/// - **Active** (`Some`) — while thread is running
-/// - **Dormant** (`Some` with terminated liveness) — when all subscribers drop and thread
+/// - **Inert** (`None`) - until first [`subscribe()`] spawns the dedicated thread
+/// - **Active** (`Some`) - while thread is running
+/// - **Dormant** (`Some` with terminated liveness) - when all subscribers drop and thread
 ///   exits
-/// - **Reactivates** — on next [`subscribe()`] call (spawns fresh thread, replaces
+/// - **Reactivates** - on next [`subscribe()`] call (spawns fresh thread, replaces
 ///   payload)
 ///
 /// # Usage
@@ -179,7 +181,7 @@ use std::sync::{Arc, Mutex};
 /// [`const expression`]: #const-expression-vs-const-declaration-vs-static-declaration
 /// [`const expressions`]: #const-expression-vs-const-declaration-vs-static-declaration
 /// [`epoll`]: https://man7.org/linux/man-pages/man7/epoll.7.html
-/// [`fd`]: https://en.wikipedia.org/wiki/File_descriptor
+/// [`fd`]: https://man7.org/linux/man-pages/man2/open.2.html
 /// [`mio::Poll::new()`]: mio::Poll::new
 /// [`mio::Poll`]: mio::Poll
 /// [`mio::Waker::new()`]: mio::Waker::new
@@ -216,7 +218,7 @@ where
         }
     }
 
-    /// Allocates a subscription, spawning the worker thread if needed.
+    /// Allocates a subscription, spawning the dedicated thread if needed.
     ///
     /// # Two Allocation Paths
     ///
@@ -229,7 +231,7 @@ where
     ///
     /// If the thread is still running, we **reuse everything**:
     /// - Same [`RRTState`] (same broadcast channel, same liveness tracker)
-    /// - Same worker resources (still valid)
+    /// - Same resources (still valid)
     /// - Same thread (continues serving the new subscriber)
     ///
     /// This handles the race condition where a new subscriber appears before the thread
@@ -237,11 +239,11 @@ where
     ///
     /// ## Slow Path (Thread Restart)
     ///
-    /// If the thread has terminated, the existing [`RRTState`] is **orphaned** — no
+    /// If the thread has terminated, the existing [`RRTState`] is **orphaned** - no
     /// thread is feeding events into its broadcast channel. We must **replace
     /// everything**:
     /// - New [`RRTState`] (fresh broadcast channel + liveness tracker + waker)
-    /// - New worker resources (via [`RRTFactory::create()`])
+    /// - New resources (via [`RRTFactory::create()`])
     /// - New thread (spawned to serve the new subscriber)
     ///
     /// # Errors
@@ -308,7 +310,7 @@ where
         })
     }
 
-    /// Checks if the worker thread is currently running.
+    /// Checks if the dedicated thread is currently running.
     ///
     /// Useful for testing thread lifecycle behavior and debugging.
     ///
@@ -348,8 +350,8 @@ where
 
     /// Returns the current thread generation number.
     ///
-    /// Each time a new worker thread is spawned, the generation increments. This allows
-    /// tests to verify whether a thread was reused or relaunched:
+    /// Each time a new dedicated thread is spawned, the generation increments. This
+    /// allows tests to verify whether a thread was reused or relaunched:
     ///
     /// - **Same generation**: Thread was reused (new subscriber appeared before thread
     ///   exited)
@@ -406,7 +408,8 @@ where
     fn default() -> Self { Self::new() }
 }
 
-/// RAII guard that calls [`mark_terminated()`] when the worker loop exits.
+/// RAII guard that calls [`mark_terminated()`] when the dedicated thread's work loop
+/// exits.
 ///
 /// [`mark_terminated()`]: super::RRTLiveness::mark_terminated
 #[allow(missing_debug_implementations)]
@@ -426,9 +429,9 @@ where
     fn drop(&mut self) { self.state.liveness.mark_terminated(); }
 }
 
-/// Runs the worker's poll loop until it returns [`Continuation::Stop`].
+/// Runs the poll loop on the dedicated thread until it returns [`Continuation::Stop`].
 ///
-/// Called from the spawned worker thread. When the loop exits, [`TerminationGuard`]
+/// Called from the spawned dedicated thread. When the loop exits, [`TerminationGuard`]
 /// calls [`mark_terminated()`] so the next [`subscribe()`] call knows to spawn a new
 /// thread.
 ///

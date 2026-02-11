@@ -581,9 +581,9 @@ fn spawn_blocking_passthrough_with_mode_detection_reader_task(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{ControlSequence, CursorKeyMode};
     #[cfg(not(target_os = "windows"))]
     use crate::try_create_temp_dir;
+    use crate::{ControlSequence, CursorKeyMode};
     use tokio::sync::mpsc::unbounded_channel;
     #[cfg(not(target_os = "windows"))]
     use wait_timeout::ChildExt;
@@ -732,7 +732,9 @@ mod tests {
             }
 
             // Print success message for visibility.
-            println!("All PTY read-write tests completed successfully in isolated processes");
+            println!(
+                "All PTY read-write tests completed successfully in isolated processes"
+            );
         }
     }
 
@@ -785,7 +787,11 @@ mod tests {
                 if let Some(mut err) = child.stderr.take() {
                     err.read_to_end(&mut stderr).ok();
                 }
-                Some(std::process::Output { status, stdout, stderr })
+                Some(std::process::Output {
+                    status,
+                    stdout,
+                    stderr,
+                })
             }
             None => {
                 // Timed out — kill the hung child.

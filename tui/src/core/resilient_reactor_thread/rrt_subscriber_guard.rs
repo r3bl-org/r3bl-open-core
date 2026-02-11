@@ -9,28 +9,28 @@ use super::{RRTState, RRTWaker};
 use std::sync::Arc;
 use tokio::sync::broadcast::Receiver;
 
-/// An [RAII] guard that wakes the worker thread on drop.
+/// An [RAII] guard that wakes the dedicated thread on drop.
 ///
 /// # Purpose
 ///
-/// Holding a [`SubscriberGuard`] keeps you subscribed to events from the worker thread.
-/// Dropping it triggers the cleanup protocol that may cause the thread to exit.
+/// Holding a [`SubscriberGuard`] keeps you subscribed to events from the dedicated
+/// thread. Dropping it triggers the cleanup protocol that may cause the thread to exit.
 ///
 /// # Drop Behavior
 ///
 /// When this guard is dropped:
 /// 1. [`receiver`] is dropped first, which causes Tokio's broadcast channel to atomically
 ///    decrement the [`Sender`]'s internal [`receiver_count()`].
-/// 2. Then [`waker.wake()`] interrupts the worker's blocking call.
-/// 3. The worker wakes and checks [`receiver_count()`] to decide if it should exit (when
-///    count reaches `0`).
+/// 2. Then [`waker.wake()`] interrupts the dedicated thread's blocking call.
+/// 3. The dedicated thread wakes and checks [`receiver_count()`] to decide if it should
+///    exit (when count reaches `0`).
 ///
 /// # Race Condition and Correctness
 ///
-/// There is a race window between when the receiver is dropped and when the worker
-/// checks [`receiver_count()`]. This is the **fast-path thread reuse** scenario — if a
-/// new subscriber appears during the window, the thread correctly continues serving it
-/// instead of exiting.
+/// There is a race window between when the receiver is dropped and when the dedicated
+/// thread checks [`receiver_count()`]. This is the **fast-path thread reuse** scenario -
+/// if a new subscriber appears during the window, the thread correctly continues serving
+/// it instead of exiting.
 ///
 /// See [`RRTState`] for comprehensive documentation on the race condition.
 ///
@@ -61,10 +61,11 @@ where
     /// [`take()`]: Option::take
     pub receiver: Option<Receiver<E>>,
 
-    /// Shared state including waker to signal the worker thread.
+    /// Shared state including your [`RRTWaker`] implementation to signal the dedicated
+    /// thread.
     ///
     /// We hold an [`Arc`] reference to keep the [`RRTState`] alive. When this guard
-    /// drops, we call [`waker.wake()`] to notify the worker thread.
+    /// drops, we call [`waker.wake()`] to notify the dedicated thread.
     ///
     /// [`Arc`]: std::sync::Arc
     /// [`RRTState`]: super::RRTState
@@ -87,7 +88,7 @@ where
         drop(self.receiver.take());
 
         // Wake the thread so it can check if it should exit.
-        // Ignore errors — the thread may have already exited.
+        // Ignore errors - the thread may have already exited.
         drop(self.state.waker.wake());
     }
 }

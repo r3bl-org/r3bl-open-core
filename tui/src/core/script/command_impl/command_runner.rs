@@ -407,10 +407,7 @@ mod tests_command_runner {
         .await
         .unwrap();
 
-        assert_eq!(
-            String::from_utf8_lossy(&output).trim(),
-            "Hello, world!"
-        );
+        assert_eq!(String::from_utf8_lossy(&output).trim(), "Hello, world!");
 
         let output = command!(
             program => "cmd",
@@ -419,10 +416,7 @@ mod tests_command_runner {
         .run_interactive()
         .await
         .unwrap();
-        assert_eq!(
-            String::from_utf8_lossy(&output).trim(),
-            "Hello, world!"
-        );
+        assert_eq!(String::from_utf8_lossy(&output).trim(), "Hello, world!");
     }
 
     #[tokio::test]

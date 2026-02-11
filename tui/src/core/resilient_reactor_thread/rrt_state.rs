@@ -20,7 +20,8 @@ use tokio::sync::broadcast::Sender;
 /// [`recv()`]: tokio::sync::broadcast::Receiver::recv
 pub const CHANNEL_CAPACITY: usize = 4_096;
 
-/// A shared state container between the process-global singleton and the worker thread.
+/// A shared state container between the process-global singleton and the dedicated
+/// thread.
 ///
 /// This struct centralizes thread lifecycle, event broadcasting, and wake signaling in
 /// one place.
@@ -34,35 +35,39 @@ pub const CHANNEL_CAPACITY: usize = 4_096;
 ///
 /// # Thread Lifecycle Overview
 ///
-/// The worker thread can be **relaunched** if it exits. Two mechanisms work together:
+/// The dedicated thread can be **relaunched** if it exits. Two mechanisms work together:
 ///
 /// 1. **Liveness flag** ([`liveness`]): Set to `Terminated` via [`Drop`] when thread
 ///    exits
-/// 2. **Waker**: Immediately wakes thread when receiver drops
+/// 2. **Your [`RRTWaker`] implementation**: Immediately wakes thread when receiver drops
 ///
 /// Lifecycle sequence:
 /// 1. On spawn: `liveness = Running`
 /// 2. On receiver drop: [`SubscriberGuard::drop()`] calls [`waker.wake()`]
-/// 3. Worker checks [`receiver_count()`] → if `0`, exits
-/// 4. Worker's [`Drop`] sets `liveness = Terminated`
+/// 3. Dedicated thread checks [`receiver_count()`] → if `0`, exits
+/// 4. [`TerminationGuard`]'s [`Drop`] sets `liveness = Terminated`
 /// 5. On next [`subscribe()`]: detects terminated thread → reinitializes
 ///
 /// # Waker Lifecycle
 ///
-/// The waker is **coupled to the worker's resources**. For example, with [`mio`]:
+/// Your [`RRTWaker`] implementation is **coupled to your [`RRTWorker`]
+/// implementation's resources**. For example, with [`mio`]:
 ///
 /// ```text
 /// mio::Poll (epoll/kqueue) ──owns──► Registry ──creates──► Waker
 /// ```
 ///
-/// When [`waker.wake()`] is called, it triggers an event that the worker's blocking call
-/// returns. **If the worker's resources are dropped, the waker becomes useless** — it
-/// would signal a mechanism that no longer exists.
+/// When [`waker.wake()`] is called, it triggers an event that the dedicated thread's
+/// blocking call returns. **If your [`RRTWorker`] implementation's resources are
+/// dropped, your [`RRTWaker`] implementation becomes useless** - it would signal a
+/// mechanism that no longer exists.
 ///
-/// This is why the slow path in [`subscribe()`] replaces the entire [`RRTState`] — the
-/// worker resources, waker, and thread must be created together.
+/// This is why the slow path in [`subscribe()`] replaces the entire [`RRTState`] -
+/// your [`RRTWorker`], [`RRTWaker`], and the dedicated thread must be created
+/// together.
 ///
 /// [`Arc`]: std::sync::Arc
+/// [`TerminationGuard`]: super::TerminationGuard
 /// [`SubscriberGuard::drop()`]: super::SubscriberGuard
 /// [`broadcast_tx`]: Self::broadcast_tx
 /// [`epoll`]: https://man7.org/linux/man-pages/man7/epoll.7.html
@@ -106,7 +111,8 @@ where
 {
     /// Creates new thread state with fresh [`RRTLiveness`] and broadcast channel.
     ///
-    /// The `waker` must be created from the same resources that the worker owns.
+    /// The `waker` must be created from the same resources that your [`RRTWorker`]
+    /// implementation owns.
     /// See [Waker Lifecycle] for why they're coupled.
     ///
     /// [Waker Lifecycle]: RRTState#waker-lifecycle
@@ -124,7 +130,7 @@ where
     /// Checks if the thread should self-terminate (no receivers left).
     ///
     /// This is the **termination check** in the thread lifecycle protocol. Called by the
-    /// worker when it receives a wake signal.
+    /// dedicated thread when it receives a wake signal.
     ///
     /// Returns [`ShutdownDecision::ShutdownNow`] if [`receiver_count()`] is `0`, meaning
     /// no async consumers are listening. Returns [`ShutdownDecision::ContinueRunning`]

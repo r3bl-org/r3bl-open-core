@@ -7,7 +7,7 @@ use std::sync::atomic::{AtomicBool, AtomicU8, Ordering};
 
 /// Counter for thread generations. Incremented each time a new thread is spawned.
 ///
-/// The actual value has no semantic meaning — it's just a counter. Tests compare
+/// The actual value has no semantic meaning - it's just a counter. Tests compare
 /// generations to detect whether the underlying thread changed (same generation = thread
 /// reused, different generation = new thread spawned).
 ///
@@ -32,10 +32,10 @@ static THREAD_GENERATION: AtomicU8 = AtomicU8::new(0);
 ///
 /// The [`is_running()`] method is called while holding the global state lock (in
 /// [`subscribe()`] and query functions). Using [`Mutex<bool>`] would create nested
-/// locking, risking [deadlock] if [`mark_terminated()`] is called from the worker thread
-/// while another thread holds the global lock.
+/// locking, risking [deadlock] if [`mark_terminated()`] is called from the dedicated
+/// thread while another thread holds the global lock.
 ///
-/// [`AtomicBool`] is [lock-free] — no [deadlock] possible. All atomic operations use
+/// [`AtomicBool`] is [lock-free] - no [deadlock] possible. All atomic operations use
 /// [`SeqCst`] ordering for simplicity and correctness.
 ///
 /// [`Mutex<bool>`]: std::sync::Mutex
@@ -82,7 +82,7 @@ impl RRTLiveness {
 
     /// Marks the thread as terminated.
     ///
-    /// Called by the worker thread's [`Drop`] implementation when the thread exits.
+    /// Called by the dedicated thread's [`Drop`] implementation when it exits.
     /// After this call, [`is_running()`] will return [`LivenessState::Terminated`].
     ///
     /// [`is_running()`]: Self::is_running
@@ -106,7 +106,7 @@ impl Default for RRTLiveness {
     fn default() -> Self { Self::new() }
 }
 
-/// An indication of whether the worker thread is running or terminated.
+/// An indication of whether the dedicated thread is running or terminated.
 ///
 /// Used by [`RRTLiveness::is_running()`] to provide a self-documenting return type
 /// instead of a bare `bool`.
@@ -119,13 +119,14 @@ impl Default for RRTLiveness {
 /// - Code reads like documentation
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum LivenessState {
-    /// The worker thread is running and processing events.
+    /// The dedicated thread is running and processing events.
     Running,
-    /// The worker thread has exited or was never started.
+    /// The dedicated thread has exited or was never started.
     Terminated,
 }
 
-/// An indication of whether the worker thread should self-terminate or continue running.
+/// An indication of whether the dedicated thread should self-terminate or continue
+/// running.
 ///
 /// This enum is returned by [`RRTState::should_self_terminate()`] to provide a
 /// self-documenting return type instead of a bare `bool`.

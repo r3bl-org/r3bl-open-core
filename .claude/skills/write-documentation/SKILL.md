@@ -40,8 +40,8 @@ Documentation should be rigorous about content, playful about presentation:
 
 | Aspect | Serious & Precise | Fun |
 |--------|-------------------|-----|
-| **Technical accuracy** | Correct terminology, proper distinctions | — |
-| **Links** | Intra-doc links, authoritative sources | — |
+| **Technical accuracy** | Correct terminology, proper distinctions | - |
+| **Links** | Intra-doc links, authoritative sources | - |
 | **Visual aids** | ASCII diagrams, tables | Emoji for scannability |
 | **Language** | Clear, unambiguous | Literary references, personality |
 
@@ -57,14 +57,14 @@ Documentation should be rigorous about content, playful about presentation:
 **Severity with visual metaphors:**
 ```rust
 //! 1. 🐢 **Multi-threaded runtime**: Reduced throughput but still running
-//! 2. 🧊 **Single-threaded runtime**: Total blockage — nothing else runs
+//! 2. 🧊 **Single-threaded runtime**: Total blockage - nothing else runs
 ```
 
 **Literary references with layered meaning:**
 ```rust
 //! What's in a name? 😛 The three core properties:
 ```
-The 😛 is a visual pun on "tongue in cheek" — Shakespeare's Juliet argues names *don't* matter,
+The 😛 is a visual pun on "tongue in cheek" - Shakespeare's Juliet argues names *don't* matter,
 but here we use the quote to explain why RRT's name *does* matter. The emoji signals the irony.
 
 **Rule:** Emoji must have semantic meaning (OS icons, severity levels). Never use random 🚀✨🎉 for "excitement."
@@ -127,6 +127,24 @@ and commonly supported. But in ASCII art diagrams, stick to standard Unicode.
 
 Doc comments should read naturally and have clear subjects. Avoid abrupt sentence starts.
 
+### Dashes: Use Regular Dashes, Not Em Dashes
+
+**Always use regular dashes (`-`) instead of em dashes (`—`) in all documentation.**
+
+- Em dashes (`—`, U+2014) have no dedicated keyboard key - they require compose sequences,
+  Unicode input, or copy-paste, which creates friction for contributors.
+- In monospace fonts (terminals, editors), em dashes and regular dashes are nearly
+  indistinguishable, so the typographic benefit is lost.
+- Searching for `-` won't find `—` and vice versa, making grep/search harder.
+
+```rust
+// ❌ Bad: Em dash (can't type from keyboard)
+/// This is the main trait — implement it to add your logic.
+
+// ✅ Good: Regular dash (just type it)
+/// This is the main trait - implement it to add your logic.
+```
+
 ### Opening Lines by Item Type
 
 The first line/paragraph of a doc comment should describe **what the item IS**, not what it does.
@@ -147,7 +165,7 @@ Follow Rust std conventions.
 /// This trait solves the chicken-egg problem.
 ```
 
-#### Structs — Noun Phrase
+#### Structs - Noun Phrase
 
 Start with "A/An [noun]..." describing what it is:
 
@@ -170,7 +188,7 @@ pub struct ThreadSafeGlobalState<F> { ... }
 pub struct OffscreenBuffer { ... }
 ```
 
-#### Enums — What It Represents
+#### Enums - What It Represents
 
 Start with "A/An [noun]..." or "The [type]...":
 
@@ -190,7 +208,7 @@ pub enum LivenessState { Running, Terminated }
 pub enum ShutdownDecision { ContinueRunning, ShutdownNow }
 ```
 
-#### Traits — "A trait for..."
+#### Traits - "A trait for..."
 
 ```rust
 // Our style:
@@ -201,7 +219,7 @@ pub trait RRTFactory { ... }
 pub trait RRTWorker { ... }
 ```
 
-#### Methods & Functions — Third-Person Verb
+#### Methods & Functions - Third-Person Verb
 
 Start with what the method/function **does** using third-person:
 
@@ -227,7 +245,7 @@ pub fn new(waker: W) -> Self { ... }
 pub fn should_self_terminate(&self) -> ShutdownDecision { ... }
 ```
 
-#### Associated Types — "The type of..." or "The type..."
+#### Associated Types - "The type of..." or "The type..."
 
 Follow the Rust std convention (e.g., `Iterator::Item`, `Future::Output`):
 
@@ -252,17 +270,17 @@ type Waker: RRTWaker;
 
 **Pattern:** Use "The type [verb]..." or "Your concrete type [verb]..." where the verb
 describes what the type does:
-- "The concrete type broadcast..." (Event — gets broadcast)
-- "Your concrete type implementing..." (Worker — user provides this)
-- "Your concrete type for..." (Waker — user provides this)
+- "The concrete type broadcast..." (Event - gets broadcast)
+- "Your concrete type implementing..." (Worker - user provides this)
+- "Your concrete type for..." (Waker - user provides this)
 
-**When to use "Your concrete type":** For associated types that the user must provide —
+**When to use "Your concrete type":** For associated types that the user must provide -
 types with trait bounds like `: RRTWorker`. The word "concrete" emphasizes they provide
 an actual struct/enum, not just satisfy an abstract contract.
 
 **When to use "of":** Only when describing what a type *contains* rather than what it *is*:
-- std's `Iterator::Item`: "The type **of the elements**..." — Item contains elements
-- std's `Future::Output`: "The type **of value**..." — Output contains a value
+- std's `Iterator::Item`: "The type **of the elements**..." - Item contains elements
+- std's `Future::Output`: "The type **of value**..." - Output contains a value
 
 **Parenthetical clarifiers:** When context is needed, use parentheticals:
 ```rust
@@ -274,7 +292,7 @@ for a complete example of complex trait documentation with associated types.
 
 [`RRTFactory`]: crate::core::resilient_reactor_thread::RRTFactory
 
-#### Constants — Noun Phrase
+#### Constants - Noun Phrase
 
 ```rust
 /// Capacity of the broadcast channel for events.
@@ -299,10 +317,10 @@ pub const ANSI_ESC: u8 = 27;
 
 ### Module-Level Docs for Single-Type Files
 
-When a file contains primarily one struct, enum, or trait, keep module docs minimal — just
+When a file contains primarily one struct, enum, or trait, keep module docs minimal - just
 identify the file's purpose and link to the main type:
 
-#### Single Type — Link to It
+#### Single Type - Link to It
 
 ```rust
 //! Thread-safe global state manager for the Resilient Reactor Thread pattern. See
@@ -320,7 +338,7 @@ identify the file's purpose and link to the main type:
 //! [RAII]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
 ```
 
-#### Multiple Types — Bullet List
+#### Multiple Types - Bullet List
 
 When a file contains multiple related types, use a brief intro + bullet list:
 
@@ -346,7 +364,7 @@ Module docs just help readers navigate to the right type. Don't duplicate conten
 
 ### Follow-Up Sentences Need Explicit Subjects
 
-After the opening line, subsequent sentences should use explicit subjects — don't start with
+After the opening line, subsequent sentences should use explicit subjects - don't start with
 verbs that leave the subject ambiguous:
 
 #### ❌ Bad: Abrupt Starts
@@ -370,7 +388,7 @@ What's "called"? The trait? A method? The reader must guess.
 
 Now it's clear: the *method* is what's being called, on *implementors* of the trait.
 
-**Note:** Traits themselves aren't "called" — methods are. Say what valid actions
+**Note:** Traits themselves aren't "called" - methods are. Say what valid actions
 a trait can take: "This trait **solves**...", "This trait **requires**...",
 "This trait **defines**...". Don't say "This trait is called...".
 
@@ -435,6 +453,27 @@ Use `# Example` (not `# Concrete Implementation`) when linking to reference impl
 
 ## Part 1: Structure (Inverted Pyramid)
 
+### Heading Levels and Sidebar Navigation
+
+The `cargo doc` static site only shows `#` (h1) and `##` (h2) headings in the sidebar
+navigation. `###` (h3) and below are **not shown** in the sidebar.
+
+For sub-sections within a `##` heading, use **bold text** (`**bold**`) instead of `###`:
+
+```rust
+//! ## How It Works                     // ← Shown in sidebar
+//!
+//! **Creation and reuse** - ...        // ← NOT in sidebar, but visually distinct
+//!
+//! **Cooperative shutdown** - ...      // ← NOT in sidebar, but visually distinct
+```
+
+**Why this matters:** Using `###` creates a false promise of navigability - readers expect
+to find it in the sidebar but can't. Bold text is visually similar but sets correct
+expectations.
+
+### Inverted Pyramid
+
 Structure documentation with high-level concepts at the top, details below:
 
 ```text
@@ -492,7 +531,7 @@ When deciding local vs external links, follow this priority:
 
 ### Link All Symbols for Refactoring Safety
 
-**Every codebase symbol in backticks must be a link.** This isn't just style—it's safety.
+**Every codebase symbol in backticks must be a link.** This isn't just style -it's safety.
 
 When you rename, move, or delete a symbol:
 - **With links**: `cargo doc` fails with a clear error pointing to the stale reference
@@ -642,7 +681,7 @@ use external URLs (man pages, Wikipedia, specs):
 ### Pedagogical Links for Inclusivity
 
 Link domain-specific terminology to external references (typically Wikipedia) even when the
-concept seems "obvious." This makes documentation accessible to readers of all backgrounds —
+concept seems "obvious." This makes documentation accessible to readers of all backgrounds -
 not everyone comes from a CS degree or has the same experience level.
 
 **Rule:** If a term has a formal definition that would help a newcomer understand the docs,
@@ -676,7 +715,7 @@ link it. The cost of an extra link is near zero; the cost of excluding a reader 
 | Reactor pattern | `https://en.wikipedia.org/wiki/Reactor_pattern` |
 
 > **Note:** The link source priority is also documented in `link-patterns.md`. This redundancy is
-> intentional—SKILL.md content is loaded when the skill triggers, ensuring reliable application
+> intentional -SKILL.md content is loaded when the skill triggers, ensuring reliable application
 > during doc generation. Supporting files require explicit reads and serve as detailed reference.
 
 ---
@@ -788,10 +827,10 @@ that should right-align for decimal alignment).
 
 #### Why Left-Align?
 
-- **Scannability** — Eyes naturally start at the left margin
-- **Consistency** — All tables look the same throughout the codebase
-- **Prose readability** — Technical descriptions flow better left-to-right
-- **Code snippets** — Backtick content is easier to read left-aligned
+- **Scannability** - Eyes naturally start at the left margin
+- **Consistency** - All tables look the same throughout the codebase
+- **Prose readability** - Technical descriptions flow better left-to-right
+- **Code snippets** - Backtick content is easier to read left-aligned
 
 ### Verify Documentation Builds
 
@@ -837,7 +876,7 @@ pub mod tests;
 >
 > And the module is `#[cfg(test)]` only
 
-**Don't give up on links** — Add conditional visibility instead of using plain text:
+**Don't give up on links** - Add conditional visibility instead of using plain text:
 
 ```rust
 // Before (links won't resolve):
@@ -870,7 +909,7 @@ mod linux_only_module;
 pub use linux_only_module::*;
 ```
 
-**Key insight:** The `doc` cfg flag doesn't override other conditions—it's just another flag. Use
+**Key insight:** The `doc` cfg flag doesn't override other conditions -it's just another flag. Use
 `any(doc, ...)` to make documentation an **alternative path**, not an additional requirement:
 
 | Pattern | Meaning | Docs on macOS? |
@@ -878,7 +917,7 @@ pub use linux_only_module::*;
 | `all(target_os = "linux", any(test, doc))` | Linux AND (test OR doc) | ❌ No |
 | `any(doc, all(target_os = "linux", test))` | doc OR (Linux AND test) | ✅ Yes |
 
-**Apply at all levels** — If linking to a nested module, both parent and child modules need
+**Apply at all levels** - If linking to a nested module, both parent and child modules need
 the visibility change. See `organize-modules` skill for complete patterns and examples.
 
 #### ⚠️ Unix Dependency Caveat
@@ -896,10 +935,10 @@ dependencies exist.
 | Unix APIs (`mio::unix`, `signal_hook`, `std::os::fd`) | `cfg(any(all(unix, doc), ...))` | ✅ | ✅ | excluded |
 | Linux-only APIs (hypothetical) | `cfg(any(all(target_os = "linux", doc), ...))` | ✅ | excluded | excluded |
 
-**Example — Unix-restricted doc build:**
+**Example - Unix-restricted doc build:**
 
 ```rust
-// Module uses mio::unix::SourceFd, signal_hook — Unix-only APIs.
+// Module uses mio::unix::SourceFd, signal_hook - Unix-only APIs.
 // Dependencies in Cargo.toml are gated with cfg(unix).
 // Doc builds are restricted to Unix where the dependencies exist.
 #[cfg(any(all(unix, doc), all(target_os = "linux", test)))]
@@ -925,9 +964,11 @@ Before committing documentation:
 - [ ] Opening lines describe what the item IS (traits: "A trait for...", structs: "A/An X that...")
 - [ ] First paragraph is separate (used as summary in module listings, IDE tooltips, search)
 - [ ] Follow-up sentences use explicit subjects ("This trait...", "This struct...")
-- [ ] Methods use third-person verbs (Creates, Returns, Checks — not Create, Return, Check)
+- [ ] Methods use third-person verbs (Creates, Returns, Checks - not Create, Return, Check)
+- [ ] Regular dashes (`-`) used, not em dashes (`—`)
 - [ ] ASCII diagrams use standard Unicode (`✗` `→` `▼`) not emoji (`❌` `➡️` `⬇️`)
 - [ ] Markdown tables use left-aligned columns (`:---`)
+- [ ] Only `#` and `##` headings used (not `###` - use **bold** for sub-sections)
 - [ ] High-level concepts at module/trait level (inverted pyramid)
 - [ ] All links use reference-style with `crate::` paths
 - [ ] All link definitions at bottom of comment blocks
@@ -935,6 +976,7 @@ Before committing documentation:
 - [ ] Hex shown in comments for cross-reference
 - [ ] Markdown tables formatted (`cargo rustdoc-fmt`)
 - [ ] No broken links (`./check.fish --doc`)
+- [ ] Heading anchors updated after heading renames (fragment links are **not** validated by rustdoc)
 - [ ] All code examples compile (`./check.fish --test`)
 
 ---
