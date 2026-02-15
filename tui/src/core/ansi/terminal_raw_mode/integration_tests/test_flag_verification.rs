@@ -6,8 +6,8 @@
 //! *something* changed. This test documents the exact contract of raw mode
 //! and catches regressions in flag handling.
 
-use crate::{ControlledChild, PtyPair, RawModeGuard, VMIN_RAW_MODE, VTIME_RAW_MODE,
-            drain_pty_and_wait, generate_pty_test};
+use crate::{ControlledChild, PtyPair, PtyTestMode, RawModeGuard, VMIN_RAW_MODE,
+            VTIME_RAW_MODE, drain_pty_and_wait, generate_pty_test};
 use rustix::termios::{self, ControlModes, InputModes, LocalModes, OutputModes, SpecialCodeIndex};
 use std::{io::{BufRead, BufReader, Write},
           time::{Duration, Instant}};
@@ -28,7 +28,8 @@ generate_pty_test! {
     /// Run with: `cargo test -p r3bl_tui --lib test_raw_mode_flags -- --nocapture`
     test_fn: test_raw_mode_flags,
     controller: pty_controller_entry_point,
-    controlled: pty_controlled_entry_point
+    controlled: pty_controlled_entry_point,
+    mode: PtyTestMode::Cooked,
 }
 
 /// Controller process: verifies that controlled process reports correct flags.

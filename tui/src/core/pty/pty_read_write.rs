@@ -588,7 +588,7 @@ mod tests {
     #[cfg(not(target_os = "windows"))]
     use wait_timeout::ChildExt;
 
-    // XMARK: Process isolated test functions using env vars.
+    // XMARK: Process isolated test with PTY.
 
     /// This test coordinator runs each PTY read-write test in its own isolated process.
     /// This ensures that PTY resources (file descriptors, child processes, etc.) are
@@ -1770,8 +1770,6 @@ mod tests {
 
         Ok(output)
     }
-
-    // XMARK: Input handler task tests.
 
     #[tokio::test]
     async fn test_create_input_handler_task_write() {

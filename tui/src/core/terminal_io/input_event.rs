@@ -98,8 +98,10 @@ pub enum InputEvent {
     /// - **Ctrl+V**: Application-controlled, consistent with desktop applications
     ///
     /// Note: Bracketed paste must be enabled via
-    /// [`EnableBracketedPaste`](crate::PaintRenderOpImplCrossterm::raw_mode_enter) in raw
+    /// [`EnableBracketedPaste`] in raw
     /// mode.
+    ///
+    /// [`EnableBracketedPaste`]: crate::PaintRenderOpImplCrossterm::raw_mode_enter
     BracketedPaste(String),
     /// The input thread shut down. The [`ShutdownReason`] indicates why - either the RRT
     /// framework exhausted its [`RestartPolicy`] or caught a panic on the dedicated thread.

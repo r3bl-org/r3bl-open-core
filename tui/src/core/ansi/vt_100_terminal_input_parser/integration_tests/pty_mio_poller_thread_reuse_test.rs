@@ -49,7 +49,7 @@
 //!
 //! [`SubscriberGuard`]: crate::core::resilient_reactor_thread::SubscriberGuard
 
-use crate::{ControlledChild, PtyPair,
+use crate::{ControlledChild, PtyPair, PtyTestMode,
             core::resilient_reactor_thread::LivenessState,
             direct_to_ansi::{DirectToAnsiInputDevice,
                              input::global_input_resource::SINGLETON},
@@ -72,7 +72,8 @@ const TEST_PASSED: &str = "REUSE_TEST_PASSED";
 generate_pty_test! {
     test_fn: test_pty_mio_poller_thread_reuse,
     controller: controller_entry_point,
-    controlled: controlled_entry_point
+    controlled: controlled_entry_point,
+    mode: PtyTestMode::Raw,
 }
 
 /// Helper to wait for a specific signal from controlled.
@@ -142,12 +143,6 @@ fn controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
 fn controlled_entry_point() -> ! {
     println!("{CONTROLLED_READY}");
     std::io::stdout().flush().expect("Failed to flush");
-
-    // Enable raw mode for proper input handling.
-    eprintln!("🔍 Reuse Controlled: Setting terminal to raw mode...");
-    if let Err(e) = crate::core::ansi::terminal_raw_mode::enable_raw_mode() {
-        eprintln!("⚠️  Failed to enable raw mode: {e}");
-    }
 
     let runtime = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
 
@@ -229,11 +224,6 @@ fn controlled_entry_point() -> ! {
         // Clean up.
         drop(device_b);
     });
-
-    // Disable raw mode.
-    if let Err(e) = crate::core::ansi::terminal_raw_mode::disable_raw_mode() {
-        eprintln!("⚠️  Failed to disable raw mode: {e}");
-    }
 
     eprintln!("🔍 Reuse Controlled: Exiting");
     std::process::exit(0);

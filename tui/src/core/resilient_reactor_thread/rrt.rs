@@ -172,13 +172,13 @@ pub const CHANNEL_CAPACITY: usize = 4_096;
 /// together (see [two-phase setup]).
 ///
 /// [`Arc<Mutex<...>>`]: std::sync::Arc
-/// [`Option<F::Waker>`]: super::RRTWaker
-/// [`Vec<u8>`]: std::vec::Vec
 /// [`Arc`]: std::sync::Arc
 /// [`Continuation::Restart`]: crate::Continuation::Restart
 /// [`LivenessState`]: super::LivenessState
-/// [`OnceLock`]: std::sync::OnceLock
 /// [`OnceLock::new()`]: std::sync::OnceLock::new
+/// [`OnceLock`]: std::sync::OnceLock
+/// [`Option<F::Waker>`]: super::RRTWaker
+/// [`Poll`]: mio::Poll
 /// [`RRTLiveness`]: super::RRTLiveness
 /// [`RRTWaker`]: super::RRTWaker
 /// [`RRTWorker`]: super::RRTWorker
@@ -186,11 +186,11 @@ pub const CHANNEL_CAPACITY: usize = 4_096;
 /// [`String`]: std::string::String
 /// [`SubscriberGuard`]: super::SubscriberGuard
 /// [`Terminated`]: super::LivenessState::Terminated
+/// [`Vec<u8>`]: std::vec::Vec
+/// [`Waker`]: mio::Waker
 /// [`broadcast channel`]: tokio::sync::broadcast::channel
 /// [`broadcast_tx`]: field@Self::broadcast_tx
 /// [`liveness`]: field@Self::liveness
-/// [`Poll`]: mio::Poll
-/// [`Waker`]: mio::Waker
 /// [`mio::Poll`]: mio::Poll
 /// [`subscribe()`]: Self::subscribe
 /// [`tokio::sync::broadcast::channel()`]: tokio::sync::broadcast::channel
@@ -198,8 +198,8 @@ pub const CHANNEL_CAPACITY: usize = 4_096;
 /// [blocking mechanism]: super#understanding-blocking-io
 /// [const expression]: #const-expression-vs-const-declaration-vs-static-declaration
 /// [self-healing restart details]: super#self-healing-restart-details
-/// [two-phase setup]: super#two-phase-setup
 /// [thread relaunch]: super#how-it-works
+/// [two-phase setup]: super#two-phase-setup
 #[allow(missing_debug_implementations)]
 pub struct RRT<F>
 where
@@ -238,11 +238,10 @@ where
     /// (which *is* const), and the wrapper is created lazily on the first
     /// [`subscribe()`] call.
     ///
-    /// [`Option<F::Waker>`]: super::RRTWaker
-    ///
     /// [`Arc::new(Mutex::new(...))`]: std::sync::Arc::new
     /// [`Arc`]: std::sync::Arc
     /// [`OnceLock`]: std::sync::OnceLock
+    /// [`Option<F::Waker>`]: super::RRTWaker
     /// [`RRTWaker`]: super::RRTWaker
     /// [`SubscriberGuard`]: super::SubscriberGuard
     /// [`mio::Poll`]: mio::Poll
@@ -646,7 +645,7 @@ pub fn run_worker_loop<F>(
 }
 
 /// Advances the backoff delay for the next restart attempt.
-fn advance_backoff_delay(
+pub fn advance_backoff_delay(
     current: std::time::Duration,
     policy: &RestartPolicy,
 ) -> Option<std::time::Duration> {

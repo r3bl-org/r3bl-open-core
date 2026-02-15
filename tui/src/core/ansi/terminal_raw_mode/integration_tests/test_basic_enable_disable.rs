@@ -6,7 +6,8 @@
 //! terminal state using actual PTY pairs. This is the foundational test
 //! that ensures the basic lifecycle works.
 
-use crate::{ControlledChild, PtyPair, RawModeGuard, drain_pty_and_wait, generate_pty_test};
+use crate::{ControlledChild, PtyPair, PtyTestMode, RawModeGuard, drain_pty_and_wait,
+            generate_pty_test};
 use rustix::termios;
 use std::{io::{BufRead, BufReader, Write},
           time::{Duration, Instant}};
@@ -22,7 +23,8 @@ generate_pty_test! {
     /// Run with: `cargo test -p r3bl_tui --lib test_raw_mode_pty -- --nocapture`
     test_fn: test_raw_mode_pty,
     controller: pty_controller_entry_point,
-    controlled: pty_controlled_entry_point
+    controlled: pty_controlled_entry_point,
+    mode: PtyTestMode::Cooked,
 }
 
 /// Controller process: verifies results.

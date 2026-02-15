@@ -33,7 +33,7 @@
 //! [`new()`]: crate::direct_to_ansi::DirectToAnsiInputDevice::new
 //! [`subscribe()`]: crate::direct_to_ansi::DirectToAnsiInputDevice::subscribe
 
-use crate::{ControlledChild, PtyPair, generate_pty_test,
+use crate::{ControlledChild, PtyPair, PtyTestMode, generate_pty_test,
             tui::terminal_lib_backends::direct_to_ansi::DirectToAnsiInputDevice};
 use std::io::{BufRead, BufReader, Write};
 
@@ -46,7 +46,8 @@ const TEST_PASSED: &str = "SINGLETON_TEST_PASSED";
 generate_pty_test! {
     test_fn: test_pty_mio_poller_singleton,
     controller: singleton_controller_entry_point,
-    controlled: singleton_controlled_entry_point
+    controlled: singleton_controlled_entry_point,
+    mode: PtyTestMode::Raw,
 }
 
 /// Helper to wait for a specific signal from controlled.
@@ -100,12 +101,6 @@ fn singleton_controlled_entry_point() -> ! {
     println!("{CONTROLLED_READY}");
     std::io::stdout().flush().expect("Failed to flush");
 
-    // Enable raw mode for proper input handling.
-    eprintln!("Singleton Controlled: Setting terminal to raw mode...");
-    if let Err(e) = crate::core::ansi::terminal_raw_mode::enable_raw_mode() {
-        eprintln!("Failed to enable raw mode: {e}");
-    }
-
     eprintln!("Singleton Controlled: Starting singleton test...");
 
     // Step 1: First device creation should succeed.
@@ -155,11 +150,6 @@ fn singleton_controlled_entry_point() -> ! {
     eprintln!("All singleton test assertions passed!");
     println!("{TEST_PASSED}");
     std::io::stdout().flush().expect("Failed to flush");
-
-    // Disable raw mode.
-    if let Err(e) = crate::core::ansi::terminal_raw_mode::disable_raw_mode() {
-        eprintln!("Failed to disable raw mode: {e}");
-    }
 
     eprintln!("Singleton Controlled: Exiting");
     std::process::exit(0);

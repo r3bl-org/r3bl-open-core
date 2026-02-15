@@ -314,7 +314,7 @@ mod tests {
     use tokio::{sync::mpsc::unbounded_channel,
                 time::{Duration, timeout}};
 
-    /// Helper function to collect events with a timeout
+    /// Helper function to collect events with a timeout.
     async fn collect_events_with_timeout(
         mut session: PtyReadOnlySession,
         max_duration: Duration,
@@ -350,12 +350,12 @@ mod tests {
         }
     }
 
+    // XMARK: Process isolated test with PTY.
+
     // On Windows, ConPTY does not reliably deliver child stdout to the controller
     // reader, causing these tests to timeout. Gate as Unix-only.
     #[cfg(unix)]
-    #[tokio::test]
     async fn test_simple_echo_command() -> miette::Result<()> {
-        // Create a temporary directory for the test.
         let temp_dir = std::env::temp_dir();
 
         let session = PtyCommandBuilder::new("echo")
@@ -368,7 +368,6 @@ mod tests {
 
         assert!(status.success());
 
-        // Should have output and exit events.
         let output_events: Vec<_> = events
             .iter()
             .filter_map(|e| match e {
@@ -387,14 +386,9 @@ mod tests {
     }
 
     #[cfg(unix)]
-    #[tokio::test]
     async fn test_osc_sequence_with_printf() -> miette::Result<()> {
-        // Create a temporary directory for the test.
         let temp_dir = std::env::temp_dir();
 
-        // Use bash's builtin printf to emit a known OSC sequence.
-        // Note: macOS /usr/bin/printf doesn't support \x escapes, so we use bash -c
-        // with \033 octal escapes which work on both Linux and macOS.
         let session = PtyCommandBuilder::new("bash")
             .args(["-c", r"printf '\033]9;4;1;50\033\\'"])
             .cwd(temp_dir)
@@ -405,7 +399,6 @@ mod tests {
 
         assert!(status.success());
 
-        // Should have received the OSC event.
         let osc_events: Vec<_> = events
             .iter()
             .filter_map(|e| match e {
@@ -420,13 +413,9 @@ mod tests {
     }
 
     #[cfg(unix)]
-    #[tokio::test]
     async fn test_multiple_osc_sequences() -> miette::Result<()> {
-        // Create a temporary directory for the test.
         let temp_dir = std::env::temp_dir();
 
-        // Emit multiple OSC sequences using bash's builtin printf.
-        // Note: macOS /usr/bin/printf doesn't support \x escapes.
         let session = PtyCommandBuilder::new("bash")
             .args([
                 "-c",
@@ -460,18 +449,10 @@ mod tests {
         Ok(())
     }
 
-    #[tokio::test]
+    #[cfg(unix)]
     async fn test_osc_with_mixed_output() -> miette::Result<()> {
-        // Mix regular output with OSC sequences.
-        // This test requires bash/sh with working printf escape sequences
-        if cfg!(target_os = "windows") {
-            return Ok(()); // Skip on Windows
-        }
-
-        // Create a temporary directory for the test.
         let temp_dir = std::env::temp_dir();
 
-        // Try using bash first, then sh.
         let config = PtyConfigOption::Osc + PtyConfigOption::Output;
         let session = PtyCommandBuilder::new("bash")
             .args([
@@ -486,13 +467,11 @@ mod tests {
 
         assert!(status.success());
 
-        // Check we got output events (OSC might not work on all systems)
         let has_output = events
             .iter()
             .any(|e| matches!(e, PtyReadOnlyOutputEvent::Output(_)));
         assert!(has_output);
 
-        // Check if we got OSC events (may not work on all printf implementations)
         let osc_events: Vec<_> = events
             .iter()
             .filter_map(|e| match e {
@@ -509,18 +488,10 @@ mod tests {
         Ok(())
     }
 
-    #[tokio::test]
+    #[cfg(unix)]
     async fn test_split_osc_sequence_simulation() -> miette::Result<()> {
-        // This test simulates a split sequence using shell commands.
-        // Note: This is platform-specific and may not work on all systems
-        if cfg!(target_os = "windows") {
-            return Ok(()); // Skip on Windows
-        }
-
-        // Create a temporary directory for the test.
         let temp_dir = std::env::temp_dir();
 
-        // Try using bash with better escape sequence handling.
         let session = PtyCommandBuilder::new("bash")
             .args(["-c", r"printf '\033]9;4;1;'; sleep 0.01; printf '75\033\\'"])
             .cwd(temp_dir)
@@ -529,7 +500,6 @@ mod tests {
         let (events, status) =
             collect_events_with_timeout(session, Duration::from_secs(5)).await?;
 
-        // Command should succeed.
         assert!(status.success());
 
         let osc_events: Vec<_> = events
@@ -540,10 +510,9 @@ mod tests {
             })
             .collect();
 
-        // This test may not produce OSC events on all systems due to printf limitations.
-        // We just verify the command ran successfully.
+        // This test may not produce OSC events on all systems due to printf
+        // limitations. We just verify the command ran successfully.
         if !osc_events.is_empty() {
-            // If we did get OSC events, they should be correct.
             assert_eq!(osc_events, vec![OscEvent::ProgressUpdate(75)]);
         }
 
@@ -551,13 +520,11 @@ mod tests {
     }
 
     #[cfg(unix)]
-    #[tokio::test]
     async fn test_all_osc_event_types() -> miette::Result<()> {
-        // Create a temporary directory for the test.
         let temp_dir = std::env::temp_dir();
 
-        // Test all four OSC event types using bash's builtin printf with octal escapes.
-        // Note: macOS /usr/bin/printf doesn't support \x escapes.
+        // Test all four OSC event types using bash's builtin printf with octal
+        // escapes. Note: macOS /usr/bin/printf doesn't support \x escapes.
         let sequences = [
             (r"printf '\033]9;4;0;0\033\\'", OscEvent::ProgressCleared),
             (
@@ -597,12 +564,9 @@ mod tests {
     }
 
     #[cfg(unix)]
-    #[tokio::test]
     async fn test_command_failure() -> miette::Result<()> {
-        // Create a temporary directory for the test.
         let temp_dir = std::env::temp_dir();
 
-        // Test that we properly handle command failures.
         let session = PtyCommandBuilder::new("false")
             .cwd(temp_dir)
             .spawn_read_only(PtyConfigOption::NoCaptureOutput)?;
@@ -610,10 +574,8 @@ mod tests {
         let (events, status) =
             collect_events_with_timeout(session, Duration::from_secs(5)).await?;
 
-        // Command should fail.
         assert!(!status.success());
 
-        // Should have an exit event.
         let has_exit = events
             .iter()
             .any(|e| matches!(e, PtyReadOnlyOutputEvent::Exit(_)));
@@ -623,12 +585,9 @@ mod tests {
     }
 
     #[cfg(unix)]
-    #[tokio::test]
     async fn test_no_capture_option() -> miette::Result<()> {
-        // Create a temporary directory for the test.
         let temp_dir = std::env::temp_dir();
 
-        // Test that NoCaptureOutput doesn't capture anything.
         let session = PtyCommandBuilder::new("echo")
             .args(["test"])
             .cwd(temp_dir)
@@ -639,7 +598,6 @@ mod tests {
 
         assert!(status.success());
 
-        // Should only have exit event, no output.
         let output_events: Vec<_> = events
             .iter()
             .filter(|e| matches!(e, PtyReadOnlyOutputEvent::Output(_)))
@@ -648,6 +606,65 @@ mod tests {
         assert!(output_events.is_empty());
 
         Ok(())
+    }
+
+    /// Runs all PTY-spawning tests sequentially in a single tokio runtime.
+    #[cfg(unix)]
+    fn run_all_pty_read_only_tests_sequentially() {
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        rt.block_on(async {
+            test_simple_echo_command().await.unwrap();
+            test_osc_sequence_with_printf().await.unwrap();
+            test_multiple_osc_sequences().await.unwrap();
+            test_osc_with_mixed_output().await.unwrap();
+            test_split_osc_sequence_simulation().await.unwrap();
+            test_all_osc_event_types().await.unwrap();
+            test_command_failure().await.unwrap();
+            test_no_capture_option().await.unwrap();
+        });
+    }
+
+    /// Process-isolated coordinator for PTY read-only tests.
+    ///
+    /// These tests spawn real PTY sessions (`openpty` on `/dev/ptmx`). When run
+    /// in parallel by `cargo test`, concurrent `openpty`/`fork` calls cause
+    /// transient `pipe2(O_CLOEXEC)` failures inside `portable_pty`. Running them
+    /// sequentially in a subprocess eliminates this contention.
+    #[cfg(unix)]
+    #[test]
+    fn test_all_pty_read_only_in_isolated_process() {
+        crate::suppress_wer_dialogs();
+        if std::env::var("ISOLATED_TEST_RUNNER").is_ok() {
+            run_all_pty_read_only_tests_sequentially();
+            std::process::exit(0);
+        }
+
+        let mut cmd = crate::new_isolated_test_command();
+        cmd.env("ISOLATED_TEST_RUNNER", "1")
+            .env("RUST_BACKTRACE", "1")
+            .args([
+                "--test-threads",
+                "1",
+                "test_all_pty_read_only_in_isolated_process",
+            ]);
+
+        let output = cmd.output().expect("Failed to run isolated test");
+        let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+
+        if !output.status.success()
+            || stderr.contains("panicked at")
+            || stderr.contains("Test failed with error")
+        {
+            eprintln!("Exit status: {:?}", output.status);
+            eprintln!("Stdout: {}", String::from_utf8_lossy(&output.stdout));
+            eprintln!("Stderr: {stderr}");
+
+            panic!(
+                "Isolated test failed with status code {:?}: {}",
+                output.status.code(),
+                stderr
+            );
+        }
     }
 
     #[tokio::test]

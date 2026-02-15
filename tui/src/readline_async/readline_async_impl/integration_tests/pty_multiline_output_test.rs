@@ -165,7 +165,7 @@
 //! [`SharedWriter`]: crate::SharedWriter
 //! [`OffscreenBuffer::apply_ansi_bytes`]: crate::OffscreenBuffer::apply_ansi_bytes
 
-use crate::{ControlledChild, PtyPair, generate_pty_test, read_lines_and_drain};
+use crate::{ControlledChild, PtyPair, PtyTestMode, generate_pty_test, read_lines_and_drain};
 use std::{io::Write, time::Duration};
 
 generate_pty_test! {
@@ -179,7 +179,8 @@ generate_pty_test! {
     /// [`SharedWriter`]: crate::SharedWriter
     test_fn: test_pty_multiline_output_starts_at_column_1,
     controller: pty_controller_entry_point,
-    controlled: pty_controlled_entry_point
+    controlled: pty_controlled_entry_point,
+    mode: PtyTestMode::Cooked,
 }
 
 /// PTY Controller: Verify multi-line output all starts at column 1.

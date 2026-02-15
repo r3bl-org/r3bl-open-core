@@ -8,7 +8,7 @@
 //! - Calling `disable()` when already disabled
 //! - Original settings are preserved across cycles
 
-use crate::{ControlledChild, PtyPair, generate_pty_test};
+use crate::{ControlledChild, PtyPair, PtyTestMode, generate_pty_test};
 use rustix::termios;
 use std::{io::{BufRead, BufReader, Write},
           time::{Duration, Instant}};
@@ -29,7 +29,8 @@ generate_pty_test! {
     /// Run with: `cargo test -p r3bl_tui --lib test_raw_mode_cycles -- --nocapture`
     test_fn: test_raw_mode_cycles,
     controller: pty_controller_entry_point,
-    controlled: pty_controlled_entry_point
+    controlled: pty_controlled_entry_point,
+    mode: PtyTestMode::Cooked,
 }
 
 /// Controller process: verifies that controlled process completes multiple cycles successfully.

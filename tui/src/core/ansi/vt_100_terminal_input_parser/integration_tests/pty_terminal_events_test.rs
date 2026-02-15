@@ -14,7 +14,7 @@
 //! [`DirectToAnsiInputDevice`]: crate::direct_to_ansi::DirectToAnsiInputDevice
 //! [`pty_bracketed_paste_test`]: mod@crate::core::ansi::vt_100_terminal_input_parser::integration_tests::pty_bracketed_paste_test
 
-use crate::{ControlledChild, InputEvent, PtyPair,
+use crate::{ControlledChild, InputEvent, PtyPair, PtyTestMode,
             core::ansi::{generator::generate_keyboard_sequence,
                          vt_100_terminal_input_parser::ir_event_types::{VT100FocusStateIR,
                                                                         VT100InputEventIR}},
@@ -26,12 +26,13 @@ use std::{io::{BufRead, BufReader, Write},
 /// Ready signal sent by controlled process after initialization.
 const CONTROLLED_READY: &str = "CONTROLLED_READY";
 
-// XMARK: Process isolated test functions using env vars & PTY.
+// XMARK: Process isolated test with PTY.
 
 generate_pty_test! {
     test_fn: test_pty_terminal_events,
     controller: pty_controller_entry_point,
-    controlled: pty_controlled_entry_point
+    controlled: pty_controlled_entry_point,
+    mode: PtyTestMode::Raw,
 }
 
 /// PTY Controller: Send terminal event sequences and verify parsing
@@ -166,13 +167,6 @@ fn pty_controlled_entry_point() -> ! {
     println!("{CONTROLLED_READY}");
     std::io::stdout().flush().expect("Failed to flush");
 
-    eprintln!("🔍 PTY Controlled: Setting terminal to raw mode...");
-    if let Err(e) = crate::core::ansi::terminal_raw_mode::enable_raw_mode() {
-        eprintln!("⚠️  PTY Controlled: Failed to enable raw mode: {e}");
-    } else {
-        eprintln!("✓ PTY Controlled: Terminal in raw mode");
-    }
-
     let runtime = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
 
     runtime.block_on(async {
@@ -232,10 +226,6 @@ fn pty_controlled_entry_point() -> ! {
 
         eprintln!("🔍 PTY Controlled: Completed, exiting");
     });
-
-    if let Err(e) = crate::core::ansi::terminal_raw_mode::disable_raw_mode() {
-        eprintln!("⚠️  PTY Controlled: Failed to disable raw mode: {e}");
-    }
 
     eprintln!("🔍 Controlled: Completed, exiting");
     std::process::exit(0);

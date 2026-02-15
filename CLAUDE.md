@@ -47,7 +47,7 @@ discover and use these when relevant. All skills are in `.claude/skills/`.
 
 ### Architecture & Patterns
 
-- **organize-modules** - Private modules with public re-exports, conditional visibility for docs/tests. Use when creating or organizing modules.
+- **organize-modules** - Private modules with public re-exports (barrel export pattern), conditional visibility for docs/tests. Use when creating or organizing modules.
   - Supporting file: `examples.md` (6 complete module organization examples)
 
 - **check-bounds-safety** - Type-safe Index/Length patterns for arrays, cursors, viewports, and terminal cursor movement. Includes `TermRowDelta`/`TermColDelta` for safe relative cursor movements that prevent CSI zero bugs. Distinguishes navigation (`-` returns index) from measurement (`distance_from()` returns length). Use when working with bounds-sensitive code.
@@ -144,6 +144,20 @@ For testing interactive terminal applications, use (both are installed):
 
   Co-Authored-By: Claude <noreply@anthropic.com>
   ```
+
+### Commit Message Format
+
+When a commit implements work from a `task/*.md` file, add a `Task:` trailer as the last line:
+
+```
+[scope] Short summary of the change
+
+Optional body with more detail.
+
+Task: task/some-task-name.md
+```
+
+The `Task:` trailer links the commit to its plan/design document for traceability.
 
 ## Task Tracking System
 

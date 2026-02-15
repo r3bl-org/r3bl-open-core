@@ -1,11 +1,30 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+/// Whether the macro should enable raw mode in the controlled process before calling
+/// the controlled function.
+///
+/// Most PTY tests need raw mode so the line discipline passes keystrokes through
+/// immediately (without waiting for Enter). Tests that manage raw mode themselves
+/// (e.g., tests for raw mode toggling) or that never read stdin should use
+/// [`Cooked`](PtyTestMode::Cooked).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PtyTestMode {
+    /// Enable raw mode in the controlled process before calling the controlled
+    /// function. Use this for tests that read keystrokes via
+    /// `DirectToAnsiInputDevice` or any stdin-reading code that expects raw mode.
+    Raw,
+    /// Do not change the terminal mode. The controlled process starts in the
+    /// default cooked mode. Use for tests that manage raw mode themselves or that
+    /// never read stdin.
+    Cooked,
+}
+
 /// Macro that generates PTY-based integration tests with automatic test name injection.
 ///
-/// Use this macro for **single-feature PTY tests** that test one specific behavior
-/// (e.g., raw mode, Ctrl+W deletion, terminal event parsing). For **multi-backend
-/// comparison tests** that need to run the same controlled code with different backends
-/// and compare results, use [`spawn_controlled_in_pty`] instead.
+/// Use this macro for **single-feature PTY tests** that test one specific behavior (e.g.,
+/// raw mode, Ctrl+W deletion, terminal event parsing). For **multi-backend comparison
+/// tests** that need to run the same controlled code with different backends and compare
+/// results, use [`spawn_controlled_in_pty`] instead.
 ///
 /// # When to Use This Macro vs [`spawn_controlled_in_pty`]
 ///
@@ -23,8 +42,8 @@
 /// 2. **PTY setup**: Creates PTY pair and spawns controlled process automatically
 /// 3. **Debug output**: Prints diagnostic messages for troubleshooting
 ///
-/// The macro creates the PTY and spawns the process, then passes these resources
-/// to your controller function so you can focus on verification logic.
+/// The macro creates the PTY and spawns the process, then passes these resources to your
+/// controller function so you can focus on verification logic.
 ///
 /// # Architecture
 ///
@@ -40,7 +59,7 @@
 /// ┌────────────▼───────────┐    ┌───────────────▼───────────────┐
 /// │ Macro: PTY Setup       │    │ Controlled Function           │
 /// │ - Creates PTY pair     │    │ - Enable raw mode (if needed) │
-/// │ - Spawns controlled    ├────▶ - Execute test logic         │
+/// │ - Spawns controlled    ├────► - Execute test logic          │
 /// │ - Passes to controller │    │ - Output via stdout/stderr    │
 /// └────────────┬───────────┘    └────────────▲─┬────────────────┘
 ///              │                             │ │
@@ -49,7 +68,7 @@
 /// │ - Receives pty_pair           │          │ │ stdin, stdout/stderr
 /// │ - Receives child              │          │ │
 /// │ - Writes input to child (opt) ├──────────┘ │
-/// │ - Reads results from child    ◀───────────┘
+/// │ - Reads results from child    ◄────────────┘
 /// │ - Verifies assertions         │
 /// │ - Waits for child exit        │
 /// └───────────────────────────────┘
@@ -78,7 +97,9 @@
 ///
 /// - The macro creates a 24x80 PTY pair (standard terminal size)
 /// - The controlled function MUST call `std::process::exit(0)` to prevent test recursion
-/// - Raw mode management is YOUR responsibility in controlled function
+/// - When `mode: PtyTestMode::Raw`, the macro enables raw mode in the controlled process
+///   before calling the controlled function. When `mode: PtyTestMode::Cooked`, the
+///   controlled process starts in the default cooked mode.
 /// - Verification logic is YOUR responsibility in controller function
 ///
 /// ## PTY Stream Behavior
@@ -96,10 +117,11 @@
 ///
 /// <!-- It is ok to use ignore here - this is a conceptual example showing PTY stream
 /// merging behavior, not a complete compilable example -->
+///
 /// ```ignore
-/// // Controlled code (both go to the same stream!)
-/// println!("Line: hello, Cursor: 5");      // Protocol message
-/// println!("🔍 PTY Controlled: Event: ...");    // Debug message (use println!, not eprintln!)
+/// // Controlled code (both println! & eprintln! go to the same stream!)
+/// println!("Line: hello, Cursor: 5");        // Protocol message
+/// println!("🔍 PTY Controlled: Event: ..."); // Debug message (use println!, not eprintln!)
 ///
 /// // Controller code (filters by content, not stream)
 /// if line.starts_with("Line:") {
@@ -119,9 +141,12 @@
 /// # Parameters
 ///
 /// - `test_fn`: The test function name (used as identifier, not string)
+/// - `controller`: A function that accepts `(pty_pair, child)` parameters
 /// - `controlled`: A function or expression that runs in the controlled process (must not
 ///   return)
-/// - `controller`: A function that accepts `(pty_pair, child)` parameters
+/// - `mode`: A [`PtyTestMode`] value - [`Raw`](PtyTestMode::Raw) to enable raw mode
+///   before calling the controlled function, or [`Cooked`](PtyTestMode::Cooked) to leave
+///   the terminal in its default cooked mode
 ///
 /// # Controller Function Signature
 ///
@@ -149,7 +174,8 @@ macro_rules! generate_pty_test {
         $(#[$meta:meta])*
         test_fn: $test_name:ident,
         controller: $controller_fn:expr,
-        controlled: $controlled_fn:expr
+        controlled: $controlled_fn:expr,
+        mode: $mode:expr $(,)?
     ) => {
         $(#[$meta])*
         #[test]
@@ -174,8 +200,24 @@ macro_rules! generate_pty_test {
                 println!("CONTROLLED_STARTING");
                 std::io::stdout().flush().expect("Failed to flush stdout");
 
-                // Run the controlled logic (never returns - exits process)
+                // Enable raw mode if requested by the test.
+                if $mode == $crate::PtyTestMode::Raw {
+                    if let Err(e) = $crate::enable_raw_mode() {
+                        eprintln!("Failed to enable raw mode: {e}");
+                    }
+                }
+
+                // Run the controlled logic (never returns - exits process).
                 $controlled_fn();
+
+                // Restore cooked mode for correctness. In practice this is
+                // unreachable because controlled functions call
+                // std::process::exit(0), but we include it so the
+                // enable/disable contract is explicit.
+                #[allow(unreachable_code)]
+                if $mode == $crate::PtyTestMode::Raw {
+                    drop($crate::disable_raw_mode());
+                }
             }
 
             // Otherwise, run as controller - create PTY and spawn controlled

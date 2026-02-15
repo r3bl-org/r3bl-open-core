@@ -1,6 +1,6 @@
 ---
 name: organize-modules
-description: Apply private modules with public re-exports pattern for clean API design. Includes conditional visibility for docs and tests. Use when creating modules, organizing mod.rs files, or before creating commits.
+description: Apply private modules with public re-exports (barrel export) pattern for clean API design. Includes conditional visibility for docs and tests. Use when creating modules, organizing mod.rs files, or before creating commits.
 ---
 
 # Module Organization Best Practices
@@ -21,9 +21,12 @@ Follow these patterns for clean, maintainable module organization:
 
 ### Step 1: Apply the Recommended Pattern
 
-**Prefer private modules with public re-exports** as the default pattern.
+**Prefer private modules with public re-exports** (also known as the [barrel export] pattern) as
+the default pattern.
 
 This provides a clean API while maintaining flexibility to refactor internal structure.
+
+[barrel export]: https://en.wikipedia.org/wiki/Barrel_(computer_science)
 
 ```rust
 // mod.rs - Module coordinator

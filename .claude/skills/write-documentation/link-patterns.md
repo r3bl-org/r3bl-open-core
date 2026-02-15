@@ -191,7 +191,7 @@ pub struct TerminalState {
 The conditional visibility pattern above is for **modules**. For **functions, structs, and other
 items** inside a private module, there's a simpler approach: just make the item `pub`.
 
-This is safe because of our **private modules with public re-exports** pattern. An item being
+This is safe because of our **private modules with public re-exports** (barrel export) pattern. An item being
 `pub` inside its containing module doesn't mean it escapes into the wild - `mod.rs` is the
 gatekeeper. The `pub use` re-exports in `mod.rs` explicitly control which symbols are visible
 to other modules, docs, and tests.

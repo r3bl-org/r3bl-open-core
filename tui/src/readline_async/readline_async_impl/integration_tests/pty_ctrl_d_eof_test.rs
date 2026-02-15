@@ -1,7 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use crate::{AsyncDebouncedDeadline, ControlledChild, DebouncedState, PtyPair,
-            core::test_fixtures::StdoutMock, generate_pty_test,
+            PtyTestMode, core::test_fixtures::StdoutMock, generate_pty_test,
             readline_async::readline_async_impl::LineState};
 use std::{io::{BufRead, BufReader, Write},
           sync::{Arc, Mutex as StdMutex},
@@ -48,7 +48,8 @@ generate_pty_test! {
     /// [`ReadlineEvent::Eof`]: crate::ReadlineEvent::Eof
     test_fn: test_pty_ctrl_d_eof,
     controller: pty_controller_entry_point,
-    controlled: pty_controlled_entry_point
+    controlled: pty_controlled_entry_point,
+    mode: PtyTestMode::Raw,
 }
 
 /// PTY Controller: Send Ctrl+D on empty line and verify EOF
@@ -161,14 +162,6 @@ fn pty_controlled_entry_point() -> ! {
     use crate::direct_to_ansi::DirectToAnsiInputDevice;
 
     println!("{CONTROLLED_STARTING}");
-    std::io::stdout().flush().expect("Failed to flush");
-
-    println!("🔍 PTY Controlled: Setting terminal to raw mode...");
-    if let Err(e) = crate::core::ansi::terminal_raw_mode::enable_raw_mode() {
-        println!("⚠️  PTY Controlled: Failed to enable raw mode: {e}");
-    } else {
-        println!("✓ PTY Controlled: Terminal in raw mode");
-    }
     std::io::stdout().flush().expect("Failed to flush");
 
     let runtime = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");

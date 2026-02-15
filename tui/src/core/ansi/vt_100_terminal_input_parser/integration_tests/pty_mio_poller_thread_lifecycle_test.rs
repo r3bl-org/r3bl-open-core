@@ -37,7 +37,7 @@
 //! [Device Lifecycle]: crate::direct_to_ansi::DirectToAnsiInputDevice#device-lifecycle
 //! [`mio_poller`]: crate::direct_to_ansi::input::mio_poller
 
-use crate::{ControlledChild, PtyPair,
+use crate::{ControlledChild, PtyPair, PtyTestMode,
             core::resilient_reactor_thread::LivenessState,
             direct_to_ansi::{DirectToAnsiInputDevice, input::global_input_resource},
             generate_pty_test};
@@ -62,7 +62,8 @@ const TEST_PASSED: &str = "LIFECYCLE_TEST_PASSED";
 generate_pty_test! {
     test_fn: test_pty_mio_poller_thread_lifecycle,
     controller: lifecycle_controller_entry_point,
-    controlled: lifecycle_controlled_entry_point
+    controlled: lifecycle_controlled_entry_point,
+    mode: PtyTestMode::Raw,
 }
 
 /// Helper to wait for a specific signal from controlled.
@@ -136,12 +137,6 @@ fn lifecycle_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChil
 fn lifecycle_controlled_entry_point() -> ! {
     println!("{CONTROLLED_READY}");
     std::io::stdout().flush().expect("Failed to flush");
-
-    // Enable raw mode for proper input handling.
-    eprintln!("🔍 Lifecycle Controlled: Setting terminal to raw mode...");
-    if let Err(e) = crate::core::ansi::terminal_raw_mode::enable_raw_mode() {
-        eprintln!("⚠️  Failed to enable raw mode: {e}");
-    }
 
     let runtime = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
 
@@ -259,11 +254,6 @@ fn lifecycle_controlled_entry_point() -> ! {
         // Clean up.
         drop(device_b);
     });
-
-    // Disable raw mode.
-    if let Err(e) = crate::core::ansi::terminal_raw_mode::disable_raw_mode() {
-        eprintln!("⚠️  Failed to disable raw mode: {e}");
-    }
 
     eprintln!("🔍 Lifecycle Controlled: Exiting");
     std::process::exit(0);

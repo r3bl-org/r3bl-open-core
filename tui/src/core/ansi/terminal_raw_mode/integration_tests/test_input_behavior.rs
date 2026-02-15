@@ -6,8 +6,8 @@
 //! flags are set correctly. Verifies character-by-character reading without
 //! buffering, echo, or signal interpretation.
 
-use crate::{ControlledChild, PtyPair, generate_pty_test, ANSI_ESC, CONTROL_C, CONTROL_D,
-            CONTROL_LF};
+use crate::{ControlledChild, PtyPair, PtyTestMode, generate_pty_test, ANSI_ESC, CONTROL_C,
+            CONTROL_D, CONTROL_LF};
 use std::{io::{BufRead, BufReader, Read, Write},
           time::Duration};
 
@@ -25,7 +25,8 @@ generate_pty_test! {
     /// Run with: `cargo test -p r3bl_tui --lib test_raw_mode_input_behavior -- --nocapture`
     test_fn: test_raw_mode_input_behavior,
     controller: pty_controller_entry_point,
-    controlled: pty_controlled_entry_point
+    controlled: pty_controlled_entry_point,
+    mode: PtyTestMode::Cooked,
 }
 
 /// Controller process: sends input and verifies controlled process reports correct bytes.

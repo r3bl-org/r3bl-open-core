@@ -1,7 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use crate::{AsyncDebouncedDeadline, ControlledChild, DebouncedState, PtyPair,
-            core::test_fixtures::StdoutMock,
+            PtyTestMode, core::test_fixtures::StdoutMock,
             generate_pty_test,
             readline_async::readline_async_impl::LineState};
 use std::{io::{BufRead, BufReader, Write},
@@ -41,7 +41,8 @@ generate_pty_test! {
     /// [`LineState`]: crate::readline_async::readline_async_impl::LineState
     test_fn: test_pty_ctrl_w_deletion,
     controller: pty_controller_entry_point,
-    controlled: pty_controlled_entry_point
+    controlled: pty_controlled_entry_point,
+    mode: PtyTestMode::Raw,
 }
 
 /// PTY Controller: Send Ctrl+W sequences and verify word deletion
@@ -183,13 +184,6 @@ fn pty_controlled_entry_point() -> ! {
     println!("CONTROLLED_STARTING");
     std::io::stdout().flush().expect("Failed to flush");
 
-    println!("🔍 PTY Controlled: Setting terminal to raw mode...");
-    if let Err(e) = crate::core::ansi::terminal_raw_mode::enable_raw_mode() {
-        println!("⚠️  PTY Controlled: Failed to enable raw mode: {e}");
-    } else {
-        println!("✓ PTY Controlled: Terminal in raw mode");
-    }
-
     let runtime = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
 
     runtime.block_on(async {
@@ -287,10 +281,6 @@ fn pty_controlled_entry_point() -> ! {
 
         println!("🔍 PTY Controlled: Completed, exiting");
     });
-
-    if let Err(e) = crate::core::ansi::terminal_raw_mode::disable_raw_mode() {
-        println!("⚠️  PTY Controlled: Failed to disable raw mode: {e}");
-    }
 
     println!("🔍 Controlled: Completed, exiting");
     std::process::exit(0);

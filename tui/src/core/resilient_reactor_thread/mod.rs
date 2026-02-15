@@ -80,7 +80,9 @@
 //! **Async consumer isolation** - This channel (stored in [`RRT`] via [`OnceLock`])
 //! completely isolates async consumers from the dedicated [thread]'s lifecycle. It
 //! outlives every thread generation and is never replaced - [`RRT`] can reuse, destroy,
-//! or relaunch the [thread] without affecting any async consumers.
+//! or relaunch the [thread] without affecting any async consumers. The sender half of the
+//! channel is sync (since our dedicated [`std::thread::Thread`] is the sender), and the
+//! receiver half is async since our ([TUI] or [`readline_async`] app) is async.
 //!
 //! **Thread creation and reuse** - You start by declaring an [`RRT`] [singleton] in your
 //! code, and providing your implementation of the [`RRTFactory`] trait. No thread is
@@ -835,9 +837,14 @@
 //! [WezTerm]: https://wezfurlong.org/wezterm/
 //! [Windows]: https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-terminatethread
 //! [`'static` trait bound]: RRT#static-trait-bound-vs-static-lifetime-annotation
+//! [`Continuation::Restart`]: crate::Continuation::Restart
+//! [`Continuation::Stop`]: crate::Continuation::Stop
+//! [`Continuation`]: crate::Continuation
+//! [`Continue`]: crate::Continuation::Continue
 //! [`EINTR`]: https://man7.org/linux/man-pages/man3/errno.3.html
 //! [`EINVAL`]: https://man7.org/linux/man-pages/man3/errno.3.html
 //! [`Event`]: RRTWorker::Event
+//! [`F::Event`]: RRTFactory::Event
 //! [`Factory::create()`]: RRTFactory::create
 //! [`IOCP`]: https://learn.microsoft.com/en-us/windows/win32/fileio/i-o-completion-ports
 //! [`IORING_OP_ASYNC_CANCEL`]: https://man7.org/linux/man-pages/man3/io_uring_prep_cancel.3.html
@@ -862,9 +869,9 @@
 //! [`RRT`]: RRT
 //! [`Receiver::recv()`]: tokio::sync::broadcast::Receiver::recv
 //! [`Receiver`]: tokio::sync::broadcast::Receiver
-//! [`Restart`]: crate::Continuation::Restart
-//! [`RestartPolicy`]: RestartPolicy
 //! [`RestartPolicy::default()`]: RestartPolicy#impl-Default-for-RestartPolicy
+//! [`RestartPolicy`]: RestartPolicy
+//! [`Restart`]: crate::Continuation::Restart
 //! [`SA_RESTART`]: https://man7.org/linux/man-pages/man2/sigaction.2.html
 //! [`SIGINT`]: https://man7.org/linux/man-pages/man7/signal.7.html
 //! [`SINGLETON`]: #how-to-use-it
@@ -878,15 +885,8 @@
 //! [`accept()`]: std::net::TcpListener::accept
 //! [`block_on()`]: tokio::runtime::Runtime::block_on
 //! [`broadcast channel`]: tokio::sync::broadcast
-//! [`catch_unwind`]: std::panic::catch_unwind
 //! [`broadcast`]: tokio::sync::broadcast
-//! [`Continuation`]: crate::Continuation
-//! [`Continuation::Restart`]: crate::Continuation::Restart
-//! [`Continuation::Stop`]: crate::Continuation::Stop
-//! [`Continue`]: crate::Continuation::Continue
-//! [const expression]: RRT#const-expression-vs-const-declaration-vs-static-declaration
-//! [const expressions]: RRT#const-expression-vs-const-declaration-vs-static-declaration
-//! [default policy]: RestartPolicy#impl-Default-for-RestartPolicy
+//! [`catch_unwind`]: std::panic::catch_unwind
 //! [`create()`]: RRTFactory::create
 //! [`epoll_wait()`]: https://man7.org/linux/man-pages/man2/epoll_wait.2.html
 //! [`epoll`]: https://man7.org/linux/man-pages/man7/epoll.7.html
@@ -895,7 +895,6 @@
 //! [`fd`]: https://man7.org/linux/man-pages/man2/open.2.html
 //! [`fds`]: https://man7.org/linux/man-pages/man2/open.2.html
 //! [`fifo(7)`]: https://man7.org/linux/man-pages/man7/fifo.7.html
-//! [`F::Event`]: RRTFactory::Event
 //! [`filedescriptor::poll()`]: https://docs.rs/filedescriptor/latest/filedescriptor/fn.poll.html
 //! [`io_uring_enter()`]: https://man7.org/linux/man-pages/man2/io_uring_enter.2.html
 //! [`io_uring`]: https://kernel.dk/io_uring.pdf
@@ -940,7 +939,10 @@
 //! [blocks on I/O]: #understanding-blocking-io
 //! [busy-waiting]: https://en.wikipedia.org/wiki/Busy_waiting
 //! [completions]: https://man7.org/linux/man-pages/man7/io_uring.7.html
+//! [const expression]: RRT#const-expression-vs-const-declaration-vs-static-declaration
+//! [const expressions]: RRT#const-expression-vs-const-declaration-vs-static-declaration
 //! [cooked mode]: mod@crate::core::ansi::terminal_raw_mode#raw-mode-vs-cooked-mode
+//! [default policy]: RestartPolicy#impl-Default-for-RestartPolicy
 //! [design pattern]: https://en.wikipedia.org/wiki/Software_design_pattern
 //! [event mechanism]: https://man7.org/linux/man-pages/man7/epoll.7.html
 //! [executor thread in the `tokio` async runtime]: tokio::runtime
@@ -980,3 +982,6 @@ pub use rrt_event::*;
 pub use rrt_liveness::*;
 pub use rrt_restart_policy::*;
 pub use rrt_subscriber_guard::*;
+
+#[cfg(test)]
+mod tests;

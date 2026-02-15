@@ -191,7 +191,7 @@
 //! [`SharedWriter`]: crate::SharedWriter
 //! [`OffscreenBuffer::apply_ansi_bytes`]: crate::OffscreenBuffer::apply_ansi_bytes
 use crate::{ControlledChild, LineStateControlSignal, OffscreenBuffer, PtyPair,
-            SharedWriter, generate_pty_test, height, read_lines_and_drain,
+            PtyTestMode, SharedWriter, generate_pty_test, height, read_lines_and_drain,
             readline_async::readline_async_impl::LineState, width};
 use std::{io::Write, time::Duration};
 
@@ -206,7 +206,8 @@ generate_pty_test! {
     /// [`SharedWriter`]: crate::SharedWriter
     test_fn: test_pty_shared_writer_no_blank_line,
     controller: pty_controller_entry_point,
-    controlled: pty_controlled_entry_point
+    controlled: pty_controlled_entry_point,
+    mode: PtyTestMode::Cooked,
 }
 
 /// PTY Controller: Verify no blank line between log output and prompt.
