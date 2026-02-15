@@ -7,7 +7,8 @@
 use super::{super::{channel_types::{PollerEvent, StdinEvent},
                     paste_state_machine::{PasteStateResult, apply_paste_state_machine}},
             MioPollWorker};
-use crate::{Continuation, tui::DEBUG_TUI_SHOW_TERMINAL_BACKEND};
+use crate::{Continuation, core::resilient_reactor_thread::RRTEvent,
+            tui::DEBUG_TUI_SHOW_TERMINAL_BACKEND};
 use std::io::{ErrorKind, Read as _};
 use tokio::sync::broadcast::Sender;
 
@@ -39,7 +40,7 @@ pub const STDIN_READ_BUFFER_SIZE: usize = 1_024;
 /// [`stdin`]: std::io::stdin
 pub fn consume_stdin_input_with_tx(
     worker: &mut MioPollWorker,
-    tx: &Sender<PollerEvent>,
+    tx: &Sender<RRTEvent<PollerEvent>>,
 ) -> Continuation {
     let read_res = worker
         .sources
@@ -51,7 +52,7 @@ pub fn consume_stdin_input_with_tx(
             DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
                 tracing::debug!(message = "mio_poller thread: EOF (0 bytes)");
             });
-            drop(tx.send(PollerEvent::Stdin(StdinEvent::Eof)));
+            drop(tx.send(PollerEvent::Stdin(StdinEvent::Eof).into()));
             Continuation::Stop
         }
 
@@ -75,7 +76,7 @@ pub fn consume_stdin_input_with_tx(
                     error = ?e
                 );
             });
-            drop(tx.send(PollerEvent::Stdin(StdinEvent::Error)));
+            drop(tx.send(PollerEvent::Stdin(StdinEvent::Error).into()));
             Continuation::Stop
         }
     }
@@ -87,7 +88,7 @@ pub fn consume_stdin_input_with_tx(
 pub fn parse_stdin_bytes_with_tx(
     worker: &mut MioPollWorker,
     n: usize,
-    tx: &Sender<PollerEvent>,
+    tx: &Sender<RRTEvent<PollerEvent>>,
 ) -> Continuation {
     DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
         tracing::debug!(message = "mio_poller thread: read bytes", bytes_read = n);
@@ -107,7 +108,7 @@ pub fn parse_stdin_bytes_with_tx(
         {
             PasteStateResult::Emit(input_event) => {
                 if tx
-                    .send(PollerEvent::Stdin(StdinEvent::Input(input_event)))
+                    .send(PollerEvent::Stdin(StdinEvent::Input(input_event)).into())
                     .is_err()
                 {
                     // Receiver dropped - exit gracefully.

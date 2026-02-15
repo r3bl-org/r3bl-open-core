@@ -4,8 +4,8 @@
 # and displays colorful help with usage, features, and workflow documentation.
 
 # Parse command line arguments and return the mode
-# Returns: "help", "check", "build", "clippy", "test", "doc", "full",
-#          "watch", "watch-test", "watch-doc", or "normal"
+# Returns: "help", "check", "build", "clippy", "test", "doc", "quick-doc",
+#          "full", "watch", "watch-test", "watch-doc", or "normal"
 function parse_arguments
     if test (count $argv) -eq 0
         echo "normal"
@@ -43,6 +43,9 @@ function parse_arguments
         case --doc
             echo "doc"
             return 0
+        case --quick-doc
+            echo "quick-doc"
+            return 0
         case --test
             echo "test"
             return 0
@@ -76,6 +79,7 @@ function show_help
     echo "  ./check.fish --clippy     Run clippy only (cargo clippy --all-targets)"
     echo "  ./check.fish --test       Run tests only (cargo test + doctests)"
     echo "  ./check.fish --doc        Build documentation only (quick, no deps)"
+    echo "  ./check.fish --quick-doc  Build docs directly to serving dir (fastest, no staging/sync)"
     echo "  ./check.fish --full       Run ALL checks (check + build + clippy + tests + doctests + docs + windows)"
     echo "  ./check.fish --watch      Watch mode: run default checks on changes"
     echo "  ./check.fish --watch-test Watch mode: run tests/doctests only"
@@ -114,6 +118,7 @@ function show_help
     echo "  --clippy      Runs clippy only: cargo clippy --all-targets (lint warnings)"
     echo "  --test        Runs tests only: cargo test + doctests"
     echo "  --doc         Builds documentation only (--no-deps, quick check)"
+    echo "  --quick-doc   Builds docs directly to serving dir (fastest, no staging/sync)"
     echo "  --full        Runs ALL checks: check + build + clippy + tests + doctests + docs + windows"
     echo "                Auto-recovers from ICE (escalates to rust-toolchain-update.fish)"
     echo "                and stale build artifacts (cleans cache, retries)"

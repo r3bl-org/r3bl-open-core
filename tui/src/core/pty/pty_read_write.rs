@@ -415,8 +415,8 @@ fn spawn_blocking_writer_task(
                         Continuation::Continue => {
                             // Continue processing.
                         }
-                        Continuation::Stop => {
-                            // Close command received, exit the task.
+                        _ => {
+                            // Exit the task.
                             break;
                         }
                     }

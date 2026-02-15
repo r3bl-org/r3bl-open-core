@@ -11,8 +11,10 @@
 
 use super::{channel_types::{PollerEvent, SignalEvent, StdinEvent},
             input_device_impl::{InputSubscriberGuard, global_input_resource}};
-use crate::{InputEvent, get_size, tui::DEBUG_TUI_SHOW_TERMINAL_BACKEND};
+use crate::{InputEvent, core::resilient_reactor_thread::RRTEvent,
+            tui::DEBUG_TUI_SHOW_TERMINAL_BACKEND};
 use std::fmt::Debug;
+use tokio::sync::broadcast::error::RecvError;
 
 /// Async input device for [`DirectToAnsi`] backend.
 ///
@@ -326,7 +328,7 @@ use std::fmt::Debug;
 /// │ THIS DEVICE: DirectToAnsiInputDevice (Backend Executor)           │
 /// │   • Zero-sized handle struct (delegates to SINGLETON)             │
 /// │   • Receives pre-parsed InputEvent from channel                   │
-/// │   • Resize events include Option<Size> (fallback to get_size())   │
+/// │   • Resize events carry Size directly (queried at signal time)    │
 /// └────────────────────────────┬──────────────────────────────────────┘
 ///                              │
 /// ┌────────────────────────────▼──────────────────────────────────────┐
@@ -335,7 +337,8 @@ use std::fmt::Debug;
 /// │   InputEvent::Mouse(MouseInput)                                   │
 /// │   InputEvent::Resize(Size)                                        │
 /// │   InputEvent::Focus(FocusEvent)                                   │
-/// │   InputEvent::Paste(String)                                       │
+/// │   InputEvent::BracketedPaste(String)                              │
+/// │   InputEvent::Shutdown(ShutdownReason)                            │
 /// └───────────────────────────────────────────────────────────────────┘
 /// ```
 ///
@@ -355,8 +358,7 @@ use std::fmt::Debug;
 /// │ 1. next() called                                                          │
 /// │    └─► Loop: stdin_rx.recv().await                                        │
 /// │         ├─► Event(e) → return e                                           │
-/// │         ├─► Resize(Some(size)) → return InputEvent::Resize(size)          │
-/// │         ├─► Resize(None) → retry get_size(), return if Ok, else continue  │
+/// │         ├─► Resize(size) → return InputEvent::Resize(size)                │
 /// │         └─► Eof/Error → return None                                       │
 /// └───────────────────────────────────▲───────────────────────────────────────┘
 ///                                     │ broadcast channel
@@ -612,19 +614,21 @@ impl DirectToAnsiInputDevice {
     ///
     /// # Returns
     ///
-    /// `None` if stdin is closed ([`EOF`]). Or [`InputEvent`] variants for:
+    /// `None` if [`stdin`] is closed ([`EOF`]). Or [`InputEvent`] variants for:
     /// - **Keyboard**: Character input, arrow keys, function keys, modifiers (with 0ms
     ///   `ESC` latency)
     /// - **Mouse**: Clicks, drags, motion, scrolling with position and modifiers
     /// - **Resize**: Terminal window size change (rows, cols)
     /// - **Focus**: Terminal gained/lost focus
     /// - **Paste**: Bracketed paste mode text
+    /// - **Shutdown**: The RRT framework shut down the input thread ([`RestartPolicy`]
+    ///   exhausted or panic caught). See [`ShutdownReason`] for details.
     ///
     /// # Usage
     ///
     /// This method is called once by the main event loop of the program using this
-    /// [`InputDevice`] and this [`DirectToAnsiInputDevice`] struct is persisted
-    /// for the entire lifetime of the program's event loop. Typical usage pattern:
+    /// [`InputDevice`] and this [`DirectToAnsiInputDevice`] struct is persisted for the
+    /// entire lifetime of the program's event loop. Typical usage pattern:
     ///
     /// ```no_run
     /// # #[cfg(target_os = "linux")]
@@ -661,8 +665,11 @@ impl DirectToAnsiInputDevice {
     ///                 Some(InputEvent::Focus(_)) => {
     ///                     // Handle focus events
     ///                 }
-    ///                 Some(_) => {
-    ///                     // Handle future/unknown event types
+    ///                 Some(InputEvent::Shutdown(reason)) => {
+    ///                     // Input thread shut down (restart policy exhausted or panic).
+    ///                     // Exit or try re-subscribing.
+    ///                     eprintln!("Input thread shutdown: {reason:?}");
+    ///                     break;
     ///                 }
     ///                 None => {
     ///                     // stdin closed (EOF) - signal program to exit
@@ -685,44 +692,29 @@ impl DirectToAnsiInputDevice {
     /// # fn main() {}
     /// ```
     ///
-    /// **Key points:**
-    /// - The device can be **created and dropped multiple times** - global state persists
-    /// - This method is **called repeatedly** by the main event loop via
-    ///   [`InputDevice::next()`], which dispatches to [`Self::next()`]
-    /// - **Buffer state is preserved** across device lifetimes via [`SINGLETON`]
-    /// - Returns `None` when stdin is closed (program should exit)
-    ///
-    /// # Global State
-    ///
-    /// This method accesses the global input resource ([`SINGLETON`]) which
-    /// holds:
-    /// - The channel receiver for stdin data and resize signals (from dedicated reader
-    ///   thread using [`mio::Poll`])
-    /// - The parse buffer and position
-    /// - The event queue for buffered events
-    /// - The paste collection state
-    ///
-    /// Note: `SIGWINCH` signals are now handled by the dedicated reader thread via
-    /// [`mio::Poll`] and [`signal_hook_mio`], arriving as [`PollerEvent::Signal`]
-    /// through the same channel as stdin data.
-    ///
-    /// See the [Architecture] section for the rationale behind this design.
+    /// **Key points about the code above:**
+    /// - The device can be **created and dropped multiple times** - the process-global
+    ///   [`SINGLETON`], its broadcast channel, and the kernel's [`stdin`] buffer all
+    ///   persist across device lifetimes.
+    /// - This method is **called repeatedly** by the async main event loop to get input
+    ///   events as they arrive.
+    /// - Returns [`None`] when [`stdin`] is closed (program should exit).
     ///
     /// # Implementation
     ///
     /// Async loop receiving pre-parsed events:
     /// 1. Check event queue for buffered events (from previous reads)
-    /// 2. Wait for events from stdin reader channel (yields until data ready)
+    /// 2. Wait for events from [`stdin`] reader channel (yields until data ready)
     /// 3. Apply paste state machine and return event
     ///
-    /// Events arrive fully parsed from the reader thread. See [struct-level
-    /// documentation] for zero-latency ESC detection.
+    /// Events arrive fully parsed from the reader thread. See [ESC key disambiguation]
+    /// for zero-latency `ESC` detection.
     ///
     /// # Cancel Safety
     ///
     /// This method is cancel-safe. The internal broadcast channel receive
-    /// ([`tokio::sync::broadcast::Receiver::recv`]) is truly cancel-safe: if
-    /// cancelled, the data remains in the channel for the next receive.
+    /// ([`tokio::sync::broadcast::Receiver::recv`]) is truly cancel-safe: if cancelled,
+    /// the data remains in the channel for the next receive.
     ///
     /// See the [Architecture] section for why we use a dedicated thread with
     /// [`mio::Poll`] and channel instead of [`tokio::io::stdin()`] (which is NOT
@@ -733,17 +725,18 @@ impl DirectToAnsiInputDevice {
     /// Panics if called after [`Drop`] has already been invoked (internal invariant).
     ///
     /// [Architecture]: Self#architecture
+    /// [ESC key disambiguation]: Self#esc-key-disambiguation-crossterm-more-flag-pattern
     /// [`EOF`]: https://en.wikipedia.org/wiki/End-of-file
     /// [`InputDevice::next()`]: crate::InputDevice::next
     /// [`InputDevice`]: crate::InputDevice
-    /// [`PollerEvent::Signal`]: super::channel_types::PollerEvent::Signal
+    /// [`RestartPolicy`]: crate::core::resilient_reactor_thread::RestartPolicy
     /// [`SINGLETON`]: super::input_device_impl::global_input_resource::SINGLETON
     /// [`Self::next()`]: Self::next
+    /// [`ShutdownReason`]: crate::core::resilient_reactor_thread::ShutdownReason
     /// [`mio::Poll`]: mio::Poll
-    /// [`signal_hook_mio`]: signal_hook_mio
+    /// [`stdin`]: std::io::stdin
     /// [`tokio::io::stdin()`]: tokio::io::stdin
     /// [`tokio::sync::broadcast::Receiver::recv`]: tokio::sync::broadcast::Receiver::recv
-    /// [struct-level documentation]: Self
     pub async fn next(&mut self) -> Option<InputEvent> {
         // Receiver was subscribed eagerly in new() - just use it.
         let subscriber_guard = &mut self.subscriber_guard;
@@ -757,16 +750,16 @@ impl DirectToAnsiInputDevice {
                 .recv()
                 .await;
 
-            let poller_event = match poller_rx_result {
+            let rrt_event = match poller_rx_result {
                 // Got a message from the channel.
                 Ok(msg) => msg,
                 // The sender was dropped.
-                Err(tokio::sync::broadcast::error::RecvError::Closed) => {
+                Err(RecvError::Closed) => {
                     // Channel closed - reader thread exited.
                     return None;
                 }
                 // This receiver fell behind and messages were dropped.
-                Err(tokio::sync::broadcast::error::RecvError::Lagged(skipped)) => {
+                Err(RecvError::Lagged(skipped)) => {
                     // This receiver fell behind - some messages were dropped.
                     // Log and continue from the current position.
                     DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
@@ -778,20 +771,20 @@ impl DirectToAnsiInputDevice {
                 }
             };
 
-            match poller_event {
-                PollerEvent::Stdin(StdinEvent::Input(event)) => {
-                    return Some(event);
-                }
-                PollerEvent::Stdin(StdinEvent::Eof | StdinEvent::Error) => {
-                    return None;
-                }
-                PollerEvent::Signal(SignalEvent::Resize(maybe_size)) => {
-                    // Use size from event, or retry get_size() if poller couldn't get it.
-                    let size = maybe_size.or_else(|| get_size().ok());
-                    if let Some(size) = size {
+            match rrt_event {
+                RRTEvent::Worker(poller_event) => match poller_event {
+                    PollerEvent::Stdin(StdinEvent::Input(event)) => {
+                        return Some(event);
+                    }
+                    PollerEvent::Stdin(StdinEvent::Eof | StdinEvent::Error) => {
+                        return None;
+                    }
+                    PollerEvent::Signal(SignalEvent::Resize(size)) => {
                         return Some(InputEvent::Resize(size));
                     }
-                    // Both failed - continue waiting for next event.
+                },
+                RRTEvent::Shutdown(reason) => {
+                    return Some(InputEvent::Shutdown(reason));
                 }
             }
         }

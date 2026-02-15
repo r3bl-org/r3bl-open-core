@@ -41,8 +41,8 @@ static THREAD_GENERATION: AtomicU8 = AtomicU8::new(0);
 /// [`Mutex<bool>`]: std::sync::Mutex
 ///
 /// [`AtomicBool`]: std::sync::atomic::AtomicBool
-/// [`SeqCst`]: std::sync::atomic::Ordering::SeqCst
 /// [`RRT::subscribe()`]: super::RRT::subscribe
+/// [`SeqCst`]: std::sync::atomic::Ordering::SeqCst
 /// [`generation`]: Self::generation
 /// [`is_running()`]: Self::is_running
 /// [`is_running`]: Self::is_running
@@ -124,4 +124,3 @@ pub enum LivenessState {
     /// The dedicated thread has exited or was never started.
     Terminated,
 }
-

@@ -150,8 +150,14 @@ impl InputRouter {
                 // Handle terminal resize - forward to all active PTYs.
                 Self::handle_resize(process_manager, new_size);
             }
+            InputEvent::Shutdown(_) => {
+                // Input thread died - signal exit so the mux doesn't hang
+                // waiting for events that will never come.
+                return Ok(true);
+            }
             _ => {
-                // Other input events are ignored for now.
+                // Other input events (Mouse, Focus, BracketedPaste) are
+                // ignored for now.
             }
         }
 

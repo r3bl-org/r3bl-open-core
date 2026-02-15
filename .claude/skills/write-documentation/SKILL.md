@@ -157,12 +157,12 @@ Follow Rust std conventions.
 
 ```rust
 // ❌ Bad: Summary and details merged
-/// A trait for creating workers. This trait solves the chicken-egg problem.
+/// A trait for creating workers. This trait implements two-phase setup.
 
 // ✅ Good: Summary is separate paragraph
 /// A trait for creating workers.
 ///
-/// This trait solves the chicken-egg problem.
+/// This trait implements two-phase setup.
 ```
 
 #### Structs - Noun Phrase
@@ -835,8 +835,9 @@ that should right-align for decimal alignment).
 ### Verify Documentation Builds
 
 ```bash
-./check.fish --doc
-# (runs: cargo doc --no-deps)
+./check.fish --quick-doc
+# (runs: cargo doc --no-deps, directly to serving dir - fastest for iteration)
+# Use --doc for final verification before commits (includes staging/sync)
 
 ./check.fish --test
 # (runs: cargo test --doc)
@@ -975,7 +976,7 @@ Before committing documentation:
 - [ ] Constants use binary/byte literal/decimal (not hex)
 - [ ] Hex shown in comments for cross-reference
 - [ ] Markdown tables formatted (`cargo rustdoc-fmt`)
-- [ ] No broken links (`./check.fish --doc`)
+- [ ] No broken links (`./check.fish --quick-doc`)
 - [ ] Heading anchors updated after heading renames (fragment links are **not** validated by rustdoc)
 - [ ] All code examples compile (`./check.fish --test`)
 

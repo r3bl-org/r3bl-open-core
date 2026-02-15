@@ -69,7 +69,7 @@ pub enum CaretDirection {
 }
 
 impl TryFrom<InputEvent> for EditorEvent {
-    type Error = String;
+    type Error = ();
 
     #[allow(clippy::too_many_lines)]
     fn try_from(input_event: InputEvent) -> Result<Self, Self::Error> {
@@ -282,7 +282,7 @@ impl TryFrom<InputEvent> for EditorEvent {
 
             InputEvent::BracketedPaste(text) => Ok(EditorEvent::InsertString(text)),
 
-            _ => Err(format!("Invalid input event: {input_event:?}")),
+            InputEvent::Shutdown(_) | _ => Err(()),
         }
     }
 }

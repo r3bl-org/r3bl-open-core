@@ -22,7 +22,7 @@ use super::{super::{channel_types::{PollerEvent, StdinEvent},
             handler_stdin::STDIN_READ_BUFFER_SIZE,
             mio_poll_waker::MioPollWaker};
 use crate::{Continuation,
-            core::resilient_reactor_thread::{RRTFactory, RRTWorker}};
+            core::resilient_reactor_thread::{RRTEvent, RRTFactory, RRTWorker}};
 use miette::{Diagnostic, Report};
 use mio::{Events, Interest, Poll, Waker, unix::SourceFd};
 use signal_hook::consts::SIGWINCH;
@@ -81,19 +81,19 @@ impl RRTWorker for MioPollWorker {
 
     /// Performs one iteration of the poll loop.
     ///
-    /// Blocks until stdin or signals are ready, then processes all ready events. Returns
-    /// [`Continuation::Stop`] if the thread should exit (e.g., no receivers left),
-    /// otherwise returns [`Continuation::Continue`].
+    /// Blocks until [`stdin`] or signals are ready, then processes all ready events.
     ///
-    /// # EINTR Handling
+    /// # Returns
     ///
-    /// If [`poll()`] is interrupted by a signal ([`ErrorKind::Interrupted`]), this method
-    /// returns [`Continuation::Continue`] to retry. This is the standard Unix pattern for
-    /// handling [`EINTR`].
+    /// - [`Continuation::Continue`]: Successfully processed or retryable error.
+    /// - [`Continuation::Stop`]: Thread should exit (e.g., no receivers left).
+    /// - [`Continuation::Restart`]: OS resources corrupted (non-[`EINTR`] poll error).
     ///
-    /// [`EINTR`]: https://man7.org/linux/man-pages/man3/errno.3.html
-    /// [`poll()`]: mio::Poll::poll
-    fn poll_once(&mut self, tx: &Sender<Self::Event>) -> Continuation {
+    /// See [EINTR handling] for how interrupted syscalls are retried.
+    ///
+    /// [EINTR handling]: super#eintr-handling
+    /// [`stdin`]: std::io::stdin
+    fn poll_once(&mut self, tx: &Sender<RRTEvent<Self::Event>>) -> Continuation {
         // Breaks borrow so dispatch can use `&mut self`.
         fn collect_ready_tokens(events: &Events) -> Vec<mio::Token> {
             events.iter().map(mio::event::Event::token).collect()
@@ -109,9 +109,10 @@ impl RRTWorker for MioPollWorker {
                 return Continuation::Continue;
             }
 
-            // Fatal error - notify consumers and exit.
-            drop(tx.send(PollerEvent::Stdin(StdinEvent::Error)));
-            return Continuation::Stop;
+            // Non-EINTR poll error - OS resources likely corrupted. Notify
+            // consumers and request restart via fresh F::create().
+            drop(tx.send(PollerEvent::Stdin(StdinEvent::Error).into()));
+            return Continuation::Restart;
         }
 
         // Dispatch ready events.
@@ -180,9 +181,10 @@ pub struct SignalRegistrationError(#[source] pub std::io::Error);
 ///
 /// Implements [`RRTFactory`] to integrate with the generic RRT infrastructure.
 /// The [`create()`] method creates both the worker and waker from the same [`mio::Poll`]
-/// instance, solving the chicken-egg problem where the waker needs the poll's registry.
+/// instance, implementing [two-phase setup] where the waker needs the poll's registry.
 ///
 /// [`create()`]: RRTFactory::create
+/// [two-phase setup]: crate::core::resilient_reactor_thread#two-phase-setup
 #[allow(missing_debug_implementations)]
 pub struct MioPollWorkerFactory;
 

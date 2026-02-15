@@ -656,7 +656,7 @@ When organizing modules, verify:
 - [ ] Rustfmt skip for deliberate organization (if needed): `#![cfg_attr(rustfmt, rustfmt_skip)]`
 - [ ] Transitive visibility for linked modules
 - [ ] Public modules ONLY when namespacing is part of the API
-- [ ] Documentation compiles: `cargo doc --no-deps`
+- [ ] Documentation compiles: `./check.fish --quick-doc`
 - [ ] Tests can access internal modules (if needed via `pub(crate)` or conditional visibility)
 
 ---

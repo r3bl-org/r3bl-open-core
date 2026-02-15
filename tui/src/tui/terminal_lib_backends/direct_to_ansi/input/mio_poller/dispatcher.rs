@@ -6,7 +6,8 @@ use super::{super::channel_types::PollerEvent, MioPollWorker,
             handler_receiver_drop::handle_receiver_drop_waker_with_tx,
             handler_signals::consume_pending_signals_with_tx,
             handler_stdin::consume_stdin_input_with_tx, sources::SourceKindReady};
-use crate::{Continuation, tui::DEBUG_TUI_SHOW_TERMINAL_BACKEND};
+use crate::{Continuation, core::resilient_reactor_thread::RRTEvent,
+            tui::DEBUG_TUI_SHOW_TERMINAL_BACKEND};
 use mio::Token;
 use tokio::sync::broadcast::Sender;
 
@@ -19,7 +20,7 @@ use tokio::sync::broadcast::Sender;
 pub fn dispatch_with_tx(
     token: Token,
     worker: &mut MioPollWorker,
-    tx: &Sender<PollerEvent>,
+    tx: &Sender<RRTEvent<PollerEvent>>,
 ) -> Continuation {
     use SourceKindReady::{ReceiverDropWaker, Signals, Stdin, Unknown};
     match SourceKindReady::from_token(token) {

@@ -40,7 +40,7 @@ This makes the comments much more readable. Follow these guidelines:
 
 - When adding reference style links, ensure that all the added links are at the bottom of the
   comment block.
-- Once complete, verify that all links are correct by running `cargo doc --no-deps` and checking the
+- Once complete, verify that all links are correct by running `./check.fish --quick-doc` and checking the
   generated documentation.
 
 For example this is good:
@@ -72,7 +72,7 @@ right amount of whitespaces.
 # Make sure code is clean
 
 1. use the test-runner subagent to fix any failing tests
-2. make sure all the docs build (`cargo doc --no-deps`)
+2. make sure all the docs build (`./check.fish --quick-doc`)
 3. make sure (`cargo clippy --all-targets`) has no warnings
 
 # Fix Comment Punctuation

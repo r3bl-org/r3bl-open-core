@@ -40,7 +40,7 @@
 //! [`subscribe()`]: crate::direct_to_ansi::DirectToAnsiInputDevice::subscribe
 
 use crate::{ControlledChild, PtyPair,
-            core::resilient_reactor_thread::LivenessState,
+            core::resilient_reactor_thread::{LivenessState, RRTEvent},
             direct_to_ansi::{DirectToAnsiInputDevice,
                              input::{channel_types::{PollerEvent, StdinEvent},
                                      global_input_resource::SINGLETON}},
@@ -204,13 +204,14 @@ fn subscribe_controlled_entry_point() -> ! {
             .receiver
             .as_mut()
             .expect("Subscriber receiver is None");
-        let msg: PollerEvent =
+        let rrt_event =
             tokio::time::timeout(Duration::from_secs(5), subscriber_rx.recv())
                 .await
                 .expect("Timeout reading from subscriber")
                 .expect("Channel closed");
-        let PollerEvent::Stdin(StdinEvent::Input(event)) = msg else {
-            panic!("Expected Stdin(Input(_)), got {msg:?}")
+        let RRTEvent::Worker(PollerEvent::Stdin(StdinEvent::Input(event))) = rrt_event
+        else {
+            panic!("Expected Worker(Stdin(Input(_))), got {rrt_event:?}")
         };
         let event_subscriber = Some(event);
         eprintln!("  Subscriber received: {event_subscriber:?}");

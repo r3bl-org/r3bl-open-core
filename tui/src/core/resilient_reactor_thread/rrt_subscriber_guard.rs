@@ -5,7 +5,7 @@
 //!
 //! [RAII]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
 
-use super::RRTWaker;
+use super::{RRTEvent, RRTWaker};
 use std::sync::{Arc, Mutex};
 use tokio::sync::broadcast::Receiver;
 
@@ -27,19 +27,23 @@ use tokio::sync::broadcast::Receiver;
 ///
 /// # Shared Waker and Correctness
 ///
-/// The `waker` field holds an `Arc<Mutex<Option<W>>>` that is shared with *all*
-/// subscribers (old and new) and the [`TerminationGuard`]. This means every subscriber
-/// always reads the **current** waker, even after a thread relaunch. This solves the
-/// zombie thread bug where old subscribers would call a stale waker targeting a dead
-/// [`mio::Poll`].
+/// The [`waker`] field holds an [`Arc<Mutex<Option<W>>>`] that is shared with *all*
+/// subscribers (old and new) and the [`TerminationGuard`].
 ///
-/// When the thread dies, [`TerminationGuard::drop()`] clears the waker to `None`. If
-/// a subscriber drops after the thread has already exited, the `wake()` call is skipped
-/// (the `Option` is `None`), which is correct - there's no thread to wake.
+/// Due to [two-phase setup], the [`RRTWaker`] and [`RRTWorker`] are created together from
+/// the same [`mio::Poll`] registry. This shared wrapper ensures every subscriber always
+/// reads the **current** [`RRTWaker`] trait implementation, even after a thread relaunch
+/// - preventing a **zombie thread bug** where old subscribers would call a stale
+/// [`RRTWaker`] trait implementation targeting a dead [`mio::Poll`].
+///
+/// When the thread dies, [`TerminationGuard::drop()`] clears the [`RRTWaker`] to
+/// [`None`]. If a subscriber drops after the thread has already exited, the [`wake()`]
+/// call is skipped (the [`Option`] is [`None`]), which is correct - there's no thread to
+/// wake.
 ///
 /// # Race Condition and Correctness
 ///
-/// There is a race window between when the receiver is dropped and when the dedicated
+/// There is a [race window] between when the receiver is dropped and when the dedicated
 /// thread checks [`receiver_count()`]. This is the **fast-path thread reuse** scenario -
 /// if a new subscriber appears during the window, the thread correctly continues serving
 /// it instead of exiting.
@@ -50,13 +54,18 @@ use tokio::sync::broadcast::Receiver;
 ///
 /// [RAII]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
 /// [`DirectToAnsiInputDevice::next()`]: crate::terminal_lib_backends::DirectToAnsiInputDevice::next
+/// [`RRTWorker`]: super::RRTWorker
 /// [`Sender`]: tokio::sync::broadcast::Sender
-/// [`TerminationGuard`]: super::TerminationGuard
 /// [`TerminationGuard::drop()`]: super::TerminationGuard
+/// [`TerminationGuard`]: super::TerminationGuard
 /// [`mio::Poll`]: mio::Poll
 /// [`receiver_count()`]: tokio::sync::broadcast::Sender::receiver_count
 /// [`receiver`]: Self::receiver
+/// [`wake()`]: RRTWaker::wake
 /// [`waker.wake()`]: RRTWaker::wake
+/// [`waker`]: Self::waker
+/// [race window]: super#the-inherent-race-condition
+/// [two-phase setup]: super#two-phase-setup
 #[allow(missing_debug_implementations)]
 pub struct SubscriberGuard<W, E>
 where
@@ -65,18 +74,24 @@ where
 {
     /// The actual broadcast receiver for events.
     ///
+    /// Receives [`RRTEvent<E>`] to support the two-tier event model: domain events
+    /// ([`RRTEvent::Worker`]) and framework infrastructure events
+    /// ([`RRTEvent::Shutdown`]).
+    ///
     /// Wrapped in [`Option`] so we can [`take()`] it in [`Drop`] to ensure the receiver
-    /// is dropped before we call `wake()`. This guarantees the [`receiver_count()`]
+    /// is dropped before we call [`wake()`]. This guarantees the [`receiver_count()`]
     /// decrement happens first.
     ///
     /// [`receiver_count()`]: tokio::sync::broadcast::Sender::receiver_count
     /// [`take()`]: Option::take
-    pub receiver: Option<Receiver<E>>,
+    /// [`wake()`]: RRTWaker::wake
+    pub receiver: Option<Receiver<RRTEvent<E>>>,
 
-    /// Shared waker - always reads the current waker via `Arc<Mutex<Option<W>>>`.
+    /// Shared [`RRTWaker`] - always reads the current [`RRTWaker`] trait implementation
+    /// via [`Arc<Mutex<Option<W>>>`].
     ///
-    /// All subscribers (across all generations) hold a clone of the same [`Arc`],
-    /// so dropping any subscriber wakes the *current* thread, not a stale one.
+    /// All subscribers (across all generations) hold a clone of the same [`Arc`], so
+    /// dropping any subscriber wakes the *current* thread, not a stale one.
     ///
     /// [`Arc`]: std::sync::Arc
     pub waker: Arc<Mutex<Option<W>>>,

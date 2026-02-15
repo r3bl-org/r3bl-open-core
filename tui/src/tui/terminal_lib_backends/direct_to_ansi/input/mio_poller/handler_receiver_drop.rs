@@ -5,7 +5,8 @@
 //! [`ReceiverDropWaker`]: super::sources::SourceKindReady::ReceiverDropWaker
 
 use super::super::channel_types::PollerEvent;
-use crate::{Continuation, tui::DEBUG_TUI_SHOW_TERMINAL_BACKEND};
+use crate::{Continuation, core::resilient_reactor_thread::RRTEvent,
+            tui::DEBUG_TUI_SHOW_TERMINAL_BACKEND};
 use tokio::sync::broadcast::Sender;
 
 /// Handles [`ReceiverDropWaker`] event using explicit `tx` — check if thread should exit.
@@ -17,7 +18,9 @@ use tokio::sync::broadcast::Sender;
 /// [`RRTWorker`]: crate::core::resilient_reactor_thread::RRTWorker
 /// [`ReceiverDropWaker`]: super::sources::SourceKindReady::ReceiverDropWaker
 #[must_use]
-pub fn handle_receiver_drop_waker_with_tx(tx: &Sender<PollerEvent>) -> Continuation {
+pub fn handle_receiver_drop_waker_with_tx(
+    tx: &Sender<RRTEvent<PollerEvent>>,
+) -> Continuation {
     let receiver_count = tx.receiver_count();
 
     DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {

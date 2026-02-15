@@ -67,20 +67,21 @@ pub enum StdinEvent {
 pub enum SignalEvent {
     /// Terminal resize signal ([`SIGWINCH`]) received.
     ///
-    /// Contains [`Some(size)`] if [`get_size()`] succeeded, or [`None`] if the
-    /// size query failed (rare—typically means no [TTY], e.g., during [SSH]
-    /// disconnect or terminal crash).
-    ///
-    /// The consumer should handle [`None`] by either:
-    /// - Retrying [`get_size()`] themselves
-    /// - Using a cached/default size
-    /// - Ignoring the resize event
+    /// Contains the new terminal size from [`get_size()`]. This event is only sent when
+    /// the size query succeeds - if [`get_size()`] fails (rare - typically means no
+    /// [TTY], e.g., during [SSH] disconnect or terminal crash), the signal is silently
+    /// dropped.
     ///
     /// [SSH]: https://en.wikipedia.org/wiki/Secure_Shell
     /// [TTY]: https://en.wikipedia.org/wiki/Tty_(Unix)
     /// [`InputEvent::Resize`]: crate::InputEvent::Resize
     /// [`SIGWINCH`]: signal_hook::consts::SIGWINCH
-    /// [`Some(size)`]: Option::Some
     /// [`get_size()`]: crate::core::term::get_size
-    Resize(Option<Size>),
+    Resize(Size),
+}
+
+/// Converts a terminal size into a [`SignalEvent::Resize`] for sending through the
+/// channel.
+impl From<Size> for SignalEvent {
+    fn from(size: Size) -> Self { Self::Resize(size) }
 }

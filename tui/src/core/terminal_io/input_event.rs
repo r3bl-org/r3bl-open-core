@@ -1,5 +1,6 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
-use crate::{KeyPress, MouseInput, Size, height, width};
+use crate::{KeyPress, MouseInput, Size, core::resilient_reactor_thread::ShutdownReason,
+            height, width};
 use crossterm::event::{Event as CTEvent,
                        Event::{self},
                        KeyEvent, MouseEvent};
@@ -58,7 +59,6 @@ use crossterm::event::{Event as CTEvent,
 /// - **Future-proofing**: Internal changes don't affect app code
 ///
 /// Please see [`KeyPress`] for more information about handling keyboard input.
-#[non_exhaustive]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum InputEvent {
     Keyboard(KeyPress),
@@ -101,6 +101,13 @@ pub enum InputEvent {
     /// [`EnableBracketedPaste`](crate::PaintRenderOpImplCrossterm::raw_mode_enter) in raw
     /// mode.
     BracketedPaste(String),
+    /// The input thread shut down. The [`ShutdownReason`] indicates why - either the RRT
+    /// framework exhausted its [`RestartPolicy`] or caught a panic on the dedicated thread.
+    /// The application should exit gracefully or try re-subscribing via [`subscribe()`].
+    ///
+    /// [`RestartPolicy`]: crate::core::resilient_reactor_thread::RestartPolicy
+    /// [`subscribe()`]: crate::core::resilient_reactor_thread::RRT::subscribe
+    Shutdown(ShutdownReason),
 }
 
 /// Represents terminal window focus state changes.

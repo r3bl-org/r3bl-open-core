@@ -305,7 +305,8 @@ cat .cargo/config.toml | grep -A5 "target.x86_64-unknown-linux-gnu"
 ./check.fish --build     → Full compilation (cargo build)
 ./check.fish --clippy    → Lint code (cargo clippy --all-targets)
 ./check.fish --test      → Run tests + doctests (cargo test)
-./check.fish --doc       → Generate docs (cargo doc --no-deps)
+./check.fish --doc       → Generate docs (cargo doc --no-deps, with staging/sync)
+./check.fish --quick-doc → Generate docs (cargo doc --no-deps, fastest, no staging/sync)
 ```
 
 **No check.fish equivalent** (run directly):

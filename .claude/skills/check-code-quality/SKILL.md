@@ -39,6 +39,7 @@ For granular control, use individual commands:
 | `./check.fish --clippy` | `cargo clippy --all-targets` (linting) |
 | `./check.fish --test` | `cargo test` + doctests |
 | `./check.fish --doc` | `cargo doc --no-deps` (quick docs) |
+| `./check.fish --quick-doc` | `cargo doc --no-deps` (fastest, no staging/sync) |
 | `./check.fish --full` | All of the above |
 
 ## Step-by-Step Approach (Alternative)
@@ -72,11 +73,12 @@ This formats markdown tables and converts inline links to reference-style.
 ### 4. Generate Documentation
 
 ```bash
-./check.fish --doc
-# (runs: cargo doc --no-deps)
+./check.fish --quick-doc
+# (runs: cargo doc --no-deps, directly to serving dir - fastest for iteration)
 ```
 
-Verify there are no documentation build warnings or errors.
+Verify there are no documentation build warnings or errors. Use `--quick-doc` for fast feedback
+during development. Use `--doc` for final verification before commits (includes staging/sync).
 
 If there are link warnings, use the `/fix-intradoc-links` command to resolve them.
 

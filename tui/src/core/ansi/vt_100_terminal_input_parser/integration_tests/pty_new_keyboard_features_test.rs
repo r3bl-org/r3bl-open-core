@@ -235,6 +235,9 @@ fn pty_controlled_entry_point() -> ! {
                                 InputEvent::BracketedPaste(ref text) => {
                                     format!("Paste: {} chars", text.len())
                                 }
+                                InputEvent::Shutdown(ref reason) => {
+                                    format!("Shutdown: {reason:?}")
+                                }
                             };
 
                             println!("{output}");

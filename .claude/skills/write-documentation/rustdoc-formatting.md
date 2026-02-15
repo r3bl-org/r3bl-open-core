@@ -167,7 +167,7 @@ For code formatting, use `cargo fmt --all`.
 
 4. **Verify docs build:**
    ```bash
-   cargo doc --no-deps
+   ./check.fish --quick-doc
    ```
 
 ### Pre-Commit Checklist
@@ -179,10 +179,10 @@ Before committing documentation changes:
 cargo rustdoc-fmt
 
 # 2. Verify no doc build errors
-cargo doc --no-deps
+./check.fish --quick-doc
 
 # 3. Run doctests
-cargo test --doc
+./check.fish --test
 
 # 4. Format regular code
 cargo fmt --all
@@ -308,9 +308,9 @@ This enforces formatting standards across all contributors.
 ```bash
 # Full doc quality workflow
 cargo rustdoc-fmt                    # Format docs
-cargo doc --no-deps                  # Verify builds
-cargo clippy --all-targets           # Check code quality
-cargo test --doc                     # Run doctests
+./check.fish --quick-doc             # Verify builds (fastest)
+./check.fish --clippy                # Check code quality
+./check.fish --test                  # Run tests + doctests
 cargo fmt --all                      # Format code
 ```
 
@@ -326,10 +326,10 @@ echo "Formatting rustdoc comments..."
 cargo rustdoc-fmt
 
 echo "Verifying documentation builds..."
-cargo doc --no-deps
+./check.fish --quick-doc
 
 echo "Running doctests..."
-cargo test --doc
+./check.fish --test
 
 echo "✅ Documentation workflow complete!"
 ```

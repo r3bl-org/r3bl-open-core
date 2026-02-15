@@ -218,7 +218,7 @@
 //!    - **Resilience** — The thread itself can crash and restart; services can connect,
 //!      disconnect, and reconnect. The TUI app remains unaffected.
 //!
-//! ## The Chicken-Egg Problem
+//! ## Two-Phase Setup
 //!
 //! Creating a worker thread requires resources that need to be shared. The problem is
 //! circular: a [`mio::Waker`] needs the [`mio::Poll`]'s registry to be created, but the

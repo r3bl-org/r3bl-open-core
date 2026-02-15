@@ -511,9 +511,9 @@ This is the **gold standard** for documenting complex traits with associated typ
 ```rust
 /// A trait for creating a coupled [`Worker`] + [`Waker`] pair atomically.
 ///
-/// This trait solves the [coupled resource creation] problem - your implementation
-/// provides the [`Worker`] + [`Waker`] pair that the [framework] needs to manage the
-/// dedicated RRT thread.
+/// This trait implements [two-phase setup] - your implementation provides the
+/// [`Worker`] + [`Waker`] pair that the [framework] needs to manage the dedicated RRT
+/// thread.
 ///
 /// For more details, see:
 /// 1. [module docs] for the full diagram

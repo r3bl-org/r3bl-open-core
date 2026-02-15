@@ -65,7 +65,8 @@ navigate to them easily in their IDE.
 Verify there are no doc build warnings or errors:
 
 ```bash
-cargo doc --no-deps
+./check.fish --quick-doc
+# (runs: cargo doc --no-deps, directly to serving dir - fastest for iteration)
 ```
 
 If there are warnings about missing links, instead of simply removing the links, add the references
