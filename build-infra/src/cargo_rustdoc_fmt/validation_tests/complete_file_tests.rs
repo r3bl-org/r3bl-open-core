@@ -668,6 +668,206 @@ fn main() {}";
         );
     }
 
+    /// Regression test: generic type params in backtick spans must not be
+    /// falsely protected as HTML tags.
+    ///
+    /// Before the fix, `ContentProtector`'s HTML regex `<[^>]+>` matched
+    /// `<F::Waker>` and `<u8>` inside backtick spans like `` [`Option<F::Waker>`] ``,
+    /// causing references to be protected (hidden from the link converter). This
+    /// created empty lines in the reference section and wrong sort order.
+    #[test]
+    fn test_rrt_generic_type_refs_sorted_correctly() {
+        let input = include_str!("test_data/complete_file/input/sample_rrt.rs");
+        let expected = normalize_line_endings(include_str!(
+            "test_data/complete_file/expected_output/sample_rrt.rs"
+        ));
+
+        let temp_dir = TempDir::new().unwrap();
+        let test_file = temp_dir.path().join("sample_rrt.rs");
+        fs::write(&test_file, input).unwrap();
+
+        // Use FileProcessor (no cargo fmt needed - rrt.rs output is stable)
+        let processor = processor::FileProcessor::new(FormatOptions::default());
+        let result = processor.process_file(&test_file);
+
+        assert!(
+            result.errors.is_empty(),
+            "Should process without errors: {:?}",
+            result.errors
+        );
+
+        let formatted = fs::read_to_string(&test_file).unwrap();
+
+        // References with generic type params in backticks should be sorted,
+        // not pinned in place by false HTML protection
+        assert!(
+            formatted.contains("/// [`Option<F::Waker>`]: super::RRTWaker"),
+            "Generic-param reference should be present"
+        );
+        assert!(
+            formatted.contains("/// [`Vec<u8>`]: std::vec::Vec"),
+            "Generic-param reference should be present"
+        );
+
+        // No PROTECTED_CONTENT placeholders should remain
+        assert!(
+            !formatted.contains("PROTECTED_CONTENT"),
+            "All placeholders should be restored"
+        );
+
+        // Full output comparison
+        let expected_path = temp_dir.path().join("expected.rs");
+        fs::write(&expected_path, &expected).unwrap();
+
+        let diff_output = std::process::Command::new("git")
+            .args(["diff", "--no-index", "--color=never"])
+            .arg(&expected_path)
+            .arg(&test_file)
+            .output()
+            .expect("Failed to run git diff");
+
+        if !diff_output.status.success() {
+            eprintln!(
+                "=== DIFF (expected vs formatted) ===\n{}",
+                String::from_utf8_lossy(&diff_output.stdout)
+            );
+            panic!("Formatted output does not match expected output");
+        }
+    }
+
+    /// Regression test: inline link regex must not match across lines.
+    ///
+    /// Before the fix, `INLINE_LINK_REGEX` used `[^\]]+` for link text which
+    /// matched newlines. This allowed `[200~` in escape sequence text
+    /// (`` `ESC[200~` ``) to chain through other `[` chars across many lines
+    /// to reach a distant `]`, duplicating content.
+    #[test]
+    fn test_input_event_no_cross_line_duplication() {
+        let input = include_str!("test_data/complete_file/input/sample_input_event.rs");
+        let expected = normalize_line_endings(include_str!(
+            "test_data/complete_file/expected_output/sample_input_event.rs"
+        ));
+
+        let temp_dir = TempDir::new().unwrap();
+        let test_file = temp_dir.path().join("sample_input_event.rs");
+        fs::write(&test_file, input).unwrap();
+
+        // Use FileProcessor (not CLI binary) to test the regex fix in isolation.
+        // The cross-line duplication bug is in INLINE_LINK_REGEX, not cargo fmt.
+        let processor = processor::FileProcessor::new(FormatOptions::default());
+        let result = processor.process_file(&test_file);
+
+        assert!(
+            result.errors.is_empty(),
+            "Should process without errors: {:?}",
+            result.errors
+        );
+
+        let formatted = fs::read_to_string(&test_file).unwrap();
+
+        // The escape sequence line must remain intact (not duplicated or mangled)
+        assert!(
+            formatted.contains("sequences (`ESC[200~` text `ESC[201~`)"),
+            "Escape sequence line should remain intact"
+        );
+
+        // Content must appear exactly once (the key regression check)
+        assert_eq!(
+            formatted.matches("Clipboard Paste (Ctrl+V)").count(),
+            1,
+            "Content must not be duplicated by cross-line regex match"
+        );
+
+        // The inline link should be converted to reference-style
+        assert!(
+            formatted.contains("[`EnableBracketedPaste`]"),
+            "Inline link should be converted to reference-style"
+        );
+        assert!(
+            formatted.contains("[`EnableBracketedPaste`]: crate::PaintRenderOpImplCrossterm::raw_mode_enter"),
+            "Reference definition should be appended"
+        );
+
+        // No PROTECTED_CONTENT placeholders should remain
+        assert!(
+            !formatted.contains("PROTECTED_CONTENT"),
+            "All placeholders should be restored"
+        );
+
+        // Full output comparison
+        let expected_path = temp_dir.path().join("expected.rs");
+        fs::write(&expected_path, &expected).unwrap();
+
+        let diff_output = std::process::Command::new("git")
+            .args(["diff", "--no-index", "--color=never"])
+            .arg(&expected_path)
+            .arg(&test_file)
+            .output()
+            .expect("Failed to run git diff");
+
+        if !diff_output.status.success() {
+            eprintln!(
+                "=== DIFF (expected vs formatted) ===\n{}",
+                String::from_utf8_lossy(&diff_output.stdout)
+            );
+            panic!("Formatted output does not match expected output");
+        }
+    }
+
+    /// Regression test: resilient_reactor_thread/mod.rs reference sorting.
+    ///
+    /// This is the full mod.rs file (larger than sample_resilient_reactor.rs which is
+    /// a snapshot). It exercises reference sorting across a large doc block with many
+    /// scattered references, verifying no empty lines or wrong ordering after the
+    /// ContentProtector backtick-span fix.
+    #[test]
+    fn test_rrt_mod_reference_sorting() {
+        let input = include_str!("test_data/complete_file/input/sample_rrt_mod.rs");
+        let expected = normalize_line_endings(include_str!(
+            "test_data/complete_file/expected_output/sample_rrt_mod.rs"
+        ));
+
+        let temp_dir = TempDir::new().unwrap();
+        let test_file = temp_dir.path().join("sample_rrt_mod.rs");
+        fs::write(&test_file, input).unwrap();
+
+        let processor = processor::FileProcessor::new(FormatOptions::default());
+        let result = processor.process_file(&test_file);
+
+        assert!(
+            result.errors.is_empty(),
+            "Should process without errors: {:?}",
+            result.errors
+        );
+
+        let formatted = fs::read_to_string(&test_file).unwrap();
+
+        // No PROTECTED_CONTENT placeholders should remain
+        assert!(
+            !formatted.contains("PROTECTED_CONTENT"),
+            "All placeholders should be restored"
+        );
+
+        // Full output comparison
+        let expected_path = temp_dir.path().join("expected.rs");
+        fs::write(&expected_path, &expected).unwrap();
+
+        let diff_output = std::process::Command::new("git")
+            .args(["diff", "--no-index", "--color=never"])
+            .arg(&expected_path)
+            .arg(&test_file)
+            .output()
+            .expect("Failed to run git diff");
+
+        if !diff_output.status.success() {
+            eprintln!(
+                "=== DIFF (expected vs formatted) ===\n{}",
+                String::from_utf8_lossy(&diff_output.stdout)
+            );
+            panic!("Formatted output does not match expected output");
+        }
+    }
+
     /// Test that text diagrams (ASCII art) are preserved correctly.
     ///
     /// This test uses the resilient_reactor_thread/mod.rs file which triggered

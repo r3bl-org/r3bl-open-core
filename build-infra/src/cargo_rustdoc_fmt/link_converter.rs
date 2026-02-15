@@ -19,9 +19,12 @@ use std::sync::LazyLock;
 /// - Already existing reference definitions `[text]: url`
 static INLINE_LINK_REGEX: LazyLock<Regex> = LazyLock::new(|| {
     // Match [text](url) but not [![ (image links) or [text][ref]
-    // The text can contain backticks, brackets (if balanced), etc.
-    // URL cannot contain spaces or closing parens (simplified)
-    Regex::new(r"\[([^\]]+)\]\(([^)\s]+)\)").expect("Invalid inline link regex")
+    // The text can contain backticks etc. but NOT nested brackets.
+    // URL cannot contain spaces or closing parens (simplified).
+    // Excluding `[` from link text prevents pathological cross-line matches where
+    // `[200~` in escape sequences chains through other `[` chars to reach a `]`
+    // dozens of lines later, duplicating content.
+    Regex::new(r"\[([^\[\]]+)\]\(([^)\s]+)\)").expect("Invalid inline link regex")
 });
 
 /// Convert inline markdown links to reference-style links.
@@ -493,5 +496,45 @@ continues on the next line without breaking.
         assert!(output.contains("1. **Item one**"), "Numbered list should be preserved");
         assert!(output.contains("2. **Item two**"), "Numbered list should be preserved");
         assert!(output.contains("   that continues"), "Indentation should be preserved");
+    }
+
+    #[test]
+    fn test_no_cross_line_matching_with_bracket_escape_sequences() {
+        // Regression test: `[200~` in escape sequence text must not match a `]`
+        // many lines later, causing content duplication. The inline link regex
+        // must not span newlines.
+        let input = concat!(
+            "- **How it works**: Terminal sends pasted text wrapped in escape\n",
+            "  sequences (`ESC[200~` text `ESC[201~`)\n",
+            "- **Characteristics**: Text arrives as a single chunk\n",
+            "\n",
+            "Note: Bracketed paste must be enabled via\n",
+            "[`EnableBracketedPaste`](crate::PaintRenderOpImplCrossterm::raw_mode_enter) in raw\n",
+            "mode.",
+        );
+        let output = convert_links(input);
+
+        // The inline link should be converted to reference-style
+        assert!(
+            output.contains("[`EnableBracketedPaste`]"),
+            "Inline link should be converted to reference-style"
+        );
+        assert!(
+            output.contains("[`EnableBracketedPaste`]: crate::PaintRenderOpImplCrossterm::raw_mode_enter"),
+            "Reference definition should be appended"
+        );
+
+        // The escape sequence line must NOT be duplicated or mangled
+        assert!(
+            output.contains("sequences (`ESC[200~` text `ESC[201~`)"),
+            "Escape sequence line should remain intact"
+        );
+
+        // Content should appear exactly once (no duplication)
+        assert_eq!(
+            output.matches("Characteristics").count(),
+            1,
+            "Content must not be duplicated"
+        );
     }
 }

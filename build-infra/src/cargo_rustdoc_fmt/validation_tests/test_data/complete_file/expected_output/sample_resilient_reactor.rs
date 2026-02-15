@@ -480,8 +480,6 @@
 //! 4. **I/O-centric** — RRT is specialized for OS-level I/O ([`stdin`], [signals],
 //!    [sockets]), not general message processing.
 //!
-//! [`Mutex<Option<Arc<ThreadState<W, E>>>>`]: ThreadState
-//!
 //! [blocking
 //! I/O]: #understanding-blocking-io
 //!
@@ -511,6 +509,7 @@
 //! [`IORING_OP_ASYNC_CANCEL`]: https://man7.org/linux/man-pages/man3/io_uring_prep_cancel.3.html
 //! [`IORING_OP_MSG_RING`]: https://man7.org/linux/man-pages/man3/io_uring_prep_msg_ring.3.html
 //! [`LivenessState`]: crate::core::resilient_reactor_thread::LivenessState
+//! [`Mutex<Option<Arc<ThreadState<W, E>>>>`]: ThreadState
 //! [`Mutex`]: std::sync::Mutex
 //! [`Option`]: std::option::Option
 //! [`PTY`]: https://man7.org/linux/man-pages/man7/pty.7.html

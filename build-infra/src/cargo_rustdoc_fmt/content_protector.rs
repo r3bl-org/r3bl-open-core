@@ -28,6 +28,13 @@ const PLACEHOLDER_SUFFIX: &str = "►►►";
 static HTML_TAG_REGEX: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"<[^>]+>").expect("Invalid HTML regex"));
 
+/// Regex to strip backtick-delimited spans before HTML tag detection.
+///
+/// Prevents false positives where generic type parameters inside backtick spans
+/// (e.g., `` `Vec<u8>` ``, `` `Mutex<Option<Arc<...>>>` ``) are mistaken for HTML tags.
+static BACKTICK_SPAN_REGEX: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"`[^`]+`").expect("Invalid backtick span regex"));
+
 static CODE_FENCE_START_REGEX: LazyLock<Regex> = LazyLock::new(|| {
     // Matches ``` optionally followed by language spec (e.g., rust, rust,ignore, text)
     // Uses [^\s]* to match any non-whitespace, handling commas in rust,ignore etc.
@@ -154,8 +161,11 @@ impl ContentProtector {
                 continue;
             }
 
-            // Check if line contains HTML tags - protect entire line
-            if HTML_TAG_REGEX.is_match(line) {
+            // Check if line contains HTML tags - protect entire line.
+            // Strip backtick spans first so generic type params (e.g., `Vec<u8>`)
+            // aren't mistaken for HTML tags.
+            let line_sans_backticks = BACKTICK_SPAN_REGEX.replace_all(line, "");
+            if HTML_TAG_REGEX.is_match(&line_sans_backticks) {
                 let placeholder = self.create_placeholder(line);
                 result.push(placeholder);
                 i += 1;
@@ -381,6 +391,73 @@ mod tests {
         assert!(!protected.contains("<!-- This"));
 
         // Should restore original
+        let restored = protector.restore(&protected);
+        assert_eq!(restored, input);
+    }
+
+    #[test]
+    fn test_generic_type_in_backticks_not_protected() {
+        let mut protector = ContentProtector::new();
+        let input = "[`Vec<u8>`]: std::vec::Vec";
+        let protected = protector.protect(input);
+
+        // Should NOT be protected - the <u8> is inside backticks, not a real HTML tag
+        assert_eq!(protected, input);
+    }
+
+    #[test]
+    fn test_real_html_outside_backticks_still_protected() {
+        let mut protector = ContentProtector::new();
+        let input = "Some text <span>highlighted</span> here";
+        let protected = protector.protect(input);
+
+        // Should be protected - real HTML tag outside backticks
+        assert!(protected.contains("◄◄◄PROTECTED_CONTENT►"));
+        assert!(!protected.contains("<span>"));
+
+        let restored = protector.restore(&protected);
+        assert_eq!(restored, input);
+    }
+
+    #[test]
+    fn test_backtick_generic_and_real_html_on_same_line() {
+        let mut protector = ContentProtector::new();
+        let input = "See `Vec<u8>` and <em>emphasis</em> here";
+        let protected = protector.protect(input);
+
+        // Should be protected - real HTML tag exists outside backticks
+        assert!(protected.contains("◄◄◄PROTECTED_CONTENT►"));
+        assert!(!protected.contains("<em>"));
+
+        let restored = protector.restore(&protected);
+        assert_eq!(restored, input);
+    }
+
+    #[test]
+    fn test_protect_restore_roundtrip_with_mixed_content() {
+        let mut protector = ContentProtector::new();
+        let input = concat!(
+            "Regular text with [`Mutex<Option<Arc<ThreadState<W, E>>>>`] reference.\n",
+            "[`Mutex<Option<Arc<ThreadState<W, E>>>>`]: ThreadState\n",
+            "\n",
+            "<div>Real HTML block</div>\n",
+            "More text with `HashMap<K, V>` inline.",
+        );
+        let protected = protector.protect(input);
+
+        // The reference line with generics in backticks should NOT be protected
+        assert!(
+            protected.contains("[`Mutex<Option<Arc<ThreadState<W, E>>>>`]: ThreadState"),
+            "Reference line with backtick-quoted generics should not be protected"
+        );
+
+        // The real HTML line should be protected
+        assert!(
+            !protected.contains("<div>"),
+            "Real HTML should be protected"
+        );
+
+        // Roundtrip should preserve everything
         let restored = protector.restore(&protected);
         assert_eq!(restored, input);
     }
