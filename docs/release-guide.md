@@ -96,8 +96,8 @@ cargo build; cargo test; cargo doc --no-deps; cargo clippy --fix --allow-dirty -
 cargo readme > README.md
 cargo publish --dry-run --allow-dirty
 git add -A
-git commit -S -m "v0.0.1-build-infra"
-git tag -a v0.0.1-build-infra -m "v0.0.1-build-infra"
+git commit -S -m "v0.0.3-build-infra"
+git tag -a v0.0.3-build-infra -m "v0.0.3-build-infra"
 cargo publish
 # TODO: Test release on clean machine with `spawny r3bl-build-infra` (see task/pending/build_infra_spawny.md)
 git push ; git push --tags # Push tags & commits

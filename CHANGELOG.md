@@ -61,6 +61,7 @@
     - [v0.0.9 (2023-12-31)](#v009-2023-12-31)
     - [v0.0.8 (2023-12-22)](#v008-2023-12-22)
   - [`r3bl-build-infra`](#r3bl-build-infra)
+    - [v0.0.3 (2026-02-15)](#v003-2026-02-15)
     - [v0.0.2 (2026-01-27)](#v002-2026-01-27)
     - [v0.0.1 (2026-01-23)](#v001-2026-01-23)
   - [`r3bl_analytics_schema`](#r3bl_analytics_schema)
@@ -1350,8 +1351,27 @@ that come up quite frequently when editing Markdown in a text editor.
 ## `r3bl-build-infra`
 
 Cargo subcommands that automate the tedious parts of Rust development and speed up the
-slow parts— documentation formatting, toolchain management, and build optimization.
+slow parts - documentation formatting, toolchain management, and build optimization.
 Install with `cargo install r3bl-build-infra`.
+
+### v0.0.3 (2026-02-15)
+
+Bug fixes for `cargo rustdoc-fmt` handling of generic type parameters and cross-line regex
+matching.
+
+- Fixed:
+  - ContentProtector false positives: Generic type parameters inside backtick spans (e.g.,
+    `` `Vec<u8>` ``, `` `Mutex<Option<Arc<ThreadState<W, E>>>>` ``) were mistakenly matched
+    by `HTML_TAG_REGEX` and protected, causing empty lines, wrong reference ordering, and
+    content gaps. Added `BACKTICK_SPAN_REGEX` to strip backtick spans before HTML detection.
+  - Inline link regex cross-line matching: `INLINE_LINK_REGEX` character class `[^\]]+`
+    matched `[` and newlines, allowing `[200~` in escape sequence text to chain through
+    other `[` characters across many lines to a distant `]`, duplicating content. Changed
+    to `[^\[\]]+` to prevent cross-line chaining.
+- Added:
+  - 4 unit tests for backtick-span HTML detection in `content_protector.rs`
+  - 1 regression test for cross-line matching in `link_converter.rs`
+  - 3 end-to-end test fixtures (input/expected_output pairs) covering both bugs
 
 ### v0.0.2 (2026-01-27)
 
