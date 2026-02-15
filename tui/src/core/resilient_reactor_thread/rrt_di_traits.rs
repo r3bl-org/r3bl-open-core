@@ -85,7 +85,7 @@ pub trait RRTFactory {
     /// # Returns
     ///
     /// A coupled [`RRTWorker`] + [`RRTWaker`] pair - see [two-phase setup] for how these
-    /// are distributed between the spawned thread and [`RRTState`].
+    /// are distributed between the spawned thread and [`RRT`]'s shared waker wrapper.
     ///
     /// # Errors
     ///
@@ -96,7 +96,7 @@ pub trait RRTFactory {
     /// [two-phase setup]: super#the-coupled-resource-creation-problem
     /// [framework]: super#the-rrt-contract-and-benefits
     /// [`subscribe()`]: super::RRT::subscribe
-    /// [`RRTState`]: super::RRTState
+    /// [`RRT`]: super::RRT
     fn create() -> Result<(Self::Worker, Self::Waker), Report>;
 }
 
@@ -201,11 +201,11 @@ pub trait RRTWorker: Send + 'static {
 ///
 /// # Trait Bounds - [`Send`] + [`Sync`] + `'static`
 ///
-/// There is exactly **one [`RRTWaker`] implementation** inside the single [`RRTState`],
-/// which all [`SubscriberGuard::state`] instances share via [`Arc`]. When any async
-/// [`tokio`] task drops its guard, the guard's [`Drop`] impl calls [`wake()`] on this
-/// shared [`RRTWaker`] implementation to
-/// interrupt the blocking thread:
+/// There is exactly **one [`RRTWaker`] implementation** inside [`RRT`]'s shared waker
+/// wrapper (`Arc<Mutex<Option<W>>>`), which all [`SubscriberGuard`] instances share via
+/// [`Arc`]. When any async [`tokio`] task drops its guard, the guard's [`Drop`] impl
+/// calls [`wake()`] on this shared [`RRTWaker`] implementation to interrupt the blocking
+/// thread:
 ///
 /// ```text
 /// ┌─────────────────────┐
@@ -223,13 +223,13 @@ pub trait RRTWorker: Send + 'static {
 ///
 /// This shared-access pattern requires the following trait bounds:
 ///
-/// - **[`Send`]**: The implementor type lives inside [`SubscriberGuard::state`] (an
-///   [`Arc<RRTState>`]). For `Arc<T>` to be `Send`, `T` must be `Send + Sync` - so the
-///   implementor type must be `Send`.
-/// - **[`Sync`]**: Multiple async tasks (each holding a [`SubscriberGuard`]) may call
-///   [`wake(&self)`] on the same implementor type concurrently from different [runtime
-///   threads]. This bound is a **compile-time contract** - implementors must ensure
-///   [`wake()`] is thread-safe:
+/// - **[`Send`]**: The implementor type lives inside [`RRT`]'s shared waker wrapper (an
+///   `Arc<Mutex<Option<W>>>`). For `Arc<T>` to be `Send`, `T` must be `Send + Sync` -
+///   so the implementor type must be `Send`.
+/// - **[`Sync`]**: Multiple async tasks (each holding a [`SubscriberGuard`]) may lock
+///   the shared waker and call [`wake(&self)`] on the same implementor type concurrently
+///   from different [runtime threads]. This bound is a **compile-time contract** -
+///   implementors must ensure [`wake()`] is thread-safe:
 ///  - Types that aren't [`Sync`] (e.g., [`RefCell`]) cannot implement this trait.
 ///  - Types that ARE [`Sync`] (e.g., [`mio::Waker`] which uses thread-safe OS primitives
 ///    like [`eventfd`]) can.
@@ -245,16 +245,14 @@ pub trait RRTWorker: Send + 'static {
 ///
 /// Wake strategies are backend-specific. See [Why is `RRTWaker` User-Provided?]
 ///
-/// [`Arc<RRTState>`]: super::RRTState
 /// [Why is `RRTWaker` User-Provided?]: super#why-is-rrtwaker-user-provided
 /// [`Arc`]: std::sync::Arc
 /// [`MioPollWaker`]: crate::terminal_lib_backends::MioPollWaker
+/// [`RRT`]: super::RRT
 /// [`RefCell`]: std::cell::RefCell
 /// [runtime threads]: tokio::runtime
 /// [`SubscriberGuard::drop()`]: super::SubscriberGuard
-/// [`SubscriberGuard::state`]: super::SubscriberGuard::state
 /// [`SubscriberGuard`]: super::SubscriberGuard
-/// [`RRTState`]: super::RRTState
 /// [`eventfd`]: https://man7.org/linux/man-pages/man2/eventfd.2.html
 /// [`mio::Waker`]: mio::Waker
 /// [`thread::spawn()`]: std::thread::spawn

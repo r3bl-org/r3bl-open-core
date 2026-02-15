@@ -3,55 +3,83 @@
 //! Thread-safe global state manager for the Resilient Reactor Thread pattern. See
 //! [`RRT`] for details.
 
-use super::{LivenessState, RRTFactory, RRTState, RRTWaker, RRTWorker, SubscriberGuard};
+use super::{LivenessState, RRTFactory, RRTLiveness, RRTWaker, RRTWorker, SubscriberGuard};
 use crate::core::common::Continuation;
 use miette::{Context, IntoDiagnostic, Report};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, OnceLock};
+
+/// Capacity of the broadcast channel for events.
+///
+/// When the buffer is full, the oldest message is dropped to make room for new ones.
+/// Slow consumers will receive [`Lagged`] on their next [`recv()`] call, indicating how
+/// many messages they missed.
+///
+/// `4_096` is generous for typical event streams, but cheap (events are usually small)
+/// and provides headroom for debug/logging consumers that might occasionally lag.
+///
+/// [`Lagged`]: tokio::sync::broadcast::error::RecvError::Lagged
+/// [`recv()`]: tokio::sync::broadcast::Receiver::recv
+pub const CHANNEL_CAPACITY: usize = 4_096;
 
 /// The entry point for the Resilient Reactor Thread (RRT) framework.
 ///
 /// This struct manages the lifecycle of a single dedicated thread (at most one at a
-/// time) with automatic
-/// spawn/shutdown/reuse semantics. This is a **static container** that holds an
-/// **ephemeral payload**:
+/// time) with automatic spawn/shutdown/reuse semantics. It is a **static container**
+/// with three top-level fields, each using the synchronization primitive matching its
+/// lifetime:
 ///
-/// - **Container** ([`Mutex<Option<_>>`]): Lives for [process] lifetime
-/// - **Payload** ([`RRTState`]): Created when thread spawns, destroyed when it exits
+/// - **`broadcast_tx`** ([`OnceLock`]): Created once on first [`subscribe()`], never
+///   replaced. The broadcast channel outlives every thread generation, so old and new
+///   subscribers always share the same channel.
 ///
-/// The container persists, but the payload comes and goes with the thread lifecycle.
+/// - **`waker`** ([`OnceLock<Arc<Mutex<Option<W>>>>`]): The `Arc<Mutex<...>>` wrapper is
+///   created once (via [`OnceLock`]). The *inner* `Option<W>` is swapped on each
+///   relaunch (set to `Some(new_waker)`) and cleared to `None` when the thread dies.
+///   Because every [`SubscriberGuard`] holds a clone of the same [`Arc`], old and new
+///   subscribers always read the *current* waker - solving the zombie thread bug where
+///   old subscribers would call a stale waker targeting a dead [`mio::Poll`].
 ///
-/// # Why [`Mutex<Option<Arc<RRTState<W, E>>>>`]?
+/// - **`liveness`** ([`Mutex<Option<Arc<RRTLiveness>>>`]): Per-thread-generation.
+///   Replaced on each relaunch, cleared when the thread exits.
 ///
-/// **Deferred initialization** - we can't create [`RRTState`] at `static` init time:
+/// # Why [`OnceLock`] for `broadcast_tx` and `waker`?
 ///
-/// | Operation              | Const? | Why not?                                      |
-/// | :--------------------- | :----- | :-------------------------------------------- |
-/// | [`mio::Poll::new()`]   | No     | [`Syscall`] (creates [`epoll`]/kqueue [`fd`]) |
-/// | [`mio::Waker::new()`]  | No     | Requires Poll's registry (see below)          |
-/// | [`Arc::new()`]         | No     | Heap allocation                               |
+/// [`tokio::sync::broadcast::channel()`] is not a [`const expression`] - it allocates
+/// at runtime, so it can't be initialized in the `static` [`SINGLETON`] declaration.
+/// [`OnceLock`] bridges this gap: the `static` is initialized with empty [`OnceLock`]s
+/// (which *are* const), and the actual channel/waker wrapper is created lazily on the
+/// first [`subscribe()`] call.
 ///
-/// ## Why [`syscalls`] Can't Be [`const expressions`]
+/// # Why [`Mutex<Option<Arc<RRTLiveness>>>`] for `liveness`?
 ///
-/// In Rust, **all** `static` variables must be initialized with [`const expressions`] -
-/// this is a language rule, not a choice. The compiler evaluates these expressions at
-/// compile time and embeds the result in the binary. [`Syscalls`] ask the OS to do
-/// something (create an [`epoll`] [`fd`], allocate memory), which is impossible during
-/// compilation. The OS doesn't exist at compile time, and these operations have side
-/// effects that can't be "undone."
+/// Unlike the channel and waker wrapper, liveness state is per-thread-generation. Each
+/// relaunch creates a fresh [`RRTLiveness`] (with an incremented generation counter).
+/// Using [`Mutex<Option<...>>`] allows [`subscribe()`] to atomically check and replace
+/// the liveness state.
 ///
-/// Since [`Mutex::new(None)`] **is** a [`const expression`] (just initializes memory
-/// layout), we use [`Option<T>`] to defer the [`syscalls`] until the first
-/// [`subscribe()`] call at runtime.
+/// # Thread Lifecycle
 ///
-/// ## Replacement On Relaunch
+/// Lifecycle states:
+/// - **Inert** (all empty) - until first [`subscribe()`] spawns the dedicated thread
+/// - **Active** (all populated) - while thread is running
+/// - **Dormant** (liveness terminated, waker cleared to `None`) - when all subscribers
+///   drop and thread exits
+/// - **Reactivates** - on next [`subscribe()`] call (spawns fresh thread, swaps waker,
+///   replaces liveness)
 ///
-/// When the thread terminates and is relaunched (slow path), we need to replace the
-/// entire [`RRTState`] with fresh resources. [`Option::replace()`] makes this clean.
+/// # Usage
 ///
-/// ## Fallibility Is NOT The Reason
+/// See [`SINGLETON`] for the real implementation used by the terminal input system.
 ///
-/// We panic on [`syscall`] failure anyway. Even if these operations were infallible, we'd
-/// still need [`Option<T>`] because they're not [`const expressions`].
+/// [`Arc`]: std::sync::Arc
+/// [`OnceLock`]: std::sync::OnceLock
+/// [`RRTLiveness`]: super::RRTLiveness
+/// [`SINGLETON`]: crate::terminal_lib_backends::global_input_resource::SINGLETON
+/// [`SubscriberGuard`]: super::SubscriberGuard
+/// [`const expression`]: #const-expression-vs-const-declaration-vs-static-declaration
+/// [`mio::Poll`]: mio::Poll
+/// [`subscribe()`]: Self::subscribe
+/// [`tokio::sync::broadcast::channel()`]: tokio::sync::broadcast::channel
 ///
 /// ## `const` Expression vs `const` Declaration vs `static` Declaration
 ///
@@ -61,8 +89,8 @@ use std::sync::{Arc, Mutex};
 /// | :----------------------- | :--------------------------------------------- | :------------------------------------- |
 /// | **`const` expression**   | Value the compiler can compute at compile time | `1 + 2`, `Mutex::new(None)`            |
 /// | **`const fn`**           | Function callable in const context             | `const fn new() -> Option<T> { None }` |
-/// | **`const` declaration**  | Inlined constant (no fixed address)            | `const PI: f64 = 3.14;`                |
-/// | **`static` declaration** | Fixed address, single instance (singleton)     | `static GLOBAL: T = …;`                |
+/// | **`const` declaration**  | Inlined constant (no fixed address)            | `const PI: f64 = 3.14;`               |
+/// | **`static` declaration** | Fixed address, single instance (singleton)     | `static GLOBAL: T = …;`               |
 ///
 /// **Key point:** Both `static` and `const` require a `const` expression as the
 /// initializer, but they have opposite runtime behaviors when used in a **declaration**:
@@ -125,12 +153,12 @@ use std::sync::{Arc, Mutex};
 /// | `&'a str`                 | ❌ No         | Reference with non-`'static` lifetime |
 /// | `Foo<'a> { s: &'a str }`  | ❌ No         | Struct with non-`'static` references  |
 ///
-/// For thread spawning, `T: 'static` is required because the spawned thread could outlive
-/// the caller - any borrowed data with a shorter lifetime might become invalid. This is
-/// why [`RRTWaker`], [`RRTWorker`], and the `E` (event) type parameter all require
-/// `'static`.
+/// For thread spawning, `T: 'static` is required because the spawned thread could
+/// outlive the caller - any borrowed data with a shorter lifetime might become invalid.
+/// This is why [`RRTWaker`], [`RRTWorker`], and the `E` (event) type parameter all
+/// require `'static`.
 ///
-/// # Poll → Registry → Waker Chain
+/// # Poll -> Registry -> Waker Chain
 ///
 /// Your [`RRTWaker`] implementation is tightly coupled to its blocking mechanism (e.g.,
 /// [`mio::Poll`]):
@@ -151,52 +179,37 @@ use std::sync::{Arc, Mutex};
 /// This is why the slow path replaces **both** Poll and Waker together - your
 /// [`RRTWaker`] implementation is useless without its parent blocking mechanism.
 ///
-/// # Thread Lifecycle
-///
-/// Lifecycle states:
-/// - **Inert** (`None`) - until first [`subscribe()`] spawns the dedicated thread
-/// - **Active** (`Some`) - while thread is running
-/// - **Dormant** (`Some` with terminated liveness) - when all subscribers drop and thread
-///   exits
-/// - **Reactivates** - on next [`subscribe()`] call (spawns fresh thread, replaces
-///   payload)
-///
-/// # Usage
-///
-/// See [`SINGLETON`] for the real implementation used by the terminal input system.
-///
-/// [`Mutex<Option<_>>`]: std::sync::Mutex
-/// [`Vec<u8>`]: std::vec::Vec
-/// [`Mutex<Option<Arc<RRTState<W, E>>>>`]: super::RRTState
-/// [`Arc::new()`]: std::sync::Arc::new
-/// [`Mutex::new(None)`]: std::sync::Mutex::new
-/// [`Option::replace()`]: std::option::Option::replace
-/// [`RRTState`]: super::RRTState
 /// [`RRTWaker`]: super::RRTWaker
 /// [`RRTWorker`]: super::RRTWorker
-/// [`SINGLETON`]: crate::terminal_lib_backends::global_input_resource::SINGLETON
 /// [`String`]: std::string::String
-/// [`Syscall`]: https://man7.org/linux/man-pages/man2/syscalls.2.html
-/// [`Syscalls`]: https://man7.org/linux/man-pages/man2/syscalls.2.html
-/// [`const expression`]: #const-expression-vs-const-declaration-vs-static-declaration
-/// [`const expressions`]: #const-expression-vs-const-declaration-vs-static-declaration
-/// [`epoll`]: https://man7.org/linux/man-pages/man7/epoll.7.html
-/// [`fd`]: https://man7.org/linux/man-pages/man2/open.2.html
-/// [`mio::Poll::new()`]: mio::Poll::new
+/// [`Vec<u8>`]: std::vec::Vec
 /// [`mio::Poll`]: mio::Poll
-/// [`mio::Waker::new()`]: mio::Waker::new
-/// [`subscribe()`]: Self::subscribe
-/// [`syscall`]: https://man7.org/linux/man-pages/man2/syscalls.2.html
-/// [`syscalls`]: https://man7.org/linux/man-pages/man2/syscalls.2.html
 /// [process]: https://en.wikipedia.org/wiki/Process_(computing)
-#[allow(missing_debug_implementations, clippy::type_complexity)]
+#[allow(missing_debug_implementations)]
 pub struct RRT<F>
 where
     F: RRTFactory,
     F::Waker: RRTWaker,
     F::Event: Clone + Send + Sync + 'static,
 {
-    pub inner: Mutex<Option<Arc<RRTState<F::Waker, F::Event>>>>,
+    /// Broadcast channel sender - created once, never replaced.
+    ///
+    /// [`OnceLock`] because [`tokio::sync::broadcast::channel()`] is not a const
+    /// expression.
+    broadcast_tx: OnceLock<tokio::sync::broadcast::Sender<F::Event>>,
+
+    /// Shared waker wrapper - the [`Arc<Mutex<...>>`] is created once via [`OnceLock`].
+    /// The inner `Option<F::Waker>` is swapped on relaunch and cleared to `None` when
+    /// the thread dies. All [`SubscriberGuard`]s hold a clone of this [`Arc`], so they
+    /// always read the current waker.
+    ///
+    /// [`Arc`]: std::sync::Arc
+    /// [`OnceLock`]: std::sync::OnceLock
+    /// [`SubscriberGuard`]: super::SubscriberGuard
+    waker: OnceLock<Arc<Mutex<Option<F::Waker>>>>,
+
+    /// Per-thread-generation liveness tracking. Replaced on each relaunch.
+    liveness: Mutex<Option<Arc<RRTLiveness>>>,
 }
 
 impl<F> RRT<F>
@@ -205,7 +218,7 @@ where
     F::Waker: RRTWaker,
     F::Event: Clone + Send + Sync + 'static,
 {
-    /// Creates a new uninitialized global state.u
+    /// Creates a new uninitialized global state.
     ///
     /// This is a `const fn` so it can be used in `static` declarations.
     /// See [`SINGLETON`] for a real usage example.
@@ -214,7 +227,9 @@ where
     #[must_use]
     pub const fn new() -> Self {
         Self {
-            inner: Mutex::new(None),
+            broadcast_tx: OnceLock::new(),
+            waker: OnceLock::new(),
+            liveness: Mutex::new(None),
         }
     }
 
@@ -222,16 +237,16 @@ where
     ///
     /// # Two Allocation Paths
     ///
-    /// | Condition                | Path          | What Happens                         |
-    /// | ------------------------ | ------------- | ------------------------------------ |
-    /// | `liveness == Running`    | **Fast path** | Reuse existing thread + [`RRTState`] |
-    /// | `liveness == Terminated` | **Slow path** | Replace all, spawn new thread        |
+    /// | Condition                | Path          | What Happens                    |
+    /// | ------------------------ | ------------- | ------------------------------- |
+    /// | `liveness == Running`    | **Fast path** | Reuse existing thread           |
+    /// | `liveness == Terminated` | **Slow path** | Spawn new thread, swap waker    |
     ///
     /// ## Fast Path (Thread Reuse)
     ///
     /// If the thread is still running, we **reuse everything**:
-    /// - Same [`RRTState`] (same broadcast channel, same liveness tracker)
-    /// - Same resources (still valid)
+    /// - Same broadcast channel (singleton-lifetime, never replaced)
+    /// - Same liveness tracker (still valid for this generation)
     /// - Same thread (continues serving the new subscriber)
     ///
     /// This handles the race condition where a new subscriber appears before the thread
@@ -239,12 +254,15 @@ where
     ///
     /// ## Slow Path (Thread Restart)
     ///
-    /// If the thread has terminated, the existing [`RRTState`] is **orphaned** - no
-    /// thread is feeding events into its broadcast channel. We must **replace
-    /// everything**:
-    /// - New [`RRTState`] (fresh broadcast channel + liveness tracker + waker)
-    /// - New resources (via [`RRTFactory::create()`])
-    /// - New thread (spawned to serve the new subscriber)
+    /// If the thread has terminated (or never started):
+    /// 1. `broadcast_tx.get_or_init(...)` - idempotent channel creation
+    /// 2. `waker.get_or_init(...)` - idempotent wrapper creation
+    /// 3. [`RRTFactory::create()`] - creates fresh worker + waker pair
+    /// 4. Swap waker: `*shared_waker.lock() = Some(new_waker)`
+    /// 5. Create fresh [`RRTLiveness`], spawn thread
+    ///
+    /// The broadcast channel and waker wrapper are **never replaced** - only the
+    /// inner waker value and liveness state change on relaunch.
     ///
     /// # Errors
     ///
@@ -254,59 +272,69 @@ where
     /// - Thread spawning fails (system thread limits)
     ///
     /// [`RRTFactory::create()`]: RRTFactory::create
-    /// [`RRTState`]: super::RRTState
+    /// [`RRTLiveness`]: super::RRTLiveness
     /// [`receiver_count()`]: tokio::sync::broadcast::Sender::receiver_count
     pub fn subscribe(&self) -> Result<SubscriberGuard<F::Waker, F::Event>, Report> {
-        let mut guard = self
-            .inner
+        // Initialize channel and waker wrapper idempotently (created once, read forever).
+        let tx = self
+            .broadcast_tx
+            .get_or_init(|| tokio::sync::broadcast::channel(CHANNEL_CAPACITY).0);
+        let shared_waker = self
+            .waker
+            .get_or_init(|| Arc::new(Mutex::new(None)));
+
+        let mut liveness_guard = self
+            .liveness
             .lock()
-            .map_err(|_| miette::miette!("RRT mutex poisoned"))?;
+            .map_err(|_| miette::miette!("RRT liveness mutex poisoned"))?;
 
-        // Fast path check: can we reuse the existing thread + RRTState?
-        let apply_fast_path_thread_reuse = guard
+        // FAST PATH: Reuse existing thread.
+        let is_running = liveness_guard
             .as_ref()
-            .is_some_and(|state| state.liveness.is_running() == LivenessState::Running);
+            .is_some_and(|liveness| liveness.is_running() == LivenessState::Running);
 
-        // SLOW PATH: Thread terminated (or never started) → create new everything.
-        if !apply_fast_path_thread_reuse {
+        // SLOW PATH: Thread terminated (or never started) -> create fresh.
+        if !is_running {
+            // Explicitly clear stale liveness (if any).
+            drop(liveness_guard.take());
+
             // Create worker and waker atomically (see the "Coupled Resource Creation"
             // problem in mod.rs).
-            let (worker, waker) =
+            let (worker, new_waker) =
                 F::create().context("Failed to create worker thread resources")?;
 
-            // Create new RRTState with the waker.
-            let thread_state = Arc::new(RRTState::new(waker));
+            // Swap waker: old subscribers now read the new waker.
+            {
+                let mut waker_guard = shared_waker
+                    .lock()
+                    .map_err(|_| miette::miette!("RRT waker mutex poisoned"))?;
+                *waker_guard = Some(new_waker);
+            }
+
+            // Create fresh liveness for this generation.
+            let liveness = Arc::new(RRTLiveness::new());
 
             // Spawn worker thread.
-            let tx_clone = thread_state.broadcast_tx.clone();
-            let liveness_clone = Arc::clone(&thread_state);
+            let tx_clone = tx.clone();
+            let liveness_for_thread = Arc::clone(&liveness);
+            let waker_for_thread = Arc::clone(shared_waker);
             std::thread::Builder::new()
                 .name(format!(
                     "rrt-worker-gen-{}",
-                    thread_state.liveness.generation
+                    liveness.generation
                 ))
                 .spawn(move || {
-                    run_worker_loop(worker, tx_clone, liveness_clone);
+                    run_worker_loop(worker, tx_clone, liveness_for_thread, waker_for_thread);
                 })
                 .into_diagnostic()
                 .context("Failed to spawn worker thread")?;
 
-            // Replace the old (orphaned) state with the new one.
-            guard.replace(thread_state);
+            *liveness_guard = Some(liveness);
         }
 
-        // FAST PATH (or after slow path): Use the current RRTState.
-        // Invariant: guard is always Some here because:
-        // - Slow path: we just called guard.replace(thread_state)
-        // - Fast path: apply_fast_path_thread_reuse was true, so
-        //   guard.as_ref().is_some_and() returned true
-        let thread_state = guard.as_ref().ok_or_else(|| {
-            miette::miette!("Invariant violated: RRTState missing after allocation")
-        })?;
-
         Ok(SubscriberGuard {
-            receiver: Some(thread_state.broadcast_tx.subscribe()),
-            state: Arc::clone(thread_state),
+            receiver: Some(tx.subscribe()),
+            waker: Arc::clone(shared_waker),
         })
     }
 
@@ -318,13 +346,12 @@ where
     ///
     /// - [`LivenessState::Running`] if the thread is running
     /// - [`LivenessState::Terminated`] if uninitialized or the thread has exited
-    #[allow(clippy::redundant_closure_for_method_calls)]
     #[must_use]
     pub fn is_thread_running(&self) -> LivenessState {
-        self.inner
+        self.liveness
             .lock()
             .ok()
-            .and_then(|guard| guard.as_ref().map(|state| state.liveness.is_running()))
+            .and_then(|guard| guard.as_ref().map(|liveness| liveness.is_running()))
             .unwrap_or(LivenessState::Terminated)
     }
 
@@ -337,14 +364,9 @@ where
     /// The number of active receivers, or `0` if uninitialized.
     #[must_use]
     pub fn get_receiver_count(&self) -> usize {
-        self.inner
-            .lock()
-            .ok()
-            .and_then(|guard| {
-                guard
-                    .as_ref()
-                    .map(|state| state.broadcast_tx.receiver_count())
-            })
+        self.broadcast_tx
+            .get()
+            .map(|tx| tx.receiver_count())
             .unwrap_or(0)
     }
 
@@ -362,10 +384,10 @@ where
     /// The current generation number, or `0` if uninitialized.
     #[must_use]
     pub fn get_thread_generation(&self) -> u8 {
-        self.inner
+        self.liveness
             .lock()
             .ok()
-            .and_then(|guard| guard.as_ref().map(|state| state.liveness.generation))
+            .and_then(|guard| guard.as_ref().map(|liveness| liveness.generation))
             .unwrap_or(0)
     }
 
@@ -377,24 +399,25 @@ where
     ///
     /// # Panics
     ///
-    /// - If the mutex is poisoned
-    /// - If no thread exists yet (call [`subscribe()`] first)
+    /// - If the broadcast channel hasn't been initialized yet (call [`subscribe()`]
+    ///   first)
+    /// - If the waker wrapper hasn't been initialized yet
     ///
     /// [`subscribe()`]: Self::subscribe
     pub fn subscribe_to_existing(&self) -> SubscriberGuard<F::Waker, F::Event> {
-        let guard = self.inner.lock().expect(
-            "RRT mutex poisoned: another thread panicked while \
-             holding this lock.",
-        );
-
-        let thread_state = guard.as_ref().expect(
+        let tx = self.broadcast_tx.get().expect(
             "subscribe_to_existing() called before subscribe(). \
              Subscribe first to create the thread, then add more subscribers.",
         );
 
+        let shared_waker = self.waker.get().expect(
+            "subscribe_to_existing() called before subscribe(). \
+             Waker wrapper should have been initialized.",
+        );
+
         SubscriberGuard {
-            receiver: Some(thread_state.broadcast_tx.subscribe()),
-            state: Arc::clone(thread_state),
+            receiver: Some(tx.subscribe()),
+            waker: Arc::clone(shared_waker),
         }
     }
 }
@@ -408,44 +431,57 @@ where
     fn default() -> Self { Self::new() }
 }
 
-/// RAII guard that calls [`mark_terminated()`] when the dedicated thread's work loop
-/// exits.
+/// RAII guard that clears the waker and calls [`mark_terminated()`] when the dedicated
+/// thread's work loop exits.
+///
+/// **Drop ordering matters**: The waker is cleared to `None` *before* marking
+/// terminated. If we marked terminated first, [`subscribe()`] could race in, install a
+/// new waker, and our cleanup would clear it.
 ///
 /// [`mark_terminated()`]: super::RRTLiveness::mark_terminated
+/// [`subscribe()`]: RRT::subscribe
 #[allow(missing_debug_implementations)]
-pub struct TerminationGuard<W, E>
+pub struct TerminationGuard<W>
 where
     W: RRTWaker,
-    E: Clone + Send + 'static,
 {
-    state: Arc<RRTState<W, E>>,
+    liveness: Arc<RRTLiveness>,
+    waker: Arc<Mutex<Option<W>>>,
 }
 
-impl<W, E> Drop for TerminationGuard<W, E>
+impl<W> Drop for TerminationGuard<W>
 where
     W: RRTWaker,
-    E: Clone + Send + 'static,
 {
-    fn drop(&mut self) { self.state.liveness.mark_terminated(); }
+    fn drop(&mut self) {
+        // Clear waker FIRST so no subscriber can call stale wake().
+        // Order matters: if we mark_terminated() first, subscribe() could
+        // race in, install a new waker, and our cleanup would clear it.
+        if let Ok(mut guard) = self.waker.lock() {
+            *guard = None;
+        }
+        self.liveness.mark_terminated();
+    }
 }
 
 /// Runs the poll loop on the dedicated thread until it returns [`Continuation::Stop`].
 ///
 /// Called from the spawned dedicated thread. When the loop exits, [`TerminationGuard`]
-/// calls [`mark_terminated()`] so the next [`subscribe()`] call knows to spawn a new
-/// thread.
+/// clears the waker to `None` and calls [`mark_terminated()`] so the next
+/// [`subscribe()`] call knows to spawn a new thread.
 ///
 /// [`mark_terminated()`]: super::RRTLiveness::mark_terminated
 /// [`subscribe()`]: RRT::subscribe
 pub fn run_worker_loop<W, E>(
     mut worker: impl RRTWorker<Event = E>,
     tx: tokio::sync::broadcast::Sender<E>,
-    state: Arc<RRTState<W, E>>,
+    liveness: Arc<RRTLiveness>,
+    waker: Arc<Mutex<Option<W>>>,
 ) where
     W: RRTWaker,
     E: Clone + Send + 'static,
 {
-    let _guard = TerminationGuard { state };
+    let _guard = TerminationGuard { liveness, waker };
     while worker.poll_once(&tx) == Continuation::Continue {}
-    // _guard dropped here (or during unwinding), calling mark_terminated()
+    // _guard dropped here (or during unwinding), clearing waker + marking terminated.
 }

@@ -77,9 +77,12 @@
 //! [`broadcast channel`] to decouple the lifecycle of this [thread] from the async
 //! consumers (in your [TUI] or [`readline_async`] app).
 //!
-//! This channel (stored in [`RRTState`]) completely isolates async consumers from the
-//! dedicated [thread]'s lifecycle. It outlives the [thread] and allows RRT to reuse,
-//! destroy, or relaunch the [thread] without affecting any async consumers.
+//! **Async consumer isolation** - This channel (stored in [`RRT`] via [`OnceLock`])
+//! completely isolates async consumers from the dedicated [thread]'s lifecycle. It
+//! outlives every thread generation and is never replaced - [`RRT`] can reuse, destroy,
+//! or relaunch the [thread] without affecting any async consumers.
+//!
+//! [`OnceLock`]: std::sync::OnceLock
 //!
 //! **Thread creation and reuse** - You start by declaring an [`RRT`] [singleton] in your
 //! code, and providing your implementation of the [`RRTFactory`] trait. No thread is
@@ -106,10 +109,9 @@
 //!    invisible to the app. The [`syscall`] does return [`EINTR`] when interrupted, but
 //!    relying on this is fragile.
 //!
-//! 3. The [thread] wakes up and checks [`receiver_count()`] - if zero, it self-terminates
-//!    (see [`RRTState::should_self_terminate()`]). If new subscribers have appeared [in
-//!    the meantime], RRT reuses the thread and continues running - the [`RRTState`] and
-//!    its contained [`broadcast channel`], etc. are retained.
+//! 3. The [thread] wakes up and checks [`receiver_count()`] - if zero, it
+//!    self-terminates. If new subscribers have appeared [in the meantime], RRT reuses the
+//!    thread and continues running.
 //!
 //! **Thread cleanup** - After the [thread] self-terminates (step 3 above),
 //! [`run_worker_loop()`] returns, and your [`RRTWorker`] trait implementation goes out of
@@ -206,15 +208,15 @@
 //!   | Linux    | [`epoll`]        | [`epoll_wait()`] | Yes                               |
 //!   | [Darwin] | [`kqueue`]       | [`kevent()`]     | No ([`EINVAL`])                   |
 //!
-//!   - On Linux, [`epoll_wait()`] can poll both [`tty`] and [`PTY`] [`fds`] for
-//!     [readiness].
+//!   **On Linux** [`epoll_wait()`] can poll both [`tty`] and [`PTY`] [`fds`] for
+//!   [readiness].
 //!
-//!   - But on [Darwin], [`kevent()`] returns [`EINVAL`] (`errno 22, "Invalid argument"`)
-//!     when you try to register either type with [`kqueue`]. This is a permanent
-//!     rejection - not to be confused with [`EINTR`] (`errno 4, "Interrupted system
-//!     call"`), where a POSIX [signal][signals] (like [`SIGINT`] from `Ctrl+C`)
-//!     interrupts a blocked [`syscall`] which unblocks and returns [`EINTR`]. In this
-//!     case, your code can simply retry the [`syscall`].
+//!   **But on [Darwin]** [`kevent()`] returns [`EINVAL`] (`errno 22, "Invalid
+//!   argument"`) when you try to register either type with [`kqueue`]. This is a
+//!   permanent rejection - not to be confused with [`EINTR`] (`errno 4, "Interrupted
+//!   system call"`), where a POSIX [signal][signals] (like [`SIGINT`] from `Ctrl+C`)
+//!   interrupts a blocked [`syscall`] which unblocks and returns [`EINTR`]. In this case,
+//!   your code can simply retry the [`syscall`].
 //!
 //! - **The workaround**: Bypass [`kqueue`] entirely and use [`filedescriptor::poll()`]
 //!   instead, which uses [`select(2)`] internally. [`select(2)`] is an older, more
@@ -337,21 +339,19 @@
 //! ├─────────────────────┬────────────────────────────┬─────────────────────┤
 //! │                     │ FRAMEWORK → RUNS YOUR CODE │                     │
 //! │                     └────────────────────────────┘                     │
-//! │  RRT<F>                                                                │
-//! │  ├── Mutex<Option<Arc<RRTState<F::Waker, F::Event>>>>                  │
-//! │  │   └── RRTState<F::Waker, F::Event>                                  │
-//! │  │       ├── broadcast_tx: Sender<F::Event> (event broadcast)          │
-//! │  │       ├── liveness:     RRTLiveness      (running state+generation) │
-//! │  │       └── waker:        F::Waker         (interrupt blocked thread) │
-//! │  │                                                                     │
-//! │  └── subscribe() → SubscriberGuard<F::Waker, F::Event>                 │
+//! │  RRT<F>  (three top-level fields, each with correct sync primitive)    │
+//! │  ├── broadcast_tx: OnceLock<Sender<F::Event>>       (created once)    │
+//! │  ├── waker: OnceLock<Arc<Mutex<Option<F::Waker>>>>  (shared, swapped) │
+//! │  └── liveness: Mutex<Option<Arc<RRTLiveness>>>      (per-generation)  │
+//! │                                                                        │
+//! │  subscribe() → SubscriberGuard<F::Waker, F::Event>                     │
 //! │      ├── Slow path: F::create() → spawn dedicated thread               │
 //! │      │   where YOUR CODE F::Worker.poll_once() runs in a loop          │
 //! │      └── Fast path: dedicated thread already running → reuse it        │
 //! │                                                                        │
 //! │  SubscriberGuard<F::Waker, F::Event>                                   │
 //! │  ├── receiver: Receiver<F::Event> (broadcast subscription)             │
-//! │  ├── state:    Arc<RRTState<...>> (for waker access on drop)           │
+//! │  ├── waker: Arc<Mutex<Option<F::Waker>>> (always reads current waker) │
 //! │  └── Drop impl: receiver dropped (decrements count), wakes thread      │
 //! │      └── Thread wakes → broadcast_tx.receiver_count() == 0 → exits     │
 //! │                                                                        │
@@ -382,16 +382,18 @@
 //!    type may contain `'static` references but no shorter-lived ones. See [`RRT`] for a
 //!    detailed explanation of `'static` in trait bounds.
 //!
-//!    This newtype wraps a [`Mutex<Option<Arc<RRTState<W, E>>>>`] because [`syscalls`]
-//!    aren't [`const expressions`] - the state must be created at runtime. See [`RRT`]
-//!    for a detailed explanation. See [`mio_poller`]'s [`SINGLETON`] for a concrete
-//!    example.
+//!    [`RRT`] uses [`OnceLock`] for the broadcast channel and waker wrapper because
+//!    [`syscalls`] aren't [`const expressions`] - they must be created at runtime.
+//!    See [`RRT`] for a detailed explanation. See [`mio_poller`]'s [`SINGLETON`] for
+//!    a concrete example.
 //!
-//! 2. **State machine** - [`RRTState`] can be created, destroyed, and reused. On spawn,
-//!    [`subscribe()`] populates the singleton with a fresh [`RRTState`]. On exit,
-//!    [`RRTLiveness`] marks it terminated. On relaunch, [`subscribe()`] replaces the old
-//!    state with fresh resources. Generation tracking distinguishes fresh launches from
-//!    reusing an existing [thread].
+//! 2. **State machine** - [`RRT`]'s liveness field tracks thread state. On spawn,
+//!    [`subscribe()`] creates fresh [`RRTLiveness`] and swaps in a new waker. On exit,
+//!    [`TerminationGuard`] clears the waker and marks terminated. On relaunch,
+//!    [`subscribe()`] replaces the liveness and swaps the waker. Generation tracking
+//!    distinguishes fresh launches from reusing an existing [thread].
+//!
+//!    [`TerminationGuard`]: TerminationGuard
 //!
 //! 3. **Contract preservation** - Async consumers never see broken promises; the
 //!    [`broadcast channel`] decouples producers from consumers. This unlocks two key
@@ -447,10 +449,10 @@
 //! │                    ▼                       ▼                            │
 //! │   Phase 2: Split and distribute                                         │
 //! │   ┌────────────────────────┐    ┌───────────────────────────────────┐   │
-//! │   │    Spawned Thread      │    │         RRTState                  │   │
-//! │   │    ───────────────     │    │         ───────────               │   │
-//! │   │    Worker moves here   │    │    Waker stored here              │   │
-//! │   │    (owns mio::Poll)    │    │    (shared via Arc)               │   │
+//! │   │    Spawned Thread      │    │     RRT (shared waker wrapper)    │   │
+//! │   │    ───────────────     │    │     ─────────────────────────     │   │
+//! │   │    Worker moves here   │    │    Waker stored in Arc<Mutex>     │   │
+//! │   │    (owns mio::Poll)    │    │    (shared with all subscribers)  │   │
 //! │   │                        │◄───│    SubscriberGuards call wake()   │   │
 //! │   └────────────────────────┘    └───────────────────────────────────┘   │
 //! │                                                                         │
@@ -459,8 +461,8 @@
 //!
 //! The key insight: **atomic creation, then separation**. Both resources are created
 //! together from the same [`mio::Poll`] registry, then split - your [`RRTWaker`]
-//! implementation stays in [`RRTState`] for subscribers, while your [`RRTWorker`]
-//! implementation moves to the spawned [thread].
+//! implementation is stored in [`RRT`]'s shared waker wrapper for subscribers, while
+//! your [`RRTWorker`] implementation moves to the spawned [thread].
 //!
 //! ### Why Is [`RRTWaker`] User-Provided?
 //!
@@ -505,8 +507,7 @@
 //! The [kernel] schedules [thread]s independently, so there's no guarantee when the
 //! dedicated [thread] will wake up after [`wake()`] is called. The RRT pattern handles
 //! this correctly by checking the **current** [`receiver_count()`] at exit time, not the
-//! count when [`wake()`] was called. See [`RRTState::should_self_terminate()`] for
-//! details.
+//! count when [`wake()`] was called.
 //!
 //! # How to Use It
 //!
@@ -579,11 +580,11 @@
 //!
 //! # Module Contents
 //!
-//! - **`types`**: Core traits ([`RRTWaker`], [`RRTWorker`], [`RRTFactory`])
-//! - **`thread_liveness`**: [Thread] lifecycle state ([`RRTLiveness`], [`LivenessState`])
-//! - **`thread_state`**: Shared state container ([`RRTState`])
-//! - **`subscriber_guard`**: RAII subscription guard ([`SubscriberGuard`])
-//! - **`thread_safe_global_state`**: Framework entry point ([`RRT`])
+//! - **`rrt_di_traits`**: Core traits ([`RRTWaker`], [`RRTWorker`], [`RRTFactory`])
+//! - **`rrt_liveness`**: [Thread] lifecycle state ([`RRTLiveness`], [`LivenessState`])
+//! - **`rrt_subscriber_guard`**: RAII subscription guard ([`SubscriberGuard`])
+//! - **`rrt`**: Framework entry point ([`RRT`]), [`TerminationGuard`],
+//!   [`run_worker_loop()`]
 //!
 //! # [`io_uring`]: An Alternative Model
 //!
@@ -717,8 +718,6 @@
 //! 4. **I/O-centric** - RRT is specialized for OS-level I/O ([`stdin`], [signals],
 //!    [sockets]), not general message processing.
 //!
-//! [`Mutex<Option<Arc<RRTState<W, E>>>>`]: RRTState
-//!
 //! [Actor]: https://en.wikipedia.org/wiki/Actor_model
 //! [Alacritty]: https://alacritty.org/
 //! [CQ]: https://man7.org/linux/man-pages/man7/io_uring.7.html
@@ -762,8 +761,6 @@
 //! [`PTY` pair]: crate::core::pty::pty_core::pty_types::PtyPair
 //! [`RRTFactory`]: RRTFactory
 //! [`RRTLiveness`]: RRTLiveness
-//! [`RRTState::should_self_terminate()`]: RRTState::should_self_terminate
-//! [`RRTState`]: RRTState
 //! [`RRTWaker`]: RRTWaker
 //! [`RRTWorker`]: RRTWorker
 //! [`RRT`]: RRT
@@ -855,11 +852,9 @@
 mod rrt;
 mod rrt_di_traits;
 mod rrt_liveness;
-mod rrt_state;
 mod rrt_subscriber_guard;
 
 pub use rrt::*;
 pub use rrt_di_traits::*;
 pub use rrt_liveness::*;
-pub use rrt_state::*;
 pub use rrt_subscriber_guard::*;

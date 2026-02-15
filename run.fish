@@ -496,21 +496,27 @@ end
 #
 # This function uses cross-compilation metadata emission to verify that
 # #[cfg(unix)], #[cfg(not(unix))], and other platform gates are syntactically
-# correct without needing a full Windows cross-compiler toolchain (mingw-w64).
+# correct. Uses `--emit=metadata` to skip linking, but still requires the
+# mingw-w64 cross-compiler toolchain because crates like libmimalloc-sys use
+# cc-rs build scripts that probe for `x86_64-w64-mingw32-gcc`.
 #
 # Technical details:
 # - Uses `--emit=metadata` to skip code generation and linking
 # - Only checks syntax and type correctness for Windows target
 # - Requires x86_64-pc-windows-gnu target (installed via install-cargo-tools)
+# - Requires mingw-w64 GCC and binutils (dlltool) for build script support
 #
 # When to use:
 # - After modifying #[cfg(unix)] or #[cfg(not(unix))] gates
 # - Before committing platform-specific code changes
-# - As part of CI/CD for cross-platform verification
+# - Automatically run as part of `./check.fish --full`
 #
 # Prerequisites:
 # - Windows target installed: `rustup target add x86_64-pc-windows-gnu`
-# - Or run: `fish run.fish install-cargo-tools`
+#   Or run: `fish run.fish install-cargo-tools`
+# - mingw-w64 GCC and binutils installed via `./bootstrap.sh`
+#   (Fedora: mingw64-gcc, Arch: mingw-w64-gcc, Ubuntu: gcc-mingw-w64-x86-64,
+#    macOS: brew install mingw-w64)
 #
 # Usage:
 #   fish run.fish check-windows-build

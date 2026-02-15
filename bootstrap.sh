@@ -17,6 +17,9 @@
 #     - rustup/cargo            Rust toolchain manager
 #     - clang                   Required by Wild linker for faster linking
 #
+#   Cross-Compilation:
+#     - mingw-w64 GCC           Windows cross-compiler (gcc, dlltool, etc.)
+#
 #   Shell & Development:
 #     - fish                    Shell used by run.fish build scripts
 #     - fzf                     Fuzzy finder (used by run.fish commands)
@@ -84,6 +87,38 @@ install_clang() {
         else
             echo "✓ clang already available"
         fi
+    fi
+}
+
+# Install mingw-w64 cross-compiler for Windows cross-compilation checks.
+# Needed by cc-rs build scripts (e.g. libmimalloc-sys) that probe for
+# x86_64-w64-mingw32-gcc even during metadata-only builds.
+# GCC packages pull in binutils (dlltool, etc.) as dependencies.
+install_mingw_tools() {
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        if [[ -z "$PKG_MGR" ]] && ! command -v brew &>/dev/null; then
+            echo "Warning: Homebrew not found. Skipping mingw-w64 installation..."
+        else
+            install_if_missing "x86_64-w64-mingw32-gcc" "${PKG_MGR:-brew install} mingw-w64"
+        fi
+    elif [[ -n "$PKG_MGR" ]]; then
+        if command -v apt-get &>/dev/null; then
+            install_if_missing "x86_64-w64-mingw32-gcc" "$PKG_MGR gcc-mingw-w64-x86-64"
+        elif command -v dnf &>/dev/null; then
+            install_if_missing "x86_64-w64-mingw32-gcc" "$PKG_MGR mingw64-gcc"
+        elif command -v pacman &>/dev/null; then
+            install_if_missing "x86_64-w64-mingw32-gcc" "$PKG_MGR mingw-w64-gcc"
+        elif command -v zypper &>/dev/null; then
+            install_if_missing "x86_64-w64-mingw32-gcc" "$PKG_MGR cross-x86_64-w64-mingw32-gcc"
+        elif command -v apk &>/dev/null; then
+            install_if_missing "x86_64-w64-mingw32-gcc" "$PKG_MGR mingw-w64-gcc"
+        fi
+    else
+        echo "Warning: No supported package manager found. Install mingw-w64 GCC manually"
+        echo "  Ubuntu/Debian: sudo apt-get install gcc-mingw-w64-x86-64"
+        echo "  RHEL/CentOS/Fedora: sudo dnf install mingw64-gcc"
+        echo "  Arch: sudo pacman -S mingw-w64-gcc"
+        echo "  openSUSE: sudo zypper install cross-x86_64-w64-mingw32-gcc"
     fi
 }
 
@@ -283,6 +318,7 @@ main() {
     echo ""
     echo "🔧 Installing development dependencies..."
     install_clang
+    install_mingw_tools
     install_shell_tools
     install_file_watcher
     install_dev_utilities

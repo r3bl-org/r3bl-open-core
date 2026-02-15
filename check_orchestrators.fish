@@ -340,6 +340,7 @@ function run_full_checks
     set -l result_cargo_test 0
     set -l result_doctest 0
     set -l result_docs 0
+    set -l result_windows 0
 
     run_check_with_recovery check_cargo_check "typecheck"
     set result_check $status
@@ -359,14 +360,19 @@ function run_full_checks
     run_check_with_recovery check_docs_full "docs"
     set result_docs $status
 
+    run_check_with_recovery check_windows_build "windows"
+    set result_windows $status
+
     # Aggregate: return 2 if ANY recoverable error, then 1 if ANY failure, else 0
     if test $result_check -eq 2 || test $result_build -eq 2 || test $result_clippy -eq 2 || \
-       test $result_cargo_test -eq 2 || test $result_doctest -eq 2 || test $result_docs -eq 2
+       test $result_cargo_test -eq 2 || test $result_doctest -eq 2 || test $result_docs -eq 2 || \
+       test $result_windows -eq 2
         return 2
     end
 
     if test $result_check -ne 0 || test $result_build -ne 0 || test $result_clippy -ne 0 || \
-       test $result_cargo_test -ne 0 || test $result_doctest -ne 0 || test $result_docs -ne 0
+       test $result_cargo_test -ne 0 || test $result_doctest -ne 0 || test $result_docs -ne 0 || \
+       test $result_windows -ne 0
         return 1
     end
 

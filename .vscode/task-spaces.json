@@ -258,10 +258,6 @@
           "isPinned": false
         },
         {
-          "path": "tui/src/core/resilient_reactor_thread/rrt_state.rs",
-          "isPinned": false
-        },
-        {
           "path": "tui/src/core/resilient_reactor_thread/rrt_subscriber_guard.rs",
           "isPinned": false
         },

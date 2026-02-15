@@ -32,7 +32,7 @@
 #   ./check.fish --clippy     Run clippy only (cargo clippy --all-targets)
 #   ./check.fish --test       Run tests only (cargo test + doctests)
 #   ./check.fish --doc        Build docs only (quick, --no-deps)
-#   ./check.fish --full       Run ALL checks (check + build + clippy + tests + doctests + docs)
+#   ./check.fish --full       Run ALL checks (check + build + clippy + tests + doctests + docs + windows)
 #   ./check.fish --watch      Watch mode: run default checks on file changes
 #   ./check.fish --watch-test Watch mode: run tests/doctests only
 #   ./check.fish --watch-doc  Watch mode: quick docs first, full docs forked to background
@@ -196,7 +196,7 @@ function main
             return $clippy_status
         case full
             # Full mode: comprehensive pre-commit check
-            # Runs: check + build + clippy + tests + doctests + docs
+            # Runs: check + build + clippy + tests + doctests + docs + windows
             check_config_changed $CHECK_TARGET_DIR $CONFIG_FILES_TO_WATCH
 
             ensure_toolchain_installed
@@ -208,7 +208,7 @@ function main
             end
 
             echo ""
-            echo "🚀 Running comprehensive checks (check + build + clippy + tests + doctests + docs)..."
+            echo "🚀 Running comprehensive checks (check + build + clippy + tests + doctests + docs + windows)..."
 
             # Run all checks with recovery (ICE, stale artifacts)
             run_full_checks_with_recovery
@@ -225,7 +225,7 @@ function main
                 set_color green --bold
                 echo "["(timestamp)"] ✅ All comprehensive checks passed!"
                 set_color normal
-                send_system_notification "Full Checks Complete ✅" "check, build, clippy, tests, doctests, docs all passed" "success" $NOTIFICATION_EXPIRE_MS
+                send_system_notification "Full Checks Complete ✅" "check, build, clippy, tests, doctests, docs, windows all passed" "success" $NOTIFICATION_EXPIRE_MS
             else
                 echo ""
                 set_color red --bold

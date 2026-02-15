@@ -176,7 +176,7 @@ use std::fmt::Debug;
 /// │ │  1. DirectToAnsiInputDevice::new()                                        │ │
 /// │ │  2. next() → subscribe()                                                  │ │
 /// │ │  3. SINGLETON is None → initialize_global_input_resource()                │ │
-/// │ │       • Creates RRTState { tx, liveness: Running }                        │ │
+/// │ │       • Creates broadcast channel, waker, liveness: Running               │ │
 /// │ │       • Spawns mio-poller thread #1                                       │ │
 /// │ │       • thread #1 owns MioPollWorker struct                               │ │
 /// │ │  4. TUI app A runs, receiving events from rx                              │ │
@@ -193,7 +193,7 @@ use std::fmt::Debug;
 /// │ │  2. next() → subscribe()                                                  │ │
 /// │ │  3. SINGLETON has state, but liveness == Terminated                       │ │
 /// │ │       → needs_init = true → initialize_global_input_resource()            │ │
-/// │ │       • Creates NEW RRTState { tx, liveness: Running }                    │ │
+/// │ │       • Swaps waker, creates fresh liveness: Running                      │ │
 /// │ │       • Spawns mio-poller thread #2 (NOT the same as #1!)                 │ │
 /// │ │       • thread #2 owns its own MioPollWorker struct                       │ │
 /// │ │  4. TUI app B runs, receiving events from rx                              │ │
@@ -275,11 +275,11 @@ use std::fmt::Debug;
 ///             │       │
 ///             │       └─► if needs_init: initialize_global_input_resource()
 ///             │               │
-///             │               ├─► Create RRTState
-///             │               ├─► MioPollWorker::new(state.clone())
-///             │               └─► guard.replace(state)
+///             │               ├─► Init broadcast_tx, waker wrapper (OnceLock)
+///             │               ├─► F::create() → swap waker, create liveness
+///             │               └─► Spawn thread with worker
 ///             │
-///             └─► return state.tx_input_event.subscribe() ← new broadcast receiver
+///             └─► return SubscriberGuard { receiver, waker } ← new subscriber
 ///
 /// DirectToAnsiInputDevice::next()               (input_device.rs)
 ///     │
@@ -476,7 +476,7 @@ use std::fmt::Debug;
 ///    drop behavior] (thread lifecycle protocol).
 ///
 /// For the complete lifecycle diagram including the [race condition] where a fast
-/// subscriber can reuse the existing thread, see [`RRTState`].
+/// subscriber can reuse the existing thread, see the [inherent race condition] docs.
 ///
 /// [Architecture]: Self#architecture
 /// [Device Lifecycle]: Self#device-lifecycle
@@ -499,7 +499,6 @@ use std::fmt::Debug;
 /// [`SubscriberGuard`]: crate::core::resilient_reactor_thread::SubscriberGuard
 /// [`SubscriberGuard`'s drop behavior]: crate::core::resilient_reactor_thread::SubscriberGuard#drop-behavior
 /// [`TERMINAL_LIB_BACKEND`]: crate::tui::TERMINAL_LIB_BACKEND
-/// [`RRTState`]: crate::core::resilient_reactor_thread::RRTState
 /// [`VT100InputEventIR`]: crate::core::ansi::vt_100_terminal_input_parser::VT100InputEventIR
 /// [`broadcast`]: tokio::sync::broadcast
 /// [`crossterm`]: crossterm
@@ -525,7 +524,8 @@ use std::fmt::Debug;
 /// [`tokio::signal`]: tokio::signal
 /// [`try_parse_input_event`]: crate::core::ansi::vt_100_terminal_input_parser::try_parse_input_event
 /// [`vt_100_terminal_input_parser`]: mod@crate::core::ansi::vt_100_terminal_input_parser
-/// [race condition]: crate::core::resilient_reactor_thread::RRTState#the-inherent-race-condition
+/// [inherent race condition]: crate::core::resilient_reactor_thread#the-inherent-race-condition
+/// [race condition]: crate::core::resilient_reactor_thread#the-inherent-race-condition
 pub struct DirectToAnsiInputDevice {
     /// This device's subscription to the global input broadcast channel.
     ///

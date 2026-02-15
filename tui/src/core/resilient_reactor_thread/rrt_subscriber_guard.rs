@@ -5,8 +5,8 @@
 //!
 //! [RAII]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
 
-use super::{RRTState, RRTWaker};
-use std::sync::Arc;
+use super::RRTWaker;
+use std::sync::{Arc, Mutex};
 use tokio::sync::broadcast::Receiver;
 
 /// An [RAII] guard that wakes the dedicated thread on drop.
@@ -25,14 +25,24 @@ use tokio::sync::broadcast::Receiver;
 /// 3. The dedicated thread wakes and checks [`receiver_count()`] to decide if it should
 ///    exit (when count reaches `0`).
 ///
+/// # Shared Waker and Correctness
+///
+/// The `waker` field holds an `Arc<Mutex<Option<W>>>` that is shared with *all*
+/// subscribers (old and new) and the [`TerminationGuard`]. This means every subscriber
+/// always reads the **current** waker, even after a thread relaunch. This solves the
+/// zombie thread bug where old subscribers would call a stale waker targeting a dead
+/// [`mio::Poll`].
+///
+/// When the thread dies, [`TerminationGuard::drop()`] clears the waker to `None`. If
+/// a subscriber drops after the thread has already exited, the `wake()` call is skipped
+/// (the `Option` is `None`), which is correct - there's no thread to wake.
+///
 /// # Race Condition and Correctness
 ///
 /// There is a race window between when the receiver is dropped and when the dedicated
 /// thread checks [`receiver_count()`]. This is the **fast-path thread reuse** scenario -
 /// if a new subscriber appears during the window, the thread correctly continues serving
 /// it instead of exiting.
-///
-/// See [`RRTState`] for comprehensive documentation on the race condition.
 ///
 /// # Example
 ///
@@ -41,7 +51,9 @@ use tokio::sync::broadcast::Receiver;
 /// [RAII]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
 /// [`DirectToAnsiInputDevice::next()`]: crate::terminal_lib_backends::DirectToAnsiInputDevice::next
 /// [`Sender`]: tokio::sync::broadcast::Sender
-/// [`RRTState`]: super::RRTState
+/// [`TerminationGuard`]: super::TerminationGuard
+/// [`TerminationGuard::drop()`]: super::TerminationGuard
+/// [`mio::Poll`]: mio::Poll
 /// [`receiver_count()`]: tokio::sync::broadcast::Sender::receiver_count
 /// [`receiver`]: Self::receiver
 /// [`waker.wake()`]: RRTWaker::wake
@@ -61,16 +73,13 @@ where
     /// [`take()`]: Option::take
     pub receiver: Option<Receiver<E>>,
 
-    /// Shared state including your [`RRTWaker`] implementation to signal the dedicated
-    /// thread.
+    /// Shared waker - always reads the current waker via `Arc<Mutex<Option<W>>>`.
     ///
-    /// We hold an [`Arc`] reference to keep the [`RRTState`] alive. When this guard
-    /// drops, we call [`waker.wake()`] to notify the dedicated thread.
+    /// All subscribers (across all generations) hold a clone of the same [`Arc`],
+    /// so dropping any subscriber wakes the *current* thread, not a stale one.
     ///
     /// [`Arc`]: std::sync::Arc
-    /// [`RRTState`]: super::RRTState
-    /// [`waker.wake()`]: RRTWaker::wake
-    pub state: Arc<RRTState<W, E>>,
+    pub waker: Arc<Mutex<Option<W>>>,
 }
 
 impl<W, E> Drop for SubscriberGuard<W, E>
@@ -88,7 +97,14 @@ where
         drop(self.receiver.take());
 
         // Wake the thread so it can check if it should exit.
-        // Ignore errors - the thread may have already exited.
-        drop(self.state.waker.wake());
+        // Lock the shared waker and call the current waker (if any).
+        // If the thread has already exited, the waker is None (cleared by
+        // TerminationGuard::drop()), so we skip the wake call.
+        if let Ok(guard) = self.waker.lock() {
+            if let Some(w) = guard.as_ref() {
+                // Ignore errors - the thread may have already exited.
+                drop(w.wake());
+            }
+        }
     }
 }

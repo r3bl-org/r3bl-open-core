@@ -7,11 +7,10 @@
 //!
 //! This module uses the **Resilient Reactor Thread (RRT)** infrastructure:
 //!
-//! - **[`SINGLETON`]** (container): Static [`RRT`], lives for process
-//!   lifetime
-//! - **[`RRTState`]** (payload): Created when thread spawns, destroyed when it exits
-//!
-//! The container persists, but the payload comes and goes with the thread lifecycle.
+//! - **[`SINGLETON`]** (container): Static [`RRT`], lives for process lifetime. Holds
+//!   the broadcast channel (created once, never replaced) and a shared waker wrapper.
+//! - **Thread-generation state**: Liveness tracking and waker are swapped on each
+//!   relaunch; the channel persists across all generations.
 //!
 //! Module contents: [`global_input_resource`] (operations + [`SINGLETON`]).
 //!
@@ -21,7 +20,6 @@
 //! [`DirectToAnsiInputDevice`]: super::DirectToAnsiInputDevice
 //! [`SINGLETON`]: global_input_resource::SINGLETON
 //! [`RRT`]: crate::core::resilient_reactor_thread::RRT
-//! [`RRTState`]: crate::core::resilient_reactor_thread::RRTState
 //! [`global_input_resource`]: mod@global_input_resource
 
 use super::{channel_types::PollerEvent,
@@ -41,28 +39,28 @@ pub type InputSubscriberGuard = SubscriberGuard<MioPollWaker, PollerEvent>;
 
 /// Process-global input resource singleton.
 ///
-/// See [`RRTState`] for what the singleton holds when active.
+/// See [`RRT`] for what the singleton holds when active.
 ///
-/// [`RRTState`]: crate::core::resilient_reactor_thread::RRTState
+/// [`RRT`]: crate::core::resilient_reactor_thread::RRT
 pub mod global_input_resource {
     #[allow(clippy::wildcard_imports)]
     use super::*;
 
-    /// **Static container** (lives for process lifetime) that holds a
-    /// [`RRTState`] **payload** (ephemeral, follows thread lifecycle). The payload is
-    /// created when [`subscribe()`] spawns a thread, and removed when the thread exits.
+    /// **Static container** (lives for process lifetime) with three top-level fields.
+    /// The broadcast channel and waker wrapper are created once (via [`OnceLock`]);
+    /// liveness tracking is per-generation and replaced on each relaunch.
     ///
     /// Lifecycle states:
-    /// - **Inert** (`None`) until [`subscribe()`] spawns the poller thread
-    /// - **Active** (`Some`) while thread is running
-    /// - **Dormant** (`Some` with terminated liveness) when all [`SubscriberGuard`]s drop
-    ///   and thread exits
-    /// - **Reactivates** on next [`subscribe()`] call (spawns fresh thread, replaces
-    ///   payload)
+    /// - **Inert** (all empty) until [`subscribe()`] spawns the poller thread
+    /// - **Active** (all populated) while thread is running
+    /// - **Dormant** (liveness terminated, waker cleared) when all [`SubscriberGuard`]s
+    ///   drop and thread exits
+    /// - **Reactivates** on next [`subscribe()`] call (spawns fresh thread, swaps waker,
+    ///   replaces liveness)
     ///
-    /// This is NOT "allocate once, lives forever" — supports full restart cycles.
+    /// See [`RRT`] for details on the three-field structure.
     ///
-    /// See [`RRTState`] for what the payload contains when active.
+    /// [`OnceLock`]: std::sync::OnceLock
     ///
     /// # Why `RRT`?
     ///
@@ -88,7 +86,7 @@ pub mod global_input_resource {
     /// [Architecture]: super::super::DirectToAnsiInputDevice#architecture
     /// [`MioPollWorker`]: super::super::mio_poller::MioPollWorker
     /// [`SubscriberGuard`]: crate::core::resilient_reactor_thread::SubscriberGuard
-    /// [`RRTState`]: crate::core::resilient_reactor_thread::RRTState
+    /// [`RRT`]: crate::core::resilient_reactor_thread::RRT
     /// [`subscribe()`]: RRT::subscribe
     pub static SINGLETON: RRT<MioPollWorkerFactory> =
         RRT::new();

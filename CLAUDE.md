@@ -87,13 +87,12 @@ optimizations — all of which are lost with direct cargo calls.
 | `./check.fish --clippy` | `cargo clippy --all-targets` (linting) |
 | `./check.fish --test` | `cargo test` + doctests |
 | `./check.fish --doc` | `cargo doc --no-deps` (quick docs) |
-| `./check.fish --full` | All of the above |
+| `./check.fish --full` | All of the above + Windows cross-compilation check |
 
 Commands with **no check.fish equivalent** (run directly):
 - `cargo rustdoc-fmt` — format rustdoc comments
 - `cargo clippy --all-targets --fix --allow-dirty` — auto-fix lints
 - `cargo fmt --all` — format code
-- `cargo rustc -p <crate> --target x86_64-pc-windows-gnu -- --emit=metadata` — cross-platform check
 
 ## Rust Code Guidelines
 

@@ -1,7 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 //! Thread liveness tracking for the Resilient Reactor Thread pattern. See
-//! [`RRTLiveness`], [`LivenessState`], and [`ShutdownDecision`].
+//! [`RRTLiveness`] and [`LivenessState`].
 
 use std::sync::atomic::{AtomicBool, AtomicU8, Ordering};
 
@@ -125,28 +125,3 @@ pub enum LivenessState {
     Terminated,
 }
 
-/// An indication of whether the dedicated thread should self-terminate or continue
-/// running.
-///
-/// This enum is returned by [`RRTState::should_self_terminate()`] to provide a
-/// self-documenting return type instead of a bare `bool`.
-///
-/// # Decision Logic
-///
-/// The thread should:
-/// - **Continue** if [`receiver_count()`] > 0 (someone is listening)
-/// - **Shutdown** if [`receiver_count()`] == 0 (no one listening)
-///
-/// This check is performed **when the thread wakes**, not when the receiver drops. This
-/// handles the race condition where a new subscriber appears between the wake signal and
-/// the exit check.
-///
-/// [`RRTState::should_self_terminate()`]: super::RRTState::should_self_terminate
-/// [`receiver_count()`]: tokio::sync::broadcast::Sender::receiver_count
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ShutdownDecision {
-    /// The thread should continue running because receivers are still listening.
-    ContinueRunning,
-    /// The thread should shut down now because no receivers are listening.
-    ShutdownNow,
-}

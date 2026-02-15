@@ -33,6 +33,11 @@ function check_doctests
     ionice_wrapper timeout $CHECK_TIMEOUT_SECS cargo test --doc -q
 end
 
+function check_windows_build
+    set -lx CARGO_TARGET_DIR $CHECK_TARGET_DIR
+    ionice_wrapper timeout $CHECK_TIMEOUT_SECS cargo rustc -p r3bl_tui --target x86_64-pc-windows-gnu -- --emit=metadata
+end
+
 # Quick doc check without dependencies (for one-off --doc mode).
 # Builds to QUICK staging directory to avoid race conditions with background full builds.
 function check_docs_quick
