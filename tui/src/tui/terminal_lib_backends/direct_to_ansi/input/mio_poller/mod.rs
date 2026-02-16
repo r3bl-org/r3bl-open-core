@@ -21,8 +21,6 @@
 //! | Item                                             | Description                                                         |
 //! | :----------------------------------------------- | :------------------------------------------------------------------ |
 //! | [`MioPollWorker`]                                | Core struct: holds poll handle, buffers, parser (implements RRT)    |
-//! | [`MioPollWaker`]                                 | Waker to interrupt blocked poll (implements RRT [`RRTWaker`])       |
-//! | [`MioPollWorkerFactory`]                         | Factory to create worker and waker together                         |
 //! | [`SourceRegistry`]                               | Holds [`stdin`] and [`SIGWINCH`] signal handles                     |
 //! | [`SourceKindReady`]                              | Enum mapping [`mio::Token`] ↔ source kind for dispatch              |
 //! | [`dispatch_with_tx()`]                           | Routes ready events to appropriate handlers                         |
@@ -278,8 +276,6 @@
 //! **Trade-off**: Faster `ESC` response vs. occasional incorrect detection on
 //! high-latency connections.
 //!
-//! [`Arc<AtomicBool>`]: std::sync::atomic::AtomicBool
-//!
 //! [100ms `ttimeoutlen` delay]: https://vi.stackexchange.com/questions/24925/usage-of-timeoutlen-and-ttimeoutlen
 //! [AsRawFd::as_raw_fd]: std::os::unix::io::AsRawFd::as_raw_fd
 //! [Device Lifecycle]: super::DirectToAnsiInputDevice#device-lifecycle
@@ -290,14 +286,13 @@
 //! [The Problems section in `DirectToAnsiInputDevice`]: super::DirectToAnsiInputDevice#the-problems
 //! [VT100 input parser]: super::stateful_parser::StatefulInputParser
 //! [Why Linux-Only?]: super#why-linux-only
+//! [`Arc<AtomicBool>`]: std::sync::atomic::AtomicBool
 //! [`CONTROL_D`]: crate::core::ansi::CONTROL_D
 //! [`DirectToAnsiInputDevice`]: super::DirectToAnsiInputDevice
 //! [`EINTR`]: https://man7.org/linux/man-pages/man3/errno.3.html
 //! [`EOF`]: https://en.wikipedia.org/wiki/End-of-file
 //! [`ErrorKind::Interrupted`]: std::io::ErrorKind::Interrupted
 //! [`InputEvent`]: crate::InputEvent
-//! [`MioPollWaker`]: mio_poll_waker::MioPollWaker
-//! [`MioPollWorkerFactory`]: mio_poll_worker::MioPollWorkerFactory
 //! [`MioPollWorker`]: mio_poll_worker::MioPollWorker
 //! [`Mutex`]: std::sync::Mutex
 //! [`PasteCollectionState`]: super::paste_state_machine::PasteCollectionState
@@ -362,7 +357,7 @@
 // https://stackoverflow.com/a/75910283/2085356
 #![cfg_attr(rustfmt, rustfmt_skip)]
 
-// RRT-based worker and waker types.
+// RRT-based waker + worker types.
 #[cfg(any(test, doc))]
 pub mod mio_poll_waker;
 #[cfg(not(any(test, doc)))]

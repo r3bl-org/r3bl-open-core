@@ -1,53 +1,62 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! mio-specific waker implementation for the Resilient Reactor Thread pattern.
+//! mio-specific waker for the Resilient Reactor Thread pattern.
 //!
-//! [`MioPollWaker`] wraps [`mio::Waker`] and implements [`RRTWaker`] to integrate with
-//! the generic RRT infrastructure.
+//! [`MioPollWaker`] wraps a [`mio::Waker`] and implements [`RRTWaker`] to interrupt the
+//! dedicated thread's [`mio::Poll::poll()`] call. The waker is created from the same
+//! [`mio::Poll`] registry as the worker (see [two-phase setup]) and is tightly coupled to
+//! it - if the poll is dropped, calling [`wake()`] has no effect.
 //!
 //! [`RRTWaker`]: crate::core::resilient_reactor_thread::RRTWaker
+//! [`mio::Poll::poll()`]: mio::Poll::poll
+//! [`mio::Poll`]: mio::Poll
+//! [`mio::Waker`]: mio::Waker
+//! [`wake()`]: MioPollWaker::wake
+//! [two-phase setup]: crate::core::resilient_reactor_thread#two-phase-setup
 
 use crate::core::resilient_reactor_thread::RRTWaker;
-use mio::Waker;
 
-/// mio-specific waker that interrupts a blocked [`mio::Poll::poll()`] call.
+/// Newtype wrapping [`mio::Waker`] to implement [`RRTWaker`].
 ///
-/// This newtype wraps [`mio::Waker`] and implements [`RRTWaker`] for use with the
-/// generic RRT infrastructure.
+/// Created from the same [`mio::Poll`] registry as the [`MioPollWorker`] it is paired
+/// with. Calling [`wake()`] triggers an event on the poll, causing
+/// [`mio::Poll::poll()`] to return.
 ///
 /// # How It Works
 ///
-/// When [`wake()`] is called:
-/// 1. The underlying [`mio::Waker::wake()`] triggers an event on the poll instance
-/// 2. The blocked [`mio::Poll::poll()`] returns with a [`ReceiverDropWaker`] token
-/// 3. The worker's event handler checks [`receiver_count()`] to decide whether to exit
+/// ```text
+/// mio::Poll::new()      // Creates OS event mechanism (epoll fd / kqueue)
+///       │
+///       ▼
+/// poll.registry()       // Handle to register interest
+///       │
+///       ▼
+/// Waker::new(registry)  // Registers with THIS Poll's mechanism
+///       │
+///       ▼
+/// MioPollWaker(waker)   // Newtype for RRTWaker trait
+///       │
+///       ▼
+/// waker.wake()          // Triggers event → poll.poll() returns
+/// ```
 ///
-/// # Coupling With Poll
-///
-/// The waker is **tightly coupled** to its [`mio::Poll`] instance — it was created from
-/// that poll's registry. If the poll is dropped, calling [`wake()`] will fail or have no
-/// effect.
-///
-/// This is why [`RRTFactory::create()`] must create the poll, waker, and worker
-/// together — they share an OS-level bond.
-///
-/// [`RRTFactory::create()`]: crate::core::resilient_reactor_thread::RRTFactory::create
-/// [`ReceiverDropWaker`]: super::SourceKindReady::ReceiverDropWaker
+/// [`MioPollWorker`]: super::MioPollWorker
 /// [`mio::Poll::poll()`]: mio::Poll::poll
 /// [`mio::Poll`]: mio::Poll
-/// [`mio::Waker::wake()`]: mio::Waker::wake
 /// [`mio::Waker`]: mio::Waker
-/// [`receiver_count()`]: tokio::sync::broadcast::Sender::receiver_count
 /// [`wake()`]: Self::wake
-#[allow(missing_debug_implementations)]
-pub struct MioPollWaker(pub Waker);
+#[derive(Debug)]
+pub struct MioPollWaker(pub mio::Waker);
 
 impl RRTWaker for MioPollWaker {
-    /// Wakes the mio poller thread by triggering a wake event.
+    /// Triggers an event on the paired [`mio::Poll`], causing its blocking
+    /// [`poll()`] call to return.
     ///
-    /// This causes the blocked [`mio::Poll::poll()`] call to return, allowing the thread
-    /// to check if it should exit.
+    /// The return value of [`mio::Waker::wake()`] is intentionally discarded - if the
+    /// poll has already been dropped (thread exited), the wake is a no-op.
     ///
-    /// [`mio::Poll::poll()`]: mio::Poll::poll
-    fn wake(&self) -> std::io::Result<()> { self.0.wake() }
+    /// [`mio::Poll`]: mio::Poll
+    /// [`mio::Waker::wake()`]: mio::Waker::wake
+    /// [`poll()`]: mio::Poll::poll
+    fn wake(&self) { let _unused = self.0.wake(); }
 }

@@ -7,8 +7,8 @@
 //!
 //! This module uses the **Resilient Reactor Thread (RRT)** infrastructure:
 //!
-//! - **[`SINGLETON`]** (container): Static [`RRT`], lives for process lifetime. Holds
-//!   the broadcast channel (created once, never replaced) and a shared waker wrapper.
+//! - **[`SINGLETON`]** (container): Static [`RRT`], lives for process lifetime. Holds the
+//!   broadcast channel (created once, never replaced) and a shared waker wrapper.
 //! - **Thread-generation state**: Liveness tracking and waker are swapped on each
 //!   relaunch; the channel persists across all generations.
 //!
@@ -18,12 +18,12 @@
 //! pipeline).
 //!
 //! [`DirectToAnsiInputDevice`]: super::DirectToAnsiInputDevice
-//! [`SINGLETON`]: global_input_resource::SINGLETON
 //! [`RRT`]: crate::core::resilient_reactor_thread::RRT
+//! [`SINGLETON`]: global_input_resource::SINGLETON
 //! [`global_input_resource`]: mod@global_input_resource
 
 use super::{channel_types::PollerEvent,
-            mio_poller::{MioPollWaker, MioPollWorkerFactory}};
+            mio_poller::MioPollWorker};
 use crate::core::resilient_reactor_thread::{RRT, SubscriberGuard};
 
 /// Type alias for the input device's subscriber guard.
@@ -35,7 +35,7 @@ use crate::core::resilient_reactor_thread::{RRT, SubscriberGuard};
 ///
 /// [`SINGLETON.subscribe()`]: global_input_resource::SINGLETON
 /// [`SINGLETON.subscribe_to_existing()`]: global_input_resource::SINGLETON
-pub type InputSubscriberGuard = SubscriberGuard<MioPollWaker, PollerEvent>;
+pub type InputSubscriberGuard = SubscriberGuard<PollerEvent>;
 
 /// Process-global input resource singleton.
 ///
@@ -60,7 +60,6 @@ pub mod global_input_resource {
     ///
     /// See [`RRT`] for details on the three-field structure.
     ///
-    /// [`OnceLock`]: std::sync::OnceLock
     ///
     /// # Why `RRT`?
     ///
@@ -85,11 +84,11 @@ pub mod global_input_resource {
     ///
     /// [Architecture]: super::super::DirectToAnsiInputDevice#architecture
     /// [`MioPollWorker`]: super::super::mio_poller::MioPollWorker
-    /// [`SubscriberGuard`]: crate::core::resilient_reactor_thread::SubscriberGuard
+    /// [`OnceLock`]: std::sync::OnceLock
     /// [`RRT`]: crate::core::resilient_reactor_thread::RRT
+    /// [`SubscriberGuard`]: crate::core::resilient_reactor_thread::SubscriberGuard
     /// [`subscribe()`]: RRT::subscribe
-    pub static SINGLETON: RRT<MioPollWorkerFactory> =
-        RRT::new();
+    pub static SINGLETON: RRT<MioPollWorker> = RRT::new();
 }
 
 /// Comprehensive testing is performed in PTY integration tests:

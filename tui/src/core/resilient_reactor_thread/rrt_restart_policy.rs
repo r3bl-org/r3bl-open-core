@@ -30,7 +30,7 @@ use std::time::Duration;
 /// [`RRTWorker`]: super::RRTWorker
 /// [`RRT`]: super::RRT
 /// [`TIME_WAIT`]: https://en.wikipedia.org/wiki/TCP_TIME-WAIT
-/// [`create()`]: super::RRTFactory::create
+/// [`create()`]: super::RRTWorker::create
 /// [`epoll`]: https://man7.org/linux/man-pages/man7/epoll.7.html
 /// [`eventfd`]: https://man7.org/linux/man-pages/man2/eventfd.2.html
 /// [`fd`]: https://man7.org/linux/man-pages/man2/open.2.html
@@ -73,9 +73,9 @@ pub struct RestartPolicy {
 /// ```
 ///
 /// For other scenarios (network servers, serial/hardware) where recovery windows are
-/// longer, provide your own policy via [`RRTFactory::restart_policy()`].
+/// longer, provide your own policy via [`RRTWorker::restart_policy()`].
 ///
-/// [`RRTFactory::restart_policy()`]: super::RRTFactory::restart_policy
+/// [`RRTWorker::restart_policy()`]: super::RRTWorker::restart_policy
 /// [`epoll`]: https://man7.org/linux/man-pages/man7/epoll.7.html
 /// [`eventfd`]: https://man7.org/linux/man-pages/man2/eventfd.2.html
 /// [`fd`]: https://man7.org/linux/man-pages/man2/open.2.html

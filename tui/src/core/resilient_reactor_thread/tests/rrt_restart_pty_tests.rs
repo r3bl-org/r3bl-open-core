@@ -1,14 +1,14 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! PTY integration test for production `MioPollWorkerFactory::create()` restart cycles.
+//! PTY integration test for production `MioPollWorker::create()` restart cycles.
 //!
 //! Each worker processes a **real keystroke** from the controller via
 //! `MioPollWorker::poll_once()` before restarting. This proves:
 //!
-//! - `MioPollWorkerFactory::create()` works correctly 3 times in sequence
+//! - `MioPollWorker::create()` works correctly 3 times in sequence
 //! - Each restarted worker can actually poll stdin and process events
 //! - No fd leaks or stale epoll state between create/drop cycles
-//! - Production waker correctly couples to new Poll registry each time
+//! - Production [`MioPollWaker`] correctly couples to new Poll registry each time
 //!
 //! The PTY provides real terminal stdin (fd 0 on the controlled end), which is required
 //! for `epoll_ctl` registration.
@@ -21,9 +21,7 @@
 use super::super::*;
 use crate::{Continuation, ControlledChild, PtyPair, PtyTestMode, generate_pty_test,
             tui::terminal_lib_backends::direct_to_ansi::input::{channel_types::PollerEvent,
-                                                                mio_poller::{MioPollWaker,
-                                                                             MioPollWorker,
-                                                                             MioPollWorkerFactory}}};
+                                                                mio_poller::MioPollWorker}};
 use std::{io::{BufRead, BufReader, Read, Write, stdout},
           sync::atomic::{AtomicU32, Ordering},
           thread::sleep,
@@ -43,6 +41,18 @@ struct RestartTestWorker {
 impl RRTWorker for RestartTestWorker {
     type Event = PollerEvent;
 
+    fn create() -> miette::Result<(Self, impl RRTWaker)> {
+        create_count::increment();
+        let (inner_worker, wake_fn) = MioPollWorker::create()?;
+        Ok((
+            RestartTestWorker {
+                inner: inner_worker,
+                poll_count: 0,
+            },
+            wake_fn,
+        ))
+    }
+
     fn poll_once(
         &mut self,
         tx: &tokio::sync::broadcast::Sender<RRTEvent<Self::Event>>,
@@ -61,28 +71,6 @@ impl RRTWorker for RestartTestWorker {
                 Continuation::Stop
             }
         }
-    }
-}
-
-/// Factory that wraps [`MioPollWorkerFactory`] to test repeated `create()`
-/// cycles with real OS resource creation.
-struct RestartTestFactory;
-
-impl RRTFactory for RestartTestFactory {
-    type Event = PollerEvent;
-    type Worker = RestartTestWorker;
-    type Waker = MioPollWaker;
-
-    fn create() -> Result<(Self::Worker, Self::Waker), miette::Report> {
-        create_count::increment();
-        let (inner_worker, waker) = MioPollWorkerFactory::create()?;
-        Ok((
-            RestartTestWorker {
-                inner: inner_worker,
-                poll_count: 0,
-            },
-            waker,
-        ))
     }
 
     fn restart_policy() -> RestartPolicy {
@@ -158,7 +146,7 @@ fn factory_restart_controller(pty_pair: PtyPair, mut child: ControlledChild) {
     eprintln!("Factory-Restart Controller: Test passed!");
 }
 
-/// Controlled: runs `MioPollWorkerFactory::create()` 3 times via the RRT
+/// Controlled: runs `MioPollWorker::create()` 3 times via the RRT
 /// restart loop. Each worker processes one real keystroke from the controller
 /// before restarting, proving the restarted worker's epoll and stdin
 /// registration actually function.
@@ -168,9 +156,9 @@ fn factory_restart_controlled() -> ! {
     println!("{FACTORY_RESTART_READY}");
     stdout().flush().expect("Failed to flush");
 
-    // RRT::subscribe() calls RestartTestFactory::create() and spawns the
+    // RRT::subscribe() calls RestartTestWorker::create() and spawns the
     // worker thread. The _guard keeps the broadcast receiver alive.
-    let rrt = RRT::<RestartTestFactory>::new();
+    let rrt = RRT::<RestartTestWorker>::new();
     let _guard = rrt.subscribe().unwrap();
 
     // Worker 1 is now entering poll.poll(). Signal the controller to
@@ -217,7 +205,7 @@ fn factory_restart_controlled() -> ! {
 }
 
 /// Encapsulates the atomic counter tracking how many times
-/// [`RestartTestFactory::create()`] has been called.
+/// [`RestartTestWorker::create()`] has been called.
 mod create_count {
     #[allow(clippy::wildcard_imports)]
     use super::*;

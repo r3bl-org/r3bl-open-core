@@ -1701,7 +1701,7 @@
 //! | [`RRTLiveness`]              | Running state + generation tracking              |
 //! | [`SubscriberGuard`]          | RAII guard managing subscription lifecycle       |
 //! | [`RRTWorker`]                | Trait for the blocking work loop                 |
-//! | [`RRTWaker`]                 | Trait for interrupting blocked threads           |
+//! | [`RRTWaker`]                 | Trait for interrupting blocked threads                |
 //!
 //! ## Key benefits
 //!

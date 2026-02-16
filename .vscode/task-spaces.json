@@ -278,10 +278,6 @@
           "isPinned": false
         },
         {
-          "path": "tui/src/tui/terminal_lib_backends/direct_to_ansi/input/mio_poller/mio_poll_waker.rs",
-          "isPinned": false
-        },
-        {
           "path": "tui/src/tui/terminal_lib_backends/direct_to_ansi/input/mio_poller/dispatcher.rs",
           "isPinned": false
         },

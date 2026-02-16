@@ -104,8 +104,9 @@ pub enum InputEvent {
     /// [`EnableBracketedPaste`]: crate::PaintRenderOpImplCrossterm::raw_mode_enter
     BracketedPaste(String),
     /// The input thread shut down. The [`ShutdownReason`] indicates why - either the RRT
-    /// framework exhausted its [`RestartPolicy`] or caught a panic on the dedicated thread.
-    /// The application should exit gracefully or try re-subscribing via [`subscribe()`].
+    /// framework exhausted its [`RestartPolicy`] or caught a panic on the dedicated
+    /// thread. The application should exit gracefully or try re-subscribing via
+    /// [`subscribe()`].
     ///
     /// [`RestartPolicy`]: crate::core::resilient_reactor_thread::RestartPolicy
     /// [`subscribe()`]: crate::core::resilient_reactor_thread::RRT::subscribe
