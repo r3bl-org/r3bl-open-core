@@ -40,7 +40,7 @@ cargo publish --dry-run --allow-dirty --no-verify
 git add -A
 git commit -S -m "v0.0.3-analytics_schema"
 git tag -a v0.0.3-analytics_schema -m "v0.0.3-analytics_schema"
-cargo publish --no-verify
+cargo publish --no-verify --allow-dirty
 git push ; git push --tags # Push tags & commits
 cd ..
 
@@ -59,7 +59,7 @@ cargo publish --dry-run --allow-dirty --no-verify
 git add -A
 git commit -S -m "v0.7.8-tui"
 git tag -a v0.7.8-tui -m "v0.7.8-tui"
-cargo publish --no-verify
+cargo publish --no-verify --allow-dirty
 git push ; git push --tags # Push tags & commits
 cd ..
 
@@ -78,7 +78,7 @@ cargo publish --dry-run --allow-dirty --no-verify
 git add -A
 git commit -S -m "v0.0.26-cmdr"
 git tag -a v0.0.26-cmdr -m "v0.0.26-cmdr"
-cargo publish --no-verify
+cargo publish --no-verify --allow-dirty
 # TODO: Test release on clean machine with `spawny r3bl-cmdr` (see task/pending/build_infra_spawny.md)
 git push ; git push --tags # Push tags & commits
 cd ..
@@ -98,7 +98,7 @@ cargo publish --dry-run --allow-dirty --no-verify
 git add -A
 git commit -S -m "v0.0.4-build-infra"
 git tag -a v0.0.4-build-infra -m "v0.0.4-build-infra"
-cargo publish --no-verify
+cargo publish --no-verify --allow-dirty
 # TODO: Test release on clean machine with `spawny r3bl-build-infra` (see task/pending/build_infra_spawny.md)
 git push ; git push --tags # Push tags & commits
 cd ..
@@ -140,7 +140,7 @@ applied to each crate (`tui`, `cmdr`, `analytics_schema`):
    publishing the crate to crates.io. The `--no-verify` flag skips re-compilation of the packaged
    tarball, which fails with the `wild` linker configured in `.cargo/config.toml`. The actual
    build/test/clippy checks in step 5 already verify correctness.
-7. Then run `cargo publish --no-verify` in the crate folder. This will publish the crate to
+7. Then run `cargo publish --no-verify --allow-dirty` in the crate folder. This will publish the crate to
    crates.io.
 
 ### Step 2. Make a GitHub release from the tag
@@ -291,7 +291,7 @@ cargo readme > README.md
 git add -A
 git commit -S -m "v0.2.0-tuify"
 git tag -a "v0.2.0-tuify" -m "v0.2.0-tuify"
-cargo publish --no-verify
+cargo publish --no-verify --allow-dirty
 git push ; git push --tags # Push tags & commits
 cd ..
 
@@ -307,7 +307,7 @@ cargo readme > README.md
 git add -A
 git commit -S -m "v0.6.0-terminal_async"
 git tag -a v0.6.0-terminal_async -m "v0.6.0-terminal_async"
-cargo publish --no-verify
+cargo publish --no-verify --allow-dirty
 git push ; git push --tags # Push tags & commits
 cd ..
 
@@ -323,7 +323,7 @@ cargo readme > README.md
 git add -A
 git commit -S -m "v0.7.0-ansi_color"
 git tag -a v0.7.0-ansi_color -m "v0.7.0-ansi_color"
-cargo publish --no-verify
+cargo publish --no-verify --allow-dirty
 git push ; git push --tags # Push tags & commits
 cd ..
 
@@ -339,7 +339,7 @@ cargo readme > README.md
 git add -A
 git commit -S -m "v0.10.0-core"
 git tag -a v0.10.0-core -m "v0.10.0-core"
-cargo publish --no-verify
+cargo publish --no-verify --allow-dirty
 git push ; git push --tags # Push tags & commits
 cd ..
 
@@ -355,7 +355,7 @@ cargo readme > README.md
 git add -A
 git commit -S -m "v0.10.0-macro"
 git tag -a v0.10.0-macro -m "v0.10.0-macro"
-cargo publish --no-verify
+cargo publish --no-verify --allow-dirty
 git push ; git push --tags # Push tags & commits
 cd ..
 
@@ -371,7 +371,7 @@ cargo readme > README.md
 git add -A
 git commit -S -m "v0.1.0-test_fixtures"
 git tag -a "v0.1.0-test_fixtures" -m "v0.1.0-test_fixtures"
-cargo publish --no-verify
+cargo publish --no-verify --allow-dirty
 git push ; git push --tags # Push tags & commits
 cd ..
 
@@ -388,7 +388,7 @@ cargo readme > README.md
 git add -A
 git commit -S -m "v0.1.4-simple_logger"
 git tag -a v0.1.4-simple_logger -m "v0.1.4-simple_logger"
-cargo publish --no-verify
+cargo publish --no-verify --allow-dirty
 git push ; git push --tags # Push tags & commits
 cd ..
 
@@ -404,7 +404,7 @@ cargo readme > README.md
 git add -A
 git commit -S -m "v0.2.8-redux"
 git tag -a v0.2.8-redux -m "v0.2.8-redux"
-cargo publish --no-verify
+cargo publish --no-verify --allow-dirty
 git push ; git push --tags # Push tags & commits
 cd ..
 
@@ -420,7 +420,7 @@ cargo readme > README.md
 git add -A
 git commit -S -m "v0.9.16-utils"
 git tag -a v0.9.16-utils -m "v0.9.16-utils"
-cargo publish --no-verify
+cargo publish --no-verify --allow-dirty
 git push ; git push --tags # Push tags & commits
 cd ..
 

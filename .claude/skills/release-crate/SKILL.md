@@ -106,7 +106,7 @@ Note: Do NOT use `-S` for signing - follow the project's git workflow convention
 ### Step 10. Publish to crates.io
 
 ```bash
-cd <crate> && cargo publish --no-verify
+cd <crate> && cargo publish --no-verify --allow-dirty
 ```
 
 ### Step 11. Push to remote
