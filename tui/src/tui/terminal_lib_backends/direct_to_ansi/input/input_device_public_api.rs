@@ -112,7 +112,7 @@ use tokio::sync::broadcast::error::RecvError;
 /// │   • Parser state                    │           │                             │
 /// │   • SIGWINCH watcher                │           │                             │
 /// │                                     │ broadcast │                             │
-/// │ tx.send(InputEvent)  ───────────────┼───────────► rx.recv().await             │
+/// │ sender.send(InputEvent)  ───────────┼──────► receiver.recv().await            │
 /// │                                     │ channel   │ (cancel-safe, fan-out!)     │
 /// └─────────────────────────────────────┘    │      └─────────────────────────────┘
 ///                                            ▼
@@ -133,9 +133,9 @@ use tokio::sync::broadcast::error::RecvError;
 /// ┌─────────────────────────────────────────────────────────────────────────┐
 /// │ SINGLETON (static Mutex<Option<...>>)                                   │
 /// │ internal:                                                               │
-/// │  • mio-poller thread: holds tx, reads stdin, runs vt100 parser          │
+/// │  • mio-poller thread: holds sender, reads stdin, runs vt100 parser      │
 /// │ external:                                                               │
-/// │  • stdin_rx: broadcast receiver (async consumers recv() from here)      │
+/// │  • stdin_receiver: broadcast receiver (async consumers recv() from here)│
 /// └───────────────────────────────────────┬─────────────────────────────────┘
 ///                                         │
 ///            ┌────────────────────────────┴─────────────────────────┐
@@ -178,10 +178,10 @@ use tokio::sync::broadcast::error::RecvError;
 /// │ │  1. DirectToAnsiInputDevice::new()                                        │ │
 /// │ │  2. next() → subscribe()                                                  │ │
 /// │ │  3. SINGLETON is None → initialize_global_input_resource()                │ │
-/// │ │       • Creates broadcast channel, waker, liveness: Running               │ │
+/// │ │       • Creates broadcast channel, safe_waker, liveness: Running          │ │
 /// │ │       • Spawns mio-poller thread #1                                       │ │
 /// │ │       • thread #1 owns MioPollWorker struct                               │ │
-/// │ │  4. TUI app A runs, receiving events from rx                              │ │
+/// │ │  4. TUI app A runs, receiving events from receiver                        │ │
 /// │ │  5. TUI app A exits → device dropped → receiver dropped                   │ │
 /// │ │  6. Thread #1 detects 0 receivers → exits gracefully                      │ │
 /// │ │  7. MioPollWorker::drop() → liveness = Terminated                         │ │
@@ -195,10 +195,10 @@ use tokio::sync::broadcast::error::RecvError;
 /// │ │  2. next() → subscribe()                                                  │ │
 /// │ │  3. SINGLETON has state, but liveness == Terminated                       │ │
 /// │ │       → needs_init = true → initialize_global_input_resource()            │ │
-/// │ │       • Swaps waker, creates fresh liveness: Running                      │ │
+/// │ │       • Swaps safe_waker, creates fresh liveness: Running                 │ │
 /// │ │       • Spawns mio-poller thread #2 (NOT the same as #1!)                 │ │
 /// │ │       • thread #2 owns its own MioPollWorker struct                       │ │
-/// │ │  4. TUI app B runs, receiving events from rx                              │ │
+/// │ │  4. TUI app B runs, receiving events from receiver                        │ │
 /// │ │  5. TUI app B exits → device dropped → receiver dropped                   │ │
 /// │ │  6. Thread #2 detects 0 receivers → exits gracefully                      │ │
 /// │ │  7. MioPollWorker::drop() → liveness = Terminated                         │ │
@@ -277,15 +277,15 @@ use tokio::sync::broadcast::error::RecvError;
 ///             │       │
 ///             │       └─► if needs_init: initialize_global_input_resource()
 ///             │               │
-///             │               ├─► Init broadcast_tx, waker wrapper (OnceLock)
-///             │               ├─► F::create() → swap waker, create liveness
+///             │               ├─► Init broadcast_sender, safe_waker wrapper (LazyLock)
+///             │               ├─► F::create() → swap safe_waker, create liveness
 ///             │               └─► Spawn thread with worker
 ///             │
-///             └─► return SubscriberGuard { receiver, waker } ← new subscriber
+///             └─► return SubscriberGuard { receiver, safe_waker } ← new subscriber
 ///
 /// DirectToAnsiInputDevice::next()               (input_device.rs)
 ///     │
-///     └─► stdin_rx.recv().await
+///     └─► stdin_receiver.recv().await
 /// ```
 ///
 /// **Key points:**
@@ -356,7 +356,7 @@ use tokio::sync::broadcast::error::RecvError;
 /// │        └─► If no thread running: spawns mio-poller thread                 │
 /// │                                                                           │
 /// │ 1. next() called                                                          │
-/// │    └─► Loop: stdin_rx.recv().await                                        │
+/// │    └─► Loop: stdin_receiver.recv().await                                  │
 /// │         ├─► Event(e) → return e                                           │
 /// │         ├─► Resize(size) → return InputEvent::Resize(size)                │
 /// │         └─► Eof/Error → return None                                       │
@@ -373,7 +373,7 @@ use tokio::sync::broadcast::error::RecvError;
 /// │    │   let n = stdin.read(&mut buffer)?;     // Read available bytes   │  │
 /// │    │   let more = n == TTY_BUFFER_SIZE;      // ESC disambiguation     │  │
 /// │    │   parser.advance(&buffer[..n], more);   // Parse with `more` flag │  │
-/// │    │   for event in parser { tx.send(Event(event))?; }                 │  │
+/// │    │   for event in parser { sender.send(Event(event))?; }             │  │
 /// │    │ }                                                                 │  │
 /// │    └───────────────────────────────────────────────────────────────────┘  │
 /// │    See module docs for thread lifecycle (exits when all receivers drop)   │
@@ -744,7 +744,7 @@ impl DirectToAnsiInputDevice {
         // Wait for fully-formed InputEvents through the broadcast channel.
         loop {
             let poller_rx_result = subscriber_guard
-                .receiver
+                .maybe_receiver
                 .as_mut()
                 .expect("PollerEventReceiver is None - this is a bug")
                 .recv()

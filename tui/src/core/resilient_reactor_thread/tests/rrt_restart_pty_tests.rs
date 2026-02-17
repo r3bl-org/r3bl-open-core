@@ -26,6 +26,7 @@ use std::{io::{BufRead, BufReader, Read, Write, stdout},
           sync::atomic::{AtomicU32, Ordering},
           thread::sleep,
           time::{Duration, Instant}};
+use tokio::sync::broadcast;
 
 /// Worker that delegates the first `poll_once()` call to the real
 /// [`MioPollWorker`], then returns [`Continuation::Restart`] or
@@ -42,7 +43,7 @@ impl RRTWorker for RestartTestWorker {
     type Event = PollerEvent;
 
     fn create() -> miette::Result<(Self, impl RRTWaker)> {
-        create_count::increment();
+        create_call_counter::increment();
         let (inner_worker, wake_fn) = MioPollWorker::create()?;
         Ok((
             RestartTestWorker {
@@ -55,16 +56,16 @@ impl RRTWorker for RestartTestWorker {
 
     fn poll_once(
         &mut self,
-        tx: &tokio::sync::broadcast::Sender<RRTEvent<Self::Event>>,
+        sender: &broadcast::Sender<RRTEvent<Self::Event>>,
     ) -> Continuation {
         self.poll_count += 1;
         if self.poll_count == 1 {
             // First call: delegate to real worker. Blocks on poll.poll()
             // until the controller sends a keystroke via the PTY.
-            self.inner.poll_once(tx)
+            self.inner.poll_once(sender)
         } else {
             // Second call: restart or stop based on total create count.
-            let count = create_count::get();
+            let count = create_call_counter::get();
             if count < 3 {
                 Continuation::Restart
             } else {
@@ -83,17 +84,32 @@ impl RRTWorker for RestartTestWorker {
     }
 }
 
-// XMARK: Process isolated test with PTY.
+/// Encapsulates the atomic counter tracking how many times
+/// [`RestartTestWorker::create()`] has been called.
+mod create_call_counter {
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
-const FACTORY_RESTART_READY: &str = "FACTORY_RESTART_READY";
-const FACTORY_RESTART_PASSED: &str = "FACTORY_RESTART_PASSED";
-const SEND_KEY: &str = "SEND_KEY";
+    static COUNT: AtomicU32 = AtomicU32::new(0);
 
-generate_pty_test! {
-    test_fn: test_production_factory_restart_cycle,
-    controller: factory_restart_controller,
-    controlled: factory_restart_controlled,
-    mode: PtyTestMode::Raw,
+    pub fn reset() { COUNT.store(0, Ordering::SeqCst); }
+
+    pub fn increment() { COUNT.fetch_add(1, Ordering::SeqCst); }
+
+    pub fn get() -> u32 { COUNT.load(Ordering::SeqCst) }
+
+    /// Spin-waits until the counter reaches `target`, with a 5-second timeout.
+    pub fn spin_wait_until(target: u32) {
+        let deadline = Instant::now() + Duration::from_secs(5);
+        while get() < target {
+            assert!(
+                Instant::now() < deadline,
+                "Timeout waiting for create() #{target}, current={}",
+                get(),
+            );
+            sleep(Duration::from_millis(1));
+        }
+    }
 }
 
 /// Waits for a line containing `signal` from the controlled process.
@@ -112,6 +128,19 @@ fn wait_for_signal(buf_reader: &mut BufReader<impl Read>, signal: &str) {
             Err(e) => panic!("Read error waiting for {signal}: {e}"),
         }
     }
+}
+
+// XMARK: Process isolated test with PTY.
+
+const FACTORY_RESTART_READY: &str = "FACTORY_RESTART_READY";
+const FACTORY_RESTART_PASSED: &str = "FACTORY_RESTART_PASSED";
+const SEND_KEY: &str = "SEND_KEY";
+
+generate_pty_test! {
+    test_fn: test_production_factory_restart_cycle,
+    controller: factory_restart_controller,
+    controlled: factory_restart_controlled,
+    mode: PtyTestMode::Raw,
 }
 
 /// Controller: sends keystrokes when the controlled signals readiness, then
@@ -151,7 +180,7 @@ fn factory_restart_controller(pty_pair: PtyPair, mut child: ControlledChild) {
 /// before restarting, proving the restarted worker's epoll and stdin
 /// registration actually function.
 fn factory_restart_controlled() -> ! {
-    create_count::reset();
+    create_call_counter::reset();
 
     println!("{FACTORY_RESTART_READY}");
     stdout().flush().expect("Failed to flush");
@@ -170,12 +199,12 @@ fn factory_restart_controlled() -> ! {
     stdout().flush().expect("Failed to flush");
 
     // Wait for Worker 2 to be created (restart happened), then send keystroke.
-    create_count::spin_wait_until(2);
+    create_call_counter::spin_wait_until(2);
     println!("{SEND_KEY}");
     stdout().flush().expect("Failed to flush");
 
     // Wait for Worker 3 to be created (restart happened), then send keystroke.
-    create_count::spin_wait_until(3);
+    create_call_counter::spin_wait_until(3);
     println!("{SEND_KEY}");
     stdout().flush().expect("Failed to flush");
 
@@ -189,7 +218,7 @@ fn factory_restart_controlled() -> ! {
         sleep(Duration::from_millis(1));
     }
 
-    let count = create_count::get();
+    let count = create_call_counter::get();
     eprintln!("Factory-Restart Controlled: create() called {count} times");
 
     // Initial create() + 2 restarts = 3 total.
@@ -202,32 +231,4 @@ fn factory_restart_controlled() -> ! {
     stdout().flush().expect("Failed to flush");
 
     std::process::exit(0);
-}
-
-/// Encapsulates the atomic counter tracking how many times
-/// [`RestartTestWorker::create()`] has been called.
-mod create_count {
-    #[allow(clippy::wildcard_imports)]
-    use super::*;
-
-    static COUNT: AtomicU32 = AtomicU32::new(0);
-
-    pub fn reset() { COUNT.store(0, Ordering::SeqCst); }
-
-    pub fn increment() { COUNT.fetch_add(1, Ordering::SeqCst); }
-
-    pub fn get() -> u32 { COUNT.load(Ordering::SeqCst) }
-
-    /// Spin-waits until the counter reaches `target`, with a 5-second timeout.
-    pub fn spin_wait_until(target: u32) {
-        let deadline = Instant::now() + Duration::from_secs(5);
-        while get() < target {
-            assert!(
-                Instant::now() < deadline,
-                "Timeout waiting for create() #{target}, current={}",
-                get(),
-            );
-            sleep(Duration::from_millis(1));
-        }
-    }
 }

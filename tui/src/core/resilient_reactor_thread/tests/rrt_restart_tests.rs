@@ -62,7 +62,7 @@ impl RRTWaker for TestWaker {
 /// [`mpsc`]: std::sync::mpsc
 /// [`poll_once()`]: RRTWorker::poll_once
 struct TestWorker {
-    cmd_rx: mpsc::Receiver<u8>,
+    cmd_receiver: mpsc::Receiver<u8>,
     event_counter: u32,
 }
 
@@ -73,8 +73,8 @@ impl RRTWorker for TestWorker {
         let mut guard = TEST_FACTORY_STATE.lock().unwrap();
         let state = guard.as_mut().expect("TEST_FACTORY_STATE not initialized");
         state.create_count += 1;
-        if let Some(ref notify_tx) = state.create_notify {
-            notify_tx.send(()).ok();
+        if let Some(ref notify_sender) = state.create_notify {
+            notify_sender.send(()).ok();
         }
         state
             .create_results
@@ -84,16 +84,16 @@ impl RRTWorker for TestWorker {
 
     fn poll_once(
         &mut self,
-        tx: &tokio::sync::broadcast::Sender<RRTEvent<Self::Event>>,
+        sender: &tokio::sync::broadcast::Sender<RRTEvent<Self::Event>>,
     ) -> Continuation {
-        match self.cmd_rx.recv() {
+        match self.cmd_receiver.recv() {
             Ok(b'c') => Continuation::Continue,
             Ok(b'r') => Continuation::Restart,
             Ok(b's') => Continuation::Stop,
             Ok(b'e') => {
                 let id = self.event_counter;
                 self.event_counter += 1;
-                drop(tx.send(RRTEvent::Worker(TestEvent(id))));
+                drop(sender.send(RRTEvent::Worker(TestEvent(id))));
                 Continuation::Continue
             }
             Ok(b'p') => panic!("TestWorker: deliberate panic for testing"),
@@ -129,29 +129,29 @@ struct TestFactoryState {
 
 static TEST_FACTORY_STATE: Mutex<Option<TestFactoryState>> = Mutex::new(None);
 
-/// Creates `(TestWorker, TestWaker, cmd_tx)`. The test thread uses `cmd_tx` to
+/// Creates `(TestWorker, TestWaker, cmd_sender)`. The test thread uses `cmd_sender` to
 /// send command bytes. Each [`TestWaker`] captures a unique ID and records it in
 /// [`LAST_WAKED_ID`] when called.
 fn create_test_resources() -> (TestWorker, TestWaker, mpsc::Sender<u8>) {
-    let (cmd_tx, cmd_rx) = mpsc::channel();
+    let (cmd_sender, cmd_receiver) = mpsc::channel();
     let worker = TestWorker {
-        cmd_rx,
+        cmd_receiver,
         event_counter: 0,
     };
     let waker_id = NEXT_WAKER_ID.fetch_add(1, Ordering::Relaxed);
     let waker = TestWaker { id: waker_id };
-    (worker, waker, cmd_tx)
+    (worker, waker, cmd_sender)
 }
 
 /// Creates resources wrapped in `Ok(...)` for factory pre-loading. Returns the
-/// `Ok` result and the corresponding `cmd_tx`.
+/// `Ok` result and the corresponding `cmd_sender`.
 fn create_ok_result() -> (miette::Result<(TestWorker, TestWaker)>, mpsc::Sender<u8>) {
-    let (worker, wake_fn, cmd_tx) = create_test_resources();
-    (Ok((worker, wake_fn)), cmd_tx)
+    let (worker, wake_fn, cmd_sender) = create_test_resources();
+    (Ok((worker, wake_fn)), cmd_sender)
 }
 
 /// Sets up [`TEST_FACTORY_STATE`] with pre-loaded create results and a policy.
-/// Returns `(create_notify_rx, cmd_senders)`.
+/// Returns `(create_notify_receiver, cmd_senders)`.
 fn setup_factory(
     results_and_senders: Vec<(
         miette::Result<(TestWorker, TestWaker)>,
@@ -159,7 +159,7 @@ fn setup_factory(
     )>,
     policy: RestartPolicy,
 ) -> (mpsc::Receiver<()>, Vec<mpsc::Sender<u8>>) {
-    let (notify_tx, notify_rx) = mpsc::channel();
+    let (notify_sender, notify_receiver) = mpsc::channel();
     let mut cmd_senders = Vec::new();
     let mut create_results = VecDeque::new();
 
@@ -175,10 +175,10 @@ fn setup_factory(
         create_results,
         create_count: 0,
         restart_policy: policy,
-        create_notify: Some(notify_tx),
+        create_notify: Some(notify_sender),
     });
 
-    (notify_rx, cmd_senders)
+    (notify_receiver, cmd_senders)
 }
 
 /// Clears [`TEST_FACTORY_STATE`].
@@ -197,8 +197,8 @@ fn get_create_count() -> u32 {
         .unwrap_or(0)
 }
 
-/// Sends a command byte to the worker via its `cmd_tx`.
-fn send_cmd(cmd_tx: &mpsc::Sender<u8>, cmd: u8) { cmd_tx.send(cmd).unwrap(); }
+/// Sends a command byte to the worker via its `cmd_sender`.
+fn send_cmd(cmd_sender: &mpsc::Sender<u8>, cmd: u8) { cmd_sender.send(cmd).unwrap(); }
 
 /// Returns a [`RestartPolicy`] with no delays.
 fn no_delay_policy(max_restarts: u8) -> RestartPolicy {
@@ -213,14 +213,13 @@ fn no_delay_policy(max_restarts: u8) -> RestartPolicy {
 /// Spawns `run_worker_loop::<TestWorker>()` on a named thread.
 fn spawn_worker_loop(
     worker: TestWorker,
-    tx: tokio::sync::broadcast::Sender<RRTEvent<TestEvent>>,
-    liveness: Arc<RRTLiveness>,
-    shared_waker: Arc<Mutex<Option<Box<dyn RRTWaker>>>>,
+    sender: SafeSender<TestEvent>,
+    safe_waker: SafeWaker,
 ) -> std::thread::JoinHandle<()> {
     std::thread::Builder::new()
         .name("test-rrt-worker".into())
         .spawn(move || {
-            run_worker_loop::<TestWorker>(worker, tx, liveness, shared_waker);
+            run_worker_loop::<TestWorker>(worker, sender, safe_waker);
         })
         .unwrap()
 }
@@ -253,7 +252,6 @@ fn run_all_restart_tests_sequentially() {
 
     // Group B Step 5.4: TerminationGuard cleanup.
     test_guard_clears_waker_on_stop();
-    test_guard_marks_terminated_on_stop();
     test_guard_clears_waker_on_exhaustion();
 
     // Group B Step 5.5: Backoff timing.
@@ -264,7 +262,6 @@ fn run_all_restart_tests_sequentially() {
     test_panic_sends_shutdown_panic();
     test_panic_after_events();
     test_guard_clears_waker_on_panic();
-    test_guard_marks_terminated_on_panic();
     test_no_restart_after_panic();
 
     // Group C Step 6: RRT<TestWorker> integration tests.
@@ -392,43 +389,37 @@ fn test_backoff_unbounded_growth() {
 }
 
 fn test_worker_stop_exits_cleanly() {
-    let (worker, wake_fn, cmd_tx) = create_test_resources();
-    let (tx, _rx) = tokio::sync::broadcast::channel(16);
-    let liveness = Arc::new(RRTLiveness::new());
-    let shared_waker: Arc<Mutex<Option<Box<dyn RRTWaker>>>> =
-        Arc::new(Mutex::new(Some(Box::new(wake_fn))));
+    let (worker, wake_fn, cmd_sender) = create_test_resources();
+    let (sender, _receiver) = tokio::sync::broadcast::channel(16);
+    let safe_waker: SafeWaker = Arc::new(Mutex::new(Some(Box::new(wake_fn))));
 
-    let (_notify_rx, _senders) = setup_factory(vec![], no_delay_policy(3));
-    let handle =
-        spawn_worker_loop(worker, tx, Arc::clone(&liveness), Arc::clone(&shared_waker));
+    let (_notify_receiver, _senders) = setup_factory(vec![], no_delay_policy(3));
+    let handle = spawn_worker_loop(worker, sender, safe_waker.clone());
 
-    send_cmd(&cmd_tx, b's');
+    send_cmd(&cmd_sender, b's');
     handle.join().unwrap();
 
-    assert_eq!(liveness.is_running(), LivenessState::Terminated);
-    assert!(shared_waker.lock().unwrap().is_none());
+    assert!(safe_waker.lock().unwrap().is_none());
+    assert!(safe_waker.lock().unwrap().is_none());
     teardown_factory();
 }
 
 fn test_worker_continue_then_stop() {
-    let (worker, wake_fn, cmd_tx) = create_test_resources();
-    let (tx, mut rx) = tokio::sync::broadcast::channel(16);
-    let liveness = Arc::new(RRTLiveness::new());
-    let shared_waker: Arc<Mutex<Option<Box<dyn RRTWaker>>>> =
-        Arc::new(Mutex::new(Some(Box::new(wake_fn))));
+    let (worker, wake_fn, cmd_sender) = create_test_resources();
+    let (sender, mut receiver) = tokio::sync::broadcast::channel(16);
+    let safe_waker: SafeWaker = Arc::new(Mutex::new(Some(Box::new(wake_fn))));
 
-    let (_notify_rx, _senders) = setup_factory(vec![], no_delay_policy(3));
-    let handle =
-        spawn_worker_loop(worker, tx, Arc::clone(&liveness), Arc::clone(&shared_waker));
+    let (_notify_receiver, _senders) = setup_factory(vec![], no_delay_policy(3));
+    let handle = spawn_worker_loop(worker, sender, safe_waker.clone());
 
-    send_cmd(&cmd_tx, b'e');
-    send_cmd(&cmd_tx, b'e');
-    send_cmd(&cmd_tx, b'e');
-    send_cmd(&cmd_tx, b's');
+    send_cmd(&cmd_sender, b'e');
+    send_cmd(&cmd_sender, b'e');
+    send_cmd(&cmd_sender, b'e');
+    send_cmd(&cmd_sender, b's');
     handle.join().unwrap();
 
     let mut count = 0;
-    while rx.try_recv().is_ok() {
+    while receiver.try_recv().is_ok() {
         count += 1;
     }
     assert_eq!(count, 3);
@@ -436,26 +427,23 @@ fn test_worker_continue_then_stop() {
 }
 
 fn test_domain_events_flow_through() {
-    let (worker, wake_fn, cmd_tx) = create_test_resources();
-    let (tx, mut rx) = tokio::sync::broadcast::channel(16);
-    let liveness = Arc::new(RRTLiveness::new());
-    let shared_waker: Arc<Mutex<Option<Box<dyn RRTWaker>>>> =
-        Arc::new(Mutex::new(Some(Box::new(wake_fn))));
+    let (worker, wake_fn, cmd_sender) = create_test_resources();
+    let (sender, mut receiver) = tokio::sync::broadcast::channel(16);
+    let safe_waker: SafeWaker = Arc::new(Mutex::new(Some(Box::new(wake_fn))));
 
-    let (_notify_rx, _senders) = setup_factory(vec![], no_delay_policy(3));
-    let handle =
-        spawn_worker_loop(worker, tx, Arc::clone(&liveness), Arc::clone(&shared_waker));
+    let (_notify_receiver, _senders) = setup_factory(vec![], no_delay_policy(3));
+    let handle = spawn_worker_loop(worker, sender, safe_waker.clone());
 
-    send_cmd(&cmd_tx, b'e');
-    send_cmd(&cmd_tx, b'e');
-    send_cmd(&cmd_tx, b's');
+    send_cmd(&cmd_sender, b'e');
+    send_cmd(&cmd_sender, b'e');
+    send_cmd(&cmd_sender, b's');
     handle.join().unwrap();
 
-    match rx.try_recv().unwrap() {
+    match receiver.try_recv().unwrap() {
         RRTEvent::Worker(TestEvent(0)) => {}
         other => panic!("Expected TestEvent(0), got {other:?}"),
     }
-    match rx.try_recv().unwrap() {
+    match receiver.try_recv().unwrap() {
         RRTEvent::Worker(TestEvent(1)) => {}
         other => panic!("Expected TestEvent(1), got {other:?}"),
     }
@@ -463,60 +451,50 @@ fn test_domain_events_flow_through() {
 }
 
 fn test_single_restart_success() {
-    let (worker1, wake_fn1, cmd_tx1) = create_test_resources();
-    let (ok2, cmd_tx2) = create_ok_result();
+    let (worker1, wake_fn1, cmd_sender1) = create_test_resources();
+    let (ok2, cmd_sender2) = create_ok_result();
 
-    let (notify_rx, _senders) =
-        setup_factory(vec![(ok2, Some(cmd_tx2.clone()))], no_delay_policy(3));
+    let (notify_receiver, _senders) =
+        setup_factory(vec![(ok2, Some(cmd_sender2.clone()))], no_delay_policy(3));
 
-    let (tx, _rx) = tokio::sync::broadcast::channel(16);
-    let liveness = Arc::new(RRTLiveness::new());
-    let shared_waker: Arc<Mutex<Option<Box<dyn RRTWaker>>>> =
-        Arc::new(Mutex::new(Some(Box::new(wake_fn1))));
+    let (sender, _receiver) = tokio::sync::broadcast::channel(16);
+    let safe_waker: SafeWaker = Arc::new(Mutex::new(Some(Box::new(wake_fn1))));
 
-    let handle = spawn_worker_loop(
-        worker1,
-        tx,
-        Arc::clone(&liveness),
-        Arc::clone(&shared_waker),
-    );
+    let handle = spawn_worker_loop(worker1, sender, safe_waker.clone());
 
     // Worker1: restart.
-    send_cmd(&cmd_tx1, b'r');
+    send_cmd(&cmd_sender1, b'r');
     // Wait for create() to be called.
-    notify_rx.recv_timeout(Duration::from_secs(5)).unwrap();
+    notify_receiver
+        .recv_timeout(Duration::from_secs(5))
+        .unwrap();
     // Worker2: stop.
-    send_cmd(&cmd_tx2, b's');
+    send_cmd(&cmd_sender2, b's');
     handle.join().unwrap();
 
     assert_eq!(get_create_count(), 1);
-    assert_eq!(liveness.is_running(), LivenessState::Terminated);
+    assert!(safe_waker.lock().unwrap().is_none());
     teardown_factory();
 }
 
 fn test_restart_no_delay_fast() {
-    let (worker1, wake_fn1, cmd_tx1) = create_test_resources();
-    let (ok2, cmd_tx2) = create_ok_result();
+    let (worker1, wake_fn1, cmd_sender1) = create_test_resources();
+    let (ok2, cmd_sender2) = create_ok_result();
 
-    let (notify_rx, _senders) =
-        setup_factory(vec![(ok2, Some(cmd_tx2.clone()))], no_delay_policy(3));
+    let (notify_receiver, _senders) =
+        setup_factory(vec![(ok2, Some(cmd_sender2.clone()))], no_delay_policy(3));
 
-    let (tx, _rx) = tokio::sync::broadcast::channel(16);
-    let liveness = Arc::new(RRTLiveness::new());
-    let shared_waker: Arc<Mutex<Option<Box<dyn RRTWaker>>>> =
-        Arc::new(Mutex::new(Some(Box::new(wake_fn1))));
+    let (sender, _receiver) = tokio::sync::broadcast::channel(16);
+    let safe_waker: SafeWaker = Arc::new(Mutex::new(Some(Box::new(wake_fn1))));
 
     let start = Instant::now();
-    let handle = spawn_worker_loop(
-        worker1,
-        tx,
-        Arc::clone(&liveness),
-        Arc::clone(&shared_waker),
-    );
+    let handle = spawn_worker_loop(worker1, sender, safe_waker.clone());
 
-    send_cmd(&cmd_tx1, b'r');
-    notify_rx.recv_timeout(Duration::from_secs(5)).unwrap();
-    send_cmd(&cmd_tx2, b's');
+    send_cmd(&cmd_sender1, b'r');
+    notify_receiver
+        .recv_timeout(Duration::from_secs(5))
+        .unwrap();
+    send_cmd(&cmd_sender2, b's');
     handle.join().unwrap();
 
     assert!(start.elapsed() < Duration::from_millis(500));
@@ -524,78 +502,68 @@ fn test_restart_no_delay_fast() {
 }
 
 fn test_events_before_and_after_restart() {
-    let (worker1, wake_fn1, cmd_tx1) = create_test_resources();
-    let (ok2, cmd_tx2) = create_ok_result();
+    let (worker1, wake_fn1, cmd_sender1) = create_test_resources();
+    let (ok2, cmd_sender2) = create_ok_result();
 
-    let (notify_rx, _senders) =
-        setup_factory(vec![(ok2, Some(cmd_tx2.clone()))], no_delay_policy(3));
+    let (notify_receiver, _senders) =
+        setup_factory(vec![(ok2, Some(cmd_sender2.clone()))], no_delay_policy(3));
 
-    let (tx, mut rx) = tokio::sync::broadcast::channel(16);
-    let liveness = Arc::new(RRTLiveness::new());
-    let shared_waker: Arc<Mutex<Option<Box<dyn RRTWaker>>>> =
-        Arc::new(Mutex::new(Some(Box::new(wake_fn1))));
+    let (sender, mut receiver) = tokio::sync::broadcast::channel(16);
+    let safe_waker: SafeWaker = Arc::new(Mutex::new(Some(Box::new(wake_fn1))));
 
-    let handle = spawn_worker_loop(
-        worker1,
-        tx,
-        Arc::clone(&liveness),
-        Arc::clone(&shared_waker),
-    );
+    let handle = spawn_worker_loop(worker1, sender, safe_waker.clone());
 
     // Worker1: event then restart.
-    send_cmd(&cmd_tx1, b'e');
-    send_cmd(&cmd_tx1, b'r');
-    notify_rx.recv_timeout(Duration::from_secs(5)).unwrap();
+    send_cmd(&cmd_sender1, b'e');
+    send_cmd(&cmd_sender1, b'r');
+    notify_receiver
+        .recv_timeout(Duration::from_secs(5))
+        .unwrap();
     // Worker2: event then stop.
-    send_cmd(&cmd_tx2, b'e');
-    send_cmd(&cmd_tx2, b's');
+    send_cmd(&cmd_sender2, b'e');
+    send_cmd(&cmd_sender2, b's');
     handle.join().unwrap();
 
     // Both events should arrive (from different worker instances).
-    let e1 = rx.try_recv().unwrap();
-    let e2 = rx.try_recv().unwrap();
+    let e1 = receiver.try_recv().unwrap();
+    let e2 = receiver.try_recv().unwrap();
     assert!(matches!(e1, RRTEvent::Worker(TestEvent(_))));
     assert!(matches!(e2, RRTEvent::Worker(TestEvent(_))));
     teardown_factory();
 }
 
 fn test_waker_swap_on_restart() {
-    let (worker1, wake_fn1, cmd_tx1) = create_test_resources();
-    let (ok2, cmd_tx2) = create_ok_result();
+    let (worker1, wake_fn1, cmd_sender1) = create_test_resources();
+    let (ok2, cmd_sender2) = create_ok_result();
 
-    let (notify_rx, _senders) =
-        setup_factory(vec![(ok2, Some(cmd_tx2.clone()))], no_delay_policy(3));
+    let (notify_receiver, _senders) =
+        setup_factory(vec![(ok2, Some(cmd_sender2.clone()))], no_delay_policy(3));
 
-    let (tx, _rx) = tokio::sync::broadcast::channel(16);
-    let liveness = Arc::new(RRTLiveness::new());
-    let shared_waker: Arc<Mutex<Option<Box<dyn RRTWaker>>>> =
-        Arc::new(Mutex::new(Some(Box::new(wake_fn1))));
+    let (sender, _receiver) = tokio::sync::broadcast::channel(16);
+    let safe_waker: SafeWaker = Arc::new(Mutex::new(Some(Box::new(wake_fn1))));
 
-    let handle = spawn_worker_loop(
-        worker1,
-        tx,
-        Arc::clone(&liveness),
-        Arc::clone(&shared_waker),
-    );
+    let handle = spawn_worker_loop(worker1, sender, safe_waker.clone());
 
     // Invoke the current waker to record its ID in LAST_WAKED_ID.
     {
-        let guard = shared_waker.lock().unwrap();
+        let guard = safe_waker.lock().unwrap();
         if let Some(w) = guard.as_ref() {
             w.wake();
         }
     }
     let old_id = LAST_WAKED_ID.load(Ordering::SeqCst);
 
-    send_cmd(&cmd_tx1, b'r');
-    notify_rx.recv_timeout(Duration::from_secs(5)).unwrap();
+    send_cmd(&cmd_sender1, b'r');
+    notify_receiver
+        .recv_timeout(Duration::from_secs(5))
+        .unwrap();
 
     // Wait for the waker swap (happens right after create() returns).
     // Each TestWaker records its unique ID in LAST_WAKED_ID when wake() is called.
     let deadline = Instant::now() + Duration::from_secs(5);
     loop {
         std::thread::sleep(Duration::from_millis(1));
-        if let Ok(guard) = shared_waker.lock() {
+        if let Ok(guard) = safe_waker.lock() {
             if let Some(w) = guard.as_ref() {
                 w.wake();
                 if LAST_WAKED_ID.load(Ordering::SeqCst) != old_id {
@@ -609,92 +577,91 @@ fn test_waker_swap_on_restart() {
         );
     }
 
-    send_cmd(&cmd_tx2, b's');
+    send_cmd(&cmd_sender2, b's');
     handle.join().unwrap();
     teardown_factory();
 }
 
 fn test_budget_resets_on_successful_create() {
     // max_restarts=1, but each successful create resets the budget.
-    let (worker1, wake_fn1, cmd_tx1) = create_test_resources();
-    let (ok2, cmd_tx2) = create_ok_result();
-    let (ok3, cmd_tx3) = create_ok_result();
-    let (ok4, cmd_tx4) = create_ok_result();
+    let (worker1, wake_fn1, cmd_sender1) = create_test_resources();
+    let (ok2, cmd_sender2) = create_ok_result();
+    let (ok3, cmd_sender3) = create_ok_result();
+    let (ok4, cmd_sender4) = create_ok_result();
 
-    let (notify_rx, _senders) = setup_factory(
+    let (notify_receiver, _senders) = setup_factory(
         vec![
-            (ok2, Some(cmd_tx2.clone())),
-            (ok3, Some(cmd_tx3.clone())),
-            (ok4, Some(cmd_tx4.clone())),
+            (ok2, Some(cmd_sender2.clone())),
+            (ok3, Some(cmd_sender3.clone())),
+            (ok4, Some(cmd_sender4.clone())),
         ],
         no_delay_policy(1),
     );
 
-    let (tx, _rx) = tokio::sync::broadcast::channel(16);
-    let liveness = Arc::new(RRTLiveness::new());
-    let shared_waker: Arc<Mutex<Option<Box<dyn RRTWaker>>>> =
-        Arc::new(Mutex::new(Some(Box::new(wake_fn1))));
+    let (sender, _receiver) = tokio::sync::broadcast::channel(16);
+    let safe_waker: SafeWaker = Arc::new(Mutex::new(Some(Box::new(wake_fn1))));
 
-    let handle = spawn_worker_loop(
-        worker1,
-        tx,
-        Arc::clone(&liveness),
-        Arc::clone(&shared_waker),
-    );
+    let handle = spawn_worker_loop(worker1, sender, safe_waker.clone());
 
     // W1 -> restart -> W2 created (budget resets).
-    send_cmd(&cmd_tx1, b'r');
-    notify_rx.recv_timeout(Duration::from_secs(5)).unwrap();
+    send_cmd(&cmd_sender1, b'r');
+    notify_receiver
+        .recv_timeout(Duration::from_secs(5))
+        .unwrap();
     // W2 -> restart -> W3 created (budget resets again).
-    send_cmd(&cmd_tx2, b'r');
-    notify_rx.recv_timeout(Duration::from_secs(5)).unwrap();
+    send_cmd(&cmd_sender2, b'r');
+    notify_receiver
+        .recv_timeout(Duration::from_secs(5))
+        .unwrap();
     // W3 -> restart -> W4 created (budget resets again).
-    send_cmd(&cmd_tx3, b'r');
-    notify_rx.recv_timeout(Duration::from_secs(5)).unwrap();
+    send_cmd(&cmd_sender3, b'r');
+    notify_receiver
+        .recv_timeout(Duration::from_secs(5))
+        .unwrap();
     // W4 -> stop.
-    send_cmd(&cmd_tx4, b's');
+    send_cmd(&cmd_sender4, b's');
     handle.join().unwrap();
 
     assert_eq!(get_create_count(), 3);
-    assert_eq!(liveness.is_running(), LivenessState::Terminated);
+    assert!(safe_waker.lock().unwrap().is_none());
     teardown_factory();
 }
 
 fn test_restart_exhaustion() {
     // max=2. W1 and W2 restart OK (budget resets each time). W3 restarts but
     // factory is empty -> create() fails repeatedly -> exhausts budget.
-    let (worker1, wake_fn1, cmd_tx1) = create_test_resources();
-    let (ok2, cmd_tx2) = create_ok_result();
-    let (ok3, cmd_tx3) = create_ok_result();
+    let (worker1, wake_fn1, cmd_sender1) = create_test_resources();
+    let (ok2, cmd_sender2) = create_ok_result();
+    let (ok3, cmd_sender3) = create_ok_result();
 
-    let (notify_rx, _senders) = setup_factory(
-        vec![(ok2, Some(cmd_tx2.clone())), (ok3, Some(cmd_tx3.clone()))],
+    let (notify_receiver, _senders) = setup_factory(
+        vec![
+            (ok2, Some(cmd_sender2.clone())),
+            (ok3, Some(cmd_sender3.clone())),
+        ],
         no_delay_policy(2),
     );
 
-    let (tx, mut rx) = tokio::sync::broadcast::channel(16);
-    let liveness = Arc::new(RRTLiveness::new());
-    let shared_waker: Arc<Mutex<Option<Box<dyn RRTWaker>>>> =
-        Arc::new(Mutex::new(Some(Box::new(wake_fn1))));
+    let (sender, mut receiver) = tokio::sync::broadcast::channel(16);
+    let safe_waker: SafeWaker = Arc::new(Mutex::new(Some(Box::new(wake_fn1))));
 
-    let handle = spawn_worker_loop(
-        worker1,
-        tx,
-        Arc::clone(&liveness),
-        Arc::clone(&shared_waker),
-    );
+    let handle = spawn_worker_loop(worker1, sender, safe_waker.clone());
 
-    send_cmd(&cmd_tx1, b'r');
-    notify_rx.recv_timeout(Duration::from_secs(5)).unwrap();
-    send_cmd(&cmd_tx2, b'r');
-    notify_rx.recv_timeout(Duration::from_secs(5)).unwrap();
+    send_cmd(&cmd_sender1, b'r');
+    notify_receiver
+        .recv_timeout(Duration::from_secs(5))
+        .unwrap();
+    send_cmd(&cmd_sender2, b'r');
+    notify_receiver
+        .recv_timeout(Duration::from_secs(5))
+        .unwrap();
     // W3 restarts, factory is empty -> create() returns Err -> budget exhausted.
-    send_cmd(&cmd_tx3, b'r');
+    send_cmd(&cmd_sender3, b'r');
     handle.join().unwrap();
 
     // Should have received a Shutdown event.
     let mut found_shutdown = false;
-    while let Ok(event) = rx.try_recv() {
+    while let Ok(event) = receiver.try_recv() {
         if let RRTEvent::Shutdown(ShutdownReason::RestartPolicyExhausted { .. }) = event {
             found_shutdown = true;
         }
@@ -704,26 +671,19 @@ fn test_restart_exhaustion() {
 }
 
 fn test_zero_budget_immediate_exhaustion() {
-    let (worker1, wake_fn1, cmd_tx1) = create_test_resources();
+    let (worker1, wake_fn1, cmd_sender1) = create_test_resources();
 
-    let (_notify_rx, _senders) = setup_factory(vec![], no_delay_policy(0));
+    let (_notify_receiver, _senders) = setup_factory(vec![], no_delay_policy(0));
 
-    let (tx, mut rx) = tokio::sync::broadcast::channel(16);
-    let liveness = Arc::new(RRTLiveness::new());
-    let shared_waker: Arc<Mutex<Option<Box<dyn RRTWaker>>>> =
-        Arc::new(Mutex::new(Some(Box::new(wake_fn1))));
+    let (sender, mut receiver) = tokio::sync::broadcast::channel(16);
+    let safe_waker: SafeWaker = Arc::new(Mutex::new(Some(Box::new(wake_fn1))));
 
-    let handle = spawn_worker_loop(
-        worker1,
-        tx,
-        Arc::clone(&liveness),
-        Arc::clone(&shared_waker),
-    );
+    let handle = spawn_worker_loop(worker1, sender, safe_waker.clone());
 
-    send_cmd(&cmd_tx1, b'r');
+    send_cmd(&cmd_sender1, b'r');
     handle.join().unwrap();
 
-    match rx.try_recv().unwrap() {
+    match receiver.try_recv().unwrap() {
         RRTEvent::Shutdown(ShutdownReason::RestartPolicyExhausted { attempts: 1 }) => {}
         other => panic!("Expected Shutdown(attempts=1), got {other:?}"),
     }
@@ -733,26 +693,19 @@ fn test_zero_budget_immediate_exhaustion() {
 }
 
 fn test_shutdown_event_payload() {
-    let (worker1, wake_fn1, cmd_tx1) = create_test_resources();
+    let (worker1, wake_fn1, cmd_sender1) = create_test_resources();
 
-    let (_notify_rx, _senders) = setup_factory(vec![], no_delay_policy(0));
+    let (_notify_receiver, _senders) = setup_factory(vec![], no_delay_policy(0));
 
-    let (tx, mut rx) = tokio::sync::broadcast::channel(16);
-    let liveness = Arc::new(RRTLiveness::new());
-    let shared_waker: Arc<Mutex<Option<Box<dyn RRTWaker>>>> =
-        Arc::new(Mutex::new(Some(Box::new(wake_fn1))));
+    let (sender, mut receiver) = tokio::sync::broadcast::channel(16);
+    let safe_waker: SafeWaker = Arc::new(Mutex::new(Some(Box::new(wake_fn1))));
 
-    let handle = spawn_worker_loop(
-        worker1,
-        tx,
-        Arc::clone(&liveness),
-        Arc::clone(&shared_waker),
-    );
+    let handle = spawn_worker_loop(worker1, sender, safe_waker.clone());
 
-    send_cmd(&cmd_tx1, b'r');
+    send_cmd(&cmd_sender1, b'r');
     handle.join().unwrap();
 
-    match rx.try_recv().unwrap() {
+    match receiver.try_recv().unwrap() {
         RRTEvent::Shutdown(ShutdownReason::RestartPolicyExhausted { attempts: 1 }) => {}
         other => panic!("Expected Shutdown(attempts=1), got {other:?}"),
     }
@@ -760,34 +713,31 @@ fn test_shutdown_event_payload() {
 }
 
 fn test_create_failure_then_success() {
-    let (worker1, wake_fn1, cmd_tx1) = create_test_resources();
-    let (ok2, cmd_tx2) = create_ok_result();
+    let (worker1, wake_fn1, cmd_sender1) = create_test_resources();
+    let (ok2, cmd_sender2) = create_ok_result();
 
-    let (notify_rx, _senders) = setup_factory(
+    let (notify_receiver, _senders) = setup_factory(
         vec![
             (Err(miette::miette!("transient error")), None),
-            (ok2, Some(cmd_tx2.clone())),
+            (ok2, Some(cmd_sender2.clone())),
         ],
         no_delay_policy(3),
     );
 
-    let (tx, _rx) = tokio::sync::broadcast::channel(16);
-    let liveness = Arc::new(RRTLiveness::new());
-    let shared_waker: Arc<Mutex<Option<Box<dyn RRTWaker>>>> =
-        Arc::new(Mutex::new(Some(Box::new(wake_fn1))));
+    let (sender, _receiver) = tokio::sync::broadcast::channel(16);
+    let safe_waker: SafeWaker = Arc::new(Mutex::new(Some(Box::new(wake_fn1))));
 
-    let handle = spawn_worker_loop(
-        worker1,
-        tx,
-        Arc::clone(&liveness),
-        Arc::clone(&shared_waker),
-    );
+    let handle = spawn_worker_loop(worker1, sender, safe_waker.clone());
 
-    send_cmd(&cmd_tx1, b'r');
+    send_cmd(&cmd_sender1, b'r');
     // Wait for second create() call (first fails, second succeeds).
-    notify_rx.recv_timeout(Duration::from_secs(5)).unwrap();
-    notify_rx.recv_timeout(Duration::from_secs(5)).unwrap();
-    send_cmd(&cmd_tx2, b's');
+    notify_receiver
+        .recv_timeout(Duration::from_secs(5))
+        .unwrap();
+    notify_receiver
+        .recv_timeout(Duration::from_secs(5))
+        .unwrap();
+    send_cmd(&cmd_sender2, b's');
     handle.join().unwrap();
 
     assert_eq!(get_create_count(), 2);
@@ -795,9 +745,9 @@ fn test_create_failure_then_success() {
 }
 
 fn test_persistent_create_failure() {
-    let (worker1, wake_fn1, cmd_tx1) = create_test_resources();
+    let (worker1, wake_fn1, cmd_sender1) = create_test_resources();
 
-    let (_notify_rx, _senders) = setup_factory(
+    let (_notify_receiver, _senders) = setup_factory(
         vec![
             (Err(miette::miette!("fail 1")), None),
             (Err(miette::miette!("fail 2")), None),
@@ -806,23 +756,16 @@ fn test_persistent_create_failure() {
         no_delay_policy(3),
     );
 
-    let (tx, mut rx) = tokio::sync::broadcast::channel(16);
-    let liveness = Arc::new(RRTLiveness::new());
-    let shared_waker: Arc<Mutex<Option<Box<dyn RRTWaker>>>> =
-        Arc::new(Mutex::new(Some(Box::new(wake_fn1))));
+    let (sender, mut receiver) = tokio::sync::broadcast::channel(16);
+    let safe_waker: SafeWaker = Arc::new(Mutex::new(Some(Box::new(wake_fn1))));
 
-    let handle = spawn_worker_loop(
-        worker1,
-        tx,
-        Arc::clone(&liveness),
-        Arc::clone(&shared_waker),
-    );
+    let handle = spawn_worker_loop(worker1, sender, safe_waker.clone());
 
-    send_cmd(&cmd_tx1, b'r');
+    send_cmd(&cmd_sender1, b'r');
     handle.join().unwrap();
 
     let mut found_shutdown = false;
-    while let Ok(event) = rx.try_recv() {
+    while let Ok(event) = receiver.try_recv() {
         if matches!(
             event,
             RRTEvent::Shutdown(ShutdownReason::RestartPolicyExhausted { .. })
@@ -837,62 +780,38 @@ fn test_persistent_create_failure() {
 }
 
 fn test_guard_clears_waker_on_stop() {
-    let (worker, wake_fn, cmd_tx) = create_test_resources();
-    let (tx, _rx) = tokio::sync::broadcast::channel(16);
-    let liveness = Arc::new(RRTLiveness::new());
-    let shared_waker: Arc<Mutex<Option<Box<dyn RRTWaker>>>> =
-        Arc::new(Mutex::new(Some(Box::new(wake_fn))));
+    let (worker, wake_fn, cmd_sender) = create_test_resources();
+    let (sender, _receiver) = tokio::sync::broadcast::channel(16);
+    let safe_waker: SafeWaker = Arc::new(Mutex::new(Some(Box::new(wake_fn))));
 
-    let (_notify_rx, _senders) = setup_factory(vec![], no_delay_policy(3));
-    let handle =
-        spawn_worker_loop(worker, tx, Arc::clone(&liveness), Arc::clone(&shared_waker));
+    let (_notify_receiver, _senders) = setup_factory(vec![], no_delay_policy(3));
+    let handle = spawn_worker_loop(worker, sender, safe_waker.clone());
 
-    send_cmd(&cmd_tx, b's');
+    send_cmd(&cmd_sender, b's');
     handle.join().unwrap();
 
-    assert!(shared_waker.lock().unwrap().is_none());
-    teardown_factory();
-}
-
-fn test_guard_marks_terminated_on_stop() {
-    let (worker, wake_fn, cmd_tx) = create_test_resources();
-    let (tx, _rx) = tokio::sync::broadcast::channel(16);
-    let liveness = Arc::new(RRTLiveness::new());
-    let shared_waker: Arc<Mutex<Option<Box<dyn RRTWaker>>>> =
-        Arc::new(Mutex::new(Some(Box::new(wake_fn))));
-
-    let (_notify_rx, _senders) = setup_factory(vec![], no_delay_policy(3));
-    let handle =
-        spawn_worker_loop(worker, tx, Arc::clone(&liveness), Arc::clone(&shared_waker));
-
-    send_cmd(&cmd_tx, b's');
-    handle.join().unwrap();
-
-    assert_eq!(liveness.is_running(), LivenessState::Terminated);
+    assert!(safe_waker.lock().unwrap().is_none());
     teardown_factory();
 }
 
 fn test_guard_clears_waker_on_exhaustion() {
-    let (worker, wake_fn, cmd_tx) = create_test_resources();
-    let (tx, _rx) = tokio::sync::broadcast::channel(16);
-    let liveness = Arc::new(RRTLiveness::new());
-    let shared_waker: Arc<Mutex<Option<Box<dyn RRTWaker>>>> =
-        Arc::new(Mutex::new(Some(Box::new(wake_fn))));
+    let (worker, wake_fn, cmd_sender) = create_test_resources();
+    let (sender, _receiver) = tokio::sync::broadcast::channel(16);
+    let safe_waker: SafeWaker = Arc::new(Mutex::new(Some(Box::new(wake_fn))));
 
-    let (_notify_rx, _senders) = setup_factory(vec![], no_delay_policy(0));
-    let handle =
-        spawn_worker_loop(worker, tx, Arc::clone(&liveness), Arc::clone(&shared_waker));
+    let (_notify_receiver, _senders) = setup_factory(vec![], no_delay_policy(0));
+    let handle = spawn_worker_loop(worker, sender, safe_waker.clone());
 
-    send_cmd(&cmd_tx, b'r');
+    send_cmd(&cmd_sender, b'r');
     handle.join().unwrap();
 
-    assert!(shared_waker.lock().unwrap().is_none());
+    assert!(safe_waker.lock().unwrap().is_none());
     teardown_factory();
 }
 
 fn test_backoff_delay_applied() {
-    let (worker1, wake_fn1, cmd_tx1) = create_test_resources();
-    let (ok2, cmd_tx2) = create_ok_result();
+    let (worker1, wake_fn1, cmd_sender1) = create_test_resources();
+    let (ok2, cmd_sender2) = create_ok_result();
 
     let policy = RestartPolicy {
         max_restarts: 1,
@@ -900,24 +819,20 @@ fn test_backoff_delay_applied() {
         backoff_multiplier: None,
         max_delay: None,
     };
-    let (notify_rx, _senders) = setup_factory(vec![(ok2, Some(cmd_tx2.clone()))], policy);
+    let (notify_receiver, _senders) =
+        setup_factory(vec![(ok2, Some(cmd_sender2.clone()))], policy);
 
-    let (tx, _rx) = tokio::sync::broadcast::channel(16);
-    let liveness = Arc::new(RRTLiveness::new());
-    let shared_waker: Arc<Mutex<Option<Box<dyn RRTWaker>>>> =
-        Arc::new(Mutex::new(Some(Box::new(wake_fn1))));
+    let (sender, _receiver) = tokio::sync::broadcast::channel(16);
+    let safe_waker: SafeWaker = Arc::new(Mutex::new(Some(Box::new(wake_fn1))));
 
     let start = Instant::now();
-    let handle = spawn_worker_loop(
-        worker1,
-        tx,
-        Arc::clone(&liveness),
-        Arc::clone(&shared_waker),
-    );
+    let handle = spawn_worker_loop(worker1, sender, safe_waker.clone());
 
-    send_cmd(&cmd_tx1, b'r');
-    notify_rx.recv_timeout(Duration::from_secs(5)).unwrap();
-    send_cmd(&cmd_tx2, b's');
+    send_cmd(&cmd_sender1, b'r');
+    notify_receiver
+        .recv_timeout(Duration::from_secs(5))
+        .unwrap();
+    send_cmd(&cmd_sender2, b's');
     handle.join().unwrap();
 
     assert!(start.elapsed() >= Duration::from_millis(50));
@@ -933,9 +848,9 @@ fn test_delay_resets_after_successful_create() {
     //   attempt 1: sleep(50ms) -> create() Ok(W3), budget+delay reset
     // W3 stops.
     // Total delay ~200ms if reset works, ~250ms if not.
-    let (worker1, wake_fn1, cmd_tx1) = create_test_resources();
-    let (ok2, cmd_tx2) = create_ok_result();
-    let (ok3, cmd_tx3) = create_ok_result();
+    let (worker1, wake_fn1, cmd_sender1) = create_test_resources();
+    let (ok2, cmd_sender2) = create_ok_result();
+    let (ok3, cmd_sender3) = create_ok_result();
 
     let policy = RestartPolicy {
         max_restarts: 3,
@@ -943,36 +858,35 @@ fn test_delay_resets_after_successful_create() {
         backoff_multiplier: Some(2.0),
         max_delay: None,
     };
-    let (notify_rx, _senders) = setup_factory(
+    let (notify_receiver, _senders) = setup_factory(
         vec![
             (Err(miette::miette!("transient")), None),
-            (ok2, Some(cmd_tx2.clone())),
-            (ok3, Some(cmd_tx3.clone())),
+            (ok2, Some(cmd_sender2.clone())),
+            (ok3, Some(cmd_sender3.clone())),
         ],
         policy,
     );
 
-    let (tx, _rx) = tokio::sync::broadcast::channel(16);
-    let liveness = Arc::new(RRTLiveness::new());
-    let shared_waker: Arc<Mutex<Option<Box<dyn RRTWaker>>>> =
-        Arc::new(Mutex::new(Some(Box::new(wake_fn1))));
+    let (sender, _receiver) = tokio::sync::broadcast::channel(16);
+    let safe_waker: SafeWaker = Arc::new(Mutex::new(Some(Box::new(wake_fn1))));
 
     let start = Instant::now();
-    let handle = spawn_worker_loop(
-        worker1,
-        tx,
-        Arc::clone(&liveness),
-        Arc::clone(&shared_waker),
-    );
+    let handle = spawn_worker_loop(worker1, sender, safe_waker.clone());
 
-    send_cmd(&cmd_tx1, b'r');
+    send_cmd(&cmd_sender1, b'r');
     // Wait for create() calls: first Err, then Ok(W2).
-    notify_rx.recv_timeout(Duration::from_secs(5)).unwrap();
-    notify_rx.recv_timeout(Duration::from_secs(5)).unwrap();
-    send_cmd(&cmd_tx2, b'r');
+    notify_receiver
+        .recv_timeout(Duration::from_secs(5))
+        .unwrap();
+    notify_receiver
+        .recv_timeout(Duration::from_secs(5))
+        .unwrap();
+    send_cmd(&cmd_sender2, b'r');
     // Wait for create() Ok(W3).
-    notify_rx.recv_timeout(Duration::from_secs(5)).unwrap();
-    send_cmd(&cmd_tx3, b's');
+    notify_receiver
+        .recv_timeout(Duration::from_secs(5))
+        .unwrap();
+    send_cmd(&cmd_sender3, b's');
     handle.join().unwrap();
 
     let elapsed = start.elapsed();
@@ -985,20 +899,17 @@ fn test_delay_resets_after_successful_create() {
 }
 
 fn test_panic_sends_shutdown_panic() {
-    let (worker, wake_fn, cmd_tx) = create_test_resources();
-    let (tx, mut rx) = tokio::sync::broadcast::channel(16);
-    let liveness = Arc::new(RRTLiveness::new());
-    let shared_waker: Arc<Mutex<Option<Box<dyn RRTWaker>>>> =
-        Arc::new(Mutex::new(Some(Box::new(wake_fn))));
+    let (worker, wake_fn, cmd_sender) = create_test_resources();
+    let (sender, mut receiver) = tokio::sync::broadcast::channel(16);
+    let safe_waker: SafeWaker = Arc::new(Mutex::new(Some(Box::new(wake_fn))));
 
-    let (_notify_rx, _senders) = setup_factory(vec![], no_delay_policy(3));
-    let handle =
-        spawn_worker_loop(worker, tx, Arc::clone(&liveness), Arc::clone(&shared_waker));
+    let (_notify_receiver, _senders) = setup_factory(vec![], no_delay_policy(3));
+    let handle = spawn_worker_loop(worker, sender, safe_waker.clone());
 
-    send_cmd(&cmd_tx, b'p');
+    send_cmd(&cmd_sender, b'p');
     handle.join().unwrap();
 
-    match rx.try_recv().unwrap() {
+    match receiver.try_recv().unwrap() {
         RRTEvent::Shutdown(ShutdownReason::Panic) => {}
         other => panic!("Expected Shutdown(Panic), got {other:?}"),
     }
@@ -1006,27 +917,24 @@ fn test_panic_sends_shutdown_panic() {
 }
 
 fn test_panic_after_events() {
-    let (worker, wake_fn, cmd_tx) = create_test_resources();
-    let (tx, mut rx) = tokio::sync::broadcast::channel(16);
-    let liveness = Arc::new(RRTLiveness::new());
-    let shared_waker: Arc<Mutex<Option<Box<dyn RRTWaker>>>> =
-        Arc::new(Mutex::new(Some(Box::new(wake_fn))));
+    let (worker, wake_fn, cmd_sender) = create_test_resources();
+    let (sender, mut receiver) = tokio::sync::broadcast::channel(16);
+    let safe_waker: SafeWaker = Arc::new(Mutex::new(Some(Box::new(wake_fn))));
 
-    let (_notify_rx, _senders) = setup_factory(vec![], no_delay_policy(3));
-    let handle =
-        spawn_worker_loop(worker, tx, Arc::clone(&liveness), Arc::clone(&shared_waker));
+    let (_notify_receiver, _senders) = setup_factory(vec![], no_delay_policy(3));
+    let handle = spawn_worker_loop(worker, sender, safe_waker.clone());
 
-    send_cmd(&cmd_tx, b'e');
-    send_cmd(&cmd_tx, b'p');
+    send_cmd(&cmd_sender, b'e');
+    send_cmd(&cmd_sender, b'p');
     handle.join().unwrap();
 
     // Domain event first.
-    match rx.try_recv().unwrap() {
+    match receiver.try_recv().unwrap() {
         RRTEvent::Worker(TestEvent(_)) => {}
         other => panic!("Expected Worker event, got {other:?}"),
     }
     // Then shutdown.
-    match rx.try_recv().unwrap() {
+    match receiver.try_recv().unwrap() {
         RRTEvent::Shutdown(ShutdownReason::Panic) => {}
         other => panic!("Expected Shutdown(Panic), got {other:?}"),
     }
@@ -1034,53 +942,29 @@ fn test_panic_after_events() {
 }
 
 fn test_guard_clears_waker_on_panic() {
-    let (worker, wake_fn, cmd_tx) = create_test_resources();
-    let (tx, _rx) = tokio::sync::broadcast::channel(16);
-    let liveness = Arc::new(RRTLiveness::new());
-    let shared_waker: Arc<Mutex<Option<Box<dyn RRTWaker>>>> =
-        Arc::new(Mutex::new(Some(Box::new(wake_fn))));
+    let (worker, wake_fn, cmd_sender) = create_test_resources();
+    let (sender, _receiver) = tokio::sync::broadcast::channel(16);
+    let safe_waker: SafeWaker = Arc::new(Mutex::new(Some(Box::new(wake_fn))));
 
-    let (_notify_rx, _senders) = setup_factory(vec![], no_delay_policy(3));
-    let handle =
-        spawn_worker_loop(worker, tx, Arc::clone(&liveness), Arc::clone(&shared_waker));
+    let (_notify_receiver, _senders) = setup_factory(vec![], no_delay_policy(3));
+    let handle = spawn_worker_loop(worker, sender, safe_waker.clone());
 
-    send_cmd(&cmd_tx, b'p');
+    send_cmd(&cmd_sender, b'p');
     handle.join().unwrap();
 
-    assert!(shared_waker.lock().unwrap().is_none());
-    teardown_factory();
-}
-
-fn test_guard_marks_terminated_on_panic() {
-    let (worker, wake_fn, cmd_tx) = create_test_resources();
-    let (tx, _rx) = tokio::sync::broadcast::channel(16);
-    let liveness = Arc::new(RRTLiveness::new());
-    let shared_waker: Arc<Mutex<Option<Box<dyn RRTWaker>>>> =
-        Arc::new(Mutex::new(Some(Box::new(wake_fn))));
-
-    let (_notify_rx, _senders) = setup_factory(vec![], no_delay_policy(3));
-    let handle =
-        spawn_worker_loop(worker, tx, Arc::clone(&liveness), Arc::clone(&shared_waker));
-
-    send_cmd(&cmd_tx, b'p');
-    handle.join().unwrap();
-
-    assert_eq!(liveness.is_running(), LivenessState::Terminated);
+    assert!(safe_waker.lock().unwrap().is_none());
     teardown_factory();
 }
 
 fn test_no_restart_after_panic() {
-    let (worker, wake_fn, cmd_tx) = create_test_resources();
-    let (tx, _rx) = tokio::sync::broadcast::channel(16);
-    let liveness = Arc::new(RRTLiveness::new());
-    let shared_waker: Arc<Mutex<Option<Box<dyn RRTWaker>>>> =
-        Arc::new(Mutex::new(Some(Box::new(wake_fn))));
+    let (worker, wake_fn, cmd_sender) = create_test_resources();
+    let (sender, _receiver) = tokio::sync::broadcast::channel(16);
+    let safe_waker: SafeWaker = Arc::new(Mutex::new(Some(Box::new(wake_fn))));
 
-    let (_notify_rx, _senders) = setup_factory(vec![], no_delay_policy(3));
-    let handle =
-        spawn_worker_loop(worker, tx, Arc::clone(&liveness), Arc::clone(&shared_waker));
+    let (_notify_receiver, _senders) = setup_factory(vec![], no_delay_policy(3));
+    let handle = spawn_worker_loop(worker, sender, safe_waker.clone());
 
-    send_cmd(&cmd_tx, b'p');
+    send_cmd(&cmd_sender, b'p');
     handle.join().unwrap();
 
     // Factory was never called for restart (panic exits immediately).
@@ -1151,7 +1035,8 @@ fn poll_error_controlled() -> ! {
     // Create worker using the production create() (PTY provides real terminal stdin).
     let (mut worker, _waker) = MioPollWorker::create().unwrap();
 
-    let (tx, mut rx) = tokio::sync::broadcast::channel::<RRTEvent<PollerEvent>>(16);
+    let (sender, mut receiver) =
+        tokio::sync::broadcast::channel::<RRTEvent<PollerEvent>>(16);
 
     // Corrupt the epoll fd so poll() fails with EBADF (non-EINTR).
     // Safety: We intentionally close the fd to trigger the error path.
@@ -1159,11 +1044,11 @@ fn poll_error_controlled() -> ! {
     let raw_fd = worker.poll_handle.as_raw_fd();
     drop(unsafe { std::os::unix::io::OwnedFd::from_raw_fd(raw_fd) });
 
-    let result = worker.poll_once(&tx);
+    let result = worker.poll_once(&sender);
 
     assert_eq!(result, Continuation::Restart);
 
-    match rx.try_recv().unwrap() {
+    match receiver.try_recv().unwrap() {
         RRTEvent::Worker(PollerEvent::Stdin(StdinEvent::Error)) => {}
         other => panic!("Expected StdinEvent::Error, got {other:?}"),
     }
@@ -1175,10 +1060,10 @@ fn poll_error_controlled() -> ! {
 }
 
 async fn test_subscribe_spawns_thread() {
-    let (worker, wake_fn, cmd_tx) = create_test_resources();
+    let (worker, wake_fn, cmd_sender) = create_test_resources();
 
-    let (_notify_rx, _senders) = setup_factory(
-        vec![(Ok((worker, wake_fn)), Some(cmd_tx.clone()))],
+    let (_notify_receiver, _senders) = setup_factory(
+        vec![(Ok((worker, wake_fn)), Some(cmd_sender.clone()))],
         no_delay_policy(3),
     );
 
@@ -1189,7 +1074,7 @@ async fn test_subscribe_spawns_thread() {
     std::thread::sleep(Duration::from_millis(50));
     assert_eq!(rrt.is_thread_running(), LivenessState::Running);
 
-    send_cmd(&cmd_tx, b's');
+    send_cmd(&cmd_sender, b's');
     // Wait for thread to exit.
     std::thread::sleep(Duration::from_millis(100));
     assert_eq!(rrt.is_thread_running(), LivenessState::Terminated);
@@ -1197,10 +1082,10 @@ async fn test_subscribe_spawns_thread() {
 }
 
 async fn test_subscribe_fast_path_reuse() {
-    let (worker, wake_fn, cmd_tx) = create_test_resources();
+    let (worker, wake_fn, cmd_sender) = create_test_resources();
 
-    let (_notify_rx, _senders) = setup_factory(
-        vec![(Ok((worker, wake_fn)), Some(cmd_tx.clone()))],
+    let (_notify_receiver, _senders) = setup_factory(
+        vec![(Ok((worker, wake_fn)), Some(cmd_sender.clone()))],
         no_delay_policy(3),
     );
 
@@ -1217,19 +1102,19 @@ async fn test_subscribe_fast_path_reuse() {
     assert_eq!(gen1, gen2, "Expected same generation (thread reuse)");
     assert_eq!(rrt.get_receiver_count(), 2);
 
-    send_cmd(&cmd_tx, b's');
+    send_cmd(&cmd_sender, b's');
     std::thread::sleep(Duration::from_millis(100));
     teardown_factory();
 }
 
 async fn test_subscribe_slow_path_after_termination() {
-    let (worker1, wake_fn1, cmd_tx1) = create_test_resources();
-    let (worker2, wake_fn2, cmd_tx2) = create_test_resources();
+    let (worker1, wake_fn1, cmd_sender1) = create_test_resources();
+    let (worker2, wake_fn2, cmd_sender2) = create_test_resources();
 
-    let (_notify_rx, _senders) = setup_factory(
+    let (_notify_receiver, _senders) = setup_factory(
         vec![
-            (Ok((worker1, wake_fn1)), Some(cmd_tx1.clone())),
-            (Ok((worker2, wake_fn2)), Some(cmd_tx2.clone())),
+            (Ok((worker1, wake_fn1)), Some(cmd_sender1.clone())),
+            (Ok((worker2, wake_fn2)), Some(cmd_sender2.clone())),
         ],
         no_delay_policy(3),
     );
@@ -1242,7 +1127,7 @@ async fn test_subscribe_slow_path_after_termination() {
         std::thread::sleep(Duration::from_millis(50));
         let gen1 = rrt.get_thread_generation();
 
-        send_cmd(&cmd_tx1, b's');
+        send_cmd(&cmd_sender1, b's');
         std::thread::sleep(Duration::from_millis(100));
         assert_eq!(rrt.is_thread_running(), LivenessState::Terminated);
 
@@ -1253,34 +1138,34 @@ async fn test_subscribe_slow_path_after_termination() {
 
         assert_ne!(gen1, gen2, "Expected new generation (thread relaunch)");
 
-        send_cmd(&cmd_tx2, b's');
+        send_cmd(&cmd_sender2, b's');
         std::thread::sleep(Duration::from_millis(100));
     }
     teardown_factory();
 }
 
 async fn test_shutdown_received_by_subscriber() {
-    let (worker, wake_fn, cmd_tx) = create_test_resources();
+    let (worker, wake_fn, cmd_sender) = create_test_resources();
 
-    let (_notify_rx, _senders) = setup_factory(
-        vec![(Ok((worker, wake_fn)), Some(cmd_tx.clone()))],
+    let (_notify_receiver, _senders) = setup_factory(
+        vec![(Ok((worker, wake_fn)), Some(cmd_sender.clone()))],
         no_delay_policy(0),
     );
 
     let rrt: RRT<TestWorker> = RRT::new();
     let guard = rrt.subscribe().unwrap();
-    let mut rx = guard.receiver.as_ref().unwrap().resubscribe();
+    let mut receiver = guard.maybe_receiver.as_ref().unwrap().resubscribe();
 
     std::thread::sleep(Duration::from_millis(50));
 
     // Worker returns Restart, budget=0 -> immediate exhaustion.
-    send_cmd(&cmd_tx, b'r');
+    send_cmd(&cmd_sender, b'r');
 
     // Wait for the shutdown event.
     let deadline = Instant::now() + Duration::from_secs(5);
     let mut found_shutdown = false;
     while Instant::now() < deadline {
-        match rx.try_recv() {
+        match receiver.try_recv() {
             Ok(RRTEvent::Shutdown(ShutdownReason::RestartPolicyExhausted { .. })) => {
                 found_shutdown = true;
                 break;
@@ -1296,13 +1181,13 @@ async fn test_shutdown_received_by_subscriber() {
 }
 
 async fn test_subscribe_after_panic_recovery() {
-    let (worker1, wake_fn1, cmd_tx1) = create_test_resources();
-    let (worker2, wake_fn2, cmd_tx2) = create_test_resources();
+    let (worker1, wake_fn1, cmd_sender1) = create_test_resources();
+    let (worker2, wake_fn2, cmd_sender2) = create_test_resources();
 
-    let (_notify_rx, _senders) = setup_factory(
+    let (_notify_receiver, _senders) = setup_factory(
         vec![
-            (Ok((worker1, wake_fn1)), Some(cmd_tx1.clone())),
-            (Ok((worker2, wake_fn2)), Some(cmd_tx2.clone())),
+            (Ok((worker1, wake_fn1)), Some(cmd_sender1.clone())),
+            (Ok((worker2, wake_fn2)), Some(cmd_sender2.clone())),
         ],
         no_delay_policy(3),
     );
@@ -1316,7 +1201,7 @@ async fn test_subscribe_after_panic_recovery() {
         let gen1 = rrt.get_thread_generation();
 
         // Cause a panic.
-        send_cmd(&cmd_tx1, b'p');
+        send_cmd(&cmd_sender1, b'p');
         std::thread::sleep(Duration::from_millis(100));
         assert_eq!(rrt.is_thread_running(), LivenessState::Terminated);
 
@@ -1328,7 +1213,7 @@ async fn test_subscribe_after_panic_recovery() {
         assert_ne!(gen1, gen2, "Expected new generation after panic recovery");
         assert_eq!(rrt.is_thread_running(), LivenessState::Running);
 
-        send_cmd(&cmd_tx2, b's');
+        send_cmd(&cmd_sender2, b's');
         std::thread::sleep(Duration::from_millis(100));
     }
     teardown_factory();

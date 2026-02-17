@@ -142,6 +142,7 @@ function main
                 cleanup_for_recovery $CHECK_TARGET_DIR
                 run_check_with_recovery check_cargo_check "typecheck"
                 set check_status $status
+                hint_toolchain_update_on_persistent_failure $check_status
             end
 
             return $check_status
@@ -167,6 +168,7 @@ function main
                 cleanup_for_recovery $CHECK_TARGET_DIR
                 run_check_with_recovery check_cargo_build "build"
                 set build_status $status
+                hint_toolchain_update_on_persistent_failure $build_status
             end
 
             return $build_status
@@ -192,6 +194,7 @@ function main
                 cleanup_for_recovery $CHECK_TARGET_DIR
                 run_check_with_recovery check_clippy "clippy"
                 set clippy_status $status
+                hint_toolchain_update_on_persistent_failure $clippy_status
             end
 
             return $clippy_status
@@ -251,6 +254,10 @@ function main
             end
 
             echo ""
+            echo "📝 Formatting rustdoc comments on changed files..."
+            run_rustdoc_fmt
+
+            echo ""
             echo "⚡ Building documentation (quick-doc, directly to serving dir)..."
             run_check_with_recovery check_docs_oneoff "docs"
             set -l doc_status $status
@@ -260,6 +267,7 @@ function main
                 cleanup_for_recovery $CHECK_TARGET_DIR
                 run_check_with_recovery check_docs_oneoff "docs"
                 set doc_status $status
+                hint_toolchain_update_on_persistent_failure $doc_status
             end
 
             if test $doc_status -eq 0
@@ -290,6 +298,10 @@ function main
             end
 
             echo ""
+            echo "📝 Formatting rustdoc comments on changed files..."
+            run_rustdoc_fmt
+
+            echo ""
             echo "📚 Building documentation (quick mode, no deps)..."
             run_check_with_recovery check_docs_quick "docs"
             set -l doc_status $status
@@ -299,6 +311,7 @@ function main
                 cleanup_for_recovery $CHECK_TARGET_DIR_DOC_STAGING_QUICK
                 run_check_with_recovery check_docs_quick "docs"
                 set doc_status $status
+                hint_toolchain_update_on_persistent_failure $doc_status
             end
 
             # Read duration from file (written by run_check_with_recovery)
@@ -351,6 +364,7 @@ function main
                 cleanup_for_recovery $CHECK_TARGET_DIR
                 run_check_with_recovery check_cargo_test "tests"
                 set test_status $status
+                hint_toolchain_update_on_persistent_failure $test_status
             end
 
             # Read duration from file (written by run_check_with_recovery)

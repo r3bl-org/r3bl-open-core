@@ -34,17 +34,16 @@ use std::io::Stdin;
 /// 2. Add a new variant and token constant to [`SourceKindReady`].
 /// 3. Register the source in [`MioPollWorker::create()`].
 /// 4. Add a handler function in [`handler_stdin`] or [`handler_signals`].
-/// 5. Add a match arm in [`dispatch_with_tx()`].
+/// 5. Add a match arm in [`dispatch_with_sender()`].
 ///
 /// [`HashMap<Token, Source>`]: std::collections::HashMap
-///
 /// [`MioPollWorker::create()`]: super::MioPollWorker::create
 /// [`Poll::poll()`]: mio::Poll::poll
 /// [`Poll`]: mio::Poll
 /// [`Signals`]: signal_hook_mio::v1_0::Signals
 /// [`Stdin`]: std::io::Stdin
 /// [`Token`]: mio::Token
-/// [`dispatch_with_tx()`]: super::dispatcher::dispatch_with_tx
+/// [`dispatch_with_sender()`]: super::dispatcher::dispatch_with_sender
 /// [`handler_signals`]: mod@super::handler_signals
 /// [`handler_stdin`]: mod@super::handler_stdin
 /// [`pending()`]: signal_hook_mio::v1_0::Signals::pending
@@ -58,10 +57,10 @@ pub struct SourceRegistry {
     /// See [What is a "Source"?] for [`mio`] terminology.
     ///
     /// - **Token**: [`SourceKindReady::Stdin`].[`to_token()`].
-    /// - **Handler**: [`consume_stdin_input_with_tx()`].
+    /// - **Handler**: [`consume_stdin_input_with_sender()`].
     ///
     /// [What is a "Source"?]: SourceRegistry#what-is-a-source
-    /// [`consume_stdin_input_with_tx()`]: super::handler_stdin::consume_stdin_input_with_tx
+    /// [`consume_stdin_input_with_sender()`]: super::handler_stdin::consume_stdin_input_with_sender
     /// [`to_token()`]: SourceKindReady::to_token
     pub stdin: Stdin,
 
@@ -72,11 +71,11 @@ pub struct SourceRegistry {
     /// arrives.
     ///
     /// - **Token**: [`SourceKindReady::Signals`].[`to_token()`].
-    /// - **Handler**: [`consume_pending_signals_with_tx()`].
+    /// - **Handler**: [`consume_pending_signals_with_sender()`].
     ///
     /// [What is a "Source"?]: SourceRegistry#what-is-a-source
     /// [`SIGWINCH`]: signal_hook::consts::SIGWINCH
-    /// [`consume_pending_signals_with_tx()`]: super::handler_signals::consume_pending_signals_with_tx
+    /// [`consume_pending_signals_with_sender()`]: super::handler_signals::consume_pending_signals_with_sender
     /// [`signal_hook_mio`]: signal_hook_mio
     /// [`to_token()`]: SourceKindReady::to_token
     pub signals: Signals,
@@ -109,12 +108,12 @@ pub enum SourceKindReady {
     /// Wakeup signal from [`SubscriberGuard`] drop - check if thread should exit.
     ///
     /// When a [`SubscriberGuard`] is dropped, it calls [`Waker::wake()`] to interrupt the
-    /// poll. Then [`handle_receiver_drop_waker_with_tx()`] checks if [`receiver_count()`]
-    /// is `0` and exits the thread if so.
+    /// poll. Then [`handle_receiver_drop_waker_with_sender()`] checks if
+    /// [`receiver_count()`] is `0` and exits the thread if so.
     ///
     /// [`SubscriberGuard`]: crate::core::resilient_reactor_thread::SubscriberGuard
     /// [`Waker::wake()`]: mio::Waker::wake
-    /// [`handle_receiver_drop_waker_with_tx()`]: super::handler_receiver_drop::handle_receiver_drop_waker_with_tx
+    /// [`handle_receiver_drop_waker_with_sender()`]: super::handler_receiver_drop::handle_receiver_drop_waker_with_sender
     /// [`receiver_count()`]: tokio::sync::broadcast::Sender::receiver_count
     ReceiverDropWaker,
     /// Unknown token - should not happen in normal operation.

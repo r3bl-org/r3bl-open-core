@@ -80,3 +80,21 @@ function log_message
         echo "["(timestamp)"] $message" >> $CHECK_LOG_FILE
     end
 end
+
+# Prints a hint suggesting rust-toolchain-update.fish when a check fails even after retry.
+# This helps diagnose persistent failures caused by toolchain ecosystem issues
+# (e.g., linker incompatibilities) that cache cleanup alone cannot fix.
+#
+# Parameters:
+#   $argv[1]: The exit status from the retried check
+function hint_toolchain_update_on_persistent_failure
+    set -l check_status $argv[1]
+    if test $check_status -ne 0
+        echo ""
+        set_color yellow
+        echo "💡 Persistent failure after cache cleanup."
+        echo "   This may be a toolchain or linker incompatibility."
+        echo "   Try running: ./rust-toolchain-update.fish"
+        set_color normal
+    end
+end

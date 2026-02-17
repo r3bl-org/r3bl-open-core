@@ -421,6 +421,10 @@ function run_checks_for_type
             # The full build (~90s) also has a blind spot. After syncing dep docs,
             # run_full_doc_build_task checks for changes and patches with quick docs if needed.
 
+            # Step 0: Format rustdoc comments on changed files before building docs.
+            # Runs before epoch capture so fmt changes don't trigger catch-up rebuilds.
+            run_rustdoc_fmt >/dev/null 2>&1
+
             # Step 1: Quick build (BLOCKING - targets only r3bl_tui for fast feedback)
             log_and_print $CHECK_LOG_FILE "["(timestamp)"] 🔨 Quick build starting (r3bl_tui only)..."
 

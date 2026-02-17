@@ -8,7 +8,7 @@ use crate::{Continuation, core::resilient_reactor_thread::RRTEvent, get_size,
 use signal_hook::consts::SIGWINCH;
 use tokio::sync::broadcast::Sender;
 
-/// Handles [`SIGWINCH`] signal (terminal resize), using explicit `tx` parameter.
+/// Handles [`SIGWINCH`] signal (terminal resize), using explicit `sender` parameter.
 ///
 /// Drains all pending signals, queries the new terminal size, and sends a single
 /// resize event to the channel. Multiple coalesced signals result in one event
@@ -18,7 +18,7 @@ use tokio::sync::broadcast::Sender;
 /// is silently dropped since there is no useful size to report.
 ///
 /// This variant is used by [`MioPollWorker`] which implements the generic
-/// [`RRTWorker`] trait and receives `tx` as a parameter.
+/// [`RRTWorker`] trait and receives `sender` as a parameter.
 ///
 /// # Returns
 ///
@@ -29,9 +29,9 @@ use tokio::sync::broadcast::Sender;
 /// [`RRTWorker`]: crate::core::resilient_reactor_thread::RRTWorker
 /// [`SIGWINCH`]: signal_hook::consts::SIGWINCH
 /// [`get_size()`]: crate::get_size
-pub fn consume_pending_signals_with_tx(
+pub fn consume_pending_signals_with_sender(
     worker: &mut MioPollWorker,
-    tx: &Sender<RRTEvent<PollerEvent>>,
+    sender: &Sender<RRTEvent<PollerEvent>>,
 ) -> Continuation {
     // Drain all pending signals and check if any SIGWINCH arrived.
     let sigwinch_arrived = worker.sources.signals.pending().any(|sig| sig == SIGWINCH);
@@ -53,7 +53,10 @@ pub fn consume_pending_signals_with_tx(
             tracing::debug!(message = "mio-poller-thread: SIGWINCH received", ?size);
         });
 
-        if tx.send(PollerEvent::Signal(size.into()).into()).is_err() {
+        if sender
+            .send(PollerEvent::Signal(size.into()).into())
+            .is_err()
+        {
             // Receiver dropped - exit gracefully.
             DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
                 tracing::debug!(message = "mio-poller-thread: receiver dropped, exiting");

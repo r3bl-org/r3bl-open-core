@@ -17,9 +17,10 @@ source (dirname (status --current-filename))/script_lib.fish
 # - Start with today's nightly snapshot (optimistic approach)
 # - For each candidate: UPDATE rust-toolchain.toml, THEN run validation suite
 # - Validation tests production scenario: clippy, build, tests, doctests, docs
-# - Check for ICE (Internal Compiler Errors) - indicates toolchain bugs
-# - If ICE detected, try progressively older nightlies until finding stable one
-# - Distinguish between toolchain issues (ICE) vs code issues (compilation/test failures)
+# - Reject toolchain on ICE (Internal Compiler Errors) in any step
+# - Reject toolchain on build failures (cargo build, cargo test --no-run) even without ICE
+#   (catches linker incompatibilities and other non-ICE toolchain ecosystem breakage)
+# - Non-build failures (clippy, tests, docs) without ICE are treated as code issues
 # - Once stable toolchain found, rust-toolchain.toml is already configured correctly
 # - Send desktop notifications (notify-send): success when found, critical alert if all fail
 #
@@ -166,7 +167,12 @@ function validate_toolchain
 
     # List of validation commands to verify toolchain stability
     # Validation tests the production scenario where cargo reads rust-toolchain.toml
-    # We're checking for ICE (Internal Compiler Errors), not code correctness
+    # We check for two categories of toolchain problems:
+    #   1. ICE (Internal Compiler Errors) - in any step
+    #   2. Build failures - in build-prod-code and build-test-code steps
+    #      (code that compiled on the previous toolchain must still compile;
+    #       build failures can be caused by linker incompatibilities, not just ICE)
+    # Test/clippy/doc failures without ICE are treated as code issues, not toolchain issues
     # Test steps use timeout to prevent hanging tests from blocking the systemd weekly service
     set -l validation_steps \
         "clippy:cargo clippy --all-targets" \
@@ -203,11 +209,26 @@ function validate_toolchain
             return 1  # ICE detected - toolchain is bad
         end
 
-        # Log exit code (non-zero is OK if it's just compilation/test errors)
+        # Handle non-zero exit codes
         if test $exit_code -ne 0
+            # Build steps are hard failures - code that compiled before must still compile.
+            # This catches linker incompatibilities (e.g., wild linker) and other non-ICE
+            # toolchain ecosystem breakage that the ICE check above wouldn't detect.
+            if test "$step_name" = "build-prod-code" -o "$step_name" = "build-test-code"
+                toolchain_log "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+                toolchain_log "❌ BUILD FAILURE in $step_name (exit code: $exit_code)"
+                toolchain_log "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+                toolchain_log "Toolchain $toolchain is UNSTABLE (build failure)"
+                toolchain_log ""
+                toolchain_log "Command output (last 50 lines):"
+                tail -n 50 $temp_output | tee -a $LOG_FILE
+                command rm -f $temp_output
+                return 1  # Build failure - toolchain is bad
+            end
+
+            # Non-build steps (clippy, tests, doctests, docs) - non-zero is OK if not ICE
             toolchain_log "  ⚠️  Command exited with code $exit_code (this is OK if not ICE)"
             toolchain_log "  Checking if failure is due to code issues (not toolchain)..."
-            # If we got here, no ICE was detected, so it's a code issue
             toolchain_log "  ✅ No ICE detected - continuing validation"
         else
             toolchain_log "  ✅ Command succeeded (exit: $exit_code)"

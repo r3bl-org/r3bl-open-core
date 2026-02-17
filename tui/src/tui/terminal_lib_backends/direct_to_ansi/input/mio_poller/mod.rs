@@ -23,9 +23,9 @@
 //! | [`MioPollWorker`]                                | Core struct: holds poll handle, buffers, parser (implements RRT)    |
 //! | [`SourceRegistry`]                               | Holds [`stdin`] and [`SIGWINCH`] signal handles                     |
 //! | [`SourceKindReady`]                              | Enum mapping [`mio::Token`] ↔ source kind for dispatch              |
-//! | [`dispatch_with_tx()`]                           | Routes ready events to appropriate handlers                         |
-//! | [`consume_stdin_input_with_tx()`]                | Reads and parses [`stdin`] bytes into [`InputEvent`]s               |
-//! | [`consume_pending_signals_with_tx()`]            | Drains [`SIGWINCH`] signals, sends [`SignalEvent::Resize`]          |
+//! | [`dispatch_with_sender()`]                       | Routes ready events to appropriate handlers                         |
+//! | [`consume_stdin_input_with_sender()`]            | Reads and parses [`stdin`] bytes into [`InputEvent`]s               |
+//! | [`consume_pending_signals_with_sender()`]        | Drains [`SIGWINCH`] signals, sends [`SignalEvent::Resize`]          |
 //! | [VT100 input parser] ([`StatefulInputParser`])   | Accumulates bytes, parses [`VT100InputEventIR`] with ESC handling   |
 //! | [paste state machine] ([`PasteCollectionState`]) | Collects text between bracketed paste markers                       |
 //!
@@ -50,7 +50,7 @@
 //! ┌────────────────────────────────────┐           ┌─────────────────────────────────┐
 //! │ Dedicated Thread (std::thread)     │           │ Async Consumers (tokio runtime) │
 //! │                                    │           │                                 │
-//! │ mio::Poll waits on:                ├───────────▶ rx.recv().await (fan-out)       │
+//! │ mio::Poll waits on:                ├───────────▶ receiver.recv().await (fan-out) │
 //! │   • stdin fd (Token 0)             │ broadcast │                                 │
 //! │   • SIGWINCH signal (Token 1)      │           │                                 │
 //! │   • ReceiverDropWaker (Token 2)    │           │                                 │
@@ -319,12 +319,12 @@
 //! [`VEOF`]: https://man7.org/linux/man-pages/man3/termios.3.html
 //! [`VT100InputEventIR`]: crate::core::ansi::vt_100_terminal_input_parser::VT100InputEventIR
 //! [`broadcast::Receiver`]: tokio::sync::broadcast::Receiver
-//! [`consume_pending_signals_with_tx()`]: handler_signals::consume_pending_signals_with_tx
-//! [`consume_stdin_input_with_tx()`]: handler_stdin::consume_stdin_input_with_tx
+//! [`consume_pending_signals_with_sender()`]: handler_signals::consume_pending_signals_with_sender
+//! [`consume_stdin_input_with_sender()`]: handler_stdin::consume_stdin_input_with_sender
 //! [`crossterm`]: ::crossterm
-//! [`dispatch_with_tx()`]: dispatcher::dispatch_with_tx
+//! [`dispatch_with_sender()`]: dispatcher::dispatch_with_sender
 //! [`epoll`]: https://man7.org/linux/man-pages/man7/epoll.7.html
-//! [`handle_receiver_drop_waker_with_tx()`]: handler_receiver_drop::handle_receiver_drop_waker_with_tx
+//! [`handle_receiver_drop_waker_with_sender()`]: handler_receiver_drop::handle_receiver_drop_waker_with_sender
 //! [`kqueue`]: https://man.freebsd.org/cgi/man.cgi?query=kqueue&sektion=2
 //! [`mio::Poll`]: mio::Poll
 //! [`mio::Token`]: mio::Token
@@ -337,6 +337,7 @@
 //! [`resilient_reactor_thread`]: crate::core::resilient_reactor_thread
 //! [`rustix::event::poll()`]: https://docs.rs/rustix/latest/rustix/event/fn.poll.html
 //! [`select()`]: https://man7.org/linux/man-pages/man2/select.2.html
+//! [`sender.send()`]: tokio::sync::broadcast::Sender::send
 //! [`signal_hook_mio`]: signal_hook_mio
 //! [`std::thread`]: std::thread
 //! [`stdin`]: std::io::stdin
@@ -345,7 +346,6 @@
 //! [`tokio::io::stdin()`]: tokio::io::stdin
 //! [`tokio::select!`]: tokio::select
 //! [`tokio::sync::broadcast`]: tokio::sync::broadcast
-//! [`tx.send()`]: tokio::sync::broadcast::Sender::send
 //! [`waker.wake()`]: mio::Waker::wake
 //! [canonical mode]: crate::core::ansi::terminal_raw_mode#raw-mode-vs-cooked-mode
 //! [file descriptor]: https://en.wikipedia.org/wiki/File_descriptor

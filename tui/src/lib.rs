@@ -1698,7 +1698,6 @@
 //! | Component                    | Purpose                                          |
 //! | ---------------------------- | ------------------------------------------------ |
 //! | [`RRT`]                      | Framework entry point for RRT instances          |
-//! | [`RRTLiveness`]              | Running state + generation tracking              |
 //! | [`SubscriberGuard`]          | RAII guard managing subscription lifecycle       |
 //! | [`RRTWorker`]                | Trait for the blocking work loop                 |
 //! | [`RRTWaker`]                 | Trait for interrupting blocked threads                |
@@ -2537,7 +2536,6 @@
 //! [`raw_mode_unix`]: crate::core::ansi::terminal_raw_mode::raw_mode_unix
 //! [`OffscreenBuffer::apply_ansi_bytes()`]: crate::OffscreenBuffer::apply_ansi_bytes
 //! [`RRT`]: core::resilient_reactor_thread::RRT
-//! [`RRTLiveness`]: core::resilient_reactor_thread::RRTLiveness
 //! [`SubscriberGuard`]: core::resilient_reactor_thread::SubscriberGuard
 //! [`RRTWorker`]: core::resilient_reactor_thread::RRTWorker
 //! [`RRTWaker`]: core::resilient_reactor_thread::RRTWaker

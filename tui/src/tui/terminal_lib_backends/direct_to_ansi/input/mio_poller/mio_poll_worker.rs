@@ -19,7 +19,7 @@ use super::{super::{channel_types::{PollerEvent, StdinEvent},
                     paste_state_machine::PasteCollectionState,
                     stateful_parser::StatefulInputParser},
             MioPollWaker, SourceKindReady, SourceRegistry,
-            dispatcher::dispatch_with_tx,
+            dispatcher::dispatch_with_sender,
             handler_stdin::STDIN_READ_BUFFER_SIZE};
 use crate::{Continuation,
             core::resilient_reactor_thread::{RRTEvent, RRTWaker, RRTWorker}};
@@ -160,7 +160,7 @@ impl RRTWorker for MioPollWorker {
     ///
     /// [EINTR handling]: super#eintr-handling
     /// [`stdin`]: std::io::stdin
-    fn poll_once(&mut self, tx: &Sender<RRTEvent<Self::Event>>) -> Continuation {
+    fn poll_once(&mut self, sender: &Sender<RRTEvent<Self::Event>>) -> Continuation {
         // Breaks borrow so dispatch can use `&mut self`.
         fn collect_ready_tokens(events: &Events) -> Vec<mio::Token> {
             events.iter().map(mio::event::Event::token).collect()
@@ -178,13 +178,13 @@ impl RRTWorker for MioPollWorker {
 
             // Non-EINTR poll error - OS resources likely corrupted. Notify
             // consumers and request restart via fresh create().
-            drop(tx.send(PollerEvent::Stdin(StdinEvent::Error).into()));
+            drop(sender.send(PollerEvent::Stdin(StdinEvent::Error).into()));
             return Continuation::Restart;
         }
 
         // Dispatch ready events.
         for token in collect_ready_tokens(&self.ready_events_buffer) {
-            let continuation = dispatch_with_tx(token, self, tx);
+            let continuation = dispatch_with_sender(token, self, sender);
             if continuation == Continuation::Stop {
                 return Continuation::Stop;
             }

@@ -3,4 +3,4 @@
 # Tracking issue: https://github.com/rust-lang/rust/issues/113349
 # Once stabilized, we can switch back to stable Rust.
 [toolchain]
-channel = "nightly-2026-02-16"
+channel = "nightly-2026-02-15"

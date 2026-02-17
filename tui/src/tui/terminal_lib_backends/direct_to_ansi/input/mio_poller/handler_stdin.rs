@@ -18,14 +18,14 @@ use tokio::sync::broadcast::Sender;
 /// kernel buffer—this is the `more` flag used for ESC disambiguation.
 pub const STDIN_READ_BUFFER_SIZE: usize = 1_024;
 
-/// Handles [`stdin`] becoming readable, using explicit `tx` parameter.
+/// Handles [`stdin`] becoming readable, using explicit `sender` parameter.
 ///
 /// Reads bytes from [`stdin`], parses them into [`VT100InputEventIR`] events, applies
 /// the paste state machine, and sends final events to the channel. See [EINTR Handling]
 /// for how interrupted syscalls are handled.
 ///
 /// This variant is used by [`MioPollWorker`] which implements the generic
-/// [`RRTWorker`] trait and receives `tx` as a parameter.
+/// [`RRTWorker`] trait and receives `sender` as a parameter.
 ///
 /// # Returns
 ///
@@ -38,9 +38,9 @@ pub const STDIN_READ_BUFFER_SIZE: usize = 1_024;
 /// [`RRTWorker`]: crate::core::resilient_reactor_thread::RRTWorker
 /// [`VT100InputEventIR`]: crate::core::ansi::vt_100_terminal_input_parser::VT100InputEventIR
 /// [`stdin`]: std::io::stdin
-pub fn consume_stdin_input_with_tx(
+pub fn consume_stdin_input_with_sender(
     worker: &mut MioPollWorker,
-    tx: &Sender<RRTEvent<PollerEvent>>,
+    sender: &Sender<RRTEvent<PollerEvent>>,
 ) -> Continuation {
     let read_res = worker
         .sources
@@ -52,11 +52,11 @@ pub fn consume_stdin_input_with_tx(
             DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
                 tracing::debug!(message = "mio_poller thread: EOF (0 bytes)");
             });
-            drop(tx.send(PollerEvent::Stdin(StdinEvent::Eof).into()));
+            drop(sender.send(PollerEvent::Stdin(StdinEvent::Eof).into()));
             Continuation::Stop
         }
 
-        Ok(n) => parse_stdin_bytes_with_tx(worker, n, tx),
+        Ok(n) => parse_stdin_bytes_with_sender(worker, n, sender),
 
         Err(ref e) if e.kind() == ErrorKind::Interrupted => {
             // EINTR - retry.
@@ -76,19 +76,19 @@ pub fn consume_stdin_input_with_tx(
                     error = ?e
                 );
             });
-            drop(tx.send(PollerEvent::Stdin(StdinEvent::Error).into()));
+            drop(sender.send(PollerEvent::Stdin(StdinEvent::Error).into()));
             Continuation::Stop
         }
     }
 }
 
-/// Parses bytes read from stdin into input events, using explicit `tx` parameter.
+/// Parses bytes read from stdin into input events, using explicit `sender` parameter.
 ///
 /// Parses bytes into VT100 events and sends them through the paste state machine.
-pub fn parse_stdin_bytes_with_tx(
+pub fn parse_stdin_bytes_with_sender(
     worker: &mut MioPollWorker,
     n: usize,
-    tx: &Sender<RRTEvent<PollerEvent>>,
+    sender: &Sender<RRTEvent<PollerEvent>>,
 ) -> Continuation {
     DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
         tracing::debug!(message = "mio_poller thread: read bytes", bytes_read = n);
@@ -107,7 +107,7 @@ pub fn parse_stdin_bytes_with_tx(
         match apply_paste_state_machine(&mut worker.paste_collection_state, &vt100_event)
         {
             PasteStateResult::Emit(input_event) => {
-                if tx
+                if sender
                     .send(PollerEvent::Stdin(StdinEvent::Input(input_event)).into())
                     .is_err()
                 {

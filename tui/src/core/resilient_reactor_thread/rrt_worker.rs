@@ -62,10 +62,8 @@ use tokio::sync::broadcast::Sender;
 ///
 /// Wake strategies are backend-specific. See [Why is `RRTWaker` User-Provided?]
 ///
-/// [`Arc`]: std::sync::Arc
-/// [`waker`]: field@super::RRT::waker
-/// [blocking I/O backend]: super#understanding-blocking-io
 /// [Why is `RRTWaker` User-Provided?]: super#why-is-rrtwaker-user-provided
+/// [`Arc`]: std::sync::Arc
 /// [`MioPollWaker`]: crate::terminal_lib_backends::MioPollWaker
 /// [`RRT`]: super::RRT
 /// [`SubscriberGuard::drop()`]: super::SubscriberGuard
@@ -76,6 +74,8 @@ use tokio::sync::broadcast::Sender;
 /// [`receiver_count()`]: tokio::sync::broadcast::Sender::receiver_count
 /// [`tokio`]: tokio
 /// [`wake()`]: Self::wake
+/// [`waker`]: field@super::RRT::waker
+/// [blocking I/O backend]: super#understanding-blocking-io
 /// [framework]: super#the-rrt-contract-and-benefits
 /// [runtime threads]: tokio::runtime
 pub trait RRTWaker: Send + Sync + 'static {
@@ -168,6 +168,24 @@ pub trait RRTWaker: Send + Sync + 'static {
 /// [self-healing restart]: super#self-healing-restart-details
 /// [two-phase setup]: super#two-phase-setup
 pub trait RRTWorker: Send + 'static {
+    /// Capacity of the [`broadcast channel`] for events.
+    ///
+    /// When the buffer is full, the oldest message is dropped to make room for new
+    /// ones. Slow consumers will receive [`Lagged`] on their next [`recv()`] call,
+    /// indicating how many messages they missed.
+    ///
+    /// `4_096` is generous for typical event streams, but cheap (events are usually
+    /// small) and provides headroom for debug/logging consumers that might occasionally
+    /// lag.
+    ///
+    /// Override this in your [`RRTWorker`] implementation to customize the channel
+    /// capacity.
+    ///
+    /// [`Lagged`]: tokio::sync::broadcast::error::RecvError::Lagged
+    /// [`broadcast channel`]: tokio::sync::broadcast
+    /// [`recv()`]: tokio::sync::broadcast::Receiver::recv
+    const CHANNEL_CAPACITY: usize = 4_096;
+
     /// The type containing domain-specific data to broadcast from your implementation to
     /// async consumers.
     ///
@@ -188,7 +206,7 @@ pub trait RRTWorker: Send + 'static {
     /// [executor threads]: tokio::runtime
     /// [framework]: super#the-rrt-contract-and-benefits
     /// [multithreaded runtime]: tokio::runtime::Builder::new_multi_thread
-    type Event: Clone + Send + 'static;
+    type Event: Clone + Send + Sync + 'static;
 
     /// Creates OS resources and a coupled worker + [waker] pair.
     ///
@@ -220,7 +238,6 @@ pub trait RRTWorker: Send + 'static {
     ///
     /// Returns an error if OS resources cannot be created.
     ///
-    /// [waker]: super::RRTWaker
     /// [`Poll`]: mio::Poll
     /// [`RRT`]: super::RRT
     /// [`impl RRTWaker`]: RRTWaker
@@ -231,6 +248,7 @@ pub trait RRTWorker: Send + 'static {
     /// [framework]: super#the-rrt-contract-and-benefits
     /// [self-healing restart]: super#self-healing-restart-details
     /// [two-phase setup]: super#two-phase-setup
+    /// [waker]: super::RRTWaker
     fn create() -> miette::Result<(Self, impl RRTWaker)>
     where
         Self: Sized;
@@ -264,10 +282,11 @@ pub trait RRTWorker: Send + 'static {
     /// trait method.
     ///
     /// Your implementation wraps domain events in [`RRTEvent::Worker(...)`] before
-    /// sending them through `tx`. The framework uses `tx` to send [`RRTEvent::Shutdown`]
-    /// when the restart policy is exhausted.
+    /// sending them through `sender`. The framework uses `sender` to send
+    /// [`RRTEvent::Shutdown`] when the restart policy is exhausted.
     ///
-    /// Pro-tip - you can call [`tx.receiver_count()`] to check if any subscribers remain.
+    /// Pro-tip - you can call [`sender.receiver_count()`] to check if any subscribers
+    /// remain.
     ///
     /// # Example
     ///
@@ -283,8 +302,8 @@ pub trait RRTWorker: Send + 'static {
     /// [`RRTEvent::Worker(...)`]: RRTEvent::Worker
     /// [`create()`]: Self::create
     /// [`mio_poller::MioPollWorker`]: crate::direct_to_ansi::input::mio_poller::MioPollWorker
-    /// [`tx.receiver_count()`]: tokio::sync::broadcast::Sender::receiver_count
+    /// [`sender.receiver_count()`]: tokio::sync::broadcast::Sender::receiver_count
     /// [framework]: super#the-rrt-contract-and-benefits
     /// [trait docs]: Self
-    fn poll_once(&mut self, tx: &Sender<RRTEvent<Self::Event>>) -> Continuation;
+    fn poll_once(&mut self, sender: &Sender<RRTEvent<Self::Event>>) -> Continuation;
 }

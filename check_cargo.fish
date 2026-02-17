@@ -68,3 +68,10 @@ function check_docs_full
     set -lx CARGO_TARGET_DIR $CHECK_TARGET_DIR_DOC_STAGING_FULL
     ionice_wrapper timeout $CHECK_TIMEOUT_SECS cargo doc
 end
+
+# Formats rustdoc comments on git-changed files.
+# With no arguments, cargo rustdoc-fmt automatically targets staged/unstaged changes.
+# Also runs cargo fmt on any files it modifies.
+function run_rustdoc_fmt
+    cargo rustdoc-fmt
+end

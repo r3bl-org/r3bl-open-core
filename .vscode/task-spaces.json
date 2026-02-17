@@ -250,11 +250,11 @@
           "isPinned": false
         },
         {
-          "path": "tui/src/core/resilient_reactor_thread/rrt.rs",
+          "path": "tui/src/core/resilient_reactor_thread/rrt_worker.rs",
           "isPinned": false
         },
         {
-          "path": "tui/src/core/resilient_reactor_thread/rrt_di_traits.rs",
+          "path": "tui/src/core/resilient_reactor_thread/rrt.rs",
           "isPinned": false
         },
         {
@@ -271,10 +271,6 @@
         },
         {
           "path": "tui/src/tui/terminal_lib_backends/direct_to_ansi/input/mio_poller/mio_poll_worker.rs",
-          "isPinned": false
-        },
-        {
-          "path": "tui/src/core/resilient_reactor_thread/rrt_liveness.rs",
           "isPinned": false
         },
         {
@@ -340,7 +336,7 @@
       ],
       "taskFile": "task/introduce-resilient-reactor-thread.md",
       "createdAt": 1768407329970,
-      "activeTab": "tui/src/core/resilient_reactor_thread/mod.rs"
+      "activeTab": "tui/src/core/resilient_reactor_thread/rrt_worker.rs"
     }
   ]
 }

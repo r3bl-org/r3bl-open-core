@@ -5,8 +5,7 @@
 //!
 //! [RAII]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
 
-use super::{RRTEvent, RRTWaker};
-use std::sync::{Arc, Mutex};
+use super::{RRTEvent, SafeWaker};
 use tokio::sync::broadcast::Receiver;
 
 /// An [RAII] guard that wakes the dedicated thread on drop.
@@ -19,8 +18,8 @@ use tokio::sync::broadcast::Receiver;
 /// # Drop Behavior
 ///
 /// When this guard is dropped:
-/// 1. [`receiver`] is dropped first, which causes Tokio's broadcast channel to atomically
-///    decrement the [`Sender`]'s internal [`receiver_count()`].
+/// 1. [`maybe_receiver`] is dropped first, which causes Tokio's broadcast channel to
+///    atomically decrement the [`Sender`]'s internal [`receiver_count()`].
 /// 2. Then the [`RRTWaker::wake()`] method interrupts the dedicated thread's blocking
 ///    call.
 /// 3. The dedicated thread wakes and checks [`receiver_count()`] to decide if it should
@@ -28,8 +27,8 @@ use tokio::sync::broadcast::Receiver;
 ///
 /// # Shared Waker and Correctness
 ///
-/// The [`waker`] field holds an `Arc<Mutex<Option<Box<dyn RRTWaker>>>>` that is shared
-/// with *all* subscribers (old and new) and the [`TerminationGuard`].
+/// The [`safe_waker`] field holds an `Arc<Mutex<Option<Box<dyn RRTWaker>>>>` that is
+/// shared with *all* subscribers (old and new) and the [`TerminationGuard`].
 ///
 /// Due to [two-phase setup], the waker and [`RRTWorker`] are created together from
 /// the same [`mio::Poll`] registry. This shared wrapper ensures every subscriber always
@@ -59,10 +58,10 @@ use tokio::sync::broadcast::Receiver;
 /// [`Sender`]: tokio::sync::broadcast::Sender
 /// [`TerminationGuard::drop()`]: super::TerminationGuard
 /// [`TerminationGuard`]: super::TerminationGuard
+/// [`maybe_receiver`]: Self::maybe_receiver
 /// [`mio::Poll`]: mio::Poll
 /// [`receiver_count()`]: tokio::sync::broadcast::Sender::receiver_count
-/// [`receiver`]: Self::receiver
-/// [`waker`]: Self::waker
+/// [`safe_waker`]: Self::safe_waker
 /// [race window]: super#the-inherent-race-condition
 /// [two-phase setup]: super#two-phase-setup
 #[allow(missing_debug_implementations)]
@@ -83,7 +82,7 @@ where
     /// [`RRTWaker::wake()`]: super::RRTWaker::wake
     /// [`receiver_count()`]: tokio::sync::broadcast::Sender::receiver_count
     /// [`take()`]: Option::take
-    pub receiver: Option<Receiver<RRTEvent<E>>>,
+    pub maybe_receiver: Option<Receiver<RRTEvent<E>>>,
 
     /// Shared waker - each layer of `Arc<Mutex<Option<Box<dyn RRTWaker>>>>` serves a
     /// purpose:
@@ -95,10 +94,10 @@ where
     ///   waker type (e.g., `SubscriberGuard<E, W: RRTWaker>`).
     ///
     /// [`Arc`]: std::sync::Arc
+    /// [`Box<dyn RRTWaker>`]: super::RRTWaker
     /// [`Mutex`]: std::sync::Mutex
     /// [`TerminationGuard`]: super::TerminationGuard
-    /// [`Box<dyn RRTWaker>`]: super::RRTWaker
-    pub waker: Arc<Mutex<Option<Box<dyn RRTWaker>>>>,
+    pub safe_waker: SafeWaker,
 }
 
 impl<E> Drop for SubscriberGuard<E>
@@ -112,16 +111,28 @@ where
     /// [Drop Behavior]: SubscriberGuard#drop-behavior
     fn drop(&mut self) {
         // Drop receiver first so Sender::receiver_count() decrements.
-        drop(self.receiver.take());
+        drop(self.maybe_receiver.take());
 
         // Wake the thread so it can check if it should exit.
         // Lock the shared waker and call the current waker's wake() method (if any).
         // If the thread has already exited, the waker is None (cleared by
         // TerminationGuard::drop()), so we skip the wake call.
-        if let Ok(guard) = self.waker.lock() {
+        if let Ok(guard) = self.safe_waker.lock() {
             if let Some(waker) = guard.as_ref() {
                 waker.wake();
             }
+        }
+    }
+}
+
+impl<E: Clone + Send + 'static> Into<SubscriberGuard<E>>
+    for (Option<Receiver<RRTEvent<E>>>, SafeWaker)
+{
+    fn into(self) -> SubscriberGuard<E> {
+        let (maybe_receiver, safe_waker) = self;
+        SubscriberGuard {
+            maybe_receiver,
+            safe_waker,
         }
     }
 }

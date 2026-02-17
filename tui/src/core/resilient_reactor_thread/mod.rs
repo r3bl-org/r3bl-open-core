@@ -77,7 +77,7 @@
 //! [`broadcast channel`] to decouple the lifecycle of this [thread] from the async
 //! consumers (in your [TUI] or [`readline_async`] app).
 //!
-//! **Async consumer isolation** - This channel (stored in [`RRT`] via [`OnceLock`])
+//! **Async consumer isolation** - This channel (stored in [`RRT`] via [`LazyLock`])
 //! completely isolates async consumers from the dedicated [thread]'s lifecycle. It
 //! outlives every thread generation and is never replaced - [`RRT`] can reuse, destroy,
 //! or relaunch the [thread] without affecting any async consumers. The sender half of the
@@ -161,8 +161,8 @@
 //! [`RRTEvent::Shutdown(RestartPolicyExhausted)`] to all subscribers, then the [poll
 //! loop] exits. [`run_worker_loop()`] creates a [`TerminationGuard`] as a local [RAII]
 //! variable at entry, so when the function returns, [`TerminationGuard`]'s [`Drop`] runs
-//! automatically - clearing the [`RRTWaker`] and marking [`liveness`] as terminated. A
-//! future [`subscribe()`] call can then relaunch a fresh thread.
+//! automatically - clearing the [`RRTWaker`] to [`None`] (which IS the terminated
+//! signal). A future [`subscribe()`] call can then relaunch a fresh thread.
 //!
 //! **[`RRTEvent`] - two-tier event model.** The [`broadcast channel`] carries
 //! [`RRTEvent<W::Event>`] instead of raw [`W::Event`], cleanly separating domain events
@@ -375,12 +375,12 @@
 //!   [`RRTWaker`] and [`Event`] types). Without your worker concrete type (and these
 //!   other pieces) to inject ([DI]), the framework has nothing to run.
 //!
-//!   | Type / Trait       | Purpose                                             | Implementation                                          |
-//!   | :----------------- | :-------------------------------------------------- | :------------------------------------------------------ |
-//!   | [`RRTWorker`]      | [`create()`], [`poll_once()`], [`restart_policy()`] | Your logic: create resources, poll, handle events       |
-//!   | [`RRTWaker`]       | Interrupt mechanism (returned by [`create()`])      | Backend-specific impl (see [why user-provided?])        |
-//!   | [`Event`]          | Domain-specific subscriber event data               | Struct/enum sent via [`tx.send()`] from [`poll_once()`] |
-//!   | [`RestartPolicy`]  | Config for [self-healing restarts]                  | Override [`restart_policy()`] or use [default policy]   |
+//!   | Type / Trait       | Purpose                                             | Implementation                                              |
+//!   | :----------------- | :-------------------------------------------------- | :---------------------------------------------------------- |
+//!   | [`RRTWorker`]      | [`create()`], [`poll_once()`], [`restart_policy()`] | Your logic: create resources, poll, handle events           |
+//!   | [`RRTWaker`]       | Interrupt mechanism (returned by [`create()`])      | Backend-specific impl (see [why user-provided?])            |
+//!   | [`Event`]          | Domain-specific subscriber event data               | Struct/enum sent via [`sender.send()`] from [`poll_once()`] |
+//!   | [`RestartPolicy`]  | Config for [self-healing restarts]                  | Override [`restart_policy()`] or use [default policy]       |
 //!
 //!   See the [Example] section for details.
 //!
@@ -405,40 +405,40 @@
 //! ## Type Hierarchy Diagram
 //!
 //! ```text
-//! ┌────────────────────────────────────────────────────────────────────────┐
-//! │                    RESILIENT REACTOR THREAD (Generic)                  │
-//! │    IoC + DI: you implement trait ─► framework orchestrates & calls     │
-//! ├────────────────────────────┬──────────────┬────────────────────────────┤
-//! │                            │  YOUR CODE   │                            │
-//! │                            └──────────────┘                            │
-//! │  SINGLETON:                                                            │
-//! │       static SINGLETON: RRT<W> = ...::new();                           │
-//! │                                                                        │
-//! │  The generic param <W>:                                                │
-//! │       W          : RRTWorker              - your worker trait impl     │
-//! │       W::Event   : Clone + Send + Sync    - your event type (from W)   │
-//! │       W::create() returns (W, impl RRTWaker) - worker + waker pair     │
-//! │                                                                        │
-//! ├─────────────────────┬────────────────────────────┬─────────────────────┤
-//! │                     │ FRAMEWORK → RUNS YOUR CODE │                     │
-//! │                     └────────────────────────────┘                     │
-//! │  RRT<W>  (three top-level fields, each with correct sync primitive)    │
-//! │  ├── broadcast_tx: OnceLock<Sender<RRTEvent<W::Event>>>  (once)        │
-//! │  ├── waker: OnceLock<Arc<Mutex<Option<Box<dyn RRTWaker>>>>> (swapped)  │
-//! │  └── liveness: Mutex<Option<Arc<RRTLiveness>>>      (per-generation)   │
-//! │                                                                        │
-//! │  subscribe() → SubscriberGuard<W::Event>                               │
-//! │      ├── Slow path: W::create() → spawn dedicated thread               │
-//! │      │   where YOUR CODE W.poll_once() runs in a loop                  │
-//! │      └── Fast path: dedicated thread already running → reuse it        │
-//! │                                                                        │
-//! │  SubscriberGuard<W::Event>                                             │
-//! │  ├── receiver: Receiver<RRTEvent<W::Event>> (two-tier events)          │
-//! │  ├── waker: Arc<Mutex<Option<Box<dyn RRTWaker>>>> (current waker)      │
-//! │  └── Drop impl: receiver dropped (decrements count), wakes thread      │
-//! │      └── Thread wakes → broadcast_tx.receiver_count() == 0 → exits     │
-//! │                                                                        │
-//! └────────────────────────────────────────────────────────────────────────┘
+//! ┌───────────────────────────────────────────────────────────────────────────────┐
+//! │                    RESILIENT REACTOR THREAD (Generic)                         │
+//! │    IoC + DI: you implement trait ─► framework orchestrates & calls            │
+//! ├────────────────────────────┬──────────────┬───────────────────────────────────┤
+//! │                            │  YOUR CODE   │                                   │
+//! │                            └──────────────┘                                   │
+//! │  SINGLETON:                                                                   │
+//! │       static SINGLETON: RRT<W> = ...::new();                                  │
+//! │                                                                               │
+//! │  The generic param <W>:                                                       │
+//! │       W          : RRTWorker              - your worker trait impl            │
+//! │       W::Event   : Clone + Send + Sync    - your event type (from W)          │
+//! │       W::create() returns (W, impl RRTWaker) - worker + waker pair            │
+//! │                                                                               │
+//! ├─────────────────────┬────────────────────────────┬────────────────────────────┤
+//! │                     │ FRAMEWORK → RUNS YOUR CODE │                            │
+//! │                     └────────────────────────────┘                            │
+//! │  RRT<W> (three top-level fields, each with correct sync primitive)            │
+//! │  ├── broadcast_sender: LazyLock<Sender<RRTEvent<W::Event>>>            (once) │
+//! │  ├── safe_waker: LazyLock<Arc<Mutex<Option<dyn RRTWaker>>>>   (inner per-gen) │
+//! │  └── generation: AtomicU8                                           (per-gen) │
+//! │                                                                               │
+//! │  subscribe() → SubscriberGuard<W::Event>                                      │
+//! │      ├── Slow path: W::create() → spawn dedicated thread                      │
+//! │      │   where YOUR CODE W.poll_once() runs in a loop                         │
+//! │      └── Fast path: dedicated thread already running → reuse it               │
+//! │                                                                               │
+//! │  SubscriberGuard<W::Event>                                                    │
+//! │  ├── receiver: Receiver<RRTEvent<W::Event>> (two-tier events)                 │
+//! │  ├── safe_waker: Arc<Mutex<Option<Box<dyn RRTWaker>>>> (current waker)        │
+//! │  └── Drop impl: receiver dropped (decrements count), wakes thread             │
+//! │      └── Thread wakes → broadcast_sender.receiver_count() == 0 → exits        │
+//! │                                                                               │
+//! └───────────────────────────────────────────────────────────────────────────────┘
 //! ```
 //!
 //! ## The RRT Contract and Benefits
@@ -465,15 +465,15 @@
 //!    type may contain `'static` references but no shorter-lived ones. See [`RRT`] for a
 //!    detailed explanation of `'static` in trait bounds.
 //!
-//!    [`RRT`] uses [`OnceLock`] for the broadcast channel and waker wrapper because
+//!    [`RRT`] uses [`LazyLock`] for the broadcast channel and waker wrapper because
 //!    [`syscalls`] aren't [const expressions] - they must be created at runtime. See
 //!    [`RRT`] for a detailed explanation. See [`mio_poller`]'s [`SINGLETON`] for a
 //!    concrete example.
 //!
-//! 2. **State machine** - [`RRT`]'s liveness field tracks thread state. On spawn,
-//!    [`subscribe()`] creates fresh [`RRTLiveness`] and swaps in a new [`RRTWaker`]. On
-//!    exit, [`TerminationGuard`] clears the [`RRTWaker`] and marks terminated. On
-//!    relaunch, [`subscribe()`] replaces the liveness and swaps the [`RRTWaker`].
+//! 2. **State machine** - [`RRT`]'s waker [`Option`] tracks thread state. On spawn,
+//!    [`subscribe()`] installs a new [`RRTWaker`] (`Some`) and records a new generation.
+//!    On exit, [`TerminationGuard`] clears the [`RRTWaker`] to [`None`]. On relaunch,
+//!    [`subscribe()`] installs a new [`RRTWaker`] and records a new generation.
 //!    Generation tracking distinguishes fresh launches from reusing an existing [thread].
 //!
 //! 3. **Contract preservation** - Async consumers never see broken promises; the
@@ -622,7 +622,7 @@
 //!         Ok((MyWorker { /* ... */ }, MyWaker))
 //!     }
 //!
-//!     fn poll_once(&mut self, tx: &Sender<RRTEvent<Self::Event>>) -> Continuation {
+//!     fn poll_once(&mut self, sender: &Sender<RRTEvent<Self::Event>>) -> Continuation {
 //!         todo!("Do one iteration of work, broadcast events via RRTEvent::Worker(...)")
 //!         // Return Continuation::Stop when receiver_count == 0
 //!     }
@@ -646,9 +646,8 @@
 //!
 //! # Module Contents
 //!
-//! - **`rrt_di_traits`**: Core traits ([`RRTWorker`], [`RRTWaker`])
+//! - **`rrt_worker`**: Core traits ([`RRTWorker`], [`RRTWaker`])
 //! - **`rrt_event`**: Two-tier event model ([`RRTEvent`], [`ShutdownReason`])
-//! - **`rrt_liveness`**: [Thread] lifecycle state ([`RRTLiveness`], [`LivenessState`])
 //! - **`rrt_restart_policy`**: Self-healing configuration ([`RestartPolicy`])
 //! - **`rrt_subscriber_guard`**: RAII subscription guard ([`SubscriberGuard`])
 //! - **`rrt`**: Framework entry point ([`RRT`]), [`TerminationGuard`],
@@ -715,11 +714,11 @@
 //!
 //! ```ignore
 //! // Current epoll model
-//! fn poll_once(&mut self, tx: &Sender<Event>) -> Continuation {
+//! fn poll_once(&mut self, sender: &Sender<Event>) -> Continuation {
 //!     self.poll.poll(&mut events, None)?;  // Block for readiness
 //!     for event in &events {
 //!         let data = read(fd)?;            // YOU do the I/O
-//!         tx.send(data);
+//!         sender.send(data);
 //!     }
 //! }
 //! ```
@@ -731,7 +730,7 @@
 //!
 //! ```ignore
 //! // io_uring blocking-wait model
-//! fn poll_once(&mut self, tx: &Sender<Event>) -> Continuation {
+//! fn poll_once(&mut self, sender: &Sender<Event>) -> Continuation {
 //!     // Submit read requests to submission queue
 //!     self.ring.submit_read(stdin_fd, &mut buffer)?;
 //!
@@ -740,7 +739,7 @@
 //!
 //!     // Data already in buffer - just process it
 //!     for cqe in self.ring.completion() {
-//!         tx.send(process(cqe));           // I/O already done!
+//!         sender.send(process(cqe));           // I/O already done!
 //!     }
 //! }
 //! ```
@@ -833,8 +832,9 @@
 //!     https://man7.org/linux/man-pages/man3/io_uring_prep_cancel.3.html
 //! [`IORING_OP_MSG_RING`]:
 //!     https://man7.org/linux/man-pages/man3/io_uring_prep_msg_ring.3.html
+//! [`LazyLock`]: std::sync::LazyLock
 //! [`LivenessState`]: crate::core::resilient_reactor_thread::LivenessState
-//! [`OnceLock`]: std::sync::OnceLock
+//! [`LivenessState`]: LivenessState
 //! [`PTY`]: https://man7.org/linux/man-pages/man7/pty.7.html
 //! [`PTY` pair]: crate::core::pty::pty_core::pty_types::PtyPair
 //! [`RRTEvent::Shutdown(Panic)`]: ShutdownReason::Panic
@@ -845,7 +845,6 @@
 //! [`RRTEvent::Worker(E)`]: RRTEvent::Worker
 //! [`RRTEvent<W::Event>`]: RRTEvent
 //! [`RRTEvent`]: RRTEvent
-//! [`RRTLiveness`]: RRTLiveness
 //! [`RRTWaker`]: RRTWaker
 //! [`RRTWorker::create()`]: RRTWorker::create
 //! [`RRTWorker`]: RRTWorker
@@ -881,13 +880,13 @@
 //! [`fifo(7)`]: https://man7.org/linux/man-pages/man7/fifo.7.html
 //! [`filedescriptor::poll()`]:
 //!     https://docs.rs/filedescriptor/latest/filedescriptor/fn.poll.html
+//! [`generation`]: field@RRT::generation
 //! [`io_uring_enter()`]: https://man7.org/linux/man-pages/man2/io_uring_enter.2.html
 //! [`io_uring`]: https://kernel.dk/io_uring.pdf
 //! [`io_uring`: An Alternative Model]: #io_uring-an-alternative-model
 //! [`kevent()`]: https://man.freebsd.org/cgi/man.cgi?query=kevent
 //! [`kill -9`]: https://man7.org/linux/man-pages/man1/kill.1.html
 //! [`kqueue`]: https://man.freebsd.org/cgi/man.cgi?query=kqueue
-//! [`liveness`]: field@RRT::liveness
 //! [`mio::Poll::poll()`]: mio::Poll::poll
 //! [`mio::Poll`]: mio::Poll
 //! [`mio_poller`]: crate::tui::terminal_lib_backends::direct_to_ansi::input::mio_poller
@@ -903,6 +902,7 @@
 //! [`restart_policy()`]: RRTWorker::restart_policy
 //! [`run_worker_loop()`]: run_worker_loop
 //! [`select(2)`]: https://man7.org/linux/man-pages/man2/select.2.html
+//! [`sender.send()`]: tokio::sync::broadcast::Sender::send
 //! [`signal-hook`]: signal_hook
 //! [`signalfd(2)`]: https://man7.org/linux/man-pages/man2/signalfd.2.html
 //! [`signals`]: https://man7.org/linux/man-pages/man7/signal.7.html
@@ -913,7 +913,6 @@
 //! [`syscall`]: https://man7.org/linux/man-pages/man2/syscalls.2.html
 //! [`syscalls`]: https://man7.org/linux/man-pages/man2/syscalls.2.html
 //! [`tty`]: https://man7.org/linux/man-pages/man4/tty.4.html
-//! [`tx.send()`]: tokio::sync::broadcast::Sender::send
 //! [async Rust]: https://rust-lang.github.io/async-book/
 //! [async runtime]: tokio::runtime
 //! [async task]: tokio::task
@@ -932,7 +931,7 @@
 //! [executor thread in the `tokio` async runtime]: tokio::runtime
 //! [executor threads in the async runtime]: tokio::runtime
 //! [file descriptors]: https://man7.org/linux/man-pages/man2/open.2.html
-//! [generation]: RRTLiveness#generation-tracking
+//! [generation]: RRT::get_thread_generation
 //! [in the meantime]: #the-inherent-race-condition
 //! [inversion of control]: https://en.wikipedia.org/wiki/Inversion_of_control
 //! [kernel]: https://en.wikipedia.org/wiki/Kernel_(operating_system)
@@ -944,7 +943,7 @@
 //! [restart budget]: RestartPolicy
 //! [scenario examples]: RestartPolicy#example-scenarios
 //! [self-healing restarts]: #self-healing-restart-details
-//! [shared wrapper]: field@RRT::waker
+//! [shared wrapper]: field@RRT::safe_waker
 //! [signals]: https://man7.org/linux/man-pages/man7/signal.7.html
 //! [singleton]: #how-to-use-it
 //! [sockets]: https://man7.org/linux/man-pages/man7/socket.7.html
@@ -954,18 +953,16 @@
 //! [why user-provided?]: #why-is-rrtwaker-user-provided
 
 mod rrt;
-mod rrt_di_traits;
 mod rrt_event;
-mod rrt_liveness;
 mod rrt_restart_policy;
 mod rrt_subscriber_guard;
+mod rrt_worker;
 
 pub use rrt::*;
-pub use rrt_di_traits::*;
 pub use rrt_event::*;
-pub use rrt_liveness::*;
 pub use rrt_restart_policy::*;
 pub use rrt_subscriber_guard::*;
+pub use rrt_worker::*;
 
 #[cfg(test)]
 mod tests;

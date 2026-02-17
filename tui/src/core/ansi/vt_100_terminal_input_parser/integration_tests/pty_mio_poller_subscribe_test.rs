@@ -196,7 +196,7 @@ fn subscribe_controlled_entry_point() -> ! {
 
         // Read from subscriber (using the raw receiver).
         let subscriber_rx = subscriber
-            .receiver
+            .maybe_receiver
             .as_mut()
             .expect("Subscriber receiver is None");
         let rrt_event =

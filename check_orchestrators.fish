@@ -357,6 +357,9 @@ function run_full_checks
     run_check_with_recovery check_doctests "doctests"
     set result_doctest $status
 
+    # Format rustdoc comments on changed files before building docs.
+    run_rustdoc_fmt
+
     run_check_with_recovery check_docs_full "docs"
     set result_docs $status
 
