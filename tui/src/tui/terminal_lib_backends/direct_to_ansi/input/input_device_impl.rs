@@ -9,7 +9,7 @@
 //!
 //! - **[`SINGLETON`]** (container): Static [`RRT`], lives for process lifetime. Holds the
 //!   broadcast channel (created once, never replaced) and a safe waker wrapper.
-//! - **Thread-generation state**: Liveness tracking and safe_waker are swapped on each
+//! - **Thread-generation state**: Liveness tracking and shared_waker_slot are swapped on each
 //!   relaunch; the channel persists across all generations.
 //!
 //! Module contents: [`global_input_resource`] (operations + [`SINGLETON`]).
@@ -22,7 +22,7 @@
 //! [`SINGLETON`]: global_input_resource::SINGLETON
 //! [`global_input_resource`]: mod@global_input_resource
 
-use super::{channel_types::PollerEvent, mio_poller::MioPollWorker};
+use super::mio_poller::MioPollWorker;
 use crate::core::resilient_reactor_thread::{RRT, SubscriberGuard};
 
 /// Type alias for the input device's subscriber guard.
@@ -34,7 +34,7 @@ use crate::core::resilient_reactor_thread::{RRT, SubscriberGuard};
 ///
 /// [`SINGLETON.subscribe()`]: global_input_resource::SINGLETON
 /// [`SINGLETON.subscribe_to_existing()`]: global_input_resource::SINGLETON
-pub type InputSubscriberGuard = SubscriberGuard<PollerEvent>;
+pub type InputSubscriberGuard = SubscriberGuard<MioPollWorker>;
 
 /// Process-global input resource singleton.
 ///
@@ -46,17 +46,17 @@ pub mod global_input_resource {
     use super::*;
 
     /// **Static container** (lives for process lifetime) with three top-level fields.
-    /// The broadcast channel and safe_waker wrapper are lazily initialized on first
+    /// The broadcast channel and shared_waker_slot wrapper are lazily initialized on first
     /// access (via [`LazyLock`]); liveness tracking is per-generation and replaced on
     /// each relaunch.
     ///
     /// Lifecycle states:
     /// - **Inert** (all empty) until [`subscribe()`] spawns the poller thread
     /// - **Active** (all populated) while thread is running
-    /// - **Dormant** (liveness terminated, safe_waker cleared) when all
+    /// - **Dormant** (liveness terminated, shared_waker_slot cleared) when all
     ///   [`SubscriberGuard`]s drop and thread exits
     /// - **Reactivates** on next [`subscribe()`] call (spawns fresh thread, swaps
-    ///   safe_waker, replaces liveness)
+    ///   shared_waker_slot, replaces liveness)
     ///
     /// See [`RRT`] for details on the three-field structure.
     ///

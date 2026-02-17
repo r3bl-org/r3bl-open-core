@@ -22,7 +22,7 @@ use super::{super::{channel_types::{PollerEvent, StdinEvent},
             dispatcher::dispatch_with_sender,
             handler_stdin::STDIN_READ_BUFFER_SIZE};
 use crate::{Continuation,
-            core::resilient_reactor_thread::{RRTEvent, RRTWaker, RRTWorker}};
+            core::resilient_reactor_thread::{RRTEvent, RRTWorker}};
 use miette::Diagnostic;
 use mio::{Events, Interest, Poll, Waker, unix::SourceFd};
 use signal_hook::consts::SIGWINCH;
@@ -78,6 +78,7 @@ pub struct MioPollWorker {
 
 impl RRTWorker for MioPollWorker {
     type Event = PollerEvent;
+    type Waker = MioPollWaker;
 
     /// Creates a new mio poll worker and [`MioPollWaker`] pair.
     ///
@@ -100,7 +101,7 @@ impl RRTWorker for MioPollWorker {
     /// [`mio::Poll`]: mio::Poll
     /// [`mio::Waker`]: mio::Waker
     /// [`wake()`]: MioPollWaker::wake
-    fn create() -> miette::Result<(Self, impl RRTWaker)> {
+    fn create() -> miette::Result<(Self, Self::Waker)> {
         // Create mio::Poll (epoll on Linux, kqueue on macOS).
         let poll_handle = Poll::new().map_err(PollCreationError)?;
 
@@ -146,6 +147,21 @@ impl RRTWorker for MioPollWorker {
         ))
     }
 
+    /// Performs one iteration of the poll loop - see [`MioPollWorker::poll_once_impl()`]
+    /// for details.
+    ///
+    /// It's not possible to link to a trait method implementation on a struct (the link
+    /// just goes to the trait's method definition) - which is why this method just
+    /// delegates to a separate `poll_once_impl()` method where the real implementation
+    /// lives, which we can link to directly.
+    ///
+    /// [`MioPollWorker::poll_once_impl()`]: Self::poll_once_impl
+    fn poll_once(&mut self, sender: &Sender<RRTEvent<Self::Event>>) -> Continuation {
+        self.poll_once_impl(sender)
+    }
+}
+
+impl MioPollWorker {
     /// Performs one iteration of the poll loop.
     ///
     /// Blocks until [`stdin`] or signals are ready, then processes all ready events.
@@ -160,12 +176,10 @@ impl RRTWorker for MioPollWorker {
     ///
     /// [EINTR handling]: super#eintr-handling
     /// [`stdin`]: std::io::stdin
-    fn poll_once(&mut self, sender: &Sender<RRTEvent<Self::Event>>) -> Continuation {
-        // Breaks borrow so dispatch can use `&mut self`.
-        fn collect_ready_tokens(events: &Events) -> Vec<mio::Token> {
-            events.iter().map(mio::event::Event::token).collect()
-        }
-
+    pub fn poll_once_impl(
+        &mut self,
+        sender: &Sender<RRTEvent<PollerEvent>>,
+    ) -> Continuation {
         // Block until stdin or signals become ready.
         let poll_result = self.poll_handle.poll(&mut self.ready_events_buffer, None);
 
@@ -183,7 +197,8 @@ impl RRTWorker for MioPollWorker {
         }
 
         // Dispatch ready events.
-        for token in collect_ready_tokens(&self.ready_events_buffer) {
+        let ready_tokens = Self::collect_ready_tokens(&self.ready_events_buffer);
+        for token in ready_tokens {
             let continuation = dispatch_with_sender(token, self, sender);
             if continuation == Continuation::Stop {
                 return Continuation::Stop;
@@ -191,6 +206,14 @@ impl RRTWorker for MioPollWorker {
         }
 
         Continuation::Continue
+    }
+
+    /// Collects tokens into a Vec so that [`ready_events_buffer`] is no longer borrowed
+    /// when [`dispatch_with_sender`] takes `&mut self`.
+    ///
+    /// [`ready_events_buffer`]: field@MioPollWorker::ready_events_buffer
+    pub fn collect_ready_tokens(events: &Events) -> Vec<mio::Token> {
+        events.iter().map(mio::event::Event::token).collect()
     }
 }
 

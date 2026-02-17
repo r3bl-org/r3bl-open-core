@@ -145,7 +145,7 @@ fn subscribe_controlled_entry_point() -> ! {
         eprintln!("Step 1: Checking initial state...");
         assert_eq!(
             SINGLETON.is_thread_running(),
-            LivenessState::Terminated,
+            LivenessState::TerminatedOrNotStarted,
             "Expected thread_alive = Dead initially"
         );
         assert_eq!(
@@ -195,12 +195,8 @@ fn subscribe_controlled_entry_point() -> ! {
         eprintln!("  Device received: {event_device:?}");
 
         // Read from subscriber (using the raw receiver).
-        let subscriber_rx = subscriber
-            .maybe_receiver
-            .as_mut()
-            .expect("Subscriber receiver is None");
         let rrt_event =
-            tokio::time::timeout(Duration::from_secs(5), subscriber_rx.recv())
+            tokio::time::timeout(Duration::from_secs(5), subscriber.receiver.recv())
                 .await
                 .expect("Timeout reading from subscriber")
                 .expect("Channel closed");
@@ -256,7 +252,7 @@ fn subscribe_controlled_entry_point() -> ! {
         let mut thread_exited = false;
         for i in 0..100 {
             tokio::time::sleep(Duration::from_millis(1)).await;
-            if SINGLETON.is_thread_running() == LivenessState::Terminated {
+            if SINGLETON.is_thread_running() == LivenessState::TerminatedOrNotStarted {
                 eprintln!("  Thread exited after {}ms", i + 1);
                 thread_exited = true;
                 break;

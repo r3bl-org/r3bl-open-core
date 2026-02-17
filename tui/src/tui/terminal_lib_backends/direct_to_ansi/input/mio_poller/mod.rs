@@ -353,6 +353,8 @@
 //! [paste state machine]: super::paste_state_machine::PasteCollectionState
 //! [raw mode]: crate::core::ansi::terminal_raw_mode#raw-mode-vs-cooked-mode
 
+// XMARK: impl trait rustdoc link definition heading-anchor (eg: #impl-Drop-for) see above
+
 // Skip rustfmt for rest of file.
 // https://stackoverflow.com/a/75910283/2085356
 #![cfg_attr(rustfmt, rustfmt_skip)]

@@ -147,7 +147,7 @@ fn lifecycle_controlled_entry_point() -> ! {
         eprintln!("📍 Step 1: Checking initial state...");
         assert_eq!(
             global_input_resource::SINGLETON.is_thread_running(),
-            LivenessState::Terminated,
+            LivenessState::TerminatedOrNotStarted,
             "Expected thread_alive = Dead initially"
         );
         assert_eq!(
@@ -195,7 +195,7 @@ fn lifecycle_controlled_entry_point() -> ! {
         let mut thread_exited = false;
         for i in 0..100 {
             tokio::time::sleep(Duration::from_millis(1)).await;
-            if global_input_resource::SINGLETON.is_thread_running() == LivenessState::Terminated {
+            if global_input_resource::SINGLETON.is_thread_running() == LivenessState::TerminatedOrNotStarted {
                 eprintln!("  ✓ Thread exited after {}ms", i + 1);
                 thread_exited = true;
                 break;

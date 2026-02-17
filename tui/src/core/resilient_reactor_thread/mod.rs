@@ -151,7 +151,7 @@
 //! If [`create()`] itself fails (e.g., OS resources exhausted), the framework retries on
 //! the pre-existing thread until either [`create()`] succeeds or the [restart budget] is
 //! exhausted. [`create()`] only allocates OS resources - it never spawns a thread. Only
-//! [`subscribe()`] affects thread lifecycle (spawning or relaunching).
+//! [`subscribe()`] affects [Thread Lifecycle] (spawning or relaunching).
 //!
 //! **[`RestartPolicy`]** controls the [restart budget]. Override it, for your needs, by
 //! implementing [`restart_policy()`] on your [`RRTWorker`]. See
@@ -200,11 +200,11 @@
 //!
 //! ## What's in a name? 😛
 //!
-//! | Word          | Meaning                                                                                                                                                                                    |
-//! | :------------ | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-//! | **Resilient** | [Thread] can stop or crash and be relaunched with [generation] tracking; [`RestartPolicy`] for self-healing restarts; [`broadcast channel`] isolates async consumers from thread lifecycle |
-//! | **Reactor**   | Reacts to I/O readiness on [`fds`] ([`stdin`], [`sockets`], [`signals`]) via any blocking backend (e.g., [`mio`]/[`epoll`]) with a matching [`RRTWaker`]                                   |
-//! | **Thread**    | Dedicated [thread] for [blocking I/O]; cooperative shutdown via [`RRTWaker`] & [RAII] cleanup via [`Drop`] on thread exit                                                                  |
+//! | Word          | Meaning                                                                                                                                                                                      |
+//! | :------------ | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+//! | **Resilient** | [Thread] can stop or crash and be relaunched with [generation] tracking; [`RestartPolicy`] for self-healing restarts; [`broadcast channel`] isolates async consumers from [Thread Lifecycle] |
+//! | **Reactor**   | Reacts to I/O readiness on [`fds`] ([`stdin`], [`sockets`], [`signals`]) via any blocking backend (e.g., [`mio`]/[`epoll`]) with a matching [`RRTWaker`]                                     |
+//! | **Thread**    | Dedicated [thread] for [blocking I/O]; cooperative shutdown via [`RRTWaker`] & [RAII] cleanup via [`Drop`] on thread exit                                                                    |
 //!
 //! ## Mental Model for Web Developers
 //!
@@ -361,7 +361,8 @@
 //!
 //! To get a bird's eye view (from the [TUI] or [`readline_async`] app's perspective) of
 //! how terminal input flows from [`stdin`] through the dedicated [thread] to your async
-//! consumers - see the [RRT section] in the crate documentation.
+//! consumers - see the [RRT section] in the crate documentation. For the concise
+//! step-by-step spawn/reuse/terminate sequence, see [`RRT`]'s [Thread Lifecycle] section.
 //!
 //! ## Separation of Concerns and [Dependency Injection] (DI)
 //!
@@ -405,40 +406,40 @@
 //! ## Type Hierarchy Diagram
 //!
 //! ```text
-//! ┌───────────────────────────────────────────────────────────────────────────────┐
-//! │                    RESILIENT REACTOR THREAD (Generic)                         │
-//! │    IoC + DI: you implement trait ─► framework orchestrates & calls            │
-//! ├────────────────────────────┬──────────────┬───────────────────────────────────┤
-//! │                            │  YOUR CODE   │                                   │
-//! │                            └──────────────┘                                   │
-//! │  SINGLETON:                                                                   │
-//! │       static SINGLETON: RRT<W> = ...::new();                                  │
-//! │                                                                               │
-//! │  The generic param <W>:                                                       │
-//! │       W          : RRTWorker              - your worker trait impl            │
-//! │       W::Event   : Clone + Send + Sync    - your event type (from W)          │
-//! │       W::create() returns (W, impl RRTWaker) - worker + waker pair            │
-//! │                                                                               │
-//! ├─────────────────────┬────────────────────────────┬────────────────────────────┤
-//! │                     │ FRAMEWORK → RUNS YOUR CODE │                            │
-//! │                     └────────────────────────────┘                            │
-//! │  RRT<W> (three top-level fields, each with correct sync primitive)            │
-//! │  ├── broadcast_sender: LazyLock<Sender<RRTEvent<W::Event>>>            (once) │
-//! │  ├── safe_waker: LazyLock<Arc<Mutex<Option<dyn RRTWaker>>>>   (inner per-gen) │
-//! │  └── generation: AtomicU8                                           (per-gen) │
-//! │                                                                               │
-//! │  subscribe() → SubscriberGuard<W::Event>                                      │
-//! │      ├── Slow path: W::create() → spawn dedicated thread                      │
-//! │      │   where YOUR CODE W.poll_once() runs in a loop                         │
-//! │      └── Fast path: dedicated thread already running → reuse it               │
-//! │                                                                               │
-//! │  SubscriberGuard<W::Event>                                                    │
-//! │  ├── receiver: Receiver<RRTEvent<W::Event>> (two-tier events)                 │
-//! │  ├── safe_waker: Arc<Mutex<Option<Box<dyn RRTWaker>>>> (current waker)        │
-//! │  └── Drop impl: receiver dropped (decrements count), wakes thread             │
-//! │      └── Thread wakes → broadcast_sender.receiver_count() == 0 → exits        │
-//! │                                                                               │
-//! └───────────────────────────────────────────────────────────────────────────────┘
+//! ┌────────────────────────────────────────────────────────────────────────────────┐
+//! │                    RESILIENT REACTOR THREAD (Generic)                          │
+//! │    IoC + DI: you implement trait ─► framework orchestrates & calls             │
+//! ├────────────────────────────┬──────────────┬────────────────────────────────────┤
+//! │                            │  YOUR CODE   │                                    │
+//! │                            └──────────────┘                                    │
+//! │  SINGLETON:                                                                    │
+//! │       static SINGLETON: RRT<W> = ...::new();                                   │
+//! │                                                                                │
+//! │  The generic param <W>:                                                        │
+//! │       W          : RRTWorker              - your worker trait impl             │
+//! │       W::Event   : Clone + Send + Sync    - your event type (from W)           │
+//! │       W::create() returns (W, W::Waker)   - worker + waker pair                │
+//! │                                                                                │
+//! ├─────────────────────┬────────────────────────────┬─────────────────────────────┤
+//! │                     │ FRAMEWORK → RUNS YOUR CODE │                             │
+//! │                     └────────────────────────────┘                             │
+//! │  RRT<W> (three top-level fields, each with correct sync primitive)             │
+//! │  ├── sender: LazyLock<Sender<RRTEvent<W::Event>>>                       (once) │
+//! │  ├── shared_waker_slot: LazyLock<Arc<Mutex<Option<W::Waker>>>> (inner per-gen) │
+//! │  └── thread_generation: AtomicU8                                     (per-gen) │
+//! │                                                                                │
+//! │  subscribe() → SubscriberGuard<W>                                              │
+//! │      ├── Slow path: W::create() → spawn dedicated thread                       │
+//! │      │   where YOUR CODE W.poll_once() runs in a loop                          │
+//! │      └── Fast path: dedicated thread already running → reuse it                │
+//! │                                                                                │
+//! │  SubscriberGuard<W>                                                            │
+//! │  ├── receiver: Receiver<RRTEvent<W::Event>> (two-tier events)                  │
+//! │  ├── wake_on_drop: WakeOnDrop<W::Waker> (wakes thread on drop)                 │
+//! │  └── Drop impl: receiver dropped (decrements count), then wakes thread         │
+//! │      └── Thread wakes → sender.receiver_count() == 0 → exits                   │
+//! │                                                                                │
+//! └────────────────────────────────────────────────────────────────────────────────┘
 //! ```
 //!
 //! ## The RRT Contract and Benefits
@@ -615,8 +616,9 @@
 //!
 //! impl RRTWorker for MyWorker {
 //!     type Event = MyEvent;
+//!     type Waker = MyWaker;
 //!
-//!     fn create() -> miette::Result<(Self, impl RRTWaker)> {
+//!     fn create() -> miette::Result<(Self, Self::Waker)> {
 //!         // Create worker with OS resources and a coupled RRTWaker.
 //!         // e.g., create mio::Poll, register fds, create mio::Waker from registry.
 //!         Ok((MyWorker { /* ... */ }, MyWaker))
@@ -812,6 +814,7 @@
 //! [Syscalls]: https://man7.org/linux/man-pages/man2/syscalls.2.html
 //! [TCP]: https://en.wikipedia.org/wiki/Transmission_Control_Protocol
 //! [TUI]: crate::tui::TerminalWindow::main_event_loop
+//! [Thread Lifecycle]: RRT#thread-lifecycle
 //! [UDP]: https://en.wikipedia.org/wiki/User_Datagram_Protocol
 //! [Unix domain sockets]: https://en.wikipedia.org/wiki/Unix_domain_socket
 //! [Wayland]: https://wayland.freedesktop.org/
@@ -880,7 +883,7 @@
 //! [`fifo(7)`]: https://man7.org/linux/man-pages/man7/fifo.7.html
 //! [`filedescriptor::poll()`]:
 //!     https://docs.rs/filedescriptor/latest/filedescriptor/fn.poll.html
-//! [`generation`]: field@RRT::generation
+//! [`generation`]: field@RRT::thread_generation
 //! [`io_uring_enter()`]: https://man7.org/linux/man-pages/man2/io_uring_enter.2.html
 //! [`io_uring`]: https://kernel.dk/io_uring.pdf
 //! [`io_uring`: An Alternative Model]: #io_uring-an-alternative-model
@@ -943,7 +946,7 @@
 //! [restart budget]: RestartPolicy
 //! [scenario examples]: RestartPolicy#example-scenarios
 //! [self-healing restarts]: #self-healing-restart-details
-//! [shared wrapper]: field@RRT::safe_waker
+//! [shared wrapper]: field@RRT::shared_waker_slot
 //! [signals]: https://man7.org/linux/man-pages/man7/signal.7.html
 //! [singleton]: #how-to-use-it
 //! [sockets]: https://man7.org/linux/man-pages/man7/socket.7.html
@@ -964,5 +967,5 @@ pub use rrt_restart_policy::*;
 pub use rrt_subscriber_guard::*;
 pub use rrt_worker::*;
 
-#[cfg(test)]
-mod tests;
+#[cfg(any(test, doc))]
+pub mod tests;

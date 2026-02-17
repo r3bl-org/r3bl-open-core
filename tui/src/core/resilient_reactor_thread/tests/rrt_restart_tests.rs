@@ -68,8 +68,9 @@ struct TestWorker {
 
 impl RRTWorker for TestWorker {
     type Event = TestEvent;
+    type Waker = TestWaker;
 
-    fn create() -> miette::Result<(Self, impl RRTWaker)> {
+    fn create() -> miette::Result<(Self, Self::Waker)> {
         let mut guard = TEST_FACTORY_STATE.lock().unwrap();
         let state = guard.as_mut().expect("TEST_FACTORY_STATE not initialized");
         state.create_count += 1;
@@ -213,13 +214,13 @@ fn no_delay_policy(max_restarts: u8) -> RestartPolicy {
 /// Spawns `run_worker_loop::<TestWorker>()` on a named thread.
 fn spawn_worker_loop(
     worker: TestWorker,
-    sender: SafeSender<TestEvent>,
-    safe_waker: SafeWaker,
+    sender: BroadcastSender<TestEvent>,
+    shared_waker_slot: SharedWakerSlot<TestWaker>,
 ) -> std::thread::JoinHandle<()> {
     std::thread::Builder::new()
         .name("test-rrt-worker".into())
         .spawn(move || {
-            run_worker_loop::<TestWorker>(worker, sender, safe_waker);
+            run_worker_loop::<TestWorker>(worker, sender, shared_waker_slot);
         })
         .unwrap()
 }
@@ -391,26 +392,28 @@ fn test_backoff_unbounded_growth() {
 fn test_worker_stop_exits_cleanly() {
     let (worker, wake_fn, cmd_sender) = create_test_resources();
     let (sender, _receiver) = tokio::sync::broadcast::channel(16);
-    let safe_waker: SafeWaker = Arc::new(Mutex::new(Some(Box::new(wake_fn))));
+    let shared_waker_slot: SharedWakerSlot<TestWaker> =
+        Arc::new(Mutex::new(Some(wake_fn)));
 
     let (_notify_receiver, _senders) = setup_factory(vec![], no_delay_policy(3));
-    let handle = spawn_worker_loop(worker, sender, safe_waker.clone());
+    let handle = spawn_worker_loop(worker, sender, shared_waker_slot.clone());
 
     send_cmd(&cmd_sender, b's');
     handle.join().unwrap();
 
-    assert!(safe_waker.lock().unwrap().is_none());
-    assert!(safe_waker.lock().unwrap().is_none());
+    assert!(shared_waker_slot.lock().unwrap().is_none());
+    assert!(shared_waker_slot.lock().unwrap().is_none());
     teardown_factory();
 }
 
 fn test_worker_continue_then_stop() {
     let (worker, wake_fn, cmd_sender) = create_test_resources();
     let (sender, mut receiver) = tokio::sync::broadcast::channel(16);
-    let safe_waker: SafeWaker = Arc::new(Mutex::new(Some(Box::new(wake_fn))));
+    let shared_waker_slot: SharedWakerSlot<TestWaker> =
+        Arc::new(Mutex::new(Some(wake_fn)));
 
     let (_notify_receiver, _senders) = setup_factory(vec![], no_delay_policy(3));
-    let handle = spawn_worker_loop(worker, sender, safe_waker.clone());
+    let handle = spawn_worker_loop(worker, sender, shared_waker_slot.clone());
 
     send_cmd(&cmd_sender, b'e');
     send_cmd(&cmd_sender, b'e');
@@ -429,10 +432,11 @@ fn test_worker_continue_then_stop() {
 fn test_domain_events_flow_through() {
     let (worker, wake_fn, cmd_sender) = create_test_resources();
     let (sender, mut receiver) = tokio::sync::broadcast::channel(16);
-    let safe_waker: SafeWaker = Arc::new(Mutex::new(Some(Box::new(wake_fn))));
+    let shared_waker_slot: SharedWakerSlot<TestWaker> =
+        Arc::new(Mutex::new(Some(wake_fn)));
 
     let (_notify_receiver, _senders) = setup_factory(vec![], no_delay_policy(3));
-    let handle = spawn_worker_loop(worker, sender, safe_waker.clone());
+    let handle = spawn_worker_loop(worker, sender, shared_waker_slot.clone());
 
     send_cmd(&cmd_sender, b'e');
     send_cmd(&cmd_sender, b'e');
@@ -458,9 +462,10 @@ fn test_single_restart_success() {
         setup_factory(vec![(ok2, Some(cmd_sender2.clone()))], no_delay_policy(3));
 
     let (sender, _receiver) = tokio::sync::broadcast::channel(16);
-    let safe_waker: SafeWaker = Arc::new(Mutex::new(Some(Box::new(wake_fn1))));
+    let shared_waker_slot: SharedWakerSlot<TestWaker> =
+        Arc::new(Mutex::new(Some(wake_fn1)));
 
-    let handle = spawn_worker_loop(worker1, sender, safe_waker.clone());
+    let handle = spawn_worker_loop(worker1, sender, shared_waker_slot.clone());
 
     // Worker1: restart.
     send_cmd(&cmd_sender1, b'r');
@@ -473,7 +478,7 @@ fn test_single_restart_success() {
     handle.join().unwrap();
 
     assert_eq!(get_create_count(), 1);
-    assert!(safe_waker.lock().unwrap().is_none());
+    assert!(shared_waker_slot.lock().unwrap().is_none());
     teardown_factory();
 }
 
@@ -485,10 +490,11 @@ fn test_restart_no_delay_fast() {
         setup_factory(vec![(ok2, Some(cmd_sender2.clone()))], no_delay_policy(3));
 
     let (sender, _receiver) = tokio::sync::broadcast::channel(16);
-    let safe_waker: SafeWaker = Arc::new(Mutex::new(Some(Box::new(wake_fn1))));
+    let shared_waker_slot: SharedWakerSlot<TestWaker> =
+        Arc::new(Mutex::new(Some(wake_fn1)));
 
     let start = Instant::now();
-    let handle = spawn_worker_loop(worker1, sender, safe_waker.clone());
+    let handle = spawn_worker_loop(worker1, sender, shared_waker_slot.clone());
 
     send_cmd(&cmd_sender1, b'r');
     notify_receiver
@@ -509,9 +515,10 @@ fn test_events_before_and_after_restart() {
         setup_factory(vec![(ok2, Some(cmd_sender2.clone()))], no_delay_policy(3));
 
     let (sender, mut receiver) = tokio::sync::broadcast::channel(16);
-    let safe_waker: SafeWaker = Arc::new(Mutex::new(Some(Box::new(wake_fn1))));
+    let shared_waker_slot: SharedWakerSlot<TestWaker> =
+        Arc::new(Mutex::new(Some(wake_fn1)));
 
-    let handle = spawn_worker_loop(worker1, sender, safe_waker.clone());
+    let handle = spawn_worker_loop(worker1, sender, shared_waker_slot.clone());
 
     // Worker1: event then restart.
     send_cmd(&cmd_sender1, b'e');
@@ -540,13 +547,14 @@ fn test_waker_swap_on_restart() {
         setup_factory(vec![(ok2, Some(cmd_sender2.clone()))], no_delay_policy(3));
 
     let (sender, _receiver) = tokio::sync::broadcast::channel(16);
-    let safe_waker: SafeWaker = Arc::new(Mutex::new(Some(Box::new(wake_fn1))));
+    let shared_waker_slot: SharedWakerSlot<TestWaker> =
+        Arc::new(Mutex::new(Some(wake_fn1)));
 
-    let handle = spawn_worker_loop(worker1, sender, safe_waker.clone());
+    let handle = spawn_worker_loop(worker1, sender, shared_waker_slot.clone());
 
     // Invoke the current waker to record its ID in LAST_WAKED_ID.
     {
-        let guard = safe_waker.lock().unwrap();
+        let guard = shared_waker_slot.lock().unwrap();
         if let Some(w) = guard.as_ref() {
             w.wake();
         }
@@ -563,7 +571,7 @@ fn test_waker_swap_on_restart() {
     let deadline = Instant::now() + Duration::from_secs(5);
     loop {
         std::thread::sleep(Duration::from_millis(1));
-        if let Ok(guard) = safe_waker.lock() {
+        if let Ok(guard) = shared_waker_slot.lock() {
             if let Some(w) = guard.as_ref() {
                 w.wake();
                 if LAST_WAKED_ID.load(Ordering::SeqCst) != old_id {
@@ -599,9 +607,10 @@ fn test_budget_resets_on_successful_create() {
     );
 
     let (sender, _receiver) = tokio::sync::broadcast::channel(16);
-    let safe_waker: SafeWaker = Arc::new(Mutex::new(Some(Box::new(wake_fn1))));
+    let shared_waker_slot: SharedWakerSlot<TestWaker> =
+        Arc::new(Mutex::new(Some(wake_fn1)));
 
-    let handle = spawn_worker_loop(worker1, sender, safe_waker.clone());
+    let handle = spawn_worker_loop(worker1, sender, shared_waker_slot.clone());
 
     // W1 -> restart -> W2 created (budget resets).
     send_cmd(&cmd_sender1, b'r');
@@ -623,7 +632,7 @@ fn test_budget_resets_on_successful_create() {
     handle.join().unwrap();
 
     assert_eq!(get_create_count(), 3);
-    assert!(safe_waker.lock().unwrap().is_none());
+    assert!(shared_waker_slot.lock().unwrap().is_none());
     teardown_factory();
 }
 
@@ -643,9 +652,10 @@ fn test_restart_exhaustion() {
     );
 
     let (sender, mut receiver) = tokio::sync::broadcast::channel(16);
-    let safe_waker: SafeWaker = Arc::new(Mutex::new(Some(Box::new(wake_fn1))));
+    let shared_waker_slot: SharedWakerSlot<TestWaker> =
+        Arc::new(Mutex::new(Some(wake_fn1)));
 
-    let handle = spawn_worker_loop(worker1, sender, safe_waker.clone());
+    let handle = spawn_worker_loop(worker1, sender, shared_waker_slot.clone());
 
     send_cmd(&cmd_sender1, b'r');
     notify_receiver
@@ -676,9 +686,10 @@ fn test_zero_budget_immediate_exhaustion() {
     let (_notify_receiver, _senders) = setup_factory(vec![], no_delay_policy(0));
 
     let (sender, mut receiver) = tokio::sync::broadcast::channel(16);
-    let safe_waker: SafeWaker = Arc::new(Mutex::new(Some(Box::new(wake_fn1))));
+    let shared_waker_slot: SharedWakerSlot<TestWaker> =
+        Arc::new(Mutex::new(Some(wake_fn1)));
 
-    let handle = spawn_worker_loop(worker1, sender, safe_waker.clone());
+    let handle = spawn_worker_loop(worker1, sender, shared_waker_slot.clone());
 
     send_cmd(&cmd_sender1, b'r');
     handle.join().unwrap();
@@ -698,9 +709,10 @@ fn test_shutdown_event_payload() {
     let (_notify_receiver, _senders) = setup_factory(vec![], no_delay_policy(0));
 
     let (sender, mut receiver) = tokio::sync::broadcast::channel(16);
-    let safe_waker: SafeWaker = Arc::new(Mutex::new(Some(Box::new(wake_fn1))));
+    let shared_waker_slot: SharedWakerSlot<TestWaker> =
+        Arc::new(Mutex::new(Some(wake_fn1)));
 
-    let handle = spawn_worker_loop(worker1, sender, safe_waker.clone());
+    let handle = spawn_worker_loop(worker1, sender, shared_waker_slot.clone());
 
     send_cmd(&cmd_sender1, b'r');
     handle.join().unwrap();
@@ -725,9 +737,10 @@ fn test_create_failure_then_success() {
     );
 
     let (sender, _receiver) = tokio::sync::broadcast::channel(16);
-    let safe_waker: SafeWaker = Arc::new(Mutex::new(Some(Box::new(wake_fn1))));
+    let shared_waker_slot: SharedWakerSlot<TestWaker> =
+        Arc::new(Mutex::new(Some(wake_fn1)));
 
-    let handle = spawn_worker_loop(worker1, sender, safe_waker.clone());
+    let handle = spawn_worker_loop(worker1, sender, shared_waker_slot.clone());
 
     send_cmd(&cmd_sender1, b'r');
     // Wait for second create() call (first fails, second succeeds).
@@ -757,9 +770,10 @@ fn test_persistent_create_failure() {
     );
 
     let (sender, mut receiver) = tokio::sync::broadcast::channel(16);
-    let safe_waker: SafeWaker = Arc::new(Mutex::new(Some(Box::new(wake_fn1))));
+    let shared_waker_slot: SharedWakerSlot<TestWaker> =
+        Arc::new(Mutex::new(Some(wake_fn1)));
 
-    let handle = spawn_worker_loop(worker1, sender, safe_waker.clone());
+    let handle = spawn_worker_loop(worker1, sender, shared_waker_slot.clone());
 
     send_cmd(&cmd_sender1, b'r');
     handle.join().unwrap();
@@ -782,30 +796,32 @@ fn test_persistent_create_failure() {
 fn test_guard_clears_waker_on_stop() {
     let (worker, wake_fn, cmd_sender) = create_test_resources();
     let (sender, _receiver) = tokio::sync::broadcast::channel(16);
-    let safe_waker: SafeWaker = Arc::new(Mutex::new(Some(Box::new(wake_fn))));
+    let shared_waker_slot: SharedWakerSlot<TestWaker> =
+        Arc::new(Mutex::new(Some(wake_fn)));
 
     let (_notify_receiver, _senders) = setup_factory(vec![], no_delay_policy(3));
-    let handle = spawn_worker_loop(worker, sender, safe_waker.clone());
+    let handle = spawn_worker_loop(worker, sender, shared_waker_slot.clone());
 
     send_cmd(&cmd_sender, b's');
     handle.join().unwrap();
 
-    assert!(safe_waker.lock().unwrap().is_none());
+    assert!(shared_waker_slot.lock().unwrap().is_none());
     teardown_factory();
 }
 
 fn test_guard_clears_waker_on_exhaustion() {
     let (worker, wake_fn, cmd_sender) = create_test_resources();
     let (sender, _receiver) = tokio::sync::broadcast::channel(16);
-    let safe_waker: SafeWaker = Arc::new(Mutex::new(Some(Box::new(wake_fn))));
+    let shared_waker_slot: SharedWakerSlot<TestWaker> =
+        Arc::new(Mutex::new(Some(wake_fn)));
 
     let (_notify_receiver, _senders) = setup_factory(vec![], no_delay_policy(0));
-    let handle = spawn_worker_loop(worker, sender, safe_waker.clone());
+    let handle = spawn_worker_loop(worker, sender, shared_waker_slot.clone());
 
     send_cmd(&cmd_sender, b'r');
     handle.join().unwrap();
 
-    assert!(safe_waker.lock().unwrap().is_none());
+    assert!(shared_waker_slot.lock().unwrap().is_none());
     teardown_factory();
 }
 
@@ -823,10 +839,11 @@ fn test_backoff_delay_applied() {
         setup_factory(vec![(ok2, Some(cmd_sender2.clone()))], policy);
 
     let (sender, _receiver) = tokio::sync::broadcast::channel(16);
-    let safe_waker: SafeWaker = Arc::new(Mutex::new(Some(Box::new(wake_fn1))));
+    let shared_waker_slot: SharedWakerSlot<TestWaker> =
+        Arc::new(Mutex::new(Some(wake_fn1)));
 
     let start = Instant::now();
-    let handle = spawn_worker_loop(worker1, sender, safe_waker.clone());
+    let handle = spawn_worker_loop(worker1, sender, shared_waker_slot.clone());
 
     send_cmd(&cmd_sender1, b'r');
     notify_receiver
@@ -868,10 +885,11 @@ fn test_delay_resets_after_successful_create() {
     );
 
     let (sender, _receiver) = tokio::sync::broadcast::channel(16);
-    let safe_waker: SafeWaker = Arc::new(Mutex::new(Some(Box::new(wake_fn1))));
+    let shared_waker_slot: SharedWakerSlot<TestWaker> =
+        Arc::new(Mutex::new(Some(wake_fn1)));
 
     let start = Instant::now();
-    let handle = spawn_worker_loop(worker1, sender, safe_waker.clone());
+    let handle = spawn_worker_loop(worker1, sender, shared_waker_slot.clone());
 
     send_cmd(&cmd_sender1, b'r');
     // Wait for create() calls: first Err, then Ok(W2).
@@ -901,10 +919,11 @@ fn test_delay_resets_after_successful_create() {
 fn test_panic_sends_shutdown_panic() {
     let (worker, wake_fn, cmd_sender) = create_test_resources();
     let (sender, mut receiver) = tokio::sync::broadcast::channel(16);
-    let safe_waker: SafeWaker = Arc::new(Mutex::new(Some(Box::new(wake_fn))));
+    let shared_waker_slot: SharedWakerSlot<TestWaker> =
+        Arc::new(Mutex::new(Some(wake_fn)));
 
     let (_notify_receiver, _senders) = setup_factory(vec![], no_delay_policy(3));
-    let handle = spawn_worker_loop(worker, sender, safe_waker.clone());
+    let handle = spawn_worker_loop(worker, sender, shared_waker_slot.clone());
 
     send_cmd(&cmd_sender, b'p');
     handle.join().unwrap();
@@ -919,10 +938,11 @@ fn test_panic_sends_shutdown_panic() {
 fn test_panic_after_events() {
     let (worker, wake_fn, cmd_sender) = create_test_resources();
     let (sender, mut receiver) = tokio::sync::broadcast::channel(16);
-    let safe_waker: SafeWaker = Arc::new(Mutex::new(Some(Box::new(wake_fn))));
+    let shared_waker_slot: SharedWakerSlot<TestWaker> =
+        Arc::new(Mutex::new(Some(wake_fn)));
 
     let (_notify_receiver, _senders) = setup_factory(vec![], no_delay_policy(3));
-    let handle = spawn_worker_loop(worker, sender, safe_waker.clone());
+    let handle = spawn_worker_loop(worker, sender, shared_waker_slot.clone());
 
     send_cmd(&cmd_sender, b'e');
     send_cmd(&cmd_sender, b'p');
@@ -944,25 +964,27 @@ fn test_panic_after_events() {
 fn test_guard_clears_waker_on_panic() {
     let (worker, wake_fn, cmd_sender) = create_test_resources();
     let (sender, _receiver) = tokio::sync::broadcast::channel(16);
-    let safe_waker: SafeWaker = Arc::new(Mutex::new(Some(Box::new(wake_fn))));
+    let shared_waker_slot: SharedWakerSlot<TestWaker> =
+        Arc::new(Mutex::new(Some(wake_fn)));
 
     let (_notify_receiver, _senders) = setup_factory(vec![], no_delay_policy(3));
-    let handle = spawn_worker_loop(worker, sender, safe_waker.clone());
+    let handle = spawn_worker_loop(worker, sender, shared_waker_slot.clone());
 
     send_cmd(&cmd_sender, b'p');
     handle.join().unwrap();
 
-    assert!(safe_waker.lock().unwrap().is_none());
+    assert!(shared_waker_slot.lock().unwrap().is_none());
     teardown_factory();
 }
 
 fn test_no_restart_after_panic() {
     let (worker, wake_fn, cmd_sender) = create_test_resources();
     let (sender, _receiver) = tokio::sync::broadcast::channel(16);
-    let safe_waker: SafeWaker = Arc::new(Mutex::new(Some(Box::new(wake_fn))));
+    let shared_waker_slot: SharedWakerSlot<TestWaker> =
+        Arc::new(Mutex::new(Some(wake_fn)));
 
     let (_notify_receiver, _senders) = setup_factory(vec![], no_delay_policy(3));
-    let handle = spawn_worker_loop(worker, sender, safe_waker.clone());
+    let handle = spawn_worker_loop(worker, sender, shared_waker_slot.clone());
 
     send_cmd(&cmd_sender, b'p');
     handle.join().unwrap();
@@ -1077,7 +1099,10 @@ async fn test_subscribe_spawns_thread() {
     send_cmd(&cmd_sender, b's');
     // Wait for thread to exit.
     std::thread::sleep(Duration::from_millis(100));
-    assert_eq!(rrt.is_thread_running(), LivenessState::Terminated);
+    assert_eq!(
+        rrt.is_thread_running(),
+        LivenessState::TerminatedOrNotStarted
+    );
     teardown_factory();
 }
 
@@ -1129,7 +1154,10 @@ async fn test_subscribe_slow_path_after_termination() {
 
         send_cmd(&cmd_sender1, b's');
         std::thread::sleep(Duration::from_millis(100));
-        assert_eq!(rrt.is_thread_running(), LivenessState::Terminated);
+        assert_eq!(
+            rrt.is_thread_running(),
+            LivenessState::TerminatedOrNotStarted
+        );
 
         // Second subscribe after termination (slow path).
         let _guard2 = rrt.subscribe().unwrap();
@@ -1154,7 +1182,7 @@ async fn test_shutdown_received_by_subscriber() {
 
     let rrt: RRT<TestWorker> = RRT::new();
     let guard = rrt.subscribe().unwrap();
-    let mut receiver = guard.maybe_receiver.as_ref().unwrap().resubscribe();
+    let mut receiver = guard.receiver.resubscribe();
 
     std::thread::sleep(Duration::from_millis(50));
 
@@ -1203,7 +1231,10 @@ async fn test_subscribe_after_panic_recovery() {
         // Cause a panic.
         send_cmd(&cmd_sender1, b'p');
         std::thread::sleep(Duration::from_millis(100));
-        assert_eq!(rrt.is_thread_running(), LivenessState::Terminated);
+        assert_eq!(
+            rrt.is_thread_running(),
+            LivenessState::TerminatedOrNotStarted
+        );
 
         // Subscribe again after panic (should relaunch).
         let _guard2 = rrt.subscribe().unwrap();

@@ -22,10 +22,9 @@ use tokio::sync::broadcast::error::RecvError;
 /// Selected via [`TERMINAL_LIB_BACKEND`] on Linux; talks directly to the terminal using
 /// ANSI/VT100 protocols without relying on [`crossterm`] for terminal I/O.
 ///
-/// This **newtype** delegates to [`SINGLETON`] for
-/// [`std::io::Stdin`] reading and buffer management. This process global singleton
-/// supports restart cycles with thread reuse (fast path) to handle race conditions
-/// when apps rapidly create and drop input devices.
+/// This **newtype** delegates to [`SINGLETON`] for [`std::io::Stdin`] reading and buffer
+/// management. This process global singleton supports restart cycles with thread reuse
+/// (fast path) to handle race conditions when apps rapidly create and drop input devices.
 ///
 /// It manages asynchronous reading from terminal [`stdin`] via dedicated thread +
 /// channel:
@@ -51,14 +50,14 @@ use tokio::sync::broadcast::error::RecvError;
 /// - **Destroy thread** cleanly when no consumers need input
 ///
 /// This decoupling also allows **multiple async consumers** to receive all input events
-/// simultaneously—useful for debugging, logging, or event recording alongside the
-/// primary TUI app consumer.
+/// simultaneously—useful for debugging, logging, or event recording alongside the primary
+/// TUI app consumer.
 ///
 /// ## Why This Design? (Historical Context)
 ///
 /// Our original "Tokio-heavy" approach created a [`DirectToAnsiInputDevice`] instance
-/// on-demand, one-instance-per-app (which was not process-bound, rather it was bound
-/// to each app-instance). It used:
+/// on-demand, one-instance-per-app (which was not process-bound, rather it was bound to
+/// each app-instance). It used:
 /// - [`tokio::io::stdin()`] for input handling
 /// - [`tokio::signal`] for [`SIGWINCH`] handling
 ///
@@ -154,14 +153,14 @@ use tokio::sync::broadcast::error::RecvError;
 /// Multiple [`DirectToAnsiInputDevice`] instances can be created and dropped, but they
 /// all share the same underlying channel and process global (singleton) reader thread.
 ///
-/// See [`MioPollWorker`] for details on how the mio poller thread works, including
-/// file descriptor handling, parsing, thread lifecycle, and ESC detection limitations.
+/// See [`MioPollWorker`] for details on how the mio poller thread works, including file
+/// descriptor handling, parsing, thread lifecycle, and ESC detection limitations.
 ///
 /// # Device Lifecycle
 ///
 /// A single process can create and drop [`DirectToAnsiInputDevice`] instances repeatedly.
-/// The global [`SINGLETON`] `static` persists, but the **thread** spawns and exits
-/// with each app lifecycle:
+/// The global [`SINGLETON`] `static` persists, but the **thread** spawns and exits with
+/// each app lifecycle:
 ///
 /// ```text
 /// ┌───────────────────────────────────────────────────────────────────────────────┐
@@ -178,7 +177,7 @@ use tokio::sync::broadcast::error::RecvError;
 /// │ │  1. DirectToAnsiInputDevice::new()                                        │ │
 /// │ │  2. next() → subscribe()                                                  │ │
 /// │ │  3. SINGLETON is None → initialize_global_input_resource()                │ │
-/// │ │       • Creates broadcast channel, safe_waker, liveness: Running          │ │
+/// │ │       • Creates broadcast channel, shared_waker_slot, liveness: Running   │ │
 /// │ │       • Spawns mio-poller thread #1                                       │ │
 /// │ │       • thread #1 owns MioPollWorker struct                               │ │
 /// │ │  4. TUI app A runs, receiving events from receiver                        │ │
@@ -195,7 +194,7 @@ use tokio::sync::broadcast::error::RecvError;
 /// │ │  2. next() → subscribe()                                                  │ │
 /// │ │  3. SINGLETON has state, but liveness == Terminated                       │ │
 /// │ │       → needs_init = true → initialize_global_input_resource()            │ │
-/// │ │       • Swaps safe_waker, creates fresh liveness: Running                 │ │
+/// │ │       • Swaps shared_waker_slot, creates fresh liveness: Running          │ │
 /// │ │       • Spawns mio-poller thread #2 (NOT the same as #1!)                 │ │
 /// │ │       • thread #2 owns its own MioPollWorker struct                       │ │
 /// │ │  4. TUI app B runs, receiving events from receiver                        │ │
@@ -258,16 +257,16 @@ use tokio::sync::broadcast::error::RecvError;
 /// └──────────────────────────────────────────────────────────────────────────┘
 /// ```
 ///
-/// The key insight: the **kernel's [`stdin`] buffer for [`fd`] `0`
-/// persists** regardless of which thread is reading. Unlike [`tokio::io::stdin()`]'s
-/// application-level buffer, the kernel buffer survives handle creation/destruction. When
-/// a new thread calls [`std::io::stdin()`], it gets a handle to the **same kernel
-/// buffer** containing any unread bytes.
+/// The key insight: the **kernel's [`stdin`] buffer for [`fd`] `0` persists** regardless
+/// of which thread is reading. Unlike [`tokio::io::stdin()`]'s application-level buffer,
+/// the kernel buffer survives handle creation/destruction. When a new thread calls
+/// [`std::io::stdin()`], it gets a handle to the **same kernel buffer** containing any
+/// unread bytes.
 ///
 /// ## Call Chain to [`subscribe()`]
 ///
 /// ```text
-/// DirectToAnsiInputDevice::new()                (input_device.rs)
+/// DirectToAnsiInputDevice::new()                 (input_device.rs)
 ///     │
 ///     └─► subscribe()                            (input_device.rs)
 ///             │
@@ -277,13 +276,13 @@ use tokio::sync::broadcast::error::RecvError;
 ///             │       │
 ///             │       └─► if needs_init: initialize_global_input_resource()
 ///             │               │
-///             │               ├─► Init broadcast_sender, safe_waker wrapper (LazyLock)
-///             │               ├─► F::create() → swap safe_waker, create liveness
+///             │               ├─► Init sender, shared_waker_slot wrapper (LazyLock)
+///             │               ├─► F::create() → swap shared_waker_slot, create liveness
 ///             │               └─► Spawn thread with worker
 ///             │
-///             └─► return SubscriberGuard { receiver, safe_waker } ← new subscriber
+///             └─► return SubscriberGuard { receiver, shared_waker_slot } ← new subscriber
 ///
-/// DirectToAnsiInputDevice::next()               (input_device.rs)
+/// DirectToAnsiInputDevice::next()                (input_device.rs)
 ///     │
 ///     └─► stdin_receiver.recv().await
 /// ```
@@ -437,8 +436,8 @@ use tokio::sync::broadcast::error::RecvError;
 ///
 /// ## SSH and High-Latency Connections
 ///
-/// Over SSH with network latency, bytes might arrive in separate packets. The `more`
-/// flag handles this correctly:
+/// Over SSH with network latency, bytes might arrive in separate packets. The `more` flag
+/// handles this correctly:
 ///
 /// ```text
 /// First packet:  [ESC]       read() → 1 byte, more = false
@@ -447,9 +446,9 @@ use tokio::sync::broadcast::error::RecvError;
 ///                            Parser accumulates: [ESC, '[', 'A'] → Up Arrow ✓
 /// ```
 ///
-/// The key insight: if bytes arrive separately, the next `mio::Poll` wake happens
-/// almost immediately when more data arrives. The parser accumulates bytes across
-/// reads, so escape sequences are correctly reassembled.
+/// The key insight: if bytes arrive separately, the next `mio::Poll` wake happens almost
+/// immediately when more data arrives. The parser accumulates bytes across reads, so
+/// escape sequences are correctly reassembled.
 ///
 /// ## Attribution
 ///
@@ -485,48 +484,58 @@ use tokio::sync::broadcast::error::RecvError;
 /// [ESC Detection Limitations]: super::mio_poller#esc-detection-limitations
 /// [ESC key disambiguation]: Self#esc-key-disambiguation-crossterm-more-flag-pattern
 /// [How It Works]: super::mio_poller#how-it-works
-/// [Loosely Coupled And Strongly Coherent]: https://developerlife.com/2015/11/05/loosely-coupled-strongly-coherent/
+/// [Loosely Coupled And Strongly Coherent]:
+///     https://developerlife.com/2015/11/05/loosely-coupled-strongly-coherent/
 /// [No exclusive access]: super::mio_poller#no-exclusive-access
 /// [SSH]: https://en.wikipedia.org/wiki/Secure_Shell
 /// [The Problems]: Self#the-problems
 /// [Tokio's stdin]: tokio::io::stdin
-/// [`CrosstermInputDevice`]: crate::tui::terminal_lib_backends::crossterm_backend::CrosstermInputDevice
+/// [`CrosstermInputDevice`]:
+///     crate::tui::terminal_lib_backends::crossterm_backend::CrosstermInputDevice
 /// [`DirectToAnsi`]: mod@crate::direct_to_ansi
 /// [`EventStream`]: crossterm::event::EventStream
-/// [`INTERNAL_EVENT_READER`]: https://github.com/crossterm-rs/crossterm/blob/0.29/src/event.rs#L149
+/// [`INTERNAL_EVENT_READER`]:
+///     https://github.com/crossterm-rs/crossterm/blob/0.29/src/event.rs#L149
 /// [`InputDevice`]: crate::InputDevice
 /// [`MioPollWorker`]: super::mio_poller::MioPollWorker
 /// [`SIGWINCH`]: signal_hook::consts::SIGWINCH
 /// [`SINGLETON`]: super::input_device_impl::global_input_resource::SINGLETON
 /// [`SubscriberGuard`]: crate::core::resilient_reactor_thread::SubscriberGuard
-/// [`SubscriberGuard`'s drop behavior]: crate::core::resilient_reactor_thread::SubscriberGuard#drop-behavior
+/// [`SubscriberGuard`'s drop behavior]:
+///     crate::core::resilient_reactor_thread::SubscriberGuard#drop-behavior
 /// [`TERMINAL_LIB_BACKEND`]: crate::tui::TERMINAL_LIB_BACKEND
-/// [`VT100InputEventIR`]: crate::core::ansi::vt_100_terminal_input_parser::VT100InputEventIR
+/// [`VT100InputEventIR`]:
+///     crate::core::ansi::vt_100_terminal_input_parser::VT100InputEventIR
 /// [`broadcast`]: tokio::sync::broadcast
 /// [`crossterm`]: crossterm
 /// [`epoll`]: https://man7.org/linux/man-pages/man7/epoll.7.html
 /// [`fd`]: https://en.wikipedia.org/wiki/File_descriptor
 /// [`kqueue`]: https://man.freebsd.org/cgi/man.cgi?query=kqueue&sektion=2
-/// [`mio.rs`]: https://github.com/crossterm-rs/crossterm/blob/0.29/src/event/source/unix/mio.rs
+/// [`mio.rs`]:
+///     https://github.com/crossterm-rs/crossterm/blob/0.29/src/event/source/unix/mio.rs
 /// [`mio::Poll`]: mio::Poll
 /// [`mio_poller`]: super::mio_poller
 /// [`more` flag pattern]: Self#esc-key-disambiguation-crossterm-more-flag-pattern
 /// [`new()`]: Self::new
 /// [`next()`]: Self::next
-/// [`pty_mio_poller_thread_reuse_test`]: crate::core::ansi::vt_100_terminal_input_parser::integration_tests::pty_mio_poller_thread_reuse_test
+/// [`pty_mio_poller_thread_reuse_test`]:
+///     crate::core::ansi::vt_100_terminal_input_parser::integration_tests::pty_mio_poller_thread_reuse_test
 /// [`signal-hook-mio`]: signal_hook_mio
 /// [`std::io::Stdin`]: std::io::Stdin
 /// [`std::io::stdin()`]: std::io::stdin
 /// [`stdin`]: std::io::stdin
 /// [`subscribe()`]: crate::core::resilient_reactor_thread::RRT::subscribe
-/// [`super::at_most_one_instance_assert::release()`]: super::at_most_one_instance_assert::release
+/// [`super::at_most_one_instance_assert::release()`]:
+///     super::at_most_one_instance_assert::release
 /// [`syscall`]: https://man7.org/linux/man-pages/man2/syscalls.2.html
 /// [`tokio::io::stdin()`]: tokio::io::stdin
 /// [`tokio::select!`]: tokio::select
 /// [`tokio::signal`]: tokio::signal
-/// [`try_parse_input_event`]: crate::core::ansi::vt_100_terminal_input_parser::try_parse_input_event
+/// [`try_parse_input_event`]:
+///     crate::core::ansi::vt_100_terminal_input_parser::try_parse_input_event
 /// [`vt_100_terminal_input_parser`]: mod@crate::core::ansi::vt_100_terminal_input_parser
-/// [inherent race condition]: crate::core::resilient_reactor_thread#the-inherent-race-condition
+/// [inherent race condition]:
+///     crate::core::resilient_reactor_thread#the-inherent-race-condition
 /// [race condition]: crate::core::resilient_reactor_thread#the-inherent-race-condition
 pub struct DirectToAnsiInputDevice {
     /// This device's subscription to the global input broadcast channel.
@@ -743,12 +752,7 @@ impl DirectToAnsiInputDevice {
 
         // Wait for fully-formed InputEvents through the broadcast channel.
         loop {
-            let poller_rx_result = subscriber_guard
-                .maybe_receiver
-                .as_mut()
-                .expect("PollerEventReceiver is None - this is a bug")
-                .recv()
-                .await;
+            let poller_rx_result = subscriber_guard.receiver.recv().await;
 
             let rrt_event = match poller_rx_result {
                 // Got a message from the channel.

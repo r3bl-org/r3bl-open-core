@@ -1,6 +1,7 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 // Attach sources.
+pub mod common_atomic;
 pub mod common_enums;
 pub mod common_math;
 pub mod common_result_and_error;
@@ -19,6 +20,7 @@ pub mod telemetry;
 pub mod time_duration;
 
 // Re-export.
+pub use common_atomic::*;
 pub use common_enums::*;
 pub use common_math::*;
 pub use common_result_and_error::*;

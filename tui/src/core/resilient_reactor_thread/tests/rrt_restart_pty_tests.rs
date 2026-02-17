@@ -19,7 +19,8 @@
 //! [`rrt_restart_tests`]: super::rrt_restart_tests
 
 use super::super::*;
-use crate::{Continuation, ControlledChild, PtyPair, PtyTestMode, generate_pty_test,
+use crate::{Continuation, ControlledChild, MioPollWaker, PtyPair, PtyTestMode,
+            generate_pty_test,
             tui::terminal_lib_backends::direct_to_ansi::input::{channel_types::PollerEvent,
                                                                 mio_poller::MioPollWorker}};
 use std::{io::{BufRead, BufReader, Read, Write, stdout},
@@ -41,8 +42,9 @@ struct RestartTestWorker {
 
 impl RRTWorker for RestartTestWorker {
     type Event = PollerEvent;
+    type Waker = MioPollWaker;
 
-    fn create() -> miette::Result<(Self, impl RRTWaker)> {
+    fn create() -> miette::Result<(Self, Self::Waker)> {
         create_call_counter::increment();
         let (inner_worker, wake_fn) = MioPollWorker::create()?;
         Ok((
@@ -210,7 +212,7 @@ fn factory_restart_controlled() -> ! {
 
     // Worker 3 processes the keystroke, then stops. Wait for thread exit.
     let deadline = Instant::now() + Duration::from_secs(5);
-    while rrt.is_thread_running() != LivenessState::Terminated {
+    while rrt.is_thread_running() != LivenessState::TerminatedOrNotStarted {
         assert!(
             std::time::Instant::now() < deadline,
             "Timeout waiting for worker thread to terminate",
