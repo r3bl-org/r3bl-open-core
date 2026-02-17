@@ -61,6 +61,7 @@
     - [v0.0.9 (2023-12-31)](#v009-2023-12-31)
     - [v0.0.8 (2023-12-22)](#v008-2023-12-22)
   - [`r3bl-build-infra`](#r3bl-build-infra)
+    - [v0.0.5 (2026-02-17)](#v005-2026-02-17)
     - [v0.0.4 (2026-02-16)](#v004-2026-02-16)
     - [v0.0.3 (2026-02-15)](#v003-2026-02-15)
     - [v0.0.2 (2026-01-27)](#v002-2026-01-27)
@@ -1354,6 +1355,15 @@ that come up quite frequently when editing Markdown in a text editor.
 Cargo subcommands that automate the tedious parts of Rust development and speed up the
 slow parts - documentation formatting, toolchain management, and build optimization.
 Install with `cargo install r3bl-build-infra`.
+
+### v0.0.5 (2026-02-17)
+
+Handle deleted files gracefully in `cargo rustdoc-fmt`.
+
+- Fixed:
+  - Files reported by `git diff` that no longer exist on disk (e.g., deleted or renamed
+    files) caused errors. Now filters them out before processing and reports skipped files
+    to the user.
 
 ### v0.0.4 (2026-02-16)
 

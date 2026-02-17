@@ -115,6 +115,21 @@ async fn run() -> miette::Result<()> {
         }
     };
 
+    // Filter out files that no longer exist on disk (e.g., deleted files reported by
+    // git diff). Track them separately for reporting.
+    let (files, skipped_files): (Vec<_>, Vec<_>) =
+        files.into_iter().partition(|p| p.exists());
+
+    if !skipped_files.is_empty() {
+        println!(
+            "Skipped {} file(s) that no longer exist on disk:",
+            skipped_files.len()
+        );
+        for file in &skipped_files {
+            println!("  - {}", file.display());
+        }
+    }
+
     if files.is_empty() {
         println!("No Rust files found to format.");
         return Ok(());
