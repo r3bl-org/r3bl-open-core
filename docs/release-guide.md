@@ -36,11 +36,11 @@ cargo update --verbose # Update Cargo.lock file (not Cargo.toml)
 cargo build; cargo test; cargo doc --no-deps; cargo clippy --fix --allow-dirty --allow-staged; cargo fmt --all
 # Generate the crates.io landing page for this crate
 cargo readme > README.md
-cargo publish --dry-run --allow-dirty
+cargo publish --dry-run --allow-dirty --no-verify
 git add -A
 git commit -S -m "v0.0.3-analytics_schema"
 git tag -a v0.0.3-analytics_schema -m "v0.0.3-analytics_schema"
-cargo publish
+cargo publish --no-verify
 git push ; git push --tags # Push tags & commits
 cd ..
 
@@ -55,11 +55,11 @@ cargo update --verbose # Update Cargo.lock file (not Cargo.toml)
 cargo build; cargo test; cargo doc --no-deps; cargo clippy --fix --allow-dirty --allow-staged; cargo fmt --all
 # Generate the crates.io landing page for this crate
 cargo readme > README.md
-cargo publish --dry-run --allow-dirty
+cargo publish --dry-run --allow-dirty --no-verify
 git add -A
 git commit -S -m "v0.7.8-tui"
 git tag -a v0.7.8-tui -m "v0.7.8-tui"
-cargo publish
+cargo publish --no-verify
 git push ; git push --tags # Push tags & commits
 cd ..
 
@@ -74,11 +74,11 @@ cargo update --verbose # Update Cargo.lock file (not Cargo.toml)
 cargo build; cargo test; cargo doc --no-deps; cargo clippy --fix --allow-dirty --allow-staged; cargo fmt --all
 # Generate the crates.io landing page for this crate
 cargo readme > README.md
-cargo publish --dry-run --allow-dirty
+cargo publish --dry-run --allow-dirty --no-verify
 git add -A
 git commit -S -m "v0.0.26-cmdr"
 git tag -a v0.0.26-cmdr -m "v0.0.26-cmdr"
-cargo publish
+cargo publish --no-verify
 # TODO: Test release on clean machine with `spawny r3bl-cmdr` (see task/pending/build_infra_spawny.md)
 git push ; git push --tags # Push tags & commits
 cd ..
@@ -94,11 +94,11 @@ cargo update --verbose # Update Cargo.lock file (not Cargo.toml)
 cargo build; cargo test; cargo doc --no-deps; cargo clippy --fix --allow-dirty --allow-staged; cargo fmt --all
 # Generate the crates.io landing page for this crate
 cargo readme > README.md
-cargo publish --dry-run --allow-dirty
+cargo publish --dry-run --allow-dirty --no-verify
 git add -A
-git commit -S -m "v0.0.3-build-infra"
-git tag -a v0.0.3-build-infra -m "v0.0.3-build-infra"
-cargo publish
+git commit -S -m "v0.0.4-build-infra"
+git tag -a v0.0.4-build-infra -m "v0.0.4-build-infra"
+cargo publish --no-verify
 # TODO: Test release on clean machine with `spawny r3bl-build-infra` (see task/pending/build_infra_spawny.md)
 git push ; git push --tags # Push tags & commits
 cd ..
@@ -136,9 +136,12 @@ applied to each crate (`tui`, `cmdr`, `analytics_schema`):
 4. Make a git tag eg `vX.Y.Z-$crate` where `$crate` is the name of the crate, and `vX.Y.Z` is the
    [semver](https://semver.org/) version number. Eg: `git tag -a vX.Y.Z-core -m "vX.Y.Z-core"`.
 5. Update the `CHANGELOG.md` with all the new updates.
-6. Run `cargo publish --dry-run` in the crate folder. This will perform a dry run of publishing the
-   crate to crates.io.
-7. Then run `cargo publish` in the crate folder. This will publish the crate to crates.io.
+6. Run `cargo publish --dry-run --no-verify` in the crate folder. This will perform a dry run of
+   publishing the crate to crates.io. The `--no-verify` flag skips re-compilation of the packaged
+   tarball, which fails with the `wild` linker configured in `.cargo/config.toml`. The actual
+   build/test/clippy checks in step 5 already verify correctness.
+7. Then run `cargo publish --no-verify` in the crate folder. This will publish the crate to
+   crates.io.
 
 ### Step 2. Make a GitHub release from the tag
 
@@ -283,12 +286,12 @@ cd tuify
 # - instead of using `cargo-edit` https://github.com/killercup/cargo-edit and the `cargo upgrade` command
 cargo update --verbose # Update Cargo.lock file (not Cargo.toml)
 cargo build; cargo test; cargo doc --no-deps; cargo clippy --fix --allow-dirty --allow-staged
-cargo publish --dry-run --allow-dirty
+cargo publish --dry-run --allow-dirty --no-verify
 cargo readme > README.md
 git add -A
 git commit -S -m "v0.2.0-tuify"
 git tag -a "v0.2.0-tuify" -m "v0.2.0-tuify"
-cargo publish
+cargo publish --no-verify
 git push ; git push --tags # Push tags & commits
 cd ..
 
@@ -299,12 +302,12 @@ cd terminal_async
 # - instead of using `cargo-edit` https://github.com/killercup/cargo-edit and the `cargo upgrade` command
 cargo update --verbose # Update Cargo.lock file (not Cargo.toml)
 cargo build; cargo test; cargo doc --no-deps; cargo clippy --fix --allow-dirty --allow-staged
-cargo publish --dry-run --allow-dirty
+cargo publish --dry-run --allow-dirty --no-verify
 cargo readme > README.md
 git add -A
 git commit -S -m "v0.6.0-terminal_async"
 git tag -a v0.6.0-terminal_async -m "v0.6.0-terminal_async"
-cargo publish
+cargo publish --no-verify
 git push ; git push --tags # Push tags & commits
 cd ..
 
@@ -315,12 +318,12 @@ cd ansi_color
 # - instead of using `cargo-edit` https://github.com/killercup/cargo-edit and the `cargo upgrade` command
 cargo update --verbose # Update Cargo.lock file (not Cargo.toml)
 cargo build; cargo test; cargo doc --no-deps; cargo clippy --fix --allow-dirty --allow-staged
-cargo publish --dry-run --allow-dirty
+cargo publish --dry-run --allow-dirty --no-verify
 cargo readme > README.md
 git add -A
 git commit -S -m "v0.7.0-ansi_color"
 git tag -a v0.7.0-ansi_color -m "v0.7.0-ansi_color"
-cargo publish
+cargo publish --no-verify
 git push ; git push --tags # Push tags & commits
 cd ..
 
@@ -331,12 +334,12 @@ cd core
 # - instead of using `cargo-edit` https://github.com/killercup/cargo-edit and the `cargo upgrade` command
 cargo update --verbose # Update Cargo.lock file (not Cargo.toml)
 cargo build; cargo test; cargo doc --no-deps; cargo clippy --fix --allow-dirty --allow-staged
-cargo publish --dry-run --allow-dirty
+cargo publish --dry-run --allow-dirty --no-verify
 cargo readme > README.md
 git add -A
 git commit -S -m "v0.10.0-core"
 git tag -a v0.10.0-core -m "v0.10.0-core"
-cargo publish
+cargo publish --no-verify
 git push ; git push --tags # Push tags & commits
 cd ..
 
@@ -347,12 +350,12 @@ cd macro
 # - instead of using `cargo-edit` https://github.com/killercup/cargo-edit and the `cargo upgrade` command
 cargo update --verbose # Update Cargo.lock file (not Cargo.toml)
 cargo build; cargo test; cargo doc --no-deps; cargo clippy --fix --allow-dirty --allow-staged
-cargo publish --dry-run --allow-dirty
+cargo publish --dry-run --allow-dirty --no-verify
 cargo readme > README.md
 git add -A
 git commit -S -m "v0.10.0-macro"
 git tag -a v0.10.0-macro -m "v0.10.0-macro"
-cargo publish
+cargo publish --no-verify
 git push ; git push --tags # Push tags & commits
 cd ..
 
@@ -363,12 +366,12 @@ cd test_fixtures
 # - instead of using `cargo-edit` https://github.com/killercup/cargo-edit and the `cargo upgrade` command
 cargo update --verbose # Update Cargo.lock file (not Cargo.toml)
 cargo build; cargo test; cargo doc --no-deps; cargo clippy --fix --allow-dirty --allow-staged
-cargo publish --dry-run --allow-dirty
+cargo publish --dry-run --allow-dirty --no-verify
 cargo readme > README.md
 git add -A
 git commit -S -m "v0.1.0-test_fixtures"
 git tag -a "v0.1.0-test_fixtures" -m "v0.1.0-test_fixtures"
-cargo publish
+cargo publish --no-verify
 git push ; git push --tags # Push tags & commits
 cd ..
 
@@ -380,12 +383,12 @@ cd simple_logger
 # - instead of using `cargo-edit` https://github.com/killercup/cargo-edit and the `cargo upgrade` command
 cargo update --verbose # Update Cargo.lock file (not Cargo.toml)
 cargo build; cargo test; cargo doc --no-deps; cargo clippy --fix --allow-dirty --allow-staged
-cargo publish --dry-run --allow-dirty
+cargo publish --dry-run --allow-dirty --no-verify
 cargo readme > README.md
 git add -A
 git commit -S -m "v0.1.4-simple_logger"
 git tag -a v0.1.4-simple_logger -m "v0.1.4-simple_logger"
-cargo publish
+cargo publish --no-verify
 git push ; git push --tags # Push tags & commits
 cd ..
 
@@ -396,12 +399,12 @@ cd redux
 # - instead of using `cargo-edit` https://github.com/killercup/cargo-edit and the `cargo upgrade` command
 cargo update --verbose # Update Cargo.lock file (not Cargo.toml)
 cargo build; cargo test; cargo doc --no-deps; cargo clippy --fix --allow-dirty --allow-staged
-cargo publish --dry-run --allow-dirty
+cargo publish --dry-run --allow-dirty --no-verify
 cargo readme > README.md
 git add -A
 git commit -S -m "v0.2.8-redux"
 git tag -a v0.2.8-redux -m "v0.2.8-redux"
-cargo publish
+cargo publish --no-verify
 git push ; git push --tags # Push tags & commits
 cd ..
 
@@ -412,12 +415,12 @@ cd utils
 # - instead of using `cargo-edit` https://github.com/killercup/cargo-edit and the `cargo upgrade` command
 cargo update --verbose # Update Cargo.lock file (not Cargo.toml)
 cargo build; cargo test; cargo doc --no-deps; cargo clippy --fix --allow-dirty --allow-staged
-cargo publish --dry-run --allow-dirty
+cargo publish --dry-run --allow-dirty --no-verify
 cargo readme > README.md
 git add -A
 git commit -S -m "v0.9.16-utils"
 git tag -a v0.9.16-utils -m "v0.9.16-utils"
-cargo publish
+cargo publish --no-verify
 git push ; git push --tags # Push tags & commits
 cd ..
 

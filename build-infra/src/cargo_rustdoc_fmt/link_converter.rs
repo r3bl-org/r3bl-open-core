@@ -108,19 +108,7 @@ fn extract_reference_definitions(text: &str) -> (String, Vec<(String, String)>) 
         return (String::new(), Vec::new());
     }
 
-    let mut content_lines = Vec::new();
-    let mut references: Vec<(String, String)> = Vec::new();
-
-    // Process each line
-    for line in text.lines() {
-        // Check if this line is a reference definition: [name]: target
-        if let Some(link_name) = parse_reference_definition(line) {
-            references.push((link_name, line.to_string()));
-        } else {
-            content_lines.push(line);
-        }
-    }
-
+    let (content_lines, references) = separate_references(text);
     let content = content_lines.join("\n");
     (content, references)
 }
@@ -157,18 +145,7 @@ pub fn aggregate_existing_references(text: &str) -> String {
         return String::new();
     }
 
-    let mut content_lines = Vec::new();
-    let mut references: Vec<(String, String)> = Vec::new(); // (link_name, full_line)
-
-    // Process each line
-    for line in text.lines() {
-        // Check if this line is a reference definition: [name]: target
-        if let Some(link_name) = parse_reference_definition(line) {
-            references.push((link_name, line.to_string()));
-        } else {
-            content_lines.push(line);
-        }
-    }
+    let (content_lines, mut references) = separate_references(text);
 
     // If no references found, return original text
     if references.is_empty() {
@@ -218,6 +195,62 @@ fn parse_reference_definition(line: &str) -> Option<String> {
     // Extract the link name
     let link_name = &trimmed[1..close_bracket];
     Some(link_name.to_string())
+}
+
+/// Separate text lines into content and reference definitions.
+///
+/// Handles both single-line references (`[name]: url`) and multi-line
+/// references where the URL is on a continuation line:
+/// ```text
+/// [name]:
+///     url
+/// ```
+/// Multi-line references are preserved in their two-line format (rustfmt
+/// may have split them to respect the line length limit).
+fn separate_references(text: &str) -> (Vec<&str>, Vec<(String, String)>) {
+    let lines: Vec<&str> = text.lines().collect();
+    let mut content_lines: Vec<&str> = Vec::new();
+    let mut references: Vec<(String, String)> = Vec::new();
+
+    let mut i = 0;
+    while i < lines.len() {
+        let line = lines[i];
+        if let Some(link_name) = parse_reference_definition(line) {
+            // Check if this definition is incomplete (no URL after the colon)
+            if is_ref_definition_incomplete(line) && i + 1 < lines.len() {
+                let next_trimmed = lines[i + 1].trim();
+                if !next_trimmed.is_empty() && !next_trimmed.starts_with('[') {
+                    // Multi-line reference: preserve both lines as a unit
+                    let combined =
+                        format!("{}\n{}", line, lines[i + 1]);
+                    references.push((link_name, combined));
+                    i += 2;
+                    continue;
+                }
+            }
+            references.push((link_name, line.to_string()));
+        } else {
+            content_lines.push(line);
+        }
+        i += 1;
+    }
+
+    (content_lines, references)
+}
+
+/// Check if a reference definition line has no URL/target after the colon.
+///
+/// Returns `true` for lines like `[name]:` or `[name]:  ` where there is
+/// no target after the colon - the URL is expected on the next line.
+fn is_ref_definition_incomplete(line: &str) -> bool {
+    let trimmed = line.trim();
+    if let Some(close_bracket) = trimmed.find(']') {
+        let after_bracket = trimmed[close_bracket + 1..].trim_start();
+        if after_bracket.starts_with(':') {
+            return after_bracket[1..].trim().is_empty();
+        }
+    }
+    false
 }
 
 #[cfg(test)]
@@ -536,5 +569,68 @@ continues on the next line without breaking.
             1,
             "Content must not be duplicated"
         );
+    }
+
+    #[test]
+    fn test_multiline_reference_definition_aggregate() {
+        let input = "See [Registered buffers] for details.\n\n[Registered buffers]:\n    https://man7.org/linux/man-pages/man3/io_uring_register_buffers.3.html";
+        let output = aggregate_existing_references(input);
+        eprintln!("Input:\n{input}");
+        eprintln!("\nOutput:\n{output}");
+
+        // Multi-line reference should be preserved as two lines
+        assert!(
+            output.contains("[Registered buffers]:\n    https://man7.org/linux/man-pages/man3/io_uring_register_buffers.3.html"),
+            "Multi-line reference should be preserved as two lines"
+        );
+        // URL should not be orphaned as content
+        assert_eq!(
+            output.matches("https://man7.org/linux/man-pages/man3/io_uring_register_buffers.3.html").count(),
+            1,
+            "URL should appear exactly once"
+        );
+    }
+
+    #[test]
+    fn test_multiline_reference_definition_convert() {
+        let input = "See [Registered buffers] here.\n\n[Registered buffers]:\n    https://example.com/buffers";
+        let output = convert_links(input);
+        eprintln!("Input:\n{input}");
+        eprintln!("\nOutput:\n{output}");
+
+        // Should preserve the multi-line reference
+        assert!(
+            output.contains("[Registered buffers]:\n    https://example.com/buffers"),
+            "Multi-line reference should be preserved"
+        );
+        // URL should not be orphaned as content
+        assert!(
+            !output.lines().any(|l| {
+                let t = l.trim();
+                t == "https://example.com/buffers" && !output.contains("[Registered buffers]:\n    https://example.com/buffers")
+            }),
+            "URL should not appear as orphaned content"
+        );
+    }
+
+    #[test]
+    fn test_mixed_single_and_multiline_references() {
+        let input = "Text [a] and [b].\n\n[a]: https://example.com/a\n[b]:\n    https://example.com/b";
+        let output = aggregate_existing_references(input);
+        eprintln!("Input:\n{input}");
+        eprintln!("\nOutput:\n{output}");
+
+        assert!(output.contains("[a]: https://example.com/a"));
+        assert!(output.contains("[b]:\n    https://example.com/b"));
+    }
+
+    #[test]
+    fn test_is_ref_definition_incomplete() {
+        assert!(is_ref_definition_incomplete("[name]:"));
+        assert!(is_ref_definition_incomplete("[name]:  "));
+        assert!(is_ref_definition_incomplete("  [name]:"));
+        assert!(!is_ref_definition_incomplete("[name]: url"));
+        assert!(!is_ref_definition_incomplete("[name]: https://example.com"));
+        assert!(!is_ref_definition_incomplete("not a ref"));
     }
 }

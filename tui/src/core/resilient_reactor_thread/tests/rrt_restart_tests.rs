@@ -395,7 +395,8 @@ fn test_worker_stop_exits_cleanly() {
     let (worker, wake_fn, cmd_tx) = create_test_resources();
     let (tx, _rx) = tokio::sync::broadcast::channel(16);
     let liveness = Arc::new(RRTLiveness::new());
-    let shared_waker: Arc<Mutex<Option<Box<dyn RRTWaker>>>> = Arc::new(Mutex::new(Some(Box::new(wake_fn))));
+    let shared_waker: Arc<Mutex<Option<Box<dyn RRTWaker>>>> =
+        Arc::new(Mutex::new(Some(Box::new(wake_fn))));
 
     let (_notify_rx, _senders) = setup_factory(vec![], no_delay_policy(3));
     let handle =
@@ -413,7 +414,8 @@ fn test_worker_continue_then_stop() {
     let (worker, wake_fn, cmd_tx) = create_test_resources();
     let (tx, mut rx) = tokio::sync::broadcast::channel(16);
     let liveness = Arc::new(RRTLiveness::new());
-    let shared_waker: Arc<Mutex<Option<Box<dyn RRTWaker>>>> = Arc::new(Mutex::new(Some(Box::new(wake_fn))));
+    let shared_waker: Arc<Mutex<Option<Box<dyn RRTWaker>>>> =
+        Arc::new(Mutex::new(Some(Box::new(wake_fn))));
 
     let (_notify_rx, _senders) = setup_factory(vec![], no_delay_policy(3));
     let handle =
@@ -437,7 +439,8 @@ fn test_domain_events_flow_through() {
     let (worker, wake_fn, cmd_tx) = create_test_resources();
     let (tx, mut rx) = tokio::sync::broadcast::channel(16);
     let liveness = Arc::new(RRTLiveness::new());
-    let shared_waker: Arc<Mutex<Option<Box<dyn RRTWaker>>>> = Arc::new(Mutex::new(Some(Box::new(wake_fn))));
+    let shared_waker: Arc<Mutex<Option<Box<dyn RRTWaker>>>> =
+        Arc::new(Mutex::new(Some(Box::new(wake_fn))));
 
     let (_notify_rx, _senders) = setup_factory(vec![], no_delay_policy(3));
     let handle =
@@ -837,7 +840,8 @@ fn test_guard_clears_waker_on_stop() {
     let (worker, wake_fn, cmd_tx) = create_test_resources();
     let (tx, _rx) = tokio::sync::broadcast::channel(16);
     let liveness = Arc::new(RRTLiveness::new());
-    let shared_waker: Arc<Mutex<Option<Box<dyn RRTWaker>>>> = Arc::new(Mutex::new(Some(Box::new(wake_fn))));
+    let shared_waker: Arc<Mutex<Option<Box<dyn RRTWaker>>>> =
+        Arc::new(Mutex::new(Some(Box::new(wake_fn))));
 
     let (_notify_rx, _senders) = setup_factory(vec![], no_delay_policy(3));
     let handle =
@@ -854,7 +858,8 @@ fn test_guard_marks_terminated_on_stop() {
     let (worker, wake_fn, cmd_tx) = create_test_resources();
     let (tx, _rx) = tokio::sync::broadcast::channel(16);
     let liveness = Arc::new(RRTLiveness::new());
-    let shared_waker: Arc<Mutex<Option<Box<dyn RRTWaker>>>> = Arc::new(Mutex::new(Some(Box::new(wake_fn))));
+    let shared_waker: Arc<Mutex<Option<Box<dyn RRTWaker>>>> =
+        Arc::new(Mutex::new(Some(Box::new(wake_fn))));
 
     let (_notify_rx, _senders) = setup_factory(vec![], no_delay_policy(3));
     let handle =
@@ -871,7 +876,8 @@ fn test_guard_clears_waker_on_exhaustion() {
     let (worker, wake_fn, cmd_tx) = create_test_resources();
     let (tx, _rx) = tokio::sync::broadcast::channel(16);
     let liveness = Arc::new(RRTLiveness::new());
-    let shared_waker: Arc<Mutex<Option<Box<dyn RRTWaker>>>> = Arc::new(Mutex::new(Some(Box::new(wake_fn))));
+    let shared_waker: Arc<Mutex<Option<Box<dyn RRTWaker>>>> =
+        Arc::new(Mutex::new(Some(Box::new(wake_fn))));
 
     let (_notify_rx, _senders) = setup_factory(vec![], no_delay_policy(0));
     let handle =
@@ -982,7 +988,8 @@ fn test_panic_sends_shutdown_panic() {
     let (worker, wake_fn, cmd_tx) = create_test_resources();
     let (tx, mut rx) = tokio::sync::broadcast::channel(16);
     let liveness = Arc::new(RRTLiveness::new());
-    let shared_waker: Arc<Mutex<Option<Box<dyn RRTWaker>>>> = Arc::new(Mutex::new(Some(Box::new(wake_fn))));
+    let shared_waker: Arc<Mutex<Option<Box<dyn RRTWaker>>>> =
+        Arc::new(Mutex::new(Some(Box::new(wake_fn))));
 
     let (_notify_rx, _senders) = setup_factory(vec![], no_delay_policy(3));
     let handle =
@@ -1002,7 +1009,8 @@ fn test_panic_after_events() {
     let (worker, wake_fn, cmd_tx) = create_test_resources();
     let (tx, mut rx) = tokio::sync::broadcast::channel(16);
     let liveness = Arc::new(RRTLiveness::new());
-    let shared_waker: Arc<Mutex<Option<Box<dyn RRTWaker>>>> = Arc::new(Mutex::new(Some(Box::new(wake_fn))));
+    let shared_waker: Arc<Mutex<Option<Box<dyn RRTWaker>>>> =
+        Arc::new(Mutex::new(Some(Box::new(wake_fn))));
 
     let (_notify_rx, _senders) = setup_factory(vec![], no_delay_policy(3));
     let handle =
@@ -1029,7 +1037,8 @@ fn test_guard_clears_waker_on_panic() {
     let (worker, wake_fn, cmd_tx) = create_test_resources();
     let (tx, _rx) = tokio::sync::broadcast::channel(16);
     let liveness = Arc::new(RRTLiveness::new());
-    let shared_waker: Arc<Mutex<Option<Box<dyn RRTWaker>>>> = Arc::new(Mutex::new(Some(Box::new(wake_fn))));
+    let shared_waker: Arc<Mutex<Option<Box<dyn RRTWaker>>>> =
+        Arc::new(Mutex::new(Some(Box::new(wake_fn))));
 
     let (_notify_rx, _senders) = setup_factory(vec![], no_delay_policy(3));
     let handle =
@@ -1046,7 +1055,8 @@ fn test_guard_marks_terminated_on_panic() {
     let (worker, wake_fn, cmd_tx) = create_test_resources();
     let (tx, _rx) = tokio::sync::broadcast::channel(16);
     let liveness = Arc::new(RRTLiveness::new());
-    let shared_waker: Arc<Mutex<Option<Box<dyn RRTWaker>>>> = Arc::new(Mutex::new(Some(Box::new(wake_fn))));
+    let shared_waker: Arc<Mutex<Option<Box<dyn RRTWaker>>>> =
+        Arc::new(Mutex::new(Some(Box::new(wake_fn))));
 
     let (_notify_rx, _senders) = setup_factory(vec![], no_delay_policy(3));
     let handle =
@@ -1063,7 +1073,8 @@ fn test_no_restart_after_panic() {
     let (worker, wake_fn, cmd_tx) = create_test_resources();
     let (tx, _rx) = tokio::sync::broadcast::channel(16);
     let liveness = Arc::new(RRTLiveness::new());
-    let shared_waker: Arc<Mutex<Option<Box<dyn RRTWaker>>>> = Arc::new(Mutex::new(Some(Box::new(wake_fn))));
+    let shared_waker: Arc<Mutex<Option<Box<dyn RRTWaker>>>> =
+        Arc::new(Mutex::new(Some(Box::new(wake_fn))));
 
     let (_notify_rx, _senders) = setup_factory(vec![], no_delay_policy(3));
     let handle =

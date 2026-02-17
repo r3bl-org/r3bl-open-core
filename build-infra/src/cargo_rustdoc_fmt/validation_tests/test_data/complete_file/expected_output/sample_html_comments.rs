@@ -187,9 +187,8 @@
 //! **Trade-off**: Faster `ESC` response vs. occasional incorrect detection on
 //! high-latency connections.
 //!
-//!     https://vi.stackexchange.com/questions/24925/usage-of-timeoutlen-and-ttimeoutlen
-//!
 //! [100ms `ttimeoutlen` delay]:
+//!     https://vi.stackexchange.com/questions/24925/usage-of-timeoutlen-and-ttimeoutlen
 //! [Blog post explaining the issue]: https://nathancraddock.com/blog/macos-dev-tty-polling/
 //! [SSH]: https://en.wikipedia.org/wiki/Secure_Shell
 //! [VT100 input parser]: super::stateful_parser::StatefulInputParser

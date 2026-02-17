@@ -58,6 +58,10 @@ discover and use these when relevant. All skills are in `.claude/skills/`.
 - **analyze-performance** - Flamegraph-based performance regression detection. Use when optimizing or investigating performance.
   - Supporting file: `baseline-management.md` (when and how to update baselines)
 
+### Release
+
+- **release-crate** - Full crate release workflow: version bump, changelog, publish to crates.io, git tag, GitHub release. Use when releasing a new version of any workspace crate.
+
 ### Log Analysis
 
 - **analyze-log-files** - Strip ANSI escape sequences from log files before analysis. Use when asked to process, read, or analyze log files that may contain terminal escape codes.
@@ -72,6 +76,7 @@ You can explicitly invoke skills using slash commands:
 - `/fix-intradoc-links` → write-documentation (focused on links)
 - `/check-regression` → analyze-performance
 - `/analyze-logs` → analyze-log-files (strips ANSI codes from `log.txt`)
+- `/release` → release-crate (full crate release workflow)
 - `/r3bl-task` → Task management (see below)
 
 ## Running Checks

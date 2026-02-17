@@ -61,6 +61,7 @@
     - [v0.0.9 (2023-12-31)](#v009-2023-12-31)
     - [v0.0.8 (2023-12-22)](#v008-2023-12-22)
   - [`r3bl-build-infra`](#r3bl-build-infra)
+    - [v0.0.4 (2026-02-16)](#v004-2026-02-16)
     - [v0.0.3 (2026-02-15)](#v003-2026-02-15)
     - [v0.0.2 (2026-01-27)](#v002-2026-01-27)
     - [v0.0.1 (2026-01-23)](#v001-2026-01-23)
@@ -1353,6 +1354,21 @@ that come up quite frequently when editing Markdown in a text editor.
 Cargo subcommands that automate the tedious parts of Rust development and speed up the
 slow parts - documentation formatting, toolchain management, and build optimization.
 Install with `cargo install r3bl-build-infra`.
+
+### v0.0.4 (2026-02-16)
+
+Multi-line reference-style link definition support for `cargo rustdoc-fmt`.
+
+- Fixed:
+  - Multi-line reference link definitions (where `[name]:` is on one line and the
+    URL on the next) were broken: the label line was extracted as a reference but the
+    URL line was orphaned as content. Added look-ahead parsing in
+    `separate_references()` to recognize multi-line refs as a unit and preserve their
+    two-line format (which rustfmt creates to respect line length limits).
+- Added:
+  - 4 unit tests for multi-line reference handling
+  - Updated `sample_rrt_mod.rs` and `sample_html_comments.rs` real-world test
+    fixtures for multi-line ref preservation
 
 ### v0.0.3 (2026-02-15)
 

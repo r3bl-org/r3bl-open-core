@@ -804,7 +804,8 @@
 //! [RRT section]: crate#resilient-reactor-thread-rrt-pattern
 //! [Reactor]: https://en.wikipedia.org/wiki/Reactor_pattern
 //! [Registered FDs]: https://man7.org/linux/man-pages/man3/io_uring_register_files.3.html
-//! [Registered buffers]: https://man7.org/linux/man-pages/man3/io_uring_register_buffers.3.html
+//! [Registered buffers]:
+//!     https://man7.org/linux/man-pages/man3/io_uring_register_buffers.3.html
 //! [Rust discussion]: https://internals.rust-lang.org/t/thread-cancel-support/3056
 //! [Rust workarounds]: https://matklad.github.io/2018/03/03/stopping-a-rust-worker.html
 //! [Single-threaded runtime]: tokio::runtime::Builder::new_current_thread
@@ -817,7 +818,8 @@
 //! [Wayland]: https://wayland.freedesktop.org/
 //! [Web Workers]: https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API
 //! [WezTerm]: https://wezfurlong.org/wezterm/
-//! [Windows]: https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-terminatethread
+//! [Windows]:
+//!     https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-terminatethread
 //! [`'static` trait bound]: RRT#static-trait-bound-vs-static-lifetime-annotation
 //! [`Continuation::Restart`]: crate::Continuation::Restart
 //! [`Continuation::Stop`]: crate::Continuation::Stop
@@ -827,8 +829,10 @@
 //! [`EINVAL`]: https://man7.org/linux/man-pages/man3/errno.3.html
 //! [`Event`]: RRTWorker::Event
 //! [`IOCP`]: https://learn.microsoft.com/en-us/windows/win32/fileio/i-o-completion-ports
-//! [`IORING_OP_ASYNC_CANCEL`]: https://man7.org/linux/man-pages/man3/io_uring_prep_cancel.3.html
-//! [`IORING_OP_MSG_RING`]: https://man7.org/linux/man-pages/man3/io_uring_prep_msg_ring.3.html
+//! [`IORING_OP_ASYNC_CANCEL`]:
+//!     https://man7.org/linux/man-pages/man3/io_uring_prep_cancel.3.html
+//! [`IORING_OP_MSG_RING`]:
+//!     https://man7.org/linux/man-pages/man3/io_uring_prep_msg_ring.3.html
 //! [`LivenessState`]: crate::core::resilient_reactor_thread::LivenessState
 //! [`OnceLock`]: std::sync::OnceLock
 //! [`PTY`]: https://man7.org/linux/man-pages/man7/pty.7.html
@@ -875,7 +879,8 @@
 //! [`fd`]: https://man7.org/linux/man-pages/man2/open.2.html
 //! [`fds`]: https://man7.org/linux/man-pages/man2/open.2.html
 //! [`fifo(7)`]: https://man7.org/linux/man-pages/man7/fifo.7.html
-//! [`filedescriptor::poll()`]: https://docs.rs/filedescriptor/latest/filedescriptor/fn.poll.html
+//! [`filedescriptor::poll()`]:
+//!     https://docs.rs/filedescriptor/latest/filedescriptor/fn.poll.html
 //! [`io_uring_enter()`]: https://man7.org/linux/man-pages/man2/io_uring_enter.2.html
 //! [`io_uring`]: https://kernel.dk/io_uring.pdf
 //! [`io_uring`: An Alternative Model]: #io_uring-an-alternative-model
