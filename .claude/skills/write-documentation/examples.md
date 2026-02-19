@@ -573,7 +573,7 @@ type Waker: RRTWaker;
 /// 2. The [`Waker`] concrete type → stored in [`ThreadState`], which is wrapped in
 ///    [`Arc`] and held by each [`SubscriberGuard`]; this ONE [`waker`] is shared by
 ///    all async subscribers
-fn create() -> Result<(Self::Worker, Self::Waker), Report>;
+fn create_and_register_os_sources() -> Result<(Self::Worker, Self::Waker), Report>;
 ```
 
 **What makes this good:**

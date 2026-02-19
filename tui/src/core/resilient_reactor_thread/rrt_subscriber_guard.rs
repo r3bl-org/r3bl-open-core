@@ -28,15 +28,16 @@ use tokio::sync::broadcast::Receiver;
 /// When this guard is dropped, Rust drops fields in declaration order:
 /// 1. [`receiver`] is dropped first, which causes Tokio's broadcast channel to atomically
 ///    decrement the [`Sender`]'s internal [`receiver_count()`].
-/// 2. Then [`WakeOnDrop`] is dropped, which calls [`RRTWaker::wake()`] to interrupt the
-///    dedicated thread's blocking call.
+/// 2. Then [`WakeOnDrop`] is dropped, which calls
+///    [`RRTWaker::wake_and_unblock_dedicated_thread()`] to interrupt the dedicated
+///    thread's blocking call.
 /// 3. The dedicated thread wakes and checks [`receiver_count()`] to decide if it should
 ///    exit (when count reaches `0`).
 ///
 /// This is step 4 of the [Thread Lifecycle] - see that section for the full
 /// spawn/reuse/terminate sequence.
 ///
-/// # Shared Waker and Correctness
+/// # Shared Waker and the Zombie Thread Bug
 ///
 /// Each [`WakeOnDrop`] holds a clone of the [`SharedWakerSlot<W::Waker>`] shared across
 /// *all* subscribers (old and new) and the [`TerminationGuard`].
@@ -68,7 +69,7 @@ use tokio::sync::broadcast::Receiver;
 /// [Thread Lifecycle]: super::RRT#thread-lifecycle
 /// [`DirectToAnsiInputDevice::next()`]:
 ///     crate::terminal_lib_backends::DirectToAnsiInputDevice::next
-/// [`RRTWaker::wake()`]: super::RRTWaker::wake
+/// [`RRTWaker::wake_and_unblock_dedicated_thread()`]: super::RRTWaker::wake_and_unblock_dedicated_thread
 /// [`RRTWaker`]: super::RRTWaker
 /// [`RRTWorker`]: super::RRTWorker
 /// [`Sender`]: tokio::sync::broadcast::Sender
@@ -108,11 +109,11 @@ impl<W: RRTWorker> SubscriberGuard<W> {
     }
 }
 
-/// Calls [`RRTWaker::wake()`] when dropped. See
+/// Calls [`RRTWaker::wake_and_unblock_dedicated_thread()`] when dropped. See
 /// [Drop Behavior] for why field ordering matters.
 ///
 /// [Drop Behavior]: SubscriberGuard#drop-behavior
-/// [`RRTWaker::wake()`]: super::RRTWaker::wake
+/// [`RRTWaker::wake_and_unblock_dedicated_thread()`]: super::RRTWaker::wake_and_unblock_dedicated_thread
 #[allow(missing_debug_implementations)]
 pub struct WakeOnDrop<K: RRTWaker> {
     shared_waker_slot: SharedWakerSlot<K>,
@@ -132,7 +133,7 @@ impl<K: RRTWaker> Drop for WakeOnDrop<K> {
         // TerminationGuard::drop()), so we skip the wake call.
         if let Ok(guard) = self.shared_waker_slot.lock() {
             if let Some(waker) = guard.as_ref() {
-                waker.wake();
+                waker.wake_and_unblock_dedicated_thread();
             }
         }
     }
@@ -146,14 +147,15 @@ mod drop_order_tests {
                     atomic::{AtomicBool, Ordering}};
     use tokio::sync::broadcast;
 
-    /// A waker that records whether the receiver was already dropped when `wake()` fires.
+    /// A waker that records whether the receiver was already dropped when
+    /// `wake_and_unblock_dedicated_thread()` fires.
     struct DropOrderWaker {
         sender: broadcast::Sender<RRTEvent<()>>,
         receiver_was_dropped_first: Arc<AtomicBool>,
     }
 
     impl RRTWaker for DropOrderWaker {
-        fn wake(&self) {
+        fn wake_and_unblock_dedicated_thread(&self) {
             if self.sender.receiver_count() == 0 {
                 self.receiver_was_dropped_first
                     .store(true, Ordering::SeqCst);
@@ -167,11 +169,11 @@ mod drop_order_tests {
         type Event = ();
         type Waker = DropOrderWaker;
 
-        fn create() -> miette::Result<(Self, Self::Waker)> {
+        fn create_and_register_os_sources() -> miette::Result<(Self, Self::Waker)> {
             unimplemented!("Not used in drop-order test")
         }
 
-        fn poll_once(
+        fn block_until_ready_then_dispatch(
             &mut self,
             _sender: &broadcast::Sender<RRTEvent<Self::Event>>,
         ) -> Continuation {
@@ -206,7 +208,7 @@ mod drop_order_tests {
 
         assert!(
             receiver_was_dropped_first.load(Ordering::SeqCst),
-            "BUG: wake() fired before receiver was dropped! \
+            "BUG: wake_and_unblock_dedicated_thread() fired before receiver was dropped! \
              The `receiver` field MUST be declared before `wake_on_drop` \
              (RFC 1857 - fields drop in declaration order)."
         );

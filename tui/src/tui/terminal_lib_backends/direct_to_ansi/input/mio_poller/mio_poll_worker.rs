@@ -5,15 +5,16 @@
 //! mio-specific worker implementation for the Resilient Reactor Thread pattern.
 //!
 //! This module provides [`MioPollWorker`], which implements [`RRTWorker`] for terminal
-//! input handling - including both resource creation ([`create()`]) and the blocking poll
-//! loop ([`poll_once()`]).
+//! input handling - including both resource creation
+//! ([`create_and_register_os_sources()`]) and the blocking poll loop
+//! ([`block_until_ready_then_dispatch()`]).
 //!
 //! This type integrates with the generic RRT infrastructure in
 //! [`crate::core::resilient_reactor_thread`].
 //!
 //! [`RRTWorker`]: crate::core::resilient_reactor_thread::RRTWorker
-//! [`create()`]: crate::core::resilient_reactor_thread::RRTWorker::create
-//! [`poll_once()`]: crate::core::resilient_reactor_thread::RRTWorker::poll_once
+//! [`block_until_ready_then_dispatch()`]: crate::core::resilient_reactor_thread::RRTWorker::block_until_ready_then_dispatch
+//! [`create_and_register_os_sources()`]: crate::core::resilient_reactor_thread::RRTWorker::create_and_register_os_sources
 
 use super::{super::{channel_types::{PollerEvent, StdinEvent},
                     paste_state_machine::PasteCollectionState,
@@ -35,9 +36,9 @@ const EVENTS_CAPACITY: usize = 8;
 
 /// mio-based worker for terminal input handling.
 ///
-/// Implements [`RRTWorker`] to integrate with the generic RRT infrastructure. Each
-/// call to [`poll_once()`] blocks until stdin data or signals are ready, processes them,
-/// and returns whether to continue or stop.
+/// Implements [`RRTWorker`] to integrate with the generic RRT infrastructure. Each call
+/// to [`block_until_ready_then_dispatch()`] blocks until stdin data or signals are ready,
+/// processes them, and returns whether to continue or stop.
 ///
 /// # Resources Managed
 ///
@@ -49,10 +50,10 @@ const EVENTS_CAPACITY: usize = 8;
 /// | [`parser`]            | VT100 input sequence parser                |
 /// | [`paste_state`]       | Bracketed paste mode state machine         |
 ///
+/// [`block_until_ready_then_dispatch()`]: Self::block_until_ready_then_dispatch
 /// [`parser`]: Self::vt_100_input_seq_parser
 /// [`paste_state`]: Self::paste_collection_state
 /// [`poll_handle`]: Self::poll_handle
-/// [`poll_once()`]: Self::poll_once
 /// [`sources`]: Self::sources
 /// [`stdin_buffer`]: Self::stdin_unparsed_byte_buffer
 #[allow(missing_debug_implementations)]
@@ -89,19 +90,21 @@ impl RRTWorker for MioPollWorker {
     /// 4. Returns both the worker (for the thread) and a [`MioPollWaker`] wrapping the
     ///    [`mio::Waker`] (for the global state)
     ///
-    /// The [`MioPollWaker`] is tightly coupled to this worker's [`mio::Poll`] -
-    /// it was created from the same poll's registry. If the poll is dropped, calling
-    /// [`wake()`] has no effect. This is why [`create()`] returns both together.
+    /// The [`MioPollWaker`] is tightly coupled to this worker's [`mio::Poll`] - it was
+    /// created from the same poll's registry. If the poll is dropped, calling
+    /// [`wake_and_unblock_dedicated_thread()`] has no effect. This is why
+    /// [`create_and_register_os_sources()`] returns both together.
     ///
     /// # Errors
     ///
     /// Returns [`miette::Report`] if any OS resource creation or registration fails.
     ///
-    /// [`create()`]: RRTWorker::create
+    /// [`create_and_register_os_sources()`]: RRTWorker::create_and_register_os_sources
     /// [`mio::Poll`]: mio::Poll
     /// [`mio::Waker`]: mio::Waker
-    /// [`wake()`]: MioPollWaker::wake
-    fn create() -> miette::Result<(Self, Self::Waker)> {
+    /// [`wake_and_unblock_dedicated_thread()`]:
+    ///     MioPollWaker::wake_and_unblock_dedicated_thread
+    fn create_and_register_os_sources() -> miette::Result<(Self, Self::Waker)> {
         // Create mio::Poll (epoll on Linux, kqueue on macOS).
         let poll_handle = Poll::new().map_err(PollCreationError)?;
 
@@ -147,17 +150,20 @@ impl RRTWorker for MioPollWorker {
         ))
     }
 
-    /// Performs one iteration of the poll loop - see [`MioPollWorker::poll_once_impl()`]
-    /// for details.
+    /// Blocks until at least one I/O source is ready, then dispatches events - see
+    /// [`MioPollWorker::block_until_ready_then_dispatch_impl()`] for details.
     ///
     /// It's not possible to link to a trait method implementation on a struct (the link
     /// just goes to the trait's method definition) - which is why this method just
-    /// delegates to a separate `poll_once_impl()` method where the real implementation
-    /// lives, which we can link to directly.
+    /// delegates to a separate `block_until_ready_then_dispatch_impl()` method where the
+    /// real implementation lives, which we can link to directly.
     ///
-    /// [`MioPollWorker::poll_once_impl()`]: Self::poll_once_impl
-    fn poll_once(&mut self, sender: &Sender<RRTEvent<Self::Event>>) -> Continuation {
-        self.poll_once_impl(sender)
+    /// [`MioPollWorker::block_until_ready_then_dispatch_impl()`]: Self::block_until_ready_then_dispatch_impl
+    fn block_until_ready_then_dispatch(
+        &mut self,
+        sender: &Sender<RRTEvent<Self::Event>>,
+    ) -> Continuation {
+        self.block_until_ready_then_dispatch_impl(sender)
     }
 }
 
@@ -176,7 +182,7 @@ impl MioPollWorker {
     ///
     /// [EINTR handling]: super#eintr-handling
     /// [`stdin`]: std::io::stdin
-    pub fn poll_once_impl(
+    pub fn block_until_ready_then_dispatch_impl(
         &mut self,
         sender: &Sender<RRTEvent<PollerEvent>>,
     ) -> Continuation {

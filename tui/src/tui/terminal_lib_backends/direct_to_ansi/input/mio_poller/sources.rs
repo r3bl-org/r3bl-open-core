@@ -32,12 +32,12 @@ use std::io::Stdin;
 /// To add a new event source:
 /// 1. Add a new field to this struct.
 /// 2. Add a new variant and token constant to [`SourceKindReady`].
-/// 3. Register the source in [`MioPollWorker::create()`].
+/// 3. Register the source in [`MioPollWorker::create_and_register_os_sources()`].
 /// 4. Add a handler function in [`handler_stdin`] or [`handler_signals`].
 /// 5. Add a match arm in [`dispatch_with_sender()`].
 ///
 /// [`HashMap<Token, Source>`]: std::collections::HashMap
-/// [`MioPollWorker::create()`]: super::MioPollWorker::create
+/// [`MioPollWorker::create_and_register_os_sources()`]: super::MioPollWorker::create_and_register_os_sources
 /// [`Poll::poll()`]: mio::Poll::poll
 /// [`Poll`]: mio::Poll
 /// [`Signals`]: signal_hook_mio::v1_0::Signals

@@ -59,7 +59,8 @@ pub enum ShutdownReason {
         attempts: u8,
     },
 
-    /// Your [`RRTWorker`] trait implementation panicked inside [`poll_once()`]. The
+    /// Your [`RRTWorker`] trait implementation panicked inside
+    /// [`block_until_ready_then_dispatch()`]. The
     /// framework caught the panic (via [`catch_unwind`]) and is notifying subscribers so
     /// they can take corrective action (e.g., call [`subscribe()`] to relaunch a fresh
     /// thread).
@@ -70,8 +71,8 @@ pub enum ShutdownReason {
     ///
     /// [`RRTWorker`]: super::RRTWorker
     /// [`RestartPolicyExhausted`]: Self::RestartPolicyExhausted
+    /// [`block_until_ready_then_dispatch()`]: super::RRTWorker::block_until_ready_then_dispatch
     /// [`catch_unwind`]: std::panic::catch_unwind
-    /// [`poll_once()`]: super::RRTWorker::poll_once
     /// [`subscribe()`]: super::RRT::subscribe
     Panic,
 }

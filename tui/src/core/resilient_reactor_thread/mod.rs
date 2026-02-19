@@ -98,71 +98,52 @@
 //! shutdown) - is unsafe in most OSes ([Linux], [macOS], [Windows]) and Rust doesn't
 //! expose it at all ([Rust discussion], [Rust workarounds]). This is why RRT implements
 //! cooperative shutdown instead - when an async consumer drops its [`SubscriberGuard`],
-//! the guard's [`Drop`] implementation triggers this sequence:
+//! the guard triggers a wake-check-exit sequence that cleanly shuts down the [thread]
+//! when no subscribers remain. This is cleaner than using POSIX [signals] to interrupt a
+//! blocking [`syscall`] - signal handlers can only call [async-signal-safe] functions,
+//! and [`SA_RESTART`] can make the interruption invisible to the app. The [`syscall`]
+//! does return [`EINTR`] when interrupted, but relying on this is fragile. See [`RRT`]'s
+//! [Thread Lifecycle] for the step-by-step shutdown sequence.
 //!
-//! 1. Drops the broadcast [`Receiver`] first, atomically decrementing the channel's
-//!    [`receiver_count()`].
+//! **Thread cleanup** - When the [thread] self-terminates, your [`RRTWorker`] trait
+//! implementation goes out of scope, triggering [RAII] cleanup via [`Drop`] on the OS
+//! resources it owns (like [`fds`]). Then [`TerminationGuard`] clears the [`RRTWaker`]
+//! to [`None`], signaling termination. See [`RRT`]'s [Thread Lifecycle] (step 4) for the
+//! full sequence.
 //!
-//! 2. Calls [`RRTWaker::wake()`]. This causes [`run_worker_loop()`] to wake up. This is
-//!    cleaner than using POSIX [signals] to interrupt a blocking [`syscall`] - signal
-//!    handlers can only call [async-signal-safe] functions, and [`SA_RESTART`] can make
-//!    the interruption invisible to the app. The [`syscall`] does return [`EINTR`] when
-//!    interrupted, but relying on this is fragile.
-//!
-//! 3. The [thread] wakes up and checks [`receiver_count()`] - if zero, it
-//!    self-terminates. If new subscribers have appeared [in the meantime], RRT reuses the
-//!    thread and continues running.
-//!
-//! **Thread cleanup** - After the [thread] self-terminates (step 3 above),
-//! [`run_worker_loop()`] returns, and your [`RRTWorker`] trait implementation goes out of
-//! scope, triggering [RAII] cleanup via [`Drop`] on the OS resources it owns (like
-//! [`fds`]).
-//!
-//! **Thread relaunch** - When an async consumer calls [`subscribe()`] again on the
-//! singleton, this allocates OS resources and starts a new [thread] (with a new
-//! [generation]). [`subscribe()`] invokes [`create()`] on your [`RRTWorker`] trait
-//! implementation, which returns a fresh worker instance and a coupled [`RRTWaker`],
-//! allocating OS resources like [`fds`].
+//! **Thread relaunch** - When an async consumer calls [`subscribe()`] again after the
+//! [thread] has terminated, [`subscribe()`] detects the [`None`] waker, creates a fresh
+//! worker/waker pair via [`create_and_register_os_sources()`], and spawns a new [thread]
+//! with a new [generation]. See [`subscribe()`] for the full fast-path/slow-path logic.
 //!
 //! **Self-healing thread restart** - When your [`RRTWorker`] trait implementation
 //! encounters a recoverable error (e.g., the OS [event mechanism] fails mid-operation),
-//! it returns [`Continuation::Restart`] from [`poll_once()`]. The framework then handles
-//! the restart sequence automatically using your [`RestartPolicy`]. This differs from
-//! **thread relaunch** (above): relaunch happens externally when [`subscribe()`] finds
-//! the thread terminated. Self-healing restart happens *within* the running thread - no
-//! subscriber action needed, no thread to respawn. See [self-healing restarts] below for
-//! the full sequence.
+//! it returns [`Continuation::Restart`] from [`block_until_ready_then_dispatch()`]. The
+//! framework then handles the restart sequence automatically using your
+//! [`RestartPolicy`]. This differs from **thread relaunch** (above): relaunch happens
+//! externally when [`subscribe()`] finds the thread terminated. Self-healing restart
+//! happens *within* the running thread - no subscriber action needed, no thread to
+//! respawn. See [self-healing restarts] below for the full sequence.
 //!
 //! ## Self-Healing Restart Details
 //!
-//! When [`poll_once()`] returns [`Continuation::Restart`], the framework executes the
-//! following sequence:
+//! When [`block_until_ready_then_dispatch()`] returns [`Continuation::Restart`], the
+//! framework drops the current [`RRTWorker`], creates a fresh worker/waker pair, and
+//! resumes the poll loop - all within the same running [thread]. No subscriber action is
+//! needed.
 //!
-//! 1. Your current [`RRTWorker`] trait implementation is dropped and [RAII] cleanup
-//!    releases OS resources.
-//! 2. The framework sleeps for the configured delay (see [`RestartPolicy`]).
-//! 3. [`RRTWorker::create()`] is called to create a fresh [`RRTWorker`] + [`RRTWaker`]
-//!    pair. The new [`RRTWorker`] instance allocates new OS resources, and the
-//!    [`RRTWaker`] is bound to these resources and can wake the thread when needed.
-//! 4. The new [`RRTWaker`] replaces the old one in the [shared wrapper] (so existing
-//!    subscribers target the new [`RRTWorker`]).
-//! 5. The [poll loop] resumes with the fresh [`RRTWorker`].
-//!
-//! If [`create()`] itself fails (e.g., OS resources exhausted), the framework retries on
-//! the pre-existing thread until either [`create()`] succeeds or the [restart budget] is
-//! exhausted. [`create()`] only allocates OS resources - it never spawns a thread. Only
-//! [`subscribe()`] affects [Thread Lifecycle] (spawning or relaunching).
-//!
-//! **[`RestartPolicy`]** controls the [restart budget]. Override it, for your needs, by
-//! implementing [`restart_policy()`] on your [`RRTWorker`]. See
-//! [`RestartPolicy::default()`] for the default configuration and [scenario examples].
+//! **[`RestartPolicy`]** controls the [restart budget] (max retries, backoff delay,
+//! multiplier). Override it by implementing [`restart_policy()`] on your [`RRTWorker`].
+//! See [`RestartPolicy::default()`] for the default configuration and [scenario
+//! examples].
 //!
 //! **When the [restart budget] is exhausted**, the framework sends
-//! [`RRTEvent::Shutdown(RestartPolicyExhausted)`] to all subscribers, then the [poll
-//! loop] exits. [`run_worker_loop()`] creates a [`TerminationGuard`] as a local [RAII]
-//! variable at entry, so when the function returns, [`TerminationGuard`]'s [`Drop`] runs
-//! automatically - clearing the [`RRTWaker`] to [`None`] (which IS the terminated
-//! signal). A future [`subscribe()`] call can then relaunch a fresh thread.
+//! [`RRTEvent::Shutdown(RestartPolicyExhausted)`] to all subscribers, then exits the
+//! [thread]. A future [`subscribe()`] call can relaunch a fresh thread.
+//!
+//! See [`run_worker_loop()`] for the step-by-step restart sequence, including what
+//! happens when [`create_and_register_os_sources()`] itself fails and how the backoff
+//! delay advances.
 //!
 //! **[`RRTEvent`] - two-tier event model.** The [`broadcast channel`] carries
 //! [`RRTEvent<W::Event>`] instead of raw [`W::Event`], cleanly separating domain events
@@ -188,15 +169,16 @@
 //!
 //! The dedicated [thread] can exit through three paths:
 //!
-//! | Path                  | Trigger                                        | Subscribers notified?                                | Recovery                   |
-//! | :-------------------- | :--------------------------------------------- | :--------------------------------------------------- | :------------------------- |
-//! | **Stop**              | [`poll_once()`] returns [`Continuation::Stop`] | No (they caused it by dropping guards)               | [`subscribe()`] relaunches |
-//! | **Restart exhausted** | [`RestartPolicy`] budget depleted              | Yes - [`RRTEvent::Shutdown(RestartPolicyExhausted)`] | [`subscribe()`] relaunches |
-//! | **Panic**             | [`poll_once()`] panics                         | Yes - [`RRTEvent::Shutdown(Panic)`]                  | [`subscribe()`] relaunches |
+//! | Path                  | Trigger                                                              | Subscribers notified?                                | Recovery                   |
+//! | :-------------------- | :------------------------------------------------------------------- | :--------------------------------------------------- | :------------------------- |
+//! | **Stop**              | [`block_until_ready_then_dispatch()`] returns [`Continuation::Stop`] | No (they caused it by dropping guards)               | [`subscribe()`] relaunches |
+//! | **Restart exhausted** | [`RestartPolicy`] budget depleted                                    | Yes - [`RRTEvent::Shutdown(RestartPolicyExhausted)`] | [`subscribe()`] relaunches |
+//! | **Panic**             | [`block_until_ready_then_dispatch()`] panics                         | Yes - [`RRTEvent::Shutdown(Panic)`]                  | [`subscribe()`] relaunches |
 //!
-//! **Panics in [`poll_once()`] on the dedicated thread are caught via [`catch_unwind`]**
-//! in [`run_worker_loop()`]. No restart is attempted - a panic signals a logic bug, not a
-//! transient resource issue that [self-healing restarts] can fix.
+//! **Panics in [`block_until_ready_then_dispatch()`]** are caught and do not crash the
+//! process - no restart is attempted, since a panic signals a logic bug, not a transient
+//! resource issue that [self-healing restarts] can fix. See [`run_worker_loop()`] for the
+//! catch mechanism.
 //!
 //! ## What's in a name? 😛
 //!
@@ -376,32 +358,34 @@
 //!   [`RRTWaker`] and [`Event`] types). Without your worker concrete type (and these
 //!   other pieces) to inject ([DI]), the framework has nothing to run.
 //!
-//!   | Type / Trait       | Purpose                                             | Implementation                                              |
-//!   | :----------------- | :-------------------------------------------------- | :---------------------------------------------------------- |
-//!   | [`RRTWorker`]      | [`create()`], [`poll_once()`], [`restart_policy()`] | Your logic: create resources, poll, handle events           |
-//!   | [`RRTWaker`]       | Interrupt mechanism (returned by [`create()`])      | Backend-specific impl (see [why user-provided?])            |
-//!   | [`Event`]          | Domain-specific subscriber event data               | Struct/enum sent via [`sender.send()`] from [`poll_once()`] |
-//!   | [`RestartPolicy`]  | Config for [self-healing restarts]                  | Override [`restart_policy()`] or use [default policy]       |
+//!   | Type / Trait       | Purpose                                                                                           | Implementation                                                                    |
+//!   | :----------------- | :------------------------------------------------------------------------------------------------ | :-------------------------------------------------------------------------------- |
+//!   | [`RRTWorker`]      | [`create_and_register_os_sources()`], [`block_until_ready_then_dispatch()`], [`restart_policy()`] | Your logic: create resources, poll, handle events                                 |
+//!   | [`RRTWaker`]       | Interrupt mechanism (returned by [`create_and_register_os_sources()`])                            | Backend-specific impl (see [why user-provided?])                                  |
+//!   | [`Event`]          | Domain-specific subscriber event data                                                             | Struct/enum sent via [`sender.send()`] from [`block_until_ready_then_dispatch()`] |
+//!   | [`RestartPolicy`]  | Config for [self-healing restarts]                                                                | Override [`restart_policy()`] or use [default policy]                             |
 //!
 //!   See the [Example] section for details.
 //!
 //! ## Design Principles
 //!
 //! 1. [Inversion of control] (IOC / control flow) - the framework owns the loop (matching
-//!    on [`poll_once()`]'s [`Continuation`] return - [`Continue`], [`Stop`], or
-//!    [`Restart`]) and creates and manages the [thread] it runs on. You provide the
-//!    iteration logic via [`poll_once()`] in your [`RRTWorker`] trait implementation.
+//!    on [`block_until_ready_then_dispatch()`]'s [`Continuation`] return - [`Continue`],
+//!    [`Stop`], or [`Restart`]) and creates and manages the [thread] it runs on. You
+//!    provide the iteration logic via [`block_until_ready_then_dispatch()`] in your
+//!    [`RRTWorker`] trait implementation.
 //!
 //! 2. [Dependency Injection] (DI / composition) - you provide a trait implementation (the
 //!    "injectable"); the framework orchestrates it. This is **imperative** (code-based)
 //!    [DI] - you provide a concrete implementation of the [`RRTWorker`] trait (which
-//!    includes [`create()`], [`poll_once()`], and optionally [`restart_policy()`]), along
+//!    includes [`create_and_register_os_sources()`],
+//!    [`block_until_ready_then_dispatch()`], and optionally [`restart_policy()`]), along
 //!    with a concrete type for [`Event`]. It's not declarative (configuration-based) [DI]
 //!    where you *declare* wiring/bindings.
 //!
 //! 3. **Type safety** - the [`RRTWorker`] trait ensures your concrete type's associated
-//!    [`Event`] and [`RRTWaker`] types returned by [`create()`] all match up correctly at
-//!    compile time.
+//!    [`Event`] and [`RRTWaker`] types returned by [`create_and_register_os_sources()`]
+//!    all match up correctly at compile time.
 //!
 //! ## Type Hierarchy Diagram
 //!
@@ -418,7 +402,7 @@
 //! │  The generic param <W>:                                                        │
 //! │       W          : RRTWorker              - your worker trait impl             │
 //! │       W::Event   : Clone + Send + Sync    - your event type (from W)           │
-//! │       W::create() returns (W, W::Waker)   - worker + waker pair                │
+//! │       W::create_and_register_os_sources()  - returns (W, W::Waker) pair        │
 //! │                                                                                │
 //! ├─────────────────────┬────────────────────────────┬─────────────────────────────┤
 //! │                     │ FRAMEWORK → RUNS YOUR CODE │                             │
@@ -429,8 +413,8 @@
 //! │  └── thread_generation: AtomicU8                                     (per-gen) │
 //! │                                                                                │
 //! │  subscribe() → SubscriberGuard<W>                                              │
-//! │      ├── Slow path: W::create() → spawn dedicated thread                       │
-//! │      │   where YOUR CODE W.poll_once() runs in a loop                          │
+//! │      ├── Slow path: W::create_and_register_os_sources() → spawn thread         │
+//! │      │   where YOUR CODE W.block_until_ready_then_dispatch() runs in a loop    │
 //! │      └── Fast path: dedicated thread already running → reuse it                │
 //! │                                                                                │
 //! │  SubscriberGuard<W>                                                            │
@@ -447,9 +431,10 @@
 //! 1. **Thread-safe global state** - [`RRT<W>`] is the type you use to declare your own
 //!    `static` singleton (initialized with a [const expression]). The generic `W:
 //!    `[`RRTWorker`] is **the injection point** - when you call [`subscribe()`], the
-//!    framework calls [`RRTWorker::create()`] to get your worker instance and coupled
-//!    [`RRTWaker`], then spawns a [thread] running your [`RRTWorker`] trait
-//!    implementation's [`poll_once()`] in a loop:
+//!    framework calls [`RRTWorker::create_and_register_os_sources()`] to get your worker
+//!    instance and coupled [`RRTWaker`], then spawns a [thread] running your
+//!    [`RRTWorker`] trait implementation's [`block_until_ready_then_dispatch()`] in a
+//!    loop:
 //!
 //!    <!-- It is ok to use ignore here - example of static singleton declaration -->
 //!
@@ -490,61 +475,11 @@
 //!
 //! ## Two-Phase Setup
 //!
-//! Creating the dedicated [thread] has an ordering conflict:
+//! [`create_and_register_os_sources()`] returns a worker + waker pair that must be
+//! created together but have different destinations. See [`RRT`]'s [two-phase setup]
+//! section for the full ordering conflict explanation, ASCII diagrams, and destination
+//! details.
 //!
-//! ```text
-//! ┌─────────────────────────────────────────────────────────────────────────┐
-//! │                       THE ORDERING CONFLICT                             │
-//! ├─────────────────────────────────────────────────────────────────────────┤
-//! │                                                                         │
-//! │   To interrupt the thread, SubscriberGuards need a Waker.               │
-//! │   To create a Waker, we need mio::Poll's registry.                      │
-//! │   But mio::Poll must MOVE to the spawned thread.                        │
-//! │                                                                         │
-//! │   ┌─────────────────────────────────────────────────────────────────┐   │
-//! │   │  PROBLEM: After thread::spawn(), Poll is gone - too late to     │   │
-//! │   │           create a Waker from its registry!                     │   │
-//! │   └─────────────────────────────────────────────────────────────────┘   │
-//! │                                                                         │
-//! │   Timeline without solution:                                            │
-//! │                                                                         │
-//! │     create Poll ──► spawn thread ──► Poll moves ──► ✗ can't create      │
-//! │                     (Poll gone!)                       Waker anymore    │
-//! │                                                                         │
-//! └─────────────────────────────────────────────────────────────────────────┘
-//!
-//! ┌─────────────────────────────────────────────────────────────────────────┐
-//! │                    THE SOLUTION: TWO-PHASE SETUP                        │
-//! ├─────────────────────────────────────────────────────────────────────────┤
-//! │                                                                         │
-//! │   Phase 1: RRTWorker::create() - resources only, no thread spawned      │
-//! │   ┌─────────────────────────────────────────────────────────────────┐   │
-//! │   │  Creates BOTH from the same mio::Poll registry:                 │   │
-//! │   │                                                                 │   │
-//! │   │     mio::Poll ──registry──► mio::Waker                          │   │
-//! │   │         │                       │                               │   │
-//! │   │         ▼                       ▼                               │   │
-//! │   │      Worker                  Waker                              │   │
-//! │   │    (owns Poll)         (wraps mio::Waker)                       │   │
-//! │   └─────────────────────────────────────────────────────────────────┘   │
-//! │                    │                       │                            │
-//! │                    ▼                       ▼                            │
-//! │   Phase 2: Split and distribute                                         │
-//! │   ┌────────────────────────┐    ┌───────────────────────────────────┐   │
-//! │   │    Spawned Thread      │    │     RRT (shared waker wrapper)    │   │
-//! │   │    ───────────────     │    │     ─────────────────────────     │   │
-//! │   │    Worker moves here   │    │    Waker stored in Arc<Mutex>     │   │
-//! │   │    (owns mio::Poll)    │    │    (shared with all subscribers)  │   │
-//! │   │                        │◄───│    SubscriberGuards call wake()   │   │
-//! │   └────────────────────────┘    └───────────────────────────────────┘   │
-//! │                                                                         │
-//! └─────────────────────────────────────────────────────────────────────────┘
-//! ```
-//!
-//! The key insight: **atomic creation, then separation**. Both resources are created
-//! together from the same [`mio::Poll`] registry, then split - the [`RRTWaker`] is stored
-//! in [`RRT`]'s shared waker wrapper for subscribers, while your [`RRTWorker`] trait
-//! implementation moves to the spawned [thread].
 //!
 //! ### Why Is [`RRTWaker`] User-Provided?
 //!
@@ -559,12 +494,14 @@
 //! | Pipe [`read(2)`]        | Self-pipe trick (write a byte)                 |
 //! | [`io_uring`]            | [`eventfd`] or [`IORING_OP_MSG_RING`]          |
 //!
-//! [`RRT`] can't know how you're blocking - it just calls [`poll_once()`] in a loop. Only
-//! you know how to interrupt your specific blocking call.
+//! [`RRT`] can't know how you're blocking - it just calls
+//! [`block_until_ready_then_dispatch()`] in a loop. Only you know how to interrupt your
+//! specific blocking call.
 //!
 //! The coupling is also at the resource level: a [`mio::Waker`] is created FROM the
 //! [`mio::Poll`]'s registry. If the poll is dropped ([thread] exits), the [`RRTWaker`]
-//! becomes useless. That's why [`create()`] returns both together.
+//! becomes useless. That's why [`create_and_register_os_sources()`] returns both
+//! together.
 //!
 //! This design gives [`RRT`] flexibility: it works with [`mio`] today and [`io_uring`]
 //! tomorrow without [`RRT`] changes.
@@ -577,12 +514,13 @@
 //! ```text
 //! Timeline:
 //! ─────────────────────────────────────────────────────────────────►
-//!      wake()          kernel         poll()         check
-//!      called         schedules       returns     receiver_count
-//!         │              │               │              │
-//!         └──────────────┴───────────────┴──────────────┘
-//!                     RACE WINDOW
-//!               (new subscriber can appear here)
+//! wake_and_unblock_           kernel         poll()      check
+//! dedicated_thread() called   schedules      returns     receiver_count
+//!    │                           │              │           │
+//!    └───────────────────────────┴──────────────┴───────────┘
+//!    ▲                                                      ▲
+//!    │             new subscriber can appear here           │
+//!    window start ───────── RACE WINDOW ─────────  window end
 //! ```
 //!
 //! The [kernel] schedules [thread]s independently, so there's no guarantee when the
@@ -609,7 +547,7 @@
 //! # #[derive(Clone)]
 //! # struct MyEvent;
 //! # struct MyWaker;
-//! # impl RRTWaker for MyWaker { fn wake(&self) {} }
+//! # impl RRTWaker for MyWaker { fn wake_and_unblock_dedicated_thread(&self) {} }
 //! #
 //! // 1. Define your worker (creates resources + runs the work loop)
 //! struct MyWorker { /* resources, e.g., mio::Poll */ }
@@ -618,13 +556,13 @@
 //!     type Event = MyEvent;
 //!     type Waker = MyWaker;
 //!
-//!     fn create() -> miette::Result<(Self, Self::Waker)> {
+//!     fn create_and_register_os_sources() -> miette::Result<(Self, Self::Waker)> {
 //!         // Create worker with OS resources and a coupled RRTWaker.
 //!         // e.g., create mio::Poll, register fds, create mio::Waker from registry.
 //!         Ok((MyWorker { /* ... */ }, MyWaker))
 //!     }
 //!
-//!     fn poll_once(&mut self, sender: &Sender<RRTEvent<Self::Event>>) -> Continuation {
+//!     fn block_until_ready_then_dispatch(&mut self, sender: &Sender<RRTEvent<Self::Event>>) -> Continuation {
 //!         todo!("Do one iteration of work, broadcast events via RRTEvent::Worker(...)")
 //!         // Return Continuation::Stop when receiver_count == 0
 //!     }
@@ -709,14 +647,15 @@
 //!
 //! ## Implementation Sketch
 //!
-//! The [`poll_once()`] implementation would change from the current [`epoll`] model:
+//! The [`block_until_ready_then_dispatch()`] implementation would change from the current
+//! [`epoll`] model:
 //!
 //! <!-- It is ok to use ignore here - pseudo-code sketch showing epoll readiness-based
 //! API pattern -->
 //!
 //! ```ignore
 //! // Current epoll model
-//! fn poll_once(&mut self, sender: &Sender<Event>) -> Continuation {
+//! fn block_until_ready_then_dispatch(&mut self, sender: &Sender<Event>) -> Continuation {
 //!     self.poll.poll(&mut events, None)?;  // Block for readiness
 //!     for event in &events {
 //!         let data = read(fd)?;            // YOU do the I/O
@@ -732,7 +671,7 @@
 //!
 //! ```ignore
 //! // io_uring blocking-wait model
-//! fn poll_once(&mut self, sender: &Sender<Event>) -> Continuation {
+//! fn block_until_ready_then_dispatch(&mut self, sender: &Sender<Event>) -> Continuation {
 //!     // Submit read requests to submission queue
 //!     self.ring.submit_read(stdin_fd, &mut buffer)?;
 //!
@@ -759,7 +698,7 @@
 //!    operations.
 //!
 //! The RRT's [`RRTWaker`] trait already abstracts this, so the change would be localized
-//! to your [`RRTWorker::create()`] implementation.
+//! to your [`RRTWorker::create_and_register_os_sources()`] implementation.
 //!
 //! # Why "RRT" and Not Actor/Reactor/Proactor?
 //!
@@ -849,7 +788,7 @@
 //! [`RRTEvent<W::Event>`]: RRTEvent
 //! [`RRTEvent`]: RRTEvent
 //! [`RRTWaker`]: RRTWaker
-//! [`RRTWorker::create()`]: RRTWorker::create
+//! [`RRTWorker::create_and_register_os_sources()`]: RRTWorker::create_and_register_os_sources
 //! [`RRTWorker`]: RRTWorker
 //! [`RRT`]: RRT
 //! [`Receiver::recv()`]: tokio::sync::broadcast::Receiver::recv
@@ -870,10 +809,11 @@
 //! [`W::Event`]: RRTWorker::Event
 //! [`accept()`]: std::net::TcpListener::accept
 //! [`block_on()`]: tokio::runtime::Runtime::block_on
+//! [`block_until_ready_then_dispatch()`]: RRTWorker::block_until_ready_then_dispatch
 //! [`broadcast channel`]: tokio::sync::broadcast
 //! [`broadcast`]: tokio::sync::broadcast
 //! [`catch_unwind`]: std::panic::catch_unwind
-//! [`create()`]: RRTWorker::create
+//! [`create_and_register_os_sources()`]: RRTWorker::create_and_register_os_sources
 //! [`epoll_wait()`]: https://man7.org/linux/man-pages/man2/epoll_wait.2.html
 //! [`epoll`]: https://man7.org/linux/man-pages/man7/epoll.7.html
 //! [`eventfd`]: https://man7.org/linux/man-pages/man2/eventfd.2.html
@@ -896,7 +836,6 @@
 //! [`mio`]: mio
 //! [`pipe(2)`]: https://man7.org/linux/man-pages/man2/pipe.2.html
 //! [`poll()`]: mio::Poll::poll
-//! [`poll_once()`]: RRTWorker::poll_once
 //! [`pollable`]: https://man7.org/linux/man-pages/man2/poll.2.html
 //! [`read(2)`]: https://man7.org/linux/man-pages/man2/read.2.html
 //! [`readline_async`]: crate::readline_async::ReadlineAsyncContext::try_new
@@ -953,6 +892,7 @@
 //! [terminal escape sequences]: crate::core::ansi
 //! [thread]: https://en.wikipedia.org/wiki/Thread_(computing)
 //! [thread pool]: https://en.wikipedia.org/wiki/Thread_pool
+//! [two-phase setup]: RRT#two-phase-setup
 //! [why user-provided?]: #why-is-rrtwaker-user-provided
 
 mod rrt;

@@ -1,11 +1,13 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! PTY integration test for production `MioPollWorker::create()` restart cycles.
+//! PTY integration test for production `MioPollWorker::create_and_register_os_sources()`
+//! restart cycles.
 //!
 //! Each worker processes a **real keystroke** from the controller via
-//! `MioPollWorker::poll_once()` before restarting. This proves:
+//! `MioPollWorker::block_until_ready_then_dispatch()` before restarting. This proves:
 //!
-//! - `MioPollWorker::create()` works correctly 3 times in sequence
+//! - `MioPollWorker::create_and_register_os_sources()` works correctly 3 times in
+//!   sequence
 //! - Each restarted worker can actually poll stdin and process events
 //! - No fd leaks or stale epoll state between create/drop cycles
 //! - Production [`MioPollWaker`] correctly couples to new Poll registry each time
@@ -29,12 +31,13 @@ use std::{io::{BufRead, BufReader, Read, Write, stdout},
           time::{Duration, Instant}};
 use tokio::sync::broadcast;
 
-/// Worker that delegates the first `poll_once()` call to the real
+/// Worker that delegates the first `block_until_ready_then_dispatch()` call to the real
 /// [`MioPollWorker`], then returns [`Continuation::Restart`] or
 /// [`Continuation::Stop`] on the second call.
 ///
 /// This proves each restarted worker can actually process stdin events
-/// via the production poll loop, not just that `create()` returns `Ok`.
+/// via the production poll loop, not just that `create_and_register_os_sources()`
+/// returns `Ok`.
 struct RestartTestWorker {
     inner: MioPollWorker,
     poll_count: u32,
@@ -44,9 +47,9 @@ impl RRTWorker for RestartTestWorker {
     type Event = PollerEvent;
     type Waker = MioPollWaker;
 
-    fn create() -> miette::Result<(Self, Self::Waker)> {
+    fn create_and_register_os_sources() -> miette::Result<(Self, Self::Waker)> {
         create_call_counter::increment();
-        let (inner_worker, wake_fn) = MioPollWorker::create()?;
+        let (inner_worker, wake_fn) = MioPollWorker::create_and_register_os_sources()?;
         Ok((
             RestartTestWorker {
                 inner: inner_worker,
@@ -56,7 +59,7 @@ impl RRTWorker for RestartTestWorker {
         ))
     }
 
-    fn poll_once(
+    fn block_until_ready_then_dispatch(
         &mut self,
         sender: &broadcast::Sender<RRTEvent<Self::Event>>,
     ) -> Continuation {
@@ -64,7 +67,7 @@ impl RRTWorker for RestartTestWorker {
         if self.poll_count == 1 {
             // First call: delegate to real worker. Blocks on poll.poll()
             // until the controller sends a keystroke via the PTY.
-            self.inner.poll_once(sender)
+            self.inner.block_until_ready_then_dispatch(sender)
         } else {
             // Second call: restart or stop based on total create count.
             let count = create_call_counter::get();
@@ -87,7 +90,7 @@ impl RRTWorker for RestartTestWorker {
 }
 
 /// Encapsulates the atomic counter tracking how many times
-/// [`RestartTestWorker::create()`] has been called.
+/// [`RestartTestWorker::create_and_register_os_sources()`] has been called.
 mod create_call_counter {
     #[allow(clippy::wildcard_imports)]
     use super::*;
@@ -177,7 +180,7 @@ fn factory_restart_controller(pty_pair: PtyPair, mut child: ControlledChild) {
     eprintln!("Factory-Restart Controller: Test passed!");
 }
 
-/// Controlled: runs `MioPollWorker::create()` 3 times via the RRT
+/// Controlled: runs `MioPollWorker::create_and_register_os_sources()` 3 times via the RRT
 /// restart loop. Each worker processes one real keystroke from the controller
 /// before restarting, proving the restarted worker's epoll and stdin
 /// registration actually function.
@@ -187,8 +190,8 @@ fn factory_restart_controlled() -> ! {
     println!("{FACTORY_RESTART_READY}");
     stdout().flush().expect("Failed to flush");
 
-    // RRT::subscribe() calls RestartTestWorker::create() and spawns the
-    // worker thread. The _guard keeps the broadcast receiver alive.
+    // RRT::subscribe() calls RestartTestWorker::create_and_register_os_sources() and
+    // spawns the worker thread. The _guard keeps the broadcast receiver alive.
     let rrt = RRT::<RestartTestWorker>::new();
     let _guard = rrt.subscribe().unwrap();
 

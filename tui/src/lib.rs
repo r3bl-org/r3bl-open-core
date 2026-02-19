@@ -1670,24 +1670,24 @@
 //! ## How it works
 //!
 //! ```text
-//! ┌──────────────────────────────────────────────────────────────────────────┐
-//! │                       RESILIENT REACTOR THREAD                           │
-//! ├──────────────────────────────────────────────────────────────────────────┤
-//! │                                                                          │
-//! │   Worker Thread                                      Async Consumers     │
-//! │  ┌─────────────┐       ┌───────────────┐       ┌────────────────────┐    │
-//! │  │ mio::Poll   │       │   broadcast   │ ────► │  SubscriberGuard A │    │
-//! │  │             │       │    channel    │       └────────────────────┘    │
-//! │  │  (blocks    │ ────► │               │       ┌────────────────────┐    │
-//! │  │   on I/O)   │events │   (clones to  │ ────► │  SubscriberGuard B │    │
-//! │  │             │       │     all)      │       └────────────────────┘    │
-//! │  └─────────────┘       └───────────────┘       ┌────────────────────┐    │
-//! │         ▲                                ────► │  SubscriberGuard C │    │
-//! │         │                                      └─────────┬──────────┘    │
-//! │         │                                                │               │
-//! │         └────────────── wake() on drop ──────────────────┘               │
-//! │                                                                          │
-//! └──────────────────────────────────────────────────────────────────────────┘
+//! ┌────────────────────────────────────────────────────────────────────────┐
+//! │                       RESILIENT REACTOR THREAD                         │
+//! ├────────────────────────────────────────────────────────────────────────┤
+//! │                                                                        │
+//! │   Worker Thread                                      Async Consumers   │
+//! │  ┌─────────────┐       ┌───────────────┐       ┌────────────────────┐  │
+//! │  │ mio::Poll   │       │   broadcast   │ ────► │  SubscriberGuard A │  │
+//! │  │             │       │    channel    │       └────────────────────┘  │
+//! │  │  (blocks    │ ────► │               │       ┌────────────────────┐  │
+//! │  │   on I/O)   │events │   (clones to  │ ────► │  SubscriberGuard B │  │
+//! │  │             │       │     all)      │       └────────────────────┘  │
+//! │  └─────────────┘       └───────────────┘       ┌────────────────────┐  │
+//! │         ▲                                ────► │  SubscriberGuard C │  │
+//! │         │                                      └─────────┬──────────┘  │
+//! │         │                                                │             │
+//! │         └── wake_and_unblock_dedicated_thread() on drop ─┘             │
+//! │                                                                        │
+//! └────────────────────────────────────────────────────────────────────────┘
 //! ```
 //!
 //! For the type hierarchy and implementation details, see the [Architecture Overview] in
@@ -2273,9 +2273,9 @@
 //! `char_ops` shows you the shim, implementation, and tests all together.
 //!
 //! **VT100 specification compliance**:
-//! - [VT100 User Guide](https://vt100.net/docs/vt100-ug/)
-//! - [ANSI X3.64 Standard](https://www.ecma-international.org/wp-content/uploads/ECMA-48_5th_edition_june_1991.pdf)
-//! - [XTerm Control Sequences](https://invisible-island.net/xterm/ctlseqs/ctlseqs.html)
+//! - [VT100 User Guide]
+//! - [ANSI X3.64 Standard]
+//! - [XTerm Control Sequences]
 //!
 //! **Intentionally unimplemented legacy features**: Custom tab stops (HTS, TBC), legacy
 //! line control (NEL), and legacy terminal modes (IRM, DECOM) are not implemented as
@@ -2480,15 +2480,19 @@
 //! [ZOrder]: crate::ZOrder
 //! [`paint`]: mod@crate::tui::terminal_lib_backends::paint
 //! [`paint()`]: fn@crate::tui::terminal_lib_backends::paint::paint
-//! [`OffscreenBufferPaintImplCrossterm`]: struct@crate::tui::terminal_lib_backends::offscreen_buffer::OffscreenBufferPaintImplCrossterm
+//! [`OffscreenBufferPaintImplCrossterm`]:
+//!     struct@crate::tui::terminal_lib_backends::offscreen_buffer::OffscreenBufferPaintImplCrossterm
 //! [EditorComponent]: crate::EditorComponent
 //! [EditorEngine]: crate::EditorEngine
 //! [EditorBuffer]: crate::EditorBuffer
 //! [HasEditorBuffers]: crate::HasEditorBuffers
 //! [ZeroCopyGapBuffer]: crate::tui::editor::zero_copy_gap_buffer::ZeroCopyGapBuffer
-//! [`zero_copy_gap_buffer` module documentation]: mod@crate::tui::editor::zero_copy_gap_buffer
-//! [`ZeroCopyGapBuffer::as_str()`]: crate::tui::editor::zero_copy_gap_buffer::ZeroCopyGapBuffer::as_str
-//! [`ZeroCopyGapBuffer::get_line_content()`]: crate::tui::editor::zero_copy_gap_buffer::ZeroCopyGapBuffer::get_line_content
+//! [`zero_copy_gap_buffer` module documentation]:
+//!     mod@crate::tui::editor::zero_copy_gap_buffer
+//! [`ZeroCopyGapBuffer::as_str()`]:
+//!     crate::tui::editor::zero_copy_gap_buffer::ZeroCopyGapBuffer::as_str
+//! [`ZeroCopyGapBuffer::get_line_content()`]:
+//!     crate::tui::editor::zero_copy_gap_buffer::ZeroCopyGapBuffer::get_line_content
 //! [`&str`]: prim@str
 //! [`Component::handle_event()`]: crate::Component::handle_event
 //! [`Component::render()`]: crate::Component::render
@@ -2497,7 +2501,8 @@
 //! [MdDocument]: crate::tui::md_parser::MdDocument
 //! [parse_markdown()]: fn@crate::tui::md_parser::parse_markdown::parse_markdown
 //! [parse_smart_list]: crate::tui::md_parser::parse_smart_list
-//! [try_parse_and_highlight]: crate::tui::syntax_highlighting::md_parser_syn_hi::try_parse_and_highlight
+//! [try_parse_and_highlight]:
+//!     crate::tui::syntax_highlighting::md_parser_syn_hi::try_parse_and_highlight
 //! [PTYMux]: crate::core::pty_mux::PTYMux
 //! [`pty_mux` module documentation]: mod@crate::core::pty_mux
 //! [CsiSequence]: crate::CsiSequence
@@ -2521,9 +2526,12 @@
 //! [HasDialogBuffers]: crate::HasDialogBuffers
 //! [DialogEngineConfigOptions]: crate::DialogEngineConfigOptions
 //! [`generate_pty_test!`]: crate::generate_pty_test
-//! [`integration_tests`]: mod@crate::core::ansi::vt_100_terminal_input_parser::integration_tests
-//! [`raw_mode_integration_tests`]: mod@crate::core::ansi::terminal_raw_mode::integration_tests
-//! [`test_pty_input_device`]: mod@crate::core::ansi::vt_100_terminal_input_parser::integration_tests::pty_input_device_test
+//! [`integration_tests`]:
+//!     mod@crate::core::ansi::vt_100_terminal_input_parser::integration_tests
+//! [`raw_mode_integration_tests`]:
+//!     mod@crate::core::ansi::terminal_raw_mode::integration_tests
+//! [`test_pty_input_device`]:
+//!     mod@crate::core::ansi::vt_100_terminal_input_parser::integration_tests::pty_input_device_test
 //! [`DirectToAnsiInputDevice`]: crate::direct_to_ansi::DirectToAnsiInputDevice
 //! [`pty_test_fixtures`]: crate::core::test_fixtures::pty_test_fixtures
 //! [`backend_compat_tests`]: crate::core::terminal_io::backend_compat_tests
@@ -2552,6 +2560,9 @@
 //! [`RenderOpOutput`]: crate::RenderOpOutput
 //! [`TERMINAL_LIB_BACKEND`]: crate::TERMINAL_LIB_BACKEND
 //! [Architecture Overview]: core::resilient_reactor_thread#architecture-overview
+//! [ANSI X3.64 Standard]: https://www.ecma-international.org/wp-content/uploads/ECMA-48_5th_edition_june_1991.pdf
+//! [VT100 User Guide]: https://vt100.net/docs/vt100-ug/
+//! [XTerm Control Sequences]: https://invisible-island.net/xterm/ctlseqs/ctlseqs.html
 
 // Enable benchmarking for nightly Rust.
 #![cfg_attr(test, feature(test))]

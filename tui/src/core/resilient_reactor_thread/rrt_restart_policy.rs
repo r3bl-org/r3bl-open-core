@@ -20,17 +20,17 @@ use std::time::Duration;
 ///
 /// # Example Scenarios
 ///
-/// | Scenario                 | What [`create()`] allocates                     | Why backoff matters                                             |
-/// | :----------------------- | :---------------------------------------------- | :-------------------------------------------------------------- |
-/// | Terminal input (current) | [`epoll`] [`fd`], [`eventfd`], [signal] handler | [`fd`] limit - need time for other processes to release [`fds`] |
-/// | Network server           | [`socket`] + `bind` + `listen`                  | Port in [`TIME_WAIT`] - needs kernel timeout to expire          |
-/// | Serial/hardware          | `open("/dev/ttyUSB0")` + [`ioctl`]              | Device busy - other process must release it                     |
+/// | Scenario                 | What [`create_and_register_os_sources()`] allocates | Why backoff matters                                             |
+/// | :----------------------- | :-------------------------------------------------- | :-------------------------------------------------------------- |
+/// | Terminal input (current) | [`epoll`] [`fd`], [`eventfd`], [signal] handler     | [`fd`] limit - need time for other processes to release [`fds`] |
+/// | Network server           | [`socket`] + `bind` + `listen`                      | Port in [`TIME_WAIT`] - needs kernel timeout to expire          |
+/// | Serial/hardware          | `open("/dev/ttyUSB0")` + [`ioctl`]                  | Device busy - other process must release it                     |
 ///
 /// [`Continuation::Restart`]: crate::Continuation::Restart
 /// [`RRTWorker`]: super::RRTWorker
 /// [`RRT`]: super::RRT
 /// [`TIME_WAIT`]: https://en.wikipedia.org/wiki/TCP_TIME-WAIT
-/// [`create()`]: super::RRTWorker::create
+/// [`create_and_register_os_sources()`]: super::RRTWorker::create_and_register_os_sources
 /// [`epoll`]: https://man7.org/linux/man-pages/man7/epoll.7.html
 /// [`eventfd`]: https://man7.org/linux/man-pages/man2/eventfd.2.html
 /// [`fd`]: https://man7.org/linux/man-pages/man2/open.2.html
@@ -66,9 +66,9 @@ pub struct RestartPolicy {
 /// hiccup.
 ///
 /// ```text
-/// Attempt 1: sleep 100ms → F::create()
-/// Attempt 2: sleep 200ms → F::create()
-/// Attempt 3: sleep 400ms → F::create()
+/// Attempt 1: sleep 100ms → F::create_and_register_os_sources()
+/// Attempt 2: sleep 200ms → F::create_and_register_os_sources()
+/// Attempt 3: sleep 400ms → F::create_and_register_os_sources()
 /// Exhausted → send Shutdown → thread exits
 /// ```
 ///

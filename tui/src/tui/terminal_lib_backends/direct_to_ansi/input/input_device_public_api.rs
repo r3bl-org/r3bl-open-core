@@ -236,25 +236,25 @@ use tokio::sync::broadcast::error::RecvError;
 /// ### Data Flow During App Switching
 ///
 /// ```text
-/// ┌──────────────────────────────────────────────────────────────────────────┐
-/// │ App A exits, drops receiver                                              │
-/// │   • SubscriberGuard::drop() calls waker.wake()                           │
-/// │   • Thread may continue running (fast) OR exit (slow)                    │
-/// └──────────────────────────────┬───────────────────────────────────────────┘
+/// ┌──────────────────────────────────────────────────────────────────────────────┐
+/// │ App A exits, drops receiver                                                  │
+/// │   • SubscriberGuard::drop() calls waker..wake_and_unblock_dedicated_thread() │
+/// │   • Thread may continue running (fast) OR exit (slow)                        │
+/// └──────────────────────────────┬───────────────────────────────────────────────┘
 ///                                │
-/// ┌──────────────────────────────▼───────────────────────────────────────────┐
-/// │ User types keystrokes during transition                                  │
-/// │   • Bytes arrive in kernel stdin buffer (fd 0)                           │
-/// │   • If thread still running: reads immediately, sends to channel         │
-/// │   • If thread exited: kernel buffer holds bytes until new thread reads   │
-/// └──────────────────────────────┬───────────────────────────────────────────┘
+/// ┌──────────────────────────────▼───────────────────────────────────────────────┐
+/// │ User types keystrokes during transition                                      │
+/// │   • Bytes arrive in kernel stdin buffer (fd 0)                               │
+/// │   • If thread still running: reads immediately, sends to channel             │
+/// │   • If thread exited: kernel buffer holds bytes until new thread reads       │
+/// └──────────────────────────────┬───────────────────────────────────────────────┘
 ///                                │
-/// ┌──────────────────────────────▼───────────────────────────────────────────┐
-/// │ App B starts, calls DirectToAnsiInputDevice::new()                       │
-/// │   • subscribe() checks liveness flag                                     │
-/// │   • If Running: reuses existing thread (no gap in reading)               │
-/// │   • If Terminated: spawns new thread → reads kernel buffer → no data loss│
-/// └──────────────────────────────────────────────────────────────────────────┘
+/// ┌──────────────────────────────▼───────────────────────────────────────────────┐
+/// │ App B starts, calls DirectToAnsiInputDevice::new()                           │
+/// │   • subscribe() checks liveness flag                                         │
+/// │   • If Running: reuses existing thread (no gap in reading)                   │
+/// │   • If Terminated: spawns new thread → reads kernel buffer → no data loss    │
+/// └──────────────────────────────────────────────────────────────────────────────┘
 /// ```
 ///
 /// The key insight: the **kernel's [`stdin`] buffer for [`fd`] `0` persists** regardless
@@ -277,7 +277,7 @@ use tokio::sync::broadcast::error::RecvError;
 ///             │       └─► if needs_init: initialize_global_input_resource()
 ///             │               │
 ///             │               ├─► Init sender, shared_waker_slot wrapper (LazyLock)
-///             │               ├─► F::create() → swap shared_waker_slot, create liveness
+///             │               ├─► F::create_and_register_os_sources() → swap waker, liveness
 ///             │               └─► Spawn thread with worker
 ///             │
 ///             └─► return SubscriberGuard { receiver, shared_waker_slot } ← new subscriber

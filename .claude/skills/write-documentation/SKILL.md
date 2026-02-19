@@ -382,7 +382,7 @@ What's "called"? The trait? A method? The reader must guess.
 ```rust
 /// A trait for interrupting blocked threads.
 ///
-/// [`SubscriberGuard::drop()`] calls [`wake()`] on implementors of this trait to signal
+/// [`SubscriberGuard::drop()`] calls [`wake_and_unblock_dedicated_thread()`] on implementors of this trait to signal
 /// shutdown.
 ```
 

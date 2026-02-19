@@ -15,9 +15,11 @@ use tokio::sync::broadcast::Sender;
 /// `sender` parameter.
 ///
 /// This variant is used by [`MioPollWorker`] which implements the generic
-/// [`RRTWorker`] trait and receives `sender` as a parameter to `poll_once()`.
+/// [`RRTWorker`] trait and receives `sender` as a parameter to
+/// [`block_until_ready_then_dispatch()`].
 ///
 /// [`RRTWorker`]: crate::core::resilient_reactor_thread::RRTWorker
+/// [`block_until_ready_then_dispatch()`]: crate::core::resilient_reactor_thread::RRTWorker::block_until_ready_then_dispatch
 pub fn dispatch_with_sender(
     token: Token,
     worker: &mut MioPollWorker,

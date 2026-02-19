@@ -34,33 +34,36 @@ static NEXT_WAKER_ID: AtomicU32 = AtomicU32::new(0);
 /// Used by [`test_waker_swap_on_restart()`] to detect waker replacement.
 static LAST_WAKED_ID: AtomicU32 = AtomicU32::new(0);
 
-/// Test waker that records its ID in [`LAST_WAKED_ID`] when [`wake()`] is called.
+/// Test waker that records its ID in [`LAST_WAKED_ID`] when
+/// [`wake_and_unblock_dedicated_thread()`] is called.
 ///
 /// Each instance gets a unique ID from [`NEXT_WAKER_ID`]. This allows
 /// [`test_waker_swap_on_restart()`] to detect that the framework swapped
 /// the waker on restart.
 ///
-/// [`wake()`]: RRTWaker::wake
+/// [`wake_and_unblock_dedicated_thread()`]: RRTWaker::wake_and_unblock_dedicated_thread
 struct TestWaker {
     id: u32,
 }
 
 impl RRTWaker for TestWaker {
-    fn wake(&self) { LAST_WAKED_ID.store(self.id, Ordering::SeqCst); }
+    fn wake_and_unblock_dedicated_thread(&self) {
+        LAST_WAKED_ID.store(self.id, Ordering::SeqCst);
+    }
 }
 
 /// Test worker driven by an [`mpsc`] command channel.
 ///
-/// Blocks on [`mpsc::Receiver::recv()`] - each call to [`poll_once()`] reads
-/// one command byte:
+/// Blocks on [`mpsc::Receiver::recv()`] - each call to
+/// [`block_until_ready_then_dispatch()`] reads one command byte:
 /// - `b'c'`: [`Continuation::Continue`]
 /// - `b'r'`: [`Continuation::Restart`]
 /// - `b's'`: [`Continuation::Stop`]
 /// - `b'e'`: Send [`TestEvent`] and continue
 /// - `b'p'`: Panic (for testing `catch_unwind`)
 ///
+/// [`block_until_ready_then_dispatch()`]: RRTWorker::block_until_ready_then_dispatch
 /// [`mpsc`]: std::sync::mpsc
-/// [`poll_once()`]: RRTWorker::poll_once
 struct TestWorker {
     cmd_receiver: mpsc::Receiver<u8>,
     event_counter: u32,
@@ -70,7 +73,7 @@ impl RRTWorker for TestWorker {
     type Event = TestEvent;
     type Waker = TestWaker;
 
-    fn create() -> miette::Result<(Self, Self::Waker)> {
+    fn create_and_register_os_sources() -> miette::Result<(Self, Self::Waker)> {
         let mut guard = TEST_FACTORY_STATE.lock().unwrap();
         let state = guard.as_mut().expect("TEST_FACTORY_STATE not initialized");
         state.create_count += 1;
@@ -83,7 +86,7 @@ impl RRTWorker for TestWorker {
             .unwrap_or_else(|| Err(miette::miette!("TestWorker: no create results")))
     }
 
-    fn poll_once(
+    fn block_until_ready_then_dispatch(
         &mut self,
         sender: &tokio::sync::broadcast::Sender<RRTEvent<Self::Event>>,
     ) -> Continuation {
@@ -113,18 +116,19 @@ impl RRTWorker for TestWorker {
     }
 }
 
-/// Shared state controlling [`TestWorker::create()`] behavior.
+/// Shared state controlling [`TestWorker::create_and_register_os_sources()`] behavior.
 struct TestFactoryState {
-    /// Pre-loaded results. `create()` pops from the front.
+    /// Pre-loaded results. `create_and_register_os_sources()` pops from the front.
     create_results: VecDeque<miette::Result<(TestWorker, TestWaker)>>,
 
-    /// Counter incremented on each `create()` call (before popping).
+    /// Counter incremented on each `create_and_register_os_sources()` call (before
+    /// popping).
     create_count: u32,
 
     /// Restart policy returned by `restart_policy()`.
     restart_policy: RestartPolicy,
 
-    /// Notifies the test thread when `create()` is called.
+    /// Notifies the test thread when `create_and_register_os_sources()` is called.
     create_notify: Option<mpsc::Sender<()>>,
 }
 
@@ -556,7 +560,7 @@ fn test_waker_swap_on_restart() {
     {
         let guard = shared_waker_slot.lock().unwrap();
         if let Some(w) = guard.as_ref() {
-            w.wake();
+            w.wake_and_unblock_dedicated_thread();
         }
     }
     let old_id = LAST_WAKED_ID.load(Ordering::SeqCst);
@@ -567,13 +571,14 @@ fn test_waker_swap_on_restart() {
         .unwrap();
 
     // Wait for the waker swap (happens right after create() returns).
-    // Each TestWaker records its unique ID in LAST_WAKED_ID when wake() is called.
+    // Each TestWaker records its unique ID in LAST_WAKED_ID when
+    // wake_and_unblock_dedicated_thread() is called.
     let deadline = Instant::now() + Duration::from_secs(5);
     loop {
         std::thread::sleep(Duration::from_millis(1));
         if let Ok(guard) = shared_waker_slot.lock() {
             if let Some(w) = guard.as_ref() {
-                w.wake();
+                w.wake_and_unblock_dedicated_thread();
                 if LAST_WAKED_ID.load(Ordering::SeqCst) != old_id {
                     break;
                 }
@@ -994,9 +999,9 @@ fn test_no_restart_after_panic() {
     teardown_factory();
 }
 
-// This test runs in a PTY subprocess because `MioPollWorker::create()`
-// registers stdin with epoll, which requires a real terminal fd. The PTY
-// provides that.
+// This test runs in a PTY subprocess because
+// `MioPollWorker::create_and_register_os_sources()` registers stdin with epoll, which
+// requires a real terminal fd. The PTY provides that.
 
 const POLL_ERROR_READY: &str = "POLL_ERROR_READY";
 const POLL_ERROR_PASSED: &str = "POLL_ERROR_PASSED";
@@ -1043,8 +1048,9 @@ fn poll_error_controller(pty_pair: PtyPair, mut child: ControlledChild) {
     eprintln!("Poll-Error Controller: Test passed!");
 }
 
-/// Controlled: creates a real `MioPollWorker` via `create()`, corrupts the epoll fd,
-/// and verifies that `poll_once()` returns `Restart` with `StdinEvent::Error`.
+/// Controlled: creates a real `MioPollWorker` via `create_and_register_os_sources()`,
+/// corrupts the epoll fd, and verifies that `block_until_ready_then_dispatch()` returns
+/// `Restart` with `StdinEvent::Error`.
 fn poll_error_controlled() -> ! {
     use crate::tui::terminal_lib_backends::direct_to_ansi::input::{channel_types::{PollerEvent,
                                                                                    StdinEvent},
@@ -1054,8 +1060,9 @@ fn poll_error_controlled() -> ! {
     println!("{POLL_ERROR_READY}");
     std::io::stdout().flush().expect("Failed to flush");
 
-    // Create worker using the production create() (PTY provides real terminal stdin).
-    let (mut worker, _waker) = MioPollWorker::create().unwrap();
+    // Create worker using the production create_and_register_os_sources() (PTY provides
+    // real terminal stdin).
+    let (mut worker, _waker) = MioPollWorker::create_and_register_os_sources().unwrap();
 
     let (sender, mut receiver) =
         tokio::sync::broadcast::channel::<RRTEvent<PollerEvent>>(16);
@@ -1066,7 +1073,7 @@ fn poll_error_controlled() -> ! {
     let raw_fd = worker.poll_handle.as_raw_fd();
     drop(unsafe { std::os::unix::io::OwnedFd::from_raw_fd(raw_fd) });
 
-    let result = worker.poll_once(&sender);
+    let result = worker.block_until_ready_then_dispatch(&sender);
 
     assert_eq!(result, Continuation::Restart);
 
