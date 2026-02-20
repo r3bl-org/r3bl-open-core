@@ -21,6 +21,7 @@ height="256px">
 
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
 **Table of contents:**
 
 - [Why R3BL TUI?](#why-r3bl-tui)
@@ -44,6 +45,7 @@ height="256px">
   - [Workflow Connection](#workflow-connection)
   - [Development Tools Integration](#development-tools-integration)
 - [Documentation and Planning](#documentation-and-planning)
+  - [Documentation Philosophy](#documentation-philosophy)
   - [Release and Contribution Guides](#release-and-contribution-guides)
   - [Technical Design Documents](#technical-design-documents)
 - [Learn how these crates are built, provide feedback](#learn-how-these-crates-are-built-provide-feedback)
@@ -70,7 +72,6 @@ height="256px">
     - [Option 1: Lightweight Watch Mode (Recommended for Most Users)](#option-1-lightweight-watch-mode-recommended-for-most-users)
     - [Option 2: Comprehensive Tmux Dashboard](#option-2-comprehensive-tmux-dashboard)
   - [Tmux Development Dashboard](#tmux-development-dashboard)
-  - [Status Monitoring Scripts](#status-monitoring-scripts)
   - [Wild Linker (Linux)](#wild-linker-linux)
   - [Cross-Platform Verification (Windows)](#cross-platform-verification-windows)
   - [Rust Toolchain Management](#rust-toolchain-management)
@@ -89,9 +90,9 @@ height="256px">
 
 ## Why R3BL TUI?
 
-After leaving Google in 2021, I ([Nazmul Idris](https://developerlife.com/about-me/))
-embarked on a journey to create infrastructure for modern, powerful, async CLI and TUI
-experiences built from the ground up in Rust.
+After leaving Google in 2021, I ([Nazmul Idris](https://developerlife.com/about-me/)) embarked on a
+journey to create infrastructure for modern, powerful, async CLI and TUI experiences built from the
+ground up in Rust.
 
 The core architectural innovation: a purely async, immediate mode reactive UI (every state change
 triggers a render from scratch) where nothing blocks the main thread - unlike traditional approaches
@@ -123,10 +124,9 @@ fundamental limitations:
 Our framework supports the full spectrum from CLI to hybrid TUI to full TUI experiences with deep
 system integration.
 
-**Key Innovation: "Applets"** - A revolutionary state management system that allows
-processes to persist state across their lifecycle and share it with other instances or
-processes. And the underlying systems level infrastructure mechanisms that make this
-possible.
+**Key Innovation: "Applets"** - A revolutionary state management system that allows processes to
+persist state across their lifecycle and share it with other instances or processes. And the
+underlying systems level infrastructure mechanisms that make this possible.
 
 ### Built-from-Scratch Primitives
 
@@ -161,9 +161,9 @@ stdin, stdout, and stderr.
 R3BL TUI brings the ergonomics of modern web development (React, flexbox, CSS) to terminal
 applications in Rust, creating a new paradigm for command-line productivity tools.
 
-We are building command line apps with rich text user interfaces (TUI). We want to lean
-into the terminal as a place of productivity, and build all kinds of delightful,
-ergonomic, and useful experiences for it.
+We are building command line apps with rich text user interfaces (TUI). We want to lean into the
+terminal as a place of productivity, and build all kinds of delightful, ergonomic, and useful
+experiences for it.
 
 1. 🔮 Instead of just building one app, we are building a library to enable any kind of rich TUI
    development w/ a twist: taking concepts that work really well for the frontend mobile and web
@@ -460,8 +460,31 @@ Both IDE environments complement the `./task/` file management system in this pr
 
 ## Documentation and Planning
 
+We invest heavily in documentation quality because it is the right thing to do. Also,
+[research shows](https://github.com/r3bl-org/r3bl-open-core/blob/main/docs/why-good-docs-matter.md)
+it is the single most important factor developers consider when evaluating open source projects. In
+the Rust ecosystem specifically, documentation is the #1 crate evaluation criterion
+([RFC 1824](https://rust-lang.github.io/rfcs/1824-crates.io-default-ranking.html)), and 91% of
+practitioners depend on documentation for adoption decisions
+([2024 study](https://arxiv.org/html/2403.03819v1)). Every public API has rustdoc comments with
+usage examples, and doc tests verify that every example compiles and runs.
+
+Our documentation standards are not aspirational - they are
+[machine-enforced](https://github.com/r3bl-org/r3bl-open-core/blob/main/.claude/skills/write-documentation/SKILL.md).
+Conventions for voice, structure, links, and formatting are codified as an AI skill that runs during
+development, not a style guide that sits in a wiki collecting dust. We also operationalize
+inclusivity at the documentation level: our
+[Pedagogical Links for Inclusivity](https://github.com/r3bl-org/r3bl-open-core/blob/main/.claude/skills/write-documentation/SKILL.md#pedagogical-links-for-inclusivity)
+rule requires linking domain-specific terms to external references so no reader is excluded by
+assumed knowledge - a concrete, measurable practice rather than a vague aspiration.
+
 The [`docs/`](https://github.com/r3bl-org/r3bl-open-core/tree/main/docs) folder contains
 comprehensive documentation for this project, including:
+
+### Documentation Philosophy
+
+- [`why-good-docs-matter.md`](https://github.com/r3bl-org/r3bl-open-core/blob/main/docs/why-good-docs-matter.md) -
+  Research evidence for why we invest heavily in documentation quality
 
 ### Release and Contribution Guides
 
@@ -698,29 +721,29 @@ design philosophy, coding standards, and crate-specific guidance.
 
 Claude Code autonomously discovers and applies these coding patterns when relevant:
 
-| Skill                   | Purpose                                                  |
-|-------------------------|----------------------------------------------------------|
-| `check-code-quality`    | Comprehensive quality checklist (check → build → clippy → tests) |
-| `run-clippy`            | Linting, comment punctuation, cargo fmt                  |
-| `write-documentation`   | Rustdoc conventions, intra-doc links, constant formatting |
-| `organize-modules`      | Private modules with public re-exports pattern           |
-| `check-bounds-safety`   | Type-safe Index/Length patterns for bounds-sensitive code |
-| `analyze-performance`   | Flamegraph-based performance regression detection        |
-| `design-philosophy`     | Core principles: cognitive load, type safety, abstraction worth |
+| Skill                 | Purpose                                                          |
+| --------------------- | ---------------------------------------------------------------- |
+| `check-code-quality`  | Comprehensive quality checklist (check → build → clippy → tests) |
+| `run-clippy`          | Linting, comment punctuation, cargo fmt                          |
+| `write-documentation` | Rustdoc conventions, intra-doc links, constant formatting        |
+| `organize-modules`    | Private modules with public re-exports pattern                   |
+| `check-bounds-safety` | Type-safe Index/Length patterns for bounds-sensitive code        |
+| `analyze-performance` | Flamegraph-based performance regression detection                |
+| `design-philosophy`   | Core principles: cognitive load, type safety, abstraction worth  |
 
 **Slash Commands:**
 
 Invoke skills directly in Claude Code:
 
-| Command              | Action                                     |
-|----------------------|--------------------------------------------|
-| `/check`             | Run comprehensive code quality checks      |
-| `/docs`              | Documentation build and formatting         |
-| `/clippy`            | Code style and linting                     |
-| `/fix-intradoc-links`| Fix rustdoc intra-doc links                |
-| `/check-regression`  | Detect performance regressions             |
-| `/analyze-logs`      | Analyze log files (strips ANSI codes)      |
-| `/r3bl-task`         | Task management (create, update, load, done) |
+| Command               | Action                                       |
+| --------------------- | -------------------------------------------- |
+| `/check`              | Run comprehensive code quality checks        |
+| `/docs`               | Documentation build and formatting           |
+| `/clippy`             | Code style and linting                       |
+| `/fix-intradoc-links` | Fix rustdoc intra-doc links                  |
+| `/check-regression`   | Detect performance regressions               |
+| `/analyze-logs`       | Analyze log files (strips ANSI codes)        |
+| `/r3bl-task`          | Task management (create, update, load, done) |
 
 **Getting Started with Claude Code:**
 
@@ -735,11 +758,11 @@ For the best Claude Code experience, install the
 [R3BL VSCode Extensions](https://github.com/r3bl-org/r3bl-vscode-extensions) which are designed to
 work hand-in-hand with Claude Code:
 
-| Extension                 | Claude Code Synergy                                           |
-|---------------------------|---------------------------------------------------------------|
-| **R3BL Copy Selection Path** | Press `Alt+O` to copy file paths with line ranges — paste directly into Claude Code for precise code references |
-| **R3BL Task Spaces**      | Organize editor tabs by task context — switch between feature work, debugging, and documentation while Claude Code tracks your `./task/` files |
-| **R3BL Theme**            | Optimized dark theme for long coding sessions with Claude Code |
+| Extension                    | Claude Code Synergy                                                                                                                            |
+| ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| **R3BL Copy Selection Path** | Press `Alt+O` to copy file paths with line ranges — paste directly into Claude Code for precise code references                                |
+| **R3BL Task Spaces**         | Organize editor tabs by task context — switch between feature work, debugging, and documentation while Claude Code tracks your `./task/` files |
+| **R3BL Theme**               | Optimized dark theme for long coding sessions with Claude Code                                                                                 |
 
 ```bash
 # Install the R3BL Development Pack
@@ -1123,7 +1146,8 @@ script:
 - **Clean progress output**: Shows stage-by-stage progress without verbose cargo logs
 - **Automatic toolchain validation**: Validates and repairs Rust toolchain before checks
 - **ICE recovery**: Detects and recovers from Internal Compiler Errors automatically
-- **ICE escalation**: On persistent ICE, escalates to `rust-toolchain-update.fish` to find a stable nightly
+- **ICE escalation**: On persistent ICE, escalates to `rust-toolchain-update.fish` to find a stable
+  nightly
 - **Continuous operation**: Keeps watching even if checks fail (perfect for iterative development)
 
 **Example output:**
@@ -1716,8 +1740,7 @@ The four scripts work together to provide a complete toolchain management soluti
 
 **Four complementary scripts:**
 
-- **validate** (`rust-toolchain-validate.fish`): Non-destructive validation of current
-  toolchain
+- **validate** (`rust-toolchain-validate.fish`): Non-destructive validation of current toolchain
 - **update** (`rust-toolchain-update.fish`): Smart search for stable nightly with comprehensive
   validation
 - **sync** (`rust-toolchain-sync-to-toml.fish`): Install toolchain matching rust-toolchain.toml
