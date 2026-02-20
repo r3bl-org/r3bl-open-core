@@ -2,6 +2,10 @@
   // R3BL Extension Pack: https://github.com/r3bl-org/r3bl-vscode-extensions
   "copyrighter.author": "R3BL LLC",
   "copyrighter.license": "Apache2OneLine",
+  "search.exclude": {
+    "**/test_data/**": true,
+    "task/done/**": true
+  },
   "cSpell.words": [
     "abcab",
     "abcaba",

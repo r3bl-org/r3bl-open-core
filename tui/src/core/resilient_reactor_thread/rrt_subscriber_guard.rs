@@ -10,34 +10,34 @@ use tokio::sync::broadcast::Receiver;
 
 /// An [RAII] guard that wakes the dedicated thread on drop.
 ///
-/// # Purpose
-///
-/// Holding a [`SubscriberGuard`] keeps you subscribed to events from the dedicated
-/// thread. Dropping it triggers the cleanup protocol that may cause the thread to exit.
+/// Holding a [`SubscriberGuard`] keeps async consumers in your [TUI] and
+/// [`readline_async`] app subscribed to events from the dedicated thread. Dropping it
+/// triggers the cleanup mechanism that may cause the thread to exit (see [Thread
+/// Lifecycle]).
 ///
 /// # Drop Behavior
 ///
 /// **Do not reorder the fields in this struct.** But don't worry if you do, since the
 /// drop order unit test in this file will fail.
 ///
-/// Field drop order is guaranteed by the language ([RFC 1857]) - fields drop in
-/// declaration order, top to bottom. This pattern of encoding drop ordering through
-/// struct composition is sometimes called "drop order by design" and avoids both `Option`
-/// wrappers and `unsafe ManuallyDrop`.
+/// Field drop order is guaranteed by the Rust language ([RFC 1857]). Fields drop in
+/// declaration order, first to last, which allows us to use struct composition to control
+/// the drop order. No need for the messy use of `Option` wrappers or `unsafe
+/// ManuallyDrop`. Here's the drop sequence for our guard, in the order of field
+/// declaration:
 ///
-/// When this guard is dropped, Rust drops fields in declaration order:
-/// 1. [`receiver`] is dropped first, which causes Tokio's broadcast channel to atomically
-///    decrement the [`Sender`]'s internal [`receiver_count()`].
-/// 2. Then [`WakeOnDrop`] is dropped, which calls
+/// 1. [`receiver`]-end of the [broadcast channel] is dropped first. This causes the
+///    channel to decrement the [`Sender`]-end's internal [`receiver_count()`] in a
+///    thread-safe manner.
+/// 2. [`wake_on_drop`] is dropped next. Its [Drop implementation] calls
 ///    [`RRTWaker::wake_and_unblock_dedicated_thread()`] to interrupt the dedicated
 ///    thread's blocking call.
-/// 3. The dedicated thread wakes and checks [`receiver_count()`] to decide if it should
-///    exit (when count reaches `0`).
 ///
-/// This is step 4 of the [Thread Lifecycle] - see that section for the full
-/// spawn/reuse/terminate sequence.
+/// The dedicated thread then wakes and checks [`receiver_count()`] to decide if it should
+/// exit (when it reaches `0`). This is step 4 of the [Thread Lifecycle] - see that
+/// section for the full spawn/reuse/terminate sequence.
 ///
-/// # Shared Waker and the Zombie Thread Bug
+/// # Shared Waker Prevents the Zombie Thread Bug
 ///
 /// Each [`WakeOnDrop`] holds a clone of the [`SharedWakerSlot<W::Waker>`] shared across
 /// *all* subscribers (old and new) and the [`TerminationGuard`].
@@ -48,10 +48,10 @@ use tokio::sync::broadcast::Receiver;
 /// **zombie thread bug** where old subscribers would call a stale waker targeting a dead
 /// [`mio::Poll`].
 ///
-/// When the thread dies, [`TerminationGuard::drop()`] clears the [`RRTWaker`] to
-/// [`None`] (see [Thread Lifecycle] step 4). If a subscriber drops after the thread has
-/// already exited, the wake call is skipped (the [`Option`] is [`None`]), which is
-/// correct - there's no thread to wake.
+/// When the thread dies, [`TerminationGuard::drop()`] clears the [`RRTWaker`] to [`None`]
+/// (see [Thread Lifecycle] step 4). If a subscriber drops after the thread has already
+/// exited, the wake call is skipped (the [`Option`] is [`None`]), which is correct -
+/// there's no thread to wake.
 ///
 /// # Race Condition and Correctness
 ///
@@ -64,21 +64,27 @@ use tokio::sync::broadcast::Receiver;
 ///
 /// See [`DirectToAnsiInputDevice::next()`] for real usage.
 ///
+/// [Drop implementation]: WakeOnDrop#method.drop
 /// [RAII]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
 /// [RFC 1857]: https://rust-lang.github.io/rfcs/1857-stabilize-drop-order.html
+/// [TUI]: crate::tui::TerminalWindow::main_event_loop
 /// [Thread Lifecycle]: super::RRT#thread-lifecycle
 /// [`DirectToAnsiInputDevice::next()`]:
 ///     crate::terminal_lib_backends::DirectToAnsiInputDevice::next
-/// [`RRTWaker::wake_and_unblock_dedicated_thread()`]: super::RRTWaker::wake_and_unblock_dedicated_thread
+/// [`RRTWaker::wake_and_unblock_dedicated_thread()`]:
+///     super::RRTWaker::wake_and_unblock_dedicated_thread
 /// [`RRTWaker`]: super::RRTWaker
 /// [`RRTWorker`]: super::RRTWorker
 /// [`Sender`]: tokio::sync::broadcast::Sender
 /// [`SharedWakerSlot<W::Waker>`]: super::SharedWakerSlot
-/// [`TerminationGuard::drop()`]: super::TerminationGuard
+/// [`TerminationGuard::drop()`]: super::TerminationGuard#method.drop
 /// [`TerminationGuard`]: super::TerminationGuard
 /// [`mio::Poll`]: mio::Poll
+/// [`readline_async`]: crate::readline_async::ReadlineAsyncContext::try_new
 /// [`receiver_count()`]: tokio::sync::broadcast::Sender::receiver_count
 /// [`receiver`]: Self::receiver
+/// [`wake_on_drop`]: Self::wake_on_drop
+/// [broadcast channel]: tokio::sync::broadcast
 /// [race window]: super#the-inherent-race-condition
 /// [two-phase setup]: super#two-phase-setup
 #[allow(missing_debug_implementations, dead_code)]
@@ -93,7 +99,7 @@ pub struct SubscriberGuard<W: RRTWorker> {
     /// [Drop Behavior].
     ///
     /// [Drop Behavior]: SubscriberGuard#drop-behavior
-    wake_on_drop: WakeOnDrop<W::Waker>,
+    pub wake_on_drop: WakeOnDrop<W::Waker>,
 }
 
 impl<W: RRTWorker> SubscriberGuard<W> {
@@ -127,10 +133,18 @@ impl<K: RRTWaker> WakeOnDrop<K> {
 }
 
 impl<K: RRTWaker> Drop for WakeOnDrop<K> {
+    /// Wakes the dedicated thread so it can check whether it should exit.
+    ///
+    /// If the thread has already exited, the [waker] is [`None`] (cleared by
+    /// [`TerminationGuard::drop()`]), so the wake call is skipped.
+    ///
+    /// See step 4 of the [Thread Lifecycle] for where this fits in the exit
+    /// sequence.
+    ///
+    /// [Thread Lifecycle]: RRT#thread-lifecycle
+    /// [`TerminationGuard::drop()`]: super::TerminationGuard#method.drop
+    /// [waker]: super::RRTWaker
     fn drop(&mut self) {
-        // Wake the thread so it can check if it should exit.
-        // If the thread has already exited, the waker is None (cleared by
-        // TerminationGuard::drop()), so we skip the wake call.
         if let Ok(guard) = self.shared_waker_slot.lock() {
             if let Some(waker) = guard.as_ref() {
                 waker.wake_and_unblock_dedicated_thread();

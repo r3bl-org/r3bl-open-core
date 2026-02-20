@@ -391,8 +391,8 @@ pub struct RRT<W: RRTWorker> {
     /// [const expression]: #const-expression-vs-const-declaration-vs-static-declaration
     /// [running]: LivenessState::Running
     /// [terminated or not started]: LivenessState::TerminatedOrNotStarted
-    /// [zombie thread bug]: super::SubscriberGuard#shared-waker-and-the-zombie-thread-bug
     /// [waker]: super::RRTWaker
+    /// [zombie thread bug]: super::SubscriberGuard#shared-waker-prevents-the-zombie-thread-bug
     pub shared_waker_slot: LazyLock<SharedWakerSlot<W::Waker>>,
 
     /// Per-thread-generation counter. Incremented each time a new thread is spawned.
@@ -775,10 +775,23 @@ pub struct TerminationGuard<W: RRTWorker> {
 }
 
 impl<W: RRTWorker> Drop for TerminationGuard<W> {
+    /// Clears the [waker] to [`None`], which serves two purposes:
+    /// 1. Prevents any [`SubscriberGuard`] from calling a stale
+    ///    [`wake_and_unblock_dedicated_thread()`] on a dead thread.
+    /// 2. Lets [`subscribe()`] detect termination via [`is_none()`] and trigger a
+    ///    relaunch.
+    ///
+    /// See step 4 of the [Thread Lifecycle] for where this fits in the exit
+    /// sequence.
+    ///
+    /// [Thread Lifecycle]: RRT#thread-lifecycle
+    /// [`SubscriberGuard`]: super::SubscriberGuard
+    /// [`is_none()`]: Option::is_none
+    /// [`subscribe()`]: RRT::subscribe
+    /// [`wake_and_unblock_dedicated_thread()`]:
+    ///     super::RRTWaker::wake_and_unblock_dedicated_thread
+    /// [waker]: super::RRTWaker
     fn drop(&mut self) {
-        // Clear waker so no subscriber can call stale
-        // wake_and_unblock_dedicated_thread(), and so subscribe()
-        // detects termination via is_none().
         if let Ok(mut guard) = self.shared_waker_slot.lock() {
             *guard = None;
         }

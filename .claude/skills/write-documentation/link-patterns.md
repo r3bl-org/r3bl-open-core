@@ -664,6 +664,30 @@ Examples:
 /// restarts with 100ms initial delay.
 ```
 
+### Linking to a Method Within a Trait Impl
+
+To link directly to a specific method (not just the impl block), use `#method.method_name`:
+
+```rust
+/// Its [Drop implementation] calls
+/// [`RRTWaker::wake_and_unblock_dedicated_thread()`].
+///
+/// [Drop implementation]: WakeOnDrop#method.drop
+```
+
+This is more precise than `#impl-Drop-for-WakeOnDrop%3CK%3E`, which anchors to the
+impl block header. `#method.drop` scrolls directly to the `fn drop` method and its
+rustdoc comments.
+
+**When to use which:**
+
+| Scenario | Anchor | Example |
+|:---------|:-------|:--------|
+| Linking to a specific method's docs | `#method.method_name` | `WakeOnDrop#method.drop` |
+| Linking to the impl as a whole (e.g., default values, derive behavior) | `#impl-Trait-for-Type` | `RestartPolicy#impl-Default-for-RestartPolicy` |
+| Trait has only one method and you want its docs | `#method.method_name` | `TerminationGuard#method.drop` |
+| Trait has multiple methods and you want the overview | `#impl-Trait-for-Type` | `MyType#impl-Iterator-for-MyType` |
+
 ### Key Differences from Heading Anchors
 
 | Aspect | Heading anchors (`#my-heading`) | Impl anchors (`#impl-Trait-for-Type`) |
