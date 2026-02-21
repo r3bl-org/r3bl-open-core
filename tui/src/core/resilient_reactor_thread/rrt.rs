@@ -4,23 +4,15 @@
 
 //! Thread lifecycle manager and entry point for the Resilient Reactor Thread pattern.
 //! See [`RRT`] for details.
-use super::{LivenessState,
-            RRTEvent,
-            RRTWorker,
-            RestartPolicy,
-            ShutdownReason,
-            SubscribeError,
-            SubscriberGuard,
-            TerminationGuard};
+use super::{BroadcastSender, LivenessState, RRTEvent, RRTWorker, RestartPolicy,
+            SharedWakerSlot, ShutdownReason, SubscribeError, SubscriberGuard,
+            TerminationGuard, WakerSlotWriter};
 use crate::{core::common::{AtomicU8Ext, Continuation},
             ok};
 use std::{panic::{AssertUnwindSafe, catch_unwind},
           sync::{Arc, LazyLock, Mutex, atomic::AtomicU8},
           time::Duration};
 use tokio::sync::broadcast;
-
-pub type BroadcastSender<E> = broadcast::Sender<RRTEvent<E>>;
-pub type SharedWakerSlot<K> = Arc<Mutex<Option<K>>>;
 
 // XMARK: Rust lang static vs const declaration vs expression and static lifetime
 
@@ -498,9 +490,7 @@ impl<W: RRTWorker> RRT<W> {
 
         // FAST PATH: thread is running -> reuse it.
         if thread_is_running {
-            let receiver = sender.subscribe();
-            let shared_waker_slot = shared_waker_slot.clone();
-            return ok!(SubscriberGuard::new(receiver, shared_waker_slot));
+            return ok!(SubscriberGuard::new(sender, shared_waker_slot));
         }
 
         // SLOW PATH: thread terminated (or never started). Hold the waker lock (don't
@@ -518,24 +508,21 @@ impl<W: RRTWorker> RRT<W> {
         let thread_generation = self.thread_generation.increment();
 
         // Spawn worker thread.
-        let sender_for_thread = sender.clone();
-        let shared_waker_slot_for_thread = shared_waker_slot.clone();
+        let thread_move_sender = sender.clone();
+        let thread_move_waker_slot_writer: WakerSlotWriter<W::Waker> =
+            shared_waker_slot.into();
         std::thread::Builder::new()
             .name(format!("rrt-worker-gen-{thread_generation}"))
             .spawn(move || {
                 run_worker_loop::<W>(
                     worker,
-                    sender_for_thread,
-                    shared_waker_slot_for_thread,
+                    thread_move_sender,
+                    thread_move_waker_slot_writer,
                 );
             })
             .map_err(SubscribeError::ThreadSpawn)?;
 
-        ok!({
-            let receiver = sender.subscribe();
-            let shared_waker_slot = shared_waker_slot.clone();
-            SubscriberGuard::new(receiver, shared_waker_slot)
-        })
+        ok!(SubscriberGuard::new(sender, shared_waker_slot))
     }
 
     /// Subscribes to events from an existing thread.
@@ -546,12 +533,7 @@ impl<W: RRTWorker> RRT<W> {
     ///
     /// [`subscribe()`]: Self::subscribe
     pub fn subscribe_to_existing(&self) -> SubscriberGuard<W> {
-        let sender = &*self.sender;
-        let shared_waker_slot = &*self.shared_waker_slot;
-
-        let receiver = sender.subscribe();
-        let shared_waker_slot = shared_waker_slot.clone();
-        SubscriberGuard::new(receiver, shared_waker_slot)
+        SubscriberGuard::new(&*self.sender, &*self.shared_waker_slot)
     }
 
     /// Checks if the dedicated thread is currently running.
@@ -669,11 +651,11 @@ impl<W: RRTWorker> RRT<W> {
 pub fn run_worker_loop<W: RRTWorker>(
     mut worker: W,
     sender: BroadcastSender<W::Event>,
-    shared_waker_slot: SharedWakerSlot<W::Waker>,
+    arg_waker_slot_writer: impl Into<WakerSlotWriter<W::Waker>>,
 ) {
-    let _guard = TerminationGuard::<W> {
-        shared_waker_slot: shared_waker_slot.clone(),
-    };
+    let waker_slot_writer: WakerSlotWriter<W::Waker> = arg_waker_slot_writer.into();
+
+    let _guard = TerminationGuard::<W>::new(waker_slot_writer.clone());
 
     let policy = W::restart_policy();
     let mut restart_count: u8 = 0;
@@ -683,8 +665,8 @@ pub fn run_worker_loop<W: RRTWorker>(
     let sender_for_panic = sender.clone();
 
     // Safety: AssertUnwindSafe is sound here. The closure captures &mut worker, &sender,
-    // &shared_waker_slot, &policy, &mut restart_count, and &mut current_delay. After
-    // catching a panic we don't touch any of the captured loop state - we only send a
+    // &waker_writer, &policy, &mut restart_count, and &mut current_delay. After catching
+    // a panic we don't touch any of the captured loop state - we only send a
     // Shutdown(Panic) notification via the pre-cloned sender_for_panic and then exit. No
     // potentially-corrupted state is observed or reused.
     let result = catch_unwind(AssertUnwindSafe(|| {
@@ -718,10 +700,7 @@ pub fn run_worker_loop<W: RRTWorker>(
                         match W::create_and_register_os_sources() {
                             Ok((new_worker, new_waker)) => {
                                 worker = new_worker;
-                                // Store the concrete waker directly.
-                                if let Ok(mut guard) = shared_waker_slot.lock() {
-                                    *guard = Some(new_waker);
-                                }
+                                waker_slot_writer.set(new_waker);
                                 // Reset budget so the fresh worker gets a full allowance
                                 // for future incidents.
                                 restart_count = 0;
@@ -766,4 +745,3 @@ pub fn advance_backoff_delay(
         None => Some(current), // No backoff - constant delay.
     }
 }
-

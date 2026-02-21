@@ -2,8 +2,17 @@
 
 // cspell:words maxfiles taskthreads
 
-//! Public API types for the RRT framework. See [`SubscribeError`] and [`LivenessState`]
-//! for details.
+//! Public API types for the RRT framework. See [`SubscribeError`], [`BroadcastSender`],
+//! and [`LivenessState`] for details.
+
+use crate::resilient_reactor_thread::RRTEvent;
+use tokio::sync::broadcast;
+
+/// [Sender]-half of the [broadcast channel] that carries [`RRTEvent<E>`] to subscribers.
+///
+/// [Sender]: tokio::sync::broadcast::Sender
+/// [broadcast channel]: tokio::sync::broadcast
+pub type BroadcastSender<E> = broadcast::Sender<RRTEvent<E>>;
 
 /// Errors from [`RRT::subscribe()`].
 ///

@@ -219,12 +219,13 @@ fn no_delay_policy(max_restarts: u8) -> RestartPolicy {
 fn spawn_worker_loop(
     worker: TestWorker,
     sender: BroadcastSender<TestEvent>,
-    shared_waker_slot: SharedWakerSlot<TestWaker>,
+    shared_waker_slot: &SharedWakerSlot<TestWaker>,
 ) -> std::thread::JoinHandle<()> {
+    let waker_slot_writer: WakerSlotWriter<TestWaker> = shared_waker_slot.into();
     std::thread::Builder::new()
         .name("test-rrt-worker".into())
         .spawn(move || {
-            run_worker_loop::<TestWorker>(worker, sender, shared_waker_slot);
+            run_worker_loop::<TestWorker>(worker, sender, waker_slot_writer);
         })
         .unwrap()
 }
@@ -400,7 +401,7 @@ fn test_worker_stop_exits_cleanly() {
         Arc::new(Mutex::new(Some(wake_fn)));
 
     let (_notify_receiver, _senders) = setup_factory(vec![], no_delay_policy(3));
-    let handle = spawn_worker_loop(worker, sender, shared_waker_slot.clone());
+    let handle = spawn_worker_loop(worker, sender, &shared_waker_slot);
 
     send_cmd(&cmd_sender, b's');
     handle.join().unwrap();
@@ -417,7 +418,7 @@ fn test_worker_continue_then_stop() {
         Arc::new(Mutex::new(Some(wake_fn)));
 
     let (_notify_receiver, _senders) = setup_factory(vec![], no_delay_policy(3));
-    let handle = spawn_worker_loop(worker, sender, shared_waker_slot.clone());
+    let handle = spawn_worker_loop(worker, sender, &shared_waker_slot);
 
     send_cmd(&cmd_sender, b'e');
     send_cmd(&cmd_sender, b'e');
@@ -440,7 +441,7 @@ fn test_domain_events_flow_through() {
         Arc::new(Mutex::new(Some(wake_fn)));
 
     let (_notify_receiver, _senders) = setup_factory(vec![], no_delay_policy(3));
-    let handle = spawn_worker_loop(worker, sender, shared_waker_slot.clone());
+    let handle = spawn_worker_loop(worker, sender, &shared_waker_slot);
 
     send_cmd(&cmd_sender, b'e');
     send_cmd(&cmd_sender, b'e');
@@ -469,7 +470,7 @@ fn test_single_restart_success() {
     let shared_waker_slot: SharedWakerSlot<TestWaker> =
         Arc::new(Mutex::new(Some(wake_fn1)));
 
-    let handle = spawn_worker_loop(worker1, sender, shared_waker_slot.clone());
+    let handle = spawn_worker_loop(worker1, sender, &shared_waker_slot);
 
     // Worker1: restart.
     send_cmd(&cmd_sender1, b'r');
@@ -498,7 +499,7 @@ fn test_restart_no_delay_fast() {
         Arc::new(Mutex::new(Some(wake_fn1)));
 
     let start = Instant::now();
-    let handle = spawn_worker_loop(worker1, sender, shared_waker_slot.clone());
+    let handle = spawn_worker_loop(worker1, sender, &shared_waker_slot);
 
     send_cmd(&cmd_sender1, b'r');
     notify_receiver
@@ -522,7 +523,7 @@ fn test_events_before_and_after_restart() {
     let shared_waker_slot: SharedWakerSlot<TestWaker> =
         Arc::new(Mutex::new(Some(wake_fn1)));
 
-    let handle = spawn_worker_loop(worker1, sender, shared_waker_slot.clone());
+    let handle = spawn_worker_loop(worker1, sender, &shared_waker_slot);
 
     // Worker1: event then restart.
     send_cmd(&cmd_sender1, b'e');
@@ -554,7 +555,7 @@ fn test_waker_swap_on_restart() {
     let shared_waker_slot: SharedWakerSlot<TestWaker> =
         Arc::new(Mutex::new(Some(wake_fn1)));
 
-    let handle = spawn_worker_loop(worker1, sender, shared_waker_slot.clone());
+    let handle = spawn_worker_loop(worker1, sender, &shared_waker_slot);
 
     // Invoke the current waker to record its ID in LAST_WAKED_ID.
     {
@@ -615,7 +616,7 @@ fn test_budget_resets_on_successful_create() {
     let shared_waker_slot: SharedWakerSlot<TestWaker> =
         Arc::new(Mutex::new(Some(wake_fn1)));
 
-    let handle = spawn_worker_loop(worker1, sender, shared_waker_slot.clone());
+    let handle = spawn_worker_loop(worker1, sender, &shared_waker_slot);
 
     // W1 -> restart -> W2 created (budget resets).
     send_cmd(&cmd_sender1, b'r');
@@ -660,7 +661,7 @@ fn test_restart_exhaustion() {
     let shared_waker_slot: SharedWakerSlot<TestWaker> =
         Arc::new(Mutex::new(Some(wake_fn1)));
 
-    let handle = spawn_worker_loop(worker1, sender, shared_waker_slot.clone());
+    let handle = spawn_worker_loop(worker1, sender, &shared_waker_slot);
 
     send_cmd(&cmd_sender1, b'r');
     notify_receiver
@@ -694,7 +695,7 @@ fn test_zero_budget_immediate_exhaustion() {
     let shared_waker_slot: SharedWakerSlot<TestWaker> =
         Arc::new(Mutex::new(Some(wake_fn1)));
 
-    let handle = spawn_worker_loop(worker1, sender, shared_waker_slot.clone());
+    let handle = spawn_worker_loop(worker1, sender, &shared_waker_slot);
 
     send_cmd(&cmd_sender1, b'r');
     handle.join().unwrap();
@@ -717,7 +718,7 @@ fn test_shutdown_event_payload() {
     let shared_waker_slot: SharedWakerSlot<TestWaker> =
         Arc::new(Mutex::new(Some(wake_fn1)));
 
-    let handle = spawn_worker_loop(worker1, sender, shared_waker_slot.clone());
+    let handle = spawn_worker_loop(worker1, sender, &shared_waker_slot);
 
     send_cmd(&cmd_sender1, b'r');
     handle.join().unwrap();
@@ -745,7 +746,7 @@ fn test_create_failure_then_success() {
     let shared_waker_slot: SharedWakerSlot<TestWaker> =
         Arc::new(Mutex::new(Some(wake_fn1)));
 
-    let handle = spawn_worker_loop(worker1, sender, shared_waker_slot.clone());
+    let handle = spawn_worker_loop(worker1, sender, &shared_waker_slot);
 
     send_cmd(&cmd_sender1, b'r');
     // Wait for second create() call (first fails, second succeeds).
@@ -778,7 +779,7 @@ fn test_persistent_create_failure() {
     let shared_waker_slot: SharedWakerSlot<TestWaker> =
         Arc::new(Mutex::new(Some(wake_fn1)));
 
-    let handle = spawn_worker_loop(worker1, sender, shared_waker_slot.clone());
+    let handle = spawn_worker_loop(worker1, sender, &shared_waker_slot);
 
     send_cmd(&cmd_sender1, b'r');
     handle.join().unwrap();
@@ -805,7 +806,7 @@ fn test_guard_clears_waker_on_stop() {
         Arc::new(Mutex::new(Some(wake_fn)));
 
     let (_notify_receiver, _senders) = setup_factory(vec![], no_delay_policy(3));
-    let handle = spawn_worker_loop(worker, sender, shared_waker_slot.clone());
+    let handle = spawn_worker_loop(worker, sender, &shared_waker_slot);
 
     send_cmd(&cmd_sender, b's');
     handle.join().unwrap();
@@ -821,7 +822,7 @@ fn test_guard_clears_waker_on_exhaustion() {
         Arc::new(Mutex::new(Some(wake_fn)));
 
     let (_notify_receiver, _senders) = setup_factory(vec![], no_delay_policy(0));
-    let handle = spawn_worker_loop(worker, sender, shared_waker_slot.clone());
+    let handle = spawn_worker_loop(worker, sender, &shared_waker_slot);
 
     send_cmd(&cmd_sender, b'r');
     handle.join().unwrap();
@@ -848,7 +849,7 @@ fn test_backoff_delay_applied() {
         Arc::new(Mutex::new(Some(wake_fn1)));
 
     let start = Instant::now();
-    let handle = spawn_worker_loop(worker1, sender, shared_waker_slot.clone());
+    let handle = spawn_worker_loop(worker1, sender, &shared_waker_slot);
 
     send_cmd(&cmd_sender1, b'r');
     notify_receiver
@@ -894,7 +895,7 @@ fn test_delay_resets_after_successful_create() {
         Arc::new(Mutex::new(Some(wake_fn1)));
 
     let start = Instant::now();
-    let handle = spawn_worker_loop(worker1, sender, shared_waker_slot.clone());
+    let handle = spawn_worker_loop(worker1, sender, &shared_waker_slot);
 
     send_cmd(&cmd_sender1, b'r');
     // Wait for create() calls: first Err, then Ok(W2).
@@ -928,7 +929,7 @@ fn test_panic_sends_shutdown_panic() {
         Arc::new(Mutex::new(Some(wake_fn)));
 
     let (_notify_receiver, _senders) = setup_factory(vec![], no_delay_policy(3));
-    let handle = spawn_worker_loop(worker, sender, shared_waker_slot.clone());
+    let handle = spawn_worker_loop(worker, sender, &shared_waker_slot);
 
     send_cmd(&cmd_sender, b'p');
     handle.join().unwrap();
@@ -947,7 +948,7 @@ fn test_panic_after_events() {
         Arc::new(Mutex::new(Some(wake_fn)));
 
     let (_notify_receiver, _senders) = setup_factory(vec![], no_delay_policy(3));
-    let handle = spawn_worker_loop(worker, sender, shared_waker_slot.clone());
+    let handle = spawn_worker_loop(worker, sender, &shared_waker_slot);
 
     send_cmd(&cmd_sender, b'e');
     send_cmd(&cmd_sender, b'p');
@@ -973,7 +974,7 @@ fn test_guard_clears_waker_on_panic() {
         Arc::new(Mutex::new(Some(wake_fn)));
 
     let (_notify_receiver, _senders) = setup_factory(vec![], no_delay_policy(3));
-    let handle = spawn_worker_loop(worker, sender, shared_waker_slot.clone());
+    let handle = spawn_worker_loop(worker, sender, &shared_waker_slot);
 
     send_cmd(&cmd_sender, b'p');
     handle.join().unwrap();
@@ -989,7 +990,7 @@ fn test_no_restart_after_panic() {
         Arc::new(Mutex::new(Some(wake_fn)));
 
     let (_notify_receiver, _senders) = setup_factory(vec![], no_delay_policy(3));
-    let handle = spawn_worker_loop(worker, sender, shared_waker_slot.clone());
+    let handle = spawn_worker_loop(worker, sender, &shared_waker_slot);
 
     send_cmd(&cmd_sender, b'p');
     handle.join().unwrap();

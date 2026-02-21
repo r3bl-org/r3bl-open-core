@@ -1,11 +1,11 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 //! [RAII] subscription guard for the Resilient Reactor Thread pattern. See
-//! [`SubscriberGuard`].
+//! [`SubscriberGuard`], [`WakeOnDrop`].
 //!
 //! [RAII]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
 
-use super::{RRTEvent, RRTWaker, RRTWorker, SharedWakerSlot};
+use super::{BroadcastSender, RRTEvent, RRTWaker, RRTWorker, WakerSlotReader};
 use tokio::sync::broadcast::Receiver;
 
 /// An [RAII] guard that wakes the dedicated thread on drop.
@@ -39,11 +39,10 @@ use tokio::sync::broadcast::Receiver;
 ///
 /// # Shared Waker Prevents the Zombie Thread Bug
 ///
-/// Each [`WakeOnDrop`] holds a clone of the [`SharedWakerSlot<W::Waker>`]. This slot is
-/// shared across *all* subscribers (old and new) and the [`TerminationGuard`].
-/// - Read-only access - All subscribers read the inner waker through this slot.
-/// - Read-write access - [`TerminationGuard`] is the sole writer that clears it to
-///   [`None`] on drop.
+/// Each [`WakeOnDrop`] holds a [`WakerSlotReader<W::Waker>`] - a read-only view of the
+/// [`SharedWakerSlot`]. This read-only view is shared across *all* subscribers (old and
+/// new). Only one [`TerminationGuard`] holds a [`WakerSlotWriter`] (write-only view of
+/// the same slot).
 ///
 /// Due to [two-phase setup], the [`RRTWaker`] and [`RRTWorker`] are created together from
 /// the same [`mio::Poll`] registry. This shared wrapper ensures every subscriber always
@@ -79,9 +78,12 @@ use tokio::sync::broadcast::Receiver;
 /// [`RRTWaker`]: super::RRTWaker
 /// [`RRTWorker`]: super::RRTWorker
 /// [`Sender`]: tokio::sync::broadcast::Sender
-/// [`SharedWakerSlot<W::Waker>`]: super::SharedWakerSlot
+/// [`SharedWakerSlot`]: super::SharedWakerSlot
 /// [`TerminationGuard::drop()`]: super::TerminationGuard#method.drop
 /// [`TerminationGuard`]: super::TerminationGuard
+/// [`WakerSlotReader<W::Waker>`]: super::WakerSlotReader
+/// [`WakerSlotReader`]: super::WakerSlotReader
+/// [`WakerSlotWriter`]: super::WakerSlotWriter
 /// [`mio::Poll`]: mio::Poll
 /// [`readline_async`]: crate::readline_async::ReadlineAsyncContext::try_new
 /// [`receiver_count()`]: tokio::sync::broadcast::Sender::receiver_count
@@ -92,47 +94,46 @@ use tokio::sync::broadcast::Receiver;
 /// [two-phase setup]: super#two-phase-setup
 #[allow(missing_debug_implementations, dead_code)]
 pub struct SubscriberGuard<W: RRTWorker> {
-    /// The broadcast receiver for events. Do not reorder - see
-    /// [Drop Behavior].
+    /// The broadcast receiver for events. Do not reorder - see [Drop Behavior].
     ///
     /// [Drop Behavior]: SubscriberGuard#drop-behavior
     pub receiver: Receiver<RRTEvent<W::Event>>,
 
-    /// Wakes the dedicated thread on drop. Do not reorder - see
-    /// [Drop Behavior].
+    /// Wakes the dedicated thread on drop. Do not reorder - see [Drop Behavior].
     ///
     /// [Drop Behavior]: SubscriberGuard#drop-behavior
     pub wake_on_drop: WakeOnDrop<W::Waker>,
 }
 
 impl<W: RRTWorker> SubscriberGuard<W> {
-    /// Creates a new `SubscriberGuard` from a receiver and shared waker.
+    /// Creates a new `SubscriberGuard` by subscribing to the given sender.
+    ///
+    /// Calls [`Sender::subscribe()`] internally to create a new receiver from the
+    /// [broadcast channel].
+    ///
+    /// [`Sender::subscribe()`]: tokio::sync::broadcast::Sender::subscribe
+    /// [broadcast channel]: tokio::sync::broadcast
     pub fn new(
-        receiver: Receiver<RRTEvent<W::Event>>,
-        shared_waker_slot: SharedWakerSlot<W::Waker>,
+        sender: &BroadcastSender<W::Event>,
+        arg_waker_slot_reader: impl Into<WakerSlotReader<W::Waker>>,
     ) -> Self {
+        let waker_slot_reader = arg_waker_slot_reader.into();
         Self {
-            receiver,
-            wake_on_drop: WakeOnDrop::new(shared_waker_slot),
+            receiver: sender.subscribe(),
+            wake_on_drop: WakeOnDrop { waker_slot_reader },
         }
     }
 }
 
-/// Calls [`RRTWaker::wake_and_unblock_dedicated_thread()`] when dropped. See
-/// [Drop Behavior] for why field ordering matters.
+/// Calls [`RRTWaker::wake_and_unblock_dedicated_thread()`] when dropped. See [Drop
+/// Behavior] for why field ordering matters.
 ///
 /// [Drop Behavior]: SubscriberGuard#drop-behavior
-/// [`RRTWaker::wake_and_unblock_dedicated_thread()`]: super::RRTWaker::wake_and_unblock_dedicated_thread
+/// [`RRTWaker::wake_and_unblock_dedicated_thread()`]:
+///     super::RRTWaker::wake_and_unblock_dedicated_thread
 #[allow(missing_debug_implementations)]
 pub struct WakeOnDrop<K: RRTWaker> {
-    shared_waker_slot: SharedWakerSlot<K>,
-}
-
-impl<K: RRTWaker> WakeOnDrop<K> {
-    /// Creates a new `WakeOnDrop` from a shared waker.
-    pub fn new(shared_waker_slot: SharedWakerSlot<K>) -> Self {
-        Self { shared_waker_slot }
-    }
+    pub waker_slot_reader: WakerSlotReader<K>,
 }
 
 impl<K: RRTWaker> Drop for WakeOnDrop<K> {
@@ -141,42 +142,70 @@ impl<K: RRTWaker> Drop for WakeOnDrop<K> {
     /// If the thread has already exited, the [waker] is [`None`] (cleared by
     /// [`TerminationGuard::drop()`]), so the wake call is skipped.
     ///
-    /// See step 4 of the [Thread Lifecycle] for where this fits in the exit
-    /// sequence.
+    /// See step 4 of the [Thread Lifecycle] for where this fits in the exit sequence.
     ///
     /// [Thread Lifecycle]: RRT#thread-lifecycle
     /// [`TerminationGuard::drop()`]: super::TerminationGuard#method.drop
     /// [waker]: super::RRTWaker
-    fn drop(&mut self) {
-        if let Ok(guard) = self.shared_waker_slot.lock() {
-            if let Some(waker) = guard.as_ref() {
-                waker.wake_and_unblock_dedicated_thread();
-            }
-        }
-    }
+    fn drop(&mut self) { self.waker_slot_reader.wake_if_present(); }
 }
 
 #[cfg(test)]
 mod drop_order_tests {
     use super::*;
-    use crate::Continuation;
-    use std::sync::{Arc, Mutex,
-                    atomic::{AtomicBool, Ordering}};
+    use crate::{Continuation, core::resilient_reactor_thread::SharedWakerSlot};
+    use std::sync::{Arc, Mutex};
     use tokio::sync::broadcast;
 
-    /// A waker that records whether the receiver was already dropped when
+    /// Enforces the field drop order invariant documented in
+    /// [`SubscriberGuard`'s Drop Behavior].
+    /// If someone reorders the fields, this test fails.
+    ///
+    /// [`SubscriberGuard`'s Drop Behavior]: SubscriberGuard#drop-behavior
+    #[test]
+    fn subscriber_guard_drops_receiver_before_wake() {
+        let (sender, _) = broadcast::channel::<RRTEvent<()>>(16);
+
+        assert_eq!(
+            sender.receiver_count(),
+            0,
+            "Precondition failed: sender should start with 0 receivers"
+        );
+
+        let waker = DropOrderWaker {
+            sender: sender.clone(),
+        };
+
+        let shared_waker_slot: SharedWakerSlot<DropOrderWaker> =
+            Arc::new(Mutex::new(Some(waker)));
+
+        let guard: SubscriberGuard<DropOrderTestWorker> =
+            SubscriberGuard::new(&sender, shared_waker_slot);
+
+        assert_eq!(
+            sender.receiver_count(),
+            1,
+            "Precondition failed: subscribing should increase receiver count to 1"
+        );
+
+        drop(guard); // Panics if fields are dropped in the wrong order.
+    }
+
+    /// A waker that asserts the receiver was already dropped when
     /// `wake_and_unblock_dedicated_thread()` fires.
     struct DropOrderWaker {
         sender: broadcast::Sender<RRTEvent<()>>,
-        receiver_was_dropped_first: Arc<AtomicBool>,
     }
 
     impl RRTWaker for DropOrderWaker {
         fn wake_and_unblock_dedicated_thread(&self) {
-            if self.sender.receiver_count() == 0 {
-                self.receiver_was_dropped_first
-                    .store(true, Ordering::SeqCst);
-            }
+            assert_eq!(
+                self.sender.receiver_count(),
+                0,
+                "BUG: wake_and_unblock_dedicated_thread() fired before receiver was \
+                 dropped! The `receiver` field MUST be declared before `wake_on_drop` \
+                 (RFC 1857 - fields drop in declaration order)."
+            );
         }
     }
 
@@ -196,38 +225,5 @@ mod drop_order_tests {
         ) -> Continuation {
             unimplemented!("Not used in drop-order test")
         }
-    }
-
-    /// Enforces the field drop order invariant documented in
-    /// [`SubscriberGuard`'s Drop Behavior].
-    /// If someone reorders the fields, this test fails.
-    ///
-    /// [`SubscriberGuard`'s Drop Behavior]: SubscriberGuard#drop-behavior
-    #[test]
-    fn subscriber_guard_drops_receiver_before_wake() {
-        let (sender, receiver) = broadcast::channel::<RRTEvent<()>>(16);
-        assert_eq!(sender.receiver_count(), 1);
-
-        let receiver_was_dropped_first = Arc::new(AtomicBool::new(false));
-
-        let waker = DropOrderWaker {
-            sender: sender.clone(),
-            receiver_was_dropped_first: receiver_was_dropped_first.clone(),
-        };
-
-        let shared_waker_slot: SharedWakerSlot<DropOrderWaker> =
-            Arc::new(Mutex::new(Some(waker)));
-
-        let guard: SubscriberGuard<DropOrderTestWorker> =
-            SubscriberGuard::new(receiver, shared_waker_slot);
-
-        drop(guard);
-
-        assert!(
-            receiver_was_dropped_first.load(Ordering::SeqCst),
-            "BUG: wake_and_unblock_dedicated_thread() fired before receiver was dropped! \
-             The `receiver` field MUST be declared before `wake_on_drop` \
-             (RFC 1857 - fields drop in declaration order)."
-        );
     }
 }
