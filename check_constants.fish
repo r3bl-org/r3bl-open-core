@@ -28,10 +28,12 @@ set -g DEBOUNCE_WINDOW_SECS 1
 # Trade-off: Build cache is lost on reboot (first build after reboot is cold).
 #
 # CHECK_TARGET_DIR: Primary target for tests and serving docs to browser.
-# CHECK_TARGET_DIR_DOC_STAGING_QUICK: Staging for quick doc builds (--no-deps).
+# CHECK_TARGET_DIR_DOC_STAGING_QUICK: Staging for quick doc builds (--no-deps, --doc and --quick-doc).
 # CHECK_TARGET_DIR_DOC_STAGING_FULL: Staging for full doc builds (with deps, runs in background).
 # CHECK_LOG_FILE: Log file for all check.fish output (created fresh each run).
 #
+# All doc modes build to staging dirs, then rsync to CHECK_TARGET_DIR/doc (the serving dir).
+# This prevents browser tabs from seeing empty doc folders during builds.
 # Two separate staging dirs prevent race conditions: quick builds can run while
 # background full builds are syncing, without files "vanishing" mid-rsync.
 set -g CHECK_TARGET_DIR /tmp/roc/target/check

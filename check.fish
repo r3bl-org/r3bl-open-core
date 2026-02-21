@@ -32,7 +32,7 @@
 #   ./check.fish --clippy     Run clippy only (cargo clippy --all-targets)
 #   ./check.fish --test       Run tests only (cargo test + doctests)
 #   ./check.fish --doc        Build docs only (quick, --no-deps)
-#   ./check.fish --quick-doc  Build docs directly to serving dir (fastest, no staging/sync)
+#   ./check.fish --quick-doc  Build docs via staging + sync (fast, no deps)
 #   ./check.fish --full       Run ALL checks (check + build + clippy + tests + doctests + docs + windows)
 #   ./check.fish --watch      Watch mode: run default checks on file changes
 #   ./check.fish --watch-test Watch mode: run tests/doctests only
@@ -240,8 +240,8 @@ function main
 
             return $full_status
         case quick-doc
-            # Quick-doc mode: build docs directly to serving dir (no staging/sync)
-            # Fastest path for tight feedback loops (e.g., tweaking rustdoc comments).
+            # Quick-doc mode: build docs via staging + sync (fast, no deps).
+            # Uses staging dir so browser tabs never see empty doc folder during build.
             # If --watch-doc is running in another terminal, it will catch up and rebuild.
             check_config_changed $CHECK_TARGET_DIR $CONFIG_FILES_TO_WATCH
 
@@ -258,19 +258,22 @@ function main
             run_rustdoc_fmt
 
             echo ""
-            echo "⚡ Building documentation (quick-doc, directly to serving dir)..."
-            run_check_with_recovery check_docs_oneoff "docs"
+            echo "⚡ Building documentation (quick-doc, staging + sync)..."
+            run_check_with_recovery check_docs_quick "docs"
             set -l doc_status $status
 
             if test $doc_status -eq 2
                 # Recoverable error - cleanup and retry once
-                cleanup_for_recovery $CHECK_TARGET_DIR
-                run_check_with_recovery check_docs_oneoff "docs"
+                cleanup_for_recovery $CHECK_TARGET_DIR_DOC_STAGING_QUICK
+                run_check_with_recovery check_docs_quick "docs"
                 set doc_status $status
                 hint_toolchain_update_on_persistent_failure $doc_status
             end
 
             if test $doc_status -eq 0
+                # Sync docs from staging to serving directory
+                sync_docs_to_serving quick
+
                 echo ""
                 set_color green --bold
                 echo "["(timestamp)"] ✅ Documentation built successfully!"

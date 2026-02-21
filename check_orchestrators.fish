@@ -8,7 +8,7 @@
 # Level 3: Orchestrator functions — Compose multiple Level 2 wrappers.
 #   Aggregate results: Recoverable (2) > Failure (1) > Success (0).
 #   - run_watch_checks: Full docs (for watch "full" mode)
-#   - run_oneoff_checks: Quick docs to CHECK_TARGET_DIR (for one-off mode)
+#   - run_oneoff_checks: Quick docs via staging + sync (for one-off mode)
 #   - run_full_checks: All checks including check, build, clippy (for --full mode)
 #
 # Level 4: Recovery functions — Wrap orchestrators with retry logic.
@@ -170,7 +170,7 @@ end
 #
 # Two variants:
 #   - run_watch_checks: Full docs (for watch "full" mode)
-#   - run_oneoff_checks: Quick docs to CHECK_TARGET_DIR (for one-off mode)
+#   - run_oneoff_checks: Quick docs via staging + sync (for one-off mode)
 #
 # Returns:
 #   0 = All checks passed
@@ -207,8 +207,8 @@ function run_watch_checks
 end
 
 # Orchestrator for one-off normal mode (./check.fish without flags).
-# Uses quick docs (--no-deps) built directly to CHECK_TARGET_DIR.
-# This avoids conflicts with --watch-doc which uses staging directories.
+# Uses quick docs (--no-deps) built to staging dir, then synced to serving dir.
+# This avoids conflicts with --watch-doc which uses its own staging directories.
 function run_oneoff_checks
     set -l result_cargo_test 0
     set -l result_doctest 0
@@ -220,9 +220,13 @@ function run_oneoff_checks
     run_check_with_recovery check_doctests "doctests"
     set result_doctest $status
 
-    # Quick doc build to CHECK_TARGET_DIR (no conflict with watch-doc)
-    run_check_with_recovery check_docs_oneoff "docs"
+    # Quick doc build to staging dir, then sync to serving dir
+    run_check_with_recovery check_docs_quick "docs"
     set result_docs $status
+
+    if test $result_docs -eq 0
+        sync_docs_to_serving quick
+    end
 
     # Aggregate: return 2 if ANY recoverable error, then 1 if ANY failure, else 0
     if test $result_cargo_test -eq 2 || test $result_doctest -eq 2 || test $result_docs -eq 2
@@ -242,7 +246,7 @@ end
 # Handles recovery from ICE and stale build artifacts with automatic cleanup and retry.
 #
 # Two variants:
-#   - run_oneoff_checks_with_recovery: For one-off normal mode (uses quick docs)
+#   - run_oneoff_checks_with_recovery: For one-off normal mode (quick docs via staging + sync)
 #   - run_watch_checks_with_recovery: For watch "full" mode (uses full docs)
 #
 # Returns:
@@ -250,7 +254,7 @@ end
 #   1 = Checks failed
 
 # Recovery function for one-off normal mode.
-# Uses run_oneoff_checks (quick docs to CHECK_TARGET_DIR).
+# Uses run_oneoff_checks (quick docs via staging + sync).
 function run_oneoff_checks_with_recovery
     set -l max_retries 1
     set -l retry_count 0
@@ -275,7 +279,7 @@ function run_oneoff_checks_with_recovery
         end
 
         # Recoverable error - cleanup and retry
-        cleanup_for_recovery $CHECK_TARGET_DIR
+        cleanup_for_recovery $CHECK_TARGET_DIR $CHECK_TARGET_DIR_DOC_STAGING_QUICK
         set retry_count (math $retry_count + 1)
     end
 
