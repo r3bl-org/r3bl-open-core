@@ -902,6 +902,7 @@ mod rrt_restart_policy;
 mod rrt_subscriber_guard;
 mod rrt_termination_guard;
 mod rrt_types;
+mod rrt_waker_slot;
 mod rrt_worker;
 
 pub use rrt::*;
@@ -910,6 +911,7 @@ pub use rrt_restart_policy::*;
 pub use rrt_subscriber_guard::*;
 pub use rrt_termination_guard::*;
 pub use rrt_types::*;
+pub use rrt_waker_slot::*;
 pub use rrt_worker::*;
 
 #[cfg(any(test, doc))]

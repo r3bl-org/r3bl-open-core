@@ -5,7 +5,7 @@
 //!
 //! [RAII]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
 
-use super::{RRTWorker, SharedWakerSlot};
+use super::{RRTWorker, WakerSlotWriter};
 
 /// [RAII] guard that clears the waker to [`None`] when the dedicated thread's work loop
 /// exits.
@@ -18,7 +18,15 @@ use super::{RRTWorker, SharedWakerSlot};
 /// [`subscribe()`]: super::RRT::subscribe
 #[allow(missing_debug_implementations)]
 pub struct TerminationGuard<W: RRTWorker> {
-    pub(super) shared_waker_slot: SharedWakerSlot<W::Waker>,
+    pub waker_slot_writer: WakerSlotWriter<W::Waker>,
+}
+
+impl<W: RRTWorker> TerminationGuard<W> {
+    /// Creates a new `TerminationGuard` with the given waker slot writer.
+    pub fn new(arg_waker_slot_writer: impl Into<WakerSlotWriter<W::Waker>>) -> Self {
+        let waker_slot_writer = arg_waker_slot_writer.into();
+        Self { waker_slot_writer }
+    }
 }
 
 impl<W: RRTWorker> Drop for TerminationGuard<W> {
@@ -28,8 +36,7 @@ impl<W: RRTWorker> Drop for TerminationGuard<W> {
     /// 2. Lets [`subscribe()`] detect termination via [`is_none()`] and trigger a
     ///    relaunch.
     ///
-    /// See step 4 of the [Thread Lifecycle] for where this fits in the exit
-    /// sequence.
+    /// See step 4 of the [Thread Lifecycle] for where this fits in the exit sequence.
     ///
     /// [Thread Lifecycle]: super::RRT#thread-lifecycle
     /// [`SubscriberGuard`]: super::SubscriberGuard
@@ -38,9 +45,5 @@ impl<W: RRTWorker> Drop for TerminationGuard<W> {
     /// [`wake_and_unblock_dedicated_thread()`]:
     ///     super::RRTWaker::wake_and_unblock_dedicated_thread
     /// [waker]: super::RRTWaker
-    fn drop(&mut self) {
-        if let Ok(mut guard) = self.shared_waker_slot.lock() {
-            *guard = None;
-        }
-    }
+    fn drop(&mut self) { self.waker_slot_writer.clear(); }
 }

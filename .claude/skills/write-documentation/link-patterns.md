@@ -645,7 +645,20 @@ The anchor follows the pattern: `#impl-{TraitName}-for-{TypeName}`
 Examples:
 - `impl Default for RestartPolicy` -> `#impl-Default-for-RestartPolicy`
 - `impl Display for MyType` -> `#impl-Display-for-MyType`
-- `impl From<String> for MyType` -> `#impl-From%3CString%3E-for-MyType` (generics are URL-encoded)
+- `impl From<String> for MyType` -> `#impl-From<String>-for-MyType`
+- `impl From<&SharedWakerSlot<K>> for WakerSlotReader<K>` -> `#impl-From<%26Arc<Mutex<Option<K>>>>-for-WakerSlotReader<K>`
+
+### URL-Encoding Rules
+
+Only `&` needs URL-encoding (`%26`) in anchor fragments. Angle brackets `<>` can stay as-is.
+Rustdoc expands type aliases to their underlying types in anchor IDs (e.g., `SharedWakerSlot<K>`
+becomes `Arc<Mutex<Option<K>>>`).
+
+| Character | Encode? | Example |
+|:----------|:--------|:--------|
+| `<` `>` | No | `From<String>` stays as-is |
+| `&` | Yes → `%26` | `&Arc` becomes `%26Arc` |
+| Type aliases | Expanded | `SharedWakerSlot<K>` becomes `Arc<Mutex<Option<K>>>` |
 
 ### Reference-Style (Preferred)
 
@@ -675,7 +688,7 @@ To link directly to a specific method (not just the impl block), use `#method.me
 /// [Drop implementation]: WakeOnDrop#method.drop
 ```
 
-This is more precise than `#impl-Drop-for-WakeOnDrop%3CK%3E`, which anchors to the
+This is more precise than `#impl-Drop-for-WakeOnDrop<K>`, which anchors to the
 impl block header. `#method.drop` scrolls directly to the `fn drop` method and its
 rustdoc comments.
 
