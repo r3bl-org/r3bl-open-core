@@ -4,7 +4,14 @@
 
 //! Thread lifecycle manager and entry point for the Resilient Reactor Thread pattern.
 //! See [`RRT`] for details.
-use super::{RRTEvent, RRTWorker, RestartPolicy, ShutdownReason, SubscriberGuard};
+use super::{LivenessState,
+            RRTEvent,
+            RRTWorker,
+            RestartPolicy,
+            ShutdownReason,
+            SubscribeError,
+            SubscriberGuard,
+            TerminationGuard};
 use crate::{core::common::{AtomicU8Ext, Continuation},
             ok};
 use std::{panic::{AssertUnwindSafe, catch_unwind},
@@ -760,145 +767,3 @@ pub fn advance_backoff_delay(
     }
 }
 
-/// [RAII] guard that clears the waker to [`None`] when the dedicated thread's work loop
-/// exits.
-///
-/// The waker's [`Option`] state IS the liveness signal: `Some(waker)` means the thread is
-/// running, `None` means it has terminated. Clearing it to `None` is the only cleanup
-/// needed - [`subscribe()`] checks `is_none()` to detect termination.
-///
-/// [RAII]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
-/// [`subscribe()`]: RRT::subscribe
-#[allow(missing_debug_implementations)]
-pub struct TerminationGuard<W: RRTWorker> {
-    shared_waker_slot: SharedWakerSlot<W::Waker>,
-}
-
-impl<W: RRTWorker> Drop for TerminationGuard<W> {
-    /// Clears the [waker] to [`None`], which serves two purposes:
-    /// 1. Prevents any [`SubscriberGuard`] from calling a stale
-    ///    [`wake_and_unblock_dedicated_thread()`] on a dead thread.
-    /// 2. Lets [`subscribe()`] detect termination via [`is_none()`] and trigger a
-    ///    relaunch.
-    ///
-    /// See step 4 of the [Thread Lifecycle] for where this fits in the exit
-    /// sequence.
-    ///
-    /// [Thread Lifecycle]: RRT#thread-lifecycle
-    /// [`SubscriberGuard`]: super::SubscriberGuard
-    /// [`is_none()`]: Option::is_none
-    /// [`subscribe()`]: RRT::subscribe
-    /// [`wake_and_unblock_dedicated_thread()`]:
-    ///     super::RRTWaker::wake_and_unblock_dedicated_thread
-    /// [waker]: super::RRTWaker
-    fn drop(&mut self) {
-        if let Ok(mut guard) = self.shared_waker_slot.lock() {
-            *guard = None;
-        }
-    }
-}
-
-/// Errors from [`RRT::subscribe()`].
-///
-/// Each variant represents a distinct failure mode with a dedicated OS specific (where
-/// appropriate) [diagnostic code] and actionable help text. The three failure modes are:
-///
-/// | Variant             | Cause                                                                           | Recoverable? |
-/// | :------------------ | :------------------------------------------------------------------------------ | :----------- |
-/// | [`MutexPoisoned`]   | A prior thread panicked while holding an internal RRT lock                      | No           |
-/// | [`WorkerCreation`]  | [`RRTWorker::create_and_register_os_sources()`] failed (OS resource exhaustion) | Maybe        |
-/// | [`ThreadSpawn`]     | [`std::thread::Builder::spawn()`] failed (thread limits)                        | Maybe        |
-///
-/// [`MutexPoisoned`]: Self::MutexPoisoned
-/// [`RRTWorker::create_and_register_os_sources()`]: RRTWorker::create_and_register_os_sources
-/// [`ThreadSpawn`]: Self::ThreadSpawn
-/// [`WorkerCreation`]: Self::WorkerCreation
-/// [diagnostic code]: miette::Diagnostic::code
-#[derive(Debug, thiserror::Error, miette::Diagnostic)]
-pub enum SubscribeError {
-    /// Internal mutex was poisoned by a prior thread panic.
-    #[error("RRT internal mutex poisoned ({which})")]
-    #[diagnostic(
-        code(r3bl_tui::rrt::mutex_poisoned),
-        help(
-            "A prior thread panicked while holding an RRT lock. \
-             Consider restarting the application."
-        )
-    )]
-    MutexPoisoned {
-        /// Which mutex was poisoned (`"liveness"` or `"waker"`).
-        which: &'static str,
-    },
-
-    /// [`RRTWorker::create_and_register_os_sources()`] failed to acquire OS resources.
-    ///
-    /// The inner [`miette::Report`] preserves the full error chain from the worker
-    /// implementation (e.g., [`PollCreationError`], [`WakerCreationError`]). Access it
-    /// via pattern matching.
-    ///
-    /// [`PollCreationError`]: crate::terminal_lib_backends::PollCreationError
-    /// [`WakerCreationError`]: crate::terminal_lib_backends::WakerCreationError
-    #[error("Failed to create worker thread resources")]
-    #[diagnostic(code(r3bl_tui::rrt::worker_creation))]
-    #[cfg_attr(
-        target_os = "linux",
-        diagnostic(help(
-            "Check OS resource limits - \
-             use `ulimit -n` for file descriptors, \
-             `cat /proc/sys/fs/file-max` for system-wide limit"
-        ))
-    )]
-    #[cfg_attr(
-        target_os = "macos",
-        diagnostic(help(
-            "Check OS resource limits - \
-             use `ulimit -n` for file descriptors, \
-             `launchctl limit maxfiles` for system-wide limit"
-        ))
-    )]
-    #[cfg_attr(
-        target_os = "windows",
-        diagnostic(help(
-            "Check OS resource limits - \
-             Windows handle limits are typically high, \
-             but check Task Manager for handle count"
-        ))
-    )]
-    WorkerCreation(miette::Report),
-
-    /// [`std::thread::Builder::spawn()`] failed.
-    #[error("Failed to spawn RRT worker thread")]
-    #[diagnostic(code(r3bl_tui::rrt::thread_spawn))]
-    #[cfg_attr(
-        target_os = "linux",
-        diagnostic(help(
-            "The system may have reached its thread limit - \
-             check `ulimit -u` for per-user limit, \
-             `cat /proc/sys/kernel/threads-max` for system-wide limit"
-        ))
-    )]
-    #[cfg_attr(
-        target_os = "macos",
-        diagnostic(help(
-            "The system may have reached its thread limit - \
-             check `ulimit -u` for per-user limit, \
-             `sysctl kern.num_taskthreads` for per-process limit"
-        ))
-    )]
-    #[cfg_attr(
-        target_os = "windows",
-        diagnostic(help(
-            "The system may have reached its thread limit - \
-             check Task Manager for thread count, \
-             or use `Get-Process` in PowerShell to inspect per-process threads"
-        ))
-    )]
-    ThreadSpawn(#[source] std::io::Error),
-}
-
-/// An indication of whether the dedicated thread is running or terminated.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum LivenessState {
-    Running,
-    TerminatedOrNotStarted,
-}

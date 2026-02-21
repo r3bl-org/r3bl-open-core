@@ -590,8 +590,9 @@
 //! - **`rrt_event`**: Two-tier event model ([`RRTEvent`], [`ShutdownReason`])
 //! - **`rrt_restart_policy`**: Self-healing configuration ([`RestartPolicy`])
 //! - **`rrt_subscriber_guard`**: RAII subscription guard ([`SubscriberGuard`])
-//! - **`rrt`**: Framework entry point ([`RRT`]), [`TerminationGuard`],
-//!   [`run_worker_loop()`]
+//! - **`rrt_termination_guard`**: RAII thread-exit guard ([`TerminationGuard`])
+//! - **`rrt_types`**: Public API types ([`SubscribeError`], [`LivenessState`])
+//! - **`rrt`**: Framework entry point ([`RRT`]), [`run_worker_loop()`]
 //!
 //! # [`io_uring`]: An Alternative Model
 //!
@@ -899,12 +900,16 @@ mod rrt;
 mod rrt_event;
 mod rrt_restart_policy;
 mod rrt_subscriber_guard;
+mod rrt_termination_guard;
+mod rrt_types;
 mod rrt_worker;
 
 pub use rrt::*;
 pub use rrt_event::*;
 pub use rrt_restart_policy::*;
 pub use rrt_subscriber_guard::*;
+pub use rrt_termination_guard::*;
+pub use rrt_types::*;
 pub use rrt_worker::*;
 
 #[cfg(any(test, doc))]

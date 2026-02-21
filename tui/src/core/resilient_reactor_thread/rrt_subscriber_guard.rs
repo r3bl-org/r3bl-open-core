@@ -39,8 +39,11 @@ use tokio::sync::broadcast::Receiver;
 ///
 /// # Shared Waker Prevents the Zombie Thread Bug
 ///
-/// Each [`WakeOnDrop`] holds a clone of the [`SharedWakerSlot<W::Waker>`] shared across
-/// *all* subscribers (old and new) and the [`TerminationGuard`].
+/// Each [`WakeOnDrop`] holds a clone of the [`SharedWakerSlot<W::Waker>`]. This slot is
+/// shared across *all* subscribers (old and new) and the [`TerminationGuard`].
+/// - Read-only access - All subscribers read the inner waker through this slot.
+/// - Read-write access - [`TerminationGuard`] is the sole writer that clears it to
+///   [`None`] on drop.
 ///
 /// Due to [two-phase setup], the [`RRTWaker`] and [`RRTWorker`] are created together from
 /// the same [`mio::Poll`] registry. This shared wrapper ensures every subscriber always
