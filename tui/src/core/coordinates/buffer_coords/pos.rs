@@ -82,8 +82,8 @@ use std::{fmt::{Debug, Formatter, Result},
 /// assert_eq!(*pos_diff.col_index, ch(4));
 /// ```
 ///
-/// [`ScrOfs`]: crate::ScrOfs
 /// [`ChUnit`]: crate::ChUnit
+/// [`ScrOfs`]: crate::ScrOfs
 /// [`pos()`]: crate::pos()
 #[derive(Copy, Clone, PartialEq, PartialOrd, Ord, Eq, Hash, Default)]
 pub struct Pos {
@@ -365,7 +365,7 @@ mod api {
 
     // Row index API.
     impl Pos {
-        /// Set row index to `value`.
+        /// Sets row index to `value`.
         pub fn set_row(&mut self, arg_row_index: impl Into<RowIndex>) {
             self.row_index = arg_row_index.into();
         }
@@ -409,7 +409,7 @@ mod api {
 
     // Col index API.
     impl Pos {
-        /// Set col index to `value`.
+        /// Sets col index to `value`.
         pub fn set_col(&mut self, arg_col_index: impl Into<ColIndex>) {
             let value: ColIndex = arg_col_index.into();
             self.col_index = value;

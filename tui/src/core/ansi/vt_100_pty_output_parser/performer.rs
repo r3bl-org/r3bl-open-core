@@ -1,5 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+// cspell:words suckless
+
 //! Internal implementation for ANSI/VT sequence processing.
 //!
 //! This parser is based on the [vte] crate's [`Perform`] trait, and is [VT100
@@ -27,18 +29,18 @@
 //! The VTE parser identifies different types of sequences and calls the appropriate
 //! method on this [`Perform`] implementation:
 //!
-//! | Sequence Type | Pattern         | Example            | Dispatch Method      | Purpose           |
-//! |---------------|-----------------|--------------------|----------------------|-------------------|
-//! | **Printable** | Regular chars   | `"Hello"`          | [`print()`]          | Display text      |
-//! | **Control**   | C0 bytes        | `\n`, `\t`, `\b`   | [`execute()`]        | Cursor control    |
-//! | **`CSI`**     | `ESC [...char`  | `ESC [2A`, `ESC [m`| [`csi_dispatch()`]   | Complex commands  |
-//! | **`OSC`**     | `ESC ]...ST`    | `ESC ]0;title`     | [`osc_dispatch()`]   | OS integration    |
-//! | **ESC**       | `ESC char`      | `ESC c`, `ESC 7`   | [`esc_dispatch()`]   | Simple commands   |
-//! | **DCS**       | `ESC P...ST`    | Ignored (stubs)    | [`hook()`]           | Device control    |
+//! | Sequence Type  | Pattern        | Example             | Dispatch Method    | Purpose          |
+//! | -------------- | -------------- | ------------------- | ------------------ | ---------------- |
+//! | **Printable**  | Regular chars  | `"Hello"`           | [`print()`]        | Display text     |
+//! | **Control**    | C0 bytes       | `\n`, `\t`, `\b`    | [`execute()`]      | Cursor control   |
+//! | **`CSI`**      | `ESC [...char` | `ESC [2A`, `ESC [m` | [`csi_dispatch()`] | Complex commands |
+//! | **`OSC`**      | `ESC ]...ST`   | `ESC ]0;title`      | [`osc_dispatch()`] | OS integration   |
+//! | **ESC**        | `ESC char`     | `ESC c`, `ESC 7`    | [`esc_dispatch()`] | Simple commands  |
+//! | **DCS**        | `ESC P...ST`   | Ignored (stubs)     | [`hook()`]         | Device control   |
 //!
 //! # VTE Parser State Machine
 //!
-//! The [VTE parser](vte::Parser) uses a state machine to recognize sequence boundaries:
+//! The [VTE parser] uses a state machine to recognize sequence boundaries:
 //!
 //! - **Ground state**: Collects printable characters → calls [`print()`]
 //! - **Escape state**: After `ESC`, determines sequence type
@@ -182,23 +184,24 @@
 //! For architecture details for more details on the
 //! architecture and testing strategy.
 //!
+//! [Alacritty]: https://github.com/alacritty/alacritty
+//! [ECMA-48 standard]: https://www.ecma-international.org/publications-and-standards/standards/ecma-48/
+//! [GNOME VTE]: https://gitlab.gnome.org/GNOME/vte
+//! [VT100 specification]: https://vt100.net/docs/vt100-ug/chapter3.html
+//! [VTE parser]: vte::Parser
 //! [`OffscreenBuffer`]: crate::OffscreenBuffer
 //! [`ParamsExt`]: crate::ParamsExt
 //! [`Perform`]: vte::Perform
-//! [`print()`]: AnsiToOfsBufPerformer::print
-//! [`execute()`]: AnsiToOfsBufPerformer::execute
 //! [`csi_dispatch()`]: AnsiToOfsBufPerformer::csi_dispatch
-//! [`osc_dispatch()`]: AnsiToOfsBufPerformer::osc_dispatch
 //! [`esc_dispatch()`]: AnsiToOfsBufPerformer::esc_dispatch
+//! [`execute()`]: AnsiToOfsBufPerformer::execute
 //! [`hook()`]: AnsiToOfsBufPerformer::hook
-//! [vte]: https://docs.rs/vte/latest/vte/
-//! [Alacritty]: https://github.com/alacritty/alacritty
+//! [`osc_dispatch()`]: AnsiToOfsBufPerformer::osc_dispatch
+//! [`print()`]: AnsiToOfsBufPerformer::print
 //! [alacritty-pr-2664]: https://github.com/alacritty/alacritty/pull/2664
 //! [kitty]: https://sw.kovidgoyal.net/kitty/
 //! [st (suckless terminal)]: https://st.suckless.org/
-//! [GNOME VTE]: https://gitlab.gnome.org/GNOME/vte
-//! [VT100 specification]: https://vt100.net/docs/vt100-ug/chapter3.html
-//! [ECMA-48 standard]: https://www.ecma-international.org/publications-and-standards/standards/ecma-48/
+//! [vte]: https://docs.rs/vte/latest/vte/
 
 // Import the operation modules and public API.
 use super::{ansi_parser_public_api::AnsiToOfsBufPerformer,
@@ -227,9 +230,9 @@ use vte::{Params, Perform};
 
 /// Internal methods for `AnsiToOfsBufPerformer` to implement [`Perform`] trait.
 impl Perform for AnsiToOfsBufPerformer<'_> {
-    /// Handle printable characters.
+    /// Handles printable characters.
     ///
-    /// See [module docs](self) for complete processing pipeline overview.
+    /// See [module docs] for complete processing pipeline overview.
     ///
     /// ## Print Sequence Architecture
     ///
@@ -268,11 +271,13 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
     ///   print('A') → writes at col 9, cursor moves to col 10
     ///   print('B') → overwrites at col 10, cursor stays at col 10
     /// ```
+    ///
+    /// [module docs]: self
     fn print(&mut self, ch: char) { vt_100_shim_char_ops::print_char(self, ch); }
 
-    /// Handle control characters (C0 set): backspace, tab, LF, CR.
+    /// Handles control characters (C0 set): backspace, tab, LF, CR.
     ///
-    /// See [module docs](self) for complete processing pipeline overview.
+    /// See [module docs] for complete processing pipeline overview.
     ///
     /// ## Control Character Architecture
     ///
@@ -304,6 +309,8 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
     /// Cursor at col 5 + TAB → moves to col 8
     /// Cursor at col 12 + TAB → moves to col 16
     /// ```
+    ///
+    /// [module docs]: self
     fn execute(&mut self, byte: u8) {
         match byte {
             BACKSPACE => {
@@ -322,9 +329,9 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
         }
     }
 
-    /// Handle CSI (Control Sequence Introducer) sequences.
+    /// Handles CSI (Control Sequence Introducer) sequences.
     ///
-    /// See [module docs](self) for complete processing pipeline overview.
+    /// See [module docs] for complete processing pipeline overview.
     ///
     /// This method processes ANSI escape sequences that follow the pattern `ESC[...char`
     /// where `char` is the final dispatch character that determines the operation.
@@ -393,10 +400,12 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
     /// **discards the entire sequence** to prevent executing commands with incorrect
     /// parameters.
     ///
-    /// See the [module-level
-    /// documentation](self#malformed-sequences-and-the-ignore-parameter) for detailed
-    /// explanation of why discarding malformed sequences is the correct
-    /// approach, with references to industry best practices.
+    /// See the [module-level documentation] for detailed explanation of why discarding
+    /// malformed sequences is the correct approach, with references to industry best
+    /// practices.
+    ///
+    /// [module docs]: self
+    /// [module-level documentation]: self#malformed-sequences-and-the-ignore-parameter
     #[allow(clippy::too_many_lines)]
     fn csi_dispatch(
         &mut self,
@@ -629,9 +638,9 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
         }
     }
 
-    /// Handle OSC (Operating System Command) sequences.
+    /// Handles OSC (Operating System Command) sequences.
     ///
-    /// See [module docs](self) for complete processing pipeline overview.
+    /// See [module docs] for complete processing pipeline overview.
     ///
     /// ## OSC Sequence Architecture
     ///
@@ -670,27 +679,29 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
     ///   ↓
     /// Pushes SetTitleAndTab event
     /// ```
+    ///
+    /// [module docs]: self
     fn osc_dispatch(&mut self, params: &[&[u8]], bell_terminated: bool) {
         vt_100_shim_osc_ops::dispatch_osc(self, params, bell_terminated);
     }
 
-    /// Handle escape sequences (not CSI or OSC).
+    /// Handles escape sequences (not CSI or OSC).
     ///
-    /// See [module docs](self) for complete processing pipeline overview.
+    /// See [module docs] for complete processing pipeline overview.
     ///
     /// There's significant overlap between **CSI sequences** and direct **ESC
-    /// sequences**, especially in managing the cursor state. This overlap exists
-    /// because direct ESC sequences were the original way to handle many terminal
-    /// functions. As terminals became more advanced, the more flexible and powerful CSI
-    /// sequences were introduced to handle the same tasks with greater precision.
+    /// sequences**, especially in managing the cursor state. This overlap exists because
+    /// direct ESC sequences were the original way to handle many terminal functions. As
+    /// terminals became more advanced, the more flexible and powerful CSI sequences were
+    /// introduced to handle the same tasks with greater precision.
     ///
     /// Here are a few key examples of this overlap:
     ///
     /// ### Cursor Management
     ///
     /// Both categories have commands for saving and restoring the cursor's position, a
-    /// common task for applications that need to temporarily move the cursor to
-    /// display a message and then return it to its original location.
+    /// common task for applications that need to temporarily move the cursor to display a
+    /// message and then return it to its original location.
     ///
     /// * **Direct ESC:** The `ESC 7` and `ESC 8` commands are simple, single-character
     ///   sequences for saving and restoring the cursor and its attributes (like color).
@@ -782,10 +793,12 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
     /// **discards the entire sequence** to prevent executing commands with incorrect
     /// parameters.
     ///
-    /// See the [module-level
-    /// documentation](self#malformed-sequences-and-the-ignore-parameter) for detailed
-    /// explanation of why discarding malformed sequences is the correct
-    /// approach, with references to industry best practices.
+    /// See the [module-level documentation] for detailed explanation of why discarding
+    /// malformed sequences is the correct approach, with references to industry best
+    /// practices.
+    ///
+    /// [module docs]: self
+    /// [module-level documentation]: self#malformed-sequences-and-the-ignore-parameter
     fn esc_dispatch(&mut self, intermediates: &[u8], ignore: bool, byte: u8) {
         // Discard malformed sequences - see module docs for rationale
         if ignore {
@@ -838,7 +851,7 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
 
     /// Hook for DCS (Device Control String) start.
     ///
-    /// See [module docs](self) for complete processing pipeline overview.
+    /// See [module docs] for complete processing pipeline overview.
     ///
     /// ## DCS Sequence Architecture (Not Implemented)
     ///
@@ -861,16 +874,17 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
     ///
     /// ## Malformed Sequence Handling
     ///
-    /// The `ignore` parameter is not checked in this method because DCS sequences
-    /// are not implemented at all in this multiplexer. Both well-formed and malformed
-    /// DCS sequences result in the same action: do nothing. The `ignore` flag is only
+    /// The `ignore` parameter is not checked in this method because DCS sequences are not
+    /// implemented at all in this multiplexer. Both well-formed and malformed DCS
+    /// sequences result in the same action: do nothing. The `ignore` flag is only
     /// meaningful when deciding whether to process a sequence.
     ///
-    /// See the [module-level
-    /// documentation](self#malformed-sequences-and-the-ignore-parameter)
-    /// for information about how `ignore` is used in `csi_dispatch()` and
-    /// `esc_dispatch()`, where it affects the decision to process or discard
-    /// sequences.
+    /// See the [module-level documentation] for information about how `ignore` is used in
+    /// `csi_dispatch()` and `esc_dispatch()`, where it affects the decision to process or
+    /// discard sequences.
+    ///
+    /// [module docs]: self
+    /// [module-level documentation]: self#malformed-sequences-and-the-ignore-parameter
     fn hook(&mut self, _params: &Params, _intermediates: &[u8], _ignore: bool, _c: char) {
         // All DCS sequences are ignored - not implemented in terminal multiplexing
     }

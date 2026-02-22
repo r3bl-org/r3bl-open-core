@@ -79,7 +79,7 @@ use crate::{ColWidth, CommonError, CommonErrorType, CommonResult, DEBUG_TUI_COMP
             inline_string, usize, width};
 
 impl RenderPipeline {
-    /// Convert the render pipeline to an offscreen buffer.
+    /// Converts the render pipeline to an offscreen buffer.
     ///
     /// 1. This does not require any specific implementation of crossterm or termion.
     /// 2. This is the intermediate representation (IR) of a [`RenderPipeline`]. In order
@@ -155,7 +155,7 @@ pub fn process_render_op(
     }
 }
 
-/// Process a common render operation in the offscreen buffer.
+/// Processes a common render operation in the offscreen buffer.
 ///
 /// These operations work identically in both IR and Output contexts.
 #[allow(clippy::too_many_lines)]

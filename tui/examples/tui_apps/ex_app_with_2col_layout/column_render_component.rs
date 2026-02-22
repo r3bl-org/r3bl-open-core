@@ -53,7 +53,7 @@ mod column_render_component_impl_component_trait {
 
         fn get_id(&self) -> FlexBoxId { self.data.id }
 
-        /// Handle following input events (and consume them):
+        /// Handles following input events (and consume them):
         /// - Up,   `+` : fire `AddPop(1)`
         /// - Down, `-` : fire `SubPop(1)`
         fn handle_event(

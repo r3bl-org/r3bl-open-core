@@ -38,15 +38,15 @@
 //! - [Parent module documentation] for conceptual overview
 //! - [`enable_raw_mode()`] and [`disable_raw_mode()`] for the public API
 //!
-//! [termios]: https://man7.org/linux/man-pages/man3/termios.3.html
 //! [Parent module documentation]: mod@crate::core::ansi::terminal_raw_mode
-//! [parent module's raw vs cooked section]: mod@crate::core::ansi::terminal_raw_mode#raw-mode-vs-cooked-mode
+//! [`Termios::make_raw()`]: rustix::termios::Termios::make_raw
+//! [`Termios`]: rustix::termios::Termios
+//! [`disable_raw_mode()`]: crate::disable_raw_mode
+//! [`enable_raw_mode()`]: crate::enable_raw_mode
 //! [`rustix`]: https://docs.rs/rustix
 //! [`termios`]: rustix::termios
-//! [`Termios`]: rustix::termios::Termios
-//! [`Termios::make_raw()`]: rustix::termios::Termios::make_raw
-//! [`enable_raw_mode()`]: crate::enable_raw_mode
-//! [`disable_raw_mode()`]: crate::disable_raw_mode
+//! [parent module's raw vs cooked section]: mod@crate::core::ansi::terminal_raw_mode#raw-mode-vs-cooked-mode
+//! [termios]: https://man7.org/linux/man-pages/man3/termios.3.html
 
 use miette::miette;
 use rustix::{fd::{AsFd, BorrowedFd},
@@ -98,7 +98,7 @@ fn get_terminal_fd() -> io::Result<TerminalFd> {
     }
 }
 
-/// Enable raw mode on the terminal (Unix/Linux/macOS implementation).
+/// Enables raw mode on the terminal (Unix/Linux/macOS implementation).
 ///
 /// Uses rustix's type-safe termios API to:
 /// 1. Get the controlling terminal (stdin if it's a tty, otherwise `/dev/tty`)

@@ -2,9 +2,9 @@
 
 //! Behavioral tests for text painting operations via [`OffscreenBuffer`] rendering.
 //!
-//! These tests complement the byte-level tests in [`text_operations`] by verifying
-//! that styled text produces the correct **visual result** when ANSI sequences
-//! are rendered to a buffer.
+//! These tests complement the byte-level tests in [`text_operations`] by verifying that
+//! styled text produces the correct **visual result** when ANSI sequences are rendered to
+//! a buffer.
 //!
 //! # What These Tests Verify
 //!
@@ -22,17 +22,17 @@
 //! another expects it set).
 //!
 //! **Solution**: All tests run sequentially in a single isolated subprocess via
-//! [`test_all_rendered_output_in_isolated_process`]. The coordinator spawns itself
-//! with `ISOLATED_RENDERED_TEST=1`, sets the color override once, runs all tests,
-//! then clears the override. This pattern is borrowed from `fs_path.rs`.
+//! [`test_all_rendered_output_in_isolated_process`]. The coordinator spawns itself with
+//! `ISOLATED_RENDERED_TEST=1`, sets the color override once, runs all tests, then clears
+//! the override. This pattern is borrowed from `fs_path.rs`.
 //!
-//! Individual test functions are **not** marked with `#[test]` - they are called
-//! by the coordinator. This prevents cargo from running them in parallel.
+//! Individual test functions are **not** marked with `#[test]` - they are called by the
+//! coordinator. This prevents cargo from running them in parallel.
 //!
-//! [`text_operations`]: super::text_operations
-//! [`OffscreenBuffer`]: crate::OffscreenBuffer
 //! [`ColorSupport::Truecolor`]: crate::ColorSupport::Truecolor
+//! [`OffscreenBuffer`]: crate::OffscreenBuffer
 //! [`global_color_support::set_override`]: crate::global_color_support::set_override
+//! [`text_operations`]: super::text_operations
 
 use super::test_helpers_rendered::*;
 use crate::{ANSIBasicColor, ColorSupport, RgbValue, TuiColor, global_color_support,
@@ -305,7 +305,7 @@ fn test_paint_text_with_rgb_combined_rendered() {
 
 // XMARK: Process isolated test.
 
-/// Run all rendered tests sequentially in a single process with controlled global state.
+/// Runs all rendered tests sequentially in a single process with controlled global state.
 ///
 /// This function runs tests in two phases:
 /// 1. **Ansi256 phase**: Tests using [`ANSIBasicColor`] (palette indices 0-15)
@@ -315,8 +315,8 @@ fn test_paint_text_with_rgb_combined_rendered() {
 /// don't modify global state - they rely on this coordinator to set it up.
 ///
 /// [`ANSIBasicColor`]: crate::ANSIBasicColor
-/// [`TuiColor::Rgb`]: crate::TuiColor::Rgb
 /// [`ColorSupport`]: crate::ColorSupport
+/// [`TuiColor::Rgb`]: crate::TuiColor::Rgb
 fn run_all_rendered_tests_sequentially() {
     // Run Ansi256 palette color tests (via ANSIBasicColor).
     // Use Ansi256 to accurately test 256-color palette behavior.
@@ -341,21 +341,21 @@ fn run_all_rendered_tests_sequentially() {
     global_color_support::clear_override();
 }
 
-/// Run all rendered output tests in an isolated process.
+/// Runs all rendered output tests in an isolated process.
 ///
 /// This test coordinator spawns itself in a subprocess with `ISOLATED_RENDERED_TEST=1`,
-/// where it runs all rendered tests sequentially with controlled global state.
-/// This prevents race conditions when tests run in parallel.
+/// where it runs all rendered tests sequentially with controlled global state. This
+/// prevents race conditions when tests run in parallel.
 ///
 /// # Why Process Isolation?
 ///
-/// These tests use [`global_color_support::set_override`] which modifies a static
-/// mutable variable. When tests run in parallel:
+/// These tests use [`global_color_support::set_override`] which modifies a static mutable
+/// variable. When tests run in parallel:
 /// - Test A sets override → Test B sets override → Test A clears → Test B gets `NoColor`
 /// - `degrade_color(yellow, NoColor)` returns black (index 0) instead of yellow (index 3)
 ///
-/// By running in an isolated process, we ensure the global state is controlled and
-/// cannot be affected by other tests.
+/// By running in an isolated process, we ensure the global state is controlled and cannot
+/// be affected by other tests.
 #[test]
 fn test_all_rendered_output_in_isolated_process() {
     crate::suppress_wer_dialogs();

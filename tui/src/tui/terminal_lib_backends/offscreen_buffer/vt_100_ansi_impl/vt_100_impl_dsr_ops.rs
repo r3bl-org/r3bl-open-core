@@ -19,15 +19,15 @@
 //!
 //! **Related Files:**
 //!
-//! [`handle_status_report_request`]: crate::OffscreenBuffer::handle_status_report_request
 //! [`handle_cursor_position_request`]: crate::OffscreenBuffer::handle_cursor_position_request
+//! [`handle_status_report_request`]: crate::OffscreenBuffer::handle_status_report_request
 
 #[allow(clippy::wildcard_imports)]
 use super::super::*;
 use crate::{DsrRequestFromPtyEvent, TermCol, TermRow};
 
 impl OffscreenBuffer {
-    /// Handle device status report request.
+    /// Handles device status report request.
     /// Queues a response indicating terminal is OK (ESC[0n).
     pub fn handle_status_report_request(&mut self) {
         self.ansi_parser_support
@@ -35,7 +35,7 @@ impl OffscreenBuffer {
             .push(DsrRequestFromPtyEvent::TerminalStatus);
     }
 
-    /// Handle cursor position report request.
+    /// Handles cursor position report request.
     /// Queues a response with current cursor position (ESC[row;colR).
     /// Converts 0-based internal position to 1-based terminal position.
     pub fn handle_cursor_position_request(&mut self) {

@@ -18,12 +18,13 @@
 //! [`gap_buffer_from_str()`] are private implementation details and should not be used
 //! directly.
 //!
-//! [`ZeroCopyGapBuffer`]: `crate::ZeroCopyGapBuffer`
-//! [`From`]: `std::convert::From`
-//! [`&str`]: `str`
 //! [`&[GCString]`]: `crate::GCStringOwned`
-//! [`ZeroCopyGapBuffer::from("some text")`]: `std::convert::From::from`
 //! [`ZeroCopyGapBuffer::from(&[GCString])`]: `std::convert::From::from`
+//!
+//! [`&str`]: `str`
+//! [`From`]: `std::convert::From`
+//! [`ZeroCopyGapBuffer::from("some text")`]: `std::convert::From::from`
+//! [`ZeroCopyGapBuffer`]: `crate::ZeroCopyGapBuffer`
 //! [`gap_buffer_from_lines()`]: `gap_buffer_from_lines`
 //! [`gap_buffer_from_str()`]: `gap_buffer_from_str`
 
@@ -32,7 +33,7 @@ use crate::{GCStringOwned, NumericValue, SegIndex, ZeroCopyGapBuffer,
 #[cfg(test)]
 use crate::{len, md_parser::md_parser_constants::NULL_CHAR};
 
-/// Convert a slice of [`GCString`] lines into a [`ZeroCopyGapBuffer`].
+/// Converts a slice of [`GCString`] lines into a [`ZeroCopyGapBuffer`].
 ///
 /// This function takes editor content lines (`&<GCString>`) and converts them into
 /// a `ZeroCopyGapBuffer` that can be passed to the [`super::parse_markdown()`] function.
@@ -64,7 +65,7 @@ fn gap_buffer_from_lines(lines: &[GCStringOwned]) -> ZeroCopyGapBuffer {
     buffer
 }
 
-/// Convert a string slice into a [`ZeroCopyGapBuffer`].
+/// Converts a string slice into a [`ZeroCopyGapBuffer`].
 ///
 /// This function takes a string (typically from [`include_str!`] or test data) and
 /// converts it into a `ZeroCopyGapBuffer` that can be passed to the
@@ -120,7 +121,7 @@ fn gap_buffer_from_str(text: &str) -> ZeroCopyGapBuffer {
 // From trait implementations for more idiomatic Rust.
 
 impl From<&str> for ZeroCopyGapBuffer {
-    /// Convert a string slice into a `ZeroCopyGapBuffer`.
+    /// Converts a string slice into a `ZeroCopyGapBuffer`.
     ///
     /// This is a more idiomatic Rust way to convert string data
     /// into a gap buffer, allowing usage like `ZeroCopyGapBuffer::from("some text")`
@@ -136,7 +137,7 @@ impl From<&str> for ZeroCopyGapBuffer {
 }
 
 impl From<&[GCStringOwned]> for ZeroCopyGapBuffer {
-    /// Convert a slice of `GCString` lines into a `ZeroCopyGapBuffer`.
+    /// Converts a slice of `GCString` lines into a `ZeroCopyGapBuffer`.
     ///
     /// This is a more idiomatic Rust way to convert editor lines
     /// into a gap buffer, allowing usage like `ZeroCopyGapBuffer::from(&lines)` or

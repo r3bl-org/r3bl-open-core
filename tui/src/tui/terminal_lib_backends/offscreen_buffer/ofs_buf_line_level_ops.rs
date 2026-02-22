@@ -5,7 +5,7 @@ use crate::{RowIndex, row};
 
 /// Line-level operations.
 impl OffscreenBuffer {
-    /// Get a reference to a line at the specified row.
+    /// Gets a reference to a line at the specified row.
     /// Returns None if the row is out of bounds.
     #[must_use]
     pub fn get_line(&self, row: RowIndex) -> Option<&PixelCharLine> {

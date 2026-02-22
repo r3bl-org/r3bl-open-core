@@ -6,7 +6,7 @@ use r3bl_tui::{InlineString, friendly_random_id,
                into_existing::{read_from_file::try_read_file_path_into_inline_string,
                                write_to_file}};
 
-/// Read the file contents from [`config_folder::get_id_file_path`] and return it as a
+/// Reads the file contents from [`config_folder::get_id_file_path`] and return it as a
 /// string if it exists and can be read.
 ///
 /// # Panics

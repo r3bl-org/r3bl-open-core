@@ -39,7 +39,7 @@ impl Default for StatefulInputParser {
 }
 
 impl StatefulInputParser {
-    /// Process incoming bytes and parse into events.
+    /// Processes incoming bytes and parses into events.
     /// - `buffer`: Raw bytes read from `stdin`.
     /// - `more`: Whether more data is likely available (`read_count == TTY_BUFFER_SIZE`).
     pub fn advance(&mut self, buffer: &[u8], more: bool) {

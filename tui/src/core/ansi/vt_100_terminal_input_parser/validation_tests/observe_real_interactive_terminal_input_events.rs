@@ -142,7 +142,7 @@ pub async fn observe_terminal() -> IoResult<()> {
 // Output Helpers for Raw Mode
 // ============================================================================
 
-/// Write a message in raw mode with proper cursor positioning.
+/// Writes a message in raw mode with proper cursor positioning.
 /// Uses \n\r (line feed + carriage return) for correct positioning.
 fn write_raw_message(stdout: &mut std::io::Stdout, message: &str) -> IoResult<()> {
     write!(stdout, "{message}\n\r")?;
@@ -289,7 +289,7 @@ fn get_test_cases() -> Vec<TestCase> {
 // Helper Functions
 // ============================================================================
 
-/// Enable raw mode and mouse tracking for terminal capture.
+/// Enables raw mode and mouse tracking for terminal capture.
 /// Logs all ANSI codes being sent to stderr for diagnostic purposes.
 fn enable_terminal_capture_mode() -> IoResult<()> {
     use std::io::Write as _;
@@ -334,7 +334,7 @@ fn disable_terminal_capture_mode() -> IoResult<()> {
     Ok(())
 }
 
-/// Detect which terminal emulator is running by checking environment variables.
+/// Detects which terminal emulator is running by checking environment variables.
 fn detect_terminal_name() -> String {
     // Check multiple env vars that different terminals set
     if let Ok(prog) = std::env::var("TERM_PROGRAM") {

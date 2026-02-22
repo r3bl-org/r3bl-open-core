@@ -338,11 +338,11 @@ impl Default for TerminalModeState {
 /// - [`AnsiToOfsBufPerformer`]: The VTE `Perform` implementation that translates ANSI
 ///   sequences into buffer operations
 ///
-/// [`RenderOpCommon`]: enum@crate::RenderOpCommon
-/// [module documentation]: super
-/// [`vt_100_pty_output_parser`]: mod@crate::core::ansi::vt_100_pty_output_parser
-/// [`apply_ansi_bytes`]: OffscreenBuffer::apply_ansi_bytes
 /// [`AnsiToOfsBufPerformer`]: crate::AnsiToOfsBufPerformer
+/// [`RenderOpCommon`]: enum@crate::RenderOpCommon
+/// [`apply_ansi_bytes`]: OffscreenBuffer::apply_ansi_bytes
+/// [`vt_100_pty_output_parser`]: mod@crate::core::ansi::vt_100_pty_output_parser
+/// [module documentation]: super
 #[derive(Clone, PartialEq)]
 pub struct OffscreenBuffer {
     // The actual 2D grid of pixel characters representing the terminal screen.
@@ -411,10 +411,10 @@ use super::{pixel_char::PixelChar, pixel_char_lines::PixelCharLines};
 /// `RenderOpIRVec`. The Compositor has already applied all necessary transformations
 /// (clipping, Unicode handling, etc.) when these methods are called.
 pub trait OffscreenBufferPaint {
-    /// Convert offscreen buffer to terminal operations.
+    /// Converts offscreen buffer to terminal operations.
     fn render(&mut self, offscreen_buffer: &OffscreenBuffer) -> RenderOpOutputVec;
 
-    /// Convert diff chunks to terminal operations (for selective redraw).
+    /// Converts diff chunks to terminal operations (for selective redraw).
     fn render_diff(
         &mut self,
         diff_chunks: &super::diff_chunks::PixelCharDiffChunks,
@@ -526,7 +526,7 @@ impl OffscreenBuffer {
         Some(PixelCharDiffChunks::from(acc))
     }
 
-    /// Create a new buffer and fill it with empty chars.
+    /// Creates a new buffer and fills it with empty chars.
     #[must_use]
     pub fn new_empty(arg_window_size: impl Into<Size>) -> Self {
         let window_size = arg_window_size.into();

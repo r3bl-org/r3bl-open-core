@@ -105,7 +105,7 @@ pub fn multi_style_text(
     sequence
 }
 
-/// Create a rainbow-colored text sequence.
+/// Creates a rainbow-colored text sequence.
 ///
 /// Demonstrates cycling through colors for visual testing of color support.
 ///

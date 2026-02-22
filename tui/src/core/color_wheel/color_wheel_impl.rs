@@ -240,7 +240,7 @@ mod color_wheel_cache {
         crate::ThreadSafeLruCache<ColorWheelCacheKey, TuiStyledTexts>,
     > = LazyLock::new(|| crate::new_threadsafe_lru_cache(CACHE_SIZE));
 
-    /// Check if a gradient policy is cacheable.
+    /// Checks if a gradient policy is cacheable.
     ///
     /// Only policies that reset the index produce deterministic output:
     /// - `ReuseExistingGradientAndResetIndex`: Always starts from index 0
@@ -767,7 +767,7 @@ impl ColorWheel {
         }
     }
 
-    /// Handle special case for lolcat background mode.
+    /// Handles special case for lolcat background mode.
     fn generate_styled_texts_for_lolcat_bg(
         &mut self,
         text_colorization_policy: TextColorizationPolicy,
@@ -788,7 +788,7 @@ impl ColorWheel {
         acc
     }
 
-    /// Handle regular colorization cases.
+    /// Handles regular colorization cases.
     fn generate_styled_texts_regular(
         &mut self,
         text_colorization_policy: TextColorizationPolicy,
@@ -846,7 +846,7 @@ impl ColorWheel {
         acc
     }
 
-    /// Create a styled text for lolcat background mode.
+    /// Creates a styled text for lolcat background mode.
     fn create_lolcat_bg_styled_text(
         &mut self,
         maybe_style: Option<TuiStyle>,
@@ -997,7 +997,7 @@ mod color_wheel_navigation {
         }
     }
 
-    /// Update the color wheel index and handle direction changes.
+    /// Updates the color wheel index and handles direction changes.
     pub fn update_index_with_direction(
         index: &mut ChUnit,
         direction: &mut ColorWheelDirection,
@@ -1035,7 +1035,7 @@ mod color_wheel_navigation {
         None // Color will be retrieved separately
     }
 
-    /// Get color at the current index from the gradient.
+    /// Gets color at the current index from the gradient.
     pub fn get_color_at_index(gradient: &VecSteps, index: ChUnit) -> Option<TuiColor> {
         gradient.get(usize(index)).copied()
     }
@@ -1046,7 +1046,7 @@ mod lolcat_helper {
     #[allow(clippy::wildcard_imports)]
     use super::*;
 
-    /// Handle lolcat color generation and seed advancement.
+    /// Handles lolcat color generation and seed advancement.
     pub fn generate_next_lolcat_color(lolcat: &mut Lolcat) -> TuiColor {
         let new_color = color_wheel_helpers::get_color_tuple(&lolcat.color_wheel_control);
         lolcat.color_wheel_control.seed +=
@@ -1054,7 +1054,7 @@ mod lolcat_helper {
         tui_color!(new_color.0, new_color.1, new_color.2)
     }
 
-    /// Convert lolcat seed to [`ChUnit`] for indexing.
+    /// Converts lolcat seed to [`ChUnit`] for indexing.
     ///
     /// This function converts a Seed value to a `ChUnit` for use as an index.
     /// The implementation has been simplified to use integer operations where possible,
@@ -1114,14 +1114,14 @@ mod gradient_generation_helper {
         gradient_vec
     }
 
-    /// Set the gradient and length based on the generated gradient.
+    /// Sets the gradient and length based on the generated gradient.
     pub fn set_gradient_and_length(color_wheel: &mut ColorWheel, gradient: VecSteps) {
         color_wheel.gradient_length_kind = GradientLengthKind::ColorWheel(gradient.len());
         color_wheel.gradient_kind = GradientKind::ColorWheel(gradient);
         color_wheel.index = ch(0);
     }
 
-    /// Set up lolcat gradient configuration.
+    /// Sets up lolcat gradient configuration.
     pub fn set_lolcat_gradient(color_wheel: &mut ColorWheel, builder: &LolcatBuilder) {
         color_wheel.gradient_kind = GradientKind::Lolcat(builder.build());
         color_wheel.index = ch(0);
@@ -1134,7 +1134,7 @@ mod lolcat_bg_helper {
     #[allow(clippy::wildcard_imports)]
     use super::*;
 
-    /// Extract the style from the text colorization policy for lolcat background mode.
+    /// Extracts the style from the text colorization policy for lolcat background mode.
     pub fn extract_style_from_policy(
         text_colorization_policy: TextColorizationPolicy,
     ) -> Option<TuiStyle> {
@@ -1144,7 +1144,7 @@ mod lolcat_bg_helper {
         }
     }
 
-    /// Convert a [`TuiColor`] to an RGB tuple for use as background color.
+    /// Converts a [`TuiColor`] to an RGB tuple for use as background color.
     pub fn convert_tui_color_to_rgb_tuple(color: TuiColor) -> (u8, u8, u8) {
         match color {
             TuiColor::Rgb(RgbValue {

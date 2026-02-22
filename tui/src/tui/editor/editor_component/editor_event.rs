@@ -601,8 +601,8 @@ mod tests {
         // R ┌──────────┐
         // 0 │abc       │
         // 1 │ab        │
-        // 2 ❱a         │
-        //   └─⮬────────┘
+        // 2 ►a         │
+        //   └─▲────────┘
         //   C0123456789
         EditorEvent::apply_editor_events::<(), ()>(
             &mut engine,
@@ -646,8 +646,8 @@ mod tests {
         // Insert "abc\nab\na".
         // `this` should look like:
         // R ┌──────────┐
-        // 0 ❱abcaba    │
-        //   └──────⮬───┘
+        // 0 ►abcaba    │
+        //   └──────▲───┘
         //   C0123456789
         EditorEvent::apply_editor_events::<(), ()>(
             &mut engine,

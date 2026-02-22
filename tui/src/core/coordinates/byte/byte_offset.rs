@@ -8,7 +8,7 @@ use std::ops::{Add, AddAssign, Deref, DerefMut, Sub};
 
 /// Represents a byte offset within a line or buffer segment.
 ///
-/// A `ByteOffset` represents a relative distance in bytes from a starting position,
+/// A [`ByteOffset`] represents a relative distance in bytes from a starting position,
 /// as opposed to [`ByteIndex`] which represents an absolute position within a buffer.
 /// This distinction is crucial for maintaining semantic correctness in operations.
 ///
@@ -17,7 +17,7 @@ use std::ops::{Add, AddAssign, Deref, DerefMut, Sub};
 ///
 /// # Type System Disambiguation
 ///
-/// `ByteOffset` is conceptually distinct from both indices and lengths in the type
+/// [`ByteOffset`] is conceptually distinct from both indices and lengths in the type
 /// system:
 /// - **Not an Index**: Unlike [`ByteIndex`], it doesn't represent an absolute position
 /// - **Not a Length**: Unlike length types (e.g., [`LengthOps`]), it doesn't represent an
@@ -31,7 +31,7 @@ use std::ops::{Add, AddAssign, Deref, DerefMut, Sub};
 /// - Offset = displacement (like "5 blocks east from here")
 ///
 /// # Semantic Usage
-/// - Use `ByteOffset` for positions relative to line start (0-based within line)
+/// - Use [`ByteOffset`] for positions relative to line start (0-based within line)
 /// - Use `ByteIndex` for absolute positions in the global buffer
 /// - Arithmetic: `ByteIndex + ByteOffset = ByteIndex` (position + distance = new
 ///   position)
@@ -61,11 +61,11 @@ impl ByteOffset {
     #[must_use]
     pub fn as_usize(&self) -> usize { self.0 }
 
-    /// Convert this offset to the index of the last consumed byte.
+    /// Converts this offset to the index of the last consumed byte.
     ///
-    /// When parsing sequences, [`ByteOffset`] represents the total bytes consumed,
-    /// which is a "one-past-the-end" position (like Rust's exclusive range ends).
-    /// This method converts to the index of the final consumed byte.
+    /// When parsing sequences, [`ByteOffset`] represents the total bytes consumed, which
+    /// is a "one-past-the-end" position (like Rust's exclusive range ends). This method
+    /// converts to the index of the final consumed byte.
     ///
     /// # Semantics
     ///
@@ -105,12 +105,13 @@ impl ByteOffset {
     ///
     /// # Edge Cases
     ///
-    /// Returns 0 when `ByteOffset` is 0 (saturating subtraction prevents underflow).
+    /// Returns `0` when [`ByteOffset`] is 0 (saturating subtraction prevents underflow).
     ///
     /// # See Also
     ///
-    /// - [`as_usize()`](ByteOffset::as_usize) - Get the raw offset value (one-past-end
-    ///   position)
+    /// - [`as_usize()`] - Get the raw offset value (one-past-end position)
+    ///
+    /// [`as_usize()`]: ByteOffset::as_usize
     #[must_use]
     pub fn as_last_byte_index(&self) -> usize { self.0.saturating_sub(1) }
 }
@@ -164,11 +165,11 @@ impl From<Length> for ByteOffset {
     fn from(it: Length) -> Self { Self(it.as_usize()) }
 }
 
-// Arithmetic operations between ByteIndex and ByteOffset.
+/// Arithmetic operations between [`ByteIndex`] and [`ByteOffset`].
 impl Add<ByteOffset> for ByteIndex {
     type Output = ByteIndex;
 
-    /// Add a byte offset to an absolute byte position.
+    /// Adds a byte offset to an absolute byte position.
     ///
     /// This represents moving forward from an absolute position by a relative distance.
     /// Semantically: `absolute_position + offset = new_absolute_position`
@@ -227,7 +228,7 @@ impl Sub<ByteIndex> for ByteIndex {
 impl Add<ByteOffset> for ByteOffset {
     type Output = ByteOffset;
 
-    /// Add two byte offsets together.
+    /// Adds two byte offsets together.
     ///
     /// This represents combining two relative distances.
     /// Semantically: `offset + offset = combined_offset`

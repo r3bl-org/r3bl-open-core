@@ -163,7 +163,7 @@ pub fn truncate_from_left(
 mod truncate_helper {
     use super::{ColWidth, CowInlineString, ELLIPSIS_GLYPH, GCStringOwned, InlineString};
 
-    /// Check if no processing is needed for ASCII strings
+    /// Checks if no processing is needed for ASCII strings
     pub fn should_skip_processing_ascii(
         string_len: usize,
         display_width_usize: usize,
@@ -172,7 +172,7 @@ mod truncate_helper {
         string_len == display_width_usize || (!pad && string_len < display_width_usize)
     }
 
-    /// Check if no processing is needed for Unicode strings
+    /// Checks if no processing is needed for Unicode strings
     pub fn should_skip_processing_unicode(
         string_display_width: ColWidth,
         display_width: ColWidth,
@@ -182,12 +182,12 @@ mod truncate_helper {
             || (!pad && string_display_width < display_width)
     }
 
-    /// Get the display width of the ellipsis glyph
+    /// Gets the display width of the ellipsis glyph
     pub fn get_ellipsis_display_width() -> usize {
         GCStringOwned::from(ELLIPSIS_GLYPH).width().as_usize()
     }
 
-    /// Handle case where display width is insufficient for ellipsis
+    /// Handles case where display width is insufficient for ellipsis
     pub fn handle_insufficient_width_for_ellipsis() -> CowInlineString<'static> {
         CowInlineString::Owned(InlineString::new())
     }

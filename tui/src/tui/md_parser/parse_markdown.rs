@@ -63,7 +63,7 @@ pub fn parse_markdown(input: &ZeroCopyGapBuffer) -> IResult<&str, MdDocument<'_>
     Ok((input, it))
 }
 
-/// Parse tags metadata with CSV format.
+/// Parses tags metadata with CSV format.
 ///
 /// # Null Padding Invariant
 ///
@@ -74,7 +74,7 @@ fn parse_tags_list(input: &str) -> IResult<&str, ParseList<&str>> {
     parse_csv_opt_eol(TAGS, input)
 }
 
-/// Parse authors metadata with CSV format.
+/// Parses authors metadata with CSV format.
 ///
 /// # Null Padding Invariant
 ///
@@ -85,7 +85,7 @@ fn parse_authors_list(input: &str) -> IResult<&str, ParseList<&str>> {
     parse_csv_opt_eol(AUTHORS, input)
 }
 
-/// Parse title metadata with key-value format.
+/// Parses title metadata with key-value format.
 ///
 /// # Null Padding Invariant
 ///
@@ -96,7 +96,7 @@ fn parse_title_value(input: &str) -> IResult<&str, &str> {
     parse_unique_kv_opt_eol(TITLE, input)
 }
 
-/// Parse date metadata with key-value format.
+/// Parses date metadata with key-value format.
 ///
 /// # Null Padding Invariant
 ///

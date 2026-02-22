@@ -154,9 +154,9 @@ pub fn handle_selection_multiline_caret_movement(
     match caret_vertical_movement_direction {
         // ```text
         // R ┌──────────┐
-        // 0 ❱C         │ ← Current caret.
+        // 0 ►C         │ ← Current caret.
         // 1 │P         │ ← Previous caret.
-        //   └⮬─────────┘
+        //   └▲─────────┘
         //   C0123456789
         // ```
         Up => {
@@ -177,8 +177,8 @@ pub fn handle_selection_multiline_caret_movement(
         // ```text
         // R ┌──────────┐
         // 0 │P         │ ← Previous caret.
-        // 1 ❱C         │ ← Current caret.
-        //   └⮬─────────┘
+        // 1 ►C         │ ← Current caret.
+        //   └▲─────────┘
         //   C0123456789
         // ```
         Down => {
@@ -295,7 +295,7 @@ mod single_line_select_helper {
     #[allow(clippy::wildcard_imports)]
     use super::*;
 
-    /// Create a new range when one doesn't exist.
+    /// Creates a new range when one doesn't exist.
     pub fn create_new_range(
         buffer: &mut EditorBuffer,
         row_index: RowIndex,
@@ -330,7 +330,7 @@ mod single_line_select_helper {
         });
     }
 
-    /// Log debug information about the range.
+    /// Logs debug information about the range.
     pub fn log_range_debug_info(
         range: SelectionRange,
         prev: CaretScrAdj,
@@ -361,7 +361,7 @@ mod single_line_select_helper {
         });
     }
 
-    /// Handle left movement with shrinking range end.
+    /// Handles left movement with shrinking range end.
     pub fn handle_left_shrink_end(
         buffer: &mut EditorBuffer,
         range: SelectionRange,
@@ -382,7 +382,7 @@ mod single_line_select_helper {
         );
     }
 
-    /// Handle left movement with growing range start.
+    /// Handles left movement with growing range start.
     pub fn handle_left_grow_start(
         buffer: &mut EditorBuffer,
         range: SelectionRange,
@@ -403,7 +403,7 @@ mod single_line_select_helper {
         );
     }
 
-    /// Handle right movement with growing range end.
+    /// Handles right movement with growing range end.
     pub fn handle_right_grow_end(
         buffer: &mut EditorBuffer,
         range: SelectionRange,
@@ -424,7 +424,7 @@ mod single_line_select_helper {
         );
     }
 
-    /// Handle right movement with shrinking range start.
+    /// Handles right movement with shrinking range start.
     pub fn handle_right_shrink_start(
         buffer: &mut EditorBuffer,
         range: SelectionRange,

@@ -114,7 +114,7 @@ pub fn get_self_version() -> &'static str { env!("CARGO_PKG_VERSION") }
 #[must_use]
 pub fn get_self_crate_name() -> &'static str { env!("CARGO_PKG_NAME") }
 
-/// Get the filename of currently running executable (at run time).
+/// Gets the filename of currently running executable (at run time).
 #[must_use]
 pub fn get_self_bin_name() -> InlineString {
     current_exe()
@@ -128,7 +128,7 @@ pub fn get_self_bin_name() -> InlineString {
         .unwrap_or_else(|| inline_string!("unknown"))
 }
 
-/// Get the emoji representing the currently running executable (at run time).
+/// Gets the emoji representing the currently running executable (at run time).
 /// When adding new binaries make sure to update this function to return the
 /// correct emoji for the new binary.
 #[must_use]
@@ -202,7 +202,7 @@ pub async fn show_exit_message(context: ExitContext) {
 // XMARK: how to use long running potentially blocking synchronous code in Tokio, with
 // spinner.
 
-/// Extract meaningful progress information from rustup output.
+/// Extracts meaningful progress information from rustup output.
 ///
 /// Looks for patterns like:
 /// - "Updating to 1.75.0"
@@ -234,7 +234,7 @@ fn extract_rustup_progress(output: &str) -> String {
     }
 }
 
-/// Run rustup update with PTY support, output capture, and Ctrl+C handling.
+/// Runs rustup update with PTY support, output capture, and Ctrl+C handling.
 ///
 /// Unlike cargo install, rustup doesn't emit OSC codes, but it does produce output that
 /// can be used to show progress. This function captures that output and updates the

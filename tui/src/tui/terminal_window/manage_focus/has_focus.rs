@@ -38,15 +38,15 @@ impl Default for HasFocus {
 }
 
 impl HasFocus {
-    /// Check to see whether [`set_id`][HasFocus::set_id] has been called.
+    /// Checks whether [`set_id`][HasFocus::set_id] has been called.
     #[must_use]
     pub fn is_empty(&self) -> bool { self.id_vec.is_empty() }
 
-    /// Check to see whether [`set_id`][HasFocus::set_id] has been called.
+    /// Checks whether [`set_id`][HasFocus::set_id] has been called.
     #[must_use]
     pub fn is_set(&self) -> bool { !self.is_empty() }
 
-    /// Get the `id` of the [`FlexBox`] that has keyboard focus.
+    /// Gets the `id` of the [`FlexBox`] that has keyboard focus.
     #[must_use]
     pub fn get_id(&self) -> Option<FlexBoxId> { self.id_vec.last().copied() }
 
@@ -66,7 +66,7 @@ impl HasFocus {
         }
     }
 
-    /// Check whether the given `id` currently has keyboard focus.
+    /// Checks whether the given `id` currently has keyboard focus.
     ///
     /// # Panics
     ///
@@ -83,7 +83,7 @@ impl HasFocus {
         }
     }
 
-    /// Check whether the `id` of the [`FlexBox`] currently has keyboard focus.
+    /// Checks whether the `id` of the [`FlexBox`] currently has keyboard focus.
     #[must_use]
     pub fn does_current_box_have_focus(&self, current_box: FlexBox) -> bool {
         self.does_id_have_focus(current_box.id)
@@ -92,13 +92,15 @@ impl HasFocus {
 
 impl HasFocus {
     /// Pushes the `id` to the `id_vec`. The previous `id` is saved and can be restored
-    /// with [`reset_modal_id`](HasFocus::reset_modal_id).
+    /// with [`reset_modal_id`].
     ///
     /// # Errors
     ///
     /// Returns an error if:
     /// - No non-modal id is currently set (modal id requires a base id)
     /// - A modal id is already set (cannot nest modal ids)
+    ///
+    /// [`reset_modal_id`]: HasFocus::reset_modal_id
     pub fn try_set_modal_id(&mut self, id: FlexBoxId) -> CommonResult<()> {
         throws!({
             // Must have a non modal id already set.

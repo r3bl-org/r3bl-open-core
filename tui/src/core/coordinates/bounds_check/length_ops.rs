@@ -243,28 +243,28 @@ use std::{cmp::min, ops::Sub};
 /// - [`ArrayBoundsCheck`] - Array access safety using length constraints
 /// - [`CursorBoundsCheck`] - Cursor positioning using length constraints
 ///
-/// [`Self::IndexType`]: crate::IndexOps
-/// [`RowHeight`]: crate::RowHeight
-/// [`ColWidth`]: crate::ColWidth
-/// [`ByteLength`]: crate::ByteLength
-/// [`Length`]: crate::Length
-/// [`SegLength`]: crate::SegLength
-/// [`Index`]: crate::Index
-/// [`RowIndex`]: crate::RowIndex
-/// [`ColIndex`]: crate::ColIndex
-/// [`ByteIndex`]: crate::ByteIndex
-/// [`SegIndex`]: crate::SegIndex
-/// [`IndexOps`]: crate::IndexOps
-/// [`NumericValue`]: crate::NumericValue
 /// [`ArrayBoundsCheck`]: crate::ArrayBoundsCheck
+/// [`ByteIndex`]: crate::ByteIndex
+/// [`ByteLength`]: crate::ByteLength
+/// [`ColIndex`]: crate::ColIndex
+/// [`ColWidth`]: crate::ColWidth
 /// [`CursorBoundsCheck`]: crate::CursorBoundsCheck
+/// [`IndexOps`]: crate::IndexOps
+/// [`Index`]: crate::Index
+/// [`Length`]: crate::Length
+/// [`NumericValue`]: crate::NumericValue
+/// [`RowHeight`]: crate::RowHeight
+/// [`RowIndex`]: crate::RowIndex
+/// [`SegIndex`]: crate::SegIndex
+/// [`SegLength`]: crate::SegLength
+/// [`Self::IndexType`]: crate::IndexOps
+/// [`clamp_to_max()`]: LengthOps::clamp_to_max
 /// [`convert_to_index()`]: LengthOps::convert_to_index
+/// [`index.overflows(length)`]: crate::ArrayBoundsCheck::overflows
+/// [`index_from_end()`]: LengthOps::index_from_end
 /// [`is_overflowed_by()`]: LengthOps::is_overflowed_by
 /// [`remaining_from()`]: LengthOps::remaining_from
-/// [`clamp_to_max()`]: LengthOps::clamp_to_max
-/// [`index.overflows(length)`]: crate::ArrayBoundsCheck::overflows
 /// [module-level comparison table]: super#indexops-vs-lengthops-understanding-0-based-positions-vs-1-based-sizes
-/// [`index_from_end()`]: LengthOps::index_from_end
 pub trait LengthOps: NumericValue {
     /// The corresponding index type for this length type.
     ///
@@ -277,7 +277,7 @@ pub trait LengthOps: NumericValue {
     /// [`RowIndex`]: crate::RowIndex
     type IndexType: IndexOps<LengthType = Self>;
 
-    /// Convert this 1-based length to a 0-based index (subtracts 1).
+    /// Converts this 1-based length to a 0-based index (subtracts 1).
     ///
     /// See the [trait documentation][Self] for visual diagrams showing the
     /// conversion from 1-based lengths to 0-based indices.
@@ -337,7 +337,7 @@ pub trait LengthOps: NumericValue {
         (*self - offset).convert_to_index()
     }
 
-    /// Check if the given index would overflow this length's bounds.
+    /// Checks if the given index would overflow this length's bounds.
     ///
     /// Answers the question: "Does this length get overflowed by this index?"
     /// This is the same check as `index.overflows(length)` but from the
@@ -398,7 +398,8 @@ pub trait LengthOps: NumericValue {
     #[must_use]
     fn remaining_from(&self, arg_index: impl Into<Self::IndexType>) -> Length
     where
-        Self::IndexType: ArrayBoundsCheck<Self> + Sub<Output = Self::IndexType> + IndexOps,
+        Self::IndexType:
+            ArrayBoundsCheck<Self> + Sub<Output = Self::IndexType> + IndexOps,
         <Self::IndexType as IndexOps>::LengthType: Into<Length>,
     {
         let index: Self::IndexType = arg_index.into();

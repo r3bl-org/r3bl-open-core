@@ -15,7 +15,7 @@ use std::ops::Add;
 /// <div class="warning">
 ///
 /// This trait is automatically implemented for all types that implement [`LengthOps`]
-/// through a [blanket implementation](#implementors). You can use this trait on
+/// through a [blanket implementation]. You can use this trait on
 /// those types without writing any implementation code yourself.
 ///
 /// </div>
@@ -77,12 +77,12 @@ use std::ops::Add;
 ///
 /// ## Key Distinction from Other Bounds Traits
 ///
-/// | Trait                         | Rule                          | Use Case      | Example                                              |
-/// |-------------------------------|-------------------------------|---------------|------------------------------------------------------|
-/// | [`ArrayBoundsCheck`]          | `index < length`              | Index safety  | `buffer[5]` needs `5 < buffer.len()`                 |
-/// | `CursorBoundsCheck`📍         | `index <= length`             | Text editing  | Cursor can be at position `length` (after last char) |
-/// | [`ViewportBoundsCheck`]       | `start <= index < start+size` | Rendering     | Content visibility in windows                        |
-/// | [`RangeBoundsExt`]          | `start <= end <= length`      | Iteration     | Range object structural validation                   |
+/// | Trait                           | Rule                            | Use Case        | Example                                                |
+/// | ------------------------------- | ------------------------------- | --------------- | ------------------------------------------------------ |
+/// | [`ArrayBoundsCheck`]            | `index < length`                | Index safety    | `buffer[5]` needs `5 < buffer.len()`                   |
+/// | `CursorBoundsCheck`📍           | `index <= length`               | Text editing    | Cursor can be at position `length` (after last char)   |
+/// | [`ViewportBoundsCheck`]         | `start <= index < start+size`   | Rendering       | Content visibility in windows                          |
+/// | [`RangeBoundsExt`]              | `start <= end <= length`        | Iteration       | Range object structural validation                     |
 ///
 /// ## Primary Use Cases
 ///
@@ -133,27 +133,28 @@ use std::ops::Add;
 /// - [`LengthOps`] - Length types that implement this trait
 /// - [Module documentation] - Overview of the complete bounds checking architecture
 ///
+/// [Interval Notation]: mod@crate::core::coordinates::bounds_check#interval-notation
+/// [Module documentation]: mod@crate::core::coordinates::bounds_check
 /// [`ArrayBoundsCheck`]: crate::ArrayBoundsCheck
-/// [`ViewportBoundsCheck`]: crate::ViewportBoundsCheck
-/// [`RangeBoundsExt`]: crate::RangeBoundsExt
+/// [`ByteLength`]: crate::ByteLength
+/// [`ColWidth`]: crate::ColWidth
 /// [`IndexOps`]: crate::IndexOps
 /// [`LengthOps`]: crate::LengthOps
-/// [Module documentation]: mod@crate::core::coordinates::bounds_check
-/// [Interval Notation]: mod@crate::core::coordinates::bounds_check#interval-notation
+/// [`Length`]: crate::Length
+/// [`RangeBoundsExt`]: crate::RangeBoundsExt
+/// [`RowHeight`]: crate::RowHeight
+/// [`SegLength`]: crate::SegLength
+/// [`ViewportBoundsCheck`]: crate::ViewportBoundsCheck
+/// [`check_cursor_position_bounds()`]: CursorBoundsCheck::check_cursor_position_bounds
+/// [`clamp_cursor_position()`]: CursorBoundsCheck::clamp_cursor_position
 /// [`eol_cursor_position()`]: CursorBoundsCheck::eol_cursor_position
 /// [`is_valid_cursor_position()`]: CursorBoundsCheck::is_valid_cursor_position
-/// [`clamp_cursor_position()`]: CursorBoundsCheck::clamp_cursor_position
-/// [`check_cursor_position_bounds()`]: CursorBoundsCheck::check_cursor_position_bounds
-/// [`Length`]: crate::Length
-/// [`RowHeight`]: crate::RowHeight
-/// [`ColWidth`]: crate::ColWidth
-/// [`ByteLength`]: crate::ByteLength
-/// [`SegLength`]: crate::SegLength
+/// [blanket implementation]: #implementors
 pub trait CursorBoundsCheck: LengthOps
 where
     Self::IndexType: Add<Output = Self::IndexType>,
 {
-    /// Get the cursor position at end-of-line (after the last character).
+    /// Gets the cursor position at end-of-line (after the last character).
     ///
     /// For content of length N, this returns position N.
     /// See the [trait documentation][Self] for cursor positioning semantics.
@@ -169,7 +170,7 @@ where
         }
     }
 
-    /// Check if a cursor position is valid for this line/buffer.
+    /// Checks if a cursor position is valid for this line/buffer.
     ///
     /// Returns true for positions in the range `[0, length]` (inclusive of EOL position).
     fn is_valid_cursor_position(&self, pos: Self::IndexType) -> bool {
@@ -188,7 +189,7 @@ where
         }
     }
 
-    /// Check detailed cursor position status for text editing contexts.
+    /// Checks detailed cursor position status for text editing contexts.
     ///
     /// See the [trait documentation][Self] for cursor positioning semantics and visual
     /// diagrams.

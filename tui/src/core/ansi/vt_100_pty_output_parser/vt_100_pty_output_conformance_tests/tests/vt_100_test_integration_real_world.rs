@@ -14,7 +14,7 @@ use crate::{ANSIBasicColor, CsiCount, PixelChar, TermCol, col,
             offscreen_buffer::test_fixtures_ofs_buf::*, row, tui_style_attrib};
 use std::cmp::min;
 
-/// Create a realistic terminal buffer for real-world scenario testing.
+/// Creates a realistic terminal buffer for real-world scenario testing.
 /// Uses standard 80x25 dimensions typical of actual terminal usage.
 fn create_realistic_terminal_buffer() -> crate::OffscreenBuffer {
     use crate::{height, width};

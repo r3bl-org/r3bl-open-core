@@ -213,7 +213,7 @@ pub mod ch_unit_math_ops {
     }
 }
 
-/// Convert to other types [prim@f64], [prim@isize], [prim@usize], etc. from [`ChUnit`].
+/// Converts to other types [prim@f64], [prim@isize], [prim@usize], etc. from [`ChUnit`].
 pub mod convert_to_other_types_from_ch {
     use super::{ChUnit, ChUnitPrimitiveType, LossyConvertToByte};
 
@@ -262,7 +262,7 @@ pub mod convert_to_other_types_from_ch {
     }
 }
 
-/// Convert from other types [prim@f64], [prim@isize], [prim@usize], etc. to [`ChUnit`].
+/// Converts from other types [prim@f64], [prim@isize], [prim@usize], etc. to [`ChUnit`].
 pub mod convert_from_other_types_to_ch {
     use super::{ChUnit, ChUnitPrimitiveType};
 

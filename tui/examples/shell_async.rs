@@ -153,9 +153,9 @@ pub mod monitor_user_input_and_send_to_child {
         Resized,
     }
 
-    /// Convert a [`miette::Result`]`<ReadlineEvent>` to a [`ControlFlow`]. This leverages
-    /// the type system to make it simpler to reason about what to do with the user
-    /// input.
+    /// Converts a [`miette::Result`]`<ReadlineEvent>` to a [`ControlFlow`]. This
+    /// leverages the type system to make it simpler to reason about what to do with
+    /// the user input.
     impl From<miette::Result<ReadlineEvent>> for ControlFlow {
         fn from(result_readline_event: miette::Result<ReadlineEvent>) -> Self {
             match result_readline_event {

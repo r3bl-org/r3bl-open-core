@@ -56,7 +56,7 @@ impl<T, const N: usize> RingBuffer<T, N> for RingBufferStack<T, N> {
 
     fn len(&self) -> Length { len(self.count) }
 
-    /// Insert at head (ie, insert the newest item).
+    /// Inserts at head (ie, insert the newest item).
     fn add(&mut self, value: T) {
         if self.count == N {
             self.internal_storage[self.head] = Some(value);
@@ -69,7 +69,7 @@ impl<T, const N: usize> RingBuffer<T, N> for RingBufferStack<T, N> {
         }
     }
 
-    /// Remove from tail (ie, remove the oldest item).
+    /// Removes from tail (ie, remove the oldest item).
     fn remove(&mut self) -> Option<T> {
         if self.count == 0 {
             return None;
@@ -81,7 +81,7 @@ impl<T, const N: usize> RingBuffer<T, N> for RingBufferStack<T, N> {
         value
     }
 
-    /// Remove from head (ie, remove the newest item). This is the opposite of
+    /// Removes from head (ie, remove the newest item). This is the opposite of
     /// [`Self::remove`].
     fn remove_head(&mut self) -> Option<T> {
         if self.count == 0 {

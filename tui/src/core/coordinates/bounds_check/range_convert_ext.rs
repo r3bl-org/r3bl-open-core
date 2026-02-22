@@ -233,19 +233,19 @@ use std::ops::{Add, Range, RangeInclusive};
 /// - [`RangeBoundsExt`] - Range validation against content boundaries
 /// - [Module documentation] - Overview of bounds checking architecture
 ///
-/// [`to_exclusive()`]: RangeConvertExt::to_exclusive
-/// [`RangeBoundsExt`]: crate::RangeBoundsExt
+/// [Interval Notation]: mod@crate::core::coordinates::bounds_check#interval-notation
 /// [Module documentation]: mod@crate::core::coordinates::bounds_check
-/// [`RangeInclusive<Index>`]: std::ops::RangeInclusive
 /// [`Range<Index>`]: std::ops::Range
+/// [`RangeBoundsExt`]: crate::RangeBoundsExt
+/// [`RangeInclusive<Index>`]: std::ops::RangeInclusive
 /// [`RangeInclusive`]: std::ops::RangeInclusive
 /// [`Range`]: std::ops::Range
-/// [Interval Notation]: mod@crate::core::coordinates::bounds_check#interval-notation
+/// [`to_exclusive()`]: RangeConvertExt::to_exclusive
 pub trait RangeConvertExt {
     /// The index type contained in this range.
     type IndexType: IndexOps;
 
-    /// Convert inclusive range to exclusive range by adding 1 to the end bound.
+    /// Converts inclusive range to exclusive range by adding 1 to the end bound.
     ///
     /// See the [trait documentation][Self] for detailed explanations, visual diagrams,
     /// VT-100 examples, and common pitfalls.

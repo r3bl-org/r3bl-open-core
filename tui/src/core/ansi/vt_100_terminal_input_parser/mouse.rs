@@ -63,9 +63,9 @@
 //!
 //! ## Shift+Click Not Reported
 //!
-//! Most terminal emulators intercept **Shift+Click** combinations for their own use
-//! (text selection, block selection, etc.) and never report these events to the
-//! application. This is a terminal-level limitation, not an issue with this parser.
+//! Most terminal emulators intercept **Shift+Click** combinations for their own use (text
+//! selection, block selection, etc.) and never report these events to the application.
+//! This is a terminal-level limitation, not an issue with this parser.
 //!
 //! **Affected combinations:**
 //! - Shift+Click
@@ -78,14 +78,15 @@
 //! - Alt+Ctrl+Click ✓
 //!
 //! This limitation is consistent across most terminal emulators (xterm, gnome-terminal,
-//! iTerm2, etc.) because Shift+Click is reserved for text selection by the terminal.
-//! See the test fixtures for mouse event generation details and validation tests.
+//! iTerm2, etc.) because Shift+Click is reserved for text selection by the terminal. See
+//! the test fixtures for mouse event generation details and validation tests.
 //!
 //! [1-based coordinates]: mod@super#one-based-mouse-input-events
 //! [`TermPos`]: crate::core::coordinates::vt_100_ansi_coords::TermPos
 //! [`VT100MouseActionIR`]: super::VT100MouseActionIR
 //! [`VT100MouseButtonIR`]: super::VT100MouseButtonIR
-//! [`convert_input_event()`]: crate::direct_to_ansi::input::protocol_conversion::convert_input_event
+//! [`convert_input_event()`]:
+//!     crate::direct_to_ansi::input::protocol_conversion::convert_input_event
 //! [`keyboard`]: mod@super::keyboard
 //! [`router`]: mod@super::router
 //! [`terminal_events`]: mod@super::terminal_events
@@ -135,7 +136,10 @@ pub fn parse_mouse_sequence(buffer: &[u8]) -> Option<(VT100InputEventIR, ByteOff
 
 /// Parse `SGR` mouse protocol: `CSI < Cb ; Cx ; Cy M/m`
 ///
-/// Returns `Some((event, bytes_consumed))` for complete sequences, `None` for incomplete.
+/// # Returns
+///
+/// - The parsed mouse event and byte count on success.
+/// - Nothing if the sequence is incomplete.
 ///
 /// Format breakdown:
 /// - `ESC [<` prefix (3 bytes)
@@ -227,7 +231,10 @@ fn parse_sgr_mouse(sequence: &[u8]) -> Option<(VT100InputEventIR, ByteOffset)> {
 
 /// Parse `X10`/Normal mouse protocol: `CSI M Cb Cx Cy`
 ///
-/// Returns `Some((event, bytes_consumed))` for complete sequences, `None` for incomplete.
+/// # Returns
+///
+/// - The parsed mouse event and byte count on success.
+/// - Nothing if the sequence is incomplete.
 ///
 /// Format breakdown:
 /// - `ESC [M` prefix (3 bytes)
@@ -373,7 +380,10 @@ fn parse_x10_mouse(sequence: &[u8]) -> Option<(VT100InputEventIR, ByteOffset)> {
 
 /// Parse `RXVT` mouse protocol: `CSI Cb ; Cx ; Cy M`
 ///
-/// Returns `Some((event, bytes_consumed))` for complete sequences, `None` for incomplete.
+/// # Returns
+///
+/// - The parsed mouse event and byte count on success.
+/// - Nothing if the sequence is incomplete.
 ///
 /// Format breakdown:
 /// - `ESC [` prefix (2 bytes)
@@ -529,7 +539,7 @@ fn parse_rxvt_mouse(sequence: &[u8]) -> Option<(VT100InputEventIR, ByteOffset)> 
     }
 }
 
-/// Detect mouse button from SGR button byte.
+/// Detects mouse button from SGR button byte.
 ///
 /// Button encoding (bits 0-1):
 /// - 0 = left button
@@ -554,12 +564,12 @@ fn detect_mouse_button(cb: u16) -> Option<VT100MouseButtonIR> {
     }
 }
 
-/// Detect if mouse event is a drag (button held while moving).
+/// Detects if mouse event is a drag (button held while moving).
 ///
 /// Drag flag is bit 5 (value 32) in the button byte.
 fn is_drag_event(cb: u16) -> bool { (cb & MOUSE_MOTION_FLAG) != 0 }
 
-/// Detect scroll events (up/down/left/right).
+/// Detects scroll events (up/down/left/right).
 ///
 /// Scroll button codes:
 /// - 64 = scroll up
@@ -582,7 +592,7 @@ fn detect_scroll_event(cb: u16) -> Option<VT100ScrollDirectionIR> {
     }
 }
 
-/// Extract modifier keys (Shift, Ctrl, Alt) from SGR sequence.
+/// Extracts modifier keys (Shift, Ctrl, Alt) from SGR sequence.
 ///
 /// Modifier encoding (bits 2-4):
 /// - Bit 2 (value 4): Shift
@@ -622,7 +632,7 @@ mod tests {
 
     // ==================== Test Helpers ====================
 
-    /// Build an X10 mouse sequence using the generator.
+    /// Builds an X10 mouse sequence using the generator.
     ///
     /// X10 format: `ESC [ M Cb Cx Cy` (6 bytes with null terminator)
     fn x10_mouse_sequence(
@@ -636,7 +646,7 @@ mod tests {
         generate_x10_mouse_sequence(button, col, row, action, modifiers)
     }
 
-    /// Build an RXVT mouse sequence using the generator.
+    /// Builds an RXVT mouse sequence using the generator.
     ///
     /// RXVT format: `ESC [ Cb ; Cx ; Cy M` (decimal with semicolons)
     fn rxvt_mouse_sequence(
@@ -650,7 +660,7 @@ mod tests {
         generate_rxvt_mouse_sequence(button, col, row, action, modifiers)
     }
 
-    /// Build an SGR mouse sequence using the generator.
+    /// Builds an SGR mouse sequence using the generator.
     ///
     /// SGR format: `ESC [ < Cb ; Cx ; Cy M/m` (modern standard)
     fn sgr_mouse_sequence(

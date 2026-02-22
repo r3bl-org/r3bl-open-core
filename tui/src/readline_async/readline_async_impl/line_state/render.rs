@@ -6,7 +6,7 @@ use crate::{CsiSequence, EraseDisplayMode, LineStateLiveness, StringLength, earl
 use std::io::{self, Write};
 
 impl LineState {
-    /// Clear current line.
+    /// Clears current line.
     ///
     /// # Errors
     ///
@@ -22,7 +22,7 @@ impl LineState {
         ok!()
     }
 
-    /// Render line (prompt + line) and flush.
+    /// Renders line (prompt + line) and flush.
     ///
     /// # Errors
     ///
@@ -50,7 +50,7 @@ impl LineState {
         ok!()
     }
 
-    /// Clear line and render.
+    /// Clears line and renders.
     ///
     /// # Errors
     ///

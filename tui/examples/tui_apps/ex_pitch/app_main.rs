@@ -82,7 +82,9 @@ mod app_main_impl_app_trait {
 
         /// Examples are provided of directly manipulating state and returning a request
         /// to re-render or sending a signal via the channel to
-        /// [app_apply_action](app_apply_action).
+        /// [app_apply_action].
+        ///
+        /// [app_apply_action]: app_apply_action
         fn app_handle_input_event(
             &mut self,
             input_event: InputEvent,
@@ -126,7 +128,9 @@ mod app_main_impl_app_trait {
         }
 
         /// Examples are provided of directly manipulating the state in the
-        /// [app_handle_input_event](app_handle_input_event) method.
+        /// [app_handle_input_event] method.
+        ///
+        /// [app_handle_input_event]: app_handle_input_event
         fn app_handle_signal(
             &mut self,
             action: &AppSignal,
@@ -270,7 +274,7 @@ mod populate_component_registry {
         });
     }
 
-    /// Insert editor component into registry if it's not already there.
+    /// Inserts editor component into registry if it's not already there.
     fn create_and_insert_editor_component_with_id(
         id: FlexBoxId,
         component_registry_map: &mut ComponentRegistryMap<State, AppSignal>,

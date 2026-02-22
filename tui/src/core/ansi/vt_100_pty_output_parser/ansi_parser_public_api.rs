@@ -32,8 +32,6 @@
 //! the architecture and testing strategy which covers the shim → impl → test design
 //! pattern.
 //!
-//! [`apply_ansi_bytes`]: crate::OffscreenBuffer::apply_ansi_bytes
-//! [`OffscreenBuffer`]: crate::OffscreenBuffer
 //!
 //! # ANSI Sequence Types from PTY Output
 //!
@@ -107,12 +105,12 @@
 //! **Why both exist**: Modern terminals support both for backward compatibility. Many
 //! operations can be performed using either approach:
 //!
-//! | Operation | `ESC` Sequence | `CSI` Sequence | Notes |
-//! |-----------|-------------|--------------|-------|
-//! | Save cursor | `ESC 7` | `ESC [s` | Both work identically |
-//! | Restore cursor | `ESC 8` | `ESC [u` | Both work identically |
-//! | Move cursor down 1 line | `ESC D` | `ESC [1B` | `CSI` version can take parameters |
-//! | Move cursor up 1 line | `ESC M` | `ESC [1A` | `CSI` version can take parameters |
+//! | Operation               | `ESC` Sequence | `CSI` Sequence | Notes                             |
+//! | ----------------------- | -------------- | -------------- | --------------------------------- |
+//! | Save cursor             | `ESC 7`        | `ESC [s`       | Both work identically             |
+//! | Restore cursor          | `ESC 8`        | `ESC [u`       | Both work identically             |
+//! | Move cursor down 1 line | `ESC D`        | `ESC [1B`      | `CSI` version can take parameters |
+//! | Move cursor up 1 line   | `ESC M`        | `ESC [1A`      | `CSI` version can take parameters |
 //!
 //! This overlap is demonstrated in the test suite: the cursor operations tests contain
 //! both `test_csi_save_restore_cursor` and `test_esc_save_restore_cursor`, showing both
@@ -121,6 +119,9 @@
 //! **Modern practice**: New applications typically use `CSI` sequences for their
 //! flexibility, while `ESC` sequences remain for compatibility and simple operations that
 //! don't need parameters.
+//!
+//! [`OffscreenBuffer`]: crate::OffscreenBuffer
+//! [`apply_ansi_bytes`]: crate::OffscreenBuffer::apply_ansi_bytes
 
 use crate::{DsrRequestFromPtyEvent, OffscreenBuffer, core::osc::OscEvent};
 use std::mem::take;
@@ -141,7 +142,7 @@ pub struct AnsiToOfsBufPerformer<'a> {
 }
 
 impl<'a> AnsiToOfsBufPerformer<'a> {
-    /// Create a new performer for the given `ofs_buf`.
+    /// Creates a new performer for the given `ofs_buf`.
     ///
     /// This creates a performer instance that provides direct access to persistent
     /// terminal state stored in the buffer's `ansi_parser_support` field.
@@ -149,11 +150,11 @@ impl<'a> AnsiToOfsBufPerformer<'a> {
     /// instances.
     pub fn new(ofs_buf: &'a mut OffscreenBuffer) -> Self { Self { ofs_buf } }
 
-    /// Handle the core parsing loop where each byte is fed to the [`VTE parser`], which
+    /// Handles the core parsing loop where each byte is fed to the [`VTE parser`], which
     /// in turn calls methods on the performer (via the [`Perform`] trait).
     ///
-    /// [`VTE parser`]: vte::Parser
     /// [`Perform`]: vte::Perform
+    /// [`VTE parser`]: vte::Parser
     pub fn apply_ansi_bytes(&mut self, bytes: impl AsRef<[u8]>) {
         let mut parser = vte::Parser::new();
         let performer = self;
@@ -224,11 +225,11 @@ impl OffscreenBuffer {
     /// - The [`VTE Parser`] (which must maintain state across reads for split sequences)
     ///   is kept separately in the [`Process`] struct.
     ///
-    /// [`VTE parser`]: vte::Parser
-    /// [`Process`]: crate::pty_mux::Process
-    /// [`PixelChar`]: crate::PixelChar
-    /// [`OSC events`]: crate::core::osc::OscEvent
     /// [`DSR response events`]: crate::DsrRequestFromPtyEvent
+    /// [`OSC events`]: crate::core::osc::OscEvent
+    /// [`PixelChar`]: crate::PixelChar
+    /// [`Process`]: crate::pty_mux::Process
+    /// [`VTE parser`]: vte::Parser
     #[must_use]
     pub fn apply_ansi_bytes(
         &mut self,

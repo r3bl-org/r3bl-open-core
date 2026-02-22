@@ -6,7 +6,7 @@ use std::ops::Range;
 
 /// Buffer manipulation methods - provides encapsulated access to buffer data.
 impl OffscreenBuffer {
-    /// Get character at position, returns None if position is out of bounds.
+    /// Gets character at position, returns None if position is out of bounds.
     #[must_use]
     pub fn get_char(&self, pos: Pos) -> Option<PixelChar> {
         // Use type-safe bounds checking before converting to usize.

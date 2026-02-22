@@ -48,9 +48,9 @@
 //!
 //! ## UTF-8 Encoding Explained
 //!
-//! UTF-8 uses **bit pattern matching** (not arithmetic) to identify byte types
-//! and extract data. The high bits are structural markers; remaining bits carry
-//! the Unicode code point.
+//! UTF-8 uses **bit pattern matching** (not arithmetic) to identify byte types and
+//! extract data. The high bits are structural markers; remaining bits carry the Unicode
+//! code point.
 //!
 //! ### Byte Type Detection
 //!
@@ -123,49 +123,55 @@
 //!
 //! # Important: UTF-8 Byte Length vs Display Width
 //!
-//! This module handles **UTF-8 byte-level parsing only** - converting raw bytes
-//! from terminal input into Unicode characters. It does NOT handle display width.
+//! This module handles **UTF-8 byte-level parsing only** - converting raw bytes from
+//! terminal input into Unicode characters. It does NOT handle display width.
 //!
 //! ## Two Separate Concerns
 //!
-//! | Concern                                | What it measures            | Example: '😀'    |
-//! |:---------------------------------------|:----------------------------|:-----------------|
-//! | **UTF-8 byte length** (this module)    | Memory size in bytes        | 4 bytes          |
-//! | **Display width** (graphemes module)   | Terminal columns occupied   | 2 columns        |
+//! | Concern                              | What it measures          | Example: '😀' |
+//! | :----------------------------------- | :------------------------ | :------------ |
+//! | **UTF-8 byte length** (this module)  | Memory size in bytes      | 4 bytes       |
+//! | **Display width** (graphemes module) | Terminal columns occupied | 2 columns     |
 //!
-//! - **This module**: Returns `(InputEvent, bytes_consumed)` where `bytes_consumed` is
-//!   the number of bytes to advance in the input buffer (1-4 bytes for UTF-8).
-//! - **Display rendering**: Calculated separately using the `unicode_width` crate. See
+//! - **This module**: Returns `(`[`VT100InputEventIR`]`, `[`ByteOffset`]`)` where
+//!   `bytes_consumed` is the number of bytes to advance in the input buffer (1-4 bytes
+//!   for UTF-8).
+//!
+//! - **Display rendering**: Calculated separately using the [`unicode_width`] crate. See
 //!   [`mod@crate::graphemes`] for comprehensive documentation on Unicode display width,
-//!   grapheme clusters, and the three types of indices (`ByteIndex`, `SegIndex`,
-//!   `ColIndex`).
+//!   grapheme clusters, and the three types of indices ([`ByteIndex`], [`SegIndex`],
+//!   [`ColIndex`]).
 //!
 //! ## Why This Matters
 //!
 //! A common mistake is assuming that `bytes_consumed` relates to how many terminal
 //! columns the character occupies. This is incorrect:
 //!
-//! ```text
-//! Character  UTF-8 Bytes  Display Width
-//! ---------  -----------  -------------
-//! 'H'        1 byte       1 column  (ASCII)
-//! '©'        2 bytes      1 column  (Latin-1 supplement)
-//! '€'        3 bytes      1 column  (currency symbol)
-//! '你'       3 bytes      2 columns (CJK fullwidth)
-//! '😀'       4 bytes      2 columns (emoji)
-//! ```
+//! | Character | UTF-8 Bytes | Display Width | Category           |
+//! | --------- | ----------- | ------------- | ------------------ |
+//! | `H`       | 1 byte      | 1 column      | ASCII              |
+//! | `©`       | 2 bytes     | 1 column      | Latin-1 supplement |
+//! | `€`       | 3 bytes     | 1 column      | Currency symbol    |
+//! | `你`      | 3 bytes     | 2 columns     | CJK fullwidth      |
+//! | `😀`      | 4 bytes     | 2 columns     | Emoji              |
 //!
-//! If you need to position the cursor or calculate line lengths, you need display
-//! width calculation, not byte length. See [`crate::graphemes::GCStringOwned`] for
-//! text rendering utilities.
+//! If you need to position the cursor or calculate line lengths, you need display width
+//! calculation, not byte length. See [`crate::graphemes::GCStringOwned`] for text
+//! rendering utilities.
 //!
+//! [`ByteIndex`]: crate::ByteIndex
+//! [`ByteOffset`]: crate::ByteOffset
+//! [`ColIndex`]: crate::ColIndex
+//! [`SegIndex`]: crate::SegIndex
+//! [`VT100InputEventIR`]: super::VT100InputEventIR
 //! [`VT100KeyCodeIR::Char`]: super::VT100KeyCodeIR::Char
+//! [`convert_input_event()`]:
+//!     crate::direct_to_ansi::input::protocol_conversion::convert_input_event
 //! [`keyboard`]: mod@super::keyboard
 //! [`mouse`]: mod@super::mouse
 //! [`router`]: mod@super::router
 //! [`terminal_events`]: mod@super::terminal_events
 //! [parent module documentation]: mod@super#primary-consumer
-//! [`convert_input_event()`]: crate::direct_to_ansi::input::protocol_conversion::convert_input_event
 
 use super::ir_event_types::{VT100InputEventIR, VT100KeyCodeIR, VT100KeyModifiersIR};
 use crate::{ByteOffset, UTF8_1BYTE_MAX, UTF8_1BYTE_MIN, UTF8_2BYTE_FIRST_MASK,
@@ -174,28 +180,32 @@ use crate::{ByteOffset, UTF8_1BYTE_MAX, UTF8_1BYTE_MIN, UTF8_2BYTE_FIRST_MASK,
             UTF8_CONTINUATION_DATA_MASK, UTF8_CONTINUATION_MASK,
             UTF8_CONTINUATION_PATTERN, byte_offset};
 
-/// Parse UTF-8 text and return a single `InputEvent` for the first complete character.
+/// Parse UTF-8 text and return a single [`VT100InputEventIR`] for the first complete
+/// character.
 ///
-/// Returns `Some((event, bytes_consumed))` if a complete UTF-8 character is parsed,
-/// or `None` if the sequence is incomplete or invalid.
+/// Converts raw UTF-8 bytes into character input events. Handles multi-byte UTF-8
+/// sequences (1-4 bytes).
 ///
-/// Converts raw UTF-8 bytes into character input events. Handles multi-byte
-/// UTF-8 sequences (1-4 bytes). If the buffer starts with incomplete UTF-8,
-/// returns `None` to indicate more bytes are needed.
+/// # Returns
 ///
-/// The caller (`DirectToAnsiInputDevice`) can call this repeatedly to parse
-/// multiple characters from the buffer.
+/// - The parsed character event and byte count on success.
+/// - Nothing if the buffer contains an incomplete or invalid UTF-8 sequence.
+///
+/// The caller ([`DirectToAnsiInputDevice`]) can call this repeatedly to parse multiple
+/// characters from the buffer.
 ///
 /// # Important: `bytes_consumed` ≠ display width
 ///
-/// The returned `bytes_consumed` indicates how many bytes to advance in the input
-/// buffer. This is **NOT** the display width (terminal columns) of the character.
+/// The returned `bytes_consumed` indicates how many bytes to advance in the input buffer.
+/// This is **NOT** the display width (terminal columns) of the character.
 ///
 /// Example:
 /// - '😀' returns `bytes_consumed = 4` (UTF-8 encoding is 4 bytes)
 /// - But '😀' occupies **2 terminal columns** (display width)
 ///
 /// For display width calculation and cursor positioning, see [`mod@crate::graphemes`].
+///
+/// [`DirectToAnsiInputDevice`]: crate::direct_to_ansi::input::DirectToAnsiInputDevice
 #[must_use]
 pub fn parse_utf8_text(buffer: &[u8]) -> Option<(VT100InputEventIR, ByteOffset)> {
     // Check if we have a complete UTF-8 sequence
@@ -214,11 +224,12 @@ pub fn parse_utf8_text(buffer: &[u8]) -> Option<(VT100InputEventIR, ByteOffset)>
     ))
 }
 
-/// Check if a UTF-8 byte sequence is complete.
+/// Checks if a UTF-8 byte sequence is complete.
 ///
-/// Returns:
-/// - `Some(len)` if complete, where `len` is the byte length of the character
-/// - `None` if the sequence is incomplete and needs more bytes
+/// # Returns
+///
+/// - The byte length of the character if the sequence is complete.
+/// - Nothing if more bytes are needed.
 fn is_utf8_complete(buffer: &[u8]) -> Option<usize> {
     if buffer.is_empty() {
         return None;
@@ -245,13 +256,13 @@ fn is_utf8_complete(buffer: &[u8]) -> Option<usize> {
 
 /// Validate and decode a complete UTF-8 sequence.
 ///
-/// Returns the decoded character if valid, or None if the sequence is invalid.
+/// Returns the decoded character if valid, or [`None`] if the sequence is invalid.
 ///
 /// Decodes UTF-8 by extracting the data bits from each byte:
-/// - 1-byte: 0xxxxxxx
-/// - 2-byte: 110xxxxx 10xxxxxx
-/// - 3-byte: 1110xxxx 10xxxxxx 10xxxxxx
-/// - 4-byte: 11110xxx 10xxxxxx 10xxxxxx 10xxxxxx
+/// - 1-byte: `0xxxxxxx`
+/// - 2-byte: `110xxxxx 10xxxxxx`
+/// - 3-byte: `1110xxxx 10xxxxxx 10xxxxxx`
+/// - 4-byte: `11110xxx 10xxxxxx 10xxxxxx 10xxxxxx`
 fn decode_utf8(buffer: &[u8]) -> Option<char> {
     if buffer.is_empty() {
         return None;
@@ -304,18 +315,22 @@ fn decode_utf8(buffer: &[u8]) -> Option<char> {
     char::from_u32(codepoint)
 }
 
-/// Get the expected length of a UTF-8 sequence from its first byte.
+/// Gets the expected length of a UTF-8 sequence from its first byte.
 ///
-/// This implements the same logic as the unstable `core::str::utf8_char_width`,
-/// but uses `Option<usize>` for type-safe error handling. We maintain this
-/// custom implementation because:
-/// - The std lib version requires nightly Rust (`str_internals` feature)
-/// - Our `Option` return type is more explicit than returning 0 for invalid bytes
+/// This implements the same logic as the unstable [`core::str::utf8_char_width`], but
+/// uses [`Option<usize>`] for type-safe error handling. We maintain this custom
+/// implementation because:
+///
+/// - The [`std`] library version requires nightly Rust ([`str_internals`] feature)
+/// - Our `Option` return type is more explicit than returning `0` for invalid bytes
 /// - Zero external dependencies
 ///
-/// Returns the total byte length of the UTF-8 character, or None if invalid.
+/// # Returns
 ///
-/// # Important: This is NOT the same as `unicode_width`
+/// - The total byte length of the UTF-8 character (1-4).
+/// - Nothing if the first byte is invalid (continuation byte or reserved).
+///
+/// # Important: This is NOT the same as [`unicode_width`]
 ///
 /// This function calculates **UTF-8 byte length** (how many bytes encode the character),
 /// NOT **display width** (how many terminal columns it occupies). These are independent:
@@ -324,9 +339,15 @@ fn decode_utf8(buffer: &[u8]) -> Option<char> {
 /// - A 3-byte character like '你' occupies **2 columns** (wide/fullwidth)
 /// - Both return `Some(3)` from this function (same byte length)
 ///
-/// For display width calculation, see the `unicode_width` crate used in
-/// [`mod@crate::graphemes`]. See also the module-level documentation for a
+/// For display width calculation, see the [`unicode_width`] crate used in
+/// [`mod@crate::graphemes`]. See also the [module-level documentation] for a
 /// comprehensive explanation of this distinction.
+///
+/// [`core::str::utf8_char_width`]:
+///     https://doc.rust-lang.org/std/str/fn.utf8_char_width.html
+/// [`str_internals`]:
+///     https://doc.rust-lang.org/unstable-book/library-features/str-internals.html
+/// [module-level documentation]: self#important-utf-8-byte-length-vs-display-width
 fn get_utf8_length(first_byte: u8) -> Option<usize> {
     match first_byte {
         // ASCII: single byte (0xxxxxxx)

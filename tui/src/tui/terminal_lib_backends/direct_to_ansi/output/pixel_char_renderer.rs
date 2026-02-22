@@ -95,7 +95,7 @@ pub struct PixelCharRenderer {
 pub const BUFFER_CAPACITY: usize = 4096;
 
 impl PixelCharRenderer {
-    /// Create a new renderer with a pre-allocated buffer of size [`BUFFER_CAPACITY`].
+    /// Creates a new renderer with a pre-allocated buffer of size [`BUFFER_CAPACITY`].
     #[must_use]
     pub fn new() -> Self {
         Self {
@@ -291,7 +291,7 @@ impl PixelCharRenderer {
         self.write_sgr(sgr);
     }
 
-    /// Convert a [`TuiColor`] to the appropriate [`SgrCode`] based on color support.
+    /// Converts a [`TuiColor`] to the appropriate [`SgrCode`] based on color support.
     ///
     /// This method uses the centralized color degradation logic from [`degrade_color`]
     /// to ensure consistent color downsampling across the codebase:

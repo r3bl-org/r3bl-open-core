@@ -2,24 +2,26 @@
 
 //! Segment building utilities for grapheme clusters.
 //!
-//! This module provides functions to build segments from string slices, extracting
-//! the core logic from [`GCStringOwned`](crate::GCStringOwned) for reuse in other
-//! components like the gap buffer implementation.
+//! This module provides functions to build segments from string slices, extracting the
+//! core logic from [`GCStringOwned`] for reuse in other components like the gap buffer
+//! implementation.
 //!
-//! See the [module docs](crate::graphemes) for
-//! comprehensive information about Unicode handling, grapheme clusters, and the three
-//! types of indices used in this system.
+//! See the [module docs] for comprehensive information about Unicode handling, grapheme
+//! clusters, and the three types of indices used in this system.
+//!
+//! [`GCStringOwned`]: crate::GCStringOwned
+//! [module docs]: crate::graphemes
 
 use crate::{ColIndex, ColWidth, Seg, SegmentArray, byte_index, col, len, seg_index,
             width};
 use unicode_segmentation::UnicodeSegmentation;
 use unicode_width::UnicodeWidthStr;
 
-/// Build grapheme cluster segments for any string slice.
+/// Builds grapheme cluster segments for any string slice.
 ///
-/// This function analyzes a UTF-8 string and creates a segment for each grapheme
-/// cluster (user-perceived character). It includes an ASCII fast path for better
-/// performance when dealing with ASCII-only text.
+/// This function analyzes a UTF-8 string and creates a segment for each grapheme cluster
+/// (user-perceived character). It includes an ASCII fast path for better performance when
+/// dealing with ASCII-only text.
 ///
 /// # Arguments
 ///
@@ -59,10 +61,10 @@ pub fn build_segments_for_str(input: &str) -> SegmentArray {
     segments
 }
 
-/// Build segments for ASCII-only strings (optimized path).
+/// Builds segments for ASCII-only strings (optimized path).
 ///
-/// Since ASCII characters are always 1 byte and 1 display column wide,
-/// we can build segments more efficiently without Unicode analysis.
+/// Since ASCII characters are always 1 byte and 1 display column wide, we can build
+/// segments more efficiently without Unicode analysis.
 fn build_ascii_segments(input: &str) -> SegmentArray {
     let mut segments = SegmentArray::with_capacity(input.len());
 
@@ -80,10 +82,10 @@ fn build_ascii_segments(input: &str) -> SegmentArray {
     segments
 }
 
-/// Calculate total display width from segments.
+/// Calculates total display width from segments.
 ///
-/// This sums up the display width of all segments to get the total
-/// width of the string when rendered in a terminal.
+/// This sums up the display width of all segments to get the total width of the string
+/// when rendered in a terminal.
 #[must_use]
 pub fn calculate_display_width(segments: &SegmentArray) -> ColWidth {
     segments

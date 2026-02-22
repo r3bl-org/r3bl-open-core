@@ -3,7 +3,7 @@
 use crate::{InlineString, tui::md_parser::md_parser_constants::COMMA_CHAR};
 use std::fmt::Write;
 
-/// Format the given number of bytes as kilobytes with commas. If the number of bytes is
+/// Formats the given number of bytes as kilobytes with commas. If the number of bytes is
 /// less than 1024, it will be formatted as bytes.
 #[must_use]
 pub fn format_as_kilobytes_with_commas(bytes_size: usize) -> InlineString {
@@ -45,7 +45,7 @@ fn test_format_as_kilobytes_with_commas() {
     }
 }
 
-/// Format a number with commas.
+/// Formats a number with commas.
 #[must_use]
 pub fn format_with_commas(num: usize) -> InlineString {
     let num_str = num.to_string();

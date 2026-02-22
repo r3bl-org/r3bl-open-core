@@ -65,8 +65,8 @@ pub type ParseListStorage<T> = Vec<T>;
 /// - [`List`]: General-purpose with [`SmallVec`] (8-item stack-allocated inline capacity)
 ///   for balanced performance/safety
 ///
-/// [`RenderList`]: crate::RenderList
 /// [`List`]: crate::List
+/// [`RenderList`]: crate::RenderList
 /// [`SmallVec`]: smallvec::SmallVec
 #[derive(Clone, Default, PartialEq, Debug)]
 pub struct ParseList<T> {
@@ -139,7 +139,7 @@ impl<T> DerefMut for ParseList<T> {
     fn deref_mut(&mut self) -> &mut Self::Target { &mut self.inner }
 }
 
-/// Create a [`ParseList`] from a list of items.
+/// Creates a [`ParseList`] from a list of items.
 ///
 /// # Examples
 ///

@@ -22,7 +22,7 @@ pub struct TerminationGuard<W: RRTWorker> {
 }
 
 impl<W: RRTWorker> TerminationGuard<W> {
-    /// Creates a new `TerminationGuard` with the given waker slot writer.
+    /// Creates a new [`TerminationGuard`] with the given [`WakerSlotWriter`].
     pub fn new(arg_waker_slot_writer: impl Into<WakerSlotWriter<W::Waker>>) -> Self {
         let waker_slot_writer = arg_waker_slot_writer.into();
         Self { waker_slot_writer }

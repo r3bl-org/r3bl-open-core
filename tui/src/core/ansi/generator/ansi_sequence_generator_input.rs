@@ -580,7 +580,7 @@ mod mouse {
         bytes
     }
 
-    /// Convert button enum to protocol code.
+    /// Converts button enum to protocol code.
     fn button_to_code(button: VT100MouseButtonIR) -> u16 {
         match button {
             VT100MouseButtonIR::Left | VT100MouseButtonIR::Unknown => {
@@ -591,7 +591,7 @@ mod mouse {
         }
     }
 
-    /// Apply modifier flags to button code.
+    /// Applies modifier flags to button code.
     fn apply_modifiers(mut code: u16, modifiers: VT100KeyModifiersIR) -> u16 {
         if modifiers.shift == KeyState::Pressed {
             code |= MOUSE_MODIFIER_SHIFT;
@@ -652,7 +652,7 @@ mod terminal_events {
 mod encoding {
     use super::*;
 
-    /// Check if any modifiers are pressed.
+    /// Checks if any modifiers are pressed.
     pub fn has_modifiers(modifiers: VT100KeyModifiersIR) -> bool {
         modifiers.shift == KeyState::Pressed
             || modifiers.ctrl == KeyState::Pressed
@@ -692,7 +692,7 @@ mod encoding {
         MODIFIER_PARAMETER_BASE_CHAR + mask
     }
 
-    /// Convert a numeric value (0-9) to its ASCII character representation.
+    /// Converts a numeric value (0-9) to its ASCII character representation.
     pub fn push_ascii_number(value: u8) -> u8 {
         debug_assert!(
             value <= 9,
@@ -701,6 +701,6 @@ mod encoding {
         ASCII_DIGIT_0 + value
     }
 
-    /// Convert a multi-digit numeric value to its ASCII byte representation.
+    /// Converts a multi-digit numeric value to its ASCII byte representation.
     pub fn push_ascii_u16(value: u16) -> Vec<u8> { value.to_string().into_bytes() }
 }

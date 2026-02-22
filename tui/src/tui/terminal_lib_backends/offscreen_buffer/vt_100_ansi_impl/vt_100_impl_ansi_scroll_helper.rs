@@ -10,7 +10,7 @@ use super::super::*;
 use crate::{LengthOps, RowIndex, core::coordinates::bounds_check::IndexOps, row};
 
 impl OffscreenBuffer {
-    /// Get the scroll region as an inclusive range.
+    /// Gets the scroll region as an inclusive range.
     ///
     /// Returns `RangeInclusive<RowIndex>` representing the VT-100 scroll region
     /// boundaries where line operations are confined. The range includes both

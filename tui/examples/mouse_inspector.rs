@@ -133,7 +133,7 @@ impl MouseEvent {
         }
     }
 
-    /// Format modifiers as a compact string
+    /// Formats modifiers as a compact string
     fn modifiers_str(&self) -> String {
         let mut mods = Vec::new();
         if self.ctrl {
@@ -163,7 +163,7 @@ impl MouseInspector {
         }
     }
 
-    /// Process a mouse event, updating state
+    /// Processes a mouse event, updating state
     fn handle_mouse_event(&mut self, mouse: MouseInput) {
         let event = MouseEvent::from_mouse_input(&mouse);
 
@@ -185,7 +185,7 @@ impl MouseInspector {
         self.latest_event = Some(event);
     }
 
-    /// Process a keyboard event
+    /// Processes a keyboard event
     fn handle_keyboard_event(&mut self, key: KeyPress) {
         // Quit on 'q' or Ctrl+C
         match key {
@@ -278,7 +278,7 @@ async fn run_inspector(
     Ok(())
 }
 
-/// Render the current inspector state using direct terminal output
+/// Renders the current inspector state using direct terminal output
 #[allow(clippy::too_many_lines)] // UI rendering naturally requires many lines
 fn render(inspector: &MouseInspector, output: &OutputDevice) {
     // Canvas area for click marks (rows 4-18, using 0-based row indices)

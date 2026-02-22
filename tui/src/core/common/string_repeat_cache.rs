@@ -132,11 +132,11 @@ static HORIZ_LINE_CACHE: LazyLock<HashMap<usize, String>> = LazyLock::new(|| {
 /// 4. If hit: return cloned string
 /// 5. Future calls to `get_spaces(100)` hit the cache
 ///
+/// [`Box::leak()`]: std::boxed::Box::leak
+/// [`HashMap`]: std::collections::HashMap
+/// [`Mutex`]: std::sync::Mutex
 /// [`char`]: std::primitive::char
 /// [`usize`]: std::primitive::usize
-/// [`Mutex`]: std::sync::Mutex
-/// [`HashMap`]: std::collections::HashMap
-/// [`Box::leak()`]: std::boxed::Box::leak
 pub static DYNAMIC_CACHE: LazyLock<Mutex<HashMap<(char, usize), String>>> =
     LazyLock::new(|| Mutex::new(HashMap::new()));
 
@@ -176,7 +176,7 @@ fn get_cached_repeated_string(
     }
 }
 
-/// Get a cached space string for the given length.
+/// Gets a cached space string for the given length.
 /// Falls back to allocation for very large space counts (>64).
 ///
 /// # Performance
@@ -203,7 +203,7 @@ pub fn get_spaces(count: usize) -> Cow<'static, str> {
     get_cached_repeated_string(count, &SPACE_CACHE, SPACE_CHAR, SPACE)
 }
 
-/// Get a cached horizontal line string for the given length.
+/// Gets a cached horizontal line string for the given length.
 /// Falls back to allocation for very large counts (>64).
 ///
 /// # Performance
@@ -235,7 +235,7 @@ pub fn get_horiz_lines(count: usize) -> Cow<'static, str> {
     )
 }
 
-/// Get a cached hash string for the given length.
+/// Gets a cached hash string for the given length.
 /// Falls back to allocation for very large counts (>10).
 ///
 /// # Performance

@@ -76,7 +76,7 @@
 use super::super::ansi_parser_public_api::AnsiToOfsBufPerformer;
 use crate::{Pos, TuiStyle};
 
-/// Clear all buffer content.
+/// Clears all buffer content.
 fn clear_buffer(performer: &mut AnsiToOfsBufPerformer) { performer.ofs_buf.clear(); }
 
 /// Reset all `SGR` attributes to default state.

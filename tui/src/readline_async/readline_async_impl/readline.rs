@@ -343,7 +343,7 @@ pub mod manage_shared_writer_output {
         })
     }
 
-    /// Process a line control signal. And actually write the line or buffered lines to
+    /// Processes a line control signal. And actually write the line or buffered lines to
     /// the terminal.
     ///
     /// # Panics
@@ -439,7 +439,7 @@ pub mod manage_shared_writer_output {
         ControlFlowLimited::Continue
     }
 
-    /// Flush all writers to terminal and erase the prompt string.
+    /// Flushes all writers to terminal and erase the prompt string.
     ///
     /// # Panics
     ///
@@ -494,7 +494,7 @@ impl Drop for Readline {
 }
 
 impl Readline {
-    /// Create a new instance with an associated [`SharedWriter`]. To customize the
+    /// Creates a new instance with an associated [`SharedWriter`]. To customize the
     /// behavior of this instance, you can use the following methods:
     /// - [`Self::should_print_line_on`]
     /// - [`Self::set_max_history`]
@@ -638,7 +638,7 @@ impl Readline {
         Ok(())
     }
 
-    /// Clear the screen.
+    /// Clears the screen.
     ///
     /// # Panics
     ///
@@ -661,7 +661,7 @@ impl Readline {
         Ok(())
     }
 
-    /// Set maximum history length. The default length is [`crate::HISTORY_SIZE_MAX`].
+    /// Sets maximum history length. The default length is [`crate::HISTORY_SIZE_MAX`].
     ///
     /// # Panics
     ///
@@ -674,7 +674,7 @@ impl Readline {
         history.entries.truncate(max_size);
     }
 
-    /// Set whether the input line should remain on the screen after events.
+    /// Sets whether the input line should remain on the screen after events.
     ///
     /// If `enter` is true, then when the user presses "Enter", the prompt and the text
     /// they entered will remain on the screen, and the cursor will move to the next line.
@@ -763,7 +763,7 @@ impl Readline {
         }
     }
 
-    /// Add a line to the input history.
+    /// Adds a line to the input history.
     pub fn add_history_entry(&mut self, entry: String) -> Option<()> {
         self.history_sender.send(entry).ok()
     }
@@ -843,11 +843,11 @@ impl Readline {
     /// panics while holding the lock. To avoid panics, ensure that the code that
     /// locks the mutex does not panic while holding the lock.
     ///
-    /// [`CursorBoundsCheck`]: crate::CursorBoundsCheck
-    /// [`AtStart`]: CursorPositionBoundsStatus::AtStart
-    /// [`Within`]: CursorPositionBoundsStatus::Within
     /// [`AtEnd`]: CursorPositionBoundsStatus::AtEnd
+    /// [`AtStart`]: CursorPositionBoundsStatus::AtStart
     /// [`Beyond`]: CursorPositionBoundsStatus::Beyond
+    /// [`CursorBoundsCheck`]: crate::CursorBoundsCheck
+    /// [`Within`]: CursorPositionBoundsStatus::Within
     #[must_use]
     pub fn get_cursor_position_status(&self) -> CursorPositionBoundsStatus {
         let line_state = self.safe_line_state.lock().unwrap();
@@ -908,7 +908,7 @@ pub mod readline_internal {
         ControlFlowExtended::Continue
     }
 
-    /// Convert crossterm `KeyCode` to canonical `Key`
+    /// Converts crossterm `KeyCode` to canonical `Key`
     #[must_use]
     fn convert_key_code_to_key(code: crossterm::event::KeyCode) -> Option<crate::Key> {
         use crate::{FunctionKey, Key, SpecialKey};
@@ -953,7 +953,7 @@ pub mod readline_internal {
         }
     }
 
-    /// Convert crossterm modifiers to canonical modifier mask
+    /// Converts crossterm modifiers to canonical modifier mask
     #[must_use]
     fn convert_modifier_keys(
         modifiers: crossterm::event::KeyModifiers,
@@ -980,7 +980,7 @@ pub mod readline_internal {
         }
     }
 
-    /// Convert crossterm mouse button to canonical button
+    /// Converts crossterm mouse button to canonical button
     #[must_use]
     fn convert_mouse_button(button: crossterm::event::MouseButton) -> crate::Button {
         use crate::Button;
@@ -993,7 +993,7 @@ pub mod readline_internal {
         }
     }
 
-    /// Convert `crossterm::event::Event` to canonical `InputEvent`
+    /// Converts `crossterm::event::Event` to canonical `InputEvent`
     #[must_use]
     pub fn convert_crossterm_event_to_input_event(
         event: crossterm::event::Event,

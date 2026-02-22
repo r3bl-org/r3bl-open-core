@@ -63,11 +63,11 @@ impl TransformColor for AnsiValue {
 }
 
 impl AnsiValue {
-    /// Create a new ANSI color value.
+    /// Creates a new ANSI color value.
     #[must_use]
     pub const fn new(color: u8) -> Self { Self { index: color } }
 
-    /// Check if this is a basic ANSI color (indices 0-15).
+    /// Checks if this is a basic ANSI color (indices 0-15).
     ///
     /// Basic ANSI colors (indices 0-15) have special handling:
     /// - They represent the standard 16 terminal colors
@@ -80,7 +80,7 @@ impl AnsiValue {
     #[must_use]
     pub const fn is_basic(&self) -> bool { self.index < 16 }
 
-    /// Check if this is an extended ANSI color (indices 16-255).
+    /// Checks if this is an extended ANSI color (indices 16-255).
     ///
     /// Extended ANSI colors (indices 16-255) are from the 256-color palette:
     /// - Indices 16-231: 6×6×6 RGB color cube (216 colors)

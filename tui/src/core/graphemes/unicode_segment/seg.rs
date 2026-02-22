@@ -7,11 +7,11 @@ use std::fmt::{Debug, Display, Formatter, Result as FmtResult};
 /// A vector-like container for grapheme segments.
 pub type SegmentArray = Vec<Seg>;
 
-/// `Seg` represents a grapheme cluster segment within a [`crate::GCStringOwned`].
+/// [`Seg`] represents a grapheme cluster segment within a [`crate::GCStringOwned`].
 ///
 /// This struct is the bridge between the three types of indices used in Unicode text
-/// handling. Each `Seg` contains all the information needed to
-/// convert between [`ByteIndex`], [`SegIndex`], and [`ColIndex`].
+/// handling. Each [`Seg`] contains all the information needed to convert between
+/// [`ByteIndex`], [`SegIndex`], and [`ColIndex`].
 ///
 /// A Unicode "grapheme" is a user-perceived character.
 /// - For `UTF-8` encoded text, a grapheme can be a single byte or up to 4 bytes.
@@ -65,11 +65,11 @@ pub type SegmentArray = Vec<Seg>;
 ///
 /// ## Purpose
 ///
-/// The `Seg` struct efficiently represents and manipulates grapheme clusters within a
-/// [`crate::GCStringOwned`]. It provides access to the underlying string slice along
-/// with display width and position information. See the [module
-/// documentation](crate::graphemes) for comprehensive information about UTF-8 encoding,
-/// grapheme clusters, and the three types of indices used in this system.
+/// The [`Seg`] struct efficiently represents and manipulates grapheme clusters within a
+/// [`crate::GCStringOwned`]. It provides access to the underlying string slice along with
+/// display width and position information. See the [module documentation] for
+/// comprehensive information about UTF-8 encoding, grapheme clusters, and the three types
+/// of indices used in this system.
 ///
 /// ## Usage
 ///
@@ -92,9 +92,10 @@ pub type SegmentArray = Vec<Seg>;
 /// }
 /// ```
 ///
-/// See the [module docs](crate::graphemes) for
-/// comprehensive information about Unicode handling, grapheme clusters, and the three
-/// types of indices used in this system.
+/// See the [module docs] for comprehensive information about Unicode handling, grapheme
+/// clusters, and the three types of indices used in this system.
+///
+/// [module docs]: crate::graphemes
 #[derive(Copy, Clone, Default, PartialEq, Ord, PartialOrd, Eq, Hash)]
 pub struct Seg {
     /// The start index (bytes), in the string slice, used to generate the
@@ -150,7 +151,7 @@ impl Display for Seg {
 }
 
 impl Seg {
-    /// Get the string slice for the grapheme cluster segment. The `string` parameter is
+    /// Gets the string slice for the grapheme cluster segment. The `string` parameter is
     /// any type that can be converted into a `&str`, such as [`crate::GCStringOwned`].
     pub fn get_str<'a>(&self, arg_str: &'a (impl AsRef<str> + ?Sized)) -> &'a str {
         let str = arg_str.as_ref();

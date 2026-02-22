@@ -32,19 +32,6 @@ use std::{fmt::{Debug, Formatter, Result},
 ///   Returns [`None`] if the value is not between 0 and 100.
 /// - [`Pc::apply_to`]: Returns the calculated percentage of the given value.
 ///
-/// [`crate::pc`!]: crate::pc!
-/// [`Result`]: std::result::Result
-/// [`Option`]: std::option::Option
-/// [`Deref`]: std::ops::Deref
-/// [`u8`]: u8
-/// [`std::fmt::Debug`]: std::fmt::Debug
-/// [`TryFrom`]: std::convert::TryFrom
-/// [`ChUnitPrimitiveType`]: crate::ChUnitPrimitiveType
-/// [`pc`]: crate::Pc
-/// [`i32`]: i32
-/// [`Err`]: std::result::Result::Err
-/// [`ChUnit`]: crate::ChUnit
-/// [`None`]: std::option::Option::None
 ///
 /// # Example
 ///
@@ -64,12 +51,26 @@ use std::{fmt::{Debug, Formatter, Result},
 /// // It implements Debug, not Display.
 /// assert_eq!(format!("{:?}", percent.unwrap()), "50%");
 /// ```
+///
+/// [`ChUnitPrimitiveType`]: crate::ChUnitPrimitiveType
+/// [`ChUnit`]: crate::ChUnit
+/// [`Deref`]: std::ops::Deref
+/// [`Err`]: std::result::Result::Err
+/// [`None`]: std::option::Option::None
+/// [`Option`]: std::option::Option
+/// [`Result`]: std::result::Result
+/// [`TryFrom`]: std::convert::TryFrom
+/// [`crate::pc`!]: crate::pc!
+/// [`i32`]: i32
+/// [`pc`]: crate::Pc
+/// [`std::fmt::Debug`]: std::fmt::Debug
+/// [`u8`]: u8
 #[derive(Copy, Clone, PartialEq, Eq, Default, Hash)]
 pub struct Pc {
     value: u8,
 }
 
-/// Create a [`Pc`] instance from the given value. It returns a [`Result`] type.
+/// Creates a [`Pc`] instance from the given value. It returns a [`Result`] type.
 ///
 /// [`Pc`]: crate::Pc
 /// [`Result`]: std::result::Result
@@ -123,8 +124,8 @@ impl TryFrom<i32> for Pc {
 /// Return [`None`] if the given value is not between 0 and 100.
 ///
 /// [`ChUnit`]: crate::ChUnit
-/// [`pc`]: crate::pc!
 /// [`None`]: std::option::Option::None
+/// [`pc`]: crate::pc!
 impl Pc {
     pub fn try_and_convert(arg_num: impl Into<ChUnit>) -> Option<Pc> {
         let num = arg_num.into();

@@ -5,9 +5,10 @@
 //! [`PixelCharLine`] represents a single row of pixels/characters in the offscreen
 //! buffer.
 //!
-//! [`PixelCharLine`]: crate::PixelCharLine
 //! Each line can contain various types of pixel characters including plain text,
 //! spacers, and void characters.
+//!
+//! [`PixelCharLine`]: crate::PixelCharLine
 
 use super::PixelChar;
 use crate::{ColWidth, GetMemSize, InlineVec, TinyInlineString, dim_underline,
@@ -190,7 +191,7 @@ fn fmt_impl_index_values(
 
 // This represents a single row on the screen (i.e. a line of text).
 impl PixelCharLine {
-    /// Create a new row with the given width and fill it with the empty chars.
+    /// Creates a new row with the given width and fills it with the empty chars.
     #[must_use]
     pub fn new_empty(arg_window_width: impl Into<ColWidth>) -> Self {
         let window_width = arg_window_width.into();

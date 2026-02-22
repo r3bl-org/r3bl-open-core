@@ -124,7 +124,7 @@ impl LayoutManagement for Surface {
 }
 
 impl PerformPositioningAndSizing for Surface {
-    /// Get the last box on the stack (if none found then return Err).
+    /// Gets the last box on the stack (if none found then return Err).
     fn current_box(&mut self) -> CommonResult<&mut FlexBox> {
         // Expect stack of boxes not to be empty!
         if self.no_boxes_added() {

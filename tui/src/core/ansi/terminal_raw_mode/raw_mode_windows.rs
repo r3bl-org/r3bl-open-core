@@ -7,7 +7,7 @@
 
 use miette::IntoDiagnostic as _;
 
-/// Enable raw mode on Windows using Crossterm.
+/// Enables raw mode on Windows using Crossterm.
 ///
 /// Delegates to [`crossterm::terminal::enable_raw_mode()`] which handles the
 /// Windows Console API (`SetConsoleMode()`) to disable:

@@ -26,7 +26,7 @@ impl OffscreenBufferPool {
         Self { pool, window_size }
     }
 
-    /// Get a buffer from the pool. If the pool is empty, a new buffer is created.
+    /// Gets a buffer from the pool. If the pool is empty, a new buffer is created.
     pub fn take(&mut self) -> Option<OffscreenBuffer> {
         if self.pool.is_empty() {
             Some(OffscreenBuffer::new_empty(self.window_size))

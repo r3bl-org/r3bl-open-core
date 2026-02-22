@@ -20,7 +20,7 @@ use crate::{ColWidth, CommonResult, CursorBoundsCheck, CursorPositionBoundsStatu
             usize};
 use syntect::easy::HighlightLines;
 
-/// Check if we should stop rendering at this row index.
+/// Checks if we should stop rendering at this row index.
 ///
 /// Uses [cursor-style bounds checking] (`index <= length`) because viewport rendering
 /// fills screen space and needs to render at positions [0, length] inclusive.
@@ -413,14 +413,14 @@ mod syn_hi_r3bl_path {
     use super::*;
 
     /// Try to convert [`ZeroCopyGapBuffer`] to [`MdDocument`]:
-    /// - Step 1: Get the lines from the buffer using
-    ///   [`editor_buffer.get_lines()`](EditorBuffer::get_lines()).
+    /// - Step 1: Get the lines from the buffer using [`editor_buffer.get_lines()`].
     /// - Step 2: Convert the lines into a [List] of [`StyleUSSpanLine`] using
     ///   [`try_parse_and_highlight()`]. If this fails then take the path of no syntax
     ///   highlighting else take the path of syntax highlighting.
     ///
-    /// [`ZeroCopyGapBuffer`]: crate::ZeroCopyGapBuffer
     /// [`MDDocument`]: crate::markdown_parser::MDDocument
+    /// [`ZeroCopyGapBuffer`]: crate::ZeroCopyGapBuffer
+    /// [`editor_buffer.get_lines()`]: EditorBuffer::get_lines()
     pub fn render_content(
         editor_buffer: &EditorBuffer,
         max_display_row_count: RowHeight,

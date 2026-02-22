@@ -26,7 +26,7 @@ impl<'a> OscController<'a> {
     #[must_use]
     pub fn new(output_device: &'a OutputDevice) -> Self { Self { output_device } }
 
-    /// Set terminal window title and tab name using OSC 0 sequence.
+    /// Sets terminal window title and tab name using OSC 0 sequence.
     /// This is the most commonly supported title-setting sequence across terminals.
     ///
     /// # Errors

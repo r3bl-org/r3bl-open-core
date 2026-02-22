@@ -84,12 +84,12 @@ use crate::RangeBoundsResult;
 /// Unlike array or cursor bounds which are about safety and editing, viewport
 /// bounds are about rendering and visibility:
 ///
-/// | Trait                         | Rule                          | Use Case      | Example                                              |
-/// |-------------------------------|-------------------------------|---------------|------------------------------------------------------|
-/// | [`ArrayBoundsCheck`]          | `index < length`              | Index safety  | `buffer[5]` needs `5 < buffer.len()`                 |
-/// | [`CursorBoundsCheck`]         | `index <= length`             | Text editing  | Cursor can be at position `length` (after last char) |
-/// | `ViewportBoundsCheck`📍       | `start <= index < start+size` | Rendering     | Content visibility in windows                        |
-/// | [`RangeBoundsExt`]            | `start <= end <= length`      | Iteration     | Range object structural validation                   |
+/// | Trait                           | Rule                            | Use Case        | Example                                                |
+/// | ------------------------------- | ------------------------------- | --------------- | ------------------------------------------------------ |
+/// | [`ArrayBoundsCheck`]            | `index < length`                | Index safety    | `buffer[5]` needs `5 < buffer.len()`                   |
+/// | [`CursorBoundsCheck`]           | `index <= length`               | Text editing    | Cursor can be at position `length` (after last char)   |
+/// | `ViewportBoundsCheck`📍         | `start <= index < start+size`   | Rendering       | Content visibility in windows                          |
+/// | [`RangeBoundsExt`]              | `start <= end <= length`        | Iteration       | Range object structural validation                     |
 ///
 /// ## Exclusive Upper Bound Semantics
 ///
@@ -156,15 +156,15 @@ use crate::RangeBoundsResult;
 /// - [`RangeBoundsExt`] - Range validation for iteration and algorithms
 /// - [Module documentation] - Overview of the complete bounds checking architecture
 ///
-/// [`IndexOps`]: crate::IndexOps
+/// [Interval Notation]: mod@crate::core::coordinates::bounds_check#interval-notation
+/// [Module documentation]: mod@crate::core::coordinates::bounds_check
 /// [`ArrayBoundsCheck`]: crate::ArrayBoundsCheck
 /// [`CursorBoundsCheck`]: crate::CursorBoundsCheck
+/// [`IndexOps`]: crate::IndexOps
 /// [`RangeBoundsExt`]: crate::RangeBoundsExt
-/// [Module documentation]: mod@crate::core::coordinates::bounds_check
-/// [Interval Notation]: mod@crate::core::coordinates::bounds_check#interval-notation
 /// [`check_viewport_bounds()`]: Self::check_viewport_bounds
 pub trait ViewportBoundsCheck: IndexOps {
-    /// Check if this index is within a viewport window.
+    /// Checks if this index is within a viewport window.
     ///
     /// Returns a three-state result indicating whether the index falls before
     /// (underflowed), within, or after (overflowed) the viewport bounds defined by
@@ -182,9 +182,9 @@ pub trait ViewportBoundsCheck: IndexOps {
     /// - [`RangeBoundsResult::Within`] if `start <= index < start+size`
     /// - [`RangeBoundsResult::Overflowed`] if `index >= start+size`
     ///
+    /// [`RangeBoundsResult::Overflowed`]: crate::RangeBoundsResult::Overflowed
     /// [`RangeBoundsResult::Underflowed`]: crate::RangeBoundsResult::Underflowed
     /// [`RangeBoundsResult::Within`]: crate::RangeBoundsResult::Within
-    /// [`RangeBoundsResult::Overflowed`]: crate::RangeBoundsResult::Overflowed
     fn check_viewport_bounds(
         &self,
         arg_viewport_start: impl Into<Self>,

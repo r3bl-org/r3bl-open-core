@@ -74,7 +74,7 @@ pub mod at_display_col_index {
             None
         }
 
-        /// Return the string and display width of the grapheme cluster segment at the
+        /// Returns the string and display width of the grapheme cluster segment at the
         /// given `display_col_index`. If this `display_col_index` falls in the middle of
         /// a grapheme cluster, then return [None].
         ///
@@ -119,7 +119,7 @@ pub mod at_display_col_index {
             })
         }
 
-        /// Return the string at the right of the given `display_col_index`. If the
+        /// Returns the string at the right of the given `display_col_index`. If the
         /// `display_col_index` is at the end of the string, then return [None]. If the
         /// `display_col_index` is in the middle of a grapheme cluster, then return the
         /// grapheme cluster segment that includes that `display_col_index`.
@@ -161,7 +161,7 @@ pub mod at_display_col_index {
             })?
         }
 
-        /// Return the string at the left of the given `display_col_index`. If the
+        /// Returns the string at the left of the given `display_col_index`. If the
         /// `display_col_index` is at the start of the string, or past the end of the
         /// string, then return [None]. If the `display_col_index` is in the middle of a
         /// grapheme cluster, then return the grapheme cluster segment that includes that
@@ -204,7 +204,7 @@ pub mod at_display_col_index {
             })?
         }
 
-        /// Return the last grapheme cluster segment in the grapheme string.
+        /// Returns the last grapheme cluster segment in the grapheme string.
         /// If the grapheme string is empty, then return [None].
         ///
         /// Here's a visual depiction of the different indices.

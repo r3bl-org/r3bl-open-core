@@ -30,7 +30,8 @@
 //! [`NonZeroU16`]: std::num::NonZeroU16
 
 use crate::NumericConversions;
-use std::{fmt::{Display, Formatter}, num::NonZeroU16};
+use std::{fmt::{Display, Formatter},
+          num::NonZeroU16};
 
 /// Count of lines or characters for CSI operations (always >= 1).
 ///
@@ -57,12 +58,12 @@ use std::{fmt::{Display, Formatter}, num::NonZeroU16};
 /// }
 /// ```
 ///
-/// [`NonZeroU16`]: std::num::NonZeroU16
-/// [`CsiSequence::InsertLine`]: crate::CsiSequence::InsertLine
-/// [`CsiSequence::DeleteLine`]: crate::CsiSequence::DeleteLine
-/// [`CsiSequence::InsertChar`]: crate::CsiSequence::InsertChar
 /// [`CsiSequence::DeleteChar`]: crate::CsiSequence::DeleteChar
+/// [`CsiSequence::DeleteLine`]: crate::CsiSequence::DeleteLine
 /// [`CsiSequence::EraseChar`]: crate::CsiSequence::EraseChar
+/// [`CsiSequence::InsertChar`]: crate::CsiSequence::InsertChar
+/// [`CsiSequence::InsertLine`]: crate::CsiSequence::InsertLine
+/// [`NonZeroU16`]: std::num::NonZeroU16
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct CsiCount(NonZeroU16);
 
@@ -84,10 +85,10 @@ impl CsiCount {
     /// panic documentation requirements and make intent clear.
     pub const ONE: Self = Self(NonZeroU16::MIN);
 
-    /// Create a new count from a raw value.
+    /// Creates a new count from a raw value.
     ///
-    /// Returns `None` if the value is zero, since zero counts are not
-    /// representable (they would cause the CSI zero bug).
+    /// Returns [`None`] if the value is zero, since zero counts are not representable
+    /// (they would cause the CSI zero bug).
     ///
     /// # Example
     ///
@@ -105,18 +106,18 @@ impl CsiCount {
         }
     }
 
-    /// Create a count from a [`NonZeroU16`] value.
+    /// Creates a count from a [`NonZeroU16`] value.
     ///
     /// This is an infallible constructor since [`NonZeroU16`] is already guaranteed
     /// to be non-zero.
     #[must_use]
     pub const fn from_non_zero_value(value: NonZeroU16) -> Self { Self(value) }
 
-    /// Get the inner [`NonZeroU16`] value.
+    /// Gets the inner [`NonZeroU16`] value.
     #[must_use]
     pub const fn value(self) -> NonZeroU16 { self.0 }
 
-    /// Get the raw `u16` value (guaranteed to be >= 1).
+    /// Gets the raw [`u16`] value (guaranteed to be `>= 1`).
     #[must_use]
     pub const fn get(self) -> u16 { self.0.get() }
 }
@@ -125,9 +126,9 @@ impl From<NonZeroU16> for CsiCount {
     fn from(value: NonZeroU16) -> Self { Self::from_non_zero_value(value) }
 }
 
-/// Create a [`CsiCount`] from a raw value.
+/// Creates a [`CsiCount`] from a raw value.
 ///
-/// Returns `None` if the value is zero.
+/// Returns [`None`] if the value is zero.
 ///
 /// # Example
 ///

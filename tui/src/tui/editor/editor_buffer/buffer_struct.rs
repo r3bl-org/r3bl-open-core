@@ -89,29 +89,32 @@ use std::fmt::{Debug, Display, Formatter, Result};
 ///
 /// 2. It works w/ [`MoveCursorPositionRelTo`] as well.
 ///
-/// > 💡 For the diagrams below, the caret is where `⮬` and `❱` intersects.
+/// > 💡 For the diagrams below, the caret is where `▲` and `►` intersects.
 ///
 /// Start of line:
 /// ```text
+/// Caret : ▲, ►
 /// R ┌──────────┐
-/// 0 ❱abcab     │
-///   └⮬─────────┘
+/// 0 ►abcab     │
+///   └▲─────────┘
 ///   C0123456789
 /// ```
 ///
 /// Middle of line:
 /// ```text
+/// Caret : ▲, ►
 /// R ┌──────────┐
-/// 0 ❱abcab     │
-///   └───⮬──────┘
+/// 0 ►abcab     │
+///   └───▲──────┘
 ///   C0123456789
 /// ```
 ///
 /// End of line:
 /// ```text
+/// Caret : ▲, ►
 /// R ┌──────────┐
-/// 0 ❱abcab     │
-///   └─────⮬────┘
+/// 0 ►abcab     │
+///   └─────▲────┘
 ///   C0123456789
 /// ```
 ///
@@ -128,11 +131,11 @@ use std::fmt::{Debug, Display, Formatter, Result};
 ///                    │        above        │ <- caret_row_adj
 ///                    │                     │
 ///                    ├─── scroll_offset ───┤
-///              ->    │         ↑           │      ↑
+///              ─►    │         ▲           │      ▲
 ///              │     │                     │      │
 ///   caret.row_index  │      within vp      │  vp height
 ///              │     │                     │      │
-///              ->    │         ↓           │      ↓
+///              ─►    │         ▼           │      ▼
 ///                    ├─── scroll_offset ───┤
 ///                    │    + vp height      │
 ///                    │                     │
@@ -144,10 +147,10 @@ use std::fmt::{Debug, Display, Formatter, Result};
 /// # Horizontal scrolling and viewport
 ///
 /// ```text
-///           <-   vp width   ->
+///           ◄─   vp width   ─►
 /// ╭0────────┼────────────────┼─────────>
 /// 0         │                │
-/// │ left of │<-  within vp ->│ right of
+/// │ left of │◄─  within vp ─►│ right of
 /// │         │                │
 /// ╰─────────┼────────────────┼─────────>
 ///       scroll_offset    scroll_offset
@@ -167,32 +170,32 @@ use std::fmt::{Debug, Display, Formatter, Result};
 /// - The row index is the key [`RowIndex`].
 /// - The value is the [`SelectionRange`].
 ///
-/// [`new_empty`]: EditorBuffer::new_empty
-/// [`ZeroCopyGapBuffer`]: crate::ZeroCopyGapBuffer
-/// [`EditorEngine`]: crate::EditorEngine
-/// [`InputEvent`]: crate::InputEvent
-/// [`EditorEvent`]: crate::EditorEvent
-/// [`apply_event`]: crate::engine_public_api::apply_event
-/// [`apply_editor_event`]: crate::EditorEvent::apply_editor_event
-/// [`apply_editor_events`]: crate::EditorEvent::apply_editor_events
-/// [`engine_internal_api`]: mod@crate::editor_engine::engine_internal_api
-/// [`EditorArgsMut`]: crate::EditorArgsMut
-/// [`get_mut`]: EditorBuffer::get_mut
-/// [`EditorBufferMut`]: crate::EditorBufferMut
-/// [`Drop`]: https://doc.rust-lang.org/std/ops/trait.Drop.html
-/// [`perform_validation_checks_after_mutation`]: crate::validate_buffer_mut::perform_validation_checks_after_mutation
 /// [`CaretRaw`]: crate::CaretRaw
 /// [`CaretScrAdj`]: crate::CaretScrAdj
-/// [`graphemes_module`]: crate::graphemes
-/// [`GCStringOwned`]: crate::graphemes::GCStringOwned
-/// [`gc_string`]: mod@crate::graphemes::gc_string
-/// [`style_adjusted_origin_pos`]: crate::FlexBox::style_adjusted_origin_pos
+/// [`Drop`]: crate::EditorBufferMutWithDrop#method.drop
+/// [`EditorArgsMut`]: crate::EditorArgsMut
+/// [`EditorBufferMut`]: crate::EditorBufferMut
+/// [`EditorEngine`]: crate::EditorEngine
+/// [`EditorEvent`]: crate::EditorEvent
 /// [`FlexBox`]: crate::FlexBox
+/// [`GCStringOwned`]: crate::graphemes::GCStringOwned
+/// [`InputEvent`]: crate::InputEvent
 /// [`MoveCursorPositionRelTo`]: crate::RenderOpCommon::MoveCursorPositionRelTo
-/// [`find_syntax_by_extension`]: syntect::parsing::SyntaxSet::find_syntax_by_extension
-/// [`SelectionList`]: crate::SelectionList
 /// [`RowIndex`]: crate::RowIndex
+/// [`SelectionList`]: crate::SelectionList
 /// [`SelectionRange`]: crate::SelectionRange
+/// [`ZeroCopyGapBuffer`]: crate::ZeroCopyGapBuffer
+/// [`apply_editor_event`]: crate::EditorEvent::apply_editor_event
+/// [`apply_editor_events`]: crate::EditorEvent::apply_editor_events
+/// [`apply_event`]: crate::engine_public_api::apply_event
+/// [`engine_internal_api`]: mod@crate::editor_engine::engine_internal_api
+/// [`find_syntax_by_extension`]: syntect::parsing::SyntaxSet::find_syntax_by_extension
+/// [`gc_string`]: mod@crate::graphemes::gc_string
+/// [`get_mut`]: EditorBuffer::get_mut
+/// [`graphemes_module`]: crate::graphemes
+/// [`new_empty`]: EditorBuffer::new_empty
+/// [`perform_validation_checks_after_mutation`]: crate::validate_buffer_mut::perform_validation_checks_after_mutation
+/// [`style_adjusted_origin_pos`]: crate::FlexBox::style_adjusted_origin_pos
 #[derive(Clone, PartialEq, Default)]
 pub struct EditorBuffer {
     pub content: EditorContent,
@@ -336,7 +339,7 @@ pub mod content_display_width {
             self.get_lines().len().convert_to_index().into()
         }
 
-        /// Get line display with at caret's scroll adjusted row index.
+        /// Gets line display width at caret's scroll adjusted row index.
         #[must_use]
         pub fn get_line_display_width_at_caret_scr_adj(&self) -> ColWidth {
             let caret_scr_adj = self.get_caret_raw() + self.get_scr_ofs();
@@ -352,7 +355,7 @@ pub mod content_display_width {
             }
         }
 
-        /// Get line display with at given scroll adjusted row index.
+        /// Gets line display width at given scroll adjusted row index.
         #[must_use]
         pub fn get_line_display_width_at_row_index(
             &self,

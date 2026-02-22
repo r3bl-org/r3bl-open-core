@@ -135,7 +135,7 @@ where
     S: Display + Debug + Default + Clone + Sync + Send,
     AS: Debug + Default + Clone + Sync + Send + 'static,
 {
-    /// Initialize the event loop state with all required components.
+    /// Initializes the event loop state with all required components.
     #[allow(clippy::needless_pass_by_value)]
     fn initialize(
         state: S,
@@ -180,7 +180,7 @@ where
         Ok(event_loop_state)
     }
 
-    /// Initialize the app and perform the first render.
+    /// Initializes the app and performs the first render.
     fn initialize_app_and_render(
         &mut self,
         app: &mut BoxedSafeApp<S, AS>,
@@ -218,7 +218,7 @@ where
         Ok(())
     }
 
-    /// Log startup information if debugging is enabled.
+    /// Logs startup information if debugging is enabled.
     fn log_startup_info(&self) {
         (DISPLAY_LOG_TELEMETRY || DEBUG_TUI_MOD).then(|| {
             tracing::info!(
@@ -232,7 +232,7 @@ where
         });
     }
 
-    /// Log shutdown information if debugging is enabled.
+    /// Logs shutdown information if debugging is enabled.
     fn log_shutdown_info(&self) {
         (DISPLAY_LOG_TELEMETRY || DEBUG_TUI_MOD).then(|| {
             tracing::info!(
@@ -246,7 +246,7 @@ where
         });
     }
 
-    /// Log telemetry information after each event loop iteration. This function must
+    /// Logs telemetry information after each event loop iteration. This function must
     /// execute quickly, so it avoids deep traversal of the editor buffer and dialog
     /// buffers. This is called in a hot loop, on every render, so it must be quick!
     pub fn log_telemetry_info(&mut self) {
@@ -280,7 +280,7 @@ where
     }
 }
 
-/// Run the main event loop with proper separation of concerns.
+/// Runs the main event loop with proper separation of concerns.
 async fn run_main_event_loop<S, AS>(
     mut event_loop_state: EventLoopState<S, AS>,
     mut app: BoxedSafeApp<S, AS>,
@@ -334,7 +334,7 @@ where
     Ok((event_loop_state.global_data, input_device, output_device))
 }
 
-/// Handle signals received from the main thread channel.
+/// Handles signals received from the main thread channel.
 /// Returns true if exit was requested.
 fn handle_main_thread_signal<S, AS>(
     signal: TerminalWindowMainThreadSignal<AS>,
@@ -367,7 +367,7 @@ where
     }
 }
 
-/// Handle render signal from the main thread.
+/// Handles render signal from the main thread.
 fn handle_render_signal<S, AS>(
     event_loop_state: &mut EventLoopState<S, AS>,
     app: &mut BoxedSafeApp<S, AS>,
@@ -398,7 +398,7 @@ where
     Ok(())
 }
 
-/// Handle app signal from the main thread.
+/// Handles app signal from the main thread.
 fn handle_app_signal<S, AS>(
     action: &AS,
     event_loop_state: &mut EventLoopState<S, AS>,
@@ -438,7 +438,7 @@ fn handle_app_signal<S, AS>(
     );
 }
 
-/// Handle input events from the terminal.
+/// Handles input events from the terminal.
 fn handle_input_event<S, AS>(
     input_event: InputEvent,
     event_loop_state: &mut EventLoopState<S, AS>,
@@ -460,7 +460,7 @@ fn handle_input_event<S, AS>(
     process_input_event(input_event, event_loop_state, app, exit_keys, output_device);
 }
 
-/// Log input event if debugging is enabled.
+/// Logs input event if debugging is enabled.
 fn log_input_event_if_enabled(input_event: &InputEvent) {
     (DISPLAY_LOG_TELEMETRY || DEBUG_TUI_MOD).then(|| {
         if let InputEvent::Keyboard(_) = input_event {
@@ -476,7 +476,7 @@ fn log_input_event_if_enabled(input_event: &InputEvent) {
     });
 }
 
-/// Handle terminal resize events.
+/// Handles terminal resize events.
 fn handle_resize_event<S, AS>(
     new_size: Size,
     event_loop_state: &mut EventLoopState<S, AS>,
@@ -507,7 +507,7 @@ fn handle_resize_event<S, AS>(
     );
 }
 
-/// Process input events and delegate to the app.
+/// Processes input events and delegates to the app.
 fn process_input_event<S, AS>(
     input_event: InputEvent,
     event_loop_state: &mut EventLoopState<S, AS>,
@@ -674,7 +674,7 @@ fn handle_result_generated_by_app_after_handling_action_or_input_event<S, AS>(
     }
 }
 
-/// Request exit from the main event loop, as exit keys were pressed.
+/// Requests exit from the main event loop, as exit keys were pressed.
 /// Note: make sure to wrap the call to `send()` in a [`tokio::spawn()`] so that it
 /// doesn't block the calling thread.
 ///

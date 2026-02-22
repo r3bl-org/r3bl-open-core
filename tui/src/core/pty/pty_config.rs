@@ -88,19 +88,19 @@ impl Default for PtyConfig {
 }
 
 impl PtyConfig {
-    /// Check if OSC capture is enabled.
+    /// Checks if OSC capture is enabled.
     #[must_use]
     pub fn is_osc_capture_enabled(&self) -> bool { self.capture_osc }
 
-    /// Check if output capture is enabled.
+    /// Checks if output capture is enabled.
     #[must_use]
     pub fn is_output_capture_enabled(&self) -> bool { self.capture_output }
 
-    /// Get the PTY size configuration.
+    /// Gets the PTY size configuration.
     #[must_use]
     pub fn get_pty_size(&self) -> PtySize { self.pty_size }
 
-    /// Apply a configuration option to this config. Uses "last write wins per field"
+    /// Applies a configuration option to this config. Uses "last write wins per field"
     /// strategy.
     fn apply(&mut self, option: PtyConfigOption) {
         match option {
@@ -115,7 +115,7 @@ impl PtyConfig {
     }
 }
 
-/// Convert a single option into a complete [`PtyConfig`].
+/// Converts a single option into a complete [`PtyConfig`].
 impl From<PtyConfigOption> for PtyConfig {
     fn from(option: PtyConfigOption) -> Self {
         let mut config = PtyConfig::default();
@@ -135,7 +135,7 @@ impl Add for PtyConfigOption {
     }
 }
 
-/// Add an option to an existing config.
+/// Adds an option to an existing config.
 impl Add<PtyConfigOption> for PtyConfig {
     type Output = PtyConfig;
 
@@ -145,7 +145,7 @@ impl Add<PtyConfigOption> for PtyConfig {
     }
 }
 
-/// Add a config to an option (for symmetry).
+/// Adds a config to an option (for symmetry).
 impl Add<PtyConfig> for PtyConfigOption {
     type Output = PtyConfig;
 

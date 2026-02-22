@@ -207,9 +207,9 @@ pub fn assert_plain_text_at(
     }
 }
 
-/// Create a test buffer with specified dimensions.
-/// This provides a common way to create buffers for testing while allowing
-/// each test module to specify the size that makes sense for their tests.
+/// Creates a test buffer with specified dimensions. This provides a common way to create
+/// buffers for testing while allowing each test module to specify the size that makes
+/// sense for their tests.
 #[cfg(test)]
 #[must_use]
 pub fn create_test_buffer_with_size(
@@ -219,11 +219,12 @@ pub fn create_test_buffer_with_size(
     OffscreenBuffer::new_empty(buffer_width + buffer_height)
 }
 
-/// Create a plain text [`PixelChar`] with default styling.
+/// Creates a plain text [`PixelChar`] with default styling.
+///
+/// This is the most common character type used in tests and provides a consistent way to
+/// create test characters across modules.
 ///
 /// [`PixelChar`]: crate::PixelChar
-/// This is the most common character type used in tests and provides
-/// a consistent way to create test characters across modules.
 #[cfg(test)]
 #[must_use]
 pub fn create_plain_test_char(ch: char) -> PixelChar {
@@ -233,12 +234,13 @@ pub fn create_plain_test_char(ch: char) -> PixelChar {
     }
 }
 
-/// Create a test line filled with the specified characters.
-/// Creates a [`PixelCharLine`] with the given width, filling it with the provided
+/// Creates a test line filled with the specified characters. Creates a [`PixelCharLine`]
+/// with the given width, filling it with the provided
+///
+/// characters (repeating if necessary) or padding with Spacers if not enough characters
+/// are provided.
 ///
 /// [`PixelCharLine`]: crate::PixelCharLine
-/// characters (repeating if necessary) or padding with Spacers if not enough
-/// characters are provided.
 #[cfg(test)]
 #[must_use]
 pub fn create_test_line_with_chars(

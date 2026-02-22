@@ -1,7 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 /// Helper macros just for this module.
-/// Check to see if buffer is empty and return early if it is.
+/// Checks if buffer is empty and returns early if it is.
 #[macro_export]
 macro_rules! empty_check_early_return {
     ($arg_buffer: expr, @None) => {
@@ -17,7 +17,7 @@ macro_rules! empty_check_early_return {
     };
 }
 
-/// Check to see if multiline mode is disabled and return early if it is.
+/// Checks if multiline mode is disabled and returns early if it is.
 #[macro_export]
 macro_rules! multiline_disabled_check_early_return {
     ($arg_engine: expr, @None) => {

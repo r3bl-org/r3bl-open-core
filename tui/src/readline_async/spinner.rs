@@ -81,7 +81,7 @@ pub struct Spinner {
 }
 
 impl Spinner {
-    /// Create a new instance of [Spinner]. If the `arg_spinner_message` contains ANSI
+    /// Creates a new instance of [Spinner]. If the `arg_spinner_message` contains ANSI
     /// escape sequences then these will be stripped.
     ///
     /// # Returns
@@ -172,7 +172,7 @@ impl Spinner {
     #[must_use]
     pub fn is_shutdown(&self) -> bool { *self.safe_is_shutdown.lock().unwrap() }
 
-    /// Start and manage a task that will run in the background. This is where the spinner
+    /// Starts and manages a task that will run in the background. This is where the spinner
     /// is started and the task is spawned. This will also pause the terminal output while
     /// the spinner is active. This will continue running until
     /// [`Self::request_shutdown()`] is called, which simply sends a message to the
@@ -329,7 +329,7 @@ impl Spinner {
         ok!()
     }
 
-    /// Shutdown the task started by [`Self::try_start_task()`]. This method only sends
+    /// Shuts down the task started by [`Self::try_start_task()`]. This method only sends
     /// the shutdown signal and returns immediately without waiting for the spinner
     /// task to completely shutdown. To wait for the task to actually finish shutting
     /// down, call [`Self::await_shutdown()`] after this method.

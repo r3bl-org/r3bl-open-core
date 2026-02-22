@@ -18,23 +18,23 @@ pub struct SegContent<'a> {
 }
 
 impl SegContent<'_> {
-    /// Get the string content of this segment.
+    /// Gets the string content of this segment.
     #[must_use]
     pub fn as_str(&self) -> &str { self.content }
 
-    /// Get the display width of this segment.
+    /// Gets the display width of this segment.
     #[must_use]
     pub fn width(&self) -> ColWidth { self.seg.display_width }
 
-    /// Get the starting column index of this segment.
+    /// Gets the starting column index of this segment.
     #[must_use]
     pub fn start_col(&self) -> ColIndex { self.seg.start_display_col_index }
 
-    /// Get a reference to the underlying segment metadata.
+    /// Gets a reference to the underlying segment metadata.
     #[must_use]
     pub fn seg(&self) -> &Seg { &self.seg }
 
-    /// Get the byte range of this segment within the original string.
+    /// Gets the byte range of this segment within the original string.
     #[must_use]
     pub fn byte_range(&self) -> Range<ByteIndex> {
         self.seg.start_byte_index..self.seg.end_byte_index

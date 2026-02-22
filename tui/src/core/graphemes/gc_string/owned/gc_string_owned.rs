@@ -80,7 +80,8 @@ impl From<&String> for GCStringOwned {
 }
 
 impl GCStringOwned {
-    /// Create a new `GCStringOwned` from a string, computing grapheme cluster segments.
+    /// Creates a new [`GCStringOwned`] from a string, computing grapheme cluster
+    /// segments.
     pub fn new(input: impl AsRef<str>) -> Self {
         let string: InlineString = input.as_ref().into();
         let segments = build_segments_for_str(string.as_str());
@@ -95,38 +96,40 @@ impl GCStringOwned {
         }
     }
 
-    /// Get the string as a string slice.
+    /// Gets the string as a string slice.
     #[must_use]
     pub fn as_str(&self) -> &str { self.string.as_str() }
 
-    /// Get the display width of the string.
+    /// Gets the display width of the string. Also see [`width()`].
+    ///
+    /// [`width()`]: Self::width
     #[must_use]
     pub fn display_width(&self) -> ColWidth { self.display_width }
 
-    /// Get the byte size of the string.
+    /// Gets the byte size of the string.
     #[must_use]
     pub fn bytes_size(&self) -> ChUnit { self.bytes_size }
 
-    /// Get the number of grapheme clusters.
+    /// Gets the number of grapheme clusters.
     #[must_use]
     pub fn len(&self) -> SegLength { self.segments.len().into() }
 
-    /// Get the number of grapheme cluster segments.
-    /// This is the preferred method for semantic clarity.
+    /// Gets the number of grapheme cluster segments. This is the preferred method for
+    /// semantic clarity.
     #[must_use]
     pub fn segment_count(&self) -> SegLength { self.segments.len().into() }
 
-    /// Check if the string is empty.
+    /// Checks if the string is empty.
     #[must_use]
     pub fn is_empty(&self) -> bool { self.segments.is_empty() }
 
-    /// Get a segment by index.
+    /// Gets a segment by index.
     pub fn get(&self, seg_index: impl Into<SegIndex>) -> Option<Seg> {
         let index = seg_index.into().as_usize();
         self.segments.get(index).copied()
     }
 
-    /// Get the maximum segment index.
+    /// Gets the maximum segment index.
     #[must_use]
     pub fn get_max_seg_index(&self) -> SegIndex {
         if self.segments.is_empty() {
@@ -136,17 +139,17 @@ impl GCStringOwned {
         }
     }
 
-    /// Iterate over segments.
+    /// Iterates over segments.
     pub fn iter(&self) -> impl Iterator<Item = Seg> + '_ { self.segments.iter().copied() }
 
-    /// Get display width of a single character (utility method).
+    /// Gets display width of a single character (utility method).
     #[must_use]
     pub fn width_char(ch: char) -> ColWidth {
         use unicode_width::UnicodeWidthChar;
         ColWidth::from(UnicodeWidthChar::width(ch).unwrap_or(0))
     }
 
-    /// Check if this string contains wide segments (characters wider than 1 column).
+    /// Checks if this string contains wide segments (characters wider than 1 column).
     #[must_use]
     pub fn contains_wide_segments(&self) -> ContainsWideSegments {
         if self
@@ -160,16 +163,18 @@ impl GCStringOwned {
         }
     }
 
-    /// Iterate over the segments.
+    /// Iterates over the segments.
     pub fn seg_iter(&self) -> impl Iterator<Item = Seg> + '_ {
         self.segments.iter().copied()
     }
 
-    /// Get the display width of the string (alias for `display_width()`).
+    /// Gets the display width of the string (alias for [`display_width()`]).
+    ///
+    /// [`display_width()`]: Self::display_width
     #[must_use]
     pub fn width(&self) -> ColWidth { self.display_width }
 
-    /// Get the last segment.
+    /// Gets the last segment.
     #[must_use]
     pub fn last(&self) -> Option<Seg> { self.segments.last().copied() }
 }

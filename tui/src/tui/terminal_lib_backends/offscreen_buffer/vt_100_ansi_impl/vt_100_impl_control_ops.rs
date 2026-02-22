@@ -22,9 +22,9 @@
 //! **Related Files:**
 //!
 //! [`handle_backspace`]: crate::OffscreenBuffer::handle_backspace
-//! [`handle_tab`]: crate::OffscreenBuffer::handle_tab
-//! [`handle_line_feed`]: crate::OffscreenBuffer::handle_line_feed
 //! [`handle_carriage_return`]: crate::OffscreenBuffer::handle_carriage_return
+//! [`handle_line_feed`]: crate::OffscreenBuffer::handle_line_feed
+//! [`handle_tab`]: crate::OffscreenBuffer::handle_tab
 
 #[allow(clippy::wildcard_imports)]
 use super::super::*;
@@ -33,7 +33,7 @@ use crate::{ArrayBoundsCheck, ArrayOverflowResult, LengthOps, NumericValue, RowI
             col};
 
 impl OffscreenBuffer {
-    /// Handle backspace control character (0x08).
+    /// Handles backspace control character (0x08).
     /// Moves cursor left one position if not at leftmost column.
     pub fn handle_backspace(&mut self) {
         let current_col = self.cursor_pos.col_index;
@@ -42,7 +42,7 @@ impl OffscreenBuffer {
         }
     }
 
-    /// Handle tab control character (0x09).
+    /// Handles tab control character (0x09).
     /// Moves cursor to next 8-column tab stop boundary.
     pub fn handle_tab(&mut self) {
         let current_col = self.cursor_pos.col_index;
@@ -66,7 +66,7 @@ impl OffscreenBuffer {
             };
     }
 
-    /// Handle line feed control character (0x0A).
+    /// Handles line feed control character (0x0A).
     /// Moves cursor down one line if not at bottom boundary.
     pub fn handle_line_feed(&mut self) {
         let max_row = self.window_size.row_height;
@@ -76,7 +76,7 @@ impl OffscreenBuffer {
         }
     }
 
-    /// Handle carriage return control character (0x0D).
+    /// Handles carriage return control character (0x0D).
     /// Moves cursor to start of current line (column 0).
     pub fn handle_carriage_return(&mut self) { self.cursor_pos.col_index = col(0); }
 }

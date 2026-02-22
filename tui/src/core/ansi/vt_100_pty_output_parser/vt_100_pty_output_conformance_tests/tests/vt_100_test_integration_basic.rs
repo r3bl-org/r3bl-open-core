@@ -11,7 +11,7 @@ use crate::core::ansi::vt_100_pty_output_parser::{ansi_parser_public_api::AnsiTo
                                             CsiSequence,
                                             vt_100_pty_output_conformance_tests::test_sequence_generators::csi_builders::csi_seq_cursor_pos};
 
-/// Create a test `OffscreenBuffer` with 24x80 dimensions (more realistic terminal size).
+/// Creates a test `OffscreenBuffer` with 24x80 dimensions (more realistic terminal size).
 fn create_offscreen_buffer_24r_by_80c() -> OffscreenBuffer {
     OffscreenBuffer::new_empty(height(24) + width(80))
 }

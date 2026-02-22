@@ -62,11 +62,13 @@ use crate::{ByteOffset, byte_offset,
                                     PASTE_START_PARSE_PARAM, RESIZE_EVENT_PARSE_PARAM,
                                     RESIZE_TERMINATOR}};
 
-/// Parse a terminal event sequence and return an `InputEvent` with bytes consumed if
-/// recognized.
+/// Parses a terminal event sequence and returns a [`VT100InputEventIR`] with bytes
+/// consumed if recognized.
 ///
-/// Returns `Some((event, bytes_consumed))` if a complete sequence is parsed,
-/// or `None` if the sequence is incomplete or invalid.
+/// # Returns
+///
+/// - The parsed event and byte count on success.
+/// - Nothing if the sequence is incomplete or unrecognized.
 ///
 /// # Handled Sequences
 ///

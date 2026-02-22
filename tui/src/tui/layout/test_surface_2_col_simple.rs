@@ -152,7 +152,7 @@ mod tests {
         });
     }
 
-    /// Create a stylesheet containing styles using DSL.
+    /// Creates a stylesheet containing styles using DSL.
     fn dsl_stylesheet() -> CommonResult<TuiStylesheet> {
         throws_with_return!({
             tui_stylesheet! {

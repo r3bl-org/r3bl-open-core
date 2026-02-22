@@ -1170,7 +1170,7 @@ mod verify_rest {
     #[allow(clippy::wildcard_imports)]
     use super::*;
 
-    /// Return true if:
+    /// Returns true if:
     /// - No ul items (at any indent).
     /// - No other ol items with same indent + number.
     /// - No other ol items with any indent or number.

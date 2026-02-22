@@ -1,5 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+// cspell:words tuicolor colortarget
+
 //! Extended color sequence parsing for SGR parameters.
 //!
 //! This module provides type-safe parsing of extended color sequences used in
@@ -31,8 +33,8 @@
 //! ESC[48:2:255:128:0m  → RGB background (orange)
 //! ```
 //!
-//! The colon format groups related sub-parameters together, making parsing simpler.
-//! In VTE's parameter model, this arrives as a single parameter with multiple
+//! The colon format groups related sub-parameters together, making parsing simpler. In
+//! VTE's parameter model, this arrives as a single parameter with multiple
 //! sub-parameters: `[[38, 5, 196]]`
 //!
 //! ## Semicolon-Separated Format (Legacy)
@@ -44,16 +46,15 @@
 //! ESC[48;2;255;128;0m  → RGB background (orange)
 //! ```
 //!
-//! The semicolon format treats each value as a separate parameter:
-//! `[[38], [5], [196]]`
+//! The semicolon format treats each value as a separate parameter: `[[38], [5], [196]]`
 //!
 //! Both formats are valid and widely supported by modern terminals.
 //!
 //! # Architecture
 //!
-//! The [`SgrColorSequence`] enum provides type-safe parsing of color parameters,
-//! ensuring that only valid color values are created. It works with the [`ParamsExt`]
-//! trait's [`extract_nth_many_raw()`] method to access the complete parameter slice.
+//! The [`SgrColorSequence`] enum provides type-safe parsing of color parameters, ensuring
+//! that only valid color values are created. It works with the [`ParamsExt`] trait's
+//! [`extract_nth_many_raw()`] method to access the complete parameter slice.
 //!
 //! # Examples
 //!
@@ -84,8 +85,8 @@
 //! ```
 //!
 //! [`ParamsExt`]: crate::ParamsExt
-//! [`extract_nth_many_raw()`]: crate::ParamsExt::extract_nth_many_raw
 //! [`SGR_SET_GRAPHICS`]: crate::core::ansi::constants::SGR_SET_GRAPHICS
+//! [`extract_nth_many_raw()`]: crate::ParamsExt::extract_nth_many_raw
 
 use crate::{AnsiValue, RgbValue, TuiColor,
             core::{ansi::constants::{CSI_START, CSI_SUB_PARAM_SEPARATOR,
@@ -114,30 +115,28 @@ pub enum ColorTarget {
 /// Extended color sequence operation parsed from VT100 SGR parameters.
 ///
 /// **Note**: SGR (Select Graphic Rendition) is a subset of CSI sequences. These sequences
-/// all follow the CSI format `ESC[...m` where the 'm' indicates SGR operations.
-/// See the module documentation for architectural context.
+/// all follow the CSI format `ESC[...m` where the 'm' indicates SGR operations. See the
+/// module documentation for architectural context.
 ///
-/// This enum represents the four possible extended color operations that can be
-/// parsed from VT100-compliant color sequences, directly encoding both the color
-/// type (256-color or RGB) and the target layer (foreground or background).
+/// This enum represents the four possible extended color operations that can be parsed
+/// from VT100-compliant color sequences, directly encoding both the color type (256-color
+/// or RGB) and the target layer (foreground or background).
 ///
 /// # Variants
 ///
-/// - [`SetForegroundAnsi256`](SgrColorSequence::SetForegroundAnsi256): 256-color
-///   foreground
+/// - [`SetForegroundAnsi256`]: 256-color foreground
 ///   - Maps to color palette indices 0-255
 ///   - Sequence format: `ESC[38:5:n` or `ESC[38;5;n`
 ///
-/// - [`SetBackgroundAnsi256`](SgrColorSequence::SetBackgroundAnsi256): 256-color
-///   background
+/// - [`SetBackgroundAnsi256`]: 256-color background
 ///   - Maps to color palette indices 0-255
 ///   - Sequence format: `ESC[48:5:n` or `ESC[48;5;n`
 ///
-/// - [`SetForegroundRgb`](SgrColorSequence::SetForegroundRgb): True RGB foreground
+/// - [`SetForegroundRgb`]: True RGB foreground
 ///   - Each component (r, g, b) ranges from 0-255
 ///   - Sequence format: `ESC[38:2:r:g:b` or `ESC[38;2;r;g;b`
 ///
-/// - [`SetBackgroundRgb`](SgrColorSequence::SetBackgroundRgb): True RGB background
+/// - [`SetBackgroundRgb`]: True RGB background
 ///   - Each component (r, g, b) ranges from 0-255
 ///   - Sequence format: `ESC[48:2:r:g:b` or `ESC[48;2;r;g;b`
 ///
@@ -149,7 +148,6 @@ pub enum ColorTarget {
 /// - `5` = 256-color palette mode (next parameter is index)
 /// - `2` = RGB mode (next 3 parameters are r, g, b values)
 ///
-/// [itu-t-416]: https://www.itu.int/rec/T-REC-T.416-199303-I
 ///
 /// # Color Palette Layout (256-color mode)
 ///
@@ -157,6 +155,12 @@ pub enum ColorTarget {
 /// - **16-231**: 6×6×6 RGB cube (216 colors)
 ///   - Formula: `16 + 36r + 6g + b` where r,g,b ∈ `[0,5]`
 /// - **232-255**: Grayscale ramp (24 shades from dark to light)
+///
+/// [`SetBackgroundAnsi256`]: SgrColorSequence::SetBackgroundAnsi256
+/// [`SetBackgroundRgb`]: SgrColorSequence::SetBackgroundRgb
+/// [`SetForegroundAnsi256`]: SgrColorSequence::SetForegroundAnsi256
+/// [`SetForegroundRgb`]: SgrColorSequence::SetForegroundRgb
+/// [itu-t-416]: https://www.itu.int/rec/T-REC-T.416-199303-I
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SgrColorSequence {
     /// Set foreground to 256-color palette index (0-255)
@@ -193,10 +197,10 @@ pub enum SgrColorSequence {
 }
 
 impl SgrColorSequence {
-    /// Parse extended color sequence from a parameter slice.
+    /// Parses extended color sequence from a parameter slice.
     ///
-    /// Parses both colon-separated and semicolon-separated formats, returning
-    /// the appropriate color operation variant. See the module documentation for
+    /// Parses both colon-separated and semicolon-separated formats, returning the
+    /// appropriate color operation variant. See the module documentation for
     /// comprehensive format details and usage examples.
     ///
     /// # Parameters
@@ -266,7 +270,7 @@ impl SgrColorSequence {
         }
     }
 
-    /// Get which layer (foreground or background) this sequence targets.
+    /// Gets which layer (foreground or background) this sequence targets.
     ///
     /// # Example
     ///
@@ -293,7 +297,7 @@ impl SgrColorSequence {
 }
 
 impl From<SgrColorSequence> for TuiColor {
-    /// Convert an extended color sequence to a normalized [`TuiColor`].
+    /// Converts an extended color sequence to a normalized [`TuiColor`].
     ///
     /// This converts both 256-color palette and RGB color sequences to their
     /// corresponding `TuiColor` variants. The layer information (foreground/background)
@@ -333,10 +337,10 @@ impl From<SgrColorSequence> for TuiColor {
 }
 
 impl From<(TuiColor, ColorTarget)> for SgrColorSequence {
-    /// Convert a [`TuiColor`] and [`ColorTarget`] to an SGR color sequence.
+    /// Converts a [`TuiColor`] and [`ColorTarget`] to an SGR color sequence.
     ///
-    /// This convenience trait provides a succinct way to convert both the color value
-    /// and the target layer in one operation using tuple syntax.
+    /// This convenience trait provides a succinct way to convert both the color value and
+    /// the target layer in one operation using tuple syntax.
     ///
     /// # Examples
     ///

@@ -224,7 +224,7 @@ mod internal_impl {
     #[allow(clippy::wildcard_imports)]
     use super::*;
 
-    /// Return the [`FlexBox`] for the dialog to be rendered in.
+    /// Returns the [`FlexBox`] for the dialog to be rendered in.
     ///
     /// - In non-modal contexts (which this is not), this is determined by the layout
     ///   engine.

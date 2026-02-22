@@ -30,9 +30,9 @@ use nom::{IResult, Parser, branch::alt, combinator::map};
 /// the entire input.
 ///
 /// Here's an example of the runtime iterations that may occur, which repeatedly run by
-/// [`crate::parse_block_markdown_text_with_or_without_new_line()`]:
+/// the [`crate::parse_block_markdown_text_with_or_without_new_line()`] function:
 ///
-/// ```txt
+/// ```text
 /// input: "foo *bar* _baz_ [link](url) ![image](url)"
 /// pass #1: [Plain("foo ")] | "*bar* _baz_ [link](url) ![image](url)"
 /// pass #2: [Bold("bar")]   | " _baz_ [link](url) ![image](url)"

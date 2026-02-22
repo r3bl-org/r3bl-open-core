@@ -83,9 +83,7 @@ mod convert_slot_to_reader {
         }
     }
 
-    /// Converts a reference to [`SharedWakerSlot`] into a [`WakerSlotReader`] by
-    /// cloning the [`Arc`] internally. This is the primary conversion used at call
-    /// sites - no `.clone()` needed by the caller.
+    /// Converts a [`SharedWakerSlot`] reference into [`WakerSlotReader`]
     impl<K: RRTWaker> From<&SharedWakerSlot<K>> for WakerSlotReader<K> {
         fn from(slot: &SharedWakerSlot<K>) -> Self {
             Self {
@@ -94,7 +92,7 @@ mod convert_slot_to_reader {
         }
     }
 
-    /// Converts an owned [`SharedWakerSlot`] into a [`WakerSlotReader`].
+    /// Converts a [`SharedWakerSlot`] (owned) into a [`WakerSlotReader`].
     impl<K: RRTWaker> From<SharedWakerSlot<K>> for WakerSlotReader<K> {
         fn from(slot: SharedWakerSlot<K>) -> Self { Self { inner: slot } }
     }
@@ -112,8 +110,7 @@ mod convert_slot_to_writer {
         }
     }
 
-    /// Converts a reference to [`SharedWakerSlot`] into a [`WakerSlotWriter`] by
-    /// cloning the [`Arc`] internally.
+    /// Converts a [`SharedWakerSlot`] reference into a [`WakerSlotWriter`]
     impl<K: RRTWaker> From<&SharedWakerSlot<K>> for WakerSlotWriter<K> {
         fn from(shared_waker_slot: &SharedWakerSlot<K>) -> Self {
             Self {
@@ -122,7 +119,7 @@ mod convert_slot_to_writer {
         }
     }
 
-    /// Converts an owned [`SharedWakerSlot`] into a [`WakerSlotWriter`].
+    /// Converts a [`SharedWakerSlot`] (owned) into a [`WakerSlotWriter`].
     impl<K: RRTWaker> From<SharedWakerSlot<K>> for WakerSlotWriter<K> {
         fn from(shared_waker_slot: SharedWakerSlot<K>) -> Self {
             Self {

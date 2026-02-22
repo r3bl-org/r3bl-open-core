@@ -11,19 +11,18 @@ use std::fmt::{Display, Formatter, Result};
 ///
 /// This trait requires [`Display`] as a supertrait, meaning any type implementing
 /// [`FastStringify`] **must also implement** [`Display`]. This allows the trait to
-/// provide optimized string building while maintaining compatibility with Rust's
-/// standard formatting infrastructure.
+/// provide optimized string building while maintaining compatibility with Rust's standard
+/// formatting infrastructure.
 ///
 /// # How to Implement
 ///
 /// Both [`FastStringify`] and [`Display`] must be implemented, but the [`Display`]
-/// implementation is always the same boilerplate. Use the [`generate_impl_display_for_fast_stringify!`]
-/// macro to generate it automatically.
+/// implementation is always the same boilerplate. Use the
+/// [`generate_impl_display_for_fast_stringify!`] macro to generate it automatically.
 ///
 /// 1. **Implement [`write_to_buf()`]** with your custom formatting logic
-/// 2. **Call the macro** [`generate_impl_display_for_fast_stringify!`] to generate the [`Display`] implementation
-///
-/// [`generate_impl_display_for_fast_stringify!`]: crate::generate_impl_display_for_fast_stringify
+/// 2. **Call the macro** [`generate_impl_display_for_fast_stringify!`] to generate the
+///    [`Display`] implementation
 ///
 /// ```rust
 ///    # use r3bl_tui::{FastStringify, BufTextStorage, generate_impl_display_for_fast_stringify};
@@ -73,18 +72,20 @@ use std::fmt::{Display, Formatter, Result};
 ///    # Ok::<(), std::fmt::Error>(())
 ///    ```
 ///
-/// [implementation example]: #how-to-implement
 /// [`Display`]: Display
-/// [`Formatter`]: std::fmt::Formatter
-/// [`write!`]: std::write
-/// [`write_str`]: std::fmt::Formatter::write_str
 /// [`FormatArgs`]: std::fmt::Arguments
+/// [`Formatter`]: std::fmt::Formatter
+/// [`generate_impl_display_for_fast_stringify!`]:
+///     crate::generate_impl_display_for_fast_stringify
 /// [`push_str`]: String::push_str
-/// [`write_to_buf()`]: FastStringify::write_to_buf
+/// [`write!`]: std::write
 /// [`write_buf_to_fmt()`]: FastStringify::write_buf_to_fmt
+/// [`write_str`]: std::fmt::Formatter::write_str
+/// [`write_to_buf()`]: FastStringify::write_to_buf
+/// [implementation example]: #how-to-implement
 #[rustfmt::skip]
 pub trait FastStringify: Display {
-    /// Write the formatted representation to the buffer. Use [`push_str`] for strings,
+    /// Writes the formatted representation to the buffer. Use [`push_str`] for strings,
     /// [`write!`] only when formatting is needed.
     ///
     /// # Errors
@@ -94,8 +95,7 @@ pub trait FastStringify: Display {
     /// [`write!`]: std::write
     fn write_to_buf(&self, acc: &mut BufTextStorage) -> Result;
 
-    /// Write the buffer to formatter. Call from [`Display::fmt`] after
-    /// [`write_to_buf`].
+    /// Writes the buffer to formatter. Call from [`Display::fmt`] after [`write_to_buf`].
     ///
     /// # Errors
     /// Returns an error if writing to the formatter fails (formatting error).
@@ -172,10 +172,10 @@ pub trait FastStringify: Display {
 /// This type alias allows us to easily experiment with different string-like data
 /// structures in the future without impacting the rest of the codebase.
 ///
-/// [`String`]: std::string::String
 /// [`Display::fmt`]: Display::fmt
-/// [`SmallString<[u8; 64]>`]: `smallstr::SmallString`
-/// [`SmallString<[u8; 256]>`]: `smallstr::SmallString`
+/// [`SmallString<[u8; 256]>`]: smallstr::SmallString
+/// [`SmallString<[u8; 64]>`]: smallstr::SmallString
+/// [`String`]: std::string::String
 pub type BufTextStorage = String;
 
 /// Macro to implement the boilerplate [`Display`] trait for types implementing

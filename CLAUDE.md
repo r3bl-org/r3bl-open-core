@@ -140,6 +140,9 @@ For testing interactive terminal applications, use (both are installed):
 
 ## Git Workflow
 
+- Never use `git stash` / `git stash pop` to test against clean state - it destroys the staging
+  area (index). Use the Task tool with `isolation: "worktree"` to run tests in a separate git
+  worktree without touching the main working tree.
 - Never commit unless explicitly asked
 - When you do make commits, do not add an attribution to yourself in the commit message. Do not add
   the following trailing lines in a commit message:

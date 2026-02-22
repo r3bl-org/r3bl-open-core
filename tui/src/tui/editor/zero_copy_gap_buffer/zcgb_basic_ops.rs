@@ -26,7 +26,7 @@ impl ZeroCopyGapBuffer {
     #[must_use]
     pub fn len(&self) -> Length { self.line_count() }
 
-    /// Check if the storage is empty (has no lines).
+    /// Checks if the storage is empty (has no lines).
     #[must_use]
     pub fn is_empty(&self) -> bool { self.line_count().is_zero() }
 
@@ -391,7 +391,7 @@ impl ZeroCopyGapBuffer {
 
 // Helper methods for ZeroCopyGapBuffer.
 impl ZeroCopyGapBuffer {
-    /// Convert a column index to a segment index for a given line.
+    /// Converts a column index to a segment index for a given line.
     fn col_to_seg_index(
         &self,
         row_index: RowIndex,

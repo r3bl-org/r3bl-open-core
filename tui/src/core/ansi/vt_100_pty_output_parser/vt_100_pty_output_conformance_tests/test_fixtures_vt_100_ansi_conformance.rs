@@ -5,19 +5,19 @@
 use crate::{OffscreenBuffer, TuiStyle, height, width};
 use std::num::NonZeroU16;
 
-/// Create a test `OffscreenBuffer` with 10x10 dimensions.
+/// Creates a test `OffscreenBuffer` with 10x10 dimensions.
 #[must_use]
 pub fn create_test_offscreen_buffer_10r_by_10c() -> OffscreenBuffer {
     OffscreenBuffer::new_empty(height(10) + width(10))
 }
 
-/// Create a test `OffscreenBuffer` with 20x20 dimensions for larger test scenarios.
+/// Creates a test `OffscreenBuffer` with 20x20 dimensions for larger test scenarios.
 #[must_use]
 pub fn create_test_offscreen_buffer_20r_by_20c() -> OffscreenBuffer {
     OffscreenBuffer::new_empty(height(20) + width(20))
 }
 
-/// Create a test buffer with numbered lines for easier test verification.
+/// Creates a test buffer with numbered lines for easier test verification.
 #[must_use]
 pub fn create_numbered_buffer(rows: usize, cols: usize) -> OffscreenBuffer {
     let mut buf = OffscreenBuffer::new_empty(height(rows) + width(cols));

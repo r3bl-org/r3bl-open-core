@@ -111,7 +111,7 @@ pub struct RenderOpIRVec {
 }
 
 impl RenderOpIRVec {
-    /// Create a new empty collection of IR operations.
+    /// Creates a new empty collection of IR operations.
     #[must_use]
     pub fn new() -> Self {
         Self {
@@ -129,11 +129,11 @@ impl RenderOpIRVec {
         self.list.extend(ops);
     }
 
-    /// Get the number of operations in the collection.
+    /// Gets the number of operations in the collection.
     #[must_use]
     pub fn len(&self) -> usize { self.list.len() }
 
-    /// Check if the collection is empty.
+    /// Checks if the collection is empty.
     #[must_use]
     pub fn is_empty(&self) -> bool { self.list.is_empty() }
 

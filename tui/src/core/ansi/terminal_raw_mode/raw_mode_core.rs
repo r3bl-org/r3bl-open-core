@@ -33,9 +33,9 @@
 //! - [`VMIN_RAW_MODE`][vmin] / [`VTIME_RAW_MODE`][vtime] - POSIX termios constants
 //! - [`RawMode`] - High-level render pipeline integration
 //!
+//! [`RawMode`]: crate::tui::terminal_lib_backends::raw_mode::RawMode
 //! [vmin]: crate::VMIN_RAW_MODE
 //! [vtime]: crate::VTIME_RAW_MODE
-//! [`RawMode`]: crate::tui::terminal_lib_backends::raw_mode::RawMode
 
 // Import platform-specific implementations for DirectToAnsi backend.
 #[cfg(unix)]
@@ -45,7 +45,7 @@ use super::raw_mode_windows;
 use crate::{DEBUG_TUI_SHOW_TERMINAL_BACKEND, TERMINAL_LIB_BACKEND, TerminalLibBackend};
 use miette::IntoDiagnostic;
 
-/// Enable raw mode on the terminal.
+/// Enables raw mode on the terminal.
 ///
 /// Dispatches to the correct raw mode implementation based on [`TERMINAL_LIB_BACKEND`]:
 /// - **Linux** ([`DirectToAnsi`]): Uses rustix-based termios API
@@ -63,8 +63,8 @@ use miette::IntoDiagnostic;
 /// - Platform is not supported (e.g., WASM, embedded targets without OS)
 /// - Lock is poisoned (internal state corruption)
 ///
-/// [`DirectToAnsi`]: crate::TerminalLibBackend::DirectToAnsi
 /// [`Crossterm`]: crate::TerminalLibBackend::Crossterm
+/// [`DirectToAnsi`]: crate::TerminalLibBackend::DirectToAnsi
 /// [`TERMINAL_LIB_BACKEND`]: crate::TERMINAL_LIB_BACKEND
 /// [module documentation]: mod@crate::core::ansi::terminal_raw_mode
 pub fn enable_raw_mode() -> miette::Result<()> {
@@ -127,8 +127,8 @@ pub fn enable_raw_mode() -> miette::Result<()> {
 /// - Platform is not supported (e.g., WASM, embedded targets without OS)
 /// - Lock is poisoned (internal state corruption)
 ///
-/// [`DirectToAnsi`]: crate::TerminalLibBackend::DirectToAnsi
 /// [`Crossterm`]: crate::TerminalLibBackend::Crossterm
+/// [`DirectToAnsi`]: crate::TerminalLibBackend::DirectToAnsi
 /// [`TERMINAL_LIB_BACKEND`]: crate::TERMINAL_LIB_BACKEND
 /// [module documentation]: mod@crate::core::ansi::terminal_raw_mode
 pub fn disable_raw_mode() -> miette::Result<()> {
@@ -184,7 +184,7 @@ pub fn disable_raw_mode() -> miette::Result<()> {
 pub struct RawModeGuard;
 
 impl RawModeGuard {
-    /// Create a new guard and enable raw mode.
+    /// Creates a new guard and enables raw mode.
     ///
     /// # Errors
     ///

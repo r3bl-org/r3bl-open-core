@@ -19,8 +19,6 @@
 //!
 //! </div>
 //!
-//! [rendering pipeline overview]: mod@crate::terminal_lib_backends#rendering-pipeline-architecture
-//!
 //! # Type Safety & Semantic Boundary
 //!
 //! This enum type ensures only Output-appropriate operations are used in backend code.
@@ -35,12 +33,13 @@
 //! preventing IR from being executed directly and bypassing the Compositor.
 //!
 //! [`CompositorNoClipTruncPaintTextWithAttributes`]: crate::render_op::RenderOpOutput::CompositorNoClipTruncPaintTextWithAttributes
+//! [rendering pipeline overview]: mod@crate::terminal_lib_backends#rendering-pipeline-architecture
 
 use super::{RenderOpCommon, RenderOpsExec};
 use crate::{InlineString, InlineVec, LockedOutputDevice, RenderOpsLocalData, Size,
             TERMINAL_LIB_BACKEND, TerminalLibBackend, TuiStyle, ok,
-            terminal_lib_backends::crossterm_backend::PaintRenderOpImplCrossterm,
-            terminal_lib_backends::direct_to_ansi::RenderOpPaintImplDirectToAnsi};
+            terminal_lib_backends::{crossterm_backend::PaintRenderOpImplCrossterm,
+                                    direct_to_ansi::RenderOpPaintImplDirectToAnsi}};
 use std::{fmt::{Debug, Formatter, Result},
           ops::{AddAssign, Deref, DerefMut}};
 
@@ -84,7 +83,7 @@ pub struct RenderOpOutputVec {
 }
 
 impl RenderOpOutputVec {
-    /// Create a new empty collection of output operations.
+    /// Creates a new empty collection of output operations.
     #[must_use]
     pub fn new() -> Self {
         Self {
@@ -102,11 +101,11 @@ impl RenderOpOutputVec {
         self.list.extend(ops);
     }
 
-    /// Get the number of operations in the collection.
+    /// Gets the number of operations in the collection.
     #[must_use]
     pub fn len(&self) -> usize { self.list.len() }
 
-    /// Check if the collection is empty.
+    /// Checks if the collection is empty.
     #[must_use]
     pub fn is_empty(&self) -> bool { self.list.is_empty() }
 

@@ -33,11 +33,12 @@
 //! // For cols_right=0, new() returns None, so no sequence is emitted
 //! ```
 //!
-//! [`TermCol`]: super::TermCol
 //! [`NonZeroU16`]: std::num::NonZeroU16
+//! [`TermCol`]: super::TermCol
 
 use crate::NumericConversions;
-use std::{fmt::{Display, Formatter}, num::NonZeroU16};
+use std::{fmt::{Display, Formatter},
+          num::NonZeroU16};
 
 /// Relative horizontal cursor movement (column delta).
 ///
@@ -63,9 +64,9 @@ use std::{fmt::{Display, Formatter}, num::NonZeroU16};
 /// }
 /// ```
 ///
-/// [`NonZeroU16`]: std::num::NonZeroU16
-/// [`CsiSequence::CursorForward`]: crate::CsiSequence::CursorForward
 /// [`CsiSequence::CursorBackward`]: crate::CsiSequence::CursorBackward
+/// [`CsiSequence::CursorForward`]: crate::CsiSequence::CursorForward
+/// [`NonZeroU16`]: std::num::NonZeroU16
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct TermColDelta(NonZeroU16);
 
@@ -87,9 +88,9 @@ impl TermColDelta {
     /// panic documentation requirements and make intent clear.
     pub const ONE: Self = Self(NonZeroU16::MIN);
 
-    /// Create a new column delta from a raw value.
+    /// Creates a new column delta from a raw value.
     ///
-    /// Returns `None` if the value is zero, since zero-valued deltas are not
+    /// Returns [`None`] if the value is zero, since zero-valued deltas are not
     /// representable (they would cause the CSI zero bug).
     ///
     /// # Example
@@ -108,18 +109,18 @@ impl TermColDelta {
         }
     }
 
-    /// Create a column delta from a [`NonZeroU16`] value.
+    /// Creates a column delta from a [`NonZeroU16`] value.
     ///
     /// This is an infallible constructor since [`NonZeroU16`] is already guaranteed
     /// to be non-zero.
     #[must_use]
     pub const fn from_non_zero(value: NonZeroU16) -> Self { Self(value) }
 
-    /// Get the inner [`NonZeroU16`] value.
+    /// Gets the inner [`NonZeroU16`] value.
     #[must_use]
     pub const fn value(self) -> NonZeroU16 { self.0 }
 
-    /// Get the raw `u16` value (guaranteed to be >= 1).
+    /// Gets the raw [`u16`] value (guaranteed to be `>= 1`).
     #[must_use]
     pub const fn get(self) -> u16 { self.0.get() }
 }
@@ -128,9 +129,9 @@ impl From<NonZeroU16> for TermColDelta {
     fn from(value: NonZeroU16) -> Self { Self::from_non_zero(value) }
 }
 
-/// Create a [`TermColDelta`] from a raw value.
+/// Creates a [`TermColDelta`] from a raw value.
 ///
-/// Returns `None` if the value is zero.
+/// Returns [`None`] if the value is zero.
 ///
 /// # Example
 ///
@@ -141,7 +142,9 @@ impl From<NonZeroU16> for TermColDelta {
 /// assert_eq!(term_col_delta(5).map(|d| d.get()), Some(5));
 /// ```
 #[must_use]
-pub const fn term_col_delta(value: u16) -> Option<TermColDelta> { TermColDelta::new(value) }
+pub const fn term_col_delta(value: u16) -> Option<TermColDelta> {
+    TermColDelta::new(value)
+}
 
 #[cfg(test)]
 mod tests {

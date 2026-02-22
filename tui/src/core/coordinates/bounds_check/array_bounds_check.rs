@@ -88,12 +88,12 @@ use crate::NumericValue;
 ///
 /// ## Key Distinction from Other Bounds Traits
 ///
-/// | Trait                         | Rule                          | Use Case      | Example                                              |
-/// |-------------------------------|-------------------------------|---------------|------------------------------------------------------|
-/// | `ArrayBoundsCheck`📍          | `index < length`              | Index safety  | `buffer[5]` needs `5 < buffer.len()`                 |
-/// | [`CursorBoundsCheck`]         | `index <= length`             | Text editing  | Cursor can be at position `length` (after last char) |
-/// | [`ViewportBoundsCheck`]       | `start <= index < start+size` | Rendering     | Content visibility in windows                        |
-/// | [`RangeBoundsExt`]          | `start <= end <= length`      | Iteration     | Range object structural validation                   |
+/// | Trait                           | Rule                            | Use Case        | Example                                                |
+/// | ------------------------------- | ------------------------------- | --------------- | ------------------------------------------------------ |
+/// | `ArrayBoundsCheck`📍            | `index < length`                | Index safety    | `buffer[5]` needs `5 < buffer.len()`                   |
+/// | [`CursorBoundsCheck`]           | `index <= length`               | Text editing    | Cursor can be at position `length` (after last char)   |
+/// | [`ViewportBoundsCheck`]         | `start <= index < start+size`   | Rendering       | Content visibility in windows                          |
+/// | [`RangeBoundsExt`]              | `start <= end <= length`        | Iteration       | Range object structural validation                     |
 ///
 /// ## Safety Guarantees
 ///
@@ -141,26 +141,26 @@ use crate::NumericValue;
 /// - [`ViewportBoundsCheck`] - Viewport visibility with window-based checking
 /// - [`RangeBoundsExt`] - Range validation for iteration and algorithms
 ///
-/// [`overflows()`]: ArrayBoundsCheck::overflows
-/// [`underflows()`]: ArrayBoundsCheck::underflows
-/// [`Index`]: crate::Index
-/// [`RowIndex`]: crate::RowIndex
-/// [`ColIndex`]: crate::ColIndex
-/// [`SegIndex`]: crate::SegIndex
 /// [`ByteIndex`]: crate::ByteIndex
+/// [`ColIndex`]: crate::ColIndex
+/// [`CursorBoundsCheck`]: crate::CursorBoundsCheck
 /// [`IndexOps`]: crate::IndexOps
+/// [`Index`]: crate::Index
 /// [`LengthOps`]: crate::LengthOps
 /// [`NumericValue`]: crate::NumericValue
-/// [`CursorBoundsCheck`]: crate::CursorBoundsCheck
 /// [`RangeBoundsExt`]: crate::RangeBoundsExt
+/// [`RowIndex`]: crate::RowIndex
+/// [`SegIndex`]: crate::SegIndex
 /// [`ViewportBoundsCheck`]: crate::ViewportBoundsCheck
-/// [`length.is_overflowed_by()`]: crate::length_ops::LengthOps::is_overflowed_by
 /// [`index.overflows()`]: ArrayBoundsCheck::overflows
+/// [`length.is_overflowed_by()`]: crate::length_ops::LengthOps::is_overflowed_by
+/// [`overflows()`]: ArrayBoundsCheck::overflows
+/// [`underflows()`]: ArrayBoundsCheck::underflows
 pub trait ArrayBoundsCheck<LengthType: LengthOps>
 where
     Self: NumericValue,
 {
-    /// Check if this index would overflow when accessing an array of the given length.
+    /// Checks if this index would overflow when accessing an array of the given length.
     ///
     /// See the [trait documentation][Self] for detailed visual diagrams and array access
     /// semantics.
@@ -184,7 +184,7 @@ where
         }
     }
 
-    /// Check if this index underflows (goes below) the given minimum bound.
+    /// Checks if this index underflows (goes below) the given minimum bound.
     ///
     /// See the [trait documentation][Self] for underflow checking semantics and visual
     /// diagrams.

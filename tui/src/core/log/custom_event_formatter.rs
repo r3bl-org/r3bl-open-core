@@ -261,7 +261,7 @@ mod helpers {
     #[allow(clippy::wildcard_imports)]
     use super::*;
 
-    /// Write formatted timestamp to the writer.
+    /// Writes formatted timestamp to the writer.
     pub fn write_timestamp(
         f: &mut tracing_subscriber::fmt::format::Writer<'_>,
         spacer: &str,
@@ -283,7 +283,7 @@ mod helpers {
         write!(f, "\n{timestamp_str_fmt}")
     }
 
-    /// Write formatted span context to the writer.
+    /// Writes formatted span context to the writer.
     pub fn write_span_context<S, N>(
         ctx: &tracing_subscriber::fmt::FmtContext<'_, S, N>,
         f: &mut tracing_subscriber::fmt::format::Writer<'_>,
@@ -309,7 +309,7 @@ mod helpers {
         }
     }
 
-    /// Get level string and style based on the event's log level.
+    /// Gets level string and style based on the event's log level.
     pub fn get_level_info(
         event: &Event<'_>,
         spacer: &str,
@@ -342,7 +342,7 @@ mod helpers {
         (level_str, style)
     }
 
-    /// Write formatted log level to the writer.
+    /// Writes formatted log level to the writer.
     pub fn write_log_level(
         f: &mut tracing_subscriber::fmt::format::Writer<'_>,
         event: &Event<'_>,
@@ -390,7 +390,7 @@ mod helpers {
         line_width_used
     }
 
-    /// Write formatted field content (heading and body).
+    /// Writes formatted field content (heading and body).
     pub fn write_field_content(
         f: &mut tracing_subscriber::fmt::format::Writer<'_>,
         FieldContentParams {
@@ -467,7 +467,7 @@ where
     S: Subscriber + for<'a> LookupSpan<'a>,
     N: for<'a> FormatFields<'a> + 'static,
 {
-    /// Format the event into 2 lines:
+    /// Formats the event into 2 lines:
     /// 1. Heading: Timestamp, span context, level and message truncated to the available
     ///    visible width (90 columns).
     /// 2. Body: Body text wrapped to 90 columns wide.

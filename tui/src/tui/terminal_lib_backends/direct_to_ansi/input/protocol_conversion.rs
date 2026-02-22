@@ -53,7 +53,7 @@ use crate::{Button, FocusEvent, InputEvent, Key, KeyPress, KeyState, ModifierKey
                                                        VT100MouseButtonIR,
                                                        VT100ScrollDirectionIR}};
 
-/// Convert protocol-level [`VT100InputEventIR`] to canonical [`InputEvent`].
+/// Converts protocol-level [`VT100InputEventIR`] to canonical [`InputEvent`].
 ///
 /// Converts all VT-100 IR event types to public API types:
 /// - **Keyboard**: [`VT100InputEventIR::Keyboard`] → [`InputEvent::Keyboard`]
@@ -151,7 +151,7 @@ pub fn convert_input_event(vt100_event: VT100InputEventIR) -> Option<InputEvent>
     }
 }
 
-/// Convert protocol-level [`VT100KeyCodeIR`] and [`VT100KeyModifiersIR`] to canonical
+/// Converts protocol-level [`VT100KeyCodeIR`] and [`VT100KeyModifiersIR`] to canonical
 /// [`KeyPress`].
 ///
 /// Maps VT-100 IR key codes to the public API [`Key`] enum, handling:

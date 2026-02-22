@@ -14,8 +14,8 @@ use crate::{ColWidth, RowHeight, TermPos, terminal_io::KeyState};
 ///
 /// ## Where This Type Fits in the Architecture
 ///
-/// For the full data flow, see the [parent module documentation]. This diagram shows
-/// how this module [`ir_event_types`] serves as the foundation layer:
+/// For the full data flow, see the [parent module documentation]. This diagram shows how
+/// this module [`ir_event_types`] serves as the foundation layer:
 ///
 /// ```text
 /// ┌─────────────────────────────────────────────────────────┐  ┌──────────────────┐
@@ -66,17 +66,20 @@ use crate::{ColWidth, RowHeight, TermPos, terminal_io::KeyState};
 /// ## IR to Canonical Conversion
 ///
 /// This module only defines IR types. The actual conversion to canonical types happens in
-/// [`convert_input_event()`] within `protocol_conversion.rs` in the `direct_to_ansi`
+/// [`convert_input_event()`] within [`protocol_conversion`] in the [`direct_to_ansi`]
 /// terminal backend. It is the responsibility of each terminal backend to convert its IR
 /// types to canonical types.
 ///
 /// [`Button`]: crate::Button
-/// [`ir_event_types`]: mod@super::ir_event_types
-/// [`convert_input_event()`]: crate::direct_to_ansi::input::protocol_conversion::convert_input_event
 /// [`InputEvent`]: crate::InputEvent
 /// [`Key`]: crate::Key
+/// [`convert_input_event()`]:
+///     crate::direct_to_ansi::input::protocol_conversion::convert_input_event
+/// [`direct_to_ansi`]: mod@crate::direct_to_ansi
+/// [`ir_event_types`]: mod@super::ir_event_types
 /// [`keyboard`]: mod@super::keyboard
 /// [`mouse`]: mod@super::mouse
+/// [`protocol_conversion`]: mod@crate::direct_to_ansi::input::protocol_conversion
 /// [`router`]: mod@super::router
 /// [`terminal_events`]: mod@super::terminal_events
 /// [`utf8`]: mod@super::utf8
@@ -161,7 +164,9 @@ pub enum VT100PasteModeIR {
     End,
 }
 
-/// Internal protocol focus state (maps to canonical `FocusEvent`).
+/// Internal protocol focus state (maps to canonical [`FocusEvent`]).
+///
+/// [`FocusEvent`]: crate::FocusEvent
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum VT100FocusStateIR {
     Gained,

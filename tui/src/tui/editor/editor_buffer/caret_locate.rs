@@ -24,9 +24,9 @@ use crate::{ArrayBoundsCheck, ArrayOverflowResult, CursorBoundsCheck,
 /// - Empty buffer: Returns [`OnFirstRow`]
 /// - This maintains consistency: "first" takes precedence over "last" in ambiguous cases
 ///
+/// [`AtEnd`]: CursorPositionBoundsStatus::AtEnd
 /// [`OnFirstRow`]: RowContentPositionStatus::OnFirstRow
 /// [`OnLastRow`]: RowContentPositionStatus::OnLastRow
-/// [`AtEnd`]: CursorPositionBoundsStatus::AtEnd
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum RowContentPositionStatus {
     /// On the first row (row index 0).
@@ -49,23 +49,26 @@ pub enum RowContentPositionStatus {
 /// method on column widths.
 ///
 /// ```text
+/// Caret : ▲, ►
 /// R ┌──────────┐
-/// 0 ❱hello     │  <- AtStart (col 0)
-///   └⮬─────────┘
+/// 0 ►hello     │  <- AtStart (col 0)
+///   └▲─────────┘
 ///   C0123456789
 /// ```
 ///
 /// ```text
+/// Caret : ▲, ►
 /// R ┌──────────┐
-/// 0 ❱hello     │  <- Within (col 3)
-///   └───⮬──────┘
+/// 0 ►hello     │  <- Within (col 3)
+///   └───▲──────┘
 ///   C0123456789
 /// ```
 ///
 /// ```text
+/// Caret : ▲, ►
 /// R ┌──────────┐
-/// 0 ❱hello░    │  <- AtEnd (col 5, after last char)
-///   └─────⮬────┘
+/// 0 ►hello     │  <- AtEnd (col 5, after last char)
+///   └─────▲────┘
 ///   C0123456789
 /// ```
 #[must_use]
@@ -87,27 +90,30 @@ pub fn locate_col(editor_buffer: &EditorBuffer) -> CursorPositionBoundsStatus {
 /// [`RowContentPositionStatus`] documentation).
 ///
 /// ```text
+/// Caret : ▲, ►
 /// R ┌──────────┐
-/// 0 ❱░         │  <- OnFirstRow (single line or empty buffer)
-///   └⮬─────────┘
+/// 0 ►          │  <- OnFirstRow (single line or empty buffer)
+///   └▲─────────┘
 ///   C0123456789
 /// ```
 ///
 /// ```text
+/// Caret : ▲, ►
 /// R ┌──────────┐
 /// 0 │a         │
-/// 1 ❱a         │  <- OnMiddleRow
+/// 1 ►a         │  <- OnMiddleRow
 /// 2 │b         │
-///   └⮬─────────┘
+///   └▲─────────┘
 ///   C0123456789
 /// ```
 ///
 /// ```text
+/// Caret : ▲, ►
 /// R ┌──────────┐
 /// 0 │a         │
 /// 1 │b         │
-/// 2 ❱c         │  <- OnLastRow (only when buffer has >1 line)
-///   └⮬─────────┘
+/// 2 ►c         │  <- OnLastRow (only when buffer has >1 line)
+///   └▲─────────┘
 ///   C0123456789
 /// ```
 #[must_use]
@@ -139,9 +145,10 @@ pub fn locate_row(buffer: &EditorBuffer) -> RowContentPositionStatus {
 /// Helper function to check if column is at the start of line.
 ///
 /// ```text
+/// Caret : ▲, ►
 /// R ┌──────────┐
-/// 0 ❱hello     │  <- returns true
-///   └⮬─────────┘
+/// 0 ►hello     │  <- returns true
+///   └▲─────────┘
 ///   C0123456789
 /// ```
 #[must_use]
@@ -152,9 +159,10 @@ pub fn col_is_at_start(buffer: &EditorBuffer) -> bool {
 /// Helper function to check if column is at the end of line.
 ///
 /// ```text
+/// Caret : ▲, ►
 /// R ┌──────────┐
-/// 0 ❱hello░    │  <- returns true
-///   └─────⮬────┘
+/// 0 ►hello     │  <- returns true
+///   └─────▲────┘
 ///   C0123456789
 /// ```
 #[must_use]
@@ -165,10 +173,11 @@ pub fn col_is_at_end(buffer: &EditorBuffer) -> bool {
 /// Helper function to check if row is at the top of buffer.
 ///
 /// ```text
+/// Caret : ▲, ►
 /// R ┌──────────┐
-/// 0 ❱first     │  <- returns true
+/// 0 ►first     │  <- returns true
 /// 1 │second    │
-///   └⮬─────────┘
+///   └▲─────────┘
 ///   C0123456789
 /// ```
 #[must_use]
@@ -179,11 +188,12 @@ pub fn row_is_at_top(buffer: &EditorBuffer) -> bool {
 /// Helper function to check if row is at the bottom of buffer.
 ///
 /// ```text
+/// Caret : ▲, ►
 /// R ┌──────────┐
 /// 0 │first     │
 /// 1 │second    │
-/// 2 ❱last      │  <- returns true
-///   └⮬─────────┘
+/// 2 ►last      │  <- returns true
+///   └▲─────────┘
 ///   C0123456789
 /// ```
 #[must_use]

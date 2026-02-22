@@ -44,7 +44,7 @@ enum BorderLineType {
 static BORDER_CACHE: LazyLock<crate::ThreadSafeLruCache<BorderCacheKey, InlineString>> =
     LazyLock::new(|| crate::new_threadsafe_lru_cache(1000));
 
-/// Get a cached top border line or create and cache it.
+/// Gets a cached top border line or creates and caches it.
 pub fn get_top_border_line(bounds_width: ColWidth) -> InlineString {
     let key = BorderCacheKey {
         line_type: BorderLineType::Top,
@@ -65,7 +65,7 @@ pub fn get_top_border_line(bounds_width: ColWidth) -> InlineString {
     }
 }
 
-/// Get a cached middle border line or create and cache it.
+/// Gets a cached middle border line or creates and caches it.
 pub fn get_middle_border_line(bounds_width: ColWidth) -> InlineString {
     let key = BorderCacheKey {
         line_type: BorderLineType::Middle,
@@ -86,7 +86,7 @@ pub fn get_middle_border_line(bounds_width: ColWidth) -> InlineString {
     }
 }
 
-/// Get a cached bottom border line or create and cache it.
+/// Gets a cached bottom border line or creates and caches it.
 pub fn get_bottom_border_line(bounds_width: ColWidth) -> InlineString {
     let key = BorderCacheKey {
         line_type: BorderLineType::Bottom,
@@ -107,7 +107,7 @@ pub fn get_bottom_border_line(bounds_width: ColWidth) -> InlineString {
     }
 }
 
-/// Get a cached separator line or create and cache it.
+/// Gets a cached separator line or creates and caches it.
 pub fn get_separator_line(bounds_width: ColWidth) -> InlineString {
     let key = BorderCacheKey {
         line_type: BorderLineType::Separator,

@@ -9,9 +9,9 @@ use std::ops::{Add, Deref, DerefMut};
 
 /// Represents a byte length measurement (1-based).
 ///
-/// A `ByteLength` represents the number of bytes in a buffer, string segment, or other
+/// A [`ByteLength`] represents the number of bytes in a buffer, string segment, or other
 /// byte-oriented structure. Unlike [`ByteIndex`] which is 0-based (representing
-/// positions), `ByteLength` is 1-based (representing sizes/counts).
+/// positions), [`ByteLength`] is 1-based (representing sizes/counts).
 ///
 /// > This newtype struct does not use [`ChUnit`] like other unit types because
 /// > offsets are inherently [`usize`].
@@ -22,7 +22,7 @@ use std::ops::{Add, Deref, DerefMut};
 ///
 /// # Type System Integration
 ///
-/// `ByteLength` implements [`LengthOps`] with [`ByteIndex`] as its associated index
+/// [`ByteLength`] implements [`LengthOps`] with [`ByteIndex`] as its associated index
 /// type, creating a bidirectional relationship that allows for type-safe bounds checking
 /// operations specific to byte measurements.
 ///
@@ -68,14 +68,14 @@ pub fn byte_len(arg_byte_length: impl Into<ByteLength>) -> ByteLength {
 }
 
 impl ByteLength {
-    /// Get the length value as a usize.
+    /// Gets the length value as a [`usize`].
     #[must_use]
     pub fn as_usize(&self) -> usize { self.0 }
 
-    /// Convert this length to the corresponding index type (0-based).
+    /// Converts this length to the corresponding index type (0-based).
     ///
-    /// Since lengths are 1-based and indices are 0-based, this subtracts 1
-    /// to get the last valid index position.
+    /// Since lengths are 1-based and indices are 0-based, this subtracts 1 to get the
+    /// last valid index position.
     ///
     /// ```text
     /// Length=6 (1-based) to index (0-based) conversion:
@@ -110,7 +110,7 @@ impl From<ChUnit> for ByteLength {
 }
 
 impl From<ByteIndex> for ByteLength {
-    /// Convert a byte index to a byte length.
+    /// Converts a byte index to a byte length.
     ///
     /// This adds 1 to convert from 0-based index to 1-based length.
     fn from(it: ByteIndex) -> Self { Self(it.as_usize() + 1) }
@@ -126,11 +126,11 @@ impl From<i32> for ByteLength {
 }
 
 impl From<Length> for ByteLength {
-    /// Convert a character-based length to a byte-based length.
+    /// Converts a character-based length to a byte-based length.
     ///
-    /// Both types are 1-based measurements, so this is a direct value conversion.
-    /// This conversion assumes that the Length value represents the same semantic
-    /// measurement but in different units (characters vs bytes).
+    /// Both types are 1-based measurements, so this is a direct value conversion. This
+    /// conversion assumes that the Length value represents the same semantic measurement
+    /// but in different units (characters vs bytes).
     fn from(it: Length) -> Self { Self(it.as_usize()) }
 }
 
@@ -140,10 +140,10 @@ impl Add for ByteLength {
 }
 
 impl NumericConversions for ByteLength {
-    /// Convert the byte length to a usize value for numeric comparison.
+    /// Converts the byte length to a [`usize`] value for numeric comparison.
     fn as_usize(&self) -> usize { self.0 }
 
-    /// Convert the byte length to a u16 value for crossterm compatibility.
+    /// Converts the byte length to a [`u16`] value for crossterm compatibility.
     #[allow(clippy::cast_possible_truncation)]
     fn as_u16(&self) -> u16 { self.0 as u16 }
 }

@@ -79,11 +79,11 @@
 //!
 //! This is handled by [`extract_nth_single_non_zero()`] which returns [`NonZeroU16`].
 //!
+//! [`NonZeroU16`]: std::num::NonZeroU16
+//! [`extract_nth_single_non_zero()`]: crate::ParamsExt::extract_nth_single_non_zero
 //! [`impl_char_ops`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl::vt_100_impl_char_ops
 //! [`test_char_ops`]: crate::core::ansi::vt_100_pty_output_parser::vt_100_pty_output_conformance_tests::tests::vt_100_test_char_ops
 //! [module-level documentation]: self
-//! [`extract_nth_single_non_zero()`]: crate::ParamsExt::extract_nth_single_non_zero
-//! [`NonZeroU16`]: std::num::NonZeroU16
 
 use super::super::ansi_parser_public_api::AnsiToOfsBufPerformer;
 use crate::ParamsExt;
@@ -153,7 +153,7 @@ pub fn erase_chars(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) 
     );
 }
 
-/// Handle printable character printing - display character at cursor position.
+/// Handles printable character printing - display character at cursor position.
 ///
 /// **VT100 Behavior**: Character set translation applied if DEC graphics mode is active.
 ///

@@ -9,11 +9,11 @@ use super::{VT100InputEventIR, VT100KeyCodeIR, VT100KeyModifiersIR, keyboard, mo
 use crate::{ByteOffset, byte_offset,
             core::ansi::constants::{ANSI_CSI_BRACKET, ANSI_ESC, ANSI_SS3_O}};
 
-/// Parse a complete input event from a byte buffer.
+/// Parses a complete input event from a byte buffer.
 ///
-/// This is the main entry point for VT-100 terminal input parsing. It analyzes the
-/// buffer and routes to specialized parsers ([`keyboard`], [`mouse`],
-/// [`terminal_events`], [`utf8`]) based on content analysis.
+/// This is the main entry point for VT-100 terminal input parsing. It analyzes the buffer
+/// and routes to specialized parsers ([`keyboard`], [`mouse`], [`terminal_events`],
+/// [`utf8`]) based on content analysis.
 ///
 /// # Parameters
 ///
@@ -94,16 +94,16 @@ use crate::{ByteOffset, byte_offset,
 ///
 /// ## Why This Avoids Fixed Timeouts
 ///
-/// Unlike a fixed 150ms timeout approach, the `input_available` flag provides
-/// **adaptive waiting**:
+/// Unlike a fixed 150ms timeout approach, the `input_available` flag provides **adaptive
+/// waiting**:
 ///
 /// - **Local terminals**: Escape sequences arrive atomically, so `input_available` is
 ///   usually `false` after reading—we emit ESC immediately when appropriate.
 /// - **SSH/high-latency**: If bytes arrive separately, `input_available` tells us when
 ///   more data is pending—we wait correctly without a fixed timeout.
 ///
-/// **Benefits**: Vim-style modal editors, `ESC`-heavy workflows, dialog dismissal.
-/// **SSH compatibility**: Works correctly because we wait for more bytes when available.
+/// **Benefits**: Vim-style modal editors, `ESC`-heavy workflows, dialog dismissal. **SSH
+/// compatibility**: Works correctly because we wait for more bytes when available.
 ///
 /// # Smart Lookahead Logic
 ///
@@ -162,13 +162,10 @@ use crate::{ByteOffset, byte_offset,
 ///
 /// # Returns
 ///
-/// `Some((event, bytes_consumed))` if a complete event was successfully parsed.
-/// Returns the protocol-level [`VT100InputEventIR`] with the number of bytes consumed
-/// as a [`ByteOffset`].
-///
-/// `None` if the buffer contains an incomplete sequence (more bytes needed), or if
-/// `input_available` is `true` and buffer is `[ESC]` (waiting for potential escape
-/// sequence).
+/// - The parsed [`VT100InputEventIR`] and [`ByteOffset`] byte count on success.
+/// - Nothing if the buffer contains an incomplete sequence (more bytes needed), or if
+///   `input_available` is `true` and the buffer is `[ESC]` (waiting for a potential
+///   escape sequence).
 ///
 /// # Examples
 ///

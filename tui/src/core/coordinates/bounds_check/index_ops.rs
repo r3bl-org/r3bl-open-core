@@ -1,5 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+// cspell:words indexops lengthops
+
 //! Zero-based position types and operations - see [`IndexOps`] trait.
 
 use super::{length_ops::LengthOps, numeric_value::NumericValue};
@@ -187,29 +189,29 @@ use std::ops::RangeInclusive;
 /// - [`ArrayBoundsCheck`] - Array access safety using index-to-length comparisons
 /// - [`CursorBoundsCheck`] - Cursor positioning using index-to-length comparisons
 /// - [`ViewportBoundsCheck`] - Viewport visibility using hybrid operations
+/// - [module-level comparison table] - `IndexOps` vs `LengthOps` at a glance
 ///
-/// [`LengthType`]: Self::LengthType
-/// [`Index`]: crate::Index
-/// [`RowIndex`]: crate::RowIndex
-/// [`ColIndex`]: crate::ColIndex
-/// [`ByteIndex`]: crate::ByteIndex
-/// [`SegIndex`]: crate::SegIndex
-/// [`Length`]: crate::Length
-/// [`RowHeight`]: crate::RowHeight
-/// [`ColWidth`]: crate::ColWidth
-/// [`ByteLength`]: crate::ByteLength
-/// [`SegLength`]: crate::SegLength
-/// [`NumericValue`]: crate::NumericValue
-/// [`LengthOps`]: crate::LengthOps
 /// [`ArrayBoundsCheck`]: crate::ArrayBoundsCheck
+/// [`ByteIndex`]: crate::ByteIndex
+/// [`ByteLength`]: crate::ByteLength
+/// [`ColIndex`]: crate::ColIndex
+/// [`ColWidth`]: crate::ColWidth
 /// [`CursorBoundsCheck`]: crate::CursorBoundsCheck
+/// [`Index`]: crate::Index
+/// [`LengthOps`]: crate::LengthOps
+/// [`LengthType`]: Self::LengthType
+/// [`Length`]: crate::Length
+/// [`NumericValue`]: crate::NumericValue
+/// [`RowHeight`]: crate::RowHeight
+/// [`RowIndex`]: crate::RowIndex
+/// [`SegIndex`]: crate::SegIndex
+/// [`SegLength`]: crate::SegLength
 /// [`ViewportBoundsCheck`]: crate::ViewportBoundsCheck
-/// [`convert_to_length()`]: IndexOps::convert_to_length
 /// [`clamp_to_max_length()`]: IndexOps::clamp_to_max_length
 /// [`clamp_to_min_index()`]: IndexOps::clamp_to_min_index
 /// [`clamp_to_range()`]: IndexOps::clamp_to_range
-/// [module-level comparison
-/// table](super#indexops-vs-lengthops-understanding-0-based-positions-vs-1-based-sizes)
+/// [`convert_to_length()`]: IndexOps::convert_to_length
+/// [module-level comparison table]: super#indexops-vs-lengthops-understanding-0-based-positions-vs-1-based-sizes
 pub trait IndexOps: NumericValue {
     /// The corresponding "length" type for this "index" type.
     ///
@@ -219,12 +221,12 @@ pub trait IndexOps: NumericValue {
     /// [`RowHeight`].
     ///
     /// [`ColIndex`]: crate::ColIndex
-    /// [`RowHeight`]: crate::RowHeight
     /// [`LengthOps<IndexType = Self>`]: crate::LengthOps
+    /// [`RowHeight`]: crate::RowHeight
     /// [`Self::IndexType`]: crate::LengthOps::IndexType
     type LengthType: LengthOps<IndexType = Self>;
 
-    /// Convert this 0-based index to 1-based length (adds 1).
+    /// Converts this 0-based index to 1-based length (adds 1).
     ///
     /// See the [trait documentation][Self] for index/length relationship.
     fn convert_to_length(&self) -> Self::LengthType {

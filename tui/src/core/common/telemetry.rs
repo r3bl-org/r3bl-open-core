@@ -272,7 +272,7 @@ mod mutator {
     }
 
     impl<const N: usize> Telemetry<N> {
-        /// Start recording the response time.
+        /// Starts recording the response time.
         /// 1. This will record the time when the operation started.
         /// 2. This returns a handle that will automatically stop recording the response
         ///    time when it's dropped.
@@ -283,7 +283,7 @@ mod mutator {
             RecordStartDropHandle::new(self, hint)
         }
 
-        /// Insert a new response time into the ring buffer. And sort the internal
+        /// Inserts a new response time into the ring buffer. And sort the internal
         /// storage. If the response time is below the minimum duration filter, it
         /// will be filtered out.
         pub fn try_record(&mut self, atom: TelemetryAtom) -> TryRecordResult {
@@ -340,9 +340,9 @@ mod calculator {
             maybe_max.map(TimeDuration::from)
         }
 
-        /// Find the most common cluster of durations within a specified range in an array
-        /// of [`Duration`]. The cluster sensitivity range is configured during
-        /// construction in
+        /// Finds the most common cluster of durations within a specified range in an
+        /// array of [`Duration`]. The cluster sensitivity range is configured
+        /// during construction in
         /// [`super::telemetry_constructor::ResponseTimesRingBufferOptions`] and
         /// automatically calculated based on the `min_duration_filter`:
         /// - If a custom `min_duration_filter` is set, uses `min_duration_filter * 5`
@@ -581,19 +581,19 @@ mod tests_fixtures {
     pub mod create {
         use super::*;
 
-        /// Create a default telemetry instance with rate limiting and filtering.
+        /// Creates a default telemetry instance with rate limiting and filtering.
         pub fn create_default_telemetry() -> Telemetry<TEST_RING_BUFFER_SIZE> {
             Telemetry::default()
         }
 
-        /// Create a telemetry instance with just rate limiting.
+        /// Creates a telemetry instance with just rate limiting.
         pub fn create_rate_limit_telemetry(
             duration: Duration,
         ) -> (Telemetry<TEST_RING_BUFFER_SIZE>, Duration) {
             (Telemetry::new(duration), duration)
         }
 
-        /// Create a telemetry instance with just filtering. No rate limiting.
+        /// Creates a telemetry instance with just filtering. No rate limiting.
         pub fn create_filter_telemetry(
             min_duration_filter: Duration,
         ) -> (Telemetry<TEST_RING_BUFFER_SIZE>, Duration) {

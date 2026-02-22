@@ -502,21 +502,23 @@ use crate::{ASCII_DEL, ByteOffset, KeyState, byte_offset,
                                     SS3_NUMPAD_ENTER, SS3_NUMPAD_MINUS,
                                     SS3_NUMPAD_MULTIPLY, SS3_NUMPAD_PLUS}};
 
-/// Parse a control character (bytes `0x00`-`0x1F`) and convert to Ctrl+key event.
+/// Parse a control character (bytes `0x00`-`0x1F`) and convert to a Ctrl+key event.
 ///
 /// **Dispatch position**: 3rd parser in non-ESC priority. Must be tried before UTF-8 text
 /// because control bytes are valid UTF-8 but represent Ctrl+letter combinations.
 ///
-/// See module docs [`Parser Dispatch Priority Pipeline`] for dispatch order and
-/// [`Control Key Combinations`] for complete byte mappings. Note: some bytes are treated
-/// as dedicated keys (Tab, Enter, Backspace, Escape) - see
-/// [`Ambiguous Control Character Handling`] for details.
+/// See module docs [`Parser Dispatch Priority Pipeline`] for dispatch order and [`Control
+/// Key Combinations`] for complete byte mappings. Note: some bytes are treated as
+/// dedicated keys (Tab, Enter, Backspace, Escape) - see [`Ambiguous Control Character
+/// Handling`] for details.
 ///
-/// ## Returns
+/// # Returns
 ///
-/// `Some((event, 1))` if successful, `None` otherwise.
+/// - The parsed control key event and byte count (always 1) on success.
+/// - Nothing if the byte is not a control character.
 ///
-/// [`Ambiguous Control Character Handling`]: mod@self#ambiguous-control-character-handling
+/// [`Ambiguous Control Character Handling`]:
+///     mod@self#ambiguous-control-character-handling
 /// [`Control Key Combinations`]: mod@self#control-key-combinations-ctrlletter
 /// [`Parser Dispatch Priority Pipeline`]: mod@self#parser-dispatch-priority-pipeline
 #[must_use]
@@ -625,10 +627,10 @@ pub fn parse_control_character(buffer: &[u8]) -> Option<(VT100InputEventIR, Byte
 /// For design rationale on why Alt uses ESC prefix vs CSI sequences, see module docs
 /// [`Why Alt Uses ESC Prefix`].
 ///
-/// ## Returns
+/// # Returns
 ///
-/// `Some((event, 2))` if buffer starts with ESC + (printable ASCII or DEL),
-/// `None` otherwise.
+/// - The parsed Alt+key event and byte count (always 2) on success.
+/// - Nothing if the buffer doesn't start with ESC + printable ASCII or DEL.
 ///
 /// [`Parser Dispatch Priority Pipeline`]: mod@self#parser-dispatch-priority-pipeline
 /// [`Why Alt Uses ESC Prefix`]: mod@self#why-alt-uses-esc-prefix-not-csi
@@ -683,7 +685,7 @@ pub fn parse_alt_letter(buffer: &[u8]) -> Option<(VT100InputEventIR, ByteOffset)
     ))
 }
 
-/// Parse a CSI keyboard sequence and return the parsed event with bytes consumed.
+/// Parses a CSI keyboard sequence and returns the parsed event with bytes consumed.
 ///
 /// **Dispatch position**: 1st parser for CSI sequences (ESC [). See module docs
 /// [`Parser Dispatch Priority Pipeline`] for dispatch order. Keyboard sequences are tried
@@ -692,10 +694,10 @@ pub fn parse_alt_letter(buffer: &[u8]) -> Option<(VT100InputEventIR, ByteOffset)
 /// Handles arrow keys, function keys, and modified keys like Alt+Right, Ctrl+Up, etc.
 /// See [`CSI Sequences`] for format details.
 ///
-/// ## Returns
+/// # Returns
 ///
-/// `Some((event, bytes_consumed))` if a complete sequence was parsed,
-/// `None` if the sequence is incomplete or invalid.
+/// - The parsed keyboard event and byte count on success.
+/// - Nothing if the sequence is incomplete or invalid.
 ///
 /// [`CSI Sequences`]: mod@self#csi-sequences-esc
 /// [`Parser Dispatch Priority Pipeline`]: mod@self#parser-dispatch-priority-pipeline
@@ -721,7 +723,7 @@ pub fn parse_keyboard_sequence(buffer: &[u8]) -> Option<(VT100InputEventIR, Byte
     helpers::parse_csi_parameters(buffer)
 }
 
-/// Parse an SS3 keyboard sequence and return the parsed event with bytes consumed.
+/// Parses an SS3 keyboard sequence and returns the parsed event with bytes consumed.
 ///
 /// **Dispatch position**: Only parser for SS3 sequences (ESC O). See module docs
 /// [`Parser Dispatch Priority Pipeline`] for dispatch order.
@@ -732,10 +734,10 @@ pub fn parse_keyboard_sequence(buffer: &[u8]) -> Option<(VT100InputEventIR, Byte
 ///
 /// **Note**: SS3 sequences do NOT support modifiers. Modified arrow keys use CSI format.
 ///
-/// ## Returns
+/// # Returns
 ///
-/// `Some((event, 3))` if a valid SS3 sequence was parsed,
-/// `None` if the sequence is incomplete or invalid.
+/// - The parsed SS3 key event and byte count (always 3) on success.
+/// - Nothing if the sequence is incomplete or invalid.
 ///
 /// [`Parser Dispatch Priority Pipeline`]: mod@self#parser-dispatch-priority-pipeline
 /// [`SS3 Sequences`]: mod@self#ss3-sequences-esc-o
@@ -812,7 +814,7 @@ mod helpers {
         }
     }
 
-    /// Parse single-character CSI sequences like `CSI A` (up arrow)
+    /// Parses single-character CSI sequences like `CSI A` (up arrow)
     pub(super) fn parse_csi_single_char(final_byte: u8) -> Option<VT100InputEventIR> {
         let code = match final_byte {
             ARROW_UP_FINAL => VT100KeyCodeIR::Up,
@@ -848,8 +850,8 @@ mod helpers {
     ///
     /// # Returns
     ///
-    /// [`Some`]`(`[`VT100InputEventIR`]`, `[`ByteOffset`]`)` on success, [`None`] if
-    /// the sequence is invalid or incomplete.
+    /// - The parsed keyboard event and byte count on success.
+    /// - Nothing if the sequence is invalid or incomplete.
     pub(super) fn parse_csi_parameters(
         buffer: &[u8],
     ) -> Option<(VT100InputEventIR, ByteOffset)> {
@@ -957,10 +959,10 @@ mod helpers {
         Some((event, byte_offset(total_consumed)))
     }
 
-    /// Parse function keys (F1-F12) and special keys (Insert, Delete, Home, End,
+    /// Parses function keys (F1-F12) and special keys (Insert, Delete, Home, End,
     /// `PageUp`, `PageDown`).
     ///
-    /// Maps ANSI codes to `VT100KeyCodeIR`. Called by CSI parameter parser.
+    /// Maps ANSI codes to [`VT100KeyCodeIR`]. Called by CSI parameter parser.
     fn parse_function_or_special_key(
         code: u16,
         modifiers: VT100KeyModifiersIR,
@@ -997,7 +999,7 @@ mod helpers {
         })
     }
 
-    /// Extract modifier parameter from CSI with type safety.
+    /// Extracts modifier parameter from CSI with type safety.
     ///
     /// Safe to cast u16→u8 because VT-100 modifiers are always 1-8.
     #[allow(clippy::cast_possible_truncation)]
@@ -1006,7 +1008,7 @@ mod helpers {
         param as u8
     }
 
-    /// Decode CSI modifier parameter (1-8) to `VT100KeyModifiersIR`.
+    /// Decode CSI modifier parameter (1-8) to [`VT100KeyModifiersIR`].
     ///
     /// CSI encoding: param = 1 + bitfield, where bitfield = Shift(1)|Alt(2)|Ctrl(4).
     /// See module docs [`Modifier Encoding`] for full table.
@@ -1057,7 +1059,7 @@ mod tests {
     // These helpers use the input event generator to build test sequences,
     // ensuring consistency between parsing and generation (round-trip testing).
 
-    /// Build an arrow key sequence using the generator.
+    /// Builds an arrow key sequence using the generator.
     fn arrow_key_sequence(
         code: VT100KeyCodeIR,
         modifiers: VT100KeyModifiersIR,
@@ -1067,7 +1069,7 @@ mod tests {
         generate_keyboard_sequence(&event).expect("Failed to generate arrow key sequence")
     }
 
-    /// Build a function key sequence using the generator.
+    /// Builds a function key sequence using the generator.
     fn function_key_sequence(n: u8, modifiers: VT100KeyModifiersIR) -> Vec<u8> {
         use crate::core::ansi::generator::generate_keyboard_sequence;
         let event = VT100InputEventIR::Keyboard {
@@ -1078,7 +1080,7 @@ mod tests {
             .expect("Failed to generate function key sequence")
     }
 
-    /// Build a special key sequence (Home, End, Insert, Delete, `PageUp`, `PageDown`)
+    /// Builds a special key sequence (Home, End, Insert, Delete, `PageUp`, `PageDown`)
     /// using the generator.
     fn special_key_sequence(
         code: VT100KeyCodeIR,

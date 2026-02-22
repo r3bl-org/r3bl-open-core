@@ -2,19 +2,19 @@
 
 //! Zero-based byte position in strings and buffers - see [`ByteIndex`] type.
 
-use crate::{ByteLength, ByteOffset, ChUnit, Index,
+use crate::{ArrayBoundsCheck, ByteLength, ByteOffset, ChUnit, Index,
             bounds_check::{IndexOps, NumericConversions, NumericValue}};
 use std::ops::{Add, AddAssign, Deref, DerefMut, Range};
 
 /// Represents an absolute byte position within strings and buffers (0-based).
 ///
-/// A `ByteIndex` represents a specific byte position within a buffer, string, or other
+/// A [`ByteIndex`] represents a specific byte position within a buffer, string, or other
 /// byte-oriented structure. As a 0-based index, `ByteIndex(0)` refers to the first byte,
 /// `ByteIndex(1)` to the second byte, and so on. This is distinct from [`ByteLength`]
 /// which is 1-based and represents sizes/counts.
 ///
-/// > This newtype struct does not use [`ChUnit`] like other unit types because
-/// > byte positions are inherently [`usize`].
+/// > This newtype struct does not use [`ChUnit`] like other unit types because byte
+/// > positions are inherently [`usize`].
 ///
 /// This type is primarily used for byte-level operations in text processing, particularly
 /// when working with UTF-8 strings where character boundaries don't align with byte
@@ -23,16 +23,16 @@ use std::ops::{Add, AddAssign, Deref, DerefMut, Range};
 ///
 /// # Type System Integration
 ///
-/// `ByteIndex` implements [`IndexOps`] with [`ByteLength`] as its associated length
+/// [`ByteIndex`] implements [`IndexOps`] with [`ByteLength`] as its associated length
 /// type, creating a bidirectional relationship that enables type-safe bounds checking
 /// operations specific to byte-level indexing.
 ///
 /// # Type System Disambiguation
 ///
-/// `ByteIndex` is conceptually distinct from related types in the type system:
+/// [`ByteIndex`] is conceptually distinct from related types in the type system:
 /// - **vs [`ByteLength`]**: Index is 0-based position, Length is 1-based size
 /// - **vs [`ByteOffset`]**: Index is absolute position, Offset is relative displacement
-/// - **vs [`Index`]**: `ByteIndex` is for byte positions, Index is for character
+/// - **vs [`Index`]**: [`ByteIndex`] is for byte positions, Index is for character
 ///   positions
 ///
 /// Think of it as:
@@ -40,7 +40,7 @@ use std::ops::{Add, AddAssign, Deref, DerefMut, Range};
 /// - [`ByteLength`] = byte count/size (like "10 bytes long")
 /// - [`ByteOffset`] = byte displacement (like "5 bytes forward from here")
 ///
-/// > 💡 **See also**: For complete workflows showing `ByteIndex` used with UTF-8 string
+/// > 💡 **See also**: For complete workflows showing [`ByteIndex`] used with UTF-8 string
 /// > operations and bounds checking, see the [coordinates module
 /// > documentation](crate::coordinates#common-workflows).
 ///
@@ -111,11 +111,11 @@ impl From<i32> for ByteIndex {
 }
 
 impl NumericConversions for ByteIndex {
-    /// Convert the byte index to a usize value for numeric comparison, usually for array
+    /// Converts the byte index to a usize value for numeric comparison, usually for array
     /// indexing operations.
     fn as_usize(&self) -> usize { self.0 }
 
-    /// Convert the byte index to a u16 value for crossterm compatibility and other
+    /// Converts the byte index to a u16 value for crossterm compatibility and other
     /// terminal operations.
     #[allow(clippy::cast_possible_truncation)]
     fn as_u16(&self) -> u16 { self.0 as u16 }
@@ -142,8 +142,8 @@ impl AddAssign for ByteIndex {
     fn add_assign(&mut self, other: Self) { self.0 += other.0; }
 }
 
-/// Extension trait to enable conversion from `Range<ByteIndex>` to `Range<usize>` for
-/// slice indexing.
+/// Extension trait to enable conversion from [`Range<ByteIndex>`] to [`Range<usize>`]
+/// for slice indexing.
 ///
 /// This works around Rust's orphan rule which prevents implementing
 /// `From<Range<ByteIndex>> for Range<usize>`. The method name mimics `.into()` behavior
@@ -159,14 +159,20 @@ impl AddAssign for ByteIndex {
 /// let usize_range: Range<usize> = byte_range.to_usize_range();
 /// assert_eq!(usize_range, 5..10);
 /// ```
+///
+/// [`Range<ByteIndex>`]: Range
+/// [`Range<usize>`]: Range
 pub trait ByteIndexRangeExt {
-    /// Convert a `Range<ByteIndex>` to `Range<usize>` for slice indexing.
+    /// Converts a [`Range<ByteIndex>`] to [`Range<usize>`] for slice indexing.
     ///
     /// This method provides the functionality that would ideally be available via
     /// `.into()`, but Rust's orphan rule prevents implementing
-    /// `From<Range<ByteIndex>> for Range<usize>` because the target type's head type
-    /// `Range` is foreign (from `std`), even though `ByteIndex` in the source type is
-    /// from our crate.
+    /// `From<Range<ByteIndex>> for Range<usize>`
+    /// because the target type's head type [`Range`] is foreign (from [`std`]), even
+    /// though [`ByteIndex`] in the source type is from our crate.
+    ///
+    /// [`Range<ByteIndex>`]: Range
+    /// [`Range<usize>`]: Range
     fn to_usize_range(self) -> Range<usize>;
 }
 
@@ -174,8 +180,8 @@ impl ByteIndexRangeExt for Range<ByteIndex> {
     fn to_usize_range(self) -> Range<usize> { self.start.as_usize()..self.end.as_usize() }
 }
 
-// ArrayBoundsCheck implementation for type-safe bounds checking
-impl crate::ArrayBoundsCheck<crate::ByteLength> for ByteIndex {}
+/// Pull in [`ArrayBoundsCheck`] (default) implementation for type-safe bounds checking.
+impl ArrayBoundsCheck<ByteLength> for ByteIndex {}
 
 #[cfg(test)]
 mod tests {

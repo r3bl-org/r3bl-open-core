@@ -84,7 +84,7 @@ pub fn trim_optional_leading_newline_and_nulls(input: &str) -> &str {
         Err(_) => input, // This should never happen with opt(), but be safe
     }
 }
-/// Parse a line that ends with '\n' followed by optional '\0' padding.
+/// Parses a line that ends with '\n' followed by optional '\0' padding.
 ///
 /// Assumes input comes from `ZeroCopyGapBuffer` with its invariants:
 /// - Non-null chars are content

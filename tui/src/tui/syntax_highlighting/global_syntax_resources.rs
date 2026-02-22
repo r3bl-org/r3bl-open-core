@@ -16,15 +16,15 @@
 //! The performance improvements from caching are dramatic:
 //!
 //! ### Individual Resource Loading
-//! | Resource    | Uncached       | Cached   | Improvement              |
-//! |-------------|----------------|----------|--------------------------|
-//! | `SyntaxSet` | 654,835.90 ns  | 0.19 ns  | **3,446,504x faster**    |
-//! | Theme       | 106,754.70 ns  | 0.19 ns  | **561,866x faster**      |
+//! | Resource      | Uncached         | Cached     | Improvement                |
+//! | ------------- | ---------------- | ---------- | -------------------------- |
+//! | `SyntaxSet`   | 654,835.90 ns    | 0.19 ns    | **3,446,504x faster**      |
+//! | Theme         | 106,754.70 ns    | 0.19 ns    | **561,866x faster**        |
 //!
 //! ### Multiple Editor Creation (10 editors)
-//! | Scenario   | Uncached         | Cached  | Improvement              |
-//! |------------|------------------|---------|--------------------------|
-//! | Total time | 3,920,191.40 ns  | 1.99 ns | **1,969,945x faster**    |
+//! | Scenario     | Uncached           | Cached    | Improvement                |
+//! | ------------ | ------------------ | --------- | -------------------------- |
+//! | Total time   | 3,920,191.40 ns    | 1.99 ns   | **1,969,945x faster**      |
 //!
 //! In practical terms:
 //! - Creating a `SyntaxSet` takes ~0.65ms (expensive deserialization)
@@ -47,14 +47,14 @@ static SYNTAX_SET: LazyLock<SyntaxSet> = LazyLock::new(SyntaxSet::load_defaults_
 static THEME: LazyLock<Theme> =
     LazyLock::new(|| try_load_r3bl_theme().unwrap_or_else(|_| load_default_theme()));
 
-/// Get the cached syntax set, loading it on first access.
+/// Gets the cached syntax set, loading it on first access.
 ///
 /// This function is thread-safe and the syntax set is loaded once and cached
 /// for the lifetime of the program.
 #[must_use]
 pub fn get_cached_syntax_set() -> &'static SyntaxSet { &SYNTAX_SET }
 
-/// Get the cached theme, loading it on first access.
+/// Gets the cached theme, loading it on first access.
 ///
 /// This function is thread-safe and the theme is loaded once and cached
 /// for the lifetime of the program.

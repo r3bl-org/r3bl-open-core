@@ -75,7 +75,7 @@ where
     S: Debug + Default + Clone + Sync + Send,
     AS: Debug + Default + Clone + Sync + Send,
 {
-    /// Create a new instance of [`GlobalData`] with the given parameters.
+    /// Creates a new instance of [`GlobalData`] with the given parameters.
     ///
     /// # Errors
     ///

@@ -46,7 +46,7 @@ pub trait PerformPositioningAndSizing {
         allocated_size: Size,
     ) -> CommonResult<Pos>;
 
-    /// Get the [`FlexBox`] at the "top" of the `stack`.
+    /// Gets the [`FlexBox`] at the "top" of the `stack`.
     ///
     /// # Errors
     ///

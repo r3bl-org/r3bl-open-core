@@ -22,9 +22,9 @@
 //!
 //! **Related Files:**
 //!
-//! [`insert_chars_at_cursor`]: crate::OffscreenBuffer::insert_chars_at_cursor
 //! [`delete_chars_at_cursor`]: crate::OffscreenBuffer::delete_chars_at_cursor
 //! [`erase_chars_at_cursor`]: crate::OffscreenBuffer::erase_chars_at_cursor
+//! [`insert_chars_at_cursor`]: crate::OffscreenBuffer::insert_chars_at_cursor
 //! [`print_char`]: crate::OffscreenBuffer::print_char
 
 #[allow(clippy::wildcard_imports)]
@@ -276,7 +276,7 @@ impl OffscreenBuffer {
         self.fill_char_range(at.row_index, erase_range, PixelChar::Spacer)
     }
 
-    /// Handle printable characters with character set translation, bounds checking, and
+    /// Handles printable characters with character set translation, bounds checking, and
     /// line wrapping.
     ///
     /// This method consolidates all character printing logic including:

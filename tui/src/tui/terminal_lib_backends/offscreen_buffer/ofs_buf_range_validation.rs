@@ -97,7 +97,7 @@ use crate::{ColIndex, RangeValidityStatus, RowIndex,
 use std::ops::Range;
 
 impl OffscreenBuffer {
-    /// Check if a row range is valid without creating slice references.
+    /// Checks if a row range is valid without creating slice references.
     ///
     /// This method provides lightweight validation for operations that only need to
     /// verify range validity without accessing the actual buffer data. It's more
@@ -134,7 +134,7 @@ impl OffscreenBuffer {
             == RangeValidityStatus::Valid
     }
 
-    /// Check if a column range within a specific row is valid without creating
+    /// Checks if a column range within a specific row is valid without creating
     /// references.
     ///
     /// This method provides lightweight validation for operations that only need to

@@ -59,7 +59,9 @@ mod animator_task {
     use super::*;
 
     /// Note the [Sender] is used to send a signal to the animator to kill it when
-    /// [Animator::stop](Animator::stop) is used.
+    /// [Animator::stop] is used.
+    ///
+    /// [Animator::stop]: Animator::stop
     pub fn start_animator_task<AS>(
         main_thread_channel_sender: Sender<TerminalWindowMainThreadSignal<AS>>,
     ) -> Sender<()>
@@ -174,7 +176,9 @@ mod app_main_impl_app_trait {
 
         /// Examples are provided of directly manipulating state and returning a request
         /// to re-render or sending a signal via the channel to
-        /// [app_apply_action](app_apply_action).
+        /// [app_apply_action].
+        ///
+        /// [app_apply_action]: app_apply_action
         fn app_handle_input_event(
             &mut self,
             input_event: InputEvent,
@@ -384,7 +388,7 @@ mod populate_component_registry {
         });
     }
 
-    /// Insert editor component into registry if it's not already there.
+    /// Inserts editor component into registry if it's not already there.
     fn create_and_insert_editor_component_with_id(
         id: FlexBoxId,
         component_registry_map: &mut ComponentRegistryMap<State, AppSignal>,

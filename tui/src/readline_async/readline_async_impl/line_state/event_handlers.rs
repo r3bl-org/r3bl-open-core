@@ -9,7 +9,7 @@ use crate::{AnsiSequenceGenerator, CsiSequence, EraseDisplayMode, FunctionKey,
 use std::{io::Write, num::NonZeroU8};
 use unicode_segmentation::UnicodeSegmentation;
 
-/// Get the byte offset at a given segment index.
+/// Gets the byte offset at a given segment index.
 ///
 /// Returns the byte position where the segment at `seg_idx` starts.
 /// If `seg_idx` is beyond the end, returns the total byte length.
@@ -24,7 +24,7 @@ fn get_byte_offset_at_seg_index(line: &GCStringOwned, seg_idx: usize) -> usize {
     }
 }
 
-/// Handle control key events (Ctrl+key combinations)
+/// Handles control key events (Ctrl+key combinations)
 #[allow(clippy::trivially_copy_pass_by_ref)]
 pub fn handle_control_key(
     line_state: &mut LineState,
@@ -65,7 +65,7 @@ pub fn handle_alt_key(
     }
 }
 
-/// Handle regular key events (no modifiers or non-Control modifiers)
+/// Handles regular key events (no modifiers or non-Control modifiers)
 #[allow(clippy::trivially_copy_pass_by_ref)]
 pub fn handle_regular_key(
     line_state: &mut LineState,
@@ -118,7 +118,7 @@ pub fn handle_regular_key(
     }
 }
 
-/// Handle terminal resize events.
+/// Handles terminal resize events.
 pub fn handle_resize(
     line_state: &mut LineState,
     size: Size,

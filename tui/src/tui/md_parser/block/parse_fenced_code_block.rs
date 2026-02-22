@@ -11,7 +11,7 @@ use nom::{IResult, Parser,
           multi::many0,
           sequence::{preceded, terminated}};
 
-/// Parse fenced code blocks with language tags and content.
+/// Parses fenced code blocks with language tags and content.
 ///
 /// # Null Padding Invariant
 ///
@@ -21,14 +21,14 @@ use nom::{IResult, Parser,
 ///
 /// # Sample inputs:
 ///
-/// | Scenario                  | Sample input                                               |
-/// |---------------------------|------------------------------------------------------------|
-/// | One line                  | `"```bash\npip install foobar\n```\n"`                     |
-/// | No line                   | `"```\n\n```\n"`                                           |
-/// | Multi line                | `"```bash\npip install foobar\npip install foobar\n```\n"` |
-/// | No language               | `"```\npip install foobar\n```\n"`                         |
-/// | No language, no line      | `"```\n```\n"`                                             |
-/// | No language, multi line   | `"```\npip install foobar\npip install foobar\n```\n"`     |
+/// | Scenario                    | Sample input                                                 |
+/// | --------------------------- | ------------------------------------------------------------ |
+/// | One line                    | `"```bash\npip install foobar\n```\n"`                       |
+/// | No line                     | `"```\n\n```\n"`                                             |
+/// | Multi line                  | `"```bash\npip install foobar\npip install foobar\n```\n"`   |
+/// | No language                 | `"```\npip install foobar\n```\n"`                           |
+/// | No language, no line        | `"```\n```\n"`                                               |
+/// | No language, multi line     | `"```\npip install foobar\npip install foobar\n```\n"`       |
 ///
 /// # Errors
 ///
@@ -80,7 +80,7 @@ fn parse_code_block_lang_including_eol(input: &str) -> IResult<&str, Option<&str
     )).parse(input)
 }
 
-/// Parse the body of a code block until the end of the code block is reached.
+/// Parses the body of a code block until the end of the code block is reached.
 /// The end of the code block is indicated by the [`CODE_BLOCK_END`] constant.
 /// Consumes the [`CODE_BLOCK_END`] if it exists.
 #[rustfmt::skip]
@@ -96,13 +96,13 @@ fn parse_code_block_body_including_code_block_end(input: &str) -> IResult<&str, 
 /// followed by a newline. An empty line is just a newline character.
 ///
 /// # Examples:
-/// | input          | output               |
-/// |:---------------|:---------------------|
-/// | "foobar\n"     | `["foobar"]`         |
-/// | "\n"           | `[""] `              |
-/// | ""             | `[] `                |
-/// | "foo\nbar\n"   | `["foo", "bar"] `    |
-/// | "\nfoo\nbar\n" | `["", "foo", "bar"]` |
+/// | input            | output                 |
+/// | :--------------- | :--------------------- |
+/// | "foobar\n"       | `["foobar"]`           |
+/// | "\n"             | `[""] `                |
+/// | ""               | `[] `                  |
+/// | "foo\nbar\n"     | `["foo", "bar"] `      |
+/// | "\nfoo\nbar\n"   | `["", "foo", "bar"]`   |
 #[must_use]
 pub fn split_by_new_line(input: &str) -> Vec<&str> {
     // Define a parser that can handle three different line patterns.
@@ -155,7 +155,7 @@ pub fn split_by_new_line(input: &str) -> Vec<&str> {
     }
 }
 
-/// Convert language and lines into `CodeBlockLines` structure.
+/// Converts language and lines into `CodeBlockLines` structure.
 /// This function was previously in `md_parser_ng` but is now implemented locally.
 fn convert_into_code_block_lines<'a>(
     language: Option<&'a str>,

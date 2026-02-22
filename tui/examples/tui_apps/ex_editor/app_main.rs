@@ -534,7 +534,7 @@ mod populate_component_registry {
         });
     }
 
-    /// Insert editor component into registry if it's not already there.
+    /// Inserts editor component into registry if it's not already there.
     fn insert_editor_component(
         component_registry_map: &mut ComponentRegistryMap<State, AppSignal>,
     ) {
@@ -566,7 +566,7 @@ mod populate_component_registry {
         });
     }
 
-    /// Insert simple dialog component into registry if it's not already there.
+    /// Inserts simple dialog component into registry if it's not already there.
     fn insert_dialog_component_simple(
         component_registry_map: &mut ComponentRegistryMap<State, AppSignal>,
     ) {
@@ -653,7 +653,7 @@ mod populate_component_registry {
         });
     }
 
-    /// Insert autocomplete dialog component into registry if it's not already there.
+    /// Inserts autocomplete dialog component into registry if it's not already there.
     fn insert_dialog_component_autocomplete(
         component_registry_map: &mut ComponentRegistryMap<State, AppSignal>,
     ) {

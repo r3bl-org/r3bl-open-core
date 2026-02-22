@@ -5,7 +5,7 @@ use crate::{md_parser::md_parser_constants::{COLON, SPACE},
             take_text_in_single_line, tiny_inline_string};
 use nom::{IResult, Parser, bytes::complete::tag, sequence::preceded};
 
-/// Parse key-value metadata pairs.
+/// Parses key-value metadata pairs.
 ///
 /// # Null Padding Invariant
 ///

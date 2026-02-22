@@ -5,7 +5,7 @@
 #![warn(clippy::all)]
 #![warn(rust_2018_idioms)]
 
-/// Enable debug logging.
+/// Enables debug logging.
 pub const ENABLE_TRACE_EXAMPLES: bool = true;
 
 // Attach sources.

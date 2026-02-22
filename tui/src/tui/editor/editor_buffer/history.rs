@@ -58,7 +58,7 @@ impl EditorHistory {
         self.current_index.clear();
     }
 
-    /// Get the current index in the history buffer. If the buffer is empty, this will
+    /// Gets the current index in the history buffer. If the buffer is empty, this will
     /// return `None`.
     #[must_use]
     pub fn current_index(&self) -> Option<CurIndex> {

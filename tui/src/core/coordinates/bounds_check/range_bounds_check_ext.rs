@@ -40,12 +40,12 @@ use std::ops::{Add, Range, RangeInclusive};
 ///
 /// # Key Distinction from Other Bounds Traits
 ///
-/// | Trait                         | Rule                          | Use Case      | Example                                              |
-/// |-------------------------------|-------------------------------|---------------|------------------------------------------------------|
-/// | [`ArrayBoundsCheck`]          | `index < length`              | Index safety  | `buffer[5]` needs `5 < buffer.len()`                 |
-/// | [`CursorBoundsCheck`]         | `index <= length`             | Text editing  | Cursor can be at position `length` (after last char) |
-/// | [`ViewportBoundsCheck`]       | `start <= index < start+size` | Rendering     | Content visibility in windows                        |
-/// | `RangeBoundsExt`📍            | `start <= end <= length`      | Iteration     | Range object validation for content of given length  |
+/// | Trait                           | Rule                            | Use Case        | Example                                                |
+/// | ------------------------------- | ------------------------------- | --------------- | ------------------------------------------------------ |
+/// | [`ArrayBoundsCheck`]            | `index < length`                | Index safety    | `buffer[5]` needs `5 < buffer.len()`                   |
+/// | [`CursorBoundsCheck`]           | `index <= length`               | Text editing    | Cursor can be at position `length` (after last char)   |
+/// | [`ViewportBoundsCheck`]         | `start <= index < start+size`   | Rendering       | Content visibility in windows                          |
+/// | `RangeBoundsExt`📍              | `start <= end <= length`        | Iteration       | Range object validation for content of given length    |
 ///
 /// ### When to Use Which Type
 ///
@@ -216,22 +216,22 @@ use std::ops::{Add, Range, RangeInclusive};
 /// - [Module documentation] - Overview of the complete bounds checking architecture
 /// - [Interval Notation] - Reference for interval notation used throughout
 ///
-/// [`check_range_is_valid_for_length()`]: RangeBoundsExt::check_range_is_valid_for_length
-/// [`check_index_is_within()`]: RangeBoundsExt::check_index_is_within
-/// [`clamp_range_to()`]: RangeBoundsExt::clamp_range_to
-/// [`IndexOps`]: crate::IndexOps
-/// [`ArrayBoundsCheck`]: crate::ArrayBoundsCheck
-/// [`CursorBoundsCheck`]: crate::CursorBoundsCheck
-/// [`ViewportBoundsCheck`]: crate::ViewportBoundsCheck
-/// [`RangeConvertExt`]: crate::RangeConvertExt
-/// [Module documentation]: mod@crate::core::coordinates::bounds_check
 /// [Interval Notation]: mod@crate::core::coordinates::bounds_check#interval-notation
-/// [`Range<Index>`]: std::ops::Range
-/// [`RangeInclusive<Index>`]: std::ops::RangeInclusive
-/// [`Range`]: std::ops::Range
-/// [`RangeInclusive`]: std::ops::RangeInclusive
+/// [Module documentation]: mod@crate::core::coordinates::bounds_check
+/// [`ArrayBoundsCheck`]: crate::ArrayBoundsCheck
 /// [`ArrayBoundsCheck`]: crate::ArrayBoundsCheck
 /// [`CursorBoundsCheck`]: crate::CursorBoundsCheck
+/// [`CursorBoundsCheck`]: crate::CursorBoundsCheck
+/// [`IndexOps`]: crate::IndexOps
+/// [`Range<Index>`]: std::ops::Range
+/// [`RangeConvertExt`]: crate::RangeConvertExt
+/// [`RangeInclusive<Index>`]: std::ops::RangeInclusive
+/// [`RangeInclusive`]: std::ops::RangeInclusive
+/// [`Range`]: std::ops::Range
+/// [`ViewportBoundsCheck`]: crate::ViewportBoundsCheck
+/// [`check_index_is_within()`]: RangeBoundsExt::check_index_is_within
+/// [`check_range_is_valid_for_length()`]: RangeBoundsExt::check_range_is_valid_for_length
+/// [`clamp_range_to()`]: RangeBoundsExt::clamp_range_to
 pub trait RangeBoundsExt
 where
     // Ensure index type supports addition (e.g., for range end
@@ -245,7 +245,7 @@ where
     /// The length type that this range can be validated against.
     type LengthType: CursorBoundsCheck;
 
-    /// Check if this range is valid for the given buffer/line length.
+    /// Checks if this range is valid for the given buffer/line length.
     ///
     /// See the [trait documentation][Self] for validation rules and range type semantics.
     ///
@@ -270,7 +270,7 @@ where
     #[must_use]
     fn clamp_range_to(self, buffer_length: Self::LengthType) -> Self;
 
-    /// Check if an index is within this range's bounds.
+    /// Checks if an index is within this range's bounds.
     ///
     /// Boundary semantics depend on range type (exclusive vs inclusive).
     /// See the [trait documentation][Self] for detailed semantics.
@@ -295,8 +295,8 @@ where
 /// exclusive end semantics.
 ///
 /// [`ColIndex`]: crate::ColIndex
-/// [`RowIndex`]: crate::RowIndex
 /// [`Range<IndexType>`]: std::ops::Range
+/// [`RowIndex`]: crate::RowIndex
 impl<I> RangeBoundsExt for Range<I>
 where
     I: IndexOps + ArrayBoundsCheck<I::LengthType> + Add<Output = I>,
@@ -388,8 +388,8 @@ where
 /// since both endpoints are included in the range.
 ///
 /// [`ColIndex`]: crate::ColIndex
-/// [`RowIndex`]: crate::RowIndex
 /// [`RangeInclusive<IndexType>`]: std::ops::RangeInclusive
+/// [`RowIndex`]: crate::RowIndex
 impl<I> RangeBoundsExt for RangeInclusive<I>
 where
     I: IndexOps + ArrayBoundsCheck<I::LengthType> + Add<Output = I>,

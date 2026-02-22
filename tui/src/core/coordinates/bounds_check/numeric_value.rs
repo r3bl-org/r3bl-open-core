@@ -28,21 +28,21 @@
 /// [`From<u16>`]), we allow types with construction constraints (like non-zero values)
 /// to participate in generic numeric operations without violating their invariants.
 ///
-/// [`TermRow`]: crate::TermRow
-/// [`TermCol`]: crate::TermCol
-/// [`NonZeroU16`]: std::num::NonZeroU16
-/// [`as_usize`]: Self::as_usize
-/// [`as_u16`]: Self::as_u16
-/// [`From<usize>`]: std::convert::From
 /// [`From<u16>`]: std::convert::From
+/// [`From<usize>`]: std::convert::From
+/// [`NonZeroU16`]: std::num::NonZeroU16
+/// [`TermCol`]: crate::TermCol
+/// [`TermRow`]: crate::TermRow
+/// [`as_u16`]: Self::as_u16
+/// [`as_usize`]: Self::as_usize
 pub trait NumericConversions: Copy + Sized {
-    /// Convert to a [`usize`] value for array indexing and size calculations.
+    /// Converts to a [`usize`] value for array indexing and size calculations.
     ///
     /// This is the preferred conversion method for most operations due to its
     /// flexibility and compatibility with Rust's standard library.
     fn as_usize(&self) -> usize;
 
-    /// Convert to a [`u16`] value for terminal and PTY operations.
+    /// Converts to a [`u16`] value for terminal and PTY operations.
     ///
     /// Use this when interfacing with terminal libraries or PTY operations
     /// that require 16-bit values.
@@ -123,22 +123,22 @@ pub trait NumericConversions: Copy + Sized {
 /// assert!(!non_zero_length.is_zero());
 /// ```
 ///
-/// [`as_usize()`]: NumericConversions::as_usize
-/// [`as_u16()`]: NumericConversions::as_u16
-/// [`is_zero()`]: Self::is_zero
-/// [`Index`]: crate::Index
-/// [`RowIndex`]: crate::RowIndex
-/// [`ColIndex`]: crate::ColIndex
 /// [`ByteIndex`]: crate::ByteIndex
-/// [`SegIndex`]: crate::SegIndex
+/// [`ByteLength`]: crate::ByteLength
+/// [`ChUnit`]: crate::ChUnit
+/// [`ColIndex`]: crate::ColIndex
+/// [`ColWidth`]: crate::ColWidth
+/// [`Index`]: crate::Index
 /// [`Length`]: crate::Length
 /// [`RowHeight`]: crate::RowHeight
-/// [`ColWidth`]: crate::ColWidth
-/// [`ByteLength`]: crate::ByteLength
+/// [`RowIndex`]: crate::RowIndex
+/// [`SegIndex`]: crate::SegIndex
 /// [`SegLength`]: crate::SegLength
-/// [`ChUnit`]: crate::ChUnit
+/// [`as_u16()`]: NumericConversions::as_u16
+/// [`as_usize()`]: NumericConversions::as_usize
+/// [`is_zero()`]: Self::is_zero
 pub trait NumericValue: NumericConversions + From<usize> + From<u16> + Ord {
-    /// Check if the unit value is zero.
+    /// Checks if the unit value is zero.
     ///
     /// See [trait-level documentation] for usage guidelines. The default
     /// implementation uses `as_usize() == 0`. Types with special zero semantics

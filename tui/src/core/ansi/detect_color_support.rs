@@ -166,10 +166,12 @@ pub mod global_color_support {
     ///
     /// # Testing support
     ///
-    /// The [serial_test](https://crates.io/crates/serial_test) crate is used to test this
+    /// The [serial_test] crate is used to test this
     /// function. In any test in which this function is called, please use the `#[serial]`
     /// attribute to annotate that test. Otherwise there will be flakiness in the test
     /// results (tests are run in parallel using many threads).
+    ///
+    /// [serial_test]: https://crates.io/crates/serial_test
     #[allow(clippy::result_unit_err, static_mut_refs)]
     pub fn set_override(value: ColorSupport) {
         let it = i8::from(value);
@@ -181,14 +183,14 @@ pub mod global_color_support {
         unsafe { COLOR_SUPPORT_GLOBAL.store(NOT_SET_VALUE, Ordering::Release) };
     }
 
-    /// Clear the cached color support detection result, forcing re-detection on next.
+    /// Clears the cached color support detection result, forcing re-detection on next.
     /// call. This is useful for testing or when environment might have changed.
     #[allow(static_mut_refs)]
     pub fn clear_cache() {
         unsafe { COLOR_SUPPORT_CACHED.store(NOT_SET_VALUE, Ordering::Release) };
     }
 
-    /// Get the cached color support detection result.
+    /// Gets the cached color support detection result.
     /// - If detection has been run and cached, that value will be returned.
     /// - Otherwise, an error will be returned.
     ///
@@ -201,14 +203,14 @@ pub mod global_color_support {
         ColorSupport::try_from(it)
     }
 
-    /// Set the cached color support detection result.
+    /// Sets the cached color support detection result.
     #[allow(static_mut_refs)]
     pub fn set_cached(value: ColorSupport) {
         let it = i8::from(value);
         unsafe { COLOR_SUPPORT_CACHED.store(it, Ordering::Release) };
     }
 
-    /// Get the color support override value.
+    /// Gets the color support override value.
     /// - If the value has been set using [`crate::global_color_support::set_override`],
     ///   then that value will be returned.
     /// - Otherwise, an error will be returned.

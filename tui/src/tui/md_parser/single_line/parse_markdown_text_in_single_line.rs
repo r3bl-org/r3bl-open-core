@@ -10,7 +10,7 @@ use nom::{IResult, Parser,
           multi::many0,
           sequence::terminated};
 
-/// Parse a markdown text [`crate::FragmentsInOneLine`] in the input (no EOL required).
+/// Parses a markdown text [`crate::FragmentsInOneLine`] in the input (no EOL required).
 ///
 /// # Null Padding Invariant
 ///
@@ -35,7 +35,7 @@ pub fn parse_block_markdown_text_with_checkbox_policy_with_or_without_new_line(
     Ok((input, it))
 }
 
-/// Parse markdown text blocks with or without new lines.
+/// Parses markdown text blocks with or without new lines.
 ///
 /// # Null Padding Invariant
 ///
@@ -59,7 +59,7 @@ mod inner {
     #[allow(clippy::wildcard_imports)]
     use super::*;
 
-    /// Parse a single line of markdown text [`crate::FragmentsInOneLine`] terminated by EOL.
+    /// Parses a single line of markdown text [`crate::FragmentsInOneLine`] terminated by EOL.
     /// # Errors
     ///
     /// Returns a nom parsing error if the input cannot be parsed as markdown text with newline.
@@ -82,7 +82,7 @@ mod inner {
         Ok((input, it))
     }
 
-    /// Parse a single line of markdown text [`crate::FragmentsInOneLine`] not terminated by EOL.
+    /// Parses a single line of markdown text [`crate::FragmentsInOneLine`] not terminated by EOL.
     #[rustfmt::skip]
     pub fn parse_block_markdown_text_without_new_line(input: &str) -> IResult<&str, MdLineFragments<'_>> {
         // Nothing to parse, early return.

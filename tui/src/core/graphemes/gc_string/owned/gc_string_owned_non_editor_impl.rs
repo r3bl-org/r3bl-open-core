@@ -20,7 +20,7 @@ use crate::{ByteIndex, ColIndex, ColWidth, InlineString, NumericValue, SegIndex,
             byte_index, ch, pad_fmt, seg_index, usize};
 use std::ops::Add;
 
-/// Convert between different types of indices. This unifies the API so that different
+/// Converts between different types of indices. This unifies the API so that different
 /// index types are all converted into [`SegIndex`] for use with this struct. Here's the
 /// list:
 /// - [`GCStringOwned`] + [`crate::ByteIndex`] = [Option]<[`SegIndex`]>
@@ -31,16 +31,17 @@ use std::ops::Add;
 ///
 /// These conversion operators are the heart of Unicode text handling in the editor:
 ///
-/// 1. **`ByteIndex` → `SegIndex`**: When we have a byte position (e.g., from a file
+/// 1. **[`ByteIndex`] → [`SegIndex`]**: When we have a byte position (e.g., from a file
 ///    offset or string slice operation), we need to find which grapheme cluster it
 ///    belongs to. This is crucial for ensuring we never split a multi-byte character.
 ///
-/// 2. **`ColIndex` → `SegIndex`**: When the user clicks at a screen position or we need
-///    to render at a specific column, we must find which grapheme cluster is at that
+/// 2. **[`ColIndex`] → [`SegIndex`]**: When the user clicks at a screen position or we
+///    need to render at a specific column, we must find which grapheme cluster is at that
 ///    display position. This handles wide characters correctly.
 ///
-/// 3. **`SegIndex` → `ColIndex`**: When we have a logical character position and need to
-///    know where it appears on screen. This is used for cursor positioning and rendering.
+/// 3. **[`SegIndex`] → [`ColIndex`]**: When we have a logical character position and need
+///    to know where it appears on screen. This is used for cursor positioning and
+///    rendering.
 ///
 /// # Examples
 ///
@@ -57,18 +58,18 @@ use std::ops::Add;
 /// ColIndex 2 → SegIndex 1 ('😀' spans columns 1-2)
 /// ColIndex 3 → SegIndex 2 ('b' at column 3)
 /// ```
-mod convert {
+pub mod convert {
     #[allow(clippy::wildcard_imports)]
     use super::*;
 
-    /// Convert a `byte_index` to a `seg_index`.
+    /// Converts a [`ByteIndex`] to a [`SegIndex`].
     ///
-    /// Try and convert a [`GCStringOwned`] + [`ByteIndex`] to a
-    /// grapheme index [`SegIndex`].
+    /// Try and convert a [`GCStringOwned`] + [`ByteIndex`] to a grapheme index
+    /// [`SegIndex`].
     impl Add<ByteIndex> for &GCStringOwned {
         type Output = Option<SegIndex>;
 
-        /// Find the grapheme cluster segment (index) that is at the `byte_index` of the
+        /// Finds the grapheme cluster segment (index) that is at the `byte_index` of the
         /// underlying string.
         fn add(self, byte_index: ByteIndex) -> Self::Output {
             let byte_index = byte_index.as_usize();
@@ -83,15 +84,17 @@ mod convert {
         }
     }
 
-    /// Convert a `display_col_index` to a `seg_index`.
+    /// Converts a [`ColIndex`] to a [`SegIndex`].
     ///
-    /// Try and convert a [`GCStringOwned`] + [`ColIndex`]
-    /// (display column index) to a grapheme index [`SegIndex`].
+    /// Try and convert a [`GCStringOwned`] + [`ColIndex`] (display column index) to a
+    /// grapheme index [`SegIndex`].
     impl Add<ColIndex> for &GCStringOwned {
         type Output = Option<SegIndex>;
 
-        /// Find the grapheme cluster segment (index) that can be displayed at the
-        /// `display_col_index` of the terminal.
+        /// Finds the grapheme cluster segment (index) that can be displayed at the
+        /// [`display_col_index`] of the terminal.
+        ///
+        /// [`display_col_index`]: ColIndex
         fn add(self, display_col_index: ColIndex) -> Self::Output {
             self.segments
                 .iter()
@@ -106,15 +109,17 @@ mod convert {
         }
     }
 
-    /// Convert a `seg_index` to `display_col_index`.
+    /// Converts a [`SegIndex`] to a [`ColIndex`].
     ///
-    /// Try and convert a [`GCStringOwned`] + [`SegIndex`] to a
-    /// [`ColIndex`] (display column index).
+    /// Try and convert a [`GCStringOwned`] + [`SegIndex`] to a [`ColIndex`] (display
+    /// column index).
     impl Add<SegIndex> for &GCStringOwned {
         type Output = Option<ColIndex>;
 
-        /// Find the display column index that corresponds to the grapheme cluster segment
-        /// at the `seg_index`.
+        /// Finds the display column index that corresponds to the grapheme cluster
+        /// segment at the [`seg_index`].
+        ///
+        /// [`seg_index`]: SegIndex
         fn add(self, seg_index: SegIndex) -> Self::Output {
             self.get(seg_index).map(|seg| seg.start_display_col_index)
         }

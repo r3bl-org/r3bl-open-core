@@ -556,7 +556,7 @@ pub struct DirectToAnsiInputDevice {
 }
 
 impl DirectToAnsiInputDevice {
-    /// Create the input device.
+    /// Creates the input device.
     ///
     /// # Singleton Semantics
     ///
@@ -597,7 +597,7 @@ impl DirectToAnsiInputDevice {
         }
     }
 
-    /// Get an additional subscriber (async consumer) to input events.
+    /// Gets an additional subscriber (async consumer) to input events.
     ///
     /// Use this for logging, debugging, or multiple concurrent consumers. Each
     /// subscriber independently receives all input events. When dropped, notifies

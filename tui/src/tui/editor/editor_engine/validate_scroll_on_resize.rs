@@ -28,7 +28,7 @@ enum CaretLocRelativeToVp {
     Below,
 }
 
-/// Check whether caret is vertically within the viewport.
+/// Checks whether caret is vertically within the viewport.
 /// - If it isn't then scroll by mutating:
 ///   1. [`crate::EditorContent::caret_raw`]'s row , so it is within the viewport.
 ///   2. [`crate::EditorContent::scr_ofs`]'s row, to actually apply scrolling.
@@ -39,9 +39,9 @@ pub fn validate_scroll_on_resize(args: EditorArgsMut<'_>) {
     validate_horizontal_scroll(EditorArgsMut { engine, buffer });
 }
 
-/// Handle vertical scrolling (make sure caret is within viewport).
+/// Handles vertical scrolling (make sure caret is within viewport).
 ///
-/// Check whether caret is in the viewport.
+/// Checks whether caret is in the viewport.
 /// - If to top of viewport, then adjust `scr_ofs` & set it.
 /// - If to bottom of viewport, then adjust `scr_ofs` & set it.
 /// - If in viewport, then do nothing.
@@ -133,9 +133,9 @@ fn validate_vertical_scroll(args: EditorArgsMut<'_>) {
     }
 }
 
-/// Handle horizontal scrolling (make sure caret is within viewport).
+/// Handles horizontal scrolling (make sure caret is within viewport).
 ///
-/// Check whether caret is in the viewport.
+/// Checks whether caret is in the viewport.
 /// - If to left of viewport, then adjust `scr_ofs` & set it.
 /// - If to right of viewport, then adjust `scr_ofs` & set it.
 /// - If in viewport, then do nothing.

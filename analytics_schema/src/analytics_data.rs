@@ -148,7 +148,7 @@ impl AnalyticsEvent {
     }
 }
 
-/// Convert [`AnalyticsEventNoTimestamp`] to [`AnalyticsEvent`].
+/// Converts [`AnalyticsEventNoTimestamp`] to [`AnalyticsEvent`].
 impl From<AnalyticsEventNoTimestamp> for AnalyticsEvent {
     fn from(incoming: AnalyticsEventNoTimestamp) -> Self {
         let result_timestamp_ms = SystemTime::now().duration_since(UNIX_EPOCH);

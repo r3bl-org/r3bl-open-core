@@ -27,14 +27,14 @@ use crate::{ColIndex, InlineString, Pos, RowHeight, TuiColor, TuiStyle};
 /// Provides 27 ergonomic factory methods that wrap `RenderOpCommon` variants.
 /// Used throughout the rendering pipeline to create render operations conveniently.
 ///
-/// [rendering pipeline overview]: mod@crate::terminal_lib_backends#rendering-pipeline-architecture
-///
 /// # Usage
 ///
 /// Instead of `RenderOpIR::Common(RenderOpCommon::MoveCursorPositionAbs(pos))`,
 /// use the ergonomic helper method: `RenderOpIR::move_cursor(pos)`.
+///
+/// [rendering pipeline overview]: mod@crate::terminal_lib_backends#rendering-pipeline-architecture
 pub trait RenderOpCommonExt: Sized {
-    /// Convert a common operation into this specific type (IR or Output).
+    /// Converts a common operation into this specific type (IR or Output).
     fn from_common(common: RenderOpCommon) -> Self;
 
     // === Terminal Mode Operations ===

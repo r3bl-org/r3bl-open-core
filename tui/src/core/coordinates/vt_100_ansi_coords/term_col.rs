@@ -77,14 +77,14 @@ impl TermCol {
     /// ```
     pub const ONE: Self = Self(NonZeroU16::MIN);
 
-    /// Create a 1-based terminal coordinate from a raw [`NonZeroU16`] value.
+    /// Creates a 1-based terminal coordinate from a raw [`NonZeroU16`] value.
     ///
     /// Use this constructor when wrapping external [`NonZeroU16`] data, such as
     /// values parsed from ANSI escape sequence parameters.
     #[must_use]
     pub const fn from_raw_non_zero_value(value: NonZeroU16) -> Self { Self(value) }
 
-    /// Get the inner [`NonZeroU16`] value.
+    /// Gets the inner [`NonZeroU16`] value.
     ///
     /// This provides access to the raw 1-based terminal coordinate value.
     /// Use this when you need the [`NonZeroU16`] representation, for example
@@ -92,7 +92,7 @@ impl TermCol {
     #[must_use]
     pub const fn value(self) -> NonZeroU16 { self.0 }
 
-    /// Get the raw 1-based value as a [`u16`].
+    /// Gets the raw 1-based value as a [`u16`].
     ///
     /// This is a convenience method that extracts the underlying [`u16`] from
     /// the [`NonZeroU16`] wrapper. Most code should use [`as_usize()`] for
@@ -104,7 +104,7 @@ impl TermCol {
     #[must_use]
     pub const fn as_u16(self) -> u16 { self.0.get() }
 
-    /// Convert from 0-based `ColIndex` to 1-based terminal coordinate.
+    /// Converts from 0-based [`ColIndex`] to 1-based terminal coordinate.
     #[must_use]
     pub fn from_zero_based(index: ColIndex) -> Self {
         let nz_value = index.as_u16() + 1;
@@ -113,7 +113,7 @@ impl TermCol {
         Self::from_raw_non_zero_value(unsafe { NonZeroU16::new_unchecked(nz_value) })
     }
 
-    /// Convert to 0-based `ColIndex` for buffer operations.
+    /// Converts to 0-based [`ColIndex`] for buffer operations.
     #[must_use]
     pub fn to_zero_based(&self) -> ColIndex {
         ColIndex::from(self.as_u16().saturating_sub(1))
@@ -121,7 +121,7 @@ impl TermCol {
 }
 
 impl From<ColIndex> for TermCol {
-    /// Convert from 0-based [`ColIndex`] to 1-based [`TermCol`].
+    /// Converts from 0-based [`ColIndex`] to 1-based [`TermCol`].
     ///
     /// This is always safe because the conversion adds 1, guaranteeing a non-zero
     /// value.
@@ -153,7 +153,7 @@ impl Add<TermRow> for TermCol {
     }
 }
 
-/// Create a [`TermCol`] from a [`NonZeroU16`] value.
+/// Creates a [`TermCol`] from a [`NonZeroU16`] value.
 #[must_use]
 pub const fn term_col(value: NonZeroU16) -> TermCol {
     TermCol::from_raw_non_zero_value(value)

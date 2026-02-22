@@ -366,11 +366,12 @@ mod delete_at_caret_helper {
     use super::*;
 
     /// ```text
+    /// Caret : ▲, ►
     /// R ┌──────────┐
-    /// 0 ❱abc       │
+    /// 0 ►abc       │
     /// 1 │ab        │
     /// 2 │a         │
-    ///   └─⮬────────┘
+    ///   └─▲────────┘
     ///   C0123456789
     /// ```
     pub fn delete_in_middle_of_line(
@@ -397,11 +398,12 @@ mod delete_at_caret_helper {
     }
 
     /// ```text
+    /// Caret : ▲, ►
     /// R ┌──────────┐
-    /// 0 ❱abc       │
+    /// 0 ►abc       │
     /// 1 │ab        │
     /// 2 │a         │
-    ///   └───⮬──────┘
+    ///   └───▲──────┘
     ///   C0123456789
     /// ```
     pub fn delete_at_end_of_line(
@@ -452,11 +454,12 @@ mod backspace_at_caret_helper {
     use super::*;
 
     /// ```text
+    /// Caret : ▲, ►
     /// R ┌──────────┐
-    /// 0 ❱abc       │
+    /// 0 ►abc       │
     /// 1 │ab        │
     /// 2 │a         │
-    ///   └─⮬────────┘
+    ///   └─▲────────┘
     ///   C0123456789
     /// ```
     pub fn backspace_in_middle_of_line(
@@ -498,11 +501,12 @@ mod backspace_at_caret_helper {
     }
 
     /// ```text
+    /// Caret : ▲, ►
     /// R ┌──────────┐
     /// 0 │abc       │
-    /// 1 ❱ab        │
+    /// 1 ►ab        │
     /// 2 │a         │
-    ///   └⮬─────────┘
+    ///   └▲─────────┘
     ///   C0123456789
     /// ```
     pub fn backspace_at_start_of_line(
@@ -891,12 +895,12 @@ mod tests {
         let mut engine = mock_real_objects_for_editor::make_editor_engine();
 
         // Insert "abc\nab\na".
-        // `this` should look like:
+        //
         // R ┌──────────┐
         // 0 │abc       │
         // 1 │ab        │
-        // 2 ❱a         │
-        //   └─⮬────────┘
+        // 2 ►a         │
+        //   └─▲────────┘
         //   C0123456789
         EditorEvent::apply_editor_events::<(), ()>(
             &mut engine,
@@ -913,12 +917,12 @@ mod tests {
         assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(1) + row(2)));
 
         // Remove the "a" on the last line.
-        // `this` should look like:
+        //
         // R ┌──────────┐
         // 0 │abc       │
         // 1 │ab        │
-        // 2 ❱          │
-        //   └⮬─────────┘
+        // 2 ►          │
+        //   └▲─────────┘
         //   C0123456789
         EditorEvent::apply_editor_events::<(), ()>(
             &mut engine,
@@ -932,11 +936,11 @@ mod tests {
         assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(0) + row(2)));
 
         // Move to the end of the 2nd line. Press delete.
-        // `this` should look like:
+        //
         // R ┌──────────┐
         // 0 │abc       │
-        // 1 ❱ab        │
-        //   └──⮬───────┘
+        // 1 ►ab        │
+        //   └──▲───────┘
         //   C0123456789
         EditorEvent::apply_editor_events::<(), ()>(
             &mut engine,
@@ -953,10 +957,10 @@ mod tests {
         assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(2) + row(1)));
 
         // Move to the end of the 1st line.
-        // `this` should look like:
+        //
         // R ┌──────────┐
-        // 0 ❱abcab     │
-        //   └───⮬──────┘
+        // 0 ►abcab     │
+        //   └───▲──────┘
         //   C0123456789
         EditorEvent::apply_editor_events::<(), ()>(
             &mut engine,
@@ -979,12 +983,12 @@ mod tests {
         let mut engine = mock_real_objects_for_editor::make_editor_engine();
 
         // Insert "abc\nab\na".
-        // `this` should look like:
+        //
         // R ┌──────────┐
         // 0 │abc       │
         // 1 │ab        │
-        // 2 ❱a         │
-        //   └─⮬────────┘
+        // 2 ►a         │
+        //   └─▲────────┘
         //   C0123456789
         EditorEvent::apply_editor_events::<(), ()>(
             &mut engine,
@@ -1001,12 +1005,12 @@ mod tests {
         assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(1) + row(2)));
 
         // Remove the "a" on the last line.
-        // `this` should look like:
+        //
         // R ┌──────────┐
         // 0 │abc       │
         // 1 │ab        │
-        // 2 ❱          │
-        //   └⮬─────────┘
+        // 2 ►          │
+        //   └▲─────────┘
         //   C0123456789
         EditorEvent::apply_editor_events::<(), ()>(
             &mut engine,
@@ -1017,11 +1021,11 @@ mod tests {
         assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(0) + row(2)));
 
         // Remove the last line.
-        // `this` should look like:
+        //
         // R ┌──────────┐
         // 0 │abc       │
-        // 1 ❱ab        │
-        //   └──⮬───────┘
+        // 1 ►ab        │
+        //   └──▲───────┘
         //   C0123456789
         EditorEvent::apply_editor_events::<(), ()>(
             &mut engine,
@@ -1032,10 +1036,10 @@ mod tests {
         assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(2) + row(1)));
 
         // Move caret to start of 2nd line. Then press backspace.
-        // `this` should look like:
+        //
         // R ┌──────────┐
-        // 0 ❱abcab     │
-        //   └───⮬──────┘
+        // 0 ►abcab     │
+        //   └───▲──────┘
         //   C0123456789
         EditorEvent::apply_editor_events::<(), ()>(
             &mut engine,
@@ -1058,10 +1062,10 @@ mod tests {
         assert::line_at_caret(&buffer, "abcab");
 
         // Move caret to end of line. Insert "😃". Then move caret to end of line.
-        // `this` should look like:
+        //
         // R ┌──────────┐
-        // 0 ❱abcab😃   │
-        //   └───────⮬──┘
+        // 0 ►abcab😃   │
+        //   └───────▲──┘
         //   C0123456789
         EditorEvent::apply_editor_events::<(), ()>(
             &mut engine,
@@ -1093,19 +1097,19 @@ mod tests {
         // Starts w/ an empty line.
         assert_eq2!(buffer.get_lines().len().as_usize(), 1);
 
-        // `this` should look like:
+        //
         // R ┌──────────┐
-        // 0 ❱          │
-        //   └⮬─────────┘
+        // 0 ►          │
+        //   └▲─────────┘
         //   C0123456789
         assert_eq2!(buffer.get_lines().len().as_usize(), 1);
         assert::none_is_at_caret(&buffer);
 
         // Insert "a".
-        // `this` should look like:
+        //
         // R ┌──────────┐
-        // 0 ❱a         │
-        //   └─⮬────────┘
+        // 0 ►a         │
+        //   └─▲────────┘
         //   C0123456789
         EditorEvent::apply_editor_events::<(), ()>(
             &mut engine,
@@ -1117,11 +1121,11 @@ mod tests {
         assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(1) + row(0)));
 
         // Insert new line (at end of line).
-        // `this` should look like:
+        //
         // R ┌──────────┐
         // 0 │a         │
-        // 1 ❱          │
-        //   └⮬─────────┘
+        // 1 ►          │
+        //   └▲─────────┘
         //   C0123456789
         EditorEvent::apply_editor_events::<(), ()>(
             &mut engine,
@@ -1134,11 +1138,11 @@ mod tests {
         assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(0) + row(1)));
 
         // Insert "a".
-        // `this` should look like:
+        //
         // R ┌──────────┐
         // 0 │a         │
-        // 1 ❱a         │
-        //   └─⮬────────┘
+        // 1 ►a         │
+        //   └─▲────────┘
         //   C0123456789
         EditorEvent::apply_editor_events::<(), ()>(
             &mut engine,
@@ -1148,11 +1152,11 @@ mod tests {
         );
 
         // Move caret left.
-        // `this` should look like:
+        //
         // R ┌──────────┐
         // 0 │a         │
-        // 1 ❱a         │
-        //   └⮬─────────┘
+        // 1 ►a         │
+        //   └▲─────────┘
         //   C0123456789
         EditorEvent::apply_editor_events::<(), ()>(
             &mut engine,
@@ -1163,12 +1167,12 @@ mod tests {
         assert::str_is_at_caret(&buffer, "a");
 
         // Insert new line (at start of line).
-        // `this` should look like:
+        //
         // R ┌──────────┐
         // 0 │a         │
         // 1 │          │
-        // 2 ❱a         │
-        //   └⮬─────────┘
+        // 2 ►a         │
+        //   └▲─────────┘
         //   C0123456789
         EditorEvent::apply_editor_events::<(), ()>(
             &mut engine,
@@ -1181,12 +1185,12 @@ mod tests {
         assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(0) + row(2)));
 
         // Move caret right, insert "b".
-        // `this` should look like:
+        //
         // R ┌──────────┐
         // 0 │a         │
         // 1 │          │
-        // 2 ❱ab        │
-        //   └──⮬───────┘
+        // 2 ►ab        │
+        //   └──▲───────┘
         //   C0123456789
         EditorEvent::apply_editor_events::<(), ()>(
             &mut engine,
@@ -1207,13 +1211,13 @@ mod tests {
         );
 
         // Move caret left, insert new line (at middle of line).
-        // `this` should look like:
+        //
         // R ┌──────────┐
         // 0 │a         │
         // 1 │          │
         // 2 │a         │
-        // 3 ❱b         │
-        //   └⮬─────────┘
+        // 3 ►b         │
+        //   └▲─────────┘
         //   C0123456789
         EditorEvent::apply_editor_events::<(), ()>(
             &mut engine,
@@ -1233,9 +1237,9 @@ mod tests {
         // 0 │a         │
         // 1 │          │
         // 2 │a         │
-        // 3 ❱          │
+        // 3 ►          │
         // 4 │b         │
-        //   └⮬─────────┘
+        //   └▲─────────┘
         //   C0123456789
         EditorEvent::apply_editor_events::<(), ()>(
             &mut engine,
@@ -1257,10 +1261,10 @@ mod tests {
         let mut engine = mock_real_objects_for_editor::make_editor_engine();
 
         // Move caret to col: FlexBoxId::from(0), row: 0. Insert "a".
-        // `this` should look like:
+        //
         // R ┌──────────┐
-        // 0 ❱a░        │
-        //   └─⮬────────┘
+        // 0 ►a         │
+        //   └─▲────────┘
         //   C0123456789
         assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(0) + row(0)));
         EditorEvent::apply_editor_events::<(), ()>(
@@ -1277,11 +1281,11 @@ mod tests {
         assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(1) + row(0)));
 
         // Move caret to col: FlexBoxId::from(0), row: 1. Insert "b".
-        // `this` should look like:
+        //
         // R ┌──────────┐
         // 0 │a         │
-        // 1 ❱b░        │
-        //   └─⮬────────┘
+        // 1 ►b         │
+        //   └─▲────────┘
         //   C0123456789
         engine_internal_api::insert_new_line_at_caret(EditorArgsMut {
             buffer: &mut buffer,
@@ -1301,13 +1305,13 @@ mod tests {
         assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(1) + row(1)));
 
         // Move caret to col: FlexBoxId::from(0), row: 3. Insert "😀" (unicode width = 2).
-        // `this` should look like:
+        //
         // R ┌──────────┐
         // 0 │a         │
         // 1 │b         │
         // 2 │          │
-        // 3 ❱😀░       │
-        //   └──⮬───────┘
+        // 3 ►😀        │
+        //   └──▲───────┘
         //   C0123456789
         EditorEvent::apply_editor_events::<(), ()>(
             &mut engine,
@@ -1327,13 +1331,13 @@ mod tests {
         assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(2) + row(3)));
 
         // Insert "d".
-        // `this` should look like:
+        //
         // R ┌──────────┐
         // 0 │a         │
         // 1 │b         │
         // 2 │          │
-        // 3 ❱😀d░      │
-        //   └───⮬──────┘
+        // 3 ►😀d       │
+        //   └───▲──────┘
         //   C0123456789
         EditorEvent::apply_editor_events::<(), ()>(
             &mut engine,
@@ -1349,13 +1353,13 @@ mod tests {
         assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(3) + row(3)));
 
         // Insert "🙏🏽" (unicode width = 2).
-        // `this` should look like:
+        //
         // R ┌──────────┐
         // 0 │a         │
         // 1 │b         │
         // 2 │          │
-        // 3 ❱😀d🙏🏽░    │
-        //   └─────⮬────┘
+        // 3 ►😀d🙏🏽     │
+        //   └─────▲────┘
         //   C0123456789
         EditorEvent::apply_editor_events::<(), ()>(
             &mut engine,

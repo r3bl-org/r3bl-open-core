@@ -88,7 +88,7 @@ use crate::{SgrColorSequence,
             tui_style_attrib};
 use vte::Params;
 
-/// Apply a single `SGR` parameter.
+/// Applies a single `SGR` parameter.
 #[allow(clippy::too_many_lines)]
 fn apply_sgr_param(performer: &mut AnsiToOfsBufPerformer, param: u16) {
     match param {

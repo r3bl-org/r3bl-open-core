@@ -96,16 +96,16 @@
 //! 2. [`TermRow::from_raw_non_zero_value()`] → 1-based coordinate
 //! 3. [`.to_zero_based()`] → 0-based buffer index ([`RowIndex`]/[`ColIndex`])
 //!
+//! [`.to_zero_based()`]: crate::TermRow::to_zero_based
+//! [`ColIndex`]: crate::ColIndex
+//! [`NonZeroU16`]: std::num::NonZeroU16
+//! [`RowIndex`]: crate::RowIndex
+//! [`TermCol::from_raw_non_zero_value()`]: crate::TermCol::from_raw_non_zero_value
+//! [`TermRow::from_raw_non_zero_value()`]: crate::TermRow::from_raw_non_zero_value
+//! [`extract_nth_single_non_zero()`]: crate::ParamsExt::extract_nth_single_non_zero
 //! [`impl_cursor_ops`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl::vt_100_impl_cursor_ops
 //! [`test_cursor_ops`]: crate::core::ansi::vt_100_pty_output_parser::vt_100_pty_output_conformance_tests::tests::vt_100_test_cursor_ops
 //! [module-level documentation]: self
-//! [`extract_nth_single_non_zero()`]: crate::ParamsExt::extract_nth_single_non_zero
-//! [`NonZeroU16`]: std::num::NonZeroU16
-//! [`TermRow::from_raw_non_zero_value()`]: crate::TermRow::from_raw_non_zero_value
-//! [`TermCol::from_raw_non_zero_value()`]: crate::TermCol::from_raw_non_zero_value
-//! [`.to_zero_based()`]: crate::TermRow::to_zero_based
-//! [`RowIndex`]: crate::RowIndex
-//! [`ColIndex`]: crate::ColIndex
 
 use super::super::{ansi_parser_public_api::AnsiToOfsBufPerformer,
                    protocols::parse_cursor_position};
@@ -121,8 +121,8 @@ use vte::Params;
 ///
 /// **Implementation**: See [`OffscreenBuffer::cursor_up`] for detailed behavior.
 ///
-/// [module-level documentation]: self
 /// [`OffscreenBuffer::cursor_up`]: crate::OffscreenBuffer::cursor_up
+/// [module-level documentation]: self
 pub fn cursor_up(performer: &mut AnsiToOfsBufPerformer, params: &Params) {
     let how_many = params.extract_nth_single_non_zero(0).get().into();
     performer.ofs_buf.cursor_up(how_many);
@@ -137,8 +137,8 @@ pub fn cursor_up(performer: &mut AnsiToOfsBufPerformer, params: &Params) {
 ///
 /// **Implementation**: See [`OffscreenBuffer::cursor_down`] for detailed behavior.
 ///
-/// [module-level documentation]: self
 /// [`OffscreenBuffer::cursor_down`]: crate::OffscreenBuffer::cursor_down
+/// [module-level documentation]: self
 pub fn cursor_down(performer: &mut AnsiToOfsBufPerformer, params: &Params) {
     let how_many = params.extract_nth_single_non_zero(0).get().into();
     performer.ofs_buf.cursor_down(how_many);
@@ -151,8 +151,8 @@ pub fn cursor_down(performer: &mut AnsiToOfsBufPerformer, params: &Params) {
 ///
 /// **Implementation**: See [`OffscreenBuffer::cursor_forward`] for detailed behavior.
 ///
-/// [module-level documentation]: self
 /// [`OffscreenBuffer::cursor_forward`]: crate::OffscreenBuffer::cursor_forward
+/// [module-level documentation]: self
 pub fn cursor_forward(performer: &mut AnsiToOfsBufPerformer, params: &Params) {
     let how_many = params.extract_nth_single_non_zero(0).get().into();
     performer.ofs_buf.cursor_forward(how_many);
@@ -165,14 +165,14 @@ pub fn cursor_forward(performer: &mut AnsiToOfsBufPerformer, params: &Params) {
 ///
 /// **Implementation**: See [`OffscreenBuffer::cursor_backward`] for detailed behavior.
 ///
-/// [module-level documentation]: self
 /// [`OffscreenBuffer::cursor_backward`]: crate::OffscreenBuffer::cursor_backward
+/// [module-level documentation]: self
 pub fn cursor_backward(performer: &mut AnsiToOfsBufPerformer, params: &Params) {
     let how_many = params.extract_nth_single_non_zero(0).get().into();
     performer.ofs_buf.cursor_backward(how_many);
 }
 
-/// Set cursor position to (row, column).
+/// Sets cursor position to (row, column).
 ///
 /// **VT100 Protocol**: See [module-level documentation] for coordinate conversion
 /// from 1-based VT100 format to 0-based buffer indices. Missing/zero parameters default

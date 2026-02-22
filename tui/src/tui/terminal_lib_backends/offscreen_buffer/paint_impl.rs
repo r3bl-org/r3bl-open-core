@@ -65,8 +65,8 @@
 //! [`crossterm_backend` mod docs]: mod@crate::tui::terminal_lib_backends::crossterm_backend
 //! [`diff_chunks`]: mod@crate::tui::terminal_lib_backends::offscreen_buffer::diff_chunks
 //! [`direct_to_ansi` mod docs]: mod@crate::direct_to_ansi
-//! [rendering pipeline overview]: mod@crate::terminal_lib_backends#rendering-pipeline-architecture
 //! [`offscreen_buffer/`]: mod@crate::tui::terminal_lib_backends::offscreen_buffer
+//! [rendering pipeline overview]: mod@crate::terminal_lib_backends#rendering-pipeline-architecture
 
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 use crate::{ColIndex, DEBUG_TUI_COMPOSITOR, DEBUG_TUI_SHOW_PIPELINE, FlushKind,
@@ -149,8 +149,8 @@ impl OffscreenBufferPaint for OffscreenBufferPaintImplCrossterm {
         });
     }
 
-    /// Process each [`PixelChar`] and generate a [`RenderOpOutput`]
-    /// for it. Return a [`RenderOpOutputVec`] containing all the [`RenderOpOutput`]s.
+    /// Processes each [`PixelChar`] and generates a [`RenderOpOutput`]
+    /// for it. Returns a [`RenderOpOutputVec`] containing all the [`RenderOpOutput`]s.
     ///
     /// > Note that each [`PixelChar`] gets the full [`TuiStyle`] embedded in it (not just
     /// > a part of it that is different than the previous char). This means that it is

@@ -22,7 +22,7 @@ impl std::fmt::Debug for CrosstermInputDevice {
 }
 
 impl CrosstermInputDevice {
-    /// Create a new Crossterm input device with an event stream.
+    /// Creates a new Crossterm input device with an event stream.
     #[must_use]
     pub fn new_event_stream() -> Self {
         Self {
@@ -30,7 +30,7 @@ impl CrosstermInputDevice {
         }
     }
 
-    /// Get the next raw crossterm event (used internally).
+    /// Gets the next raw crossterm event (used internally).
     ///
     /// # Errors
     ///

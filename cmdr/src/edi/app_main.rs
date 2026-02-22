@@ -340,7 +340,7 @@ mod modal_dialog_ask_for_filename_to_save_file {
         });
     }
 
-    /// Insert simple dialog component into registry if it's not already there.
+    /// Inserts simple dialog component into registry if it's not already there.
     pub fn insert_component_into_registry(
         component_registry_map: &mut ComponentRegistryMap<State, AppSignal>,
     ) {
@@ -546,7 +546,7 @@ mod populate_component_registry {
         });
     }
 
-    /// Insert editor component into registry if it's not already there.
+    /// Inserts editor component into registry if it's not already there.
     fn insert_editor_component(
         component_registry_map: &mut ComponentRegistryMap<State, AppSignal>,
     ) {

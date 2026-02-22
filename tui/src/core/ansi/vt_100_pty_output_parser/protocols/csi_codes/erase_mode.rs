@@ -52,7 +52,7 @@ pub enum EraseDisplayMode {
 }
 
 impl EraseDisplayMode {
-    /// Convert from a raw parameter value.
+    /// Converts from a raw parameter value.
     ///
     /// Returns the default mode ([`FromCursorToEnd`]) for invalid values,
     /// matching VT100 terminal behavior.
@@ -117,7 +117,7 @@ pub enum EraseLineMode {
 }
 
 impl EraseLineMode {
-    /// Convert from a raw parameter value.
+    /// Converts from a raw parameter value.
     ///
     /// Returns the default mode ([`FromCursorToEnd`]) for invalid values,
     /// matching VT100 terminal behavior.
