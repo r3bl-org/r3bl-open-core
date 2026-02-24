@@ -285,6 +285,7 @@ async fn run_cargo_install_with_progress(
     // Use Osc mode to capture OSC progress sequences from cargo.
     let mut session = PtyCommandBuilder::new("cargo")
         .args(["+nightly", "install", crate_name])
+        .enable_osc_sequences()
         .spawn_read_only(PtyConfigOption::Osc)
         .map_err(Error::other)?;
 

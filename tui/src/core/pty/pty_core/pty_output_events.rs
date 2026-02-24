@@ -1,65 +1,70 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Output event types and terminal control sequences for PTY communication.
+//! Output event types and terminal control sequences for [PTY] communication.
 //!
-//! This module defines events that flow FROM the PTY child process TO the application:
+//! This module defines events that flow FROM the [PTY] child process TO the application.
+//!
+//! **Event types (received by your program):**
 //! - [`PtyReadOnlyOutputEvent`] - Events for read-only monitoring sessions
-//! - [`PtyReadWriteOutputEvent`] - Events for interactive read-write sessions
-//! - [`ControlSequence`] - Terminal control sequences with mode-aware generation
-//! - [`CursorKeyMode`] - Cursor key mode detection and management
+//! - [`PtyReadWriteOutputEvent`] - Events for interactive read-write sessions (includes
+//!   [`CursorModeChange`] variant)
 //!
-//! ## Terminal Cursor Key Modes
+//! **Cursor mode detection (handled automatically by the Reader Task):**
+//! - [`CursorModeDetector`] - The Reader Task in [`pty_read_write`] calls
+//!   [`scan_for_mode_change()`] on every chunk of [PTY] output, detecting DECCKM
+//!   mode-switch sequences ([`DECCKM_ENABLE_BYTES`] = application mode,
+//!   [`DECCKM_DISABLE_BYTES`] = normal mode) and emitting [`CursorModeChange`] events.
+//!   Your program does not need to call this directly.
 //!
-//! Application Mode vs Normal Mode cursor keys. This is a classic terminal
-//! compatibility issue.
+//! **Input generation (called by your program):**
+//! - [`ControlSequence`] - Terminal control sequences; call [`to_bytes()`] with the
+//!   current [`CursorKeyMode`] to generate the correct escape bytes when sending input
+//!
+//! # Terminal Cursor Key Modes
+//!
+//! Application Mode vs Normal Mode cursor keys. This is a classic terminal compatibility
+//! issue.
 //!
 //! In terminals, arrow keys and function keys can be sent in two different modes:
 //!
-//! | Key  | Application Mode (VT52/SS3) | Normal Mode (ANSI/CSI) |
-//! |----- |-----------------------------|------------------------|
-//! | Up   | `\x1BOA`                    | `\x1B[A`               |
-//! | Down | `\x1BOB`                    | `\x1B[B`               |
-//! | Right| `\x1BOC`                    | `\x1B[C`               |
-//! | Left | `\x1BOD`                    | `\x1B[D`               |
+//! | Key   | Application Mode (VT52/SS3)   | Normal Mode (ANSI/CSI)   |
+//! | ----- | ----------------------------- | ------------------------ |
+//! | Up    | `ESC O A`                     | `ESC [ A`                |
+//! | Down  | `ESC O B`                     | `ESC [ B`                |
+//! | Right | `ESC O C`                     | `ESC [ C`                |
+//! | Left  | `ESC O D`                     | `ESC [ D`                |
 //!
-//! - **Application Mode (VT52/SS3/Single Shift 3)** uses ESC O sequences for better
+//! - **Application Mode (VT52/SS3/Single Shift 3)** uses `ESC O` sequences for better
 //!   terminal compatibility. This is the default mode that we use.
 //! - **Normal Mode (ANSI/CSI/Control Sequence Introducer)** uses standard ANSI escape
 //!   sequences.
-//! - The difference is `\x1B[` (CSI) vs `\x1BO` (SS3).
+//! - The difference is `ESC [` (CSI) vs `ESC O` (SS3).
 //!
-//! ## Mode Detection Benefits
+//! # Mode Detection Benefits
 //!
 //! 1. We use Application Mode as the default mode (when no mode set).
-//! 2. **Automatic adaptation** - Send `\x1B[A` (normal) or `\x1BOA` (application) based
+//! 2. **Automatic adaptation** - Send `ESC [ A` (normal) or `ESC O A` (application) based
 //!    on what the app actually expects.
 //! 3. **App compatibility** - Different apps have different preferences (vim vs htop vs
 //!    bash).
 //! 4. **Dynamic switching** - Apps can change modes mid-session.
 //! 5. **No hardcoding** - Works with any terminal application without assumptions.
 //!
-//! ## Implementation
+//! # Mode Detection Implementation
 //!
-//! ```text
-//! // Watch for these sequences in PTY output:
-//! // \x1B[?1h - Enable application cursor keys
-//! // \x1B[?1l - Disable application cursor keys (back to normal)
+//! - [`CursorModeDetector`] scans PTY output for [`DECCKM_ENABLE_BYTES`] (application
+//!   mode) and [`DECCKM_DISABLE_BYTES`] (normal mode), tracking mode changes across read
+//!   boundaries.
+//! - [`ControlSequence::to_bytes()`] generates the correct escape sequence for the
+//!   current [`CursorKeyMode`].
 //!
-//! // Then generate appropriate sequences:
-//! match current_mode {
-//!     CursorKeyMode::Normal => "\x1B[A",      // Up
-//!     CursorKeyMode::Application => "\x1BOA", // Up
-//! }
-//! ```
-//!
-//! This way your PTY implementation becomes a proper terminal emulator that responds
-//! correctly to whatever the running application expects, rather than forcing one mode or
-//! the other.
-//!
-//! The detection approach is more work upfront but creates a much more robust and
-//! compatible system.
+//! [PTY]: https://en.wikipedia.org/wiki/Pseudoterminal
+//! [`CursorModeChange`]: PtyReadWriteOutputEvent::CursorModeChange
+//! [`pty_read_write`]: crate::core::pty::pty_read_write
+//! [`scan_for_mode_change()`]: CursorModeDetector::scan_for_mode_change
+//! [`to_bytes()`]: ControlSequence::to_bytes
 
-use crate::OscEvent;
+use crate::{DECCKM_DISABLE_BYTES, DECCKM_ENABLE_BYTES, DECCKM_SEQ_LEN, OscEvent};
 use std::borrow::Cow;
 
 /// Cursor key mode for terminal compatibility.
@@ -188,10 +193,12 @@ impl ControlSequence {
     }
 }
 
-/// Cursor mode detector for parsing PTY output streams.
+/// Cursor mode detector for parsing [PTY] output streams.
 ///
-/// Scans for terminal mode switching sequences and maintains a buffer
-/// for partial sequence detection across read boundaries.
+/// Scans for terminal mode switching sequences and maintains a buffer for partial
+/// sequence detection across read boundaries.
+///
+/// [PTY]: https://en.wikipedia.org/wiki/Pseudoterminal
 #[derive(Debug)]
 pub struct CursorModeDetector {
     buffer: Vec<u8>,
@@ -204,21 +211,33 @@ impl CursorModeDetector {
 
     /// Scans incoming data for cursor mode change sequences.
     ///
-    /// Returns `Some(mode)` if a mode change sequence is detected, `None` otherwise.
     /// Maintains an internal buffer to handle sequences that span multiple reads.
+    ///
+    /// # Returns
+    ///
+    /// - `Some(mode)` if a mode change sequence is detected
+    /// - `None` otherwise
     pub fn scan_for_mode_change(&mut self, data: &[u8]) -> Option<CursorKeyMode> {
         // Add new data to buffer.
         self.buffer.extend_from_slice(data);
 
-        // Look for application mode enable: ESC[?1h
-        if let Some(pos) = self.buffer.windows(5).position(|w| w == b"\x1B[?1h") {
-            self.buffer.drain(..=pos + 4); // Remove processed bytes
+        // Look for application mode enable: ESC[?1h (DECCKM set).
+        if let Some(pos) = self
+            .buffer
+            .windows(DECCKM_SEQ_LEN)
+            .position(|w| w == DECCKM_ENABLE_BYTES)
+        {
+            self.buffer.drain(..pos + DECCKM_SEQ_LEN); // Remove processed bytes.
             return Some(CursorKeyMode::Application);
         }
 
-        // Look for application mode disable (normal mode): ESC[?1l
-        if let Some(pos) = self.buffer.windows(5).position(|w| w == b"\x1B[?1l") {
-            self.buffer.drain(..=pos + 4);
+        // Look for application mode disable (normal mode): ESC[?1l (DECCKM reset).
+        if let Some(pos) = self
+            .buffer
+            .windows(DECCKM_SEQ_LEN)
+            .position(|w| w == DECCKM_DISABLE_BYTES)
+        {
+            self.buffer.drain(..pos + DECCKM_SEQ_LEN);
             return Some(CursorKeyMode::Normal);
         }
 
@@ -235,7 +254,7 @@ impl Default for CursorModeDetector {
     fn default() -> Self { Self::new() }
 }
 
-/// Output event types for read-only PTY sessions.
+/// Output event types for read-only [PTY] sessions.
 ///
 /// # Summary
 /// - Used with [`super::pty_sessions::PtyReadOnlySession`] for monitoring child processes
@@ -244,6 +263,8 @@ impl Default for CursorModeDetector {
 /// - Supports OSC sequence capture for terminal automation and progress monitoring
 /// - Output capture is configurable for selective data processing
 /// - Integrates with [`portable_pty`] for cross-platform terminal compatibility
+///
+/// [PTY]: https://en.wikipedia.org/wiki/Pseudoterminal
 #[derive(Debug)]
 pub enum PtyReadOnlyOutputEvent {
     /// OSC sequence event (if OSC capture is enabled in config).
@@ -254,7 +275,7 @@ pub enum PtyReadOnlyOutputEvent {
     Exit(portable_pty::ExitStatus),
 }
 
-/// Output event types for read-write PTY sessions.
+/// Output event types for read-write [PTY] sessions.
 ///
 /// # Summary
 /// - Used with [`super::pty_sessions::PtyReadWriteSession`] for interactive terminal
@@ -264,6 +285,8 @@ pub enum PtyReadOnlyOutputEvent {
 /// - Follows "dumb pipe" philosophy - raw bytes pass through, but mode detection added
 /// - Handles write errors and unexpected termination for robust error reporting
 /// - Integrates with [`portable_pty`] for cross-platform terminal compatibility
+///
+/// [PTY]: https://en.wikipedia.org/wiki/Pseudoterminal
 #[derive(Debug)]
 pub enum PtyReadWriteOutputEvent {
     /// Raw output data (always sent, no processing).

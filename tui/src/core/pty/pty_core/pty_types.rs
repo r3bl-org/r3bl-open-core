@@ -1,6 +1,16 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Core type aliases and constants for PTY operations.
+//! Core type aliases and constants for [PTY] operations. See individual type definitions
+//! for details:
+//! - [`PtyPair`] - Inclusive-language wrapper around [`portable_pty::PtyPair`]
+//! - [`Controller`], [`Controlled`] - [PTY] halves
+//! - [`ControlledChild`], [`ControlledChildTerminationHandle`] - Child process management
+//! - [`ControllerReader`], [`ControllerWriter`] - [PTY] I/O streams
+//! - [`PtyCommand`], [`PtyCompletionHandle`] - Command execution
+//! - [`InputEventSenderHalf`], [`ReadOnlyOutputEventReceiverHalf`],
+//!   [`ReadWriteOutputEventReceiverHalf`] - Channel halves
+//!
+//! [PTY]: https://en.wikipedia.org/wiki/Pseudoterminal
 
 use super::{PtyInputEvent, PtyReadOnlyOutputEvent, PtyReadWriteOutputEvent};
 use portable_pty::{ChildKiller, CommandBuilder, MasterPty, SlavePty};
@@ -8,12 +18,14 @@ use std::pin::Pin;
 use tokio::{sync::mpsc::{UnboundedReceiver, UnboundedSender},
             task::JoinHandle};
 
-/// Buffer size for reading PTY output (4KB stack allocation).
+/// Buffer size for reading [PTY] output (4KB stack allocation).
 ///
-/// This is used for the read buffer in PTY operations. The performance bottleneck is not
-/// this buffer size but the [`Vec`]`<`[`u8`]`>` allocations in
+/// This is used for the read buffer in [PTY] operations. The performance bottleneck is
+/// not this buffer size but the [`Vec`]`<`[`u8`]`>` allocations in
 /// [`PtyReadWriteOutputEvent::Output`].
-pub const READ_BUFFER_SIZE: usize = 4096;
+///
+/// [PTY]: https://en.wikipedia.org/wiki/Pseudoterminal
+pub const READ_BUFFER_SIZE: usize = 4_096;
 
 /// Wrapper around [`portable_pty::PtyPair`] that provides controller/controlled
 /// terminology.
@@ -22,7 +34,7 @@ pub const READ_BUFFER_SIZE: usize = 4096;
 /// [`portable_pty`]'s master/slave terminology. It provides clean accessor methods that
 /// align with our codebase's inclusive language policy.
 ///
-/// See: [Inclusive Naming Initiative - Tier 1 Terms](https://inclusivenaming.org/word-lists/tier-1/)
+/// See: [Inclusive Naming Initiative - Tier 1 Terms]
 ///
 /// # Example
 ///
@@ -40,13 +52,16 @@ pub const READ_BUFFER_SIZE: usize = 4096;
 /// // Access controlled side (library's "slave")
 /// // (typically used for spawning child processes)
 /// ```
+///
+/// [Inclusive Naming Initiative - Tier 1 Terms]:
+///     https://inclusivenaming.org/word-lists/tier-1/
 #[allow(missing_debug_implementations)]
 pub struct PtyPair {
     inner: portable_pty::PtyPair,
 }
 
 impl PtyPair {
-    /// Create a new wrapper from a raw `portable_pty::PtyPair`.
+    /// Creates a new wrapper from a raw `portable_pty::PtyPair`.
     #[must_use]
     pub fn new(inner: portable_pty::PtyPair) -> Self { Self { inner } }
 
@@ -78,10 +93,10 @@ impl PtyPair {
         (self.inner.master, self.inner.slave)
     }
 
-    /// Get the inner `portable_pty::PtyPair` for direct library access.
+    /// Gets the inner [`portable_pty::PtyPair`] for direct library access.
     ///
     /// This is provided for cases where you need to interact directly with the
-    /// `portable_pty` API, but should be used sparingly.
+    /// [`portable_pty`] API, but should be used sparingly.
     #[must_use]
     pub fn into_inner(self) -> portable_pty::PtyPair { self.inner }
 }
@@ -90,44 +105,57 @@ impl From<portable_pty::PtyPair> for PtyPair {
     fn from(inner: portable_pty::PtyPair) -> Self { Self::new(inner) }
 }
 
-/// Type alias for the controlled half of a PTY (slave).
+/// Type alias for the controlled half of a [PTY] (slave).
 ///
-/// This represents the process-side of the PTY that the child process
-/// will use for stdin/stdout/stderr.
+/// This represents the process-side of the [PTY] that the child process will use for
+/// stdin/stdout/stderr.
+///
+/// [PTY]: https://en.wikipedia.org/wiki/Pseudoterminal
 pub type Controlled = Box<dyn SlavePty + Send>;
 
-/// Type alias for the controller half of a PTY (master).
+/// Type alias for the controller half of a [PTY] (master).
 ///
-/// This represents the controller half that the parent process uses
-/// to read from and write to the child process.
+/// This represents the controller half that the parent process uses to read from and
+/// write to the child process.
+///
+/// [PTY]: https://en.wikipedia.org/wiki/Pseudoterminal
 pub type Controller = Box<dyn MasterPty + Send>;
 
-/// Type alias for a spawned child process in a PTY.
+/// Type alias for a spawned child process in a [PTY].
+///
+/// [PTY]: https://en.wikipedia.org/wiki/Pseudoterminal
 pub type ControlledChild = Box<dyn portable_pty::Child + Send + Sync>;
 
-/// Type alias for the writer used in PTY operations.
+/// Type alias for the writer used in [PTY] operations.
+///
+/// [PTY]: https://en.wikipedia.org/wiki/Pseudoterminal
 pub type ControllerWriter = Box<dyn std::io::Write + Send>;
 
-/// Type alias for the reader used in PTY operations.
+/// Type alias for the reader used in [PTY] operations.
+///
+/// [PTY]: https://en.wikipedia.org/wiki/Pseudoterminal
 pub type ControllerReader = Box<dyn std::io::Read + Send>;
 
 /// Type alias for a controlled child termination handle.
 pub type ControlledChildTerminationHandle = Box<dyn ChildKiller + Send + Sync>;
 
-/// Type alias for a validated PTY command ready for execution.
+/// Type alias for a validated [PTY] command ready for execution.
 ///
 /// This enhances readability by making the flow clear: [`crate::PtyCommandBuilder`] `->
 /// build() ->` [`PtyCommand`]. This is a validated [`CommandBuilder`] returned by
 /// [`crate::PtyCommandBuilder::build`].
+///
+/// [PTY]: https://en.wikipedia.org/wiki/Pseudoterminal
 pub type PtyCommand = CommandBuilder;
 
-/// Type alias for a pinned completion handle used in PTY sessions.
+/// Type alias for a pinned completion handle used in [PTY] sessions.
 ///
 /// The pinning satisfies Tokio's [`Unpin`] requirement for [`select!`] macro usage. The
 /// [`JoinHandle`] returned by [`tokio::spawn`] doesn't implement [`Unpin`] by default,
 /// but [`select!`] requires all futures to be [`Unpin`] for efficient polling without
 /// moving them.
 ///
+/// [PTY]: https://en.wikipedia.org/wiki/Pseudoterminal
 /// [`select!`]: tokio::select
 pub type PtyCompletionHandle =
     Pin<Box<JoinHandle<miette::Result<portable_pty::ExitStatus>>>>;

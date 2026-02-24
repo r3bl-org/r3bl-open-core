@@ -1,26 +1,31 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Input event types and conversion logic for PTY communication.
+//! Input event types and conversion logic for [PTY] communication.
 //!
-//! This module defines events that flow FROM the application TO the PTY child process:
-//! - [`PtyInputEvent`] - Commands that can be sent to a PTY child process
+//! This module defines events that flow FROM the application TO the [PTY] child process:
+//! - [`PtyInputEvent`] - Commands that can be sent to a [PTY] child process
 //! - `KeyPress` to `PtyInputEvent` conversion using algorithmic approach
 //! - Terminal control sequence generation for cross-platform compatibility
+//!
+//! [PTY]: https://en.wikipedia.org/wiki/Pseudoterminal
 
 use super::pty_output_events::{ControlSequence, CursorKeyMode};
 use crate::{FunctionKey, Key, KeyPress, KeyState, ModifierKeysMask, SpecialKey};
 use portable_pty::PtySize;
 
-/// Input event types that can be sent to a child process through PTY.
+/// Input event types that can be sent to a child process through [PTY].
 ///
 /// # Summary
-/// - Bidirectional communication API for sending commands to PTY child processes
+/// - Bidirectional communication API for sending commands to [PTY] child processes
+///
 /// - Event types: `Write` (raw data), `WriteLine` (text), `SendControl` (key sequences),
 ///   `Resize`, `Flush`, `Close`
 /// - Supports terminal control sequences, window resizing, and process lifecycle
 ///   management
 /// - Used with [`super::pty_sessions::PtyReadWriteSession`] for interactive terminal
 ///   applications
+///
+/// [PTY]: https://en.wikipedia.org/wiki/Pseudoterminal
 #[derive(Debug, Clone)]
 pub enum PtyInputEvent {
     /// Send raw bytes to child's stdin.
@@ -72,18 +77,18 @@ impl ModifierState {
         }
     }
 
-    /// Convert to CSI modifier code:
+    /// Converts to CSI modifier code.
     ///
-    /// | Code | Modifiers        |
-    /// |------|------------------|
-    /// | 1    | none             |
-    /// | 2    | shift            |
-    /// | 3    | alt              |
-    /// | 4    | alt+shift        |
-    /// | 5    | ctrl             |
-    /// | 6    | ctrl+shift       |
-    /// | 7    | ctrl+alt         |
-    /// | 8    | ctrl+alt+shift   |
+    /// | Code   | Modifiers          |
+    /// | ------ | ------------------ |
+    /// | 1      | none               |
+    /// | 2      | shift              |
+    /// | 3      | alt                |
+    /// | 4      | alt+shift          |
+    /// | 5      | ctrl               |
+    /// | 6      | ctrl+shift         |
+    /// | 7      | ctrl+alt           |
+    /// | 8      | ctrl+alt+shift     |
     fn to_csi_modifier(self) -> u8 {
         1 + u8::from(self.shift)
             + (if self.alt { 2 } else { 0 })
@@ -106,7 +111,7 @@ impl From<KeyPress> for Option<PtyInputEvent> {
     }
 }
 
-/// Convert plain (unmodified) keys
+/// Converts plain (unmodified) keys.
 fn convert_plain_key(key: Key) -> Option<PtyInputEvent> {
     match key {
         Key::Character(ch) => Some(PtyInputEvent::Write(ch.to_string().into_bytes())),
@@ -133,7 +138,7 @@ fn convert_plain_key(key: Key) -> Option<PtyInputEvent> {
     }
 }
 
-/// Convert modified keys using algorithmic approach
+/// Converts modified keys using algorithmic approach.
 fn convert_modified_key(key: Key, modifiers: ModifierState) -> Option<PtyInputEvent> {
     match key {
         Key::Character(ch) => Some(convert_character_with_modifiers(ch, modifiers)),
@@ -385,7 +390,7 @@ fn get_ctrl_code_extended(ch: char) -> Option<u8> {
     }
 }
 
-/// Convert special keys with modifiers using CSI sequences
+/// Converts special keys with modifiers using CSI sequences.
 fn convert_special_key(
     special: SpecialKey,
     modifiers: ModifierState,
@@ -486,7 +491,7 @@ fn convert_special_key(
     ))
 }
 
-/// Convert function keys with modifiers
+/// Converts function keys with modifiers.
 fn convert_function_key(
     func: FunctionKey,
     modifiers: ModifierState,

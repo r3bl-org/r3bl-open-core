@@ -1,13 +1,14 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Dynamic input event routing for the PTY multiplexer.
+//! Dynamic input event routing for the [PTY] multiplexer.
 //!
 //! This module handles keyboard input routing, including dynamic process switching
-//! shortcuts (F1 through F9 based on the number of processes) and
-//! terminal resize events.
+//! shortcuts (F1 through F9 based on the number of processes) and terminal resize events.
+//!
+//! [PTY]: https://en.wikipedia.org/wiki/Pseudoterminal
 
 use super::ProcessManager;
-use crate::{AnsiSequenceGenerator, FunctionKey, InputEvent, Key, KeyPress, KeyState,
+use crate::{AnsiSequenceGenerator, Continuation, InputEvent, Key, KeyPress, KeyState,
             ModifierKeysMask, Size, col,
             core::{osc::OscController,
                    pty::{PtyInputEvent, pty_core::pty_sessions::show_notification},
@@ -19,13 +20,16 @@ use crate::{AnsiSequenceGenerator, FunctionKey, InputEvent, Key, KeyPress, KeySt
 pub struct InputRouter;
 
 impl InputRouter {
-    /// Create a new input router.
+    /// Creates a new input router.
     #[must_use]
     pub fn new() -> Self { Self }
 
-    /// Handle an input event, routing it appropriately.
+    /// Handles an input event, routing it appropriately.
     ///
-    /// Returns `Ok(true)` if the application should exit, `Ok(false)` otherwise.
+    /// # Returns
+    ///
+    /// - [`Continuation::Stop`] if the application should exit (Ctrl+Q or input shutdown)
+    /// - [`Continuation::Continue`] otherwise
     ///
     /// # Errors
     ///
@@ -36,26 +40,16 @@ impl InputRouter {
         process_manager: &mut ProcessManager,
         osc: &mut OscController<'_>,
         output_device: &OutputDevice,
-    ) -> miette::Result<bool> {
+    ) -> miette::Result<Continuation> {
         match event {
             InputEvent::Keyboard(key) => {
                 match key {
-                    // Process switching: Handle F1 through F9 for switching processes
+                    // Process switching: Handle F1 through F12 for switching processes
                     KeyPress::Plain {
                         key: Key::FunctionKey(fn_key),
                     } => {
-                        let (fn_number, process_index) = match fn_key {
-                            FunctionKey::F1 => (1, 0),
-                            FunctionKey::F2 => (2, 1),
-                            FunctionKey::F3 => (3, 2),
-                            FunctionKey::F4 => (4, 3),
-                            FunctionKey::F5 => (5, 4),
-                            FunctionKey::F6 => (6, 5),
-                            FunctionKey::F7 => (7, 6),
-                            FunctionKey::F8 => (8, 7),
-                            FunctionKey::F9 => (9, 8),
-                            _ => return Ok(false), // F10-F12 not handled
-                        };
+                        let fn_number = u8::from(fn_key);
+                        let process_index = (fn_number - 1) as usize;
 
                         tracing::debug!("Received F{} for process switching", fn_number);
 
@@ -129,7 +123,7 @@ impl InputRouter {
                         // Show notification for exit.
                         show_notification("PTY Mux - Exit", "Exiting PTY Mux");
 
-                        return Ok(true); // Exit requested
+                        return Ok(Continuation::Stop); // Exit requested
                     }
                     _ => {
                         // Show notification for other key presses (useful for debugging)
@@ -151,9 +145,9 @@ impl InputRouter {
                 Self::handle_resize(process_manager, new_size);
             }
             InputEvent::Shutdown(_) => {
-                // Input thread died - signal exit so the mux doesn't hang
-                // waiting for events that will never come.
-                return Ok(true);
+                // Input thread died - signal exit so the mux doesn't hang waiting for
+                // events that will never come.
+                return Ok(Continuation::Stop);
             }
             _ => {
                 // Other input events (Mouse, Focus, BracketedPaste) are
@@ -161,10 +155,10 @@ impl InputRouter {
             }
         }
 
-        Ok(false)
+        Ok(Continuation::Continue)
     }
 
-    /// Update the terminal title based on the currently active process.
+    /// Updates the terminal title based on the currently active process.
     fn update_terminal_title(
         process_manager: &ProcessManager,
         osc: &mut OscController<'_>,
@@ -185,7 +179,7 @@ impl InputRouter {
         Ok(())
     }
 
-    /// Handle terminal resize events.
+    /// Handles terminal resize events.
     ///
     /// Updates the process manager's size and forwards reduced size to all PTY sessions
     /// to reserve space for the status bar.

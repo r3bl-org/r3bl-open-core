@@ -1,10 +1,13 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Process lifecycle management for the PTY multiplexer with per-process buffers.
+//! Process lifecycle management for the [PTY] multiplexer. See [`ProcessManager`] and
+//! [`Process`].
 //!
-//! This module implements true terminal multiplexing where each process maintains
-//! its own virtual terminal (`OffscreenBuffer`) and ANSI parser. Process switching
-//! is instant with no delays or hacks - just display a different buffer.
+//! Each process maintains its own virtual terminal ([`OffscreenBuffer`]) and [ANSI
+//! parser]. Process switching is instant - just display a different buffer.
+//!
+//! [ANSI parser]: vte::Parser
+//! [PTY]: https://en.wikipedia.org/wiki/Pseudoterminal
 
 use super::output_renderer::STATUS_BAR_HEIGHT;
 use crate::{OffscreenBuffer, Size,
@@ -15,7 +18,9 @@ use crate::{OffscreenBuffer, Size,
 use portable_pty::PtySize;
 use std::fmt::{Debug, Formatter, Result};
 
-/// Manages multiple PTY processes and handles switching between them.
+/// Manages multiple [PTY] processes and handles switching between them.
+///
+/// [PTY]: https://en.wikipedia.org/wiki/Pseudoterminal
 #[derive(Debug)]
 pub struct ProcessManager {
     processes: Vec<Process>,
@@ -26,8 +31,10 @@ pub struct ProcessManager {
 /// Represents a single process that can be managed by the multiplexer.
 ///
 /// Each process maintains its own virtual terminal state through an [`OffscreenBuffer`]
-/// and [`ANSI parser`](vte::Parser), enabling true terminal multiplexing where switching
-/// between processes is instant and preserves the complete terminal state.
+/// and [`ANSI parser`], enabling true terminal multiplexing where switching between
+/// processes is instant and preserves the complete terminal state.
+///
+/// [`ANSI parser`]: vte::Parser
 pub struct Process {
     /// Display name for this process (shown in status bar)
     pub name: String,
@@ -49,10 +56,10 @@ pub struct Process {
 }
 
 impl Process {
-    /// Create a new process definition with virtual terminal buffer.
+    /// Creates a new process definition with virtual terminal buffer.
     ///
-    /// The buffer is sized to (height-1, width) to reserve space for the status bar.
-    /// Each process gets its own virtual terminal that persists when switching.
+    /// The buffer is sized to (height-1, width) to reserve space for the status bar. Each
+    /// process gets its own virtual terminal that persists when switching.
     pub fn new(
         name: impl Into<String>,
         command: impl Into<String>,
@@ -84,15 +91,17 @@ impl Process {
     #[must_use]
     pub fn is_running(&self) -> bool { self.is_running }
 
-    /// Update the process's virtual terminal buffer with new PTY output.
+    /// Updates the process's virtual terminal buffer with new PTY output.
     ///
-    /// This is the core of the per-process virtual terminal architecture:
-    /// Each process maintains its own complete terminal state through an
-    /// `OffscreenBuffer`. Raw PTY bytes are processed through the ANSI parser and
-    /// converted into `PixelChar` updates in the virtual terminal buffer.
+    /// This is the core of the per-process virtual terminal architecture: Each process
+    /// maintains its own complete terminal state through an [`OffscreenBuffer`]. Raw PTY
+    /// bytes are processed through the ANSI parser and converted into [`PixelChar`]
+    /// updates in the virtual terminal buffer.
     ///
     /// This allows each process to maintain its complete screen state independently,
     /// enabling instant switching without any delays or resizing tricks.
+    ///
+    /// [`PixelChar`]: crate::PixelChar
     pub fn process_pty_output_and_update_buffer(&mut self, output: Vec<u8>) {
         if !output.is_empty() {
             // Process bytes and extract any OSC and DSR events.
@@ -143,10 +152,15 @@ impl Process {
         }
     }
 
-    /// Try to get output from this process's PTY session without blocking.
+    /// Tries to get output from this process's [PTY] session without blocking.
     ///
-    /// Returns None if no output is immediately available, or Some(output) if
-    /// there is new data to process.
+    /// # Returns
+    ///
+    /// - [`None`] if no output is immediately available
+    /// - [`Some(output)`] if there is new data to process
+    ///
+    /// [PTY]: https://en.wikipedia.org/wiki/Pseudoterminal
+    /// [`Some(output)`]: Some
     pub fn try_get_output(&mut self) -> Option<Vec<u8>> {
         if let Some(session) = &mut self.session
             && let Ok(event) = session.output_event_receiver_half.try_recv()
@@ -171,7 +185,7 @@ impl Process {
         None
     }
 
-    /// Mark this process as having been rendered (clear unrendered output flag).
+    /// Marks this process as having been rendered (clear unrendered output flag).
     pub fn mark_as_rendered(&mut self) { self.has_unrendered_output = false; }
 }
 
@@ -191,7 +205,7 @@ impl Debug for Process {
 }
 
 impl ProcessManager {
-    /// Create a new process manager with the given processes and terminal size.
+    /// Creates a new process manager with the given processes and terminal size.
     #[must_use]
     pub fn new(processes: Vec<Process>, terminal_size: Size) -> Self {
         Self {
@@ -201,7 +215,7 @@ impl ProcessManager {
         }
     }
 
-    /// Start all processes at startup.
+    /// Starts all processes at startup.
     ///
     /// This spawns all configured processes immediately so they're ready when the user
     /// switches to them. This ensures faster switching and eliminates the delay of
@@ -229,10 +243,9 @@ impl ProcessManager {
 
     /// Switch to the process at the given index.
     ///
-    /// **Instant switching with per-process virtual terminals**:
-    /// This is where the per-process buffer architecture shines - switching
-    /// between processes is truly instant because each process maintains its
-    /// complete terminal state independently.
+    /// **Instant switching with per-process virtual terminals**: This is where the
+    /// per-process buffer architecture shines - switching between processes is truly
+    /// instant because each process maintains its complete terminal state independently.
     ///
     /// **What happens**:
     /// 1. Change the `active_index` to point to a different process
@@ -240,7 +253,7 @@ impl ProcessManager {
     /// 3. The next render will display the target process's virtual terminal
     ///
     /// **Why this works universally**:
-    /// - TUI apps: Their complete screen state is preserved in the `OffscreenBuffer`
+    /// - TUI apps: Their complete screen state is preserved in the [`OffscreenBuffer`]
     /// - bash: Your command history and current prompt state remain intact
     /// - CLI tools: All their output is preserved exactly as they generated it
     pub fn switch_to(&mut self, index: usize) -> Option<usize> {
@@ -262,7 +275,7 @@ impl ProcessManager {
         Some(old_index)
     }
 
-    /// Spawn a process at the given index.
+    /// Spawns a process at the given index.
     fn spawn_process(&mut self, index: usize) -> miette::Result<()> {
         let process = &mut self.processes[index];
         tracing::debug!("Spawning process: {} ({})", process.name, process.command);
@@ -293,10 +306,9 @@ impl ProcessManager {
     /// This is the heart of the per-process virtual terminal architecture:
     ///
     /// **Key Innovation**: ALL processes are polled continuously, not just the active
-    /// one. Each process maintains its own complete virtual terminal state through
-    /// its `OffscreenBuffer`. When you switch between processes, you're instantly
-    /// seeing their maintained terminal state - no delays, no fake resize tricks
-    /// needed.
+    /// one. Each process maintains its own complete virtual terminal state through its
+    /// [`OffscreenBuffer`]. When you switch between processes, you're instantly seeing
+    /// their maintained terminal state - no delays, no fake resize tricks needed.
     ///
     /// **How it works**:
     /// 1. Poll each process for new PTY output (non-blocking)
@@ -335,7 +347,7 @@ impl ProcessManager {
         active_had_output
     }
 
-    /// Send input to the currently active process.
+    /// Sends input to the currently active process.
     ///
     /// # Errors
     ///
@@ -347,39 +359,41 @@ impl ProcessManager {
         Ok(())
     }
 
-    /// Get the name of the currently active process.
+    /// Gets the name of the currently active process.
     #[must_use]
     pub fn active_name(&self) -> &str { &self.processes[self.active_index].name }
 
-    /// Get a slice of all processes.
+    /// Gets a slice of all processes.
     #[must_use]
     pub fn processes(&self) -> &[Process] { &self.processes }
 
-    /// Get the index of the currently active process.
+    /// Gets the index of the currently active process.
     #[must_use]
     pub fn active_index(&self) -> usize { self.active_index }
 
-    /// Get the terminal title of the currently active process (if any).
+    /// Gets the terminal title of the currently active process (if any).
     #[must_use]
     pub fn active_terminal_title(&self) -> Option<&str> {
         self.processes[self.active_index].terminal_title.as_deref()
     }
 
-    /// Get read-only access to the active process's virtual terminal buffer.
+    /// Gets read-only access to the active process's virtual terminal buffer.
     #[must_use]
     pub fn get_active_buffer(&self) -> &OffscreenBuffer {
         &self.processes[self.active_index].ofs_buf
     }
 
-    /// Mark the active process as having been rendered.
+    /// Marks the active process as having been rendered.
     pub fn mark_active_as_rendered(&mut self) {
         self.processes[self.active_index].mark_as_rendered();
     }
-    /// Handle terminal resize with per-process buffer architecture.
+
+    /// Handles terminal resize with per-process buffer architecture.
     ///
-    /// This creates fresh buffers at the new size for all processes and resets
-    /// their parsers for a clean state. Each PTY is notified of the resize
-    /// for natural reflow.
+    /// This creates fresh buffers at the new size for all processes and resets their
+    /// parsers for a clean state. Each [PTY] is notified of the resize for natural reflow.
+    ///
+    /// [PTY]: https://en.wikipedia.org/wiki/Pseudoterminal
     pub fn handle_terminal_resize(&mut self, new_size: Size) {
         self.terminal_size = new_size;
 
@@ -432,10 +446,12 @@ impl ProcessManager {
         );
     }
 
-    /// Shutdown all running processes.
+    /// Shuts down all running processes.
     ///
-    /// This method kills all active PTY sessions to ensure clean exit.
-    /// Called when the multiplexer is shutting down.
+    /// This method kills all active [PTY] sessions to ensure clean exit. Called when the
+    /// multiplexer is shutting down.
+    ///
+    /// [PTY]: https://en.wikipedia.org/wiki/Pseudoterminal
     pub fn shutdown_all_processes(&mut self) {
         tracing::debug!(
             "Shutting down all processes - starting cleanup of {} processes",

@@ -1,24 +1,29 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! PTY command builder for constructing and configuring PTY commands.
+// cspell:words ghostty
+
+//! [PTY] command builder for constructing and configuring [PTY] commands.
+//!
+//! [PTY]: https://en.wikipedia.org/wiki/Pseudoterminal
 
 use super::pty_core::pty_types::PtyCommand;
 use std::path::PathBuf;
 
-/// Configuration builder for PTY commands with sensible defaults.
+/// Configuration builder for [PTY] commands with sensible defaults.
 ///
 /// # Summary
-/// - Builder pattern API for constructing PTY commands with proper configuration
-/// - Features: automatic working directory, environment variables, OSC sequence support,
-///   command arguments chaining
-/// - Prevents common PTY issues like spawning in wrong directory or missing terminal
+/// - Builder pattern API for constructing [PTY] commands with proper configuration
+/// - Features: automatic working directory, environment variables, [OSC] sequence
+///   support, command arguments chaining
+/// - Prevents common [PTY] issues like spawning in wrong directory or missing terminal
 ///   environment settings
-/// - Used to create [`PtyCommand`] instances for spawning child processes in PTY sessions
+/// - Used to create [`PtyCommand`] instances for spawning child processes in [PTY]
+///   sessions
 /// - Integrates with cargo, npm, and other CLI tools requiring terminal emulation
 ///
 /// # Examples
 ///
-/// Basic cargo command with OSC sequences:
+/// Basic cargo command with [OSC] sequences:
 ///
 /// ```rust
 /// # use r3bl_tui::PtyCommandBuilder;
@@ -45,6 +50,9 @@ use std::path::PathBuf;
 /// # Ok(())
 /// # }
 /// ```
+///
+/// [OSC]: crate::OscEvent
+/// [PTY]: https://en.wikipedia.org/wiki/Pseudoterminal
 #[derive(Debug)]
 pub struct PtyCommandBuilder {
     command: String,
@@ -73,8 +81,9 @@ impl PtyCommandBuilder {
 
     /// Sets the working directory.
     ///
-    /// If not called, defaults to the current directory when [`build()`](Self::build) is
-    /// invoked.
+    /// If not called, defaults to the current directory when [`build()`] is invoked.
+    ///
+    /// [`build()`]: Self::build
     #[must_use]
     pub fn cwd(mut self, path: impl Into<PathBuf>) -> Self {
         self.cwd = Some(path.into());
@@ -88,34 +97,39 @@ impl PtyCommandBuilder {
         self
     }
 
-    /// Enables OSC sequence emission by setting appropriate environment variables.
+    /// Enables [OSC] sequence emission by setting appropriate environment variables.
     ///
-    /// Cargo requires specific terminal environment variables to emit OSC 9;4 progress
+    /// Cargo requires specific terminal environment variables to emit [OSC] 9;4 progress
     /// sequences. This method automatically detects and configures the appropriate
     /// environment based on the current terminal:
     ///
     /// - **Windows Terminal**: Detected via `WT_SESSION` (no additional config needed)
     /// - **`ConEmu`**: Detected via `ConEmuANSI=ON` (no additional config needed)
+    /// - **`Ghostty`**: Detected via `TERM_PROGRAM=ghostty` (no additional config needed)
     /// - **`WezTerm`**: Set via `TERM_PROGRAM=WezTerm` (fallback for all platforms)
     ///
     /// This approach ensures maximum compatibility across different terminals and
-    /// operating systems, particularly on Windows where Windows Terminal is the
-    /// default in Windows 11.
+    /// operating systems, particularly on Windows where Windows Terminal is the default
+    /// in Windows 11.
     ///
-    /// Here is a link to the Cargo source code that emits these sequences:
-    /// - <https://github.com/rust-lang/cargo/blob/master/src/cargo/core/shell.rs#L594-L600>
+    /// Here is a link to the [Cargo source] code that emits these sequences.
+    ///
+    /// [Cargo source]:
+    ///     https://github.com/rust-lang/cargo/blob/5d9fc0bc2e870f9b0440a9ff9e7f64f6f06ac411/src/cargo/core/shell.rs#L638-L651
+    /// [OSC]: crate::OscEvent
     #[must_use]
     pub fn enable_osc_sequences(self) -> Self {
-        // Windows Terminal sets WT_SESSION automatically, so we don't need to override
-        // it.
-        if std::env::var("WT_SESSION").is_ok() {
-            // Already in Windows Terminal, no need to set anything.
-            self
-        } else if std::env::var("ConEmuANSI").ok() == Some("ON".into()) {
-            // Already in ConEmu with ANSI enabled.
+        // If the current terminal already supports OSC 9;4 natively, do nothing.
+        let terminal_already_supports_osc = {
+            matches!(std::env::var("WT_SESSION"), Ok(_))
+                || matches!(std::env::var("ConEmuANSI").as_deref(), Ok("ON"))
+                || matches!(std::env::var("TERM_PROGRAM").as_deref(), Ok("ghostty"))
+        };
+
+        if terminal_already_supports_osc {
             self
         } else {
-            // Fall back to WezTerm which works on all platforms.
+            // Spoof WezTerm to force cargo to emit OSC 9;4 progress sequences.
             self.env("TERM_PROGRAM", "WezTerm")
         }
     }

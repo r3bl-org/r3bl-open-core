@@ -341,6 +341,36 @@ pub const CSI_PREFIX: &[u8] = &[ANSI_ESC, ANSI_CSI_BRACKET];
 /// CSI prefix length (2 bytes).
 pub const CSI_PREFIX_LEN: usize = 2;
 
+// ==================== DECCKM Cursor Key Mode Sequences ====================
+//
+// Complete byte sequences for detecting DECCKM mode changes in PTY output.
+// Used by `CursorModeDetector::scan_for_mode_change()`.
+
+/// DECCKM enable sequence (Application mode): `ESC [ ? 1 h`
+///
+/// Byte representation of
+/// [`CsiSequence::EnablePrivateMode`]`(`[`PrivateModeType::CursorKeys`]`)`.
+/// See [`DECCKM_CURSOR_KEYS`] for the mode number.
+///
+/// [`CsiSequence::EnablePrivateMode`]: crate::CsiSequence::EnablePrivateMode
+/// [`DECCKM_CURSOR_KEYS`]: crate::DECCKM_CURSOR_KEYS
+/// [`PrivateModeType::CursorKeys`]: crate::PrivateModeType::CursorKeys
+pub const DECCKM_ENABLE_BYTES: &[u8; 5] = b"\x1B[?1h";
+
+/// DECCKM disable sequence (Normal mode): `ESC [ ? 1 l`
+///
+/// Byte representation of
+/// [`CsiSequence::DisablePrivateMode`]`(`[`PrivateModeType::CursorKeys`]`)`.
+/// See [`DECCKM_CURSOR_KEYS`] for the mode number.
+///
+/// [`CsiSequence::DisablePrivateMode`]: crate::CsiSequence::DisablePrivateMode
+/// [`DECCKM_CURSOR_KEYS`]: crate::DECCKM_CURSOR_KEYS
+/// [`PrivateModeType::CursorKeys`]: crate::PrivateModeType::CursorKeys
+pub const DECCKM_DISABLE_BYTES: &[u8; 5] = b"\x1B[?1l";
+
+/// Length of DECCKM sequences (5 bytes: `ESC [ ? 1 h` or `ESC [ ? 1 l`).
+pub const DECCKM_SEQ_LEN: usize = 5;
+
 // ==================== Terminal Focus Events ====================
 
 /// `CSI I`: Focus gained (73 dec, 49 hex).

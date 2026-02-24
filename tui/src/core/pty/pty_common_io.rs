@@ -1,13 +1,15 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Common I/O implementation shared between PTY session types.
+//! Common I/O implementation shared between [PTY] session types.
 //!
-//! This module provides the core I/O functionality used by both read-only and
-//! read-write PTY sessions:
-//! - PTY pair creation and configuration
+//! This module provides the core I/O functionality used by both read-only and read-write
+//! [PTY] sessions:
+//! - [PTY] pair creation and configuration
 //! - Async task spawning for I/O operations
 //! - Input/output event handling
 //! - Resource management and cleanup
+//!
+//! [PTY]: https://en.wikipedia.org/wiki/Pseudoterminal
 
 use super::pty_core::pty_types::{Controlled, ControlledChild, Controller, PtyCommand};
 use portable_pty::{PtySize, native_pty_system};

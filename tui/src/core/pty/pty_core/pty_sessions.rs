@@ -1,17 +1,22 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! PTY session handle types for read-only and read-write communication.
+//! [PTY] session handle types for read-only and read-write communication.
+//!
+//! [PTY]: https://en.wikipedia.org/wiki/Pseudoterminal
 
 use super::pty_types::{InputEventSenderHalf, PtyCompletionHandle,
                        ReadOnlyOutputEventReceiverHalf, ReadWriteOutputEventReceiverHalf};
 use crate::ControlledChildTerminationHandle;
 use notify_rust::Notification;
 
-/// Show a desktop notification with error handling.
+/// Default notification display duration.
+pub const NOTIFICATION_TIMEOUT_MS: u32 = 1_000;
+
+/// Shows a desktop notification with error handling.
 ///
 /// This helper function simplifies showing notifications throughout the PTY multiplexer
-/// by handling the verbose notification setup and error handling in a single place.
-/// Uses a default timeout of 2 seconds for all notifications.
+/// by handling the verbose notification setup and error handling in a single place. Uses
+/// a default timeout of [`NOTIFICATION_TIMEOUT_MS`] for all notifications.
 ///
 /// # Arguments
 /// * `title` - The notification title/summary
@@ -20,25 +25,22 @@ pub fn show_notification(title: &str, message: &str) {
     if let Err(e) = Notification::new()
         .summary(title)
         .body(message)
-        .timeout(notify_rust::Timeout::Milliseconds(1000))
+        .timeout(notify_rust::Timeout::Milliseconds(NOTIFICATION_TIMEOUT_MS))
         .show()
     {
         tracing::warn!("Failed to show notification '{}': {}", title, e);
     }
 }
 
-/// Session handle for read-only PTY communication.
+/// A unidirectional [PTY] session handle for monitoring child process output.
 ///
-/// # Summary
-/// - Unidirectional PTY session for monitoring child process output without input
-///   capability
-/// - Components: `output_event_receiver_half` (event stream), `completion_handle` (exit
-///   status)
-/// - Receives combined stdout/stderr, OSC sequences, and process lifecycle events
+/// - Receives combined stdout/stderr, [OSC] sequences, and process lifecycle events
+///   without input capability
 /// - Used for monitoring long-running processes, capturing command output, or observing
 ///   terminal applications
-/// - Integrates with Tokio async runtime via pinned [`PtyCompletionHandle`] for efficient
-///   polling in `select!` macros
+///
+/// [OSC]: crate::OscEvent
+/// [PTY]: https://en.wikipedia.org/wiki/Pseudoterminal
 #[derive(Debug)]
 pub struct PtyReadOnlySession {
     /// Receives output events from the child process (combined stdout/stderr).
@@ -52,21 +54,19 @@ pub struct PtyReadOnlySession {
     pub pinned_boxed_session_completion_handle: PtyCompletionHandle,
 }
 
-/// Session handle for read-write PTY communication.
+/// A bidirectional [PTY] session handle for full interaction with child processes.
 ///
-/// # Summary
-/// - Bidirectional PTY session for full interaction with child processes
-/// - Components: `input_event_sender_half` (send input), `output_event_receiver_half`
-///   (receive output), `completion_handle` (exit status)
-/// - Supports sending keyboard input, control sequences, window resizing, and receiving
-///   stdout/stderr output
+/// - Sends keyboard input, control sequences, and window resizing via [`PtyInputEvent`]
+/// - Receives stdout/stderr output via [`PtyReadWriteOutputEvent`]
 /// - Used for interactive terminal applications, REPLs, shell sessions, and automated
 ///   command execution
-/// - Integrates with [`super::pty_input_events::PtyInputEvent`] for input and
-///   [`super::pty_output_events::PtyReadWriteOutputEvent`] for output handling
+///
+/// [PTY]: https://en.wikipedia.org/wiki/Pseudoterminal
+/// [`PtyInputEvent`]: crate::PtyInputEvent
+/// [`PtyReadWriteOutputEvent`]: crate::PtyReadWriteOutputEvent
 #[derive(Debug)]
 pub struct PtyReadWriteSession {
-    /// Send input TO the child process.
+    /// Sends input TO the child process.
     pub input_event_ch_tx_half: InputEventSenderHalf,
 
     /// Receive output FROM the child process (combined stdout/stderr).

@@ -200,7 +200,7 @@ fn spawn_child_process_waiter(
     })
 }
 
-/// Spawn a blocking reader task that processes output from the PTY controller half.
+/// Spawns a blocking reader task that processes output from the PTY controller half.
 ///
 /// This function spawns a blocking task that continuously reads data from the PTY
 /// controller half and processes it according to the provided configuration options.

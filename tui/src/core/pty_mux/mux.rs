@@ -1,19 +1,23 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Main PTY multiplexer orchestrator.
+//! Main [PTY] multiplexer orchestrator.
 //!
-//! This module provides the main `PTYMux` struct that coordinates all components
-//! and manages the event loop for the terminal multiplexer.
+//! This module provides the main [`PTYMux`] struct that coordinates all components and
+//! manages the event loop for the terminal multiplexer.
+//!
+//! [PTY]: https://en.wikipedia.org/wiki/Pseudoterminal
 
 use super::{InputRouter, OutputRenderer, Process, ProcessManager, output_renderer};
-use crate::{AnsiSequenceGenerator, InputEvent, RawMode, Size, col,
+use crate::{AnsiSequenceGenerator, Continuation, InputEvent, RawMode, Size, col,
             core::{get_size,
                    osc::OscController,
                    pty::pty_core::pty_sessions::show_notification,
                    terminal_io::{InputDevice, OutputDevice}},
             lock_output_device_as_mut, row};
 
-/// Main PTY multiplexer that orchestrates all components.
+/// Main [PTY] multiplexer that orchestrates all components.
+///
+/// [PTY]: https://en.wikipedia.org/wiki/Pseudoterminal
 pub struct PTYMux {
     process_manager: ProcessManager,
     input_router: InputRouter,
@@ -36,32 +40,37 @@ impl std::fmt::Debug for PTYMux {
     }
 }
 
-/// Builder for configuring and creating a `PTYMux` instance.
+/// Builder for configuring and creating a [`PTYMux`] instance.
 #[derive(Default, Debug)]
 pub struct PTYMuxBuilder {
     processes: Vec<Process>,
 }
 
 impl PTYMuxBuilder {
-    /// Set the processes to be managed by the multiplexer.
+    /// Sets the processes to be managed by the multiplexer.
     #[must_use]
     pub fn processes(mut self, processes: Vec<Process>) -> Self {
         self.processes = processes;
         self
     }
 
-    /// Add a single process to the multiplexer.
+    /// Adds a single process to the multiplexer.
     #[must_use]
     pub fn add_process(mut self, process: Process) -> Self {
         self.processes.push(process);
         self
     }
 
-    /// Build the `PTYMux` instance.
+    /// Builds the [`PTYMux`] instance.
     ///
     /// # Errors
     ///
-    /// Returns an error if no processes are configured or terminal setup fails.
+    /// Returns an error if:
+    /// - No processes are configured
+    /// - More than [`MAX_PROCESSES`] processes are configured
+    /// - Terminal size query fails
+    ///
+    /// [`MAX_PROCESSES`]: output_renderer::MAX_PROCESSES
     pub fn build(self) -> miette::Result<PTYMux> {
         if self.processes.is_empty() {
             miette::bail!("At least one process must be configured");
@@ -90,11 +99,11 @@ impl PTYMuxBuilder {
 }
 
 impl PTYMux {
-    /// Create a new builder for configuring a `PTYMux` instance.
+    /// Creates a new builder for configuring a [`PTYMux`] instance.
     #[must_use]
     pub fn builder() -> PTYMuxBuilder { PTYMuxBuilder::default() }
 
-    /// Run the multiplexer event loop.
+    /// Runs the multiplexer event loop.
     ///
     /// This is the main entry point that:
     /// 1. Starts raw mode
@@ -104,7 +113,13 @@ impl PTYMux {
     ///
     /// # Errors
     ///
-    /// Returns an error if terminal setup, process management, or event handling fails.
+    /// Returns an error if:
+    /// - Terminal title ([OSC]) setup fails
+    /// - Process spawning fails
+    /// - Status bar rendering fails
+    /// - Input or output event handling fails during the main loop
+    ///
+    /// [OSC]: crate::OscEvent
     pub async fn run(mut self) -> miette::Result<()> {
         // Start raw mode using existing RawMode.
         RawMode::start(
@@ -162,7 +177,7 @@ impl PTYMux {
         let mut output_poll_interval =
             tokio::time::interval(tokio::time::Duration::from_millis(10));
 
-        'main_loop: loop {
+        loop {
             tokio::select! {
                 // Poll ALL processes and update their virtual terminal buffers.
                 // https://developerlife.com/2024/07/10/rust-async-cancellation-safety-tokio/#example-1-right-and-wrong-way-to-sleep-and-interval
@@ -203,16 +218,16 @@ impl PTYMux {
 
                     // Handle input events using the input router.
                     tracing::debug!("Handling input event: {:?}", input_event);
-                    let should_exit = self.input_router.handle_input(
+                    let continuation = self.input_router.handle_input(
                         input_event,
                         &mut self.process_manager,
                         &mut osc,
                         &self.output_device
                     )?;
 
-                    if should_exit {
+                    if continuation == Continuation::Stop {
                         tracing::debug!("Exit requested by input router - breaking main event loop");
-                        break 'main_loop; // Exit requested - break out of the loop
+                        break;
                     }
                 }
 
@@ -222,29 +237,31 @@ impl PTYMux {
                 }
             }
         }
+
         tracing::debug!("Event loop completed - returning Ok(())");
+
         Ok(())
     }
 
-    /// Update terminal size for all components.
+    /// Updates terminal size for all components.
     ///
-    /// This method is called when the terminal is resized and ensures
-    /// all components are aware of the new size.
+    /// This method is called when the terminal is resized and ensures all components are
+    /// aware of the new size.
     pub fn update_terminal_size(&mut self, new_size: Size) {
         self.terminal_size = new_size;
         self.process_manager.handle_terminal_resize(new_size);
         self.output_renderer.update_terminal_size(new_size);
     }
 
-    /// Get the current terminal size.
+    /// Gets the current terminal size.
     #[must_use]
     pub fn terminal_size(&self) -> Size { self.terminal_size }
 
-    /// Get a reference to the process manager.
+    /// Gets a reference to the process manager.
     #[must_use]
     pub fn process_manager(&self) -> &ProcessManager { &self.process_manager }
 
-    /// Get a mutable reference to the process manager.
+    /// Gets a mutable reference to the process manager.
     pub fn process_manager_mut(&mut self) -> &mut ProcessManager {
         &mut self.process_manager
     }

@@ -1,10 +1,13 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Dynamic display management for the PTY multiplexer.
+//! Dynamic display management for the [PTY] multiplexer. See [`OutputRenderer`] for
+//! details.
 //!
-//! This module handles rendering output from the active process using `OffscreenBuffer`
+//! This module handles rendering output from the active process using [`OffscreenBuffer`]
 //! as a compositor to eliminate visual artifacts. It maintains a dynamic status bar
 //! showing process information and keyboard shortcuts.
+//!
+//! [PTY]: https://en.wikipedia.org/wiki/Pseudoterminal
 
 use super::ProcessManager;
 use crate::{ANSIBasicColor, ArrayOverflowResult, FlushKind, IndexOps, LengthOps,
@@ -16,21 +19,20 @@ use crate::{ANSIBasicColor, ArrayOverflowResult, FlushKind, IndexOps, LengthOps,
             tui_style_attrib::Bold,
             tui_style_attribs};
 
-/// `RowHeight` reserved for the status bar at the bottom of the terminal.
+/// [`RowHeight`] reserved for the status bar at the bottom of the terminal.
+///
+/// [`RowHeight`]: crate::RowHeight
 pub const STATUS_BAR_HEIGHT: u16 = 1;
 
 /// Maximum number of processes supported (F1-F9).
 pub const MAX_PROCESSES: usize = 9;
 
-/// Manages display rendering and status bar for the multiplexer with per-process buffers.
+/// Manages display rendering and status bar for the multiplexer.
 ///
-/// This renderer gets the active process's buffer from `ProcessManager` and composites
-/// the status bar into it for final rendering. No longer maintains its own single buffer.
+/// Gets the active process's buffer from [`ProcessManager`] and composites the status bar
+/// into it for final rendering.
 pub struct OutputRenderer {
     terminal_size: Size,
-    // Removed: single offscreen_buffer - now uses per-process buffers
-    // Removed: vte_parser - now handled per-process
-    // Removed: first_output_seen - now handled per-process
 }
 
 impl std::fmt::Debug for OutputRenderer {
@@ -42,18 +44,15 @@ impl std::fmt::Debug for OutputRenderer {
 }
 
 impl OutputRenderer {
-    /// Create a new output renderer with the given terminal size.
-    ///
-    /// With per-process buffers, the renderer no longer maintains its own buffer
-    /// or parser - it gets buffers from the `ProcessManager` when needed.
+    /// Creates a new output renderer with the given terminal size.
     #[must_use]
     pub fn new(terminal_size: Size) -> Self { Self { terminal_size } }
 
-    /// Render the active process's buffer with status bar using per-process buffers.
+    /// Renders the active process's buffer with the status bar composited on top.
     ///
-    /// **Per-process buffer compositing**:
+    /// **Buffer compositing**:
     /// This method demonstrates how the virtual terminal architecture works:
-    /// 1. Get the active process's complete virtual terminal (`OffscreenBuffer`)
+    /// 1. Get the active process's complete virtual terminal ([`OffscreenBuffer`])
     /// 2. Clone it for compositing (preserves the original state)
     /// 3. Composite the status bar into the last row
     /// 4. Paint the entire composite to the real terminal atomically
@@ -87,7 +86,7 @@ impl OutputRenderer {
         Ok(())
     }
 
-    /// Composite status bar into the last row of the given `OffscreenBuffer`.
+    /// Composite status bar into the last row of the given [`OffscreenBuffer`].
     ///
     /// This modifies the provided buffer by writing the status bar to its last row.
     fn composite_status_bar_into_buffer(
@@ -124,7 +123,8 @@ impl OutputRenderer {
         }
     }
 
-    /// Paint the given `OffscreenBuffer` to terminal using existing paint infrastructure.
+    /// Paint the given [`OffscreenBuffer`] to terminal using existing paint
+    /// infrastructure.
     fn paint_buffer(&mut self, ofs_buf: &OffscreenBuffer, output_device: &OutputDevice) {
         let mut crossterm_impl = OffscreenBufferPaintImplCrossterm {};
         let render_ops = crossterm_impl.render(ofs_buf);
@@ -211,7 +211,7 @@ impl OutputRenderer {
         }
     }
 
-    /// Render initial status bar on startup using `OffscreenBuffer` composition.
+    /// Renders initial status bar on startup using [`OffscreenBuffer`] composition.
     ///
     /// # Errors
     ///
@@ -221,14 +221,10 @@ impl OutputRenderer {
         output_device: &OutputDevice,
         process_manager: &ProcessManager,
     ) -> miette::Result<()> {
-        // With per-process buffers, just render from the active buffer.
         self.render_from_active_buffer(output_device, process_manager)
     }
 
-    /// Update the terminal size for the renderer.
-    ///
-    /// With per-process buffers, the renderer doesn't maintain its own buffer,
-    /// so this just updates the terminal size for status bar compositing.
+    /// Updates the terminal size used for status bar compositing.
     pub fn update_terminal_size(&mut self, new_size: Size) {
         self.terminal_size = new_size;
     }
