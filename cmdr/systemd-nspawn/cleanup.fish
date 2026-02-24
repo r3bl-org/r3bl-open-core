@@ -81,7 +81,7 @@ end
 # Delete cached images
 for img in $found_images
     echo "Removing $img..."
-    rm -f $img
+    command rm -f $img
 end
 
 echo ""

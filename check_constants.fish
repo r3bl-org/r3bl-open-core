@@ -105,3 +105,9 @@ set -g TIMEOUT_EXIT_CODE 124
 # Using a well-known path avoids global variable side effects while still
 # allowing callers to explicitly opt-in to reading the duration.
 set -g CHECK_DURATION_FILE /tmp/check_fish_duration.txt
+
+# Maximum size (in GB) for /tmp/roc/target before triggering automatic cleanup.
+# The three target dirs (check ~5.6GB, doc-staging-full ~1.7GB, doc-staging-quick ~0.5GB)
+# total ~8GB at steady state. 16GB gives headroom for incremental artifacts without
+# thrashing (constant evict → cold rebuild cycles). Still well under tmpfs capacity (63GB).
+set -g MAX_TARGET_SIZE_GB 16

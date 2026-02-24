@@ -145,6 +145,31 @@ Doc comments should read naturally and have clear subjects. Avoid abrupt sentenc
 /// This is the main trait - implement it to add your logic.
 ```
 
+### Escape Sequences: Use `ESC` Notation, Not `\x1B`
+
+**In documentation prose, write escape sequences using human-readable `ESC` notation, not Rust
+hex escape syntax.**
+
+- `\x1B` is Rust/C escape syntax for byte 27. In prose, it forces the reader to mentally decode
+  hex before understanding the sequence.
+- `ESC` is the standard terminal notation used in VT100 specs, Wikipedia, and terminal
+  documentation. A reader instantly knows "escape byte" without hex decoding.
+- Space-separate the components (`ESC [ A`, not `ESC[A`) so each part (escape prefix,
+  intermediary, final byte) is visually distinct.
+
+```rust
+// ❌ Bad: Rust escape syntax in documentation prose
+/// Sends `\x1BOA` in application mode or `\x1B[A` in normal mode.
+/// The detector scans for `\x1B[?1h` and `\x1B[?1l`.
+
+// ✅ Good: Standard terminal notation
+/// Sends `ESC O A` in application mode or `ESC [ A` in normal mode.
+/// The detector scans for `ESC [ ? 1 h` and `ESC [ ? 1 l`.
+```
+
+**Exception:** In Rust code, doctests, and byte literals, continue using `\x1B` or `0x1B` -
+that's actual Rust syntax the compiler needs.
+
 ### Opening Lines by Item Type
 
 The first line/paragraph of a doc comment should describe **what the item IS**, not what it does.
@@ -967,6 +992,7 @@ Before committing documentation:
 - [ ] Follow-up sentences use explicit subjects ("This trait...", "This struct...")
 - [ ] Methods use third-person verbs (Creates, Returns, Checks - not Create, Return, Check)
 - [ ] Regular dashes (`-`) used, not em dashes (`—`)
+- [ ] Escape sequences use `ESC` notation in prose, not `\x1B` (exception: code/doctests)
 - [ ] ASCII diagrams use standard Unicode (`✗` `→` `▼`) not emoji (`❌` `➡️` `⬇️`)
 - [ ] Markdown tables use left-aligned columns (`:---`)
 - [ ] Only `#` and `##` headings used (not `###` - use **bold** for sub-sections)

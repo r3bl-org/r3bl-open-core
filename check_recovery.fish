@@ -21,6 +21,25 @@ function dirs_for_check_type
     end
 end
 
+# Evict build cache if total size exceeds MAX_TARGET_SIZE_GB.
+# Prevents /tmp/roc/target from filling the tmpfs over long watch sessions.
+# Uses du -sk (kilobytes) for cross-platform compatibility (Linux + macOS).
+function cleanup_oversized_target
+    set -l target_parent (dirname $CHECK_TARGET_DIR)
+    if not test -d $target_parent
+        return 0
+    end
+
+    set -l size_kb (command du -sk $target_parent 2>/dev/null | string split \t)[1]
+    set -l max_kb (math "$MAX_TARGET_SIZE_GB * 1048576")
+    if test "$size_kb" -ge "$max_kb"
+        set -l size_gb (math --scale=1 "$size_kb / 1048576")
+        log_and_print $CHECK_LOG_FILE "["(timestamp)"] 🧹 Target dir is "$size_gb"GB (limit: "$MAX_TARGET_SIZE_GB"GB), cleaning..."
+        command rm -rf $target_parent
+        mkdir -p $target_parent
+    end
+end
+
 # Helper function to clean target folder
 # Removes build artifacts and caches to ensure a clean rebuild.
 # This is important because various parts of the cache (incremental, metadata, etc.)

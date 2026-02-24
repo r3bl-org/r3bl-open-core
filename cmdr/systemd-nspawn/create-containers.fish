@@ -99,7 +99,7 @@ function create_fedora_container
         # Fallback: try direct extraction
         sudo tar -xf /tmp/$fedora_image -C $container_path --strip-components=1
     end
-    rm -rf $tmpdir
+    command rm -rf $tmpdir
 
     if test $status -ne 0
         echo "Failed to create Fedora container"

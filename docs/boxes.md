@@ -72,6 +72,10 @@ Provide a quick reference for Unicode box-drawing characters commonly used in AS
 | `╯` | U+256F | ARC UP AND LEFT |
 | `╰` | U+2570 | ARC UP AND RIGHT |
 
+## Footnote marker
+
+▪ (U+25AA, Black Small Square)
+
 ## Quick Copy-Paste Box Templates
 
 ### Simple Box

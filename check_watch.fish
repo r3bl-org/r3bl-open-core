@@ -314,6 +314,9 @@ function watch_mode
         # PHASE 3: Run checks (quiet period detected)
         # ──────────────────────────────────────────────────────────────────────
 
+
+        # Evict build cache if it has grown too large (prevents filling tmpfs)
+        cleanup_oversized_target
         # Check if config files changed (cleans target if needed)
         check_config_changed $CHECK_TARGET_DIR $CONFIG_FILES_TO_WATCH
 
