@@ -5,7 +5,7 @@
 // Allow test_attr_in_doctest - examples show test function structure for documentation.
 #![allow(clippy::doc_markdown, clippy::test_attr_in_doctest)]
 
-//! Conformance test data for VT100 ANSI sequence validation.
+//! Conformance test data for [`VT-100`] ANSI sequence validation.
 //!
 //! This module provides type-safe, reusable sequence builder functions organized by
 //! functionality. Each module contains functions that generate ANSI sequences using
@@ -42,21 +42,22 @@
 //! - **Refactoring safety**: Changes to sequence builders update all tests automatically
 //! - **Type safety**: Cannot accidentally create malformed sequences
 //! - **Composability**: Complex sequences built from simple, reusable components
-//! - **VT100 specification mapping**: Each builder corresponds to documented commands
+//! - **[`VT-100` specification] mapping**: Each builder corresponds to documented
+//!   commands
 //! - **IDE support**: Full autocomplete and error checking
 //!
 //! ## Module Organization
 //!
-//! | Module | Purpose | Key Functions | VT100 Spec Coverage |
-//! |--------|---------|---------------|---------------------|
-//! | [`basic_sequences`] | Simple operations | `clear_and_home()`, `move_and_print()` | Cursor positioning, display control |
-//! | [`cursor_sequences`] | Cursor control | `save_do_restore()`, `move_to_position()` | ESC 7/8, CSI H commands |
-//! | [`display_sequences`] | Screen manipulation | `clear_screen()`, `clear_to_end_of_screen()` | ED, EL commands |
-//! | [`styling_sequences`] | Text formatting | `colored_text()`, `rainbow_text()` | SGR codes 30-37, 40-47 |
-//! | [`vim_sequences`] | Vim editor patterns | `vim_status_line()`, `vim_syntax_highlighting()` | Real vim output sequences |
-//! | [`emacs_sequences`] | Emacs editor patterns | `emacs_mode_line()`, `emacs_buffer_list()` | Real emacs output sequences |
-//! | [`tmux_sequences`] | Terminal multiplexer | `tmux_status_bar()`, `tmux_pane_split_horizontal()` | Real tmux output sequences |
-//! | [`edge_case_sequences`] | Boundary conditions | `malformed_sequences()`, `boundary_cursor_tests()` | Error handling validation |
+//! | Module                  | Purpose               | Key Functions                                       | [`VT-100`] Spec Coverage            |
+//! | ----------------------- | --------------------- | --------------------------------------------------- | ----------------------------------- |
+//! | [`basic_sequences`]     | Simple operations     | `clear_and_home()`, `move_and_print()`              | Cursor positioning, display control |
+//! | [`cursor_sequences`]    | Cursor control        | `save_do_restore()`, `move_to_position()`           | ESC 7/8, CSI H commands             |
+//! | [`display_sequences`]   | Screen manipulation   | `clear_screen()`, `clear_to_end_of_screen()`        | ED, EL commands                     |
+//! | [`styling_sequences`]   | Text formatting       | `colored_text()`, `rainbow_text()`                  | SGR codes 30-37, 40-47              |
+//! | [`vim_sequences`]       | Vim editor patterns   | `vim_status_line()`, `vim_syntax_highlighting()`    | Real vim output sequences           |
+//! | [`emacs_sequences`]     | Emacs editor patterns | `emacs_mode_line()`, `emacs_buffer_list()`          | Real emacs output sequences         |
+//! | [`tmux_sequences`]      | Terminal multiplexer  | `tmux_status_bar()`, `tmux_pane_split_horizontal()` | Real tmux output sequences          |
+//! | [`edge_case_sequences`] | Boundary conditions   | `malformed_sequences()`, `boundary_cursor_tests()`  | Error handling validation           |
 //!
 //! ## Sequence Construction Patterns
 //!
@@ -210,6 +211,9 @@
 //! let tmux_status = tmux_sequences::tmux_status_bar();
 //! ofs_buf.apply_ansi_bytes(tmux_status);
 //! ```
+//!
+//! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+//! [`VT-100` specification]: https://vt100.net/docs/vt100-ug/chapter3.html
 
 pub mod basic_sequences;
 pub mod cursor_sequences;

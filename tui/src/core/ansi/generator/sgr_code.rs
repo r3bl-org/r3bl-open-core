@@ -40,8 +40,10 @@
 //!
 //! For 256-color and RGB (truecolor) sequences, there are two formats:
 //!
-//! - **Semicolon format** (xterm-compatible): `ESC[38;2;r;g;bm` — de-facto standard
-//! - **Colon format** (ITU-T T.416/ISO 8613-6): `ESC[38:2:r:g:bm` — technically "correct"
+//! - **Semicolon format** (xterm-compatible): `ESC [ 38 ; 2 ; r ; g ; b m` — de-facto
+//!   standard
+//! - **Colon format** (ITU-T T.416/ISO 8613-6): `ESC [ 38 : 2 : r : g : b m` —
+//!   technically "correct"
 //!
 //! We use **semicolons** because:
 //!
@@ -54,12 +56,16 @@
 //! 3. **Crossterm compatibility**: The Crossterm backend (used on macOS/Windows) also
 //!    uses semicolons, so this keeps output consistent across all platforms.
 //!
-//! Note: Our VT100 *parser* accepts both formats for maximum compatibility when parsing
-//! output from other applications. See [`crate::core::ansi::vt_100_pty_output_parser`].
+//! Note: Our [`VT-100`] *parser* accepts both formats for maximum compatibility when
+//! parsing output from other applications. See
+//! [`crate::core::ansi::vt_100_pty_output_parser`].
+//!
 //!
 //! More info:
 //! - <https://doc.rust-lang.org/reference/tokens.html#ascii-escapes>
 //! - <https://notes.burke.libbey.me/ansi-escape-codes/>
+//!
+//! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 
 use crate::{ANSIBasicColor, AnsiValue, FastStringify,
             generate_impl_display_for_fast_stringify};

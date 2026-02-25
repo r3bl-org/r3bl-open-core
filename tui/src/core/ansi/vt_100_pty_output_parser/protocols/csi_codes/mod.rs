@@ -13,8 +13,8 @@
 //!
 //! - **ESC sequences** (the predecessors): Simple, non-parameterized commands like `ESC
 //!   7` (save cursor) or `ESC D` (move down one line). See [`esc_codes`] for details.
-//! - **CSI sequences** (modern approach): Parameterized commands like `ESC[s` (save
-//!   cursor) or `ESC[5B` (move down 5 lines). The parameters make them much more
+//! - **CSI sequences** (modern approach): Parameterized commands like `ESC [ s` (save
+//!   cursor) or `ESC [ 5 B` (move down 5 lines). The parameters make them much more
 //!   flexible.
 //!
 //! Many operations can be performed using either approach for backward compatibility.
@@ -35,10 +35,10 @@
 //! - **Terminal Modes**: Configure terminal behavior and features
 //!
 //! ## Examples
-//! - `ESC[2J` - Clear entire screen
-//! - `ESC[1;5H` - Move cursor to row 1, column 5
-//! - `ESC[31m` - Set text color to red
-//! - `ESC[1A` - Move cursor up 1 line
+//! - `ESC [ 2 J` - Clear entire screen
+//! - `ESC [ 1 ; 5 H` - Move cursor to row 1, column 5
+//! - `ESC [ 31 m` - Set text color to red
+//! - `ESC [ 1 A` - Move cursor up 1 line
 //!
 //! [`esc_codes`]: crate::vt_100_pty_output_parser::protocols::esc_codes
 

@@ -2,18 +2,29 @@
 
 //! Direct ESC (Escape) sequence constants for terminal control.
 //!
-//! ESC sequences are simple, non-parameterized terminal control codes that predate
-//! the more advanced CSI sequences. They provide fundamental terminal operations
-//! without the flexibility of parameters.
+//! ESC sequences are simple, non-parameterized terminal control codes that predate the
+//! more advanced [`CSI`] sequences. They provide fundamental terminal operations without
+//! the flexibility of parameters.
+//!
+//! These constants are used by [`EscSequence`] for building ESC output sequences.
+//!
+//! [`CSI`]: crate::CsiSequence
+//! [`EscSequence`]: crate::EscSequence
 
 // Cursor Save/Restore Operations
 
-/// ESC 7 (DECSC): Save cursor position and attributes
-/// Saves the current cursor position and SGR attributes
+/// ESC 7 (DECSC): Save cursor position and attributes.
+///
+/// Saves the current cursor position and [`SGR`] attributes.
+///
+/// [`SGR`]: crate::SgrCode
 pub const DECSC_SAVE_CURSOR: u8 = b'7';
 
-/// ESC 8 (DECRC): Restore cursor position and attributes
-/// Restores the previously saved cursor position and SGR attributes
+/// ESC 8 (DECRC): Restore cursor position and attributes.
+///
+/// Restores the previously saved cursor position and [`SGR`] attributes.
+///
+/// [`SGR`]: crate::SgrCode
 pub const DECRC_RESTORE_CURSOR: u8 = b'8';
 
 // Scrolling Operations.
@@ -48,9 +59,11 @@ pub const G1_CHARSET_INTERMEDIATE: &[u8] = b")";
 /// Used as: ESC ( B
 pub const CHARSET_ASCII: u8 = b'B';
 
-/// Select DEC Special Graphics character set (line drawing)
-/// Used as: ESC ( 0
-/// Maps ASCII characters to box-drawing Unicode characters
+/// Select [`DEC`] Special Graphics character set (line drawing).
+///
+/// Used as: `ESC ( 0`. Maps ASCII characters to box-drawing Unicode characters.
+///
+/// [`DEC`]: https://en.wikipedia.org/wiki/Digital_Equipment_Corporation
 pub const CHARSET_DEC_GRAPHICS: u8 = b'0';
 
 // Other Character Sets (for future extension)
@@ -59,8 +72,11 @@ pub const CHARSET_DEC_GRAPHICS: u8 = b'0';
 /// Used as: ESC ( A
 pub const CHARSET_UK: u8 = b'A';
 
-/// Select DEC Supplemental Graphics character set
-/// Used as: ESC ( <
+/// Select [`DEC`] Supplemental Graphics character set.
+///
+/// Used as: `ESC ( <`.
+///
+/// [`DEC`]: https://en.wikipedia.org/wiki/Digital_Equipment_Corporation
 pub const CHARSET_DEC_SUPPLEMENTAL: u8 = b'<';
 
 // Miscellaneous ESC Sequences.

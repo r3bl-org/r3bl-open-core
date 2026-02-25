@@ -100,9 +100,9 @@ use tokio::sync::broadcast;
 ///      `== 0`, and exits if it is. If new subscribers have appeared between the wake and
 ///      the check (the [inherent race condition]), the thread continues running instead.
 ///    - On exit, [`run_worker_loop(worker, ...)`] returns, and the [worker] goes out of
-///      scope, triggering [RAII] cleanup via [`Drop`] on the OS resources it owns (like
+///      scope, triggering [`RAII`] cleanup via [`Drop`] on the OS resources it owns (like
 ///      [`fd`]s).
-///    - [`TerminationGuard::drop()`] (also a local [RAII] guard in
+///    - [`TerminationGuard::drop()`] (also a local [`RAII`] guard in
 ///      [`run_worker_loop(worker, ...)`]) then clears the [waker] to [`None`], leaving
 ///      liveness in the [terminated or not started] state.
 /// 5. **Panic exit** - if your [`block_until_ready_then_dispatch()`] implementation
@@ -269,7 +269,6 @@ use tokio::sync::broadcast;
 /// require `'static`.
 ///
 /// [Drop Behavior]: super::SubscriberGuard#drop-behavior
-/// [RAII]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
 /// [What Is the RRT Pattern?]: super#what-is-the-rrt-pattern
 /// [`Arc<Mutex<Option<W::Waker>>>`]: std::sync::Arc
 /// [`AtomicU8`]: std::sync::atomic::AtomicU8
@@ -280,6 +279,7 @@ use tokio::sync::broadcast;
 /// [`LazyLock`]: std::sync::LazyLock
 /// [`MioPollWorker::block_until_ready_then_dispatch_impl()`]:
 ///     crate::terminal_lib_backends::MioPollWorker::block_until_ready_then_dispatch_impl
+/// [`RAII`]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
 /// [`RRTWaker::wake_and_unblock_dedicated_thread()`]:
 ///     super::RRTWaker::wake_and_unblock_dedicated_thread
 /// [`RRTWaker`]: super::RRTWaker
@@ -331,7 +331,7 @@ pub struct RRT<W: RRTWorker> {
     /// replaced.
     ///
     /// This [sender]-half broadcasts both of these kinds of events to all async
-    /// consumers (in your [TUI] or [`readline_async`] app):
+    /// consumers (in your [`TUI`] or [`readline_async`] app):
     /// 1. Domain events ([`RRTEvent::Worker`], from your injected code in
     ///    [`RRTWorker::block_until_ready_then_dispatch`]).
     /// 2. Framework events ([`RRTEvent::Shutdown`], from [`RRT`] itself).
@@ -347,9 +347,9 @@ pub struct RRT<W: RRTWorker> {
     /// [`LazyLock`] defers creation to first access, and the actual channel is created
     /// transparently via [`Deref`].
     ///
-    /// [TUI]: crate::tui::TerminalWindow::main_event_loop
     /// [`Deref`]: std::ops::Deref
     /// [`LazyLock`]: std::sync::LazyLock
+    /// [`TUI`]: crate::tui::TerminalWindow::main_event_loop
     /// [`broadcast::channel()`]: tokio::sync::broadcast::channel()
     /// [`readline_async`]: crate::readline_async::ReadlineAsyncContext::try_new
     /// [`sender.subscribe()`]: tokio::sync::broadcast::Sender::subscribe()
@@ -372,7 +372,7 @@ pub struct RRT<W: RRTWorker> {
     ///   [`LazyLock`]. We use [`LazyLock`] because [`Arc::new(Mutex::new(...))`] is not
     ///   a [const expression]. [`LazyLock`] defers creation to first access, and the
     ///   wrapper is created transparently via [`Deref`].
-    /// - The inner [`Option<W::Waker>`] (the "WakerSlot" type) is swapped on relaunch
+    /// - The inner [`Option<W::Waker>`] (the "`WakerSlot`" type) is swapped on relaunch
     ///   (set to `Some(new_waker)`) and cleared to [`None`] when the thread dies.
     ///
     /// All [`SubscriberGuard`]s hold a clone of the inner [`Arc`] (the
@@ -547,17 +547,16 @@ impl<W: RRTWorker> RRT<W> {
     ///   exited
     #[must_use]
     pub fn is_thread_running(&self) -> LivenessState {
-        self.shared_waker_slot
-            .lock()
-            .ok()
-            .map(|guard| {
+        match self.shared_waker_slot.lock() {
+            Ok(guard) => {
                 if guard.is_some() {
                     LivenessState::Running
                 } else {
                     LivenessState::TerminatedOrNotStarted
                 }
-            })
-            .unwrap_or(LivenessState::TerminatedOrNotStarted)
+            }
+            Err(_) => LivenessState::TerminatedOrNotStarted,
+        }
     }
 
     /// Queries how many receivers are subscribed to the broadcast channel.
@@ -600,12 +599,11 @@ impl<W: RRTWorker> RRT<W> {
 /// When [`block_until_ready_then_dispatch()`] returns [`Continuation::Restart`], the
 /// framework executes the following sequence:
 ///
-/// 1. The current [`RRTWorker`] is dropped and [RAII] cleanup releases OS resources.
+/// 1. The current [`RRTWorker`] is dropped and [`RAII`] cleanup releases OS resources.
 /// 2. The framework sleeps for the configured delay (see [`RestartPolicy`]).
 /// 3. [`W::create_and_register_os_sources()`] is called to create a fresh [`RRTWorker`]
-///    + [`RRTWaker`] pair. The new [`RRTWorker`] instance allocates new OS resources,
-///    and the [`RRTWaker`] is bound to these resources and can wake the thread when
-///    needed.
+///    + [`RRTWaker`] pair. The new [`RRTWorker`] instance allocates new OS resources, and
+///      the [`RRTWaker`] is bound to these resources and can wake the thread when needed.
 /// 4. The new [`RRTWaker`] replaces the old one in the [`shared_waker_slot`] (so existing
 ///    subscribers target the new [`RRTWorker`]).
 /// 5. The poll loop resumes with the fresh [`RRTWorker`]. The restart budget resets so
@@ -632,11 +630,11 @@ impl<W: RRTWorker> RRT<W> {
 /// When the loop exits, [`TerminationGuard`] clears the waker to [`None`] so the next
 /// [`subscribe()`] call detects termination and spawns a new thread.
 ///
-/// [RAII]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
 /// [Thread Lifecycle]: RRT#thread-lifecycle
 /// [`Continue`]: Continuation::Continue
 /// [`MioPollWorker::create_and_register_os_sources()`]:
 ///     crate::terminal_lib_backends::direct_to_ansi::input::mio_poller::MioPollWorker::create_and_register_os_sources
+/// [`RAII`]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
 /// [`RRTEvent::Shutdown(Panic)`]: ShutdownReason::Panic
 /// [`RRTWaker`]: super::RRTWaker
 /// [`Restart`]: Continuation::Restart
@@ -697,18 +695,18 @@ pub fn run_worker_loop<W: RRTWorker>(
                             current_delay = advance_backoff_delay(delay, &policy);
                         }
 
-                        match W::create_and_register_os_sources() {
-                            Ok((new_worker, new_waker)) => {
-                                worker = new_worker;
-                                waker_slot_writer.set(new_waker);
-                                // Reset budget so the fresh worker gets a full allowance
-                                // for future incidents.
-                                restart_count = 0;
-                                current_delay = policy.initial_delay;
-                                break false; // Success - back to outer poll loop.
-                            }
-                            Err(_) => continue, // Retry create with next delay.
+                        if let Ok((new_worker, new_waker)) =
+                            W::create_and_register_os_sources()
+                        {
+                            worker = new_worker;
+                            waker_slot_writer.set(new_waker);
+                            // Reset budget so the fresh worker gets a full allowance
+                            // for future incidents.
+                            restart_count = 0;
+                            current_delay = policy.initial_delay;
+                            break false; // Success - back to outer poll loop.
                         }
+                        // Err: retry create with next delay.
                     };
 
                     // If policy exhausted, exit thread.
@@ -730,6 +728,7 @@ pub fn run_worker_loop<W: RRTWorker>(
 }
 
 /// Advances the backoff delay for the next restart attempt.
+#[must_use]
 pub fn advance_backoff_delay(
     current: Duration,
     policy: &RestartPolicy,

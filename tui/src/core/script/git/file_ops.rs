@@ -10,7 +10,7 @@ use crate::{ResultAndCommand, Run, command,
                                                      GIT_PROGRAM}}};
 use std::path::PathBuf;
 
-/// Get list of changed files matching any of the provided extensions.
+/// Gets list of changed files matching any of the provided extensions.
 ///
 /// Priority:
 /// 1. If there are staged or unstaged changes, return those files
@@ -54,7 +54,7 @@ pub async fn try_get_changed_files_by_ext(
     get_files_from_last_commit(extensions).await
 }
 
-/// Get files with staged or unstaged changes matching the extensions.
+/// Gets files with staged or unstaged changes matching the extensions.
 async fn get_working_tree_changes(extensions: &[&str]) -> ResultAndCommand<Vec<PathBuf>> {
     let mut cmd = command!(
         program => GIT_PROGRAM,
@@ -89,7 +89,7 @@ async fn get_working_tree_changes(extensions: &[&str]) -> ResultAndCommand<Vec<P
     (Ok(files), cmd)
 }
 
-/// Get files from the most recent commit matching the extensions.
+/// Gets files from the most recent commit matching the extensions.
 async fn get_files_from_last_commit(
     extensions: &[&str],
 ) -> ResultAndCommand<Vec<PathBuf>> {

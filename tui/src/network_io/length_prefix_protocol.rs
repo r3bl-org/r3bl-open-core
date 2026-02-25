@@ -188,7 +188,7 @@ pub mod byte_io {
     #[allow(clippy::wildcard_imports)]
     use super::*;
 
-    /// Write the payload to the client. Use the length-prefix, binary payload, protocol.
+    /// Writes the payload to the client. Use the length-prefix, binary payload, protocol.
     /// - The trait bounds on this function are so that this function can be tested w/ a
     ///   mock from `tokio_test::io::Builder`.
     /// - More info: <https://tokio.rs/tokio/topics/testing>

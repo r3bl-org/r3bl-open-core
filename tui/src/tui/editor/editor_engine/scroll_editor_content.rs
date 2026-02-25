@@ -402,7 +402,9 @@ pub fn clip_caret_row_to_content_height(
 /// whether it is inside or outside the buffer content boundary. You should check that
 /// before calling this function.
 ///
-/// Returns the new scroll adjusted caret row.
+/// # Returns
+///
+/// The new scroll adjusted caret row.
 ///
 /// This increments the `caret.row_index` and can activate vertical scrolling if the
 /// `caret.row_index` goes past the viewport height.

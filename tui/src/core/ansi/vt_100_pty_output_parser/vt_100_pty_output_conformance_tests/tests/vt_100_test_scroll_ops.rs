@@ -661,17 +661,17 @@ pub mod scrolling {
         // Tests edge cases for scrolling operations, including zero-parameter scrolls
         // and other boundary conditions.
         //
-        // NOTE: According to VT100 specification, a parameter of 0 for scroll operations
-        // should be treated as 1, just like cursor movement commands. This is now
-        // correctly implemented.
+        // NOTE: According to `VT-100` specification, a parameter of 0 for scroll
+        // operations should be treated as 1, just like cursor movement commands.
+        // This is now correctly implemented.
 
         let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
         fill_buffer_with_lines(&mut ofs_buf);
 
         let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf);
 
-        // Test CSI 0 S (Scroll Up by 0 lines) - VT100 spec says 0 should be treated as 1
-        // So this should scroll up by 1 line: Line-0 lost, Line-1 moves to top
+        // Test CSI 0 S (Scroll Up by 0 lines) - `VT-100` spec says 0 should be treated as
+        // 1 So this should scroll up by 1 line: Line-0 lost, Line-1 moves to top
         // Use raw ANSI bytes since type-safe API prevents zero deltas
         performer.apply_ansi_bytes("\x1b[0S");
 
@@ -721,7 +721,7 @@ pub mod line_wrap_scroll_interaction {
         // Tests the current implementation where line wrapping at the bottom
         // of the screen clamps the cursor instead of scrolling.
         //
-        // NOTE: This documents current behavior. True VT100 terminals would
+        // NOTE: This documents current behavior. True `VT-100` terminals would
         // typically scroll when wrapping at the bottom, but this implementation
         // clamps the cursor position.
 

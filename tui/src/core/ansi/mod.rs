@@ -6,7 +6,7 @@
 //!
 //! ## Key Subsystems
 //!
-//! - **Output Parser** (VTE-based): Parse incoming PTY output (ANSI sequences from child
+//! - **Output Parser** ([`VTE`]-based): Parse incoming PTY output (ANSI sequences from child
 //!   processes) → terminal state updates → [`OffscreenBuffer`] storage (via
 //!   [`vt_100_pty_output_parser`] and [`AnsiToOfsBufPerformer`])
 //! - **Input Parser** (custom): Parse terminal input (keyboard/mouse) → structured
@@ -135,7 +135,7 @@
 //! **What it does**: Parses ANSI escape sequences sent TO the terminal by child
 //! processes (via the PTY master).
 //!
-//! **Architecture**: Uses the [VTE crate] - a battle-tested state machine from the
+//! **Architecture**: Uses the [`VTE`] crate - a battle-tested state machine from the
 //! Alacritty terminal emulator project.
 //!
 //! **Why stateful parsing?** PTY output is **non-atomic**. Child processes can write
@@ -146,7 +146,7 @@
 //! Complete:   ESC[1;5A (Ctrl+Up Arrow)
 //! ```
 //!
-//! VTE handles this by maintaining parse state across `advance()` calls, buffering
+//! [`VTE`] handles this by maintaining parse state across `advance()` calls, buffering
 //! incomplete parameters until the final sequence byte arrives.
 //!
 //! **Benefits**:
@@ -162,7 +162,7 @@
 //!
 //! **Architecture**: Custom Rust implementation using stateless pattern matching.
 //!
-//! **Why NOT use VTE?** Terminal input has fundamentally different characteristics:
+//! **Why NOT use [`VTE`]?** Terminal input has fundamentally different characteristics:
 //!
 //! 1. **Atomic sequences**: Terminal emulators send input sequences **complete** in
 //!    single writes:
@@ -172,11 +172,11 @@
 //!    stdin read():   [0x1B, 0x5B, 0x41] (always complete)
 //!    ```
 //!
-//! 2. **Different event types**: VTE cannot parse keyboard/mouse events - it's
+//! 2. **Different event types**: [`VTE`] cannot parse keyboard/mouse events - it's
 //!    designed for output sequences only. Input events require custom parsing logic:
-//!    - `ESC[A` = User pressed Up Arrow (not "move cursor up")
-//!    - `ESC[<0;10;20M` = Mouse click at (10,20)
-//!    - `ESC[?1049h` = Terminal entered alternate buffer mode
+//!    - `ESC [ A` = User pressed Up Arrow (not "move cursor up")
+//!    - `ESC [ < 0 ; 10 ; 20 M` = Mouse click at (10,20)
+//!    - `ESC [ ? 1049 h` = Terminal entered alternate buffer mode
 //!
 //! 3. **Simpler logic**: Input patterns are predictable - no need for full state
 //!    machine overhead
@@ -187,7 +187,7 @@
 //! - ✅ Full control over parsing logic
 //! - ✅ Can optimize for specific terminal features (SGR mouse, Kitty etc.)
 //!
-//! **Key insight**: The architectural split (VTE for output, custom for input) is
+//! **Key insight**: The architectural split ([`VTE`] for output, custom for input) is
 //! **not a limitation** - it's the correct design because output and input are
 //! fundamentally different problems requiring different solutions.
 //!
@@ -202,7 +202,7 @@
 //! - [`CliTextInline`] - Styled inline text for output
 //!
 //! **Output Parsing** (PTY escape sequences):
-//! - [`AnsiToOfsBufPerformer`] - VTE Perform trait implementation for PTY parsing
+//! - [`AnsiToOfsBufPerformer`] - [`VTE`] [`Perform`] trait implementation for PTY parsing
 //! - [`CsiSequence`] - CSI escape sequence types
 //!
 //! **Input Parsing** (keyboard/mouse events):
@@ -212,12 +212,13 @@
 //! **Terminal I/O:**
 //! - Color detection and support queries
 //!
-//! [VTE crate]: https://docs.rs/vte/latest/vte/
 //! [`CliTextInline`]: crate::core::ansi::CliTextInline
 //! [`OffscreenBuffer`]: crate::OffscreenBuffer
+//! [`Perform`]: vte::Perform
 //! [`RenderOpOutput`]: crate::RenderOpOutput
 //! [`SgrCode`]: crate::core::ansi::SgrCode
 //! [`VT100InputEventIR`]: crate::core::ansi::vt_100_terminal_input_parser::VT100InputEventIR
+//! [`VTE`]: mod@vte
 //! [`vt_100_pty_output_parser`]: mod@crate::core::ansi::vt_100_pty_output_parser
 //! [`vt_100_terminal_input_parser`]: mod@crate::core::ansi::vt_100_terminal_input_parser
 

@@ -1,11 +1,18 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! This module contains all the constant values used in CSI (Control Sequence Introducer)
-//! sequences, organized by functional category.
+//! Constant values used in [`CSI`] (Control Sequence Introducer) sequences, organized by
+//! functional category.
+//!
+//! These constants are used by [`CsiSequence`] for building [`CSI`] output sequences, and
+//! by [`SgrCode`] for text formatting parameters.
+//!
+//! [`CSI`]: crate::CsiSequence
+//! [`CsiSequence`]: crate::CsiSequence
+//! [`SgrCode`]: crate::SgrCode
 
 // CSI sequence components.
 
-/// CSI sequence start: ESC [
+/// CSI sequence start: `ESC [`
 pub const CSI_START: &str = "\x1b[";
 
 /// Private mode prefix for CSI sequences
@@ -14,17 +21,17 @@ pub const CSI_PRIVATE_MODE_PREFIX: char = '?';
 /// Parameter separator in CSI sequences (semicolon)
 ///
 /// Used to separate top-level parameters in CSI sequences:
-/// - `ESC[1;5H` - Cursor position (row 1, column 5)
-/// - `ESC[1;31m` - Bold + red foreground
+/// - `ESC [ 1 ; 5 H` - Cursor position (row 1, column 5)
+/// - `ESC [ 1 ; 31 m` - Bold + red foreground
 pub const CSI_PARAM_SEPARATOR: char = ';';
 
 /// Sub-parameter separator in CSI sequences (colon)
 ///
 /// Used to separate sub-parameters within a single CSI parameter:
-/// - `ESC[38:5:196m` - 256-color foreground (38 = fg extended, 5 = palette mode, 196 =
-///   index)
-/// - `ESC[48:2:255:128:0m` - RGB background (48 = bg extended, 2 = RGB mode, 255:128:0 =
-///   RGB)
+/// - `ESC [ 38 : 5 : 196 m` - 256-color foreground (38 = fg extended, 5 = palette mode,
+///   196 = index)
+/// - `ESC [ 48 : 2 : 255 : 128 : 0 m` - RGB background (48 = bg extended, 2 = RGB mode,
+///   255:128:0 = RGB)
 ///
 /// Per [ITU-T Rec. T.416] (ISO 8613-6), the colon (`:`) is the recommended modern format
 /// for sub-parameters, while semicolon (`;`) is supported for legacy compatibility.
@@ -119,7 +126,9 @@ pub const SU_SCROLL_UP: char = 'S';
 /// CSI T: Scroll Down (SD)
 /// Scrolls text down by n lines (default 1)
 pub const SD_SCROLL_DOWN: char = 'T';
-/// DECSTBM - Set Top and Bottom Margins - ESC [ top ; bottom r
+/// [DECSTBM] - Set Top and Bottom Margins - `ESC [ top ; bottom r`
+///
+/// [DECSTBM]: https://vt100.net/docs/vt510-rm/DECSTBM.html
 pub const DECSTBM_SET_MARGINS: char = 'r';
 
 // Line Operations.
@@ -328,39 +337,39 @@ pub const SGR_BG_BRIGHT_WHITE: u16 = 107;
 /// Extended foreground color (SGR 38)
 ///
 /// Used in sequences like:
-/// - `ESC[38:5:nM` - 256-color foreground (n = 0-255)
-/// - `ESC[38:2:r:g:bM` - RGB foreground (r,g,b = 0-255)
+/// - `ESC [ 38 : 5 : n M` - 256-color foreground (n = 0-255)
+/// - `ESC [ 38 : 2 : r : g : b M` - RGB foreground (r,g,b = 0-255)
 pub const SGR_FG_EXTENDED: u16 = 38;
 
 /// Extended background color (SGR 48)
 ///
 /// Used in sequences like:
-/// - `ESC[48:5:nM` - 256-color background (n = 0-255)
-/// - `ESC[48:2:r:g:bM` - RGB background (r,g,b = 0-255)
+/// - `ESC [ 48 : 5 : n M` - 256-color background (n = 0-255)
+/// - `ESC [ 48 : 2 : r : g : b M` - RGB background (r,g,b = 0-255)
 pub const SGR_BG_EXTENDED: u16 = 48;
 
 /// 256-color mode indicator
 ///
 /// Second parameter in 256-color sequences:
-/// - `ESC[38:5:nM` - 256-color foreground
-/// - `ESC[48:5:nM` - 256-color background
+/// - `ESC [ 38 : 5 : n M` - 256-color foreground
+/// - `ESC [ 48 : 5 : n M` - 256-color background
 pub const SGR_COLOR_MODE_256: u16 = 5;
 
 /// RGB color mode indicator
 ///
 /// Second parameter in RGB color sequences:
-/// - `ESC[38:2:r:g:bM` - RGB foreground
-/// - `ESC[48:2:r:g:bM` - RGB background
+/// - `ESC [ 38 : 2 : r : g : b M` - RGB foreground
+/// - `ESC [ 48 : 2 : r : g : b M` - RGB background
 pub const SGR_COLOR_MODE_RGB: u16 = 2;
 
 // Cursor Save/Restore (CSI versions).
 
 /// CSI s: Save Cursor Position (SCP)
-/// Alternative to ESC 7
+/// Alternative to `ESC 7`
 pub const SCP_SAVE_CURSOR: char = 's';
 
 /// CSI u: Restore Cursor Position (RCP)
-/// Alternative to ESC 8
+/// Alternative to `ESC 8`
 pub const RCP_RESTORE_CURSOR: char = 'u';
 
 // Device Status.
@@ -382,12 +391,18 @@ pub const RM_RESET_MODE: char = 'l';
 
 // Private Mode Setting (with ? prefix).
 
-/// CSI ? h: Set Private Mode
-/// Sets DEC private modes
+/// CSI ? h: Set Private Mode.
+///
+/// Sets [`DEC`] private modes.
+///
+/// [`DEC`]: https://en.wikipedia.org/wiki/Digital_Equipment_Corporation
 pub const SM_SET_PRIVATE_MODE: char = 'h';
 
-/// CSI ? l: Reset Private Mode
-/// Resets DEC private modes
+/// CSI ? l: Reset Private Mode.
+///
+/// Resets [`DEC`] private modes.
+///
+/// [`DEC`]: https://en.wikipedia.org/wiki/Digital_Equipment_Corporation
 pub const RM_RESET_PRIVATE_MODE: char = 'l';
 
 // Common Private Mode Numbers.

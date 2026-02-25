@@ -1,13 +1,13 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Dynamic display management for the [PTY] multiplexer. See [`OutputRenderer`] for
+//! Dynamic display management for the [`PTY`] multiplexer. See [`OutputRenderer`] for
 //! details.
 //!
 //! This module handles rendering output from the active process using [`OffscreenBuffer`]
 //! as a compositor to eliminate visual artifacts. It maintains a dynamic status bar
 //! showing process information and keyboard shortcuts.
 //!
-//! [PTY]: https://en.wikipedia.org/wiki/Pseudoterminal
+//! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 
 use super::ProcessManager;
 use crate::{ANSIBasicColor, ArrayOverflowResult, FlushKind, IndexOps, LengthOps,

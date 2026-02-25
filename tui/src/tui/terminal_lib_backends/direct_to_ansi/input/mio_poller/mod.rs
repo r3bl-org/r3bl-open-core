@@ -114,14 +114,14 @@
 //!     - In [raw mode], it passes bytes through unchanged. [`EOF`] only occurs when
 //!       [`stdin`] is actually closed:
 //!
-//!    | Scenario                         | What Happens                                                        |
-//!    | :------------------------------- | :------------------------------------------------------------------ |
-//!    | Close terminal window            | Terminal emulator closes [PTY] controller → controlled gets [`EOF`] |
-//!    | [SSH] connection drops           | sshd closes [PTY] controller → controlled gets [`EOF`]              |
-//!    | `screen`/`tmux` session killed   | Multiplexer closes [PTY] controller → controlled gets [`EOF`]       |
-//!    | Kill terminal emulator process   | Same as closing window                                              |
-//!    | Network timeout ([SSH])          | sshd eventually closes connection → [`EOF`]                         |
-//!    | Pipe closed                      | Writer closes pipe → reader gets [`EOF`]                            |
+//!    | Scenario                         | What Happens                                                          |
+//!    | :------------------------------- | :-------------------------------------------------------------------- |
+//!    | Close terminal window            | Terminal emulator closes [`PTY`] controller → controlled gets [`EOF`] |
+//!    | [`SSH`] connection drops         | sshd closes [`PTY`] controller → controlled gets [`EOF`]              |
+//!    | `screen`/`tmux` session killed   | Multiplexer closes [`PTY`] controller → controlled gets [`EOF`]       |
+//!    | Kill terminal emulator process   | Same as closing window                                                |
+//!    | Network timeout ([`SSH`])        | sshd eventually closes connection → [`EOF`]                           |
+//!    | Pipe closed                      | Writer closes pipe → reader gets [`EOF`]                              |
 //!
 //!    **Note on receiver drop (thread restart)**: When all [`broadcast::Receiver`]s are
 //!    dropped, the thread exits. This typically happens when:
@@ -256,7 +256,7 @@
 //!
 //! - **Local terminals**: Escape sequences are typically written atomically, so they
 //!   arrive complete in one `read()`. The heuristic works well.
-//! - **Over [SSH]**: TCP can fragment data arbitrarily. If `ESC` arrives in one packet
+//! - **Over [`SSH`]**: TCP can fragment data arbitrarily. If `ESC` arrives in one packet
 //!   and `[ A` in the next (even microseconds later), we might incorrectly emit `ESC`.
 //! - **High latency networks**: The more latency and packet fragmentation, the higher the
 //!   chance of incorrect `ESC` detection.
@@ -269,8 +269,8 @@
 //!
 //! We chose the `more` flag heuristic (following [`crossterm`]) because:
 //! - Zero latency for `ESC` key in the common case (local terminal).
-//! - Acceptable behavior for most [SSH] connections (TCP usually delivers related bytes
-//!   together). In our testing there were no issues over [SSH].
+//! - Acceptable behavior for most [`SSH`] connections (TCP usually delivers related bytes
+//!   together). In our testing there were no issues over [`SSH`].
 //! - The failure mode (`ESC` emitted early) is annoying but not catastrophic.
 //!
 //! **Trade-off**: Faster `ESC` response vs. occasional incorrect detection on
@@ -279,10 +279,8 @@
 //! [100ms `ttimeoutlen` delay]: https://vi.stackexchange.com/questions/24925/usage-of-timeoutlen-and-ttimeoutlen
 //! [AsRawFd::as_raw_fd]: std::os::unix::io::AsRawFd::as_raw_fd
 //! [Device Lifecycle]: super::DirectToAnsiInputDevice#device-lifecycle
-//! [PTY]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [RRT module docs]: crate::core::resilient_reactor_thread
 //! [Related Tests]: crate::core::resilient_reactor_thread#related-tests
-//! [SSH]: https://en.wikipedia.org/wiki/Secure_Shell
 //! [The Problems section in `DirectToAnsiInputDevice`]: super::DirectToAnsiInputDevice#the-problems
 //! [VT100 input parser]: super::stateful_parser::StatefulInputParser
 //! [Why Linux-Only?]: super#why-linux-only
@@ -295,6 +293,7 @@
 //! [`InputEvent`]: crate::InputEvent
 //! [`MioPollWorker`]: mio_poll_worker::MioPollWorker
 //! [`Mutex`]: std::sync::Mutex
+//! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`PasteCollectionState`]: super::paste_state_machine::PasteCollectionState
 //! [`PollerEvent::Signal`]: super::channel_types::PollerEvent::Signal
 //! [`PollerEvent::Stdin`]: super::channel_types::PollerEvent::Stdin
@@ -303,6 +302,7 @@
 //! [`SIGINT`]: signal_hook::consts::SIGINT
 //! [`SIGWINCH`]: signal_hook::consts::SIGWINCH
 //! [`SINGLETON`]: super::input_device_impl::global_input_resource::SINGLETON
+//! [`SSH`]: https://en.wikipedia.org/wiki/Secure_Shell
 //! [`Signal(Resize)`]: super::channel_types::SignalEvent::Resize
 //! [`SignalEvent::Resize`]: super::channel_types::SignalEvent::Resize
 //! [`SourceFd`]: mio::unix::SourceFd

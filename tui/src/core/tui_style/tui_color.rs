@@ -30,24 +30,24 @@ use core::fmt::Debug;
 /// supported by terminal emulators. These will not be degraded to a lower color support
 /// level:
 ///
-/// | Index  | Name           |
-/// |--------|----------------|
-/// | 0      | `black`        |
-/// | 1      | `red`          |
-/// | 2      | `green`        |
-/// | 3      | `yellow`       |
-/// | 4      | `blue`         |
-/// | 5      | `magenta`      |
-/// | 6      | `cyan`         |
-/// | 7      | `white`        |
-/// | 8      | `dark_gray`    |
-/// | 9      | `dark_red`     |
-/// | 10     | `dark_green`   |
-/// | 11     | `dark_yellow`  |
-/// | 12     | `dark_blue`    |
-/// | 13     | `dark_magenta` |
-/// | 14     | `dark_cyan`    |
-/// | 15     | `gray`         |
+/// | Index    | Name             |
+/// | -------- | ---------------- |
+/// | 0        | `black`          |
+/// | 1        | `red`            |
+/// | 2        | `green`          |
+/// | 3        | `yellow`         |
+/// | 4        | `blue`           |
+/// | 5        | `magenta`        |
+/// | 6        | `cyan`           |
+/// | 7        | `white`          |
+/// | 8        | `dark_gray`      |
+/// | 9        | `dark_red`       |
+/// | 10       | `dark_green`     |
+/// | 11       | `dark_yellow`    |
+/// | 12       | `dark_blue`      |
+/// | 13       | `dark_magenta`   |
+/// | 14       | `dark_cyan`      |
+/// | 15       | `gray`           |
 ///
 /// # Panics
 ///
@@ -60,24 +60,24 @@ use core::fmt::Debug;
 ///
 /// For fallible hex color parsing, use [`RgbValue::try_from_hex_color`] instead.
 ///
-/// [`TuiColor`]: crate::TuiColor
 /// [`RgbValue::try_from_hex_color`]: crate::RgbValue::try_from_hex_color
+/// [`TuiColor`]: crate::TuiColor
 /// [black]: #usage
-/// [red]: #usage
-/// [green]: #usage
-/// [yellow]: #usage
 /// [blue]: #usage
-/// [magenta]: #usage
 /// [cyan]: #usage
-/// [white]: #usage
-/// [dark_gray]: #usage
-/// [dark_red]: #usage
-/// [dark_green]: #usage
-/// [dark_yellow]: #usage
 /// [dark_blue]: #usage
-/// [dark_magenta]: #usage
 /// [dark_cyan]: #usage
+/// [dark_gray]: #usage
+/// [dark_green]: #usage
+/// [dark_magenta]: #usage
+/// [dark_red]: #usage
+/// [dark_yellow]: #usage
 /// [gray]: #usage
+/// [green]: #usage
+/// [magenta]: #usage
+/// [red]: #usage
+/// [white]: #usage
+/// [yellow]: #usage
 #[macro_export]
 macro_rules! tui_color {
     //------------------
@@ -289,10 +289,10 @@ macro_rules! tui_color {
 /// - Basic ANSI colors (0-15) are represented as [`AnsiValue`] with indices 0-15. If a
 ///   color is specified as [`AnsiValue`], it will not be downgraded.
 ///
-/// [`TuiColor`]: crate::TuiColor
-/// [`RgbValue`]: crate::RgbValue
 /// [`AnsiValue`]: crate::AnsiValue
 /// [`ColorSupport`]: crate::ColorSupport
+/// [`RgbValue`]: crate::RgbValue
+/// [`TuiColor`]: crate::TuiColor
 /// [`tui_color`!]: crate::tui_color!
 #[derive(Clone, PartialEq, Eq, Copy, Hash)]
 pub enum TuiColor {
@@ -332,7 +332,7 @@ pub enum ANSIBasicColor {
 }
 
 impl ANSIBasicColor {
-    /// Get the palette index (0-15) for this basic ANSI color.
+    /// Gets the palette index (0-15) for this basic ANSI color.
     ///
     /// These indices correspond to the 16-color ANSI palette:
     /// - 0-7: standard colors (dark variants)
@@ -375,7 +375,7 @@ mod convenience_conversions {
     }
 
     impl From<AnsiValue> for TuiColor {
-        /// Convert a [`AnsiValue`] to [`TuiColor`].
+        /// Converts a [`AnsiValue`] to [`TuiColor`].
         ///
         /// SGR codes (30-37, 40-47, 90-97, 100-107) are mapped to basic color indices
         /// 0-15. Other values (0-29, 48-89, 98-99, 108-255) are treated as

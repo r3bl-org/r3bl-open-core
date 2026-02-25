@@ -1,16 +1,16 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! [RAII] subscription guard for the Resilient Reactor Thread pattern. See
+//! [`RAII`] subscription guard for the Resilient Reactor Thread pattern. See
 //! [`SubscriberGuard`], [`WakeOnDrop`].
 //!
-//! [RAII]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
+//! [`RAII`]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
 
 use super::{BroadcastSender, RRTEvent, RRTWaker, RRTWorker, WakerSlotReader};
 use tokio::sync::broadcast::Receiver;
 
-/// An [RAII] guard that wakes the dedicated thread on drop.
+/// An [`RAII`] guard that wakes the dedicated thread on drop.
 ///
-/// Holding a [`SubscriberGuard`] keeps async consumers in your [TUI] and
+/// Holding a [`SubscriberGuard`] keeps async consumers in your [`TUI`] and
 /// [`readline_async`] app subscribed to events from the dedicated thread. Dropping it
 /// triggers the cleanup mechanism that may cause the thread to exit (see [Thread
 /// Lifecycle]).
@@ -67,18 +67,18 @@ use tokio::sync::broadcast::Receiver;
 /// See [`DirectToAnsiInputDevice::next()`] for real usage.
 ///
 /// [Drop implementation]: WakeOnDrop#method.drop
-/// [RAII]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
 /// [RFC 1857]: https://rust-lang.github.io/rfcs/1857-stabilize-drop-order.html
-/// [TUI]: crate::tui::TerminalWindow::main_event_loop
 /// [Thread Lifecycle]: super::RRT#thread-lifecycle
 /// [`DirectToAnsiInputDevice::next()`]:
 ///     crate::terminal_lib_backends::DirectToAnsiInputDevice::next
+/// [`RAII`]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
 /// [`RRTWaker::wake_and_unblock_dedicated_thread()`]:
 ///     super::RRTWaker::wake_and_unblock_dedicated_thread
 /// [`RRTWaker`]: super::RRTWaker
 /// [`RRTWorker`]: super::RRTWorker
 /// [`Sender`]: tokio::sync::broadcast::Sender
 /// [`SharedWakerSlot`]: super::SharedWakerSlot
+/// [`TUI`]: crate::tui::TerminalWindow::main_event_loop
 /// [`TerminationGuard::drop()`]: super::TerminationGuard#method.drop
 /// [`TerminationGuard`]: super::TerminationGuard
 /// [`WakerSlotReader<W::Waker>`]: super::WakerSlotReader
@@ -144,7 +144,7 @@ impl<K: RRTWaker> Drop for WakeOnDrop<K> {
     ///
     /// See step 4 of the [Thread Lifecycle] for where this fits in the exit sequence.
     ///
-    /// [Thread Lifecycle]: RRT#thread-lifecycle
+    /// [Thread Lifecycle]: crate::core::resilient_reactor_thread::RRT#thread-lifecycle
     /// [`TerminationGuard::drop()`]: super::TerminationGuard#method.drop
     /// [waker]: super::RRTWaker
     fn drop(&mut self) { self.waker_slot_reader.wake_if_present(); }

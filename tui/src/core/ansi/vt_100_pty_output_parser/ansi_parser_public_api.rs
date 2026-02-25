@@ -94,7 +94,7 @@
 //! to the evolutionary history of terminal control:
 //!
 //! **`ESC` sequences came first**: They were the original, simple terminal control codes
-//! used in early terminals like the VT100. Each `ESC` sequence does one specific thing
+//! used in early terminals like the [`VT-100`]. Each `ESC` sequence does one specific thing
 //! without parameters. For example, `ESC D` moves the cursor down exactly one line.
 //!
 //! **`CSI` sequences evolved later**: As terminals became more sophisticated, the need
@@ -121,6 +121,7 @@
 //! don't need parameters.
 //!
 //! [`OffscreenBuffer`]: crate::OffscreenBuffer
+//! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 //! [`apply_ansi_bytes`]: crate::OffscreenBuffer::apply_ansi_bytes
 
 use crate::{DsrRequestFromPtyEvent, OffscreenBuffer, core::osc::OscEvent};
@@ -129,9 +130,12 @@ use std::mem::take;
 /// Terminal state context for ANSI sequence processing.
 ///
 /// This performer is created by [`OffscreenBuffer::apply_ansi_bytes`] and passed to the
-/// VTE parser implementation. It provides direct access to persistent terminal state
+/// [`VTE`] [`Parser`] implementation. It provides direct access to persistent terminal state
 /// stored in the buffer's [`OffscreenBuffer::ansi_parser_support`] field. All state is
 /// stored directly in the buffer and persisted between performer instances.
+///
+/// [`Parser`]: vte::Parser
+/// [`VTE`]: mod@vte
 #[derive(Debug)]
 pub struct AnsiToOfsBufPerformer<'a> {
     /// Target buffer receiving processed terminal output and storing all persistent
@@ -250,11 +254,10 @@ impl OffscreenBuffer {
 
 #[cfg(test)]
 mod tests {
-    use crate::{ANSIBasicColor, SgrCode, col, row, term_col, term_col_delta, term_row,
-                term_row_delta, offscreen_buffer::test_fixtures_ofs_buf::*,
-                core::ansi::vt_100_pty_output_parser::{CsiSequence,
+    use crate::{ANSIBasicColor, DSR_CURSOR_POSITION_REQUEST, DSR_STATUS_REQUEST, DsrRequestFromPtyEvent::TerminalStatus, SgrCode, col, core::ansi::vt_100_pty_output_parser::{CsiSequence,
                                                  vt_100_pty_output_conformance_tests::{test_fixtures_vt_100_ansi_conformance::{create_test_offscreen_buffer_10r_by_10c, nz},
-                                                                      test_sequence_generators::csi_builders::csi_seq_cursor_pos}}};
+                                                                      test_sequence_generators::csi_builders::csi_seq_cursor_pos}}, offscreen_buffer::test_fixtures_ofs_buf::*, row, term_col, term_col_delta, term_row, term_row_delta};
+    use crate::core::osc::osc_codes::OscSequence;
 
     #[test]
     #[allow(clippy::items_after_statements)]
@@ -400,7 +403,7 @@ mod tests {
         let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
 
         // First call with OSC sequence (set title).
-        let osc_title = "\x1b]0;First Title\x07".to_string();
+        let osc_title = OscSequence::SetTitleAndIcon("First Title".into()).to_string();
         let (osc_events, dsr_responses) = ofs_buf.apply_ansi_bytes(&osc_title);
 
         assert_eq!(osc_events.len(), 1, "should get one OSC event");
@@ -414,7 +417,7 @@ mod tests {
         }
 
         // Second call with another OSC sequence.
-        let osc_title2 = "\x1b]0;Second Title\x07".to_string();
+        let osc_title2 = OscSequence::SetTitleAndIcon("Second Title".into()).to_string();
         let (osc_events2, dsr_responses2) = ofs_buf.apply_ansi_bytes(&osc_title2);
 
         assert_eq!(
@@ -451,18 +454,15 @@ mod tests {
         let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
 
         // First DSR request (status report).
-        let dsr_status = "\x1b[5n".to_string();
+        let dsr_status = DSR_STATUS_REQUEST.to_string();
         let (osc_events, dsr_responses) = ofs_buf.apply_ansi_bytes(&dsr_status);
 
         assert_eq!(osc_events.len(), 0, "no OSC events expected");
         assert_eq!(dsr_responses.len(), 1, "should get one DSR response");
-        assert_eq!(
-            dsr_responses[0],
-            crate::DsrRequestFromPtyEvent::TerminalStatus
-        );
+        assert_eq!(dsr_responses[0], TerminalStatus);
 
         // Second call with cursor position request.
-        let dsr_cursor = "\x1b[6n".to_string();
+        let dsr_cursor = DSR_CURSOR_POSITION_REQUEST.to_string();
         let (osc_events2, dsr_responses2) = ofs_buf.apply_ansi_bytes(&dsr_cursor);
 
         assert_eq!(osc_events2.len(), 0, "no OSC events expected");
@@ -485,7 +485,7 @@ mod tests {
                     "cursor at origin should be col 1 (1-based)"
                 );
             }
-            crate::DsrRequestFromPtyEvent::TerminalStatus => {
+            TerminalStatus => {
                 panic!("Expected CursorPositionReport")
             }
         }
@@ -509,9 +509,9 @@ mod tests {
         // Send a mix of OSC and DSR sequences in one call.
         let mixed_sequence = format!(
             "{}{}{}",
-            "\x1b]0;Mixed Title\x07", // OSC 0: Set title
-            "\x1b[5n",                // DSR: Status report
-            "\x1b[6n"                 // DSR: Cursor position
+            OscSequence::SetTitleAndIcon("Mixed Title".into()), // OSC 0: Set title
+            crate::DSR_STATUS_REQUEST,                          // DSR: Status report
+            crate::DSR_CURSOR_POSITION_REQUEST                  // DSR: Cursor position
         );
 
         let (osc_events, dsr_responses) = ofs_buf.apply_ansi_bytes(&mixed_sequence);
@@ -536,7 +536,7 @@ mod tests {
                 assert_eq!(row.as_u16(), 1);
                 assert_eq!(col.as_u16(), 1);
             }
-            crate::DsrRequestFromPtyEvent::TerminalStatus => {
+            TerminalStatus => {
                 panic!("Expected CursorPositionReport")
             }
         }
@@ -554,9 +554,9 @@ mod tests {
         // Send multiple OSC sequences in one call.
         let multi_osc = format!(
             "{}{}{}",
-            "\x1b]0;Title One\x07", // OSC 0
-            "\x1b]2;Title Two\x07", // OSC 2
-            "\x1b]1;Icon Name\x07"  // OSC 1
+            OscSequence::SetTitleAndIcon("Title One".into()), // OSC 0
+            OscSequence::SetTitle("Title Two".into()),        // OSC 2
+            OscSequence::SetIcon("Icon Name".into())          // OSC 1
         );
 
         let (osc_events, dsr_responses) = ofs_buf.apply_ansi_bytes(&multi_osc);

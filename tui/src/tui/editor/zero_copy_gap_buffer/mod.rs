@@ -10,14 +10,14 @@
 //!
 //! # Module Architecture
 //!
-//! This module provides a concrete `ZeroCopyGapBuffer` implementation with specialized
+//! This module provides a concrete [`ZeroCopyGapBuffer`] implementation with specialized
 //! methods organized into focused modules:
 //!
 //! ## Core Implementation
 //! - `core` - Core gap buffer implementation and fundamental operations
 //!
 //! ## Implementation Extensions (`implementations` module)
-//! Specialized method implementations that extend `ZeroCopyGapBuffer`:
+//! Specialized method implementations that extend [`ZeroCopyGapBuffer`]:
 //! - `implementations::basic` - Fundamental line operations (insert, delete, access)
 //! - `implementations::access` - Zero-copy buffer access utilities
 //! - `implementations::insert` - Text insertion algorithms
@@ -26,7 +26,7 @@
 //!
 //! ## Simple Direct Usage
 //!
-//! `ZeroCopyGapBuffer` is used directly as a concrete type:
+//! [`ZeroCopyGapBuffer`] is used directly as a concrete type:
 //!
 //! ```rust
 //! use r3bl_tui::{ZeroCopyGapBuffer, row};
@@ -35,7 +35,7 @@
 //! let content = buffer.get_line_content(row(0));
 //! ```
 //!
-//! All operations are available as inherent methods on `ZeroCopyGapBuffer` - no trait
+//! All operations are available as inherent methods on [`ZeroCopyGapBuffer`] - no trait
 //! indirection is needed. This provides better performance and simpler APIs compared to
 //! generic trait-based approaches.
 //!
@@ -52,13 +52,13 @@
 //! Each line in the buffer follows a specific storage model:
 //!
 //! ## Initial Allocation
-//! - **Starting size**: 256 bytes per line (`INITIAL_LINE_SIZE`)
+//! - **Starting size**: 256 bytes per line ([`INITIAL_LINE_SIZE`])
 //! - **Initialization**: All bytes set to `\0` (null bytes)
 //! - **Content layout**: `[content][newline][null padding...]`
 //!
 //! ## Dynamic Growth
 //! When text insertion exceeds the current line capacity:
-//! - **Growth increment**: 256 bytes (`LINE_PAGE_SIZE`)
+//! - **Growth increment**: 256 bytes ([`LINE_PAGE_SIZE`])
 //! - **Growth strategy**: Extends in fixed-size pages to minimize allocations
 //! - **Buffer shifting**: Subsequent lines are shifted to accommodate growth
 //! - **Null padding**: New capacity is immediately null-initialized
@@ -157,10 +157,6 @@
 //! This approach follows Rust's philosophy of "zero-cost abstractions" while maintaining
 //! memory safety through careful API design rather than runtime validation.
 //!
-//! [`insert_text_at_grapheme(text: &str)`]: ZeroCopyGapBuffer::insert_text_at_grapheme
-//! [`as_str()`]: ZeroCopyGapBuffer::as_str
-//! [`get_line_content()`]: ZeroCopyGapBuffer::get_line_content
-//! [`rebuild_line_segments()`]: ZeroCopyGapBuffer::rebuild_line_segments
 //!
 //! # Performance Benchmarks
 //!
@@ -269,6 +265,11 @@
 //! library to identify grapheme cluster boundaries and calculate display widths.
 //! While this adds some overhead to each edit operation, it ensures correctness
 //! for all Unicode text, including emojis, combining characters, and complex scripts.
+//!
+//! [`as_str()`]: ZeroCopyGapBuffer::as_str
+//! [`get_line_content()`]: ZeroCopyGapBuffer::get_line_content
+//! [`insert_text_at_grapheme(text: &str)`]: ZeroCopyGapBuffer::insert_text_at_grapheme
+//! [`rebuild_line_segments()`]: ZeroCopyGapBuffer::rebuild_line_segments
 
 // Core types and data structures.
 mod zcgb_core;

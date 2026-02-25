@@ -37,7 +37,9 @@ pub struct LineMetadata {
 impl LineMetadata {
     /// Get the buffer range for this line's content (excluding null padding).
     ///
-    /// Returns a range that can be used to slice the buffer to get only the
+    /// # Returns
+    ///
+    /// A range that can be used to slice the buffer to get only the
     /// actual content bytes, not including the null padding that fills the
     /// remaining capacity.
     ///
@@ -206,7 +208,8 @@ impl LineMetadata {
         crate::seg_index(self.grapheme_segments.len())
     }
 
-    /// Check if the given display column index falls in the middle of a grapheme cluster.
+    /// Checks if the given display column index falls in the middle of a grapheme
+    /// cluster.
     ///
     /// This method ensures Unicode correctness by detecting when a cursor position
     /// would split a grapheme cluster (which is not allowed). It returns the segment
@@ -272,7 +275,7 @@ impl LineMetadata {
     }
 
     /// Get a string slice at the given column index.
-    /// This method provides GCString-compatible behavior for editor operations.
+    /// This method provides [`GCStringOwned`]-compatible behavior for editor operations.
     ///
     /// # Arguments
     /// * `content` - The line content as a string slice
@@ -330,7 +333,7 @@ impl LineMetadata {
     }
 
     /// Get a string slice to the right of the given column index.
-    /// This method provides GCString-compatible behavior for editor operations.
+    /// This method provides [`GCStringOwned`]-compatible behavior for editor operations.
     #[must_use]
     pub fn get_string_at_right_of(
         &self,
@@ -357,7 +360,7 @@ impl LineMetadata {
     }
 
     /// Get a string slice to the left of the given column index.
-    /// This method provides GCString-compatible behavior for editor operations.
+    /// This method provides [`GCStringOwned`]-compatible behavior for editor operations.
     #[must_use]
     pub fn get_string_at_left_of(
         &self,
@@ -404,7 +407,7 @@ impl LineMetadata {
     }
 
     /// Get the string at the end (last segment).
-    /// This method provides GCString-compatible behavior for editor operations.
+    /// This method provides [`GCStringOwned`]-compatible behavior for editor operations.
     #[must_use]
     pub fn get_string_at_end(&self, content: &str) -> Option<SegStringOwned> {
         let last_segment = self.grapheme_segments.last()?;

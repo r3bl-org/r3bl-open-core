@@ -94,7 +94,7 @@
 
 - [ ] [`copy-keystone-docs-to-developerlife`](task/pending/copy-keystone-docs-to-developerlife.md)
       Publish standalone evergreen documentation from roc monorepo to developerlife.com and create
-      YouTube videos for each topic (RRT, VT100 parsing, graphemes, raw mode, ANSI input, PTY testing)
+      YouTube videos for each topic (RRT, VT-100 parsing, graphemes, raw mode, ANSI input, PTY testing)
 
 # optimize offscreen buffer
 

@@ -207,22 +207,25 @@ fn apply_sgr_param(performer: &mut AnsiToOfsBufPerformer, param: u16) {
 /// It supports:
 /// - Basic text attributes (bold, italic, underline, etc.)
 /// - 16-color ANSI colors (30-37, 40-47, 90-97, 100-107)
-/// - 256-color palette (colon format `ESC[38:5:nm` or legacy `ESC[38;5;nm`)
-/// - RGB true color (colon format `ESC[38:2:r:g:bm` or legacy `ESC[38;2;r;g;bm`)
+/// - 256-color palette (colon format `ESC [ 38 : 5 : n m` or legacy `ESC [ 38 ; 5 ; n m`)
+/// - RGB true color (colon format `ESC [ 38 : 2 : r : g : b m` or legacy `ESC [ 38 ; 2 ;
+///   r ; g ; b m`)
 ///
 /// # Extended Color Format Handling
 ///
 /// Extended colors (256-color and RGB) can be formatted two ways:
 ///
-/// - **Colon format** ([ITU-T Rec. T.416]): `ESC[38:5:196m` - VTE groups as `[[38, 5,
-///   196]]`
-/// - **Semicolon format** (legacy): `ESC[38;5;196m` - VTE parses as `[[38], [5], [196]]`
+/// - **Colon format** ([ITU-T Rec. T.416]): `ESC [ 38 : 5 : 196 m` - [`VTE`] groups as
+///   `[[38, 5, 196]]`
+/// - **Semicolon format** (legacy): `ESC [ 38 ; 5 ; 196 m` - [`VTE`] parses as `[[38],
+///   [5], [196]]`
 ///
 /// The colon format is handled directly by [`SgrColorSequence::parse_from_raw_slice`].
 /// The semicolon format requires look-ahead logic to collect params from subsequent
 /// positions.
 ///
 /// [ITU-T Rec. T.416]: https://www.itu.int/rec/T-REC-T.416-199303-I
+/// [`VTE`]: mod@vte
 pub fn set_graphics_rendition(performer: &mut AnsiToOfsBufPerformer, params: &Params) {
     let mut idx = 0;
     while let Some(param_slice) = params.extract_nth_many_raw(idx) {
@@ -258,14 +261,16 @@ pub fn set_graphics_rendition(performer: &mut AnsiToOfsBufPerformer, params: &Pa
 
 /// Try to parse semicolon-separated extended color starting at `start_idx`.
 ///
-/// When VTE encounters semicolon-separated extended colors like `ESC[38;5;196m`,
-/// it produces separate parameter positions: `[[38], [5], [196]]`. This function
+/// When [`VTE`] encounters semicolon-separated extended colors like `ESC [ 38 ; 5 ; 196
+/// m`, it produces separate parameter positions: `[[38], [5], [196]]`. This function
 /// looks ahead to collect the remaining params and apply the color.
 ///
 /// # Returns
 ///
 /// - `Some(params_consumed)` - Successfully parsed; caller should skip this many params
 /// - `None` - Not a valid extended color sequence; caller should handle normally
+///
+/// [`VTE`]: mod@vte
 #[allow(clippy::cast_possible_truncation)] // Values are validated <= 255 before cast.
 fn try_parse_semicolon_extended_color(
     performer: &mut AnsiToOfsBufPerformer,

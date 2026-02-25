@@ -1,6 +1,6 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! [`GapBufferLine`] - A line view that combines content and metadata.
+//! [[`GapBufferLine`]] - A line view that combines content and metadata.
 //!
 //! This struct provides unified access to both line content and its associated
 //! metadata, eliminating the need to work with split content/metadata APIs.
@@ -33,7 +33,7 @@ pub struct GapBufferLine<'a> {
 }
 
 impl<'a> GapBufferLine<'a> {
-    /// Create a new `GapBufferLine`.
+    /// Creates a new [`GapBufferLine`].
     #[must_use]
     pub fn new(content: &'a str, info: &'a LineMetadata) -> Self {
         Self { content, info }
@@ -66,7 +66,7 @@ impl<'a> GapBufferLine<'a> {
     #[must_use]
     pub fn segments(&self) -> &[Seg] { &self.info.grapheme_segments }
 
-    /// Check if the given column index falls in the middle of a grapheme cluster.
+    /// Checks if the given column index falls in the middle of a grapheme cluster.
     #[must_use]
     pub fn check_is_in_middle_of_grapheme(
         &self,
@@ -112,7 +112,7 @@ impl<'a> GapBufferLine<'a> {
         self.info.get_string_at_end(self.content)
     }
 
-    /// Check if the line is empty.
+    /// Checks if the line is empty.
     #[must_use]
     pub fn is_empty(&self) -> bool { self.info.grapheme_count.is_zero() }
 
@@ -121,13 +121,13 @@ impl<'a> GapBufferLine<'a> {
     pub fn byte_len(&self) -> Length { self.info.content_byte_len }
 }
 
-/// `GraphemeString` trait implementation for `GapBufferLine`
+/// [`GraphemeString`] trait implementation for [`GapBufferLine`]
 ///
 /// # Lifetime Relationships
 ///
 /// The associated types use a lifetime parameter `'b` that represents the lifetime
 /// of references returned by trait methods. The constraint `Self: 'b` ensures that
-/// any borrowed data cannot outlive the `GapBufferLine` instance.
+/// any borrowed data cannot outlive the [`GapBufferLine`] instance.
 ///
 /// Since `GapBufferLine<'a>` contains references with lifetime `'a`, the constraint
 /// `Self: 'b` implicitly requires `'a: 'b` (i.e., `'a` must outlive `'b`).
@@ -135,7 +135,7 @@ impl GraphemeString for GapBufferLine<'_> {
     /// Iterator over segments with lifetime `'b`.
     ///
     /// The lifetime `'b` is constrained by `Self: 'b`, which means the iterator
-    /// cannot outlive the `GapBufferLine` it borrows from.
+    /// cannot outlive the [`GapBufferLine`] it borrows from.
     type SegmentIterator<'b>
         = std::iter::Copied<std::slice::Iter<'b, Seg>>
     where
@@ -144,7 +144,7 @@ impl GraphemeString for GapBufferLine<'_> {
     /// String slice with lifetime `'b`.
     ///
     /// The lifetime `'b` is constrained by `Self: 'b`, which means the string slice
-    /// cannot outlive the `GapBufferLine` it borrows from.
+    /// cannot outlive the [`GapBufferLine`] it borrows from.
     type StringSlice<'b>
         = &'b str
     where
@@ -170,9 +170,11 @@ impl GraphemeString for GapBufferLine<'_> {
 
     /// Get the segment at the given column index.
     ///
-    /// Returns a `SegContent` with an anonymous lifetime `'_` that is tied to
+    /// # Returns
+    ///
+    /// A [`SegContent`] with an anonymous lifetime `'_` that is tied to
     /// the lifetime of `self`. This ensures the returned content reference
-    /// cannot outlive the `GapBufferLine` instance.
+    /// cannot outlive the [`GapBufferLine`] instance.
     fn get_seg_at(&self, col: ColIndex) -> Option<SegContent<'_>> {
         self.get_string_at(col).and_then(|seg_string| {
             self.segments()
@@ -187,9 +189,11 @@ impl GraphemeString for GapBufferLine<'_> {
 
     /// Get the segment at the right of the given column index.
     ///
-    /// Returns a `SegContent` with an anonymous lifetime `'_` that is tied to
+    /// # Returns
+    ///
+    /// A [`SegContent`] with an anonymous lifetime `'_` that is tied to
     /// the lifetime of `self`. This ensures the returned content reference
-    /// cannot outlive the `GapBufferLine` instance.
+    /// cannot outlive the [`GapBufferLine`] instance.
     fn get_seg_right_of(&self, col: ColIndex) -> Option<SegContent<'_>> {
         self.get_string_at_right_of(col).and_then(|seg_string| {
             self.segments()
@@ -204,9 +208,11 @@ impl GraphemeString for GapBufferLine<'_> {
 
     /// Get the segment at the left of the given column index.
     ///
-    /// Returns a `SegContent` with an anonymous lifetime `'_` that is tied to
+    /// # Returns
+    ///
+    /// A [`SegContent`] with an anonymous lifetime `'_` that is tied to
     /// the lifetime of `self`. This ensures the returned content reference
-    /// cannot outlive the `GapBufferLine` instance.
+    /// cannot outlive the [`GapBufferLine`] instance.
     fn get_seg_left_of(&self, col: ColIndex) -> Option<SegContent<'_>> {
         self.get_string_at_left_of(col).and_then(|seg_string| {
             self.segments()
@@ -221,9 +227,11 @@ impl GraphemeString for GapBufferLine<'_> {
 
     /// Get the segment at the end of the line.
     ///
-    /// Returns a `SegContent` with an anonymous lifetime `'_` that is tied to
+    /// # Returns
+    ///
+    /// A [`SegContent`] with an anonymous lifetime `'_` that is tied to
     /// the lifetime of `self`. This ensures the returned content reference
-    /// cannot outlive the `GapBufferLine` instance.
+    /// cannot outlive the [`GapBufferLine`] instance.
     fn get_seg_at_end(&self) -> Option<SegContent<'_>> {
         self.get_string_at_end().and_then(|seg_string| {
             self.segments()
@@ -238,16 +246,20 @@ impl GraphemeString for GapBufferLine<'_> {
 
     /// Clip the string to the given range.
     ///
-    /// Returns a string slice with lifetime tied to `self`. The anonymous lifetime
-    /// `'_` ensures the returned slice cannot outlive the `GapBufferLine` instance.
+    /// # Returns
+    ///
+    /// A string slice with lifetime tied to `self`. The anonymous lifetime
+    /// `'_` ensures the returned slice cannot outlive the [`GapBufferLine`] instance.
     fn clip(&self, start_col: ColIndex, width: ColWidth) -> Self::StringSlice<'_> {
         self.info.clip_to_range(self.content(), start_col, width)
     }
 
     /// Truncate from the end to fit within the given width.
     ///
-    /// Returns a string slice with lifetime tied to `self`. The anonymous lifetime
-    /// `'_` ensures the returned slice cannot outlive the `GapBufferLine` instance.
+    /// # Returns
+    ///
+    /// A string slice with lifetime tied to `self`. The anonymous lifetime
+    /// `'_` ensures the returned slice cannot outlive the [`GapBufferLine`] instance.
     fn trunc_end_to_fit(&self, width: ColWidth) -> Self::StringSlice<'_> {
         // Source of truth: GCStringOwned::trunc_end_to_fit algorithm
         let mut avail_cols = width;
@@ -267,18 +279,22 @@ impl GraphemeString for GapBufferLine<'_> {
 
     /// Truncate from the end by the given width.
     ///
-    /// Returns a string slice with lifetime tied to `self`. The anonymous lifetime
-    /// `'_` ensures the returned slice cannot outlive the `GapBufferLine` instance.
+    /// # Returns
+    ///
+    /// A string slice with lifetime tied to `self`. The anonymous lifetime `'_` ensures
+    /// the returned slice cannot outlive the [`GapBufferLine`] instance.
     ///
     /// # Implementation Note: Intentional Use of Raw `usize`
     ///
     /// This method uses `.as_usize()` combined with `.min()` for string slicing because:
     /// - String slice operations require `usize` indices
     /// - The `.min()` comparison operates on `usize` values
-    /// - Type-safe `ByteIndex` must be unwrapped for both operations
+    /// - Type-safe [`ByteIndex`] must be unwrapped for both operations
     ///
     /// The pattern `byte_index.as_usize().min(content.len())` is necessary since we're
     /// clamping to the string's length before slicing.
+    ///
+    /// [`ByteIndex`]: crate::ByteIndex
     fn trunc_end_by(&self, width: ColWidth) -> Self::StringSlice<'_> {
         // Source of truth: GCStringOwned::trunc_end_by algorithm
         let mut countdown_col_count = width;
@@ -298,8 +314,10 @@ impl GraphemeString for GapBufferLine<'_> {
 
     /// Truncate from the start by the given width.
     ///
-    /// Returns a string slice with lifetime tied to `self`. The anonymous lifetime
-    /// `'_` ensures the returned slice cannot outlive the `GapBufferLine` instance.
+    /// # Returns
+    ///
+    /// A string slice with lifetime tied to `self`. The anonymous lifetime
+    /// `'_` ensures the returned slice cannot outlive the [`GapBufferLine`] instance.
     fn trunc_start_by(&self, width: ColWidth) -> Self::StringSlice<'_> {
         // Adapt GCStringOwned algorithm for starting from beginning.
         let mut skip_col_count = width;
@@ -319,9 +337,11 @@ impl GraphemeString for GapBufferLine<'_> {
 
     /// Get an iterator over the segments.
     ///
-    /// Returns an iterator with an anonymous lifetime `'_` that is tied to
+    /// # Returns
+    ///
+    /// An iterator with an anonymous lifetime `'_` that is tied to
     /// the lifetime of `self`. This ensures the iterator cannot outlive
-    /// the `GapBufferLine` instance.
+    /// the [`GapBufferLine`] instance.
     fn segments_iter(&self) -> Self::SegmentIterator<'_> {
         self.segments().iter().copied()
     }

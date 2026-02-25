@@ -15,11 +15,12 @@ use std::time::Duration;
 ///
 /// Uses an enum to dispatch to the appropriate backend implementation at runtime:
 /// - **Crossterm**: Cross-platform terminal input (default on non-Linux)
-/// - **`DirectToAnsi`**: Pure Rust async input with tokio (Linux-only, default on Linux)
+/// - **[`DirectToAnsi`]**: Pure Rust async input with tokio (Linux-only, default on
+///   Linux)
 /// - **Mock**: Synthetic event generator for testing
 ///
 /// Backend selection is automatic based on [`TERMINAL_LIB_BACKEND`], or can be
-/// explicitly chosen via `new_crossterm()` / `new_direct_to_ansi()`.
+/// explicitly chosen via [`new_crossterm()`] / [`new_direct_to_ansi()`].
 ///
 /// ## Examples
 ///
@@ -53,25 +54,37 @@ use std::time::Duration;
 /// ];
 /// let mut device = InputDevice::new_mock(events);
 /// ```
+///
+/// [`DirectToAnsi`]: crate::DirectToAnsiInputDevice
+/// [`new_crossterm()`]: Self::new_crossterm
+/// [`new_direct_to_ansi()`]: Self::new_direct_to_ansi
 #[derive(Debug)]
 #[allow(clippy::large_enum_variant)]
 pub enum InputDevice {
-    /// Crossterm backend - cross-platform terminal input
+    /// [`CrosstermInputDevice`] backend - cross-platform terminal input.
+    ///
+    /// [`CrosstermInputDevice`]: crate::CrosstermInputDevice
     Crossterm(CrosstermInputDevice),
-    /// `DirectToAnsi` backend - pure Rust async I/O (Linux-only)
+    /// [`DirectToAnsiInputDevice`] backend - pure Rust async I/O (Linux-only).
+    ///
+    /// [`DirectToAnsiInputDevice`]: crate::DirectToAnsiInputDevice
     #[cfg(target_os = "linux")]
     DirectToAnsi(DirectToAnsiInputDevice),
-    /// Mock backend - synthetic events for testing
+    /// [`MockInputDevice`] backend - synthetic events for testing.
+    ///
+    /// [`MockInputDevice`]: crate::MockInputDevice
     Mock(MockInputDevice),
 }
 
 impl InputDevice {
-    /// Create a new [`InputDevice`] using the platform-default backend.
+    /// Creates a new [`InputDevice`] using the platform-default backend.
     ///
-    /// - Linux: `DirectToAnsi` (pure Rust async I/O)
+    /// - Linux: [`DirectToAnsi`] (pure Rust async I/O)
     /// - Others: Crossterm (cross-platform compatibility)
     ///
     /// Backend is selected via [`TERMINAL_LIB_BACKEND`] constant.
+    ///
+    /// [`DirectToAnsi`]: crate::DirectToAnsiInputDevice
     #[must_use]
     pub fn new() -> Self {
         match TERMINAL_LIB_BACKEND {
@@ -86,22 +99,24 @@ impl InputDevice {
         }
     }
 
-    /// Create a new `InputDevice` using the Crossterm backend explicitly.
+    /// Creates a new [`InputDevice`] using the Crossterm backend explicitly.
     #[must_use]
     pub fn new_crossterm() -> Self {
         Self::Crossterm(CrosstermInputDevice::new_event_stream())
     }
 
-    /// Create a new `InputDevice` using the `DirectToAnsi` backend explicitly.
+    /// Creates a new [`InputDevice`] using the [`DirectToAnsi`] backend explicitly.
     ///
     /// Only available on Linux.
+    ///
+    /// [`DirectToAnsi`]: crate::DirectToAnsiInputDevice
     #[cfg(target_os = "linux")]
     #[must_use]
     pub fn new_direct_to_ansi() -> Self {
         Self::DirectToAnsi(DirectToAnsiInputDevice::new())
     }
 
-    /// Create a new mock `InputDevice` for testing.
+    /// Creates a new mock [`InputDevice`] for testing.
     ///
     /// Events are yielded from the provided vector in order.
     #[must_use]
@@ -109,7 +124,7 @@ impl InputDevice {
         Self::Mock(MockInputDevice::new(generator_vec))
     }
 
-    /// Create a new mock `InputDevice` with a delay between events.
+    /// Creates a new mock [`InputDevice`] with a delay between events.
     ///
     /// Useful for testing timing-sensitive behavior.
     #[must_use]
@@ -120,13 +135,19 @@ impl InputDevice {
         Self::Mock(MockInputDevice::new_with_delay(generator_vec, delay))
     }
 
-    /// Read the next input event asynchronously.
+    /// Reads the next input event asynchronously.
     ///
-    /// Returns `None` if the input stream is closed or encounters an error.
+    /// # Returns
     ///
-    /// ## Implementation
+    /// - [`None`] if the input stream is closed or encounters an error.
+    /// - [`Some(InputEvent)`] containing the next input event from the device.
     ///
-    /// Dispatches to the appropriate backend's `next()` implementation.
+    /// # Implementation
+    ///
+    /// Dispatches to the appropriate backend's [`next()`] implementation.
+    ///
+    /// [`Some(InputEvent)`]: InputEvent
+    /// [`next()`]: crate::CrosstermInputDevice::next
     pub async fn next(&mut self) -> Option<InputEvent> {
         match self {
             Self::Crossterm(device) => device.next().await,
@@ -136,7 +157,7 @@ impl InputDevice {
         }
     }
 
-    /// Check if this is a mock device (for testing).
+    /// Checks if this is a mock device (for testing).
     ///
     /// This method exists for API symmetry with [`crate::OutputDevice`].
     #[must_use]

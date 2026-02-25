@@ -4,9 +4,8 @@
 //! also contains some data copied from the editor engine. This is necessary when you need
 //! to mutate the buffer and then run validation checks on the buffer.
 //!
-//! The [newtype pattern](https://doc.rust-lang.org/rust-by-example/generics/new_types.html) is used
-//! here to wrap the underlying [`EditorBufferMut`] struct, so that it be used in one of
-//! two distinct use cases:
+//! The [newtype pattern] is used here to wrap the underlying [`EditorBufferMut`] struct,
+//! so that it be used in one of two distinct use cases:
 //! 1. Once [`crate::EditorBuffer::get_mut()`] is called, the buffer is mutated and then
 //!    the validation checks are run. This is done by using [`EditorBufferMutWithDrop`].
 //! 2. If you don't want the buffer to be mutated, then you can use
@@ -31,6 +30,8 @@
 //!
 //! The [`EditorBufferMutNoDrop`] variant does NOT invalidate the cache, which is useful
 //! for operations that don't modify content (e.g., viewport resizing).
+//!
+//! [newtype pattern]: https://doc.rust-lang.org/rust-by-example/generics/new_types.html
 
 use super::scroll_editor_content;
 use crate::{CaretRaw, ColWidth, CursorBoundsCheck, CursorPositionBoundsStatus,
@@ -60,8 +61,11 @@ mod editor_buffer_mut_impl_block {
     use super::*;
 
     impl EditorBufferMut<'_> {
-        /// Returns the display width of the line at the caret (at it's scroll adjusted
-        /// row index).
+        /// Get the display width of the line at the caret.
+        ///
+        /// # Returns
+        ///
+        /// The display width of the line at the caret's scroll adjusted row index.
         #[must_use]
         pub fn get_line_display_width_at_caret_scr_adj_row_index(&self) -> ColWidth {
             let caret_scr_adj = *self.caret_raw + *self.scr_ofs;
@@ -173,9 +177,8 @@ mod editor_buffer_mut_with_drop_impl_block {
         ///
         /// 1. **Memory Cache Invalidation**: Invalidates the memory size cache to ensure
         ///    accurate telemetry reporting after buffer modifications. This is crucial
-        ///    because the [`main_event_loop`](crate::TerminalWindow::main_event_loop)
-        ///    logs state information after EVERY render cycle using the
-        ///    [`std::fmt::Display`] trait, which relies on cached memory size
+        ///    because the [`main_event_loop`] logs state information after EVERY render
+        ///    cycle using the [`Display`] trait, which relies on cached memory size
         ///    calculations.
         ///
         /// 2. **Unicode Validation**: Runs validation checks to ensure that the buffer is
@@ -186,6 +189,9 @@ mod editor_buffer_mut_with_drop_impl_block {
         ///    offset positions are not in the middle of a unicode segment character, we
         ///    need to run the validation checks using
         ///    [`perform_validation_checks_after_mutation`].
+        ///
+        /// [`Display`]: std::fmt::Display
+        /// [`main_event_loop`]: crate::TerminalWindow::main_event_loop
         fn drop(&mut self) {
             // Invalidate the memory size cache since content may have changed.
             self.inner.memory_size_calc_cache.invalidate();
@@ -220,10 +226,10 @@ pub fn perform_validation_checks_after_mutation(arg: &mut EditorBufferMutWithDro
 /// ```text
 ///     0   4    9    1    2    2
 ///                   4    0    5
-///    ┌────┴────┴────┴────┴────┴⮮─┤ col
+///    ┌────┴────┴────┴────┴────▼────┤ col
 ///  0 ┤     ├─      line     ─┤
-///  1 ❱     TEXT-TEXT-TEXT-TEXT ░❬───┐Caret is out of
-///  2 ┤         ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲  ⎝bounds of line.
+///  1 ►     TEXT-TEXT-TEXT-TEXT░◄───┐Caret is out of
+///  2 ┤         ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲  ╰bounds of line.
 ///    │         ├─    viewport   ─┤
 ///    ┴
 ///   row

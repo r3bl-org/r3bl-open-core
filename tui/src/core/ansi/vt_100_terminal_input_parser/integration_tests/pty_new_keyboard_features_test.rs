@@ -5,7 +5,7 @@
 //! Tests the following keyboard input features that were recently added/fixed:
 //! - Tab key (fixed: was returning None)
 //! - Ctrl+Space (generates Ctrl+Space event, not Ctrl+@)
-//! - Alternative Home/End sequences (ESC[1~, ESC[4~, ESC[7~, ESC[8~)
+//! - Alternative Home/End sequences (`ESC [ 1 ~`, `ESC [ 4 ~`, `ESC [ 7 ~`, `ESC [ 8 ~`)
 //! - Numpad application mode (all 17 numpad keys)
 //! - Shift+Tab (`BackTab`)
 //!

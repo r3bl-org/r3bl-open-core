@@ -84,7 +84,7 @@
 //! - [TUI Development Workflow](#tui-development-workflow)
 //!   - [TUI-Specific Commands](#tui-specific-commands)
 //!   - [Testing and Development](#testing-and-development)
-//!     - [VT100 ANSI Conformance Testing](#vt100-ansi-conformance-testing)
+//!     - [`VT-100` ANSI Conformance Testing](#vt-100-ansi-conformance-testing)
 //!     - [Markdown Parser Conformance Testing](#markdown-parser-conformance-testing)
 //!     - [Next-Level PTY-Based Integration
 //!       Testing](#next-level-pty-based-integration-testing)
@@ -149,11 +149,11 @@
 //!   - [How it works](#how-it-works)
 //!   - [Key components](#key-components)
 //!   - [Key benefits](#key-benefits-1)
-//! - [VT100/ANSI escape sequence handling](#vt100ansi-escape-sequence-handling)
+//! - [`VT-100`/ANSI escape sequence handling](#vt-100ansi-escape-sequence-handling)
 //!   - [Input parsing](#input-parsing)
 //!   - [Output parsing](#output-parsing)
 //!   - [In-memory terminal emulation](#in-memory-terminal-emulation)
-//!   - [Key VT100 references](#key-vt100-references)
+//!   - [Key `VT-100` references](#key-vt-100-references)
 //! - [Raw mode implementation](#raw-mode-implementation)
 //!   - [Raw mode vs cooked mode](#raw-mode-vs-cooked-mode)
 //!   - [Platform implementations](#platform-implementations)
@@ -181,12 +181,12 @@
 //!   - [Integration with Syntax Highlighting](#integration-with-syntax-highlighting)
 //!   - [Performance Characteristics](#performance-characteristics)
 //!   - [Learn More](#learn-more-3)
-//! - [Terminal Multiplexer with VT-100 ANSI
+//! - [Terminal Multiplexer with `VT-100` ANSI
 //!   Parsing](#terminal-multiplexer-with-vt-100-ansi-parsing)
 //!   - [Core Capabilities](#core-capabilities)
 //!   - [Architecture: The Virtual Terminal
 //!     Pipeline](#architecture-the-virtual-terminal-pipeline)
-//!   - [VT-100 ANSI Parser Implementation](#vt-100-ansi-parser-implementation)
+//!   - [`VT-100` ANSI Parser Implementation](#vt-100-ansi-parser-implementation)
 //!   - [Usage Example](#usage-example)
 //!   - [Learn More](#learn-more-4)
 //! - [Painting the caret](#painting-the-caret)
@@ -447,13 +447,13 @@
 //! | `fish run.fish watch-clippy`               | Watch files, run clippy             |
 //! | `fish run.fish docs`                       | Generate documentation              |
 //!
-//! ### VT100 ANSI Conformance Testing
+//! ### `VT-100` ANSI Conformance Testing
 //!
-//! The TUI library includes comprehensive VT100/ANSI escape sequence conformance tests
+//! The TUI library includes comprehensive `VT-100`/ANSI escape sequence conformance tests
 //! that validate the terminal emulation pipeline:
 //!
 //! ```bash
-//! # Run all VT100 ANSI conformance tests
+//! # Run all VT-100 ANSI conformance tests
 //! cargo test vt_100_pty_output_conformance_tests
 //!
 //! # Run specific conformance test categories
@@ -467,13 +467,13 @@
 //!   [`SgrCode`] builders instead of hardcoded escape strings
 //! - **Real-world scenarios**: Tests realistic terminal applications (vim, emacs, tmux)
 //!   with authentic 80x25 terminal dimensions
-//! - **VT100 specification compliance**: Comprehensive coverage of ANSI escape sequences
+//! - **`VT-100` specification compliance**: Comprehensive coverage of ANSI escape sequences
 //!   with proper bounds checking and edge case handling
 //! - **Conformance data modules**: Organized sequence patterns for different terminal
 //!   applications and use cases
 //!
 //! The conformance tests ensure the ANSI parser correctly processes sequences from real
-//! terminal applications and maintains compatibility with VT100 specifications.
+//! terminal applications and maintains compatibility with `VT-100` specifications.
 //!
 //! ### Markdown Parser Conformance Testing
 //!
@@ -590,7 +590,7 @@
 //! - Proper process coordination and cleanup
 //!
 //! **Real-world applications:**
-//! - **Terminal input parsing**: [`integration_tests`] validates VT-100 input sequences
+//! - **Terminal input parsing**: [`integration_tests`] validates `VT-100` input sequences
 //! - **Raw mode behavior**: [`raw_mode_integration_tests`] tests termios configuration
 //! - **Interactive applications**: Tests readline, editor, and TUI component interactions
 //!
@@ -1712,9 +1712,9 @@
 //! For comprehensive documentation including I/O backend compatibility, [`io_uring`]
 //! support, and implementation examples, see [`resilient_reactor_thread`].
 //!
-//! # VT100/ANSI escape sequence handling
+//! # `VT-100`/ANSI escape sequence handling
 //!
-//! The TUI engine includes comprehensive VT100/ANSI escape sequence parsing for both
+//! The TUI engine includes comprehensive `VT-100`/ANSI escape sequence parsing for both
 //! terminal input (keyboard, mouse events) and terminal output (PTY child processes).
 //!
 //! ## Input parsing
@@ -1765,13 +1765,13 @@
 //! OffscreenBuffer (cursor, text, styles)
 //! ```
 //!
-//! This enables the terminal multiplexer to correctly render output from any VT100-
+//! This enables the terminal multiplexer to correctly render output from any `VT-100`-
 //! compatible program running in a PTY.
 //!
 //! ## In-memory terminal emulation
 //!
 //! [`OffscreenBuffer`] can function as a **standalone in-memory terminal emulator**. By
-//! calling [`OffscreenBuffer::apply_ansi_bytes()`], you can feed raw VT100 ANSI escape
+//! calling [`OffscreenBuffer::apply_ansi_bytes()`], you can feed raw `VT-100` ANSI escape
 //! sequences directly into the buffer — no real terminal or PTY required:
 //!
 //! <!-- It is ok to use ignore here - demonstrates API usage with types not importable
@@ -1795,7 +1795,7 @@
 //!   contents against expected state
 //! - **Diffing**: Compare output between backends or program versions
 //! - **Screen capture**: Snapshot terminal state at any point
-//! - **Terminal emulation**: Build terminal emulators using the same battle-tested VT100
+//! - **Terminal emulation**: Build terminal emulators using the same battle-tested `VT-100`
 //!   parser that powers the terminal multiplexer
 //!
 //! **How `r3bl_tui` uses this for testing:**
@@ -1810,7 +1810,7 @@
 //! [`OffscreenBuffer`] that continuously receives and renders ANSI output, enabling
 //! instant switching between processes with fully preserved screen state.
 //!
-//! ## Key VT100 references
+//! ## Key `VT-100` references
 //!
 //! - Input coordinates are **1-based** (terminal standard), converted to 0-based
 //!   internally
@@ -2203,7 +2203,7 @@
 //!   Rust](https://developerlife.com/2024/06/28/md-parser-rust-from-r3bl-tui/)
 //! - [Video: Markdown Parser Deep Dive](https://youtu.be/SbwvSHZRb1E)
 //!
-//! # Terminal Multiplexer with VT-100 ANSI Parsing
+//! # Terminal Multiplexer with `VT-100` ANSI Parsing
 //!
 //! The [`PTYMux`] module provides tmux-like functionality with **universal
 //! compatibility** for all programs: TUI applications, interactive shells, and
@@ -2250,9 +2250,9 @@
 //!                                  ╰────────────────╯
 //! ```
 //!
-//! ### VT-100 ANSI Parser Implementation
+//! ### `VT-100` ANSI Parser Implementation
 //!
-//! The parser provides comprehensive VT100 compliance using the [`vte`] crate (same as
+//! The parser provides comprehensive `VT-100` compliance using the [`vte`] crate (same as
 //! Alacritty):
 //!
 //! **Supported sequences**:
@@ -2272,8 +2272,8 @@
 //! This naming convention enables **predictable IDE navigation**: searching for
 //! `char_ops` shows you the shim, implementation, and tests all together.
 //!
-//! **VT100 specification compliance**:
-//! - [VT100 User Guide]
+//! **`VT-100` specification compliance**:
+//! - [`VT-100` User Guide]
 //! - [ANSI X3.64 Standard]
 //! - [XTerm Control Sequences]
 //!
@@ -2307,10 +2307,10 @@
 //! ### Learn More
 //!
 //! For comprehensive implementation details including:
-//! - Complete VT-100 sequence support matrix
+//! - Complete `VT-100` sequence support matrix
 //! - Virtual terminal state management
 //! - Process lifecycle and resource cleanup
-//! - VT-100 conformance test suite
+//! - `VT-100` conformance test suite
 //!
 //! See the detailed [`pty_mux` module documentation] and [`vt_100_pty_output_parser`]
 //! documentation.
@@ -2561,7 +2561,7 @@
 //! [`TERMINAL_LIB_BACKEND`]: crate::TERMINAL_LIB_BACKEND
 //! [Architecture Overview]: core::resilient_reactor_thread#architecture-overview
 //! [ANSI X3.64 Standard]: https://www.ecma-international.org/wp-content/uploads/ECMA-48_5th_edition_june_1991.pdf
-//! [VT100 User Guide]: https://vt100.net/docs/vt100-ug/
+//! [`VT-100` User Guide]: https://vt100.net/docs/vt100-ug/
 //! [XTerm Control Sequences]: https://invisible-island.net/xterm/ctlseqs/ctlseqs.html
 
 // Enable benchmarking for nightly Rust.

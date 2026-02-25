@@ -7,7 +7,7 @@
 // readability.
 #![allow(clippy::doc_markdown)]
 
-//! VT100 ANSI conformance tests for terminal sequence processing.
+//! [`VT-100`] ANSI conformance tests for terminal sequence processing.
 //!
 //! This module provides comprehensive testing of ANSI/VT escape sequence processing
 //! using a structured conformance test approach similar to the markdown parser tests.
@@ -164,13 +164,13 @@
 //!
 //! ### Types Using This Pattern
 //!
-//! | Type | Parsing Method | Generation | Purpose |
-//! |------|----------------|------------|---------|
-//! | [`CsiSequence`] | Manual parsing | `Display` + `FastStringify` | CSI control sequences |
-//! | [`EscSequence`] | Manual parsing | `Display` + `FastStringify` | ESC control sequences |
-//! | [`OscSequence`] | Manual parsing | `Display` + `FastStringify` | OSC sequences (titles, hyperlinks) |
-//! | [`DsrSequence`] | Manual parsing | `Display` + `FastStringify` | Device Status Report responses |
-//! | [`SgrColorSequence`] | `parse_from_slice()` | `Display` + `FastStringify` | 256-color & RGB colors |
+//! | Type                 | Parsing Method       | Generation                  | Purpose                            |
+//! | -------------------- | -------------------- | --------------------------- | ---------------------------------- |
+//! | [`CsiSequence`]      | Manual parsing       | `Display` + `FastStringify` | CSI control sequences              |
+//! | [`EscSequence`]      | Manual parsing       | `Display` + `FastStringify` | ESC control sequences              |
+//! | [`OscSequence`]      | Manual parsing       | `Display` + `FastStringify` | OSC sequences (titles, hyperlinks) |
+//! | [`DsrSequence`]      | Manual parsing       | `Display` + `FastStringify` | Device Status Report responses     |
+//! | [`SgrColorSequence`] | `parse_from_slice()` | `Display` + `FastStringify` | 256-color & RGB colors             |
 //!
 //! ### Benefits of Bidirectional Pattern
 //!
@@ -268,18 +268,11 @@
 //!
 //! See [`SgrColorSequence`] for a complete example implementation.
 //!
-//! [`CsiSequence`]: crate::CsiSequence
-//! [`EscSequence`]: crate::EscSequence
-//! [`OscSequence`]: crate::core::osc::osc_codes::OscSequence
-//! [`DsrSequence`]: crate::DsrSequence
-//! [`SgrColorSequence`]: crate::SgrColorSequence
-//! [`FastStringify`]: crate::core::common::fast_stringify::FastStringify
-//! [`vte`]: https://docs.rs/vte
 //!
-//! ## VT100 Specification Mapping
+//! ## [`VT-100`] Specification Mapping
 //!
 //! Each conformance data module includes specification references:
-//! - **VT100 User Guide**: Section references for command behavior
+//! - **[`VT-100` specification]**: Section references for command behavior
 //! - **ANSI X3.64**: Standard compliance notes
 //! - **`XTerm` Control Sequences**: Extended sequence support
 //!
@@ -303,7 +296,7 @@
 //! - **Type Safety**: Compile-time validation using sequence builders
 //! - **Maintainability**: Single source of truth for test sequences
 //! - **Readability**: Self-documenting test code with clear intent
-//! - **Specification Compliance**: Easy mapping to VT100/ANSI standards
+//! - **Specification Compliance**: Easy mapping to [`VT-100`]/ANSI standards
 //! - **Real-world Validation**: Tests mirror actual terminal application usage
 //! - **Extensibility**: Simple to add new conformance test patterns
 //! - **Performance Testing**: Validates behavior under realistic load conditions
@@ -312,7 +305,7 @@
 //!
 //! 1. **Create sequence patterns** in appropriate `conformance_data` module
 //! 2. **Use type-safe builders** (`CsiSequence`, `EscSequence`, `SgrCode`)
-//! 3. **Include VT100 spec references** in documentation
+//! 3. **Include [`VT-100` specification] references** in documentation
 //! 4. **Test with realistic terminal dimensions** (80x25 or similar)
 //! 5. **Validate complete behavior**, not just individual sequences
 //!
@@ -337,10 +330,19 @@
 //! }, "status line reverse video");
 //! ```
 //!
-//! [`vt_100_ansi_impl`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl
+//! [`CsiSequence`]: crate::CsiSequence
+//! [`DsrSequence`]: crate::DsrSequence
+//! [`EscSequence`]: crate::EscSequence
+//! [`FastStringify`]: crate::core::common::fast_stringify::FastStringify
+//! [`OffscreenBuffer::apply_ansi_bytes`]: crate::tui::terminal_lib_backends::offscreen_buffer::OffscreenBuffer::apply_ansi_bytes
+//! [`OscSequence`]: crate::core::osc::osc_codes::OscSequence
+//! [`SgrColorSequence`]: crate::SgrColorSequence
+//! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+//! [`VT-100` specification]: https://vt100.net/docs/vt100-ug/chapter3.html
 //! [`impl_char_ops`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl::vt_100_impl_char_ops
 //! [`test_char_ops`]: tests::vt_100_test_char_ops
-//! [`OffscreenBuffer::apply_ansi_bytes`]: crate::tui::terminal_lib_backends::offscreen_buffer::OffscreenBuffer::apply_ansi_bytes
+//! [`vt_100_ansi_impl`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl
+//! [`vte`]: https://docs.rs/vte
 
 #[cfg(any(test, doc))]
 pub mod conformance_data;

@@ -370,7 +370,7 @@ struct SgrMouseEvent {
 
 /// Manually parse SGR mouse sequence and provide human-readable descriptions.
 /// Handles clicks, drags, releases, and scroll wheel events.
-/// Expected format: `ESC[<button;col;row` followed by `M` (press) or `m` (release)
+/// Expected format: `ESC [ < button ; col ; row` followed by `M` (press) or `m` (release)
 fn extract_sgr_mouse_event(raw: &[u8]) -> Option<SgrMouseEvent> {
     // Expected format: ESC[<Cb;Cx;CyM or ESC[<Cb;Cx;Cym
     if !raw.starts_with(b"\x1b[<") {

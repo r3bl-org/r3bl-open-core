@@ -1,8 +1,9 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Output event types and terminal control sequences for [PTY] communication.
+//! Output event types and terminal control sequences for [`PTY`] communication.
 //!
-//! This module defines events that flow FROM the [PTY] child process TO the application.
+//! This module defines events that flow FROM the [`PTY`] child process TO the
+//! application.
 //!
 //! **Event types (received by your program):**
 //! - [`PtyReadOnlyOutputEvent`] - Events for read-only monitoring sessions
@@ -11,7 +12,7 @@
 //!
 //! **Cursor mode detection (handled automatically by the Reader Task):**
 //! - [`CursorModeDetector`] - The Reader Task in [`pty_read_write`] calls
-//!   [`scan_for_mode_change()`] on every chunk of [PTY] output, detecting DECCKM
+//!   [`scan_for_mode_change()`] on every chunk of [`PTY`] output, detecting DECCKM
 //!   mode-switch sequences ([`DECCKM_ENABLE_BYTES`] = application mode,
 //!   [`DECCKM_DISABLE_BYTES`] = normal mode) and emitting [`CursorModeChange`] events.
 //!   Your program does not need to call this directly.
@@ -58,8 +59,8 @@
 //! - [`ControlSequence::to_bytes()`] generates the correct escape sequence for the
 //!   current [`CursorKeyMode`].
 //!
-//! [PTY]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`CursorModeChange`]: PtyReadWriteOutputEvent::CursorModeChange
+//! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`pty_read_write`]: crate::core::pty::pty_read_write
 //! [`scan_for_mode_change()`]: CursorModeDetector::scan_for_mode_change
 //! [`to_bytes()`]: ControlSequence::to_bytes
@@ -193,12 +194,12 @@ impl ControlSequence {
     }
 }
 
-/// Cursor mode detector for parsing [PTY] output streams.
+/// Cursor mode detector for parsing [`PTY`] output streams.
 ///
 /// Scans for terminal mode switching sequences and maintains a buffer for partial
 /// sequence detection across read boundaries.
 ///
-/// [PTY]: https://en.wikipedia.org/wiki/Pseudoterminal
+/// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 #[derive(Debug)]
 pub struct CursorModeDetector {
     buffer: Vec<u8>,
@@ -254,7 +255,7 @@ impl Default for CursorModeDetector {
     fn default() -> Self { Self::new() }
 }
 
-/// Output event types for read-only [PTY] sessions.
+/// Output event types for read-only [`PTY`] sessions.
 ///
 /// # Summary
 /// - Used with [`super::pty_sessions::PtyReadOnlySession`] for monitoring child processes
@@ -264,7 +265,7 @@ impl Default for CursorModeDetector {
 /// - Output capture is configurable for selective data processing
 /// - Integrates with [`portable_pty`] for cross-platform terminal compatibility
 ///
-/// [PTY]: https://en.wikipedia.org/wiki/Pseudoterminal
+/// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 #[derive(Debug)]
 pub enum PtyReadOnlyOutputEvent {
     /// OSC sequence event (if OSC capture is enabled in config).
@@ -275,7 +276,7 @@ pub enum PtyReadOnlyOutputEvent {
     Exit(portable_pty::ExitStatus),
 }
 
-/// Output event types for read-write [PTY] sessions.
+/// Output event types for read-write [`PTY`] sessions.
 ///
 /// # Summary
 /// - Used with [`super::pty_sessions::PtyReadWriteSession`] for interactive terminal
@@ -286,7 +287,7 @@ pub enum PtyReadOnlyOutputEvent {
 /// - Handles write errors and unexpected termination for robust error reporting
 /// - Integrates with [`portable_pty`] for cross-platform terminal compatibility
 ///
-/// [PTY]: https://en.wikipedia.org/wiki/Pseudoterminal
+/// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 #[derive(Debug)]
 pub enum PtyReadWriteOutputEvent {
     /// Raw output data (always sent, no processing).

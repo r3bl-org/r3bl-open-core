@@ -127,7 +127,7 @@ pub fn convert_to_string_slice(arg: &[u8; USIZE_FMT_MAX_DIGITS]) -> &str {
 // ==================== u16 formatting (optimized for terminal coordinates)
 // ====================
 
-/// Convert a [u16] to a fixed-size [u8] array without heap allocation.
+/// Converts a [u16] to a fixed-size [u8] array without heap allocation.
 ///
 /// This is optimized for terminal coordinates (rows/columns) which are typically [u16]
 /// values. The array is smaller (5 bytes vs 20) and conversion is faster than the
@@ -177,7 +177,7 @@ pub fn u16_to_u8_array(num: u16) -> [u8; U16_FMT_MAX_DIGITS] {
     result
 }
 
-/// Convert a [u16] [u8] array to a string slice by removing leading zeros.
+/// Converts a [u16] [u8] array to a string slice by removing leading zeros.
 ///
 /// This is the companion function to [`u16_to_u8_array`]. It trims the leading null
 /// bytes from the array to produce a valid string slice.

@@ -1,9 +1,9 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Core [PTY] (Pseudo-Terminal) types and functionality.
+//! Core [`PTY`] (Pseudo-Terminal) types and functionality.
 //!
-//! This module provides the fundamental building blocks for [PTY] operations including:
-//! - Type aliases for [PTY] components and channels
+//! This module provides the fundamental building blocks for [`PTY`] operations including:
+//! - Type aliases for [`PTY`] components and channels
 //! - Event types for bidirectional communication
 //! - Control character handling and conversion
 //! - Session handles for read-only and read-write operations
@@ -17,7 +17,7 @@
 //! - [`pty_sessions`] - Session handle types
 //! - [`pty_utils`] - Cross-platform utility functions
 //!
-//! [PTY]: https://en.wikipedia.org/wiki/Pseudoterminal
+//! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 
 pub mod pty_input_events;
 pub mod pty_output_events;

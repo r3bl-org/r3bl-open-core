@@ -1,71 +1,88 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+// cspell:words waitpid
+
 use super::normalize_pty_output::normalize_pty_line;
 use crate::{ControlledChild, PtyPair};
 
-/// Result of reading PTY output lines until a sentinel.
+/// Result of reading [`PTY`] output lines until a marker.
+///
+/// [`PTY`]: mod@crate::core::pty
 #[derive(Debug)]
 pub struct ReadLinesResult {
     /// Collected output lines (normalized, filtered).
     pub lines: Vec<String>,
-    /// Whether the sentinel string was found in the output.
-    pub found_sentinel: bool,
+    /// Whether the marker string was found in the output.
+    pub found_marker: bool,
 }
 
-/// Reads lines from a PTY controller until a sentinel string is found, then
-/// cleans up and waits for the child to exit.
+/// Reads lines from a [`PTY`] controller until a marker string is found, then cleans up
+/// and waits for the child to exit.
 ///
-/// Both platforms use a simple blocking `read_line()` loop — no background
-/// threads, polling, or timeouts are needed. The **only** platform difference
-/// is a handshake that Windows (ConPTY) requires before any output flows:
+/// All OSes (Linux, macOS, Windows) use a simple blocking [`read_line()`] loop — no
+/// background threads, polling, or timeouts are needed. The **only** platform difference
+/// is on Windows, where [`ConPTY`] requires a handshake before any output flows.
 ///
-/// ## The ConPTY DSR handshake (Windows only)
+/// ## The [`ConPTY`] [`DSR`] handshake (Windows only)
 ///
-/// When a ConPTY session starts, the `OpenConsole.exe` broker sends a **Device
-/// Status Report** request (`\x1b[6n` — "report cursor position") to the host
-/// and **blocks ALL child stdout forwarding** until the host replies with
-/// `\x1b[row;colR`. In production code, crossterm's terminal emulator handles
-/// this transparently. In raw PTY tests (which bypass crossterm), we must
-/// respond manually. Without the response, zero bytes arrive on the reader —
-/// the child's output is buffered inside ConPTY indefinitely.
+/// When a [`ConPTY`] session starts, the [`OpenConsole.exe`] broker sends a **Device
+/// Status Report** request ([`DSR_CURSOR_POSITION_REQUEST`] — "report cursor position")
+/// to the host and **blocks ALL child stdout forwarding** until the host replies with
+/// `ESC [ row ; col R`. In production code, [`crossterm`]'s terminal emulator handles
+/// this transparently. In raw [`PTY`] tests (which bypass [`crossterm`]), we must respond
+/// manually. Without the response, zero bytes arrive on the reader - the child's output
+/// is buffered inside [`ConPTY`] indefinitely.
 ///
-/// Once the DSR response is sent, ConPTY behaves like a Unix PTY: blocking
-/// reads work, and EOF is delivered when the child exits.
+/// Once the DSR response is sent, [`ConPTY`] behaves like a Unix [`PTY`]: blocking reads
+/// work, and [`EOF`] is delivered when the child exits.
 ///
-/// There is one additional ConPTY quirk: the **writer (input pipe) must stay
-/// alive** until reading completes. ConPTY treats input and output as a single
-/// console session — dropping the writer closes the session and stops stdout
-/// forwarding even though the child is still running.
+/// There is one additional [`ConPTY`] quirk: the **writer (input pipe) must stay alive**
+/// until reading completes. [`ConPTY`] treats input and output as a single console
+/// session, and dropping the writer closes the session and stops stdout forwarding even
+/// though the child is still running.
 ///
-/// ## Platform-specific cleanup
+/// ## OS-specific cleanup
 ///
-/// - **Unix**: Calls [`drain_pty_and_wait`] after reading to prevent macOS PTY buffer
-///   deadlock (the PTY master must be drained before `waitpid`).
-/// - **Windows**: Drops writer and controller to close the ConPTY session, then reaps the
-///   child with `wait()`.
+/// - **Unix**: Calls [`drain_pty_and_wait`] after reading to prevent macOS [`PTY`] buffer
+///   deadlock (the [`PTY`] controller must be drained before [`waitpid`]).
+/// - **Windows**: Drops writer and controller to close the [`ConPTY`] session, then reaps
+///   the child with [`wait()`].
 ///
 /// # Parameters
 ///
-/// - `pty_pair` — Owned PTY pair (consumed for cleanup).
+/// - `pty_pair` — Owned [`PTY`] pair (consumed for cleanup).
 /// - `child` — The controlled child process handle.
-/// - `sentinel` — A substring to watch for. Reading stops when found.
+/// - `marker` — A substring to watch for. Reading stops when found.
 /// - `line_filter` — Predicate on each normalized line. Lines returning `false` are
 ///   skipped.
 ///
+/// [`ConPTY`]:
+///     https://learn.microsoft.com/en-us/windows/console/creating-a-pseudoconsole-session
+/// [`DSR_CURSOR_POSITION_REQUEST`]: crate::DSR_CURSOR_POSITION_REQUEST
+/// [`DSR`]: crate::DSR_CURSOR_POSITION_REQUEST
+/// [`EOF`]: https://en.wikipedia.org/wiki/End-of-file
+/// [`OpenConsole.exe`]: https://github.com/microsoft/terminal/tree/main/src/host
+/// [`PTY`]: mod@crate::core::pty
+/// [`crossterm`]: ::crossterm
 /// [`drain_pty_and_wait`]: crate::drain_pty_and_wait
+/// [`read_line()`]: std::io::BufRead::read_line
+/// [`wait()`]:
+///     https://docs.rs/portable-pty/latest/portable_pty/trait.Child.html#tymethod.wait
+/// [`waitpid`]:
+///     https://docs.rs/portable-pty/latest/portable_pty/trait.Child.html#tymethod.wait
 pub fn read_lines_and_drain(
     pty_pair: PtyPair,
     child: &mut ControlledChild,
-    sentinel: &str,
+    marker: &str,
     line_filter: impl Fn(&str) -> bool,
 ) -> ReadLinesResult {
     #[cfg(not(target_os = "windows"))]
     {
-        read_lines_unix(pty_pair, child, sentinel, line_filter)
+        read_lines_unix(pty_pair, child, marker, line_filter)
     }
     #[cfg(target_os = "windows")]
     {
-        read_lines_windows(pty_pair, child, sentinel, line_filter)
+        read_lines_windows(pty_pair, child, marker, line_filter)
     }
 }
 
@@ -75,7 +92,7 @@ pub fn read_lines_and_drain(
 fn read_lines_unix(
     pty_pair: PtyPair,
     child: &mut ControlledChild,
-    sentinel: &str,
+    marker: &str,
     line_filter: impl Fn(&str) -> bool,
 ) -> ReadLinesResult {
     use crate::drain_pty_and_wait;
@@ -87,14 +104,13 @@ fn read_lines_unix(
         .expect("Failed to clone reader");
     let mut buf_reader = BufReader::new(reader);
 
-    let (lines, found_sentinel) =
-        read_until_sentinel(&mut buf_reader, sentinel, &line_filter);
+    let (lines, found_marker) = read_until_marker(&mut buf_reader, marker, &line_filter);
 
     drain_pty_and_wait(buf_reader, pty_pair, child);
 
     ReadLinesResult {
         lines,
-        found_sentinel,
+        found_marker,
     }
 }
 
@@ -104,12 +120,12 @@ fn read_lines_unix(
 fn read_lines_windows(
     pty_pair: PtyPair,
     child: &mut ControlledChild,
-    sentinel: &str,
+    marker: &str,
     line_filter: impl Fn(&str) -> bool,
 ) -> ReadLinesResult {
     use std::io::{BufReader, Read, Write};
 
-    // Split the PtyPair. The controlled (slave) half must be dropped after
+    // Split the PtyPair. The controlled half must be dropped after
     // spawning; the child retains its own console handle.
     let (controller, controlled) = pty_pair.split();
     drop(controlled);
@@ -118,7 +134,7 @@ fn read_lines_windows(
         .try_clone_reader()
         .expect("Failed to clone reader");
 
-    // ConPTY DSR handshake: ConPTY sends `\x1b[6n` (Report Cursor Position)
+    // ConPTY DSR handshake: ConPTY sends DSR_CURSOR_POSITION_REQUEST
     // during initialization and blocks ALL child stdout forwarding until the
     // host responds with `\x1b[row;colR`. Without this, zero bytes arrive.
     //
@@ -131,7 +147,8 @@ fn read_lines_windows(
         loop {
             match reader.read(&mut buf) {
                 Ok(n) if n > 0 => {
-                    if buf[..n].windows(4).any(|w| w == b"\x1b[6n") {
+                    let req = crate::DSR_CURSOR_POSITION_REQUEST.as_bytes();
+                    if buf[..n].windows(req.len()).any(|w| w == req) {
                         let _unused = writer.write_all(b"\x1b[1;1R");
                         let _unused = writer.flush();
                         break;
@@ -145,8 +162,7 @@ fn read_lines_windows(
 
     let mut buf_reader = BufReader::new(reader);
 
-    let (lines, found_sentinel) =
-        read_until_sentinel(&mut buf_reader, sentinel, &line_filter);
+    let (lines, found_marker) = read_until_marker(&mut buf_reader, marker, &line_filter);
 
     // Drop writer and controller to close the ConPTY session, then reap child.
     drop(_writer);
@@ -158,19 +174,19 @@ fn read_lines_windows(
 
     ReadLinesResult {
         lines,
-        found_sentinel,
+        found_marker,
     }
 }
 
 // ── Shared read loop ─────────────────────────────────────────────────
 
-fn read_until_sentinel(
+fn read_until_marker(
     buf_reader: &mut impl std::io::BufRead,
-    sentinel: &str,
+    marker: &str,
     line_filter: &impl Fn(&str) -> bool,
 ) -> (Vec<String>, bool) {
     let mut lines = Vec::new();
-    let mut found_sentinel = false;
+    let mut found_marker = false;
 
     loop {
         let mut line = String::new();
@@ -180,8 +196,8 @@ fn read_until_sentinel(
                 let trimmed = normalize_pty_line(&line);
                 eprintln!("  <- Controlled output: {trimmed:?}");
 
-                if trimmed.contains(sentinel) {
-                    found_sentinel = true;
+                if trimmed.contains(marker) {
+                    found_marker = true;
                     break;
                 }
 
@@ -196,5 +212,5 @@ fn read_until_sentinel(
         }
     }
 
-    (lines, found_sentinel)
+    (lines, found_marker)
 }

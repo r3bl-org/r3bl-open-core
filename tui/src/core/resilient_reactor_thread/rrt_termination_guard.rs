@@ -1,20 +1,20 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! [RAII] guard that clears the waker on thread exit. See [`TerminationGuard`] for
+//! [`RAII`] guard that clears the waker on thread exit. See [`TerminationGuard`] for
 //! details.
 //!
-//! [RAII]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
+//! [`RAII`]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
 
 use super::{RRTWorker, WakerSlotWriter};
 
-/// [RAII] guard that clears the waker to [`None`] when the dedicated thread's work loop
+/// [`RAII`] guard that clears the waker to [`None`] when the dedicated thread's work loop
 /// exits.
 ///
 /// The waker's [`Option`] state IS the liveness signal: `Some(waker)` means the thread is
 /// running, `None` means it has terminated. Clearing it to `None` is the only cleanup
 /// needed - [`subscribe()`] checks `is_none()` to detect termination.
 ///
-/// [RAII]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
+/// [`RAII`]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
 /// [`subscribe()`]: super::RRT::subscribe
 #[allow(missing_debug_implementations)]
 pub struct TerminationGuard<W: RRTWorker> {

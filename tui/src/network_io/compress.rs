@@ -1,4 +1,5 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
+
 use crate::{Buffer, BufferAtom};
 use flate2::{Compression, read::GzDecoder, write::GzEncoder};
 use miette::IntoDiagnostic;
@@ -11,6 +12,7 @@ use std::io::{Read, Write};
 /// Returns an error if:
 /// - The compression algorithm fails
 /// - Writing to the encoder fails due to I/O errors
+#[allow(clippy::map_unwrap_or)]
 pub fn compress(data: &[BufferAtom]) -> miette::Result<Buffer> {
     let uncompressed_size = data.len();
     let mut encoder = GzEncoder::new(Vec::new(), Compression::default());
@@ -52,34 +54,37 @@ fn log_compression_stats(
     uncompressed_size: usize,
     compressed_size: usize,
 ) {
-    let (
-        uncompressed_kb,
-        uncompressed_remainder,
-        compressed_kb,
-        compressed_remainder,
-        ratio_percent,
-        ratio_remainder,
-    ) = calculate_compression_stats(uncompressed_size, compressed_size);
+    let stats = calculate_compression_stats(uncompressed_size, compressed_size);
 
     tracing::info!(
         message = operation,
         "{a}.{b:03} kb -> {c}.{d:03} kb ({e}.{f:02}%)",
-        a = uncompressed_kb,
-        b = uncompressed_remainder,
-        c = compressed_kb,
-        d = compressed_remainder,
-        e = ratio_percent,
-        f = ratio_remainder
+        a = stats.uncompressed_kb,
+        b = stats.uncompressed_remainder,
+        c = stats.compressed_kb,
+        d = stats.compressed_remainder,
+        e = stats.ratio_percent,
+        f = stats.ratio_remainder
     );
 }
 
-/// Calculate compression statistics using integer arithmetic to avoid floating-point
-/// precision issues. Returns (`uncompressed_kb`, `uncompressed_remainder`,
-/// `compressed_kb`, `compressed_remainder`, `ratio_percent`, `ratio_remainder`)
+/// Compression statistics computed using integer arithmetic.
+struct CompressionStats {
+    pub uncompressed_kb: usize,
+    pub uncompressed_remainder: usize,
+    pub compressed_kb: usize,
+    pub compressed_remainder: usize,
+    pub ratio_percent: usize,
+    pub ratio_remainder: usize,
+}
+
+/// Calculates compression statistics using integer arithmetic to avoid floating-point
+/// precision issues.
+#[allow(clippy::manual_checked_ops)]
 fn calculate_compression_stats(
     uncompressed_size: usize,
     compressed_size: usize,
-) -> (usize, usize, usize, usize, usize, usize) {
+) -> CompressionStats {
     // Convert to kilobytes using integer division, with remainder for precision.
     let uncompressed_kb = uncompressed_size / 1000;
     let uncompressed_remainder = uncompressed_size % 1000;
@@ -109,14 +114,14 @@ fn calculate_compression_stats(
         (0, 0)
     };
 
-    (
+    CompressionStats {
         uncompressed_kb,
         uncompressed_remainder,
         compressed_kb,
         compressed_remainder,
         ratio_percent,
         ratio_remainder,
-    )
+    }
 }
 
 #[cfg(test)]
@@ -125,194 +130,131 @@ mod tests {
     #[test]
     fn test_calculate_compression_stats_basic_compression() {
         // Test basic compression scenario: 1500 bytes -> 750 bytes (50% ratio)
-        let (
-            uncompressed_kb,
-            uncompressed_remainder,
-            compressed_kb,
-            compressed_remainder,
-            ratio_percent,
-            ratio_remainder,
-        ) = calculate_compression_stats(1500, 750);
+        let stats = calculate_compression_stats(1500, 750);
 
-        assert_eq!(uncompressed_kb, 1);
-        assert_eq!(uncompressed_remainder, 500);
-        assert_eq!(compressed_kb, 0);
-        assert_eq!(compressed_remainder, 750);
-        assert_eq!(ratio_percent, 50);
-        assert_eq!(ratio_remainder, 0);
+        assert_eq!(stats.uncompressed_kb, 1);
+        assert_eq!(stats.uncompressed_remainder, 500);
+        assert_eq!(stats.compressed_kb, 0);
+        assert_eq!(stats.compressed_remainder, 750);
+        assert_eq!(stats.ratio_percent, 50);
+        assert_eq!(stats.ratio_remainder, 0);
     }
 
     #[test]
     fn test_calculate_compression_stats_zero_uncompressed_size() {
         // Test edge case: zero uncompressed size (should not cause division by zero)
-        let (
-            uncompressed_kb,
-            uncompressed_remainder,
-            compressed_kb,
-            compressed_remainder,
-            ratio_percent,
-            ratio_remainder,
-        ) = calculate_compression_stats(0, 100);
+        let stats = calculate_compression_stats(0, 100);
 
-        assert_eq!(uncompressed_kb, 0);
-        assert_eq!(uncompressed_remainder, 0);
-        assert_eq!(compressed_kb, 0);
-        assert_eq!(compressed_remainder, 100);
-        assert_eq!(ratio_percent, 0);
-        assert_eq!(ratio_remainder, 0);
+        assert_eq!(stats.uncompressed_kb, 0);
+        assert_eq!(stats.uncompressed_remainder, 0);
+        assert_eq!(stats.compressed_kb, 0);
+        assert_eq!(stats.compressed_remainder, 100);
+        assert_eq!(stats.ratio_percent, 0);
+        assert_eq!(stats.ratio_remainder, 0);
     }
 
     #[test]
     fn test_calculate_compression_stats_small_sizes() {
         // Test small sizes (less than 1KB): 456 bytes -> 123 bytes
-        let (
-            uncompressed_kb,
-            uncompressed_remainder,
-            compressed_kb,
-            compressed_remainder,
-            ratio_percent,
-            ratio_remainder,
-        ) = calculate_compression_stats(456, 123);
+        let stats = calculate_compression_stats(456, 123);
 
-        assert_eq!(uncompressed_kb, 0);
-        assert_eq!(uncompressed_remainder, 456);
-        assert_eq!(compressed_kb, 0);
-        assert_eq!(compressed_remainder, 123);
+        assert_eq!(stats.uncompressed_kb, 0);
+        assert_eq!(stats.uncompressed_remainder, 456);
+        assert_eq!(stats.compressed_kb, 0);
+        assert_eq!(stats.compressed_remainder, 123);
 
         // Calculate expected ratio: (123 * 100) / 456 = 26.97...
         // Integer division gives us 26.
-        assert_eq!(ratio_percent, 26);
+        assert_eq!(stats.ratio_percent, 26);
         // For remainder: ((123 * 10000) / 456) % 100
         // = (1230000 / 456) % 100 = 2697 % 100 = 97
-        assert_eq!(ratio_remainder, 97);
+        assert_eq!(stats.ratio_remainder, 97);
     }
 
     #[test]
     fn test_calculate_compression_stats_large_sizes() {
         // Test large sizes: 5MB -> 1MB
-        let (
-            uncompressed_kb,
-            uncompressed_remainder,
-            compressed_kb,
-            compressed_remainder,
-            ratio_percent,
-            ratio_remainder,
-        ) = calculate_compression_stats(5_000_000, 1_000_000);
+        let stats = calculate_compression_stats(5_000_000, 1_000_000);
 
-        assert_eq!(uncompressed_kb, 5000);
-        assert_eq!(uncompressed_remainder, 0);
-        assert_eq!(compressed_kb, 1000);
-        assert_eq!(compressed_remainder, 0);
-        assert_eq!(ratio_percent, 20);
-        assert_eq!(ratio_remainder, 0);
+        assert_eq!(stats.uncompressed_kb, 5000);
+        assert_eq!(stats.uncompressed_remainder, 0);
+        assert_eq!(stats.compressed_kb, 1000);
+        assert_eq!(stats.compressed_remainder, 0);
+        assert_eq!(stats.ratio_percent, 20);
+        assert_eq!(stats.ratio_remainder, 0);
     }
 
     #[test]
     fn test_calculate_compression_stats_no_compression() {
         // Test case where "compressed" size equals original (100% ratio)
-        let (
-            uncompressed_kb,
-            uncompressed_remainder,
-            compressed_kb,
-            compressed_remainder,
-            ratio_percent,
-            ratio_remainder,
-        ) = calculate_compression_stats(1000, 1000);
+        let stats = calculate_compression_stats(1000, 1000);
 
-        assert_eq!(uncompressed_kb, 1);
-        assert_eq!(uncompressed_remainder, 0);
-        assert_eq!(compressed_kb, 1);
-        assert_eq!(compressed_remainder, 0);
-        assert_eq!(ratio_percent, 100);
-        assert_eq!(ratio_remainder, 0);
+        assert_eq!(stats.uncompressed_kb, 1);
+        assert_eq!(stats.uncompressed_remainder, 0);
+        assert_eq!(stats.compressed_kb, 1);
+        assert_eq!(stats.compressed_remainder, 0);
+        assert_eq!(stats.ratio_percent, 100);
+        assert_eq!(stats.ratio_remainder, 0);
     }
 
     #[test]
     fn test_calculate_compression_stats_expansion() {
         // Test case where compressed size is larger than original (>100% ratio)
-        let (
-            uncompressed_kb,
-            uncompressed_remainder,
-            compressed_kb,
-            compressed_remainder,
-            ratio_percent,
-            ratio_remainder,
-        ) = calculate_compression_stats(100, 150);
+        let stats = calculate_compression_stats(100, 150);
 
-        assert_eq!(uncompressed_kb, 0);
-        assert_eq!(uncompressed_remainder, 100);
-        assert_eq!(compressed_kb, 0);
-        assert_eq!(compressed_remainder, 150);
-        assert_eq!(ratio_percent, 150);
-        assert_eq!(ratio_remainder, 0);
+        assert_eq!(stats.uncompressed_kb, 0);
+        assert_eq!(stats.uncompressed_remainder, 100);
+        assert_eq!(stats.compressed_kb, 0);
+        assert_eq!(stats.compressed_remainder, 150);
+        assert_eq!(stats.ratio_percent, 150);
+        assert_eq!(stats.ratio_remainder, 0);
     }
 
     #[test]
     fn test_calculate_compression_stats_precision() {
         // Test precision with specific values that test remainder calculations.
-        let (
-            uncompressed_kb,
-            uncompressed_remainder,
-            compressed_kb,
-            compressed_remainder,
-            ratio_percent,
-            ratio_remainder,
-        ) = calculate_compression_stats(3333, 1111);
+        let stats = calculate_compression_stats(3333, 1111);
 
-        assert_eq!(uncompressed_kb, 3);
-        assert_eq!(uncompressed_remainder, 333);
-        assert_eq!(compressed_kb, 1);
-        assert_eq!(compressed_remainder, 111);
+        assert_eq!(stats.uncompressed_kb, 3);
+        assert_eq!(stats.uncompressed_remainder, 333);
+        assert_eq!(stats.compressed_kb, 1);
+        assert_eq!(stats.compressed_remainder, 111);
 
         // Calculate expected ratio: (1111 * 100) / 3333 = 33.33...
-        assert_eq!(ratio_percent, 33);
+        assert_eq!(stats.ratio_percent, 33);
         // For remainder: ((1111 * 10000) / 3333) % 100
         // = (11110000 / 3333) % 100 = 3333 % 100 = 33
-        assert_eq!(ratio_remainder, 33);
+        assert_eq!(stats.ratio_remainder, 33);
     }
 
     #[test]
     fn test_calculate_compression_stats_exact_kilobytes() {
         // Test with exact kilobyte values.
-        let (
-            uncompressed_kb,
-            uncompressed_remainder,
-            compressed_kb,
-            compressed_remainder,
-            ratio_percent,
-            ratio_remainder,
-        ) = calculate_compression_stats(4000, 2000);
+        let stats = calculate_compression_stats(4000, 2000);
 
-        assert_eq!(uncompressed_kb, 4);
-        assert_eq!(uncompressed_remainder, 0);
-        assert_eq!(compressed_kb, 2);
-        assert_eq!(compressed_remainder, 0);
-        assert_eq!(ratio_percent, 50);
-        assert_eq!(ratio_remainder, 0);
+        assert_eq!(stats.uncompressed_kb, 4);
+        assert_eq!(stats.uncompressed_remainder, 0);
+        assert_eq!(stats.compressed_kb, 2);
+        assert_eq!(stats.compressed_remainder, 0);
+        assert_eq!(stats.ratio_percent, 50);
+        assert_eq!(stats.ratio_remainder, 0);
     }
 
     #[test]
     fn test_calculate_compression_stats_fractional_ratio() {
         // Test a case that produces a fractional ratio.
-        let (
-            uncompressed_kb,
-            uncompressed_remainder,
-            compressed_kb,
-            compressed_remainder,
-            ratio_percent,
-            ratio_remainder,
-        ) = calculate_compression_stats(7, 3);
+        let stats = calculate_compression_stats(7, 3);
 
-        assert_eq!(uncompressed_kb, 0);
-        assert_eq!(uncompressed_remainder, 7);
-        assert_eq!(compressed_kb, 0);
-        assert_eq!(compressed_remainder, 3);
+        assert_eq!(stats.uncompressed_kb, 0);
+        assert_eq!(stats.uncompressed_remainder, 7);
+        assert_eq!(stats.compressed_kb, 0);
+        assert_eq!(stats.compressed_remainder, 3);
 
         // Calculate expected ratio: (3 * 100) / 7 = 42.857...
-        assert_eq!(ratio_percent, 42);
+        assert_eq!(stats.ratio_percent, 42);
         // For remainder: ((3 * 10000) / 7) % 100
         // = (30000 / 7) % 100 = 4285 % 100 = 85
-        assert_eq!(ratio_remainder, 85);
+        assert_eq!(stats.ratio_remainder, 85);
     }
 
     #[test]

@@ -109,7 +109,7 @@ pub(crate) mod display_impl_for_command_run_result {
         fg_slate_gray(&details_str).to_small_str()
     }
 
-    /// Format the command as a string for display.
+    /// Formats the command as a string for display.
     pub fn fmt_cmd_str(cmd: &Command) -> StdResult<InlineString, Error> {
         use std::fmt::Write;
 

@@ -20,8 +20,8 @@
 //!
 //! These builders generate sequences using the **colon-separated format** (recommended
 //! modern format):
-//! - 256-color: `ESC[38:5:196m` (not `ESC[38;5;196m`)
-//! - RGB: `ESC[38:2:255:128:0m` (not `ESC[38;2;255;128;0m`)
+//! - 256-color: `ESC [ 38 : 5 : 196 m` (not `ESC [ 38 ; 5 ; 196 m`)
+//! - RGB: `ESC [ 38 : 2 : 255 : 128 : 0 m` (not `ESC [ 38 ; 2 ; 255 ; 128 ; 0 m`)
 //!
 //! # Example Usage
 //!
@@ -40,12 +40,12 @@
 //! let blue_bg = bg_rgb(0, 128, 255);         // → "\x1b[48:2:0:128:255m"
 //! ```
 //!
-//! [`SgrColorSequence`]: crate::SgrColorSequence
 //! [`Display`]: std::fmt::Display
+//! [`SgrColorSequence`]: crate::SgrColorSequence
 
 use crate::SgrColorSequence;
 
-/// Generate 256-color foreground sequence: ESC[38:5:nm
+/// Generate 256-color foreground sequence: `ESC [ 38 : 5 : n m`
 ///
 /// Creates a sequence that sets the foreground color to a 256-color palette index.
 ///
@@ -62,7 +62,7 @@ pub fn fg_ansi256(index: u8) -> String {
     SgrColorSequence::SetForegroundAnsi256(index).to_string()
 }
 
-/// Generate 256-color background sequence: ESC[48:5:nm
+/// Generate 256-color background sequence: `ESC [ 48 : 5 : n m`
 ///
 /// Creates a sequence that sets the background color to a 256-color palette index.
 ///
@@ -76,7 +76,7 @@ pub fn bg_ansi256(index: u8) -> String {
     SgrColorSequence::SetBackgroundAnsi256(index).to_string()
 }
 
-/// Generate RGB foreground sequence: ESC[38:2:r:g:bm
+/// Generate RGB foreground sequence: `ESC [ 38 : 2 : r : g : b m`
 ///
 /// Creates a sequence that sets the foreground color to a true RGB color.
 ///
@@ -92,7 +92,7 @@ pub fn fg_rgb(r: u8, g: u8, b: u8) -> String {
     SgrColorSequence::SetForegroundRgb(r, g, b).to_string()
 }
 
-/// Generate RGB background sequence: ESC[48:2:r:g:bm
+/// Generate RGB background sequence: `ESC [ 48 : 2 : r : g : b m`
 ///
 /// Creates a sequence that sets the background color to a true RGB color.
 ///

@@ -3,23 +3,25 @@
 use super::{InlineString, InlineVec};
 use std::ops::{Deref, DerefMut};
 
-// XMARK: Clever Rust, use of newtype pattern to convert various
-// types to `ItemsOwned`.
+// XMARK: Clever Rust, use of newtype pattern to convert various types to `ItemsOwned`.
 
-/// The primary reason this module exists is to be able to easily
-/// convert from a borrowed type to an owned type. This module is
-/// built to make it easy to use `[r3bl_tui::readline_async::choose()]`. The `choose()`
-/// needs a list of items to allow the user to choose from.
+/// The primary reason this module exists is to be able to easily convert from a borrowed
+/// type to an owned type. This module is built to make it easy to use
+/// [`r3bl_tui::readline_async::choose()`] - it needs a list of items to allow the user to
+/// choose from.
 ///
 /// This list of items can be easily constructed from:
 /// - Case 1: `vec!["one", "two", "three"]`
 /// - Case 2: `&["one", "two", "three"]`
 /// - Case 3: `vec!["one".to_string(), "two".to_string(), "three".to_string()]`
 ///
-/// The ["newtype" pattern](https://youtu.be/3-Ika3mAOGQ?si=EgcSROsbgcM5hTIY) is used here
-/// to facilitate the conversion of various types to `ItemsOwned`. The `ItemsOwned` type
-/// is a wrapper around `InlineVec<InlineString>`, which is a stack-allocated vector of
-/// strings. The `InlineVec` type is used to avoid heap allocations for small vectors,
+/// The ["newtype" pattern] is used here to facilitate the conversion of various types to
+/// [`ItemsOwned`]. The [`ItemsOwned`] type is a wrapper around
+/// [`InlineVec<InlineString>`], which is a stack-allocated vector of strings. The
+/// [`InlineVec`] type is used to avoid heap allocations for small vectors,
+///
+/// ["newtype" pattern]: https://youtu.be/3-Ika3mAOGQ?si=EgcSROsbgcM5hTIY
+/// [`r3bl_tui::readline_async::choose()`]: crate::readline_async::choose
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct ItemsOwned(pub InlineVec<InlineString>);
 
@@ -29,24 +31,25 @@ pub fn items_owned(arg_owned_items: impl Into<ItemsOwned>) -> ItemsOwned {
 }
 
 mod convert_to_vec_string {
-    use super::ItemsOwned;
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     impl ItemsOwned {
-        /// Convert `ItemsOwned` to `Vec<String>`.
+        /// Converts [`ItemsOwned`] to [`Vec<String>`].
         #[must_use]
         pub fn to_vec(&self) -> Vec<String> { self.into() }
     }
 
-    /// Convert `ItemsOwned` to `Vec<String>`. For compatibility with other Rust std lib
-    /// types.
+    /// Converts [`ItemsOwned`] to [`Vec<String>`]. For compatibility with other Rust
+    /// [`std`] lib types.
     impl From<ItemsOwned> for Vec<String> {
         fn from(items: ItemsOwned) -> Self {
             items.0.iter().map(ToString::to_string).collect()
         }
     }
 
-    /// Convert `&ItemsOwned` to `Vec<String>`. For compatibility with other Rust std lib
-    /// types.
+    /// Converts `&`[`ItemsOwned`] to [`Vec<String>`]. For compatibility with other Rust
+    /// [`std`] lib types.
     impl From<&ItemsOwned> for Vec<String> {
         fn from(items: &ItemsOwned) -> Self {
             items.0.iter().map(ToString::to_string).collect()
@@ -71,7 +74,9 @@ mod constructors {
 mod iter_impl {
     use super::{InlineString, InlineVec, ItemsOwned};
 
-    /// `FromIterator` for [`ItemsOwned`] for `collect()`.
+    /// [`FromIterator`] for [`ItemsOwned`] for [`collect()`].
+    ///
+    /// [`collect()`]: Iterator::collect
     impl FromIterator<InlineString> for ItemsOwned {
         fn from_iter<I: IntoIterator<Item = InlineString>>(iter: I) -> Self {
             let inline_vec = iter.into_iter().collect::<InlineVec<InlineString>>();
@@ -91,7 +96,9 @@ mod iter_impl {
     impl IntoIterator for ItemsOwned {
         type Item = InlineString;
 
-        /// Use the `IntoIter` type that matches what `InlineVec` returns.
+        /// Use the [`IntoIter`] type that matches what [`InlineVec`] returns.
+        ///
+        /// [`IntoIter`]: IntoIterator::IntoIter
         type IntoIter = <InlineVec<InlineString> as IntoIterator>::IntoIter;
 
         fn into_iter(self) -> Self::IntoIter { self.0.into_iter() }
@@ -105,7 +112,10 @@ mod convert_into_items_owned {
     // XMARK: Clever Rust, to make it easy to work with arrays of any size, eg: `&["1",
     // "2"]`, `vec!["1", "2"]`, `vec!["1".to_string(), "2".to_string()]`
 
-    /// Convert `SmallVec<[&str; N]>` to `ItemsOwned` for any size N.
+    /// Converts [`SmallVec<[&str; N]>`] to [`ItemsOwned`] for any size N.
+    ///
+    /// [`SmallVec<[&str; N]>`]: smallvec::SmallVec
+    #[allow(clippy::doc_markdown)]
     impl<const N: usize> From<SmallVec<[&str; N]>> for ItemsOwned {
         fn from(items: SmallVec<[&str; N]>) -> Self {
             let mut inline_vec = InlineVec::with_capacity(items.len());
@@ -117,7 +127,7 @@ mod convert_into_items_owned {
     }
 
     impl<const N: usize> From<&[&str; N]> for ItemsOwned {
-        /// Handle arrays of any fixed size.
+        /// Handles arrays of any fixed size.
         fn from(items: &[&str; N]) -> Self {
             // Delegate to the slice implementation.
             ItemsOwned::from(&items[..])
@@ -125,8 +135,10 @@ mod convert_into_items_owned {
     }
 
     impl From<&[&str]> for ItemsOwned {
-        /// The slice implementation is used to convert from a
-        /// slice of `&str` to `ItemsOwned`.
+        /// The slice implementation is used to convert from a slice of [`&str`] to
+        /// [`ItemsOwned`].
+        ///
+        /// [`&str`]: str
         fn from(items: &[&str]) -> Self {
             let mut inline_vec = InlineVec::with_capacity(items.len());
             for item in items {
@@ -182,7 +194,7 @@ mod convert_into_items_owned {
         }
     }
 
-    /// Convert `Vec<String>` to `ItemsOwned`.
+    /// Converts [`Vec<String>`] to [`ItemsOwned`].
     impl From<Vec<String>> for ItemsOwned {
         fn from(items: Vec<String>) -> Self {
             let mut inline_vec = InlineVec::with_capacity(items.len());

@@ -3,12 +3,12 @@
 //! Buffer utility methods for [`ZeroCopyGapBuffer`].
 //!
 //! This module provides specialized utility methods for buffer-level operations
-//! that complement the line-based operations provided by `ZeroCopyGapBuffer`.
+//! that complement the line-based operations provided by [`ZeroCopyGapBuffer`].
 //!
 //! # Architectural Separation
 //!
 //! This module follows a clear separation of concerns:
-//! - **Line-based operations** → Use `ZeroCopyGapBuffer` inherent methods
+//! - **Line-based operations** → Use [`ZeroCopyGapBuffer`] inherent methods
 //! - **Buffer-wide utilities** → Use methods in this module
 //!
 //! ## Buffer Utilities (This Module)
@@ -17,7 +17,7 @@
 //! - Raw/debug access (`get_line_raw()`, `is_valid_utf8()`)
 //! - Special content access (`get_line_with_newline()`)
 //!
-//! ## Line Operations (`ZeroCopyGapBuffer` Methods)
+//! ## Line Operations ([`ZeroCopyGapBuffer`] Methods)
 //! - Single line access (`get_line_content()`, `get_line()`)
 //! - Line metadata (`get_line_display_width()`, `line_count()`)
 //! - Line mutations (`insert_at_grapheme()`, `delete_at_grapheme()`)
@@ -147,7 +147,9 @@ impl ZeroCopyGapBuffer {
     /// string access methods, it uses `unsafe` code to maintain zero-copy semantics
     /// with the same safety guarantees as `as_str()`.
     ///
-    /// Returns None if the range is out of bounds
+    /// # Returns
+    ///
+    /// `None` if the range is out of bounds.
     ///
     /// # Panics
     ///
@@ -208,7 +210,7 @@ impl ZeroCopyGapBuffer {
         Some(&self.buffer[start..end])
     }
 
-    /// Check if the buffer contains valid UTF-8
+    /// Checks if the buffer contains valid UTF-8
     ///
     /// This should always return true in normal operation
     #[must_use]

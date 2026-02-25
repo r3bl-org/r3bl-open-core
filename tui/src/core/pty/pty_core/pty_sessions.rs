@@ -1,8 +1,8 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! [PTY] session handle types for read-only and read-write communication.
+//! [`PTY`] session handle types for read-only and read-write communication.
 //!
-//! [PTY]: https://en.wikipedia.org/wiki/Pseudoterminal
+//! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 
 use super::pty_types::{InputEventSenderHalf, PtyCompletionHandle,
                        ReadOnlyOutputEventReceiverHalf, ReadWriteOutputEventReceiverHalf};
@@ -32,15 +32,15 @@ pub fn show_notification(title: &str, message: &str) {
     }
 }
 
-/// A unidirectional [PTY] session handle for monitoring child process output.
+/// A unidirectional [`PTY`] session handle for monitoring child process output.
 ///
-/// - Receives combined stdout/stderr, [OSC] sequences, and process lifecycle events
+/// - Receives combined stdout/stderr, [`OSC`] sequences, and process lifecycle events
 ///   without input capability
 /// - Used for monitoring long-running processes, capturing command output, or observing
 ///   terminal applications
 ///
-/// [OSC]: crate::OscEvent
-/// [PTY]: https://en.wikipedia.org/wiki/Pseudoterminal
+/// [`OSC`]: crate::OscEvent
+/// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 #[derive(Debug)]
 pub struct PtyReadOnlySession {
     /// Receives output events from the child process (combined stdout/stderr).
@@ -54,14 +54,14 @@ pub struct PtyReadOnlySession {
     pub pinned_boxed_session_completion_handle: PtyCompletionHandle,
 }
 
-/// A bidirectional [PTY] session handle for full interaction with child processes.
+/// A bidirectional [`PTY`] session handle for full interaction with child processes.
 ///
 /// - Sends keyboard input, control sequences, and window resizing via [`PtyInputEvent`]
 /// - Receives stdout/stderr output via [`PtyReadWriteOutputEvent`]
 /// - Used for interactive terminal applications, REPLs, shell sessions, and automated
 ///   command execution
 ///
-/// [PTY]: https://en.wikipedia.org/wiki/Pseudoterminal
+/// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 /// [`PtyInputEvent`]: crate::PtyInputEvent
 /// [`PtyReadWriteOutputEvent`]: crate::PtyReadWriteOutputEvent
 #[derive(Debug)]

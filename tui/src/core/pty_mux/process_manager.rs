@@ -1,13 +1,13 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Process lifecycle management for the [PTY] multiplexer. See [`ProcessManager`] and
+//! Process lifecycle management for the [`PTY`] multiplexer. See [`ProcessManager`] and
 //! [`Process`].
 //!
 //! Each process maintains its own virtual terminal ([`OffscreenBuffer`]) and [ANSI
 //! parser]. Process switching is instant - just display a different buffer.
 //!
 //! [ANSI parser]: vte::Parser
-//! [PTY]: https://en.wikipedia.org/wiki/Pseudoterminal
+//! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 
 use super::output_renderer::STATUS_BAR_HEIGHT;
 use crate::{OffscreenBuffer, Size,
@@ -18,9 +18,9 @@ use crate::{OffscreenBuffer, Size,
 use portable_pty::PtySize;
 use std::fmt::{Debug, Formatter, Result};
 
-/// Manages multiple [PTY] processes and handles switching between them.
+/// Manages multiple [`PTY`] processes and handles switching between them.
 ///
-/// [PTY]: https://en.wikipedia.org/wiki/Pseudoterminal
+/// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 #[derive(Debug)]
 pub struct ProcessManager {
     processes: Vec<Process>,
@@ -152,14 +152,14 @@ impl Process {
         }
     }
 
-    /// Tries to get output from this process's [PTY] session without blocking.
+    /// Tries to get output from this process's [`PTY`] session without blocking.
     ///
     /// # Returns
     ///
     /// - [`None`] if no output is immediately available
     /// - [`Some(output)`] if there is new data to process
     ///
-    /// [PTY]: https://en.wikipedia.org/wiki/Pseudoterminal
+    /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
     /// [`Some(output)`]: Some
     pub fn try_get_output(&mut self) -> Option<Vec<u8>> {
         if let Some(session) = &mut self.session
@@ -391,9 +391,10 @@ impl ProcessManager {
     /// Handles terminal resize with per-process buffer architecture.
     ///
     /// This creates fresh buffers at the new size for all processes and resets their
-    /// parsers for a clean state. Each [PTY] is notified of the resize for natural reflow.
+    /// parsers for a clean state. Each [`PTY`] is notified of the resize for natural
+    /// reflow.
     ///
-    /// [PTY]: https://en.wikipedia.org/wiki/Pseudoterminal
+    /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
     pub fn handle_terminal_resize(&mut self, new_size: Size) {
         self.terminal_size = new_size;
 
@@ -448,10 +449,10 @@ impl ProcessManager {
 
     /// Shuts down all running processes.
     ///
-    /// This method kills all active [PTY] sessions to ensure clean exit. Called when the
-    /// multiplexer is shutting down.
+    /// This method kills all active [`PTY`] sessions to ensure clean exit. Called when
+    /// the multiplexer is shutting down.
     ///
-    /// [PTY]: https://en.wikipedia.org/wiki/Pseudoterminal
+    /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
     pub fn shutdown_all_processes(&mut self) {
         tracing::debug!(
             "Shutting down all processes - starting cleanup of {} processes",

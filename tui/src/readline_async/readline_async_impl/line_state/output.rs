@@ -1,8 +1,9 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::core::LineState;
-use crate::{CsiSequence, GCStringOwned, LINE_FEED_BYTE, LineStateLiveness, ReadlineError,
-            TermCol, TermColDelta, TermRowDelta, early_return_if_paused, ok, width};
+use crate::{CsiSequence, GCStringOwned, LINE_FEED_BYTE, LineStateLiveness,
+            ReadlineError, TermCol, TermColDelta, TermRowDelta, early_return_if_paused,
+            ok, width};
 use std::io::Write;
 
 impl LineState {
@@ -41,9 +42,14 @@ impl LineState {
                     .to_string()
                     .as_bytes(),
             )?;
-            // Only emit CursorForward if the delta is non-zero (illegal states unrepresentable).
+            // Only emit CursorForward if the delta is non-zero (illegal states
+            // unrepresentable).
             if let Some(cols_right) = TermColDelta::new(self.last_line_length.as_u16()) {
-                term.write_all(CsiSequence::CursorForward(cols_right).to_string().as_bytes())?;
+                term.write_all(
+                    CsiSequence::CursorForward(cols_right)
+                        .to_string()
+                        .as_bytes(),
+                )?;
             }
         }
 
@@ -103,12 +109,14 @@ impl LineState {
     /// Prints a string to the terminal and re-renders the prompt.
     ///
     /// This is a convenience wrapper around
-    /// [`print_data_and_flush`](Self::print_data_and_flush) that accepts a string
+    /// [`print_data_and_flush`] that accepts a string
     /// slice. Respects pause state - does nothing if paused.
     ///
     /// # Errors
     ///
     /// Returns an error if writing to the terminal fails.
+    ///
+    /// [`print_data_and_flush`]: Self::print_data_and_flush
     pub fn print_and_flush(
         &mut self,
         string: &str,
@@ -205,7 +213,9 @@ mod tests {
                 let start = i;
                 i += 2;
                 let mut params = String::new();
-                while i < output.len() && (output[i].is_ascii_digit() || output[i] == b';') {
+                while i < output.len()
+                    && (output[i].is_ascii_digit() || output[i] == b';')
+                {
                     params.push(output[i] as char);
                     i += 1;
                 }
@@ -296,7 +306,9 @@ mod tests {
     /// Regression test: verify partial line writes still work correctly.
     ///
     /// When data doesn't end with newline (e.g., manual `.flush()` call), the code
-    /// should still emit CHA(1) to ensure proper cursor positioning.
+    /// should still emit [`CHA(1)`] to ensure proper cursor positioning.
+    ///
+    /// [`CHA(1)`]: crate::CsiSequence::CursorHorizontalAbsolute
     #[test]
     fn test_print_data_partial_line_emits_cha() {
         let mut line_state = LineState::new("> ".into(), (80, 24));
@@ -328,10 +340,12 @@ mod tests {
     /// Test multiple segments in a single write (e.g., "line1\nline2\n").
     ///
     /// In raw terminal mode, LF only moves the cursor down without returning to
-    /// column 1. Therefore, we need `CHA(1)` after each line segment to ensure
+    /// column 1. Therefore, we need [`CHA(1)`] after each line segment to ensure
     /// subsequent lines start at column 1. The only exception is the final segment
-    /// when it ends with newline - we skip `CHA(1)` there to avoid double `CHA(1)`
+    /// when it ends with newline - we skip [`CHA(1)`] there to avoid double [`CHA(1)`]
     /// with the one emitted before `render_and_flush`.
+    ///
+    /// [`CHA(1)`]: crate::CsiSequence::CursorHorizontalAbsolute
     #[test]
     fn test_print_data_multiple_segments() {
         let mut line_state = LineState::new("> ".into(), (80, 24));

@@ -8,18 +8,28 @@ use crate::{CalculateResizeHint, CaretVerticalViewportLocation, ChUnit, CliTextI
 pub struct State {
     /// Does not include the header row.
     pub max_display_height: ChUnit,
+
     pub max_display_width: ChUnit,
-    /// This is not adjusted for
-    /// [`scroll_offset_row_index`](State::scroll_offset_row_index).
+
+    /// Not adjusted for [`scroll_offset_row_index`].
+    ///
+    /// [`scroll_offset_row_index`]: State::scroll_offset_row_index
     pub raw_caret_row_index: ChUnit,
+
     pub scroll_offset_row_index: ChUnit,
+
     pub items: ItemsOwned,
+
     pub selected_items: ItemsOwned,
+
     pub header: Header,
+
     pub selection_mode: HowToChoose,
-    /// This is used to determine if the terminal has been resized.
+
+    /// Used to determine if the terminal has been resized.
     pub resize_hint: Option<ResizeHint>,
-    /// This is used to determine if the terminal has been resized.
+
+    /// Used to determine if the terminal has been resized.
     pub window_size: Option<Size>,
 }
 
@@ -32,10 +42,10 @@ pub enum Header {
     MultiLine(InlineVec<InlineVec<CliTextInline>>),
 }
 
-/// Convert various types to a header:
-/// - `Vec<Vec<AnsiStyledText>>`,
-/// - `InlineString`,
-/// - `String`, etc.
+/// Converts various types to a header:
+/// - [`Vec<Vec<AnsiStyledText>>`],
+/// - [`InlineString`],
+/// - [`String`], etc.
 mod convert_to_header {
     use super::{CliTextInline, Header, InlineString, InlineVec};
 
@@ -71,7 +81,7 @@ mod convert_to_header {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{assert_eq2, cli_text_inline, TuiStyle};
+    use crate::{TuiStyle, assert_eq2, cli_text_inline};
     use smallvec::smallvec;
 
     #[test]

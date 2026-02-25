@@ -1,12 +1,14 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-/// Whether the macro should enable raw mode in the controlled process before calling
-/// the controlled function.
+/// Whether the macro should enable raw mode in the controlled process before calling the
+/// controlled function.
 ///
-/// Most PTY tests need raw mode so the line discipline passes keystrokes through
-/// immediately (without waiting for Enter). Tests that manage raw mode themselves
-/// (e.g., tests for raw mode toggling) or that never read stdin should use
-/// [`Cooked`](PtyTestMode::Cooked).
+/// Most [`PTY`] tests need raw mode so the line discipline passes keystrokes through
+/// immediately (without waiting for Enter). Tests that manage raw mode themselves (e.g.,
+/// tests for raw mode toggling) or that never read stdin should use [`Cooked`].
+///
+/// [`Cooked`]: PtyTestMode::Cooked
+/// [`PTY`]: crate::core::pty
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PtyTestMode {
     /// Enable raw mode in the controlled process before calling the controlled
@@ -48,20 +50,20 @@ pub enum PtyTestMode {
 /// # Architecture
 ///
 /// ```text
-/// ┌─────────────────────────────────────────────────────────────┐
-/// │ Test Function (entry point)                                 │
-/// │  - Macro detects role via environment variable              │
-/// │  - Routes to controller or controlled function              │
-/// └────────────┬────────────────────────────────┬───────────────┘
+/// ┌──────────────────────────────────────────────────────────────┐
+/// │ Test Function (entry point)                                  │
+/// │  - Macro detects role via environment variable               │
+/// │  - Routes to controller or controlled function               │
+/// └────────────┬────────────────────────────────┬────────────────┘
 ///              │                                │
 ///     Controller Path                  Controlled Path
 ///              │                                │
-/// ┌────────────▼───────────┐    ┌───────────────▼───────────────┐
-/// │ Macro: PTY Setup       │    │ Controlled Function           │
-/// │ - Creates PTY pair     │    │ - Enable raw mode (if needed) │
-/// │ - Spawns controlled    ├────► - Execute test logic          │
-/// │ - Passes to controller │    │ - Output via stdout/stderr    │
-/// └────────────┬───────────┘    └────────────▲─┬────────────────┘
+/// ┌────────────▼───────────┐    ┌───────────────▼────────────────┐
+/// │ Macro: PTY Setup       │    │ Controlled Function            │
+/// │ - Creates PTY pair     │    │ - Enables raw mode (if needed) │
+/// │ - Spawns controlled    ├────► - Execute test logic           │
+/// │ - Passes to controller │    │ - Output via stdout/stderr     │
+/// └────────────┬───────────┘    └────────────▲─┬─────────────────┘
 ///              │                             │ │
 /// ┌────────────▼──────────────────┐          │ │
 /// │ Controller Function           │          │ │ PTY I/O
@@ -144,9 +146,8 @@ pub enum PtyTestMode {
 /// - `controller`: A function that accepts `(pty_pair, child)` parameters
 /// - `controlled`: A function or expression that runs in the controlled process (must not
 ///   return)
-/// - `mode`: A [`PtyTestMode`] value - [`Raw`](PtyTestMode::Raw) to enable raw mode
-///   before calling the controlled function, or [`Cooked`](PtyTestMode::Cooked) to leave
-///   the terminal in its default cooked mode
+/// - `mode`: A [`PtyTestMode`] value - [`Raw`] to enable raw mode before calling the
+///   controlled function, or [`Cooked`] to leave the terminal in its default cooked mode
 ///
 /// # Controller Function Signature
 ///
@@ -161,12 +162,15 @@ pub enum PtyTestMode {
 /// - Drain PTY and wait: `drain_pty_and_wait(buf_reader, pty_pair, &mut child)` —
 ///   prevents macOS PTY buffer deadlocks (see [`drain_pty_and_wait`])
 ///
+/// [`Cooked`]: PtyTestMode::Cooked
+/// [`Raw`]: PtyTestMode::Raw
 /// [`drain_pty_and_wait`]: crate::drain_pty_and_wait
-///
 /// [`generate_pty_test!`]: crate::generate_pty_test
-/// [`integration_tests`]: mod@crate::core::ansi::vt_100_terminal_input_parser::integration_tests
+/// [`integration_tests`]:
+///     mod@crate::core::ansi::vt_100_terminal_input_parser::integration_tests
 /// [`pty_types`]: mod@crate::core::pty::pty_core::pty_types
-/// [`raw_mode_integration_tests`]: mod@crate::core::ansi::terminal_raw_mode::integration_tests
+/// [`raw_mode_integration_tests`]:
+///     mod@crate::core::ansi::terminal_raw_mode::integration_tests
 /// [`spawn_controlled_in_pty`]: crate::spawn_controlled_in_pty
 #[macro_export]
 macro_rules! generate_pty_test {

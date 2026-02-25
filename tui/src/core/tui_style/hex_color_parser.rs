@@ -10,7 +10,7 @@ use nom::{IResult, Parser,
           combinator::map_res};
 use std::num::ParseIntError;
 
-/// Parse function that generate an [`RgbValue`] struct from a valid hex color string.
+/// Parses a valid hex color string and generates an [`RgbValue`] struct.
 ///
 /// # Errors
 ///

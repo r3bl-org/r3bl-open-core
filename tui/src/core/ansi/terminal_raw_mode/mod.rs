@@ -29,7 +29,7 @@
 //! The term `TTY` comes from "teletypewriter" — physical terminals from the 1960s-70s
 //! that communicated with mainframes over serial lines. Modern terminal emulators (like
 //! [Terminator], [GNOME Terminal], [WezTerm], [iTerm2], or [Alacritty]) still use this
-//! abstraction: they create a **pseudo-terminal ([PTY])** that behaves like those old
+//! abstraction: they create a **pseudo-terminal ([`PTY`])** that behaves like those old
 //! hardware devices.
 //!
 //! ### The Line Discipline
@@ -55,11 +55,11 @@
 //! mode** and let a user-space library (like [GNU Readline]) handle input
 //! instead:
 //!
-//! | Aspect       | Kernel Line Discipline (`N_TTY`)  | User-Space Library ([GNU Readline])      |
-//! |:-------------|:----------------------------------|:-----------------------------------------|
-//! | **Location** | Inside the Linux kernel           | Part of the shell ([Bash], Python, etc.) |
-//! | **Active**   | Canonical ("Cooked") Mode         | Non-Canonical ("Raw") Mode               |
-//! | **Purpose**  | Basic, ancient terminal functions | Advanced, feature-rich line editing      |
+//! | Aspect         | Kernel Line Discipline (`N_TTY`)    | User-Space Library ([GNU Readline])        |
+//! | :------------- | :---------------------------------- | :----------------------------------------- |
+//! | **Location**   | Inside the Linux kernel             | Part of the shell ([Bash], Python, etc.)   |
+//! | **Active**     | Canonical ("Cooked") Mode           | Non-Canonical ("Raw") Mode                 |
+//! | **Purpose**    | Basic, ancient terminal functions   | Advanced, feature-rich line editing        |
 //!
 //! **Kernel-handled keybindings** (when in canonical mode):
 //! - `Ctrl+C` — Generates `SIGINT` (interrupt signal)
@@ -201,9 +201,6 @@
 //!   [`raw_mode_unix`])
 //! - **macOS/Windows** ([`Crossterm`]): Uses [`crossterm::terminal`] functions
 //!
-//! [`TERMINAL_LIB_BACKEND`]: crate::TERMINAL_LIB_BACKEND
-//! [`DirectToAnsi`]: crate::TerminalLibBackend::DirectToAnsi
-//! [`Crossterm`]: crate::TerminalLibBackend::Crossterm
 //!
 //! ## Usage Example
 //!
@@ -235,11 +232,14 @@
 //! [GNOME Terminal]: https://help.gnome.org/users/gnome-terminal/stable/
 //! [GNU Readline]: https://tiswww.case.edu/php/chet/readline/rltop.html
 //! [Nushell]: https://www.nushell.sh/
-//! [PTY]: crate::pty
 //! [Reedline]: https://github.com/nushell/reedline
 //! [Terminator]: https://gnome-terminator.org/
 //! [Unix implementation's termios section]: mod@crate::core::ansi::terminal_raw_mode::raw_mode_unix#the-termios-interface
 //! [WezTerm]: https://wezfurlong.org/wezterm/
+//! [`Crossterm`]: crate::TerminalLibBackend::Crossterm
+//! [`DirectToAnsi`]: crate::TerminalLibBackend::DirectToAnsi
+//! [`PTY`]: crate::pty
+//! [`TERMINAL_LIB_BACKEND`]: crate::TERMINAL_LIB_BACKEND
 //! [`portable_pty` crate]: https://docs.rs/portable-pty
 //! [iTerm2]: https://iterm2.com/
 //! [rustix]: https://docs.rs/rustix

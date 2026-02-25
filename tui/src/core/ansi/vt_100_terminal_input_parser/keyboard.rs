@@ -5,7 +5,7 @@
 //! Keyboard input event parsing from ANSI/CSI sequences.
 //!
 //! This module handles conversion of raw ANSI escape sequences into keyboard events.
-//! It provides comprehensive support for VT-100 compatible terminal input while
+//! It provides comprehensive support for [`VT-100`] compatible terminal input while
 //! maintaining clarity about protocol limitations and design decisions.
 //!
 //! ## Where You Are in the Pipeline
@@ -44,7 +44,7 @@
 //! - 📤 **Converted by**: [`convert_input_event()`] in `protocol_conversion.rs` (not this
 //!   module)
 //!
-//! ## VT-100 Keyboard Input Encoding Explained
+//! ## `VT-100` Keyboard Input Encoding Explained
 //!
 //! You might wonder:
 //! - Why does Alt+A send `ESC a` (2 bytes) instead of a CSI sequence like `ESC [1;3a`?
@@ -53,7 +53,7 @@
 //! - Why does F6 send `ESC [17~` instead of `ESC [16~`?
 //! - Can I detect when a key is released?
 //!
-//! These behaviors stem from VT-100 design decisions made in the 1970s that remain
+//! These behaviors stem from [`VT-100`] design decisions made in the 1970s that remain
 //! standard today. The core principle: use the **simplest encoding that works**. This
 //! minimized bytes sent over slow serial lines (a 1970s constraint that became a lasting
 //! design principle) and keeps parsing simple.
@@ -67,7 +67,7 @@
 //!
 //! ### [ANSI escape codes] (1979)
 //!
-//! Built on ASCII's ESC character. Standardized as ANSI X3.64 based on DEC's VT100
+//! Built on ASCII's ESC character. Standardized as ANSI X3.64 based on DEC's `VT-100`
 //! terminal, these are the `ESC [...` sequences we still use today (e.g., `ESC [15~`
 //! for F5, `ESC [<0;10;20M` for mouse click). Regular keys use single ASCII bytes, Alt
 //! adds one ESC byte, and only complex modifier combinations require multi-byte CSI
@@ -84,7 +84,7 @@
 //! ```text
 //! 1963: ASCII → 7-bit character set with ESC (27)
 //! 1975: VT52  → Introduced ESC + letter commands
-//! 1978: VT100 → Added CSI (ESC [), kept ESC+letter for compatibility
+//! 1978: `VT-100` → Added CSI (ESC [), kept ESC+letter for compatibility
 //! 1983: VT220 → Extended CSI, still kept ESC+letter
 //! 1992: UTF-8 → Replaced ASCII, but ASCII-compatible
 //! 2025: Today → Still using ESC+letter for Alt!
@@ -205,10 +205,10 @@
 //!
 //! ### Protocol Limitations
 //!
-//! **Can I detect when a key is released?** No. VT-100 protocol only sends sequences on
-//! key **press**. Key release events are not part of the protocol. Modern protocols like
-//! Kitty keyboard protocol support press/release/repeat events, but we maintain VT-100
-//! compatibility.
+//! **Can I detect when a key is released?** No. [`VT-100`] protocol only sends sequences
+//! on key **press**. Key release events are not part of the protocol. Modern protocols
+//! like `Kitty` keyboard protocol support press/release/repeat events, but we maintain
+//! [`VT-100`] compatibility.
 //!
 //! ### Real-World Examples
 //!
@@ -304,7 +304,7 @@
 //!
 //! ### Why This Matters
 //!
-//! **Problem**: In VT-100 terminals, Ctrl modifies keys by masking with `0x1F`:
+//! **Problem**: In [`VT-100`] terminals, Ctrl modifies keys by masking with `0x1F`:
 //! - `Ctrl+I` = `'I'` (`0x49`) & `0x1F` = `0x09` (same as Tab)
 //! - `Ctrl+M` = `'M'` (`0x4D`) & `0x1F` = `0x0D` (same as Enter/CR)
 //! - `Ctrl+H` = `'H'` (`0x48`) & `0x1F` = `0x08` (same as Backspace)
@@ -321,8 +321,9 @@
 //! - **Alt+Letter**: Sends `ESC + letter` (parsed with Alt modifier)
 //! - **Function Keys**: Send `ESC [n~` or `ESC O P/Q/R/S`
 //!
-//! This is a fundamental VT-100 protocol limitation, not a parser bug. Modern protocols
-//! like Kitty keyboard protocol solve this, but we maintain VT-100 compatibility.
+//! This is a fundamental [`VT-100`] protocol limitation, not a parser bug. Modern
+//! protocols like `Kitty` keyboard protocol solve this, but we maintain [`VT-100`]
+//! compatibility.
 //!
 //! ## Comprehensive List of Supported Keyboard Shortcuts
 //!
@@ -454,6 +455,7 @@
 //! [Ken Thompson]: https://en.wikipedia.org/wiki/Ken_Thompson
 //! [Rob Pike]: https://en.wikipedia.org/wiki/Rob_Pike
 //! [UTF-8]: https://en.wikipedia.org/wiki/UTF-8
+//! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 //! [`VT100InputEventIR`]: super::VT100InputEventIR
 //! [`VT100KeyCodeIR`]: super::VT100KeyCodeIR
 //! [`VT100KeyModifiersIR`]: super::VT100KeyModifiersIR
@@ -1001,7 +1003,7 @@ mod helpers {
 
     /// Extracts modifier parameter from CSI with type safety.
     ///
-    /// Safe to cast u16→u8 because VT-100 modifiers are always 1-8.
+    /// Safe to cast u16→u8 because `VT-100` modifiers are always 1-8.
     #[allow(clippy::cast_possible_truncation)]
     fn extract_modifier_parameter(param: u16) -> u8 {
         debug_assert!(param <= 255, "Modifier parameter out of range: {param}");

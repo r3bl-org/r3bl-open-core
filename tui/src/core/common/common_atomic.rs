@@ -138,7 +138,9 @@ mod tests {
         );
 
         // The final stored value must equal the total number of increments.
-        assert_eq!(counter.get(), TOTAL as u8);
+        #[allow(clippy::cast_possible_truncation)]
+        let expected_total: u8 = TOTAL as u8;
+        assert_eq!(counter.get(), expected_total);
     }
 
     /// Verifies that the final counter is consistent after concurrent increments that
@@ -148,6 +150,7 @@ mod tests {
         const MAX_THREAD_COUNT: usize = 4;
         const INCREMENTS_PER_THREAD: usize = 100;
         // 4 * 100 = 400, wraps: 400 % 256 = 144.
+        #[allow(clippy::cast_possible_truncation)]
         const EXPECTED_FINAL: u8 = (MAX_THREAD_COUNT * INCREMENTS_PER_THREAD % 256) as u8;
 
         let counter = Arc::new(AtomicU8::new(0));

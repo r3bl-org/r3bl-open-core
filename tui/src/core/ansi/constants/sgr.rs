@@ -1,6 +1,8 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! SGR (Select Graphic Rendition) sequence constants.
+//! [`SGR`] (Select Graphic Rendition) sequence constants.
+//!
+//! [`SGR`]: crate::SgrCode
 
 /// SGR Reset sequence bytes.
 ///

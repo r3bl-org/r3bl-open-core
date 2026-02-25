@@ -282,7 +282,7 @@ impl TryFrom<InputEvent> for EditorEvent {
 
             InputEvent::BracketedPaste(text) => Ok(EditorEvent::InsertString(text)),
 
-            InputEvent::Shutdown(_) | _ => Err(()),
+            _ => Err(()),
         }
     }
 }

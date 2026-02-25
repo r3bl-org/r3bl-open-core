@@ -65,5 +65,5 @@ pub use select_component::*;
 pub use state::*;
 pub use style::*;
 
-/// Enable file logging. You can use `tail -f log.txt` to watch the logs.
+/// Enables file logging. You can use `tail -f log.txt` to watch the logs.
 pub const DEVELOPMENT_MODE: bool = false;

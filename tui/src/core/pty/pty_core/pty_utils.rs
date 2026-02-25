@@ -1,8 +1,8 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Utility functions for [PTY] operations.
+//! Utility functions for [`PTY`] operations.
 //!
-//! [PTY]: https://en.wikipedia.org/wiki/Pseudoterminal
+//! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 
 /// Converts [`portable_pty::ExitStatus`] to [`std::process::ExitStatus`].
 ///
@@ -11,7 +11,7 @@
 /// - On success: uses explicit success status (exit code `0`)
 /// - On failure: encodes exit code in Unix wait status format with bounds checking
 ///
-/// [PTY]: https://en.wikipedia.org/wiki/Pseudoterminal
+/// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 /// [`portable_pty::ExitStatus`]: portable_pty::ExitStatus
 /// [`std::process::ExitStatus`]: std::process::ExitStatus
 #[must_use]

@@ -21,6 +21,7 @@ use std::{collections::VecDeque,
           sync::{Arc, Mutex,
                  atomic::{AtomicU32, Ordering},
                  mpsc},
+          thread::sleep,
           time::{Duration, Instant}};
 
 /// Simple domain event for tests.
@@ -90,6 +91,7 @@ impl RRTWorker for TestWorker {
         &mut self,
         sender: &tokio::sync::broadcast::Sender<RRTEvent<Self::Event>>,
     ) -> Continuation {
+        #[allow(clippy::match_same_arms)]
         match self.cmd_receiver.recv() {
             Ok(b'c') => Continuation::Continue,
             Ok(b'r') => Continuation::Restart,
@@ -157,6 +159,7 @@ fn create_ok_result() -> (miette::Result<(TestWorker, TestWaker)>, mpsc::Sender<
 
 /// Sets up [`TEST_FACTORY_STATE`] with pre-loaded create results and a policy.
 /// Returns `(create_notify_receiver, cmd_senders)`.
+#[allow(clippy::type_complexity)]
 fn setup_factory(
     results_and_senders: Vec<(
         miette::Result<(TestWorker, TestWaker)>,
@@ -193,6 +196,9 @@ fn teardown_factory() {
 }
 
 /// Reads `create_count` from the factory state.
+///
+/// [`create_count`]: TestFactoryState::create_count
+#[allow(clippy::map_unwrap_or)]
 fn get_create_count() -> u32 {
     TEST_FACTORY_STATE
         .lock()
@@ -271,14 +277,11 @@ fn run_all_restart_tests_sequentially() {
     test_no_restart_after_panic();
 
     // Group C Step 6: RRT<TestWorker> integration tests.
-    let rt = tokio::runtime::Runtime::new().unwrap();
-    rt.block_on(async {
-        test_subscribe_spawns_thread().await;
-        test_subscribe_fast_path_reuse().await;
-        test_subscribe_slow_path_after_termination().await;
-        test_shutdown_received_by_subscriber().await;
-        test_subscribe_after_panic_recovery().await;
-    });
+    test_subscribe_spawns_thread();
+    test_subscribe_fast_path_reuse();
+    test_subscribe_slow_path_after_termination();
+    test_shutdown_received_by_subscriber();
+    test_subscribe_after_panic_recovery();
 }
 
 /// Process-isolated test entry point.
@@ -576,13 +579,13 @@ fn test_waker_swap_on_restart() {
     // wake_and_unblock_dedicated_thread() is called.
     let deadline = Instant::now() + Duration::from_secs(5);
     loop {
-        std::thread::sleep(Duration::from_millis(1));
-        if let Ok(guard) = shared_waker_slot.lock() {
-            if let Some(w) = guard.as_ref() {
-                w.wake_and_unblock_dedicated_thread();
-                if LAST_WAKED_ID.load(Ordering::SeqCst) != old_id {
-                    break;
-                }
+        sleep(Duration::from_millis(1));
+        if let Ok(guard) = shared_waker_slot.lock()
+            && let Some(w) = guard.as_ref()
+        {
+            w.wake_and_unblock_dedicated_thread();
+            if LAST_WAKED_ID.load(Ordering::SeqCst) != old_id {
+                break;
             }
         }
         assert!(
@@ -957,7 +960,7 @@ fn test_panic_after_events() {
     // Domain event first.
     match receiver.try_recv().unwrap() {
         RRTEvent::Worker(TestEvent(_)) => {}
-        other => panic!("Expected Worker event, got {other:?}"),
+        other @ RRTEvent::Shutdown(_) => panic!("Expected Worker event, got {other:?}"),
     }
     // Then shutdown.
     match receiver.try_recv().unwrap() {
@@ -1089,7 +1092,7 @@ fn poll_error_controlled() -> ! {
     std::process::exit(0);
 }
 
-async fn test_subscribe_spawns_thread() {
+fn test_subscribe_spawns_thread() {
     let (worker, wake_fn, cmd_sender) = create_test_resources();
 
     let (_notify_receiver, _senders) = setup_factory(
@@ -1101,12 +1104,12 @@ async fn test_subscribe_spawns_thread() {
     let _guard = rrt.subscribe().unwrap();
 
     // Wait for thread to start.
-    std::thread::sleep(Duration::from_millis(50));
+    sleep(Duration::from_millis(50));
     assert_eq!(rrt.is_thread_running(), LivenessState::Running);
 
     send_cmd(&cmd_sender, b's');
     // Wait for thread to exit.
-    std::thread::sleep(Duration::from_millis(100));
+    sleep(Duration::from_millis(100));
     assert_eq!(
         rrt.is_thread_running(),
         LivenessState::TerminatedOrNotStarted
@@ -1114,7 +1117,7 @@ async fn test_subscribe_spawns_thread() {
     teardown_factory();
 }
 
-async fn test_subscribe_fast_path_reuse() {
+fn test_subscribe_fast_path_reuse() {
     let (worker, wake_fn, cmd_sender) = create_test_resources();
 
     let (_notify_receiver, _senders) = setup_factory(
@@ -1125,7 +1128,7 @@ async fn test_subscribe_fast_path_reuse() {
     let rrt: RRT<TestWorker> = RRT::new();
     let _guard1 = rrt.subscribe().unwrap();
 
-    std::thread::sleep(Duration::from_millis(50));
+    sleep(Duration::from_millis(50));
     let gen1 = rrt.get_thread_generation();
 
     // Second subscribe reuses the thread (fast path).
@@ -1136,11 +1139,11 @@ async fn test_subscribe_fast_path_reuse() {
     assert_eq!(rrt.get_receiver_count(), 2);
 
     send_cmd(&cmd_sender, b's');
-    std::thread::sleep(Duration::from_millis(100));
+    sleep(Duration::from_millis(100));
     teardown_factory();
 }
 
-async fn test_subscribe_slow_path_after_termination() {
+fn test_subscribe_slow_path_after_termination() {
     let (worker1, wake_fn1, cmd_sender1) = create_test_resources();
     let (worker2, wake_fn2, cmd_sender2) = create_test_resources();
 
@@ -1157,11 +1160,11 @@ async fn test_subscribe_slow_path_after_termination() {
     // First subscribe.
     {
         let _guard = rrt.subscribe().unwrap();
-        std::thread::sleep(Duration::from_millis(50));
+        sleep(Duration::from_millis(50));
         let gen1 = rrt.get_thread_generation();
 
         send_cmd(&cmd_sender1, b's');
-        std::thread::sleep(Duration::from_millis(100));
+        sleep(Duration::from_millis(100));
         assert_eq!(
             rrt.is_thread_running(),
             LivenessState::TerminatedOrNotStarted
@@ -1169,18 +1172,18 @@ async fn test_subscribe_slow_path_after_termination() {
 
         // Second subscribe after termination (slow path).
         let _guard2 = rrt.subscribe().unwrap();
-        std::thread::sleep(Duration::from_millis(50));
+        sleep(Duration::from_millis(50));
         let gen2 = rrt.get_thread_generation();
 
         assert_ne!(gen1, gen2, "Expected new generation (thread relaunch)");
 
         send_cmd(&cmd_sender2, b's');
-        std::thread::sleep(Duration::from_millis(100));
+        sleep(Duration::from_millis(100));
     }
     teardown_factory();
 }
 
-async fn test_shutdown_received_by_subscriber() {
+fn test_shutdown_received_by_subscriber() {
     let (worker, wake_fn, cmd_sender) = create_test_resources();
 
     let (_notify_receiver, _senders) = setup_factory(
@@ -1192,7 +1195,7 @@ async fn test_shutdown_received_by_subscriber() {
     let guard = rrt.subscribe().unwrap();
     let mut receiver = guard.receiver.resubscribe();
 
-    std::thread::sleep(Duration::from_millis(50));
+    sleep(Duration::from_millis(50));
 
     // Worker returns Restart, budget=0 -> immediate exhaustion.
     send_cmd(&cmd_sender, b'r');
@@ -1207,7 +1210,7 @@ async fn test_shutdown_received_by_subscriber() {
                 break;
             }
             Err(tokio::sync::broadcast::error::TryRecvError::Empty) => {
-                std::thread::sleep(Duration::from_millis(10));
+                sleep(Duration::from_millis(10));
             }
             _ => {}
         }
@@ -1216,7 +1219,7 @@ async fn test_shutdown_received_by_subscriber() {
     teardown_factory();
 }
 
-async fn test_subscribe_after_panic_recovery() {
+fn test_subscribe_after_panic_recovery() {
     let (worker1, wake_fn1, cmd_sender1) = create_test_resources();
     let (worker2, wake_fn2, cmd_sender2) = create_test_resources();
 
@@ -1233,12 +1236,12 @@ async fn test_subscribe_after_panic_recovery() {
     // First subscribe.
     {
         let _guard = rrt.subscribe().unwrap();
-        std::thread::sleep(Duration::from_millis(50));
+        sleep(Duration::from_millis(50));
         let gen1 = rrt.get_thread_generation();
 
         // Cause a panic.
         send_cmd(&cmd_sender1, b'p');
-        std::thread::sleep(Duration::from_millis(100));
+        sleep(Duration::from_millis(100));
         assert_eq!(
             rrt.is_thread_running(),
             LivenessState::TerminatedOrNotStarted
@@ -1246,14 +1249,14 @@ async fn test_subscribe_after_panic_recovery() {
 
         // Subscribe again after panic (should relaunch).
         let _guard2 = rrt.subscribe().unwrap();
-        std::thread::sleep(Duration::from_millis(50));
+        sleep(Duration::from_millis(50));
         let gen2 = rrt.get_thread_generation();
 
         assert_ne!(gen1, gen2, "Expected new generation after panic recovery");
         assert_eq!(rrt.is_thread_running(), LivenessState::Running);
 
         send_cmd(&cmd_sender2, b's');
-        std::thread::sleep(Duration::from_millis(100));
+        sleep(Duration::from_millis(100));
     }
     teardown_factory();
 }

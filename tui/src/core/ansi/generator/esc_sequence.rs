@@ -11,14 +11,14 @@
 //! ESC sequences are the predecessors to the more modern CSI sequences:
 //!
 //! - **ESC sequences** (this module): Original, simple commands used in early terminals
-//!   like the VT100. Each does one specific thing: `ESC 7` saves cursor, `ESC 8` restores
+//!   like the [`VT-100`]. Each does one specific thing: `ESC 7` saves cursor, `ESC 8` restores
 //!   it.
 //! - **CSI sequences** (the successors): Modern, parameterized commands that evolved from
 //!   ESC to provide greater flexibility.
 //!
 //! Both approaches coexist for backward compatibility. For example:
-//! - `ESC 7` / `ESC 8` (this module) vs `ESC[s` / `ESC[u` (CSI equivalent)
-//! - `ESC D` (move down 1 line) vs `ESC[1B` or `ESC[5B` (move down N lines)
+//! - `ESC 7` / `ESC 8` (this module) vs `ESC [ s` / `ESC [ u` (CSI equivalent)
+//! - `ESC D` (move down 1 line) vs `ESC [ 1 B` or `ESC [ 5 B` (move down N lines)
 //!
 //! ## Structure
 //! ESC sequences follow simpler patterns than CSI:
@@ -30,6 +30,8 @@
 //! - **Character Sets**: Switch between ASCII and special graphics character sets
 //! - **Line Operations**: Move cursor with automatic scrolling at boundaries
 //! - **Terminal Reset**: Full terminal initialization
+//!
+//! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 
 use crate::{BufTextStorage, FastStringify,
             core::ansi::constants::{CHARSET_ASCII, CHARSET_DEC_GRAPHICS,

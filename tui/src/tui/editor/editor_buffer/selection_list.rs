@@ -267,8 +267,8 @@ mod impl_debug_format {
     const EMPTY_STR: &str = "--empty--";
 
     impl SelectionList {
-        /// Get the output from [`Self::to_unformatted_string`] and format it with colors.
-        /// And return that.
+        /// Gets the output from [`Self::to_unformatted_string`] and formats it with
+        /// colors. Returns the formatted string.
         #[must_use]
         pub fn to_formatted_string(&self) -> InlineString {
             let mut selection_list_string = self.to_unformatted_string();
@@ -305,7 +305,9 @@ mod impl_debug_format {
             }
         }
 
-        /// Returns a [`InlineVec`] of [`InlineString`] that represent the selection map.
+        /// # Returns
+        ///
+        /// A [`InlineVec`] of [`InlineString`] that represent the selection map.
         #[must_use]
         pub fn to_unformatted_string(&self) -> ItemsOwned {
             let mut vec_output: InlineVec<InlineString> = {

@@ -1,5 +1,7 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+// cspell:words noconfirm
+
 use crate::{command, ok};
 use miette::IntoDiagnostic;
 
@@ -19,7 +21,7 @@ pub enum PackageManager {
 }
 
 impl PackageManager {
-    /// Detect the system's package manager by checking for available commands.
+    /// Detects the system's package manager by checking for available commands.
     #[must_use]
     pub fn detect() -> Option<Self> {
         // Check in order of specificity
@@ -58,7 +60,7 @@ impl PackageManager {
         }
     }
 
-    /// Get the command used to check if a package is installed.
+    /// Gets the command used to check if a package is installed.
     #[must_use]
     pub fn check_command(&self) -> (&'static str, &'static [&'static str]) {
         match self {
@@ -69,7 +71,7 @@ impl PackageManager {
         }
     }
 
-    /// Get the command used to install a package.
+    /// Gets the command used to install a package.
     #[must_use]
     pub fn install_command(&self) -> (&'static str, &'static [&'static str]) {
         match self {
@@ -86,12 +88,13 @@ impl PackageManager {
     pub fn requires_sudo(&self) -> bool { !matches!(self, PackageManager::Brew) }
 }
 
-/// Check if a command is available on the system PATH.
+/// Checks if a command is available on the system PATH.
 ///
 /// Uses `which` to check if the given command name resolves to an
 /// executable. This works on all Unix-like systems (Linux and macOS)
 /// regardless of package manager.
 #[must_use]
+#[allow(clippy::map_unwrap_or)]
 pub fn is_command_available(command_name: &str) -> bool {
     std::process::Command::new("which")
         .arg(command_name)
@@ -100,7 +103,7 @@ pub fn is_command_available(command_name: &str) -> bool {
         .unwrap_or(false)
 }
 
-/// Check if a package is installed on the system.
+/// Checks if a package is installed on the system.
 ///
 /// This function detects the system's package manager and uses the appropriate
 /// command to check package installation status.
@@ -232,7 +235,7 @@ pub async fn install_package(package_name: &str) -> miette::Result<()> {
     }
 }
 
-/// Get the detected package manager for the current system.
+/// Gets the detected package manager for the current system.
 ///
 /// This is useful for informational purposes or when you need to
 /// handle package manager-specific logic.

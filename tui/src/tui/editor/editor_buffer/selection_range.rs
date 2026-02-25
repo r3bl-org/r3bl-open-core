@@ -65,7 +65,7 @@ pub struct SelectionRange {
     ///   encoding uses between 1 and 4 bytes to encode a character, e.g.: `"H"` is 1
     ///   byte, and `"😄"` is 4 bytes. And visually they can occupy 1 or more spaces,
     ///   e.g.: `"H"` is 1 space wide, and `"😄"` is two spaces wide
-    ///   [`crate::GCString::width()`] and [`crate::GCString::width_char()`].
+    ///   [`crate::GCStringOwned::width()`] and [`crate::GCStringOwned::width_char()`].
     start: CaretScrAdj,
     /// This is not "raw", this is "scroll adjusted".
     /// - It represents the display width at which the selection ends. The display width
@@ -76,7 +76,7 @@ pub struct SelectionRange {
     ///   encoding uses between 1 and 4 bytes to encode a character, e.g.: `"H"` is 1
     ///   byte, and `"😄"` is 4 bytes. And visually they can occupy 1 or more spaces,
     ///   e.g. `"H"` is 1 space wide, and `"😄"` is two spaces wide
-    ///   [`crate::GCString::width()`] and [`crate::GCString::width_char()`].
+    ///   [`crate::GCStringOwned::width()`] and [`crate::GCStringOwned::width_char()`].
     end: CaretScrAdj,
 }
 
@@ -118,9 +118,12 @@ impl SelectionRange {
         width(*self.start.col_index)
     }
 
-    /// Returns a tuple of the start and end display column indices. This is just a
-    /// convenience function that prevents the need to access the fields directly to get
-    /// the two [`ColIndex`] values.
+    /// Get start and end display column indices as a tuple.
+    ///
+    /// # Returns
+    ///
+    /// A tuple of the start and end [`ColIndex`] values. This is just a
+    /// convenience function that prevents the need to access the fields directly.
     #[must_use]
     pub fn as_tuple(&self) -> (ColIndex, ColIndex) {
         (self.start.col_index, self.end.col_index)
@@ -189,7 +192,9 @@ pub enum CaretLocationInRange {
     Contained,
 }
 
-/// Note this must derive [Eq]. More info [here](https://stackoverflow.com/a/68900245/2085356).
+/// Note this must derive [Eq]. More info [here].
+///
+/// [here]: https://stackoverflow.com/a/68900245/2085356
 #[derive(Clone, PartialEq, Eq, Copy, Debug)]
 pub enum CaretMovementDirection {
     Up,
@@ -368,7 +373,9 @@ mod tests_range {
     ///   │  ⎩4 = end_display_col_index
     ///   ⎩1 = start_display_col_index
     /// ```
-    /// - [GCString::clip_to_range](GCString::clip_to_range): "ell"
+    /// - Result from [`SelectionRange::clip_to_range_str()`] → "ell"
+    ///
+    /// [`SelectionRange::clip_to_range_str()`]: SelectionRange::clip_to_range_str
     #[test]
     fn test_locate() {
         let range = {

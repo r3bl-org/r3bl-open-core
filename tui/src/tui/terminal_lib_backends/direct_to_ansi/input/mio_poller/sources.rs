@@ -37,7 +37,7 @@ use std::io::Stdin;
 /// 5. Add a match arm in [`dispatch_with_sender()`].
 ///
 /// [`HashMap<Token, Source>`]: std::collections::HashMap
-/// [`MioPollWorker::create_and_register_os_sources()`]: super::MioPollWorker::create_and_register_os_sources
+/// [`MioPollWorker::create_and_register_os_sources()`]: crate::core::resilient_reactor_thread::RRTWorker::create_and_register_os_sources
 /// [`Poll::poll()`]: mio::Poll::poll
 /// [`Poll`]: mio::Poll
 /// [`Signals`]: signal_hook_mio::v1_0::Signals

@@ -1,11 +1,11 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Main [PTY] multiplexer orchestrator.
+//! Main [`PTY`] multiplexer orchestrator.
 //!
 //! This module provides the main [`PTYMux`] struct that coordinates all components and
 //! manages the event loop for the terminal multiplexer.
 //!
-//! [PTY]: https://en.wikipedia.org/wiki/Pseudoterminal
+//! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 
 use super::{InputRouter, OutputRenderer, Process, ProcessManager, output_renderer};
 use crate::{AnsiSequenceGenerator, Continuation, InputEvent, RawMode, Size, col,
@@ -15,9 +15,9 @@ use crate::{AnsiSequenceGenerator, Continuation, InputEvent, RawMode, Size, col,
                    terminal_io::{InputDevice, OutputDevice}},
             lock_output_device_as_mut, row};
 
-/// Main [PTY] multiplexer that orchestrates all components.
+/// Main [`PTY`] multiplexer that orchestrates all components.
 ///
-/// [PTY]: https://en.wikipedia.org/wiki/Pseudoterminal
+/// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 pub struct PTYMux {
     process_manager: ProcessManager,
     input_router: InputRouter,
@@ -114,12 +114,12 @@ impl PTYMux {
     /// # Errors
     ///
     /// Returns an error if:
-    /// - Terminal title ([OSC]) setup fails
+    /// - Terminal title ([`OSC`]) setup fails
     /// - Process spawning fails
     /// - Status bar rendering fails
     /// - Input or output event handling fails during the main loop
     ///
-    /// [OSC]: crate::OscEvent
+    /// [`OSC`]: crate::OscEvent
     pub async fn run(mut self) -> miette::Result<()> {
         // Start raw mode using existing RawMode.
         RawMode::start(
@@ -327,7 +327,7 @@ impl PTYMux {
 
         // If cleanup took too long, there might be zombie processes.
         // Force exit to prevent hanging.
-        if total_time > std::time::Duration::from_millis(1000) {
+        if total_time > std::time::Duration::from_secs(1) {
             tracing::error!("Cleanup took over 1 second, forcing exit to prevent hang");
             std::process::exit(0);
         }

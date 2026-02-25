@@ -177,7 +177,7 @@ fn degrade_basic_color(index: u8, color_support: ColorSupport) -> TuiColor {
     }
 }
 
-/// Convert a basic ANSI color index (0-15) to its RGB representation.
+/// Converts a basic ANSI color index (0-15) to its RGB representation.
 ///
 /// This allows us to convert basic colors to grayscale by first
 /// converting to RGB, then using the grayscale algorithm.

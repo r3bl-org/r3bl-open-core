@@ -1,15 +1,15 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! PTY integration test: Multi-line output starts at column 1.
+//! [`PTY`] integration test: Multi-line output starts at column 1.
 //!
-//! Validates that [`SharedWriter`] correctly emits `CHA(1)` after each newline so
-//! that multi-line output aligns properly in raw terminal mode.
+//! Validates that [`SharedWriter`] correctly emits [`CHA(1)`] after each newline so that
+//! multi-line output aligns properly in raw terminal mode.
 //!
 //! # Raw Mode Requires Explicit Carriage Return
 //!
 //! In **cooked mode**, the terminal driver translates `LF` → `CR+LF`. In **raw mode**,
 //! `LF` only moves the cursor down—it does NOT return to column 1. We must emit
-//! `CHA(1)` (`ESC[1G`) explicitly.
+//! [`CHA(1)`] explicitly.
 //!
 //! ```text
 //! ┌─────────────────────────────────────┬───────────────────────────────────────┐
@@ -32,7 +32,7 @@
 //!
 //! # Expected Behavior
 //!
-//! With proper `CHA(1)` emission, each line starts at column 0:
+//! With proper [`CHA(1)`] emission, each line starts at column 0:
 //!
 //! ```text
 //!   Col:  0   1   2   3   4   5
@@ -49,7 +49,7 @@
 //!
 //! # Test Architecture
 //!
-//! This test uses the same **PTY-based integration test pattern** with **headless
+//! This test uses the same **[`PTY`]-based integration test pattern** with **headless
 //! terminal emulation** as the blank line test:
 //!
 //! ```text
@@ -132,9 +132,9 @@
 //!
 //! ## [`OffscreenBuffer::apply_ansi_bytes`]
 //!
-//! Parses ANSI escape sequences and renders them to a virtual terminal buffer.
-//! This gives us the **exact visual output** a user would see, allowing us to
-//! verify column alignment.
+//! Parses ANSI escape sequences and renders them to a virtual terminal buffer. This gives
+//! us the **exact visual output** a user would see, allowing us to verify column
+//! alignment.
 //!
 //! # ANSI Escape Sequences Involved
 //!
@@ -153,7 +153,7 @@
 //!
 //! 1. **No concatenation**: Each "Line N:" message appears on its own row
 //! 2. **Column alignment**: Each line starts at column 0 (or after prompt)
-//! 3. **Proper sequencing**: `CHA(1)` is emitted after each newline
+//! 3. **Proper sequencing**: [`CHA(1)`] is emitted after each newline
 //!
 //! # Running the Test
 //!
@@ -161,22 +161,23 @@
 //! cargo test -p r3bl_tui --lib test_pty_multiline_output_starts_at_column_1 -- --nocapture
 //! ```
 //!
-//! [blank line test]: super::pty_shared_writer_no_blank_line_test
-//! [`SharedWriter`]: crate::SharedWriter
+//! [`CHA(1)`]: crate::CsiSequence::CursorHorizontalAbsolute
 //! [`OffscreenBuffer::apply_ansi_bytes`]: crate::OffscreenBuffer::apply_ansi_bytes
+//! [`PTY`]: crate::core::pty
+//! [`SharedWriter`]: crate::SharedWriter
+//! [blank line test]: super::pty_shared_writer_no_blank_line_test
 
-use crate::{ControlledChild, PtyPair, PtyTestMode, generate_pty_test, read_lines_and_drain};
+use crate::{ControlledChild, PtyPair, PtyTestMode, generate_pty_test,
+            read_lines_and_drain};
 use std::{io::Write, time::Duration};
 
 generate_pty_test! {
-    /// PTY-based integration test: multi-line output starts at column 1.
+    /// Verifies each line of multi-line [`SharedWriter`] output starts at column 1.
     ///
-    /// Validates that each line of multi-line output printed via [`SharedWriter`]
-    /// starts at column 1, not offset by the length of the previous line.
-    ///
-    /// Run with: `cargo test -p r3bl_tui --lib test_pty_multiline_output_starts_at_column_1 -- --nocapture`
+    /// See the [module docs] for test architecture and expected behavior.
     ///
     /// [`SharedWriter`]: crate::SharedWriter
+    /// [module docs]: self
     test_fn: test_pty_multiline_output_starts_at_column_1,
     controller: pty_controller_entry_point,
     controlled: pty_controlled_entry_point,
@@ -187,20 +188,16 @@ generate_pty_test! {
 fn pty_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
     eprintln!("🚀 PTY Controller: Starting multi-line output column test...");
 
-    let result = read_lines_and_drain(
-        pty_pair,
-        &mut child,
-        "CONTROLLED_DONE",
-        |trimmed| {
+    let result =
+        read_lines_and_drain(pty_pair, &mut child, "CONTROLLED_DONE", |trimmed| {
             // Skip debug lines from the test framework.
             !trimmed.contains("🔍")
                 && !trimmed.contains("TEST_RUNNING")
                 && !trimmed.contains("CONTROLLED_STARTING")
-        },
-    );
+        });
 
     assert!(
-        result.found_sentinel,
+        result.found_marker,
         "Controlled process never signaled CONTROLLED_DONE"
     );
 
@@ -301,7 +298,9 @@ impl Write for CaptureOutputBytes {
     fn flush(&mut self) -> std::io::Result<()> { Ok(()) }
 }
 
-/// Extracts text content from an `OffscreenBuffer` row for verification.
+/// Extracts text content from an [`OffscreenBuffer`] row for verification.
+///
+/// [`OffscreenBuffer`]: crate::OffscreenBuffer
 fn get_line_content(buf: &crate::OffscreenBuffer, row: usize, max_cols: usize) -> String {
     buf.buffer[row]
         .iter()
@@ -315,11 +314,14 @@ fn get_line_content(buf: &crate::OffscreenBuffer, row: usize, max_cols: usize) -
         .to_string()
 }
 
-/// PTY Controlled: Simulate multi-line `SharedWriter` output and verify column alignment.
+/// PTY controlled process: simulates multi-line [`SharedWriter`] output and verifies
+/// column alignment via [`OffscreenBuffer::apply_ansi_bytes`].
 ///
-/// Uses `OffscreenBuffer::apply_ansi_bytes` to accurately simulate what the terminal
-/// renders, then verifies each line starts at column 0 (no column offset from missing
-/// CR).
+/// See the [module docs] for the full test architecture.
+///
+/// [`OffscreenBuffer::apply_ansi_bytes`]: crate::OffscreenBuffer::apply_ansi_bytes
+/// [`SharedWriter`]: crate::SharedWriter
+/// [module docs]: self
 fn pty_controlled_entry_point() -> ! {
     use crate::{LineStateControlSignal, OffscreenBuffer, SharedWriter, height,
                 readline_async::readline_async_impl::LineState, width};

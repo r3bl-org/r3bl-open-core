@@ -64,7 +64,7 @@ impl From<TuiColor> for crossterm::style::Color {
     }
 }
 
-/// Convert from [`crossterm::style::Color`] to [`TuiColor`].
+/// Converts from [`crossterm::style::Color`] to [`TuiColor`].
 impl From<crossterm::style::Color> for TuiColor {
     fn from(crossterm_color: crossterm::style::Color) -> Self {
         match crossterm_color {

@@ -59,7 +59,7 @@ pub fn get_terminal_width_no_default() -> Option<ColWidth> {
     }
 }
 
-/// Get the terminal width. If there is a problem, return the default width.
+/// Gets the terminal width. If there is a problem, return the default width.
 #[must_use]
 pub fn get_terminal_width() -> ColWidth {
     match get_size() {
@@ -68,7 +68,7 @@ pub fn get_terminal_width() -> ColWidth {
     }
 }
 
-/// Get the terminal size.
+/// Gets the terminal size.
 ///
 /// Uses [`crossterm`] for the Crossterm backend, or [`rustix`] [`tcgetwinsize`] syscall
 /// for the [`DirectToAnsi`] backend.
@@ -96,7 +96,7 @@ pub fn get_size() -> miette::Result<Size> {
     }
 }
 
-/// Get the terminal size.
+/// Gets the terminal size.
 ///
 /// # Errors
 ///

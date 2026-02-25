@@ -1,11 +1,11 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Dynamic input event routing for the [PTY] multiplexer.
+//! Dynamic input event routing for the [`PTY`] multiplexer.
 //!
 //! This module handles keyboard input routing, including dynamic process switching
 //! shortcuts (F1 through F9 based on the number of processes) and terminal resize events.
 //!
-//! [PTY]: https://en.wikipedia.org/wiki/Pseudoterminal
+//! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 
 use super::ProcessManager;
 use crate::{AnsiSequenceGenerator, Continuation, InputEvent, Key, KeyPress, KeyState,

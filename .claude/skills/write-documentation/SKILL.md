@@ -71,13 +71,14 @@ but here we use the quote to explain why RRT's name *does* matter. The emoji sig
 
 ### Unicode Over Emoji in Diagrams
 
-For ASCII art diagrams in rustdoc, **use standard Unicode characters** instead of emoji. Emoji
-require special font support (Nerd Fonts, emoji fonts) and may not render correctly on all
-systems. Standard Unicode box-drawing and symbol characters render reliably everywhere.
+For ASCII art diagrams in rustdoc, **use only glyphs listed in [`docs/boxes.md`]**. That file is
+the approved set - every glyph there has been tested across multiple fonts and terminals on
+macOS, Linux, and Windows. Emoji and other Unicode characters outside that set may render
+with incorrect widths or as tofu boxes.
 
 #### Box-Drawing Characters
 
-See [`docs/boxes.md`] for the complete reference. Common patterns:
+See [`docs/boxes.md`] for the complete approved set. Common patterns:
 
 ```text
 ┌─────────────────────────────────────────────────────────────────────────┐
@@ -102,9 +103,8 @@ See [`docs/boxes.md`] for the complete reference. Common patterns:
 
 | Use | Instead of | Unicode | Meaning |
 |-----|------------|---------|---------|
-| `✓` | `✅` | U+2713 CHECK MARK | Success/yes |
-| `✗` | `❌` | U+2717 BALLOT X | Failure/no |
-| `✘` | `❌` | U+2718 HEAVY BALLOT X | Failure/no (bold) |
+| `■` | `✅` `✓` | U+25A0 BLACK SQUARE | Success/yes |
+| `□` | `❌` `✗` `✘` | U+25A1 WHITE SQUARE | Failure/no |
 
 #### Example: Before and After
 
@@ -112,8 +112,8 @@ See [`docs/boxes.md`] for the complete reference. Common patterns:
 // ❌ Bad: Emoji may not render correctly
 //! Timeline: create ──► spawn ──► ❌ fails
 
-// ✓ Good: Standard Unicode renders everywhere
-//! Timeline: create ──► spawn ──► ✗ fails
+// ■ Good: Font-safe Unicode renders everywhere
+//! Timeline: create ──► spawn ──► □ fails
 ```
 
 **Exception:** OS-identifying emoji (🐧 🍎 🪟) are acceptable in prose because they're semantic
@@ -152,7 +152,7 @@ hex escape syntax.**
 
 - `\x1B` is Rust/C escape syntax for byte 27. In prose, it forces the reader to mentally decode
   hex before understanding the sequence.
-- `ESC` is the standard terminal notation used in VT100 specs, Wikipedia, and terminal
+- `ESC` is the standard terminal notation used in `VT-100` specs, Wikipedia, and terminal
   documentation. A reader instantly knows "escape byte" without hex decoding.
 - Space-separate the components (`ESC [ A`, not `ESC[A`) so each part (escape prefix,
   intermediary, final byte) is visually distinct.
@@ -169,6 +169,92 @@ hex escape syntax.**
 
 **Exception:** In Rust code, doctests, and byte literals, continue using `\x1B` or `0x1B` -
 that's actual Rust syntax the compiler needs.
+
+### Acronym Formatting: Always Backtick
+
+**All technical acronyms get backticks.** No exceptions - treat them as technical identifiers,
+not prose.
+
+```rust
+// ❌ Bad: Plain text acronyms
+/// Uses ANSI escape sequences to parse PTY output via the VTE parser.
+
+// ✅ Good: All acronyms backticked
+/// Uses `ANSI` escape sequences to parse `PTY` output via the `VTE` parser.
+```
+
+#### When Linking: Use `` [`ACRONYM`] ``
+
+When a backticked acronym has a useful link target, wrap it in `[` `]` to create a
+reference-style intra-doc link. **Prefer local links** when the target is a dependency
+in `Cargo.toml` (validated at build time, works offline, version-matched). Fall back
+to external URLs (Wikipedia, man pages) only when no local target exists:
+
+```rust
+/// Parses [`PTY`] output using the [`VTE`] parser over [`SSH`] connections.
+///
+/// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal   // No local target
+/// [`VTE`]: mod@vte                                        // Local dep in Cargo.toml
+/// [`SSH`]: https://en.wikipedia.org/wiki/Secure_Shell     // No local target
+```
+
+Common linked acronyms and their targets:
+
+| Acronym | Link Target | Source |
+| :------ | :---------- | :----- |
+| `` [`TUI`] `` | `crate::tui::TerminalWindow::main_event_loop` | Local (crate item) |
+| `` [`VTE`] `` | `mod@vte` | Local (Cargo.toml dep) |
+| `` [`PTY`] `` | `https://en.wikipedia.org/wiki/Pseudoterminal` | External (OS concept) |
+| `` [`SSH`] `` | `https://en.wikipedia.org/wiki/Secure_Shell` | External (protocol) |
+| `` [`TCP`] `` | `https://en.wikipedia.org/wiki/Transmission_Control_Protocol` | External (protocol) |
+| `` [`DCS`] `` | Spec URL or crate path as appropriate | Depends on context |
+
+#### Without a Link: Plain Backticks
+
+When used inline without a link target, plain backticks are sufficient:
+
+```rust
+/// The `CSI` sequence `ESC [ 38 ; 5 ; n m` sets 256-color foreground.
+/// This `SGR` parameter handles `RGB` true color via `ANSI` escape codes.
+```
+
+Common unlinked acronyms: `` `SGR` ``, `` `CSI` ``, `` `OSC` ``, `` `ANSI` ``,
+`` `ASCII` ``, `` `RGB` ``, `` `UTF-8` ``, `` `EOF` ``, `` `FIFO` ``.
+
+#### Software Product and Project Names
+
+Software names are technical identifiers and get backticks:
+
+```rust
+// ❌ Bad: Plain text product names
+/// Compatible with xterm, Alacritty, and kitty terminals.
+
+// ✅ Good: Backticked product names
+/// Compatible with `xterm`, `Alacritty`, and `kitty` terminals.
+```
+
+Common product names: `` `xterm` ``, `` `Alacritty` ``, `` `kitty` ``,
+`` `GNOME VTE` ``, `` `st` `` (suckless terminal).
+
+When linking to an external project: `` [`GNOME VTE`]: https://gitlab.gnome.org/GNOME/vte ``
+
+#### What Stays Plain Text
+
+Standards body names and specification document identifiers stay as plain text - they are
+citation references, not technical identifiers:
+
+| Category | Examples |
+| :------- | :------- |
+| Spec document identifiers | ECMA-48, ITU-T Rec. T.416, ISO 8613-6 |
+
+When linking a spec, use descriptive link text: `[ITU-T Rec. T.416]: https://...`
+
+#### DEC Private Modes
+
+`DEC` private mode mnemonics are acronyms and get backticks: `` `DECAWM` ``,
+`` `DECSC` ``, `` `DECRC` ``, `` `DECSM` ``.
+
+When linking to a crate constant: `` [`DECAWM`]: crate::DECAWM_AUTO_WRAP ``
 
 ### Opening Lines by Item Type
 
@@ -991,9 +1077,11 @@ Before committing documentation:
 - [ ] First paragraph is separate (used as summary in module listings, IDE tooltips, search)
 - [ ] Follow-up sentences use explicit subjects ("This trait...", "This struct...")
 - [ ] Methods use third-person verbs (Creates, Returns, Checks - not Create, Return, Check)
+- [ ] Technical acronyms backticked (`` `ANSI` ``, `` `PTY` ``, `` `VTE` ``); linked when target exists (`` [`VTE`] ``)
+- [ ] Software product names backticked (`` `xterm` ``, `` `Alacritty` ``, `` `kitty` ``)
 - [ ] Regular dashes (`-`) used, not em dashes (`—`)
 - [ ] Escape sequences use `ESC` notation in prose, not `\x1B` (exception: code/doctests)
-- [ ] ASCII diagrams use standard Unicode (`✗` `→` `▼`) not emoji (`❌` `➡️` `⬇️`)
+- [ ] ASCII diagrams use font-safe Unicode (`■` `□` `→` `▼`) not emoji (`❌` `➡️` `⬇️`)
 - [ ] Markdown tables use left-aligned columns (`:---`)
 - [ ] Only `#` and `##` headings used (not `###` - use **bold** for sub-sections)
 - [ ] High-level concepts at module/trait level (inverted pyramid)

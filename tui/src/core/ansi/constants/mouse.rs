@@ -1,9 +1,12 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Mouse input protocol constants for ANSI/CSI sequences.
+//! Mouse input protocol constants for ANSI/[`CSI`] sequences.
 //!
 //! Defines byte values, bit masks, and protocol prefixes used by mouse input parsers
-//! to handle SGR (modern), X10 (legacy), and RXVT (legacy) mouse protocols.
+//! to handle [`SGR`] (modern), X10 (legacy), and RXVT (legacy) mouse protocols.
+//!
+//! [`CSI`]: crate::CsiSequence
+//! [`SGR`]: crate::SgrCode
 
 // ==================== Protocol Prefixes ====================
 

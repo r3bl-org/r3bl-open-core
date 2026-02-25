@@ -68,13 +68,35 @@ function run_check_with_recovery
     set -l duration_str (format_duration $duration_secs)
 
     if test $exit_code -eq 0
-        set_color green
-        echo "["(timestamp)"] ✅ $check_name passed ($duration_str)"
-        set_color normal
+        # Count warnings (exclude cargo's "generated N warnings" summary line)
+        set -l warning_count 0
+        if grep -q "^warning:" $temp_output
+            set warning_count (grep "^warning:" $temp_output | grep -cv "generated.*warning")
+        end
 
-        # Log success to file
+        # Print pass/warning summary to terminal
+        if test $warning_count -gt 0
+            set_color green
+            echo -n "["(timestamp)"] ✅ $check_name passed ($duration_str)"
+            set_color yellow
+            echo " ⚠️  $warning_count warning(s)"
+            set_color normal
+            # Print actual warning lines (excluding summary lines)
+            grep "^warning:" $temp_output | grep -v "generated.*warning"
+        else
+            set_color green
+            echo "["(timestamp)"] ✅ $check_name passed ($duration_str)"
+            set_color normal
+        end
+
+        # Log to file (include warning count and details if any)
         if set -q CHECK_LOG_FILE; and test -n "$CHECK_LOG_FILE"
-            echo "["(timestamp)"] ✅ $check_name passed ($duration_str)" >> $CHECK_LOG_FILE
+            if test $warning_count -gt 0
+                echo "["(timestamp)"] ✅ $check_name passed ($duration_str) ⚠️  $warning_count warning(s)" >> $CHECK_LOG_FILE
+                grep "^warning:" $temp_output | grep -v "generated.*warning" >> $CHECK_LOG_FILE
+            else
+                echo "["(timestamp)"] ✅ $check_name passed ($duration_str)" >> $CHECK_LOG_FILE
+            end
         end
 
         command rm -f $temp_output

@@ -6,11 +6,13 @@
 //! relative movement, absolute positioning, and save/restore functionality.
 //! Both CSI and ESC variants are provided where applicable for compatibility testing.
 //!
-//! ## VT100 Specification References
+//! ## [`VT-100`] Specification References
 //!
-//! - Cursor Movement: VT100 User Guide Section 3.3.1
-//! - Save/Restore: VT100 User Guide Section 3.3.3
-//! - Absolute Positioning: VT100 User Guide Section 3.3.4
+//! - Cursor Movement: [`VT-100`] User Guide Section 3.3.1
+//! - Save/Restore: [`VT-100`] User Guide Section 3.3.3
+//! - Absolute Positioning: [`VT-100`] User Guide Section 3.3.4
+//!
+//! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 
 use super::super::test_fixtures_vt_100_ansi_conformance::nz;
 use crate::{EscSequence, TermColDelta, TermRow, TermRowDelta,
@@ -20,11 +22,14 @@ use std::num::NonZeroU16;
 
 /// Move cursor to absolute position (row, col).
 ///
-/// **VT100 Spec**: ESC[{row};{col}H or ESC[{row};{col}f (Cursor Position)
+/// **[`VT-100`] Spec**: `ESC [ {row} ; {col} H` or `ESC [ {row} ; {col} f` (Cursor
+/// Position)
 ///
 /// # Arguments
-/// * `row` - Target row (1-based, VT100 convention)
-/// * `col` - Target column (1-based, VT100 convention)
+/// * `row` - Target row (1-based, [`VT-100`] convention)
+/// * `col` - Target column (1-based, [`VT-100`] convention)
+///
+/// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 #[must_use]
 pub fn move_to_position(row: NonZeroU16, col: NonZeroU16) -> String {
     CsiSequence::CursorPosition {
@@ -36,7 +41,9 @@ pub fn move_to_position(row: NonZeroU16, col: NonZeroU16) -> String {
 
 /// Move cursor to home position (1,1).
 ///
-/// **VT100 Spec**: ESC[H (Cursor Position without parameters)
+/// **[`VT-100`] Spec**: `ESC [ H` (Cursor Position without parameters)
+///
+/// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 #[must_use]
 pub fn move_to_home() -> String {
     CsiSequence::CursorPosition {
@@ -48,7 +55,7 @@ pub fn move_to_home() -> String {
 
 /// Move cursor up by specified number of lines.
 ///
-/// **VT100 Spec**: ESC[{count}A (Cursor Up)
+/// **[`VT-100`] Spec**: `ESC [ {count} A` (Cursor Up)
 ///
 /// # Arguments
 /// * `count` - Number of lines to move up (default 1 if count is 0)
@@ -56,6 +63,8 @@ pub fn move_to_home() -> String {
 /// # Panics
 /// Panics if `count` is greater than [`u16::MAX`] (which is impossible) or if
 /// `term_row_delta` fails for values > 1.
+///
+/// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 #[must_use]
 pub fn move_up(count: u16) -> String {
     let delta = if count <= 1 {
@@ -68,7 +77,7 @@ pub fn move_up(count: u16) -> String {
 
 /// Move cursor down by specified number of lines.
 ///
-/// **VT100 Spec**: ESC[{count}B (Cursor Down)
+/// **[`VT-100`] Spec**: `ESC [ {count} B` (Cursor Down)
 ///
 /// # Arguments
 /// * `count` - Number of lines to move down (default 1 if count is 0)
@@ -76,6 +85,8 @@ pub fn move_up(count: u16) -> String {
 /// # Panics
 /// Panics if `count` is greater than [`u16::MAX`] (which is impossible) or if
 /// `term_row_delta` fails for values > 1.
+///
+/// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 #[must_use]
 pub fn move_down(count: u16) -> String {
     let delta = if count <= 1 {
@@ -88,7 +99,7 @@ pub fn move_down(count: u16) -> String {
 
 /// Move cursor right by specified number of columns.
 ///
-/// **VT100 Spec**: ESC[{count}C (Cursor Forward)
+/// **[`VT-100`] Spec**: `ESC [ {count} C` (Cursor Forward)
 ///
 /// # Arguments
 /// * `count` - Number of columns to move right (default 1 if count is 0)
@@ -96,6 +107,8 @@ pub fn move_down(count: u16) -> String {
 /// # Panics
 /// Panics if `count` is greater than [`u16::MAX`] (which is impossible) or if
 /// `term_col_delta` fails for values > 1.
+///
+/// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 #[must_use]
 pub fn move_right(count: u16) -> String {
     let delta = if count <= 1 {
@@ -108,7 +121,7 @@ pub fn move_right(count: u16) -> String {
 
 /// Move cursor left by specified number of columns.
 ///
-/// **VT100 Spec**: ESC[{count}D (Cursor Backward)
+/// **[`VT-100`] Spec**: `ESC [ {count} D` (Cursor Backward)
 ///
 /// # Arguments
 /// * `count` - Number of columns to move left (default 1 if count is 0)
@@ -116,6 +129,8 @@ pub fn move_right(count: u16) -> String {
 /// # Panics
 /// Panics if `count` is greater than [`u16::MAX`] (which is impossible) or if
 /// `term_col_delta` fails for values > 1.
+///
+/// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 #[must_use]
 pub fn move_left(count: u16) -> String {
     let delta = if count <= 1 {
@@ -128,35 +143,43 @@ pub fn move_left(count: u16) -> String {
 
 /// Save current cursor position and attributes (CSI variant).
 ///
-/// **VT100 Spec**: ESC[s (Save Cursor Position)
+/// **[`VT-100`] Spec**: `ESC [ s` (Save Cursor Position)
 ///
 /// Modern CSI-based save operation. Use with [`restore_cursor_csi()`].
+///
+/// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 #[must_use]
 pub fn save_cursor_csi() -> String { CsiSequence::SaveCursor.to_string() }
 
 /// Restore previously saved cursor position and attributes (CSI variant).
 ///
-/// **VT100 Spec**: ESC[u (Restore Cursor Position)
+/// **[`VT-100`] Spec**: `ESC [ u` (Restore Cursor Position)
 ///
 /// Modern CSI-based restore operation. Use with [`save_cursor_csi()`].
+///
+/// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 #[must_use]
 pub fn restore_cursor_csi() -> String { CsiSequence::RestoreCursor.to_string() }
 
 /// Save current cursor position and attributes (ESC variant).
 ///
-/// **VT100 Spec**: ESC 7 (Save Cursor)
+/// **[`VT-100`] Spec**: `ESC 7` (Save Cursor)
 ///
 /// Legacy ESC-based save operation. Use with [`restore_cursor_esc()`].
 /// Functionally identical to CSI variant but uses older syntax.
+///
+/// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 #[must_use]
 pub fn save_cursor_esc() -> String { EscSequence::SaveCursor.to_string() }
 
 /// Restore previously saved cursor position and attributes (ESC variant).
 ///
-/// **VT100 Spec**: ESC 8 (Restore Cursor)
+/// **[`VT-100`] Spec**: `ESC 8` (Restore Cursor)
 ///
 /// Legacy ESC-based restore operation. Use with [`save_cursor_esc()`].
 /// Functionally identical to CSI variant but uses older syntax.
+///
+/// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 #[must_use]
 pub fn restore_cursor_esc() -> String { EscSequence::RestoreCursor.to_string() }
 
@@ -180,21 +203,25 @@ pub fn save_do_restore(operation: &str, use_esc: bool) -> String {
 
 /// Move cursor to next line (equivalent to LF + CR).
 ///
-/// **VT100 Spec**: ESC E (Next Line)
+/// **[`VT-100`] Spec**: `ESC E` (Next Line)
 ///
 /// Moves cursor to beginning of next line, combining the effects
 /// of Line Feed and Carriage Return.
 ///
 /// Note: Using direct escape sequence since `NextLine` variant doesn't exist yet.
+///
+/// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 #[must_use]
 pub fn next_line() -> String { "\x1bE".to_string() }
 
 /// Move cursor to specific row while maintaining current column.
 ///
-/// **VT100 Spec**: ESC[{row}d (Vertical Position Absolute)
+/// **[`VT-100`] Spec**: `ESC [ {row} d` (Vertical Position Absolute)
 ///
 /// # Arguments
 /// * `row` - Target row.
+///
+/// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 #[must_use]
 pub fn move_to_row(row: TermRow) -> String {
     CsiSequence::VerticalPositionAbsolute(row).to_string()

@@ -38,6 +38,7 @@ mod accessor {
         pub fn get_only_secs(&self) -> u64 { self.inner.as_secs() }
 
         #[must_use]
+        #[allow(clippy::manual_checked_ops)]
         pub fn get_as_fps(&self) -> u32 {
             let num_of_micros_in_one_sec = 1_000_000;
             let total_micros = self.inner.as_secs() * num_of_micros_in_one_sec
@@ -115,7 +116,7 @@ mod tests {
     #[test]
     fn test_converters() {
         let time_duration = TimeDuration::from(
-            Duration::from_secs(3600)
+            Duration::from_hours(1)
                 + Duration::from_secs(1)
                 + Duration::from_millis(100)
                 + Duration::from_micros(100),
@@ -123,7 +124,7 @@ mod tests {
         assert_eq!(format!("{time_duration}"), "1h:0m:1s100ms");
 
         let time_duration = TimeDuration::from(
-            Duration::from_secs(60)
+            Duration::from_mins(1)
                 + Duration::from_secs(1)
                 + Duration::from_millis(100)
                 + Duration::from_micros(100),

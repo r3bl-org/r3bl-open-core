@@ -1,14 +1,15 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! ANSI/VT100 keyboard input sequence constants.
+//! ANSI/[`VT-100`] keyboard input sequence constants.
 //!
 //! This module contains constant values for keyboard input sequences (arrow keys,
 //! function keys, modifiers, control characters). Mouse constants are in the [`mouse`]
 //! module and re-exported here.
 //!
-//! For VT-100 keyboard encoding history and design decisions, see the [keyboard module
-//! documentation].
+//! For [`VT-100`] keyboard encoding history and design decisions, see the [keyboard
+//! module documentation].
 //!
+//! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 //! [`mouse`]: crate::core::ansi::constants::mouse
 //! [keyboard module documentation]: crate::core::ansi::vt_100_terminal_input_parser::keyboard#vt-100-keyboard-input-encoding-explained
 
@@ -408,7 +409,7 @@ pub const PASTE_START_GENERATE_CODE: &str = "200";
 /// Paste end code `"201"` for generation.
 pub const PASTE_END_GENERATE_CODE: &str = "201";
 
-/// Tests that verify ANSI/VT100 protocol constants match their specification values.
+/// Tests that verify ANSI/[`VT-100`] protocol constants match their specification values.
 ///
 /// These tests:
 /// - prevent subtle input parsing bugs that would be difficult to diagnose.
@@ -420,6 +421,8 @@ pub const PASTE_END_GENERATE_CODE: &str = "201";
 /// - Catch refactoring mistakes if constants are reorganized.
 /// - Highlight protocol quirks like function key code gaps (F6=17 skips 16, F11=23 skips
 ///   22).
+///
+/// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 #[cfg(test)]
 mod tests {
     use super::*;

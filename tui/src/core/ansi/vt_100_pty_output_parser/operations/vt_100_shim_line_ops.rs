@@ -66,9 +66,9 @@
 //!     Update OffscreenBuffer state
 //! ```
 //!
-//! # VT100 Protocol Conventions
+//! # [`VT-100`] Protocol Conventions
 //!
-//! This shim layer sits at the boundary between VT100 wire format and internal types.
+//! This shim layer sits at the boundary between [`VT-100`] wire format and internal types.
 //!
 //! ## Parameter Handling
 //!
@@ -85,11 +85,12 @@
 //! DECSTBM. Lines are shifted within the region boundaries, with new/blank lines
 //! appearing at the opposite end.
 //!
+//! [`NonZeroU16`]: std::num::NonZeroU16
+//! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+//! [`extract_nth_single_non_zero()`]: crate::ParamsExt::extract_nth_single_non_zero
 //! [`impl_line_ops`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl::vt_100_impl_line_ops
 //! [`test_line_ops`]: crate::core::ansi::vt_100_pty_output_parser::vt_100_pty_output_conformance_tests::tests::vt_100_test_line_ops
 //! [module-level documentation]: self
-//! [`extract_nth_single_non_zero()`]: crate::ParamsExt::extract_nth_single_non_zero
-//! [`NonZeroU16`]: std::num::NonZeroU16
 
 use super::super::ansi_parser_public_api::AnsiToOfsBufPerformer;
 use crate::ParamsExt;
@@ -97,14 +98,16 @@ use crate::ParamsExt;
 /// Handle IL (Insert Line) - insert n blank lines at cursor position.
 /// Lines below cursor and within scroll region shift down.
 ///
-/// **VT100 Protocol**: See [module-level documentation](self) for parameter handling
+/// **[`VT-100`] Protocol**: See [module-level documentation] for parameter handling
 /// (missing/zero parameters default to 1) and scroll region interaction.
 ///
-/// This operation respects VT-100 scroll region boundaries.
+/// This operation respects [`VT-100`] scroll region boundaries.
 /// See [`OffscreenBuffer::insert_lines_at`] for detailed behavior and scroll region
 /// handling.
 ///
 /// [`OffscreenBuffer::insert_lines_at`]: crate::OffscreenBuffer::insert_lines_at
+/// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+/// [module-level documentation]: self
 pub fn insert_lines(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) {
     let how_many = params.extract_nth_single_non_zero(0).get().into();
     let at = performer.ofs_buf.cursor_pos.row_index;
@@ -119,14 +122,16 @@ pub fn insert_lines(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params)
 /// Lines below cursor and within scroll region shift up.
 /// Blank lines are added at the bottom of the scroll region.
 ///
-/// **VT100 Protocol**: See [module-level documentation](self) for parameter handling
+/// **[`VT-100`] Protocol**: See [module-level documentation] for parameter handling
 /// (missing/zero parameters default to 1) and scroll region interaction.
 ///
-/// This operation respects VT-100 scroll region boundaries.
+/// This operation respects [`VT-100`] scroll region boundaries.
 /// See [`OffscreenBuffer::delete_lines_at`] for detailed behavior and scroll region
 /// handling.
 ///
 /// [`OffscreenBuffer::delete_lines_at`]: crate::OffscreenBuffer::delete_lines_at
+/// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+/// [module-level documentation]: self
 pub fn delete_lines(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) {
     let how_many = params.extract_nth_single_non_zero(0).get().into();
     let at = performer.ofs_buf.cursor_pos.row_index;

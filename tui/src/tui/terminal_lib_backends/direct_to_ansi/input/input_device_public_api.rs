@@ -39,7 +39,7 @@ use tokio::sync::broadcast::error::RecvError;
 /// synchronous [`mio`]-based reader thread with async consumers via a [`broadcast`]
 /// channel. It handles keyboard input (including ANSI escape sequences for arrow keys,
 /// function keys, etc.) and terminal resize signals ([`SIGWINCH`]) reliably, even over
-/// [SSH].
+/// [`SSH`].
 ///
 /// ## [Loosely Coupled And Strongly Coherent]
 ///
@@ -77,9 +77,9 @@ use tokio::sync::broadcast::error::RecvError;
 ///    - Starting one app, exiting, **dropped keystrokes**, starting another, exit,
 ///      **dropped keystrokes**, starting another, and so on.
 ///
-/// 3. **Flawed `ESC` detection over [SSH].** Our original approach had flawed logic for
+/// 3. **Flawed `ESC` detection over [`SSH`].** Our original approach had flawed logic for
 ///    distinguishing the `ESC` key from escape sequences (like `ESC [ A` for Up Arrow).
-///    It worked locally but failed over [SSH]. We now use [`crossterm`]'s `more` flag
+///    It worked locally but failed over [`SSH`]. We now use [`crossterm`]'s `more` flag
 ///    heuristic (see [ESC Detection Limitations] in [`MioPollWorker`]).
 ///
 /// ### The Solution
@@ -487,7 +487,6 @@ use tokio::sync::broadcast::error::RecvError;
 /// [Loosely Coupled And Strongly Coherent]:
 ///     https://developerlife.com/2015/11/05/loosely-coupled-strongly-coherent/
 /// [No exclusive access]: super::mio_poller#no-exclusive-access
-/// [SSH]: https://en.wikipedia.org/wiki/Secure_Shell
 /// [The Problems]: Self#the-problems
 /// [Tokio's stdin]: tokio::io::stdin
 /// [`CrosstermInputDevice`]:
@@ -500,6 +499,7 @@ use tokio::sync::broadcast::error::RecvError;
 /// [`MioPollWorker`]: super::mio_poller::MioPollWorker
 /// [`SIGWINCH`]: signal_hook::consts::SIGWINCH
 /// [`SINGLETON`]: super::input_device_impl::global_input_resource::SINGLETON
+/// [`SSH`]: https://en.wikipedia.org/wiki/Secure_Shell
 /// [`SubscriberGuard`]: crate::core::resilient_reactor_thread::SubscriberGuard
 /// [`SubscriberGuard`'s drop behavior]:
 ///     crate::core::resilient_reactor_thread::SubscriberGuard#drop-behavior

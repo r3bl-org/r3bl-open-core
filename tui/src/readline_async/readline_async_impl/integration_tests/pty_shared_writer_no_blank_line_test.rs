@@ -1,10 +1,10 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! PTY integration test: No extra blank line before prompt with [`SharedWriter`].
+//! [`PTY`] integration test: No extra blank line before prompt with [`SharedWriter`].
 //!
-//! Validates that [`SharedWriter`] output followed by a prompt redraw does not
-//! create an unwanted blank line. This ensures `CHA(1)` is only emitted when
-//! necessary (not redundantly after newline-terminated data).
+//! Validates that [`SharedWriter`] output followed by a prompt redraw does not create an
+//! unwanted blank line. This ensures [`CHA(1)`] is only emitted when necessary (not
+//! redundantly after newline-terminated data).
 //!
 //! # Expected Behavior
 //!
@@ -25,13 +25,13 @@
 //!   Row 3: >
 //! ```
 //!
-//! The blank line would occur if redundant `CHA(1)` (`ESC[1G`) sequences were
-//! emitted after newline-terminated data, moving the cursor to column 1 on a
-//! new line before rendering the prompt.
+//! The blank line would occur if redundant [`CHA(1)`] sequences were emitted
+//! after newline-terminated data, moving the cursor to column 1 on a new line before
+//! rendering the prompt.
 //!
 //! # Test Architecture
 //!
-//! This test uses a **PTY-based integration test pattern** with **headless terminal
+//! This test uses a **[`PTY`]-based integration test pattern** with **headless terminal
 //! emulation** to verify exact rendered output:
 //!
 //! ```text
@@ -129,8 +129,8 @@
 //!
 //! ## [`OffscreenBuffer::apply_ansi_bytes`]
 //!
-//! Parses ANSI escape sequences and renders them to a virtual terminal buffer,
-//! giving us the **exact visual output** a user would see:
+//! Parses ANSI escape sequences and renders them to a virtual terminal buffer, giving us
+//! the **exact visual output** a user would see:
 //!
 //! ```text
 //! ┌─────────────────────────────────────────────────────────────────────────────┐
@@ -188,22 +188,23 @@
 //! cargo test -p r3bl_tui --lib test_pty_shared_writer_no_blank_line -- --nocapture
 //! ```
 //!
-//! [`SharedWriter`]: crate::SharedWriter
+//! [`CHA(1)`]: crate::CsiSequence::CursorHorizontalAbsolute
 //! [`OffscreenBuffer::apply_ansi_bytes`]: crate::OffscreenBuffer::apply_ansi_bytes
+//! [`PTY`]: crate::core::pty
+//! [`SharedWriter`]: crate::SharedWriter
 use crate::{ControlledChild, LineStateControlSignal, OffscreenBuffer, PtyPair,
             PtyTestMode, SharedWriter, generate_pty_test, height, read_lines_and_drain,
             readline_async::readline_async_impl::LineState, width};
 use std::{io::Write, time::Duration};
 
 generate_pty_test! {
-    /// PTY-based integration test: no extra blank line before prompt.
+    /// Verifies no extra blank line appears between [`SharedWriter`] output and
+    /// the prompt.
     ///
-    /// Validates that [`SharedWriter`] output followed by prompt doesn't create
-    /// an extra blank line between the output and the prompt.
-    ///
-    /// Run with: `cargo test -p r3bl_tui --lib test_pty_shared_writer_no_blank_line -- --nocapture`
+    /// See the [module docs] for test architecture and expected behavior.
     ///
     /// [`SharedWriter`]: crate::SharedWriter
+    /// [module docs]: self
     test_fn: test_pty_shared_writer_no_blank_line,
     controller: pty_controller_entry_point,
     controlled: pty_controlled_entry_point,
@@ -214,20 +215,16 @@ generate_pty_test! {
 fn pty_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
     eprintln!("🚀 PTY Controller: Starting SharedWriter blank line test...");
 
-    let result = read_lines_and_drain(
-        pty_pair,
-        &mut child,
-        "CONTROLLED_DONE",
-        |trimmed| {
+    let result =
+        read_lines_and_drain(pty_pair, &mut child, "CONTROLLED_DONE", |trimmed| {
             // Skip debug lines from the test framework.
             !trimmed.contains("🔍")
                 && !trimmed.contains("TEST_RUNNING")
                 && !trimmed.contains("CONTROLLED_STARTING")
-        },
-    );
+        });
 
     assert!(
-        result.found_sentinel,
+        result.found_marker,
         "Controlled process never signaled CONTROLLED_DONE"
     );
 
@@ -311,7 +308,9 @@ impl Write for CaptureOutputBytes {
     fn flush(&mut self) -> std::io::Result<()> { Ok(()) }
 }
 
-/// Extracts text content from an `OffscreenBuffer` row for verification.
+/// Extracts text content from an [`OffscreenBuffer`] row for verification.
+///
+/// [`OffscreenBuffer`]: crate::OffscreenBuffer
 fn get_line_content(buf: &crate::OffscreenBuffer, row: usize, max_cols: usize) -> String {
     buf.buffer[row]
         .iter()
@@ -325,10 +324,14 @@ fn get_line_content(buf: &crate::OffscreenBuffer, row: usize, max_cols: usize) -
         .to_string()
 }
 
-/// PTY Controlled: Simulate `SharedWriter` output and check for blank lines.
+/// PTY controlled process: simulates [`SharedWriter`] output and checks for blank
+/// lines before the prompt via [`OffscreenBuffer::apply_ansi_bytes`].
 ///
-/// Uses `OffscreenBuffer::apply_ansi_bytes` to accurately simulate what the terminal
-/// renders, then checks for blank lines before the prompt.
+/// See the [module docs] for the full test architecture.
+///
+/// [`OffscreenBuffer::apply_ansi_bytes`]: crate::OffscreenBuffer::apply_ansi_bytes
+/// [`SharedWriter`]: crate::SharedWriter
+/// [module docs]: self
 fn pty_controlled_entry_point() -> ! {
     println!("CONTROLLED_STARTING");
     std::io::stdout().flush().expect("Failed to flush");

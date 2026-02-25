@@ -13,7 +13,7 @@ use std::time::Duration;
 ///
 /// The [`RRT`] framework applies this policy by sleeping between restart attempts with
 /// optional [exponential backoff]. This gives the system time to recover from transient
-/// resource exhaustion (e.g., [`fd`] limits, ports in TIME_WAIT).
+/// resource exhaustion (e.g., [`fd`] limits, ports in [`TIME_WAIT`]).
 ///
 /// See [self-healing restart details] for the full restart lifecycle and two-tier event
 /// model.

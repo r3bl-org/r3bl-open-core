@@ -3,7 +3,7 @@
 use portable_pty::PtySize;
 use std::ops::{Add, AddAssign};
 
-/// Configuration options that can be combined to build a [PTY] configuration.
+/// Configuration options that can be combined to build a [`PTY`] configuration.
 ///
 /// These options are the building blocks that combine using the `+` operator
 /// to create a [`PtyConfig`]. The combination follows a "last write wins per field"
@@ -35,7 +35,7 @@ use std::ops::{Add, AddAssign};
 /// let config = Osc + Output + NoCaptureOutput; // Both captures disabled
 /// ```
 ///
-/// [PTY]: https://en.wikipedia.org/wiki/Pseudoterminal
+/// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum PtyConfigOption {
     /// Capture and parse OSC sequences.
@@ -48,7 +48,7 @@ pub enum PtyConfigOption {
     NoCaptureOutput,
 }
 
-/// Final configuration for [PTY] command execution.
+/// Final configuration for [`PTY`] command execution.
 ///
 /// This struct is built by combining [`PtyConfigOption`] values using the `+` operator.
 /// It represents the complete configuration state after all options have been applied.
@@ -68,7 +68,7 @@ pub enum PtyConfigOption {
 /// let config = config + Size(custom_size);
 /// ```
 ///
-/// [PTY]: https://en.wikipedia.org/wiki/Pseudoterminal
+/// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct PtyConfig {
     pub capture_osc: bool,

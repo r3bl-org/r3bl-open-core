@@ -12,11 +12,16 @@ pub use output_device_fixtures::*;
 pub use pty_test_fixtures::*;
 pub use tcp_stream_fixtures::*;
 
-/// Create a [`std::process::Command`] for the current test executable, configured
+/// Creates a [`std::process::Command`] for the current test executable, configured
 /// for isolated test runner usage. On Windows, sets [`CREATE_NO_WINDOW`] to prevent
 /// console window flashing during child process spawns.
 ///
+/// # Panics
+///
+/// Panics if [`std::env::current_exe()`] fails to determine the test binary path.
+///
 /// [`CREATE_NO_WINDOW`]: https://learn.microsoft.com/en-us/windows/win32/procthread/process-creation-flags
+#[must_use]
 pub fn new_isolated_test_command() -> std::process::Command {
     #[allow(unused_mut)]
     let mut cmd =

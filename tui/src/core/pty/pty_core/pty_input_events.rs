@@ -1,22 +1,23 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Input event types and conversion logic for [PTY] communication.
+//! Input event types and conversion logic for [`PTY`] communication.
 //!
-//! This module defines events that flow FROM the application TO the [PTY] child process:
-//! - [`PtyInputEvent`] - Commands that can be sent to a [PTY] child process
+//! This module defines events that flow FROM the application TO the [`PTY`] child
+//! process:
+//! - [`PtyInputEvent`] - Commands that can be sent to a [`PTY`] child process
 //! - `KeyPress` to `PtyInputEvent` conversion using algorithmic approach
 //! - Terminal control sequence generation for cross-platform compatibility
 //!
-//! [PTY]: https://en.wikipedia.org/wiki/Pseudoterminal
+//! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 
 use super::pty_output_events::{ControlSequence, CursorKeyMode};
 use crate::{FunctionKey, Key, KeyPress, KeyState, ModifierKeysMask, SpecialKey};
 use portable_pty::PtySize;
 
-/// Input event types that can be sent to a child process through [PTY].
+/// Input event types that can be sent to a child process through [`PTY`].
 ///
 /// # Summary
-/// - Bidirectional communication API for sending commands to [PTY] child processes
+/// - Bidirectional communication API for sending commands to [`PTY`] child processes
 ///
 /// - Event types: `Write` (raw data), `WriteLine` (text), `SendControl` (key sequences),
 ///   `Resize`, `Flush`, `Close`
@@ -25,7 +26,7 @@ use portable_pty::PtySize;
 /// - Used with [`super::pty_sessions::PtyReadWriteSession`] for interactive terminal
 ///   applications
 ///
-/// [PTY]: https://en.wikipedia.org/wiki/Pseudoterminal
+/// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 #[derive(Debug, Clone)]
 pub enum PtyInputEvent {
     /// Send raw bytes to child's stdin.

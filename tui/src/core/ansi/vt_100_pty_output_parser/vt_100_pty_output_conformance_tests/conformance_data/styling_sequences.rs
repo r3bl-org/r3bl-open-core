@@ -6,17 +6,20 @@
 //! colors, attributes (bold, italic, underline), and reset operations.
 //! Demonstrates proper SGR sequence construction and state management.
 //!
-//! ## VT100 Specification References
+//! ## [`VT-100`] Specification References
 //!
-//! - SGR Codes: VT100 User Guide Section 3.3.5
+//! - SGR Codes: [`VT-100` specification] Section 3.3.5
 //! - Color Support: ANSI X3.64 Standard
-//! - Text Attributes: VT100 User Guide Appendix C
+//! - Text Attributes: [`VT-100` specification] Appendix C
+//!
+//! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+//! [`VT-100` specification]: https://vt100.net/docs/vt100-ug/chapter3.html
 
 use crate::{ANSIBasicColor, SgrCode};
 
 /// Apply bold formatting to text.
 ///
-/// **ANSI Spec**: ESC[1m (Bold/Bright)
+/// **ANSI Spec**: `ESC [ 1 m` (Bold/Bright)
 ///
 /// # Arguments
 /// * `text` - Text to format with bold styling
@@ -32,7 +35,7 @@ pub fn bold_text(text: &str) -> String {
 
 /// Apply inverse/reverse video formatting to text.
 ///
-/// **ANSI Spec**: ESC[7m (Reverse Video)
+/// **ANSI Spec**: `ESC [ 7 m` (Reverse Video)
 ///
 /// Swaps foreground and background colors, commonly used for highlighting.
 ///
@@ -45,7 +48,7 @@ pub fn reverse_text(text: &str) -> String {
 
 /// Set foreground color for text.
 ///
-/// **ANSI Spec**: ESC[3{color}m (Foreground Color)
+/// **ANSI Spec**: `ESC [ 3 {color} m` (Foreground Color)
 ///
 /// # Arguments
 /// * `color` - Basic ANSI color to apply
@@ -62,7 +65,7 @@ pub fn colored_text(color: ANSIBasicColor, text: &str) -> String {
 
 /// Apply multiple formatting attributes to text.
 ///
-/// **ANSI Spec**: Multiple ESC[{code}m sequences
+/// **ANSI Spec**: Multiple `ESC [ {code} m` sequences
 ///
 /// Demonstrates combining multiple text attributes and proper reset handling.
 ///
@@ -134,7 +137,7 @@ pub fn rainbow_text(text: &str) -> String {
 
 /// Test SGR partial reset functionality.
 ///
-/// **ANSI Spec**: ESC[22m (Reset Bold/Dim), ESC[23m (Reset Italic), etc.
+/// **ANSI Spec**: `ESC [ 22 m` (Reset Bold/Dim), `ESC [ 23 m` (Reset Italic), etc.
 ///
 /// Demonstrates that partial resets preserve other attributes while
 /// clearing specific ones.

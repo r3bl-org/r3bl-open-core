@@ -9,22 +9,22 @@ use std::ops::{Add, Range, RangeInclusive};
 /// Extension trait for converting from [`RangeInclusive`] to [`Range`] types.
 ///
 /// This trait provides type-safe conversion between inclusive and exclusive range
-/// semantics, primarily for VT-100 terminal scroll regions.
+/// semantics, primarily for [`VT-100`] terminal scroll regions.
 ///
 /// <div class="warning">
 ///
-/// We cannot add inherent methods to [`Range`] or [`RangeInclusive`] (orphan rule,
-/// since they are in [`std`]), so we use an extension trait that can be implemented on
-/// foreign types.
+/// We cannot add inherent methods to [`Range`] or [`RangeInclusive`] (orphan rule, since
+/// they are in [`std`]), so we use an extension trait that can be implemented on foreign
+/// types.
 ///
 /// </div>
 ///
 /// # Core Purpose
 ///
-/// **Use case**: "I have a VT-100 scroll region stored as [`RangeInclusive`] (both
+/// **Use case**: "I have a [`VT-100`] scroll region stored as [`RangeInclusive`] (both
 /// endpoints valid), but I need a [`Range`] (exclusive end) for Rust iteration."
 ///
-/// VT-100 scroll regions use inclusive bounds (`2..=5` = rows 2,3,4,5), but Rust's
+/// [`VT-100`] scroll regions use inclusive bounds (`2..=5` = rows 2,3,4,5), but Rust's
 /// iteration requires exclusive bounds (`2..6` = rows 2,3,4,5). This trait eliminates
 /// error-prone manual `+1` arithmetic with explicit, type-safe conversion.
 ///
@@ -91,8 +91,8 @@ use std::ops::{Add, Range, RangeInclusive};
 /// Rust usage: for i in 2..6 iterates over 2,3,4,5 (NOT 6)
 /// ```
 ///
-/// **Key insight**: Both `2..=5` and `2..6` process the **same indices** (2,3,4,5),
-/// just with different syntax. This trait performs the conversion.
+/// **Key insight**: Both `2..=5` and `2..6` process the **same indices** (2,3,4,5), just
+/// with different syntax. This trait performs the conversion.
 ///
 /// ## Conversion Mechanics
 ///
@@ -122,8 +122,9 @@ use std::ops::{Add, Range, RangeInclusive};
 /// ┌─────────────────────────────────────────────────────────────┐
 /// │ Given: VT-100 scroll region from row 2 to row 5             │
 /// └─────────────────────────────────────────────────────────────┘
+/// Legend: ■ Correct | □ Incorrect
 ///
-/// ✓ CORRECT: (row(2)..=row(5)).to_exclusive()
+/// ■ CORRECT: (row(2)..=row(5)).to_exclusive()
 ///
 ///   Inclusive range: row(2)..=row(5)
 ///   Row:     0   1   2   3   4   5   6   7
@@ -138,10 +139,9 @@ use std::ops::{Add, Range, RangeInclusive};
 ///          └───┴───┴───┴───┴───┴───┴───┴───┘  (row 6 excluded)
 ///                                      ↑
 ///                                 end boundary
-///   ✓ Processes: row(2), row(3), row(4), row(5) - ALL CORRECT
+///   ■ Processes: row(2), row(3), row(4), row(5) - ALL CORRECT
 ///
-///
-/// ✗ WRONG: row(2)..row(5)
+/// □ WRONG: row(2)..row(5)
 ///
 ///   Exclusive range: row(2)..row(5)
 ///   Row:     0   1   2   3   4   5   6   7
@@ -150,20 +150,20 @@ use std::ops::{Add, Range, RangeInclusive};
 ///          └───┴───┴───┴───┴───┴───┴───┴───┘
 ///                              ↑
 ///                         end boundary
-///   ✗ Processes: row(2), row(3), row(4) only
-///   ✗ MISSING: row(5) - BUG! Last row of scroll region not processed!
+///   □ Processes: row(2), row(3), row(4) only
+///   □ MISSING: row(5) - BUG! Last row of scroll region not processed!
 /// ```
 ///
-/// **Why the confusion?** In VT-100 scroll regions, `scroll_bottom` represents the
-/// **last valid row** in the region (inclusive). Using it directly as an exclusive
-/// end (`row_index..scroll_bottom`) excludes that last row, causing subtle bugs.
+/// **Why the confusion?** In [`VT-100`] scroll regions, `scroll_bottom` represents the
+/// **last valid row** in the region (inclusive). Using it directly as an exclusive end
+/// (`row_index..scroll_bottom`) excludes that last row, causing subtle bugs.
 ///
-/// **Solution**: Always use [`to_exclusive()`] when converting from VT-100's inclusive
-/// semantics to Rust's exclusive iteration semantics.
+/// **Solution**: Always use [`to_exclusive()`] when converting from [`VT-100`]'s
+/// inclusive semantics to Rust's exclusive iteration semantics.
 ///
-/// ## VT-100 Scroll Region Example
+/// ## [`VT-100`] Scroll Region Example
 ///
-/// VT-100 terminals define scroll regions with inclusive bounds. Here's how to
+/// [`VT-100`] terminals define scroll regions with inclusive bounds. Here's how to
 /// compose them for Rust buffer operations:
 ///
 /// ```text
@@ -240,6 +240,8 @@ use std::ops::{Add, Range, RangeInclusive};
 /// [`RangeInclusive<Index>`]: std::ops::RangeInclusive
 /// [`RangeInclusive`]: std::ops::RangeInclusive
 /// [`Range`]: std::ops::Range
+/// [`VT-100`]:
+///     mod@crate::core::ansi::vt_100_pty_output_parser::operations::vt_100_shim_scroll_ops
 /// [`to_exclusive()`]: RangeConvertExt::to_exclusive
 pub trait RangeConvertExt {
     /// The index type contained in this range.
@@ -247,22 +249,28 @@ pub trait RangeConvertExt {
 
     /// Converts inclusive range to exclusive range by adding 1 to the end bound.
     ///
-    /// See the [trait documentation][Self] for detailed explanations, visual diagrams,
-    /// VT-100 examples, and common pitfalls.
+    /// See the [trait documentation] for detailed explanations, visual diagrams,
+    /// [`VT-100`] examples, and common pitfalls.
     ///
     /// # Returns
     /// A [`Range`] with the same start and `end + 1`.
     ///
     /// [`Range`]: std::ops::Range
+    /// [`VT-100`]:
+    ///     mod@crate::core::ansi::vt_100_pty_output_parser::operations::vt_100_shim_scroll_ops
+    /// [trait documentation]: Self
     #[must_use]
     fn to_exclusive(self) -> Range<Self::IndexType>;
 }
 
 /// Implementation for [`RangeInclusive<I>`] - the primary use case.
 ///
-/// This implementation converts VT-100 style inclusive ranges (where both endpoints
-/// are valid positions) to Rust's exclusive ranges (where the end is not included)
-/// for use with iteration and slice operations.
+/// This implementation converts [`VT-100`] style inclusive ranges (where both endpoints
+/// are valid positions) to Rust's exclusive ranges (where the end is not included) for
+/// use with iteration and slice operations.
+///
+/// [`VT-100`]:
+///     mod@crate::core::ansi::vt_100_pty_output_parser::operations::vt_100_shim_scroll_ops
 impl<I> RangeConvertExt for RangeInclusive<I>
 where
     I: IndexOps + Add<Output = I>,

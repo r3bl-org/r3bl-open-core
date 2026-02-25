@@ -2,15 +2,17 @@
 
 //! ANSI/VT sequence parsing for terminal emulation
 //!
-//! This module provides a comprehensive VT100-compliant ANSI escape sequence parser
+//! This module provides a comprehensive [`VT-100`]-compliant ANSI escape sequence parser
 //! that processes terminal output and converts it into structured operations.
 //!
 //! ## Architecture
 //!
-//! - **[`performer`]**: VTE `Perform` trait implementation - handles state transitions
+//! - **[`performer`]**: [`VTE`] [`Perform`] trait implementation - handles state
+//!   transitions
 //! - **[`protocols`]**: ANSI sequence types and constants
 //! - **[`operations`]**: Protocol handlers that translate sequences into operations
-//! - **[`vt_100_pty_output_conformance_tests`]**: Comprehensive VT100 conformance tests
+//! - **[`vt_100_pty_output_conformance_tests`]**: Comprehensive [`VT-100`] conformance
+//!   tests
 //!
 //! ## Key Types
 //!
@@ -42,6 +44,9 @@
 //! For terminal multiplexer architecture, see the [`pty_mux`] module.
 //!
 //! [`OffscreenBuffer::apply_ansi_bytes`]: crate::OffscreenBuffer::apply_ansi_bytes
+//! [`Perform`]: vte::Perform
+//! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+//! [`VTE`]: mod@vte
 //! [`pty_mux`]: mod@crate::core::pty_mux
 
 pub mod ansi_parser_public_api;
@@ -49,7 +54,7 @@ pub mod operations;
 pub mod performer;
 pub mod protocols;
 
-// VT100 conformance tests module
+// `VT-100` conformance tests module
 pub mod vt_100_pty_output_conformance_tests;
 
 // Re-export public API

@@ -66,9 +66,9 @@
 //!     Update OffscreenBuffer state
 //! ```
 //!
-//! # VT100 Protocol Conventions
+//! # [`VT-100`] Protocol Conventions
 //!
-//! This shim layer sits at the boundary between VT100 wire format and internal types.
+//! This shim layer sits at the boundary between [`VT-100`] wire format and internal types.
 //!
 //! ## Parameter Handling
 //!
@@ -80,6 +80,7 @@
 //! This is handled by [`extract_nth_single_non_zero()`] which returns [`NonZeroU16`].
 //!
 //! [`NonZeroU16`]: std::num::NonZeroU16
+//! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 //! [`extract_nth_single_non_zero()`]: crate::ParamsExt::extract_nth_single_non_zero
 //! [`impl_char_ops`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl::vt_100_impl_char_ops
 //! [`test_char_ops`]: crate::core::ansi::vt_100_pty_output_parser::vt_100_pty_output_conformance_tests::tests::vt_100_test_char_ops
@@ -90,7 +91,7 @@ use crate::ParamsExt;
 
 /// Handle ICH (Insert Character) - insert n blank characters at cursor position.
 ///
-/// **VT100 Protocol**: See [module-level documentation] for parameter handling.
+/// **[`VT-100`] Protocol**: See [module-level documentation] for parameter handling.
 ///
 /// **Behavior**: Characters to the right of cursor shift right, characters beyond margin
 /// are lost.
@@ -98,6 +99,7 @@ use crate::ParamsExt;
 /// See [`OffscreenBuffer::insert_chars_at_cursor`] for the implementation of this shim.
 ///
 /// [`OffscreenBuffer::insert_chars_at_cursor`]: crate::OffscreenBuffer::insert_chars_at_cursor
+/// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 /// [module-level documentation]: self
 pub fn insert_chars(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) {
     let how_many = params.extract_nth_single_non_zero(0).get().into();
@@ -112,7 +114,7 @@ pub fn insert_chars(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params)
 
 /// Handle DCH (Delete Character) - delete n characters at cursor position.
 ///
-/// **VT100 Protocol**: See [module-level documentation] for parameter handling.
+/// **[`VT-100`] Protocol**: See [module-level documentation] for parameter handling.
 ///
 /// **Behavior**: Characters to the right of cursor shift left, blanks are inserted at
 /// line end.
@@ -120,6 +122,7 @@ pub fn insert_chars(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params)
 /// See [`OffscreenBuffer::delete_chars_at_cursor`] for the implementation of this shim.
 ///
 /// [`OffscreenBuffer::delete_chars_at_cursor`]: crate::OffscreenBuffer::delete_chars_at_cursor
+/// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 /// [module-level documentation]: self
 pub fn delete_chars(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) {
     let how_many = params.extract_nth_single_non_zero(0).get().into();
@@ -134,13 +137,14 @@ pub fn delete_chars(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params)
 
 /// Handle ECH (Erase Character) - erase n characters at cursor position.
 ///
-/// **VT100 Protocol**: See [module-level documentation] for parameter handling.
+/// **[`VT-100`] Protocol**: See [module-level documentation] for parameter handling.
 ///
 /// **Behavior**: Characters are replaced with blanks, no shifting occurs (unlike DCH).
 ///
 /// See [`OffscreenBuffer::erase_chars_at_cursor`] for the implementation of this shim.
 ///
 /// [`OffscreenBuffer::erase_chars_at_cursor`]: crate::OffscreenBuffer::erase_chars_at_cursor
+/// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 /// [module-level documentation]: self
 pub fn erase_chars(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) {
     let how_many = params.extract_nth_single_non_zero(0).get().into();
@@ -155,11 +159,13 @@ pub fn erase_chars(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) 
 
 /// Handles printable character printing - display character at cursor position.
 ///
-/// **VT100 Behavior**: Character set translation applied if DEC graphics mode is active.
+/// **[`VT-100`] Behavior**: Character set translation applied if DEC graphics mode is
+/// active.
 ///
 /// See [`OffscreenBuffer::print_char`] for the implementation of this shim.
 ///
 /// [`OffscreenBuffer::print_char`]: crate::OffscreenBuffer::print_char
+/// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 pub fn print_char(performer: &mut AnsiToOfsBufPerformer, ch: char) {
     let result = performer.ofs_buf.print_char(ch);
     debug_assert!(

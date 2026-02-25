@@ -6,24 +6,24 @@
 //! You can use it to store keys that are of whatever type you choose, and values that are
 //! whatever type you choose.
 //!
-//! - It is a wrapper around the [kv] crate, to make it trivially simple to use. There are
-//!   only 4 functions that allow you access to the capabilities of the key/value embedded
-//!   store.
+//! - It is a wrapper around the [`kv`] crate, to make it trivially simple to use. There
+//!   are only 4 functions that allow you access to the capabilities of the key/value
+//!   embedded store.
 //!   - [`load_or_create_store`]
 //!   - [`load_or_create_bucket_from_store`]
 //!   - [`insert_into_bucket`]
 //!   - [`get_from_bucket`]
 //!   - [`remove_from_bucket`]
 //!   - [`is_key_contained_in_bucket`]
-//! - And provide lots of really fine grained errors, using [miette] and [thiserror] (see
-//!   [`kv_error`]).
+//! - And provide lots of really fine grained errors, using [`miette`] and [`thiserror`]
+//!   (see [`kv_error`]).
 //! - The values are serialized to JSON (from Rust struct) before they are saved.
 //! - The values are deserialized from JSON (to Rust struct) after they are loaded.
 //!
 //! See the tests in this module for an example of how to use this module.
 //!
-//! The [kv] crate works really well, even with multiple processes accessing the same
-//! database on disk. Even though [sled], which the [kv] crate itself wraps, is not
+//! The [`kv`] crate works really well, even with multiple processes accessing the same
+//! database on disk. Even though [`sled`], which the [`kv`] crate itself wraps, is not
 //! multi-process safe.
 //!
 //! In my testing, I've run multiple processes that write to the key/value store at the
@@ -31,7 +31,7 @@
 //! store, the iterator [`kv::Bucket::iter`] can be used to read the current state of the
 //! db, as expected.
 //!
-//! [sled]: https://github.com/spacejam/sled
+//! [`sled`]: https://github.com/spacejam/sled
 
 use crate::fg_cyan;
 use kv::{Config, Json, Store};
@@ -40,18 +40,18 @@ use serde::{Deserialize, Serialize};
 use std::fmt::{Debug, Display};
 
 /// Convenience type alias for the [`kv::Bucket`] type.
-/// 1. A [`kv::Bucket`] is created from a [Store].
+/// 1. A [`kv::Bucket`] is created from a [`Store`].
 /// 2. A [`kv::Bucket`] is given a name, and there may be many [`kv::Bucket`]s in a
-///    [Store].
-/// 3. A [`kv::Bucket`] provides typed access to a section of the key/value store [kv].
+///    [`Store`].
+/// 3. A [`kv::Bucket`] provides typed access to a section of the key/value store [`kv`].
 ///
 /// The [`kv::Bucket`] stores the following key/value pairs.
 /// - `KeyT`: The generic type `<KeyT>`. This will not be serialized or deserialized. This
 ///   also has a trait bound on [`kv::Key`]. See [`insert_into_bucket`] for an example of
 ///   this.
-/// - `ValueT`: This type makes it concrete that [Json] will be used to serialize and
+/// - `ValueT`: This type makes it concrete that [`Json`] will be used to serialize and
 ///   deserialize the data from the generic type `<ValueT>`, which has trait bounds on
-///   [Serialize], [Deserialize]. See [`insert_into_bucket`] for an example of this.
+///   [`Serialize`], [`Deserialize`]. See [`insert_into_bucket`] for an example of this.
 pub type KVBucket<'a, KeyT, ValueT> = kv::Bucket<'a, KeyT, Json<ValueT>>;
 
 mod default_settings {
@@ -59,13 +59,14 @@ mod default_settings {
 
     #[derive(Debug, strum_macros::EnumString, Hash, PartialEq, Eq, Clone, Copy)]
     pub enum Keys {
-        /// Your [Store] folder path name. [kv] uses this folder to save your key/value
-        /// store. It is your database persistence folder.
+        /// Your [`kv::Store`] folder path name. [`kv`] uses this folder to save your
+        /// key/value store. It is your database persistence folder.
         StoreFolderPath,
-        /// Your [Bucket] name that is used to store the key/value pairs.
+        /// Your [`kv::Bucket`] name that is used to store the key/value pairs.
         /// - JSON is used to serialize/deserialize the value stored in the key/value
         ///   pair.
-        /// - A [Bucket] provides typed access to a section of the key/value store [kv].
+        /// - A [`kv::Bucket`] provides typed access to a section of the key/value store
+        ///   [`kv`].
         BucketName,
     }
 
@@ -77,10 +78,10 @@ mod default_settings {
     }
 }
 
-/// Create the db folder if it doesn't `request_shutdown`. Otherwise load it from the
-/// folder on disk. Note there are no lifetime annotations on this function. All the other
-/// functions below do have lifetime annotations, since they are all tied to the lifetime
-/// of the returned [Store].
+/// Creates the db folder if it doesn't exist. Otherwise loads it from the folder on disk.
+/// Note there are no lifetime annotations on this function. All the other functions below
+/// do have lifetime annotations, since they are all tied to the lifetime of the returned
+/// [`Store`].
 ///
 /// # Errors
 ///
@@ -116,8 +117,8 @@ pub fn load_or_create_store(
     Ok(store)
 }
 
-/// A [kv::Bucket] provides typed access to a section of the key/value [Store].
-/// It has a lifetime, since the [kv::Bucket] is created from a [Store].
+/// A [`kv::Bucket`] provides typed access to a section of the key/value [`Store`].
+/// It has a lifetime, since the [`kv::Bucket`] is created from a [`Store`].
 ///
 /// # Errors
 ///

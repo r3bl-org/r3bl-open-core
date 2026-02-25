@@ -587,7 +587,8 @@ pub mod sgr_styling {
     /// Test semicolon-separated 256-color sequences (legacy format).
     ///
     /// This tests the look-ahead parsing logic that handles the legacy semicolon format
-    /// where VTE parses `ESC[38;5;196m` as separate positions: `[[38], [5], [196]]`.
+    /// where VTE parses `ESC [ 38 ; 5 ; 196 m` as separate positions: `[[38], [5],
+    /// [196]]`.
     #[test]
     fn test_sgr_extended_256_colors_semicolon_format() {
         let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();

@@ -38,6 +38,7 @@ use std::io::{BufReader, Read};
 /// # Panics
 ///
 /// Panics if `child.wait()` fails.
+#[allow(clippy::needless_continue)]
 pub fn drain_pty_and_wait(
     mut buf_reader: BufReader<ControllerReader>,
     pty_pair: PtyPair,

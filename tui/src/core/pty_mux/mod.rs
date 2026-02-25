@@ -3,7 +3,7 @@
 //! Terminal multiplexer module for `r3bl_tui`.
 //!
 //! This module provides tmux-like functionality for multiplexing terminal sessions, with
-//! universal compatibility for ALL programs: [TUI] apps, [`readline_async`] apps, and
+//! universal compatibility for ALL programs: [`TUI`] apps, [`readline_async`] apps, and
 //! command-line tools.
 //!
 //! ## Key Features
@@ -16,7 +16,7 @@
 //!   count)
 //! - **Status bar with process information**: Live status indicators for each process
 //! - **OSC sequence integration**: Dynamic terminal title updates
-//! - **Resource management**: Clean cleanup of [PTY] sessions and raw mode
+//! - **Resource management**: Clean cleanup of [`PTY`] sessions and raw mode
 //!
 //! ## Architecture
 //!
@@ -29,7 +29,7 @@
 //! ### Key Components:
 //!
 //! - [`PTYMux`]: Main orchestrator that manages the event loop and coordinates components
-//! - [`ProcessManager`]: Handles [PTY] lifecycle management and maintains per-process
+//! - [`ProcessManager`]: Handles [`PTY`] lifecycle management and maintains per-process
 //!   virtual terminals
 //! - [`InputRouter`]: Routes keyboard input and handles dynamic shortcuts
 //! - [`OutputRenderer`]: Renders the active process's buffer with status bar compositing
@@ -39,7 +39,7 @@
 //! Each Process contains:
 //! - **[`OffscreenBuffer`]**: Acts as a virtual terminal maintaining complete screen
 //!   state
-//! - **[`ANSI Parser`]**: Processes [PTY] output and updates the virtual terminal
+//! - **[`ANSI Parser`]**: Processes [`PTY`] output and updates the virtual terminal
 //! - **[`PTY Session`]**: The actual process communication channel
 //!
 //! The multiplexer continuously polls ALL processes and updates their virtual terminals
@@ -79,12 +79,12 @@
 //!   [`OffscreenBuffer::apply_ansi_bytes`]
 //! - [`core::ansi`]: Parent module containing all ANSI/VT-100 protocol handling
 //!
-//! [PTY]: https://en.wikipedia.org/wiki/Pseudoterminal
-//! [TUI]: crate::tui::TerminalWindow::main_event_loop
 //! [`ANSI Parser`]: crate::AnsiToOfsBufPerformer
 //! [`OffscreenBuffer::apply_ansi_bytes`]: crate::OffscreenBuffer::apply_ansi_bytes
 //! [`OffscreenBuffer`]: crate::OffscreenBuffer
 //! [`PTY Session`]: crate::PtyReadWriteSession
+//! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
+//! [`TUI`]: crate::tui::TerminalWindow::main_event_loop
 //! [`core::ansi`]: mod@crate::core::ansi
 //! [`readline_async`]: crate::readline_async::ReadlineAsyncContext::try_new
 //! [`vt_100_pty_output_parser`]: mod@crate::core::ansi::vt_100_pty_output_parser

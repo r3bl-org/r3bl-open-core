@@ -5,14 +5,14 @@
 //! Extended color sequence parsing for SGR parameters.
 //!
 //! This module provides type-safe parsing of extended color sequences used in
-//! VT100-compliant terminal emulators. These sequences enable 256-color palette support
-//! and true RGB colors, going beyond the basic 16 ANSI colors.
+//! [`VT-100`]-compliant terminal emulators. These sequences enable 256-color palette
+//! support and true RGB colors, going beyond the basic 16 ANSI colors.
 //!
 //! # Architecture Note
 //!
 //! **SGR (Select Graphic Rendition) is a subset of CSI sequences**, not a separate
 //! protocol. All SGR sequences:
-//! - Begin with the CSI introducer `ESC[`
+//! - Begin with the CSI introducer `ESC [`
 //! - Contain parameters for text attributes or colors
 //! - End with the 'm' character ([`SGR_SET_GRAPHICS`])
 //!
@@ -22,28 +22,28 @@
 //!
 //! # Color Sequence Formats
 //!
-//! VT100 extended color sequences support two formats:
+//! [`VT-100`] extended color sequences support two formats:
 //!
 //! ## Colon-Separated Format (Recommended)
 //!
 //! ```text
-//! ESC[38:5:196m        → 256-color foreground (index 196)
-//! ESC[48:5:196m        → 256-color background (index 196)
-//! ESC[38:2:255:128:0m  → RGB foreground (orange)
-//! ESC[48:2:255:128:0m  → RGB background (orange)
+//! ESC [ 38 : 5 : 196 m        → 256-color foreground (index 196)
+//! ESC [ 48 : 5 : 196 m        → 256-color background (index 196)
+//! ESC [ 38 : 2 : 255 : 128 : 0 m  → RGB foreground (orange)
+//! ESC [ 48 : 2 : 255 : 128 : 0 m  → RGB background (orange)
 //! ```
 //!
 //! The colon format groups related sub-parameters together, making parsing simpler. In
-//! VTE's parameter model, this arrives as a single parameter with multiple
+//! [`VTE`]'s parameter model, this arrives as a single parameter with multiple
 //! sub-parameters: `[[38, 5, 196]]`
 //!
 //! ## Semicolon-Separated Format (Legacy)
 //!
 //! ```text
-//! ESC[38;5;196m        → 256-color foreground (index 196)
-//! ESC[48;5;196m        → 256-color background (index 196)
-//! ESC[38;2;255;128;0m  → RGB foreground (orange)
-//! ESC[48;2;255;128;0m  → RGB background (orange)
+//! ESC [ 38 ; 5 ; 196 m        → 256-color foreground (index 196)
+//! ESC [ 48 ; 5 ; 196 m        → 256-color background (index 196)
+//! ESC [ 38 ; 2 ; 255 ; 128 ; 0 m  → RGB foreground (orange)
+//! ESC [ 48 ; 2 ; 255 ; 128 ; 0 m  → RGB background (orange)
 //! ```
 //!
 //! The semicolon format treats each value as a separate parameter: `[[38], [5], [196]]`
@@ -86,6 +86,8 @@
 //!
 //! [`ParamsExt`]: crate::ParamsExt
 //! [`SGR_SET_GRAPHICS`]: crate::core::ansi::constants::SGR_SET_GRAPHICS
+//! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+//! [`VTE`]: mod@vte
 //! [`extract_nth_many_raw()`]: crate::ParamsExt::extract_nth_many_raw
 
 use crate::{AnsiValue, RgbValue, TuiColor,
@@ -112,35 +114,35 @@ pub enum ColorTarget {
     Background,
 }
 
-/// Extended color sequence operation parsed from VT100 SGR parameters.
+/// Extended color sequence operation parsed from [`VT-100`] SGR parameters.
 ///
 /// **Note**: SGR (Select Graphic Rendition) is a subset of CSI sequences. These sequences
-/// all follow the CSI format `ESC[...m` where the 'm' indicates SGR operations. See the
-/// module documentation for architectural context.
+/// all follow the CSI format `ESC [ ... m` where the 'm' indicates SGR operations. See
+/// the module documentation for architectural context.
 ///
 /// This enum represents the four possible extended color operations that can be parsed
-/// from VT100-compliant color sequences, directly encoding both the color type (256-color
-/// or RGB) and the target layer (foreground or background).
+/// from [`VT-100`]-compliant color sequences, directly encoding both the color type
+/// (256-color or RGB) and the target layer (foreground or background).
 ///
 /// # Variants
 ///
 /// - [`SetForegroundAnsi256`]: 256-color foreground
 ///   - Maps to color palette indices 0-255
-///   - Sequence format: `ESC[38:5:n` or `ESC[38;5;n`
+///   - Sequence format: `ESC [ 38 : 5 : n` or `ESC [ 38 ; 5 ; n`
 ///
 /// - [`SetBackgroundAnsi256`]: 256-color background
 ///   - Maps to color palette indices 0-255
-///   - Sequence format: `ESC[48:5:n` or `ESC[48;5;n`
+///   - Sequence format: `ESC [ 48 : 5 : n` or `ESC [ 48 ; 5 ; n`
 ///
 /// - [`SetForegroundRgb`]: True RGB foreground
 ///   - Each component (r, g, b) ranges from 0-255
-///   - Sequence format: `ESC[38:2:r:g:b` or `ESC[38;2;r;g;b`
+///   - Sequence format: `ESC [ 38 : 2 : r : g : b` or `ESC [ 38 ; 2 ; r ; g ; b`
 ///
 /// - [`SetBackgroundRgb`]: True RGB background
 ///   - Each component (r, g, b) ranges from 0-255
-///   - Sequence format: `ESC[48:2:r:g:b` or `ESC[48;2;r;g;b`
+///   - Sequence format: `ESC [ 48 : 2 : r : g : b` or `ESC [ 48 ; 2 ; r ; g ; b`
 ///
-/// # VT100 Specification
+/// # [`VT-100`] Specification
 ///
 /// These sequences follow the [ISO 8613-6 (ITU-T Rec. T.416)][itu-t-416] standard:
 /// - `38` = foreground color control
@@ -160,6 +162,7 @@ pub enum ColorTarget {
 /// [`SetBackgroundRgb`]: SgrColorSequence::SetBackgroundRgb
 /// [`SetForegroundAnsi256`]: SgrColorSequence::SetForegroundAnsi256
 /// [`SetForegroundRgb`]: SgrColorSequence::SetForegroundRgb
+/// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 /// [itu-t-416]: https://www.itu.int/rec/T-REC-T.416-199303-I
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SgrColorSequence {
@@ -167,7 +170,7 @@ pub enum SgrColorSequence {
     ///
     /// # Example
     /// ```text
-    /// ESC[38:5:196m  → Bright red foreground
+    /// ESC [ 38 : 5 : 196 m  → Bright red foreground
     /// ```
     SetForegroundAnsi256(u8),
 
@@ -175,7 +178,7 @@ pub enum SgrColorSequence {
     ///
     /// # Example
     /// ```text
-    /// ESC[48:5:196m  → Bright red background
+    /// ESC [ 48 : 5 : 196 m  → Bright red background
     /// ```
     SetBackgroundAnsi256(u8),
 
@@ -183,7 +186,7 @@ pub enum SgrColorSequence {
     ///
     /// # Example
     /// ```text
-    /// ESC[38:2:255:128:0m  → Orange foreground (#FF8000)
+    /// ESC [ 38 : 2 : 255 : 128 : 0 m  → Orange foreground (#FF8000)
     /// ```
     SetForegroundRgb(u8, u8, u8),
 
@@ -191,7 +194,7 @@ pub enum SgrColorSequence {
     ///
     /// # Example
     /// ```text
-    /// ESC[48:2:255:128:0m  → Orange background (#FF8000)
+    /// ESC [ 48 : 2 : 255 : 128 : 0 m  → Orange background (#FF8000)
     /// ```
     SetBackgroundRgb(u8, u8, u8),
 }

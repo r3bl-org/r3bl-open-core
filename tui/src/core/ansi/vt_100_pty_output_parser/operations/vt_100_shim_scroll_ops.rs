@@ -66,10 +66,10 @@
 //!     Update OffscreenBuffer state
 //! ```
 //!
-//! # VT100 Protocol Conventions
+//! # [`VT-100`] Protocol Conventions
 //!
-//! This shim layer sits at the boundary between VT100 wire format and internal types.
-//! Understanding VT100 parameter conventions is essential for maintaining this code.
+//! This shim layer sits at the boundary between [`VT-100`] wire format and internal types.
+//! Understanding [`VT-100`] parameter conventions is essential for maintaining this code.
 //!
 //! ## Parameter Handling
 //!
@@ -86,12 +86,13 @@
 //! maintained internally by [`OffscreenBuffer`] and applied automatically to all scroll
 //! operations.
 //!
+//! [`NonZeroU16`]: std::num::NonZeroU16
+//! [`OffscreenBuffer`]: crate::OffscreenBuffer
+//! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+//! [`extract_nth_single_non_zero()`]: crate::ParamsExt::extract_nth_single_non_zero
 //! [`impl_scroll_ops`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl::vt_100_impl_scroll_ops
 //! [`test_scroll_ops`]: crate::core::ansi::vt_100_pty_output_parser::vt_100_pty_output_conformance_tests::tests::vt_100_test_scroll_ops
 //! [module-level documentation]: self
-//! [`extract_nth_single_non_zero()`]: crate::ParamsExt::extract_nth_single_non_zero
-//! [`NonZeroU16`]: std::num::NonZeroU16
-//! [`OffscreenBuffer`]: crate::OffscreenBuffer
 
 use super::super::ansi_parser_public_api::AnsiToOfsBufPerformer;
 use crate::ParamsExt;
@@ -100,9 +101,12 @@ use crate::ParamsExt;
 ///
 /// Implements the `ESC D` (`IND`) escape sequence.
 ///
-/// **VT100 Protocol**: See [module-level documentation](self) for scroll region handling.
+/// **[`VT-100`] Protocol**: See [module-level documentation] for scroll region handling.
 ///
 /// **Behavior**: Respects DECSTBM scroll region margins.
+///
+/// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+/// [module-level documentation]: self
 pub fn index_down(performer: &mut AnsiToOfsBufPerformer) {
     let result = performer.ofs_buf.index_down();
     debug_assert!(
@@ -116,9 +120,12 @@ pub fn index_down(performer: &mut AnsiToOfsBufPerformer) {
 ///
 /// Implements the `ESC M` (`RI`) escape sequence.
 ///
-/// **VT100 Protocol**: See [module-level documentation](self) for scroll region handling.
+/// **[`VT-100`] Protocol**: See [module-level documentation] for scroll region handling.
 ///
 /// **Behavior**: Respects DECSTBM scroll region margins.
+///
+/// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+/// [module-level documentation]: self
 pub fn reverse_index_up(performer: &mut AnsiToOfsBufPerformer) {
     let result = performer.ofs_buf.reverse_index_up();
     debug_assert!(
@@ -130,10 +137,13 @@ pub fn reverse_index_up(performer: &mut AnsiToOfsBufPerformer) {
 
 /// Scroll buffer content up by one line (for `ESC D` at bottom).
 ///
-/// **VT100 Protocol**: See [module-level documentation](self) for scroll region handling.
+/// **[`VT-100`] Protocol**: See [module-level documentation] for scroll region handling.
 ///
 /// **Behavior**: The top line is lost, and a new empty line appears at bottom.
 /// Respects DECSTBM scroll region margins.
+///
+/// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+/// [module-level documentation]: self
 pub fn scroll_buffer_up(performer: &mut AnsiToOfsBufPerformer) {
     let result = performer.ofs_buf.scroll_buffer_up();
     debug_assert!(
@@ -145,10 +155,13 @@ pub fn scroll_buffer_up(performer: &mut AnsiToOfsBufPerformer) {
 
 /// Scroll buffer content down by one line (for `ESC M` at top).
 ///
-/// **VT100 Protocol**: See [module-level documentation](self) for scroll region handling.
+/// **[`VT-100`] Protocol**: See [module-level documentation] for scroll region handling.
 ///
 /// **Behavior**: The bottom line is lost, and a new empty line appears at top.
 /// Respects DECSTBM scroll region margins.
+///
+/// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+/// [module-level documentation]: self
 pub fn scroll_buffer_down(performer: &mut AnsiToOfsBufPerformer) {
     let result = performer.ofs_buf.scroll_buffer_down();
     debug_assert!(
@@ -160,8 +173,11 @@ pub fn scroll_buffer_down(performer: &mut AnsiToOfsBufPerformer) {
 
 /// Handle SU (Scroll Up) - scroll display up by n lines.
 ///
-/// **VT100 Protocol**: See [module-level documentation](self) for parameter handling
+/// **[`VT-100`] Protocol**: See [module-level documentation] for parameter handling
 /// (missing/zero parameters default to 1) and scroll region handling.
+///
+/// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+/// [module-level documentation]: self
 pub fn scroll_up(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) {
     let how_many = params.extract_nth_single_non_zero(0).get().into();
     let result = performer.ofs_buf.scroll_up(how_many);
@@ -175,8 +191,11 @@ pub fn scroll_up(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) {
 
 /// Handle SD (Scroll Down) - scroll display down by n lines.
 ///
-/// **VT100 Protocol**: See [module-level documentation](self) for parameter handling
+/// **[`VT-100`] Protocol**: See [module-level documentation] for parameter handling
 /// (missing/zero parameters default to 1) and scroll region handling.
+///
+/// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+/// [module-level documentation]: self
 pub fn scroll_down(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) {
     let how_many = params.extract_nth_single_non_zero(0).get().into();
     let result = performer.ofs_buf.scroll_down(how_many);

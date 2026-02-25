@@ -18,7 +18,7 @@ impl TempDir {
     }
 }
 
-/// Create a temporary directory. The directory is automatically deleted when the
+/// Creates a temporary directory. The directory is automatically deleted when the
 /// [`TempDir`] struct is dropped.
 ///
 /// You might want to use the [`crate::try_create_temp_dir_and_cd`!] macro instead,

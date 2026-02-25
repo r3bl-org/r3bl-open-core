@@ -18,7 +18,7 @@
 //!
 //! 1. **Coordinate System**: VT-100 uses 1-based coordinates (top-left = 1,1)
 //! 2. **Modifier Encoding**: CSI parameter = 1 + bitfield (Shift=1, Alt=2, Ctrl=4)
-//! 3. **Ctrl Modifier**: Parameter 5 = Ctrl (not 4), confirmed with `ESC[1;5A`
+//! 3. **Ctrl Modifier**: Parameter 5 = Ctrl (not 4), confirmed with `ESC [ 1 ; 5 A`
 //! 4. **Scroll Events**: Button 66+ indicates scroll with possible modifiers
 //!
 //! ## Test Design Philosophy

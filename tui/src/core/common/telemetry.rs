@@ -383,6 +383,7 @@ mod calculator {
         /// percentage of occurrences of that bucket, and the most frequent hint
         /// associated with that bucket.
         #[must_use]
+        #[allow(clippy::manual_checked_ops)]
         pub fn median(&self) -> Option<(Duration, Pc, TelemetryAtomHint)> {
             // The count can't be greater than N.
             type BucketCount = u16;
@@ -626,14 +627,14 @@ mod tests_display_format {
         assert_eq!(backing_store.capacity(), TELEMETRY_REPORT_STRING_SIZE);
 
         let avg = TimeDuration::from(
-            Duration::from_secs(3600)
+            Duration::from_hours(1)
                 + Duration::from_secs(1)
                 + Duration::from_millis(100)
                 + Duration::from_micros(100),
         );
 
         let min = TimeDuration::from(
-            Duration::from_secs(60)
+            Duration::from_mins(1)
                 + Duration::from_secs(1)
                 + Duration::from_millis(100)
                 + Duration::from_micros(100),
@@ -743,7 +744,7 @@ mod tests_record {
             Duration::from_micros(700),
             Duration::from_micros(800),
             Duration::from_micros(900),
-            Duration::from_micros(1000),
+            Duration::from_millis(1),
         ];
 
         for &duration in &durations {
@@ -759,7 +760,7 @@ mod tests_record {
             Duration::from_micros(700),
             Duration::from_micros(800),
             Duration::from_micros(900),
-            Duration::from_micros(1000),
+            Duration::from_millis(1),
         ];
         assert_eq!(
             response_times
@@ -822,7 +823,7 @@ mod tests_record {
         let (mut response_times, rate_limit_time_threshold) = create_rate_limit_telemetry(
             // This delay should be long enough for the report generation to occur,
             // which might take a few hundred micros.
-            Duration::from_micros(1000),
+            Duration::from_millis(1),
         );
 
         assert_eq!(

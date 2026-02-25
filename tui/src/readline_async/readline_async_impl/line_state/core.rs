@@ -74,9 +74,9 @@ pub struct LineState {
 /// Use [`LineState::set_paused`] to change the liveness state. When transitioning
 /// from `Paused` to `NotPaused`, the line is automatically re-rendered.
 ///
-/// [`Spinner`]: crate::Spinner
-/// [`Paused`]: LineStateLiveness::Paused
 /// [`NotPaused`]: LineStateLiveness::NotPaused
+/// [`Paused`]: LineStateLiveness::Paused
+/// [`Spinner`]: crate::Spinner
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum LineStateLiveness {
     /// Input is ignored and rendering is suppressed.
@@ -86,7 +86,9 @@ pub enum LineStateLiveness {
 }
 
 impl LineStateLiveness {
-    /// Returns `true` if the state is [`Paused`](LineStateLiveness::Paused).
+    /// Returns `true` if the state is [`Paused`].
+    ///
+    /// [`Paused`]: LineStateLiveness::Paused
     #[must_use]
     pub fn is_paused(&self) -> bool { matches!(self, LineStateLiveness::Paused) }
 }
@@ -116,7 +118,7 @@ macro_rules! early_return_if_paused {
 }
 
 impl LineState {
-    /// Create a new `LineState` with the given prompt and terminal size.
+    /// Creates a new `LineState` with the given prompt and terminal size.
     ///
     /// The `term_size` parameter accepts a `(u16, u16)` tuple: `(width_cols,
     /// height_rows)`.
@@ -143,7 +145,7 @@ impl LineState {
         }
     }
 
-    /// Update the paused state, which affects the following:
+    /// Updates the paused state, which affects the following:
     /// - Rendering the output from multiple [`crate::SharedWriter`]s. When paused nothing
     ///   is rendered from them, and things like the [`crate::Spinner`] can be active.
     /// - Handling user input while the [`crate::Readline::readline`] is awaiting user

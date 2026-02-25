@@ -1,5 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+// cspell:words GPGSIGN
+
 use crate::{RepoStatus, ResultAndCommand, Run, command,
             script::git::types::{git_command_args::{GIT_ARG_GIT_DIR, GIT_ARG_PORCELAIN},
                                  git_command_names::{GIT_CMD_REV_PARSE,
@@ -30,7 +32,8 @@ pub async fn try_is_working_directory_clean() -> ResultAndCommand<RepoStatus> {
     (Ok(status), cmd)
 }
 
-/// Check if we're in a git repository.
+/// Checks if we're in a git repository.
+#[allow(clippy::map_unwrap_or)]
 pub async fn try_is_git_repo() -> ResultAndCommand<bool> {
     let mut cmd = command!(
         program => GIT_PROGRAM,

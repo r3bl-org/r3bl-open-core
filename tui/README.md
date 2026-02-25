@@ -72,7 +72,7 @@ in which this crate is meant to exist.
 - [TUI Development Workflow](#tui-development-workflow)
   - [TUI-Specific Commands](#tui-specific-commands)
   - [Testing and Development](#testing-and-development)
-    - [VT100 ANSI Conformance Testing](#vt100-ansi-conformance-testing)
+    - [`VT-100` ANSI Conformance Testing](#vt-100-ansi-conformance-testing)
     - [Markdown Parser Conformance Testing](#markdown-parser-conformance-testing)
     - [Next-Level PTY-Based Integration
       Testing](#next-level-pty-based-integration-testing)
@@ -137,11 +137,11 @@ in which this crate is meant to exist.
   - [How it works](#how-it-works)
   - [Key components](#key-components)
   - [Key benefits](#key-benefits-1)
-- [VT100/ANSI escape sequence handling](#vt100ansi-escape-sequence-handling)
+- [`VT-100`/ANSI escape sequence handling](#vt-100ansi-escape-sequence-handling)
   - [Input parsing](#input-parsing)
   - [Output parsing](#output-parsing)
   - [In-memory terminal emulation](#in-memory-terminal-emulation)
-  - [Key VT100 references](#key-vt100-references)
+  - [Key `VT-100` references](#key-vt-100-references)
 - [Raw mode implementation](#raw-mode-implementation)
   - [Raw mode vs cooked mode](#raw-mode-vs-cooked-mode)
   - [Platform implementations](#platform-implementations)
@@ -435,13 +435,13 @@ fish run.fish run-examples
 | `fish run.fish watch-clippy`               | Watch files, run clippy             |
 | `fish run.fish docs`                       | Generate documentation              |
 
-#### VT100 ANSI Conformance Testing
+#### `VT-100` ANSI Conformance Testing
 
-The TUI library includes comprehensive VT100/ANSI escape sequence conformance tests
+The TUI library includes comprehensive `VT-100`/ANSI escape sequence conformance tests
 that validate the terminal emulation pipeline:
 
 ```bash
-# Run all VT100 ANSI conformance tests
+# Run all VT-100 ANSI conformance tests
 cargo test vt_100_pty_output_conformance_tests
 
 # Run specific conformance test categories
@@ -455,13 +455,13 @@ cargo test test_sgr_and_character_sets   # text styling & colors
   [`SgrCode`] builders instead of hardcoded escape strings
 - **Real-world scenarios**: Tests realistic terminal applications (vim, emacs, tmux)
   with authentic 80x25 terminal dimensions
-- **VT100 specification compliance**: Comprehensive coverage of ANSI escape sequences
+- **`VT-100` specification compliance**: Comprehensive coverage of ANSI escape sequences
   with proper bounds checking and edge case handling
 - **Conformance data modules**: Organized sequence patterns for different terminal
   applications and use cases
 
 The conformance tests ensure the ANSI parser correctly processes sequences from real
-terminal applications and maintains compatibility with VT100 specifications.
+terminal applications and maintains compatibility with `VT-100` specifications.
 
 #### Markdown Parser Conformance Testing
 
@@ -1657,24 +1657,24 @@ dedicating a thread to blocking I/O.
 ### How it works
 
 ```
-┌──────────────────────────────────────────────────────────────────────────┐
-│                       RESILIENT REACTOR THREAD                           │
-├──────────────────────────────────────────────────────────────────────────┤
-│                                                                          │
-│   Worker Thread                                      Async Consumers     │
-│  ┌─────────────┐       ┌───────────────┐       ┌────────────────────┐    │
-│  │ mio::Poll   │       │   broadcast   │ ────► │  SubscriberGuard A │    │
-│  │             │       │    channel    │       └────────────────────┘    │
-│  │  (blocks    │ ────► │               │       ┌────────────────────┐    │
-│  │   on I/O)   │events │   (clones to  │ ────► │  SubscriberGuard B │    │
-│  │             │       │     all)      │       └────────────────────┘    │
-│  └─────────────┘       └───────────────┘       ┌────────────────────┐    │
-│         ▲                                ────► │  SubscriberGuard C │    │
-│         │                                      └─────────┬──────────┘    │
-│         │                                                │               │
-│         └────────────── wake() on drop ──────────────────┘               │
-│                                                                          │
-└──────────────────────────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────────────────┐
+│                       RESILIENT REACTOR THREAD                         │
+├────────────────────────────────────────────────────────────────────────┤
+│                                                                        │
+│   Worker Thread                                      Async Consumers   │
+│  ┌─────────────┐       ┌───────────────┐       ┌────────────────────┐  │
+│  │ mio::Poll   │       │   broadcast   │ ────► │  SubscriberGuard A │  │
+│  │             │       │    channel    │       └────────────────────┘  │
+│  │  (blocks    │ ────► │               │       ┌────────────────────┐  │
+│  │   on I/O)   │events │   (clones to  │ ────► │  SubscriberGuard B │  │
+│  │             │       │     all)      │       └────────────────────┘  │
+│  └─────────────┘       └───────────────┘       ┌────────────────────┐  │
+│         ▲                                ────► │  SubscriberGuard C │  │
+│         │                                      └─────────┬──────────┘  │
+│         │                                                │             │
+│         └── wake_and_unblock_dedicated_thread() on drop ─┘             │
+│                                                                        │
+└────────────────────────────────────────────────────────────────────────┘
 ```
 
 For the type hierarchy and implementation details, see the [Architecture Overview] in
@@ -1684,11 +1684,10 @@ For the type hierarchy and implementation details, see the [Architecture Overvie
 
 | Component                    | Purpose                                          |
 | ---------------------------- | ------------------------------------------------ |
-| [`ThreadSafeGlobalState`]    | Thread-safe singleton for RRT instances          |
-| [`ThreadLiveness`]           | Running state + generation tracking              |
+| [`RRT`]                      | Framework entry point for RRT instances          |
 | [`SubscriberGuard`]          | RAII guard managing subscription lifecycle       |
-| [`ThreadWorker`]             | Trait for the blocking work loop                 |
-| [`ThreadWaker`]              | Trait for interrupting blocked threads           |
+| [`RRTWorker`]                | Trait for the blocking work loop                 |
+| [`RRTWaker`]                 | Trait for interrupting blocked threads                |
 
 ### Key benefits
 
@@ -1700,9 +1699,9 @@ For the type hierarchy and implementation details, see the [Architecture Overvie
 For comprehensive documentation including I/O backend compatibility, [`io_uring`]
 support, and implementation examples, see [`resilient_reactor_thread`].
 
-## VT100/ANSI escape sequence handling
+## `VT-100`/ANSI escape sequence handling
 
-The TUI engine includes comprehensive VT100/ANSI escape sequence parsing for both
+The TUI engine includes comprehensive `VT-100`/ANSI escape sequence parsing for both
 terminal input (keyboard, mouse events) and terminal output (PTY child processes).
 
 ### Input parsing
@@ -1753,13 +1752,13 @@ AnsiToOfsBufPerformer (updates buffer state)
 OffscreenBuffer (cursor, text, styles)
 ```
 
-This enables the terminal multiplexer to correctly render output from any VT100-
+This enables the terminal multiplexer to correctly render output from any `VT-100`-
 compatible program running in a PTY.
 
 ### In-memory terminal emulation
 
 [`OffscreenBuffer`] can function as a **standalone in-memory terminal emulator**. By
-calling [`OffscreenBuffer::apply_ansi_bytes()`], you can feed raw VT100 ANSI escape
+calling [`OffscreenBuffer::apply_ansi_bytes()`], you can feed raw `VT-100` ANSI escape
 sequences directly into the buffer — no real terminal or PTY required:
 
 <!-- It is ok to use ignore here - demonstrates API usage with types not importable
@@ -1783,7 +1782,7 @@ buffer.apply_ansi_bytes(b"\x1b[31mRed text\x1b[0m Normal text");
   contents against expected state
 - **Diffing**: Compare output between backends or program versions
 - **Screen capture**: Snapshot terminal state at any point
-- **Terminal emulation**: Build terminal emulators using the same battle-tested VT100
+- **Terminal emulation**: Build terminal emulators using the same battle-tested `VT-100`
   parser that powers the terminal multiplexer
 
 **How `r3bl_tui` uses this for testing:**
@@ -1798,7 +1797,7 @@ This is the same mechanism that powers [`PTYMux`] — each managed process gets 
 [`OffscreenBuffer`] that continuously receives and renders ANSI output, enabling
 instant switching between processes with fully preserved screen state.
 
-### Key VT100 references
+### Key `VT-100` references
 
 - Input coordinates are **1-based** (terminal standard), converted to 0-based
   internally
@@ -2240,7 +2239,7 @@ that acts as a complete virtual terminal, enabling:
 
 #### VT-100 ANSI Parser Implementation
 
-The parser provides comprehensive VT100 compliance using the [`vte`] crate (same as
+The parser provides comprehensive `VT-100` compliance using the [`vte`] crate (same as
 Alacritty):
 
 **Supported sequences**:
@@ -2260,10 +2259,10 @@ Layer 3: TESTS          → Conformance validation (vt_100_test_char_ops)
 This naming convention enables **predictable IDE navigation**: searching for
 `char_ops` shows you the shim, implementation, and tests all together.
 
-**VT100 specification compliance**:
-- [VT100 User Guide](https://vt100.net/docs/vt100-ug/)
-- [ANSI X3.64 Standard](https://www.ecma-international.org/wp-content/uploads/ECMA-48_5th_edition_june_1991.pdf)
-- [XTerm Control Sequences](https://invisible-island.net/xterm/ctlseqs/ctlseqs.html)
+**`VT-100` specification compliance**:
+- [`VT-100` User Guide]
+- [ANSI X3.64 Standard]
+- [XTerm Control Sequences]
 
 **Intentionally unimplemented legacy features**: Custom tab stops (HTS, TBC), legacy
 line control (NEL), and legacy terminal modes (IRM, DECOM) are not implemented as
@@ -2468,15 +2467,19 @@ feature requests, feel free to add them there too 👍.
 [ZOrder]: crate::ZOrder
 [`paint`]: mod@crate::tui::terminal_lib_backends::paint
 [`paint()`]: fn@crate::tui::terminal_lib_backends::paint::paint
-[`OffscreenBufferPaintImplCrossterm`]: struct@crate::tui::terminal_lib_backends::offscreen_buffer::OffscreenBufferPaintImplCrossterm
+[`OffscreenBufferPaintImplCrossterm`]:
+    struct@crate::tui::terminal_lib_backends::offscreen_buffer::OffscreenBufferPaintImplCrossterm
 [EditorComponent]: crate::EditorComponent
 [EditorEngine]: crate::EditorEngine
 [EditorBuffer]: crate::EditorBuffer
 [HasEditorBuffers]: crate::HasEditorBuffers
 [ZeroCopyGapBuffer]: crate::tui::editor::zero_copy_gap_buffer::ZeroCopyGapBuffer
-[`zero_copy_gap_buffer` module documentation]: mod@crate::tui::editor::zero_copy_gap_buffer
-[`ZeroCopyGapBuffer::as_str()`]: crate::tui::editor::zero_copy_gap_buffer::ZeroCopyGapBuffer::as_str
-[`ZeroCopyGapBuffer::get_line_content()`]: crate::tui::editor::zero_copy_gap_buffer::ZeroCopyGapBuffer::get_line_content
+[`zero_copy_gap_buffer` module documentation]:
+    mod@crate::tui::editor::zero_copy_gap_buffer
+[`ZeroCopyGapBuffer::as_str()`]:
+    crate::tui::editor::zero_copy_gap_buffer::ZeroCopyGapBuffer::as_str
+[`ZeroCopyGapBuffer::get_line_content()`]:
+    crate::tui::editor::zero_copy_gap_buffer::ZeroCopyGapBuffer::get_line_content
 [`&str`]: prim@str
 [`Component::handle_event()`]: crate::Component::handle_event
 [`Component::render()`]: crate::Component::render
@@ -2485,7 +2488,8 @@ feature requests, feel free to add them there too 👍.
 [MdDocument]: crate::tui::md_parser::MdDocument
 [parse_markdown()]: fn@crate::tui::md_parser::parse_markdown::parse_markdown
 [parse_smart_list]: crate::tui::md_parser::parse_smart_list
-[try_parse_and_highlight]: crate::tui::syntax_highlighting::md_parser_syn_hi::try_parse_and_highlight
+[try_parse_and_highlight]:
+    crate::tui::syntax_highlighting::md_parser_syn_hi::try_parse_and_highlight
 [PTYMux]: crate::core::pty_mux::PTYMux
 [`pty_mux` module documentation]: mod@crate::core::pty_mux
 [CsiSequence]: crate::CsiSequence
@@ -2509,9 +2513,12 @@ feature requests, feel free to add them there too 👍.
 [HasDialogBuffers]: crate::HasDialogBuffers
 [DialogEngineConfigOptions]: crate::DialogEngineConfigOptions
 [`generate_pty_test!`]: crate::generate_pty_test
-[`integration_tests`]: mod@crate::core::ansi::vt_100_terminal_input_parser::integration_tests
-[`raw_mode_integration_tests`]: mod@crate::core::ansi::terminal_raw_mode::integration_tests
-[`test_pty_input_device`]: mod@crate::core::ansi::vt_100_terminal_input_parser::integration_tests::pty_input_device_test
+[`integration_tests`]:
+    mod@crate::core::ansi::vt_100_terminal_input_parser::integration_tests
+[`raw_mode_integration_tests`]:
+    mod@crate::core::ansi::terminal_raw_mode::integration_tests
+[`test_pty_input_device`]:
+    mod@crate::core::ansi::vt_100_terminal_input_parser::integration_tests::pty_input_device_test
 [`DirectToAnsiInputDevice`]: crate::direct_to_ansi::DirectToAnsiInputDevice
 [`pty_test_fixtures`]: crate::core::test_fixtures::pty_test_fixtures
 [`backend_compat_tests`]: crate::core::terminal_io::backend_compat_tests
@@ -2523,11 +2530,10 @@ feature requests, feel free to add them there too 👍.
 [`terminal_raw_mode`]: crate::core::ansi::terminal_raw_mode
 [`raw_mode_unix`]: crate::core::ansi::terminal_raw_mode::raw_mode_unix
 [`OffscreenBuffer::apply_ansi_bytes()`]: crate::OffscreenBuffer::apply_ansi_bytes
-[`ThreadSafeGlobalState`]: core::resilient_reactor_thread::ThreadSafeGlobalState
-[`ThreadLiveness`]: core::resilient_reactor_thread::ThreadLiveness
+[`RRT`]: core::resilient_reactor_thread::RRT
 [`SubscriberGuard`]: core::resilient_reactor_thread::SubscriberGuard
-[`ThreadWorker`]: core::resilient_reactor_thread::ThreadWorker
-[`ThreadWaker`]: core::resilient_reactor_thread::ThreadWaker
+[`RRTWorker`]: core::resilient_reactor_thread::RRTWorker
+[`RRTWaker`]: core::resilient_reactor_thread::RRTWaker
 [`resilient_reactor_thread`]: core::resilient_reactor_thread
 [`mio_poller`]: crate::direct_to_ansi::input::mio_poller
 [`io_uring`]: https://kernel.dk/io_uring.pdf
@@ -2541,5 +2547,8 @@ feature requests, feel free to add them there too 👍.
 [`RenderOpOutput`]: crate::RenderOpOutput
 [`TERMINAL_LIB_BACKEND`]: crate::TERMINAL_LIB_BACKEND
 [Architecture Overview]: core::resilient_reactor_thread#architecture-overview
+[ANSI X3.64 Standard]: https://www.ecma-international.org/wp-content/uploads/ECMA-48_5th_edition_june_1991.pdf
+[`VT-100` User Guide]: https://vt100.net/docs/vt100-ug/
+[XTerm Control Sequences]: https://invisible-island.net/xterm/ctlseqs/ctlseqs.html
 
 License: Apache-2.0

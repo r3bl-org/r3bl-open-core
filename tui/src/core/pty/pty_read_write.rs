@@ -1482,7 +1482,7 @@ mod tests {
         println!("htop launched successfully, waiting for initialization...");
 
         // Wait for htop to fully initialize with timeout.
-        tokio::time::sleep(Duration::from_millis(1000)).await;
+        tokio::time::sleep(Duration::from_secs(1)).await;
 
         // Phase 1: Capture initial output - ASSERT htop is running properly
         println!("Phase 1: Capturing initial htop display...");
@@ -1797,7 +1797,7 @@ mod tests {
         drop(input_sender);
 
         // Task should complete successfully.
-        let result = tokio::time::timeout(Duration::from_millis(2000), handle).await;
+        let result = tokio::time::timeout(Duration::from_secs(2), handle).await;
         assert!(result.is_ok(), "Task timed out");
     }
 
@@ -1826,7 +1826,7 @@ mod tests {
         drop(input_sender);
 
         // Task should complete successfully.
-        let result = tokio::time::timeout(Duration::from_millis(2000), handle).await;
+        let result = tokio::time::timeout(Duration::from_secs(2), handle).await;
         assert!(result.is_ok(), "Task timed out");
     }
 
@@ -1858,7 +1858,7 @@ mod tests {
         drop(input_sender);
 
         // Task should complete successfully.
-        let result = tokio::time::timeout(Duration::from_millis(2000), handle).await;
+        let result = tokio::time::timeout(Duration::from_secs(2), handle).await;
         assert!(result.is_ok(), "Task timed out");
     }
 
@@ -1891,7 +1891,7 @@ mod tests {
         drop(input_sender);
 
         // Task should complete successfully.
-        let result = tokio::time::timeout(Duration::from_millis(2000), handle).await;
+        let result = tokio::time::timeout(Duration::from_secs(2), handle).await;
         assert!(result.is_ok(), "Task timed out");
     }
 
@@ -1918,7 +1918,7 @@ mod tests {
         drop(input_sender);
 
         // Task should complete successfully.
-        let result = tokio::time::timeout(Duration::from_millis(2000), handle).await;
+        let result = tokio::time::timeout(Duration::from_secs(2), handle).await;
         assert!(result.is_ok(), "Task timed out");
     }
 

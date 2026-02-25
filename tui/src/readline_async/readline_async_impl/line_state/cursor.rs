@@ -1,16 +1,19 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::core::LineState;
-use crate::{ArrayBoundsCheck, ArrayOverflowResult, ColWidth, CsiSequence, CursorBoundsCheck,
-            NumericValue, Seg, StringLength, TermCol, TermColDelta, TermRowDelta, col, ok,
-            seg_index, term_col_delta, term_row_delta, width};
+use crate::{ArrayBoundsCheck, ArrayOverflowResult, ColWidth, CsiSequence,
+            CursorBoundsCheck, NumericValue, Seg, StringLength, TermCol, TermColDelta,
+            TermRowDelta, col, ok, seg_index, term_col_delta, term_row_delta, width};
 use std::io::{self, Write};
 
 impl LineState {
     /// Gets the number of lines wrapped (how many rows the text spans).
     ///
     /// The `pos` parameter is a display offset (column width) from the start of the line.
-    /// Returns a [`TermRowDelta`] representing how many rows down the position is.
+    ///
+    /// # Returns
+    ///
+    /// A [`TermRowDelta`] representing how many rows down the position is.
     /// Returns `None` if the calculated delta is zero (position is on the first line).
     #[must_use]
     pub fn line_height(&self, pos: ColWidth) -> Option<TermRowDelta> {
@@ -20,8 +23,12 @@ impl LineState {
     /// Gets the column offset within the current row.
     ///
     /// The `pos` parameter is a display offset (column width) from the start of the line.
-    /// Returns a [`TermColDelta`] representing the horizontal position within the row.
-    /// Returns `None` if the calculated delta is zero (position is at the start of a row).
+    ///
+    /// # Returns
+    ///
+    /// A [`TermColDelta`] representing the horizontal position within the row.
+    /// Returns `None` if the calculated delta is zero (position is at the start of a
+    /// row).
     #[must_use]
     pub fn line_column_offset(&self, pos: ColWidth) -> Option<TermColDelta> {
         term_col_delta(pos % self.term_size.col_width)
@@ -29,18 +36,27 @@ impl LineState {
 
     /// Move from a position on the line to the start.
     ///
-    /// The `from` parameter is a display offset (column width) from the start of the line.
+    /// The `from` parameter is a display offset (column width) from the start of the
+    /// line.
     ///
     /// # Errors
     ///
     /// Returns an error if writing to the terminal fails.
-    pub fn move_to_beginning(&self, term: &mut dyn Write, from: ColWidth) -> io::Result<()> {
+    pub fn move_to_beginning(
+        &self,
+        term: &mut dyn Write,
+        from: ColWidth,
+    ) -> io::Result<()> {
         // Calculate row delta from position.
         // Position 80 on 80-col terminal is Row 1, Col 0: 80/80 = 1 row.
         let move_up = self.line_height(from);
 
         // Move to column 1 (CHA = Cursor Horizontal Absolute, 1-based).
-        term.write_all(CsiSequence::CursorHorizontalAbsolute(TermCol::ONE).to_string().as_bytes())?;
+        term.write_all(
+            CsiSequence::CursorHorizontalAbsolute(TermCol::ONE)
+                .to_string()
+                .as_bytes(),
+        )?;
 
         // Move up the calculated number of rows (CUU = Cursor Up).
         // Only emit if Some (non-zero) - guards against CSI zero bug.
@@ -58,7 +74,11 @@ impl LineState {
     /// # Errors
     ///
     /// Returns an error if writing to the terminal fails.
-    pub fn move_from_beginning(&self, term: &mut dyn Write, to: ColWidth) -> io::Result<()> {
+    pub fn move_from_beginning(
+        &self,
+        term: &mut dyn Write,
+        to: ColWidth,
+    ) -> io::Result<()> {
         // Calculate deltas from position.
         // Position 80 on 80-col terminal is Row 1, Col 0: 80/80 = 1 row, 80%80 = 0 cols.
         let rows_down = self.line_height(to);
@@ -94,7 +114,8 @@ impl LineState {
             let change_usize = change as usize;
 
             let new_position = self.line_cursor_grapheme + seg_index(change_usize);
-            // Use CursorBoundsCheck for text cursor positioning (allows position == length).
+            // Use CursorBoundsCheck for text cursor positioning (allows position ==
+            // length).
             self.line_cursor_grapheme = count.clamp_cursor_position(new_position);
         } else {
             // Use unsigned_abs() to convert negative change to
@@ -151,7 +172,8 @@ impl LineState {
         self.line.get(self.line_cursor_grapheme - seg_index(1))
     }
 
-    /// Returns the grapheme cluster segment at the cursor position (to be deleted by Delete key).
+    /// Returns the grapheme cluster segment at the cursor position (to be deleted by
+    /// Delete key).
     ///
     /// Returns `None` if the cursor is at the end of the line.
     ///
@@ -185,12 +207,14 @@ impl LineState {
 
     /// Moves the terminal cursor from the beginning to the current cursor position.
     ///
-    /// This is typically called after [`reset_cursor`](Self::reset_cursor) to restore
+    /// This is typically called after [`reset_cursor`] to restore
     /// the cursor to its logical position within the line.
     ///
     /// # Errors
     ///
     /// Returns an error if writing to the terminal fails.
+    ///
+    /// [`reset_cursor`]: Self::reset_cursor
     pub fn set_cursor(&self, term: &mut dyn Write) -> io::Result<()> {
         // Column index value equals distance from start (col 5 = 5 chars from start).
         self.move_from_beginning(term, width(self.current_column.as_u16()))?;
@@ -202,13 +226,11 @@ impl LineState {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        ANSI_CSI_BRACKET, CSI_START, CUD_CURSOR_DOWN, CUF_CURSOR_FORWARD, ESC_START,
-        core::test_fixtures::StdoutMock,
-    };
+    use crate::{ANSI_CSI_BRACKET, CSI_START, CUD_CURSOR_DOWN, CUF_CURSOR_FORWARD,
+                ESC_START, core::test_fixtures::StdoutMock};
     use test_case::test_case;
 
-    /// Check if the string contains a `CursorForward` sequence (CSI <n> C).
+    /// Checks if the string contains a `CursorForward` sequence (CSI <n> C).
     fn contains_cursor_forward(s: &str) -> bool {
         // CSI sequences start with ESC [ and CursorForward ends with 'C'.
         // We look for patterns like "\x1b[5C" or "\x1b[10C".
@@ -234,7 +256,7 @@ mod tests {
         false
     }
 
-    /// Check if the string contains a `CursorDown` sequence (CSI <n> B).
+    /// Checks if the string contains a `CursorDown` sequence (CSI <n> B).
     fn contains_cursor_down(s: &str) -> bool {
         let mut chars = s.chars().peekable();
         while let Some(c) = chars.next() {
@@ -345,7 +367,8 @@ mod tests {
         let output_str = stdout_mock.get_copy_of_buffer_as_string();
 
         // Must emit CursorForward with correct column count.
-        let expected_cursor_forward = format!("{CSI_START}{expected_cols}{CUF_CURSOR_FORWARD}");
+        let expected_cursor_forward =
+            format!("{CSI_START}{expected_cols}{CUF_CURSOR_FORWARD}");
         assert!(
             output_str.contains(&expected_cursor_forward),
             "position={position}: expected CursorForward({expected_cols}), got: {output_str:?}"
@@ -380,7 +403,8 @@ mod tests {
 
         // Must emit both CursorDown and CursorForward.
         let expected_cursor_down = format!("{CSI_START}{expected_rows}{CUD_CURSOR_DOWN}");
-        let expected_cursor_forward = format!("{CSI_START}{expected_cols}{CUF_CURSOR_FORWARD}");
+        let expected_cursor_forward =
+            format!("{CSI_START}{expected_cols}{CUF_CURSOR_FORWARD}");
 
         assert!(
             output_str.contains(&expected_cursor_down),

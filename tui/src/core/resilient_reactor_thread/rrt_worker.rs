@@ -107,7 +107,7 @@ use tokio::sync::broadcast::Sender;
 /// [`waker`]: field@super::RRT::waker
 /// [blocking I/O backend]: super#understanding-blocking-io
 /// [blocking mechanism]: super#understanding-blocking-io
-/// [framework]: super#the-rrt-contract-and-benefits
+/// [framework]: crate::core::resilient_reactor_thread#the-rrt-contract-and-benefits
 /// [runtime threads]: tokio::runtime
 /// [two-phase setup]: super#two-phase-setup
 pub trait RRTWaker: Send + Sync + 'static {
@@ -203,7 +203,7 @@ pub trait RRTWaker: Send + Sync + 'static {
 /// [`subscribe()`]: super::RRT::subscribe
 /// [`syscalls`]: https://man7.org/linux/man-pages/man2/syscalls.2.html
 /// [default policy]: RestartPolicy#impl-Default-for-RestartPolicy
-/// [framework]: super#the-rrt-contract-and-benefits
+/// [framework]: crate::core::resilient_reactor_thread#the-rrt-contract-and-benefits
 /// [module docs]: super::RRT#two-phase-setup
 /// [self-healing restart]: super#self-healing-restart-details
 /// [two-phase setup]: super::RRT#two-phase-setup
@@ -242,11 +242,10 @@ pub trait RRTWorker: Send + 'static {
     /// [`RRT`]: super::RRT
     /// [`Receiver`]: tokio::sync::broadcast::Receiver
     /// [`SubscriberGuard`]: super::SubscriberGuard
-    /// [`broadcast channel`]:
     /// [`broadcast channel`]: tokio::sync::broadcast
     /// [`tokio`]: tokio
     /// [executor threads]: tokio::runtime
-    /// [framework]: super#the-rrt-contract-and-benefits
+    /// [framework]: crate::core::resilient_reactor_thread#the-rrt-contract-and-benefits
     /// [multithreaded runtime]: tokio::runtime::Builder::new_multi_thread
     type Event: Clone + Send + Sync + 'static;
 
@@ -308,7 +307,7 @@ pub trait RRTWorker: Send + 'static {
     /// [`shared_waker_slot`]: field@super::RRT::shared_waker_slot
     /// [`subscribe()`]: super::RRT::subscribe
     /// [`syscalls`]: https://man7.org/linux/man-pages/man2/syscalls.2.html
-    /// [framework]: super#the-rrt-contract-and-benefits
+    /// [framework]: crate::core::resilient_reactor_thread#the-rrt-contract-and-benefits
     /// [self-healing restart]: super#self-healing-restart-details
     /// [waker]: super::RRTWaker
     fn create_and_register_os_sources() -> miette::Result<(Self, Self::Waker)>
@@ -328,6 +327,7 @@ pub trait RRTWorker: Send + 'static {
     ///
     /// [default policy]: RestartPolicy#impl-Default-for-RestartPolicy
     /// [self-healing restart details]: super#self-healing-restart-details
+    #[must_use]
     fn restart_policy() -> RestartPolicy
     where
         Self: Sized,
@@ -368,7 +368,7 @@ pub trait RRTWorker: Send + 'static {
     /// [`create_and_register_os_sources()`]: Self::create_and_register_os_sources
     /// [`mio_poller::MioPollWorker`]: crate::direct_to_ansi::input::mio_poller::MioPollWorker
     /// [`sender.receiver_count()`]: tokio::sync::broadcast::Sender::receiver_count
-    /// [framework]: super#the-rrt-contract-and-benefits
+    /// [framework]: crate::core::resilient_reactor_thread#the-rrt-contract-and-benefits
     /// [trait docs]: Self
     fn block_until_ready_then_dispatch(
         &mut self,

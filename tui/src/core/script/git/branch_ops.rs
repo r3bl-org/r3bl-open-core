@@ -81,7 +81,7 @@ pub async fn try_delete_branches(branches: &ItemsOwned) -> ResultAndCommand<()> 
     (Ok(()), cmd)
 }
 
-/// Get all the local branches as a tuple.
+/// Gets all the local branches as a tuple.
 ///
 /// 1. The first item in the tuple contains the current branch is prefixed with
 ///    `CURRENT_BRANCH_PREFIX`.

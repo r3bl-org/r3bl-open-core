@@ -33,7 +33,7 @@
 //!   `.await` points. If any task makes a blocking call (which doesn't unblock on its
 //!   own), then it never yields - the runtime hangs and **nothing else runs**.
 //!
-//! In practice, both runtimes can produce the same result for [TUI] and
+//! In practice, both runtimes can produce the same result for [`TUI`] and
 //! [`readline_async`] apps - **the app becomes unresponsive** to the end user. The end
 //! user types and nothing happens.
 //!
@@ -75,14 +75,14 @@
 //!
 //! RRT manages its own dedicated [thread] to isolate [blocking I/O], and owns a
 //! [`broadcast channel`] to decouple the lifecycle of this [thread] from the async
-//! consumers (in your [TUI] or [`readline_async`] app).
+//! consumers (in your [`TUI`] or [`readline_async`] app).
 //!
 //! **Async consumer isolation** - This channel (stored in [`RRT`] via [`LazyLock`])
 //! completely isolates async consumers from the dedicated [thread]'s lifecycle. It
 //! outlives every thread generation and is never replaced - [`RRT`] can reuse, destroy,
 //! or relaunch the [thread] without affecting any async consumers. The sender half of the
 //! channel is sync (since our dedicated [`std::thread::Thread`] is the sender), and the
-//! receiver half is async since our ([TUI] or [`readline_async`] app) is async.
+//! receiver half is async since our ([`TUI`] or [`readline_async`] app) is async.
 //!
 //! **Thread creation and reuse** - You start by declaring an [`RRT`] [singleton] in your
 //! code, and providing your implementation of the [`RRTWorker`] trait. No thread is
@@ -106,7 +106,7 @@
 //! [Thread Lifecycle] for the step-by-step shutdown sequence.
 //!
 //! **Thread cleanup** - When the [thread] self-terminates, your [`RRTWorker`] trait
-//! implementation goes out of scope, triggering [RAII] cleanup via [`Drop`] on the OS
+//! implementation goes out of scope, triggering [`RAII`] cleanup via [`Drop`] on the OS
 //! resources it owns (like [`fds`]). Then [`TerminationGuard`] clears the [`RRTWaker`]
 //! to [`None`], signaling termination. See [`RRT`]'s [Thread Lifecycle] (step 4) for the
 //! full sequence.
@@ -186,14 +186,14 @@
 //! | :------------ | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 //! | **Resilient** | [Thread] can stop or crash and be relaunched with [generation] tracking; [`RestartPolicy`] for self-healing restarts; [`broadcast channel`] isolates async consumers from [Thread Lifecycle] |
 //! | **Reactor**   | Reacts to I/O readiness on [`fds`] ([`stdin`], [`sockets`], [`signals`]) via any blocking backend (e.g., [`mio`]/[`epoll`]) with a matching [`RRTWaker`]                                     |
-//! | **Thread**    | Dedicated [thread] for [blocking I/O]; cooperative shutdown via [`RRTWaker`] & [RAII] cleanup via [`Drop`] on thread exit                                                                    |
+//! | **Thread**    | Dedicated [thread] for [blocking I/O]; cooperative shutdown via [`RRTWaker`] & [`RAII`] cleanup via [`Drop`] on thread exit                                                                  |
 //!
 //! ## Mental Model for Web Developers
 //!
-//! RRT solves the same fundamental problem for [TUI] and [`readline_async`] apps as [Web
-//! Workers] does for web browsers - **keeping blocking work off the main execution
-//! context**. In [TUI] and [`readline_async`] apps, just like in web browsers, code that
-//! blocks the main [thread] freezes the UI and makes it unresponsive to user input.
+//! RRT solves the same fundamental problem for [`TUI`] and [`readline_async`] apps as
+//! [Web Workers] does for web browsers - **keeping blocking work off the main execution
+//! context**. In [`TUI`] and [`readline_async`] apps, just like in web browsers, code
+//! that blocks the main [thread] freezes the UI and makes it unresponsive to user input.
 //!
 //! | Web Pattern         | RRT Equivalent                          |
 //! | :------------------ | :-------------------------------------- |
@@ -216,7 +216,7 @@
 //!   [`subscribe()`].
 //!
 //! - **Lifecycle**: [Web Workers] require manual cleanup (`terminate()` or
-//!   `self.close()`); RRT uses [RAII] via [`SubscriberGuard`] - the thread
+//!   `self.close()`); RRT uses [`RAII`] via [`SubscriberGuard`] - the thread
 //!   self-terminates when all guards are dropped.
 //!
 //! - **Communication**: [Web Workers] use serialized `postMessage`; RRT uses a type-safe
@@ -250,7 +250,7 @@
 //! [`epoll`]), which doesn't support terminal [`fds`] (which is a [known Darwin
 //! limitation]).
 //!
-//! - **Background information**: Your [TUI] or [`readline_async`] app's [`stdin`] ([`fd
+//! - **Background information**: Your [`TUI`] or [`readline_async`] app's [`stdin`] ([`fd
 //!   0`]) is a terminal [`fd`] which is one of the following:
 //!
 //!   - [`tty`] - A hardware terminal or virtual console (e.g., `Ctrl+Alt+F1` on Linux).
@@ -280,9 +280,9 @@
 //!   **But on [Darwin]** [`kevent()`] returns [`EINVAL`] (`errno 22, "Invalid argument"`)
 //!   when you try to register either type with [`kqueue`]. This is a permanent rejection
 //!   - not to be confused with [`EINTR`] (`errno 4, "Interrupted system call"`), where a
-//!   POSIX [signal][signals] (like [`SIGINT`] from `Ctrl+C`) interrupts a blocked
-//!   [`syscall`] which unblocks and returns [`EINTR`]. In this case, your code can simply
-//!   retry the [`syscall`].
+//!     POSIX [signal][signals] (like [`SIGINT`] from `Ctrl+C`) interrupts a blocked
+//!     [`syscall`] which unblocks and returns [`EINTR`]. In this case, your code can
+//!     simply retry the [`syscall`].
 //!
 //! - **The workaround**: Bypass [`kqueue`] entirely and use [`filedescriptor::poll()`]
 //!   instead, which uses [`select(2)`] internally. [`select(2)`] is an older, more
@@ -323,7 +323,7 @@
 //! | I/O Backend                                 | Blocks? | Notes                                                                                                                                |
 //! | :------------------------------------------ | :------ | :----------------------------------------------------------------------------------------------------------------------------------- |
 //! | [`mio`] + [`stdin`]                         | Yes     | See [`mio_poller`]                                                                                                                   |
-//! | [`mio`] + [sockets]                         | Yes     | [TCP], [UDP], [Unix domain sockets]                                                                                                  |
+//! | [`mio`] + [sockets]                         | Yes     | [`TCP`], [`UDP`], [Unix domain sockets]                                                                                              |
 //! | [`mio`] + [signals]                         | Yes     | Signals are async interrupts (not [`pollable`]); [`signalfd(2)`] or [`signal-hook`] wraps them as [`fd`]s (see [`mio_poller`])       |
 //! | [`mio`] + [`pipe(2)`]/[`fifo(7)`]           | Yes     | [`pollable`] [`fd`]s ie, 1-1 one-way byte streams: [`pipe(2)`] = parent↔child (anonymous), [`fifo(7)`] = via filesystem path (named) |
 //!
@@ -341,7 +341,7 @@
 //!
 //! ## Context
 //!
-//! To get a bird's eye view (from the [TUI] or [`readline_async`] app's perspective) of
+//! To get a bird's eye view (from the [`TUI`] or [`readline_async`] app's perspective) of
 //! how terminal input flows from [`stdin`] through the dedicated [thread] to your async
 //! consumers - see the [RRT section] in the crate documentation. For the concise
 //! step-by-step spawn/reuse/terminate sequence, see [`RRT`]'s [Thread Lifecycle] section.
@@ -356,7 +356,7 @@
 //!   shutdown.
 //! - **You** provide the [`RRTWorker`] trait implementation (with its associated
 //!   [`RRTWaker`] and [`Event`] types). Without your worker concrete type (and these
-//!   other pieces) to inject ([DI]), the framework has nothing to run.
+//!   other pieces) to inject ([`DI`]), the framework has nothing to run.
 //!
 //!   | Type / Trait       | Purpose                                                                                           | Implementation                                                                    |
 //!   | :----------------- | :------------------------------------------------------------------------------------------------ | :-------------------------------------------------------------------------------- |
@@ -377,11 +377,11 @@
 //!
 //! 2. [Dependency Injection] (DI / composition) - you provide a trait implementation (the
 //!    "injectable"); the framework orchestrates it. This is **imperative** (code-based)
-//!    [DI] - you provide a concrete implementation of the [`RRTWorker`] trait (which
+//!    [`DI`] - you provide a concrete implementation of the [`RRTWorker`] trait (which
 //!    includes [`create_and_register_os_sources()`],
 //!    [`block_until_ready_then_dispatch()`], and optionally [`restart_policy()`]), along
-//!    with a concrete type for [`Event`]. It's not declarative (configuration-based) [DI]
-//!    where you *declare* wiring/bindings.
+//!    with a concrete type for [`Event`]. It's not declarative (configuration-based)
+//!    [`DI`] where you *declare* wiring/bindings.
 //!
 //! 3. **Type safety** - the [`RRTWorker`] trait ensures your concrete type's associated
 //!    [`Event`] and [`RRTWaker`] types returned by [`create_and_register_os_sources()`]
@@ -470,7 +470,7 @@
 //!     Consumers can come and go without affecting the dedicated [thread].
 //!
 //!   - **Resilience** - The [thread] itself can crash and be relaunched; services can
-//!     connect, disconnect, and reconnect. The [TUI] or [`readline_async`] app remains
+//!     connect, disconnect, and reconnect. The [`TUI`] or [`readline_async`] app remains
 //!     unaffected.
 //!
 //! ## Two-Phase Setup
@@ -606,7 +606,7 @@
 //! | Mode                                    | Thread blocks?                    | Fits RRT? |
 //! | :-------------------------------------- | :-------------------------------- | :-------- |
 //! | [`io_uring_enter()`] with wait          | Yes (waiting for [completions])   | Yes       |
-//! | [`io_uring_enter()`] non-blocking       | No (just checks [CQ])             | No        |
+//! | [`io_uring_enter()`] non-blocking       | No (just checks [`CQ`])           | No        |
 //! | [`SQPOLL`]                              | No ([kernel] [thread] polls)      | No        |
 //!
 //! In non-blocking or [`SQPOLL`] modes, the work loop could look like this:
@@ -731,9 +731,7 @@
 //!
 //! [Actor]: https://en.wikipedia.org/wiki/Actor_model
 //! [Alacritty]: https://alacritty.org/
-//! [CQ]: https://man7.org/linux/man-pages/man7/io_uring.7.html
 //! [Console API]: https://learn.microsoft.com/en-us/windows/console/console-functions
-//! [DI]: https://en.wikipedia.org/wiki/Dependency_injection
 //! [Darwin]: https://en.wikipedia.org/wiki/Darwin_(operating_system)
 //! [Dependency Injection]: https://en.wikipedia.org/wiki/Dependency_injection
 //! [Example]: #example
@@ -741,7 +739,6 @@
 //! [Linux]: https://man7.org/linux/man-pages/man3/pthread_cancel.3.html
 //! [Multi-threaded runtime]: tokio::runtime::Builder::new_multi_thread
 //! [Proactor]: https://en.wikipedia.org/wiki/Proactor_pattern
-//! [RAII]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
 //! [RRT section]: crate#resilient-reactor-thread-rrt-pattern
 //! [Reactor]: https://en.wikipedia.org/wiki/Reactor_pattern
 //! [Registered FDs]: https://man7.org/linux/man-pages/man3/io_uring_register_files.3.html
@@ -752,10 +749,7 @@
 //! [Single-threaded runtime]: tokio::runtime::Builder::new_current_thread
 //! [Syscall]: https://man7.org/linux/man-pages/man2/syscalls.2.html
 //! [Syscalls]: https://man7.org/linux/man-pages/man2/syscalls.2.html
-//! [TCP]: https://en.wikipedia.org/wiki/Transmission_Control_Protocol
-//! [TUI]: crate::tui::TerminalWindow::main_event_loop
 //! [Thread Lifecycle]: RRT#thread-lifecycle
-//! [UDP]: https://en.wikipedia.org/wiki/User_Datagram_Protocol
 //! [Unix domain sockets]: https://en.wikipedia.org/wiki/Unix_domain_socket
 //! [Wayland]: https://wayland.freedesktop.org/
 //! [Web Workers]: https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API
@@ -763,10 +757,12 @@
 //! [Windows]:
 //!     https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-terminatethread
 //! [`'static` trait bound]: RRT#static-trait-bound-vs-static-lifetime-annotation
+//! [`CQ`]: https://man7.org/linux/man-pages/man7/io_uring.7.html
 //! [`Continuation::Restart`]: crate::Continuation::Restart
 //! [`Continuation::Stop`]: crate::Continuation::Stop
 //! [`Continuation`]: crate::Continuation
 //! [`Continue`]: crate::Continuation::Continue
+//! [`DI`]: https://en.wikipedia.org/wiki/Dependency_injection
 //! [`EINTR`]: https://man7.org/linux/man-pages/man3/errno.3.html
 //! [`EINVAL`]: https://man7.org/linux/man-pages/man3/errno.3.html
 //! [`Event`]: RRTWorker::Event
@@ -780,6 +776,7 @@
 //! [`LivenessState`]: LivenessState
 //! [`PTY`]: https://man7.org/linux/man-pages/man7/pty.7.html
 //! [`PTY` pair]: crate::core::pty::pty_core::pty_types::PtyPair
+//! [`RAII`]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
 //! [`RRTEvent::Shutdown(Panic)`]: ShutdownReason::Panic
 //! [`RRTEvent::Shutdown(RestartPolicyExhausted)`]: ShutdownReason::RestartPolicyExhausted
 //! [`RRTEvent::Shutdown(reason)`]: RRTEvent::Shutdown
@@ -805,8 +802,11 @@
 //! [`ShutdownReason`]: ShutdownReason
 //! [`Stop`]: crate::Continuation::Stop
 //! [`SubscriberGuard`]: SubscriberGuard
+//! [`TCP`]: https://en.wikipedia.org/wiki/Transmission_Control_Protocol
 //! [`TIME_WAIT`]: https://en.wikipedia.org/wiki/TCP_TIME-WAIT
+//! [`TUI`]: crate::tui::TerminalWindow::main_event_loop
 //! [`TerminationGuard`]: TerminationGuard
+//! [`UDP`]: https://en.wikipedia.org/wiki/User_Datagram_Protocol
 //! [`W::Event`]: RRTWorker::Event
 //! [`accept()`]: std::net::TcpListener::accept
 //! [`block_on()`]: tokio::runtime::Runtime::block_on

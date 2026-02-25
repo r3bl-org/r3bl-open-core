@@ -1,10 +1,10 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Test modules for VT100 ANSI conformance validation.
+//! Test modules for [`VT-100`] ANSI conformance validation.
 //!
 //! This module organizes conformance tests by functionality and architectural layer:
 //! - Operations tests (test_*_ops.rs) - Test operations modules directly
-//! - Protocol tests (`test_protocol_*.rs`) - Test ANSI/VT100 protocol parsing
+//! - Protocol tests (`test_protocol_*.rs`) - Test ANSI/[`VT-100`] protocol parsing
 //! - System tests (`test_system_*.rs`) - Test system components and lifecycle
 //! - Integration tests (`test_integration_*.rs`) - Test cross-cutting scenarios
 //!
@@ -34,11 +34,12 @@
 //! 2. **Shim**: [`operations::char_ops`] - Parameter translation (no direct tests)
 //! 3. **Implementation**: [`impl_char_ops`] - Buffer logic (has unit tests)
 //!
+//! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+//! [`apply_ansi_bytes`]: crate::tui::terminal_lib_backends::offscreen_buffer::OffscreenBuffer::apply_ansi_bytes
+//! [`impl_char_ops`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl::vt_100_impl_char_ops
+//! [`operations::char_ops`]: super::super::operations::vt_100_shim_char_ops
 //! [`operations`]: super::super::operations
 //! [`vt_100_ansi_impl`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl
-//! [`operations::char_ops`]: super::super::operations::vt_100_shim_char_ops
-//! [`impl_char_ops`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl::vt_100_impl_char_ops
-//! [`apply_ansi_bytes`]: crate::tui::terminal_lib_backends::offscreen_buffer::OffscreenBuffer::apply_ansi_bytes
 //! [conformance tests]: super
 
 // === OPERATIONS TESTS ===
@@ -78,7 +79,7 @@ pub mod vt_100_test_sgr_ops;
 pub mod vt_100_test_terminal_ops;
 
 // === PROTOCOL TESTS ===
-// These test ANSI/VT100 protocol parsing and sequence handling.
+// These test ANSI/`VT-100` protocol parsing and sequence handling.
 
 #[cfg(test)]
 mod vt_100_test_protocol_csi_basic;

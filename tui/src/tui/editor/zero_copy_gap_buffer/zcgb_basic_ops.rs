@@ -1,8 +1,8 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Basic line storage operations for `ZeroCopyGapBuffer`.
+//! Basic line storage operations for [`ZeroCopyGapBuffer`].
 //!
-//! This module provides fundamental line storage operations for `ZeroCopyGapBuffer`,
+//! This module provides fundamental line storage operations for [`ZeroCopyGapBuffer`],
 //! enabling efficient text editing and manipulation.
 //!
 //! # Performance Characteristics
@@ -692,7 +692,7 @@ mod tests {
         assert!(line.info().grapheme_count.as_usize() > 0);
         assert!(line.info().display_width.as_usize() > 0);
 
-        // Test GCString-compatible methods.
+        // Test GCStringOwned-compatible methods.
         let seg_string = line.info().get_string_at(line.content(), col(6)).unwrap();
         assert_eq!(seg_string.string.as_ref(), "👋");
     }

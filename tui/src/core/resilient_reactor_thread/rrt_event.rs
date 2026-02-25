@@ -40,12 +40,13 @@ pub enum RRTEvent<E> {
     Shutdown(ShutdownReason),
 }
 
-/// Converts a domain event into an [`RRTEvent::Worker`] for sending through the channel.
+/// Converts a domain event into an [`RRTEvent::Worker`] (for sending through the
+/// channel).
 impl<E> From<E> for RRTEvent<E> {
     fn from(event: E) -> Self { Self::Worker(event) }
 }
 
-/// Reason the framework is shutting down the dedicated thread.
+/// Details of a framework-initiated shutdown of the dedicated thread.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ShutdownReason {
     /// Your [`RRTWorker`] trait implementation returned [`Continuation::Restart`] more

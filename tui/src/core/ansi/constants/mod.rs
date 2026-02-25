@@ -1,6 +1,6 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Centralized ANSI/VT100 escape sequence constants.
+//! Centralized ANSI/[`VT-100`] escape sequence constants.
 //!
 //! This module consolidates all ANSI terminal constants into a single,
 //! discoverable location organized by protocol type.
@@ -20,6 +20,7 @@
 //!
 //! ## Usage
 //!
+//!
 //! ```rust
 //! use r3bl_tui::{CSI_START, SGR_RESET_BYTES, ESC_START};
 //!
@@ -28,6 +29,8 @@
 //! let sgr_reset = SGR_RESET_BYTES;
 //! let escape = ESC_START;
 //! ```
+//!
+//! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 
 // Skip rustfmt for rest of file to preserve manual alignment.
 // https://stackoverflow.com/a/75910283/2085356

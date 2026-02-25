@@ -176,6 +176,7 @@ pub trait FastStringify: Display {
 /// [`SmallString<[u8; 256]>`]: smallstr::SmallString
 /// [`SmallString<[u8; 64]>`]: smallstr::SmallString
 /// [`String`]: std::string::String
+#[allow(clippy::doc_markdown)]
 pub type BufTextStorage = String;
 
 /// Macro to implement the boilerplate [`Display`] trait for types implementing

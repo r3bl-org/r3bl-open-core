@@ -105,10 +105,10 @@ mod dsr_request_type_impl {
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DsrSequence {
-    /// Terminal OK status response - ESC[0n
+    /// Terminal OK status response - `ESC [ 0 n`
     StatusOkResponse,
 
-    /// Cursor position response - ESC[row;colR (1-based)
+    /// Cursor position response - `ESC [ row ; col R` (1-based)
     CursorPositionResponse { row: TermRow, col: TermCol },
 }
 
@@ -157,7 +157,7 @@ generate_impl_display_for_fast_stringify!(DsrSequence);
 ///    col }`
 /// 3. **Event → Manager**: Process manager receives the request event
 /// 4. **Manager → PTY → Child process**: Manager sends response bytes back:
-///    `ESC[row;colR`
+///    `ESC [ row ; col R`
 ///
 /// This type implements `Display` which delegates to `DsrSequence` for formatting.
 ///
@@ -178,11 +178,11 @@ generate_impl_display_for_fast_stringify!(DsrSequence);
 #[derive(Debug, Clone, PartialEq)]
 pub enum DsrRequestFromPtyEvent {
     /// Terminal status report requested (CSI 5n received)
-    /// Should respond with ESC[0n (terminal OK)
+    /// Should respond with `ESC [ 0 n` (terminal OK)
     TerminalStatus,
 
     /// Cursor position report requested (CSI 6n received)
-    /// Should respond with ESC[row;colR (1-based coordinates)
+    /// Should respond with `ESC [ row ; col R` (1-based coordinates)
     CursorPosition { row: TermRow, col: TermCol },
 }
 

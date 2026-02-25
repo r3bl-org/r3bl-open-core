@@ -299,15 +299,17 @@ pub mod invalid_character_handling {
 pub mod boundary_edge_cases {
     use super::*;
 
-    /// Note: Testing VT100 spec compliance requires raw ANSI bytes because
-    /// zero-parameter sequences ARE valid in the VT100 spec (treated as 1),
+    /// Note: Testing [`VT-100`] spec compliance requires raw ANSI bytes because
+    /// zero-parameter sequences ARE valid in the [`VT-100`] spec (treated as 1),
     /// but our type-safe API intentionally prevents zero-valued deltas to
-    /// avoid the CSI zero bug. Raw bytes test the parser's VT100 compliance.
+    /// avoid the CSI zero bug. Raw bytes test the parser's [`VT-100`] compliance.
+    ///
+    /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
     #[test]
     fn test_zero_parameter_treated_as_one() {
         let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
 
-        // Test VT100-compliant behavior: zero parameters are treated as 1
+        // Test `VT-100`-compliant behavior: zero parameters are treated as 1
         // Using raw ANSI bytes since type-safe API prevents zero deltas
         let test_cases = vec![
             (
@@ -365,14 +367,14 @@ pub mod boundary_edge_cases {
             // Apply the zero-parameter movement command (raw ANSI bytes)
             let _unused = ofs_buf.apply_ansi_bytes(movement_cmd_bytes);
 
-            // Per VT100 spec: parameter 0 is treated as 1 (minimum movement)
+            // Per `VT-100` spec: parameter 0 is treated as 1 (minimum movement)
             assert_eq!(
                 ofs_buf.cursor_pos.row_index, expected_row,
-                "VT100 spec: {description} should move by 1 (row)"
+                "VT-100 spec: {description} should move by 1 (row)"
             );
             assert_eq!(
                 ofs_buf.cursor_pos.col_index, expected_col,
-                "VT100 spec: {description} should move by 1 (col)"
+                "VT-100 spec: {description} should move by 1 (col)"
             );
         }
     }

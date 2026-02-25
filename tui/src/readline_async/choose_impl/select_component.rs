@@ -45,7 +45,7 @@ impl FunctionComponent<State> for SelectComponent {
         }
     }
 
-    /// Allocate space and print the lines. The bring the cursor back to the start of the
+    /// Allocates space and prints the lines. The bring the cursor back to the start of the
     /// lines.
     fn render(&mut self, state: &mut State) -> CommonResult<()> {
         let render_context = render_helper::RenderContext::new(self, state);

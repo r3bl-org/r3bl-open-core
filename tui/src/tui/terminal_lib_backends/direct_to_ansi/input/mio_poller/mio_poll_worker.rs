@@ -103,7 +103,7 @@ impl RRTWorker for MioPollWorker {
     /// [`mio::Poll`]: mio::Poll
     /// [`mio::Waker`]: mio::Waker
     /// [`wake_and_unblock_dedicated_thread()`]:
-    ///     MioPollWaker::wake_and_unblock_dedicated_thread
+    ///     crate::core::resilient_reactor_thread::RRTWaker::wake_and_unblock_dedicated_thread
     fn create_and_register_os_sources() -> miette::Result<(Self, Self::Waker)> {
         // Create mio::Poll (epoll on Linux, kqueue on macOS).
         let poll_handle = Poll::new().map_err(PollCreationError)?;
@@ -181,6 +181,7 @@ impl MioPollWorker {
     /// See [EINTR handling] for how interrupted syscalls are retried.
     ///
     /// [EINTR handling]: super#eintr-handling
+    /// [`EINTR`]: super#eintr-handling
     /// [`stdin`]: std::io::stdin
     pub fn block_until_ready_then_dispatch_impl(
         &mut self,

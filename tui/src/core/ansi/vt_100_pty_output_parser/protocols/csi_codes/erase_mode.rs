@@ -9,7 +9,7 @@ use crate::NumericConversions;
 
 /// Erase display modes for ED (Erase in Display) - `ESC [ n J`.
 ///
-/// Per ECMA-48 / VT100 specification, only values 0-3 are valid.
+/// Per ECMA-48 / [`VT-100` specification], only values 0-3 are valid.
 /// Using an enum makes invalid modes (like 5) unrepresentable.
 ///
 /// # Example
@@ -23,6 +23,8 @@ use crate::NumericConversions;
 /// // Clear entire screen (like the `clear` command)
 /// let clear_all = CsiSequence::EraseDisplay(EraseDisplayMode::EntireScreen);
 /// ```
+///
+/// [`VT-100` specification]: https://vt100.net/docs/vt100-ug/chapter3.html
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub enum EraseDisplayMode {
     /// Erase from cursor to end of screen (ED 0) - default.
@@ -47,7 +49,9 @@ pub enum EraseDisplayMode {
     /// Erase entire screen and scrollback buffer (ED 3).
     ///
     /// Clears all characters on the screen AND the scrollback buffer.
-    /// This is an xterm extension, not part of the original VT100 spec.
+    /// This is an xterm extension, not part of the original [`VT-100` specification].
+    ///
+    /// [`VT-100` specification]: https://vt100.net/docs/vt100-ug/chapter3.html
     EntireScreenAndScrollback = 3,
 }
 
@@ -55,16 +59,17 @@ impl EraseDisplayMode {
     /// Converts from a raw parameter value.
     ///
     /// Returns the default mode ([`FromCursorToEnd`]) for invalid values,
-    /// matching VT100 terminal behavior.
+    /// matching [`VT-100`] terminal behavior.
     ///
     /// [`FromCursorToEnd`]: Self::FromCursorToEnd
+    /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
     #[must_use]
     pub const fn from_param(value: u16) -> Self {
         match value {
             1 => Self::FromStartToCursor,
             2 => Self::EntireScreen,
             3 => Self::EntireScreenAndScrollback,
-            // 0 is the default per VT100 spec; invalid values also default to this.
+            // 0 is the default per `VT-100` spec; invalid values also default to this.
             _ => Self::FromCursorToEnd,
         }
     }
@@ -81,7 +86,7 @@ impl From<u16> for EraseDisplayMode {
 
 /// Erase line modes for EL (Erase in Line) - `ESC [ n K`.
 ///
-/// Per ECMA-48 / VT100 specification, only values 0-2 are valid.
+/// Per ECMA-48 / [`VT-100` specification], only values 0-2 are valid.
 /// Using an enum makes invalid modes (like 5) unrepresentable.
 ///
 /// # Example
@@ -95,6 +100,8 @@ impl From<u16> for EraseDisplayMode {
 /// // Clear entire line
 /// let clear_line = CsiSequence::EraseLine(EraseLineMode::EntireLine);
 /// ```
+///
+/// [`VT-100` specification]: https://vt100.net/docs/vt100-ug/chapter3.html
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub enum EraseLineMode {
     /// Erase from cursor to end of line (EL 0) - default.
@@ -120,15 +127,16 @@ impl EraseLineMode {
     /// Converts from a raw parameter value.
     ///
     /// Returns the default mode ([`FromCursorToEnd`]) for invalid values,
-    /// matching VT100 terminal behavior.
+    /// matching [`VT-100`] terminal behavior.
     ///
     /// [`FromCursorToEnd`]: Self::FromCursorToEnd
+    /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
     #[must_use]
     pub const fn from_param(value: u16) -> Self {
         match value {
             1 => Self::FromStartToCursor,
             2 => Self::EntireLine,
-            // 0 is the default per VT100 spec; invalid values also default to this.
+            // 0 is the default per `VT-100` spec; invalid values also default to this.
             _ => Self::FromCursorToEnd,
         }
     }

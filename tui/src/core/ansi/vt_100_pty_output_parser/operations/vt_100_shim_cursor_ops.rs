@@ -66,10 +66,10 @@
 //!     Update OffscreenBuffer state
 //! ```
 //!
-//! # VT100 Protocol Conventions
+//! # [`VT-100`] Protocol Conventions
 //!
-//! This shim layer sits at the boundary between VT100 wire format and internal types.
-//! Understanding VT100 parameter conventions is essential for maintaining this code.
+//! This shim layer sits at the boundary between [`VT-100`] wire format and internal types.
+//! Understanding [`VT-100`] parameter conventions is essential for maintaining this code.
 //!
 //! ## Parameter Handling
 //!
@@ -82,10 +82,10 @@
 //!
 //! ## Coordinate Systems
 //!
-//! **VT100 uses 1-based coordinates, internal buffers use 0-based indices:**
+//! **[`VT-100`] uses 1-based coordinates, internal buffers use 0-based indices:**
 //!
 //! ```text
-//! VT100 Wire Format    →    1-based Types    →    0-based Indices
+//! [`VT-100`] Wire Format    →    1-based Types    →    0-based Indices
 //! ─────────────────         ──────────────         ───────────────
 //! ESC [5;10H                TermRow(5)             RowIndex(4)
 //!                           TermCol(10)            ColIndex(9)
@@ -102,6 +102,7 @@
 //! [`RowIndex`]: crate::RowIndex
 //! [`TermCol::from_raw_non_zero_value()`]: crate::TermCol::from_raw_non_zero_value
 //! [`TermRow::from_raw_non_zero_value()`]: crate::TermRow::from_raw_non_zero_value
+//! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 //! [`extract_nth_single_non_zero()`]: crate::ParamsExt::extract_nth_single_non_zero
 //! [`impl_cursor_ops`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl::vt_100_impl_cursor_ops
 //! [`test_cursor_ops`]: crate::core::ansi::vt_100_pty_output_parser::vt_100_pty_output_conformance_tests::tests::vt_100_test_cursor_ops
@@ -114,7 +115,7 @@ use vte::Params;
 
 /// Move cursor up by n lines.
 ///
-/// **VT100 Protocol**: See [module-level documentation] for parameter handling
+/// **[`VT-100`] Protocol**: See [module-level documentation] for parameter handling
 /// (missing/zero parameters default to 1).
 ///
 /// **Behavior**: Respects DECSTBM scroll region margins.
@@ -122,6 +123,7 @@ use vte::Params;
 /// **Implementation**: See [`OffscreenBuffer::cursor_up`] for detailed behavior.
 ///
 /// [`OffscreenBuffer::cursor_up`]: crate::OffscreenBuffer::cursor_up
+/// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 /// [module-level documentation]: self
 pub fn cursor_up(performer: &mut AnsiToOfsBufPerformer, params: &Params) {
     let how_many = params.extract_nth_single_non_zero(0).get().into();
@@ -130,7 +132,7 @@ pub fn cursor_up(performer: &mut AnsiToOfsBufPerformer, params: &Params) {
 
 /// Move cursor down by n lines.
 ///
-/// **VT100 Protocol**: See [module-level documentation] for parameter handling
+/// **[`VT-100`] Protocol**: See [module-level documentation] for parameter handling
 /// (missing/zero parameters default to 1).
 ///
 /// **Behavior**: Respects DECSTBM scroll region margins.
@@ -138,6 +140,7 @@ pub fn cursor_up(performer: &mut AnsiToOfsBufPerformer, params: &Params) {
 /// **Implementation**: See [`OffscreenBuffer::cursor_down`] for detailed behavior.
 ///
 /// [`OffscreenBuffer::cursor_down`]: crate::OffscreenBuffer::cursor_down
+/// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 /// [module-level documentation]: self
 pub fn cursor_down(performer: &mut AnsiToOfsBufPerformer, params: &Params) {
     let how_many = params.extract_nth_single_non_zero(0).get().into();
@@ -146,12 +149,13 @@ pub fn cursor_down(performer: &mut AnsiToOfsBufPerformer, params: &Params) {
 
 /// Move cursor forward by n columns.
 ///
-/// **VT100 Protocol**: See [module-level documentation] for parameter handling
+/// **[`VT-100`] Protocol**: See [module-level documentation] for parameter handling
 /// (missing/zero parameters default to 1).
 ///
 /// **Implementation**: See [`OffscreenBuffer::cursor_forward`] for detailed behavior.
 ///
 /// [`OffscreenBuffer::cursor_forward`]: crate::OffscreenBuffer::cursor_forward
+/// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 /// [module-level documentation]: self
 pub fn cursor_forward(performer: &mut AnsiToOfsBufPerformer, params: &Params) {
     let how_many = params.extract_nth_single_non_zero(0).get().into();
@@ -160,12 +164,13 @@ pub fn cursor_forward(performer: &mut AnsiToOfsBufPerformer, params: &Params) {
 
 /// Move cursor backward by n columns.
 ///
-/// **VT100 Protocol**: See [module-level documentation] for parameter handling
+/// **[`VT-100`] Protocol**: See [module-level documentation] for parameter handling
 /// (missing/zero parameters default to 1).
 ///
 /// **Implementation**: See [`OffscreenBuffer::cursor_backward`] for detailed behavior.
 ///
 /// [`OffscreenBuffer::cursor_backward`]: crate::OffscreenBuffer::cursor_backward
+/// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 /// [module-level documentation]: self
 pub fn cursor_backward(performer: &mut AnsiToOfsBufPerformer, params: &Params) {
     let how_many = params.extract_nth_single_non_zero(0).get().into();
@@ -174,13 +179,14 @@ pub fn cursor_backward(performer: &mut AnsiToOfsBufPerformer, params: &Params) {
 
 /// Sets cursor position to (row, column).
 ///
-/// **VT100 Protocol**: See [module-level documentation] for coordinate conversion
-/// from 1-based VT100 format to 0-based buffer indices. Missing/zero parameters default
-/// to 1.
+/// **[`VT-100`] Protocol**: See [module-level documentation] for coordinate conversion
+/// from 1-based [`VT-100`] format to 0-based buffer indices. Missing/zero parameters
+/// default to 1.
 ///
 /// **Behavior**: Respects DECSTBM scroll region margins. Coordinates are converted from
-/// 1-based VT100 format to 0-based internal indices.
+/// 1-based [`VT-100`] format to 0-based internal indices.
 ///
+/// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 /// [module-level documentation]: self
 pub fn cursor_position(performer: &mut AnsiToOfsBufPerformer, params: &Params) {
     let (row, col) = parse_cursor_position(params);
@@ -189,9 +195,10 @@ pub fn cursor_position(performer: &mut AnsiToOfsBufPerformer, params: &Params) {
 
 /// Handle CNL (Cursor Next Line) - move cursor to beginning of line n lines down.
 ///
-/// **VT100 Protocol**: See [module-level documentation] for parameter handling
+/// **[`VT-100`] Protocol**: See [module-level documentation] for parameter handling
 /// (missing/zero parameters default to 1).
 ///
+/// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 /// [module-level documentation]: self
 pub fn cursor_next_line(performer: &mut AnsiToOfsBufPerformer, params: &Params) {
     let how_many = params.extract_nth_single_non_zero(0).get().into();
@@ -201,9 +208,10 @@ pub fn cursor_next_line(performer: &mut AnsiToOfsBufPerformer, params: &Params) 
 
 /// Handle CPL (Cursor Previous Line) - move cursor to beginning of line n lines up.
 ///
-/// **VT100 Protocol**: See [module-level documentation] for parameter handling
+/// **[`VT-100`] Protocol**: See [module-level documentation] for parameter handling
 /// (missing/zero parameters default to 1).
 ///
+/// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 /// [module-level documentation]: self
 pub fn cursor_prev_line(performer: &mut AnsiToOfsBufPerformer, params: &Params) {
     let how_many = params.extract_nth_single_non_zero(0).get().into();
@@ -213,10 +221,11 @@ pub fn cursor_prev_line(performer: &mut AnsiToOfsBufPerformer, params: &Params) 
 
 /// Handle CHA (Cursor Horizontal Absolute) - move cursor to column n.
 ///
-/// **VT100 Protocol**: See [module-level documentation] for coordinate conversion
-/// from 1-based VT100 format to 0-based buffer indices. Missing/zero parameters default
-/// to 1.
+/// **[`VT-100`] Protocol**: See [module-level documentation] for coordinate conversion
+/// from 1-based [`VT-100`] format to 0-based buffer indices. Missing/zero parameters
+/// default to 1.
 ///
+/// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 /// [module-level documentation]: self
 pub fn cursor_column(performer: &mut AnsiToOfsBufPerformer, params: &Params) {
     let target_col =
@@ -237,12 +246,13 @@ pub fn restore_cursor_position(performer: &mut AnsiToOfsBufPerformer) {
 
 /// Handle VPA (Vertical Position Absolute) - move cursor to specified row.
 ///
-/// **VT100 Protocol**: See [module-level documentation] for coordinate conversion
-/// from 1-based VT100 format to 0-based buffer indices. Missing/zero parameters default
-/// to 1.
+/// **[`VT-100`] Protocol**: See [module-level documentation] for coordinate conversion
+/// from 1-based [`VT-100`] format to 0-based buffer indices. Missing/zero parameters
+/// default to 1.
 ///
 /// The horizontal position remains unchanged.
 ///
+/// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 /// [module-level documentation]: self
 pub fn vertical_position_absolute(
     performer: &mut AnsiToOfsBufPerformer,

@@ -17,7 +17,7 @@
 use crate::{CSI_PARAM_SEPARATOR, DSR_CURSOR_POSITION_RESPONSE_END, DSR_RESPONSE_START,
             TermCol, TermRow};
 
-/// Generate DSR cursor position response: ESC[row;colR
+/// Generate DSR cursor position response: `ESC [ row ; col R`
 ///
 /// Creates a properly formatted cursor position report response that would be
 /// sent from the terminal back to the application in response to `CSI 6n`.

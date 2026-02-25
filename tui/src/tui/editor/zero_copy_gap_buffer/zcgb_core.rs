@@ -28,7 +28,7 @@ pub struct ZeroCopyGapBuffer {
 }
 
 impl ZeroCopyGapBuffer {
-    /// Create a new empty [`ZeroCopyGapBuffer`]
+    /// Creates a new empty [`ZeroCopyGapBuffer`]
     #[must_use]
     pub fn new() -> Self {
         Self {
@@ -38,7 +38,7 @@ impl ZeroCopyGapBuffer {
         }
     }
 
-    /// Create a new [`ZeroCopyGapBuffer`] with pre-allocated capacity
+    /// Creates a new [`ZeroCopyGapBuffer`] with pre-allocated capacity
     #[must_use]
     pub fn with_capacity(line_capacity: usize) -> Self {
         Self {
@@ -168,7 +168,9 @@ impl ZeroCopyGapBuffer {
 
     /// Add a new line to the buffer (always appends at the end)
     ///
-    /// Returns the index of the newly added line.
+    /// # Returns
+    ///
+    /// The index of the newly added line.
     ///
     /// # Buffer Behavior
     ///
@@ -219,7 +221,9 @@ impl ZeroCopyGapBuffer {
 
     /// Remove a line from the buffer
     ///
-    /// Returns true if the line was removed, false if index was out of bounds.
+    /// # Returns
+    ///
+    /// `true` if the line was removed, `false` if index was out of bounds.
     ///
     /// # Buffer Shifting Behavior
     ///
@@ -281,7 +285,7 @@ impl ZeroCopyGapBuffer {
         self.line_count = len(0);
     }
 
-    /// Check if a line can accommodate additional bytes without reallocation
+    /// Checks if a line can accommodate additional bytes without reallocation
     #[must_use]
     pub fn can_insert(
         &self,
@@ -400,7 +404,7 @@ impl GraphemeDoc for ZeroCopyGapBuffer {
     fn as_bytes(&self) -> Cow<'_, [u8]> { Cow::Borrowed(self.as_bytes()) }
 }
 
-/// Iterator over lines in a `ZeroCopyGapBuffer`
+/// Iterator over lines in a [`ZeroCopyGapBuffer`]
 #[derive(Debug)]
 pub struct ZeroCopyLineIterator<'a> {
     buffer: &'a ZeroCopyGapBuffer,

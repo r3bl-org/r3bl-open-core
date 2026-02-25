@@ -1,46 +1,56 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! This module is standalone, you can use it any project that uses
-//! [miette](https://docs.rs/miette/latest/miette/index.html) for error handling.
+//! Standalone [`miette`] global report handler setup.
 //!
-//! If you want to change the default global report handler you can do the following:
-//! 1. Customize the default global implementation of the `ReportHandler` trait. (Easy).
+//! This module can be used in any project that uses [`miette`] for error handling. To
+//! change the default global report handler, you can either:
+//! 1. Customize the default global implementation of [`ReportHandler`]. (Easy).
 //! 2. Register a custom error report handler of your own. (Difficult).
 //!
-//! Background information on miette's architecture:
-//! - Miette allows customization how the report is [`Report`](https://docs.rs/miette/latest/miette/struct.Report.html)
-//!   displayed to terminal output (stdout, stderr), when the global hook is activated,
-//!   due to a program "erroring out" or "crashing", when the top-level miette handler in
-//!   `main() -> miette::Result<_>` is activated. This hook is only activated at the time
-//!   that the error is displayed to terminal output, not when it is registered, it is
-//!   lazy. So it is possible to detect the terminal width just before the output is
-//!   generated to the terminal output (stdout, stderr).
-//! - The global default implementation of the [`ReportHandler` trait](https://docs.rs/miette/latest/miette/trait.ReportHandler.html)
-//!   is done by [`MietteHandler` struct](https://docs.rs/miette/latest/miette/struct.MietteHandler.html).
-//! - Using the [`MietteHandlerOpts`
-//!   struct](https://docs.rs/miette/latest/miette/struct.MietteHandlerOpts.html) you can
-//!   configure the default `MietteHandler`. Under the hood, `build()` produces a
-//!   [`GraphicalReportHandler`
-//!   struct](https://docs.rs/miette/latest/miette/struct.GraphicalReportHandler.html)
-//!   which is the "real" handler struct.
-//! - The [`miette::set_hook`] function is used to register a custom error report handler.
-//!   Here's an [example in a test](https://github.com/zkat/miette/blob/6ea86a2248854acf88df345814b6c97d31b8b4d9/tests/test_location.rs#L39)
-//!   which registers a custom hook / report handler.
+//! ## Architecture
+//!
+//! [`miette`] allows customizing how a [`Report`] is displayed to terminal output
+//! ([`stdout`], [`stderr`]) when the program errors out. The global hook is only
+//! activated at display time, not when it is registered - it is lazy. This makes it
+//! possible to detect the terminal width just before the output is generated.
+//!
+//! - The default global implementation of [`ReportHandler`] is [`MietteHandler`].
+//! - [`MietteHandlerOpts`] configures [`MietteHandler`]. Under the hood,
+//!   [`MietteHandlerOpts::build()`] produces a [`GraphicalReportHandler`], which is the
+//!   "real" handler struct.
+//! - [`miette::set_hook()`] registers a custom error report handler. Here's an [example
+//!   in a test] which registers a custom hook.
+//!
+//! [`GraphicalReportHandler`]: miette::GraphicalReportHandler
+//! [`MietteHandlerOpts::build()`]: miette::MietteHandlerOpts::build
+//! [`MietteHandlerOpts`]: miette::MietteHandlerOpts
+//! [`MietteHandler`]: miette::MietteHandler
+//! [`ReportHandler`]: miette::ReportHandler
+//! [`Report`]: miette::Report
+//! [`miette::set_hook()`]: miette::set_hook
+//! [`miette`]: miette
+//! [`stderr`]: std::io::stderr
+//! [`stdout`]: std::io::stdout
+//! [example in a test]:
+//!     https://github.com/zkat/miette/blob/6ea86a2248854acf88df345814b6c97d31b8b4d9/tests/test_location.rs#L39
 
 use miette::MietteHandlerOpts;
 use tracing::debug;
 
-/// The [`miette::ErrorHook`] is lazily evaluated.
+/// Registers a default [`miette`] global report handler with lazy terminal width
+/// detection.
 ///
-/// The terminal width will be calculated just at the time of the global error handler
-/// being used. So if an error never occurs, then the terminal width will never be
-/// calculated. This is the desired behavior.
+/// The [`miette::ErrorHook`] is lazily evaluated - terminal width is calculated only
+/// when the error handler is actually invoked. If no error occurs, the terminal width
+/// is never calculated.
+///
+/// [`miette::ErrorHook`]: miette::ErrorHook
+/// [`miette`]: miette
 pub fn setup_default_miette_global_report_handler(issues_url: &'static str) {
     miette::set_hook(Box::new(|_report| {
         let terminal_width = {
-            let it = crossterm::terminal::size()
-                .map(|(columns, _rows)| columns)
-                .unwrap_or(80) as usize;
+            let it = crossterm::terminal::size().map_or(80, |(columns, _rows)| columns)
+                as usize;
             debug!("miette::set_hook -> terminal_width: {}", it);
             it
         };

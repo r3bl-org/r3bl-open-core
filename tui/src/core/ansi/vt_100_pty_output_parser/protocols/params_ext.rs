@@ -1,21 +1,23 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Parameter parsing utilities for VT100-compliant escape sequences. See [`ParamsExt`]
+//! Parameter parsing utilities for [`VT-100`]-compliant escape sequences. See [`ParamsExt`]
 //! and [`parse_cursor_position`] for details.
+//!
+//! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 
 use crate::{ColIndex, Index, RowIndex, TermCol, TermRow};
 use std::{cmp::max, num::NonZeroU16};
 
-/// Extension trait for [`vte::Params`] providing VT100-compliant parameter extraction.
+/// Extension trait for [`vte::Params`] providing [`VT-100`]-compliant parameter extraction.
 ///
 /// This extension trait works around Rust's orphan rule, which prevents adding impl
 /// blocks directly to [`vte::Params`] (a type from an external crate).
 ///
-/// # VT100 Parameter Structure
+/// # `VT-100` Parameter Structure
 ///
 /// The [`vte::Params`] type captures parameters for a **single command** (after it is
 /// parsed from the bytes emitted from the child process running in PTY-slave). We have no
-/// control over this. The following is an overview of how VT100 parameters are
+/// control over this. The following is an overview of how [`VT-100`] parameters are
 /// structured, which informs how the [`vte::Params`] type organizes them.
 ///
 /// <div class="warning">
@@ -43,14 +45,14 @@ use std::{cmp::max, num::NonZeroU16};
 ///
 /// Here are some examples of how different escape sequences are parsed:
 ///
-/// | Command         | `&[u16]`         | Details                                                                  |
-/// | --------------- | ---------------- | ------------------------------------------------------------------------ |
-/// | `ESC[5;10H]`    | `[[5], [10]]`    | 2 "single" params separated by `;` each stored as a single-element slice |
-/// | `ESC[38:5:196m` | `[[38, 5, 196]]` | 1 param with 3 sub-params separated by `:` stored as a 3 element slice   |
+/// | Command                | `&[u16]`         | Details                                                                  |
+/// | ---------------------- | ---------------- | ------------------------------------------------------------------------ |
+/// | `ESC [ 5 ; 10 H`       | `[[5], [10]]`    | 2 "single" params separated by `;` each stored as a single-element slice |
+/// | `ESC [ 38 : 5 : 196 m` | `[[38, 5, 196]]` | 1 param with 3 sub-params separated by `:` stored as a 3 element slice   |
 ///
 /// - The `extract_nth_single_*` methods extract the **primary value** (first element)
 ///   from each parameter slice using `.first()`, which is the standard behavior for most
-///   VT100 commands.
+///   [`VT-100`] commands.
 /// - In contrast, `extract_nth_many_raw` method returns the complete slice, supporting
 ///   complex sequences like extended colors that need all sub-parameters.
 ///
@@ -65,22 +67,22 @@ use std::{cmp::max, num::NonZeroU16};
 /// ```
 ///
 /// **Why these methods exist**: They handle the slice extraction (`.first()`) and
-/// VT100-compliant defaults automatically:
+/// [`VT-100`]-compliant defaults automatically:
 ///
-/// | Sequence | `extract_nth_single_non_zero(0)` | `extract_nth_single_opt_raw(0)` |
-/// | -------- | -------------------------------- | ------------------------------- |
-/// | `ESC[A`  | 1                                | `Some(0)` ▪                     |
-/// | `ESC[0A` | 1                                | `Some(0)` ▪                     |
-/// | `ESC[5A` | 5                                | `Some(5)`                       |
+/// | Sequence    | `extract_nth_single_non_zero(0)` | `extract_nth_single_opt_raw(0)` |
+/// | ----------- | -------------------------------- | ------------------------------- |
+/// | `ESC [ A`   | 1                                | `Some(0)` ▪                     |
+/// | `ESC [ 0 A` | 1                                | `Some(0)` ▪                     |
+/// | `ESC [ 5 A` | 5                                | `Some(5)`                       |
 ///
-/// ▪ **Note**: VTE normalizes missing parameters to `0` internally, making them
-/// indistinguishable from explicit zeros. Both `ESC[A` and `ESC[0A` produce identical
-/// results.
+/// ▪ **Note**: [`VTE`] normalizes missing parameters to `0` internally, making them
+/// indistinguishable from explicit zeros. Both `ESC [ A` and `ESC [ 0 A` produce
+/// identical results.
 ///
 /// # Method Selection Guide
 ///
 /// **Use [`extract_nth_single_non_zero`]** when:
-/// - Missing/zero parameters should default to 1 (VT100 standard behavior)
+/// - Missing/zero parameters should default to 1 ([`VT-100`] standard behavior)
 /// - Implementing cursor movement commands (`CUU`, `CUD`, `CUF`, `CUB`)
 /// - Implementing scroll operations (`SU`, `SD`)
 /// - The parameter represents a count or distance
@@ -107,18 +109,19 @@ use std::{cmp::max, num::NonZeroU16};
 /// | `extract_nth_single_opt_raw`    | `Some(0)` ▪       | `Some(0)` ▪      | `Some(n)`        | `None`          | first value         |
 /// | `extract_nth_many_raw`          | `Some(&[0])` ▪    | `Some(&[0])` ▪   | `Some(&[n])`     | `None`          | `Some(&[...all])`   |
 ///
-/// - ▪ VTE cannot distinguish missing parameters from explicit zeros - both produce `0`.
-/// - ▪▪ Out-of-bounds is treated as a missing parameter (defaults to 1) per VT100 spec.
-///   Use [`extract_nth_single_opt_raw`] if you need to distinguish missing from
-///   out-of-bounds.
+/// - ▪ [`VTE`] cannot distinguish missing parameters from explicit zeros - both produce
+///   `0`.
+/// - ▪▪ Out-of-bounds is treated as a missing parameter (defaults to 1) per [`VT-100`
+///   specification]. Use [`extract_nth_single_opt_raw`] if you need to distinguish
+///   missing from out-of-bounds.
 ///
 /// # Working Example
 ///
-/// The following example demonstrates parsing a 256-color escape sequence through the VTE
-/// parser and extracting its parameters using [`extract_nth_many_raw`]:
+/// The following example demonstrates parsing a 256-color escape sequence through the
+/// [`VTE`] [`Parser`] and extracting its parameters using [`extract_nth_many_raw`]:
 ///
 /// ```rust
-/// # // Doc test for VT100 parameter parsing workflow
+/// # // Doc test for `VT-100` parameter parsing workflow
 /// # use r3bl_tui::ParamsExt;
 /// # use vte::{Parser, Perform};
 /// #
@@ -162,26 +165,26 @@ use std::{cmp::max, num::NonZeroU16};
 /// ```
 ///
 /// This workflow demonstrates:
-/// - **Parsing**: Feed escape sequences to the VTE parser
+/// - **Parsing**: Feed escape sequences to the [`VTE`] [`Parser`]
 /// - **Extraction**: Use [`ParamsExt`] methods to get parameter values
 /// - **Pattern matching**: Validate and interpret the extracted parameters
 ///
-/// See the [VT100 Parameter Structure] section for details on how parameters are
+/// See the [`VT-100` Parameter Structure] section for details on how parameters are
 /// organized in different escape sequence formats (semicolon vs colon).
 ///
 /// # Behavior Validation
 ///
-/// The assumptions documented above about VTE's parameter handling are validated in
+/// The assumptions documented above about [`VTE`]'s parameter handling are validated in
 /// executable form through the [`vte_params_behavior_validation`] test module. This test
-/// suite feeds real escape sequences through the VTE parser and verifies that:
+/// suite feeds real escape sequences through the [`VTE`] [`Parser`] and verifies that:
 ///
-/// - **Missing parameters normalize to `0`**: `ESC[A` produces `Some(0)` / `Some(&[0])`
-/// - **Explicit zeros are indistinguishable**: `ESC[A` and `ESC[0A` produce identical
-///   results
+/// - **Missing parameters normalize to `0`**: `ESC [ A` produces `Some(0)` / `Some(&[0])`
+/// - **Explicit zeros are indistinguishable**: `ESC [ A` and `ESC [ 0 A` produce
+///   identical results
 /// - **Out-of-bounds access returns `None`**: Accessing non-existent positions doesn't
 ///   panic
 ///
-/// These validation tests serve as **regression protection**—if VTE's behavior ever
+/// These validation tests serve as **regression protection**—if [`VTE`]'s behavior ever
 /// changes in a future version, the tests will immediately catch the discrepancy,
 /// alerting us that our documentation and implementation assumptions need updating.
 ///
@@ -189,7 +192,7 @@ use std::{cmp::max, num::NonZeroU16};
 ///
 /// While [`ParamsExt`] provides low-level parameter **extraction**, there are
 /// higher-level parsing functions that use these primitives to implement **semantic
-/// interpretation** for specific VT100 commands. These are distinct layers:
+/// interpretation** for specific [`VT-100`] commands. These are distinct layers:
 ///
 /// | Layer                              | Responsibility                                    | Example                            |
 /// | ---------------------------------- | ------------------------------------------------- | ---------------------------------- |
@@ -198,23 +201,27 @@ use std::{cmp::max, num::NonZeroU16};
 ///
 /// ## Available Parsers
 ///
-/// - [`parse_cursor_position()`] - Convert VT100 cursor position parameters (`ESC[5;10H`)
-///   to 0-based buffer coordinates ([`RowIndex(4)`], [`ColIndex(9)`])
+/// - [`parse_cursor_position()`] - Convert [`VT-100`] cursor position parameters (`ESC [ 5
+///   ; 10 H`) to 0-based buffer coordinates ([`RowIndex(4)`], [`ColIndex(9)`])
 ///
 /// ## Design Rationale
 ///
 /// Parsers are intentionally **not** trait methods because:
 ///
 /// 1. **Separation of concerns** - Each parser handles domain-specific logic (type
-///    conversion, bounds checking, VT100-spec interpretation)
+///    conversion, bounds checking, [`VT-100` specification] interpretation)
 /// 2. **Scalability** - New parsers for other commands (`parse_sgr_attributes`,
 ///    `parse_erase_region`, etc.) don't require trait modifications
 /// 3. **Composability** - Parsers can be used independently or combined
 /// 4. **Testability** - Each parser can be tested in isolation
 ///
-/// [VT100 Parameter Structure]: #vt100-parameter-structure
 /// [`ColIndex(9)`]: crate::ColIndex
+/// [`Parser`]: vte::Parser
 /// [`RowIndex(4)`]: crate::RowIndex
+/// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+/// [`VT-100` Parameter Structure]: #vt-100-parameter-structure
+/// [`VT-100` specification]: https://vt100.net/docs/vt100-ug/chapter3.html
+/// [`VTE`]: mod@vte
 /// [`extract_nth_many_raw`]: Self::extract_nth_many_raw
 /// [`extract_nth_single_non_zero(0)`]: Self::extract_nth_single_non_zero
 /// [`extract_nth_single_non_zero`]: Self::extract_nth_single_non_zero
@@ -223,38 +230,40 @@ use std::{cmp::max, num::NonZeroU16};
 /// [`vte::Params`]: vte::Params
 /// [`vte_params_behavior_validation`]: vte_params_behavior_validation
 pub trait ParamsExt {
-    /// Extracts the nth parameter (0-based) with VT100-compliant default handling.
+    /// Extracts the nth parameter (0-based) with [`VT-100`]-compliant default handling.
     ///
-    /// See the [VT100 Parameter Structure section] at the trait level for comprehensive
-    /// documentation on how parameters are structured, indexed, and how to choose between
-    /// this method and [`extract_nth_single_opt_raw`].
+    /// See the [`VT-100` Parameter Structure section] at the trait level for
+    /// comprehensive documentation on how parameters are structured, indexed, and how
+    /// to choose between this method and [`extract_nth_single_opt_raw`].
     ///
     /// This method extracts only the **first** sub-parameter value (for simple
     /// parameters). For complex sequences with multiple sub-parameters, use
     /// [`extract_nth_many_raw`].
     ///
     /// # Returns
-    /// [`NonZeroU16`] - Always returns a value `>= 1` per VT100 specification.
+    /// [`NonZeroU16`] - Always returns a value `>= 1` per [`VT-100` specification].
     ///
     /// <div class="warning">
     ///
-    /// Missing or zero parameters default to 1, ensuring VT100 compatibility.
+    /// Missing or zero parameters default to 1, ensuring [`VT-100`] compatibility.
     /// Out-of-bounds parameter positions are also treated as missing and default to 1. If
     /// you need to distinguish between missing and out-of-bounds, use
     /// [`extract_nth_single_opt_raw`].
     ///
     /// </div>
     ///
-    /// [VT100 Parameter Structure section]: ParamsExt#vt100-parameter-structure
+    /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+    /// [`VT-100` Parameter Structure section]: ParamsExt#vt100-parameter-structure
+    /// [`VT-100` specification]: https://vt100.net/docs/vt100-ug/chapter3.html
     /// [`extract_nth_many_raw`]: Self::extract_nth_many_raw
     /// [`extract_nth_single_opt_raw`]: Self::extract_nth_single_opt_raw
     fn extract_nth_single_non_zero(&self, arg_nth_pos: impl Into<Index>) -> NonZeroU16;
 
     /// Extracts the nth parameter (0-based) without default transformation.
     ///
-    /// See the [VT100 Parameter Structure section] at the trait level for comprehensive
-    /// documentation on how parameters are structured, indexed, and how to choose between
-    /// this method and [`extract_nth_single_non_zero`].
+    /// See the [`VT-100` Parameter Structure section] at the trait level for
+    /// comprehensive documentation on how parameters are structured, indexed, and how
+    /// to choose between this method and [`extract_nth_single_non_zero`].
     ///
     /// This method extracts only the **first** sub-parameter value (for simple
     /// parameters). For complex sequences with multiple sub-parameters, use
@@ -262,51 +271,55 @@ pub trait ParamsExt {
     ///
     /// # Returns
     ///
-    /// The raw parameter value without VT100's "treat 0 as 1" logic.
+    /// The raw parameter value without [`VT-100`]'s "treat 0 as 1" logic.
     ///
     /// - [`None`] if index n is out of bounds (position doesn't exist)
     /// - [`Some(value)`] if position n exists (value may be 0 for missing/zero params)
     ///
     /// <div class="warning">
     ///
-    /// VTE normalizes missing parameters to `0`, so `ESC[A` and `ESC[0A` both return
-    /// `Some(0)`.
+    /// [`VTE`] normalizes missing parameters to `0`, so `ESC [ A` and `ESC [ 0 A` both
+    /// return `Some(0)`.
     ///
     /// </div>
     ///
-    /// [VT100 Parameter Structure section]: ParamsExt#vt100-parameter-structure
     /// [`Some(value)`]: Option::Some
+    /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+    /// [`VT-100` Parameter Structure section]: ParamsExt#vt100-parameter-structure
+    /// [`VTE`]: mod@vte
     /// [`extract_nth_many_raw`]: Self::extract_nth_many_raw
     /// [`extract_nth_single_non_zero`]: Self::extract_nth_single_non_zero
     fn extract_nth_single_opt_raw(&self, arg_nth_pos: impl Into<Index>) -> Option<u16>;
 
     /// Extracts all (variable number of) sub-parameters at position n as a slice.
     ///
-    /// See the [VT100 Parameter Structure section] and [Working Example section] at the
-    /// trait level for comprehensive documentation on parameter structure, examples with
-    /// real escape sequences, and use cases for handling semicolon vs colon-separated
-    /// formats.
+    /// See the [`VT-100` Parameter Structure section] and [Working Example section] at
+    /// the trait level for comprehensive documentation on parameter structure,
+    /// examples with real escape sequences, and use cases for handling semicolon vs
+    /// colon-separated formats.
     ///
     /// This method provides access to the complete parameter slice at the given position,
     /// including all colon-separated sub-parameters. This is essential for handling
-    /// extended color sequences and other complex VT100 parameters.
+    /// extended color sequences and other complex [`VT-100`] parameters.
     ///
     /// # Use Cases
     ///
-    /// - **256-color sequences**: `ESC[38:5:196m` → `Some(&[38, 5, 196])`
-    /// - **RGB color sequences**: `ESC[38:2:255:128:0m` → `Some(&[38, 2, 255, 128, 0])`
-    /// - **Simple parameters**: `ESC[5A` → `Some(&[5])`
-    /// - **Multiple parameters**: `ESC[1;31m` → positions 0 and 1 return `Some(&[1])` and
-    ///   `Some(&[31])` respectively
+    /// - **256-color sequences**: `ESC [ 38 : 5 : 196 m` → `Some(&[38, 5, 196])`
+    /// - **RGB color sequences**: `ESC [ 38 : 2 : 255 : 128 : 0 m` → `Some(&[38, 2, 255,
+    ///   128, 0])`
+    /// - **Simple parameters**: `ESC [ 5 A` → `Some(&[5])`
+    /// - **Multiple parameters**: `ESC [ 1 ; 31 m` → positions 0 and 1 return
+    ///   `Some(&[1])` and `Some(&[31])` respectively
     ///
     /// # Returns
     /// - [`None`] if no parameter exists at index n
     /// - [`Some(slice)`] - A reference to the sub-parameter slice (zero-copy, no
     ///   allocation)
     ///
-    /// [VT100 Parameter Structure section]: ParamsExt#vt100-parameter-structure
     /// [Working Example section]: ParamsExt#working-example
     /// [`Some(slice)`]: Option::Some
+    /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+    /// [`VT-100` Parameter Structure section]: ParamsExt#vt100-parameter-structure
     fn extract_nth_many_raw(&self, arg_nth_pos: impl Into<Index>) -> Option<&[u16]>;
 }
 
@@ -342,13 +355,16 @@ impl ParamsExt for vte::Params {
     }
 }
 
-/// Parse VT100 cursor position parameters and convert to 0-based
+/// Parse [`VT-100`] cursor position parameters and convert to 0-based
 /// buffer coordinates.
 ///
 /// # Conversion Flow
 ///
+/// **[`VT-100` specification]**: Coordinates are 1-based; missing/zero parameters default
+/// to 1.
+///
 /// ```text
-/// VTE Params           1-based VT100        0-based Buffer
+/// VTE Params           1-based `VT-100`     0-based Buffer
 /// (from parser)        Coordinates          Indices
 /// ─────────────        ───────────────      ──────────────
 /// ESC[5;10H       →    TermRow(5)      →    RowIndex(4)
@@ -359,12 +375,14 @@ impl ParamsExt for vte::Params {
 /// (ensures >= 1)      (1-based coords)    (for buffers)
 /// ```
 ///
-/// **VT100 Spec**: Coordinates are 1-based; missing/zero parameters default to 1.
+/// # Returns
 ///
-/// **Result**: 0-based [`RowIndex`]/[`ColIndex`] ready for buffer operations.
+/// 0-based [`RowIndex`]/[`ColIndex`] ready for buffer operations.
 ///
 /// [`ColIndex`]: crate::ColIndex
 /// [`RowIndex`]: crate::RowIndex
+/// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+/// [`VT-100` specification]: https://vt100.net/docs/vt100-ug/chapter3.html
 #[must_use]
 pub fn parse_cursor_position(params: &vte::Params) -> (RowIndex, ColIndex) {
     // Step 1: Extract 1-based parameters (NonZeroU16, guaranteed >= 1)
@@ -381,29 +399,36 @@ pub fn parse_cursor_position(params: &vte::Params) -> (RowIndex, ColIndex) {
 ///
 /// The [`vte::Params`] type has private fields and cannot be meaningfully constructed
 /// with test data. While it implements `Default`, you can only populate it through
-/// the VTE parser by feeding it real escape sequences.
+/// the [`VTE`] [`Parser`] by feeding it real escape sequences.
 ///
 /// The [`ParamsExt`] methods are thoroughly tested through integration tests in separate
 /// test modules:
 /// - [`extract_nth_all_tests`] - Tests `extract_nth_many_raw()` with various parameter
 ///   formats
-/// - [`vte_params_behavior_validation`] - Validates VTE parser behavior assumptions
+/// - [`vte_params_behavior_validation`] - Validates [`VTE`] [`Parser`] behavior
+///   assumptions
 /// - `parse_cursor_position` tests validate cursor position parameter parsing
 /// - `MarginRequest` tests (in margin.rs) exercise `extract_nth_single_opt_raw`
 ///
 /// This integration testing approach is preferred because it validates the entire
-/// parsing pipeline with real VTE parser output, ensuring correctness with actual
+/// parsing pipeline with real [`VTE`] [`Parser`] output, ensuring correctness with actual
 /// terminal escape sequences rather than mocked data.
+///
+/// [`Parser`]: vte::Parser
+/// [`VTE`]: mod@vte
 #[cfg(any(test, doc))]
 mod test_fixtures {
     use vte::{Parser, Perform};
 
     /// Integration test helper - process CSI sequence and extract params.
     ///
-    /// This helper feeds a complete CSI escape sequence through the VTE parser
+    /// This helper feeds a complete CSI escape sequence through the [`VTE`] [`Parser`]
     /// and captures the resulting [`vte::Params`] for testing. This is the only
     /// way to properly test [`ParamsExt`] methods since [`vte::Params`] cannot be
     /// manually constructed.
+    ///
+    /// [`Parser`]: vte::Parser
+    /// [`VTE`]: mod@vte
     pub(super) fn process_csi_sequence_and_test<F>(sequence: &str, test_fn: F)
     where
         F: Fn(&vte::Params),
@@ -416,27 +441,30 @@ mod test_fixtures {
         }
     }
 
-    /// Adapter that bridges VTE's callback-based API to test closures.
+    /// Adapter that bridges [`VTE`]'s callback-based API to test closures.
     ///
     /// # What It Does
     ///
     /// This adapter implements the [`Perform`] trait to receive parsed [`vte::Params`]
-    /// from the VTE parser, then forwards them to a test closure for inspection.
+    /// from the [`VTE`] [`Parser`], then forwards them to a test closure for inspection.
     ///
     /// # Why It's Needed
     ///
     /// [`vte::Params`] has private fields and cannot be manually constructed. The ONLY
-    /// way to get populated params is to feed escape sequences through the VTE parser.
-    /// Since VTE uses a callback-based API (the [`Perform`] trait), we need this adapter
-    /// to bridge VTE's callback API to our test closure API.
+    /// way to get populated params is to feed escape sequences through the [`VTE`]
+    /// [`Parser`]. Since [`VTE`] uses a callback-based API (the [`Perform`] trait),
+    /// we need this adapter to bridge [`VTE`]'s callback API to our test closure API.
     ///
     /// # Design Pattern
     ///
     /// This is an **Adapter pattern**, not a mock or stub. It doesn't simulate behavior—
-    /// it observes real VTE parser output. The [`Option<F>`] pattern allows us to move
-    /// the closure out of the struct to call it, working around the `&mut self`
+    /// it observes real [`VTE`] [`Parser`] output. The [`Option<F>`] pattern allows us to
+    /// move the closure out of the struct to call it, working around the `&mut self`
     /// requirement of the [`Perform`] trait while keeping the closure as [`Fn`] (not
     /// [`FnMut`]).
+    ///
+    /// [`Parser`]: vte::Parser
+    /// [`VTE`]: mod@vte
     struct TestPerformerAdapter<F> {
         test_fn: Option<F>,
     }
@@ -492,8 +520,11 @@ mod test_fixtures {
 }
 
 /// These tests validate the fundamental assumptions documented in the [`ParamsExt`] trait
-/// about how VTE's [`vte::Params`] type handles missing parameters, explicit zeros, and
-/// out-of-bounds access. If VTE's behavior ever changes, these tests will catch it.
+/// about how [`VTE`]'s [`vte::Params`] type handles missing parameters, explicit zeros,
+/// and out-of-bounds access. If [`VTE`]'s behavior ever changes, these tests will catch
+/// it.
+///
+/// [`VTE`]: mod@vte
 #[cfg(any(test, doc))]
 pub mod vte_params_behavior_validation {
     use super::{test_fixtures::process_csi_sequence_and_test, *};
@@ -770,8 +801,8 @@ mod extract_nth_all_tests {
     #[test]
     fn test_extract_nth_all_empty_sequence() {
         process_csi_sequence_and_test("\x1b[A", |params| {
-            // Missing parameter - VTE represents this as [0]
-            // This is consistent with VT100 spec where missing params often default to 0
+            // Missing parameter - VTE represents this as [0]. This is consistent with
+            // `VT-100` spec where missing params often default to 0
             let result = params.extract_nth_many_raw(0);
             assert_eq!(result, Some(&[0][..]));
         });

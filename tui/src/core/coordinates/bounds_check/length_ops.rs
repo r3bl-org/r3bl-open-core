@@ -1,5 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+// cspell:words lengthops indexops
+
 //! One-based size types and operations - see [`LengthOps`] trait.
 
 use super::{index_ops::IndexOps, numeric_value::NumericValue,
@@ -7,19 +9,19 @@ use super::{index_ops::IndexOps, numeric_value::NumericValue,
 use crate::{ArrayBoundsCheck, Length, len};
 use std::{cmp::min, ops::Sub};
 
-/// Trait for 1-based size/length types, providing operations for working with
-/// sizes and measurements.
+/// Trait for 1-based size/length types, providing operations for working with sizes and
+/// measurements.
 ///
-/// This trait provides the foundational operations for any type that represents a
-/// size, count, or measurement of content (container sizes, buffer lengths, terminal
+/// This trait provides the foundational operations for any type that represents a size,
+/// count, or measurement of content (container sizes, buffer lengths, terminal
 /// dimensions, etc.). It enables type-safe size calculations, space management, and
 /// conversion between length and index semantics.
 ///
 /// ## Purpose
 ///
-/// This trait serves types that represent "how much" or "how big" something is.
-/// While [`IndexOps`] asks "where am I?", this trait asks "how much space do I have?".
-/// This semantic distinction enables clearer, more maintainable code by making size-based
+/// This trait serves types that represent "how much" or "how big" something is. While
+/// [`IndexOps`] asks "where am I?", this trait asks "how much space do I have?". This
+/// semantic distinction enables clearer, more maintainable code by making size-based
 /// operations explicit.
 ///
 /// ## Key Trait Capabilities
@@ -36,7 +38,7 @@ use std::{cmp::min, ops::Sub};
 ///
 /// ## Type System Foundation
 ///
-/// Every `LengthOps` type has an associated [`Self::IndexType`] that represents the
+/// Every [`LengthOps`] type has an associated [`Self::IndexType`] that represents the
 /// corresponding 0-based position measurement. This creates a bidirectional type-safe
 /// relationship preventing mismatched comparisons at compile time:
 ///
@@ -50,7 +52,7 @@ use std::{cmp::min, ops::Sub};
 ///
 /// ## Implementing Types
 ///
-/// The following types in this codebase implement `LengthOps`:
+/// The following types in this codebase implement [`LengthOps`]:
 ///
 /// - [`Length`] - Generic 1-based size (dimension-agnostic)
 /// - [`RowHeight`] - Vertical size in terminal grid
@@ -115,8 +117,8 @@ use std::{cmp::min, ops::Sub};
 /// • Layout calculations from bottom edge
 ///
 /// Semantic clarity comparison:
-/// ❌ Unclear: length.convert_to_index() - row(1)  // mixing domains
-/// ✓ Clear:   length.index_from_end(height(1))    // explicit intent
+/// ■ Unclear: length.convert_to_index() - row(1)  // mixing domains
+/// □ Clear:   length.index_from_end(height(1))    // explicit intent
 /// ```
 ///
 /// ### Overflow Checking ([`is_overflowed_by()`])
@@ -168,8 +170,9 @@ use std::{cmp::min, ops::Sub};
 /// ┌───── length=5 ────┬───────┐
 /// │ 1   2   3   4   5 │ 6   7 ← max_length boundary
 /// ├───┬───┬───┬───┬───┼───┬───┤
-/// │ ✓ │ ✓ │ ✓ │ ✓ │ ✓ │ ✗ │ ✗ │
+/// │ ■ │ ■ │ ■ │ ■ │ ■ │ □ │ □ │
 /// └───┴───┴───┴───┴───┴───┴───┘
+/// Legend: ■ Within | □ Exceeds
 ///
 /// Result: clamp_to_max(5, max=7) = 5 (no change - within bounds)
 ///
@@ -177,9 +180,10 @@ use std::{cmp::min, ops::Sub};
 /// ┌───────────── length=10 ───┬───────────┐
 /// │ 1   2   3   4   5   6   7 │ 8   9   10 (trimmed)
 /// ├───┬───┬───┬───┬───┬───┬───┼───┬───┬───┤
-/// │ ✓ │ ✓ │ ✓ │ ✓ │ ✓ │ ✓ │ ✓ │ ✗ │ ✗ │ ✗ │
+/// │ ■ │ ■ │ ■ │ ■ │ ■ │ ■ │ ■ │ □ │ □ │ □ │
 /// └───┴───┴───┴───┴───┴───┴───┼───┴───┴───┘
 ///                             └─ max_length=7 boundary
+/// Legend: ■ Within | □ Exceeds
 ///
 /// Result: clamp_to_max(10, max=7) = 7 (clamped to maximum)
 /// ```
@@ -198,9 +202,9 @@ use std::{cmp::min, ops::Sub};
 ///
 /// ## Comparison with [`IndexOps`]
 ///
-/// For a detailed side-by-side comparison of this trait (1-based sizes) and
-/// [`IndexOps`] (0-based positions), see the [module-level comparison table].
-/// This table clarifies when to use each trait based on your specific use case.
+/// For a detailed side-by-side comparison of this trait (1-based sizes) and [`IndexOps`]
+/// (0-based positions), see the [module-level comparison table]. This table clarifies
+/// when to use each trait based on your specific use case.
 ///
 /// ## Examples
 ///
@@ -239,7 +243,7 @@ use std::{cmp::min, ops::Sub};
 /// ## See Also
 ///
 /// - [`IndexOps`] - Position-based operations and comparisons (the paired trait)
-/// - [`NumericValue`] - Base trait that `LengthOps` extends
+/// - [`NumericValue`] - Base trait that [`LengthOps`] extends
 /// - [`ArrayBoundsCheck`] - Array access safety using length constraints
 /// - [`CursorBoundsCheck`] - Cursor positioning using length constraints
 ///
@@ -251,6 +255,7 @@ use std::{cmp::min, ops::Sub};
 /// [`CursorBoundsCheck`]: crate::CursorBoundsCheck
 /// [`IndexOps`]: crate::IndexOps
 /// [`Index`]: crate::Index
+/// [`LengthOps`]: crate::LengthOps
 /// [`Length`]: crate::Length
 /// [`NumericValue`]: crate::NumericValue
 /// [`RowHeight`]: crate::RowHeight
@@ -264,23 +269,25 @@ use std::{cmp::min, ops::Sub};
 /// [`index_from_end()`]: LengthOps::index_from_end
 /// [`is_overflowed_by()`]: LengthOps::is_overflowed_by
 /// [`remaining_from()`]: LengthOps::remaining_from
-/// [module-level comparison table]: super#indexops-vs-lengthops-understanding-0-based-positions-vs-1-based-sizes
+/// [module-level comparison table]:
+///     super#indexops-vs-lengthops-understanding-0-based-positions-vs-1-based-sizes
 pub trait LengthOps: NumericValue {
     /// The corresponding index type for this length type.
     ///
-    /// The constraint `IndexOps<LengthType = Self>` creates a bidirectional
-    /// relationship: this ensures that the index type's `LengthType` points back to
+    /// The constraint [`IndexOps<LengthType = Self>`] creates a bidirectional
+    /// relationship: this ensures that the index type's [`LengthType`] points back to
     /// this same length type, preventing type mismatches like [`ColWidth`] ↔
     /// [`RowIndex`].
     ///
     /// [`ColWidth`]: crate::ColWidth
+    /// [`LengthType`]: crate::IndexOps::LengthType
     /// [`RowIndex`]: crate::RowIndex
     type IndexType: IndexOps<LengthType = Self>;
 
     /// Converts this 1-based length to a 0-based index (subtracts 1).
     ///
-    /// See the [trait documentation][Self] for visual diagrams showing the
-    /// conversion from 1-based lengths to 0-based indices.
+    /// See the [trait documentation] for visual diagrams showing the conversion from
+    /// 1-based lengths to 0-based indices.
     ///
     /// # Examples
     /// ```
@@ -294,6 +301,8 @@ pub trait LengthOps: NumericValue {
     /// let zero_length = len(0);
     /// assert_eq!(zero_length.convert_to_index(), idx(0));
     /// ```
+    ///
+    /// [trait documentation]: Self
     #[must_use]
     fn convert_to_index(&self) -> Self::IndexType {
         let value = self.as_usize().saturating_sub(1);
@@ -307,8 +316,8 @@ pub trait LengthOps: NumericValue {
     /// Instead of manually computing `(length - offset).convert_to_index()`, this method
     /// expresses the intent clearly.
     ///
-    /// See the [trait documentation][Self] for visual diagrams showing how positions
-    /// from the end are calculated.
+    /// See the [trait documentation] for visual diagrams showing how positions from
+    /// the end are calculated.
     ///
     /// # Examples
     /// ```
@@ -328,6 +337,8 @@ pub trait LengthOps: NumericValue {
     /// // Edge case: offset equals length (results in beginning)
     /// assert_eq!(length.index_from_end(len(10)), idx(0));
     /// ```
+    ///
+    /// [trait documentation]: Self
     #[must_use]
     fn index_from_end(&self, arg_offset: impl Into<Self>) -> Self::IndexType
     where
@@ -339,11 +350,10 @@ pub trait LengthOps: NumericValue {
 
     /// Checks if the given index would overflow this length's bounds.
     ///
-    /// Answers the question: "Does this length get overflowed by this index?"
-    /// This is the same check as `index.overflows(length)` but from the
-    /// container's perspective.
+    /// Answers the question: "Does this length get overflowed by this index?" This is the
+    /// same check as [`index.overflows(length)`] but from the container's perspective.
     ///
-    /// See the [trait documentation][Self] for visual diagrams showing overflow
+    /// See the [trait documentation] for visual diagrams showing overflow
     /// boundaries and validation logic.
     ///
     /// # Returns
@@ -364,6 +374,11 @@ pub trait LengthOps: NumericValue {
     ///     ArrayOverflowResult::Overflowed
     /// );
     /// ```
+    ///
+    /// [`ArrayOverflowResult::Overflowed`]: crate::ArrayOverflowResult::Overflowed
+    /// [`ArrayOverflowResult::Within`]: crate::ArrayOverflowResult::Within
+    /// [`index.overflows(length)`]: crate::ArrayBoundsCheck::overflows
+    /// [trait documentation]: Self
     #[must_use]
     fn is_overflowed_by(
         &self,
@@ -379,12 +394,12 @@ pub trait LengthOps: NumericValue {
 
     /// Calculate the remaining space from the given index to the end of this length.
     ///
-    /// See the [trait documentation][Self] for visual diagrams showing how
-    /// remaining space is calculated from different positions.
+    /// See the [trait documentation] for visual diagrams showing how remaining space is
+    /// calculated from different positions.
     ///
     /// # Returns
-    /// The number of units between the index and the boundary defined by this
-    /// length. Returns `Length(0)` if the index is at or beyond the boundary.
+    /// - The number of units between the index and the boundary defined by this length.
+    /// - If the index is at or beyond the boundary, returns [`Length(0)`]
     ///
     /// # Examples
     /// ```
@@ -395,6 +410,9 @@ pub trait LengthOps: NumericValue {
     /// assert_eq!(max_width.remaining_from(col(10)), len(0)); // At boundary
     /// assert_eq!(max_width.remaining_from(col(15)), len(0)); // Beyond boundary
     /// ```
+    ///
+    /// [`Length(0)`]: crate::Length
+    /// [trait documentation]: Self
     #[must_use]
     fn remaining_from(&self, arg_index: impl Into<Self::IndexType>) -> Length
     where

@@ -88,8 +88,8 @@ macro_rules! key_press {
 /// This is equivalent to [`crossterm::event::KeyEvent`] except that it is cleaned up
 /// semantically and impossible states are removed.
 ///
-/// It enables the TUI framework to use a different backend other than `crossterm` in the
-/// future. Apps written using this framework use [`KeyPress`] and not
+/// It enables the TUI framework to use a different backend other than [`crossterm`] in
+/// the future. Apps written using this framework use [`KeyPress`] and not
 /// [`crossterm::event::KeyEvent`]. See [`convert_key_event`] for more information on the
 /// conversion.
 ///
@@ -99,23 +99,23 @@ macro_rules! key_press {
 ///
 /// The TUI framework uses a layered architecture to abstract terminal events:
 ///
-/// 1. **Crossterm Event** (External dependency)
+/// 1. **[Crossterm Event]** (External dependency)
 ///    - Raw events from the terminal (keyboard, mouse, resize, etc.)
 ///    - Includes platform-specific quirks (Windows sends Press/Release, Unix only Press)
 ///    - API can change between crossterm versions
 ///    - Contains unnecessary complexity for most use cases
 ///
-/// 2. **`KeyPress`** (Clean keyboard abstraction - this struct)
+/// 2. **[`KeyPress`]** (Clean keyboard abstraction - this struct)
 ///    - Focuses only on keyboard input
 ///    - Filters out Release/Repeat events for cross-platform consistency
 ///    - Simplifies modifier handling (e.g., Shift+X becomes just 'X')
 ///    - Provides a stable API that won't break if crossterm changes
 ///    - Makes it easier to support other terminal backends in the future
 ///
-/// 3. **`InputEvent`** (Unified input abstraction)
+/// 3. **[`InputEvent`]** (Unified input abstraction)
 ///    - Combines all input types: Keyboard, Mouse, Resize, Focus
 ///    - Provides a single type for the event loop to handle
-///    - Each variant wraps the appropriate cleaned-up type (`KeyPress`, `MouseInput`,
+///    - Each variant wraps the appropriate cleaned-up type ([`KeyPress`], [`MouseInput`],
 ///      etc.)
 ///
 /// The conversion flow:
@@ -134,19 +134,28 @@ macro_rules! key_press {
 ///
 /// # Kitty keyboard protocol support limitations
 ///
-/// 1. `KeyPress` explicitly matches on `KeyEventKind::Press` as of crossterm 0.25.0. It
-///    filters out Release and Repeat events on all platforms. This is necessary because:
-///    - Windows terminals send both Press and Release events for each key press
-///    - Most Unix terminals only send Press events
-///    - Terminals with [kitty keyboard protocol](https://sw.kovidgoyal.net/kitty/keyboard-protocol/)
-///      support may send Press, Release, and Repeat events
+/// 1. [`KeyPress`] explicitly matches on [`KeyEventKind::Press`] as of `crossterm
+///    0.25.0`. It filters out [`Release`] and [`Repeat`] events on all platforms. This is
+///    necessary because:
+///    - Windows terminals send both [`Press`] and [`Release`] events for each key press
+///    - Most Unix terminals only send [`Press`] events
+///    - Terminals with [kitty keyboard protocol] support may send [`Press`], [`Release`],
+///      and [`Repeat`] events
 ///
-///    By filtering to only Press events, we ensure consistent behavior across all
+///    By filtering to only [`Press`] events, we ensure consistent behavior across all
 ///    platforms.
 ///
 /// 2. Also, the [`KeyEvent`]'s `state` is totally ignored in the conversion to
 ///    [`KeyPress`]. The [`crossterm::event::KeyEventState`] isn't even considered in the
 ///    conversion code.
+///
+/// [Crossterm Event]: crossterm::event::Event
+/// [`InputEvent`]: crate::InputEvent
+/// [`MouseInput`]: crate::MouseInput
+/// [`Press`]: KeyEventKind::Press
+/// [`Release`]: KeyEventKind::Release
+/// [`Repeat`]: KeyEventKind::Repeat
+/// [kitty keyboard protocol]: https://sw.kovidgoyal.net/kitty/keyboard-protocol/
 #[derive(Clone, Debug, Eq, PartialEq, Copy)]
 pub enum KeyPress {
     Plain { key: Key },
@@ -165,28 +174,27 @@ pub enum Key {
     SpecialKey(SpecialKey),
     FunctionKey(FunctionKey),
     /// See [`crossterm::event::PushKeyboardEnhancementFlags`] for more details on [kitty
-    /// keyboard protocol](https://sw.kovidgoyal.net/kitty/keyboard-protocol/) and the
-    /// terminals on which this is currently supported:
-    /// * [kitty terminal](https://sw.kovidgoyal.net/kitty/)
-    /// * [foot terminal](https://codeberg.org/dnkl/foot/issues/319)
-    /// * [WezTerm terminal](https://wezfurlong.org/wezterm/config/lua/config/enable_kitty_keyboard.html)
-    /// * [notcurses library](https://github.com/dankamongmen/notcurses/issues/2131)
-    /// * [neovim text editor](https://github.com/neovim/neovim/pull/18181)
-    /// * [kakoune text editor](https://github.com/mawww/kakoune/issues/4103)
-    /// * [dte text editor](https://gitlab.com/craigbarnes/dte/-/issues/138)
+    /// keyboard protocol] and the terminals on which this is currently supported:
+    /// * [kitty terminal]
+    /// * [foot terminal]
+    /// * [WezTerm terminal]
+    /// * [notcurses library]
+    /// * [neovim text editor]
+    /// * [kakoune text editor]
+    /// * [dte text editor]
     ///
     /// Crossterm docs:
-    /// - [`KeyboardEnhancementFlags::DISAMBIGUATE_ESCAPE_CODES`](https://docs.rs/crossterm/0.25.0/crossterm/event/struct.KeyboardEnhancementFlags.html)
-    /// - [`PushKeyboardEnhancementFlags`](https://docs.rs/crossterm/0.25.0/crossterm/event/struct.KeyboardEnhancementFlags.html)
+    /// - [`KeyboardEnhancementFlags::DISAMBIGUATE_ESCAPE_CODES`]
+    /// - [`PushKeyboardEnhancementFlags`]
     ///
     /// **Note:** [`MediaKey`] and [`SpecialKey`] can be read if:
-    /// `KeyboardEnhancementFlags::DISAMBIGUATE_ESCAPE_CODES` has been enabled with
-    /// `PushKeyboardEnhancementFlags`.
+    /// [`KeyboardEnhancementFlags::DISAMBIGUATE_ESCAPE_CODES`] has been enabled with
+    /// [`PushKeyboardEnhancementFlags`].
     ///
     /// **Note:** [`ModifierKeyEnum`] can only be read if **both**
-    /// `KeyboardEnhancementFlags::DISAMBIGUATE_ESCAPE_CODES` and
-    /// `KeyboardEnhancementFlags::REPORT_ALL_KEYS_AS_ESCAPE_CODES` have been enabled
-    /// with `PushKeyboardEnhancementFlags`.
+    /// [`KeyboardEnhancementFlags::DISAMBIGUATE_ESCAPE_CODES`] and
+    /// [`KeyboardEnhancementFlags::REPORT_ALL_KEYS_AS_ESCAPE_CODES`] have been enabled
+    /// with [`PushKeyboardEnhancementFlags`].
     ///
     /// Here's how you can enable crossterm enhanced mode.
     ///
@@ -212,6 +220,21 @@ pub enum Key {
     ///
     /// execute!(stdout, PopKeyboardEnhancementFlags);
     /// ```
+    ///
+    /// [WezTerm terminal]:
+    ///     https://wezfurlong.org/wezterm/config/lua/config/enable_kitty_keyboard.html
+    /// [`KeyboardEnhancementFlags::DISAMBIGUATE_ESCAPE_CODES`]:
+    ///     https://docs.rs/crossterm/0.25.0/crossterm/event/struct.KeyboardEnhancementFlags.html
+    /// [`KeyboardEnhancementFlags::REPORT_ALL_KEYS_AS_ESCAPE_CODES`]:
+    ///     https://docs.rs/crossterm/0.25.0/crossterm/event/struct.KeyboardEnhancementFlags.html
+    /// [`PushKeyboardEnhancementFlags`]: crossterm::event::PushKeyboardEnhancementFlags
+    /// [dte text editor]: https://gitlab.com/craigbarnes/dte/-/issues/138
+    /// [foot terminal]: https://codeberg.org/dnkl/foot/issues/319
+    /// [kakoune text editor]: https://github.com/mawww/kakoune/issues/4103
+    /// [kitty keyboard protocol]: https://sw.kovidgoyal.net/kitty/keyboard-protocol/
+    /// [kitty terminal]: https://sw.kovidgoyal.net/kitty/
+    /// [neovim text editor]: https://github.com/neovim/neovim/pull/18181
+    /// [notcurses library]: https://github.com/dankamongmen/notcurses/issues/2131
     KittyKeyboardProtocol(Enhanced),
 }
 
@@ -229,6 +252,26 @@ pub enum FunctionKey {
     F10,
     F11,
     F12,
+}
+
+/// Converts a function key into its numeric equivalent (`1`-`12`).
+impl From<FunctionKey> for u8 {
+    fn from(key: FunctionKey) -> u8 {
+        match key {
+            FunctionKey::F1 => 1,
+            FunctionKey::F2 => 2,
+            FunctionKey::F3 => 3,
+            FunctionKey::F4 => 4,
+            FunctionKey::F5 => 5,
+            FunctionKey::F6 => 6,
+            FunctionKey::F7 => 7,
+            FunctionKey::F8 => 8,
+            FunctionKey::F9 => 9,
+            FunctionKey::F10 => 10,
+            FunctionKey::F11 => 11,
+            FunctionKey::F12 => 12,
+        }
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Copy)]
@@ -273,31 +316,66 @@ pub enum SpecialKey {
 /// ╚════════════════════╩════════════════════════════════════════════════════════════════╝
 /// ```
 ///
-/// The test `test_input_event_matches_correctly` in `test_input_event.rs` demonstrates
-/// this.
+/// See [Crossterm KeyCode::Char] for more details.
 ///
-/// Docs:
-///  - [Crossterm KeyCode::Char](https://docs.rs/crossterm/latest/crossterm/event/enum.KeyCode.html#variant.Char)
+/// [Crossterm KeyCode::Char]: https://docs.rs/crossterm/latest/crossterm/event/enum.KeyCode.html#variant.Char
 pub mod convert_key_event {
     #[allow(clippy::wildcard_imports)]
     use super::*;
 
     impl TryFrom<KeyEvent> for KeyPress {
         type Error = ();
-        /// Convert [`KeyEvent`] to [`KeyPress`].
+        /// Converts a [`KeyEvent`] into a [`KeyPress`], filtering out non-[`Press`]
+        /// events.
         ///
-        /// This function filters out non-Press events (Release and Repeat) by returning
-        /// `Err(())`. This is an expected "error" that signals to the caller to skip
-        /// this event and continue processing.
+        /// Only [`Press`] events are processed. [`Release`] and [`Repeat`] events return
+        /// [`Err(())`], which is an expected "error" that signals [`InputDevice::next()`]
+        /// to skip the event and continue reading the next one.
+        ///
+        /// This ensures consistent behavior across different terminals:
+        ///
+        /// - Most Unix terminals only send [`Press`] events.
+        /// - Windows terminals send both [`Press`] and [`Release`] events for each key
+        ///   press.
+        /// - Some terminals with [kitty keyboard protocol] support may send [`Repeat`]
+        ///   events.
+        ///
+        /// [`Err(())`]: Result::Err
+        /// [`InputDevice::next()`]: crate::InputDevice::next
+        /// [`Press`]: KeyEventKind::Press
+        /// [`Release`]: KeyEventKind::Release
+        /// [`Repeat`]: KeyEventKind::Repeat
+        /// [kitty keyboard protocol]: https://sw.kovidgoyal.net/kitty/keyboard-protocol/
         fn try_from(key_event: KeyEvent) -> Result<Self, Self::Error> {
-            special_handling_of_character_key_event(key_event)
+            match key_event {
+                    KeyEvent {
+                        kind: KeyEventKind::Press,
+                        .. /* ignore everything else: code, modifiers, etc */
+                    } => {
+                        special_handling_impl::process_key_event(key_event)
+                    }
+                    _ => {
+                        // Filter out Release and Repeat events.
+                        Err(())
+                    }
+                }
         }
     }
 
-    pub(crate) fn special_handling_of_character_key_event(
-        key_event: KeyEvent,
-    ) -> Result<KeyPress, ()> {
-        fn process_key_event(key_event: KeyEvent) -> Result<KeyPress, ()> {
+    pub mod special_handling_impl {
+        #[allow(clippy::wildcard_imports)]
+        use super::*;
+
+        /// Processes a [`KeyEvent`] known to be a [`Press`] event into a [`KeyPress`].
+        ///
+        /// # Errors
+        ///
+        /// Returns `Err(())` when the key event does not map to a recognized [`KeyPress`]
+        /// variant.
+        ///
+        /// [`Press`]: KeyEventKind::Press
+        #[allow(clippy::result_unit_err)]
+        pub fn process_key_event(key_event: KeyEvent) -> Result<KeyPress, ()> {
             if let KeyEvent {
                     code: KeyCode::Char(character),
                     modifiers: KeyModifiers::NONE | KeyModifiers::SHIFT, // Ignore SHIFT.
@@ -332,27 +410,6 @@ pub mod convert_key_event {
             mask: ModifierKeysMask,
         ) -> KeyPress {
             KeyPress::WithModifiers { mask, key }
-        }
-
-        // We only process Press events and filter out Release and Repeat events.
-        // This ensures consistent behavior across different terminals:
-        // - Most Unix terminals only send Press events.
-        // - Windows terminals send both Press and Release events for each key press.
-        // - Some terminals with Kitty keyboard protocol support may send Repeat events.
-        //
-        // When a non-Press event is encountered, we return Err(()) which signals to
-        // InputDeviceExt::next_input_event() to continue reading the next event.
-        match key_event {
-            KeyEvent {
-                kind: KeyEventKind::Press,
-                .. /* ignore everything else: code, modifiers, etc */
-            } => {
-                process_key_event(key_event)
-            }
-            _ => {
-                // Filter out Release and Repeat events.
-                Err(())
-            }
         }
     }
 

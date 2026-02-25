@@ -2,28 +2,28 @@
 
 // cspell:words ghostty
 
-//! [PTY] command builder for constructing and configuring [PTY] commands.
+//! [`PTY`] command builder for constructing and configuring [`PTY`] commands.
 //!
-//! [PTY]: https://en.wikipedia.org/wiki/Pseudoterminal
+//! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 
 use super::pty_core::pty_types::PtyCommand;
 use std::path::PathBuf;
 
-/// Configuration builder for [PTY] commands with sensible defaults.
+/// Configuration builder for [`PTY`] commands with sensible defaults.
 ///
 /// # Summary
-/// - Builder pattern API for constructing [PTY] commands with proper configuration
-/// - Features: automatic working directory, environment variables, [OSC] sequence
+/// - Builder pattern API for constructing [`PTY`] commands with proper configuration
+/// - Features: automatic working directory, environment variables, [`OSC`] sequence
 ///   support, command arguments chaining
-/// - Prevents common [PTY] issues like spawning in wrong directory or missing terminal
+/// - Prevents common [`PTY`] issues like spawning in wrong directory or missing terminal
 ///   environment settings
-/// - Used to create [`PtyCommand`] instances for spawning child processes in [PTY]
+/// - Used to create [`PtyCommand`] instances for spawning child processes in [`PTY`]
 ///   sessions
 /// - Integrates with cargo, npm, and other CLI tools requiring terminal emulation
 ///
 /// # Examples
 ///
-/// Basic cargo command with [OSC] sequences:
+/// Basic cargo command with [`OSC`] sequences:
 ///
 /// ```rust
 /// # use r3bl_tui::PtyCommandBuilder;
@@ -51,8 +51,8 @@ use std::path::PathBuf;
 /// # }
 /// ```
 ///
-/// [OSC]: crate::OscEvent
-/// [PTY]: https://en.wikipedia.org/wiki/Pseudoterminal
+/// [`OSC`]: crate::OscEvent
+/// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 #[derive(Debug)]
 pub struct PtyCommandBuilder {
     command: String,
@@ -97,11 +97,11 @@ impl PtyCommandBuilder {
         self
     }
 
-    /// Enables [OSC] sequence emission by setting appropriate environment variables.
+    /// Enables [`OSC`] sequence emission by setting appropriate environment variables.
     ///
-    /// Cargo requires specific terminal environment variables to emit [OSC] 9;4 progress
-    /// sequences. This method automatically detects and configures the appropriate
-    /// environment based on the current terminal:
+    /// Cargo requires specific terminal environment variables to emit [`OSC`] 9;4
+    /// progress sequences. This method automatically detects and configures the
+    /// appropriate environment based on the current terminal:
     ///
     /// - **Windows Terminal**: Detected via `WT_SESSION` (no additional config needed)
     /// - **`ConEmu`**: Detected via `ConEmuANSI=ON` (no additional config needed)
@@ -116,8 +116,9 @@ impl PtyCommandBuilder {
     ///
     /// [Cargo source]:
     ///     https://github.com/rust-lang/cargo/blob/5d9fc0bc2e870f9b0440a9ff9e7f64f6f06ac411/src/cargo/core/shell.rs#L638-L651
-    /// [OSC]: crate::OscEvent
+    /// [`OSC`]: crate::OscEvent
     #[must_use]
+    #[allow(clippy::redundant_pattern_matching)]
     pub fn enable_osc_sequences(self) -> Self {
         // If the current terminal already supports OSC 9;4 natively, do nothing.
         let terminal_already_supports_osc = {

@@ -174,7 +174,7 @@ where
     }
 }
 
-/// Create a [`RenderList`] from a list of items.
+/// Creates a [`RenderList`] from a list of items.
 ///
 /// # Examples
 ///

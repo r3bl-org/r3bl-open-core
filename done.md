@@ -629,9 +629,9 @@
       [`task_prd_ch_bin`](task/done/task_prd_ch_bin.md):
       https://github.com/anthropics/claude-code/issues/5005#issuecomment-3188388260
 
-# refactor editor & vt100 parser to use type-safe indices and lengths
+# refactor editor & VT-100 parser to use type-safe indices and lengths
 
-- [x] **COMPLETED 2025-09-27** - Refactor Editor Buffer, Editor Engine, and VT100 Parser modules for
+- [x] **COMPLETED 2025-09-27** - Refactor Editor Buffer, Editor Engine, and VT-100 Parser modules for
       type safety
       [`task_make_editor_vt_100_parser_more_typesafe`](task/done/task_make_editor_vt_100_parser_more_typesafe.md)
 - [x] **Major discovery**: Most of the codebase was already type-safe! Only needed to:
@@ -644,7 +644,7 @@
   - [x] Editor Engine (10/10 files) - content_mut.rs, validate_buffer_mut.rs, engine_public_api.rs +
         7 already type-safe
   - [x] Editor Component (3/3 files) - all already type-safe
-  - [x] VT100 Parser (15+ files) - term_units.rs, protocols/csi_codes.rs + all already type-safe
+  - [x] VT-100 Parser (15+ files) - term_units.rs, protocols/csi_codes.rs + all already type-safe
 - [x] **Total**: 38/38 files complete - 100% type-safe with zero behavioral regressions
 - [x] **Timeline**: Completed in 1 day (vs 1-2 weeks estimated) due to excellent existing
       architecture
