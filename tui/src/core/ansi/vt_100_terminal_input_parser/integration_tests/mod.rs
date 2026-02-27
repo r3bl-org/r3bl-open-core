@@ -1,19 +1,22 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! System-level PTY tests - end-to-end validation in real pseudo-terminals.
+//! System-level [`PTY`] tests - end-to-end validation in real pseudo-terminals.
 //!
-//! These tests validate the complete input handling stack in a real PTY environment:
+//! These tests validate the complete input handling stack in a real [`PTY`] environment:
 //! - `DirectToAnsiInputDevice` async I/O and buffer management
-//! - Zero-latency `ESC` key detection
+//! - Zero-latency [`ESC`] key detection
 //! - Full parsing from raw bytes to `InputEvent`
 //!
 //! All tests use **generated sequences** to verify the system can handle its own output.
 //!
-//! Run with: `cargo test test_pty -- --nocapture`
+//! Run with:
+//! ```bash
+//! cargo test test_pty -- --nocapture
+//! ```
 //!
 //! # Testing Philosophy
 //!
-//! **PTY tests use generated sequences** because:
+//! **[`PTY`] tests use generated sequences** because:
 //! - **Real-world testing**: In production, our generator creates sequences and our
 //!   parser consumes them - we test this integration
 //! - **System compatibility**: If both generator and parser have matching bugs, this is
@@ -22,16 +25,17 @@
 //!   test cases
 //!
 //! **Protocol conformance** is tested separately in [`validation_tests`], which use
-//! hardcoded sequences to validate against the VT-100 spec.
+//! hardcoded sequences to validate against the [`VT-100`] spec.
 //!
 //! See the [parent module documentation] for the overall testing strategy.
 //!
+//! [`ESC`]: crate::EscSequence
+//! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`validation_tests`]: mod@crate::core::ansi::vt_100_terminal_input_parser::validation_tests
+//! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 //! [parent module documentation]: mod@super#testing-strategy
 
-// Skip rustfmt for rest of file.
-// https://stackoverflow.com/a/75910283/2085356
-#![cfg_attr(rustfmt, rustfmt_skip)]
+#![rustfmt::skip]
 
 // These PTY tests use DirectToAnsiInputDevice which is Linux-only.
 // On macOS/Windows, Crossterm backend is used instead and these tests are skipped.

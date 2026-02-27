@@ -245,8 +245,6 @@ fn tuple7<T>(a: &[T]) -> (&T, &T, &T, &T, &T, &T, &T) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::assert_eq2;
-
     #[test]
     fn test_parse_plain_text_with_null_padding() {
         // Plain text followed by null padding.

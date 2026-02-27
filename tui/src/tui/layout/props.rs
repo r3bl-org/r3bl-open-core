@@ -22,7 +22,7 @@ pub struct SurfaceProps {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{CommonResult, col, height, ok, req_size_pc, row, width};
+    use crate::{CommonResult, col, height, row, width};
     use smallvec::smallvec;
 
     #[test]

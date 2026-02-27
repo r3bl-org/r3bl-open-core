@@ -5,6 +5,12 @@
 // ensures test code within the library can also use .unwrap() freely.
 #![cfg_attr(not(test), deny(clippy::unwrap_in_result))]
 
+// XMARK: Prevent rustfmt from reformatting entire file.
+// The `custom_inner_attributes` nightly feature enables `#![rustfmt::skip]` (replacing
+// `#![cfg_attr(rustfmt, rustfmt_skip)]`).
+#![feature(custom_inner_attributes)]
+#![rustfmt::skip]
+
 //! # Why R3BL?
 //!
 //! <img src="https://raw.githubusercontent.com/r3bl-org/r3bl-open-core/main/cmdr/r3bl-cmdr-eap.svg?raw=true" height="256px">
@@ -71,8 +77,8 @@
 //!
 //! # Installation
 //!
-//! The two apps, `edi` and `giti`, that comprise `r3bl-cmdr` will make you smile and
-//! make you more productive. Both are fully async (built on [`r3bl_tui`]) and currently
+//! The two apps, `edi` and `giti`, that comprise `r3bl-cmdr` will make you smile and make
+//! you more productive. Both are fully async (built on [`r3bl_tui`]) and currently
 //! available as early access preview 🐣.
 //!
 //! - 😺 `giti` - An interactive git CLI app designed to give you more confidence and a
@@ -218,8 +224,6 @@
 //! - **Smart log monitoring**: Automatically detects and manages log files from binaries
 //! - **Docker builds**: Build release binaries in isolated Docker environment
 //! - **Cross-platform file watching**: Uses inotifywait (Linux) or fswatch (macOS)
-//!
-//! [`r3bl_tui`]: https://crates.io/crates/r3bl_tui
 
 pub const DEVELOPMENT_MODE: bool = true;
 pub const DEBUG_ANALYTICS_CLIENT_MOD: bool = true;

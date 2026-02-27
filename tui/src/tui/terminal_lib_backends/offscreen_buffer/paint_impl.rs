@@ -59,13 +59,13 @@
 //! This stage is crucial for performance: by diffing buffers, only changed pixels are
 //! rendered in subsequent frames, eliminating unnecessary terminal updates.
 //!
-//! [`OffscreenBuffer`]: crate::OffscreenBuffer
-//! [`RenderOpOutputVec`]: crate::RenderOpOutputVec
-//! [`RenderOpsLocalData`]: crate::RenderOpsLocalData
 //! [`crossterm_backend` mod docs]: mod@crate::tui::terminal_lib_backends::crossterm_backend
 //! [`diff_chunks`]: mod@crate::tui::terminal_lib_backends::offscreen_buffer::diff_chunks
 //! [`direct_to_ansi` mod docs]: mod@crate::direct_to_ansi
 //! [`offscreen_buffer/`]: mod@crate::tui::terminal_lib_backends::offscreen_buffer
+//! [`OffscreenBuffer`]: crate::OffscreenBuffer
+//! [`RenderOpOutputVec`]: crate::RenderOpOutputVec
+//! [`RenderOpsLocalData`]: crate::RenderOpsLocalData
 //! [rendering pipeline overview]: mod@crate::terminal_lib_backends#rendering-pipeline-architecture
 
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
@@ -169,8 +169,8 @@ impl OffscreenBufferPaint for OffscreenBufferPaintImplCrossterm {
     ///     - When style changes.
     ///
     /// [`PlainText`]: PixelChar::PlainText
-    /// [`RenderOpOutputVec`]: crate::RenderOpOutputVec
     /// [`RenderOpOutput`]: crate::RenderOpOutput
+    /// [`RenderOpOutputVec`]: crate::RenderOpOutputVec
     /// [`Spacer`]: PixelChar::Spacer
     /// [`TuiStyle`]: crate::TuiStyle
     /// [`Void`]: PixelChar::Void
@@ -380,9 +380,9 @@ mod render_helper {
 #[cfg(test)]
 mod tests {
     use super::{render_helper::style_eq, *};
-    use crate::{ColWidth, RenderOpsLocalData, assert_eq2,
+    use crate::{ColWidth, RenderOpsLocalData,
                 compositor_render_ops_to_ofs_buf::print_text_with_attributes, height,
-                new_style, tui_color, width};
+                width};
 
     /// Helper function to make an `OffscreenBuffer`.
     fn make_offscreen_buffer_plain_text() -> OffscreenBuffer {

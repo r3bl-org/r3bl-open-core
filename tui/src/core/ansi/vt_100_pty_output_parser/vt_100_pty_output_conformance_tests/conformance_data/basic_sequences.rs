@@ -1,16 +1,16 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Basic ANSI sequence patterns for fundamental terminal operations.
+//! Basic [`ANSI`] sequence patterns for fundamental terminal operations.
 //!
 //! This module provides simple, single-purpose sequence builders that form the foundation
 //! for more complex sequence patterns. These functions demonstrate type-safe sequence
 //! construction using the codebase's builder types.
 //!
-//! ## [`VT-100`] Specification References
+//! ## [`VT-100` spec] References
 //!
-//! - Clear operations: [VT-100 specification Section 3.3.4]
-//! - Cursor positioning: [VT-100 specification Section 3.3.1]
-//! - Basic movement: [VT-100 specification Section 3.3.2]
+//! - Clear operations: [`VT-100` spec Section 3.3.4]
+//! - Cursor positioning: [`VT-100` spec Section 3.3.1]
+//! - Basic movement: [`VT-100` spec Section 3.3.2]
 //!
 //! ## Functions Overview
 //!
@@ -21,14 +21,63 @@
 //! - [`move_and_insert_chars`] - Move to column and insert blank characters
 //! - [`move_and_erase_chars`] - Move to column and erase characters
 //!
-//! [VT-100 specification Section 3.3.1]:
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`VT-100` spec]: https://vt100.net/docs/vt100-ug/chapter3.html
+//! [`VT-100` spec]: https://vt100.net/docs/vt100-ug/chapter3.html
+//! [`VT-100` spec]: https://vt100.net/docs/vt100-ug/chapter3.html
+//! [`VT-100` spec]: https://vt100.net/docs/vt100-ug/chapter3.html
+//! [`VT-100` spec]: https://vt100.net/docs/vt100-ug/chapter3.html
+//! [`VT-100` spec]: https://vt100.net/docs/vt100-ug/chapter3.html
+//! [`VT-100` spec]: https://vt100.net/docs/vt100-ug/chapter3.html
+//! [`VT-100` spec]: https://vt100.net/docs/vt100-ug/chapter3.html
+//! [`VT-100` spec]: https://vt100.net/docs/vt100-ug/chapter3.html
+//! [`VT-100` spec]: https://vt100.net/docs/vt100-ug/chapter3.html
+//! [`VT-100` spec]: https://vt100.net/docs/vt100-ug/chapter3.html
+//! [`VT-100` spec]: https://vt100.net/docs/vt100-ug/chapter3.html
+//! [`VT-100` spec]: https://vt100.net/docs/vt100-ug/chapter3.html
+//! [`VT-100` spec]: https://vt100.net/docs/vt100-ug/chapter3.html
+//! [`VT-100` spec]: https://vt100.net/docs/vt100-ug/chapter3.html
+//! [`VT-100` spec]: https://vt100.net/docs/vt100-ug/chapter3.html
+//! [`VT-100` spec]: https://vt100.net/docs/vt100-ug/chapter3.html
+//! [`VT-100` spec]: https://vt100.net/docs/vt100-ug/chapter3.html
+//! [`VT-100` spec]: https://vt100.net/docs/vt100-ug/chapter3.html
+//! [`VT-100` spec]: https://vt100.net/docs/vt100-ug/chapter3.html
+//! [`VT-100` spec]: https://vt100.net/docs/vt100-ug/chapter3.html
+//! [`VT-100` spec]: https://vt100.net/docs/vt100-ug/chapter3.html
+//! [`VT-100` spec]: https://vt100.net/docs/vt100-ug/chapter3.html
+//! [`VT-100` spec]: https://vt100.net/docs/vt100-ug/chapter3.html
+//! [`VT-100` spec Section 3.3.1]:
 //!     https://vt100.net/docs/vt100-ug/chapter3.html#S3.3.1
-//! [VT-100 specification Section 3.3.2]:
+//! [`VT-100` spec Section 3.3.2]:
 //!     https://vt100.net/docs/vt100-ug/chapter3.html#S3.3.2
-//! [VT-100 specification Section 3.3.4]:
+//! [`VT-100` spec Section 3.3.4]:
 //!     https://vt100.net/docs/vt100-ug/chapter3.html#S3.3.4
-//! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
-//! [`VT-100` specification]: https://vt100.net/docs/vt100-ug/
+//!
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`VT-100` spec]: https://vt100.net/docs/vt100-ug/chapter3.html
 
 use super::super::test_fixtures_vt_100_ansi_conformance::nz;
 use crate::{CsiCount, EraseDisplayMode, TermCol,

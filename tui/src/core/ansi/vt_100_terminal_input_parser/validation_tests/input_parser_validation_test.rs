@@ -2,9 +2,9 @@
 
 //! Automated Parser Validation Tests
 //!
-//! These tests use **real ANSI sequences** captured from interactive terminal observation
-//! to validate parser correctness. All sequences were confirmed with actual terminal
-//! emulators using `showkey -a` (Linux) or `sed -n l` (POSIX compliant OSes).
+//! These tests use **real [`ANSI`] sequences** captured from interactive terminal
+//! observation to validate parser correctness. All sequences were confirmed with actual
+//! terminal emulators using `showkey -a` (Linux) or `sed -n l` (POSIX compliant OSes).
 //!
 //! ## Test Organization
 //!
@@ -14,10 +14,10 @@
 //! - **Terminal Events**: Resize, focus, paste markers
 //! - **Edge Cases**: Incomplete sequences, invalid data, boundary conditions
 //!
-//! ## Key VT-100 Behaviors Validated
+//! ## Key [`VT-100`] Behaviors Validated
 //!
-//! 1. **Coordinate System**: VT-100 uses 1-based coordinates (top-left = 1,1)
-//! 2. **Modifier Encoding**: CSI parameter = 1 + bitfield (Shift=1, Alt=2, Ctrl=4)
+//! 1. **Coordinate System**: [`VT-100`] uses 1-based coordinates (top-left = 1,1)
+//! 2. **Modifier Encoding**: [`CSI`] parameter = 1 + bitfield (Shift=1, Alt=2, Ctrl=4)
 //! 3. **Ctrl Modifier**: Parameter 5 = Ctrl (not 4), confirmed with `ESC [ 1 ; 5 A`
 //! 4. **Scroll Events**: Button 66+ indicates scroll with possible modifiers
 //!
@@ -28,21 +28,21 @@
 //!
 //! ### Why Literals?
 //!
-//! 1. **Ground Truth**: Literals represent empirical VT-100 behavior observed from real
-//!    terminals, providing an independent reference that parsers must match.
+//! 1. **Ground Truth**: Literals represent empirical [`VT-100`] behavior observed from
+//!    real terminals, providing an independent reference that parsers must match.
 //!
 //! 2. **Avoid Circular Logic**: Using a generator to create test sequences would be
 //!    circular - if the generator has a bug, tests would pass despite incorrect behavior.
 //!
 //! 3. **Spec Compliance**: Literal sequences serve as the authoritative reference from
-//!    the VT-100 specification and terminal observation.
+//!    the [`VT-100` spec] and terminal observation.
 //!
 //! ### Test Strategy
 //!
 //! | Test Type                        | Purpose                                     | Approach                                                |
 //! | :------------------------------- | :------------------------------------------ | :------------------------------------------------------ |
-//! | **Parser tests** (this file)     | Verify ANSI → Event parsing                 | Use literal sequences from terminal observation         |
-//! | **Generator tests**              | Verify Event → ANSI generation              | Use literal sequences from VT-100 spec                  |
+//! | **Parser tests** (this file)     | Verify [`ANSI`] → Event parsing             | Use literal sequences from terminal observation         |
+//! | **Generator tests**              | Verify Event → [`ANSI`] generation          | Use literal sequences from [`VT-100` spec]              |
 //! | **Round-trip tests**             | Verify parser ↔ generator compatibility     | Event → bytes → Event                                   |
 //!
 //! The combination of all three test types ensures both parser and generator are correct
@@ -54,12 +54,12 @@
 //! function calls, **STOP**! This would break the validation chain:
 //!
 //! ```text
-//! ❌ BROKEN: Circular validation (no ground truth)
-//!    Generator → Bytes → Parser → Generator validates itself ✗
+//! □ BROKEN: Circular validation (no ground truth)
+//!    Generator → Bytes → Parser → Generator validates itself
 //!
-//! ✅ CORRECT: Independent validation against reality
-//!    Terminal observation → Bytes → Parser validates against reality ✓
-//!    Generator → Bytes validates against reality ✓
+//! ■ CORRECT: Independent validation against reality
+//!    Terminal observation → Bytes → Parser validates against reality
+//!    Generator → Bytes validates against reality
 //! ```
 //!
 //! **These hardcoded sequences ARE the ground truth.** The generators in
@@ -71,18 +71,18 @@
 //!
 //! ### Sample Test Run Output
 //! ╔═══════════════════════════════════════════════════════╗
-//! ║   VT-100 Terminal Input Observation Test              ║
+//! ║   [`VT-100`] Terminal Input Observation Test              ║
 //! ║   Phase 1: Establish Ground Truth                     ║
 //! ╚═══════════════════════════════════════════════════════╝
 //!
-//! 🖥️  Terminal: Alacritty
+//! 🖥️  Terminal: [`Alacritty`]
 //!
 //! 🔧 Diagnostic Info:
-//!    Sending ANSI codes to enable mouse tracking...
-//! 📤 Sent: SGR mouse (1006) = [1b, 5b, 3f, 31, 30, 30, 36, 68]
+//!    Sending [`ANSI`] codes to enable mouse tracking...
+//! 📤 Sent: [`SGR`] mouse (1006) = [1b, 5b, 3f, 31, 30, 30, 36, 68]
 //! 📤 Sent: X11 mouse (1000) = [1b, 5b, 3f, 31, 30, 30, 30, 68]
 //! 📤 Sent: Bracketed paste (2004) = [1b, 5b, 3f, 32, 30, 30, 34, 68]
-//! ✅ All ANSI codes sent (check stderr for details)
+//! ✅ All [`ANSI`] codes sent (check stderr for details)
 //!
 //! ╭─────────────────────────────────────────╮
 //! │ TEST 1: Mouse - Top-Left Corner         │
@@ -134,8 +134,14 @@
 //! 🔤 Escaped string: "\u{1b}[<65;59;20M"
 //! ⌨️  Parsed: Unknown (hex: 1b 5b 3c 36 35 3b 35 39 3b 32 30 4d)
 //!
+//! [`Alacritty`]: https://alacritty.org/
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`CSI`]: crate::CsiSequence
 //! [`generator`]: crate::core::ansi::generator
+//! [`SGR`]: crate::SgrCode
 //! [`unit_tests::generator_round_trip_tests`]: mod@crate::core::ansi::vt_100_terminal_input_parser::unit_tests::generator_round_trip_tests
+//! [`VT-100` spec]: https://vt100.net/docs/vt100-ug/chapter3.html
+//! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 
 use crate::{KeyState, byte_offset,
             core::ansi::vt_100_terminal_input_parser::{VT100InputEventIR,

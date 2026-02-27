@@ -6,13 +6,20 @@
 //! flags are set correctly. Verifies character-by-character reading without
 //! buffering, echo, or signal interpretation.
 
-use crate::{ControlledChild, PtyPair, PtyTestMode, generate_pty_test, ANSI_ESC, CONTROL_C,
-            CONTROL_D, CONTROL_LF};
+use crate::{
+    ANSI_ESC,
+    CONTROL_C,
+    CONTROL_D,
+    CONTROL_LF,
+    ControlledChild,
+    PtyPair,
+    PtyTestMode,
+};
 use std::{io::{BufRead, BufReader, Read, Write},
           time::Duration};
 
 generate_pty_test! {
-    /// PTY-based integration test for raw mode input behavior.
+    /// [`PTY`]-based integration test for raw mode input behavior.
     ///
     /// Sends various input sequences from master to slave and verifies:
     /// 1. Characters arrive immediately (no line buffering)
@@ -22,7 +29,12 @@ generate_pty_test! {
     /// This is the most important test as it validates actual terminal behavior,
     /// not just configuration settings.
     ///
-    /// Run with: `cargo test -p r3bl_tui --lib test_raw_mode_input_behavior -- --nocapture`
+    /// Run with:
+    /// ```bash
+    /// cargo test -p r3bl_tui --lib test_raw_mode_input_behavior -- --nocapture
+    /// ```
+    ///
+    /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
     test_fn: test_raw_mode_input_behavior,
     controller: pty_controller_entry_point,
     controlled: pty_controlled_entry_point,
@@ -30,10 +42,14 @@ generate_pty_test! {
 }
 
 /// Controller process: sends input and verifies controlled process reports correct bytes.
+#[allow(clippy::too_many_lines)]
 fn pty_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
     eprintln!("🚀 PTY Controller: Starting input behavior test...");
 
-    let mut writer = pty_pair.controller().take_writer().expect("Failed to get writer");
+    let mut writer = pty_pair
+        .controller()
+        .take_writer()
+        .expect("Failed to get writer");
     let reader = pty_pair
         .controller()
         .try_clone_reader()
@@ -98,7 +114,9 @@ fn pty_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
 
     // Test 2: Send Ctrl+C (should be 0x03, not trigger signal)
     eprintln!("📝 PTY Controller: Test 2 - Ctrl+C (should be 0x03)...");
-    writer.write_all(&[CONTROL_C]).expect("Failed to write Ctrl+C");
+    writer
+        .write_all(&[CONTROL_C])
+        .expect("Failed to write Ctrl+C");
     writer.flush().expect("Failed to flush");
     std::thread::sleep(Duration::from_millis(100));
 
@@ -111,7 +129,9 @@ fn pty_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
 
     // Test 3: Send Ctrl+D (should be 0x04, not EOF)
     eprintln!("📝 PTY Controller: Test 3 - Ctrl+D (should be 0x04)...");
-    writer.write_all(&[CONTROL_D]).expect("Failed to write Ctrl+D");
+    writer
+        .write_all(&[CONTROL_D])
+        .expect("Failed to write Ctrl+D");
     writer.flush().expect("Failed to flush");
     std::thread::sleep(Duration::from_millis(100));
 
@@ -124,7 +144,9 @@ fn pty_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
 
     // Test 4: Send newline (should be 0x0A, not trigger line buffering)
     eprintln!("📝 PTY Controller: Test 4 - Newline (should be 0x0A)...");
-    writer.write_all(&[CONTROL_LF]).expect("Failed to write newline");
+    writer
+        .write_all(&[CONTROL_LF])
+        .expect("Failed to write newline");
     writer.flush().expect("Failed to flush");
     std::thread::sleep(Duration::from_millis(100));
 

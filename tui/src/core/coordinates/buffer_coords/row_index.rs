@@ -1,7 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::{RowHeight, height};
-use crate::{ChUnit, Index, generate_index_type_impl};
+use crate::{ChUnit, Index};
 use std::hash::Hash;
 
 /// The vertical index in a grid of characters, starting at 0, which is the first row.
@@ -17,9 +17,9 @@ use std::hash::Hash;
 /// ```
 ///
 /// [`Pos`]: crate::Pos
+/// [`row()`]: crate::row
 /// [`RowHeight`]: crate::RowHeight
 /// [`Size`]: crate::Size
-/// [`row()`]: crate::row
 #[derive(Copy, Clone, PartialEq, PartialOrd, Ord, Eq, Hash, Default)]
 pub struct RowIndex(pub ChUnit);
 generate_index_type_impl!(

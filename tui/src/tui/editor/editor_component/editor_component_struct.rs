@@ -5,7 +5,7 @@ use crate::{BoxedSafeComponent, CommonResult, Component, DEFAULT_SYN_HI_FILE_EXT
             EditorEngineConfig, EventPropagation, FlexBox, FlexBoxId, GlobalData,
             HasEditorBuffers, HasFocus, InputEvent, RenderPipeline, SurfaceBounds,
             SystemClipboard, TerminalWindowMainThreadSignal,
-            editor_engine::engine_public_api, ok};
+            editor_engine::engine_public_api};
 use std::fmt::Debug;
 use tokio::sync::mpsc::Sender;
 
@@ -43,7 +43,7 @@ pub mod editor_component_impl_component_trait {
                 EditorComponent, EditorComponentData, EditorEngineApplyEventResult,
                 EventPropagation, FlexBox, FlexBoxId, GlobalData, HasEditorBuffers,
                 HasFocus, InputEvent, RenderPipeline, SurfaceBounds, SystemClipboard,
-                engine_public_api, ok};
+                engine_public_api};
 
     fn get_existing_mut_editor_buffer_from_state_or_create_new_one<S>(
         mut_state: &mut S,
@@ -110,8 +110,10 @@ pub mod editor_component_impl_component_trait {
         /// - User input (from [`crate::main_event_loop`]): [`InputEvent`].
         ///
         /// Usually a component must have focus in order for the [`crate::App`] to
-        /// [`route_event_to_focused_component`](crate::ComponentRegistry::route_event_to_focused_component)
+        /// [`route_event_to_focused_component`]
         /// in the first place.
+        ///
+        /// [`route_event_to_focused_component`]: crate::ComponentRegistry::route_event_to_focused_component
         fn handle_event(
             &mut self,
             global_data: &mut GlobalData<S, AS>,

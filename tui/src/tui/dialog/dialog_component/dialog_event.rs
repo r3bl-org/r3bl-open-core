@@ -52,8 +52,6 @@ mod dialog_event_impl {
 #[cfg(test)]
 mod test_dialog_event {
     use super::*;
-    use crate::{assert_eq2, key_press};
-
     #[test]
     fn dialog_event_handles_enter() {
         let input_event = InputEvent::Keyboard(key_press!(@special SpecialKey::Enter));

@@ -12,7 +12,7 @@
 //!
 //! Calling a blocking [`syscall`] (like [`read(2)`] on [`stdin`]) from async code blocks
 //! the entire async runtime - **which is not ok**. RRT solves this by isolating [blocking
-//! I/O] in a dedicated thread and creating a bridge to async
+//! I/O](#understanding-blocking-io) in a dedicated thread and creating a bridge to async
 //! consumers via a [`broadcast channel`]. Thus allowing async code to consume events from
 //! blocking sources ([`stdin`], [`sockets`], [`signals`]) without blocking the async
 //! runtime.
@@ -480,94 +480,91 @@
 //! 4. **I/O-centric** — RRT is specialized for OS-level I/O ([`stdin`], [signals],
 //!    [sockets]), not general message processing.
 //!
-//! [blocking
-//! I/O]: #understanding-blocking-io
-//!
-//! [Actor]: https://en.wikipedia.org/wiki/Actor_model
-//! [Blocks on I/O]: #understanding-blocks-on-io
-//! [CQ]: https://man7.org/linux/man-pages/man7/io_uring.7.html
-//! [Console API]: https://learn.microsoft.com/en-us/windows/console/console-functions
-//! [Dependency Injection]: https://en.wikipedia.org/wiki/Dependency_injection
-//! [Example]: #example
-//! [Linked operations]: https://man7.org/linux/man-pages/man3/io_uring_prep_link.3.html
-//! [OS I/O primitives]: #io-backend-compatibility
-//! [Proactor]: https://en.wikipedia.org/wiki/Proactor_pattern
-//! [RRT section]: crate#resilient-reactor-thread-rrt-pattern
-//! [Reactor]: https://en.wikipedia.org/wiki/Reactor_pattern
-//! [Registered FDs]: https://man7.org/linux/man-pages/man3/io_uring_register_files.3.html
-//! [Registered buffers]: https://man7.org/linux/man-pages/man3/io_uring_register_buffers.3.html
-//! [Syscall]: https://man7.org/linux/man-pages/man2/syscalls.2.html
-//! [Syscalls]: https://man7.org/linux/man-pages/man2/syscalls.2.html
 //! [`'static` trait bound]: ThreadSafeGlobalState#static-trait-bound-vs-static-lifetime-annotation
-//! [`Arc`]: std::sync::Arc
-//! [`Continuation`]: crate::core::common::Continuation
-//! [`EINVAL`]: https://man7.org/linux/man-pages/man3/errno.3.html
-//! [`Event`]: RRTWorker::Event
-//! [`Factory::create()`]: RRTFactory::create
-//! [`Factory`]: RRTFactory
-//! [`IOCP`]: https://learn.microsoft.com/en-us/windows/win32/fileio/i-o-completion-ports
-//! [`IORING_OP_ASYNC_CANCEL`]: https://man7.org/linux/man-pages/man3/io_uring_prep_cancel.3.html
-//! [`IORING_OP_MSG_RING`]: https://man7.org/linux/man-pages/man3/io_uring_prep_msg_ring.3.html
-//! [`LivenessState`]: crate::core::resilient_reactor_thread::LivenessState
-//! [`Mutex<Option<Arc<ThreadState<W, E>>>>`]: ThreadState
-//! [`Mutex`]: std::sync::Mutex
-//! [`Option`]: std::option::Option
-//! [`PTY`]: https://man7.org/linux/man-pages/man7/pty.7.html
-//! [`RRTFactory`]: RRTFactory
-//! [`RRTWaker`]: RRTWaker
-//! [`RRTWorker`]: RRTWorker
-//! [`SINGLETON`]: crate::terminal_lib_backends::direct_to_ansi::input::input_device_impl::global_input_resource::SINGLETON
-//! [`SQPOLL`]: https://man7.org/linux/man-pages/man2/io_uring_setup.2.html
-//! [`SubscriberGuard`]: SubscriberGuard
-//! [`ThreadLiveness`]: ThreadLiveness
-//! [`ThreadSafeGlobalState`]: ThreadSafeGlobalState
-//! [`ThreadState::should_self_terminate()`]: ThreadState::should_self_terminate
-//! [`ThreadState`]: ThreadState
-//! [`Waker`]: RRTWaker
-//! [`Worker`]: RRTWorker
 //! [`accept()`]: std::net::TcpListener::accept
+//! [`Arc`]: std::sync::Arc
 //! [`broadcast channel`]: tokio::sync::broadcast
 //! [`broadcast`]: tokio::sync::broadcast
 //! [`const expression`]: ThreadSafeGlobalState#const-expression-vs-const-declaration-vs-static-declaration
 //! [`const expressions`]: ThreadSafeGlobalState#const-expression-vs-const-declaration-vs-static-declaration
+//! [`Continuation`]: crate::core::common::Continuation
+//! [`EINVAL`]: https://man7.org/linux/man-pages/man3/errno.3.html
 //! [`epoll_wait()`]: https://man7.org/linux/man-pages/man2/epoll_wait.2.html
 //! [`epoll`]: https://man7.org/linux/man-pages/man7/epoll.7.html
+//! [`Event`]: RRTWorker::Event
+//! [`Factory::create()`]: RRTFactory::create
+//! [`Factory`]: RRTFactory
 //! [`fd`]: https://en.wikipedia.org/wiki/File_descriptor
 //! [`fifo(7)`]: https://man7.org/linux/man-pages/man7/fifo.7.html
 //! [`file descriptor`]: https://en.wikipedia.org/wiki/File_descriptor
 //! [`filedescriptor::poll()`]: https://docs.rs/filedescriptor/latest/filedescriptor/fn.poll.html
 //! [`io_uring_enter()`]: https://man7.org/linux/man-pages/man2/io_uring_enter.2.html
-//! [`io_uring`]: https://kernel.dk/io_uring.pdf
 //! [`io_uring`: An Alternative Model]: #io_uring-an-alternative-model
+//! [`io_uring`]: https://kernel.dk/io_uring.pdf
+//! [`IOCP`]: https://learn.microsoft.com/en-us/windows/win32/fileio/i-o-completion-ports
+//! [`IORING_OP_ASYNC_CANCEL`]: https://man7.org/linux/man-pages/man3/io_uring_prep_cancel.3.html
+//! [`IORING_OP_MSG_RING`]: https://man7.org/linux/man-pages/man3/io_uring_prep_msg_ring.3.html
 //! [`kqueue`]: https://man.freebsd.org/cgi/man.cgi?query=kqueue
+//! [`LivenessState`]: crate::core::resilient_reactor_thread::LivenessState
 //! [`mio::Poll::poll()`]: mio::Poll::poll
 //! [`mio_poller`]: crate::tui::terminal_lib_backends::direct_to_ansi::input::mio_poller
 //! [`mio`]: mio
+//! [`Mutex<Option<Arc<ThreadState<W, E>>>>`]: ThreadState
+//! [`Mutex`]: std::sync::Mutex
+//! [`Option`]: std::option::Option
 //! [`pipe(2)`]: https://man7.org/linux/man-pages/man2/pipe.2.html
 //! [`poll()`]: https://man7.org/linux/man-pages/man2/poll.2.html
 //! [`poll_once()`]: RRTWorker::poll_once
 //! [`pollable`]: https://man7.org/linux/man-pages/man2/poll.2.html
+//! [`PTY`]: https://man7.org/linux/man-pages/man7/pty.7.html
 //! [`read(2)`]: https://man7.org/linux/man-pages/man2/read.2.html
 //! [`receiver_count()`]: tokio::sync::broadcast::Sender::receiver_count
+//! [`RRTFactory`]: RRTFactory
+//! [`RRTWaker`]: RRTWaker
+//! [`RRTWorker`]: RRTWorker
 //! [`select(2)`]: https://man7.org/linux/man-pages/man2/select.2.html
 //! [`signal-hook`]: signal_hook
 //! [`signalfd(2)`]: https://man7.org/linux/man-pages/man2/signalfd.2.html
 //! [`signals`]: https://en.wikipedia.org/wiki/Signal_(IPC)
+//! [`SINGLETON`]: crate::terminal_lib_backends::direct_to_ansi::input::input_device_impl::global_input_resource::SINGLETON
 //! [`sockets`]: https://man7.org/linux/man-pages/man7/socket.7.html
+//! [`SQPOLL`]: https://man7.org/linux/man-pages/man2/io_uring_setup.2.html
 //! [`stdin`]: std::io::stdin
 //! [`subscribe()`]: ThreadSafeGlobalState::subscribe
+//! [`SubscriberGuard`]: SubscriberGuard
 //! [`syscall`]: https://man7.org/linux/man-pages/man2/syscalls.2.html
 //! [`syscalls`]: https://man7.org/linux/man-pages/man2/syscalls.2.html
+//! [`ThreadLiveness`]: ThreadLiveness
+//! [`ThreadSafeGlobalState`]: ThreadSafeGlobalState
+//! [`ThreadState::should_self_terminate()`]: ThreadState::should_self_terminate
+//! [`ThreadState`]: ThreadState
 //! [`tty`]: https://man7.org/linux/man-pages/man4/tty.4.html
 //! [`tx.send()`]: tokio::sync::broadcast::Sender::send
 //! [`wake()`]: RRTWaker::wake
+//! [`Waker`]: RRTWaker
+//! [`Worker`]: RRTWorker
+//! [Actor]: https://en.wikipedia.org/wiki/Actor_model
+//! [Blocks on I/O]: #understanding-blocks-on-io
 //! [completions]: https://man7.org/linux/man-pages/man7/io_uring.7.html
+//! [Console API]: https://learn.microsoft.com/en-us/windows/console/console-functions
+//! [CQ]: https://man7.org/linux/man-pages/man7/io_uring.7.html
+//! [Dependency Injection]: https://en.wikipedia.org/wiki/Dependency_injection
+//! [Example]: #example
 //! [fds]: https://en.wikipedia.org/wiki/File_descriptor
 //! [file descriptors]: https://en.wikipedia.org/wiki/File_descriptor
 //! [inversion of control]: https://en.wikipedia.org/wiki/Inversion_of_control
 //! [kernel]: https://en.wikipedia.org/wiki/Kernel_(operating_system)
 //! [known Darwin limitation]: https://nathancraddock.com/blog/macos-dev-tty-polling/
+//! [Linked operations]: https://man7.org/linux/man-pages/man3/io_uring_prep_link.3.html
+//! [OS I/O primitives]: #io-backend-compatibility
+//! [Proactor]: https://en.wikipedia.org/wiki/Proactor_pattern
+//! [Reactor]: https://en.wikipedia.org/wiki/Reactor_pattern
+//! [Registered buffers]: https://man7.org/linux/man-pages/man3/io_uring_register_buffers.3.html
+//! [Registered FDs]: https://man7.org/linux/man-pages/man3/io_uring_register_files.3.html
+//! [RRT section]: crate#resilient-reactor-thread-rrt-pattern
 //! [signals]: https://en.wikipedia.org/wiki/Signal_(IPC)
 //! [sockets]: https://man7.org/linux/man-pages/man7/socket.7.html
+//! [Syscall]: https://man7.org/linux/man-pages/man2/syscalls.2.html
+//! [Syscalls]: https://man7.org/linux/man-pages/man2/syscalls.2.html
 //! [system call]: https://man7.org/linux/man-pages/man2/syscalls.2.html
 //! [why user-provided?]: #why-is-threadwaker-user-provided

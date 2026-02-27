@@ -21,11 +21,11 @@ use syntect::{highlighting::Theme, parsing::SyntaxSet};
 /// [`InputEvent`] and tries to convert it to an [`EditorEvent`] and then execute them
 /// against this buffer.
 ///
-/// [`InputEvent`]: crate::InputEvent
-/// [`EditorEvent`]: crate::EditorEvent
+/// [`apply_event`]: crate::engine_public_api::apply_event
 /// [`EditorBuffer`]: crate::EditorBuffer
 /// [`EditorComponent`]: crate::EditorComponent
-/// [`apply_event`]: crate::engine_public_api::apply_event
+/// [`EditorEvent`]: crate::EditorEvent
+/// [`InputEvent`]: crate::InputEvent
 /// [`new()`]: Self::new
 #[derive(Debug)]
 pub struct EditorEngine {
@@ -116,7 +116,7 @@ pub enum SyntaxHighlightMode {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{assert_eq2, height, width};
+    use crate::{height, width};
 
     #[test]
     fn test_editor_engine_new() {

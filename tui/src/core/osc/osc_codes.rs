@@ -1,25 +1,25 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Operating System Command (OSC) codes for terminal control.
+//! Operating System Command ([`OSC`]) codes for terminal control.
 //!
-//! OSC sequences allow child processes to send commands to the terminal emulator
+//! [`OSC`] sequences allow child processes to send commands to the terminal emulator
 //! for features that affect the terminal's operating system integration, such as
 //! window titles, notifications, and hyperlinks.
 //!
 //! ## Data Flow
 //!
-//! **Child process → PTY → Terminal emulator**: Child process sends OSC commands
+//! **Child process → [`PTY`] → Terminal emulator**: Child process sends [`OSC`] commands
 //! to control terminal features (titles, hyperlinks, notifications, etc.)
 //!
-//! Unlike DSR sequences, OSC sequences are typically unidirectional - the child
+//! Unlike [`DSR`] sequences, [`OSC`] sequences are typically unidirectional - the child
 //! process sends commands to the terminal but doesn't expect responses back.
 //!
 //! ## Structure
-//! OSC sequences follow the pattern: `ESC ] code ; parameters ST`
-//! - Start with ESC (0x1B) followed by `]`
+//! [`OSC`] sequences follow the pattern: `ESC ] code ; parameters ST`
+//! - Start with [`ESC`] (0x1B) followed by `]`
 //! - Numeric code identifying the command type
 //! - Parameters separated by `;`
-//! - End with String Terminator (ESC \\) or BEL (0x07)
+//! - End with String Terminator ([`ESC`] \\) or BEL (0x07)
 //!
 //! ## Common Uses
 //! - **Window Management**: Set window title and tab names
@@ -28,37 +28,65 @@
 //! - **Clipboard**: Access system clipboard (security-restricted)
 //!
 //! ## Examples
-//! - `ESC]0;My Title ESC\\` - Set both window title and tab name
-//! - `ESC]2;Window Title ESC\\` - Set window title only
-//! - `ESC]8;;https://example.com ESC\\Link Text ESC]8;; ESC\\` - Create hyperlink
+//! - `ESC]0;My Title [`[`ESC`]`]\\` - Set both window title and tab name
+//! - `ESC]2;Window Title [`[`ESC`]`]\\` - Set window title only
+//! - `ESC]8;;https://example.com [`[`ESC`]`]\\Link Text [`[`ESC`]`]]8;; [`[`ESC`]`]\\` -
+//!   Create hyperlink
+//!
+//! [`DSR`]: crate::DsrSequence
+//! [`ESC`]: crate::EscSequence
+//! [`OSC`]: crate::osc_codes::OscSequence
+//! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 
 // Common OSC sequence components for sending outgoing sequences.
 
-/// Generic OSC sequence start: ESC ]
+/// Generic [`OSC`] sequence start: [`ESC`] ]
+///
+/// [`ESC`]: crate::EscSequence
+/// [`OSC`]: crate::osc_codes::OscSequence
 pub const OSC_START: &str = "\x1b]";
-/// OSC 9;4 sequence prefix: ESC ] 9 ; 4 ;
+/// [`OSC`] 9;4 sequence prefix: [`ESC`] ] 9 ; 4 ;
+///
+/// [`ESC`]: crate::EscSequence
+/// [`OSC`]: crate::osc_codes::OscSequence
 pub const START: &str = "\x1b]9;4;";
-/// OSC 8 hyperlink sequence prefix: ESC ] 8 ; ;
+/// [`OSC`] 8 hyperlink sequence prefix: [`ESC`] ] 8 ; ;
+///
+/// [`ESC`]: crate::EscSequence
+/// [`OSC`]: crate::osc_codes::OscSequence
 pub const OSC8_START: &str = "\x1b]8;;";
-/// Sequence terminator: ESC \\ (String Terminator)
+/// Sequence terminator: [`ESC`] \\ (String Terminator)
+///
+/// [`ESC`]: crate::EscSequence
 pub const END: &str = "\x1b\\";
-/// Parameter delimiter within OSC sequences
+/// Parameter delimiter within [`OSC`] sequences
+///
+/// [`OSC`]: crate::osc_codes::OscSequence
 pub const DELIMITER: char = ';';
 
 /// Terminal title and tab control sequences for sending outgoing sequences
 ///
-/// OSC 0 sequence: Set both window title and tab name (ESC ] 0 ;)
-/// We only implement OSC 0 (title + tab). OSC 1 (icon only) and OSC 2
+/// [`OSC`] 0 sequence: Set both window title and tab name ([`ESC`] ] 0 ;)
+/// We only implement [`OSC`] 0 (title + tab). [`OSC`] 1 (icon only) and [`OSC`] 2
 /// (title only) are not needed for modern terminal multiplexing where
 /// consistent branding is preferred.
+///
+/// [`ESC`]: crate::EscSequence
+/// [`OSC`]: crate::osc_codes::OscSequence
 pub const OSC0_SET_TITLE_AND_TAB: &str = "\x1b]0;";
 
-/// OSC 1 sequence: Set icon name (ESC ] 1 ;)
+/// [`OSC`] 1 sequence: Set icon name ([`ESC`] ] 1 ;)
 /// For testing compatibility - rarely used in modern terminals
+///
+/// [`ESC`]: crate::EscSequence
+/// [`OSC`]: crate::osc_codes::OscSequence
 pub const OSC1_SET_ICON: &str = "\x1b]1;";
 
-/// OSC 2 sequence: Set window title only (ESC ] 2 ;)
-/// For testing compatibility - OSC 0 is preferred
+/// [`OSC`] 2 sequence: Set window title only ([`ESC`] ] 2 ;)
+/// For testing compatibility - [`OSC`] 0 is preferred
+///
+/// [`ESC`]: crate::EscSequence
+/// [`OSC`]: crate::osc_codes::OscSequence
 pub const OSC2_SET_TITLE: &str = "\x1b]2;";
 
 /// Alternative terminator: BEL character (0x07)
@@ -67,52 +95,75 @@ pub const BELL_TERMINATOR: &str = "\x07";
 
 // OSC code numbers for parsing incoming sequences by the ANSI parser.
 
-/// OSC code 0: Set both window title and icon name
+/// [`OSC`] code 0: Set both window title and icon name
+///
+/// [`OSC`]: crate::osc_codes::OscSequence
 pub const OSC_CODE_TITLE_AND_ICON: &str = "0";
 
-/// OSC code 1: Set icon name
+/// [`OSC`] code 1: Set icon name
+///
+/// [`OSC`]: crate::osc_codes::OscSequence
 pub const OSC_CODE_ICON: &str = "1";
 
-/// OSC code 2: Set window title
+/// [`OSC`] code 2: Set window title
+///
+/// [`OSC`]: crate::osc_codes::OscSequence
 pub const OSC_CODE_TITLE: &str = "2";
 
-/// OSC code 8: Hyperlink
+/// [`OSC`] code 8: Hyperlink
+///
+/// [`OSC`]: crate::osc_codes::OscSequence
 pub const OSC_CODE_HYPERLINK: &str = "8";
 
-use crate::{core::common::fast_stringify::{BufTextStorage, FastStringify},
-            generate_impl_display_for_fast_stringify};
+use crate::core::common::fast_stringify::{BufTextStorage, FastStringify};
 use std::fmt;
 
-/// OSC sequence builder enum that provides type-safe construction of Operating System
-/// Command sequences.
+/// [`OSC`] ([`OSC` spec]) sequence builder enum that provides type-safe construction of
+/// Operating System Command sequences.
 ///
-/// This enum follows the same pattern as `CsiSequence` and `EscSequence`, providing a
-/// structured way to build OSC sequences instead of manual string formatting.
+/// This enum follows the same pattern as [`CsiSequence`] and [`EscSequence`], providing
+/// a structured way to build [`OSC`] sequences instead of manual string formatting.
 ///
-/// OSC sequences follow the format: `ESC ] code ; parameters ST`
-/// where ST is the String Terminator (ESC \ or BEL).
+/// [`OSC`] sequences follow the format: `ESC ] code ; parameters ST`
+/// where ST is the String Terminator ([`ESC`] \ or BEL).
+///
+/// [`CsiSequence`]: crate::CsiSequence
+/// [`ESC`]: crate::EscSequence
+/// [`EscSequence`]: crate::EscSequence
+/// [`OSC` spec]: https://en.wikipedia.org/wiki/ANSI_escape_code#OSC
+/// [`OSC`]: crate::osc_codes::OscSequence
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum OscSequence {
-    /// OSC 0: Set both window title and icon name
+    /// [`OSC`] 0: Set both window title and icon name
     /// Format: `ESC ] 0 ; title ST`
+    ///
+    /// [`OSC`]: crate::osc_codes::OscSequence
     SetTitleAndIcon(String),
 
-    /// OSC 1: Set icon name only
+    /// [`OSC`] 1: Set icon name only
     /// Format: `ESC ] 1 ; icon_name ST`
+    ///
+    /// [`OSC`]: crate::osc_codes::OscSequence
     SetIcon(String),
 
-    /// OSC 2: Set window title only\
+    /// [`OSC`] 2: Set window title only\
     /// Format: `ESC ] 2 ; title ST`
+    ///
+    /// [`OSC`]: crate::osc_codes::OscSequence
     SetTitle(String),
 
-    /// OSC 8: Hyperlink start sequence
+    /// [`OSC`] 8: Hyperlink start sequence
     /// Format: `ESC ] 8 ; id ; uri ST`
     /// The `id` parameter is optional and used for link identification
+    ///
+    /// [`OSC`]: crate::osc_codes::OscSequence
     HyperlinkStart { uri: String, id: Option<String> },
 
-    /// OSC 8: Hyperlink end sequence\
+    /// [`OSC`] 8: Hyperlink end sequence\
     /// Format: `ESC ] 8 ; ; ST`
     /// This closes the hyperlink started by `HyperlinkStart`
+    ///
+    /// [`OSC`]: crate::osc_codes::OscSequence
     HyperlinkEnd,
 }
 

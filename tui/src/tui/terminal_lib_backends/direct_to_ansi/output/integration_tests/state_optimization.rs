@@ -4,18 +4,20 @@
 //!
 //! These tests validate `DirectToAnsi`'s optimization of redundant operations:
 //!
-//! 1. Moving cursor to same position skips ANSI output (but updates state)
-//! 2. Setting same color twice skips second ANSI output
+//! 1. Moving cursor to same position skips [`ANSI`] output (but updates state)
+//! 2. Setting same color twice skips second [`ANSI`] output
 //! 3. State is correctly maintained across multiple operations
 //! 4. Cursor position state after relative vs absolute moves
 //! 5. Color state persistence across unrelated operations
 //! 6. Combining operations preserves optimization
 //!
 //! This optimization is critical for performance as it reduces the amount of
-//! ANSI escape sequences sent to the terminal.
+//! [`ANSI`] escape sequences sent to the terminal.
+//!
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 
 use super::test_helpers::*;
-use crate::{AnsiSequenceGenerator, col, pos, render_op::RenderOpCommon, row, tui_color};
+use crate::{AnsiSequenceGenerator, col, pos, render_op::RenderOpCommon, row};
 
 #[test]
 fn test_duplicate_cursor_position_updates_state() {

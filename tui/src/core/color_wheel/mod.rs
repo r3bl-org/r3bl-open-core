@@ -6,15 +6,15 @@
 //! ## Organization:
 //! - `types` - Core data types (`Seed`, `ColorWheelControl`, etc.)
 //! - `config` - Configuration types and utilities
-//! - `gradients` - ANSI 256 and truecolor gradient generation
+//! - `gradients` - [`ANSI`] 256 and truecolor gradient generation
 //! - `helpers` - Color calculation utilities
 //! - `policies` - Text colorization policies
 //! - `lolcat` - Lolcat-style colorization API
 //! - `impl` - Main `ColorWheel` implementation
+//!
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 
-// Skip rustfmt for rest of file.
-// https://stackoverflow.com/a/75910283/2085356
-#![cfg_attr(rustfmt, rustfmt_skip)]
+#![rustfmt::skip]
 
 // Attach sources.
 mod color_wheel_config;

@@ -61,22 +61,26 @@ pub struct SelectionRange {
     /// - It represents the display width at which the selection starts.
     /// - The [`crate::RowIndex`] field is not used and is clobbered with
     ///   [`ChUnitPrimitiveType::MAX`] after initialization.
-    /// - The display width is used, to support variable width characters. `UTF-8`
+    /// - The display width is used, to support variable width characters. [`UTF-8`]
     ///   encoding uses between 1 and 4 bytes to encode a character, e.g.: `"H"` is 1
     ///   byte, and `"😄"` is 4 bytes. And visually they can occupy 1 or more spaces,
     ///   e.g.: `"H"` is 1 space wide, and `"😄"` is two spaces wide
     ///   [`crate::GCStringOwned::width()`] and [`crate::GCStringOwned::width_char()`].
+    ///
+    /// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
     start: CaretScrAdj,
     /// This is not "raw", this is "scroll adjusted".
     /// - It represents the display width at which the selection ends. The display width
     ///   is used, to support variable width characters.
     /// - The end index is not inclusive when the selection range is resolved into a
     ///   result (string).
-    /// - The display width is used, to support variable width characters. `UTF-8`
+    /// - The display width is used, to support variable width characters. [`UTF-8`]
     ///   encoding uses between 1 and 4 bytes to encode a character, e.g.: `"H"` is 1
     ///   byte, and `"😄"` is 4 bytes. And visually they can occupy 1 or more spaces,
     ///   e.g. `"H"` is 1 space wide, and `"😄"` is two spaces wide
     ///   [`crate::GCStringOwned::width()`] and [`crate::GCStringOwned::width_char()`].
+    ///
+    /// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
     end: CaretScrAdj,
 }
 
@@ -363,7 +367,7 @@ mod range_impl_debug_format {
 #[cfg(test)]
 mod tests_range {
     use super::*;
-    use crate::{assert_eq2, col};
+    use crate::col;
 
     /// ```text
     /// ╭0123456789╮

@@ -6,14 +6,22 @@
 //! *something* changed. This test documents the exact contract of raw mode
 //! and catches regressions in flag handling.
 
-use crate::{ControlledChild, PtyPair, PtyTestMode, RawModeGuard, VMIN_RAW_MODE,
-            VTIME_RAW_MODE, drain_pty_and_wait, generate_pty_test};
-use rustix::termios::{self, ControlModes, InputModes, LocalModes, OutputModes, SpecialCodeIndex};
+use crate::{
+    ControlledChild,
+    PtyPair,
+    PtyTestMode,
+    RawModeGuard,
+    VMIN_RAW_MODE,
+    VTIME_RAW_MODE,
+    drain_pty_and_wait,
+};
+use rustix::termios::{self, ControlModes, InputModes, LocalModes, OutputModes,
+                      SpecialCodeIndex};
 use std::{io::{BufRead, BufReader, Write},
           time::{Duration, Instant}};
 
 generate_pty_test! {
-    /// PTY-based integration test for raw mode flag verification.
+    /// [`PTY`]-based integration test for raw mode flag verification.
     ///
     /// Verifies that `make_raw()` sets the correct termios flags according to
     /// the POSIX `cfmakeraw` specification. This ensures our implementation
@@ -25,7 +33,12 @@ generate_pty_test! {
     /// - Control modes: CS8 set, 8-bit characters
     /// - Special codes: VMIN=1, VTIME=0 (byte-by-byte, no timeout)
     ///
-    /// Run with: `cargo test -p r3bl_tui --lib test_raw_mode_flags -- --nocapture`
+    /// Run with:
+    /// ```bash
+    /// cargo test -p r3bl_tui --lib test_raw_mode_flags -- --nocapture
+    /// ```
+    ///
+    /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
     test_fn: test_raw_mode_flags,
     controller: pty_controller_entry_point,
     controlled: pty_controlled_entry_point,
@@ -77,7 +90,10 @@ fn pty_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
         }
     }
 
-    assert!(controlled_started, "Controlled process did not start properly");
+    assert!(
+        controlled_started,
+        "Controlled process did not start properly"
+    );
     assert!(test_passed, "Test did not report success");
 
     // Drain PTY and wait for child to prevent macOS PTY buffer deadlock.

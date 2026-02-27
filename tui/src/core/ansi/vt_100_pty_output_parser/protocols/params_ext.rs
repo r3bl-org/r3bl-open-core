@@ -1,24 +1,25 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Parameter parsing utilities for [`VT-100`]-compliant escape sequences. See [`ParamsExt`]
-//! and [`parse_cursor_position`] for details.
+//! Parameter parsing utilities for [`VT-100`]-compliant escape sequences. See
+//! [`ParamsExt`] and [`parse_cursor_position`] for details.
 //!
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 
 use crate::{ColIndex, Index, RowIndex, TermCol, TermRow};
 use std::{cmp::max, num::NonZeroU16};
 
-/// Extension trait for [`vte::Params`] providing [`VT-100`]-compliant parameter extraction.
+/// Extension trait for [`vte::Params`] providing [`VT-100`]-compliant parameter
+/// extraction.
 ///
 /// This extension trait works around Rust's orphan rule, which prevents adding impl
 /// blocks directly to [`vte::Params`] (a type from an external crate).
 ///
-/// # `VT-100` Parameter Structure
+/// # [`VT-100`] Parameter Structure
 ///
 /// The [`vte::Params`] type captures parameters for a **single command** (after it is
-/// parsed from the bytes emitted from the child process running in PTY-slave). We have no
-/// control over this. The following is an overview of how [`VT-100`] parameters are
-/// structured, which informs how the [`vte::Params`] type organizes them.
+/// parsed from the bytes emitted from the child process running in [`PTY`]-slave). We
+/// have no control over this. The following is an overview of how [`VT-100`] parameters
+/// are structured, which informs how the [`vte::Params`] type organizes them.
 ///
 /// <div class="warning">
 ///
@@ -89,7 +90,7 @@ use std::{cmp::max, num::NonZeroU16};
 ///
 /// **Use [`extract_nth_single_opt_raw`]** when:
 /// - You need the raw parameter value without the "treat 0 as 1" transformation
-/// - Implementing scroll margin commands (`DECSTBM`) where `Some(0)` means "use first
+/// - Implementing scroll margin commands ([`DECSTBM`]) where `Some(0)` means "use first
 ///   line" and `None` means "use viewport bound"
 /// - You need to detect out-of-bounds parameter positions (`None`)
 ///
@@ -201,34 +202,38 @@ use std::{cmp::max, num::NonZeroU16};
 ///
 /// ## Available Parsers
 ///
-/// - [`parse_cursor_position()`] - Convert [`VT-100`] cursor position parameters (`ESC [ 5
-///   ; 10 H`) to 0-based buffer coordinates ([`RowIndex(4)`], [`ColIndex(9)`])
+/// - [`parse_cursor_position()`] - Convert [`VT-100`] cursor position parameters
+///   (`[`[`ESC`]`] [ 5 ; 10 H`) to 0-based buffer coordinates ([`RowIndex(4)`],
+///   [`ColIndex(9)`])
 ///
 /// ## Design Rationale
 ///
 /// Parsers are intentionally **not** trait methods because:
 ///
 /// 1. **Separation of concerns** - Each parser handles domain-specific logic (type
-///    conversion, bounds checking, [`VT-100` specification] interpretation)
+///    conversion, bounds checking, [`VT-100` spec] interpretation)
 /// 2. **Scalability** - New parsers for other commands (`parse_sgr_attributes`,
 ///    `parse_erase_region`, etc.) don't require trait modifications
 /// 3. **Composability** - Parsers can be used independently or combined
 /// 4. **Testability** - Each parser can be tested in isolation
 ///
 /// [`ColIndex(9)`]: crate::ColIndex
-/// [`Parser`]: vte::Parser
-/// [`RowIndex(4)`]: crate::RowIndex
-/// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
-/// [`VT-100` Parameter Structure]: #vt-100-parameter-structure
-/// [`VT-100` specification]: https://vt100.net/docs/vt100-ug/chapter3.html
-/// [`VTE`]: mod@vte
+/// [`DECSTBM`]: https://vt100.net/docs/vt510-rm/DECSTBM.html
+/// [`ESC`]: crate::EscSequence
 /// [`extract_nth_many_raw`]: Self::extract_nth_many_raw
 /// [`extract_nth_single_non_zero(0)`]: Self::extract_nth_single_non_zero
 /// [`extract_nth_single_non_zero`]: Self::extract_nth_single_non_zero
 /// [`extract_nth_single_opt_raw`]: Self::extract_nth_single_opt_raw
 /// [`parse_cursor_position()`]: parse_cursor_position
+/// [`Parser`]: vte::Parser
+/// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
+/// [`RowIndex(4)`]: crate::RowIndex
+/// [`VT-100` Parameter Structure]: #vt-100-parameter-structure
+/// [`VT-100` spec]: https://vt100.net/docs/vt100-ug/chapter3.html
+/// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 /// [`vte::Params`]: vte::Params
 /// [`vte_params_behavior_validation`]: vte_params_behavior_validation
+/// [`VTE`]: mod@vte
 pub trait ParamsExt {
     /// Extracts the nth parameter (0-based) with [`VT-100`]-compliant default handling.
     ///
@@ -241,7 +246,7 @@ pub trait ParamsExt {
     /// [`extract_nth_many_raw`].
     ///
     /// # Returns
-    /// [`NonZeroU16`] - Always returns a value `>= 1` per [`VT-100` specification].
+    /// [`NonZeroU16`] - Always returns a value `>= 1` per [`VT-100` spec].
     ///
     /// <div class="warning">
     ///
@@ -252,11 +257,11 @@ pub trait ParamsExt {
     ///
     /// </div>
     ///
-    /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
-    /// [`VT-100` Parameter Structure section]: ParamsExt#vt100-parameter-structure
-    /// [`VT-100` specification]: https://vt100.net/docs/vt100-ug/chapter3.html
     /// [`extract_nth_many_raw`]: Self::extract_nth_many_raw
     /// [`extract_nth_single_opt_raw`]: Self::extract_nth_single_opt_raw
+    /// [`VT-100` Parameter Structure section]: ParamsExt#vt100-parameter-structure
+    /// [`VT-100` spec]: https://vt100.net/docs/vt100-ug/chapter3.html
+    /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
     fn extract_nth_single_non_zero(&self, arg_nth_pos: impl Into<Index>) -> NonZeroU16;
 
     /// Extracts the nth parameter (0-based) without default transformation.
@@ -283,12 +288,12 @@ pub trait ParamsExt {
     ///
     /// </div>
     ///
-    /// [`Some(value)`]: Option::Some
-    /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
-    /// [`VT-100` Parameter Structure section]: ParamsExt#vt100-parameter-structure
-    /// [`VTE`]: mod@vte
     /// [`extract_nth_many_raw`]: Self::extract_nth_many_raw
     /// [`extract_nth_single_non_zero`]: Self::extract_nth_single_non_zero
+    /// [`Some(value)`]: Option::Some
+    /// [`VT-100` Parameter Structure section]: ParamsExt#vt100-parameter-structure
+    /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+    /// [`VTE`]: mod@vte
     fn extract_nth_single_opt_raw(&self, arg_nth_pos: impl Into<Index>) -> Option<u16>;
 
     /// Extracts all (variable number of) sub-parameters at position n as a slice.
@@ -316,10 +321,10 @@ pub trait ParamsExt {
     /// - [`Some(slice)`] - A reference to the sub-parameter slice (zero-copy, no
     ///   allocation)
     ///
-    /// [Working Example section]: ParamsExt#working-example
     /// [`Some(slice)`]: Option::Some
-    /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
     /// [`VT-100` Parameter Structure section]: ParamsExt#vt100-parameter-structure
+    /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+    /// [Working Example section]: ParamsExt#working-example
     fn extract_nth_many_raw(&self, arg_nth_pos: impl Into<Index>) -> Option<&[u16]>;
 }
 
@@ -360,7 +365,7 @@ impl ParamsExt for vte::Params {
 ///
 /// # Conversion Flow
 ///
-/// **[`VT-100` specification]**: Coordinates are 1-based; missing/zero parameters default
+/// **[`VT-100` spec]**: Coordinates are 1-based; missing/zero parameters default
 /// to 1.
 ///
 /// ```text
@@ -381,8 +386,8 @@ impl ParamsExt for vte::Params {
 ///
 /// [`ColIndex`]: crate::ColIndex
 /// [`RowIndex`]: crate::RowIndex
+/// [`VT-100` spec]: https://vt100.net/docs/vt100-ug/chapter3.html
 /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
-/// [`VT-100` specification]: https://vt100.net/docs/vt100-ug/chapter3.html
 #[must_use]
 pub fn parse_cursor_position(params: &vte::Params) -> (RowIndex, ColIndex) {
     // Step 1: Extract 1-based parameters (NonZeroU16, guaranteed >= 1)
@@ -420,13 +425,14 @@ pub fn parse_cursor_position(params: &vte::Params) -> (RowIndex, ColIndex) {
 mod test_fixtures {
     use vte::{Parser, Perform};
 
-    /// Integration test helper - process CSI sequence and extract params.
+    /// Integration test helper - process [`CSI`] sequence and extract params.
     ///
-    /// This helper feeds a complete CSI escape sequence through the [`VTE`] [`Parser`]
-    /// and captures the resulting [`vte::Params`] for testing. This is the only
-    /// way to properly test [`ParamsExt`] methods since [`vte::Params`] cannot be
-    /// manually constructed.
+    /// This helper feeds a complete [`CSI`] escape sequence through the [`VTE`]
+    /// [`Parser`] and captures the resulting [`vte::Params`] for testing. This is the
+    /// only way to properly test [`ParamsExt`] methods since [`vte::Params`] cannot
+    /// be manually constructed.
     ///
+    /// [`CSI`]: crate::CsiSequence
     /// [`Parser`]: vte::Parser
     /// [`VTE`]: mod@vte
     pub(super) fn process_csi_sequence_and_test<F>(sequence: &str, test_fn: F)

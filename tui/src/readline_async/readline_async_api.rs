@@ -4,8 +4,7 @@ use crate::{ChannelCapacity, CommonResult, CursorPositionBoundsStatus, GCStringO
             InputDevice, LineStateControlSignal, OutputDevice,
             READLINE_ASYNC_INITIAL_PROMPT_DISPLAY_CURSOR_SHOW_DELAY, Readline,
             ReadlineEvent, SegIndex, SharedWriter, StdinIsPipedResult,
-            StdoutIsPipedResult, TTYResult, inline_string, is_headless, is_stdin_piped,
-            is_stdout_piped, ok};
+            StdoutIsPipedResult, TTYResult, is_headless, is_stdin_piped, is_stdout_piped};
 use futures_util::FutureExt;
 use miette::IntoDiagnostic;
 use tokio::sync::broadcast;
@@ -107,7 +106,7 @@ macro_rules! rla_println_prefixed {
 
 impl ReadlineAsyncContext {
     /// Creates a new instance of [`ReadlineAsyncContext`]. Example of `prompt` is `"> "`.
-    /// It is safe to have ANSI escape sequences inside the `prompt` as this is taken
+    /// It is safe to have [`ANSI`] escape sequences inside the `prompt` as this is taken
     /// into account when calculating the width of the terminal when displaying it in
     /// the "line editor".
     ///
@@ -138,6 +137,8 @@ impl ReadlineAsyncContext {
     /// - The terminal cannot be put into raw mode
     /// - The terminal size cannot be determined
     /// - The readline instance cannot be created
+    ///
+    /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
     pub async fn try_new(
         read_line_prompt: Option<impl AsRef<str>>,
         channel_capacity: Option<ChannelCapacity>,

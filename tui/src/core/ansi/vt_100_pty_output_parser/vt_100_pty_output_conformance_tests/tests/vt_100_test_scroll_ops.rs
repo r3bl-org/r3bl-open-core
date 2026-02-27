@@ -661,7 +661,7 @@ pub mod scrolling {
         // Tests edge cases for scrolling operations, including zero-parameter scrolls
         // and other boundary conditions.
         //
-        // NOTE: According to `VT-100` specification, a parameter of 0 for scroll
+        // NOTE: According to [`VT-100` spec], a parameter of 0 for scroll
         // operations should be treated as 1, just like cursor movement commands.
         // This is now correctly implemented.
 
@@ -840,11 +840,13 @@ pub mod line_wrap_scroll_interaction {
     }
 }
 
-/// Tests for DECSTBM (Set Top and Bottom Margins) functionality.
+/// Tests for [`DECSTBM`] (Set Top and Bottom Margins) functionality.
 ///
-/// DECSTBM is essential for applications like vim splits, terminal multiplexers,
+/// [`DECSTBM`] is essential for applications like vim splits, terminal multiplexers,
 /// and any application that needs split-screen functionality with independent
 /// scrolling regions.
+///
+/// [`DECSTBM`]: https://vt100.net/docs/vt510-rm/DECSTBM.html
 pub mod decstbm_scroll_margins {
     use super::*;
 

@@ -1,3 +1,5 @@
+# cspell:words incompat
+
 # Parallel frontend compiler (requires nightly, see rust-toolchain.toml).
 # `-Z threads=8` enables multi-threaded compilation for ~20-30% faster builds.
 # Tracking issue: https://github.com/rust-lang/rust/issues/113349
@@ -23,3 +25,9 @@ incremental = true  # Only disable to avoid rustc dep graph ICE on nightly which
 
 [profile.test]
 incremental = true  # Only disable to avoid rustc dep graph ICE on nightly which should not happen due to rust-toolchain-update.fish
+
+# TODO: remove this workaround when this is done `task/fix-future-incompat-warnings-2.md`
+# Suppress cargo's future-incompat report for `$crate::macro!()` in macro bodies.
+# The underlying lint is intentionally allowed in tui/src/lib.rs (see comment there).
+[future-incompat-report]
+frequency = "never"

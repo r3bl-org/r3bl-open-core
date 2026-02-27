@@ -8,20 +8,30 @@ use std::fmt::Debug;
 /// Character set modes for terminal emulation.
 ///
 /// Used by [`AnsiToOfsBufPerformer`] to handle
-/// ESC ( sequences that switch between ASCII and DEC line-drawing graphics.
+/// [`ESC`] ( sequences that switch between [`ASCII`] and [`DEC`] line-drawing graphics.
 ///
 /// [`AnsiToOfsBufPerformer`]: crate::AnsiToOfsBufPerformer
+/// [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
+/// [`DEC`]: https://en.wikipedia.org/wiki/Digital_Equipment_Corporation
+/// [`ESC`]: crate::EscSequence
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum CharacterSet {
-    /// Normal ASCII character set (ESC ( B).
+    /// Normal [`ASCII`] character set ([`ESC`] ( B).
+    ///
+    /// [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
+    /// [`ESC`]: crate::EscSequence
     #[default]
     Ascii,
-    /// DEC Special Graphics character set for line drawing (ESC ( 0).
-    /// Maps ASCII characters to box-drawing Unicode characters.
+    /// [`DEC`] Special Graphics character set for line drawing ([`ESC`] ( 0).
+    /// Maps [`ASCII`] characters to box-drawing Unicode characters.
+    ///
+    /// [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
+    /// [`DEC`]: https://en.wikipedia.org/wiki/Digital_Equipment_Corporation
+    /// [`ESC`]: crate::EscSequence
     DECGraphics,
 }
 
-/// Support structure for ANSI escape sequence parsing and terminal state management.
+/// Support structure for [`ANSI`] escape sequence parsing and terminal state management.
 ///
 /// This struct groups together all fields related to [`ANSI parser performer`]
 /// functionality that need to be maintained by the [`OffscreenBuffer`] for proper
@@ -32,19 +42,20 @@ pub enum CharacterSet {
 /// and is the primary cursor position tracker for the entire offscreen buffer system.
 ///
 /// [`ANSI parser performer`]: crate::AnsiToOfsBufPerformer
+/// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 /// [`OffscreenBuffer::cursor_pos`]: OffscreenBuffer::cursor_pos
 #[derive(Debug, Clone, PartialEq)]
 pub struct AnsiParserSupport {
     /// Temporary cursor position storage for DECSC/DECRC escape sequences only.
     ///
-    /// This field is ONLY used for ESC 7 (DECSC) save and ESC 8 (DECRC) restore
-    /// operations, as well as their CSI equivalents (CSI s and CSI u). It does NOT
-    /// track the current cursor position - that's stored in
+    /// This field is ONLY used for [`ESC`] 7 (DECSC) save and [`ESC`] 8 (DECRC) restore
+    /// operations, as well as their [`CSI`] equivalents ([`CSI`] s and [`CSI`] u). It
+    /// does NOT track the current cursor position - that's stored in
     /// [`OffscreenBuffer::cursor_pos`].
     ///
     /// Used by [`AnsiToOfsBufPerformer`] to implement
-    /// the DECSC (ESC 7) and DECRC (ESC 8) escape sequences for saving and restoring
-    /// cursor position.
+    /// the DECSC ([`ESC`] 7) and DECRC ([`ESC`] 8) escape sequences for saving and
+    /// restoring cursor position.
     ///
     /// ## Data Flow:
     /// ```text
@@ -62,14 +73,16 @@ pub struct AnsiParserSupport {
     /// ```
     ///
     /// [`AnsiToOfsBufPerformer`]: crate::AnsiToOfsBufPerformer
+    /// [`CSI`]: crate::CsiSequence
+    /// [`ESC`]: crate::EscSequence
     pub cursor_pos_for_esc_save_and_restore: Option<Pos>,
 
-    /// Active character set for ANSI escape sequence support.
+    /// Active character set for [`ANSI`] escape sequence support.
     ///
     /// Used by [`AnsiToOfsBufPerformer`] to implement
-    /// character set switching via ESC ( B (ASCII) and ESC ( 0 (DEC graphics).
-    /// When in Graphics mode, characters like 'q' are translated to box-drawing
-    /// characters like '─' during the `print()` operation.
+    /// character set switching via [`ESC`] ( B ([`ASCII`]) and [`ESC`] ( 0 ([`DEC`]
+    /// graphics). When in Graphics mode, characters like 'q' are translated to
+    /// box-drawing characters like '─' during the `print()` operation.
     ///
     /// ## Character Set Usage:
     /// ```text
@@ -77,10 +90,14 @@ pub struct AnsiParserSupport {
     /// Graphics Mode (ESC ( 0): 'q' → '─' (horizontal line)
     /// ```
     ///
+    /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
     /// [`AnsiToOfsBufPerformer`]: crate::AnsiToOfsBufPerformer
+    /// [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
+    /// [`DEC`]: https://en.wikipedia.org/wiki/Digital_Equipment_Corporation
+    /// [`ESC`]: crate::EscSequence
     pub character_set: CharacterSet,
 
-    /// Auto-wrap mode (DECAWM) for ANSI escape sequence support.
+    /// Auto-wrap mode (DECAWM) for [`ANSI`] escape sequence support.
     ///
     /// Used by [`AnsiToOfsBufPerformer`] to control
     /// line wrapping behavior when printing characters. This implements the VT100
@@ -96,60 +113,73 @@ pub struct AnsiParserSupport {
     /// automatically wrap to the beginning of the next line. When disabled,
     /// the cursor stays at the right margin and subsequent characters overwrite.
     ///
+    /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
     /// [`AnsiToOfsBufPerformer`]: crate::AnsiToOfsBufPerformer
     pub auto_wrap_mode: bool,
 
     /// Complete computed style combining attributes and colors for efficient rendering.
     pub current_style: TuiStyle,
 
-    /// OSC events (hyperlinks, titles, etc.) accumulated during processing.
+    /// [`OSC`] events (hyperlinks, titles, etc.) accumulated during processing.
+    ///
+    /// [`OSC`]: crate::osc_codes::OscSequence
     pub pending_osc_events: Vec<OscEvent>,
 
-    /// DSR response events accumulated during processing - need to be sent back to PTY.
+    /// [`DSR`] response events accumulated during processing - need to be sent back to
+    /// [`PTY`].
+    ///
+    /// [`DSR`]: crate::DsrSequence
+    /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
     pub pending_dsr_responses: Vec<crate::DsrRequestFromPtyEvent>,
 
-    /// Top margin for the **scrollable region** (DECSTBM) - 1-based row number.
+    /// Top margin for the **scrollable region** ([`DECSTBM`]) - 1-based row number.
     ///
     /// This variable defines the **upper boundary** of the area where scrolling occurs.
     /// Rows above this boundary are part of the **static top region** and do not scroll.
     ///
-    /// Used by [`AnsiToOfsBufPerformer`] to implement DECSTBM (Set Top and Bottom
-    /// Margins) functionality via ESC [ top ; bottom r.
+    /// Used by [`AnsiToOfsBufPerformer`] to implement [`DECSTBM`] (Set Top and Bottom
+    /// Margins) functionality via [`ESC`] [ top ; bottom r.
     ///
     /// When `None`, the default top margin is row 1 (first row), making the
     /// entire terminal screen the scrollable region.
     /// When `Some(n)`, scrolling operations only affect rows from n to
     /// `scroll_region_bottom`.
     ///
-    /// ## DECSTBM Usage:
+    /// ## [`DECSTBM`] Usage:
     /// ```text
     /// ESC [ 5 ; 20 r   - Set scrolling region from row 5 to row 20
     /// ESC [ r          - Reset to full screen (clears both margins)
     /// ```
     ///
     /// [`AnsiToOfsBufPerformer`]: crate::AnsiToOfsBufPerformer
+    /// [`DECSTBM`]: https://vt100.net/docs/vt510-rm/DECSTBM.html
+    /// [`ESC`]: crate::EscSequence
     pub scroll_region_top: Option<TermRow>,
 
-    /// Bottom margin for the **scrollable region** (DECSTBM) - 1-based row number.
+    /// Bottom margin for the **scrollable region** ([`DECSTBM`]) - 1-based row number.
     ///
     /// This variable defines the **lower boundary** of the area where scrolling occurs.
     /// Rows below this boundary are part of the **static bottom region** and do not
     /// scroll.
     ///
-    /// Used by [`AnsiToOfsBufPerformer`] to implement DECSTBM (Set Top and Bottom
-    /// Margins) functionality via ESC [ top ; bottom r.
+    /// Used by [`AnsiToOfsBufPerformer`] to implement [`DECSTBM`] (Set Top and Bottom
+    /// Margins) functionality via [`ESC`] [ top ; bottom r.
     ///
     /// When `None`, the default bottom margin is the last row of the terminal,
     /// making the entire terminal screen the scrollable region.
     /// When `Some(n)`, scrolling operations only affect rows from `scroll_region_top` to
     /// n.
     ///
-    /// ## DECSTBM Behavior:
-    /// - Scrolling commands (ESC D, ESC M, CSI S, CSI T) only affect the region
+    /// ## [`DECSTBM`] Behavior:
+    /// - Scrolling commands ([`ESC`] D, [`ESC`] M, [`CSI`] S, [`CSI`] T) only affect the
+    ///   region
     /// - Cursor movement is constrained to the region boundaries
     /// - Content outside the region remains unchanged during scrolling
     ///
     /// [`AnsiToOfsBufPerformer`]: crate::AnsiToOfsBufPerformer
+    /// [`CSI`]: crate::CsiSequence
+    /// [`DECSTBM`]: https://vt100.net/docs/vt510-rm/DECSTBM.html
+    /// [`ESC`]: crate::EscSequence
     pub scroll_region_bottom: Option<TermRow>,
 }
 
@@ -210,8 +240,10 @@ pub enum MouseTrackingState {
 /// Bracketed paste mode state.
 ///
 /// Controls whether text pasted from clipboard is wrapped with special escape
-/// sequences (OSC 52), allowing applications to distinguish pasted text from
+/// sequences ([`OSC`] 52), allowing applications to distinguish pasted text from
 /// keyboard input. This prevents misinterpretation of pasted content.
+///
+/// [`OSC`]: crate::osc_codes::OscSequence
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BracketedPasteState {
     /// Bracketed paste mode enabled
@@ -233,9 +265,10 @@ pub enum BracketedPasteState {
 /// - **Mouse Tracking**: Capability to capture mouse events
 /// - **Bracketed Paste**: Ability to distinguish pasted text from keyboard input
 ///
-/// Used by render pipeline and ANSI parser performer to maintain complete
+/// Used by render pipeline and [`ANSI`] parser performer to maintain complete
 /// terminal state information.
 ///
+/// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 /// [`RenderOpCommon`]: enum@crate::RenderOpCommon
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TerminalModeState {
@@ -280,13 +313,14 @@ pub struct TerminalModeState {
     /// Bracketed paste mode status.
     ///
     /// When enabled, text pasted from clipboard is wrapped with special escape
-    /// sequences (OSC 52), allowing applications to distinguish pasted text from
+    /// sequences ([`OSC`] 52), allowing applications to distinguish pasted text from
     /// keyboard input. This prevents misinterpretation of pasted content.
     ///
     /// Set via:
     /// - [`RenderOpCommon`] variant `EnableBracketedPaste` (enables)
     /// - [`RenderOpCommon`] variant `DisableBracketedPaste` (disables)
     ///
+    /// [`OSC`]: crate::osc_codes::OscSequence
     /// [`RenderOpCommon`]: enum@crate::RenderOpCommon
     pub bracketed_paste: BracketedPasteState,
 }
@@ -306,7 +340,7 @@ impl Default for TerminalModeState {
     }
 }
 
-/// Core terminal screen buffer structure with VT100/ANSI support.
+/// Core terminal screen buffer structure with VT100/[`ANSI`] support.
 ///
 /// For comprehensive architectural overview and integration details, see the
 /// [module documentation].
@@ -316,7 +350,8 @@ impl Default for TerminalModeState {
 /// characters (like emoji) using [`PixelChar::Void`] placeholders.
 ///
 /// ## Key Features
-/// - **Dual Integration**: Works with both render pipeline and ANSI terminal emulation
+/// - **Dual Integration**: Works with both render pipeline and [`ANSI`] terminal
+///   emulation
 /// - **Variable-ColWidth Support**: Proper handling of emoji and Unicode characters
 /// - **VT100 Compliance**: Full terminal specification compliance
 /// - **Performance Optimized**: Pre-calculated memory sizes and efficient operations
@@ -328,19 +363,21 @@ impl Default for TerminalModeState {
 /// - **Cursor Management**: Primary cursor position for all subsystems
 /// - **Terminal Mode State**: Tracking of terminal control modes (raw, alternate screen,
 ///   etc.)
-/// - **ANSI Support**: Terminal state for escape sequence processing
+/// - **[`ANSI`] Support**: Terminal state for escape sequence processing
 /// - **Performance**: Pre-calculated memory usage tracking
 ///
 /// ## Underlying protocol parser
 ///
-/// - [`vt_100_pty_output_parser`]: The ANSI parser that processes PTY output and updates
-///   this buffer's state via [`apply_ansi_bytes`]
-/// - [`AnsiToOfsBufPerformer`]: The VTE `Perform` implementation that translates ANSI
+/// - [`vt_100_pty_output_parser`]: The [`ANSI`] parser that processes [`PTY`] output and
+///   updates this buffer's state via [`apply_ansi_bytes`]
+/// - [`AnsiToOfsBufPerformer`]: The VTE `Perform` implementation that translates [`ANSI`]
 ///   sequences into buffer operations
 ///
+/// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 /// [`AnsiToOfsBufPerformer`]: crate::AnsiToOfsBufPerformer
-/// [`RenderOpCommon`]: enum@crate::RenderOpCommon
 /// [`apply_ansi_bytes`]: OffscreenBuffer::apply_ansi_bytes
+/// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
+/// [`RenderOpCommon`]: enum@crate::RenderOpCommon
 /// [`vt_100_pty_output_parser`]: mod@crate::core::ansi::vt_100_pty_output_parser
 /// [module documentation]: super
 #[derive(Clone, PartialEq)]
@@ -358,15 +395,17 @@ pub struct OffscreenBuffer {
     /// - **Render pipeline**: Updated when processing [`RenderOpCommon`] variants
     ///   `MoveCursorPositionAbs` and `MoveCursorPositionRelTo`
     /// - **Text rendering**: Starting position for `print_text_with_attributes()`
-    /// - **ANSI parser**: Directly reads from and writes to this position during
+    /// - **[`ANSI`] parser**: Directly reads from and writes to this position during
     ///   sequence processing
     /// - **Terminal emulation**: Tracks where the next character should be rendered
     ///
     /// Note: This is different from [`cursor_pos_for_esc_save_and_restore`] which is
-    /// only used for DECSC/DECRC (ESC 7/8) save/restore operations.
+    /// only used for DECSC/DECRC ([`ESC`] 7/8) save/restore operations.
     ///
-    /// [`RenderOpCommon`]: enum@crate::RenderOpCommon
+    /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
     /// [`cursor_pos_for_esc_save_and_restore`]: AnsiParserSupport::cursor_pos_for_esc_save_and_restore
+    /// [`ESC`]: crate::EscSequence
+    /// [`RenderOpCommon`]: enum@crate::RenderOpCommon
     pub cursor_pos: Pos,
 
     /// Terminal mode state tracking (raw mode, alternate screen, mouse tracking, etc.).
@@ -385,7 +424,9 @@ pub struct OffscreenBuffer {
     /// [`log_telemetry_info`]: crate::main_event_loop::EventLoopState::log_telemetry_info()
     memory_size: MemorySize,
 
-    /// ANSI parser support fields grouped together for better organization.
+    /// [`ANSI`] parser support fields grouped together for better organization.
+    ///
+    /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
     pub ansi_parser_support: AnsiParserSupport,
 }
 
@@ -443,7 +484,7 @@ pub trait OffscreenBufferPaint {
 // Core implementations moved from ofs_buf_core_impl.rs.
 
 use super::PixelCharDiffChunks;
-use crate::{List, col, fg_green, inline_string, ok, row};
+use crate::{List, col, fg_green, row};
 use std::{fmt::{self},
           ops::{Deref, DerefMut}};
 

@@ -10,7 +10,10 @@
 //! This example validates the fix for issue #442:
 //! <https://github.com/r3bl-org/r3bl-open-core/issues/442>
 //!
-//! Run with: `cargo run -p r3bl_tui --example readline_async_multiline`
+//! Run with:
+//! ```bash
+//! cargo run -p r3bl_tui --example readline_async_multiline
+//! ```
 //!
 //! ## Expected behavior
 //!

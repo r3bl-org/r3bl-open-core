@@ -3,24 +3,37 @@
 //! Test 1: Basic enable/disable functionality.
 //!
 //! Verifies that raw mode can be enabled, disabled, and properly restores
-//! terminal state using actual PTY pairs. This is the foundational test
+//! terminal state using actual [`PTY`] pairs. This is the foundational test
 //! that ensures the basic lifecycle works.
+//!
+//! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 
-use crate::{ControlledChild, PtyPair, PtyTestMode, RawModeGuard, drain_pty_and_wait,
-            generate_pty_test};
+use crate::{
+    ControlledChild,
+    PtyPair,
+    PtyTestMode,
+    RawModeGuard,
+    drain_pty_and_wait,
+};
 use rustix::termios;
 use std::{io::{BufRead, BufReader, Write},
           time::{Duration, Instant}};
 
 generate_pty_test! {
-    /// PTY-based integration test for raw mode basic enable/disable.
+    /// [`PTY`]-based integration test for raw mode basic enable/disable.
     ///
-    /// This test uses a master/slave PTY pair to verify that:
-    /// 1. Raw mode can be enabled on a real PTY
+    /// This test uses a master/slave [`PTY`] pair to verify that:
+    /// 1. Raw mode can be enabled on a real [`PTY`]
     /// 2. Raw mode can be disabled and terminal settings restored
-    /// 3. The RAII guard pattern works correctly
+    /// 3. The [`RAII`] guard pattern works correctly
     ///
-    /// Run with: `cargo test -p r3bl_tui --lib test_raw_mode_pty -- --nocapture`
+    /// Run with:
+    /// ```bash
+    /// cargo test -p r3bl_tui --lib test_raw_mode_pty -- --nocapture
+    /// ```
+    ///
+    /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
+    /// [`RAII`]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
     test_fn: test_raw_mode_pty,
     controller: pty_controller_entry_point,
     controlled: pty_controlled_entry_point,
@@ -28,7 +41,9 @@ generate_pty_test! {
 }
 
 /// Controller process: verifies results.
-/// Receives PTY pair and child process from the macro.
+/// Receives [`PTY`] pair and child process from the macro.
+///
+/// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 fn pty_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
     eprintln!("🚀 PTY Controller: Starting raw mode test...");
 
@@ -74,7 +89,10 @@ fn pty_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
         }
     }
 
-    assert!(controlled_started, "Controlled process did not start properly");
+    assert!(
+        controlled_started,
+        "Controlled process did not start properly"
+    );
     assert!(test_passed, "Test did not report success");
 
     // Drain PTY and wait for child to prevent macOS PTY buffer deadlock.

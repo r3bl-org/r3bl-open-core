@@ -2,8 +2,13 @@
 
 #[cfg(test)]
 mod tests {
-    use crate::{RenderOpCommon, RenderOpIR, RenderOpIRVec, RenderPipeline, ZOrder,
-                assert_eq2, render_pipeline};
+    use crate::{
+        RenderOpCommon,
+        RenderOpIR,
+        RenderOpIRVec,
+        RenderPipeline,
+        ZOrder,
+    };
 
     #[test]
     fn render_ops_macro() {

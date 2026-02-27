@@ -1,7 +1,8 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use clap::Parser;
-use r3bl_build_infra::{cargo_rustdoc_fmt::{CLIArg, FileProcessor},
+use r3bl_build_infra::{cargo_rustdoc_fmt::{CLIArg, FileProcessor,
+                                           TechnicalTermDictionary},
                        common::{cargo_fmt_runner, workspace_utils}};
 use r3bl_tui::core::script::{try_get_changed_files_by_ext, try_is_git_repo};
 use std::process;
@@ -115,19 +116,38 @@ async fn run() -> miette::Result<()> {
         }
     };
 
-    // Filter out files that no longer exist on disk (e.g., deleted files reported by
-    // git diff). Track them separately for reporting.
-    let (files, skipped_files): (Vec<_>, Vec<_>) =
-        files.into_iter().partition(|p| p.exists());
+    // Silently filter out files that no longer exist on disk (safety net in case
+    // git reports deleted files despite --diff-filter=d) and test data directories
+    // (golden fixtures that should not be formatted).
+    let files: Vec<_> = files
+        .into_iter()
+        .filter(|p| {
+            p.exists()
+                && !p.components().any(|c| {
+                    let s = c.as_os_str().to_string_lossy();
+                    s.contains("test_data") || s.contains("testdata")
+                })
+        })
+        .collect();
 
-    if !skipped_files.is_empty() {
+    // Skip lib.rs files by default. These serve as README templates with
+    // specific formatting (gradient spans, TOC anchors, multi-line HTML) that
+    // rustdoc-fmt should not modify. Use --include-lib-rs to override.
+    let (files, lib_rs_skipped) = if cli_arg.include_lib_rs {
+        (files, 0)
+    } else {
+        let pre_filter_count = files.len();
+        let filtered: Vec<_> = files
+            .into_iter()
+            .filter(|p| p.file_name().is_none_or(|name| name != "lib.rs"))
+            .collect();
+        let skipped = pre_filter_count - filtered.len();
+        (filtered, skipped)
+    };
+    if lib_rs_skipped > 0 && cli_arg.verbose {
         println!(
-            "Skipped {} file(s) that no longer exist on disk:",
-            skipped_files.len()
+            "Skipped {lib_rs_skipped} lib.rs file(s) (README templates, use --include-lib-rs to override)"
         );
-        for file in &skipped_files {
-            println!("  - {}", file.display());
-        }
     }
 
     if files.is_empty() {
@@ -148,8 +168,27 @@ async fn run() -> miette::Result<()> {
         println!("Processing {} files...", files.len());
     }
 
+    // Build the known-terms registry (once, shared across all files).
+    // When --terms-file is provided, uses only that file (no workspace scan)
+    // for deterministic results. Otherwise, builds from the embedded seed
+    // plus a workspace scan for additional terms.
+    let registry = if options.link_terms {
+        let terms_file = cli_arg.terms_file.as_deref();
+        if terms_file.is_some() {
+            Some(TechnicalTermDictionary::from_seed(terms_file)?)
+        } else {
+            let workspace_root = workspace_utils::get_workspace_root()?;
+            Some(TechnicalTermDictionary::build(&workspace_root, None)?)
+        }
+    } else {
+        None
+    };
+
     // Process files
-    let processor = FileProcessor::new(options);
+    let processor = match &registry {
+        Some(reg) => FileProcessor::with_registry(options, reg),
+        None => FileProcessor::new(options),
+    };
     let results = processor.process_files(&files);
 
     // Report results

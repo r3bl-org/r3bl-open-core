@@ -94,7 +94,6 @@ impl TransformColor for RgbValue {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::assert_eq2;
     use test_case::test_case;
 
     #[test]
@@ -148,8 +147,11 @@ mod tests {
     }
 
     /// <https://www.ditig.com/256-colors-cheat-sheet>
-    /// ANSI: 57 `BlueViolet`
     /// RGB: #5f00ff rgb(95,0,255)
+    ///
+    /// [`ANSI`] value 57 = `BlueViolet`
+    ///
+    /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
     #[test]
     fn test_rgb_to_ansi() {
         let rgb = RgbValue::from_u8(95, 0, 255);

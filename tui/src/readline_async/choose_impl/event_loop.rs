@@ -1,17 +1,9 @@
 // Copyright (c) 2023-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crossterm::cursor::{Hide, Show};
-
 use super::KeyPressReader;
-use crate::{execute_commands,
-            is_output_interactive,
-            CalculateResizeHint,
-            CommonResult,
-            FunctionComponent,
-            InputDevice,
-            InputEvent,
-            ItemsOwned,
-            TTYResult};
+use crate::{CalculateResizeHint, CommonResult, FunctionComponent, InputDevice,
+            InputEvent, ItemsOwned, TTYResult, is_output_interactive};
+use crossterm::cursor::{Hide, Show};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[allow(clippy::large_enum_variant)]
@@ -134,7 +126,8 @@ fn handle_event_loop_result<S: CalculateResizeHint>(
     result: EventLoopResult,
     state: &mut S,
 ) -> Option<EventLoopResult> {
-    use EventLoopResult::{ContinueAndRerenderAndClear, ContinueAndRerender, Continue, Select, ExitWithResult, ExitWithoutResult, ExitWithError};
+    use EventLoopResult::{Continue, ContinueAndRerender, ContinueAndRerenderAndClear,
+                          ExitWithError, ExitWithResult, ExitWithoutResult, Select};
 
     match result {
         ContinueAndRerenderAndClear => {

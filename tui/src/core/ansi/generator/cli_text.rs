@@ -4,7 +4,6 @@ use crate::{BufTextStorage, ColIndex, ColWidth, FastStringify, GCStringOwned,
             InlineString, InlineVec, PixelChar, PixelCharRenderer, SgrCode, TuiColor,
             TuiStyle, TuiStyleAttribs, UNICODE_REPLACEMENT_CHAR,
             cli_text_inline_impl::CliTextConvertOptions,
-            generate_impl_display_for_fast_stringify, inline_string, tui_color,
             tui_style_attrib::{Bold, Dim, Italic, Strikethrough, Underline}};
 use std::fmt::Result;
 use strum_macros::EnumCount;
@@ -71,15 +70,14 @@ use strum_macros::EnumCount;
 /// .println();
 /// ```
 ///
-/// [`CliTextLine`]: crate::CliTextLine
-/// [`CliTextLines`]: crate::CliTextLines
-/// [`TuiStyleAttribs`]: crate::TuiStyleAttribs
 /// [`attribs`]: Self::attribs
 /// [`bg_color`]: Self::bg_color
 /// [`bg_dark_gray`]: Self::bg_dark_gray
 /// [`cli_text_inline`]: crate::cli_text_inline
 /// [`cli_text_line!`]: crate::cli_text_line
 /// [`cli_text_lines!`]: crate::cli_text_lines
+/// [`CliTextLine`]: crate::CliTextLine
+/// [`CliTextLines`]: crate::CliTextLines
 /// [`color_bg`]: Self::color_bg
 /// [`color_fg`]: Self::color_fg
 /// [`fg_blue`]: crate::fg_blue
@@ -87,6 +85,7 @@ use strum_macros::EnumCount;
 /// [`fg_green`]: crate::fg_green
 /// [`fg_red`]: crate::fg_red
 /// [`text`]: Self::text
+/// [`TuiStyleAttribs`]: crate::TuiStyleAttribs
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CliTextInline {
     pub text: InlineString,
@@ -169,11 +168,13 @@ pub mod cli_text_inline_impl {
     /// - Accurate terminal column positioning
     ///
     /// # Examples
-    /// - ASCII text "Hello World": Each char is 1 column wide
+    /// - [`ASCII`] text "Hello World": Each char is 1 column wide
     ///   - `start=0, width=5` → "Hello"
     /// - CJK text "你好世界": Each char is 2 columns wide
     ///   - `start=0, width=2` → "你" (starts at col 0, takes 2 cols)
     ///   - `start=2, width=4` → "好世" (starts at col 2, takes 4 cols)
+    ///
+    /// [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
     #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
     pub struct CliTextConvertOptions {
         pub start: ColIndex,
@@ -934,7 +935,7 @@ generate_impl_display_for_fast_stringify!(CliTextInline);
 mod tests {
     use super::{cli_text_inline_impl::CliTextConvertOptions, dim};
     use crate::{CliTextInline, ColIndex, ColorSupport, InlineVec, PixelChar, TuiColor,
-                TuiStyle, TuiStyleAttribs, global_color_support, tui_color,
+                TuiStyle, TuiStyleAttribs, global_color_support,
                 tui_style::tui_style_attrib::Bold, tui_style_attribs, width};
     use pretty_assertions::assert_eq;
     use serial_test::serial;

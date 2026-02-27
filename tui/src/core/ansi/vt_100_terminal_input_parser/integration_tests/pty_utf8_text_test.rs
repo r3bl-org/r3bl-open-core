@@ -1,18 +1,30 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! PTY-based integration test for UTF-8 text input parsing.
+//! [`PTY`]-based integration test for [`UTF-8`] text input parsing.
 //!
-//! Validates that the [`DirectToAnsiInputDevice`] correctly handles UTF-8 text input:
-//! - ASCII characters
-//! - UTF-8 multi-byte sequences (accented characters, emojis, etc.)
-//! - Mixed text and ANSI escape sequences
+//! Validates that the [`DirectToAnsiInputDevice`] correctly handles [`UTF-8`] text input:
+//! - [`ASCII`] characters
+//! - [`UTF-8`] multi-byte sequences (accented characters, emojis, etc.)
+//! - Mixed text and [`ANSI`] escape sequences
 //!
-//! Run with: `cargo test -p r3bl_tui --lib test_pty_utf8_text -- --nocapture`
+//! Run with:
+//! ```bash
+//! cargo test -p r3bl_tui --lib test_pty_utf8_text -- --nocapture
+//! ```
 //!
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
 //! [`DirectToAnsiInputDevice`]: crate::direct_to_ansi::DirectToAnsiInputDevice
+//! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
+//! [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
 
-use crate::{ControlledChild, InputEvent, PtyPair, PtyTestMode, generate_pty_test,
-            tui::terminal_lib_backends::direct_to_ansi::DirectToAnsiInputDevice};
+use crate::{
+    ControlledChild,
+    InputEvent,
+    PtyPair,
+    PtyTestMode,
+    tui::terminal_lib_backends::direct_to_ansi::DirectToAnsiInputDevice,
+};
 use std::{io::{BufRead, BufReader, Write},
           time::Duration};
 
@@ -28,11 +40,17 @@ generate_pty_test! {
     mode: PtyTestMode::Raw,
 }
 
-/// PTY Controller: Send UTF-8 text and verify parsing
+/// [`PTY`] Controller: Sends [`UTF-8`] text and verifies parsing.
+///
+/// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
+/// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
 fn pty_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
     eprintln!("🚀 PTY Controller: Starting UTF-8 text test...");
 
-    let mut writer = pty_pair.controller().take_writer().expect("Failed to get writer");
+    let mut writer = pty_pair
+        .controller()
+        .take_writer()
+        .expect("Failed to get writer");
     let reader = pty_pair
         .controller()
         .try_clone_reader()
@@ -66,7 +84,10 @@ fn pty_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
         }
     }
 
-    assert!(test_running_seen, "Controlled test never started running (no TEST_RUNNING output)");
+    assert!(
+        test_running_seen,
+        "Controlled test never started running (no TEST_RUNNING output)"
+    );
 
     // Send text inputs
     let texts = vec![
@@ -139,7 +160,10 @@ fn pty_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
     eprintln!("✅ PTY Controller: Test passed!");
 }
 
-/// PTY Controlled: Read and parse UTF-8 text
+/// [`PTY`] Controlled: Reads and parses [`UTF-8`] text.
+///
+/// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
+/// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
 fn pty_controlled_entry_point() -> ! {
     println!("{CONTROLLED_READY}");
     std::io::stdout().flush().expect("Failed to flush");

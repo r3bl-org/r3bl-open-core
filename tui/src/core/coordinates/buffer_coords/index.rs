@@ -3,7 +3,7 @@
 //! Zero-based character position for terminal UI - see [`Index`] type.
 
 use super::{Length, len};
-use crate::{ChUnit, RowIndex, generate_index_type_impl};
+use crate::{ChUnit, RowIndex};
 use std::hash::Hash;
 
 /// Represents an index position in character units.

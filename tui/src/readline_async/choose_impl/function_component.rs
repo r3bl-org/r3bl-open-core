@@ -1,15 +1,8 @@
 // Copyright (c) 2023-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+use crate::{ChUnit, DEVELOPMENT_MODE, OutputDevice, ResizeHint, Size};
 use crossterm::{cursor::{MoveToNextLine, MoveToPreviousLine},
                 terminal::{Clear, ClearType}};
-
-use crate::{queue_commands,
-            throws,
-            ChUnit,
-            OutputDevice,
-            ResizeHint,
-            Size,
-            DEVELOPMENT_MODE};
 
 pub trait CalculateResizeHint {
     fn set_size(&mut self, new_size: Size);

@@ -1,7 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::RowIndex;
-use crate::{ChUnit, generate_length_type_impl};
+use crate::ChUnit;
 use std::hash::Hash;
 
 /// [`RowHeight`] is row count, i.e., the number of rows that a UI component occupies.
@@ -19,7 +19,6 @@ use std::hash::Hash;
 /// [`LengthOps::convert_to_index()`] and apply whatever logic makes sense for your use
 /// case.
 ///
-/// [`LengthOps::convert_to_index()`]: crate::LengthOps::convert_to_index
 ///
 /// # Examples
 /// ```
@@ -28,6 +27,7 @@ use std::hash::Hash;
 /// let height = RowHeight::new(5);
 /// ```
 ///
+/// [`LengthOps::convert_to_index()`]: crate::LengthOps::convert_to_index
 /// [`RowHeight`]: crate::RowHeight
 /// [`RowIndex`]: crate::RowIndex
 /// [`Size`]: crate::Size

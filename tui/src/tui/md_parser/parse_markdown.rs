@@ -111,7 +111,7 @@ fn parse_date_value(input: &str) -> IResult<&str, &str> {
 #[cfg(test)]
 mod tests_integration_block_smart_lists {
     use super::*;
-    use crate::{PrettyPrintDebug, assert_eq2};
+    use crate::PrettyPrintDebug;
 
     #[test]
     fn test_parse_valid_md_ol_with_indent() {
@@ -300,7 +300,7 @@ mod tests_integration_block_smart_lists {
 mod tests_parse_markdown {
     use super::*;
     use crate::{BulletKind, CodeBlockLine, CodeBlockLineContent, HeadingData,
-                HeadingLevel, HyperlinkData, MdLineFragment, assert_eq2};
+                HeadingLevel, HyperlinkData, MdLineFragment};
 
     #[test]
     fn test_no_line() {

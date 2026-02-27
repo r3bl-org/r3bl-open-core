@@ -3,7 +3,7 @@
 use crate::{DEBUG_TUI_COPY_PASTE, DeleteSelectionWith, EditorArgsMut, EditorBuffer,
             EditorEngine, InputEvent, Key, KeyPress, KeyState, ModifierKeysMask,
             SelectMode, Size, SpecialKey, clipboard_support::ClipboardService,
-            editor_engine::engine_internal_api, fg_green, inline_string,
+            editor_engine::engine_internal_api, fg_green,
             md_parser::md_parser_constants::NEW_LINE_CHAR, validate_scroll_on_resize};
 use std::fmt::Debug;
 
@@ -579,7 +579,7 @@ impl EditorEvent {
 mod tests {
     use crate::{CaretDirection, CaretScrAdj, DEFAULT_SYN_HI_FILE_EXT, EditorBuffer,
                 EditorEngine, EditorEngineConfig, EditorEvent, LineMode,
-                SelectionAction, assert_eq2, caret_scr_adj,
+                SelectionAction, caret_scr_adj,
                 clipboard_service::clipboard_test_fixtures::TestClipboard, col,
                 editor::test_fixtures_editor::mock_real_objects_for_editor,
                 editor_engine::engine_internal_api, row};

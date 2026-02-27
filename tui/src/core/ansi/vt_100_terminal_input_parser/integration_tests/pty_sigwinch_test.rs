@@ -2,23 +2,24 @@
 
 // cspell:words tcgetwinsize
 
-//! PTY integration test for SIGWINCH signal handling.
+//! [`PTY`] integration test for [`SIGWINCH`] signal handling.
 //!
 //! This test validates that [`DirectToAnsiInputDevice`] correctly receives and handles
-//! the SIGWINCH signal when the terminal is resized. Unlike the ANSI resize sequence
-//! test in [`pty_terminal_events_test`], this test triggers a **real SIGWINCH signal**
-//! by calling the PTY's `resize()` method.
+//! the [`SIGWINCH`] signal when the terminal is resized. Unlike the [`ANSI`] resize
+//! sequence test in [`pty_terminal_events_test`], this test triggers a **real
+//! [`SIGWINCH`] signal** by calling the [`PTY`]'s `resize()` method.
 //!
 //! # Signal vs Sequence
 //!
 //! Terminal resize can be communicated in two ways:
-//! - **SIGWINCH signal**: Sent by the kernel when the PTY size changes (tested here)
-//! - **ANSI sequence**: `CSI 8;rows;cols t` sent by the terminal (tested in
+//! - **[`SIGWINCH`] signal**: Sent by the kernel when the [`PTY`] size changes (tested
+//!   here)
+//! - **[`ANSI`] sequence**: `CSI 8;rows;cols t` sent by the terminal (tested in
 //!   [`pty_terminal_events_test`])
 //!
 //! The [`DirectToAnsiInputDevice`] uses [`tokio::signal::unix::Signal`] to listen for
-//! SIGWINCH, then queries the terminal size using `tcgetwinsize()`. This test verifies
-//! that entire flow works correctly in a real PTY environment.
+//! [`SIGWINCH`], then queries the terminal size using `tcgetwinsize()`. This test
+//! verifies that entire flow works correctly in a real [`PTY`] environment.
 //!
 //! # Test Architecture
 //!
@@ -49,10 +50,13 @@
 //!     │                                       │
 //! ```
 //!
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`DirectToAnsiInputDevice`]: crate::direct_to_ansi::DirectToAnsiInputDevice
 //! [`pty_terminal_events_test`]: super::pty_terminal_events_test
+//! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
+//! [`SIGWINCH`]: https://man7.org/linux/man-pages/man7/signal.7.html
 
-use crate::{ControlledChild, InputEvent, PtyPair, PtyTestMode, generate_pty_test,
+use crate::{ControlledChild, InputEvent, PtyPair, PtyTestMode,
             tui::terminal_lib_backends::direct_to_ansi::DirectToAnsiInputDevice};
 use portable_pty::PtySize;
 use std::{io::{BufRead, BufReader, Write},
@@ -68,7 +72,11 @@ generate_pty_test! {
     mode: PtyTestMode::Raw,
 }
 
-/// PTY Controller: Resize the PTY and verify the controlled process receives SIGWINCH.
+/// [`PTY`] Controller: Resize the [`PTY`] and verify the controlled process receives
+/// [`SIGWINCH`].
+///
+/// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
+/// [`SIGWINCH`]: https://man7.org/linux/man-pages/man7/signal.7.html
 fn pty_controller_entry_point(mut pty_pair: PtyPair, mut child: ControlledChild) {
     eprintln!("🚀 PTY Controller: Starting SIGWINCH test...");
 
@@ -185,7 +193,10 @@ fn pty_controller_entry_point(mut pty_pair: PtyPair, mut child: ControlledChild)
     eprintln!("✅ PTY Controller: SIGWINCH test passed!");
 }
 
-/// PTY Controlled: Set up signal handler and wait for SIGWINCH.
+/// [`PTY`] Controlled: Set up signal handler and wait for [`SIGWINCH`].
+///
+/// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
+/// [`SIGWINCH`]: https://man7.org/linux/man-pages/man7/signal.7.html
 fn pty_controlled_entry_point() -> ! {
     println!("{CONTROLLED_READY}");
     std::io::stdout().flush().expect("Failed to flush");

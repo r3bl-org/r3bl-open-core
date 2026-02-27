@@ -127,16 +127,16 @@
 //!
 //! ## `CaptureOutputBytes`
 //!
-//! A simple [`Write`] implementation that captures raw bytes (including ANSI escape
+//! A simple [`Write`] implementation that captures raw bytes (including [`ANSI`] escape
 //! sequences) for later processing. See the [blank line test] for detailed docs.
 //!
 //! ## [`OffscreenBuffer::apply_ansi_bytes`]
 //!
-//! Parses ANSI escape sequences and renders them to a virtual terminal buffer. This gives
-//! us the **exact visual output** a user would see, allowing us to verify column
+//! Parses [`ANSI`] escape sequences and renders them to a virtual terminal buffer. This
+//! gives us the **exact visual output** a user would see, allowing us to verify column
 //! alignment.
 //!
-//! # ANSI Escape Sequences Involved
+//! # [`ANSI`] Escape Sequences Involved
 //!
 //! ```text
 //! ┌──────────────┬────────────────────────────────────────────────────────────┐
@@ -161,14 +161,14 @@
 //! cargo test -p r3bl_tui --lib test_pty_multiline_output_starts_at_column_1 -- --nocapture
 //! ```
 //!
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`CHA(1)`]: crate::CsiSequence::CursorHorizontalAbsolute
 //! [`OffscreenBuffer::apply_ansi_bytes`]: crate::OffscreenBuffer::apply_ansi_bytes
 //! [`PTY`]: crate::core::pty
 //! [`SharedWriter`]: crate::SharedWriter
 //! [blank line test]: super::pty_shared_writer_no_blank_line_test
 
-use crate::{ControlledChild, PtyPair, PtyTestMode, generate_pty_test,
-            read_lines_and_drain};
+use crate::{ControlledChild, PtyPair, PtyTestMode, read_lines_and_drain};
 use std::{io::Write, time::Duration};
 
 generate_pty_test! {
@@ -184,7 +184,9 @@ generate_pty_test! {
     mode: PtyTestMode::Cooked,
 }
 
-/// PTY Controller: Verify multi-line output all starts at column 1.
+/// [`PTY`] Controller: Verify multi-line output all starts at column 1.
+///
+/// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 fn pty_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
     eprintln!("🚀 PTY Controller: Starting multi-line output column test...");
 
@@ -257,7 +259,7 @@ fn pty_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
     eprintln!("✅ PTY Controller: All lines start at column 1 correctly!");
 }
 
-/// Captures raw ANSI bytes for later processing with
+/// Captures raw [`ANSI`] bytes for later processing with
 /// [`OffscreenBuffer::apply_ansi_bytes`].
 ///
 /// This struct implements [`Write`] to collect terminal output bytes (including escape
@@ -282,6 +284,7 @@ fn pty_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
 /// └─────────────────────┘
 /// ```
 ///
+/// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 /// [`OffscreenBuffer::apply_ansi_bytes`]: crate::OffscreenBuffer::apply_ansi_bytes
 struct CaptureOutputBytes(Vec<u8>);
 
@@ -314,12 +317,13 @@ fn get_line_content(buf: &crate::OffscreenBuffer, row: usize, max_cols: usize) -
         .to_string()
 }
 
-/// PTY controlled process: simulates multi-line [`SharedWriter`] output and verifies
+/// [`PTY`] controlled process: simulates multi-line [`SharedWriter`] output and verifies
 /// column alignment via [`OffscreenBuffer::apply_ansi_bytes`].
 ///
 /// See the [module docs] for the full test architecture.
 ///
 /// [`OffscreenBuffer::apply_ansi_bytes`]: crate::OffscreenBuffer::apply_ansi_bytes
+/// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 /// [`SharedWriter`]: crate::SharedWriter
 /// [module docs]: self
 fn pty_controlled_entry_point() -> ! {

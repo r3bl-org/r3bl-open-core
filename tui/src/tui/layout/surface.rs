@@ -3,7 +3,7 @@
 use super::{FlexBox, FlexBoxProps, LayoutDirection, LayoutError, LayoutErrorType,
             LayoutManagement, PerformPositioningAndSizing, SurfaceProps};
 use crate::{CommonResult, InlineVec, Pos, RenderPipeline, ReqSizePc, Size, TuiStyle,
-            TuiStylesheet, height, throws, unwrap_or_err, width};
+            TuiStylesheet, height, width};
 
 /// Represents a rectangular area of the terminal screen, and not necessarily the full
 /// terminal screen.

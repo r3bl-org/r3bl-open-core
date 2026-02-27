@@ -2,8 +2,8 @@
 
 //! Test helpers for rendered output integration tests.
 //!
-//! These helpers execute render operations via [`StdoutMock`], capture the ANSI output,
-//! then apply those bytes to an [`OffscreenBuffer`] for behavioral verification.
+//! These helpers execute render operations via [`StdoutMock`], capture the [`ANSI`]
+//! output, then apply those bytes to an [`OffscreenBuffer`] for behavioral verification.
 //!
 //! # Testing Pattern
 //!
@@ -25,14 +25,15 @@
 //! **Important**: Do not call `set_override`/`clear_override` in individual test
 //! helpers - the coordinator manages global state to avoid race conditions.
 //!
-//! [`StdoutMock`]: crate::StdoutMock
-//! [`OffscreenBuffer`]: crate::OffscreenBuffer
-//! [`global_color_support::set_override`]: crate::global_color_support::set_override
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`ColorSupport::Truecolor`]: crate::ColorSupport::Truecolor
+//! [`global_color_support::set_override`]: crate::global_color_support::set_override
+//! [`OffscreenBuffer`]: crate::OffscreenBuffer
+//! [`StdoutMock`]: crate::StdoutMock
 
 use crate::{LockedOutputDevice, OffscreenBuffer, OutputDevice, RenderOpOutput,
-            RenderOpPaint, RenderOpsLocalData, Size, col, height,
-            lock_output_device_as_mut, pos, render_op::RenderOpCommon, row,
+            RenderOpPaint, RenderOpsLocalData, Size, col, height, pos,
+            render_op::RenderOpCommon, row,
             terminal_lib_backends::direct_to_ansi::RenderOpPaintImplDirectToAnsi,
             test_fixtures::output_device_fixtures::OutputDeviceExt, width};
 
@@ -53,13 +54,14 @@ pub fn create_rendered_test_state() -> RenderOpsLocalData {
 /// This is the core helper for behavioral testing. It:
 /// 1. Creates a [`StdoutMock`] output device
 /// 2. Executes render operations via [`RenderOpPaintImplDirectToAnsi`]
-/// 3. Captures the ANSI byte output
+/// 3. Captures the [`ANSI`] byte output
 /// 4. Creates an [`OffscreenBuffer`] and applies the captured bytes
 /// 5. Returns the buffer for assertions
 ///
-/// [`StdoutMock`]: crate::StdoutMock
+/// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 /// [`OffscreenBuffer`]: crate::OffscreenBuffer
 /// [`RenderOpPaintImplDirectToAnsi`]: crate::RenderOpPaintImplDirectToAnsi
+/// [`StdoutMock`]: crate::StdoutMock
 pub fn execute_and_render_to_buffer(ops: Vec<RenderOpOutput>) -> OffscreenBuffer {
     let buffer_size = rendered_test_buffer_size();
     execute_and_render_to_buffer_with_size(ops, buffer_size)
@@ -202,8 +204,12 @@ pub fn paint_text_with_rgb_colors(
     bg: (u8, u8, u8),
 ) -> RenderOpOutput {
     let style = crate::TuiStyle {
-        color_fg: Some(crate::TuiColor::Rgb(crate::RgbValue::from_u8(fg.0, fg.1, fg.2))),
-        color_bg: Some(crate::TuiColor::Rgb(crate::RgbValue::from_u8(bg.0, bg.1, bg.2))),
+        color_fg: Some(crate::TuiColor::Rgb(crate::RgbValue::from_u8(
+            fg.0, fg.1, fg.2,
+        ))),
+        color_bg: Some(crate::TuiColor::Rgb(crate::RgbValue::from_u8(
+            bg.0, bg.1, bg.2,
+        ))),
         ..Default::default()
     };
     paint_text(text, Some(style))

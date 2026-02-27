@@ -3,7 +3,7 @@
 // cspell:words testx
 
 use crate::{ColIndex, ColWidth, GCStringOwned, MemoizedLenMap, SegIndex, Size,
-            StringLength, height, ok, width};
+            StringLength, height, width};
 use std::io::{self, Write};
 
 /// This struct actually handles the line editing, and rendering. This works hand in hand
@@ -31,9 +31,10 @@ pub struct LineState {
 
     /// The prompt string displayed before user input (e.g., `"$ "` or `"> "`).
     ///
-    /// May contain ANSI escape codes for styling (colors, bold, etc.). Display width
+    /// May contain [`ANSI`] escape codes for styling (colors, bold, etc.). Display width
     /// is calculated using [`StringLength::StripAnsi`] to exclude escape sequences.
     ///
+    /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
     /// [`StringLength::StripAnsi`]: crate::StringLength::StripAnsi
     pub prompt: String,
 

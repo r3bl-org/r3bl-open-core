@@ -11,9 +11,11 @@
 //! In both cases:
 //! 1. The source document comes from a [`crate::editor`] component, which is a [Vec] of
 //!    [`GCStringOwned`] (Unicode strings).
-//! 2. This intermediate type is [clipped](StyleUSSpanLine::clip) to the visible area of
-//!    the editor component (based on scroll state in the viewport). And finally that is
-//!    converted to a [`crate::TuiStyledTexts`].
+//! 2. This intermediate type is [clipped] to the visible area of the editor component
+//!    (based on scroll state in the viewport). And finally that is converted to a
+//!    [`crate::TuiStyledTexts`].
+//!
+//! [clipped]: StyleUSSpanLine::clip
 
 use crate::{CharacterMatchResult, ColIndex, ColWidth, GCStringOwned, InlineString,
             PatternMatcherStateMachine, RenderList, ScrOfs, TuiStyle, TuiStyledTexts,
@@ -21,7 +23,7 @@ use crate::{CharacterMatchResult, ColIndex, ColWidth, GCStringOwned, InlineStrin
             get_metadata_tags_values_style, get_metadata_title_marker_style,
             get_metadata_title_value_style,
             md_parser::md_parser_constants::{COLON, COMMA, SPACE},
-            tiny_inline_string, tui_styled_text, width};
+            width};
 
 /// Spans are chunks of a text that have an associated style. There are usually multiple
 /// spans in a line of text.
@@ -230,7 +232,7 @@ impl StyleUSSpanLine {
 }
 
 mod convert {
-    use super::{StyleUSSpan, StyleUSSpanLine, TuiStyle, TuiStyledTexts, tui_styled_text};
+    use super::{StyleUSSpan, StyleUSSpanLine, TuiStyle, TuiStyledTexts};
 
     impl From<(&TuiStyle, &str)> for StyleUSSpan {
         fn from((style, text): (&TuiStyle, &str)) -> Self { Self::new(*style, text) }
@@ -256,13 +258,11 @@ mod convert {
 #[cfg(test)]
 mod tests_clip_styled_texts {
     use super::*;
-    use crate::{ChUnitPrimitiveType, ConvertToPlainText, RenderList, assert_eq2, ch,
-                col, render_list, row, scr_ofs, tui_color};
+    use crate::{ChUnitPrimitiveType, ConvertToPlainText, RenderList, ch, col, row,
+                scr_ofs};
 
     mod fixtures {
         use super::*;
-        use crate::new_style;
-
         pub fn get_s1() -> TuiStyle {
             new_style!(
                 id: {1}

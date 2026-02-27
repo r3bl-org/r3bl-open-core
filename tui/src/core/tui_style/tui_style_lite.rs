@@ -100,7 +100,7 @@ macro_rules! apply_style {
 
 #[cfg(test)]
 mod tests {
-    use crate::{TuiStyle, TuiStyleId, ch, tui_color};
+    use crate::{TuiStyle, TuiStyleId, ch};
     const BLACK: crate::TuiColor = tui_color!(black);
 
     #[test]

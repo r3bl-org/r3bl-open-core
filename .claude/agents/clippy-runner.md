@@ -128,9 +128,7 @@ automatically reformatting your carefully structured code. Use this directive at
 (after copyright and module-level documentation):
 
 ```rust
-// Skip rustfmt for rest of file.
-// https://stackoverflow.com/a/75910283/2085356
-#![cfg_attr(rustfmt, rustfmt_skip)]
+#![rustfmt::skip]
 ```
 
 **Why use this?**

@@ -1,14 +1,15 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{ChUnit, DEFAULT_SYN_HI_FILE_EXT, EditorBuffer, InlineString, ItemsOwned, ch,
-            fmt_option};
+use crate::{ChUnit, DEFAULT_SYN_HI_FILE_EXT, EditorBuffer, InlineString, ItemsOwned, ch};
 use std::fmt::{Debug, Display, Formatter, Result};
 
 /// Please do not construct this struct directly and use
-/// [`new_empty`](DialogBuffer::new_empty) instead.
+/// [`new_empty`] instead.
 ///
 /// Stores the data for a modal dialog. It contains the text content in an
 /// [`EditorBuffer`] and a title that is displayed.
+///
+/// [`new_empty`]: DialogBuffer::new_empty
 #[derive(Clone, PartialEq)]
 pub struct DialogBuffer {
     pub editor_buffer: EditorBuffer,

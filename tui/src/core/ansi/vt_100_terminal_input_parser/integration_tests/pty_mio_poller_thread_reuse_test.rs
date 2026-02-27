@@ -1,14 +1,16 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! PTY-based integration test for thread reuse (race condition).
+//! [`PTY`]-based integration test for thread reuse (race condition).
 //!
 //! Tests that when a new subscriber appears **before** the thread checks
 //! `receiver_count`, the thread correctly continues running (not relaunched). This
 //! validates the documented race condition is semantically correct. See
 //! [`SubscriberGuard`] for the race condition documentation.
 //!
-//! Run with: `cargo test -p r3bl_tui --lib test_pty_mio_poller_thread_reuse --
-//! --nocapture`
+//! Run with:
+//! ```bash
+//! cargo test -p r3bl_tui --lib test_pty_mio_poller_thread_reuse -- --nocapture
+//! ```
 //!
 //! Tests that:
 //! 1. Thread spawns on first subscribe (`thread_alive = true`)
@@ -47,13 +49,13 @@
 //! The key difference from the lifecycle test: we create device B **immediately**
 //! after dropping device A, racing the thread's `receiver_count` check.
 //!
+//! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`SubscriberGuard`]: crate::core::resilient_reactor_thread::SubscriberGuard
 
 use crate::{ControlledChild, PtyPair, PtyTestMode,
             core::resilient_reactor_thread::LivenessState,
             direct_to_ansi::{DirectToAnsiInputDevice,
-                             input::global_input_resource::SINGLETON},
-            generate_pty_test};
+                             input::global_input_resource::SINGLETON}};
 use std::{io::{BufRead, BufReader, Write},
           time::Duration};
 

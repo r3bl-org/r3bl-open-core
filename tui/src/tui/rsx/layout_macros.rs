@@ -21,8 +21,7 @@ macro_rules! box_start {
         styles:                 [$($args:tt)*]                      // Eg: [ "style1" , "style2" ]
         $(,)*                   /* Optional trailing comma https://stackoverflow.com/a/43143459/2085356. */
     ) => {
-      use $crate::box_props;
-      $arg_surface.box_start(box_props! {
+      $arg_surface.box_start($crate::box_props! {
             id:                     $arg_id,
             dir:                    $arg_dir,
             requested_size_percent: $arg_requested_size_percent,
@@ -80,7 +79,9 @@ macro_rules! box_props {
   };
 }
 
-/// [Use incremental TT munching](https://veykril.github.io/tlborm/decl-macros/patterns/tt-muncher.html)
+/// [Use incremental TT munching]
+///
+/// [Use incremental TT munching]: https://veykril.github.io/tlborm/decl-macros/patterns/tt-muncher.html
 #[deprecated]
 #[macro_export]
 macro_rules! box_start_with_component {

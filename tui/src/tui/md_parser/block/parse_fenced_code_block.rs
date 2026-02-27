@@ -189,8 +189,6 @@ fn convert_into_code_block_lines<'a>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::assert_eq2;
-
     #[test]
     fn test_parse_codeblock_split_by_eol() {
         assert_eq2!(split_by_new_line("foobar\n"), vec!["foobar"]);

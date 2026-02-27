@@ -1,15 +1,15 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! 1-based VT-100 ANSI escape sequence coordinates.
+//! 1-based [`VT-100`] [`ANSI`] escape sequence coordinates.
 //!
-//! This module provides coordinate types specifically for VT-100 ANSI escape sequence
-//! parsing. These types use 1-based indexing and wrap [`std::num::NonZeroU16`] as
-//! mandated by the VT-100 specification.
+//! This module provides coordinate types specifically for [`VT-100`] [`ANSI`] escape
+//! sequence parsing. These types use 1-based indexing and wrap [`std::num::NonZeroU16`]
+//! as mandated by the [`VT-100`] spec.
 //!
 //! # Usage
 //!
 //! Use these types **only** when:
-//! - Parsing ANSI escape sequences (e.g., `ESC[5;10H`)
+//! - Parsing [`ANSI`] escape sequences (e.g., `ESC[5;10H`)
 //! - Working with `vt_100_pty_output_parser` module
 //!
 //! For all other terminal operations (including crossterm), use [`buffer_coords`] types
@@ -19,8 +19,8 @@
 //!
 //! ## Absolute Positioning (1-based)
 //!
-//! - [`TermRow`]: 1-based row coordinate for ANSI sequences
-//! - [`TermCol`]: 1-based column coordinate for ANSI sequences
+//! - [`TermRow`]: 1-based row coordinate for [`ANSI`] sequences
+//! - [`TermCol`]: 1-based column coordinate for [`ANSI`] sequences
 //! - [`TermPos`]: 1-based position combining column and row (used in mouse events)
 //!
 //! ## Relative Movement (0-based delta)
@@ -28,9 +28,9 @@
 //! - [`TermRowDelta`]: How many rows to move (for `CursorUp`/`CursorDown`)
 //! - [`TermColDelta`]: How many columns to move (for `CursorForward`/`CursorBackward`)
 //!
-//! # The CSI Zero Problem - Make Illegal States Unrepresentable
+//! # The [`CSI`] Zero Problem - Make Illegal States Unrepresentable
 //!
-//! ANSI cursor movement commands interpret parameter 0 as 1:
+//! [`ANSI`] cursor movement commands interpret parameter 0 as 1:
 //! - `CSI 0 A` moves the cursor **1 row up**, not 0
 //! - `CSI 0 C` moves the cursor **1 column right**, not 0
 //!
@@ -47,7 +47,6 @@
 //! }
 //! ```
 //!
-//! [`NonZeroU16`]: std::num::NonZeroU16
 //!
 //! # Coordinate Conversion
 //!
@@ -55,7 +54,11 @@
 //! - `.to_zero_based()`: Convert to 0-based buffer coordinates
 //! - `.from_zero_based()`: Convert from 0-based buffer coordinates
 //!
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`buffer_coords`]: crate::coordinates::buffer_coords
+//! [`CSI`]: crate::CsiSequence
+//! [`NonZeroU16`]: std::num::NonZeroU16
+//! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 
 // Submodule declarations (private).
 mod csi_count;

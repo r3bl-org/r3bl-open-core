@@ -4,7 +4,8 @@ use crate::{CalculateResizeHint, ColWidth, DEVELOPMENT_MODE, EventLoopResult, He
             InputDevice, InputEvent, ItemsOwned, Key, KeyPress, KeyState,
             LineStateControlSignal, ModifierKeysMask, OutputDevice, RowHeight,
             SelectComponent, SharedWriter, SpecialKey, State, StyleSheet, ch,
-            tui::md_parser::md_parser_constants::SPACE_CHAR, enter_event_loop_async, get_size};
+            enter_event_loop_async, get_size,
+            tui::md_parser::md_parser_constants::SPACE_CHAR};
 use clap::ValueEnum;
 use miette::IntoDiagnostic;
 use std::pin::Pin;
@@ -227,7 +228,7 @@ pub fn choose<'a>(
 
 mod keypress_handler_helper {
     use crate::{CalculateResizeHint, CaretVerticalViewportLocation, DEVELOPMENT_MODE,
-                EventLoopResult, State, fg_green, inline_string, usize};
+                EventLoopResult, State, fg_green, usize};
 
     pub fn handle_resize_event(state: &mut State, size: crate::Size) -> EventLoopResult {
         DEVELOPMENT_MODE.then(|| {

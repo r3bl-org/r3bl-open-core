@@ -1,6 +1,6 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! PTY integration tests for newly added keyboard features.
+//! [`PTY`] integration tests for newly added keyboard features.
 //!
 //! Tests the following keyboard input features that were recently added/fixed:
 //! - Tab key (fixed: was returning None)
@@ -10,19 +10,21 @@
 //! - Shift+Tab (`BackTab`)
 //!
 //! These tests validate that the complete input stack handles these new features
-//! correctly in a real PTY environment.
+//! correctly in a real [`PTY`] environment.
+//!
+//! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 
 use crate::{ControlledChild, InputEvent, PtyPair, PtyTestMode,
-            core::ansi::constants::{
-                ANSI_CSI_BRACKET, ANSI_ESC, ANSI_FUNCTION_KEY_TERMINATOR, ANSI_SS3_O,
-                BACKTAB_FINAL, CONTROL_NUL, CONTROL_TAB,
-                SS3_NUMPAD_0, SS3_NUMPAD_1, SS3_NUMPAD_2, SS3_NUMPAD_3, SS3_NUMPAD_4,
-                SS3_NUMPAD_5, SS3_NUMPAD_6, SS3_NUMPAD_7, SS3_NUMPAD_8, SS3_NUMPAD_9,
-                SS3_NUMPAD_ENTER, SS3_NUMPAD_PLUS, SS3_NUMPAD_MINUS,
-                SS3_NUMPAD_MULTIPLY, SS3_NUMPAD_DIVIDE,
-                SS3_NUMPAD_DECIMAL, SS3_NUMPAD_COMMA,
-            },
-            generate_pty_test,
+            core::ansi::constants::{ANSI_CSI_BRACKET, ANSI_ESC,
+                                    ANSI_FUNCTION_KEY_TERMINATOR, ANSI_SS3_O,
+                                    BACKTAB_FINAL, CONTROL_NUL, CONTROL_TAB,
+                                    SS3_NUMPAD_0, SS3_NUMPAD_1, SS3_NUMPAD_2,
+                                    SS3_NUMPAD_3, SS3_NUMPAD_4, SS3_NUMPAD_5,
+                                    SS3_NUMPAD_6, SS3_NUMPAD_7, SS3_NUMPAD_8,
+                                    SS3_NUMPAD_9, SS3_NUMPAD_COMMA, SS3_NUMPAD_DECIMAL,
+                                    SS3_NUMPAD_DIVIDE, SS3_NUMPAD_ENTER,
+                                    SS3_NUMPAD_MINUS, SS3_NUMPAD_MULTIPLY,
+                                    SS3_NUMPAD_PLUS},
             tui::terminal_lib_backends::direct_to_ansi::DirectToAnsiInputDevice};
 use std::{io::{BufRead, BufReader, Write},
           time::Duration};
@@ -39,12 +41,17 @@ generate_pty_test! {
     mode: PtyTestMode::Raw,
 }
 
-/// PTY Controller: Send new keyboard sequences and verify parsing
+/// [`PTY`] Controller: Send new keyboard sequences and verify parsing
+///
+/// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 #[allow(clippy::too_many_lines)]
 fn pty_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
     eprintln!("🚀 PTY Controller: Starting new keyboard features test...");
 
-    let mut writer = pty_pair.controller().take_writer().expect("Failed to get writer");
+    let mut writer = pty_pair
+        .controller()
+        .take_writer()
+        .expect("Failed to get writer");
     let reader = pty_pair
         .controller()
         .try_clone_reader()
@@ -78,15 +85,22 @@ fn pty_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
         }
     }
 
-    assert!(test_running_seen, "Controlled test never started running (no TEST_RUNNING output)");
+    assert!(
+        test_running_seen,
+        "Controlled test never started running (no TEST_RUNNING output)"
+    );
 
     // Build test sequences for new keyboard features
-    // Tab, BackTab, and Ctrl+Space are raw bytes/simple sequences, not CSI parameter sequences
+    // Tab, BackTab, and Ctrl+Space are raw bytes/simple sequences, not CSI parameter
+    // sequences
     let mut sequences: Vec<(&str, Vec<u8>)> = vec![
         // Test 1: Tab key (was broken, returning None)
         ("Tab", vec![CONTROL_TAB]),
         // Test 2: Shift+Tab (BackTab) - ESC [ Z
-        ("Shift+Tab (BackTab)", vec![ANSI_ESC, ANSI_CSI_BRACKET, BACKTAB_FINAL]),
+        (
+            "Shift+Tab (BackTab)",
+            vec![ANSI_ESC, ANSI_CSI_BRACKET, BACKTAB_FINAL],
+        ),
         // Test 3: Ctrl+Space - NUL byte
         ("Ctrl+Space", vec![CONTROL_NUL]),
     ];
@@ -94,35 +108,121 @@ fn pty_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
     // Tests 4-7: Alternative Home/End sequences
     // Format: ESC [ code ~
     sequences.extend(vec![
-        ("Home (alt ESC[1~)", vec![ANSI_ESC, ANSI_CSI_BRACKET, b'1', ANSI_FUNCTION_KEY_TERMINATOR]),
-        ("End (alt ESC[4~)", vec![ANSI_ESC, ANSI_CSI_BRACKET, b'4', ANSI_FUNCTION_KEY_TERMINATOR]),
-        ("Home (rxvt ESC[7~)", vec![ANSI_ESC, ANSI_CSI_BRACKET, b'7', ANSI_FUNCTION_KEY_TERMINATOR]),
-        ("End (rxvt ESC[8~)", vec![ANSI_ESC, ANSI_CSI_BRACKET, b'8', ANSI_FUNCTION_KEY_TERMINATOR]),
+        (
+            "Home (alt ESC[1~)",
+            vec![
+                ANSI_ESC,
+                ANSI_CSI_BRACKET,
+                b'1',
+                ANSI_FUNCTION_KEY_TERMINATOR,
+            ],
+        ),
+        (
+            "End (alt ESC[4~)",
+            vec![
+                ANSI_ESC,
+                ANSI_CSI_BRACKET,
+                b'4',
+                ANSI_FUNCTION_KEY_TERMINATOR,
+            ],
+        ),
+        (
+            "Home (rxvt ESC[7~)",
+            vec![
+                ANSI_ESC,
+                ANSI_CSI_BRACKET,
+                b'7',
+                ANSI_FUNCTION_KEY_TERMINATOR,
+            ],
+        ),
+        (
+            "End (rxvt ESC[8~)",
+            vec![
+                ANSI_ESC,
+                ANSI_CSI_BRACKET,
+                b'8',
+                ANSI_FUNCTION_KEY_TERMINATOR,
+            ],
+        ),
     ]);
 
     // Tests 8-24: Numpad in application mode (SS3 sequences)
     // Format: ESC O command_char
     sequences.extend(vec![
-        ("Numpad 0 (app mode)", vec![ANSI_ESC, ANSI_SS3_O, SS3_NUMPAD_0]),
-        ("Numpad 1 (app mode)", vec![ANSI_ESC, ANSI_SS3_O, SS3_NUMPAD_1]),
-        ("Numpad 2 (app mode)", vec![ANSI_ESC, ANSI_SS3_O, SS3_NUMPAD_2]),
-        ("Numpad 3 (app mode)", vec![ANSI_ESC, ANSI_SS3_O, SS3_NUMPAD_3]),
-        ("Numpad 4 (app mode)", vec![ANSI_ESC, ANSI_SS3_O, SS3_NUMPAD_4]),
-        ("Numpad 5 (app mode)", vec![ANSI_ESC, ANSI_SS3_O, SS3_NUMPAD_5]),
-        ("Numpad 6 (app mode)", vec![ANSI_ESC, ANSI_SS3_O, SS3_NUMPAD_6]),
-        ("Numpad 7 (app mode)", vec![ANSI_ESC, ANSI_SS3_O, SS3_NUMPAD_7]),
-        ("Numpad 8 (app mode)", vec![ANSI_ESC, ANSI_SS3_O, SS3_NUMPAD_8]),
-        ("Numpad 9 (app mode)", vec![ANSI_ESC, ANSI_SS3_O, SS3_NUMPAD_9]),
-        ("Numpad Enter (app mode)", vec![ANSI_ESC, ANSI_SS3_O, SS3_NUMPAD_ENTER]),
-        ("Numpad + (app mode)", vec![ANSI_ESC, ANSI_SS3_O, SS3_NUMPAD_PLUS]),
-        ("Numpad - (app mode)", vec![ANSI_ESC, ANSI_SS3_O, SS3_NUMPAD_MINUS]),
-        ("Numpad * (app mode)", vec![ANSI_ESC, ANSI_SS3_O, SS3_NUMPAD_MULTIPLY]),
-        ("Numpad / (app mode)", vec![ANSI_ESC, ANSI_SS3_O, SS3_NUMPAD_DIVIDE]),
-        ("Numpad . (app mode)", vec![ANSI_ESC, ANSI_SS3_O, SS3_NUMPAD_DECIMAL]),
-        ("Numpad , (app mode)", vec![ANSI_ESC, ANSI_SS3_O, SS3_NUMPAD_COMMA]),
+        (
+            "Numpad 0 (app mode)",
+            vec![ANSI_ESC, ANSI_SS3_O, SS3_NUMPAD_0],
+        ),
+        (
+            "Numpad 1 (app mode)",
+            vec![ANSI_ESC, ANSI_SS3_O, SS3_NUMPAD_1],
+        ),
+        (
+            "Numpad 2 (app mode)",
+            vec![ANSI_ESC, ANSI_SS3_O, SS3_NUMPAD_2],
+        ),
+        (
+            "Numpad 3 (app mode)",
+            vec![ANSI_ESC, ANSI_SS3_O, SS3_NUMPAD_3],
+        ),
+        (
+            "Numpad 4 (app mode)",
+            vec![ANSI_ESC, ANSI_SS3_O, SS3_NUMPAD_4],
+        ),
+        (
+            "Numpad 5 (app mode)",
+            vec![ANSI_ESC, ANSI_SS3_O, SS3_NUMPAD_5],
+        ),
+        (
+            "Numpad 6 (app mode)",
+            vec![ANSI_ESC, ANSI_SS3_O, SS3_NUMPAD_6],
+        ),
+        (
+            "Numpad 7 (app mode)",
+            vec![ANSI_ESC, ANSI_SS3_O, SS3_NUMPAD_7],
+        ),
+        (
+            "Numpad 8 (app mode)",
+            vec![ANSI_ESC, ANSI_SS3_O, SS3_NUMPAD_8],
+        ),
+        (
+            "Numpad 9 (app mode)",
+            vec![ANSI_ESC, ANSI_SS3_O, SS3_NUMPAD_9],
+        ),
+        (
+            "Numpad Enter (app mode)",
+            vec![ANSI_ESC, ANSI_SS3_O, SS3_NUMPAD_ENTER],
+        ),
+        (
+            "Numpad + (app mode)",
+            vec![ANSI_ESC, ANSI_SS3_O, SS3_NUMPAD_PLUS],
+        ),
+        (
+            "Numpad - (app mode)",
+            vec![ANSI_ESC, ANSI_SS3_O, SS3_NUMPAD_MINUS],
+        ),
+        (
+            "Numpad * (app mode)",
+            vec![ANSI_ESC, ANSI_SS3_O, SS3_NUMPAD_MULTIPLY],
+        ),
+        (
+            "Numpad / (app mode)",
+            vec![ANSI_ESC, ANSI_SS3_O, SS3_NUMPAD_DIVIDE],
+        ),
+        (
+            "Numpad . (app mode)",
+            vec![ANSI_ESC, ANSI_SS3_O, SS3_NUMPAD_DECIMAL],
+        ),
+        (
+            "Numpad , (app mode)",
+            vec![ANSI_ESC, ANSI_SS3_O, SS3_NUMPAD_COMMA],
+        ),
     ]);
 
-    eprintln!("📝 PTY Controller: Sending {} sequences...", sequences.len());
+    eprintln!(
+        "📝 PTY Controller: Sending {} sequences...",
+        sequences.len()
+    );
 
     // For each test sequence: write ANSI bytes to PTY, read back parsed event, verify
     for (desc, sequence) in &sequences {
@@ -186,7 +286,9 @@ fn pty_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
     eprintln!("✅ PTY Controller: All new keyboard features tests passed!");
 }
 
-/// PTY Controlled: Parse keyboard input and echo results
+/// [`PTY`] Controlled: Parse keyboard input and echo results
+///
+/// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 fn pty_controlled_entry_point() -> ! {
     // Print to stdout immediately to confirm controlled is running
     println!("{CONTROLLED_READY}");

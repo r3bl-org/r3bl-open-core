@@ -13,11 +13,10 @@ use crate::{ColWidth, CommonResult, CursorBoundsCheck, CursorPositionBoundsStatu
             caret_scr_adj,
             clipboard_support::ClipboardService,
             col, convert_syntect_to_styled_text, fg_green, get_selection_style, glyphs,
-            height, inline_string, new_style,
+            height,
             render_cache::{RenderCache, UseRenderCache},
-            render_pipeline, render_tui_styled_texts_into, row, throws,
-            throws_with_return, try_get_syntax_ref, try_parse_and_highlight, tui_color,
-            usize};
+            render_pipeline, render_tui_styled_texts_into, row, try_get_syntax_ref,
+            try_parse_and_highlight, usize};
 use syntect::easy::HighlightLines;
 
 /// Checks if we should stop rendering at this row index.
@@ -418,9 +417,9 @@ mod syn_hi_r3bl_path {
     ///   [`try_parse_and_highlight()`]. If this fails then take the path of no syntax
     ///   highlighting else take the path of syntax highlighting.
     ///
+    /// [`editor_buffer.get_lines()`]: EditorBuffer::get_lines()
     /// [`MDDocument`]: crate::markdown_parser::MDDocument
     /// [`ZeroCopyGapBuffer`]: crate::ZeroCopyGapBuffer
-    /// [`editor_buffer.get_lines()`]: EditorBuffer::get_lines()
     pub fn render_content(
         editor_buffer: &EditorBuffer,
         max_display_row_count: RowHeight,
@@ -724,7 +723,7 @@ mod tests {
     use super::*;
     use crate::{CaretDirection, EditorEngineConfig, FlexBoxId, ModifierKeysMask, Pos,
                 RenderList, clipboard_service::clipboard_test_fixtures::TestClipboard,
-                key_press, width};
+                width};
 
     #[test]
     fn test_undo_redo_clears_ast_cache() {

@@ -1,7 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use crate::{AsyncDebouncedDeadline, ControlledChild, DebouncedState, PtyPair,
-            PtyTestMode, core::test_fixtures::StdoutMock, generate_pty_test,
+            PtyTestMode, core::test_fixtures::StdoutMock,
             readline_async::readline_async_impl::LineState};
 use std::{io::{BufRead, BufReader, Write},
           sync::{Arc, Mutex as StdMutex},
@@ -23,15 +23,20 @@ const CONTROLLED_READY: &str = "CONTROLLED_READY";
 /// Prefix for line state output.
 const LINE_PREFIX: &str = "Line:";
 
-/// EOF signal.
+/// [`EOF`] signal.
+///
+/// [`EOF`]: https://en.wikipedia.org/wiki/End-of-file
 const EOF_SIGNAL: &str = "EOF";
 
 generate_pty_test! {
-    /// PTY-based integration test for Ctrl+D EOF behavior on empty line.
+    /// [`PTY`]-based integration test for Ctrl+D [`EOF`] behavior on empty line.
     ///
-    /// Validates that Ctrl+D on an empty line returns EOF ([`ReadlineEvent::Eof`]).
+    /// Validates that Ctrl+D on an empty line returns [`EOF`] ([`ReadlineEvent::Eof`]).
     ///
-    /// Run with: `cargo test -p r3bl_tui --lib test_pty_ctrl_d_eof -- --nocapture`
+    /// Run with:
+    /// ```bash
+    /// cargo test -p r3bl_tui --lib test_pty_ctrl_d_eof -- --nocapture
+    /// ```
     ///
     /// ## Test Protocol (Request-Response Pattern)
     ///
@@ -39,12 +44,14 @@ generate_pty_test! {
     ///
     /// 1. **Controller sends input** (Ctrl+D on empty line)
     /// 2. **Controller flushes** and waits ~200ms for controlled to process
-    /// 3. **Controller blocks** reading controlled stdout until it sees "EOF"
-    /// 4. **Controller makes assertion** on the EOF signal
+    /// 3. **Controller blocks** reading controlled stdout until it sees "[`EOF`]"
+    /// 4. **Controller makes assertion** on the [`EOF`] signal
     ///
     /// The ([`LineState`]) is checked in the test to make assertions against.
     ///
+    /// [`EOF`]: https://en.wikipedia.org/wiki/End-of-file
     /// [`LineState`]: crate::readline_async::readline_async_impl::LineState
+    /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
     /// [`ReadlineEvent::Eof`]: crate::ReadlineEvent::Eof
     test_fn: test_pty_ctrl_d_eof,
     controller: pty_controller_entry_point,
@@ -52,7 +59,10 @@ generate_pty_test! {
     mode: PtyTestMode::Raw,
 }
 
-/// PTY Controller: Send Ctrl+D on empty line and verify EOF
+/// [`PTY`] Controller: Send Ctrl+D on empty line and verify [`EOF`]
+///
+/// [`EOF`]: https://en.wikipedia.org/wiki/End-of-file
+/// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 fn pty_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
     eprintln!("🚀 PTY Controller: Starting Ctrl+D EOF test...");
 
@@ -157,7 +167,10 @@ fn pty_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
     }
 }
 
-/// PTY Controlled: Process readline input and report EOF
+/// [`PTY`] Controlled: Process readline input and report [`EOF`]
+///
+/// [`EOF`]: https://en.wikipedia.org/wiki/End-of-file
+/// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 fn pty_controlled_entry_point() -> ! {
     use crate::direct_to_ansi::DirectToAnsiInputDevice;
 

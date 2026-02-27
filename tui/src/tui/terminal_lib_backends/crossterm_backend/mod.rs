@@ -22,7 +22,6 @@
 //! > **For the complete 6-stage rendering pipeline with visual diagrams and stage
 //! > reference table**, see the [rendering pipeline overview].
 //!
-//! [rendering pipeline overview]: mod@crate::terminal_lib_backends#rendering-pipeline-architecture
 //!
 //! ## Module Organization
 //!
@@ -45,19 +44,21 @@
 //! - Handles colors, cursor movement, and text output
 //!
 //! [`offscreen_buffer::paint_impl`]: mod@crate::tui::terminal_lib_backends::offscreen_buffer::paint_impl
-//!
 //! [`OffscreenBuffer`]: crate::OffscreenBuffer
-//! [`RenderOpOutputVec`]: crate::RenderOpOutputVec
 //! [`OffscreenBufferPaint`]: crate::OffscreenBufferPaint
+//! [`RenderOpOutputVec`]: crate::RenderOpOutputVec
 //! [`RenderOpPaint`]: crate::RenderOpPaint
 //! [`RenderOpsLocalData`]: crate::RenderOpsLocalData
+//! [rendering pipeline overview]: mod@crate::terminal_lib_backends#rendering-pipeline-architecture
 
 // Attach.
 mod debug;
 mod input_device_impl;
 
+#[macro_use]
 #[cfg(any(test, doc))]
 pub mod crossterm_paint_render_op_impl;
+#[macro_use]
 #[cfg(not(any(test, doc)))]
 mod crossterm_paint_render_op_impl;
 

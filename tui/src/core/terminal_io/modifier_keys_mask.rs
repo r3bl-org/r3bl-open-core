@@ -108,7 +108,7 @@ impl ModifierKeysMask {
     }
 
     /// Check `other` for
-    /// [`crossterm::event::KeyModifiers`](crossterm::event::KeyModifiers::SHIFT) bit.
+    /// [`crossterm::event::KeyModifiers`] bit.
     /// Check `other` for `CONTROL` bit. Check `other` for `ALT` bit. If all bits
     /// match `self` then return `true`, otherwise return `false`.
     ///
@@ -117,6 +117,8 @@ impl ModifierKeysMask {
     ///   contain other bits.
     /// - `contains` -> means that your variable ONLY contains these bits.
     /// - Docs: <https://docs.rs/bitflags/latest/bitflags/index.html>
+    ///
+    /// [`crossterm::event::KeyModifiers`]: crossterm::event::KeyModifiers::SHIFT
     pub fn matches(&self, arg_mask: impl Into<ModifierKeysMask>) -> MatchResult {
         let other: ModifierKeysMask = arg_mask.into();
         if *self == other {
@@ -172,8 +174,6 @@ impl From<KeyModifiers> for ModifierKeysMask {
 #[cfg(test)]
 mod tests_modifier_keys_mask {
     use super::*;
-    use crate::assert_eq2;
-
     #[test]
     fn test_empty_mask() {
         let mask = ModifierKeysMask::new();

@@ -26,7 +26,7 @@ use core::fmt::Debug;
 ///
 /// # Basic Colors
 ///
-/// The following named colors are basic ANSI colors (indices 0-15) which are widely
+/// The following named colors are basic [`ANSI`] colors (indices 0-15) which are widely
 /// supported by terminal emulators. These will not be degraded to a lower color support
 /// level:
 ///
@@ -60,6 +60,7 @@ use core::fmt::Debug;
 ///
 /// For fallible hex color parsing, use [`RgbValue::try_from_hex_color`] instead.
 ///
+/// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 /// [`RgbValue::try_from_hex_color`]: crate::RgbValue::try_from_hex_color
 /// [`TuiColor`]: crate::TuiColor
 /// [black]: #usage
@@ -284,16 +285,17 @@ macro_rules! tui_color {
 ///
 /// A [`TuiColor`] can be [`RgbValue`] or [`AnsiValue`].
 /// - It is safe to use just [`RgbValue`] since the library will degrade gracefully to
-///   ANSI 256 or grayscale based on terminal emulator capabilities at runtime, as
+///   [`ANSI`] 256 or grayscale based on terminal emulator capabilities at runtime, as
 ///   determined by [`ColorSupport`].
-/// - Basic ANSI colors (0-15) are represented as [`AnsiValue`] with indices 0-15. If a
-///   color is specified as [`AnsiValue`], it will not be downgraded.
+/// - Basic [`ANSI`] colors (0-15) are represented as [`AnsiValue`] with indices 0-15. If
+///   a color is specified as [`AnsiValue`], it will not be downgraded.
 ///
+/// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 /// [`AnsiValue`]: crate::AnsiValue
 /// [`ColorSupport`]: crate::ColorSupport
 /// [`RgbValue`]: crate::RgbValue
-/// [`TuiColor`]: crate::TuiColor
 /// [`tui_color`!]: crate::tui_color!
+/// [`TuiColor`]: crate::TuiColor
 #[derive(Clone, PartialEq, Eq, Copy, Hash)]
 pub enum TuiColor {
     /// An RGB color. See [RGB color model] for more info.
@@ -302,12 +304,14 @@ pub enum TuiColor {
     ///
     /// [RGB color model]: https://en.wikipedia.org/wiki/RGB_color_model
     Rgb(RgbValue),
-    /// An ANSI color. See [256 colors - cheat sheet] for more info.
+    /// An [`ANSI`] color. See [256 colors - cheat sheet] for more info.
     ///
     /// Most UNIX terminals and Windows 10 supported only.
-    /// Indices 0-15 represent basic ANSI colors; 16-255 represent the extended palette.
+    /// Indices 0-15 represent basic [`ANSI`] colors; 16-255 represent the extended
+    /// palette.
     ///
     /// [256 colors - cheat sheet]: https://jonasjacek.github.io/colors/
+    /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
     Ansi(AnsiValue),
 }
 
@@ -332,11 +336,13 @@ pub enum ANSIBasicColor {
 }
 
 impl ANSIBasicColor {
-    /// Gets the palette index (0-15) for this basic ANSI color.
+    /// Gets the palette index (0-15) for this basic [`ANSI`] color.
     ///
-    /// These indices correspond to the 16-color ANSI palette:
+    /// These indices correspond to the 16-color [`ANSI`] palette:
     /// - 0-7: standard colors (dark variants)
     /// - 8-15: bright colors and grays
+    ///
+    /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
     #[must_use]
     pub fn palette_index(&self) -> u8 {
         match self {
@@ -377,9 +383,11 @@ mod convenience_conversions {
     impl From<AnsiValue> for TuiColor {
         /// Converts a [`AnsiValue`] to [`TuiColor`].
         ///
-        /// SGR codes (30-37, 40-47, 90-97, 100-107) are mapped to basic color indices
+        /// [`SGR`] codes (30-37, 40-47, 90-97, 100-107) are mapped to basic color indices
         /// 0-15. Other values (0-29, 48-89, 98-99, 108-255) are treated as
         /// 256-color palette indices.
+        ///
+        /// [`SGR`]: crate::SgrCode
         fn from(ansi_value: AnsiValue) -> Self {
             match ansi_value.index {
                 // Standard foreground colors (30-37) → palette indices 9-15, 0
@@ -600,7 +608,6 @@ impl TransformColor for TuiColor {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::assert_eq2;
     use test_case::test_case;
 
     #[test]

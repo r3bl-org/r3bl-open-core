@@ -17,8 +17,8 @@
 //! size cache is automatically invalidated to ensure accurate telemetry reporting. This
 //! happens in the [`Drop`] implementation of [`EditorBufferMutWithDrop`].
 //!
-//! <!-- It is ok to use ignore here - demonstrates RAII pattern with Drop trait, not a
-//! complete runnable example -->
+//! <!-- It is ok to use ignore here - demonstrates [`RAII`] pattern with Drop trait, not
+//! a complete runnable example -->
 //!
 //! ```ignore
 //! // When content is modified:
@@ -31,6 +31,7 @@
 //! The [`EditorBufferMutNoDrop`] variant does NOT invalidate the cache, which is useful
 //! for operations that don't modify content (e.g., viewport resizing).
 //!
+//! [`RAII`]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
 //! [newtype pattern]: https://doc.rust-lang.org/rust-by-example/generics/new_types.html
 
 use super::scroll_editor_content;
@@ -136,11 +137,13 @@ mod editor_buffer_mut_no_drop_impl_block {
 /// See the [Drop] implementation of `EditorBufferMut` which runs
 /// [`crate::validate_buffer_mut::perform_validation_checks_after_mutation`].
 ///
-/// Due to the nature of `UTF-8` and its variable width characters, where the memory size
-/// is not the same as display size. Eg: `a` is 1 byte and 1 display width (unicode
+/// Due to the nature of [`UTF-8`] and its variable width characters, where the memory
+/// size is not the same as display size. Eg: `a` is 1 byte and 1 display width (unicode
 /// segment width display). `😄` is 3 bytes but it's display width is 2! To ensure that
 /// caret position and scroll offset positions are not in the middle of a unicode segment
 /// character, we need to run the validation checks.
+///
+/// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
 #[derive(Debug)]
 pub struct EditorBufferMutWithDrop<'a> {
     pub inner: EditorBufferMut<'a>,
@@ -182,7 +185,7 @@ mod editor_buffer_mut_with_drop_impl_block {
         ///    calculations.
         ///
         /// 2. **Unicode Validation**: Runs validation checks to ensure that the buffer is
-        ///    in a valid state. Due to the nature of `UTF-8` and its variable width
+        ///    in a valid state. Due to the nature of [`UTF-8`] and its variable width
         ///    characters, where the memory size is not the same as display size. Eg: `a`
         ///    is 1 byte and 1 display width (unicode segment width display). `😄` is 3
         ///    bytes but it's display width is 2! To ensure that caret position and scroll
@@ -192,6 +195,7 @@ mod editor_buffer_mut_with_drop_impl_block {
         ///
         /// [`Display`]: std::fmt::Display
         /// [`main_event_loop`]: crate::TerminalWindow::main_event_loop
+        /// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
         fn drop(&mut self) {
             // Invalidate the memory size cache since content may have changed.
             self.inner.memory_size_calc_cache.invalidate();
@@ -340,7 +344,7 @@ pub fn adjust_caret_col_if_not_in_middle_of_grapheme_cluster(
 #[cfg(test)]
 mod tests {
     use crate::{ArrayBoundsCheck, ArrayOverflowResult, EditorBuffer, EditorEngine,
-                EditorEngineConfig, assert_eq2, col, height, row, width};
+                EditorEngineConfig, col, height, row, width};
 
     #[test]
     fn test_adjust_caret_col_if_not_in_bounds_of_line() {

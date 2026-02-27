@@ -9,8 +9,7 @@ use crate::{ColorWheel, CommonError, CommonErrorType, CommonResult, DialogBuffer
             RenderOpIR, RenderOpIRVec, RenderPipeline, Size, SpecialKey, SurfaceBounds,
             SystemClipboard, TextColorizationPolicy, TuiStyle, ZOrder, ch, col,
             editor_engine::engine_public_api,
-            height, inline_string, pc, render_pipeline, render_tui_styled_texts_into,
-            row, throws_with_return,
+            height, render_tui_styled_texts_into, row,
             tui_style_attrib::{Dim, Underline},
             tui_style_attribs, u16, usize, width};
 use std::{borrow::Cow, fmt::Debug};
@@ -963,7 +962,7 @@ mod internal_impl {
 #[cfg(test)]
 mod test_dialog_engine_api_render_engine {
     use super::*;
-    use crate::{HasFocus, assert_eq2,
+    use crate::{HasFocus,
                 test_dialog::mock_real_objects_for_dialog::{self, make_global_data}};
 
     #[test]
@@ -1012,7 +1011,7 @@ mod test_dialog_engine_api_render_engine {
 #[cfg(test)]
 mod test_dialog_api_make_flex_box_for_dialog {
     use super::*;
-    use crate::{Surface, assert_eq2};
+    use crate::Surface;
 
     /// More info on `is` and downcasting:
     /// - <https://stackoverflow.com/questions/71409337/rust-how-to-match-against-any>
@@ -1168,7 +1167,7 @@ mod test_dialog_api_make_flex_box_for_dialog {
 #[cfg(test)]
 mod test_dialog_engine_api_apply_event {
     use super::*;
-    use crate::{assert_eq2, key_press, test_dialog::mock_real_objects_for_dialog};
+    use crate::test_dialog::mock_real_objects_for_dialog;
 
     #[test]
     fn apply_event_esc() {

@@ -2,9 +2,8 @@
 
 use crate::{InlineString, LineStateControlSignal, OutputDevice, SafeBool,
             SafeInlineString, SharedWriter, SpinnerStyle, StdMutex, StdoutIsPipedResult,
-            TTYResult, contains_ansi_escape_sequence, get_terminal_width,
-            is_headless, is_stdout_piped, ok, spinner_print,
-            spinner_render};
+            TTYResult, contains_ansi_escape_sequence, get_terminal_width, is_headless,
+            is_stdout_piped, spinner_print, spinner_render};
 use std::{sync::Arc, time::Duration};
 use tokio::{sync::broadcast, time::interval};
 
@@ -66,8 +65,10 @@ use tokio::{sync::broadcast, time::interval};
 #[allow(missing_debug_implementations)]
 pub struct Spinner {
     pub tick_delay: Duration,
-    /// ANSI escape sequences are stripped from this before being assigned.
+    /// [`ANSI`] escape sequences are stripped from this before being assigned.
     /// Thread-safe message that can be updated during spinner animation.
+    ///
+    /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
     pub interval_message: SafeInlineString,
     pub final_message: InlineString,
     pub style: SpinnerStyle,
@@ -81,8 +82,8 @@ pub struct Spinner {
 }
 
 impl Spinner {
-    /// Creates a new instance of [Spinner]. If the `arg_spinner_message` contains ANSI
-    /// escape sequences then these will be stripped.
+    /// Creates a new instance of [Spinner]. If the `arg_spinner_message` contains
+    /// [`ANSI`] escape sequences then these will be stripped.
     ///
     /// # Returns
     /// 1. This will return an error if the task is already running.
@@ -101,6 +102,8 @@ impl Spinner {
     /// Returns an error if:
     /// - The spinner task cannot be started
     /// - The communication channels fail to initialize
+    ///
+    /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
     pub async fn try_start(
         arg_interval_msg: impl AsRef<str>,
         arg_final_msg: impl AsRef<str>,
@@ -172,9 +175,9 @@ impl Spinner {
     #[must_use]
     pub fn is_shutdown(&self) -> bool { *self.safe_is_shutdown.lock().unwrap() }
 
-    /// Starts and manages a task that will run in the background. This is where the spinner
-    /// is started and the task is spawned. This will also pause the terminal output while
-    /// the spinner is active. This will continue running until
+    /// Starts and manages a task that will run in the background. This is where the
+    /// spinner is started and the task is spawned. This will also pause the terminal
+    /// output while the spinner is active. This will continue running until
     /// [`Self::request_shutdown()`] is called, which simply sends a message to the
     /// shutdown channel, so that this task can shut itself down.
     ///
@@ -354,13 +357,15 @@ impl Spinner {
     /// Updates the interval message that's displayed during spinner animation.
     /// This can be called from another task/thread to update progress.
     ///
-    /// ANSI escape sequences are stripped from the message if present.
+    /// [`ANSI`] escape sequences are stripped from the message if present.
     ///
     /// # Panics
     ///
     /// This will panic if the lock is poisoned, which can happen if a thread
     /// panics while holding the lock. To avoid panics, ensure that the code that
     /// locks the mutex does not panic while holding the lock.
+    ///
+    /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
     pub fn update_message(&self, new_message: impl Into<InlineString>) {
         let msg = new_message.into();
         // Strip ANSI codes if present.

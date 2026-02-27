@@ -56,7 +56,7 @@ use std::cmp::Ordering;
 ///
 /// Once this function runs, it is necessary to run the [Drop] impl for
 /// [`EditorBufferMut`], which runs this function:
-/// [`perform_validation_checks_after_mutation`]. Due to the nature of `UTF-8` and its
+/// [`perform_validation_checks_after_mutation`]. Due to the nature of [`UTF-8`] and its
 /// variable width characters, where the memory size is not the same as display size.
 ///
 /// Eg:
@@ -69,6 +69,7 @@ use std::cmp::Ordering;
 ///
 /// [`EditorBufferMut`]: crate::validate_buffer_mut::EditorBufferMut
 /// [`perform_validation_checks_after_mutation`]: crate::validate_buffer_mut::perform_validation_checks_after_mutation
+/// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
 pub fn inc_caret_col_by(
     caret_raw: &mut CaretRaw,
     scr_ofs: &mut ScrOfs,
@@ -94,11 +95,13 @@ pub fn inc_caret_col_by(
 /// Once this function runs, it is necessary to run the [Drop] impl for
 /// [`crate::validate_buffer_mut::EditorBufferMut`], which runs this function:
 /// [`crate::validate_buffer_mut::perform_validation_checks_after_mutation`]. Due to the
-/// nature of `UTF-8` and its variable width characters, where the memory size is not the
-/// same as display size. Eg: `a` is 1 byte and 1 display width (unicode segment width
+/// nature of [`UTF-8`] and its variable width characters, where the memory size is not
+/// the same as display size. Eg: `a` is 1 byte and 1 display width (unicode segment width
 /// display). `😄` is 3 bytes but it's display width is 2! To ensure that caret position
 /// and scroll offset positions are not in the middle of a unicode segment character, we
 /// need to run the validation checks.
+///
+/// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
 pub fn clip_caret_to_content_width(args: EditorArgsMut<'_>) {
     let EditorArgsMut { buffer, engine } = args;
 
@@ -115,11 +118,13 @@ pub fn clip_caret_to_content_width(args: EditorArgsMut<'_>) {
 /// Once this function runs, it is necessary to run the [Drop] impl for
 /// [`crate::validate_buffer_mut::EditorBufferMut`], which runs this function:
 /// [`crate::validate_buffer_mut::perform_validation_checks_after_mutation`]. Due to the
-/// nature of `UTF-8` and its variable width characters, where the memory size is not the
-/// same as display size. Eg: `a` is 1 byte and 1 display width (unicode segment width
+/// nature of [`UTF-8`] and its variable width characters, where the memory size is not
+/// the same as display size. Eg: `a` is 1 byte and 1 display width (unicode segment width
 /// display). `😄` is 3 bytes but it's display width is 2! To ensure that caret position
 /// and scroll offset positions are not in the middle of a unicode segment character, we
 /// need to run the validation checks.
+///
+/// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
 pub fn set_caret_col_to(
     desired_col_index: ColIndex,
     caret_raw: &mut CaretRaw,
@@ -158,11 +163,13 @@ pub fn set_caret_col_to(
 /// Once this function runs, it is necessary to run the [Drop] impl for
 /// [`crate::validate_buffer_mut::EditorBufferMut`], which runs this function:
 /// [`crate::validate_buffer_mut::perform_validation_checks_after_mutation`]. Due to the
-/// nature of `UTF-8` and its variable width characters, where the memory size is not the
-/// same as display size. Eg: `a` is 1 byte and 1 display width (unicode segment width
+/// nature of [`UTF-8`] and its variable width characters, where the memory size is not
+/// the same as display size. Eg: `a` is 1 byte and 1 display width (unicode segment width
 /// display). `😄` is 3 bytes but it's display width is 2! To ensure that caret position
 /// and scroll offset positions are not in the middle of a unicode segment character, we
 /// need to run the validation checks.
+///
+/// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
 pub fn dec_caret_col_by(
     caret_raw: &mut CaretRaw,
     scr_ofs: &mut ScrOfs,
@@ -231,11 +238,13 @@ pub fn dec_caret_col_by(
 /// Once this function runs, it is necessary to run the [Drop] impl for
 /// [`crate::validate_buffer_mut::EditorBufferMut`], which runs this function:
 /// [`crate::validate_buffer_mut::perform_validation_checks_after_mutation`]. Due to the
-/// nature of `UTF-8` and its variable width characters, where the memory size is not the
-/// same as display size. Eg: `a` is 1 byte and 1 display width (unicode segment width
+/// nature of [`UTF-8`] and its variable width characters, where the memory size is not
+/// the same as display size. Eg: `a` is 1 byte and 1 display width (unicode segment width
 /// display). `😄` is 3 bytes but it's display width is 2! To ensure that caret position
 /// and scroll offset positions are not in the middle of a unicode segment character, we
 /// need to run the validation checks.
+///
+/// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
 pub fn reset_caret_col(caret_raw: &mut CaretRaw, scr_ofs: &mut ScrOfs) {
     *scr_ofs.col_index = ch(0);
     *caret_raw.col_index = ch(0);
@@ -255,11 +264,13 @@ pub fn reset_caret_col(caret_raw: &mut CaretRaw, scr_ofs: &mut ScrOfs) {
 /// Once this function runs, it is necessary to run the [Drop] impl for
 /// [`crate::validate_buffer_mut::EditorBufferMut`], which runs this function:
 /// [`crate::validate_buffer_mut::perform_validation_checks_after_mutation`]. Due to the
-/// nature of `UTF-8` and its variable width characters, where the memory size is not the
-/// same as display size. Eg: `a` is 1 byte and 1 display width (unicode segment width
+/// nature of [`UTF-8`] and its variable width characters, where the memory size is not
+/// the same as display size. Eg: `a` is 1 byte and 1 display width (unicode segment width
 /// display). `😄` is 3 bytes but it's display width is 2! To ensure that caret position
 /// and scroll offset positions are not in the middle of a unicode segment character, we
 /// need to run the validation checks.
+///
+/// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
 pub fn dec_caret_row(caret_raw: &mut CaretRaw, scr_ofs: &mut ScrOfs) -> RowIndex {
     enum VertScr {
         Active,
@@ -412,11 +423,13 @@ pub fn clip_caret_row_to_content_height(
 /// Once this function runs, it is necessary to run the [Drop] impl for
 /// [`crate::validate_buffer_mut::EditorBufferMut`], which runs this function:
 /// [`crate::validate_buffer_mut::perform_validation_checks_after_mutation`]. Due to the
-/// nature of `UTF-8` and its variable width characters, where the memory size is not the
-/// same as display size. Eg: `a` is 1 byte and 1 display width (unicode segment width
+/// nature of [`UTF-8`] and its variable width characters, where the memory size is not
+/// the same as display size. Eg: `a` is 1 byte and 1 display width (unicode segment width
 /// display). `😄` is 3 bytes but it's display width is 2! To ensure that caret position
 /// and scroll offset positions are not in the middle of a unicode segment character, we
 /// need to run the validation checks.
+///
+/// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
 pub fn inc_caret_row(
     caret: &mut CaretRaw,
     scroll_offset: &mut ScrOfs,
@@ -434,7 +447,7 @@ pub fn inc_caret_row(
 #[cfg(test)]
 mod tests {
     use crate::{CaretDirection, DEFAULT_SYN_HI_FILE_EXT, EditorBuffer, EditorEvent,
-                GCStringOwned, assert_eq2, caret_raw, caret_scr_adj,
+                GCStringOwned, caret_raw, caret_scr_adj,
                 clipboard_service::clipboard_test_fixtures::TestClipboard, col,
                 editor::test_fixtures_editor::mock_real_objects_for_editor, height, row,
                 scr_ofs, width};

@@ -3,7 +3,7 @@
 // cspell:words ello
 
 use crate::{AsyncDebouncedDeadline, ControlledChild, DebouncedState, PtyPair,
-            PtyTestMode, core::test_fixtures::StdoutMock, generate_pty_test,
+            PtyTestMode, core::test_fixtures::StdoutMock,
             readline_async::readline_async_impl::LineState};
 use std::{io::{BufRead, BufReader, Write},
           sync::{Arc, Mutex as StdMutex},
@@ -26,11 +26,14 @@ const CONTROLLED_READY: &str = "CONTROLLED_READY";
 const LINE_PREFIX: &str = "Line:";
 
 generate_pty_test! {
-    /// PTY-based integration test for Ctrl+D delete character behavior.
+    /// [`PTY`]-based integration test for Ctrl+D delete character behavior.
     ///
     /// Validates that Ctrl+D on a non-empty line deletes the character at cursor position.
     ///
-    /// Run with: `cargo test -p r3bl_tui --lib test_pty_ctrl_d_delete -- --nocapture`
+    /// Run with:
+    /// ```bash
+    /// cargo test -p r3bl_tui --lib test_pty_ctrl_d_delete -- --nocapture
+    /// ```
     ///
     /// ## Test Protocol (Request-Response Pattern)
     ///
@@ -45,13 +48,16 @@ generate_pty_test! {
     /// The ([`LineState`]) is checked in the test to make assertions against.
     ///
     /// [`LineState`]: crate::readline_async::readline_async_impl::LineState
+    /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
     test_fn: test_pty_ctrl_d_delete,
     controller: pty_controller_entry_point,
     controlled: pty_controlled_entry_point,
     mode: PtyTestMode::Raw,
 }
 
-/// PTY Controller: Send Ctrl+D on non-empty line and verify delete behavior
+/// [`PTY`] Controller: Send Ctrl+D on non-empty line and verify delete behavior
+///
+/// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 #[allow(clippy::too_many_lines)]
 fn pty_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
     eprintln!("🚀 PTY Controller: Starting Ctrl+D delete test...");
@@ -178,7 +184,9 @@ fn pty_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
     }
 }
 
-/// PTY Controlled: Process readline input and report line state
+/// [`PTY`] Controlled: Process readline input and report line state
+///
+/// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 fn pty_controlled_entry_point() -> ! {
     use crate::direct_to_ansi::DirectToAnsiInputDevice;
 

@@ -2,7 +2,7 @@
 
 //! Automated integration tests for terminal raw mode functionality.
 //!
-//! This module contains **automated** PTY-based integration tests that verify
+//! This module contains **automated** [`PTY`]-based integration tests that verify
 //! raw mode behavior without requiring user interaction. All tests in this
 //! module can run in CI environments.
 //!
@@ -34,21 +34,20 @@
 //! ## Architecture
 //!
 //! All tests use the [`generate_pty_test!`] macro which handles:
-//! - PTY pair creation (24x80 terminal)
+//! - [`PTY`] pair creation (24x80 terminal)
 //! - Master/slave process coordination
 //! - CI detection (tests skip in CI environments)
 //! - Automatic cleanup
 //!
-//! PTY pairs simulate real terminals, allowing automated verification without
+//! [`PTY`] pairs simulate real terminals, allowing automated verification without
 //! user interaction. For edge cases that cannot be simulated with PTYs (like
 //! stdin redirection with controlling terminals), see [`validation_tests`].
 //!
 //! [`generate_pty_test!`]: macro@crate::generate_pty_test
+//! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`validation_tests`]: mod@super::validation_tests
 
-// Skip rustfmt for rest of file.
-// https://stackoverflow.com/a/75910283/2085356
-#![cfg_attr(rustfmt, rustfmt_skip)]
+#![rustfmt::skip]
 
 // These tests work on all Unix platforms (no PTY stdin reading).
 mod test_basic_enable_disable;

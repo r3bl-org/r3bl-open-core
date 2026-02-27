@@ -69,8 +69,7 @@ pub mod mock_real_objects_for_editor {
 
 #[cfg(test)]
 pub mod assert {
-    use crate::{EditorBuffer, SegStringOwned, assert_eq2,
-                editor_engine::engine_internal_api};
+    use crate::{EditorBuffer, SegStringOwned, editor_engine::engine_internal_api};
 
     pub fn none_is_at_caret(buffer: &EditorBuffer) {
         assert_eq2!(buffer.string_at_caret(), None);

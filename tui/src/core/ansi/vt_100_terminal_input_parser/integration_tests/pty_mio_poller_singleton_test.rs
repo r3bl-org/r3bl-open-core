@@ -1,11 +1,14 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! PTY-based integration test for [`DirectToAnsiInputDevice`] singleton semantics.
+//! [`PTY`]-based integration test for [`DirectToAnsiInputDevice`] singleton semantics.
 //!
 //! Tests that only one [`DirectToAnsiInputDevice`] can exist at a time, and that
 //! calling [`new()`] twice panics with a helpful message.
 //!
-//! Run with: `cargo test -p r3bl_tui --lib test_pty_mio_poller_singleton -- --nocapture`
+//! Run with:
+//! ```bash
+//! cargo test -p r3bl_tui --lib test_pty_mio_poller_singleton -- --nocapture
+//! ```
 //!
 //! Tests that:
 //! 1. First [`new()`] succeeds
@@ -31,9 +34,10 @@
 //! ```
 //!
 //! [`new()`]: crate::direct_to_ansi::DirectToAnsiInputDevice::new
+//! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`subscribe()`]: crate::direct_to_ansi::DirectToAnsiInputDevice::subscribe
 
-use crate::{ControlledChild, PtyPair, PtyTestMode, generate_pty_test,
+use crate::{ControlledChild, PtyPair, PtyTestMode,
             tui::terminal_lib_backends::direct_to_ansi::DirectToAnsiInputDevice};
 use std::io::{BufRead, BufReader, Write};
 

@@ -47,16 +47,22 @@ pub const DEBUG_TUI_SHOW_TERMINAL_BACKEND: bool = false;
 pub const UNICODE_REPLACEMENT_CHAR: char = '�';
 
 // Attach sources.
+// #[macro_use] propagates macros textually (order matters).
+// `rsx` before `layout` so box_start!/box_end! are visible to layout's tests.
+#[macro_use]
+pub mod rsx;
+#[macro_use]
+pub mod layout;
+#[macro_use]
+pub mod editor;
+#[macro_use]
+pub mod terminal_lib_backends;
 pub mod animator;
 pub mod cmd_line_args;
 pub mod dialog;
-pub mod editor;
 pub mod global_constants;
-pub mod layout;
 pub mod md_parser;
-pub mod rsx;
 pub mod syntax_highlighting;
-pub mod terminal_lib_backends;
 pub mod terminal_window;
 
 // Re-export.

@@ -1,14 +1,16 @@
 // Copyright (c) 2023-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! ANSI 256 color gradient definitions and utilities.
+//! [`ANSI`] 256 color gradient definitions and utilities.
 //!
-//! This module provides predefined color gradients using the ANSI 256 color palette.
+//! This module provides predefined color gradients using the [`ANSI`] 256 color palette.
 //! It includes:
 //! - `Ansi256GradientIndex` - Enum of available gradient types
 //! - `ANSI_256_GRADIENTS` - Static array of gradient color sequences
 //! - `get_gradient_array_for()` - Function to retrieve gradient colors by index
 //!
 //! Previously located in `color_wheel_core/ansi_256_color_gradients.rs`.
+//!
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 
 #[repr(u8)]
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
@@ -89,7 +91,7 @@ pub fn get_gradient_array_for(
 #[cfg(test)]
 mod ansi_256_gradients_test {
     use super::*;
-    use crate::{LossyConvertToByte, assert_eq2};
+    use crate::LossyConvertToByte;
 
     #[test]
     fn test_all() {

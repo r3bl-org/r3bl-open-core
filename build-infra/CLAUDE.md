@@ -95,6 +95,13 @@ build-infra/
 └── tests/                      # Integration tests
 ```
 
+## Skipping Files
+
+Add `// rustdoc-fmt: skip` to any `.rs` file to exclude it from `cargo rustdoc-fmt`
+processing. Place it after the copyright line. All source files in `cargo_rustdoc_fmt/`
+use this marker because their doc comments discuss the formatter's own concepts (e.g.,
+CSI, ANSI) which would be incorrectly linkified.
+
 ## Debugging Tips
 
 ### Binary Not Using Latest Code?

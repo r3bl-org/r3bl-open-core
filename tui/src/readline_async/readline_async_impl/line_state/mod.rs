@@ -10,13 +10,13 @@
 //!
 //! The module is organized by functional responsibility:
 //!
-//! | Module          | Responsibility                                             |
-//! |-----------------|------------------------------------------------------------|
-//! | `core`          | [`LineState`] struct, [`LineStateLiveness`] enum, state    |
-//! | `cursor`        | Cursor movement, grapheme navigation, terminal positioning |
-//! | `event_handlers`| Keyboard event dispatch (Ctrl, Alt, regular keys)          |
-//! | `output`        | Data printing, prompt updates, exit handling               |
-//! | `render`        | Terminal clear/render operations with ANSI sequences       |
+//! | Module            | Responsibility                                               |
+//! | ----------------- | ------------------------------------------------------------ |
+//! | `core`            | [`LineState`] struct, [`LineStateLiveness`] enum, state      |
+//! | `cursor`          | Cursor movement, grapheme navigation, terminal positioning   |
+//! | `event_handlers`  | Keyboard event dispatch (Ctrl, Alt, regular keys)            |
+//! | `output`          | Data printing, prompt updates, exit handling                 |
+//! | `render`          | Terminal clear/render operations with [`ANSI`] sequences     |
 //!
 //! # Type Safety
 //!
@@ -36,20 +36,21 @@
 //! the terminal. While paused, keyboard events are ignored and rendering is
 //! suppressed. See [`LineStateLiveness`] and [`LineState::set_paused`].
 //!
-//! [`Readline`]: crate::Readline
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`ArrayBoundsCheck`]: crate::ArrayBoundsCheck
 //! [`bounds_check`]: crate::core::coordinates::bounds_check
-//! [`SegIndex`]: crate::SegIndex
 //! [`ColIndex`]: crate::ColIndex
 //! [`ColWidth`]: crate::ColWidth
 //! [`CursorBoundsCheck`]: crate::CursorBoundsCheck
-//! [`ArrayBoundsCheck`]: crate::ArrayBoundsCheck
+//! [`Readline`]: crate::Readline
+//! [`SegIndex`]: crate::SegIndex
 
 // Skip rustfmt for rest of file.
 // https://stackoverflow.com/a/75910283/2085356
 #![cfg_attr(rustfmt, rustfmt_skip)]
 
 // Private modules organized by functional responsibility.
-mod core;
+#[macro_use] mod core;
 mod cursor;
 mod event_handlers;
 mod output;

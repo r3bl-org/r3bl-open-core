@@ -342,7 +342,6 @@ pub mod kv_error {
         ExecuteTransaction,
     }
 }
-use crate::inline_string;
 use kv_error::KvErrorCouldNot;
 
 #[cfg(test)]

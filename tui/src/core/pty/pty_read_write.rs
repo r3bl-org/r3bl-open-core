@@ -2,7 +2,7 @@
 
 use crate::{Continuation, Controlled, ControlledChild, Controller, ControllerReader,
             ControllerWriter, LINE_FEED_BYTE, PtyCommandBuilder, PtyInputEvent,
-            PtyReadWriteOutputEvent, PtyReadWriteSession, READ_BUFFER_SIZE, ok,
+            PtyReadWriteOutputEvent, PtyReadWriteSession, READ_BUFFER_SIZE,
             pty_common_io::{create_pty_pair, spawn_command_in_pty}};
 use miette::{IntoDiagnostic, miette};
 use portable_pty::PtySize;
@@ -11,7 +11,7 @@ use std::{io::{Read, Write},
           time::Duration};
 
 impl PtyCommandBuilder {
-    /// Spawns a read-write PTY session; it spawns three Tokio tasks and one OS child
+    /// Spawns a read-write [`PTY`] session; it spawns three Tokio tasks and one OS child
     /// process with bidirectional communication.
     ///
     /// ```text
@@ -37,16 +37,16 @@ impl PtyCommandBuilder {
     ///
     /// 1. **Background orchestration task [`tokio::spawn`]** -> Required because this
     ///    function needs to return immediately with a session handle, allowing the caller
-    ///    to start processing events and sending input while the PTY command runs in the
-    ///    background. Without this, the function would block until the entire PTY session
-    ///    completes.
+    ///    to start processing events and sending input while the [`PTY`] command runs in
+    ///    the background. Without this, the function would block until the entire [`PTY`]
+    ///    session completes.
     ///
     /// 2. **OS child process [`ControlledChild`]** -> The actual command being executed
-    ///    in the PTY. This is not a Tokio task but a system process that runs your
+    ///    in the [`PTY`]. This is not a Tokio task but a system process that runs your
     ///    command with terminal emulation (the child thinks it is in an interactive
     ///    terminal).
     ///
-    /// 3. **Blocking reader task [`spawn_blocking`]** -> Required because PTY file
+    /// 3. **Blocking reader task [`spawn_blocking`]** -> Required because [`PTY`] file
     ///    descriptors only provide synchronous [`std::io::Read`] APIs, not async
     ///    [`tokio::io::AsyncRead`]. Using regular [`tokio::spawn`] with blocking reads
     ///    would block the entire async runtime. [`spawn_blocking`] runs these synchronous
@@ -59,7 +59,7 @@ impl PtyCommandBuilder {
     ///    serves as an async-to-sync adapter, necessary because [`mod@portable_pty`] only
     ///    provides synchronous I/O APIs, while the input handler must run in
     ///    [`spawn_blocking`] context to avoid blocking the tokio runtime. Without this
-    ///    bridge, async code couldn't send input to the synchronous PTY writer.
+    ///    bridge, async code couldn't send input to the synchronous [`PTY`] writer.
     ///
     /// # Design Decisions
     ///
@@ -97,7 +97,7 @@ impl PtyCommandBuilder {
     /// # Returns
     ///
     /// A session with:
-    /// - `input_event_sender_half` for sending input events to the PTY
+    /// - `input_event_sender_half` for sending input events to the [`PTY`]
     /// - `output_event_receiver_half` combined stdout/stderr of child process -> events
     /// - `completion_handle` to await spawned child process completion
     ///
@@ -148,9 +148,10 @@ impl PtyCommandBuilder {
     ///
     /// # Errors
     ///
-    /// Returns an error if the PTY fails to spawn or initialize properly.
+    /// Returns an error if the [`PTY`] fails to spawn or initialize properly.
     ///
     /// [`portable_pty::MasterPty`]: portable_pty::MasterPty
+    /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
     /// [`spawn_blocking`]: tokio::task::spawn_blocking
     /// [`std::io::Read`]: std::io::Read
     /// [`tokio::io::AsyncRead`]: tokio::io::AsyncRead
@@ -255,15 +256,15 @@ impl PtyCommandBuilder {
     }
 }
 
-/// Creates an input handler task that sends input to the PTY and handles resize.
+/// Creates an input handler task that sends input to the [`PTY`] and handles resize.
 ///
-/// Flow: your program → async input channel → this task (bridge + writer) → PTY
+/// Flow: your program → async input channel → this task (bridge + writer) → [`PTY`]
 ///
 /// This task:
 /// - Reads input commands from a channel
-/// - Writes data to the PTY master
+/// - Writes data to the [`PTY`] master
 /// - Handles control characters and text input
-/// - Handles PTY resize commands
+/// - Handles [`PTY`] resize commands
 /// - Reports write errors through the output event channel, that is sent to your program
 ///
 /// This single task owns the [`MasterPty`] and handles all input operations.
@@ -274,6 +275,7 @@ impl PtyCommandBuilder {
 ///
 /// [`JoinHandle`]: tokio::task::JoinHandle
 /// [`MasterPty`]: portable_pty::MasterPty
+/// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 #[must_use]
 fn create_controller_input_writer_task(
     controller: Controller,
@@ -332,14 +334,15 @@ fn create_controller_input_writer_task(
 /// - Ensures the writer task receives a Close signal when done
 ///
 /// This bridge enables async input from your program to be processed by
-/// the blocking PTY writer task running in [`tokio::task::spawn_blocking`]
+/// the blocking [`PTY`] writer task running in [`tokio::task::spawn_blocking`]
 /// context. This conversion is necessary because [`portable_pty`] provides
 /// only synchronous APIs, not async ones, like our code in this module,
 /// while the input must come from async channels.
 ///
 /// Returns a `JoinHandle` for the spawned async task.
 ///
-/// [`portable_pty`]: mod@portable_pty
+/// [`portable_pty`]: https://docs.rs/portable-pty
+/// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 /// [`tokio::task::spawn_blocking`]: tokio::task::spawn_blocking
 #[must_use]
 fn spawn_async_to_sync_bridge_task(
@@ -359,18 +362,18 @@ fn spawn_async_to_sync_bridge_task(
     })
 }
 
-/// Handles writing input events to the PTY controller in a blocking context.
+/// Handles writing input events to the [`PTY`] controller in a blocking context.
 ///
 /// Flow: your program → async input channel → bridge task → sync channel → this task →
-/// PTY
+/// [`PTY`]
 ///
 /// This task:
 /// - Reads input commands from a sync channel
-/// - Writes data to the PTY master using [`tokio::task::spawn_blocking`] because
+/// - Writes data to the [`PTY`] master using [`tokio::task::spawn_blocking`] because
 ///   [`portable_pty`] provides only synchronous I/O APIs, not async ones, like our code
 ///   in this module
 /// - Handles control characters and text input
-/// - Handles PTY resize commands
+/// - Handles [`PTY`] resize commands
 /// - Reports write errors through the output event channel, that is sent to your program
 ///
 /// This task owns the `Controller` and handles all input operations in a
@@ -378,7 +381,8 @@ fn spawn_async_to_sync_bridge_task(
 ///
 /// Returns a `JoinHandle` for the spawned blocking task.
 ///
-/// [`portable_pty`]: mod@portable_pty
+/// [`portable_pty`]: https://docs.rs/portable-pty
+/// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 /// [`tokio::task::spawn_blocking`]: tokio::task::spawn_blocking
 #[must_use]
 fn spawn_blocking_writer_task(
@@ -432,8 +436,10 @@ fn spawn_blocking_writer_task(
     })
 }
 
-/// Handles a single PTY input event, writing data and reporting errors as needed.
+/// Handles a single [`PTY`] input event, writing data and reporting errors as needed.
 /// Returns the loop continuation state.
+///
+/// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 fn handle_pty_input_event(
     input: PtyInputEvent,
     writer: &mut ControllerWriter,
@@ -481,7 +487,9 @@ fn handle_pty_input_event(
     Ok(Continuation::Continue)
 }
 
-/// Writes data to PTY and flushes, sending error events on failure.
+/// Writes data to [`PTY`] and flushes, sending error events on failure.
+///
+/// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 fn write_to_pty_with_flush(
     writer: &mut ControllerWriter,
     data: &[u8],
@@ -505,10 +513,10 @@ fn write_to_pty_with_flush(
     ok!()
 }
 
-/// Spawns a blocking task that reads PTY output, detects cursor mode changes, and sends
-/// events.
+/// Spawns a blocking task that reads [`PTY`] output, detects cursor mode changes, and
+/// sends events.
 ///
-/// This is used for read-write sessions to capture output from the PTY while also
+/// This is used for read-write sessions to capture output from the [`PTY`] while also
 /// monitoring for terminal mode switching sequences. The caller is responsible for
 /// writing the output to the appropriate device and tracking mode changes.
 ///
@@ -523,6 +531,8 @@ fn write_to_pty_with_flush(
 /// Mode detection watches for:
 /// - `\x1B[?1h` - Enable application cursor keys
 /// - `\x1B[?1l` - Disable application cursor keys (back to normal)
+///
+/// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 fn spawn_blocking_passthrough_with_mode_detection_reader_task(
     mut controller_reader: ControllerReader,
     output_evt_ch_tx_half: tokio::sync::mpsc::UnboundedSender<PtyReadWriteOutputEvent>,
@@ -590,20 +600,20 @@ mod tests {
 
     // XMARK: Process isolated test with PTY.
 
-    /// This test coordinator runs each PTY read-write test in its own isolated process.
-    /// This ensures that PTY resources (file descriptors, child processes, etc.) are
-    /// completely isolated between tests, eliminating any potential side effects
-    /// or resource contention.
+    /// This test coordinator runs each [`PTY`] read-write test in its own isolated
+    /// process. This ensures that [`PTY`] resources (file descriptors, child
+    /// processes, etc.) are completely isolated between tests, eliminating any
+    /// potential side effects or resource contention.
     ///
     /// The issue is that when these tests are run by cargo test (in parallel in the SAME
-    /// process), it leads to resource contention and flaky test failures, since PTY
+    /// process), it leads to resource contention and flaky test failures, since [`PTY`]
     /// resources are limited per process and tests compete for file descriptors.
     ///
     /// By running each individual test in its own isolated process, we ensure that:
     /// - Each test gets fresh system resources
     /// - No resource leaks from one test can affect others
     /// - File descriptor limits are not shared between tests
-    /// - PTY allocation is completely clean for each test
+    /// - [`PTY`] allocation is completely clean for each test
     ///
     /// # Known flakiness
     ///
@@ -616,8 +626,10 @@ mod tests {
     /// timeout, `check.fish` kills it with exit code 124. macOS appears less
     /// susceptible to the hang.
     ///
-    /// The root cause is PTY resource contention at the OS level when spawning
+    /// The root cause is [`PTY`] resource contention at the OS level when spawning
     /// isolated child processes in rapid succession. This is not a code defect.
+    ///
+    /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
     #[test]
     fn test_all_pty_read_write_in_isolated_process() {
         crate::suppress_wer_dialogs();
@@ -743,7 +755,7 @@ mod tests {
     #[cfg(not(target_os = "windows"))]
     const PTY_TEST_TIMEOUT: Duration = Duration::from_secs(5);
 
-    /// Runs a single PTY test in an isolated process with a timeout.
+    /// Runs a single [`PTY`] test in an isolated process with a timeout.
     ///
     /// Returns `Some(Output)` if the child finished (pass or fail), or `None`
     /// if it hung and was killed after [`PTY_TEST_TIMEOUT`]. The caller can
@@ -752,7 +764,10 @@ mod tests {
     /// Creates a unique temp directory for each test to ensure complete cwd
     /// isolation. This prevents "No such file or directory" errors when the
     /// parent's cwd becomes invalid during test execution. Uses
-    /// [`crate::TempDir`] RAII guard for automatic cleanup.
+    /// [`crate::TempDir`] [`RAII`] guard for automatic cleanup.
+    ///
+    /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
+    /// [`RAII`]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
     #[cfg(not(target_os = "windows"))]
     fn run_single_pty_test_in_isolated_process(
         test_name: &str,
@@ -805,9 +820,11 @@ mod tests {
         }
     }
 
-    /// This function runs a single PTY test based on the environment variable.
+    /// This function runs a single [`PTY`] test based on the environment variable.
     /// This is called when we're in the isolated process mode for a specific test.
-    /// On Windows, all PTY process-spawning tests are gated, so this is Unix-only.
+    /// On Windows, all [`PTY`] process-spawning tests are gated, so this is Unix-only.
+    ///
+    /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
     #[cfg(not(target_os = "windows"))]
     #[allow(clippy::missing_errors_doc)]
     fn run_single_pty_test_by_name(test_name: &str) {
@@ -1377,11 +1394,11 @@ mod tests {
         Ok(())
     }
 
-    /// Comprehensive integration test for PTY input events using htop as a real
+    /// Comprehensive integration test for [`PTY`] input events using htop as a real
     /// interactive application.
     ///
     /// This test validates the new `ControlSequence` + `CursorKeyMode` architecture by
-    /// interacting with htop, ensuring that PTY input events are properly translated
+    /// interacting with htop, ensuring that [`PTY`] input events are properly translated
     /// to terminal sequences and that the application responds correctly.
     ///
     /// ## Test Flow
@@ -1443,7 +1460,9 @@ mod tests {
     ///
     /// - htop must be installed (bootstrap.sh handles this automatically)
     /// - Test fails hard if htop missing (not skipped) to ensure proper CI setup
-    /// - Requires PTY support (not available in all containerized environments)
+    /// - Requires [`PTY`] support (not available in all containerized environments)
+    ///
+    /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
     #[cfg(not(target_os = "windows"))] // Linux and macOS only
     #[allow(clippy::too_many_lines)]
     async fn test_htop_interactive_with_cursor_modes() -> miette::Result<()> {

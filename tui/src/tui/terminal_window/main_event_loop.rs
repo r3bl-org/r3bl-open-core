@@ -8,10 +8,9 @@ use crate::{Ansi256GradientIndex, ColorWheel, ColorWheelConfig, ColorWheelSpeed,
             InputEvent, LockedOutputDevice, MinSize, OffscreenBufferPool, OutputDevice,
             RawMode, RenderOpCommon, RenderOpFlush, RenderOpIR, RenderPipeline, Size,
             SufficientSize, TelemetryAtomHint, TerminalWindowMainThreadSignal,
-            TextColorizationPolicy, ZOrder, ch, col, glyphs, height, inline_string,
-            lock_output_device_as_mut, new_style, ok, render_pipeline, row,
+            TextColorizationPolicy, ZOrder, ch, col, glyphs, height, row,
             telemetry::{Telemetry, telemetry_default_constants},
-            telemetry_record, width};
+            width};
 use smallvec::smallvec;
 use std::{fmt::{Debug, Display},
           marker::PhantomData};
@@ -821,11 +820,10 @@ mod tests {
                 InlineVec, InputDevice, InputEvent, Key, KeyPress, OutputDevice,
                 OutputDeviceExt, PixelChar, RenderOpCommon, RenderOpIRVec,
                 RenderPipeline, SpecialKey, TTYResult, TerminalWindowMainThreadSignal,
-                TextColorizationPolicy, TuiStyle, TuiStyleAttribs, ZOrder, assert_eq2,
-                ch, col, defaults::get_default_gradient_stops, height, inline_string,
-                is_headless, is_output_interactive, key_press, main_event_loop_impl,
-                new_style, ok, render_pipeline, render_tui_styled_texts_into,
-                send_signal, tui_color, tui_style_attrib, tui_styled_text, width};
+                TextColorizationPolicy, TuiStyle, TuiStyleAttribs, ZOrder, ch, col,
+                defaults::get_default_gradient_stops, height, is_headless,
+                is_output_interactive, main_event_loop_impl,
+                render_tui_styled_texts_into, tui_style_attrib, width};
     use smallvec::smallvec;
     use std::{fmt::{Debug, Display, Formatter},
               time::Duration};
@@ -1037,7 +1035,7 @@ mod tests {
 
     mod test_fixture_app_main_impl_trait_app {
         use super::*;
-        use crate::{Pos, row, throws_with_return};
+        use crate::{Pos, row};
 
         impl App for AppMainTest {
             type S = State;
@@ -1235,7 +1233,7 @@ mod tests {
 
     mod text_fixture_status_bar {
         use super::*;
-        use crate::{LengthOps, Size, tui_styled_texts};
+        use crate::{LengthOps, Size};
 
         /// Shows helpful messages at the bottom row of the screen.
         pub fn create_status_bar_message(pipeline: &mut RenderPipeline, size: Size) {

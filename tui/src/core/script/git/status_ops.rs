@@ -2,7 +2,7 @@
 
 // cspell:words GPGSIGN
 
-use crate::{RepoStatus, ResultAndCommand, Run, command,
+use crate::{RepoStatus, ResultAndCommand, Run,
             script::git::types::{git_command_args::{GIT_ARG_GIT_DIR, GIT_ARG_PORCELAIN},
                                  git_command_names::{GIT_CMD_REV_PARSE,
                                                      GIT_CMD_STATUS, GIT_PROGRAM}}};
@@ -49,8 +49,7 @@ pub async fn try_is_git_repo() -> ResultAndCommand<bool> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{command, ok,
-                script::git::{test_fixtures::helper_setup_git_repo_with_commit,
+    use crate::{script::git::{git_test_fixtures::helper_setup_git_repo_with_commit,
                               types::{git_command_names::{GIT_CMD_ADD, GIT_CMD_COMMIT,
                                                            GIT_CMD_CONFIG, GIT_CMD_INIT},
                                        git_config_keys::{GIT_CONFIG_COMMIT_GPGSIGN,
@@ -61,7 +60,7 @@ mod tests {
                                                      TEST_GPG_SIGN_DISABLED,
                                                      TEST_INITIAL_COMMIT_MSG,
                                                      TEST_USER_NAME}}},
-                try_create_temp_dir_and_cd, try_write_file, with_saved_pwd};
+                try_create_temp_dir_and_cd, try_write_file};
 
     async fn test_try_is_working_directory_clean() -> miette::Result<()> {
         with_saved_pwd!(async {

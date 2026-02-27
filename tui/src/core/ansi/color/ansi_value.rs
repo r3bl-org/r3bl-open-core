@@ -1,18 +1,22 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! ANSI 256-color palette representation.
+//! [`ANSI`] 256-color palette representation.
 //!
 //! This provides a good balance between color precision and terminal compatibility.
 //! Each index (0-255) maps to a specific color in the palette.
+//!
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 
 use super::{RgbValue,
             convert::{ansi_constants::ANSI_COLOR_PALETTE, convert_rgb_into_grayscale}};
 use crate::TransformColor;
 
-/// Represents a color in the ANSI 256-color palette format.
+/// Represents a color in the [`ANSI`] 256-color palette format.
 ///
 /// This provides a good balance between color precision and terminal compatibility.
 /// Each index (0-255) maps to a specific color in the palette.
+///
+/// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 #[derive(Clone, PartialEq, Eq, Hash, Copy, Debug)]
 pub struct AnsiValue {
     pub index: u8,
@@ -63,13 +67,15 @@ impl TransformColor for AnsiValue {
 }
 
 impl AnsiValue {
-    /// Creates a new ANSI color value.
+    /// Creates a new [`ANSI`] color value.
+    ///
+    /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
     #[must_use]
     pub const fn new(color: u8) -> Self { Self { index: color } }
 
-    /// Checks if this is a basic ANSI color (indices 0-15).
+    /// Checks if this is a basic [`ANSI`] color (indices 0-15).
     ///
-    /// Basic ANSI colors (indices 0-15) have special handling:
+    /// Basic [`ANSI`] colors (indices 0-15) have special handling:
     /// - They represent the standard 16 terminal colors
     /// - Color degradation treats them differently than extended colors (16-255)
     /// - When converting to grayscale, we convert via RGB first
@@ -77,12 +83,14 @@ impl AnsiValue {
     /// # Returns
     ///
     /// `true` if this is a basic color (0-15), `false` for extended colors (16-255)
+    ///
+    /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
     #[must_use]
     pub const fn is_basic(&self) -> bool { self.index < 16 }
 
-    /// Checks if this is an extended ANSI color (indices 16-255).
+    /// Checks if this is an extended [`ANSI`] color (indices 16-255).
     ///
-    /// Extended ANSI colors (indices 16-255) are from the 256-color palette:
+    /// Extended [`ANSI`] colors (indices 16-255) are from the 256-color palette:
     /// - Indices 16-231: 6×6×6 RGB color cube (216 colors)
     /// - Indices 232-255: Grayscale ramp (24 shades)
     /// - They don't have the special handling that basic colors (0-15) require
@@ -90,6 +98,8 @@ impl AnsiValue {
     /// # Returns
     ///
     /// `true` if this is an extended color (16-255), `false` for basic colors (0-15)
+    ///
+    /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
     #[must_use]
     pub const fn is_extended(&self) -> bool { !self.is_basic() }
 }
@@ -97,12 +107,14 @@ impl AnsiValue {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::assert_eq2;
     use test_case::test_case;
 
     /// <https://www.ditig.com/256-colors-cheat-sheet>
-    /// ANSI: 57 `BlueViolet`
     /// RGB: #5f00ff rgb(95,0,255)
+    ///
+    /// [`ANSI`] value 57 = `BlueViolet`
+    ///
+    /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
     #[test]
     fn test_ansi_to_rgb() {
         let ansi = AnsiValue::new(57);

@@ -1,10 +1,12 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+// rustdoc-fmt: skip
+
 //! Extract rustdoc comment blocks from Rust source code.
 
 use crate::cargo_rustdoc_fmt::types::{CommentType, RustdocBlock};
 
-/// Extract all rustdoc comment blocks from source code.
+/// Extracts all rustdoc comment blocks from source code.
 ///
 /// Returns blocks for both `///` (outer) and `//!` (inner) style comments.
 #[must_use]
@@ -63,7 +65,7 @@ fn try_extract_block(lines: &[&str], index: &mut usize) -> Option<RustdocBlock> 
     })
 }
 
-/// Detect if a line is a rustdoc comment and return its type and indentation.
+/// Detects if a line is a rustdoc comment and returns its type and indentation.
 fn detect_rustdoc_comment(line: &str) -> Option<(CommentType, String, String)> {
     let trimmed = line.trim_start();
     let indentation = line[..line.len() - trimmed.len()].to_string();
@@ -77,7 +79,7 @@ fn detect_rustdoc_comment(line: &str) -> Option<(CommentType, String, String)> {
     }
 }
 
-/// Extract comment content, removing the marker and leading spaces.
+/// Extracts comment content, removing the marker and leading spaces.
 fn extract_comment_content<'a>(
     line: &'a str,
     marker: &str,

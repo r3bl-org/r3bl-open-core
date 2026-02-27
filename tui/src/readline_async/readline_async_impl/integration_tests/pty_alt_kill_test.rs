@@ -1,20 +1,28 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{AsyncDebouncedDeadline, ControlledChild, DebouncedState, PtyPair,
-            PtyTestMode, core::test_fixtures::StdoutMock,
-            generate_pty_test,
-            readline_async::readline_async_impl::LineState};
+use crate::{
+    AsyncDebouncedDeadline,
+    ControlledChild,
+    DebouncedState,
+    PtyPair,
+    PtyTestMode,
+    core::test_fixtures::StdoutMock,
+    readline_async::readline_async_impl::LineState,
+};
 use std::{io::{BufRead, BufReader, Write},
           sync::{Arc, Mutex as StdMutex},
           time::Duration};
 
 generate_pty_test! {
-    /// PTY-based integration test for Alt+D and Alt+Backspace word killing.
+    /// [`PTY`]-based integration test for Alt+D and Alt+Backspace word killing.
     ///
     /// Validates that Alt+D (kill word forward) and Alt+Backspace (kill word backward)
     /// correctly delete words at word boundaries.
     ///
-    /// Run with: `cargo test -p r3bl_tui --lib test_pty_alt_kill -- --nocapture`
+    /// Run with:
+    /// ```bash
+    /// cargo test -p r3bl_tui --lib test_pty_alt_kill -- --nocapture
+    /// ```
     ///
     /// Tests:
     /// 1. Alt+D: Delete word forward from cursor
@@ -38,18 +46,24 @@ generate_pty_test! {
     /// The ([`LineState`]) is checked in the tests to make assertions against.
     ///
     /// [`LineState`]: crate::readline_async::readline_async_impl::LineState
+    /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
     test_fn: test_pty_alt_kill,
     controller: pty_controller_entry_point,
     controlled: pty_controlled_entry_point,
     mode: PtyTestMode::Raw,
 }
 
-/// PTY Controller: Send Alt+D/Backspace sequences and verify word deletion
+/// [`PTY`] Controller: Send Alt+D/Backspace sequences and verify word deletion
+///
+/// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 #[allow(clippy::too_many_lines)]
 fn pty_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
     eprintln!("🚀 PTY Controller: Starting Alt+D/Backspace test...");
 
-    let mut writer = pty_pair.controller().take_writer().expect("Failed to get writer");
+    let mut writer = pty_pair
+        .controller()
+        .take_writer()
+        .expect("Failed to get writer");
     let reader = pty_pair
         .controller()
         .try_clone_reader()
@@ -208,7 +222,9 @@ fn pty_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
     eprintln!("✅ PTY Controller: Test passed!");
 }
 
-/// PTY Controlled: Process readline input and report line state
+/// [`PTY`] Controlled: Process readline input and report line state
+///
+/// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 fn pty_controlled_entry_point() -> ! {
     use crate::direct_to_ansi::DirectToAnsiInputDevice;
 

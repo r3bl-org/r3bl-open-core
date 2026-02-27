@@ -432,8 +432,6 @@ mod bounds_check_trait_impls {
 #[cfg(test)]
 mod tests_convert {
     use super::*;
-    use crate::assert_eq2;
-
     #[test]
     fn test_as_usize() {
         let ch_1: ChUnit = ch(1);
@@ -489,8 +487,6 @@ mod tests_convert {
 #[cfg(test)]
 mod tests_ch_unit_math_ops {
     use super::*;
-    use crate::assert_eq2;
-
     #[test]
     fn test_add_ch_units() {
         let ch_1: ChUnit = ch(1);

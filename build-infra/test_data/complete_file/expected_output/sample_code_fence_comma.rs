@@ -55,14 +55,13 @@
 //! # Entry Point
 //!
 //! [`DirectToAnsiInputDevice::try_read_event`] is the main async method for reading
-//! terminal input with zero-latency `ESC` key detection.
+//! terminal input with zero-latency [`ESC`] key detection.
 //!
-//! [`DirectToAnsiInputDevice::try_read_event`]: DirectToAnsiInputDevice::try_read_event
 //! [`DirectToAnsi`]: mod@super
+//! [`DirectToAnsiInputDevice::try_read_event`]: DirectToAnsiInputDevice::try_read_event
 //! [`EINVAL`]: https://man7.org/linux/man-pages/man3/errno.3.html
-//! [`SIGWINCH`]: https://man7.org/linux/man-pages/man7/signal.7.html
-//! [`TERMINAL_LIB_BACKEND`]: crate::TERMINAL_LIB_BACKEND
 //! [`epoll(7)`]: https://man7.org/linux/man-pages/man7/epoll.7.html
+//! [`ESC`]: crate::EscSequence
 //! [`filedescriptor::poll()`]: https://docs.rs/filedescriptor/latest/filedescriptor/fn.poll.html
 //! [`filedescriptor`]: https://docs.rs/filedescriptor
 //! [`kqueue(2)`]: https://man.freebsd.org/cgi/man.cgi?query=kqueue&sektion=2
@@ -72,6 +71,8 @@
 //! [`select(2)`]: https://man7.org/linux/man-pages/man2/select.2.html
 //! [`signal-hook-mio`]: https://docs.rs/signal-hook-mio
 //! [`signal-hook`]: https://docs.rs/signal-hook
+//! [`SIGWINCH`]: https://man7.org/linux/man-pages/man7/signal.7.html
+//! [`TERMINAL_LIB_BACKEND`]: crate::TERMINAL_LIB_BACKEND
 //! [crossterm issue #500]: https://github.com/crossterm-rs/crossterm/issues/500
 //! [declined to work around this]: https://github.com/tokio-rs/mio/issues/1377
 //! [known Darwin limitation]: https://nathancraddock.com/blog/macos-dev-tty-polling/

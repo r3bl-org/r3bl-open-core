@@ -48,6 +48,7 @@
 #![warn(clippy::unwrap_in_result)]
 #![warn(rust_2018_idioms)]
 
+#[macro_use]
 pub mod crossterm_macros;
 pub mod event_loop;
 pub mod function_component;

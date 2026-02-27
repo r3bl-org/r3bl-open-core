@@ -15,7 +15,7 @@
 //! [`mpsc`]: std::sync::mpsc
 
 use super::super::*;
-use crate::{Continuation, ControlledChild, PtyPair, PtyTestMode, generate_pty_test};
+use crate::{Continuation, ControlledChild, PtyPair, PtyTestMode};
 use std::{collections::VecDeque,
           io::{BufRead, BufReader, Write},
           sync::{Arc, Mutex,
@@ -1053,8 +1053,11 @@ fn poll_error_controller(pty_pair: PtyPair, mut child: ControlledChild) {
 }
 
 /// Controlled: creates a real `MioPollWorker` via `create_and_register_os_sources()`,
-/// corrupts the epoll fd, and verifies that `block_until_ready_then_dispatch()` returns
-/// `Restart` with `StdinEvent::Error`.
+/// corrupts the [`epoll`] [`fd`], and verifies that `block_until_ready_then_dispatch()`
+/// returns `Restart` with `StdinEvent::Error`.
+///
+/// [`epoll`]: https://man7.org/linux/man-pages/man7/epoll.7.html
+/// [`fd`]: https://en.wikipedia.org/wiki/File_descriptor
 fn poll_error_controlled() -> ! {
     use crate::tui::terminal_lib_backends::direct_to_ansi::input::{channel_types::{PollerEvent,
                                                                                    StdinEvent},

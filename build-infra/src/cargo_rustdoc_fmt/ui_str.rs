@@ -1,5 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+// rustdoc-fmt: skip
+
 //! User-facing strings and messages.
 
 pub const PROCESSING_FILE: &str = "Processing";
@@ -11,21 +13,21 @@ pub const CHECK_MODE_NEEDS_FORMATTING: &str =
     "Some files need formatting. Run without --check to format them.";
 pub const ALL_PROPERLY_FORMATTED: &str = "All files are properly formatted!";
 
-/// Format an error message for a specific file.
+/// Formats an error message for a specific file.
 #[must_use]
 pub fn format_error(file: &str, error: &str) -> String {
     format!("{ERROR_PREFIX} in {file}: {error}")
 }
 
-/// Format a "file modified" message.
+/// Formats a "file modified" message.
 #[must_use]
 pub fn format_modified(file: &str) -> String { format!("{FILE_MODIFIED}: {file}") }
 
-/// Format a "file unchanged" message.
+/// Formats a "file unchanged" message.
 #[must_use]
 pub fn format_unchanged(file: &str) -> String { format!("{FILE_UNCHANGED}: {file}") }
 
-/// Format summary message.
+/// Formats summary message.
 #[must_use]
 pub fn format_summary(total: usize, modified: usize, errors: usize) -> String {
     format!("Processed {total} files, {modified} modified, {errors} errors")

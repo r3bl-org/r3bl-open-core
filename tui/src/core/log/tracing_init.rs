@@ -81,13 +81,15 @@ pub fn try_create_layers(
 /// This erases the concrete type of the writer, and returns a boxed layer.
 ///
 /// This is useful for composition of layers. There's more info in the docs
-/// [here](https://docs.rs/tracing-subscriber/latest/tracing_subscriber/layer/index.html#runtime-configuration-with-layers).
+/// [here].
 ///
 /// # Errors
 ///
 /// Returns an error if:
 /// - The shared writer cannot be created or locked
 /// - The writer configuration is invalid
+///
+/// [here]: https://docs.rs/tracing-subscriber/latest/tracing_subscriber/layer/index.html#runtime-configuration-with-layers
 pub fn try_create_display_layer<S>(
     level_filter: LevelFilter,
     writer_config: WriterConfig,
@@ -131,13 +133,15 @@ where
 /// This erases the concrete type of the writer, and returns a boxed layer.
 ///
 /// This is useful for composition of layers. There's more info in the docs
-/// [here](https://docs.rs/tracing-subscriber/latest/tracing_subscriber/layer/index.html#runtime-configuration-with-layers).
+/// [here].
 ///
 /// # Errors
 ///
 /// Returns an error if:
 /// - The file appender cannot be created (invalid path, permissions)
 /// - The file path is invalid
+///
+/// [here]: https://docs.rs/tracing-subscriber/latest/tracing_subscriber/layer/index.html#runtime-configuration-with-layers
 pub fn try_create_file_layer<S>(
     level_filter: LevelFilter,
     writer_config: WriterConfig,
@@ -234,7 +238,7 @@ mod fixtures {
 #[cfg(test)]
 mod test_tracing_shared_writer_output {
     use super::{fixtures::get_expected, *};
-    use crate::{InlineString, InlineVec, LineStateControlSignal, SharedWriter, join};
+    use crate::{InlineString, InlineVec, LineStateControlSignal, SharedWriter};
     use smallvec::smallvec;
 
     #[tokio::test]

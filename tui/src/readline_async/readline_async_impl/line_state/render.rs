@@ -1,8 +1,7 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::core::LineState;
-use crate::{CsiSequence, EraseDisplayMode, LineStateLiveness, StringLength, early_return_if_paused,
-            ok, width};
+use crate::{CsiSequence, EraseDisplayMode, LineStateLiveness, StringLength, width};
 use std::io::{self, Write};
 
 impl LineState {
@@ -17,7 +16,11 @@ impl LineState {
         // Column index value equals distance from start (col 5 = 5 chars from start).
         self.move_to_beginning(term, width(self.current_column.as_u16()))?;
         // ED 0 = Erase from cursor to end of screen (CSI 0J).
-        term.write_all(CsiSequence::EraseDisplay(EraseDisplayMode::FromCursorToEnd).to_string().as_bytes())?;
+        term.write_all(
+            CsiSequence::EraseDisplay(EraseDisplayMode::FromCursorToEnd)
+                .to_string()
+                .as_bytes(),
+        )?;
 
         ok!()
     }
@@ -68,10 +71,8 @@ impl LineState {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        CHA_CURSOR_COLUMN, CSI_START, ED_ERASE_DISPLAY, ED_ERASE_TO_END, GCStringOwned,
-        core::test_fixtures::StdoutMock,
-    };
+    use crate::{CHA_CURSOR_COLUMN, CSI_START, ED_ERASE_DISPLAY, ED_ERASE_TO_END,
+                GCStringOwned, core::test_fixtures::StdoutMock};
 
     #[test]
     fn test_clear_writes_escape_sequences() {

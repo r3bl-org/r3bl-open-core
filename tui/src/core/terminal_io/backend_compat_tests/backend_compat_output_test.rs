@@ -9,9 +9,9 @@
 //! Verifies [`RenderOpPaintImplDirectToAnsi`] and [`PaintRenderOpImplCrossterm`] produce
 //! visually identical terminal output for the same [`RenderOpOutput`] sequences. This is
 //! a **snapshot test** that compares whether both backends produce the same rendered
-//! output for the same given terminal size and capabilities in a real PTY environment.
-//! Manually sets raw mode for each backend directly (not using the production
-//! [`terminal_raw_mode::enable_raw_mode()`] dispatcher which selects based on
+//! output for the same given terminal size and capabilities in a real [`PTY`]
+//! environment. Manually sets raw mode for each backend directly (not using the
+//! production [`terminal_raw_mode::enable_raw_mode()`] dispatcher which selects based on
 //! [`TERMINAL_LIB_BACKEND`]).
 //!
 //! # Platform
@@ -20,10 +20,10 @@
 //! "linux"))]` because [`DirectToAnsi`] is currently Linux-only. The raw mode
 //! implementations used are:
 //!
-//! | Backend          | Raw Mode Implementation                                                |
-//! | ---------------- | ---------------------------------------------------------------------- |
-//! | [`DirectToAnsi`] | [`terminal_raw_mode::raw_mode_unix::enable_raw_mode()`] (rustix-based) |
-//! | [`Crossterm`]    | [`crossterm::terminal::enable_raw_mode()`]                             |
+//! | Backend          | Raw Mode Implementation                                                    |
+//! | ---------------- | -------------------------------------------------------------------------- |
+//! | [`DirectToAnsi`] | [`terminal_raw_mode::raw_mode_unix::enable_raw_mode()`] ([`rustix`]-based) |
+//! | [`Crossterm`]    | [`crossterm::terminal::enable_raw_mode()`]                                 |
 //!
 //! # Quick Start
 //!
@@ -35,7 +35,7 @@
 //!
 //! # Architecture
 //!
-//! The test uses PTY-based process isolation with **real output devices**:
+//! The test uses [`PTY`]-based process isolation with **real output devices**:
 //!
 //! Each backend test manually:
 //! 1. Sets raw mode for each backend directly (**not** using the production
@@ -93,49 +93,55 @@
 //!
 //! # Why `OffscreenBuffer` Comparison?
 //!
-//! The raw ANSI bytes from each backend may differ in encoding (e.g., crossterm might
-//! use different CSI parameter formats), but they should produce **identical terminal
+//! The raw [`ANSI`] bytes from each backend may differ in encoding (e.g., crossterm might
+//! use different [`CSI`] parameter formats), but they should produce **identical terminal
 //! state**. By applying bytes to [`OffscreenBuffer`]s and comparing those, we test
 //! semantic equivalence rather than byte-for-byte equality. This is a rendered output
 //! snapshot test that confirms that both backends "look the same" at the end, regardless
-//! what ANSI escape code encoded byte sequences they used to get there.
+//! what [`ANSI`] escape code encoded byte sequences they used to get there.
 //!
 //! # Module Structure
 //!
 //! - `test_backend_compat_output_compare()` - Main test that compares backend outputs.
 //! - [`generate_test_render_ops`] - Test render operations.
-//! - [`controller`] - PTY master logic that captures all bytes.
+//! - [`controller`] - [`PTY`] master logic that captures all bytes.
 //! - [`controlled_crossterm`] - Crossterm backend controlled process.
 //! - [`controlled_direct_to_ansi`] - `DirectToAnsi` backend controlled process.
 //!
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`Crossterm`]: crate::TerminalLibBackend::Crossterm
+//! [`CSI`]: crate::CsiSequence
 //! [`DirectToAnsi`]: crate::TerminalLibBackend::DirectToAnsi
 //! [`OffscreenBuffer`]: crate::OffscreenBuffer
 //! [`PaintRenderOpImplCrossterm`]: crate::tui::terminal_lib_backends::crossterm_backend::PaintRenderOpImplCrossterm
+//! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`RenderOpOutput`]: crate::RenderOpOutput
 //! [`RenderOpPaintImplDirectToAnsi`]: crate::direct_to_ansi::RenderOpPaintImplDirectToAnsi
+//! [`rustix`]: https://docs.rs/rustix
 //! [`TERMINAL_LIB_BACKEND`]: crate::tui::terminal_lib_backends::TERMINAL_LIB_BACKEND
-//! [`terminal_raw_mode::raw_mode_unix::enable_raw_mode()`]: crate::core::ansi::terminal_raw_mode::raw_mode_unix::enable_raw_mode
 //! [`terminal_raw_mode::enable_raw_mode()`]: crate::core::ansi::terminal_raw_mode::enable_raw_mode
+//! [`terminal_raw_mode::raw_mode_unix::enable_raw_mode()`]: crate::core::ansi::terminal_raw_mode::raw_mode_unix::enable_raw_mode
 
 use crate::{ColorSupport, InlineString, OffscreenBuffer, OutputDevice, PtyPair,
             RenderOpOutput, RenderOpPaint, RenderOpsLocalData, Size, TuiStyle,
             TuiStyleAttribs, col,
             core::ansi::terminal_raw_mode,
-            global_color_support, height, lock_output_device_as_mut, pos,
+            global_color_support, height, pos,
             render_op::RenderOpCommon,
             row, spawn_controlled_in_pty,
             terminal_lib_backends::{crossterm_backend::PaintRenderOpImplCrossterm,
                                     direct_to_ansi::RenderOpPaintImplDirectToAnsi},
-            tui_color, tui_style_attrib, width};
+            tui_style_attrib, width};
 use std::io::{Read, Write};
 
 /// Test window size for output compatibility tests.
 const TEST_WIDTH: u16 = 80;
 const TEST_HEIGHT: u16 = 24;
 
-/// Completion signal sent by controlled process after all ANSI output.
-/// Uses null bytes which won't appear in normal ANSI sequences.
+/// Completion signal sent by controlled process after all [`ANSI`] output.
+/// Uses null bytes which won't appear in normal [`ANSI`] sequences.
+///
+/// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 const COMPLETION_SIGNAL: &[u8] = b"\x00\x00\x00DONE";
 
 /// Environment variable to indicate controlled process mode.
@@ -146,7 +152,7 @@ const CONTROLLED_READY: &str = "CONTROLLED_READY";
 
 /// Runs both backend tests and compares their rendered outputs.
 ///
-/// Creates PTY pairs directly (no subprocess indirection), captures raw ANSI
+/// Creates [`PTY`] pairs directly (no subprocess indirection), captures raw [`ANSI`]
 /// output from each backend, applies to [`OffscreenBuffer`]s, and compares.
 ///
 /// Run with:
@@ -157,6 +163,9 @@ const CONTROLLED_READY: &str = "CONTROLLED_READY";
 /// # Panics
 ///
 /// Panics if the `PTY_CONTROLLED_ENV_VAR` is set to an unknown backend value.
+///
+/// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+/// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 #[test]
 pub fn test_backend_compat_output_compare() {
     // Check if we're running as a controlled process.
@@ -243,19 +252,24 @@ pub fn test_backend_compat_output_compare() {
     );
 }
 
-/// Controller (PTY Master) Logic - captures all raw bytes.
+/// Controller ([`PTY`] Master) Logic - captures all raw bytes.
+///
+/// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 pub mod controller {
     use super::*;
 
-    /// Capture all raw ANSI bytes from the controlled process.
+    /// Capture all raw [`ANSI`] bytes from the controlled process.
     ///
-    /// Reads from PTY until it sees the completion signal, then strips the signal
-    /// and returns just the ANSI bytes. The controlled process sends the completion
+    /// Reads from [`PTY`] until it sees the completion signal, then strips the signal
+    /// and returns just the [`ANSI`] bytes. The controlled process sends the completion
     /// signal immediately after finishing its output, so blocking reads work.
     ///
     /// # Panics
     ///
-    /// Panics if PTY reader cannot be obtained, or if I/O operations fail.
+    /// Panics if [`PTY`] reader cannot be obtained, or if I/O operations fail.
+    ///
+    /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+    /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
     #[must_use]
     pub fn run((backend_name, pty_pair): (&str, PtyPair)) -> Vec<u8> {
         eprintln!("{backend_name} Controller: Starting...");
@@ -394,12 +408,14 @@ pub mod controlled_direct_to_ansi {
     /// `DirectToAnsi` controlled process entry point.
     ///
     /// Uses [`terminal_raw_mode::raw_mode_unix::enable_raw_mode()`] directly (the
-    /// rustix-based implementation) to explicitly test the `DirectToAnsi` backend's raw
-    /// mode.
+    /// [`rustix`]-based implementation) to explicitly test the `DirectToAnsi` backend's
+    /// raw mode.
     ///
     /// # Panics
     ///
     /// Panics if stdout flush fails.
+    ///
+    /// [`rustix`]: https://docs.rs/rustix
     pub fn run() -> ! {
         // 1. Signal ready (before enabling raw mode so newlines work normally).
         println!("{}", super::CONTROLLED_READY);

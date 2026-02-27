@@ -36,7 +36,7 @@
 //! - **Stage 5 options**:
 //!   - [`crossterm_backend::crossterm_paint_render_op_impl` mod docs] (Crossterm
 //!     executor)
-//!   - [`direct_to_ansi` mod docs] (`DirectToAnsi` executor - generates ANSI escape
+//!   - [`direct_to_ansi` mod docs] (`DirectToAnsi` executor - generates [`ANSI`] escape
 //!     sequences)
 //!
 //! ## What This Stage Does
@@ -63,6 +63,7 @@
 //! The buffer can be compared with the previous frame to determine what changed,
 //! enabling selective redraw in the next stage.
 //!
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`crossterm_backend::crossterm_paint_render_op_impl` mod docs]: mod@crate::tui::terminal_lib_backends::crossterm_backend::crossterm_paint_render_op_impl
 //! [`direct_to_ansi` mod docs]: mod@crate::direct_to_ansi
 //! [`offscreen_buffer::paint_impl` mod docs]: mod@crate::tui::terminal_lib_backends::offscreen_buffer::paint_impl
@@ -76,7 +77,7 @@ use crate::{ColWidth, CommonError, CommonErrorType, CommonResult, DEBUG_TUI_COMP
             GCStringOwned, MemoizedLenMap, PixelChar, PixelCharLine, Pos,
             RenderOpsLocalData, Size, StringLength, TuiStyle, ZOrder, ch,
             glyphs::{self, SPACER_GLYPH},
-            inline_string, usize, width};
+            usize, width};
 
 impl RenderPipeline {
     /// Converts the render pipeline to an offscreen buffer.
@@ -691,7 +692,7 @@ mod print_text_with_attributes_helper {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{assert_eq2, col, height, new_style, render_pipeline, row, tui_color};
+    use crate::{col, height, row};
     use std::collections::HashMap;
 
     #[allow(clippy::too_many_lines)]

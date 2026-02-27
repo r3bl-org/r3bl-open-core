@@ -37,7 +37,7 @@
 
 use super::{RenderOpCommon, RenderOpsExec};
 use crate::{InlineString, InlineVec, LockedOutputDevice, RenderOpsLocalData, Size,
-            TERMINAL_LIB_BACKEND, TerminalLibBackend, TuiStyle, ok,
+            TERMINAL_LIB_BACKEND, TerminalLibBackend, TuiStyle,
             terminal_lib_backends::{crossterm_backend::PaintRenderOpImplCrossterm,
                                     direct_to_ansi::RenderOpPaintImplDirectToAnsi}};
 use std::{fmt::{Debug, Formatter, Result},

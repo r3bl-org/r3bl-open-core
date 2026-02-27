@@ -13,7 +13,7 @@
 //! the tests in this file.
 
 use crate::{CheckboxParsePolicy, DEBUG_MD_PARSER, MdLineFragment, fg_green, fg_red,
-            inline_string, parse_fragment_plain_text_no_new_line,
+            parse_fragment_plain_text_no_new_line,
             parse_fragment_starts_with_backtick_err_on_new_line,
             parse_fragment_starts_with_checkbox_checkbox_into_bool,
             parse_fragment_starts_with_checkbox_into_str,
@@ -113,7 +113,7 @@ pub fn parse_inline_fragments_until_eol_or_eoi(
 #[cfg(test)]
 mod tests_parse_fragment {
     use super::*;
-    use crate::{HyperlinkData, assert_eq2};
+    use crate::HyperlinkData;
     use nom::{Err as NomErr,
               error::{Error, ErrorKind}};
 

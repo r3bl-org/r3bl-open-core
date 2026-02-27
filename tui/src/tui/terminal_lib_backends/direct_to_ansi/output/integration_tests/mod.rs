@@ -2,39 +2,38 @@
 
 //! **Output** integration tests for [`RenderOpPaintImplDirectToAnsi`].
 //!
-//! These tests verify the **output painting pipeline** ([`RenderOpOutput`] → ANSI escape
-//! sequences). No real terminal or PTY is needed—we test ANSI sequence generation.
+//! These tests verify the **output painting pipeline** ([`RenderOpOutput`] → [`ANSI`]
+//! escape sequences). No real terminal or [`PTY`] is needed—we test [`ANSI`] sequence
+//! generation.
 //!
-//! **Looking for input tests?** See [`input::integration_tests_docs`] for PTY test
+//! **Looking for input tests?** See [`input::integration_tests_docs`] for [`PTY`] test
 //! documentation.
 //!
 //! # Testing Strategy: Two Complementary Layers
 //!
 //! This module uses **two testing layers** that verify complementary properties:
 //!
-//! | Layer | Tests | Catches |
-//! |-------|-------|---------|
-//! | **[`StdoutMock`]** (byte-level) | "Did we emit correct bytes?" | Typos, wrong SGR codes |
-//! | **[`OffscreenBuffer`]** (rendered) | "Did it render correctly?" | Off-by-one, semantic bugs |
+//! | Layer                              | Tests                        | Catches                    |
+//! | ---------------------------------- | ---------------------------- | -------------------------- |
+//! | **[`StdoutMock`]** (byte-level)    | "Did we emit correct bytes?" | Typos, wrong [`SGR`] codes |
+//! | **[`OffscreenBuffer`]** (rendered) | "Did it render correctly?"   | Off-by-one, semantic bugs  |
 //!
 //! ## Byte-Level Tests ([`StdoutMock`])
 //!
-//! Verify exact ANSI escape sequences are generated:
+//! Verify exact [`ANSI`] escape sequences are generated:
 //! - `color_operations`, `cursor_movement`, `screen_operations`, `text_operations`
 //! - `state_optimization` (tracks operation counts)
 //!
 //! ## Rendered Tests ([`OffscreenBuffer`])
 //!
-//! Verify **behavioral correctness** by applying ANSI output to [`OffscreenBuffer`]:
+//! Verify **behavioral correctness** by applying [`ANSI`] output to [`OffscreenBuffer`]:
 //! - `cursor_movement_rendered`: Cursor positions characters correctly
 //! - `text_operations_rendered`: Styled text renders with correct colors/attributes
 //! - `screen_operations_rendered`: Clear operations affect correct regions
 //!
-//! The rendered tests use [`OffscreenBuffer::apply_ansi_bytes`] to parse the ANSI
+//! The rendered tests use [`OffscreenBuffer::apply_ansi_bytes`] to parse the [`ANSI`]
 //! output and verify the visual result.
 //!
-//! [`OffscreenBuffer::apply_ansi_bytes`]: crate::OffscreenBuffer::apply_ansi_bytes
-//! [`OffscreenBuffer`]: crate::OffscreenBuffer
 //!
 //! # Module Organization
 //!
@@ -59,13 +58,13 @@
 //!
 //! The test pattern:
 //!
-//! 1. Create mock [`OutputDevice`] with [`StdoutMock`] (captures ANSI output)
+//! 1. Create mock [`OutputDevice`] with [`StdoutMock`] (captures [`ANSI`] output)
 //! 2. Create test state ([`RenderOpsLocalData`] - tracks cursor and colors)
 //! 3. Create operation (either [`RenderOpCommon`] or text paint with style)
 //! 4. Wrap in appropriate [`RenderOpOutput`] variant
 //! 5. Execute via [`RenderOpPaint`] trait on [`RenderOpPaintImplDirectToAnsi`]
 //! 6. Verify BOTH:
-//!    - ANSI output captured in [`StdoutMock`]
+//!    - [`ANSI`] output captured in [`StdoutMock`]
 //!    - State changes in [`RenderOpsLocalData`] (optimization tracking)
 //!
 //! # Key Types Under Test
@@ -84,29 +83,34 @@
 //!   [`HideCursor`], etc.)
 //! - [`TuiStyle`]: Styling information for text (foreground color, background color,
 //!   attributes)
-//! - [`StdoutMock`]: Captures ANSI output for verification
+//! - [`StdoutMock`]: Captures [`ANSI`] output for verification
 //! - `OutputDeviceExt::new_mock()`: Creates ([`OutputDevice`], [`StdoutMock`]) pair
 //!
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`ClearScreen`]: crate::render_op::RenderOpCommon::ClearScreen
+//! [`HideCursor`]: crate::render_op::RenderOpCommon::HideCursor
+//! [`input::integration_tests_docs`]: mod@crate::terminal_lib_backends::direct_to_ansi::input::integration_tests_docs
+//! [`MoveCursorPositionAbs`]: crate::render_op::RenderOpCommon::MoveCursorPositionAbs
+//! [`MoveCursorPositionRelTo`]: crate::render_op::RenderOpCommon::MoveCursorPositionRelTo
+//! [`OffscreenBuffer::apply_ansi_bytes`]: crate::OffscreenBuffer::apply_ansi_bytes
+//! [`OffscreenBuffer`]: crate::OffscreenBuffer
 //! [`OutputDevice`]: crate::OutputDevice
-//! [`StdoutMock`]: crate::StdoutMock
-//! [`RenderOpsLocalData`]: crate::RenderOpsLocalData
 //! [`Pos`]: crate::Pos
+//! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`RenderOpCommon`]: crate::render_op::RenderOpCommon
+//! [`RenderOpOutput::Common`]: crate::RenderOpOutput::Common
+//! [`RenderOpOutput::CompositorNoClipTruncPaintTextWithAttributes`]: crate::RenderOpOutput::CompositorNoClipTruncPaintTextWithAttributes
 //! [`RenderOpOutput`]: crate::RenderOpOutput
 //! [`RenderOpPaint`]: crate::RenderOpPaint
 //! [`RenderOpPaintImplDirectToAnsi`]: crate::terminal_lib_backends::direct_to_ansi::output::direct_to_ansi_paint_render_op_impl::RenderOpPaintImplDirectToAnsi
-//! [`TuiStyle`]: crate::TuiStyle
-//! [`SetFgColor`]: crate::render_op::RenderOpCommon::SetFgColor
-//! [`SetBgColor`]: crate::render_op::RenderOpCommon::SetBgColor
+//! [`RenderOpsLocalData`]: crate::RenderOpsLocalData
 //! [`ResetColor`]: crate::render_op::RenderOpCommon::ResetColor
-//! [`MoveCursorPositionAbs`]: crate::render_op::RenderOpCommon::MoveCursorPositionAbs
-//! [`MoveCursorPositionRelTo`]: crate::render_op::RenderOpCommon::MoveCursorPositionRelTo
-//! [`ClearScreen`]: crate::render_op::RenderOpCommon::ClearScreen
+//! [`SetBgColor`]: crate::render_op::RenderOpCommon::SetBgColor
+//! [`SetFgColor`]: crate::render_op::RenderOpCommon::SetFgColor
+//! [`SGR`]: crate::SgrCode
 //! [`ShowCursor`]: crate::render_op::RenderOpCommon::ShowCursor
-//! [`HideCursor`]: crate::render_op::RenderOpCommon::HideCursor
-//! [`RenderOpOutput::Common`]: crate::RenderOpOutput::Common
-//! [`RenderOpOutput::CompositorNoClipTruncPaintTextWithAttributes`]: crate::RenderOpOutput::CompositorNoClipTruncPaintTextWithAttributes
-//! [`input::integration_tests_docs`]: mod@crate::terminal_lib_backends::direct_to_ansi::input::integration_tests_docs
+//! [`StdoutMock`]: crate::StdoutMock
+//! [`TuiStyle`]: crate::TuiStyle
 
 // Byte-level tests (StdoutMock).
 #[cfg(test)]
@@ -134,8 +138,8 @@ mod text_operations_rendered;
 #[cfg(test)]
 mod test_helpers {
     use crate::{LockedOutputDevice, OutputDevice, RenderOpOutput, RenderOpPaint,
-                RenderOpsLocalData, Size, StdoutMock, TuiColor, col, height,
-                lock_output_device_as_mut, pos, render_op::RenderOpCommon, row,
+                RenderOpsLocalData, Size, StdoutMock, TuiColor, col, height, pos,
+                render_op::RenderOpCommon, row,
                 terminal_lib_backends::direct_to_ansi::RenderOpPaintImplDirectToAnsi,
                 test_fixtures::output_device_fixtures::OutputDeviceExt, width};
 
@@ -164,8 +168,10 @@ mod test_helpers {
         RenderOpCommon::SetBgColor(color)
     }
 
-    /// Executes a [`RenderOpCommon`] via the paint pipeline and returns the captured ANSI
-    /// output
+    /// Executes a [`RenderOpCommon`] via the paint pipeline and returns the captured
+    /// [`ANSI`] output
+    ///
+    /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
     pub fn execute_and_capture(
         op: RenderOpCommon,
         state: &mut RenderOpsLocalData,
@@ -223,8 +229,9 @@ mod test_helpers {
     }
 
     /// Executes a [`CompositorNoClipTruncPaintTextWithAttributes`] [`RenderOpOutput`] and
-    /// returns captured ANSI output
+    /// returns captured [`ANSI`] output
     ///
+    /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
     /// [`CompositorNoClipTruncPaintTextWithAttributes`]: crate::RenderOpOutput::CompositorNoClipTruncPaintTextWithAttributes
     pub fn execute_text_paint_and_capture(
         text: &str,

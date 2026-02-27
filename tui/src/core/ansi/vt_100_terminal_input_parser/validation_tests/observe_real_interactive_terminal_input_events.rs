@@ -3,7 +3,8 @@
 //! Interactive terminal observation test to establish ground truth.
 //!
 //! This test captures raw bytes from real terminal interactions to establish ground truth
-//! about ANSI coordinate systems and actual sequences sent by terminal emulators.
+//! about [`ANSI`] coordinate systems and actual sequences sent by terminal emulators.
+//!
 //!
 //! # Run Instructions
 //!
@@ -22,23 +23,12 @@
 //! # POSIX compliant OSes (shows C-style escapes like \033):
 //! sed -n l
 //! ```
+//!
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 
 use std::{io::{Result as IoResult, Write},
           time::Duration};
 use tokio::io::AsyncReadExt;
-
-// ============================================================================
-// Data Types
-// ============================================================================
-
-/// Describes a single test case in the observation sequence.
-#[derive(Clone)]
-#[allow(clippy::struct_field_names)]
-struct TestCase {
-    prompt_title: &'static str,
-    prompt_action: &'static str,
-    prompt_detail: &'static str,
-}
 
 // ============================================================================
 // Main Test
@@ -47,9 +37,13 @@ struct TestCase {
 /// Interactive terminal observation test to establish ground truth.
 ///
 /// This test captures raw bytes from real terminal interactions to establish ground truth
-/// about ANSI coordinate systems and actual sequences sent by terminal emulators.
+/// about [`ANSI`] coordinate systems and actual sequences sent by terminal emulators.
 ///
-/// Run with: `cargo test observe_terminal -- --ignored --nocapture`
+///
+/// Run with:
+/// ```bash
+/// cargo test observe_terminal -- --ignored --nocapture
+/// ```
 ///
 /// Follow the on-screen prompts to interact with your terminal (click mouse, press keys).
 /// The test will capture raw bytes and display findings.
@@ -61,6 +55,8 @@ struct TestCase {
 /// # Panics
 ///
 /// May panic if terminal state cannot be properly restored.
+///
+/// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 #[cfg_attr(not(doc), tokio::test)]
 #[cfg_attr(
     not(doc),
@@ -136,6 +132,19 @@ pub async fn observe_terminal() -> IoResult<()> {
     stdout.flush()?;
 
     Ok(())
+}
+
+// ============================================================================
+// Data Types
+// ============================================================================
+
+/// Describes a single test case in the observation sequence.
+#[derive(Clone)]
+#[allow(clippy::struct_field_names)]
+struct TestCase {
+    prompt_title: &'static str,
+    prompt_action: &'static str,
+    prompt_detail: &'static str,
 }
 
 // ============================================================================
@@ -290,7 +299,9 @@ fn get_test_cases() -> Vec<TestCase> {
 // ============================================================================
 
 /// Enables raw mode and mouse tracking for terminal capture.
-/// Logs all ANSI codes being sent to stderr for diagnostic purposes.
+/// Logs all [`ANSI`] codes being sent to stderr for diagnostic purposes.
+///
+/// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 fn enable_terminal_capture_mode() -> IoResult<()> {
     use std::io::Write as _;
 
@@ -357,8 +368,10 @@ fn detect_terminal_name() -> String {
     "Unknown Terminal".to_string()
 }
 
-/// Describes a parsed SGR mouse event (button/action, coordinates, and human-readable
+/// Describes a parsed [`SGR`] mouse event (button/action, coordinates, and human-readable
 /// description).
+///
+/// [`SGR`]: crate::SgrCode
 #[derive(Debug)]
 struct SgrMouseEvent {
     button_code: u16,
@@ -368,9 +381,11 @@ struct SgrMouseEvent {
     description: String,
 }
 
-/// Manually parse SGR mouse sequence and provide human-readable descriptions.
+/// Manually parses [`SGR`] mouse sequence and provides human-readable descriptions.
 /// Handles clicks, drags, releases, and scroll wheel events.
 /// Expected format: `ESC [ < button ; col ; row` followed by `M` (press) or `m` (release)
+///
+/// [`SGR`]: crate::SgrCode
 fn extract_sgr_mouse_event(raw: &[u8]) -> Option<SgrMouseEvent> {
     // Expected format: ESC[<Cb;Cx;CyM or ESC[<Cb;Cx;Cym
     if !raw.starts_with(b"\x1b[<") {
@@ -405,8 +420,10 @@ fn extract_sgr_mouse_event(raw: &[u8]) -> Option<SgrMouseEvent> {
     })
 }
 
-/// Describe SGR mouse button codes and actions.
+/// Describes [`SGR`] mouse button codes and actions.
 /// Button codes: 0-2 = left/middle/right, 64-67 = scroll, etc.
+///
+/// [`SGR`]: crate::SgrCode
 fn describe_sgr_button_event(button_code: u16, action_char: char) -> String {
     let button_name = match button_code {
         0 => "Left Click",

@@ -23,7 +23,6 @@
 //!
 //! </div>
 //!
-//! [rendering pipeline overview]: mod@crate::terminal_lib_backends#rendering-pipeline-architecture
 //!
 //! ## What This Module Provides
 //!
@@ -84,10 +83,10 @@
 //! available on both IR and Output types. This avoids repetitive wrapping like
 //! `RenderOpIR::Common(RenderOpCommon::MoveCursorPositionAbs(pos))` in favor of
 //! `RenderOpIR::move_cursor(pos)`.
+//!
+//! [rendering pipeline overview]: mod@crate::terminal_lib_backends#rendering-pipeline-architecture
 
-// Skip rustfmt for rest of file.
-// https://stackoverflow.com/a/75910283/2085356
-#![cfg_attr(rustfmt, rustfmt_skip)]
+#![rustfmt::skip]
 
 // Private modules - implementation details.
 mod render_op_common;

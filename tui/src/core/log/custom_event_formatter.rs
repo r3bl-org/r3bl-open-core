@@ -136,8 +136,7 @@
 
 use crate::{ColWidth, ColorWheel, GCStringOwned, InlineString, OrderedMap, RgbValue,
             TuiColor, TuiStyle, cli_text_inline, fg_color, get_terminal_width, glyphs,
-            inline_string, new_style, remove_escaped_quotes, truncate_from_right,
-            tui_color, tui_style_attrib, usize, width};
+            remove_escaped_quotes, truncate_from_right, tui_style_attrib, usize, width};
 use chrono::Local;
 use const_format::formatcp;
 use custom_event_formatter_constants::{BODY_FG_COLOR, BODY_FG_COLOR_BRIGHT,

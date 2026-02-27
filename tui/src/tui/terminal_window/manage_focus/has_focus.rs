@@ -1,7 +1,6 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{CommonError, CommonResult, FlexBox, FlexBoxId, InlineVec, inline_string,
-            throws, tiny_inline_string};
+use crate::{CommonError, CommonResult, FlexBox, FlexBoxId, InlineVec};
 use std::fmt::Debug;
 
 /// This is a global (scoped to an [`crate::App`]) struct that is used to store the `id`
@@ -149,8 +148,6 @@ impl HasFocus {
 #[cfg(test)]
 mod has_focus_tests {
     use super::*;
-    use crate::assert_eq2;
-
     #[test]
     fn works_with_normal_id() {
         let mut has_focus = HasFocus::default();

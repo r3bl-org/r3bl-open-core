@@ -1,6 +1,6 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! PTY-based integration test for terminal event parsing.
+//! [`PTY`]-based integration test for terminal event parsing.
 //!
 //! Validates that the [`DirectToAnsiInputDevice`] correctly parses terminal events:
 //! - Window resize notifications (`CSI 8;rows;cols t`)
@@ -9,16 +9,19 @@
 //! Note: Bracketed paste events are tested in [`pty_bracketed_paste_test`]
 //! because they require special state machine handling (Start + text + End).
 //!
-//! Run with: `cargo test -p r3bl_tui --lib test_pty_terminal_events -- --nocapture`
+//! Run with:
+//! ```bash
+//! cargo test -p r3bl_tui --lib test_pty_terminal_events -- --nocapture
+//! ```
 //!
 //! [`DirectToAnsiInputDevice`]: crate::direct_to_ansi::DirectToAnsiInputDevice
 //! [`pty_bracketed_paste_test`]: mod@crate::core::ansi::vt_100_terminal_input_parser::integration_tests::pty_bracketed_paste_test
+//! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 
 use crate::{ControlledChild, InputEvent, PtyPair, PtyTestMode,
             core::ansi::{generator::generate_keyboard_sequence,
                          vt_100_terminal_input_parser::ir_event_types::{VT100FocusStateIR,
                                                                         VT100InputEventIR}},
-            generate_pty_test,
             tui::terminal_lib_backends::direct_to_ansi::DirectToAnsiInputDevice};
 use std::{io::{BufRead, BufReader, Write},
           time::Duration};
@@ -35,12 +38,17 @@ generate_pty_test! {
     mode: PtyTestMode::Raw,
 }
 
-/// PTY Controller: Send terminal event sequences and verify parsing
+/// [`PTY`] Controller: Send terminal event sequences and verify parsing
+///
+/// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 #[allow(clippy::too_many_lines)]
 fn pty_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
     eprintln!("🚀 PTY Controller: Starting terminal events test...");
 
-    let mut writer = pty_pair.controller().take_writer().expect("Failed to get writer");
+    let mut writer = pty_pair
+        .controller()
+        .take_writer()
+        .expect("Failed to get writer");
     let reader = pty_pair
         .controller()
         .try_clone_reader()
@@ -100,7 +108,10 @@ fn pty_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
         ),
     ];
 
-    eprintln!("📝 PTY Controller: Sending {} terminal events...", events.len());
+    eprintln!(
+        "📝 PTY Controller: Sending {} terminal events...",
+        events.len()
+    );
 
     for (desc, event) in &events {
         let sequence = generate_keyboard_sequence(event)
@@ -162,7 +173,9 @@ fn pty_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
     eprintln!("✅ PTY Controller: Test passed!");
 }
 
-/// PTY Controlled: Read and parse terminal events
+/// [`PTY`] Controlled: Read and parse terminal events
+///
+/// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 fn pty_controlled_entry_point() -> ! {
     println!("{CONTROLLED_READY}");
     std::io::stdout().flush().expect("Failed to flush");

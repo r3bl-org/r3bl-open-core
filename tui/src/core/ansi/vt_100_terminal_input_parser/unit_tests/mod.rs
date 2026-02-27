@@ -8,12 +8,13 @@
 //! `InputEvent → generate() → bytes → parse() → InputEvent`
 //!
 //! This ensures:
-//! - Generator produces valid ANSI sequences
+//! - Generator produces valid [`ANSI`] sequences
 //! - Parser correctly interprets those sequences
 //! - Generator and parser are compatible/speak the same language
 //!
 //! See the [parent module] for the overall testing strategy.
 //!
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [parent module]: super#testing-strategy
 
 #[cfg(any(test, doc))]

@@ -158,7 +158,7 @@ impl AsRef<Path> for TempDir {
 #[cfg(test)]
 mod tests_temp_dir {
     use super::*;
-    use crate::{fg_lizard_green, ok};
+    use crate::fg_lizard_green;
 
     /// On Windows, `remove_dir_all()` may return before the OS fully removes the
     /// directory (due to antivirus, indexer, or "delete on close" semantics). This

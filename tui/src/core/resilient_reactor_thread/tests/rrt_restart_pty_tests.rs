@@ -1,7 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! PTY integration test for production `MioPollWorker::create_and_register_os_sources()`
-//! restart cycles.
+//! [`PTY`] integration test for production
+//! `MioPollWorker::create_and_register_os_sources()` restart cycles.
 //!
 //! Each worker processes a **real keystroke** from the controller via
 //! `MioPollWorker::block_until_ready_then_dispatch()` before restarting. This proves:
@@ -9,20 +9,23 @@
 //! - `MioPollWorker::create_and_register_os_sources()` works correctly 3 times in
 //!   sequence
 //! - Each restarted worker can actually poll stdin and process events
-//! - No fd leaks or stale epoll state between create/drop cycles
+//! - No [`fd`] leaks or stale [`epoll`] state between create/drop cycles
 //! - Production [`MioPollWaker`] correctly couples to new Poll registry each time
 //!
-//! The PTY provides real terminal stdin (fd 0 on the controlled end), which is required
-//! for `epoll_ctl` registration.
+//! The [`PTY`] provides real terminal stdin ([`fd 0`] on the controlled end), which is
+//! required for `epoll_ctl` registration.
 //!
 //! See also: Group B Step 5.7 in [`rrt_restart_tests`] for the production poll-error path
 //! test.
 //!
+//! [`epoll`]: https://man7.org/linux/man-pages/man7/epoll.7.html
+//! [`fd 0`]: https://man7.org/linux/man-pages/man3/stdin.3.html
+//! [`fd`]: https://en.wikipedia.org/wiki/File_descriptor
+//! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`rrt_restart_tests`]: super::rrt_restart_tests
 
 use super::super::*;
 use crate::{Continuation, ControlledChild, MioPollWaker, PtyPair, PtyTestMode,
-            generate_pty_test,
             tui::terminal_lib_backends::direct_to_ansi::input::{channel_types::PollerEvent,
                                                                 mio_poller::MioPollWorker}};
 use std::{io::{BufRead, BufReader, Read, Write, stdout},
@@ -182,8 +185,10 @@ fn factory_restart_controller(pty_pair: PtyPair, mut child: ControlledChild) {
 
 /// Controlled: runs `MioPollWorker::create_and_register_os_sources()` 3 times via the RRT
 /// restart loop. Each worker processes one real keystroke from the controller
-/// before restarting, proving the restarted worker's epoll and stdin
+/// before restarting, proving the restarted worker's [`epoll`] and stdin
 /// registration actually function.
+///
+/// [`epoll`]: https://man7.org/linux/man-pages/man7/epoll.7.html
 fn factory_restart_controlled() -> ! {
     create_call_counter::reset();
 

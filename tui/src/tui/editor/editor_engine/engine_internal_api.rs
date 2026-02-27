@@ -124,9 +124,8 @@ pub fn copy_editor_selection_to_clipboard(
 #[cfg(test)]
 mod tests {
     use crate::{DEFAULT_SYN_HI_FILE_EXT, DeleteSelectionWith, EditorBuffer, SelectMode,
-                assert_eq2, caret_raw,
-                clipboard_service::clipboard_test_fixtures::TestClipboard, col,
-                editor::test_fixtures_editor::mock_real_objects_for_editor,
+                caret_raw, clipboard_service::clipboard_test_fixtures::TestClipboard,
+                col, editor::test_fixtures_editor::mock_real_objects_for_editor,
                 editor_engine::engine_internal_api, len, row};
 
     #[test]

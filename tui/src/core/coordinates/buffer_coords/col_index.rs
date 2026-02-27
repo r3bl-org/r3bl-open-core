@@ -1,7 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::{ColWidth, width};
-use crate::{ChUnit, Index, Length, generate_index_type_impl};
+use crate::{ChUnit, Index, Length};
 use std::{hash::Hash,
           ops::{Add, AddAssign, Mul, Sub, SubAssign}};
 
@@ -18,10 +18,10 @@ use std::{hash::Hash,
 /// let col = ColIndex::new(5);
 /// ```
 ///
-/// [`Pos`]: crate::Pos
-/// [`ColWidth`]: crate::ColWidth
-/// [`Size`]: crate::Size
 /// [`col()`]: crate::col
+/// [`ColWidth`]: crate::ColWidth
+/// [`Pos`]: crate::Pos
+/// [`Size`]: crate::Size
 #[derive(Copy, Clone, PartialEq, PartialOrd, Ord, Eq, Hash, Default)]
 pub struct ColIndex(pub ChUnit);
 generate_index_type_impl!(

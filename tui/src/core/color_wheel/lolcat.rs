@@ -13,7 +13,7 @@
 //! the previously separate `lolcat_api.rs` and `lolcat_impl.rs` files.
 
 use super::{ColorChangeSpeed, ColorWheelControl, Seed, SeedDelta, color_wheel_helpers};
-use crate::{GCStringOwned, TuiStyle, TuiStyledTexts, tui_color, tui_styled_text};
+use crate::{GCStringOwned, TuiStyle, TuiStyledTexts};
 use std::{borrow::Cow,
           fmt::{Debug, Formatter, Result}};
 
@@ -123,16 +123,20 @@ pub enum Colorize {
 ///
 /// This [Lolcat] that is returned by `build()` is safe to re-use.
 /// - The colors it cycles through are "stable" meaning that once constructed via the
-///   [builder](LolcatBuilder) (which sets the speed, seed, and delta that determine where
-///   the color wheel starts when it is used). For eg, when used in a dialog box component
-///   that re-uses the instance, repeated calls to the `render()` function of this
-///   component will produce the same generated colors over and over again.
+///   [builder] (which sets the speed, seed, and delta that determine where the color
+///   wheel starts when it is used). For eg, when used in a dialog box component that
+///   re-uses the instance, repeated calls to the `render()` function of this component
+///   will produce the same generated colors over and over again.
 /// - If you want to change where the color wheel "begins", you have to change the speed,
 ///   seed, and delta of this [Lolcat] instance.
+///
+/// [builder]: LolcatBuilder
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct LolcatBuilder {
     /// Rate at which the color changes when
-    /// [`colorize_to_styled_texts`](Lolcat::colorize_to_styled_texts) is called.
+    /// [`colorize_to_styled_texts`] is called.
+    ///
+    /// [`colorize_to_styled_texts`]: Lolcat::colorize_to_styled_texts
     pub color_change_speed: ColorChangeSpeed,
     /// Initial color of the wheel.
     pub seed: Seed,

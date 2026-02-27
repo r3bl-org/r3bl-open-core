@@ -1,0 +1,46 @@
+{
+  // Known terms registry - canonical link targets for technical terms in rustdoc comments.
+  // The tool also discovers terms by scanning existing link targets in the workspace.
+  //
+  // "tier": "internal" = links to a crate type (intra-doc link)
+  // "tier": "external" = links to an external URL
+
+  // Tier 1: Terms with internal Rust types
+  "CSI":  { "target": "crate::CsiSequence",  "tier": "internal" },
+  "SGR":  { "target": "crate::SgrCode",      "tier": "internal" },
+  "ESC":  { "target": "crate::EscSequence",   "tier": "internal" },
+  "DSR":  { "target": "crate::DsrSequence",   "tier": "internal" },
+  "OSC":  { "target": "crate::osc_codes::OscSequence",   "tier": "internal" },
+
+  // Tier 1b: Spec links for Tier 1 terms (Wikipedia sections)
+  // Convention: [`CSI`] links to crate code, [`CSI` spec] links to the spec.
+  "`CSI` spec":    { "target": "https://en.wikipedia.org/wiki/ANSI_escape_code#CSI",  "tier": "external" },
+  "`SGR` spec":    { "target": "https://en.wikipedia.org/wiki/ANSI_escape_code#SGR",  "tier": "external" },
+  "`ESC` spec":    { "target": "https://en.wikipedia.org/wiki/ANSI_escape_code#ESC",  "tier": "external" },
+  "`DSR` spec":    { "target": "https://en.wikipedia.org/wiki/ANSI_escape_code#DSR",  "tier": "external" },
+  "`OSC` spec":    { "target": "https://en.wikipedia.org/wiki/ANSI_escape_code#OSC",  "tier": "external" },
+  "`VT-100` spec": { "target": "https://vt100.net/docs/vt100-ug/chapter3.html",       "tier": "external" },
+
+  // Tier 2: Pure external concepts (no internal type)
+  "ANSI":               { "target": "https://en.wikipedia.org/wiki/ANSI_escape_code",               "tier": "external" },
+  "ASCII":              { "target": "https://en.wikipedia.org/wiki/ASCII",                           "tier": "external" },
+  "UTF-8":              { "target": "https://en.wikipedia.org/wiki/UTF-8",                           "tier": "external" },
+  "DCS":                { "target": "https://vt100.net/docs/vt510-rm/chapter4.html#S4.3.4",          "tier": "external" },
+  "VT-100":             { "target": "https://vt100.net/docs/vt100-ug/chapter3.html",                 "tier": "external" },
+  "VT-220":             { "target": "https://en.wikipedia.org/wiki/VT220",                           "tier": "external" },
+  "DECSTBM":            { "target": "https://vt100.net/docs/vt510-rm/DECSTBM.html",                  "tier": "external" },
+  "DEC":                { "target": "https://en.wikipedia.org/wiki/Digital_Equipment_Corporation",    "tier": "external" },
+  "xterm":              { "target": "https://en.wikipedia.org/wiki/Xterm",                            "tier": "external" },
+  "Alacritty":          { "target": "https://alacritty.org/",                                         "tier": "external" },
+  "Kitty":              { "target": "https://sw.kovidgoyal.net/kitty/",                               "tier": "external" },
+  "RXVT":               { "target": "https://en.wikipedia.org/wiki/Rxvt",                            "tier": "external" },
+  "rxvt-unicode":       { "target": "https://en.wikipedia.org/wiki/Rxvt-unicode",                    "tier": "external" },
+  "urxvt":              { "target": "https://en.wikipedia.org/wiki/Rxvt-unicode",                     "tier": "external" },
+  "ConPTY":             { "target": "https://learn.microsoft.com/en-us/windows/console/creating-a-pseudoconsole-session", "tier": "external" },
+  "gnome-terminal":     { "target": "https://en.wikipedia.org/wiki/GNOME_Terminal",                   "tier": "external" },
+  "ReGIS":              { "target": "https://en.wikipedia.org/wiki/ReGIS",                            "tier": "external" },
+  "Sixel":              { "target": "https://en.wikipedia.org/wiki/Sixel",                            "tier": "external" },
+  "X10":                { "target": "https://invisible-island.net/xterm/ctlseqs/ctlseqs.html#h2-Mouse-Tracking", "tier": "external" },
+  "ITU-T Rec. T.416":   { "target": "https://www.itu.int/rec/T-REC-T.416-199303-I",                  "tier": "external" },
+  "vte":                { "target": "https://docs.rs/vte",                                            "tier": "external" }
+}

@@ -2,8 +2,7 @@
 
 use super::core::LineState;
 use crate::{CsiSequence, GCStringOwned, LINE_FEED_BYTE, LineStateLiveness,
-            ReadlineError, TermCol, TermColDelta, TermRowDelta, early_return_if_paused,
-            ok, width};
+            ReadlineError, TermCol, TermColDelta, TermRowDelta, width};
 use std::io::Write;
 
 impl LineState {
@@ -201,7 +200,9 @@ mod tests {
     use super::*;
     use crate::core::test_fixtures::StdoutMock;
 
-    /// Helper to decode ANSI escape sequences in output for debugging.
+    /// Helper to decode [`ANSI`] escape sequences in output for debugging.
+    ///
+    /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
     fn describe_ansi_output(output: &[u8]) -> String {
         use std::fmt::Write;
 

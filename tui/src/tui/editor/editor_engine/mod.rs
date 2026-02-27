@@ -1,9 +1,10 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 // Attach.
+#[macro_use]
+pub mod editor_macros;
 pub mod caret_mut;
 pub mod content_mut;
-pub mod editor_macros;
 pub mod engine_internal_api;
 pub mod engine_public_api;
 pub mod engine_struct;

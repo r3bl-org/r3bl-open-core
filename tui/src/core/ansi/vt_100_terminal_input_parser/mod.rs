@@ -2,10 +2,10 @@
 
 // cspell:words desynchronization
 
-//! VT-100 Terminal Input Parsing Layer
+//! [`VT-100`] Terminal Input Parsing Layer
 //!
-//! This module provides pure, reusable ANSI sequence parsing for terminal user input.
-//! It converts raw bytes (escape sequences, UTF-8 text) into high-level input events.
+//! This module provides pure, reusable [`ANSI`] sequence parsing for terminal user input.
+//! It converts raw bytes (escape sequences, [`UTF-8`] text) into high-level input events.
 //!
 //! ## Primary Consumer
 //!
@@ -14,8 +14,8 @@
 //!
 //! - [`DirectToAnsiInputDevice`] reads from stdin, and calls the main entry point
 //!   function [`try_parse_input_event()`] in this module.
-//! - This function checks if the buffer starts with escape sequences (`ESC`, `0x1b`), and
-//!   then dispatches to the appropriate parser: keyboard, mouse, terminal events, or UTF-8
+//! - This function checks if the buffer starts with escape sequences ([`ESC`], `0x1b`), and
+//!   then dispatches to the appropriate parser: keyboard, mouse, terminal events, or [`UTF-8`]
 //!   text.
 //! - The resulting events are converted to structured [`InputEvent`]s for the application
 //!   by [`convert_input_event()`].
@@ -52,13 +52,13 @@
 //!
 //! ## Architecture
 //!
-//! The VT-100 terminal input parser uses **IO-free design** - it parses ANSI
+//! The [`VT-100`] terminal input parser uses **IO-free design** - it parses [`ANSI`]
 //! sequences independently of platform-specific I/O. This I/O-agnostic approach mirrors
 //! the output architecture ([`generator`] + [`output`]) and enables:
 //!
 //! - **Testability**: Unit test parsers without I/O or async complexity
 //! - **Reusability**: Multiple backends can use the same protocol parsers
-//! - **Clarity**: ANSI protocol handling is centralized in `core/ansi/`
+//! - **Clarity**: [`ANSI`] protocol handling is centralized in `core/ansi/`
 //! - **Separation of Concerns**: Protocol parsing ≠ async I/O ≠ buffering
 //!
 //! ### Comparison with Output Architecture
@@ -85,19 +85,19 @@
 //! ### [`router`]
 //! - Main entry point: [`try_parse_input_event()`]
 //! - Route bytes to specialized parsers based on first byte
-//! - Handle `ESC` key detection (single `ESC` vs escape sequence start)
-//! - Coordinate between keyboard, mouse, terminal events, and UTF-8 parsers
+//! - Handle [`ESC`] key detection (single [`ESC`] vs escape sequence start)
+//! - Coordinate between keyboard, mouse, terminal events, and [`UTF-8`] parsers
 //!
 //! ### [`keyboard`]
-//! - Parse `CSI` sequences (`ESC [`) for arrow keys, function keys, special keys
+//! - Parse [`CSI`] sequences (`ESC [`) for arrow keys, function keys, special keys
 //! - Parse `SS3` sequences (`ESC O`) for application mode keys (F1-F4, Home, End, arrows)
 //! - Handle modifier combinations (Shift, Ctrl, Alt)
 //! - Handle control characters and ambiguous key mappings
 //!
 //! ### [`mouse`]
-//! - Parse `SGR` mouse protocol (modern standard): `CSI < Cb ; Cx ; Cy M/m`
-//! - Parse `X10`/Normal protocol (legacy): `CSI M Cb Cx Cy`
-//! - Parse `RXVT` protocol (legacy): `CSI Cb ; Cx ; Cy M`
+//! - Parse [`SGR`] mouse protocol (modern standard): `CSI < Cb ; Cx ; Cy M/m`
+//! - Parse [`X10`]/Normal protocol (legacy): `CSI M Cb Cx Cy`
+//! - Parse [`RXVT`] protocol (legacy): `CSI Cb ; Cx ; Cy M`
 //! - Detect buttons, clicks, drags, motion, scrolling
 //! - Extract modifier keys from mouse sequences
 //!
@@ -107,9 +107,9 @@
 //! - Parse bracketed paste markers: `ESC [ 200 ~` / `ESC [ 201 ~`
 //!
 //! ### [`utf8`]
-//! - Parse UTF-8 text between ANSI sequences
+//! - Parse [`UTF-8`] text between [`ANSI`] sequences
 //! - Generate character input events for typed text
-//! - Handle multi-byte UTF-8 sequences
+//! - Handle multi-byte [`UTF-8`] sequences
 //! - Buffer incomplete sequences for later completion
 //!
 //! ## Establishing Ground Truth Through Validation Testing
@@ -125,12 +125,12 @@
 //! ### One-Based Mouse Input Events
 //!
 //! Key findings from [`observe_terminal`] are incorporated into the [`mouse`] parser:
-//! - VT-100 mouse coordinates are 1-based (not 0-based), where (1, 1) is the top-left
+//! - [`VT-100`] mouse coordinates are 1-based (not 0-based), where (1, 1) is the top-left
 //!   corner.
 //! - Scroll wheel codes are **inverted on systems with natural scrolling enabled**:
 //!   - On Linux with GNOME, check with: `gsettings get
 //!     org.gnome.desktop.peripherals.mouse natural-scroll`
-//! - `SGR` protocol uses codes (`XTerm` standard):
+//! - [`SGR`] protocol uses codes (`XTerm` standard):
 //!   - `64`=Wheel Down
 //!   - `65`=Wheel Up
 //! - Use [`TermRow`] and [`TermCol`] for type safety and explicit conversion to/from
@@ -139,11 +139,11 @@
 //! ## Testing Strategy
 //!
 //! Testing a parser that talks to a generator creates an "oracle problem": if both share
-//! the same misunderstanding of the VT-100 protocol, tests pass but the code is wrong.
+//! the same misunderstanding of the [`VT-100`] protocol, tests pass but the code is wrong.
 //!
 //! We solve this with two complementary approaches:
 //!
-//! - **Hardcoded sequences** (validation tests): Written by a human reading the VT-100
+//! - **Hardcoded sequences** (validation tests): Written by a human reading the [`VT-100`]
 //!   spec, these provide ground truth independent of our generator. They catch systematic
 //!   protocol misinterpretations.
 //!
@@ -170,23 +170,30 @@
 //! | Unit          | Component contracts              | Generated   | Generator/parser desynchronization   |
 //! | Integration   | System behavior                  | Generated   | Real-world usage regressions         |
 //!
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`AnsiSequenceGenerator`]: crate::AnsiSequenceGenerator
+//! [`convert_input_event()`]: crate::direct_to_ansi::input::protocol_conversion::convert_input_event
+//! [`core::ansi`]: crate::core::ansi
+//! [`CSI`]: crate::CsiSequence
 //! [`DirectToAnsiInputDevice`]: crate::DirectToAnsiInputDevice
-//! [`DirectToAnsiInputDevice`]: crate::DirectToAnsiInputDevice
+//! [`ESC`]: crate::EscSequence
+//! [`generator`]: mod@crate::core::ansi::generator
+//! [`input`]: mod@crate::direct_to_ansi::input
 //! [`InputDevice`]: crate::InputDevice
 //! [`InputEvent`]: crate::InputEvent
+//! [`observe_terminal`]: crate::core::ansi::vt_100_terminal_input_parser::validation_tests::observe_real_interactive_terminal_input_events::observe_terminal
+//! [`output`]: mod@crate::direct_to_ansi::output
 //! [`OutputDevice`]: crate::OutputDevice
 //! [`RenderOpPaintImplDirectToAnsi`]: crate::RenderOpPaintImplDirectToAnsi
+//! [`RXVT`]: https://en.wikipedia.org/wiki/Rxvt
+//! [`SGR`]: crate::SgrCode
 //! [`SgrCode`]: crate::SgrCode
 //! [`TermCol`]: crate::core::coordinates::vt_100_ansi_coords::TermCol
 //! [`TermRow`]: crate::core::coordinates::vt_100_ansi_coords::TermRow
-//! [`convert_input_event()`]: crate::direct_to_ansi::input::protocol_conversion::convert_input_event
-//! [`core::ansi`]: crate::core::ansi
-//! [`generator`]: mod@crate::core::ansi::generator
-//! [`input`]: mod@crate::direct_to_ansi::input
-//! [`observe_terminal`]: crate::core::ansi::vt_100_terminal_input_parser::validation_tests::observe_real_interactive_terminal_input_events::observe_terminal
-//! [`output`]: mod@crate::direct_to_ansi::output
 //! [`try_parse_input_event()`]: crate::core::ansi::vt_100_terminal_input_parser::router::try_parse_input_event
+//! [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
+//! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+//! [`X10`]: https://invisible-island.net/xterm/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
 
 // Skip rustfmt for rest of file.
 // https://stackoverflow.com/a/75910283/2085356

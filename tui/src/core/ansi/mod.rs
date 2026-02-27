@@ -1,19 +1,19 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! ANSI Terminal Abstraction Layer
+//! [`ANSI`] Terminal Abstraction Layer
 //!
-//! This module provides bidirectional ANSI sequence handling for terminal emulation:
+//! This module provides bidirectional [`ANSI`] sequence handling for terminal emulation:
 //!
 //! ## Key Subsystems
 //!
-//! - **Output Parser** ([`VTE`]-based): Parse incoming PTY output (ANSI sequences from child
+//! - **Output Parser** ([`VTE`]-based): Parse incoming [`PTY`] output ([`ANSI`] sequences from child
 //!   processes) → terminal state updates → [`OffscreenBuffer`] storage (via
 //!   [`vt_100_pty_output_parser`] and [`AnsiToOfsBufPerformer`])
 //! - **Input Parser** (custom): Parse terminal input (keyboard/mouse) → structured
 //!   [`VT100InputEventIR`] → application logic (via [`vt_100_terminal_input_parser`])
-//! - **Generator**: Convert application styling → outgoing ANSI sequences → real terminal
+//! - **Generator**: Convert application styling → outgoing [`ANSI`] sequences → real terminal
 //!   display (via [`RenderOpOutput`], [`SgrCode`], [`CliTextInline`])
-//! - **Constants & Color**: Shared ANSI specifications - color types (RGB ↔ ANSI256),
+//! - **Constants & Color**: Shared [`ANSI`] specifications - color types (`RGB` ↔ ANSI256),
 //!   escape sequence definitions, used by all subsystems
 //!
 //! ## Architecture Overview
@@ -132,13 +132,13 @@
 //!
 //! ### Output Parser: VTE-based ([`vt_100_pty_output_parser`])
 //!
-//! **What it does**: Parses ANSI escape sequences sent TO the terminal by child
-//! processes (via the PTY master).
+//! **What it does**: Parses [`ANSI`] escape sequences sent TO the terminal by child
+//! processes (via the [`PTY`] master).
 //!
 //! **Architecture**: Uses the [`VTE`] crate - a battle-tested state machine from the
-//! Alacritty terminal emulator project.
+//! [`Alacritty`] terminal emulator project.
 //!
-//! **Why stateful parsing?** PTY output is **non-atomic**. Child processes can write
+//! **Why stateful parsing?** [`PTY`] output is **non-atomic**. Child processes can write
 //! partial sequences that span multiple buffer reads:
 //! ```text
 //! PTY Read 1: [0x1B, 0x5B, 0x31]        // ESC [ 1
@@ -151,8 +151,8 @@
 //!
 //! **Benefits**:
 //! - ✅ Robust state machine for split sequences and edge cases
-//! - ✅ Battle-tested in production (Alacritty uses it)
-//! - ✅ Proper ANSI/VT-100 spec compliance
+//! - ✅ Battle-tested in production ([`Alacritty`] uses it)
+//! - ✅ Proper [`ANSI`]/[`VT-100`] spec compliance
 //! - ✅ Low maintenance (bug fixes come from upstream)
 //!
 //! ### Input Parser: Custom Implementation ([`vt_100_terminal_input_parser`])
@@ -182,10 +182,10 @@
 //!    machine overhead
 //!
 //! **Benefits**:
-//! - ✅ Zero-latency ESC key detection (instant emit when buffer = `[0x1B]`)
+//! - ✅ Zero-latency [`ESC`] key detection (instant emit when buffer = `[0x1B]`)
 //! - ✅ Optimal for atomic sequences (no buffering overhead)
 //! - ✅ Full control over parsing logic
-//! - ✅ Can optimize for specific terminal features (SGR mouse, Kitty etc.)
+//! - ✅ Can optimize for specific terminal features ([`SGR`] mouse, [`Kitty`] etc.)
 //!
 //! **Key insight**: The architectural split ([`VTE`] for output, custom for input) is
 //! **not a limitation** - it's the correct design because output and input are
@@ -194,16 +194,16 @@
 //! ## Key Types and Public API
 //!
 //! **Color System:**
-//! - `TuiColor` - Terminal color with RGB and ANSI256 support
+//! - `TuiColor` - Terminal color with `RGB` and ANSI256 support
 //! - [`RgbValue`], [`AnsiValue`] - Color value types
 //!
 //! **Text Styling:**
-//! - [`SgrCode`] - SGR (Select Graphic Rendition) styling codes
+//! - [`SgrCode`] - [`SGR`] (Select Graphic Rendition) styling codes
 //! - [`CliTextInline`] - Styled inline text for output
 //!
-//! **Output Parsing** (PTY escape sequences):
-//! - [`AnsiToOfsBufPerformer`] - [`VTE`] [`Perform`] trait implementation for PTY parsing
-//! - [`CsiSequence`] - CSI escape sequence types
+//! **Output Parsing** ([`PTY`] escape sequences):
+//! - [`AnsiToOfsBufPerformer`] - [`VTE`] [`Perform`] trait implementation for [`PTY`] parsing
+//! - [`CsiSequence`] - [`CSI`] escape sequence types
 //!
 //! **Input Parsing** (keyboard/mouse events):
 //! - `VT100InputEventIR` - Keyboard, mouse, and terminal events (see [`vt_100_terminal_input_parser`])
@@ -212,21 +212,25 @@
 //! **Terminal I/O:**
 //! - Color detection and support queries
 //!
+//! [`Alacritty`]: https://alacritty.org/
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`CliTextInline`]: crate::core::ansi::CliTextInline
+//! [`CSI`]: crate::CsiSequence
+//! [`ESC`]: crate::EscSequence
+//! [`Kitty`]: https://sw.kovidgoyal.net/kitty/
 //! [`OffscreenBuffer`]: crate::OffscreenBuffer
 //! [`Perform`]: vte::Perform
+//! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`RenderOpOutput`]: crate::RenderOpOutput
+//! [`SGR`]: crate::SgrCode
 //! [`SgrCode`]: crate::core::ansi::SgrCode
+//! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 //! [`VT100InputEventIR`]: crate::core::ansi::vt_100_terminal_input_parser::VT100InputEventIR
-//! [`VTE`]: mod@vte
 //! [`vt_100_pty_output_parser`]: mod@crate::core::ansi::vt_100_pty_output_parser
 //! [`vt_100_terminal_input_parser`]: mod@crate::core::ansi::vt_100_terminal_input_parser
+//! [`VTE`]: mod@vte
 
-// XMARK: rustfmt prevent from reformatting entire file.
-
-// Skip rustfmt for rest of file.
-// https://stackoverflow.com/a/75910283/2085356
-#![cfg_attr(rustfmt, rustfmt_skip)]
+#![rustfmt::skip]
 
 // Private modules.
 mod color;
@@ -235,8 +239,10 @@ mod detect_color_support;
 
 // Module is public only when building documentation or tests.
 // This allows rustdoc links to work while keeping it private in release builds.
+#[macro_use]
 #[cfg(any(test, doc))]
 pub mod generator;
+#[macro_use]
 #[cfg(not(any(test, doc)))]
 mod generator;
 

@@ -7,14 +7,14 @@ use std::num::NonZeroU16;
 
 /// 1-based terminal position combining column and row coordinates.
 ///
-/// Represents a position on the terminal using VT-100 1-based coordinates where both
+/// Represents a position on the terminal using [`VT-100`] 1-based coordinates where both
 /// the column and row are `NonZeroU16` values (valid range: 1 to 65,535).
 ///
 /// # Coordinate Order
 ///
-/// Note the `(col, row)` field order, which matches VT-100 ANSI convention for mouse
-/// events and cursor positioning. This differs from buffer coordinates which use `(row,
-/// col)` order.
+/// Note the `(col, row)` field order, which matches [`VT-100`] [`ANSI`] convention for
+/// mouse events and cursor positioning. This differs from buffer coordinates which use
+/// `(row, col)` order.
 ///
 /// # Construction
 ///
@@ -37,18 +37,20 @@ use std::num::NonZeroU16;
 /// these 1-based coordinates.
 ///
 /// This means:
-/// - ✅ Coordinates are VT-100 spec-compliant (1-based, not 0-based)
+/// - ✅ Coordinates are [`VT-100`] spec-compliant (1-based, not 0-based)
 /// - ✅ Mouse click positions match actual terminal emulator output
 /// - ✅ Tested against multiple terminal emulators
 /// - ✅ Validated through real-world interactive testing
 ///
 /// # Use Cases
 ///
-/// - Mouse event positions in ANSI input sequences
+/// - Mouse event positions in [`ANSI`] input sequences
 /// - Any protocol layer that needs a combined coordinate pair
 ///
-/// [`TermPos::from_one_based()`]: Self::from_one_based
+/// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 /// [`observe_real_interactive_terminal_input_events`]: mod@crate::core::ansi::vt_100_terminal_input_parser::validation_tests::observe_real_interactive_terminal_input_events
+/// [`TermPos::from_one_based()`]: Self::from_one_based
+/// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct TermPos {
     pub col: TermCol,
@@ -58,12 +60,12 @@ pub struct TermPos {
 impl TermPos {
     /// Construct a terminal position from raw 1-based coordinate values.
     ///
-    /// This is the primary constructor for ANSI sequence parsing where coordinates
+    /// This is the primary constructor for [`ANSI`] sequence parsing where coordinates
     /// are received as raw `u16` values that are known to be 1-based and non-zero.
     ///
     /// # Panics
     ///
-    /// Panics if either coordinate is zero (invalid VT-100 coordinate).
+    /// Panics if either coordinate is zero (invalid [`VT-100`] coordinate).
     ///
     /// # Example
     ///
@@ -75,6 +77,9 @@ impl TermPos {
     /// assert_eq!(pos.col.as_u16(), 10);
     /// assert_eq!(pos.row.as_u16(), 5);
     /// ```
+    ///
+    /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+    /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
     #[must_use]
     pub fn from_one_based(col: u16, row: u16) -> Self {
         let col_nz = NonZeroU16::new(col).expect("Column must be non-zero (1-based)");
@@ -124,9 +129,13 @@ mod tests {
 
     #[test]
     #[should_panic(expected = "Column must be non-zero")]
-    fn test_term_pos_panics_on_zero_column() { let _unused = TermPos::from_one_based(0, 5); }
+    fn test_term_pos_panics_on_zero_column() {
+        let _unused = TermPos::from_one_based(0, 5);
+    }
 
     #[test]
     #[should_panic(expected = "Row must be non-zero")]
-    fn test_term_pos_panics_on_zero_row() { let _unused = TermPos::from_one_based(10, 0); }
+    fn test_term_pos_panics_on_zero_row() {
+        let _unused = TermPos::from_one_based(10, 0);
+    }
 }

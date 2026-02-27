@@ -3,14 +3,16 @@
 //! Integration tests for cursor movement operations
 //!
 //! These tests validate:
-//! 1. [`MoveCursorPositionAbs`] generates correct CUP (Cursor Position) ANSI sequences
+//! 1. [`MoveCursorPositionAbs`] generates correct CUP (Cursor Position) [`ANSI`]
+//!    sequences
 //! 2. [`MoveCursorPositionRelTo`] correctly adds origin + relative offset
 //! 3. Cursor state tracking in [`RenderOpsLocalData`] after movement
 //! 4. [`MoveCursorToColumn`], [`MoveCursorToNextLine`], [`MoveCursorToPreviousLine`]
 //!    operations
 //! 5. Multiple cursor moves in sequence preserve correct final position
-//! 6. Cursor position state matches ANSI output
+//! 6. Cursor position state matches [`ANSI`] output
 //!
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`MoveCursorPositionAbs`]: crate::render_op::RenderOpCommon::MoveCursorPositionAbs
 //! [`MoveCursorPositionRelTo`]: crate::render_op::RenderOpCommon::MoveCursorPositionRelTo
 //! [`MoveCursorToColumn`]: crate::render_op::RenderOpCommon::MoveCursorToColumn
@@ -20,7 +22,7 @@
 
 use super::test_helpers::*;
 use crate::{AnsiSequenceGenerator, ColIndex, RowIndex, col, height, pos,
-            render_op::RenderOpCommon, row, term_row_delta, tui_color};
+            render_op::RenderOpCommon, row, term_row_delta};
 
 #[test]
 fn test_move_cursor_absolute_origin() {

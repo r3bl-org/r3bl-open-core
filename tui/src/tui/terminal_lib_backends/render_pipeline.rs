@@ -55,7 +55,7 @@
 //! [rendering pipeline overview]: mod@crate::terminal_lib_backends#rendering-pipeline-architecture
 
 use super::{ZOrder, paint::paint};
-use crate::{FlushKind, GlobalData, InlineVec, LockedOutputDevice, RenderOpIRVec, ok,
+use crate::{FlushKind, GlobalData, InlineVec, LockedOutputDevice, RenderOpIRVec,
             tui::DEBUG_TUI_SHOW_PIPELINE_EXPANDED};
 use smallvec::smallvec;
 use std::{collections::{HashMap, hash_map::Entry},
@@ -103,8 +103,8 @@ use std::{collections::{HashMap, hash_map::Entry},
 /// Decl macro docs:
 /// - <https://veykril.github.io/tlborm/decl-macros/macros-methodical.html#repetitions>
 ///
-/// [`RenderOpIRVec`]: crate::RenderOpIRVec
 /// [`RenderOpIR`]: crate::RenderOpIR
+/// [`RenderOpIRVec`]: crate::RenderOpIRVec
 /// [`RenderPipeline`]: crate::RenderPipeline
 /// [`ZOrder::get_render_order`]: crate::ZOrder::get_render_order
 /// [`ZOrder`]: crate::ZOrder

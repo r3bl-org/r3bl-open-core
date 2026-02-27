@@ -2,7 +2,10 @@
 
 // cspell:words URXVT
 
-//! ANSI escape sequence generator for terminal operations. See [`AnsiSequenceGenerator`].
+//! [`ANSI`] escape sequence generator for terminal operations. See
+//! [`AnsiSequenceGenerator`].
+//!
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 
 use crate::{ColIndex, ColorTarget, EraseDisplayMode, EraseLineMode, RowIndex,
             SgrColorSequence, TermRowDelta, TuiColor, TuiStyle,
@@ -15,11 +18,11 @@ use crate::{ColIndex, ColorTarget, EraseDisplayMode, EraseLineMode, RowIndex,
                           vt_100_pty_output_parser::{CsiSequence, PrivateModeType}},
                    coordinates::{TermCol, TermRow}}};
 
-/// Generates ANSI escape sequence strings for terminal operations.
+/// Generates [`ANSI`] escape sequence strings for terminal operations.
 ///
-/// This module generates raw ANSI escape sequence bytes for terminal operations using
+/// This module generates raw [`ANSI`] escape sequence bytes for terminal operations using
 /// semantic types and traits for type-safe sequence generation. Works in conjunction with
-/// [`vt_100_pty_output_parser`] for bidirectional ANSI handling.
+/// [`vt_100_pty_output_parser`] for bidirectional [`ANSI`] handling.
 ///
 /// # Design Philosophy
 ///
@@ -27,9 +30,9 @@ use crate::{ColIndex, ColorTarget, EraseDisplayMode, EraseLineMode, RowIndex,
 ///   [`FastStringify`]
 /// - **Type-safe sequences**: Uses [`CsiSequence`], [`SgrColorSequence`], and other
 ///   sequence enums
-/// - **Reuses infrastructure**: Leverages existing ANSI types and constants
+/// - **Reuses infrastructure**: Leverages existing [`ANSI`] types and constants
 /// - **Infallible generation**: Exhaustive pattern matching ensures valid output
-/// - **1-based indexing**: Automatically converts 0-based indices to 1-based ANSI
+/// - **1-based indexing**: Automatically converts 0-based indices to 1-based [`ANSI`]
 ///
 ///
 /// # Reference Implementation Pattern
@@ -55,13 +58,14 @@ use crate::{ColIndex, ColorTarget, EraseDisplayMode, EraseLineMode, RowIndex,
 /// This achieves:
 /// - **Semantic clarity**: Intent is explicit (method name shows what we're doing)
 /// - **Type safety**: Only valid sequences can be constructed via enums
-/// - **Infallibility**: `FastStringify` guarantees valid ANSI
+/// - **Infallibility**: `FastStringify` guarantees valid [`ANSI`]
 /// - **Consistency**: Matches test infrastructure patterns
 /// - **No allocation waste**: Returns String, avoiding [`String`]→[`Vec<u8>`] conversion
 ///
 /// # Return Types
 ///
-/// All methods return [`String`] containing raw ANSI escape sequence bytes. Callers can:
+/// All methods return [`String`] containing raw [`ANSI`] escape sequence bytes. Callers
+/// can:
 /// - Use directly if a [`String`] is needed
 /// - Call `.into_bytes()` to get [`Vec<u8>`] for writing to output devices
 /// - Use `&sequence` to get [`&str`] for slice operations
@@ -69,10 +73,10 @@ use crate::{ColIndex, ColorTarget, EraseDisplayMode, EraseLineMode, RowIndex,
 /// This struct has no state; it's a collection of static methods. State tracking (cursor
 /// position, current colors) is handled by external implementations.
 ///
+/// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 /// [`CsiSequence`]: crate::CsiSequence
 /// [`FastStringify`]: crate::core::common::fast_stringify::FastStringify
 /// [`SgrColorSequence`]: crate::SgrColorSequence
-/// [`vt_100_pty_output_parser`]: mod@crate::core::ansi::vt_100_pty_output_parser
 /// [`vt_100_pty_output_parser`]: mod@crate::core::ansi::vt_100_pty_output_parser
 #[derive(Debug)]
 pub struct AnsiSequenceGenerator;
@@ -83,7 +87,9 @@ mod cursor_movement {
 
     impl AnsiSequenceGenerator {
         /// Generate absolute cursor positioning
-        /// CSI `<row>;<col>H` (1-based indexing)
+        /// [`CSI`] `<row>;<col>H` (1-based indexing)
+        ///
+        /// [`CSI`]: crate::CsiSequence
         #[must_use]
         pub fn cursor_position(row: RowIndex, col: ColIndex) -> String {
             CsiSequence::CursorPosition {
@@ -94,7 +100,9 @@ mod cursor_movement {
         }
 
         /// Generate cursor to column
-        /// CSI <col>G (1-based)
+        /// [`CSI`] <col>G (1-based)
+        ///
+        /// [`CSI`]: crate::CsiSequence
         #[must_use]
         pub fn cursor_to_column(col: ColIndex) -> String {
             let term_col = TermCol::from_zero_based(col);
@@ -103,12 +111,13 @@ mod cursor_movement {
 
         /// Generate cursor next line.
         ///
-        /// CSI `<n>E`
+        /// [`CSI`] `<n>E`
         ///
         /// Uses [`TermRowDelta`] for type-safe cursor movement. Since [`TermRowDelta`]
-        /// wraps [`NonZeroU16`] internally, the CSI zero bug is prevented at the type
+        /// wraps [`NonZeroU16`] internally, the [`CSI`] zero bug is prevented at the type
         /// level—callers use [`TermRowDelta::new()`] which returns `None` for zero.
         ///
+        /// [`CSI`]: crate::CsiSequence
         /// [`NonZeroU16`]: std::num::NonZeroU16
         #[must_use]
         pub fn cursor_next_line(rows: TermRowDelta) -> String {
@@ -117,12 +126,13 @@ mod cursor_movement {
 
         /// Generate cursor previous line.
         ///
-        /// CSI `<n>F`
+        /// [`CSI`] `<n>F`
         ///
         /// Uses [`TermRowDelta`] for type-safe cursor movement. Since [`TermRowDelta`]
-        /// wraps [`NonZeroU16`] internally, the CSI zero bug is prevented at the type
+        /// wraps [`NonZeroU16`] internally, the [`CSI`] zero bug is prevented at the type
         /// level—callers use [`TermRowDelta::new()`] which returns `None` for zero.
         ///
+        /// [`CSI`]: crate::CsiSequence
         /// [`NonZeroU16`]: std::num::NonZeroU16
         #[must_use]
         pub fn cursor_previous_line(rows: TermRowDelta) -> String {
@@ -136,28 +146,36 @@ mod screen_clearing {
 
     impl AnsiSequenceGenerator {
         /// Clear entire screen
-        /// CSI 2J (Erase Display: 2 = entire display)
+        /// [`CSI`] 2J (Erase Display: 2 = entire display)
+        ///
+        /// [`CSI`]: crate::CsiSequence
         #[must_use]
         pub fn clear_screen() -> String {
             CsiSequence::EraseDisplay(EraseDisplayMode::EntireScreen).to_string()
         }
 
         /// Clear current line
-        /// CSI 2K (Erase Line: 2 = entire line)
+        /// [`CSI`] 2K (Erase Line: 2 = entire line)
+        ///
+        /// [`CSI`]: crate::CsiSequence
         #[must_use]
         pub fn clear_current_line() -> String {
             CsiSequence::EraseLine(EraseLineMode::EntireLine).to_string()
         }
 
         /// Clear to end of line
-        /// CSI 0K (Erase Line: 0 = cursor to end)
+        /// [`CSI`] 0K (Erase Line: 0 = cursor to end)
+        ///
+        /// [`CSI`]: crate::CsiSequence
         #[must_use]
         pub fn clear_to_end_of_line() -> String {
             CsiSequence::EraseLine(EraseLineMode::FromCursorToEnd).to_string()
         }
 
         /// Clear to start of line
-        /// CSI 1K (Erase Line: 1 = start to cursor)
+        /// [`CSI`] 1K (Erase Line: 1 = start to cursor)
+        ///
+        /// [`CSI`]: crate::CsiSequence
         #[must_use]
         pub fn clear_to_start_of_line() -> String {
             CsiSequence::EraseLine(EraseLineMode::FromStartToCursor).to_string()
@@ -185,8 +203,10 @@ mod color_ops {
         }
 
         /// Generate text attribute sequences (bold, italic, underline, etc.)
-        /// Uses semantic SGR codes from the [`vt_100_pty_output_parser`] infrastructure
+        /// Uses semantic [`SGR`] codes from the [`vt_100_pty_output_parser`]
+        /// infrastructure
         ///
+        /// [`SGR`]: crate::SgrCode
         /// [`vt_100_pty_output_parser`]: mod@crate::core::ansi::vt_100_pty_output_parser
         #[must_use]
         pub fn text_attributes(style: &TuiStyle) -> String {
@@ -228,7 +248,10 @@ mod color_ops {
         }
 
         /// Reset all colors and attributes to default
-        /// CSI 0m (SGR Reset)
+        /// [`CSI`] 0m ([`SGR`] Reset)
+        ///
+        /// [`CSI`]: crate::CsiSequence
+        /// [`SGR`]: crate::SgrCode
         #[must_use]
         pub fn reset_color() -> String { SGR_RESET_STR.to_string() }
     }
@@ -240,14 +263,19 @@ mod cursor_visibility {
 
     impl AnsiSequenceGenerator {
         /// Show cursor
-        /// CSI ?25h (DECTCEM: DEC Text Cursor Enable Mode = set)
+        /// [`CSI`] ?25h (DECTCEM: [`DEC`] Text Cursor Enable Mode = set)
+        ///
+        /// [`CSI`]: crate::CsiSequence
+        /// [`DEC`]: https://en.wikipedia.org/wiki/Digital_Equipment_Corporation
         #[must_use]
         pub fn show_cursor() -> String {
             CsiSequence::EnablePrivateMode(PrivateModeType::ShowCursor).to_string()
         }
 
         /// Hide cursor
-        /// CSI ?25l (DECTCEM = reset)
+        /// [`CSI`] ?25l (DECTCEM = reset)
+        ///
+        /// [`CSI`]: crate::CsiSequence
         #[must_use]
         pub fn hide_cursor() -> String {
             CsiSequence::DisablePrivateMode(PrivateModeType::ShowCursor).to_string()
@@ -261,12 +289,16 @@ mod cursor_save_restore {
 
     impl AnsiSequenceGenerator {
         /// Save cursor position
-        /// CSI s (DECSC: Save Cursor)
+        /// [`CSI`] s (DECSC: Save Cursor)
+        ///
+        /// [`CSI`]: crate::CsiSequence
         #[must_use]
         pub fn save_cursor_position() -> String { CsiSequence::SaveCursor.to_string() }
 
         /// Restore cursor position
-        /// CSI u (DECRC: Restore Cursor)
+        /// [`CSI`] u (DECRC: Restore Cursor)
+        ///
+        /// [`CSI`]: crate::CsiSequence
         #[must_use]
         pub fn restore_cursor_position() -> String {
             CsiSequence::RestoreCursor.to_string()
@@ -280,7 +312,9 @@ mod terminal_modes {
 
     impl AnsiSequenceGenerator {
         /// Enter alternate screen buffer
-        /// CSI ?1049h (`AlternateScreenBuffer`)
+        /// [`CSI`] ?1049h (`AlternateScreenBuffer`)
+        ///
+        /// [`CSI`]: crate::CsiSequence
         #[must_use]
         pub fn enter_alternate_screen() -> String {
             CsiSequence::EnablePrivateMode(PrivateModeType::AlternateScreenBuffer)
@@ -288,7 +322,9 @@ mod terminal_modes {
         }
 
         /// Exit alternate screen buffer
-        /// CSI ?1049l (`AlternateScreenBuffer`)
+        /// [`CSI`] ?1049l (`AlternateScreenBuffer`)
+        ///
+        /// [`CSI`]: crate::CsiSequence
         #[must_use]
         pub fn exit_alternate_screen() -> String {
             CsiSequence::DisablePrivateMode(PrivateModeType::AlternateScreenBuffer)
@@ -296,7 +332,9 @@ mod terminal_modes {
         }
 
         /// Enable mouse tracking (all modes)
-        /// CSI ?1003h CSI ?1015h CSI ?1006h
+        /// [`CSI`] ?1003h [`CSI`] ?1015h [`CSI`] ?1006h
+        ///
+        /// [`CSI`]: crate::CsiSequence
         #[must_use]
         pub fn enable_mouse_tracking() -> String {
             let mut result = String::new();
@@ -324,7 +362,9 @@ mod terminal_modes {
         }
 
         /// Disable mouse tracking
-        /// CSI ?1003l CSI ?1015l CSI ?1006l
+        /// [`CSI`] ?1003l [`CSI`] ?1015l [`CSI`] ?1006l
+        ///
+        /// [`CSI`]: crate::CsiSequence
         #[must_use]
         pub fn disable_mouse_tracking() -> String {
             let mut result = String::new();
@@ -351,7 +391,9 @@ mod terminal_modes {
         }
 
         /// Enable bracketed paste mode
-        /// CSI ?2004h
+        /// [`CSI`] ?2004h
+        ///
+        /// [`CSI`]: crate::CsiSequence
         #[must_use]
         pub fn enable_bracketed_paste() -> String {
             CsiSequence::EnablePrivateMode(PrivateModeType::Other(BRACKETED_PASTE_MODE))
@@ -359,7 +401,9 @@ mod terminal_modes {
         }
 
         /// Disable bracketed paste mode
-        /// CSI ?2004l
+        /// [`CSI`] ?2004l
+        ///
+        /// [`CSI`]: crate::CsiSequence
         #[must_use]
         pub fn disable_bracketed_paste() -> String {
             CsiSequence::DisablePrivateMode(PrivateModeType::Other(BRACKETED_PASTE_MODE))

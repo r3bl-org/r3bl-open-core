@@ -1,16 +1,35 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+// rustdoc-fmt: skip
+
 // cspell:words Blockquotes
 
 //! Orchestrate rustdoc formatting for files.
+//!
+//! Files containing `// rustdoc-fmt: skip` are skipped entirely. Place this comment
+//! anywhere in the file (typically after the copyright line). This is useful for files
+//! whose doc comments discuss the formatter's own concepts (e.g., technical terms like
+//! CSI that would be incorrectly linkified by the term linker).
 
 use crate::cargo_rustdoc_fmt::{content_protector::ContentProtector,
                                extractor, link_converter, table_formatter,
+                               technical_term_dictionary::TechnicalTermDictionary,
+                               technical_term_linker,
                                types::{CommentType, FormatOptions, ProcessingResult,
                                        RustdocBlock}};
 use std::path::{Path, PathBuf};
 
-/// Find the line number where `rustfmt_skip` attribute appears.
+/// Checks if a file contains the `// rustdoc-fmt: skip` marker.
+///
+/// When present, the entire file is skipped by `cargo rustdoc-fmt`. Place this
+/// comment anywhere in the file (typically near the top, after the copyright line).
+fn has_rustdoc_fmt_skip(source: &str) -> bool {
+    source
+        .lines()
+        .any(|line| line.trim() == "// rustdoc-fmt: skip")
+}
+
+/// Finds the line number where `rustfmt_skip` attribute appears.
 ///
 /// Returns `Some(line_number)` (0-indexed) if found, `None` otherwise.
 /// When present, only rustdoc blocks ending before this line should be processed.
@@ -19,6 +38,7 @@ fn find_rustfmt_skip_line(source: &str) -> Option<usize> {
         if line.contains("#![cfg_attr(rustfmt, rustfmt_skip)]")
             || line.contains("#![ cfg_attr(rustfmt, rustfmt_skip) ]")
             || line.contains("#![ cfg_attr( rustfmt , rustfmt_skip ) ]")
+            || line.contains("#![rustfmt::skip]")
         {
             return Some(line_num);
         }
@@ -28,16 +48,34 @@ fn find_rustfmt_skip_line(source: &str) -> Option<usize> {
 
 /// Processes Rust files to format their rustdoc comments.
 #[derive(Debug)]
-pub struct FileProcessor {
+pub struct FileProcessor<'a> {
     options: FormatOptions,
+    registry: Option<&'a TechnicalTermDictionary>,
 }
 
-impl FileProcessor {
-    /// Create a new file processor with the given options.
+impl<'a> FileProcessor<'a> {
+    /// Creates a new file processor with the given options.
     #[must_use]
-    pub fn new(options: FormatOptions) -> Self { Self { options } }
+    pub fn new(options: FormatOptions) -> Self {
+        Self {
+            options,
+            registry: None,
+        }
+    }
 
-    /// Process a single file.
+    /// Creates a new file processor with known-term linking support.
+    #[must_use]
+    pub fn with_registry(
+        options: FormatOptions,
+        registry: &'a TechnicalTermDictionary,
+    ) -> Self {
+        Self {
+            options,
+            registry: Some(registry),
+        }
+    }
+
+    /// Processes a single file.
     #[must_use]
     pub fn process_file(&self, path: &Path) -> ProcessingResult {
         let mut result = ProcessingResult::new(path.to_path_buf());
@@ -51,10 +89,15 @@ impl FileProcessor {
             }
         };
 
-        // Extract rustdoc blocks
+        // Skip entire file if it contains `// rustdoc-fmt: skip`.
+        if has_rustdoc_fmt_skip(&source) {
+            return result;
+        }
+
+        // Extract rustdoc blocks.
         let mut blocks = extractor::extract_rustdoc_blocks(&source);
 
-        // If file has rustfmt_skip, only process blocks that end before that line
+        // If file has rustfmt_skip, only process blocks that end before that line.
         if let Some(skip_line) = find_rustfmt_skip_line(&source) {
             blocks.retain(|block| block.end_line < skip_line);
         }
@@ -62,7 +105,7 @@ impl FileProcessor {
         // Process blocks
         let mut modified = false;
         for block in &mut blocks {
-            if process_rustdoc_block(block, &self.options) {
+            if process_rustdoc_block(block, &self.options, self.registry) {
                 modified = true;
             }
         }
@@ -82,16 +125,20 @@ impl FileProcessor {
         result
     }
 
-    /// Process multiple files.
+    /// Processes multiple files.
     #[must_use]
     pub fn process_files(&self, paths: &[PathBuf]) -> Vec<ProcessingResult> {
         paths.iter().map(|p| self.process_file(p)).collect()
     }
 }
 
-/// Process a single rustdoc block, applying formatters.
+/// Processes a single rustdoc block, applying formatters.
 /// Returns true if the block was modified.
-fn process_rustdoc_block(block: &mut RustdocBlock, options: &FormatOptions) -> bool {
+fn process_rustdoc_block(
+    block: &mut RustdocBlock,
+    options: &FormatOptions,
+    registry: Option<&TechnicalTermDictionary>,
+) -> bool {
     let original = block.lines.join("\n");
     let mut modified = original.clone();
 
@@ -109,6 +156,14 @@ fn process_rustdoc_block(block: &mut RustdocBlock, options: &FormatOptions) -> b
         let converted = link_converter::convert_links(&protected);
         let aggregated = link_converter::aggregate_existing_references(&converted);
         modified = protector.restore(&aggregated);
+    }
+
+    // Term linking: upgrade known terms to backticked+linked form.
+    // Runs last because it needs reference-style links from the previous step.
+    if options.link_terms
+        && let Some(reg) = registry
+    {
+        modified = technical_term_linker::link_known_terms(&modified, reg);
     }
 
     if modified == original {
@@ -180,5 +235,30 @@ mod tests {
         let processor = FileProcessor::new(options);
         let result = processor.process_file(Path::new("/nonexistent/file.rs"));
         assert!(!result.errors.is_empty());
+    }
+
+    #[test]
+    fn test_has_rustdoc_fmt_skip_present() {
+        let source = "// Copyright\n// rustdoc-fmt: skip\n\n//! Module docs.\n";
+        assert!(has_rustdoc_fmt_skip(source));
+    }
+
+    #[test]
+    fn test_has_rustdoc_fmt_skip_absent() {
+        let source = "// Copyright\n\n//! Module docs.\n";
+        assert!(!has_rustdoc_fmt_skip(source));
+    }
+
+    #[test]
+    fn test_has_rustdoc_fmt_skip_indented() {
+        let source = "    // rustdoc-fmt: skip\n";
+        assert!(has_rustdoc_fmt_skip(source));
+    }
+
+    #[test]
+    fn test_has_rustdoc_fmt_skip_not_in_doc_comment() {
+        // Should only match plain comments, not doc comments.
+        let source = "/// rustdoc-fmt: skip\n";
+        assert!(!has_rustdoc_fmt_skip(source));
     }
 }

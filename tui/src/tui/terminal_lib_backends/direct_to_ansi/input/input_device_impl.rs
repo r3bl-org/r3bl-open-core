@@ -9,8 +9,8 @@
 //!
 //! - **[`SINGLETON`]** (container): Static [`RRT`], lives for process lifetime. Holds the
 //!   broadcast channel (created once, never replaced) and a safe waker wrapper.
-//! - **Thread-generation state**: Liveness tracking and `shared_waker_slot` are swapped on each
-//!   relaunch; the channel persists across all generations.
+//! - **Thread-generation state**: Liveness tracking and `shared_waker_slot` are swapped
+//!   on each relaunch; the channel persists across all generations.
 //!
 //! Module contents: [`global_input_resource`] (operations + [`SINGLETON`]).
 //!
@@ -18,20 +18,21 @@
 //! pipeline).
 //!
 //! [`DirectToAnsiInputDevice`]: super::DirectToAnsiInputDevice
+//! [`global_input_resource`]: mod@global_input_resource
 //! [`RRT`]: crate::core::resilient_reactor_thread::RRT
 //! [`SINGLETON`]: global_input_resource::SINGLETON
-//! [`global_input_resource`]: mod@global_input_resource
 
 use super::mio_poller::MioPollWorker;
 use crate::core::resilient_reactor_thread::{RRT, SubscriberGuard};
 
 /// Type alias for the input device's subscriber guard.
 ///
-/// This is the RAII guard returned by [`SINGLETON.subscribe()`] and
+/// This is the [`RAII`] guard returned by [`SINGLETON.subscribe()`] and
 /// [`SINGLETON.subscribe_to_existing()`]. Holding this guard keeps you subscribed to
 /// input events; dropping it triggers the cleanup protocol that may cause the thread to
 /// exit.
 ///
+/// [`RAII`]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
 /// [`SINGLETON.subscribe()`]: global_input_resource::SINGLETON
 /// [`SINGLETON.subscribe_to_existing()`]: global_input_resource::SINGLETON
 pub type InputSubscriberGuard = SubscriberGuard<MioPollWorker>;
@@ -46,9 +47,9 @@ pub mod global_input_resource {
     use super::*;
 
     /// **Static container** (lives for process lifetime) with three top-level fields.
-    /// The broadcast channel and `shared_waker_slot` wrapper are lazily initialized on first
-    /// access (via [`LazyLock`]); liveness tracking is per-generation and replaced on
-    /// each relaunch.
+    /// The broadcast channel and `shared_waker_slot` wrapper are lazily initialized on
+    /// first access (via [`LazyLock`]); liveness tracking is per-generation and
+    /// replaced on each relaunch.
     ///
     /// Lifecycle states:
     /// - **Inert** (all empty) until [`subscribe()`] spawns the poller thread
@@ -64,7 +65,7 @@ pub mod global_input_resource {
     /// # Why `RRT`?
     ///
     /// The RRT infrastructure handles all the complexity of:
-    /// - Deferred initialization (syscalls can't be `const`)
+    /// - Deferred initialization ([`syscalls`] can't be `const`)
     /// - Thread lifecycle management (spawn, exit, restart)
     /// - Race condition handling (fast-path thread reuse)
     /// - Waker coupling with Poll
@@ -82,22 +83,24 @@ pub mod global_input_resource {
     /// - See [Architecture] for why global state is necessary.
     /// - See [`MioPollWorker`] for worker details.
     ///
-    /// [Architecture]: super::super::DirectToAnsiInputDevice#architecture
     /// [`LazyLock`]: std::sync::LazyLock
     /// [`MioPollWorker`]: super::super::mio_poller::MioPollWorker
     /// [`RRT`]: crate::core::resilient_reactor_thread::RRT
-    /// [`SubscriberGuard`]: crate::core::resilient_reactor_thread::SubscriberGuard
     /// [`subscribe()`]: RRT::subscribe
+    /// [`SubscriberGuard`]: crate::core::resilient_reactor_thread::SubscriberGuard
+    /// [`syscalls`]: https://man7.org/linux/man-pages/man2/syscalls.2.html
+    /// [Architecture]: super::super::DirectToAnsiInputDevice#architecture
     pub static SINGLETON: RRT<MioPollWorker> = RRT::new();
 }
 
-/// Comprehensive testing is performed in PTY integration tests:
+/// Comprehensive testing is performed in [`PTY`] integration tests:
 /// - [`test_pty_input_device`]
 /// - [`test_pty_mouse_events`]
 /// - [`test_pty_keyboard_modifiers`]
 /// - [`test_pty_utf8_text`]
 /// - [`test_pty_terminal_events`]
 ///
+/// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 /// [`test_pty_input_device`]: crate::core::ansi::vt_100_terminal_input_parser::integration_tests::pty_input_device_test::test_pty_input_device
 /// [`test_pty_keyboard_modifiers`]: crate::core::ansi::vt_100_terminal_input_parser::integration_tests::pty_keyboard_modifiers_test::test_pty_keyboard_modifiers
 /// [`test_pty_mouse_events`]: crate::core::ansi::vt_100_terminal_input_parser::integration_tests::pty_mouse_events_test::test_pty_mouse_events

@@ -3,7 +3,7 @@
 use super::core::LineState;
 use crate::{ArrayBoundsCheck, ArrayOverflowResult, ColWidth, CsiSequence,
             CursorBoundsCheck, NumericValue, Seg, StringLength, TermCol, TermColDelta,
-            TermRowDelta, col, ok, seg_index, term_col_delta, term_row_delta, width};
+            TermRowDelta, col, seg_index, term_col_delta, term_row_delta, width};
 use std::io::{self, Write};
 
 impl LineState {
@@ -230,7 +230,9 @@ mod tests {
                 ESC_START, core::test_fixtures::StdoutMock};
     use test_case::test_case;
 
-    /// Checks if the string contains a `CursorForward` sequence (CSI <n> C).
+    /// Checks if the string contains a `CursorForward` sequence ([`CSI`] <n> C).
+    ///
+    /// [`CSI`]: crate::CsiSequence
     fn contains_cursor_forward(s: &str) -> bool {
         // CSI sequences start with ESC [ and CursorForward ends with 'C'.
         // We look for patterns like "\x1b[5C" or "\x1b[10C".
@@ -256,7 +258,9 @@ mod tests {
         false
     }
 
-    /// Checks if the string contains a `CursorDown` sequence (CSI <n> B).
+    /// Checks if the string contains a `CursorDown` sequence ([`CSI`] <n> B).
+    ///
+    /// [`CSI`]: crate::CsiSequence
     fn contains_cursor_down(s: &str) -> bool {
         let mut chars = s.chars().peekable();
         while let Some(c) = chars.next() {

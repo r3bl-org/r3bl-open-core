@@ -1,6 +1,6 @@
 // Copyright (c) 2023-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{CommonResult, TerminalWindowMainThreadSignal, throws};
+use crate::{CommonResult, TerminalWindowMainThreadSignal};
 use std::fmt::Debug;
 use tokio::sync::mpsc::Sender;
 
@@ -14,8 +14,10 @@ pub struct Animator {
     /// - [None] means that the animation task is not running.
     /// - When an animation task is started, this will have a [Some] value in it.
     ///
-    /// The [Animator::stop](Animator::stop) function uses this channel to kill the
+    /// The [Animator::stop] function uses this channel to kill the
     /// animation task.
+    ///
+    /// [Animator::stop]: Animator::stop
     pub animator_kill_channel: Option<Sender<()>>,
 }
 

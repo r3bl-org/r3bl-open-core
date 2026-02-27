@@ -6,7 +6,7 @@
 //! providing the main interface for color wheel functionality:
 //! - Text colorization with various policies
 //! - Gradient generation and management
-//! - Support for RGB, ANSI 256, and Lolcat color modes
+//! - Support for RGB, [`ANSI`] 256, and Lolcat color modes
 //! - Iterator interface for color cycling
 //!
 //! The `ColorWheel` automatically adapts to terminal capabilities and provides
@@ -89,6 +89,8 @@
 //!
 //! The optimization successfully eliminated the hash operation bottleneck, making
 //! `ColorWheel` operations negligible in the overall performance profile.
+//!
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 use super::{Ansi256GradientIndex, ColorWheelConfig, ColorWheelDirection,
             ColorWheelSpeed, Colorize, GradientKind, GradientLengthKind, Lolcat,
             LolcatBuilder, Seed,
@@ -98,8 +100,7 @@ use super::{Ansi256GradientIndex, ColorWheelConfig, ColorWheelDirection,
             generate_truecolor_gradient, get_gradient_array_for};
 use crate::{ChUnit, FastStringify, GCStringOwned, GradientGenerationPolicy, RgbValue,
             TextColorizationPolicy, TuiColor, TuiStyle, TuiStyledText, TuiStyledTexts,
-            ch, cli_text_inline, glyphs::SPACER_GLYPH as SPACER, tui_color,
-            tui_styled_text, u8, usize};
+            ch, cli_text_inline, glyphs::SPACER_GLYPH as SPACER, u8, usize};
 use sizing::VecConfigs;
 use smallvec::SmallVec;
 use std::{collections::hash_map::DefaultHasher,
@@ -457,11 +458,12 @@ impl ColorWheel {
     ///
     /// # Arguments
     /// - `configs`: A list of color wheel configs. The order of the configs is
-    ///   unimportant. However, at the very least, one Truecolor config & one ANSI 256
+    ///   unimportant. However, at the very least, one Truecolor config & one [`ANSI`] 256
     ///   config should be provided. The fallback is always grayscale. See
     ///   [`ColorWheelConfig::narrow_config_based_on_color_support`],
     ///   [`crate::global_color_support::detect`] for more info.
     ///
+    /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
     /// [`colorize_into_styled_texts`]: ColorWheel::colorize_into_styled_texts
     /// [`generate_color_wheel`]: ColorWheel::generate_color_wheel
     #[must_use]
@@ -1163,7 +1165,7 @@ mod lolcat_bg_helper {
 #[cfg(test)]
 mod tests_color_wheel_rgb {
     use super::*;
-    use crate::{ColorSupport, assert_eq2, global_color_support,
+    use crate::{ColorSupport, global_color_support,
                 tui_style::tui_style_attrib::{Bold, Dim},
                 tui_style_attribs};
     use serial_test::serial;
@@ -1548,7 +1550,9 @@ mod bench {
     use super::*;
     use test::Bencher;
 
-    /// Benchmark: `lolcat_into_string` with short ASCII text
+    /// Benchmark: `lolcat_into_string` with short [`ASCII`] text
+    ///
+    /// [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
     #[bench]
     fn bench_lolcat_into_string_ascii_short(b: &mut Bencher) {
         let text = "Hello, world!";
@@ -1557,7 +1561,9 @@ mod bench {
         });
     }
 
-    /// Benchmark: `lolcat_into_string` with longer ASCII text
+    /// Benchmark: `lolcat_into_string` with longer [`ASCII`] text
+    ///
+    /// [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
     #[bench]
     fn bench_lolcat_into_string_ascii_long(b: &mut Bencher) {
         let text =

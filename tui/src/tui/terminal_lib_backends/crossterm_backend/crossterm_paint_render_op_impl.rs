@@ -18,7 +18,7 @@
 //! ```
 //!
 //! **Input**: [`RenderOpOutputVec`] (from backend converter)
-//! **Output**: ANSI escape sequences to terminal
+//! **Output**: [`ANSI`] escape sequences to terminal
 //! **Role**: Execute rendering operations via Crossterm backend
 //!
 //! <div class="warning">
@@ -39,8 +39,9 @@
 //! - Flushes output to ensure immediate display
 //!
 //! This is the final stage before terminal output. The Crossterm library handles
-//! converting commands to ANSI escape sequences appropriate for the terminal.
+//! converting commands to [`ANSI`] escape sequences appropriate for the terminal.
 //!
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`RenderOpOutputVec`]: crate::RenderOpOutputVec
 //! [`RenderOpsLocalData`]: crate::RenderOpsLocalData
 //! [rendering pipeline overview]: mod@crate::terminal_lib_backends#rendering-pipeline-architecture
@@ -49,14 +50,142 @@
 use crate::{CliTextInline, GCStringOwned, LockedOutputDevice, Pos, RenderOpCommon,
             RenderOpFlush, RenderOpOutput, RenderOpPaint, RenderOpsLocalData, Size,
             TuiColor, TuiStyle, cli_text_inline_impl::CliTextConvertOptions,
-            disable_raw_mode_now, enable_raw_mode_now, flush_now,
-            queue_terminal_command, sanitize_and_save_abs_pos,
+            sanitize_and_save_abs_pos,
             tui::terminal_lib_backends::direct_to_ansi::PixelCharRenderer};
 use crossterm::{cursor::{Hide, MoveTo, Show},
                 event::{DisableBracketedPaste, DisableMouseCapture,
                         EnableBracketedPaste, EnableMouseCapture},
                 style::{ResetColor, SetBackgroundColor, SetForegroundColor},
                 terminal::{Clear, ClearType, EnterAlternateScreen, LeaveAlternateScreen}};
+
+// Macro definitions MUST come before their first usage within the same file,
+// because macro_rules! macros have textual (top-down) visibility.
+#[macro_export]
+macro_rules! crossterm_op {
+    (
+        $arg_is_mock:expr, // Mock flag - if true, skip the operation.
+        $arg_log_msg:expr, // Log message.
+        $op:expr,          // The crossterm operation to perform.
+        $success_msg:expr, // Success log message.
+        $error_msg:expr    // Error log message.
+    ) => {{
+        use $crate::tui::DEBUG_TUI_SHOW_TERMINAL_BACKEND;
+
+        // Skip the operation in mock mode (consistent with flush_now! behavior).
+        if !$arg_is_mock {
+            match $op {
+                Ok(_) => {
+                    DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
+                        // % is Display, ? is Debug.
+                        tracing::info!(
+                            message = $success_msg,
+                            details = %$arg_log_msg
+                        );
+                    });
+                }
+                Err(err) => {
+                    DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
+                        // % is Display, ? is Debug.
+                        tracing::error!(
+                            message = $error_msg,
+                            details = %$arg_log_msg,
+                            error = %err,
+                        );
+                    });
+                }
+            }
+        }
+    }};
+    (
+        $arg_log_msg:expr, // Log message.
+        $op:expr,          // The crossterm operation to perform.
+        $success_msg:expr, // Success log message.
+        $error_msg:expr    // Error log message.
+    ) => {{
+        use $crate::tui::DEBUG_TUI_SHOW_TERMINAL_BACKEND;
+
+        match $op {
+            Ok(_) => {
+                DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
+                    // % is Display, ? is Debug.
+                    tracing::info!(
+                        message = $success_msg,
+                        details = %$arg_log_msg
+                    );
+                });
+            }
+            Err(err) => {
+                DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
+                    // % is Display, ? is Debug.
+                    tracing::error!(
+                        message = $error_msg,
+                        details = %$arg_log_msg,
+                        error = %err,
+                    );
+                });
+            }
+        }
+    }};
+}
+
+#[macro_export]
+macro_rules! queue_terminal_command {
+    ($writer: expr, $arg_log_msg: expr $(, $command: expr)* $(,)?) => {{
+        use ::crossterm::QueueableCommand;
+        $(
+            $crate::crossterm_op!(
+                $arg_log_msg,
+                QueueableCommand::queue($writer, $command),
+                "crossterm: ✅ Succeeded",
+                "crossterm: ❌ Failed"
+            );
+        )*
+    }};
+}
+
+#[macro_export]
+macro_rules! flush_now {
+    ($writer: expr, $arg_log_msg: expr) => {{
+        $crate::crossterm_op!(
+            $arg_log_msg,
+            $writer.flush(),
+            "crossterm: ✅ Succeeded",
+            "crossterm: ❌ Failed"
+        );
+    }};
+}
+
+#[macro_export]
+macro_rules! disable_raw_mode_now {
+    (
+        $arg_is_mock: expr,
+        $arg_log_msg: expr
+    ) => {{
+        $crate::crossterm_op!(
+            $arg_is_mock,
+            $arg_log_msg,
+            crossterm::terminal::disable_raw_mode(),
+            "crossterm: ✅ Succeeded",
+            "crossterm: ❌ Failed"
+        );
+    }};
+}
+
+#[macro_export]
+macro_rules! enable_raw_mode_now {
+    (
+        $arg_is_mock: expr,
+        $arg_log_msg: expr
+    ) => {{
+        $crate::crossterm_op!(
+            $arg_is_mock,
+            $arg_log_msg,
+            crossterm::terminal::enable_raw_mode(),
+            "crossterm: ✅ Succeeded",
+            "crossterm: ❌ Failed"
+        );
+    }};
+}
 
 /// Struct representing the Crossterm implementation of [`RenderOpPaint`] trait.
 /// This empty struct is needed since the `RenderOpFlush` trait needs to be implemented.
@@ -470,7 +599,10 @@ impl PaintRenderOpImplCrossterm {
     // ===== Incremental Rendering Operations (Phase 1) =====
 
     /// Move cursor to specific column in current row (row unchanged).
-    /// Maps to CSI `<n>G` ANSI sequence.
+    /// Maps to [`CSI`] `<n>G` [`ANSI`] sequence.
+    ///
+    /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+    /// [`CSI`]: crate::CsiSequence
     pub fn move_cursor_to_column(
         col_index: crate::ColIndex,
         render_local_data: &mut RenderOpsLocalData,
@@ -489,7 +621,10 @@ impl PaintRenderOpImplCrossterm {
     }
 
     /// Move cursor down by N lines and to column 0.
-    /// Maps to CSI `<n>E` ANSI sequence.
+    /// Maps to [`CSI`] `<n>E` [`ANSI`] sequence.
+    ///
+    /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+    /// [`CSI`]: crate::CsiSequence
     pub fn move_cursor_to_next_line(
         row_height: crate::RowHeight,
         render_local_data: &mut RenderOpsLocalData,
@@ -511,7 +646,10 @@ impl PaintRenderOpImplCrossterm {
     }
 
     /// Move cursor up by N lines and to column 0.
-    /// Maps to CSI `<n>F` ANSI sequence.
+    /// Maps to [`CSI`] `<n>F` [`ANSI`] sequence.
+    ///
+    /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+    /// [`CSI`]: crate::CsiSequence
     pub fn move_cursor_to_previous_line(
         row_height: crate::RowHeight,
         render_local_data: &mut RenderOpsLocalData,
@@ -533,7 +671,10 @@ impl PaintRenderOpImplCrossterm {
     }
 
     /// Clear from cursor to end of line.
-    /// Maps to CSI `0K` (or `CSI K`) ANSI sequence.
+    /// Maps to [`CSI`] `0K` (or `CSI K`) [`ANSI`] sequence.
+    ///
+    /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+    /// [`CSI`]: crate::CsiSequence
     pub fn clear_to_end_of_line(locked_output_device: LockedOutputDevice<'_>) {
         queue_terminal_command!(
             locked_output_device,
@@ -543,7 +684,10 @@ impl PaintRenderOpImplCrossterm {
     }
 
     /// Clear from cursor to beginning of line.
-    /// Maps to CSI `1K` ANSI sequence.
+    /// Maps to [`CSI`] `1K` [`ANSI`] sequence.
+    ///
+    /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+    /// [`CSI`]: crate::CsiSequence
     pub fn clear_to_start_of_line(locked_output_device: LockedOutputDevice<'_>) {
         queue_terminal_command!(
             locked_output_device,
@@ -552,8 +696,10 @@ impl PaintRenderOpImplCrossterm {
         );
     }
 
-    /// Print text that already contains ANSI escape codes.
+    /// Print text that already contains [`ANSI`] escape codes.
     /// No additional styling applied - text rendered as-is.
+    ///
+    /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
     pub fn print_styled_text(text: &str, locked_output_device: LockedOutputDevice<'_>) {
         use crossterm::style::Print;
 
@@ -561,7 +707,10 @@ impl PaintRenderOpImplCrossterm {
     }
 
     /// Save cursor position to be restored later.
-    /// Maps to CSI `s` ANSI sequence (DECSC - save cursor).
+    /// Maps to [`CSI`] `s` [`ANSI`] sequence (DECSC - save cursor).
+    ///
+    /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+    /// [`CSI`]: crate::CsiSequence
     pub fn save_cursor_position(locked_output_device: LockedOutputDevice<'_>) {
         // crossterm doesn't have a direct SaveCursorPosition command,
         // so we write the ANSI sequence directly.
@@ -571,8 +720,10 @@ impl PaintRenderOpImplCrossterm {
     }
 
     /// Restore cursor position previously saved with [`SaveCursorPosition`].
-    /// Maps to CSI `u` ANSI sequence (DECRC - restore cursor).
+    /// Maps to [`CSI`] `u` [`ANSI`] sequence (DECRC - restore cursor).
     ///
+    /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+    /// [`CSI`]: crate::CsiSequence
     /// [`SaveCursorPosition`]: PaintRenderOpImplCrossterm::save_cursor_position
     pub fn restore_cursor_position(locked_output_device: LockedOutputDevice<'_>) {
         // crossterm doesn't have a direct RestoreCursorPosition command,
@@ -581,131 +732,4 @@ impl PaintRenderOpImplCrossterm {
             eprintln!("Failed to write RestoreCursorPosition ANSI sequence: {e}");
         }
     }
-}
-
-#[macro_export]
-macro_rules! queue_terminal_command {
-    ($writer: expr, $arg_log_msg: expr $(, $command: expr)* $(,)?) => {{
-        use ::crossterm::QueueableCommand;
-        $(
-            $crate::crossterm_op!(
-                $arg_log_msg,
-                QueueableCommand::queue($writer, $command),
-                "crossterm: ✅ Succeeded",
-                "crossterm: ❌ Failed"
-            );
-        )*
-    }};
-}
-
-#[macro_export]
-macro_rules! flush_now {
-    ($writer: expr, $arg_log_msg: expr) => {{
-        $crate::crossterm_op!(
-            $arg_log_msg,
-            $writer.flush(),
-            "crossterm: ✅ Succeeded",
-            "crossterm: ❌ Failed"
-        );
-    }};
-}
-
-#[macro_export]
-macro_rules! disable_raw_mode_now {
-    (
-        $arg_is_mock: expr,
-        $arg_log_msg: expr
-    ) => {{
-        $crate::crossterm_op!(
-            $arg_is_mock,
-            $arg_log_msg,
-            crossterm::terminal::disable_raw_mode(),
-            "crossterm: ✅ Succeeded",
-            "crossterm: ❌ Failed"
-        );
-    }};
-}
-
-#[macro_export]
-macro_rules! enable_raw_mode_now {
-    (
-        $arg_is_mock: expr,
-        $arg_log_msg: expr
-    ) => {{
-        $crate::crossterm_op!(
-            $arg_is_mock,
-            $arg_log_msg,
-            crossterm::terminal::enable_raw_mode(),
-            "crossterm: ✅ Succeeded",
-            "crossterm: ❌ Failed"
-        );
-    }};
-}
-
-#[macro_export]
-macro_rules! crossterm_op {
-    (
-        $arg_is_mock:expr, // Mock flag - if true, skip the operation.
-        $arg_log_msg:expr, // Log message.
-        $op:expr,          // The crossterm operation to perform.
-        $success_msg:expr, // Success log message.
-        $error_msg:expr    // Error log message.
-    ) => {{
-        use $crate::tui::DEBUG_TUI_SHOW_TERMINAL_BACKEND;
-
-        // Skip the operation in mock mode (consistent with flush_now! behavior).
-        if !$arg_is_mock {
-            match $op {
-                Ok(_) => {
-                    DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
-                        // % is Display, ? is Debug.
-                        tracing::info!(
-                            message = $success_msg,
-                            details = %$arg_log_msg
-                        );
-                    });
-                }
-                Err(err) => {
-                    DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
-                        // % is Display, ? is Debug.
-                        tracing::error!(
-                            message = $error_msg,
-                            details = %$arg_log_msg,
-                            error = %err,
-                        );
-                    });
-                }
-            }
-        }
-    }};
-    (
-        $arg_log_msg:expr, // Log message.
-        $op:expr,          // The crossterm operation to perform.
-        $success_msg:expr, // Success log message.
-        $error_msg:expr    // Error log message.
-    ) => {{
-        use $crate::tui::DEBUG_TUI_SHOW_TERMINAL_BACKEND;
-
-        match $op {
-            Ok(_) => {
-                DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
-                    // % is Display, ? is Debug.
-                    tracing::info!(
-                        message = $success_msg,
-                        details = %$arg_log_msg
-                    );
-                });
-            }
-            Err(err) => {
-                DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
-                    // % is Display, ? is Debug.
-                    tracing::error!(
-                        message = $error_msg,
-                        details = %$arg_log_msg,
-                        error = %err,
-                    );
-                });
-            }
-        }
-    }};
 }

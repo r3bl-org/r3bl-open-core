@@ -1,7 +1,7 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::{TuiStyledText, sizing::VecTuiStyledText};
-use crate::{ConvertToPlainText, GCStringOwned, InlineString, join_with_index_fmt, ok};
+use crate::{ConvertToPlainText, GCStringOwned, InlineString};
 use std::{fmt::Debug,
           ops::{AddAssign, Index}};
 
@@ -73,7 +73,7 @@ mod impl_ops {
 
 mod impl_display {
     use super::{ConvertToPlainText, GCStringOwned, InlineString, TuiStyledTexts};
-    use crate::{ColWidth, join};
+    use crate::ColWidth;
 
     impl ConvertToPlainText for TuiStyledTexts {
         fn to_plain_text(&self) -> InlineString {
@@ -97,7 +97,7 @@ mod impl_display {
 }
 
 mod impl_debug {
-    use super::{Debug, TuiStyledTexts, join_with_index_fmt, ok};
+    use super::{Debug, TuiStyledTexts};
 
     impl Debug for TuiStyledTexts {
         fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -119,8 +119,7 @@ mod impl_debug {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{CommonResult, TuiStyle, TuiStylesheet, assert_eq2, ch, throws,
-                throws_with_return, tui_styled_text, tui_stylesheet};
+    use crate::{CommonResult, TuiStyle, TuiStylesheet, ch};
 
     #[test]
     fn test_create_styled_text_with_dsl() -> CommonResult<()> {
@@ -133,7 +132,7 @@ mod tests {
 
     mod helpers {
         use super::*;
-        use crate::{tui_color, tui_style_id};
+        use crate::tui_style_id;
 
         pub fn create_styled_text() -> CommonResult<TuiStyledTexts> {
             throws_with_return!({

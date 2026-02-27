@@ -109,7 +109,7 @@
 //!
 //! ## `CaptureOutputBytes`
 //!
-//! A simple [`Write`] implementation that captures raw bytes (including ANSI escape
+//! A simple [`Write`] implementation that captures raw bytes (including [`ANSI`] escape
 //! sequences) for later processing:
 //!
 //! ```text
@@ -129,8 +129,8 @@
 //!
 //! ## [`OffscreenBuffer::apply_ansi_bytes`]
 //!
-//! Parses ANSI escape sequences and renders them to a virtual terminal buffer, giving us
-//! the **exact visual output** a user would see:
+//! Parses [`ANSI`] escape sequences and renders them to a virtual terminal buffer, giving
+//! us the **exact visual output** a user would see:
 //!
 //! ```text
 //! ┌─────────────────────────────────────────────────────────────────────────────┐
@@ -167,7 +167,7 @@
 //! └─────────────────────────────────────────────────────────────────────────────┘
 //! ```
 //!
-//! # ANSI Escape Sequences Involved
+//! # [`ANSI`] Escape Sequences Involved
 //!
 //! This test specifically validates behavior around these escape sequences:
 //!
@@ -188,12 +188,13 @@
 //! cargo test -p r3bl_tui --lib test_pty_shared_writer_no_blank_line -- --nocapture
 //! ```
 //!
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`CHA(1)`]: crate::CsiSequence::CursorHorizontalAbsolute
 //! [`OffscreenBuffer::apply_ansi_bytes`]: crate::OffscreenBuffer::apply_ansi_bytes
 //! [`PTY`]: crate::core::pty
 //! [`SharedWriter`]: crate::SharedWriter
 use crate::{ControlledChild, LineStateControlSignal, OffscreenBuffer, PtyPair,
-            PtyTestMode, SharedWriter, generate_pty_test, height, read_lines_and_drain,
+            PtyTestMode, SharedWriter, height, read_lines_and_drain,
             readline_async::readline_async_impl::LineState, width};
 use std::{io::Write, time::Duration};
 
@@ -211,7 +212,9 @@ generate_pty_test! {
     mode: PtyTestMode::Cooked,
 }
 
-/// PTY Controller: Verify no blank line between log output and prompt.
+/// [`PTY`] Controller: Verify no blank line between log output and prompt.
+///
+/// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 fn pty_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
     eprintln!("🚀 PTY Controller: Starting SharedWriter blank line test...");
 
@@ -267,7 +270,7 @@ fn pty_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
     eprintln!("✅ PTY Controller: No blank line detected before prompt!");
 }
 
-/// Captures raw ANSI bytes for later processing with
+/// Captures raw [`ANSI`] bytes for later processing with
 /// [`OffscreenBuffer::apply_ansi_bytes`].
 ///
 /// This struct implements [`Write`] to collect terminal output bytes (including escape
@@ -292,6 +295,7 @@ fn pty_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
 /// └─────────────────────┘
 /// ```
 ///
+/// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 /// [`OffscreenBuffer::apply_ansi_bytes`]: crate::OffscreenBuffer::apply_ansi_bytes
 struct CaptureOutputBytes(Vec<u8>);
 
@@ -324,12 +328,13 @@ fn get_line_content(buf: &crate::OffscreenBuffer, row: usize, max_cols: usize) -
         .to_string()
 }
 
-/// PTY controlled process: simulates [`SharedWriter`] output and checks for blank
+/// [`PTY`] controlled process: simulates [`SharedWriter`] output and checks for blank
 /// lines before the prompt via [`OffscreenBuffer::apply_ansi_bytes`].
 ///
 /// See the [module docs] for the full test architecture.
 ///
 /// [`OffscreenBuffer::apply_ansi_bytes`]: crate::OffscreenBuffer::apply_ansi_bytes
+/// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 /// [`SharedWriter`]: crate::SharedWriter
 /// [module docs]: self
 fn pty_controlled_entry_point() -> ! {

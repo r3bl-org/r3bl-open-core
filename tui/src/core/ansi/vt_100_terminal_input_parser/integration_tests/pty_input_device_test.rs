@@ -1,16 +1,19 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! PTY-based integration test for [`DirectToAnsiInputDevice`].
+//! [`PTY`]-based integration test for [`DirectToAnsiInputDevice`].
 //!
 //! Test coordinator that routes to controller or controlled based on env var.
 //! When `R3BL_PTY_TEST_CONTROLLED` is set, runs controlled logic and exits.
 //! Otherwise runs the controller test.
 //!
-//! Run with: `cargo test -p r3bl_tui --lib test_pty_input_device -- --nocapture`
+//! Run with:
+//! ```bash
+//! cargo test -p r3bl_tui --lib test_pty_input_device -- --nocapture
+//! ```
 //!
 //! ## Test Architecture (2 Actors)
 //!
-//! This test validates [`DirectToAnsiInputDevice`] in a real PTY environment using a
+//! This test validates [`DirectToAnsiInputDevice`] in a real [`PTY`] environment using a
 //! coordinator-worker pattern with two processes:
 //!
 //! ```text
@@ -39,42 +42,46 @@
 //!
 //! ## Critical: Raw Mode Requirement
 //!
-//! **Raw Mode Clarification**: In PTY architecture, the controlled PTY side is what the child
-//! process sees as its terminal. When the child reads from stdin, it's reading from
-//! the controlled PTY. Therefore, we MUST set the controlled PTY to raw mode so that:
+//! **Raw Mode Clarification**: In [`PTY`] architecture, the controlled [`PTY`] side is
+//! what the child process sees as its terminal. When the child reads from stdin, it's
+//! reading from the controlled [`PTY`]. Therefore, we MUST set the controlled [`PTY`] to
+//! raw mode so that:
 //!
 //! 1. **No Line Buffering**: Input isn't line-buffered - characters are available
 //!    immediately without waiting for Enter key
-//! 2. **No Special Character Processing**: Special characters (like ESC sequences) aren't
-//!    interpreted by the terminal layer - they pass through as raw bytes
+//! 2. **No Special Character Processing**: Special characters (like [`ESC`] sequences)
+//!    aren't interpreted by the terminal layer - they pass through as raw bytes
 //! 3. **Async Compatibility**: The async reader can get bytes as they arrive, not waiting
-//!    for newlines, enabling proper ANSI escape sequence parsing
+//!    for newlines, enabling proper [`ANSI`] escape sequence parsing
 //!
-//! **Controller vs Controlled**: The controller doesn't need raw mode - it's just a bidirectional
-//! pipe for communication. The controlled side is the actual "terminal" that needs proper
-//! settings for the child process to read ANSI sequences correctly.
+//! **Controller vs Controlled**: The controller doesn't need raw mode - it's just a
+//! bidirectional pipe for communication. The controlled side is the actual "terminal"
+//! that needs proper settings for the child process to read [`ANSI`] sequences correctly.
 //!
-//! Without raw mode, the PTY stays in "cooked" mode where:
+//! Without raw mode, the [`PTY`] stays in "cooked" mode where:
 //! - Input waits for line termination (Enter key)
 //! - Control sequences may be interpreted instead of passed through
 //! - [`DirectToAnsiInputDevice`] times out waiting for input that's stuck in buffers
 //!
 //! ## Why This Test Pattern?
 //!
-//! - **Real PTY Environment**: Tests [`DirectToAnsiInputDevice`] with actual PTY, not
-//!   mocks
-//! - **Process Isolation**: Each test run gets fresh PTY resources via process spawning
+//! - **Real [`PTY`] Environment**: Tests [`DirectToAnsiInputDevice`] with actual [`PTY`],
+//!   not mocks
+//! - **Process Isolation**: Each test run gets fresh [`PTY`] resources via process
+//!   spawning
 //! - **Coordinator-Worker Pattern**: Same test function handles both roles via env var
 //! - **Async Validation**: Properly tests tokio async I/O with real terminal input
 //!
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`DirectToAnsiInputDevice`]: crate::direct_to_ansi::DirectToAnsiInputDevice
+//! [`ESC`]: crate::EscSequence
+//! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 
 use crate::{ControlledChild, InputEvent, PtyPair, PtyTestMode,
             core::ansi::{generator::generate_keyboard_sequence,
                          vt_100_terminal_input_parser::ir_event_types::{VT100InputEventIR,
                                                                         VT100KeyCodeIR,
                                                                         VT100KeyModifiersIR}},
-            generate_pty_test,
             tui::terminal_lib_backends::direct_to_ansi::DirectToAnsiInputDevice};
 use std::{io::{BufRead, BufReader, Write},
           time::Duration};
@@ -91,14 +98,19 @@ generate_pty_test! {
     mode: PtyTestMode::Raw,
 }
 
-/// ### Actor 1: PTY Controller (test entry, env var NOT set) - Synchronous code
-/// - Receives PTY pair and child process from macro
-/// - Writes ANSI sequences to PTY controller
+/// ### Actor 1: [`PTY`] Controller (test entry, env var NOT set) - Synchronous code
+/// - Receives [`PTY`] pair and child process from macro
+/// - Writes [`ANSI`] sequences to [`PTY`] controller
 /// - Reads parsed output from controlled's stdout
 /// - Verifies correctness
+///
+/// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+/// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 #[allow(clippy::too_many_lines)]
 fn pty_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
-    /// Helper to generate ANSI bytes from `InputEvent`.
+    /// Helper to generate [`ANSI`] bytes from `InputEvent`.
+    ///
+    /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
     fn generate_test_sequence(desc: &str, event: VT100InputEventIR) -> (&str, Vec<u8>) {
         let bytes = generate_keyboard_sequence(&event)
             .unwrap_or_else(|| panic!("Failed to generate sequence for: {desc}"));
@@ -109,7 +121,10 @@ fn pty_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
 
     // Get writer (to send ANSI sequences to controlled) and reader (to receive
     // parsed events from controlled).
-    let mut writer = pty_pair.controller().take_writer().expect("Failed to get writer");
+    let mut writer = pty_pair
+        .controller()
+        .take_writer()
+        .expect("Failed to get writer");
     let reader = pty_pair
         .controller()
         .try_clone_reader()
@@ -174,7 +189,10 @@ fn pty_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
         ),
     ];
 
-    eprintln!("📝 PTY Controller: Sending {} sequences...", sequences.len());
+    eprintln!(
+        "📝 PTY Controller: Sending {} sequences...",
+        sequences.len()
+    );
 
     // For each test sequence: write ANSI bytes to PTY, read back parsed event, verify
     // correctness.
@@ -239,21 +257,26 @@ fn pty_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
     eprintln!("✅ PTY Controller: Test passed!");
 }
 
-/// ### Actor 2: PTY Controlled (worker process)
+/// ### Actor 2: [`PTY`] Controlled (worker process)
 ///
 /// Runs in the spawned child process when `R3BL_PTY_TEST_CONTROLLED` env var is set.
-/// This process's stdin/stdout are connected to the controlled PTY file descriptor.
+/// This process's stdin/stdout are connected to the controlled [`PTY`] [`file
+/// descriptor`].
 ///
 /// **Critical Steps**:
-/// 1. **Enable Raw Mode**: MUST set the controlled PTY terminal to raw mode to:
+/// 1. **Enable Raw Mode**: MUST set the controlled [`PTY`] terminal to raw mode to:
 ///    - Disable line buffering (get bytes immediately)
-///    - Prevent ANSI escape sequence interpretation
+///    - Prevent [`ANSI`] escape sequence interpretation
 ///    - Allow async byte-by-byte reading
 /// 2. **Create Device**: Initialize `DirectToAnsiInputDevice` to read from stdin
-/// 3. **Process Events**: Read and parse ANSI sequences into `InputEvents`
+/// 3. **Process Events**: Read and parse [`ANSI`] sequences into `InputEvents`
 /// 4. **Output Results**: Write parsed events to stdout for master to verify
 ///
 /// This function MUST exit before returning so other tests don't run.
+///
+/// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+/// [`file descriptor`]: https://en.wikipedia.org/wiki/File_descriptor
+/// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 fn pty_controlled_entry_point() -> ! {
     // Print to stdout immediately to confirm controlled is running.
     println!("{CONTROLLED_READY}");

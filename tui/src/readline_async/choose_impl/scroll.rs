@@ -45,7 +45,7 @@
 //!    ╰─────────────────────╯ <- AtAbsoluteBottom
 //! ```
 
-use crate::{ch, fg_green, inline_string, ChUnit, DEVELOPMENT_MODE};
+use crate::{ChUnit, DEVELOPMENT_MODE, ch, fg_green};
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub enum CaretVerticalViewportLocation {
@@ -59,14 +59,16 @@ pub enum CaretVerticalViewportLocation {
     NotFound,
 }
 
-#[must_use] pub fn get_scroll_adjusted_row_index(
+#[must_use]
+pub fn get_scroll_adjusted_row_index(
     raw_caret_row_index: ChUnit,
     scroll_offset_row_index: ChUnit,
 ) -> ChUnit {
     raw_caret_row_index + scroll_offset_row_index
 }
 
-#[must_use] pub fn locate_cursor_in_viewport(
+#[must_use]
+pub fn locate_cursor_in_viewport(
     raw_caret_row_index: ChUnit,
     scroll_offset_row_index: ChUnit,
     display_height: ChUnit,
@@ -92,7 +94,8 @@ pub enum CaretVerticalViewportLocation {
 
     // Note the ordering of the statements below matters.
     if abs_row_index == items_size - 1 {
-        // AtAbsoluteBottom takes precedence over AtAbsoluteTop when there is only one item.
+        // AtAbsoluteBottom takes precedence over AtAbsoluteTop when there is only one
+        // item.
         CaretVerticalViewportLocation::AtAbsoluteBottom
     } else if abs_row_index == ch(0) {
         CaretVerticalViewportLocation::AtAbsoluteTop
@@ -117,9 +120,8 @@ pub enum CaretVerticalViewportLocation {
 
 #[cfg(test)]
 mod tests {
-    use pretty_assertions::assert_eq;
-
     use super::*;
+    use pretty_assertions::assert_eq;
 
     #[test]
     fn test_get_scroll_adjusted_row_index() {

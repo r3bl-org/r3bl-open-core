@@ -21,7 +21,7 @@
 //! that needs to be migrated during the [`crate::ZeroCopyGapBuffer`] transition.
 
 use super::{GCStringOwned, SegStringOwned};
-use crate::{ColIndex, ColWidth, InlineString, InlineVecStr, Seg, ch, join, seg_index,
+use crate::{ColIndex, ColWidth, InlineString, InlineVecStr, Seg, ch, seg_index,
             seg_length, usize, width};
 
 /// Methods to make it easy to work with getting owned string (from slices) at a given

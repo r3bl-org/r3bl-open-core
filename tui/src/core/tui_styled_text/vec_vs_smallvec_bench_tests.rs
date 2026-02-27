@@ -1,8 +1,8 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! ## `SmallVec` vs Vec Benchmark Suite
+//! ## [`SmallVec`] vs Vec Benchmark Suite
 //!
-//! This module benchmarks the performance of `SmallVec` vs Vec for `TuiStyledTexts`
+//! This module benchmarks the performance of [`SmallVec`] vs Vec for `TuiStyledTexts`
 //! to determine the optimal data structure for our use case.
 //!
 //! ## Running the Benchmarks
@@ -19,16 +19,18 @@
 //!
 //! ## Benchmark Categories
 //!
-//! - **Small collections (1-5 items)**: Where `SmallVec` should excel
+//! - **Small collections (1-5 items)**: Where [`SmallVec`] should excel
 //! - **Medium collections (8-20 items)**: Around the threshold
 //! - **Large collections (30-100 items)**: Where Vec might be better
 //! - **Extend operations**: The main performance issue from flamegraph
 //! - **Mixed operations**: Realistic usage patterns
+//!
+//! [`SmallVec`]: https://docs.rs/smallvec/latest/smallvec/
 
 #[cfg(test)]
 mod benchmarks {
     extern crate test;
-    use crate::{TuiStyle, TuiStyledText, tui_styled_text};
+    use crate::{TuiStyle, TuiStyledText};
     use smallvec::SmallVec;
     use test::Bencher;
 

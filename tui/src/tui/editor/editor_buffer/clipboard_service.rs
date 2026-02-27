@@ -1,7 +1,7 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::{ClipboardResult, ClipboardService};
-use crate::{DEBUG_TUI_COPY_PASTE, throws};
+use crate::DEBUG_TUI_COPY_PASTE;
 use copypasta_ext::{copypasta::ClipboardProvider, x11_fork::ClipboardContext};
 
 #[derive(Debug)]

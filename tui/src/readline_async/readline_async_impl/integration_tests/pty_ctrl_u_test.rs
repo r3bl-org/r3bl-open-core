@@ -1,9 +1,14 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{AsyncDebouncedDeadline, ControlledChild, DebouncedState, PtyPair,
-            PtyTestMode, core::test_fixtures::StdoutMock,
-            generate_pty_test,
-            readline_async::readline_async_impl::LineState};
+use crate::{
+    AsyncDebouncedDeadline,
+    ControlledChild,
+    DebouncedState,
+    PtyPair,
+    PtyTestMode,
+    core::test_fixtures::StdoutMock,
+    readline_async::readline_async_impl::LineState,
+};
 use std::{io::{BufRead, BufReader, Write},
           sync::{Arc, Mutex as StdMutex},
           time::Duration};
@@ -25,11 +30,14 @@ const CONTROLLED_READY: &str = "CONTROLLED_READY";
 const LINE_PREFIX: &str = "Line:";
 
 generate_pty_test! {
-    /// PTY-based integration test for Ctrl+U line clearing behavior.
+    /// [`PTY`]-based integration test for Ctrl+U line clearing behavior.
     ///
     /// Validates that Ctrl+U correctly clears from the start of the line to the cursor position.
     ///
-    /// Run with: `cargo test -p r3bl_tui --lib test_pty_ctrl_u -- --nocapture`
+    /// Run with:
+    /// ```bash
+    /// cargo test -p r3bl_tui --lib test_pty_ctrl_u -- --nocapture
+    /// ```
     ///
     /// ## Test Cases
     ///
@@ -53,18 +61,24 @@ generate_pty_test! {
     /// The ([`LineState`]) is checked in the test to make assertions against.
     ///
     /// [`LineState`]: crate::readline_async::readline_async_impl::LineState
+    /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
     test_fn: test_pty_ctrl_u,
     controller: pty_controller_entry_point,
     controlled: pty_controlled_entry_point,
     mode: PtyTestMode::Raw,
 }
 
-/// PTY Controller: Send Ctrl+U sequences and verify line clearing behavior
+/// [`PTY`] Controller: Send Ctrl+U sequences and verify line clearing behavior
+///
+/// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 #[allow(clippy::too_many_lines)]
 fn pty_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
     eprintln!("🚀 PTY Controller: Starting Ctrl+U test...");
 
-    let mut writer = pty_pair.controller().take_writer().expect("Failed to get writer");
+    let mut writer = pty_pair
+        .controller()
+        .take_writer()
+        .expect("Failed to get writer");
     let reader = pty_pair
         .controller()
         .try_clone_reader()
@@ -98,7 +112,9 @@ fn pty_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
                 }
                 if trimmed.contains(CONTROLLED_READY) {
                     controlled_ready_seen = true;
-                    eprintln!("  ✓ Controlled is ready (raw mode enabled, input device created)");
+                    eprintln!(
+                        "  ✓ Controlled is ready (raw mode enabled, input device created)"
+                    );
                     break;
                 }
             }
@@ -138,7 +154,9 @@ fn pty_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
     eprintln!("📝 PTY Controller: Test Case 1 - Ctrl+U with cursor at end...");
 
     // Type "hello world" which naturally leaves cursor at end
-    writer.write_all(b"hello world").expect("Failed to write text");
+    writer
+        .write_all(b"hello world")
+        .expect("Failed to write text");
     writer.flush().expect("Failed to flush");
     std::thread::sleep(Duration::from_millis(200));
 
@@ -153,8 +171,10 @@ fn pty_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
 
     let result = read_line_state();
     eprintln!("  ← After Ctrl+U (cursor at end): {result}");
-    assert_eq!(result, "Line: , Cursor: 0",
-               "Ctrl+U at end should delete entire line");
+    assert_eq!(
+        result, "Line: , Cursor: 0",
+        "Ctrl+U at end should delete entire line"
+    );
 
     // Test Case 2: Ctrl+U with cursor at position 0 (deletes nothing)
     eprintln!("📝 PTY Controller: Test Case 2 - Ctrl+U with cursor at position 0...");
@@ -167,8 +187,10 @@ fn pty_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
 
     let result = read_line_state();
     eprintln!("  ← After Ctrl+U on empty line: {result}");
-    assert_eq!(result, "Line: , Cursor: 0",
-               "Ctrl+U on empty line should delete nothing");
+    assert_eq!(
+        result, "Line: , Cursor: 0",
+        "Ctrl+U on empty line should delete nothing"
+    );
 
     eprintln!("✅ PTY Controller: All Ctrl+U test cases passed!");
 
@@ -186,7 +208,9 @@ fn pty_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
     }
 }
 
-/// PTY Controlled: Process readline input and report line state
+/// [`PTY`] Controlled: Process readline input and report line state
+///
+/// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 fn pty_controlled_entry_point() -> ! {
     use crate::direct_to_ansi::DirectToAnsiInputDevice;
 

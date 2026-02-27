@@ -21,6 +21,7 @@
 //!
 //! - [`crate::stack_alloc_types`] - Stack-allocated types for performance-critical paths
 
+#[macro_use]
 pub mod parse_list;
 
 // Re-export.

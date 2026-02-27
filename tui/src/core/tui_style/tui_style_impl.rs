@@ -1,7 +1,6 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 use super::{TuiColor, TuiStyleAttribs, tui_style_attrib};
-use crate::{ChUnit, InlineVecStr, TinyInlineString, ch, join, join_fmt, ok,
-            tiny_inline_string};
+use crate::{ChUnit, InlineVecStr, TinyInlineString, ch};
 use core::fmt::Debug;
 use std::{fmt::{Display, Formatter},
           ops::{Add, AddAssign, Deref}};
@@ -49,7 +48,10 @@ use std::{fmt::{Display, Formatter},
 /// ```
 ///
 /// Here are the [crossterm docs on
-/// attributes](https://docs.rs/crossterm/0.25.0/crossterm/style/enum.Attribute.html)
+/// attributes]
+///
+/// [crossterm docs on
+/// attributes]: https://docs.rs/crossterm/0.25.0/crossterm/style/enum.Attribute.html
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Default)]
 pub struct TuiStyle {
     // XMARK: Use of newtype pattern `Option<T>` instead of `bool`.
@@ -61,7 +63,9 @@ pub struct TuiStyle {
     /// The semantics of this are the same as CSS. The padding is space that is taken up
     /// inside a `FlexBox`. This does not affect the size or position of a `FlexBox`, it
     /// only applies to the contents inside that `FlexBox`.
-    /// - [`FlexBox` docs](https://docs.rs/r3bl_tui/latest/r3bl_tui/tui/layout/flex_box/struct.FlexBox.html).
+    /// - [`FlexBox` docs].
+    ///
+    /// [`FlexBox` docs]: https://docs.rs/r3bl_tui/latest/r3bl_tui/tui/layout/flex_box/struct.FlexBox.html
     pub padding: Option<ChUnit>,
     pub lolcat: Option<tui_style_attrib::Lolcat>,
 }
@@ -369,8 +373,6 @@ mod style_impl {
 #[cfg(test)]
 mod test_style {
     use super::*;
-    use crate::{assert_eq2, tui_color};
-
     #[test]
     fn test_all_fields_in_style() {
         let attribs = TuiStyleAttribs {

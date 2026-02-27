@@ -2,14 +2,14 @@
 
 // cspell:words Homet Min End
 
-//! Public API for ANSI/VT sequence processing.
+//! Public API for [`ANSI`]/VT sequence processing.
 //!
 //! # Entry Point
 //!
-//! **[`apply_ansi_bytes`]** is the main entry point for processing ANSI sequences from
-//! PTY output. This method is called by the PTY multiplexer after receiving bytes from a
-//! child process (like vim, bash, etc.) and updates the [`OffscreenBuffer`]'s display
-//! content, cursor position, and text styles accordingly.
+//! **[`apply_ansi_bytes`]** is the main entry point for processing [`ANSI`] sequences
+//! from [`PTY`] output. This method is called by the [`PTY`] multiplexer after receiving
+//! bytes from a child process (like vim, bash, etc.) and updates the
+//! [`OffscreenBuffer`]'s display content, cursor position, and text styles accordingly.
 //!
 //! ```rust
 //! use r3bl_tui::{*, height, width};
@@ -26,23 +26,23 @@
 //!
 //! # Returns
 //!
-//! OSC events (window titles, etc.) and DSR responses (terminal status queries).
+//! [`OSC`] events (window titles, etc.) and [`DSR`] responses (terminal status queries).
 //!
 //! For implementation details, architecture patterns, and testing strategy, see the
 //! the architecture and testing strategy which covers the shim → impl → test design
 //! pattern.
 //!
 //!
-//! # ANSI Sequence Types from PTY Output
+//! # [`ANSI`] Sequence Types from [`PTY`] Output
 //!
-//! There are three categories of escape sequences: **`CSI`**, **`OSC`**, and direct
-//! **`ESC`**. These are the fundamental commands a terminal uses to display and control
+//! There are three categories of escape sequences: **[`CSI`]**, **[`OSC`]**, and direct
+//! **[`ESC`]**. These are the fundamental commands a terminal uses to display and control
 //! text. They differ primarily in their structure, purpose, and the range of commands
 //! they offer.
 //!
-//! ## 1. `CSI` Sequences (Control Sequence Introducer)
+//! ## 1. [`CSI`] Sequences (Control Sequence Introducer)
 //!
-//! `CSI` sequences, which begin with `ESC [`, are the most common and versatile type of
+//! [`CSI`] sequences, which begin with `ESC [`, are the most common and versatile type of
 //! escape sequence. They are used for a wide variety of terminal operations, mainly
 //! related to **cursor movement**, **text formatting**, and **screen manipulation**. The
 //! structure `ESC [ param ; param letter` makes them highly flexible. The parameters are
@@ -53,12 +53,12 @@
 //! * `ESC [1;2H` moves the cursor to row 1, column 2.
 //! * `ESC [2J` clears the entire screen.
 //!
-//! `vte` spends most of its time parsing these sequences because they are responsible for
-//! the majority of what you see on a terminal screen.
+//! [`vte`] spends most of its time parsing these sequences because they are responsible
+//! for the majority of what you see on a terminal screen.
 //!
-//! ## 2. `OSC` Sequences (Operating System Command)
+//! ## 2. [`OSC`] Sequences (Operating System Command)
 //!
-//! `OSC` sequences, which start with `ESC ]`, are used for non-display commands that
+//! [`OSC`] sequences, which start with `ESC ]`, are used for non-display commands that
 //! interact with the terminal emulator itself or the operating system. They are typically
 //! used for tasks that don't involve drawing characters on the screen. The structure is
 //! `ESC ] number ; text ST`, where `ST` is the string terminator (either `ESC \` or
@@ -71,69 +71,80 @@
 //! text output, such as setting the title of a shell session to reflect the current
 //! working directory.
 //!
-//! ## 3. Direct `ESC` Sequences (Single-Character Commands)
+//! ## 3. Direct [`ESC`] Sequences (Single-Character Commands)
 //!
-//! Direct escape sequences are simpler, single-character commands that start with `ESC`
-//! and are followed by a single character. They predate `CSI` and `OSC` sequences and are
-//! generally used for more fundamental or legacy terminal functions. Unlike `CSI` and
-//! `OSC`, they don't have a parameter-based structure, making them less flexible but very
-//! fast to parse. Examples include:
+//! Direct escape sequences are simpler, single-character commands that start with [`ESC`]
+//! and are followed by a single character. They predate [`CSI`] and [`OSC`] sequences and
+//! are generally used for more fundamental or legacy terminal functions. Unlike [`CSI`]
+//! and [`OSC`], they don't have a parameter-based structure, making them less flexible
+//! but very fast to parse. Examples include:
 //!
 //! * `ESC 7` saves the current cursor position and attributes.
 //! * `ESC 8` restores the cursor position and attributes.
 //! * `ESC c` performs a hard reset of the terminal to its initial state.
 //!
 //! The simplicity of these commands means they are often used for quick, common tasks.
-//! They are also used to switch character sets (e.g., from ASCII to a graphics set), a
-//! feature that's less common in modern applications but still important for
+//! They are also used to switch character sets (e.g., from [`ASCII`] to a graphics set),
+//! a feature that's less common in modern applications but still important for
 //! compatibility.
 //!
-//! ## Evolution and Overlap Between `ESC` and `CSI`
+//! ## Evolution and Overlap Between [`ESC`] and [`CSI`]
 //!
-//! There is significant functional overlap between `ESC` and `CSI` sequences, largely due
-//! to the evolutionary history of terminal control:
+//! There is significant functional overlap between [`ESC`] and [`CSI`] sequences, largely
+//! due to the evolutionary history of terminal control:
 //!
-//! **`ESC` sequences came first**: They were the original, simple terminal control codes
-//! used in early terminals like the [`VT-100`]. Each `ESC` sequence does one specific thing
-//! without parameters. For example, `ESC D` moves the cursor down exactly one line.
+//! **[`ESC`] sequences came first**: They were the original, simple terminal control
+//! codes used in early terminals like the [`VT-100`]. Each [`ESC`] sequence does one
+//! specific thing without parameters. For example, `ESC D` moves the cursor down exactly
+//! one line.
 //!
-//! **`CSI` sequences evolved later**: As terminals became more sophisticated, the need
-//! for parameterized control became apparent. `CSI` sequences (`ESC [`) were introduced
-//! to provide the same functionality with much greater flexibility. For example, `ESC
-//! [5B` moves the cursor down 5 lines, and `ESC [31m` sets the foreground color to red.
+//! **[`CSI`] sequences evolved later**: As terminals became more sophisticated, the need
+//! for parameterized control became apparent. [`CSI`] sequences (`ESC [`) were introduced
+//! to provide the same functionality with much greater flexibility. For example, `[`ESC`]
+//! [5B` moves the cursor down 5 lines, and `[`ESC`] [31m` sets the foreground color to
+//! red.
 //!
 //! **Why both exist**: Modern terminals support both for backward compatibility. Many
 //! operations can be performed using either approach:
 //!
-//! | Operation               | `ESC` Sequence | `CSI` Sequence | Notes                             |
+//! | Operation               | [`ESC`] Sequence | [`CSI`] Sequence | Notes                             |
 //! | ----------------------- | -------------- | -------------- | --------------------------------- |
 //! | Save cursor             | `ESC 7`        | `ESC [s`       | Both work identically             |
 //! | Restore cursor          | `ESC 8`        | `ESC [u`       | Both work identically             |
-//! | Move cursor down 1 line | `ESC D`        | `ESC [1B`      | `CSI` version can take parameters |
-//! | Move cursor up 1 line   | `ESC M`        | `ESC [1A`      | `CSI` version can take parameters |
+//! | Move cursor down 1 line | `ESC D`        | `ESC [1B`      | [`CSI`] version can take parameters |
+//! | Move cursor up 1 line   | `ESC M`        | `ESC [1A`      | [`CSI`] version can take parameters |
 //!
 //! This overlap is demonstrated in the test suite: the cursor operations tests contain
 //! both `test_csi_save_restore_cursor` and `test_esc_save_restore_cursor`, showing both
 //! approaches work identically.
 //!
-//! **Modern practice**: New applications typically use `CSI` sequences for their
-//! flexibility, while `ESC` sequences remain for compatibility and simple operations that
-//! don't need parameters.
+//! **Modern practice**: New applications typically use [`CSI`] sequences for their
+//! flexibility, while [`ESC`] sequences remain for compatibility and simple operations
+//! that don't need parameters.
 //!
-//! [`OffscreenBuffer`]: crate::OffscreenBuffer
-//! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`apply_ansi_bytes`]: crate::OffscreenBuffer::apply_ansi_bytes
+//! [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
+//! [`CSI`]: crate::CsiSequence
+//! [`DSR`]: crate::DsrSequence
+//! [`ESC`]: crate::EscSequence
+//! [`OffscreenBuffer`]: crate::OffscreenBuffer
+//! [`OSC`]: crate::osc_codes::OscSequence
+//! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
+//! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+//! [`vte`]: https://docs.rs/vte
 
 use crate::{DsrRequestFromPtyEvent, OffscreenBuffer, core::osc::OscEvent};
 use std::mem::take;
 
-/// Terminal state context for ANSI sequence processing.
+/// Terminal state context for [`ANSI`] sequence processing.
 ///
 /// This performer is created by [`OffscreenBuffer::apply_ansi_bytes`] and passed to the
-/// [`VTE`] [`Parser`] implementation. It provides direct access to persistent terminal state
-/// stored in the buffer's [`OffscreenBuffer::ansi_parser_support`] field. All state is
-/// stored directly in the buffer and persisted between performer instances.
+/// [`VTE`] [`Parser`] implementation. It provides direct access to persistent terminal
+/// state stored in the buffer's [`OffscreenBuffer::ansi_parser_support`] field. All state
+/// is stored directly in the buffer and persisted between performer instances.
 ///
+/// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 /// [`Parser`]: vte::Parser
 /// [`VTE`]: mod@vte
 #[derive(Debug)]
@@ -168,9 +179,11 @@ impl<'a> AnsiToOfsBufPerformer<'a> {
     }
 }
 
-/// Public API to process ANSI/VT sequences and apply them to an [`OffscreenBuffer`].
+/// Public API to process [`ANSI`]/VT sequences and apply them to an [`OffscreenBuffer`].
+///
+/// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 impl OffscreenBuffer {
-    /// Process & apply ANSI/VT sequences directly to this buffer.
+    /// Process & apply [`ANSI`]/VT sequences directly to this buffer.
     ///
     /// ## Data Flow:
     ///
@@ -190,7 +203,7 @@ impl OffscreenBuffer {
     ///
     /// # Arguments
     ///
-    /// * `bytes` - The byte sequence containing ANSI/VT escape sequences to process
+    /// * `bytes` - The byte sequence containing [`ANSI`]/VT escape sequences to process
     ///
     /// # Returns
     ///
@@ -199,7 +212,7 @@ impl OffscreenBuffer {
     ///   changes, hyperlinks). Returns an empty vector if no [`OSC events`] were
     ///   detected.
     /// - A vector of [`DSR response events`] that need to be sent back to the child
-    ///   process through the PTY input channel.
+    ///   process through the [`PTY`] input channel.
     ///
     /// # Example
     ///
@@ -218,9 +231,9 @@ impl OffscreenBuffer {
     /// The performer is designed to be a transient manipulator that works directly on the
     /// buffer's state. It's created fresh for each batch of bytes to process:
     ///
-    /// - Style attributes (`bold`, `fg_color`, etc.) are `SGR` (Select Graphic Rendition)
-    ///   attributes that apply to characters being written. These styles get baked into
-    ///   the [`PixelChar`] objects in the buffer and stored in the buffer's
+    /// - Style attributes (`bold`, `fg_color`, etc.) are [`SGR`] (Select Graphic
+    ///   Rendition) attributes that apply to characters being written. These styles get
+    ///   baked into the [`PixelChar`] objects in the buffer and stored in the buffer's
     ///   `ansi_parser_support` field for persistence.
     /// - Cursor position is read from and written directly to `buffer.my_pos` during
     ///   processing - no copying or synchronization is needed.
@@ -229,10 +242,13 @@ impl OffscreenBuffer {
     /// - The [`VTE Parser`] (which must maintain state across reads for split sequences)
     ///   is kept separately in the [`Process`] struct.
     ///
+    /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
     /// [`DSR response events`]: crate::DsrRequestFromPtyEvent
     /// [`OSC events`]: crate::core::osc::OscEvent
     /// [`PixelChar`]: crate::PixelChar
     /// [`Process`]: crate::pty_mux::Process
+    /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
+    /// [`SGR`]: crate::SgrCode
     /// [`VTE parser`]: vte::Parser
     #[must_use]
     pub fn apply_ansi_bytes(

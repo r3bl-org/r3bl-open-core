@@ -157,7 +157,7 @@ mod render_cache_impl_block {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{RenderOpCommon, assert_eq2, col,
+    use crate::{RenderOpCommon, col,
                 editor::test_fixtures_editor::mock_real_objects_for_editor, height, row,
                 scr_ofs, width};
 

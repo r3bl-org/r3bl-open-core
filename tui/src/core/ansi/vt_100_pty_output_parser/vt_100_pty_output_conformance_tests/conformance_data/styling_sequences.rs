@@ -1,28 +1,33 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! SGR (Select Graphic Rendition) sequence patterns for text styling and colors.
+//! [`SGR`] (Select Graphic Rendition) sequence patterns for text styling and colors.
 //!
 //! This module provides sequences for all text formatting operations including
-//! colors, attributes (bold, italic, underline), and reset operations.
-//! Demonstrates proper SGR sequence construction and state management.
+//! colors, attributes (bold, italic, underline), and [`reset`] operations.
+//! Demonstrates proper [`SGR`] sequence construction and state management.
 //!
-//! ## [`VT-100`] Specification References
+//! ## [`VT-100` spec] References
 //!
-//! - SGR Codes: [`VT-100` specification] Section 3.3.5
-//! - Color Support: ANSI X3.64 Standard
-//! - Text Attributes: [`VT-100` specification] Appendix C
+//! - [`SGR`] Codes: [`VT-100` spec] Section 3.3.5
+//! - Color Support: [`ANSI`] X3.64 Standard
+//! - Text Attributes: [`VT-100` spec] Appendix C
 //!
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`reset`]: https://man7.org/linux/man-pages/man1/reset.1.html
+//! [`SGR`]: crate::SgrCode
+//! [`VT-100` spec]: https://vt100.net/docs/vt100-ug/chapter3.html
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
-//! [`VT-100` specification]: https://vt100.net/docs/vt100-ug/chapter3.html
 
 use crate::{ANSIBasicColor, SgrCode};
 
 /// Apply bold formatting to text.
 ///
-/// **ANSI Spec**: `ESC [ 1 m` (Bold/Bright)
+/// **[`ANSI`] Spec**: `ESC [ 1 m` (Bold/Bright)
 ///
 /// # Arguments
 /// * `text` - Text to format with bold styling
+///
+/// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 #[must_use]
 pub fn bold_text(text: &str) -> String {
     format!(
@@ -35,12 +40,14 @@ pub fn bold_text(text: &str) -> String {
 
 /// Apply inverse/reverse video formatting to text.
 ///
-/// **ANSI Spec**: `ESC [ 7 m` (Reverse Video)
+/// **[`ANSI`] Spec**: `ESC [ 7 m` (Reverse Video)
 ///
 /// Swaps foreground and background colors, commonly used for highlighting.
 ///
 /// # Arguments
 /// * `text` - Text to format with reverse video
+///
+/// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 #[must_use]
 pub fn reverse_text(text: &str) -> String {
     format!("{}{}{}", SgrCode::Invert, text, SgrCode::ResetInvert)
@@ -48,11 +55,13 @@ pub fn reverse_text(text: &str) -> String {
 
 /// Set foreground color for text.
 ///
-/// **ANSI Spec**: `ESC [ 3 {color} m` (Foreground Color)
+/// **[`ANSI`] Spec**: `ESC [ 3 {color} m` (Foreground Color)
 ///
 /// # Arguments
-/// * `color` - Basic ANSI color to apply
+/// * `color` - Basic [`ANSI`] color to apply
 /// * `text` - Text to colorize
+///
+/// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 #[must_use]
 pub fn colored_text(color: ANSIBasicColor, text: &str) -> String {
     format!(
@@ -65,9 +74,9 @@ pub fn colored_text(color: ANSIBasicColor, text: &str) -> String {
 
 /// Apply multiple formatting attributes to text.
 ///
-/// **ANSI Spec**: Multiple `ESC [ {code} m` sequences
+/// **[`ANSI`] Spec**: Multiple `ESC [ {code} m` sequences
 ///
-/// Demonstrates combining multiple text attributes and proper reset handling.
+/// Demonstrates combining multiple text attributes and proper [`reset`] handling.
 ///
 /// # Arguments
 /// * `text` - Text to format
@@ -75,6 +84,9 @@ pub fn colored_text(color: ANSIBasicColor, text: &str) -> String {
 /// * `italic` - Apply italic formatting
 /// * `fg_color` - Optional foreground color
 /// * `bg_color` - Optional background color
+///
+/// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+/// [`reset`]: https://man7.org/linux/man-pages/man1/reset.1.html
 #[must_use]
 pub fn multi_style_text(
     text: &str,
@@ -135,12 +147,16 @@ pub fn rainbow_text(text: &str) -> String {
     sequence
 }
 
-/// Test SGR partial reset functionality.
+/// Test [`SGR`] partial [`reset`] functionality.
 ///
-/// **ANSI Spec**: `ESC [ 22 m` (Reset Bold/Dim), `ESC [ 23 m` (Reset Italic), etc.
+/// **[`ANSI`] Spec**: `ESC [ 22 m` (Reset Bold/Dim), `ESC [ 23 m` (Reset Italic), etc.
 ///
 /// Demonstrates that partial resets preserve other attributes while
 /// clearing specific ones.
+///
+/// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+/// [`reset`]: https://man7.org/linux/man-pages/man1/reset.1.html
+/// [`SGR`]: crate::SgrCode
 #[must_use]
 pub fn partial_reset_test() -> String {
     format!(

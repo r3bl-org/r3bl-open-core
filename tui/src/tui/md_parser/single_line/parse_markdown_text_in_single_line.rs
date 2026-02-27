@@ -108,7 +108,7 @@ mod inner {
 #[cfg(test)]
 mod tests_parse_block_markdown_text_opt_eol_checkbox_policy {
     use super::*;
-    use crate::{MdLineFragment, assert_eq2};
+    use crate::MdLineFragment;
 
     #[test]
     fn test_parse_block_markdown_text_with_checkbox_policy_empty_string() {
@@ -144,7 +144,7 @@ mod tests_parse_block_markdown_text_opt_eol_checkbox_policy {
 #[cfg(test)]
 mod tests_parse_block_markdown_text_inner {
     use super::*;
-    use crate::{MdLineFragment, assert_eq2};
+    use crate::MdLineFragment;
 
     #[test]
     fn test_parse_block_markdown_text_with_new_line() {
@@ -234,7 +234,7 @@ mod tests_parse_block_markdown_text_inner {
 #[cfg(test)]
 mod tests_parse_block_markdown_text {
     use super::*;
-    use crate::{HyperlinkData, MdLineFragment, assert_eq2};
+    use crate::{HyperlinkData, MdLineFragment};
 
     #[test]
     fn test_parse_block_markdown_text_with_hyperlink_1() {

@@ -4,14 +4,18 @@
 //!
 //! This module provides sequences for all cursor movement operations including
 //! relative movement, absolute positioning, and save/restore functionality.
-//! Both CSI and ESC variants are provided where applicable for compatibility testing.
+//! Both [`CSI`] and [`ESC`] variants are provided where applicable for compatibility
+//! testing.
 //!
-//! ## [`VT-100`] Specification References
+//! ## [`VT-100` spec] References
 //!
 //! - Cursor Movement: [`VT-100`] User Guide Section 3.3.1
 //! - Save/Restore: [`VT-100`] User Guide Section 3.3.3
 //! - Absolute Positioning: [`VT-100`] User Guide Section 3.3.4
 //!
+//! [`CSI`]: crate::CsiSequence
+//! [`ESC`]: crate::EscSequence
+//! [`VT-100` spec]: https://vt100.net/docs/vt100-ug/chapter3.html
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 
 use super::super::test_fixtures_vt_100_ansi_conformance::nz;
@@ -141,44 +145,50 @@ pub fn move_left(count: u16) -> String {
     CsiSequence::CursorBackward(delta).to_string()
 }
 
-/// Save current cursor position and attributes (CSI variant).
+/// Save current cursor position and attributes ([`CSI`] variant).
 ///
 /// **[`VT-100`] Spec**: `ESC [ s` (Save Cursor Position)
 ///
-/// Modern CSI-based save operation. Use with [`restore_cursor_csi()`].
+/// Modern [`CSI`]-based save operation. Use with [`restore_cursor_csi()`].
 ///
+/// [`CSI`]: crate::CsiSequence
 /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 #[must_use]
 pub fn save_cursor_csi() -> String { CsiSequence::SaveCursor.to_string() }
 
-/// Restore previously saved cursor position and attributes (CSI variant).
+/// Restore previously saved cursor position and attributes ([`CSI`] variant).
 ///
 /// **[`VT-100`] Spec**: `ESC [ u` (Restore Cursor Position)
 ///
-/// Modern CSI-based restore operation. Use with [`save_cursor_csi()`].
+/// Modern [`CSI`]-based restore operation. Use with [`save_cursor_csi()`].
 ///
+/// [`CSI`]: crate::CsiSequence
 /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 #[must_use]
 pub fn restore_cursor_csi() -> String { CsiSequence::RestoreCursor.to_string() }
 
-/// Save current cursor position and attributes (ESC variant).
+/// Save current cursor position and attributes ([`ESC`] variant).
 ///
 /// **[`VT-100`] Spec**: `ESC 7` (Save Cursor)
 ///
-/// Legacy ESC-based save operation. Use with [`restore_cursor_esc()`].
-/// Functionally identical to CSI variant but uses older syntax.
+/// Legacy [`ESC`]-based save operation. Use with [`restore_cursor_esc()`].
+/// Functionally identical to [`CSI`] variant but uses older syntax.
 ///
+/// [`CSI`]: crate::CsiSequence
+/// [`ESC`]: crate::EscSequence
 /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 #[must_use]
 pub fn save_cursor_esc() -> String { EscSequence::SaveCursor.to_string() }
 
-/// Restore previously saved cursor position and attributes (ESC variant).
+/// Restore previously saved cursor position and attributes ([`ESC`] variant).
 ///
 /// **[`VT-100`] Spec**: `ESC 8` (Restore Cursor)
 ///
-/// Legacy ESC-based restore operation. Use with [`save_cursor_esc()`].
-/// Functionally identical to CSI variant but uses older syntax.
+/// Legacy [`ESC`]-based restore operation. Use with [`save_cursor_esc()`].
+/// Functionally identical to [`CSI`] variant but uses older syntax.
 ///
+/// [`CSI`]: crate::CsiSequence
+/// [`ESC`]: crate::EscSequence
 /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 #[must_use]
 pub fn restore_cursor_esc() -> String { EscSequence::RestoreCursor.to_string() }
@@ -191,7 +201,10 @@ pub fn restore_cursor_esc() -> String { EscSequence::RestoreCursor.to_string() }
 ///
 /// # Arguments
 /// * `operation` - Sequence to execute while cursor is saved
-/// * `use_esc` - If true, use ESC 7/8; if false, use CSI s/u
+/// * `use_esc` - If true, use [`ESC`] 7/8; if false, use [`CSI`] s/u
+///
+/// [`CSI`]: crate::CsiSequence
+/// [`ESC`]: crate::EscSequence
 #[must_use]
 pub fn save_do_restore(operation: &str, use_esc: bool) -> String {
     if use_esc {

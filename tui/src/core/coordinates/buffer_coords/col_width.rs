@@ -1,7 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::ColIndex;
-use crate::{ChUnit, generate_length_type_impl};
+use crate::ChUnit;
 use std::hash::Hash;
 
 /// [`ColWidth`] is column count, i.e., the number of columns that a UI component
@@ -20,7 +20,6 @@ use std::hash::Hash;
 /// [`LengthOps::convert_to_index()`] and apply whatever logic makes sense for your use
 /// case.
 ///
-/// [`LengthOps::convert_to_index()`]: crate::LengthOps::convert_to_index
 ///
 /// # Examples
 /// ```
@@ -29,8 +28,9 @@ use std::hash::Hash;
 /// let width = ColWidth::new(5);
 /// ```
 ///
-/// [`ColWidth`]: crate::ColWidth
 /// [`ColIndex`]: crate::ColIndex
+/// [`ColWidth`]: crate::ColWidth
+/// [`LengthOps::convert_to_index()`]: crate::LengthOps::convert_to_index
 /// [`Size`]: crate::Size
 #[derive(Copy, Clone, PartialEq, PartialOrd, Ord, Eq, Hash, Default)]
 pub struct ColWidth(pub ChUnit);

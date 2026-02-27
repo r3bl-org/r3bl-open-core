@@ -223,8 +223,6 @@ mod deref_deref_mut_impl {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::inline_vec;
-
     #[test]
     fn test_use_with_choose() {
         fn choose(arg: impl Into<ItemsOwned>) { let _items: ItemsOwned = arg.into(); }

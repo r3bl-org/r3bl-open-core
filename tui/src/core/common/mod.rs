@@ -1,11 +1,14 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 // Attach sources.
+#[macro_use]
+pub mod telemetry;
+#[macro_use]
+pub mod fast_stringify;
 pub mod common_atomic;
 pub mod common_enums;
 pub mod common_math;
 pub mod common_result_and_error;
-pub mod fast_stringify;
 pub mod get_mem_size;
 pub mod lru_cache;
 pub mod memoized_value;
@@ -16,7 +19,6 @@ pub mod ring_buffer;
 pub mod ring_buffer_heap;
 pub mod ring_buffer_stack;
 pub mod string_repeat_cache;
-pub mod telemetry;
 pub mod time_duration;
 
 // Re-export.

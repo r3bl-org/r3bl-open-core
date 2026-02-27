@@ -1,15 +1,17 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! This module defines the **intermediate representation (IR) types** for VT-100
+//! This module defines the **intermediate representation (IR) types** for [`VT-100`]
 //! terminal input parsing. See [`VT100InputEventIR`] for architecture details and
 //! documentation.
+//!
+//! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 
 use crate::{ColWidth, RowHeight, TermPos, terminal_io::KeyState};
 
-/// Internal protocol event from VT-100 parsing.
+/// Internal protocol event from [`VT-100`] parsing.
 ///
 /// This is the **intermediate representation (IR)** - the output of all parsers in this
-/// module. These types represent the protocol layer between raw ANSI bytes and
+/// module. These types represent the protocol layer between raw [`ANSI`] bytes and
 /// application-facing canonical types.
 ///
 /// ## Where This Type Fits in the Architecture
@@ -48,14 +50,15 @@ use crate::{ColWidth, RowHeight, TermPos, terminal_io::KeyState};
 ///   protocols change. If we add Windows Console API or another backend later, we can
 ///   convert *that* IR to the same [`InputEvent`] without touching application code.
 ///
-/// - Protocol Quirk Absorption - VT-100 has quirks that shouldn't leak to applications.
-///   The IR layer normalizes these quirks during conversion to canonical types:
-///   - VT-100 uses 1-based coordinates, canonical types use 0-based.
-///   - Multiple mouse protocols (`SGR`, `X10`, `RXVT`) with different encodings.
+/// - Protocol Quirk Absorption - [`VT-100`] has quirks that shouldn't leak to
+///   applications. The IR layer normalizes these quirks during conversion to canonical
+///   types:
+///   - [`VT-100`] uses 1-based coordinates, canonical types use 0-based.
+///   - Multiple mouse protocols ([`SGR`], [`X10`], [`RXVT`]) with different encodings.
 ///   - Tab/Enter/Backspace send same bytes as Ctrl+I/Ctrl+M/Ctrl+H.
-///   - `ESC` key and escape sequences (like arrow keys) both start with `0x1B`.
+///   - [`ESC`] key and escape sequences (like arrow keys) both start with `0x1B`.
 ///
-/// - Type Safety - Protocol types use VT-100 nomenclature ([`VT100KeyCodeIR`],
+/// - Type Safety - Protocol types use [`VT-100`] nomenclature ([`VT100KeyCodeIR`],
 ///   [`VT100MouseButtonIR`]), while canonical types use domain-appropriate names
 ///   ([`Key`], [`Button`]). Different types prevent accidental mixing of protocol details
 ///   with domain logic.
@@ -70,19 +73,187 @@ use crate::{ColWidth, RowHeight, TermPos, terminal_io::KeyState};
 /// terminal backend. It is the responsibility of each terminal backend to convert its IR
 /// types to canonical types.
 ///
+/// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+/// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+/// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+/// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+/// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+/// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+/// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+/// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+/// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+/// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+/// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+/// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+/// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+/// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+/// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+/// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+/// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+/// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+/// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+/// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+/// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+/// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+/// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+/// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+/// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+/// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 /// [`Button`]: crate::Button
+/// [`ESC`]: crate::EscSequence
+/// [`ESC`]: crate::EscSequence
+/// [`ESC`]: crate::EscSequence
+/// [`ESC`]: crate::EscSequence
+/// [`ESC`]: crate::EscSequence
+/// [`ESC`]: crate::EscSequence
+/// [`ESC`]: crate::EscSequence
+/// [`ESC`]: crate::EscSequence
+/// [`ESC`]: crate::EscSequence
+/// [`ESC`]: crate::EscSequence
+/// [`ESC`]: crate::EscSequence
+/// [`ESC`]: crate::EscSequence
+/// [`ESC`]: crate::EscSequence
+/// [`ESC`]: crate::EscSequence
+/// [`ESC`]: crate::EscSequence
+/// [`ESC`]: crate::EscSequence
+/// [`ESC`]: crate::EscSequence
+/// [`ESC`]: crate::EscSequence
+/// [`ESC`]: crate::EscSequence
+/// [`ESC`]: crate::EscSequence
+/// [`ESC`]: crate::EscSequence
+/// [`ESC`]: crate::EscSequence
+/// [`ESC`]: crate::EscSequence
+/// [`ESC`]: crate::EscSequence
+/// [`ESC`]: crate::EscSequence
+/// [`ESC`]: crate::EscSequence
 /// [`InputEvent`]: crate::InputEvent
 /// [`Key`]: crate::Key
+/// [`RXVT`]: https://en.wikipedia.org/wiki/Rxvt
+/// [`RXVT`]: https://en.wikipedia.org/wiki/Rxvt
+/// [`RXVT`]: https://en.wikipedia.org/wiki/Rxvt
+/// [`RXVT`]: https://en.wikipedia.org/wiki/Rxvt
+/// [`RXVT`]: https://en.wikipedia.org/wiki/Rxvt
+/// [`RXVT`]: https://en.wikipedia.org/wiki/Rxvt
+/// [`RXVT`]: https://en.wikipedia.org/wiki/Rxvt
+/// [`RXVT`]: https://en.wikipedia.org/wiki/Rxvt
+/// [`RXVT`]: https://en.wikipedia.org/wiki/Rxvt
+/// [`RXVT`]: https://en.wikipedia.org/wiki/Rxvt
+/// [`RXVT`]: https://en.wikipedia.org/wiki/Rxvt
+/// [`RXVT`]: https://en.wikipedia.org/wiki/Rxvt
+/// [`RXVT`]: https://en.wikipedia.org/wiki/Rxvt
+/// [`RXVT`]: https://en.wikipedia.org/wiki/Rxvt
+/// [`RXVT`]: https://en.wikipedia.org/wiki/Rxvt
+/// [`RXVT`]: https://en.wikipedia.org/wiki/Rxvt
+/// [`RXVT`]: https://en.wikipedia.org/wiki/Rxvt
+/// [`RXVT`]: https://en.wikipedia.org/wiki/Rxvt
+/// [`RXVT`]: https://en.wikipedia.org/wiki/Rxvt
+/// [`RXVT`]: https://en.wikipedia.org/wiki/Rxvt
+/// [`RXVT`]: https://en.wikipedia.org/wiki/Rxvt
+/// [`RXVT`]: https://en.wikipedia.org/wiki/Rxvt
+/// [`RXVT`]: https://en.wikipedia.org/wiki/Rxvt
+/// [`RXVT`]: https://en.wikipedia.org/wiki/Rxvt
+/// [`RXVT`]: https://en.wikipedia.org/wiki/Rxvt
+/// [`RXVT`]: https://en.wikipedia.org/wiki/Rxvt
+/// [`RXVT`]: https://en.wikipedia.org/wiki/Rxvt
+/// [`SGR`]: crate::SgrCode
+/// [`SGR`]: crate::SgrCode
+/// [`SGR`]: crate::SgrCode
+/// [`SGR`]: crate::SgrCode
+/// [`SGR`]: crate::SgrCode
+/// [`SGR`]: crate::SgrCode
+/// [`SGR`]: crate::SgrCode
+/// [`SGR`]: crate::SgrCode
+/// [`SGR`]: crate::SgrCode
+/// [`SGR`]: crate::SgrCode
+/// [`SGR`]: crate::SgrCode
+/// [`SGR`]: crate::SgrCode
+/// [`SGR`]: crate::SgrCode
+/// [`SGR`]: crate::SgrCode
+/// [`SGR`]: crate::SgrCode
+/// [`SGR`]: crate::SgrCode
+/// [`SGR`]: crate::SgrCode
+/// [`SGR`]: crate::SgrCode
+/// [`SGR`]: crate::SgrCode
+/// [`SGR`]: crate::SgrCode
+/// [`SGR`]: crate::SgrCode
+/// [`SGR`]: crate::SgrCode
+/// [`SGR`]: crate::SgrCode
+/// [`SGR`]: crate::SgrCode
+/// [`SGR`]: crate::SgrCode
+/// [`SGR`]: crate::SgrCode
+/// [`SGR`]: crate::SgrCode
+/// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+/// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+/// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+/// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+/// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+/// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+/// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+/// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+/// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+/// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+/// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+/// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+/// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+/// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+/// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+/// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+/// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+/// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+/// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+/// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+/// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+/// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+/// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+/// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+/// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+/// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+/// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+/// [`X10`]: https://invisible-island.net/[`xterm`]/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
+/// [`X10`]: https://invisible-island.net/[`xterm`]/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
+/// [`X10`]: https://invisible-island.net/[`xterm`]/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
+/// [`X10`]: https://invisible-island.net/[`xterm`]/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
+/// [`X10`]: https://invisible-island.net/[`xterm`]/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
+/// [`X10`]: https://invisible-island.net/[`xterm`]/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
+/// [`X10`]: https://invisible-island.net/[`xterm`]/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
+/// [`X10`]: https://invisible-island.net/[`xterm`]/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
+/// [`X10`]: https://invisible-island.net/[`xterm`]/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
+/// [`X10`]: https://invisible-island.net/[`xterm`]/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
+/// [`X10`]: https://invisible-island.net/[`xterm`]/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
+/// [`X10`]: https://invisible-island.net/[`xterm`]/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
+/// [`X10`]: https://invisible-island.net/[`xterm`]/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
+/// [`X10`]: https://invisible-island.net/[`xterm`]/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
+/// [`X10`]: https://invisible-island.net/[`xterm`]/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
+/// [`X10`]: https://invisible-island.net/[`xterm`]/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
+/// [`X10`]: https://invisible-island.net/[`xterm`]/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
+/// [`X10`]: https://invisible-island.net/[`xterm`]/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
+/// [`X10`]: https://invisible-island.net/[`xterm`]/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
+/// [`X10`]: https://invisible-island.net/[`xterm`]/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
+/// [`X10`]: https://invisible-island.net/[`xterm`]/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
+/// [`X10`]: https://invisible-island.net/[`xterm`]/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
+/// [`X10`]: https://invisible-island.net/[`xterm`]/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
+/// [`X10`]: https://invisible-island.net/[`xterm`]/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
+/// [`X10`]: https://invisible-island.net/[`xterm`]/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
+/// [`X10`]: https://invisible-island.net/[`xterm`]/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
+/// [`X10`]: https://invisible-island.net/[`xterm`]/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
 /// [`convert_input_event()`]:
 ///     crate::direct_to_ansi::input::protocol_conversion::convert_input_event
+///
+/// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 /// [`direct_to_ansi`]: mod@crate::direct_to_ansi
+/// [`ESC`]: crate::EscSequence
 /// [`ir_event_types`]: mod@super::ir_event_types
 /// [`keyboard`]: mod@super::keyboard
 /// [`mouse`]: mod@super::mouse
 /// [`protocol_conversion`]: mod@crate::direct_to_ansi::input::protocol_conversion
 /// [`router`]: mod@super::router
+/// [`RXVT`]: https://en.wikipedia.org/wiki/Rxvt
+/// [`SGR`]: crate::SgrCode
 /// [`terminal_events`]: mod@super::terminal_events
 /// [`utf8`]: mod@super::utf8
+/// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+/// [`X10`]: https://invisible-island.net/xterm/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
+/// [`xterm`]: https://en.wikipedia.org/wiki/Xterm
 /// [parent module documentation]: mod@super#primary-consumer
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum VT100InputEventIR {

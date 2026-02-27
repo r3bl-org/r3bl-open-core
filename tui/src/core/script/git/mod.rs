@@ -10,9 +10,7 @@
 //! The module follows the pattern from CLAUDE.md with private submodules and public
 //! re-exports to provide a clean, flat API surface.
 
-// Skip rustfmt for rest of file to preserve manual organization
-// https://stackoverflow.com/a/75910283/2085356
-#![cfg_attr(rustfmt, rustfmt_skip)]
+#![rustfmt::skip]
 
 // Private modules (hide internal structure).
 mod types;
@@ -28,4 +26,4 @@ pub use file_ops::*;
 
 // Test fixtures module used by inner test modules in each of these files.
 #[cfg(test)]
-pub mod test_fixtures;
+pub mod git_test_fixtures;

@@ -1,19 +1,28 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{AsyncDebouncedDeadline, ControlledChild, DebouncedState, PtyPair,
-            PtyTestMode, core::test_fixtures::StdoutMock, generate_pty_test,
-            readline_async::readline_async_impl::LineState};
+use crate::{
+    AsyncDebouncedDeadline,
+    ControlledChild,
+    DebouncedState,
+    PtyPair,
+    PtyTestMode,
+    core::test_fixtures::StdoutMock,
+    readline_async::readline_async_impl::LineState,
+};
 use std::{io::{BufRead, BufReader, Write},
           sync::{Arc, Mutex as StdMutex},
           time::Duration};
 
 generate_pty_test! {
-    /// PTY-based integration test for Alt+B/F word navigation.
+    /// [`PTY`]-based integration test for Alt+B/F word navigation.
     ///
     /// Validates that Alt+B (backward) and Alt+F (forward) correctly move the cursor
     /// to word boundaries, providing bash-compatible word navigation.
     ///
-    /// Run with: `cargo test -p r3bl_tui --lib test_pty_alt_navigation -- --nocapture`
+    /// Run with:
+    /// ```bash
+    /// cargo test -p r3bl_tui --lib test_pty_alt_navigation -- --nocapture
+    /// ```
     ///
     /// Tests:
     /// 1. Alt+B: Move backward one word
@@ -24,7 +33,7 @@ generate_pty_test! {
     ///
     /// This test uses a **request-response protocol** between controller and controlled:
     ///
-    /// 1. **Controller sends input** (e.g., "one two three" or ESC sequences)
+    /// 1. **Controller sends input** (e.g., "one two three" or [`ESC`] sequences)
     /// 2. **Controller flushes** and waits ~200ms for controlled to process
     /// 3. **Controller blocks** reading controlled stdout until it sees "Line: ..."
     /// 4. **Controller makes assertion** on the line state
@@ -37,18 +46,25 @@ generate_pty_test! {
     ///
     /// The ([`LineState`]) is checked in the tests to make assertions against.
     ///
+    /// [`ESC`]: crate::EscSequence
     /// [`LineState`]: crate::readline_async::readline_async_impl::LineState
+    /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
     test_fn: test_pty_alt_navigation,
     controller: pty_controller_entry_point,
     controlled: pty_controlled_entry_point,
     mode: PtyTestMode::Raw,
 }
 
-/// PTY Controller: Send Alt+B/F sequences and verify navigation
+/// [`PTY`] Controller: Send Alt+B/F sequences and verify navigation
+///
+/// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 fn pty_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
     eprintln!("🚀 PTY Controller: Starting Alt+B/F test...");
 
-    let mut writer = pty_pair.controller().take_writer().expect("Failed to get writer");
+    let mut writer = pty_pair
+        .controller()
+        .take_writer()
+        .expect("Failed to get writer");
     let reader = pty_pair
         .controller()
         .try_clone_reader()
@@ -168,7 +184,9 @@ fn pty_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
     eprintln!("✅ PTY Controller: Test passed!");
 }
 
-/// PTY Controlled: Process readline input and report line state
+/// [`PTY`] Controlled: Process readline input and report line state
+///
+/// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 fn pty_controlled_entry_point() -> ! {
     use crate::direct_to_ansi::DirectToAnsiInputDevice;
 

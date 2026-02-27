@@ -124,11 +124,11 @@
 //! ```
 //!
 //! The parser handles three tricky cases:
-//! - **`ESC` disambiguation**: The `more` flag indicates if more bytes might be waiting.
-//!   If `read_count == buffer_size`, we wait before deciding a lone `ESC` is the `ESC`
+//! - **[`ESC`] disambiguation**: The `more` flag indicates if more bytes might be waiting.
+//!   If `read_count == buffer_size`, we wait before deciding a lone [`ESC`] is the [`ESC`]
 //!   key.
 //! - **Chunked input**: The buffer accumulates bytes until a complete sequence is parsed.
-//! - **UTF-8**: Multi-byte characters can span multiple reads.
+//! - **[`UTF-8`]**: Multi-byte characters can span multiple reads.
 //!
 //! The channel sends [`ReaderThreadMessage`] variants to the async side:
 //! - [`Event(InputEvent)`] - parsed keyboard/mouse input
@@ -145,10 +145,10 @@
 //! - **Platform abstraction**: [`mio`] uses the optimal syscall per platform ([`epoll`]
 //!   on Linux, [`kqueue`] on macOS/BSD).
 //!
-//! # ESC Detection Limitations
+//! # [`ESC`] Detection Limitations
 //!
-//! Both the `ESC` key and escape sequences (like Up Arrow = `ESC [ A`) start with the
-//! same byte (`1B`). When we read a lone `ESC` byte, is it the `ESC` key or the start of
+//! Both the [`ESC`] key and escape sequences (like Up Arrow = `ESC [ A`) start with the
+//! same byte (`1B`). When we read a lone [`ESC`] byte, is it the [`ESC`] key or the start of
 //! a sequence?
 //!
 //! ## The `more` Flag Heuristic
@@ -157,8 +157,8 @@
 //! idea is that if `read()` fills the entire buffer, more data is probably waiting in
 //! the kernel. So:
 //!
-//! - `more == true` + lone `ESC` → wait (might be start of escape sequence)
-//! - `more == false` + lone `ESC` → emit `ESC` key (no more data waiting)
+//! - `more == true` + lone [`ESC`] → wait (might be start of escape sequence)
+//! - `more == false` + lone [`ESC`] → emit [`ESC`] key (no more data waiting)
 //!
 //! ## Why This is a Heuristic, Not a Guarantee
 //!
@@ -167,62 +167,62 @@
 //!
 //! - **Local terminals**: Escape sequences are typically written atomically, so they
 //!   arrive complete in one `read()`. The heuristic works well.
-//! - **Over [SSH]**: TCP can fragment data arbitrarily. If `ESC` arrives in one packet
-//!   and `[ A` in the next (even microseconds later), we might incorrectly emit `ESC`.
+//! - **Over [SSH]**: TCP can fragment data arbitrarily. If [`ESC`] arrives in one packet
+//!   and `[ A` in the next (even microseconds later), we might incorrectly emit [`ESC`].
 //! - **High latency networks**: The more latency and packet fragmentation, the higher the
-//!   chance of incorrect `ESC` detection.
+//!   chance of incorrect [`ESC`] detection.
 //!
 //! ## Why Not Use a Timeout Like `vim`?
 //!
 //! Vim uses a [100ms `ttimeoutlen` delay] - if no more bytes arrive within 100ms after
-//! `ESC`, it's the `ESC` key. This is more reliable but adds latency to every `ESC`
+//! [`ESC`], it's the [`ESC`] key. This is more reliable but adds latency to every [`ESC`]
 //! keypress.
 //!
 //! We chose the `more` flag heuristic (following [`crossterm`]) because:
-//! - Zero latency for `ESC` key in the common case (local terminal).
+//! - Zero latency for [`ESC`] key in the common case (local terminal).
 //! - Acceptable behavior for most [SSH] connections (TCP usually delivers related bytes
 //!   together). In our testing there were no issues over [SSH].
-//! - The failure mode (`ESC` emitted early) is annoying but not catastrophic.
+//! - The failure mode ([`ESC`] emitted early) is annoying but not catastrophic.
 //!
-//! **Trade-off**: Faster `ESC` response vs. occasional incorrect detection on
+//! **Trade-off**: Faster [`ESC`] response vs. occasional incorrect detection on
 //! high-latency connections.
 //!
-//! [100ms `ttimeoutlen` delay]:
-//!     https://vi.stackexchange.com/questions/24925/usage-of-timeoutlen-and-ttimeoutlen
-//! [Blog post explaining the issue]: https://nathancraddock.com/blog/macos-dev-tty-polling/
-//! [SSH]: https://en.wikipedia.org/wiki/Secure_Shell
-//! [VT100 input parser]: super::stateful_parser::StatefulInputParser
+//! [`crossterm`]: ::crossterm
 //! [`Eof`]: super::types::ReaderThreadMessage::Eof
+//! [`epoll`]: https://man7.org/linux/man-pages/man7/epoll.7.html
 //! [`Error`]: super::types::ReaderThreadMessage::Error
+//! [`ESC`]: crate::EscSequence
 //! [`Event(InputEvent)`]: super::types::ReaderThreadMessage::Event
+//! [`global_input_resource`]: super::global_input_resource
 //! [`INPUT_RESOURCE`]: super::global_input_resource::INPUT_RESOURCE
+//! [`kqueue`]: https://man.freebsd.org/cgi/man.cgi?query=kqueue&sektion=2
 //! [`LazyLock`]: std::sync::LazyLock
+//! [`mio::Poll`]: mio::Poll
+//! [`mio`]: mio
+//! [`poll()`]: https://man7.org/linux/man-pages/man2/poll.2.html
 //! [`ReaderThreadMessage::Eof`]: super::types::ReaderThreadMessage::Eof
 //! [`ReaderThreadMessage::Error`]: super::types::ReaderThreadMessage::Error
 //! [`ReaderThreadMessage::Event`]: super::types::ReaderThreadMessage::Event
 //! [`ReaderThreadMessage::Resize`]: super::types::ReaderThreadMessage::Resize
 //! [`ReaderThreadMessage`]: super::types::ReaderThreadMessage
 //! [`Resize`]: super::types::ReaderThreadMessage::Resize
-//! [`SIGWINCH`]: signal_hook::consts::SIGWINCH
-//! [`SourceFd`]: mio::unix::SourceFd
-//! [`crossterm`]: ::crossterm
-//! [`epoll`]: https://man7.org/linux/man-pages/man7/epoll.7.html
-//! [`global_input_resource`]: super::global_input_resource
-//! [`kqueue`]: https://man.freebsd.org/cgi/man.cgi?query=kqueue&sektion=2
-//! [`mio::Poll`]: mio::Poll
-//! [`mio`]: mio
-//! [`poll()`]: https://man7.org/linux/man-pages/man2/poll.2.html
 //! [`rustix::event::poll()`]: rustix::event::poll
 //! [`select()`]: https://man7.org/linux/man-pages/man2/select.2.html
 //! [`signal_hook_mio`]: signal_hook_mio
+//! [`SIGWINCH`]: signal_hook::consts::SIGWINCH
+//! [`SourceFd`]: mio::unix::SourceFd
 //! [`std::thread`]: std::thread
 //! [`stdin`]: std::io::stdin
 //! [`tokio::io::stdin()`]: tokio::io::stdin
 //! [`tokio::select!`]: tokio::select
 //! [`tokio::sync::broadcast`]: tokio::sync::broadcast
+//! [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
+//! [Blog post explaining the issue]: https://nathancraddock.com/blog/macos-dev-tty-polling/
 //! [crossterm-issue]: https://github.com/crossterm-rs/crossterm/issues/500
 //! [mio-issue]: https://github.com/tokio-rs/mio/issues/1377
 //! [paste state machine]: super::paste_state_machine::PasteCollectionState
+//! [SSH]: https://en.wikipedia.org/wiki/Secure_Shell
+//! [VT100 input parser]: super::stateful_parser::StatefulInputParser
 
 // Skip rustfmt for rest of file.
 // https://stackoverflow.com/a/75910283/2085356

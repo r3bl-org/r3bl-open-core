@@ -17,8 +17,9 @@
 //! # Testing
 //!
 //! Backend compatibility tests live in `backend_compat_tests` (test-only module). These
-//! PTY-based tests verify that [`DirectToAnsiInputDevice`] and [`CrosstermInputDevice`]
-//! produce identical [`InputEvent`] values for the same ANSI byte sequences.
+//! [`PTY`]-based tests verify that [`DirectToAnsiInputDevice`] and
+//! [`CrosstermInputDevice`] produce identical [`InputEvent`] values for the same [`ANSI`]
+//! byte sequences.
 //!
 //! Run the tests with:
 //!
@@ -26,6 +27,7 @@
 //! cargo test -p r3bl_tui --lib test_pty_backend -- --nocapture
 //! ```
 //!
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`CrosstermInputDevice`]: crate::CrosstermInputDevice
 //! [`DirectToAnsiInputDevice`]: crate::direct_to_ansi::DirectToAnsiInputDevice
 //! [`InputDevice`]: crate::InputDevice
@@ -33,15 +35,18 @@
 //! [`KeyPress`]: crate::KeyPress
 //! [`ModifierKeysMask`]: crate::ModifierKeysMask
 //! [`MouseInput`]: crate::MouseInput
+//! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 
 // Private modules (hide internal structure).
+#[macro_use]
+mod key_press;
+#[macro_use]
+mod output_device;
 mod enhanced_keys;
 mod input_device;
 mod input_event;
-mod key_press;
 mod modifier_keys_mask;
 mod mouse_input;
-mod output_device;
 mod shared_writer;
 mod terminal_io_type_aliases;
 

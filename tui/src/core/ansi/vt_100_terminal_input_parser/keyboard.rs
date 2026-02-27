@@ -2,9 +2,9 @@
 
 // cspell:words Bemer finalchar ctrlletter
 
-//! Keyboard input event parsing from ANSI/CSI sequences.
+//! Keyboard input event parsing from [`ANSI`]/[`CSI`] sequences.
 //!
-//! This module handles conversion of raw ANSI escape sequences into keyboard events.
+//! This module handles conversion of raw [`ANSI`] escape sequences into keyboard events.
 //! It provides comprehensive support for [`VT-100`] compatible terminal input while
 //! maintaining clarity about protocol limitations and design decisions.
 //!
@@ -44,10 +44,11 @@
 //! - 📤 **Converted by**: [`convert_input_event()`] in `protocol_conversion.rs` (not this
 //!   module)
 //!
-//! ## `VT-100` Keyboard Input Encoding Explained
+//! ## [`VT-100`] Keyboard Input Encoding Explained
 //!
 //! You might wonder:
-//! - Why does Alt+A send `ESC a` (2 bytes) instead of a CSI sequence like `ESC [1;3a`?
+//! - Why does Alt+A send `ESC a` (2 bytes) instead of a [`CSI`] sequence like `ESC
+//!   [1;3a`?
 //! - Why can't I distinguish Ctrl+Shift+A from Ctrl+A?
 //! - What does Ctrl+Alt+A send?
 //! - Why does F6 send `ESC [17~` instead of `ESC [16~`?
@@ -58,26 +59,26 @@
 //! minimized bytes sent over slow serial lines (a 1970s constraint that became a lasting
 //! design principle) and keeps parsing simple.
 //!
-//! ### [ASCII] (1963)
+//! ### [[`ASCII`]] (1963)
 //!
 //! Uses only 7 bits (0-127). The 8th bit was used for [parity checking] during
 //! serial transmission—a transport-layer mechanism for error detection on noisy lines,
 //! not part of stored character values. A committee including [Bob Bemer] developed
-//! ASCII; he championed the ESC character that made escape sequences possible.
+//! [`ASCII`]; he championed the [`ESC`] character that made escape sequences possible.
 //!
-//! ### [ANSI escape codes] (1979)
+//! ### [[`ANSI`] escape codes] (1979)
 //!
-//! Built on ASCII's ESC character. Standardized as ANSI X3.64 based on DEC's `VT-100`
-//! terminal, these are the `ESC [...` sequences we still use today (e.g., `ESC [15~`
-//! for F5, `ESC [<0;10;20M` for mouse click). Regular keys use single ASCII bytes, Alt
-//! adds one ESC byte, and only complex modifier combinations require multi-byte CSI
-//! sequences.
+//! Built on [`ASCII`]'s [`ESC`] character. Standardized as [`ANSI`] X3.64 based on
+//! [`DEC`]'s [`VT-100`] terminal, these are the `ESC [...` sequences we still use today
+//! (e.g., `ESC [15~` for F5, `ESC [<0;10;20M` for mouse click). Regular keys use single
+//! [`ASCII`] bytes, Alt adds one [`ESC`] byte, and only complex modifier combinations
+//! require multi-byte [`CSI`] sequences.
 //!
-//! ### [UTF-8] (1992)
+//! ### [[`UTF-8`]] (1992)
 //!
-//! Created by [Ken Thompson] and [Rob Pike] at Bell Labs. UTF-8 repurposed the high
+//! Created by [Ken Thompson] and [Rob Pike] at Bell Labs. [`UTF-8`] repurposed the high
 //! bits as structural markers for multi-byte sequences (not parity), while remaining
-//! backwards-compatible with ASCII and ANSI escape codes.
+//! backwards-compatible with [`ASCII`] and [`ANSI`] escape codes.
 //!
 //! ### Timeline
 //!
@@ -102,7 +103,7 @@
 //! ```
 //!
 //! Note: The 8th MSB bit was historically used for parity during serial transmission (a
-//! transport-layer concern, not stored data). UTF-8 repurposed these high bits for
+//! transport-layer concern, not stored data). [`UTF-8`] repurposed these high bits for
 //! multi-byte markers. See [`utf8` encoding] module for encoding details.
 //!
 //! ```text
@@ -151,7 +152,7 @@
 //!
 //! ### How Bitmask Encoding for Modifiers Works
 //!
-//! CSI sequences encode modifiers as a number after the semicolon: `ESC [1;<n>A`.
+//! [`CSI`] sequences encode modifiers as a number after the semicolon: `ESC [1;<n>A`.
 //! The number `n` is calculated by adding the values of pressed modifiers to 1:
 //!
 //! ```text
@@ -172,9 +173,9 @@
 //! | Bytes   | Encoding                    | Modifier       | Reason                          |
 //! | :------ | :-------------------------- | :------------- | :------------------------------ |
 //! | 0       | Implicit in case            | **Shift**      | 'a' vs 'A' already encodes it   |
-//! | 1       | Single byte (`0x00-0x1F`)   | **Ctrl**       | Fits in ASCII control codes     |
-//! | 2       | ESC prefix                  | **Alt**        | No room in ASCII, prepend ESC   |
-//! | 4-8     | CSI parameters              | **Combos**     | Need bitmask encoding           |
+//! | 1       | Single byte (`0x00-0x1F`)   | **Ctrl**       | Fits in [`ASCII`] control codes     |
+//! | 2       | [`ESC`] prefix                  | **Alt**        | No room in [`ASCII`], prepend [`ESC`]   |
+//! | 4-8     | [`CSI`] parameters              | **Combos**     | Need bitmask encoding           |
 //!
 //! - Why does Ctrl+Shift+A = Ctrl+Shift+a = Ctrl+A?
 //!
@@ -195,19 +196,19 @@
 //! - What does Ctrl+Alt+A send?
 //!
 //!   `ESC 0x01` (0x1B 0x01). The terminal applies Ctrl first (masking 'A' → 0x01), then
-//!   Alt prepends ESC.
+//!   Alt prepends [`ESC`].
 //!
 //! ### Function Key Quirks
 //!
-//! **Why does F6 send `ESC [17~` instead of `ESC [16~`?** Historical VT-220 quirk. The
-//! original VT-220 terminal reserved codes 16 and 22 for other purposes, creating gaps:
-//! F5 = 15, F6 = 17 (skips 16); F10 = 21, F11 = 23 (skips 22).
+//! **Why does F6 send `ESC [17~` instead of `ESC [16~`?** Historical [`VT-220`] quirk.
+//! The original [`VT-220`] terminal reserved codes 16 and 22 for other purposes, creating
+//! gaps: F5 = 15, F6 = 17 (skips 16); F10 = 21, F11 = 23 (skips 22).
 //!
 //! ### Protocol Limitations
 //!
 //! **Can I detect when a key is released?** No. [`VT-100`] protocol only sends sequences
 //! on key **press**. Key release events are not part of the protocol. Modern protocols
-//! like `Kitty` keyboard protocol support press/release/repeat events, but we maintain
+//! like [`Kitty`] keyboard protocol support press/release/repeat events, but we maintain
 //! [`VT-100`] compatibility.
 //!
 //! ### Real-World Examples
@@ -225,17 +226,17 @@
 //!
 //! **Why this design survived 50 years:**
 //! - ✅ Works everywhere (bash, vim, emacs, tmux, etc.)
-//! - ✅ Simpler to parse than CSI
+//! - ✅ Simpler to parse than [`CSI`]
 //! - ✅ More efficient (fewer bytes)
-//! - ✅ Unambiguous (ESC always means "next char is modified")
+//! - ✅ Unambiguous ([`ESC`] always means "next char is modified")
 //!
-//! ## CSI vs ESC Prefix: When to Use Each
+//! ## [`CSI`] vs [`ESC`] Prefix: When to Use Each
 //!
-//! **ESC prefix** (this module's `parse_alt_letter()`):
+//! **[`ESC`] prefix** (this module's `parse_alt_letter()`):
 //! - ✅ Alt+printable-character (Alt+B, Alt+F, Alt+3, Alt+.)
 //! - Simple 2-byte sequences: `ESC char`
 //!
-//! **CSI sequences** (this module's `parse_keyboard_sequence()`):
+//! **[`CSI`] sequences** (this module's `parse_keyboard_sequence()`):
 //! - ✅ Special keys with modifiers (Ctrl+Up, Shift+F5)
 //! - ✅ Complex modifier combinations (Ctrl+Alt+Up)
 //! - Parametric sequences: `ESC [ params finalchar`
@@ -248,13 +249,13 @@
 //! This module provides multiple parser functions that are invoked in a **predefined
 //! priority order** by the [`try_parse_input_event`] main routing function.
 //!
-//! ### CSI Sequences (`ESC [`...)
+//! ### [`CSI`] Sequences (`ESC [`...)
 //!
 //! When buffer starts with `ESC [`:
-//! 1. **`parse_keyboard_sequence()`** - Arrow keys, function keys, modified keys with CSI
-//!    format
+//! 1. **`parse_keyboard_sequence()`** - Arrow keys, function keys, modified keys with
+//!    [`CSI`] format
 //!    - Examples: `ESC [A` (Up), `ESC [1;5A` (Ctrl+Up), `ESC [15~` (F5)
-//! 2. **`parse_mouse_sequence()`** - SGR mouse protocol for clicks, drags, scrolling
+//! 2. **`parse_mouse_sequence()`** - [`SGR`] mouse protocol for clicks, drags, scrolling
 //!    - Examples: `ESC [<0;10;20M` (left click), `ESC [<64;10;20M` (scroll up)
 //! 3. **`parse_terminal_event()`** - Window resize, focus gained/lost, paste markers
 //!    - Examples: `ESC [8;24;80t` (resize to 24x80), `ESC [I` (focus gained)
@@ -265,26 +266,26 @@
 //! - **`parse_ss3_sequence()`** - Application mode keys (F1-F4, Home, End, arrows)
 //!   - Examples: `ESC OP` (F1), `ESC OA` (Up in app mode)
 //!
-//! ### `ESC` + Unknown Byte
+//! ### [`ESC`] + Unknown Byte
 //!
-//! When buffer starts with `ESC` + (something other than `[` or `O`):
+//! When buffer starts with [`ESC`] + (something other than `[` or `O`):
 //! - **`parse_alt_letter()`** - Alt+printable character combinations
 //!   - Examples: `ESC b` (Alt+B), `ESC 3` (Alt+3), `ESC ░` (Alt+Space)
 //!
-//! ### Non-ESC Sequences (Regular Input)
+//! ### Non-[`ESC`] Sequences (Regular Input)
 //!
-//! When first byte is not ESC:
-//! 1. **`parse_terminal_event()`** - (Re-attempted for non-ESC input)
-//! 2. **`parse_mouse_sequence()`** - X10/RXVT mouse protocols (legacy)
+//! When first byte is not [`ESC`]:
+//! 1. **`parse_terminal_event()`** - (Re-attempted for non-[`ESC`] input)
+//! 2. **`parse_mouse_sequence()`** - [`X10`]/[`RXVT`] mouse protocols (legacy)
 //! 3. **`parse_control_character()`** - Ctrl+A through Ctrl+Z (`0x00`-`0x1F`)
 //!    - Examples: `0x01` (Ctrl+A), `0x04` (Ctrl+D), `0x17` (Ctrl+W)
-//!    - **Must be tried before UTF-8** because control bytes are valid UTF-8
+//!    - **Must be tried before [`UTF-8`]** because control bytes are valid [`UTF-8`]
 //! 4. **`parse_utf8_text()`** - Regular text input and printable characters
-//!    - Examples: `a`, `ñ`, `日`, multi-byte UTF-8 sequences
+//!    - Examples: `a`, `ñ`, `日`, multi-byte [`UTF-8`] sequences
 //!
-//! **Critical**: Control characters must be parsed before UTF-8 because bytes
-//! `0x00`-`0x1F` are technically valid UTF-8 but represent Ctrl+letter combinations.
-//! Without this priority, Ctrl+A would be misinterpreted as incomplete UTF-8.
+//! **Critical**: Control characters must be parsed before [`UTF-8`] because bytes
+//! `0x00`-`0x1F` are technically valid [`UTF-8`] but represent Ctrl+letter combinations.
+//! Without this priority, Ctrl+A would be misinterpreted as incomplete [`UTF-8`].
 //!
 //! ## Ambiguous Control Character Handling
 //!
@@ -300,7 +301,7 @@
 //! | `0x0A`   | Enter (LF) **OR** Ctrl+J   | **Enter**               | Enter key is essential for apps     |
 //! | `0x0D`   | Enter (CR) **OR** Ctrl+M   | **Enter**               | Enter key is essential for apps     |
 //! | `0x08`   | Backspace **OR** Ctrl+H    | **Backspace**           | Backspace is critical for editing   |
-//! | `0x1B`   | ESC **OR** Ctrl+\[         | **ESC**                 | Standard for vi-mode, modals        |
+//! | `0x1B`   | [`ESC`] **OR** Ctrl+\[         | **[`ESC`]**                 | Standard for vi-mode, modals        |
 //!
 //! ### Why This Matters
 //!
@@ -322,7 +323,7 @@
 //! - **Function Keys**: Send `ESC [n~` or `ESC O P/Q/R/S`
 //!
 //! This is a fundamental [`VT-100`] protocol limitation, not a parser bug. Modern
-//! protocols like `Kitty` keyboard protocol solve this, but we maintain [`VT-100`]
+//! protocols like [`Kitty`] keyboard protocol solve this, but we maintain [`VT-100`]
 //! compatibility.
 //!
 //! ## Comprehensive List of Supported Keyboard Shortcuts
@@ -349,15 +350,15 @@
 //! ### Alt Key Combinations (Alt+Letter)
 //! | Key                           | Sequence            | Format                  |
 //! | :---------------------------- | :------------------ | :---------------------- |
-//! | **Alt+\[a-z\]**               | `ESC` + letter      | Lowercase letters       |
-//! | **Alt+\[A-Z\]**               | `ESC` + letter      | Uppercase letters       |
-//! | **Alt+\[0-9\]**               | `ESC` + digit       | Digits                  |
-//! | **Alt+Space**                 | `ESC` + space       | Space key               |
-//! | **Alt+Backspace**             | `ESC` + `0x7F`      | Delete word             |
-//! | **Alt+\[punctuation\]**       | `ESC` + char        | Any printable ASCII     |
+//! | **Alt+\[a-z\]**               | [`ESC`] + letter      | Lowercase letters       |
+//! | **Alt+\[A-Z\]**               | [`ESC`] + letter      | Uppercase letters       |
+//! | **Alt+\[0-9\]**               | [`ESC`] + digit       | Digits                  |
+//! | **Alt+Space**                 | [`ESC`] + space       | Space key               |
+//! | **Alt+Backspace**             | [`ESC`] + `0x7F`      | Delete word             |
+//! | **Alt+\[punctuation\]**       | [`ESC`] + char        | Any printable [`ASCII`]     |
 //!
 //! ### Arrow Keys
-//! | Key           | CSI Sequence     | SS3 Sequence     | Application Mode     |
+//! | Key           | [`CSI`] Sequence     | SS3 Sequence     | Application Mode     |
 //! | :------------ | :--------------- | :--------------- | :------------------- |
 //! | **Up**        | `ESC [A`         | `ESC O A`        | vim/less/emacs       |
 //! | **Down**      | `ESC [B`         | `ESC O B`        | vim/less/emacs       |
@@ -367,9 +368,9 @@
 //! ### Arrow Keys with Modifiers
 //! | Key                              | Sequence               | Format               |
 //! | :------------------------------- | :--------------------- | :------------------- |
-//! | **Ctrl+Up/Down/Left/Right**      | `ESC [1;5A/B/D/C`      | CSI with modifier    |
-//! | **Alt+Up/Down/Left/Right**       | `ESC [1;3A/B/D/C`      | CSI with modifier    |
-//! | **Shift+Up/Down/Left/Right**     | `ESC [1;2A/B/D/C`      | CSI with modifier    |
+//! | **Ctrl+Up/Down/Left/Right**      | `ESC [1;5A/B/D/C`      | [`CSI`] with modifier    |
+//! | **Alt+Up/Down/Left/Right**       | `ESC [1;3A/B/D/C`      | [`CSI`] with modifier    |
+//! | **Shift+Up/Down/Left/Right**     | `ESC [1;2A/B/D/C`      | [`CSI`] with modifier    |
 //! | **Ctrl+Alt+arrows**              | `ESC [1;7A/B/D/C`      | Combined modifiers   |
 //!
 //! ### Special Navigation Keys
@@ -389,23 +390,23 @@
 //! | **Shift+Tab (`BackTab`)**      | `ESC [Z`      | Backward navigation   |
 //!
 //! ### Function Keys F1-F12
-//! | Key         | CSI Code        | SS3 Sequence     | Notes              |
+//! | Key         | [`CSI`] Code        | SS3 Sequence     | Notes              |
 //! | :---------- | :-------------- | :--------------- | :----------------- |
 //! | **F1**      | `ESC [11~`      | `ESC O P`        | SS3 in app mode    |
 //! | **F2**      | `ESC [12~`      | `ESC O Q`        | SS3 in app mode    |
 //! | **F3**      | `ESC [13~`      | `ESC O R`        | SS3 in app mode    |
 //! | **F4**      | `ESC [14~`      | `ESC O S`        | SS3 in app mode    |
-//! | **F5**      | `ESC [15~`      | -                | CSI only           |
+//! | **F5**      | `ESC [15~`      | -                | [`CSI`] only           |
 //! | **F6**      | `ESC [17~`      | -                | Note: gap at 16    |
-//! | **F7**      | `ESC [18~`      | -                | CSI only           |
-//! | **F8**      | `ESC [19~`      | -                | CSI only           |
-//! | **F9**      | `ESC [20~`      | -                | CSI only           |
-//! | **F10**     | `ESC [21~`      | -                | CSI only           |
+//! | **F7**      | `ESC [18~`      | -                | [`CSI`] only           |
+//! | **F8**      | `ESC [19~`      | -                | [`CSI`] only           |
+//! | **F9**      | `ESC [20~`      | -                | [`CSI`] only           |
+//! | **F10**     | `ESC [21~`      | -                | [`CSI`] only           |
 //! | **F11**     | `ESC [23~`      | -                | Note: gap at 22    |
-//! | **F12**     | `ESC [24~`      | -                | CSI only           |
+//! | **F12**     | `ESC [24~`      | -                | [`CSI`] only           |
 //!
 //! ### Function Keys with Modifiers
-//! Function keys support all modifier combinations using CSI format:
+//! Function keys support all modifier combinations using [`CSI`] format:
 //! - **Shift+F5**: `ESC [15;2~` (modifier = 2)
 //! - **Alt+F5**: `ESC [15;3~` (modifier = 3)
 //! - **Ctrl+F5**: `ESC [15;5~` (modifier = 5)
@@ -446,29 +447,40 @@
 //! F13-F24 are intentionally NOT supported:
 //! - Rarely available on modern keyboards
 //! - No standardized escape sequences across terminals
-//! - Different terminals use different codes (xterm vs linux console vs rxvt)
+//! - Different terminals use different codes ([`xterm`] vs linux console vs [`rxvt`])
 //! - Minimal real-world usage in applications
 //!
-//! [ANSI escape codes]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [ASCII]: https://en.wikipedia.org/wiki/ASCII
-//! [Bob Bemer]: https://en.wikipedia.org/wiki/Bob_Bemer
-//! [Ken Thompson]: https://en.wikipedia.org/wiki/Ken_Thompson
-//! [Rob Pike]: https://en.wikipedia.org/wiki/Rob_Pike
-//! [UTF-8]: https://en.wikipedia.org/wiki/UTF-8
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
+//! [`convert_input_event()`]: crate::direct_to_ansi::input::protocol_conversion::convert_input_event
+//! [`CSI`]: crate::CsiSequence
+//! [`DEC`]: https://en.wikipedia.org/wiki/Digital_Equipment_Corporation
+//! [`ESC`]: crate::EscSequence
+//! [`keyboard`]: mod@super
+//! [`Kitty`]: https://sw.kovidgoyal.net/kitty/
+//! [`mouse`]: mod@super::mouse
+//! [`router`]: mod@super::router
+//! [`RXVT`]: https://en.wikipedia.org/wiki/Rxvt
+//! [`rxvt`]: https://en.wikipedia.org/wiki/Rxvt
+//! [`SGR`]: crate::SgrCode
+//! [`terminal_events`]: mod@super::terminal_events
+//! [`try_parse_input_event`]: super::try_parse_input_event
+//! [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
+//! [`utf8` encoding]: mod@crate::core::ansi::vt_100_terminal_input_parser::utf8#utf-8-encoding-explained
+//! [`utf8`]: mod@super::utf8
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+//! [`VT-220`]: https://en.wikipedia.org/wiki/VT220
 //! [`VT100InputEventIR`]: super::VT100InputEventIR
 //! [`VT100KeyCodeIR`]: super::VT100KeyCodeIR
 //! [`VT100KeyModifiersIR`]: super::VT100KeyModifiersIR
-//! [`convert_input_event()`]: crate::direct_to_ansi::input::protocol_conversion::convert_input_event
-//! [`keyboard`]: mod@super
-//! [`mouse`]: mod@super::mouse
-//! [`router`]: mod@super::router
-//! [`terminal_events`]: mod@super::terminal_events
-//! [`try_parse_input_event`]: super::try_parse_input_event
-//! [`utf8`]: mod@super::utf8
-//! [`utf8` encoding]: mod@crate::core::ansi::vt_100_terminal_input_parser::utf8#utf-8-encoding-explained
+//! [`X10`]: https://invisible-island.net/xterm/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
+//! [`xterm`]: https://en.wikipedia.org/wiki/Xterm
+//! [ANSI escape codes]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [Bob Bemer]: https://en.wikipedia.org/wiki/Bob_Bemer
+//! [Ken Thompson]: https://en.wikipedia.org/wiki/Ken_Thompson
 //! [parent module documentation]: mod@super#primary-consumer
 //! [parity checking]: https://en.wikipedia.org/wiki/Parity_bit
+//! [Rob Pike]: https://en.wikipedia.org/wiki/Rob_Pike
 
 use super::ir_event_types::{VT100InputEventIR, VT100KeyCodeIR, VT100KeyModifiersIR};
 use crate::{ASCII_DEL, ByteOffset, KeyState, byte_offset,
@@ -506,8 +518,9 @@ use crate::{ASCII_DEL, ByteOffset, KeyState, byte_offset,
 
 /// Parse a control character (bytes `0x00`-`0x1F`) and convert to a Ctrl+key event.
 ///
-/// **Dispatch position**: 3rd parser in non-ESC priority. Must be tried before UTF-8 text
-/// because control bytes are valid UTF-8 but represent Ctrl+letter combinations.
+/// **Dispatch position**: 3rd parser in non-[`ESC`] priority. Must be tried before
+/// [`UTF-8`] text because control bytes are valid [`UTF-8`] but represent Ctrl+letter
+/// combinations.
 ///
 /// See module docs [`Parser Dispatch Priority Pipeline`] for dispatch order and [`Control
 /// Key Combinations`] for complete byte mappings. Note: some bytes are treated as
@@ -521,8 +534,11 @@ use crate::{ASCII_DEL, ByteOffset, KeyState, byte_offset,
 ///
 /// [`Ambiguous Control Character Handling`]:
 ///     mod@self#ambiguous-control-character-handling
+///
 /// [`Control Key Combinations`]: mod@self#control-key-combinations-ctrlletter
+/// [`ESC`]: crate::EscSequence
 /// [`Parser Dispatch Priority Pipeline`]: mod@self#parser-dispatch-priority-pipeline
+/// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
 #[must_use]
 pub fn parse_control_character(buffer: &[u8]) -> Option<(VT100InputEventIR, ByteOffset)> {
     // Check minimum length
@@ -618,22 +634,25 @@ pub fn parse_control_character(buffer: &[u8]) -> Option<(VT100InputEventIR, Byte
     ))
 }
 
-/// Parse Alt+key combination (ESC followed by printable ASCII or DEL).
+/// Parse Alt+key combination ([`ESC`] followed by printable [`ASCII`] or DEL).
 ///
-/// **Dispatch position**: Only parser for ESC + unknown byte. See module docs
+/// **Dispatch position**: Only parser for [`ESC`] + unknown byte. See module docs
 /// [`Parser Dispatch Priority Pipeline`] for dispatch order.
 ///
-/// Terminals send Alt+key as ESC (`0x1B`) + key byte. This parses two-byte sequences like
-/// Alt+B → (`0x1B`, `0x62`) or Alt+Backspace → (`0x1B`, `0x7F`).
+/// Terminals send Alt+key as [`ESC`] (`0x1B`) + key byte. This parses two-byte sequences
+/// like Alt+B → (`0x1B`, `0x62`) or Alt+Backspace → (`0x1B`, `0x7F`).
 ///
-/// For design rationale on why Alt uses ESC prefix vs CSI sequences, see module docs
-/// [`Why Alt Uses ESC Prefix`].
+/// For design rationale on why Alt uses [`ESC`] prefix vs [`CSI`] sequences, see module
+/// docs [`Why Alt Uses ESC Prefix`].
 ///
 /// # Returns
 ///
 /// - The parsed Alt+key event and byte count (always 2) on success.
-/// - Nothing if the buffer doesn't start with ESC + printable ASCII or DEL.
+/// - Nothing if the buffer doesn't start with [`ESC`] + printable [`ASCII`] or DEL.
 ///
+/// [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
+/// [`CSI`]: crate::CsiSequence
+/// [`ESC`]: crate::EscSequence
 /// [`Parser Dispatch Priority Pipeline`]: mod@self#parser-dispatch-priority-pipeline
 /// [`Why Alt Uses ESC Prefix`]: mod@self#why-alt-uses-esc-prefix-not-csi
 #[must_use]
@@ -687,9 +706,9 @@ pub fn parse_alt_letter(buffer: &[u8]) -> Option<(VT100InputEventIR, ByteOffset)
     ))
 }
 
-/// Parses a CSI keyboard sequence and returns the parsed event with bytes consumed.
+/// Parses a [`CSI`] keyboard sequence and returns the parsed event with bytes consumed.
 ///
-/// **Dispatch position**: 1st parser for CSI sequences (ESC [). See module docs
+/// **Dispatch position**: 1st parser for [`CSI`] sequences ([`ESC`] [). See module docs
 /// [`Parser Dispatch Priority Pipeline`] for dispatch order. Keyboard sequences are tried
 /// first because they're more common than mouse or terminal events.
 ///
@@ -702,6 +721,8 @@ pub fn parse_alt_letter(buffer: &[u8]) -> Option<(VT100InputEventIR, ByteOffset)
 /// - Nothing if the sequence is incomplete or invalid.
 ///
 /// [`CSI Sequences`]: mod@self#csi-sequences-esc
+/// [`CSI`]: crate::CsiSequence
+/// [`ESC`]: crate::EscSequence
 /// [`Parser Dispatch Priority Pipeline`]: mod@self#parser-dispatch-priority-pipeline
 #[must_use]
 pub fn parse_keyboard_sequence(buffer: &[u8]) -> Option<(VT100InputEventIR, ByteOffset)> {
@@ -727,20 +748,23 @@ pub fn parse_keyboard_sequence(buffer: &[u8]) -> Option<(VT100InputEventIR, Byte
 
 /// Parses an SS3 keyboard sequence and returns the parsed event with bytes consumed.
 ///
-/// **Dispatch position**: Only parser for SS3 sequences (ESC O). See module docs
+/// **Dispatch position**: Only parser for SS3 sequences ([`ESC`] O). See module docs
 /// [`Parser Dispatch Priority Pipeline`] for dispatch order.
 ///
-/// SS3 sequences (ESC O + single char) are used in terminal application mode (vim, less,
-/// emacs) for arrow keys, function keys (F1-F4), Home, End, and numpad keys. Always 3
-/// bytes. See [`SS3 Sequences`] for format details.
+/// SS3 sequences ([`ESC`] O + single char) are used in terminal application mode (vim,
+/// less, emacs) for arrow keys, function keys (F1-F4), Home, End, and numpad keys. Always
+/// 3 bytes. See [`SS3 Sequences`] for format details.
 ///
-/// **Note**: SS3 sequences do NOT support modifiers. Modified arrow keys use CSI format.
+/// **Note**: SS3 sequences do NOT support modifiers. Modified arrow keys use [`CSI`]
+/// format.
 ///
 /// # Returns
 ///
 /// - The parsed SS3 key event and byte count (always 3) on success.
 /// - Nothing if the sequence is incomplete or invalid.
 ///
+/// [`CSI`]: crate::CsiSequence
+/// [`ESC`]: crate::EscSequence
 /// [`Parser Dispatch Priority Pipeline`]: mod@self#parser-dispatch-priority-pipeline
 /// [`SS3 Sequences`]: mod@self#ss3-sequences-esc-o
 #[must_use]
@@ -816,7 +840,9 @@ mod helpers {
         }
     }
 
-    /// Parses single-character CSI sequences like `CSI A` (up arrow)
+    /// Parses single-character [`CSI`] sequences like `CSI A` (up arrow)
+    ///
+    /// [`CSI`]: crate::CsiSequence
     pub(super) fn parse_csi_single_char(final_byte: u8) -> Option<VT100InputEventIR> {
         let code = match final_byte {
             ARROW_UP_FINAL => VT100KeyCodeIR::Up,
@@ -835,7 +861,7 @@ mod helpers {
         })
     }
 
-    /// Parses CSI sequences with numeric parameters into keyboard events.
+    /// Parses [`CSI`] sequences with numeric parameters into keyboard events.
     ///
     /// # Format
     ///
@@ -854,6 +880,8 @@ mod helpers {
     ///
     /// - The parsed keyboard event and byte count on success.
     /// - Nothing if the sequence is invalid or incomplete.
+    ///
+    /// [`CSI`]: crate::CsiSequence
     pub(super) fn parse_csi_parameters(
         buffer: &[u8],
     ) -> Option<(VT100InputEventIR, ByteOffset)> {
@@ -964,7 +992,10 @@ mod helpers {
     /// Parses function keys (F1-F12) and special keys (Insert, Delete, Home, End,
     /// `PageUp`, `PageDown`).
     ///
-    /// Maps ANSI codes to [`VT100KeyCodeIR`]. Called by CSI parameter parser.
+    /// Maps [`ANSI`] codes to [`VT100KeyCodeIR`]. Called by [`CSI`] parameter parser.
+    ///
+    /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+    /// [`CSI`]: crate::CsiSequence
     fn parse_function_or_special_key(
         code: u16,
         modifiers: VT100KeyModifiersIR,
@@ -1001,22 +1032,26 @@ mod helpers {
         })
     }
 
-    /// Extracts modifier parameter from CSI with type safety.
+    /// Extracts modifier parameter from [`CSI`] with type safety.
     ///
-    /// Safe to cast u16→u8 because `VT-100` modifiers are always 1-8.
+    /// Safe to cast u16→u8 because [`VT-100`] modifiers are always 1-8.
+    ///
+    /// [`CSI`]: crate::CsiSequence
+    /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
     #[allow(clippy::cast_possible_truncation)]
     fn extract_modifier_parameter(param: u16) -> u8 {
         debug_assert!(param <= 255, "Modifier parameter out of range: {param}");
         param as u8
     }
 
-    /// Decode CSI modifier parameter (1-8) to [`VT100KeyModifiersIR`].
+    /// Decode [`CSI`] modifier parameter (1-8) to [`VT100KeyModifiersIR`].
     ///
-    /// CSI encoding: param = 1 + bitfield, where bitfield = Shift(1)|Alt(2)|Ctrl(4).
+    /// [`CSI`] encoding: param = 1 + bitfield, where bitfield = Shift(1)|Alt(2)|Ctrl(4).
     /// See module docs [`Modifier Encoding`] for full table.
     ///
     /// [`Modifier Encoding`]
     ///
+    /// [`CSI`]: crate::CsiSequence
     /// [`Modifier Encoding`]: mod@super#why-each-modifier-uses-different-encoding
     fn decode_modifiers(modifier_mask: u8) -> VT100KeyModifiersIR {
         // Subtract offset to get the bitfield (CSI parameter = 1 + bitfield)

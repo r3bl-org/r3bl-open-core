@@ -1,8 +1,7 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use smallvec::smallvec;
-
 use crate::{ColorWheel, ColorWheelConfig, ColorWheelSpeed};
+use smallvec::smallvec;
 
 #[derive(Debug, Clone, Copy)]
 pub enum SpinnerTemplate {

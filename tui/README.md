@@ -169,12 +169,12 @@ in which this crate is meant to exist.
   - [Integration with Syntax Highlighting](#integration-with-syntax-highlighting)
   - [Performance Characteristics](#performance-characteristics)
   - [Learn More](#learn-more-3)
-- [Terminal Multiplexer with VT-100 ANSI
+- [Terminal Multiplexer with `VT-100` ANSI
   Parsing](#terminal-multiplexer-with-vt-100-ansi-parsing)
   - [Core Capabilities](#core-capabilities)
   - [Architecture: The Virtual Terminal
     Pipeline](#architecture-the-virtual-terminal-pipeline)
-  - [VT-100 ANSI Parser Implementation](#vt-100-ansi-parser-implementation)
+  - [`VT-100` ANSI Parser Implementation](#vt-100-ansi-parser-implementation)
   - [Usage Example](#usage-example)
   - [Learn More](#learn-more-4)
 - [Painting the caret](#painting-the-caret)
@@ -455,13 +455,13 @@ cargo test test_sgr_and_character_sets   # text styling & colors
   [`SgrCode`] builders instead of hardcoded escape strings
 - **Real-world scenarios**: Tests realistic terminal applications (vim, emacs, tmux)
   with authentic 80x25 terminal dimensions
-- **`VT-100` specification compliance**: Comprehensive coverage of ANSI escape sequences
+- **[`VT-100` spec] compliance**: Comprehensive coverage of ANSI escape sequences
   with proper bounds checking and edge case handling
 - **Conformance data modules**: Organized sequence patterns for different terminal
   applications and use cases
 
 The conformance tests ensure the ANSI parser correctly processes sequences from real
-terminal applications and maintains compatibility with `VT-100` specifications.
+terminal applications and maintains compatibility with [`VT-100` spec].
 
 #### Markdown Parser Conformance Testing
 
@@ -578,7 +578,7 @@ demonstrates:
 - Proper process coordination and cleanup
 
 **Real-world applications:**
-- **Terminal input parsing**: [`integration_tests`] validates VT-100 input sequences
+- **Terminal input parsing**: [`integration_tests`] validates `VT-100` input sequences
 - **Raw mode behavior**: [`raw_mode_integration_tests`] tests termios configuration
 - **Interactive applications**: Tests readline, editor, and TUI component interactions
 
@@ -2190,7 +2190,7 @@ See:
   Rust](https://developerlife.com/2024/06/28/md-parser-rust-from-r3bl-tui/)
 - [Video: Markdown Parser Deep Dive](https://youtu.be/SbwvSHZRb1E)
 
-## Terminal Multiplexer with VT-100 ANSI Parsing
+## Terminal Multiplexer with `VT-100` ANSI Parsing
 
 The [`PTYMux`] module provides tmux-like functionality with **universal
 compatibility** for all programs: TUI applications, interactive shells, and
@@ -2237,7 +2237,7 @@ that acts as a complete virtual terminal, enabling:
                                  ╰────────────────╯
 ```
 
-#### VT-100 ANSI Parser Implementation
+#### `VT-100` ANSI Parser Implementation
 
 The parser provides comprehensive `VT-100` compliance using the [`vte`] crate (same as
 Alacritty):
@@ -2259,7 +2259,7 @@ Layer 3: TESTS          → Conformance validation (vt_100_test_char_ops)
 This naming convention enables **predictable IDE navigation**: searching for
 `char_ops` shows you the shim, implementation, and tests all together.
 
-**`VT-100` specification compliance**:
+**[`VT-100` spec] compliance**:
 - [`VT-100` User Guide]
 - [ANSI X3.64 Standard]
 - [XTerm Control Sequences]
@@ -2294,10 +2294,10 @@ async fn main() -> miette::Result<()> {
 #### Learn More
 
 For comprehensive implementation details including:
-- Complete VT-100 sequence support matrix
+- Complete `VT-100` sequence support matrix
 - Virtual terminal state management
 - Process lifecycle and resource cleanup
-- VT-100 conformance test suite
+- `VT-100` conformance test suite
 
 See the detailed [`pty_mux` module documentation] and [`vt_100_pty_output_parser`]
 documentation.
@@ -2548,6 +2548,7 @@ feature requests, feel free to add them there too 👍.
 [`TERMINAL_LIB_BACKEND`]: crate::TERMINAL_LIB_BACKEND
 [Architecture Overview]: core::resilient_reactor_thread#architecture-overview
 [ANSI X3.64 Standard]: https://www.ecma-international.org/wp-content/uploads/ECMA-48_5th_edition_june_1991.pdf
+[`VT-100` spec]: https://vt100.net/docs/vt100-ug/chapter3.html
 [`VT-100` User Guide]: https://vt100.net/docs/vt100-ug/
 [XTerm Control Sequences]: https://invisible-island.net/xterm/ctlseqs/ctlseqs.html
 

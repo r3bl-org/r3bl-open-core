@@ -5,6 +5,12 @@
 // ensures test code within the library can also use .unwrap() freely.
 #![cfg_attr(not(test), deny(clippy::unwrap_in_result))]
 
+// XMARK: Prevent rustfmt from reformatting entire file.
+// The `custom_inner_attributes` nightly feature enables `#![rustfmt::skip]` (replacing
+// `#![cfg_attr(rustfmt, rustfmt_skip)]`).
+#![feature(custom_inner_attributes)]
+#![rustfmt::skip]
+
 //! # Why R3BL?
 //!
 //! <img src="https://raw.githubusercontent.com/r3bl-org/r3bl-open-core/main/r3bl-term.svg?raw=true" height="256px">
@@ -123,7 +129,7 @@
 //! };
 //! record.events.push(event.into());
 //! ```
-// https://github.com/rust-lang/rust-clippy
+
 /// This is copied from `r3bl_core` crate's `common_type_aliases.rs` file.
 pub const DEFAULT_TINY_VEC_SIZE: usize = 16;
 /// This is copied from `r3bl_core` create's `common_type_aliases.rs` file.

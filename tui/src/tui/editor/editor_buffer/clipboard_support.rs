@@ -64,7 +64,7 @@ pub fn copy_to_clipboard(
 mod tests {
 
     use crate::{CaretDirection, DEFAULT_SYN_HI_FILE_EXT, EditorBuffer, EditorEvent,
-                SelectionAction, assert_eq2,
+                SelectionAction,
                 clipboard_service::clipboard_test_fixtures::TestClipboard,
                 editor::test_fixtures_editor::mock_real_objects_for_editor};
 

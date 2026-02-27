@@ -1,12 +1,14 @@
 // Copyright (c) 2023-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 //! These are the colors use to highlight the MD document. These are all sensitive to
-//! [`ColorSupport`] constraints. You can find ANSI colors
-//! [here](https://www.ditig.com/256-colors-cheat-sheet).
+//! [`ColorSupport`] constraints. You can find [`ANSI`] colors
+//! [here].
+//!
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [here]: https://www.ditig.com/256-colors-cheat-sheet
 
 use crate::{Ansi256GradientIndex, ColorSupport, ColorWheel, ColorWheelConfig,
-            ColorWheelSpeed, HeadingData, TuiStyle, global_color_support, new_style,
-            tui_color};
+            ColorWheelSpeed, HeadingData, TuiStyle, global_color_support};
 use smallvec::smallvec;
 
 /// This style is for any selected range in the document.

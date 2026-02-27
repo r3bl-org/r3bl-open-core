@@ -8,13 +8,13 @@
 //! - Calling `disable()` when already disabled
 //! - Original settings are preserved across cycles
 
-use crate::{ControlledChild, PtyPair, PtyTestMode, generate_pty_test};
+use crate::{ControlledChild, PtyPair, PtyTestMode};
 use rustix::termios;
 use std::{io::{BufRead, BufReader, Write},
           time::{Duration, Instant}};
 
 generate_pty_test! {
-    /// PTY-based integration test for multiple raw mode cycles.
+    /// [`PTY`]-based integration test for multiple raw mode cycles.
     ///
     /// Verifies that enabling and disabling raw mode multiple times works correctly:
     /// 1. First enable/disable cycle
@@ -26,14 +26,20 @@ generate_pty_test! {
     /// This catches edge cases with the `ORIGINAL_TERMIOS` static and ensures
     /// the implementation is robust for repeated use.
     ///
-    /// Run with: `cargo test -p r3bl_tui --lib test_raw_mode_cycles -- --nocapture`
+    /// Run with:
+    /// ```bash
+    /// cargo test -p r3bl_tui --lib test_raw_mode_cycles -- --nocapture
+    /// ```
+    ///
+    /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
     test_fn: test_raw_mode_cycles,
     controller: pty_controller_entry_point,
     controlled: pty_controlled_entry_point,
     mode: PtyTestMode::Cooked,
 }
 
-/// Controller process: verifies that controlled process completes multiple cycles successfully.
+/// Controller process: verifies that controlled process completes multiple cycles
+/// successfully.
 fn pty_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
     eprintln!("🚀 PTY Controller: Starting multiple cycles test...");
 
@@ -83,7 +89,10 @@ fn pty_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
         }
     }
 
-    assert!(controlled_started, "Controlled process did not start properly");
+    assert!(
+        controlled_started,
+        "Controlled process did not start properly"
+    );
     assert_eq!(cycles_completed, 3, "Expected 3 cycles to complete");
     assert!(test_passed, "Test did not report success");
 
@@ -143,7 +152,10 @@ fn pty_controlled_entry_point() -> ! {
             }
         };
 
-        if raw_termios.local_modes.contains(rustix::termios::LocalModes::ICANON) {
+        if raw_termios
+            .local_modes
+            .contains(rustix::termios::LocalModes::ICANON)
+        {
             eprintln!("⚠️  Controlled: ICANON still on in cycle {cycle}");
             println!("FAILED: Raw mode not properly enabled in cycle {cycle}");
             std::io::stdout().flush().expect("Failed to flush");
@@ -164,7 +176,9 @@ fn pty_controlled_entry_point() -> ! {
         let restored_termios = match termios::tcgetattr(&stdin) {
             Ok(t) => t,
             Err(e) => {
-                eprintln!("⚠️  Controlled: Failed to get termios after restore in cycle {cycle}: {e}");
+                eprintln!(
+                    "⚠️  Controlled: Failed to get termios after restore in cycle {cycle}: {e}"
+                );
                 println!("FAILED: Could not read termios after restore in cycle {cycle}");
                 std::io::stdout().flush().expect("Failed to flush");
                 std::process::exit(1);

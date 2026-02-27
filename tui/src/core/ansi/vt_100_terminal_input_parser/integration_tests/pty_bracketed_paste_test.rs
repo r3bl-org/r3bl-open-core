@@ -1,30 +1,35 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! PTY-based integration test for bracketed paste text collection.
+//! [`PTY`]-based integration test for bracketed paste text collection.
 //!
 //! Validates that [`DirectToAnsiInputDevice`] correctly collects text between
 //! bracketed paste markers (`ESC [200~` ... `ESC [201~`) and emits a single
 //! [`InputEvent::BracketedPaste`] with the complete text.
 //!
-//! Run with: `cargo test -p r3bl_tui --lib test_pty_bracketed_paste -- --nocapture`
+//! Run with:
+//! ```bash
+//! cargo test -p r3bl_tui --lib test_pty_bracketed_paste -- --nocapture
+//! ```
 //!
 //! ## Test Cases
 //!
-//! - Simple ASCII paste: "Hello"
+//! - Simple [`ASCII`] paste: "Hello"
 //! - Multiline paste with newlines preserved
-//! - UTF-8 paste with multi-byte characters
+//! - [`UTF-8`] paste with multi-byte characters
 //! - Empty paste (Start immediately followed by End)
 //!
 //! Uses the coordinator-worker pattern with two processes.
 //!
+//! [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
 //! [`DirectToAnsiInputDevice`]: crate::direct_to_ansi::DirectToAnsiInputDevice
 //! [`InputEvent::BracketedPaste`]: crate::InputEvent::BracketedPaste
+//! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
+//! [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
 
 use crate::{ControlledChild, InputEvent, PtyPair, PtyTestMode,
             core::ansi::{generator::generate_keyboard_sequence,
                          vt_100_terminal_input_parser::ir_event_types::{VT100InputEventIR,
                                                                         VT100PasteModeIR}},
-            generate_pty_test,
             tui::terminal_lib_backends::direct_to_ansi::DirectToAnsiInputDevice};
 use std::{io::{BufRead, BufReader, Write},
           time::Duration};
@@ -41,14 +46,19 @@ generate_pty_test! {
     mode: PtyTestMode::Raw,
 }
 
-/// PTY Controller: Send bracketed paste sequences and verify collection
+/// [`PTY`] Controller: Send bracketed paste sequences and verify collection
+///
+/// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 #[allow(clippy::too_many_lines)]
 fn pty_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
     /// Helper to build a complete bracketed paste sequence from text.
     ///
     /// Returns (description, byte sequence) tuple.
-    /// Generates: Start marker + UTF-8 text bytes + End marker.
-    /// (Regular characters are raw UTF-8 bytes, not ANSI escape sequences)
+    /// Generates: Start marker + [`UTF-8`] text bytes + End marker.
+    /// (Regular characters are raw [`UTF-8`] bytes, not [`ANSI`] escape sequences)
+    ///
+    /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+    /// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
     fn generate_paste_test_sequence<'a>(desc: &'a str, text: &str) -> (&'a str, Vec<u8>) {
         let mut bytes = Vec::new();
 
@@ -73,7 +83,10 @@ fn pty_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
 
     eprintln!("🚀 PTY Controller: Starting bracketed paste test...");
 
-    let mut writer = pty_pair.controller().take_writer().expect("Failed to get writer");
+    let mut writer = pty_pair
+        .controller()
+        .take_writer()
+        .expect("Failed to get writer");
     let reader = pty_pair
         .controller()
         .try_clone_reader()
@@ -182,7 +195,9 @@ fn pty_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
     eprintln!("✅ PTY Controller: Test passed!");
 }
 
-/// PTY Controlled: Read and parse bracketed paste events
+/// [`PTY`] Controlled: Read and parse bracketed paste events
+///
+/// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 fn pty_controlled_entry_point() -> ! {
     println!("{CONTROLLED_READY}");
     std::io::stdout().flush().expect("Failed to flush");

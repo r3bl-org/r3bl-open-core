@@ -2,23 +2,23 @@
 
 // cspell:words tuicolor colortarget
 
-//! Extended color sequence parsing for SGR parameters.
+//! Extended color sequence parsing for [`SGR`] parameters.
 //!
 //! This module provides type-safe parsing of extended color sequences used in
 //! [`VT-100`]-compliant terminal emulators. These sequences enable 256-color palette
-//! support and true RGB colors, going beyond the basic 16 ANSI colors.
+//! support and true RGB colors, going beyond the basic 16 [`ANSI`] colors.
 //!
 //! # Architecture Note
 //!
-//! **SGR (Select Graphic Rendition) is a subset of CSI sequences**, not a separate
-//! protocol. All SGR sequences:
-//! - Begin with the CSI introducer `ESC [`
+//! **[`SGR`] (Select Graphic Rendition) is a subset of [`CSI`] sequences**, not a
+//! separate protocol. All [`SGR`] sequences:
+//! - Begin with the [`CSI`] introducer `ESC [`
 //! - Contain parameters for text attributes or colors
 //! - End with the 'm' character ([`SGR_SET_GRAPHICS`])
 //!
-//! This module lives in the `csi_codes` parent directory because SGR is conceptually part
-//! of the larger CSI protocol family. The [`SgrColorSequence`] type specifically handles
-//! the extended color subset of SGR (256-color and RGB modes).
+//! This module lives in the `csi_codes` parent directory because [`SGR`] is conceptually
+//! part of the larger [`CSI`] protocol family. The [`SgrColorSequence`] type specifically
+//! handles the extended color subset of [`SGR`] (256-color and RGB modes).
 //!
 //! # Color Sequence Formats
 //!
@@ -84,11 +84,14 @@
 //! }
 //! ```
 //!
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`CSI`]: crate::CsiSequence
+//! [`extract_nth_many_raw()`]: crate::ParamsExt::extract_nth_many_raw
 //! [`ParamsExt`]: crate::ParamsExt
 //! [`SGR_SET_GRAPHICS`]: crate::core::ansi::constants::SGR_SET_GRAPHICS
+//! [`SGR`]: crate::SgrCode
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 //! [`VTE`]: mod@vte
-//! [`extract_nth_many_raw()`]: crate::ParamsExt::extract_nth_many_raw
 
 use crate::{AnsiValue, RgbValue, TuiColor,
             core::{ansi::constants::{CSI_START, CSI_SUB_PARAM_SEPARATOR,
@@ -96,7 +99,6 @@ use crate::{AnsiValue, RgbValue, TuiColor,
                                      SGR_COLOR_MODE_RGB, SGR_FG_EXTENDED,
                                      SGR_SET_GRAPHICS},
                    common::fast_stringify::{BufTextStorage, FastStringify}},
-            generate_impl_display_for_fast_stringify,
             stack_alloc_types::usize_fmt::{convert_u16_to_string_slice, u16_to_u8_array}};
 use std::fmt::Result;
 
@@ -114,11 +116,11 @@ pub enum ColorTarget {
     Background,
 }
 
-/// Extended color sequence operation parsed from [`VT-100`] SGR parameters.
+/// Extended color sequence operation parsed from [`VT-100`] [`SGR`] parameters.
 ///
-/// **Note**: SGR (Select Graphic Rendition) is a subset of CSI sequences. These sequences
-/// all follow the CSI format `ESC [ ... m` where the 'm' indicates SGR operations. See
-/// the module documentation for architectural context.
+/// **Note**: [`SGR`] (Select Graphic Rendition) is a subset of [`CSI`] sequences. These
+/// sequences all follow the [`CSI`] format `ESC [ ... m` where the 'm' indicates [`SGR`]
+/// operations. See the module documentation for architectural context.
 ///
 /// This enum represents the four possible extended color operations that can be parsed
 /// from [`VT-100`]-compliant color sequences, directly encoding both the color type
@@ -150,18 +152,20 @@ pub enum ColorTarget {
 /// - `5` = 256-color palette mode (next parameter is index)
 /// - `2` = RGB mode (next 3 parameters are r, g, b values)
 ///
-///
 /// # Color Palette Layout (256-color mode)
 ///
-/// - **0-15**: Standard ANSI colors (matches basic 16-color palette)
+/// - **0-15**: Standard [`ANSI`] colors (matches basic 16-color palette)
 /// - **16-231**: 6×6×6 RGB cube (216 colors)
 ///   - Formula: `16 + 36r + 6g + b` where r,g,b ∈ `[0,5]`
 /// - **232-255**: Grayscale ramp (24 shades from dark to light)
 ///
+/// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+/// [`CSI`]: crate::CsiSequence
 /// [`SetBackgroundAnsi256`]: SgrColorSequence::SetBackgroundAnsi256
 /// [`SetBackgroundRgb`]: SgrColorSequence::SetBackgroundRgb
 /// [`SetForegroundAnsi256`]: SgrColorSequence::SetForegroundAnsi256
 /// [`SetForegroundRgb`]: SgrColorSequence::SetForegroundRgb
+/// [`SGR`]: crate::SgrCode
 /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 /// [itu-t-416]: https://www.itu.int/rec/T-REC-T.416-199303-I
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -340,7 +344,7 @@ impl From<SgrColorSequence> for TuiColor {
 }
 
 impl From<(TuiColor, ColorTarget)> for SgrColorSequence {
-    /// Converts a [`TuiColor`] and [`ColorTarget`] to an SGR color sequence.
+    /// Converts a [`TuiColor`] and [`ColorTarget`] to an [`SGR`] color sequence.
     ///
     /// This convenience trait provides a succinct way to convert both the color value and
     /// the target layer in one operation using tuple syntax.
@@ -358,6 +362,8 @@ impl From<(TuiColor, ColorTarget)> for SgrColorSequence {
     /// let seq: SgrColorSequence = (color, ColorTarget::Background).into();
     /// assert_eq!(seq, SgrColorSequence::SetBackgroundRgb(255, 128, 0));
     /// ```
+    ///
+    /// [`SGR`]: crate::SgrCode
     fn from((color, target): (TuiColor, ColorTarget)) -> Self {
         match color {
             TuiColor::Ansi(val) => match target {
@@ -382,10 +388,12 @@ impl From<(TuiColor, ColorTarget)> for SgrColorSequence {
 /// (`parse_from_slice`) and generation (`FastStringify` + `Display`) for bidirectional
 /// use:
 /// - Parsing: Convert incoming bytes → `SgrColorSequence` enum
-/// - Generation: Convert `SgrColorSequence` enum → ANSI escape string
+/// - Generation: Convert `SgrColorSequence` enum → [`ANSI`] escape string
 ///
 /// This enables type-safe, infallible test sequence generation without raw escape
 /// strings.
+///
+/// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 impl FastStringify for SgrColorSequence {
     fn write_to_buf(&self, acc: &mut BufTextStorage) -> Result {
         acc.push_str(CSI_START);

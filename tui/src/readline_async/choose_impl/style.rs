@@ -1,6 +1,6 @@
 // Copyright (c) 2023-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{new_style, tui_color, TuiStyle};
+use crate::TuiStyle;
 
 /// This is different from [`crate::TuiStylesheet`], since this encapsulates styling
 /// information that is specific to [`crate::choose()`] that are not generalized.

@@ -11,7 +11,7 @@ use std::collections::{HashMap, hash_map::Entry};
 ///
 /// # Variants
 ///
-/// - `StripAnsi`: Calculates the length of the string after stripping ANSI escape
+/// - `StripAnsi`: Calculates the length of the string after stripping [`ANSI`] escape
 ///   sequences.
 /// - `Unicode`: Calculates the Unicode width of the string.
 ///
@@ -25,6 +25,8 @@ use std::collections::{HashMap, hash_map::Entry};
 /// let length = StringLength::StripAnsi.calculate(input, &mut memoized_len_map);
 /// assert_eq!(length, 3);
 /// ```
+///
+/// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum StringLength {
     StripAnsi,
@@ -44,10 +46,10 @@ impl StringLength {
     ///
     /// # Speedup, even for small strings
     ///
-    /// | Variant                   | Cached | Speedup |
-    /// |---------------------------|--------|---------|
-    /// | [`StringLength::Unicode`]   | No     | None    |
-    /// | [`StringLength::StripAnsi`] | Yes    | 70x     |
+    /// | Variant                     | Cached   | Speedup   |
+    /// | --------------------------- | -------- | --------- |
+    /// | [`StringLength::Unicode`]   | No       | None      |
+    /// | [`StringLength::StripAnsi`] | Yes      | 70x       |
     /// Eg: For input: `"\u{1b}[31mfoo\u{1b}[0m";` on a 13th Gen Intel® Core™ i5-13600K
     /// machine with 64GB of RAM running Ubuntu 24.04, the execution times are:
     /// - Uncached time is 700µs.
@@ -71,12 +73,14 @@ impl StringLength {
         }
     }
 
-    /// [SHA256](sha2) produces a 256-bit (32-byte) hash value, typically rendered as a
+    /// [SHA256] produces a 256-bit (32-byte) hash value, typically rendered as a
     /// hexadecimal number. However, here we are converting it to a u32. Here's an example
     /// of how long it takes to run on `foo`: 25.695µs. To provide some perspective of how
     /// long this is, it takes about the same time to run [`StringLength::Unicode`] on the
     /// same input, on a 13th Gen Intel® Core™ i5-13600K machine with 64GB of RAM running
     /// Ubuntu 24.04.
+    ///
+    /// [SHA256]: sha2
     #[must_use]
     pub fn calculate_sha256(text: &str) -> u32 {
         let mut hasher = Sha256::new();
@@ -116,8 +120,6 @@ mod to_from_string_impl {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::timed;
-
     #[test]
     fn test_sha256() {
         let input = "foo";

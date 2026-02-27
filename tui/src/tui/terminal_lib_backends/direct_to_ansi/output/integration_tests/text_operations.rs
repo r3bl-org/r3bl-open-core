@@ -4,19 +4,21 @@
 //! ([`CompositorNoClipTruncPaintTextWithAttributes`])
 //!
 //! These tests validate:
-//! 1. [`CompositorNoClipTruncPaintTextWithAttributes`] paints text without ANSI escapes
-//!    for styling
-//! 2. Text with [`TuiStyle`] renders correct SGR styling sequences
-//! 3. Text without style (plain text) renders without extra ANSI sequences
+//! 1. [`CompositorNoClipTruncPaintTextWithAttributes`] paints text without [`ANSI`]
+//!    escapes for styling
+//! 2. Text with [`TuiStyle`] renders correct [`SGR`] styling sequences
+//! 3. Text without style (plain text) renders without extra [`ANSI`] sequences
 //! 4. Multiple text operations in sequence preserve styling state
 //! 5. Text rendering integrates with cursor positioning
 //! 6. Color state is properly managed across text painting operations
 //!
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`CompositorNoClipTruncPaintTextWithAttributes`]: crate::RenderOpOutput::CompositorNoClipTruncPaintTextWithAttributes
+//! [`SGR`]: crate::SgrCode
 //! [`TuiStyle`]: crate::TuiStyle
 
 use super::test_helpers::*;
-use crate::{TuiStyle, tui_color, tui_style_attrib};
+use crate::{TuiStyle, tui_style_attrib};
 
 #[test]
 fn test_paint_text_plain_without_style() {

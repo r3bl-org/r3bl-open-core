@@ -71,7 +71,6 @@ fn take_text_between<'input>(
 #[cfg(test)]
 mod tests_parse_take_between {
     use super::*;
-    use crate::assert_eq2;
     use nom::{Err as NomErr, error::Error};
 
     #[test]

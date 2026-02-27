@@ -36,17 +36,18 @@
 //! - [`generate_length_type_impl!`]: For length/dimension types (1-based)
 //!
 //! [`ChUnit`]: crate::ChUnit
-//! [`OffscreenBuffer`]: crate::OffscreenBuffer
-//! [`ZeroCopyGapBuffer`]: crate::ZeroCopyGapBuffer
 //! [`generate_index_type_impl!`]: crate::generate_index_type_impl
 //! [`generate_length_type_impl!`]: crate::generate_length_type_impl
+//! [`OffscreenBuffer`]: crate::OffscreenBuffer
+//! [`ZeroCopyGapBuffer`]: crate::ZeroCopyGapBuffer
 
 // Attach source files.
+#[macro_use]
+pub mod index_and_length_impl_macros;
 pub mod caret;
 pub mod col_index;
 pub mod col_width;
 pub mod index;
-pub mod index_and_length_impl_macros;
 pub mod length;
 pub mod pos;
 pub mod row_height;

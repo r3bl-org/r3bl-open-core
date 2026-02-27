@@ -4,7 +4,9 @@ use crate::{ColWidth, CowInlineString, GCStringOwned, InlineString,
             glyphs::{ELLIPSIS_GLYPH, SPACER_GLYPH}};
 use std::fmt::Write;
 
-/// Tests whether the given text contains an ANSI escape sequence.
+/// Tests whether the given text contains an [`ANSI`] escape sequence.
+///
+/// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 #[must_use]
 pub fn contains_ansi_escape_sequence(text: &str) -> bool {
     text.chars().any(|it| it == '\x1b')
@@ -163,7 +165,9 @@ pub fn truncate_from_left(
 mod truncate_helper {
     use super::{ColWidth, CowInlineString, ELLIPSIS_GLYPH, GCStringOwned, InlineString};
 
-    /// Checks if no processing is needed for ASCII strings
+    /// Checks if no processing is needed for [`ASCII`] strings
+    ///
+    /// [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
     pub fn should_skip_processing_ascii(
         string_len: usize,
         display_width_usize: usize,
@@ -198,7 +202,9 @@ mod truncate_from_right_helper {
     #[allow(clippy::wildcard_imports)]
     use super::*;
 
-    /// Handle ASCII truncation from the right
+    /// Handle [`ASCII`] truncation from the right
+    ///
+    /// [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
     pub fn handle_ascii_truncation(
         string: &str,
         display_width_usize: usize,
@@ -220,7 +226,9 @@ mod truncate_from_right_helper {
         CowInlineString::Owned(acc)
     }
 
-    /// Handle ASCII padding from the right
+    /// Handle [`ASCII`] padding from the right
+    ///
+    /// [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
     pub fn handle_ascii_padding(
         string: &str,
         display_width_usize: usize,
@@ -258,7 +266,9 @@ mod truncate_from_left_helper {
     #[allow(clippy::wildcard_imports)]
     use super::*;
 
-    /// Handle ASCII truncation from the left
+    /// Handle [`ASCII`] truncation from the left
+    ///
+    /// [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
     pub fn handle_ascii_truncation(
         string: &str,
         display_width_usize: usize,
@@ -281,7 +291,9 @@ mod truncate_from_left_helper {
         CowInlineString::Owned(acc)
     }
 
-    /// Handle ASCII padding from the left
+    /// Handle [`ASCII`] padding from the left
+    ///
+    /// [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
     pub fn handle_ascii_padding(
         string: &str,
         display_width_usize: usize,
@@ -317,12 +329,10 @@ mod truncate_from_left_helper {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{cli_text_inline, new_style, tui_color, width};
+    use crate::{cli_text_inline, width};
 
     #[test]
     fn test_contains_ansi_escape_sequence() {
-        use crate::assert_eq2;
-
         assert_eq2!(
             contains_ansi_escape_sequence(
                 "\x1b[31mThis is red text.\x1b[0m And this is normal text."

@@ -1,9 +1,12 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! CSI sequence builder for terminal control operations.
+//! [`CSI`] sequence builder for terminal control operations.
 //!
-//! This module provides the `CsiSequence` enum which represents various CSI control
-//! sequences and can serialize them into ANSI escape codes.
+//! This module provides the `CsiSequence` enum which represents various [`CSI`] control
+//! sequences and can serialize them into [`ANSI`] escape codes.
+//!
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`CSI`]: crate::CsiSequence
 
 use super::{erase_mode::{EraseDisplayMode, EraseLineMode},
             private_mode::PrivateModeType};
@@ -24,16 +27,15 @@ use crate::{BufTextStorage, CsiCount, FastStringify, NumericConversions, TermCol
                                      SD_SCROLL_DOWN, SM_SET_PRIVATE_MODE,
                                      SU_SCROLL_UP, VPA_VERTICAL_POSITION},
                          generator::DsrRequestType},
-            generate_impl_display_for_fast_stringify,
             stack_alloc_types::usize_fmt::{convert_u16_to_string_slice, u16_to_u8_array}};
 use std::fmt::{Formatter, Result};
 
-/// Builder for CSI (Control Sequence Introducer) sequences.
-/// Similar to `SgrCode` but for cursor movement and other CSI commands.
+/// Builder for [`CSI`] (Control Sequence Introducer) sequences.
+/// Similar to `SgrCode` but for cursor movement and other [`CSI`] commands.
 ///
 /// # Make Illegal States Unrepresentable
 ///
-/// This enum uses type-safe wrappers to prevent the CSI zero bug at compile time:
+/// This enum uses type-safe wrappers to prevent the [`CSI`] zero bug at compile time:
 ///
 /// - **Relative movements** ([`TermRowDelta`], [`TermColDelta`]): For cursor
 ///   up/down/forward/backward
@@ -41,7 +43,7 @@ use std::fmt::{Formatter, Result};
 /// - **Counts** ([`CsiCount`]): For insert/delete/erase operations
 /// - **Modes** ([`EraseDisplayMode`], [`EraseLineMode`]): For erase operations
 ///
-/// ANSI terminals interpret parameter 0 as 1 for most commands:
+/// [`ANSI`] terminals interpret parameter 0 as 1 for most commands:
 /// - `CSI 0 A` moves cursor **1 row up**, not 0
 /// - `CSI 0 G` moves cursor to **column 1**, not 0
 /// - `CSI 0 L` inserts **1 line**, not 0
@@ -59,104 +61,171 @@ use std::fmt::{Formatter, Result};
 /// }
 /// ```
 ///
-/// [`TermRowDelta`]: crate::TermRowDelta
-/// [`TermColDelta`]: crate::TermColDelta
-/// [`TermRow`]: crate::TermRow
-/// [`TermCol`]: crate::TermCol
+/// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+/// [`CSI`]: crate::CsiSequence
 /// [`CsiCount`]: crate::CsiCount
 /// [`EraseDisplayMode`]: crate::EraseDisplayMode
 /// [`EraseLineMode`]: crate::EraseLineMode
 /// [`NonZeroU16`]: std::num::NonZeroU16
+/// [`TermCol`]: crate::TermCol
+/// [`TermColDelta`]: crate::TermColDelta
+/// [`TermRow`]: crate::TermRow
+/// [`TermRowDelta`]: crate::TermRowDelta
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum CsiSequence {
-    /// Cursor Up (CUU) - ESC [ n A.
+    /// Cursor Up (CUU) - [`ESC`] [ n A.
     ///
-    /// Uses [`TermRowDelta`] to prevent CSI zero bug.
+    /// Uses [`TermRowDelta`] to prevent [`CSI`] zero bug.
+    ///
+    /// [`CSI`]: crate::CsiSequence
+    /// [`ESC`]: crate::EscSequence
     CursorUp(TermRowDelta),
-    /// Cursor Down (CUD) - ESC [ n B.
+    /// Cursor Down (CUD) - [`ESC`] [ n B.
     ///
-    /// Uses [`TermRowDelta`] to prevent CSI zero bug.
+    /// Uses [`TermRowDelta`] to prevent [`CSI`] zero bug.
+    ///
+    /// [`CSI`]: crate::CsiSequence
+    /// [`ESC`]: crate::EscSequence
     CursorDown(TermRowDelta),
-    /// Cursor Forward (CUF) - ESC [ n C.
+    /// Cursor Forward (CUF) - [`ESC`] [ n C.
     ///
-    /// Uses [`TermColDelta`] to prevent CSI zero bug.
+    /// Uses [`TermColDelta`] to prevent [`CSI`] zero bug.
+    ///
+    /// [`CSI`]: crate::CsiSequence
+    /// [`ESC`]: crate::EscSequence
     CursorForward(TermColDelta),
-    /// Cursor Backward (CUB) - ESC [ n D.
+    /// Cursor Backward (CUB) - [`ESC`] [ n D.
     ///
-    /// Uses [`TermColDelta`] to prevent CSI zero bug.
+    /// Uses [`TermColDelta`] to prevent [`CSI`] zero bug.
+    ///
+    /// [`CSI`]: crate::CsiSequence
+    /// [`ESC`]: crate::EscSequence
     CursorBackward(TermColDelta),
-    /// Cursor Position (CUP) - ESC [ row ; col H.
+    /// Cursor Position (CUP) - [`ESC`] [ row ; col H.
+    ///
+    /// [`ESC`]: crate::EscSequence
     CursorPosition { row: TermRow, col: TermCol },
-    /// Cursor Position alternate form (HVP) - ESC [ row ; col f.
+    /// Cursor Position alternate form (HVP) - [`ESC`] [ row ; col f.
+    ///
+    /// [`ESC`]: crate::EscSequence
     CursorPositionAlt { row: TermRow, col: TermCol },
-    /// Erase Display (ED) - ESC [ n J.
+    /// Erase Display (ED) - [`ESC`] [ n J.
     ///
     /// Uses [`EraseDisplayMode`] enum for type-safe mode selection.
+    ///
+    /// [`ESC`]: crate::EscSequence
     EraseDisplay(EraseDisplayMode),
-    /// Erase Line (EL) - ESC [ n K.
+    /// Erase Line (EL) - [`ESC`] [ n K.
     ///
     /// Uses [`EraseLineMode`] enum for type-safe mode selection.
+    ///
+    /// [`ESC`]: crate::EscSequence
     EraseLine(EraseLineMode),
-    /// Save Cursor (SCP) - ESC [ s.
+    /// Save Cursor (SCP) - [`ESC`] [ s.
+    ///
+    /// [`ESC`]: crate::EscSequence
     SaveCursor,
-    /// Restore Cursor (RCP) - ESC [ u.
+    /// Restore Cursor (RCP) - [`ESC`] [ u.
+    ///
+    /// [`ESC`]: crate::EscSequence
     RestoreCursor,
-    /// Cursor Next Line (CNL) - ESC [ n E.
+    /// Cursor Next Line (CNL) - [`ESC`] [ n E.
     ///
-    /// Uses [`TermRowDelta`] to prevent CSI zero bug.
+    /// Uses [`TermRowDelta`] to prevent [`CSI`] zero bug.
+    ///
+    /// [`CSI`]: crate::CsiSequence
+    /// [`ESC`]: crate::EscSequence
     CursorNextLine(TermRowDelta),
-    /// Cursor Previous Line (CPL) - ESC [ n F.
+    /// Cursor Previous Line (CPL) - [`ESC`] [ n F.
     ///
-    /// Uses [`TermRowDelta`] to prevent CSI zero bug.
+    /// Uses [`TermRowDelta`] to prevent [`CSI`] zero bug.
+    ///
+    /// [`CSI`]: crate::CsiSequence
+    /// [`ESC`]: crate::EscSequence
     CursorPrevLine(TermRowDelta),
-    /// Cursor Horizontal Absolute (CHA) - ESC [ n G.
+    /// Cursor Horizontal Absolute (CHA) - [`ESC`] [ n G.
     ///
     /// Uses [`TermCol`] for type-safe 1-based column positioning.
+    ///
+    /// [`ESC`]: crate::EscSequence
     CursorHorizontalAbsolute(TermCol),
-    /// Scroll Up (SU) - ESC [ n S.
+    /// Scroll Up (SU) - [`ESC`] [ n S.
     ///
-    /// Uses [`TermRowDelta`] to prevent CSI zero bug.
+    /// Uses [`TermRowDelta`] to prevent [`CSI`] zero bug.
+    ///
+    /// [`CSI`]: crate::CsiSequence
+    /// [`ESC`]: crate::EscSequence
     ScrollUp(TermRowDelta),
-    /// Scroll Down (SD) - ESC [ n T.
+    /// Scroll Down (SD) - [`ESC`] [ n T.
     ///
-    /// Uses [`TermRowDelta`] to prevent CSI zero bug.
+    /// Uses [`TermRowDelta`] to prevent [`CSI`] zero bug.
+    ///
+    /// [`CSI`]: crate::CsiSequence
+    /// [`ESC`]: crate::EscSequence
     ScrollDown(TermRowDelta),
-    /// Set Top and Bottom Margins (DECSTBM) - ESC [ top ; bottom r.
+    /// Set Top and Bottom Margins ([`DECSTBM`]) - [`ESC`] [ top ; bottom r.
+    ///
+    /// [`DECSTBM`]: https://vt100.net/docs/vt510-rm/DECSTBM.html
+    /// [`ESC`]: crate::EscSequence
     SetScrollingMargins {
         top: Option<TermRow>,
         bottom: Option<TermRow>,
     },
-    /// Device Status Report (DSR) - ESC [ n n.
+    /// Device Status Report ([`DSR`]) - [`ESC`] [ n n.
+    ///
+    /// [`DSR`]: crate::DsrSequence
+    /// [`ESC`]: crate::EscSequence
     DeviceStatusReport(DsrRequestType),
-    /// Enable Private Mode - ESC [ ? n h (n = mode number like `DECAWM_AUTO_WRAP`).
+    /// Enable Private Mode - [`ESC`] [ ? n h (n = mode number like `DECAWM_AUTO_WRAP`).
     /// See [`crate::offscreen_buffer::AnsiParserSupport::auto_wrap_mode`]
+    ///
+    /// [`ESC`]: crate::EscSequence
     EnablePrivateMode(PrivateModeType),
-    /// Disable Private Mode - ESC [ ? n l (n = mode number like `DECAWM_AUTO_WRAP`).
+    /// Disable Private Mode - [`ESC`] [ ? n l (n = mode number like `DECAWM_AUTO_WRAP`).
     /// See [`crate::offscreen_buffer::AnsiParserSupport::auto_wrap_mode`]
+    ///
+    /// [`ESC`]: crate::EscSequence
     DisablePrivateMode(PrivateModeType),
-    /// Insert Line (IL) - ESC [ n L.
+    /// Insert Line (IL) - [`ESC`] [ n L.
     ///
-    /// Uses [`CsiCount`] to prevent CSI zero bug.
+    /// Uses [`CsiCount`] to prevent [`CSI`] zero bug.
+    ///
+    /// [`CSI`]: crate::CsiSequence
+    /// [`ESC`]: crate::EscSequence
     InsertLine(CsiCount),
-    /// Delete Line (DL) - ESC [ n M.
+    /// Delete Line (DL) - [`ESC`] [ n M.
     ///
-    /// Uses [`CsiCount`] to prevent CSI zero bug.
+    /// Uses [`CsiCount`] to prevent [`CSI`] zero bug.
+    ///
+    /// [`CSI`]: crate::CsiSequence
+    /// [`ESC`]: crate::EscSequence
     DeleteLine(CsiCount),
-    /// Delete Character (DCH) - ESC [ n P.
+    /// Delete Character (DCH) - [`ESC`] [ n P.
     ///
-    /// Uses [`CsiCount`] to prevent CSI zero bug.
+    /// Uses [`CsiCount`] to prevent [`CSI`] zero bug.
+    ///
+    /// [`CSI`]: crate::CsiSequence
+    /// [`ESC`]: crate::EscSequence
     DeleteChar(CsiCount),
-    /// Insert Character (ICH) - ESC [ n @.
+    /// Insert Character (ICH) - [`ESC`] [ n @.
     ///
-    /// Uses [`CsiCount`] to prevent CSI zero bug.
+    /// Uses [`CsiCount`] to prevent [`CSI`] zero bug.
+    ///
+    /// [`CSI`]: crate::CsiSequence
+    /// [`ESC`]: crate::EscSequence
     InsertChar(CsiCount),
-    /// Erase Character (ECH) - ESC [ n X.
+    /// Erase Character (ECH) - [`ESC`] [ n X.
     ///
-    /// Uses [`CsiCount`] to prevent CSI zero bug.
+    /// Uses [`CsiCount`] to prevent [`CSI`] zero bug.
+    ///
+    /// [`CSI`]: crate::CsiSequence
+    /// [`ESC`]: crate::EscSequence
     EraseChar(CsiCount),
-    /// Vertical Position Absolute (VPA) - ESC [ n d.
+    /// Vertical Position Absolute (VPA) - [`ESC`] [ n d.
     ///
     /// Uses [`TermRow`] for type-safe 1-based row positioning.
+    ///
+    /// [`ESC`]: crate::EscSequence
     VerticalPositionAbsolute(TermRow),
 }
 

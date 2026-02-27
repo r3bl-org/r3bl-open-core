@@ -1,6 +1,6 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! PTY-based integration test for keyboard modifiers (Shift, Ctrl, Alt).
+//! [`PTY`]-based integration test for keyboard modifiers (Shift, Ctrl, Alt).
 //!
 //! Validates that the [`DirectToAnsiInputDevice`] correctly parses keyboard sequences
 //! with various modifier combinations:
@@ -10,16 +10,19 @@
 //!
 //! Tests with arrow keys and function keys to validate round-trip generation+parsing.
 //!
-//! Run with: `cargo test -p r3bl_tui --lib test_pty_keyboard_modifiers -- --nocapture`
+//! Run with:
+//! ```bash
+//! cargo test -p r3bl_tui --lib test_pty_keyboard_modifiers -- --nocapture
+//! ```
 //!
 //! [`DirectToAnsiInputDevice`]: crate::direct_to_ansi::DirectToAnsiInputDevice
+//! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 
 use crate::{ControlledChild, InputEvent, KeyState, PtyPair, PtyTestMode,
             core::ansi::{generator::generate_keyboard_sequence,
                          vt_100_terminal_input_parser::ir_event_types::{VT100InputEventIR,
                                                                         VT100KeyCodeIR,
                                                                         VT100KeyModifiersIR}},
-            generate_pty_test,
             tui::terminal_lib_backends::direct_to_ansi::DirectToAnsiInputDevice};
 use std::{io::{BufRead, BufReader, Write},
           time::Duration};
@@ -36,12 +39,17 @@ generate_pty_test! {
     mode: PtyTestMode::Raw,
 }
 
-/// PTY Controller: Send keyboard sequences with modifiers and verify parsing
+/// [`PTY`] Controller: Send keyboard sequences with modifiers and verify parsing
+///
+/// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 #[allow(clippy::too_many_lines)]
 fn pty_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
     eprintln!("🚀 PTY Controller: Starting keyboard modifiers test...");
 
-    let mut writer = pty_pair.controller().take_writer().expect("Failed to get writer");
+    let mut writer = pty_pair
+        .controller()
+        .take_writer()
+        .expect("Failed to get writer");
     let reader = pty_pair
         .controller()
         .try_clone_reader()
@@ -212,7 +220,9 @@ fn pty_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
     eprintln!("✅ PTY Controller: Test passed!");
 }
 
-/// PTY Controlled: Read and parse keyboard events with modifiers
+/// [`PTY`] Controlled: Read and parse keyboard events with modifiers
+///
+/// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 fn pty_controlled_entry_point() -> ! {
     println!("{CONTROLLED_READY}");
     std::io::stdout().flush().expect("Failed to flush");

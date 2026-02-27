@@ -3,8 +3,7 @@ use crate::{ChannelCapacity, CommonResultWithError, CursorBoundsCheck,
             CursorPositionBoundsStatus, GCStringOwned, History, InputDevice, InputEvent,
             KeyPress, LineState, LineStateControlSignal, LineStateLiveness,
             ModifierKeysMask, OutputDevice, PauseBuffer, SafeHistory, SafeLineState,
-            SafePauseBuffer, SegIndex, SendRawTerminal, SharedWriter, Size, StdMutex,
-            execute_commands_no_lock, join, key_press, lock_output_device_as_mut};
+            SafePauseBuffer, SegIndex, SendRawTerminal, SharedWriter, Size, StdMutex};
 use crossterm::{ExecutableCommand, QueueableCommand, cursor,
                 terminal::{self, Clear}};
 use miette::Report as ErrorReport;
@@ -288,7 +287,7 @@ pub mod manage_shared_writer_output {
     use super::{Arc, CommonResultWithError, ControlFlowLimited, JoinHandle, LineState,
                 LineStateControlSignal, LineStateLiveness, OutputDevice, PauseBuffer,
                 ReadlineError, SafeLineState, SafePauseBuffer, SendRawTerminal,
-                StdMutex, broadcast, io, join, lock_output_device_as_mut, mpsc, spawn};
+                StdMutex, broadcast, io, mpsc, spawn};
 
     /// - Receiver end of the channel, which does the actual writing to the terminal.
     /// - The sender end of the channel is in [`crate::SharedWriter`].
@@ -1105,8 +1104,8 @@ mod test_readline {
     use super::{Arc, ChannelCapacity, ControlFlowExtended, CursorPositionBoundsStatus,
                 Duration, History, InputDevice, LineStateControlSignal,
                 LineStateLiveness, OutputDevice, Readline, ReadlineEvent, StdMutex,
-                broadcast, lock_output_device_as_mut, readline_internal,
-                readline_test_fixtures::get_input_vec, sleep};
+                broadcast, readline_internal, readline_test_fixtures::get_input_vec,
+                sleep};
     use crate::{OutputDeviceExt, TTYResult, is_output_interactive};
 
     #[tokio::test]

@@ -8,9 +8,11 @@
 // - <https://symbl.cc/en/collections/brackets/>
 // - <https://symbl.cc/en/collections/crosses/>
 
-// Skip rustfmt for rest of file.
-// https://stackoverflow.com/a/75910283/2085356
-#![cfg_attr(rustfmt, rustfmt_skip)]
+// XMARK: Prevent rustfmt from reformatting entire file.
+// The `custom_inner_attributes` nightly feature enables `#![rustfmt::skip]` (replacing
+// `#![cfg_attr(rustfmt, rustfmt_skip)]`).
+#![feature(custom_inner_attributes)]
+#![rustfmt::skip]
 
 //! # Why R3BL?
 //!
@@ -467,13 +469,13 @@
 //!   [`SgrCode`] builders instead of hardcoded escape strings
 //! - **Real-world scenarios**: Tests realistic terminal applications (vim, emacs, tmux)
 //!   with authentic 80x25 terminal dimensions
-//! - **`VT-100` specification compliance**: Comprehensive coverage of ANSI escape sequences
+//! - **[`VT-100` spec] compliance**: Comprehensive coverage of ANSI escape sequences
 //!   with proper bounds checking and edge case handling
 //! - **Conformance data modules**: Organized sequence patterns for different terminal
 //!   applications and use cases
 //!
 //! The conformance tests ensure the ANSI parser correctly processes sequences from real
-//! terminal applications and maintains compatibility with `VT-100` specifications.
+//! terminal applications and maintains compatibility with [`VT-100` spec].
 //!
 //! ### Markdown Parser Conformance Testing
 //!
@@ -2272,7 +2274,7 @@
 //! This naming convention enables **predictable IDE navigation**: searching for
 //! `char_ops` shows you the shim, implementation, and tests all together.
 //!
-//! **`VT-100` specification compliance**:
+//! **[`VT-100` spec] compliance**:
 //! - [`VT-100` User Guide]
 //! - [ANSI X3.64 Standard]
 //! - [XTerm Control Sequences]
@@ -2561,24 +2563,43 @@
 //! [`TERMINAL_LIB_BACKEND`]: crate::TERMINAL_LIB_BACKEND
 //! [Architecture Overview]: core::resilient_reactor_thread#architecture-overview
 //! [ANSI X3.64 Standard]: https://www.ecma-international.org/wp-content/uploads/ECMA-48_5th_edition_june_1991.pdf
+//! [`VT-100` spec]: https://vt100.net/docs/vt100-ug/chapter3.html
 //! [`VT-100` User Guide]: https://vt100.net/docs/vt100-ug/
 //! [XTerm Control Sequences]: https://invisible-island.net/xterm/ctlseqs/ctlseqs.html
 
 // Enable benchmarking for nightly Rust.
 #![cfg_attr(test, feature(test))]
+
 // Enforce strict error handling in production library code only. Tests and examples are
 // allowed to use .unwrap() (workspace `Cargo.toml` config allows it). The cfg_attr
 // ensures test code within the library can also use .unwrap() freely.
 #![cfg_attr(not(test), deny(clippy::unwrap_in_result))]
+
 // Allow large stack arrays in test code - buffers like DEFAULT_READ_BUFFER_SIZE (16384
 // bytes) are intentional and necessary for I/O operations.
 #![cfg_attr(test, allow(clippy::large_stack_arrays))]
 
+// Allow `$crate::macro_name!()` inside `#[macro_export]` macro bodies. The `$crate::`
+// prefix is required for cross-crate correctness (external callers need it to resolve
+// sibling macros back to this crate). This lint can only be suppressed at crate level.
+// See: https://github.com/rust-lang/rust/issues/52234
+//
+// Files that need this (macro calls sibling macro via `$crate::`):
+// - core/tui_style/tui_style_lite.rs: new_style! → $crate::apply_style!
+// - tui/rsx/layout_macros.rs: box_start! → $crate::box_props!
+// - tui/terminal_lib_backends/crossterm_backend/crossterm_paint_render_op_impl.rs:
+//     queue_terminal_command!/flush_now!/disable_raw_mode_now!/enable_raw_mode_now! →
+//     $crate::crossterm_op!
+// - readline_async/choose_impl/crossterm_macros.rs: queue_commands!/execute_commands! →
+//     $crate::lock_output_device_as_mut!
+#![allow(macro_expanded_macro_exports_accessed_by_absolute_paths)]
+
 // Attach modules (re-exported below to provide clean public API).
-pub mod core;
+// #[macro_use] propagates macros textually to subsequent sibling modules.
+#[macro_use] pub mod core;
 pub mod network_io;
-pub mod readline_async;
-pub mod tui;
+#[macro_use] pub mod readline_async;
+#[macro_use] pub mod tui;
 
 // Re-export stable public API using glob imports for ergonomic, flat API surface.
 //

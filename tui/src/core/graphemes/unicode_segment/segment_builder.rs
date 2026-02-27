@@ -19,9 +19,9 @@ use unicode_width::UnicodeWidthStr;
 
 /// Builds grapheme cluster segments for any string slice.
 ///
-/// This function analyzes a UTF-8 string and creates a segment for each grapheme cluster
-/// (user-perceived character). It includes an ASCII fast path for better performance when
-/// dealing with ASCII-only text.
+/// This function analyzes a [`UTF-8`] string and creates a segment for each grapheme
+/// cluster (user-perceived character). It includes an [`ASCII`] fast path for better
+/// performance when dealing with [`ASCII`]-only text.
 ///
 /// # Arguments
 ///
@@ -30,6 +30,9 @@ use unicode_width::UnicodeWidthStr;
 /// # Returns
 ///
 /// A [`SegmentArray`] containing one [`Seg`] for each grapheme cluster in the input
+///
+/// [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
+/// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
 #[must_use]
 pub fn build_segments_for_str(input: &str) -> SegmentArray {
     // ASCII fast path
@@ -61,10 +64,12 @@ pub fn build_segments_for_str(input: &str) -> SegmentArray {
     segments
 }
 
-/// Builds segments for ASCII-only strings (optimized path).
+/// Builds segments for [`ASCII`]-only strings (optimized path).
 ///
-/// Since ASCII characters are always 1 byte and 1 display column wide, we can build
+/// Since [`ASCII`] characters are always 1 byte and 1 display column wide, we can build
 /// segments more efficiently without Unicode analysis.
+///
+/// [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
 fn build_ascii_segments(input: &str) -> SegmentArray {
     let mut segments = SegmentArray::with_capacity(input.len());
 
@@ -101,8 +106,6 @@ pub fn calculate_display_width(segments: &SegmentArray) -> ColWidth {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::assert_eq2;
-
     #[test]
     fn test_build_segments_ascii() {
         let input = "Hello";

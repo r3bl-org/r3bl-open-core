@@ -35,6 +35,7 @@ pub mod git_command_args {
     pub const GIT_ARG_HEAD: &str = "HEAD";
     pub const GIT_ARG_NO_COMMIT_ID: &str = "--no-commit-id";
     pub const GIT_ARG_RECURSIVE: &str = "-r";
+    pub const GIT_ARG_DIFF_FILTER_NO_DELETES: &str = "--diff-filter=d";
 }
 
 /// Git configuration keys used across the module.

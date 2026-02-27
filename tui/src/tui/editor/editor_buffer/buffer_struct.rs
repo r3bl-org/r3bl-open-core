@@ -5,9 +5,8 @@ use crate::{CaretRaw, CaretScrAdj, ColWidth, CursorPositionBoundsStatus,
             EditorBufferMutWithDrop, GapBufferLine, GetMemSize, InlineString, LengthOps,
             MemoizedMemorySize, MemorySize, NumericValue, RowHeight, RowIndex, ScrOfs,
             SegStringOwned, Size, TinyInlineString, ZeroCopyGapBuffer,
-            caret_locate::locate_col, format_as_kilobytes_with_commas, glyphs,
-            inline_string, ok, row, validate_buffer_mut::EditorBufferMutNoDrop, width,
-            with_mut};
+            caret_locate::locate_col, format_as_kilobytes_with_commas, glyphs, row,
+            validate_buffer_mut::EditorBufferMutNoDrop, width};
 use std::fmt::{Debug, Display, Formatter, Result};
 
 /// Stores the data for a single editor buffer using [`ZeroCopyGapBuffer`] for efficient
@@ -75,7 +74,7 @@ use std::fmt::{Debug, Display, Formatter, Result};
 /// > Please review [`GCStringOwned`], specifically the methods in [`gc_string`] for more
 /// > details on how the conversion between "display" and "logical" indices is done.
 /// >
-/// > This results from the fact that `UTF-8` is a variable width text encoding scheme,
+/// > This results from the fact that [`UTF-8`] is a variable width text encoding scheme,
 /// > that can use between 1 and 4 bytes to represent a single character. So the width a
 /// > human perceives, and it's byte size in RAM can be different.
 /// >
@@ -170,6 +169,9 @@ use std::fmt::{Debug, Display, Formatter, Result};
 /// - The row index is the key [`RowIndex`].
 /// - The value is the [`SelectionRange`].
 ///
+/// [`apply_editor_event`]: crate::EditorEvent::apply_editor_event
+/// [`apply_editor_events`]: crate::EditorEvent::apply_editor_events
+/// [`apply_event`]: crate::engine_public_api::apply_event
 /// [`CaretRaw`]: crate::CaretRaw
 /// [`CaretScrAdj`]: crate::CaretScrAdj
 /// [`Drop`]: crate::EditorBufferMutWithDrop#method.drop
@@ -177,25 +179,23 @@ use std::fmt::{Debug, Display, Formatter, Result};
 /// [`EditorBufferMut`]: crate::EditorBufferMut
 /// [`EditorEngine`]: crate::EditorEngine
 /// [`EditorEvent`]: crate::EditorEvent
+/// [`engine_internal_api`]: mod@crate::editor_engine::engine_internal_api
+/// [`find_syntax_by_extension`]: syntect::parsing::SyntaxSet::find_syntax_by_extension
 /// [`FlexBox`]: crate::FlexBox
+/// [`gc_string`]: mod@crate::graphemes::gc_string
 /// [`GCStringOwned`]: crate::graphemes::GCStringOwned
+/// [`get_mut`]: EditorBuffer::get_mut
+/// [`graphemes_module`]: crate::graphemes
 /// [`InputEvent`]: crate::InputEvent
 /// [`MoveCursorPositionRelTo`]: crate::RenderOpCommon::MoveCursorPositionRelTo
+/// [`new_empty`]: EditorBuffer::new_empty
+/// [`perform_validation_checks_after_mutation`]: crate::validate_buffer_mut::perform_validation_checks_after_mutation
 /// [`RowIndex`]: crate::RowIndex
 /// [`SelectionList`]: crate::SelectionList
 /// [`SelectionRange`]: crate::SelectionRange
-/// [`ZeroCopyGapBuffer`]: crate::ZeroCopyGapBuffer
-/// [`apply_editor_event`]: crate::EditorEvent::apply_editor_event
-/// [`apply_editor_events`]: crate::EditorEvent::apply_editor_events
-/// [`apply_event`]: crate::engine_public_api::apply_event
-/// [`engine_internal_api`]: mod@crate::editor_engine::engine_internal_api
-/// [`find_syntax_by_extension`]: syntect::parsing::SyntaxSet::find_syntax_by_extension
-/// [`gc_string`]: mod@crate::graphemes::gc_string
-/// [`get_mut`]: EditorBuffer::get_mut
-/// [`graphemes_module`]: crate::graphemes
-/// [`new_empty`]: EditorBuffer::new_empty
-/// [`perform_validation_checks_after_mutation`]: crate::validate_buffer_mut::perform_validation_checks_after_mutation
 /// [`style_adjusted_origin_pos`]: crate::FlexBox::style_adjusted_origin_pos
+/// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
+/// [`ZeroCopyGapBuffer`]: crate::ZeroCopyGapBuffer
 #[derive(Clone, PartialEq, Default)]
 pub struct EditorBuffer {
     pub content: EditorContent,
@@ -586,8 +586,8 @@ pub mod access_and_mutate {
         // XMARK: Clever Rust, use `IntoIterator` to efficiently & flexibly load data.
 
         /// You can load a file into the editor buffer using this method. Since this is a
-        /// text editor and not binary editor, it operates on UTF-8 encoded text files and
-        /// not binary files (which just contain `u8`s).
+        /// text editor and not binary editor, it operates on [`UTF-8`] encoded text files
+        /// and not binary files (which just contain `u8`s).
         ///
         /// You can convert a `&[u8]` to a `&str` using
         /// [`std::str::from_utf8`]. Initializes the buffer with the given lines,
@@ -602,6 +602,8 @@ pub mod access_and_mutate {
         /// - Then you can convert the `&[u8]` to a `&str` using [`std::str::from_utf8`].
         /// - And then call [`str::lines()`] on the `&str` to get an iterator over the
         ///   lines which can be passed to this method.
+        ///
+        /// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
         pub fn init_with<I>(&mut self, arg_lines: I)
         where
             I: IntoIterator,
@@ -816,8 +818,8 @@ mod debug_impl {
 #[cfg(test)]
 mod test_memory_cache_invalidation {
     use super::*;
-    use crate::{CaretMovementDirection, EditorEngine, RingBuffer, assert_eq2,
-                caret_scr_adj, col, height, len};
+    use crate::{CaretMovementDirection, EditorEngine, RingBuffer, caret_scr_adj, col,
+                height, len};
 
     #[test]
     fn test_cache_invalidated_on_get_mut() {

@@ -1,8 +1,10 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! This module exports [`try_parse_input_event`], the VT-100 terminal input parser entry
-//! point for converting raw bytes into terminal input events. See the function
+//! This module exports [`try_parse_input_event`], the [`VT-100`] terminal input parser
+//! entry point for converting raw bytes into terminal input events. See the function
 //! documentation for full details.
+//!
+//! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 
 use super::{VT100InputEventIR, VT100KeyCodeIR, VT100KeyModifiersIR, keyboard, mouse,
             terminal_events, utf8};
@@ -11,9 +13,9 @@ use crate::{ByteOffset, byte_offset,
 
 /// Parses a complete input event from a byte buffer.
 ///
-/// This is the main entry point for VT-100 terminal input parsing. It analyzes the buffer
-/// and routes to specialized parsers ([`keyboard`], [`mouse`], [`terminal_events`],
-/// [`utf8`]) based on content analysis.
+/// This is the main entry point for [`VT-100`] terminal input parsing. It analyzes the
+/// buffer and routes to specialized parsers ([`keyboard`], [`mouse`],
+/// [`terminal_events`], [`utf8`]) based on content analysis.
 ///
 /// # Parameters
 ///
@@ -21,7 +23,7 @@ use crate::{ByteOffset, byte_offset,
 /// - `input_available`: Whether more input is likely available in the kernel buffer.
 ///   Computed by the caller as `read_count == TTY_BUFFER_SIZE` (crossterm pattern).
 ///   - When `true` and buffer is `[ESC]`: Return `None` (wait for more bytes).
-///   - When `false` and buffer is `[ESC]`: Emit ESC key immediately.
+///   - When `false` and buffer is `[ESC]`: Emit [`ESC`] key immediately.
 ///   - For all other inputs: This flag has no effect.
 ///
 /// # Where You Are in the Pipeline
@@ -58,12 +60,12 @@ use crate::{ByteOffset, byte_offset,
 ///   parsers
 /// - 📚 **Types**: [`VT100InputEventIR`] - Output event type
 ///
-/// # ESC Key Detection (Crossterm Pattern)
+/// # [`ESC`] Key Detection (Crossterm Pattern)
 ///
 /// ## The Problem
 ///
-/// Both `ESC` key presses and escape sequences (e.g., Up Arrow = `ESC [ A`) start with
-/// [`ANSI_ESC`] (`0x1B`), so when we read that byte, is it a standalone `ESC` or the
+/// Both [`ESC`] key presses and escape sequences (e.g., Up Arrow = `ESC [ A`) start with
+/// [`ANSI_ESC`] (`0x1B`), so when we read that byte, is it a standalone [`ESC`] or the
 /// start of a multi-byte sequence?
 ///
 /// ## Crossterm's Solution: The `input_available` Flag
@@ -75,7 +77,7 @@ use crate::{ByteOffset, byte_offset,
 /// - If the read returned fewer bytes, we've drained all available input.
 ///
 /// This works because:
-/// - **Over SSH**: Bytes may arrive in fragments, but if we read fewer bytes than the
+/// - **Over [`SSH`]**: Bytes may arrive in fragments, but if we read fewer bytes than the
 ///   buffer size, we know there's no more data waiting right now.
 /// - **Locally**: Terminal emulators send escape sequences atomically, so they arrive
 ///   complete in a single read.
@@ -98,12 +100,13 @@ use crate::{ByteOffset, byte_offset,
 /// waiting**:
 ///
 /// - **Local terminals**: Escape sequences arrive atomically, so `input_available` is
-///   usually `false` after reading—we emit ESC immediately when appropriate.
-/// - **SSH/high-latency**: If bytes arrive separately, `input_available` tells us when
-///   more data is pending—we wait correctly without a fixed timeout.
+///   usually `false` after reading—we emit [`ESC`] immediately when appropriate.
+/// - **[`SSH`]/high-latency**: If bytes arrive separately, `input_available` tells us
+///   when more data is pending—we wait correctly without a fixed timeout.
 ///
-/// **Benefits**: Vim-style modal editors, `ESC`-heavy workflows, dialog dismissal. **SSH
-/// compatibility**: Works correctly because we wait for more bytes when available.
+/// **Benefits**: Vim-style modal editors, [`ESC`]-heavy workflows, dialog dismissal.
+/// **[`SSH`] compatibility**: Works correctly because we wait for more bytes when
+/// available.
 ///
 /// # Smart Lookahead Logic
 ///
@@ -111,28 +114,28 @@ use crate::{ByteOffset, byte_offset,
 ///
 /// | Input Pattern              | `input_available`   | Routing                               |
 /// | :------------------------- | :------------------ | :------------------------------------ |
-/// | `[ 0x1B ]` alone           | `false`             | Emit `ESC` key immediately            |
+/// | `[ 0x1B ]` alone           | `false`             | Emit [`ESC`] key immediately            |
 /// | `[ 0x1B ]` alone           | `true`              | Return `None` (wait for more bytes)   |
-/// | `[ 0x1B, b'[', .. ]`       | (ignored)           | `CSI` → keyboard/mouse/terminal       |
+/// | `[ 0x1B, b'[', .. ]`       | (ignored)           | [`CSI`] → keyboard/mouse/terminal       |
 /// | `[ 0x1B, b'O', .. ]`       | (ignored)           | `SS3` → F1-F4, Home, End, arrows      |
-/// | `[ 0x1B, other ]`          | (ignored)           | Alt+letter or emit standalone `ESC`   |
-/// | Other bytes                | (ignored)           | control char → UTF-8                  |
+/// | `[ 0x1B, other ]`          | (ignored)           | Alt+letter or emit standalone [`ESC`]   |
+/// | Other bytes                | (ignored)           | control char → [`UTF-8`]                  |
 ///
-/// - `CSI` (Control Sequence Introducer):
+/// - [`CSI`] (Control Sequence Introducer):
 ///   - The most common escape sequence format, starting with `ESC [`. Used for arrow
 ///     keys, function keys, mouse events, and terminal queries.
 ///   - Example: `ESC [ A` is Up arrow, `ESC [ 1 ; 5 C` is Ctrl+Right.
 /// - `SS3` (Single Shift 3) / Application mode:
 ///   - Terminals can switch between "normal" and "application" mode. Programs like vim,
 ///     less, and emacs enable this mode.
-///   - In application mode, arrow keys and F1-F4 send `ESC O x` (`SS3`) instead of `ESC [
-///     x` (`CSI`).
+///   - In application mode, arrow keys and F1-F4 send `ESC O x` (`SS3`) instead of
+///     `[`ESC`] [ x` ([`[`CSI`]`]).
 /// - Alt+letter fallback:
-///   - Terminals historically couldn't send a dedicated Alt modifier, so they send `ESC`
-///     followed by the letter (e.g., `ESC b` for Alt+B).
-///   - When we see `ESC` + unknown byte, we first try to parse it as Alt+letter. If that
-///     fails, we emit a standalone `ESC` and leave the next byte for the next parse
-///     cycle.
+///   - Terminals historically couldn't send a dedicated Alt modifier, so they send
+///     [`ESC`] followed by the letter (e.g., `ESC b` for Alt+B).
+///   - When we see [`ESC`] + unknown byte, we first try to parse it as Alt+letter. If
+///     that fails, we emit a standalone [`ESC`] and leave the next byte for the next
+///     parse cycle.
 ///
 /// # Routing Algorithm
 ///
@@ -209,13 +212,18 @@ use crate::{ByteOffset, byte_offset,
 ///
 /// [`ANSI_ESC`]: crate::ANSI_ESC
 /// [`ByteOffset`]: crate::ByteOffset
+/// [`CSI`]: crate::CsiSequence
 /// [`DirectToAnsiInputDevice`]: crate::DirectToAnsiInputDevice
-/// [`TERMINAL_LIB_BACKEND`]: crate::TERMINAL_LIB_BACKEND
-/// [`VT100InputEventIR`]: super::VT100InputEventIR
+/// [`ESC`]: crate::EscSequence
 /// [`keyboard`]: mod@super::keyboard
 /// [`mouse`]: mod@super::mouse
+/// [`SSH`]: https://en.wikipedia.org/wiki/Secure_Shell
 /// [`terminal_events`]: mod@super::terminal_events
+/// [`TERMINAL_LIB_BACKEND`]: crate::TERMINAL_LIB_BACKEND
+/// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
 /// [`utf8`]: mod@super::utf8
+/// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+/// [`VT100InputEventIR`]: super::VT100InputEventIR
 /// [parent module documentation]: mod@super#primary-consumer
 /// [write-syscall]: https://man7.org/linux/man-pages/man2/write.2.html
 #[must_use]
@@ -255,7 +263,9 @@ pub fn try_parse_input_event(
     }
 }
 
-/// Helper to create an ESC key event.
+/// Helper to create an [`ESC`] key event.
+///
+/// [`ESC`]: crate::EscSequence
 fn esc_key_event() -> VT100InputEventIR {
     VT100InputEventIR::Keyboard {
         code: VT100KeyCodeIR::Escape,
@@ -263,7 +273,9 @@ fn esc_key_event() -> VT100InputEventIR {
     }
 }
 
-/// Tests for CSI/SS3 sequence routing using generators for round-trip validation.
+/// Tests for [`CSI`]/SS3 sequence routing using generators for round-trip validation.
+///
+/// [`CSI`]: crate::CsiSequence
 #[cfg(test)]
 mod tests_csi_routing {
     use super::*;
@@ -363,8 +375,12 @@ mod tests_csi_routing {
     }
 }
 
-/// Tests for non-CSI input: single bytes and ESC+byte sequences.
-/// Validates parsing of ESC key, Alt+letter, control characters, and UTF-8 text.
+/// Tests for non-[`CSI`] input: single bytes and [`ESC`]+byte sequences.
+/// Validates parsing of [`ESC`] key, Alt+letter, control characters, and [`UTF-8`] text.
+///
+/// [`CSI`]: crate::CsiSequence
+/// [`ESC`]: crate::EscSequence
+/// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
 #[cfg(test)]
 mod tests_non_csi_input {
     use super::*;

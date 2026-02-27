@@ -1,10 +1,11 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 // Attach.
+#[macro_use]
+pub mod editor_engine;
 pub mod default_content;
 pub mod editor_buffer;
 pub mod editor_component;
-pub mod editor_engine;
 pub mod zero_copy_gap_buffer;
 
 // Re-export.

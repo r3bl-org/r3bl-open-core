@@ -26,7 +26,7 @@
 //! | [`dispatch_with_sender()`]                       | Routes ready events to appropriate handlers                         |
 //! | [`consume_stdin_input_with_sender()`]            | Reads and parses [`stdin`] bytes into [`InputEvent`]s               |
 //! | [`consume_pending_signals_with_sender()`]        | Drains [`SIGWINCH`] signals, sends [`SignalEvent::Resize`]          |
-//! | [VT100 input parser] ([`StatefulInputParser`])   | Accumulates bytes, parses [`VT100InputEventIR`] with ESC handling   |
+//! | [VT100 input parser] ([`StatefulInputParser`])   | Accumulates bytes, parses [`VT100InputEventIR`] with [`ESC`] handling   |
 //! | [paste state machine] ([`PasteCollectionState`]) | Collects text between bracketed paste markers                       |
 //!
 //! # How It Works
@@ -69,7 +69,7 @@
 //!
 //!
 //! See [Device Lifecycle] for a detailed diagram showing how threads spawn and exit with
-//! each app lifecycle, and [Related Tests] for PTY-based integration tests validating
+//! each app lifecycle, and [Related Tests] for [`PTY`]-based integration tests validating
 //! the lifecycle behavior.
 //!
 //! Key properties:
@@ -148,10 +148,10 @@
 //! This is safe because:
 //! - [`SINGLETON`] is a static [`Mutex`], never dropped until process exit.
 //! - The thread is doing nothing when blocked—[`mio`] uses efficient OS primitives.
-//! - There are no resources to leak—[`stdin`] is [`fd`][file descriptor] `0`, which is
+//! - There are no resources to leak—[`stdin`] is [`fd`][[`file descriptor`]] `0`, which is
 //!   not owned by us.
 //!
-//! #### `EINTR` Handling
+//! #### [`EINTR`] Handling
 //!
 //! [`EINTR`] ([`ErrorKind::Interrupted`]) occurs when a signal interrupts a blocking
 //! [`syscall`]. Both [`poll()`] and [`read()`] can return this error. Unlike other
@@ -166,7 +166,7 @@
 //! - **macOS**: [`kqueue`]
 //!
 //! It's *blocking* but efficient - [`poll.poll(&mut events, None)`] blocks the thread until
-//! something happens on either [file descriptor]. Unlike [`select()`] or raw [`poll()`], [`mio`] uses the
+//! something happens on either [[`file descriptor`]]. Unlike [`select()`] or raw [`poll()`], [`mio`] uses the
 //! optimal [`syscall`] per platform.
 //!
 //! <div class="warning">
@@ -177,17 +177,17 @@
 //! [The Problems section in `DirectToAnsiInputDevice`].
 //!
 //! **Why is this not implemented for macOS?** See [Why Linux-Only?] in
-//! the parent module—macOS [`kqueue`] can't poll PTY/tty file descriptors.
+//! the parent module—macOS [`kqueue`] can't poll [`PTY`]/[`tty`] file descriptors.
 //!
 //! </div>
 //!
 //! ## The Two File Descriptors
 //!
-//! A [file descriptor] (`fd`) is a Unix integer handle to an I/O resource (file, socket,
-//! pipe, etc.). Two `fd`s are registered with [`mio`]'s registry so a single [`poll()`] call
+//! A [[`file descriptor`]] ([`fd`]) is a Unix integer handle to an I/O resource (file, [`socket`],
+//! pipe, etc.). Two [`fd`]s are registered with [`mio`]'s registry so a single [`poll()`] call
 //! can wait on either becoming ready:
 //!
-//! **1. `stdin` `fd`** - The raw file descriptor (`fd 0`) for standard input, obtained via
+//! **1. `stdin` [`fd`]** - The raw [`file descriptor`] ([`fd 0`]) for standard input, obtained via
 //! [`std::io::stdin().as_raw_fd()`][AsRawFd::as_raw_fd]. We wrap it in [`SourceFd`] so [`mio`] can poll it:
 //!
 //! <!-- It is ok to use ignore here -->
@@ -196,9 +196,9 @@
 //! registry.register(&mut SourceFd(&stdin_fd), SourceKindReady::Stdin.to_token(), Interest::READABLE)
 //! ```
 //!
-//! **2. Signal watcher fd** - Signals aren't file descriptors, so [`signal_hook_mio`]
+//! **2. Signal watcher [`fd`]** - Signals aren't file descriptors, so [`signal_hook_mio`]
 //! provides a clever adapter: it creates an internal pipe that becomes readable when
-//! [`SIGWINCH`] arrives. This lets [`mio`] wait on signals just like any other fd:
+//! [`SIGWINCH`] arrives. This lets [`mio`] wait on signals just like any other [`fd`]:
 //!
 //! <!-- It is ok to use ignore here -->
 //!
@@ -216,11 +216,11 @@
 //! ```
 //!
 //! The parser handles three tricky cases:
-//! - **`ESC` disambiguation**: The `more` flag indicates if more bytes might be waiting.
-//!   If `read_count == buffer_size`, we wait before deciding a lone `ESC` is the `ESC`
+//! - **[`ESC`] disambiguation**: The `more` flag indicates if more bytes might be waiting.
+//!   If `read_count == buffer_size`, we wait before deciding a lone [`ESC`] is the [`ESC`]
 //!   key.
 //! - **Chunked input**: The buffer accumulates bytes until a complete sequence is parsed.
-//! - **UTF-8**: Multi-byte characters can span multiple reads.
+//! - **[`UTF-8`]**: Multi-byte characters can span multiple reads.
 //!
 //! The channel sends [`PollerEvent`] variants to the async side:
 //! - [`Stdin(Input(InputEvent))`] - parsed keyboard/mouse input
@@ -234,124 +234,132 @@
 //! provides a clean platform abstraction over [`epoll`] on Linux. See [Why Linux-Only?]
 //! for why this module doesn't support macOS.
 //!
-//! # ESC Detection Limitations
+//! # [`ESC`] Detection Limitations
 //!
-//! Both the `ESC` key and escape sequences (like `Up Arrow` = `ESC [ A`) start with the
-//! same byte (`1B`). When we read a lone `ESC` byte, is it the `ESC` key or the start of
+//! Both the [`ESC`] key and escape sequences (like `Up Arrow` = `ESC [ A`) start with the
+//! same byte (`1B`). When we read a lone [`ESC`] byte, is it the [`ESC`] key or the start of
 //! a sequence?
 //!
 //! ## The `more` Flag Heuristic
 //!
 //! We use [`crossterm`]'s `more` flag pattern: `more = (read_count == buffer_size)`. The
-//! idea is that if `read()` fills the entire buffer, more data is probably waiting in
+//! idea is that if [`read()`] fills the entire buffer, more data is probably waiting in
 //! the kernel. So:
 //!
-//! - `more == true` + lone `ESC` → wait (might be start of escape sequence)
-//! - `more == false` + lone `ESC` → emit `ESC` key (no more data waiting)
+//! - `more == true` + lone [`ESC`] → wait (might be start of escape sequence)
+//! - `more == false` + lone [`ESC`] → emit [`ESC`] key (no more data waiting)
 //!
 //! ## Why This is a Heuristic, Not a Guarantee
 //!
-//! **This approach assumes that if `read()` returns fewer bytes than the buffer size, all
+//! **This approach assumes that if [`read()`] returns fewer bytes than the buffer size, all
 //! pending data has been consumed.** This is usually true, but not guaranteed:
 //!
 //! - **Local terminals**: Escape sequences are typically written atomically, so they
-//!   arrive complete in one `read()`. The heuristic works well.
-//! - **Over [`SSH`]**: TCP can fragment data arbitrarily. If `ESC` arrives in one packet
-//!   and `[ A` in the next (even microseconds later), we might incorrectly emit `ESC`.
+//!   arrive complete in one [`read()`]. The heuristic works well.
+//! - **Over [`SSH`]**: [`TCP`] can fragment data arbitrarily. If [`ESC`] arrives in one packet
+//!   and `[ A` in the next (even microseconds later), we might incorrectly emit [`ESC`].
 //! - **High latency networks**: The more latency and packet fragmentation, the higher the
-//!   chance of incorrect `ESC` detection.
+//!   chance of incorrect [`ESC`] detection.
 //!
 //! ## Why Not Use a Timeout Like `vim`?
 //!
 //! Vim uses a [100ms `ttimeoutlen` delay] - if no more bytes arrive within 100ms after
-//! `ESC`, it's the `ESC` key. This is more reliable but adds latency to every `ESC`
+//! [`ESC`], it's the [`ESC`] key. This is more reliable but adds latency to every [`ESC`]
 //! keypress.
 //!
 //! We chose the `more` flag heuristic (following [`crossterm`]) because:
-//! - Zero latency for `ESC` key in the common case (local terminal).
-//! - Acceptable behavior for most [`SSH`] connections (TCP usually delivers related bytes
+//! - Zero latency for [`ESC`] key in the common case (local terminal).
+//! - Acceptable behavior for most [`SSH`] connections ([`TCP`] usually delivers related bytes
 //!   together). In our testing there were no issues over [`SSH`].
-//! - The failure mode (`ESC` emitted early) is annoying but not catastrophic.
+//! - The failure mode ([`ESC`] emitted early) is annoying but not catastrophic.
 //!
-//! **Trade-off**: Faster `ESC` response vs. occasional incorrect detection on
+//! **Trade-off**: Faster [`ESC`] response vs. occasional incorrect detection on
 //! high-latency connections.
 //!
 //! [100ms `ttimeoutlen` delay]: https://vi.stackexchange.com/questions/24925/usage-of-timeoutlen-and-ttimeoutlen
-//! [AsRawFd::as_raw_fd]: std::os::unix::io::AsRawFd::as_raw_fd
-//! [Device Lifecycle]: super::DirectToAnsiInputDevice#device-lifecycle
-//! [RRT module docs]: crate::core::resilient_reactor_thread
-//! [Related Tests]: crate::core::resilient_reactor_thread#related-tests
-//! [The Problems section in `DirectToAnsiInputDevice`]: super::DirectToAnsiInputDevice#the-problems
-//! [VT100 input parser]: super::stateful_parser::StatefulInputParser
-//! [Why Linux-Only?]: super#why-linux-only
 //! [`Arc<AtomicBool>`]: std::sync::atomic::AtomicBool
-//! [`CONTROL_D`]: crate::core::ansi::CONTROL_D
-//! [`DirectToAnsiInputDevice`]: super::DirectToAnsiInputDevice
-//! [`EINTR`]: https://man7.org/linux/man-pages/man3/errno.3.html
-//! [`EOF`]: https://en.wikipedia.org/wiki/End-of-file
-//! [`ErrorKind::Interrupted`]: std::io::ErrorKind::Interrupted
-//! [`InputEvent`]: crate::InputEvent
-//! [`MioPollWorker`]: mio_poll_worker::MioPollWorker
-//! [`Mutex`]: std::sync::Mutex
-//! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
-//! [`PasteCollectionState`]: super::paste_state_machine::PasteCollectionState
-//! [`PollerEvent::Signal`]: super::channel_types::PollerEvent::Signal
-//! [`PollerEvent::Stdin`]: super::channel_types::PollerEvent::Stdin
-//! [`PollerEvent`]: super::channel_types::PollerEvent
-//! [`RRTWaker`]: crate::core::resilient_reactor_thread::RRTWaker
-//! [`SIGINT`]: signal_hook::consts::SIGINT
-//! [`SIGWINCH`]: signal_hook::consts::SIGWINCH
-//! [`SINGLETON`]: super::input_device_impl::global_input_resource::SINGLETON
-//! [`SSH`]: https://en.wikipedia.org/wiki/Secure_Shell
-//! [`Signal(Resize)`]: super::channel_types::SignalEvent::Resize
-//! [`SignalEvent::Resize`]: super::channel_types::SignalEvent::Resize
-//! [`SourceFd`]: mio::unix::SourceFd
-//! [`SourceKindReady`]: sources::SourceKindReady
-//! [`SourceRegistry`]: sources::SourceRegistry
-//! [`StatefulInputParser`]: super::stateful_parser::StatefulInputParser
-//! [`Stdin(Eof)`]: super::channel_types::StdinEvent::Eof
-//! [`Stdin(Error)`]: super::channel_types::StdinEvent::Error
-//! [`Stdin(Input(InputEvent))`]: super::channel_types::StdinEvent::Input
-//! [`StdinEvent::Eof`]: super::channel_types::StdinEvent::Eof
-//! [`StdinEvent::Error`]: super::channel_types::StdinEvent::Error
-//! [`SubscriberGuard::drop()`]: crate::core::resilient_reactor_thread::SubscriberGuard#impl-Drop-for-SubscriberGuard
-//! [`SubscriberGuard`]: crate::core::resilient_reactor_thread::SubscriberGuard
-//! [`VEOF`]: https://man7.org/linux/man-pages/man3/termios.3.html
-//! [`VT100InputEventIR`]: crate::core::ansi::vt_100_terminal_input_parser::VT100InputEventIR
 //! [`broadcast::Receiver`]: tokio::sync::broadcast::Receiver
 //! [`consume_pending_signals_with_sender()`]: handler_signals::consume_pending_signals_with_sender
 //! [`consume_stdin_input_with_sender()`]: handler_stdin::consume_stdin_input_with_sender
+//! [`CONTROL_D`]: crate::core::ansi::CONTROL_D
 //! [`crossterm`]: ::crossterm
+//! [`DirectToAnsiInputDevice`]: super::DirectToAnsiInputDevice
 //! [`dispatch_with_sender()`]: dispatcher::dispatch_with_sender
+//! [`EINTR`]: https://man7.org/linux/man-pages/man3/errno.3.html
+//! [`EOF`]: https://en.wikipedia.org/wiki/End-of-file
 //! [`epoll`]: https://man7.org/linux/man-pages/man7/epoll.7.html
+//! [`ErrorKind::Interrupted`]: std::io::ErrorKind::Interrupted
+//! [`ESC`]: crate::EscSequence
+//! [`fd 0`]: https://man7.org/linux/man-pages/man3/stdin.3.html
+//! [`fd`]: https://en.wikipedia.org/wiki/File_descriptor
+//! [`file descriptor`]: https://en.wikipedia.org/wiki/File_descriptor
 //! [`handle_receiver_drop_waker_with_sender()`]: handler_receiver_drop::handle_receiver_drop_waker_with_sender
+//! [`InputEvent`]: crate::InputEvent
 //! [`kqueue`]: https://man.freebsd.org/cgi/man.cgi?query=kqueue&sektion=2
 //! [`mio::Poll`]: mio::Poll
 //! [`mio::Token`]: mio::Token
 //! [`mio::Waker`]: mio::Waker
 //! [`mio_poller`]: mod@self
+//! [`mio`]: https://docs.rs/mio
+//! [`MioPollWorker`]: mio_poll_worker::MioPollWorker
+//! [`Mutex`]: std::sync::Mutex
+//! [`PasteCollectionState`]: super::paste_state_machine::PasteCollectionState
 //! [`poll()`]: https://man7.org/linux/man-pages/man2/poll.2.html
 //! [`poll.poll(&mut events, None)`]: mio::Poll::poll
+//! [`PollerEvent::Signal`]: super::channel_types::PollerEvent::Signal
+//! [`PollerEvent::Stdin`]: super::channel_types::PollerEvent::Stdin
+//! [`PollerEvent`]: super::channel_types::PollerEvent
+//! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`read()`]: https://man7.org/linux/man-pages/man2/read.2.html
 //! [`receiver_count()`]: tokio::sync::broadcast::Sender::receiver_count
 //! [`resilient_reactor_thread`]: crate::core::resilient_reactor_thread
+//! [`RRTWaker`]: crate::core::resilient_reactor_thread::RRTWaker
 //! [`rustix::event::poll()`]: https://docs.rs/rustix/latest/rustix/event/fn.poll.html
 //! [`select()`]: https://man7.org/linux/man-pages/man2/select.2.html
 //! [`sender.send()`]: tokio::sync::broadcast::Sender::send
+//! [`SIGINT`]: signal_hook::consts::SIGINT
+//! [`Signal(Resize)`]: super::channel_types::SignalEvent::Resize
 //! [`signal_hook_mio`]: signal_hook_mio
+//! [`SignalEvent::Resize`]: super::channel_types::SignalEvent::Resize
+//! [`SIGWINCH`]: signal_hook::consts::SIGWINCH
+//! [`SINGLETON`]: super::input_device_impl::global_input_resource::SINGLETON
+//! [`socket`]: https://man7.org/linux/man-pages/man7/socket.7.html
+//! [`SourceFd`]: mio::unix::SourceFd
+//! [`SourceKindReady`]: sources::SourceKindReady
+//! [`SourceRegistry`]: sources::SourceRegistry
+//! [`SSH`]: https://en.wikipedia.org/wiki/Secure_Shell
+//! [`StatefulInputParser`]: super::stateful_parser::StatefulInputParser
 //! [`std::thread`]: std::thread
+//! [`Stdin(Eof)`]: super::channel_types::StdinEvent::Eof
+//! [`Stdin(Error)`]: super::channel_types::StdinEvent::Error
+//! [`Stdin(Input(InputEvent))`]: super::channel_types::StdinEvent::Input
 //! [`stdin`]: std::io::stdin
+//! [`StdinEvent::Eof`]: super::channel_types::StdinEvent::Eof
+//! [`StdinEvent::Error`]: super::channel_types::StdinEvent::Error
 //! [`subscribe()`]: crate::core::resilient_reactor_thread::RRT::subscribe
+//! [`SubscriberGuard::drop()`]: crate::core::resilient_reactor_thread::SubscriberGuard#impl-Drop-for-SubscriberGuard
+//! [`SubscriberGuard`]: crate::core::resilient_reactor_thread::SubscriberGuard
 //! [`syscall`]: https://man7.org/linux/man-pages/man2/syscalls.2.html
+//! [`TCP`]: https://en.wikipedia.org/wiki/Transmission_Control_Protocol
 //! [`tokio::io::stdin()`]: tokio::io::stdin
 //! [`tokio::select!`]: tokio::select
 //! [`tokio::sync::broadcast`]: tokio::sync::broadcast
+//! [`tty`]: https://man7.org/linux/man-pages/man4/tty.4.html
+//! [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
+//! [`VEOF`]: https://man7.org/linux/man-pages/man3/termios.3.html
+//! [`VT100InputEventIR`]: crate::core::ansi::vt_100_terminal_input_parser::VT100InputEventIR
 //! [`waker.wake()`]: mio::Waker::wake
+//! [AsRawFd::as_raw_fd]: std::os::unix::io::AsRawFd::as_raw_fd
 //! [canonical mode]: crate::core::ansi::terminal_raw_mode#raw-mode-vs-cooked-mode
-//! [file descriptor]: https://en.wikipedia.org/wiki/File_descriptor
+//! [Device Lifecycle]: super::DirectToAnsiInputDevice#device-lifecycle
 //! [line discipline]: https://en.wikipedia.org/wiki/Line_discipline
 //! [paste state machine]: super::paste_state_machine::PasteCollectionState
 //! [raw mode]: crate::core::ansi::terminal_raw_mode#raw-mode-vs-cooked-mode
+//! [Related Tests]: crate::core::resilient_reactor_thread#related-tests
+//! [RRT module docs]: crate::core::resilient_reactor_thread
+//! [The Problems section in `DirectToAnsiInputDevice`]: super::DirectToAnsiInputDevice#the-problems
+//! [VT100 input parser]: super::stateful_parser::StatefulInputParser
+//! [Why Linux-Only?]: super#why-linux-only
 
 // XMARK: impl trait rustdoc link definition heading-anchor (eg: #impl-Drop-for) see above
 

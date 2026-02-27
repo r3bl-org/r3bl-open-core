@@ -3,7 +3,7 @@
 use super::TerminalWindowMainThreadSignal;
 use crate::{ChUnit, CommonResult, DEBUG_TUI_COMPOSITOR, DEBUG_TUI_MOD, InlineString,
             MemoizedLenMap, OffscreenBuffer, OffscreenBufferPool, OutputDevice, Size,
-            SpinnerStyle, TelemetryHudReport, ok, spinner_impl,
+            SpinnerStyle, TelemetryHudReport, spinner_impl,
             telemetry::telemetry_sizing::TelemetryReportLineStorage};
 use std::{collections::HashMap,
           fmt::{Debug, Formatter}};

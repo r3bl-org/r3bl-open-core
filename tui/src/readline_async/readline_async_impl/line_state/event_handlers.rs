@@ -4,8 +4,8 @@ use super::core::LineState;
 use crate::{AnsiSequenceGenerator, CsiSequence, EraseDisplayMode, FunctionKey,
             GCStringOwned, InputEvent, Key, KeyPress, KeyState, LineStateLiveness,
             NumericValue, ReadlineError, ReadlineEvent, SafeHistory, Size, SpecialKey,
-            col, early_return_if_paused, find_next_word_end, find_next_word_start,
-            find_prev_word_start, row, seg_index};
+            col, find_next_word_end, find_next_word_start, find_prev_word_start, row,
+            seg_index};
 use std::{io::Write, num::NonZeroU8};
 use unicode_segmentation::UnicodeSegmentation;
 
@@ -114,7 +114,9 @@ pub fn handle_regular_key(
         }))),
 
         // Catch-all for unhandled keys.
-        _ => Ok(Some(ReadlineEvent::UnhandledKey(KeyPress::Plain { key: *key }))),
+        _ => Ok(Some(ReadlineEvent::UnhandledKey(KeyPress::Plain {
+            key: *key,
+        }))),
     }
 }
 
@@ -697,8 +699,8 @@ impl LineState {
     /// ## Real-World Usage
     ///
     /// For complete async event loop implementations, see:
-    /// - [`pty_ctrl_navigation_test`] - Shows full PTY test pattern with debouncing
-    /// - [`pty_ctrl_d_eof_test`] - Shows handling of Ctrl+D as EOF
+    /// - [`pty_ctrl_navigation_test`] - Shows full [`PTY`] test pattern with debouncing
+    /// - [`pty_ctrl_d_eof_test`] - Shows handling of Ctrl+D as [`EOF`]
     /// - [`pty_ctrl_d_delete_test`] - Shows handling of Ctrl+D as delete
     ///
     ///
@@ -713,9 +715,11 @@ impl LineState {
     /// Returns an error if writing to the terminal fails or if the event cannot be
     /// processed.
     ///
+    /// [`EOF`]: https://en.wikipedia.org/wiki/End-of-file
     /// [`pty_ctrl_d_delete_test`]: crate::readline_async::readline_async_impl::integration_tests::pty_ctrl_d_delete_test
     /// [`pty_ctrl_d_eof_test`]: crate::readline_async::readline_async_impl::integration_tests::pty_ctrl_d_eof_test
     /// [`pty_ctrl_navigation_test`]: crate::readline_async::readline_async_impl::integration_tests::pty_ctrl_navigation_test
+    /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
     #[allow(clippy::unwrap_in_result)] /* This is for lock.unwrap() */
     pub fn apply_event_and_render(
         &mut self,
@@ -1779,7 +1783,9 @@ mod tests {
                         "Unexpected event for {special_key:?}: got {readline_event:?}"
                     );
                 }
-                other => panic!("Expected Ok(Some(_)) for {special_key:?}, got {other:?}"),
+                other => {
+                    panic!("Expected Ok(Some(_)) for {special_key:?}, got {other:?}")
+                }
             }
         }
     }

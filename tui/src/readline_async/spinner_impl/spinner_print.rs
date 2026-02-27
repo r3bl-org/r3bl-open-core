@@ -1,12 +1,10 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+use crate::{CommonResult, LockedOutputDevice, OutputDevice, SharedWriter, SpinnerStyle};
 use crossterm::{cursor::{Hide, MoveToColumn, MoveToNextLine, MoveToPreviousLine, Show},
                 style::Print,
                 terminal::{Clear, ClearType}};
 use miette::IntoDiagnostic;
-
-use crate::{lock_output_device_as_mut, ok, queue_commands, queue_commands_no_lock,
-            CommonResult, LockedOutputDevice, OutputDevice, SharedWriter, SpinnerStyle};
 
 // Allocate specified number of lines in the terminal (ahead of the current cursor
 // position) for the spinner.

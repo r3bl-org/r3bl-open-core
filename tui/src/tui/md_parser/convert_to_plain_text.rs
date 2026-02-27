@@ -5,8 +5,7 @@
 
 use crate::{HeadingLevel, HyperlinkData, InlineString, List, MdDocument, MdElement,
             MdLineFragment, ParseList, PrettyPrintDebug, convert_to_string_slice,
-            get_hashes, get_horiz_lines, get_spaces, inline_string, join, join_fmt,
-            join_with_index,
+            get_hashes, get_horiz_lines, get_spaces,
             md_parser::md_parser_constants::{BACK_TICK, CHECKED, LEFT_BRACKET,
                                              LEFT_IMAGE, LEFT_PARENTHESIS,
                                              LIST_SPACE_DISPLAY,
@@ -211,8 +210,6 @@ pub fn generate_unordered_list_item_bullet(
 #[cfg(test)]
 mod to_plain_text_tests {
     use super::*;
-    use crate::assert_eq2;
-
     #[test]
     fn test_fragment_to_plain_text() {
         assert_eq2!(

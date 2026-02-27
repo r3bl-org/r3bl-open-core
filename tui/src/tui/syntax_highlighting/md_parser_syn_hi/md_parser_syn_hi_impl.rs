@@ -15,7 +15,7 @@ use crate::{CodeBlockLineContent, CodeBlockLines, CommonError, CommonErrorType,
             get_code_block_content_style, get_code_block_lang_style,
             get_foreground_dim_style, get_foreground_style, get_inline_code_style,
             get_italic_style, get_link_text_style, get_link_url_style,
-            get_list_bullet_style, join, new_style, parse_markdown, try_get_syntax_ref,
+            get_list_bullet_style, parse_markdown, try_get_syntax_ref,
             tui::md_parser::md_parser_constants::{AUTHORS, BACK_TICK, CHECKED_OUTPUT,
                                                   CODE_BLOCK_START_PARTIAL, DATE,
                                                   LEFT_BRACKET, LEFT_IMAGE,
@@ -88,11 +88,12 @@ pub fn try_parse_and_highlight(
 #[cfg(test)]
 mod tests_try_parse_and_highlight {
     use super::*;
-    use crate::{ColorSupport, assert_eq2, fg_cyan, global_color_support, throws,
-                tui_color};
+    use crate::{ColorSupport, fg_cyan, global_color_support};
     use serial_test::serial;
 
-    /// RAII guard for color support override cleanup
+    /// [`RAII`] guard for color support override cleanup
+    ///
+    /// [`RAII`]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
     struct ColorSupportGuard;
     impl Drop for ColorSupportGuard {
         fn drop(&mut self) { global_color_support::clear_override(); }
@@ -507,9 +508,12 @@ impl StyleUSSpan {
     /// [`StyleUSSpan`]s.
     ///
     /// 1. These are then rolled up into a [`StyleUSSpanLine`] by
-    ///    [StyleUSSpanLine::from_fragments](StyleUSSpanLine::from_fragments) ...
+    ///    [StyleUSSpanLine::from_fragments] ...
     /// 2. ... which is then rolled up into [`StyleUSSpanLines`] by
-    ///    [StyleUSSpanLine::from_block](StyleUSSpanLine::from_block).
+    ///    [StyleUSSpanLine::from_block].
+    ///
+    /// [StyleUSSpanLine::from_block]: StyleUSSpanLine::from_block
+    /// [StyleUSSpanLine::from_fragments]: StyleUSSpanLine::from_fragments
     #[must_use]
     #[allow(clippy::too_many_lines)]
     pub fn from_fragment(
@@ -729,13 +733,15 @@ impl From<TuiStyledTexts> for StyleUSSpanLine {
 mod tests_style_us_span_lines_from {
 
     use super::*;
-    use crate::{CodeBlockLine, ColorSupport, HeadingLevel, assert_eq2,
+    use crate::{CodeBlockLine, ColorSupport, HeadingLevel,
                 get_metadata_tags_marker_style, get_metadata_tags_values_style,
                 get_metadata_title_marker_style, get_metadata_title_value_style,
-                global_color_support, throws, tui_color};
+                global_color_support};
     use serial_test::serial;
 
-    /// RAII guard for color support override cleanup
+    /// [`RAII`] guard for color support override cleanup
+    ///
+    /// [`RAII`]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
     struct ColorSupportGuard;
     impl Drop for ColorSupportGuard {
         fn drop(&mut self) { global_color_support::clear_override(); }
@@ -748,7 +754,9 @@ mod tests_style_us_span_lines_from {
     }
 
     /// Test each [`MdLineFragment`] variant is converted by
-    /// [StyleUSSpan::from_fragment](StyleUSSpan::from_fragment).
+    /// [StyleUSSpan::from_fragment].
+    ///
+    /// [StyleUSSpan::from_fragment]: StyleUSSpan::from_fragment
     mod from_fragment {
         use super::*;
 
@@ -1060,10 +1068,12 @@ mod tests_style_us_span_lines_from {
     }
 
     /// Test each variant of [`MdBlockElement`] is converted by
-    /// [StyleUSSpanLines::from_block](StyleUSSpanLines::from_block).
+    /// [StyleUSSpanLines::from_block].
+    ///
+    /// [StyleUSSpanLines::from_block]: StyleUSSpanLines::from_block
     mod from_block {
         use super::*;
-        use crate::{BulletKind, parse_list};
+        use crate::BulletKind;
 
         #[test]
         #[serial]

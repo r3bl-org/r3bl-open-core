@@ -43,7 +43,7 @@
 //!                                             ╰─────────────────╯
 //! ```
 //!
-//! # `CSI` Sequence Processing Flow
+//! # [`CSI`] Sequence Processing Flow
 //!
 //! ```text
 //! Application sends "ESC [2L" (insert 2 lines)
@@ -68,7 +68,8 @@
 //!
 //! # [`VT-100`] Protocol Conventions
 //!
-//! This shim layer sits at the boundary between [`VT-100`] wire format and internal types.
+//! This shim layer sits at the boundary between [`VT-100`] wire format and internal
+//! types.
 //!
 //! ## Parameter Handling
 //!
@@ -82,14 +83,16 @@
 //! ## Scroll Region Interaction
 //!
 //! Line insertion and deletion operations interact with the scrolling region set by
-//! DECSTBM. Lines are shifted within the region boundaries, with new/blank lines
+//! [`DECSTBM`]. Lines are shifted within the region boundaries, with new/blank lines
 //! appearing at the opposite end.
 //!
-//! [`NonZeroU16`]: std::num::NonZeroU16
-//! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+//! [`CSI`]: crate::CsiSequence
+//! [`DECSTBM`]: https://vt100.net/docs/vt510-rm/DECSTBM.html
 //! [`extract_nth_single_non_zero()`]: crate::ParamsExt::extract_nth_single_non_zero
 //! [`impl_line_ops`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl::vt_100_impl_line_ops
+//! [`NonZeroU16`]: std::num::NonZeroU16
 //! [`test_line_ops`]: crate::core::ansi::vt_100_pty_output_parser::vt_100_pty_output_conformance_tests::tests::vt_100_test_line_ops
+//! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 //! [module-level documentation]: self
 
 use super::super::ansi_parser_public_api::AnsiToOfsBufPerformer;

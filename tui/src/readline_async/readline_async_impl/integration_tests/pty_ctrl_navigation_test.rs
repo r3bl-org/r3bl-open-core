@@ -7,7 +7,6 @@ use crate::{AsyncDebouncedDeadline, ControlledChild, DebouncedState, KeyState, P
                                                          VT100KeyCodeIR,
                                                          VT100KeyModifiersIR}},
                    test_fixtures::StdoutMock},
-            generate_pty_test,
             readline_async::readline_async_impl::LineState};
 use std::{io::{BufRead, BufReader, Write},
           sync::{Arc, Mutex as StdMutex},
@@ -19,7 +18,9 @@ use std::{io::{BufRead, BufReader, Write},
 // This ensures the test sends the exact same sequences that the parser expects.
 
 /// Ctrl+Left: Move cursor one word backward
-/// Generates: ESC [ 1 ; 5 D
+/// Generates: [`ESC`] [ 1 ; 5 D
+///
+/// [`ESC`]: crate::EscSequence
 fn ctrl_left() -> Vec<u8> {
     generate_keyboard_sequence(&VT100InputEventIR::Keyboard {
         code: VT100KeyCodeIR::Left,
@@ -33,7 +34,9 @@ fn ctrl_left() -> Vec<u8> {
 }
 
 /// Ctrl+Right: Move cursor one word forward
-/// Generates: ESC [ 1 ; 5 C
+/// Generates: [`ESC`] [ 1 ; 5 C
+///
+/// [`ESC`]: crate::EscSequence
 fn ctrl_right() -> Vec<u8> {
     generate_keyboard_sequence(&VT100InputEventIR::Keyboard {
         code: VT100KeyCodeIR::Right,
@@ -47,12 +50,15 @@ fn ctrl_right() -> Vec<u8> {
 }
 
 generate_pty_test! {
-    /// PTY-based integration test for Ctrl+Left/Right word navigation.
+    /// [`PTY`]-based integration test for Ctrl+Left/Right word navigation.
     ///
     /// Validates that Ctrl+Left and Ctrl+Right correctly move the cursor
     /// to word boundaries, respecting whitespace and punctuation.
     ///
-    /// Run with: `cargo test -p r3bl_tui --lib test_pty_ctrl_navigation -- --nocapture`
+    /// Run with:
+    /// ```bash
+    /// cargo test -p r3bl_tui --lib test_pty_ctrl_navigation -- --nocapture
+    /// ```
     ///
     /// Tests:
     /// 1. Ctrl+Left: Move to start of previous word
@@ -63,7 +69,7 @@ generate_pty_test! {
     ///
     /// This test uses a **request-response protocol** between controller and controlled processes:
     ///
-    /// 1. **Controller sends input** (e.g., "hello world test" or ESC sequences)
+    /// 1. **Controller sends input** (e.g., "hello world test" or [`ESC`] sequences)
     /// 2. **Controller flushes** and waits ~200ms for controlled process to process
     /// 3. **Controller blocks** reading controlled stdout until it sees "Line: ..."
     /// 4. **Controller makes assertion** on the line state
@@ -76,19 +82,26 @@ generate_pty_test! {
     ///
     /// The ([`LineState`]) is checked in the tests to make assertions against.
     ///
+    /// [`ESC`]: crate::EscSequence
     /// [`LineState`]: crate::readline_async::readline_async_impl::LineState
+    /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
     test_fn: test_pty_ctrl_navigation,
     controller: pty_controller_entry_point,
     controlled: pty_controlled_entry_point,
     mode: PtyTestMode::Raw,
 }
 
-/// PTY Controller: Send Ctrl+Left/Right sequences and verify navigation
+/// [`PTY`] Controller: Send Ctrl+Left/Right sequences and verify navigation
+///
+/// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 #[allow(clippy::too_many_lines)]
 fn pty_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
     eprintln!("🚀 PTY Controller: Starting Ctrl+Left/Right test...");
 
-    let mut writer = pty_pair.controller().take_writer().expect("Failed to get writer");
+    let mut writer = pty_pair
+        .controller()
+        .take_writer()
+        .expect("Failed to get writer");
     let reader = pty_pair
         .controller()
         .try_clone_reader()
@@ -155,8 +168,9 @@ fn pty_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
         .expect("Failed to write text");
     writer.flush().expect("Failed to flush");
 
-    // Wait 200ms for controlled process to process all 16 characters and print line state.
-    // Controlled process's 10ms debounce ensures all chars are batched before printing.
+    // Wait 200ms for controlled process to process all 16 characters and print line
+    // state. Controlled process's 10ms debounce ensures all chars are batched before
+    // printing.
     std::thread::sleep(Duration::from_millis(200));
 
     let result = read_line_state();
@@ -171,7 +185,8 @@ fn pty_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
         .expect("Failed to write Ctrl+Left");
     writer.flush().expect("Failed to flush");
 
-    // Wait 100ms for controlled process to process single key sequence and print line state
+    // Wait 100ms for controlled process to process single key sequence and print line
+    // state
     std::thread::sleep(Duration::from_millis(100));
 
     let result = read_line_state();
@@ -219,7 +234,9 @@ fn pty_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
     eprintln!("✅ PTY Controller: Test passed!");
 }
 
-/// PTY Controlled: Process readline input and report line state
+/// [`PTY`] Controlled: Process readline input and report line state
+///
+/// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 fn pty_controlled_entry_point() -> ! {
     use crate::direct_to_ansi::DirectToAnsiInputDevice;
 

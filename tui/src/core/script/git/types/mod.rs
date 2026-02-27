@@ -2,9 +2,7 @@
 
 //! Type definitions and constants for git operations.
 
-// Skip rustfmt for rest of file to preserve manual organization
-// https://stackoverflow.com/a/75910283/2085356
-#![cfg_attr(rustfmt, rustfmt_skip)]
+#![rustfmt::skip]
 
 // Private modules (hide internal structure)
 mod core;

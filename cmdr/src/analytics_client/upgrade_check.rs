@@ -1,6 +1,6 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Upgrade checking and installation functionality for r3bl-cmdr.
+//! Upgrade checking and installation functionality for [`r3bl-cmdr`].
 //!
 //! This module handles checking for newer versions of the crate on crates.io and manages
 //! the upgrade process with progress display and user interaction.
@@ -20,11 +20,11 @@
 //!   compilation
 //!
 //! ## 2. Crate Installation: `cargo +nightly install r3bl-cmdr`
-//! - **What it does**: Downloads, compiles, and installs the latest version of r3bl-cmdr
-//!   from crates.io
+//! - **What it does**: Downloads, compiles, and installs the latest version of
+//!   [`r3bl-cmdr`] from crates.io
 //! - **Why `+nightly`**: Explicitly uses the nightly toolchain for compilation, ensuring
 //!   consistency
-//! - **Progress display**: Emits OSC escape sequences showing compilation percentage
+//! - **Progress display**: Emits [`OSC`] escape sequences showing compilation percentage
 //!   (0-100%)
 //! - **Benefits**: Uses the latest nightly features for optimal performance and newest
 //!   language capabilities
@@ -37,10 +37,13 @@
 //! 2. Run `cargo run --bin edi` or `cargo run --bin giti`
 //! 3. When you exit, if an upgrade is available, you'll see:
 //!    - Spinner with real-time rustup installation messages (using output)
-//!    - Progress percentages during cargo compilation (using OSC)
+//!    - Progress percentages during cargo compilation (using [`OSC`])
 //!    - Both processes can be cancelled with Ctrl+C
 //!
-//! [`../remove_toolchains.sh`]: https://github.com/r3bl-org/r3bl-open-core/blob/main/remove_toolchains.sh
+//! [`../remove_toolchains.sh`]:
+//!     https://github.com/r3bl-org/r3bl-open-core/blob/main/remove_toolchains.sh
+//! [`OSC`]: r3bl_tui::osc_codes::OscSequence
+//! [`r3bl-cmdr`]: https://github.com/r3bl-org/r3bl-open-core/tree/main/cmdr
 
 use super::ui_str;
 use crate::{DEBUG_ANALYTICS_CLIENT_MOD, prefix_single_select_instruction_header};
@@ -150,16 +153,16 @@ pub fn is_upgrade_required() -> bool {
 pub async fn show_exit_message(context: ExitContext) {
     if is_upgrade_required() {
         // Show the "upgrade available" text.
-        println!("{}", ui_str::upgrade_check::upgrade_is_required_msg());
+        println!("{}", ui_str::upgrade_check_msgs::upgrade_is_required_msg());
 
         // Ask the user.
         let yes_no_options = &[
-            ui_str::upgrade_check::yes_msg_raw(),
-            ui_str::upgrade_check::no_msg_raw(),
+            ui_str::upgrade_check_msgs::yes_msg_raw(),
+            ui_str::upgrade_check_msgs::no_msg_raw(),
         ];
         let header_with_instructions = {
             let last_line = cli_text_line![cli_text_inline(
-                ui_str::upgrade_check::ask_user_msg_raw(),
+                ui_str::upgrade_check_msgs::ask_user_msg_raw(),
                 crate::common::ui_templates::header_style_default()
             )];
             prefix_single_select_instruction_header(smallvec![last_line])
@@ -234,11 +237,14 @@ fn extract_rustup_progress(output: &str) -> String {
     }
 }
 
-/// Runs rustup update with PTY support, output capture, and Ctrl+C handling.
+/// Runs rustup update with [`PTY`] support, output capture, and Ctrl+C handling.
 ///
-/// Unlike cargo install, rustup doesn't emit OSC codes, but it does produce output that
-/// can be used to show progress. This function captures that output and updates the
+/// Unlike cargo install, rustup doesn't emit [`OSC`] codes, but it does produce output
+/// that can be used to show progress. This function captures that output and updates the
 /// spinner message with meaningful progress information.
+///
+/// [`OSC`]: crate::osc_codes::OscSequence
+/// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 async fn run_rustup_update(spinner: Option<&Spinner>) -> Result<ExitStatus, Error> {
     // Use Output mode to capture rustup's output for progress display.
     let mut session = PtyCommandBuilder::new("rustup")
@@ -315,7 +321,9 @@ async fn run_cargo_install_with_progress(
     }
 }
 
-/// Handle OSC events from cargo install and update the spinner message accordingly.
+/// Handle [`OSC`] events from cargo install and update the spinner message accordingly.
+///
+/// [`OSC`]: crate::osc_codes::OscSequence
 fn handle_osc_event(event: OscEvent, crate_name: &str, spinner: Option<&Spinner>) {
     if let Some(spinner) = spinner {
         match event {

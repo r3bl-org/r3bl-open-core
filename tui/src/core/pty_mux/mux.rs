@@ -13,7 +13,7 @@ use crate::{AnsiSequenceGenerator, Continuation, InputEvent, RawMode, Size, col,
                    osc::OscController,
                    pty::pty_core::pty_sessions::show_notification,
                    terminal_io::{InputDevice, OutputDevice}},
-            lock_output_device_as_mut, row};
+            row};
 
 /// Main [`PTY`] multiplexer that orchestrates all components.
 ///

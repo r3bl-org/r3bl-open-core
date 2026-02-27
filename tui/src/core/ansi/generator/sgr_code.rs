@@ -1,24 +1,24 @@
 // Copyright (c) 2023-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! ANSI escape code generation with optimized performance.
+//! [`ANSI`] escape code generation with optimized performance.
 //!
 //! ## Performance Optimization
 //!
 //! This module uses a lookup table approach to avoid the overhead of Rust's formatting
-//! machinery. Even though `write!` macro writes to an in-memory buffer, it still incurs
+//! machinery. Even though [`write!`] macro writes to an in-memory buffer, it still incurs
 //! significant overhead:
 //!
-//! 1. **Format machinery dispatch**: The `write!` macro expands to `format_args!` which
-//!    creates a `fmt::Arguments` struct and dispatches through the Display trait.
+//! 1. **Format machinery dispatch**: The [`write!`] macro expands to [`format_args!`]
+//!    which creates a `fmt::Arguments` struct and dispatches through the Display trait.
 //!
 //! 2. **Integer formatting overhead**: For number placeholders like `{index}`, Rust's
-//!    integer Display implementation:
+//!    integer [`Display`] implementation:
 //!    - Allocates temporary buffers
 //!    - Performs division/modulo operations in a loop
 //!    - Handles sign, radix, padding, alignment (even when unused)
 //!    - Builds the string representation digit by digit at runtime
 //!
-//! 3. **Hot path impact**: ANSI codes are generated millions of times per second in a
+//! 3. **Hot path impact**: [`ANSI`] codes are generated millions of times per second in a
 //!    TUI:
 //!    - Every styled text segment
 //!    - Every color change
@@ -27,50 +27,59 @@
 //!
 //! ## Optimization Strategy
 //!
-//! We use a pre-computed lookup table for all possible u8 values (0-255):
+//! We use a pre-computed lookup table for all possible [`u8`] values (`0-255`):
 //! - Eliminates integer-to-string conversion
 //! - Removes format machinery dispatch
 //! - Avoids temporary allocations
 //! - Reduces to simple array lookup + memcpy
 //!
-//! This optimization targets the 45M samples shown in flamegraph profiling for ANSI
+//! This optimization targets the 45M samples shown in flamegraph profiling for [`ANSI`]
 //! formatting.
 //!
 //! ## Extended Color Format: Semicolons vs Colons
 //!
-//! For 256-color and RGB (truecolor) sequences, there are two formats:
+//! For 256-color and `RGB` (truecolor) sequences, there are two formats:
 //!
-//! - **Semicolon format** (xterm-compatible): `ESC [ 38 ; 2 ; r ; g ; b m` — de-facto
+//! - **Semicolon format** ([`xterm`]-compatible): `ESC [ 38 ; 2 ; r ; g ; b m` - de-facto
 //!   standard
-//! - **Colon format** (ITU-T T.416/ISO 8613-6): `ESC [ 38 : 2 : r : g : b m` —
+//! - **Colon format** (ITU-T T.416/ISO 8613-6): `ESC [ 38 : 2 : r : g : b m` -
 //!   technically "correct"
 //!
 //! We use **semicolons** because:
 //!
 //! 1. **Universal compatibility**: Semicolons work in virtually all terminals, while
-//!    colons are not supported by VSCode/xterm.js and many older terminals.
+//!    colons are not supported by [`VSCode`]/[`xterm.js`] and many older terminals.
 //!
-//! 2. **xterm established the standard**: Most terminal emulators implement xterm's
-//!    semicolon format, not the ISO standard's colon format.
+//! 2. **[`xterm`] established the standard**: Most terminal emulators implement
+//!    [`xterm`]'s semicolon format, not the ISO standard's colon format.
 //!
-//! 3. **Crossterm compatibility**: The Crossterm backend (used on macOS/Windows) also
+//! 3. **Crossterm compatibility**: The [`Crossterm backend`] (used on macOS/Windows) also
 //!    uses semicolons, so this keeps output consistent across all platforms.
 //!
 //! Note: Our [`VT-100`] *parser* accepts both formats for maximum compatibility when
 //! parsing output from other applications. See
 //! [`crate::core::ansi::vt_100_pty_output_parser`].
 //!
-//!
 //! More info:
 //! - <https://doc.rust-lang.org/reference/tokens.html#ascii-escapes>
 //! - <https://notes.burke.libbey.me/ansi-escape-codes/>
 //!
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`Crossterm backend`]: crate::core::ansi::crossterm_backend
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+//! [`xterm`]: https://en.wikipedia.org/wiki/Xterm
 
-use crate::{ANSIBasicColor, AnsiValue, FastStringify,
-            generate_impl_display_for_fast_stringify};
+use crate::{ANSIBasicColor, AnsiValue, FastStringify};
 use std::fmt::Result;
 
+/// Select Graphic Rendition ([`SGR`], [`SGR` spec]) codes for [`ANSI`] text styling.
+///
+/// Each variant represents a single [`SGR`] parameter that can be combined in a
+/// `CSI <params> m` sequence to control text attributes (bold, italic, colors, etc.).
+///
+/// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+/// [`SGR` spec]: https://en.wikipedia.org/wiki/ANSI_escape_code#SGR
+/// [`SGR`]: crate::SgrCode
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum SgrCode {
     Reset,
@@ -127,15 +136,17 @@ const U8_STRINGS: [&str; 256] = [
     "244", "245", "246", "247", "248", "249", "250", "251", "252", "253", "254", "255",
 ];
 
-/// SGR: set graphics mode command.
+/// [`FastStringify`] implementation for optimized [`SGR`] code generation.
+///
+/// Uses direct string concatenation and lookup tables to avoid formatting overhead.
+///
 /// More info:
 /// - <https://notes.burke.libbey.me/ansi-escape-codes/>
 /// - <https://www.asciitable.com/>
 /// - <https://commons.wikimedia.org/wiki/File:Xterm_256color_chart.svg>
 /// - <https://en.wikipedia.org/wiki/ANSI_escape_code>
 ///
-/// [`FastStringify`] implementation for optimized performance.
-/// Uses direct string concatenation and lookup tables to avoid formatting overhead.
+/// [`SGR`]: crate::SgrCode
 impl FastStringify for SgrCode {
     #[allow(clippy::too_many_lines)]
     fn write_to_buf(&self, buf: &mut crate::BufTextStorage) -> Result {

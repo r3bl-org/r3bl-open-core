@@ -1,16 +1,16 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Device Status Report (DSR) sequence builders.
+//! Device Status Report ([`DSR`]) sequence builders.
 //!
-//! This module provides types and builders for handling DSR requests and responses
-//! in terminal emulation.
+//! This module provides types and builders for handling [`DSR`] requests and responses in
+//! terminal emulation.
 //!
-//! ## DSR Codes and Constants
+//! ## [`DSR`] Codes and Constants
 //!
-//! DSR sequences are used for bidirectional communication between terminals and
+//! [`DSR`] sequences are used for bidirectional communication between terminals and
 //! applications:
-//! - **Requests** (INCOMING): Applications send CSI sequences to request information
-//! - **Responses** (OUTGOING): Terminal emulator sends back ESC sequences with the
+//! - **Requests** (INCOMING): Applications send [`CSI`] sequences to request information
+//! - **Responses** (OUTGOING): Terminal emulator sends back [`ESC`] sequences with the
 //!   requested data
 //!
 //! ### Request Format (from application)
@@ -20,26 +20,33 @@
 //! ### Response Format (from terminal)
 //! - `ESC [ 0 n` - Terminal OK status
 //! - `ESC [ row ; col R` - Cursor position (1-based)
+//!
+//! [`CSI`]: crate::CsiSequence
+//! [`DSR`]: crate::DsrSequence
+//! [`ESC`]: crate::EscSequence
 
 use crate::{ParamsExt, TermCol, TermRow,
             core::{ansi::constants::{CSI_PARAM_SEPARATOR,
                                      DSR_CURSOR_POSITION_RESPONSE_END,
                                      DSR_RESPONSE_START, DSR_STATUS_OK_CODE,
                                      DSR_STATUS_RESPONSE_END},
-                   common::fast_stringify::{BufTextStorage, FastStringify}},
-            generate_impl_display_for_fast_stringify};
+                   common::fast_stringify::{BufTextStorage, FastStringify}}};
 use std::fmt::{self, Display};
 
-// DSR request types for parsing incoming DSR CSI sequences.
+// [`DSR`] request types for parsing incoming [`DSR`] [`CSI`] sequences.
 
-/// Device Status Report types for CSI n sequences.
+/// Device Status Report types for [`CSI`] n sequences.
+///
+/// [`CSI`]: crate::CsiSequence
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum DsrRequestType {
-    /// Request terminal status (5)
+    /// Request terminal status (5).
     RequestStatus,
-    /// Request cursor position (6)
+    /// Request cursor position (6).
     RequestCursorPosition,
-    /// Unknown/unsupported DSR type
+    /// Unknown/unsupported [`DSR`] type.
+    ///
+    /// [`DSR`]: crate::DsrSequence
     Other(u16),
 }
 
@@ -76,17 +83,18 @@ mod dsr_request_type_impl {
     }
 }
 
-/// Builder for formatting DSR response sequences.
+/// Builder for formatting [`DSR`] ([`DSR` spec]) response sequences.
 ///
-/// This is the formatting layer that converts semantic DSR requests
-/// into properly formatted ANSI escape sequences.
+/// This is the formatting layer that converts semantic [`DSR`] requests into properly
+/// formatted [`ANSI`] escape sequences.
 ///
-/// `DsrSequence` is part of the OUTGOING sequence builder family:
-/// - **`CsiSequence`**: Builds CSI sequences (cursor movement, colors, etc.)
-/// - **`OscSequence`**: Builds OSC sequences (titles, hyperlinks, notifications)
-/// - **`DsrSequence`**: Builds DSR response sequences (status reports)
+/// [`DsrSequence`] is part of the OUTGOING sequence builder family:
+/// - **[`CsiSequence`]**: Builds [`CSI`] sequences (cursor movement, colors, etc.)
+/// - **[`OscSequence`]**: Builds [`OSC`] sequences (titles, hyperlinks, notifications)
+/// - **[`DsrSequence`]**: Builds [`DSR`] response sequences (status reports)
 ///
-/// All implement `FastStringify` for efficient formatting and `Display` for convenience.
+/// All implement [`FastStringify`] for efficient formatting and [`Display`] for
+/// convenience.
 ///
 /// ## Examples
 ///
@@ -103,12 +111,20 @@ mod dsr_request_type_impl {
 /// };
 /// assert_eq!(cursor.to_string(), "\x1b[5;10R");
 /// ```
+///
+/// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+/// [`CSI`]: crate::CsiSequence
+/// [`CsiSequence`]: crate::CsiSequence
+/// [`DSR` spec]: https://en.wikipedia.org/wiki/ANSI_escape_code#DSR
+/// [`DSR`]: crate::DsrSequence
+/// [`OSC`]: crate::osc_codes::OscSequence
+/// [`OscSequence`]: crate::osc_codes::OscSequence
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DsrSequence {
-    /// Terminal OK status response - `ESC [ 0 n`
+    /// Terminal OK status response - `ESC [ 0 n`.
     StatusOkResponse,
 
-    /// Cursor position response - `ESC [ row ; col R` (1-based)
+    /// Cursor position response - `ESC [ row ; col R` (1-based).
     CursorPositionResponse { row: TermRow, col: TermCol },
 }
 
@@ -146,20 +162,20 @@ mod dsr_sequence_impl {
 
 generate_impl_display_for_fast_stringify!(DsrSequence);
 
-/// Represents a Device Status Report (DSR) request event received FROM the PTY child
-/// process that requires a response to be sent back TO the PTY.
+/// Represents a Device Status Report ([`DSR`]) request event received FROM the [`PTY`]
+/// child process that requires a response to be sent back TO the [`PTY`].
 ///
 /// ## Data Flow
 ///
-/// 1. **Child process → PTY → Parser**: Child process sends `CSI 6n` (request cursor
+/// 1. **Child process → [`PTY`] → Parser**: Child process sends `CSI 6n` (request cursor
 ///    position)
 /// 2. **Parser → Event**: Parser creates `DsrRequestFromPtyEvent::CursorPosition { row,
 ///    col }`
 /// 3. **Event → Manager**: Process manager receives the request event
-/// 4. **Manager → PTY → Child process**: Manager sends response bytes back:
-///    `ESC [ row ; col R`
+/// 4. **Manager → [`PTY`] → Child process**: Manager sends response bytes back:
+///    `[`[`ESC`]`] [ row ; col R`
 ///
-/// This type implements `Display` which delegates to `DsrSequence` for formatting.
+/// This type implements [`Display`] which delegates to [`DsrSequence`] for formatting.
 ///
 /// ## Usage Example
 ///
@@ -175,14 +191,20 @@ generate_impl_display_for_fast_stringify!(DsrSequence);
 /// // The response_bytes would be sent back through the PTY input channel
 /// assert_eq!(response_bytes, b"\x1b[10;25R");
 /// ```
+///
+/// [`DSR`]: crate::DsrSequence
+/// [`ESC`]: crate::EscSequence
+/// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 #[derive(Debug, Clone, PartialEq)]
 pub enum DsrRequestFromPtyEvent {
-    /// Terminal status report requested (CSI 5n received)
-    /// Should respond with `ESC [ 0 n` (terminal OK)
+    /// Terminal status report requested (`CSI 5n` received).
+    ///
+    /// Should respond with `ESC [ 0 n` (terminal OK).
     TerminalStatus,
 
-    /// Cursor position report requested (CSI 6n received)
-    /// Should respond with `ESC [ row ; col R` (1-based coordinates)
+    /// Cursor position report requested (`CSI 6n` received).
+    ///
+    /// Should respond with `ESC [ row ; col R` (1-based coordinates).
     CursorPosition { row: TermRow, col: TermCol },
 }
 

@@ -1,12 +1,14 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! PTY-based integration test for [`mio_poller`] thread lifecycle.
+//! [`PTY`]-based integration test for [`mio_poller`] thread lifecycle.
 //!
 //! Tests the complete thread spawn → drop → respawn cycle using observable state
 //! functions. See [Device Lifecycle] for the lifecycle being tested.
 //!
-//! Run with: `cargo test -p r3bl_tui --lib test_pty_mio_poller_thread_lifecycle --
-//! --nocapture`
+//! Run with:
+//! ```bash
+//! cargo test -p r3bl_tui --lib test_pty_mio_poller_thread_lifecycle -- --nocapture
+//! ```
 //!
 //! Tests that:
 //! 1. Thread spawns on first subscribe (`thread_alive = true`, `receiver_count = 1`)
@@ -34,13 +36,13 @@
 //! └─────────────────────────────────────────────────────────────────────────────┘
 //! ```
 //!
-//! [Device Lifecycle]: crate::direct_to_ansi::DirectToAnsiInputDevice#device-lifecycle
 //! [`mio_poller`]: crate::direct_to_ansi::input::mio_poller
+//! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
+//! [Device Lifecycle]: crate::direct_to_ansi::DirectToAnsiInputDevice#device-lifecycle
 
 use crate::{ControlledChild, PtyPair, PtyTestMode,
             core::resilient_reactor_thread::LivenessState,
-            direct_to_ansi::{DirectToAnsiInputDevice, input::global_input_resource},
-            generate_pty_test};
+            direct_to_ansi::{DirectToAnsiInputDevice, input::global_input_resource}};
 use std::{io::{BufRead, BufReader, Write},
           time::Duration};
 

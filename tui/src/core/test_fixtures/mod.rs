@@ -1,9 +1,10 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 // Attach sources.
+#[macro_use]
+pub mod pty_test_fixtures;
 pub mod input_device_fixtures;
 pub mod output_device_fixtures;
-pub mod pty_test_fixtures;
 pub mod tcp_stream_fixtures;
 
 // Re-export.
@@ -44,15 +45,17 @@ pub fn new_isolated_test_command() -> std::process::Command {
 ///
 /// # Known limitation
 ///
-/// When running `cargo test` over SSH on Windows, one `cmd.exe` "application error"
+/// When running `cargo test` over [`SSH`] on Windows, one `cmd.exe` "application error"
 /// dialog may still appear per test run. This is caused by the test harness process
-/// itself (which is spawned by the SSH shell, not by our code) and cannot be
+/// itself (which is spawned by the [`SSH`] shell, not by our code) and cannot be
 /// suppressed from within test code. It is cosmetic and does not affect test results.
 /// To suppress it system-wide, set this registry key:
 ///
 /// ```text
 /// reg add "HKLM\SOFTWARE\Microsoft\Windows\Windows Error Reporting" /v DontShowUI /t REG_DWORD /d 1 /f
 /// ```
+///
+/// [`SSH`]: https://en.wikipedia.org/wiki/Secure_Shell
 pub fn suppress_wer_dialogs() {
     #[cfg(windows)]
     {

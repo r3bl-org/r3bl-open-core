@@ -1,22 +1,22 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Centralized ANSI/[`VT-100`] escape sequence constants.
+//! Centralized [`ANSI`]/[`VT-100`] escape sequence constants.
 //!
-//! This module consolidates all ANSI terminal constants into a single,
+//! This module consolidates all [`ANSI`] terminal constants into a single,
 //! discoverable location organized by protocol type.
 //!
 //! ## Organization
 //!
 //! Constants are grouped by protocol domain:
-//! - **[`generic`]**: Terminal modes, DEC modes, mouse tracking, alternate screen
-//! - **[`csi`]**: CSI sequences, cursor movement, SGR parameters, color codes
-//! - **[`esc`]**: ESC sequences, character set selection, C0 control characters
+//! - **[`generic`]**: Terminal modes, [`DEC`] modes, mouse tracking, alternate screen
+//! - **[`csi`]**: [`CSI`] sequences, cursor movement, [`SGR`] parameters, color codes
+//! - **[`esc`]**: [`ESC`] sequences, character set selection, C0 control characters
 //! - **[`dsr`]**: Device Status Report response constants
 //! - **[`input_sequences`]**: Keyboard input, control characters, mouse protocol markers
-//! - **[`mouse`]**: Mouse protocol constants (SGR, X10, RXVT button codes and flags)
+//! - **[`mouse`]**: Mouse protocol constants ([`SGR`], [`X10`], [`RXVT`] button codes and flags)
 //! - **[`raw_mode`]**: Raw mode terminal configuration (VMIN, VTIME)
-//! - **[`sgr`]**: SGR byte constants for performance-critical paths
-//! - **[`utf8`]**: UTF-8 encoding constants for byte-level text parsing
+//! - **[`sgr`]**: [`SGR`] byte constants for performance-critical paths
+//! - **[`utf8`]**: [`UTF-8`] encoding constants for byte-level text parsing
 //!
 //! ## Usage
 //!
@@ -30,11 +30,18 @@
 //! let escape = ESC_START;
 //! ```
 //!
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`CSI`]: crate::CsiSequence
+//! [`DEC`]: https://en.wikipedia.org/wiki/Digital_Equipment_Corporation
+//! [`ESC`]: crate::EscSequence
+//! [`RXVT`]: https://en.wikipedia.org/wiki/Rxvt
+//! [`SGR`]: crate::SgrCode
+//! [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+//! [`X10`]: https://invisible-island.net/xterm/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
 
-// Skip rustfmt for rest of file to preserve manual alignment.
-// https://stackoverflow.com/a/75910283/2085356
-#![cfg_attr(rustfmt, rustfmt_skip)]
+#![rustfmt::skip]
+
 
 // Module is public only when building documentation or tests.
 // This allows rustdoc links to work while keeping it private in release builds.

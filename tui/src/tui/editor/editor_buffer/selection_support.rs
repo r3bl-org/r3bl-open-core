@@ -5,7 +5,7 @@ use crate::{CaretLocationInRange, CaretMovementDirection, CaretScrAdj,
             ChUnitPrimitiveType, ColIndex, CursorBoundsCheck, DEBUG_TUI_COPY_PASTE,
             DirectionChangeResult, EditorBuffer, RowIndex, SelectionRange, Size,
             caret_scr_adj, col, dim, fg_blue, fg_cyan, fg_green, fg_magenta, fg_red,
-            fg_yellow, height, inline_string, row, underline, width};
+            fg_yellow, height, row, underline, width};
 use std::cmp::{self, Ordering};
 
 /// Usually [`EditorBuffer::get_mut()`] and [`EditorBuffer::get_mut_no_drop()`] need a
@@ -1027,8 +1027,6 @@ mod multiline_select_helper {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::assert_eq2;
-
     #[test]
     fn test_dummy_viewport() {
         let viewport = dummy_viewport();

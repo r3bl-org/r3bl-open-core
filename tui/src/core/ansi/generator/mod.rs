@@ -1,24 +1,27 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! ANSI sequence generation engine
+//! [`ANSI`] sequence generation engine.
 //!
 //! This module provides builders for converting styled text and terminal operations
-//! into ANSI escape sequences for output.
+//! into [`ANSI`] escape sequences for output.
 //!
 //! ## Key Types
 //!
-//! - [`SgrCode`] - SGR (Select Graphic Rendition) codes for text styling
-//! - [`EscSequence`] - ESC (Escape) sequence builder for cursor and terminal control
-//! - [`DsrSequence`] - DSR (Device Status Report) response builder
+//! - [`SgrCode`] - [`SGR`] (Select Graphic Rendition) codes for text styling
+//! - [`EscSequence`] - [`ESC`] (Escape) sequence builder for cursor and terminal control
+//! - [`DsrSequence`] - [`DSR`] (Device Status Report) response builder
 //! - [`CliTextInline`] - Styled text for CLI output
+//!
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`DSR`]: crate::DsrSequence
+//! [`ESC`]: crate::EscSequence
+//! [`SGR`]: crate::SgrCode
 
-// Skip rustfmt for rest of file.
-// https://stackoverflow.com/a/75910283/2085356
-#![cfg_attr(rustfmt, rustfmt_skip)]
+#![rustfmt::skip]
 
 // Private modules (hide internal structure).
+#[macro_use] mod cli_text;
 mod ansi_sequence_generator_output;
-mod cli_text;
 mod dsr_sequence;
 mod esc_sequence;
 mod sgr_code;

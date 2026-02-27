@@ -1,66 +1,70 @@
 // Copyright (c) 2023-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+// cspell:words urxvt wezterm konsole
+
 use std::{env,
           sync::atomic::{AtomicI8, Ordering}};
 
-/// # Terminal Color Support Detection with Performance Optimization
+/// Terminal Color Support Detection with Performance Optimization
 ///
 /// This module provides efficient color support detection for terminal applications with
 /// critical performance optimizations to prevent render loop bottlenecks.
 ///
-/// ## Performance Critical Implementation
+/// # Performance Critical Implementation
 ///
 /// **CRITICAL**: This implementation includes memoization to prevent a severe performance
 /// bottleneck identified through flamegraph analysis. Without caching, color support
 /// detection can consume ~24% of execution time in the main event loop.
 ///
-/// ### The Problem (Before Optimization)
-/// - `examine_env_vars_to_determine_color_support()` was called thousands of times per
+/// ## The Problem (Before Optimization)
+/// - [`examine_env_vars_to_determine_color_support()`] was called thousands of times per
 ///   render
 /// - Each call performed expensive environment variable lookups
 /// - Flamegraph analysis showed 24% of CPU time spent in color detection
 /// - Caused significant editor lag during typing/editing operations
 ///
-/// ### The Solution (Current Implementation)
-/// - Added `COLOR_SUPPORT_CACHED` static variable for memoization
+/// ## The Solution (Current Implementation)
+/// - Added [`global_color_support::COLOR_SUPPORT_CACHED`] static variable for memoization
 /// - Detection runs once and caches result for subsequent calls
 /// - Provides ~24% reduction in execution time for editor operations
 /// - Maintains thread-safety with atomic operations
 ///
-/// ## Usage Patterns
+/// # Usage Patterns
 ///
 /// This module supports two primary use cases:
 /// 1. **Override color support** - For testing or user preferences
 /// 2. **Cached detection** - For production performance (default behavior)
 ///
-/// ### Correct Usage (Performance Optimized)
+/// ## Correct Usage (Performance Optimized)
 ///
 /// ```rust
 /// use r3bl_tui::{global_color_support, ColorSupport};
 ///
-/// // ✅ CORRECT: Use the cached detect() function
+/// // CORRECT: Use the cached detect() function
 /// let color_support = global_color_support::detect();
 ///
-/// // ✅ CORRECT: For testing, use overrides
+/// // CORRECT: For testing, use overrides
 /// global_color_support::set_override(ColorSupport::NoColor);
 /// let overridden = global_color_support::detect(); // Returns NoColor
 /// global_color_support::clear_override();
 /// ```
 ///
-/// ### Incorrect Usage (Performance Killer)
+/// ## Incorrect Usage (Performance Killer)
 ///
 /// ```rust
 /// use r3bl_tui::{examine_env_vars_to_determine_color_support, Stream};
 ///
-/// // ❌ WRONG: Direct calls bypass caching and kill performance
+/// // WRONG: Direct calls bypass caching and kill performance
 /// let color_support = examine_env_vars_to_determine_color_support(Stream::Stdout);
 /// ```
 ///
-/// ## Global Variables
+/// # Global Variables
 ///
 /// Two global atomic variables manage the color detection state:
-/// - `COLOR_SUPPORT_GLOBAL`: Explicit override values (highest priority)
-/// - `COLOR_SUPPORT_CACHED`: Memoized detection results (performance optimization)
+/// - [`global_color_support::COLOR_SUPPORT_GLOBAL`]: Explicit override values (highest
+///   priority)
+/// - [`global_color_support::COLOR_SUPPORT_CACHED`]: Memoized detection results
+///   (performance optimization)
 pub mod global_color_support {
     #[allow(clippy::wildcard_imports)]
     use super::*;
@@ -83,9 +87,12 @@ pub mod global_color_support {
     /// - Debugging: Temporarily disable colors regardless of terminal capabilities
     ///
     /// # Thread Safety
-    /// Uses `AtomicI8` with `Release`/`Acquire` ordering to ensure thread-safe access.
-    /// across the application.
-    static mut COLOR_SUPPORT_GLOBAL: AtomicI8 = AtomicI8::new(NOT_SET_VALUE);
+    /// Uses [`AtomicI8`] with [`Release`]/[`Acquire`] ordering to ensure thread-safe
+    /// access, across the application.
+    ///
+    /// [`Acquire`]: std::sync::atomic::Ordering::Acquire
+    /// [`Release`]: std::sync::atomic::Ordering::Release
+    pub static mut COLOR_SUPPORT_GLOBAL: AtomicI8 = AtomicI8::new(NOT_SET_VALUE);
 
     /// Cached result of automatic color support detection.
     ///
@@ -109,9 +116,9 @@ pub mod global_color_support {
     /// Eliminates expensive environment variable lookups and terminal capability.
     /// checks on subsequent calls, providing O(1) color support detection after
     /// the initial detection run.
-    static mut COLOR_SUPPORT_CACHED: AtomicI8 = AtomicI8::new(NOT_SET_VALUE);
+    pub static mut COLOR_SUPPORT_CACHED: AtomicI8 = AtomicI8::new(NOT_SET_VALUE);
 
-    const NOT_SET_VALUE: i8 = -1;
+    pub const NOT_SET_VALUE: i8 = -1;
 
     /// This is the main function that is used to determine whether color is supported.
     /// And if so what type of color is supported.
@@ -166,10 +173,10 @@ pub mod global_color_support {
     ///
     /// # Testing support
     ///
-    /// The [serial_test] crate is used to test this
-    /// function. In any test in which this function is called, please use the `#[serial]`
-    /// attribute to annotate that test. Otherwise there will be flakiness in the test
-    /// results (tests are run in parallel using many threads).
+    /// The [serial_test] crate is used to test this function. In any test in which this
+    /// function is called, please use the `#[serial]` attribute to annotate that test.
+    /// Otherwise there will be flakiness in the test results (tests are run in parallel
+    /// using many threads).
     ///
     /// [serial_test]: https://crates.io/crates/serial_test
     #[allow(clippy::result_unit_err, static_mut_refs)]
@@ -225,7 +232,7 @@ pub mod global_color_support {
     }
 }
 
-/// # Terminal Hyperlink (OSC 8) Support Detection with Performance Optimization
+/// # Terminal Hyperlink ([`OSC`] 8) Support Detection with Performance Optimization
 ///
 /// This module provides efficient hyperlink support detection for terminal applications.
 /// with the same performance-critical caching strategy used for color detection.
@@ -233,8 +240,11 @@ pub mod global_color_support {
 /// ## Blacklist Approach
 ///
 /// This implementation uses a blacklist approach where hyperlink support is assumed to
-/// be. available by default, and only disabled for terminals known to lack OSC 8 support.
-/// This approach is future-proof as most modern terminals (2018+) support OSC 8.
+/// be. available by default, and only disabled for terminals known to lack [`OSC`] 8
+/// support. This approach is future-proof as most modern terminals (2018+) support
+/// [`OSC`] 8.
+///
+/// [`OSC`]: crate::osc_codes::OscSequence
 pub mod global_hyperlink_support {
     use super::{AtomicI8, HyperlinkSupport, Ordering,
                 examine_env_vars_to_determine_hyperlink_support};
@@ -261,8 +271,11 @@ pub mod global_hyperlink_support {
     /// performance bottlenecks.
     ///
     /// # Returns
-    /// - `HyperlinkSupport::Supported` - Terminal supports OSC 8 hyperlinks (default)
-    /// - `HyperlinkSupport::NotSupported` - Terminal is known to lack OSC 8 support
+    /// - [`HyperlinkSupport::Supported`] - Terminal supports [`OSC`] 8 hyperlinks
+    ///   (default)
+    /// - [`HyperlinkSupport::NotSupported`] - Terminal is known to lack [`OSC`] 8 support
+    ///
+    /// [`OSC`]: crate::osc_codes::OscSequence
     #[must_use]
     pub fn detect() -> HyperlinkSupport {
         // Check for global override first.
@@ -329,16 +342,16 @@ pub mod global_hyperlink_support {
     }
 }
 
-/// Determine whether OSC 8 hyperlinks are supported heuristically.
+/// Determines whether [`OSC`] 8 hyperlinks are supported heuristically.
 ///
 /// ## Blacklist Strategy
 ///
-/// This function implements a blacklist approach where hyperlink support is assumed.
-/// to be available by default, and only disabled for terminals known to lack support:
+/// This function implements a blacklist approach where hyperlink support is assumed. to
+/// be available by default, and only disabled for terminals known to lack support:
 ///
 /// - Apple Terminal (`TERM_PROGRAM=Apple_Terminal`)
-/// - xterm (legacy versions)
-/// - rxvt/urxvt family
+/// - [`xterm`] (legacy versions)
+/// - [`rxvt`]/[`urxvt`] family
 /// - Other legacy terminals
 ///
 /// ## Environment Variables Checked
@@ -349,8 +362,13 @@ pub mod global_hyperlink_support {
 ///
 /// ## Performance Note
 ///
-/// Like color detection, this function is expensive due to environment variable.
-/// lookups and should only be called through [`global_hyperlink_support::detect()`].
+/// Like color detection, this function is expensive due to environment variable. lookups
+/// and should only be called through [`global_hyperlink_support::detect()`].
+///
+/// [`OSC`]: crate::osc_codes::OscSequence
+/// [`rxvt`]: https://en.wikipedia.org/wiki/Rxvt
+/// [`urxvt`]: https://en.wikipedia.org/wiki/Rxvt-unicode
+/// [`xterm`]: https://en.wikipedia.org/wiki/Xterm
 #[must_use]
 pub fn examine_env_vars_to_determine_hyperlink_support() -> HyperlinkSupport {
     // Check for explicit opt-out.
@@ -402,7 +420,7 @@ pub fn examine_env_vars_to_determine_hyperlink_support() -> HyperlinkSupport {
 /// - `TERM_PROGRAM` - Specific terminal application detection (macOS)
 /// - `COLORTERM` - Modern color support indication
 /// - `CLICOLOR` - Legacy color support flag
-/// - `IGNORE_IS_TERMINAL` - Override for non-TTY environments
+/// - `IGNORE_IS_TERMINAL` - Override for non-[`TTY`] environments
 ///
 /// When called thousands of times per render (as was happening before caching),
 /// this function consumed ~24% of total execution time in flamegraph analysis.
@@ -417,9 +435,11 @@ pub fn examine_env_vars_to_determine_hyperlink_support() -> HyperlinkSupport {
 ///
 /// The function implements a comprehensive heuristic strategy:
 /// 1. Check for explicit color disabling (`NO_COLOR`, `TERM=dumb`)
-/// 2. Verify TTY capability (unless overridden)
+/// 2. Verify [`TTY`] capability (unless overridden)
 /// 3. Apply platform-specific detection logic (macOS, Linux, Windows)
 /// 4. Fallback to generic environment variable checks
+///
+/// [`TTY`]: https://en.wikipedia.org/wiki/Tty_(Unix)
 #[must_use]
 pub fn examine_env_vars_to_determine_color_support(stream: Stream) -> ColorSupport {
     if helpers::env_no_color()
@@ -480,14 +500,16 @@ pub enum ColorSupport {
     NoColor,
 }
 
-/// Represents hyperlink (OSC 8) support in the terminal.
+/// Represents hyperlink ([`OSC`] 8) support in the terminal.
+///
+/// [`OSC`]: crate::osc_codes::OscSequence
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum HyperlinkSupport {
     NotSupported,
     Supported,
 }
 
-/// These trait implementations allow us to use `HyperlinkSupport` and `i8`
+/// These trait implementations allow us to use [`HyperlinkSupport`] and [`i8`]
 /// interchangeably.
 mod convert_between_hyperlink_and_i8 {
     impl TryFrom<i8> for super::HyperlinkSupport {
@@ -514,7 +536,8 @@ mod convert_between_hyperlink_and_i8 {
     }
 }
 
-/// These trait implementations allow us to use `ColorSupport` and `i8` interchangeably.
+/// These trait implementations allow us to use [`ColorSupport`] and [`i8`]
+/// interchangeably.
 mod convert_between_color_and_i8 {
     impl TryFrom<i8> for super::ColorSupport {
         type Error = ();
@@ -595,10 +618,9 @@ fn as_str<E>(option: &Result<String, E>) -> Result<&str, &E> {
 mod tests {
     //! Tests for color support detection with performance optimizations.
     //!
-    //! These tests verify both the correctness of color detection and the
-    //! caching behavior that prevents performance bottlenecks in the main
-    //! event loop. The `#[serial]` annotations ensure thread-safe testing
-    //! of global state.
+    //! These tests verify both the correctness of color detection and the caching
+    //! behavior that prevents performance bottlenecks in the main event loop. The
+    //! `#[serial]` annotations ensure thread-safe testing of global state.
     use super::*;
     use serial_test::serial;
 

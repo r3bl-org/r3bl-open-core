@@ -40,20 +40,19 @@ mod utils;
 ```rust
 //! Color representations and conversions.
 
-// Skip rustfmt to preserve organization
-#![cfg_attr(rustfmt, rustfmt_skip)]
+#![rustfmt::skip]
 
-// Private submodules (internal structure)
+// Private submodules (internal structure).
 mod rgb;
 mod ansi;
 mod named;
 
-// Public re-exports (flat API)
+// Public re-exports (flat API).
 pub use rgb::RgbColor;
 pub use ansi::AnsiColor;
 pub use named::NamedColor;
 
-// Re-export utils for this module's use, but keep private to external users
+// Re-export utils for this module's use, but keep private to external users.
 pub(crate) use crate::utils::*;
 ```
 
@@ -653,7 +652,7 @@ When organizing modules, verify:
 - [ ] Private modules for internal structure: `mod foo;`
 - [ ] Public re-exports for stable API: `pub use foo::*;`
 - [ ] Conditional visibility for doc links: `#[cfg(any(test, doc))] pub mod ...`
-- [ ] Rustfmt skip for deliberate organization (if needed): `#![cfg_attr(rustfmt, rustfmt_skip)]`
+- [ ] Rustfmt skip for deliberate organization (if needed): `#![rustfmt::skip]`
 - [ ] Transitive visibility for linked modules
 - [ ] Public modules ONLY when namespacing is part of the API
 - [ ] Documentation compiles: `./check.fish --quick-doc`

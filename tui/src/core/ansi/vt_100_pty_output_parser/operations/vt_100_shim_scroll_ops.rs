@@ -43,7 +43,7 @@
 //!                                             ╰─────────────────╯
 //! ```
 //!
-//! # `CSI` Sequence Processing Flow
+//! # [`CSI`] Sequence Processing Flow
 //!
 //! ```text
 //! Application sends "ESC [3S" (scroll up 3 lines)
@@ -68,8 +68,9 @@
 //!
 //! # [`VT-100`] Protocol Conventions
 //!
-//! This shim layer sits at the boundary between [`VT-100`] wire format and internal types.
-//! Understanding [`VT-100`] parameter conventions is essential for maintaining this code.
+//! This shim layer sits at the boundary between [`VT-100`] wire format and internal
+//! types. Understanding [`VT-100`] parameter conventions is essential for maintaining
+//! this code.
 //!
 //! ## Parameter Handling
 //!
@@ -80,18 +81,20 @@
 //!
 //! This is handled by [`extract_nth_single_non_zero()`] which returns [`NonZeroU16`].
 //!
-//! ## Scroll Region (DECSTBM)
+//! ## Scroll Region ([`DECSTBM`])
 //!
-//! Scroll operations respect the scrolling region set by DECSTBM. The region bounds are
-//! maintained internally by [`OffscreenBuffer`] and applied automatically to all scroll
-//! operations.
+//! Scroll operations respect the scrolling region set by [`DECSTBM`]. The region bounds
+//! are maintained internally by [`OffscreenBuffer`] and applied automatically to all
+//! scroll operations.
 //!
-//! [`NonZeroU16`]: std::num::NonZeroU16
-//! [`OffscreenBuffer`]: crate::OffscreenBuffer
-//! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+//! [`CSI`]: crate::CsiSequence
+//! [`DECSTBM`]: https://vt100.net/docs/vt510-rm/DECSTBM.html
 //! [`extract_nth_single_non_zero()`]: crate::ParamsExt::extract_nth_single_non_zero
 //! [`impl_scroll_ops`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl::vt_100_impl_scroll_ops
+//! [`NonZeroU16`]: std::num::NonZeroU16
+//! [`OffscreenBuffer`]: crate::OffscreenBuffer
 //! [`test_scroll_ops`]: crate::core::ansi::vt_100_pty_output_parser::vt_100_pty_output_conformance_tests::tests::vt_100_test_scroll_ops
+//! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 //! [module-level documentation]: self
 
 use super::super::ansi_parser_public_api::AnsiToOfsBufPerformer;
@@ -103,8 +106,9 @@ use crate::ParamsExt;
 ///
 /// **[`VT-100`] Protocol**: See [module-level documentation] for scroll region handling.
 ///
-/// **Behavior**: Respects DECSTBM scroll region margins.
+/// **Behavior**: Respects [`DECSTBM`] scroll region margins.
 ///
+/// [`DECSTBM`]: https://vt100.net/docs/vt510-rm/DECSTBM.html
 /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 /// [module-level documentation]: self
 pub fn index_down(performer: &mut AnsiToOfsBufPerformer) {
@@ -122,8 +126,9 @@ pub fn index_down(performer: &mut AnsiToOfsBufPerformer) {
 ///
 /// **[`VT-100`] Protocol**: See [module-level documentation] for scroll region handling.
 ///
-/// **Behavior**: Respects DECSTBM scroll region margins.
+/// **Behavior**: Respects [`DECSTBM`] scroll region margins.
 ///
+/// [`DECSTBM`]: https://vt100.net/docs/vt510-rm/DECSTBM.html
 /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 /// [module-level documentation]: self
 pub fn reverse_index_up(performer: &mut AnsiToOfsBufPerformer) {
@@ -140,8 +145,9 @@ pub fn reverse_index_up(performer: &mut AnsiToOfsBufPerformer) {
 /// **[`VT-100`] Protocol**: See [module-level documentation] for scroll region handling.
 ///
 /// **Behavior**: The top line is lost, and a new empty line appears at bottom.
-/// Respects DECSTBM scroll region margins.
+/// Respects [`DECSTBM`] scroll region margins.
 ///
+/// [`DECSTBM`]: https://vt100.net/docs/vt510-rm/DECSTBM.html
 /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 /// [module-level documentation]: self
 pub fn scroll_buffer_up(performer: &mut AnsiToOfsBufPerformer) {
@@ -158,8 +164,9 @@ pub fn scroll_buffer_up(performer: &mut AnsiToOfsBufPerformer) {
 /// **[`VT-100`] Protocol**: See [module-level documentation] for scroll region handling.
 ///
 /// **Behavior**: The bottom line is lost, and a new empty line appears at top.
-/// Respects DECSTBM scroll region margins.
+/// Respects [`DECSTBM`] scroll region margins.
 ///
+/// [`DECSTBM`]: https://vt100.net/docs/vt510-rm/DECSTBM.html
 /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 /// [module-level documentation]: self
 pub fn scroll_buffer_down(performer: &mut AnsiToOfsBufPerformer) {

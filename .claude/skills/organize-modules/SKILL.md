@@ -54,9 +54,7 @@ For `mod.rs` files with deliberate manual alignment, prevent rustfmt from reform
 ```rust
 // mod.rs
 
-// Skip rustfmt for rest of file.
-// https://stackoverflow.com/a/75910283/2085356
-#![cfg_attr(rustfmt, rustfmt_skip)]
+#![rustfmt::skip]
 
 // Private modules
 mod constants;
@@ -483,8 +481,7 @@ as actual module boundaries (scoped imports, clear boundaries, IDE navigation).
 ```rust
 // src/terminal/mod.rs
 
-// Skip rustfmt for deliberate organization
-#![cfg_attr(rustfmt, rustfmt_skip)]
+#![rustfmt::skip]
 
 // Core types
 mod position;

@@ -1,6 +1,6 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{DisplayPreference, TracingConfig, WriterConfig, ok};
+use crate::{DisplayPreference, TracingConfig, WriterConfig};
 use std::{fs::OpenOptions, io::Write, ops::Add, path::Path};
 use tracing::dispatcher;
 
@@ -311,7 +311,7 @@ pub mod tracing_config_options {
 
 /// Global default subscriber, which once set, can't be unset or changed.
 /// - This is great for apps.
-/// - Docs for [Global default tracing subscriber](https://docs.rs/tracing/latest/tracing/subscriber/fn.set_global_default.html)
+/// - Docs for [Global default tracing subscriber]
 /// - Configure this using the [`mod@tracing_config_options`] module (which converts any
 ///   number of arguments into [`Into<TracingConfig>`]. Look at this module for default
 ///   configuration.
@@ -343,6 +343,8 @@ pub mod tracing_config_options {
 /// - The global subscriber is already set
 /// - The log file cannot be created or written to
 /// - The tracing layers cannot be initialized
+///
+/// [Global default tracing subscriber]: https://docs.rs/tracing/latest/tracing/subscriber/fn.set_global_default.html
 pub fn try_initialize_logging_global(
     arg_options: impl Into<TracingConfig>,
 ) -> miette::Result<()> {
@@ -360,7 +362,7 @@ pub fn try_initialize_logging_global(
 /// Thread local subscriber, which is thread local, and you can assign different ones
 /// to different threads.
 /// - This is great for tests.
-/// - Docs for [Thread local tracing subscriber](https://docs.rs/tracing/latest/tracing/subscriber/fn.set_default.html)
+/// - Docs for [Thread local tracing subscriber]
 /// - Configure this using the [`mod@tracing_config_options`] module (which converts any
 ///   number of arguments into [`Into<TracingConfig>`]. Look at this module for default
 ///   configuration.
@@ -399,6 +401,8 @@ pub fn try_initialize_logging_global(
 /// Returns an error if:
 /// - The log file cannot be created or written to
 /// - The tracing layers cannot be initialized
+///
+/// [Thread local tracing subscriber]: https://docs.rs/tracing/latest/tracing/subscriber/fn.set_default.html
 pub fn try_initialize_logging_thread_local(
     arg_options: impl Into<TracingConfig>,
 ) -> miette::Result<Option<dispatcher::DefaultGuard>> {

@@ -4,11 +4,12 @@
 //!
 //! [`PixelChar`] represents a single character cell in the offscreen buffer.
 //!
-//! [`PixelChar`]: crate::PixelChar
 //! It can be a void (invisible), spacer (empty but visible), or plain text
 //! with optional styling information.
+//!
+//! [`PixelChar`]: crate::PixelChar
 
-use crate::{GetMemSize, TuiStyle, fg_magenta, ok};
+use crate::{GetMemSize, TuiStyle, fg_magenta};
 use std::fmt::{self, Debug};
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Default)]
@@ -64,9 +65,8 @@ impl Debug for PixelChar {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{height, new_style,
-                tui::terminal_lib_backends::offscreen_buffer::OffscreenBuffer,
-                tui_color, tui_style_attrib::Underline, tui_style_attribs, width};
+    use crate::{height, tui::terminal_lib_backends::offscreen_buffer::OffscreenBuffer,
+                tui_style_attrib::Underline, tui_style_attribs, width};
 
     fn create_test_buffer() -> OffscreenBuffer {
         let window_size = width(4) + height(2);

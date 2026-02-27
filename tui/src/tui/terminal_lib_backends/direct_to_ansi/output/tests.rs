@@ -2,7 +2,9 @@
 
 //! Unit tests for [`AnsiSequenceGenerator`]
 //!
-//! Tests all static methods to verify correct ANSI escape sequence generation.
+//! Tests all static methods to verify correct [`ANSI`] escape sequence generation.
+//!
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 
 #[cfg(test)]
 mod cursor_positioning_tests {
@@ -112,7 +114,7 @@ mod screen_clearing_tests {
 
 #[cfg(test)]
 mod color_tests {
-    use crate::{AnsiSequenceGenerator, AnsiValue, SgrColorSequence, TuiColor, tui_color};
+    use crate::{AnsiSequenceGenerator, AnsiValue, SgrColorSequence, TuiColor};
 
     #[test]
     fn test_reset_color() {

@@ -1,5 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+// rustdoc-fmt: skip
+
 //! Rust documentation formatting tools.
 //!
 //! This module provides functionality to format markdown tables and
@@ -16,6 +18,8 @@ pub mod extractor;
 pub mod link_converter;
 pub mod processor;
 pub mod table_formatter;
+pub mod technical_term_dictionary;
+pub mod technical_term_linker;
 pub mod types;
 pub mod ui_str;
 
@@ -29,5 +33,7 @@ pub use extractor::*;
 pub use link_converter::*;
 pub use processor::*;
 pub use table_formatter::*;
+pub use technical_term_dictionary::*;
+pub use technical_term_linker::*;
 pub use types::*;
 pub use ui_str::*;

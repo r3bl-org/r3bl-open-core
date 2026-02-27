@@ -43,7 +43,7 @@
 //!                                             ╰─────────────────╯
 //! ```
 //!
-//! # `CSI` Sequence Processing Flow
+//! # [`CSI`] Sequence Processing Flow
 //!
 //! ```text
 //! Application sends "ESC [2P" (delete 2 chars)
@@ -68,7 +68,8 @@
 //!
 //! # [`VT-100`] Protocol Conventions
 //!
-//! This shim layer sits at the boundary between [`VT-100`] wire format and internal types.
+//! This shim layer sits at the boundary between [`VT-100`] wire format and internal
+//! types.
 //!
 //! ## Parameter Handling
 //!
@@ -79,11 +80,12 @@
 //!
 //! This is handled by [`extract_nth_single_non_zero()`] which returns [`NonZeroU16`].
 //!
-//! [`NonZeroU16`]: std::num::NonZeroU16
-//! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+//! [`CSI`]: crate::CsiSequence
 //! [`extract_nth_single_non_zero()`]: crate::ParamsExt::extract_nth_single_non_zero
 //! [`impl_char_ops`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl::vt_100_impl_char_ops
+//! [`NonZeroU16`]: std::num::NonZeroU16
 //! [`test_char_ops`]: crate::core::ansi::vt_100_pty_output_parser::vt_100_pty_output_conformance_tests::tests::vt_100_test_char_ops
+//! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 //! [module-level documentation]: self
 
 use super::super::ansi_parser_public_api::AnsiToOfsBufPerformer;
@@ -159,11 +161,12 @@ pub fn erase_chars(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) 
 
 /// Handles printable character printing - display character at cursor position.
 ///
-/// **[`VT-100`] Behavior**: Character set translation applied if DEC graphics mode is
+/// **[`VT-100`] Behavior**: Character set translation applied if [`DEC`] graphics mode is
 /// active.
 ///
 /// See [`OffscreenBuffer::print_char`] for the implementation of this shim.
 ///
+/// [`DEC`]: https://en.wikipedia.org/wiki/Digital_Equipment_Corporation
 /// [`OffscreenBuffer::print_char`]: crate::OffscreenBuffer::print_char
 /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 pub fn print_char(performer: &mut AnsiToOfsBufPerformer, ch: char) {

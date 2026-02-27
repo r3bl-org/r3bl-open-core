@@ -1,5 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+// rustdoc-fmt: skip
+
 //! Type definitions for rustdoc formatting.
 
 use std::path::PathBuf;
@@ -10,8 +12,10 @@ use std::path::PathBuf;
 pub struct FormatOptions {
     /// Format markdown tables
     pub format_tables: bool,
-    /// Convert inline links to reference-style
+    /// Converts inline links to reference-style
     pub convert_links: bool,
+    /// Upgrades known terms to backticked+linked form with correct targets
+    pub link_terms: bool,
     /// Only check formatting, don't modify files
     pub check_only: bool,
     /// Print verbose output
@@ -23,6 +27,7 @@ impl Default for FormatOptions {
         Self {
             format_tables: true,
             convert_links: true,
+            link_terms: true,
             check_only: false,
             verbose: false,
         }
@@ -41,7 +46,7 @@ pub struct ProcessingResult {
 }
 
 impl ProcessingResult {
-    /// Create a new processing result.
+    /// Creates a new processing result.
     #[must_use]
     pub fn new(file_path: PathBuf) -> Self {
         Self {
@@ -51,10 +56,10 @@ impl ProcessingResult {
         }
     }
 
-    /// Mark this result as modified.
+    /// Marks this result as modified.
     pub fn mark_modified(&mut self) { self.modified = true; }
 
-    /// Add an error to this result.
+    /// Adds an error to this result.
     pub fn add_error(&mut self, error: String) { self.errors.push(error); }
 }
 
@@ -94,6 +99,7 @@ mod tests {
         let opts = FormatOptions::default();
         assert!(opts.format_tables);
         assert!(opts.convert_links);
+        assert!(opts.link_terms);
         assert!(!opts.check_only);
         assert!(!opts.verbose);
     }

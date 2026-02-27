@@ -1,5 +1,7 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+// rustdoc-fmt: skip
+
 // cspell:words terminalasynctry spinnertry
 
 //! # Async readline and choose modules
@@ -319,17 +321,19 @@
 //! - [Linux TTY and async Rust - Playlist on developerlife.com YT
 //!   channel](https://www.youtube.com/watch?v=bolScvh4x7I&list=PLofhE49PEwmw3MKOU1Kn3xbP4FRQR4Mb3)
 
+// XMARK: rustfmt prevent from reformatting entire file.
 // Skip rustfmt for rest of file.
 // https://stackoverflow.com/a/75910283/2085356
 #![cfg_attr(rustfmt, rustfmt_skip)]
 
 // Attach sources.
+// #[macro_use] propagates macros textually (order matters).
+#[macro_use] pub mod readline_async_api;
+#[macro_use] pub mod choose_impl;
+#[macro_use] pub mod readline_async_impl;
 pub mod choose_api;
-pub mod readline_async_api;
 pub mod spinner;
 pub mod spinner_impl;
-pub mod readline_async_impl;
-pub mod choose_impl;
 
 // Re-export the public API.
 pub use choose_api::*;

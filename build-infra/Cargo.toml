@@ -36,6 +36,8 @@ pulldown-cmark-to-cmark = "21.1.0"
 clap = { version = "4.5.51", features = ["derive"] }
 miette = { version = "7.6.0", features = ["fancy"] }
 regex = "1.12"
+serde = { version = "1", features = ["derive"] }
+json5 = "1.3"
 walkdir = "2.5"
 unicode-width = "0.2"
 

@@ -1,5 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+// rustdoc-fmt: skip
+
 //! Protect content that should not be modified during formatting.
 //!
 //! This module handles preservation of:
@@ -55,7 +57,7 @@ pub struct ContentProtector {
 }
 
 impl ContentProtector {
-    /// Create a new content protector
+    /// Creates a new content protector
     #[must_use]
     pub fn new() -> Self {
         Self {
@@ -134,6 +136,28 @@ impl ContentProtector {
 
             // Check for HTML comment start
             if line.contains("<!--") {
+                // Check for TOC opening marker: collect all lines through <!-- /TOC -->
+                // as one protected block, regardless of whether individual lines contain
+                // --> or not.
+                if line.contains("<!-- TOC") && !line.contains("<!-- /TOC") {
+                    let mut toc_lines = vec![line];
+                    i += 1;
+                    while i < lines.len() {
+                        let toc_line = lines[i];
+                        toc_lines.push(toc_line);
+                        if toc_line.contains("<!-- /TOC") {
+                            i += 1;
+                            break;
+                        }
+                        i += 1;
+                    }
+
+                    let original = toc_lines.join("\n");
+                    let placeholder = self.create_placeholder(&original);
+                    result.push(placeholder);
+                    continue;
+                }
+
                 // If comment closes on same line, protect just this line
                 if line.contains("-->") {
                     let placeholder = self.create_placeholder(line);
@@ -193,7 +217,7 @@ impl ContentProtector {
         result
     }
 
-    /// Create a unique placeholder for protected content
+    /// Creates a unique placeholder for protected content
     fn create_placeholder(&mut self, original: &str) -> String {
         let index = self.regions.len();
         let placeholder = format!("{PLACEHOLDER_PREFIX}{index}{PLACEHOLDER_SUFFIX}");
@@ -458,6 +482,50 @@ mod tests {
         );
 
         // Roundtrip should preserve everything
+        let restored = protector.restore(&protected);
+        assert_eq!(restored, input);
+    }
+
+    #[test]
+    fn test_protect_toc_block() {
+        let mut protector = ContentProtector::new();
+        let input = concat!(
+            "# Table of contents\n",
+            "\n",
+            "<!-- TOC -->\n",
+            "\n",
+            "- [Introduction](#introduction)\n",
+            "- [Features](#features)\n",
+            "\n",
+            "<!-- /TOC -->\n",
+            "\n",
+            "# Introduction\n",
+            "\n",
+            "Some text with [link](https://example.com).",
+        );
+        let protected = protector.protect(input);
+
+        // The entire TOC block should be protected as one unit.
+        assert!(
+            !protected.contains("[Introduction](#introduction)"),
+            "TOC anchor links should be protected"
+        );
+        assert!(
+            !protected.contains("[Features](#features)"),
+            "TOC anchor links should be protected"
+        );
+
+        // Content outside the TOC should remain.
+        assert!(
+            protected.contains("# Table of contents"),
+            "Content before TOC should remain"
+        );
+        assert!(
+            protected.contains("[link](https://example.com)"),
+            "Content after TOC should remain"
+        );
+
+        // Roundtrip should preserve everything.
         let restored = protector.restore(&protected);
         assert_eq!(restored, input);
     }

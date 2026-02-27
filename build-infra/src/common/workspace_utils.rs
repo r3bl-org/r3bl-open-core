@@ -8,7 +8,7 @@ use miette::{IntoDiagnostic, Result, miette};
 use std::path::{Path, PathBuf};
 use walkdir::WalkDir;
 
-/// Find the workspace root by searching for Cargo.toml with `[workspace]`.
+/// Finds the workspace root by searching for Cargo.toml with `[workspace]`.
 ///
 /// Searches from current directory up to the filesystem root.
 ///
@@ -45,7 +45,7 @@ pub fn get_workspace_root() -> Result<PathBuf> {
     }
 }
 
-/// Find all .rs files in the workspace, excluding target/, hidden directories, and test
+/// Finds all .rs files in the workspace, excluding target/, hidden directories, and test
 /// data.
 ///
 /// Automatically excludes common test fixture directory patterns:
@@ -88,7 +88,7 @@ pub fn find_rust_files(workspace_root: &Path) -> Result<Vec<PathBuf>> {
     Ok(files)
 }
 
-/// Find all .rs files in specific paths.
+/// Finds all .rs files in specific paths.
 ///
 /// # Errors
 ///

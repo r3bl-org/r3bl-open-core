@@ -1,11 +1,13 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+// rustdoc-fmt: skip
+
 //! Format markdown tables in rustdoc comments.
 
 use regex::Regex;
 use unicode_width::UnicodeWidthStr;
 
-/// Format all markdown tables in the given text.
+/// Formats all markdown tables in the given text.
 ///
 /// Aligns columns and normalizes table formatting while preserving content.
 /// Code fence blocks (` ``` `) are preserved and not processed.
@@ -61,7 +63,7 @@ pub fn format_tables(text: &str) -> String {
     result.join("\n")
 }
 
-/// Extract a table starting at the given index.
+/// Extracts a table starting at the given index.
 ///
 /// Returns the table lines (without content indentation) and the content indentation
 /// string that should be re-applied after formatting.
@@ -113,7 +115,7 @@ enum ColumnAlignment {
     Right,
 }
 
-/// Format a single table with proper column alignment.
+/// Formats a single table with proper column alignment.
 ///
 /// The `content_indent` is prepended to each formatted line to preserve the original
 /// indentation (e.g., for tables nested under numbered lists).
@@ -165,7 +167,7 @@ fn format_single_table(table: &[String], content_indent: &str) -> Vec<String> {
     formatted
 }
 
-/// Parse alignment from a separator cell.
+/// Parses alignment from a separator cell.
 ///
 /// - `:---` or `:--` → Left
 /// - `:---:` or `:--:` → Center
@@ -184,7 +186,7 @@ fn parse_alignment(cell: &str) -> ColumnAlignment {
     }
 }
 
-/// Parse a table row into cells.
+/// Parses a table row into cells.
 fn parse_table_row(line: &str) -> Vec<String> {
     let trimmed = line.trim();
     let without_pipes = &trimmed[1..trimmed.len() - 1]; // Remove leading and trailing |
@@ -195,7 +197,7 @@ fn parse_table_row(line: &str) -> Vec<String> {
         .collect()
 }
 
-/// Format a table row with proper padding.
+/// Formats a table row with proper padding.
 fn format_table_row(
     cells: &[String],
     col_widths: &[usize],
@@ -227,7 +229,7 @@ fn format_table_row(
     format!("| {} |", formatted_cells.join(" | "))
 }
 
-/// Format a separator cell with alignment markers.
+/// Formats a separator cell with alignment markers.
 ///
 /// Generates dashes with the appropriate leading/trailing colons based on alignment.
 fn format_separator_cell(width: usize, alignment: ColumnAlignment) -> String {
@@ -260,7 +262,7 @@ fn format_separator_cell(width: usize, alignment: ColumnAlignment) -> String {
     }
 }
 
-/// Pad a string to the specified display width (accounts for emoji and unicode).
+/// Pads a string to the specified display width (accounts for emoji and unicode).
 fn pad_string_by_chars(s: &str, width: usize) -> String {
     let display_width = s.width();
     if display_width >= width {

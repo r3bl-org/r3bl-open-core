@@ -132,8 +132,6 @@ pub fn parse_null_padded_line(input: &str) -> IResult<&str, &str> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::assert_eq2;
-
     #[test]
     fn test_is_helpers() {
         // Test is()

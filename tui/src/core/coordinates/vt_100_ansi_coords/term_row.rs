@@ -5,24 +5,25 @@ use std::{fmt::{Display, Formatter},
           num::NonZeroU16,
           ops::Add};
 
-/// 1-based row coordinate for terminal ANSI sequences.
+/// 1-based row coordinate for terminal [`ANSI`] sequences.
 ///
-/// Uses [`NonZeroU16`] as mandated by the VT-100 specification, which defines terminal
+/// Uses [`NonZeroU16`] as mandated by the [`VT-100` spec], which defines terminal
 /// coordinates as 16-bit unsigned integers with valid values ranging from 1 to 65,535.
 ///
 /// # Construction
 ///
 /// This type uses private fields and explicit constructors. Use these methods to create
 /// `TermRow` values:
-/// - [`from_raw_non_zero_value()`] - Wrap external `NonZeroU16` data (ANSI parameters)
+/// - [`from_raw_non_zero_value()`] - Wrap external `NonZeroU16` data ([`ANSI`]
+///   parameters)
 /// - [`from_zero_based()`] - Convert from 0-based [`RowIndex`] to 1-based terminal
 ///   coordinate
 /// - [`term_row()`] - Convenience helper (primarily for tests)
 ///
 /// # Coordinate System
 ///
-/// `TermRow` represents **1-based terminal coordinates** used in ANSI escape sequences.
-/// This is distinct from:
+/// `TermRow` represents **1-based terminal coordinates** used in [`ANSI`] escape
+/// sequences. This is distinct from:
 /// - [`RowIndex`] - 0-based buffer/array positions
 ///
 /// # Example
@@ -43,9 +44,11 @@ use std::{fmt::{Display, Formatter},
 /// assert_eq!(buffer_idx, RowIndex::from(4));
 /// ```
 ///
+/// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 /// [`from_raw_non_zero_value()`]: Self::from_raw_non_zero_value
 /// [`from_zero_based()`]: Self::from_zero_based
 /// [`term_row()`]: term_row
+/// [`VT-100` spec]: https://vt100.net/docs/vt100-ug/chapter3.html
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct TermRow(NonZeroU16);
 
@@ -83,7 +86,9 @@ impl TermRow {
     /// Creates a 1-based terminal coordinate from a raw [`NonZeroU16`] value.
     ///
     /// Use this constructor when wrapping external [`NonZeroU16`] data, such as values
-    /// parsed from ANSI escape sequence parameters.
+    /// parsed from [`ANSI`] escape sequence parameters.
+    ///
+    /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
     #[must_use]
     pub const fn from_raw_non_zero_value(value: NonZeroU16) -> Self { Self(value) }
 

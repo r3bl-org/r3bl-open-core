@@ -43,7 +43,7 @@
 //!                                             ╰─────────────────╯
 //! ```
 //!
-//! # `CSI` Sequence Processing Flow
+//! # [`CSI`] Sequence Processing Flow
 //!
 //! ```text
 //! Application sends "ESC [2A" (cursor up 2 lines)
@@ -68,8 +68,9 @@
 //!
 //! # [`VT-100`] Protocol Conventions
 //!
-//! This shim layer sits at the boundary between [`VT-100`] wire format and internal types.
-//! Understanding [`VT-100`] parameter conventions is essential for maintaining this code.
+//! This shim layer sits at the boundary between [`VT-100`] wire format and internal
+//! types. Understanding [`VT-100`] parameter conventions is essential for maintaining
+//! this code.
 //!
 //! ## Parameter Handling
 //!
@@ -98,14 +99,15 @@
 //!
 //! [`.to_zero_based()`]: crate::TermRow::to_zero_based
 //! [`ColIndex`]: crate::ColIndex
+//! [`CSI`]: crate::CsiSequence
+//! [`extract_nth_single_non_zero()`]: crate::ParamsExt::extract_nth_single_non_zero
+//! [`impl_cursor_ops`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl::vt_100_impl_cursor_ops
 //! [`NonZeroU16`]: std::num::NonZeroU16
 //! [`RowIndex`]: crate::RowIndex
 //! [`TermCol::from_raw_non_zero_value()`]: crate::TermCol::from_raw_non_zero_value
 //! [`TermRow::from_raw_non_zero_value()`]: crate::TermRow::from_raw_non_zero_value
-//! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
-//! [`extract_nth_single_non_zero()`]: crate::ParamsExt::extract_nth_single_non_zero
-//! [`impl_cursor_ops`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl::vt_100_impl_cursor_ops
 //! [`test_cursor_ops`]: crate::core::ansi::vt_100_pty_output_parser::vt_100_pty_output_conformance_tests::tests::vt_100_test_cursor_ops
+//! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 //! [module-level documentation]: self
 
 use super::super::{ansi_parser_public_api::AnsiToOfsBufPerformer,
@@ -118,10 +120,11 @@ use vte::Params;
 /// **[`VT-100`] Protocol**: See [module-level documentation] for parameter handling
 /// (missing/zero parameters default to 1).
 ///
-/// **Behavior**: Respects DECSTBM scroll region margins.
+/// **Behavior**: Respects [`DECSTBM`] scroll region margins.
 ///
 /// **Implementation**: See [`OffscreenBuffer::cursor_up`] for detailed behavior.
 ///
+/// [`DECSTBM`]: https://vt100.net/docs/vt510-rm/DECSTBM.html
 /// [`OffscreenBuffer::cursor_up`]: crate::OffscreenBuffer::cursor_up
 /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 /// [module-level documentation]: self
@@ -135,10 +138,11 @@ pub fn cursor_up(performer: &mut AnsiToOfsBufPerformer, params: &Params) {
 /// **[`VT-100`] Protocol**: See [module-level documentation] for parameter handling
 /// (missing/zero parameters default to 1).
 ///
-/// **Behavior**: Respects DECSTBM scroll region margins.
+/// **Behavior**: Respects [`DECSTBM`] scroll region margins.
 ///
 /// **Implementation**: See [`OffscreenBuffer::cursor_down`] for detailed behavior.
 ///
+/// [`DECSTBM`]: https://vt100.net/docs/vt510-rm/DECSTBM.html
 /// [`OffscreenBuffer::cursor_down`]: crate::OffscreenBuffer::cursor_down
 /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 /// [module-level documentation]: self
@@ -183,9 +187,10 @@ pub fn cursor_backward(performer: &mut AnsiToOfsBufPerformer, params: &Params) {
 /// from 1-based [`VT-100`] format to 0-based buffer indices. Missing/zero parameters
 /// default to 1.
 ///
-/// **Behavior**: Respects DECSTBM scroll region margins. Coordinates are converted from
-/// 1-based [`VT-100`] format to 0-based internal indices.
+/// **Behavior**: Respects [`DECSTBM`] scroll region margins. Coordinates are converted
+/// from 1-based [`VT-100`] format to 0-based internal indices.
 ///
+/// [`DECSTBM`]: https://vt100.net/docs/vt510-rm/DECSTBM.html
 /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 /// [module-level documentation]: self
 pub fn cursor_position(performer: &mut AnsiToOfsBufPerformer, params: &Params) {

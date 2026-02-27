@@ -4,22 +4,26 @@
 //! [`ResetColor`])
 //!
 //! These tests validate:
-//! 1. [`SetFgColor`] [`RenderOpCommon`] generates correct SGR foreground ANSI sequences
-//!    via the full paint pipeline
-//! 2. [`SetBgColor`] [`RenderOpCommon`] generates correct SGR background ANSI sequences
+//! 1. [`SetFgColor`] [`RenderOpCommon`] generates correct [`SGR`] foreground [`ANSI`]
+//!    sequences via the full paint pipeline
+//! 2. [`SetBgColor`] [`RenderOpCommon`] generates correct [`SGR`] background [`ANSI`]
+//!    sequences
 //! 3. Color state tracking in [`RenderOpsLocalData`] (`fg_color`, `bg_color` fields)
 //! 4. [`ResetColor`] clears both foreground and background color state
 //! 5. Multiple color operations in sequence preserve state correctly
-//! 6. ANSI escape sequence format validation (colon-separated extended palette format)
+//! 6. [`ANSI`] escape sequence format validation (colon-separated extended palette
+//!    format)
 //!
-//! [`SetFgColor`]: crate::render_op::RenderOpCommon::SetFgColor
-//! [`SetBgColor`]: crate::render_op::RenderOpCommon::SetBgColor
-//! [`ResetColor`]: crate::render_op::RenderOpCommon::ResetColor
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`RenderOpCommon`]: crate::render_op::RenderOpCommon
 //! [`RenderOpsLocalData`]: crate::RenderOpsLocalData
+//! [`ResetColor`]: crate::render_op::RenderOpCommon::ResetColor
+//! [`SetBgColor`]: crate::render_op::RenderOpCommon::SetBgColor
+//! [`SetFgColor`]: crate::render_op::RenderOpCommon::SetFgColor
+//! [`SGR`]: crate::SgrCode
 
 use super::test_helpers::*;
-use crate::{AnsiSequenceGenerator, render_op::RenderOpCommon, tui_color};
+use crate::{AnsiSequenceGenerator, render_op::RenderOpCommon};
 
 #[test]
 fn test_set_fg_color_basic_red() {

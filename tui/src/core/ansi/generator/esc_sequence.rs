@@ -1,63 +1,77 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Direct ESC (Escape) sequence builder.
+//! Direct [`ESC`] (Escape) sequence builder.
 //!
-//! ESC sequences are simple, non-parameterized terminal control codes that predate
-//! the more advanced CSI sequences. They provide fundamental terminal operations
+//! [`ESC`] sequences are simple, non-parameterized terminal control codes that predate
+//! the more advanced [`CSI`] sequences. They provide fundamental terminal operations
 //! without the flexibility of parameters.
 //!
-//! ## Relationship to CSI Sequences
+//! ## Relationship to [`CSI`] Sequences
 //!
-//! ESC sequences are the predecessors to the more modern CSI sequences:
+//! [`ESC`] sequences are the predecessors to the more modern [`CSI`] sequences:
 //!
-//! - **ESC sequences** (this module): Original, simple commands used in early terminals
-//!   like the [`VT-100`]. Each does one specific thing: `ESC 7` saves cursor, `ESC 8` restores
-//!   it.
-//! - **CSI sequences** (the successors): Modern, parameterized commands that evolved from
-//!   ESC to provide greater flexibility.
+//! - **[`ESC`] sequences** (this module): Original, simple commands used in early
+//!   terminals like the [`VT-100`]. Each does one specific thing: `ESC 7` saves cursor,
+//!   `ESC 8` restores it.
+//! - **[`CSI`] sequences** (the successors): Modern, parameterized commands that evolved
+//!   from [`ESC`] to provide greater flexibility.
 //!
 //! Both approaches coexist for backward compatibility. For example:
-//! - `ESC 7` / `ESC 8` (this module) vs `ESC [ s` / `ESC [ u` (CSI equivalent)
+//! - `ESC 7` / `ESC 8` (this module) vs `ESC [ s` / `ESC [ u` ([`CSI`] equivalent)
 //! - `ESC D` (move down 1 line) vs `ESC [ 1 B` or `ESC [ 5 B` (move down N lines)
 //!
 //! ## Structure
-//! ESC sequences follow simpler patterns than CSI:
-//! - Single character: `ESC character` (e.g., `ESC c` for reset)
+//!
+//! [`ESC`] sequences follow simpler patterns than [`CSI`]:
+//! - Single character: `ESC character` (e.g., `ESC c` for [`reset`])
 //! - With intermediate: `ESC intermediate final` (e.g., `ESC ( B` for charset selection)
 //!
 //! ## Common Uses
-//! - **Cursor Save/Restore**: Save and restore cursor position without parameters
-//! - **Character Sets**: Switch between ASCII and special graphics character sets
-//! - **Line Operations**: Move cursor with automatic scrolling at boundaries
-//! - **Terminal Reset**: Full terminal initialization
 //!
+//! - **Cursor Save/Restore**: Save and restore cursor position without parameters.
+//! - **Character Sets**: Switch between [`ASCII`] and special graphics character sets.
+//! - **Line Operations**: Move cursor with automatic scrolling at boundaries.
+//! - **Terminal Reset**: Full terminal initialization.
+//!
+//! [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
+//! [`CSI`]: crate::CsiSequence
+//! [`ESC`]: crate::EscSequence
+//! [`reset`]: https://man7.org/linux/man-pages/man1/reset.1.html
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 
 use crate::{BufTextStorage, FastStringify,
             core::ansi::constants::{CHARSET_ASCII, CHARSET_DEC_GRAPHICS,
                                     CHARSET_SELECTOR_G0, DECRC_RESTORE_CURSOR,
                                     DECSC_SAVE_CURSOR, ESC_START, IND_INDEX_DOWN,
-                                    RI_REVERSE_INDEX_UP, RIS_RESET_TERMINAL},
-            generate_impl_display_for_fast_stringify};
+                                    RI_REVERSE_INDEX_UP, RIS_RESET_TERMINAL}};
 use std::fmt;
 
-/// Builder for ESC (direct escape) sequences.
-/// Similar to `SgrCode` but for direct escape sequences.
+/// Builder for [`ESC`] ([`ESC` spec]) sequences.
+///
+/// Similar to [`SgrCode`] but for direct escape sequences.
+///
+/// [`ESC` spec]: https://en.wikipedia.org/wiki/ANSI_escape_code#ESC
+/// [`ESC`]: crate::EscSequence
+/// [`SgrCode`]: crate::SgrCode
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum EscSequence {
-    /// ESC 7 - Save cursor position (DECSC)
+    /// `ESC 7` - Save cursor position (`DECSC`).
     SaveCursor,
-    /// ESC 8 - Restore cursor position (DECRC)
+    /// `ESC 8` - Restore cursor position (`DECRC`).
     RestoreCursor,
-    /// ESC D - Index down (IND)
+    /// `ESC D` - Index down (`IND`).
     IndexDown,
-    /// ESC M - Reverse index up (RI)
+    /// `ESC M` - Reverse index up (`RI`).
     ReverseIndex,
-    /// ESC c - Reset terminal (RIS)
+    /// `ESC c` - Reset terminal (`RIS`).
     ResetTerminal,
-    /// ESC ( B - Select ASCII character set
+    /// `ESC ( B` - Select [`ASCII`] character set.
+    ///
+    /// [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
     SelectAscii,
-    /// ESC ( 0 - Select DEC graphics character set
+    /// `ESC ( 0` - Select [`DEC`] graphics character set.
+    ///
+    /// [`DEC`]: https://en.wikipedia.org/wiki/Digital_Equipment_Corporation
     SelectDECGraphics,
 }
 

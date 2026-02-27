@@ -32,12 +32,14 @@
 //! See [`crate::Telemetry`] for usage in performance monitoring.
 //!
 //! [`ColWidth`]: crate::coordinates::buffer_coords::ColWidth
-//! [`RowHeight`]: crate::coordinates::buffer_coords::RowHeight
-//! [`ReqSizePc`]: crate::coordinates::percent_spec::ReqSizePc
 //! [`Pc`]: crate::coordinates::percent_spec::Pc
+//! [`ReqSizePc`]: crate::coordinates::percent_spec::ReqSizePc
+//! [`RowHeight`]: crate::coordinates::buffer_coords::RowHeight
 
 // Attach source files.
+#[macro_use]
 pub mod pc;
+#[macro_use]
 pub mod req_size_pc;
 
 // Re-export.

@@ -458,9 +458,7 @@ pub use internal_parser::*;
 ```rust
 // mod.rs
 
-// Skip rustfmt for rest of file.
-// https://stackoverflow.com/a/75910283/2085356
-#![cfg_attr(rustfmt, rustfmt_skip)]
+#![rustfmt::skip]
 
 // Private modules
 mod constants;

@@ -17,11 +17,11 @@ use nom::{Parser,
 ///
 /// Here are some examples:
 ///
-/// | input               | rem            |  output           |
-/// |:--------------------|:---------------|:------------------|
-/// | `"\nfoo\nbar"`      | `"\nfoo\nbar"` | `""`              |
-/// | `"Hello, world!\n"` | `"\n"`         | `"Hello, world!"` |
-/// | `"Hello, world!"`   | `""`           | `"Hello, world!"` |
+/// | input                 | rem              | output              |
+/// | :-------------------- | :--------------- | :------------------ |
+/// | `"\nfoo\nbar"`        | `"\nfoo\nbar"`   | `""`                |
+/// | `"Hello, world!\n"`   | `"\n"`           | `"Hello, world!"`   |
+/// | `"Hello, world!"`     | `""`             | `"Hello, world!"`   |
 #[rustfmt::skip]
 pub fn take_text_in_single_line<'input>() ->
     impl Parser<&'input str, Output = &'input str, Error = nom::error::Error<&'input str>>
@@ -45,7 +45,7 @@ pub fn take_text_in_single_line<'input>() ->
 #[cfg(test)]
 mod test_text_until_opt_eol {
     use super::*;
-    use crate::{assert_eq2, fg_lizard_green};
+    use crate::fg_lizard_green;
 
     #[test]
     fn test_text_until_opt_eol() {

@@ -2,10 +2,10 @@
 
 // cspell:words iflag cflag lflag
 
-//! Terminal raw mode implementation for ANSI terminals.
+//! Terminal raw mode implementation for [`ANSI`] terminals.
 //!
 //! This module provides functionality to enable and disable raw mode on terminals,
-//! which is essential for reading ANSI escape sequences character-by-character
+//! which is essential for reading [`ANSI`] escape sequences character-by-character
 //! without line buffering or terminal interpretation.
 //!
 //! ## Raw Mode vs Cooked Mode
@@ -13,24 +13,24 @@
 //! **Cooked Mode** (the default when a terminal is opened):
 //! - Input is line-buffered (waits for Enter key)
 //! - Special characters are interpreted (`Ctrl+C`, `Ctrl+D`, etc.)
-//! - ANSI escape sequences may be processed by the terminal
+//! - [`ANSI`] escape sequences may be processed by the terminal
 //! - Echoing is enabled (typed characters appear on screen)
 //!
 //! **Raw Mode**:
 //! - No line buffering - bytes available immediately
 //! - No special character processing - all bytes pass through
 //! - No echo - typed characters don't automatically appear
-//! - Perfect for reading ANSI escape sequences and building TUIs
+//! - Perfect for reading [`ANSI`] escape sequences and building TUIs
 //!
-//! ## TTY, Line Discipline, and `stty`
+//! ## [`TTY`], Line Discipline, and `stty`
 //!
 //! ### Historical Context
 //!
-//! The term `TTY` comes from "teletypewriter" — physical terminals from the 1960s-70s
+//! The term [`TTY`] comes from "teletypewriter" — physical terminals from the 1960s-70s
 //! that communicated with mainframes over serial lines. Modern terminal emulators (like
-//! [Terminator], [GNOME Terminal], [WezTerm], [iTerm2], or [Alacritty]) still use this
-//! abstraction: they create a **pseudo-terminal ([`PTY`])** that behaves like those old
-//! hardware devices.
+//! [Terminator], [GNOME Terminal], [WezTerm], [[`iTerm2`]], or [[`Alacritty`]]) still use
+//! this abstraction: they create a **pseudo-terminal ([`PTY`])** that behaves like those
+//! old hardware devices.
 //!
 //! ### The Line Discipline
 //!
@@ -38,7 +38,7 @@
 //! discipline** — a kernel-level layer that:
 //!
 //! - **Buffers input** line-by-line (so you can edit before pressing Enter)
-//! - **Interprets special characters** (Ctrl+C sends `SIGINT`, Ctrl+D sends `EOF`)
+//! - **Interprets special characters** (Ctrl+C sends [`SIGINT`], Ctrl+D sends [`EOF`])
 //! - **Echoes characters** back to the screen as you type
 //! - **Processes editing keys** (backspace, arrow keys for line editing)
 //!
@@ -62,10 +62,10 @@
 //! | **Purpose**    | Basic, ancient terminal functions   | Advanced, feature-rich line editing        |
 //!
 //! **Kernel-handled keybindings** (when in canonical mode):
-//! - `Ctrl+C` — Generates `SIGINT` (interrupt signal)
+//! - `Ctrl+C` — Generates [`SIGINT`] (interrupt signal)
 //! - `Ctrl+Z` — Generates `SIGTSTP` (suspend signal)
 //! - `Ctrl+U` — `VKILL` character (kill entire line)
-//! - `Ctrl+D` — `VEOF` character (end-of-file)
+//! - `Ctrl+D` — [`VEOF`] character (end-of-file)
 //!
 //! **User-space keybindings** ([GNU Readline] in raw mode):
 //! - `Ctrl+W` — Delete previous word (requires word boundary understanding)
@@ -78,8 +78,8 @@
 //! When you run [Bash], it immediately switches the terminal to non-canonical
 //! mode (raw mode). However, the [GNU Readline] library is clever:
 //!
-//! 1. It queries the kernel's settings for special characters (like `Ctrl+C` for `SIGINT`
-//!    or `Ctrl+U` for `VKILL`)
+//! 1. It queries the kernel's settings for special characters (like `Ctrl+C` for
+//!    [`SIGINT`] or `Ctrl+U` for `VKILL`)
 //! 2. It sets up its own keybindings to mirror these kernel defaults
 //!
 //! This is why `Ctrl+U` still works in [Bash] even though the terminal is in raw mode:
@@ -175,10 +175,10 @@
 //!
 //! The [`enable_raw_mode`] and [`disable_raw_mode`] functions use the same underlying
 //! mechanism as `stty` — the POSIX [termios] API. On Unix systems, this module calls
-//! `tcgetattr()` and `tcsetattr()` (via the [rustix] crate) to manipulate the same
+//! `tcgetattr()` and `tcsetattr()` (via the [[`rustix`]] crate) to manipulate the same
 //! terminal flags that `stty` controls. For details on the [termios] struct fields
-//! (`c_iflag`, `c_lflag`, etc.) and why we use [rustix], see our [Unix implementation's
-//! termios section].
+//! (`c_iflag`, `c_lflag`, etc.) and why we use [[`rustix`]], see our [Unix
+//! implementation's termios section].
 //!
 //! Understanding `stty` helps when debugging terminal behavior — if something isn't
 //! working, you can use `stty -a` to inspect the current terminal state and verify that
@@ -188,16 +188,16 @@
 //!
 //! - [`crate::pty`] — Uses the [`portable_pty` crate] to create pseudo-terminals (PTYs)
 //!   for spawning child processes. While this module configures raw mode on your
-//!   *current* terminal, the PTY module creates *new* pseudo-terminals for child
-//!   processes. Both deal with the same underlying TTY abstraction: the PTY module
-//!   creates the terminal pair, while raw mode configures how the line discipline
+//!   *current* terminal, the [`PTY`] module creates *new* pseudo-terminals for child
+//!   processes. Both deal with the same underlying [`TTY`] abstraction: the [`PTY`]
+//!   module creates the terminal pair, while raw mode configures how the line discipline
 //!   processes input.
 //!
 //! ## Platform Support
 //!
 //! Backend dispatch is based on [`TERMINAL_LIB_BACKEND`]:
 //!
-//! - **Linux** ([`DirectToAnsi`]): Uses [rustix]'s safe termios API (see
+//! - **Linux** ([`DirectToAnsi`]): Uses [[`rustix`]]'s safe termios API (see
 //!   [`raw_mode_unix`])
 //! - **macOS/Windows** ([`Crossterm`]): Uses [`crossterm::terminal`] functions
 //!
@@ -226,7 +226,19 @@
 //! disable_raw_mode().expect("Failed to disable raw mode");
 //! ```
 //!
-//! [Alacritty]: https://alacritty.org/
+//! [`Alacritty`]: https://alacritty.org/
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`Crossterm`]: crate::TerminalLibBackend::Crossterm
+//! [`DirectToAnsi`]: crate::TerminalLibBackend::DirectToAnsi
+//! [`EOF`]: https://en.wikipedia.org/wiki/End-of-file
+//! [`iTerm2`]: https://iterm2.com/
+//! [`portable_pty` crate]: https://docs.rs/portable-pty
+//! [`PTY`]: crate::pty
+//! [`rustix`]: https://docs.rs/rustix
+//! [`SIGINT`]: https://man7.org/linux/man-pages/man7/signal.7.html
+//! [`TERMINAL_LIB_BACKEND`]: crate::TERMINAL_LIB_BACKEND
+//! [`TTY`]: https://en.wikipedia.org/wiki/Tty_(Unix)
+//! [`VEOF`]: https://man7.org/linux/man-pages/man3/termios.3.html
 //! [Bash]: https://www.gnu.org/software/bash/
 //! [Fish]: https://fishshell.com/docs/current/interactive.html
 //! [GNOME Terminal]: https://help.gnome.org/users/gnome-terminal/stable/
@@ -234,16 +246,9 @@
 //! [Nushell]: https://www.nushell.sh/
 //! [Reedline]: https://github.com/nushell/reedline
 //! [Terminator]: https://gnome-terminator.org/
+//! [termios]: https://man7.org/linux/man-pages/man3/termios.3.html
 //! [Unix implementation's termios section]: mod@crate::core::ansi::terminal_raw_mode::raw_mode_unix#the-termios-interface
 //! [WezTerm]: https://wezfurlong.org/wezterm/
-//! [`Crossterm`]: crate::TerminalLibBackend::Crossterm
-//! [`DirectToAnsi`]: crate::TerminalLibBackend::DirectToAnsi
-//! [`PTY`]: crate::pty
-//! [`TERMINAL_LIB_BACKEND`]: crate::TERMINAL_LIB_BACKEND
-//! [`portable_pty` crate]: https://docs.rs/portable-pty
-//! [iTerm2]: https://iterm2.com/
-//! [rustix]: https://docs.rs/rustix
-//! [termios]: https://man7.org/linux/man-pages/man3/termios.3.html
 
 // Private modules (hide internal structure).
 mod raw_mode_core;

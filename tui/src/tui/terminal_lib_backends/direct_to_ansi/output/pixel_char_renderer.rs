@@ -1,15 +1,17 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 //! This module implements [`PixelCharRenderer`], which converts [`PixelChar`] arrays to
-//! byte arrays containing ANSI escape sequences using intelligent style diffing to
+//! byte arrays containing [`ANSI`] escape sequences using intelligent style diffing to
 //! minimize redundant codes.
+//!
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 
 use crate::{FastStringify, PixelChar, SGR_RESET_BYTES, SgrCode, TuiColor, TuiStyle,
             degrade_color, global_color_support, tui_style};
 
-/// # Unified ANSI Generator for [`PixelChar`] Rendering
+/// # Unified [`ANSI`] Generator for [`PixelChar`] Rendering
 ///
-/// `PixelCharRenderer` converts [`PixelChar`] arrays to ANSI escape sequences using
+/// `PixelCharRenderer` converts [`PixelChar`] arrays to [`ANSI`] escape sequences using
 /// intelligent style diffing to minimize redundant codes.
 ///
 /// This separation of concerns is architecturally clean: `PixelCharRenderer` is a pure
@@ -41,8 +43,8 @@ use crate::{FastStringify, PixelChar, SGR_RESET_BYTES, SgrCode, TuiColor, TuiSty
 ///
 /// ## Key Features
 ///
-/// **Smart Style Diffing**: Only emits ANSI codes when the style actually changes. This
-/// reduces output size by ~30% compared to emitting codes for every character.
+/// **Smart Style Diffing**: Only emits [`ANSI`] codes when the style actually changes.
+/// This reduces output size by ~30% compared to emitting codes for every character.
 ///
 /// **Default Style Handling**: Uses `TuiStyle::default()` to represent "no style" (not
 /// `Option<TuiStyle>`). Tracks `has_active_style` to know when a reset is necessary.
@@ -54,13 +56,13 @@ use crate::{FastStringify, PixelChar, SGR_RESET_BYTES, SgrCode, TuiColor, TuiSty
 ///
 /// When transitioning between two styles:
 ///
-/// 1. **Same style** → No ANSI codes emitted
+/// 1. **Same style** → No [`ANSI`] codes emitted
 /// 2. **Default → Styled** → Apply new style codes
 /// 3. **Styled → Default** → Emit reset (`\x1b[0m`)
 /// 4. **Styled → Different Styled** → Emit reset first (if attributes conflict), then new
 ///    codes
 ///
-/// This ensures minimal but correct ANSI output.
+/// This ensures minimal but correct [`ANSI`] output.
 ///
 /// ## Integration Points
 ///
@@ -70,15 +72,18 @@ use crate::{FastStringify, PixelChar, SGR_RESET_BYTES, SgrCode, TuiColor, TuiSty
 /// - [`RenderOpOutput`] variant `CompositorNoClipTruncPaintTextWithAttributes` will use
 ///   this renderer
 ///
-/// This renderer implements intelligent style diffing to produce minimal ANSI output
+/// This renderer implements intelligent style diffing to produce minimal [`ANSI`] output
 /// while maintaining correctness. It tracks the current style and only emits new codes
 /// when styles change.
 ///
+/// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 /// [`OutputDevice`]: crate::OutputDevice
 /// [`RenderOpOutput`]: enum@crate::RenderOpOutput
 #[derive(Debug, Clone)]
 pub struct PixelCharRenderer {
-    /// Pre-allocated ANSI escape sequence buffer (typically 4KB).
+    /// Pre-allocated [`ANSI`] escape sequence buffer (typically 4KB).
+    ///
+    /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
     buffer: Vec<u8>,
 
     /// Track the current style to implement smart diffing.
@@ -105,14 +110,14 @@ impl PixelCharRenderer {
         }
     }
 
-    /// Render a line of [`PixelChar`]s to ANSI escape sequences.
+    /// Render a line of [`PixelChar`]s to [`ANSI`] escape sequences.
     ///
     /// This is the main rendering method. It:
     /// - Clears the internal buffer
     /// - Iterates through each [`PixelChar`]
     /// - Applies smart style diffing
     /// - Writes character bytes
-    /// - Returns a reference to the ANSI-encoded bytes
+    /// - Returns a reference to the [`ANSI`]-encoded bytes
     ///
     /// # Arguments
     ///
@@ -120,18 +125,21 @@ impl PixelCharRenderer {
     ///
     /// # Returns
     ///
-    /// A byte slice containing the ANSI escape sequences and character data.
+    /// A byte slice containing the [`ANSI`] escape sequences and character data.
     ///
     /// # Algorithm
     ///
     /// For each `PixelChar`:
     /// - `PlainText { display_char, style }`: Check if style changed, apply style if
-    ///   needed, write character UTF-8 bytes
+    ///   needed, write character [`UTF-8`] bytes
     /// - `Spacer`: Write a space character (typically already handled by positioning)
     /// - `Void`: Skip (positioning already handled)
     ///
-    /// The style diffing is the key optimization: we only emit ANSI codes when the style
-    /// actually changes, reducing output size by ~30%.
+    /// The style diffing is the key optimization: we only emit [`ANSI`] codes when the
+    /// style actually changes, reducing output size by ~30%.
+    ///
+    /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+    /// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
     pub fn render_line(&mut self, pixels: &[PixelChar]) -> &[u8] {
         self.buffer.clear();
         self.current_style = TuiStyle::default();
@@ -177,7 +185,9 @@ impl PixelCharRenderer {
     /// 3. Styled → default → emit reset
     /// 4. Styled → different styled → emit reset if needed, then new codes
     ///
-    /// This minimizes ANSI output while maintaining correctness.
+    /// This minimizes [`ANSI`] output while maintaining correctness.
+    ///
+    /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
     fn apply_style_change(&mut self, from: &TuiStyle, to: &TuiStyle) {
         // Same style - no change needed
         if from == to {
@@ -210,8 +220,10 @@ impl PixelCharRenderer {
     /// Determine if a full reset is needed between two styled states.
     ///
     /// A full reset is needed when attributes are being turned off (present in `from`
-    /// but not in `to`). This is because ANSI doesn't have individual "turn off" codes
-    /// for most attributes - you must reset and reapply.
+    /// but not in `to`). This is because [`ANSI`] doesn't have individual "turn off"
+    /// codes for most attributes - you must reset and reapply.
+    ///
+    /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
     fn needs_full_reset(from: &TuiStyle, to: &TuiStyle) -> bool {
         // If attributes are different, we likely need a reset
         // (e.g., from bold to non-bold requires reset then reapply other codes)
@@ -220,13 +232,15 @@ impl PixelCharRenderer {
 
     /// Apply style codes for a given [`TuiStyle`].
     ///
-    /// This method emits ANSI codes for:
+    /// This method emits [`ANSI`] codes for:
     /// - All enabled attributes (bold, italic, underline, etc.)
     /// - Foreground color (if present)
     /// - Background color (if present)
     ///
     /// It uses the existing [`SgrCode`] infrastructure for consistency with the rest
     /// of the codebase.
+    ///
+    /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
     fn apply_style(&mut self, style: &TuiStyle) {
         // Apply text attributes
         self.apply_attribute(SgrCode::Bold, style.attribs.bold.is_some());
@@ -276,8 +290,10 @@ impl PixelCharRenderer {
 
     /// Apply a foreground color to the output.
     ///
-    /// This method converts a [`TuiColor`] to the appropriate ANSI escape sequence based
-    /// on the detected color support level (RGB, Ansi256, Grayscale).
+    /// This method converts a [`TuiColor`] to the appropriate [`ANSI`] escape sequence
+    /// based on the detected color support level (RGB, Ansi256, Grayscale).
+    ///
+    /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
     fn apply_fg_color(&mut self, color: TuiColor) {
         let sgr = Self::color_to_sgr(color, true);
         self.write_sgr(sgr);
@@ -297,8 +313,10 @@ impl PixelCharRenderer {
     /// to ensure consistent color downsampling across the codebase:
     /// - **Truecolor support** → 24-bit RGB codes (passed through unchanged)
     /// - **Ansi256 support** → 8-bit color codes (RGB downsampled if needed)
-    /// - **Grayscale support** → converted to ANSI grayscale equivalent
+    /// - **Grayscale support** → converted to [`ANSI`] grayscale equivalent
     /// - **`NoColor` support** → black (converted by [`degrade_color`])
+    ///
+    /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
     fn color_to_sgr(color: TuiColor, is_foreground: bool) -> SgrCode {
         let color_support = global_color_support::detect();
         let degraded = degrade_color(color, color_support);
@@ -338,8 +356,6 @@ impl Default for PixelCharRenderer {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{new_style, tui_color};
-
     #[test]
     fn test_render_plain_text_no_style() {
         let mut renderer = PixelCharRenderer::new();

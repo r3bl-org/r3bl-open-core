@@ -124,7 +124,7 @@ pub mod upgrade_install {
     }
 }
 
-pub mod upgrade_check {
+pub mod upgrade_check_msgs {
     #[allow(clippy::wildcard_imports)]
     use super::*;
 

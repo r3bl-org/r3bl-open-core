@@ -45,13 +45,12 @@
 //! automated verification of raw mode behavior without user interaction.
 //!
 //! **Validation tests** require real shell environments and user actions, verifying
-//! edge cases that cannot be simulated with PTY pairs.
+//! edge cases that cannot be simulated with [`PTY`] pairs.
 //!
 //! [`integration_tests`]: mod@super::integration_tests
 //! [`portable_pty`]: https://docs.rs/portable-pty
+//! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 
-// Skip rustfmt for rest of file.
-// https://stackoverflow.com/a/75910283/2085356
-#![cfg_attr(rustfmt, rustfmt_skip)]
+#![rustfmt::skip]
 
 mod test_dev_tty_fallback_manual;

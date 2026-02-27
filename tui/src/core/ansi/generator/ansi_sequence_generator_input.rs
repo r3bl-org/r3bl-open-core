@@ -2,7 +2,7 @@
 
 // cspell:words rowm
 
-//! ANSI escape sequence generator for terminal INPUT (test fixtures).
+//! [`ANSI`] escape sequence generator for terminal INPUT (test fixtures).
 //!
 //! Provides input sequence generation for testing. Creates symmetry with
 //! [`ansi_sequence_generator_output`] for output sequences.
@@ -12,7 +12,8 @@
 //! **This module is for testing only.** It is not used in production code.
 //!
 //! The generator enables:
-//! 1. **Round-trip validation**: Parse ANSI → `InputEvent` → Generate ANSI → Verify match
+//! 1. **Round-trip validation**: Parse [`ANSI`] → [`InputEvent`] → Generate [`ANSI`] →
+//!    Verify match
 //! 2. **Test helpers**: Build test sequences without hardcoding raw bytes
 //! 3. **Parser verification**: Confirm parsers handle all modifier combinations correctly
 //!
@@ -23,6 +24,10 @@
 //! | Pre-computed constants        | [`SEQ_ARROW_UP`], [`SEQ_ARROW_DOWN`], [`SEQ_ARROW_RIGHT`], [`SEQ_ARROW_LEFT`], [`SEQ_HOME`], [`SEQ_END`], [`SEQ_BACKTAB`], [`SEQ_F1`]–[`SEQ_F4`]          |
 //! | Low-level builder functions   | [`csi`], [`ss3`], [`csi_tilde`], [`csi_modified`]                                                                                                         |
 //! | High-level generators         | [`generate_keyboard_sequence`], [`generate_mouse_sequence_bytes`], [`generate_resize_sequence`], [`generate_focus_sequence`], [`generate_paste_sequence`] |
+//!
+//! [`ansi_sequence_generator_output`]: super::ansi_sequence_generator_output
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`InputEvent`]: crate::core::terminal_io::InputEvent
 
 use crate::{KeyState,
             core::ansi::{constants::{ASCII_DEL, ASCII_DIGIT_0, CONTROL_ENTER,
@@ -87,7 +92,9 @@ pub const SEQ_HOME: &[u8] = &[ANSI_ESC, ANSI_CSI_BRACKET, SPECIAL_HOME_FINAL];
 /// End: `ESC [ F`.
 pub const SEQ_END: &[u8] = &[ANSI_ESC, ANSI_CSI_BRACKET, SPECIAL_END_FINAL];
 
-/// `BackTab` (Shift+Tab): `ESC [ Z`.
+/// [`BackTab`] (Shift+Tab): `ESC [ Z`.
+///
+/// [`BackTab`]: VT100KeyCodeIR::BackTab
 pub const SEQ_BACKTAB: &[u8] = &[ANSI_ESC, ANSI_CSI_BRACKET, BACKTAB_FINAL];
 
 /// F1 (SS3): `ESC O P`.
@@ -106,7 +113,9 @@ pub const SEQ_F4: &[u8] = &[ANSI_ESC, ANSI_SS3_O, SS3_F4_FINAL];
 // LOW-LEVEL BUILDER FUNCTIONS
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-/// Builds CSI sequence: `ESC [ <final>`.
+/// Builds [`CSI`] sequence: `ESC [ <final>`.
+///
+/// [`CSI`]: crate::CsiSequence
 #[must_use]
 pub const fn csi(final_byte: u8) -> [u8; 3] { [ANSI_ESC, ANSI_CSI_BRACKET, final_byte] }
 
@@ -114,9 +123,13 @@ pub const fn csi(final_byte: u8) -> [u8; 3] { [ANSI_ESC, ANSI_CSI_BRACKET, final
 #[must_use]
 pub const fn ss3(final_byte: u8) -> [u8; 3] { [ANSI_ESC, ANSI_SS3_O, final_byte] }
 
-/// Builds CSI tilde sequence: `ESC [ <code> ~`.
+/// Builds [`CSI`] tilde sequence: `ESC [ <code> ~`.
 ///
-/// Used for function keys (F5+), Insert, Delete, `PageUp`, `PageDown`.
+/// Used for function keys (F5+), Insert, Delete, [`PageUp`], [`PageDown`].
+///
+/// [`CSI`]: crate::CsiSequence
+/// [`PageDown`]: VT100KeyCodeIR::PageDown
+/// [`PageUp`]: VT100KeyCodeIR::PageUp
 #[must_use]
 pub fn csi_tilde(code: u16) -> Vec<u8> {
     let mut seq = vec![ANSI_ESC, ANSI_CSI_BRACKET];
@@ -125,10 +138,12 @@ pub fn csi_tilde(code: u16) -> Vec<u8> {
     seq
 }
 
-/// Builds CSI with modifier: `ESC [ 1 ; <mod+1> <final>`.
+/// Builds [`CSI`] with modifier: `ESC [ 1 ; <mod+1> <final>`.
 ///
 /// Modifier encoding: Shift=1, Alt=2, Ctrl=4 (additive).
 /// The parameter sent is `1 + modifier_bits`.
+///
+/// [`CSI`]: crate::CsiSequence
 #[must_use]
 pub fn csi_modified(modifier: u8, final_byte: u8) -> Vec<u8> {
     let param = 1 + modifier;
@@ -146,10 +161,11 @@ pub fn csi_modified(modifier: u8, final_byte: u8) -> Vec<u8> {
 // HIGH-LEVEL GENERATORS - Main entry points for generating ANSI sequences
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-/// Generate ANSI bytes for an input event.
+/// Generates [`ANSI`] bytes for an input event.
 ///
-/// Converts any input event back into the ANSI `CSI` sequence format that terminals
-/// send. This enables round-trip validation: `InputEvent` → bytes → parse → `InputEvent`.
+/// Converts any input event back into the [`ANSI`] [`CSI`] sequence format that terminals
+/// send. This enables round-trip validation: [`InputEvent`] → bytes → parse →
+/// [`InputEvent`].
 ///
 /// ## Supported Events
 ///
@@ -157,12 +173,18 @@ pub fn csi_modified(modifier: u8, final_byte: u8) -> Vec<u8> {
 /// - **Resize**: Window resize notifications (`CSI 8 ; rows ; cols t`)
 /// - **Focus**: Focus gained/lost events (`CSI I` / `CSI O`)
 /// - **Paste**: Bracketed paste mode (`CSI 200~` / `CSI 201~`)
-/// - **Mouse**: `SGR` mouse format (`CSI < button ; col ; row M/m`)
+/// - **Mouse**: [`SGR`] mouse format (`CSI < button ; col ; row M/m`)
 ///
 /// ## Returns
 ///
-/// - `Some(Vec<u8>)` for recognized events
-/// - `None` for unsupported or invalid combinations
+/// - [`Some(Vec<u8>)`] for recognized events
+/// - [`None`] for unsupported or invalid combinations
+///
+/// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+/// [`CSI`]: crate::CsiSequence
+/// [`InputEvent`]: crate::core::terminal_io::InputEvent
+/// [`SGR`]: crate::SgrCode
+/// [`Some(Vec<u8>)`]: std::option::Option::Some
 #[must_use]
 pub fn generate_keyboard_sequence(event: &VT100InputEventIR) -> Option<Vec<u8>> {
     match event {
@@ -198,15 +220,15 @@ pub fn generate_keyboard_sequence(event: &VT100InputEventIR) -> Option<Vec<u8>> 
     }
 }
 
-/// Generate ANSI bytes for a mouse event in `X10`/Normal format.
+/// Generate [`ANSI`] bytes for a mouse event in [`X10`]/Normal format.
 ///
 /// Generates sequences like: `ESC [ M Cb Cx Cy` (6 bytes)
 ///
-/// ## `X10` Format Details
+/// ## [`X10`] Format Details
 ///
 /// - `Cb` = button byte: button code (0-2) + modifier flags + motion flag
-/// - `Cx` = column byte: `actual_column` + 32 (ASCII offset encoding)
-/// - `Cy` = row byte: `actual_row` + 32 (ASCII offset encoding)
+/// - `Cx` = column byte: `actual_column` + 32 ([`ASCII`] offset encoding)
+/// - `Cy` = row byte: `actual_row` + 32 ([`ASCII`] offset encoding)
 ///
 /// Button encoding:
 /// - Bits 0-1: Button (0=left, 1=middle, 2=right, 3=release)
@@ -224,6 +246,9 @@ pub fn generate_keyboard_sequence(event: &VT100InputEventIR) -> Option<Vec<u8>> 
 /// - `modifiers`: Key modifiers (Shift, Ctrl, Alt)
 ///
 /// [1-based]: crate::core::ansi::vt_100_terminal_input_parser#one-based-mouse-input-events
+/// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+/// [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
+/// [`X10`]: https://invisible-island.net/xterm/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
 #[must_use]
 pub fn generate_x10_mouse_sequence(
     button: VT100MouseButtonIR,
@@ -235,11 +260,11 @@ pub fn generate_x10_mouse_sequence(
     mouse::generate_x10_sequence(button, col, row, action, modifiers)
 }
 
-/// Generate ANSI bytes for a mouse event in `RXVT` format.
+/// Generate [`ANSI`] bytes for a mouse event in [`RXVT`] format.
 ///
 /// Generates sequences like: `ESC [ Cb ; Cx ; Cy M` (variable length)
 ///
-/// ## `RXVT` Format Details
+/// ## [`RXVT`] Format Details
 ///
 /// Uses decimal numbers separated by semicolons (human-readable format):
 /// - `Cb` = button code (decimal): button (0-2) + modifier bits
@@ -252,10 +277,12 @@ pub fn generate_x10_mouse_sequence(
 /// - `button`: Mouse button
 /// - `col`: Column coordinate ([1-based])
 /// - `row`: Row coordinate ([1-based])
-/// - `action`: Press or Release (`RXVT` primarily uses Press)
+/// - `action`: Press or Release ([`RXVT`] primarily uses Press)
 /// - `modifiers`: Key modifiers (Shift, Ctrl, Alt)
 ///
 /// [1-based]: crate::core::ansi::vt_100_terminal_input_parser#one-based-mouse-input-events
+/// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+/// [`RXVT`]: https://en.wikipedia.org/wiki/Rxvt
 #[must_use]
 pub fn generate_rxvt_mouse_sequence(
     button: VT100MouseButtonIR,
@@ -267,7 +294,7 @@ pub fn generate_rxvt_mouse_sequence(
     mouse::generate_rxvt_sequence(button, col, row, action, modifiers)
 }
 
-/// Generate ANSI bytes for a mouse event in `SGR` format.
+/// Generate [`ANSI`] bytes for a mouse event in [`SGR`] format.
 ///
 /// Generates sequences like: `ESC [<button;col;rowM` or `ESC [<button;col;rowm`
 ///
@@ -280,6 +307,8 @@ pub fn generate_rxvt_mouse_sequence(
 /// - `modifiers`: Key modifiers (Shift, Ctrl, Alt)
 ///
 /// [1-based]: crate::core::ansi::vt_100_terminal_input_parser#one-based-mouse-input-events
+/// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+/// [`SGR`]: crate::SgrCode
 #[must_use]
 pub fn generate_mouse_sequence_bytes(
     button: VT100MouseButtonIR,
@@ -293,7 +322,9 @@ pub fn generate_mouse_sequence_bytes(
 
 /// Generate a window resize sequence: `CSI 8 ; rows ; cols t`
 ///
-/// This is the ANSI sequence sent by terminals when they are resized.
+/// This is the [`ANSI`] sequence sent by terminals when they are resized.
+///
+/// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 #[must_use]
 pub fn generate_resize_sequence(rows: u16, cols: u16) -> Vec<u8> {
     terminal_events::generate_resize_sequence(rows, cols)
@@ -325,7 +356,9 @@ pub fn generate_paste_sequence(mode: VT100PasteModeIR) -> Vec<u8> {
 mod keyboard {
     use super::*;
 
-    /// Generate ANSI bytes for a specific key code and modifiers.
+    /// Generate [`ANSI`] bytes for a specific key code and modifiers.
+    ///
+    /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
     pub fn generate_key_sequence(
         code: VT100KeyCodeIR,
         modifiers: VT100KeyModifiersIR,
@@ -382,7 +415,9 @@ mod keyboard {
         bytes
     }
 
-    /// Generate simple CSI sequence: `CSI final`.
+    /// Generate simple [`CSI`] sequence: `CSI final`.
+    ///
+    /// [`CSI`]: crate::CsiSequence
     fn generate_simple_csi(final_byte: u8) -> Vec<u8> {
         let mut bytes = CSI_PREFIX.to_vec();
         bytes.push(final_byte);
@@ -457,11 +492,17 @@ mod keyboard {
     }
 }
 
-/// Mouse sequence generation (X10, RXVT, SGR formats).
+/// Mouse sequence generation ([`X10`], [`RXVT`], [`SGR`] formats).
+///
+/// [`RXVT`]: https://en.wikipedia.org/wiki/Rxvt
+/// [`SGR`]: crate::SgrCode
+/// [`X10`]: https://invisible-island.net/xterm/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
 mod mouse {
     use super::*;
 
-    /// Generate mouse sequence in SGR format: `ESC [<button;col;rowM/m`.
+    /// Generate mouse sequence in [`SGR`] format: `ESC [<button;col;rowM/m`.
+    ///
+    /// [`SGR`]: crate::SgrCode
     pub fn generate_sgr_sequence(
         button: VT100MouseButtonIR,
         col: u16,
@@ -511,7 +552,9 @@ mod mouse {
         bytes
     }
 
-    /// Generate mouse sequence in X10 format: `ESC [ M Cb Cx Cy`.
+    /// Generate mouse sequence in [`X10`] format: `ESC [ M Cb Cx Cy`.
+    ///
+    /// [`X10`]: https://invisible-island.net/xterm/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
     pub fn generate_x10_sequence(
         button: VT100MouseButtonIR,
         col: u16,
@@ -548,7 +591,9 @@ mod mouse {
         bytes
     }
 
-    /// Generate mouse sequence in RXVT format: `ESC [ Cb ; Cx ; Cy M`.
+    /// Generate mouse sequence in [`RXVT`] format: `ESC [ Cb ; Cx ; Cy M`.
+    ///
+    /// [`RXVT`]: https://en.wikipedia.org/wiki/Rxvt
     pub fn generate_rxvt_sequence(
         button: VT100MouseButtonIR,
         col: u16,
@@ -648,7 +693,10 @@ mod terminal_events {
     }
 }
 
-/// ANSI encoding utilities (modifiers, ASCII conversion).
+/// [`ANSI`] encoding utilities (modifiers, [`ASCII`] conversion).
+///
+/// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+/// [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
 mod encoding {
     use super::*;
 
@@ -659,9 +707,9 @@ mod encoding {
             || modifiers.alt == KeyState::Pressed
     }
 
-    /// Encode modifier flags into a single byte following VT-100 ANSI convention.
+    /// Encode modifier flags into a single byte following [`VT-100`] [`ANSI`] convention.
     ///
-    /// **VT-100 Modifier Encoding**: `parameter = 1 + bitfield`
+    /// **[`VT-100`] Modifier Encoding**: `parameter = 1 + bitfield`
     ///
     /// Where bitfield is:
     /// - bit 0 (value 1): Shift
@@ -678,6 +726,9 @@ mod encoding {
     /// - `6` → Ctrl+Shift (1 + 5)
     /// - `7` → Ctrl+Alt (1 + 6)
     /// - `8` → Ctrl+Alt+Shift (1 + 7)
+    ///
+    /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+    /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
     pub fn encode_modifiers(modifiers: VT100KeyModifiersIR) -> u8 {
         let mut mask: u8 = 0;
         if modifiers.shift == KeyState::Pressed {
@@ -692,7 +743,9 @@ mod encoding {
         MODIFIER_PARAMETER_BASE_CHAR + mask
     }
 
-    /// Converts a numeric value (0-9) to its ASCII character representation.
+    /// Converts a numeric value (0-9) to its [`ASCII`] character representation.
+    ///
+    /// [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
     pub fn push_ascii_number(value: u8) -> u8 {
         debug_assert!(
             value <= 9,
@@ -701,6 +754,8 @@ mod encoding {
         ASCII_DIGIT_0 + value
     }
 
-    /// Converts a multi-digit numeric value to its ASCII byte representation.
+    /// Converts a multi-digit numeric value to its [`ASCII`] byte representation.
+    ///
+    /// [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
     pub fn push_ascii_u16(value: u16) -> Vec<u8> { value.to_string().into_bytes() }
 }

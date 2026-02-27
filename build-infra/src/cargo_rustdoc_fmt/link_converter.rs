@@ -1,7 +1,6 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-// Skip rustdoc formatting - this file contains examples of the formatter's output.
-#![cfg_attr(rustfmt, rustfmt_skip)]
+#![rustfmt::skip]
 
 //! Convert inline markdown links to reference-style links.
 
@@ -17,17 +16,37 @@ use std::sync::LazyLock;
 /// Does NOT match:
 /// - Reference-style links `[text][ref]` or `[text]`
 /// - Already existing reference definitions `[text]: url`
+///   Regex to match backtick-delimited inline code spans.
+///
+/// Used to protect inline code from link conversion. Content inside backticks
+/// (e.g., `` `[link]` ``) must not be converted to reference-style links.
+///
+/// [link]: url
+static BACKTICK_SPAN_REGEX: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"`[^`]+`").expect("Invalid backtick span regex"));
+
+/// Placeholder markers for protected backtick spans during link conversion.
+const BACKTICK_PLACEHOLDER_PREFIX: &str = "\u{25C4}BTCK";
+const BACKTICK_PLACEHOLDER_SUFFIX: &str = "\u{25BA}";
+
 static INLINE_LINK_REGEX: LazyLock<Regex> = LazyLock::new(|| {
     // Match [text](url) but not [![ (image links) or [text][ref]
     // The text can contain backticks etc. but NOT nested brackets.
-    // URL cannot contain spaces or closing parens (simplified).
     // Excluding `[` from link text prevents pathological cross-line matches where
     // `[200~` in escape sequences chains through other `[` chars to reach a `]`
     // dozens of lines later, duplicating content.
-    Regex::new(r"\[([^\[\]]+)\]\(([^)\s]+)\)").expect("Invalid inline link regex")
+    //
+    // The URL portion supports one level of balanced parentheses so that Rust
+    // intra-doc links like `EditorBuffer::get_lines()` are captured in full
+    // instead of being truncated at the first `)`.
+    //
+    // URL structure: `[^()\s]*` (non-paren chars) optionally followed by
+    // `\([^()\s]*\)` (a matched paren pair) and more non-paren chars, repeated.
+    Regex::new(r"\[([^\[\]]+)\]\(([^()\s]*(?:\([^()\s]*\)[^()\s]*)*)\)")
+        .expect("Invalid inline link regex")
 });
 
-/// Convert inline markdown links to reference-style links.
+/// Converts inline markdown links to reference-style links.
 ///
 /// This function preserves all original formatting (numbered lists, indentation,
 /// etc.) by using regex replacement instead of parsing and rebuilding the markdown.
@@ -36,22 +55,44 @@ static INLINE_LINK_REGEX: LazyLock<Regex> = LazyLock::new(|| {
 ///
 /// Input: `See [docs](https://example.com) here.`
 /// Output: `See [docs] here.\n\n[docs]: https://example.com`
+///
+/// # Panics
+///
+/// Panics if the regex engine returns a `Captures` without a full match (group 0),
+/// which cannot happen per the regex contract.
 #[must_use]
 pub fn convert_links(text: &str) -> String {
     if text.is_empty() {
         return String::new();
     }
 
-    // Extract existing reference definitions first
+    // Extract existing reference definitions first (no backtick protection needed -
+    // reference definitions like [`Name`]: target have valid backtick-wrapped names).
     let (text_without_refs, existing_refs) = extract_reference_definitions(text);
+
+    // Protect inline code spans from link regex matching. This prevents
+    // `[link](url)` inside backticks from being converted to reference-style.
+    let (protected_text, backtick_spans) = protect_backtick_spans(&text_without_refs);
 
     // Collect inline links and their URLs
     let mut link_info: Vec<(String, String)> = Vec::new();
     let mut seen_urls: std::collections::HashSet<String> = std::collections::HashSet::new();
 
-    for caps in INLINE_LINK_REGEX.captures_iter(&text_without_refs) {
+    for caps in INLINE_LINK_REGEX.captures_iter(&protected_text) {
+        let full_match = caps.get(0).unwrap();
         let link_text = caps.get(1).map_or("", |m| m.as_str()).to_string();
         let url = caps.get(2).map_or("", |m| m.as_str()).to_string();
+
+        // Skip anchor links (URL starts with #).
+        if url.starts_with('#') {
+            continue;
+        }
+
+        // Skip image links (preceded by !).
+        let start = full_match.start();
+        if start > 0 && protected_text.as_bytes().get(start - 1) == Some(&b'!') {
+            continue;
+        }
 
         // Only add unique URLs (first link text wins for duplicates)
         if !seen_urls.contains(&url) {
@@ -60,9 +101,24 @@ pub fn convert_links(text: &str) -> String {
         }
     }
 
-    // Replace inline links with reference-style links in-place
-    let result = INLINE_LINK_REGEX.replace_all(&text_without_refs, |caps: &regex::Captures| {
+    // Replace inline links with reference-style links in-place.
+    // Skip anchor links (#...) and image links (![alt](url)).
+    let result = INLINE_LINK_REGEX.replace_all(&protected_text, |caps: &regex::Captures| {
+        let full_match = caps.get(0).unwrap();
         let link_text = caps.get(1).map_or("", |m| m.as_str());
+        let url = caps.get(2).map_or("", |m| m.as_str());
+
+        // Skip anchor links.
+        if url.starts_with('#') {
+            return full_match.as_str().to_string();
+        }
+
+        // Skip image links.
+        let start = full_match.start();
+        if start > 0 && protected_text.as_bytes().get(start - 1) == Some(&b'!') {
+            return full_match.as_str().to_string();
+        }
+
         format!("[{link_text}]")
     });
 
@@ -94,10 +150,11 @@ pub fn convert_links(text: &str) -> String {
         result = result.trim_end().to_string();
     }
 
-    result
+    // Restore backtick spans that were protected from conversion.
+    restore_backtick_spans(&result, &backtick_spans)
 }
 
-/// Extract reference definitions from text and return (`text_without_refs`, `references`).
+/// Extracts reference definitions from text and returns (`text_without_refs`, `references`).
 ///
 /// Scans for existing reference definitions (e.g., `[name]: target`), extracts them,
 /// and returns both the text without those definitions and the list of references.
@@ -161,8 +218,10 @@ pub fn aggregate_existing_references(text: &str) -> String {
     // Trim trailing whitespace/newlines
     result = result.trim_end().to_string();
 
-    // Append references with blank line separator for visual clarity
-    result.push_str("\n\n");
+    // Append references with blank line separator (only if there is content).
+    if !result.is_empty() {
+        result.push_str("\n\n");
+    }
     for (_, ref_line) in &references {
         result.push_str(ref_line);
         result.push('\n');
@@ -174,17 +233,35 @@ pub fn aggregate_existing_references(text: &str) -> String {
     result
 }
 
-/// Parse a reference definition line and return the link name if valid.
+/// Parses a reference definition line and returns the link name if valid.
 ///
 /// Matches lines in the format: `[name]: target`
+///
+/// Handles nested brackets in the link name (e.g.,
+/// `` [`SmallString<[u8; 64]>`]: target ``).
 fn parse_reference_definition(line: &str) -> Option<String> {
     let trimmed = line.trim();
     if !trimmed.starts_with('[') {
         return None;
     }
 
-    // Find the closing bracket
-    let close_bracket = trimmed.find(']')?;
+    // Find the matching closing bracket, accounting for nested brackets.
+    let mut depth = 0;
+    let mut close_bracket = None;
+    for (i, ch) in trimmed.char_indices() {
+        match ch {
+            '[' => depth += 1,
+            ']' => {
+                depth -= 1;
+                if depth == 0 {
+                    close_bracket = Some(i);
+                    break;
+                }
+            }
+            _ => {}
+        }
+    }
+    let close_bracket = close_bracket?;
 
     // Check if it's followed by a colon
     let after_bracket = &trimmed[close_bracket + 1..];
@@ -238,19 +315,63 @@ fn separate_references(text: &str) -> (Vec<&str>, Vec<(String, String)>) {
     (content_lines, references)
 }
 
-/// Check if a reference definition line has no URL/target after the colon.
+/// Checks if a reference definition line has no URL/target after the colon.
 ///
 /// Returns `true` for lines like `[name]:` or `[name]:  ` where there is
 /// no target after the colon - the URL is expected on the next line.
 fn is_ref_definition_incomplete(line: &str) -> bool {
     let trimmed = line.trim();
-    if let Some(close_bracket) = trimmed.find(']') {
+    // Find the matching closing bracket, accounting for nested brackets.
+    let mut depth = 0;
+    let mut close_bracket = None;
+    for (i, ch) in trimmed.char_indices() {
+        match ch {
+            '[' => depth += 1,
+            ']' => {
+                depth -= 1;
+                if depth == 0 {
+                    close_bracket = Some(i);
+                    break;
+                }
+            }
+            _ => {}
+        }
+    }
+    if let Some(close_bracket) = close_bracket {
         let after_bracket = trimmed[close_bracket + 1..].trim_start();
-        if after_bracket.starts_with(':') {
-            return after_bracket[1..].trim().is_empty();
+        if let Some(stripped) = after_bracket.strip_prefix(':') {
+            return stripped.trim().is_empty();
         }
     }
     false
+}
+
+/// Replace inline backtick spans with placeholders.
+///
+/// Prevents link conversion and reference extraction from modifying content
+/// inside backtick-delimited code spans (e.g., `` `[link]` ``).
+///
+/// [link]: url
+fn protect_backtick_spans(text: &str) -> (String, Vec<String>) {
+    let mut spans = Vec::new();
+    let result = BACKTICK_SPAN_REGEX.replace_all(text, |caps: &regex::Captures| {
+        let original = caps.get(0).map_or("", |m| m.as_str()).to_string();
+        let index = spans.len();
+        spans.push(original);
+        format!("{BACKTICK_PLACEHOLDER_PREFIX}{index}{BACKTICK_PLACEHOLDER_SUFFIX}")
+    });
+    (result.to_string(), spans)
+}
+
+/// Restore backtick spans from placeholders.
+fn restore_backtick_spans(text: &str, spans: &[String]) -> String {
+    let mut result = text.to_string();
+    for (i, span) in spans.iter().enumerate() {
+        let placeholder =
+            format!("{BACKTICK_PLACEHOLDER_PREFIX}{i}{BACKTICK_PLACEHOLDER_SUFFIX}");
+        result = result.replace(&placeholder, span);
+    }
+    result
 }
 
 #[cfg(test)]
@@ -625,6 +746,94 @@ continues on the next line without breaking.
     }
 
     #[test]
+    fn test_inline_link_inside_backticks_not_converted() {
+        // Regression test: `[link](http://r3bl.com)` inside backticks must NOT be
+        // converted to a reference-style link. The backtick span is inline code.
+        let input = "eg: `**bold**`, `*italic*`, `[link](http://r3bl.com)`, etc.";
+        let output = convert_links(input);
+        eprintln!("Input: {input:?}");
+        eprintln!("Output: {output:?}");
+
+        assert_eq!(
+            output, input,
+            "Inline link inside backticks should not be modified"
+        );
+    }
+
+    #[test]
+    fn test_mixed_backtick_and_real_inline_links() {
+        // Backtick-wrapped links should be preserved, real inline links converted.
+        let input = "See `[example](http://example.com)` and [docs](https://docs.rs).";
+        let output = convert_links(input);
+        eprintln!("Input: {input:?}");
+        eprintln!("Output: {output:?}");
+
+        // Backtick-wrapped link should be untouched.
+        assert!(
+            output.contains("`[example](http://example.com)`"),
+            "Backtick-wrapped link should be preserved"
+        );
+        // Real inline link should be converted to reference-style.
+        assert!(
+            output.contains("[docs]"),
+            "Real inline link should be converted"
+        );
+        assert!(
+            output.contains("[docs]: https://docs.rs"),
+            "Reference definition should be appended"
+        );
+    }
+
+    #[test]
+    fn test_url_with_balanced_parentheses() {
+        // Regression test: URLs like `EditorBuffer::get_lines()` contain balanced
+        // parentheses. The regex must capture the full URL, not truncate at the
+        // first `)`.
+        let input = "See [`editor_buffer.get_lines()`](EditorBuffer::get_lines()).";
+        let output = convert_links(input);
+        eprintln!("Input: {input:?}");
+        eprintln!("Output: {output:?}");
+
+        // Should convert to reference-style with full URL.
+        assert!(
+            output.contains("[`editor_buffer.get_lines()`]"),
+            "Link text should be preserved as reference"
+        );
+        assert!(
+            output.contains("[`editor_buffer.get_lines()`]: EditorBuffer::get_lines()"),
+            "Reference should have full URL including parentheses"
+        );
+        // The trailing period should remain after the reference link.
+        assert!(
+            output.contains("[`editor_buffer.get_lines()`]."),
+            "Trailing period should remain after the reference link"
+        );
+    }
+
+    #[test]
+    fn test_url_without_parentheses_still_works() {
+        // Ensure normal URLs (no parens) still work after the balanced-paren change.
+        let input = "See [docs](https://docs.rs/crate) here.";
+        let output = convert_links(input);
+
+        assert!(output.contains("[docs]"));
+        assert!(output.contains("[docs]: https://docs.rs/crate"));
+    }
+
+    #[test]
+    fn test_backtick_ref_definition_not_extracted() {
+        // A reference-like pattern inside backticks is not on its own line starting
+        // with `[`, so `parse_reference_definition` won't match it.
+        let input = "Example: `[name]: url` is how you write references.";
+        let output = aggregate_existing_references(input);
+
+        assert_eq!(
+            output, input,
+            "Reference-like pattern inside backticks should not be extracted"
+        );
+    }
+
+    #[test]
     fn test_is_ref_definition_incomplete() {
         assert!(is_ref_definition_incomplete("[name]:"));
         assert!(is_ref_definition_incomplete("[name]:  "));
@@ -632,5 +841,151 @@ continues on the next line without breaking.
         assert!(!is_ref_definition_incomplete("[name]: url"));
         assert!(!is_ref_definition_incomplete("[name]: https://example.com"));
         assert!(!is_ref_definition_incomplete("not a ref"));
+    }
+
+    #[test]
+    fn test_parse_reference_definition_nested_brackets() {
+        // Link names with nested brackets (e.g., Rust array types) must be
+        // parsed correctly by matching the outermost `]`.
+        assert_eq!(
+            parse_reference_definition("[`SmallString<[u8; 64]>`]: `smallstr::SmallString`"),
+            Some("`SmallString<[u8; 64]>`".to_string())
+        );
+        assert_eq!(
+            parse_reference_definition("[`SmallString<[u8; 256]>`]: `smallstr::SmallString`"),
+            Some("`SmallString<[u8; 256]>`".to_string())
+        );
+    }
+
+    #[test]
+    fn test_aggregate_nested_bracket_refs_no_spurious_blank_line() {
+        // Regression test: reference definitions with nested brackets (e.g.,
+        // `[u8; 64]` inside the link name) must not produce a spurious blank
+        // line when aggregated with normal references.
+        let input = "\
+[`SmallString<[u8; 64]>`]: `smallstr::SmallString`
+[`SmallString<[u8; 256]>`]: `smallstr::SmallString`
+[`Display::fmt`]: Display::fmt
+[`String`]: std::string::String";
+        let output = aggregate_existing_references(input);
+        eprintln!("Input:\n{input}");
+        eprintln!("\nOutput:\n{output}");
+
+        // All four should be recognized as references and sorted together
+        // with no blank lines between them.
+        let lines: Vec<&str> = output.lines().collect();
+        assert_eq!(lines.len(), 4, "Should have exactly 4 lines (no blank line)");
+        // Sorted order: Display::fmt, SmallString 256, SmallString 64, String
+        assert!(lines[0].contains("[`Display::fmt`]"));
+        assert!(lines[1].contains("[`SmallString<[u8; 256]>`]"));
+        assert!(lines[2].contains("[`SmallString<[u8; 64]>`]"));
+        assert!(lines[3].contains("[`String`]"));
+    }
+
+    #[test]
+    fn test_aggregate_nested_bracket_refs_with_content() {
+        // Simulates the real-world scenario from fast_stringify.rs where
+        // content precedes reference definitions containing nested brackets.
+        let input = "\
+This type alias allows us to easily experiment with different string-like data
+structures in the future without impacting the rest of the codebase.
+
+[`SmallString<[u8; 64]>`]: `smallstr::SmallString`
+[`SmallString<[u8; 256]>`]: `smallstr::SmallString`
+[`Display::fmt`]: Display::fmt
+[`String`]: std::string::String";
+        let output = aggregate_existing_references(input);
+        eprintln!("Input:\n{input}");
+        eprintln!("\nOutput:\n{output}");
+
+        // Content should be preserved.
+        assert!(output.contains("This type alias"));
+
+        // References should be at the bottom with no spurious blank line.
+        let lines: Vec<&str> = output.lines().collect();
+        let ref_lines: Vec<&&str> = lines.iter().filter(|l| l.starts_with('[') ).collect();
+        assert_eq!(ref_lines.len(), 4, "Should have exactly 4 reference lines");
+
+        // No blank lines within the reference block.
+        let first_ref = lines.iter().position(|l| l.starts_with('[')).unwrap();
+        let ref_block = &lines[first_ref..];
+        assert!(
+            !ref_block.iter().any(|l| l.trim().is_empty()),
+            "No blank lines should appear within the reference block"
+        );
+    }
+
+    #[test]
+    fn test_anchor_links_not_converted() {
+        // Anchor links like [text](#section) should be left as inline links,
+        // not converted to reference-style.
+        let input = "- [Introduction](#introduction)\n- [Features](#features)";
+        let output = convert_links(input);
+        eprintln!("Input: {input:?}");
+        eprintln!("Output: {output:?}");
+
+        assert_eq!(
+            output, input,
+            "Anchor links should not be converted to reference-style"
+        );
+    }
+
+    #[test]
+    fn test_anchor_links_mixed_with_regular_links() {
+        // Anchor links should be preserved while regular links are converted.
+        let input = "See [Introduction](#intro) and [docs](https://docs.rs).";
+        let output = convert_links(input);
+        eprintln!("Input: {input:?}");
+        eprintln!("Output: {output:?}");
+
+        assert!(
+            output.contains("[Introduction](#intro)"),
+            "Anchor link should be preserved as inline"
+        );
+        assert!(
+            output.contains("[docs]"),
+            "Regular link should be converted to reference-style"
+        );
+        assert!(
+            output.contains("[docs]: https://docs.rs"),
+            "Reference definition should be appended"
+        );
+    }
+
+    #[test]
+    fn test_image_links_not_converted() {
+        // Image links ![alt](url) should be left unchanged.
+        let input = "![screenshot](https://example.com/img.png)";
+        let output = convert_links(input);
+        eprintln!("Input: {input:?}");
+        eprintln!("Output: {output:?}");
+
+        assert_eq!(
+            output, input,
+            "Image links should not be converted to reference-style"
+        );
+    }
+
+    #[test]
+    fn test_image_links_mixed_with_regular_links() {
+        // Image links should be preserved while regular links are converted.
+        let input =
+            "See ![logo](https://example.com/logo.png) and [docs](https://docs.rs).";
+        let output = convert_links(input);
+        eprintln!("Input: {input:?}");
+        eprintln!("Output: {output:?}");
+
+        assert!(
+            output.contains("![logo](https://example.com/logo.png)"),
+            "Image link should be preserved"
+        );
+        assert!(
+            output.contains("[docs]"),
+            "Regular link should be converted"
+        );
+        assert!(
+            output.contains("[docs]: https://docs.rs"),
+            "Reference definition should be appended"
+        );
     }
 }

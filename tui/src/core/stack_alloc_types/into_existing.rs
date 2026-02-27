@@ -23,8 +23,8 @@
 //! ### 2. `FastStringify` trait - Fast batched writing
 //!
 //! For complex types that need to build strings from multiple parts, use the
-//! [`FastStringify`](crate::FastStringify) trait (see
-//! [`fast_stringify`](../common/fast_stringify)). This approach:
+//! [`FastStringify`] trait (see
+//! [`fast_stringify`]). This approach:
 //! - Batches all string building into a single buffer
 //! - Makes only one call to the formatter when implementing `Display`
 //! - Allows mixing `push_str()` for literals with `write!` only when needed
@@ -67,6 +67,9 @@
 //!    literals and `write!` only for values that need formatting
 //! 5. For repeated patterns, consider using the optimized macros in this module like
 //!    `pad_fmt!` which avoid formatting overhead
+//!
+//! [`fast_stringify`]: ../common/fast_stringify
+//! [`FastStringify`]: crate::FastStringify
 
 // XMARK: Clever Rust, use of decl macro w/ `tt` to allow any number of arguments.
 
@@ -292,7 +295,7 @@ mod join_with_index_fmt_tests {
 
 #[allow(clippy::large_stack_arrays)]
 pub mod read_from_file {
-    use crate::{DEFAULT_READ_BUFFER_SIZE, ok};
+    use crate::DEFAULT_READ_BUFFER_SIZE;
     use miette::{Context, IntoDiagnostic};
     use smallstr::SmallString;
     use smallvec::Array;
@@ -319,7 +322,9 @@ pub mod read_from_file {
     /// Returns an error if:
     /// - The file cannot be opened (doesn't exist, permissions)
     /// - I/O errors occur while reading the file
-    /// - The file content is not valid UTF-8
+    /// - The file content is not valid [`UTF-8`]
+    ///
+    /// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
     pub fn try_read_file_path_into_inline_string<A: Array<Item = u8>>(
         acc: &mut SmallString<A>,
         arg_path: impl Into<PathBuf>,

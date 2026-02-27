@@ -2,10 +2,10 @@
 
 // cspell:words fullwidth multibyte
 
-//! UTF-8 text parsing between ANSI sequences.
+//! [`UTF-8`] text parsing between [`ANSI`] sequences.
 //!
-//! This module handles conversion of raw UTF-8 bytes (received as regular text input
-//! between ANSI escape sequences) into keyboard events representing typed characters.
+//! This module handles conversion of raw [`UTF-8`] bytes (received as regular text input
+//! between [`ANSI`] escape sequences) into keyboard events representing typed characters.
 //!
 //! ## Where You Are in the Pipeline
 //!
@@ -41,15 +41,15 @@
 //!   module)
 //!
 //! ## Handles:
-//! - Single-byte UTF-8 characters (ASCII)
-//! - Multi-byte UTF-8 sequences (2-4 bytes)
-//! - Incomplete UTF-8 sequences (buffering)
-//! - Invalid UTF-8 sequences (graceful error handling)
+//! - Single-byte [`UTF-8`] characters ([`ASCII`])
+//! - Multi-byte [`UTF-8`] sequences (2-4 bytes)
+//! - Incomplete [`UTF-8`] sequences (buffering)
+//! - Invalid [`UTF-8`] sequences (graceful error handling)
 //!
-//! ## UTF-8 Encoding Explained
+//! ## [`UTF-8`] Encoding Explained
 //!
-//! UTF-8 uses **bit pattern matching** (not arithmetic) to identify byte types and
-//! extract data. The high bits are structural markers; remaining bits carry the Unicode
+//! [`UTF-8`] uses **bit pattern matching** (not arithmetic) to identify byte types and
+//! extract data. The high bits are structural markers; remaining bits carry the `Unicode`
 //! code point.
 //!
 //! ### Byte Type Detection
@@ -110,7 +110,8 @@
 //!         (0xC3 & 0x1F) << 6 | (0xA9 & 0x3F)
 //!         = 0x03 << 6 | 0x29
 //!         = 0xC0 | 0x29
-//!         = 0xE9 = 233 ✓
+//!         = 0xE9
+//!         = 233 (matches the original codepoint)
 //! ```
 //!
 //! ### Why Bit Patterns (Not Arithmetic)?
@@ -119,23 +120,24 @@
 //! - **Self-synchronizing**: Jump anywhere in a stream, scan for `0xxxxxxx` or `11xxxxxx`
 //! - **Unambiguous**: Continuation bytes (`10xxxxxx`) can never be confused with start
 //!   bytes
-//! - **ASCII-compatible**: Single-byte chars unchanged (the `0` prefix means "complete")
+//! - **[`ASCII`]-compatible**: Single-byte chars unchanged (the `0` prefix means
+//!   "complete")
 //!
-//! # Important: UTF-8 Byte Length vs Display Width
+//! # Important: [`UTF-8`] Byte Length vs Display Width
 //!
-//! This module handles **UTF-8 byte-level parsing only** - converting raw bytes from
-//! terminal input into Unicode characters. It does NOT handle display width.
+//! This module handles **[`UTF-8`] byte-level parsing only** - converting raw bytes from
+//! terminal input into `Unicode` characters. It does NOT handle display width.
 //!
 //! ## Two Separate Concerns
 //!
-//! | Concern                              | What it measures          | Example: '😀' |
-//! | :----------------------------------- | :------------------------ | :------------ |
-//! | **UTF-8 byte length** (this module)  | Memory size in bytes      | 4 bytes       |
-//! | **Display width** (graphemes module) | Terminal columns occupied | 2 columns     |
+//! | Concern                                 | What it measures          | Example: '😀' |
+//! | :-------------------------------------- | :------------------------ | :------------ |
+//! | **[`UTF-8`] byte length** (this module) | Memory size in bytes      | 4 bytes       |
+//! | **Display width** (graphemes module)    | Terminal columns occupied | 2 columns     |
 //!
 //! - **This module**: Returns `(`[`VT100InputEventIR`]`, `[`ByteOffset`]`)` where
 //!   `bytes_consumed` is the number of bytes to advance in the input buffer (1-4 bytes
-//!   for UTF-8).
+//!   for [`UTF-8`]).
 //!
 //! - **Display rendering**: Calculated separately using the [`unicode_width`] crate. See
 //!   [`mod@crate::graphemes`] for comprehensive documentation on Unicode display width,
@@ -147,30 +149,114 @@
 //! A common mistake is assuming that `bytes_consumed` relates to how many terminal
 //! columns the character occupies. This is incorrect:
 //!
-//! | Character | UTF-8 Bytes | Display Width | Category           |
-//! | --------- | ----------- | ------------- | ------------------ |
-//! | `H`       | 1 byte      | 1 column      | ASCII              |
-//! | `©`       | 2 bytes     | 1 column      | Latin-1 supplement |
-//! | `€`       | 3 bytes     | 1 column      | Currency symbol    |
-//! | `你`      | 3 bytes     | 2 columns     | CJK fullwidth      |
-//! | `😀`      | 4 bytes     | 2 columns     | Emoji              |
+//! | Character | [`UTF-8`] Bytes | Display Width | Category           |
+//! | --------- | --------------- | ------------- | ------------------ |
+//! | `H`       | 1 byte          | 1 column      | [`ASCII`]          |
+//! | `©`       | 2 bytes         | 1 column      | Latin-1 supplement |
+//! | `€`       | 3 bytes         | 1 column      | Currency symbol    |
+//! | `你`      | 3 bytes         | 2 columns     | CJK fullwidth      |
+//! | `😀`      | 4 bytes         | 2 columns     | Emoji              |
 //!
 //! If you need to position the cursor or calculate line lengths, you need display width
 //! calculation, not byte length. See [`crate::graphemes::GCStringOwned`] for text
 //! rendering utilities.
 //!
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`ASCII`]: https://en.wikipedia.org/wiki/[`ASCII`]
+//! [`ASCII`]: https://en.wikipedia.org/wiki/[`ASCII`]
+//! [`ASCII`]: https://en.wikipedia.org/wiki/[`ASCII`]
+//! [`ASCII`]: https://en.wikipedia.org/wiki/[`ASCII`]
+//! [`ASCII`]: https://en.wikipedia.org/wiki/[`ASCII`]
+//! [`ASCII`]: https://en.wikipedia.org/wiki/[`ASCII`]
+//! [`ASCII`]: https://en.wikipedia.org/wiki/[`ASCII`]
+//! [`ASCII`]: https://en.wikipedia.org/wiki/[`ASCII`]
+//! [`ASCII`]: https://en.wikipedia.org/wiki/[`ASCII`]
+//! [`ASCII`]: https://en.wikipedia.org/wiki/[`ASCII`]
+//! [`ASCII`]: https://en.wikipedia.org/wiki/[`ASCII`]
+//! [`ASCII`]: https://en.wikipedia.org/wiki/[`ASCII`]
+//! [`ASCII`]: https://en.wikipedia.org/wiki/[`ASCII`]
+//! [`ASCII`]: https://en.wikipedia.org/wiki/[`ASCII`]
+//! [`ASCII`]: https://en.wikipedia.org/wiki/[`ASCII`]
+//! [`ASCII`]: https://en.wikipedia.org/wiki/[`ASCII`]
+//! [`ASCII`]: https://en.wikipedia.org/wiki/[`ASCII`]
+//! [`ASCII`]: https://en.wikipedia.org/wiki/[`ASCII`]
+//! [`ASCII`]: https://en.wikipedia.org/wiki/[`ASCII`]
+//! [`ASCII`]: https://en.wikipedia.org/wiki/[`ASCII`]
+//! [`ASCII`]: https://en.wikipedia.org/wiki/[`ASCII`]
+//! [`ASCII`]: https://en.wikipedia.org/wiki/[`ASCII`]
+//! [`ASCII`]: https://en.wikipedia.org/wiki/[`ASCII`]
+//! [`ASCII`]: https://en.wikipedia.org/wiki/[`ASCII`]
+//! [`ASCII`]: https://en.wikipedia.org/wiki/[`ASCII`]
+//! [`ASCII`]: https://en.wikipedia.org/wiki/[`ASCII`]
 //! [`ByteIndex`]: crate::ByteIndex
 //! [`ByteOffset`]: crate::ByteOffset
 //! [`ColIndex`]: crate::ColIndex
 //! [`SegIndex`]: crate::SegIndex
+//! [`UTF-8`]: https://en.wikipedia.org/wiki/[`UTF-8`]
+//! [`UTF-8`]: https://en.wikipedia.org/wiki/[`UTF-8`]
+//! [`UTF-8`]: https://en.wikipedia.org/wiki/[`UTF-8`]
+//! [`UTF-8`]: https://en.wikipedia.org/wiki/[`UTF-8`]
+//! [`UTF-8`]: https://en.wikipedia.org/wiki/[`UTF-8`]
+//! [`UTF-8`]: https://en.wikipedia.org/wiki/[`UTF-8`]
+//! [`UTF-8`]: https://en.wikipedia.org/wiki/[`UTF-8`]
+//! [`UTF-8`]: https://en.wikipedia.org/wiki/[`UTF-8`]
+//! [`UTF-8`]: https://en.wikipedia.org/wiki/[`UTF-8`]
+//! [`UTF-8`]: https://en.wikipedia.org/wiki/[`UTF-8`]
+//! [`UTF-8`]: https://en.wikipedia.org/wiki/[`UTF-8`]
+//! [`UTF-8`]: https://en.wikipedia.org/wiki/[`UTF-8`]
+//! [`UTF-8`]: https://en.wikipedia.org/wiki/[`UTF-8`]
+//! [`UTF-8`]: https://en.wikipedia.org/wiki/[`UTF-8`]
+//! [`UTF-8`]: https://en.wikipedia.org/wiki/[`UTF-8`]
+//! [`UTF-8`]: https://en.wikipedia.org/wiki/[`UTF-8`]
+//! [`UTF-8`]: https://en.wikipedia.org/wiki/[`UTF-8`]
+//! [`UTF-8`]: https://en.wikipedia.org/wiki/[`UTF-8`]
+//! [`UTF-8`]: https://en.wikipedia.org/wiki/[`UTF-8`]
+//! [`UTF-8`]: https://en.wikipedia.org/wiki/[`UTF-8`]
+//! [`UTF-8`]: https://en.wikipedia.org/wiki/[`UTF-8`]
+//! [`UTF-8`]: https://en.wikipedia.org/wiki/[`UTF-8`]
+//! [`UTF-8`]: https://en.wikipedia.org/wiki/[`UTF-8`]
+//! [`UTF-8`]: https://en.wikipedia.org/wiki/[`UTF-8`]
+//! [`UTF-8`]: https://en.wikipedia.org/wiki/[`UTF-8`]
+//! [`UTF-8`]: https://en.wikipedia.org/wiki/[`UTF-8`]
+//! [`UTF-8`]: https://en.wikipedia.org/wiki/[`UTF-8`]
 //! [`VT100InputEventIR`]: super::VT100InputEventIR
 //! [`VT100KeyCodeIR::Char`]: super::VT100KeyCodeIR::Char
 //! [`convert_input_event()`]:
 //!     crate::direct_to_ansi::input::protocol_conversion::convert_input_event
+//!
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
 //! [`keyboard`]: mod@super::keyboard
 //! [`mouse`]: mod@super::mouse
 //! [`router`]: mod@super::router
 //! [`terminal_events`]: mod@super::terminal_events
+//! [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
 //! [parent module documentation]: mod@super#primary-consumer
 
 use super::ir_event_types::{VT100InputEventIR, VT100KeyCodeIR, VT100KeyModifiersIR};
@@ -180,16 +266,16 @@ use crate::{ByteOffset, UTF8_1BYTE_MAX, UTF8_1BYTE_MIN, UTF8_2BYTE_FIRST_MASK,
             UTF8_CONTINUATION_DATA_MASK, UTF8_CONTINUATION_MASK,
             UTF8_CONTINUATION_PATTERN, byte_offset};
 
-/// Parse UTF-8 text and return a single [`VT100InputEventIR`] for the first complete
-/// character.
+/// Parses [`UTF-8`] text and returns a single [`VT100InputEventIR`] for the first
+/// complete character.
 ///
-/// Converts raw UTF-8 bytes into character input events. Handles multi-byte UTF-8
-/// sequences (1-4 bytes).
+/// Converts raw [`UTF-8`] bytes into character input events. Handles multi-byte
+/// [`UTF-8`] sequences (1-4 bytes).
 ///
 /// # Returns
 ///
 /// - The parsed character event and byte count on success.
-/// - Nothing if the buffer contains an incomplete or invalid UTF-8 sequence.
+/// - Nothing if the buffer contains an incomplete or invalid [`UTF-8`] sequence.
 ///
 /// The caller ([`DirectToAnsiInputDevice`]) can call this repeatedly to parse multiple
 /// characters from the buffer.
@@ -200,12 +286,13 @@ use crate::{ByteOffset, UTF8_1BYTE_MAX, UTF8_1BYTE_MIN, UTF8_2BYTE_FIRST_MASK,
 /// This is **NOT** the display width (terminal columns) of the character.
 ///
 /// Example:
-/// - '😀' returns `bytes_consumed = 4` (UTF-8 encoding is 4 bytes)
+/// - '😀' returns `bytes_consumed = 4` ([`UTF-8`] encoding is 4 bytes)
 /// - But '😀' occupies **2 terminal columns** (display width)
 ///
 /// For display width calculation and cursor positioning, see [`mod@crate::graphemes`].
 ///
 /// [`DirectToAnsiInputDevice`]: crate::direct_to_ansi::input::DirectToAnsiInputDevice
+/// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
 #[must_use]
 pub fn parse_utf8_text(buffer: &[u8]) -> Option<(VT100InputEventIR, ByteOffset)> {
     // Check if we have a complete UTF-8 sequence
@@ -224,12 +311,15 @@ pub fn parse_utf8_text(buffer: &[u8]) -> Option<(VT100InputEventIR, ByteOffset)>
     ))
 }
 
-/// Checks if a UTF-8 byte sequence is complete.
+/// Checks if a [`UTF-8`] byte sequence is complete.
+///
 ///
 /// # Returns
 ///
 /// - The byte length of the character if the sequence is complete.
 /// - Nothing if more bytes are needed.
+///
+/// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
 fn is_utf8_complete(buffer: &[u8]) -> Option<usize> {
     if buffer.is_empty() {
         return None;
@@ -254,15 +344,18 @@ fn is_utf8_complete(buffer: &[u8]) -> Option<usize> {
     Some(required_len)
 }
 
-/// Validate and decode a complete UTF-8 sequence.
+/// Validates and decodes a complete [`UTF-8`] sequence.
 ///
 /// Returns the decoded character if valid, or [`None`] if the sequence is invalid.
 ///
-/// Decodes UTF-8 by extracting the data bits from each byte:
+/// Decodes [`UTF-8`] by extracting the data bits from each byte:
+///
 /// - 1-byte: `0xxxxxxx`
 /// - 2-byte: `110xxxxx 10xxxxxx`
 /// - 3-byte: `1110xxxx 10xxxxxx 10xxxxxx`
 /// - 4-byte: `11110xxx 10xxxxxx 10xxxxxx 10xxxxxx`
+///
+/// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
 fn decode_utf8(buffer: &[u8]) -> Option<char> {
     if buffer.is_empty() {
         return None;
@@ -315,7 +408,7 @@ fn decode_utf8(buffer: &[u8]) -> Option<char> {
     char::from_u32(codepoint)
 }
 
-/// Gets the expected length of a UTF-8 sequence from its first byte.
+/// Gets the expected length of a [`UTF-8`] sequence from its first byte.
 ///
 /// This implements the same logic as the unstable [`core::str::utf8_char_width`], but
 /// uses [`Option<usize>`] for type-safe error handling. We maintain this custom
@@ -327,13 +420,14 @@ fn decode_utf8(buffer: &[u8]) -> Option<char> {
 ///
 /// # Returns
 ///
-/// - The total byte length of the UTF-8 character (1-4).
+/// - The total byte length of the [`UTF-8`] character (1-4).
 /// - Nothing if the first byte is invalid (continuation byte or reserved).
 ///
 /// # Important: This is NOT the same as [`unicode_width`]
 ///
-/// This function calculates **UTF-8 byte length** (how many bytes encode the character),
-/// NOT **display width** (how many terminal columns it occupies). These are independent:
+/// This function calculates **[`UTF-8`] byte length** (how many bytes encode the
+/// character), NOT **display width** (how many terminal columns it occupies). These are
+/// independent:
 ///
 /// - A 3-byte character like '€' occupies **1 column** (narrow)
 /// - A 3-byte character like '你' occupies **2 columns** (wide/fullwidth)
@@ -343,10 +437,39 @@ fn decode_utf8(buffer: &[u8]) -> Option<char> {
 /// [`mod@crate::graphemes`]. See also the [module-level documentation] for a
 /// comprehensive explanation of this distinction.
 ///
+/// [`UTF-8`]: https://en.wikipedia.org/wiki/[`UTF-8`]
+/// [`UTF-8`]: https://en.wikipedia.org/wiki/[`UTF-8`]
+/// [`UTF-8`]: https://en.wikipedia.org/wiki/[`UTF-8`]
+/// [`UTF-8`]: https://en.wikipedia.org/wiki/[`UTF-8`]
+/// [`UTF-8`]: https://en.wikipedia.org/wiki/[`UTF-8`]
+/// [`UTF-8`]: https://en.wikipedia.org/wiki/[`UTF-8`]
+/// [`UTF-8`]: https://en.wikipedia.org/wiki/[`UTF-8`]
+/// [`UTF-8`]: https://en.wikipedia.org/wiki/[`UTF-8`]
+/// [`UTF-8`]: https://en.wikipedia.org/wiki/[`UTF-8`]
+/// [`UTF-8`]: https://en.wikipedia.org/wiki/[`UTF-8`]
+/// [`UTF-8`]: https://en.wikipedia.org/wiki/[`UTF-8`]
+/// [`UTF-8`]: https://en.wikipedia.org/wiki/[`UTF-8`]
+/// [`UTF-8`]: https://en.wikipedia.org/wiki/[`UTF-8`]
+/// [`UTF-8`]: https://en.wikipedia.org/wiki/[`UTF-8`]
+/// [`UTF-8`]: https://en.wikipedia.org/wiki/[`UTF-8`]
+/// [`UTF-8`]: https://en.wikipedia.org/wiki/[`UTF-8`]
+/// [`UTF-8`]: https://en.wikipedia.org/wiki/[`UTF-8`]
+/// [`UTF-8`]: https://en.wikipedia.org/wiki/[`UTF-8`]
+/// [`UTF-8`]: https://en.wikipedia.org/wiki/[`UTF-8`]
+/// [`UTF-8`]: https://en.wikipedia.org/wiki/[`UTF-8`]
+/// [`UTF-8`]: https://en.wikipedia.org/wiki/[`UTF-8`]
+/// [`UTF-8`]: https://en.wikipedia.org/wiki/[`UTF-8`]
+/// [`UTF-8`]: https://en.wikipedia.org/wiki/[`UTF-8`]
+/// [`UTF-8`]: https://en.wikipedia.org/wiki/[`UTF-8`]
+/// [`UTF-8`]: https://en.wikipedia.org/wiki/[`UTF-8`]
+/// [`UTF-8`]: https://en.wikipedia.org/wiki/[`UTF-8`]
+/// [`UTF-8`]: https://en.wikipedia.org/wiki/[`UTF-8`]
 /// [`core::str::utf8_char_width`]:
 ///     https://doc.rust-lang.org/std/str/fn.utf8_char_width.html
 /// [`str_internals`]:
 ///     https://doc.rust-lang.org/unstable-book/library-features/str-internals.html
+///
+/// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
 /// [module-level documentation]: self#important-utf-8-byte-length-vs-display-width
 fn get_utf8_length(first_byte: u8) -> Option<usize> {
     match first_byte {
@@ -364,12 +487,13 @@ fn get_utf8_length(first_byte: u8) -> Option<usize> {
     }
 }
 
-/// Unit tests for UTF-8 text parsing.
+/// Unit tests for [`UTF-8`] text parsing.
 ///
 /// These tests use generator functions instead of hardcoded magic strings to ensure
 /// consistency between sequence generation and parsing. For testing strategy details,
 /// see the [testing strategy] documentation.
 ///
+/// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
 /// [testing strategy]: mod@super#testing-strategy
 #[cfg(test)]
 mod tests {

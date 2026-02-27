@@ -1,15 +1,17 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Erase mode enums for ED (Erase Display) and EL (Erase Line) CSI sequences.
+//! Erase mode enums for ED (Erase Display) and EL (Erase Line) [`CSI`] sequences.
 //!
 //! These enums make illegal states unrepresentable by restricting the valid values
 //! for erase operations to only those defined by the ECMA-48 standard.
+//!
+//! [`CSI`]: crate::CsiSequence
 
 use crate::NumericConversions;
 
 /// Erase display modes for ED (Erase in Display) - `ESC [ n J`.
 ///
-/// Per ECMA-48 / [`VT-100` specification], only values 0-3 are valid.
+/// Per ECMA-48 / [`VT-100` spec], only values 0-3 are valid.
 /// Using an enum makes invalid modes (like 5) unrepresentable.
 ///
 /// # Example
@@ -24,7 +26,7 @@ use crate::NumericConversions;
 /// let clear_all = CsiSequence::EraseDisplay(EraseDisplayMode::EntireScreen);
 /// ```
 ///
-/// [`VT-100` specification]: https://vt100.net/docs/vt100-ug/chapter3.html
+/// [`VT-100` spec]: https://vt100.net/docs/vt100-ug/chapter3.html
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub enum EraseDisplayMode {
     /// Erase from cursor to end of screen (ED 0) - default.
@@ -49,9 +51,10 @@ pub enum EraseDisplayMode {
     /// Erase entire screen and scrollback buffer (ED 3).
     ///
     /// Clears all characters on the screen AND the scrollback buffer.
-    /// This is an xterm extension, not part of the original [`VT-100` specification].
+    /// This is an [`xterm`] extension, not part of the original [`VT-100` spec].
     ///
-    /// [`VT-100` specification]: https://vt100.net/docs/vt100-ug/chapter3.html
+    /// [`VT-100` spec]: https://vt100.net/docs/vt100-ug/chapter3.html
+    /// [`xterm`]: https://en.wikipedia.org/wiki/Xterm
     EntireScreenAndScrollback = 3,
 }
 
@@ -86,7 +89,7 @@ impl From<u16> for EraseDisplayMode {
 
 /// Erase line modes for EL (Erase in Line) - `ESC [ n K`.
 ///
-/// Per ECMA-48 / [`VT-100` specification], only values 0-2 are valid.
+/// Per ECMA-48 / [`VT-100` spec], only values 0-2 are valid.
 /// Using an enum makes invalid modes (like 5) unrepresentable.
 ///
 /// # Example
@@ -101,7 +104,7 @@ impl From<u16> for EraseDisplayMode {
 /// let clear_line = CsiSequence::EraseLine(EraseLineMode::EntireLine);
 /// ```
 ///
-/// [`VT-100` specification]: https://vt100.net/docs/vt100-ug/chapter3.html
+/// [`VT-100` spec]: https://vt100.net/docs/vt100-ug/chapter3.html
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub enum EraseLineMode {
     /// Erase from cursor to end of line (EL 0) - default.

@@ -44,7 +44,7 @@ pub enum CommandRunResult<T: Debug + Display> {
 pub(crate) mod display_impl_for_command_run_result {
     use super::{Command, CommandRunResult, Error, FmtResult, StdResult};
     use crate::{InlineString, InlineVec, fg_lizard_green, fg_orange, fg_pink,
-                fg_slate_gray, inline_string};
+                fg_slate_gray};
     use std::fmt::{Debug, Display, Formatter};
 
     impl<T: Debug + Display> Display for CommandRunResult<T> {

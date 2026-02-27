@@ -2,8 +2,9 @@
 
 //! Operations for detecting and filtering changed files in git repositories.
 
-use crate::{ResultAndCommand, Run, command,
-            script::git::types::{git_command_args::{GIT_ARG_HEAD, GIT_ARG_NAME_ONLY,
+use crate::{ResultAndCommand, Run,
+            script::git::types::{git_command_args::{GIT_ARG_DIFF_FILTER_NO_DELETES,
+                                                    GIT_ARG_HEAD, GIT_ARG_NAME_ONLY,
                                                     GIT_ARG_NO_COMMIT_ID,
                                                     GIT_ARG_RECURSIVE},
                                  git_command_names::{GIT_CMD_DIFF, GIT_CMD_DIFF_TREE,
@@ -58,7 +59,7 @@ pub async fn try_get_changed_files_by_ext(
 async fn get_working_tree_changes(extensions: &[&str]) -> ResultAndCommand<Vec<PathBuf>> {
     let mut cmd = command!(
         program => GIT_PROGRAM,
-        args => GIT_CMD_DIFF, GIT_ARG_NAME_ONLY, GIT_ARG_HEAD
+        args => GIT_CMD_DIFF, GIT_ARG_NAME_ONLY, GIT_ARG_DIFF_FILTER_NO_DELETES, GIT_ARG_HEAD
     );
 
     let res_output = cmd.run().await;
@@ -95,7 +96,7 @@ async fn get_files_from_last_commit(
 ) -> ResultAndCommand<Vec<PathBuf>> {
     let mut cmd = command!(
         program => GIT_PROGRAM,
-        args => GIT_CMD_DIFF_TREE, GIT_ARG_NO_COMMIT_ID, GIT_ARG_NAME_ONLY, GIT_ARG_RECURSIVE, GIT_ARG_HEAD
+        args => GIT_CMD_DIFF_TREE, GIT_ARG_NO_COMMIT_ID, GIT_ARG_NAME_ONLY, GIT_ARG_RECURSIVE, GIT_ARG_DIFF_FILTER_NO_DELETES, GIT_ARG_HEAD
     );
 
     let res_output = cmd.run().await;
@@ -129,8 +130,7 @@ async fn get_files_from_last_commit(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{command, ok,
-                script::git::types::{git_command_names::{GIT_CMD_ADD, GIT_CMD_COMMIT,
+    use crate::{script::git::types::{git_command_names::{GIT_CMD_ADD, GIT_CMD_COMMIT,
                                                          GIT_CMD_CONFIG, GIT_CMD_INIT},
                                      git_config_keys::{GIT_CONFIG_COMMIT_GPGSIGN,
                                                        GIT_CONFIG_USER_EMAIL,
@@ -140,7 +140,7 @@ mod tests {
                                                    TEST_GPG_SIGN_DISABLED,
                                                    TEST_INITIAL_COMMIT_MSG,
                                                    TEST_USER_NAME}},
-                try_create_temp_dir_and_cd, try_write_file, with_saved_pwd};
+                try_create_temp_dir_and_cd, try_write_file};
 
     async fn test_try_get_changed_files_by_ext() -> miette::Result<()> {
         with_saved_pwd!(async {

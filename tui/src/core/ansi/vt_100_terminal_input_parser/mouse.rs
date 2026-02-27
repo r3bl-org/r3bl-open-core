@@ -1,8 +1,8 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Mouse input event [1-based coordinates] parsing from ANSI/`CSI` sequences.
+//! Mouse input event [1-based coordinates] parsing from [`ANSI`]/[`CSI`] sequences.
 //!
-//! This module handles conversion of mouse-related ANSI escape sequences into mouse
+//! This module handles conversion of mouse-related [`ANSI`] escape sequences into mouse
 //! events, including support for multiple mouse protocols.
 //!
 //! ## Where You Are in the Pipeline
@@ -40,13 +40,13 @@
 //!   module)
 //!
 //! ## Supported Mouse Protocols
-//! - **`SGR` (Selective Graphic Rendition) Protocol**: Modern standard format
+//! - **[`SGR`] (Selective Graphic Rendition) Protocol**: Modern standard format
 //! - Format: `CSI < Cb ; Cx ; Cy M/m`
 //! - Button detection (left=0, middle=1, right=2)
 //! - Drag detection (button with flag 32)
 //! - Scroll events (buttons 64/65 for vertical, 66/67 for horizontal)
-//! - **`X10`/Normal Protocol**: Legacy formats
-//! - **`RXVT` Protocol**: Alternative legacy format
+//! - **[`X10`]/Normal Protocol**: Legacy formats
+//! - **[`RXVT`] Protocol**: Alternative legacy format
 //! - **Click Events**: Press (M) and Release (m)
 //! - **Drag Events**: Motion while button held
 //! - **Motion Events**: Movement without buttons
@@ -54,9 +54,9 @@
 //!
 //! # Verifying Coordinate Systems
 //!
-//! **VT-100 mouse coordinates are 1-based**, where (1, 1) represents the top-left corner.
-//! This was confirmed through ground truth discovery via the validation tests, which
-//! capture raw bytes from actual terminal interactions. For details on how this was
+//! **[`VT-100`] mouse coordinates are 1-based**, where (1, 1) represents the top-left
+//! corner. This was confirmed through ground truth discovery via the validation tests,
+//! which capture raw bytes from actual terminal interactions. For details on how this was
 //! verified, see the [parent module's testing strategy documentation].
 //!
 //! # Terminal Limitations
@@ -77,20 +77,192 @@
 //! - Alt+Click ✓
 //! - Alt+Ctrl+Click ✓
 //!
-//! This limitation is consistent across most terminal emulators (xterm, gnome-terminal,
-//! iTerm2, etc.) because Shift+Click is reserved for text selection by the terminal. See
-//! the test fixtures for mouse event generation details and validation tests.
+//! This limitation is consistent across most terminal emulators ([`xterm`],
+//! [`gnome-terminal`], [`iTerm2`], etc.) because Shift+Click is reserved for text
+//! selection by the terminal. See the test fixtures for mouse event generation details
+//! and validation tests.
 //!
 //! [1-based coordinates]: mod@super#one-based-mouse-input-events
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`CSI`]: crate::CsiSequence
+//! [`CSI`]: crate::CsiSequence
+//! [`CSI`]: crate::CsiSequence
+//! [`CSI`]: crate::CsiSequence
+//! [`CSI`]: crate::CsiSequence
+//! [`CSI`]: crate::CsiSequence
+//! [`CSI`]: crate::CsiSequence
+//! [`CSI`]: crate::CsiSequence
+//! [`CSI`]: crate::CsiSequence
+//! [`CSI`]: crate::CsiSequence
+//! [`CSI`]: crate::CsiSequence
+//! [`CSI`]: crate::CsiSequence
+//! [`CSI`]: crate::CsiSequence
+//! [`CSI`]: crate::CsiSequence
+//! [`CSI`]: crate::CsiSequence
+//! [`CSI`]: crate::CsiSequence
+//! [`CSI`]: crate::CsiSequence
+//! [`CSI`]: crate::CsiSequence
+//! [`CSI`]: crate::CsiSequence
+//! [`CSI`]: crate::CsiSequence
+//! [`CSI`]: crate::CsiSequence
+//! [`CSI`]: crate::CsiSequence
+//! [`CSI`]: crate::CsiSequence
+//! [`CSI`]: crate::CsiSequence
+//! [`CSI`]: crate::CsiSequence
+//! [`CSI`]: crate::CsiSequence
+//! [`RXVT`]: https://en.wikipedia.org/wiki/Rxvt
+//! [`RXVT`]: https://en.wikipedia.org/wiki/Rxvt
+//! [`RXVT`]: https://en.wikipedia.org/wiki/Rxvt
+//! [`RXVT`]: https://en.wikipedia.org/wiki/Rxvt
+//! [`RXVT`]: https://en.wikipedia.org/wiki/Rxvt
+//! [`RXVT`]: https://en.wikipedia.org/wiki/Rxvt
+//! [`RXVT`]: https://en.wikipedia.org/wiki/Rxvt
+//! [`RXVT`]: https://en.wikipedia.org/wiki/Rxvt
+//! [`RXVT`]: https://en.wikipedia.org/wiki/Rxvt
+//! [`RXVT`]: https://en.wikipedia.org/wiki/Rxvt
+//! [`RXVT`]: https://en.wikipedia.org/wiki/Rxvt
+//! [`RXVT`]: https://en.wikipedia.org/wiki/Rxvt
+//! [`RXVT`]: https://en.wikipedia.org/wiki/Rxvt
+//! [`RXVT`]: https://en.wikipedia.org/wiki/Rxvt
+//! [`RXVT`]: https://en.wikipedia.org/wiki/Rxvt
+//! [`RXVT`]: https://en.wikipedia.org/wiki/Rxvt
+//! [`RXVT`]: https://en.wikipedia.org/wiki/Rxvt
+//! [`RXVT`]: https://en.wikipedia.org/wiki/Rxvt
+//! [`RXVT`]: https://en.wikipedia.org/wiki/Rxvt
+//! [`RXVT`]: https://en.wikipedia.org/wiki/Rxvt
+//! [`RXVT`]: https://en.wikipedia.org/wiki/Rxvt
+//! [`RXVT`]: https://en.wikipedia.org/wiki/Rxvt
+//! [`RXVT`]: https://en.wikipedia.org/wiki/Rxvt
+//! [`RXVT`]: https://en.wikipedia.org/wiki/Rxvt
+//! [`RXVT`]: https://en.wikipedia.org/wiki/Rxvt
+//! [`RXVT`]: https://en.wikipedia.org/wiki/Rxvt
+//! [`RXVT`]: https://en.wikipedia.org/wiki/Rxvt
+//! [`SGR`]: crate::SgrCode
+//! [`SGR`]: crate::SgrCode
+//! [`SGR`]: crate::SgrCode
+//! [`SGR`]: crate::SgrCode
+//! [`SGR`]: crate::SgrCode
+//! [`SGR`]: crate::SgrCode
+//! [`SGR`]: crate::SgrCode
+//! [`SGR`]: crate::SgrCode
+//! [`SGR`]: crate::SgrCode
+//! [`SGR`]: crate::SgrCode
+//! [`SGR`]: crate::SgrCode
+//! [`SGR`]: crate::SgrCode
+//! [`SGR`]: crate::SgrCode
+//! [`SGR`]: crate::SgrCode
+//! [`SGR`]: crate::SgrCode
+//! [`SGR`]: crate::SgrCode
+//! [`SGR`]: crate::SgrCode
+//! [`SGR`]: crate::SgrCode
+//! [`SGR`]: crate::SgrCode
+//! [`SGR`]: crate::SgrCode
+//! [`SGR`]: crate::SgrCode
+//! [`SGR`]: crate::SgrCode
+//! [`SGR`]: crate::SgrCode
+//! [`SGR`]: crate::SgrCode
+//! [`SGR`]: crate::SgrCode
+//! [`SGR`]: crate::SgrCode
+//! [`SGR`]: crate::SgrCode
 //! [`TermPos`]: crate::core::coordinates::vt_100_ansi_coords::TermPos
+//! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+//! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+//! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+//! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+//! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+//! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+//! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+//! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+//! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+//! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+//! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+//! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+//! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+//! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+//! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+//! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+//! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+//! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+//! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+//! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+//! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+//! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+//! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+//! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+//! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+//! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+//! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 //! [`VT100MouseActionIR`]: super::VT100MouseActionIR
 //! [`VT100MouseButtonIR`]: super::VT100MouseButtonIR
+//! [`X10`]: https://invisible-island.net/[`xterm`]/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
+//! [`X10`]: https://invisible-island.net/[`xterm`]/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
+//! [`X10`]: https://invisible-island.net/[`xterm`]/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
+//! [`X10`]: https://invisible-island.net/[`xterm`]/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
+//! [`X10`]: https://invisible-island.net/[`xterm`]/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
+//! [`X10`]: https://invisible-island.net/[`xterm`]/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
+//! [`X10`]: https://invisible-island.net/[`xterm`]/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
+//! [`X10`]: https://invisible-island.net/[`xterm`]/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
+//! [`X10`]: https://invisible-island.net/[`xterm`]/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
+//! [`X10`]: https://invisible-island.net/[`xterm`]/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
+//! [`X10`]: https://invisible-island.net/[`xterm`]/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
+//! [`X10`]: https://invisible-island.net/[`xterm`]/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
+//! [`X10`]: https://invisible-island.net/[`xterm`]/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
+//! [`X10`]: https://invisible-island.net/[`xterm`]/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
+//! [`X10`]: https://invisible-island.net/[`xterm`]/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
+//! [`X10`]: https://invisible-island.net/[`xterm`]/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
+//! [`X10`]: https://invisible-island.net/[`xterm`]/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
+//! [`X10`]: https://invisible-island.net/[`xterm`]/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
+//! [`X10`]: https://invisible-island.net/[`xterm`]/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
+//! [`X10`]: https://invisible-island.net/[`xterm`]/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
+//! [`X10`]: https://invisible-island.net/[`xterm`]/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
+//! [`X10`]: https://invisible-island.net/[`xterm`]/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
+//! [`X10`]: https://invisible-island.net/[`xterm`]/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
+//! [`X10`]: https://invisible-island.net/[`xterm`]/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
+//! [`X10`]: https://invisible-island.net/[`xterm`]/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
+//! [`X10`]: https://invisible-island.net/[`xterm`]/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
+//! [`X10`]: https://invisible-island.net/[`xterm`]/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
 //! [`convert_input_event()`]:
 //!     crate::direct_to_ansi::input::protocol_conversion::convert_input_event
+//!
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`CSI`]: crate::CsiSequence
+//! [`gnome-terminal`]: https://en.wikipedia.org/wiki/GNOME_Terminal
+//! [`iTerm2`]: https://iterm2.com/
 //! [`keyboard`]: mod@super::keyboard
 //! [`router`]: mod@super::router
+//! [`RXVT`]: https://en.wikipedia.org/wiki/Rxvt
+//! [`SGR`]: crate::SgrCode
 //! [`terminal_events`]: mod@super::terminal_events
 //! [`utf8`]: mod@super::utf8
+//! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+//! [`X10`]: https://invisible-island.net/xterm/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
+//! [`xterm`]: https://en.wikipedia.org/wiki/Xterm
 //! [parent module documentation]: mod@super#primary-consumer
 //! [parent module's testing strategy documentation]: mod@super#testing-strategy
 
@@ -134,7 +306,7 @@ pub fn parse_mouse_sequence(buffer: &[u8]) -> Option<(VT100InputEventIR, ByteOff
     None
 }
 
-/// Parse `SGR` mouse protocol: `CSI < Cb ; Cx ; Cy M/m`
+/// Parse [`SGR`] mouse protocol: `CSI < Cb ; Cx ; Cy M/m`
 ///
 /// # Returns
 ///
@@ -147,6 +319,8 @@ pub fn parse_mouse_sequence(buffer: &[u8]) -> Option<(VT100InputEventIR, ByteOff
 /// - `Cx` = column (1-based)
 /// - `Cy` = row (1-based)
 /// - `M` = press, `m` = release
+///
+/// [`SGR`]: crate::SgrCode
 fn parse_sgr_mouse(sequence: &[u8]) -> Option<(VT100InputEventIR, ByteOffset)> {
     // Minimum: ESC[<0;1;1M (9 bytes)
     if sequence.len() < 9 {
@@ -229,7 +403,8 @@ fn parse_sgr_mouse(sequence: &[u8]) -> Option<(VT100InputEventIR, ByteOffset)> {
     ))
 }
 
-/// Parse `X10`/Normal mouse protocol: `CSI M Cb Cx Cy`
+/// Parse [`X10`]/Normal mouse protocol: `CSI M Cb Cx Cy`.
+///
 ///
 /// # Returns
 ///
@@ -255,6 +430,8 @@ fn parse_sgr_mouse(sequence: &[u8]) -> Option<(VT100InputEventIR, ByteOffset)> {
 /// - Bit 4 (value 16): Ctrl
 ///
 /// Motion flag (bit 5, value 32): Set when mouse moved without button press
+///
+/// [`X10`]: https://invisible-island.net/xterm/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
 fn parse_x10_mouse(sequence: &[u8]) -> Option<(VT100InputEventIR, ByteOffset)> {
     // X10 format: ESC [ M Cb Cx Cy (5 bytes minimum)
     if sequence.len() < 5 {
@@ -378,7 +555,8 @@ fn parse_x10_mouse(sequence: &[u8]) -> Option<(VT100InputEventIR, ByteOffset)> {
     }
 }
 
-/// Parse `RXVT` mouse protocol: `CSI Cb ; Cx ; Cy M`
+/// Parse [`RXVT`] mouse protocol: `CSI Cb ; Cx ; Cy M`.
+///
 ///
 /// # Returns
 ///
@@ -387,21 +565,26 @@ fn parse_x10_mouse(sequence: &[u8]) -> Option<(VT100InputEventIR, ByteOffset)> {
 ///
 /// Format breakdown:
 /// - `ESC [` prefix (2 bytes)
-/// - `Cb` = button code (ASCII digits, semicolon-separated)
-/// - `Cx` = column (ASCII digits, semicolon-separated)
-/// - `Cy` = row (ASCII digits, semicolon-separated)
+/// - `Cb` = button code ([`ASCII`] digits, semicolon-separated)
+/// - `Cx` = column ([`ASCII`] digits, semicolon-separated)
+/// - `Cy` = row ([`ASCII`] digits, semicolon-separated)
 /// - `M` = terminator (always uppercase, no lowercase 'm')
 ///
-/// Button encoding (similar to X10):
+/// Button encoding (similar to [`X10`]):
 /// - 0 = left button
 /// - 1 = middle button
 /// - 2 = right button
 /// - 3 = release (no button held)
-/// - Add 4 for shift, 8 for alt, 16 for ctrl (like X10)
+/// - Add 4 for shift, 8 for alt, 16 for ctrl (like [`X10`])
 /// - Add 32 for motion (mouse moved)
 ///
-/// Similar to SGR but simpler - no `<` prefix, only M terminator (no m),
+/// Similar to [`SGR`] but simpler - no `<` prefix, only M terminator (no m),
 /// and always includes coordinates as decimal numbers.
+///
+/// [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
+/// [`RXVT`]: https://en.wikipedia.org/wiki/Rxvt
+/// [`SGR`]: crate::SgrCode
+/// [`X10`]: https://invisible-island.net/xterm/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
 #[allow(clippy::too_many_lines)]
 fn parse_rxvt_mouse(sequence: &[u8]) -> Option<(VT100InputEventIR, ByteOffset)> {
     // RXVT format: ESC [ Cb ; Cx ; Cy M (minimum 8 bytes: ESC[0;1;1M)
@@ -539,13 +722,15 @@ fn parse_rxvt_mouse(sequence: &[u8]) -> Option<(VT100InputEventIR, ByteOffset)> 
     }
 }
 
-/// Detects mouse button from SGR button byte.
+/// Detects mouse button from [`SGR`] button byte.
 ///
 /// Button encoding (bits 0-1):
 /// - 0 = left button
 /// - 1 = middle button
 /// - 2 = right button
-/// - 3 = release (for legacy modes, SGR uses 'M'/'m' instead)
+/// - 3 = release (for legacy modes, [`SGR`] uses 'M'/'m' instead)
+///
+/// [`SGR`]: crate::SgrCode
 fn detect_mouse_button(cb: u16) -> Option<VT100MouseButtonIR> {
     // Mask out modifier and drag bits (keep only bits 0-5)
     let button_code = cb & MOUSE_BUTTON_CODE_MASK;
@@ -592,12 +777,14 @@ fn detect_scroll_event(cb: u16) -> Option<VT100ScrollDirectionIR> {
     }
 }
 
-/// Extracts modifier keys (Shift, Ctrl, Alt) from SGR sequence.
+/// Extracts modifier keys (Shift, Ctrl, Alt) from [`SGR`] sequence.
 ///
 /// Modifier encoding (bits 2-4):
 /// - Bit 2 (value 4): Shift
 /// - Bit 3 (value 8): Alt
 /// - Bit 4 (value 16): Ctrl
+///
+/// [`SGR`]: crate::SgrCode
 fn extract_modifiers(cb: u16) -> VT100KeyModifiersIR {
     VT100KeyModifiersIR {
         shift: if (cb & MOUSE_MODIFIER_SHIFT) != 0 {
@@ -632,9 +819,11 @@ mod tests {
 
     // ==================== Test Helpers ====================
 
-    /// Builds an X10 mouse sequence using the generator.
+    /// Builds an [`X10`] mouse sequence using the generator.
     ///
-    /// X10 format: `ESC [ M Cb Cx Cy` (6 bytes with null terminator)
+    /// [`X10`] format: `ESC [ M Cb Cx Cy` (6 bytes with null terminator)
+    ///
+    /// [`X10`]: https://invisible-island.net/xterm/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
     fn x10_mouse_sequence(
         button: VT100MouseButtonIR,
         col: u16,
@@ -646,9 +835,11 @@ mod tests {
         generate_x10_mouse_sequence(button, col, row, action, modifiers)
     }
 
-    /// Builds an RXVT mouse sequence using the generator.
+    /// Builds an [`RXVT`] mouse sequence using the generator.
     ///
-    /// RXVT format: `ESC [ Cb ; Cx ; Cy M` (decimal with semicolons)
+    /// [`RXVT`] format: `ESC [ Cb ; Cx ; Cy M` (decimal with semicolons)
+    ///
+    /// [`RXVT`]: https://en.wikipedia.org/wiki/Rxvt
     fn rxvt_mouse_sequence(
         button: VT100MouseButtonIR,
         col: u16,
@@ -660,9 +851,11 @@ mod tests {
         generate_rxvt_mouse_sequence(button, col, row, action, modifiers)
     }
 
-    /// Builds an SGR mouse sequence using the generator.
+    /// Builds an [`SGR`] mouse sequence using the generator.
     ///
-    /// SGR format: `ESC [ < Cb ; Cx ; Cy M/m` (modern standard)
+    /// [`SGR`] format: `ESC [ < Cb ; Cx ; Cy M/m` (modern standard)
+    ///
+    /// [`SGR`]: crate::SgrCode
     fn sgr_mouse_sequence(
         button: VT100MouseButtonIR,
         col: u16,
@@ -1218,13 +1411,15 @@ mod tests {
         }
     }
 
-    /// Test incomplete RXVT sequence parsing (negative test).
+    /// Test incomplete [`RXVT`] sequence parsing (negative test).
     ///
     /// Uses raw bytes instead of a generator because this tests the parser's
     /// rejection of invalid input. Generators should only produce valid sequences;
     /// this ensures our type system cannot express invalid mouse protocols.
     ///
     /// Sequence: `ESC [ 0 ; 1` (missing `;`, `Cy`, and `M`)
+    ///
+    /// [`RXVT`]: https://en.wikipedia.org/wiki/Rxvt
     #[test]
     fn test_rxvt_incomplete_sequence() {
         let seq = &[ANSI_ESC, ANSI_CSI_BRACKET, b'0', b';', b'1'];
@@ -1235,13 +1430,15 @@ mod tests {
         );
     }
 
-    /// Test RXVT sequence without terminator (negative test).
+    /// Test [`RXVT`] sequence without terminator (negative test).
     ///
     /// Uses raw bytes instead of a generator because this tests the parser's
     /// rejection of invalid input. Generators should only produce valid sequences;
     /// this ensures our type system cannot express invalid mouse protocols.
     ///
     /// Sequence: `ESC [ 0 ; 1 ; 1` (missing `M` terminator)
+    ///
+    /// [`RXVT`]: https://en.wikipedia.org/wiki/Rxvt
     #[test]
     fn test_rxvt_missing_terminator() {
         let seq = &[ANSI_ESC, ANSI_CSI_BRACKET, b'0', b';', b'1', b';', b'1'];
@@ -1249,13 +1446,15 @@ mod tests {
         assert!(result.is_none(), "Should not parse RXVT without terminator");
     }
 
-    /// Test RXVT sequence that is too short (negative test).
+    /// Test [`RXVT`] sequence that is too short (negative test).
     ///
     /// Uses raw bytes instead of a generator because this tests the parser's
     /// rejection of invalid input. Generators should only produce valid sequences;
     /// this ensures our type system cannot express invalid mouse protocols.
     ///
     /// Sequence: `ESC [` (missing all parameters and terminator)
+    ///
+    /// [`RXVT`]: https://en.wikipedia.org/wiki/Rxvt
     #[test]
     fn test_rxvt_too_short() {
         let seq = &[ANSI_ESC, ANSI_CSI_BRACKET];

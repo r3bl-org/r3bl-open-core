@@ -183,8 +183,6 @@ mod impl_debug_format {
 #[cfg(test)]
 mod tests_editor_history_struct {
     use super::*;
-    use crate::assert_eq2;
-
     #[test]
     fn test_editor_history_struct_one_item() {
         let mut history = EditorHistory::default();
@@ -284,7 +282,7 @@ mod tests_editor_history_struct {
 #[cfg(test)]
 mod tests_history_functions {
 
-    use crate::{EditorBuffer, Length, RingBuffer, ZeroCopyGapBuffer, assert_eq2,
+    use crate::{EditorBuffer, Length, RingBuffer, ZeroCopyGapBuffer,
                 cur_index::CurIndex, len, row};
 
     #[test]

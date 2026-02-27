@@ -20,9 +20,12 @@ pub fn render_tui_styled_texts_into(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{CommonResult, InlineVec, TuiStylesheet, ZOrder, assert_eq2, console_log,
-                new_style, render_pipeline, throws, throws_with_return, tui_color,
-                tui_styled_text, tui_styled_texts, tui_stylesheet};
+    use crate::{
+        CommonResult,
+        InlineVec,
+        TuiStylesheet,
+        ZOrder,
+    };
 
     #[test]
     fn test_styled_text_renders_correctly() -> CommonResult<()> {

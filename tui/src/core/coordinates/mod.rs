@@ -42,13 +42,13 @@
 //!
 //! The codebase uses three distinct coordinate systems that must never be mixed:
 //!
-//! | System          | Base    | Primitive            | Use Case                                      |
-//! |-----------------|---------|----------------------|-----------------------------------------------|
-//! | **Buffer**      | 0-based | [`ChUnit`] ([`u16`]) | Internal app logic, array indexing, crossterm |
-//! | **VT-100 ANSI** | 1-based | [`NonZeroU16`]       | ANSI escape sequence parsing only             |
-//! | **Byte**        | 0-based | [`usize`]            | UTF-8 string/buffer byte positions            |
+//! | System                  | Base      | Primitive              | Use Case                                        |
+//! | ----------------------- | --------- | ---------------------- | ----------------------------------------------- |
+//! | **Buffer**              | 0-based   | [`ChUnit`] ([`u16`])   | Internal app logic, array indexing, crossterm   |
+//! | **[`VT-100`] [`ANSI`]** | 1-based   | [`NonZeroU16`]         | [`ANSI`] escape sequence parsing only           |
+//! | **Byte**                | 0-based   | [`usize`]              | [`UTF-8`] string/buffer byte positions          |
 //!
-//! **Why this matters**: ANSI escape sequences like `ESC[5;10H` use 1-based indexing
+//! **Why this matters**: [`ANSI`] escape sequences like `ESC[5;10H` use 1-based indexing
 //! where `(1,1)` is the top-left corner. Internal data structures and crossterm use
 //! 0-based indexing where `(0,0)` is top-left. Byte positions must use [`usize`] for
 //! string slicing. Mixing these causes off-by-one errors.
@@ -86,15 +86,15 @@
 //!
 //! ## Coordinate Type Selection
 //!
-//! | Your Task                                                    | Use These Types                                 |
-//! |--------------------------------------------------------------|-------------------------------------------------|
-//! | **Index into [`OffscreenBuffer`] or [`ZeroCopyGapBuffer`]**  | [`ColIndex`], [`RowIndex`], [`Pos`]             |
-//! | **Send cursor commands via crossterm**                       | [`ColIndex`], [`RowIndex`] (convert to [`u16`]) |
-//! | **Parse VT-100 ANSI escape sequences**                       | [`TermRow`], [`TermCol`]                        |
-//! | **Work with UTF-8 byte positions in strings**                | [`ByteIndex`], [`ByteLength`], [`ByteOffset`]   |
-//! | **Store dimensions/sizes**                                   | [`ColWidth`], [`RowHeight`], [`Size`]           |
-//! | **Track cursor or caret position**                           | [`Pos`], [`CaretRaw`], [`CaretScrAdj`]          |
-//! | **Specify layout constraints or percentage metrics**         | [`Pc`], [`ReqSizePc`]                           |
+//! | Your Task                                                      | Use These Types                                   |
+//! | -------------------------------------------------------------- | ------------------------------------------------- |
+//! | **Index into [`OffscreenBuffer`] or [`ZeroCopyGapBuffer`]**    | [`ColIndex`], [`RowIndex`], [`Pos`]               |
+//! | **Send cursor commands via crossterm**                         | [`ColIndex`], [`RowIndex`] (convert to [`u16`])   |
+//! | **Parse [`VT-100`] [`ANSI`] escape sequences**                 | [`TermRow`], [`TermCol`]                          |
+//! | **Work with [`UTF-8`] byte positions in strings**              | [`ByteIndex`], [`ByteLength`], [`ByteOffset`]     |
+//! | **Store dimensions/sizes**                                     | [`ColWidth`], [`RowHeight`], [`Size`]             |
+//! | **Track cursor or caret position**                             | [`Pos`], [`CaretRaw`], [`CaretScrAdj`]            |
+//! | **Specify layout constraints or percentage metrics**           | [`Pc`], [`ReqSizePc`]                             |
 //!
 //! # Common Workflows
 //!
@@ -102,15 +102,15 @@
 //! systems. For detailed API usage and type-specific examples, consult the individual
 //! type and module documentation:
 //!
-//! | Workflow                                | Primary Types                                         | Documentation Links        |
-//! |-----------------------------------------|-------------------------------------------------------|----------------------------|
-//! | **VT-100 ANSI parsing → buffer access** | [`TermRow`], [`TermCol`] → [`RowIndex`], [`ColIndex`] | [`vt_100_ansi_coords`]     |
-//! | **Buffer positioning & manipulation**   | [`Pos`], [`Size`], [`RowIndex`], [`ColIndex`]         | [`buffer_coords`]          |
-//! | **Type-safe bounds checking**           | [`ArrayBoundsCheck`], [`CursorBoundsCheck`]           | [`bounds_check`]           |
-//! | **UTF-8 byte-level operations**         | [`ByteIndex`], [`ByteLength`], [`ByteOffset`]         | [`byte`]                   |
-//! | **Terminal output (crossterm)**         | [`RowIndex::as_u16()`], [`ColIndex::as_u16()`]        | [`Pos`], [`buffer_coords`] |
+//! | Workflow                                        | Primary Types                                           | Documentation Links          |
+//! | ----------------------------------------------- | ------------------------------------------------------- | ---------------------------- |
+//! | **[`VT-100`] [`ANSI`] parsing → buffer access** | [`TermRow`], [`TermCol`] → [`RowIndex`], [`ColIndex`]   | [`vt_100_ansi_coords`]       |
+//! | **Buffer positioning & manipulation**           | [`Pos`], [`Size`], [`RowIndex`], [`ColIndex`]           | [`buffer_coords`]            |
+//! | **Type-safe bounds checking**                   | [`ArrayBoundsCheck`], [`CursorBoundsCheck`]             | [`bounds_check`]             |
+//! | **[`UTF-8`] byte-level operations**             | [`ByteIndex`], [`ByteLength`], [`ByteOffset`]           | [`byte`]                     |
+//! | **Terminal output (crossterm)**                 | [`RowIndex::as_u16()`], [`ColIndex::as_u16()`]          | [`Pos`], [`buffer_coords`]   |
 //!
-//! **Example: Complete VT-100 to buffer workflow**
+//! **Example: Complete [`VT-100`] to buffer workflow**
 //! ```rust
 //! use r3bl_tui::{TermRow, TermCol, RowIndex, ColIndex};
 //! use std::num::NonZeroU16;
@@ -154,56 +154,59 @@
 //! - **[`buffer_coords`]**: 0-based coordinates for internal app logic and buffer
 //!   indexing. Includes generic types ([`Index`], [`Length`]) and concrete types
 //!   ([`ColIndex`], [`RowIndex`], [`ColWidth`], [`RowHeight`], [`Pos`], [`Size`])
-//! - **[`vt_100_ansi_coords`]**: 1-based coordinates for VT-100 ANSI escape sequence
+//! - **[`vt_100_ansi_coords`]**: 1-based coordinates for [`VT-100`] [`ANSI`] escape sequence
 //!   parsing
-//! - **[`byte`]**: Byte-level coordinates for UTF-8 text processing
+//! - **[`byte`]**: Byte-level coordinates for [`UTF-8`] text processing
 //! - **[`percent_spec`]**: Percentage types ([`Pc`], [`ReqSizePc`]) for UI layout
 //!   specifications and telemetry metrics
 //! - **[`bounds_check`]**: Type-safe bounds checking traits and utilities
 //!
-//! [`ChUnit`]: primitives::ChUnit
-//! [`Index`]: buffer_coords::Index
-//! [`Length`]: buffer_coords::Length
-//! [`ColIndex`]: buffer_coords::ColIndex
-//! [`RowIndex`]: buffer_coords::RowIndex
-//! [`ColWidth`]: buffer_coords::ColWidth
-//! [`RowHeight`]: buffer_coords::RowHeight
-//! [`Pos`]: buffer_coords::Pos
-//! [`Size`]: buffer_coords::Size
-//! [`CaretRaw`]: buffer_coords::CaretRaw
-//! [`CaretScrAdj`]: buffer_coords::CaretScrAdj
-//! [`TermRow`]: vt_100_ansi_coords::TermRow
-//! [`TermCol`]: vt_100_ansi_coords::TermCol
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`ArrayBoundsCheck`]: bounds_check::ArrayBoundsCheck
+//! [`ArrayOverflowResult`]: bounds_check::ArrayOverflowResult
+//! [`bounds_check`]: bounds_check
+//! [`buffer_coords`]: buffer_coords
+//! [`byte`]: byte
 //! [`ByteIndex`]: byte::ByteIndex
+//! [`ByteIndexRangeExt`]: byte::ByteIndexRangeExt
 //! [`ByteLength`]: byte::ByteLength
 //! [`ByteOffset`]: byte::ByteOffset
-//! [`ByteIndexRangeExt`]: byte::ByteIndexRangeExt
-//! [`Pc`]: crate::Pc
-//! [`ReqSizePc`]: crate::ReqSizePc
-//! [`ArrayBoundsCheck`]: bounds_check::ArrayBoundsCheck
+//! [`CaretRaw`]: buffer_coords::CaretRaw
+//! [`CaretScrAdj`]: buffer_coords::CaretScrAdj
+//! [`ChUnit`]: primitives::ChUnit
+//! [`ColIndex`]: buffer_coords::ColIndex
+//! [`ColWidth`]: buffer_coords::ColWidth
 //! [`CursorBoundsCheck`]: bounds_check::CursorBoundsCheck
-//! [`ViewportBoundsCheck`]: bounds_check::ViewportBoundsCheck
-//! [`RangeBoundsExt`]: bounds_check::RangeBoundsExt
-//! [`ArrayOverflowResult`]: bounds_check::ArrayOverflowResult
-//! [`primitives`]: primitives
-//! [`buffer_coords`]: buffer_coords
-//! [`vt_100_ansi_coords`]: vt_100_ansi_coords
-//! [`byte`]: byte
-//! [`percent_spec`]: percent_spec
-//! [`bounds_check`]: bounds_check
-//! [`OffscreenBuffer`]: crate::OffscreenBuffer
-//! [`ZeroCopyGapBuffer`]: crate::ZeroCopyGapBuffer
-//! [`TermRow::to_zero_based()`]: vt_100_ansi_coords::TermRow::to_zero_based
-//! [`Index::overflows()`]: buffer_coords::Index::overflows
-//! [`Length::check_cursor_position_bounds()`]: bounds_check::CursorBoundsCheck::check_cursor_position_bounds
-//! [`Index::check_viewport_bounds()`]: bounds_check::ViewportBoundsCheck::check_viewport_bounds
-//! [`RangeBoundsExt::check_range_is_valid_for_length()`]: bounds_check::RangeBoundsExt::check_range_is_valid_for_length
-//! [`NonZeroU16`]: std::num::NonZeroU16
-//! [`usize`]: prim@usize
-//! [`u16`]: prim@u16
-//! [`term_row.to_zero_based()`]: vt_100_ansi_coords::TermRow::to_zero_based
 //! [`index.overflows(length)`]: buffer_coords::Index::overflows
+//! [`Index::check_viewport_bounds()`]: bounds_check::ViewportBoundsCheck::check_viewport_bounds
+//! [`Index::overflows()`]: buffer_coords::Index::overflows
+//! [`Index`]: buffer_coords::Index
+//! [`Length::check_cursor_position_bounds()`]: bounds_check::CursorBoundsCheck::check_cursor_position_bounds
+//! [`Length`]: buffer_coords::Length
+//! [`NonZeroU16`]: std::num::NonZeroU16
+//! [`OffscreenBuffer`]: crate::OffscreenBuffer
+//! [`Pc`]: crate::Pc
+//! [`percent_spec`]: percent_spec
+//! [`Pos`]: buffer_coords::Pos
+//! [`primitives`]: primitives
+//! [`RangeBoundsExt::check_range_is_valid_for_length()`]: bounds_check::RangeBoundsExt::check_range_is_valid_for_length
+//! [`RangeBoundsExt`]: bounds_check::RangeBoundsExt
+//! [`ReqSizePc`]: crate::ReqSizePc
+//! [`RowHeight`]: buffer_coords::RowHeight
+//! [`RowIndex`]: buffer_coords::RowIndex
+//! [`Size`]: buffer_coords::Size
+//! [`term_row.to_zero_based()`]: vt_100_ansi_coords::TermRow::to_zero_based
+//! [`TermCol`]: vt_100_ansi_coords::TermCol
 //! [`TermRow::from_zero_based(RowIndex)`]: vt_100_ansi_coords::TermRow::from_zero_based
+//! [`TermRow::to_zero_based()`]: vt_100_ansi_coords::TermRow::to_zero_based
+//! [`TermRow`]: vt_100_ansi_coords::TermRow
+//! [`u16`]: prim@u16
+//! [`usize`]: prim@usize
+//! [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
+//! [`ViewportBoundsCheck`]: bounds_check::ViewportBoundsCheck
+//! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+//! [`vt_100_ansi_coords`]: vt_100_ansi_coords
+//! [`ZeroCopyGapBuffer`]: crate::ZeroCopyGapBuffer
 
 // Skip rustfmt for rest of file.
 // https://stackoverflow.com/a/75910283/2085356
@@ -223,10 +226,10 @@
 // Note: These are public to support existing codebase that uses qualified paths.
 // New code should avoid importing from qualified paths and instead use the
 // public re-exports below.
+#[macro_use] pub mod buffer_coords;
+#[macro_use] pub mod percent_spec;
 pub mod bounds_check;
-pub mod buffer_coords;
 pub mod byte;
-pub mod percent_spec;
 pub mod primitives;
 pub mod vt_100_ansi_coords;
 

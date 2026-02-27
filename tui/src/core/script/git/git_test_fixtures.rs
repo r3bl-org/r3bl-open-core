@@ -2,7 +2,7 @@
 
 //! Shared test infrastructure for git module tests.
 
-use crate::{InlineString, Run, TempDir, command, ok,
+use crate::{InlineString, Run, TempDir,
             script::git::types::{git_command_args::GIT_ARG_INIT_BRANCH,
                                  git_command_names::{GIT_CMD_ADD, GIT_CMD_COMMIT,
                                                      GIT_CMD_CONFIG, GIT_CMD_INIT,

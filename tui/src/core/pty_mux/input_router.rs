@@ -13,7 +13,7 @@ use crate::{AnsiSequenceGenerator, Continuation, InputEvent, Key, KeyPress, KeyS
             core::{osc::OscController,
                    pty::{PtyInputEvent, pty_core::pty_sessions::show_notification},
                    terminal_io::OutputDevice},
-            lock_output_device_as_mut, row};
+            row};
 
 /// Routes input events to appropriate handlers and manages dynamic keyboard shortcuts.
 #[derive(Debug)]
@@ -181,8 +181,10 @@ impl InputRouter {
 
     /// Handles terminal resize events.
     ///
-    /// Updates the process manager's size and forwards reduced size to all PTY sessions
-    /// to reserve space for the status bar.
+    /// Updates the process manager's size and forwards reduced size to all [`PTY`]
+    /// sessions to reserve space for the status bar.
+    ///
+    /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
     fn handle_resize(process_manager: &mut ProcessManager, new_size: Size) {
         // Update manager's size (full terminal size)
         process_manager.handle_terminal_resize(new_size);
