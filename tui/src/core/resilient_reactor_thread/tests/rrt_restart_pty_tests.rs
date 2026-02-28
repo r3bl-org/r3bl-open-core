@@ -25,7 +25,8 @@
 //! [`rrt_restart_tests`]: super::rrt_restart_tests
 
 use super::super::*;
-use crate::{Continuation, ControlledChild, MioPollWaker, PtyPair, PtyTestMode,
+use crate::{Continuation, MioPollWaker, PtyPair, PtyTestMode,
+            SingleThreadSafeControlledChild,
             tui::terminal_lib_backends::direct_to_ansi::input::{channel_types::PollerEvent,
                                                                 mio_poller::MioPollWorker}};
 use std::{io::{BufRead, BufReader, Read, Write, stdout},
@@ -153,7 +154,7 @@ generate_pty_test! {
 
 /// Controller: sends keystrokes when the controlled signals readiness, then
 /// waits for all 3 create/poll cycles to complete.
-fn factory_restart_controller(pty_pair: PtyPair, mut child: ControlledChild) {
+fn factory_restart_controller(pty_pair: PtyPair, child: SingleThreadSafeControlledChild) {
     eprintln!("Factory-Restart Controller: Starting...");
 
     let reader = pty_pair
@@ -179,7 +180,7 @@ fn factory_restart_controller(pty_pair: PtyPair, mut child: ControlledChild) {
 
     wait_for_signal(&mut buf_reader, FACTORY_RESTART_PASSED);
 
-    crate::drain_pty_and_wait(buf_reader, pty_pair, &mut child);
+    child.drain_and_wait(buf_reader, pty_pair);
     eprintln!("Factory-Restart Controller: Test passed!");
 }
 

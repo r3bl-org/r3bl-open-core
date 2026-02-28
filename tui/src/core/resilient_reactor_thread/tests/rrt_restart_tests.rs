@@ -15,7 +15,7 @@
 //! [`mpsc`]: std::sync::mpsc
 
 use super::super::*;
-use crate::{Continuation, ControlledChild, PtyPair, PtyTestMode};
+use crate::{Continuation, PtyPair, PtyTestMode, SingleThreadSafeControlledChild};
 use std::{collections::VecDeque,
           io::{BufRead, BufReader, Write},
           sync::{Arc, Mutex,
@@ -1036,7 +1036,7 @@ fn wait_for_signal(buf_reader: &mut BufReader<impl std::io::Read>, signal: &str)
 }
 
 /// Controller: waits for the controlled process to complete the poll-error test.
-fn poll_error_controller(pty_pair: PtyPair, mut child: ControlledChild) {
+fn poll_error_controller(pty_pair: PtyPair, child: SingleThreadSafeControlledChild) {
     eprintln!("Poll-Error Controller: Starting...");
 
     let reader = pty_pair
@@ -1048,7 +1048,7 @@ fn poll_error_controller(pty_pair: PtyPair, mut child: ControlledChild) {
     wait_for_signal(&mut buf_reader, POLL_ERROR_READY);
     wait_for_signal(&mut buf_reader, POLL_ERROR_PASSED);
 
-    crate::drain_pty_and_wait(buf_reader, pty_pair, &mut child);
+    child.drain_and_wait(buf_reader, pty_pair);
     eprintln!("Poll-Error Controller: Test passed!");
 }
 

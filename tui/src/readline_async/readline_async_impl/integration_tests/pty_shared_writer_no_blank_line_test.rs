@@ -193,10 +193,11 @@
 //! [`OffscreenBuffer::apply_ansi_bytes`]: crate::OffscreenBuffer::apply_ansi_bytes
 //! [`PTY`]: crate::core::pty
 //! [`SharedWriter`]: crate::SharedWriter
-use crate::{ControlledChild, LineStateControlSignal, OffscreenBuffer, PtyPair,
-            PtyTestMode, SharedWriter, height, read_lines_and_drain,
+use crate::{SingleThreadSafeControlledChild, LineStateControlSignal, OffscreenBuffer, PtyPair,
+            PtyTestMode, ReadLinesResult, SharedWriter, height, read_until_marker,
             readline_async::readline_async_impl::LineState, width};
-use std::{io::Write, time::Duration};
+use std::io::{BufReader, Write};
+use std::time::Duration;
 
 generate_pty_test! {
     /// Verifies no extra blank line appears between [`SharedWriter`] output and
@@ -215,16 +216,29 @@ generate_pty_test! {
 /// [`PTY`] Controller: Verify no blank line between log output and prompt.
 ///
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
-fn pty_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
+fn pty_controller_entry_point(pty_pair: PtyPair, child: SingleThreadSafeControlledChild) {
     eprintln!("🚀 PTY Controller: Starting SharedWriter blank line test...");
 
-    let result =
-        read_lines_and_drain(pty_pair, &mut child, "CONTROLLED_DONE", |trimmed| {
+    let reader = pty_pair
+        .controller()
+        .try_clone_reader()
+        .expect("Failed to clone reader");
+    let mut buf_reader = BufReader::new(reader);
+
+    let (lines, found_marker) =
+        read_until_marker(&mut buf_reader, "CONTROLLED_DONE", &|trimmed: &str| {
             // Skip debug lines from the test framework.
             !trimmed.contains("🔍")
                 && !trimmed.contains("TEST_RUNNING")
                 && !trimmed.contains("CONTROLLED_STARTING")
         });
+
+    child.drain_and_wait(buf_reader, pty_pair);
+
+    let result = ReadLinesResult {
+        lines,
+        found_marker,
+    };
 
     assert!(
         result.found_marker,

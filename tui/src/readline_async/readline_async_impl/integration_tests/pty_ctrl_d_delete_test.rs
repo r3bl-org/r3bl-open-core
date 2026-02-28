@@ -2,7 +2,7 @@
 
 // cspell:words ello
 
-use crate::{AsyncDebouncedDeadline, ControlledChild, DebouncedState, PtyPair,
+use crate::{AsyncDebouncedDeadline, SingleThreadSafeControlledChild, DebouncedState, PtyPair,
             PtyTestMode, core::test_fixtures::StdoutMock,
             readline_async::readline_async_impl::LineState};
 use std::{io::{BufRead, BufReader, Write},
@@ -59,7 +59,7 @@ generate_pty_test! {
 ///
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 #[allow(clippy::too_many_lines)]
-fn pty_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
+fn pty_controller_entry_point(pty_pair: PtyPair, child: SingleThreadSafeControlledChild) {
     eprintln!("🚀 PTY Controller: Starting Ctrl+D delete test...");
 
     let mut writer = pty_pair
@@ -172,16 +172,8 @@ fn pty_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
     // Clean shutdown - close writer to signal controlled to exit
     eprintln!("🧹 PTY Controller: Cleaning up...");
     drop(writer);
-
-    // Wait for child to exit
-    match child.wait() {
-        Ok(status) => {
-            eprintln!("✅ PTY Controller: Controlled process exited: {status:?}");
-        }
-        Err(e) => {
-            panic!("Failed to wait for controlled process: {e}");
-        }
-    }
+    child.drain_and_wait(buf_reader, pty_pair);
+    eprintln!("✅ PTY Controller: Test passed!");
 }
 
 /// [`PTY`] Controlled: Process readline input and report line state

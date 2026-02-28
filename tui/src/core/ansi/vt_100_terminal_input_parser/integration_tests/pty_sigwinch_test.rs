@@ -56,7 +56,7 @@
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`SIGWINCH`]: https://man7.org/linux/man-pages/man7/signal.7.html
 
-use crate::{ControlledChild, InputEvent, PtyPair, PtyTestMode,
+use crate::{SingleThreadSafeControlledChild, InputEvent, PtyPair, PtyTestMode,
             tui::terminal_lib_backends::direct_to_ansi::DirectToAnsiInputDevice};
 use portable_pty::PtySize;
 use std::{io::{BufRead, BufReader, Write},
@@ -77,7 +77,7 @@ generate_pty_test! {
 ///
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 /// [`SIGWINCH`]: https://man7.org/linux/man-pages/man7/signal.7.html
-fn pty_controller_entry_point(mut pty_pair: PtyPair, mut child: ControlledChild) {
+fn pty_controller_entry_point(mut pty_pair: PtyPair, child: SingleThreadSafeControlledChild) {
     eprintln!("🚀 PTY Controller: Starting SIGWINCH test...");
 
     let reader = pty_pair
@@ -180,15 +180,7 @@ fn pty_controller_entry_point(mut pty_pair: PtyPair, mut child: ControlledChild)
 
     eprintln!("🧹 PTY Controller: Cleaning up...");
 
-    // The controlled process should exit on its own after receiving the event.
-    match child.wait() {
-        Ok(status) => {
-            eprintln!("✅ PTY Controller: Controlled process exited: {status:?}");
-        }
-        Err(e) => {
-            eprintln!("⚠️  PTY Controller: Error waiting for controlled: {e}");
-        }
-    }
+    child.drain_and_wait(buf_reader, pty_pair);
 
     eprintln!("✅ PTY Controller: SIGWINCH test passed!");
 }

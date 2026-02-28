@@ -70,14 +70,15 @@
 //! - **Process Isolation**: Each test run gets fresh [`PTY`] resources via process
 //!   spawning
 //! - **Coordinator-Worker Pattern**: Same test function handles both roles via env var
-//! - **Async Validation**: Properly tests tokio async I/O with real terminal input
+//! - **Async Validation**: Properly tests [`tokio`] async I/O with real terminal input
 //!
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`DirectToAnsiInputDevice`]: crate::direct_to_ansi::DirectToAnsiInputDevice
 //! [`ESC`]: crate::EscSequence
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
+//! [`tokio`]: tokio
 
-use crate::{ControlledChild, InputEvent, PtyPair, PtyTestMode,
+use crate::{SingleThreadSafeControlledChild, InputEvent, PtyPair, PtyTestMode,
             core::ansi::{generator::generate_keyboard_sequence,
                          vt_100_terminal_input_parser::ir_event_types::{VT100InputEventIR,
                                                                         VT100KeyCodeIR,
@@ -107,7 +108,7 @@ generate_pty_test! {
 /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 #[allow(clippy::too_many_lines)]
-fn pty_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
+fn pty_controller_entry_point(pty_pair: PtyPair, child: SingleThreadSafeControlledChild) {
     /// Helper to generate [`ANSI`] bytes from `InputEvent`.
     ///
     /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
@@ -243,16 +244,7 @@ fn pty_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
 
     // Close writer to signal EOF.
     drop(writer);
-
-    // Wait for controlled to exit.
-    match child.wait() {
-        Ok(status) => {
-            eprintln!("✅ PTY Controller: Controlled process exited: {status:?}");
-        }
-        Err(e) => {
-            panic!("Failed to wait for controlled process: {e}");
-        }
-    }
+    child.drain_and_wait(buf_reader, pty_pair);
 
     eprintln!("✅ PTY Controller: Test passed!");
 }

@@ -21,7 +21,7 @@
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 //! [parent module documentation]: mod@super#testing-philosophy
 
-use crate::{ControlledChild, InputEvent, PtyPair, PtyTestMode, TermPos,
+use crate::{SingleThreadSafeControlledChild, InputEvent, PtyPair, PtyTestMode, TermPos,
             core::ansi::{generator::generate_keyboard_sequence,
                          vt_100_terminal_input_parser::ir_event_types::{VT100InputEventIR,
                                                                         VT100KeyModifiersIR,
@@ -47,7 +47,7 @@ generate_pty_test! {
 ///
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 #[allow(clippy::too_many_lines)]
-fn pty_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
+fn pty_controller_entry_point(pty_pair: PtyPair, child: SingleThreadSafeControlledChild) {
     eprintln!("🚀 PTY Controller: Starting mouse events test...");
 
     let mut writer = pty_pair
@@ -185,15 +185,7 @@ fn pty_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
     eprintln!("🧹 PTY Controller: Cleaning up...");
 
     drop(writer);
-
-    match child.wait() {
-        Ok(status) => {
-            eprintln!("✅ PTY Controller: Controlled process exited: {status:?}");
-        }
-        Err(e) => {
-            panic!("Failed to wait for controlled process: {e}");
-        }
-    }
+    child.drain_and_wait(buf_reader, pty_pair);
 
     eprintln!("✅ PTY Controller: Test passed!");
 }

@@ -7,13 +7,12 @@
 //! and catches regressions in flag handling.
 
 use crate::{
-    ControlledChild,
+    SingleThreadSafeControlledChild,
     PtyPair,
     PtyTestMode,
     RawModeGuard,
     VMIN_RAW_MODE,
     VTIME_RAW_MODE,
-    drain_pty_and_wait,
 };
 use rustix::termios::{self, ControlModes, InputModes, LocalModes, OutputModes,
                       SpecialCodeIndex};
@@ -46,7 +45,7 @@ generate_pty_test! {
 }
 
 /// Controller process: verifies that controlled process reports correct flags.
-fn pty_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
+fn pty_controller_entry_point(pty_pair: PtyPair, child: SingleThreadSafeControlledChild) {
     eprintln!("🚀 PTY Controller: Starting flag verification test...");
 
     let reader = pty_pair
@@ -97,7 +96,7 @@ fn pty_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
     assert!(test_passed, "Test did not report success");
 
     // Drain PTY and wait for child to prevent macOS PTY buffer deadlock.
-    drain_pty_and_wait(buf_reader, pty_pair, &mut child);
+    child.drain_and_wait(buf_reader, pty_pair);
 
     eprintln!("✅ PTY Controller: Flag verification test passed!");
 }

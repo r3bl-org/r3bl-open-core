@@ -26,7 +26,7 @@
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
 
-use crate::{ControlledChild, InputEvent, PtyPair, PtyTestMode,
+use crate::{SingleThreadSafeControlledChild, InputEvent, PtyPair, PtyTestMode,
             core::ansi::{generator::generate_keyboard_sequence,
                          vt_100_terminal_input_parser::ir_event_types::{VT100InputEventIR,
                                                                         VT100PasteModeIR}},
@@ -50,7 +50,7 @@ generate_pty_test! {
 ///
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 #[allow(clippy::too_many_lines)]
-fn pty_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
+fn pty_controller_entry_point(pty_pair: PtyPair, child: SingleThreadSafeControlledChild) {
     /// Helper to build a complete bracketed paste sequence from text.
     ///
     /// Returns (description, byte sequence) tuple.
@@ -182,15 +182,7 @@ fn pty_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
     eprintln!("🧹 PTY Controller: Cleaning up...");
 
     drop(writer);
-
-    match child.wait() {
-        Ok(status) => {
-            eprintln!("✅ PTY Controller: Controlled process exited: {status:?}");
-        }
-        Err(e) => {
-            panic!("Failed to wait for controlled process: {e}");
-        }
-    }
+    child.drain_and_wait(buf_reader, pty_pair);
 
     eprintln!("✅ PTY Controller: Test passed!");
 }

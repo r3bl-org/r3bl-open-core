@@ -1,6 +1,6 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{AsyncDebouncedDeadline, ControlledChild, DebouncedState, KeyState, PtyPair,
+use crate::{AsyncDebouncedDeadline, SingleThreadSafeControlledChild, DebouncedState, KeyState, PtyPair,
             PtyTestMode,
             core::{ansi::{generator::generate_keyboard_sequence,
                           vt_100_terminal_input_parser::{VT100InputEventIR,
@@ -95,7 +95,7 @@ generate_pty_test! {
 ///
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 #[allow(clippy::too_many_lines)]
-fn pty_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
+fn pty_controller_entry_point(pty_pair: PtyPair, child: SingleThreadSafeControlledChild) {
     eprintln!("🚀 PTY Controller: Starting Ctrl+Left/Right test...");
 
     let mut writer = pty_pair
@@ -221,16 +221,7 @@ fn pty_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
 
     eprintln!("🧹 PTY Controller: Cleaning up...");
     drop(writer);
-
-    match child.wait() {
-        Ok(status) => {
-            eprintln!("✅ PTY Controller: Controlled process exited: {status:?}");
-        }
-        Err(e) => {
-            panic!("Failed to wait for controlled process: {e}");
-        }
-    }
-
+    child.drain_and_wait(buf_reader, pty_pair);
     eprintln!("✅ PTY Controller: Test passed!");
 }
 

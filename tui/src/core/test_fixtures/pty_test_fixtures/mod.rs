@@ -5,7 +5,9 @@ mod async_debounced_deadline;
 mod deadline;
 mod debounced_state;
 mod drain_pty_and_wait;
+mod guarded_child;
 mod normalize_pty_output;
+mod pty_test_watchdog;
 mod read_lines_and_drain;
 mod spawn_controlled_in_pty;
 
@@ -19,6 +21,8 @@ pub use deadline::*;
 pub use debounced_state::*;
 pub use drain_pty_and_wait::*;
 pub use generate_pty_test::*;
+pub use guarded_child::*;
 pub use normalize_pty_output::*;
+pub use pty_test_watchdog::*;
 pub use read_lines_and_drain::*;
 pub use spawn_controlled_in_pty::*;

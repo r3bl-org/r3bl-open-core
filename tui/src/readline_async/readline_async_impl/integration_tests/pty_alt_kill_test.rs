@@ -2,7 +2,7 @@
 
 use crate::{
     AsyncDebouncedDeadline,
-    ControlledChild,
+    SingleThreadSafeControlledChild,
     DebouncedState,
     PtyPair,
     PtyTestMode,
@@ -57,7 +57,7 @@ generate_pty_test! {
 ///
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 #[allow(clippy::too_many_lines)]
-fn pty_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
+fn pty_controller_entry_point(pty_pair: PtyPair, child: SingleThreadSafeControlledChild) {
     eprintln!("🚀 PTY Controller: Starting Alt+D/Backspace test...");
 
     let mut writer = pty_pair
@@ -209,16 +209,7 @@ fn pty_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
 
     eprintln!("🧹 PTY Controller: Cleaning up...");
     drop(writer);
-
-    match child.wait() {
-        Ok(status) => {
-            eprintln!("✅ PTY Controller: Controlled process exited: {status:?}");
-        }
-        Err(e) => {
-            panic!("Failed to wait for controlled process: {e}");
-        }
-    }
-
+    child.drain_and_wait(buf_reader, pty_pair);
     eprintln!("✅ PTY Controller: Test passed!");
 }
 

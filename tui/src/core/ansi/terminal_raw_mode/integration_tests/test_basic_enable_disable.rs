@@ -9,11 +9,10 @@
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 
 use crate::{
-    ControlledChild,
+    SingleThreadSafeControlledChild,
     PtyPair,
     PtyTestMode,
     RawModeGuard,
-    drain_pty_and_wait,
 };
 use rustix::termios;
 use std::{io::{BufRead, BufReader, Write},
@@ -44,7 +43,7 @@ generate_pty_test! {
 /// Receives [`PTY`] pair and child process from the macro.
 ///
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
-fn pty_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
+fn pty_controller_entry_point(pty_pair: PtyPair, child: SingleThreadSafeControlledChild) {
     eprintln!("🚀 PTY Controller: Starting raw mode test...");
 
     // Read from PTY and verify
@@ -95,8 +94,7 @@ fn pty_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
     );
     assert!(test_passed, "Test did not report success");
 
-    // Drain PTY and wait for child to prevent macOS PTY buffer deadlock.
-    drain_pty_and_wait(buf_reader, pty_pair, &mut child);
+    child.drain_and_wait(buf_reader, pty_pair);
 
     eprintln!("✅ PTY Controller: Raw mode test passed!");
 }

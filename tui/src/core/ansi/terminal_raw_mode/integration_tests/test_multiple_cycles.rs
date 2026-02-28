@@ -8,7 +8,7 @@
 //! - Calling `disable()` when already disabled
 //! - Original settings are preserved across cycles
 
-use crate::{ControlledChild, PtyPair, PtyTestMode};
+use crate::{SingleThreadSafeControlledChild, PtyPair, PtyTestMode};
 use rustix::termios;
 use std::{io::{BufRead, BufReader, Write},
           time::{Duration, Instant}};
@@ -40,7 +40,7 @@ generate_pty_test! {
 
 /// Controller process: verifies that controlled process completes multiple cycles
 /// successfully.
-fn pty_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
+fn pty_controller_entry_point(pty_pair: PtyPair, child: SingleThreadSafeControlledChild) {
     eprintln!("🚀 PTY Controller: Starting multiple cycles test...");
 
     let reader = pty_pair
@@ -96,15 +96,7 @@ fn pty_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
     assert_eq!(cycles_completed, 3, "Expected 3 cycles to complete");
     assert!(test_passed, "Test did not report success");
 
-    match child.wait() {
-        Ok(status) => {
-            eprintln!("✅ PTY Controller: Controlled process exited: {status:?}");
-        }
-        Err(e) => {
-            panic!("Failed to wait for controlled process: {e}");
-        }
-    }
-
+    child.drain_and_wait(buf_reader, pty_pair);
     eprintln!("✅ PTY Controller: Multiple cycles test passed!");
 }
 

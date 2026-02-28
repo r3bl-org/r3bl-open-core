@@ -165,6 +165,25 @@ function run_check_with_recovery
         return 2
     end
 
+    # Check for ETXTBSY (orphaned test processes holding binary open)
+    if detect_text_file_busy $temp_output
+        set_color yellow
+        echo "📝 Text file busy (ETXTBSY) — killing orphaned test processes and retrying ($duration_str)"
+        set_color normal
+
+        # Kill orphaned test processes holding the binary open
+        pkill -f "r3bl_tui.*--quiet" 2>/dev/null
+        sleep 1
+
+        # Log ETXTBSY to file
+        if set -q CHECK_LOG_FILE; and test -n "$CHECK_LOG_FILE"
+            echo "["(timestamp)"] 📝 ETXTBSY detected during $check_name ($duration_str)" >> $CHECK_LOG_FILE
+        end
+
+        command rm -f $temp_output
+        return 2
+    end
+
     # Regular failure (not ICE, not stale artifacts, not linker failure) - show the error output to user
     set_color red
     echo "["(timestamp)"] ❌ $check_name failed ($duration_str)"

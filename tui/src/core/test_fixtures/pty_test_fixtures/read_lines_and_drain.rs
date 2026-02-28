@@ -33,8 +33,8 @@ pub struct ReadLinesResult {
 /// manually. Without the response, zero bytes arrive on the reader - the child's output
 /// is buffered inside [`ConPTY`] indefinitely.
 ///
-/// Once the DSR response is sent, [`ConPTY`] behaves like a Unix [`PTY`]: blocking reads
-/// work, and [`EOF`] is delivered when the child exits.
+/// Once the [`DSR`] response is sent, [`ConPTY`] behaves like a Unix [`PTY`]: blocking
+/// reads work, and [`EOF`] is delivered when the child exits.
 ///
 /// There is one additional [`ConPTY`] quirk: the **writer (input pipe) must stay alive**
 /// until reading completes. [`ConPTY`] treats input and output as a single console
@@ -58,13 +58,13 @@ pub struct ReadLinesResult {
 ///
 /// [`ConPTY`]:
 ///     https://learn.microsoft.com/en-us/windows/console/creating-a-pseudoconsole-session
+/// [`crossterm`]: ::crossterm
+/// [`drain_pty_and_wait`]: crate::drain_pty_and_wait
 /// [`DSR_CURSOR_POSITION_REQUEST`]: crate::DSR_CURSOR_POSITION_REQUEST
 /// [`DSR`]: crate::DSR_CURSOR_POSITION_REQUEST
 /// [`EOF`]: https://en.wikipedia.org/wiki/End-of-file
 /// [`OpenConsole.exe`]: https://github.com/microsoft/terminal/tree/main/src/host
 /// [`PTY`]: mod@crate::core::pty
-/// [`crossterm`]: ::crossterm
-/// [`drain_pty_and_wait`]: crate::drain_pty_and_wait
 /// [`read_line()`]: std::io::BufRead::read_line
 /// [`wait()`]:
 ///     https://docs.rs/portable-pty/latest/portable_pty/trait.Child.html#tymethod.wait
@@ -180,7 +180,7 @@ fn read_lines_windows(
 
 // ── Shared read loop ─────────────────────────────────────────────────
 
-fn read_until_marker(
+pub fn read_until_marker(
     buf_reader: &mut impl std::io::BufRead,
     marker: &str,
     line_filter: &impl Fn(&str) -> bool,

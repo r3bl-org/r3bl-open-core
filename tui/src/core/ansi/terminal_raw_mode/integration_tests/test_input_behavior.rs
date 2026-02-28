@@ -11,7 +11,7 @@ use crate::{
     CONTROL_C,
     CONTROL_D,
     CONTROL_LF,
-    ControlledChild,
+    SingleThreadSafeControlledChild,
     PtyPair,
     PtyTestMode,
 };
@@ -43,7 +43,7 @@ generate_pty_test! {
 
 /// Controller process: sends input and verifies controlled process reports correct bytes.
 #[allow(clippy::too_many_lines)]
-fn pty_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
+fn pty_controller_entry_point(pty_pair: PtyPair, child: SingleThreadSafeControlledChild) {
     eprintln!("🚀 PTY Controller: Starting input behavior test...");
 
     let mut writer = pty_pair
@@ -164,16 +164,7 @@ fn pty_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
     std::thread::sleep(Duration::from_millis(100));
 
     drop(writer);
-
-    match child.wait() {
-        Ok(status) => {
-            eprintln!("✅ PTY Controller: Controlled process exited: {status:?}");
-        }
-        Err(e) => {
-            panic!("Failed to wait for controlled process: {e}");
-        }
-    }
-
+    child.drain_and_wait(buf_reader, pty_pair);
     eprintln!("✅ PTY Controller: Input behavior test passed!");
 }
 

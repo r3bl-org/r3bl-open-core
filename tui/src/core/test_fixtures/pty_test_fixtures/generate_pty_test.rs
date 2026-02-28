@@ -13,7 +13,9 @@
 pub enum PtyTestMode {
     /// Enable raw mode in the controlled process before calling the controlled
     /// function. Use this for tests that read keystrokes via
-    /// `DirectToAnsiInputDevice` or any stdin-reading code that expects raw mode.
+    /// [`DirectToAnsiInputDevice`] or any stdin-reading code that expects raw mode.
+    ///
+    /// [`DirectToAnsiInputDevice`]: crate::DirectToAnsiInputDevice
     Raw,
     /// Do not change the terminal mode. The controlled process starts in the
     /// default cooked mode. Use for tests that manage raw mode themselves or that
@@ -21,23 +23,24 @@ pub enum PtyTestMode {
     Cooked,
 }
 
-/// Macro that generates PTY-based integration tests with automatic test name injection.
+/// Macro that generates [`PTY`]-based integration tests with automatic test name
+/// injection.
 ///
-/// Use this macro for **single-feature PTY tests** that test one specific behavior (e.g.,
-/// raw mode, Ctrl+W deletion, terminal event parsing). For **multi-backend comparison
-/// tests** that need to run the same controlled code with different backends and compare
-/// results, use [`spawn_controlled_in_pty`] instead.
+/// Use this macro for **single-feature [`PTY`] tests** that test one specific behavior
+/// (e.g., raw mode, Ctrl+W deletion, terminal event parsing). For **multi-backend
+/// comparison tests** that need to run the same controlled code with different backends
+/// and compare results, use [`spawn_controlled_in_pty`] instead.
 ///
 /// # When to Use This Macro vs [`spawn_controlled_in_pty`]
 ///
-/// | Scenario                                         | Use                         |
-/// | ------------------------------------------------ | --------------------------- |
-/// | Testing a single feature in a PTY environment    | [`generate_pty_test!`]      |
-/// | Comparing two backends produce identical results | [`spawn_controlled_in_pty`] |
-/// | One test function, one controlled process        | [`generate_pty_test!`]      |
-/// | One test function, multiple controlled processes | [`spawn_controlled_in_pty`] |
+/// | Scenario                                          | Use                         |
+/// | ------------------------------------------------- | --------------------------- |
+/// | Testing a single feature in a [`PTY`] environment | [`generate_pty_test!`]      |
+/// | Comparing two backends produce identical results  | [`spawn_controlled_in_pty`] |
+/// | One test function, one controlled process         | [`generate_pty_test!`]      |
+/// | One test function, multiple controlled processes  | [`spawn_controlled_in_pty`] |
 ///
-/// This macro handles the boilerplate for PTY-based integration tests:
+/// This macro handles the boilerplate for [`PTY`]-based integration tests:
 ///
 /// 1. **Process routing**: Routes to controller or controlled code based on environment
 ///    variable
@@ -87,7 +90,7 @@ pub enum PtyTestMode {
 /// **Benefits of this approach:**
 ///
 /// 1. **Different verification strategies**: Some tests check terminal settings, others
-///    parse ANSI sequences, others send input and verify responses
+///    parse [`ANSI`] sequences, others send input and verify responses
 /// 2. **Flexible resource usage**: Some tests need writers (to send input), some only
 ///    need readers (to observe output)
 /// 3. **Explicit dependencies**: Controller function signature clearly shows what it
@@ -153,17 +156,17 @@ pub enum PtyTestMode {
 ///
 /// Your controller function receives:
 /// - `pty_pair: PtyPair` - The PTY pair wrapper for communication
-/// - `child: ControlledChild` - The spawned controlled process (type alias from
-///   [`pty_types`])
+/// - `child: SingleThreadSafeControlledChild` - The spawned controlled process wrapped in
+///   a guard that enforces correct cleanup (see [`SingleThreadSafeControlledChild`])
 ///
 /// You can then:
 /// - Get a reader: `pty_pair.controller().try_clone_reader()`
 /// - Get a writer: `pty_pair.controller_mut().take_writer()`
-/// - Drain PTY and wait: `drain_pty_and_wait(buf_reader, pty_pair, &mut child)` —
+/// - Drain PTY and wait: `child.drain_and_wait(buf_reader, pty_pair)` — consumes child,
 ///   prevents macOS PTY buffer deadlocks (see [`drain_pty_and_wait`])
 ///
+/// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 /// [`Cooked`]: PtyTestMode::Cooked
-/// [`Raw`]: PtyTestMode::Raw
 /// [`drain_pty_and_wait`]: crate::drain_pty_and_wait
 /// [`generate_pty_test!`]: crate::generate_pty_test
 /// [`integration_tests`]:
@@ -171,6 +174,8 @@ pub enum PtyTestMode {
 /// [`pty_types`]: mod@crate::core::pty::pty_core::pty_types
 /// [`raw_mode_integration_tests`]:
 ///     mod@crate::core::ansi::terminal_raw_mode::integration_tests
+/// [`Raw`]: PtyTestMode::Raw
+/// [`SingleThreadSafeControlledChild`]: crate::SingleThreadSafeControlledChild
 /// [`spawn_controlled_in_pty`]: crate::spawn_controlled_in_pty
 #[macro_export]
 macro_rules! generate_pty_test {
@@ -257,7 +262,20 @@ macro_rules! generate_pty_test {
                 .spawn_command(cmd)
                 .expect("Failed to spawn controlled process");
 
-            // Call user's controller function with PTY resources
+            // Wrap in SingleThreadSafeControlledChild — bare child.wait() is now impossible.
+            // The only exit path is drain_and_wait(), preventing PTY buffer deadlocks.
+            let child = $crate::SingleThreadSafeControlledChild::new(child);
+
+            // Start watchdog timer — kills child after timeout if controller hangs.
+            let killer = child.clone_termination_handle();
+            let _watchdog = $crate::PtyTestWatchdog::new(
+                killer,
+                $crate::PTY_TEST_WATCHDOG_TIMEOUT,
+            );
+
+            // Call user's controller function with PTY resources.
+            // When this returns, _watchdog drops → sets cancelled flag → thread exits
+            // cleanly on wake.
             $controller_fn(pty_pair, child);
         }
     };

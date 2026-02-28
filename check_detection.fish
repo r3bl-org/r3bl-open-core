@@ -67,3 +67,19 @@ function detect_linker_failure
     end
     return 1
 end
+
+# Detects ETXTBSY ("Text file busy") errors in captured cargo output.
+# This occurs when orphaned test processes hold a test binary open while
+# the linker tries to overwrite it. Recoverable by killing orphans and retrying.
+#
+# Parameters:
+#   $argv[1]: Path to temp file containing captured cargo output
+#
+# Returns: 0 if ETXTBSY detected, 1 otherwise
+function detect_text_file_busy
+    set -l temp_output $argv[1]
+    if grep -qE "Text file busy" $temp_output 2>/dev/null
+        return 0
+    end
+    return 1
+end

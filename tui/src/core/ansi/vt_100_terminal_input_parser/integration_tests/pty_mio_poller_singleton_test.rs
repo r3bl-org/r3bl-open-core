@@ -37,7 +37,7 @@
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`subscribe()`]: crate::direct_to_ansi::DirectToAnsiInputDevice::subscribe
 
-use crate::{ControlledChild, PtyPair, PtyTestMode,
+use crate::{SingleThreadSafeControlledChild, PtyPair, PtyTestMode,
             tui::terminal_lib_backends::direct_to_ansi::DirectToAnsiInputDevice};
 use std::io::{BufRead, BufReader, Write};
 
@@ -73,7 +73,7 @@ fn wait_for_signal(buf_reader: &mut BufReader<impl std::io::Read>, signal: &str)
 }
 
 /// Controller process: waits for controlled to complete successfully.
-fn singleton_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
+fn singleton_controller_entry_point(pty_pair: PtyPair, child: SingleThreadSafeControlledChild) {
     eprintln!("Singleton Controller: Starting...");
 
     let reader = pty_pair
@@ -92,10 +92,7 @@ fn singleton_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChil
     eprintln!("  Test passed signal received");
 
     // Clean up.
-    match child.wait() {
-        Ok(status) => eprintln!("Singleton Controller: Controlled exited: {status:?}"),
-        Err(e) => panic!("Failed to wait for controlled: {e}"),
-    }
+    child.drain_and_wait(buf_reader, pty_pair);
 
     eprintln!("Singleton Controller: Test passed!");
 }

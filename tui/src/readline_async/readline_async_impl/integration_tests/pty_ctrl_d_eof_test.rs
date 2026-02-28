@@ -1,6 +1,6 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{AsyncDebouncedDeadline, ControlledChild, DebouncedState, PtyPair,
+use crate::{AsyncDebouncedDeadline, SingleThreadSafeControlledChild, DebouncedState, PtyPair,
             PtyTestMode, core::test_fixtures::StdoutMock,
             readline_async::readline_async_impl::LineState};
 use std::{io::{BufRead, BufReader, Write},
@@ -63,7 +63,7 @@ generate_pty_test! {
 ///
 /// [`EOF`]: https://en.wikipedia.org/wiki/End-of-file
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
-fn pty_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
+fn pty_controller_entry_point(pty_pair: PtyPair, child: SingleThreadSafeControlledChild) {
     eprintln!("🚀 PTY Controller: Starting Ctrl+D EOF test...");
 
     let mut writer = pty_pair
@@ -156,15 +156,10 @@ fn pty_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
 
     eprintln!("✅ PTY Controller: Ctrl+D EOF test passed!");
 
-    // Wait for child to exit
-    match child.wait() {
-        Ok(status) => {
-            eprintln!("✅ PTY Controller: Controlled process exited: {status:?}");
-        }
-        Err(e) => {
-            panic!("Failed to wait for controlled process: {e}");
-        }
-    }
+    eprintln!("🧹 PTY Controller: Cleaning up...");
+    drop(writer);
+    child.drain_and_wait(buf_reader, pty_pair);
+    eprintln!("✅ PTY Controller: Test passed!");
 }
 
 /// [`PTY`] Controlled: Process readline input and report [`EOF`]

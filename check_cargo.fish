@@ -10,46 +10,46 @@
 
 function check_cargo_check
     set -lx CARGO_TARGET_DIR $CHECK_TARGET_DIR
-    ionice_wrapper timeout $CHECK_TIMEOUT_SECS cargo check
+    ionice_wrapper timeout --foreground $CHECK_TIMEOUT_SECS cargo check
 end
 
 function check_cargo_build
     set -lx CARGO_TARGET_DIR $CHECK_TARGET_DIR
-    ionice_wrapper timeout $CHECK_TIMEOUT_SECS cargo build
+    ionice_wrapper timeout --foreground $CHECK_TIMEOUT_SECS cargo build
 end
 
 function check_clippy
     set -lx CARGO_TARGET_DIR $CHECK_TARGET_DIR
-    ionice_wrapper timeout $CHECK_TIMEOUT_SECS cargo clippy --all-targets
+    ionice_wrapper timeout --foreground $CHECK_TIMEOUT_SECS cargo clippy --all-targets
 end
 
 function check_cargo_test
     set -lx CARGO_TARGET_DIR $CHECK_TARGET_DIR
-    ionice_wrapper timeout $CHECK_TIMEOUT_SECS cargo test --all-targets -q
+    ionice_wrapper timeout --foreground $CHECK_TIMEOUT_SECS cargo test --all-targets -q
 end
 
 function check_doctests
     set -lx CARGO_TARGET_DIR $CHECK_TARGET_DIR
-    ionice_wrapper timeout $CHECK_TIMEOUT_SECS cargo test --doc -q
+    ionice_wrapper timeout --foreground $CHECK_TIMEOUT_SECS cargo test --doc -q
 end
 
 function check_windows_build
     set -lx CARGO_TARGET_DIR $CHECK_TARGET_DIR
-    ionice_wrapper timeout $CHECK_TIMEOUT_SECS cargo rustc -p r3bl_tui --target x86_64-pc-windows-gnu -- --emit=metadata
+    ionice_wrapper timeout --foreground $CHECK_TIMEOUT_SECS cargo rustc -p r3bl_tui --target x86_64-pc-windows-gnu -- --emit=metadata
 end
 
 # Quick doc check without dependencies (for --doc, --quick-doc, and normal mode).
 # Builds to QUICK staging directory; callers rsync to serving dir after success.
 function check_docs_quick
     set -lx CARGO_TARGET_DIR $CHECK_TARGET_DIR_DOC_STAGING_QUICK
-    ionice_wrapper timeout $CHECK_TIMEOUT_SECS cargo doc --no-deps
+    ionice_wrapper timeout --foreground $CHECK_TIMEOUT_SECS cargo doc --no-deps
 end
 
 # Full doc build including dependencies (for watch modes).
 # Builds to FULL staging directory to avoid race conditions with quick builds.
 function check_docs_full
     set -lx CARGO_TARGET_DIR $CHECK_TARGET_DIR_DOC_STAGING_FULL
-    ionice_wrapper timeout $CHECK_TIMEOUT_SECS cargo doc
+    ionice_wrapper timeout --foreground $CHECK_TIMEOUT_SECS cargo doc
 end
 
 # Formats rustdoc comments on git-changed files.

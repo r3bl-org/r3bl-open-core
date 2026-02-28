@@ -40,7 +40,7 @@
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [Device Lifecycle]: crate::direct_to_ansi::DirectToAnsiInputDevice#device-lifecycle
 
-use crate::{ControlledChild, PtyPair, PtyTestMode,
+use crate::{SingleThreadSafeControlledChild, PtyPair, PtyTestMode,
             core::resilient_reactor_thread::LivenessState,
             direct_to_ansi::{DirectToAnsiInputDevice, input::global_input_resource}};
 use std::{io::{BufRead, BufReader, Write},
@@ -87,7 +87,7 @@ fn wait_for_signal(buf_reader: &mut BufReader<impl std::io::Read>, signal: &str)
 }
 
 /// Controller process: sends input bytes and verifies controlled completes successfully.
-fn lifecycle_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChild) {
+fn lifecycle_controller_entry_point(pty_pair: PtyPair, child: SingleThreadSafeControlledChild) {
     eprintln!("🚀 Lifecycle Controller: Starting...");
 
     let mut writer = pty_pair
@@ -127,10 +127,7 @@ fn lifecycle_controller_entry_point(pty_pair: PtyPair, mut child: ControlledChil
 
     // Clean up.
     drop(writer);
-    match child.wait() {
-        Ok(status) => eprintln!("✅ Lifecycle Controller: Controlled exited: {status:?}"),
-        Err(e) => panic!("Failed to wait for controlled: {e}"),
-    }
+    child.drain_and_wait(buf_reader, pty_pair);
 
     eprintln!("✅ Lifecycle Controller: Test passed!");
 }
