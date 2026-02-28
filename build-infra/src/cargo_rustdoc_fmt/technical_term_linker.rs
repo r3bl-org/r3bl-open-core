@@ -486,14 +486,19 @@ fn upgrade_term_in_line(line: &str, term: &str) -> String {
         let abs_pos = search_start + pos;
         let end_pos = abs_pos + term.len();
 
-        // Whole-word check: not part of a longer identifier.
+        // Whole-word check: not part of a longer identifier or qualified path.
+        // Treats `::` as a word continuation so `tokio::mpsc` and `vte::Parser`
+        // are not split by linkifying just the prefix.
         let prev_is_word = abs_pos > 0
             && result_bytes
                 .get(abs_pos - 1)
                 .is_some_and(|&b| b.is_ascii_alphanumeric() || b == b'_');
+        let next_is_qualified_path = result_bytes.get(end_pos) == Some(&b':')
+            && result_bytes.get(end_pos + 1) == Some(&b':');
         let next_is_word = result_bytes
             .get(end_pos)
-            .is_some_and(|&b| b.is_ascii_alphanumeric() || b == b'_');
+            .is_some_and(|&b| b.is_ascii_alphanumeric() || b == b'_')
+            || next_is_qualified_path;
 
         // Code span check: term is inside an inline code span.
         let is_inside_code_span = code_spans
@@ -1009,6 +1014,47 @@ mod tests {
     fn test_find_markdown_link_ranges_none() {
         let ranges = find_markdown_link_ranges("Plain text without links.");
         assert!(ranges.is_empty());
+    }
+
+    #[test]
+    fn test_qualified_path_not_split() {
+        let registry = test_registry();
+        // `tokio::mpsc` should NOT become `[`tokio`]::mpsc` — the `::` means
+        // the term is part of a qualified Rust path.
+        let input = "Reads from tokio::io::stdin() in a loop.";
+        let result = link_known_terms(input, &registry);
+        assert!(
+            result.contains("tokio::io::stdin()"),
+            "Qualified path should not be split: {result}"
+        );
+        assert!(
+            !result.contains("[`tokio`]"),
+            "Should not linkify prefix of qualified path: {result}"
+        );
+    }
+
+    #[test]
+    fn test_standalone_term_still_linked() {
+        let registry = test_registry();
+        // Bare `tokio` NOT followed by `::` should still be linkified.
+        let input = "Uses tokio for async runtime.";
+        let result = link_known_terms(input, &registry);
+        assert!(
+            result.contains("[`tokio`]"),
+            "Standalone term should be linked: {result}"
+        );
+    }
+
+    #[test]
+    fn test_term_followed_by_single_colon_still_linked() {
+        let registry = test_registry();
+        // `ESC:` (single colon, e.g. end of label) should still linkify ESC.
+        let input = "When first byte is not ESC:";
+        let result = link_known_terms(input, &registry);
+        assert!(
+            result.contains("[`ESC`]"),
+            "Term followed by single colon should be linked: {result}"
+        );
     }
 
     #[test]

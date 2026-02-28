@@ -286,11 +286,11 @@ fn main() {}";
     fn test_real_world_file_complete_formatting() {
         let input = include_str!(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/test_data/complete_file/input/sample_real_world.rs"
+            "/test_data/manual_snapshot/input/sample_real_world.rs"
         ));
         let expected = normalize_line_endings(include_str!(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/test_data/complete_file/expected_output/sample_real_world.rs"
+            "/test_data/manual_snapshot/expected_output/sample_real_world.rs"
         )));
 
         // Create temp dir and copy input file
@@ -433,11 +433,11 @@ fn main() {}";
     fn test_scattered_references_aggregation() {
         let input = include_str!(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/test_data/complete_file/input/sample_scattered_references.rs"
+            "/test_data/manual_snapshot/input/sample_scattered_references.rs"
         ));
         let expected = normalize_line_endings(include_str!(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/test_data/complete_file/expected_output/sample_scattered_references.rs"
+            "/test_data/manual_snapshot/expected_output/sample_scattered_references.rs"
         )));
 
         // Use the actual FileProcessor to test the complete pipeline
@@ -1408,34 +1408,219 @@ fn main() {}";
         );
     }
 
+    /// Verifies every seed term is correctly handled across three states: bare
+    /// (plain text), backticked only, and already linked. Also covers qualified
+    /// paths, single-colon edge cases, compound spec terms, and code fences.
+    #[test]
+    #[allow(clippy::too_many_lines)]
+    fn test_seed_term_coverage() {
+        let input = include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/test_data/complete_file/input/sample_seed_term_coverage.rs"
+        ));
+        let expected = normalize_line_endings(include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/test_data/complete_file/expected_output/sample_seed_term_coverage.rs"
+        )));
+
+        let temp_dir = TempDir::new().unwrap();
+        let test_file = temp_dir.path().join("sample_seed_term_coverage.rs");
+        fs::write(&test_file, input).unwrap();
+
+        let registry = test_registry();
+        let processor =
+            processor::FileProcessor::with_registry(FormatOptions::default(), &registry);
+        let result = processor.process_file(&test_file);
+
+        assert!(
+            result.errors.is_empty(),
+            "Processing errors: {:?}",
+            result.errors
+        );
+
+        let formatted = fs::read_to_string(&test_file).unwrap();
+
+        // Bare terms should be linkified.
+        for term in [
+            "CSI",
+            "SGR",
+            "ESC",
+            "DSR",
+            "OSC",
+            "ANSI",
+            "ASCII",
+            "VT-100",
+            "tokio",
+            "vte",
+            "xterm",
+            "Alacritty",
+            "Kitty",
+            "RXVT",
+            "Sixel",
+            "DEC",
+        ] {
+            assert!(
+                formatted.contains(&format!("[`{term}`]")),
+                "Bare term '{term}' should be linked in output: not found"
+            );
+        }
+
+        // Compound spec terms should be linked.
+        for spec in [
+            "[`CSI` spec]",
+            "[`SGR` spec]",
+            "[`ESC` spec]",
+            "[`VT-100` spec]",
+        ] {
+            assert!(
+                formatted.contains(spec),
+                "Compound spec term '{spec}' should be linked"
+            );
+        }
+
+        // Qualified paths must NOT be split.
+        assert!(
+            formatted.contains("tokio::io::stdin()"),
+            "Qualified path tokio::io::stdin() should not be split"
+        );
+        assert!(
+            formatted.contains("vte::Parser"),
+            "Qualified path vte::Parser should not be split"
+        );
+
+        // Single colon after term must still linkify.
+        assert!(
+            formatted.contains("[`ESC`]:"),
+            "ESC followed by single colon should still be linked"
+        );
+
+        // Code fence content must NOT be linkified.
+        assert!(
+            formatted.contains("CSI 38 ; 5 ; n m"),
+            "Terms inside code fence should not be linkified"
+        );
+        assert!(
+            formatted.contains("tokio::spawn(async"),
+            "Qualified path inside code fence should not be touched"
+        );
+
+        // Ref defs should be present for all seed terms.
+        assert!(
+            formatted.contains("[`CSI`]: crate::CsiSequence"),
+            "CSI ref def should be present"
+        );
+        assert!(
+            formatted.contains("[`tokio`]: tokio"),
+            "tokio ref def should be present"
+        );
+        assert!(
+            formatted
+                .contains("[`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code"),
+            "ANSI ref def should be present"
+        );
+
+        // Full golden file comparison.
+        let expected_path = temp_dir.path().join("expected.rs");
+        fs::write(&expected_path, &expected).unwrap();
+
+        let diff_output = std::process::Command::new("git")
+            .args(["diff", "--no-index", "--color=never"])
+            .arg(&expected_path)
+            .arg(&test_file)
+            .output()
+            .expect("Failed to run git diff");
+
+        if !diff_output.status.success() {
+            eprintln!(
+                "=== DIFF (expected vs formatted) ===\n{}",
+                String::from_utf8_lossy(&diff_output.stdout)
+            );
+            panic!("Formatted output does not match expected output");
+        }
+    }
+
+    /// Idempotency test: running the formatter multiple times on the seed term
+    /// coverage fixture must produce identical output after the first run.
+    #[test]
+    fn test_seed_term_coverage_idempotent() {
+        let input = include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/test_data/complete_file/input/sample_seed_term_coverage.rs"
+        ));
+
+        let temp_dir = TempDir::new().unwrap();
+        let test_file = temp_dir.path().join("sample_seed_term_coverage.rs");
+        fs::write(&test_file, input).unwrap();
+
+        let registry = test_registry();
+        let processor =
+            processor::FileProcessor::with_registry(FormatOptions::default(), &registry);
+
+        // Run 1: initial formatting.
+        let _r1 = processor.process_file(&test_file);
+        let after_run_1 = fs::read_to_string(&test_file).unwrap();
+
+        // Run 2: should produce identical output.
+        let _r2 = processor.process_file(&test_file);
+        let after_run_2 = fs::read_to_string(&test_file).unwrap();
+
+        assert_eq!(
+            after_run_1, after_run_2,
+            "Run 2 should produce identical output to run 1 (idempotency)"
+        );
+
+        // Run 3: belt and suspenders.
+        let _r3 = processor.process_file(&test_file);
+        let after_run_3 = fs::read_to_string(&test_file).unwrap();
+
+        assert_eq!(
+            after_run_2, after_run_3,
+            "Run 3 should produce identical output to run 2 (idempotency)"
+        );
+    }
+
     /// Utility test to regenerate golden files. Run with:
-    /// `cargo test -p r3bl-build-infra --lib regen_golden -- --ignored --nocapture`
+    /// ```bash
+    /// cargo test -p r3bl-build-infra --lib -- regen_golden_output_snapshot_files_for_input_files --ignored --nocapture
+    /// ```
+    ///
+    /// Auto-discovers all `.rs` files in `test_data/complete_file/input/` and
+    /// regenerates the matching `expected_output/` files using the full pipeline
+    /// (registry + default options).
+    ///
+    /// Tests that use non-standard processing (CLI binary, `link_terms: false`)
+    /// have their fixtures in `test_data/manual_snapshot/` instead, so they are
+    /// not affected by this utility.
     #[test]
     #[ignore = "utility for regenerating golden files on demand"]
-    fn regen_golden() {
+    fn regen_golden_output_snapshot_files_for_input_files() {
         let manifest = env!("CARGO_MANIFEST_DIR");
         let registry = test_registry();
         let proc =
             processor::FileProcessor::with_registry(FormatOptions::default(), &registry);
 
-        let files = [
-            "sample_html_comments.rs",
-            "sample_readline_async.rs",
-            "sample_rrt_mod.rs",
-            "sample_rrt.rs",
-        ];
+        let input_dir =
+            std::path::Path::new(manifest).join("test_data/complete_file/input");
+        let output_dir = std::path::Path::new(manifest)
+            .join("test_data/complete_file/expected_output");
 
-        for name in &files {
-            let input_path = format!("{manifest}/test_data/complete_file/input/{name}");
-            let expected_path =
-                format!("{manifest}/test_data/complete_file/expected_output/{name}");
-            let input = fs::read_to_string(&input_path).unwrap();
+        let mut entries: Vec<_> = fs::read_dir(&input_dir)
+            .unwrap()
+            .filter_map(Result::ok)
+            .filter(|e| e.path().extension().is_some_and(|ext| ext == "rs"))
+            .collect();
+        entries.sort_by_key(std::fs::DirEntry::file_name);
+
+        for entry in &entries {
+            let name = entry.file_name();
+            let name = name.to_string_lossy();
+            let input = fs::read_to_string(entry.path()).unwrap();
             let temp_dir = TempDir::new().unwrap();
-            let temp_file = temp_dir.path().join(name);
+            let temp_file = temp_dir.path().join(name.as_ref());
             fs::write(&temp_file, &input).unwrap();
             let _result = proc.process_file(&temp_file);
             let output = fs::read_to_string(&temp_file).unwrap();
-            fs::write(&expected_path, &output).unwrap();
+            fs::write(output_dir.join(name.as_ref()), &output).unwrap();
             eprintln!("Regenerated: {name}");
         }
     }

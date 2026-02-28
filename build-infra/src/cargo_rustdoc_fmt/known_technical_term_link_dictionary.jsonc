@@ -1,9 +1,23 @@
 {
   // Known terms registry - canonical link targets for technical terms in rustdoc comments.
-  // The tool also discovers terms by scanning existing link targets in the workspace.
   //
   // "tier": "internal" = links to a crate type (intra-doc link)
   // "tier": "external" = links to an external URL
+  //
+  // WHEN ADDING, REMOVING, OR CHANGING A TERM:
+  //
+  // 1. Update the seed term coverage test fixture:
+  //    - test_data/complete_file/input/sample_seed_term_coverage.rs
+  //    Add/remove/change the term in all three sections (bare, backticked, already-linked).
+  //
+  // 2. Update the unit test that checks all seed terms are present:
+  //    - src/cargo_rustdoc_fmt/technical_term_dictionary.rs -> test_all_seed_terms_present()
+  //
+  // 3. Regenerate golden files:
+  //    cargo test -p r3bl-build-infra --lib -- regen_golden_output_snapshot_files_for_input_files --ignored --nocapture
+  //
+  // 4. Run the full test suite to verify:
+  //    cargo test -p r3bl-build-infra --lib
 
   // Tier 1: Terms with internal Rust types
   "CSI":  { "target": "crate::CsiSequence",  "tier": "internal" },
@@ -42,5 +56,6 @@
   "Sixel":              { "target": "https://en.wikipedia.org/wiki/Sixel",                            "tier": "external" },
   "X10":                { "target": "https://invisible-island.net/xterm/ctlseqs/ctlseqs.html#h2-Mouse-Tracking", "tier": "external" },
   "ITU-T Rec. T.416":   { "target": "https://www.itu.int/rec/T-REC-T.416-199303-I",                  "tier": "external" },
+  "tokio":              { "target": "tokio",                                                           "tier": "internal" },
   "vte":                { "target": "https://docs.rs/vte",                                            "tier": "external" }
 }

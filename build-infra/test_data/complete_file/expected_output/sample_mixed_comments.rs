@@ -2,19 +2,23 @@
 
 //! Module-level documentation.
 //!
-//! | Feature | Status |
-//! |---|---|
-//! | Tables | Implemented |
-//! | Links | [Working](https://example.com) |
+//! | Feature | Status                         |
+//! | ------- | ------------------------------ |
+//! | Tables  | Implemented                    |
+//! | Links   | [Working] |
+//!
+//! [Working]: https://example.com
 
 /// Function documentation with a table.
 ///
-/// | Parameter | Type | Description |
-/// |---|---|---|
-/// | x | i32 | The first number |
-/// | y | i32 | The second number |
+/// | Parameter | Type | Description       |
+/// | --------- | ---- | ----------------- |
+/// | x         | i32  | The first number  |
+/// | y         | i32  | The second number |
 ///
-/// See [Rust docs](https://rust-lang.org) for more.
+/// See [Rust docs] for more.
+///
+/// [Rust docs]: https://rust-lang.org
 pub fn add(x: i32, y: i32) -> i32 {
     x + y
 }
@@ -22,8 +26,11 @@ pub fn add(x: i32, y: i32) -> i32 {
 /// Another function with links.
 ///
 /// Check out:
-/// - [The Rust book](https://doc.rust-lang.org/book/)
-/// - [Rust by example](https://doc.rust-lang.org/rust-by-example/)
+/// - [The Rust book]
+/// - [Rust by example]
+///
+/// [Rust by example]: https://doc.rust-lang.org/rust-by-example/
+/// [The Rust book]: https://doc.rust-lang.org/book/
 pub fn subtract(x: i32, y: i32) -> i32 {
     x - y
 }

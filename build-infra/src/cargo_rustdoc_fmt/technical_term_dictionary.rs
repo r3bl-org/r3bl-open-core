@@ -134,6 +134,11 @@ mod tests {
         assert_eq!(sgr.target, "crate::SgrCode");
         assert_eq!(sgr.tier, TechnicalTermTier::Internal);
 
+        // Check internal crate dependency terms.
+        let tokio = registry.get("tokio").unwrap();
+        assert_eq!(tokio.target, "tokio");
+        assert_eq!(tokio.tier, TechnicalTermTier::Internal);
+
         // Check tier 2 (external) terms.
         let ansi = registry.get("ANSI").unwrap();
         assert_eq!(
@@ -179,6 +184,7 @@ mod tests {
             "xterm",
             "Alacritty",
             "Kitty",
+            "tokio",
         ] {
             assert!(registry.get(term).is_some(), "Missing tier 2 term: {term}");
         }

@@ -3,7 +3,7 @@
 // Test fixture: Complex example with both tables and inline links
 // From r3bl-open-core graphemes module
 
-//! # Grapheme Clusters and UTF-8
+//! # Grapheme Clusters and [`UTF-8`]
 //!
 //! This module handles grapheme cluster analysis for terminal rendering.
 //!
@@ -19,8 +19,9 @@
 //! - [UTF-8 String]
 //! - [Unicode in Rust]
 //!
+//! [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
 //! [Grapheme clusters]: https://medium.com/flutter-community/working-with-unicode-and-grapheme-clusters-in-dart-b054faab5705
-//! [UTF-8 String]: https://doc.rust-lang.org/book/ch08-02-strings.html
 //! [Unicode in Rust]: https://doc.rust-lang.org/stable/std/primitive.str.html
+//! [UTF-8 String]: https://doc.rust-lang.org/book/ch08-02-strings.html
 
 fn main() {}

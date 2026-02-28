@@ -66,7 +66,7 @@
 //!    ```
 //!    Then type `starttask1`, press Enter. Then type `spinner`, press Enter.
 //!
-//! 3. Use tokio tracing with support for concurrently writing to [`stdout`]. If you
+//! 3. Use [`tokio`] tracing with support for concurrently writing to [`stdout`]. If you
 //!    choose to log to [`stdout`] then the concurrent version [`crate::SharedWriter`]
 //!    from this crate will be used. This ensures that the concurrent output is supported
 //!    even for your tracing logs to [`stdout`].

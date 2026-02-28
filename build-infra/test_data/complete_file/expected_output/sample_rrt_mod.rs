@@ -879,6 +879,7 @@
 //! [`syscalls`]: https://man7.org/linux/man-pages/man2/syscalls.2.html
 //! [`TerminationGuard`]: TerminationGuard
 //! [`TIME_WAIT`]: https://en.wikipedia.org/wiki/TCP_TIME-WAIT
+//! [`tokio`]: tokio
 //! [`tty`]: https://man7.org/linux/man-pages/man4/tty.4.html
 //! [`tx.send()`]: tokio::sync::broadcast::Sender::send
 //! [`W::Event`]: RRTWorker::Event

@@ -2,9 +2,9 @@
 
 //! Example with a table
 //!
-//! | Aspect | Output | Input |
-//! |---|---|---|
-//! | Protocol | ansi/generator/ | ansi/parser/ |
+//! | Aspect           | Output                       | Input               |
+//! | ---------------- | ---------------------------- | ------------------- |
+//! | Protocol         | ansi/generator/              | ansi/parser/        |
 //! | Very Long Column | This is a longer description | Another description |
 
 fn main() {}

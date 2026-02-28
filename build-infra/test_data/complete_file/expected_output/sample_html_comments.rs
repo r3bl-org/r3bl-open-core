@@ -77,7 +77,7 @@
 //! something happens on either fd. Unlike [`select()`] or raw [`poll()`], mio uses the
 //! optimal syscall per platform.
 //!
-//! **Why not tokio for stdin?** Because [`tokio::io::stdin()`] uses a blocking threadpool
+//! **Why not [`tokio`] for stdin?** Because [`tokio::io::stdin()`] uses a blocking threadpool
 //! internally, and cancelling a [`tokio::select!`] branch doesn't stop the underlying
 //! read - it keeps running as a "zombie", causing the problems described in
 //! [`global_input_resource`].
@@ -216,6 +216,7 @@
 //! [`tokio::io::stdin()`]: tokio::io::stdin
 //! [`tokio::select!`]: tokio::select
 //! [`tokio::sync::broadcast`]: tokio::sync::broadcast
+//! [`tokio`]: tokio
 //! [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
 //! [Blog post explaining the issue]: https://nathancraddock.com/blog/macos-dev-tty-polling/
 //! [crossterm-issue]: https://github.com/crossterm-rs/crossterm/issues/500

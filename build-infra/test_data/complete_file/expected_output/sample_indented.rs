@@ -3,10 +3,12 @@
 mod inner {
     /// Indented documentation.
     ///
-    /// | Feature | Status |
-    /// |---|---|
+    /// | Feature     | Status    |
+    /// | ----------- | --------- |
     /// | Indentation | Preserved |
     ///
-    /// See [docs](https://example.com) here.
+    /// See [docs] here.
+    ///
+    /// [docs]: https://example.com
     pub fn indented_fn() {}
 }
