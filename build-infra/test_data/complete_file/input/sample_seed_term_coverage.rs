@@ -11,19 +11,21 @@
 //!
 //! Parses CSI sequences from the input stream. Applies SGR codes for styling. Sends
 //! ESC escapes to the terminal. Reads DSR reports for cursor position. Processes OSC
-//! commands for clipboard and title.
+//! commands for clipboard and title. Uses the pty module for pseudoterminal support.
 //!
 //! ## Tier 1: Internal types (backticked only)
 //!
 //! Parses `CSI` sequences from the input stream. Applies `SGR` codes for styling.
 //! Sends `ESC` escapes to the terminal. Reads `DSR` reports for cursor position.
-//! Processes `OSC` commands for clipboard and title.
+//! Processes `OSC` commands for clipboard and title. Uses the `pty` module for
+//! pseudoterminal support.
 //!
 //! ## Tier 1: Internal types (already linked)
 //!
 //! Parses [`CSI`] sequences from the input stream. Applies [`SGR`] codes for styling.
 //! Sends [`ESC`] escapes to the terminal. Reads [`DSR`] reports for cursor position.
-//! Processes [`OSC`] commands for clipboard and title.
+//! Processes [`OSC`] commands for clipboard and title. Uses the [`pty`] module for
+//! pseudoterminal support.
 //!
 //! ## Tier 1b: Compound spec terms (bare)
 //!
@@ -43,7 +45,7 @@
 //! gnome-terminal on GNOME desktops. Renders ReGIS vector graphics and Sixel
 //! bitmap graphics. Tracks X10 mouse events for legacy compatibility. Colors
 //! follow the ITU-T Rec. T.416 standard. Runs on a tokio async runtime. Parses
-//! escape sequences with the vte crate.
+//! escape sequences with the vte crate. Allocates a PTY for each test process.
 //!
 //! ## Tier 2: External terms (backticked only)
 //!
@@ -53,7 +55,7 @@
 //! and `rxvt-unicode` (also called `urxvt`) on Linux. Uses `ConPTY` on Windows
 //! and `gnome-terminal` on GNOME. Renders `ReGIS` and `Sixel` graphics. Handles
 //! `X10` mouse events. Colors per `ITU-T Rec. T.416` standard. Powered by `tokio`
-//! runtime. Parses with `vte` crate.
+//! runtime. Parses with `vte` crate. Allocates a `PTY` for each test process.
 //!
 //! ## Tier 2: External terms (already linked)
 //!
@@ -63,7 +65,8 @@
 //! Supports [`RXVT`] and [`rxvt-unicode`] (also called [`urxvt`]) on Linux. Uses
 //! [`ConPTY`] on Windows and [`gnome-terminal`] on GNOME. Renders [`ReGIS`] and
 //! [`Sixel`] graphics. Handles [`X10`] mouse events. Colors per [`ITU-T Rec. T.416`]
-//! standard. Powered by [`tokio`] runtime. Parses with [`vte`] crate.
+//! standard. Powered by [`tokio`] runtime. Parses with [`vte`] crate. Allocates a
+//! [`PTY`] for each test process.
 //!
 //! ## Edge cases: Qualified paths (must NOT be split)
 //!
@@ -94,6 +97,7 @@
 //! [`ITU-T Rec. T.416`]: https://www.itu.int/rec/T-REC-T.416-199303-I
 //! [`Kitty`]: https://sw.kovidgoyal.net/kitty/
 //! [`OSC`]: crate::osc_codes::OscSequence
+//! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`RXVT`]: https://en.wikipedia.org/wiki/Rxvt
 //! [`ReGIS`]: https://en.wikipedia.org/wiki/ReGIS
 //! [`SGR`]: crate::SgrCode
@@ -103,6 +107,7 @@
 //! [`VT-220`]: https://en.wikipedia.org/wiki/VT220
 //! [`X10`]: https://invisible-island.net/xterm/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
 //! [`gnome-terminal`]: https://en.wikipedia.org/wiki/GNOME_Terminal
+//! [`pty`]: crate::core::pty
 //! [`rxvt-unicode`]: https://en.wikipedia.org/wiki/Rxvt-unicode
 //! [`tokio`]: tokio
 //! [`urxvt`]: https://en.wikipedia.org/wiki/Rxvt-unicode

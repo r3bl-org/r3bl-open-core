@@ -25,6 +25,7 @@
   "ESC":  { "target": "crate::EscSequence",   "tier": "internal" },
   "DSR":  { "target": "crate::DsrSequence",   "tier": "internal" },
   "OSC":  { "target": "crate::osc_codes::OscSequence",   "tier": "internal" },
+  "pty":  { "target": "crate::core::pty",                "tier": "internal" },
 
   // Tier 1b: Spec links for Tier 1 terms (Wikipedia sections)
   // Convention: [`CSI`] links to crate code, [`CSI` spec] links to the spec.
@@ -50,6 +51,7 @@
   "RXVT":               { "target": "https://en.wikipedia.org/wiki/Rxvt",                            "tier": "external" },
   "rxvt-unicode":       { "target": "https://en.wikipedia.org/wiki/Rxvt-unicode",                    "tier": "external" },
   "urxvt":              { "target": "https://en.wikipedia.org/wiki/Rxvt-unicode",                     "tier": "external" },
+  "PTY":                { "target": "https://en.wikipedia.org/wiki/Pseudoterminal",     "tier": "external" },
   "ConPTY":             { "target": "https://learn.microsoft.com/en-us/windows/console/creating-a-pseudoconsole-session", "tier": "external" },
   "gnome-terminal":     { "target": "https://en.wikipedia.org/wiki/GNOME_Terminal",                   "tier": "external" },
   "ReGIS":              { "target": "https://en.wikipedia.org/wiki/ReGIS",                            "tier": "external" },

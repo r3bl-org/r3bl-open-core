@@ -3,12 +3,12 @@
 /// Whether the macro should enable raw mode in the controlled process before calling the
 /// controlled function.
 ///
-/// Most [`PTY`] tests need raw mode so the line discipline passes keystrokes through
+/// Most [`pty`] tests need raw mode so the line discipline passes keystrokes through
 /// immediately (without waiting for Enter). Tests that manage raw mode themselves (e.g.,
 /// tests for raw mode toggling) or that never read stdin should use [`Cooked`].
 ///
 /// [`Cooked`]: PtyTestMode::Cooked
-/// [`PTY`]: crate::core::pty
+/// [`pty`]: crate::core::pty
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PtyTestMode {
     /// Enable raw mode in the controlled process before calling the controlled
@@ -23,10 +23,10 @@ pub enum PtyTestMode {
     Cooked,
 }
 
-/// Macro that generates [`PTY`]-based integration tests with automatic test name
+/// Macro that generates [`pty`]-based integration tests with automatic test name
 /// injection.
 ///
-/// Use this macro for **single-feature [`PTY`] tests** that test one specific behavior
+/// Use this macro for **single-feature [`pty`] tests** that test one specific behavior
 /// (e.g., raw mode, Ctrl+W deletion, terminal event parsing). For **multi-backend
 /// comparison tests** that need to run the same controlled code with different backends
 /// and compare results, use [`spawn_controlled_in_pty`] instead.
@@ -35,20 +35,20 @@ pub enum PtyTestMode {
 ///
 /// | Scenario                                          | Use                         |
 /// | ------------------------------------------------- | --------------------------- |
-/// | Testing a single feature in a [`PTY`] environment | [`generate_pty_test!`]      |
+/// | Testing a single feature in a [`pty`] environment | [`generate_pty_test!`]      |
 /// | Comparing two backends produce identical results  | [`spawn_controlled_in_pty`] |
 /// | One test function, one controlled process         | [`generate_pty_test!`]      |
 /// | One test function, multiple controlled processes  | [`spawn_controlled_in_pty`] |
 ///
-/// This macro handles the boilerplate for [`PTY`]-based integration tests:
+/// This macro handles the boilerplate for [`pty`]-based integration tests:
 ///
 /// 1. **Process routing**: Routes to controller or controlled code based on environment
 ///    variable
-/// 2. **PTY setup**: Creates PTY pair and spawns controlled process automatically
+/// 2. **[`pty`] setup**: Creates [`pty`] pair and spawns controlled process automatically
 /// 3. **Debug output**: Prints diagnostic messages for troubleshooting
 ///
-/// The macro creates the PTY and spawns the process, then passes these resources to your
-/// controller function so you can focus on verification logic.
+/// The macro creates the [`pty`] and spawns the process, then passes these resources to
+/// your controller function so you can focus on verification logic.
 ///
 /// # Architecture
 ///
@@ -81,9 +81,10 @@ pub enum PtyTestMode {
 ///
 /// # Design Rationale: Dependency Injection at the Macro Level
 ///
-/// **Why the macro passes PTY resources as parameters instead of handling everything:**
+/// **Why the macro passes [`pty`] resources as parameters instead of handling
+/// everything:**
 ///
-/// The macro creates PTY infrastructure but delegates verification to your controller
+/// The macro creates [`pty`] infrastructure but delegates verification to your controller
 /// function. This is **dependency injection** - the macro injects resources your function
 /// needs, but doesn't dictate how to use them.
 ///
@@ -95,32 +96,32 @@ pub enum PtyTestMode {
 ///    need readers (to observe output)
 /// 3. **Explicit dependencies**: Controller function signature clearly shows what it
 ///    needs (`pty_pair`, `child`) instead of hiding dependencies in macro magic
-/// 4. **Testability**: Each controller function is independently testable with mock PTY
-///    pairs
+/// 4. **Testability**: Each controller function is independently testable with mock
+///    [`pty`] pairs
 ///
 /// # Notes
 ///
-/// - The macro creates a 24x80 PTY pair (standard terminal size)
+/// - The macro creates a 24x80 [`pty`] pair (standard terminal size)
 /// - The controlled function MUST call `std::process::exit(0)` to prevent test recursion
 /// - When `mode: PtyTestMode::Raw`, the macro enables raw mode in the controlled process
 ///   before calling the controlled function. When `mode: PtyTestMode::Cooked`, the
 ///   controlled process starts in the default cooked mode.
 /// - Verification logic is YOUR responsibility in controller function
 ///
-/// ## PTY Stream Behavior
+/// ## [`pty`] Stream Behavior
 ///
-/// **Important:** In a PTY, stdout and stderr are **merged into a single stream** from
-/// the controller's perspective. This means:
+/// **Important:** In a [`pty`], stdout and stderr are **merged into a single stream**
+/// from the controller's perspective. This means:
 ///
 /// - Controlled's `println!()` and `eprintln!()` both go to the same merged stream
 /// - Controller reads both streams together via
 ///   `pty_pair.controller().try_clone_reader()`
-/// - There is NO semantic difference between stdout and stderr in PTY tests
+/// - There is NO semantic difference between stdout and stderr in [`pty`] tests
 /// - Use **content-based filtering** to distinguish messages, not stream type
 ///
 /// ## Example
 ///
-/// <!-- It is ok to use ignore here - this is a conceptual example showing PTY stream
+/// <!-- It is ok to use ignore here - this is a conceptual example showing [`pty`] stream
 /// merging behavior, not a complete compilable example -->
 ///
 /// ```ignore
@@ -136,10 +137,10 @@ pub enum PtyTestMode {
 /// }
 /// ```
 ///
-/// This is why all output in PTY controlled processes should use `println!()` - using
+/// This is why all output in [`pty`] controlled processes should use `println!()` - using
 /// `eprintln!()` creates a false impression that stderr is handled differently.
 ///
-/// For complete PTY test implementations, see:
+/// For complete [`pty`] test implementations, see:
 /// - [`raw_mode_integration_tests`] - Tests raw mode itself
 /// - [`integration_tests`] - Tests input parsing
 ///
@@ -155,15 +156,15 @@ pub enum PtyTestMode {
 /// # Controller Function Signature
 ///
 /// Your controller function receives:
-/// - `pty_pair: PtyPair` - The PTY pair wrapper for communication
+/// - `pty_pair: PtyPair` - The [`pty`] pair wrapper for communication
 /// - `child: SingleThreadSafeControlledChild` - The spawned controlled process wrapped in
 ///   a guard that enforces correct cleanup (see [`SingleThreadSafeControlledChild`])
 ///
 /// You can then:
 /// - Get a reader: `pty_pair.controller().try_clone_reader()`
 /// - Get a writer: `pty_pair.controller_mut().take_writer()`
-/// - Drain PTY and wait: `child.drain_and_wait(buf_reader, pty_pair)` — consumes child,
-///   prevents macOS PTY buffer deadlocks (see [`drain_pty_and_wait`])
+/// - Drain [`pty`] and wait: `child.drain_and_wait(buf_reader, pty_pair)` — consumes
+///   child, prevents macOS [`pty`] buffer deadlocks (see [`drain_pty_and_wait`])
 ///
 /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 /// [`Cooked`]: PtyTestMode::Cooked
@@ -172,6 +173,7 @@ pub enum PtyTestMode {
 /// [`integration_tests`]:
 ///     mod@crate::core::ansi::vt_100_terminal_input_parser::integration_tests
 /// [`pty_types`]: mod@crate::core::pty::pty_core::pty_types
+/// [`pty`]: crate::core::pty
 /// [`raw_mode_integration_tests`]:
 ///     mod@crate::core::ansi::terminal_raw_mode::integration_tests
 /// [`Raw`]: PtyTestMode::Raw

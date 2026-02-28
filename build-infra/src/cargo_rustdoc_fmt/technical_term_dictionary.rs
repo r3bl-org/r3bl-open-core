@@ -171,7 +171,7 @@ mod tests {
         let registry = TechnicalTermDictionary::from_seed(None).unwrap();
 
         // Tier 1.
-        for term in ["CSI", "SGR", "ESC", "DSR", "OSC"] {
+        for term in ["CSI", "SGR", "ESC", "DSR", "OSC", "pty"] {
             assert!(registry.get(term).is_some(), "Missing tier 1 term: {term}");
         }
 
@@ -184,6 +184,7 @@ mod tests {
             "xterm",
             "Alacritty",
             "Kitty",
+            "PTY",
             "tokio",
         ] {
             assert!(registry.get(term).is_some(), "Missing tier 2 term: {term}");

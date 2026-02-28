@@ -516,7 +516,7 @@
 //! [`poll()`]: https://man7.org/linux/man-pages/man2/poll.2.html
 //! [`poll_once()`]: RRTWorker::poll_once
 //! [`pollable`]: https://man7.org/linux/man-pages/man2/poll.2.html
-//! [`PTY`]: https://man7.org/linux/man-pages/man7/pty.7.html
+//! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`read(2)`]: https://man7.org/linux/man-pages/man2/read.2.html
 //! [`receiver_count()`]: tokio::sync::broadcast::Sender::receiver_count
 //! [`RRTFactory`]: RRTFactory

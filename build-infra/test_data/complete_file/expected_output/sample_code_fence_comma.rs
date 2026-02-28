@@ -14,11 +14,11 @@
 //!
 //! This module uses [`mio`] for async I/O multiplexing. [`mio`] provides a clean
 //! platform abstraction over OS-specific polling mechanisms:
-//! - **Linux**: [`epoll(7)`] - works correctly with PTY/tty file descriptors
-//! - **macOS**: [`kqueue(2)`] - **broken for PTY/tty polling**
+//! - **Linux**: [`epoll(7)`] - works correctly with [`PTY`]/tty file descriptors
+//! - **macOS**: [`kqueue(2)`] - **broken for [`PTY`]/tty polling**
 //!
 //! macOS's [`kqueue(2)`] returns [`EINVAL`] when attempting to monitor `/dev/tty` or
-//! PTY file descriptors. This is a [known Darwin limitation] with no planned fix.
+//! [`PTY`] file descriptors. This is a [known Darwin limitation] with no planned fix.
 //! The [`mio`] maintainers have [declined to work around this] since it would require
 //! mixing [`kqueue(2)`] with [`select(2)`].
 //!
@@ -26,7 +26,7 @@
 //!
 //! Crossterm uses the [`filedescriptor`] crate which provides a [`poll()`] wrapper:
 //! - On Linux: uses [`poll(2)`] directly
-//! - On macOS: uses [`select(2)`] instead (which works with PTY/tty)
+//! - On macOS: uses [`select(2)`] instead (which works with [`PTY`]/tty)
 //!
 //! ```rust,ignore
 //! // From filedescriptor crate (simplified)
@@ -68,6 +68,7 @@
 //! [`mio`]: https://docs.rs/mio
 //! [`poll()`]: https://docs.rs/filedescriptor/latest/filedescriptor/fn.poll.html
 //! [`poll(2)`]: https://man7.org/linux/man-pages/man2/poll.2.html
+//! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`select(2)`]: https://man7.org/linux/man-pages/man2/select.2.html
 //! [`signal-hook-mio`]: https://docs.rs/signal-hook-mio
 //! [`signal-hook`]: https://docs.rs/signal-hook

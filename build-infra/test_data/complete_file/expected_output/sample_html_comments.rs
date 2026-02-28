@@ -83,7 +83,7 @@
 //! [`global_input_resource`].
 //!
 //! **Why is this not implemented for macOS?** Because macOS [`kqueue`] returns `EINVAL`
-//! when polling PTY/tty file descriptors - a known Darwin kernel limitation. On macOS, we
+//! when polling [`PTY`]/tty file descriptors - a known Darwin kernel limitation. On macOS, we
 //! use the [`crossterm`] backend instead. For details:
 //! - [Blog post explaining the issue]
 //! - [mio-issue]
@@ -200,6 +200,7 @@
 //! [`mio::Poll`]: mio::Poll
 //! [`mio`]: mio
 //! [`poll()`]: https://man7.org/linux/man-pages/man2/poll.2.html
+//! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`ReaderThreadMessage::Eof`]: super::types::ReaderThreadMessage::Eof
 //! [`ReaderThreadMessage::Error`]: super::types::ReaderThreadMessage::Error
 //! [`ReaderThreadMessage::Event`]: super::types::ReaderThreadMessage::Event
