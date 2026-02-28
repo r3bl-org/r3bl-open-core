@@ -6,13 +6,15 @@ use std::{io::{self, Write},
 use tokio::sync::{broadcast, mpsc};
 
 /// Cloneable object that implements [`Write`] and allows for sending data to the terminal
-/// without messing up its associated `Readline` instance (in the `r3bl_terminal_async`
-/// crate).
+/// without messing up its associated [`Readline`] instance (in the [`readline_async`]
+/// module).
+///
 ///
 /// # Create a new instance by creating a `Readline` instance
 ///
-/// - A [`crate::SharedWriter`] instance is obtained by calling `Readline::new()` (in the
-///   `r3bl_terminal_async` crate).
+/// - A [`crate::SharedWriter`] instance is obtained by calling [`Readline::new()`] (in
+///   the [`readline_async`] module).
+///
 /// - It also returns a `Readline` instance associated with the writer.
 ///
 /// # Nothing is output without terminating with a newline, unless you call [`SharedWriter::flush()`]
@@ -27,13 +29,21 @@ use tokio::sync::{broadcast, mpsc};
 /// - `manage_shared_writer_output::flush_internal()`.
 ///
 /// If you want to output data without a newline, you can call [`SharedWriter::flush()`].
+///
+/// [`Readline::new()`]: crate::Readline::try_new
+/// [`readline_async`]: mod@crate::readline_async
+/// [`Readline`]: crate::Readline
 #[derive(Debug)]
 pub struct SharedWriter {
     /// Holds the data to be written to the terminal.
     pub buffer: InlineString,
 
-    /// Sender end of the channel, the receiver end is in `Readline` (in the
-    /// `r3bl_terminal_async` crate), which does the actual printing to `stdout`.
+    /// Sender end of the channel, the receiver end is in [`Readline`] (in the
+    /// [`readline_async`] module), which does the actual printing to [`stdout`].
+    ///
+    /// [`readline_async`]: mod@crate::readline_async
+    /// [`Readline`]: crate::Readline
+    /// [`stdout`]: std::io::stdout
     pub line_state_control_channel_sender: mpsc::Sender<LineStateControlSignal>,
 
     /// This is set to `true` when this struct is cloned. Only the first instance of this
@@ -87,8 +97,11 @@ impl SharedWriter {
 /// Custom [Clone] implementation for [`SharedWriter`]. This ensures that each new
 /// instance gets its own buffer to write data into. And a [Clone] of the
 /// [`Self::line_state_control_channel_sender`], so all the [`LineStateControlSignal`]s
-/// end up in the same `line` [`tokio::sync::mpsc::channel`] that lives in the `Readline`
-/// instance (in the `r3bl_terminal_async` crate).
+/// end up in the same `line` [`tokio::sync::mpsc::channel`] that lives in the
+/// [`Readline`] instance (in the [`readline_async`] module).
+///
+/// [`readline_async`]: mod@crate::readline_async
+/// [`Readline`]: crate::Readline
 impl Clone for SharedWriter {
     fn clone(&self) -> Self {
         Self {

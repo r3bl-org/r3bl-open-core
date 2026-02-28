@@ -335,11 +335,22 @@ fn find_markdown_link_ranges(line: &str) -> Vec<(usize, usize)> {
             continue;
         };
 
-        // Check what follows the closing bracket: (url) or [ref].
+        // Check what follows the closing bracket: (url), [ref], or end-of-context
+        // (shortcut reference link).
         let after = close_pos + 1;
         if after < len && (bytes[after] == b'(' || bytes[after] == b'[') {
-            // This is a link - the text between bracket_start and close_pos+1
-            // is the link text region.
+            // Inline link [text](url) or full reference link [text][ref].
+            ranges.push((bracket_start, close_pos + 1));
+        } else if bracket_start + 1 < close_pos
+            && bytes[bracket_start + 1] != b'`'
+            && (bracket_start == 0 || bytes[bracket_start - 1] != b']')
+        {
+            // Shortcut reference link [text] — the bracket text itself is the
+            // ref def name. We exclude:
+            // - [`Term`] (starts with backtick) — term references that should remain
+            //   modifiable.
+            // - [ref] immediately after ] — ref label of a full reference link
+            //   [text][ref], not a standalone shortcut link.
             ranges.push((bracket_start, close_pos + 1));
         }
 
@@ -918,6 +929,35 @@ mod tests {
         assert!(
             result.contains("[CSI overview][ref]"),
             "Term inside reference link text should not be modified: {result}"
+        );
+    }
+
+    #[test]
+    fn test_term_inside_shortcut_ref_link_not_modified() {
+        let registry = test_registry();
+        let input = concat!(
+            "- [Linux CSI and async Rust - Article on developerlife.com]\n",
+            "\n",
+            "[Linux CSI and async Rust - Article on developerlife.com]: https://example.com",
+        );
+        let result = link_known_terms(input, &registry);
+        assert!(
+            result
+                .contains("- [Linux CSI and async Rust - Article on developerlife.com]"),
+            "Term inside shortcut reference link should not be modified: {result}"
+        );
+    }
+
+    #[test]
+    fn test_shortcut_ref_link_does_not_block_term_references() {
+        let registry = test_registry();
+        // [`CSI`] is a term reference (starts with backtick), not a shortcut ref
+        // link. Plain CSI should still be upgraded to linked form.
+        let input = "Uses CSI for terminal control.";
+        let result = link_known_terms(input, &registry);
+        assert!(
+            result.contains("[`CSI`]"),
+            "Plain term should still be upgraded to linked form: {result}"
         );
     }
 

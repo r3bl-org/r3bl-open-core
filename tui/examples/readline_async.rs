@@ -442,10 +442,8 @@ pub mod file_walker {
 
     /// Gets the current working directory path and name.
     ///
-    /// - Get the current working directory. Eg:
-    ///   `/home/nazmul/github/r3bl_terminal_async`.
-    /// - Returns a tuple of `(path, name)`. Eg:
-    ///   (`/home/nazmul/github/r3bl_terminal_async`, `r3bl_terminal_async`).
+    /// - Get the current working directory. Eg: `/home/nazmul/github/roc`.
+    /// - Returns a tuple of `(path, name)`. Eg: (`/home/nazmul/github/roc`, `roc`).
     ///
     /// # Errors
     ///

@@ -4,40 +4,15 @@
 
 //! Dictionary of known technical terms and their canonical link targets.
 //!
-//! Builds from two sources:
-//! 1. A seed file (`known_technical_term_link_dictionary.jsonc`) embedded at compile time
-//!    (or overridden via `--terms-file`)
-//! 2. A workspace scan that discovers existing `` [`Term`]: target `` reference
-//!    definitions in rustdoc comments
+//! Builds from the seed file (`known_technical_term_link_dictionary.jsonc`) embedded at
+//! compile time, or from a custom file provided via `--terms-file`.
 
-use crate::cargo_rustdoc_fmt::{extractor, types::FormatterResult};
-use regex::Regex;
+use crate::cargo_rustdoc_fmt::types::FormatterResult;
 use serde::Deserialize;
-use std::{collections::HashMap, path::Path, sync::LazyLock};
-use walkdir::WalkDir;
+use std::{collections::HashMap, path::Path};
 
 /// Embedded seed file (JSON5 format with comments).
 const EMBEDDED_SEED: &str = include_str!("known_technical_term_link_dictionary.jsonc");
-
-/// Terms that are too generic to auto-linkify from workspace scanning.
-///
-/// These terms appear as common English words and cause false-positive linkification
-/// (e.g., "send the signals directly" becomes "send the [`signals`] directly").
-/// Only terms discovered via workspace-scanned ref defs (`` [`term`]: url ``)
-/// need to be listed here; seed file terms are curated manually.
-const WORKSPACE_SCAN_BLOCKLIST: &[&str] = &["pollable", "reset", "signals"];
-
-/// Regex to find reference-style link definitions with backticked names.
-///
-/// Matches patterns like: `` [`CSI`]: https://example.com ``
-/// Captures:
-/// - Group 1: term text (e.g., [`CSI`])
-/// - Group 2: link target (e.g., `https://example.com` or `crate::Foo`)
-///
-/// [`CSI`]: crate::CsiSequence
-static REF_DEF_REGEX: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"^\[`([^`]+)`\]:\s+(\S+)").expect("Invalid ref def regex")
-});
 
 /// Whether a term links to an internal Rust type or an external URL.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -71,9 +46,8 @@ pub struct TechnicalTermDictionary {
 }
 
 impl TechnicalTermDictionary {
-    /// Builds the registry from the seed file only (no workspace scan).
-    ///
-    /// Use this when no workspace root is available, or for testing.
+    /// Builds the registry from the embedded seed file, or from a custom file
+    /// provided via `--terms-file`.
     ///
     /// # Errors
     ///
@@ -87,27 +61,6 @@ impl TechnicalTermDictionary {
 
         let terms = parse_seed(&seed_content)?;
         Ok(Self { terms })
-    }
-
-    /// Builds the registry from the seed file and workspace scan.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the seed file cannot be read or parsed.
-    pub fn build(
-        workspace_root: &Path,
-        terms_file: Option<&Path>,
-    ) -> FormatterResult<Self> {
-        let mut registry = Self::from_seed(terms_file)?;
-
-        // Scan workspace for additional terms not in the seed.
-        let discovered = scan_workspace(workspace_root);
-        for (term, entry) in discovered {
-            // Seed is authoritative - only add terms not already present.
-            registry.terms.entry(term).or_insert(entry);
-        }
-
-        Ok(registry)
     }
 
     /// Looks up the entry for a term.
@@ -161,62 +114,6 @@ fn parse_seed(content: &str) -> FormatterResult<HashMap<String, TechnicalTermEnt
     }
 
     Ok(terms)
-}
-
-/// Scans workspace `.rs` files for reference-style link definitions in rustdoc
-/// comments.
-///
-/// Only discovers external links (URLs starting with `http://` or `https://`).
-/// Intra-doc links (containing `::`) are skipped since the seed file handles
-/// those.
-fn scan_workspace(workspace_root: &Path) -> HashMap<String, TechnicalTermEntry> {
-    let mut discovered = HashMap::new();
-
-    for entry in WalkDir::new(workspace_root)
-        .into_iter()
-        .filter_map(Result::ok)
-        .filter(|e| {
-            e.path().extension().is_some_and(|ext| ext == "rs")
-                && !e.path().to_string_lossy().contains("/target/")
-        })
-    {
-        let Ok(source) = std::fs::read_to_string(entry.path()) else {
-            continue;
-        };
-
-        let blocks = extractor::extract_rustdoc_blocks(&source);
-        for block in &blocks {
-            for line in &block.lines {
-                if let Some(caps) = REF_DEF_REGEX.captures(line) {
-                    let term = caps[1].to_string();
-                    let target = caps[2].to_string();
-
-                    // Skip blocklisted generic terms.
-                    if WORKSPACE_SCAN_BLOCKLIST.contains(&term.as_str()) {
-                        continue;
-                    }
-
-                    // Skip intra-doc links (contain ::).
-                    if target.contains("::") {
-                        continue;
-                    }
-
-                    // Only accept URLs.
-                    if !target.starts_with("http://") && !target.starts_with("https://") {
-                        continue;
-                    }
-
-                    // First URL wins for duplicates.
-                    discovered.entry(term).or_insert(TechnicalTermEntry {
-                        target,
-                        tier: TechnicalTermTier::External,
-                    });
-                }
-            }
-        }
-    }
-
-    discovered
 }
 
 #[cfg(test)]
@@ -284,64 +181,6 @@ mod tests {
             "Kitty",
         ] {
             assert!(registry.get(term).is_some(), "Missing tier 2 term: {term}");
-        }
-    }
-
-    #[test]
-    fn test_ref_def_regex() {
-        let caps = REF_DEF_REGEX.captures("[`CSI`]: https://example.com");
-        assert!(caps.is_some());
-        let caps = caps.unwrap();
-        assert_eq!(&caps[1], "CSI");
-        assert_eq!(&caps[2], "https://example.com");
-    }
-
-    #[test]
-    fn test_ref_def_regex_intra_doc() {
-        let caps = REF_DEF_REGEX.captures("[`Parser`]: crate::core::Parser");
-        assert!(caps.is_some());
-        let caps = caps.unwrap();
-        assert_eq!(&caps[1], "Parser");
-        assert_eq!(&caps[2], "crate::core::Parser");
-    }
-
-    #[test]
-    fn test_ref_def_regex_no_match() {
-        // Not a ref def.
-        assert!(
-            REF_DEF_REGEX
-                .captures("Some text with [`CSI`] link")
-                .is_none()
-        );
-        // Missing backticks.
-        assert!(
-            REF_DEF_REGEX
-                .captures("[CSI]: https://example.com")
-                .is_none()
-        );
-    }
-
-    #[test]
-    fn test_blocklist_excludes_generic_terms() {
-        // Verify that all blocklisted terms are present.
-        let expected_blocklisted = ["pollable", "reset", "signals"];
-        for term in expected_blocklisted {
-            assert!(
-                WORKSPACE_SCAN_BLOCKLIST.contains(&term),
-                "Term '{term}' should be in the blocklist"
-            );
-        }
-
-        // Verify the regex would match each blocklisted term - proving the
-        // blocklist is the only thing preventing them from being added.
-        for term in expected_blocklisted {
-            let line = format!("[`{term}`]: https://example.com/{term}");
-            let caps = REF_DEF_REGEX.captures(&line);
-            assert!(
-                caps.is_some(),
-                "Regex should match blocklisted term '{term}'"
-            );
-            assert_eq!(&caps.unwrap()[1], term);
         }
     }
 }

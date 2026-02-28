@@ -130,26 +130,6 @@ async fn run() -> miette::Result<()> {
         })
         .collect();
 
-    // Skip lib.rs files by default. These serve as README templates with
-    // specific formatting (gradient spans, TOC anchors, multi-line HTML) that
-    // rustdoc-fmt should not modify. Use --include-lib-rs to override.
-    let (files, lib_rs_skipped) = if cli_arg.include_lib_rs {
-        (files, 0)
-    } else {
-        let pre_filter_count = files.len();
-        let filtered: Vec<_> = files
-            .into_iter()
-            .filter(|p| p.file_name().is_none_or(|name| name != "lib.rs"))
-            .collect();
-        let skipped = pre_filter_count - filtered.len();
-        (filtered, skipped)
-    };
-    if lib_rs_skipped > 0 && cli_arg.verbose {
-        println!(
-            "Skipped {lib_rs_skipped} lib.rs file(s) (README templates, use --include-lib-rs to override)"
-        );
-    }
-
     if files.is_empty() {
         println!("No Rust files found to format.");
         return Ok(());
@@ -169,17 +149,11 @@ async fn run() -> miette::Result<()> {
     }
 
     // Build the known-terms registry (once, shared across all files).
-    // When --terms-file is provided, uses only that file (no workspace scan)
-    // for deterministic results. Otherwise, builds from the embedded seed
-    // plus a workspace scan for additional terms.
+    // Uses the embedded seed file by default, or a custom file via --terms-file.
     let registry = if options.link_terms {
-        let terms_file = cli_arg.terms_file.as_deref();
-        if terms_file.is_some() {
-            Some(TechnicalTermDictionary::from_seed(terms_file)?)
-        } else {
-            let workspace_root = workspace_utils::get_workspace_root()?;
-            Some(TechnicalTermDictionary::build(&workspace_root, None)?)
-        }
+        Some(TechnicalTermDictionary::from_seed(
+            cli_arg.terms_file.as_deref(),
+        )?)
     } else {
         None
     };

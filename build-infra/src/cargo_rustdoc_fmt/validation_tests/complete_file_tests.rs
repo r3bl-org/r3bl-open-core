@@ -299,16 +299,10 @@ fn main() {}";
         fs::write(&test_file, input).unwrap();
 
         // Run the actual CLI binary for true e2e testing (includes cargo fmt).
-        // Uses --terms-file to pin the seed file for deterministic results
-        // (no workspace scan).
-        let seed_file = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("src/cargo_rustdoc_fmt/known_technical_term_link_dictionary.jsonc");
         let cargo = std::env::var("CARGO").unwrap_or_else(|_| "cargo".to_string());
         let output = std::process::Command::new(&cargo)
             .args(["run", "--bin", "cargo-rustdoc-fmt", "--"])
             .arg("rustdoc-fmt")
-            .arg("--terms-file")
-            .arg(&seed_file)
             .arg(&test_file)
             .output()
             .expect("Failed to run cargo-rustdoc-fmt binary");
@@ -1224,16 +1218,10 @@ fn main() {}";
         fs::write(&test_file, input).unwrap();
 
         // Run the actual CLI binary for true e2e testing (includes cargo fmt).
-        // Uses --terms-file to pin the seed file for deterministic results
-        // (no workspace scan).
-        let seed_file = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("src/cargo_rustdoc_fmt/known_technical_term_link_dictionary.jsonc");
         let cargo = std::env::var("CARGO").unwrap_or_else(|_| "cargo".to_string());
         let output = std::process::Command::new(&cargo)
             .args(["run", "--bin", "cargo-rustdoc-fmt", "--"])
             .arg("rustdoc-fmt")
-            .arg("--terms-file")
-            .arg(&seed_file)
             .arg(&test_file)
             .output()
             .expect("Failed to run cargo-rustdoc-fmt binary");
@@ -1306,15 +1294,13 @@ fn main() {}";
         }
     }
 
-    /// Test readline_async/mod.rs formatting with TOC blocks, image links,
-    /// anchor links, and mixed inline/reference-style links.
+    /// Tests readline_async/mod.rs golden file comparison.
     ///
     /// Verifies:
-    /// - `<!-- TOC -->` ... `<!-- /TOC -->` blocks are protected as one unit
-    /// - Anchor links `[text](#section)` are NOT converted to reference-style
     /// - Image links `![alt](url)` are NOT converted
-    /// - Regular inline links ARE converted
-    /// - Known terms (e.g., ANSI) are linked outside of protected regions
+    /// - Shortcut reference links `[text]` are NOT clobbered
+    /// - Known terms (e.g., [`ANSI`]) are linked outside of protected regions
+    /// - Already-formatted input is not modified (idempotency via golden file)
     #[test]
     fn test_readline_async_file_complete_formatting() {
         let input = include_str!(concat!(
@@ -1326,9 +1312,6 @@ fn main() {}";
             "/test_data/complete_file/expected_output/sample_readline_async.rs"
         )));
 
-        // Use the FileProcessor (not CLI binary) because this file has
-        // rustfmt_skip and module declarations that cargo fmt cannot resolve
-        // outside the tui crate.
         let temp_dir = TempDir::new().unwrap();
         let test_file = temp_dir.path().join("sample_readline_async.rs");
         fs::write(&test_file, input).unwrap();
@@ -1343,31 +1326,20 @@ fn main() {}";
             "Processing errors: {:?}",
             result.errors
         );
-        assert!(
-            result.modified,
-            "File should be modified (inline links converted)"
-        );
 
         let formatted = fs::read_to_string(&test_file).unwrap();
-
-        // Verify TOC block is preserved.
-        assert!(
-            formatted.contains("- [Introduction](#introduction)"),
-            "TOC anchor links should be preserved"
-        );
-        assert!(
-            formatted.contains("<!-- TOC -->"),
-            "TOC opening marker should be preserved"
-        );
-        assert!(
-            formatted.contains("<!-- /TOC -->"),
-            "TOC closing marker should be preserved"
-        );
 
         // Verify image link is preserved.
         assert!(
             formatted.contains("![`readline_async_video`](https://github.com/r3bl-org/r3bl-open-core/tree/main/docs/video/r3bl_terminal_async_clip_ffmpeg.gif?raw=true)"),
             "Image link should be preserved"
+        );
+
+        // Verify shortcut reference links are not clobbered.
+        assert!(
+            formatted
+                .contains("[Linux TTY and async Rust - Article on developerlife.com]"),
+            "Shortcut reference link should not be modified: {formatted}"
         );
 
         // Verify known term ANSI is linked.
@@ -1396,6 +1368,46 @@ fn main() {}";
         }
     }
 
+    /// Idempotency test for readline_async/mod.rs: run the formatter 3 times and
+    /// verify output is identical after each run.
+    #[test]
+    fn test_readline_async_idempotent_across_multiple_runs() {
+        let input = include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/test_data/complete_file/input/sample_readline_async.rs"
+        ));
+
+        let temp_dir = TempDir::new().unwrap();
+        let test_file = temp_dir.path().join("sample_readline_async.rs");
+        fs::write(&test_file, input).unwrap();
+
+        let registry = test_registry();
+        let processor =
+            processor::FileProcessor::with_registry(FormatOptions::default(), &registry);
+
+        // Run 1: initial formatting.
+        let _r1 = processor.process_file(&test_file);
+        let after_run_1 = fs::read_to_string(&test_file).unwrap();
+
+        // Run 2: should produce identical output.
+        let _r2 = processor.process_file(&test_file);
+        let after_run_2 = fs::read_to_string(&test_file).unwrap();
+
+        assert_eq!(
+            after_run_1, after_run_2,
+            "Run 2 should produce identical output to run 1 (idempotency)"
+        );
+
+        // Run 3: belt and suspenders.
+        let _r3 = processor.process_file(&test_file);
+        let after_run_3 = fs::read_to_string(&test_file).unwrap();
+
+        assert_eq!(
+            after_run_2, after_run_3,
+            "Run 3 should produce identical output to run 2 (idempotency)"
+        );
+    }
+
     /// Utility test to regenerate golden files. Run with:
     /// `cargo test -p r3bl-build-infra --lib regen_golden -- --ignored --nocapture`
     #[test]
@@ -1408,6 +1420,7 @@ fn main() {}";
 
         let files = [
             "sample_html_comments.rs",
+            "sample_readline_async.rs",
             "sample_rrt_mod.rs",
             "sample_rrt.rs",
         ];

@@ -278,7 +278,7 @@
 //!     subsystem, and makes the bytes available on your app's [`stdin`].
 //!
 //!   - [`PTY`] - A pseudoterminal, a software-emulated [`tty`]. When you run your app
-//!     inside a terminal emulator (like [WezTerm] or [[`Alacritty`]]), the emulator creates a
+//!     inside a terminal emulator (like [WezTerm] or [Alacritty]), the emulator creates a
 //!     [`PTY` pair] - it holds the controller end, and your app's [`stdin`] is the
 //!     controlled end. The emulator receives OS-level input events from the windowing
 //!     system (e.g., [Wayland]), translates them into [terminal escape sequences], and

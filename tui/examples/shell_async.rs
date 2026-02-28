@@ -110,7 +110,7 @@ async fn main() -> miette::Result<()> {
         stderr,
     } = child_process_constructor::new("bash")?;
 
-    // Create a `r3bl_terminal_async` instance.
+    // Create a `readline_async` instance.
     let terminal_async_constructor::TerminalAsyncHandle {
         rl_ctx: readline_async,
         shared_writer,

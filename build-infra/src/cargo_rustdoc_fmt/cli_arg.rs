@@ -68,10 +68,6 @@ pub struct CLIArg {
     #[arg(long, short = 'd')]
     pub dry_run: bool,
 
-    /// Include lib.rs files (excluded by default since they serve as README templates)
-    #[arg(long)]
-    pub include_lib_rs: bool,
-
     /// Specific files or directories to format.
     /// If not provided, formats git-changed files (or entire workspace with
     /// --workspace).

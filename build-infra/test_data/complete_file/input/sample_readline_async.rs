@@ -2,74 +2,42 @@
 
 // cspell:words terminalasynctry spinnertry
 
-//! # Async readline and choose modules
+//! Readline async and choose modules
 //!
-//! This module provides async readline functionality, choice selection UI, and spinners
+//! This module provides readline async functionality, choice selection UI, and spinners
 //! for building interactive terminal applications.
-//!
-//! For more information about the R3BL TUI framework, see the main
-//! [README](https://github.com/r3bl-org/r3bl-open-core/blob/main/README.md).
-//!
-//! # Table of contents
-//!
-//! <!-- TOC -->
-//!
-//! - [Introduction](#introduction)
-//! - [Features](#features)
-//!   - [Pause and resume support](#pause-and-resume-support)
-//!   - [Input Editing Behavior](#input-editing-behavior)
-//! - [Examples](#examples)
-//! - [How to use this crate](#how-to-use-this-crate)
-//!   - [`ReadlineAsyncContext::try_new`], which is the main entry point for most use
-//!     cases](#terminalasynctry_new-which-is-the-main-entry-point-for-most-use-cases)
-//!   - [Readline overview please see the docs for this struct for
-//!     details](#readline-overview-please-see-the-docs-for-this-struct-for-details)
-//!   - [`Spinner::try_start`](#spinnertry_start)
-//! - [Build this crate with Naz on `YouTube`](#build-this-crate-with-naz-on-youtube)
-//! - [Why another async readline crate?](#why-another-async-readline-crate)
-//!   - [References for blocking and thread cancellation in
-//!     Rust](#references-for-blocking-and-thread-cancellation-in-rust)
-//!   - [Educational references for Linux TTY and async
-//!     Rust](#educational-references-for-linux-tty-and-async-rust)
-//!
-//! <!-- /TOC -->
 //!
 //! # Introduction
 //!
-//! The `terminal_async` library lets your CLI program be asynchronous and interactive
+//! The [`readline_async`] module lets your CLI program be asynchronous and interactive
 //! without blocking the main thread. Your spawned tasks can use it to concurrently write
 //! to the display output, pause and resume it. You can also display of colorful animated
 //! spinners ⌛🌈 for long running tasks. With it, you can create beautiful, powerful, and
 //! interactive REPLs (read execute print loops) with ease.
 //!
-//! 1. Because
-//!    [`read_line()`](https://doc.rust-lang.org/std/io/struct.Stdin.html#method.read_line)
-//!    is blocking. And there is no way to terminate an OS thread that is blocking in
-//!    Rust. To do this, you have to `request_shutdown` the process (who's thread is blocked in
-//!    `read_line()`).
+//! 1. Because [`read_line()`] is blocking. And there is no way to terminate an OS thread
+//!    that is blocking in Rust. To do this, you have to [`request_shutdown`] the process
+//!    (who's thread is blocked in [`read_line()`]).
 //!
-//!     - There is no way to get `read_line()` unblocked once it is blocked.
-//!     - You can use
-//!       [`process::request_shutdown()`](https://doc.rust-lang.org/std/process/fn.exit.html) or
-//!       [`panic!()`](https://doc.rust-lang.org/std/panic/index.html) to kill the entire
+//!     - There is no way to get [`read_line()`] unblocked once it is blocked.
+//!     - You can use [`process::request_shutdown()`] or [`panic!()`] to kill the entire
 //!       process. This is not appealing.
 //!     - Even if that task is wrapped in a [`thread::spawn()` or
-//!       `thread::spawn_blocking()`](https://tokio.rs/tokio/tutorial/spawning), it isn't
-//!       possible to cancel or abort that thread, without cooperatively asking it to
-//!       `request_shutdown`. To see what this type of code looks like, take a look at
-//!       [this](https://github.com/nazmulidris/rust-scratch/blob/fcd730c4b17ed0b09ff2c1a7ac4dd5b4a0c66e49/tcp-api-server/src/client_task.rs#L275).
+//!       `thread::spawn_blocking()`], it isn't possible to cancel or abort that thread,
+//!       without cooperatively asking it to [`request_shutdown`]. To see what this type
+//!       of code looks like, take a look at [this].
 //!
-//! 2. Another problem is that when a thread is blocked in `read_line()`, and you have to
-//!    display output to `stdout` concurrently, this poses some challenges.
+//! 2. Another problem is that when a thread is blocked in [`read_line()`], and you have
+//!    to display output to [`stdout`] concurrently, this poses some challenges.
 //!
-//!     - This is because the caret is moved by `read_line()` and it blocks.
-//!     - When another thread / task writes to `stdout` concurrently, it assumes that the
-//!       caret is at row 0 of a new line.
+//!     - This is because the caret is moved by [`read_line()`] and it blocks.
+//!     - When another thread / task writes to [`stdout`] concurrently, it assumes that the
+//!       caret is at row `0` of a new line.
 //!     - This results in output that doesn't look good since it clobbers the
-//!       `read_line()` output, which assumes that no other output will be produced, while
-//!       is blocking for user input, resulting in a bad user experience.
+//!       [`read_line()`] output, which assumes that no other output will be produced,
+//!       while is blocking for user input, resulting in a bad user experience.
 //!
-//! Here is a video of the `readline_async` and `spinner` examples in this crate, in
+//! Here is a video of the [`readline_async`] and [`spinner`] examples in this crate, in
 //! action:
 //!
 //! ![`readline_async_video`](https://github.com/r3bl-org/r3bl-open-core/tree/main/docs/video/r3bl_terminal_async_clip_ffmpeg.gif?raw=true)
@@ -78,38 +46,39 @@
 //!
 //! 1. Read user input from the terminal line by line, while your program concurrently
 //!    writes lines to the same terminal.
-//!    - One [`Readline`] instance can be used to spawn
-//!      many async `stdout` writers, [`crate::SharedWriter`], that can write to the
-//!      terminal concurrently.
-//!    - For most users the [`ReadlineAsyncContext`] struct is the simplest
-//!      way to use this crate. You rarely have to access the underlying [`Readline`] or
+//!    - One [`Readline`] instance can be used to spawn many async [`stdout`] writers,
+//!      [`crate::SharedWriter`], that can write to the terminal concurrently.
+//!    - For most users the [`ReadlineAsyncContext`] struct is the simplest way to use
+//!      this module. You rarely have to access the underlying [`Readline`] or
 //!      [`crate::SharedWriter`] directly. But you can if you need to.
-//!    - [`crate::SharedWriter`] can be cloned and is thread-safe. However, there is
-//!      only one instance of [`Readline`] per [`ReadlineAsyncContext`] instance.
+//!    - [`crate::SharedWriter`] can be cloned and is thread-safe. However, there is only
+//!      one instance of [`Readline`] per [`ReadlineAsyncContext`] instance.
 //!
 //! 2. Generate a spinner (indeterminate progress indicator). This spinner works
 //!    concurrently with the rest of your program. When the [`Spinner`] is active, it
-//!    automatically pauses output from all the [`crate::SharedWriter`] instances that
-//!    are associated with one [`Readline`] instance. Typically a spawned task clones its
-//!    own [`crate::SharedWriter`] to generate its output. This is useful when you
-//!    want to show a spinner while waiting for a long-running task to complete. Please
-//!    look at the example to see this in action, by running `cargo run --example
-//!    readline_async`. Then type `starttask1`, press Enter. Then type `spinner`, press
-//!    Enter.
+//!    automatically pauses output from all the [`crate::SharedWriter`] instances that are
+//!    associated with one [`Readline`] instance. Typically a spawned task clones its own
+//!    [`crate::SharedWriter`] to generate its output. This is useful when you want to
+//!    show a spinner while waiting for a long-running task to complete. Please look at
+//!    the example to see this in action, by running:
+//!    ```bash
+//!    cargo run --example readline_async
+//!    ```
+//!    Then type `starttask1`, press Enter. Then type `spinner`, press Enter.
 //!
-//! 3. Use tokio tracing with support for concurrently writing to `stout`. If you
-//!    choose to log to `stdout` then the concurrent version
-//!    [`crate::SharedWriter`] from this crate will be used. This ensures that
-//!    the concurrent output is supported even for your tracing logs to `stdout`.
+//! 3. Use tokio tracing with support for concurrently writing to [`stdout`]. If you
+//!    choose to log to [`stdout`] then the concurrent version [`crate::SharedWriter`]
+//!    from this crate will be used. This ensures that the concurrent output is supported
+//!    even for your tracing logs to [`stdout`].
 //!
-//! 4. You can also plug in your own terminal, like `stdout`, or `stderr`, or any other
-//!    terminal that implements [`crate::SendRawTerminal`] trait for more details.
+//! 4. You can also plug in your own terminal, like [`stdout`], or [`stderr`], or any
+//!    other terminal that implements [`crate::SendRawTerminal`] trait for more details.
 //!
-//! This crate can detect when your terminal is not in interactive mode. E.g.: when you pipe
-//! the output of your program to another program. In this case, the `readline` feature is
-//! disabled. Both the [`ReadlineAsyncContext`] and [`Spinner`] support this functionality. So if
-//! you run the examples in this crate, and pipe something into them, they won't do
-//! anything.
+//! This module can detect when your terminal is not in interactive mode. E.g.: when you
+//! pipe the output of your program to another program. In this case, the
+//! [`readline_async`] feature is disabled. Both the [`ReadlineAsyncContext`] and
+//! [`Spinner`] support this functionality. So if you run the examples in this crate, and
+//! pipe something into them, they won't do anything.
 //!
 //! Here's an example:
 //!
@@ -132,23 +101,23 @@
 //! - [`crate::SharedWriter::line_state_control_channel_sender`] - Mechanism used to
 //!   manipulate the paused state.
 //!
-//! The [`Readline::try_new`] or [`ReadlineAsyncContext::try_new`] create a `line_channel` to send and
-//! receive [`crate::LineStateControlSignal`]:
-//! 1. The sender end of this channel is moved to the [`crate::SharedWriter`]. So any
-//!    [`crate::SharedWriter`] can be used to send [`crate::LineStateControlSignal`]s
-//!    to the channel, which will be processed in the task started, just for this, in
-//!    [`Readline::try_new`]. This is the primary mechanism to switch between pause and resume.
-//!    Some helper functions are provided in [`ReadlineAsyncContext::pause`] and
-//!    [`ReadlineAsyncContext::resume`], though you can just send the signals directly to the
-//!    channel's sender via the
-//!    [`crate::SharedWriter::line_state_control_channel_sender`].
-//! 2. The receiver end of this [`tokio::sync::mpsc::channel`] is moved to the task that is
-//!    spawned by [`Readline::try_new`]. This is where the actual work is done when signals are
-//!    sent via the sender (described above).
+//! The [`Readline::try_new`] or [`ReadlineAsyncContext::try_new`] create a
+//! [`line_state_control_channel`] to send and receive [`crate::LineStateControlSignal`]:
 //!
-//! While the [Readline] is suspended, no input is possible, and only <kbd>Ctrl+C</kbd>
-//! and <kbd>Ctrl+D</kbd> are allowed to make it through, the rest of the keypresses are
-//! ignored.
+//! 1. The sender end of this channel is moved to the [`crate::SharedWriter`]. So any
+//!    [`crate::SharedWriter`] can be used to send [`crate::LineStateControlSignal`]s to
+//!    the channel, which will be processed in the task started, just for this, in
+//!    [`Readline::try_new`]. This is the primary mechanism to switch between pause and
+//!    resume. Some helper functions are provided in [`ReadlineAsyncContext::pause`] and
+//!    [`ReadlineAsyncContext::resume`], though you can just send the signals directly to
+//!    the channel's sender via the
+//!    [`crate::SharedWriter::line_state_control_channel_sender`].
+//! 2. The receiver end of this [`tokio::sync::mpsc::channel`] is moved to the task that
+//!    is spawned by [`Readline::try_new`]. This is where the actual work is done when
+//!    signals are sent via the sender (described above).
+//!
+//! While the [Readline] is suspended, no input is possible, and only Ctrl+C and Ctrl+D
+//! are allowed to make it through, the rest of the keypresses are ignored.
 //!
 //! See [Readline] module docs for more implementation details on this.
 //!
@@ -157,7 +126,7 @@
 //! While entering text, the user can edit and navigate through the current input line
 //! with the following key bindings:
 //!
-//! - Works on all platforms supported by `crossterm`.
+//! - Works on all OSes (Linux, Windows, macOS) on most modern terminal emulators.
 //! - Full Unicode Support (Including Grapheme Clusters).
 //! - Multiline Editing.
 //! - In-memory History.
@@ -168,12 +137,13 @@
 //! - Ctrl+L: Clear the screen.
 //! - Ctrl+Left / Ctrl+Right: Move to previous/next whitespace.
 //! - Home: Jump to the start of the line.
-//!     - When the "emacs" feature (on by default) is enabled, Ctrl+A has the same effect.
+//!     - When the `"emacs"` feature (on by default) is enabled, Ctrl+A has the same
+//!       effect.
 //! - End: Jump to the end of the line.
-//!     - When the "emacs" feature (on by default) is enabled, Ctrl+E has the same effect.
-//! - Ctrl+C, Ctrl+D: Send an `Eof` event.
+//!     - When the `"emacs"` feature (on by default) is enabled, Ctrl+E has the same
+//!       effect.
+//! - Ctrl+C, Ctrl+D: Send an [`Eof`] event.
 //! - Ctrl+C: Send an `Interrupt` event.
-//! - Extensible design based on `crossterm`'s `event-stream` feature.
 //!
 //! # Examples
 //!
@@ -183,38 +153,39 @@
 //! - `shell_async` - Interactive shell implementation
 //! - `choose` - Choice selection UI
 //!
-//! # How to use this crate
+//! # How to use this module
 //!
 //! ## [`ReadlineAsyncContext::try_new()`], which is the main entry point for most use cases
 //!
 //! 1. To read user input, call [`ReadlineAsyncContext::read_line()`].
 //! 2. You can call [`ReadlineAsyncContext::clone_shared_writer()`] to get a
-//!    [`crate::SharedWriter`] instance that you can use to write to `stdout`
+//!    [`crate::SharedWriter`] instance that you can use to write to [`stdout`]
 //!    concurrently, using [`std::write!`] or [`std::writeln!`].
-//! 3. If you use [`std::writeln!`] then there's no need to [`ReadlineAsyncContext::flush()`]
-//!    because the `\n` will flush the buffer. When there's no `\n` in the buffer, or you
-//!    are using [`std::write!`] then you might need to call [`ReadlineAsyncContext::flush()`].
-//! 4. You can use the [`crate::rla_println`!] and [`crate::rla_println_prefixed`!] methods to
-//!    easily write concurrent output to the `stdout` ([`crate::SharedWriter`]).
+//! 3. If you use [`std::writeln!`] then there's no need to
+//!    [`ReadlineAsyncContext::flush()`] because the `\n` will flush the buffer. When
+//!    there's no `\n` in the buffer, or you are using [`std::write!`] then you might need
+//!    to call [`ReadlineAsyncContext::flush()`].
+//! 4. You can use the [`crate::rla_println`!] and [`crate::rla_println_prefixed`!]
+//!    methods to easily write concurrent output to the [`stdout`]
+//!    ([`crate::SharedWriter`]).
 //! 5. You can also get access to the underlying [`Readline`] via the
-//!    [`Readline::readline`] field. Details on this struct are listed below. For most use
-//!    cases you won't need to do this.
+//!    [`ReadlineAsyncContext::readline`] field. Details on this struct are listed below.
+//!    For most use cases you won't need to do this.
 //!
 //! ## [`Readline`] overview (please see the docs for this struct for details)
 //!
 //! - Structure for reading lines of input from a terminal while lines are output to the
 //!   terminal concurrently. It uses dependency injection, allowing you to supply
 //!   resources that can be used to:
-//!   1. Read input from the user, typically
-//!      [`crossterm::event::EventStream`](https://docs.rs/crossterm/latest/crossterm/event/struct.EventStream.html).
-//!   2. Generate output to the raw terminal, typically [`std::io::Stdout`].
+//!   1. Read input from the user, via an async input device [`InputDevice`].
+//!   2. Generate output to the raw terminal via output device [`OutputDevice`].
 //!
 //! - Terminal input is retrieved by calling [`Readline::readline()`], which returns each
 //!   complete line of input once the user presses Enter.
 //!
-//! - Each [`Readline`] instance is associated with one or more
-//!   [`crate::SharedWriter`] instances. Lines written to an associated
-//!   [`crate::SharedWriter`] are output to the raw terminal.
+//! - Each [`Readline`] instance is associated with one or more [`crate::SharedWriter`]
+//!   instances. Lines written to an associated [`crate::SharedWriter`] are output to the
+//!   raw terminal.
 //!
 //! - Call [`Readline::try_new()`] to create a [`Readline`] instance and associated
 //!   [`crate::SharedWriter`].
@@ -242,16 +213,19 @@
 //! Neither will the spinner output clobber the output from other tasks. It suspends the
 //! output from all the [`crate::SharedWriter`] instances that are associated with one
 //! [`Readline`] instance. Both the `readline_async.rs` and `spinner.rs` examples shows
-//! this (`cargo run --example readline_async` and `cargo run --example spinner`).
+//! this:
+//! ```bash
+//! cargo run --example readline_async` and `cargo run --example spinner
+//! ```
 //!
-//! [`Spinner`]s also has cancellation support. Once a spinner is started,
-//! <kbd>Ctrl+C</kbd> and <kbd>Ctrl+D</kbd> are directed to the spinner, to cancel it.
-//! Spinners can also be checked for completion or cancellation by long running tasks, to
-//! ensure that they `request_shutdown` as a response to user cancellation. Take a look at the
+//! [`Spinner`]s also has cancellation support. Once a spinner is started, Ctrl+C and
+//! Ctrl+D are directed to the spinner, to cancel it. Spinners can also be checked for
+//! completion or cancellation by long running tasks, to ensure that they
+//! [`request_shutdown`] as a response to user cancellation. Take a look at the
 //! `examples/readline_async.rs` file to get an understanding of how to use this API.
 //!
-//! The third change is that [`ReadlineAsyncContext::try_new()`] now accepts prompts that can
-//! have ANSI escape sequences in them. Here's an example of this.
+//! The third change is that [`ReadlineAsyncContext::try_new()`] now accepts prompts that
+//! can have [`ANSI`] escape sequences in them. Here's an example of this.
 //!
 //! ```
 //! # use r3bl_tui::readline_async::ReadlineAsyncContext;
@@ -274,50 +248,72 @@
 //!
 //! # Video tutorials
 //!
-//! - [Async readline and spinner playlist](https://www.youtube.com/watch?v=3vQJguti02I&list=PLofhE49PEwmwelPkhfiqdFQ9IXnmGdnSE)
-//! - [Linux TTY programming playlist](https://www.youtube.com/playlist?list=PLofhE49PEwmw3MKOU1Kn3xbP4FRQR4Mb3)
+//! - [Async readline and spinner playlist]
+//! - [Linux TTY programming playlist]
 //!
-//! # Why another async readline crate?
+//! # Origin
 //!
-//! This crate & repo is forked from
-//! [rustyline-async](https://github.com/zyansheep/rustyline-async). However it has mostly
-//! been rewritten and re-architected. Here are some changes made to the code:
+//! This module is forked from [rustyline-async]. However it has mostly been rewritten and
+//! re-architected. Here are some changes made to the code:
 //!
-//! - Rearchitect the entire crate from the ground up to operate in a totally different
+//! - Rearchitect the entire module from the ground up to operate in a totally different
 //!   manner than the original. All the underlying mental models are different, and
 //!   simpler. The main event loop is redone. And a task is used to monitor the line
 //!   channel for communication between multiple [`crate::SharedWriter`]s and the
 //!   [`Readline`], to properly support pause and resume, and other control functions.
-//! - Drop support for all async runtimes other than `tokio`. Rewrite all the code for
+//! - Drop support for all async runtimes other than [`tokio`]. Rewrite all the code for
 //!   this.
-//! - Drop crates like `pin-project`, `thingbuf` in favor of `tokio`. Rewrite all the code
-//!   for this.
-//! - Drop `simplelog` and `log` dependencies. Add support for `tokio-tracing`. Rewrite
-//!   all the code for this, and add `tracing_setup.rs`.
+//! - Drop crates like `pin-project`, `thingbuf` in favor of [`tokio`]. Rewrite all the
+//!   code for this.
+//! - Drop `simplelog` and `log` dependencies. Add support for [`tracing`]. Rewrite all
+//!   the code for this, and add [`tracing_setup.rs`].
 //! - Remove all examples and create new ones to mimic a real world CLI application.
 //! - Add `spinner_impl`, `readline_impl`, and `public_api` modules.
 //! - Add tests.
 //!
 //! ## References for blocking and thread cancellation in Rust
-//! <a href="markdown-references-for-blocking-and-thread-cancellation-in-rust"
-//! name="references-for-blocking-and-thread-cancellation-in-rust"></a>
 //!
-//! - [Docs: tokio's `stdin`](https://docs.rs/tokio/latest/tokio/io/struct.Stdin.html)
-//! - [Discussion: Stopping a thread in
-//!   Rust](https://users.rust-lang.org/t/stopping-a-thread/6328/7)
-//! - [Discussion: Support for
-//!   `Thread::cancel()`](https://internals.rust-lang.org/t/thread-cancel-support/3056/16)
-//! - [Discussion: stdin, stdout redirection for spawned
-//!   processes](https://stackoverflow.com/questions/34611742/how-do-i-read-the-output-of-a-child-process-without-blocking-in-rust)
+//! - [Docs: tokio's `stdin`]
+//! - [Discussion: Stopping a thread in Rust]
+//! - [Discussion: Support for `Thread::cancel()`]
+//! - [Discussion: stdin, stdout redirection for spawned processes]
 //!
-//! ## Educational references for Linux TTY and async Rust
-//! <a href="markdown-educational-references-for-linux-tty-and-async-rust"
-//! name="educational-references-for-linux-tty-and-async-rust"></a>
+//! ## Educational references for Linux [`TTY`] and async Rust
 //!
-//! - [Linux TTY and async Rust - Article on
-//!   developerlife.com](https://developerlife.com/2024/08/20/tty-linux-async-rust/)
-//! - [Linux TTY and async Rust - Playlist on developerlife.com YT
-//!   channel](https://www.youtube.com/watch?v=bolScvh4x7I&list=PLofhE49PEwmw3MKOU1Kn3xbP4FRQR4Mb3)
+//! - [Linux TTY and async Rust - Article on developerlife.com]
+//! - [Linux TTY and async Rust - Playlist on developerlife.com YT channel]
+//!
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`Eof`]: ReadlineEvent::Eof
+//! [`InputDevice`]: crate::InputDevice
+//! [`line_state_control_channel`]: field@crate::SharedWriter::line_state_control_channel_sender
+//! [`OutputDevice`]: crate::OutputDevice
+//! [`panic!()`]: https://doc.rust-lang.org/std/panic/index.html
+//! [`process::request_shutdown()`]: https://doc.rust-lang.org/std/process/fn.exit.html
+//! [`read_line()`]: std::io::Stdin::read_line
+//! [`readline_async`]: mod@crate::readline_async
+//! [`ReadlineAsyncContext::readline`]: field@ReadlineAsyncContext::readline
+//! [`request_shutdown`]: ReadlineAsyncContext::request_shutdown
+//! [`spinner`]: mod@crate::readline_async::spinner
+//! [`stderr`]: std::io::stderr
+//! [`stdout`]: std::io::stdout
+//! [`thread::spawn()` or `thread::spawn_blocking()`]: https://tokio.rs/tokio/tutorial/spawning
+//! [`tokio::sync::mpsc::channel`]: tokio::sync::mpsc::channel
+//! [`tokio`]: ::tokio
+//! [`tracing_setup.rs`]: crate::TracingConfig
+//! [`tracing`]: ::tracing
+//! [`TTY`]: https://en.wikipedia.org/wiki/Tty_(Unix)
+//! [`tty`]: https://man7.org/linux/man-pages/man4/tty.4.html
+//! [Async readline and spinner playlist]: https://www.youtube.com/watch?v=3vQJguti02I&list=PLofhE49PEwmwelPkhfiqdFQ9IXnmGdnSE
+//! [Discussion: stdin, stdout redirection for spawned processes]: https://stackoverflow.com/questions/34611742/how-do-i-read-the-output-of-a-child-process-without-blocking-in-rust
+//! [Discussion: Stopping a thread in Rust]: https://users.rust-lang.org/t/stopping-a-thread/6328/7
+//! [Discussion: Support for `Thread::cancel()`]: https://internals.rust-lang.org/t/thread-cancel-support/3056/16
+//! [Docs: tokio's `stdin`]: https://docs.rs/tokio/latest/tokio/io/struct.Stdin.html
+//! [Linux TTY and async Rust - Article on developerlife.com]: https://developerlife.com/2024/08/20/tty-linux-async-rust/
+//! [Linux TTY and async Rust - Playlist on developerlife.com YT channel]: https://www.youtube.com/watch?v=bolScvh4x7I&list=PLofhE49PEwmw3MKOU1Kn3xbP4FRQR4Mb3
+//! [Linux TTY programming playlist]: https://www.youtube.com/playlist?list=PLofhE49PEwmw3MKOU1Kn3xbP4FRQR4Mb3
+//! [rustyline-async]: https://github.com/zyansheep/rustyline-async
+//! [this]: https://github.com/nazmulidris/rust-scratch/blob/fcd730c4b17ed0b09ff2c1a7ac4dd5b4a0c66e49/tcp-api-server/src/client_task.rs#L275
 
 // XMARK: rustfmt prevent from reformatting entire file.
 // Skip rustfmt for rest of file.
@@ -325,12 +321,13 @@
 #![cfg_attr(rustfmt, rustfmt_skip)]
 
 // Attach sources.
+// #[macro_use] propagates macros textually (order matters).
+#[macro_use] pub mod readline_async_api;
+#[macro_use] pub mod choose_impl;
+#[macro_use] pub mod readline_async_impl;
 pub mod choose_api;
-pub mod readline_async_api;
 pub mod spinner;
 pub mod spinner_impl;
-pub mod readline_async_impl;
-pub mod choose_impl;
 
 // Re-export the public API.
 pub use choose_api::*;

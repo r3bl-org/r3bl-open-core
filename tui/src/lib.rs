@@ -1021,10 +1021,13 @@
 //!
 //! [Dependency injection](https://developerlife.com/category/DI) is used to inject the
 //! required resources into the `main_event_loop` function. This allows for easy testing
-//! and for modularity and extensibility in the codebase. The `r3bl_terminal_async` crate
+//! and for modularity and extensibility in the codebase. The [`readline_async`] module
 //! shares the same infrastructure for input and output devices. In fact the
-//! [`crate::InputDevice`] and [`crate::OutputDevice`] structs are in the `r3bl_core`
-//! crate.
+//! [`crate::InputDevice`] and [`crate::OutputDevice`] structs are shared by both the
+//! full [`TUI`] and the [`readline_async`] module.
+//!
+//! [`readline_async`]: mod@crate::readline_async
+//! [`TUI`]: crate::tui
 //!
 //! - The advantage of this approach is that for testing, test fixtures can be used to
 //!   perform end-to-end testing of the TUI.
