@@ -104,7 +104,7 @@
 //!
 //! - `test_backend_compat_output_compare()` - Main test that compares backend outputs.
 //! - [`generate_test_render_ops`] - Test render operations.
-//! - [`controller`] - [`PTY`] master logic that captures all bytes.
+//! - [`controller`] - [`PTY`] controller logic that captures all bytes.
 //! - [`controlled_crossterm`] - Crossterm backend controlled process.
 //! - [`controlled_direct_to_ansi`] - `DirectToAnsi` backend controlled process.
 //!
@@ -252,7 +252,7 @@ pub fn test_backend_compat_output_compare() {
     );
 }
 
-/// Controller ([`PTY`] Master) Logic - captures all raw bytes.
+/// [`PTY`] Controller Logic - captures all raw bytes.
 ///
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 pub mod controller {

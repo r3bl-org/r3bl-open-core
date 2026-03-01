@@ -1,11 +1,10 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{Continuation, Controlled, ControlledChild, Controller, ControllerReader,
-            ControllerWriter, LINE_FEED_BYTE, PtyCommandBuilder, PtyInputEvent,
-            PtyReadWriteOutputEvent, PtyReadWriteSession, READ_BUFFER_SIZE,
-            pty_common_io::{create_pty_pair, spawn_command_in_pty}};
+use crate::{Continuation, ControlledChild, Controller, ControllerReader,
+            ControllerWriter, LINE_FEED_BYTE, PtyCommandBuilder,
+            PtyControlledChildExitStatus, PtyInputEvent, PtyPair,
+            PtyReadWriteOutputEvent, PtyReadWriteSession, READ_BUFFER_SIZE, Size};
 use miette::{IntoDiagnostic, miette};
-use portable_pty::PtySize;
 use std::{io::{Read, Write},
           sync::mpsc::RecvTimeoutError,
           time::Duration};
@@ -58,8 +57,8 @@ impl PtyCommandBuilder {
     ///    communication while maintaining proper async/sync boundaries. The bridge task
     ///    serves as an async-to-sync adapter, necessary because [`mod@portable_pty`] only
     ///    provides synchronous I/O APIs, while the input handler must run in
-    ///    [`spawn_blocking`] context to avoid blocking the tokio runtime. Without this
-    ///    bridge, async code couldn't send input to the synchronous [`PTY`] writer.
+    ///    [`spawn_blocking`] context to avoid blocking the [`tokio`] runtime. Without
+    ///    this bridge, async code couldn't send input to the synchronous [`PTY`] writer.
     ///
     /// # Design Decisions
     ///
@@ -106,13 +105,12 @@ impl PtyCommandBuilder {
     /// ```no_run
     /// # #[tokio::main]
     /// # async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    /// use r3bl_tui::{PtyCommandBuilder, PtyInputEvent, PtyReadWriteOutputEvent};
-    /// use portable_pty::PtySize;
+    /// use r3bl_tui::{PtyCommandBuilder, PtyInputEvent, PtyReadWriteOutputEvent, size, width, height};
     /// use tokio::time::{sleep, Duration};
     ///
     /// // Start an interactive shell
     /// let mut session = PtyCommandBuilder::new("sh")
-    ///     .spawn_read_write(PtySize::default())?;
+    ///     .spawn_read_write(size(width(80) + height(24)))?;
     ///
     /// // Send commands to the shell
     /// session.input_event_ch_tx_half.send(PtyInputEvent::WriteLine("echo 'Hello from shell'".into()))?;
@@ -156,10 +154,8 @@ impl PtyCommandBuilder {
     /// [`std::io::Read`]: std::io::Read
     /// [`tokio::io::AsyncRead`]: tokio::io::AsyncRead
     /// [`tokio::spawn`]: tokio::spawn
-    pub fn spawn_read_write(
-        self,
-        pty_size: PtySize,
-    ) -> miette::Result<PtyReadWriteSession> {
+    /// [`tokio`]: tokio
+    pub fn spawn_read_write(self, pty_size: Size) -> miette::Result<PtyReadWriteSession> {
         // 1. Async channel for output from spawned process → your program.
         let (
             /* used by 2 tasks for sending output and error */
@@ -177,18 +173,25 @@ impl PtyCommandBuilder {
         // Build the command, ensuring CWD is set.
         let command = self.build()?;
 
-        // Create PTY pair: controller (master) for bidirectional I/O, controlled
-        // (slave) for spawned process
-        let (controller, controlled): (Controller, Controlled) =
-            create_pty_pair(pty_size)?;
-
-        // [🛫 SPAWN 1] Spawn the command with PTY (makes is_terminal() return true).
-        // The child process uses the controlled side as its stdin/stdout/stderr.
+        // Create PTY pair and spawn the command. The controlled fd is closed
+        // automatically by spawn_command_and_close_controlled().
+        let mut pty_pair = PtyPair::new_with_size(pty_size)?;
         let mut controlled_child: ControlledChild =
-            spawn_command_in_pty(&controlled, command)?;
+            pty_pair.spawn_command_and_close_controlled(command)?;
 
         // Clone the killer handle before moving the child into the completion task.
         let child_process_terminate_handle = controlled_child.clone_killer();
+
+        // Clone the reader before consuming the PtyPair. try_clone_reader() returns an
+        // owned Box<dyn Read> so it remains valid after into_controller() drops the pair.
+        let controller_reader = pty_pair
+            .controller()
+            .try_clone_reader()
+            .map_err(|e| miette!("Failed to clone reader: {}", e))?;
+
+        // Consume the PtyPair, dropping the controlled side (already None after
+        // spawn_command_and_close_controlled) and returning the owned Controller.
+        let controller = pty_pair.into_controller();
 
         // [🛫 SPAWN 0] Spawn the main orchestration task. This is returned to your
         // program, which waits for this to complete.
@@ -198,15 +201,11 @@ impl PtyCommandBuilder {
             // for immediate display and detects cursor mode changes.
             // NOTE: Critical resource management - see module docs for PTY lifecycle
             // details.
-            let output_reader_task_handle = {
-                let controller_reader = controller
-                    .try_clone_reader()
-                    .map_err(|e| miette!("Failed to clone reader: {}", e))?;
+            let output_reader_task_handle =
                 spawn_blocking_passthrough_with_mode_detection_reader_task(
                     controller_reader,
                     output_evt_ch_tx_half.clone(),
-                )
-            };
+                );
 
             // [🛫 SPAWN 3 & 4] The input writer task owns the controller and handles all
             // input operations, along with its bridge task for async-to-sync conversion.
@@ -230,10 +229,6 @@ impl PtyCommandBuilder {
             let _unused =
                 output_evt_ch_tx_half.send(PtyReadWriteOutputEvent::Exit(status));
 
-            // CRITICAL: Drop the controlled half to signal EOF to reader.
-            // See module docs for detailed PTY lifecycle management explanation.
-            drop(controlled);
-
             // Wait for all tasks to complete in proper order.
             // [🛬 WAIT 3 & 4] Wait for the input writer task (which includes bridge) to
             // complete.
@@ -242,7 +237,7 @@ impl PtyCommandBuilder {
             let _unused = output_reader_task_handle.await;
 
             // Return the exit status.
-            Ok(portable_pty::ExitStatus::with_exit_code(exit_code))
+            Ok(PtyControlledChildExitStatus::with_exit_code(exit_code))
         });
 
         Ok(PtyReadWriteSession {
@@ -262,7 +257,7 @@ impl PtyCommandBuilder {
 ///
 /// This task:
 /// - Reads input commands from a channel
-/// - Writes data to the [`PTY`] master
+/// - Writes data to the [`PTY`] controller
 /// - Handles control characters and text input
 /// - Handles [`PTY`] resize commands
 /// - Reports write errors through the output event channel, that is sent to your program
@@ -369,7 +364,7 @@ fn spawn_async_to_sync_bridge_task(
 ///
 /// This task:
 /// - Reads input commands from a sync channel
-/// - Writes data to the [`PTY`] master using [`tokio::task::spawn_blocking`] because
+/// - Writes data to the [`PTY`] controller using [`tokio::task::spawn_blocking`] because
 ///   [`portable_pty`] provides only synchronous I/O APIs, not async ones, like our code
 ///   in this module
 /// - Handles control characters and text input
@@ -469,7 +464,7 @@ fn handle_pty_input_event(
             "Failed to send control char to PTY",
             output_evt_ch_tx_half,
         )?,
-        PtyInputEvent::Resize(size) => controller.resize(size).map_err(|e| {
+        PtyInputEvent::Resize(size) => controller.resize(size.into()).map_err(|e| {
             let _unused = output_evt_ch_tx_half.send(
                 PtyReadWriteOutputEvent::WriteError(miette!("Resize failed: {e}")),
             );
@@ -593,7 +588,7 @@ mod tests {
     use super::*;
     #[cfg(not(target_os = "windows"))]
     use crate::try_create_temp_dir;
-    use crate::{ControlSequence, CursorKeyMode};
+    use crate::{ControlSequence, CursorKeyMode, height, size, width};
     use tokio::sync::mpsc::unbounded_channel;
     #[cfg(not(target_os = "windows"))]
     use wait_timeout::ChildExt;
@@ -874,7 +869,7 @@ mod tests {
         let mut session = PtyCommandBuilder::new("echo")
             .args(["Hello, PTY!"])
             .cwd(temp_dir)
-            .spawn_read_write(PtySize::default())
+            .spawn_read_write(size(width(80) + height(24)))
             .unwrap();
 
         // Give the echo command more time to start and produce output.
@@ -941,7 +936,7 @@ mod tests {
 
         let mut session = PtyCommandBuilder::new("cat")
             .cwd(temp_dir)
-            .spawn_read_write(PtySize::default())
+            .spawn_read_write(size(width(80) + height(24)))
             .unwrap();
 
         // Send some text
@@ -1021,7 +1016,7 @@ mod tests {
         let mut session = PtyCommandBuilder::new("sh")
             .args(["-c", "echo $((2+3)); echo 'Hello from Shell'"])
             .cwd(temp_dir)
-            .spawn_read_write(PtySize::default())
+            .spawn_read_write(size(width(80) + height(24)))
             .unwrap();
 
         // Collect output with timeout.
@@ -1084,7 +1079,7 @@ mod tests {
         // Use a more reliable command - use /bin/echo directly instead of shell
         let mut session = PtyCommandBuilder::new("/bin/echo")
             .args(["Test output from echo"])
-            .spawn_read_write(PtySize::default())
+            .spawn_read_write(size(width(80) + height(24)))
             .unwrap();
 
         // Give the command more time to start and produce output.
@@ -1147,7 +1142,7 @@ mod tests {
         use tokio::time::timeout;
 
         let mut session = PtyCommandBuilder::new("cat")
-            .spawn_read_write(PtySize::default())
+            .spawn_read_write(size(width(80) + height(24)))
             .unwrap();
 
         // Test various control characters with delays for PTY processing.
@@ -1279,7 +1274,7 @@ mod tests {
 
         let mut session = PtyCommandBuilder::new("cat")
             .cwd(temp_dir)
-            .spawn_read_write(PtySize::default())
+            .spawn_read_write(size(width(80) + height(24)))
             .unwrap();
 
         // Send some text with ANSI color codes using raw sequences.
@@ -1492,7 +1487,7 @@ mod tests {
         let mut session = timeout(Duration::from_secs(5), async {
             PtyCommandBuilder::new("htop")
                 .args(["--delay", "100"])
-                .spawn_read_write(PtySize::default())
+                .spawn_read_write(size(width(80) + height(24)))
         })
         .await
         .map_err(|_| miette::miette!("Timeout launching htop"))?
@@ -1792,7 +1787,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_create_input_handler_task_write() {
-        let (controller, _controlled) = create_pty_pair(PtySize::default()).unwrap();
+        let controller = PtyPair::new_with_default_size().unwrap().into_controller();
 
         let (input_sender, input_receiver) = unbounded_channel();
         let (event_sender, _event_receiver) = unbounded_channel();
@@ -1822,7 +1817,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_create_input_handler_task_write_line() {
-        let (controller, _controlled) = create_pty_pair(PtySize::default()).unwrap();
+        let controller = PtyPair::new_with_default_size().unwrap().into_controller();
 
         let (input_sender, input_receiver) = unbounded_channel();
         let (event_sender, _event_receiver) = unbounded_channel();
@@ -1851,7 +1846,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_create_input_handler_task_control_char() {
-        let (controller, _controlled) = create_pty_pair(PtySize::default()).unwrap();
+        let controller = PtyPair::new_with_default_size().unwrap().into_controller();
 
         let (input_sender, input_receiver) = unbounded_channel();
         let (event_sender, _event_receiver) = unbounded_channel();
@@ -1883,7 +1878,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_create_input_handler_task_resize() {
-        let (controller, _controlled) = create_pty_pair(PtySize::default()).unwrap();
+        let controller = PtyPair::new_with_default_size().unwrap().into_controller();
 
         let (input_sender, input_receiver) = unbounded_channel();
         let (event_sender, _event_receiver) = unbounded_channel();
@@ -1892,12 +1887,7 @@ mod tests {
             create_controller_input_writer_task(controller, input_receiver, event_sender);
 
         // Send resize command.
-        let new_size = PtySize {
-            rows: 40,
-            cols: 120,
-            pixel_width: 0,
-            pixel_height: 0,
-        };
+        let new_size = size(width(120) + height(40));
         input_sender.send(PtyInputEvent::Resize(new_size)).unwrap();
 
         // Send close to terminate task.
@@ -1916,7 +1906,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_create_input_handler_task_flush() {
-        let (controller, _controlled) = create_pty_pair(PtySize::default()).unwrap();
+        let controller = PtyPair::new_with_default_size().unwrap().into_controller();
 
         let (input_sender, input_receiver) = unbounded_channel();
         let (event_sender, _event_receiver) = unbounded_channel();
@@ -1943,7 +1933,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_create_input_handler_task_channel_disconnect() {
-        let (controller, _controlled) = create_pty_pair(PtySize::default()).unwrap();
+        let controller = PtyPair::new_with_default_size().unwrap().into_controller();
 
         let (input_sender, input_receiver) = unbounded_channel();
         let (event_sender, _event_receiver) = unbounded_channel();

@@ -14,7 +14,7 @@ use std::time::Duration;
 /// # Use Case
 ///
 /// **Good for:** Buffering rapid events before taking action
-/// - PTY test slave: batch input events before printing line state
+/// - [`PTY`] test controlled process: batch input events before printing line state
 /// - Rate limiting: buffer API calls and flush after quiet period
 /// - Coalescing UI updates: batch rapid state changes
 ///
@@ -47,6 +47,8 @@ use std::time::Duration;
 /// # async fn read_event() -> String { String::new() }
 /// # }
 /// ```
+///
+/// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 #[derive(Debug)]
 pub struct DebouncedState<T> {
     debounce: AsyncDebouncedDeadline,

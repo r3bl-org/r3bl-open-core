@@ -1,12 +1,13 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Core type aliases and constants for [`PTY`] operations. See individual type
-//! definitions for details:
-//! - [`PtyPair`] - Inclusive-language wrapper around [`portable_pty::PtyPair`]
+//! Core type aliases, constants, and utility functions for [`PTY`] operations.
 //! - [`Controller`], [`Controlled`] - [`PTY`] halves
 //! - [`ControlledChild`], [`ControlledChildTerminationHandle`] - Child process management
 //! - [`ControllerReader`], [`ControllerWriter`] - [`PTY`] I/O streams
-//! - [`PtyCommand`], [`PtyCompletionHandle`] - Command execution
+//! - [`PtyCommand`], [`PtyControlledChildExitStatus`], [`PtyCompletionHandle`] - Command
+//!   execution and exit status
+//! - [`pty_to_std_exit_status()`] - Convert [`PtyControlledChildExitStatus`] to
+//!   [`std::process::ExitStatus`]
 //! - [`InputEventSenderHalf`], [`ReadOnlyOutputEventReceiverHalf`],
 //!   [`ReadWriteOutputEventReceiverHalf`] - Channel halves
 //!
@@ -21,91 +22,14 @@ use tokio::{sync::mpsc::{UnboundedReceiver, UnboundedSender},
 /// Buffer size for reading [`PTY`] output (4KB stack allocation).
 ///
 /// This is used for the read buffer in [`PTY`] operations. The performance bottleneck is
-/// not this buffer size but the [`Vec`]`<`[`u8`]`>` allocations in
+/// not this buffer size but the [`Vec<u8>`] allocations in
 /// [`PtyReadWriteOutputEvent::Output`].
 ///
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
+/// [`Vec<u8>`]: std::vec::Vec
 pub const READ_BUFFER_SIZE: usize = 4_096;
 
-/// Wrapper around [`portable_pty::PtyPair`] that provides controller/controlled
-/// terminology.
-///
-/// This type intentionally shadows [`portable_pty::PtyPair`] to prevent direct use of
-/// [`portable_pty`]'s master/slave terminology. It provides clean accessor methods that
-/// align with our codebase's inclusive language policy.
-///
-/// See: [Inclusive Naming Initiative - Tier 1 Terms]
-///
-/// # Example
-///
-/// ```no_run
-/// use r3bl_tui::PtyPair;
-/// use portable_pty::{PtySystem, NativePtySystem, PtySize};
-///
-/// let pty_system = NativePtySystem::default();
-/// let raw_pair = pty_system.openpty(PtySize::default()).unwrap();
-/// let pty_pair = PtyPair::from(raw_pair);
-///
-/// // Access controller side (library's "master")
-/// let reader = pty_pair.controller().try_clone_reader().unwrap();
-///
-/// // Access controlled side (library's "slave")
-/// // (typically used for spawning child processes)
-/// ```
-///
-/// [Inclusive Naming Initiative - Tier 1 Terms]:
-///     https://inclusivenaming.org/word-lists/tier-1/
-#[allow(missing_debug_implementations)]
-pub struct PtyPair {
-    inner: portable_pty::PtyPair,
-}
-
-impl PtyPair {
-    /// Creates a new wrapper from a raw `portable_pty::PtyPair`.
-    #[must_use]
-    pub fn new(inner: portable_pty::PtyPair) -> Self { Self { inner } }
-
-    /// Access the controller side of the PTY (library's "master").
-    ///
-    /// The controller side is used by the parent process to read output from
-    /// and write input to the controlled child process.
-    #[must_use]
-    pub fn controller(&self) -> &Controller { &self.inner.master }
-
-    /// Access the controller side mutably.
-    pub fn controller_mut(&mut self) -> &mut Controller { &mut self.inner.master }
-
-    /// Access the controlled side of the PTY (library's "slave").
-    ///
-    /// The controlled side is typically used for spawning child processes that
-    /// will use this PTY for their stdin/stdout/stderr.
-    #[must_use]
-    pub fn controlled(&self) -> &Controlled { &self.inner.slave }
-
-    /// Access the controlled side mutably.
-    pub fn controlled_mut(&mut self) -> &mut Controlled { &mut self.inner.slave }
-
-    /// Split the pair into separate controller and controlled halves.
-    ///
-    /// This consumes the wrapper and returns the individual components.
-    #[must_use]
-    pub fn split(self) -> (Controller, Controlled) {
-        (self.inner.master, self.inner.slave)
-    }
-
-    /// Gets the inner [`portable_pty::PtyPair`] for direct library access.
-    ///
-    /// This is provided for cases where you need to interact directly with the
-    /// [`portable_pty`] API, but should be used sparingly.
-    #[must_use]
-    pub fn into_inner(self) -> portable_pty::PtyPair { self.inner }
-}
-
-impl From<portable_pty::PtyPair> for PtyPair {
-    fn from(inner: portable_pty::PtyPair) -> Self { Self::new(inner) }
-}
-
-/// Type alias for the controlled half of a [`PTY`] (slave).
+/// Type alias for the controlled half of a [`PTY`].
 ///
 /// This represents the process-side of the [`PTY`] that the child process will use for
 /// stdin/stdout/stderr.
@@ -113,7 +37,7 @@ impl From<portable_pty::PtyPair> for PtyPair {
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 pub type Controlled = Box<dyn SlavePty + Send>;
 
-/// Type alias for the controller half of a [`PTY`] (master).
+/// Type alias for the controller half of a [`PTY`].
 ///
 /// This represents the controller half that the parent process uses to read from and
 /// write to the child process.
@@ -143,22 +67,90 @@ pub type ControlledChildTerminationHandle = Box<dyn ChildKiller + Send + Sync>;
 ///
 /// This enhances readability by making the flow clear: [`crate::PtyCommandBuilder`] `->
 /// build() ->` [`PtyCommand`]. This is a validated [`CommandBuilder`] returned by
-/// [`crate::PtyCommandBuilder::build`].
+/// [`crate::PtyCommandBuilder::build()`].
 ///
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 pub type PtyCommand = CommandBuilder;
 
+/// Type alias for the exit status of a controlled child process in a [`PTY`] session.
+///
+/// Wraps [`portable_pty::ExitStatus`] so that the rest of the codebase does not depend
+/// on the [`portable_pty`] crate directly. All [`PTY`]-related exit statuses should use
+/// this alias.
+///
+/// [`portable_pty`]: https://docs.rs/portable-pty
+/// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
+pub type PtyControlledChildExitStatus = portable_pty::ExitStatus;
+
+/// Converts [`PtyControlledChildExitStatus`] to [`std::process::ExitStatus`].
+///
+/// - Handles Unix wait status format encoding and Windows exit codes
+/// - Clamps large exit codes to `255` to prevent overflow on Unix systems
+/// - On success: uses explicit success status (exit code `0`)
+/// - On failure: encodes exit code in Unix wait status format with bounds checking
+///
+/// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
+/// [`std::process::ExitStatus`]: std::process::ExitStatus
+#[must_use]
+pub fn pty_to_std_exit_status(
+    status: PtyControlledChildExitStatus,
+) -> std::process::ExitStatus {
+    #[cfg(unix)]
+    use std::os::unix::process::ExitStatusExt;
+    #[cfg(windows)]
+    use std::os::windows::process::ExitStatusExt;
+
+    if status.success() {
+        // Success case: use explicit success status
+        #[cfg(unix)]
+        return std::process::ExitStatus::from_raw(0);
+        #[cfg(windows)]
+        return std::process::ExitStatus::from_raw(0);
+    }
+    // Failure case: encode exit code properly
+    let code = status.exit_code();
+
+    // Ensure we don't overflow when shifting for Unix wait status format.
+    let wait_status = if code <= 255 {
+        #[allow(clippy::cast_possible_wrap)]
+        let code_i32 = code as i32;
+        #[cfg(unix)]
+        {
+            code_i32 << 8
+        }
+        #[cfg(windows)]
+        {
+            code_i32
+        }
+    } else {
+        // If exit code is too large, clamp to 255 and encode.
+        #[cfg(unix)]
+        {
+            255_i32 << 8
+        }
+        #[cfg(windows)]
+        {
+            255_i32
+        }
+    };
+
+    #[cfg(unix)]
+    return std::process::ExitStatus::from_raw(wait_status);
+    #[cfg(windows)]
+    return std::process::ExitStatus::from_raw(wait_status as u32);
+}
+
 /// Type alias for a pinned completion handle used in [`PTY`] sessions.
 ///
 /// The pinning satisfies Tokio's [`Unpin`] requirement for [`select!`] macro usage. The
-/// [`JoinHandle`] returned by [`tokio::spawn`] doesn't implement [`Unpin`] by default,
+/// [`JoinHandle`] returned by [`tokio::spawn()`] doesn't implement [`Unpin`] by default,
 /// but [`select!`] requires all futures to be [`Unpin`] for efficient polling without
 /// moving them.
 ///
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 /// [`select!`]: tokio::select
 pub type PtyCompletionHandle =
-    Pin<Box<JoinHandle<miette::Result<portable_pty::ExitStatus>>>>;
+    Pin<Box<JoinHandle<miette::Result<PtyControlledChildExitStatus>>>>;
 
 /// Type alias for the read-only output event receiver half of a channel.
 pub type ReadOnlyOutputEventReceiverHalf = UnboundedReceiver<PtyReadOnlyOutputEvent>;
@@ -173,14 +165,9 @@ pub type InputEventSenderHalf = UnboundedSender<PtyInputEvent>;
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_read_buffer_size_constant() {
-        assert_eq!(READ_BUFFER_SIZE, 4096);
-    }
-
-    /// Compile-time validation that PTY type aliases are correctly defined.
+    /// Compile-time validation that [`PTY`] type aliases are correctly defined.
     ///
-    /// This test ensures that the core PTY type aliases (`Controller`, `Controlled`,
+    /// This test ensures that the core [`PTY`] type aliases (`Controller`, `Controlled`,
     /// and `ControlledChild`) can be used as function parameters, proving they are
     /// properly defined and usable. If any type alias has incorrect bounds or
     /// missing trait implementations, this test will fail at compile time.
@@ -188,6 +175,8 @@ mod tests {
     /// The functions are marked with `#[allow(dead_code)]` since they are never
     /// called - they only need to compile successfully to validate the type
     /// definitions.
+    ///
+    /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
     #[test]
     fn validate_pty_type_aliases_compile() {
         // Verify type aliases exist and are correctly defined.

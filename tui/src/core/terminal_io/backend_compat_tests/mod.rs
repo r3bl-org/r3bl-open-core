@@ -4,27 +4,28 @@
 //!
 //! These tests verify that different backends produce consistent results:
 //! - **Input tests**: Verify [`DirectToAnsiInputDevice`] and [`CrosstermInputDevice`]
-//!   produce identical [`InputEvent`] values for the same ANSI byte sequences.
+//!   produce identical [`InputEvent`] values for the same [`ANSI`] byte sequences.
 //! - **Output tests**: Verify [`RenderOpPaintImplDirectToAnsi`] and
 //!   [`PaintRenderOpImplCrossterm`] produce visually identical terminal output for the
 //!   same [`RenderOpOutput`] sequences.
 //!
 //! # Test Strategy
 //!
-//! Both input and output tests use PTY-based process isolation:
+//! Both input and output tests use [`PTY`]-based process isolation:
 //! - Each backend runs in a separate subprocess for isolation
 //! - Results are compared by the main comparison test
 //!
 //! ## Input Tests
 //!
-//! - A controller process writes ANSI bytes to the PTY master
-//! - A controlled process reads from stdin (PTY slave) using the specific backend
+//! - A controller process writes [`ANSI`] bytes to the [`PTY`] controller
+//! - A controlled process reads from stdin ([`PTY`] controlled side) using the specific
+//!   backend
 //! - The parsed [`InputEvent`] is output for verification
 //!
 //! ## Output Tests
 //!
 //! - A controlled process executes [`RenderOpOutput`] via the specific backend
-//! - ANSI output is captured and written to stdout (PTY slave)
+//! - [`ANSI`] output is captured and written to stdout ([`PTY`] controlled side)
 //! - The main test applies both outputs to [`OffscreenBuffer`] and compares
 //!
 //! # Platform Support
@@ -33,19 +34,21 @@
 //! both [`DirectToAnsiInputDevice`] and the `DirectToAnsi` output backend, which are
 //! only available on Linux.
 //!
-//! | Test                                  | Linux   | macOS   | Windows   |
-//! | :------------------------------------ | :------ | :------ | :-------- |
-//! | [`test_pty_backend_direct_to_ansi`]   | ✅      | ❌      | ❌        |
-//! | [`test_pty_backend_crossterm`]        | ✅      | ❌      | ❌        |
-//! | [`test_backend_compat_input_compare`] | ✅      | ❌      | ❌        |
-//! | [`test_backend_compat_output_compare`]| ✅      | ❌      | ❌        |
+//! | Test                                   | Linux   | macOS   | Windows   |
+//! | :------------------------------------- | :------ | :------ | :-------- |
+//! | [`test_pty_backend_direct_to_ansi`]    | ✅      | ❌      | ❌        |
+//! | [`test_pty_backend_crossterm`]         | ✅      | ❌      | ❌        |
+//! | [`test_backend_compat_input_compare`]  | ✅      | ❌      | ❌        |
+//! | [`test_backend_compat_output_compare`] | ✅      | ❌      | ❌        |
 //!
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`CrosstermInputDevice`]: crate::CrosstermInputDevice
 //! [`DirectToAnsiInputDevice`]: crate::direct_to_ansi::DirectToAnsiInputDevice
 //! [`InputDevice`]: crate::InputDevice
 //! [`InputEvent`]: crate::InputEvent
 //! [`OffscreenBuffer`]: crate::OffscreenBuffer
 //! [`PaintRenderOpImplCrossterm`]: crate::tui::terminal_lib_backends::crossterm_backend::PaintRenderOpImplCrossterm
+//! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`RenderOpOutput`]: crate::RenderOpOutput
 //! [`RenderOpPaintImplDirectToAnsi`]: crate::direct_to_ansi::RenderOpPaintImplDirectToAnsi
 //! [`test_backend_compat_input_compare`]: mod@backend_compat_input_test

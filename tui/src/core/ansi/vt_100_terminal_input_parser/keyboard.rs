@@ -59,7 +59,7 @@
 //! minimized bytes sent over slow serial lines (a 1970s constraint that became a lasting
 //! design principle) and keeps parsing simple.
 //!
-//! ### [[`ASCII`]] (1963)
+//! ### [`ASCII`] (1963)
 //!
 //! Uses only 7 bits (0-127). The 8th bit was used for [parity checking] during
 //! serial transmission—a transport-layer mechanism for error detection on noisy lines,
@@ -74,7 +74,7 @@
 //! [`ASCII`] bytes, Alt adds one [`ESC`] byte, and only complex modifier combinations
 //! require multi-byte [`CSI`] sequences.
 //!
-//! ### [[`UTF-8`]] (1992)
+//! ### [`UTF-8`] (1992)
 //!
 //! Created by [Ken Thompson] and [Rob Pike] at Bell Labs. [`UTF-8`] repurposed the high
 //! bits as structural markers for multi-byte sequences (not parity), while remaining
@@ -170,12 +170,12 @@
 //!
 //! Here's how each modifier is encoded (sorted by byte count):
 //!
-//! | Bytes   | Encoding                    | Modifier       | Reason                          |
-//! | :------ | :-------------------------- | :------------- | :------------------------------ |
-//! | 0       | Implicit in case            | **Shift**      | 'a' vs 'A' already encodes it   |
-//! | 1       | Single byte (`0x00-0x1F`)   | **Ctrl**       | Fits in [`ASCII`] control codes     |
-//! | 2       | [`ESC`] prefix                  | **Alt**        | No room in [`ASCII`], prepend [`ESC`]   |
-//! | 4-8     | [`CSI`] parameters              | **Combos**     | Need bitmask encoding           |
+//! | Bytes   | Encoding                    | Modifier       | Reason                                |
+//! | :------ | :-------------------------- | :------------- | :------------------------------------ |
+//! | 0       | Implicit in case            | **Shift**      | 'a' vs 'A' already encodes it         |
+//! | 1       | Single byte (`0x00-0x1F`)   | **Ctrl**       | Fits in [`ASCII`] control codes       |
+//! | 2       | [`ESC`] prefix              | **Alt**        | No room in [`ASCII`], prepend [`ESC`] |
+//! | 4-8     | [`CSI`] parameters          | **Combos**     | Need bitmask encoding                 |
 //!
 //! - Why does Ctrl+Shift+A = Ctrl+Shift+a = Ctrl+A?
 //!
@@ -301,7 +301,7 @@
 //! | `0x0A`   | Enter (LF) **OR** Ctrl+J   | **Enter**               | Enter key is essential for apps     |
 //! | `0x0D`   | Enter (CR) **OR** Ctrl+M   | **Enter**               | Enter key is essential for apps     |
 //! | `0x08`   | Backspace **OR** Ctrl+H    | **Backspace**           | Backspace is critical for editing   |
-//! | `0x1B`   | [`ESC`] **OR** Ctrl+\[         | **[`ESC`]**                 | Standard for vi-mode, modals        |
+//! | `0x1B`   | [`ESC`] **OR** Ctrl+\[     | **[`ESC`]**             | Standard for vi-mode, modals        |
 //!
 //! ### Why This Matters
 //!
@@ -350,15 +350,15 @@
 //! ### Alt Key Combinations (Alt+Letter)
 //! | Key                           | Sequence            | Format                  |
 //! | :---------------------------- | :------------------ | :---------------------- |
-//! | **Alt+\[a-z\]**               | [`ESC`] + letter      | Lowercase letters       |
-//! | **Alt+\[A-Z\]**               | [`ESC`] + letter      | Uppercase letters       |
-//! | **Alt+\[0-9\]**               | [`ESC`] + digit       | Digits                  |
-//! | **Alt+Space**                 | [`ESC`] + space       | Space key               |
-//! | **Alt+Backspace**             | [`ESC`] + `0x7F`      | Delete word             |
-//! | **Alt+\[punctuation\]**       | [`ESC`] + char        | Any printable [`ASCII`]     |
+//! | **Alt+\[a-z\]**               | [`ESC`] + letter    | Lowercase letters       |
+//! | **Alt+\[A-Z\]**               | [`ESC`] + letter    | Uppercase letters       |
+//! | **Alt+\[0-9\]**               | [`ESC`] + digit     | Digits                  |
+//! | **Alt+Space**                 | [`ESC`] + space     | Space key               |
+//! | **Alt+Backspace**             | [`ESC`] + `0x7F`    | Delete word             |
+//! | **Alt+\[punctuation\]**       | [`ESC`] + char      | Any printable [`ASCII`] |
 //!
 //! ### Arrow Keys
-//! | Key           | [`CSI`] Sequence     | SS3 Sequence     | Application Mode     |
+//! | Key           | [`CSI`] Sequence | SS3 Sequence     | Application Mode     |
 //! | :------------ | :--------------- | :--------------- | :------------------- |
 //! | **Up**        | `ESC [A`         | `ESC O A`        | vim/less/emacs       |
 //! | **Down**      | `ESC [B`         | `ESC O B`        | vim/less/emacs       |
@@ -366,12 +366,12 @@
 //! | **Left**      | `ESC [D`         | `ESC O D`        | vim/less/emacs       |
 //!
 //! ### Arrow Keys with Modifiers
-//! | Key                              | Sequence               | Format               |
-//! | :------------------------------- | :--------------------- | :------------------- |
-//! | **Ctrl+Up/Down/Left/Right**      | `ESC [1;5A/B/D/C`      | [`CSI`] with modifier    |
-//! | **Alt+Up/Down/Left/Right**       | `ESC [1;3A/B/D/C`      | [`CSI`] with modifier    |
-//! | **Shift+Up/Down/Left/Right**     | `ESC [1;2A/B/D/C`      | [`CSI`] with modifier    |
-//! | **Ctrl+Alt+arrows**              | `ESC [1;7A/B/D/C`      | Combined modifiers   |
+//! | Key                              | Sequence               | Format                |
+//! | :------------------------------- | :--------------------- | :-------------------- |
+//! | **Ctrl+Up/Down/Left/Right**      | `ESC [1;5A/B/D/C`      | [`CSI`] with modifier |
+//! | **Alt+Up/Down/Left/Right**       | `ESC [1;3A/B/D/C`      | [`CSI`] with modifier |
+//! | **Shift+Up/Down/Left/Right**     | `ESC [1;2A/B/D/C`      | [`CSI`] with modifier |
+//! | **Ctrl+Alt+arrows**              | `ESC [1;7A/B/D/C`      | Combined modifiers    |
 //!
 //! ### Special Navigation Keys
 //! | Key               | Primary      | Alt 1        | Alt 2        | SS3          |
@@ -390,20 +390,20 @@
 //! | **Shift+Tab (`BackTab`)**      | `ESC [Z`      | Backward navigation   |
 //!
 //! ### Function Keys F1-F12
-//! | Key         | [`CSI`] Code        | SS3 Sequence     | Notes              |
+//! | Key         | [`CSI`] Code    | SS3 Sequence     | Notes              |
 //! | :---------- | :-------------- | :--------------- | :----------------- |
 //! | **F1**      | `ESC [11~`      | `ESC O P`        | SS3 in app mode    |
 //! | **F2**      | `ESC [12~`      | `ESC O Q`        | SS3 in app mode    |
 //! | **F3**      | `ESC [13~`      | `ESC O R`        | SS3 in app mode    |
 //! | **F4**      | `ESC [14~`      | `ESC O S`        | SS3 in app mode    |
-//! | **F5**      | `ESC [15~`      | -                | [`CSI`] only           |
+//! | **F5**      | `ESC [15~`      | -                | [`CSI`] only       |
 //! | **F6**      | `ESC [17~`      | -                | Note: gap at 16    |
-//! | **F7**      | `ESC [18~`      | -                | [`CSI`] only           |
-//! | **F8**      | `ESC [19~`      | -                | [`CSI`] only           |
-//! | **F9**      | `ESC [20~`      | -                | [`CSI`] only           |
-//! | **F10**     | `ESC [21~`      | -                | [`CSI`] only           |
+//! | **F7**      | `ESC [18~`      | -                | [`CSI`] only       |
+//! | **F8**      | `ESC [19~`      | -                | [`CSI`] only       |
+//! | **F9**      | `ESC [20~`      | -                | [`CSI`] only       |
+//! | **F10**     | `ESC [21~`      | -                | [`CSI`] only       |
 //! | **F11**     | `ESC [23~`      | -                | Note: gap at 22    |
-//! | **F12**     | `ESC [24~`      | -                | [`CSI`] only           |
+//! | **F12**     | `ESC [24~`      | -                | [`CSI`] only       |
 //!
 //! ### Function Keys with Modifiers
 //! Function keys support all modifier combinations using [`CSI`] format:
@@ -534,7 +534,6 @@ use crate::{ASCII_DEL, ByteOffset, KeyState, byte_offset,
 ///
 /// [`Ambiguous Control Character Handling`]:
 ///     mod@self#ambiguous-control-character-handling
-///
 /// [`Control Key Combinations`]: mod@self#control-key-combinations-ctrlletter
 /// [`ESC`]: crate::EscSequence
 /// [`Parser Dispatch Priority Pipeline`]: mod@self#parser-dispatch-priority-pipeline

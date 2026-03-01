@@ -58,7 +58,7 @@
 
 use crate::{SingleThreadSafeControlledChild, InputEvent, PtyPair, PtyTestMode,
             tui::terminal_lib_backends::direct_to_ansi::DirectToAnsiInputDevice};
-use portable_pty::PtySize;
+use crate::{Size, height, size, width};
 use std::{io::{BufRead, BufReader, Write},
           time::Duration};
 
@@ -122,21 +122,16 @@ fn pty_controller_entry_point(mut pty_pair: PtyPair, child: SingleThreadSafeCont
     std::thread::sleep(Duration::from_millis(200));
 
     // Resize the PTY - this sends SIGWINCH to the controlled process.
-    let new_size = PtySize {
-        rows: 30,
-        cols: 100,
-        pixel_width: 0,
-        pixel_height: 0,
-    };
+    let new_size: Size = size(width(100) + height(30));
 
     eprintln!(
-        "📐 PTY Controller: Resizing PTY to {}x{}...",
-        new_size.cols, new_size.rows
+        "📐 PTY Controller: Resizing PTY to {:?}x{:?}...",
+        new_size.col_width, new_size.row_height
     );
 
     pty_pair
         .controller_mut()
-        .resize(new_size)
+        .resize(new_size.into())
         .expect("Failed to resize PTY");
 
     eprintln!("  ✓ PTY resized, SIGWINCH should have been sent");

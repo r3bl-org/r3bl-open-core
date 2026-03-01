@@ -1,6 +1,6 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use portable_pty::PtySize;
+use crate::{Size, height, size, width};
 use std::ops::{Add, AddAssign};
 
 /// Configuration options that can be combined to build a [`PTY`] configuration.
@@ -17,8 +17,7 @@ use std::ops::{Add, AddAssign};
 /// # Examples
 ///
 /// ```rust
-/// use r3bl_tui::{PtyConfigOption, PtyConfig};
-/// use portable_pty::PtySize;
+/// use r3bl_tui::{PtyConfigOption, PtyConfig, size, width, height};
 /// use PtyConfigOption::*;
 ///
 /// // Single option (automatically converts to PtyConfig)
@@ -28,7 +27,7 @@ use std::ops::{Add, AddAssign};
 /// let config = Osc + Output;
 ///
 /// // With custom size (last size wins)
-/// let custom_size = PtySize { rows: 24, cols: 80, pixel_width: 0, pixel_height: 0 };
+/// let custom_size = size(width(80) + height(24));
 /// let config = Osc + Output + Size(custom_size);
 ///
 /// // NoCaptureOutput overrides previous capture settings
@@ -38,12 +37,16 @@ use std::ops::{Add, AddAssign};
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum PtyConfigOption {
-    /// Capture and parse OSC sequences.
+    /// Capture and parse [`OSC`] sequences.
+    ///
+    /// [`OSC`]: crate::osc_codes::OscSequence
     Osc,
     /// Capture raw output data.
     Output,
-    /// Set custom PTY dimensions.
-    Size(PtySize),
+    /// Set custom [`PTY`] dimensions.
+    ///
+    /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
+    Size(Size),
     /// Disable all capture (sets both capture flags to false).
     NoCaptureOutput,
 }
@@ -56,15 +59,14 @@ pub enum PtyConfigOption {
 /// # Examples
 ///
 /// ```rust
-/// use r3bl_tui::{PtyConfigOption, PtyConfig};
-/// use portable_pty::PtySize;
+/// use r3bl_tui::{PtyConfigOption, PtyConfig, size, width, height};
 /// use PtyConfigOption::*;
 ///
 /// // Build from options
 /// let config = Osc + Output; // Creates a PtyConfig
 ///
 /// // Can continue adding to an existing config
-/// let custom_size = PtySize { rows: 24, cols: 80, pixel_width: 0, pixel_height: 0 };
+/// let custom_size = size(width(80) + height(24));
 /// let config = config + Size(custom_size);
 /// ```
 ///
@@ -73,7 +75,7 @@ pub enum PtyConfigOption {
 pub struct PtyConfig {
     pub capture_osc: bool,
     pub capture_output: bool,
-    pub pty_size: PtySize,
+    pub pty_size: Size,
 }
 
 impl Default for PtyConfig {
@@ -81,18 +83,15 @@ impl Default for PtyConfig {
         Self {
             capture_osc: false,
             capture_output: true,
-            pty_size: PtySize {
-                rows: 24,
-                cols: 80,
-                pixel_width: 0,
-                pixel_height: 0,
-            },
+            pty_size: size(width(80) + height(24)),
         }
     }
 }
 
 impl PtyConfig {
-    /// Checks if OSC capture is enabled.
+    /// Checks if [`OSC`] capture is enabled.
+    ///
+    /// [`OSC`]: crate::osc_codes::OscSequence
     #[must_use]
     pub fn is_osc_capture_enabled(&self) -> bool { self.capture_osc }
 
@@ -100,9 +99,11 @@ impl PtyConfig {
     #[must_use]
     pub fn is_output_capture_enabled(&self) -> bool { self.capture_output }
 
-    /// Gets the PTY size configuration.
+    /// Gets the [`PTY`] size configuration.
+    ///
+    /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
     #[must_use]
-    pub fn get_pty_size(&self) -> PtySize { self.pty_size }
+    pub fn get_pty_size(&self) -> Size { self.pty_size }
 
     /// Applies a configuration option to this config. Uses "last write wins per field"
     /// strategy.
@@ -161,9 +162,9 @@ impl AddAssign<PtyConfigOption> for PtyConfig {
     fn add_assign(&mut self, rhs: PtyConfigOption) { self.apply(rhs); }
 }
 
-/// Allow creating [`PtyConfig`] from [`PtySize`] via [`PtyConfigOption`].
-impl From<PtySize> for PtyConfigOption {
-    fn from(size: PtySize) -> Self { PtyConfigOption::Size(size) }
+/// Allow creating [`PtyConfig`] from [`Size`] via [`PtyConfigOption`].
+impl From<Size> for PtyConfigOption {
+    fn from(size: Size) -> Self { PtyConfigOption::Size(size) }
 }
 #[cfg(test)]
 mod tests {
@@ -174,8 +175,8 @@ mod tests {
         let config = PtyConfig::default();
         assert!(!config.capture_osc);
         assert!(config.capture_output);
-        assert_eq!(config.pty_size.rows, 24);
-        assert_eq!(config.pty_size.cols, 80);
+        assert_eq!(config.pty_size.row_height, height(24));
+        assert_eq!(config.pty_size.col_width, width(80));
     }
 
     #[test]
@@ -184,9 +185,9 @@ mod tests {
         assert!(!config.is_osc_capture_enabled());
         assert!(config.is_output_capture_enabled());
 
-        let size = config.get_pty_size();
-        assert_eq!(size.rows, 24);
-        assert_eq!(size.cols, 80);
+        let sz = config.get_pty_size();
+        assert_eq!(sz.row_height, height(24));
+        assert_eq!(sz.col_width, width(80));
     }
 
     #[test]
@@ -205,12 +206,7 @@ mod tests {
 
     #[test]
     fn test_pty_config_option_size() {
-        let custom_size = PtySize {
-            rows: 30,
-            cols: 120,
-            pixel_width: 0,
-            pixel_height: 0,
-        };
+        let custom_size = size(width(120) + height(30));
         let config: PtyConfig = PtyConfigOption::Size(custom_size).into();
         assert_eq!(config.pty_size, custom_size);
         assert!(!config.capture_osc);
@@ -265,18 +261,8 @@ mod tests {
 
     #[test]
     fn test_last_write_wins_size() {
-        let size1 = PtySize {
-            rows: 30,
-            cols: 120,
-            pixel_width: 0,
-            pixel_height: 0,
-        };
-        let size2 = PtySize {
-            rows: 40,
-            cols: 100,
-            pixel_width: 0,
-            pixel_height: 0,
-        };
+        let size1 = size(width(120) + height(30));
+        let size2 = size(width(100) + height(40));
 
         let config = PtyConfigOption::Size(size1) + PtyConfigOption::Size(size2);
         assert_eq!(config.pty_size, size2);
@@ -284,12 +270,7 @@ mod tests {
 
     #[test]
     fn test_complex_combination() {
-        let custom_size = PtySize {
-            rows: 50,
-            cols: 150,
-            pixel_width: 0,
-            pixel_height: 0,
-        };
+        let custom_size = size(width(150) + height(50));
 
         let config = PtyConfigOption::Osc
             + PtyConfigOption::Output
@@ -304,16 +285,11 @@ mod tests {
 
     #[test]
     fn test_pty_size_conversion() {
-        let size = PtySize {
-            rows: 25,
-            cols: 90,
-            pixel_width: 0,
-            pixel_height: 0,
-        };
+        let sz = size(width(90) + height(25));
 
-        let option: PtyConfigOption = size.into();
+        let option: PtyConfigOption = sz.into();
         match option {
-            PtyConfigOption::Size(converted_size) => assert_eq!(converted_size, size),
+            PtyConfigOption::Size(converted_size) => assert_eq!(converted_size, sz),
             _ => panic!("Expected Size option"),
         }
     }
@@ -335,12 +311,7 @@ mod tests {
             PtyConfigOption::NoCaptureOutput
         );
 
-        let size = PtySize {
-            rows: 24,
-            cols: 80,
-            pixel_width: 0,
-            pixel_height: 0,
-        };
-        assert_eq!(PtyConfigOption::Size(size), PtyConfigOption::Size(size));
+        let sz = size(width(80) + height(24));
+        assert_eq!(PtyConfigOption::Size(sz), PtyConfigOption::Size(sz));
     }
 }

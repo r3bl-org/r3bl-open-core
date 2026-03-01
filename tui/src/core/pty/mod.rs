@@ -6,7 +6,7 @@
 //!
 //! This module provides a high-level, async interface for spawning and controlling
 //! processes in [pseudo-terminals] ([`PTY`]s). It supports both read-only and read-write
-//! (read-write) sessions with optional OSC sequence capture for enhanced terminal
+//! (read-write) sessions with optional [`OSC`] sequence capture for enhanced terminal
 //! features.
 //!
 //! ## [`PTY`] Architecture Overview
@@ -41,19 +41,20 @@
 //! │ Your Program │◄─►│    PTY     │   │ Spawned Process   │
 //! │ Reads/writes │   │ Controller │   │ stdin/stdout/     │
 //! │ through      │   │     ↕      │   │ stderr redirected │
-//! │ controller/  │   │    PTY     │   │ to controlled     │
-//! │ master side  │   │     ↕      │   │ side              │
+//! │ controller   │   │    PTY     │   │ to controlled     │
+//! │ side         │   │     ↕      │   │ side              │
 //! │              │   │ Controlled │◄─►│                   │
 //! └──────────────┘   └────────────┘   └───────────────────┘
 //! ```
 //!
 //! ## Key Features
 //!
-//! - **Read-only sessions**: Capture command output with optional OSC sequence processing
+//! - **Read-only sessions**: Capture command output with optional [`OSC`] sequence
+//!   processing
 //! - **Read-write sessions**: Full bidirectional communication with [`PTY`] processes
-//! - **OSC sequence support**: Capture progress updates and terminal escape sequences
+//! - **[`OSC`] sequence support**: Capture progress updates and terminal escape sequences
 //! - **Flexible configuration**: Control what data is captured and processed
-//! - **Async/await support**: Built on tokio for non-blocking operation
+//! - **Async/await support**: Built on [`tokio`] for non-blocking operation
 //!
 //! ## Implementation Strategy
 //!
@@ -69,17 +70,17 @@
 //!
 //! ### Task Coordination & Lifecycle
 //!
-//! | Time | Completion Task        | Reader Task    | Input Handler  | Bridge Task    |
-//! | :--- | :--------------------- | :------------- | :------------- | :------------- |
-//! | 0    | 🛫 Spawn child         |                |                |                |
-//! | 1    | 🛫 Spawn reader        | 🛫 Start read  |                |                |
-//! | 2    | 🛫 Spawn input hndlr▪  | 📖 Read data   | 🛫 Start▪      |                |
-//! | 3    | 🛫 Spawn bridge▪       | 📤 Send events | 📥 Wait input▪ | 🛫 Start▪      |
-//! | 4    | 🛬 Wait `child.wait()` | 📖 Read data   | ✍️ Write PTY▪  | 🔄 Bridge I/O▪ |
-//! | 5    | 📤 Send Exit event     | 📖 Read EOF    | 📥 Wait input▪ | 🔄 Bridge I/O▪ |
-//! | 6    | 💀 drop(controlled)    | 🛬 Exit        | 🛬 Exit▪       | 🛬 Exit▪       |
-//! | 7    | 🛬 Wait all tasks      |                |                |                |
-//! | 8    | ✅ Return status       |                |                |                |
+//! | Time | Completion Task        | Reader Task    | Input Handler     | Bridge Task    |
+//! | :--- | :--------------------- | :------------- | :---------------- | :------------- |
+//! | 0    | 🛫 Spawn child         |                |                   |                |
+//! | 1    | 🛫 Spawn reader        | 🛫 Start read  |                   |                |
+//! | 2    | 🛫 Spawn input hndlr▪  | 📖 Read data   | 🛫 Start▪         |                |
+//! | 3    | 🛫 Spawn bridge▪       | 📤 Send events | 📥 Wait input▪    | 🛫 Start▪      |
+//! | 4    | 🛬 Wait `child.wait()` | 📖 Read data   | ✍️ Write [`PTY`]▪ | 🔄 Bridge I/O▪ |
+//! | 5    | 📤 Send Exit event     | 📖 Read EOF    | 📥 Wait input▪    | 🔄 Bridge I/O▪ |
+//! | 6    | 💀 drop(controlled)    | 🛬 Exit        | 🛬 Exit▪          | 🛬 Exit▪       |
+//! | 7    | 🛬 Wait all tasks      |                |                   |                |
+//! | 8    | ✅ Return status       |                |                   |                |
 //!
 //! Legends:
 //! ```txt
@@ -160,40 +161,20 @@
 //!
 //! ## Critical [`PTY`] Lifecycle Management
 //!
-//! **Understanding [`PTY`] file descriptor management is crucial for all implementations
-//! in this module to avoid deadlocks.**
+//! The controlled side of the [`PTY`] must be closed in the parent process immediately
+//! after spawning the child. Without this, reads from the controller will never see
+//! [`EOF`] -- even after the child exits -- causing permanent deadlocks.
 //!
-//! ### The [`PTY`] File Descriptor Reference Counting Problem
+//! See [`PtyPair`] for the full explanation, including file descriptor ownership,
+//! the `Drop` chain, and why [`PtyPair::spawn_command_and_close_controlled`] exists.
 //!
-//! A [`PTY`] consists of two halves: master (controller) and slave (controlled). The
-//! kernel's [`PTY`] implementation requires **BOTH** conditions for EOF:
-//!
-//! 1. The slave side must be closed (happens when the child process exits)
-//! 2. The reader must be the ONLY remaining reference to the master
-//!
-//! ### Why Explicit Resource Management is Required
-//!
-//! Even though the child process has exited and closed its slave FD, our `controlled`
-//! variable keeps the slave side open. The [`PTY`] won't send EOF to the master until ALL
-//! slave file descriptors are closed. Without explicitly dropping `controlled`, it would
-//! remain open until the entire function returns, causing the reader to block forever
-//! waiting for EOF that never comes.
-//!
-//! ### The Solution Strategy (Applied in All Implementations)
-//!
-//! 1. Clone a reader from controller, keeping controller in scope
-//! 2. **Explicitly drop controlled after process exits** - closes our controlled half FD
-//! 3. Drop controller after process exits to release master FD
-//! 4. This allows the reader to receive EOF and exit cleanly
-//!
-//! **This pattern is critical in both read-only and read-write implementations.**
 //!
 //! ## Main Types
 //!
 //! - [`PtyCommandBuilder`]: Builder for configuring and spawning [`PTY`] commands
 //! - [`PtyReadWriteSession`]: Read-write [`PTY`] session handle
 //! - [`PtyReadOnlySession`]: Read-only [`PTY`] session handle
-//! - [`PtyReadWriteOutputEvent`]: Events received from [`PTY`] processes (output, OSC
+//! - [`PtyReadWriteOutputEvent`]: Events received from [`PTY`] processes (output, [`OSC`]
 //!   sequences, exit)
 //! - [`PtyInputEvent`]: Input types that can be sent to interactive sessions
 //!
@@ -229,11 +210,10 @@
 //! # #[cfg(unix)]
 //! # #[tokio::main]
 //! # async fn main() -> Result<(), Box<dyn std::error::Error>> {
-//! use r3bl_tui::{PtyCommandBuilder, PtyReadWriteOutputEvent, PtyInputEvent, ControlSequence, CursorKeyMode};
-//! use portable_pty::PtySize;
+//! use r3bl_tui::{PtyCommandBuilder, PtyReadWriteOutputEvent, PtyInputEvent, ControlSequence, CursorKeyMode, size, width, height};
 //!
 //! let mut session = PtyCommandBuilder::new("cat")
-//!     .spawn_read_write(PtySize { rows: 24, cols: 80, pixel_width: 0, pixel_height: 0 })?;
+//!     .spawn_read_write(size(width(80) + height(24)))?;
 //!
 //! // Send input
 //! session.input_event_ch_tx_half.send(PtyInputEvent::WriteLine("Hello, PTY!".into()))?;
@@ -253,13 +233,15 @@
 //! # }
 //! ```
 //!
-//! [MPSC channels]: tokio::sync::mpsc
+//! [`EOF`]: https://en.wikipedia.org/wiki/End-of-file
+//! [`OSC`]: crate::osc_codes::OscSequence
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
+//! [`tokio`]: tokio
+//! [MPSC channels]: tokio::sync::mpsc
 //! [pseudo-terminals]: https://en.wikipedia.org/wiki/Pseudoterminal
 
 // Attach.
 pub mod pty_command_builder;
-pub mod pty_common_io;
 pub mod pty_config;
 pub mod pty_core;
 pub mod pty_read_only;

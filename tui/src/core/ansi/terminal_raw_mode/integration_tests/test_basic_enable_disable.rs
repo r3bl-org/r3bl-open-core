@@ -21,7 +21,7 @@ use std::{io::{BufRead, BufReader, Write},
 generate_pty_test! {
     /// [`PTY`]-based integration test for raw mode basic enable/disable.
     ///
-    /// This test uses a master/slave [`PTY`] pair to verify that:
+    /// This test uses a controller/controlled [`PTY`] pair to verify that:
     /// 1. Raw mode can be enabled on a real [`PTY`]
     /// 2. Raw mode can be disabled and terminal settings restored
     /// 3. The [`RAII`] guard pattern works correctly

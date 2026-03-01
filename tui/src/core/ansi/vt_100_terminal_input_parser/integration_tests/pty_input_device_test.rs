@@ -262,7 +262,7 @@ fn pty_controller_entry_point(pty_pair: PtyPair, child: SingleThreadSafeControll
 ///    - Allow async byte-by-byte reading
 /// 2. **Create Device**: Initialize `DirectToAnsiInputDevice` to read from stdin
 /// 3. **Process Events**: Read and parse [`ANSI`] sequences into `InputEvents`
-/// 4. **Output Results**: Write parsed events to stdout for master to verify
+/// 4. **Output Results**: Write parsed events to stdout for controller to verify
 ///
 /// This function MUST exit before returning so other tests don't run.
 ///

@@ -79,6 +79,39 @@ pub enum PtyTestMode {
 /// └───────────────────────────────┘
 /// ```
 ///
+/// # Controller-Controlled Orchestration
+///
+/// The controller and controlled communicate through the kernel [`pty`] buffer using
+/// real I/O -- no mocks. This is the entire purpose of the test fixture: exercise real
+/// terminal code paths. A typical exchange looks like:
+///
+/// 1. Controlled prints a ready marker (e.g. `"CONTROLLED_READY"`) to stdout.
+/// 2. Controller reads lines from the [`pty`] until it sees the marker.
+/// 3. Controller writes raw bytes (e.g. [`ANSI`] key sequences) to the [`pty`] writer.
+/// 4. Controlled reads those bytes from its stdin, processes them, and prints results.
+/// 5. Controller reads the result lines back and asserts correctness.
+/// 6. Controller must now wait for the child process to exit.
+///
+/// ## [`PTY`] Buffer Deadlock
+///
+/// Because the controller does all of this on a **single thread**, calling bare
+/// [`wait()`] without first draining the [`pty`] buffer causes a deadlock - the
+/// controller waits for the child to exit while the child's `exit()` flush blocks on
+/// a full buffer that nobody is reading. See [`drain_pty_and_wait`] for the full
+/// deadlock sequence and solution.
+///
+/// ## How the Macro Prevents It
+///
+/// The macro wraps the child in [`SingleThreadSafeControlledChild`], which hides
+/// [`wait()`] entirely. The only exit path is [`drain_and_wait()`], which delegates
+/// to [`drain_pty_and_wait`]. A [`PtyTestWatchdog`] runs alongside as a safety net -
+/// if the controller hangs for any reason, the watchdog kills the child after 30
+/// seconds, converting an infinite hang into a bounded test failure.
+///
+/// **Not needed in production code.** Production [`pty`] sessions run [`wait()`] inside
+/// [`tokio::task::spawn_blocking`] while separate [`tokio`] tasks concurrently drain the
+/// buffer. Reading and waiting happen on different tasks, so the buffer never fills up.
+///
 /// # Design Rationale: Dependency Injection at the Macro Level
 ///
 /// **Why the macro passes [`pty`] resources as parameters instead of handling
@@ -168,17 +201,22 @@ pub enum PtyTestMode {
 ///
 /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 /// [`Cooked`]: PtyTestMode::Cooked
+/// [`drain_and_wait()`]: crate::SingleThreadSafeControlledChild::drain_and_wait
 /// [`drain_pty_and_wait`]: crate::drain_pty_and_wait
 /// [`generate_pty_test!`]: crate::generate_pty_test
 /// [`integration_tests`]:
 ///     mod@crate::core::ansi::vt_100_terminal_input_parser::integration_tests
 /// [`pty_types`]: mod@crate::core::pty::pty_core::pty_types
 /// [`pty`]: crate::core::pty
+/// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
+/// [`PtyTestWatchdog`]: crate::PtyTestWatchdog
 /// [`raw_mode_integration_tests`]:
 ///     mod@crate::core::ansi::terminal_raw_mode::integration_tests
 /// [`Raw`]: PtyTestMode::Raw
 /// [`SingleThreadSafeControlledChild`]: crate::SingleThreadSafeControlledChild
 /// [`spawn_controlled_in_pty`]: crate::spawn_controlled_in_pty
+/// [`tokio`]: tokio
+/// [`wait()`]: portable_pty::Child::wait
 #[macro_export]
 macro_rules! generate_pty_test {
     (
@@ -192,8 +230,7 @@ macro_rules! generate_pty_test {
         #[test]
         fn $test_name() {
             use std::io::Write;
-            use portable_pty::{CommandBuilder, NativePtySystem, PtySize, PtySystem};
-            use $crate::PtyPair;
+            use $crate::{PtyCommand, PtyPair};
 
             const PTY_CONTROLLED_ENV_VAR: &str = "R3BL_PTY_TEST_CONTROLLED";
 
@@ -234,35 +271,25 @@ macro_rules! generate_pty_test {
             // Otherwise, run as controller - create PTY and spawn controlled
             eprintln!("🚀 TEST: No {} var, running as controller", PTY_CONTROLLED_ENV_VAR);
 
-            // Create PTY pair
-            let pty_system = NativePtySystem::default();
-            let raw_pty_pair = pty_system
-                .openpty(PtySize {
-                    rows: 24,
-                    cols: 80,
-                    pixel_width: 0,
-                    pixel_height: 0,
-                })
+            // Create PTY pair (standard 80x24 terminal size).
+            let mut pty_pair = PtyPair::new_with_default_size()
                 .expect("Failed to create PTY pair");
-
-            // Wrap the PTY pair to use controller/controlled terminology
-            let pty_pair = PtyPair::from(raw_pty_pair);
 
             eprintln!("🔍 Controller: PTY pair created");
 
             // Spawn controlled process
             let test_binary =
                 std::env::current_exe().expect("Failed to get current executable");
-            let mut cmd = CommandBuilder::new(&test_binary);
+            let mut cmd = PtyCommand::new(&test_binary);
             cmd.env(PTY_CONTROLLED_ENV_VAR, "1");
             cmd.env("RUST_BACKTRACE", "1");
             cmd.args(&["--test-threads", "1", "--nocapture", stringify!($test_name)]);
 
             eprintln!("🚀 Controller: Spawning controlled process...");
             let child = pty_pair
-                .controlled()
-                .spawn_command(cmd)
+                .spawn_command_and_close_controlled(cmd)
                 .expect("Failed to spawn controlled process");
+            eprintln!("🔍 Controller: Controlled side closed (parent no longer holds controlled fd)");
 
             // Wrap in SingleThreadSafeControlledChild — bare child.wait() is now impossible.
             // The only exit path is drain_and_wait(), preventing PTY buffer deadlocks.

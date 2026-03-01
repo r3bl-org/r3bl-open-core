@@ -1,6 +1,6 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! [[`GapBufferLine`]] - A line view that combines content and metadata.
+//! [`GapBufferLine`] - A line view that combines content and metadata.
 //!
 //! This struct provides unified access to both line content and its associated
 //! metadata, eliminating the need to work with split content/metadata APIs.

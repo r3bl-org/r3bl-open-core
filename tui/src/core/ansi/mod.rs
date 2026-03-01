@@ -133,7 +133,7 @@
 //! ### Output Parser: VTE-based ([`vt_100_pty_output_parser`])
 //!
 //! **What it does**: Parses [`ANSI`] escape sequences sent TO the terminal by child
-//! processes (via the [`PTY`] master).
+//! processes (via the [`PTY`] controller).
 //!
 //! **Architecture**: Uses the [`VTE`] crate - a battle-tested state machine from the
 //! [`Alacritty`] terminal emulator project.

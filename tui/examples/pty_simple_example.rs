@@ -1,10 +1,11 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Minimal PTY example - just run a single htop process.
+//! Minimal [`PTY`] example - just run a single htop process.
 //!
-//! This is a simplified example to debug PTY integration issues.
+//! This is a simplified example to debug [`PTY`] integration issues.
+//!
+//! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 
-use portable_pty::PtySize;
 use r3bl_tui::{AnsiSequenceGenerator, InputEvent, Key, KeyPress, KeyState,
                ModifierKeysMask, RawMode, col,
                core::{get_size,
@@ -52,17 +53,9 @@ async fn main() -> miette::Result<()> {
     }
     tracing::debug!("Screen cleared");
 
-    // Spawn htop process.
-    let pty_size = PtySize {
-        rows: terminal_size.row_height.into(),
-        cols: terminal_size.col_width.into(),
-        pixel_width: 0,
-        pixel_height: 0,
-    };
+    tracing::debug!("Spawning htop with PTY size: {:?}", terminal_size);
 
-    tracing::debug!("Spawning htop with PTY size: {:?}", pty_size);
-
-    let session = PtyCommandBuilder::new("htop").spawn_read_write(pty_size)?;
+    let session = PtyCommandBuilder::new("htop").spawn_read_write(terminal_size)?;
 
     tracing::debug!("htop process started successfully");
 
@@ -176,13 +169,7 @@ async fn run_event_loop(
                     }
                     InputEvent::Resize(new_size) => {
                         // Handle resize.
-                        let pty_size = PtySize {
-                            rows: new_size.row_height.0.value,
-                            cols: new_size.col_width.0.value,
-                            pixel_width: 0,
-                            pixel_height: 0,
-                        };
-                        let _unused = session.input_event_ch_tx_half.send(PtyInputEvent::Resize(pty_size));
+                        let _unused = session.input_event_ch_tx_half.send(PtyInputEvent::Resize(new_size));
                     }
                     _ => {}
                 }

@@ -35,7 +35,7 @@
 //!
 //! All tests use the [`generate_pty_test!`] macro which handles:
 //! - [`PTY`] pair creation (24x80 terminal)
-//! - Master/slave process coordination
+//! - Controller/controlled process coordination
 //! - CI detection (tests skip in CI environments)
 //! - Automatic cleanup
 //!

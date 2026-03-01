@@ -34,30 +34,31 @@ Controller functions call bare `child.wait()` after finishing their assertions. 
 This is exactly what `drain_pty_and_wait()` prevents — it drains the buffer before waiting.
 But these controllers use bare `child.wait()` instead.
 
-### Fix: `GuardedChild` newtype — make bare `child.wait()` impossible
+### Fix: `SingleThreadSafeControlledChild` newtype — make bare `child.wait()` impossible
 
 Wrap `ControlledChild` in a newtype that does NOT expose `.wait()`. The only way to finish
 is through `drain_and_wait()`, which drains the PTY buffer first.
 
-**New file: `tui/src/core/test_fixtures/pty_test_fixtures/guarded_child.rs`**
+**New file: `tui/src/core/test_fixtures/pty_test_fixtures/single_thread_safe_controlled_child.rs`**
 
 ```rust
-/// Wraps [`ControlledChild`] to enforce correct PTY cleanup.
+/// Wraps [`ControlledChild`] for test controllers that cannot read and wait
+/// concurrently.
 ///
-/// Does NOT expose `.wait()`. The only exit path is [`drain_and_wait`],
-/// which drains the PTY buffer first — preventing the PTY buffer deadlock
-/// where parent waits for child exit while child blocks on a full buffer.
+/// The only exit path is [`drain_and_wait`], which drains the PTY buffer
+/// first — preventing the deadlock where parent waits for child exit while
+/// child blocks on a full buffer.
 ///
 /// [`drain_and_wait`]: Self::drain_and_wait
-pub struct GuardedChild {
+pub struct SingleThreadSafeControlledChild {
     child: ControlledChild,
 }
 
-impl GuardedChild {
+impl SingleThreadSafeControlledChild {
     pub fn new(child: ControlledChild) -> Self { Self { child } }
 
-    /// Clone a kill handle (for the watchdog timer).
-    pub fn clone_killer(&self) -> ControlledChildTerminationHandle {
+    /// Returns a handle that can kill the child process from another thread.
+    pub fn clone_termination_handle(&self) -> ControlledChildTerminationHandle {
         self.child.clone_killer()
     }
 
@@ -78,7 +79,7 @@ No `Deref<Target = dyn Child>`, no `.wait()` method — the only way to finish i
 
 **Modify: `tui/src/core/test_fixtures/pty_test_fixtures/mod.rs`**
 
-Add `mod guarded_child; pub use guarded_child::*;`
+Add `mod single_thread_safe_controlled_child; pub use single_thread_safe_controlled_child::*;`
 
 **Modify: `tui/src/core/test_fixtures/pty_test_fixtures/generate_pty_test.rs`**
 
@@ -86,10 +87,10 @@ Wrap the child before passing to controller:
 
 ```rust
 let child = pty_pair.controlled().spawn_command(cmd).expect("...");
-let child = $crate::GuardedChild::new(child);  // wrap in newtype
+let child = $crate::SingleThreadSafeControlledChild::new(child);  // wrap in newtype
 ```
 
-Controller signature changes from `(PtyPair, ControlledChild)` to `(PtyPair, GuardedChild)`.
+Controller signature changes from `(PtyPair, ControlledChild)` to `(PtyPair, SingleThreadSafeControlledChild)`.
 
 ### Affected controller functions (all change `child.wait()` → `child.drain_and_wait()`):
 
@@ -115,8 +116,8 @@ fn controller(pty_pair: PtyPair, mut child: ControlledChild) {
     match child.wait() { ... }
 }
 
-// After (GuardedChild forces drain):
-fn controller(pty_pair: PtyPair, child: GuardedChild) {
+// After (SingleThreadSafeControlledChild forces drain):
+fn controller(pty_pair: PtyPair, child: SingleThreadSafeControlledChild) {
     // ... test work ...
     drop(writer);
     child.drain_and_wait(buf_reader, pty_pair);
@@ -128,7 +129,7 @@ Each controller keeps `buf_reader` and `pty_pair` alive until the final `drain_a
 ### Tests that currently use `read_lines_and_drain()`
 
 2 tests call `read_lines_and_drain(pty_pair, &mut child, ...)` which combines reading
-and draining. With `GuardedChild`, split into two steps:
+and draining. With `SingleThreadSafeControlledChild`, split into two steps:
 
 1. Make `read_until_marker()` public (currently private in `read_lines_and_drain.rs:183`)
 2. Tests call `read_until_marker()` for reading, then `child.drain_and_wait()` for cleanup
@@ -149,7 +150,7 @@ Affected tests:
 - `tui/src/readline_async/.../pty_multiline_output_test.rs`
 - `tui/src/readline_async/.../pty_shared_writer_no_blank_line_test.rs`
 
-`GuardedChild` stays with a single method: `drain_and_wait()`.
+`SingleThreadSafeControlledChild` stays with a single method: `drain_and_wait()`.
 
 ---
 
@@ -157,7 +158,7 @@ Affected tests:
 
 ### Purpose
 
-Defense-in-depth: `GuardedChild` makes the deadlock impossible for normal code paths.
+Defense-in-depth: `SingleThreadSafeControlledChild` makes the deadlock impossible for normal code paths.
 The watchdog catches edge cases (e.g., controller panics before calling `drain_and_wait`,
 or a blocking read loop that never reaches cleanup). After 30 seconds, the watchdog kills
 the child, converting an indefinite hang into a test failure.
@@ -190,8 +191,8 @@ Add `mod pty_test_watchdog; pub use pty_test_watchdog::*;`
 After line 258 (child spawned), before line 261 (controller called), add:
 
 ```rust
-let child = $crate::GuardedChild::new(child);
-let killer = child.clone_killer();
+let child = $crate::SingleThreadSafeControlledChild::new(child);
+let killer = child.clone_termination_handle();
 let _watchdog = $crate::PtyTestWatchdog::new(killer, $crate::PTY_TEST_WATCHDOG_TIMEOUT);
 $controller_fn(pty_pair, child);
 // _watchdog dropped here -> sets cancelled flag, thread exits cleanly on wake

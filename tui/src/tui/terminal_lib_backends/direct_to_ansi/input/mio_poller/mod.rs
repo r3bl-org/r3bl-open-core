@@ -18,16 +18,16 @@
 //!
 //! ## Quick Reference
 //!
-//! | Item                                             | Description                                                         |
-//! | :----------------------------------------------- | :------------------------------------------------------------------ |
-//! | [`MioPollWorker`]                                | Core struct: holds poll handle, buffers, parser (implements RRT)    |
-//! | [`SourceRegistry`]                               | Holds [`stdin`] and [`SIGWINCH`] signal handles                     |
-//! | [`SourceKindReady`]                              | Enum mapping [`mio::Token`] ↔ source kind for dispatch              |
-//! | [`dispatch_with_sender()`]                       | Routes ready events to appropriate handlers                         |
-//! | [`consume_stdin_input_with_sender()`]            | Reads and parses [`stdin`] bytes into [`InputEvent`]s               |
-//! | [`consume_pending_signals_with_sender()`]        | Drains [`SIGWINCH`] signals, sends [`SignalEvent::Resize`]          |
-//! | [VT100 input parser] ([`StatefulInputParser`])   | Accumulates bytes, parses [`VT100InputEventIR`] with [`ESC`] handling   |
-//! | [paste state machine] ([`PasteCollectionState`]) | Collects text between bracketed paste markers                       |
+//! | Item                                             | Description                                                           |
+//! | :----------------------------------------------- | :-------------------------------------------------------------------- |
+//! | [`MioPollWorker`]                                | Core struct: holds poll handle, buffers, parser (implements RRT)      |
+//! | [`SourceRegistry`]                               | Holds [`stdin`] and [`SIGWINCH`] signal handles                       |
+//! | [`SourceKindReady`]                              | Enum mapping [`mio::Token`] ↔ source kind for dispatch                |
+//! | [`dispatch_with_sender()`]                       | Routes ready events to appropriate handlers                           |
+//! | [`consume_stdin_input_with_sender()`]            | Reads and parses [`stdin`] bytes into [`InputEvent`]s                 |
+//! | [`consume_pending_signals_with_sender()`]        | Drains [`SIGWINCH`] signals, sends [`SignalEvent::Resize`]            |
+//! | [VT100 input parser] ([`StatefulInputParser`])   | Accumulates bytes, parses [`VT100InputEventIR`] with [`ESC`] handling |
+//! | [paste state machine] ([`PasteCollectionState`]) | Collects text between bracketed paste markers                         |
 //!
 //! # How It Works
 //!
@@ -148,7 +148,7 @@
 //! This is safe because:
 //! - [`SINGLETON`] is a static [`Mutex`], never dropped until process exit.
 //! - The thread is doing nothing when blocked—[`mio`] uses efficient OS primitives.
-//! - There are no resources to leak—[`stdin`] is [`fd`][[`file descriptor`]] `0`, which is
+//! - There are no resources to leak—[`stdin`] is [`fd`][`file descriptor`] `0`, which is
 //!   not owned by us.
 //!
 //! #### [`EINTR`] Handling
@@ -166,12 +166,12 @@
 //! - **macOS**: [`kqueue`]
 //!
 //! It's *blocking* but efficient - [`poll.poll(&mut events, None)`] blocks the thread until
-//! something happens on either [[`file descriptor`]]. Unlike [`select()`] or raw [`poll()`], [`mio`] uses the
+//! something happens on either [`file descriptor`]. Unlike [`select()`] or raw [`poll()`], [`mio`] uses the
 //! optimal [`syscall`] per platform.
 //!
 //! <div class="warning">
 //!
-//! **Why not tokio for stdin?** Because [`tokio::io::stdin()`] uses a blocking threadpool
+//! **Why not [`tokio`] for stdin?** Because [`tokio::io::stdin()`] uses a blocking threadpool
 //! internally, and cancelling a [`tokio::select!`] branch doesn't stop the underlying
 //! read - it keeps running as a "zombie", causing the problems described in
 //! [The Problems section in `DirectToAnsiInputDevice`].
@@ -183,7 +183,7 @@
 //!
 //! ## The Two File Descriptors
 //!
-//! A [[`file descriptor`]] ([`fd`]) is a Unix integer handle to an I/O resource (file, [`socket`],
+//! A [`file descriptor`] ([`fd`]) is a Unix integer handle to an I/O resource (file, [`socket`],
 //! pipe, etc.). Two [`fd`]s are registered with [`mio`]'s registry so a single [`poll()`] call
 //! can wait on either becoming ready:
 //!
@@ -344,6 +344,7 @@
 //! [`tokio::io::stdin()`]: tokio::io::stdin
 //! [`tokio::select!`]: tokio::select
 //! [`tokio::sync::broadcast`]: tokio::sync::broadcast
+//! [`tokio`]: tokio
 //! [`tty`]: https://man7.org/linux/man-pages/man4/tty.4.html
 //! [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
 //! [`VEOF`]: https://man7.org/linux/man-pages/man3/termios.3.html

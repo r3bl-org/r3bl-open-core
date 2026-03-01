@@ -95,9 +95,9 @@
 //!
 //! - **[`Alacritty`]**: Checks `ignore` flag, returns early without processing, see
 //!   [alacritty-pr-2664] for details
-//! - **[kitty]**: Trashes entire control sequence when limits exceeded
-//! - **[st (suckless terminal)]**: Trashes entire control sequence
-//! - **[GNOME VTE]**: Trashes entire control sequence
+//! - **[`kitty`]**: Trashes entire control sequence when limits exceeded
+//! - **[`st (suckless terminal)`]**: Trashes entire control sequence
+//! - **[`GNOME VTE`]**: Trashes entire control sequence
 //!
 //! This approach is mandated by the [`VT-100` spec] and [ECMA-48 standard],
 //! which require terminals to ignore malformed sequences rather than execute potentially
@@ -193,7 +193,9 @@
 //! [`esc_dispatch()`]: AnsiToOfsBufPerformer::esc_dispatch
 //! [`ESC`]: crate::EscSequence
 //! [`execute()`]: AnsiToOfsBufPerformer::execute
+//! [`GNOME VTE`]: https://gitlab.gnome.org/GNOME/vte
 //! [`hook()`]: AnsiToOfsBufPerformer::hook
+//! [`kitty`]: https://sw.kovidgoyal.net/kitty/
 //! [`OffscreenBuffer`]: crate::OffscreenBuffer
 //! [`osc_dispatch()`]: AnsiToOfsBufPerformer::osc_dispatch
 //! [`OSC`]: crate::osc_codes::OscSequence
@@ -202,14 +204,12 @@
 //! [`Perform`]: vte::Perform
 //! [`print()`]: AnsiToOfsBufPerformer::print
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
+//! [`st (suckless terminal)`]: https://st.suckless.org/
 //! [`VT-100` spec]: https://vt100.net/docs/vt100-ug/chapter3.html
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 //! [`vte::Params`]: vte::Params
 //! [`vte`]: https://docs.rs/vte
 //! [alacritty-pr-2664]: https://github.com/alacritty/alacritty/pull/2664
-//! [GNOME VTE]: https://gitlab.gnome.org/GNOME/vte
-//! [kitty]: https://sw.kovidgoyal.net/kitty/
-//! [st (suckless terminal)]: https://st.suckless.org/
 
 // Import the operation modules and public API.
 use super::{ansi_parser_public_api::AnsiToOfsBufPerformer,

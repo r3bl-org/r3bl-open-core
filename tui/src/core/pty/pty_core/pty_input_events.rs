@@ -11,8 +11,7 @@
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 
 use super::pty_output_events::{ControlSequence, CursorKeyMode};
-use crate::{FunctionKey, Key, KeyPress, KeyState, ModifierKeysMask, SpecialKey};
-use portable_pty::PtySize;
+use crate::{FunctionKey, Key, KeyPress, KeyState, ModifierKeysMask, Size, SpecialKey};
 
 /// Input event types that can be sent to a child process through [`PTY`].
 ///
@@ -36,8 +35,10 @@ pub enum PtyInputEvent {
     /// Send control sequences with cursor mode awareness (Ctrl-C, Ctrl-D, arrow keys,
     /// etc.).
     SendControl(ControlSequence, CursorKeyMode),
-    /// Resize the PTY window.
-    Resize(PtySize),
+    /// Resize the [`PTY`] window.
+    ///
+    /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
+    Resize(Size),
     /// Explicit flush without writing data.
     /// Forces any buffered data to be sent to the child immediately.
     Flush,
@@ -78,7 +79,7 @@ impl ModifierState {
         }
     }
 
-    /// Converts to CSI modifier code.
+    /// Converts to [`CSI`] modifier code.
     ///
     /// | Code   | Modifiers          |
     /// | ------ | ------------------ |
@@ -90,6 +91,8 @@ impl ModifierState {
     /// | 6      | ctrl+shift         |
     /// | 7      | ctrl+alt           |
     /// | 8      | ctrl+alt+shift     |
+    ///
+    /// [`CSI`]: crate::CsiSequence
     fn to_csi_modifier(self) -> u8 {
         1 + u8::from(self.shift)
             + (if self.alt { 2 } else { 0 })
@@ -391,7 +394,9 @@ fn get_ctrl_code_extended(ch: char) -> Option<u8> {
     }
 }
 
-/// Converts special keys with modifiers using CSI sequences.
+/// Converts special keys with modifiers using [`CSI`] sequences.
+///
+/// [`CSI`]: crate::CsiSequence
 fn convert_special_key(
     special: SpecialKey,
     modifiers: ModifierState,
@@ -564,7 +569,10 @@ fn convert_function_key(
     ))
 }
 
-/// Generate CSI sequence: ESC[key;modifier;letter or ESC[key;modifier~
+/// Generate [`CSI`] sequence: [`ESC`][key;modifier;letter or [`ESC`][key;modifier~
+///
+/// [`CSI`]: crate::CsiSequence
+/// [`ESC`]: crate::EscSequence
 fn generate_csi_sequence(key_code: u32, modifier: u8, suffix: &str) -> PtyInputEvent {
     if modifier == 1 {
         // No modifier - use simple sequence.
@@ -591,7 +599,10 @@ fn generate_csi_sequence(key_code: u32, modifier: u8, suffix: &str) -> PtyInputE
     }
 }
 
-/// Generate CSI u sequence: ESC[unicode;modifier;u
+/// Generate [`CSI`] u sequence: [`ESC`][unicode;modifier;u
+///
+/// [`CSI`]: crate::CsiSequence
+/// [`ESC`]: crate::EscSequence
 fn generate_csi_u_sequence(unicode: u32, modifier: u8) -> PtyInputEvent {
     let seq = if modifier == 1 {
         format!("\x1B[{unicode}u")

@@ -21,7 +21,7 @@ use std::{io::{BufRead, BufReader, Read, Write},
 generate_pty_test! {
     /// [`PTY`]-based integration test for raw mode input behavior.
     ///
-    /// Sends various input sequences from master to slave and verifies:
+    /// Sends various input sequences from controller to controlled and verifies:
     /// 1. Characters arrive immediately (no line buffering)
     /// 2. Control characters pass through as bytes (e.g., Ctrl+C = 0x03)
     /// 3. No echo (typed characters don't appear in output)

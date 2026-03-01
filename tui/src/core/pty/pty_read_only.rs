@@ -1,14 +1,13 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{Controlled, ControlledChild, Controller, ControllerReader, OscBuffer,
-            PtyCommandBuilder, PtyConfig, PtyReadOnlyOutputEvent, PtyReadOnlySession,
-            READ_BUFFER_SIZE,
-            pty_common_io::{create_pty_pair, spawn_command_in_pty}};
+use crate::{ControlledChild, ControllerReader, OscBuffer, PtyCommandBuilder, PtyConfig,
+            PtyControlledChildExitStatus, PtyPair, PtyReadOnlyOutputEvent,
+            PtyReadOnlySession, READ_BUFFER_SIZE};
 use miette::IntoDiagnostic;
 use std::io::Read;
 
 impl PtyCommandBuilder {
-    /// Spawns a read-only PTY session; it spawns two Tokio tasks and one OS child
+    /// Spawns a read-only [`PTY`] session; it spawns two Tokio tasks and one OS child
     /// process.
     ///
     /// ```text
@@ -33,19 +32,20 @@ impl PtyCommandBuilder {
     ///
     /// 1. **Background orchestration task [`tokio::spawn`]** -> Required because this
     ///    function needs to return immediately with a session handle, allowing the caller
-    ///    to start processing events while the PTY command runs in the background.
-    ///    Without this, the function would block until the entire PTY session completes.
+    ///    to start processing events while the [`PTY`] command runs in the background.
+    ///    Without this, the function would block until the entire [`PTY`] session
+    ///    completes.
     ///
     /// 2. **OS child process [`ControlledChild`]** -> The actual command being executed
-    ///    in the PTY. This is not a Tokio task but a system process that runs your
+    ///    in the [`PTY`]. This is not a Tokio task but a system process that runs your
     ///    command with terminal emulation (the child thinks it is in an interactive
     ///    terminal).
     ///
     /// 3. **Blocking reader task [`tokio::task::spawn_blocking`]** -> Required because
-    ///    PTY file descriptors only provide synchronous [`std::io::Read`] APIs, not async
-    ///    [`tokio::io::AsyncRead`]. Using regular [`tokio::spawn`] with blocking reads
-    ///    would block the entire async runtime. [`spawn_blocking`] runs these synchronous
-    ///    reads on a dedicated thread pool.
+    ///    [`PTY`] file descriptors only provide synchronous [`std::io::Read`] APIs, not
+    ///    async [`tokio::io::AsyncRead`]. Using regular [`tokio::spawn`] with blocking
+    ///    reads would block the entire async runtime. [`spawn_blocking`] runs these
+    ///    synchronous reads on a dedicated thread pool.
     ///
     /// # Returns
     ///
@@ -53,7 +53,7 @@ impl PtyCommandBuilder {
     /// - `output_event_receiver_half` combined stdout/stderr of child process -> events
     /// - `completion_handle` to await spawned child process completion
     ///
-    /// # Example: Capturing OSC sequences from cargo build
+    /// # Example: Capturing [`OSC`] sequences from cargo build
     ///
     /// ```no_run
     /// # #[tokio::main]
@@ -90,9 +90,11 @@ impl PtyCommandBuilder {
     ///
     /// # Errors
     ///
-    /// Returns an error if the PTY fails to spawn or initialize properly.
+    /// Returns an error if the [`PTY`] fails to spawn or initialize properly.
     ///
     /// [`ControlledChild`]: crate::ControlledChild
+    /// [`OSC`]: crate::osc_codes::OscSequence
+    /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
     /// [`spawn_blocking`]: tokio::task::spawn_blocking
     /// [`std::io::Read`]: std::io::Read
     /// [`tokio::io::AsyncRead`]: tokio::io::AsyncRead
@@ -116,21 +118,18 @@ impl PtyCommandBuilder {
             // Build the command, ensuring CWD is set.
             let command = self.build()?;
 
-            // Create PTY pair: controller (master) for your program, controlled (slave)
-            // for spawned process
-            let (controller, controlled): (Controller, Controlled) =
-                create_pty_pair(pty_config.get_pty_size())?;
-
-            // [🛫 SPAWN 1] Spawn the command with PTY (makes is_terminal() return true).
-            // The child process uses the controlled side as its stdin/stdout/stderr.
+            // Create PTY pair and spawn the command. The controlled fd is closed
+            // automatically by spawn_command_and_close_controlled().
+            let mut pty_pair = PtyPair::new_with_size(pty_config.get_pty_size())?;
             let controlled_child: ControlledChild =
-                spawn_command_in_pty(&controlled, command)?;
+                pty_pair.spawn_command_and_close_controlled(command)?;
 
             // [🛫 SPAWN 2] Spawn the reader task to process output from the controller
             // side. NOTE: Critical resource management - see module docs for
             // PTY lifecycle details.
             let output_reader_task_handle = {
-                let controller_reader = controller
+                let controller_reader = pty_pair
+                    .controller()
                     .try_clone_reader()
                     .map_err(|e| miette::miette!("Failed to clone pty reader: {}", e))?;
                 spawn_blocking_controller_output_reader_task(
@@ -148,14 +147,13 @@ impl PtyCommandBuilder {
             .await
             .into_diagnostic()??;
 
-            // See module docs for detailed PTY lifecycle management explanation.
-            drop(controlled); // Close the controlled half. CRITICAL for EOF to be sent to reader.
-            drop(controller); // Not critical, but good practice to release controller FD.
+            // Not critical, but good practice to release controller FD.
+            drop(pty_pair);
 
             // [🛬 WAIT 2] Wait for the reader task to complete.
             output_reader_task_handle.await.into_diagnostic()??;
 
-            Ok(portable_pty::ExitStatus::with_exit_code(
+            Ok(PtyControlledChildExitStatus::with_exit_code(
                 child_proc_exit_code,
             ))
         });
@@ -200,48 +198,48 @@ fn spawn_child_process_waiter(
     })
 }
 
-/// Spawns a blocking reader task that processes output from the PTY controller half.
+/// Spawns a blocking reader task that processes output from the [`PTY`] controller half.
 ///
-/// This function spawns a blocking task that continuously reads data from the PTY
+/// This function spawns a blocking task that continuously reads data from the [`PTY`]
 /// controller half and processes it according to the provided configuration options.
 ///
 /// # Why `spawn_blocking`?
 ///
-/// PTY operations are inherently **synchronous** and require `spawn_blocking` for proper
-/// async integration:
+/// [`PTY`] operations are inherently **synchronous** and require `spawn_blocking` for
+/// proper async integration:
 ///
-/// ## Synchronous PTY APIs
-/// - The `portable_pty` crate and underlying PTY file descriptors only provide
+/// ## Synchronous [`PTY`] APIs
+/// - The `portable_pty` crate and underlying [`PTY`] file descriptors only provide
 ///   synchronous I/O
 /// - `controller_reader` implements `std::io::Read` (blocking), not
 ///   `tokio::io::AsyncRead`
-/// - PTY file descriptors are Unix concepts that operate at the kernel level with
+/// - [`PTY`] file descriptors are Unix concepts that operate at the kernel level with
 ///   blocking semantics
 ///
 /// ## No `AsyncRead` Implementation
-/// - There is no `AsyncRead` implementation available for PTY file descriptors
+/// - There is no `AsyncRead` implementation available for [`PTY`] file descriptors
 /// - `portable_pty::MasterPty::take_reader()` returns `Box<dyn Read + Send>`
 ///   (synchronous)
-/// - PTY operations don't map cleanly to async file I/O patterns
+/// - [`PTY`] operations don't map cleanly to async file I/O patterns
 ///
 /// ## Tokio Integration
 /// - Using regular `tokio::spawn()` with blocking `Read::read()` would block the entire
 ///   async runtime
 /// - `spawn_blocking()` runs the blocking operation on a dedicated thread pool
-/// - This allows other async tasks to continue running while PTY I/O happens on separate
-///   threads
+/// - This allows other async tasks to continue running while [`PTY`] I/O happens on
+///   separate threads
 ///
 /// ## Alternative Approaches (and why they don't work)
-/// - **Polling/Non-blocking**: PTY file descriptors don't reliably support non-blocking
-///   mode across platforms
-/// - **Native async PTY library**: Doesn't exist with required cross-platform support
-/// - **File descriptor conversion**: `tokio::fs::File::from_std()` doesn't work with PTY
-///   FDs
+/// - **Polling/Non-blocking**: [`PTY`] file descriptors don't reliably support
+///   non-blocking mode across platforms
+/// - **Native async [`PTY`] library**: Doesn't exist with required cross-platform support
+/// - **File descriptor conversion**: `tokio::fs::File::from_std()` doesn't work with
+///   [`PTY`] FDs
 ///
 /// # Arguments
 ///
 /// * `controller_reader` - A boxed reader that implements [`Read`] + [`Send`], typically
-///   the read end of a PTY master file descriptor
+///   the read end of a [`PTY`] controller file descriptor
 /// * `output_event_sender_half` - An unbounded sender for [`PtyReadOnlyOutputEvent`]s to
 ///   communicate with other parts of the application
 /// * `config` - Configuration settings that determine which events to capture
@@ -249,13 +247,14 @@ fn spawn_child_process_waiter(
 /// # Returns
 ///
 /// A [`tokio::task::JoinHandle`]`<`[`miette::Result`]`<()>>` for the spawned blocking
-/// task. The task will complete when the PTY is closed (EOF) or an error occurs during
-/// reading. CRITICAL - If the PTY is not closed and this join handle is awaited, it will
-/// deadlock.
+/// task. The task will complete when the [`PTY`] is closed (EOF) or an error occurs
+/// during reading. CRITICAL - If the [`PTY`] is not closed and this join handle is
+/// awaited, it will deadlock.
 ///
+/// [`miette::Result`]: miette::Result
+/// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 /// [`Read`]: std::io::Read
 /// [`Send`]: std::marker::Send
-/// [`miette::Result`]: miette::Result
 /// [`tokio::task::JoinHandle`]: tokio::task::JoinHandle
 #[must_use]
 pub fn spawn_blocking_controller_output_reader_task(
@@ -307,7 +306,8 @@ pub fn spawn_blocking_controller_output_reader_task(
 
 #[cfg(test)]
 mod tests {
-    use crate::{OscEvent, PtyCommandBuilder, PtyConfigOption, PtyReadOnlyOutputEvent,
+    use crate::{OscEvent, PtyCommandBuilder, PtyConfigOption,
+                PtyControlledChildExitStatus, PtyReadOnlyOutputEvent,
                 PtyReadOnlySession,
                 pty_read_only::spawn_blocking_controller_output_reader_task};
     use miette::IntoDiagnostic;
@@ -318,7 +318,7 @@ mod tests {
     async fn collect_events_with_timeout(
         mut session: PtyReadOnlySession,
         max_duration: Duration,
-    ) -> miette::Result<(Vec<PtyReadOnlyOutputEvent>, portable_pty::ExitStatus)> {
+    ) -> miette::Result<(Vec<PtyReadOnlyOutputEvent>, PtyControlledChildExitStatus)> {
         let mut events = Vec::new();
 
         let result = timeout(max_duration, async move {
@@ -608,7 +608,10 @@ mod tests {
         Ok(())
     }
 
-    /// Runs all PTY-spawning tests sequentially in a single tokio runtime.
+    /// Runs all [`PTY`]-spawning tests sequentially in a single [`tokio`] runtime.
+    ///
+    /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
+    /// [`tokio`]: tokio
     #[cfg(unix)]
     fn run_all_pty_read_only_tests_sequentially() {
         let rt = tokio::runtime::Runtime::new().unwrap();
@@ -624,12 +627,14 @@ mod tests {
         });
     }
 
-    /// Process-isolated coordinator for PTY read-only tests.
+    /// Process-isolated coordinator for [`PTY`] read-only tests.
     ///
-    /// These tests spawn real PTY sessions (`openpty` on `/dev/ptmx`). When run
+    /// These tests spawn real [`PTY`] sessions (`openpty` on `/dev/ptmx`). When run
     /// in parallel by `cargo test`, concurrent `openpty`/`fork` calls cause
     /// transient `pipe2(O_CLOEXEC)` failures inside `portable_pty`. Running them
     /// sequentially in a subprocess eliminates this contention.
+    ///
+    /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
     #[cfg(unix)]
     #[test]
     fn test_all_pty_read_only_in_isolated_process() {

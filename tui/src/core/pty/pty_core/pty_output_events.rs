@@ -28,18 +28,18 @@
 //!
 //! In terminals, arrow keys and function keys can be sent in two different modes:
 //!
-//! | Key   | Application Mode (VT52/SS3)   | Normal Mode (ANSI/CSI)   |
-//! | ----- | ----------------------------- | ------------------------ |
-//! | Up    | `ESC O A`                     | `ESC [ A`                |
-//! | Down  | `ESC O B`                     | `ESC [ B`                |
-//! | Right | `ESC O C`                     | `ESC [ C`                |
-//! | Left  | `ESC O D`                     | `ESC [ D`                |
+//! | Key   | Application Mode (VT52/SS3)   | Normal Mode ([`ANSI`]/[`CSI`]) |
+//! | ----- | ----------------------------- | ------------------------------ |
+//! | Up    | `ESC O A`                     | `ESC [ A`                      |
+//! | Down  | `ESC O B`                     | `ESC [ B`                      |
+//! | Right | `ESC O C`                     | `ESC [ C`                      |
+//! | Left  | `ESC O D`                     | `ESC [ D`                      |
 //!
 //! - **Application Mode (VT52/SS3/Single Shift 3)** uses `ESC O` sequences for better
 //!   terminal compatibility. This is the default mode that we use.
-//! - **Normal Mode (ANSI/CSI/Control Sequence Introducer)** uses standard ANSI escape
-//!   sequences.
-//! - The difference is `ESC [` (CSI) vs `ESC O` (SS3).
+//! - **Normal Mode ([`ANSI`]/[`CSI`]/Control Sequence Introducer)** uses standard
+//!   [`ANSI`] escape sequences.
+//! - The difference is `ESC [` ([`CSI`]) vs `ESC O` (SS3).
 //!
 //! # Mode Detection Benefits
 //!
@@ -53,27 +53,35 @@
 //!
 //! # Mode Detection Implementation
 //!
-//! - [`CursorModeDetector`] scans PTY output for [`DECCKM_ENABLE_BYTES`] (application
+//! - [`CursorModeDetector`] scans [`PTY`] output for [`DECCKM_ENABLE_BYTES`] (application
 //!   mode) and [`DECCKM_DISABLE_BYTES`] (normal mode), tracking mode changes across read
 //!   boundaries.
 //! - [`ControlSequence::to_bytes()`] generates the correct escape sequence for the
 //!   current [`CursorKeyMode`].
 //!
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`CSI`]: crate::CsiSequence
 //! [`CursorModeChange`]: PtyReadWriteOutputEvent::CursorModeChange
-//! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`pty_read_write`]: crate::core::pty::pty_read_write
+//! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`scan_for_mode_change()`]: CursorModeDetector::scan_for_mode_change
 //! [`to_bytes()`]: ControlSequence::to_bytes
 
-use crate::{DECCKM_DISABLE_BYTES, DECCKM_ENABLE_BYTES, DECCKM_SEQ_LEN, OscEvent};
+use crate::{DECCKM_DISABLE_BYTES, DECCKM_ENABLE_BYTES, DECCKM_SEQ_LEN, OscEvent,
+            PtyControlledChildExitStatus};
 use std::borrow::Cow;
 
 /// Cursor key mode for terminal compatibility.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum CursorKeyMode {
-    /// Normal mode (ANSI) - ESC[ sequences
+    /// Normal mode ([`ANSI`]) - [`ESC`][ sequences
+    ///
+    /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+    /// [`ESC`]: crate::EscSequence
     Normal,
-    /// Application mode (VT52) - ESC O sequences
+    /// Application mode (VT52) - [`ESC`] O sequences
+    ///
+    /// [`ESC`]: crate::EscSequence
     #[default]
     Application,
 }
@@ -261,19 +269,22 @@ impl Default for CursorModeDetector {
 /// - Used with [`super::pty_sessions::PtyReadOnlySession`] for monitoring child processes
 /// - Event types: `Output` (optional, based on config), `Osc` (optional, based on
 ///   config), `Exit`
-/// - Supports OSC sequence capture for terminal automation and progress monitoring
+/// - Supports [`OSC`] sequence capture for terminal automation and progress monitoring
 /// - Output capture is configurable for selective data processing
 /// - Integrates with [`portable_pty`] for cross-platform terminal compatibility
 ///
+/// [`OSC`]: crate::osc_codes::OscSequence
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 #[derive(Debug)]
 pub enum PtyReadOnlyOutputEvent {
-    /// OSC sequence event (if OSC capture is enabled in config).
+    /// [`OSC`] sequence event (if [`OSC`] capture is enabled in config).
+    ///
+    /// [`OSC`]: crate::osc_codes::OscSequence
     Osc(OscEvent),
     /// Raw output data (if output capture is enabled in config).
     Output(Vec<u8>),
     /// Process exited with status.
-    Exit(portable_pty::ExitStatus),
+    Exit(PtyControlledChildExitStatus),
 }
 
 /// Output event types for read-write [`PTY`] sessions.
@@ -295,7 +306,7 @@ pub enum PtyReadWriteOutputEvent {
     /// Cursor key mode changed (detected from terminal escape sequences).
     CursorModeChange(CursorKeyMode),
     /// Process exited with status.
-    Exit(portable_pty::ExitStatus),
+    Exit(PtyControlledChildExitStatus),
     /// Child process crashed or terminated unexpectedly.
     UnexpectedExit(String),
     /// Write operation failed - session will terminate.

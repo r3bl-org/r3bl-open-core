@@ -4,11 +4,10 @@
 mod async_debounced_deadline;
 mod deadline;
 mod debounced_state;
-mod drain_pty_and_wait;
-mod guarded_child;
 mod normalize_pty_output;
 mod pty_test_watchdog;
 mod read_lines_and_drain;
+mod single_thread_safe_controlled_child;
 mod spawn_controlled_in_pty;
 
 // Macro module - #[macro_export] makes it available at crate root.
@@ -19,10 +18,9 @@ mod generate_pty_test;
 pub use async_debounced_deadline::*;
 pub use deadline::*;
 pub use debounced_state::*;
-pub use drain_pty_and_wait::*;
 pub use generate_pty_test::*;
-pub use guarded_child::*;
 pub use normalize_pty_output::*;
 pub use pty_test_watchdog::*;
 pub use read_lines_and_drain::*;
+pub use single_thread_safe_controlled_child::*;
 pub use spawn_controlled_in_pty::*;

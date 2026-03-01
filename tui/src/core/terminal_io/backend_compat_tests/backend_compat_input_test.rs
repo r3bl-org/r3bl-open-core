@@ -3,10 +3,10 @@
 //! Backend compatibility tests for [`DirectToAnsiInputDevice`] and
 //! [`CrosstermInputDevice`].
 //!
-//! Verifies both backends produce identical [`InputEvent`] for the same ANSI sequences
-//! when running in a real PTY environment, with the same terminal size and capabilities.
-//! Manually sets raw mode for each backend directly (not using the production
-//! [`terminal_raw_mode::enable_raw_mode()`] dispatcher which selects based on
+//! Verifies both backends produce identical [`InputEvent`] for the same [`ANSI`]
+//! sequences when running in a real [`PTY`] environment, with the same terminal size and
+//! capabilities. Manually sets raw mode for each backend directly (not using the
+//! production [`terminal_raw_mode::enable_raw_mode()`] dispatcher which selects based on
 //! [`TERMINAL_LIB_BACKEND`]).
 //!
 //! # Platform
@@ -30,7 +30,7 @@
 //!
 //! # Architecture
 //!
-//! The comparison test creates PTY pairs directly (no subprocess indirection):
+//! The comparison test creates [`PTY`] pairs directly (no subprocess indirection):
 //!
 //! ```text
 //! test_backend_compat_input_compare (run this one)
@@ -41,17 +41,19 @@
 //!
 //! # Module Structure
 //!
-//! - [`generate_test_sequences`] - ANSI sequence builders and test data.
-//! - [`controller`] - PTY master (controller) logic.
+//! - [`generate_test_sequences`] - [`ANSI`] sequence builders and test data.
+//! - [`controller`] - [`PTY`] controller logic.
 //! - [`controlled_common`] - Shared setup/teardown for controlled processes.
 //! - [`controlled_crossterm`] - Crossterm backend controlled process.
 //! - [`controlled_direct_to_ansi`] - `DirectToAnsi` backend controlled process.
 //!
-//! [`CrosstermInputDevice`]: crate::CrosstermInputDevice
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`Crossterm`]: crate::TerminalLibBackend::Crossterm
-//! [`DirectToAnsiInputDevice`]: crate::direct_to_ansi::DirectToAnsiInputDevice
+//! [`CrosstermInputDevice`]: crate::CrosstermInputDevice
 //! [`DirectToAnsi`]: crate::TerminalLibBackend::DirectToAnsi
+//! [`DirectToAnsiInputDevice`]: crate::direct_to_ansi::DirectToAnsiInputDevice
 //! [`InputEvent`]: crate::InputEvent
+//! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`TERMINAL_LIB_BACKEND`]: crate::tui::terminal_lib_backends::TERMINAL_LIB_BACKEND
 //! [`terminal_raw_mode::enable_raw_mode()`]: crate::core::ansi::terminal_raw_mode::enable_raw_mode
 //! [`terminal_raw_mode::raw_mode_unix::enable_raw_mode`]: crate::core::ansi::terminal_raw_mode::raw_mode_unix::enable_raw_mode
@@ -85,7 +87,7 @@ const EVENT_PREFIX: &str = "EVENT:";
 
 /// Runs both backend tests and compares their outputs.
 ///
-/// Creates PTY pairs directly (no subprocess indirection), sends ANSI sequences
+/// Creates [`PTY`] pairs directly (no subprocess indirection), sends [`ANSI`] sequences
 /// to each backend, and compares the parsed [`InputEvent`]s.
 ///
 /// Run with:
@@ -97,7 +99,9 @@ const EVENT_PREFIX: &str = "EVENT:";
 ///
 /// Panics if the `PTY_CONTROLLED_ENV_VAR` is set to an unknown backend value.
 ///
+/// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 /// [`InputEvent`]: crate::InputEvent
+/// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 #[test]
 pub fn test_backend_compat_input_compare() {
     // Check if we're running as a controlled process.
@@ -179,7 +183,9 @@ pub fn test_backend_compat_input_compare() {
     }
 }
 
-/// Controller (PTY Master) Logic.
+/// [`PTY`] Controller Logic.
+///
+/// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 pub mod controller {
     use super::*;
 
@@ -190,7 +196,9 @@ pub mod controller {
     ///
     /// # Panics
     ///
-    /// Panics if PTY reader/writer cannot be obtained, or if I/O operations fail.
+    /// Panics if [`PTY`] reader/writer cannot be obtained, or if I/O operations fail.
+    ///
+    /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
     #[must_use]
     pub fn run_and_collect(
         (backend_name, pty_pair): (&str, PtyPair),
@@ -269,7 +277,9 @@ pub mod controller {
     }
 }
 
-/// Shared setup/teardown for controlled (PTY slave) processes.
+/// Shared setup/teardown for controlled ([`PTY`] controlled side) processes.
+///
+/// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 pub mod controlled_common {
     use super::*;
 
@@ -346,7 +356,9 @@ pub mod controlled_crossterm {
     ///
     /// # Panics
     ///
-    /// Panics if the tokio runtime cannot be created.
+    /// Panics if the [`tokio`] runtime cannot be created.
+    ///
+    /// [`tokio`]: tokio
     pub fn run() -> ! {
         // 1. Signal ready (before enabling raw mode so newlines work normally).
         controlled_common::signal_ready();
@@ -377,7 +389,9 @@ pub mod controlled_direct_to_ansi {
     ///
     /// # Panics
     ///
-    /// Panics if the tokio runtime cannot be created.
+    /// Panics if the [`tokio`] runtime cannot be created.
+    ///
+    /// [`tokio`]: tokio
     pub fn run() -> ! {
         // 1. Signal ready (before enabling raw mode so newlines work normally).
         controlled_common::signal_ready();
@@ -402,7 +416,9 @@ pub mod generate_test_sequences {
 
     /// All test sequences for backend compatibility testing.
     ///
-    /// Returns (description, ANSI bytes) pairs sent to both backends for comparison.
+    /// Returns (description, [`ANSI`] bytes) pairs sent to both backends for comparison.
+    ///
+    /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
     #[must_use]
     pub fn all() -> Vec<(&'static str, Vec<u8>)> {
         vec![

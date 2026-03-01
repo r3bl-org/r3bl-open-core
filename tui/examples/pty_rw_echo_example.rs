@@ -1,8 +1,9 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Super minimal PTY test - just echo raw bytes to verify data flow
+//! Super minimal [`PTY`] test - just echo raw bytes to verify data flow
+//!
+//! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 
-use portable_pty::PtySize;
 use r3bl_tui::{AnsiSequenceGenerator, InputEvent, Key, KeyPress, KeyState,
                ModifierKeysMask, RawMode, col,
                core::{get_size,
@@ -46,14 +47,7 @@ async fn main() -> miette::Result<()> {
     }
 
     // Spawn cat process (simple echo).
-    let pty_size = PtySize {
-        rows: terminal_size.row_height.into(),
-        cols: terminal_size.col_width.into(),
-        pixel_width: 0,
-        pixel_height: 0,
-    };
-
-    let mut session = PtyCommandBuilder::new("cat").spawn_read_write(pty_size)?;
+    let mut session = PtyCommandBuilder::new("cat").spawn_read_write(terminal_size)?;
 
     println!("Type something and press Enter to see it echo back:");
 

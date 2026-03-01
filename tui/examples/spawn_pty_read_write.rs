@@ -1,8 +1,8 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Example demonstrating bidirectional PTY communication with Python REPL.
+//! Example demonstrating bidirectional [`PTY`] communication with Python REPL.
 //!
-//! This program shows how to interact with a Python interpreter running in a PTY,
+//! This program shows how to interact with a Python interpreter running in a [`PTY`],
 //! sending commands and receiving output. It demonstrates:
 //! - Sending Python code to the interpreter
 //! - Receiving and displaying output
@@ -15,12 +15,13 @@
 //! ```bash
 //! cargo run --example spawn_pty_read_write
 //! ```
+//!
+//! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 
 use miette::IntoDiagnostic;
-use portable_pty::PtySize;
 use r3bl_tui::{core::pty::{ControlSequence, CursorKeyMode, PtyCommandBuilder,
                            PtyInputEvent, PtyReadWriteOutputEvent},
-               set_mimalloc_in_main};
+               height, set_mimalloc_in_main, size, width};
 use tokio::time::{Duration, sleep};
 
 // ANSI color constants for terminal output.
@@ -39,7 +40,7 @@ async fn run_python_repl_demo() -> miette::Result<()> {
     // Start Python with unbuffered output for immediate feedback.
     let mut session = PtyCommandBuilder::new("python3")
         .args(["-u", "-i"]) // -u: unbuffered, -i: interactive
-        .spawn_read_write(PtySize::default())?;
+        .spawn_read_write(size(width(80) + height(24)))?;
 
     // Spawn a task to handle output.
     let output_handle = tokio::spawn(async move {
@@ -199,7 +200,7 @@ async fn run_shell_demo() -> miette::Result<()> {
     // Start a shell session.
     let mut session = PtyCommandBuilder::new("sh")
         .args(["-i"]) // Interactive mode
-        .spawn_read_write(PtySize::default())?;
+        .spawn_read_write(size(width(80) + height(24)))?;
 
     // Spawn output handler.
     let output_handle = tokio::spawn(async move {

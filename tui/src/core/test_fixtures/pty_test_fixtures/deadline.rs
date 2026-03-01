@@ -2,11 +2,11 @@
 
 use std::time::{Duration, Instant};
 
-/// Timeout enforcement for PTY tests.
+/// Timeout enforcement for [`PTY`] tests.
 ///
 /// Enforces maximum duration for operations with a clean polling API. Use this when
 /// you need to ensure an operation completes within a time limit, such as waiting
-/// for a PTY slave process to start or for test output to appear.
+/// for a [`PTY`] controlled process to start or for test output to appear.
 ///
 /// # Use Case
 ///
@@ -21,13 +21,13 @@ use std::time::{Duration, Instant};
 ///
 /// # Comparison with `AsyncDebouncedDeadline`
 ///
-/// | Pattern      | `Deadline`                            | `AsyncDebouncedDeadline`      |
-/// |:-------------|:--------------------------------------|:------------------------------|
-/// | **Purpose**  | Timeout enforcement                   | Event debouncing              |
-/// | **Resets?**  | No (fixed duration)                   | Yes (on each event)           |
-/// | **Runtime**  | Sync (`std::time`)                    | Async (`tokio::time`)         |
-/// | **Use with** | Polling loops                         | `tokio::select!`              |
-/// | **Example**  | "Controlled process must start in 5s" | "Print after 10ms of silence" |
+/// | Pattern        | `Deadline`                              | `AsyncDebouncedDeadline`        |
+/// | :------------- | :-------------------------------------- | :------------------------------ |
+/// | **Purpose**    | Timeout enforcement                     | Event debouncing                |
+/// | **Resets?**    | No (fixed duration)                     | Yes (on each event)             |
+/// | **Runtime**    | Sync (`std::time`)                      | Async (`tokio::time`)           |
+/// | **Use with**   | Polling loops                           | `tokio::select!`                |
+/// | **Example**    | "Controlled process must start in 5s"   | "Print after 10ms of silence"   |
 ///
 /// # Examples
 ///
@@ -79,7 +79,7 @@ use std::time::{Duration, Instant};
 /// loop {
 ///     assert!(
 ///         deadline.has_time_remaining(),
-///         "Timeout: slave did not start within 5 seconds"
+///         "Timeout: controlled process did not start within 5 seconds"
 ///     );
 ///
 ///     // ... check for completion ...
@@ -88,6 +88,7 @@ use std::time::{Duration, Instant};
 /// ```
 ///
 /// [`AsyncDebouncedDeadline`]: crate::AsyncDebouncedDeadline
+/// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 #[derive(Debug, Clone, Copy)]
 pub struct Deadline {
     expires_at: Instant,
@@ -129,7 +130,7 @@ impl Deadline {
 
     /// Returns `true` if there is still time remaining before the deadline expires.
     ///
-    /// This is the inverse of [`is_expired()`](Self::is_expired) and provides
+    /// This is the inverse of [`is_expired()`] and provides
     /// more readable assertions in tests, clearly expressing "we still have time to
     /// complete the operation."
     ///
@@ -142,6 +143,8 @@ impl Deadline {
     /// let deadline = Deadline::new(Duration::from_secs(10));
     /// assert!(deadline.has_time_remaining(), "We should still have time");
     /// ```
+    ///
+    /// [`is_expired()`]: Self::is_expired
     #[must_use]
     pub fn has_time_remaining(&self) -> bool { !self.is_expired() }
 }
@@ -149,7 +152,7 @@ impl Deadline {
 impl Default for Deadline {
     /// Creates a deadline with a default timeout of 5 seconds.
     ///
-    /// This is a sensible default for PTY test slave process startup timeouts.
+    /// This is a sensible default for [`PTY`] test controlled process startup timeouts.
     ///
     /// # Examples
     ///
@@ -159,6 +162,8 @@ impl Default for Deadline {
     /// let deadline = Deadline::default();
     /// assert!(deadline.has_time_remaining());
     /// ```
+    ///
+    /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
     fn default() -> Self { Self::new(Duration::from_secs(5)) }
 }
 

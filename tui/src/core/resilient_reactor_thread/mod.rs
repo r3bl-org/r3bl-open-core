@@ -260,9 +260,9 @@
 //!     subsystem, and makes the bytes available on your app's [`stdin`].
 //!
 //!   - [`PTY`] - A pseudoterminal, a software-emulated [`tty`]. When you run your app
-//!     inside a terminal emulator (like [WezTerm] or [Alacritty]), the emulator creates a
-//!     [`PTY` pair] - it holds the controller end, and your app's [`stdin`] is the
-//!     controlled end. The emulator receives OS-level input events from the windowing
+//!     inside a terminal emulator (like [`WezTerm`] or [`Alacritty`]), the emulator
+//!     creates a [`PTY` pair] - it holds the controller end, and your app's [`stdin`] is
+//!     the controlled end. The emulator receives OS-level input events from the windowing
 //!     system (e.g., [Wayland]), translates them into [terminal escape sequences], and
 //!     writes them to the controller end. Those bytes then appear on the controlled end,
 //!     for reading, which is your app's [`stdin`].
@@ -477,8 +477,8 @@
 //!
 //! [`create_and_register_os_sources()`] returns a worker + waker pair that must be
 //! created together but have different destinations. See [`RRT`]'s [two-phase setup]
-//! section for the full ordering conflict explanation, ASCII diagrams, and destination
-//! details.
+//! section for the full ordering conflict explanation, [`ASCII`] diagrams, and
+//! destination details.
 //!
 //!
 //! ### Why Is [`RRTWaker`] User-Provided?
@@ -729,94 +729,27 @@
 //! 4. **I/O-centric** - RRT is specialized for OS-level I/O ([`stdin`], [signals],
 //!    [sockets]), not general message processing.
 //!
-//! [Actor]: https://en.wikipedia.org/wiki/Actor_model
-//! [Alacritty]: https://alacritty.org/
-//! [Console API]: https://learn.microsoft.com/en-us/windows/console/console-functions
-//! [Darwin]: https://en.wikipedia.org/wiki/Darwin_(operating_system)
-//! [Dependency Injection]: https://en.wikipedia.org/wiki/Dependency_injection
-//! [Example]: #example
-//! [Linked operations]: https://man7.org/linux/man-pages/man3/io_uring_prep_link.3.html
-//! [Linux]: https://man7.org/linux/man-pages/man3/pthread_cancel.3.html
-//! [Multi-threaded runtime]: tokio::runtime::Builder::new_multi_thread
-//! [Proactor]: https://en.wikipedia.org/wiki/Proactor_pattern
-//! [RRT section]: crate#resilient-reactor-thread-rrt-pattern
-//! [Reactor]: https://en.wikipedia.org/wiki/Reactor_pattern
-//! [Registered FDs]: https://man7.org/linux/man-pages/man3/io_uring_register_files.3.html
-//! [Registered buffers]:
-//!     https://man7.org/linux/man-pages/man3/io_uring_register_buffers.3.html
-//! [Rust discussion]: https://internals.rust-lang.org/t/thread-cancel-support/3056
-//! [Rust workarounds]: https://matklad.github.io/2018/03/03/stopping-a-rust-worker.html
-//! [Single-threaded runtime]: tokio::runtime::Builder::new_current_thread
-//! [Syscall]: https://man7.org/linux/man-pages/man2/syscalls.2.html
-//! [Syscalls]: https://man7.org/linux/man-pages/man2/syscalls.2.html
-//! [Thread Lifecycle]: RRT#thread-lifecycle
-//! [Unix domain sockets]: https://en.wikipedia.org/wiki/Unix_domain_socket
-//! [Wayland]: https://wayland.freedesktop.org/
-//! [Web Workers]: https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API
-//! [WezTerm]: https://wezfurlong.org/wezterm/
-//! [Windows]:
-//!     https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-terminatethread
 //! [`'static` trait bound]: RRT#static-trait-bound-vs-static-lifetime-annotation
-//! [`CQ`]: https://man7.org/linux/man-pages/man7/io_uring.7.html
-//! [`Continuation::Restart`]: crate::Continuation::Restart
-//! [`Continuation::Stop`]: crate::Continuation::Stop
-//! [`Continuation`]: crate::Continuation
-//! [`Continue`]: crate::Continuation::Continue
-//! [`DI`]: https://en.wikipedia.org/wiki/Dependency_injection
-//! [`EINTR`]: https://man7.org/linux/man-pages/man3/errno.3.html
-//! [`EINVAL`]: https://man7.org/linux/man-pages/man3/errno.3.html
-//! [`Event`]: RRTWorker::Event
-//! [`IOCP`]: https://learn.microsoft.com/en-us/windows/win32/fileio/i-o-completion-ports
-//! [`IORING_OP_ASYNC_CANCEL`]:
-//!     https://man7.org/linux/man-pages/man3/io_uring_prep_cancel.3.html
-//! [`IORING_OP_MSG_RING`]:
-//!     https://man7.org/linux/man-pages/man3/io_uring_prep_msg_ring.3.html
-//! [`LazyLock`]: std::sync::LazyLock
-//! [`LivenessState`]: crate::core::resilient_reactor_thread::LivenessState
-//! [`LivenessState`]: LivenessState
-//! [`PTY`]: https://man7.org/linux/man-pages/man7/pty.7.html
-//! [`PTY` pair]: crate::core::pty::pty_core::pty_types::PtyPair
-//! [`RAII`]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
-//! [`RRTEvent::Shutdown(Panic)`]: ShutdownReason::Panic
-//! [`RRTEvent::Shutdown(RestartPolicyExhausted)`]: ShutdownReason::RestartPolicyExhausted
-//! [`RRTEvent::Shutdown(reason)`]: RRTEvent::Shutdown
-//! [`RRTEvent::Shutdown`]: RRTEvent::Shutdown
-//! [`RRTEvent::Worker(...)`]: RRTEvent::Worker
-//! [`RRTEvent::Worker(E)`]: RRTEvent::Worker
-//! [`RRTEvent<W::Event>`]: RRTEvent
-//! [`RRTEvent`]: RRTEvent
-//! [`RRTWaker`]: RRTWaker
-//! [`RRTWorker::create_and_register_os_sources()`]: RRTWorker::create_and_register_os_sources
-//! [`RRTWorker`]: RRTWorker
-//! [`RRT`]: RRT
-//! [`Receiver::recv()`]: tokio::sync::broadcast::Receiver::recv
-//! [`Receiver`]: tokio::sync::broadcast::Receiver
-//! [`RestartPolicy::default()`]: RestartPolicy#impl-Default-for-RestartPolicy
-//! [`RestartPolicy`]: RestartPolicy
-//! [`Restart`]: crate::Continuation::Restart
-//! [`SA_RESTART`]: https://man7.org/linux/man-pages/man2/sigaction.2.html
-//! [`SIGINT`]: https://man7.org/linux/man-pages/man7/signal.7.html
-//! [`SINGLETON`]: #how-to-use-it
-//! [`SQPOLL`]: https://man7.org/linux/man-pages/man2/io_uring_setup.2.html
-//! [`Sender::send()`]: tokio::sync::broadcast::Sender::send
-//! [`ShutdownReason`]: ShutdownReason
-//! [`Stop`]: crate::Continuation::Stop
-//! [`SubscriberGuard`]: SubscriberGuard
-//! [`TCP`]: https://en.wikipedia.org/wiki/Transmission_Control_Protocol
-//! [`TIME_WAIT`]: https://en.wikipedia.org/wiki/TCP_TIME-WAIT
-//! [`TUI`]: crate::tui::TerminalWindow::main_event_loop
-//! [`TerminationGuard`]: TerminationGuard
-//! [`UDP`]: https://en.wikipedia.org/wiki/User_Datagram_Protocol
-//! [`W::Event`]: RRTWorker::Event
 //! [`accept()`]: std::net::TcpListener::accept
+//! [`Alacritty`]: https://alacritty.org/
+//! [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
 //! [`block_on()`]: tokio::runtime::Runtime::block_on
 //! [`block_until_ready_then_dispatch()`]: RRTWorker::block_until_ready_then_dispatch
 //! [`broadcast channel`]: tokio::sync::broadcast
 //! [`broadcast`]: tokio::sync::broadcast
 //! [`catch_unwind`]: std::panic::catch_unwind
+//! [`Continuation::Restart`]: crate::Continuation::Restart
+//! [`Continuation::Stop`]: crate::Continuation::Stop
+//! [`Continuation`]: crate::Continuation
+//! [`Continue`]: crate::Continuation::Continue
+//! [`CQ`]: https://man7.org/linux/man-pages/man7/io_uring.7.html
 //! [`create_and_register_os_sources()`]: RRTWorker::create_and_register_os_sources
+//! [`DI`]: https://en.wikipedia.org/wiki/Dependency_injection
+//! [`EINTR`]: https://man7.org/linux/man-pages/man3/errno.3.html
+//! [`EINVAL`]: https://man7.org/linux/man-pages/man3/errno.3.html
 //! [`epoll_wait()`]: https://man7.org/linux/man-pages/man2/epoll_wait.2.html
 //! [`epoll`]: https://man7.org/linux/man-pages/man7/epoll.7.html
+//! [`Event`]: RRTWorker::Event
 //! [`eventfd`]: https://man7.org/linux/man-pages/man2/eventfd.2.html
 //! [`fd 0`]: https://man7.org/linux/man-pages/man3/stdin.3.html
 //! [`fd`]: https://man7.org/linux/man-pages/man2/open.2.html
@@ -826,11 +759,19 @@
 //!     https://docs.rs/filedescriptor/latest/filedescriptor/fn.poll.html
 //! [`generation`]: field@RRT::thread_generation
 //! [`io_uring_enter()`]: https://man7.org/linux/man-pages/man2/io_uring_enter.2.html
-//! [`io_uring`]: https://kernel.dk/io_uring.pdf
 //! [`io_uring`: An Alternative Model]: #io_uring-an-alternative-model
+//! [`io_uring`]: https://kernel.dk/io_uring.pdf
+//! [`IOCP`]: https://learn.microsoft.com/en-us/windows/win32/fileio/i-o-completion-ports
+//! [`IORING_OP_ASYNC_CANCEL`]:
+//!     https://man7.org/linux/man-pages/man3/io_uring_prep_cancel.3.html
+//! [`IORING_OP_MSG_RING`]:
+//!     https://man7.org/linux/man-pages/man3/io_uring_prep_msg_ring.3.html
 //! [`kevent()`]: https://man.freebsd.org/cgi/man.cgi?query=kevent
 //! [`kill -9`]: https://man7.org/linux/man-pages/man1/kill.1.html
 //! [`kqueue`]: https://man.freebsd.org/cgi/man.cgi?query=kqueue
+//! [`LazyLock`]: std::sync::LazyLock
+//! [`LivenessState`]: crate::core::resilient_reactor_thread::LivenessState
+//! [`LivenessState`]: LivenessState
 //! [`mio::Poll::poll()`]: mio::Poll::poll
 //! [`mio::Poll`]: mio::Poll
 //! [`mio_poller`]: crate::tui::terminal_lib_backends::direct_to_ansi::input::mio_poller
@@ -838,39 +779,79 @@
 //! [`pipe(2)`]: https://man7.org/linux/man-pages/man2/pipe.2.html
 //! [`poll()`]: mio::Poll::poll
 //! [`pollable`]: https://man7.org/linux/man-pages/man2/poll.2.html
+//! [`PTY` pair]: crate::core::pty::pty_core::pty_pair::PtyPair
+//! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
+//! [`RAII`]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
 //! [`read(2)`]: https://man7.org/linux/man-pages/man2/read.2.html
 //! [`readline_async`]: crate::readline_async::ReadlineAsyncContext::try_new
+//! [`Receiver::recv()`]: tokio::sync::broadcast::Receiver::recv
 //! [`receiver_count()`]: tokio::sync::broadcast::Sender::receiver_count
+//! [`Receiver`]: tokio::sync::broadcast::Receiver
 //! [`reset`]: https://man7.org/linux/man-pages/man1/reset.1.html
 //! [`restart_policy()`]: RRTWorker::restart_policy
+//! [`Restart`]: crate::Continuation::Restart
+//! [`RestartPolicy::default()`]: RestartPolicy#impl-Default-for-RestartPolicy
+//! [`RestartPolicy`]: RestartPolicy
+//! [`RRT`]: RRT
+//! [`RRTEvent::Shutdown(Panic)`]: ShutdownReason::Panic
+//! [`RRTEvent::Shutdown(reason)`]: RRTEvent::Shutdown
+//! [`RRTEvent::Shutdown(RestartPolicyExhausted)`]: ShutdownReason::RestartPolicyExhausted
+//! [`RRTEvent::Shutdown`]: RRTEvent::Shutdown
+//! [`RRTEvent::Worker(...)`]: RRTEvent::Worker
+//! [`RRTEvent::Worker(E)`]: RRTEvent::Worker
+//! [`RRTEvent<W::Event>`]: RRTEvent
+//! [`RRTEvent`]: RRTEvent
+//! [`RRTWaker`]: RRTWaker
+//! [`RRTWorker::create_and_register_os_sources()`]: RRTWorker::create_and_register_os_sources
+//! [`RRTWorker`]: RRTWorker
 //! [`run_worker_loop()`]: run_worker_loop
+//! [`SA_RESTART`]: https://man7.org/linux/man-pages/man2/sigaction.2.html
 //! [`select(2)`]: https://man7.org/linux/man-pages/man2/select.2.html
 //! [`sender.send()`]: tokio::sync::broadcast::Sender::send
+//! [`Sender::send()`]: tokio::sync::broadcast::Sender::send
+//! [`ShutdownReason`]: ShutdownReason
+//! [`SIGINT`]: https://man7.org/linux/man-pages/man7/signal.7.html
 //! [`signal-hook`]: signal_hook
 //! [`signalfd(2)`]: https://man7.org/linux/man-pages/man2/signalfd.2.html
 //! [`signals`]: https://man7.org/linux/man-pages/man7/signal.7.html
+//! [`SINGLETON`]: #how-to-use-it
 //! [`sockets`]: https://man7.org/linux/man-pages/man7/socket.7.html
+//! [`SQPOLL`]: https://man7.org/linux/man-pages/man2/io_uring_setup.2.html
 //! [`stdin`]: std::io::stdin
+//! [`Stop`]: crate::Continuation::Stop
 //! [`stty sane`]: https://man7.org/linux/man-pages/man1/stty.1.html
 //! [`subscribe()`]: RRT::subscribe
+//! [`SubscriberGuard`]: SubscriberGuard
 //! [`syscall`]: https://man7.org/linux/man-pages/man2/syscalls.2.html
 //! [`syscalls`]: https://man7.org/linux/man-pages/man2/syscalls.2.html
+//! [`TCP`]: https://en.wikipedia.org/wiki/Transmission_Control_Protocol
+//! [`TerminationGuard`]: TerminationGuard
+//! [`TIME_WAIT`]: https://en.wikipedia.org/wiki/TCP_TIME-WAIT
+//! [`tokio`]: tokio
 //! [`tty`]: https://man7.org/linux/man-pages/man4/tty.4.html
-//! [async Rust]: https://rust-lang.github.io/async-book/
+//! [`TUI`]: crate::tui::TerminalWindow::main_event_loop
+//! [`UDP`]: https://en.wikipedia.org/wiki/User_Datagram_Protocol
+//! [`W::Event`]: RRTWorker::Event
+//! [Actor]: https://en.wikipedia.org/wiki/Actor_model
 //! [async runtime]: tokio::runtime
+//! [async Rust]: https://rust-lang.github.io/async-book/
 //! [async task]: tokio::task
 //! [async-signal-safe]: https://man7.org/linux/man-pages/man7/signal-safety.7.html
-//! [blocking I/O]: #understanding-blocking-io
 //! [blocking call]: #understanding-blocking-io
+//! [blocking I/O]: #understanding-blocking-io
 //! [blocks on I/O]: #understanding-blocking-io
 //! [busy-waiting]: https://en.wikipedia.org/wiki/Busy_waiting
 //! [completions]: https://man7.org/linux/man-pages/man7/io_uring.7.html
+//! [Console API]: https://learn.microsoft.com/en-us/windows/console/console-functions
 //! [const expression]: RRT#const-expression-vs-const-declaration-vs-static-declaration
 //! [const expressions]: RRT#const-expression-vs-const-declaration-vs-static-declaration
 //! [cooked mode]: mod@crate::core::ansi::terminal_raw_mode#raw-mode-vs-cooked-mode
+//! [Darwin]: https://en.wikipedia.org/wiki/Darwin_(operating_system)
 //! [default policy]: RestartPolicy#impl-Default-for-RestartPolicy
+//! [Dependency Injection]: https://en.wikipedia.org/wiki/Dependency_injection
 //! [design pattern]: https://en.wikipedia.org/wiki/Software_design_pattern
 //! [event mechanism]: https://man7.org/linux/man-pages/man7/epoll.7.html
+//! [Example]: #example
 //! [executor thread in the `tokio` async runtime]: tokio::runtime
 //! [executor threads in the async runtime]: tokio::runtime
 //! [file descriptors]: https://man7.org/linux/man-pages/man2/open.2.html
@@ -879,22 +860,42 @@
 //! [inversion of control]: https://en.wikipedia.org/wiki/Inversion_of_control
 //! [kernel]: https://en.wikipedia.org/wiki/Kernel_(operating_system)
 //! [known Darwin limitation]: https://nathancraddock.com/blog/macos-dev-tty-polling/
+//! [Linked operations]: https://man7.org/linux/man-pages/man3/io_uring_prep_link.3.html
+//! [Linux]: https://man7.org/linux/man-pages/man3/pthread_cancel.3.html
 //! [macOS]: https://man7.org/linux/man-pages/man3/pthread_cancel.3.html
+//! [Multi-threaded runtime]: tokio::runtime::Builder::new_multi_thread
 //! [poll loop]: run_worker_loop
+//! [Proactor]: https://en.wikipedia.org/wiki/Proactor_pattern
 //! [raw mode]: mod@crate::core::ansi::terminal_raw_mode#raw-mode-vs-cooked-mode
+//! [Reactor]: https://en.wikipedia.org/wiki/Reactor_pattern
 //! [readiness]: https://man7.org/linux/man-pages/man7/epoll.7.html#DESCRIPTION
+//! [Registered buffers]:
+//!     https://man7.org/linux/man-pages/man3/io_uring_register_buffers.3.html
+//! [Registered FDs]: https://man7.org/linux/man-pages/man3/io_uring_register_files.3.html
 //! [restart budget]: RestartPolicy
+//! [RRT section]: crate#resilient-reactor-thread-rrt-pattern
+//! [Rust discussion]: https://internals.rust-lang.org/t/thread-cancel-support/3056
+//! [Rust workarounds]: https://matklad.github.io/2018/03/03/stopping-a-rust-worker.html
 //! [scenario examples]: RestartPolicy#example-scenarios
 //! [self-healing restarts]: #self-healing-restart-details
 //! [shared wrapper]: field@RRT::shared_waker_slot
 //! [signals]: https://man7.org/linux/man-pages/man7/signal.7.html
+//! [Single-threaded runtime]: tokio::runtime::Builder::new_current_thread
 //! [singleton]: #how-to-use-it
 //! [sockets]: https://man7.org/linux/man-pages/man7/socket.7.html
+//! [Syscall]: https://man7.org/linux/man-pages/man2/syscalls.2.html
+//! [Syscalls]: https://man7.org/linux/man-pages/man2/syscalls.2.html
 //! [terminal escape sequences]: crate::core::ansi
-//! [thread]: https://en.wikipedia.org/wiki/Thread_(computing)
+//! [Thread Lifecycle]: RRT#thread-lifecycle
 //! [thread pool]: https://en.wikipedia.org/wiki/Thread_pool
+//! [thread]: https://en.wikipedia.org/wiki/Thread_(computing)
 //! [two-phase setup]: RRT#two-phase-setup
+//! [Unix domain sockets]: https://en.wikipedia.org/wiki/Unix_domain_socket
+//! [Wayland]: https://wayland.freedesktop.org/
+//! [Web Workers]: https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API
 //! [why user-provided?]: #why-is-rrtwaker-user-provided
+//! [Windows]:
+//!     https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-terminatethread
 
 mod rrt;
 mod rrt_event;

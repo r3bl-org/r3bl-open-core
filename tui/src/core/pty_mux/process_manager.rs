@@ -3,11 +3,12 @@
 //! Process lifecycle management for the [`PTY`] multiplexer. See [`ProcessManager`] and
 //! [`Process`].
 //!
-//! Each process maintains its own virtual terminal ([`OffscreenBuffer`]) and [ANSI
+//! Each process maintains its own virtual terminal ([`OffscreenBuffer`]) and [[`ANSI`]
 //! parser]. Process switching is instant - just display a different buffer.
 //!
-//! [ANSI parser]: vte::Parser
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
+//! [ANSI parser]: vte::Parser
 
 use super::output_renderer::STATUS_BAR_HEIGHT;
 use crate::{OffscreenBuffer, Size,
@@ -15,7 +16,6 @@ use crate::{OffscreenBuffer, Size,
                    pty::{PtyCommandBuilder, PtyInputEvent, PtyReadWriteOutputEvent,
                          PtyReadWriteSession}},
             height};
-use portable_pty::PtySize;
 use std::fmt::{Debug, Formatter, Result};
 
 /// Manages multiple [`PTY`] processes and handles switching between them.
@@ -42,7 +42,9 @@ pub struct Process {
     pub command: String,
     /// Command line arguments
     pub args: Vec<String>,
-    /// Optional PTY session (None if not yet spawned)
+    /// Optional [`PTY`] session (None if not yet spawned)
+    ///
+    /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
     session: Option<PtyReadWriteSession>,
     /// Whether the process is currently running
     is_running: bool,
@@ -51,7 +53,9 @@ pub struct Process {
 
     /// Tracks if this process has unrendered output since last render
     has_unrendered_output: bool,
-    /// Terminal title set by OSC sequences (None if not set)
+    /// Terminal title set by [`OSC`] sequences (None if not set)
+    ///
+    /// [`OSC`]: crate::osc_codes::OscSequence
     pub terminal_title: Option<String>,
 }
 
@@ -91,17 +95,19 @@ impl Process {
     #[must_use]
     pub fn is_running(&self) -> bool { self.is_running }
 
-    /// Updates the process's virtual terminal buffer with new PTY output.
+    /// Updates the process's virtual terminal buffer with new [`PTY`] output.
     ///
     /// This is the core of the per-process virtual terminal architecture: Each process
-    /// maintains its own complete terminal state through an [`OffscreenBuffer`]. Raw PTY
-    /// bytes are processed through the ANSI parser and converted into [`PixelChar`]
-    /// updates in the virtual terminal buffer.
+    /// maintains its own complete terminal state through an [`OffscreenBuffer`]. Raw
+    /// [`PTY`] bytes are processed through the [`ANSI`] parser and converted into
+    /// [`PixelChar`] updates in the virtual terminal buffer.
     ///
     /// This allows each process to maintain its complete screen state independently,
     /// enabling instant switching without any delays or resizing tricks.
     ///
+    /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
     /// [`PixelChar`]: crate::PixelChar
+    /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
     pub fn process_pty_output_and_update_buffer(&mut self, output: Vec<u8>) {
         if !output.is_empty() {
             // Process bytes and extract any OSC and DSR events.
@@ -281,14 +287,13 @@ impl ProcessManager {
         tracing::debug!("Spawning process: {} ({})", process.name, process.command);
 
         // Reserve bottom row for status bar - PTY gets reduced height.
-        let pty_size = PtySize {
-            rows: self
-                .terminal_size
-                .row_height
-                .saturating_sub(STATUS_BAR_HEIGHT),
-            cols: self.terminal_size.col_width.into(),
-            pixel_width: 0,
-            pixel_height: 0,
+        let pty_size = Size {
+            row_height: height(
+                self.terminal_size
+                    .row_height
+                    .saturating_sub(STATUS_BAR_HEIGHT),
+            ),
+            col_width: self.terminal_size.col_width,
         };
 
         // Use existing PtyCommandBuilder with reduced size.
@@ -311,8 +316,8 @@ impl ProcessManager {
     /// their maintained terminal state - no delays, no fake resize tricks needed.
     ///
     /// **How it works**:
-    /// 1. Poll each process for new PTY output (non-blocking)
-    /// 2. If output exists, process it through the ANSI parser
+    /// 1. Poll each process for new [`PTY`] output (non-blocking)
+    /// 2. If output exists, process it through the [`ANSI`] parser
     /// 3. Update the process's virtual terminal buffer
     /// 4. Track if the currently active process had updates
     ///
@@ -322,6 +327,9 @@ impl ProcessManager {
     /// - CLI tools: Output preserved exactly as generated
     ///
     /// Returns true if the active process had new output (triggers rendering).
+    ///
+    /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+    /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
     pub fn poll_all_processes(&mut self) -> bool {
         let mut active_had_output = false;
 
@@ -398,30 +406,22 @@ impl ProcessManager {
     pub fn handle_terminal_resize(&mut self, new_size: Size) {
         self.terminal_size = new_size;
 
-        // Calculate PTY size (reserve status bar)
-        let pty_size = PtySize {
-            rows: new_size.row_height.saturating_sub(STATUS_BAR_HEIGHT),
-            cols: new_size.col_width.into(),
-            pixel_width: 0,
-            pixel_height: 0,
-        };
-
-        let buffer_size = Size {
+        // Calculate PTY/buffer size (reserve status bar).
+        let pty_size = Size {
             row_height: height(new_size.row_height.saturating_sub(STATUS_BAR_HEIGHT)),
             col_width: new_size.col_width,
         };
 
         tracing::debug!(
-            "Handling terminal resize to {:?}, PTY size: {:?}, buffer size: {:?}",
+            "Handling terminal resize to {:?}, PTY size: {:?}",
             new_size,
             pty_size,
-            buffer_size
         );
 
         // Update all processes with new buffers and parsers.
         for (i, process) in self.processes.iter_mut().enumerate() {
             // Create fresh buffer at new size.
-            process.ofs_buf = OffscreenBuffer::new_empty(buffer_size);
+            process.ofs_buf = OffscreenBuffer::new_empty(pty_size);
 
             // Clear unrendered output flag since we're starting fresh.
             process.has_unrendered_output = false;

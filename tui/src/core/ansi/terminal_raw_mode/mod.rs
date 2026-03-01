@@ -28,9 +28,9 @@
 //!
 //! The term [`TTY`] comes from "teletypewriter" — physical terminals from the 1960s-70s
 //! that communicated with mainframes over serial lines. Modern terminal emulators (like
-//! [Terminator], [GNOME Terminal], [WezTerm], [[`iTerm2`]], or [[`Alacritty`]]) still use
-//! this abstraction: they create a **pseudo-terminal ([`PTY`])** that behaves like those
-//! old hardware devices.
+//! [`Terminator`], [`GNOME Terminal`], [`WezTerm`], [`iTerm2`], or [`Alacritty`]) still
+//! use this abstraction: they create a **pseudo-terminal ([`PTY`])** that behaves like
+//! those old hardware devices.
 //!
 //! ### The Line Discipline
 //!
@@ -175,9 +175,9 @@
 //!
 //! The [`enable_raw_mode`] and [`disable_raw_mode`] functions use the same underlying
 //! mechanism as `stty` — the POSIX [termios] API. On Unix systems, this module calls
-//! `tcgetattr()` and `tcsetattr()` (via the [[`rustix`]] crate) to manipulate the same
+//! `tcgetattr()` and `tcsetattr()` (via the [`rustix`] crate) to manipulate the same
 //! terminal flags that `stty` controls. For details on the [termios] struct fields
-//! (`c_iflag`, `c_lflag`, etc.) and why we use [[`rustix`]], see our [Unix
+//! (`c_iflag`, `c_lflag`, etc.) and why we use [`rustix`], see our [Unix
 //! implementation's termios section].
 //!
 //! Understanding `stty` helps when debugging terminal behavior — if something isn't
@@ -197,7 +197,7 @@
 //!
 //! Backend dispatch is based on [`TERMINAL_LIB_BACKEND`]:
 //!
-//! - **Linux** ([`DirectToAnsi`]): Uses [[`rustix`]]'s safe termios API (see
+//! - **Linux** ([`DirectToAnsi`]): Uses [`rustix`]'s safe termios API (see
 //!   [`raw_mode_unix`])
 //! - **macOS/Windows** ([`Crossterm`]): Uses [`crossterm::terminal`] functions
 //!
@@ -231,24 +231,24 @@
 //! [`Crossterm`]: crate::TerminalLibBackend::Crossterm
 //! [`DirectToAnsi`]: crate::TerminalLibBackend::DirectToAnsi
 //! [`EOF`]: https://en.wikipedia.org/wiki/End-of-file
+//! [`GNOME Terminal`]: https://help.gnome.org/users/gnome-terminal/stable/
 //! [`iTerm2`]: https://iterm2.com/
 //! [`portable_pty` crate]: https://docs.rs/portable-pty
 //! [`PTY`]: crate::pty
 //! [`rustix`]: https://docs.rs/rustix
 //! [`SIGINT`]: https://man7.org/linux/man-pages/man7/signal.7.html
 //! [`TERMINAL_LIB_BACKEND`]: crate::TERMINAL_LIB_BACKEND
+//! [`Terminator`]: https://gnome-terminator.org/
 //! [`TTY`]: https://en.wikipedia.org/wiki/Tty_(Unix)
 //! [`VEOF`]: https://man7.org/linux/man-pages/man3/termios.3.html
+//! [`WezTerm`]: https://wezfurlong.org/wezterm/
 //! [Bash]: https://www.gnu.org/software/bash/
 //! [Fish]: https://fishshell.com/docs/current/interactive.html
-//! [GNOME Terminal]: https://help.gnome.org/users/gnome-terminal/stable/
 //! [GNU Readline]: https://tiswww.case.edu/php/chet/readline/rltop.html
 //! [Nushell]: https://www.nushell.sh/
 //! [Reedline]: https://github.com/nushell/reedline
-//! [Terminator]: https://gnome-terminator.org/
 //! [termios]: https://man7.org/linux/man-pages/man3/termios.3.html
 //! [Unix implementation's termios section]: mod@crate::core::ansi::terminal_raw_mode::raw_mode_unix#the-termios-interface
-//! [WezTerm]: https://wezfurlong.org/wezterm/
 
 // Private modules (hide internal structure).
 mod raw_mode_core;

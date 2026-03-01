@@ -125,10 +125,10 @@ fn read_lines_windows(
 ) -> ReadLinesResult {
     use std::io::{BufReader, Read, Write};
 
-    // Split the PtyPair. The controlled half must be dropped after
-    // spawning; the child retains its own console handle.
-    let (controller, controlled) = pty_pair.split();
-    drop(controlled);
+    // Consume the PtyPair and take ownership of the controller.
+    // The controlled half is dropped automatically by into_controller(),
+    // preventing deadlocks from a leaked parent fd.
+    let controller = pty_pair.into_controller();
 
     let mut reader = controller
         .try_clone_reader()
