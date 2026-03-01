@@ -187,6 +187,8 @@
 //! **Trade-off**: Faster [`ESC`] response vs. occasional incorrect detection on
 //! high-latency connections.
 //!
+//! [100ms `ttimeoutlen` delay]:
+//!     https://vi.stackexchange.com/questions/24925/usage-of-timeoutlen-and-ttimeoutlen
 //! [`crossterm`]: ::crossterm
 //! [`Eof`]: super::types::ReaderThreadMessage::Eof
 //! [`epoll`]: https://man7.org/linux/man-pages/man7/epoll.7.html

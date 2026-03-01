@@ -924,6 +924,8 @@
 //! [raw mode]: mod@crate::core::ansi::terminal_raw_mode#raw-mode-vs-cooked-mode
 //! [Reactor]: https://en.wikipedia.org/wiki/Reactor_pattern
 //! [readiness]: https://man7.org/linux/man-pages/man7/epoll.7.html#DESCRIPTION
+//! [Registered buffers]:
+//!     https://man7.org/linux/man-pages/man3/io_uring_register_buffers.3.html
 //! [Registered FDs]: https://man7.org/linux/man-pages/man3/io_uring_register_files.3.html
 //! [restart budget]: RestartPolicy
 //! [RRT section]: crate#resilient-reactor-thread-rrt-pattern
@@ -949,6 +951,8 @@
 //! [Web Workers]: https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API
 //! [WezTerm]: https://wezfurlong.org/wezterm/
 //! [why user-provided?]: #why-is-rrtwaker-user-provided
+//! [Windows]:
+//!     https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-terminatethread
 
 mod rrt;
 mod rrt_di_traits;

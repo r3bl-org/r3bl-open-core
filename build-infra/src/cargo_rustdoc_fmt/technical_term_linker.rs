@@ -670,6 +670,16 @@ fn parse_ref_def(line: &str) -> Option<(String, String)> {
         return Some((term, target));
     }
 
+    // Multi-line plain ref def: [Term]:\n    target
+    // (split_off_ref_defs combines two-line refs into "header\n    url")
+    if line.starts_with('[')
+        && let Some(end) = line.find("]:")
+    {
+        let term = line[1..end].to_string();
+        let target = line[end + 2..].trim().to_string();
+        return Some((term, target));
+    }
+
     None
 }
 
@@ -874,6 +884,15 @@ mod tests {
         let (term, target) = parse_ref_def("[CSI]: https://example.com").unwrap();
         assert_eq!(term, "CSI");
         assert_eq!(target, "https://example.com");
+    }
+
+    #[test]
+    fn test_parse_ref_def_plain_multiline() {
+        // Multi-line ref def combined by split_off_ref_defs into "header\n    url".
+        let input = "[Inclusive Naming Initiative - Tier 1 Terms]:\n    https://inclusivenaming.org/word-lists/tier-1/";
+        let (term, target) = parse_ref_def(input).unwrap();
+        assert_eq!(term, "Inclusive Naming Initiative - Tier 1 Terms");
+        assert_eq!(target, "https://inclusivenaming.org/word-lists/tier-1/");
     }
 
     #[test]

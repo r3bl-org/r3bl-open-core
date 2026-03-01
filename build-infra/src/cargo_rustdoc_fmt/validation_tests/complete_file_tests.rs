@@ -1579,6 +1579,59 @@ fn main() {}";
         );
     }
 
+    /// Regression test: multi-line plain (non-backticked) reference definitions
+    /// must not be deleted by the term linker.
+    ///
+    /// When rustfmt splits a long reference definition across two lines:
+    /// ```text
+    /// [Inclusive Naming Initiative - Tier 1 Terms]:
+    ///     https://inclusivenaming.org/word-lists/tier-1/
+    /// ```
+    /// `split_off_ref_defs` combines them into a single string with `\n`.
+    /// `parse_ref_def` must handle this format (previously it only handled
+    /// backticked multi-line refs, not plain ones).
+    #[test]
+    fn test_multiline_plain_ref_def_preserved() {
+        let input = include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/test_data/complete_file/input/sample_pty_types.rs"
+        ));
+        let expected = normalize_line_endings(include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/test_data/complete_file/expected_output/sample_pty_types.rs"
+        )));
+
+        let temp_dir = TempDir::new().unwrap();
+        let test_file = temp_dir.path().join("sample_pty_types.rs");
+        fs::write(&test_file, input).unwrap();
+
+        let registry = test_registry();
+        let processor =
+            processor::FileProcessor::with_registry(FormatOptions::default(), &registry);
+        let result = processor.process_file(&test_file);
+
+        assert!(
+            result.errors.is_empty(),
+            "Should process without errors: {:?}",
+            result.errors
+        );
+
+        let formatted = fs::read_to_string(&test_file).unwrap();
+
+        // Key regression check: multi-line plain ref def must be preserved.
+        assert!(
+            formatted.contains(
+                "/// [Inclusive Naming Initiative - Tier 1 Terms]:\n///     https://inclusivenaming.org/word-lists/tier-1/"
+            ),
+            "Multi-line plain reference definition should be preserved"
+        );
+
+        assert_eq!(
+            formatted, expected,
+            "Formatted output should match expected output"
+        );
+    }
+
     /// Utility test to regenerate golden files. Run with:
     /// ```bash
     /// cargo test -p r3bl-build-infra --lib -- regen_golden_output_snapshot_files_for_input_files --ignored --nocapture
