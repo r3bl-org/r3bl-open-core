@@ -563,7 +563,7 @@ pub mod file_walker {
     ///
     /// Displays the folder tree structure.
     ///
-    /// # Parameters
+    /// # Arguments
     ///
     /// - `root_path`: The root directory to start traversal from
     /// - `shared_writer`: Writer for output

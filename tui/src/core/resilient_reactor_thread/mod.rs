@@ -263,7 +263,7 @@
 //!     inside a terminal emulator (like [`WezTerm`] or [`Alacritty`]), the emulator
 //!     creates a [`PTY` pair] - it holds the controller end, and your app's [`stdin`] is
 //!     the controlled end. The emulator receives OS-level input events from the windowing
-//!     system (e.g., [Wayland]), translates them into [terminal escape sequences], and
+//!     system (e.g., [`Wayland`]), translates them into [terminal escape sequences], and
 //!     writes them to the controller end. Those bytes then appear on the controlled end,
 //!     for reading, which is your app's [`stdin`].
 //!
@@ -832,6 +832,8 @@
 //! [`TUI`]: crate::tui::TerminalWindow::main_event_loop
 //! [`UDP`]: https://en.wikipedia.org/wiki/User_Datagram_Protocol
 //! [`W::Event`]: RRTWorker::Event
+//! [`Wayland`]: https://wayland.freedesktop.org/
+//! [`WezTerm`]: https://wezfurlong.org/wezterm/
 //! [Actor]: https://en.wikipedia.org/wiki/Actor_model
 //! [async runtime]: tokio::runtime
 //! [async Rust]: https://rust-lang.github.io/async-book/
@@ -891,7 +893,6 @@
 //! [thread]: https://en.wikipedia.org/wiki/Thread_(computing)
 //! [two-phase setup]: RRT#two-phase-setup
 //! [Unix domain sockets]: https://en.wikipedia.org/wiki/Unix_domain_socket
-//! [Wayland]: https://wayland.freedesktop.org/
 //! [Web Workers]: https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API
 //! [why user-provided?]: #why-is-rrtwaker-user-provided
 //! [Windows]:

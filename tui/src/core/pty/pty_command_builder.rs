@@ -62,7 +62,9 @@ pub struct PtyCommandBuilder {
 }
 
 impl PtyCommandBuilder {
-    /// Creates a new PTY command builder for the specified command.
+    /// Creates a new [`PTY`] command builder for the specified command.
+    ///
+    /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
     pub fn new(command: impl Into<String>) -> Self {
         Self {
             command: command.into(),
@@ -114,9 +116,9 @@ impl PtyCommandBuilder {
     ///
     /// Here is a link to the [Cargo source] code that emits these sequences.
     ///
+    /// [`OSC`]: crate::OscEvent
     /// [Cargo source]:
     ///     https://github.com/rust-lang/cargo/blob/5d9fc0bc2e870f9b0440a9ff9e7f64f6f06ac411/src/cargo/core/shell.rs#L638-L651
-    /// [`OSC`]: crate::OscEvent
     #[must_use]
     #[allow(clippy::redundant_pattern_matching)]
     pub fn enable_osc_sequences(self) -> Self {
@@ -138,20 +140,22 @@ impl PtyCommandBuilder {
     /// Builds the final [`PtyCommand`] with all configurations applied.
     ///
     /// Always sets a working directory - uses the provided one or defaults to current
-    /// directory. This is critical to ensure the PTY starts in the expected location,
+    /// directory. This is critical to ensure the [`PTY`] starts in the expected location,
     /// since by default it uses `$HOME`.
     ///
     /// # Returns
-    /// * `Ok(PtyCommand)` - Configured command ready for PTY execution
+    /// * `Ok(PtyCommand)` - Configured command ready for [`PTY`] execution
     /// * `Err(miette::Error)` - If current directory cannot be determined
     ///
     /// # Errors
-    /// Returns an error if the current directory cannot be determined when no
-    /// working directory was explicitly provided.
+    /// Returns an error if the current directory cannot be determined when no working
+    /// directory was explicitly provided.
     ///
     /// # Panics
     /// Panics if `cwd` is `None` after attempting to set it to the current directory,
     /// which should be impossible in practice.
+    ///
+    /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
     pub fn build(mut self) -> miette::Result<PtyCommand> {
         // CRITICAL - Ensure working directory is always set - use current if not
         // specified. This prevents PTY from spawning in an unexpected location.

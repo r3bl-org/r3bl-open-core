@@ -138,7 +138,7 @@
 //! **Architecture**: Uses the [`VTE`] crate - a battle-tested state machine from the
 //! [`Alacritty`] terminal emulator project.
 //!
-//! **Why stateful parsing?** [`PTY`] output is **non-atomic**. Child processes can write
+//! **Why stateful parsing?** [`PTY`] output is **non-contiguous**. Child processes can write
 //! partial sequences that span multiple buffer reads:
 //! ```text
 //! PTY Read 1: [0x1B, 0x5B, 0x31]        // ESC [ 1
@@ -164,8 +164,8 @@
 //!
 //! **Why NOT use [`VTE`]?** Terminal input has fundamentally different characteristics:
 //!
-//! 1. **Atomic sequences**: Terminal emulators send input sequences **complete** in
-//!    single writes:
+//! 1. **Complete sequences**: Terminal emulators send input sequences **in a single
+//!    burst** in single writes:
 //!    ```text
 //!    User presses:   Up Arrow
 //!    Terminal sends: "\x1B[A" (3 bytes in one syscall)
@@ -183,7 +183,7 @@
 //!
 //! **Benefits**:
 //! - ✅ Zero-latency [`ESC`] key detection (instant emit when buffer = `[0x1B]`)
-//! - ✅ Optimal for atomic sequences (no buffering overhead)
+//! - ✅ Optimal for complete sequences (no buffering overhead)
 //! - ✅ Full control over parsing logic
 //! - ✅ Can optimize for specific terminal features ([`SGR`] mouse, [`Kitty`] etc.)
 //!
@@ -236,6 +236,8 @@
 mod color;
 mod constants;
 mod detect_color_support;
+
+// XMARK: conditional visibility for docs and test only
 
 // Module is public only when building documentation or tests.
 // This allows rustdoc links to work while keeping it private in release builds.

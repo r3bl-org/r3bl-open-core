@@ -110,7 +110,7 @@ impl ReadlineAsyncContext {
     /// into account when calculating the width of the terminal when displaying it in
     /// the "line editor".
     ///
-    /// # Parameters
+    /// # Arguments
     ///
     /// - `read_line_prompt`: Optional prompt string (defaults to `"> "`).
     /// - `channel_capacity`: Optional channel capacity (defaults to

@@ -54,7 +54,7 @@ impl OutputRenderer {
     /// 1. Get the active process's complete virtual terminal ([`OffscreenBuffer`])
     /// 2. Clone it for compositing (preserves the original state)
     /// 3. Composite the status bar into the last row
-    /// 4. Paint the entire composite to the real terminal atomically
+    /// 4. Paint the entire composite to the real terminal all at once
     ///
     /// **Key benefits**:
     /// - The original process buffer is never modified (preserves state)

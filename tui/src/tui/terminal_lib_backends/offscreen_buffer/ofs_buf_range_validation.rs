@@ -103,7 +103,7 @@ impl OffscreenBuffer {
     /// verify range validity without accessing the actual buffer data. It's more
     /// efficient than the full validation methods when the returned slice won't be used.
     ///
-    /// ## Parameters
+    /// ## Arguments
     ///
     /// * `row_range` - The range of rows to validate (exclusive end)
     ///
@@ -142,7 +142,7 @@ impl OffscreenBuffer {
     /// efficient than the full validation methods when the returned line reference won't
     /// be used.
     ///
-    /// ## Parameters
+    /// ## Arguments
     ///
     /// * `row` - The row index to check
     /// * `col_range` - The range of columns to validate (exclusive end)
@@ -187,7 +187,7 @@ impl OffscreenBuffer {
     /// and returns the converted indices along with immutable references to the
     /// requested lines.
     ///
-    /// ## Parameters
+    /// ## Arguments
     ///
     /// * `row_range` - The range of rows to validate (exclusive end)
     ///
@@ -244,7 +244,7 @@ impl OffscreenBuffer {
     /// and returns the converted indices along with mutable references to the
     /// requested lines.
     ///
-    /// ## Parameters
+    /// ## Arguments
     ///
     /// * `row_range` - The range of rows to validate (exclusive end)
     ///
@@ -300,7 +300,7 @@ impl OffscreenBuffer {
     /// that row's length, then returns the converted indices along with an
     /// immutable reference to the requested line.
     ///
-    /// ## Parameters
+    /// ## Arguments
     ///
     /// * `row` - The row index to check
     /// * `col_range` - The range of columns to validate (exclusive end)
@@ -362,7 +362,7 @@ impl OffscreenBuffer {
     /// that row's length, then returns the converted indices along with a
     /// mutable reference to the requested line.
     ///
-    /// ## Parameters
+    /// ## Arguments
     ///
     /// * `row` - The row index to check
     /// * `col_range` - The range of columns to validate (exclusive end)

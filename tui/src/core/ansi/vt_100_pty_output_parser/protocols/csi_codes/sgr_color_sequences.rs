@@ -210,7 +210,7 @@ impl SgrColorSequence {
     /// appropriate color operation variant. See the module documentation for
     /// comprehensive format details and usage examples.
     ///
-    /// # Parameters
+    /// # Arguments
     ///
     /// - `params`: The parameter slice from [`extract_nth_many_raw()`]
     ///

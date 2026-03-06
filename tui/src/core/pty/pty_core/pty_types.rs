@@ -11,11 +11,12 @@
 //! - [`InputEventSenderHalf`], [`ReadOnlyOutputEventReceiverHalf`],
 //!   [`ReadWriteOutputEventReceiverHalf`] - Channel halves
 //!
+//! [`pty_to_std_exit_status()`]: PtyControlledChildExitStatus::pty_to_std_exit_status
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 
 use super::{PtyInputEvent, PtyReadOnlyOutputEvent, PtyReadWriteOutputEvent};
 use portable_pty::{ChildKiller, CommandBuilder, MasterPty, SlavePty};
-use std::pin::Pin;
+use std::{ops::Deref, pin::Pin};
 use tokio::{sync::mpsc::{UnboundedReceiver, UnboundedSender},
             task::JoinHandle};
 
@@ -79,65 +80,93 @@ pub type PtyCommand = CommandBuilder;
 /// this alias.
 ///
 /// [`portable_pty`]: https://docs.rs/portable-pty
+/// [`pty_to_std_exit_status()`]: PtyControlledChildExitStatus::pty_to_std_exit_status
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
-pub type PtyControlledChildExitStatus = portable_pty::ExitStatus;
+#[derive(Debug)]
+pub struct PtyControlledChildExitStatus {
+    pub inner: portable_pty::ExitStatus,
+}
 
-/// Converts [`PtyControlledChildExitStatus`] to [`std::process::ExitStatus`].
-///
-/// - Handles Unix wait status format encoding and Windows exit codes
-/// - Clamps large exit codes to `255` to prevent overflow on Unix systems
-/// - On success: uses explicit success status (exit code `0`)
-/// - On failure: encodes exit code in Unix wait status format with bounds checking
-///
-/// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
-/// [`std::process::ExitStatus`]: std::process::ExitStatus
-#[must_use]
-pub fn pty_to_std_exit_status(
-    status: PtyControlledChildExitStatus,
-) -> std::process::ExitStatus {
-    #[cfg(unix)]
-    use std::os::unix::process::ExitStatusExt;
-    #[cfg(windows)]
-    use std::os::windows::process::ExitStatusExt;
+impl Deref for PtyControlledChildExitStatus {
+    type Target = portable_pty::ExitStatus;
 
-    if status.success() {
-        // Success case: use explicit success status
-        #[cfg(unix)]
-        return std::process::ExitStatus::from_raw(0);
-        #[cfg(windows)]
-        return std::process::ExitStatus::from_raw(0);
+    fn deref(&self) -> &Self::Target { &self.inner }
+}
+
+impl From<portable_pty::ExitStatus> for PtyControlledChildExitStatus {
+    fn from(it: portable_pty::ExitStatus) -> Self { Self { inner: it } }
+}
+
+impl From<u32> for PtyControlledChildExitStatus {
+    fn from(code: u32) -> Self {
+        Self {
+            inner: portable_pty::ExitStatus::with_exit_code(code),
+        }
     }
-    // Failure case: encode exit code properly
-    let code = status.exit_code();
+}
 
-    // Ensure we don't overflow when shifting for Unix wait status format.
-    let wait_status = if code <= 255 {
-        #[allow(clippy::cast_possible_wrap)]
-        let code_i32 = code as i32;
-        #[cfg(unix)]
-        {
-            code_i32 << 8
-        }
-        #[cfg(windows)]
-        {
-            code_i32
-        }
-    } else {
-        // If exit code is too large, clamp to 255 and encode.
-        #[cfg(unix)]
-        {
-            255_i32 << 8
-        }
-        #[cfg(windows)]
-        {
-            255_i32
-        }
-    };
+impl From<PtyControlledChildExitStatus> for std::process::ExitStatus {
+    fn from(status: PtyControlledChildExitStatus) -> Self {
+        status.pty_to_std_exit_status()
+    }
+}
 
-    #[cfg(unix)]
-    return std::process::ExitStatus::from_raw(wait_status);
-    #[cfg(windows)]
-    return std::process::ExitStatus::from_raw(wait_status as u32);
+impl PtyControlledChildExitStatus {
+    /// Converts [`PtyControlledChildExitStatus`] to [`std::process::ExitStatus`].
+    ///
+    /// - Handles Unix wait status format encoding and Windows exit codes
+    /// - Clamps large exit codes to `255` to prevent overflow on Unix systems
+    /// - On success: uses explicit success status (exit code `0`)
+    /// - On failure: encodes exit code in Unix wait status format with bounds checking
+    ///
+    /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
+    /// [`std::process::ExitStatus`]: std::process::ExitStatus
+    #[must_use]
+    pub fn pty_to_std_exit_status(&self) -> std::process::ExitStatus {
+        #[cfg(unix)]
+        use std::os::unix::process::ExitStatusExt;
+        #[cfg(windows)]
+        use std::os::windows::process::ExitStatusExt;
+
+        if self.inner.success() {
+            // Success case: use explicit success status
+            #[cfg(unix)]
+            return std::process::ExitStatus::from_raw(0);
+            #[cfg(windows)]
+            return std::process::ExitStatus::from_raw(0);
+        }
+        // Failure case: encode exit code properly
+        let code = self.inner.exit_code();
+
+        // Ensure we don't overflow when shifting for Unix wait status format.
+        let wait_status = if code <= 255 {
+            #[allow(clippy::cast_possible_wrap)]
+            let code_i32 = code as i32;
+            #[cfg(unix)]
+            {
+                code_i32 << 8
+            }
+            #[cfg(windows)]
+            {
+                code_i32
+            }
+        } else {
+            // If exit code is too large, clamp to 255 and encode.
+            #[cfg(unix)]
+            {
+                255_i32 << 8
+            }
+            #[cfg(windows)]
+            {
+                255_i32
+            }
+        };
+
+        #[cfg(unix)]
+        return std::process::ExitStatus::from_raw(wait_status);
+        #[cfg(windows)]
+        return std::process::ExitStatus::from_raw(wait_status as u32);
+    }
 }
 
 /// Type alias for a pinned completion handle used in [`PTY`] sessions.

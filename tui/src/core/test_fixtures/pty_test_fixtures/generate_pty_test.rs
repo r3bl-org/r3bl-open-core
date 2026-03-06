@@ -177,7 +177,7 @@ pub enum PtyTestMode {
 /// - [`raw_mode_integration_tests`] - Tests raw mode itself
 /// - [`integration_tests`] - Tests input parsing
 ///
-/// # Parameters
+/// # Arguments
 ///
 /// - `test_fn`: The test function name (used as identifier, not string)
 /// - `controller`: A function that accepts `(pty_pair, child)` parameters
@@ -271,12 +271,6 @@ macro_rules! generate_pty_test {
             // Otherwise, run as controller - create PTY and spawn controlled
             eprintln!("🚀 TEST: No {} var, running as controller", PTY_CONTROLLED_ENV_VAR);
 
-            // Create PTY pair (standard 80x24 terminal size).
-            let mut pty_pair = PtyPair::new_with_default_size()
-                .expect("Failed to create PTY pair");
-
-            eprintln!("🔍 Controller: PTY pair created");
-
             // Spawn controlled process
             let test_binary =
                 std::env::current_exe().expect("Failed to get current executable");
@@ -286,9 +280,9 @@ macro_rules! generate_pty_test {
             cmd.args(&["--test-threads", "1", "--nocapture", stringify!($test_name)]);
 
             eprintln!("🚀 Controller: Spawning controlled process...");
-            let child = pty_pair
-                .spawn_command_and_close_controlled(cmd)
+            let (pty_pair, child) = PtyPair::open_and_spawn($crate::core::pty::pty_core::pty_size::DefaultPtySize, cmd)
                 .expect("Failed to spawn controlled process");
+            eprintln!("🔍 Controller: PTY pair created");
             eprintln!("🔍 Controller: Controlled side closed (parent no longer holds controlled fd)");
 
             // Wrap in SingleThreadSafeControlledChild — bare child.wait() is now impossible.

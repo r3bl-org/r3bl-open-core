@@ -5,43 +5,53 @@
 //! See [`PtyPair`] for the main wrapper struct.
 
 use super::{Controlled, ControlledChild, Controller, PtyCommand};
-use crate::{Size, height, size, width};
+use crate::Size;
 
 /// Owns both halves of a [`PTY`] pair and manages the controlled side's lifecycle.
 ///
-/// <div class="warning">
+/// # Do not use the [`portable_pty::PtyPair`] directly
 ///
-/// Do not use the [`portable_pty::PtyPair`] directly - this wrapper provides a safe API
-/// that prevents deadlocks from leaked parent controlled [`fd`]s and abstracts away
-/// platform differences in [`PTY`] I/O signaling ([`EOF`] vs [`EIO`]) by documenting the
-/// correct cross-platform handling pattern.
+/// Use this wrapper instead, since it provides a safe API that programmatically prevents
+/// deadlocks from leaked parent controlled [`fd`]s and normalizes platform-specific
+/// [`PTY`] I/O signaling ([`EOF`] vs [`EIO`]) into a reliable [`PTY`] session lifecycle.
 ///
-/// When the parent process creates a [`PTY`] pair and spawns a child, both parent and
-/// child processes hold copies of the controlled [`fd`]. When the controller (in the
-/// parent process) calls the blocking [`read()`] [`syscall`] to get data from the child
-/// process's output, then a potential for deadlock exists.
+/// When a [`PTY`] pair is created, both the parent and child processes initially hold
+/// copies of the controlled [`fd`]. This creates a [critical deadlock
+/// risk](#resource-leaking-deadlock): the kernel only delivers a termination signal
+/// ([`EIO`] on Linux, [`EOF`] on others) to the controller when **all** copies of the
+/// controlled [`fd`] are closed.
 ///
-/// The kernel only returns [`EIO`] (input/output error) or [`EOF`] (end of file) from
-/// blocking [`read()`] when **all** controlled [`fd`]s are closed. So if the parent
-/// process does not drop its copy (_which it does not really need, and has due to some
-/// POSIX function orchestration reasons_), the kernel's reference count never hits zero
-/// and the blocking [`read()`] [`syscall`] blocks forever.
+/// If the parent process fails to drop its bootstrapping copy, the kernel's reference
+/// count never reaches zero. Consequently, any blocking [`read()`] on the controller will
+/// hang indefinitely—even after the child has exited—as it waits for a signal that can
+/// never be delivered.
 ///
-/// This hangs up the thread that called the blocking [`read()`] in the parent process;
-/// the thread waits indefinitely for an [`EIO`] or [`EOF`] that will never arrive. This
-/// typically happens after the child process has already exited (having closed its 3
-/// copies of the [`fd`], while the parent holds on to its one).
+/// [`PtyPair`] structurally eliminates this risk by wrapping the controlled side in an
+/// [`Option`] and programmatically closing it immediately after spawning. This ensures
+/// that the child's copies are the only ones remaining, guaranteeing that the
+/// controller's reader receives a termination signal. The library's reader tasks and test
+/// fixtures (like [`pty_test_fixtures::drain_pty_and_wait()`]) then programmatically
+/// handle both [`EOF`] (`Ok(0)`) and [`EIO`] ([`Err`] with `errno 5` on Linux) to ensure
+/// clean, cross-platform termination.
 ///
-/// [`PtyPair`] prevents this by closing the parent's controlled [`fd`] immediately after
-/// spawning.
+/// # Higher-level Sessions
 ///
-/// </div>
+/// While [`PtyPair`] is the low-level "engine" that manages kernel resources and safe
+/// initialization, your [`TUI`] or [`readline_async`] app will typically interact with
+/// these higher-level session types for actual process communication:
+/// [`PtyReadOnlySession`] / [`PtyReadWriteSession`]. Here's a comparison between them.
+///
+/// | [`PtyPair`]                                                    | [`PtyReadOnlySession`] / [`PtyReadWriteSession`] |
+/// | :------------------------------------------------------------- | :----------------------------------------------- |
+/// | Short-lived (initialization phase)                             | Long-lived (duration of the process)             |
+/// | Blocking ([`std::read()`], [`std::write()`], [`std::spawn()`]) | Non-blocking ([`tokio`] channels, [`select!`])   |
+/// | Prevents [`fd`] leaks and deadlocks                            | Manages task completion and cleanup              |
 ///
 /// # [`PTY`] Primer
 ///
 /// A [`PTY`] (pseudoterminal, introduced in [`4.2BSD`] in 1983, standardized in
-/// `POSIX.1-2001`) is a kernel-provided virtual terminal. It lets your application spawn
-/// a child process that believes it is running in a fully interactive terminal
+/// [`POSIX.1-2001`]) is a kernel-provided virtual terminal. It lets your application
+/// spawn a child process that believes it is running in a fully interactive terminal
 /// environment. Yet it runs without any terminal device attached. What is a "terminal
 /// device"? Any of the following:
 ///
@@ -77,7 +87,7 @@ use crate::{Size, height, size, width};
 ///
 /// <!-- inception animated gif -->
 /// <img
-/// src="https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExeDB3cGV2M2s2bW42b3Vhc3I5eHA3Y2pob2MwOWdibGV0NHRvaG14YSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/kOIbusN7fPnkk/giphy.gif"
+/// src="https://raw.githubusercontent.com/r3bl-org/r3bl-open-core/main/docs/image/inception.gif"
 /// width="350" height="250" alt="Inception GIF">
 ///
 /// ## Parent process perspective (your application)
@@ -122,7 +132,7 @@ use crate::{Size, height, size, width};
 ///
 /// After spawning, the parent process has no use for the controlled [`fd`] anymore and it
 /// **should** drop the controlled [`fd`] to avoid the deadlock described above. But this
-/// does not happen in the [`portable_pty`] code 💣💀.
+/// does not happen in the [`portable_pty`] code 💣.
 ///
 /// ## What this struct does
 ///
@@ -177,53 +187,62 @@ use crate::{Size, height, size, width};
 /// returns [`EIO`]/[`EOF`] from blocking [`read()`] [`syscall`] on the controller (in the
 /// **parent process**'s thread) when all copies close.
 ///
-/// Specifically, the kernel maintains a reference count on the file description (the
-/// internal kernel object, `struct file` in Linux) that the controlled [`fd`] points to.
-/// Every file descriptor is just an integer index into a process's [`fd`] table, and
-/// multiple [`fd`]s can point to the same underlying kernel file description.
+/// Specifically, on Unix-like systems, the kernel maintains a reference count on the file
+/// description that the controlled [`fd`] points to. In Linux, the internal kernel object
+/// that does this is [`struct file`]. Every file descriptor is just an integer index into
+/// a process's [`fd`] table, and multiple [`fd`]s can point to the same underlying kernel
+/// file description. While terminology differs on Windows, the core principle is the
+/// same: the resource remains open as long as any process holds a reference to it.
 ///
-/// Your code (the parent process) makes two [`portable_pty`] calls that create controlled
-/// [`fd`]s:
-/// 1. First via [`PtyPair::new_with_size()`] or [`PtyPair::new_with_default_size()`] to
-///    create the initial [`PTY`] pair.
-/// 2. Then via [`PtyPair::spawn_command_and_close_controlled()`] to spawn the child
-///    process with the given command.
+/// ## Resource-leaking deadlock
 ///
-/// Here are the details around the underlying [`portable_pty`] calls that are made.
+/// Your code (running in the parent process) makes two [`portable_pty`] calls indirectly
+/// by using [`PtyPair`]. Both of the following steps are combined in the primary
+/// [`PtyPair::open_and_spawn()`] method. Both controller and controlled [`fd`]s get
+/// created.
 ///
-/// 1. **[`portable_pty's openpty()`]** - Called by [`PtyPair::new_with_size()`] or
-///    [`PtyPair::new_with_default_size()`].
+/// 1. **[`portable_pty's openpty()`]** - Called by [`PtyPair::open_raw_pair()`], creates
+///    the initial [`PTY`] pair.
 ///    - Under the hood, this calls the POSIX [`openpty(3)`] system call, which opens
 ///      [`/dev/ptmx`] and creates the initial [`PTY`] pair.
 ///    - Returns one controller [`fd`] and one controlled [`fd`], both owned by the parent
-///      process.
+///      process. We need the controlled [`fd`] in the next step to spawn the child.
 ///
 /// 2. **[`portable_pty's spawn_command()`]** - Called by
-///    [`PtyPair::spawn_command_and_close_controlled()`].
-///    - Builds a [`Command`] from the [portable_pty's `CommandBuilder`] passed to
+///    [`PtyPair::spawn_command_and_close_controlled()`], spawns the child process with
+///    the given command.
+///    - Builds a [`Command`] from the [`portable_pty's CommandBuilder`] passed to
 ///      [`PtyPair::spawn_command_and_close_controlled()`].
 ///    - Wires the controlled [`fd`] to the child's [`stdin`]/[`stdout`]/[`stderr`] via
 ///      [`Command::stdin()`]/[`Command::stdout()`]/[`Command::stderr()`]. Then calls
 ///      [`Command::spawn()`], which internally calls [`fork()`] → [`dup2()`] → [`exec()`]
 ///      (the [fork-exec] pattern) to create **new** controlled [`fd`]s (`0`, `1`, `2`) in
 ///      the child.
-///    - After [`exec()`], the child only has these 3 `dup2()`'d copies. The original
-///      controlled [`fd`] (inherited from [`fork()`]) is marked [`FD_CLOEXEC`] by
-///      [`portable_pty`] after [`openpty()`], so [`exec()`] auto-closes it in the child
-///      (the child briefly held 4, but `exec()` drops the original, leaving 3).
-///    - Crucially, [`FD_CLOEXEC`] only fires when [`exec()`] is called, and only the
-///      child process calls [`exec()`]. The parent's copy of the controlled [`fd`] is
+///    - After [`exec()`], the child only has these 3 [`dup2()`]'d copies of the
+///      controlled [`fd`].
+///      - The original controlled [`fd`] (inherited from [`fork()`]) is marked
+///        [`FD_CLOEXEC`] by [`portable_pty`] after [`openpty()`], so [`exec()`]
+///        auto-closes it in the child.
+///      - The child briefly held 4, but [`exec()`] drops the original controlled [`fd`],
+///        leaving 3.
+///    - Crucially, the parent's copy of the controlled [`fd`] (created in Step 1) is
 ///      completely unaffected - this is the bootstrap artifact that causes the deadlock
-///      if not explicitly dropped.
+///      if not explicitly dropped 💣. And that is exactly what
+///      [`PtyPair::spawn_command_and_close_controlled()`] does.
 ///
-/// After [`portable_pty's spawn_command()`], [two processes] hold controlled [`fd`]s:
-/// 1. the parent process (via [`PtyPair`]) and
-/// 2. the child process (via its [`stdin`]/[`stdout`]/[`stderr`]).
+/// To understand why relying on [`portable_pty's spawn_command()`] alone leads to a
+/// deadlock, we must look at the system state immediately after spawning the child (at
+/// the very end of Step 2 above). At this point, [two processes] still hold controlled
+/// [`fd`]s:
+/// 1. The parent process (via [`PtyPair`]) - This is problematic and can cause deadlock
+///    💀.
+/// 2. The child process (via its [`stdin`]/[`stdout`]/[`stderr`]) - This is ok.
 ///
 /// Here's where the problem arises - the kernel delivers [`EIO`] (or [`EOF`]) to the
 /// controller reader only when **all** controlled [`fd`]s are closed. The parent's copy
-/// can cause the deadlock - if it is not dropped, the kernel's reference count never hits
-/// zero and blocking [`read()`] on the controller blocks forever.
+/// can cause the deadlock, if it is not dropped. Without dropping it the kernel's
+/// reference count never hits zero, it never gets the [`EIO`] (or [`EOF`]), and blocking
+/// [`read()`] on the controller blocks forever.
 ///
 /// ```text
 /// Deadlock: parent still holds controlled fd 💀
@@ -238,14 +257,14 @@ use crate::{Size, height, size, width};
 /// ┌───────▼─────────────────▼─────────┐
 /// │          Kernel PTY driver        │
 /// │                                   │
-/// │    refcount(controlled fd) = 4    │ ← dup2 creates 3 child fds;
-/// │    (parent: 1, child: 3)          │   FD_CLOEXEC closes the 4th at exec **
+/// │    refcount(controlled fd) = 4    │ ← dup2() creates 3 child fds;
+/// │    (parent: 1, child: 3)          │   FD_CLOEXEC closes the 4th at exec() ●●
 /// └─────────────────────────┬─────────┘
 ///                           │
 /// ┌─────────────────────────▼─────────┐
 /// │          CHILD PROCESS            │
 /// │                                   │
-/// │  controlled fd (via dup2)         │
+/// │  controlled fd (via dup2())       │
 /// │  → stdin / stdout / stderr        │
 /// └───────────────────────────────────┘
 ///
@@ -253,20 +272,25 @@ use crate::{Size, height, size, width};
 ///             → Kernel does NOT signal EOF
 ///             → Parent process thread in blocking read() blocks forever 💀
 ///
-/// ** portable_pty delegates to Rust's Command::spawn(), which internally
-///    calls fork() + dup2() + exec(). After fork(), the child inherits the
-///    parent's controlled fd (refcount 2). Then dup2() x3 creates stdin,
-///    stdout, stderr copies (refcount 5). FD_CLOEXEC on the original
-///    controlled fd auto-closes it at exec(), bringing refcount to 4.
-///    portable_pty sets FD_CLOEXEC on the original controlled fd immediately
-///    after openpty() via fcntl(F_SETFD). The dup2()'d copies (fd 0, 1, 2)
-///    do NOT have FD_CLOEXEC - dup2() clears it - so they survive exec().
+/// ●● Why this happens:
+/// - portable_pty delegates to Rust's Command::spawn(), which internally calls
+///   fork() + dup2() + exec().
+/// - After fork(), the child inherits the parent's controlled fd (refcount 2).
+/// - Then dup2() x3 creates stdin, stdout, and stderr copies in the child
+///   (refcount 5).
+/// - portable_pty sets FD_CLOEXEC on the original controlled fd immediately
+///   after openpty() via fcntl(F_SETFD).
+/// - During exec(), the original controlled fd auto-closes in the child, but
+///   the dup2()'d copies (0, 1, 2) survive because dup2() clears the
+///   FD_CLOEXEC flag (refcount 4).
+/// - Crucially, the parent still holds its original copy - this is the +1 that
+///   causes the deadlock!
 /// ```
 ///
 /// And this is where the `_and_close_controlled` part of
 /// [`PtyPair::spawn_command_and_close_controlled()`] comes into play to prevent this.
 /// This method spawns the child and immediately closes the parent's controlled [`fd`] in
-/// one atomic step, so the child process's copies are the only ones left. When the child
+/// a single step, so the child process's copies are the only ones left. When the child
 /// exits, the kernel delivers [`EIO`]/[`EOF`] to the controller reader as expected 🙌.
 ///
 /// ```text
@@ -276,7 +300,7 @@ use crate::{Size, height, size, width};
 /// │          PARENT PROCESS           │
 /// │                                   │
 /// │  controller fd     controlled fd  │
-/// │       │               ╳ dropped   │
+/// │       │              ╳ dropped    │
 /// └───────│───────────────────────────┘
 ///         │
 /// ┌───────▼───────────────────────────┐
@@ -289,7 +313,7 @@ use crate::{Size, height, size, width};
 /// ┌─────────────────────────▼─────────┐
 /// │          CHILD PROCESS            │
 /// │                                   │
-/// │  controlled fd (via dup2)         │
+/// │  controlled fd (via dup2())       │
 /// │  → stdin / stdout / stderr        │
 /// └───────────────────────────────────┘
 ///
@@ -308,14 +332,48 @@ use crate::{Size, height, size, width};
 /// one of two signals depending on the platform:
 ///
 /// - [`EOF`] (`0` bytes returned) - traditionally means "no more data right now, but the
-///   channel is still valid." BSD/macOS uses this for controlled-side closure.
-/// - [`EIO`] (`errno` `5`) - means "the I/O channel itself is broken - the other end
-///   doesn't exist anymore." Linux uses this as the more semantically precise signal.
+///   channel is still valid". BSD/macOS uses this for controlled-side closure.
+/// - [`EIO`] (`errno` `5`) - means "the I/O channel itself is broken, and the other end
+///   doesn't exist anymore". Linux uses this as the more semantically precise signal.
 ///
 /// Any code that reads from the controller must handle **both** to avoid cross-platform
-/// polling bugs. See the [kernel patch that documents this behavior] and the
-/// [`drain_pty_and_wait`] implementation for an example of correct cross-platform
-/// handling.
+/// polling bugs. For more information take a look at the following:
+/// - The [kernel patch that documents this behavior].
+/// - The [`pty_test_fixtures::drain_pty_and_wait()`] implementation for an example of
+///   correct cross-platform handling.
+///
+/// # Two Types of Deadlocks
+///
+/// Understanding these two distinct deadlock scenarios is critical for safe [`PTY`]
+/// orchestration.
+///
+/// ### 1. [Resource-leaking deadlock](#resource-leaking-deadlock) (Production & Test)
+/// - **Cause**: The parent process leaks its bootstrapping copy of the controlled [`fd`].
+/// - **Effect**: The kernel's reference count for the controlled side stays above zero
+///   even after the child process exits.
+/// - **Symptom**: Blocking [`read()`] on the controller side hangs forever instead of
+///   returning [`EIO`] or [`EOF`].
+/// - **Solution**: [`PtyPair::open_and_spawn()`] (or
+///   [`PtyPair::spawn_command_and_close_controlled()`]) ensures the parent's copy is
+///   closed immediately after spawning.
+///
+/// ### 2. Buffer-full deadlock (Contrived Single-threaded Tests)
+///
+/// > <div class="warning">
+/// > This is not needed in production code where reading happens in a dedicated
+/// > background thread.
+/// > </div>
+///
+/// - **Cause**: The controller thread stops performing [`read()`] operations to call
+///   [`ControlledChild::wait()`], but the child process attempts to write more data
+///   (e.g., final output to [`stdout`] or [`stderr`]) before exiting.
+/// - **Effect**: The kernel's [`PTY`] buffer (typically 1KB on macOS, 4KB on Linux) fills
+///   up.
+/// - **Symptom**: The child blocks on its final [`write()`] [`syscall`], while the parent
+///   blocks on its [`ControlledChild::wait()`] call.
+/// - **Solution**: [`pty_test_fixtures::drain_pty_and_wait()`] (used in test fixtures)
+///   ensures all remaining bytes are consumed until [`EIO`]/[`EOF`] before calling
+///   [`ControlledChild::wait()`].
 ///
 /// # Deadlock-safe API design
 ///
@@ -324,24 +382,27 @@ use crate::{Size, height, size, width};
 /// value, so the deadlock described in [Controlled side lifecycle] is structurally
 /// impossible.
 ///
-/// 1. [`spawn_command_and_close_controlled()`] is the only way to spawn a child. It
-///    closes the parent's controlled [`fd`] immediately after spawning, so the child's
-///    copies are the only ones left.
-/// 2. [`into_controller()`] is the only way to extract an owned [`Controller`]. It drops
-///    the controlled side automatically if it is still open, as a safety net.
+/// 1. [`PtyPair::open_and_spawn()`] is the primary way to spawn a child.
+///    [`PtyPair::spawn_command_and_close_controlled()`] is another way. Both close the
+///    parent's controlled [`fd`] immediately after spawning, so the child's copies are
+///    the only ones left, eliminating any chance of [resource-leaking
+///    deadlock](#resource-leaking-deadlock).
+/// 2. [`PtyPair::into_controller()`] is the only way to extract an owned [`Controller`].
+///    It drops the controlled side automatically if it is still open, as a safety net,
+///    eliminating any change of [resource-leaking deadlock](#resource-leaking-deadlock).
 ///
-/// The example below shows [`PtyPair::spawn_command_and_close_controlled()`] handling
-/// both spawn and controlled-side closure in a single call:
+/// The example below shows [`PtyPair::open_and_spawn()`] handling everything in a single
+/// call:
 ///
 /// ```no_run
 /// use r3bl_tui::{PtyCommand, PtyPair, size, width, height};
 ///
-/// let mut pty_pair = PtyPair::new_with_size(size(width(80) + height(24))).unwrap();
+/// let (pty_pair, _child) = PtyPair::open_and_spawn(
+///     size(width(80) + height(24)),
+///     PtyCommand::new("top")
+/// ).unwrap();
 ///
-/// // Spawn child and close the controlled side in one step.
-/// let _child = pty_pair.spawn_command_and_close_controlled(PtyCommand::new("cat")).unwrap();
-///
-/// // Reads from the controller will return EOF once the child exits.
+/// // Reading from the reader will return `EIO` or `EOF` once the child process exits.
 /// let reader = pty_pair.controller().try_clone_reader().unwrap();
 /// ```
 ///
@@ -369,7 +430,7 @@ use crate::{Size, height, size, width};
 /// Controlled (Box<dyn SlavePty>) → UnixSlavePty → PtyFd → FileDescriptor → close(fd)
 /// ```
 ///
-/// This is why [`spawn_command_and_close_controlled()`] works: it calls
+/// This is why [`PtyPair::spawn_command_and_close_controlled()`] works: it calls
 /// [`Option::take()`] to move the [`Controlled`] out, then drops it.
 ///
 /// # Inclusive terminology
@@ -387,9 +448,10 @@ use crate::{Size, height, size, width};
 /// [`Command::stdin()`]: std::process::Command::stdin
 /// [`Command::stdout()`]: std::process::Command::stdout
 /// [`Command`]: std::process::Command
+/// [`ControlledChild::wait()`]: portable_pty::Child::wait
 /// [`controller()`]: PtyPair::controller
 /// [`controller_mut()`]: PtyPair::controller_mut
-/// [`drain_pty_and_wait`]: crate::drain_pty_and_wait
+/// [`DefaultPtySize`]: crate::DefaultPtySize
 /// [`dup2()`]: https://man7.org/linux/man-pages/man2/dup2.2.html
 /// [`EIO`]: https://man7.org/linux/man-pages/man3/errno.3.html
 /// [`EOF`]: https://en.wikipedia.org/wiki/End-of-file
@@ -397,31 +459,45 @@ use crate::{Size, height, size, width};
 /// [`FD_CLOEXEC`]: https://man7.org/linux/man-pages/man2/fcntl.2.html
 /// [`fd`]: https://man7.org/linux/man-pages/man2/open.2.html
 /// [`fork()`]: https://man7.org/linux/man-pages/man2/fork.2.html
-/// [`into_controller()`]: PtyPair::into_controller
 /// [`ioctl(TIOCGWINSZ)`]: https://man7.org/linux/man-pages/man2/ioctl_tty.2.html
 /// [`isatty()`]: https://man7.org/linux/man-pages/man3/isatty.3.html
-/// [`new_with_default_size()`]: PtyPair::new_with_default_size
-/// [`new_with_size()`]: PtyPair::new_with_size
 /// [`openpty()`]: https://man7.org/linux/man-pages/man3/openpty.3.html
 /// [`openpty(3)`]: https://man7.org/linux/man-pages/man3/openpty.3.html
+/// [`portable_pty's CommandBuilder`]: portable_pty::CommandBuilder
 /// [`portable_pty's openpty()`]: portable_pty::PtySystem::openpty
 /// [`portable_pty's spawn_command()`]: portable_pty::SlavePty::spawn_command
+/// [`POSIX.1-2001`]: https://pubs.opengroup.org/onlinepubs/009695399/
+/// [`pty_test_fixtures::drain_pty_and_wait()`]: crate::drain_pty_and_wait
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
+/// [`PtyPair::into_controller()`]: PtyPair::into_controller
+/// [`PtyPair::open_raw_pair()`]: Self::open_raw_pair
 /// [`PtyPair::spawn_command_and_close_controlled()`]:
-///     PtyPair::spawn_command_and_close_controlled
+///     Self::spawn_command_and_close_controlled
+/// [`PtyReadOnlySession`]: crate::PtyReadOnlySession
+/// [`PtyReadWriteSession`]: crate::PtyReadWriteSession
 /// [`read()`]: https://man7.org/linux/man-pages/man2/read.2.html
-/// [`SIGINT`]: https://man7.org/linux/man-pages/man7/signal.7.html
-/// [`spawn_command_and_close_controlled()`]: PtyPair::spawn_command_and_close_controlled
+/// [`readline_async`]: crate::readline_async
+/// [`readline_async`]: crate::readline_async::ReadlineAsyncContext::try_new
+/// [`select!`]: tokio::select
+/// [`SIGINT`]: https://man7.org/linux/man-pages/7/signal.7.html
+/// [`std::read()`]: std::io::Read::read
+/// [`std::spawn()`]: Self::open_and_spawn
+/// [`std::write()`]: std::io::Write::write
 /// [`stderr`]: std::io::stderr
 /// [`stdin`]: std::io::stdin
 /// [`stdout`]: std::io::stdout
+/// [`struct file`]:
+///     https://elixir.bootlin.com/linux/v6.19.3/source/include/linux/fs.h#L1256
 /// [`syscall`]: https://man7.org/linux/man-pages/man2/syscalls.2.html
 /// [`tcsetattr()`]: https://man7.org/linux/man-pages/man3/tcsetattr.3.html
-/// [`top`]: https://man7.org/linux/man-pages/man1/top.1.html
+/// [`tokio`]: tokio
+/// [`top`]: https://man7.org/linux/man-pages/1/top.1.html
+/// [`TUI`]: crate::tui::TerminalWindow::main_event_loop
 /// [`WezTerm`]: https://wezfurlong.org/wezterm/
+/// [`write()`]: https://man7.org/linux/man-pages/man2/write.2.html
 /// [`Xenix`]: https://en.wikipedia.org/wiki/Xenix
 /// [`xterm`]: https://en.wikipedia.org/wiki/Xterm
-/// [Controlled side lifecycle]: #controlled-side-lifecycle
+/// [Controlled side lifecycle]: #resource-leaking-deadlock
 /// [DEC video terminals]: https://vt100.net/shuford/terminal/dec.html
 /// [fork-exec]: https://en.wikipedia.org/wiki/Fork-exec
 /// [Inclusive Naming Initiative - Tier 1 Terms]:
@@ -444,60 +520,43 @@ pub struct PtyPair {
     /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
     pub controller: Controller,
 
-    /// Controlled side of the [`PTY`], held as `Option` so it can be closed early.
+    /// Controlled side of the [`PTY`], held as [`Option`] so it can be closed early. For
+    /// more information, see:
+    /// - [File Descriptor ownership].
+    /// - [Resource-leaking deadlock].
     ///
-    /// After the child process is spawned, the parent process no longer needs the
-    /// controlled [`fd`]. Keeping it open prevents [`EIO`] (or [`EOF`]) from being
-    /// delivered to controller readers after the child process exits.
-    /// [`PtyPair::spawn_command_and_close_controlled()`] handles this automatically.
-    ///
-    /// [`EIO`]: https://man7.org/linux/man-pages/man3/errno.3.html
-    /// [`EOF`]: https://en.wikipedia.org/wiki/End-of-file
-    /// [`fd`]: https://man7.org/linux/man-pages/man2/open.2.html
     /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
+    /// [File Descriptor ownership]: #file-descriptor-ownership
+    /// [Resource-leaking deadlock]: #resource-leaking-deadlock
     pub maybe_controlled: Option<Controlled>,
 }
 
 impl PtyPair {
-    /// Creates a new [`PTY`] pair with the specified terminal size.
+    /// Opens a [`PTY`] pair with the given size and immediately spawns the command.
+    ///
+    /// This is the safest way to initialize a [`PTY`] as it automatically drops the
+    /// parent's copy of the controlled [`fd`] after spawning.
     ///
     /// # Errors
     ///
-    /// Returns an error if the [`PTY`] system fails to open a pair.
+    /// Returns an error if the [`PTY`] system fails to open a pair, or if the command
+    /// fails to spawn.
     ///
+    /// [`fd`]: https://man7.org/linux/man-pages/man2/open.2.html
     /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
-    pub fn new_with_size(pty_size: Size) -> miette::Result<Self> {
-        let pty_system = portable_pty::native_pty_system();
-        let raw_pair = pty_system
-            .openpty(pty_size.into())
-            .map_err(|e| miette::miette!("Failed to open PTY: {e}"))?;
-        Ok(Self::from(raw_pair))
-    }
-
-    /// Creates a new [`PTY`] pair with the standard 80x24 terminal size.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the [`PTY`] system fails to open a pair.
-    ///
-    /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
-    pub fn new_with_default_size() -> miette::Result<Self> {
-        Self::new_with_size(size(width(80) + height(24)))
-    }
-
-    /// Creates a new wrapper from a raw [`portable_pty::PtyPair`].
-    #[must_use]
-    pub fn new(inner: portable_pty::PtyPair) -> Self {
-        Self {
-            controller: inner.master,
-            maybe_controlled: Some(inner.slave),
-        }
+    pub fn open_and_spawn(
+        arg_size: impl Into<Size>,
+        command: PtyCommand,
+    ) -> miette::Result<(PtyPair, ControlledChild)> {
+        let mut pair = PtyPair::open_raw_pair(arg_size.into())?;
+        let child = PtyPair::spawn_command_and_close_controlled(&mut pair, command)?;
+        Ok((pair, child))
     }
 
     /// Access the controller side of the [`PTY`].
     ///
-    /// The controller side is used by the parent process to read output from
-    /// and write input to the controlled child process.
+    /// The controller side is used by the parent process to read output from and write
+    /// input to the controlled child process.
     ///
     /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
     #[must_use]
@@ -509,93 +568,140 @@ impl PtyPair {
     /// Consumes the pair and returns the owned controller side.
     ///
     /// If the controlled side is still open, it is dropped automatically to prevent
-    /// deadlocks from a leaked parent [`fd`].
+    /// deadlocks from a leaked parent [`fd`]. For more information, see:
+    /// - [File Descriptor ownership].
+    /// - [Resource-leaking deadlock].
     ///
     /// [`fd`]: https://man7.org/linux/man-pages/man2/open.2.html
+    /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
+    /// [File Descriptor ownership]: #file-descriptor-ownership
+    /// [Resource-leaking deadlock]: #resource-leaking-deadlock
     #[must_use]
     pub fn into_controller(self) -> Controller {
         drop(self.maybe_controlled);
         self.controller
     }
+}
 
-    /// Spawns a command on the controlled side and immediately closes it.
+/// Associated functions for the [`PtyPair`] struct that are not methods.
+impl PtyPair {
+    /// Opens a raw [`PTY`] pair without spawning a child process.
     ///
-    /// This prevents deadlocks by ensuring the parent process never holds the controlled
-    /// [`fd`] after spawning. The child process retains its own copies of the controlled
-    /// [`fd`]s ([`stdin`]/[`stdout`]/[`stderr`]), which close when the child exits -
-    /// delivering [`EIO`]/[`EOF`] to the controller reader.
+    /// This is an internal implementation step used by [`PtyPair::open_and_spawn()`].
+    ///
+    /// - It is exposed as an associated function for use-cases that need to separate
+    ///   [`PTY`] creation from spawning (e.g., tests that only need a raw [`Controller`]
+    ///   for testing).
+    /// - You can pass [`crate::DefaultPtySize`] for standard dimensions for a [`PTY`]
+    ///   used in tests.
+    ///
+    /// # Returns
+    ///
+    /// A [`PtyPair`] with both controller and controlled sides open. The returned
+    /// [`PtyPair`] still holds the controlled [`fd`].
+    ///
+    /// You must either:
+    /// - Call [`PtyPair::spawn_command_and_close_controlled()`] to spawn and close the
+    ///   controlled [`fd`].
+    /// - Call [`PtyPair::into_controller()`] which drops the controlled side as a safety
+    ///   net.
+    ///
+    /// See [`PtyPair`]'s [Controlled side lifecycle] section for why the controlled
+    /// [`fd`] must be closed before reading from the controller.
     ///
     /// # Errors
     ///
-    /// Returns an error if the command fails to spawn in the [`PTY`].
+    /// Returns an error if the [`PTY`] system fails to open a pair.
     ///
-    /// # Panics
-    ///
-    /// Panics if the controlled side has already been consumed by a previous call to
-    /// this method or [`into_controller()`].
-    ///
-    /// [`EIO`]: https://man7.org/linux/man-pages/man3/errno.3.html
-    /// [`EOF`]: https://en.wikipedia.org/wiki/End-of-file
     /// [`fd`]: https://man7.org/linux/man-pages/man2/open.2.html
-    /// [`into_controller()`]: PtyPair::into_controller
     /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
-    /// [`stderr`]: std::io::stderr
-    /// [`stdin`]: std::io::stdin
-    /// [`stdout`]: std::io::stdout
+    /// [Controlled side lifecycle]: #resource-leaking-deadlock
+    pub fn open_raw_pair(
+        arg_pty_size: impl Into<portable_pty::PtySize>,
+    ) -> miette::Result<PtyPair> {
+        let pty_size = arg_pty_size.into();
+        let raw_pair = portable_pty::native_pty_system()
+            .openpty(pty_size)
+            .map_err(|e| miette::miette!("Failed to open PTY: {e}"))?;
+        Ok(PtyPair::from(raw_pair))
+    }
+
+    /// Spawns a command on the controlled side and immediately closes the controlled
+    /// [`fd`].
+    ///
+    /// This is an internal implementation step used by [`PtyPair::open_and_spawn()`]. It
+    /// is exposed as an associated function for use-cases that need to separate [`PTY`]
+    /// creation from spawning (e.g., tests that configure the pair before spawning).
+    ///
+    /// See [`PtyPair`]'s [Controlled side lifecycle] section for why the controlled
+    /// [`fd`] must be closed immediately after spawning.
+    ///
+    /// # Returns
+    ///
+    /// The spawned [`ControlledChild`] process handle. The controlled [`fd`] is closed
+    /// before returning.
+    ///
+    /// See the [Two Types of Deadlocks] section for how this prevents the primary
+    /// **resource-leaking deadlock**.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the controlled side has already been consumed (e.g., by a
+    /// previous call to this function or by [`PtyPair::into_controller()`]), or if the
+    /// command fails to spawn.
+    ///
+    /// [`fd`]: https://man7.org/linux/man-pages/man2/open.2.html
+    /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
+    /// [Controlled side lifecycle]: #resource-leaking-deadlock
+    /// [Two Types of Deadlocks]: #two-types-of-pty-deadlocks
     pub fn spawn_command_and_close_controlled(
-        &mut self,
+        pair: &mut PtyPair,
         command: PtyCommand,
     ) -> miette::Result<ControlledChild> {
-        let controlled = self
-            .maybe_controlled
-            .as_ref()
-            .expect("controlled side already consumed");
+        let controlled = pair.maybe_controlled.as_ref().ok_or_else(|| {
+            miette::miette!(
+                "Controlled side already consumed - was this pair already spawned \
+                or created via open_and_spawn()?"
+            )
+        })?;
         let child = controlled
             .spawn_command(command)
             .map_err(|e| miette::miette!("{e:#}"))?;
-        drop(self.maybe_controlled.take());
+        drop(pair.maybe_controlled.take());
         Ok(child)
-    }
-}
-
-/// Converts a [`Size`] to a [`portable_pty::PtySize`].
-impl From<Size> for portable_pty::PtySize {
-    fn from(size: Size) -> Self {
-        Self {
-            rows: size.row_height.0.as_u16(),
-            cols: size.col_width.0.as_u16(),
-            pixel_width: 0,
-            pixel_height: 0,
-        }
     }
 }
 
 /// Converts a [`portable_pty::PtyPair`] to a [`PtyPair`] wrapper.
 impl From<portable_pty::PtyPair> for PtyPair {
-    fn from(it: portable_pty::PtyPair) -> Self { Self::new(it) }
+    fn from(it: portable_pty::PtyPair) -> Self {
+        Self {
+            controller: it.master,
+            maybe_controlled: Some(it.slave),
+        }
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{PtyCommand, height, size, width};
+    use crate::{PtyCommand, core::pty::pty_core::pty_size::DefaultPtySize, height, size,
+                width};
 
     #[test]
-    fn test_new_with_default_size_creates_pty_pair() {
-        let result = PtyPair::new_with_default_size();
+    fn test_open_raw_pair_default_size() {
+        let result = PtyPair::open_raw_pair(DefaultPtySize);
         assert!(result.is_ok());
     }
 
     #[test]
-    fn test_new_with_custom_size() {
-        let result = PtyPair::new_with_size(size(width(100) + height(30)));
+    fn test_open_raw_pair_custom_size() {
+        let result = PtyPair::open_raw_pair(size(width(100) + height(30)));
         assert!(result.is_ok());
     }
 
     #[test]
-    fn test_spawn_command_and_close_controlled() {
-        let mut pty_pair = PtyPair::new_with_default_size().unwrap();
-
+    fn test_open_and_spawn_success() {
         #[cfg(unix)]
         let command = {
             let mut cmd = PtyCommand::new("echo");
@@ -609,7 +715,9 @@ mod tests {
             cmd
         };
 
-        let result = pty_pair.spawn_command_and_close_controlled(command);
+        let result = PtyPair::open_and_spawn(DefaultPtySize, command);
         assert!(result.is_ok());
+        let (pty_pair, _child) = result.unwrap();
+        assert!(pty_pair.maybe_controlled.is_none());
     }
 }

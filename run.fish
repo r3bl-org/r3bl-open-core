@@ -227,7 +227,7 @@ end
 # 1. cargo-binstall for fast binary installation
 # 2. Cargo tools for Rust development (bacon, flamegraph, etc.)
 # 3. Wild linker with .cargo/config.toml generation
-# 4. Language servers (rust-analyzer)
+# 4. Language servers (multi-lang-analyze)
 #
 # Features:
 # - Cross-platform support (macOS, Linux)
@@ -275,10 +275,22 @@ function install-cargo-tools
         "cargo-readme" \
         "cargo-warloc" \
         "flamegraph" \
-        "inferno"
+        "inferno" \
+        "narsil-mcp"
 
     for tool in $cargo_tools
         install_cargo_tool $tool
+    end
+
+    # Install git-based Refactoring Engine (Dex)
+    install_if_missing "rustmcp" "cargo install --git https://github.com/dexwritescode/rust-mcp.git"
+
+    # Configure Gemini MCP servers if Gemini is installed
+    if command -v gemini >/dev/null
+        echo ""
+        echo (set_color cyan --bold)"Configuring Gemini MCP servers..."(set_color normal)
+        gemini mcp add rust-refactor ~/.cargo/bin/rustmcp
+        gemini mcp add multi-lang-analyze ~/.cargo/bin/narsil-mcp
     end
 
     # Install Wild linker via cargo-binstall
@@ -720,6 +732,11 @@ function update-cargo-tools
         echo ""
         echo (set_color yellow)"⚠️  Some crates.io updates may have failed. Continuing with local packages..."(set_color normal)
     end
+
+    # Update git-based tools
+    echo ""
+    echo (set_color cyan --bold)"Updating git-based tools..."(set_color normal)
+    cargo install --git https://github.com/dexwritescode/rust-mcp.git
 
     # Rebuild local source packages
     # This ensures cmdr and build-infra are compiled with the current toolchain

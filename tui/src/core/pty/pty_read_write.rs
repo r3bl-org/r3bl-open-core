@@ -1,8 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{Continuation, ControlledChild, Controller, ControllerReader,
-            ControllerWriter, LINE_FEED_BYTE, PtyCommandBuilder,
-            PtyControlledChildExitStatus, PtyInputEvent, PtyPair,
+use crate::{Continuation, Controller, ControllerReader, ControllerWriter,
+            LINE_FEED_BYTE, PtyCommandBuilder, PtyInputEvent, PtyPair,
             PtyReadWriteOutputEvent, PtyReadWriteSession, READ_BUFFER_SIZE, Size};
 use miette::{IntoDiagnostic, miette};
 use std::{io::{Read, Write},
@@ -148,6 +147,7 @@ impl PtyCommandBuilder {
     ///
     /// Returns an error if the [`PTY`] fails to spawn or initialize properly.
     ///
+    /// [`ControlledChild`]: crate::ControlledChild
     /// [`portable_pty::MasterPty`]: portable_pty::MasterPty
     /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
     /// [`spawn_blocking`]: tokio::task::spawn_blocking
@@ -174,10 +174,9 @@ impl PtyCommandBuilder {
         let command = self.build()?;
 
         // Create PTY pair and spawn the command. The controlled fd is closed
-        // automatically by spawn_command_and_close_controlled().
-        let mut pty_pair = PtyPair::new_with_size(pty_size)?;
-        let mut controlled_child: ControlledChild =
-            pty_pair.spawn_command_and_close_controlled(command)?;
+        // automatically by open_and_spawn().
+        let (pty_pair, mut controlled_child) =
+            PtyPair::open_and_spawn(pty_size, command)?;
 
         // Clone the killer handle before moving the child into the completion task.
         let child_process_terminate_handle = controlled_child.clone_killer();
@@ -227,7 +226,7 @@ impl PtyCommandBuilder {
 
             // Send exit event.
             let _unused =
-                output_evt_ch_tx_half.send(PtyReadWriteOutputEvent::Exit(status));
+                output_evt_ch_tx_half.send(PtyReadWriteOutputEvent::Exit(status.into()));
 
             // Wait for all tasks to complete in proper order.
             // [🛬 WAIT 3 & 4] Wait for the input writer task (which includes bridge) to
@@ -237,7 +236,7 @@ impl PtyCommandBuilder {
             let _unused = output_reader_task_handle.await;
 
             // Return the exit status.
-            Ok(PtyControlledChildExitStatus::with_exit_code(exit_code))
+            Ok(exit_code.into())
         });
 
         Ok(PtyReadWriteSession {
@@ -268,6 +267,7 @@ impl PtyCommandBuilder {
 ///
 /// Returns a [`JoinHandle`] for the combined tasks.
 ///
+/// [`ControlledChild`]: crate::ControlledChild
 /// [`JoinHandle`]: tokio::task::JoinHandle
 /// [`MasterPty`]: portable_pty::MasterPty
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
@@ -588,7 +588,7 @@ mod tests {
     use super::*;
     #[cfg(not(target_os = "windows"))]
     use crate::try_create_temp_dir;
-    use crate::{ControlSequence, CursorKeyMode, height, size, width};
+    use crate::{ControlSequence, CursorKeyMode, DefaultPtySize, height, size, width};
     use tokio::sync::mpsc::unbounded_channel;
     #[cfg(not(target_os = "windows"))]
     use wait_timeout::ChildExt;
@@ -1787,7 +1787,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_create_input_handler_task_write() {
-        let controller = PtyPair::new_with_default_size().unwrap().into_controller();
+        let controller = PtyPair::open_raw_pair(DefaultPtySize)
+            .unwrap()
+            .into_controller();
 
         let (input_sender, input_receiver) = unbounded_channel();
         let (event_sender, _event_receiver) = unbounded_channel();
@@ -1817,7 +1819,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_create_input_handler_task_write_line() {
-        let controller = PtyPair::new_with_default_size().unwrap().into_controller();
+        let controller = PtyPair::open_raw_pair(DefaultPtySize)
+            .unwrap()
+            .into_controller();
 
         let (input_sender, input_receiver) = unbounded_channel();
         let (event_sender, _event_receiver) = unbounded_channel();
@@ -1846,7 +1850,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_create_input_handler_task_control_char() {
-        let controller = PtyPair::new_with_default_size().unwrap().into_controller();
+        let controller = PtyPair::open_raw_pair(DefaultPtySize)
+            .unwrap()
+            .into_controller();
 
         let (input_sender, input_receiver) = unbounded_channel();
         let (event_sender, _event_receiver) = unbounded_channel();
@@ -1878,7 +1884,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_create_input_handler_task_resize() {
-        let controller = PtyPair::new_with_default_size().unwrap().into_controller();
+        let controller = PtyPair::open_raw_pair(DefaultPtySize)
+            .unwrap()
+            .into_controller();
 
         let (input_sender, input_receiver) = unbounded_channel();
         let (event_sender, _event_receiver) = unbounded_channel();
@@ -1906,7 +1914,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_create_input_handler_task_flush() {
-        let controller = PtyPair::new_with_default_size().unwrap().into_controller();
+        let controller = PtyPair::open_raw_pair(DefaultPtySize)
+            .unwrap()
+            .into_controller();
 
         let (input_sender, input_receiver) = unbounded_channel();
         let (event_sender, _event_receiver) = unbounded_channel();
@@ -1933,7 +1943,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_create_input_handler_task_channel_disconnect() {
-        let controller = PtyPair::new_with_default_size().unwrap().into_controller();
+        let controller = PtyPair::open_raw_pair(DefaultPtySize)
+            .unwrap()
+            .into_controller();
 
         let (input_sender, input_receiver) = unbounded_channel();
         let (event_sender, _event_receiver) = unbounded_channel();

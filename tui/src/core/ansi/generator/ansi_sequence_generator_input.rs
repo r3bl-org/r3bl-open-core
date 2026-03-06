@@ -237,7 +237,7 @@ pub fn generate_keyboard_sequence(event: &VT100InputEventIR) -> Option<Vec<u8>> 
 /// - Bit 4: Ctrl modifier (16)
 /// - Bit 5: Motion flag (32)
 ///
-/// ## Parameters
+/// ## Arguments
 ///
 /// - `button`: Mouse button
 /// - `col`: Column coordinate ([1-based])
@@ -272,7 +272,7 @@ pub fn generate_x10_mouse_sequence(
 /// - `Cy` = row coordinate (decimal, [1-based])
 /// - Final: `M` for press
 ///
-/// ## Parameters
+/// ## Arguments
 ///
 /// - `button`: Mouse button
 /// - `col`: Column coordinate ([1-based])
@@ -298,7 +298,7 @@ pub fn generate_rxvt_mouse_sequence(
 ///
 /// Generates sequences like: `ESC [<button;col;rowM` or `ESC [<button;col;rowm`
 ///
-/// ## Parameters
+/// ## Arguments
 ///
 /// - `button`: Mouse button (0=left, 1=middle, 2=right, 64-67=scroll)
 /// - `col`: Column coordinate ([1-based])

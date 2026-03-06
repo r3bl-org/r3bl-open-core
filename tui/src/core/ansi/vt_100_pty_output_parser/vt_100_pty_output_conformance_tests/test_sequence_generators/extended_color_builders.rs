@@ -6,8 +6,8 @@
 
 //! Test convenience builders for extended color sequences (256-color & RGB).
 //!
-//! This module provides ergonomic functions for generating extended color ANSI sequences
-//! in tests. These are thin wrappers around the [`Display`] implementation for
+//! This module provides ergonomic functions for generating extended color [`ANSI`]
+//! sequences in tests. These are thin wrappers around the [`Display`] implementation for
 //! [`SgrColorSequence`] that provide shorter, more readable APIs for test code.
 //!
 //! # Purpose
@@ -40,6 +40,7 @@
 //! let blue_bg = bg_rgb(0, 128, 255);         // → "\x1b[48:2:0:128:255m"
 //! ```
 //!
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`Display`]: std::fmt::Display
 //! [`SgrColorSequence`]: crate::SgrColorSequence
 
@@ -49,14 +50,16 @@ use crate::SgrColorSequence;
 ///
 /// Creates a sequence that sets the foreground color to a 256-color palette index.
 ///
-/// # Parameters
+/// # Arguments
 /// - `index`: Color palette index (0-255)
-///   - 0-15: Standard ANSI colors
+///   - 0-15: Standard [`ANSI`] colors
 ///   - 16-231: 6×6×6 RGB cube
 ///   - 232-255: Grayscale ramp
 ///
 /// # Returns
-/// Formatted ANSI sequence: `\x1b[38:5:{index}m`
+/// Formatted [`ANSI`] sequence: `\x1b[38:5:{index}m`
+///
+/// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 #[must_use]
 pub fn fg_ansi256(index: u8) -> String {
     SgrColorSequence::SetForegroundAnsi256(index).to_string()
@@ -66,11 +69,13 @@ pub fn fg_ansi256(index: u8) -> String {
 ///
 /// Creates a sequence that sets the background color to a 256-color palette index.
 ///
-/// # Parameters
+/// # Arguments
 /// - `index`: Color palette index (0-255)
 ///
 /// # Returns
-/// Formatted ANSI sequence: `\x1b[48:5:{index}m`
+/// Formatted [`ANSI`] sequence: `\x1b[48:5:{index}m`
+///
+/// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 #[must_use]
 pub fn bg_ansi256(index: u8) -> String {
     SgrColorSequence::SetBackgroundAnsi256(index).to_string()
@@ -80,13 +85,15 @@ pub fn bg_ansi256(index: u8) -> String {
 ///
 /// Creates a sequence that sets the foreground color to a true RGB color.
 ///
-/// # Parameters
+/// # Arguments
 /// - `r`: Red component (0-255)
 /// - `g`: Green component (0-255)
 /// - `b`: Blue component (0-255)
 ///
 /// # Returns
-/// Formatted ANSI sequence: `\x1b[38:2:{r}:{g}:{b}m`
+/// Formatted [`ANSI`] sequence: `\x1b[38:2:{r}:{g}:{b}m`
+///
+/// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 #[must_use]
 pub fn fg_rgb(r: u8, g: u8, b: u8) -> String {
     SgrColorSequence::SetForegroundRgb(r, g, b).to_string()
@@ -96,13 +103,13 @@ pub fn fg_rgb(r: u8, g: u8, b: u8) -> String {
 ///
 /// Creates a sequence that sets the background color to a true RGB color.
 ///
-/// # Parameters
+/// # Arguments
 /// - `r`: Red component (0-255)
 /// - `g`: Green component (0-255)
 /// - `b`: Blue component (0-255)
 ///
 /// # Returns
-/// Formatted ANSI sequence: `\x1b[48:2:{r}:{g}:{b}m`
+/// Formatted [`ANSI`] sequence: `\x1b[48:2:{r}:{g}:{b}m`
 ///
 /// # Example
 /// <!-- It is ok to use ignore here - test helper functions in conditionally compiled
@@ -112,6 +119,8 @@ pub fn fg_rgb(r: u8, g: u8, b: u8) -> String {
 /// let blue = bg_rgb(0, 128, 255);
 /// assert_eq!(blue, "\x1b[48:2:0:128:255m");
 /// ```
+///
+/// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 #[must_use]
 pub fn bg_rgb(r: u8, g: u8, b: u8) -> String {
     SgrColorSequence::SetBackgroundRgb(r, g, b).to_string()

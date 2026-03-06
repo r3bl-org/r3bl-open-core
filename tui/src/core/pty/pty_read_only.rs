@@ -1,8 +1,9 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+// cspell:words ptmx CLOEXEC
+
 use crate::{ControlledChild, ControllerReader, OscBuffer, PtyCommandBuilder, PtyConfig,
-            PtyControlledChildExitStatus, PtyPair, PtyReadOnlyOutputEvent,
-            PtyReadOnlySession, READ_BUFFER_SIZE};
+            PtyPair, PtyReadOnlyOutputEvent, PtyReadOnlySession, READ_BUFFER_SIZE};
 use miette::IntoDiagnostic;
 use std::io::Read;
 
@@ -119,10 +120,9 @@ impl PtyCommandBuilder {
             let command = self.build()?;
 
             // Create PTY pair and spawn the command. The controlled fd is closed
-            // automatically by spawn_command_and_close_controlled().
-            let mut pty_pair = PtyPair::new_with_size(pty_config.get_pty_size())?;
-            let controlled_child: ControlledChild =
-                pty_pair.spawn_command_and_close_controlled(command)?;
+            // automatically by open_and_spawn().
+            let (pty_pair, controlled_child) =
+                PtyPair::open_and_spawn(pty_config.get_pty_size(), command)?;
 
             // [🛫 SPAWN 2] Spawn the reader task to process output from the controller
             // side. NOTE: Critical resource management - see module docs for
@@ -153,9 +153,7 @@ impl PtyCommandBuilder {
             // [🛬 WAIT 2] Wait for the reader task to complete.
             output_reader_task_handle.await.into_diagnostic()??;
 
-            Ok(PtyControlledChildExitStatus::with_exit_code(
-                child_proc_exit_code,
-            ))
+            Ok(child_proc_exit_code.into())
         });
 
         Ok(PtyReadOnlySession {
@@ -193,7 +191,8 @@ fn spawn_child_process_waiter(
     tokio::task::spawn_blocking(move || -> miette::Result<u32> {
         let status = controlled_child.wait().into_diagnostic()?;
         let exit_code = status.exit_code();
-        let _unused = output_evt_ch_tx_half.send(PtyReadOnlyOutputEvent::Exit(status));
+        let _unused =
+            output_evt_ch_tx_half.send(PtyReadOnlyOutputEvent::Exit(status.into()));
         Ok(exit_code)
     })
 }

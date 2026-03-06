@@ -48,7 +48,7 @@ pub struct ReadLinesResult {
 /// - **Windows**: Drops writer and controller to close the [`ConPTY`] session, then reaps
 ///   the child with [`wait()`].
 ///
-/// # Parameters
+/// # Arguments
 ///
 /// - `pty_pair` — Owned [`PTY`] pair (consumed for cleanup).
 /// - `child` — The controlled child process handle.
@@ -58,7 +58,7 @@ pub struct ReadLinesResult {
 ///
 /// [`ConPTY`]:
 ///     https://learn.microsoft.com/en-us/windows/console/creating-a-pseudoconsole-session
-/// [`crossterm`]: ::crossterm
+/// [`crossterm`]: crossterm
 /// [`drain_pty_and_wait`]: crate::drain_pty_and_wait
 /// [`DSR_CURSOR_POSITION_REQUEST`]: crate::DSR_CURSOR_POSITION_REQUEST
 /// [`DSR`]: crate::DSR_CURSOR_POSITION_REQUEST

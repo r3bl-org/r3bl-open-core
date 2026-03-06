@@ -17,7 +17,7 @@ use crate::{ByteOffset, byte_offset,
 /// buffer and routes to specialized parsers ([`keyboard`], [`mouse`],
 /// [`terminal_events`], [`utf8`]) based on content analysis.
 ///
-/// # Parameters
+/// # Arguments
 ///
 /// - `buffer`: The accumulated bytes to parse.
 /// - `input_available`: Whether more input is likely available in the kernel buffer.
@@ -37,12 +37,12 @@ use crate::{ByteOffset, byte_offset,
 ///    │ Reads from tokio::io::stdin(), calls try_parse_input_event()
 ///    ▼
 /// ┌──────────────────────────────────────────┐  ┌──────────────────┐
-/// │  try_parse_input_event()                 ◀──┤ **YOU ARE HERE** │
-/// │  • Smart routing & `ESC` detection       │  └──────────────────┘
-/// │  • Zero-latency `ESC` key handling       │
+/// │  try_parse_input_event()                 ◀──┤ YOU ARE HERE     │
+/// │  • Smart routing & ESC detection         │  └──────────────────┘
+/// │  • Zero-latency ESC key handling         │
 /// └──────────────────────────────────────────┘
 ///    │ (routes to specialized parsers)
-///    ├─→ keyboard.rs (`CSI`/`SS3` keyboard sequences)
+///    ├─→ keyboard.rs (CSI/SS3 keyboard sequences)
 ///    ├─→ mouse.rs (mouse protocols)
 ///    ├─→ terminal_events.rs (resize/focus/paste)
 ///    └─→ utf8.rs (text input)
@@ -79,7 +79,7 @@ use crate::{ByteOffset, byte_offset,
 /// This works because:
 /// - **Over [`SSH`]**: Bytes may arrive in fragments, but if we read fewer bytes than the
 ///   buffer size, we know there's no more data waiting right now.
-/// - **Locally**: Terminal emulators send escape sequences atomically, so they arrive
+/// - **Locally**: Terminal emulators send escape sequences in a single burst, so they arrive
 ///   complete in a single read.
 ///
 /// ## Algorithm
@@ -99,7 +99,7 @@ use crate::{ByteOffset, byte_offset,
 /// Unlike a fixed 150ms timeout approach, the `input_available` flag provides **adaptive
 /// waiting**:
 ///
-/// - **Local terminals**: Escape sequences arrive atomically, so `input_available` is
+/// - **Local terminals**: Escape sequences arrive in a single burst, so `input_available` is
 ///   usually `false` after reading—we emit [`ESC`] immediately when appropriate.
 /// - **[`SSH`]/high-latency**: If bytes arrive separately, `input_available` tells us
 ///   when more data is pending—we wait correctly without a fixed timeout.
@@ -112,24 +112,24 @@ use crate::{ByteOffset, byte_offset,
 ///
 /// The parser uses intelligent 1-2 byte lookahead to determine routing:
 ///
-/// | Input Pattern              | `input_available`   | Routing                               |
-/// | :------------------------- | :------------------ | :------------------------------------ |
-/// | `[ 0x1B ]` alone           | `false`             | Emit [`ESC`] key immediately            |
-/// | `[ 0x1B ]` alone           | `true`              | Return `None` (wait for more bytes)   |
-/// | `[ 0x1B, b'[', .. ]`       | (ignored)           | [`CSI`] → keyboard/mouse/terminal       |
-/// | `[ 0x1B, b'O', .. ]`       | (ignored)           | `SS3` → F1-F4, Home, End, arrows      |
-/// | `[ 0x1B, other ]`          | (ignored)           | Alt+letter or emit standalone [`ESC`]   |
-/// | Other bytes                | (ignored)           | control char → [`UTF-8`]                  |
+/// | Input Pattern        | `input_available` | Routing                               |
+/// | :------------------- | :---------------- | :------------------------------------ |
+/// | `[ 0x1B ]` alone     | `false`           | Emit [`ESC`] key immediately          |
+/// | `[ 0x1B ]` alone     | `true`            | Return `None` (wait for more bytes)   |
+/// | `[ 0x1B, b'[', .. ]` | (ignored)         | [`CSI`] → keyboard/mouse/terminal     |
+/// | `[ 0x1B, b'O', .. ]` | (ignored)         | [`SS3`] → F1-F4, Home, End, arrows    |
+/// | `[ 0x1B, other ]`    | (ignored)         | Alt+letter or emit standalone [`ESC`] |
+/// | Other bytes          | (ignored)         | control char → [`UTF-8`]              |
 ///
 /// - [`CSI`] (Control Sequence Introducer):
 ///   - The most common escape sequence format, starting with `ESC [`. Used for arrow
 ///     keys, function keys, mouse events, and terminal queries.
 ///   - Example: `ESC [ A` is Up arrow, `ESC [ 1 ; 5 C` is Ctrl+Right.
-/// - `SS3` (Single Shift 3) / Application mode:
+/// - [`SS3`] (Single Shift 3) / Application mode:
 ///   - Terminals can switch between "normal" and "application" mode. Programs like vim,
 ///     less, and emacs enable this mode.
-///   - In application mode, arrow keys and F1-F4 send `ESC O x` (`SS3`) instead of
-///     `[`ESC`] [ x` ([`[`CSI`]`]).
+///   - In application mode, arrow keys and F1-F4 send `ESC O x` ([`SS3`]) instead of `ESC
+///     [ x` ([`CSI`]).
 /// - Alt+letter fallback:
 ///   - Terminals historically couldn't send a dedicated Alt modifier, so they send
 ///     [`ESC`] followed by the letter (e.g., `ESC b` for Alt+B).
@@ -144,19 +144,19 @@ use crate::{ByteOffset, byte_offset,
 /// ┌────────────────────────────────────────────────────┐
 /// │ First byte check                                   │
 /// ├────────────────────────────────────────────────────┤
-/// │ 0x1B (`ESC`)?                                      │
+/// │ 0x1B (ESC)?                                        │
 /// │  ├─ buf.len() == 1?                                │
 /// │  │  ├─ input_available == true?                    │
 /// │  │  │  └─ Return None (wait for more bytes)        │
 /// │  │  └─ input_available == false?                   │
-/// │  │     └─ Emit `ESC` key immediately               │
+/// │  │     └─ Emit ESC key immediately                │
 /// │  └─ buf.len() >= 2?                                │
 /// │     ├─ Second byte = b'['?                         │
-/// │     │  └─ `CSI` → keyboard/mouse/terminal_events   │
+/// │     │  └─ CSI → keyboard/mouse/terminal_events     │
 /// │     ├─ Second byte = b'O'?                         │
-/// │     │  └─ `SS3` → application mode keys            │
+/// │     │  └─ SS3 → application mode keys              │
 /// │     └─ Second byte = other?                        │
-/// │        └─ Alt+letter or emit `ESC`                 │
+/// │        └─ Alt+letter or emit ESC                   │
 /// ├────────────────────────────────────────────────────┤
 /// │ Not ESC?                                           │
 /// │  └─ Raw byte: control_char → UTF-8                 │
@@ -187,7 +187,7 @@ use crate::{ByteOffset, byte_offset,
 ///     assert_eq!(consumed, byte_offset(1));
 /// }
 ///
-/// // Lone ESC with more input available - wait for more bytes.
+/// // Lone `ESC` with more input available - wait for more bytes.
 /// let buffer = &[0x1B];
 /// assert!(try_parse_input_event(buffer, true).is_none());
 ///
@@ -217,6 +217,7 @@ use crate::{ByteOffset, byte_offset,
 /// [`ESC`]: crate::EscSequence
 /// [`keyboard`]: mod@super::keyboard
 /// [`mouse`]: mod@super::mouse
+/// [`SS3`]: https://vt100.net/docs/vt510-rm/SS.html
 /// [`SSH`]: https://en.wikipedia.org/wiki/Secure_Shell
 /// [`terminal_events`]: mod@super::terminal_events
 /// [`TERMINAL_LIB_BACKEND`]: crate::TERMINAL_LIB_BACKEND

@@ -118,7 +118,7 @@ impl RenderOpOutputVec {
     /// method. It acts as a dispatcher, selecting the correct terminal library
     /// backend (Crossterm or `DirectAnsi`) and delegating the actual rendering work.
     ///
-    /// # Parameters
+    /// # Arguments
     /// - `render_local_data`: Mutable state for render optimization
     /// - `skip_flush`: Mutable reference to control flush behavior
     /// - `render_op_output`: The specific Output operation to execute

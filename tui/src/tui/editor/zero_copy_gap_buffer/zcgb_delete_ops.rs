@@ -10,7 +10,7 @@
 //! # Key Features
 //!
 //! - **Grapheme-aware**: Respects Unicode grapheme cluster boundaries during deletion
-//! - **UTF-8 safe**: Maintains UTF-8 validity throughout all operations
+//! - **[`UTF-8`] safe**: Maintains [`UTF-8`] validity throughout all operations
 //! - **Capacity preservation**: Does not shrink line capacity after deletion
 //! - **Null-padding restoration**: Clears freed space with null bytes
 //! - **Efficient shifting**: Minimizes data movement during content removal
@@ -61,15 +61,15 @@
 //! See [`delete_bytes_at_range`] for the core
 //! null-padding logic.
 //!
-//! # UTF-8 Safety in Deletion Operations
+//! # [`UTF-8`] Safety in Deletion Operations
 //!
-//! This module maintains UTF-8 validity during deletion through **boundary-aware
+//! This module maintains [`UTF-8`] validity during deletion through **boundary-aware
 //! operations**:
 //!
 //! ## Grapheme-Level Safety
 //!
 //! - **[`delete_grapheme_at()`]**: Only deletes complete grapheme clusters, never splits
-//!   UTF-8 sequences
+//!   [`UTF-8`] sequences
 //! - **[`delete_range()`]**: Operates on grapheme boundaries, ensuring no mid-character
 //!   cuts
 //! - **Segment-based indexing**: Uses pre-computed grapheme boundaries from segment
@@ -79,24 +79,26 @@
 //!
 //! The low-level [`delete_bytes_at_range()`]
 //! operates on **pre-validated byte boundaries**:
-//! - Callers ensure byte positions align with UTF-8 character boundaries
-//! - Content shifting preserves UTF-8 validity by moving complete byte sequences
-//! - No new UTF-8 validation needed since we're only removing existing valid content
+//! - Callers ensure byte positions align with [`UTF-8`] character boundaries
+//! - Content shifting preserves [`UTF-8`] validity by moving complete byte sequences
+//! - No new [`UTF-8`] validation needed since we're only removing existing valid content
 //!
-//! ## Why No UTF-8 Validation During Deletion
+//! ## Why No [`UTF-8`] Validation During Deletion
 //!
-//! Deletion operations **don't require UTF-8 validation** because:
-//! 1. **We only remove existing valid UTF-8** (can't create invalid sequences)
+//! Deletion operations **don't require [`UTF-8`] validation** because:
+//! 1. **We only remove existing valid [`UTF-8`]** (can't create invalid sequences)
 //! 2. **Grapheme boundaries are pre-computed** (segment metadata ensures valid positions)
-//! 3. **Byte shifting preserves encoding** (complete UTF-8 sequences moved intact)
-//! 4. **Null padding is valid UTF-8** (`\0` is ASCII, thus valid UTF-8)
+//! 3. **Byte shifting preserves encoding** (complete [`UTF-8`] sequences moved intact)
+//! 4. **Null padding is valid [`UTF-8`]** (`\0` is [`ASCII`], thus valid [`UTF-8`])
 //!
 //! This allows deletion operations to be **extremely fast** with no validation overhead.
 //!
+//! [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
+//! [`delete_bytes_at_range()`]: ZeroCopyGapBuffer::delete_bytes_at_range
+//! [`delete_bytes_at_range`]: ZeroCopyGapBuffer::delete_bytes_at_range
 //! [`delete_grapheme_at()`]: ZeroCopyGapBuffer::delete_grapheme_at
 //! [`delete_range()`]: ZeroCopyGapBuffer::delete_range
-//! [`delete_bytes_at_range`]: ZeroCopyGapBuffer::delete_bytes_at_range
-//! [`delete_bytes_at_range()`]: ZeroCopyGapBuffer::delete_bytes_at_range
+//! [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
 
 use super::ZeroCopyGapBuffer;
 use crate::{ArrayBoundsCheck, ArrayOverflowResult, ByteIndex, ByteOffset,
@@ -239,7 +241,7 @@ impl ZeroCopyGapBuffer {
     /// This is a lower-level helper that performs the actual buffer manipulation.
     /// It handles content shifting and null padding restoration.
     ///
-    /// # Parameters
+    /// # Arguments
     /// * `arg_line_index` - The line index containing the bytes to delete
     /// * `arg_start_pos` - Line-relative byte position where deletion starts (inclusive)
     /// * `arg_end_pos` - Line-relative byte position where deletion ends (exclusive)
@@ -253,12 +255,14 @@ impl ZeroCopyGapBuffer {
     /// the null-padding invariant.
     ///
     /// # Safety
-    /// The caller must ensure that byte positions are at valid UTF-8 boundaries.
+    /// The caller must ensure that byte positions are at valid [`UTF-8`] boundaries.
     ///
     /// # Errors
     /// Returns an error if:
     /// - The line index is out of bounds
     /// - The byte positions exceed the content length
+    ///
+    /// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
     pub fn delete_bytes_at_range(
         &mut self,
         arg_line_index: impl Into<RowIndex>,

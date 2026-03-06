@@ -169,7 +169,7 @@ use tokio::sync::broadcast;
 /// └───────────────────────────────────────────────────────────────────────┘
 /// ```
 ///
-/// The key insight: **atomic creation, then separation**. Both resources are created
+/// The key insight: **unified creation, then separation**. Both resources are created
 /// together from the same [`mio::Poll`] registry, then split:
 ///
 /// - The **[`RRTWaker`]** is stored in [`shared_waker_slot`] (an

@@ -65,10 +65,10 @@ use crate::{LockedOutputDevice, Size};
 /// # }
 /// ```
 ///
-/// [`RenderOpOutputVec`]: crate::RenderOpOutputVec
+/// [`RenderOpIR`]: crate::RenderOpIR
 /// [`RenderOpIRVec`]: crate::RenderOpIRVec
 /// [`RenderOpOutput`]: crate::RenderOpOutput
-/// [`RenderOpIR`]: crate::RenderOpIR
+/// [`RenderOpOutputVec`]: crate::RenderOpOutputVec
 pub trait RenderOpsExec {
     /// Executes all render operations in the collection sequentially.
     ///
@@ -78,7 +78,7 @@ pub trait RenderOpsExec {
     /// RenderOpIR → Compositor → RenderOpOutput → execute_all()
     /// ```
     ///
-    /// # Parameters
+    /// # Arguments
     /// - `skip_flush`: Mutable reference to control flush behavior
     /// - `window_size`: Current terminal window dimensions
     /// - `locked_output_device`: Locked terminal output for thread-safe writing

@@ -166,7 +166,7 @@
 //! [`EOF`] -- even after the child exits -- causing permanent deadlocks.
 //!
 //! See [`PtyPair`] for the full explanation, including file descriptor ownership,
-//! the `Drop` chain, and why [`PtyPair::spawn_command_and_close_controlled`] exists.
+//! the `Drop` chain, and why [`PtyPair::open_and_spawn()`] exists.
 //!
 //!
 //! ## Main Types

@@ -26,10 +26,10 @@ use tokio::sync::broadcast::Sender;
 ///
 /// # Trait Bounds - [`Send`] + [`Sync`] + `'static`
 ///
-/// There is exactly **one waker** inside [`RRT`]'s shared [`waker`] wrapper, which all
-/// [`SubscriberGuard`] instances share. When any subscriber drops its guard, the guard's
-/// [`Drop`] impl calls [`wake_and_unblock_dedicated_thread()`] to interrupt the blocking
-/// thread:
+/// There is exactly **one waker** inside [`RRT`]'s shared [`shared_waker_slot`] wrapper,
+/// which all [`SubscriberGuard`] instances share. When any subscriber drops its guard,
+/// the guard's [`Drop`] impl calls [`wake_and_unblock_dedicated_thread()`] to interrupt
+/// the blocking thread:
 ///
 /// ```text
 /// ┌─────────────────────┐
@@ -89,27 +89,27 @@ use tokio::sync::broadcast::Sender;
 ///
 /// Wake strategies are backend-specific. See [Why is `RRTWaker` User-Provided?]
 ///
-/// [Why is `RRTWaker` User-Provided?]: super#why-is-rrtwaker-user-provided
 /// [`'static`]: super::RRT#static-trait-bound-vs-static-lifetime-annotation
 /// [`Arc`]: std::sync::Arc
-/// [`MioPollWaker`]: crate::terminal_lib_backends::MioPollWaker
-/// [`Poll`]: mio::Poll
-/// [`RRT`]: super::RRT
-/// [`SubscriberGuard::drop()`]: super::SubscriberGuard
-/// [`SubscriberGuard`]: super::SubscriberGuard
-/// [`Waker`]: mio::Waker
 /// [`epoll`]: https://man7.org/linux/man-pages/man7/epoll.7.html
 /// [`kqueue`]: https://man.freebsd.org/cgi/man.cgi?query=kqueue
 /// [`mio::Waker`]: mio::Waker
+/// [`MioPollWaker`]: crate::terminal_lib_backends::MioPollWaker
+/// [`Poll`]: mio::Poll
 /// [`receiver_count()`]: tokio::sync::broadcast::Sender::receiver_count
+/// [`RRT`]: super::RRT
+/// [`shared_waker_slot`]: field@super::RRT::shared_waker_slot
+/// [`SubscriberGuard::drop()`]: super::SubscriberGuard
+/// [`SubscriberGuard`]: super::SubscriberGuard
 /// [`tokio`]: tokio
 /// [`wake_and_unblock_dedicated_thread()`]: Self::wake_and_unblock_dedicated_thread
-/// [`waker`]: field@super::RRT::waker
+/// [`Waker`]: mio::Waker
 /// [blocking I/O backend]: super#understanding-blocking-io
 /// [blocking mechanism]: super#understanding-blocking-io
 /// [framework]: crate::core::resilient_reactor_thread#the-rrt-contract-and-benefits
 /// [runtime threads]: tokio::runtime
 /// [two-phase setup]: super#two-phase-setup
+/// [Why is `RRTWaker` User-Provided?]: super#why-is-rrtwaker-user-provided
 pub trait RRTWaker: Send + Sync + 'static {
     /// Wakes the OS event mechanism registered during
     /// [`create_and_register_os_sources()`], unblocking the dedicated RRT thread's
@@ -121,16 +121,16 @@ pub trait RRTWaker: Send + Sync + 'static {
     ///
     /// Implementations should be idempotent - multiple concurrent calls must be safe.
     ///
-    /// [`SubscriberGuard::drop()`]: super::SubscriberGuard
     /// [`block_until_ready_then_dispatch()`]: RRTWorker::block_until_ready_then_dispatch
     /// [`create_and_register_os_sources()`]: RRTWorker::create_and_register_os_sources
     /// [`mio::Poll::poll()`]: mio::Poll::poll
     /// [`receiver_count()`]: tokio::sync::broadcast::Sender::receiver_count
+    /// [`SubscriberGuard::drop()`]: super::SubscriberGuard
     /// [`syscall`]: https://man7.org/linux/man-pages/man2/syscalls.2.html
     fn wake_and_unblock_dedicated_thread(&self);
 }
 
-/// A trait for implementing the blocking I/O worker on the [framework]-managed dedicated
+/// A trait for implementing the blocking ]I/O worker on the [framework]-managed dedicated
 /// RRT thread.
 ///
 /// This is the main "entry point" for you to use the RRT [framework]. The journey begins
@@ -189,20 +189,20 @@ pub trait RRTWaker: Send + Sync + 'static {
 ///   framework handles lifecycle
 /// - **Testability**: Unit test [`block_until_ready_then_dispatch()`] in isolation
 ///
-/// [DI overview]: super#separation-of-concerns-and-dependency-injection-di
-/// [Event]: Self::Event
 /// [`'static`]: super::RRT#static-trait-bound-vs-static-lifetime-annotation
-/// [`MioPollWorker`]: crate::terminal_lib_backends::MioPollWorker
-/// [`RRT`]: super::RRT
 /// [`block_until_ready_then_dispatch()`]: Self::block_until_ready_then_dispatch
 /// [`create_and_register_os_sources()`]: Self::create_and_register_os_sources
 /// [`event`]: Self::Event
+/// [`MioPollWorker`]: crate::terminal_lib_backends::MioPollWorker
 /// [`restart_policy()`]: Self::restart_policy
+/// [`RRT`]: super::RRT
 /// [`signals`]: https://man7.org/linux/man-pages/man7/signal.7.html
 /// [`stdin`]: std::io::stdin
 /// [`subscribe()`]: super::RRT::subscribe
 /// [`syscalls`]: https://man7.org/linux/man-pages/man2/syscalls.2.html
 /// [default policy]: RestartPolicy#impl-Default-for-RestartPolicy
+/// [DI overview]: super#separation-of-concerns-and-dependency-injection-di
+/// [Event]: Self::Event
 /// [framework]: crate::core::resilient_reactor_thread#the-rrt-contract-and-benefits
 /// [module docs]: super::RRT#two-phase-setup
 /// [self-healing restart]: super#self-healing-restart-details
@@ -221,8 +221,8 @@ pub trait RRTWorker: Send + 'static {
     /// Override this in your [`RRTWorker`] implementation to customize the channel
     /// capacity.
     ///
-    /// [`Lagged`]: tokio::sync::broadcast::error::RecvError::Lagged
     /// [`broadcast channel`]: tokio::sync::broadcast
+    /// [`Lagged`]: tokio::sync::broadcast::error::RecvError::Lagged
     /// [`recv()`]: tokio::sync::broadcast::Receiver::recv
     const CHANNEL_CAPACITY: usize = 4_096;
 
@@ -239,10 +239,10 @@ pub trait RRTWorker: Send + 'static {
     ///   explanation of the [`'static` trait bound][`'static`].
     ///
     /// [`'static`]: super::RRT#static-trait-bound-vs-static-lifetime-annotation
-    /// [`RRT`]: super::RRT
-    /// [`Receiver`]: tokio::sync::broadcast::Receiver
-    /// [`SubscriberGuard`]: super::SubscriberGuard
     /// [`broadcast channel`]: tokio::sync::broadcast
+    /// [`Receiver`]: tokio::sync::broadcast::Receiver
+    /// [`RRT`]: super::RRT
+    /// [`SubscriberGuard`]: super::SubscriberGuard
     /// [`tokio`]: tokio
     /// [executor threads]: tokio::runtime
     /// [framework]: crate::core::resilient_reactor_thread#the-rrt-contract-and-benefits
@@ -256,10 +256,10 @@ pub trait RRTWorker: Send + 'static {
     /// ([`SharedWakerSlot`], [`SubscriberGuard`], [`TerminationGuard`]) at the type
     /// level, eliminating dynamic dispatch.
     ///
+    /// [`create_and_register_os_sources()`]: Self::create_and_register_os_sources
     /// [`SharedWakerSlot`]: super::SharedWakerSlot
     /// [`SubscriberGuard`]: super::SubscriberGuard
     /// [`TerminationGuard`]: super::TerminationGuard
-    /// [`create_and_register_os_sources()`]: Self::create_and_register_os_sources
     type Waker: RRTWaker;
 
     /// Creates OS resources, registers event sources, and returns a coupled worker +
@@ -296,19 +296,19 @@ pub trait RRTWorker: Send + 'static {
     ///
     /// Returns an error if OS resources cannot be created.
     ///
-    /// [Thread Lifecycle]: super::RRT#thread-lifecycle
-    /// [Two-Phase Setup]: super::RRT#two-phase-setup
-    /// [`Poll`]: mio::Poll
-    /// [`RRT`]: super::RRT
-    /// [`Self::Waker`]: Self::Waker
     /// [`mio::Poll`]: mio::Poll
     /// [`mio::Waker`]: mio::Waker
+    /// [`Poll`]: mio::Poll
+    /// [`RRT`]: super::RRT
     /// [`run_worker_loop()`]: super::run_worker_loop
+    /// [`Self::Waker`]: Self::Waker
     /// [`shared_waker_slot`]: field@super::RRT::shared_waker_slot
     /// [`subscribe()`]: super::RRT::subscribe
     /// [`syscalls`]: https://man7.org/linux/man-pages/man2/syscalls.2.html
     /// [framework]: crate::core::resilient_reactor_thread#the-rrt-contract-and-benefits
     /// [self-healing restart]: super#self-healing-restart-details
+    /// [Thread Lifecycle]: super::RRT#thread-lifecycle
+    /// [Two-Phase Setup]: super::RRT#two-phase-setup
     /// [waker]: super::RRTWaker
     fn create_and_register_os_sources() -> miette::Result<(Self, Self::Waker)>
     where
@@ -363,10 +363,10 @@ pub trait RRTWorker: Send + 'static {
     /// - [`Continuation::Restart`] to request a fresh worker via
     ///   [`create_and_register_os_sources()`]
     ///
-    /// [`RRTEvent::Shutdown`]: RRTEvent::Shutdown
-    /// [`RRTEvent::Worker(...)`]: RRTEvent::Worker
     /// [`create_and_register_os_sources()`]: Self::create_and_register_os_sources
     /// [`mio_poller::MioPollWorker`]: crate::direct_to_ansi::input::mio_poller::MioPollWorker
+    /// [`RRTEvent::Shutdown`]: RRTEvent::Shutdown
+    /// [`RRTEvent::Worker(...)`]: RRTEvent::Worker
     /// [`sender.receiver_count()`]: tokio::sync::broadcast::Sender::receiver_count
     /// [framework]: crate::core::resilient_reactor_thread#the-rrt-contract-and-benefits
     /// [trait docs]: Self

@@ -323,7 +323,7 @@ fn process_common_render_op(
 /// - **Position tracking**: Updates buffer position based on actual rendered width
 /// - **Wide character support**: Handles multi-column characters with void padding
 ///
-/// # Parameters
+/// # Arguments
 ///
 /// This will modify the `my_offscreen_buffer` argument. For plain text it supports
 /// counting [`crate::Seg`]s. The display width of each segment is

@@ -8,7 +8,7 @@
 /// This macro reduces boilerplate for types like [`Index`], [`RowIndex`], and
 /// [`ColIndex`] by generating all common implementations in one place.
 ///
-/// # Parameters
+/// # Arguments
 /// - `$idx_ty`: The index type being implemented (e.g., [`RowIndex`], [`ColIndex`],
 ///   [`Index`])
 /// - `$assoc_len_ty`: The associated length type (e.g., [`RowHeight`], [`ColWidth`],
@@ -38,26 +38,26 @@
 /// See the implementations in [`ColIndex`], [`RowIndex`], and [`Index`] for real-world
 /// examples of how to use this macro.
 ///
-/// [`Index`]: crate::Index
-/// [`RowIndex`]: crate::RowIndex
-/// [`ColIndex`]: crate::ColIndex
-/// [`Length`]: crate::Length
-/// [`RowHeight`]: crate::RowHeight
-/// [`ColWidth`]: crate::ColWidth
+/// [`Add`]: std::ops::Add
+/// [`AddAssign`]: std::ops::AddAssign
+/// [`ArrayBoundsCheck`]: crate::ArrayBoundsCheck
 /// [`ChUnit`]: crate::ChUnit
+/// [`ColIndex`]: crate::ColIndex
+/// [`ColWidth`]: crate::ColWidth
+/// [`Debug`]: std::fmt::Debug
+/// [`Deref`]: std::ops::Deref
+/// [`DerefMut`]: std::ops::DerefMut
+/// [`From`]: std::convert::From
+/// [`Index`]: crate::Index
+/// [`IndexOps`]: crate::IndexOps
+/// [`Length`]: crate::Length
+/// [`Mul`]: std::ops::Mul
 /// [`NumericConversions`]: crate::NumericConversions
 /// [`NumericValue`]: crate::NumericValue
-/// [`IndexOps`]: crate::IndexOps
-/// [`ArrayBoundsCheck`]: crate::ArrayBoundsCheck
-/// [`Debug`]: ::std::fmt::Debug
-/// [`From`]: ::std::convert::From
-/// [`Deref`]: ::std::ops::Deref
-/// [`DerefMut`]: ::std::ops::DerefMut
-/// [`Add`]: ::std::ops::Add
-/// [`AddAssign`]: ::std::ops::AddAssign
-/// [`Sub`]: ::std::ops::Sub
-/// [`SubAssign`]: ::std::ops::SubAssign
-/// [`Mul`]: ::std::ops::Mul
+/// [`RowHeight`]: crate::RowHeight
+/// [`RowIndex`]: crate::RowIndex
+/// [`Sub`]: std::ops::Sub
+/// [`SubAssign`]: std::ops::SubAssign
 #[macro_export]
 macro_rules! generate_index_type_impl {
     (
@@ -408,7 +408,7 @@ macro_rules! generate_index_type_impl {
 /// This macro reduces boilerplate for types like [`Length`], [`RowHeight`], and
 /// [`ColWidth`] by generating all common implementations in one place.
 ///
-/// # Parameters
+/// # Arguments
 /// - `$len_ty`: The length type being implemented (e.g., [`RowHeight`], [`ColWidth`],
 ///   [`Length`])
 /// - `$assoc_idx_ty`: The associated index type (e.g., [`RowIndex`], [`ColIndex`],
@@ -434,25 +434,25 @@ macro_rules! generate_index_type_impl {
 /// See the implementations in [`ColWidth`], [`RowHeight`], and [`Length`] for real-world
 /// examples of how to use this macro.
 ///
-/// [`Length`]: crate::Length
-/// [`RowHeight`]: crate::RowHeight
-/// [`ColWidth`]: crate::ColWidth
-/// [`Index`]: crate::Index
-/// [`RowIndex`]: crate::RowIndex
-/// [`ColIndex`]: crate::ColIndex
+/// [`Add`]: std::ops::Add
+/// [`AddAssign`]: std::ops::AddAssign
 /// [`ChUnit`]: crate::ChUnit
+/// [`ColIndex`]: crate::ColIndex
+/// [`ColWidth`]: crate::ColWidth
+/// [`Debug`]: std::fmt::Debug
+/// [`Deref`]: std::ops::Deref
+/// [`DerefMut`]: std::ops::DerefMut
+/// [`Div`]: std::ops::Div
+/// [`From`]: std::convert::From
+/// [`Index`]: crate::Index
+/// [`Length`]: crate::Length
+/// [`LengthOps`]: crate::LengthOps
 /// [`NumericConversions`]: crate::NumericConversions
 /// [`NumericValue`]: crate::NumericValue
-/// [`LengthOps`]: crate::LengthOps
-/// [`Debug`]: ::std::fmt::Debug
-/// [`From`]: ::std::convert::From
-/// [`Deref`]: ::std::ops::Deref
-/// [`DerefMut`]: ::std::ops::DerefMut
-/// [`Add`]: ::std::ops::Add
-/// [`AddAssign`]: ::std::ops::AddAssign
-/// [`Sub`]: ::std::ops::Sub
-/// [`SubAssign`]: ::std::ops::SubAssign
-/// [`Div`]: ::std::ops::Div
+/// [`RowHeight`]: crate::RowHeight
+/// [`RowIndex`]: crate::RowIndex
+/// [`Sub`]: std::ops::Sub
+/// [`SubAssign`]: std::ops::SubAssign
 #[macro_export]
 macro_rules! generate_length_type_impl {
     (

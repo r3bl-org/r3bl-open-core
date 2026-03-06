@@ -49,8 +49,7 @@ use super::ui_str;
 use crate::{DEBUG_ANALYTICS_CLIENT_MOD, prefix_single_select_instruction_header};
 use r3bl_tui::{DefaultIoDevices, HowToChoose, InlineString, OscEvent, OutputDevice,
                SpinnerStyle, StyleSheet, choose, cli_text_inline, cli_text_line,
-               core::pty::{PtyCommandBuilder, PtyConfigOption, PtyReadOnlyOutputEvent,
-                           pty_to_std_exit_status},
+               core::pty::{PtyCommandBuilder, PtyConfigOption, PtyReadOnlyOutputEvent},
                height, inline_string,
                spinner::Spinner,
                try_get_latest_release_version_from_crates_io};
@@ -271,7 +270,7 @@ async fn run_rustup_update(spinner: Option<&Spinner>) -> Result<ExitStatus, Erro
                         }
                     }
                     Some(PtyReadOnlyOutputEvent::Exit(status)) => {
-                        return Ok(pty_to_std_exit_status(status));
+                        return Ok(status.into());
                     }
                     None => {
                         // Channel closed unexpectedly.
@@ -308,7 +307,7 @@ async fn run_cargo_install_with_progress(
                         handle_osc_event(osc, crate_name, spinner);
                     }
                     Some(PtyReadOnlyOutputEvent::Exit(status)) => {
-                        return Ok(pty_to_std_exit_status(status));
+                        return Ok(status.into());
                     }
                     None => {
                         // Channel closed unexpectedly.

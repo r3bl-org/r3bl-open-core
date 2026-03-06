@@ -156,13 +156,13 @@ use crate::RangeBoundsResult;
 /// - [`RangeBoundsExt`] - Range validation for iteration and algorithms
 /// - [Module documentation] - Overview of the complete bounds checking architecture
 ///
-/// [Interval Notation]: mod@crate::core::coordinates::bounds_check#interval-notation
-/// [Module documentation]: mod@crate::core::coordinates::bounds_check
 /// [`ArrayBoundsCheck`]: crate::ArrayBoundsCheck
+/// [`check_viewport_bounds()`]: Self::check_viewport_bounds
 /// [`CursorBoundsCheck`]: crate::CursorBoundsCheck
 /// [`IndexOps`]: crate::IndexOps
 /// [`RangeBoundsExt`]: crate::RangeBoundsExt
-/// [`check_viewport_bounds()`]: Self::check_viewport_bounds
+/// [Interval Notation]: mod@crate::core::coordinates::bounds_check#interval-notation
+/// [Module documentation]: mod@crate::core::coordinates::bounds_check
 pub trait ViewportBoundsCheck: IndexOps {
     /// Checks if this index is within a viewport window.
     ///
@@ -173,7 +173,7 @@ pub trait ViewportBoundsCheck: IndexOps {
     /// See the [trait documentation][Self] for viewport geometry, exclusive upper bound
     /// semantics, design rationale, usage patterns, and examples.
     ///
-    /// # Parameters
+    /// # Arguments
     /// - `arg_viewport_start`: The starting index of the viewport
     /// - `arg_viewport_size`: The size/length of the viewport
     ///

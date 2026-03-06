@@ -282,7 +282,7 @@
 //! [`consume_pending_signals_with_sender()`]: handler_signals::consume_pending_signals_with_sender
 //! [`consume_stdin_input_with_sender()`]: handler_stdin::consume_stdin_input_with_sender
 //! [`CONTROL_D`]: crate::core::ansi::CONTROL_D
-//! [`crossterm`]: ::crossterm
+//! [`crossterm`]: crossterm
 //! [`DirectToAnsiInputDevice`]: super::DirectToAnsiInputDevice
 //! [`dispatch_with_sender()`]: dispatcher::dispatch_with_sender
 //! [`EINTR`]: https://man7.org/linux/man-pages/man3/errno.3.html

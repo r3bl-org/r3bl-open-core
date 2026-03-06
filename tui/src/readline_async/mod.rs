@@ -66,7 +66,7 @@
 //!    ```
 //!    Then type `starttask1`, press Enter. Then type `spinner`, press Enter.
 //!
-//! 3. Use tokio tracing with support for concurrently writing to [`stdout`]. If you
+//! 3. Use [`tokio`] tracing with support for concurrently writing to [`stdout`]. If you
 //!    choose to log to [`stdout`] then the concurrent version [`crate::SharedWriter`]
 //!    from this crate will be used. This ensures that the concurrent output is supported
 //!    even for your tracing logs to [`stdout`].
@@ -299,9 +299,9 @@
 //! [`stdout`]: std::io::stdout
 //! [`thread::spawn()` or `thread::spawn_blocking()`]: https://tokio.rs/tokio/tutorial/spawning
 //! [`tokio::sync::mpsc::channel`]: tokio::sync::mpsc::channel
-//! [`tokio`]: ::tokio
+//! [`tokio`]: tokio
 //! [`tracing_setup.rs`]: crate::TracingConfig
-//! [`tracing`]: ::tracing
+//! [`tracing`]: tracing
 //! [`TTY`]: https://en.wikipedia.org/wiki/Tty_(Unix)
 //! [`tty`]: https://man7.org/linux/man-pages/man4/tty.4.html
 //! [Async readline and spinner playlist]: https://www.youtube.com/watch?v=3vQJguti02I&list=PLofhE49PEwmwelPkhfiqdFQ9IXnmGdnSE

@@ -84,10 +84,6 @@ pub fn spawn_controlled_in_pty<'a>(
     /* backend */ &'a str,
     /* return ownership of */ PtyPair,
 ) {
-    // Create PTY pair.
-    let mut pty_pair = PtyPair::new_with_size(size(width(cols) + height(rows)))
-        .expect("Failed to create PTY pair");
-
     // Spawn controlled process and close the controlled side automatically,
     // preventing deadlocks from a leaked parent fd.
     let test_binary = std::env::current_exe().expect("Failed to get current executable");
@@ -95,9 +91,9 @@ pub fn spawn_controlled_in_pty<'a>(
     cmd.env(env_var, backend);
     cmd.args(["--test-threads", "1", "--nocapture", test_name]);
 
-    let _child = pty_pair
-        .spawn_command_and_close_controlled(cmd)
-        .expect("Failed to spawn controlled process");
+    let (pty_pair, _child) =
+        PtyPair::open_and_spawn(size(width(cols) + height(rows)), cmd)
+            .expect("Failed to spawn controlled process");
 
     (backend, pty_pair)
 }
