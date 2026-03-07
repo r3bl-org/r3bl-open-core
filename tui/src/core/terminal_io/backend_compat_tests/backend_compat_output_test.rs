@@ -280,10 +280,13 @@ pub mod controller {
             .expect("Failed to get reader");
 
         // Wait for CONTROLLED_READY (line-based, before OPOST is disabled).
-        wait_for_ready(&mut reader, backend_name);
+        // Preserve any leftover bytes read after the ready signal -- under
+        // load the OS may batch the ready signal and ANSI output together.
+        let leftover = wait_for_ready(&mut reader, backend_name);
 
         // Read raw bytes until we see the completion signal.
-        let mut all_bytes = Vec::new();
+        // Seed with leftover bytes from wait_for_ready.
+        let mut all_bytes = leftover;
         let mut temp = [0u8; 4096];
 
         loop {
@@ -310,11 +313,16 @@ pub mod controller {
         all_bytes
     }
 
-    /// Wait for controlled process to signal readiness.
+    /// Wait for controlled process to signal readiness, returning leftover bytes.
     ///
-    /// The controlled process sends `CONTROLLED_READY` immediately on startup, so
-    /// blocking reads work reliably here. No timeout needed since we control both sides.
-    fn wait_for_ready(reader: &mut impl Read, backend_name: &str) {
+    /// The controlled process sends `CONTROLLED_READY\n` before enabling raw mode.
+    /// Under CPU load, the OS may batch the ready signal and the start of the [`ANSI`]
+    /// output into the same [`PTY`] buffer. Any bytes read after `CONTROLLED_READY\n`
+    /// are returned so they can be prepended to the main capture buffer.
+    ///
+    /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+    /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
+    fn wait_for_ready(reader: &mut impl Read, backend_name: &str) -> Vec<u8> {
         let mut buffer = Vec::new();
         let mut temp = [0u8; 256];
 
@@ -325,9 +333,17 @@ pub mod controller {
                     buffer.extend_from_slice(&temp[..n]);
                     let text = String::from_utf8_lossy(&buffer);
 
-                    if text.contains(CONTROLLED_READY) {
+                    if let Some(pos) = text.find(CONTROLLED_READY) {
                         eprintln!("  {backend_name} Controlled is ready");
-                        return;
+                        // Return any bytes AFTER "CONTROLLED_READY\n".
+                        let signal_end = pos + CONTROLLED_READY.len();
+                        // Skip the newline after CONTROLLED_READY if present.
+                        let leftover_start = if buffer.get(signal_end) == Some(&b'\n') {
+                            signal_end + 1
+                        } else {
+                            signal_end
+                        };
+                        return buffer[leftover_start..].to_vec();
                     }
                 }
                 Err(e) => panic!("Read error: {e}"),
