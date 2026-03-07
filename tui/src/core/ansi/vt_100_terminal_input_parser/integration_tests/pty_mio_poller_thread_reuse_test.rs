@@ -1,11 +1,13 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! [`PTY`]-based integration test for thread reuse (race condition).
+//! [`PTY`]-based integration test for thread reuse (fast path).
 //!
-//! Tests that when a new subscriber appears **before** the thread checks
-//! `receiver_count`, the thread correctly continues running (not relaunched). This
-//! validates the documented race condition is semantically correct. See
-//! [`SubscriberGuard`] for the race condition documentation.
+//! Tests that the mio-poller thread is **reused** (not relaunched) when a new subscriber
+//! appears while the thread is still alive. This validates the fast-path behavior
+//! documented in [`RRT::subscribe()`].
+//!
+//! **Companion test**: [`pty_mio_poller_thread_lifecycle_test`] validates the opposite
+//! scenario -- thread exit and relaunch (slow path).
 //!
 //! Run with:
 //! ```bash
@@ -14,12 +16,28 @@
 //!
 //! Tests that:
 //! 1. Thread spawns on first subscribe (`thread_alive = true`)
-//! 2. Device A drops → waker fires
-//! 3. Device B subscribes **immediately** (before thread checks `receiver_count`)
-//! 4. Thread continues running (same thread, not relaunched)
+//! 2. A temporary subscriber keeps `receiver_count > 0` across the device transition
+//! 3. Device B subscribes and receives events from the **same** thread
+//! 4. Thread continues running (same generation, not relaunched)
 //!
-//! This validates the race is **semantically correct**: thread stays alive
-//! because there IS a receiver when it checks.
+//! ## Strategy: Overlapping Subscriptions
+//!
+//! The original test tried to race `drop(device_a)` against
+//! `DirectToAnsiInputDevice::new()` for device B. Under CPU load, the mio-poller thread
+//! could wake and see `receiver_count() == 0` before the subscribe completed, causing it
+//! to exit (flaky failure).
+//!
+//! The fix uses [`SINGLETON.subscribe_to_existing()`] to create a temporary subscriber
+//! that overlaps with device A, ensuring `receiver_count` never reaches 0:
+//!
+//! ```text
+//! temp_guard = subscribe_to_existing()    count: 1 -> 2
+//! drop(device_a)                          count: 2 -> 1  (never 0!)
+//! device_b = new()                        count: 1 -> 2
+//! drop(temp_guard)                        count: 2 -> 1
+//! ```
+//!
+//! This is deterministic regardless of OS thread scheduling.
 //!
 //! ## Test Flow
 //!
@@ -27,32 +45,36 @@
 //! ┌─────────────────────────────────────────────────────────────────────────────┐
 //! │ Controlled Process (in PTY)                          Thread #1 (mio_poller) │
 //! │                                                                             │
-//! │  1. Create DirectToAnsiInputDevice A                   ┌───────────────┐    │
-//! │     Assert: thread_alive = true, receiver_count = 1    │ poll() blocks │    │
-//! │     Capture generation_before                          └─────────┬─────┘    │
-//! │                                                                  │          │
-//! │  2. Read input from device A (proves thread works)               │          │
-//! │  3. Drop device A ────────────────────────────────▶ waker fires! │          │
-//! │     │ IMMEDIATELY (no sleep!)                                    │          │
-//! │     ▼                                                  ┌─────────▼─────┐    │
-//! │  4. Create DirectToAnsiInputDevice B                   │ wakes up,     │    │
-//! │     Assert: thread_alive = true, receiver_count = 1    │ checks count  │    │
-//! │     │                                                  │ count > 0 ✓   │    │
-//! │     ▼                                                  │ continues!    │    │
-//! │  5. Read input from device B                           └───────────────┘    │
+//! │  1. Create DirectToAnsiInputDevice A                   ┌───────────┐        │
+//! │     Assert: thread_alive = true, receiver_count = 1    │ poll()    │        │
+//! │     Capture generation_before                          │ blocks    │        │
+//! │                                                        └─────┬─────┘        │
+//! │  2. Read input from device A (proves thread works)           │              │
+//! │  3. Create temp_guard via subscribe_to_existing()            │              │
+//! │     (receiver_count: 1 -> 2)                                 │              │
+//! │  4. Drop device A                                            │              │
+//! │     (receiver_count: 2 -> 1, waker fires)    waker fires! ───┘              │
+//! │                                                  ┌──────────┬─────────┐     │
+//! │  5. Create DirectToAnsiInputDevice B             │ wakes up,          │     │
+//! │     (receiver_count: 1 -> 2)                     │ checks count       │     │
+//! │  6. Drop temp_guard                              │ count > 0 (ok!)    │     │
+//! │     (receiver_count: 2 -> 1)                     │ continues!         │     │
+//! │                                                  └────────────────────┘     │
+//! │  7. Read input from device B                                                │
 //! │     Assert: generation_before == generation_after (SAME thread!)            │
 //! │                                                                             │
-//! │  If generation unchanged → TEST_PASSED (thread reused, not relaunched)      │
+//! │  If generation unchanged -> TEST_PASSED (thread reused, not relaunched)     │
 //! └─────────────────────────────────────────────────────────────────────────────┘
 //! ```
 //!
-//! The key difference from the lifecycle test: we create device B **immediately**
-//! after dropping device A, racing the thread's `receiver_count` check.
-//!
+//! [`pty_mio_poller_thread_lifecycle_test`]:
+//!     super::pty_mio_poller_thread_lifecycle_test
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
-//! [`SubscriberGuard`]: crate::core::resilient_reactor_thread::SubscriberGuard
+//! [`RRT::subscribe()`]: crate::core::resilient_reactor_thread::RRT::subscribe
+//! [`SINGLETON.subscribe_to_existing()`]:
+//!     crate::direct_to_ansi::input::global_input_resource::SINGLETON
 
-use crate::{SingleThreadSafeControlledChild, PtyPair, PtyTestMode,
+use crate::{PtyPair, PtyTestMode, SingleThreadSafeControlledChild,
             core::resilient_reactor_thread::LivenessState,
             direct_to_ansi::{DirectToAnsiInputDevice,
                              input::global_input_resource::SINGLETON}};
@@ -65,7 +87,7 @@ const CONTROLLED_READY: &str = "REUSE_TEST_READY";
 /// Signal sent when device A is created.
 const DEVICE_A_CREATED: &str = "REUSE_DEVICE_A_CREATED";
 
-/// Signal sent when device B is created immediately after A dropped.
+/// Signal sent when device B is created after the overlap transition.
 const DEVICE_B_CREATED: &str = "REUSE_DEVICE_B_CREATED";
 
 /// Signal sent when test completes successfully.
@@ -86,7 +108,7 @@ fn wait_for_signal(buf_reader: &mut BufReader<impl std::io::Read>, signal: &str)
             Ok(0) => panic!("EOF before receiving {signal}"),
             Ok(_) => {
                 let trimmed = line.trim();
-                eprintln!("  ← Controlled: {trimmed}");
+                eprintln!("  <- Controlled: {trimmed}");
                 if trimmed.contains(signal) {
                     return;
                 }
@@ -98,7 +120,7 @@ fn wait_for_signal(buf_reader: &mut BufReader<impl std::io::Read>, signal: &str)
 
 /// Controller process: sends input bytes and verifies controlled completes successfully.
 fn controller_entry_point(pty_pair: PtyPair, child: SingleThreadSafeControlledChild) {
-    eprintln!("🚀 Reuse Controller: Starting...");
+    eprintln!("Reuse Controller: Starting...");
 
     let mut writer = pty_pair
         .controller()
@@ -111,34 +133,34 @@ fn controller_entry_point(pty_pair: PtyPair, child: SingleThreadSafeControlledCh
     let mut buf_reader = BufReader::new(reader);
 
     // Wait for controlled to be ready.
-    eprintln!("📝 Reuse Controller: Waiting for controlled to start...");
+    eprintln!("Reuse Controller: Waiting for controlled to start...");
     wait_for_signal(&mut buf_reader, CONTROLLED_READY);
-    eprintln!("  ✓ Controlled is ready");
+    eprintln!("  Controlled is ready");
 
     // Wait for device A, send input.
     wait_for_signal(&mut buf_reader, DEVICE_A_CREATED);
-    eprintln!("📝 Reuse Controller: Sending input for device A...");
+    eprintln!("Reuse Controller: Sending input for device A...");
     writer.write_all(b"a").expect("Failed to write");
     writer.flush().expect("Failed to flush");
 
-    // Wait for device B (created immediately after A dropped), send input.
+    // Wait for device B (created after overlap transition), send input.
     wait_for_signal(&mut buf_reader, DEVICE_B_CREATED);
-    eprintln!("📝 Reuse Controller: Sending input for device B...");
+    eprintln!("Reuse Controller: Sending input for device B...");
     writer.write_all(b"b").expect("Failed to write");
     writer.flush().expect("Failed to flush");
 
     // Wait for test to pass.
     wait_for_signal(&mut buf_reader, TEST_PASSED);
-    eprintln!("  ✓ Test passed signal received");
+    eprintln!("  Test passed signal received");
 
     // Clean up.
     drop(writer);
     child.drain_and_wait(buf_reader, pty_pair);
 
-    eprintln!("✅ Reuse Controller: Test passed!");
+    eprintln!("Reuse Controller: Test passed!");
 }
 
-/// Controlled process: tests thread reuse with immediate subscription.
+/// Controlled process: tests thread reuse with overlapping subscriptions.
 fn controlled_entry_point() -> ! {
     println!("{CONTROLLED_READY}");
     std::io::stdout().flush().expect("Failed to flush");
@@ -146,20 +168,20 @@ fn controlled_entry_point() -> ! {
     let runtime = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
 
     runtime.block_on(async {
-        eprintln!("🔍 Reuse Controlled: Starting thread reuse test...");
+        eprintln!("Reuse Controlled: Starting thread reuse test...");
 
         // Step 1: Create device A - this spawns the thread.
-        eprintln!("📍 Step 1: Creating device A...");
+        eprintln!("Step 1: Creating device A...");
         let mut device_a = DirectToAnsiInputDevice::new();
 
         println!("{DEVICE_A_CREATED}");
         std::io::stdout().flush().expect("Failed to flush");
 
-        // Read one event from device A to trigger subscription.
+        // Read one event from device A to prove the thread works.
         let event_a = tokio::time::timeout(Duration::from_secs(5), device_a.next())
             .await
             .expect("Timeout reading from device A");
-        eprintln!("  ✓ Device A received event: {event_a:?}");
+        eprintln!("  Device A received event: {event_a:?}");
 
         // Verify thread is alive and capture generation for later comparison.
         assert_eq!(
@@ -170,31 +192,39 @@ fn controlled_entry_point() -> ! {
         let initial_receiver_count = SINGLETON.get_receiver_count();
         assert_eq!(initial_receiver_count, 1, "Expected receiver_count = 1");
         let generation_before = SINGLETON.get_thread_generation();
-        eprintln!("  ✓ Thread alive, receiver_count = 1, generation = {generation_before}");
+        eprintln!("  Thread alive, receiver_count = 1, generation = {generation_before}");
 
-        // Step 2: Drop device A and IMMEDIATELY create device B.
-        // This tests the race condition where a new subscriber appears before
-        // the thread can check receiver_count.
-        eprintln!("📍 Step 2: Dropping device A and immediately creating device B...");
+        // Step 2: Overlap transition from device A to device B.
+        //
+        // Create a temporary subscriber BEFORE dropping device A. This keeps
+        // receiver_count > 0 across the transition, so the thread always takes
+        // the fast path (reuse) regardless of OS thread scheduling.
+        eprintln!("Step 2: Overlapping transition from device A to device B...");
 
-        // Drop device A.
-        drop(device_a);
-        eprintln!("  ✓ Device A dropped (waker should have fired)");
+        // Temporary subscriber keeps the thread alive during the transition.
+        let temp_guard = SINGLETON.subscribe_to_existing(); // count: 1 -> 2
+        eprintln!("  temp_guard created (receiver_count: 1 -> 2)");
 
-        // Immediately create device B (no sleep!).
-        let mut device_b = DirectToAnsiInputDevice::new();
-        eprintln!("  ✓ Device B created immediately");
+        drop(device_a); // count: 2 -> 1 (never 0!)
+        eprintln!("  Device A dropped (receiver_count: 2 -> 1)");
+
+        let mut device_b = DirectToAnsiInputDevice::new(); // count: 1 -> 2
+        eprintln!("  Device B created (receiver_count: 1 -> 2)");
+
+        drop(temp_guard); // count: 2 -> 1
+        eprintln!("  temp_guard dropped (receiver_count: 2 -> 1)");
 
         println!("{DEVICE_B_CREATED}");
         std::io::stdout().flush().expect("Failed to flush");
 
-        // Read one event from device B to trigger subscription.
+        // Read one event from device B to prove the thread serves it.
         let event_b = tokio::time::timeout(Duration::from_secs(5), device_b.next())
             .await
             .expect("Timeout reading from device B");
-        eprintln!("  ✓ Device B received event: {event_b:?}");
+        eprintln!("  Device B received event: {event_b:?}");
 
-        // Step 3: Verify thread is still alive AND same generation (reused, not relaunched).
+        // Step 3: Verify thread is still alive AND same generation (reused, not
+        // relaunched).
         assert_eq!(
             SINGLETON.is_thread_running(),
             LivenessState::Running,
@@ -212,11 +242,11 @@ fn controlled_entry_point() -> ! {
              Before: {generation_before}, After: {generation_after}"
         );
         eprintln!(
-            "  ✓ Thread still alive, receiver_count = 1, generation = {generation_after} (same thread reused!)"
+            "  Thread still alive, receiver_count = 1, generation = {generation_after} (same thread reused!)"
         );
 
         // All assertions passed!
-        eprintln!("🎉 Thread reuse test passed! Race condition handled correctly.");
+        eprintln!("Thread reuse test passed! Race condition handled correctly.");
         println!("{TEST_PASSED}");
         std::io::stdout().flush().expect("Failed to flush");
 
@@ -224,6 +254,6 @@ fn controlled_entry_point() -> ! {
         drop(device_b);
     });
 
-    eprintln!("🔍 Reuse Controlled: Exiting");
+    eprintln!("Reuse Controlled: Exiting");
     std::process::exit(0);
 }

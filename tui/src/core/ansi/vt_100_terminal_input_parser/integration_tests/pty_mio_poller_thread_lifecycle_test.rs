@@ -1,9 +1,12 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! [`PTY`]-based integration test for [`mio_poller`] thread lifecycle.
+//! [`PTY`]-based integration test for [`mio_poller`] thread lifecycle (slow path).
 //!
-//! Tests the complete thread spawn → drop → respawn cycle using observable state
+//! Tests the complete thread spawn -> drop -> respawn cycle using observable state
 //! functions. See [Device Lifecycle] for the lifecycle being tested.
+//!
+//! **Companion test**: [`pty_mio_poller_thread_reuse_test`] validates the opposite
+//! scenario -- thread reuse via overlapping subscriptions (fast path).
 //!
 //! Run with:
 //! ```bash
@@ -37,10 +40,11 @@
 //! ```
 //!
 //! [`mio_poller`]: crate::direct_to_ansi::input::mio_poller
+//! [`pty_mio_poller_thread_reuse_test`]: super::pty_mio_poller_thread_reuse_test
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [Device Lifecycle]: crate::direct_to_ansi::DirectToAnsiInputDevice#device-lifecycle
 
-use crate::{SingleThreadSafeControlledChild, PtyPair, PtyTestMode,
+use crate::{PtyPair, PtyTestMode, SingleThreadSafeControlledChild,
             core::resilient_reactor_thread::LivenessState,
             direct_to_ansi::{DirectToAnsiInputDevice, input::global_input_resource}};
 use std::{io::{BufRead, BufReader, Write},
@@ -87,7 +91,10 @@ fn wait_for_signal(buf_reader: &mut BufReader<impl std::io::Read>, signal: &str)
 }
 
 /// Controller process: sends input bytes and verifies controlled completes successfully.
-fn lifecycle_controller_entry_point(pty_pair: PtyPair, child: SingleThreadSafeControlledChild) {
+fn lifecycle_controller_entry_point(
+    pty_pair: PtyPair,
+    child: SingleThreadSafeControlledChild,
+) {
     eprintln!("🚀 Lifecycle Controller: Starting...");
 
     let mut writer = pty_pair
