@@ -40,10 +40,10 @@ generate_pty_test! {
     /// This test uses a **request-response protocol** between controller and controlled:
     ///
     /// 1. **Controller sends input** (text and Ctrl+D sequences)
-    /// 2. **Controller flushes** and waits ~200ms for controlled to process
-    /// 3. **Controller blocks** reading controlled stdout until it sees "Line: ..."
-    /// 4. **Controller makes assertion** on the line state
-    /// 5. **Repeat** for next input sequence
+    /// 2. **Controller flushes** and blocks reading controlled stdout until it sees
+    ///    "Line: ..."
+    /// 3. **Controller makes assertion** on the line state
+    /// 4. **Repeat** for next input sequence
     ///
     /// The ([`LineState`]) is checked in the test to make assertions against.
     ///
@@ -141,7 +141,6 @@ fn pty_controller_entry_point(pty_pair: PtyPair, child: SingleThreadSafeControll
     eprintln!("📝 PTY Controller: Sending 'hello'...");
     writer.write_all(b"hello").expect("Failed to write text");
     writer.flush().expect("Failed to flush");
-    std::thread::sleep(Duration::from_millis(200));
 
     let result = read_line_state();
     eprintln!("  ← Line state: {result}");
@@ -151,7 +150,6 @@ fn pty_controller_entry_point(pty_pair: PtyPair, child: SingleThreadSafeControll
     eprintln!("📝 PTY Controller: Sending Ctrl+A (move to beginning)...");
     writer.write_all(&[0x01]).expect("Failed to write Ctrl+A");
     writer.flush().expect("Failed to flush");
-    std::thread::sleep(Duration::from_millis(100));
 
     let result = read_line_state();
     eprintln!("  ← After Ctrl+A: {result}");
@@ -161,7 +159,6 @@ fn pty_controller_entry_point(pty_pair: PtyPair, child: SingleThreadSafeControll
     eprintln!("📝 PTY Controller: Sending Ctrl+D (delete character at cursor)...");
     writer.write_all(&[0x04]).expect("Failed to write Ctrl+D");
     writer.flush().expect("Failed to flush");
-    std::thread::sleep(Duration::from_millis(100));
 
     let result = read_line_state();
     eprintln!("  ← After Ctrl+D: {result}");
@@ -204,9 +201,11 @@ fn pty_controlled_entry_point() -> ! {
 
         // ==================== Timing Configuration ====================
         //
-        // Inactivity watchdog: Exit if no events arrive for 2 seconds
+        // Inactivity watchdog: Exit if no events arrive for 5 seconds.
+        // Needs headroom for parallel test execution where CPU scheduling
+        // delays can cause input events to arrive late.
         // Pattern: "Exit if this operation takes too long"
-        let mut inactivity_watchdog = AsyncDebouncedDeadline::new(Duration::from_secs(2));
+        let mut inactivity_watchdog = AsyncDebouncedDeadline::new(Duration::from_secs(5));
         inactivity_watchdog.reset(); // Start the watchdog
 
         // Debounced state: Buffer line state and print after 10ms of no events
