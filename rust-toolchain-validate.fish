@@ -135,6 +135,11 @@ function validate_complete
     echo "═══════════════════════════════════════════════════════"
     echo ""
 
+    # Purge any project-related zombie processes
+    echo "🧟 Purging project-related zombie processes..."
+    purge_zombie_processes
+    echo ""
+
     set -l temp_output /tmp/rust-toolchain-validation-(date +%s).log
     set -l validation_steps \
         "clippy:cargo clippy --all-targets" \
@@ -142,7 +147,7 @@ function validate_complete
         "build-test-code:cargo test --no-run" \
         "tests:cargo test --all-targets" \
         "doctest:cargo test --doc" \
-        "doc:cargo doc --no-deps"
+        "doc:cargo doc --workspace --no-deps"
 
     for step in $validation_steps
         set -l step_name (string split ":" $step)[1]

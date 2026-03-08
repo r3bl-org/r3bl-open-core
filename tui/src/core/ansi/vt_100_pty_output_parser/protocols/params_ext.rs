@@ -17,9 +17,9 @@ use std::{cmp::max, num::NonZeroU16};
 /// # [`VT-100`] Parameter Structure
 ///
 /// The [`vte::Params`] type captures parameters for a **single command** (after it is
-/// parsed from the bytes emitted from the child process running in [`PTY`]-controlled). We
-/// have no control over this. The following is an overview of how [`VT-100`] parameters
-/// are structured, which informs how the [`vte::Params`] type organizes them.
+/// parsed from the bytes emitted from the child process running in [`PTY`]-controlled).
+/// We have no control over this. The following is an overview of how [`VT-100`]
+/// parameters are structured, which informs how the [`vte::Params`] type organizes them.
 ///
 /// <div class="warning">
 ///

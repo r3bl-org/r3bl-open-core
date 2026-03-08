@@ -1,12 +1,12 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Scroll margin operations for VT100/ANSI terminal emulation.
+//! Scroll margin operations for VT100/[`ANSI`] terminal emulation.
 //!
-//! This module implements scroll margin operations that correspond to ANSI
+//! This module implements scroll margin operations that correspond to [`ANSI`]
 //! sequences handled by the `vt_100_pty_output_parser::operations::margin_ops` module.
 //! These include:
 //!
-//! - **DECSTBM** (Set Top and Bottom Margins) - [`set_scroll_margins`]
+//! - **[`DECSTBM`]** (Set Top and Bottom Margins) - [`set_scroll_margins`]
 //! - **Reset margins** - [`reset_scroll_margins`]
 //!
 //! All operations maintain VT100 compliance and handle proper scroll region
@@ -19,8 +19,10 @@
 //!
 //! **Related Files:**
 //!
-//! [`set_scroll_margins`]: crate::OffscreenBuffer::set_scroll_margins
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`DECSTBM`]: https://vt100.net/docs/vt510-rm/DECSTBM.html
 //! [`reset_scroll_margins`]: crate::OffscreenBuffer::reset_scroll_margins
+//! [`set_scroll_margins`]: crate::OffscreenBuffer::set_scroll_margins
 
 #[allow(clippy::wildcard_imports)]
 use super::super::*;

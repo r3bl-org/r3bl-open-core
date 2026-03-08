@@ -20,7 +20,7 @@
 //! - [Unicode in Rust]
 //!
 //! [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
-//! [Grapheme clusters]: https://medium.com/flutter-community/working-with-unicode-and-grapheme-clusters-in-dart-b054faab5705
+//! [Grapheme clusters]: https://www.unicode.org/reports/tr29/#Grapheme_Cluster_Boundaries
 //! [Unicode in Rust]: https://doc.rust-lang.org/stable/std/primitive.str.html
 //! [UTF-8 String]: https://doc.rust-lang.org/book/ch08-02-strings.html
 

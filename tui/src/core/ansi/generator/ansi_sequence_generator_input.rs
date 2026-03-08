@@ -27,7 +27,7 @@
 //!
 //! [`ansi_sequence_generator_output`]: super::ansi_sequence_generator_output
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`InputEvent`]: crate::core::terminal_io::InputEvent
+//! [`InputEvent`]: crate::InputEvent
 
 use crate::{KeyState,
             core::ansi::{constants::{ASCII_DEL, ASCII_DIGIT_0, CONTROL_ENTER,
@@ -182,7 +182,7 @@ pub fn csi_modified(modifier: u8, final_byte: u8) -> Vec<u8> {
 ///
 /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 /// [`CSI`]: crate::CsiSequence
-/// [`InputEvent`]: crate::core::terminal_io::InputEvent
+/// [`InputEvent`]: crate::InputEvent
 /// [`SGR`]: crate::SgrCode
 /// [`Some(Vec<u8>)`]: std::option::Option::Some
 #[must_use]
@@ -245,7 +245,7 @@ pub fn generate_keyboard_sequence(event: &VT100InputEventIR) -> Option<Vec<u8>> 
 /// - `action`: Press, Release, Motion, or Drag
 /// - `modifiers`: Key modifiers (Shift, Ctrl, Alt)
 ///
-/// [1-based]: crate::core::ansi::vt_100_terminal_input_parser#one-based-mouse-input-events
+/// [1-based]: crate::vt_100_terminal_input_parser#one-based-mouse-input-events
 /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 /// [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
 /// [`X10`]: https://invisible-island.net/xterm/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
@@ -280,7 +280,7 @@ pub fn generate_x10_mouse_sequence(
 /// - `action`: Press or Release ([`RXVT`] primarily uses Press)
 /// - `modifiers`: Key modifiers (Shift, Ctrl, Alt)
 ///
-/// [1-based]: crate::core::ansi::vt_100_terminal_input_parser#one-based-mouse-input-events
+/// [1-based]: crate::vt_100_terminal_input_parser#one-based-mouse-input-events
 /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 /// [`RXVT`]: https://en.wikipedia.org/wiki/Rxvt
 #[must_use]
@@ -306,7 +306,7 @@ pub fn generate_rxvt_mouse_sequence(
 /// - `action`: Press, Release, or Drag
 /// - `modifiers`: Key modifiers (Shift, Ctrl, Alt)
 ///
-/// [1-based]: crate::core::ansi::vt_100_terminal_input_parser#one-based-mouse-input-events
+/// [1-based]: crate::vt_100_terminal_input_parser#one-based-mouse-input-events
 /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 /// [`SGR`]: crate::SgrCode
 #[must_use]

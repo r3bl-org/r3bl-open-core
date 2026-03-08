@@ -692,6 +692,20 @@ This is more precise than `#impl-Drop-for-WakeOnDrop<K>`, which anchors to the
 impl block header. `#method.drop` scrolls directly to the `fn drop` method and its
 rustdoc comments.
 
+**Three equivalent path forms** - all resolve to the same anchor on the type's page:
+
+```rust
+/// [`Drop`]: Self#method.drop              // Self resolves to current type
+/// [`Drop`]: PtyTestWatchdog#method.drop   // Explicit type name
+/// [`Drop`]: #method.drop                  // Same-page fragment (shortest)
+```
+
+| Form | When to use |
+| :--- | :---------- |
+| `Self#method.drop` | In the type's own doc comment (idiomatic) |
+| `TypeName#method.drop` | From another type's or module's doc comment |
+| `#method.drop` | Same-page shorthand (most concise, works on the type's own page) |
+
 **When to use which:**
 
 | Scenario | Anchor | Example |

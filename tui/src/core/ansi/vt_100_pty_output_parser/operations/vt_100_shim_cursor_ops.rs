@@ -26,7 +26,7 @@
 //!
 //! ```text
 //! ╭─────────────────╮    ╭────────────────╮    ╭─────────────────╮    ╭──────────────╮
-//! │ Child Process   │────▶ PTY Controller │────▶ VTE Parser      │────▶ OffscreenBuf │
+//! │ Child Process   │────► PTY Controller │────► VTE Parser      │────► OffscreenBuf │
 //! │ (vim, bash...)  │    │ (byte stream)  │    │ (state machine) │    │ (terminal    │
 //! ╰──────┬──────────╯    ╰────────────────╯    ╰───────┬─────────╯    │  buffer)     │
 //!        │                                             │              ╰───────┬──────╯
@@ -37,9 +37,9 @@
 //!        │                                    ╚═════════════════╝             │
 //!        │                                                                    │
 //!        │                                    ╭─────────────────╮             │
-//!        │                                    │ RenderPipeline  ◀─────────────╯
+//!        │                                    │ RenderPipeline  ◄─────────────╯
 //!        │                                    │ paint()         │
-//!        ╰────────────────────────────────────▶ Terminal Output │
+//!        ╰────────────────────────────────────► Terminal Output │
 //!                                             ╰─────────────────╯
 //! ```
 //!
@@ -101,12 +101,12 @@
 //! [`ColIndex`]: crate::ColIndex
 //! [`CSI`]: crate::CsiSequence
 //! [`extract_nth_single_non_zero()`]: crate::ParamsExt::extract_nth_single_non_zero
-//! [`impl_cursor_ops`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl::vt_100_impl_cursor_ops
+//! [`impl_cursor_ops`]: crate::vt_100_ansi_impl::vt_100_impl_cursor_ops
 //! [`NonZeroU16`]: std::num::NonZeroU16
 //! [`RowIndex`]: crate::RowIndex
 //! [`TermCol::from_raw_non_zero_value()`]: crate::TermCol::from_raw_non_zero_value
 //! [`TermRow::from_raw_non_zero_value()`]: crate::TermRow::from_raw_non_zero_value
-//! [`test_cursor_ops`]: crate::core::ansi::vt_100_pty_output_parser::vt_100_pty_output_conformance_tests::tests::vt_100_test_cursor_ops
+//! [`test_cursor_ops`]: crate::vt_100_pty_output_conformance_tests::tests::vt_100_test_cursor_ops
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 //! [module-level documentation]: self
 

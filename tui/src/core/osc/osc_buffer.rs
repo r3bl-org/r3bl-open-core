@@ -1,14 +1,20 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! OSC buffer for accumulating and parsing OSC sequences.
+//! [`OSC`] buffer for accumulating and parsing [`OSC`] sequences. See [`OscBuffer`] for
+//! details.
+//!
+//! [`OSC`]: crate::osc_codes::OscSequence
 
 use super::{osc_codes, osc_event::OscEvent};
 
-/// Buffer for accumulating and parsing OSC (Operating System Command) sequences.
+/// Buffer for accumulating and parsing [`OSC`] (Operating System Command) sequences.
 ///
-/// This is not the raw PTY read buffer, but a dedicated buffer that accumulates OSC
-/// sequences as they are read from the PTY output. It handles partial sequences that may
-/// be split across multiple read operations.
+/// This is not the raw [`PTY`] read buffer, but a dedicated buffer that accumulates
+/// [`OSC`] sequences as they are read from the [`PTY`] output. It handles partial
+/// sequences that may be split across multiple read operations.
+///
+/// [`OSC`]: crate::osc_codes::OscSequence
+/// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 #[derive(Debug)]
 pub struct OscBuffer {
     data: String,
@@ -19,7 +25,9 @@ impl Default for OscBuffer {
 }
 
 impl OscBuffer {
-    /// Creates a new empty OSC buffer.
+    /// Creates a new empty [`OSC`] buffer.
+    ///
+    /// [`OSC`]: crate::osc_codes::OscSequence
     #[must_use]
     pub fn new() -> Self {
         Self {
@@ -27,14 +35,17 @@ impl OscBuffer {
         }
     }
 
-    /// Appends new bytes to the buffer and extracts any complete OSC sequences.
+    /// Appends new bytes to the buffer and extracts any complete [`OSC`] sequences.
     ///
     /// # Arguments
-    /// * `buffer` - Raw bytes read from the PTY
+    /// * `buffer` - Raw bytes read from the [`PTY`]
     /// * `n` - Number of valid bytes in the buffer
     ///
     /// # Returns
     /// A vector of parsed [`OscEvent`]s from any complete sequences found.
+    ///
+    /// [`OSC`]: crate::osc_codes::OscSequence
+    /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
     pub fn append_and_extract(&mut self, buffer: &[u8], n: usize) -> Vec<OscEvent> {
         // Convert bytes to string and append to accumulated data.
         let text = String::from_utf8_lossy(&buffer[..n]);
@@ -50,23 +61,25 @@ impl OscBuffer {
         events
     }
 
-    /// Extracts and parses the next complete OSC sequence from the buffer.
+    /// Extracts and parses the next complete [`OSC`] sequence from the buffer.
     ///
     /// Looks for sequences in the format: `ESC]9;4;{state};{progress}ESC\`
     ///
     /// # Returns
     /// * `Some(OscEvent)` if a complete sequence was found and parsed.
     /// * `None` if no complete sequence is available.
+    ///
+    /// [`OSC`]: crate::osc_codes::OscSequence
     pub fn extract_next_sequence(&mut self) -> Option<OscEvent> {
-        // OSC sequence format "codes::START {state};{progress} codes::END"
-        // Find start of OSC sequence.
-        let start_idx = self.data.find(osc_codes::START)?;
-        let after_start_idx = start_idx + osc_codes::START.len();
+        // OSC sequence format "codes::OSC_PROGRESS_START {state};{progress}
+        // codes::OSC_TERMINATOR_ST" Find start of OSC sequence.
+        let start_idx = self.data.find(osc_codes::OSC_PROGRESS_START)?;
+        let after_start_idx = start_idx + osc_codes::OSC_PROGRESS_START.len();
 
         // Find end of sequence.
-        let end_idx = self.data[after_start_idx..].find(osc_codes::END)?;
+        let end_idx = self.data[after_start_idx..].find(osc_codes::OSC_TERMINATOR_ST)?;
         let params_end_idx = after_start_idx + end_idx;
-        let sequence_end_idx = params_end_idx + osc_codes::END.len();
+        let sequence_end_idx = params_end_idx + osc_codes::OSC_TERMINATOR_ST.len();
 
         // Extract parameters.
         let params = &self.data[after_start_idx..params_end_idx];
@@ -80,7 +93,7 @@ impl OscBuffer {
         event
     }
 
-    /// Parses OSC parameters into an `OscEvent`.
+    /// Parses [`OSC`] parameters into an `OscEvent`.
     ///
     /// # Arguments
     /// * `params` - The parameter string in format "{state};{progress}"
@@ -88,9 +101,11 @@ impl OscBuffer {
     /// # Returns
     /// * `Some(OscEvent)` if parameters were valid.
     /// * `None` if parameters were malformed or state was unknown.
+    ///
+    /// [`OSC`]: crate::osc_codes::OscSequence
     #[must_use]
     pub fn parse_osc_params(&self, params: &str) -> Option<OscEvent> {
-        let parts: Vec<&str> = params.split(osc_codes::DELIMITER).collect();
+        let parts: Vec<&str> = params.split(osc_codes::OSC_DELIMITER).collect();
         if parts.len() != 2 {
             // Gracefully handle malformed sequences.
             return None;
@@ -341,7 +356,7 @@ mod tests {
         // So it gracefully ignores the malformed sequence and extracts it.
         assert_eq!(events, vec![]);
 
-        // After extraction attempt, buffer should be empty since the malformed.
+        // After extraction attempt, buffer should be empty since the malformed
         // sequence was removed
         assert_eq!(buffer.data, "");
     }

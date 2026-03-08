@@ -31,7 +31,7 @@
 #   ./check.fish --build      Run build only (cargo build)
 #   ./check.fish --clippy     Run clippy only (cargo clippy --all-targets)
 #   ./check.fish --test       Run tests only (cargo test + doctests)
-#   ./check.fish --doc        Build docs only (quick, --no-deps)
+#   ./check.fish --doc        Build docs only (full, with deps, dep-doc caching)
 #   ./check.fish --quick-doc  Build docs via staging + sync (fast, no deps)
 #   ./check.fish --full       Run ALL checks (check + build + clippy + tests + doctests + docs + windows)
 #   ./check.fish --watch      Watch mode: run default checks on file changes
@@ -79,9 +79,11 @@ function main
         return 1
     end
 
-    # Proactive cleanup: remove stale ICE dump files from interrupted previous runs.
-    # Prevents false ICE detection when a non-ICE compile error occurs.
+    # Proactive cleanup: remove stale ICE dump files and project-related zombies
+    # from interrupted previous runs. Prevents false ICE detection and stale
+    # test binary locks (ETXTBSY).
     cleanup_stale_ice_files
+    purge_zombie_processes
 
     # Branch based on mode
     switch $mode
@@ -117,6 +119,9 @@ function main
 
             # Kill orphaned file watcher processes (inotifywait/fswatch)
             kill_orphaned_watchers
+
+            # Purge any project-related zombie processes
+            purge_zombie_processes
 
             echo "✅ Cleanup complete"
             return 0
@@ -200,7 +205,7 @@ function main
             return $clippy_status
         case full
             # Full mode: comprehensive pre-commit check
-            # Runs: check + build + clippy + tests + doctests + docs + windows
+            # Runs: check + build + clippy + tests + doctests + docs + windows + lychee
             check_config_changed $CHECK_TARGET_DIR $CONFIG_FILES_TO_WATCH
 
             ensure_toolchain_installed
@@ -212,7 +217,7 @@ function main
             end
 
             echo ""
-            echo "🚀 Running comprehensive checks (check + build + clippy + tests + doctests + docs + windows)..."
+            echo "🚀 Running comprehensive checks (check + build + clippy + tests + doctests + docs + windows + lychee)..."
 
             # Run all checks with recovery (ICE, stale artifacts)
             run_full_checks_with_recovery
@@ -220,7 +225,21 @@ function main
 
             # Sync docs from staging to serving directory (so docs are browseable)
             if test $full_status -eq 0
-                sync_docs_to_serving full
+                # Sync mode based on dep-doc cache (see DEP_DOCS_WERE_CACHED architecture note)
+                if test "$DEP_DOCS_WERE_CACHED" = true
+                    # Cache hit: Dependencies were NOT rebuilt in staging.
+                    # However, we must check if the serving directory was wiped
+                    # (e.g. by check_config_changed). If so, we perform a full
+                    # sync to restore the cached dependency docs from staging.
+                    if not test -d $CHECK_TARGET_DIR/doc/r3bl_tui
+                        sync_docs_to_serving full
+                    else
+                        sync_docs_to_serving quick
+                    end
+                else
+                    sync_docs_to_serving full
+                    update_dep_docs_hash $CHECK_TARGET_DIR_DOC_STAGING_FULL
+                end
             end
 
             # Send desktop notification for final result
@@ -229,13 +248,13 @@ function main
                 set_color green --bold
                 echo "["(timestamp)"] ✅ All comprehensive checks passed!"
                 set_color normal
-                send_system_notification "Full Checks Complete ✅" "check, build, clippy, tests, doctests, docs, windows all passed" "success" $NOTIFICATION_EXPIRE_MS
+                send_system_notification "Full Checks Complete ($WORKSPACE_NAME) ✅" "check, build, clippy, tests, doctests, docs, windows, lychee all passed" "success" $NOTIFICATION_EXPIRE_MS
             else
                 echo ""
                 set_color red --bold
                 echo "["(timestamp)"] ❌ Some checks failed"
                 set_color normal
-                send_system_notification "Full Checks Failed ❌" "One or more checks failed - see terminal" "critical" $NOTIFICATION_EXPIRE_MS
+                send_system_notification "Full Checks Failed ($WORKSPACE_NAME) ❌" "One or more checks failed - see terminal" "critical" $NOTIFICATION_EXPIRE_MS
             end
 
             return $full_status
@@ -258,7 +277,7 @@ function main
             run_rustdoc_fmt
 
             echo ""
-            echo "⚡ Building documentation (quick-doc, staging + sync)..."
+            echo "⚡ Building documentation (quick-doc, no ext crate links)..."
             run_check_with_recovery check_docs_quick "docs"
             set -l doc_status $status
 
@@ -276,8 +295,8 @@ function main
 
                 echo ""
                 set_color green --bold
-                echo "["(timestamp)"] ✅ Documentation built successfully!"
-                echo "    file://$CHECK_TARGET_DIR/doc/r3bl_tui/index.html"
+                echo "["(timestamp)"] ✅ Documentation built successfully (no ext crate links)!"
+                echo "    file://$CHECK_TARGET_DIR/doc/"
                 set_color normal
             else
                 echo ""
@@ -288,8 +307,8 @@ function main
 
             return $doc_status
         case doc
-            # Docs-only mode: build docs once without watching
-            # Check if config files changed (cleans target if needed)
+            # Docs-only mode: full build with dep-doc caching.
+            # First run builds all deps (~90s), subsequent runs skip deps (~5-7s).
             check_config_changed $CHECK_TARGET_DIR $CONFIG_FILES_TO_WATCH
 
             ensure_toolchain_installed
@@ -305,14 +324,14 @@ function main
             run_rustdoc_fmt
 
             echo ""
-            echo "📚 Building documentation (quick mode, no deps)..."
-            run_check_with_recovery check_docs_quick "docs"
+            echo "📚 Building documentation (full, with deps)..."
+            run_check_with_recovery check_docs_full "docs"
             set -l doc_status $status
 
             if test $doc_status -eq 2
                 # Recoverable error - cleanup and retry once
-                cleanup_for_recovery $CHECK_TARGET_DIR_DOC_STAGING_QUICK
-                run_check_with_recovery check_docs_quick "docs"
+                cleanup_for_recovery $CHECK_TARGET_DIR_DOC_STAGING_FULL
+                run_check_with_recovery check_docs_full "docs"
                 set doc_status $status
                 hint_toolchain_update_on_persistent_failure $doc_status
             end
@@ -322,17 +341,30 @@ function main
             set -l duration_str (format_duration $duration)
 
             if test $doc_status -eq 0
-                # Sync docs to serving directory
-                sync_docs_to_serving quick
+                # Sync mode based on dep-doc cache (see DEP_DOCS_WERE_CACHED architecture note)
+                if test "$DEP_DOCS_WERE_CACHED" = true
+                    # Cache hit: Dependencies were NOT rebuilt in staging.
+                    # However, we must check if the serving directory was wiped
+                    # (e.g. by check_config_changed). If so, we perform a full
+                    # sync to restore the cached dependency docs from staging.
+                    if not test -d $CHECK_TARGET_DIR/doc/r3bl_tui
+                        sync_docs_to_serving full
+                    else
+                        sync_docs_to_serving quick
+                    end
+                else
+                    sync_docs_to_serving full
+                    update_dep_docs_hash $CHECK_TARGET_DIR_DOC_STAGING_FULL
+                end
 
                 echo ""
                 set_color green --bold
-                echo "["(timestamp)"] ✅ Documentation built successfully! ($duration_str)"
-                echo "    file://$CHECK_TARGET_DIR/doc/r3bl_tui/index.html"
+                echo "["(timestamp)"] ✅ Documentation built successfully ($WORKSPACE_NAME workspace)!"
+                echo "    file://$CHECK_TARGET_DIR/doc/"
                 set_color normal
                 # Only notify if duration > threshold (user likely switched away)
                 if test (math "floor($duration)") -ge "$NOTIFICATION_THRESHOLD_SECS"
-                    send_system_notification "Doc Build Complete ✅" "Built in $duration_str" "normal" $NOTIFICATION_EXPIRE_MS
+                    send_system_notification "Doc Build Complete ($WORKSPACE_NAME) ✅" "Built in $duration_str" "normal" $NOTIFICATION_EXPIRE_MS
                 end
             else
                 echo ""
@@ -340,7 +372,7 @@ function main
                 echo "["(timestamp)"] ❌ Documentation build failed ($duration_str)"
                 set_color normal
                 # Always notify on failure (user needs to know)
-                send_system_notification "Doc Build Failed ❌" "Failed after $duration_str - see terminal" "critical" $NOTIFICATION_EXPIRE_MS
+                send_system_notification "Doc Build Failed ($WORKSPACE_NAME) ❌" "Failed after $duration_str - see terminal" "critical" $NOTIFICATION_EXPIRE_MS
             end
 
             return $doc_status
@@ -381,7 +413,7 @@ function main
                 set_color normal
                 # Only notify if duration > threshold (user likely switched away)
                 if test (math "floor($duration)") -ge "$NOTIFICATION_THRESHOLD_SECS"
-                    send_system_notification "Tests Complete ✅" "Passed in $duration_str" "normal" $NOTIFICATION_EXPIRE_MS
+                    send_system_notification "Tests Complete ($WORKSPACE_NAME) ✅" "Passed in $duration_str" "normal" $NOTIFICATION_EXPIRE_MS
                 end
             else
                 echo ""
@@ -389,7 +421,7 @@ function main
                 echo "["(timestamp)"] ❌ Tests failed ($duration_str)"
                 set_color normal
                 # Always notify on failure (user needs to know)
-                send_system_notification "Tests Failed ❌" "Failed after $duration_str - see terminal" "critical" $NOTIFICATION_EXPIRE_MS
+                send_system_notification "Tests Failed ($WORKSPACE_NAME) ❌" "Failed after $duration_str - see terminal" "critical" $NOTIFICATION_EXPIRE_MS
             end
 
             return $test_status
@@ -431,10 +463,10 @@ function main
             # Log and send desktop notification for final result
             if test $check_status -eq 0
                 log_message "✅ All checks passed!"
-                send_system_notification "Build Checks Complete ✅" "All tests, doctests, and docs passed" "success" $NOTIFICATION_EXPIRE_MS
+                send_system_notification "Build Checks Complete ($WORKSPACE_NAME) ✅" "All tests, doctests, and docs passed" "success" $NOTIFICATION_EXPIRE_MS
             else
                 log_message "❌ Checks failed"
-                send_system_notification "Build Checks Failed ❌" "One or more checks failed - see terminal" "critical" $NOTIFICATION_EXPIRE_MS
+                send_system_notification "Build Checks Failed ($WORKSPACE_NAME) ❌" "One or more checks failed - see terminal" "critical" $NOTIFICATION_EXPIRE_MS
             end
 
             return $check_status

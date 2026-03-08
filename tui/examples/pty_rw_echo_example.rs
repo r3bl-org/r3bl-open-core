@@ -7,8 +7,9 @@
 use r3bl_tui::{AnsiSequenceGenerator, InputEvent, Key, KeyPress, KeyState,
                ModifierKeysMask, RawMode, col,
                core::{get_size,
-                      pty::{ControlSequence, CursorKeyMode, PtyCommandBuilder,
-                            PtyInputEvent, PtyReadWriteOutputEvent},
+                      pty::{ControlSequence, CursorKeyMode, DefaultPtySessionConfig,
+                            PtyInputEvent, PtyOutputEvent, PtySessionBuilder,
+                            PtySessionConfigOption},
                       terminal_io::{InputDevice, OutputDevice},
                       try_initialize_logging_global},
                lock_output_device_as_mut, row, set_mimalloc_in_main};
@@ -47,7 +48,11 @@ async fn main() -> miette::Result<()> {
     }
 
     // Spawn cat process (simple echo).
-    let mut session = PtyCommandBuilder::new("cat").spawn_read_write(terminal_size)?;
+    let mut session = PtySessionBuilder::new("cat")
+        .with_config(
+            DefaultPtySessionConfig + PtySessionConfigOption::Size(terminal_size),
+        )
+        .start()?;
 
     println!("Type something and press Enter to see it echo back:");
 
@@ -55,14 +60,14 @@ async fn main() -> miette::Result<()> {
     loop {
         tokio::select! {
             // Handle PTY output.
-            Some(event) = session.output_event_receiver_half.recv() => {
+            Some(event) = session.rx_output_event.recv() => {
                 match event {
-                    PtyReadWriteOutputEvent::Output(data) => {
+                    PtyOutputEvent::Output(data) => {
                         // Just write raw bytes directly to terminal.
                         print!("{}", String::from_utf8_lossy(&data));
                         std::io::stdout().flush().unwrap();
                     }
-                    PtyReadWriteOutputEvent::Exit(_) => {
+                    PtyOutputEvent::Exit(_) => {
                         break;
                     }
                     _ => {}
@@ -82,13 +87,13 @@ async fn main() -> miette::Result<()> {
                         },
                     } = key {
                         // Send Ctrl+D to cat.
-                        let _unused = session.input_event_ch_tx_half.send(PtyInputEvent::SendControl(ControlSequence::CtrlD, CursorKeyMode::default()));
+                        let _unused = session.tx_input_event.send(PtyInputEvent::SendControl(ControlSequence::CtrlD, CursorKeyMode::default()));
                         break;
                     }
 
                     // Convert key to PTY event and send.
                     if let Some(event) = Option::<PtyInputEvent>::from(key) {
-                        let _unused = session.input_event_ch_tx_half.send(event);
+                        let _unused = session.tx_input_event.send(event);
                     }
                 }
             }

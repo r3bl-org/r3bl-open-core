@@ -1,8 +1,8 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! VT100/ANSI terminal operation implementations for `OffscreenBuffer`.
+//! VT100/[`ANSI`] terminal operation implementations for `OffscreenBuffer`.
 //!
-//! This module contains the actual implementations of VT100 and ANSI escape sequence
+//! This module contains the actual implementations of VT100 and [`ANSI`] escape sequence
 //! operations that are delegated from the `vt_100_pty_output_parser::operations` module.
 //! The structure mirrors `vt_100_pty_output_parser/operations/` to provide a clear 1:1
 //! mapping between the parser shim layer and the implementation layer.
@@ -39,13 +39,13 @@
 //! - [`vt_100_impl_cursor_ops`] - Cursor movement operations
 //! - [`vt_100_impl_dsr_ops`] - Device Status Report operations
 //! - [`vt_100_impl_line_ops`] - Line manipulation operations
-//! - [`vt_100_impl_margin_ops`] - Scroll margin operations (DECSTBM)
+//! - [`vt_100_impl_margin_ops`] - Scroll margin operations ([`DECSTBM`])
 //! - [`vt_100_impl_mode_ops`] - Mode setting operations (SM/RM)
 //! - [`vt_100_impl_osc_ops`] - Operating System Command operations
 //! - [`vt_100_impl_scroll_ops`] - Scrolling operations
 //! - [`vt_100_impl_sgr_ops`] - Select Graphic Rendition operations (styling)
 //! - [`vt_100_impl_terminal_ops`] - Terminal state operations (reset, clear, charset)
-//! - [`vt_100_impl_ansi_scroll_helper`] - ANSI scroll region helper utilities
+//! - [`vt_100_impl_ansi_scroll_helper`] - [`ANSI`] scroll region helper utilities
 //!
 //! # Testing Approach
 //!
@@ -64,10 +64,10 @@
 //!     └── ... (dozens of focused unit tests)
 //! ```
 //!
-//! These unit tests directly call implementation methods without going through the ANSI
-//! parsing pipeline, allowing for:
+//! These unit tests directly call implementation methods without going through the
+//! [`ANSI`] parsing pipeline, allowing for:
 //! - **Isolated Logic Testing**: Test edge cases and boundary conditions
-//! - **Fast Execution**: No ANSI parsing overhead
+//! - **Fast Execution**: No [`ANSI`] parsing overhead
 //! - **Precise Error Diagnosis**: Pinpoint exact implementation bugs
 //!
 //! ## Integration Testing Relationship
@@ -87,14 +87,14 @@
 //!
 //! When working on any implementation file, you can navigate to its related layers:
 //! - **Shim Layer** - The delegation layer that calls these implementations
-//! - **Integration Tests** - Tests the complete ANSI pipeline
+//! - **Integration Tests** - Tests the complete [`ANSI`] pipeline
 //! - **Testing Philosophy**: See the three-layer architecture documentation above for
 //!   strategy
 //!
 //! For example, when working on character operations:
 //! 1. **Implementation** - Unit tests for buffer logic
 //! 2. **Shim** - Parameter translation (no direct tests)
-//! 3. **Integration** - Full ANSI sequence testing
+//! 3. **Integration** - Full [`ANSI`] sequence testing
 //!
 //! ## Complete Navigation Map
 //!
@@ -107,6 +107,8 @@
 //!
 //! These implementations follow VT100 terminal specifications.
 //!
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`DECSTBM`]: https://vt100.net/docs/vt510-rm/DECSTBM.html
 //! [`vt_100_impl_ansi_scroll_helper`]: vt_100_impl_ansi_scroll_helper
 //! [`vt_100_impl_char_ops`]: vt_100_impl_char_ops
 //! [`vt_100_impl_control_ops`]: vt_100_impl_control_ops

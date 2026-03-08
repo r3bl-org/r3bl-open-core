@@ -1,45 +1,49 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! SGR (Select Graphic Rendition) operations for VT100/ANSI terminal emulation.
+//! [`SGR`] (Select Graphic Rendition) operations for VT100/[`ANSI`] terminal emulation.
 //!
-//! This module implements SGR operations that correspond to ANSI SGR
+//! This module implements [`SGR`] operations that correspond to [`ANSI`] [`SGR`]
 //! sequences handled by the `vt_100_pty_output_parser::operations::sgr_ops` module. These
 //! include:
 //!
-//! - **SGR 0** (Reset) - [`reset_all_style_attributes()`]
-//! - **SGR 1** (Bold) - [`apply_style_attribute()`]
-//! - **SGR 2** (Dim) - [`apply_style_attribute()`]
-//! - **SGR 3** (Italic) - [`apply_style_attribute()`]
-//! - **SGR 4** (Underline) - [`apply_style_attribute()`]
-//! - **SGR 5/6** (Blink) - [`apply_style_attribute()`]
-//! - **SGR 7** (Reverse) - [`apply_style_attribute()`]
-//! - **SGR 8** (Hidden) - [`apply_style_attribute()`]
-//! - **SGR 9** (Strikethrough) - [`apply_style_attribute()`]
-//! - **SGR 30-37** (Foreground colors) - [`set_foreground_color()`]
-//! - **SGR 40-47** (Background colors) - [`set_background_color()`]
-//! - **SGR 90-97** (Bright foreground) - [`set_foreground_color()`]
-//! - **SGR 100-107** (Bright background) - [`set_background_color()`]
+//! - **[`SGR`] 0** (Reset) - [`reset_all_style_attributes()`]
+//! - **[`SGR`] 1** (Bold) - [`apply_style_attribute()`]
+//! - **[`SGR`] 2** (Dim) - [`apply_style_attribute()`]
+//! - **[`SGR`] 3** (Italic) - [`apply_style_attribute()`]
+//! - **[`SGR`] 4** (Underline) - [`apply_style_attribute()`]
+//! - **[`SGR`] 5/6** (Blink) - [`apply_style_attribute()`]
+//! - **[`SGR`] 7** (Reverse) - [`apply_style_attribute()`]
+//! - **[`SGR`] 8** (Hidden) - [`apply_style_attribute()`]
+//! - **[`SGR`] 9** (Strikethrough) - [`apply_style_attribute()`]
+//! - **[`SGR`] 30-37** (Foreground colors) - [`set_foreground_color()`]
+//! - **[`SGR`] 40-47** (Background colors) - [`set_background_color()`]
+//! - **[`SGR`] 90-97** (Bright foreground) - [`set_foreground_color()`]
+//! - **[`SGR`] 100-107** (Bright background) - [`set_background_color()`]
 //!
 //! All operations maintain VT100 compliance and handle proper style state
 //! management for terminal text rendering.
 //!
-//! This module implements the business logic for SGR operations delegated from
+//! This module implements the business logic for [`SGR`] operations delegated from
 //! the parser shim. The `impl_` prefix follows our naming convention for searchable
 //! code organization. See the architecture documentation above
 //! for the complete three-layer architecture.
 //!
 //! **Related Files:**
 //!
-//! [`reset_all_style_attributes()`]: crate::OffscreenBuffer::reset_all_style_attributes
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`apply_style_attribute()`]: crate::OffscreenBuffer::apply_style_attribute
-//! [`set_foreground_color()`]: crate::OffscreenBuffer::set_foreground_color
+//! [`reset_all_style_attributes()`]: crate::OffscreenBuffer::reset_all_style_attributes
 //! [`set_background_color()`]: crate::OffscreenBuffer::set_background_color
+//! [`set_foreground_color()`]: crate::OffscreenBuffer::set_foreground_color
+//! [`SGR`]: crate::SgrCode
 
 use crate::{AnsiValue, ColorTarget, OffscreenBuffer, RgbValue, SgrColorSequence,
             TuiColor, TuiStyle, TuiStyleAttribs};
 
 impl OffscreenBuffer {
-    /// Reset all SGR attributes to default state.
+    /// Reset all [`SGR`] attributes to default state.
+    ///
+    /// [`SGR`]: crate::SgrCode
     pub fn reset_all_style_attributes(&mut self) {
         self.ansi_parser_support.current_style = TuiStyle::default();
     }
@@ -82,13 +86,17 @@ impl OffscreenBuffer {
         }
     }
 
-    /// Set foreground color using ANSI color code.
+    /// Set foreground color using [`ANSI`] color code.
+    ///
+    /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
     pub fn set_foreground_color(&mut self, ansi_color: u16) {
         self.ansi_parser_support.current_style.color_fg =
             Some(TuiColor::from(AnsiValue::from(ansi_color)));
     }
 
-    /// Set background color using ANSI color code.
+    /// Set background color using [`ANSI`] color code.
+    ///
+    /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
     pub fn set_background_color(&mut self, ansi_color: u16) {
         self.ansi_parser_support.current_style.color_bg =
             Some(TuiColor::from(AnsiValue::from(ansi_color)));

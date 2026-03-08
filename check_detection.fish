@@ -70,7 +70,8 @@ end
 
 # Detects ETXTBSY ("Text file busy") errors in captured cargo output.
 # This occurs when orphaned test processes hold a test binary open while
-# the linker tries to overwrite it. Recoverable by killing orphans and retrying.
+# the linker tries to overwrite it. Recoverable by killing orphans, purging
+# zombies, and retrying.
 #
 # Parameters:
 #   $argv[1]: Path to temp file containing captured cargo output

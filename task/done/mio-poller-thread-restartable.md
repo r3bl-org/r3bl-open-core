@@ -415,7 +415,7 @@ than spawning a new one.
 
 ### Test Implementation
 
-Both tests use the PTY (pseudo-terminal) pattern:
+Both tests use the PTY (pseudoterminal) pattern:
 
 1. **Controller**: Spawns a "controlled" process with `R3BL_PTY_TEST_CONTROLLED=1`
 2. **Controlled**: Runs inside PTY, uses real terminal I/O

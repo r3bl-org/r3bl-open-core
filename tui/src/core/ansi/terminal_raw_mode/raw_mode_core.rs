@@ -33,7 +33,7 @@
 //! - [`VMIN_RAW_MODE`][vmin] / [`VTIME_RAW_MODE`][vtime] - POSIX termios constants
 //! - [`RawMode`] - High-level render pipeline integration
 //!
-//! [`RawMode`]: crate::tui::terminal_lib_backends::raw_mode::RawMode
+//! [`RawMode`]: crate::raw_mode::RawMode
 //! [vmin]: crate::VMIN_RAW_MODE
 //! [vtime]: crate::VTIME_RAW_MODE
 
@@ -66,7 +66,7 @@ use miette::IntoDiagnostic;
 /// [`Crossterm`]: crate::TerminalLibBackend::Crossterm
 /// [`DirectToAnsi`]: crate::TerminalLibBackend::DirectToAnsi
 /// [`TERMINAL_LIB_BACKEND`]: crate::TERMINAL_LIB_BACKEND
-/// [module documentation]: mod@crate::core::ansi::terminal_raw_mode
+/// [module documentation]: mod@crate::terminal_raw_mode
 pub fn enable_raw_mode() -> miette::Result<()> {
     DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
         tracing::debug!(
@@ -130,7 +130,7 @@ pub fn enable_raw_mode() -> miette::Result<()> {
 /// [`Crossterm`]: crate::TerminalLibBackend::Crossterm
 /// [`DirectToAnsi`]: crate::TerminalLibBackend::DirectToAnsi
 /// [`TERMINAL_LIB_BACKEND`]: crate::TERMINAL_LIB_BACKEND
-/// [module documentation]: mod@crate::core::ansi::terminal_raw_mode
+/// [module documentation]: mod@crate::terminal_raw_mode
 pub fn disable_raw_mode() -> miette::Result<()> {
     DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
         tracing::debug!(
@@ -179,7 +179,7 @@ pub fn disable_raw_mode() -> miette::Result<()> {
 /// See [module documentation] for usage examples and complete
 /// documentation.
 ///
-/// [module documentation]: mod@crate::core::ansi::terminal_raw_mode
+/// [module documentation]: mod@crate::terminal_raw_mode
 #[derive(Debug)]
 pub struct RawModeGuard;
 

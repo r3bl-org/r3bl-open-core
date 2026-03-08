@@ -36,19 +36,19 @@ use std::io::Stdin;
 /// 4. Add a handler function in [`handler_stdin`] or [`handler_signals`].
 /// 5. Add a match arm in [`dispatch_with_sender()`].
 ///
-/// [`HashMap<Token, Source>`]: std::collections::HashMap
-/// [`MioPollWorker::create_and_register_os_sources()`]: crate::core::resilient_reactor_thread::RRTWorker::create_and_register_os_sources
-/// [`Poll::poll()`]: mio::Poll::poll
-/// [`Poll`]: mio::Poll
-/// [`Signals`]: signal_hook_mio::v1_0::Signals
-/// [`Stdin`]: std::io::Stdin
-/// [`Token`]: mio::Token
 /// [`dispatch_with_sender()`]: super::dispatcher::dispatch_with_sender
 /// [`handler_signals`]: mod@super::handler_signals
 /// [`handler_stdin`]: mod@super::handler_stdin
+/// [`HashMap<Token, Source>`]: std::collections::HashMap
+/// [`MioPollWorker::create_and_register_os_sources()`]: crate::RRTWorker::create_and_register_os_sources
 /// [`pending()`]: signal_hook_mio::v1_0::Signals::pending
+/// [`Poll::poll()`]: mio::Poll::poll
+/// [`Poll`]: mio::Poll
 /// [`read()`]: std::io::Read::read
+/// [`Signals`]: signal_hook_mio::v1_0::Signals
+/// [`Stdin`]: std::io::Stdin
 /// [`stdin`]: std::io::stdin
+/// [`Token`]: mio::Token
 /// [signals]: signal_hook_mio::v1_0::Signals
 #[allow(missing_debug_implementations)]
 pub struct SourceRegistry {
@@ -59,9 +59,9 @@ pub struct SourceRegistry {
     /// - **Token**: [`SourceKindReady::Stdin`].[`to_token()`].
     /// - **Handler**: [`consume_stdin_input_with_sender()`].
     ///
-    /// [What is a "Source"?]: SourceRegistry#what-is-a-source
     /// [`consume_stdin_input_with_sender()`]: super::handler_stdin::consume_stdin_input_with_sender
     /// [`to_token()`]: SourceKindReady::to_token
+    /// [What is a "Source"?]: SourceRegistry#what-is-a-source
     pub stdin: Stdin,
 
     /// [`SIGWINCH`] signal handler registered with [`mio::Poll`].
@@ -73,11 +73,11 @@ pub struct SourceRegistry {
     /// - **Token**: [`SourceKindReady::Signals`].[`to_token()`].
     /// - **Handler**: [`consume_pending_signals_with_sender()`].
     ///
-    /// [What is a "Source"?]: SourceRegistry#what-is-a-source
-    /// [`SIGWINCH`]: signal_hook::consts::SIGWINCH
     /// [`consume_pending_signals_with_sender()`]: super::handler_signals::consume_pending_signals_with_sender
     /// [`signal_hook_mio`]: signal_hook_mio
+    /// [`SIGWINCH`]: signal_hook::consts::SIGWINCH
     /// [`to_token()`]: SourceKindReady::to_token
+    /// [What is a "Source"?]: SourceRegistry#what-is-a-source
     pub signals: Signals,
 }
 
@@ -93,10 +93,10 @@ pub struct SourceRegistry {
 /// registered source became ready. Use [`from_token()`] to convert a token to this
 /// enum, then match on the variant to dispatch to the appropriate handler.
 ///
+/// [`from_token()`]: SourceKindReady::from_token
 /// [`Poll::poll()`]: mio::Poll::poll
 /// [`Token`]: mio::Token
 /// [`Unknown`]: SourceKindReady::Unknown
-/// [`from_token()`]: SourceKindReady::from_token
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SourceKindReady {
     /// [`SourceRegistry::stdin`] has data available to read.
@@ -111,10 +111,10 @@ pub enum SourceKindReady {
     /// poll. Then [`handle_receiver_drop_waker_with_sender()`] checks if
     /// [`receiver_count()`] is `0` and exits the thread if so.
     ///
-    /// [`SubscriberGuard`]: crate::core::resilient_reactor_thread::SubscriberGuard
-    /// [`Waker::wake()`]: mio::Waker::wake
     /// [`handle_receiver_drop_waker_with_sender()`]: super::handler_receiver_drop::handle_receiver_drop_waker_with_sender
     /// [`receiver_count()`]: tokio::sync::broadcast::Sender::receiver_count
+    /// [`SubscriberGuard`]: crate::SubscriberGuard
+    /// [`Waker::wake()`]: mio::Waker::wake
     ReceiverDropWaker,
     /// Unknown token - should not happen in normal operation.
     Unknown,
@@ -130,9 +130,9 @@ impl SourceKindReady {
     ///
     /// Panics if called on [`SourceKindReady::Unknown`].
     ///
-    /// [`Token`]: mio::Token
     /// [`from_token()`]: SourceKindReady::from_token
     /// [`mio::Registry`]: mio::Registry
+    /// [`Token`]: mio::Token
     #[must_use]
     pub const fn to_token(self) -> Token {
         match self {
@@ -149,8 +149,8 @@ impl SourceKindReady {
     /// from [`Poll::poll()`].
     ///
     /// [`Poll::poll()`]: mio::Poll::poll
-    /// [`Token`]: mio::Token
     /// [`to_token()`]: SourceKindReady::to_token
+    /// [`Token`]: mio::Token
     #[must_use]
     pub const fn from_token(token: Token) -> Self {
         match token.0 {

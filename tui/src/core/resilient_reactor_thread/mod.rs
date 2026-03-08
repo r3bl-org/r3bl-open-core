@@ -770,16 +770,16 @@
 //! [`kill -9`]: https://man7.org/linux/man-pages/man1/kill.1.html
 //! [`kqueue`]: https://man.freebsd.org/cgi/man.cgi?query=kqueue
 //! [`LazyLock`]: std::sync::LazyLock
-//! [`LivenessState`]: crate::core::resilient_reactor_thread::LivenessState
+//! [`LivenessState`]: crate::LivenessState
 //! [`LivenessState`]: LivenessState
 //! [`mio::Poll::poll()`]: mio::Poll::poll
 //! [`mio::Poll`]: mio::Poll
-//! [`mio_poller`]: crate::tui::terminal_lib_backends::direct_to_ansi::input::mio_poller
+//! [`mio_poller`]: crate::direct_to_ansi::input::mio_poller
 //! [`mio`]: mio
 //! [`pipe(2)`]: https://man7.org/linux/man-pages/man2/pipe.2.html
 //! [`poll()`]: mio::Poll::poll
 //! [`pollable`]: https://man7.org/linux/man-pages/man2/poll.2.html
-//! [`PTY` pair]: crate::core::pty::pty_core::pty_pair::PtyPair
+//! [`PTY` pair]: crate::pty_engine::pty_pair::PtyPair
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`RAII`]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
 //! [`read(2)`]: https://man7.org/linux/man-pages/man2/read.2.html
@@ -847,7 +847,7 @@
 //! [Console API]: https://learn.microsoft.com/en-us/windows/console/console-functions
 //! [const expression]: RRT#const-expression-vs-const-declaration-vs-static-declaration
 //! [const expressions]: RRT#const-expression-vs-const-declaration-vs-static-declaration
-//! [cooked mode]: mod@crate::core::ansi::terminal_raw_mode#raw-mode-vs-cooked-mode
+//! [cooked mode]: mod@crate::terminal_raw_mode#raw-mode-vs-cooked-mode
 //! [Darwin]: https://en.wikipedia.org/wiki/Darwin_(operating_system)
 //! [default policy]: RestartPolicy#impl-Default-for-RestartPolicy
 //! [Dependency Injection]: https://en.wikipedia.org/wiki/Dependency_injection
@@ -868,7 +868,7 @@
 //! [Multi-threaded runtime]: tokio::runtime::Builder::new_multi_thread
 //! [poll loop]: run_worker_loop
 //! [Proactor]: https://en.wikipedia.org/wiki/Proactor_pattern
-//! [raw mode]: mod@crate::core::ansi::terminal_raw_mode#raw-mode-vs-cooked-mode
+//! [raw mode]: mod@crate::terminal_raw_mode#raw-mode-vs-cooked-mode
 //! [Reactor]: https://en.wikipedia.org/wiki/Reactor_pattern
 //! [readiness]: https://man7.org/linux/man-pages/man7/epoll.7.html#DESCRIPTION
 //! [Registered buffers]:

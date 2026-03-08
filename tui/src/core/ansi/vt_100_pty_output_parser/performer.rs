@@ -5,8 +5,8 @@
 //! Internal implementation for [`ANSI`]/[`VT-100`] sequence processing.
 //!
 //! This parser is based on the [`vte`] crate's [`Perform`] trait, and is [`VT-100` spec]
-//! compliant. It provides support to parse [`ANSI`] escape sequences and
-//! update an [`OffscreenBuffer`] accordingly.
+//! compliant. It provides support to parse [`ANSI`] escape sequences and update an
+//! [`OffscreenBuffer`] accordingly.
 //!
 //! # [`PTY`] Output Processing Pipeline
 //!
@@ -99,9 +99,9 @@
 //! - **[`st (suckless terminal)`]**: Trashes entire control sequence
 //! - **[`GNOME VTE`]**: Trashes entire control sequence
 //!
-//! This approach is mandated by the [`VT-100` spec] and [ECMA-48 standard],
-//! which require terminals to ignore malformed sequences rather than execute potentially
-//! incorrect commands.
+//! This approach is mandated by the [`VT-100` spec] and [ECMA-48 standard], which require
+//! terminals to ignore malformed sequences rather than execute potentially incorrect
+//! commands.
 //!
 //! ## Implementation in This Module
 //!
@@ -131,8 +131,8 @@
 //!   buffer management
 //!
 //! This thin shim pattern provides clean separation of concerns: the performer handles
-//! [`ANSI`]/VT protocol specifics while [`OffscreenBuffer`] handles terminal buffer
-//! semantics.
+//! [`ANSI`]/[`VT-100`] protocol specifics while [`OffscreenBuffer`] handles terminal
+//! buffer semantics.
 //!
 //! # Implementation Architecture - 1:1 File Mapping
 //!
@@ -381,8 +381,8 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
     ///
     /// ## Parameter Handling
     ///
-    /// All cursor movement and scroll operations follow [`VT-100` spec] for
-    /// parameter handling:
+    /// All cursor movement and scroll operations follow [`VT-100` spec] for parameter
+    /// handling:
     /// - **Missing parameters** (None) default to 1
     /// - **Zero parameters** (Some(0)) are treated as 1
     /// - This ensures compatibility with real [`VT-100`] terminals and modern terminal
@@ -410,9 +410,9 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
     /// ## Malformed Sequence Handling
     ///
     /// The `ignore` parameter signals when the [`vte`] [`Parser`] exceeded its limits
-    /// during parsing (too many parameters or intermediates). When `ignore = true`,
-    /// this method **discards the entire sequence** to prevent executing commands
-    /// with incorrect parameters.
+    /// during parsing (too many parameters or intermediates). When `ignore = true`, this
+    /// method **discards the entire sequence** to prevent executing commands with
+    /// incorrect parameters.
     ///
     /// See the [module-level documentation] for detailed explanation of why discarding
     /// malformed sequences is the correct approach, with references to industry best
@@ -696,12 +696,7 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
     ///
     /// ## Example: Window Title
     /// ```text
-    /// OSC 0 ; "vim - file.rs" ST
-    ///   ↓
-    /// params[0] = "0" (code)
-    /// params[1] = "vim - file.rs" (title)
-    ///   ↓
-    /// Pushes SetTitleAndTab event
+    /// ESC ] 0 ; "vim - file.rs" ESC \ (ST)
     /// ```
     ///
     /// [`OSC`]: crate::osc_codes::OscSequence
@@ -818,9 +813,9 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
     /// ## Malformed Sequence Handling
     ///
     /// The `ignore` parameter signals when the [`vte`] [`Parser`] exceeded its limits
-    /// during parsing (too many intermediate bytes). When `ignore = true`, this
-    /// method **discards the entire sequence** to prevent executing commands with
-    /// incorrect parameters.
+    /// during parsing (too many intermediate bytes). When `ignore = true`, this method
+    /// **discards the entire sequence** to prevent executing commands with incorrect
+    /// parameters.
     ///
     /// See the [module-level documentation] for detailed explanation of why discarding
     /// malformed sequences is the correct approach, with references to industry best
@@ -912,9 +907,9 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
     /// ## Malformed Sequence Handling
     ///
     /// The `ignore` parameter is not checked in this method because [`DCS`] sequences are
-    /// not implemented at all in this multiplexer. Both well-formed and malformed
-    /// [`DCS`] sequences result in the same action: do nothing. The `ignore` flag is
-    /// only meaningful when deciding whether to process a sequence.
+    /// not implemented at all in this multiplexer. Both well-formed and malformed [`DCS`]
+    /// sequences result in the same action: do nothing. The `ignore` flag is only
+    /// meaningful when deciding whether to process a sequence.
     ///
     /// See the [module-level documentation] for information about how `ignore` is used in
     /// [`csi_dispatch()`] and [`esc_dispatch()`], where it affects the decision to

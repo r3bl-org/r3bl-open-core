@@ -48,7 +48,7 @@ use std::num::NonZeroU16;
 /// - Any protocol layer that needs a combined coordinate pair
 ///
 /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-/// [`observe_real_interactive_terminal_input_events`]: mod@crate::core::ansi::vt_100_terminal_input_parser::validation_tests::observe_real_interactive_terminal_input_events
+/// [`observe_real_interactive_terminal_input_events`]: mod@crate::vt_100_terminal_input_parser::validation_tests::observe_real_interactive_terminal_input_events
 /// [`TermPos::from_one_based()`]: Self::from_one_based
 /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

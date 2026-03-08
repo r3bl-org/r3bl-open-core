@@ -1,6 +1,8 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Tests for Device Status Report (DSR) response generation.
+//! Tests for Device Status Report ([`DSR`]) response generation.
+//!
+//! [`DSR`]: crate::DsrSequence
 
 use super::super::test_fixtures_vt_100_ansi_conformance::{create_test_offscreen_buffer_10r_by_10c, nz};
 use crate::{

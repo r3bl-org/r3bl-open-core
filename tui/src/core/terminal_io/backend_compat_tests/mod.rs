@@ -47,7 +47,7 @@
 //! [`InputDevice`]: crate::InputDevice
 //! [`InputEvent`]: crate::InputEvent
 //! [`OffscreenBuffer`]: crate::OffscreenBuffer
-//! [`PaintRenderOpImplCrossterm`]: crate::tui::terminal_lib_backends::crossterm_backend::PaintRenderOpImplCrossterm
+//! [`PaintRenderOpImplCrossterm`]: crate::crossterm_backend::PaintRenderOpImplCrossterm
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`RenderOpOutput`]: crate::RenderOpOutput
 //! [`RenderOpPaintImplDirectToAnsi`]: crate::direct_to_ansi::RenderOpPaintImplDirectToAnsi

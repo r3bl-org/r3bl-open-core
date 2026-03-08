@@ -1,18 +1,20 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Helper functions for creating OSC 8 hyperlink sequences.
+//! Helper functions for creating [`OSC`] 8 hyperlink sequences.
+//!
+//! [`OSC`]: crate::osc_codes::OscSequence
 
 use super::osc_codes::OscSequence;
 use std::path::Path;
 
-/// Creates an OSC 8 hyperlink sequence.
+/// Creates an [`OSC`] 8 hyperlink sequence.
 ///
 /// # Arguments
-/// * `uri` - The URI/URL to link to (e.g., `<https://example.com>`, `<file:///path/to/file>`)
+/// * `uri` - The URI/URL to link to (e.g., `https://example.com`, `file:///path/to/file`)
 /// * `text` - The display text for the hyperlink
 ///
 /// # Returns
-/// A string containing the complete OSC 8 hyperlink sequence
+/// A string containing the complete [`OSC`] 8 hyperlink sequence
 ///
 /// # Example
 /// ```
@@ -20,6 +22,8 @@ use std::path::Path;
 /// let link = format_hyperlink("https://example.com", "Example");
 /// assert_eq!(link, "\u{1b}]8;;https://example.com\u{7}Example\u{1b}]8;;\u{7}");
 /// ```
+///
+/// [`OSC`]: crate::osc_codes::OscSequence
 #[must_use]
 pub fn format_hyperlink(uri: &str, text: &str) -> String {
     let start = OscSequence::HyperlinkStart {
@@ -30,17 +34,17 @@ pub fn format_hyperlink(uri: &str, text: &str) -> String {
     format!("{start}{text}{end}")
 }
 
-/// Creates an OSC 8 hyperlink for a file path.
+/// Creates an [`OSC`] 8 hyperlink for a file path.
 ///
-/// This function converts a file path to a proper file:// URI and creates
+/// This function converts a file path to a proper `file://` URI and creates
 /// a clickable hyperlink that will open the file in the default application
-/// when clicked in a terminal that supports OSC 8.
+/// when clicked in a terminal that supports [`OSC`] 8.
 ///
 /// # Arguments
 /// * `path` - The file path to create a hyperlink for
 ///
 /// # Returns
-/// A string containing the OSC 8 hyperlink sequence for the file
+/// A string containing the [`OSC`] 8 hyperlink sequence for the file
 ///
 /// # Example
 /// ```
@@ -50,6 +54,8 @@ pub fn format_hyperlink(uri: &str, text: &str) -> String {
 /// let link = format_file_hyperlink(path);
 /// // Result will be a clickable link showing the path
 /// ```
+///
+/// [`OSC`]: crate::osc_codes::OscSequence
 #[must_use]
 pub fn format_file_hyperlink(path: &Path) -> String {
     let display_text = path.display().to_string();

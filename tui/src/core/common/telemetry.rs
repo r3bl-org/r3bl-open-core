@@ -8,7 +8,8 @@ use std::{collections::HashMap,
 use strum_macros::{Display, EnumString};
 
 pub mod telemetry_sizing {
-    use super::SmallString;
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     pub type TelemetryReportLineStorage = SmallString<[u8; TELEMETRY_REPORT_STRING_SIZE]>;
 
@@ -18,7 +19,8 @@ pub mod telemetry_sizing {
 /// These are the default constants for the telemetry module. They are reasonable
 /// defaults, but you can override them to suit your needs.
 pub mod telemetry_default_constants {
-    use super::Duration;
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     /// The size of the ring buffer to store the response times.
     pub const RING_BUFFER_SIZE: usize = 100;
@@ -55,8 +57,8 @@ pub mod telemetry_default_constants {
 
 /// You can use this struct to track the response times of an operation. It stores the
 /// response times in a ring buffer and provides methods to calculate the average, min,
-/// max, median, and session duration. It also provides a method to generate
-/// a report of the response times.
+/// max, median, and session duration. It also provides a method to generate a report of
+/// the response times.
 ///
 /// 1. The report is rate limited to run once every `n sec`, where `n` is the time
 ///    duration defined in [`Self::rate_limiter_generate_report`].
@@ -66,7 +68,7 @@ pub mod telemetry_default_constants {
 /// # Examples
 ///
 /// You have a lot of flexibility in constructing this, using
-/// [`mod@telemetry_constructor`] and the [`Telemetry::new`] constructor function.
+/// [`ResponseTimesRingBufferOptions`] and the [`Telemetry::new`] constructor function.
 ///
 /// ```
 /// use std::time::Duration;
@@ -144,16 +146,47 @@ macro_rules! telemetry_record {
     }};
 }
 
-pub mod telemetry_constructor {
-    use super::{Duration, Instant, RateLimiter, RingBufferStack, Telemetry,
-                TelemetryHudReport, TimeDuration, telemetry_default_constants};
+// XMARK: Clever Rust, use of `impl Into<ResponseTimesRingBufferOptions>` for elegant
+// constructor config options.
 
-    #[derive(Debug)]
-    pub struct ResponseTimesRingBufferOptions {
-        pub rate_limit_min_time_threshold: Duration,
-        pub min_duration_filter: Option<Duration>,
-        pub cluster_sensitivity_range: Duration,
-    }
+#[derive(Debug)]
+pub struct ResponseTimesRingBufferOptions {
+    pub rate_limit_min_time_threshold: Duration,
+    pub min_duration_filter: Option<Duration>,
+    pub cluster_sensitivity_range: Duration,
+}
+
+/// This module implements the "heavy lifting" for the Elegant Constructor DSL Pattern.
+///
+/// This enables an elegant and ergonomic way to configure a [`Telemetry`] instance. By
+/// leveraging [`impl Into<ResponseTimesRingBufferOptions>`], the [`Telemetry::new`]
+/// constructor can accept multiple types of inputs.
+///
+/// It implements [`From`] for various types (including tuples) to enable this flexibility
+/// while keeping the constructor signature simple.
+///
+/// # Examples
+/// ```no_run
+/// use std::time::Duration;
+/// use r3bl_tui::Telemetry;
+///
+/// // 1. No options.
+/// let _ = Telemetry::<5>::new(());
+///
+/// // 2. Rate limit only.
+/// let _ = Telemetry::<5>::new(Duration::from_secs(1));
+///
+/// // 3. Rate limit and filter.
+/// let _ = Telemetry::<5>::new((
+///     Duration::from_secs(1),
+///     Duration::from_micros(100)
+/// ));
+/// ```
+///
+/// [`impl Into<ResponseTimesRingBufferOptions>`]: ResponseTimesRingBufferOptions
+mod impl_elegant_constructor_dsl_pattern {
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     impl From<()> for ResponseTimesRingBufferOptions {
         fn from((): ()) -> Self {
@@ -235,7 +268,8 @@ pub mod telemetry_constructor {
 }
 
 mod mutator {
-    use super::{Instant, RingBuffer, Telemetry, TelemetryAtom, TelemetryAtomHint};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     #[derive(Debug, PartialEq)]
     pub struct RecordStartDropHandle<'a, const N: usize> {
@@ -301,8 +335,8 @@ mod mutator {
 }
 
 mod calculator {
-    use super::{Duration, HashMap, Pc, RingBuffer, Telemetry, TelemetryAtom,
-                TelemetryAtomHint, TimeDuration};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     impl<const N: usize> Telemetry<N> {
         #[must_use]
@@ -341,17 +375,16 @@ mod calculator {
         }
 
         /// Finds the most common cluster of durations within a specified range in an
-        /// array of [`Duration`]. The cluster sensitivity range is configured
-        /// during construction in
-        /// [`super::telemetry_constructor::ResponseTimesRingBufferOptions`] and
-        /// automatically calculated based on the `min_duration_filter`:
+        /// array of [`Duration`]. The cluster sensitivity range is configured during
+        /// construction in [`crate::ResponseTimesRingBufferOptions`] and automatically
+        /// calculated based on the `min_duration_filter`:
         /// - If a custom `min_duration_filter` is set, uses `min_duration_filter * 5`
         /// - Otherwise, uses the default (5x the filter minimum response time)
         ///
         /// This function creates a **frequency histogram** of duration measurements using
         /// a bucketing strategy to group similar durations together. This approach is
-        /// more useful for performance analysis than exact timing matches, since
-        /// exact matches are rare in real-world telemetry data.
+        /// more useful for performance analysis than exact timing matches, since exact
+        /// matches are rare in real-world telemetry data.
         ///
         /// ## Algorithm
         ///
@@ -379,9 +412,9 @@ mod calculator {
         ///
         /// ## Returns
         ///
-        /// Returns the representative duration for the most common bucket, the
-        /// percentage of occurrences of that bucket, and the most frequent hint
-        /// associated with that bucket.
+        /// Returns the representative duration for the most common bucket, the percentage
+        /// of occurrences of that bucket, and the most frequent hint associated with that
+        /// bucket.
         #[must_use]
         #[allow(clippy::manual_checked_ops)]
         pub fn median(&self) -> Option<(Duration, Pc, TelemetryAtomHint)> {
@@ -476,8 +509,8 @@ mod calculator {
 }
 
 mod report_generator {
-    use super::{Instant, RateLimitStatus, RingBuffer, Telemetry, TelemetryHudReport,
-                TimeDuration};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     impl<const N: usize> Telemetry<N> {
         /// Generate a report of the response times.
@@ -1234,9 +1267,10 @@ mod tests_median {
         );
     }
 }
+
 #[test]
 fn test_cluster_sensitivity_range_calculation() {
-    use telemetry_constructor::ResponseTimesRingBufferOptions;
+    use super::ResponseTimesRingBufferOptions;
 
     // Test default case - should be 5x the default FILTER_MIN_RESPONSE_TIME (20μs * 5 =
     // 100μs) This demonstrates that our fix correctly calculates based on the actual

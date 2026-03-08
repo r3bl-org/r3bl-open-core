@@ -21,8 +21,8 @@ use std::sync::atomic::{AtomicBool, Ordering};
 ///
 /// `AtomicBool::swap()` is **panic-safe**—there's no lock to poison.
 ///
-/// [`DirectToAnsiInputDevice`]: super::DirectToAnsiInputDevice
 /// [`catch_unwind`]: std::panic::catch_unwind
+/// [`DirectToAnsiInputDevice`]: super::DirectToAnsiInputDevice
 /// [`Mutex<bool>`]: std::sync::Mutex
 /// [`Mutex`]: std::sync::Mutex
 static DEVICE_EXISTS: AtomicBool = AtomicBool::new(false);

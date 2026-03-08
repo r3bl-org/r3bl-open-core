@@ -8,9 +8,9 @@
 /// - [`MioPollWorker`] thread (input handling).
 /// - [PTY input processing] loop.
 ///
-/// [Main event loop]: crate::main_event_loop_impl
-/// [PTY input processing]: crate::core::pty::pty_read_write
 /// [`MioPollWorker`]: crate::terminal_lib_backends::MioPollWorker
+/// [Main event loop]: crate::main_event_loop_impl
+/// [PTY input processing]: crate::pty_session::pty_session_builder
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum Continuation {
     /// Continue to the next iteration.
@@ -30,9 +30,9 @@ pub enum Continuation {
     /// should use [`Continue`] or [`Stop`].
     ///
     /// [`Continue`]: Self::Continue
-    /// [`RRT`]: crate::core::resilient_reactor_thread::RRT
+    /// [`RRT`]: crate::RRT
+    /// [`run_worker_loop()`]: crate::run_worker_loop
     /// [`Stop`]: Self::Stop
-    /// [`run_worker_loop()`]: crate::core::resilient_reactor_thread::run_worker_loop
     Restart,
 }
 

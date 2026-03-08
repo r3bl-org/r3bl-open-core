@@ -5,7 +5,6 @@
 //! This test captures raw bytes from real terminal interactions to establish ground truth
 //! about [`ANSI`] coordinate systems and actual sequences sent by terminal emulators.
 //!
-//!
 //! # Run Instructions
 //!
 //! ```bash
@@ -387,13 +386,13 @@ struct SgrMouseEvent {
 ///
 /// [`SGR`]: crate::SgrCode
 fn extract_sgr_mouse_event(raw: &[u8]) -> Option<SgrMouseEvent> {
-    // Expected format: ESC[<Cb;Cx;CyM or ESC[<Cb;Cx;Cym
+    // Expected format: `ESC [ < Cb ; Cx ; Cy M` or `ESC [ < Cb ; Cx ; Cy m`
     if !raw.starts_with(b"\x1b[<") {
         return None;
     }
 
-    // Remove prefix (ESC[< = 3 bytes) and suffix (M/m = 1 byte)
-    // Format: ESC [ < button ; col ; row M/m
+    // Remove prefix (ESC [ < = 3 bytes) and suffix (M / m = 1 byte)
+    // Format: ESC [ < button ; col ; row M / m
     //         1   2 3 ^content^               ^last
     let content = std::str::from_utf8(&raw[3..raw.len().saturating_sub(1)]).ok()?;
     let action_char = *raw.last()? as char;

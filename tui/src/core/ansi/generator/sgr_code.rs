@@ -58,18 +58,24 @@
 //!
 //! Note: Our [`VT-100`] *parser* accepts both formats for maximum compatibility when
 //! parsing output from other applications. See
-//! [`crate::core::ansi::vt_100_pty_output_parser`].
+//! [`crate::vt_100_pty_output_parser`].
 //!
 //! More info:
 //! - <https://doc.rust-lang.org/reference/tokens.html#ascii-escapes>
 //! - <https://notes.burke.libbey.me/ansi-escape-codes/>
 //!
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`Crossterm backend`]: crate::core::ansi::crossterm_backend
+//! [`Crossterm backend`]: crate::crossterm_backend
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 //! [`xterm`]: https://en.wikipedia.org/wiki/Xterm
-
-use crate::{ANSIBasicColor, AnsiValue, FastStringify};
+use crate::{
+    ANSIBasicColor, AnsiValue, CSI_START, FastStringify, SGR_BOLD_STR, SGR_DIM_STR,
+    SGR_HIDDEN_STR, SGR_INVERT_STR, SGR_ITALIC_STR, SGR_OVERLINE_STR, SGR_RAPID_BLINK_STR,
+    SGR_RESET_BLINK_STR, SGR_RESET_BOLD_DIM_STR, SGR_RESET_HIDDEN_STR, SGR_RESET_INVERT_STR,
+    SGR_RESET_ITALIC_STR, SGR_RESET_STRIKETHROUGH_STR, SGR_RESET_STR,
+    SGR_RESET_UNDERLINE_STR, SGR_SET_GRAPHICS, SGR_SLOW_BLINK_STR, SGR_STRIKETHROUGH_STR,
+    SGR_UNDERLINE_STR,
+};
 use std::fmt::Result;
 
 /// Select Graphic Rendition ([`SGR`], [`SGR` spec]) codes for [`ANSI`] text styling.
@@ -107,9 +113,6 @@ pub enum SgrCode {
     ForegroundRGB(u8, u8, u8),
     BackgroundRGB(u8, u8, u8),
 }
-
-const CSI: &str = "\x1b[";
-const SGR: &str = "m";
 
 /// Lookup table for u8 to string conversion to avoid runtime formatting overhead.
 /// Pre-computed at compile time for all possible u8 values (0-255).
@@ -152,115 +155,79 @@ impl FastStringify for SgrCode {
     fn write_to_buf(&self, buf: &mut crate::BufTextStorage) -> Result {
         match *self {
             SgrCode::Reset => {
-                buf.push_str(CSI);
-                buf.push('0');
-                buf.push_str(SGR);
-                Ok(())
+                buf.push_str(SGR_RESET_STR);
+                ok!()
             }
             SgrCode::Bold => {
-                buf.push_str(CSI);
-                buf.push('1');
-                buf.push_str(SGR);
-                Ok(())
+                buf.push_str(SGR_BOLD_STR);
+                ok!()
             }
             SgrCode::Dim => {
-                buf.push_str(CSI);
-                buf.push('2');
-                buf.push_str(SGR);
-                Ok(())
+                buf.push_str(SGR_DIM_STR);
+                ok!()
             }
             SgrCode::Italic => {
-                buf.push_str(CSI);
-                buf.push('3');
-                buf.push_str(SGR);
-                Ok(())
+                buf.push_str(SGR_ITALIC_STR);
+                ok!()
             }
             SgrCode::Underline => {
-                buf.push_str(CSI);
-                buf.push('4');
-                buf.push_str(SGR);
-                Ok(())
+                buf.push_str(SGR_UNDERLINE_STR);
+                ok!()
             }
             SgrCode::SlowBlink => {
-                buf.push_str(CSI);
-                buf.push('5');
-                buf.push_str(SGR);
-                Ok(())
+                buf.push_str(SGR_SLOW_BLINK_STR);
+                ok!()
             }
             SgrCode::RapidBlink => {
-                buf.push_str(CSI);
-                buf.push('6');
-                buf.push_str(SGR);
-                Ok(())
+                buf.push_str(SGR_RAPID_BLINK_STR);
+                ok!()
             }
             SgrCode::Invert => {
-                buf.push_str(CSI);
-                buf.push('7');
-                buf.push_str(SGR);
-                Ok(())
+                buf.push_str(SGR_INVERT_STR);
+                ok!()
             }
             SgrCode::Hidden => {
-                buf.push_str(CSI);
-                buf.push('8');
-                buf.push_str(SGR);
-                Ok(())
+                buf.push_str(SGR_HIDDEN_STR);
+                ok!()
             }
             SgrCode::Strikethrough => {
-                buf.push_str(CSI);
-                buf.push('9');
-                buf.push_str(SGR);
-                Ok(())
+                buf.push_str(SGR_STRIKETHROUGH_STR);
+                ok!()
             }
             SgrCode::Overline => {
-                buf.push_str(CSI);
-                buf.push_str("53");
-                buf.push_str(SGR);
-                Ok(())
+                buf.push_str(SGR_OVERLINE_STR);
+                ok!()
             }
             SgrCode::ResetBoldDim => {
-                buf.push_str(CSI);
-                buf.push_str("22");
-                buf.push_str(SGR);
-                Ok(())
+                buf.push_str(SGR_RESET_BOLD_DIM_STR);
+                ok!()
             }
             SgrCode::ResetItalic => {
-                buf.push_str(CSI);
-                buf.push_str("23");
-                buf.push_str(SGR);
-                Ok(())
+                buf.push_str(SGR_RESET_ITALIC_STR);
+                ok!()
             }
             SgrCode::ResetUnderline => {
-                buf.push_str(CSI);
-                buf.push_str("24");
-                buf.push_str(SGR);
-                Ok(())
+                buf.push_str(SGR_RESET_UNDERLINE_STR);
+                ok!()
             }
             SgrCode::ResetBlink => {
-                buf.push_str(CSI);
-                buf.push_str("25");
-                buf.push_str(SGR);
-                Ok(())
+                buf.push_str(SGR_RESET_BLINK_STR);
+                ok!()
             }
             SgrCode::ResetInvert => {
-                buf.push_str(CSI);
-                buf.push_str("27");
-                buf.push_str(SGR);
-                Ok(())
+                buf.push_str(SGR_RESET_INVERT_STR);
+                ok!()
             }
             SgrCode::ResetHidden => {
-                buf.push_str(CSI);
-                buf.push_str("28");
-                buf.push_str(SGR);
-                Ok(())
+                buf.push_str(SGR_RESET_HIDDEN_STR);
+                ok!()
             }
             SgrCode::ResetStrikethrough => {
-                buf.push_str(CSI);
-                buf.push_str("29");
-                buf.push_str(SGR);
-                Ok(())
+                buf.push_str(SGR_RESET_STRIKETHROUGH_STR);
+                ok!()
             }
             SgrCode::ForegroundBasic(color) => {
-                buf.push_str(CSI);
+                buf.push_str(CSI_START);
                 let code = match color {
                     ANSIBasicColor::Black => "30",
                     ANSIBasicColor::DarkRed => "31",
@@ -280,11 +247,11 @@ impl FastStringify for SgrCode {
                     ANSIBasicColor::White => "97",
                 };
                 buf.push_str(code);
-                buf.push_str(SGR);
-                Ok(())
+                buf.push(SGR_SET_GRAPHICS);
+                ok!()
             }
             SgrCode::BackgroundBasic(color) => {
-                buf.push_str(CSI);
+                buf.push_str(CSI_START);
                 let code = match color {
                     ANSIBasicColor::Black => "40",
                     ANSIBasicColor::DarkRed => "41",
@@ -304,44 +271,44 @@ impl FastStringify for SgrCode {
                     ANSIBasicColor::White => "107",
                 };
                 buf.push_str(code);
-                buf.push_str(SGR);
-                Ok(())
+                buf.push(SGR_SET_GRAPHICS);
+                ok!()
             }
             SgrCode::ForegroundAnsi256(ansi_value) => {
-                buf.push_str(CSI);
+                buf.push_str(CSI_START);
                 buf.push_str("38;5;");
                 buf.push_str(U8_STRINGS[ansi_value.index as usize]);
-                buf.push_str(SGR);
-                Ok(())
+                buf.push(SGR_SET_GRAPHICS);
+                ok!()
             }
             SgrCode::BackgroundAnsi256(ansi_value) => {
-                buf.push_str(CSI);
+                buf.push_str(CSI_START);
                 buf.push_str("48;5;");
                 buf.push_str(U8_STRINGS[ansi_value.index as usize]);
-                buf.push_str(SGR);
-                Ok(())
+                buf.push(SGR_SET_GRAPHICS);
+                ok!()
             }
             SgrCode::ForegroundRGB(r, g, b) => {
-                buf.push_str(CSI);
+                buf.push_str(CSI_START);
                 buf.push_str("38;2;");
                 buf.push_str(U8_STRINGS[r as usize]);
                 buf.push(';');
                 buf.push_str(U8_STRINGS[g as usize]);
                 buf.push(';');
                 buf.push_str(U8_STRINGS[b as usize]);
-                buf.push_str(SGR);
-                Ok(())
+                buf.push(SGR_SET_GRAPHICS);
+                ok!()
             }
             SgrCode::BackgroundRGB(r, g, b) => {
-                buf.push_str(CSI);
+                buf.push_str(CSI_START);
                 buf.push_str("48;2;");
                 buf.push_str(U8_STRINGS[r as usize]);
                 buf.push(';');
                 buf.push_str(U8_STRINGS[g as usize]);
                 buf.push(';');
                 buf.push_str(U8_STRINGS[b as usize]);
-                buf.push_str(SGR);
-                Ok(())
+                buf.push(SGR_SET_GRAPHICS);
+                ok!()
             }
         }
     }

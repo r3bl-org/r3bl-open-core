@@ -36,7 +36,7 @@ source (dirname (status --current-filename))/script_lib.fish
 # - Run full verification build with new toolchain:
 #   - cargo test --all-targets
 #   - cargo test --doc
-#   - cargo doc --no-deps
+#   - cargo doc --workspace --no-deps
 # - Ensures new toolchain works perfectly with fresh build from scratch
 #
 # Cargo Tools Update:
@@ -59,6 +59,7 @@ source (dirname (status --current-filename))/script_lib.fish
 
 set -g LOG_FILE $HOME/Downloads/rust-toolchain-update.log
 set -g PROJECT_DIR (pwd)
+set -g WORKSPACE_NAME (prompt_pwd)
 set -g TOOLCHAIN_FILE $PROJECT_DIR/rust-toolchain.toml
 set -g target_toolchain ""
 
@@ -96,6 +97,12 @@ function clean_and_verify_build
     toolchain_log "✅ ICE files cleaned"
     toolchain_log ""
 
+    # Purge project-related zombies
+    toolchain_log "Purging any project-related zombie processes..."
+    purge_zombie_processes
+    toolchain_log "✅ Zombie processes cleaned"
+    toolchain_log ""
+
     # Clean build artifacts
     toolchain_log ""
     if not toolchain_log_command "Running cargo clean..." cargo clean
@@ -128,8 +135,8 @@ function clean_and_verify_build
 
     # Build documentation
     toolchain_log ""
-    toolchain_log "Running cargo doc --no-deps..."
-    if not toolchain_log_command "Building documentation..." cargo doc --no-deps
+    toolchain_log "Running cargo doc --workspace --no-deps..."
+    if not toolchain_log_command "Building documentation..." cargo doc --workspace --no-deps
         toolchain_log "⚠️  Documentation build had warnings/errors"
     else
         toolchain_log "✅ Documentation built successfully"
@@ -180,7 +187,7 @@ function validate_toolchain
         "build-test-code:cargo test --no-run" \
         "tests:timeout 2m cargo test --all-targets" \
         "doctest:timeout 2m cargo test --doc" \
-        "doc:cargo doc --no-deps"
+        "doc:cargo doc --workspace --no-deps"
 
     # Run each validation step
     for step in $validation_steps
@@ -319,7 +326,7 @@ function find_stable_toolchain
 
     # Send system notification (cross-platform: macOS and Linux)
     send_system_notification \
-        "Rust Toolchain Update Failed" \
+        "Rust Toolchain Update Failed ($WORKSPACE_NAME)" \
         "Could not find stable nightly in $total_attempts attempts ($search_window_days-day window). Check log: $LOG_FILE" \
         "critical"
     toolchain_log "System notification sent"
@@ -521,7 +528,7 @@ function main
 
     # Send final success notification (cross-platform: macOS and Linux)
     send_system_notification \
-        "Rust Toolchain Update Complete" \
+        "Rust Toolchain Update Complete ($WORKSPACE_NAME)" \
         "✅ Successfully updated to: $target_toolchain. All validation, cleanup, and verification passed" \
         "normal"
     toolchain_log "Final success notification sent"

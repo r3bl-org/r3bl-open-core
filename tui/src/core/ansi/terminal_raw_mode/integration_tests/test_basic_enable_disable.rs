@@ -7,15 +7,13 @@
 //! that ensures the basic lifecycle works.
 //!
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
-
 use crate::{
-    SingleThreadSafeControlledChild,
-    PtyPair,
     PtyTestMode,
     RawModeGuard,
+    PtyTestContext,
 };
 use rustix::termios;
-use std::{io::{BufRead, BufReader, Write},
+use std::{io::{BufRead, Write},
           time::{Duration, Instant}};
 
 generate_pty_test! {
@@ -40,18 +38,18 @@ generate_pty_test! {
 }
 
 /// Controller process: verifies results.
-/// Receives [`PTY`] pair and child process from the macro.
+/// Receives [`PTY`] context from the macro.
 ///
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
-fn pty_controller_entry_point(pty_pair: PtyPair, child: SingleThreadSafeControlledChild) {
-    eprintln!("🚀 PTY Controller: Starting raw mode test...");
+fn pty_controller_entry_point(context: PtyTestContext) {
+    let PtyTestContext {
+        pty_pair,
+        child,
+        mut buf_reader,
+        ..
+    } = context;
 
-    // Read from PTY and verify
-    let reader = pty_pair
-        .controller()
-        .try_clone_reader()
-        .expect("Failed to get reader");
-    let mut buf_reader = BufReader::new(reader);
+    eprintln!("🚀 PTY Controller: Starting raw mode test...");
 
     eprintln!("📝 PTY Controller: Waiting for controlled process results...");
 

@@ -1,8 +1,11 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 //! For more information on how to use CLAP, here are some resources:
-//! 1. [Tutorial](https://developerlife.com/2023/09/17/tuify-clap/)
-//! 2. [Video](https://youtu.be/lzMYDA6St0s)
+//! 1. [Tutorial]
+//! 2. [Video]
+//!
+//! [Tutorial]: https://developerlife.com/2023/09/17/tuify-clap/
+//! [Video]: https://youtu.be/lzMYDA6St0s
 
 use clap::Parser;
 use r3bl_cmdr::{AnalyticsAction,

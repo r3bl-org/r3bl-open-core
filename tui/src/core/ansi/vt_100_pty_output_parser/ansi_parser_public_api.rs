@@ -2,7 +2,7 @@
 
 // cspell:words Homet Min End
 
-//! Public API for [`ANSI`]/VT sequence processing.
+//! Public API for [`ANSI`]/[`VT-100`] sequence processing.
 //!
 //! # Entry Point
 //!
@@ -28,10 +28,8 @@
 //!
 //! [`OSC`] events (window titles, etc.) and [`DSR`] responses (terminal status queries).
 //!
-//! For implementation details, architecture patterns, and testing strategy, see the
-//! the architecture and testing strategy which covers the shim → impl → test design
-//! pattern.
-//!
+//! For implementation details, architecture patterns, and testing strategy, see the the
+//! architecture and testing strategy which covers the shim → impl → test design pattern.
 //!
 //! # [`ANSI`] Sequence Types from [`PTY`] Output
 //!
@@ -107,12 +105,12 @@
 //! **Why both exist**: Modern terminals support both for backward compatibility. Many
 //! operations can be performed using either approach:
 //!
-//! | Operation               | [`ESC`] Sequence | [`CSI`] Sequence | Notes                             |
-//! | ----------------------- | -------------- | -------------- | --------------------------------- |
-//! | Save cursor             | `ESC 7`        | `ESC [s`       | Both work identically             |
-//! | Restore cursor          | `ESC 8`        | `ESC [u`       | Both work identically             |
-//! | Move cursor down 1 line | `ESC D`        | `ESC [1B`      | [`CSI`] version can take parameters |
-//! | Move cursor up 1 line   | `ESC M`        | `ESC [1A`      | [`CSI`] version can take parameters |
+//! | Operation               | [`ESC`] Sequence | [`CSI`] Sequence | Notes                               |
+//! | ----------------------- | ---------------- | ---------------- | ----------------------------------- |
+//! | Save cursor             | `ESC 7`          | `ESC [s`         | Both work identically               |
+//! | Restore cursor          | `ESC 8`          | `ESC [u`         | Both work identically               |
+//! | Move cursor down 1 line | `ESC D`          | `ESC [1B`        | [`CSI`] version can take parameters |
+//! | Move cursor up 1 line   | `ESC M`          | `ESC [1A`        | [`CSI`] version can take parameters |
 //!
 //! This overlap is demonstrated in the test suite: the cursor operations tests contain
 //! both `test_csi_save_restore_cursor` and `test_esc_save_restore_cursor`, showing both
@@ -179,11 +177,13 @@ impl<'a> AnsiToOfsBufPerformer<'a> {
     }
 }
 
-/// Public API to process [`ANSI`]/VT sequences and apply them to an [`OffscreenBuffer`].
+/// Public API to process [`ANSI`]/[`VT-100`] sequences and apply them to an
+/// [`OffscreenBuffer`].
 ///
 /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+/// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 impl OffscreenBuffer {
-    /// Process & apply [`ANSI`]/VT sequences directly to this buffer.
+    /// Process & apply [`ANSI`]/[`VT-100`] sequences directly to this buffer.
     ///
     /// ## Data Flow:
     ///
@@ -203,7 +203,8 @@ impl OffscreenBuffer {
     ///
     /// # Arguments
     ///
-    /// * `bytes` - The byte sequence containing [`ANSI`]/VT escape sequences to process
+    /// * `bytes` - The byte sequence containing [`ANSI`]/[`VT-100`] escape sequences to
+    ///   process
     ///
     /// # Returns
     ///
@@ -249,6 +250,7 @@ impl OffscreenBuffer {
     /// [`Process`]: crate::pty_mux::Process
     /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
     /// [`SGR`]: crate::SgrCode
+    /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
     /// [`VTE parser`]: vte::Parser
     #[must_use]
     pub fn apply_ansi_bytes(
@@ -270,9 +272,15 @@ impl OffscreenBuffer {
 
 #[cfg(test)]
 mod tests {
-    use crate::{ANSIBasicColor, DSR_CURSOR_POSITION_REQUEST, DSR_STATUS_REQUEST, DsrRequestFromPtyEvent::TerminalStatus, SgrCode, col, core::ansi::vt_100_pty_output_parser::{CsiSequence,
-                                                 vt_100_pty_output_conformance_tests::{test_fixtures_vt_100_ansi_conformance::{create_test_offscreen_buffer_10r_by_10c, nz},
-                                                                      test_sequence_generators::csi_builders::csi_seq_cursor_pos}}, offscreen_buffer::test_fixtures_ofs_buf::*, row, term_col, term_col_delta, term_row, term_row_delta};
+    use crate::{ANSIBasicColor, DSR_CURSOR_POSITION_REQUEST, DSR_STATUS_REQUEST,
+        DsrRequestFromPtyEvent::TerminalStatus, SgrCode, col,
+        core::ansi::vt_100_pty_output_parser::{CsiSequence,
+        vt_100_pty_output_conformance_tests::{
+            test_fixtures_vt_100_ansi_conformance::{
+                create_test_offscreen_buffer_10r_by_10c, nz},
+        test_sequence_generators::csi_builders::csi_seq_cursor_pos}},
+        offscreen_buffer::test_fixtures_ofs_buf::*,
+        row, term_col, term_col_delta, term_row, term_row_delta};
     use crate::core::osc::osc_codes::OscSequence;
 
     #[test]
@@ -594,31 +602,34 @@ mod tests {
         assert_eq!(dsr_responses2.len(), 0, "DSR responses should be drained");
     }
 
+    /// Note: [`OffscreenBuffer`] uses 0-based index, and terminal ([`CSI`], [`ESC`] seq,
+    /// etc) uses 1-based index.
+    ///
+    /// Buffer layout after cursor position changes:
+    /// ```txt
+    /// Column:   0   1   2   3   4   5   6   7   8   9
+    ///         ┌───┬───┬───┬───┬───┬───┬───┬───┬───┬───┐
+    /// Row 0:  │ H │ o │ m │ e │ t │   │   │   │   │   │
+    ///         ├───┼───┼───┼───┼───┼───┼───┼───┼───┼───┤
+    /// Row 1:  │   │   │ M │ i │ d │   │   │   │   │   │
+    ///         ├───┼───┼───┼───┼───┼───┼───┼───┼───┼───┤
+    /// Row 2:  │   │   │   │   │   │   │   │   │   │   │
+    ///         ├───┼───┼───┼───┼───┼───┼───┼───┼───┼───┤
+    ///         │ … │ … │ … │ … │ … │ … │ … │ … │ … │ … │
+    ///         ├───┼───┼───┼───┼───┼───┼───┼───┼───┼───┤
+    /// Row 7:  │   │   │   │   │   │   │   │ E │ n │ d │
+    ///         ├───┼───┼───┼───┼───┼───┼───┼───┼───┼───┤
+    /// Row 8:  │ ␩ │   │   │   │   │   │   │   │   │   │ ← cursor ends here (8,0)
+    ///         └───┴───┴───┴───┴───┴───┴───┴───┴───┴───┘   after wrapping
+    /// Sequence: "Start" → move(2,3) → "Mid" → move(1,1) → "Home" → move(8,8) → "End"
+    /// ```
+    ///
+    /// [`CSI`]: crate::CsiSequence
+    /// [`ESC`]: crate::EscSequence
+    /// [`OffscreenBuffer`]: crate::OffscreenBuffer
     #[test]
     fn test_public_api_csi_position_change() {
         let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
-
-        // Note: OffscreenBuffer uses 0-based index, and terminal (CSI, ESC seq, etc) uses
-        // 1-based index.
-        //
-        // Buffer layout after cursor position changes:
-        //
-        // Column:   0   1   2   3   4   5   6   7   8   9
-        //         ┌───┬───┬───┬───┬───┬───┬───┬───┬───┬───┐
-        // Row 0:  │ H │ o │ m │ e │ t │   │   │   │   │   │
-        //         ├───┼───┼───┼───┼───┼───┼───┼───┼───┼───┤
-        // Row 1:  │   │   │ M │ i │ d │   │   │   │   │   │
-        //         ├───┼───┼───┼───┼───┼───┼───┼───┼───┼───┤
-        // Row 2:  │   │   │   │   │   │   │   │   │   │   │
-        //         ├───┼───┼───┼───┼───┼───┼───┼───┼───┼───┤
-        //         │ … │ … │ … │ … │ … │ … │ … │ … │ … │ … │
-        //         ├───┼───┼───┼───┼───┼───┼───┼───┼───┼───┤
-        // Row 7:  │   │   │   │   │   │   │   │ E │ n │ d │
-        //         ├───┼───┼───┼───┼───┼───┼───┼───┼───┼───┤
-        // Row 8:  │ ␩ │   │   │   │   │   │   │   │   │   │ ← cursor ends here (8,0)
-        //         └───┴───┴───┴───┴───┴───┴───┴───┴───┴───┘   after wrapping
-        //
-        // Sequence: "Start" → move(2,3) → "Mid" → move(1,1) → "Home" → move(8,8) → "End"
 
         let (osc_events, dsr_responses) = ofs_buf.apply_ansi_bytes(format!(
             "Start{move_to_r2_c3}Mid{move_to_r1_c1}Home{move_to_r8_c8}End",

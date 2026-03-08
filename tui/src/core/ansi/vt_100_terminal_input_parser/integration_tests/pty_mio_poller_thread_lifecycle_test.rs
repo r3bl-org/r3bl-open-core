@@ -44,14 +44,14 @@
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [Device Lifecycle]: crate::direct_to_ansi::DirectToAnsiInputDevice#device-lifecycle
 
-use crate::{PtyPair, PtyTestMode, SingleThreadSafeControlledChild,
+use crate::{PtyTestMode, PtyTestContext,
             core::resilient_reactor_thread::LivenessState,
             direct_to_ansi::{DirectToAnsiInputDevice, input::global_input_resource}};
 use std::{io::{BufRead, BufReader, Write},
           time::Duration};
 
 /// Ready signal sent by controlled process after initialization.
-const CONTROLLED_READY: &str = "LIFECYCLE_TEST_READY";
+const LIFECYCLE_READY: &str = "LIFECYCLE_TEST_READY";
 
 /// Signal sent when device A is created and verified.
 const DEVICE_A_CREATED: &str = "DEVICE_A_CREATED";
@@ -91,25 +91,19 @@ fn wait_for_signal(buf_reader: &mut BufReader<impl std::io::Read>, signal: &str)
 }
 
 /// Controller process: sends input bytes and verifies controlled completes successfully.
-fn lifecycle_controller_entry_point(
-    pty_pair: PtyPair,
-    child: SingleThreadSafeControlledChild,
-) {
-    eprintln!("🚀 Lifecycle Controller: Starting...");
+fn lifecycle_controller_entry_point(context: PtyTestContext) {
+    let PtyTestContext {
+        pty_pair,
+        child,
+        mut buf_reader,
+        mut writer,
+    } = context;
 
-    let mut writer = pty_pair
-        .controller()
-        .take_writer()
-        .expect("Failed to get writer");
-    let reader = pty_pair
-        .controller()
-        .try_clone_reader()
-        .expect("Failed to get reader");
-    let mut buf_reader = BufReader::new(reader);
+    eprintln!("Lifecycle Controller: Starting...");
 
     // Wait for controlled to be ready.
     eprintln!("📝 Lifecycle Controller: Waiting for controlled to start...");
-    wait_for_signal(&mut buf_reader, CONTROLLED_READY);
+    wait_for_signal(&mut buf_reader, LIFECYCLE_READY);
     eprintln!("  ✓ Controlled is ready");
 
     // Wait for device A to be created, then send input.
@@ -140,8 +134,8 @@ fn lifecycle_controller_entry_point(
 }
 
 /// Controlled process: tests thread lifecycle with assertions.
-fn lifecycle_controlled_entry_point() -> ! {
-    println!("{CONTROLLED_READY}");
+fn lifecycle_controlled_entry_point() {
+    println!("{LIFECYCLE_READY}");
     std::io::stdout().flush().expect("Failed to flush");
 
     let runtime = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
@@ -261,6 +255,4 @@ fn lifecycle_controlled_entry_point() -> ! {
         drop(device_b);
     });
 
-    eprintln!("🔍 Lifecycle Controlled: Exiting");
-    std::process::exit(0);
 }

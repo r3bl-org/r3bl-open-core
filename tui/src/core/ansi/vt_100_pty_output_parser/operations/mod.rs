@@ -1,21 +1,21 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! ANSI/VT sequence operation modules.
+//! [`ANSI`]/[`VT-100`] sequence operation modules.
 //!
-//! This module organizes all the different types of ANSI operations into
-//! logical groups for better maintainability and discoverability.
+//! This module organizes all the different types of [`ANSI`] operations into logical
+//! groups for better maintainability and discoverability.
 //!
 //! # Design Architecture
 //!
 //! The operation modules in this directory follow a consistent **thin shim pattern**:
 //!
-//! - Each operation module acts as a parameter translator from ANSI sequences to
+//! - Each operation module acts as a parameter translator from [`ANSI`] sequences to
 //!   [`OffscreenBuffer`] calls
 //! - Operations contain minimal logic, primarily focused on parameter parsing and
 //!   delegation
 //! - All actual terminal buffer logic is implemented in dedicated [`OffscreenBuffer`]
 //!   methods
-//! - This design ensures a clear separation between ANSI protocol handling and buffer
+//! - This design ensures a clear separation between [`ANSI`] protocol handling and buffer
 //!   operations
 //!
 //! This consistent pattern across all operation modules makes the codebase predictable
@@ -32,40 +32,40 @@
 //!
 //! 1. **Pure Delegation**: These operations are thin delegation layers with no business
 //!    logic
-//! 2. **Parameter Translation Only**: They primarily translate ANSI parameters into
+//! 2. **Parameter Translation Only**: They primarily translate [`ANSI`] parameters into
 //!    [`OffscreenBuffer`] method calls
 //! 3. **Minimal Risk**: Code simplicity means minimal risk of bugs
 //! 4. **Comprehensive Coverage**: Testing is handled by two complementary layers:
 //!    - **Unit Tests**: The underlying [`OffscreenBuffer`] methods have comprehensive
 //!      unit tests
-//!    - **Integration Tests**: The [`VT-100`] conformance tests verify the complete ANSI
-//!      processing pipeline
+//!    - **Integration Tests**: The [`VT-100`] conformance tests verify the complete
+//!      [`ANSI`] processing pipeline
 //!
 //! ## Testing Philosophy
 //!
 //! ```text
-//! ┌─────────────────────────────────────────────────────────┐
-//! │ Shim Layer (operations/*)                               │
-//! │ • NO DIRECT TESTS (by design)                           │
-//! │ • Pure delegation, no business logic                    │
-//! └────────────────────┬────────────────────────────────────┘
+//! ┌───────────────────────────────────────────────────────────┐
+//! │ Shim Layer (operations/*)                                 │
+//! │ • NO DIRECT TESTS (by design)                             │
+//! │ • Pure delegation, no business logic                      │
+//! └────────────────────┬──────────────────────────────────────┘
 //!                      │ delegates to
 //!                      │
-//! ┌────────────────────▼────────────────────────────────────┐
-//! │ Implementation Layer (vt_100_ansi_impl/impl_*)          │
-//! │ • UNIT TESTS: #[test] functions                         │
-//! │ • Contains all business logic                           │
-//! └─────────────────────────────────────────────────────────┘
+//! ┌────────────────────▼──────────────────────────────────────┐
+//! │ Implementation Layer (vt_100_ansi_impl/impl_*)            │
+//! │ • UNIT TESTS: #[test] functions                           │
+//! │ • Contains all business logic                             │
+//! └───────────────────────────────────────────────────────────┘
 //!
-//! ┌─────────────────────────────────────────────────────────┐
-//! │ Conformance Tests (vt_100_pty_output_conformance_tests/*)     │
-//! │ • INTEGRATION TESTS: Full pipeline validation           │
-//! │ • Tests: Shim → Implementation → Buffer                 │
-//! └─────────────────────────────────────────────────────────┘
+//! ┌───────────────────────────────────────────────────────────┐
+//! │ Conformance Tests (vt_100_pty_output_conformance_tests/*) │
+//! │ • INTEGRATION TESTS: Full pipeline validation             │
+//! │ • Tests: Shim → Implementation → Buffer                   │
+//! └───────────────────────────────────────────────────────────┘
 //! ```
 //!
-//! This approach avoids redundant testing while ensuring both unit-level correctness
-//! and system-level behavior validation.
+//! This approach avoids redundant testing while ensuring both unit-level correctness and
+//! system-level behavior validation.
 //!
 //! ## Navigation to Related Testing Layers
 //!
@@ -76,9 +76,9 @@
 //!
 //! # Naming Convention
 //!
-//! Files in this directory intentionally have no prefix, serving as the "shim" layer
-//! in our three-layer architecture. This creates a searchable hierarchy when combined
-//! with `impl_` prefixed implementations and `test_` prefixed tests.
+//! Files in this directory intentionally have no prefix, serving as the "shim" layer in
+//! our three-layer architecture. This creates a searchable hierarchy when combined with
+//! `impl_` prefixed implementations and `test_` prefixed tests.
 //!
 //! When you search for any operation (e.g., "`char_ops`") in your IDE, you'll see:
 //! - [`vt_100_shim_char_ops`] (this directory) - The shim layer for protocol translation
@@ -101,20 +101,21 @@
 //! | [`vt_100_shim_sgr_ops`]         | [`vt_100_impl_sgr_ops`]        | [`vt_100_test_sgr_ops`]          |
 //! | [`vt_100_shim_terminal_ops`]    | [`vt_100_impl_terminal_ops`]   | [`vt_100_test_terminal_ops`]     |
 //!
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`OffscreenBuffer`]: crate::OffscreenBuffer
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
-//! [`vt_100_ansi_impl`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl
-//! [`vt_100_impl_char_ops`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl::vt_100_impl_char_ops
-//! [`vt_100_impl_control_ops`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl::vt_100_impl_control_ops
-//! [`vt_100_impl_cursor_ops`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl::vt_100_impl_cursor_ops
-//! [`vt_100_impl_dsr_ops`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl::vt_100_impl_dsr_ops
-//! [`vt_100_impl_line_ops`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl::vt_100_impl_line_ops
-//! [`vt_100_impl_margin_ops`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl::vt_100_impl_margin_ops
-//! [`vt_100_impl_mode_ops`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl::vt_100_impl_mode_ops
-//! [`vt_100_impl_osc_ops`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl::vt_100_impl_osc_ops
-//! [`vt_100_impl_scroll_ops`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl::vt_100_impl_scroll_ops
-//! [`vt_100_impl_sgr_ops`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl::vt_100_impl_sgr_ops
-//! [`vt_100_impl_terminal_ops`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl::vt_100_impl_terminal_ops
+//! [`vt_100_ansi_impl`]: crate::vt_100_ansi_impl
+//! [`vt_100_impl_char_ops`]: crate::vt_100_ansi_impl::vt_100_impl_char_ops
+//! [`vt_100_impl_control_ops`]: crate::vt_100_ansi_impl::vt_100_impl_control_ops
+//! [`vt_100_impl_cursor_ops`]: crate::vt_100_ansi_impl::vt_100_impl_cursor_ops
+//! [`vt_100_impl_dsr_ops`]: crate::vt_100_ansi_impl::vt_100_impl_dsr_ops
+//! [`vt_100_impl_line_ops`]: crate::vt_100_ansi_impl::vt_100_impl_line_ops
+//! [`vt_100_impl_margin_ops`]: crate::vt_100_ansi_impl::vt_100_impl_margin_ops
+//! [`vt_100_impl_mode_ops`]: crate::vt_100_ansi_impl::vt_100_impl_mode_ops
+//! [`vt_100_impl_osc_ops`]: crate::vt_100_ansi_impl::vt_100_impl_osc_ops
+//! [`vt_100_impl_scroll_ops`]: crate::vt_100_ansi_impl::vt_100_impl_scroll_ops
+//! [`vt_100_impl_sgr_ops`]: crate::vt_100_ansi_impl::vt_100_impl_sgr_ops
+//! [`vt_100_impl_terminal_ops`]: crate::vt_100_ansi_impl::vt_100_impl_terminal_ops
 //! [`vt_100_shim_char_ops`]: vt_100_shim_char_ops
 //! [`vt_100_shim_control_ops`]: vt_100_shim_control_ops
 //! [`vt_100_shim_cursor_ops`]: vt_100_shim_cursor_ops
@@ -126,17 +127,28 @@
 //! [`vt_100_shim_scroll_ops`]: vt_100_shim_scroll_ops
 //! [`vt_100_shim_sgr_ops`]: vt_100_shim_sgr_ops
 //! [`vt_100_shim_terminal_ops`]: vt_100_shim_terminal_ops
-//! [`vt_100_test_char_ops`]: crate::core::ansi::vt_100_pty_output_parser::vt_100_pty_output_conformance_tests::tests::vt_100_test_char_ops
-//! [`vt_100_test_control_ops`]: crate::core::ansi::vt_100_pty_output_parser::vt_100_pty_output_conformance_tests::tests::vt_100_test_control_ops
-//! [`vt_100_test_cursor_ops`]: crate::core::ansi::vt_100_pty_output_parser::vt_100_pty_output_conformance_tests::tests::vt_100_test_cursor_ops
-//! [`vt_100_test_dsr_ops`]: crate::core::ansi::vt_100_pty_output_parser::vt_100_pty_output_conformance_tests::tests::vt_100_test_dsr_ops
-//! [`vt_100_test_line_ops`]: crate::core::ansi::vt_100_pty_output_parser::vt_100_pty_output_conformance_tests::tests::vt_100_test_line_ops
-//! [`vt_100_test_margin_ops`]: crate::core::ansi::vt_100_pty_output_parser::vt_100_pty_output_conformance_tests::tests::vt_100_test_margin_ops
-//! [`vt_100_test_mode_ops`]: crate::core::ansi::vt_100_pty_output_parser::vt_100_pty_output_conformance_tests::tests::vt_100_test_mode_ops
-//! [`vt_100_test_osc_ops`]: crate::core::ansi::vt_100_pty_output_parser::vt_100_pty_output_conformance_tests::tests::vt_100_test_osc_ops
-//! [`vt_100_test_scroll_ops`]: crate::core::ansi::vt_100_pty_output_parser::vt_100_pty_output_conformance_tests::tests::vt_100_test_scroll_ops
-//! [`vt_100_test_sgr_ops`]: crate::core::ansi::vt_100_pty_output_parser::vt_100_pty_output_conformance_tests::tests::vt_100_test_sgr_ops
-//! [`vt_100_test_terminal_ops`]: crate::core::ansi::vt_100_pty_output_parser::vt_100_pty_output_conformance_tests::tests::vt_100_test_terminal_ops
+//! [`vt_100_test_char_ops`]:
+//!     crate::vt_100_pty_output_conformance_tests::tests::vt_100_test_char_ops
+//! [`vt_100_test_control_ops`]:
+//!     crate::vt_100_pty_output_conformance_tests::tests::vt_100_test_control_ops
+//! [`vt_100_test_cursor_ops`]:
+//!     crate::vt_100_pty_output_conformance_tests::tests::vt_100_test_cursor_ops
+//! [`vt_100_test_dsr_ops`]:
+//!     crate::vt_100_pty_output_conformance_tests::tests::vt_100_test_dsr_ops
+//! [`vt_100_test_line_ops`]:
+//!     crate::vt_100_pty_output_conformance_tests::tests::vt_100_test_line_ops
+//! [`vt_100_test_margin_ops`]:
+//!     crate::vt_100_pty_output_conformance_tests::tests::vt_100_test_margin_ops
+//! [`vt_100_test_mode_ops`]:
+//!     crate::vt_100_pty_output_conformance_tests::tests::vt_100_test_mode_ops
+//! [`vt_100_test_osc_ops`]:
+//!     crate::vt_100_pty_output_conformance_tests::tests::vt_100_test_osc_ops
+//! [`vt_100_test_scroll_ops`]:
+//!     crate::vt_100_pty_output_conformance_tests::tests::vt_100_test_scroll_ops
+//! [`vt_100_test_sgr_ops`]:
+//!     crate::vt_100_pty_output_conformance_tests::tests::vt_100_test_sgr_ops
+//! [`vt_100_test_terminal_ops`]:
+//!     crate::vt_100_pty_output_conformance_tests::tests::vt_100_test_terminal_ops
 
 pub mod vt_100_shim_char_ops;
 pub mod vt_100_shim_control_ops;

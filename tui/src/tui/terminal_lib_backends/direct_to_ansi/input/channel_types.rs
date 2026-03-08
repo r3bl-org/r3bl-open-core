@@ -9,8 +9,8 @@
 //!
 //! [`DirectToAnsi`]: crate::direct_to_ansi
 //! [`EOF`]: https://en.wikipedia.org/wiki/End-of-file
-//! [`SIGWINCH`]: signal_hook::consts::SIGWINCH
 //! [`mio_poller`]: super::mio_poller
+//! [`SIGWINCH`]: signal_hook::consts::SIGWINCH
 //! [`stdin`]: std::io::stdin
 
 use crate::{InputEvent, Size};
@@ -72,11 +72,11 @@ pub enum SignalEvent {
     /// [`TTY`], e.g., during [`SSH`] disconnect or terminal crash), the signal is
     /// silently dropped.
     ///
+    /// [`get_size()`]: crate::core::term::get_size
     /// [`InputEvent::Resize`]: crate::InputEvent::Resize
     /// [`SIGWINCH`]: signal_hook::consts::SIGWINCH
     /// [`SSH`]: https://en.wikipedia.org/wiki/Secure_Shell
     /// [`TTY`]: https://en.wikipedia.org/wiki/Tty_(Unix)
-    /// [`get_size()`]: crate::core::term::get_size
     Resize(Size),
 }
 

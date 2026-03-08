@@ -43,7 +43,7 @@
 //! - Uses [`RenderOpsLocalData`] for state tracking (avoid redundant commands)
 //! - Handles colors, cursor movement, and text output
 //!
-//! [`offscreen_buffer::paint_impl`]: mod@crate::tui::terminal_lib_backends::offscreen_buffer::paint_impl
+//! [`offscreen_buffer::paint_impl`]: mod@crate::offscreen_buffer::paint_impl
 //! [`OffscreenBuffer`]: crate::OffscreenBuffer
 //! [`OffscreenBufferPaint`]: crate::OffscreenBufferPaint
 //! [`RenderOpOutputVec`]: crate::RenderOpOutputVec

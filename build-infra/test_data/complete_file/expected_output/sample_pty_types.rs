@@ -9,12 +9,12 @@
 //! - [`ControlledChild`], [`ControlledChildTerminationHandle`] - Child process management
 //! - [`ControllerReader`], [`ControllerWriter`] - [`PTY`] I/O streams
 //! - [`PtyCommand`], [`PtyCompletionHandle`] - Command execution
-//! - [`InputEventSenderHalf`], [`ReadOnlyOutputEventReceiverHalf`],
-//!   [`ReadWriteOutputEventReceiverHalf`] - Channel halves
+//! - [`InputEventSenderHalf`], [`OutputEventReceiverHalf`],
+//!   [`OutputEventReceiverHalf`] - Channel halves
 //!
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 
-use super::{PtyInputEvent, PtyReadOnlyOutputEvent, PtyReadWriteOutputEvent};
+use super::{PtyInputEvent, PtyOutputEvent, PtyOutputEvent};
 use portable_pty::{ChildKiller, CommandBuilder, MasterPty, SlavePty};
 use std::pin::Pin;
 use tokio::{sync::mpsc::{UnboundedReceiver, UnboundedSender},
@@ -24,7 +24,7 @@ use tokio::{sync::mpsc::{UnboundedReceiver, UnboundedSender},
 ///
 /// This is used for the read buffer in [`PTY`] operations. The performance bottleneck is
 /// not this buffer size but the [`Vec`]`<`[`u8`]`>` allocations in
-/// [`PtyReadWriteOutputEvent::Output`].
+/// [`PtyOutputEvent::Output`].
 ///
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 pub const READ_BUFFER_SIZE: usize = 4_096;
@@ -313,9 +313,9 @@ pub type ControlledChildTerminationHandle = Box<dyn ChildKiller + Send + Sync>;
 
 /// Type alias for a validated [`PTY`] command ready for execution.
 ///
-/// This enhances readability by making the flow clear: [`crate::PtyCommandBuilder`] `->
+/// This enhances readability by making the flow clear: [`crate::PtySessionBuilder`] `->
 /// build() ->` [`PtyCommand`]. This is a validated [`CommandBuilder`] returned by
-/// [`crate::PtyCommandBuilder::build`].
+/// [`crate::PtySessionBuilder::build`].
 ///
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 pub type PtyCommand = CommandBuilder;
@@ -333,10 +333,10 @@ pub type PtyCompletionHandle =
     Pin<Box<JoinHandle<miette::Result<portable_pty::ExitStatus>>>>;
 
 /// Type alias for the read-only output event receiver half of a channel.
-pub type ReadOnlyOutputEventReceiverHalf = UnboundedReceiver<PtyReadOnlyOutputEvent>;
+pub type OutputEventReceiverHalf = UnboundedReceiver<PtyOutputEvent>;
 
 /// Type alias for the read-write output event receiver half of a channel.
-pub type ReadWriteOutputEventReceiverHalf = UnboundedReceiver<PtyReadWriteOutputEvent>;
+pub type OutputEventReceiverHalf = UnboundedReceiver<PtyOutputEvent>;
 
 /// Type alias for the input event sender half of a channel.
 pub type InputEventSenderHalf = UnboundedSender<PtyInputEvent>;

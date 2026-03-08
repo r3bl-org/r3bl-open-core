@@ -1,9 +1,11 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Basic CSI operation tests using conformance data sequences.
+//! Basic [`CSI`] operation tests using conformance data sequences.
 //!
 //! This module demonstrates the new testing approach using type-safe sequence
 //! builders from the `conformance_data` module instead of hardcoded format strings.
+//!
+//! [`CSI`]: crate::CsiSequence
 
 use super::super::{conformance_data::{basic_sequences, cursor_sequences},
                    test_fixtures_vt_100_ansi_conformance::*};

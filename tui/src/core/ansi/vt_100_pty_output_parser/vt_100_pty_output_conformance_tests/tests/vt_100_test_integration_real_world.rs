@@ -81,10 +81,13 @@ fn test_terminal_initialization_pattern() {
     assert_eq!(ofs_buf.cursor_pos, row(2) + col(0));
 }
 
-/// Test cursor save/restore patterns using both ESC and CSI variants.
+/// Test cursor save/restore patterns using both [`ESC`] and [`CSI`] variants.
 ///
 /// Demonstrates testing equivalent functionality with different sequence types,
-/// ensuring both legacy ESC and modern CSI approaches work correctly.
+/// ensuring both legacy [`ESC`] and modern [`CSI`] approaches work correctly.
+///
+/// [`CSI`]: crate::CsiSequence
+/// [`ESC`]: crate::EscSequence
 #[test]
 fn test_cursor_save_restore_variants() {
     let mut ofs_buf = create_realistic_terminal_buffer();
@@ -158,7 +161,9 @@ fn test_complex_styling_patterns() {
 /// Test rainbow text pattern for color support validation.
 ///
 /// Demonstrates testing color cycling functionality to ensure
-/// all basic ANSI colors are properly supported.
+/// all basic [`ANSI`] colors are properly supported.
+///
+/// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 #[test]
 fn test_rainbow_color_pattern() {
     let mut ofs_buf = create_realistic_terminal_buffer();

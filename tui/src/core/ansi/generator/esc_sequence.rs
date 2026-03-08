@@ -39,11 +39,9 @@
 //! [`reset`]: https://man7.org/linux/man-pages/man1/reset.1.html
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 
-use crate::{BufTextStorage, FastStringify,
-            core::ansi::constants::{CHARSET_ASCII, CHARSET_DEC_GRAPHICS,
-                                    CHARSET_SELECTOR_G0, DECRC_RESTORE_CURSOR,
-                                    DECSC_SAVE_CURSOR, ESC_START, IND_INDEX_DOWN,
-                                    RI_REVERSE_INDEX_UP, RIS_RESET_TERMINAL}};
+use crate::{BufTextStorage, ESC_INDEX_DOWN_STR, ESC_RESET_TERMINAL_STR,
+            ESC_RESTORE_CURSOR_STR, ESC_REVERSE_INDEX_STR, ESC_SAVE_CURSOR_STR,
+            ESC_SELECT_ASCII_STR, ESC_SELECT_DEC_GRAPHICS_STR, FastStringify};
 use std::fmt;
 
 /// Builder for [`ESC`] ([`ESC` spec]) sequences.
@@ -77,23 +75,16 @@ pub enum EscSequence {
 
 impl FastStringify for EscSequence {
     fn write_to_buf(&self, acc: &mut BufTextStorage) -> fmt::Result {
-        acc.push(ESC_START);
         match self {
-            EscSequence::SaveCursor => acc.push(DECSC_SAVE_CURSOR as char),
-            EscSequence::RestoreCursor => acc.push(DECRC_RESTORE_CURSOR as char),
-            EscSequence::IndexDown => acc.push(IND_INDEX_DOWN as char),
-            EscSequence::ReverseIndex => acc.push(RI_REVERSE_INDEX_UP as char),
-            EscSequence::ResetTerminal => acc.push(RIS_RESET_TERMINAL as char),
-            EscSequence::SelectAscii => {
-                acc.push(CHARSET_SELECTOR_G0);
-                acc.push(CHARSET_ASCII as char);
-            }
-            EscSequence::SelectDECGraphics => {
-                acc.push(CHARSET_SELECTOR_G0);
-                acc.push(CHARSET_DEC_GRAPHICS as char);
-            }
+            EscSequence::SaveCursor => acc.push_str(ESC_SAVE_CURSOR_STR),
+            EscSequence::RestoreCursor => acc.push_str(ESC_RESTORE_CURSOR_STR),
+            EscSequence::IndexDown => acc.push_str(ESC_INDEX_DOWN_STR),
+            EscSequence::ReverseIndex => acc.push_str(ESC_REVERSE_INDEX_STR),
+            EscSequence::ResetTerminal => acc.push_str(ESC_RESET_TERMINAL_STR),
+            EscSequence::SelectAscii => acc.push_str(ESC_SELECT_ASCII_STR),
+            EscSequence::SelectDECGraphics => acc.push_str(ESC_SELECT_DEC_GRAPHICS_STR),
         }
-        Ok(())
+        ok!()
     }
 
     fn write_buf_to_fmt(

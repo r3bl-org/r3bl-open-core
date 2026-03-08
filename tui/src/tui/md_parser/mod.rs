@@ -54,8 +54,8 @@
 //! - And returns a vector of [`MdElement`]s.
 //!
 //! This module contains a fully functional Markdown parser. This parser supports standard
-//! Markdown syntax as well as some extensions that are added to make it work w/
-//! [R3BL](https://r3bl.com) products.
+//! Markdown syntax as well as some extensions that are added to make it work w/ [R3BL]
+//! products.
 //!
 //! Here are some entry points into the codebase.
 //!
@@ -66,9 +66,9 @@
 //! 2. The [`mod@md_parser_types`] contain all the types that are used to represent the
 //!    Markdown document model, such as [`MdDocument`], [`MdElement`], [`MdLineFragment`]
 //!    and all the other intermediate types & enums required for parsing.
-//! 3. All the parsers related to parsing metadata specific for [R3BL](https://r3bl.com)
-//!    applications, which are not standard Markdown can be found in the [`extended`]
-//!    module, specifically [`parse_unique_kv_opt_eol`] and [`parse_csv_opt_eol`].
+//! 3. All the parsers related to parsing metadata specific for [R3BL] applications, which
+//!    are not standard Markdown can be found in the [`extended`] module, specifically
+//!    [`parse_unique_kv_opt_eol`] and [`parse_csv_opt_eol`].
 //! 4. All the parsers that are related to parsing the main "blocks" of Markdown, such as
 //!    ordered lists, unordered lists, code blocks, can be found in the [`block`] module.
 //! 5. All the parsers that parse within a single line of text (headings, general text)
@@ -78,10 +78,8 @@
 //!
 //! ## Video and blog post on this
 //!
-//! You can read all about this parser in [this blog post on
-//! developerlife.com](https://developerlife.com/2024/06/28/md-parser-rust-from-r3bl-tui/).
-//! You can watch a [video](https://youtu.be/SbwvSHZRb1E) about this parser on the `YouTube`
-//! developerlife.com channel.
+//! You can read all about this parser in [this blog post on developerlife.com]. You can
+//! watch a [video] about this parser on the `YouTube` developerlife.com channel.
 //!
 //! ## Note on Parser Selection
 //!
@@ -95,8 +93,8 @@
 //! decision.
 //!
 //! To learn about nom fundamentals, here are some resources:
-//! - Tutorial on nom parsing on [developerlife.com](https://developerlife.com/2023/02/20/guide-to-nom-parsing/).
-//! - Video on nom parsing on [YouTube developerlife.com channel](https://youtu.be/v3tMwr_ysPg).
+//! - Tutorial on nom parsing on [developerlife.com].
+//! - Video on nom parsing on [YouTube developerlife.com channel].
 //!
 //! ## Testing Infrastructure
 //!
@@ -219,7 +217,15 @@
 //! chain. Its the lowest priority parser called by
 //! [`parse_inline_fragments_until_eol_or_eoi()`], which itself is called:
 //! 1. Repeatedly in a loop by [`parse_block_markdown_text_with_or_without_new_line()`].
-//! 2. And by [`parse_block_markdown_text_with_checkbox_policy_with_or_without_new_line()`].
+//! 2. And by
+//!    [`parse_block_markdown_text_with_checkbox_policy_with_or_without_new_line()`].
+//!
+//! [developerlife.com]: https://developerlife.com/2023/02/20/guide-to-nom-parsing/
+//! [R3BL]: https://r3bl.com
+//! [this blog post on developerlife.com]:
+//!     https://developerlife.com/2024/06/28/md-parser-rust-from-r3bl-tui/
+//! [video]: https://youtu.be/SbwvSHZRb1E
+//! [YouTube developerlife.com channel]: https://youtu.be/v3tMwr_ysPg
 
 // Attach.
 pub mod block;

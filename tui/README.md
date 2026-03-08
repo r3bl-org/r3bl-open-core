@@ -350,7 +350,7 @@ to see how the library has evolved over time.
 To learn how we built this crate, please take a look at the following resources.
 - If you like consuming video content, here's our [YT
   channel](https://www.youtube.com/@developerlifecom). Please consider
-  [subscribing](https://www.youtube.com/channel/CHANNEL_ID?sub_confirmation=1).
+  [subscribing](https://www.youtube.com/channel/UCMcsxfCwzwDevc3NRqFgfEg?sub_confirmation=1).
 - If you like consuming written content, here's our developer
   [site](https://developerlife.com/).
 
@@ -455,8 +455,8 @@ cargo test test_sgr_and_character_sets   # text styling & colors
   [`SgrCode`] builders instead of hardcoded escape strings
 - **Real-world scenarios**: Tests realistic terminal applications (vim, emacs, tmux)
   with authentic 80x25 terminal dimensions
-- **[`VT-100` spec] compliance**: Comprehensive coverage of ANSI escape sequences
-  with proper bounds checking and edge case handling
+- **[`VT-100` spec] compliance**: Comprehensive coverage of ANSI escape sequences with
+  proper bounds checking and edge case handling
 - **Conformance data modules**: Organized sequence patterns for different terminal
   applications and use cases
 
@@ -501,7 +501,7 @@ syntax and R3BL extensions while maintaining performance and reliability.
 #### Next-Level PTY-Based Integration Testing
 
 The TUI library features **production-grade integration testing** using
-pseudo-terminals (PTYs) that simulate real interactive terminal applications. Unlike
+pseudoterminals (PTYs) that simulate real interactive terminal applications. Unlike
 traditional unit tests, these tests spawn the test binary itself in a PTY slave
 process and send raw byte sequences through the PTY master—exactly like a real
 terminal emulator would.
@@ -540,34 +540,45 @@ The [`generate_pty_test!`] macro handles PTY infrastructure automatically:
 
 **Example test structure:**
 
-<!-- It is ok to use ignore here, as this is a macro call -->
-
 ```rust
 generate_pty_test! {
     test_fn: interactive_input_parsing,
-    slave: || {
-        // Runs in PTY slave - fully interactive terminal
-        enable_raw_mode();
-        let input_device = InputDevice::new();
+    controller: |context: PtyTestContext| {
+        // Runs in PTY controller - sends input, verifies output
+        let PtyTestContext {
+            pty_pair,
+            child,
+            mut buf_reader,
+            mut writer,
+        } = context;
+
+        child.wait_for_ready(&mut buf_reader, "CONTROLLED_READY").unwrap();
+
+        writer.write_all(b"\x1b[A").unwrap();  // Send Up Arrow
+        writer.flush().unwrap();
+
+        let output = child.read_line_state(&mut buf_reader, "Event:");
+        assert!(output.contains("UpArrow event received"));
+
+        child.drain_and_wait(buf_reader, pty_pair);
+    },
+    controlled: || {
+        // Runs in PTY controlled - fully interactive terminal
+        let mut input_device = DirectToAnsiInputDevice::new();
+        println!("CONTROLLED_READY");
         process_terminal_events(&input_device);
         std::process::exit(0);
     },
-    master: |pty_pair, child| {
-        // Runs in PTY master - sends input, verifies output
-        let mut writer = pty_pair.controller().take_writer();
-        writer.write_all(b"\x1b[A").unwrap();  // Send Up Arrow
-
-        let output = read_pty_output(&pty_pair);
-        assert!(output.contains("UpArrow event received"));
-        child.wait().unwrap();
-    }
+    mode: PtyTestMode::Raw,
 }
 ```
 
-The macro takes three parameters:
+The macro takes four parameters:
 - `test_fn`: Name of the generated test function
-- `slave`: Closure that runs in the PTY slave process (interactive terminal)
-- `master`: Closure that runs in the PTY master process (sends input, verifies output)
+- `controller`: Closure that runs in the PTY controller process (sends input, verifies
+  output)
+- `controlled`: Closure that runs in the PTY controlled process (interactive terminal)
+- `mode`: A `PtyTestMode` value (`Raw` or `Cooked`)
 
 For a complete working example, see the [`test_pty_input_device`] module which
 demonstrates:
@@ -996,20 +1007,20 @@ to manage a connection between a process running the engine, and other processes
 running on the same host or on other hosts, in order to handle use cases like
 synchronizing rendered output, or state.
 
-> Here are some papers outlining the differences between message passing and shared
+> Here are some resources outlining the differences between message passing and shared
 > memory for communication between threads.
 >
-> - <https://rits.github-pages.ucl.ac.uk/intro-hpchtc/morea/lesson2/reading4.html>
-> - <https://www.javatpoint.com/shared-memory-vs-message-passing-in-operating-system>
+> - [Inter-process communication]
+> - [Message passing]
 
 ## I/O devices for full TUI, choice, and REPL
 
 [Dependency injection](https://developerlife.com/category/DI) is used to inject the
 required resources into the `main_event_loop` function. This allows for easy testing
-and for modularity and extensibility in the codebase. The `readline_async` module
+and for modularity and extensibility in the codebase. The [`readline_async`] module
 shares the same infrastructure for input and output devices. In fact the
-`InputDevice` and `OutputDevice` structs are shared by both the full TUI and the
-`readline_async` module.
+[`crate::InputDevice`] and [`crate::OutputDevice`] structs are shared by both the full
+[`TUI`] and the [`readline_async`] module.
 
 - The advantage of this approach is that for testing, test fixtures can be used to
   perform end-to-end testing of the TUI.
@@ -1782,8 +1793,8 @@ buffer.apply_ansi_bytes(b"\x1b[31mRed text\x1b[0m Normal text");
   contents against expected state
 - **Diffing**: Compare output between backends or program versions
 - **Screen capture**: Snapshot terminal state at any point
-- **Terminal emulation**: Build terminal emulators using the same battle-tested `VT-100`
-  parser that powers the terminal multiplexer
+- **Terminal emulation**: Build terminal emulators using the same battle-tested
+  `VT-100` parser that powers the terminal multiplexer
 
 **How `r3bl_tui` uses this for testing:**
 
@@ -1897,7 +1908,7 @@ Traditional unit tests can't verify:
 - Terminal resize handling
 - Input/output synchronization
 
-PTY tests solve this by creating real pseudo-terminals where tests act as both the
+PTY tests solve this by creating real pseudoterminals where tests act as both the
 "terminal emulator" (controller) and the "application" (controlled).
 
 ### Architecture
@@ -1914,7 +1925,7 @@ PTY tests solve this by creating real pseudo-terminals where tests act as both t
 ┌────────────▼───────────┐    ┌───────────────▼───────────────┐
 │ Macro: PTY Setup       │    │ Controlled Function           │
 │ - Creates PTY pair     │    │ - Enable raw mode (if needed) │
-│ - Spawns controlled    ├────▶ - Execute test logic         │
+│ - Spawns controlled    ├────► - Execute test logic          │
 │ - Passes to controller │    │ - Output via stdout/stderr    │
 └────────────┬───────────┘    └────────────▲─┬────────────────┘
              │                             │ │
@@ -1940,7 +1951,8 @@ controller/controlled functions -->
 generate_pty_test! {
     test_fn: test_raw_mode_enables_correctly,
     controller: my_controller_function,
-    controlled: my_controlled_function
+    controlled: my_controlled_function,
+    mode: PtyTestMode::Raw,
 }
 ```
 
@@ -1954,10 +1966,12 @@ The macro handles:
 
 **Controller** (runs in test process):
 
-- Receives `PtyPair` and `ControlledChild`
+- Receives [`PtyTestContext`] which bundles [`pty_pair`], [`child`], [`buf_reader`],
+  and [`writer`]
 - Sends input via PTY writer
 - Reads output via PTY reader
 - Performs assertions
+- Performs [`drain_and_wait()`] cleanup
 
 **Controlled** (runs in spawned child):
 
@@ -2448,8 +2462,11 @@ feature requests, feel free to add them there too 👍.
 
 <!-- Type references for documentation links -->
 
+[`readline_async`]: crate::readline_async::ReadlineAsyncContext::try_new
+[`TUI`]: crate::tui::TerminalWindow::main_event_loop
 [App]: crate::App
 [Component]: crate::Component
+[`pty_test_fixtures::drain_and_wait()`]: crate::pty_test_fixtures::drain_and_wait
 [TerminalWindow]: crate::TerminalWindow
 [FlexBox]: crate::FlexBox
 [Surface]: crate::Surface
@@ -2468,7 +2485,7 @@ feature requests, feel free to add them there too 👍.
 [`paint`]: mod@crate::tui::terminal_lib_backends::paint
 [`paint()`]: fn@crate::tui::terminal_lib_backends::paint::paint
 [`OffscreenBufferPaintImplCrossterm`]:
-    struct@crate::tui::terminal_lib_backends::offscreen_buffer::OffscreenBufferPaintImplCrossterm
+    struct@crate::OffscreenBufferPaintImplCrossterm
 [EditorComponent]: crate::EditorComponent
 [EditorEngine]: crate::EditorEngine
 [EditorBuffer]: crate::EditorBuffer
@@ -2513,6 +2530,12 @@ feature requests, feel free to add them there too 👍.
 [HasDialogBuffers]: crate::HasDialogBuffers
 [DialogEngineConfigOptions]: crate::DialogEngineConfigOptions
 [`generate_pty_test!`]: crate::generate_pty_test
+[`PtyTestContext`]: crate::PtyTestContext
+[`drain_and_wait()`]: crate::SingleThreadSafeControlledChild::drain_and_wait
+[`pty_pair`]: field@PtyTestContext::pty_pair
+[`child`]: field@PtyTestContext::child
+[`buf_reader`]: field@PtyTestContext::buf_reader
+[`writer`]: field@PtyTestContext::writer
 [`integration_tests`]:
     mod@crate::core::ansi::vt_100_terminal_input_parser::integration_tests
 [`raw_mode_integration_tests`]:
@@ -2547,7 +2570,10 @@ feature requests, feel free to add them there too 👍.
 [`RenderOpOutput`]: crate::RenderOpOutput
 [`TERMINAL_LIB_BACKEND`]: crate::TERMINAL_LIB_BACKEND
 [Architecture Overview]: core::resilient_reactor_thread#architecture-overview
-[ANSI X3.64 Standard]: https://www.ecma-international.org/wp-content/uploads/ECMA-48_5th_edition_june_1991.pdf
+[ANSI X3.64 Standard]:
+    https://www.ecma-international.org/wp-content/uploads/ECMA-48_5th_edition_june_1991.pdf
+[Inter-process communication]: https://en.wikipedia.org/wiki/Inter-process_communication
+[Message passing]: https://en.wikipedia.org/wiki/Message_passing
 [`VT-100` spec]: https://vt100.net/docs/vt100-ug/chapter3.html
 [`VT-100` User Guide]: https://vt100.net/docs/vt100-ug/
 [XTerm Control Sequences]: https://invisible-island.net/xterm/ctlseqs/ctlseqs.html

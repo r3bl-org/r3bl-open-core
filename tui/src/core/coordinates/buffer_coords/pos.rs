@@ -16,7 +16,7 @@ use std::{fmt::{Debug, Formatter, Result},
 ///
 /// > 💡 **See also**: For complete workflows showing `Pos` used with other coordinate
 /// > types
-/// > (e.g., VT-100 conversions, bounds checking), see the [coordinates module
+/// > (e.g., [`VT-100`] conversions, bounds checking), see the [coordinates module
 /// > documentation](crate::coordinates).
 ///
 /// Here is a visual representation of how position and sizing work for the layout
@@ -83,8 +83,9 @@ use std::{fmt::{Debug, Formatter, Result},
 /// ```
 ///
 /// [`ChUnit`]: crate::ChUnit
-/// [`ScrOfs`]: crate::ScrOfs
 /// [`pos()`]: crate::pos()
+/// [`ScrOfs`]: crate::ScrOfs
+/// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 #[derive(Copy, Clone, PartialEq, PartialOrd, Ord, Eq, Hash, Default)]
 pub struct Pos {
     /// Row index, 0-based.
@@ -447,7 +448,7 @@ mod api {
         /// [`scroll_editor_content`] for that.
         ///
         /// [`ScrOfs`]: crate::ScrOfs
-        /// [`scroll_editor_content`]: crate::tui::editor::editor_engine::scroll_editor_content
+        /// [`scroll_editor_content`]: crate::editor_engine::scroll_editor_content
         pub fn add_col_with_bounds(
             &mut self,
             arg_col_width: impl Into<ColWidth>,

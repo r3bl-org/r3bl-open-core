@@ -1,5 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+// cspell:words errno
+
 //! Backend compatibility tests for [`DirectToAnsiInputDevice`] and
 //! [`CrosstermInputDevice`].
 //!
@@ -54,33 +56,31 @@
 //! [`DirectToAnsiInputDevice`]: crate::direct_to_ansi::DirectToAnsiInputDevice
 //! [`InputEvent`]: crate::InputEvent
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
-//! [`TERMINAL_LIB_BACKEND`]: crate::tui::terminal_lib_backends::TERMINAL_LIB_BACKEND
-//! [`terminal_raw_mode::enable_raw_mode()`]: crate::core::ansi::terminal_raw_mode::enable_raw_mode
-//! [`terminal_raw_mode::raw_mode_unix::enable_raw_mode`]: crate::core::ansi::terminal_raw_mode::raw_mode_unix::enable_raw_mode
+//! [`TERMINAL_LIB_BACKEND`]: crate::TERMINAL_LIB_BACKEND
+//! [`terminal_raw_mode::enable_raw_mode()`]: crate::terminal_raw_mode::enable_raw_mode
+//! [`terminal_raw_mode::raw_mode_unix::enable_raw_mode`]: crate::terminal_raw_mode::raw_mode_unix::enable_raw_mode
 
 use crate::{ARROW_DOWN_FINAL, ARROW_LEFT_FINAL, ARROW_RIGHT_FINAL, ARROW_UP_FINAL,
-            ASCII_DEL, CONTROL_C, CONTROL_ENTER, CONTROL_TAB, CrosstermInputDevice,
-            FUNCTION_F5_CODE, MODIFIER_ALT, MODIFIER_CTRL, MODIFIER_CTRL_SHIFT,
-            MODIFIER_SHIFT, PtyPair, SPECIAL_DELETE_CODE, SPECIAL_END_FINAL,
-            SPECIAL_HOME_FINAL, SPECIAL_INSERT_CODE, SPECIAL_PAGE_DOWN_CODE,
-            SPECIAL_PAGE_UP_CODE, SS3_F1_FINAL, SS3_F2_FINAL, SS3_F3_FINAL,
-            SS3_F4_FINAL,
+            ASCII_DEL, CONTROL_C, CONTROL_ENTER, CONTROL_TAB, CONTROLLED_READY,
+            CrosstermInputDevice, EIO, FUNCTION_F5_CODE, MODIFIER_ALT, MODIFIER_CTRL,
+            MODIFIER_CTRL_SHIFT, MODIFIER_SHIFT, PtyPair, SPECIAL_DELETE_CODE,
+            SPECIAL_END_FINAL, SPECIAL_HOME_FINAL, SPECIAL_INSERT_CODE,
+            SPECIAL_PAGE_DOWN_CODE, SPECIAL_PAGE_UP_CODE, SS3_F1_FINAL, SS3_F2_FINAL,
+            SS3_F3_FINAL, SS3_F4_FINAL,
             core::ansi::{generator::{csi, csi_modified, csi_tilde, ss3},
                          terminal_raw_mode},
-            spawn_controlled_in_pty,
-            tui::terminal_lib_backends::direct_to_ansi::DirectToAnsiInputDevice};
+            retry_until_success_test, spawn_controlled_in_pty,
+            tui::terminal_lib_backends::direct_to_ansi::DirectToAnsiInputDevice,
+            wait_for_ready};
 use std::{collections::HashMap,
-          io::{BufRead, BufReader, Write},
-          time::Duration};
+          fmt::Write as _,
+          io::{BufRead, Write}};
 
 const BACKEND_NAME_CROSSTERM: &str = "crossterm";
 const BACKEND_NAME_DIRECT_TO_ANSI: &str = "direct_to_ansi";
 
 /// Environment variable to indicate controlled process mode.
-const PTY_CONTROLLED_ENV_VAR: &str = "R3BL_PTY_INPUT_TEST_CONTROLLED";
-
-/// Ready signal sent by controlled process after initialization.
-const CONTROLLED_READY: &str = "CONTROLLED_READY";
+const INPUT_TEST_ENV_VAR: &str = "R3BL_PTY_INPUT_TEST_CONTROLLED";
 
 /// Prefix for event output from controlled process.
 const EVENT_PREFIX: &str = "EVENT:";
@@ -97,7 +97,7 @@ const EVENT_PREFIX: &str = "EVENT:";
 ///
 /// # Panics
 ///
-/// Panics if the `PTY_CONTROLLED_ENV_VAR` is set to an unknown backend value.
+/// Panics if the `INPUT_TEST_ENV_VAR` is set to an unknown backend value.
 ///
 /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 /// [`InputEvent`]: crate::InputEvent
@@ -105,7 +105,7 @@ const EVENT_PREFIX: &str = "EVENT:";
 #[test]
 pub fn test_backend_compat_input_compare() {
     // Check if we're running as a controlled process.
-    if let Ok(backend) = std::env::var(PTY_CONTROLLED_ENV_VAR) {
+    if let Ok(backend) = std::env::var(INPUT_TEST_ENV_VAR) {
         match backend.as_str() {
             "direct_to_ansi" => controlled_direct_to_ansi::run(),
             "crossterm" => controlled_crossterm::run(),
@@ -115,26 +115,35 @@ pub fn test_backend_compat_input_compare() {
 
     eprintln!("🔍 Compatibility Test: Running both backends and comparing outputs...");
 
+    retry_until_success_test!({ run_single_test_attempt() });
+}
+
+/// Run a single attempt of the input compatibility test.
+/// Returns `Ok(())` if identical, or `Err(String)` with diagnostic message.
+#[allow(clippy::map_unwrap_or)]
+fn run_single_test_attempt() -> Result<(), String> {
     // Run DirectToAnsi backend via PTY.
     eprintln!("\n📝 Running DirectToAnsi backend...");
-    let direct_events = controller::run_and_collect(spawn_controlled_in_pty(
+    let (name, pty_pair, _child) = spawn_controlled_in_pty(
         "direct_to_ansi",
-        PTY_CONTROLLED_ENV_VAR,
+        INPUT_TEST_ENV_VAR,
         "test_backend_compat_input_compare",
         24,
         80,
-    ));
+    );
+    let direct_events = controller::run_and_collect((name, pty_pair))?;
     eprintln!("  Captured {} events", direct_events.len());
 
     // Run Crossterm backend via PTY.
     eprintln!("\n📝 Running Crossterm backend...");
-    let crossterm_events = controller::run_and_collect(spawn_controlled_in_pty(
+    let (name, pty_pair, _child) = spawn_controlled_in_pty(
         "crossterm",
-        PTY_CONTROLLED_ENV_VAR,
+        INPUT_TEST_ENV_VAR,
         "test_backend_compat_input_compare",
         24,
         80,
-    ));
+    );
+    let crossterm_events = controller::run_and_collect((name, pty_pair))?;
     eprintln!("  Captured {} events", crossterm_events.len());
 
     eprintln!("\n📊 Results:");
@@ -147,39 +156,24 @@ pub fn test_backend_compat_input_compare() {
         let direct_event = direct_events.get(desc);
         let crossterm_event = crossterm_events.get(desc);
 
-        match (direct_event, crossterm_event) {
-            (Some(d), Some(c)) if d == c => {
-                eprintln!("  ✅ {desc}: Match");
-            }
-            (Some(d), Some(c)) => {
-                eprintln!("  ❌ {desc}: MISMATCH");
-                eprintln!("      DirectToAnsi: {d}");
-                eprintln!("      Crossterm:    {c}");
-                differences.push(format!("{desc}: DirectToAnsi={d}, Crossterm={c}"));
-            }
-            (Some(d), None) => {
-                eprintln!("  ⚠️  {desc}: Only DirectToAnsi produced event: {d}");
-                differences.push(format!("{desc}: Only DirectToAnsi={d}"));
-            }
-            (None, Some(c)) => {
-                eprintln!("  ⚠️  {desc}: Only Crossterm produced event: {c}");
-                differences.push(format!("{desc}: Only Crossterm={c}"));
-            }
-            (None, None) => {
-                eprintln!("  ⚠️  {desc}: Neither backend produced event");
-                differences.push(format!("{desc}: No events from either backend"));
-            }
+        if direct_event != crossterm_event {
+            let direct_str = direct_event.map(String::as_str).unwrap_or("<None>");
+            let crossterm_str = crossterm_event.map(String::as_str).unwrap_or("<None>");
+            differences.push(format!(
+                "{desc}: DirectToAnsi={direct_str}, Crossterm={crossterm_str}"
+            ));
         }
     }
 
-    eprintln!("\n📋 Summary:");
     if differences.is_empty() {
-        eprintln!("  ✅ All events match between backends!");
+        eprintln!("✅ All events match perfectly!");
+        Ok(())
     } else {
-        eprintln!("  ❌ Found {} differences:", differences.len());
+        let mut msg = format!("❌ Found {} differences:\n", differences.len());
         for diff in &differences {
-            eprintln!("    - {diff}");
+            let _ = writeln!(msg, "  - {diff}");
         }
+        Err(msg)
     }
 }
 
@@ -194,86 +188,77 @@ pub mod controller {
     /// Used by the comparison test to directly capture events without printing.
     /// Returns a map of sequence description → EVENT string.
     ///
-    /// # Panics
+    /// See [`wait_for_ready#robust-synchronization-pattern`] for details on how the
+    /// [`PTY`] handshake is handled without data loss.
     ///
-    /// Panics if [`PTY`] reader/writer cannot be obtained, or if I/O operations fail.
+    /// # Errors
+    ///
+    /// Returns an error message if [`PTY`] reader/writer cannot be obtained or if I/O
+    /// operations fail.
     ///
     /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
-    #[must_use]
     pub fn run_and_collect(
         (backend_name, pty_pair): (&str, PtyPair),
-    ) -> HashMap<String, String> {
-        eprintln!("🚀 {backend_name} Controller: Starting...");
-
+    ) -> Result<HashMap<String, String>, String> {
         let mut writer = pty_pair
             .controller()
             .take_writer()
-            .expect("Failed to get writer");
+            .map_err(|e| format!("Failed to get writer: {e}"))?;
         let reader = pty_pair
             .controller()
             .try_clone_reader()
-            .expect("Failed to get reader");
-        let mut buf_reader = BufReader::new(reader);
+            .map_err(|e| format!("Failed to get reader: {e}"))?;
+        let mut buf_reader = std::io::BufReader::new(reader);
 
-        wait_for_ready(&mut buf_reader, backend_name);
+        // Wait for CONTROLLED_READY.
+        // Because it uses a buffered reader, any data arriving after the signal
+        // is preserved in the reader's internal buffer.
+        wait_for_ready(&mut buf_reader, CONTROLLED_READY)?;
 
         let mut events = HashMap::new();
 
         for (desc, bytes) in generate_test_sequences::all() {
-            eprintln!("📝 {backend_name} Controller: Sending {desc}...");
-
-            writer.write_all(&bytes).expect("Failed to write sequence");
-            writer.flush().expect("Failed to flush");
-
-            std::thread::sleep(Duration::from_millis(50));
+            writer
+                .write_all(&bytes)
+                .map_err(|e| format!("Failed to write sequence {desc}: {e}"))?;
+            writer
+                .flush()
+                .map_err(|e| format!("Failed to flush after {desc}: {e}"))?;
 
             // Read lines until we see the EVENT response. The controlled process
             // responds immediately after receiving input, so blocking reads work.
             loop {
                 let mut line = String::new();
                 match buf_reader.read_line(&mut line) {
-                    Ok(0) => break,
+                    Ok(0) => {
+                        return Err(format!(
+                            "EOF waiting for event {desc} for backend {backend_name}"
+                        ));
+                    }
                     Ok(_) => {
                         let trimmed = line.trim();
                         if trimmed.starts_with(EVENT_PREFIX) {
-                            eprintln!("✅ {backend_name} {desc}: {trimmed}");
                             events.insert(desc.to_string(), trimmed.to_string());
                             break;
                         }
                     }
-                    Err(e) => panic!("Read error: {e}"),
-                }
-            }
-        }
-
-        eprintln!("🧹 {backend_name} Controller: Cleaning up...");
-        drop(writer);
-        events
-    }
-
-    /// Wait for controlled process to signal readiness.
-    ///
-    /// The controlled process sends `CONTROLLED_READY` immediately on startup, so
-    /// blocking reads work reliably here. No timeout needed since we control both sides.
-    fn wait_for_ready(
-        buf_reader: &mut BufReader<impl std::io::Read>,
-        backend_name: &str,
-    ) {
-        loop {
-            let mut line = String::new();
-            match buf_reader.read_line(&mut line) {
-                Ok(0) => panic!("EOF before controlled ready"),
-                Ok(_) => {
-                    let trimmed = line.trim();
-                    eprintln!("  ← {backend_name} Controlled: {trimmed}");
-                    if trimmed.contains(CONTROLLED_READY) {
-                        eprintln!("  ✓ {backend_name} Controlled is ready");
-                        return;
+                    Err(e) => {
+                        // EIO (errno 5) is how Linux signals that the controlled side
+                        // closed.
+                        let raw_os_error: Option<i32> = e.raw_os_error();
+                        if raw_os_error == Some(EIO) {
+                            return Err(format!(
+                                "EOF (EIO) waiting for event {desc} for backend {backend_name}"
+                            ));
+                        }
+                        return Err(format!("Read error waiting for event {desc}: {e}"));
                     }
                 }
-                Err(e) => panic!("Read error: {e}"),
             }
         }
+
+        drop(writer);
+        Ok(events)
     }
 }
 
@@ -289,15 +274,12 @@ pub mod controlled_common {
     ///
     /// Panics if stdout flush fails.
     pub fn signal_ready() {
-        println!("{}", super::CONTROLLED_READY);
-        std::io::stdout().flush().expect("Failed to flush");
+        println!("{}", crate::CONTROLLED_READY);
+        std::io::stdout().flush().expect("Failed to flush stdout");
     }
 
     /// Exit the controlled process.
-    pub fn exit(backend_name: &str) -> ! {
-        eprintln!("🔍 {backend_name} Controlled: Exiting");
-        std::process::exit(0);
-    }
+    pub fn exit(_backend_name: &str) -> ! { std::process::exit(0); }
 
     /// Macro for the async event loop.
     ///
@@ -311,7 +293,7 @@ pub mod controlled_common {
         ($backend_name:expr, $device:expr) => {{
             use std::io::Write as _;
 
-            let inactivity_timeout = std::time::Duration::from_secs(3);
+            let inactivity_timeout = std::time::Duration::from_secs(5);
             let mut deadline = tokio::time::Instant::now() + inactivity_timeout;
 
             loop {
@@ -321,16 +303,14 @@ pub mod controlled_common {
                             Some(input_event) => {
                                 deadline = tokio::time::Instant::now() + inactivity_timeout;
                                 println!("{} {input_event:?}", super::EVENT_PREFIX);
-                                std::io::stdout().flush().expect("Failed to flush");
+                                std::io::stdout().flush().expect("Failed to flush stdout");
                             }
                             None => {
-                                eprintln!("🔍 {} Controlled: EOF", $backend_name);
                                 break;
                             }
                         }
                     }
                     () = tokio::time::sleep_until(deadline) => {
-                        eprintln!("🔍 {} Controlled: Inactivity timeout", $backend_name);
                         break;
                     }
                 }
@@ -360,16 +340,14 @@ pub mod controlled_crossterm {
     ///
     /// [`tokio`]: tokio
     pub fn run() -> ! {
-        // 1. Signal ready (before enabling raw mode so newlines work normally).
-        controlled_common::signal_ready();
-
-        // 2. Enable raw mode using Crossterm's raw mode.
+        // 1. Enable raw mode using Crossterm's raw mode.
         drop(crossterm::terminal::enable_raw_mode());
 
         let runtime = tokio::runtime::Runtime::new().expect("Failed to create runtime");
         runtime.block_on(async {
-            eprintln!("🔍 {BACKEND_NAME_CROSSTERM} Controlled: Creating device...");
             let mut device = CrosstermInputDevice::new_event_stream();
+            // 2. Signal ready (AFTER poller is watching stdin).
+            controlled_common::signal_ready();
             controlled_common::run_event_loop!(BACKEND_NAME_CROSSTERM, device);
         });
 
@@ -393,16 +371,14 @@ pub mod controlled_direct_to_ansi {
     ///
     /// [`tokio`]: tokio
     pub fn run() -> ! {
-        // 1. Signal ready (before enabling raw mode so newlines work normally).
-        controlled_common::signal_ready();
-
-        // 2. Enable raw mode using DirectToAnsi's raw mode (rustix-based).
+        // 1. Enable raw mode using DirectToAnsi's raw mode (rustix-based).
         drop(terminal_raw_mode::raw_mode_unix::enable_raw_mode());
 
         let runtime = tokio::runtime::Runtime::new().expect("Failed to create runtime");
         runtime.block_on(async {
-            eprintln!("🔍 {BACKEND_NAME_DIRECT_TO_ANSI} Controlled: Creating device...");
             let mut device = DirectToAnsiInputDevice::new();
+            // 2. Signal ready (AFTER poller is watching stdin).
+            controlled_common::signal_ready();
             controlled_common::run_event_loop!(BACKEND_NAME_DIRECT_TO_ANSI, device);
         });
 

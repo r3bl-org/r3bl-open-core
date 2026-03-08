@@ -2,28 +2,12 @@
 
 // cspell:words ello
 
-use crate::{AsyncDebouncedDeadline, SingleThreadSafeControlledChild, DebouncedState, PtyPair,
-            PtyTestMode, core::test_fixtures::StdoutMock,
+use crate::{AsyncDebouncedDeadline, CONTROLLED_READY, DebouncedState, LINE_PREFIX, PtyTestMode, PtyTestContext,
+            core::test_fixtures::StdoutMock, direct_to_ansi::DirectToAnsiInputDevice,
             readline_async::readline_async_impl::LineState};
-use std::{io::{BufRead, BufReader, Write},
+use std::{io::Write,
           sync::{Arc, Mutex as StdMutex},
           time::Duration};
-
-// ==================== Signal Constants ====================
-//
-// These constants ensure consistency between controller and controlled processes.
-
-/// Signal indicating the test is running in the controlled process.
-const TEST_RUNNING: &str = "TEST_RUNNING";
-
-/// Signal indicating the controlled process has started and is initializing.
-const CONTROLLED_STARTING: &str = "CONTROLLED_STARTING";
-
-/// Signal indicating the controlled process is ready to receive input.
-const CONTROLLED_READY: &str = "CONTROLLED_READY";
-
-/// Prefix for line state output.
-const LINE_PREFIX: &str = "Line:";
 
 generate_pty_test! {
     /// [`PTY`]-based integration test for Ctrl+D delete character behavior.
@@ -59,90 +43,31 @@ generate_pty_test! {
 ///
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 #[allow(clippy::too_many_lines)]
-fn pty_controller_entry_point(pty_pair: PtyPair, child: SingleThreadSafeControlledChild) {
+fn pty_controller_entry_point(context: PtyTestContext) {
+    let PtyTestContext {
+        pty_pair,
+        child,
+        mut buf_reader,
+        mut writer,
+    } = context;
+
     eprintln!("🚀 PTY Controller: Starting Ctrl+D delete test...");
-
-    let mut writer = pty_pair
-        .controller()
-        .take_writer()
-        .expect("Failed to get writer");
-    let reader = pty_pair
-        .controller()
-        .try_clone_reader()
-        .expect("Failed to clone reader");
-
-    let mut buf_reader = BufReader::new(reader);
 
     eprintln!("📝 PTY Controller: Waiting for controlled process to start...");
 
-    // Wait for controlled to confirm it's running and ready. The controlled process sends
-    // TEST_RUNNING, CONTROLLED_STARTING, and CONTROLLED_READY on startup.
-    let mut test_running_seen = false;
-    // Note: controlled_ready_seen will be assigned in the loop before being read
-    let controlled_ready_seen;
+    // Wait for controlled to confirm it's ready.
+    child
+        .wait_for_ready(&mut buf_reader, CONTROLLED_READY)
+        .expect("Controlled never signaled ready");
 
-    // Blocking reads work reliably because controlled process responds immediately.
-    loop {
-        let mut line = String::new();
-        match buf_reader.read_line(&mut line) {
-            Ok(0) => panic!("EOF reached before controlled started"),
-            Ok(_) => {
-                let trimmed = line.trim();
-                eprintln!("  ← Controlled output: {trimmed}");
-
-                if trimmed.contains(TEST_RUNNING) {
-                    test_running_seen = true;
-                    eprintln!("  ✓ Test is running in controlled");
-                }
-                if trimmed.contains(CONTROLLED_STARTING) {
-                    eprintln!("  ✓ Controlled process confirmed running!");
-                }
-                if trimmed.contains(CONTROLLED_READY) {
-                    controlled_ready_seen = true;
-                    eprintln!(
-                        "  ✓ Controlled is ready (raw mode enabled, input device created)"
-                    );
-                    break;
-                }
-            }
-            Err(e) => panic!("Read error while waiting for controlled: {e}"),
-        }
-    }
-
-    assert!(
-        test_running_seen,
-        "Controlled test never started running (no {TEST_RUNNING} output)"
-    );
-    assert!(
-        controlled_ready_seen,
-        "Controlled never signaled ready (no {CONTROLLED_READY} output)"
-    );
-
-    // Helper function to read line state, skipping debug output.
-    // Blocking reads work reliably because controlled process responds immediately.
-    let mut read_line_state = || -> String {
-        loop {
-            let mut line = String::new();
-            match buf_reader.read_line(&mut line) {
-                Ok(0) => panic!("EOF reached before getting line state"),
-                Ok(_) => {
-                    let trimmed = line.trim();
-                    if trimmed.starts_with(LINE_PREFIX) {
-                        return trimmed.to_string();
-                    }
-                    eprintln!("  ⚠️  Skipping: {trimmed}");
-                }
-                Err(e) => panic!("Read error: {e}"),
-            }
-        }
-    };
+    eprintln!("  ✓ Controlled is ready (input device created)");
 
     // Test: Ctrl+D on non-empty line → delete character at cursor
     eprintln!("📝 PTY Controller: Sending 'hello'...");
     writer.write_all(b"hello").expect("Failed to write text");
     writer.flush().expect("Failed to flush");
 
-    let result = read_line_state();
+    let result = child.read_line_state(&mut buf_reader, LINE_PREFIX);
     eprintln!("  ← Line state: {result}");
     assert_eq!(result, "Line: hello, Cursor: 5");
 
@@ -151,7 +76,7 @@ fn pty_controller_entry_point(pty_pair: PtyPair, child: SingleThreadSafeControll
     writer.write_all(&[0x01]).expect("Failed to write Ctrl+A");
     writer.flush().expect("Failed to flush");
 
-    let result = read_line_state();
+    let result = child.read_line_state(&mut buf_reader, LINE_PREFIX);
     eprintln!("  ← After Ctrl+A: {result}");
     assert_eq!(result, "Line: hello, Cursor: 0");
 
@@ -160,7 +85,7 @@ fn pty_controller_entry_point(pty_pair: PtyPair, child: SingleThreadSafeControll
     writer.write_all(&[0x04]).expect("Failed to write Ctrl+D");
     writer.flush().expect("Failed to flush");
 
-    let result = read_line_state();
+    let result = child.read_line_state(&mut buf_reader, LINE_PREFIX);
     eprintln!("  ← After Ctrl+D: {result}");
     assert_eq!(result, "Line: ello, Cursor: 0");
 
@@ -176,12 +101,7 @@ fn pty_controller_entry_point(pty_pair: PtyPair, child: SingleThreadSafeControll
 /// [`PTY`] Controlled: Process readline input and report line state
 ///
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
-fn pty_controlled_entry_point() -> ! {
-    use crate::direct_to_ansi::DirectToAnsiInputDevice;
-
-    println!("{CONTROLLED_STARTING}");
-    std::io::stdout().flush().expect("Failed to flush");
-
+fn pty_controlled_entry_point() {
     let runtime = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
 
     runtime.block_on(async {
@@ -194,10 +114,14 @@ fn pty_controlled_entry_point() -> ! {
         let safe_history = Arc::new(StdMutex::new(history));
 
         println!("🔍 PTY Controlled: LineState created, reading input...");
-        println!("{CONTROLLED_READY}");  // Signal to controller that we're ready
-        std::io::stdout().flush().expect("Failed to flush");
 
         let mut input_device = DirectToAnsiInputDevice::new();
+
+        // Signal to controller that we're ready to receive input. MUST be after
+        // DirectToAnsiInputDevice::new() so the mio poller thread is already
+        // watching stdin before the controller sends any input through the PTY.
+        println!("{CONTROLLED_READY}");
+        std::io::stdout().flush().expect("Failed to flush");
 
         // ==================== Timing Configuration ====================
         //
@@ -282,6 +206,4 @@ fn pty_controlled_entry_point() -> ! {
         std::io::stdout().flush().expect("Failed to flush");
     });
 
-    println!("🔍 Controlled: Completed, exiting");
-    std::process::exit(0);
 }

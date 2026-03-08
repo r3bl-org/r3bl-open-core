@@ -1,10 +1,10 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Test modules for [`VT-100`] ANSI conformance validation.
+//! Test modules for [`VT-100`] [`ANSI`] conformance validation.
 //!
 //! This module organizes conformance tests by functionality and architectural layer:
 //! - Operations tests (test_*_ops.rs) - Test operations modules directly
-//! - Protocol tests (`test_protocol_*.rs`) - Test ANSI/[`VT-100`] protocol parsing
+//! - Protocol tests (`test_protocol_*.rs`) - Test [`ANSI`]/[`VT-100`] protocol parsing
 //! - System tests (`test_system_*.rs`) - Test system components and lifecycle
 //! - Integration tests (`test_integration_*.rs`) - Test cross-cutting scenarios
 //!
@@ -34,12 +34,13 @@
 //! 2. **Shim**: [`operations::char_ops`] - Parameter translation (no direct tests)
 //! 3. **Implementation**: [`impl_char_ops`] - Buffer logic (has unit tests)
 //!
-//! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
-//! [`apply_ansi_bytes`]: crate::tui::terminal_lib_backends::offscreen_buffer::OffscreenBuffer::apply_ansi_bytes
-//! [`impl_char_ops`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl::vt_100_impl_char_ops
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`apply_ansi_bytes`]: crate::OffscreenBuffer::apply_ansi_bytes
+//! [`impl_char_ops`]: crate::vt_100_ansi_impl::vt_100_impl_char_ops
 //! [`operations::char_ops`]: super::super::operations::vt_100_shim_char_ops
 //! [`operations`]: super::super::operations
-//! [`vt_100_ansi_impl`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl
+//! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+//! [`vt_100_ansi_impl`]: crate::vt_100_ansi_impl
 //! [conformance tests]: super
 
 // === OPERATIONS TESTS ===

@@ -17,7 +17,7 @@
 //! router.rs (routing & `ESC` detection)
 //!    │ (routes mouse sequences here)
 //! ┌──▼───────────────────────────────────────┐  ┌──────────────────┐
-//! │  mouse.rs                                ◀──┤ **YOU ARE HERE** │
+//! │  mouse.rs                                ◄──┤ **YOU ARE HERE** │
 //! │  • Parse `SGR` protocol (modern)         │  └──────────────────┘
 //! │  • Parse `X10`/Normal (legacy)           │
 //! │  • Parse `RXVT` protocol (legacy)        │
@@ -41,12 +41,12 @@
 //!
 //! ## Supported Mouse Protocols
 //! - **[`SGR`] (Selective Graphic Rendition) Protocol**: Modern standard format
-//! - Format: `CSI < Cb ; Cx ; Cy M/m`
+//! - Format: `ESC [ < Cb ; Cx ; Cy M / m`
 //! - Button detection (left=0, middle=1, right=2)
 //! - Drag detection (button with flag 32)
 //! - Scroll events (buttons 64/65 for vertical, 66/67 for horizontal)
-//! - **[`X10`]/Normal Protocol**: Legacy formats
-//! - **[`RXVT`] Protocol**: Alternative legacy format
+//! - **[`X10`]/Normal Protocol**: Legacy formats (Format: `ESC [ M Cb Cx Cy`)
+//! - **[`RXVT`] Protocol**: Alternative legacy format (Format: `ESC [ Cb ; Cx ; Cy M`)
 //! - **Click Events**: Press (M) and Release (m)
 //! - **Drag Events**: Motion while button held
 //! - **Motion Events**: Movement without buttons
@@ -84,173 +84,8 @@
 //!
 //! [1-based coordinates]: mod@super#one-based-mouse-input-events
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`CSI`]: crate::CsiSequence
-//! [`CSI`]: crate::CsiSequence
-//! [`CSI`]: crate::CsiSequence
-//! [`CSI`]: crate::CsiSequence
-//! [`CSI`]: crate::CsiSequence
-//! [`CSI`]: crate::CsiSequence
-//! [`CSI`]: crate::CsiSequence
-//! [`CSI`]: crate::CsiSequence
-//! [`CSI`]: crate::CsiSequence
-//! [`CSI`]: crate::CsiSequence
-//! [`CSI`]: crate::CsiSequence
-//! [`CSI`]: crate::CsiSequence
-//! [`CSI`]: crate::CsiSequence
-//! [`CSI`]: crate::CsiSequence
-//! [`CSI`]: crate::CsiSequence
-//! [`CSI`]: crate::CsiSequence
-//! [`CSI`]: crate::CsiSequence
-//! [`CSI`]: crate::CsiSequence
-//! [`CSI`]: crate::CsiSequence
-//! [`CSI`]: crate::CsiSequence
-//! [`CSI`]: crate::CsiSequence
-//! [`CSI`]: crate::CsiSequence
-//! [`CSI`]: crate::CsiSequence
-//! [`CSI`]: crate::CsiSequence
-//! [`CSI`]: crate::CsiSequence
-//! [`CSI`]: crate::CsiSequence
-//! [`RXVT`]: https://en.wikipedia.org/wiki/Rxvt
-//! [`RXVT`]: https://en.wikipedia.org/wiki/Rxvt
-//! [`RXVT`]: https://en.wikipedia.org/wiki/Rxvt
-//! [`RXVT`]: https://en.wikipedia.org/wiki/Rxvt
-//! [`RXVT`]: https://en.wikipedia.org/wiki/Rxvt
-//! [`RXVT`]: https://en.wikipedia.org/wiki/Rxvt
-//! [`RXVT`]: https://en.wikipedia.org/wiki/Rxvt
-//! [`RXVT`]: https://en.wikipedia.org/wiki/Rxvt
-//! [`RXVT`]: https://en.wikipedia.org/wiki/Rxvt
-//! [`RXVT`]: https://en.wikipedia.org/wiki/Rxvt
-//! [`RXVT`]: https://en.wikipedia.org/wiki/Rxvt
-//! [`RXVT`]: https://en.wikipedia.org/wiki/Rxvt
-//! [`RXVT`]: https://en.wikipedia.org/wiki/Rxvt
-//! [`RXVT`]: https://en.wikipedia.org/wiki/Rxvt
-//! [`RXVT`]: https://en.wikipedia.org/wiki/Rxvt
-//! [`RXVT`]: https://en.wikipedia.org/wiki/Rxvt
-//! [`RXVT`]: https://en.wikipedia.org/wiki/Rxvt
-//! [`RXVT`]: https://en.wikipedia.org/wiki/Rxvt
-//! [`RXVT`]: https://en.wikipedia.org/wiki/Rxvt
-//! [`RXVT`]: https://en.wikipedia.org/wiki/Rxvt
-//! [`RXVT`]: https://en.wikipedia.org/wiki/Rxvt
-//! [`RXVT`]: https://en.wikipedia.org/wiki/Rxvt
-//! [`RXVT`]: https://en.wikipedia.org/wiki/Rxvt
-//! [`RXVT`]: https://en.wikipedia.org/wiki/Rxvt
-//! [`RXVT`]: https://en.wikipedia.org/wiki/Rxvt
-//! [`RXVT`]: https://en.wikipedia.org/wiki/Rxvt
-//! [`RXVT`]: https://en.wikipedia.org/wiki/Rxvt
-//! [`SGR`]: crate::SgrCode
-//! [`SGR`]: crate::SgrCode
-//! [`SGR`]: crate::SgrCode
-//! [`SGR`]: crate::SgrCode
-//! [`SGR`]: crate::SgrCode
-//! [`SGR`]: crate::SgrCode
-//! [`SGR`]: crate::SgrCode
-//! [`SGR`]: crate::SgrCode
-//! [`SGR`]: crate::SgrCode
-//! [`SGR`]: crate::SgrCode
-//! [`SGR`]: crate::SgrCode
-//! [`SGR`]: crate::SgrCode
-//! [`SGR`]: crate::SgrCode
-//! [`SGR`]: crate::SgrCode
-//! [`SGR`]: crate::SgrCode
-//! [`SGR`]: crate::SgrCode
-//! [`SGR`]: crate::SgrCode
-//! [`SGR`]: crate::SgrCode
-//! [`SGR`]: crate::SgrCode
-//! [`SGR`]: crate::SgrCode
-//! [`SGR`]: crate::SgrCode
-//! [`SGR`]: crate::SgrCode
-//! [`SGR`]: crate::SgrCode
-//! [`SGR`]: crate::SgrCode
-//! [`SGR`]: crate::SgrCode
-//! [`SGR`]: crate::SgrCode
-//! [`SGR`]: crate::SgrCode
-//! [`TermPos`]: crate::core::coordinates::vt_100_ansi_coords::TermPos
-//! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
-//! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
-//! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
-//! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
-//! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
-//! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
-//! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
-//! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
-//! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
-//! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
-//! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
-//! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
-//! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
-//! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
-//! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
-//! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
-//! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
-//! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
-//! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
-//! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
-//! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
-//! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
-//! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
-//! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
-//! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
-//! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
-//! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
-//! [`VT100MouseActionIR`]: super::VT100MouseActionIR
-//! [`VT100MouseButtonIR`]: super::VT100MouseButtonIR
-//! [`X10`]: https://invisible-island.net/[`xterm`]/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
-//! [`X10`]: https://invisible-island.net/[`xterm`]/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
-//! [`X10`]: https://invisible-island.net/[`xterm`]/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
-//! [`X10`]: https://invisible-island.net/[`xterm`]/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
-//! [`X10`]: https://invisible-island.net/[`xterm`]/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
-//! [`X10`]: https://invisible-island.net/[`xterm`]/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
-//! [`X10`]: https://invisible-island.net/[`xterm`]/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
-//! [`X10`]: https://invisible-island.net/[`xterm`]/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
-//! [`X10`]: https://invisible-island.net/[`xterm`]/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
-//! [`X10`]: https://invisible-island.net/[`xterm`]/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
-//! [`X10`]: https://invisible-island.net/[`xterm`]/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
-//! [`X10`]: https://invisible-island.net/[`xterm`]/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
-//! [`X10`]: https://invisible-island.net/[`xterm`]/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
-//! [`X10`]: https://invisible-island.net/[`xterm`]/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
-//! [`X10`]: https://invisible-island.net/[`xterm`]/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
-//! [`X10`]: https://invisible-island.net/[`xterm`]/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
-//! [`X10`]: https://invisible-island.net/[`xterm`]/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
-//! [`X10`]: https://invisible-island.net/[`xterm`]/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
-//! [`X10`]: https://invisible-island.net/[`xterm`]/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
-//! [`X10`]: https://invisible-island.net/[`xterm`]/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
-//! [`X10`]: https://invisible-island.net/[`xterm`]/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
-//! [`X10`]: https://invisible-island.net/[`xterm`]/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
-//! [`X10`]: https://invisible-island.net/[`xterm`]/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
-//! [`X10`]: https://invisible-island.net/[`xterm`]/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
-//! [`X10`]: https://invisible-island.net/[`xterm`]/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
-//! [`X10`]: https://invisible-island.net/[`xterm`]/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
-//! [`X10`]: https://invisible-island.net/[`xterm`]/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
 //! [`convert_input_event()`]:
 //!     crate::direct_to_ansi::input::protocol_conversion::convert_input_event
-//!
-//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`CSI`]: crate::CsiSequence
 //! [`gnome-terminal`]: https://en.wikipedia.org/wiki/GNOME_Terminal
 //! [`iTerm2`]: https://iterm2.com/
@@ -259,8 +94,11 @@
 //! [`RXVT`]: https://en.wikipedia.org/wiki/Rxvt
 //! [`SGR`]: crate::SgrCode
 //! [`terminal_events`]: mod@super::terminal_events
+//! [`TermPos`]: crate::vt_100_ansi_coords::TermPos
 //! [`utf8`]: mod@super::utf8
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+//! [`VT100MouseActionIR`]: super::VT100MouseActionIR
+//! [`VT100MouseButtonIR`]: super::VT100MouseButtonIR
 //! [`X10`]: https://invisible-island.net/xterm/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
 //! [`xterm`]: https://en.wikipedia.org/wiki/Xterm
 //! [parent module documentation]: mod@super#primary-consumer

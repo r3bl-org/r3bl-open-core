@@ -9,9 +9,9 @@
 
 //! [`VT-100`] [`ANSI`] conformance tests for terminal sequence processing.
 //!
-//! This module provides comprehensive testing of [`ANSI`]/VT escape sequence processing
-//! using a structured conformance test approach similar to the markdown parser tests.
-//! Tests are organized by functionality and use type-safe sequence builders for
+//! This module provides comprehensive testing of [`ANSI`]/[`VT-100`] escape sequence
+//! processing using a structured conformance test approach similar to the markdown parser
+//! tests. Tests are organized by functionality and use type-safe sequence builders for
 //! maintainability and specification compliance.
 //!
 //! # Testing Philosophy
@@ -269,7 +269,6 @@
 //!
 //! See [`SgrColorSequence`] for a complete example implementation.
 //!
-//!
 //! ## [`VT-100`] Specification Mapping
 //!
 //! Each conformance data module includes specification references:
@@ -337,9 +336,9 @@
 //! [`DsrSequence`]: crate::DsrSequence
 //! [`ESC`]: crate::EscSequence
 //! [`EscSequence`]: crate::EscSequence
-//! [`FastStringify`]: crate::core::common::fast_stringify::FastStringify
-//! [`impl_char_ops`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl::vt_100_impl_char_ops
-//! [`OffscreenBuffer::apply_ansi_bytes`]: crate::tui::terminal_lib_backends::offscreen_buffer::OffscreenBuffer::apply_ansi_bytes
+//! [`FastStringify`]: crate::fast_stringify::FastStringify
+//! [`impl_char_ops`]: crate::vt_100_ansi_impl::vt_100_impl_char_ops
+//! [`OffscreenBuffer::apply_ansi_bytes`]: crate::OffscreenBuffer::apply_ansi_bytes
 //! [`OSC`]: crate::osc_codes::OscSequence
 //! [`OscSequence`]: crate::core::osc::osc_codes::OscSequence
 //! [`SGR`]: crate::SgrCode
@@ -347,7 +346,7 @@
 //! [`test_char_ops`]: tests::vt_100_test_char_ops
 //! [`VT-100` spec]: https://vt100.net/docs/vt100-ug/chapter3.html
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
-//! [`vt_100_ansi_impl`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl
+//! [`vt_100_ansi_impl`]: crate::vt_100_ansi_impl
 //! [`vte`]: https://docs.rs/vte
 
 #[cfg(any(test, doc))]

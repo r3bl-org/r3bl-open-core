@@ -133,9 +133,9 @@ static HORIZ_LINE_CACHE: LazyLock<HashMap<usize, String>> = LazyLock::new(|| {
 /// 5. Future calls to `get_spaces(100)` hit the cache
 ///
 /// [`Box::leak()`]: std::boxed::Box::leak
+/// [`char`]: std::primitive::char
 /// [`HashMap`]: std::collections::HashMap
 /// [`Mutex`]: std::sync::Mutex
-/// [`char`]: std::primitive::char
 /// [`usize`]: std::primitive::usize
 pub static DYNAMIC_CACHE: LazyLock<Mutex<HashMap<(char, usize), String>>> =
     LazyLock::new(|| Mutex::new(HashMap::new()));

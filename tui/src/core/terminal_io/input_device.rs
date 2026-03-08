@@ -15,7 +15,7 @@ use std::time::Duration;
 ///
 /// Uses an enum to dispatch to the appropriate backend implementation at runtime:
 /// - **Crossterm**: Cross-platform terminal input (default on non-Linux)
-/// - **[`DirectToAnsi`]**: Pure Rust async input with tokio (Linux-only, default on
+/// - **[`DirectToAnsi`]**: Pure Rust async input with [`tokio`] (Linux-only, default on
 ///   Linux)
 /// - **Mock**: Synthetic event generator for testing
 ///
@@ -58,6 +58,7 @@ use std::time::Duration;
 /// [`DirectToAnsi`]: crate::DirectToAnsiInputDevice
 /// [`new_crossterm()`]: Self::new_crossterm
 /// [`new_direct_to_ansi()`]: Self::new_direct_to_ansi
+/// [`tokio`]: tokio
 #[derive(Debug)]
 #[allow(clippy::large_enum_variant)]
 pub enum InputDevice {
@@ -146,8 +147,8 @@ impl InputDevice {
     ///
     /// Dispatches to the appropriate backend's [`next()`] implementation.
     ///
-    /// [`Some(InputEvent)`]: InputEvent
     /// [`next()`]: crate::CrosstermInputDevice::next
+    /// [`Some(InputEvent)`]: InputEvent
     pub async fn next(&mut self) -> Option<InputEvent> {
         match self {
             Self::Crossterm(device) => device.next().await,

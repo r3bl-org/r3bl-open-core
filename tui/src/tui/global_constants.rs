@@ -1,5 +1,7 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+// cspell:words errno
+
 use std::time::Duration;
 use strum_macros::AsRefStr;
 
@@ -21,10 +23,20 @@ pub enum MinSize {
 #[repr(usize)]
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum DefaultSize {
-    /// Buffer size for MPSC channels used for inter-thread communication
-    /// in the main event loop. This size allows for sufficient message
-    /// queuing without blocking senders under normal load.
+    /// Buffer size for [`bounded MPSC channel`]s used for inter-thread communication in
+    /// the main event loop. This size allows for sufficient message queuing without
+    /// blocking senders under normal load.
+    ///
+    /// [`bounded MPSC channel`]: tokio::sync::mpsc::channel
     MainThreadSignalChannelBufferSize = 1_000,
+
+    /// Buffer size for [`bounded MPSC channel`]s used for [`PTY`] input and output
+    /// events. [`PTY`] output can be voluminous, so we use a larger buffer than the main
+    /// thread signal channel.
+    ///
+    /// [`bounded MPSC channel`]: tokio::sync::mpsc::channel
+    /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
+    PtyChannelBufferSize = 10_000,
 }
 
 /// Converts `DefaultSize` enum variants to their corresponding usize values.
@@ -109,3 +121,10 @@ pub const LINE_FEED_BYTE: u8 = b'\n';
 
 /// Null byte used for padding unused capacity.
 pub const NULL_BYTE: u8 = b'\0';
+
+/// [`EIO`] (`errno 5`) is how Linux signals that the controlled side of a [`PTY`] has
+/// closed.
+///
+/// [`EIO`]: https://man7.org/linux/man-pages/man3/errno.3.html
+/// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
+pub const EIO: i32 = 5;

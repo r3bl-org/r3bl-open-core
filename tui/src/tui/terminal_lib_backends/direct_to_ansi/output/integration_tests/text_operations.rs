@@ -18,7 +18,7 @@
 //! [`TuiStyle`]: crate::TuiStyle
 
 use super::test_helpers::*;
-use crate::{TuiStyle, tui_style_attrib};
+use crate::{CSI_START, TuiStyle, tui_style_attrib};
 
 #[test]
 fn test_paint_text_plain_without_style() {
@@ -74,7 +74,7 @@ fn test_paint_text_with_foreground_color() {
     // Output should contain ANSI escape sequences for styling
     assert!(!output.is_empty(), "Output should not be empty");
     assert!(
-        output.contains("\x1b["),
+        output.contains(CSI_START),
         "Output should contain ANSI escape sequences"
     );
     assert!(
@@ -113,7 +113,7 @@ fn test_paint_text_with_background_color() {
     // Output should contain ANSI escape sequences for background styling
     assert!(!output.is_empty(), "Output should not be empty");
     assert!(
-        output.contains("\x1b["),
+        output.contains(CSI_START),
         "Output should contain ANSI escape sequences"
     );
     assert!(
@@ -153,7 +153,7 @@ fn test_paint_text_with_combined_style() {
     // Output should contain ANSI escape sequences for both fg and bg styling
     assert!(!output.is_empty(), "Output should not be empty");
     assert!(
-        output.contains("\x1b["),
+        output.contains(CSI_START),
         "Output should contain ANSI escape sequences"
     );
     assert!(
@@ -195,7 +195,7 @@ fn test_paint_text_with_bold_style() {
     // Output should contain ANSI escape sequences for bold attribute
     assert!(!output.is_empty(), "Output should not be empty");
     assert!(
-        output.contains("\x1b["),
+        output.contains(CSI_START),
         "Output should contain ANSI escape sequences"
     );
     assert!(
@@ -260,7 +260,7 @@ fn test_paint_multiple_text_operations_sequence() {
         "Second output should contain text: {text2}"
     );
     assert!(
-        output2.contains("\x1b["),
+        output2.contains(CSI_START),
         "Second output should have ANSI sequences"
     );
 
@@ -384,7 +384,7 @@ fn test_paint_text_style_persistence() {
     // Text painting should produce styled output
     assert!(!output.is_empty(), "Output should not be empty");
     assert!(
-        output.contains("\x1b["),
+        output.contains(CSI_START),
         "Output should contain ANSI escape sequences"
     );
     assert!(

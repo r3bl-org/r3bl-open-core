@@ -355,6 +355,7 @@ impl Default for PixelCharRenderer {
 
 #[cfg(test)]
 mod tests {
+    use crate::{SGR_BOLD_STR, SGR_ITALIC_STR, SGR_RESET_STR, SGR_UNDERLINE_STR};
     use super::*;
     #[test]
     fn test_render_plain_text_no_style() {
@@ -419,8 +420,8 @@ mod tests {
         let output = renderer.render_line(&pixels);
         let output_str = String::from_utf8_lossy(output);
 
-        // Should have: plain A, then \x1b[1m for bold, then B
-        assert!(output_str.contains("A\x1b[1mB"));
+        // Should have: plain A, then bold B
+        assert!(output_str.contains(&format!("A{SGR_BOLD_STR}B")));
     }
 
     #[test]
@@ -440,9 +441,9 @@ mod tests {
         let output = renderer.render_line(&pixels);
         let output_str = String::from_utf8_lossy(output);
 
-        // Should have: \x1b[1m for bold, A, reset \x1b[0m, B
-        assert!(output_str.contains("\x1b[1m"));
-        assert!(output_str.contains("\x1b[0m"));
+        // Should have: bold A, then reset B
+        assert!(output_str.contains(SGR_BOLD_STR));
+        assert!(output_str.contains(SGR_RESET_STR));
         assert!(output_str.contains('B'));
     }
 
@@ -468,10 +469,10 @@ mod tests {
         let output = renderer.render_line(&pixels);
         let output_str = String::from_utf8_lossy(output);
 
-        // Should have only one \x1b[1m at the beginning
-        let bold_count = output_str.matches("\x1b[1m").count();
+        // Should have only one bold sequence at the beginning
+        let bold_count = output_str.matches(SGR_BOLD_STR).count();
         assert_eq!(bold_count, 1);
-        assert_eq!(output_str, "\x1b[1mABC");
+        assert_eq!(output_str, format!("{SGR_BOLD_STR}ABC"));
     }
 
     #[test]
@@ -487,9 +488,9 @@ mod tests {
         let output_str = String::from_utf8_lossy(output);
 
         // Should contain all three attribute codes
-        assert!(output_str.contains("\x1b[1m")); // bold
-        assert!(output_str.contains("\x1b[3m")); // italic
-        assert!(output_str.contains("\x1b[4m")); // underline
+        assert!(output_str.contains(SGR_BOLD_STR));
+        assert!(output_str.contains(SGR_ITALIC_STR));
+        assert!(output_str.contains(SGR_UNDERLINE_STR));
         assert!(output_str.contains('X'));
     }
 

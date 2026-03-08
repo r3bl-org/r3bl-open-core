@@ -15,7 +15,7 @@
 //! | `🙏🏽`         | 4  | 2         | Yes |
 //!
 //! For more details see:
-//! - [Grapheme clusters](https://medium.com/flutter-community/working-with-unicode-and-grapheme-clusters-in-dart-b054faab5705)
+//! - [Grapheme clusters](https://www.unicode.org/reports/tr29/#Grapheme_Cluster_Boundaries)
 //! - [UTF-8 String](https://doc.rust-lang.org/book/ch08-02-strings.html)
 //! - [Unicode in Rust](https://doc.rust-lang.org/stable/std/primitive.str.html)
 

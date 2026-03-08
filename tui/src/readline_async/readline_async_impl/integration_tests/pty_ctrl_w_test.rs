@@ -2,16 +2,21 @@
 
 use crate::{
     AsyncDebouncedDeadline,
-    SingleThreadSafeControlledChild,
+    CONTROLLED_READY,
+    CONTROLLED_STARTING,
     DebouncedState,
-    PtyPair,
     PtyTestMode,
+    TEST_RUNNING,
     core::test_fixtures::StdoutMock,
     readline_async::readline_async_impl::LineState,
+    PtyTestContext,
 };
-use std::{io::{BufRead, BufReader, Write},
+use std::{io::{BufRead, Write},
           sync::{Arc, Mutex as StdMutex},
           time::Duration};
+
+/// Prefix for line state output.
+const LINE_PREFIX: &str = "Line:";
 
 generate_pty_test! {
     /// [`PTY`]-based integration test for Ctrl+W word deletion.
@@ -34,10 +39,10 @@ generate_pty_test! {
     /// This test uses a **request-response protocol** between controller and controlled:
     ///
     /// 1. **Controller sends input** (e.g., "hello world" or Ctrl+W sequences)
-    /// 2. **Controller flushes** and waits ~200ms for controlled to process
-    /// 3. **Controller blocks** reading controlled stdout until it sees "Line: ..."
-    /// 4. **Controller makes assertion** on the line state
-    /// 5. **Repeat** for next input sequence
+    /// 2. **Controller flushes** and blocks reading controlled stdout until it sees
+    ///    "Line: ..."
+    /// 3. **Controller makes assertion** on the line state
+    /// 4. **Repeat** for next input sequence
     ///
     /// **Critical requirement**: Controlled must output line state **only once** after
     /// processing all available input, not after every character. Otherwise, controller
@@ -58,24 +63,23 @@ generate_pty_test! {
 ///
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 #[allow(clippy::too_many_lines)]
-fn pty_controller_entry_point(pty_pair: PtyPair, child: SingleThreadSafeControlledChild) {
-    eprintln!("🚀 PTY Controller: Starting Ctrl+W test...");
+fn pty_controller_entry_point(context: PtyTestContext) {
+    let PtyTestContext {
+        pty_pair,
+        child,
+        mut buf_reader,
+        mut writer,
+    } = context;
 
-    let mut writer = pty_pair
-        .controller()
-        .take_writer()
-        .expect("Failed to get writer");
-    let reader = pty_pair
-        .controller()
-        .try_clone_reader()
-        .expect("Failed to get reader");
-    let mut buf_reader = BufReader::new(reader);
+    eprintln!("🚀 PTY Controller: Starting Ctrl+W test...");
 
     eprintln!("📝 PTY Controller: Waiting for controlled process to start...");
 
-    // Wait for controlled to confirm it's running. The controlled process sends
-    // TEST_RUNNING and CONTROLLED_STARTING immediately on startup.
+    // Wait for controlled to confirm it's running and ready. The controlled process sends
+    // TEST_RUNNING, CONTROLLED_STARTING, and CONTROLLED_READY on startup.
     let mut test_running_seen = false;
+    // Note: controlled_ready_seen will be assigned in the loop before being read
+    let controlled_ready_seen;
 
     // Blocking reads work reliably because controlled process responds immediately.
     loop {
@@ -86,12 +90,18 @@ fn pty_controller_entry_point(pty_pair: PtyPair, child: SingleThreadSafeControll
                 let trimmed = line.trim();
                 eprintln!("  ← Controlled output: {trimmed}");
 
-                if trimmed.contains("TEST_RUNNING") {
+                if trimmed.contains(TEST_RUNNING) {
                     test_running_seen = true;
                     eprintln!("  ✓ Test is running in controlled");
                 }
-                if trimmed.contains("CONTROLLED_STARTING") {
+                if trimmed.contains(CONTROLLED_STARTING) {
                     eprintln!("  ✓ Controlled process confirmed running!");
+                }
+                if trimmed.contains(CONTROLLED_READY) {
+                    controlled_ready_seen = true;
+                    eprintln!(
+                        "  ✓ Controlled is ready (input device created)"
+                    );
                     break;
                 }
             }
@@ -101,7 +111,11 @@ fn pty_controller_entry_point(pty_pair: PtyPair, child: SingleThreadSafeControll
 
     assert!(
         test_running_seen,
-        "Controlled test never started running (no TEST_RUNNING output)"
+        "Controlled test never started running (no {TEST_RUNNING} output)"
+    );
+    assert!(
+        controlled_ready_seen,
+        "Controlled never signaled ready (no {CONTROLLED_READY} output)"
     );
 
     // Helper function to read line state, skipping debug output.
@@ -113,7 +127,7 @@ fn pty_controller_entry_point(pty_pair: PtyPair, child: SingleThreadSafeControll
                 Ok(0) => panic!("EOF reached before getting line state"),
                 Ok(_) => {
                     let trimmed = line.trim();
-                    if trimmed.starts_with("Line:") || trimmed.contains("EOF") {
+                    if trimmed.starts_with(LINE_PREFIX) || trimmed.contains("EOF") {
                         return trimmed.to_string();
                     }
                     eprintln!("  ⚠️  Skipping: {trimmed}");
@@ -131,7 +145,6 @@ fn pty_controller_entry_point(pty_pair: PtyPair, child: SingleThreadSafeControll
         .write_all(b"hello world")
         .expect("Failed to write text");
     writer.flush().expect("Failed to flush");
-    std::thread::sleep(Duration::from_millis(200));
 
     let result = read_line_state();
     eprintln!("  ← Line state: {result}");
@@ -140,7 +153,6 @@ fn pty_controller_entry_point(pty_pair: PtyPair, child: SingleThreadSafeControll
     // Send Ctrl+W (0x17) to delete "world"
     writer.write_all(&[0x17]).expect("Failed to write Ctrl+W");
     writer.flush().expect("Failed to flush");
-    std::thread::sleep(Duration::from_millis(100));
 
     let result = read_line_state();
     eprintln!("  ← After Ctrl+W: {result}");
@@ -152,7 +164,6 @@ fn pty_controller_entry_point(pty_pair: PtyPair, child: SingleThreadSafeControll
     // Clear line with Ctrl+U (0x15) and send "hello-world"
     writer.write_all(&[0x15]).expect("Failed to write Ctrl+U");
     writer.flush().expect("Failed to flush");
-    std::thread::sleep(Duration::from_millis(100));
 
     let result = read_line_state();
     eprintln!("  ← After clear: {result}");
@@ -161,7 +172,6 @@ fn pty_controller_entry_point(pty_pair: PtyPair, child: SingleThreadSafeControll
         .write_all(b"hello-world")
         .expect("Failed to write text");
     writer.flush().expect("Failed to flush");
-    std::thread::sleep(Duration::from_millis(200));
 
     let result = read_line_state();
     eprintln!("  ← Line state: {result}");
@@ -170,7 +180,6 @@ fn pty_controller_entry_point(pty_pair: PtyPair, child: SingleThreadSafeControll
     // Send Ctrl+W to delete "world"
     writer.write_all(&[0x17]).expect("Failed to write Ctrl+W");
     writer.flush().expect("Failed to flush");
-    std::thread::sleep(Duration::from_millis(100));
 
     let result = read_line_state();
     eprintln!("  ← After Ctrl+W: {result}");
@@ -185,10 +194,10 @@ fn pty_controller_entry_point(pty_pair: PtyPair, child: SingleThreadSafeControll
 /// [`PTY`] Controlled: Process readline input and report line state
 ///
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
-fn pty_controlled_entry_point() -> ! {
+fn pty_controlled_entry_point() {
     use crate::direct_to_ansi::DirectToAnsiInputDevice;
 
-    println!("CONTROLLED_STARTING");
+    println!("{CONTROLLED_STARTING}");
     std::io::stdout().flush().expect("Failed to flush");
 
     let runtime = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
@@ -206,11 +215,19 @@ fn pty_controlled_entry_point() -> ! {
 
         let mut input_device = DirectToAnsiInputDevice::new();
 
+        // Signal to controller that we're ready to receive input. MUST be after
+        // DirectToAnsiInputDevice::new() so the mio poller thread is already
+        // watching stdin before the controller sends any input through the PTY.
+        println!("{CONTROLLED_READY}");
+        std::io::stdout().flush().expect("Failed to flush");
+
         // ==================== Timing Configuration ====================
         //
-        // Inactivity watchdog: Exit if no events arrive for 2 seconds
+        // Inactivity watchdog: Exit if no events arrive for 5 seconds.
+        // Needs headroom for parallel test execution where CPU scheduling
+        // delays can cause input events to arrive late.
         // Pattern: "Exit if this operation takes too long"
-        let mut inactivity_watchdog = AsyncDebouncedDeadline::new(Duration::from_secs(2));
+        let mut inactivity_watchdog = AsyncDebouncedDeadline::new(Duration::from_secs(5));
         inactivity_watchdog.reset(); // Start the watchdog
 
         // Debounced state: Buffer line state and print after 10ms of no events
@@ -252,7 +269,7 @@ fn pty_controlled_entry_point() -> ! {
                                     // If another event arrives before 10ms, we update the buffered
                                     // state and reset the timer again (batching rapid input).
                                     buffered_state.set(format!(
-                                        "Line: {}, Cursor: {}",
+                                        "{LINE_PREFIX} {}, Cursor: {}",
                                         line_state.line,
                                         line_state.line_cursor_grapheme
                                     ));
@@ -289,6 +306,4 @@ fn pty_controlled_entry_point() -> ! {
         println!("🔍 PTY Controlled: Completed, exiting");
     });
 
-    println!("🔍 Controlled: Completed, exiting");
-    std::process::exit(0);
 }

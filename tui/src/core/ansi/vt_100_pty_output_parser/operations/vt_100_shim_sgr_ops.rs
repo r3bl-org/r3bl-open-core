@@ -26,7 +26,7 @@
 //!
 //! ```text
 //! ╭─────────────────╮    ╭────────────────╮    ╭─────────────────╮    ╭──────────────╮
-//! │ Child Process   │────▶ PTY Controller │────▶ VTE Parser      │────▶ OffscreenBuf │
+//! │ Child Process   │────► PTY Controller │────► VTE Parser      │────► OffscreenBuf │
 //! │ (vim, bash...)  │    │ (byte stream)  │    │ (state machine) │    │ (terminal    │
 //! ╰──────┬──────────╯    ╰────────────────╯    ╰───────┬─────────╯    │  buffer)     │
 //!        │                                             │              ╰───────┬──────╯
@@ -37,13 +37,13 @@
 //!        │                                    ╚═════════════════╝             │
 //!        │                                                                    │
 //!        │                                    ╭─────────────────╮             │
-//!        │                                    │ RenderPipeline  ◀─────────────╯
+//!        │                                    │ RenderPipeline  ◄─────────────╯
 //!        │                                    │ paint()         │
-//!        ╰────────────────────────────────────▶ Terminal Output │
+//!        ╰────────────────────────────────────► Terminal Output │
 //!                                             ╰─────────────────╯
 //! ```
 //!
-//! # `CSI` Sequence Processing Flow
+//! # [`CSI`] Sequence Processing Flow
 //!
 //! ```text
 //! Application sends "ESC [1;31m" (bold red text)
@@ -66,8 +66,9 @@
 //!     Update OffscreenBuffer state
 //! ```
 //!
-//! [`impl_sgr_ops`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl::vt_100_impl_sgr_ops
-//! [`test_sgr_ops`]: crate::core::ansi::vt_100_pty_output_parser::vt_100_pty_output_conformance_tests::tests::vt_100_test_sgr_ops
+//! [`CSI`]: crate::CsiSequence
+//! [`impl_sgr_ops`]: crate::vt_100_ansi_impl::vt_100_impl_sgr_ops
+//! [`test_sgr_ops`]: crate::vt_100_pty_output_conformance_tests::tests::vt_100_test_sgr_ops
 //! [module-level documentation]: self
 
 use super::super::{AnsiToOfsBufPerformer, ParamsExt};
@@ -88,7 +89,9 @@ use crate::{SgrColorSequence,
             tui_style_attrib};
 use vte::Params;
 
-/// Applies a single `SGR` parameter.
+/// Applies a single [`SGR`] parameter.
+///
+/// [`SGR`]: crate::SgrCode
 #[allow(clippy::too_many_lines)]
 fn apply_sgr_param(performer: &mut AnsiToOfsBufPerformer, param: u16) {
     match param {
@@ -201,12 +204,12 @@ fn apply_sgr_param(performer: &mut AnsiToOfsBufPerformer, param: u16) {
     }
 }
 
-/// Handle `SGR` (Select Graphic Rendition) parameters.
+/// Handle [`SGR`] (Select Graphic Rendition) parameters.
 ///
-/// This function processes `SGR` parameters and applies them to the offscreen buffer.
+/// This function processes [`SGR`] parameters and applies them to the offscreen buffer.
 /// It supports:
 /// - Basic text attributes (bold, italic, underline, etc.)
-/// - 16-color ANSI colors (30-37, 40-47, 90-97, 100-107)
+/// - 16-color [`ANSI`] colors (30-37, 40-47, 90-97, 100-107)
 /// - 256-color palette (colon format `ESC [ 38 : 5 : n m` or legacy `ESC [ 38 ; 5 ; n m`)
 /// - RGB true color (colon format `ESC [ 38 : 2 : r : g : b m` or legacy `ESC [ 38 ; 2 ;
 ///   r ; g ; b m`)
@@ -224,8 +227,10 @@ fn apply_sgr_param(performer: &mut AnsiToOfsBufPerformer, param: u16) {
 /// The semicolon format requires look-ahead logic to collect params from subsequent
 /// positions.
 ///
-/// [ITU-T Rec. T.416]: https://www.itu.int/rec/T-REC-T.416-199303-I
+/// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+/// [`SGR`]: crate::SgrCode
 /// [`VTE`]: mod@vte
+/// [ITU-T Rec. T.416]: https://www.itu.int/rec/T-REC-T.416-199303-I
 pub fn set_graphics_rendition(performer: &mut AnsiToOfsBufPerformer, params: &Params) {
     let mut idx = 0;
     while let Some(param_slice) = params.extract_nth_many_raw(idx) {

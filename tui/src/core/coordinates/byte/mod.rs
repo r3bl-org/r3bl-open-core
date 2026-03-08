@@ -1,10 +1,10 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Byte-level coordinates for UTF-8 text processing.
+//! Byte-level coordinates for [`UTF-8`] text processing.
 //!
-//! This module provides coordinate types for working with byte positions in UTF-8 strings
-//! and buffers. All types use `usize` internally for compatibility with Rust string
-//! slicing.
+//! This module provides coordinate types for working with byte positions in [`UTF-8`]
+//! strings and buffers. All types use `usize` internally for compatibility with Rust
+//! string slicing.
 //!
 //! # Core Types
 //!
@@ -16,7 +16,8 @@
 //!
 //! These types are primarily used in:
 //! - `InlineString` within `GCStringOwned`
-//! - UTF-8 text processing where character boundaries don't align with byte boundaries
+//! - [`UTF-8`] text processing where character boundaries don't align with byte
+//!   boundaries
 //! - String slicing operations
 //!
 //! # Example
@@ -32,6 +33,8 @@
 //! let slice = &text[(start..end).to_usize_range()];
 //! assert_eq!(slice, "Hello");
 //! ```
+//!
+//! [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
 
 // Attach source files.
 pub mod byte_index;

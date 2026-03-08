@@ -1,17 +1,22 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Tests for scroll margin operations (DECSTBM).
+//! Tests for scroll margin operations ([`DECSTBM`]).
 //!
 //! This module tests margin setting operations including:
-//! - DECSTBM (Set Top and Bottom Margins) - CSI Pt ; Pb r
+//! - [`DECSTBM`] (Set Top and Bottom Margins) - [`CSI`] Pt ; Pb r
 //! - Margin boundary conditions and validation
 //! - Cursor positioning within and outside margins
 //! - Scrolling behavior within set margins
+//!
+//! [`CSI`]: crate::CsiSequence
+//! [`DECSTBM`]: https://vt100.net/docs/vt510-rm/DECSTBM.html
 
 use super::super::test_fixtures_vt_100_ansi_conformance::*;
 use crate::{core::ansi::vt_100_pty_output_parser::CsiSequence, term_row};
 
-/// Tests for DECSTBM (Set Top and Bottom Margins) operations.
+/// Tests for [`DECSTBM`] (Set Top and Bottom Margins) operations.
+///
+/// [`DECSTBM`]: https://vt100.net/docs/vt510-rm/DECSTBM.html
 pub mod decstbm_margins {
     use super::*;
 

@@ -103,70 +103,6 @@ function install_if_missing
     end
 end
 
-# Generates cargo configuration based on available tools.
-#
-# This function creates a .cargo/config.toml file with optimized build settings:
-# - Enables parallel frontend compilation with 8 threads
-# - Configures Wild linker when both clang and wild are available
-# - Falls back to standard parallel compilation if Wild linker unavailable
-#
-# Features:
-# - Automatic detection of Wild linker availability
-# - Platform-specific configuration (Linux x86_64 and aarch64)
-# - Graceful fallback when tools are missing
-# - Clear user feedback about configuration choices
-#
-# Prerequisites:
-# - clang and wild should be installed for optimal linking performance
-#
-# Usage:
-#   generate_cargo_config
-function generate_cargo_config
-    echo "Generating cargo configuration..."
-
-    # Base configuration with parallel compilation
-    echo '[build]
-rustflags = ["-Z", "threads=8"]  # Parallel frontend compiler' > .cargo/config.toml
-
-    # Add Wild linker configuration if both clang and wild are available
-    if command -v clang >/dev/null && command -v wild >/dev/null
-        echo "✓ Wild linker available - adding to configuration"
-        echo '
-[target.x86_64-unknown-linux-gnu]
-linker = "clang"
-rustflags = [
-    "-Z", "threads=8",  # Parallel compilation
-    "-C", "link-arg=--ld-path=wild"  # Wild linker
-]
-
-[target.aarch64-unknown-linux-gnu]
-linker = "clang"
-rustflags = [
-    "-Z", "threads=8",  # Parallel compilation
-    "-C", "link-arg=--ld-path=wild"  # Wild linker
-]' >> .cargo/config.toml
-    else
-        echo "✓ Wild linker not available - using default configuration"
-        echo '
-[target.x86_64-unknown-linux-gnu]
-rustflags = ["-Z", "threads=8"]  # Parallel compilation only
-
-[target.aarch64-unknown-linux-gnu]
-rustflags = ["-Z", "threads=8"]  # Parallel compilation only' >> .cargo/config.toml
-    end
-
-    # Add profile configurations for nightly Rust stability
-    # Disables incremental compilation to avoid rustc dep graph ICE on nightly
-    echo '
-[profile.dev]
-# incremental = false  # Disable to avoid rustc dep graph ICE on nightly
-
-[profile.test]
-# incremental = false  # Disable to avoid rustc dep graph ICE on nightly' >> .cargo/config.toml
-
-    echo "✓ Cargo configuration generated"
-end
-
 # Installs a cargo tool using cargo-binstall with fallback to cargo install.
 #
 # This function provides a unified interface for installing cargo tools with
@@ -189,8 +125,11 @@ function install_cargo_tool --argument-names tool_name
     if not command -v $tool_name >/dev/null
         echo "Installing $tool_name..."
         if command -v cargo-binstall >/dev/null
-            # Use cargo binstall for faster installation
-            cargo binstall -y $tool_name
+            # Use --force because binstall metadata may be stale: the binary
+            # was deleted but binstall still thinks it's installed and skips
+            # the download. Since we only reach here when command -v fails
+            # (binary genuinely missing), --force is safe.
+            cargo binstall -y --force $tool_name
         else
             # Fallback to cargo install with --locked for all tools
             cargo install $tool_name --locked
@@ -990,7 +929,7 @@ end
 # Why ionice -c2 -n0?
 #   Gives cargo the highest I/O priority within the best-effort class (no sudo
 #   needed). This helps when reading source files from disk. Note: builds target
-#   tmpfs (/tmp/roc/target/check), so most write I/O bypasses the block layer
+#   tmpfs ($CHECK_TARGET_DIR), so most write I/O bypasses the block layer
 #   entirely — ionice mainly affects source file reads from the SSD.
 #
 # Parameters:
@@ -1435,22 +1374,16 @@ end
 # - Adding/removing dependencies in any workspace crate
 #
 # Parameters:
-#   $argv[1]: Target directory to check/clean (e.g., "target/check")
+#   $argv[1]: Target directory to clean on change (e.g., $CHECK_TARGET_DIR)
 #   $argv[2...]: Config files to watch (e.g., Cargo.toml rust-toolchain.toml)
 #
-# The hash is stored in $target_dir/.config_hash and updated after each check.
-# In watch mode, these config files should also be added to inotifywait so that
-# changes trigger the watch loop, which then calls this function.
+# The hash is stored in $CHECK_BUILD_CONFIG_HASH_FILE (private tree) and updated
+# after each check. Cleaning the target directory is a side effect.
 #
-# Returns: 0 always (cleaning is a side effect, not a failure)
+# Returns: 0 always
 #
 # Usage:
-#   # Typical usage with workspace crates (dynamically detected)
-#   set -g CONFIG_FILES Cargo.toml rust-toolchain.toml .cargo/config.toml
-#   for crate_toml in */Cargo.toml
-#       set -a CONFIG_FILES $crate_toml
-#   end
-#   check_config_changed "target/check" $CONFIG_FILES
+#   check_config_changed $CHECK_TARGET_DIR $CONFIG_FILES_TO_WATCH
 function check_config_changed
     set -l target_dir $argv[1]
     set -l config_files $argv[2..-1]
@@ -1459,12 +1392,10 @@ function check_config_changed
     # Using cat with 2>/dev/null to handle missing files gracefully
     # SHA256 is preferred over MD5 as a modern, more robust hash algorithm
     set -l config_hash (cat $config_files 2>/dev/null | sha256sum | cut -d' ' -f1)
-    set -l hash_file "$target_dir/.config_hash"
+    set -l hash_file $CHECK_BUILD_CONFIG_HASH_FILE
 
-    # If target directory doesn't exist, nothing to clean
-    if not test -d "$target_dir"
-        return 0
-    end
+    # Ensure hash file directory exists (private tree root)
+    mkdir -p (dirname $hash_file)
 
     # Check if hash file exists and compare
     if test -f $hash_file
@@ -1475,14 +1406,14 @@ function check_config_changed
             echo "⚠️  Build config changed (Cargo.toml, rust-toolchain.toml, or .cargo/config.toml)"
             echo "🧹 Cleaning $target_dir to avoid stale artifacts..."
             set_color normal
-            command rm -rf "$target_dir"
-            mkdir -p "$target_dir"
+            if test -d "$target_dir"
+                command rm -rf "$target_dir"
+            end
             echo $config_hash > $hash_file
             echo ""
         end
     else
         # No hash file yet - create it (first run or after manual clean)
-        mkdir -p "$target_dir"
         echo $config_hash > $hash_file
     end
 
@@ -1515,9 +1446,9 @@ end
 #   log_and_print /tmp/my.log "Error:" $error_message
 #
 # Example:
-#   set -g LOG_FILE /tmp/roc/check.log
+#   set -g LOG_FILE $CHECK_LOG_FILE
 #   log_and_print $LOG_FILE "["(timestamp)"] 🔨 Starting doc build..."
-#   # Output appears on terminal AND is appended to /tmp/roc/check.log
+#   # Output appears on terminal AND is appended to $CHECK_LOG_FILE
 function log_and_print
     set -l log_file $argv[1]
     set -l message $argv[2..-1]
@@ -1543,7 +1474,7 @@ end
 # system with catch-up mechanisms for changes that occur during builds.
 #
 # Build Types:
-# - Quick build: `cargo doc -p r3bl_tui --no-deps` (~5-7s)
+# - Quick build: `cargo doc --workspace --no-deps` (~5-7s)
 #   * Fast feedback for doc changes
 #   * Broken cross-crate links (e.g., links to crossterm, tokio don't work)
 #   * Acceptable trade-off: user sees changes quickly, links fixed by full build
@@ -1572,7 +1503,7 @@ end
 #       ▼
 #   ┌─────────────────────────────────────────────┐
 #   │ Quick build (~5-7s)                         │
-#   │ • cargo doc -p r3bl_tui --no-deps           │
+#   │ • cargo doc --workspace --no-deps           │
 #   │ • Fast feedback, broken links OK            │
 #   └─────────────────────────────────────────────┘
 #       │
@@ -1581,15 +1512,16 @@ end
 #       │
 #       ▼
 #   ┌─────────────────────────────────────────────┐
-#   │ Full build (~90s) [FORKED TO BACKGROUND]    │
-#   │ • cargo doc (all deps)                      │
+#   │ Full build (~5-90s) [FORKED TO BACKGROUND]  │
+#   │ • cargo doc (dep-doc caching: --no-deps if  │
+#   │   Cargo.lock + rust-toolchain.toml unchanged)│
 #   │ • Fixes all cross-crate links               │
 #   └─────────────────────────────────────────────┘
 #       │
 #       └──► Catch-up check (if changes during full build)
 #                 │
 #                 ▼
-#            Quick build (~5-7s) → forks Full build (~90s)
+#            Quick build (~5-7s) → forks Full build (~5-90s)
 #                 │                      │
 #                 ▼                      ▼
 #            [fast feedback]      [fixes links eventually]
@@ -1624,9 +1556,9 @@ end
 # STAGING DIRECTORIES
 # ===================
 # Quick and full builds use separate staging directories to avoid conflicts:
-# - Quick staging: /tmp/roc/target/check-doc-staging-quick
-# - Full staging:  /tmp/roc/target/check-doc-staging-full
-# - Serving dir:   /tmp/roc/target/check/doc (what browser loads)
+# - Quick staging: $CHECK_TARGET_DIR_DOC_STAGING_QUICK
+# - Full staging:  $CHECK_TARGET_DIR_DOC_STAGING_FULL
+# - Serving dir:   $CHECK_TARGET_DIR/doc (what browser loads)
 #
 # Both sync to the same serving directory using rsync. The staging approach
 # prevents users from seeing incomplete docs during a build.
@@ -1640,6 +1572,16 @@ end
 # - The catch-up detection can use `std::fs::metadata().modified()`
 # - Consider a message-passing architecture (channels) instead of forking
 # ============================================================================
+
+# ============================================================================
+# Global Variables (Shared)
+# ============================================================================
+
+# Project name/path for notifications. Shortened version of PWD (e.g., ~/g/roc).
+# Fallback if not already set by a configuration module (like check_constants.fish).
+if not set -q WORKSPACE_NAME
+    set -g WORKSPACE_NAME (prompt_pwd)
+end
 
 # Source directories to watch for changes and to check for modifications.
 #
@@ -1687,7 +1629,98 @@ function has_source_changes_since
     test (count $changed) -gt 0
 end
 
-# Builds quick docs (r3bl_tui only) and syncs to serving directory.
+# ============================================================================
+# Centralized cargo doc Runner & Dep-doc Caching
+# ============================================================================
+#
+# ARCHITECTURE NOTE (for future Rust rewrite):
+# run_cargo_doc is the single source of truth for invoking `cargo doc`.
+# All doc build paths (--doc, --quick-doc, --full, --watch-doc) route through
+# here. Custom CSS is applied via RUSTDOCFLAGS env var with an absolute path
+# (not .cargo/config.toml) because rustdoc resolves --extend-css relative to
+# each crate's source directory - which fails for dependency crates outside
+# the workspace root.
+#
+# Dep-doc caching: Hash of Cargo.lock + rust-toolchain.toml, stored in the
+# FULL staging directory (tmpfs at $CHECK_TARGET_DIR_DOC_STAGING_FULL).
+# By storing it in the staging directory, it survives when the serving directory
+# is wiped by check_config_changed (which reacts to any Cargo.toml change).
+# The cache only invalidates when dependencies (Cargo.lock) or the toolchain
+# change. It self-heals on reboot (tmpfs wiped) or cargo clean (dir gone).
+#
+# DEP_DOCS_WERE_CACHED global variable pattern: check_docs_full sets this so
+# callers (check.fish --doc and --full cases) know which sync mode to use.
+# Exit codes don't work here because check_docs_full's exit code flows through
+# run_check_with_recovery (maps codes to 0=success, 1=failure, 2=recoverable)
+# and run_full_checks (aggregates 7 check results into a single code). A global
+# variable sidesteps this cleanly. Rust rewrite should use a proper return type.
+#
+# Used by: check_docs_quick, check_docs_full, build_and_sync_quick_docs,
+#          build_and_sync_full_docs
+# ============================================================================
+
+# Central cargo doc runner with custom CSS support.
+#
+# Always sets RUSTDOCFLAGS with absolute path for monospace font CSS.
+# Accepts optional --timeout=SECS for builds that need time limits.
+# All other arguments pass through to `cargo doc`.
+function run_cargo_doc
+    set -lx RUSTDOCFLAGS "--extend-css $PWD/docs/rustdoc/custom.css"
+
+    set -l timeout_secs 0
+    set -l cargo_args
+    for arg in $argv
+        if string match -q -- '--timeout=*' $arg
+            set timeout_secs (string replace -- '--timeout=' '' $arg)
+        else
+            set -a cargo_args $arg
+        end
+    end
+
+    if test "$timeout_secs" -gt 0
+        ionice_wrapper timeout --foreground $timeout_secs cargo doc $cargo_args
+    else
+        ionice_wrapper cargo doc $cargo_args
+    end
+end
+
+# Check if dependency docs are still valid (no dep changes since last full build).
+#
+# CACHE INVALIDATION:
+# Hash is based on Cargo.lock + rust-toolchain.toml. These two files capture
+# all scenarios that require rebuilding dependency docs:
+#   - Cargo.lock: dependency version changes, additions, removals
+#   - rust-toolchain.toml: toolchain changes (doc format can differ between nightlies)
+#
+# Hash file lives in the staging dir (e.g. $CHECK_TARGET_DIR_DOC_STAGING_FULL/),
+# so it survives when the serving dir ($CHECK_TARGET_DIR) is wiped by
+# check_config_changed.
+#
+# Parameters:
+#   $argv[1]: staging_dir (e.g., $CHECK_TARGET_DIR_DOC_STAGING_FULL)
+#
+# Returns: 0 if dep docs are current, 1 if they need rebuilding.
+function dep_docs_are_current
+    set -l staging_dir $argv[1]
+    set -l hash_file $staging_dir/.dep-docs-hash
+    if not test -f $hash_file
+        return 1
+    end
+    set -l current_hash (cat Cargo.lock rust-toolchain.toml 2>/dev/null | md5sum | cut -d' ' -f1)
+    set -l stored_hash (cat $hash_file)
+    test "$current_hash" = "$stored_hash"
+end
+
+# Update dep docs hash after successful full build.
+#
+# Parameters:
+#   $argv[1]: staging_dir (e.g., $CHECK_TARGET_DIR_DOC_STAGING_FULL)
+function update_dep_docs_hash
+    set -l staging_dir $argv[1]
+    cat Cargo.lock rust-toolchain.toml 2>/dev/null | md5sum | cut -d' ' -f1 > $staging_dir/.dep-docs-hash
+end
+
+# Builds quick docs (workspace-wide) and syncs to serving directory.
 #
 # PURPOSE:
 # Provides fast feedback (~5-7s) when a user modifies documentation. This is
@@ -1695,8 +1728,8 @@ end
 # visual feedback on their doc changes.
 #
 # TRADE-OFF: SPEED VS LINK CORRECTNESS
-# This build uses `cargo doc -p r3bl_tui --no-deps` which is fast but produces
-# broken cross-crate links. For example:
+# This build uses `cargo doc --workspace --no-deps` which is fast but produces
+# no external crate links. For example:
 #   - Broken: href="crossterm" (relative path that doesn't exist)
 #   - Correct: href="../crossterm/index.html" (only from full build)
 #
@@ -1711,8 +1744,8 @@ end
 # users from seeing incomplete/broken docs during the build process.
 #
 # Parameters:
-#   $argv[1]: Staging directory (e.g., /tmp/roc/target/check-doc-staging-quick)
-#   $argv[2]: Serving directory (e.g., /tmp/roc/target/check/doc)
+#   $argv[1]: Staging directory (e.g., $CHECK_TARGET_DIR_DOC_STAGING_QUICK)
+#   $argv[2]: Serving directory (e.g., $CHECK_TARGET_DIR/doc)
 #
 # Returns: 0 on success, non-zero on failure
 #
@@ -1726,9 +1759,9 @@ function build_and_sync_quick_docs
     set -l serving_dir $argv[2]
 
     set -lx CARGO_TARGET_DIR $staging_dir
-    # Fast mode: -p r3bl_tui --no-deps (~5-7s)
-    # Broken cross-crate links OK - full build will fix them soon
-    ionice_wrapper cargo doc -p r3bl_tui --no-deps > /dev/null 2>&1
+    # Fast mode: --workspace --no-deps (~5-7s)
+    # No external crate links - full build will fix them soon
+    run_cargo_doc --workspace --no-deps > /dev/null 2>&1
     set -l result $status
 
     if test $result -eq 0
@@ -1740,47 +1773,31 @@ function build_and_sync_quick_docs
 end
 
 
-# Builds full docs (with dependencies) and syncs to serving directory.
+# Builds full docs (with dep-doc caching) and syncs to serving directory.
+# Used by --watch-doc's forked background process for correct cross-crate links.
 #
-# PURPOSE:
-# Produces complete documentation with correct cross-crate links. This build
-# runs `cargo doc` without any flags, which documents:
-# - All workspace crates (r3bl_tui, r3bl_cmdr, r3bl_analytics_schema, etc.)
-# - All dependencies (crossterm, tokio, serde, etc.)
+# Dep-doc caching: Checks hash of Cargo.lock + rust-toolchain.toml. If unchanged,
+# builds only workspace crates (--no-deps).
 #
-# LINK CORRECTNESS:
-# Because rustdoc sees all crates, it generates correct cross-crate links:
-#   - Correct: href="../crossterm/index.html"
-#   - Correct: href="../tokio/index.html"
-# These links work because the dependency docs exist in the same doc directory.
+# Sync behavior: This function always performs a full rsync from staging to
+# serving. This is crucial because even if the cache is hit (meaning dependency
+# artifacts are already in the staging directory), the serving directory may
+# have been wiped by check_config_changed. The rsync ensures all docs (including
+# dependencies) are restored from the staging cache to the serving directory.
 #
-# TIMING:
-# Full builds take ~90 seconds, so they run in a forked background process.
-# The user can continue editing while the full build runs. When it completes,
-# all links become correct.
-#
-# SEPARATE STAGING DIRECTORY:
-# Uses a different staging directory than quick builds to avoid conflicts.
-# Both quick and full builds can be in progress simultaneously without
-# interfering with each other's intermediate files.
-#
-# Parameters:
-#   $argv[1]: Staging directory (e.g., /tmp/roc/target/check-doc-staging-full)
-#   $argv[2]: Serving directory (e.g., /tmp/roc/target/check/doc)
-#
-# Returns: 0 on success, non-zero on failure
-#
-# Usage:
-#   build_and_sync_full_docs $CHECK_TARGET_DIR_DOC_STAGING_FULL $CHECK_TARGET_DIR
-#
-# Rust migration: Run cargo doc via std::process::Command. Consider using
-# --message-format=json for progress reporting.
+# Does NOT use the DEP_DOCS_WERE_CACHED global (unlike check_docs_full) because
+# this function handles its own sync internally - rsync -a without --delete is
+# safe regardless of whether deps were rebuilt or cached.
 function build_and_sync_full_docs
     set -l staging_dir $argv[1]
     set -l serving_dir $argv[2]
 
     set -lx CARGO_TARGET_DIR $staging_dir
-    ionice_wrapper cargo doc > /dev/null 2>&1
+    if dep_docs_are_current $staging_dir
+        run_cargo_doc --no-deps > /dev/null 2>&1
+    else
+        run_cargo_doc > /dev/null 2>&1
+    end
     set -l result $status
 
     if test $result -eq 0
@@ -1790,6 +1807,10 @@ function build_and_sync_full_docs
         # Note: We don't use --delete here because the quick build patch
         # that follows will overlay our crates' docs anyway
         rsync -a "$staging_dir/doc/" "$serving_dir/doc/"
+        # Update hash only when deps were actually rebuilt
+        if not dep_docs_are_current $staging_dir
+            update_dep_docs_hash $staging_dir
+        end
     end
 
     return $result
@@ -2003,18 +2024,18 @@ function run_full_doc_build_task
                     run_full_doc_build_task $staging_full $staging_quick $serving_dir $log_file $notify_expire_ms
                 " &
 
-                send_system_notification "Watch: Quick Docs Ready ⚡" "r3bl_tui done w/ broken dep links - full build starting" "success" $notify_expire_ms
+                send_system_notification "Watch ($WORKSPACE_NAME): Quick Docs Ready ⚡" "Workspace ready (no ext crate links) - full build starting..." "success" $notify_expire_ms
             else
                 log_and_print $log_file "["(timestamp)"] [bg] ⚠️ Quick catch-up failed (full docs still available)"
-                send_system_notification "Watch: Full Docs Ready ⚠️" "Full docs built, but catch-up failed" "normal" $notify_expire_ms
+                send_system_notification "Watch ($WORKSPACE_NAME): Full Docs Ready ✅" "Full build done, but latest edits have errors ❌" "normal" $notify_expire_ms
             end
         else
             # No changes during build - full docs are already up to date
-            send_system_notification "Watch: Full Docs Built ✅" "All documentation including dependencies built" "success" $notify_expire_ms
+            send_system_notification "Watch ($WORKSPACE_NAME): Full Docs Built ✅" "All documentation including dependencies built" "success" $notify_expire_ms
         end
     else
         log_and_print $log_file "["(timestamp)"] [bg] ❌ Full build failed!"
-        send_system_notification "Watch: Full Doc Build Failed ❌" "cargo doc failed" "critical" $notify_expire_ms
+        send_system_notification "Watch ($WORKSPACE_NAME): Full Doc Build Failed ❌" "cargo doc failed" "critical" $notify_expire_ms
     end
 end
 
@@ -2198,4 +2219,78 @@ function toolchain_install_all_components
     install_windows_target
 
     return 0
+end
+# Find and purge zombie processes and their project-related parents.
+#
+# Zombie processes (STAT 'Z') are already dead but remain in the process table
+# until their parent reaps them via wait(). In test runs, bugs can cause parents
+# to hang or crash without reaping children, leading to zombie leaks.
+#
+# This function:
+# 1. Finds all zombie processes
+# 2. Identifies parents that are project-related (r3bl_tui*)
+# 3. Kills those parents to allow init to reap the zombies
+#
+# This is a shared utility used by both check.fish and run.fish.
+function purge_zombie_processes
+    # Find all zombie processes and their parents
+    # ps -eo pid,ppid,stat,comm
+    # STAT 'Z' or 'Z+' indicates a zombie
+    # awk filter: $3 (stat) matches Z, print $1 (pid), $2 (ppid), $4 (comm)
+    set -l zombies (ps -eo pid,ppid,stat,comm | awk '$3 ~ /^Z/ {print $1, $2, $4}')
+
+    if test -z "$zombies"
+        return 0
+    end
+
+    set -l parents_to_kill
+    for z in $zombies
+        # $z looks like "1234 1111 my_zombie"
+        set -l parts (string split " " $z)
+        if test (count $parts) -lt 3
+            continue
+        end
+        set -l pid $parts[1]
+        set -l ppid $parts[2]
+        set -l z_comm $parts[3]
+
+        # Identify the parent process name
+        set -l parent_comm (ps -o comm= -p $ppid 2>/dev/null | string trim)
+
+        # Only kill parents that are project-related or our own test binaries.
+        # This prevents accidental killing of system processes or unrelated apps.
+        # r3bl_tui-* is the pattern for our test binaries and main crate.
+        if string match -q "r3bl*" "$parent_comm"; or string match -q "r3bl*" "$z_comm"
+            if not contains $ppid $parents_to_kill
+                # Suicide prevention: Avoid killing PID 1 (init) or our own shell ($fish_pid).
+                # This ensures that running this purge doesn't terminate the script itself.
+                if test "$ppid" -gt 1; and test "$ppid" -ne $fish_pid
+                    set -a parents_to_kill $ppid
+                end
+            end
+        end
+    end
+
+    if test (count $parents_to_kill) -gt 0
+        # If log_message is available (check.fish), use it. Otherwise echo.
+        if functions -q log_message
+            log_message "🧟 Found "(count $zombies)" zombie(s). Purging project-related parents..."
+            for ppid in $parents_to_kill
+                set -l pcomm (ps -o comm= -p $ppid 2>/dev/null | string trim)
+                if test -n "$pcomm"
+                    log_message "   🔪 Killing parent $pcomm (PID $ppid)"
+                    kill -9 $ppid 2>/dev/null
+                end
+            end
+        else
+            echo "🧟 Found "(count $zombies)" zombie(s). Purging project-related parents..."
+            for ppid in $parents_to_kill
+                set -l pcomm (ps -o comm= -p $ppid 2>/dev/null | string trim)
+                if test -n "$pcomm"
+                    echo "   🔪 Killing parent $pcomm (PID $ppid)"
+                    kill -9 $ppid 2>/dev/null
+                end
+            end
+        end
+    end
 end

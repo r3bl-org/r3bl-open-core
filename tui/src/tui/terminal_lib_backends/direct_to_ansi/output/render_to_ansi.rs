@@ -1,16 +1,18 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Trait and implementations for rendering content to ANSI escape sequences.
+//! Trait and implementations for rendering content to [`ANSI`] escape sequences.
 //! See [`RenderToAnsi`] for details.
+//!
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 
 use super::PixelCharRenderer;
 use crate::{CRLF_BYTES, OffscreenBuffer, SGR_RESET_BYTES};
 
-/// Trait for rendering content to ANSI escape sequences.
+/// Trait for rendering content to [`ANSI`] escape sequences.
 ///
-/// This trait defines a unified interface for converting various buffer types to ANSI
+/// This trait defines a unified interface for converting various buffer types to [`ANSI`]
 /// escape sequence byte arrays. This enables both the full TUI and lightweight
-/// [`choose()`] rendering paths to converge on a single ANSI generation mechanism.
+/// [`choose()`] rendering paths to converge on a single [`ANSI`] generation mechanism.
 ///
 /// ## Architecture
 ///
@@ -31,35 +33,37 @@ use crate::{CRLF_BYTES, OffscreenBuffer, SGR_RESET_BYTES};
 /// ```
 ///
 /// The trait is intentionally simple to minimize coupling between rendering abstractions.
-/// Unified interface for rendering content to ANSI escape sequences.
+/// Unified interface for rendering content to [`ANSI`] escape sequences.
 ///
 /// This trait defines a contract for any buffer-like type to render itself as
-/// ANSI-encoded bytes. Both full TUI (via [`OffscreenBuffer`]) and lightweight modes (via
-/// alternative buffer types) can implement this to provide consistent ANSI generation.
+/// [`ANSI`]-encoded bytes. Both full TUI (via [`OffscreenBuffer`]) and lightweight modes
+/// (via alternative buffer types) can implement this to provide consistent [`ANSI`]
+/// generation.
 ///
 /// ## Design Principles
 ///
 /// 1. **Backend Agnostic**: The trait doesn't care about I/O backend (crossterm, direct
-///    ANSI, etc.)
+///    [`ANSI`], etc.)
 /// 2. **Simple Contract**: Single method with clear semantics
 /// 3. **Reusable**: Multiple implementations possible for different buffer types
 /// 4. **Future-Ready**: Designed to work with both current crossterm backend and future
-///    direct ANSI backend
+///    direct [`ANSI`] backend
 ///
+/// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 /// [`choose()`]: crate::choose
 /// [`OffscreenBuffer`]: crate::OffscreenBuffer
 pub trait RenderToAnsi {
-    /// Render this buffer to ANSI escape sequence bytes.
+    /// Render this buffer to [`ANSI`] escape sequence bytes.
     ///
-    /// This method converts the buffer's contents to a byte vector containing ANSI escape
-    /// sequences and character data. The output is ready to be written directly to a
-    /// terminal device.
+    /// This method converts the buffer's contents to a byte vector containing [`ANSI`]
+    /// escape sequences and character data. The output is ready to be written
+    /// directly to a terminal device.
     ///
     /// # Returns
     ///
     /// A vector of bytes containing:
-    /// - ANSI escape sequences for styling (color, bold, italic, etc.)
-    /// - Character data (UTF-8 encoded)
+    /// - [`ANSI`] escape sequences for styling (color, bold, italic, etc.)
+    /// - Character data ([`UTF-8`] encoded)
     /// - Line separators (`\r\n` or equivalent)
     ///
     /// # Algorithm
@@ -71,10 +75,12 @@ pub trait RenderToAnsi {
     /// - Join lines with `\r\n` separators
     /// - Apply final reset if any styling was emitted
     ///
-    /// The smart style diffing in [`PixelCharRenderer`] ensures minimal ANSI output.
+    /// The smart style diffing in [`PixelCharRenderer`] ensures minimal [`ANSI`] output.
     ///
+    /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
     /// [`PixelCharRenderer`]: crate::PixelCharRenderer
     /// [`render_line()`]: crate::PixelCharRenderer::render_line
+    /// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
     fn render_to_ansi(&self) -> Vec<u8>;
 }
 

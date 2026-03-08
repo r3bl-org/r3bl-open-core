@@ -8,7 +8,9 @@
 //! - [`ChUnit`]: The fundamental character unit type (wraps [`prim@u16`])
 //!
 //! All other coordinate types (indices, lengths, positions, sizes) are built on top of
-//! this primitive and live in the [`buffer_coords`](super::buffer_coords) module.
+//! this primitive and live in the [`buffer_coords`] module.
+//!
+//! [`buffer_coords`]: super::buffer_coords
 
 // Attach source file.
 pub mod ch_unit;

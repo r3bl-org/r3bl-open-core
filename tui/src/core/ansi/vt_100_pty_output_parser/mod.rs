@@ -1,15 +1,15 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! ANSI/VT sequence parsing for terminal emulation
+//! [`ANSI`]/[`VT-100`] sequence parsing for terminal emulation
 //!
-//! This module provides a comprehensive [`VT-100`]-compliant ANSI escape sequence parser
-//! that processes terminal output and converts it into structured operations.
+//! This module provides a comprehensive [`VT-100`]-compliant [`ANSI`] escape sequence
+//! parser that processes terminal output and converts it into structured operations.
 //!
 //! ## Architecture
 //!
 //! - **[`performer`]**: [`VTE`] [`Perform`] trait implementation - handles state
 //!   transitions
-//! - **[`protocols`]**: ANSI sequence types and constants
+//! - **[`protocols`]**: [`ANSI`] sequence types and constants
 //! - **[`operations`]**: Protocol handlers that translate sequences into operations
 //! - **[`vt_100_pty_output_conformance_tests`]**: Comprehensive [`VT-100`] conformance
 //!   tests
@@ -23,7 +23,7 @@
 //! ## Primary Consumer
 //!
 //! This parser is primarily used by [`OffscreenBuffer::apply_ansi_bytes`], which
-//! processes PTY output from child processes and updates the terminal display state.
+//! processes [`PTY`] output from child processes and updates the terminal display state.
 //!
 //! ```text
 //! pty_mux (process_manager.rs)
@@ -43,11 +43,13 @@
 //!
 //! For terminal multiplexer architecture, see the [`pty_mux`] module.
 //!
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`OffscreenBuffer::apply_ansi_bytes`]: crate::OffscreenBuffer::apply_ansi_bytes
 //! [`Perform`]: vte::Perform
+//! [`pty_mux`]: mod@crate::core::pty_mux
+//! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 //! [`VTE`]: mod@vte
-//! [`pty_mux`]: mod@crate::core::pty_mux
 
 pub mod ansi_parser_public_api;
 pub mod operations;

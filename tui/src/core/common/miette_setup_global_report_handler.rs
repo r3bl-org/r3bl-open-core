@@ -22,13 +22,13 @@
 //!   in a test] which registers a custom hook.
 //!
 //! [`GraphicalReportHandler`]: miette::GraphicalReportHandler
-//! [`MietteHandlerOpts::build()`]: miette::MietteHandlerOpts::build
-//! [`MietteHandlerOpts`]: miette::MietteHandlerOpts
-//! [`MietteHandler`]: miette::MietteHandler
-//! [`ReportHandler`]: miette::ReportHandler
-//! [`Report`]: miette::Report
 //! [`miette::set_hook()`]: miette::set_hook
 //! [`miette`]: miette
+//! [`MietteHandler`]: miette::MietteHandler
+//! [`MietteHandlerOpts::build()`]: miette::MietteHandlerOpts::build
+//! [`MietteHandlerOpts`]: miette::MietteHandlerOpts
+//! [`Report`]: miette::Report
+//! [`ReportHandler`]: miette::ReportHandler
 //! [`stderr`]: std::io::stderr
 //! [`stdout`]: std::io::stdout
 //! [example in a test]:

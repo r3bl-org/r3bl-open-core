@@ -37,15 +37,15 @@ use crate::{ByteOffset, byte_offset,
 ///    │ Reads from tokio::io::stdin(), calls try_parse_input_event()
 ///    ▼
 /// ┌──────────────────────────────────────────┐  ┌──────────────────┐
-/// │  try_parse_input_event()                 ◀──┤ YOU ARE HERE     │
+/// │  try_parse_input_event()                 ◄──┤ YOU ARE HERE     │
 /// │  • Smart routing & ESC detection         │  └──────────────────┘
 /// │  • Zero-latency ESC key handling         │
 /// └──────────────────────────────────────────┘
 ///    │ (routes to specialized parsers)
-///    ├─→ keyboard.rs (CSI/SS3 keyboard sequences)
-///    ├─→ mouse.rs (mouse protocols)
-///    ├─→ terminal_events.rs (resize/focus/paste)
-///    └─→ utf8.rs (text input)
+///    ├─► keyboard.rs (CSI/SS3 keyboard sequences)
+///    ├─► mouse.rs (mouse protocols)
+///    ├─► terminal_events.rs (resize/focus/paste)
+///    ├─► utf8.rs (text input)
 ///    │
 ///    ▼
 /// VT100InputEventIR
@@ -79,8 +79,8 @@ use crate::{ByteOffset, byte_offset,
 /// This works because:
 /// - **Over [`SSH`]**: Bytes may arrive in fragments, but if we read fewer bytes than the
 ///   buffer size, we know there's no more data waiting right now.
-/// - **Locally**: Terminal emulators send escape sequences in a single burst, so they arrive
-///   complete in a single read.
+/// - **Locally**: Terminal emulators send escape sequences in a single burst, so they
+///   arrive complete in a single read.
 ///
 /// ## Algorithm
 ///
@@ -99,8 +99,8 @@ use crate::{ByteOffset, byte_offset,
 /// Unlike a fixed 150ms timeout approach, the `input_available` flag provides **adaptive
 /// waiting**:
 ///
-/// - **Local terminals**: Escape sequences arrive in a single burst, so `input_available` is
-///   usually `false` after reading—we emit [`ESC`] immediately when appropriate.
+/// - **Local terminals**: Escape sequences arrive in a single burst, so `input_available`
+///   is usually `false` after reading—we emit [`ESC`] immediately when appropriate.
 /// - **[`SSH`]/high-latency**: If bytes arrive separately, `input_available` tells us
 ///   when more data is pending—we wait correctly without a fixed timeout.
 ///
@@ -149,7 +149,7 @@ use crate::{ByteOffset, byte_offset,
 /// │  │  ├─ input_available == true?                    │
 /// │  │  │  └─ Return None (wait for more bytes)        │
 /// │  │  └─ input_available == false?                   │
-/// │  │     └─ Emit ESC key immediately                │
+/// │  │     └─ Emit ESC key immediately                 │
 /// │  └─ buf.len() >= 2?                                │
 /// │     ├─ Second byte = b'['?                         │
 /// │     │  └─ CSI → keyboard/mouse/terminal_events     │

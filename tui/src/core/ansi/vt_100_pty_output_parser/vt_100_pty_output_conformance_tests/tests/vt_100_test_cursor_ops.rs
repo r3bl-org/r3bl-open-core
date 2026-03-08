@@ -553,7 +553,10 @@ pub mod movement {
     }
 }
 
-/// Tests for cursor save and restore operations (both CSI and ESC variants).
+/// Tests for cursor save and restore operations (both [`CSI`] and [`ESC`] variants).
+///
+/// [`CSI`]: crate::CsiSequence
+/// [`ESC`]: crate::EscSequence
 pub mod save_restore {
     use super::*;
 

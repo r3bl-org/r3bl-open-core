@@ -1,9 +1,9 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Terminal event parsing from ANSI sequences.
+//! Terminal event parsing from [`ANSI`] sequences.
 //!
-//! This module handles terminal-level events like window resize, focus changes,
-//! and bracketed paste mode notifications.
+//! This module handles terminal-level events like window resize, focus changes, and
+//! bracketed paste mode notifications.
 //!
 //! ## Where You Are in the Pipeline
 //!
@@ -17,7 +17,7 @@
 //! router.rs (routing & `ESC` detection)
 //!    │ (routes terminal event sequences here)
 //! ┌──▼───────────────────────────────────────┐  ┌──────────────────┐
-//! │  terminal_events.rs                      ◀──┤ **YOU ARE HERE** │
+//! │  terminal_events.rs                      ◄──┤ **YOU ARE HERE** │
 //! │  • Parse window resize events            │  └──────────────────┘
 //! │  • Parse focus gained/lost               │
 //! │  • Parse bracketed paste markers         │
@@ -38,19 +38,21 @@
 //!   module)
 //!
 //! ## Supported Events
-//! - **Window Resize**: `CSI 8 ; rows ; cols t`
-//! - **Focus Gained**: `CSI I`
-//! - **Focus Lost**: `CSI O`
-//! - **Bracketed Paste Start**: `ESC [ 200 ~`
-//! - **Bracketed Paste End**: `ESC [ 201 ~`
+//! - **Window Resize**: `ESC [ 8 ; rows ; cols t`
+//! - **Focus Gained**: `ESC [ I`
+//! - **Focus Lost**: `ESC [ O`
+//! - **Bracketed Paste Start**: `ESC [ 2 0 0 ~`
+//! - **Bracketed Paste End**: `ESC [ 2 0 1 ~`
 //!
-//! [`VT100FocusStateIR`]: super::VT100FocusStateIR
-//! [`VT100PasteModeIR`]: super::VT100PasteModeIR
-//! [`convert_input_event()`]: crate::direct_to_ansi::input::protocol_conversion::convert_input_event
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`convert_input_event()`]:
+//!     crate::direct_to_ansi::input::protocol_conversion::convert_input_event
 //! [`keyboard`]: mod@super::keyboard
 //! [`mouse`]: mod@super::mouse
 //! [`router`]: mod@super::router
 //! [`utf8`]: mod@super::utf8
+//! [`VT100FocusStateIR`]: super::VT100FocusStateIR
+//! [`VT100PasteModeIR`]: super::VT100PasteModeIR
 //! [parent module documentation]: mod@super#primary-consumer
 
 use super::ir_event_types::{VT100FocusStateIR, VT100InputEventIR, VT100PasteModeIR};
@@ -72,10 +74,10 @@ use crate::{ByteOffset, byte_offset,
 ///
 /// # Handled Sequences
 ///
-/// - `CSI 8;24;80t` - Window resize to 24 rows × 80 columns
-/// - `CSI I` - Terminal gained focus
-/// - `CSI O` - Terminal lost focus
-/// - `ESC [200~` - Bracketed paste start
+/// - `ESC [ 8 ; 2 4 ; 8 0 t` - Window resize to 24 rows × 80 columns
+/// - `ESC [ I` - Terminal gained focus
+/// - `ESC [ O` - Terminal lost focus
+/// - `ESC [ 2 0 0 ~` - Bracketed paste start
 #[must_use]
 pub fn parse_terminal_event(buffer: &[u8]) -> Option<(VT100InputEventIR, ByteOffset)> {
     // Check minimum length: ESC [ + final byte
@@ -111,7 +113,9 @@ pub fn parse_terminal_event(buffer: &[u8]) -> Option<(VT100InputEventIR, ByteOff
     parse_csi_terminal_parameters(buffer)
 }
 
-/// Parse `CSI` sequences with parameters for terminal events.
+/// Parse [`CSI`] sequences with parameters for terminal events.
+///
+/// [`CSI`]: crate::CsiSequence
 fn parse_csi_terminal_parameters(
     buffer: &[u8],
 ) -> Option<(VT100InputEventIR, ByteOffset)> {

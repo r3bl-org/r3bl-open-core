@@ -127,10 +127,10 @@ fn perform_full_paint(
 /// This will also panic if all offscreen buffers are currently taken, which
 /// indicates a bug in the buffer pool management.
 ///
+/// [`crate::RenderOpCommon`]: crate::RenderOpCommon
 /// [`RenderOpCommon`]: crate::RenderOpCommon
 /// [`RenderOpOutputVec`]: crate::RenderOpOutputVec
 /// [`ZOrder`]: crate::ZOrder
-/// [`crate::RenderOpCommon`]: crate::RenderOpCommon
 pub fn paint<S, AS>(
     pipeline: &RenderPipeline,
     flush_kind: FlushKind,

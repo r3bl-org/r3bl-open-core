@@ -38,12 +38,12 @@ impl<W: RRTWorker> Drop for TerminationGuard<W> {
     ///
     /// See step 4 of the [Thread Lifecycle] for where this fits in the exit sequence.
     ///
-    /// [Thread Lifecycle]: super::RRT#thread-lifecycle
-    /// [`SubscriberGuard`]: super::SubscriberGuard
     /// [`is_none()`]: Option::is_none
     /// [`subscribe()`]: super::RRT::subscribe
+    /// [`SubscriberGuard`]: super::SubscriberGuard
     /// [`wake_and_unblock_dedicated_thread()`]:
     ///     super::RRTWaker::wake_and_unblock_dedicated_thread
+    /// [Thread Lifecycle]: super::RRT#thread-lifecycle
     /// [waker]: super::RRTWaker
     fn drop(&mut self) { self.waker_slot_writer.clear(); }
 }

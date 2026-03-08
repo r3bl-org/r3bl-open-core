@@ -33,6 +33,9 @@ pub const READLINE_ASYNC_INITIAL_PROMPT_DISPLAY_CURSOR_SHOW_DELAY: Duration =
 /// type in the terminal. Upon resumption, any queued output from the [`SharedWriter`]s is
 /// printed out.
 ///
+/// For details on the underlying async orchestration, including [`Pin`] and [`Unpin`]
+/// requirements for [`tokio::select!`], see [Core Async Concepts].
+///
 /// When you call [`Self::readline()`] it enters an infinite loop. During which you can
 /// type things into the multiline editor, which also displays the prompt. You can press
 /// up, down, left, right, etc. While in this loop other tasks can send messages to the
@@ -46,6 +49,7 @@ pub const READLINE_ASYNC_INITIAL_PROMPT_DISPLAY_CURSOR_SHOW_DELAY: Duration =
 /// [`SharedWriter`]s.
 ///
 /// # How or when to terminate the session
+///
 ///
 /// There is no `close()` function on [`Readline`]. You simply drop it. This will cause
 /// the terminal to come out of raw mode. And all the buffers will be flushed. However,
@@ -146,6 +150,8 @@ pub const READLINE_ASYNC_INITIAL_PROMPT_DISPLAY_CURSOR_SHOW_DELAY: Duration =
 /// compiles with `dyn std::io::Write + Send` trait bounds can be used.
 ///
 /// [`crossterm::event::EventStream`]: https://docs.rs/crossterm/latest/crossterm/event/struct.EventStream.html
+/// [`Pin`]: std::pin::Pin
+/// [Core Async Concepts]: crate::main_event_loop_impl#core-async-concepts-pin-and-unpin
 /// [dependency injection]: https://developerlife.com/category/DI/
 #[allow(missing_debug_implementations)]
 pub struct Readline {

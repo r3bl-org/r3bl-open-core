@@ -2,9 +2,9 @@
 
 //! [`PTY`]-based integration test for [`DirectToAnsiInputDevice`].
 //!
-//! Test coordinator that routes to controller or controlled based on env var.
-//! When `R3BL_PTY_TEST_CONTROLLED` is set, runs controlled logic and exits.
-//! Otherwise runs the controller test.
+//! Test coordinator that routes to controller or controlled based on env var. When
+//! `R3BL_PTY_TEST_CONTROLLED` is set, runs controlled logic and exits. Otherwise runs the
+//! controller test.
 //!
 //! Run with:
 //! ```bash
@@ -78,17 +78,15 @@
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`tokio`]: tokio
 
-use crate::{SingleThreadSafeControlledChild, InputEvent, PtyPair, PtyTestMode,
+use crate::{CONTROLLED_READY, CONTROLLED_STARTING, InputEvent, PtyTestMode,
+            PtyTestContext, TEST_RUNNING,
             core::ansi::{generator::generate_keyboard_sequence,
                          vt_100_terminal_input_parser::ir_event_types::{VT100InputEventIR,
                                                                         VT100KeyCodeIR,
                                                                         VT100KeyModifiersIR}},
             tui::terminal_lib_backends::direct_to_ansi::DirectToAnsiInputDevice};
-use std::{io::{BufRead, BufReader, Write},
+use std::{io::{BufRead, Write},
           time::Duration};
-
-/// Ready signal sent by controlled process after initialization.
-const CONTROLLED_READY: &str = "CONTROLLED_READY";
 
 // XMARK: Process isolated test with PTY.
 
@@ -108,7 +106,7 @@ generate_pty_test! {
 /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 #[allow(clippy::too_many_lines)]
-fn pty_controller_entry_point(pty_pair: PtyPair, child: SingleThreadSafeControlledChild) {
+fn pty_controller_entry_point(context: PtyTestContext) {
     /// Helper to generate [`ANSI`] bytes from `InputEvent`.
     ///
     /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
@@ -118,51 +116,20 @@ fn pty_controller_entry_point(pty_pair: PtyPair, child: SingleThreadSafeControll
         (desc, bytes)
     }
 
-    eprintln!("🚀 PTY Controller: Starting...");
+    let PtyTestContext {
+        pty_pair,
+        child,
+        mut buf_reader,
+        mut writer,
+    } = context;
 
-    // Get writer (to send ANSI sequences to controlled) and reader (to receive
-    // parsed events from controlled).
-    let mut writer = pty_pair
-        .controller()
-        .take_writer()
-        .expect("Failed to get writer");
-    let reader = pty_pair
-        .controller()
-        .try_clone_reader()
-        .expect("Failed to get reader");
-    let mut buf_reader = BufReader::new(reader);
+    eprintln!("🚀 PTY Controller: Starting...");
 
     eprintln!("📝 PTY Controller: Waiting for controlled process to start...");
 
-    // Wait for controlled to confirm it's running. The controlled process sends
-    // TEST_RUNNING and CONTROLLED_READY immediately on startup.
-    let mut test_running_seen = false;
-
-    loop {
-        let mut line = String::new();
-        match buf_reader.read_line(&mut line) {
-            Ok(0) => panic!("EOF reached before controlled started"),
-            Ok(_) => {
-                let trimmed = line.trim();
-                eprintln!("  ← Controlled output: {trimmed}");
-
-                if trimmed.contains("TEST_RUNNING") {
-                    test_running_seen = true;
-                    eprintln!("  ✓ Test is running in controlled");
-                }
-                if trimmed.contains(CONTROLLED_READY) {
-                    eprintln!("  ✓ Controlled process confirmed running!");
-                    break;
-                }
-            }
-            Err(e) => panic!("Read error while waiting for controlled: {e}"),
-        }
-    }
-
-    assert!(
-        test_running_seen,
-        "Controlled test never started running (no TEST_RUNNING output)"
-    );
+    // Wait for controlled to confirm it's running and ready.
+    child.wait_for_ready(&mut buf_reader, CONTROLLED_READY)
+        .expect("Failed to wait for ready signal");
 
     // Send sequences and verify.
     let no_mods = VT100KeyModifiersIR::default();
@@ -205,16 +172,11 @@ fn pty_controller_entry_point(pty_pair: PtyPair, child: SingleThreadSafeControll
             .expect("Failed to write sequence");
         writer.flush().expect("Failed to flush");
 
-        // Give controlled time to process
-        std::thread::sleep(Duration::from_millis(100));
-
         // Read responses until we get an event line (skip test harness noise)
         let event_line = loop {
             let mut line = String::new();
             match buf_reader.read_line(&mut line) {
-                Ok(0) => {
-                    panic!("EOF reached before receiving event for {desc}");
-                }
+                Ok(0) => panic!("EOF reached before receiving event for {desc}"),
                 Ok(_) => {
                     let trimmed = line.trim();
 
@@ -231,9 +193,7 @@ fn pty_controller_entry_point(pty_pair: PtyPair, child: SingleThreadSafeControll
                     // Skip test harness noise
                     eprintln!("  ⚠️  Skipping non-event output: {trimmed}");
                 }
-                Err(e) => {
-                    panic!("Read error for {desc}: {e}");
-                }
+                Err(e) => panic!("Read error for {desc}: {e}"),
             }
         };
 
@@ -264,15 +224,14 @@ fn pty_controller_entry_point(pty_pair: PtyPair, child: SingleThreadSafeControll
 /// 3. **Process Events**: Read and parse [`ANSI`] sequences into `InputEvents`
 /// 4. **Output Results**: Write parsed events to stdout for controller to verify
 ///
-/// This function MUST exit before returning so other tests don't run.
-///
 /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 /// [`file descriptor`]: https://en.wikipedia.org/wiki/File_descriptor
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
-fn pty_controlled_entry_point() -> ! {
-    // Print to stdout immediately to confirm controlled is running.
-    println!("{CONTROLLED_READY}");
-    std::io::stdout().flush().expect("Failed to flush");
+fn pty_controlled_entry_point() {
+    // Print to stdout immediately to confirm controlled is starting.
+    println!("{TEST_RUNNING}");
+    println!("{CONTROLLED_STARTING}");
+    std::io::stdout().flush().expect("Failed to flush stdout");
 
     // Create a Tokio runtime for async operations.
     let runtime = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
@@ -282,9 +241,15 @@ fn pty_controlled_entry_point() -> ! {
         let mut input_device = DirectToAnsiInputDevice::new();
         eprintln!("🔍 PTY Controlled: Device created, reading events...");
 
-        // Create inactivity timeout: exit if no events for 2 seconds.
+        // Signal to controller that we're ready to receive input.
+        println!("{CONTROLLED_READY}");
+        std::io::stdout().flush().expect("Failed to flush stdout");
+
+        // Create inactivity timeout: exit if no events for 5 seconds.
+        // Needs headroom for parallel test execution where CPU scheduling
+        // delays can cause input events to arrive late.
         // https://developerlife.com/2024/07/10/rust-async-cancellation-safety-tokio/#example-1-right-and-wrong-way-to-sleep-and-interval
-        let inactivity_timeout = Duration::from_secs(2);
+        let inactivity_timeout = Duration::from_secs(5);
         // Cancel safe: sleep_until() with a deadline stored outside select! is safe.
         let mut inactivity_deadline = tokio::time::Instant::now() + inactivity_timeout;
 
@@ -340,7 +305,7 @@ fn pty_controlled_entry_point() -> ! {
                 // Inactivity timeout: exit if deadline is reached (2 seconds of no events).
                 // https://developerlife.com/2024/07/10/rust-async-cancellation-safety-tokio/#example-1-right-and-wrong-way-to-sleep-and-interval
                 () = tokio::time::sleep_until(inactivity_deadline) => {
-                    eprintln!("🔍 PTY Controlled: Inactivity timeout (2 seconds with no events), exiting");
+                    eprintln!("🔍 PTY Controlled: Inactivity timeout (5 seconds with no events), exiting");
                     break;
                 }
             }
@@ -349,7 +314,4 @@ fn pty_controlled_entry_point() -> ! {
         eprintln!("🔍 PTY Controlled: Completed, exiting");
     });
 
-    eprintln!("🔍 Controlled: Completed, exiting");
-    // CRITICAL: Exit immediately to prevent test harness from running other tests.
-    std::process::exit(0);
 }

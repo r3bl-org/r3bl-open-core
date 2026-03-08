@@ -76,7 +76,7 @@
 //!   │  └────────────────────┘                          │                       │
 //!   └──────────────────────────────────────────────────┼───────────────────────┘
 //!                                                      │
-//!                              PTY (pseudo-terminal)   │
+//!                              PTY (pseudoterminal)    │
 //!                              ════════════════════════╪════════════════════════
 //!                                                      │
 //!   ┌──────────────────────────────────────────────────┼───────────────────────┐
@@ -168,9 +168,8 @@
 //! [`SharedWriter`]: crate::SharedWriter
 //! [blank line test]: super::pty_shared_writer_no_blank_line_test
 
-use crate::{SingleThreadSafeControlledChild, PtyPair, PtyTestMode, ReadLinesResult, read_until_marker};
-use std::io::{BufReader, Write};
-use std::time::Duration;
+use crate::{CONTROLLED_STARTING, PtyTestMode, PtyTestContext, TEST_RUNNING};
+use std::io::Write;
 
 generate_pty_test! {
     /// Verifies each line of multi-line [`SharedWriter`] output starts at column 1.
@@ -188,29 +187,25 @@ generate_pty_test! {
 /// [`PTY`] Controller: Verify multi-line output all starts at column 1.
 ///
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
-fn pty_controller_entry_point(pty_pair: PtyPair, child: SingleThreadSafeControlledChild) {
+fn pty_controller_entry_point(context: PtyTestContext) {
+    let PtyTestContext {
+        pty_pair,
+        child,
+        mut buf_reader,
+        ..
+    } = context;
+
     eprintln!("🚀 PTY Controller: Starting multi-line output column test...");
 
-    let reader = pty_pair
-        .controller()
-        .try_clone_reader()
-        .expect("Failed to clone reader");
-    let mut buf_reader = BufReader::new(reader);
-
-    let (lines, found_marker) =
-        read_until_marker(&mut buf_reader, "CONTROLLED_DONE", &|trimmed: &str| {
+    let result =
+        child.read_until_marker(&mut buf_reader, "CONTROLLED_DONE", |trimmed: &str| {
             // Skip debug lines from the test framework.
             !trimmed.contains("🔍")
-                && !trimmed.contains("TEST_RUNNING")
-                && !trimmed.contains("CONTROLLED_STARTING")
+                && !trimmed.contains(TEST_RUNNING)
+                && !trimmed.contains(CONTROLLED_STARTING)
         });
 
     child.drain_and_wait(buf_reader, pty_pair);
-
-    let result = ReadLinesResult {
-        lines,
-        found_marker,
-    };
 
     assert!(
         result.found_marker,
@@ -340,11 +335,11 @@ fn get_line_content(buf: &crate::OffscreenBuffer, row: usize, max_cols: usize) -
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 /// [`SharedWriter`]: crate::SharedWriter
 /// [module docs]: self
-fn pty_controlled_entry_point() -> ! {
+fn pty_controlled_entry_point() {
     use crate::{LineStateControlSignal, OffscreenBuffer, SharedWriter, height,
                 readline_async::readline_async_impl::LineState, width};
 
-    println!("CONTROLLED_STARTING");
+    println!("{CONTROLLED_STARTING}");
     std::io::stdout().flush().expect("Failed to flush");
 
     // Create a channel to receive SharedWriter output.
@@ -372,9 +367,6 @@ fn pty_controlled_entry_point() -> ! {
     // Process the channel messages (simulating what Readline does).
     let runtime = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
     runtime.block_on(async {
-        // Give time for messages to arrive.
-        tokio::time::sleep(Duration::from_millis(50)).await;
-
         while let Ok(signal) = rx.try_recv() {
             if let LineStateControlSignal::Line(data) = signal {
                 line_state
@@ -449,5 +441,4 @@ fn pty_controlled_entry_point() -> ! {
     println!("CONTROLLED_DONE");
     std::io::stdout().flush().expect("Failed to flush");
 
-    std::process::exit(0);
 }

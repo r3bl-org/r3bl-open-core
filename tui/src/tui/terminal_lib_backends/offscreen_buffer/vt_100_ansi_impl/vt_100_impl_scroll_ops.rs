@@ -1,11 +1,11 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! ANSI vertical scrolling operations for `OffscreenBuffer`.
+//! [`ANSI`] vertical scrolling operations for `OffscreenBuffer`.
 //!
 //! This module provides methods for vertical line-based scrolling operations,
 //! including index operations (IND/RI) and scroll operations (SU/SD).
-//! These operations respect DECSTBM scroll region margins and handle
-//! cursor positioning as required by ANSI terminal emulation standards.
+//! These operations respect [`DECSTBM`] scroll region margins and handle
+//! cursor positioning as required by [`ANSI`] terminal emulation standards.
 //!
 //! This module implements the business logic for scroll operations delegated from
 //! the parser shim. The `impl_` prefix follows our naming convention for searchable
@@ -13,6 +13,9 @@
 //! for the complete three-layer architecture.
 //!
 //! **Related Files:**
+//!
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`DECSTBM`]: https://vt100.net/docs/vt510-rm/DECSTBM.html
 
 #[allow(clippy::wildcard_imports)]
 use super::super::*;
@@ -21,8 +24,8 @@ use crate::{ArrayBoundsCheck, ArrayUnderflowResult, RowHeight,
 
 impl OffscreenBuffer {
     /// Move cursor down one line, scrolling the buffer if at bottom.
-    /// Implements the ESC D (IND) escape sequence.
-    /// Respects DECSTBM scroll region margins.
+    /// Implements the [`ESC`] D (IND) escape sequence.
+    /// Respects [`DECSTBM`] scroll region margins.
     ///
     /// Example - Index down at scroll region bottom triggers scroll
     ///
@@ -57,6 +60,9 @@ impl OffscreenBuffer {
     /// # Errors
     ///
     /// Returns an error if the scroll operation fails.
+    ///
+    /// [`DECSTBM`]: https://vt100.net/docs/vt510-rm/DECSTBM.html
+    /// [`ESC`]: crate::EscSequence
     pub fn index_down(&mut self) -> miette::Result<()> {
         let current_row = self.cursor_pos.row_index;
 
@@ -77,8 +83,8 @@ impl OffscreenBuffer {
     }
 
     /// Move cursor up one line, scrolling the buffer if at top.
-    /// Implements the ESC M (RI) escape sequence.
-    /// Respects DECSTBM scroll region margins.
+    /// Implements the [`ESC`] M (RI) escape sequence.
+    /// Respects [`DECSTBM`] scroll region margins.
     ///
     /// Example - Reverse index up at scroll region top triggers scroll
     ///
@@ -113,6 +119,9 @@ impl OffscreenBuffer {
     /// # Errors
     ///
     /// Returns an error if the scroll operation fails.
+    ///
+    /// [`DECSTBM`]: https://vt100.net/docs/vt510-rm/DECSTBM.html
+    /// [`ESC`]: crate::EscSequence
     pub fn reverse_index_up(&mut self) -> miette::Result<()> {
         let current_row = self.cursor_pos.row_index;
 
@@ -132,16 +141,19 @@ impl OffscreenBuffer {
         }
     }
 
-    /// Scroll buffer content up by one line (for ESC D at bottom).
+    /// Scroll buffer content up by one line (for [`ESC`] D at bottom).
     /// The top line is lost, and a new empty line appears at bottom.
-    /// Respects DECSTBM scroll region margins.
+    /// Respects [`DECSTBM`] scroll region margins.
     /// See [`shift_lines_up()`] for detailed behavior and examples.
     ///
-    /// [`shift_lines_up()`]: crate::OffscreenBuffer::shift_lines_up
     ///
     /// # Errors
     ///
     /// Returns an error if the scroll operation fails.
+    ///
+    /// [`DECSTBM`]: https://vt100.net/docs/vt510-rm/DECSTBM.html
+    /// [`ESC`]: crate::EscSequence
+    /// [`shift_lines_up()`]: crate::OffscreenBuffer::shift_lines_up
     pub fn scroll_buffer_up(&mut self) -> miette::Result<()> {
         // Get scroll region as an inclusive range and convert to
         // exclusive for iteration.
@@ -151,17 +163,20 @@ impl OffscreenBuffer {
         self.shift_lines_up(scroll_region.to_exclusive(), 1)
     }
 
-    /// Scroll buffer content down by one line (for ESC M at top).
+    /// Scroll buffer content down by one line (for [`ESC`] M at top).
     /// The bottom line is lost, and a new empty line appears at top.
-    /// Respects DECSTBM scroll region margins.
+    /// Respects [`DECSTBM`] scroll region margins.
     /// See [`shift_lines_down()`] for detailed behavior and
     /// examples.
     ///
-    /// [`shift_lines_down()`]: crate::OffscreenBuffer::shift_lines_down
     ///
     /// # Errors
     ///
     /// Returns an error if the scroll operation fails.
+    ///
+    /// [`DECSTBM`]: https://vt100.net/docs/vt510-rm/DECSTBM.html
+    /// [`ESC`]: crate::EscSequence
+    /// [`shift_lines_down()`]: crate::OffscreenBuffer::shift_lines_down
     pub fn scroll_buffer_down(&mut self) -> miette::Result<()> {
         // Get scroll region as an inclusive range and convert to
         // exclusive for iteration.
@@ -173,7 +188,7 @@ impl OffscreenBuffer {
 
     /// Handle SU (Scroll Up) - scroll display up by n lines.
     /// Multiple lines at the top are lost, new empty lines appear at bottom.
-    /// Respects DECSTBM scroll region margins.
+    /// Respects [`DECSTBM`] scroll region margins.
     ///
     /// Example - Scrolling up by 2 lines
     ///
@@ -208,6 +223,8 @@ impl OffscreenBuffer {
     /// # Errors
     ///
     /// Returns an error if the scroll operation fails.
+    ///
+    /// [`DECSTBM`]: https://vt100.net/docs/vt510-rm/DECSTBM.html
     pub fn scroll_up(&mut self, how_many: RowHeight) -> miette::Result<()> {
         for _ in 0..how_many.as_u16() {
             self.scroll_buffer_up()?;
@@ -217,7 +234,7 @@ impl OffscreenBuffer {
 
     /// Handle SD (Scroll Down) - scroll display down by n lines.
     /// Multiple lines at the bottom are lost, new empty lines appear at top.
-    /// Respects DECSTBM scroll region margins.
+    /// Respects [`DECSTBM`] scroll region margins.
     ///
     /// Example - Scrolling down by 2 lines
     ///
@@ -252,6 +269,8 @@ impl OffscreenBuffer {
     /// # Errors
     ///
     /// Returns an error if the scroll operation fails.
+    ///
+    /// [`DECSTBM`]: https://vt100.net/docs/vt510-rm/DECSTBM.html
     pub fn scroll_down(&mut self, how_many: RowHeight) -> miette::Result<()> {
         for _ in 0..how_many.as_u16() {
             self.scroll_buffer_down()?;

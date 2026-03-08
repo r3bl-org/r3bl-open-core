@@ -11,7 +11,7 @@
 //! - Check [Rust documentation] again (duplicate URL test)
 //!
 //! [GitHub]: https://github.com
-//! [grapheme clusters]: https://medium.com/flutter-community/working-with-unicode-and-grapheme-clusters-in-dart-b054faab5705
+//! [grapheme clusters]: https://www.unicode.org/reports/tr29/#Grapheme_Cluster_Boundaries
 //! [Rust docs]: https://doc.rust-lang.org
 //! [Unicode guide]: https://doc.rust-lang.org/book/ch08-02-strings.html
 

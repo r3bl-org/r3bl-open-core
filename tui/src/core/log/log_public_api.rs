@@ -4,16 +4,36 @@ use crate::{DisplayPreference, TracingConfig, WriterConfig};
 use std::{fs::OpenOptions, io::Write, ops::Add, path::Path};
 use tracing::dispatcher;
 
-// XMARK: Clever Rust, use of `impl Into<ConfigStruct>` for elegant constructor config
-// options.
+pub const DEFAULT_LOG_FILE_NAME: &str = "log.txt";
 
-/// This module makes it easier to configure the logging system. Instead of having lots of
-/// complex arguments to the [`try_initialize_logging_global`] and
-/// [`try_initialize_logging_thread_local`] functions, they both receive a type that
-/// implements the [`Into<TracingConfig>`] trait. This is a very powerful pattern since it
-/// can be used to convert many different types into a
-/// [`TracingConfig`] type while retaining a simple function signature. Here are some
-/// examples of what is possible:
+/// Global default subscriber, which once set, can't be unset or changed.
+/// - This is great for apps.
+/// - Docs for [Global default tracing subscriber]
+/// - Configure this using [`TracingConfig`] (which supports [`Into<TracingConfig>]` from
+///   multiple argument types). Look at [`TracingConfig`] for default configuration.
+///
+/// Logging is **DISABLED** by **default**.
+///
+/// If you don't call this function w/ a value other than
+/// [`tracing_core::LevelFilter::OFF`], then logging won't be enabled. It won't matter if
+/// you call any of the other logging functions in this module, or directly use the
+/// [`tracing::info`!], [`tracing::debug`!], etc. macros.
+///
+/// This is a convenience method to setup Tokio [`tracing_subscriber`] with [`stdout`] as
+/// the output destination. This method also ensures that the [`crate::SharedWriter`] is
+/// used for concurrent writes to [`stdout`]. You can also use the [`TracingConfig`]
+/// struct to customize the behavior of the tracing setup, by choosing whether to display
+/// output to [`stdout`], [`stderr`], or a [`crate::SharedWriter`]. By default, both
+/// display and file logging are enabled. You can also customize the log level, and the
+/// file path and prefix for the log file.
+///
+/// You can use the functions in this module or just use the [`mod@crate::log`] functions
+/// directly, along with using [`tracing::info`!], [`tracing::debug`!], etc. macros.
+///
+/// If you don't want to use sophisticated logging, you can use the [`file_log`] function
+/// to log messages to a file.
+///
+/// # Examples
 ///
 /// ```no_run
 /// use r3bl_tui::log::{
@@ -38,10 +58,138 @@ use tracing::dispatcher;
 /// _ = try_initialize_logging_global(config_compose);
 /// _ = try_initialize_logging_thread_local(config_1 + config_4);
 /// ```
-pub mod tracing_config_options {
-    use super::{Add, DisplayPreference, TracingConfig, WriterConfig};
+///
+/// # Errors
+///
+/// Returns an error in any of these cases:
+/// - The global subscriber is already set.
+/// - The log file cannot be created or written to.
+/// - The tracing layers cannot be initialized.
+///
+/// [`Into<TracingConfig>`]: TracingConfig
+/// [`stderr`]: std::io::stderr
+/// [`stdout`]: std::io::stdout
+/// [Global default tracing subscriber]: tracing::subscriber::set_global_default
+pub fn try_initialize_logging_global(
+    arg_options: impl Into<TracingConfig>,
+) -> miette::Result<()> {
+    let config: TracingConfig = arg_options.into();
 
-    pub const DEFAULT_LOG_FILE_NAME: &str = "log.txt";
+    // Early return if the level filter is off.
+    if matches!(config.get_level_filter(), tracing_core::LevelFilter::OFF) {
+        return ok!();
+    }
+
+    // Try to initialize the tracing system w/ (rolling) file log output.
+    config.install_global()
+}
+
+/// Thread local subscriber, which is thread local, and you can assign different ones
+/// to different threads.
+/// - This is great for tests.
+/// - Docs for [Thread local tracing subscriber]
+/// - Configure this using [`TracingConfig`] (which supports `Into<TracingConfig>` from
+///   multiple argument types). Look at [`TracingConfig`] for default configuration.
+///
+/// Logging is **DISABLED** by **default**.
+///
+/// If you don't call this function w/ a value other than
+/// [`tracing_core::LevelFilter::OFF`], then logging won't be enabled. It won't matter if
+/// you call any of the other logging functions in this module, or directly use the
+/// [`tracing::info`!], [`tracing::debug`!], etc. macros.
+///
+/// Unlike [`try_initialize_logging_global`], this function initializes the logging system
+/// per thread. This is useful when you want to have different log levels for different
+/// threads, eg in different tests.
+///
+/// If you don't want to use sophisticated logging, you can use the [`file_log`] function
+/// to log messages to a file.
+///
+/// # Example
+///
+/// ```no_run
+/// # use r3bl_tui::log::{
+/// #     TracingConfig, DisplayPreference, WriterConfig,
+/// #     try_initialize_logging_thread_local
+/// # };
+/// fn test_logging_setup() {
+///     try_initialize_logging_thread_local(
+///        DisplayPreference::Stdout
+///     ).unwrap();
+///     tracing::info!("This is an info message");
+/// }
+/// ```
+///
+/// # Errors
+///
+/// Returns an error if:
+/// - The log file cannot be created or written to
+/// - The tracing layers cannot be initialized
+///
+/// [Thread local tracing subscriber]: tracing::subscriber::set_default
+pub fn try_initialize_logging_thread_local(
+    arg_options: impl Into<TracingConfig>,
+) -> miette::Result<Option<dispatcher::DefaultGuard>> {
+    let config: TracingConfig = arg_options.into();
+
+    // Early return if the level filter is off.
+    if matches!(config.get_level_filter(), tracing_core::LevelFilter::OFF) {
+        return Ok(None);
+    }
+
+    // Try to initialize the tracing system w/ (rolling) file log output.
+    config.install_thread_local().map(Some)
+}
+
+/// This is a simple function that logs a message to a file. This is meant to be used when
+/// there are no other logging facilities available, such as
+/// [`try_initialize_logging_global`] or [`try_initialize_logging_thread_local`].
+///
+/// # Arguments
+/// * `file_path` - The path to the file to log to. If `None`, the default path is
+///   [`DEFAULT_LOG_FILE_NAME`].
+/// * `message` - The message to log.
+///
+/// # Panics
+/// This function will panic if:
+/// * The file cannot be created or opened (e.g., due to permission issues or invalid
+///   path)
+/// * The message cannot be written to the file (e.g., due to disk space issues or I/O
+///   errors)
+pub fn file_log(file_path: Option<&Path>, message: &str) {
+    let file_path = file_path.unwrap_or(Path::new(DEFAULT_LOG_FILE_NAME));
+    let message = if message.ends_with('\n') {
+        message.to_string()
+    } else {
+        format!("{message}\n")
+    };
+    let mut file = OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(file_path)
+        .unwrap();
+    file.write_all(message.as_bytes()).unwrap();
+}
+
+// XMARK: Clever Rust, use of `impl Into<ConfigStruct>` for elegant constructor config
+// options.
+
+/// This module implements the "heavy lifting" for the Elegant Constructor DSL Pattern.
+///
+/// This enables an elegant, type-safe, and ergonomic DSL for configuring the logging
+/// system. By leveraging [`impl Into<TracingConfig>`] and operator overloading (`+`),
+/// callers can progressively disclose their configuration needs.
+///
+/// It implements [`From`] traits to convert various configuration types
+/// ([`tracing::Level`], [`WriterConfig`], [`DisplayPreference`], etc) into
+/// [`TracingConfig`], and [`Add`] traits to combine them with `+`. This is what allows
+/// [`try_initialize_logging_global`] and [`try_initialize_logging_thread_local`] to
+/// accept multiple types of inputs via [`impl Into<TracingConfig>`].
+///
+/// [`impl Into<TracingConfig>`]: TracingConfig
+mod impl_elegant_constructor_dsl_pattern {
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     impl From<tracing::Level> for TracingConfig {
         fn from(level: tracing::Level) -> Self {
@@ -307,143 +455,4 @@ pub mod tracing_config_options {
             );
         }
     }
-}
-
-/// Global default subscriber, which once set, can't be unset or changed.
-/// - This is great for apps.
-/// - Docs for [Global default tracing subscriber]
-/// - Configure this using the [`mod@tracing_config_options`] module (which converts any
-///   number of arguments into [`Into<TracingConfig>`]. Look at this module for default
-///   configuration.
-///
-/// Logging is **DISABLED** by **default**.
-///
-/// If you don't call this function w/ a value other than
-/// [`tracing_core::LevelFilter::OFF`], then logging won't be enabled. It won't matter if
-/// you call any of the other logging functions in this module, or directly use the
-/// [`tracing::info`!], [`tracing::debug`!], etc. macros.
-///
-/// This is a convenience method to setup Tokio [`tracing_subscriber`] with `stdout` as
-/// the output destination. This method also ensures that the [`crate::SharedWriter`]
-/// is used for concurrent writes to `stdout`. You can also use the [`TracingConfig`]
-/// struct to customize the behavior of the tracing setup, by choosing whether to display
-/// output to `stdout`, `stderr`, or a [`crate::SharedWriter`]. By default, both
-/// display and file logging are enabled. You can also customize the log level, and the
-/// file path and prefix for the log file.
-///
-/// You can use the functions in this module or just use the [`mod@crate::log`] functions
-/// directly, along with using [`tracing::info`!], [`tracing::debug`!], etc. macros.
-///
-/// If you don't want to use sophisticated logging, you can use the [`file_log`] function
-/// to log messages to a file.
-///
-/// # Errors
-///
-/// Returns an error if:
-/// - The global subscriber is already set
-/// - The log file cannot be created or written to
-/// - The tracing layers cannot be initialized
-///
-/// [Global default tracing subscriber]: https://docs.rs/tracing/latest/tracing/subscriber/fn.set_global_default.html
-pub fn try_initialize_logging_global(
-    arg_options: impl Into<TracingConfig>,
-) -> miette::Result<()> {
-    let config: TracingConfig = arg_options.into();
-
-    // Early return if the level filter is off.
-    if matches!(config.get_level_filter(), tracing_core::LevelFilter::OFF) {
-        return ok!();
-    }
-
-    // Try to initialize the tracing system w/ (rolling) file log output.
-    config.install_global()
-}
-
-/// Thread local subscriber, which is thread local, and you can assign different ones
-/// to different threads.
-/// - This is great for tests.
-/// - Docs for [Thread local tracing subscriber]
-/// - Configure this using the [`mod@tracing_config_options`] module (which converts any
-///   number of arguments into [`Into<TracingConfig>`]. Look at this module for default
-///   configuration.
-///
-/// Logging is **DISABLED** by **default**.
-///
-/// If you don't call this function w/ a value other than
-/// [`tracing_core::LevelFilter::OFF`], then logging won't be enabled. It won't matter if
-/// you call any of the other logging functions in this module, or directly use the
-/// [`tracing::info`!], [`tracing::debug`!], etc. macros.
-///
-/// Unlike [`try_initialize_logging_global`], this function initializes the logging system
-/// per thread. This is useful when you want to have different log levels for different
-/// threads, eg in different tests.
-///
-/// If you don't want to use sophisticated logging, you can use the [`file_log`] function
-/// to log messages to a file.
-///
-/// # Example
-///
-/// ```no_run
-/// # use r3bl_tui::log::{
-/// #     TracingConfig, DisplayPreference, WriterConfig,
-/// #     try_initialize_logging_thread_local
-/// # };
-/// fn test_logging_setup() {
-///     try_initialize_logging_thread_local(
-///        DisplayPreference::Stdout
-///     ).unwrap();
-///     tracing::info!("This is an info message");
-/// }
-/// ```
-///
-/// # Errors
-///
-/// Returns an error if:
-/// - The log file cannot be created or written to
-/// - The tracing layers cannot be initialized
-///
-/// [Thread local tracing subscriber]: https://docs.rs/tracing/latest/tracing/subscriber/fn.set_default.html
-pub fn try_initialize_logging_thread_local(
-    arg_options: impl Into<TracingConfig>,
-) -> miette::Result<Option<dispatcher::DefaultGuard>> {
-    let config: TracingConfig = arg_options.into();
-
-    // Early return if the level filter is off.
-    if matches!(config.get_level_filter(), tracing_core::LevelFilter::OFF) {
-        return Ok(None);
-    }
-
-    // Try to initialize the tracing system w/ (rolling) file log output.
-    config.install_thread_local().map(Some)
-}
-
-/// This is a simple function that logs a message to a file. This is meant to be used when
-/// there are no other logging facilities available, such as
-/// [`try_initialize_logging_global`] or [`try_initialize_logging_thread_local`].
-///
-/// # Arguments
-/// * `file_path` - The path to the file to log to. If `None`, the default path is
-///   [`tracing_config_options::DEFAULT_LOG_FILE_NAME`].
-/// * `message` - The message to log.
-///
-/// # Panics
-/// This function will panic if:
-/// * The file cannot be created or opened (e.g., due to permission issues or invalid
-///   path)
-/// * The message cannot be written to the file (e.g., due to disk space issues or I/O
-///   errors)
-pub fn file_log(file_path: Option<&Path>, message: &str) {
-    let file_path =
-        file_path.unwrap_or(Path::new(tracing_config_options::DEFAULT_LOG_FILE_NAME));
-    let message = if message.ends_with('\n') {
-        message.to_string()
-    } else {
-        format!("{message}\n")
-    };
-    let mut file = OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(file_path)
-        .unwrap();
-    file.write_all(message.as_bytes()).unwrap();
 }

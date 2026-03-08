@@ -28,13 +28,13 @@
 /// [`From<u16>`]), we allow types with construction constraints (like non-zero values)
 /// to participate in generic numeric operations without violating their invariants.
 ///
+/// [`as_u16`]: Self::as_u16
+/// [`as_usize`]: Self::as_usize
 /// [`From<u16>`]: std::convert::From
 /// [`From<usize>`]: std::convert::From
 /// [`NonZeroU16`]: std::num::NonZeroU16
 /// [`TermCol`]: crate::TermCol
 /// [`TermRow`]: crate::TermRow
-/// [`as_u16`]: Self::as_u16
-/// [`as_usize`]: Self::as_usize
 pub trait NumericConversions: Copy + Sized {
     /// Converts to a [`usize`] value for array indexing and size calculations.
     ///
@@ -42,10 +42,12 @@ pub trait NumericConversions: Copy + Sized {
     /// flexibility and compatibility with Rust's standard library.
     fn as_usize(&self) -> usize;
 
-    /// Converts to a [`u16`] value for terminal and PTY operations.
+    /// Converts to a [`u16`] value for terminal and [`PTY`] operations.
     ///
-    /// Use this when interfacing with terminal libraries or PTY operations
+    /// Use this when interfacing with terminal libraries or [`PTY`] operations
     /// that require 16-bit values.
+    ///
+    /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
     fn as_u16(&self) -> u16;
 }
 
@@ -80,14 +82,14 @@ pub trait NumericConversions: Copy + Sized {
 /// - [`Index`] - Generic position (dimension-agnostic)
 /// - [`RowIndex`] - Vertical position in terminal grid
 /// - [`ColIndex`] - Horizontal position in terminal grid
-/// - [`ByteIndex`] - Byte position in UTF-8 strings
+/// - [`ByteIndex`] - Byte position in [`UTF-8`] strings
 /// - [`SegIndex`] - Grapheme segment position
 ///
 /// **Length types** (1-based sizes):
 /// - [`Length`] - Generic size (dimension-agnostic)
 /// - [`RowHeight`] - Vertical size in terminal grid
 /// - [`ColWidth`] - Horizontal size in terminal grid
-/// - [`ByteLength`] - Byte count in UTF-8 strings
+/// - [`ByteLength`] - Byte count in [`UTF-8`] strings
 /// - [`SegLength`] - Grapheme segment count
 ///
 /// **Other numeric types**:
@@ -123,20 +125,21 @@ pub trait NumericConversions: Copy + Sized {
 /// assert!(!non_zero_length.is_zero());
 /// ```
 ///
+/// [`as_u16()`]: NumericConversions::as_u16
+/// [`as_usize()`]: NumericConversions::as_usize
 /// [`ByteIndex`]: crate::ByteIndex
 /// [`ByteLength`]: crate::ByteLength
 /// [`ChUnit`]: crate::ChUnit
 /// [`ColIndex`]: crate::ColIndex
 /// [`ColWidth`]: crate::ColWidth
 /// [`Index`]: crate::Index
+/// [`is_zero()`]: Self::is_zero
 /// [`Length`]: crate::Length
 /// [`RowHeight`]: crate::RowHeight
 /// [`RowIndex`]: crate::RowIndex
 /// [`SegIndex`]: crate::SegIndex
 /// [`SegLength`]: crate::SegLength
-/// [`as_u16()`]: NumericConversions::as_u16
-/// [`as_usize()`]: NumericConversions::as_usize
-/// [`is_zero()`]: Self::is_zero
+/// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
 pub trait NumericValue: NumericConversions + From<usize> + From<u16> + Ord {
     /// Checks if the unit value is zero.
     ///

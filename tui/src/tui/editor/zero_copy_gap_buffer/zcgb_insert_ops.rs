@@ -9,7 +9,7 @@
 //! # Key Features
 //!
 //! - **Grapheme-aware**: Respects Unicode grapheme cluster boundaries
-//! - **UTF-8 safe**: Maintains UTF-8 validity throughout all operations
+//! - **[`UTF-8`] safe**: Maintains [`UTF-8`] validity throughout all operations
 //! - **Dynamic growth**: Automatically extends line capacity when needed
 //! - **Null-padding**: Preserves null-padding in unused capacity
 //! - **Zero-copy ready**: Maintains buffer state for efficient parsing
@@ -22,7 +22,7 @@
 //! 2. Extend line by one or more 256-byte pages (`LINE_PAGE_SIZE`)
 //! 3. Shift subsequent lines in buffer to make room
 //! 4. Initialize new capacity with null bytes
-//! 5. Perform the insertion maintaining UTF-8 boundaries
+//! 5. Perform the insertion maintaining [`UTF-8`] boundaries
 //!
 //! # Operations
 //!
@@ -51,50 +51,54 @@
 //! [`insert_text_at_byte_ofs`] where
 //! content shifting and capacity extension occur.
 //!
-//! # UTF-8 Safety in Insertion Operations
+//! # [`UTF-8`] Safety in Insertion Operations
 //!
-//! This module implements the **input validation boundary** of our UTF-8 safety
+//! This module implements the **input validation boundary** of our [`UTF-8`] safety
 //! architecture:
 //!
 //! ## API-Level Validation
 //!
-//! UTF-8 safety is **guaranteed by Rust's type system** at the API boundary:
+//! [`UTF-8`] safety is **guaranteed by Rust's type system** at the API boundary:
 //!
 //! - **[`insert_text_at_grapheme(text:
 //!   &str)`][ZeroCopyGapBuffer::insert_text_at_grapheme]**: The `&str` parameter ensures
-//!   valid UTF-8
-//! - **Type system enforcement**: Impossible to pass invalid UTF-8 through safe Rust APIs
-//! - **No runtime validation needed**: UTF-8 validity guaranteed by caller's type
+//!   valid [`UTF-8`]
+//! - **Type system enforcement**: Impossible to pass invalid [`UTF-8`] through safe Rust
+//!   APIs
+//! - **No runtime validation needed**: [`UTF-8`] validity guaranteed by caller's type
 //!   constraints
 //!
 //! ## Grapheme-Safe Positioning
 //!
 //! Insertion respects **Unicode grapheme cluster boundaries**:
 //! - Uses pre-computed segment metadata to find valid insertion points
-//! - Never splits multi-byte UTF-8 sequences or grapheme clusters
+//! - Never splits multi-byte [`UTF-8`] sequences or grapheme clusters
 //! - Maintains proper Unicode text editing semantics
 //!
 //! ## Buffer Integrity During Insertion
 //!
-//! Content insertion preserves UTF-8 validity through:
-//! 1. **Boundary-aware shifting**: Moves complete UTF-8 sequences during content shifting
-//! 2. **Null-padding maintenance**: Fills unused capacity with valid UTF-8 null bytes
-//! 3. **Capacity extension**: New memory immediately initialized with valid UTF-8 (`\0`)
+//! Content insertion preserves [`UTF-8`] validity through:
+//! 1. **Boundary-aware shifting**: Moves complete [`UTF-8`] sequences during content
+//!    shifting
+//! 2. **Null-padding maintenance**: Fills unused capacity with valid [`UTF-8`] null bytes
+//! 3. **Capacity extension**: New memory immediately initialized with valid [`UTF-8`]
+//!    (`\0`)
 //!
 //! ## Why This is the Validation Point
 //!
-//! This module is where **all UTF-8 validation occurs** because:
+//! This module is where **all [`UTF-8`] validation occurs** because:
 //! - **Single entry point**: All content enters the buffer through these methods
-//! - **Type-safe APIs**: `&str` parameters guarantee UTF-8 validity
+//! - **Type-safe APIs**: `&str` parameters guarantee [`UTF-8`] validity
 //! - **Performance optimization**: Validate once at input, trust thereafter
 //! - **Zero-copy enabling**: Subsequent operations can use `unsafe` for performance
 //!
 //! After insertion, all other modules can safely use [`from_utf8_unchecked()`] because
 //! they operate on content that was validated at this boundary.
 //!
-//! [`insert_text_at_grapheme()`]: ZeroCopyGapBuffer::insert_text_at_grapheme
 //! [`insert_empty_line()`]: ZeroCopyGapBuffer::insert_empty_line
 //! [`insert_text_at_byte_ofs`]: ZeroCopyGapBuffer::insert_text_at_byte_ofs
+//! [`insert_text_at_grapheme()`]: ZeroCopyGapBuffer::insert_text_at_grapheme
+//! [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
 
 use super::{LINE_PAGE_SIZE, ZeroCopyGapBuffer};
 use crate::{ArrayBoundsCheck, ArrayOverflowResult, ByteIndex, CursorBoundsCheck,
@@ -160,7 +164,7 @@ impl ZeroCopyGapBuffer {
     /// The method ensures null padding is maintained after the newline character.
     ///
     /// # Safety
-    /// The caller must ensure that `byte_pos` is at a valid UTF-8 boundary.
+    /// The caller must ensure that `byte_pos` is at a valid [`UTF-8`] boundary.
     ///
     /// # Errors
     /// Returns an error if:
@@ -181,6 +185,8 @@ impl ZeroCopyGapBuffer {
     /// operate on raw memory indices. Using type-safe wrappers would require
     /// immediate unwrapping at every operation, providing no additional safety while
     /// significantly reducing code readability.
+    ///
+    /// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
     pub fn insert_text_at_byte_pos(
         &mut self,
         arg_line_index: impl Into<RowIndex>,

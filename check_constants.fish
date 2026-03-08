@@ -4,7 +4,7 @@
 # Must be sourced first after script_lib.fish (sets globals used by all other modules).
 #
 # Performance Optimizations:
-# - tmpfs: Builds to /tmp/roc/target/check (RAM-based, eliminates disk I/O)
+# - tmpfs: Builds to $CHECK_TARGET_DIR (RAM-based, eliminates disk I/O)
 #   Trade-off: Cache lost on reboot, first post-reboot build is cold
 # - CARGO_BUILD_JOBS=2/3 of cores: High parallelism without starving interactive processes.
 #   Leaves ~1/3 of cores free for terminal input, IDE, and desktop compositor.
@@ -14,7 +14,12 @@
 
 # Lock/PID file for single-instance enforcement.
 # Uses PID file with process liveness check - simpler and fish-compatible.
-set -g CHECK_LOCK_FILE /tmp/roc/check.fish.pid
+# Project name for isolation.
+set -l project_name (basename $PWD)
+set -g CHECK_LOCK_FILE /tmp/check-fish-$project_name.pid
+
+# Project name (folder name) for notifications.
+set -g WORKSPACE_NAME (prompt_pwd)
 
 # Sliding window debounce for watch mode (in seconds).
 # After detecting a file change, waits for this many seconds of "quiet" (no new changes)
@@ -22,24 +27,34 @@ set -g CHECK_LOCK_FILE /tmp/roc/check.fish.pid
 # This handles IDE auto-save, formatters, and "oops forgot to save that file" moments.
 set -g DEBOUNCE_WINDOW_SECS 1
 
-# Use tmpfs for build artifacts - eliminates disk I/O for massive speedup.
-# /tmp is already tmpfs on most Linux systems (including this one: 46GB).
-# Benefits: ~2-3x faster builds, no SSD wear, isolated from IDE target directories.
-# Trade-off: Build cache is lost on reboot (first build after reboot is cold).
+# Two-tree architecture for build artifacts and metadata:
+# 1. SHARED TREE (cargo + IDE + check.fish): Build artifacts shared with rust-analyzer.
+# 2. PRIVATE TREE (check.fish only): Metadata and doc staging (isolated from IDE).
 #
-# CHECK_TARGET_DIR: Primary target for tests and serving docs to browser.
-# CHECK_TARGET_DIR_DOC_STAGING_QUICK: Staging for quick doc builds (--no-deps, --doc and --quick-doc).
-# CHECK_TARGET_DIR_DOC_STAGING_FULL: Staging for full doc builds (with deps, runs in background).
-# CHECK_LOG_FILE: Log file for all check.fish output (created fresh each run).
+# Benefits: ~2-3x faster builds (tmpfs), no SSD wear, shared cache with IDE.
 #
-# All doc modes build to staging dirs, then rsync to CHECK_TARGET_DIR/doc (the serving dir).
+# PRIVATE TREE: check.fish-owned metadata and doc staging.
+# Always under /tmp for tmpfs performance. Independent of CARGO_TARGET_DIR.
+set -g CHECK_PROJECT_ROOT /tmp/check-fish-$project_name
+
+# SHARED TREE: cargo build artifacts (shared between check.fish and IDE).
+# Respect user's CARGO_TARGET_DIR if set, otherwise default to isolated tmpfs path.
+# All doc modes build to staging dirs (private tree), then rsync to serving dir (shared tree).
 # This prevents browser tabs from seeing empty doc folders during builds.
-# Two separate staging dirs prevent race conditions: quick builds can run while
-# background full builds are syncing, without files "vanishing" mid-rsync.
-set -g CHECK_TARGET_DIR /tmp/roc/target/check
-set -g CHECK_TARGET_DIR_DOC_STAGING_QUICK /tmp/roc/target/check-doc-staging-quick
-set -g CHECK_TARGET_DIR_DOC_STAGING_FULL /tmp/roc/target/check-doc-staging-full
-set -g CHECK_LOG_FILE /tmp/roc/check.log
+if set -q CARGO_TARGET_DIR; and test -n "$CARGO_TARGET_DIR"
+    set -g CHECK_TARGET_DIR $CARGO_TARGET_DIR
+else
+    set -g CHECK_TARGET_DIR $CHECK_PROJECT_ROOT/target
+    # Export so cargo picks it up (scoped to this process)
+    set -gx CARGO_TARGET_DIR $CHECK_TARGET_DIR
+end
+
+# Derived paths for staging and metadata.
+set -g CHECK_TARGET_DIR_DOC_STAGING_QUICK $CHECK_PROJECT_ROOT/staging-quick
+set -g CHECK_TARGET_DIR_DOC_STAGING_FULL  $CHECK_PROJECT_ROOT/staging-full
+set -g CHECK_LOG_FILE               $CHECK_PROJECT_ROOT/check.log
+set -g CHECK_BUILD_CONFIG_HASH_FILE $CHECK_PROJECT_ROOT/.build_config_toml_hash
+set -g CHECK_DURATION_FILE          $CHECK_PROJECT_ROOT/check_duration.txt
 
 # Use 2/3 of available cores for cargo operations (ceil to avoid rounding down too far).
 # Example: 28 cores → 19 jobs (leaves 9 cores free for interactive processes).
@@ -101,13 +116,6 @@ set -g CHECK_TIMEOUT_SECS 300
 # Used by run_check_with_recovery to distinguish timeouts from other failures.
 set -g TIMEOUT_EXIT_CODE 124
 
-# Temp file path for passing duration from run_check_with_recovery to callers.
-# Using a well-known path avoids global variable side effects while still
-# allowing callers to explicitly opt-in to reading the duration.
-set -g CHECK_DURATION_FILE /tmp/check_fish_duration.txt
-
-# Maximum size (in GB) for /tmp/roc/target before triggering automatic cleanup.
-# The three target dirs (check ~5.6GB, doc-staging-full ~1.7GB, doc-staging-quick ~0.5GB)
-# total ~8GB at steady state. 16GB gives headroom for incremental artifacts without
-# thrashing (constant evict → cold rebuild cycles). Still well under tmpfs capacity (63GB).
+# Maximum size (in GB) for managed directories before triggering automatic cleanup.
+# 16GB gives headroom for incremental artifacts without thrashing.
 set -g MAX_TARGET_SIZE_GB 16

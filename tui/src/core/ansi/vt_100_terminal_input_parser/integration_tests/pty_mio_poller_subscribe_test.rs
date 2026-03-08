@@ -2,8 +2,8 @@
 
 //! [`PTY`]-based integration test for [`subscribe()`] multi-receiver functionality.
 //!
-//! Tests that [`DirectToAnsiInputDevice::subscribe()`] creates additional receivers
-//! that independently receive all input events via the broadcast channel.
+//! Tests that [`DirectToAnsiInputDevice::subscribe()`] creates additional receivers that
+//! independently receive all input events via the broadcast channel.
 //!
 //! Run with:
 //! ```bash
@@ -43,7 +43,7 @@
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`subscribe()`]: crate::direct_to_ansi::DirectToAnsiInputDevice::subscribe
 
-use crate::{SingleThreadSafeControlledChild, PtyPair, PtyTestMode,
+use crate::{PtyTestMode, PtyTestContext,
             core::resilient_reactor_thread::{LivenessState, RRTEvent},
             direct_to_ansi::{DirectToAnsiInputDevice,
                              input::{channel_types::{PollerEvent, StdinEvent},
@@ -52,7 +52,7 @@ use std::{io::{BufRead, BufReader, Write},
           time::Duration};
 
 /// Ready signal sent by controlled process after initialization.
-const CONTROLLED_READY: &str = "SUBSCRIBE_TEST_READY";
+const SUBSCRIBE_READY: &str = "SUBSCRIBE_TEST_READY";
 
 /// Signal sent when device and subscriber are created.
 const SUBSCRIBERS_CREATED: &str = "SUBSCRIBERS_CREATED";
@@ -89,22 +89,19 @@ fn wait_for_signal(buf_reader: &mut BufReader<impl std::io::Read>, signal: &str)
 }
 
 /// Controller process: sends input bytes and verifies controlled completes successfully.
-fn subscribe_controller_entry_point(pty_pair: PtyPair, child: SingleThreadSafeControlledChild) {
-    eprintln!("Subscribe Controller: Starting...");
+fn subscribe_controller_entry_point(context: PtyTestContext) {
+    let PtyTestContext {
+        pty_pair,
+        child,
+        mut buf_reader,
+        mut writer,
+    } = context;
 
-    let mut writer = pty_pair
-        .controller()
-        .take_writer()
-        .expect("Failed to get writer");
-    let reader = pty_pair
-        .controller()
-        .try_clone_reader()
-        .expect("Failed to get reader");
-    let mut buf_reader = BufReader::new(reader);
+    eprintln!("Subscribe Controller: Starting...");
 
     // Wait for controlled to be ready.
     eprintln!("Subscribe Controller: Waiting for controlled to start...");
-    wait_for_signal(&mut buf_reader, CONTROLLED_READY);
+    wait_for_signal(&mut buf_reader, SUBSCRIBE_READY);
     eprintln!("  Controlled is ready");
 
     // Wait for both subscribers to be created, then send input.
@@ -132,8 +129,8 @@ fn subscribe_controller_entry_point(pty_pair: PtyPair, child: SingleThreadSafeCo
 
 /// Controlled process: tests [`subscribe()`] multi-receiver functionality.
 #[allow(clippy::too_many_lines)]
-fn subscribe_controlled_entry_point() -> ! {
-    println!("{CONTROLLED_READY}");
+fn subscribe_controlled_entry_point() {
+    println!("{SUBSCRIBE_READY}");
     std::io::stdout().flush().expect("Failed to flush");
 
     let runtime = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
@@ -272,6 +269,4 @@ fn subscribe_controlled_entry_point() -> ! {
         std::io::stdout().flush().expect("Failed to flush");
     });
 
-    eprintln!("Subscribe Controlled: Exiting");
-    std::process::exit(0);
 }

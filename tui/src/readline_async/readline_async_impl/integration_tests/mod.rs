@@ -1,6 +1,6 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! System-level [`PTY`] tests - end-to-end validation of readline editing in real pseudo-terminals.
+//! System-level [`PTY`] tests - end-to-end validation of readline editing in real pseudoterminals.
 //!
 //! These tests validate the complete readline editing stack in a real [`PTY`] environment:
 //! - [`LineState`] async event handling and state management
@@ -18,7 +18,7 @@
 //! # Testing Philosophy
 //!
 //! **[`PTY`] tests validate end-to-end behavior** because:
-//! - **Real-world testing**: Tests run in an actual pseudo-terminal, matching production environment
+//! - **Real-world testing**: Tests run in an actual pseudoterminal, matching production environment
 //! - **Integration validation**: Verifies the complete stack from keyboard input → line state → terminal output
 //! - **Unicode safety**: Validates multi-byte character handling in actual terminal environment
 //!

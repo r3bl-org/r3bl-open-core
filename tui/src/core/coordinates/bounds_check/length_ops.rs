@@ -57,7 +57,7 @@ use std::{cmp::min, ops::Sub};
 /// - [`Length`] - Generic 1-based size (dimension-agnostic)
 /// - [`RowHeight`] - Vertical size in terminal grid
 /// - [`ColWidth`] - Horizontal size in terminal grid
-/// - [`ByteLength`] - Byte count in UTF-8 strings
+/// - [`ByteLength`] - Byte count in [`UTF-8`] strings
 /// - [`SegLength`] - Grapheme segment count
 ///
 /// ## Core Operations
@@ -250,25 +250,26 @@ use std::{cmp::min, ops::Sub};
 /// [`ArrayBoundsCheck`]: crate::ArrayBoundsCheck
 /// [`ByteIndex`]: crate::ByteIndex
 /// [`ByteLength`]: crate::ByteLength
+/// [`clamp_to_max()`]: LengthOps::clamp_to_max
 /// [`ColIndex`]: crate::ColIndex
 /// [`ColWidth`]: crate::ColWidth
+/// [`convert_to_index()`]: LengthOps::convert_to_index
 /// [`CursorBoundsCheck`]: crate::CursorBoundsCheck
-/// [`IndexOps`]: crate::IndexOps
+/// [`index.overflows(length)`]: crate::ArrayBoundsCheck::overflows
+/// [`index_from_end()`]: LengthOps::index_from_end
 /// [`Index`]: crate::Index
-/// [`LengthOps`]: crate::LengthOps
+/// [`IndexOps`]: crate::IndexOps
+/// [`is_overflowed_by()`]: LengthOps::is_overflowed_by
 /// [`Length`]: crate::Length
+/// [`LengthOps`]: crate::LengthOps
 /// [`NumericValue`]: crate::NumericValue
+/// [`remaining_from()`]: LengthOps::remaining_from
 /// [`RowHeight`]: crate::RowHeight
 /// [`RowIndex`]: crate::RowIndex
 /// [`SegIndex`]: crate::SegIndex
 /// [`SegLength`]: crate::SegLength
 /// [`Self::IndexType`]: crate::IndexOps
-/// [`clamp_to_max()`]: LengthOps::clamp_to_max
-/// [`convert_to_index()`]: LengthOps::convert_to_index
-/// [`index.overflows(length)`]: crate::ArrayBoundsCheck::overflows
-/// [`index_from_end()`]: LengthOps::index_from_end
-/// [`is_overflowed_by()`]: LengthOps::is_overflowed_by
-/// [`remaining_from()`]: LengthOps::remaining_from
+/// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
 /// [module-level comparison table]:
 ///     super#indexops-vs-lengthops-understanding-0-based-positions-vs-1-based-sizes
 pub trait LengthOps: NumericValue {

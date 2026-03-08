@@ -2,8 +2,10 @@
 use std::{fmt::{Debug, Display},
           ops::Deref};
 
-/// This works w/ the [int-enum](https://crates.io/crates/int-enum) crate in order to
+/// This works w/ the [int-enum] crate in order to
 /// allow for the definition of enums that are represented in memory as [u8]s.
+///
+/// [int-enum]: https://crates.io/crates/int-enum
 #[derive(Default, Copy, Clone, PartialEq, Eq, Hash)]
 pub struct FlexBoxId {
     pub inner: u8,

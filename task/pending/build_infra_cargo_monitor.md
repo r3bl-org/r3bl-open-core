@@ -90,6 +90,11 @@ dirs = "6"                        # Standard directories
 - [ ] Create CLI argument structure with clap
   - Subcommands: `doc`, `test`, (none = all)
   - Flags: `--once`, `--verbose`, `--help`
+- [ ] **Implement Workspace Discovery** (manual `cargo metadata` parsing):
+  - Run `cargo metadata --no-deps --format-version 1` at startup and parse the resulting JSON.
+  - Determine if the current directory is a **Workspace** (by checking the `workspace_members` list length) or a **Package**.
+  - Use this to intelligently apply or omit the `--workspace` flag to avoid redundant-flag warnings.
+  - Automatically identify the "primary" crate (matching the folder name or containing a binary) to resolve the default documentation index path (`target/doc/<primary_crate>/index.html`).
 - [ ] Define core types:
   - `CheckType`: `All`, `Test`, `Doc`
   - `RunMode`: `Watch`, `Once`
@@ -111,6 +116,16 @@ dirs = "6"                        # Standard directories
 - [ ] Capture stdout/stderr for ICE detection
 - [ ] Measure execution duration
 - [ ] Return structured `CheckResult`
+- [ ] **Implement Robust Process Cleanup** (platform-based strategy):
+  - **Unix (Linux + macOS) — `#[cfg(unix)]`: Process Group Isolation**:
+    - Run each cargo command in its own process group (using `std::os::unix::process::CommandExt::process_group(0)`). This allows for atomic termination of the entire child process tree via `kill(-pgid, SIGTERM)`. This is what production process supervisors like systemd use.
+    - Track PGIDs of all spawned child processes.
+    - On interruption or failure, kill the entire process group — no pattern matching needed, no orphans possible.
+  - **Windows — `#[cfg(not(unix))]`: Dynamic Pattern Matching via Workspace Discovery**:
+    - Reuse the workspace discovery results from Phase 1 (the `cargo metadata` parse) to build a dynamic list of all crate names and binary target names in the workspace.
+    - Use this list to identify and kill orphaned processes by name using Windows-native APIs (`tasklist` / `taskkill`, or `windows-sys` crate's `CreateToolhelp32Snapshot` / `Process32Next`) instead of hardcoding patterns like `"r3bl_tui"`.
+    - Avoids the complexity of Windows Job Objects (which would be the process-group equivalent on Windows).
+    - **Limitation**: Can miss sub-processes whose names don't match workspace metadata (e.g., `rustc`, `cc` spawned by cargo). Acceptable tradeoff since Windows is a secondary target and these sub-processes are short-lived.
 - [ ] Implement cross-platform `ionice_wrapper`:
   - Linux: `ionice -c2 -n0` for highest I/O priority in best-effort class
   - macOS: Run command directly (no ionice available)
@@ -308,6 +323,15 @@ Stage 2: Full Build (BACKGROUND/FORKED)
   - Test ICE recovery
   - Test config change detection
   - Test toolchain corruption recovery
+
+### Cross-Platform & Multi-User Considerations (Future)
+
+- [ ] **Windows Path Support**: Re-evaluate the project-specific `/tmp` default for Windows. Use
+      appropriate platform-native temporary or local data directories (e.g., `LOCALAPPDATA` or
+      `TEMP`).
+- [ ] **Collision Prevention**: Use a hash of the absolute workspace path or include the UID
+      (`id -u` equivalent) in lock file and target folder names. This prevents collisions on shared
+      machines or when multiple projects have the same folder name.
 
 ## Feature Parity Checklist
 

@@ -42,39 +42,38 @@
 //! ## Test Flow
 //!
 //! ```text
-//! ┌─────────────────────────────────────────────────────────────────────────────┐
-//! │ Controlled Process (in PTY)                          Thread #1 (mio_poller) │
-//! │                                                                             │
-//! │  1. Create DirectToAnsiInputDevice A                   ┌───────────┐        │
-//! │     Assert: thread_alive = true, receiver_count = 1    │ poll()    │        │
-//! │     Capture generation_before                          │ blocks    │        │
-//! │                                                        └─────┬─────┘        │
-//! │  2. Read input from device A (proves thread works)           │              │
-//! │  3. Create temp_guard via subscribe_to_existing()            │              │
-//! │     (receiver_count: 1 -> 2)                                 │              │
-//! │  4. Drop device A                                            │              │
-//! │     (receiver_count: 2 -> 1, waker fires)    waker fires! ───┘              │
-//! │                                                  ┌──────────┬─────────┐     │
-//! │  5. Create DirectToAnsiInputDevice B             │ wakes up,          │     │
-//! │     (receiver_count: 1 -> 2)                     │ checks count       │     │
-//! │  6. Drop temp_guard                              │ count > 0 (ok!)    │     │
-//! │     (receiver_count: 2 -> 1)                     │ continues!         │     │
-//! │                                                  └────────────────────┘     │
-//! │  7. Read input from device B                                                │
-//! │     Assert: generation_before == generation_after (SAME thread!)            │
-//! │                                                                             │
-//! │  If generation unchanged -> TEST_PASSED (thread reused, not relaunched)     │
-//! └─────────────────────────────────────────────────────────────────────────────┘
+//! ┌──────────────────────────────────────────────────────┬────────────────────────────┐
+//! │ Controlled Process (in PTY)                          │     Thread #1 (mio_poller) │
+//! │                                                      │                            │
+//! │  1. Create DirectToAnsiInputDevice A                 │     ┌────────────────────┐ │
+//! │     Assert: thread_alive = true, receiver_count = 1  │     │ poll()             │ │
+//! │     Capture generation_before                        │     │ blocks             │ │
+//! │                                                      │     └───────────┬────────┘ │
+//! │  2. Read input from device A (proves thread works)   │                 │          │
+//! │  3. Create temp_guard via subscribe_to_existing()    │                 │          │
+//! │     (receiver_count: 1 -> 2)                         │                 │          │
+//! │  4. Drop device A                                    │                 ▼          │
+//! │     (receiver_count: 2 -> 1, waker fires)            │ waker fires! ───┤          │
+//! │                                                      │     ┌───────────▼────────┐ │
+//! │  5. Create DirectToAnsiInputDevice B                 │     │ wakes up,          │ │
+//! │     (receiver_count: 1 -> 2)                         │     │ checks count       │ │
+//! │  6. Drop temp_guard                                  │     │ count > 0 (ok!)    │ │
+//! │     (receiver_count: 2 -> 1)                         │     │ continues!         │ │
+//! │                                                      │     └────────────────────┘ │
+//! │  7. Read input from device B                         └────────────────────────────┤
+//! │     Assert: generation_before == generation_after (SAME thread!)                  │
+//! │                                                                                   │
+//! │  If generation unchanged -> TEST_PASSED (thread reused, not relaunched)           │
+//! └───────────────────────────────────────────────────────────────────────────────────┘
 //! ```
 //!
-//! [`pty_mio_poller_thread_lifecycle_test`]:
-//!     super::pty_mio_poller_thread_lifecycle_test
+//! [`pty_mio_poller_thread_lifecycle_test`]: super::pty_mio_poller_thread_lifecycle_test
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
-//! [`RRT::subscribe()`]: crate::core::resilient_reactor_thread::RRT::subscribe
+//! [`RRT::subscribe()`]: crate::RRT::subscribe
 //! [`SINGLETON.subscribe_to_existing()`]:
 //!     crate::direct_to_ansi::input::global_input_resource::SINGLETON
 
-use crate::{PtyPair, PtyTestMode, SingleThreadSafeControlledChild,
+use crate::{PtyTestContext, PtyTestMode,
             core::resilient_reactor_thread::LivenessState,
             direct_to_ansi::{DirectToAnsiInputDevice,
                              input::global_input_resource::SINGLETON}};
@@ -82,7 +81,7 @@ use std::{io::{BufRead, BufReader, Write},
           time::Duration};
 
 /// Ready signal sent by controlled process after initialization.
-const CONTROLLED_READY: &str = "REUSE_TEST_READY";
+const REUSE_READY: &str = "REUSE_TEST_READY";
 
 /// Signal sent when device A is created.
 const DEVICE_A_CREATED: &str = "REUSE_DEVICE_A_CREATED";
@@ -119,22 +118,19 @@ fn wait_for_signal(buf_reader: &mut BufReader<impl std::io::Read>, signal: &str)
 }
 
 /// Controller process: sends input bytes and verifies controlled completes successfully.
-fn controller_entry_point(pty_pair: PtyPair, child: SingleThreadSafeControlledChild) {
-    eprintln!("Reuse Controller: Starting...");
+fn controller_entry_point(context: PtyTestContext) {
+    let PtyTestContext {
+        pty_pair,
+        child,
+        mut buf_reader,
+        mut writer,
+    } = context;
 
-    let mut writer = pty_pair
-        .controller()
-        .take_writer()
-        .expect("Failed to get writer");
-    let reader = pty_pair
-        .controller()
-        .try_clone_reader()
-        .expect("Failed to get reader");
-    let mut buf_reader = BufReader::new(reader);
+    eprintln!("Reuse Controller: Starting...");
 
     // Wait for controlled to be ready.
     eprintln!("Reuse Controller: Waiting for controlled to start...");
-    wait_for_signal(&mut buf_reader, CONTROLLED_READY);
+    wait_for_signal(&mut buf_reader, REUSE_READY);
     eprintln!("  Controlled is ready");
 
     // Wait for device A, send input.
@@ -161,8 +157,8 @@ fn controller_entry_point(pty_pair: PtyPair, child: SingleThreadSafeControlledCh
 }
 
 /// Controlled process: tests thread reuse with overlapping subscriptions.
-fn controlled_entry_point() -> ! {
-    println!("{CONTROLLED_READY}");
+fn controlled_entry_point() {
+    println!("{REUSE_READY}");
     std::io::stdout().flush().expect("Failed to flush");
 
     let runtime = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
@@ -253,7 +249,4 @@ fn controlled_entry_point() -> ! {
         // Clean up.
         drop(device_b);
     });
-
-    eprintln!("Reuse Controlled: Exiting");
-    std::process::exit(0);
 }

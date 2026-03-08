@@ -29,7 +29,7 @@
 //! The term [`TTY`] comes from "teletypewriter" — physical terminals from the 1960s-70s
 //! that communicated with mainframes over serial lines. Modern terminal emulators (like
 //! [`Terminator`], [`GNOME Terminal`], [`WezTerm`], [`iTerm2`], or [`Alacritty`]) still
-//! use this abstraction: they create a **pseudo-terminal ([`PTY`])** that behaves like
+//! use this abstraction: they create a **pseudoterminal ([`PTY`])** that behaves like
 //! those old hardware devices.
 //!
 //! ### The Line Discipline
@@ -186,9 +186,9 @@
 //!
 //! ### See Also
 //!
-//! - [`crate::pty`] — Uses the [`portable_pty` crate] to create pseudo-terminals (PTYs)
+//! - [`crate::pty`] — Uses the [`portable_pty` crate] to create pseudoterminals (PTYs)
 //!   for spawning child processes. While this module configures raw mode on your
-//!   *current* terminal, the [`PTY`] module creates *new* pseudo-terminals for child
+//!   *current* terminal, the [`PTY`] module creates *new* pseudoterminals for child
 //!   processes. Both deal with the same underlying [`TTY`] abstraction: the [`PTY`]
 //!   module creates the terminal pair, while raw mode configures how the line discipline
 //!   processes input.
@@ -248,7 +248,7 @@
 //! [Nushell]: https://www.nushell.sh/
 //! [Reedline]: https://github.com/nushell/reedline
 //! [termios]: https://man7.org/linux/man-pages/man3/termios.3.html
-//! [Unix implementation's termios section]: mod@crate::core::ansi::terminal_raw_mode::raw_mode_unix#the-termios-interface
+//! [Unix implementation's termios section]: mod@crate::terminal_raw_mode::raw_mode_unix#the-termios-interface
 
 // Private modules (hide internal structure).
 mod raw_mode_core;

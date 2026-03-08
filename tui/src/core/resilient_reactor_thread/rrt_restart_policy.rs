@@ -27,17 +27,17 @@ use std::time::Duration;
 /// | Serial/hardware          | `open("/dev/ttyUSB0")` + [`ioctl`]                  | Device busy - other process must release it                     |
 ///
 /// [`Continuation::Restart`]: crate::Continuation::Restart
-/// [`RRTWorker`]: super::RRTWorker
-/// [`RRT`]: super::RRT
-/// [`TIME_WAIT`]: https://en.wikipedia.org/wiki/TCP_TIME-WAIT
 /// [`create_and_register_os_sources()`]: super::RRTWorker::create_and_register_os_sources
 /// [`epoll`]: https://man7.org/linux/man-pages/man7/epoll.7.html
 /// [`eventfd`]: https://man7.org/linux/man-pages/man2/eventfd.2.html
 /// [`fd`]: https://man7.org/linux/man-pages/man2/open.2.html
 /// [`fds`]: https://man7.org/linux/man-pages/man2/open.2.html
 /// [`ioctl`]: https://man7.org/linux/man-pages/man2/ioctl.2.html
+/// [`RRT`]: super::RRT
+/// [`RRTWorker`]: super::RRTWorker
 /// [`socket`]: https://man7.org/linux/man-pages/man7/socket.7.html
 /// [`systemd`]: https://www.freedesktop.org/software/systemd/man/latest/systemd.service.html
+/// [`TIME_WAIT`]: https://en.wikipedia.org/wiki/Transmission_Control_Protocol#TIME-WAIT
 /// [exponential backoff]: https://en.wikipedia.org/wiki/Exponential_backoff
 /// [self-healing restart details]: super#self-healing-restart-details
 /// [signal]: https://man7.org/linux/man-pages/man7/signal.7.html
@@ -75,10 +75,10 @@ pub struct RestartPolicy {
 /// For other scenarios (network servers, serial/hardware) where recovery windows are
 /// longer, provide your own policy via [`RRTWorker::restart_policy()`].
 ///
-/// [`RRTWorker::restart_policy()`]: super::RRTWorker::restart_policy
 /// [`epoll`]: https://man7.org/linux/man-pages/man7/epoll.7.html
 /// [`eventfd`]: https://man7.org/linux/man-pages/man2/eventfd.2.html
 /// [`fd`]: https://man7.org/linux/man-pages/man2/open.2.html
+/// [`RRTWorker::restart_policy()`]: super::RRTWorker::restart_policy
 /// [signal]: https://man7.org/linux/man-pages/man7/signal.7.html
 impl Default for RestartPolicy {
     fn default() -> Self {

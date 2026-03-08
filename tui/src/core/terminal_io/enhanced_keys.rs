@@ -1,8 +1,11 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 /// Crossterm docs:
-/// - [`KeyboardEnhancementFlags::DISAMBIGUATE_ESCAPE_CODES`](https://docs.rs/crossterm/0.25.0/crossterm/event/struct.KeyboardEnhancementFlags.html)
-/// - [`PushKeyboardEnhancementFlags`](https://docs.rs/crossterm/0.25.0/crossterm/event/struct.KeyboardEnhancementFlags.html)
+/// - [`KeyboardEnhancementFlags::DISAMBIGUATE_ESCAPE_CODES`]
+/// - [`PushKeyboardEnhancementFlags`]
+///
+/// [`KeyboardEnhancementFlags::DISAMBIGUATE_ESCAPE_CODES`]: https://docs.rs/crossterm/0.25.0/crossterm/event/struct.KeyboardEnhancementFlags.html
+/// [`PushKeyboardEnhancementFlags`]: crossterm::event::PushKeyboardEnhancementFlags
 #[derive(Clone, Debug, Eq, PartialEq, Copy)]
 pub enum Enhanced {
     /// **Note:** this key can only be read if
@@ -21,13 +24,16 @@ pub enum Enhanced {
 }
 
 /// Crossterm docs:
-/// - [`KeyboardEnhancementFlags::DISAMBIGUATE_ESCAPE_CODES`](https://docs.rs/crossterm/0.25.0/crossterm/event/struct.KeyboardEnhancementFlags.html)
-/// - [`PushKeyboardEnhancementFlags`](https://docs.rs/crossterm/0.25.0/crossterm/event/struct.KeyboardEnhancementFlags.html)
+/// - [`KeyboardEnhancementFlags::DISAMBIGUATE_ESCAPE_CODES`]
+/// - [`PushKeyboardEnhancementFlags`]
 ///
 /// **Note:** these keys can only be read if **both**
 /// `KeyboardEnhancementFlags::DISAMBIGUATE_ESCAPE_CODES` and
 /// `KeyboardEnhancementFlags::REPORT_ALL_KEYS_AS_ESCAPE_CODES` have been enabled with
 /// `PushKeyboardEnhancementFlags`.
+///
+/// [`KeyboardEnhancementFlags::DISAMBIGUATE_ESCAPE_CODES`]: https://docs.rs/crossterm/0.25.0/crossterm/event/struct.KeyboardEnhancementFlags.html
+/// [`PushKeyboardEnhancementFlags`]: crossterm::event::PushKeyboardEnhancementFlags
 #[derive(Clone, Debug, Eq, PartialEq, Copy)]
 pub enum ModifierKeyEnum {
     /// Left Shift key.
@@ -61,12 +67,15 @@ pub enum ModifierKeyEnum {
 }
 
 /// Crossterm docs:
-/// - [`KeyboardEnhancementFlags::DISAMBIGUATE_ESCAPE_CODES`](https://docs.rs/crossterm/0.25.0/crossterm/event/struct.KeyboardEnhancementFlags.html)
-/// - [`PushKeyboardEnhancementFlags`](https://docs.rs/crossterm/0.25.0/crossterm/event/struct.KeyboardEnhancementFlags.html)
+/// - [`KeyboardEnhancementFlags::DISAMBIGUATE_ESCAPE_CODES`]
+/// - [`PushKeyboardEnhancementFlags`]
 ///
 /// **Note:** this key can only be read if
 /// `KeyboardEnhancementFlags::DISAMBIGUATE_ESCAPE_CODES` has been enabled with
 /// `PushKeyboardEnhancementFlags`.
+///
+/// [`KeyboardEnhancementFlags::DISAMBIGUATE_ESCAPE_CODES`]: https://docs.rs/crossterm/0.25.0/crossterm/event/struct.KeyboardEnhancementFlags.html
+/// [`PushKeyboardEnhancementFlags`]: crossterm::event::PushKeyboardEnhancementFlags
 #[derive(Clone, Debug, Eq, PartialEq, Copy)]
 pub enum SpecialKeyExt {
     CapsLock,
@@ -79,12 +88,15 @@ pub enum SpecialKeyExt {
 }
 
 /// Crossterm docs:
-/// - [`KeyboardEnhancementFlags::DISAMBIGUATE_ESCAPE_CODES`](https://docs.rs/crossterm/0.25.0/crossterm/event/struct.KeyboardEnhancementFlags.html)
-/// - [`PushKeyboardEnhancementFlags`](https://docs.rs/crossterm/0.25.0/crossterm/event/struct.KeyboardEnhancementFlags.html)
+/// - [`KeyboardEnhancementFlags::DISAMBIGUATE_ESCAPE_CODES`]
+/// - [`PushKeyboardEnhancementFlags`]
 ///
 /// **Note:** this key can only be read if
 /// `KeyboardEnhancementFlags::DISAMBIGUATE_ESCAPE_CODES` has been enabled with
 /// `PushKeyboardEnhancementFlags`.
+///
+/// [`KeyboardEnhancementFlags::DISAMBIGUATE_ESCAPE_CODES`]: https://docs.rs/crossterm/0.25.0/crossterm/event/struct.KeyboardEnhancementFlags.html
+/// [`PushKeyboardEnhancementFlags`]: crossterm::event::PushKeyboardEnhancementFlags
 #[derive(Clone, Debug, Eq, PartialEq, Copy)]
 pub enum MediaKey {
     Play,

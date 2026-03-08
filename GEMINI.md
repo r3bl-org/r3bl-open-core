@@ -9,20 +9,9 @@ You are operating in the current repository. Your entire behavior, coding style,
 # 2. Tooling & Capabilities (Dual-Engine)
 You have two strict sets of tools at your disposal. Use them appropriately:
 
-**A. Semantic Rust Tools (MCP):** You are connected to powerful Rust MCP servers. You must actively use these built-in tools for all code navigation (go-to-definition, finding references), deep architectural analysis (call graphs), and precise compiler-driven refactoring.
+**A. Semantic Rust Tools (MCP):** You are connected to a powerful Rust MCP server (`rust-refactor`). You must actively use these built-in tools for all code navigation (go-to-definition, finding references), deep architectural analysis (call graphs), and precise compiler-driven refactoring.
 
-*   **The Data Diet Rule:** Some of your tools (especially from Narsil) generate massive, voluminous outputs like call graphs and ASTs. **You must protect your context window.**
-    *   **Narsil Tools:** Whenever you request a graph, search, or trace, you MUST pass strict parameters to limit the output. Never dump unbounded, raw codebase graphs into your memory. If you need more info, take it step-by-step.
-    *   **Rust-Refactor Tools:** These tools are surgical. Always provide precise `file_path`, `line`, and `character` coordinates to ensure fast, focused responses.
-*   **Mandatory Limits Reference (Narsil):**
-    | Tool Category | Key Tools | Mandatory Limit Parameter | Recommended Default |
-    | :--- | :--- | :--- | :--- |
-    | **Search** | `search_code`, `semantic_search` | `max_results` | 5 to 10 |
-    | **Symbols** | `workspace_symbol_search` | `limit` | 10 to 20 |
-    | **Graphs** | `get_code_graph` | `depth` | 1 |
-    | **Structure** | `get_project_structure` | `max_depth` | 2 |
-    | **Snippets** | `get_excerpt` | `max_lines` | 50 |
-    | **Security** | `scan_security` | `max_findings` | 20 |
+*   **Rust-Refactor Tools:** These tools are surgical. Always provide precise `file_path`, `line`, and `character` coordinates to ensure fast, focused responses.
 
 **B. Local Workflows (.claude/):** For repo-specific workflows (like running clippy, formatting, or analyzing logs), your capabilities are defined in the `.claude/` directory. Whenever I ask you to run a codebase skill, agent, or check quality, you must:
 1. Look inside the `.claude/` directory.
@@ -80,3 +69,11 @@ You do not have the full codebase in memory. You must actively use your search a
 
 **Rule:** If a request requires system-wide knowledge, global refactoring, or sweeping architectural changes, **DO NOT GUESS**. Stop immediately and reply exactly with:
 > "I need global context for this. Please run your request again, starting your prompt with `@.`"
+
+# 5. Research Efficiency & High-Signal Turns
+**Goal:** Minimize unnecessary pauses and turn overhead during the research and planning phase.
+
+- **Batch Tool Calls:** Execute research and file-reading tools in parallel blocks (multiple calls per turn) to build context rapidly.
+- **Deep Investigation:** When mapping unfamiliar layers (e.g., `pty_session`), proactively use `codebase_investigator` or multiple `grep_search` and `read_file` calls in a single turn. 
+- **Autonomous Progress:** In autonomous mode, do not stop for minor clarifications or "is this okay?" pauses. Complete the research and propose a high-signal plan or task before pausing.
+- **Milestone Delivery:** Aim for one high-signal turn (e.g., a complete research summary or a task file) rather than many low-signal turns (reading one file at a time).

@@ -1,43 +1,49 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! OSC (Operating System Command) operations for VT100/ANSI terminal emulation.
+//! [`OSC`] (Operating System Command) operations for VT100/[`ANSI`] terminal emulation.
 //!
-//! This module implements OSC operations that correspond to ANSI OSC
+//! This module implements [`OSC`] operations that correspond to [`ANSI`] [`OSC`]
 //! sequences handled by the `vt_100_pty_output_parser::operations::osc_ops` module. These
 //! include:
 //!
-//! - **OSC 0/1/2** (Set Title/Icon) - [`handle_title_and_icon`]
-//! - **OSC 8** (Hyperlinks) - [`handle_hyperlink`]
+//! - **[`OSC`] 0/1/2** (Set Title/Icon) - [`handle_title_and_icon`]
+//! - **[`OSC`] 8** (Hyperlinks) - [`handle_hyperlink`]
 //!
-//! All operations maintain VT100 compliance and handle proper OSC event
+//! All operations maintain VT100 compliance and handle proper [`OSC`] event
 //! queueing for later transmission to the rendering layer.
 //!
-//! This module implements the business logic for OSC operations delegated from
+//! This module implements the business logic for [`OSC`] operations delegated from
 //! the parser shim. The `impl_` prefix follows our naming convention for searchable
 //! code organization. See the architecture documentation above
 //! for the complete three-layer architecture.
 //!
 //! **Related Files:**
 //!
-//! [`handle_title_and_icon`]: crate::OffscreenBuffer::handle_title_and_icon
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`handle_hyperlink`]: crate::OffscreenBuffer::handle_hyperlink
+//! [`handle_title_and_icon`]: crate::OffscreenBuffer::handle_title_and_icon
+//! [`OSC`]: crate::osc_codes::OscSequence
 
 #[allow(clippy::wildcard_imports)]
 use super::super::*;
 use crate::core::osc::OscEvent;
 
 impl OffscreenBuffer {
-    /// Handle OSC title and icon sequences (OSC 0, 1, 2).
-    /// Sets window title and/or icon name by queuing an OSC event.
+    /// Handle [`OSC`] title and icon sequences ([`OSC`] 0, 1, 2).
+    /// Sets window title and/or icon name by queuing an [`OSC`] event.
+    ///
+    /// [`OSC`]: crate::osc_codes::OscSequence
     pub fn handle_title_and_icon(&mut self, title: &str) {
         self.ansi_parser_support
             .pending_osc_events
             .push(OscEvent::SetTitleAndTab(title.to_string()));
     }
 
-    /// Handle OSC 8 hyperlink sequences.
-    /// Creates hyperlinks with URI by queuing an OSC event.
+    /// Handle [`OSC`] 8 hyperlink sequences.
+    /// Creates hyperlinks with URI by queuing an [`OSC`] event.
     /// The display text is handled separately via `print()` calls.
+    ///
+    /// [`OSC`]: crate::osc_codes::OscSequence
     pub fn handle_hyperlink(&mut self, uri: &str) {
         self.ansi_parser_support
             .pending_osc_events

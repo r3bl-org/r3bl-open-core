@@ -3,7 +3,7 @@
 # Only ONE watch mode instance can run at a time.
 # One-off commands (--test, --doc, default) can run concurrently without issues.
 # Uses PID file with liveness check (fish doesn't support bash-style flock FD syntax).
-# PID file: /tmp/roc/check.fish.pid (checked via kill -0 for cross-platform support).
+# PID file: /tmp/check-fish-<project>.pid (checked via kill -0 for cross-platform support).
 # When entering watch mode, kills existing instance and orphaned file watcher processes.
 # Prevents race conditions where multiple watch instances clean target/check simultaneously.
 

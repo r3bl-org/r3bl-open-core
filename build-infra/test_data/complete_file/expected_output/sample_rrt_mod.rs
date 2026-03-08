@@ -833,7 +833,7 @@
 //! [`poll()`]: mio::Poll::poll
 //! [`poll_once()`]: RRTWorker::poll_once
 //! [`pollable`]: https://man7.org/linux/man-pages/man2/poll.2.html
-//! [`PTY` pair]: crate::core::pty::pty_core::pty_types::PtyPair
+//! [`PTY` pair]: crate::core::pty::pty_engine::pty_engine_types::PtyPair
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`read(2)`]: https://man7.org/linux/man-pages/man2/read.2.html
 //! [`readline_async`]: crate::readline_async::ReadlineAsyncContext::try_new

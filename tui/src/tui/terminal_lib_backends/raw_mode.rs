@@ -52,10 +52,10 @@
 //!
 //! [`Crossterm`]: crate::TerminalLibBackend::Crossterm
 //! [`DirectToAnsi`]: crate::TerminalLibBackend::DirectToAnsi
-//! [`TERMINAL_LIB_BACKEND`]: crate::TERMINAL_LIB_BACKEND
 //! [`disable_raw_mode()`]: crate::disable_raw_mode
 //! [`enable_raw_mode()`]: crate::enable_raw_mode
-//! [`terminal_raw_mode`]: crate::core::ansi::terminal_raw_mode
+//! [`TERMINAL_LIB_BACKEND`]: crate::TERMINAL_LIB_BACKEND
+//! [`terminal_raw_mode`]: crate::terminal_raw_mode
 //! [vmin]: crate::VMIN_RAW_MODE
 //! [vtime]: crate::VTIME_RAW_MODE
 
@@ -92,9 +92,9 @@ use crate::{LockedOutputDevice, RenderOpOutput, RenderOpOutputVec, RenderOpsExec
 /// RawMode::end(window_size, lock_output_device_as_mut!(&output), false);
 /// ```
 ///
-/// [`TERMINAL_LIB_BACKEND`]: crate::TERMINAL_LIB_BACKEND
 /// [`disable_raw_mode()`]: crate::disable_raw_mode
 /// [`enable_raw_mode()`]: crate::enable_raw_mode
+/// [`TERMINAL_LIB_BACKEND`]: crate::TERMINAL_LIB_BACKEND
 #[derive(Debug, Clone)]
 pub struct RawMode;
 

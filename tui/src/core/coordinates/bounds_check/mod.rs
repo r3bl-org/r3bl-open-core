@@ -652,22 +652,22 @@
 //! ```text
 //! Bidirectional Type Relationships:
 //!
-//!     IndexOps                       LengthOps
+//!     IndexOps                        LengthOps
 //!         │                               │
-//!         │  type LengthType ────────────▶│
+//!         │  type LengthType ────────────►│
 //!         │                               │
-//!         │◀──────────── type IndexType   │
+//!         │◄──────────── type IndexType   │
 //!         │                               │
 //!
 //! Concrete Type Pairs:
 //!
-//!     RowIndex    ◀───────────▶    RowHeight
+//!     RowIndex    ◄───────────►    RowHeight
 //!     (0-based row position)       (1-based row count)
 //!
-//!     ColIndex    ◀───────────▶    ColWidth
+//!     ColIndex    ◄───────────►    ColWidth
 //!     (0-based column position)    (1-based column count)
 //!
-//!     Index       ◀───────────▶    Length
+//!     Index       ◄───────────►    Length
 //!     (generic 0-based position)   (generic 1-based size)
 //!
 //! Compile-Time Prevention:
@@ -696,10 +696,11 @@
 //! - [`ColIndex`] ↔ [`ColWidth`] - Horizontal positioning and sizing in terminal grids.
 //!   They can easily be converted from one to another.
 //!
-//! **VT-100 Protocol Types** (not part of bounds checking):
-//! - [`TermRow`], [`TermCol`] - 1-based terminal coordinates for ANSI escape sequences
+//! **[`VT-100`] Protocol Types** (not part of bounds checking):
+//! - [`TermRow`], [`TermCol`] - 1-based terminal coordinates for [`ANSI`] escape
+//!   sequences
 //!   - Located in `vt_100_pty_output_parser::term_units` module
-//!   - Used exclusively for CSI sequence parsing (`ESC[row;colH`)
+//!   - Used exclusively for [`CSI`] sequence parsing (`ESC[row;colH`)
 //!   - Convert to/from [`RowIndex`]/[`ColIndex`] for buffer operations
 //!   - **Not paired**: Both are 1-based positions, neither represents a size/length
 //!   - **Different domain**: Terminal protocol coordinates, not buffer bounds checking
@@ -709,7 +710,7 @@
 //! Don't confuse [`TermRow`] (1-based terminal coordinate) with [`RowIndex`]
 //! (0-based buffer position) or [`RowHeight`] (1-based buffer size). The bounds
 //! checking system works on buffer coordinates, while [`TermRow`]/[`TermCol`] are for
-//! VT-100 parsing.
+//! [`VT-100`] parsing.
 //!
 //! </div>
 //!
@@ -867,7 +868,7 @@
 //! - **Implements on**: [`RangeInclusive<Index>`] types
 //! - **Converts**: Inclusive ranges to exclusive for iteration
 //! - **Key methods**: [`to_exclusive()`]
-//! - **Use when**: VT-100 scroll regions, converting for Rust iteration
+//! - **Use when**: [`VT-100`] scroll regions, converting for Rust iteration
 //!
 //! #### Complete Type System Integration
 //!
@@ -1059,47 +1060,17 @@
 //!   a standard index/length pair, [`ByteOffset`] is intentionally separate from the
 //!   bounds checking system.
 //!
-//! [Decision Tree]: #decision-tree-which-trait-do-i-need
-//! [Example: Type System in Action]: #example-type-system-in-action
-//! [Exclusive vs Inclusive Range Comparison]: mod@crate::core::coordinates::bounds_check::range_bounds_check_ext#exclusive-vs-inclusive-range-comparison
-//! [Getting Started with Bounds Checking]: #getting-started-with-bounds-checking
-//! [Type System Foundation]: #type-system-foundation
-//! [When to Use What]: #when-to-use-what
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`array_bounds_check.rs`]: mod@crate::array_bounds_check
 //! [`ArrayBoundsCheck`]: crate::ArrayBoundsCheck
 //! [`ArrayOverflowResult`]: crate::ArrayOverflowResult
-//! [`ByteIndex`]: crate::ByteIndex
-//! [`ByteLength`]: crate::ByteLength
-//! [`ByteOffset`]: crate::ByteOffset
-//! [`ColIndex`]: crate::ColIndex
-//! [`ColWidth`]: crate::ColWidth
-//! [`CursorBoundsCheck`]: crate::CursorBoundsCheck
-//! [`CursorPositionBoundsStatus`]: crate::CursorPositionBoundsStatus
-//! [`From<u16>`]: std::convert::From
-//! [`From<usize>`]: std::convert::From
-//! [`IndexOps`]: crate::IndexOps
-//! [`Index`]: crate::Index
-//! [`LengthOps`]: crate::LengthOps
-//! [`Length`]: crate::Length
-//! [`NumericConversions`]: crate::NumericConversions
-//! [`NumericValue`]: crate::NumericValue
-//! [`Range<Index>`]: std::ops::Range
-//! [`RangeBoundsExt`]: crate::RangeBoundsExt
-//! [`RangeBoundsResult`]: crate::RangeBoundsResult
-//! [`RangeConvertExt`]: crate::RangeConvertExt
-//! [`RangeInclusive<Index>`]: std::ops::RangeInclusive
-//! [`RangeInclusive`]: std::ops::RangeInclusive
-//! [`RangeValidityStatus`]: crate::RangeValidityStatus
-//! [`Range`]: std::ops::Range
-//! [`RowHeight`]: crate::RowHeight
-//! [`RowIndex`]: crate::RowIndex
-//! [`TermCol`]: crate::TermCol
-//! [`TermRow`]: crate::TermRow
-//! [`ViewportBoundsCheck`]: crate::ViewportBoundsCheck
-//! [`array_bounds_check.rs`]: mod@crate::array_bounds_check
 //! [`as_u16()`]: crate::NumericConversions::as_u16
 //! [`as_u16`]: NumericConversions::as_u16
 //! [`as_usize()`]: crate::NumericConversions::as_usize
 //! [`as_usize`]: NumericConversions::as_usize
+//! [`ByteIndex`]: crate::ByteIndex
+//! [`ByteLength`]: crate::ByteLength
+//! [`ByteOffset`]: crate::ByteOffset
 //! [`check_cursor_position_bounds()`]: crate::CursorBoundsCheck::check_cursor_position_bounds
 //! [`check_index_is_within()`]: crate::RangeBoundsExt::check_index_is_within
 //! [`check_range_is_valid_for_length()`]: crate::RangeBoundsExt::check_range_is_valid_for_length
@@ -1111,10 +1082,17 @@
 //! [`clamp_to_min_index()`]: crate::IndexOps::clamp_to_min_index
 //! [`clamp_to_range()`]: crate::IndexOps::clamp_to_range
 //! [`col()`]: crate::col
+//! [`ColIndex`]: crate::ColIndex
+//! [`ColWidth`]: crate::ColWidth
 //! [`convert_to_index()`]: crate::LengthOps::convert_to_index
 //! [`convert_to_length()`]: crate::IndexOps::convert_to_length
+//! [`CSI`]: crate::CsiSequence
 //! [`cursor_bounds_check.rs`]: mod@crate::cursor_bounds_check
+//! [`CursorBoundsCheck`]: crate::CursorBoundsCheck
+//! [`CursorPositionBoundsStatus`]: crate::CursorPositionBoundsStatus
 //! [`eol_cursor_position()`]: crate::CursorBoundsCheck::eol_cursor_position
+//! [`From<u16>`]: std::convert::From
+//! [`From<usize>`]: std::convert::From
 //! [`height()`]: crate::height
 //! [`index.clamp_to_max_length(length)`]: crate::IndexOps::clamp_to_max_length
 //! [`index.clamp_to_min_index(min_index)`]: crate::IndexOps::clamp_to_min_index
@@ -1125,6 +1103,8 @@
 //! [`index_from_end()`]: crate::LengthOps::index_from_end
 //! [`index_ops.rs`]: mod@crate::index_ops
 //! [`index_ops`]: mod@crate::index_ops
+//! [`Index`]: crate::Index
+//! [`IndexOps`]: crate::IndexOps
 //! [`is_overflowed_by()`]: crate::LengthOps::is_overflowed_by
 //! [`is_valid_cursor_position()`]: crate::CursorBoundsCheck::is_valid_cursor_position
 //! [`is_zero()`]: crate::NumericValue::is_zero
@@ -1135,21 +1115,45 @@
 //! [`length.remaining_from(index)`]: crate::LengthOps::remaining_from
 //! [`length_ops.rs`]: mod@crate::length_ops
 //! [`length_ops`]: mod@crate::length_ops
+//! [`Length`]: crate::Length
+//! [`LengthOps`]: crate::LengthOps
 //! [`numeric_value`]: mod@crate::numeric_value
+//! [`NumericConversions`]: crate::NumericConversions
+//! [`NumericValue`]: crate::NumericValue
 //! [`overflows()`]: crate::ArrayBoundsCheck::overflows
+//! [`Range<Index>`]: std::ops::Range
 //! [`range_bounds_check_ext.rs`]: mod@crate::range_bounds_check_ext
 //! [`range_bounds_check_ext`]: mod@crate::range_bounds_check_ext
 //! [`range_convert_ext.rs`]: mod@crate::range_convert_ext
 //! [`range_convert_ext`]: mod@crate::range_convert_ext
+//! [`Range`]: std::ops::Range
+//! [`RangeBoundsExt`]: crate::RangeBoundsExt
+//! [`RangeBoundsResult`]: crate::RangeBoundsResult
+//! [`RangeConvertExt`]: crate::RangeConvertExt
+//! [`RangeInclusive<Index>`]: std::ops::RangeInclusive
+//! [`RangeInclusive`]: std::ops::RangeInclusive
+//! [`RangeValidityStatus`]: crate::RangeValidityStatus
 //! [`remaining_from()`]: crate::LengthOps::remaining_from
 //! [`result_enums.rs`]: mod@crate::result_enums
 //! [`row()`]: crate::row
+//! [`RowHeight`]: crate::RowHeight
+//! [`RowIndex`]: crate::RowIndex
+//! [`TermCol`]: crate::TermCol
+//! [`TermRow`]: crate::TermRow
 //! [`to_exclusive()`]: crate::RangeConvertExt::to_exclusive
 //! [`underflows()`]: crate::ArrayBoundsCheck::underflows
 //! [`viewport_bounds_check.rs`]: mod@crate::viewport_bounds_check
 //! [`viewport_bounds_check`]: mod@crate::viewport_bounds_check
+//! [`ViewportBoundsCheck`]: crate::ViewportBoundsCheck
+//! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 //! [`width()`]: crate::width
+//! [Decision Tree]: #decision-tree-which-trait-do-i-need
+//! [Example: Type System in Action]: #example-type-system-in-action
+//! [Exclusive vs Inclusive Range Comparison]: mod@crate::bounds_check::range_bounds_check_ext#exclusive-vs-inclusive-range-comparison
+//! [Getting Started with Bounds Checking]: #getting-started-with-bounds-checking
 //! [semantic trait distinctions]: #semantic-trait-distinctions
+//! [Type System Foundation]: #type-system-foundation
+//! [When to Use What]: #when-to-use-what
 
 // Attach.
 pub mod array_bounds_check;

@@ -66,31 +66,31 @@ use tokio::sync::broadcast::Receiver;
 ///
 /// See [`DirectToAnsiInputDevice::next()`] for real usage.
 ///
-/// [Drop implementation]: WakeOnDrop#method.drop
-/// [RFC 1857]: https://rust-lang.github.io/rfcs/1857-stabilize-drop-order.html
-/// [Thread Lifecycle]: super::RRT#thread-lifecycle
 /// [`DirectToAnsiInputDevice::next()`]:
 ///     crate::terminal_lib_backends::DirectToAnsiInputDevice::next
+/// [`mio::Poll`]: mio::Poll
 /// [`RAII`]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
+/// [`readline_async`]: crate::readline_async::ReadlineAsyncContext::try_new
+/// [`receiver_count()`]: tokio::sync::broadcast::Sender::receiver_count
+/// [`receiver`]: Self::receiver
 /// [`RRTWaker::wake_and_unblock_dedicated_thread()`]:
 ///     super::RRTWaker::wake_and_unblock_dedicated_thread
 /// [`RRTWaker`]: super::RRTWaker
 /// [`RRTWorker`]: super::RRTWorker
 /// [`Sender`]: tokio::sync::broadcast::Sender
 /// [`SharedWakerSlot`]: super::SharedWakerSlot
-/// [`TUI`]: crate::tui::TerminalWindow::main_event_loop
 /// [`TerminationGuard::drop()`]: super::TerminationGuard#method.drop
 /// [`TerminationGuard`]: super::TerminationGuard
+/// [`TUI`]: crate::tui::TerminalWindow::main_event_loop
+/// [`wake_on_drop`]: Self::wake_on_drop
 /// [`WakerSlotReader<W::Waker>`]: super::WakerSlotReader
 /// [`WakerSlotReader`]: super::WakerSlotReader
 /// [`WakerSlotWriter`]: super::WakerSlotWriter
-/// [`mio::Poll`]: mio::Poll
-/// [`readline_async`]: crate::readline_async::ReadlineAsyncContext::try_new
-/// [`receiver_count()`]: tokio::sync::broadcast::Sender::receiver_count
-/// [`receiver`]: Self::receiver
-/// [`wake_on_drop`]: Self::wake_on_drop
 /// [broadcast channel]: tokio::sync::broadcast
+/// [Drop implementation]: WakeOnDrop#method.drop
 /// [race window]: super#the-inherent-race-condition
+/// [RFC 1857]: https://rust-lang.github.io/rfcs/1857-stabilize-drop-order.html
+/// [Thread Lifecycle]: super::RRT#thread-lifecycle
 /// [two-phase setup]: super#two-phase-setup
 #[allow(missing_debug_implementations, dead_code)]
 pub struct SubscriberGuard<W: RRTWorker> {
@@ -128,9 +128,9 @@ impl<W: RRTWorker> SubscriberGuard<W> {
 /// Calls [`RRTWaker::wake_and_unblock_dedicated_thread()`] when dropped. See [Drop
 /// Behavior] for why field ordering matters.
 ///
-/// [Drop Behavior]: SubscriberGuard#drop-behavior
 /// [`RRTWaker::wake_and_unblock_dedicated_thread()`]:
 ///     super::RRTWaker::wake_and_unblock_dedicated_thread
+/// [Drop Behavior]: SubscriberGuard#drop-behavior
 #[allow(missing_debug_implementations)]
 pub struct WakeOnDrop<K: RRTWaker> {
     pub waker_slot_reader: WakerSlotReader<K>,
@@ -144,8 +144,8 @@ impl<K: RRTWaker> Drop for WakeOnDrop<K> {
     ///
     /// See step 4 of the [Thread Lifecycle] for where this fits in the exit sequence.
     ///
-    /// [Thread Lifecycle]: crate::core::resilient_reactor_thread::RRT#thread-lifecycle
     /// [`TerminationGuard::drop()`]: super::TerminationGuard#method.drop
+    /// [Thread Lifecycle]: crate::RRT#thread-lifecycle
     /// [waker]: super::RRTWaker
     fn drop(&mut self) { self.waker_slot_reader.wake_if_present(); }
 }

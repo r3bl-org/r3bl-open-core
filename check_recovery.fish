@@ -22,21 +22,33 @@ function dirs_for_check_type
 end
 
 # Evict build cache if total size exceeds MAX_TARGET_SIZE_GB.
-# Prevents /tmp/roc/target from filling the tmpfs over long watch sessions.
+# Prevents managed directories from filling the tmpfs over long watch sessions.
 # Uses du -sk (kilobytes) for cross-platform compatibility (Linux + macOS).
 function cleanup_oversized_target
-    set -l target_parent (dirname $CHECK_TARGET_DIR)
-    if not test -d $target_parent
-        return 0
+    # Sum the sizes of all managed directories
+    set -l managed_dirs $CHECK_TARGET_DIR \
+                        $CHECK_TARGET_DIR_DOC_STAGING_QUICK \
+                        $CHECK_TARGET_DIR_DOC_STAGING_FULL
+
+    set -l total_kb 0
+    for dir in $managed_dirs
+        if test -d "$dir"
+            set -l dir_kb (command du -sk "$dir" 2>/dev/null | string split \t)[1]
+            if test -n "$dir_kb"
+                set total_kb (math "$total_kb + $dir_kb")
+            end
+        end
     end
 
-    set -l size_kb (command du -sk $target_parent 2>/dev/null | string split \t)[1]
     set -l max_kb (math "$MAX_TARGET_SIZE_GB * 1048576")
-    if test "$size_kb" -ge "$max_kb"
-        set -l size_gb (math --scale=1 "$size_kb / 1048576")
-        log_and_print $CHECK_LOG_FILE "["(timestamp)"] 🧹 Target dir is "$size_gb"GB (limit: "$MAX_TARGET_SIZE_GB"GB), cleaning..."
-        command rm -rf $target_parent
-        mkdir -p $target_parent
+    if test "$total_kb" -ge "$max_kb"
+        set -l size_gb (math --scale=1 "$total_kb / 1048576")
+        log_and_print $CHECK_LOG_FILE "["(timestamp)"] 🧹 Managed dirs are "$size_gb"GB (limit: "$MAX_TARGET_SIZE_GB"GB), cleaning..."
+        for dir in $managed_dirs
+            if test -d "$dir"
+                command rm -rf "$dir"
+            end
+        end
     end
 end
 
@@ -79,6 +91,9 @@ function cleanup_for_recovery
 
     # Remove target folders (pass through optional dir arguments for targeted cleanup)
     cleanup_target_folder $argv
+
+    # Purge any project-related zombie processes that might be locking binaries
+    purge_zombie_processes
 
     log_message "✨ Cleanup complete. Retrying checks..."
     echo ""

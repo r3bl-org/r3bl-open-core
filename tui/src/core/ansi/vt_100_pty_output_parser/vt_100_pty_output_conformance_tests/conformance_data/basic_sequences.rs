@@ -22,61 +22,12 @@
 //! - [`move_and_erase_chars`] - Move to column and erase characters
 //!
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`VT-100` spec]: https://vt100.net/docs/vt100-ug/chapter3.html
-//! [`VT-100` spec]: https://vt100.net/docs/vt100-ug/chapter3.html
-//! [`VT-100` spec]: https://vt100.net/docs/vt100-ug/chapter3.html
-//! [`VT-100` spec]: https://vt100.net/docs/vt100-ug/chapter3.html
-//! [`VT-100` spec]: https://vt100.net/docs/vt100-ug/chapter3.html
-//! [`VT-100` spec]: https://vt100.net/docs/vt100-ug/chapter3.html
-//! [`VT-100` spec]: https://vt100.net/docs/vt100-ug/chapter3.html
-//! [`VT-100` spec]: https://vt100.net/docs/vt100-ug/chapter3.html
-//! [`VT-100` spec]: https://vt100.net/docs/vt100-ug/chapter3.html
-//! [`VT-100` spec]: https://vt100.net/docs/vt100-ug/chapter3.html
-//! [`VT-100` spec]: https://vt100.net/docs/vt100-ug/chapter3.html
-//! [`VT-100` spec]: https://vt100.net/docs/vt100-ug/chapter3.html
-//! [`VT-100` spec]: https://vt100.net/docs/vt100-ug/chapter3.html
-//! [`VT-100` spec]: https://vt100.net/docs/vt100-ug/chapter3.html
-//! [`VT-100` spec]: https://vt100.net/docs/vt100-ug/chapter3.html
-//! [`VT-100` spec]: https://vt100.net/docs/vt100-ug/chapter3.html
-//! [`VT-100` spec]: https://vt100.net/docs/vt100-ug/chapter3.html
-//! [`VT-100` spec]: https://vt100.net/docs/vt100-ug/chapter3.html
-//! [`VT-100` spec]: https://vt100.net/docs/vt100-ug/chapter3.html
-//! [`VT-100` spec]: https://vt100.net/docs/vt100-ug/chapter3.html
-//! [`VT-100` spec]: https://vt100.net/docs/vt100-ug/chapter3.html
-//! [`VT-100` spec]: https://vt100.net/docs/vt100-ug/chapter3.html
-//! [`VT-100` spec]: https://vt100.net/docs/vt100-ug/chapter3.html
-//! [`VT-100` spec]: https://vt100.net/docs/vt100-ug/chapter3.html
 //! [`VT-100` spec Section 3.3.1]:
 //!     https://vt100.net/docs/vt100-ug/chapter3.html#S3.3.1
 //! [`VT-100` spec Section 3.3.2]:
 //!     https://vt100.net/docs/vt100-ug/chapter3.html#S3.3.2
 //! [`VT-100` spec Section 3.3.4]:
 //!     https://vt100.net/docs/vt100-ug/chapter3.html#S3.3.4
-//!
-//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`VT-100` spec]: https://vt100.net/docs/vt100-ug/chapter3.html
 
 use super::super::test_fixtures_vt_100_ansi_conformance::nz;

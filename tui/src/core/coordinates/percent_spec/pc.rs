@@ -52,18 +52,18 @@ use std::{fmt::{Debug, Formatter, Result},
 /// assert_eq!(format!("{:?}", percent.unwrap()), "50%");
 /// ```
 ///
-/// [`ChUnitPrimitiveType`]: crate::ChUnitPrimitiveType
 /// [`ChUnit`]: crate::ChUnit
+/// [`ChUnitPrimitiveType`]: crate::ChUnitPrimitiveType
+/// [`crate::pc`!]: crate::pc!
 /// [`Deref`]: std::ops::Deref
 /// [`Err`]: std::result::Result::Err
+/// [`i32`]: i32
 /// [`None`]: std::option::Option::None
 /// [`Option`]: std::option::Option
-/// [`Result`]: std::result::Result
-/// [`TryFrom`]: std::convert::TryFrom
-/// [`crate::pc`!]: crate::pc!
-/// [`i32`]: i32
 /// [`pc`]: crate::Pc
+/// [`Result`]: std::result::Result
 /// [`std::fmt::Debug`]: std::fmt::Debug
+/// [`TryFrom`]: std::convert::TryFrom
 /// [`u8`]: u8
 #[derive(Copy, Clone, PartialEq, Eq, Default, Hash)]
 pub struct Pc {

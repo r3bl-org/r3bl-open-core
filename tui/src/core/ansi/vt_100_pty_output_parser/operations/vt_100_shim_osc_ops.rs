@@ -1,6 +1,6 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! OSC (Operating System Command) sequence operations.
+//! [`OSC`] (Operating System Command) sequence operations.
 //!
 //! This module acts as a thin shim layer that delegates to the actual implementation.
 //! Refer to the module-level documentation in the operations module for details on the
@@ -26,7 +26,7 @@
 //!
 //! ```text
 //! ╭─────────────────╮    ╭────────────────╮    ╭─────────────────╮    ╭──────────────╮
-//! │ Child Process   │────▶ PTY Controller │────▶ VTE Parser      │────▶ OffscreenBuf │
+//! │ Child Process   │────► PTY Controller │────► VTE Parser      │────► OffscreenBuf │
 //! │ (vim, bash...)  │    │ (byte stream)  │    │ (state machine) │    │ (terminal    │
 //! ╰──────┬──────────╯    ╰────────────────╯    ╰───────┬─────────╯    │  buffer)     │
 //!        │                                             │              ╰───────┬──────╯
@@ -37,13 +37,13 @@
 //!        │                                    ╚═════════════════╝             │
 //!        │                                                                    │
 //!        │                                    ╭─────────────────╮             │
-//!        │                                    │ RenderPipeline  ◀─────────────╯
+//!        │                                    │ RenderPipeline  ◄─────────────╯
 //!        │                                    │ paint()         │
-//!        ╰────────────────────────────────────▶ Terminal Output │
+//!        ╰────────────────────────────────────► Terminal Output │
 //!                                             ╰─────────────────╯
 //! ```
 //!
-//! # `OSC` Sequence Processing Flow
+//! # [`OSC`] Sequence Processing Flow
 //!
 //! ```text
 //! Application sends "ESC ]0;My Title\007"
@@ -62,7 +62,7 @@
 //!     Queue OscEvent for later rendering
 //! ```
 //!
-//! # Supported `OSC` Sequences
+//! # Supported [`OSC`] Sequences
 //!
 //! This module handles Operating System Command sequences that provide
 //! integration between terminal applications and the operating system:
@@ -70,20 +70,23 @@
 //! - **`OSC 0`**: Set both window title and icon name
 //! - **`OSC 1`**: Set icon name only (treated same as title)
 //! - **`OSC 2`**: Set window title only
-//! - **`OSC 8`**: Create hyperlinks (format: `OSC 8 ; params ; URI`)
+//! - **`OSC 8`**: Create hyperlinks (Format: `ESC ] 8 ; params ; URI ESC \ (ST)`)
 //!
-//! `OSC` sequences are queued as events for later processing by the output renderer.
+//! [`OSC`] sequences are queued as events for later processing by the output renderer.
 //!
-//! [`impl_osc_ops`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl::vt_100_impl_osc_ops
-//! [`test_osc_ops`]: crate::core::ansi::vt_100_pty_output_parser::vt_100_pty_output_conformance_tests::tests::vt_100_test_osc_ops
+//! [`impl_osc_ops`]: crate::vt_100_ansi_impl::vt_100_impl_osc_ops
+//! [`OSC`]: crate::osc_codes::OscSequence
+//! [`test_osc_ops`]: crate::vt_100_pty_output_conformance_tests::tests::vt_100_test_osc_ops
 //! [module-level documentation]: self
 
 use super::super::ansi_parser_public_api::AnsiToOfsBufPerformer;
 use crate::core::osc::osc_codes;
 
-/// Handle `OSC` dispatch - process all `OSC` (Operating System Command) sequences.
-/// This is the main entry point for `OSC` sequence processing.
-/// See individual helper functions for specific `OSC` code handling.
+/// Handle [`OSC`] dispatch - process all [`OSC`] (Operating System Command) sequences.
+/// This is the main entry point for [`OSC`] sequence processing.
+/// See individual helper functions for specific [`OSC`] code handling.
+///
+/// [`OSC`]: crate::osc_codes::OscSequence
 pub fn dispatch_osc(
     performer: &mut AnsiToOfsBufPerformer,
     params: &[&[u8]],
@@ -123,10 +126,11 @@ pub fn dispatch_osc(
     }
 }
 
-/// Handle `OSC` title and icon sequences (`OSC 0`, `OSC 1`, `OSC 2`).
+/// Handle [`OSC`] title and icon sequences (`OSC 0`, `OSC 1`, `OSC 2`).
 /// Sets window title and/or icon name.
 /// Queues [`SetTitleAndTab`] event for later processing by output renderer.
 ///
+/// [`OSC`]: crate::osc_codes::OscSequence
 /// [`SetTitleAndTab`]: crate::OscEvent::SetTitleAndTab
 pub fn handle_title_and_icon(performer: &mut AnsiToOfsBufPerformer, title: &str) {
     performer.ofs_buf.handle_title_and_icon(title);

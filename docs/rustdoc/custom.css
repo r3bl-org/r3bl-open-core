@@ -1,0 +1,35 @@
+/* Monospace fonts render wider per character than proportional fonts at the same size.
+   Use a fixed px size to avoid em compounding across nested elements like .docblock.
+   Override rustdoc's default body font to use the same monospace font as code blocks. */
+body,
+.docblock {
+    font-size: 17px !important;
+    font-family: "Adwaita Mono", "SFMono Nerd Font", "Source Code Pro", "DejaVu Sans Mono", monospace !important;
+}
+
+/* Rustdoc uses a variable-width font (Fira Sans) for headings and sidebar elements.
+   Override to match the monospace body font for visual consistency. */
+h1, h2, h3, h4, h5, h6,
+.sidebar, .sidebar-crate, .rustdoc-breadcrumbs, .main-heading {
+    font-family: "Adwaita Mono", "SFMono Nerd Font", "Source Code Pro", "DejaVu Sans Mono", monospace !important;
+}
+
+/* Tighten line-height for standalone paragraphs, but NOT paragraphs inside list
+   items — otherwise list content gets overly compressed. */
+p:not(li p) {
+    line-height: 1.2;
+}
+
+/* Fix clipped list markers caused by monospace body font.
+   Rustdoc's default CSS assumes proportional fonts; monospace characters are wider,
+   so the default padding-left is too narrow and `overflow: hidden` clips the
+   number/bullet markers. */
+ol, ul {
+    overflow: visible !important;
+    padding-left: 2em !important;
+}
+
+li {
+    overflow: visible !important;
+    padding-top: 0.25em !important;
+}

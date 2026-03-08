@@ -38,7 +38,7 @@
 //!
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`ArrayBoundsCheck`]: crate::ArrayBoundsCheck
-//! [`bounds_check`]: crate::core::coordinates::bounds_check
+//! [`bounds_check`]: crate::bounds_check
 //! [`ColIndex`]: crate::ColIndex
 //! [`ColWidth`]: crate::ColWidth
 //! [`CursorBoundsCheck`]: crate::CursorBoundsCheck

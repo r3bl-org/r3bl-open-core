@@ -4,7 +4,7 @@
 //!
 //! This module provides challenging sequences including malformed input,
 //! boundary conditions, and complex nested sequences that stress-test
-//! the ANSI parser's error handling and performance characteristics.
+//! the [`ANSI`] parser's error handling and performance characteristics.
 //!
 //! ## Edge Case Categories
 //!
@@ -13,6 +13,8 @@
 //! - Malformed sequences
 //! - Performance stress tests
 //! - Boundary condition validation
+//!
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 
 use super::super::test_fixtures_vt_100_ansi_conformance::nz;
 use crate::{ANSIBasicColor, SgrCode, core::ansi::vt_100_pty_output_parser::CsiSequence,
@@ -41,8 +43,10 @@ pub fn long_text_sequence() -> String {
 
 /// Generate rapid style changes to test state management.
 ///
-/// **Edge Case**: Tests parser's ability to handle rapid SGR transitions
+/// **Edge Case**: Tests parser's ability to handle rapid [`SGR`] transitions
 /// without state corruption or performance degradation.
+///
+/// [`SGR`]: crate::SgrCode
 #[must_use]
 pub fn rapid_style_changes() -> String {
     let mut sequence = String::new();

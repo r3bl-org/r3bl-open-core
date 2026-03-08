@@ -191,7 +191,7 @@ pub mod byte_io {
     /// Writes the payload to the client. Use the length-prefix, binary payload, protocol.
     /// - The trait bounds on this function are so that this function can be tested w/ a
     ///   mock from `tokio_test::io::Builder`.
-    /// - More info: <https://tokio.rs/tokio/topics/testing>
+    /// - More info on [tokio testing].
     ///
     /// # Errors
     ///
@@ -200,6 +200,8 @@ pub mod byte_io {
     /// - Compression of the payload fails
     /// - Writing to the buffer fails
     /// - Flushing the buffer fails
+    ///
+    /// [tokio testing]: https://tokio.rs/tokio/topics/testing
     pub async fn try_write<W: AsyncWrite + Unpin, T: Serialize>(
         buf_writer: &mut BufWriter<W>,
         data: &T,
@@ -233,7 +235,7 @@ pub mod byte_io {
     /// binary payload, protocol.
     /// - The trait bounds on this function are so that this function can be tested w/ a
     ///   mock from `tokio_test::io::Builder`.
-    /// - More info: <https://tokio.rs/tokio/topics/testing>
+    /// - More info on [tokio testing].
     ///
     /// # Errors
     ///
@@ -242,6 +244,8 @@ pub mod byte_io {
     /// - The payload size exceeds the maximum allowed size
     /// - Decompression of the payload fails
     /// - Deserialization of the data fails
+    ///
+    /// [tokio testing]: https://tokio.rs/tokio/topics/testing
     pub async fn try_read<R: AsyncRead + Unpin, T: for<'d> Deserialize<'d>>(
         buf_reader: &mut BufReader<R>,
     ) -> miette::Result<T> {

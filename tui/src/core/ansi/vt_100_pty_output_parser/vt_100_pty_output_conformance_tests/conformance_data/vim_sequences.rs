@@ -10,9 +10,11 @@
 //! ## Real-World Context
 //!
 //! Vim is one of the most sophisticated terminal applications in terms of
-//! ANSI sequence usage. It employs advanced cursor management, complex
+//! [`ANSI`] sequence usage. It employs advanced cursor management, complex
 //! styling patterns, and efficient screen updates that stress-test terminal
 //! parsers and buffer management.
+//!
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 
 use super::super::test_fixtures_vt_100_ansi_conformance::nz;
 use crate::{ANSIBasicColor, EraseDisplayMode, EscSequence, LengthOps, SgrCode,

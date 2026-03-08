@@ -3,24 +3,25 @@
 //! Behavioral tests for screen operations via [`OffscreenBuffer`] rendering.
 //!
 //! These tests complement the byte-level tests in [`screen_operations`] by verifying
-//! that clear operations produce the correct **visual result** when ANSI sequences
+//! that clear operations produce the correct **visual result** when [`ANSI`] sequences
 //! are rendered to a buffer.
 //!
 //! # Important Design Note
 //!
-//! The [`OffscreenBuffer`] ANSI parser **intentionally ignores** clear operations
+//! The [`OffscreenBuffer`] [`ANSI`] parser **intentionally ignores** clear operations
 //! (ED/EL sequences). This is by design because TUI applications repaint themselves
 //! after clear operations. See [`performer.rs`] where `ED_ERASE_DISPLAY` and
 //! `EL_ERASE_LINE` are explicitly ignored.
 //!
 //! As a result, these tests verify:
-//! - Clear ANSI sequences are **generated correctly** (verified by byte-level tests)
+//! - Clear [`ANSI`] sequences are **generated correctly** (verified by byte-level tests)
 //! - Text painting **after** clear operations works correctly (cursor positioning)
 //! - Buffer state is correct for content that **isn't** cleared
 //!
-//! [`screen_operations`]: super::screen_operations
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`OffscreenBuffer`]: crate::OffscreenBuffer
 //! [`performer.rs`]: crate::vt_100_pty_output_parser::performer
+//! [`screen_operations`]: super::screen_operations
 
 use super::test_helpers_rendered::*;
 use crate::{offscreen_buffer::test_fixtures_ofs_buf::*, render_op::RenderOpCommon};
@@ -28,8 +29,10 @@ use crate::{offscreen_buffer::test_fixtures_ofs_buf::*, render_op::RenderOpCommo
 /// Verify text can be painted at various positions.
 ///
 /// NOTE: Clear operations (`ClearScreen`, `ClearLine`, etc.) are intentionally ignored
-/// by [`OffscreenBuffer`]'s ANSI parser - TUI apps repaint themselves. This test
+/// by [`OffscreenBuffer`]'s [`ANSI`] parser - TUI apps repaint themselves. This test
 /// verifies the cursor positioning and text painting still work correctly.
+///
+/// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 #[test]
 fn test_paint_after_clear_sequence_rendered() {
     // Even though ClearScreen is ignored by the parser, the cursor positioning

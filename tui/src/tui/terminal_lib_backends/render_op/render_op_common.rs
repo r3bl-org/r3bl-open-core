@@ -92,93 +92,127 @@ pub enum RenderOpCommon {
 
     /// Move cursor to specific column in current row (leaving row unchanged).
     ///
-    /// Maps to CSI `<n>G` ANSI sequence (1-indexed).
+    /// Maps to [`CSI`] `<n>G` [`ANSI`] sequence (1-indexed).
     ///
     /// Useful for incremental rendering operations where you need precise
     /// horizontal cursor positioning without affecting the row.
+    ///
+    /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+    /// [`CSI`]: crate::CsiSequence
     MoveCursorToColumn(ColIndex),
 
     /// Move cursor down by N lines and to column 0 (start of line).
     ///
-    /// Maps to CSI `<n>E` ANSI sequence. Equivalent to moving down N rows
+    /// Maps to [`CSI`] `<n>E` [`ANSI`] sequence. Equivalent to moving down N rows
     /// and then moving to column 0. Used for line-by-line incremental rendering.
+    ///
+    /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+    /// [`CSI`]: crate::CsiSequence
     MoveCursorToNextLine(RowHeight),
 
     /// Move cursor up by N lines and to column 0 (start of line).
     ///
-    /// Maps to CSI `<n>F` ANSI sequence. Useful for updating content above
+    /// Maps to [`CSI`] `<n>F` [`ANSI`] sequence. Useful for updating content above
     /// the current cursor position, with safe bounds checking.
+    ///
+    /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+    /// [`CSI`]: crate::CsiSequence
     MoveCursorToPreviousLine(RowHeight),
 
     /// Clear current line only, leaving cursor position unchanged.
     ///
-    /// Maps to CSI `2K` ANSI sequence. Erases the entire line from start to end,
+    /// Maps to [`CSI`] `2K` [`ANSI`] sequence. Erases the entire line from start to end,
     /// but preserves the current cursor column position.
+    ///
+    /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+    /// [`CSI`]: crate::CsiSequence
     ClearCurrentLine,
 
     /// Clear from cursor to end of line (inclusive).
     ///
-    /// Maps to CSI `0K` (or `CSI K`) ANSI sequence. Erases from the cursor position
-    /// to the end of the line, leaving the cursor position unchanged.
+    /// Maps to [`CSI`] `0K` (or `CSI K`) [`ANSI`] sequence. Erases from the cursor
+    /// position to the end of the line, leaving the cursor position unchanged.
     ///
     /// Useful for partial line updates where you want to preserve content to the left
     /// of the cursor but clear everything to the right.
+    ///
+    /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+    /// [`CSI`]: crate::CsiSequence
     ClearToEndOfLine,
 
     /// Clear from cursor to beginning of line (inclusive).
     ///
-    /// Maps to CSI `1K` ANSI sequence. Erases from the start of the line to the
+    /// Maps to [`CSI`] `1K` [`ANSI`] sequence. Erases from the start of the line to the
     /// cursor position (inclusive), leaving the cursor position unchanged.
     ///
     /// Useful for left-side clearing operations in incremental rendering.
+    ///
+    /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+    /// [`CSI`]: crate::CsiSequence
     ClearToStartOfLine,
 
-    /// Print text that already contains ANSI escape codes (pre-styled text).
+    /// Print text that already contains [`ANSI`] escape codes (pre-styled text).
     ///
     /// No additional styling applied - text is rendered exactly as provided.
     ///
     /// This variant is used when `CliTextInline` or other text formatting
-    /// has already generated the final ANSI-escaped output. The text is printed
+    /// has already generated the final [`ANSI`]-escaped output. The text is printed
     /// as-is without any additional processing, attribute application, or color
     /// application.
+    ///
+    /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
     PrintStyledText(InlineString),
 
     /// Show cursor (make it visible).
     ///
-    /// Maps to CSI `?25h` ANSI sequence (DEC Private Mode Set).
+    /// Maps to [`CSI`] `?25h` [`ANSI`] sequence ([`DEC`] Private Mode Set).
     ///
     /// Restores cursor visibility after it has been hidden with
     /// [`RenderOpCommon::HideCursor`].
+    ///
+    /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+    /// [`CSI`]: crate::CsiSequence
+    /// [`DEC`]: https://en.wikipedia.org/wiki/Digital_Equipment_Corporation
     ShowCursor,
 
     /// Hide cursor (make it invisible).
     ///
-    /// Maps to CSI `?25l` ANSI sequence (DEC Private Mode Reset).
+    /// Maps to [`CSI`] `?25l` [`ANSI`] sequence ([`DEC`] Private Mode Reset).
     ///
     /// Useful for animations or rendering where cursor visibility would be distracting.
     /// Remember to call [`RenderOpCommon::ShowCursor`] before normal operation resumes.
+    ///
+    /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+    /// [`CSI`]: crate::CsiSequence
+    /// [`DEC`]: https://en.wikipedia.org/wiki/Digital_Equipment_Corporation
     HideCursor,
 
     /// Save cursor position to be restored later.
     ///
-    /// Maps to CSI `s` ANSI sequence (also known as DECSC - save cursor).
+    /// Maps to [`CSI`] `s` [`ANSI`] sequence (also known as DECSC - save cursor).
     ///
     /// Saves the current cursor position (row and column) in terminal memory.
     /// Use with [`RenderOpCommon::RestoreCursorPosition`] to return to this position.
     ///
     /// Note: Some terminals may not support this sequence. Use with caution
     /// in cross-platform applications.
+    ///
+    /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+    /// [`CSI`]: crate::CsiSequence
     SaveCursorPosition,
 
     /// Restore cursor position previously saved with
     /// [`RenderOpCommon::SaveCursorPosition`].
     ///
-    /// Maps to CSI `u` ANSI sequence (also known as DECRC - restore cursor).
+    /// Maps to [`CSI`] `u` [`ANSI`] sequence (also known as DECRC - restore cursor).
     ///
     /// Restores the cursor to the position that was previously saved.
     ///
     /// Note: Some terminals may not support this sequence. Must be preceded by
     /// a corresponding [`RenderOpCommon::SaveCursorPosition`] call.
+    ///
+    /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+    /// [`CSI`]: crate::CsiSequence
     RestoreCursorPosition,
 
     /// Switches to alternate screen buffer for full-screen applications.
@@ -187,7 +221,11 @@ pub enum RenderOpCommon {
     /// alternate buffer. This is used by full-screen applications (vim, less, etc.) to
     /// preserve shell history and avoid cluttering the original screen.
     ///
-    /// Maps to CSI `?1049h` ANSI sequence (DEC Private Mode Set).
+    /// Maps to [`CSI`] `?1049h` [`ANSI`] sequence ([`DEC`] Private Mode Set).
+    ///
+    /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+    /// [`CSI`]: crate::CsiSequence
+    /// [`DEC`]: https://en.wikipedia.org/wiki/Digital_Equipment_Corporation
     EnterAlternateScreen,
 
     /// Exits alternate screen buffer and restores original screen content.
@@ -196,7 +234,11 @@ pub enum RenderOpCommon {
     /// [`RenderOpCommon::EnterAlternateScreen`] was called. Should always be called
     /// before returning to normal shell operation.
     ///
-    /// Maps to CSI `?1049l` ANSI sequence (DEC Private Mode Reset).
+    /// Maps to [`CSI`] `?1049l` [`ANSI`] sequence ([`DEC`] Private Mode Reset).
+    ///
+    /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+    /// [`CSI`]: crate::CsiSequence
+    /// [`DEC`]: https://en.wikipedia.org/wiki/Digital_Equipment_Corporation
     ExitAlternateScreen,
 
     /// Enables mouse event tracking (clicks, movement, scroll).
@@ -204,7 +246,12 @@ pub enum RenderOpCommon {
     /// When enabled, the terminal reports mouse events to the application.
     /// This includes mouse clicks, movements, and scroll wheel events.
     ///
-    /// Maps to CSI `?1000h` ANSI sequence (DEC Private Mode Set for mouse tracking).
+    /// Maps to [`CSI`] `?1000h` [`ANSI`] sequence ([`DEC`] Private Mode Set for mouse
+    /// tracking).
+    ///
+    /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+    /// [`CSI`]: crate::CsiSequence
+    /// [`DEC`]: https://en.wikipedia.org/wiki/Digital_Equipment_Corporation
     EnableMouseTracking,
 
     /// Disables mouse event tracking.
@@ -213,7 +260,11 @@ pub enum RenderOpCommon {
     /// to the application. Called to restore normal operation after mouse tracking is
     /// no longer needed.
     ///
-    /// Maps to CSI `?1000l` ANSI sequence (DEC Private Mode Reset).
+    /// Maps to [`CSI`] `?1000l` [`ANSI`] sequence ([`DEC`] Private Mode Reset).
+    ///
+    /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+    /// [`CSI`]: crate::CsiSequence
+    /// [`DEC`]: https://en.wikipedia.org/wiki/Digital_Equipment_Corporation
     DisableMouseTracking,
 
     /// Enables bracketed paste mode for distinguishing pasted text.
@@ -222,7 +273,12 @@ pub enum RenderOpCommon {
     /// sequences, allowing the application to distinguish pasted content from keyboard
     /// input. This prevents pasted content from being misinterpreted as commands.
     ///
-    /// Maps to CSI `?2004h` ANSI sequence (DEC Private Mode Set for bracketed paste).
+    /// Maps to [`CSI`] `?2004h` [`ANSI`] sequence ([`DEC`] Private Mode Set for bracketed
+    /// paste).
+    ///
+    /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+    /// [`CSI`]: crate::CsiSequence
+    /// [`DEC`]: https://en.wikipedia.org/wiki/Digital_Equipment_Corporation
     EnableBracketedPaste,
 
     /// Disables bracketed paste mode.
@@ -231,7 +287,11 @@ pub enum RenderOpCommon {
     /// with special escape sequences. Called when clipboard detection is no longer
     /// needed.
     ///
-    /// Maps to CSI `?2004l` ANSI sequence (DEC Private Mode Reset).
+    /// Maps to [`CSI`] `?2004l` [`ANSI`] sequence ([`DEC`] Private Mode Reset).
+    ///
+    /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+    /// [`CSI`]: crate::CsiSequence
+    /// [`DEC`]: https://en.wikipedia.org/wiki/Digital_Equipment_Corporation
     DisableBracketedPaste,
 
     /// No-operation render operation that does nothing when executed.

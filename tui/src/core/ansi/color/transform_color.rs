@@ -6,11 +6,15 @@ pub trait TransformColor {
     /// Returns a [`RgbValue`] representation of the `self` color.
     fn as_rgb(&self) -> RgbValue;
 
-    /// Returns the index of a color in 256-color ANSI palette approximating the `self`
-    /// color.
+    /// Returns the index of a color in 256-color [`ANSI`] palette approximating the
+    /// `self` color.
+    ///
+    /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
     fn as_ansi(&self) -> AnsiValue;
 
-    /// Returns the index of a color in 256-color ANSI palette approximating the `self`
-    /// color as grayscale.
+    /// Returns the index of a color in 256-color [`ANSI`] palette approximating the
+    /// `self` color as grayscale.
+    ///
+    /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
     fn as_grayscale(&self) -> AnsiValue;
 }

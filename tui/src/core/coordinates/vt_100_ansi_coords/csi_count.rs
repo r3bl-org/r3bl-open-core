@@ -1,13 +1,13 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Count parameter for CSI sequences that operate on lines or characters.
+//! Count parameter for [`CSI`] sequences that operate on lines or characters.
 //!
 //! [`CsiCount`] represents **how many** lines or characters to insert, delete, or erase.
 //! It wraps [`NonZeroU16`] internally, making it **impossible** to create a zero count.
 //!
 //! # Make Illegal States Unrepresentable
 //!
-//! ANSI CSI count parameters interpret 0 as 1:
+//! [`ANSI`] [`CSI`] count parameters interpret 0 as 1:
 //! - `CSI 0 L` (insert 0 lines) → inserts **1 line**
 //! - `CSI 0 P` (delete 0 chars) → deletes **1 character**
 //!
@@ -27,13 +27,15 @@
 //! let delete_one = CsiSequence::DeleteChar(CsiCount::ONE);
 //! ```
 //!
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`CSI`]: crate::CsiSequence
 //! [`NonZeroU16`]: std::num::NonZeroU16
 
 use crate::NumericConversions;
 use std::{fmt::{Display, Formatter},
           num::NonZeroU16};
 
-/// Count of lines or characters for CSI operations (always >= 1).
+/// Count of lines or characters for [`CSI`] operations (always >= 1).
 ///
 /// Used with [`CsiSequence::InsertLine`], [`CsiSequence::DeleteLine`],
 /// [`CsiSequence::InsertChar`], [`CsiSequence::DeleteChar`], and
@@ -42,7 +44,7 @@ use std::{fmt::{Display, Formatter},
 /// # Make Illegal States Unrepresentable
 ///
 /// This type wraps [`NonZeroU16`] internally. A zero count **cannot exist**,
-/// preventing the CSI zero bug at compile time:
+/// preventing the [`CSI`] zero bug at compile time:
 ///
 /// ```rust
 /// use r3bl_tui::CsiCount;
@@ -58,6 +60,7 @@ use std::{fmt::{Display, Formatter},
 /// }
 /// ```
 ///
+/// [`CSI`]: crate::CsiSequence
 /// [`CsiSequence::DeleteChar`]: crate::CsiSequence::DeleteChar
 /// [`CsiSequence::DeleteLine`]: crate::CsiSequence::DeleteLine
 /// [`CsiSequence::EraseChar`]: crate::CsiSequence::EraseChar
@@ -88,7 +91,7 @@ impl CsiCount {
     /// Creates a new count from a raw value.
     ///
     /// Returns [`None`] if the value is zero, since zero counts are not representable
-    /// (they would cause the CSI zero bug).
+    /// (they would cause the [`CSI`] zero bug).
     ///
     /// # Example
     ///
@@ -98,6 +101,8 @@ impl CsiCount {
     /// assert!(CsiCount::new(0).is_none());  // Zero not allowed
     /// assert!(CsiCount::new(5).is_some());  // Non-zero OK
     /// ```
+    ///
+    /// [`CSI`]: crate::CsiSequence
     #[must_use]
     pub const fn new(value: u16) -> Option<Self> {
         match NonZeroU16::new(value) {
@@ -199,7 +204,9 @@ mod tests {
         assert_eq!(nz.get(), 5);
     }
 
-    /// Regression test: verify CSI zero bug is prevented at type level.
+    /// Regression test: verify [`CSI`] zero bug is prevented at type level.
+    ///
+    /// [`CSI`]: crate::CsiSequence
     #[test]
     fn test_csi_zero_bug_prevented() {
         // 0 lines/chars - should be None (prevents CSI zero bug).

@@ -28,9 +28,9 @@ This document provides full examples of well-documented Rust code following the 
 //! │ TerminalState   │
 //! └────────┬────────┘
 //!          │
-//!          ├──▶ CursorState (position, visibility)
-//!          ├──▶ ScrollbackBuffer (history, lines)
-//!          └──▶ AttributeSet (colors, styles)
+//!          ├──► CursorState (position, visibility)
+//!          ├──► ScrollbackBuffer (history, lines)
+//!          └──► AttributeSet (colors, styles)
 //! ```
 //!
 //! ## Example Usage
@@ -108,7 +108,7 @@ This document provides full examples of well-documented Rust code following the 
 ///        │ uses
 ///        ▼
 /// ┌──────────────┐
-/// │   Backend    │ ◀─── This trait
+/// │   Backend    │ ◄─── This trait
 /// │  (trait)     │
 /// └──────┬───────┘
 ///        │ implements
@@ -258,10 +258,10 @@ pub trait Backend {
 /// ┌──────────────────────────┐
 /// │   OffscreenBuffer        │
 /// ├──────────────────────────┤
-/// │ - cells: Vec<Vec<Cell>>  │ ◀── 2D array of cells
-/// │ - size: Size             │ ◀── Buffer dimensions
-/// │ - cursor: Position       │ ◀── Current cursor position
-/// │ - style: Style           │ ◀── Current text style
+/// │ - cells: Vec<Vec<Cell>>  │ ◄── 2D array of cells
+/// │ - size: Size             │ ◄── Buffer dimensions
+/// │ - cursor: Position       │ ◄── Current cursor position
+/// │ - style: Style           │ ◄── Current text style
 /// └──────────────────────────┘
 /// ```
 ///

@@ -64,10 +64,10 @@
 //! enabling selective redraw in the next stage.
 //!
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`crossterm_backend::crossterm_paint_render_op_impl` mod docs]: mod@crate::tui::terminal_lib_backends::crossterm_backend::crossterm_paint_render_op_impl
+//! [`crossterm_backend::crossterm_paint_render_op_impl` mod docs]: mod@crate::crossterm_backend::crossterm_paint_render_op_impl
 //! [`direct_to_ansi` mod docs]: mod@crate::direct_to_ansi
-//! [`offscreen_buffer::paint_impl` mod docs]: mod@crate::tui::terminal_lib_backends::offscreen_buffer::paint_impl
-//! [`render_pipeline`]: mod@crate::tui::terminal_lib_backends::render_pipeline
+//! [`offscreen_buffer::paint_impl` mod docs]: mod@crate::offscreen_buffer::paint_impl
+//! [`render_pipeline`]: mod@crate::render_pipeline
 //! [rendering pipeline overview]: mod@crate::terminal_lib_backends#rendering-pipeline-architecture
 
 use super::{AlternateScreenState, BracketedPasteState, MouseTrackingState,
@@ -85,7 +85,7 @@ impl RenderPipeline {
     /// 1. This does not require any specific implementation of crossterm or termion.
     /// 2. This is the intermediate representation (IR) of a [`RenderPipeline`]. In order
     ///    to turn this IR into actual paint commands for the terminal, you must use the
-    ///    [`super::OffscreenBufferPaint`] trait implementations.
+    ///    [`crate::OffscreenBufferPaint`] trait implementations.
     pub fn compose_render_ops_into_ofs_buf(
         &self,
         window_size: Size,

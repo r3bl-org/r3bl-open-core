@@ -1,3 +1,5 @@
+# cspell: words ETXTBSY oneoff nextest mktemp coreutils
+
 # Check Composition, Result Aggregation & Recovery
 #
 # Layered architecture for running cargo checks with automatic error recovery:
@@ -171,8 +173,13 @@ function run_check_with_recovery
         echo "📝 Text file busy (ETXTBSY) — killing orphaned test processes and retrying ($duration_str)"
         set_color normal
 
-        # Kill orphaned test processes holding the binary open
-        pkill -f "r3bl_tui.*--quiet" 2>/dev/null
+        # Kill orphaned test processes holding the binary open and purge zombies
+        #
+        # TODO: This pattern is hardcoded to "r3bl_tui" because our test binaries
+        # typically contain this name. Making this dynamic based on $WORKSPACE_NAME is deferred
+        # to the Rust-based cargo-monitor tool (see task/pending/build_infra_cargo_monitor.md).
+        pkill -f "r3bl_tui" 2>/dev/null
+        purge_zombie_processes
         sleep 1
 
         # Log ETXTBSY to file
@@ -411,6 +418,21 @@ function run_full_checks
     run_check_with_recovery check_windows_build "windows"
     set result_windows $status
 
+    # Check external URLs in changed files for link rot (non-recoverable).
+    # Ensure lychee is installed before the check. This runs outside
+    # run_check_with_recovery because cargo binstall fails silently when
+    # stdout/stderr are redirected to a file.
+    if not command -v lychee >/dev/null
+        fish run.fish install-cargo-tools
+    end
+    set -l result_lychee 0
+    if command -v lychee >/dev/null
+        run_check_with_recovery check_lychee_changed_files "lychee"
+        set result_lychee $status
+    else
+        echo "⚠️  lychee not available after install attempt, skipping link check"
+    end
+
     # Aggregate: return 2 if ANY recoverable error, then 1 if ANY failure, else 0
     if test $result_check -eq 2 || test $result_build -eq 2 || test $result_clippy -eq 2 || \
        test $result_cargo_test -eq 2 || test $result_doctest -eq 2 || test $result_docs -eq 2 || \
@@ -420,7 +442,7 @@ function run_full_checks
 
     if test $result_check -ne 0 || test $result_build -ne 0 || test $result_clippy -ne 0 || \
        test $result_cargo_test -ne 0 || test $result_doctest -ne 0 || test $result_docs -ne 0 || \
-       test $result_windows -ne 0
+       test $result_windows -ne 0 || test $result_lychee -ne 0
         return 1
     end
 

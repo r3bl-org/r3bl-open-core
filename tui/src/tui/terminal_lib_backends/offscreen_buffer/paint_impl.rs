@@ -59,10 +59,10 @@
 //! This stage is crucial for performance: by diffing buffers, only changed pixels are
 //! rendered in subsequent frames, eliminating unnecessary terminal updates.
 //!
-//! [`crossterm_backend` mod docs]: mod@crate::tui::terminal_lib_backends::crossterm_backend
-//! [`diff_chunks`]: mod@crate::tui::terminal_lib_backends::offscreen_buffer::diff_chunks
+//! [`crossterm_backend` mod docs]: mod@crate::crossterm_backend
+//! [`diff_chunks`]: mod@crate::offscreen_buffer::diff_chunks
 //! [`direct_to_ansi` mod docs]: mod@crate::direct_to_ansi
-//! [`offscreen_buffer/`]: mod@crate::tui::terminal_lib_backends::offscreen_buffer
+//! [`offscreen_buffer/`]: mod@crate::offscreen_buffer
 //! [`OffscreenBuffer`]: crate::OffscreenBuffer
 //! [`RenderOpOutputVec`]: crate::RenderOpOutputVec
 //! [`RenderOpsLocalData`]: crate::RenderOpsLocalData

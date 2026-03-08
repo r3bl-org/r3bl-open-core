@@ -36,7 +36,6 @@
 //!
 //! - **Stage 4 implementation**: [`paint_impl`] (Backend Converter that uses diff chunks)
 //!
-//! [rendering pipeline overview]: mod@crate::terminal_lib_backends#rendering-pipeline-architecture
 //!
 //! ## Relationship to Rendering Pipeline
 //!
@@ -49,8 +48,9 @@
 //! avoiding unnecessary terminal updates for unchanged regions.
 //!
 //! [`OffscreenBuffer`]: crate::OffscreenBuffer
-//! [`RenderOpOutputVec`]: crate::RenderOpOutputVec
 //! [`paint_impl`]: crate::offscreen_buffer::paint_impl
+//! [`RenderOpOutputVec`]: crate::RenderOpOutputVec
+//! [rendering pipeline overview]: mod@crate::terminal_lib_backends#rendering-pipeline-architecture
 
 use super::PixelChar;
 use crate::{List, Pos};

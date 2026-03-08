@@ -1,6 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use r3bl_tui::{CommonResult, OutputDevice, SpinnerColor, SpinnerStyle, SpinnerTemplate,
+use r3bl_tui::{CommonResult, OutputDevice, SGR_FG_RED_STR, SGR_RESET_STR, SpinnerColor,
+               SpinnerStyle, SpinnerTemplate,
                readline_async::{ReadlineAsyncContext, SafeInlineString, Spinner},
                set_mimalloc_in_main,
                spinner_constants::{ARTIFICIAL_UI_DELAY, DELAY_MS, DELAY_UNIT},
@@ -220,7 +221,9 @@ async fn example_with_message_updates(style: SpinnerStyle) -> miette::Result<()>
         sleep(Duration::from_millis(800)).await;
 
         // Test ANSI code stripping.
-        spinner.update_message("\x1b[31mCleaning up (ANSI codes stripped)...\x1b[0m");
+        spinner.update_message(format!(
+            "{SGR_FG_RED_STR}Cleaning up (ANSI codes stripped)...{SGR_RESET_STR}"
+        ));
 
         sleep(Duration::from_millis(800)).await;
     }

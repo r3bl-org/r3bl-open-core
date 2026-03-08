@@ -237,14 +237,15 @@ pub mod global_color_support {
 /// This module provides efficient hyperlink support detection for terminal applications.
 /// with the same performance-critical caching strategy used for color detection.
 ///
-/// ## Blacklist Approach
+/// ## Exclusion List Approach
 ///
-/// This implementation uses a blacklist approach where hyperlink support is assumed to
-/// be. available by default, and only disabled for terminals known to lack [`OSC`] 8
-/// support. This approach is future-proof as most modern terminals (2018+) support
-/// [`OSC`] 8.
+/// This implementation uses an [exclusion list] approach where hyperlink support is
+/// assumed to be available by default, and only disabled for terminals known to lack
+/// [`OSC`] 8 support. This approach is future-proof as most modern terminals (2018+)
+/// support [`OSC`] 8.
 ///
 /// [`OSC`]: crate::osc_codes::OscSequence
+/// [exclusion list]: https://inclusivenaming.org/word-lists/tier-1/
 pub mod global_hyperlink_support {
     use super::{AtomicI8, HyperlinkSupport, Ordering,
                 examine_env_vars_to_determine_hyperlink_support};
@@ -252,7 +253,7 @@ pub mod global_hyperlink_support {
     /// Global override for hyperlink support detection.
     ///
     /// - `NOT_SET_VALUE`: Detection not performed yet
-    /// - `0`: `NotSupported` (blacklisted terminal)
+    /// - `0`: `NotSupported` (excluded terminal)
     /// - `1`: Supported (default assumption)
     static HYPERLINK_SUPPORT_GLOBAL: AtomicI8 = AtomicI8::new(NOT_SET_VALUE);
 
@@ -344,10 +345,11 @@ pub mod global_hyperlink_support {
 
 /// Determines whether [`OSC`] 8 hyperlinks are supported heuristically.
 ///
-/// ## Blacklist Strategy
+/// ## Exclusion List Strategy
 ///
-/// This function implements a blacklist approach where hyperlink support is assumed. to
-/// be available by default, and only disabled for terminals known to lack support:
+/// This function implements an [exclusion list] approach where hyperlink support is
+/// assumed to be available by default, and only disabled for terminals known to lack
+/// support:
 ///
 /// - Apple Terminal (`TERM_PROGRAM=Apple_Terminal`)
 /// - [`xterm`] (legacy versions)
@@ -369,6 +371,7 @@ pub mod global_hyperlink_support {
 /// [`rxvt`]: https://en.wikipedia.org/wiki/Rxvt
 /// [`urxvt`]: https://en.wikipedia.org/wiki/Rxvt-unicode
 /// [`xterm`]: https://en.wikipedia.org/wiki/Xterm
+/// [exclusion list]: https://inclusivenaming.org/word-lists/tier-1/
 #[must_use]
 pub fn examine_env_vars_to_determine_hyperlink_support() -> HyperlinkSupport {
     // Check for explicit opt-out.
@@ -712,7 +715,7 @@ mod tests {
 
         #[test]
         #[serial]
-        fn test_apple_terminal_blacklist() {
+        fn test_apple_terminal_excluded() {
             // Mock Apple Terminal.
             unsafe {
                 global_hyperlink_support::clear_cache(); // Clear cache for accurate testing
@@ -725,7 +728,7 @@ mod tests {
 
         #[test]
         #[serial]
-        fn test_xterm_blacklist() {
+        fn test_xterm_excluded() {
             unsafe {
                 // Test basic xterm.
                 global_hyperlink_support::clear_cache();
@@ -758,7 +761,7 @@ mod tests {
 
         #[test]
         #[serial]
-        fn test_rxvt_family_blacklist() {
+        fn test_rxvt_family_excluded() {
             let unsupported_terms = ["rxvt", "rxvt-unicode", "urxvt", "urxvt-256color"];
 
             unsafe {
@@ -779,7 +782,7 @@ mod tests {
 
         #[test]
         #[serial]
-        fn test_legacy_terminals_blacklist() {
+        fn test_legacy_terminals_excluded() {
             let unsupported_terms = ["linux", "screen", "dumb"];
 
             unsafe {

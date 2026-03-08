@@ -3,8 +3,8 @@
 //! Behavioral tests for text painting operations via [`OffscreenBuffer`] rendering.
 //!
 //! These tests complement the byte-level tests in [`text_operations`] by verifying that
-//! styled text produces the correct **visual result** when ANSI sequences are rendered to
-//! a buffer.
+//! styled text produces the correct **visual result** when [`ANSI`] sequences are
+//! rendered to a buffer.
 //!
 //! # What These Tests Verify
 //!
@@ -29,9 +29,10 @@
 //! Individual test functions are **not** marked with `#[test]` - they are called by the
 //! coordinator. This prevents cargo from running them in parallel.
 //!
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`ColorSupport::Truecolor`]: crate::ColorSupport::Truecolor
-//! [`OffscreenBuffer`]: crate::OffscreenBuffer
 //! [`global_color_support::set_override`]: crate::global_color_support::set_override
+//! [`OffscreenBuffer`]: crate::OffscreenBuffer
 //! [`text_operations`]: super::text_operations
 
 use super::test_helpers_rendered::*;
@@ -175,7 +176,9 @@ fn test_multiple_styled_text_segments_rendered() {
     }
 }
 
-/// Verify Unicode text (non-ASCII) renders correctly.
+/// Verify Unicode text (non-[`ASCII`]) renders correctly.
+///
+/// [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
 fn test_paint_unicode_text_rendered() {
     // Paint Unicode text.
     let buffer =

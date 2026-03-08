@@ -137,7 +137,7 @@
 //!
 //! To learn how we built this crate, please take a look at the following resources.
 //! - If you like consuming video content, here's our [YT channel](https://www.youtube.com/@developerlifecom).
-//!   Please consider [subscribing](https://www.youtube.com/channel/CHANNEL_ID?sub_confirmation=1).
+//!   Please consider [subscribing](https://www.youtube.com/channel/UCMcsxfCwzwDevc3NRqFgfEg?sub_confirmation=1).
 //! - If you like consuming written content, here's our developer [site](https://developerlife.com/).
 //!
 //! # Run `giti` binary target

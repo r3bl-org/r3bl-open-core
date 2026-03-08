@@ -1,9 +1,9 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Protocol conversion layer: VT-100 IR → Public API types.
+//! Protocol conversion layer: [`VT-100`] IR → Public API types.
 //!
 //! This module converts protocol-level intermediate representation (IR) from the
-//! VT-100 parser into the public API types that applications consume. This layer
+//! [`VT-100`] parser into the public API types that applications consume. This layer
 //! decouples protocol-specific details from the stable public API.
 //!
 //! ## Architecture
@@ -36,12 +36,14 @@
 //! ## Why This Layer Exists
 //!
 //! - **Protocol independence**: Applications depend on stable `InputEvent` types, not
-//!   VT-100 specifics
+//!   [`VT-100`] specifics
 //! - **Multi-backend support**: Future backends (e.g., Windows Console API) can convert
 //!   their IR to the same public API
-//! - **Type safety**: Protocol types use VT-100 nomenclature; public API uses
+//! - **Type safety**: Protocol types use [`VT-100`] nomenclature; public API uses
 //!   domain-appropriate names
 //! - **Evolution**: Protocol can change without breaking application code
+//!
+//! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 
 use crate::{Button, FocusEvent, InputEvent, Key, KeyPress, KeyState, ModifierKeysMask,
             MouseInput, MouseInputKind, Pos, SpecialKey,
@@ -55,7 +57,7 @@ use crate::{Button, FocusEvent, InputEvent, Key, KeyPress, KeyState, ModifierKey
 
 /// Converts protocol-level [`VT100InputEventIR`] to canonical [`InputEvent`].
 ///
-/// Converts all VT-100 IR event types to public API types:
+/// Converts all [`VT-100`] IR event types to public API types:
 /// - **Keyboard**: [`VT100InputEventIR::Keyboard`] → [`InputEvent::Keyboard`]
 /// - **Mouse**: [`VT100InputEventIR::Mouse`] → [`InputEvent::Mouse`]
 ///   - Converts button types: [`VT100MouseButtonIR::Left`] → [`Button::Left`]
@@ -68,6 +70,7 @@ use crate::{Button, FocusEvent, InputEvent, Key, KeyPress, KeyState, ModifierKey
 /// Returns `None` if the event cannot be converted (e.g., unknown mouse button).
 ///
 /// [`TermPos`]: crate::TermPos
+/// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 #[must_use]
 pub fn convert_input_event(vt100_event: VT100InputEventIR) -> Option<InputEvent> {
     match vt100_event {
@@ -154,7 +157,7 @@ pub fn convert_input_event(vt100_event: VT100InputEventIR) -> Option<InputEvent>
 /// Converts protocol-level [`VT100KeyCodeIR`] and [`VT100KeyModifiersIR`] to canonical
 /// [`KeyPress`].
 ///
-/// Maps VT-100 IR key codes to the public API [`Key`] enum, handling:
+/// Maps [`VT-100`] IR key codes to the public API [`Key`] enum, handling:
 /// - Character keys: [`VT100KeyCodeIR::Char`] → [`Key::Character`]
 /// - Function keys: [`VT100KeyCodeIR::Function`] → [`Key::FunctionKey`]
 /// - Special keys: [`VT100KeyCodeIR::Up`] → [`Key::SpecialKey`]
@@ -163,6 +166,8 @@ pub fn convert_input_event(vt100_event: VT100InputEventIR) -> Option<InputEvent>
 /// Returns:
 /// - [`KeyPress::Plain`] if no modifiers are active
 /// - [`KeyPress::WithModifiers`] if any modifiers (Shift/Ctrl/Alt) are pressed
+///
+/// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 fn convert_key_code_to_keypress(
     code: VT100KeyCodeIR,
     modifiers: VT100KeyModifiersIR,

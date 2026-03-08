@@ -15,7 +15,9 @@ use tokio::sync::broadcast::Sender;
 /// Read buffer size for stdin reads (`1_024` bytes).
 ///
 /// When `read_count == STDIN_READ_BUFFER_SIZE`, more data is likely waiting in the
-/// kernel buffer—this is the `more` flag used for ESC disambiguation.
+/// kernel buffer—this is the `more` flag used for [`ESC`] disambiguation.
+///
+/// [`ESC`]: crate::EscSequence
 pub const STDIN_READ_BUFFER_SIZE: usize = 1_024;
 
 /// Handles [`stdin`] becoming readable, using explicit `sender` parameter.
@@ -32,12 +34,12 @@ pub const STDIN_READ_BUFFER_SIZE: usize = 1_024;
 /// - [`Continuation::Continue`]: Successfully processed or recoverable error.
 /// - [`Continuation::Stop`]: [`EOF`], fatal error, or receiver dropped.
 ///
-/// [EINTR Handling]: super#eintr-handling
 /// [`EOF`]: https://en.wikipedia.org/wiki/End-of-file
 /// [`MioPollWorker`]: super::MioPollWorker
-/// [`RRTWorker`]: crate::core::resilient_reactor_thread::RRTWorker
-/// [`VT100InputEventIR`]: crate::core::ansi::vt_100_terminal_input_parser::VT100InputEventIR
+/// [`RRTWorker`]: crate::RRTWorker
 /// [`stdin`]: std::io::stdin
+/// [`VT100InputEventIR`]: crate::vt_100_terminal_input_parser::VT100InputEventIR
+/// [EINTR Handling]: super#eintr-handling
 pub fn consume_stdin_input_with_sender(
     worker: &mut MioPollWorker,
     sender: &Sender<RRTEvent<PollerEvent>>,

@@ -2,8 +2,8 @@
 
 //! [`PTY`]-based integration test for [`DirectToAnsiInputDevice`] singleton semantics.
 //!
-//! Tests that only one [`DirectToAnsiInputDevice`] can exist at a time, and that
-//! calling [`new()`] twice panics with a helpful message.
+//! Tests that only one [`DirectToAnsiInputDevice`] can exist at a time, and that calling
+//! [`new()`] twice panics with a helpful message.
 //!
 //! Run with:
 //! ```bash
@@ -37,12 +37,12 @@
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`subscribe()`]: crate::direct_to_ansi::DirectToAnsiInputDevice::subscribe
 
-use crate::{SingleThreadSafeControlledChild, PtyPair, PtyTestMode,
+use crate::{PtyTestMode, PtyTestContext,
             tui::terminal_lib_backends::direct_to_ansi::DirectToAnsiInputDevice};
 use std::io::{BufRead, BufReader, Write};
 
 /// Ready signal sent by controlled process after initialization.
-const CONTROLLED_READY: &str = "SINGLETON_TEST_READY";
+const SINGLETON_READY: &str = "SINGLETON_TEST_READY";
 
 /// Signal sent when test completes successfully.
 const TEST_PASSED: &str = "SINGLETON_TEST_PASSED";
@@ -73,18 +73,19 @@ fn wait_for_signal(buf_reader: &mut BufReader<impl std::io::Read>, signal: &str)
 }
 
 /// Controller process: waits for controlled to complete successfully.
-fn singleton_controller_entry_point(pty_pair: PtyPair, child: SingleThreadSafeControlledChild) {
-    eprintln!("Singleton Controller: Starting...");
+fn singleton_controller_entry_point(context: PtyTestContext) {
+    let PtyTestContext {
+        pty_pair,
+        child,
+        mut buf_reader,
+        ..
+    } = context;
 
-    let reader = pty_pair
-        .controller()
-        .try_clone_reader()
-        .expect("Failed to get reader");
-    let mut buf_reader = BufReader::new(reader);
+    eprintln!("Singleton Controller: Starting...");
 
     // Wait for controlled to be ready.
     eprintln!("Singleton Controller: Waiting for controlled to start...");
-    wait_for_signal(&mut buf_reader, CONTROLLED_READY);
+    wait_for_signal(&mut buf_reader, SINGLETON_READY);
     eprintln!("  Controlled is ready");
 
     // Wait for test to pass.
@@ -98,8 +99,8 @@ fn singleton_controller_entry_point(pty_pair: PtyPair, child: SingleThreadSafeCo
 }
 
 /// Controlled process: tests singleton device semantics.
-fn singleton_controlled_entry_point() -> ! {
-    println!("{CONTROLLED_READY}");
+fn singleton_controlled_entry_point() {
+    println!("{SINGLETON_READY}");
     std::io::stdout().flush().expect("Failed to flush");
 
     eprintln!("Singleton Controlled: Starting singleton test...");
@@ -152,6 +153,4 @@ fn singleton_controlled_entry_point() -> ! {
     println!("{TEST_PASSED}");
     std::io::stdout().flush().expect("Failed to flush");
 
-    eprintln!("Singleton Controlled: Exiting");
-    std::process::exit(0);
 }

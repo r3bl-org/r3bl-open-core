@@ -6,8 +6,10 @@
 //! operations with grapheme cluster support. It's used throughout the TUI system
 //! for text formatting, clipping, and rendering operations.
 //!
-//! See the [module docs](crate::graphemes) for comprehensive information about Unicode
+//! See the [module docs] for comprehensive information about Unicode
 //! handling, grapheme clusters, and the three types of indices used in this system.
+//!
+//! [module docs]: crate::graphemes
 
 // Submodules
 pub mod owned;

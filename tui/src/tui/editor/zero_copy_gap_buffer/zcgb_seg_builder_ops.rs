@@ -8,7 +8,7 @@
 //! grapheme cluster metadata for lines after text modifications. It ensures:
 //!
 //! - **Content boundary correctness**: Only processes content up to `content_len`
-//! - **UTF-8 safety**: Validates and handles UTF-8 errors appropriately
+//! - **[`UTF-8`] safety**: Validates and handles [`UTF-8`] errors appropriately
 //! - **Metadata accuracy**: Updates segments, display width, and grapheme count
 //! - **Performance**: Supports both single-line and batch rebuilding
 //!
@@ -24,16 +24,17 @@
 //! to update line metadata after content changes. See the individual function
 //! documentation for usage examples.
 //!
-//! # UTF-8 Safety in Segment Construction
+//! # [`UTF-8`] Safety in Segment Construction
 //!
-//! This module implements **post-modification metadata rebuilding** within our UTF-8
+//! This module implements **post-modification metadata rebuilding** within our [`UTF-8`]
 //! safety architecture:
 //!
 //! ## When Segment Rebuilding Occurs
 //!
 //! Segment rebuilding is called **after content modifications**:
 //! - After [`insert_text_at_grapheme()`] - content already validated at insertion
-//! - After [`delete_grapheme_at()`] - removing valid UTF-8 can't create invalid sequences
+//! - After [`delete_grapheme_at()`] - removing valid [`UTF-8`] can't create invalid
+//!   sequences
 //! - After bulk operations - operating on previously validated content
 //!
 //! ## Why `unsafe { `[`from_utf8_unchecked()`]` }` is Safe Here
@@ -41,18 +42,18 @@
 //! This module can safely use `unsafe` operations because:
 //!
 //! 1. **Controlled input**: All public insert and mutate operations use `&str`, ensuring
-//!    only valid UTF-8 content is added to the buffer
+//!    only valid [`UTF-8`] content is added to the buffer
 //! 2. **Metadata reconstruction**: Only reading existing buffer content for analysis
 //! 3. **Content boundary respect**: Only processes content up to `content_len` (validated
 //!    region)
 //! 4. **Bounds checking**: All buffer access is bounds checked before creating slices
 //! 5. **Performance critical**: Called after every edit operation, needs maximum speed
-//! 6. **Test coverage**: Comprehensive tests verify UTF-8 handling, including
-//!    intentionally invalid UTF-8 scenarios that panic in debug mode
+//! 6. **Test coverage**: Comprehensive tests verify [`UTF-8`] handling, including
+//!    intentionally invalid [`UTF-8`] scenarios that panic in debug mode
 //!
 //! Why unsafe is used instead of [`from_utf8_lossy()`]:
 //! - [`from_utf8_lossy()`] returns `Cow<str>`, which may allocate a new `String` if
-//!   invalid UTF-8 is encountered, breaking our zero-copy guarantee
+//!   invalid [`UTF-8`] is encountered, breaking our zero-copy guarantee
 //! - [`from_utf8_unchecked()`] returns `&str` directly without allocation, preserving
 //!   zero-copy semantics essential for performance-critical operations
 //!
@@ -63,27 +64,29 @@
 //! - Called after **every deletion operation** (backspace, delete key)
 //! - Called during **bulk operations** (paste, find/replace, formatting)
 //!
-//! UTF-8 validation here would add significant overhead to basic text editing operations.
+//! [`UTF-8`] validation here would add significant overhead to basic text editing
+//! operations.
 //!
 //! ## Debug-Mode Safety Net
 //!
-//! In debug builds, we **validate UTF-8 before unsafe operations**:
+//! In debug builds, we **validate [`UTF-8`] before unsafe operations**:
 //! - Catches any invariant violations during development
 //! - Provides clear panic messages with line and byte position info
-//! - Helps identify if content modifications broke UTF-8 boundaries
+//! - Helps identify if content modifications broke [`UTF-8`] boundaries
 //!
 //! ## Architectural Role
 //!
-//! This module sits in the **"trust zone"** of our UTF-8 architecture:
-//! - **Input modules** ([`implementations::insert`]) validate UTF-8 at boundaries
+//! This module sits in the **"trust zone"** of our [`UTF-8`] architecture:
+//! - **Input modules** ([`implementations::insert`]) validate [`UTF-8`] at boundaries
 //! - **This module** trusts validated content and optimizes for performance
 //! - **Access modules** ([`implementations::access`]) provide zero-copy string access
 //!
 //! The safety depends on the **architectural contract** that content entering
-//! the buffer is UTF-8 validated, making subsequent operations safe.
+//! the buffer is [`UTF-8`] validated, making subsequent operations safe.
 //!
-//! [`insert_text_at_grapheme()`]: ZeroCopyGapBuffer::insert_text_at_grapheme
 //! [`delete_grapheme_at()`]: ZeroCopyGapBuffer::delete_grapheme_at
+//! [`insert_text_at_grapheme()`]: ZeroCopyGapBuffer::insert_text_at_grapheme
+//! [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
 
 use super::super::ZeroCopyGapBuffer;
 use crate::{ByteIndexRangeExt, RowIndex, len,
@@ -98,7 +101,7 @@ impl ZeroCopyGapBuffer {
     /// content has been modified. It:
     ///
     /// 1. Extracts line content up to `content_len` (excluding null padding)
-    /// 2. Validates UTF-8 encoding
+    /// 2. Validates [`UTF-8`] encoding
     /// 3. Builds new segments using the segment builder
     /// 4. Updates all metadata fields in [`crate::LineMetadata`]
     ///
@@ -125,8 +128,8 @@ impl ZeroCopyGapBuffer {
     ///
     /// # Panics
     ///
-    /// In debug builds, panics if the line contains invalid UTF-8. This should
-    /// not happen in normal operation as the buffer maintains UTF-8 invariants.
+    /// In debug builds, panics if the line contains invalid [`UTF-8`]. This should
+    /// not happen in normal operation as the buffer maintains [`UTF-8`] invariants.
     ///
     /// # Content Boundary
     ///
@@ -142,9 +145,10 @@ impl ZeroCopyGapBuffer {
     /// buffer.rebuild_line_segments(line_index)?;
     /// ```
     ///
-    /// [`insert_text_at_grapheme()`]: ZeroCopyGapBuffer::insert_text_at_grapheme
     /// [`delete_grapheme_at()`]: ZeroCopyGapBuffer::delete_grapheme_at
     /// [`delete_range()`]: ZeroCopyGapBuffer::delete_range
+    /// [`insert_text_at_grapheme()`]: ZeroCopyGapBuffer::insert_text_at_grapheme
+    /// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
     pub fn rebuild_line_segments(
         &mut self,
         arg_line_index: impl Into<RowIndex>,
@@ -224,7 +228,6 @@ impl ZeroCopyGapBuffer {
     /// [`rebuild_line_segments()`] multiple times
     /// as it avoids repeated function call overhead for bulk operations.
     ///
-    /// [`rebuild_line_segments()`]: Self::rebuild_line_segments
     ///
     /// # Example
     ///
@@ -246,8 +249,11 @@ impl ZeroCopyGapBuffer {
     ///
     /// # Panics
     ///
-    /// In debug builds, panics if any line contains invalid UTF-8. This should
-    /// not happen in normal operation as the buffer maintains UTF-8 invariants.
+    /// In debug builds, panics if any line contains invalid [`UTF-8`]. This should
+    /// not happen in normal operation as the buffer maintains [`UTF-8`] invariants.
+    ///
+    /// [`rebuild_line_segments()`]: Self::rebuild_line_segments
+    /// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
     pub fn rebuild_line_segments_batch(
         &mut self,
         line_indices: &[RowIndex],

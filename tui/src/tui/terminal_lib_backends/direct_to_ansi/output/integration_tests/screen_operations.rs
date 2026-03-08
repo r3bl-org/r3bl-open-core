@@ -4,21 +4,22 @@
 //! [`HideCursor`], etc.)
 //!
 //! These tests validate:
-//! 1. [`ClearScreen`] generates correct CSI 2J sequence
+//! 1. [`ClearScreen`] generates correct [`CSI`] 2J sequence
 //! 2. [`ShowCursor`] generates DECTCEM set (show) sequence
 //! 3. [`HideCursor`] generates DECTCEM reset (hide) sequence
 //! 4. [`EnterAlternateScreen`] / [`ExitAlternateScreen`] for full-screen apps
 //! 5. [`ClearCurrentLine`], [`ClearToEndOfLine`], [`ClearToStartOfLine`] operations
 //! 6. State preservation across screen operations
 //!
-//! [`ClearScreen`]: crate::render_op::RenderOpCommon::ClearScreen
-//! [`ShowCursor`]: crate::render_op::RenderOpCommon::ShowCursor
-//! [`HideCursor`]: crate::render_op::RenderOpCommon::HideCursor
-//! [`EnterAlternateScreen`]: crate::render_op::RenderOpCommon::EnterAlternateScreen
-//! [`ExitAlternateScreen`]: crate::render_op::RenderOpCommon::ExitAlternateScreen
 //! [`ClearCurrentLine`]: crate::render_op::RenderOpCommon::ClearCurrentLine
+//! [`ClearScreen`]: crate::render_op::RenderOpCommon::ClearScreen
 //! [`ClearToEndOfLine`]: crate::render_op::RenderOpCommon::ClearToEndOfLine
 //! [`ClearToStartOfLine`]: crate::render_op::RenderOpCommon::ClearToStartOfLine
+//! [`CSI`]: crate::CsiSequence
+//! [`EnterAlternateScreen`]: crate::render_op::RenderOpCommon::EnterAlternateScreen
+//! [`ExitAlternateScreen`]: crate::render_op::RenderOpCommon::ExitAlternateScreen
+//! [`HideCursor`]: crate::render_op::RenderOpCommon::HideCursor
+//! [`ShowCursor`]: crate::render_op::RenderOpCommon::ShowCursor
 
 use super::test_helpers::*;
 use crate::{AnsiSequenceGenerator, col, pos, render_op::RenderOpCommon, row};

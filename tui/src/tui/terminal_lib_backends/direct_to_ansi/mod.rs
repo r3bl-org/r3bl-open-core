@@ -62,10 +62,10 @@
 //!
 //! # Platform Support
 //!
-//! | Component                | Linux   | macOS   | Windows   |
-//! | ------------------------ | ------- | ------- | --------- |
+//! | Component                    | Linux   | macOS   | Windows   |
+//! | ---------------------------- | ------- | ------- | --------- |
 //! | Output ([`ANSI`] generation) | ✅      | ✅      | ✅        |
-//! | Input (terminal reading) | ✅      | ❌      | ❌        |
+//! | Input (terminal reading)     | ✅      | ❌      | ❌        |
 //!
 //! The **output** side works on all platforms (pure [`ANSI`] sequence generation).
 //!
@@ -84,17 +84,17 @@
 //!
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`AnsiSequenceGenerator`]: crate::AnsiSequenceGenerator
-//! [`compositor_render_ops_to_ofs_buf` mod docs]: mod@crate::tui::terminal_lib_backends::compositor_render_ops_to_ofs_buf
-//! [`crossterm_backend::crossterm_paint_render_op_impl` mod docs]: mod@crate::tui::terminal_lib_backends::crossterm_backend::crossterm_paint_render_op_impl
+//! [`compositor_render_ops_to_ofs_buf` mod docs]: mod@crate::compositor_render_ops_to_ofs_buf
+//! [`crossterm_backend::crossterm_paint_render_op_impl` mod docs]: mod@crate::crossterm_backend::crossterm_paint_render_op_impl
 //! [`DirectToAnsi`]: self
 //! [`filedescriptor::poll()`]: https://docs.rs/filedescriptor/latest/filedescriptor/fn.poll.html
 //! [`input::integration_tests_docs`]: mod@crate::terminal_lib_backends::direct_to_ansi::input::integration_tests_docs
 //! [`kqueue`]: https://man.freebsd.org/cgi/man.cgi?query=kqueue&sektion=2
-//! [`offscreen_buffer::paint_impl` mod docs]: mod@crate::tui::terminal_lib_backends::offscreen_buffer::paint_impl
+//! [`offscreen_buffer::paint_impl` mod docs]: mod@crate::offscreen_buffer::paint_impl
 //! [`output::integration_tests`]: mod@crate::terminal_lib_backends::direct_to_ansi::output::integration_tests
 //! [`PixelCharRenderer`]: crate::PixelCharRenderer
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
-//! [`render_op_ir` mod docs]: mod@crate::tui::terminal_lib_backends::render_op::render_op_ir
+//! [`render_op_ir` mod docs]: mod@crate::render_op::render_op_ir
 //! [`RenderOpCommon`]: crate::RenderOpCommon
 //! [`RenderOpIR`]: crate::RenderOpIR
 //! [`RenderOpIRVec`]: crate::RenderOpIRVec
@@ -106,7 +106,7 @@
 //! [`StdoutMock`]: crate::StdoutMock
 //! [`terminal_lib_backends` mod docs]: mod@crate::tui::terminal_lib_backends
 //! [`tty`]: https://man7.org/linux/man-pages/man4/tty.4.html
-//! [`vt_100_terminal_input_parser::integration_tests`]: mod@crate::core::ansi::vt_100_terminal_input_parser::integration_tests
+//! [`vt_100_terminal_input_parser::integration_tests`]: mod@crate::vt_100_terminal_input_parser::integration_tests
 //! [rendering pipeline overview]: mod@crate::terminal_lib_backends#rendering-pipeline-architecture
 
 // Skip rustfmt for rest of file to preserve manual alignment.

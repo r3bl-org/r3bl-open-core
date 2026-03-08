@@ -19,11 +19,11 @@
 //!
 //! This module uses [`mio`] for async I/O multiplexing. [`mio`] provides a clean
 //! platform abstraction over OS-specific polling mechanisms:
-//! - **Linux**: [`epoll(7)`] - works correctly with PTY/tty file descriptors
-//! - **macOS**: [`kqueue(2)`] - **broken for PTY/tty polling**
+//! - **Linux**: [`epoll(7)`] - works correctly with [`PTY`]/tty file descriptors
+//! - **macOS**: [`kqueue(2)`] - **broken for [`PTY`]/tty polling**
 //!
 //! macOS's [`kqueue(2)`] returns [`EINVAL`] when attempting to monitor `/dev/tty` or
-//! PTY file descriptors. This is a [known Darwin limitation] with no planned fix.
+//! [`PTY`] file descriptors. This is a [known Darwin limitation] with no planned fix.
 //! The [`mio`] maintainers have [declined to work around this] since it would require
 //! mixing [`kqueue(2)`] with [`select(2)`].
 //!
@@ -31,7 +31,7 @@
 //!
 //! Crossterm uses the [`filedescriptor`] crate which provides a [`poll()`] wrapper:
 //! - On Linux: uses [`poll(2)`] directly
-//! - On macOS: uses [`select(2)`] instead (which works with PTY/tty)
+//! - On macOS: uses [`select(2)`] instead (which works with [`PTY`]/tty)
 //!
 //! <!-- It is ok to use ignore here - shows internal filedescriptor crate implementation,
 //! not runnable example -->
@@ -59,21 +59,22 @@
 //! - [crossterm issue] - "/dev/tty does not work on macOS with kqueue"
 //! - [macOS /dev/tty polling blog post] - Detailed technical explanation
 //!
-//! [`DirectToAnsiInputDevice::next`]: DirectToAnsiInputDevice::next
 //! [`DirectToAnsi`]: super
+//! [`DirectToAnsiInputDevice::next`]: DirectToAnsiInputDevice::next
 //! [`EINVAL`]: https://man7.org/linux/man-pages/man3/errno.3.html
-//! [`ESC` key detection]: DirectToAnsiInputDevice#esc-key-disambiguation-crossterm-more-flag-pattern
-//! [`SIGWINCH`]: https://man7.org/linux/man-pages/man7/signal.7.html
-//! [`TERMINAL_LIB_BACKEND`]: crate::TERMINAL_LIB_BACKEND
 //! [`epoll(7)`]: https://man7.org/linux/man-pages/man7/epoll.7.html
+//! [`ESC` key detection]: DirectToAnsiInputDevice#esc-key-disambiguation-crossterm-more-flag-pattern
 //! [`filedescriptor::poll()`]: https://docs.rs/filedescriptor/latest/filedescriptor/fn.poll.html
 //! [`filedescriptor`]: https://docs.rs/filedescriptor
 //! [`kqueue(2)`]: https://man.freebsd.org/cgi/man.cgi?query=kqueue&sektion=2
 //! [`poll()`]: https://docs.rs/filedescriptor/latest/filedescriptor/fn.poll.html
 //! [`poll(2)`]: https://man7.org/linux/man-pages/man2/poll.2.html
+//! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`select(2)`]: https://man7.org/linux/man-pages/man2/select.2.html
 //! [`signal-hook-mio`]: https://docs.rs/signal-hook-mio
 //! [`signal-hook`]: https://docs.rs/signal-hook
+//! [`SIGWINCH`]: https://man7.org/linux/man-pages/man7/signal.7.html
+//! [`TERMINAL_LIB_BACKEND`]: crate::TERMINAL_LIB_BACKEND
 //! [crossterm issue]: https://github.com/crossterm-rs/crossterm/issues/500
 //! [declined to work around this]: https://github.com/tokio-rs/mio/issues/1377
 //! [known Darwin limitation]: https://nathancraddock.com/blog/macos-dev-tty-polling/

@@ -25,8 +25,7 @@
 //! [`rrt_restart_tests`]: super::rrt_restart_tests
 
 use super::super::*;
-use crate::{Continuation, MioPollWaker, PtyPair, PtyTestMode,
-            SingleThreadSafeControlledChild,
+use crate::{Continuation, MioPollWaker, PtyTestContext, PtyTestMode,
             tui::terminal_lib_backends::direct_to_ansi::input::{channel_types::PollerEvent,
                                                                 mio_poller::MioPollWorker}};
 use std::{io::{BufRead, BufReader, Read, Write, stdout},
@@ -154,18 +153,15 @@ generate_pty_test! {
 
 /// Controller: sends keystrokes when the controlled signals readiness, then
 /// waits for all 3 create/poll cycles to complete.
-fn factory_restart_controller(pty_pair: PtyPair, child: SingleThreadSafeControlledChild) {
-    eprintln!("Factory-Restart Controller: Starting...");
+fn factory_restart_controller(context: PtyTestContext) {
+    let PtyTestContext {
+        pty_pair,
+        child,
+        mut buf_reader,
+        mut writer,
+    } = context;
 
-    let reader = pty_pair
-        .controller()
-        .try_clone_reader()
-        .expect("Failed to get reader");
-    let mut buf_reader = BufReader::new(reader);
-    let mut writer = pty_pair
-        .controller()
-        .take_writer()
-        .expect("Failed to get writer");
+    eprintln!("Factory-Restart Controller: Starting...");
 
     wait_for_signal(&mut buf_reader, FACTORY_RESTART_READY);
 
@@ -190,7 +186,7 @@ fn factory_restart_controller(pty_pair: PtyPair, child: SingleThreadSafeControll
 /// registration actually function.
 ///
 /// [`epoll`]: https://man7.org/linux/man-pages/man7/epoll.7.html
-fn factory_restart_controlled() -> ! {
+fn factory_restart_controlled() {
     create_call_counter::reset();
 
     println!("{FACTORY_RESTART_READY}");
@@ -240,6 +236,4 @@ fn factory_restart_controlled() -> ! {
 
     println!("{FACTORY_RESTART_PASSED}");
     stdout().flush().expect("Failed to flush");
-
-    std::process::exit(0);
 }

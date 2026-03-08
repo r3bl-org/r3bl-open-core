@@ -1,10 +1,11 @@
 // Copyright (c) 2023-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{BufTextStorage, ColIndex, ColWidth, FastStringify, GCStringOwned,
-            InlineString, InlineVec, PixelChar, PixelCharRenderer, SgrCode, TuiColor,
-            TuiStyle, TuiStyleAttribs, UNICODE_REPLACEMENT_CHAR,
-            cli_text_inline_impl::CliTextConvertOptions,
-            tui_style_attrib::{Bold, Dim, Italic, Strikethrough, Underline}};
+use crate::{
+    BufTextStorage, ColIndex, ColWidth, FastStringify, GCStringOwned, InlineString,
+    InlineVec, PixelChar, PixelCharRenderer, SgrCode, TuiColor, TuiStyle, TuiStyleAttribs,
+    UNICODE_REPLACEMENT_CHAR, cli_text_inline_impl::CliTextConvertOptions,
+    tui_style_attrib::{Bold, Dim, Italic, Strikethrough, Underline},
+};
 use std::fmt::Result;
 use strum_macros::EnumCount;
 
@@ -925,7 +926,7 @@ impl FastStringify for CliTextInline {
         // Emit final reset code (consistent with old behavior - always emitted)
         SgrCode::Reset.write_to_buf(acc)?;
 
-        Ok(())
+        ok!()
     }
 }
 

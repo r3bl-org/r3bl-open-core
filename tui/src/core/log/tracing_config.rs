@@ -109,8 +109,8 @@ impl Debug for DisplayPreference {
 }
 
 /// Configure the tracing logging to suit your needs. You can display the logs to a:
-/// 1. file,
-/// 2. stdout, stderr, or a shared writer,
+/// 1. [`file`],
+/// 2. [`stdout`], [`stderr`], or a [`shared writer`],
 /// 3. both.
 ///
 /// This configuration also allows you to set the log level.
@@ -126,6 +126,13 @@ impl Debug for DisplayPreference {
 ///   can only be one, and it can't be unset, once set, or changed.
 /// - [`Self::install_thread_local()`]: This will install the tracing subscriber for the
 ///   current thread.
+///
+/// [`file`]: std::fs::File
+/// [`Self::install_global()`]: TracingConfig::install_global
+/// [`Self::install_thread_local()`]: TracingConfig::install_thread_local
+/// [`shared writer`]: crate::SharedWriter
+/// [`stderr`]: std::io::stderr
+/// [`stdout`]: std::io::stdout
 #[derive(Debug)]
 pub struct TracingConfig {
     pub writer_config: WriterConfig,
@@ -137,11 +144,14 @@ pub struct TracingConfig {
 ///
 /// 1. Global default subscriber, which once set, can't be unset or changed.
 ///    - This is great for apps.
-///    - Docs for [Global default tracing subscriber](https://docs.rs/tracing/latest/tracing/subscriber/fn.set_global_default.html)
+///    - See [Global default tracing subscriber] for details.
 /// 2. Thread local subscriber, which is thread local, and you can assign different ones
 ///    to different threads.
 ///    - This is great for tests.
-///    - Docs for [Thread local tracing subscriber](https://docs.rs/tracing/latest/tracing/subscriber/fn.set_default.html)
+///    - See [Thread local tracing subscriber] for details.
+///
+/// [Global default tracing subscriber]: tracing::subscriber::set_global_default
+/// [Thread local tracing subscriber]: tracing::subscriber::set_default
 impl TracingConfig {
     /// Thread local is use in tests, where each test should have its own log file or
     /// stdout, etc. This is set per thread. So you can have more than one, assuming you

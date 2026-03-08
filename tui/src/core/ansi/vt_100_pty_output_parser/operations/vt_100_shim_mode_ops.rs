@@ -26,7 +26,7 @@
 //!
 //! ```text
 //! ╭─────────────────╮    ╭────────────────╮    ╭─────────────────╮    ╭──────────────╮
-//! │ Child Process   │────▶ PTY Controller │────▶ VTE Parser      │────▶ OffscreenBuf │
+//! │ Child Process   │────► PTY Controller │────► VTE Parser      │────► OffscreenBuf │
 //! │ (vim, bash...)  │    │ (byte stream)  │    │ (state machine) │    │ (terminal    │
 //! ╰──────┬──────────╯    ╰────────────────╯    ╰───────┬─────────╯    │  buffer)     │
 //!        │                                             │              ╰───────┬──────╯
@@ -37,13 +37,13 @@
 //!        │                                    ╚═════════════════╝             │
 //!        │                                                                    │
 //!        │                                    ╭─────────────────╮             │
-//!        │                                    │ RenderPipeline  ◀─────────────╯
+//!        │                                    │ RenderPipeline  ◄─────────────╯
 //!        │                                    │ paint()         │
-//!        ╰────────────────────────────────────▶ Terminal Output │
+//!        ╰────────────────────────────────────► Terminal Output │
 //!                                             ╰─────────────────╯
 //! ```
 //!
-//! # `CSI` Sequence Processing Flow
+//! # [`CSI`] Sequence Processing Flow
 //!
 //! ```text
 //! Application sends "ESC [?7h" (set autowrap mode)
@@ -67,8 +67,9 @@
 //!     Update OffscreenBuffer state
 //! ```
 //!
-//! [`impl_mode_ops`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl::vt_100_impl_mode_ops
-//! [`test_mode_ops`]: crate::core::ansi::vt_100_pty_output_parser::vt_100_pty_output_conformance_tests::tests::vt_100_test_mode_ops
+//! [`CSI`]: crate::CsiSequence
+//! [`impl_mode_ops`]: crate::vt_100_ansi_impl::vt_100_impl_mode_ops
+//! [`test_mode_ops`]: crate::vt_100_pty_output_conformance_tests::tests::vt_100_test_mode_ops
 //! [module-level documentation]: self
 
 use super::super::{PrivateModeType, ansi_parser_public_api::AnsiToOfsBufPerformer};

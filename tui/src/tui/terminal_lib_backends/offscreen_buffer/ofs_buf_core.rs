@@ -378,7 +378,7 @@ impl Default for TerminalModeState {
 /// [`apply_ansi_bytes`]: OffscreenBuffer::apply_ansi_bytes
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 /// [`RenderOpCommon`]: enum@crate::RenderOpCommon
-/// [`vt_100_pty_output_parser`]: mod@crate::core::ansi::vt_100_pty_output_parser
+/// [`vt_100_pty_output_parser`]: mod@crate::vt_100_pty_output_parser
 /// [module documentation]: super
 #[derive(Clone, PartialEq)]
 pub struct OffscreenBuffer {

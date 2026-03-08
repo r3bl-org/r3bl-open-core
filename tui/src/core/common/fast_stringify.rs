@@ -133,7 +133,7 @@ pub trait FastStringify: Display {
 /// ## Unpredictable Size Problem
 ///
 /// Types implementing [`FastStringify`] have unpredictable output sizes:
-/// - ANSI styled text: `"\x1b[38;5;42mHello\x1b[0m"` ≈ 20 bytes
+/// - [`ANSI`] styled text: `"\x1b[38;5;42mHello\x1b[0m"` ≈ 20 bytes
 /// - Complex types: could be 10 bytes or 500 bytes
 /// - With [`SmallString<[u8; 64]>`]: waste stack space for small strings, pay both stack
 ///   AND heap for large strings
@@ -172,6 +172,7 @@ pub trait FastStringify: Display {
 /// This type alias allows us to easily experiment with different string-like data
 /// structures in the future without impacting the rest of the codebase.
 ///
+/// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 /// [`Display::fmt`]: Display::fmt
 /// [`SmallString<[u8; 256]>`]: smallstr::SmallString
 /// [`SmallString<[u8; 64]>`]: smallstr::SmallString

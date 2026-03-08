@@ -836,7 +836,7 @@
 //! [`LivenessState`]: crate::core::resilient_reactor_thread::LivenessState
 //! [`OnceLock`]: std::sync::OnceLock
 //! [`PTY`]: https://man7.org/linux/man-pages/man7/pty.7.html
-//! [`PTY` pair]: crate::core::pty::pty_core::pty_types::PtyPair
+//! [`PTY` pair]: crate::core::pty::pty_engine::pty_engine_types::PtyPair
 //! [`RRTEvent::Shutdown(Panic)`]: ShutdownReason::Panic
 //! [`RRTEvent::Shutdown(RestartPolicyExhausted)`]: ShutdownReason::RestartPolicyExhausted
 //! [`RRTEvent::Shutdown(reason)`]: RRTEvent::Shutdown

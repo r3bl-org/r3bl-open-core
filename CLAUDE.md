@@ -91,9 +91,9 @@ optimizations — all of which are lost with direct cargo calls.
 | `./check.fish --build` | `cargo build` (compile production) |
 | `./check.fish --clippy` | `cargo clippy --all-targets` (linting) |
 | `./check.fish --test` | `cargo test` + doctests |
-| `./check.fish --doc` | `cargo doc --no-deps` (quick docs) |
-| `./check.fish --quick-doc` | `cargo doc --no-deps` (fastest, no staging/sync) |
-| `./check.fish --full` | All of the above + Windows cross-compilation check |
+| `./check.fish --doc` | `cargo doc --workspace` (full, with dep-doc caching) |
+| `./check.fish --quick-doc` | `cargo doc --workspace --no-deps` (fastest, no staging/sync) |
+| `./check.fish --full` | All of the above + Windows cross-compilation check + lychee link rot check |
 
 Commands with **no check.fish equivalent** (run directly):
 - `cargo rustdoc-fmt` — format rustdoc comments
@@ -144,8 +144,8 @@ For testing interactive terminal applications, use (both are installed):
   area (index). Use the Task tool with `isolation: "worktree"` to run tests in a separate git
   worktree without touching the main working tree.
 - Never commit unless explicitly asked
-- When you do make commits, do not add an attribution to yourself in the commit message. Do not add
-  the following trailing lines in a commit message:
+- When you do make commits, do not add an attribution to yourself in the commit message.
+  Do not add the following trailing lines (or similar) in a commit message:
 
   ```
   🤖 Generated with [Claude Code](https://claude.com/claude-code)
@@ -169,35 +169,17 @@ The `Task:` trailer links the commit to its plan/design document for traceabilit
 
 ## Task Tracking System
 
-Two-file system: active work in `todo.md`, completed work in `done.md`.
+The `/r3bl-task` slash command is available to manage all the details of a long-running
+task. All tasks are stored in the `./task/` directory as individual Markdown files.
 
-### todo.md - Active Work
+### Folder Structure
 
-- Check at session start for current state
-- Latest changes at top
-- Mark completed tasks with `[x]`
-- Keep partial sections with mixed completion states
-- Maintain task hierarchy with 2-space indentation
+- `task/` - Active tasks (currently being worked on).
+- `task/pending/` - Future tasks (not yet started).
+- `task/done/` - Completed tasks.
+- `task/archive/` - Abandoned tasks kept for historical reference.
 
-### done.md - Archive
-
-- Latest changes at top for historical reference
-- Move complete sections only (all subtasks `[x]`)
-- Never move individual tasks - preserve context
-- Example: Move "fix md parser" only after all 200+ subtasks complete
-
-### Task Format
-
-- `[x]` completed, `[ ]` pending
-- Group under descriptive headers
-- Include GitHub issue links
-- Add technical notes for complex tasks
-
-### The "./task/" folder
-
-The custom slash command "/r3bl-task" is available to manage all the details of a long running task. The
-"todo.md" and "done.md" files are simply "pointers" to what tasks are active and which ones are
-done. For the details and to create, update, or load a task, use the "/r3bl-task" command.
+See `task/CLAUDE.md` for detailed rules on managing individual task files.
 
 ---
 

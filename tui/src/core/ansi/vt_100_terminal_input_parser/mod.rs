@@ -36,8 +36,8 @@
 //!    │
 //!    │ It calls try_parse_input_event() with byte slice
 //!    │
-//!    ▼                    ┐  ┌──────────────────┐
-//! try_parse_input_event() ◀──┤ **YOU ARE HERE** │
+//!    ▼                       ┌──────────────────┐
+//! try_parse_input_event() ◄──┤ **YOU ARE HERE** │
 //!    │                       └──────────────────┘
 //!    │ Code in this parser runs and returns Option<VT100InputEventIR>
 //!    │
@@ -177,20 +177,20 @@
 //! [`CSI`]: crate::CsiSequence
 //! [`DirectToAnsiInputDevice`]: crate::DirectToAnsiInputDevice
 //! [`ESC`]: crate::EscSequence
-//! [`generator`]: mod@crate::core::ansi::generator
+//! [`generator`]: mod@crate::generator
 //! [`input`]: mod@crate::direct_to_ansi::input
 //! [`InputDevice`]: crate::InputDevice
 //! [`InputEvent`]: crate::InputEvent
-//! [`observe_terminal`]: crate::core::ansi::vt_100_terminal_input_parser::validation_tests::observe_real_interactive_terminal_input_events::observe_terminal
+//! [`observe_terminal`]: crate::vt_100_terminal_input_parser::validation_tests::observe_real_interactive_terminal_input_events::observe_terminal
 //! [`output`]: mod@crate::direct_to_ansi::output
 //! [`OutputDevice`]: crate::OutputDevice
 //! [`RenderOpPaintImplDirectToAnsi`]: crate::RenderOpPaintImplDirectToAnsi
 //! [`RXVT`]: https://en.wikipedia.org/wiki/Rxvt
 //! [`SGR`]: crate::SgrCode
 //! [`SgrCode`]: crate::SgrCode
-//! [`TermCol`]: crate::core::coordinates::vt_100_ansi_coords::TermCol
-//! [`TermRow`]: crate::core::coordinates::vt_100_ansi_coords::TermRow
-//! [`try_parse_input_event()`]: crate::core::ansi::vt_100_terminal_input_parser::router::try_parse_input_event
+//! [`TermCol`]: crate::vt_100_ansi_coords::TermCol
+//! [`TermRow`]: crate::vt_100_ansi_coords::TermRow
+//! [`try_parse_input_event()`]: crate::vt_100_terminal_input_parser::router::try_parse_input_event
 //! [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 //! [`X10`]: https://invisible-island.net/xterm/ctlseqs/ctlseqs.html#h2-Mouse-Tracking

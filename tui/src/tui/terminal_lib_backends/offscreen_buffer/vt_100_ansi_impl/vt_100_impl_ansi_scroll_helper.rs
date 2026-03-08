@@ -1,9 +1,11 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
-//! ANSI terminal scroll helper operations for `OffscreenBuffer`.
+//! [`ANSI`] terminal scroll helper operations for `OffscreenBuffer`.
 //!
-//! This module provides helper methods for ANSI escape sequence scrolling operations,
+//! This module provides helper methods for [`ANSI`] escape sequence scrolling operations,
 //! including scroll region boundary detection and row clamping within defined scroll
 //! areas.
+//!
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 
 #[allow(clippy::wildcard_imports)]
 use super::super::*;
@@ -12,7 +14,7 @@ use crate::{LengthOps, RowIndex, core::coordinates::bounds_check::IndexOps, row}
 impl OffscreenBuffer {
     /// Gets the scroll region as an inclusive range.
     ///
-    /// Returns `RangeInclusive<RowIndex>` representing the VT-100 scroll region
+    /// Returns `RangeInclusive<RowIndex>` representing the [`VT-100`] scroll region
     /// boundaries where line operations are confined. The range includes both
     /// the top and bottom boundaries (inclusive on both ends).
     ///
@@ -42,6 +44,8 @@ impl OffscreenBuffer {
     /// *range.end()    // 5 (scroll_bottom)
     /// range.contains(&row(4))  // true (within region)
     /// ```
+    ///
+    /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
     #[must_use]
     pub fn get_scroll_range_inclusive(&self) -> std::ops::RangeInclusive<RowIndex> {
         let scroll_top = self.ansi_parser_support.scroll_region_top.map_or(
@@ -59,7 +63,7 @@ impl OffscreenBuffer {
 
     /// Clamp a row to stay within the scroll region boundaries.
     ///
-    /// This ensures row positions respect ANSI scroll region settings,
+    /// This ensures row positions respect [`ANSI`] scroll region settings,
     /// keeping the cursor within the defined scrollable area.
     ///
     /// ```text
@@ -83,6 +87,8 @@ impl OffscreenBuffer {
     /// - row=5 → returns 5    (at bottom boundary)
     /// - row=6 → clamped to 5 (above scroll_bottom, clamped down)
     /// ```
+    ///
+    /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
     #[must_use]
     pub fn clamp_row_to_scroll_region(&self, row: RowIndex) -> RowIndex {
         let scroll_region = self.get_scroll_range_inclusive();

@@ -3,7 +3,7 @@
 //! Behavioral tests for cursor movement operations via [`OffscreenBuffer`] rendering.
 //!
 //! These tests complement the byte-level tests in [`cursor_movement`] by verifying
-//! that cursor positioning produces the correct **visual result** when ANSI sequences
+//! that cursor positioning produces the correct **visual result** when [`ANSI`] sequences
 //! are rendered to a buffer.
 //!
 //! # What These Tests Verify
@@ -12,6 +12,7 @@
 //! - 0-based to 1-based coordinate conversion works correctly
 //! - Relative cursor movement calculates positions correctly
 //!
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`cursor_movement`]: super::cursor_movement
 //! [`OffscreenBuffer`]: crate::OffscreenBuffer
 
@@ -34,8 +35,11 @@ fn test_move_cursor_absolute_origin_rendered() {
 ///
 /// This tests the critical 0-based to 1-based coordinate conversion:
 /// - Our API uses 0-based indices (row 5, col 10)
-/// - ANSI CSI CUP uses 1-based indices (row 6, col 11)
+/// - [`ANSI`] [`CSI`] CUP uses 1-based indices (row 6, col 11)
 /// - The character should appear at buffer[5][10]
+///
+/// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+/// [`CSI`]: crate::CsiSequence
 #[test]
 fn test_move_cursor_absolute_5_10_rendered() {
     // Move cursor to (5,10) and paint 'X'.

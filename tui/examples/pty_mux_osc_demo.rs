@@ -1,9 +1,12 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Demo of OSC sequence handling in PTY Mux.
+//! Demo of [`OSC`] sequence handling in [`PTY`] Mux.
 //!
-//! This example demonstrates how PTY Mux can handle OSC sequences from processes
+//! This example demonstrates how [`PTY`] Mux can handle [`OSC`] sequences from processes
 //! to dynamically update the terminal title.
+//!
+//! [`OSC`]: crate::osc_codes::OscSequence
+//! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 
 use r3bl_tui::{Size,
                core::pty_mux::{PTYMux, Process},

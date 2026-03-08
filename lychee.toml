@@ -1,0 +1,31 @@
+# Link checker configuration for detecting URL rot in rustdoc comments.
+# Used by check.fish --full (scoped to git-modified files).
+#
+# Categories of lychee findings:
+#   Real 404s     → Fix the URL (find new location)
+#   file:// URIs  → Example paths in docs, excluded below
+#   Test URLs     → Fixture URLs in test code, excluded below
+#   429 Rate limit → Accepted as non-error below
+#   Redirects     → Informational only (docs.rs short URLs always 302)
+
+# Accept rate-limit responses as non-errors.
+accept = ["100..=103", "200..=299", "429"]
+
+# Timeout per request (seconds).
+timeout = 20
+
+# Max retries per URL (default 3). Lower to reduce total wall-clock time.
+max_retries = 1
+
+# Max concurrent requests (avoid rate limiting).
+max_concurrency = 8
+
+# Exclude URLs that are not meant to resolve.
+exclude = [
+    # Example file:// URIs in documentation (e.g., osc_hyperlink.rs).
+    "^file://",
+    # Test fixture URLs in test code.
+    "^https?://test\\.com",
+    # Example/placeholder URLs in test/doc code.
+    "^https?://link1\\.com",
+]

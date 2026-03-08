@@ -33,10 +33,10 @@ use std::sync::atomic::{AtomicU8, Ordering};
 ///
 /// [`AtomicU8::fetch_add`]: std::sync::atomic::AtomicU8::fetch_add
 /// [`AtomicU8`]: std::sync::atomic::AtomicU8
-/// [`SeqCst`]: Ordering::SeqCst
 /// [`fetch_add`]: std::sync::atomic::AtomicU8::fetch_add
 /// [`get`]: Self::get
 /// [`increment`]: Self::increment
+/// [`SeqCst`]: Ordering::SeqCst
 pub trait AtomicU8Ext {
     /// Atomically increments the counter and returns the **new** value.
     ///

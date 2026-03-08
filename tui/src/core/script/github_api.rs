@@ -52,7 +52,7 @@ pub async fn try_get_latest_release_tag_from_github(
 #[cfg(test)]
 mod tests_github_api {
     use super::*;
-    use crate::{TTYResult, is_output_interactive};
+    use crate::{TTYResult, is_output_interactive, retry_until_success_test_async};
     use std::time::Duration;
     use tokio::time::timeout;
 
@@ -68,24 +68,18 @@ mod tests_github_api {
         let org = "cloudflare";
         let repo = "cfssl";
 
-        // Original code w/out timeout.
-        // let tag = try_get_latest_release_tag_from_github(org, repo)
-        //     .await
-        //     .unwrap();
-
-        match timeout(TIMEOUT, try_get_latest_release_tag_from_github(org, repo)).await {
-            Ok(Ok(tag)) => {
-                assert!(!tag.is_empty());
-                println!("Latest tag: {}", fg_magenta(&tag));
+        retry_until_success_test_async!({
+            match timeout(TIMEOUT, try_get_latest_release_tag_from_github(org, repo))
+                .await
+            {
+                Ok(Ok(tag)) => {
+                    assert!(!tag.is_empty());
+                    println!("Latest tag: {}", fg_magenta(&tag));
+                    Ok(())
+                }
+                Ok(Err(err)) => Err(format!("API error: {err:?}")),
+                Err(_) => Err("Timeout: GitHub was too slow".to_string()),
             }
-            Ok(Err(err)) => {
-                // Re-throw the error and fail the test.
-                panic!("Error: {err:?}");
-            }
-            Err(_) => {
-                // Timeout does not mean that test has failed. Github is probably slow.
-                println!("Timeout");
-            }
-        }
+        });
     }
 }

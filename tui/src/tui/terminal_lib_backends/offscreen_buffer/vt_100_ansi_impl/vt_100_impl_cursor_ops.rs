@@ -1,10 +1,10 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! ANSI cursor movement operations for `OffscreenBuffer`.
+//! [`ANSI`] cursor movement operations for `OffscreenBuffer`.
 //!
 //! This module provides methods for moving the cursor position within the buffer,
 //! handling boundary conditions, scroll regions, and cursor state management
-//! as required by ANSI terminal emulation standards.
+//! as required by [`ANSI`] terminal emulation standards.
 //!
 //! This module implements the business logic for cursor operations delegated from
 //! the parser shim. The `impl_` prefix follows our naming convention for searchable
@@ -12,6 +12,8 @@
 //! for the complete three-layer architecture.
 //!
 //! **Related Files:**
+//!
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 
 #[allow(clippy::wildcard_imports)]
 use super::super::*;
@@ -20,7 +22,7 @@ use crate::{ColIndex, ColWidth, Pos, RowHeight, RowIndex, col,
 
 impl OffscreenBuffer {
     /// Move cursor up by n lines.
-    /// Respects DECSTBM scroll region margins.
+    /// Respects [`DECSTBM`] scroll region margins.
     ///
     /// Example - Moving cursor up by 2 lines with scroll region
     ///
@@ -51,6 +53,8 @@ impl OffscreenBuffer {
     ///
     /// Result: Cursor moved up 2 lines, stops at scroll region boundaries
     /// ```
+    ///
+    /// [`DECSTBM`]: https://vt100.net/docs/vt510-rm/DECSTBM.html
     pub fn cursor_up(&mut self, how_many: RowHeight) {
         let current_row = self.cursor_pos.row_index;
         let scroll_top_boundary = *self.get_scroll_range_inclusive().start();
@@ -62,7 +66,9 @@ impl OffscreenBuffer {
     }
 
     /// Move cursor down by n lines.
-    /// Respects DECSTBM scroll region margins.
+    /// Respects [`DECSTBM`] scroll region margins.
+    ///
+    /// [`DECSTBM`]: https://vt100.net/docs/vt510-rm/DECSTBM.html
     pub fn cursor_down(&mut self, how_many: RowHeight) {
         let current_row = self.cursor_pos.row_index;
         let scroll_bottom_boundary = *self.get_scroll_range_inclusive().end();

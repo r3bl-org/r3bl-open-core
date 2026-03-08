@@ -255,7 +255,7 @@ To learn how we built this crate, please take a look at the following resources.
 [crates.io]: https://crates.io/crates/r3bl-build-infra
 [README.md]: https://github.com/r3bl-org/r3bl-open-core/blob/main/README.md
 [site]: https://developerlife.com/
-[subscribing]: https://www.youtube.com/channel/CHANNEL_ID?sub_confirmation=1
+[subscribing]: https://www.youtube.com/channel/UCMcsxfCwzwDevc3NRqFgfEg?sub_confirmation=1
 [YT channel]: https://www.youtube.com/@developerlifecom
 
 License: Apache-2.0

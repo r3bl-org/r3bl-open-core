@@ -51,8 +51,8 @@ use std::ops::{Add, Range, RangeInclusive};
 ///
 /// - **Use [`Range`] (exclusive)**: Iteration, slicing, viewport windows where end is a
 ///   limit
-/// - **Use [`RangeInclusive`] (inclusive)**: VT-100 scroll regions, text selections, when
-///   both endpoints are valid positions
+/// - **Use [`RangeInclusive`] (inclusive)**: [`VT-100`] scroll regions, text selections,
+///   when both endpoints are valid positions
 ///
 /// ## Common Use Cases
 ///
@@ -216,22 +216,21 @@ use std::ops::{Add, Range, RangeInclusive};
 /// - [Module documentation] - Overview of the complete bounds checking architecture
 /// - [Interval Notation] - Reference for interval notation used throughout
 ///
-/// [Interval Notation]: mod@crate::core::coordinates::bounds_check#interval-notation
-/// [Module documentation]: mod@crate::core::coordinates::bounds_check
 /// [`ArrayBoundsCheck`]: crate::ArrayBoundsCheck
-/// [`ArrayBoundsCheck`]: crate::ArrayBoundsCheck
-/// [`CursorBoundsCheck`]: crate::CursorBoundsCheck
-/// [`CursorBoundsCheck`]: crate::CursorBoundsCheck
-/// [`IndexOps`]: crate::IndexOps
-/// [`Range<Index>`]: std::ops::Range
-/// [`RangeConvertExt`]: crate::RangeConvertExt
-/// [`RangeInclusive<Index>`]: std::ops::RangeInclusive
-/// [`RangeInclusive`]: std::ops::RangeInclusive
-/// [`Range`]: std::ops::Range
-/// [`ViewportBoundsCheck`]: crate::ViewportBoundsCheck
 /// [`check_index_is_within()`]: RangeBoundsExt::check_index_is_within
 /// [`check_range_is_valid_for_length()`]: RangeBoundsExt::check_range_is_valid_for_length
 /// [`clamp_range_to()`]: RangeBoundsExt::clamp_range_to
+/// [`CursorBoundsCheck`]: crate::CursorBoundsCheck
+/// [`IndexOps`]: crate::IndexOps
+/// [`Range<Index>`]: std::ops::Range
+/// [`Range`]: std::ops::Range
+/// [`RangeConvertExt`]: crate::RangeConvertExt
+/// [`RangeInclusive<Index>`]: std::ops::RangeInclusive
+/// [`RangeInclusive`]: std::ops::RangeInclusive
+/// [`ViewportBoundsCheck`]: crate::ViewportBoundsCheck
+/// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+/// [Interval Notation]: mod@crate::bounds_check#interval-notation
+/// [Module documentation]: mod@crate::bounds_check
 pub trait RangeBoundsExt
 where
     // Ensure index type supports addition (e.g., for range end

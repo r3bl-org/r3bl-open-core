@@ -3,10 +3,12 @@
 //! Tests for terminal-level operations.
 //!
 //! This module tests terminal control operations including:
-//! - RIS (Reset to Initial State) - ESC c
-//! - Character set selection - ESC ( B, ESC ( 0
+//! - RIS (Reset to Initial State) - [`ESC`] c
+//! - Character set selection - [`ESC`] ( B, [`ESC`] ( 0
 //! - Terminal state reset and initialization
 //! - Character set switching and translation
+//!
+//! [`ESC`]: crate::EscSequence
 
 use super::super::test_fixtures_vt_100_ansi_conformance::*;
 use crate::{CharacterSet, ColIndex, EscSequence, Pos, RowIndex, TuiStyle, ch};

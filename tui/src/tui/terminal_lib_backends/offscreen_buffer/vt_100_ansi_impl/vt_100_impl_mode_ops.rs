@@ -1,8 +1,8 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Mode setting operations for VT100/ANSI terminal emulation.
+//! Mode setting operations for VT100/[`ANSI`] terminal emulation.
 //!
-//! This module implements mode operations that correspond to ANSI mode
+//! This module implements mode operations that correspond to [`ANSI`] mode
 //! sequences handled by the [`mode_ops`] module.
 //! These include:
 //!
@@ -19,8 +19,9 @@
 //!
 //! **Related Files:**
 //!
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`mode_ops`]: crate::vt_100_pty_output_parser::operations::vt_100_shim_mode_ops
 //! [`set_auto_wrap_mode`]: crate::OffscreenBuffer::set_auto_wrap_mode
-//! [`mode_ops`]: crate::core::ansi::vt_100_pty_output_parser::operations::vt_100_shim_mode_ops
 
 #[allow(clippy::wildcard_imports)]
 use super::super::*;

@@ -1,8 +1,8 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Control character operations for VT100/ANSI terminal emulation.
+//! Control character operations for VT100/[`ANSI`] terminal emulation.
 //!
-//! This module implements control character handling that corresponds to ANSI control
+//! This module implements control character handling that corresponds to [`ANSI`] control
 //! sequences handled by the `vt_100_pty_output_parser::operations::control_ops` module.
 //! These include:
 //!
@@ -21,6 +21,7 @@
 //!
 //! **Related Files:**
 //!
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`handle_backspace`]: crate::OffscreenBuffer::handle_backspace
 //! [`handle_carriage_return`]: crate::OffscreenBuffer::handle_carriage_return
 //! [`handle_line_feed`]: crate::OffscreenBuffer::handle_line_feed

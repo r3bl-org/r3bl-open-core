@@ -18,17 +18,15 @@
 //! [`DirectToAnsiInputDevice`]: crate::direct_to_ansi::DirectToAnsiInputDevice
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 
-use crate::{SingleThreadSafeControlledChild, InputEvent, KeyState, PtyPair, PtyTestMode,
+use crate::{CONTROLLED_READY, CONTROLLED_STARTING, InputEvent, KeyState,
+            PtyTestMode, PtyTestContext, TEST_RUNNING,
             core::ansi::{generator::generate_keyboard_sequence,
                          vt_100_terminal_input_parser::ir_event_types::{VT100InputEventIR,
                                                                         VT100KeyCodeIR,
                                                                         VT100KeyModifiersIR}},
             tui::terminal_lib_backends::direct_to_ansi::DirectToAnsiInputDevice};
-use std::{io::{BufRead, BufReader, Write},
+use std::{io::{BufRead, Write},
           time::Duration};
-
-/// Ready signal sent by controlled process after initialization.
-const CONTROLLED_READY: &str = "CONTROLLED_READY";
 
 // XMARK: Process isolated test with PTY.
 
@@ -43,23 +41,20 @@ generate_pty_test! {
 ///
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 #[allow(clippy::too_many_lines)]
-fn pty_controller_entry_point(pty_pair: PtyPair, child: SingleThreadSafeControlledChild) {
-    eprintln!("🚀 PTY Controller: Starting keyboard modifiers test...");
+fn pty_controller_entry_point(context: PtyTestContext) {
+    let PtyTestContext {
+        pty_pair,
+        child,
+        mut buf_reader,
+        mut writer,
+    } = context;
 
-    let mut writer = pty_pair
-        .controller()
-        .take_writer()
-        .expect("Failed to get writer");
-    let reader = pty_pair
-        .controller()
-        .try_clone_reader()
-        .expect("Failed to get reader");
-    let mut buf_reader = BufReader::new(reader);
+    eprintln!("🚀 PTY Controller: Starting keyboard modifiers test...");
 
     eprintln!("📝 PTY Controller: Waiting for controlled process to start...");
 
-    // Wait for controlled to confirm it's running. The controlled process sends
-    // TEST_RUNNING and CONTROLLED_READY immediately on startup.
+    // Wait for controlled to confirm it's running and ready. The controlled process sends
+    // TEST_RUNNING, CONTROLLED_STARTING, and CONTROLLED_READY on startup.
     let mut test_running_seen = false;
 
     loop {
@@ -70,12 +65,15 @@ fn pty_controller_entry_point(pty_pair: PtyPair, child: SingleThreadSafeControll
                 let trimmed = line.trim();
                 eprintln!("  ← Controlled output: {trimmed}");
 
-                if trimmed.contains("TEST_RUNNING") {
+                if trimmed.contains(TEST_RUNNING) {
                     test_running_seen = true;
                     eprintln!("  ✓ Test is running in controlled");
                 }
+                if trimmed.contains(CONTROLLED_STARTING) {
+                    eprintln!("  ✓ Controlled process confirmed starting!");
+                }
                 if trimmed.contains(CONTROLLED_READY) {
-                    eprintln!("  ✓ Controlled process confirmed running!");
+                    eprintln!("  ✓ Controlled is ready (input device created)");
                     break;
                 }
             }
@@ -174,8 +172,6 @@ fn pty_controller_entry_point(pty_pair: PtyPair, child: SingleThreadSafeControll
             .expect("Failed to write sequence");
         writer.flush().expect("Failed to flush");
 
-        std::thread::sleep(Duration::from_millis(100));
-
         // Read responses until we get a keyboard event line. The controlled process
         // responds immediately after receiving input, so blocking reads work.
         let event_line = loop {
@@ -215,8 +211,9 @@ fn pty_controller_entry_point(pty_pair: PtyPair, child: SingleThreadSafeControll
 /// [`PTY`] Controlled: Read and parse keyboard events with modifiers
 ///
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
-fn pty_controlled_entry_point() -> ! {
-    println!("{CONTROLLED_READY}");
+fn pty_controlled_entry_point() {
+    // Print to stdout immediately to confirm controlled is starting.
+    println!("{CONTROLLED_STARTING}");
     std::io::stdout().flush().expect("Failed to flush");
 
     let runtime = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
@@ -226,7 +223,13 @@ fn pty_controlled_entry_point() -> ! {
         let mut input_device = DirectToAnsiInputDevice::new();
         eprintln!("🔍 PTY Controlled: Device created, reading events...");
 
-        let inactivity_timeout = Duration::from_secs(2);
+        // Signal to controller that we're ready to receive input. MUST be after
+        // DirectToAnsiInputDevice::new() so the mio poller thread is already
+        // watching stdin before the controller sends any input through the PTY.
+        println!("{CONTROLLED_READY}");
+        std::io::stdout().flush().expect("Failed to flush");
+
+        let inactivity_timeout = Duration::from_secs(5);
         let mut inactivity_deadline = tokio::time::Instant::now() + inactivity_timeout;
         let mut event_count = 0;
 
@@ -263,7 +266,7 @@ fn pty_controlled_entry_point() -> ! {
                     }
                 }
                 () = tokio::time::sleep_until(inactivity_deadline) => {
-                    eprintln!("🔍 PTY Controlled: Inactivity timeout (2 seconds with no events), exiting");
+                    eprintln!("🔍 PTY Controlled: Inactivity timeout (5 seconds with no events), exiting");
                     break;
                 }
             }
@@ -272,6 +275,4 @@ fn pty_controlled_entry_point() -> ! {
         eprintln!("🔍 PTY Controlled: Completed, exiting");
     });
 
-    eprintln!("🔍 Controlled: Completed, exiting");
-    std::process::exit(0);
 }

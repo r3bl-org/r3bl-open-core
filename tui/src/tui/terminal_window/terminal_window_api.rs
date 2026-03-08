@@ -8,20 +8,24 @@ use std::{fmt::{Debug, Display},
 #[derive(Debug)]
 pub struct TerminalWindow;
 
-/// Type alias for the boxed future returned by the [`TerminalWindow::main_event_loop`]
-/// function.
+/// Type alias for the pinned boxed future returned by the
+/// [`TerminalWindow::main_event_loop`] function.
 ///
-/// This represents a [`Pin`]ned [`Box`]ed future that resolves to a [`CommonResult`]
-/// containing the main event loop's output: global data, input device, and output device.
-pub type MainEventLoopFuture<'a, S, AS> = Pin<
+/// This represents a pinned boxed future that resolves to a [`CommonResult`] containing
+/// the main event loop's output: global data, input device, and output device.
+///
+/// See [Core Async Concepts] for more information on the async concepts used here.
+///
+/// [Core Async Concepts]: crate::main_event_loop_impl#core-async-concepts-pin-and-unpin
+pub type MainEventLoopFuture<S, AS> = Pin<
     Box<
         dyn Future<
-                Output = CommonResult<(
-                    /* global_data */ GlobalData<S, AS>,
-                    /* event stream */ InputDevice,
-                    /* stdout */ OutputDevice,
-                )>,
-            > + 'a,
+            Output = CommonResult<(
+                /* global_data */ GlobalData<S, AS>,
+                /* event stream */ InputDevice,
+                /* stdout */ OutputDevice,
+            )>,
+        >,
     >,
 >;
 
@@ -41,19 +45,18 @@ where
 impl TerminalWindow {
     /// This is the public API for the main event loop of the terminal window.
     ///
-    /// This is the public API, and not the internal API
-    /// [`super::main_event_loop_impl()`]. This separation exists to allow for
-    /// testing using dependency injection.
+    /// This is the public API, and not the internal API [`main_event_loop_impl()`]. This
+    /// separation exists to allow for testing using dependency injection.
     ///
     /// This function handles the synchronous initialization (getting terminal size,
     /// creating input/output devices) and then returns a [`MainEventLoopFuture`] that
     /// contains the actual async event loop implementation.
     ///
     /// The main event loop is responsible for handling all input events, and dispatching
-    /// them to the [`crate::App`] for processing. It is also responsible for rendering
-    /// the [`crate::App`] after each input event. It is also responsible for handling
-    /// all signals sent from the [`crate::App`] to the main event loop (eg:
-    /// `request_shutdown`, re-render, apply app signal, etc).
+    /// them to the [`App`] for processing. It is also responsible for rendering the
+    /// [`App`] after each input event. It is also responsible for handling all signals
+    /// sent from the [`App`] to the main event loop (eg: `request_shutdown`, re-render,
+    /// apply app signal, etc).
     ///
     /// # Arguments
     ///
@@ -63,8 +66,8 @@ impl TerminalWindow {
     ///
     /// # Returns
     ///
-    /// Returns a [`miette::Result`] containing a [`MainEventLoopFuture`] that resolves
-    /// to a [`CommonResult`] with:
+    /// Returns a [`miette::Result`] containing a [`MainEventLoopFuture`] that resolves to
+    /// a [`CommonResult`] with:
     /// * `global_data` - The final [`GlobalData`] state after the event loop exits.
     /// * `event_stream` - The [`InputDevice`] used for input events.
     /// * `stdout` - The [`OutputDevice`] used for output.
@@ -72,8 +75,8 @@ impl TerminalWindow {
     /// # Performance Note
     ///
     /// The state type `S` must implement [`Display`] for telemetry logging. This
-    /// implementation is called after EVERY render cycle in the main event loop, so
-    /// it must be lightweight and efficient. Avoid expensive operations like:
+    /// implementation is called after EVERY render cycle in the main event loop, so it
+    /// must be lightweight and efficient. Avoid expensive operations like:
     /// * Deep recursive traversal of data structures.
     /// * Memory size calculations.
     /// * Complex string formatting.
@@ -105,18 +108,22 @@ impl TerminalWindow {
     /// * Input/output device creation.
     /// * Event loop execution (input processing, rendering, signal handling).
     /// * Terminal cleanup and restoration.
-    pub fn main_event_loop<'a, S, AS>(
+    ///
+    /// [`App`]: crate::App
+    /// [`main_event_loop_impl()`]: crate::main_event_loop_impl()
+    pub fn main_event_loop<S, AS>(
         app: BoxedSafeApp<S, AS>,
-        exit_keys: &'a [InputEvent],
+        exit_keys: &[InputEvent],
         state: S,
-    ) -> miette::Result<MainEventLoopFuture<'a, S, AS>>
+    ) -> miette::Result<MainEventLoopFuture<S, AS>>
     where
-        S: Display + Debug + Default + Clone + Sync + Send + 'a,
+        S: Display + Debug + Default + Clone + Sync + Send + 'static,
         AS: Debug + Default + Clone + Sync + Send + 'static,
     {
         let initial_size = get_size()?;
         let input_device = InputDevice::default();
         let output_device = OutputDevice::new_stdout();
+        let exit_keys = exit_keys.to_vec();
 
         Ok(main_event_loop_impl(
             app,

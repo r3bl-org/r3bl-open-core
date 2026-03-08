@@ -4,7 +4,7 @@
 // every function/type would reduce readability.
 #![allow(clippy::doc_markdown)]
 
-//! Test utilities for building [`VT-100`] ANSI sequences.
+//! Test utilities for building [`VT-100`] [`ANSI`] sequences.
 //!
 //! This module provides convenience wrappers around the bidirectional sequence types
 //! ([`SgrColorSequence`], [`DsrSequence`], [`CsiSequence`], etc.) that enable
@@ -55,10 +55,11 @@
 //! );
 //! ```
 //!
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`CsiSequence`]: crate::CsiSequence
 //! [`Display`]: std::fmt::Display
 //! [`DsrSequence`]: crate::DsrSequence
-//! [`FastStringify`]: crate::core::common::fast_stringify::FastStringify
+//! [`FastStringify`]: crate::fast_stringify::FastStringify
 //! [`SgrColorSequence`]: crate::SgrColorSequence
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 

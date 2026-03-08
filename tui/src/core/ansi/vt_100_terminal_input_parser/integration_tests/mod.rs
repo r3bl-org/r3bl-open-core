@@ -1,6 +1,6 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! System-level [`PTY`] tests - end-to-end validation in real pseudo-terminals.
+//! System-level [`PTY`] tests - end-to-end validation in real pseudoterminals.
 //!
 //! These tests validate the complete input handling stack in a real [`PTY`] environment:
 //! - `DirectToAnsiInputDevice` async I/O and buffer management
@@ -31,7 +31,7 @@
 //!
 //! [`ESC`]: crate::EscSequence
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
-//! [`validation_tests`]: mod@crate::core::ansi::vt_100_terminal_input_parser::validation_tests
+//! [`validation_tests`]: mod@crate::vt_100_terminal_input_parser::validation_tests
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 //! [parent module documentation]: mod@super#testing-strategy
 

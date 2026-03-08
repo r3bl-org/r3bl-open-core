@@ -41,7 +41,7 @@
 
 This document outlines the design for `spawn_pty_capture_output_and_provide_input`, a bidirectional
 PTY communication function that allows both reading from and writing to a child process running in a
-pseudo-terminal. This function will be implemented in
+pseudoterminal. This function will be implemented in
 `tui/src/core/pty/spawn_pty_read_write_channels.rs`.
 
 **Design Philosophy**: The API treats input and output channels as dumb pipes of events, making no

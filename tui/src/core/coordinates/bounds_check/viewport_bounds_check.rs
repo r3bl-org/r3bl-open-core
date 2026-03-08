@@ -161,8 +161,8 @@ use crate::RangeBoundsResult;
 /// [`CursorBoundsCheck`]: crate::CursorBoundsCheck
 /// [`IndexOps`]: crate::IndexOps
 /// [`RangeBoundsExt`]: crate::RangeBoundsExt
-/// [Interval Notation]: mod@crate::core::coordinates::bounds_check#interval-notation
-/// [Module documentation]: mod@crate::core::coordinates::bounds_check
+/// [Interval Notation]: mod@crate::bounds_check#interval-notation
+/// [Module documentation]: mod@crate::bounds_check
 pub trait ViewportBoundsCheck: IndexOps {
     /// Checks if this index is within a viewport window.
     ///

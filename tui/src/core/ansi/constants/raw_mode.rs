@@ -31,9 +31,6 @@
 //! - [`terminal_raw_mode`] - Core enable/disable functions and RAII guard
 //! - [`RawMode`] - High-level render pipeline integration
 //!
-//! [`terminal_raw_mode`]: crate::core::ansi::terminal_raw_mode
-//! [`RawMode`]: crate::tui::terminal_lib_backends::raw_mode::RawMode
-//!
 //! # Raw Mode Configuration
 //!
 //! Raw mode disables terminal line buffering and processing, allowing applications
@@ -79,18 +76,23 @@
 //!
 //! ## VMIN/VTIME Interaction Matrix
 //!
-//! | VMIN   | VTIME   | Behavior                                            |
-//! |:-------|:--------|:----------------------------------------------------|
-//! | 0      | 0       | Non-blocking: return immediately with available     |
-//! | 0      | >0      | Timed read: return after timeout or data            |
-//! | >0     | 0       | Blocking: return after VMIN bytes (no timeout)      |
-//! | >0     | >0      | Interbyte timeout: return after VMIN or timeout     |
+//! | VMIN     | VTIME     | Behavior                                              |
+//! | :------- | :-------- | :---------------------------------------------------- |
+//! | 0        | 0         | Non-blocking: return immediately with available       |
+//! | 0        | >0        | Timed read: return after timeout or data              |
+//! | >0       | 0         | Blocking: return after VMIN bytes (no timeout)        |
+//! | >0       | >0        | Interbyte timeout: return after VMIN or timeout       |
 //!
 //! Raw mode uses **VMIN=1, VTIME=0** for immediate, blocking input.
+//!
+//! [`RawMode`]: crate::raw_mode::RawMode
+//! [`terminal_raw_mode`]: crate::terminal_raw_mode
 
 // ==================== Special Codes for Raw Mode ====================
 
-/// VMIN value for raw mode: return after reading 1 byte.
+/// VMIN Raw Mode (termios): return after reading 1 byte.
+///
+/// Value: `1` dec, `01` hex.
 ///
 /// In raw mode, `VMIN=1` means `read()` will block until at least one byte
 /// is available, then return immediately with that byte. This enables
@@ -102,7 +104,9 @@
 /// - Interactive TUI applications
 pub const VMIN_RAW_MODE: u8 = 1;
 
-/// VTIME value for raw mode: no timeout (blocking read).
+/// VTIME Raw Mode (termios): no timeout (blocking read).
+///
+/// Value: `0` dec, `00` hex.
 ///
 /// In raw mode, `VTIME=0` means `read()` will block indefinitely until
 /// `VMIN` bytes are available (when VMIN > 0). Combined with `VMIN=1`,

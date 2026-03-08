@@ -47,7 +47,7 @@ use std::ops::Add;
 /// - [`Length`] - Generic 1-based size (dimension-agnostic)
 /// - [`RowHeight`] - Vertical size in terminal grid (number of rows)
 /// - [`ColWidth`] - Horizontal size in terminal grid (number of columns)
-/// - [`ByteLength`] - Byte count in UTF-8 strings
+/// - [`ByteLength`] - Byte count in [`UTF-8`] strings
 /// - [`SegLength`] - Grapheme segment count
 ///
 /// ## Cursor Positioning Semantics
@@ -133,23 +133,24 @@ use std::ops::Add;
 /// - [`LengthOps`] - Length types that implement this trait
 /// - [Module documentation] - Overview of the complete bounds checking architecture
 ///
-/// [Interval Notation]: mod@crate::core::coordinates::bounds_check#interval-notation
-/// [Module documentation]: mod@crate::core::coordinates::bounds_check
 /// [`ArrayBoundsCheck`]: crate::ArrayBoundsCheck
 /// [`ByteLength`]: crate::ByteLength
+/// [`check_cursor_position_bounds()`]: CursorBoundsCheck::check_cursor_position_bounds
+/// [`clamp_cursor_position()`]: CursorBoundsCheck::clamp_cursor_position
 /// [`ColWidth`]: crate::ColWidth
+/// [`eol_cursor_position()`]: CursorBoundsCheck::eol_cursor_position
 /// [`IndexOps`]: crate::IndexOps
-/// [`LengthOps`]: crate::LengthOps
+/// [`is_valid_cursor_position()`]: CursorBoundsCheck::is_valid_cursor_position
 /// [`Length`]: crate::Length
+/// [`LengthOps`]: crate::LengthOps
 /// [`RangeBoundsExt`]: crate::RangeBoundsExt
 /// [`RowHeight`]: crate::RowHeight
 /// [`SegLength`]: crate::SegLength
+/// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
 /// [`ViewportBoundsCheck`]: crate::ViewportBoundsCheck
-/// [`check_cursor_position_bounds()`]: CursorBoundsCheck::check_cursor_position_bounds
-/// [`clamp_cursor_position()`]: CursorBoundsCheck::clamp_cursor_position
-/// [`eol_cursor_position()`]: CursorBoundsCheck::eol_cursor_position
-/// [`is_valid_cursor_position()`]: CursorBoundsCheck::is_valid_cursor_position
 /// [blanket implementation]: #implementors
+/// [Interval Notation]: mod@crate::bounds_check#interval-notation
+/// [Module documentation]: mod@crate::bounds_check
 pub trait CursorBoundsCheck: LengthOps
 where
     Self::IndexType: Add<Output = Self::IndexType>,

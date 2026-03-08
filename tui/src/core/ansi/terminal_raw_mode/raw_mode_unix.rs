@@ -38,14 +38,14 @@
 //! - [Parent module documentation] for conceptual overview
 //! - [`enable_raw_mode()`] and [`disable_raw_mode()`] for the public API
 //!
-//! [Parent module documentation]: mod@crate::core::ansi::terminal_raw_mode
-//! [`Termios::make_raw()`]: rustix::termios::Termios::make_raw
-//! [`Termios`]: rustix::termios::Termios
 //! [`disable_raw_mode()`]: crate::disable_raw_mode
 //! [`enable_raw_mode()`]: crate::enable_raw_mode
 //! [`rustix`]: https://docs.rs/rustix
+//! [`Termios::make_raw()`]: rustix::termios::Termios::make_raw
 //! [`termios`]: rustix::termios
-//! [parent module's raw vs cooked section]: mod@crate::core::ansi::terminal_raw_mode#raw-mode-vs-cooked-mode
+//! [`Termios`]: rustix::termios::Termios
+//! [Parent module documentation]: mod@crate::terminal_raw_mode
+//! [parent module's raw vs cooked section]: mod@crate::terminal_raw_mode#raw-mode-vs-cooked-mode
 //! [termios]: https://man7.org/linux/man-pages/man3/termios.3.html
 
 use miette::miette;
@@ -119,7 +119,7 @@ fn get_terminal_fd() -> io::Result<TerminalFd> {
 /// - Terminal attributes cannot be retrieved or set
 /// - Mutex lock is poisoned
 ///
-/// [module documentation]: mod@crate::core::ansi::terminal_raw_mode
+/// [module documentation]: mod@crate::terminal_raw_mode
 pub fn enable_raw_mode() -> miette::Result<()> {
     let fd = get_terminal_fd()
         .map_err(|e| miette::miette!("failed to get terminal file descriptor: {e}"))?;

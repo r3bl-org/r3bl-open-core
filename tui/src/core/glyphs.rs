@@ -1,23 +1,40 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 //! More info:
-//! - [List of all symbols](https://symbl.cc/en/unicode-table/#miscellaneous-technical)
-//! - [Box drawing characters](https://symbl.cc/en/unicode/blocks/box-drawing/)
-//! - [Block element characters](https://symbl.cc/en/unicode/blocks/block-elements/)
-//! - [Geometric shape characters](https://symbl.cc/en/unicode/blocks/geometric-shapes/)
-//! - [Arrow](https://symbl.cc/en/unicode/blocks/arrows/)
-//! - [Arrow symbols](https://symbl.cc/en/collections/arrow-symbols/)
-//! - [Brackets](https://symbl.cc/en/collections/brackets/)
-//! - [Supplemental arrow characters-A](https://symbl.cc/en/unicode/blocks/supplemental-arrows-a/)
-//! - [Supplemental arrow characters-B](https://symbl.cc/en/unicode/blocks/supplemental-arrows-b/)
-//! - [Dingbat characters](https://symbl.cc/en/unicode/blocks/dingbats/)
-//! - [Braille pattern characters](https://symbl.cc/en/unicode/blocks/braille-patterns/)
-//! - [Geometric shapes](https://symbl.cc/en/unicode/blocks/geometric-shapes/)
-//! - [Miscellaneous symbol and arrow characters](https://symbl.cc/en/unicode/blocks/miscellaneous-symbols-and-arrows/)
-//! - [Tifinagh characters](https://symbl.cc/en/unicode/blocks/tifinagh/)
-//! - [Ideographic characters](https://symbl.cc/en/unicode/blocks/ideographic-description-characters/)
-//! - [Emotions kaomoji](https://symbl.cc/en/kaomoji/)
-//! - [ASCII Art](https://symbl.cc/en/text-art/)
+//! - [List of all symbols]
+//! - [Box drawing characters]
+//! - [Block element characters]
+//! - [Geometric shape characters]
+//! - [Arrow]
+//! - [Arrow symbols]
+//! - [Brackets]
+//! - [Supplemental arrow characters-A]
+//! - [Supplemental arrow characters-B]
+//! - [Dingbat characters]
+//! - [Braille pattern characters]
+//! - [Geometric shapes]
+//! - [Miscellaneous symbol and arrow characters]
+//! - [Tifinagh characters]
+//! - [Ideographic characters]
+//! - [Emotions kaomoji]
+//! - [ASCII Art]
+//!
+//! [Arrow symbols]: https://symbl.cc/en/collections/arrow-symbols/
+//! [Arrow]: https://symbl.cc/en/unicode/blocks/arrows/
+//! [ASCII Art]: https://symbl.cc/en/text-art/
+//! [Block element characters]: https://symbl.cc/en/unicode/blocks/block-elements/
+//! [Box drawing characters]: https://symbl.cc/en/unicode/blocks/box-drawing/
+//! [Brackets]: https://symbl.cc/en/collections/brackets/
+//! [Braille pattern characters]: https://symbl.cc/en/unicode/blocks/braille-patterns/
+//! [Dingbat characters]: https://symbl.cc/en/unicode/blocks/dingbats/
+//! [Emotions kaomoji]: https://symbl.cc/en/kaomoji/
+//! [Geometric shape characters]: https://symbl.cc/en/unicode/blocks/geometric-shapes/
+//! [Ideographic characters]: https://symbl.cc/en/unicode/blocks/ideographic-description-characters/
+//! [List of all symbols]: https://symbl.cc/en/unicode-table/#miscellaneous-technical
+//! [Miscellaneous symbol and arrow characters]: https://symbl.cc/en/unicode/blocks/miscellaneous-symbols-and-arrows/
+//! [Supplemental arrow characters-A]: https://symbl.cc/en/unicode/blocks/supplemental-arrows-a/
+//! [Supplemental arrow characters-B]: https://symbl.cc/en/unicode/blocks/supplemental-arrows-b/
+//! [Tifinagh characters]: https://symbl.cc/en/unicode/blocks/tifinagh/
 
 pub const HELLO_GLYPH: &str = "ヾ(◕‿◕)ノ";
 pub const HUG_GLYPH: &str = "⊂(◕‿◕)つ";

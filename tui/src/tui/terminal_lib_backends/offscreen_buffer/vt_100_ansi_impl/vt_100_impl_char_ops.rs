@@ -1,8 +1,8 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Character operations for VT100/ANSI terminal emulation.
+//! Character operations for VT100/[`ANSI`] terminal emulation.
 //!
-//! This module implements character-level operations that correspond to ANSI escape
+//! This module implements character-level operations that correspond to [`ANSI`] escape
 //! sequences handled by the `vt_100_pty_output_parser/operations/vt_100_shim_char_ops`
 //! shim. These include:
 //!
@@ -22,6 +22,7 @@
 //!
 //! **Related Files:**
 //!
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`delete_chars_at_cursor`]: crate::OffscreenBuffer::delete_chars_at_cursor
 //! [`erase_chars_at_cursor`]: crate::OffscreenBuffer::erase_chars_at_cursor
 //! [`insert_chars_at_cursor`]: crate::OffscreenBuffer::insert_chars_at_cursor
@@ -280,7 +281,7 @@ impl OffscreenBuffer {
     /// line wrapping.
     ///
     /// This method consolidates all character printing logic including:
-    /// - DEC graphics character translation
+    /// - [`DEC`] graphics character translation
     /// - Bounds checking
     /// - Character writing to buffer
     /// - DECAWM (Auto Wrap Mode) line wrap handling
@@ -304,6 +305,8 @@ impl OffscreenBuffer {
     /// # Errors
     ///
     /// Returns an error if the character cannot be processed or if the operation fails.
+    ///
+    /// [`DEC`]: https://en.wikipedia.org/wiki/Digital_Equipment_Corporation
     pub fn print_char(&mut self, ch: char) -> miette::Result<()> {
         // Apply character set translation if in graphics mode.
         let display_char = match self.ansi_parser_support.character_set {

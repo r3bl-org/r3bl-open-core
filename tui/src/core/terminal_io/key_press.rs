@@ -132,7 +132,7 @@ macro_rules! key_press {
 /// - **Type safety**: Each layer handles specific concerns
 /// - **Extensibility**: Easy to add new backends or event types
 ///
-/// # Kitty keyboard protocol support limitations
+/// # [`Kitty`] keyboard protocol support limitations
 ///
 /// 1. [`KeyPress`] explicitly matches on [`KeyEventKind::Press`] as of `crossterm
 ///    0.25.0`. It filters out [`Release`] and [`Repeat`] events on all platforms. This is
@@ -149,12 +149,13 @@ macro_rules! key_press {
 ///    [`KeyPress`]. The [`crossterm::event::KeyEventState`] isn't even considered in the
 ///    conversion code.
 ///
-/// [Crossterm Event]: crossterm::event::Event
 /// [`InputEvent`]: crate::InputEvent
+/// [`Kitty`]: https://sw.kovidgoyal.net/kitty/
 /// [`MouseInput`]: crate::MouseInput
 /// [`Press`]: KeyEventKind::Press
 /// [`Release`]: KeyEventKind::Release
 /// [`Repeat`]: KeyEventKind::Repeat
+/// [Crossterm Event]: crossterm::event::Event
 /// [kitty keyboard protocol]: https://sw.kovidgoyal.net/kitty/keyboard-protocol/
 #[derive(Clone, Debug, Eq, PartialEq, Copy)]
 pub enum KeyPress {
@@ -221,8 +222,6 @@ pub enum Key {
     /// execute!(stdout, PopKeyboardEnhancementFlags);
     /// ```
     ///
-    /// [WezTerm terminal]:
-    ///     https://wezfurlong.org/wezterm/config/lua/config/enable_kitty_keyboard.html
     /// [`KeyboardEnhancementFlags::DISAMBIGUATE_ESCAPE_CODES`]:
     ///     https://docs.rs/crossterm/0.25.0/crossterm/event/struct.KeyboardEnhancementFlags.html
     /// [`KeyboardEnhancementFlags::REPORT_ALL_KEYS_AS_ESCAPE_CODES`]:
@@ -235,6 +234,7 @@ pub enum Key {
     /// [kitty terminal]: https://sw.kovidgoyal.net/kitty/
     /// [neovim text editor]: https://github.com/neovim/neovim/pull/18181
     /// [notcurses library]: https://github.com/dankamongmen/notcurses/issues/2131
+    /// [WezTerm terminal]: https://wezterm.org/config/lua/config/enable_kitty_keyboard.html
     KittyKeyboardProtocol(Enhanced),
 }
 

@@ -1,16 +1,16 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Rust uses `UTF-8` to represent text in [String]. `UTF-8` is a variable width encoding,
-//! so each character can take up a different number of bytes, between 1 and 4, and 1 byte
-//! is 8 bits; this is why we use [Vec] of [u8] to represent a [String].
+//! Rust uses [`UTF-8`] to represent text in [String]. [`UTF-8`] is a variable width
+//! encoding, so each character can take up a different number of bytes, between 1 and 4,
+//! and 1 byte is 8 bits; this is why we use [Vec] of [u8] to represent a [String].
 //!
-//! For example, the character `H` takes up 1 byte. `UTF-8` is also backward compatible
-//! with `ASCII`, meaning that the first 128 characters (the ASCII characters) are
-//! represented using the same single byte as in ASCII. So the character `H` is
-//! represented by the same byte value in `UTF-8` as it is in `ASCII`. This is why `UTF-8`
-//! is so popular, as it allows for the representation of all the characters in the
-//! Unicode standard, while still being able to represent `ASCII` characters in the same
-//! way.
+//! For example, the character `H` takes up 1 byte. [`UTF-8`] is also backward compatible
+//! with [`ASCII`], meaning that the first 128 characters (the [`ASCII`] characters) are
+//! represented using the same single byte as in [`ASCII`]. So the character `H` is
+//! represented by the same byte value in [`UTF-8`] as it is in [`ASCII`]. This is why
+//! [`UTF-8`] is so popular, as it allows for the representation of all the characters in
+//! the Unicode standard, while still being able to represent [`ASCII`] characters in the
+//! same way.
 //!
 //! A grapheme cluster is a user-perceived character. Grapheme clusters can take up many
 //! more bytes, eg 4 bytes or 2 or 3, etc. Here are some examples:
@@ -21,13 +21,13 @@
 //!
 //! Videos:
 //!
-//! - [Live coding video on Rust String](https://youtu.be/7I11degAElQ?si=xPDIhITDro7Pa_gq)
-//! - [UTF-8 encoding video](https://youtu.be/wIVmDPc16wA?si=D9sTt_G7_mBJFLmc)
+//! - [Live coding video on Rust String]
+//! - [UTF-8 encoding video]
 //!
 //! Docs:
 //!
-//! - [Grapheme clusters](https://medium.com/flutter-community/working-with-unicode-and-grapheme-clusters-in-dart-b054faab5705)
-//! - [UTF-8 String](https://doc.rust-lang.org/book/ch08-02-strings.html)
+//! - [Grapheme clusters]
+//! - [UTF-8 String]
 //!
 //! There is a discrepancy between how a [String] that contains grapheme clusters is
 //! represented in memory and how it is rendered in a terminal. When writing an TUI editor
@@ -44,15 +44,15 @@
 //! To complicate things further, the size that a grapheme cluster takes up is not the
 //! same as its byte size in memory. Let's unpack that.
 //!
-//! | Character | Byte size | Grapheme cluster size | Compound |
-//! |:----------|:----------|:----------------------|:---------|
-//! | `H`       | 1         | 1                     | No       |
-//! | `😃`      | 4         | 2                     | No       |
-//! | `📦`      | 4         | 2                     | No       |
-//! | `🙏🏽`      | 4         | 2                     | Yes      |
+//! | Character   | Byte size   | Grapheme cluster size   | Compound   |
+//! | :---------- | :---------- | :---------------------- | :--------- |
+//! | `H`         | 1           | 1                       | No         |
+//! | `😃`        | 4           | 2                       | No         |
+//! | `📦`        | 4           | 2                       | No         |
+//! | `🙏🏽`        | 4           | 2                       | Yes        |
 //!
-//! > **Note**: For input parsing of UTF-8 byte sequences from terminal input, see
-//! > [`mod@crate::core::ansi::vt_100_terminal_input_parser::utf8`]. That module
+//! > **Note**: For input parsing of [`UTF-8`] byte sequences from terminal input, see
+//! > [`mod@crate::vt_100_terminal_input_parser::utf8`]. That module
 //! > handles byte-level decoding (converting raw bytes to characters), while this
 //! > module handles display width calculation (determining how many terminal columns
 //! > a character occupies for rendering).
@@ -64,7 +64,7 @@
 //! 🏾‍ + 👨 + 🤝‍ + 👨 +  🏿 = 👨🏾‍🤝‍👨🏿
 //! ```
 //!
-//! Let's say you're browsing this source file in `VSCode`. The `UTF-8` string this Rust
+//! Let's say you're browsing this source file in `VSCode`. The [`UTF-8`] string this Rust
 //! source file is rendered by `VSCode` correctly. But this is not how it looks in a
 //! terminal. And the size of the string in memory isn't clear either from looking at the
 //! string in `VSCode`. It isn't apparent that you can't just index into the string at
@@ -147,18 +147,16 @@
 //!
 //! - Some parsing is necessary to get "logical" index into the string that is grapheme
 //!   cluster based (not byte boundary based).
-//!   - This is where [`unicode-segmentation`](https://crates.io/crates/unicode-segmentation)
-//!     crate comes in and allows us to split our string into a vector of grapheme
-//!     clusters.
+//!   - This is where [`unicode-segmentation`] crate comes in and allows us to split our
+//!     string into a vector of grapheme clusters.
 //! - Some translation is necessary to get from the "logical" index to the physical index
 //!   and back again. This is where we can apply one of the following approaches:
-//!   - We can use the [`unicode-width`](https://crates.io/crates/unicode-width) crate to
-//!     calculate the width of the grapheme cluster. This works on Linux, but doesn't work
-//!     very well on macOS & I haven't tested it on Windows. This crate will (on Linux)
-//!     reliably tell us what the displayed width of a grapheme cluster is.
-//!   - We can take the approach from the [`reedline`](https://crates.io/crates/reedline) crate's
-//!     [`repaint_buffer()`](https://github.com/nazmulidris/reedline/blob/79e7d8da92cd5ae4f8e459f901189d7419c3adfd/src/painting/painter.rs#L129)
-//!     where we split the string based on the "logical" index into the vector of grapheme
+//!   - We can use the [`unicode-width`] crate to calculate the width of the grapheme
+//!     cluster. This works on Linux, but doesn't work very well on macOS & I haven't
+//!     tested it on Windows. This crate will (on Linux) reliably tell us what the
+//!     displayed width of a grapheme cluster is.
+//!   - We can take the approach from the [`reedline`] crate's [`repaint_buffer()`] where
+//!     we split the string based on the "logical" index into the vector of grapheme
 //!     clusters. And then we print the 1st part of the string, then call `SavePosition`
 //!     to save the cursor at this point, then print the 2nd part of the string, then call
 //!     `RestorePosition` to restore the cursor to where it "should" be.
@@ -181,9 +179,10 @@
 //!
 //! ## 1. `ByteIndex` - Memory Position
 //!
-//! [`ByteIndex`](crate::ByteIndex) represents the raw byte offset in a UTF-8 encoded
+//! [`ByteIndex`] represents the raw byte offset in a [`UTF-8`] encoded
 //! string. This is crucial for:
-//! - String slicing operations (Rust strings must be sliced at valid UTF-8 boundaries)
+//! - String slicing operations (Rust strings must be sliced at valid [`UTF-8`]
+//!   boundaries)
 //! - Memory access and manipulation
 //! - Efficient storage and retrieval
 //!
@@ -202,7 +201,7 @@
 //!
 //! ## 3. `ColIndex` - Display Position
 //!
-//! [`ColIndex`](crate::ColIndex) represents the column position on the terminal screen.
+//! [`ColIndex`] represents the column position on the terminal screen.
 //! This is necessary because:
 //! - Some characters are wider than others (emojis typically take 2 columns)
 //! - Terminal rendering requires knowing exact column positions
@@ -238,6 +237,19 @@
 //! These conversions can return `None` when indices are out of bounds or fall between
 //! characters. For example, a `ByteIndex` in the middle of a multi-byte character would
 //! return `None`.
+//!
+//! [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
+//! [`ByteIndex`]: crate::ByteIndex
+//! [`ColIndex`]: crate::ColIndex
+//! [`reedline`]: https://crates.io/crates/reedline
+//! [`repaint_buffer()`]: https://github.com/nushell/reedline/blob/79e7d8da92cd5ae4f8e459f901189d7419c3adfd/src/painting/painter.rs#L129
+//! [`unicode-segmentation`]: https://crates.io/crates/unicode-segmentation
+//! [`unicode-width`]: https://crates.io/crates/unicode-width
+//! [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
+//! [Grapheme clusters]: https://www.unicode.org/reports/tr29/#Grapheme_Cluster_Boundaries
+//! [Live coding video on Rust String]: https://youtu.be/7I11degAElQ?si=xPDIhITDro7Pa_gq
+//! [UTF-8 encoding video]: https://youtu.be/wIVmDPc16wA?si=D9sTt_G7_mBJFLmc
+//! [UTF-8 String]: https://doc.rust-lang.org/book/ch08-02-strings.html
 
 // Attach sources.
 pub mod gc_string;

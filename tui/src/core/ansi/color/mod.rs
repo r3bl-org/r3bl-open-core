@@ -1,6 +1,6 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Core ANSI color types and conversions.
+//! Core [`ANSI`] color types and conversions.
 //!
 //! This module provides:
 //! - **Primitive types**: [`RgbValue`] (24-bit truecolor) and [`AnsiValue`] (256-color
@@ -12,6 +12,7 @@
 //! Both types implement the [`TransformColor`] trait to enable conversion between
 //! different color representations.
 //!
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`TransformColor`]: crate::TransformColor
 //! [`TuiColor`]: crate::TuiColor
 

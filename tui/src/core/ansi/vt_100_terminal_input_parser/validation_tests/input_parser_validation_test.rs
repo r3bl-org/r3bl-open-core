@@ -6,7 +6,7 @@
 //! observation to validate parser correctness. All sequences were confirmed with actual
 //! terminal emulators using `showkey -a` (Linux) or `sed -n l` (POSIX compliant OSes).
 //!
-//! ## Test Organization
+//! # Test Organization
 //!
 //! Tests are organized by event type and complexity:
 //! - **Mouse Events**: Clicks, drags, scrolling with various modifiers
@@ -14,19 +14,19 @@
 //! - **Terminal Events**: Resize, focus, paste markers
 //! - **Edge Cases**: Incomplete sequences, invalid data, boundary conditions
 //!
-//! ## Key [`VT-100`] Behaviors Validated
+//! # Key [`VT-100`] Behaviors Validated
 //!
 //! 1. **Coordinate System**: [`VT-100`] uses 1-based coordinates (top-left = 1,1)
 //! 2. **Modifier Encoding**: [`CSI`] parameter = 1 + bitfield (Shift=1, Alt=2, Ctrl=4)
 //! 3. **Ctrl Modifier**: Parameter 5 = Ctrl (not 4), confirmed with `ESC [ 1 ; 5 A`
 //! 4. **Scroll Events**: Button 66+ indicates scroll with possible modifiers
 //!
-//! ## Test Design Philosophy
+//! # Test Design Philosophy
 //!
 //! These tests use **literal byte sequences** rather than generated sequences. This
 //! design is intentional and critical for correctness:
 //!
-//! ### Why Literals?
+//! ## Why Literals?
 //!
 //! 1. **Ground Truth**: Literals represent empirical [`VT-100`] behavior observed from
 //!    real terminals, providing an independent reference that parsers must match.
@@ -37,7 +37,7 @@
 //! 3. **Spec Compliance**: Literal sequences serve as the authoritative reference from
 //!    the [`VT-100` spec] and terminal observation.
 //!
-//! ### Test Strategy
+//! ## Test Strategy
 //!
 //! | Test Type                        | Purpose                                     | Approach                                                |
 //! | :------------------------------- | :------------------------------------------ | :------------------------------------------------------ |
@@ -48,7 +48,7 @@
 //! The combination of all three test types ensures both parser and generator are correct
 //! and compatible with each other.
 //!
-//! ## ⚠️ WARNING: DO NOT Refactor These Tests to Use Generators!
+//! # ⚠️ WARNING: DO NOT Refactor These Tests to Use Generators!
 //!
 //! If you're considering replacing hardcoded sequences in this file with generator
 //! function calls, **STOP**! This would break the validation chain:
@@ -62,16 +62,16 @@
 //!    Generator → Bytes validates against reality
 //! ```
 //!
-//! **These hardcoded sequences ARE the ground truth.** The generators in
-//! [`generator`] are validated by producing sequences that match these literals.
+//! **These hardcoded sequences ARE the ground truth.** The generators in [`generator`]
+//! are validated by producing sequences that match these literals.
 //!
 //! If you want to test generator correctness, see the round-trip tests in
 //! [`unit_tests::generator_round_trip_tests`] instead.
 //!
-//!
-//! ### Sample Test Run Output
+//! ## Sample Test Run Output
+//! ```text
 //! ╔═══════════════════════════════════════════════════════╗
-//! ║   [`VT-100`] Terminal Input Observation Test              ║
+//! ║   [`VT-100`] Terminal Input Observation Test          ║
 //! ║   Phase 1: Establish Ground Truth                     ║
 //! ╚═══════════════════════════════════════════════════════╝
 //!
@@ -105,7 +105,7 @@
 //! 🔤 Escaped string: "\u{1b}[<0;61;20M"
 //!
 //! ╭─────────────────────────────────────────╮
-//! │ TEST 3: Keyboard - Arrow Up              │
+//! │ TEST 3: Keyboard - Arrow Up             │
 //! ╰─────────────────────────────────────────╯
 //! ⬆️  Press the UP ARROW key
 //! Waiting for input...
@@ -115,7 +115,7 @@
 //! ⌨️  Parsed: Up Arrow
 //!
 //! ╭─────────────────────────────────────────╮
-//! │ TEST 4: Keyboard - Ctrl+Up               │
+//! │ TEST 4: Keyboard - Ctrl+Up              │
 //! ╰─────────────────────────────────────────╯
 //! ⌨️  Press CTRL+UP ARROW together
 //! Waiting for input...
@@ -125,7 +125,7 @@
 //! ⌨️  Parsed: Ctrl+Up
 //!
 //! ╭─────────────────────────────────────────╮
-//! │ TEST 5: Mouse - Scroll Wheel Up          │
+//! │ TEST 5: Mouse - Scroll Wheel Up         │
 //! ╰─────────────────────────────────────────╯
 //! 🖱️  Scroll mouse wheel UP
 //! Waiting for input...
@@ -133,13 +133,15 @@
 //! 📦 Raw bytes (hex): [1b, 5b, 3c, 36, 35, 3b, 35, 39, 3b, 32, 30, 4d]
 //! 🔤 Escaped string: "\u{1b}[<65;59;20M"
 //! ⌨️  Parsed: Unknown (hex: 1b 5b 3c 36 35 3b 35 39 3b 32 30 4d)
+//! ```
 //!
 //! [`Alacritty`]: https://alacritty.org/
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`CSI`]: crate::CsiSequence
-//! [`generator`]: crate::core::ansi::generator
+//! [`generator`]: crate::generator
 //! [`SGR`]: crate::SgrCode
-//! [`unit_tests::generator_round_trip_tests`]: mod@crate::core::ansi::vt_100_terminal_input_parser::unit_tests::generator_round_trip_tests
+//! [`unit_tests::generator_round_trip_tests`]:
+//!     mod@crate::vt_100_terminal_input_parser::unit_tests::generator_round_trip_tests
 //! [`VT-100` spec]: https://vt100.net/docs/vt100-ug/chapter3.html
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 

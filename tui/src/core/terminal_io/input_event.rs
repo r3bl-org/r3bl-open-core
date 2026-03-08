@@ -108,8 +108,8 @@ pub enum InputEvent {
     /// thread. The application should exit gracefully or try re-subscribing via
     /// [`subscribe()`].
     ///
-    /// [`RestartPolicy`]: crate::core::resilient_reactor_thread::RestartPolicy
-    /// [`subscribe()`]: crate::core::resilient_reactor_thread::RRT::subscribe
+    /// [`RestartPolicy`]: crate::RestartPolicy
+    /// [`subscribe()`]: crate::RRT::subscribe
     Shutdown(ShutdownReason),
 }
 

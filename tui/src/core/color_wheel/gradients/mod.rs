@@ -3,11 +3,13 @@
 //! Gradient generation functionality for color wheels.
 //!
 //! This module provides gradient generation for different color systems:
-//! - `ansi_256` - ANSI 256 color gradients with predefined color palettes
+//! - `ansi_256` - [`ANSI`] 256 color gradients with predefined color palettes
 //! - `truecolor` - True color (RGB) gradients with customizable stops
 //!
 //! Previously these were in separate files in the `color_wheel_core` module,
 //! but have been reorganized into this dedicated gradients submodule.
+//!
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 
 // Attach sources.
 pub mod ansi_256;

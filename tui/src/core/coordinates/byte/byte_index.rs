@@ -17,7 +17,7 @@ use std::ops::{Add, AddAssign, Deref, DerefMut, Range};
 /// > positions are inherently [`usize`].
 ///
 /// This type is primarily used for byte-level operations in text processing, particularly
-/// when working with UTF-8 strings where character boundaries don't align with byte
+/// when working with [`UTF-8`] strings where character boundaries don't align with byte
 /// boundaries. It provides type safety when dealing with the underlying byte
 /// representation of [`crate::InlineString`] within [`crate::GCStringOwned`].
 ///
@@ -40,7 +40,8 @@ use std::ops::{Add, AddAssign, Deref, DerefMut, Range};
 /// - [`ByteLength`] = byte count/size (like "10 bytes long")
 /// - [`ByteOffset`] = byte displacement (like "5 bytes forward from here")
 ///
-/// > 💡 **See also**: For complete workflows showing [`ByteIndex`] used with UTF-8 string
+/// > 💡 **See also**: For complete workflows showing [`ByteIndex`] used with [`UTF-8`]
+/// > string
 /// > operations and bounds checking, see the [coordinates module
 /// > documentation](crate::coordinates#common-workflows).
 ///
@@ -60,6 +61,8 @@ use std::ops::{Add, AddAssign, Deref, DerefMut, Range};
 /// use r3bl_tui::Index;
 /// let char_index: Index = pos.into();
 /// ```
+///
+/// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
 #[derive(Debug, Copy, Clone, Default, PartialEq, Ord, PartialOrd, Eq, Hash)]
 pub struct ByteIndex(pub usize);
 

@@ -26,7 +26,7 @@
 //!
 //! ```text
 //! ╭─────────────────╮    ╭────────────────╮    ╭─────────────────╮    ╭──────────────╮
-//! │ Child Process   │────▶ PTY Controller │────▶ VTE Parser      │────▶ OffscreenBuf │
+//! │ Child Process   │────► PTY Controller │────► VTE Parser      │────► OffscreenBuf │
 //! │ (vim, bash...)  │    │ (byte stream)  │    │ (state machine) │    │ (terminal    │
 //! ╰──────┬──────────╯    ╰────────────────╯    ╰───────┬─────────╯    │  buffer)     │
 //!        │                                             │              ╰───────┬──────╯
@@ -37,9 +37,9 @@
 //!        │                                    ╚═════════════════╝             │
 //!        │                                                                    │
 //!        │                                    ╭─────────────────╮             │
-//!        │                                    │ RenderPipeline  ◀─────────────╯
+//!        │                                    │ RenderPipeline  ◄─────────────╯
 //!        │                                    │ paint()         │
-//!        ╰────────────────────────────────────▶ Terminal Output │
+//!        ╰────────────────────────────────────► Terminal Output │
 //!                                             ╰─────────────────╯
 //! ```
 //!
@@ -89,9 +89,9 @@
 //! [`CSI`]: crate::CsiSequence
 //! [`DECSTBM`]: https://vt100.net/docs/vt510-rm/DECSTBM.html
 //! [`extract_nth_single_non_zero()`]: crate::ParamsExt::extract_nth_single_non_zero
-//! [`impl_line_ops`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl::vt_100_impl_line_ops
+//! [`impl_line_ops`]: crate::vt_100_ansi_impl::vt_100_impl_line_ops
 //! [`NonZeroU16`]: std::num::NonZeroU16
-//! [`test_line_ops`]: crate::core::ansi::vt_100_pty_output_parser::vt_100_pty_output_conformance_tests::tests::vt_100_test_line_ops
+//! [`test_line_ops`]: crate::vt_100_pty_output_conformance_tests::tests::vt_100_test_line_ops
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 //! [module-level documentation]: self
 

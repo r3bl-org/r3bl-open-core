@@ -1,6 +1,8 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Integration tests for complex ANSI sequences and VTE parser integration.
+//! Integration tests for complex [`ANSI`] sequences and VTE parser integration.
+//!
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 
 use super::super::test_fixtures_vt_100_ansi_conformance::*;
 use crate::{
@@ -16,7 +18,9 @@ fn create_offscreen_buffer_24r_by_80c() -> OffscreenBuffer {
     OffscreenBuffer::new_empty(height(24) + width(80))
 }
 
-/// Tests for complex real-world ANSI sequences.
+/// Tests for complex real-world [`ANSI`] sequences.
+///
+/// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 mod full_sequences {
     use super::*;
 

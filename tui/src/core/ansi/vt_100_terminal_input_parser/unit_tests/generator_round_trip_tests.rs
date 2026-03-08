@@ -2,12 +2,10 @@
 
 //! Round-trip validation tests for input event generator.
 //!
-//! These tests validate that the generator produces valid sequences that the parser
-//! can correctly parse back to the original event:
+//! These tests ensure that every input event can be serialized to an [`ANSI`] sequence
+//! and then parsed back to the exact same event.
 //!
-//! `InputEvent → generate() → bytes → parse() → InputEvent`
-//!
-//! This ensures generator and parser are compatible and speak the same protocol.
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 
 use crate::{KeyState,
             core::ansi::{generator::*,

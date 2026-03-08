@@ -11,14 +11,8 @@
 //! [`PixelCharLine`]: crate::PixelCharLine
 
 use super::PixelChar;
-use crate::{
-    ColWidth,
-    GetMemSize,
-    InlineVec,
-    TinyInlineString,
-    dim_underline,
-    get_mem_size,
-};
+use crate::{ColWidth, GetMemSize, InlineVec, TinyInlineString, dim_underline,
+            get_mem_size};
 use smallvec::smallvec;
 use std::{fmt::{self, Debug},
           ops::{Deref, DerefMut}};

@@ -4,13 +4,16 @@
 //!
 //! This module provides sequences that simulate Emacs terminal behavior,
 //! allowing tests to verify compatibility with different text editor patterns.
-//! Useful for ensuring ANSI parser works correctly with various editor implementations.
+//! Useful for ensuring [`ANSI`] parser works correctly with various editor
+//! implementations.
 //!
 //! ## Emacs Terminal Behavior
 //!
 //! - Mode lines typically appear at bottom with reverse video
 //! - Uses different status indicators than vim
 //! - Often employs more conservative styling
+//!
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 
 use super::super::test_fixtures_vt_100_ansi_conformance::nz;
 use crate::{ANSIBasicColor, EraseDisplayMode, EraseLineMode, SgrCode,

@@ -18,8 +18,8 @@ use tokio::sync::broadcast::Sender;
 /// [`RRTWorker`] trait and receives `sender` as a parameter to
 /// [`block_until_ready_then_dispatch()`].
 ///
-/// [`RRTWorker`]: crate::core::resilient_reactor_thread::RRTWorker
-/// [`block_until_ready_then_dispatch()`]: crate::core::resilient_reactor_thread::RRTWorker::block_until_ready_then_dispatch
+/// [`block_until_ready_then_dispatch()`]: crate::RRTWorker::block_until_ready_then_dispatch
+/// [`RRTWorker`]: crate::RRTWorker
 pub fn dispatch_with_sender(
     token: Token,
     worker: &mut MioPollWorker,

@@ -72,7 +72,6 @@ height="256px">
     - [Option 1: Lightweight Watch Mode (Recommended for Most Users)](#option-1-lightweight-watch-mode-recommended-for-most-users)
     - [Option 2: Comprehensive Tmux Dashboard](#option-2-comprehensive-tmux-dashboard)
   - [Tmux Development Dashboard](#tmux-development-dashboard)
-  - [Wild Linker (Linux)](#wild-linker-linux)
   - [Cross-Platform Verification (Windows)](#cross-platform-verification-windows)
   - [Rust Toolchain Management](#rust-toolchain-management)
     - [Why mkdir for Locking?](#why-mkdir-for-locking)
@@ -518,7 +517,7 @@ To learn how we built this crate, please take a look at the following resources.
 
 - If you like consuming video content, here's our
   [YT channel](https://www.youtube.com/@developerlifecom). Please consider
-  [subscribing](https://www.youtube.com/channel/CHANNEL_ID?sub_confirmation=1).
+  [subscribing](https://www.youtube.com/channel/UCMcsxfCwzwDevc3NRqFgfEg?sub_confirmation=1).
 
 ## Quick Start
 
@@ -541,7 +540,6 @@ handles **OS-level setup** with a clean main function structure and will:
 - **Cross-Platform Support**: Works on **macOS** (Homebrew) and **Linux** including Ubuntu (apt),
   Fedora (dnf), Arch (pacman), openSUSE (zypper), and Alpine (apk)
 - **Core Rust Installation**: Install Rust toolchain (rustup) and ensure cargo is in PATH
-- **Compiler Setup**: Install clang compiler (required by Wild linker)
 - **Development Shell**: Install Fish shell and fzf for interactive development
 - **File Watching**: Install file watchers (inotifywait on Linux, fswatch on macOS)
 - **Development Utilities**: Install htop, screen, tmux for system monitoring
@@ -579,7 +577,6 @@ fish run.fish install-cargo-tools
 - **Core Development Tools**: bacon, flamegraph, inferno
 - **Workspace Management**: cargo-workspaces, cargo-cache, cargo-update
 - **Code Quality**: cargo-deny, cargo-unmaintained, cargo-expand, cargo-readme
-- **Wild Linker**: Fast linker with optimized .cargo/config.toml generation
 - **Language Server**: rust-analyzer component
 
 **From local source (via cargo install --path):**
@@ -1159,13 +1156,13 @@ Press Ctrl+C to stop
 
 🔄 Changes detected, running checks...
 
-▶️  Running tests...
+►️  Running tests...
 ✅ Tests passed
 
-▶️  Running doctests...
+►️  Running doctests...
 ✅ Doctests passed
 
-▶️  Building docs...
+►️  Building docs...
 ✅ Docs built
 
 ✅ All checks passed!
@@ -1208,52 +1205,32 @@ Adjust `DEBOUNCE_SECONDS` in the script if needed.
 
 ### Tmux Development Dashboard
 
-For developers who prefer a multi-pane visual environment, the tmux dashboard combines multiple
-bacon monitors with the `check.fish --watch` script for comprehensive coverage.
+For developers who prefer a multi-pane visual environment, the tmux dashboard combines documentation monitoring with a focused development shell.
 
-**When to choose tmux dashboard over standalone watch mode:**
-
-- You want to see **all** checks running simultaneously in different panes
-- You prefer visual separation between tests, doctests, docs, and comprehensive checks
-- You're comfortable with tmux keybindings and pane navigation
-- You have screen space for a 2x2 grid layout
-
-**Comprehensive 4-Pane Development Dashboard:**
+**Comprehensive 2-Pane Development Dashboard:**
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│ Tmux Session: r3bl-dev (2x2 grid layout)                    │
-├──────────────────────┬──────────────────────────────────────┤
-│ Top-left:            │ Top-right:                           │
-│ bacon test           │ bacon doc                            │
-│ (Unit & Integration  │ (Documentation generation            │
-│  Tests)              │  with live feedback)                 │
-├──────────────────────┼──────────────────────────────────────┤
-│ Bottom-left:         │ Bottom-right:                        │
-│ bacon doctests       │ ./check.fish --watch                 │
-│ (Documentation       │ (Event-driven comprehensive checks:  │
-│  Tests)              │  tests + doctests + docs + ICE)      │
-└──────────────────────┴──────────────────────────────────────┘
+│ Tmux Session: r3bl (2-pane vertical layout)                 │
+├─────────────────────────────────────────────────────────────┤
+│ Top Pane:                                                   │
+│ ./check.fish --watch-doc                                    │
+│ (Documentation watch mode for real-time feedback)           │
+├─────────────────────────────────────────────────────────────┤
+│ Bottom Pane:                                                │
+│ (Empty, focused for your commands)                          │
+└─────────────────────────────────────────────────────────────┘
 ```
 
 **Key Features:**
 
-- **Persistent Session**: Session name "r3bl-dev" - reconnect from other terminals with
-  `tmux attach-session -t r3bl-dev`
-- **Multiple Monitors**: Combines three bacon monitors (tests, doctests, docs) with one
-  comprehensive check monitor (`check.fish --watch`)
-- **Event-Driven Checks**: The bottom-right pane runs `./check.fish --watch` which triggers
-  immediately on file changes (not periodic polling)
-- **Comprehensive Coverage**: The `check.fish --watch` monitor provides:
-  - All unit and integration tests (`cargo test --all-targets`)
-  - Documentation tests (`cargo test --doc`)
-  - Documentation building (`cargo doc --no-deps`)
-  - Automatic ICE (Internal Compiler Error) detection and recovery
-  - Automatic toolchain validation and repair if needed
-  - 5-second intelligent debouncing to prevent rapid re-runs
-- **Interactive Multiplexing**: Full tmux keybindings for pane switching and layout customization
-- **Redundant Coverage**: Tests run in two panes (bacon test + check.fish) - if one fails, the other
-  shows details
+- **Persistent Session**: Session name "r3bl" - reconnect from other terminals with
+  `tmux attach-session -t r3bl`
+- **Watch Mode Documentation**: The top pane runs `./check.fish --watch-doc` which triggers
+  immediately on file changes to rebuild documentation.
+- **Focused Development**: The bottom pane is focused and ready for your manual commands, tests, or
+  binary execution.
+- **Persistent Session**: survives terminal disconnects, allowing you to pick up exactly where you left off.
 
 **Usage:**
 
@@ -1262,75 +1239,31 @@ bacon monitors with the `check.fish --watch` script for comprehensive coverage.
 fish run.fish dev-dashboard
 
 # Reconnect to existing session from another terminal
-tmux attach-session -t r3bl-dev
+tmux attach-session -t r3bl
 
 # Kill the session when done
-tmux kill-session -t r3bl-dev
+tmux kill-session -t r3bl
 ```
 
 **Comparison: Standalone vs Tmux Dashboard:**
 
 | Aspect                 | `./check.fish --watch`              | Tmux Dashboard                             |
 | ---------------------- | ----------------------------------- | ------------------------------------------ |
-| **Setup Complexity**   | Single command, one window          | tmux session with 4 panes                  |
-| **Screen Real Estate** | Minimal (one terminal)              | Large (2x2 grid)                           |
-| **Monitoring Scope**   | Comprehensive (tests+docs+doctests) | Granular (separate panes for each)         |
+| **Setup Complexity**   | Single command, one window          | tmux session with 2 panes                  |
+| **Screen Real Estate** | Minimal (one terminal)              | Standard (vertical split)                  |
+| **Monitoring Scope**   | Comprehensive (tests+docs+doctests) | Documentation focused + open shell         |
 | **Visual Separation**  | Sequential output in one stream     | Parallel output in dedicated panes         |
-| **Ideal For**          | Focused development, laptop screens | Multi-monitor setups, visual dashboards    |
+| **Ideal For**          | Focused development, laptop screens | Continuous documentation feedback          |
 | **Tmux Knowledge**     | Not required                        | Helpful for navigation                     |
-| **Resource Usage**     | Lower (one monitor)                 | Higher (4 monitors)                        |
-| **Event-Driven**       | Yes (file system events)            | Yes (check.fish pane) + bacon auto-rebuild |
+| **Resource Usage**     | Lower (one monitor)                 | Moderate (monitoring + open shell)         |
+| **Event-Driven**       | Yes (file system events)            | Yes (top pane)                             |
 
 **When to use each:**
 
-- **Use standalone watch**: When you want simple, focused monitoring in a single terminal
-- **Use tmux dashboard**: When you want comprehensive visibility with separate panes for each
-  concern
+- **Use standalone watch**: When you want simple, focused monitoring of tests and docs in a single terminal.
+- **Use tmux dashboard**: When you want continuous documentation feedback while maintaining an open shell for commands.
 
-Both approaches use the same `check.fish --watch` script in different contexts - standalone for
-simplicity, integrated for comprehensive dashboards.
-
-**Typical Development Session:**
-
-1. Start session: `fish run.fish dev-dashboard`
-2. Monitor panes to catch issues while coding
-3. Switch to specific pane for detailed investigation if needed
-4. All four monitors provide continuous feedback on code quality
-
-### Wild Linker (Linux)
-
-This project uses the [Wild linker](https://github.com/davidlattimore/wild) as a fast alternative to
-the default linker on Linux systems. Wild can significantly reduce link times during iterative
-development, making builds faster and more responsive.
-
-**Automatic Configuration**: The build system automatically detects and configures Wild when both
-`clang` and `wild` are installed. If either tool is missing, the configuration gracefully falls back
-to standard parallel compilation without Wild.
-
-**Installation**: The setup process automatically installs both prerequisites:
-
-- `clang`: Installed by
-  [`bootstrap.sh`](https://github.com/r3bl-org/r3bl-open-core/blob/main/bootstrap.sh) as a system
-  dependency
-- `wild-linker`: Installed by `fish run.fish install-cargo-tools` via `cargo-binstall` (with
-  fallback to `cargo install`)
-
-**Configuration**: When available, Wild is configured in `.cargo/config.toml` for Linux targets:
-
-```toml
-[target.x86_64-unknown-linux-gnu]
-linker = "clang"
-rustflags = [
-    "-Z", "threads=8",  # Parallel compilation
-    "-C", "link-arg=--ld-path=wild"  # Wild linker
-]
-```
-
-**Verification**: Check if Wild is active by looking for the configuration in `.cargo/config.toml`
-or by observing faster link times during development builds.
-
-**Platform Support**: Wild linker is Linux-only. On other platforms, the build system uses standard
-parallel compilation without Wild.
+Both approaches use the `check.fish` script in different contexts - standalone for comprehensive monitoring, integrated for a focused documentation dashboard.
 
 ### Cross-Platform Verification (Windows)
 
@@ -1505,7 +1438,7 @@ fish run.fish toolchain-update
   - `cargo build`
   - `cargo test --all-targets`
   - `cargo test --doc`
-  - `cargo doc --no-deps`
+  - `cargo doc --workspace --no-deps`
 - **Toolchain vs code errors**: Distinguishes between:
   - ❌ **ICE errors** (compiler crashes) → rejects toolchain, tries next day
   - ✅ **Code errors** (compilation/test failures) → accepts toolchain (validates compiler works,
@@ -1652,7 +1585,7 @@ fish run.fish toolchain-validate-complete
 - ✅ cargo build (no ICE)
 - ✅ cargo test --all-targets (no ICE)
 - ✅ cargo test --doc (no ICE)
-- ✅ cargo doc --no-deps (no ICE)
+- ✅ cargo doc --workspace --no-deps (no ICE)
 
 **Return Codes:**
 
@@ -1767,21 +1700,20 @@ The project uses a clean separation of concerns across three main scripts with s
 │                           Bootstrap Flow                                 │
 └──────────────────────────────────────────────────────────────────────────┘
 
-    ┌─────────────────┐     calls     ┌───────────────────────────────────┐
-    │  bootstrap.sh   │──────────────▶│  fish run.fish install-cargo-tools│
-    │  (OS-level)     │               │  (Rust development tools)         │
-    └─────────────────┘               └───────────────────────────────────┘
+    ┌─────────────────┐     calls     ┌────────────────────────────────────┐
+    │  bootstrap.sh   │──────────────►│  fish run.fish install-cargo-tools │
+    │  (OS-level)     │               │  (Rust development tools)          │
+    └─────────────────┘               └────────────────────────────────────┘
             │                                       │
             │ installs                              │ uses
             ▼                                       ▼
     ┌─────────────────┐               ┌──────────────────────────────────┐
-    │ rustup, clang,  │               │        script_lib.fish           │
+    │ rustup,         │               │        script_lib.fish           │
     │ fish, fzf,      │               │   (shared utility functions)     │
     │ inotify-tools   │               │                                  │
     └─────────────────┘               │  • install_windows_target        │
                                       │  • install_if_missing            │
                                       │  • install_cargo_tool            │
-                                      │  • generate_cargo_config         │
                                       │  • read_toolchain_from_toml      │
                                       │  • acquire_toolchain_lock        │
                                       │  • ... 25+ shared functions      │
@@ -1831,7 +1763,7 @@ Commands**
 **Shared Utilities**
 
 - Common functions used by both bootstrap.sh and run.fish
-- Utility functions: install_if_missing, generate_cargo_config, install_cargo_tool
+- Utility functions: install_if_missing, install_cargo_tool
 - Cross-platform package manager detection
 
 All commands work from the root directory, eliminating the need to navigate between subdirectories.

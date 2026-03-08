@@ -2,10 +2,12 @@
 
 //! Component-level tests - round-trip validation of input event generator.
 //!
-//! Tests validate that the event generator and parser work together correctly
-//! through round-trip validation:
+//! Tests validate that the event generator and parser work together correctly through
+//! round-trip validation:
 //!
-//! `InputEvent → generate() → bytes → parse() → InputEvent`
+//! ```text
+//! InputEvent → generate() → bytes → parse() → InputEvent
+//! ```
 //!
 //! This ensures:
 //! - Generator produces valid [`ANSI`] sequences

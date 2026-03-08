@@ -3,13 +3,13 @@
 //! Stack-allocated number formatting for [usize] and [u16] without heap allocation.
 //!
 //! This module provides zero-allocation integer-to-string conversion using fixed-size
-//! stack arrays. Ideal for performance-critical code paths like ANSI sequence generation
-//! where heap allocation overhead is significant.
+//! stack arrays. Ideal for performance-critical code paths like [`ANSI`] sequence
+//! generation where heap allocation overhead is significant.
 //!
 //! # Performance Characteristics
 //!
 //! - **Zero heap allocations** - Uses stack arrays only
-//! - **Direct ASCII conversion** - No Display trait overhead
+//! - **Direct [`ASCII`] conversion** - No Display trait overhead
 //! - **Constant time** - Division loop, no formatting machinery
 //! - **Cache-friendly** - Small stack footprint (5-20 bytes)
 //!
@@ -31,7 +31,7 @@
 //! - [`convert_to_string_slice`]: Converts [u8] array to string slice (removes leading
 //!   zeros)
 //!
-//! ## u16 formatting (optimized for ANSI sequences)
+//! ## u16 formatting (optimized for [`ANSI`] sequences)
 //! - [`u16_to_u8_array`]: Converts [u16] to fixed-size [u8] array (smaller, faster)
 //! - [`convert_u16_to_string_slice`]: Converts [u16] [u8] array to string slice
 //!
@@ -58,7 +58,12 @@
 //!
 //! # Panics
 //!
-//! - `convert_to_string_slice` will panic if the input [u8] array is not a valid UTF-8
+//! - `convert_to_string_slice` will panic if the input [u8] array is not a valid
+//!   [`UTF-8`]
+//!
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
+//! [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
 ///   sequence. 20 is needed for [std].
 /// - <https://doc.rust-lang.org/std/primitive.u64.html>
 pub const USIZE_FMT_MAX_DIGITS: usize = 20;
@@ -109,9 +114,12 @@ pub fn usize_to_u8_array(num: usize) -> [u8; USIZE_FMT_MAX_DIGITS] {
 ///
 /// # Panics
 ///
-/// This function will panic if the input [u8] array is not a valid UTF-8 sequence.
+/// This function will panic if the input [u8] array is not a valid [`UTF-8`] sequence.
 /// This should never happen because the input is a fixed size [u8] array that is
-/// guaranteed to contain only ASCII digits (0-9) and null bytes (0).
+/// guaranteed to contain only [`ASCII`] digits (0-9) and null bytes (0).
+///
+/// [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
+/// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
 #[must_use]
 pub fn convert_to_string_slice(arg: &[u8; USIZE_FMT_MAX_DIGITS]) -> &str {
     let result_str = std::str::from_utf8(arg);
@@ -184,9 +192,9 @@ pub fn u16_to_u8_array(num: u16) -> [u8; U16_FMT_MAX_DIGITS] {
 ///
 /// # Panics
 ///
-/// This function will panic if the input [u8] array is not a valid UTF-8 sequence.
+/// This function will panic if the input [u8] array is not a valid [`UTF-8`] sequence.
 /// This should never happen because the input is a fixed-size [u8] array that is
-/// guaranteed to contain only ASCII digits (0-9) and null bytes (0).
+/// guaranteed to contain only [`ASCII`] digits (0-9) and null bytes (0).
 ///
 /// # Examples
 ///
@@ -198,6 +206,9 @@ pub fn u16_to_u8_array(num: u16) -> [u8; U16_FMT_MAX_DIGITS] {
 /// let result = convert_u16_to_string_slice(&array);
 /// assert_eq!(result, "123");
 /// ```
+///
+/// [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
+/// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
 #[must_use]
 pub fn convert_u16_to_string_slice(arg: &[u8; U16_FMT_MAX_DIGITS]) -> &str {
     let result_str = std::str::from_utf8(arg);

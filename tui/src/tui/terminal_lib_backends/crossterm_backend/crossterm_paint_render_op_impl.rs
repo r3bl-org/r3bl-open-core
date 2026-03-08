@@ -47,10 +47,10 @@
 //! [rendering pipeline overview]: mod@crate::terminal_lib_backends#rendering-pipeline-architecture
 
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
-use crate::{CliTextInline, GCStringOwned, LockedOutputDevice, Pos, RenderOpCommon,
-            RenderOpFlush, RenderOpOutput, RenderOpPaint, RenderOpsLocalData, Size,
-            TuiColor, TuiStyle, cli_text_inline_impl::CliTextConvertOptions,
-            sanitize_and_save_abs_pos,
+use crate::{CliTextInline, GCStringOwned, LockedOutputDevice, Pos, RCP_RESTORE_CURSOR_BYTES,
+            RenderOpCommon, RenderOpFlush, RenderOpOutput, RenderOpPaint,
+            RenderOpsLocalData, SCP_SAVE_CURSOR_BYTES, Size, TuiColor, TuiStyle,
+            cli_text_inline_impl::CliTextConvertOptions, sanitize_and_save_abs_pos,
             tui::terminal_lib_backends::direct_to_ansi::PixelCharRenderer};
 use crossterm::{cursor::{Hide, MoveTo, Show},
                 event::{DisableBracketedPaste, DisableMouseCapture,
@@ -714,7 +714,7 @@ impl PaintRenderOpImplCrossterm {
     pub fn save_cursor_position(locked_output_device: LockedOutputDevice<'_>) {
         // crossterm doesn't have a direct SaveCursorPosition command,
         // so we write the ANSI sequence directly.
-        if let Err(e) = locked_output_device.write_all(b"\x1b[s") {
+        if let Err(e) = locked_output_device.write_all(SCP_SAVE_CURSOR_BYTES) {
             eprintln!("Failed to write SaveCursorPosition ANSI sequence: {e}");
         }
     }
@@ -728,7 +728,7 @@ impl PaintRenderOpImplCrossterm {
     pub fn restore_cursor_position(locked_output_device: LockedOutputDevice<'_>) {
         // crossterm doesn't have a direct RestoreCursorPosition command,
         // so we write the ANSI sequence directly.
-        if let Err(e) = locked_output_device.write_all(b"\x1b[u") {
+        if let Err(e) = locked_output_device.write_all(RCP_RESTORE_CURSOR_BYTES) {
             eprintln!("Failed to write RestoreCursorPosition ANSI sequence: {e}");
         }
     }

@@ -1,16 +1,21 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+// cspell:words FAILCRITICALERRORS HKLM NOGPFAULTERRORBOX
+
 // Attach sources.
-#[macro_use]
+#[macro_use] // Propagate macros textually (order matters).
 pub mod pty_test_fixtures;
 pub mod input_device_fixtures;
 pub mod output_device_fixtures;
 pub mod tcp_stream_fixtures;
+#[macro_use] // Propagate macros textually (order matters).
+pub mod retry;
 
 // Re-export.
 pub use input_device_fixtures::*;
 pub use output_device_fixtures::*;
 pub use pty_test_fixtures::*;
+pub use retry::*;
 pub use tcp_stream_fixtures::*;
 
 /// Creates a [`std::process::Command`] for the current test executable, configured

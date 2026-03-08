@@ -75,21 +75,6 @@ install_rustup() {
     fi
 }
 
-# Install clang (required by Wild linker)
-install_clang() {
-    if [[ "$OSTYPE" == "linux"* ]] && [[ -n "$PKG_MGR" ]]; then
-        install_if_missing "clang" "$PKG_MGR clang"
-    elif [[ "$OSTYPE" == "darwin"* ]]; then
-        # Clang is usually available on macOS through Xcode Command Line Tools
-        if ! command -v clang &>/dev/null; then
-            echo "Warning: clang not found. Install Xcode Command Line Tools:"
-            echo "  xcode-select --install"
-        else
-            echo "✓ clang already available"
-        fi
-    fi
-}
-
 # Install mingw-w64 cross-compiler for Windows cross-compilation checks.
 # Needed by cc-rs build scripts (e.g. libmimalloc-sys) that probe for
 # x86_64-w64-mingw32-gcc even during metadata-only builds.
@@ -317,7 +302,6 @@ main() {
 
     echo ""
     echo "🔧 Installing development dependencies..."
-    install_clang
     install_mingw_tools
     install_shell_tools
     install_file_watcher

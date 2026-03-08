@@ -6,8 +6,8 @@
 //! - Window resize notifications (`CSI 8;rows;cols t`)
 //! - Focus gained/lost events (`CSI I/O`)
 //!
-//! Note: Bracketed paste events are tested in [`pty_bracketed_paste_test`]
-//! because they require special state machine handling (Start + text + End).
+//! Note: Bracketed paste events are tested in [`pty_bracketed_paste_test`] because they
+//! require special state machine handling (Start + text + End).
 //!
 //! Run with:
 //! ```bash
@@ -15,19 +15,18 @@
 //! ```
 //!
 //! [`DirectToAnsiInputDevice`]: crate::direct_to_ansi::DirectToAnsiInputDevice
-//! [`pty_bracketed_paste_test`]: mod@crate::core::ansi::vt_100_terminal_input_parser::integration_tests::pty_bracketed_paste_test
+//! [`pty_bracketed_paste_test`]:
+//!     mod@crate::vt_100_terminal_input_parser::integration_tests::pty_bracketed_paste_test
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 
-use crate::{SingleThreadSafeControlledChild, InputEvent, PtyPair, PtyTestMode,
+use crate::{CONTROLLED_READY, CONTROLLED_STARTING, InputEvent, PtyTestMode,
+            PtyTestContext, TEST_RUNNING,
             core::ansi::{generator::generate_keyboard_sequence,
                          vt_100_terminal_input_parser::ir_event_types::{VT100FocusStateIR,
                                                                         VT100InputEventIR}},
             tui::terminal_lib_backends::direct_to_ansi::DirectToAnsiInputDevice};
-use std::{io::{BufRead, BufReader, Write},
+use std::{io::{BufRead, Write},
           time::Duration};
-
-/// Ready signal sent by controlled process after initialization.
-const CONTROLLED_READY: &str = "CONTROLLED_READY";
 
 // XMARK: Process isolated test with PTY.
 
@@ -42,52 +41,23 @@ generate_pty_test! {
 ///
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 #[allow(clippy::too_many_lines)]
-fn pty_controller_entry_point(pty_pair: PtyPair, child: SingleThreadSafeControlledChild) {
-    eprintln!("🚀 PTY Controller: Starting terminal events test...");
+fn pty_controller_entry_point(context: PtyTestContext) {
+    let PtyTestContext {
+        pty_pair,
+        child,
+        mut buf_reader,
+        mut writer,
+    } = context;
 
-    let mut writer = pty_pair
-        .controller()
-        .take_writer()
-        .expect("Failed to get writer");
-    let reader = pty_pair
-        .controller()
-        .try_clone_reader()
-        .expect("Failed to get reader");
-    let mut buf_reader = BufReader::new(reader);
+    eprintln!("🚀 PTY Controller: Starting terminal events test...");
 
     eprintln!("📝 PTY Controller: Waiting for controlled process to start...");
 
-    // Wait for controlled to confirm it's running. The controlled process sends
-    // TEST_RUNNING and CONTROLLED_READY immediately on startup.
-    let mut test_running_seen = false;
+    // Wait for controlled to confirm it's running and ready.
+    child.wait_for_ready(&mut buf_reader, CONTROLLED_READY)
+        .expect("Failed to wait for ready signal");
 
-    loop {
-        let mut line = String::new();
-        match buf_reader.read_line(&mut line) {
-            Ok(0) => panic!("EOF reached before controlled started"),
-            Ok(_) => {
-                let trimmed = line.trim();
-                eprintln!("  ← Controlled output: {trimmed}");
-
-                if trimmed.contains("TEST_RUNNING") {
-                    test_running_seen = true;
-                    eprintln!("  ✓ Test is running in controlled");
-                }
-                if trimmed.contains(CONTROLLED_READY) {
-                    eprintln!("  ✓ Controlled process confirmed running!");
-                    break;
-                }
-            }
-            Err(e) => panic!("Read error while waiting for controlled: {e}"),
-        }
-    }
-
-    assert!(
-        test_running_seen,
-        "Controlled test never started running (no TEST_RUNNING output)"
-    );
-
-    // Generate and send terminal events
+    // Generate test cases using abstractions (no magic strings!)
     // Note: Paste events are tested separately in pty_bracketed_paste_test.rs
     // because they require special handling (Start + text + End = single event)
     let events = vec![
@@ -122,18 +92,14 @@ fn pty_controller_entry_point(pty_pair: PtyPair, child: SingleThreadSafeControll
         writer
             .write_all(&sequence)
             .expect("Failed to write sequence");
-        writer.flush().expect("Failed to flush");
-
-        std::thread::sleep(Duration::from_millis(100));
+        writer.flush().expect("Failed to flush after {desc}");
 
         // Read responses until we get an event line. The controlled process
         // responds immediately after receiving input, so blocking reads work.
         let event_line = loop {
             let mut line = String::new();
             match buf_reader.read_line(&mut line) {
-                Ok(0) => {
-                    panic!("EOF reached before receiving event for {desc}");
-                }
+                Ok(0) => panic!("EOF reached before receiving event for {desc}"),
                 Ok(_) => {
                     let trimmed = line.trim();
 
@@ -148,9 +114,7 @@ fn pty_controller_entry_point(pty_pair: PtyPair, child: SingleThreadSafeControll
                     // Skip test harness noise
                     eprintln!("  ⚠️  Skipping non-event output: {trimmed}");
                 }
-                Err(e) => {
-                    panic!("Read error for {desc}: {e}");
-                }
+                Err(e) => panic!("Read error for {desc}: {e}"),
             }
         };
 
@@ -168,8 +132,10 @@ fn pty_controller_entry_point(pty_pair: PtyPair, child: SingleThreadSafeControll
 /// [`PTY`] Controlled: Read and parse terminal events
 ///
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
-fn pty_controlled_entry_point() -> ! {
-    println!("{CONTROLLED_READY}");
+fn pty_controlled_entry_point() {
+    // Print to stdout immediately to confirm controlled is starting.
+    println!("{TEST_RUNNING}");
+    println!("{CONTROLLED_STARTING}");
     std::io::stdout().flush().expect("Failed to flush");
 
     let runtime = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
@@ -179,7 +145,11 @@ fn pty_controlled_entry_point() -> ! {
         let mut input_device = DirectToAnsiInputDevice::new();
         eprintln!("🔍 PTY Controlled: Device created, reading events...");
 
-        let inactivity_timeout = Duration::from_secs(2);
+        // Signal to controller that we're ready to receive input.
+        println!("{CONTROLLED_READY}");
+        std::io::stdout().flush().expect("Failed to flush");
+
+        let inactivity_timeout = Duration::from_secs(5);
         let mut inactivity_deadline = tokio::time::Instant::now() + inactivity_timeout;
         let mut event_count = 0;
 
@@ -223,7 +193,7 @@ fn pty_controlled_entry_point() -> ! {
                     }
                 }
                 () = tokio::time::sleep_until(inactivity_deadline) => {
-                    eprintln!("🔍 PTY Controlled: Inactivity timeout (2 seconds with no events), exiting");
+                    eprintln!("🔍 PTY Controlled: Inactivity timeout (5 seconds with no events), exiting");
                     break;
                 }
             }
@@ -232,6 +202,4 @@ fn pty_controlled_entry_point() -> ! {
         eprintln!("🔍 PTY Controlled: Completed, exiting");
     });
 
-    eprintln!("🔍 Controlled: Completed, exiting");
-    std::process::exit(0);
 }

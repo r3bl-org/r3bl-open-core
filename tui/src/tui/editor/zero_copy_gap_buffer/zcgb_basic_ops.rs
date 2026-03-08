@@ -38,8 +38,10 @@ impl ZeroCopyGapBuffer {
     ///
     /// # Panics
     ///
-    /// Panics in debug builds if the line contains invalid UTF-8. This should never
+    /// Panics in debug builds if the line contains invalid [`UTF-8`]. This should never
     /// happen as all content is validated on insertion.
+    ///
+    /// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
     #[must_use]
     pub fn get_line(
         &self,

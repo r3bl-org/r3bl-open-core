@@ -1,150 +1,242 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Mouse input protocol constants for ANSI/[`CSI`] sequences.
+//! Mouse input protocol constants for [`ANSI`]/[`CSI`] sequences.
 //!
 //! Defines byte values, bit masks, and protocol prefixes used by mouse input parsers
-//! to handle [`SGR`] (modern), X10 (legacy), and RXVT (legacy) mouse protocols.
+//! to handle [`SGR`] (modern), [`X10`] (legacy), and [`RXVT`] (legacy) mouse protocols.
 //!
+//! See [constants module design] for the three-tier architecture.
+//!
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`CSI`]: crate::CsiSequence
+//! [`RXVT`]: https://en.wikipedia.org/wiki/Rxvt
 //! [`SGR`]: crate::SgrCode
+//! [`X10`]: https://invisible-island.net/xterm/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
+//! [constants module design]: mod@crate::constants#design
 
 // ==================== Protocol Prefixes ====================
 
-/// SGR mouse protocol prefix: `ESC [ <`
+/// [`SGR`] Mouse Protocol Prefix: Modern mouse tracking prefix `ESC [ <`.
 ///
-/// Modern standard mouse protocol with better support for modifiers and coordinates.
 /// Format: `CSI < Cb ; Cx ; Cy M/m`
+///
+/// [`SGR`]: crate::SgrCode
 pub const MOUSE_SGR_PREFIX: &[u8] = b"\x1b[<";
 
-/// SGR mouse protocol prefix length in bytes.
+/// [`SGR`] Mouse Prefix Length: Number of bytes in the [`SGR`] prefix.
 ///
-/// The prefix `ESC [ <` is 3 bytes: `\x1b` (ESC), `[`, `<`.
+/// Prefix `ESC [ <` is 3 bytes: [`ESC`] (`1B` hex), `[`, `<`.
+///
+/// [`ESC`]: crate::ANSI_ESC
+/// [`SGR`]: crate::SgrCode
 pub const MOUSE_SGR_PREFIX_LEN: usize = 3;
 
-/// X10/Normal mouse protocol prefix: `ESC [ M`
+/// [`X10`]/Normal Mouse Protocol Prefix: Legacy mouse tracking prefix `ESC [ M`.
 ///
-/// Legacy protocol with fixed 6-byte sequences.
 /// Format: `CSI M Cb Cx Cy`
+///
+/// [`X10`]: https://invisible-island.net/xterm/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
 pub const MOUSE_X10_PREFIX: &[u8] = b"\x1b[M";
 
 // ==================== Action Codes ====================
 
-/// SGR mouse protocol marker: `<` (60 dec, 3C hex).
+/// [`SGR`] Mouse Marker ([`SGR`]): The `<` byte (`60` dec, `3C` hex).
 ///
-/// Used in SGR extended mouse tracking sequences: `ESC [ < Cb ; Cx ; Cy M/m`
+/// Value: `'<'` dec, `3C` hex.
+///
+/// Sequence: `ESC [ < Cb ; Cx ; Cy M/m`.
+///
+/// [`SGR`]: crate::SgrCode
 pub const MOUSE_SGR_MARKER: u8 = b'<';
 
-/// SGR mouse press action: `M` (uppercase)
+/// [`SGR`] Mouse Press Action ([`SGR`]): `M` (uppercase) indicates button press.
 ///
-/// Indicates a mouse button press in SGR protocol.
+/// Value: `'M'` dec, `4D` hex.
+///
+/// Sequence: `CSI < Cb ; Cx ; Cy M`.
+///
+/// [`SGR`]: crate::SgrCode
 pub const MOUSE_SGR_PRESS: u8 = b'M';
 
-/// SGR mouse release action: `m` (lowercase)
+/// [`SGR`] Mouse Release Action ([`SGR`]): `m` (lowercase) indicates button release.
 ///
-/// Indicates a mouse button release in SGR protocol.
-/// Only used in SGR; X10 and RXVT use button code 3 for release.
+/// Value: `'m'` dec, `6D` hex.
+///
+/// Sequence: `CSI < Cb ; Cx ; Cy m`.
+///
+/// Only used in [`SGR`]; [`X10`] and [`RXVT`] use button code `3` for release.
+///
+/// [`RXVT`]: https://en.wikipedia.org/wiki/Rxvt
+/// [`SGR`]: crate::SgrCode
+/// [`X10`]: https://invisible-island.net/xterm/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
 pub const MOUSE_SGR_RELEASE: u8 = b'm';
 
-/// X10 mouse protocol marker: `M`
+/// [`X10`] Mouse Protocol Marker ([`X10`]): `M` identifies the [`X10`] format.
 ///
-/// Used in X10 format to identify the protocol.
+/// Value: `'M'` dec, `4D` hex.
+///
+/// Sequence: `CSI M Cb Cx Cy`.
+///
+/// [`X10`]: https://invisible-island.net/xterm/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
 pub const MOUSE_X10_MARKER: u8 = b'M';
 
 // ==================== Button Codes and Bit Masks ====================
 
-/// Mask for button code bits (bits 0-1).
+/// Button Bits Mask ([`ANSI`]): Extracts base button code from bits 0-1.
 ///
-/// Extracts the base button code (0=left, 1=middle, 2=right, 3=release)
-/// from the button byte.
+/// Bit pattern: `0b0000_0011` (0=left, 1=middle, 2=right, 3=release).
+///
+/// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 pub const MOUSE_BUTTON_BITS_MASK: u16 = 0b0000_0011;
 
-/// Left mouse button code (0)
+/// Left Mouse Button Code ([`ANSI`]): Button code `0` for left click.
 ///
-/// Used in X10, RXVT, and SGR mouse protocols to represent button code 0.
+/// Value: `0`.
+///
+/// Used in [`X10`], [`RXVT`], and [`SGR`] mouse protocols.
+///
+/// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+/// [`RXVT`]: https://en.wikipedia.org/wiki/Rxvt
+/// [`SGR`]: crate::SgrCode
+/// [`X10`]: https://invisible-island.net/xterm/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
 pub const MOUSE_LEFT_BUTTON_CODE: u16 = 0;
 
-/// Middle mouse button code (1)
+/// Middle Mouse Button Code ([`ANSI`]): Button code `1` for middle click.
 ///
-/// Used in X10, RXVT, and SGR mouse protocols to represent button code 1.
+/// Value: `1`.
+///
+/// Used in [`X10`], [`RXVT`], and [`SGR`] mouse protocols.
+///
+/// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+/// [`RXVT`]: https://en.wikipedia.org/wiki/Rxvt
+/// [`SGR`]: crate::SgrCode
+/// [`X10`]: https://invisible-island.net/xterm/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
 pub const MOUSE_MIDDLE_BUTTON_CODE: u16 = 1;
 
-/// Right mouse button code (2)
+/// Right Mouse Button Code ([`ANSI`]): Button code `2` for right click.
 ///
-/// Used in X10, RXVT, and SGR mouse protocols to represent button code 2.
+/// Value: `2`.
+///
+/// Used in [`X10`], [`RXVT`], and [`SGR`] mouse protocols.
+///
+/// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+/// [`RXVT`]: https://en.wikipedia.org/wiki/Rxvt
+/// [`SGR`]: crate::SgrCode
+/// [`X10`]: https://invisible-island.net/xterm/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
 pub const MOUSE_RIGHT_BUTTON_CODE: u16 = 2;
 
-/// Mouse button release code (3)
+/// Mouse Button Release Code ([`ANSI`]): Button code `3` indicates no button pressed.
 ///
-/// Used in X10, RXVT, and SGR mouse protocols to indicate button release.
-/// When the button byte equals 3, it means no button is pressed.
+/// Value: `3`.
+///
+/// Used in [`X10`], [`RXVT`], and [`SGR`] mouse protocols.
+///
+/// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+/// [`RXVT`]: https://en.wikipedia.org/wiki/Rxvt
+/// [`SGR`]: crate::SgrCode
+/// [`X10`]: https://invisible-island.net/xterm/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
 pub const MOUSE_RELEASE_BUTTON_CODE: u16 = 3;
 
-/// Mask for complete button code (bits 0-5).
+/// Button Code Mask ([`ANSI`]): Extracts complete button code from bits 0-5.
 ///
-/// Includes button bits (0-1), modifier bits (2-4), and drag bit (5).
-/// Used to distinguish scroll events (button >= 64) from regular clicks.
+/// Bit pattern: `0b0011_1111` - button (0-1), modifier (2-4), drag (5).
+///
+/// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 pub const MOUSE_BUTTON_CODE_MASK: u16 = 0b0011_1111;
 
-/// Mask for button code with scroll bit (bits 0-6).
+/// Base Button Mask ([`ANSI`]): Extracts button code with scroll bit from bits 0-6.
 ///
-/// Preserves all button information: button bits (0-1), modifier bits (2-4),
-/// motion flag (5), and scroll bit (6). When scroll bit is set (value 64+),
-/// indicates a scroll event. Used before distinguishing scroll from regular clicks.
+/// Bit pattern: `0b0111_1111` - button (0-1), modifier (2-4), motion (5), scroll (6).
+///
+/// When scroll bit is set (value `64`+), indicates a scroll event.
+///
+/// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 pub const MOUSE_BASE_BUTTON_MASK: u16 = 0b0111_1111;
 
 // ==================== Modifier Bit Flags ====================
 
-/// Shift modifier flag (bit 2, value 4).
+/// Shift Modifier Flag ([`ANSI`]): Bit 2, value `4`.
 ///
-/// Set in button byte when Shift key is held during mouse event.
+/// Bit pattern: `0b0000_0100` - set when Shift is held during mouse event.
+///
 /// Note: Shift+Click is often intercepted by terminals for text selection.
+///
+/// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 pub const MOUSE_MODIFIER_SHIFT: u16 = 0b0000_0100;
 
-/// Alt/Meta modifier flag (bit 3, value 8).
+/// Alt/Meta Modifier Flag ([`ANSI`]): Bit 3, value `8`.
 ///
-/// Set in button byte when Alt/Meta key is held during mouse event.
+/// Bit pattern: `0b0000_1000` - set when Alt/Meta is held during mouse event.
+///
+/// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 pub const MOUSE_MODIFIER_ALT: u16 = 0b0000_1000;
 
-/// Ctrl modifier flag (bit 4, value 16).
+/// Ctrl Modifier Flag ([`ANSI`]): Bit 4, value `16`.
 ///
-/// Set in button byte when Ctrl key is held during mouse event.
+/// Bit pattern: `0b0001_0000` - set when Ctrl is held during mouse event.
+///
+/// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 pub const MOUSE_MODIFIER_CTRL: u16 = 0b0001_0000;
 
 // ==================== Action Flags ====================
 
-/// Drag/Motion flag (bit 5, value 32).
+/// Drag/Motion Flag ([`ANSI`]): Bit 5, value `32`.
 ///
-/// In SGR protocol: Set when mouse button is held and moved (drag).
-/// In X10 protocol: Set when mouse moves without button held (motion).
+/// Bit pattern: `0b0010_0000` - [`SGR`] drag or [`X10`] motion.
+///
+/// In [`SGR`] protocol: set when mouse button is held and moved (drag).
+/// In [`X10`] protocol: set when mouse moves without button held (motion).
+///
+/// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+/// [`SGR`]: crate::SgrCode
+/// [`X10`]: https://invisible-island.net/xterm/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
 pub const MOUSE_MOTION_FLAG: u16 = 0b0010_0000;
 
 // ==================== Scroll Detection ====================
 
-/// Scroll event threshold (value 64).
+/// Scroll Event Threshold ([`ANSI`]): Value `64` separates scroll from click events.
 ///
-/// Scroll events have button codes >= 64.
-/// Regular button codes are 0-3 (with modifiers 0-63).
-/// Scroll codes: 64-67 (up/down/left/right) with optional modifiers.
+/// Bit pattern: `0b0100_0000` - button codes >= `64` are scroll events.
+///
+/// Scroll codes: `64`-`67` (up/down/left/right) with optional modifiers.
+///
+/// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 pub const MOUSE_SCROLL_THRESHOLD: u16 = 0b0100_0000;
 
 // ==================== Scroll Button Codes ====================
 
-/// SGR scroll up button code (64)
+/// [`SGR`] Scroll Up ([`SGR`]): Button code `64` for scroll up events.
 ///
-/// Used in SGR mouse protocol for scroll up events.
+/// Value: `64`.
+///
+/// Used in [`SGR`] mouse protocol.
+///
+/// [`SGR`]: crate::SgrCode
 pub const MOUSE_SCROLL_UP_BUTTON: u16 = 64;
 
-/// SGR scroll down button code (68)
+/// [`SGR`] Scroll Down ([`SGR`]): Button code `68` for scroll down events.
 ///
-/// Used in SGR mouse protocol for scroll down events.
+/// Value: `68`.
+///
+/// Used in [`SGR`] mouse protocol.
+///
+/// [`SGR`]: crate::SgrCode
 pub const MOUSE_SCROLL_DOWN_BUTTON: u16 = 68;
 
-/// SGR scroll left button code (66)
+/// [`SGR`] Scroll Left ([`SGR`]): Button code `66` for horizontal scroll left events.
 ///
-/// Used in SGR mouse protocol for horizontal scroll left events.
+/// Value: `66`.
+///
+/// Used in [`SGR`] mouse protocol.
+///
+/// [`SGR`]: crate::SgrCode
 pub const MOUSE_SCROLL_LEFT_BUTTON: u16 = 66;
 
-/// SGR scroll right button code (67)
+/// [`SGR`] Scroll Right ([`SGR`]): Button code `67` for horizontal scroll right events.
 ///
-/// Used in SGR mouse protocol for horizontal scroll right events.
+/// Value: `67`.
+///
+/// Used in [`SGR`] mouse protocol.
+///
+/// [`SGR`]: crate::SgrCode
 pub const MOUSE_SCROLL_RIGHT_BUTTON: u16 = 67;

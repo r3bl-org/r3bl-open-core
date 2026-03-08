@@ -144,18 +144,18 @@ use crate::NumericValue;
 /// [`ByteIndex`]: crate::ByteIndex
 /// [`ColIndex`]: crate::ColIndex
 /// [`CursorBoundsCheck`]: crate::CursorBoundsCheck
-/// [`IndexOps`]: crate::IndexOps
+/// [`index.overflows()`]: ArrayBoundsCheck::overflows
 /// [`Index`]: crate::Index
+/// [`IndexOps`]: crate::IndexOps
+/// [`length.is_overflowed_by()`]: crate::length_ops::LengthOps::is_overflowed_by
 /// [`LengthOps`]: crate::LengthOps
 /// [`NumericValue`]: crate::NumericValue
+/// [`overflows()`]: ArrayBoundsCheck::overflows
 /// [`RangeBoundsExt`]: crate::RangeBoundsExt
 /// [`RowIndex`]: crate::RowIndex
 /// [`SegIndex`]: crate::SegIndex
-/// [`ViewportBoundsCheck`]: crate::ViewportBoundsCheck
-/// [`index.overflows()`]: ArrayBoundsCheck::overflows
-/// [`length.is_overflowed_by()`]: crate::length_ops::LengthOps::is_overflowed_by
-/// [`overflows()`]: ArrayBoundsCheck::overflows
 /// [`underflows()`]: ArrayBoundsCheck::underflows
+/// [`ViewportBoundsCheck`]: crate::ViewportBoundsCheck
 pub trait ArrayBoundsCheck<LengthType: LengthOps>
 where
     Self: NumericValue,

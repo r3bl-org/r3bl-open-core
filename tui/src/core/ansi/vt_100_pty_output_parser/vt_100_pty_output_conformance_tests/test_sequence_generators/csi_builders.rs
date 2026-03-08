@@ -1,9 +1,9 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Test convenience builders for CSI sequences.
+//! Test convenience builders for [`CSI`] sequences.
 //!
 //! This module provides convenience functions for working with [`CsiSequence`] in tests.
-//! These are simple wrappers that validate or convert CSI
+//! These are simple wrappers that validate or convert [`CSI`]
 //! sequence variants for ergonomic test code.
 //!
 //! # Purpose
@@ -17,9 +17,10 @@
 //! - [`csi_seq_cursor_pos_alt`] - Converts to or validates
 //!   [`CsiSequence::CursorPositionAlt`]
 //!
-//! [`CsiSequence`]: crate::CsiSequence
+//! [`CSI`]: crate::CsiSequence
 //! [`CsiSequence::CursorPosition`]: crate::CsiSequence::CursorPosition
 //! [`CsiSequence::CursorPositionAlt`]: crate::CsiSequence::CursorPositionAlt
+//! [`CsiSequence`]: crate::CsiSequence
 
 use crate::CsiSequence;
 

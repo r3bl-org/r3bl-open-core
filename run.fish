@@ -30,6 +30,10 @@ function main
         return
     end
 
+    # Purge any project-related zombie processes from previous sessions
+    # before running any commands.
+    purge_zombie_processes
+
     set command $argv[1]
 
     switch $command
@@ -227,7 +231,7 @@ end
 # 1. cargo-binstall for fast binary installation
 # 2. Cargo tools for Rust development (bacon, flamegraph, etc.)
 # 3. Wild linker with .cargo/config.toml generation
-# 4. Language servers (multi-lang-analyze)
+# 4. Language servers (rust-refactor)
 #
 # Features:
 # - Cross-platform support (macOS, Linux)
@@ -252,6 +256,7 @@ end
 # - cargo-readme: Generate README from doc comments
 # - flamegraph: Performance profiling visualization
 # - inferno: Fast stack trace visualizer
+# - lychee: Link checker for detecting URL rot in rustdoc comments
 # - wild: Fast linker (wild-linker package)
 # - rust-analyzer: Language server
 # - x86_64-pc-windows-gnu: Cross-compilation target for Windows verification
@@ -276,7 +281,7 @@ function install-cargo-tools
         "cargo-warloc" \
         "flamegraph" \
         "inferno" \
-        "narsil-mcp"
+        "lychee"
 
     for tool in $cargo_tools
         install_cargo_tool $tool
@@ -290,19 +295,7 @@ function install-cargo-tools
         echo ""
         echo (set_color cyan --bold)"Configuring Gemini MCP servers..."(set_color normal)
         gemini mcp add rust-refactor ~/.cargo/bin/rustmcp
-        gemini mcp add multi-lang-analyze ~/.cargo/bin/narsil-mcp
     end
-
-    # Install Wild linker via cargo-binstall
-    if command -v cargo-binstall >/dev/null
-        install_if_missing "wild" "cargo binstall -y wild-linker"
-    else
-        echo "Warning: cargo-binstall not found. Cannot install Wild linker efficiently"
-        install_if_missing "wild" "cargo install wild-linker"
-    end
-
-    # Generate appropriate cargo configuration after installation
-    generate_cargo_config
 
     # Install local source packages (cmdr and build-infra)
     echo ""
@@ -979,7 +972,7 @@ function run-binaries
     cd cmdr
 
     set binaries edi giti rc
-    set selection (printf '%s\n' $binaries | fzf --prompt 'Select a binary to run: ')
+    set selection (string join \n $binaries | fzf --prompt 'Select a binary to run: ')
     set fzf_status $status
 
     if test $fzf_status -ne 0
@@ -1162,7 +1155,7 @@ function log
             set options $options "$path ($desc)"
         end
 
-        set selection (printf '%s\n' $options | fzf --prompt 'Select log file to monitor: ')
+        set selection (string join \n $options | fzf --prompt 'Select log file to monitor: ')
         set fzf_status $status
 
         if test $fzf_status -ne 0

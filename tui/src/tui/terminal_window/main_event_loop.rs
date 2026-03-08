@@ -1,4 +1,5 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
+
 use super::{BoxedSafeApp, DefaultInputEventHandler, EventPropagation,
             MainEventLoopFuture};
 use crate::{Ansi256GradientIndex, ColorWheel, ColorWheelConfig, ColorWheelSpeed,
@@ -21,19 +22,19 @@ use tokio::sync::mpsc;
 /// Main event loop implementation that handles terminal UI events and app state
 /// management.
 ///
-/// This is the internal API, and not the public API
-/// [`super::TerminalWindow::main_event_loop()`]. This separation exists to allow for
-/// testing using dependency injection.
+/// This is the internal API, and not the public API [`main_event_loop()`]. This
+/// separation exists to allow for testing using dependency injection.
 ///
 /// This function takes pre-initialized components (terminal size, input/output devices)
-/// and runs the actual async event loop. It handles all input events, dispatches them
-/// to the [`crate::App`] for processing, renders the app after each event, and manages
-/// all signals sent from the app to the main event loop.
+/// and runs the actual async event loop. It handles all input events, dispatches them to
+/// the [`crate::App`] for processing, renders the app after each event, and manages all
+/// signals sent from the app to the main event loop.
 ///
 /// # Arguments
 ///
 /// * `app` - The [`BoxedSafeApp`] instance that will handle input events and signals.
-/// * `exit_keys` - A slice of [`InputEvent`]s that will trigger application exit.
+/// * `exit_keys` - An owned [`Vec`] of [`InputEvent`]s that will trigger application
+///   exit.
 /// * `state` - The initial application state.
 /// * `initial_size` - The initial terminal size.
 /// * `input_device` - The [`InputDevice`] for reading input events.
@@ -53,15 +54,16 @@ use tokio::sync::mpsc;
 /// * Event loop execution (input processing, rendering, signal handling).
 /// * Terminal cleanup and restoration.
 ///
-/// # Why return a boxed pinned future?
+/// # Why return a pinned boxed future?
 ///
-/// This function returns a [`Box::pin`]ned future (> 16KB clippy threshold) for safer
-/// memory management and better performance characteristics.
+/// This function returns a pinned boxed future ([`Pin<Box<T>>`]; > 16KB clippy threshold)
+/// for safer memory management and better performance characteristics.
 ///
 /// ## Performance Benefits
 ///
 /// * **Without [`Box::pin`]**: The entire > 16KB future gets copied every time it moves
-///   between stack frames (function calls, async state transitions, select! operations).
+///   between stack frames (function calls, async state transitions, [`select!`]
+///   operations).
 /// * **With [`Box::pin`]**: Only an 8-byte pointer moves, while the actual future data
 ///   stays fixed on the heap, avoiding expensive > 16KB memory copies.
 /// * Reduces stack pressure and improves CPU cache locality.
@@ -74,25 +76,86 @@ use tokio::sync::mpsc;
 /// * Provides defensive programming "better safe than sorry" approach for stack depth
 ///   management.
 ///
-/// ## Usage Context
+/// # Core Async Concepts: [`Pin`] and [`Unpin`]
 ///
-/// The returned boxed pinned future from this function is typically used in contexts
-/// where:
-/// - Single use: The future is created, awaited once, and then dropped - no loops or
-///   repeated moves.
-/// - Not stored in a struct: The future isn't being stored in a data structure that would
-///   require [`std::pin::Pin`].
-/// - Direct await: It's immediately awaited, not passed around or stored.
-pub fn main_event_loop_impl<'a, S, AS>(
+/// Understanding the relationship between the [`Pin`] struct and the [`Unpin`] trait is
+/// critical for building efficient async systems.
+///
+/// ## The Household Objects Metaphor
+///
+/// Think of items in a house.
+///
+/// 1. **Portable furniture** (the [`Unpin`] auto-trait): Most types (like a `struct` or
+///    `enum`) that don't care where they are placed implement this trait bound
+///    automatically. You can move them to a new room (memory address) and they function
+///    exactly the same.
+///
+/// 2. **Fixed fixtures** (the absence of `!Unpin` in the trait bound): Some types (like
+///    `async` blocks) do not implement the [`Unpin`] trait bound because they are like
+///    **built-in sinks**. They have **internal plumbing** (self-references) that is
+///    calibrated to their exact position in the room. If you move a fixed fixture to a
+///    new room, the internal plumbing still "remembers" the coordinates of the old room.
+///    The connections break because the pipes are now pointing at empty space where the
+///    fixture *used* to be.
+///
+/// The [`Pin`] **struct wrapper** is the **bolt** that fixes the fixture to the floor. It
+/// ensures that once those internal connections are established, the fixture stays put so
+/// the plumbing always points to the right place.
+///
+/// ## When is Pinning Necessary?
+///
+/// 1. **Self-referential types**: Futures created by `async` blocks often contain
+///    pointers to their own internal state. These must be pinned before they are polled.
+/// 2. **Trait Objects**: When using `Box<dyn Future>` or `Box<dyn Stream>`, the compiler
+///    cannot prove if the underlying concrete type is [`Unpin`], so you must wrap it in a
+///    [`Pin`] struct.
+///
+/// ## When is Pinning a "No-op"?
+///
+/// If a type already implements the [`Unpin`] trait (like [`i32`], [`String`], or
+/// [`tokio::task::JoinHandle`]), wrapping it in a [`Pin`] struct adds a heap allocation
+/// and indirection without any safety benefit. These types are **portable furniture** —
+/// they never store their own coordinates, so they can always be safely moved without
+/// breaking anything, making the "bolt" redundant.
+///
+/// ## How it's Enforced (The "Magic")
+///
+/// The Rust compiler and standard library work together to enforce pinning:
+///
+/// 1. **Auto-Traits**: [`Unpin`] is an **auto-trait** (like [`Send`] or [`Sync`]). The
+///    compiler automatically implements it for almost every type you write. Only
+///    compiler-generated futures (from `async` blocks) are automatically `!Unpin`.
+/// 2. **API Restriction**: The [`Pin`] struct does not use compiler magic to "watch"
+///    memory. Instead, it **hides** the `&mut T` for `!Unpin` types. Since you cannot get
+///    a mutable reference, you cannot call functions like [`std::mem::swap`] or
+///    [`std::mem::replace`], making it impossible to move the data safely.
+///
+/// ## Why `Pin<Box<T>>`?
+///
+/// You will often see the combination [`Pin`]`<`[`Box`]`<T>>`. This serves two distinct
+/// purposes:
+///
+/// - **[`Box`]** is used because the size of `T` (often an anonymous future or trait
+///   object) is not known at compile time. It puts the furniture in a "shipping crate" on
+///   the heap.
+/// - **[`Pin`]** is used because `T` is `!Unpin`. It bolts that crate to the floor of the
+///   heap so it can never be moved to a different heap address.
+///
+/// [`main_event_loop()`]: crate::TerminalWindow::main_event_loop()
+/// [`Pin<Box<T>>`]: std::boxed::Box::pin
+/// [`Pin`]: std::pin::Pin
+/// [`select!`]: tokio::select
+/// [`Unpin`]: std::marker::Unpin
+pub fn main_event_loop_impl<S, AS>(
     app: BoxedSafeApp<S, AS>,
-    exit_keys: &'a [InputEvent],
+    exit_keys: Vec<InputEvent>,
     state: S,
     initial_size: Size,
     input_device: InputDevice,
     output_device: OutputDevice,
-) -> MainEventLoopFuture<'a, S, AS>
+) -> MainEventLoopFuture<S, AS>
 where
-    S: Display + Debug + Default + Clone + Sync + Send + 'a,
+    S: Display + Debug + Default + Clone + Sync + Send + 'static,
     AS: Debug + Default + Clone + Sync + Send + 'static,
 {
     Box::pin(async move {
@@ -107,7 +170,7 @@ where
         run_main_event_loop(
             event_loop_state,
             app,
-            exit_keys,
+            &exit_keys,
             input_device,
             output_device,
         )
@@ -673,11 +736,12 @@ fn handle_result_generated_by_app_after_handling_action_or_input_event<S, AS>(
     }
 }
 
-/// Requests exit from the main event loop, as exit keys were pressed.
-/// Note: make sure to wrap the call to `send()` in a [`tokio::spawn()`] so that it
-/// doesn't block the calling thread.
+/// Requests exit from the main event loop, as exit keys were pressed. Note: make sure to
+/// wrap the call to [`send()`] in a [`tokio::spawn()`] so that it doesn't block the
+/// calling thread. See [channels] for more details.
 ///
-/// More info: <https://tokio.rs/tokio/tutorial/channels>.
+/// [`send()`]: mpsc::Sender::send
+/// [channels]: https://tokio.rs/tokio/tutorial/channels
 fn request_exit_by_sending_signal<AS>(
     channel_sender: mpsc::Sender<TerminalWindowMainThreadSignal<AS>>,
 ) where
@@ -887,7 +951,7 @@ mod tests {
 
         let (global_data, _, _) = main_event_loop_impl(
             app,
-            &exit_keys,
+            exit_keys.to_vec(),
             state,
             initial_size,
             input_device,

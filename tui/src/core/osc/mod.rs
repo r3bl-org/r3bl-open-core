@@ -1,17 +1,20 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! OSC (Operating System Command) sequence parsing and formatting.
+//! [`OSC`] (Operating System Command) sequence parsing and formatting.
 //!
 //! This module provides support for:
-//! - OSC 9;4 sequences used by Cargo and other build tools to communicate progress
-//!   information. Supports four progress states: progress updates (0-100%), progress
-//!   cleared, build errors, and indeterminate progress.
-//! - OSC 8 sequences for creating terminal hyperlinks that can be clicked to open URLs or
-//!   file paths.
-//! - Terminal control sequences (OSC 0) for setting window titles and tab names.
+//! - **`OSC 9;4`** sequences (`ESC ] 9 ; 4 ... ESC \ (ST)`) used by Cargo and other build
+//!   tools to communicate progress information. Supports four progress states: progress
+//!   updates (0-100%), progress cleared, build errors, and indeterminate progress.
+//! - **`OSC 8`** sequences (`ESC ] 8 ... ESC \ (ST)`) for creating terminal hyperlinks
+//!   that can be clicked to open URLs or file paths.
+//! - Terminal control sequences (**`OSC 0`**, `ESC ] 0 ... ESC \ (ST)`) for setting
+//!   window titles and tab names.
 //!
 //! The [`OscBuffer`] handles partial sequences split across buffer reads and
 //! gracefully ignores malformed input.
+//!
+//! [`OSC`]: crate::osc_codes::OscSequence
 
 pub mod osc_buffer;
 pub mod osc_codes;

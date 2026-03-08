@@ -1,9 +1,12 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! DEC Private Mode types for CSI ? h/l sequences.
+//! [`DEC`] Private Mode types for [`CSI`] ? h/l sequences.
 //!
 //! This module handles the various private mode settings that control terminal behavior,
 //! such as cursor visibility, auto-wrap, and alternate screen buffer.
+//!
+//! [`CSI`]: crate::CsiSequence
+//! [`DEC`]: https://en.wikipedia.org/wiki/Digital_Equipment_Corporation
 
 use crate::{ParamsExt,
             core::ansi::constants::{ALT_SCREEN_BUFFER, DECANM_VT52_MODE,
@@ -12,7 +15,10 @@ use crate::{ParamsExt,
                                     DECSCLM_SMOOTH_SCROLL, DECSCNM_REVERSE_VIDEO,
                                     DECTCEM_SHOW_CURSOR, SAVE_CURSOR_DEC}};
 
-/// DEC Private Mode types for CSI ? h/l sequences
+/// [`DEC`] Private Mode types for [`CSI`] ? h/l sequences
+///
+/// [`CSI`]: crate::CsiSequence
+/// [`DEC`]: https://en.wikipedia.org/wiki/Digital_Equipment_Corporation
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum PrivateModeType {
     /// DECCKM - Application Cursor Keys (1)

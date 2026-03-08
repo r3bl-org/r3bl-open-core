@@ -8,17 +8,20 @@ use tokio::{io::AsyncWriteExt,
 /// Disambiguate the [`tokio::process::Command`] type from the [`std::process::Command`]
 /// type. Here are the key differences between them:
 ///
-/// 1. **Execution Model**: tokio's `Command` is asynchronous and doesn't block the
+/// 1. **Execution Model**: [`tokio`]'s `Command` is asynchronous and doesn't block the
 ///    thread, while std's `Command` is synchronous and blocks until completion.
-/// 2. **Method Signatures**: Similar methods but tokio's version returns futures that
+/// 2. **Method Signatures**: Similar methods but [`tokio`]'s version returns futures that
 ///    must be awaited.
-/// 3. **Runtime Integration**: tokio's `Command` integrates with tokio's runtime and
-///    event loop, allowing it to work with other async features like select!.
-/// 4. **Process Management**: tokio provides additional features like `kill_on_drop()`
-///    and non-blocking `start_kill()` for better process management in async contexts.
-/// 5. **Use Case**: Use tokio's `Command` when working in async contexts to maintain
+/// 3. **Runtime Integration**: [`tokio`]'s `Command` integrates with [`tokio`]'s runtime
+///    and event loop, allowing it to work with other async features like select!.
+/// 4. **Process Management**: [`tokio`] provides additional features like
+///    `kill_on_drop()` and non-blocking `start_kill()` for better process management in
+///    async contexts.
+/// 5. **Use Case**: Use [`tokio`]'s `Command` when working in async contexts to maintain
 ///    non-blocking behavior, and std's `Command` for synchronous operations where
 ///    blocking is acceptable.
+///
+/// [`tokio`]: tokio
 pub type TokioCommand = tokio::process::Command;
 
 /// This macro to create a [`TokioCommand`] that receives a set of arguments and

@@ -20,7 +20,7 @@
 //! router.rs (routing & ESC detection)
 //!    │ (routes CSI/SS3 keyboard sequences here)
 //! ┌──▼───────────────────────────────────────┐  ┌──────────────────┐
-//! │  keyboard.rs                             ◀──┤ **YOU ARE HERE** │
+//! │  keyboard.rs                             ◄──┤ **YOU ARE HERE** │
 //! │  • Parse CSI sequences (ESC [)           │  └──────────────────┘
 //! │  • Parse SS3 sequences (ESC O)           │
 //! │  • Handle modifiers (Shift/Ctrl/Alt)     │
@@ -44,14 +44,14 @@
 //! - 📤 **Converted by**: [`convert_input_event()`] in `protocol_conversion.rs` (not this
 //!   module)
 //!
-//! ## [`VT-100`] Keyboard Input Encoding Explained
+//! ## Keyboard Encoding Explained
 //!
 //! You might wonder:
-//! - Why does Alt+A send `ESC a` (2 bytes) instead of a [`CSI`] sequence like `ESC
-//!   [1;3a`?
+//! - Why does Alt+A send `ESC a` (2 bytes) instead of a [`CSI`] sequence like `ESC [ 1 ;
+//!   3 a`?
 //! - Why can't I distinguish Ctrl+Shift+A from Ctrl+A?
 //! - What does Ctrl+Alt+A send?
-//! - Why does F6 send `ESC [17~` instead of `ESC [16~`?
+//! - Why does F6 send `ESC [ 1 7 ~` instead of `ESC [ 1 6 ~`?
 //! - Can I detect when a key is released?
 //!
 //! These behaviors stem from [`VT-100`] design decisions made in the 1970s that remain
@@ -61,18 +61,18 @@
 //!
 //! ### [`ASCII`] (1963)
 //!
-//! Uses only 7 bits (0-127). The 8th bit was used for [parity checking] during
-//! serial transmission—a transport-layer mechanism for error detection on noisy lines,
-//! not part of stored character values. A committee including [Bob Bemer] developed
-//! [`ASCII`]; he championed the [`ESC`] character that made escape sequences possible.
+//! Uses only 7 bits (0-127). The 8th bit was used for [parity checking] during serial
+//! transmission—a transport-layer mechanism for error detection on noisy lines, not part
+//! of stored character values. A committee including [Bob Bemer] developed [`ASCII`]; he
+//! championed the [`ESC`] character that made escape sequences possible.
 //!
-//! ### [[`ANSI`] escape codes] (1979)
+//! ### [`ANSI`] escape codes] (1979)
 //!
 //! Built on [`ASCII`]'s [`ESC`] character. Standardized as [`ANSI`] X3.64 based on
-//! [`DEC`]'s [`VT-100`] terminal, these are the `ESC [...` sequences we still use today
-//! (e.g., `ESC [15~` for F5, `ESC [<0;10;20M` for mouse click). Regular keys use single
-//! [`ASCII`] bytes, Alt adds one [`ESC`] byte, and only complex modifier combinations
-//! require multi-byte [`CSI`] sequences.
+//! [`DEC`]'s [`VT-100`] terminal, these are the `ESC [ ...` sequences we still use today
+//! (e.g., `ESC [ 1 5 ~` for F5, `ESC [ < 0 ; 10 ; 20 M` for mouse click). Regular keys
+//! use single [`ASCII`] bytes, Alt adds one [`ESC`] byte, and only complex modifier
+//! combinations require multi-byte [`CSI`] sequences.
 //!
 //! ### [`UTF-8`] (1992)
 //!
@@ -140,19 +140,19 @@
 //!
 //! 3. CSI sequences (3-7 bytes). Complex modifier combinations and special keys that
 //!    can't be represented in simpler encodings use parametric escape sequences
-//!    ┌─ Sequence ─┬─ Dec ─────────────────┬─ Hex ────────────────┬─ Symbolic ───┬ Size ┐
-//!    ├─ Home      │ 27 91 72              │ 1B 5B 48             │ (ESC [H)     │ 3    │
-//!    ├─ Delete    │ 27 91 51 126          │ 1B 5B 33 7E          │ (ESC [3~)    │ 4    │
-//!    ├─ F5        │ 27 91 49 53 126       │ 1B 5B 31 35 7E       │ (ESC [15~)   │ 5    │
-//!    ├─ Ctrl+Up   │ 27 91 49 59 53 65     │ 1B 5B 31 3B 35 41    │ (ESC [1;5A)  │ 6    │
-//!    ├─ Alt+Down  │ 27 91 49 59 51 66     │ 1B 5B 31 3B 33 42    │ (ESC [1;3B)  │ 6    │
-//!    ├─ Ctrl+F5   │ 27 91 49 53 59 53 126 │ 1B 5B 31 35 3B 35 7E │ (ESC [15;5~) │ 7    │
-//!    └────────────┴───────────────────────┴──────────────────────┴──────────────┴──────┘
+//!    ┌─ Sequence ─┬─ Dec ─────────────────┬─ Hex ────────────────┬─ Symbolic ────────┬ Size ┐
+//!    ├─ Home      │ 27 91 72              │ 1B 5B 48             │ (ESC [ H)         │ 3    │
+//!    ├─ Delete    │ 27 91 51 126          │ 1B 5B 33 7E          │ (ESC [ 3 ~)       │ 4    │
+//!    ├─ F5        │ 27 91 49 53 126       │ 1B 5B 31 35 7E       │ (ESC [ 1 5 ~)     │ 5    │
+//!    ├─ Ctrl+Up   │ 27 91 49 59 53 65     │ 1B 5B 31 3B 35 41    │ (ESC [ 1 ; 5 A)   │ 6    │
+//!    ├─ Alt+Down  │ 27 91 49 59 51 66     │ 1B 5B 31 3B 33 42    │ (ESC [ 1 ; 3 B)   │ 6    │
+//!    ├─ Ctrl+F5   │ 27 91 49 53 59 53 126 │ 1B 5B 31 35 3B 35 7E │ (ESC [ 1 5 ; 5 ~) │ 7    │
+//!    └────────────┴───────────────────────┴──────────────────────┴───────────────────┴──────┘
 //! ```
 //!
 //! ### How Bitmask Encoding for Modifiers Works
 //!
-//! [`CSI`] sequences encode modifiers as a number after the semicolon: `ESC [1;<n>A`.
+//! [`CSI`] sequences encode modifiers as a number after the semicolon: `ESC [ 1 ; <n> A`.
 //! The number `n` is calculated by adding the values of pressed modifiers to 1:
 //!
 //! ```text
@@ -163,9 +163,9 @@
 //! Examples:             (bitmask)
 //!                        ┌─ n ─┐   ┌─ offset (1-indexed, not 0-indexed)
 //!                        ▼     ▼   ▼
-//! Ctrl+Up       : ESC [1;5A    5 = 1 + Ctrl(4)
-//! Alt+Down      : ESC [1;3B    3 = 1 + Alt(2)
-//! Ctrl+Shift+Up : ESC [1;6A    6 = 1 + Shift(1) + Ctrl(4)
+//! Ctrl+Up       : ESC [ 1 ; 5 A    5 = 1 + Ctrl(4)
+//! Alt+Down      : ESC [ 1 ; 3 B    3 = 1 + Alt(2)
+//! Ctrl+Shift+Up : ESC [ 1 ; 6 A    6 = 1 + Shift(1) + Ctrl(4)
 //! ```
 //!
 //! Here's how each modifier is encoded (sorted by byte count):
@@ -221,7 +221,7 @@
 //! ─────────────────────────────────────────────────────
 //! Alt+A          ESC a        2       ESC prefix ✓
 //! Alt+Shift+A    ESC A        2       ESC + uppercase ✓
-//! Ctrl+Alt+Up    ESC [1;7A    6       CSI (complex)
+//! Ctrl+Alt+Up    ESC [ 1 ; 7 A    6       CSI (complex)
 //! ```
 //!
 //! **Why this design survived 50 years:**
@@ -241,8 +241,8 @@
 //! - ✅ Complex modifier combinations (Ctrl+Alt+Up)
 //! - Parametric sequences: `ESC [ params finalchar`
 //!
-//! This dual approach gives us the best of both worlds: efficiency for simple
-//! cases (Alt+letter) and expressiveness for complex cases (Ctrl+Alt+Shift+Up).
+//! This dual approach gives us the best of both worlds: efficiency for simple cases
+//! (Alt+letter) and expressiveness for complex cases (Ctrl+Alt+Shift+Up).
 //!
 //! ## Parser Dispatch Priority Pipeline
 //!
@@ -437,8 +437,8 @@
 //! | **.**          | `'.'`           | `ESC O n`            | n            |
 //! | **,**          | `','`           | `ESC O l`            | l            |
 //!
-//! **Use cases**: Calculator apps (distinguish numpad), games (numpad for movement),
-//! vim (numpad for navigation).
+//! **Use cases**: Calculator apps (distinguish numpad), games (numpad for movement), vim
+//! (numpad for navigation).
 //!
 //! ## Intentionally Unsupported Features
 //!
@@ -452,7 +452,8 @@
 //!
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
-//! [`convert_input_event()`]: crate::direct_to_ansi::input::protocol_conversion::convert_input_event
+//! [`convert_input_event()`]:
+//!     crate::direct_to_ansi::input::protocol_conversion::convert_input_event
 //! [`CSI`]: crate::CsiSequence
 //! [`DEC`]: https://en.wikipedia.org/wiki/Digital_Equipment_Corporation
 //! [`ESC`]: crate::EscSequence
@@ -466,7 +467,8 @@
 //! [`terminal_events`]: mod@super::terminal_events
 //! [`try_parse_input_event`]: super::try_parse_input_event
 //! [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
-//! [`utf8` encoding]: mod@crate::core::ansi::vt_100_terminal_input_parser::utf8#utf-8-encoding-explained
+//! [`utf8` encoding]:
+//!     mod@crate::vt_100_terminal_input_parser::utf8#utf-8-encoding-explained
 //! [`utf8`]: mod@super::utf8
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 //! [`VT-220`]: https://en.wikipedia.org/wiki/VT220

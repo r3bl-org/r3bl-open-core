@@ -26,7 +26,7 @@
 //!
 //! ```text
 //! ╭─────────────────╮    ╭────────────────╮    ╭─────────────────╮    ╭──────────────╮
-//! │ Child Process   │────▶ PTY Controller │────▶ VTE Parser      │────▶ OffscreenBuf │
+//! │ Child Process   │────► PTY Controller │────► VTE Parser      │────► OffscreenBuf │
 //! │ (vim, bash...)  │    │ (byte stream)  │    │ (state machine) │    │ (terminal    │
 //! ╰──────┬──────────╯    ╰────────────────╯    ╰───────┬─────────╯    │  buffer)     │
 //!        │                                             │              ╰───────┬──────╯
@@ -37,9 +37,9 @@
 //!        │                                    ╚═════════════════╝             │
 //!        │                                                                    │
 //!        │                                    ╭─────────────────╮             │
-//!        │                                    │ RenderPipeline  ◀─────────────╯
+//!        │                                    │ RenderPipeline  ◄─────────────╯
 //!        │                                    │ paint()         │
-//!        ╰────────────────────────────────────▶ Terminal Output │
+//!        ╰────────────────────────────────────► Terminal Output │
 //!                                             ╰─────────────────╯
 //! ```
 //!
@@ -73,10 +73,11 @@
 //! - **CR (0x0D)**: Carriage Return - move cursor to start of current line
 //!
 //! These operations are fundamental cursor control operations that don't require
-//! parameters, unlike their `CSI` sequence counterparts.
+//! parameters, unlike their [`CSI`] sequence counterparts.
 //!
-//! [`impl_control_ops`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl::vt_100_impl_control_ops
-//! [`test_control_ops`]: crate::core::ansi::vt_100_pty_output_parser::vt_100_pty_output_conformance_tests::tests::vt_100_test_control_ops
+//! [`CSI`]: crate::CsiSequence
+//! [`impl_control_ops`]: crate::vt_100_ansi_impl::vt_100_impl_control_ops
+//! [`test_control_ops`]: crate::vt_100_pty_output_conformance_tests::tests::vt_100_test_control_ops
 //! [module-level documentation]: self
 
 use super::super::ansi_parser_public_api::AnsiToOfsBufPerformer;

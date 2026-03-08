@@ -2,7 +2,7 @@
 
 //! [`CSI`] sequence builder for terminal control operations.
 //!
-//! This module provides the `CsiSequence` enum which represents various [`CSI`] control
+//! This module provides the [`CsiSequence`] enum which represents various [`CSI`] control
 //! sequences and can serialize them into [`ANSI`] escape codes.
 //!
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
@@ -30,8 +30,8 @@ use crate::{BufTextStorage, CsiCount, FastStringify, NumericConversions, TermCol
             stack_alloc_types::usize_fmt::{convert_u16_to_string_slice, u16_to_u8_array}};
 use std::fmt::{Formatter, Result};
 
-/// Builder for [`CSI`] (Control Sequence Introducer) sequences.
-/// Similar to `SgrCode` but for cursor movement and other [`CSI`] commands.
+/// Builder for [`CSI`] (Control Sequence Introducer) sequences. Similar to `SgrCode` but
+/// for cursor movement and other [`CSI`] commands.
 ///
 /// # Make Illegal States Unrepresentable
 ///
@@ -48,8 +48,8 @@ use std::fmt::{Formatter, Result};
 /// - `CSI 0 G` moves cursor to **column 1**, not 0
 /// - `CSI 0 L` inserts **1 line**, not 0
 ///
-/// Since all wrapper types use [`NonZeroU16`] internally, you are **forced** to
-/// handle the zero case at construction time:
+/// Since all wrapper types use [`NonZeroU16`] internally, you are **forced** to handle
+/// the zero case at construction time:
 ///
 /// ```rust
 /// use r3bl_tui::{TermRowDelta, CsiSequence};
@@ -371,7 +371,7 @@ impl FastStringify for CsiSequence {
                 acc.push(VPA_VERTICAL_POSITION);
             }
         }
-        Ok(())
+        ok!()
     }
 
     fn write_buf_to_fmt(&self, acc: &BufTextStorage, f: &mut Formatter<'_>) -> Result {

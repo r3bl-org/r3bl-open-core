@@ -364,7 +364,7 @@
 //! To learn how we built this crate, please take a look at the following resources.
 //! - If you like consuming video content, here's our [YT
 //!   channel](https://www.youtube.com/@developerlifecom). Please consider
-//!   [subscribing](https://www.youtube.com/channel/CHANNEL_ID?sub_confirmation=1).
+//!   [subscribing](https://www.youtube.com/channel/UCMcsxfCwzwDevc3NRqFgfEg?sub_confirmation=1).
 //! - If you like consuming written content, here's our developer
 //!   [site](https://developerlife.com/).
 //!
@@ -469,8 +469,8 @@
 //!   [`SgrCode`] builders instead of hardcoded escape strings
 //! - **Real-world scenarios**: Tests realistic terminal applications (vim, emacs, tmux)
 //!   with authentic 80x25 terminal dimensions
-//! - **[`VT-100` spec] compliance**: Comprehensive coverage of ANSI escape sequences
-//!   with proper bounds checking and edge case handling
+//! - **[`VT-100` spec] compliance**: Comprehensive coverage of ANSI escape sequences with
+//!   proper bounds checking and edge case handling
 //! - **Conformance data modules**: Organized sequence patterns for different terminal
 //!   applications and use cases
 //!
@@ -515,7 +515,7 @@
 //! ### Next-Level PTY-Based Integration Testing
 //!
 //! The TUI library features **production-grade integration testing** using
-//! pseudo-terminals (PTYs) that simulate real interactive terminal applications. Unlike
+//! pseudoterminals (PTYs) that simulate real interactive terminal applications. Unlike
 //! traditional unit tests, these tests spawn the test binary itself in a PTY slave
 //! process and send raw byte sequences through the PTY master—exactly like a real
 //! terminal emulator would.
@@ -554,34 +554,48 @@
 //!
 //! **Example test structure:**
 //!
-//! <!-- It is ok to use ignore here, as this is a macro call -->
-//!
-//! ```ignore
+//! ```no_run
+//! # use r3bl_tui::{generate_pty_test, PtyTestMode, DirectToAnsiInputDevice, PtyPair, SingleThreadSafeControlledChild, PtyTestContext};
+//! # use std::io::{Write, BufRead};
+//! # fn process_terminal_events(_: &DirectToAnsiInputDevice) {}
 //! generate_pty_test! {
 //!     test_fn: interactive_input_parsing,
-//!     slave: || {
-//!         // Runs in PTY slave - fully interactive terminal
-//!         enable_raw_mode();
-//!         let input_device = InputDevice::new();
+//!     controller: |context: PtyTestContext| {
+//!         // Runs in PTY controller - sends input, verifies output
+//!         let PtyTestContext {
+//!             pty_pair,
+//!             child,
+//!             mut buf_reader,
+//!             mut writer,
+//!         } = context;
+//!
+//!         child.wait_for_ready(&mut buf_reader, "CONTROLLED_READY").unwrap();
+//!
+//!         writer.write_all(b"\x1b[A").unwrap();  // Send Up Arrow
+//!         writer.flush().unwrap();
+//!
+//!         let output = child.read_line_state(&mut buf_reader, "Event:");
+//!         assert!(output.contains("UpArrow event received"));
+//!
+//!         child.drain_and_wait(buf_reader, pty_pair);
+//!     },
+//!     controlled: || {
+//!         // Runs in PTY controlled - fully interactive terminal
+//!         let mut input_device = DirectToAnsiInputDevice::new();
+//!         println!("CONTROLLED_READY");
 //!         process_terminal_events(&input_device);
 //!         std::process::exit(0);
 //!     },
-//!     master: |pty_pair, child| {
-//!         // Runs in PTY master - sends input, verifies output
-//!         let mut writer = pty_pair.controller().take_writer();
-//!         writer.write_all(b"\x1b[A").unwrap();  // Send Up Arrow
-//!
-//!         let output = read_pty_output(&pty_pair);
-//!         assert!(output.contains("UpArrow event received"));
-//!         child.wait().unwrap();
-//!     }
+//!     mode: PtyTestMode::Raw,
 //! }
 //! ```
 //!
-//! The macro takes three parameters:
+//! The macro takes four parameters:
 //! - `test_fn`: Name of the generated test function
-//! - `slave`: Closure that runs in the PTY slave process (interactive terminal)
-//! - `master`: Closure that runs in the PTY master process (sends input, verifies output)
+//! - `controller`: Closure that runs in the PTY controller process (sends input, verifies
+//!   output)
+//! - `controlled`: Closure that runs in the PTY controlled process (interactive terminal)
+//! - `mode`: A `PtyTestMode` value (`Raw` or `Cooked`)
 //!
 //! For a complete working example, see the [`test_pty_input_device`] module which
 //! demonstrates:
@@ -828,7 +842,7 @@
 //! - Advanced patterns (range validation, scroll regions, text selections)
 //!
 //! See the extensive and detailed [`bounds_check` module
-//! documentation](mod@crate::core::coordinates::bounds_check).
+//! documentation](mod@crate::bounds_check).
 //!
 //! # Grapheme support
 //!
@@ -1011,11 +1025,11 @@
 //! running on the same host or on other hosts, in order to handle use cases like
 //! synchronizing rendered output, or state.
 //!
-//! > Here are some papers outlining the differences between message passing and shared
+//! > Here are some resources outlining the differences between message passing and shared
 //! > memory for communication between threads.
 //! >
-//! > - <https://rits.github-pages.ucl.ac.uk/intro-hpchtc/morea/lesson2/reading4.html>
-//! > - <https://www.javatpoint.com/shared-memory-vs-message-passing-in-operating-system>
+//! > - [Inter-process communication]
+//! > - [Message passing]
 //!
 //! # I/O devices for full TUI, choice, and REPL
 //!
@@ -1023,11 +1037,8 @@
 //! required resources into the `main_event_loop` function. This allows for easy testing
 //! and for modularity and extensibility in the codebase. The [`readline_async`] module
 //! shares the same infrastructure for input and output devices. In fact the
-//! [`crate::InputDevice`] and [`crate::OutputDevice`] structs are shared by both the
-//! full [`TUI`] and the [`readline_async`] module.
-//!
-//! [`readline_async`]: mod@crate::readline_async
-//! [`TUI`]: crate::tui
+//! [`crate::InputDevice`] and [`crate::OutputDevice`] structs are shared by both the full
+//! [`TUI`] and the [`readline_async`] module.
 //!
 //! - The advantage of this approach is that for testing, test fixtures can be used to
 //!   perform end-to-end testing of the TUI.
@@ -1800,8 +1811,8 @@
 //!   contents against expected state
 //! - **Diffing**: Compare output between backends or program versions
 //! - **Screen capture**: Snapshot terminal state at any point
-//! - **Terminal emulation**: Build terminal emulators using the same battle-tested `VT-100`
-//!   parser that powers the terminal multiplexer
+//! - **Terminal emulation**: Build terminal emulators using the same battle-tested
+//!   `VT-100` parser that powers the terminal multiplexer
 //!
 //! **How `r3bl_tui` uses this for testing:**
 //!
@@ -1915,7 +1926,7 @@
 //! - Terminal resize handling
 //! - Input/output synchronization
 //!
-//! PTY tests solve this by creating real pseudo-terminals where tests act as both the
+//! PTY tests solve this by creating real pseudoterminals where tests act as both the
 //! "terminal emulator" (controller) and the "application" (controlled).
 //!
 //! ## Architecture
@@ -1932,7 +1943,7 @@
 //! ┌────────────▼───────────┐    ┌───────────────▼───────────────┐
 //! │ Macro: PTY Setup       │    │ Controlled Function           │
 //! │ - Creates PTY pair     │    │ - Enable raw mode (if needed) │
-//! │ - Spawns controlled    ├────▶ - Execute test logic         │
+//! │ - Spawns controlled    ├────► - Execute test logic          │
 //! │ - Passes to controller │    │ - Output via stdout/stderr    │
 //! └────────────┬───────────┘    └────────────▲─┬────────────────┘
 //!              │                             │ │
@@ -1954,11 +1965,15 @@
 //! <!-- It is ok to use ignore here - macro invocation requires test context and
 //! controller/controlled functions -->
 //!
-//! ```ignore
+//! ```no_run
+//! # use r3bl_tui::{generate_pty_test, PtyTestMode, PtyTestContext};
+//! # fn my_controller_function(_: PtyTestContext) {}
+//! # fn my_controlled_function() {}
 //! generate_pty_test! {
 //!     test_fn: test_raw_mode_enables_correctly,
 //!     controller: my_controller_function,
-//!     controlled: my_controlled_function
+//!     controlled: my_controlled_function,
+//!     mode: PtyTestMode::Raw,
 //! }
 //! ```
 //!
@@ -1972,10 +1987,12 @@
 //!
 //! **Controller** (runs in test process):
 //!
-//! - Receives `PtyPair` and `ControlledChild`
+//! - Receives [`PtyTestContext`] which bundles [`pty_pair`], [`child`], [`buf_reader`],
+//!   and [`writer`]
 //! - Sends input via PTY writer
 //! - Reads output via PTY reader
 //! - Performs assertions
+//! - Performs [`drain_and_wait()`] cleanup
 //!
 //! **Controlled** (runs in spawned child):
 //!
@@ -2466,8 +2483,11 @@
 //!
 //! <!-- Type references for documentation links -->
 //!
+//! [`readline_async`]: crate::readline_async::ReadlineAsyncContext::try_new
+//! [`TUI`]: crate::tui::TerminalWindow::main_event_loop
 //! [App]: crate::App
 //! [Component]: crate::Component
+//! [`pty_test_fixtures::drain_and_wait()`]: crate::pty_test_fixtures::drain_and_wait
 //! [TerminalWindow]: crate::TerminalWindow
 //! [FlexBox]: crate::FlexBox
 //! [Surface]: crate::Surface
@@ -2483,37 +2503,37 @@
 //! [OffscreenBuffer]: crate::OffscreenBuffer
 //! [PixelChar]: crate::PixelChar
 //! [ZOrder]: crate::ZOrder
-//! [`paint`]: mod@crate::tui::terminal_lib_backends::paint
-//! [`paint()`]: fn@crate::tui::terminal_lib_backends::paint::paint
+//! [`paint`]: mod@crate::paint
+//! [`paint()`]: fn@crate::paint
 //! [`OffscreenBufferPaintImplCrossterm`]:
-//!     struct@crate::tui::terminal_lib_backends::offscreen_buffer::OffscreenBufferPaintImplCrossterm
+//!     struct@crate::OffscreenBufferPaintImplCrossterm
 //! [EditorComponent]: crate::EditorComponent
 //! [EditorEngine]: crate::EditorEngine
 //! [EditorBuffer]: crate::EditorBuffer
 //! [HasEditorBuffers]: crate::HasEditorBuffers
-//! [ZeroCopyGapBuffer]: crate::tui::editor::zero_copy_gap_buffer::ZeroCopyGapBuffer
+//! [ZeroCopyGapBuffer]: crate::ZeroCopyGapBuffer
 //! [`zero_copy_gap_buffer` module documentation]:
-//!     mod@crate::tui::editor::zero_copy_gap_buffer
+//!     mod@crate::zero_copy_gap_buffer
 //! [`ZeroCopyGapBuffer::as_str()`]:
-//!     crate::tui::editor::zero_copy_gap_buffer::ZeroCopyGapBuffer::as_str
+//!     crate::ZeroCopyGapBuffer::as_str
 //! [`ZeroCopyGapBuffer::get_line_content()`]:
-//!     crate::tui::editor::zero_copy_gap_buffer::ZeroCopyGapBuffer::get_line_content
+//!     crate::ZeroCopyGapBuffer::get_line_content
 //! [`&str`]: prim@str
 //! [`Component::handle_event()`]: crate::Component::handle_event
 //! [`Component::render()`]: crate::Component::render
-//! [`EditorEngine::apply_event()`]: fn@crate::tui::editor::editor_engine::apply_event
-//! [`EditorEngine::render_engine()`]: fn@crate::tui::editor::editor_engine::render_engine
-//! [MdDocument]: crate::tui::md_parser::MdDocument
-//! [parse_markdown()]: fn@crate::tui::md_parser::parse_markdown::parse_markdown
-//! [parse_smart_list]: crate::tui::md_parser::parse_smart_list
+//! [`EditorEngine::apply_event()`]: crate::apply_event
+//! [`EditorEngine::render_engine()`]: crate::render_engine
+//! [MdDocument]: crate::MdDocument
+//! [parse_markdown()]: crate::parse_markdown()
+//! [parse_smart_list]: crate::parse_smart_list
 //! [try_parse_and_highlight]:
-//!     crate::tui::syntax_highlighting::md_parser_syn_hi::try_parse_and_highlight
-//! [PTYMux]: crate::core::pty_mux::PTYMux
-//! [`pty_mux` module documentation]: mod@crate::core::pty_mux
+//!     crate::try_parse_and_highlight
+//! [PTYMux]: crate::PTYMux
+//! [`pty_mux` module documentation]: mod@crate::pty_mux
 //! [CsiSequence]: crate::CsiSequence
 //! [EscSequence]: crate::EscSequence
 //! [SgrCode]: crate::SgrCode
-//! [`vt_100_pty_output_parser`]: mod@crate::core::ansi::vt_100_pty_output_parser
+//! [`vt_100_pty_output_parser`]: mod@crate::vt_100_pty_output_parser
 //! [RowIndex]: crate::RowIndex
 //! [ColIndex]: crate::ColIndex
 //! [ColWidth]: crate::ColWidth
@@ -2531,29 +2551,35 @@
 //! [HasDialogBuffers]: crate::HasDialogBuffers
 //! [DialogEngineConfigOptions]: crate::DialogEngineConfigOptions
 //! [`generate_pty_test!`]: crate::generate_pty_test
+//! [`PtyTestContext`]: crate::PtyTestContext
+//! [`drain_and_wait()`]: crate::SingleThreadSafeControlledChild::drain_and_wait
+//! [`pty_pair`]: field@PtyTestContext::pty_pair
+//! [`child`]: field@PtyTestContext::child
+//! [`buf_reader`]: field@PtyTestContext::buf_reader
+//! [`writer`]: field@PtyTestContext::writer
 //! [`integration_tests`]:
-//!     mod@crate::core::ansi::vt_100_terminal_input_parser::integration_tests
+//!     mod@crate::vt_100_terminal_input_parser::integration_tests
 //! [`raw_mode_integration_tests`]:
-//!     mod@crate::core::ansi::terminal_raw_mode::integration_tests
+//!     mod@crate::terminal_raw_mode::integration_tests
 //! [`test_pty_input_device`]:
-//!     mod@crate::core::ansi::vt_100_terminal_input_parser::integration_tests::pty_input_device_test
-//! [`DirectToAnsiInputDevice`]: crate::direct_to_ansi::DirectToAnsiInputDevice
-//! [`pty_test_fixtures`]: crate::core::test_fixtures::pty_test_fixtures
-//! [`backend_compat_tests`]: crate::core::terminal_io::backend_compat_tests
-//! [`terminal_lib_backends`]: crate::tui::terminal_lib_backends
+//!     mod@crate::vt_100_terminal_input_parser::integration_tests::pty_input_device_test
+//! [`DirectToAnsiInputDevice`]: crate::DirectToAnsiInputDevice
+//! [`pty_test_fixtures`]: crate::pty_test_fixtures
+//! [`backend_compat_tests`]: crate::backend_compat_tests
+//! [`terminal_lib_backends`]: crate::terminal_lib_backends
 //! [`direct_to_ansi`]: crate::direct_to_ansi
-//! [`crossterm_backend`]: crate::tui::terminal_lib_backends::crossterm_backend
-//! [`vt_100_terminal_input_parser`]: crate::core::ansi::vt_100_terminal_input_parser
-//! [`RawModeGuard`]: crate::core::ansi::terminal_raw_mode::RawModeGuard
-//! [`terminal_raw_mode`]: crate::core::ansi::terminal_raw_mode
-//! [`raw_mode_unix`]: crate::core::ansi::terminal_raw_mode::raw_mode_unix
+//! [`crossterm_backend`]: crate::crossterm_backend
+//! [`vt_100_terminal_input_parser`]: crate::vt_100_terminal_input_parser
+//! [`RawModeGuard`]: crate::RawModeGuard
+//! [`terminal_raw_mode`]: crate::terminal_raw_mode
+//! [`raw_mode_unix`]: crate::terminal_raw_mode::raw_mode_unix
 //! [`OffscreenBuffer::apply_ansi_bytes()`]: crate::OffscreenBuffer::apply_ansi_bytes
-//! [`RRT`]: core::resilient_reactor_thread::RRT
-//! [`SubscriberGuard`]: core::resilient_reactor_thread::SubscriberGuard
-//! [`RRTWorker`]: core::resilient_reactor_thread::RRTWorker
-//! [`RRTWaker`]: core::resilient_reactor_thread::RRTWaker
-//! [`resilient_reactor_thread`]: core::resilient_reactor_thread
-//! [`mio_poller`]: crate::direct_to_ansi::input::mio_poller
+//! [`RRT`]: crate::RRT
+//! [`SubscriberGuard`]: crate::SubscriberGuard
+//! [`RRTWorker`]: crate::RRTWorker
+//! [`RRTWaker`]: crate::RRTWaker
+//! [`resilient_reactor_thread`]: crate::resilient_reactor_thread
+//! [`mio_poller`]: crate::mio_poller
 //! [`io_uring`]: https://kernel.dk/io_uring.pdf
 //! [`crossterm`]: crossterm
 //! [`mio`]: mio
@@ -2564,8 +2590,11 @@
 //! [`vte`]: vte
 //! [`RenderOpOutput`]: crate::RenderOpOutput
 //! [`TERMINAL_LIB_BACKEND`]: crate::TERMINAL_LIB_BACKEND
-//! [Architecture Overview]: core::resilient_reactor_thread#architecture-overview
-//! [ANSI X3.64 Standard]: https://www.ecma-international.org/wp-content/uploads/ECMA-48_5th_edition_june_1991.pdf
+//! [Architecture Overview]: crate::resilient_reactor_thread#architecture-overview
+//! [ANSI X3.64 Standard]:
+//!     https://www.ecma-international.org/wp-content/uploads/ECMA-48_5th_edition_june_1991.pdf
+//! [Inter-process communication]: https://en.wikipedia.org/wiki/Inter-process_communication
+//! [Message passing]: https://en.wikipedia.org/wiki/Message_passing
 //! [`VT-100` spec]: https://vt100.net/docs/vt100-ug/chapter3.html
 //! [`VT-100` User Guide]: https://vt100.net/docs/vt100-ug/
 //! [XTerm Control Sequences]: https://invisible-island.net/xterm/ctlseqs/ctlseqs.html

@@ -2,8 +2,8 @@
 
 //! Protocol validation - ground truth discovery and conformance testing.
 //!
-//! This module contains two types of validation that ensure our parser conforms to
-//! the [`VT-100`] [`ANSI`] protocol:
+//! This module contains two types of validation that ensure our parser conforms to the
+//! [`VT-100`] [`ANSI`] protocol:
 //!
 //! ## 1. Ground Truth Discovery
 //!
@@ -19,8 +19,8 @@
 //! ## 2. Protocol Conformance Testing
 //!
 //! [`input_parser_validation_test`] - Automated unit tests using hardcoded [`ANSI`]
-//! sequences captured from real terminals. These tests validate that our parser
-//! correctly interprets the protocol.
+//! sequences captured from real terminals. These tests validate that our parser correctly
+//! interprets the protocol.
 //!
 //! # Design Philosophy
 //!
@@ -45,15 +45,16 @@
 //!    Generator → Bytes validates against reality ✓
 //! ```
 //!
-//! **These hardcoded sequences ARE the ground truth.** The generators in
-//! [`generator`] are validated by producing sequences that match these literals.
+//! **These hardcoded sequences ARE the ground truth.** The generators in [`generator`]
+//! are validated by producing sequences that match these literals.
 //!
 //! If you want to test generator correctness, see the round-trip tests in
 //! [`unit_tests::generator_round_trip_tests`] instead.
 //!
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`generator`]: crate::core::ansi::generator
-//! [`unit_tests::generator_round_trip_tests`]: super::unit_tests::generator_round_trip_tests
+//! [`generator`]: crate::generator
+//! [`unit_tests::generator_round_trip_tests`]:
+//!     super::unit_tests::generator_round_trip_tests
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 //! [parent module]: super#testing-strategy
 

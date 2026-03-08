@@ -12,9 +12,9 @@
 //! This type integrates with the generic RRT infrastructure in
 //! [`crate::core::resilient_reactor_thread`].
 //!
-//! [`RRTWorker`]: crate::core::resilient_reactor_thread::RRTWorker
-//! [`block_until_ready_then_dispatch()`]: crate::core::resilient_reactor_thread::RRTWorker::block_until_ready_then_dispatch
-//! [`create_and_register_os_sources()`]: crate::core::resilient_reactor_thread::RRTWorker::create_and_register_os_sources
+//! [`block_until_ready_then_dispatch()`]: crate::RRTWorker::block_until_ready_then_dispatch
+//! [`create_and_register_os_sources()`]: crate::RRTWorker::create_and_register_os_sources
+//! [`RRTWorker`]: crate::RRTWorker
 
 use super::{super::{channel_types::{PollerEvent, StdinEvent},
                     paste_state_machine::PasteCollectionState,
@@ -103,7 +103,7 @@ impl RRTWorker for MioPollWorker {
     /// [`mio::Poll`]: mio::Poll
     /// [`mio::Waker`]: mio::Waker
     /// [`wake_and_unblock_dedicated_thread()`]:
-    ///     crate::core::resilient_reactor_thread::RRTWaker::wake_and_unblock_dedicated_thread
+    ///     crate::RRTWaker::wake_and_unblock_dedicated_thread
     fn create_and_register_os_sources() -> miette::Result<(Self, Self::Waker)> {
         // Create mio::Poll (epoll on Linux, kqueue on macOS).
         let poll_handle = Poll::new().map_err(PollCreationError)?;
@@ -180,9 +180,9 @@ impl MioPollWorker {
     ///
     /// See [EINTR handling] for how interrupted syscalls are retried.
     ///
-    /// [EINTR handling]: super#eintr-handling
     /// [`EINTR`]: super#eintr-handling
     /// [`stdin`]: std::io::stdin
+    /// [EINTR handling]: super#eintr-handling
     pub fn block_until_ready_then_dispatch_impl(
         &mut self,
         sender: &Sender<RRTEvent<PollerEvent>>,

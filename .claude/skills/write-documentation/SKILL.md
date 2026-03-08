@@ -409,9 +409,12 @@ for a complete example of complex trait documentation with associated types.
 /// Capacity of the broadcast channel for events.
 pub const CHANNEL_CAPACITY: usize = 4_096;
 
-/// ESC byte (0x1B in hex).
+/// ESC byte (1B in hex).
 pub const ANSI_ESC: u8 = 27;
 ```
+
+**Note:** All ANSI constants in `tui/src/core/ansi/constants/` MUST follow the
+Standardized Doc Template. See [`constant-conventions.md`] for details.
 
 #### Quick Reference Table
 
@@ -840,18 +843,18 @@ Use human-readable numeric literals for byte constants:
 | **Bitmasks** (used in `&`, `\|`, `^`) | Binary | `0b0110_0000` |
 | **Printable ASCII** | Byte literal | `b'['` |
 | **Non-printable bytes** | Decimal | `27` |
-| **Comments** | Show hex | `// (0x1B in hex)` |
+| **Comments** | Show hex | `// (1B in hex)` |
 
 ### ✅ Good: Human-Readable
 
 ```rust
-/// ESC byte (0x1B in hex).
+/// ESC byte (1B in hex).
 pub const ANSI_ESC: u8 = 27;
 
-/// CSI bracket byte: `[` (91 decimal, 0x5B hex).
+/// CSI bracket byte: `[` (91 decimal, 5B hex).
 pub const ANSI_CSI_BRACKET: u8 = b'[';
 
-/// Mask to convert control character to lowercase (0x60 in hex).
+/// Mask to convert control character to lowercase (60 in hex).
 pub const CTRL_TO_LOWERCASE_MASK: u8 = 0b0110_0000;
 ```
 
@@ -1089,6 +1092,7 @@ Before committing documentation:
 - [ ] All link definitions at bottom of comment blocks
 - [ ] Constants use binary/byte literal/decimal (not hex)
 - [ ] Hex shown in comments for cross-reference
+- [ ] ANSI constants follow [Standardized Doc Template]
 - [ ] Markdown tables formatted (`cargo rustdoc-fmt`)
 - [ ] No broken links (`./check.fish --quick-doc`)
 - [ ] Heading anchors updated after heading renames (fragment links are **not** validated by rustdoc)

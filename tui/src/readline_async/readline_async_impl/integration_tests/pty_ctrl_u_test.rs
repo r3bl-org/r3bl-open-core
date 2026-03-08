@@ -2,29 +2,18 @@
 
 use crate::{
     AsyncDebouncedDeadline,
-    SingleThreadSafeControlledChild,
+    CONTROLLED_READY,
+    CONTROLLED_STARTING,
     DebouncedState,
-    PtyPair,
     PtyTestMode,
+    TEST_RUNNING,
     core::test_fixtures::StdoutMock,
     readline_async::readline_async_impl::LineState,
+    PtyTestContext,
 };
-use std::{io::{BufRead, BufReader, Write},
+use std::{io::{BufRead, Write},
           sync::{Arc, Mutex as StdMutex},
           time::Duration};
-
-// ==================== Signal Constants ====================
-//
-// These constants ensure consistency between controller and controlled processes.
-
-/// Signal indicating the test is running in the controlled process.
-const TEST_RUNNING: &str = "TEST_RUNNING";
-
-/// Signal indicating the controlled process has started and is initializing.
-const CONTROLLED_STARTING: &str = "CONTROLLED_STARTING";
-
-/// Signal indicating the controlled process is ready to receive input.
-const CONTROLLED_READY: &str = "CONTROLLED_READY";
 
 /// Prefix for line state output.
 const LINE_PREFIX: &str = "Line:";
@@ -53,10 +42,10 @@ generate_pty_test! {
     /// This test uses a **request-response protocol** between controller and controlled:
     ///
     /// 1. **Controller sends input** (text and Ctrl+U sequences)
-    /// 2. **Controller flushes** and waits ~200ms for controlled to process
-    /// 3. **Controller blocks** reading controlled stdout until it sees "Line: ..."
-    /// 4. **Controller makes assertion** on the line state
-    /// 5. **Repeat** for next test case
+    /// 2. **Controller flushes** and blocks reading controlled stdout until it sees
+    ///    "Line: ..."
+    /// 3. **Controller makes assertion** on the line state
+    /// 4. **Repeat** for next test case
     ///
     /// The ([`LineState`]) is checked in the test to make assertions against.
     ///
@@ -72,19 +61,15 @@ generate_pty_test! {
 ///
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 #[allow(clippy::too_many_lines)]
-fn pty_controller_entry_point(pty_pair: PtyPair, child: SingleThreadSafeControlledChild) {
+fn pty_controller_entry_point(context: PtyTestContext) {
+    let PtyTestContext {
+        pty_pair,
+        child,
+        mut buf_reader,
+        mut writer,
+    } = context;
+
     eprintln!("🚀 PTY Controller: Starting Ctrl+U test...");
-
-    let mut writer = pty_pair
-        .controller()
-        .take_writer()
-        .expect("Failed to get writer");
-    let reader = pty_pair
-        .controller()
-        .try_clone_reader()
-        .expect("Failed to clone reader");
-
-    let mut buf_reader = BufReader::new(reader);
 
     eprintln!("📝 PTY Controller: Waiting for controlled process to start...");
 
@@ -113,7 +98,7 @@ fn pty_controller_entry_point(pty_pair: PtyPair, child: SingleThreadSafeControll
                 if trimmed.contains(CONTROLLED_READY) {
                     controlled_ready_seen = true;
                     eprintln!(
-                        "  ✓ Controlled is ready (raw mode enabled, input device created)"
+                        "  ✓ Controlled is ready (input device created)"
                     );
                     break;
                 }
@@ -158,7 +143,6 @@ fn pty_controller_entry_point(pty_pair: PtyPair, child: SingleThreadSafeControll
         .write_all(b"hello world")
         .expect("Failed to write text");
     writer.flush().expect("Failed to flush");
-    std::thread::sleep(Duration::from_millis(200));
 
     let result = read_line_state();
     eprintln!("  ← Line with cursor at end: {result}");
@@ -167,7 +151,6 @@ fn pty_controller_entry_point(pty_pair: PtyPair, child: SingleThreadSafeControll
     // Ctrl+U at end should delete entire line
     writer.write_all(&[0x15]).expect("Failed to write Ctrl+U");
     writer.flush().expect("Failed to flush");
-    std::thread::sleep(Duration::from_millis(100));
 
     let result = read_line_state();
     eprintln!("  ← After Ctrl+U (cursor at end): {result}");
@@ -183,7 +166,6 @@ fn pty_controller_entry_point(pty_pair: PtyPair, child: SingleThreadSafeControll
     // Ctrl+U at position 0 should still delete nothing
     writer.write_all(&[0x15]).expect("Failed to write Ctrl+U");
     writer.flush().expect("Failed to flush");
-    std::thread::sleep(Duration::from_millis(100));
 
     let result = read_line_state();
     eprintln!("  ← After Ctrl+U on empty line: {result}");
@@ -204,7 +186,7 @@ fn pty_controller_entry_point(pty_pair: PtyPair, child: SingleThreadSafeControll
 /// [`PTY`] Controlled: Process readline input and report line state
 ///
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
-fn pty_controlled_entry_point() -> ! {
+fn pty_controlled_entry_point() {
     use crate::direct_to_ansi::DirectToAnsiInputDevice;
 
     println!("{CONTROLLED_STARTING}");
@@ -222,16 +204,22 @@ fn pty_controlled_entry_point() -> ! {
         let safe_history = Arc::new(StdMutex::new(history));
 
         println!("🔍 PTY Controlled: LineState created, reading input...");
-        println!("{CONTROLLED_READY}");  // Signal to controller that we're ready
-        std::io::stdout().flush().expect("Failed to flush");
 
         let mut input_device = DirectToAnsiInputDevice::new();
 
+        // Signal to controller that we're ready to receive input. MUST be after
+        // DirectToAnsiInputDevice::new() so the mio poller thread is already
+        // watching stdin before the controller sends any input through the PTY.
+        println!("{CONTROLLED_READY}");
+        std::io::stdout().flush().expect("Failed to flush");
+
         // ==================== Timing Configuration ====================
         //
-        // Inactivity watchdog: Exit if no events arrive for 2 seconds
+        // Inactivity watchdog: Exit if no events arrive for 5 seconds.
+        // Needs headroom for parallel test execution where CPU scheduling
+        // delays can cause input events to arrive late.
         // Pattern: "Exit if this operation takes too long"
-        let mut inactivity_watchdog = AsyncDebouncedDeadline::new(Duration::from_secs(2));
+        let mut inactivity_watchdog = AsyncDebouncedDeadline::new(Duration::from_secs(5));
         inactivity_watchdog.reset(); // Start the watchdog
 
         // Debounced state: Buffer line state and print after 10ms of no events
@@ -305,6 +293,4 @@ fn pty_controlled_entry_point() -> ! {
         std::io::stdout().flush().expect("Failed to flush");
     });
 
-    println!("🔍 Controlled: Completed, exiting");
-    std::process::exit(0);
 }

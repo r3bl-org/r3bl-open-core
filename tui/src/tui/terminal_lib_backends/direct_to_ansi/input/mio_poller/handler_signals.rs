@@ -25,10 +25,10 @@ use tokio::sync::broadcast::Sender;
 /// - [`Continuation::Continue`]: Successfully processed.
 /// - [`Continuation::Stop`]: Receiver dropped.
 ///
-/// [`MioPollWorker`]: super::MioPollWorker
-/// [`RRTWorker`]: crate::core::resilient_reactor_thread::RRTWorker
-/// [`SIGWINCH`]: signal_hook::consts::SIGWINCH
 /// [`get_size()`]: crate::get_size
+/// [`MioPollWorker`]: super::MioPollWorker
+/// [`RRTWorker`]: crate::RRTWorker
+/// [`SIGWINCH`]: signal_hook::consts::SIGWINCH
 pub fn consume_pending_signals_with_sender(
     worker: &mut MioPollWorker,
     sender: &Sender<RRTEvent<PollerEvent>>,

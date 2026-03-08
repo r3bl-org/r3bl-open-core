@@ -19,7 +19,7 @@
 //! router.rs (routing & `ESC` detection)
 //!    │ (routes non-escape bytes here)
 //! ┌──▼───────────────────────────────────────┐  ┌──────────────────┐
-//! │  utf8.rs                                 ◀──┤ **YOU ARE HERE** │
+//! │  utf8.rs                                 ◄──┤ **YOU ARE HERE** │
 //! │  • Parse UTF-8 multi-byte sequences      │  └──────────────────┘
 //! │  • Generate character events             │
 //! │  • Handle incomplete sequences           │
@@ -162,101 +162,20 @@
 //! rendering utilities.
 //!
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`ASCII`]: https://en.wikipedia.org/wiki/[`ASCII`]
-//! [`ASCII`]: https://en.wikipedia.org/wiki/[`ASCII`]
-//! [`ASCII`]: https://en.wikipedia.org/wiki/[`ASCII`]
-//! [`ASCII`]: https://en.wikipedia.org/wiki/[`ASCII`]
-//! [`ASCII`]: https://en.wikipedia.org/wiki/[`ASCII`]
-//! [`ASCII`]: https://en.wikipedia.org/wiki/[`ASCII`]
-//! [`ASCII`]: https://en.wikipedia.org/wiki/[`ASCII`]
-//! [`ASCII`]: https://en.wikipedia.org/wiki/[`ASCII`]
-//! [`ASCII`]: https://en.wikipedia.org/wiki/[`ASCII`]
-//! [`ASCII`]: https://en.wikipedia.org/wiki/[`ASCII`]
-//! [`ASCII`]: https://en.wikipedia.org/wiki/[`ASCII`]
-//! [`ASCII`]: https://en.wikipedia.org/wiki/[`ASCII`]
-//! [`ASCII`]: https://en.wikipedia.org/wiki/[`ASCII`]
-//! [`ASCII`]: https://en.wikipedia.org/wiki/[`ASCII`]
-//! [`ASCII`]: https://en.wikipedia.org/wiki/[`ASCII`]
-//! [`ASCII`]: https://en.wikipedia.org/wiki/[`ASCII`]
-//! [`ASCII`]: https://en.wikipedia.org/wiki/[`ASCII`]
-//! [`ASCII`]: https://en.wikipedia.org/wiki/[`ASCII`]
-//! [`ASCII`]: https://en.wikipedia.org/wiki/[`ASCII`]
-//! [`ASCII`]: https://en.wikipedia.org/wiki/[`ASCII`]
-//! [`ASCII`]: https://en.wikipedia.org/wiki/[`ASCII`]
-//! [`ASCII`]: https://en.wikipedia.org/wiki/[`ASCII`]
-//! [`ASCII`]: https://en.wikipedia.org/wiki/[`ASCII`]
-//! [`ASCII`]: https://en.wikipedia.org/wiki/[`ASCII`]
-//! [`ASCII`]: https://en.wikipedia.org/wiki/[`ASCII`]
-//! [`ASCII`]: https://en.wikipedia.org/wiki/[`ASCII`]
+//! [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
 //! [`ByteIndex`]: crate::ByteIndex
 //! [`ByteOffset`]: crate::ByteOffset
 //! [`ColIndex`]: crate::ColIndex
-//! [`SegIndex`]: crate::SegIndex
-//! [`UTF-8`]: https://en.wikipedia.org/wiki/[`UTF-8`]
-//! [`UTF-8`]: https://en.wikipedia.org/wiki/[`UTF-8`]
-//! [`UTF-8`]: https://en.wikipedia.org/wiki/[`UTF-8`]
-//! [`UTF-8`]: https://en.wikipedia.org/wiki/[`UTF-8`]
-//! [`UTF-8`]: https://en.wikipedia.org/wiki/[`UTF-8`]
-//! [`UTF-8`]: https://en.wikipedia.org/wiki/[`UTF-8`]
-//! [`UTF-8`]: https://en.wikipedia.org/wiki/[`UTF-8`]
-//! [`UTF-8`]: https://en.wikipedia.org/wiki/[`UTF-8`]
-//! [`UTF-8`]: https://en.wikipedia.org/wiki/[`UTF-8`]
-//! [`UTF-8`]: https://en.wikipedia.org/wiki/[`UTF-8`]
-//! [`UTF-8`]: https://en.wikipedia.org/wiki/[`UTF-8`]
-//! [`UTF-8`]: https://en.wikipedia.org/wiki/[`UTF-8`]
-//! [`UTF-8`]: https://en.wikipedia.org/wiki/[`UTF-8`]
-//! [`UTF-8`]: https://en.wikipedia.org/wiki/[`UTF-8`]
-//! [`UTF-8`]: https://en.wikipedia.org/wiki/[`UTF-8`]
-//! [`UTF-8`]: https://en.wikipedia.org/wiki/[`UTF-8`]
-//! [`UTF-8`]: https://en.wikipedia.org/wiki/[`UTF-8`]
-//! [`UTF-8`]: https://en.wikipedia.org/wiki/[`UTF-8`]
-//! [`UTF-8`]: https://en.wikipedia.org/wiki/[`UTF-8`]
-//! [`UTF-8`]: https://en.wikipedia.org/wiki/[`UTF-8`]
-//! [`UTF-8`]: https://en.wikipedia.org/wiki/[`UTF-8`]
-//! [`UTF-8`]: https://en.wikipedia.org/wiki/[`UTF-8`]
-//! [`UTF-8`]: https://en.wikipedia.org/wiki/[`UTF-8`]
-//! [`UTF-8`]: https://en.wikipedia.org/wiki/[`UTF-8`]
-//! [`UTF-8`]: https://en.wikipedia.org/wiki/[`UTF-8`]
-//! [`UTF-8`]: https://en.wikipedia.org/wiki/[`UTF-8`]
-//! [`UTF-8`]: https://en.wikipedia.org/wiki/[`UTF-8`]
-//! [`VT100InputEventIR`]: super::VT100InputEventIR
-//! [`VT100KeyCodeIR::Char`]: super::VT100KeyCodeIR::Char
 //! [`convert_input_event()`]:
 //!     crate::direct_to_ansi::input::protocol_conversion::convert_input_event
-//!
-//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
 //! [`keyboard`]: mod@super::keyboard
 //! [`mouse`]: mod@super::mouse
 //! [`router`]: mod@super::router
+//! [`SegIndex`]: crate::SegIndex
 //! [`terminal_events`]: mod@super::terminal_events
 //! [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
+//! [`VT100InputEventIR`]: super::VT100InputEventIR
+//! [`VT100KeyCodeIR::Char`]: super::VT100KeyCodeIR::Char
 //! [parent module documentation]: mod@super#primary-consumer
 
 use super::ir_event_types::{VT100InputEventIR, VT100KeyCodeIR, VT100KeyModifiersIR};
@@ -437,38 +356,9 @@ fn decode_utf8(buffer: &[u8]) -> Option<char> {
 /// [`mod@crate::graphemes`]. See also the [module-level documentation] for a
 /// comprehensive explanation of this distinction.
 ///
-/// [`UTF-8`]: https://en.wikipedia.org/wiki/[`UTF-8`]
-/// [`UTF-8`]: https://en.wikipedia.org/wiki/[`UTF-8`]
-/// [`UTF-8`]: https://en.wikipedia.org/wiki/[`UTF-8`]
-/// [`UTF-8`]: https://en.wikipedia.org/wiki/[`UTF-8`]
-/// [`UTF-8`]: https://en.wikipedia.org/wiki/[`UTF-8`]
-/// [`UTF-8`]: https://en.wikipedia.org/wiki/[`UTF-8`]
-/// [`UTF-8`]: https://en.wikipedia.org/wiki/[`UTF-8`]
-/// [`UTF-8`]: https://en.wikipedia.org/wiki/[`UTF-8`]
-/// [`UTF-8`]: https://en.wikipedia.org/wiki/[`UTF-8`]
-/// [`UTF-8`]: https://en.wikipedia.org/wiki/[`UTF-8`]
-/// [`UTF-8`]: https://en.wikipedia.org/wiki/[`UTF-8`]
-/// [`UTF-8`]: https://en.wikipedia.org/wiki/[`UTF-8`]
-/// [`UTF-8`]: https://en.wikipedia.org/wiki/[`UTF-8`]
-/// [`UTF-8`]: https://en.wikipedia.org/wiki/[`UTF-8`]
-/// [`UTF-8`]: https://en.wikipedia.org/wiki/[`UTF-8`]
-/// [`UTF-8`]: https://en.wikipedia.org/wiki/[`UTF-8`]
-/// [`UTF-8`]: https://en.wikipedia.org/wiki/[`UTF-8`]
-/// [`UTF-8`]: https://en.wikipedia.org/wiki/[`UTF-8`]
-/// [`UTF-8`]: https://en.wikipedia.org/wiki/[`UTF-8`]
-/// [`UTF-8`]: https://en.wikipedia.org/wiki/[`UTF-8`]
-/// [`UTF-8`]: https://en.wikipedia.org/wiki/[`UTF-8`]
-/// [`UTF-8`]: https://en.wikipedia.org/wiki/[`UTF-8`]
-/// [`UTF-8`]: https://en.wikipedia.org/wiki/[`UTF-8`]
-/// [`UTF-8`]: https://en.wikipedia.org/wiki/[`UTF-8`]
-/// [`UTF-8`]: https://en.wikipedia.org/wiki/[`UTF-8`]
-/// [`UTF-8`]: https://en.wikipedia.org/wiki/[`UTF-8`]
-/// [`UTF-8`]: https://en.wikipedia.org/wiki/[`UTF-8`]
-/// [`core::str::utf8_char_width`]:
-///     https://doc.rust-lang.org/std/str/fn.utf8_char_width.html
+/// [`core::str::utf8_char_width`]: https://en.wikipedia.org/wiki/UTF-8#Encoding
 /// [`str_internals`]:
 ///     https://doc.rust-lang.org/unstable-book/library-features/str-internals.html
-///
 /// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
 /// [module-level documentation]: self#important-utf-8-byte-length-vs-display-width
 fn get_utf8_length(first_byte: u8) -> Option<usize> {

@@ -433,7 +433,7 @@ similar to tmux.
   - Enables snapshot testing: compare expected vs actual terminal state without a real terminal
 
 - **PTY Testing Infrastructure:**
-  Real-world testing in pseudo-terminals instead of mocks.
+  Real-world testing in pseudoterminals instead of mocks.
   See the [`generate_pty_test!`](https://docs.rs/r3bl_tui/0.7.7/r3bl_tui/macro.generate_pty_test.html) macro documentation for usage and the Controller/Controlled pattern.
   - Controller/Controlled pattern for test isolation
   - `generate_pty_test!` macro for single-feature tests
@@ -499,13 +499,13 @@ Fixed Windows compatibility issues with PTY exit status handling.
 
 ### v0.7.4 (2025-08-15)
 
-This release introduces a comprehensive PTY (pseudo-terminal) module with full process control
+This release introduces a comprehensive PTY (pseudoterminal) module with full process control
 capabilities, enhanced spinner messaging, and complete OSC 8 hyperlink support for modern terminal
 interactions.
 
 - Added PTY module:
-  - New comprehensive PTY (pseudo-terminal) module with both read_only and read_write APIs
-  - Support for spawning and controlling child processes in pseudo-terminals
+  - New comprehensive PTY (pseudoterminal) module with both read_only and read_write APIs
+  - Support for spawning and controlling child processes in pseudoterminals
   - Multiple examples demonstrating PTY functionality including `spawn_pty_read_only.rs` and
     `spawn_pty_read_write.rs`
 - Added OSC support:

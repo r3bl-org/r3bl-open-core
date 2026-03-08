@@ -8,10 +8,10 @@
 //! it - if the poll is dropped, calling [`wake_and_unblock_dedicated_thread()`] has no
 //! effect.
 //!
-//! [`RRTWaker`]: crate::core::resilient_reactor_thread::RRTWaker
 //! [`mio::Poll::poll()`]: mio::Poll::poll
 //! [`mio::Poll`]: mio::Poll
 //! [`mio::Waker`]: mio::Waker
+//! [`RRTWaker`]: crate::RRTWaker
 //! [`wake_and_unblock_dedicated_thread()`]: MioPollWaker::wake_and_unblock_dedicated_thread
 //! [two-phase setup]: crate::core::resilient_reactor_thread#two-phase-setup
 
@@ -27,12 +27,12 @@ use crate::core::resilient_reactor_thread::RRTWaker;
 ///
 /// See the [Poll -> Registry -> Waker Chain] diagram on [`RRTWaker`].
 ///
-/// [Poll -> Registry -> Waker Chain]: RRTWaker#poll---registry---waker-chain
-/// [`MioPollWorker`]: super::MioPollWorker
 /// [`mio::Poll::poll()`]: mio::Poll::poll
 /// [`mio::Poll`]: mio::Poll
 /// [`mio::Waker`]: mio::Waker
+/// [`MioPollWorker`]: super::MioPollWorker
 /// [`wake_and_unblock_dedicated_thread()`]: Self::wake_and_unblock_dedicated_thread
+/// [Poll -> Registry -> Waker Chain]: RRTWaker#poll---registry---waker-chain
 #[derive(Debug)]
 pub struct MioPollWaker(pub mio::Waker);
 

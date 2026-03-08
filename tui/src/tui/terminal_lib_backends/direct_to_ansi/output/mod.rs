@@ -3,24 +3,26 @@
 //! Output rendering module for `DirectToAnsi` backend.
 //!
 //! This module contains the output-specific functionality for the `DirectToAnsi` backend,
-//! including ANSI sequence generation, render operation painting, and text rendering.
+//! including [`ANSI`] sequence generation, render operation painting, and text rendering.
 //!
 //! ## Architecture
 //!
 //! The module consists of:
-//! 1. [`AnsiSequenceGenerator`]: Generates raw ANSI escape sequence bytes
+//! 1. [`AnsiSequenceGenerator`]: Generates raw [`ANSI`] escape sequence bytes
 //! 2. [`RenderOpPaintImplDirectToAnsi`]: Implements [`RenderOpPaint`] trait for executing
 //!    render operations: [`RenderOpOutput`] and [`RenderOpCommon`]
-//! 3. [`PixelCharRenderer`]: Converts styled text to ANSI with smart attribute diffing
-//! 4. [`RenderToAnsi`]: Trait for rendering offscreen buffers to ANSI
+//! 3. [`PixelCharRenderer`]: Converts styled text to [`ANSI`] with smart attribute
+//!    diffing
+//! 4. [`RenderToAnsi`]: Trait for rendering offscreen buffers to [`ANSI`]
 //!
-//! [`RenderOpCommon`]: crate::RenderOpCommon
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`AnsiSequenceGenerator`]: crate::AnsiSequenceGenerator
-//! [`RenderOpPaintImplDirectToAnsi`]: crate::RenderOpPaintImplDirectToAnsi
 //! [`PixelCharRenderer`]: crate::PixelCharRenderer
-//! [`RenderToAnsi`]: crate::RenderToAnsi
-//! [`RenderOpPaint`]: crate::RenderOpPaint
+//! [`RenderOpCommon`]: crate::RenderOpCommon
 //! [`RenderOpOutput`]: crate::RenderOpOutput
+//! [`RenderOpPaint`]: crate::RenderOpPaint
+//! [`RenderOpPaintImplDirectToAnsi`]: crate::RenderOpPaintImplDirectToAnsi
+//! [`RenderToAnsi`]: crate::RenderToAnsi
 
 // Attach.
 // Conditionally public for documentation links.

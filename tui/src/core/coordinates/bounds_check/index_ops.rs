@@ -55,7 +55,7 @@ use std::ops::RangeInclusive;
 /// - [`Index`] - Generic 0-based position (dimension-agnostic)
 /// - [`RowIndex`] - Vertical position in terminal grid
 /// - [`ColIndex`] - Horizontal position in terminal grid
-/// - [`ByteIndex`] - Byte position in UTF-8 strings
+/// - [`ByteIndex`] - Byte position in [`UTF-8`] strings
 /// - [`SegIndex`] - Grapheme segment position
 ///
 /// ## Core Operations
@@ -72,7 +72,7 @@ use std::ops::RangeInclusive;
 ///   array/buffer access within a container size. Takes a length because upper bounds are
 ///   naturally expressed as container sizes.
 ///
-/// - [`clamp_to_range()`] - Clamp to inclusive range (index-to-range). Use for VT-100
+/// - [`clamp_to_range()`] - Clamp to inclusive range (index-to-range). Use for [`VT-100`]
 ///   scroll regions or text selections where both endpoints are valid positions.
 ///
 /// ## Visual Reference
@@ -95,7 +95,7 @@ use std::ops::RangeInclusive;
 /// ```text
 /// Clamping index=15 to max_length=10:
 ///           0   1   2   3   4   5   6   7   8   9 │ 10..15
-///         ┌───┬───┬───┬───┬───┬───┬───┬───┬───┬───┼──────▶
+///         ┌───┬───┬───┬───┬───┬───┬───┬───┬───┬───┼──────►
 ///         │   │   │   │   │   │   │   │   │   │ ← │      ▓ (clamped)
 ///         └───┴───┴───┴───┴───┴───┴───┴───┴───┴───┘
 ///         └────────── max_length=10 ──────────┘
@@ -194,23 +194,25 @@ use std::ops::RangeInclusive;
 /// [`ArrayBoundsCheck`]: crate::ArrayBoundsCheck
 /// [`ByteIndex`]: crate::ByteIndex
 /// [`ByteLength`]: crate::ByteLength
+/// [`clamp_to_max_length()`]: IndexOps::clamp_to_max_length
+/// [`clamp_to_min_index()`]: IndexOps::clamp_to_min_index
+/// [`clamp_to_range()`]: IndexOps::clamp_to_range
 /// [`ColIndex`]: crate::ColIndex
 /// [`ColWidth`]: crate::ColWidth
+/// [`convert_to_length()`]: IndexOps::convert_to_length
 /// [`CursorBoundsCheck`]: crate::CursorBoundsCheck
 /// [`Index`]: crate::Index
+/// [`Length`]: crate::Length
 /// [`LengthOps`]: crate::LengthOps
 /// [`LengthType`]: Self::LengthType
-/// [`Length`]: crate::Length
 /// [`NumericValue`]: crate::NumericValue
 /// [`RowHeight`]: crate::RowHeight
 /// [`RowIndex`]: crate::RowIndex
 /// [`SegIndex`]: crate::SegIndex
 /// [`SegLength`]: crate::SegLength
+/// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
 /// [`ViewportBoundsCheck`]: crate::ViewportBoundsCheck
-/// [`clamp_to_max_length()`]: IndexOps::clamp_to_max_length
-/// [`clamp_to_min_index()`]: IndexOps::clamp_to_min_index
-/// [`clamp_to_range()`]: IndexOps::clamp_to_range
-/// [`convert_to_length()`]: IndexOps::convert_to_length
+/// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 /// [module-level comparison table]: super#indexops-vs-lengthops-understanding-0-based-positions-vs-1-based-sizes
 pub trait IndexOps: NumericValue {
     /// The corresponding "length" type for this "index" type.
@@ -268,11 +270,13 @@ pub trait IndexOps: NumericValue {
 
     /// Clamp this index to stay within an inclusive range `[start..=end]`.
     ///
-    /// Useful for VT-100 scroll regions and text selections where both boundaries are
+    /// Useful for [`VT-100`] scroll regions and text selections where both boundaries are
     /// valid. See the [trait documentation][Self] for clamping operation details.
     ///
     /// # Returns
     /// The index clamped to the range boundaries (inclusive).
+    ///
+    /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
     #[must_use]
     fn clamp_to_range(&self, range: RangeInclusive<Self>) -> Self {
         (*self).clamp(*range.start(), *range.end())

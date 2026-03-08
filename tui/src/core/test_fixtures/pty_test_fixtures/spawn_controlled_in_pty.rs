@@ -47,8 +47,9 @@ use crate::{PtyCommand, PtyPair, height, size, width};
 ///
 /// # Returns
 ///
-/// A tuple containing `backend` name and the owned [`PtyPair`] so that the caller can
-/// chain this in a pipeline (and reuse both).
+/// A tuple containing `backend` name, the owned [`PtyPair`], and the owned
+/// [`crate::ControlledChild`]. Ownership of the child handle is returned so that the
+/// caller can ensure the process remains alive for the duration of the test.
 ///
 /// # Panics
 ///
@@ -56,10 +57,9 @@ use crate::{PtyCommand, PtyPair, height, size, width};
 ///
 /// # Note on Child Process
 ///
-/// The spawned child process handle is intentionally not returned. The child runs
-/// independently and communicates via [`PTY`] I/O. Controllers should use timeouts and
-/// completion signals rather than waiting on the child handle, as [`PTY`] `EOF` behavior
-/// varies by platform.
+/// The spawned child process handle MUST be held by the caller for the duration of the
+/// test. If dropped, the OS may terminate the child process prematurely, leading to
+/// unexpected `EOF` or `EIO` errors.
 ///
 /// For complete implementations using this helper, see:
 /// - [`backend_compat_output_test`] - Output backend comparison using **snapshot
@@ -67,8 +67,8 @@ use crate::{PtyCommand, PtyPair, height, size, width};
 /// - [`backend_compat_input_test`] - Input backend comparison (compares parsed
 ///   [`InputEvent`]s).
 ///
-/// [`backend_compat_input_test`]: mod@crate::core::terminal_io::backend_compat_tests::backend_compat_input_test
-/// [`backend_compat_output_test`]: mod@crate::core::terminal_io::backend_compat_tests::backend_compat_output_test
+/// [`backend_compat_input_test`]: mod@crate::backend_compat_tests::backend_compat_input_test
+/// [`backend_compat_output_test`]: mod@crate::backend_compat_tests::backend_compat_output_test
 /// [`generate_pty_test!`]: crate::generate_pty_test
 /// [`InputEvent`]: crate::InputEvent
 /// [`OffscreenBuffer`]: crate::OffscreenBuffer
@@ -83,6 +83,7 @@ pub fn spawn_controlled_in_pty<'a>(
 ) -> (
     /* backend */ &'a str,
     /* return ownership of */ PtyPair,
+    /* return ownership of */ crate::ControlledChild,
 ) {
     // Spawn controlled process and close the controlled side automatically,
     // preventing deadlocks from a leaked parent fd.
@@ -91,9 +92,9 @@ pub fn spawn_controlled_in_pty<'a>(
     cmd.env(env_var, backend);
     cmd.args(["--test-threads", "1", "--nocapture", test_name]);
 
-    let (pty_pair, _child) =
+    let (pty_pair, child) =
         PtyPair::open_and_spawn(size(width(cols) + height(rows)), cmd)
             .expect("Failed to spawn controlled process");
 
-    (backend, pty_pair)
+    (backend, pty_pair, child)
 }

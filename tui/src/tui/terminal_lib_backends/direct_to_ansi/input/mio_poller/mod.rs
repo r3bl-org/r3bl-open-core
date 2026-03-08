@@ -50,7 +50,7 @@
 //! ┌────────────────────────────────────┐           ┌─────────────────────────────────┐
 //! │ Dedicated Thread (std::thread)     │           │ Async Consumers (tokio runtime) │
 //! │                                    │           │                                 │
-//! │ mio::Poll waits on:                ├───────────▶ receiver.recv().await (fan-out) │
+//! │ mio::Poll waits on:                ├───────────► receiver.recv().await (fan-out) │
 //! │   • stdin fd (Token 0)             │ broadcast │                                 │
 //! │   • SIGWINCH signal (Token 1)      │           │                                 │
 //! │   • ReceiverDropWaker (Token 2)    │           │                                 │
@@ -281,7 +281,7 @@
 //! [`broadcast::Receiver`]: tokio::sync::broadcast::Receiver
 //! [`consume_pending_signals_with_sender()`]: handler_signals::consume_pending_signals_with_sender
 //! [`consume_stdin_input_with_sender()`]: handler_stdin::consume_stdin_input_with_sender
-//! [`CONTROL_D`]: crate::core::ansi::CONTROL_D
+//! [`CONTROL_D`]: crate::CONTROL_D
 //! [`crossterm`]: crossterm
 //! [`DirectToAnsiInputDevice`]: super::DirectToAnsiInputDevice
 //! [`dispatch_with_sender()`]: dispatcher::dispatch_with_sender
@@ -313,7 +313,7 @@
 //! [`read()`]: https://man7.org/linux/man-pages/man2/read.2.html
 //! [`receiver_count()`]: tokio::sync::broadcast::Sender::receiver_count
 //! [`resilient_reactor_thread`]: crate::core::resilient_reactor_thread
-//! [`RRTWaker`]: crate::core::resilient_reactor_thread::RRTWaker
+//! [`RRTWaker`]: crate::RRTWaker
 //! [`rustix::event::poll()`]: https://docs.rs/rustix/latest/rustix/event/fn.poll.html
 //! [`select()`]: https://man7.org/linux/man-pages/man2/select.2.html
 //! [`sender.send()`]: tokio::sync::broadcast::Sender::send
@@ -336,9 +336,9 @@
 //! [`stdin`]: std::io::stdin
 //! [`StdinEvent::Eof`]: super::channel_types::StdinEvent::Eof
 //! [`StdinEvent::Error`]: super::channel_types::StdinEvent::Error
-//! [`subscribe()`]: crate::core::resilient_reactor_thread::RRT::subscribe
-//! [`SubscriberGuard::drop()`]: crate::core::resilient_reactor_thread::SubscriberGuard#impl-Drop-for-SubscriberGuard
-//! [`SubscriberGuard`]: crate::core::resilient_reactor_thread::SubscriberGuard
+//! [`subscribe()`]: crate::RRT::subscribe
+//! [`SubscriberGuard::drop()`]: crate::SubscriberGuard#impl-Drop-for-SubscriberGuard
+//! [`SubscriberGuard`]: crate::SubscriberGuard
 //! [`syscall`]: https://man7.org/linux/man-pages/man2/syscalls.2.html
 //! [`TCP`]: https://en.wikipedia.org/wiki/Transmission_Control_Protocol
 //! [`tokio::io::stdin()`]: tokio::io::stdin
@@ -348,14 +348,14 @@
 //! [`tty`]: https://man7.org/linux/man-pages/man4/tty.4.html
 //! [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
 //! [`VEOF`]: https://man7.org/linux/man-pages/man3/termios.3.html
-//! [`VT100InputEventIR`]: crate::core::ansi::vt_100_terminal_input_parser::VT100InputEventIR
+//! [`VT100InputEventIR`]: crate::vt_100_terminal_input_parser::VT100InputEventIR
 //! [`waker.wake()`]: mio::Waker::wake
 //! [AsRawFd::as_raw_fd]: std::os::unix::io::AsRawFd::as_raw_fd
-//! [canonical mode]: crate::core::ansi::terminal_raw_mode#raw-mode-vs-cooked-mode
+//! [canonical mode]: crate::terminal_raw_mode#raw-mode-vs-cooked-mode
 //! [Device Lifecycle]: super::DirectToAnsiInputDevice#device-lifecycle
 //! [line discipline]: https://en.wikipedia.org/wiki/Line_discipline
 //! [paste state machine]: super::paste_state_machine::PasteCollectionState
-//! [raw mode]: crate::core::ansi::terminal_raw_mode#raw-mode-vs-cooked-mode
+//! [raw mode]: crate::terminal_raw_mode#raw-mode-vs-cooked-mode
 //! [Related Tests]: crate::core::resilient_reactor_thread#related-tests
 //! [RRT module docs]: crate::core::resilient_reactor_thread
 //! [The Problems section in `DirectToAnsiInputDevice`]: super::DirectToAnsiInputDevice#the-problems

@@ -1,8 +1,8 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Line manipulation operations for VT100/ANSI terminal emulation.
+//! Line manipulation operations for VT100/[`ANSI`] terminal emulation.
 //!
-//! This module implements line-level operations that correspond to ANSI line
+//! This module implements line-level operations that correspond to [`ANSI`] line
 //! sequences. These include:
 //!
 //! - **IL** (Insert Lines) - [`shift_lines_down()`]
@@ -19,9 +19,9 @@
 //!
 //! **Related Files:**
 //!
-//! # VT-100 Scroll Region Boundaries
+//! # [`VT-100`] Scroll Region Boundaries
 //!
-//! Line insertion and deletion operations respect VT-100 scroll region boundaries.
+//! Line insertion and deletion operations respect [`VT-100`] scroll region boundaries.
 //! The scroll region defines an inclusive range `[scroll_top, scroll_bottom]` where
 //! line operations are confined. Lines outside this region remain fixed.
 //! See [Interval Notation] for details on mathematical range syntax.
@@ -52,10 +52,12 @@
 //! Operations only affect lines within the scroll region. If the cursor is outside
 //! the scroll region, the operation is skipped entirely.
 //!
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`clear_line()`]: crate::OffscreenBuffer::clear_line
 //! [`shift_lines_down()`]: crate::OffscreenBuffer::shift_lines_down
 //! [`shift_lines_up()`]: crate::OffscreenBuffer::shift_lines_up
-//! [`clear_line()`]: crate::OffscreenBuffer::clear_line
-//! [Interval Notation]: crate::core::coordinates::bounds_check#interval-notation
+//! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+//! [Interval Notation]: crate::bounds_check#interval-notation
 
 use crate::{Length, OffscreenBuffer, PixelChar, RowHeight, RowIndex,
             core::coordinates::bounds_check::{RangeBoundsExt, RangeBoundsResult,
@@ -93,14 +95,16 @@ impl OffscreenBuffer {
     /// Lines at the bottom of the range are filled with blank lines.
     /// Returns true if the operation was successful.
     ///
-    /// Used by ANSI DL (Delete Line) and SU (Scroll Up) operations.
+    /// Used by [`ANSI`] DL (Delete Line) and SU (Scroll Up) operations.
     ///
-    /// [`is_row_range_valid()`]: crate::OffscreenBuffer::is_row_range_valid
-    /// [`validate_row_range_mut()`]: crate::OffscreenBuffer::validate_row_range_mut
     ///
     /// # Errors
     ///
     /// Returns an error if the row range is invalid or out of bounds.
+    ///
+    /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+    /// [`is_row_range_valid()`]: crate::OffscreenBuffer::is_row_range_valid
+    /// [`validate_row_range_mut()`]: crate::OffscreenBuffer::validate_row_range_mut
     pub fn shift_lines_up(
         &mut self,
         row_range: Range<RowIndex>,
@@ -134,17 +138,19 @@ impl OffscreenBuffer {
     /// Lines at the top of the range are filled with blank lines.
     /// Returns true if the operation was successful.
     ///
-    /// Used by ANSI IL (Insert Line) and SD (Scroll Down) operations.
+    /// Used by [`ANSI`] IL (Insert Line) and SD (Scroll Down) operations.
     ///
     /// For scrolling operations, this is also used to scroll buffer content down.
     /// The bottom line is lost, and a new empty line appears at top.
     ///
-    /// [`is_row_range_valid()`]: crate::OffscreenBuffer::is_row_range_valid
-    /// [`validate_row_range_mut()`]: crate::OffscreenBuffer::validate_row_range_mut
     ///
     /// # Errors
     ///
     /// Returns an error if the row range is invalid or out of bounds.
+    ///
+    /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+    /// [`is_row_range_valid()`]: crate::OffscreenBuffer::is_row_range_valid
+    /// [`validate_row_range_mut()`]: crate::OffscreenBuffer::validate_row_range_mut
     pub fn shift_lines_down(
         &mut self,
         row_range: Range<RowIndex>,
@@ -178,14 +184,17 @@ impl OffscreenBuffer {
     /// Lines below the insertion point shift down within the scroll region.
     /// Lines at the bottom of the scroll region are lost.
     ///
-    /// This operation respects VT-100 scroll region boundaries. If the specified row
+    /// This operation respects [`VT-100`] scroll region boundaries. If the specified row
     /// is outside the scroll region, the operation is skipped.
     ///
-    /// Used by ANSI IL (Insert Line) operations.
+    /// Used by [`ANSI`] IL (Insert Line) operations.
     ///
     /// # Errors
     ///
     /// Returns an error if the operation fails.
+    ///
+    /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+    /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
     pub fn insert_lines_at(
         &mut self,
         row_index: RowIndex,
@@ -224,14 +233,17 @@ impl OffscreenBuffer {
     /// Lines below the deletion point shift up within the scroll region.
     /// Blank lines are added at the bottom of the scroll region.
     ///
-    /// This operation respects VT-100 scroll region boundaries. If the specified row
+    /// This operation respects [`VT-100`] scroll region boundaries. If the specified row
     /// is outside the scroll region, the operation is skipped.
     ///
-    /// Used by ANSI DL (Delete Line) operations.
+    /// Used by [`ANSI`] DL (Delete Line) operations.
     ///
     /// # Errors
     ///
     /// Returns an error if the operation fails.
+    ///
+    /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+    /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
     pub fn delete_lines_at(
         &mut self,
         row_index: RowIndex,

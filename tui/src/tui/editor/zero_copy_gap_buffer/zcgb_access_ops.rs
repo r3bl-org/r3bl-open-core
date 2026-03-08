@@ -36,20 +36,20 @@
 //!   uninitialized memory
 //! - **Predictable parsing**: The markdown parser can safely process content knowing that
 //!   unused capacity contains only null bytes
-//! - **Debug-mode validation**: We can verify UTF-8 validity without encountering random
-//!   uninitialized bytes
+//! - **Debug-mode validation**: We can verify [`UTF-8`] validity without encountering
+//!   random uninitialized bytes
 //!
 //! The null-padding invariant is essential for the safety of our `unsafe` operations:
-//! - [`from_utf8_unchecked`] calls assume the buffer contains valid UTF-8
-//! - The null bytes in unused capacity are valid UTF-8 (ASCII 0)
+//! - [`from_utf8_unchecked`] calls assume the buffer contains valid [`UTF-8`]
+//! - The null bytes in unused capacity are valid [`UTF-8`] ([`ASCII`] 0)
 //! - This prevents undefined behavior when creating string slices
 //!
 //! All access methods in this module depend on this invariant being maintained by
 //! the storage, insertion, and deletion operations.
 //!
-//! # UTF-8 Safety in Zero-Copy Access
+//! # [`UTF-8`] Safety in Zero-Copy Access
 //!
-//! This module implements the **performance-optimized read path** of our UTF-8 safety
+//! This module implements the **performance-optimized read path** of our [`UTF-8`] safety
 //! architecture:
 //!
 //! ## Why `unsafe { `[`from_utf8_unchecked()`]` }` is Safe Here
@@ -57,18 +57,18 @@
 //! This module can safely use `unsafe` operations because:
 //!
 //! 1. **Controlled input**: All public insert and mutate operations use `&str`, ensuring
-//!    only valid UTF-8 content is added to the buffer
+//!    only valid [`UTF-8`] content is added to the buffer
 //! 2. **Metadata reconstruction**: Only reading existing buffer content for analysis
 //! 3. **Content boundary respect**: Only processes content up to `content_len` (validated
 //!    region)
 //! 4. **Bounds checking**: All buffer access is bounds checked before creating slices
 //! 5. **Performance critical**: Called after every edit operation, needs maximum speed
-//! 6. **Test coverage**: Comprehensive tests verify UTF-8 handling, including
-//!    intentionally invalid UTF-8 scenarios that panic in debug mode
+//! 6. **Test coverage**: Comprehensive tests verify [`UTF-8`] handling, including
+//!    intentionally invalid [`UTF-8`] scenarios that panic in debug mode
 //!
 //! Why unsafe is used instead of [`from_utf8_lossy()`]:
 //! - [`from_utf8_lossy()`] returns `Cow<str>`, which may allocate a new `String` if
-//!   invalid UTF-8 is encountered, breaking our zero-copy guarantee
+//!   invalid [`UTF-8`] is encountered, breaking our zero-copy guarantee
 //! - [`from_utf8_unchecked()`] returns `&str` directly without allocation, preserving
 //!   zero-copy semantics essential for performance-critical operations
 //!
@@ -85,7 +85,7 @@
 //!
 //! ## Debug-Mode Validation
 //!
-//! In debug builds, we **validate UTF-8 before unsafe operations**:
+//! In debug builds, we **validate [`UTF-8`] before unsafe operations**:
 //! - Catches any invariant violations during development
 //! - Provides clear panic messages for debugging
 //! - Zero overhead in production builds (assertions compiled out)
@@ -94,12 +94,15 @@
 //!
 //! This module maintains **true zero-copy access**:
 //! - Returns `&str` slices directly into buffer memory
-//! - No allocations, no copying, no UTF-8 validation overhead
+//! - No allocations, no copying, no [`UTF-8`] validation overhead
 //! - Enables efficient integration with parsers and external libraries
 //!
 //! The safety of this approach depends on the **architectural contract** that
-//! UTF-8 validation occurs once at input boundaries, making subsequent unsafe
+//! [`UTF-8`] validation occurs once at input boundaries, making subsequent unsafe
 //! operations safe and performant.
+//!
+//! [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
+//! [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
 
 use super::super::ZeroCopyGapBuffer;
 use crate::{ArrayBoundsCheck, ArrayOverflowResult, ByteIndexRangeExt,
@@ -117,8 +120,10 @@ impl ZeroCopyGapBuffer {
     /// crucial for performance when passing content to the markdown parser.
     ///
     /// # Panics
-    /// Panics if the buffer contains invalid UTF-8 (should not happen in normal
+    /// Panics if the buffer contains invalid [`UTF-8`] (should not happen in normal
     /// operation).
+    ///
+    /// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
     #[must_use]
     pub fn as_str(&self) -> &str {
         // In debug builds, validate UTF-8.
@@ -153,7 +158,9 @@ impl ZeroCopyGapBuffer {
     ///
     /// # Panics
     ///
-    /// In debug builds, panics if the line slice contains invalid UTF-8
+    /// In debug builds, panics if the line slice contains invalid [`UTF-8`]
+    ///
+    /// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
     #[must_use]
     pub fn get_line_slice(&self, line_range: Range<RowIndex>) -> Option<&str> {
         // Check bounds using type-safe range validation.
@@ -210,9 +217,11 @@ impl ZeroCopyGapBuffer {
         Some(&self.buffer[start..end])
     }
 
-    /// Checks if the buffer contains valid UTF-8
+    /// Checks if the buffer contains valid [`UTF-8`]
     ///
     /// This should always return true in normal operation
+    ///
+    /// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
     #[must_use]
     pub fn is_valid_utf8(&self) -> bool { from_utf8(&self.buffer).is_ok() }
 
@@ -225,7 +234,9 @@ impl ZeroCopyGapBuffer {
     /// Returns None if the line index is out of bounds.
     ///
     /// # Panics
-    /// In debug builds, panics if the line with newline contains invalid UTF-8.
+    /// In debug builds, panics if the line with newline contains invalid [`UTF-8`].
+    ///
+    /// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
     #[must_use]
     pub fn get_line_with_newline(
         &self,

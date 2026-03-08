@@ -14,7 +14,7 @@ pub type SegmentArray = Vec<Seg>;
 /// [`ByteIndex`], [`SegIndex`], and [`ColIndex`].
 ///
 /// A Unicode "grapheme" is a user-perceived character.
-/// - For `UTF-8` encoded text, a grapheme can be a single byte or up to 4 bytes.
+/// - For [`UTF-8`] encoded text, a grapheme can be a single byte or up to 4 bytes.
 /// - A "grapheme cluster" can be multiple graphemes or code points or Unicode scalar
 ///   values.
 ///
@@ -68,8 +68,8 @@ pub type SegmentArray = Vec<Seg>;
 /// The [`Seg`] struct efficiently represents and manipulates grapheme clusters within a
 /// [`crate::GCStringOwned`]. It provides access to the underlying string slice along with
 /// display width and position information. See the [module documentation] for
-/// comprehensive information about UTF-8 encoding, grapheme clusters, and the three types
-/// of indices used in this system.
+/// comprehensive information about [`UTF-8`] encoding, grapheme clusters, and the three
+/// types of indices used in this system.
 ///
 /// ## Usage
 ///
@@ -95,6 +95,7 @@ pub type SegmentArray = Vec<Seg>;
 /// See the [module docs] for comprehensive information about Unicode handling, grapheme
 /// clusters, and the three types of indices used in this system.
 ///
+/// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
 /// [module docs]: crate::graphemes
 #[derive(Copy, Clone, Default, PartialEq, Ord, PartialOrd, Eq, Hash)]
 pub struct Seg {

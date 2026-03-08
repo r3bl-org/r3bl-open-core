@@ -39,11 +39,11 @@ use crate::{ColIndex, ColorTarget, EraseDisplayMode, EraseLineMode, RowIndex,
 ///
 /// Instead of raw format strings (❌ DON'T DO THIS):
 /// ```rust
-/// # use r3bl_tui::{row, col};
+/// # use r3bl_tui::{row, col, CSI_START};
 /// let row_idx = row(5);
 /// let col_idx = col(10);
 /// // Avoid this approach:
-/// let _seq: String = format!("\x1b[{};{}H", row_idx.as_usize() + 1, col_idx.as_usize() + 1);
+/// let s = format!("{CSI_START}{};{}H", row_idx.as_usize() + 1, col_idx.as_usize() + 1);
 /// ```
 ///
 /// We now use semantic enums (✅ CURRENT APPROACH):
@@ -51,8 +51,8 @@ use crate::{ColIndex, ColorTarget, EraseDisplayMode, EraseLineMode, RowIndex,
 /// # use r3bl_tui::{row, col, AnsiSequenceGenerator};
 /// let row_idx = row(5);
 /// let col_idx = col(10);
-/// let seq = AnsiSequenceGenerator::cursor_position(row_idx, col_idx);
-/// assert_eq!(seq, "\x1b[6;11H");  // row 5 → 6, col 10 → 11 (1-based)
+/// let s = AnsiSequenceGenerator::cursor_position(row_idx, col_idx);
+/// assert_eq!(s, "\x1b[6;11H");  // row 5 → 6, col 10 → 11 (1-based)
 /// ```
 ///
 /// This achieves:
@@ -75,9 +75,9 @@ use crate::{ColIndex, ColorTarget, EraseDisplayMode, EraseLineMode, RowIndex,
 ///
 /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 /// [`CsiSequence`]: crate::CsiSequence
-/// [`FastStringify`]: crate::core::common::fast_stringify::FastStringify
+/// [`FastStringify`]: crate::fast_stringify::FastStringify
 /// [`SgrColorSequence`]: crate::SgrColorSequence
-/// [`vt_100_pty_output_parser`]: mod@crate::core::ansi::vt_100_pty_output_parser
+/// [`vt_100_pty_output_parser`]: mod@crate::vt_100_pty_output_parser
 #[derive(Debug)]
 pub struct AnsiSequenceGenerator;
 
@@ -207,7 +207,7 @@ mod color_ops {
         /// infrastructure
         ///
         /// [`SGR`]: crate::SgrCode
-        /// [`vt_100_pty_output_parser`]: mod@crate::core::ansi::vt_100_pty_output_parser
+        /// [`vt_100_pty_output_parser`]: mod@crate::vt_100_pty_output_parser
         #[must_use]
         pub fn text_attributes(style: &TuiStyle) -> String {
             // Build SGR sequence with all applicable attributes

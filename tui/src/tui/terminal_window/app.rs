@@ -9,12 +9,17 @@ use std::fmt::Debug;
 /// It lays out a bunch of [`crate::Component`]s on its [`crate::Surface`] which do all
 /// the work of rendering and input event handling.
 ///
-/// There are examples of structs that implement this train in the [examples
-/// module](https://github.com/r3bl-org/r3bl-open-core/blob/autocomplete/tui/examples/demo/ex_editor/app.rs).
+/// There are examples of structs that implement this train in the [examples module].
 ///
 /// Notes:
-/// - Async trait docs: <https://doc.rust-lang.org/book/ch10-02-traits.html>
-/// - Limitations of linking to examples module: <https://users.rust-lang.org/t/how-to-link-to-examples/67918>
+/// - [Async trait docs]
+/// - [Limitations of linking to examples module]
+///
+/// [Async trait docs]: https://doc.rust-lang.org/book/ch10-02-traits.html
+/// [examples module]:
+///     https://github.com/r3bl-org/r3bl-open-core/blob/main/tui/examples/tui_apps/ex_editor/app_main.rs
+/// [Limitations of linking to examples module]:
+///     https://users.rust-lang.org/t/how-to-link-to-examples/67918
 pub trait App {
     /// State.
     type S: Debug + Default + Clone + Sync + Send;

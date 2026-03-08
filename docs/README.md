@@ -81,7 +81,7 @@ The [`done`](done) folder contains:
   implementation for editor content storage, successfully eliminating string materialization in the
   markdown parser path with proven performance improvements
 - [`task_dual_channel_pty.md`](done/task_dual_channel_pty.md) - Dual channel PTY interactive design
-  documentation for bidirectional communication with child processes running in pseudo-terminals,
+  documentation for bidirectional communication with child processes running in pseudoterminals,
   including implementation considerations and usage examples
 - [`task_prd_ch_bin.md`](done/task_prd_ch_bin.md) - Complete implementation of the `ch` binary in
   r3bl-cmdr crate for recalling and copying Claude Code prompt history, including TUI interface,

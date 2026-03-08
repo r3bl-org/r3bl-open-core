@@ -1,28 +1,28 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Control Sequence Introducer (CSI) codes for terminal control.
+//! Control Sequence Introducer ([`CSI`]) codes for terminal control.
 //!
-//! CSI sequences are the most common type of ANSI escape sequences used in modern
+//! [`CSI`] sequences are the most common type of [`ANSI`] escape sequences used in modern
 //! terminals. They provide parameterized control over cursor movement, text formatting,
 //! colors, and display manipulation.
 //!
-//! ## Evolution from ESC Sequences
+//! ## Evolution from [`ESC`] Sequences
 //!
-//! CSI sequences evolved from the simpler direct ESC sequences to provide greater
+//! [`CSI`] sequences evolved from the simpler direct [`ESC`] sequences to provide greater
 //! flexibility:
 //!
 //! - **ESC sequences** (the predecessors): Simple, non-parameterized commands like `ESC
 //!   7` (save cursor) or `ESC D` (move down one line). See [`esc_codes`] for details.
-//! - **CSI sequences** (modern approach): Parameterized commands like `ESC [ s` (save
+//! - **[`CSI`] sequences** (modern approach): Parameterized commands like `ESC [ s` (save
 //!   cursor) or `ESC [ 5 B` (move down 5 lines). The parameters make them much more
 //!   flexible.
 //!
 //! Many operations can be performed using either approach for backward compatibility.
-//! Modern applications typically prefer CSI for their flexibility.
+//! Modern applications typically prefer [`CSI`] for their flexibility.
 //!
 //! ## Structure
-//! CSI sequences follow the pattern: `ESC [ parameters final_character`
-//! - Start with ESC (0x1B) followed by `[`
+//! [`CSI`] sequences follow the pattern: `ESC [ parameters final_character`
+//! - Start with [`ESC`] (0x1B) followed by `[`
 //! - Optional numeric parameters separated by `;`
 //! - End with a single letter that determines the action
 //!
@@ -40,7 +40,10 @@
 //! - `ESC [ 31 m` - Set text color to red
 //! - `ESC [ 1 A` - Move cursor up 1 line
 //!
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`CSI`]: crate::CsiSequence
 //! [`esc_codes`]: crate::vt_100_pty_output_parser::protocols::esc_codes
+//! [`ESC`]: crate::EscSequence
 
 // Attach private module to avoid naming conflicts (hide inner details).
 mod erase_mode;

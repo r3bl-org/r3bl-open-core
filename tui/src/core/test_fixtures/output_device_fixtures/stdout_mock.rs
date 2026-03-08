@@ -1,6 +1,8 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use crate::{InlineVec, StdMutex};
+#[cfg(test)]
+use crate::{SGR_FG_RED_STR, SGR_RESET_STR};
 use smallvec::smallvec;
 use std::{io::{Result, Write},
           sync::Arc};
@@ -106,7 +108,7 @@ async fn test_stdout_mock_strip_ansi() {
     let stdout_mock_clone = stdout_mock.clone(); // Points to the same inner value as `stdout_mock`.
 
     let normal_text = "hello world";
-    let red_text = format!("\x1b[31m{normal_text}\x1b[0m"); // Resets color after.
+    let red_text = format!("{SGR_FG_RED_STR}{normal_text}{SGR_RESET_STR}"); // Resets color after.
 
     stdout_mock.write_all(red_text.as_bytes()).unwrap();
     stdout_mock.flush().unwrap();

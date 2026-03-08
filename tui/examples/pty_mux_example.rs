@@ -14,7 +14,7 @@
 //! - **Instant switching**: No delays or fake resize hacks needed
 //! - **Dynamic process switching**: Use F1 through F9 to switch between processes
 //! - **Live status bar**: Shows process status and available shortcuts
-//! - **Terminal title updates**: Uses OSC sequences to update terminal title
+//! - **Terminal title updates**: Uses [`OSC`] sequences to update terminal title
 //!
 //! ## Usage
 //!
@@ -44,6 +44,8 @@
 //! Note: All processes are started immediately at startup for fast switching.
 //! All applications are proper TUI applications that respond to SIGWINCH
 //! and will repaint correctly when switching between them.
+//!
+//! [`OSC`]: crate::osc_codes::OscSequence
 
 use r3bl_tui::{core::{get_size,
                       pty_mux::{PTYMux, Process},

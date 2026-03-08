@@ -31,7 +31,7 @@
 //!
 //! A character is considered a word boundary if it is:
 //! - Whitespace (`.is_whitespace()`)
-//! - ASCII punctuation (`.is_ascii_punctuation()`)
+//! - [`ASCII`] punctuation (`.is_ascii_punctuation()`)
 //!
 //! Everything else is considered a word character.
 //!
@@ -43,6 +43,8 @@
 //! "foo.bar()"    → words: ["foo", "bar"] (punctuation is boundary)
 //! "hello  world" → words: ["hello", "world"] (multiple spaces treated as one boundary)
 //! ```
+//!
+//! [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
 
 mod word_boundary_detection;
 

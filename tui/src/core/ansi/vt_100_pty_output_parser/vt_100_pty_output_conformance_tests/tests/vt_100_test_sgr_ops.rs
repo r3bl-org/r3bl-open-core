@@ -1,6 +1,8 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Tests for all display operations - SGR styling, character sets, and printing.
+//! Tests for all display operations - [`SGR`] styling, character sets, and printing.
+//!
+//! [`SGR`]: crate::SgrCode
 
 use super::super::test_fixtures_vt_100_ansi_conformance::*;
 use crate::{ANSIBasicColor, CharacterSet, EscSequence, SgrCode,
@@ -9,7 +11,9 @@ use crate::{ANSIBasicColor, CharacterSet, EscSequence, SgrCode,
             tui_style_attrib::{self}};
 use vte::Perform;
 
-/// Tests for SGR (Select Graphic Rendition) styling operations.
+/// Tests for [`SGR`] (Select Graphic Rendition) styling operations.
+///
+/// [`SGR`]: crate::SgrCode
 pub mod sgr_styling {
     use super::*;
     use crate::{col, row};
@@ -690,7 +694,9 @@ pub mod sgr_styling {
         );
     }
 
-    /// Test mixing semicolon-separated extended colors with basic SGR attributes.
+    /// Test mixing semicolon-separated extended colors with basic [`SGR`] attributes.
+    ///
+    /// [`SGR`]: crate::SgrCode
     #[test]
     fn test_sgr_semicolon_extended_colors_with_attributes() {
         let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();

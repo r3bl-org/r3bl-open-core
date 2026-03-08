@@ -1,6 +1,8 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Tests for OSC (Operating System Command) sequences.
+//! Tests for [`OSC`] (Operating System Command) sequences.
+//!
+//! [`OSC`]: crate::osc_codes::OscSequence
 
 use super::super::test_fixtures_vt_100_ansi_conformance::*;
 use crate::{core::osc::{OscEvent, osc_codes::OscSequence},

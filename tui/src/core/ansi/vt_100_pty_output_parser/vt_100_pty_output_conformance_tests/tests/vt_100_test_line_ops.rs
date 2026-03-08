@@ -2,7 +2,7 @@
 
 //! Tests for line insertion and deletion operations (IL/DL).
 //!
-//! Tests the complete pipeline from ANSI sequences through the shim to implementation
+//! Tests the complete pipeline from [`ANSI`] sequences through the shim to implementation
 //! using the public [`apply_ansi_bytes`] API. This provides integration testing coverage
 //! for the [`line_ops`] shim layer. The `test_` prefix follows our naming convention.
 //! See [parser module docs] for the complete testing philosophy.
@@ -11,9 +11,10 @@
 //! - **Shim**: [`line_ops`] - Parameter translation (tested indirectly by this module)
 //! - **Implementation**: [`impl_line_ops`] - Business logic (has separate unit tests)
 //!
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`apply_ansi_bytes`]: crate::OffscreenBuffer::apply_ansi_bytes
-//! [`line_ops`]: crate::core::ansi::vt_100_pty_output_parser::operations::vt_100_shim_line_ops
-//! [`impl_line_ops`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl::vt_100_impl_line_ops
+//! [`impl_line_ops`]: crate::vt_100_ansi_impl::vt_100_impl_line_ops
+//! [`line_ops`]: crate::vt_100_pty_output_parser::operations::vt_100_shim_line_ops
 //! [parser module docs]: super::super
 
 use super::super::test_fixtures_vt_100_ansi_conformance::*;

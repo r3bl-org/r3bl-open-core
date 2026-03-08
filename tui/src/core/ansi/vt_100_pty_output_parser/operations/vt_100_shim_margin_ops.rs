@@ -1,6 +1,6 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Margin setting operations (DECSTBM).
+//! Margin setting operations ([`DECSTBM`]).
 //!
 //! This module acts as a thin shim layer that delegates to the actual implementation.
 //! Refer to the module-level documentation in the operations module for details on the
@@ -26,7 +26,7 @@
 //!
 //! ```text
 //! ╭─────────────────╮    ╭────────────────╮    ╭─────────────────╮    ╭──────────────╮
-//! │ Child Process   │────▶ PTY Controller │────▶ VTE Parser      │────▶ OffscreenBuf │
+//! │ Child Process   │────► PTY Controller │────► VTE Parser      │────► OffscreenBuf │
 //! │ (vim, bash...)  │    │ (byte stream)  │    │ (state machine) │    │ (terminal    │
 //! ╰──────┬──────────╯    ╰────────────────╯    ╰───────┬─────────╯    │  buffer)     │
 //!        │                                             │              ╰───────┬──────╯
@@ -37,13 +37,13 @@
 //!        │                                    ╚═════════════════╝             │
 //!        │                                                                    │
 //!        │                                    ╭─────────────────╮             │
-//!        │                                    │ RenderPipeline  ◀─────────────╯
+//!        │                                    │ RenderPipeline  ◄─────────────╯
 //!        │                                    │ paint()         │
-//!        ╰────────────────────────────────────▶ Terminal Output │
+//!        ╰────────────────────────────────────► Terminal Output │
 //!                                             ╰─────────────────╯
 //! ```
 //!
-//! # `CSI` Sequence Processing Flow
+//! # [`CSI`] Sequence Processing Flow
 //!
 //! ```text
 //! Application sends "ESC [1;20r" (set top/bottom margins)
@@ -67,18 +67,22 @@
 //!     Update OffscreenBuffer state
 //! ```
 //!
-//! [`impl_margin_ops`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl::vt_100_impl_margin_ops
-//! [`test_margin_ops`]: crate::core::ansi::vt_100_pty_output_parser::vt_100_pty_output_conformance_tests::tests::vt_100_test_margin_ops
+//! [`CSI`]: crate::CsiSequence
+//! [`DECSTBM`]: https://vt100.net/docs/vt510-rm/DECSTBM.html
+//! [`impl_margin_ops`]: crate::vt_100_ansi_impl::vt_100_impl_margin_ops
+//! [`test_margin_ops`]: crate::vt_100_pty_output_conformance_tests::tests::vt_100_test_margin_ops
 //! [module-level documentation]: self
 
 use super::super::{MarginRequest, ansi_parser_public_api::AnsiToOfsBufPerformer};
 use vte::Params;
 
-/// Handle Set Top and Bottom Margins (DECSTBM) command.
+/// Handle Set Top and Bottom Margins ([`DECSTBM`]) command.
 /// `CSI r` - `ESC [` top ; bottom r
 ///
 /// This command sets the scrolling region for the terminal. Lines outside
 /// the scrolling region are not affected by scroll operations.
+///
+/// [`DECSTBM`]: https://vt100.net/docs/vt510-rm/DECSTBM.html
 pub fn set_margins(performer: &mut AnsiToOfsBufPerformer, params: &Params) {
     let request = MarginRequest::from(params);
 

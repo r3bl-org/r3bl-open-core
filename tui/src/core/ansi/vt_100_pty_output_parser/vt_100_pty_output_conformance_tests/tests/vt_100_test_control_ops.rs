@@ -2,12 +2,16 @@
 
 //! Tests for tab operation conformance.
 //!
-//! This module tests tab-related ANSI operations:
+//! This module tests tab-related [`ANSI`] operations:
 //! - Basic TAB character (0x09) with fixed 8-column tab stops
-//! - HTS (Horizontal Tab Set) - ESC H (placeholder for future implementation)
-//! - TBC (Tab Clear) - CSI g (placeholder for future implementation)
-//! - CHT (Cursor Horizontal Tab) - CSI I (placeholder for future implementation)
-//! - CBT (Cursor Backward Tab) - CSI Z (placeholder for future implementation)
+//! - HTS (Horizontal Tab Set) - [`ESC`] H (placeholder for future implementation)
+//! - TBC (Tab Clear) - [`CSI`] g (placeholder for future implementation)
+//! - CHT (Cursor Horizontal Tab) - [`CSI`] I (placeholder for future implementation)
+//! - CBT (Cursor Backward Tab) - [`CSI`] Z (placeholder for future implementation)
+//!
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`CSI`]: crate::CsiSequence
+//! [`ESC`]: crate::EscSequence
 
 use super::super::test_fixtures_vt_100_ansi_conformance::*;
 use crate::{term_col, term_row};

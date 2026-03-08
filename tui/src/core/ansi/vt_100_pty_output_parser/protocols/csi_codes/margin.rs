@@ -1,16 +1,19 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Margin request types for DECSTBM (Set Top and Bottom Margins) operations.
+//! Margin request types for [`DECSTBM`] (Set Top and Bottom Margins) operations.
 //!
 //! This module handles scrolling region margin settings, which define the area
 //! where scrolling operations occur.
 //!
+//! [`DECSTBM`]: https://vt100.net/docs/vt510-rm/DECSTBM.html
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 
 use crate::{ParamsExt, TermRow, term_row};
 use std::{cmp::max, num::NonZeroU16};
 
-/// Margin request types for DECSTBM (Set Top and Bottom Margins) operations.
+/// Margin request types for [`DECSTBM`] (Set Top and Bottom Margins) operations.
+///
+/// [`DECSTBM`]: https://vt100.net/docs/vt510-rm/DECSTBM.html
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum MarginRequest {
     /// Reset margins to full screen (`ESC [ r`, `ESC [ 0 r`, `ESC [ 0 ; 0 r`)

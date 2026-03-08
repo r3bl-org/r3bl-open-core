@@ -1,6 +1,6 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Relative vertical cursor movement for VT-100 ANSI sequences.
+//! Relative vertical cursor movement for [`VT-100`] [`ANSI`] sequences.
 //!
 //! [`TermRowDelta`] represents **how many rows** to move the cursor, as opposed to
 //! [`TermRow`] which represents **which row** the cursor is on.
@@ -8,9 +8,9 @@
 //! # Make Illegal States Unrepresentable
 //!
 //! This type wraps [`NonZeroU16`] internally, making it **impossible** to create a
-//! zero-valued delta. This prevents the CSI zero bug at the type level.
+//! zero-valued delta. This prevents the [`CSI`] zero bug at the type level.
 //!
-//! ANSI cursor movement commands (CUU, CUD) interpret parameter 0 as 1:
+//! [`ANSI`] cursor movement commands (CUU, CUD) interpret parameter 0 as 1:
 //! - `CSI 0 A` (`CursorUp` with n=0) moves the cursor **1 row up**, not 0
 //! - `CSI 0 B` (`CursorDown` with n=0) moves the cursor **1 row down**, not 0
 //!
@@ -33,8 +33,11 @@
 //! // For rows_down=0, new() returns None, so no sequence is emitted
 //! ```
 //!
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`CSI`]: crate::CsiSequence
 //! [`NonZeroU16`]: std::num::NonZeroU16
 //! [`TermRow`]: super::TermRow
+//! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 
 use crate::NumericConversions;
 use std::{fmt::{Display, Formatter},
@@ -48,7 +51,7 @@ use std::{fmt::{Display, Formatter},
 /// # Make Illegal States Unrepresentable
 ///
 /// This type wraps [`NonZeroU16`] internally. A zero-valued delta **cannot exist**,
-/// preventing the CSI zero bug at compile time:
+/// preventing the [`CSI`] zero bug at compile time:
 ///
 /// ```rust
 /// use r3bl_tui::{TermRowDelta, CsiSequence};
@@ -64,6 +67,7 @@ use std::{fmt::{Display, Formatter},
 /// }
 /// ```
 ///
+/// [`CSI`]: crate::CsiSequence
 /// [`CsiSequence::CursorDown`]: crate::CsiSequence::CursorDown
 /// [`CsiSequence::CursorUp`]: crate::CsiSequence::CursorUp
 /// [`NonZeroU16`]: std::num::NonZeroU16
@@ -91,7 +95,7 @@ impl TermRowDelta {
     /// Creates a new row delta from a raw value.
     ///
     /// Returns [`None`] if the value is zero, since zero-valued deltas are not
-    /// representable (they would cause the CSI zero bug).
+    /// representable (they would cause the [`CSI`] zero bug).
     ///
     /// # Example
     ///
@@ -101,6 +105,8 @@ impl TermRowDelta {
     /// assert!(TermRowDelta::new(0).is_none());  // Zero not allowed
     /// assert!(TermRowDelta::new(5).is_some());  // Non-zero OK
     /// ```
+    ///
+    /// [`CSI`]: crate::CsiSequence
     #[must_use]
     pub const fn new(value: u16) -> Option<Self> {
         match NonZeroU16::new(value) {
@@ -199,11 +205,13 @@ mod tests {
         assert_eq!(nz.get(), 5);
     }
 
-    /// Regression test: verify CSI zero bug is prevented at type level.
+    /// Regression test: verify [`CSI`] zero bug is prevented at type level.
     ///
     /// Position 240 on 80-col terminal = exactly 3 rows down.
     /// Position 80 on 80-col terminal = exactly 1 row down.
     /// Position 0 on 80-col terminal = 0 rows (None).
+    ///
+    /// [`CSI`]: crate::CsiSequence
     #[test]
     fn test_csi_zero_bug_prevented() {
         let term_width: u16 = 80;

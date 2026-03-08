@@ -34,7 +34,7 @@
 //! ┌────────────────────────────────────┐           ┌─────────────────────────────────┐
 //! │ Dedicated Thread (std::thread)     │           │ Async Consumers (tokio runtime) │
 //! │                                    │           │                                 │
-//! │ mio::Poll waits on:                ├───────────▶ rx.recv().await (fan-out)       │
+//! │ mio::Poll waits on:                ├───────────► rx.recv().await (fan-out)       │
 //! │   • stdin fd (Token 0)             │ broadcast │                                 │
 //! │   • SIGWINCH signal (Token 1)      │           │                                 │
 //! └────────────────────────────────────┘           └─────────────────────────────────┘

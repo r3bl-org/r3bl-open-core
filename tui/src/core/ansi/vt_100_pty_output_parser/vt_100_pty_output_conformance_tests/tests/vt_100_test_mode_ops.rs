@@ -2,23 +2,25 @@
 
 //! Tests for terminal mode operations (SM/RM).
 //!
-//! Tests the complete pipeline from ANSI sequences through the shim to implementation
+//! Tests the complete pipeline from [`ANSI`] sequences through the shim to implementation
 //! using the public [`apply_ansi_bytes`] API. This provides integration testing coverage
 //! for the [`mode_ops`] shim layer. The `test_` prefix follows our naming convention.
 //! See [parser module docs] for the complete testing philosophy.
 //!
 //! This module tests mode setting and resetting operations including:
-//! - DECAWM (Auto Wrap Mode) - CSI ? 7 h/l
-//! - Future IRM (Insert/Replace Mode) - CSI 4 h/l (placeholder tests)
-//! - Future DECOM (Origin Mode) - CSI ? 6 h/l (placeholder tests)
+//! - DECAWM (Auto Wrap Mode) - [`CSI`] ? 7 h/l
+//! - Future IRM (Insert/Replace Mode) - [`CSI`] 4 h/l (placeholder tests)
+//! - Future DECOM (Origin Mode) - [`CSI`] ? 6 h/l (placeholder tests)
 //!
 //! **Related Files:**
 //! - **Shim**: [`mode_ops`] - Parameter translation (tested indirectly by this module)
 //! - **Implementation**: [`impl_mode_ops`] - Business logic (has separate unit tests)
 //!
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`apply_ansi_bytes`]: crate::OffscreenBuffer::apply_ansi_bytes
-//! [`mode_ops`]: crate::core::ansi::vt_100_pty_output_parser::operations::vt_100_shim_mode_ops
-//! [`impl_mode_ops`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl::vt_100_impl_mode_ops
+//! [`CSI`]: crate::CsiSequence
+//! [`impl_mode_ops`]: crate::vt_100_ansi_impl::vt_100_impl_mode_ops
+//! [`mode_ops`]: crate::vt_100_pty_output_parser::operations::vt_100_shim_mode_ops
 //! [parser module docs]: super::super
 
 use super::super::test_fixtures_vt_100_ansi_conformance::*;

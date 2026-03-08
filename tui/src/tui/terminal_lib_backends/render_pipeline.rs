@@ -50,8 +50,8 @@
 //! This stage is purely organizational. No actual rendering to the terminal (or even to
 //! the offscreen buffer) happens here. That's the compositor's job.
 //!
-//! [`compositor_render_ops_to_ofs_buf` mod docs]: mod@crate::tui::terminal_lib_backends::compositor_render_ops_to_ofs_buf
-//! [`render_op_ir` mod docs]: mod@crate::tui::terminal_lib_backends::render_op::render_op_ir
+//! [`compositor_render_ops_to_ofs_buf` mod docs]: mod@crate::compositor_render_ops_to_ofs_buf
+//! [`render_op_ir` mod docs]: mod@crate::render_op::render_op_ir
 //! [rendering pipeline overview]: mod@crate::terminal_lib_backends#rendering-pipeline-architecture
 
 use super::{ZOrder, paint::paint};

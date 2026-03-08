@@ -5,8 +5,8 @@
 //! [`PixelCharLines`] represents a collection of [`PixelCharLine`] objects,
 //! used to store multiple lines of text in the offscreen buffer.
 //!
-//! [`PixelCharLines`]: crate::PixelCharLines
 //! [`PixelCharLine`]: crate::PixelCharLine
+//! [`PixelCharLines`]: crate::PixelCharLines
 
 use super::PixelCharLine;
 use crate::{GetMemSize, InlineVec, Size, get_mem_size};

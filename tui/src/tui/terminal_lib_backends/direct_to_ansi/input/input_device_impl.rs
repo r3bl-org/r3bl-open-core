@@ -19,7 +19,7 @@
 //!
 //! [`DirectToAnsiInputDevice`]: super::DirectToAnsiInputDevice
 //! [`global_input_resource`]: mod@global_input_resource
-//! [`RRT`]: crate::core::resilient_reactor_thread::RRT
+//! [`RRT`]: crate::RRT
 //! [`SINGLETON`]: global_input_resource::SINGLETON
 
 use super::mio_poller::MioPollWorker;
@@ -41,7 +41,7 @@ pub type InputSubscriberGuard = SubscriberGuard<MioPollWorker>;
 ///
 /// See [`RRT`] for what the singleton holds when active.
 ///
-/// [`RRT`]: crate::core::resilient_reactor_thread::RRT
+/// [`RRT`]: crate::RRT
 pub mod global_input_resource {
     #[allow(clippy::wildcard_imports)]
     use super::*;
@@ -85,9 +85,9 @@ pub mod global_input_resource {
     ///
     /// [`LazyLock`]: std::sync::LazyLock
     /// [`MioPollWorker`]: super::super::mio_poller::MioPollWorker
-    /// [`RRT`]: crate::core::resilient_reactor_thread::RRT
+    /// [`RRT`]: crate::RRT
     /// [`subscribe()`]: RRT::subscribe
-    /// [`SubscriberGuard`]: crate::core::resilient_reactor_thread::SubscriberGuard
+    /// [`SubscriberGuard`]: crate::SubscriberGuard
     /// [`syscalls`]: https://man7.org/linux/man-pages/man2/syscalls.2.html
     /// [Architecture]: super::super::DirectToAnsiInputDevice#architecture
     pub static SINGLETON: RRT<MioPollWorker> = RRT::new();
@@ -101,11 +101,11 @@ pub mod global_input_resource {
 /// - [`test_pty_terminal_events`]
 ///
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
-/// [`test_pty_input_device`]: crate::core::ansi::vt_100_terminal_input_parser::integration_tests::pty_input_device_test::test_pty_input_device
-/// [`test_pty_keyboard_modifiers`]: crate::core::ansi::vt_100_terminal_input_parser::integration_tests::pty_keyboard_modifiers_test::test_pty_keyboard_modifiers
-/// [`test_pty_mouse_events`]: crate::core::ansi::vt_100_terminal_input_parser::integration_tests::pty_mouse_events_test::test_pty_mouse_events
-/// [`test_pty_terminal_events`]: crate::core::ansi::vt_100_terminal_input_parser::integration_tests::pty_terminal_events_test::test_pty_terminal_events
-/// [`test_pty_utf8_text`]: crate::core::ansi::vt_100_terminal_input_parser::integration_tests::pty_utf8_text_test::test_pty_utf8_text
+/// [`test_pty_input_device`]: crate::vt_100_terminal_input_parser::integration_tests::pty_input_device_test::test_pty_input_device
+/// [`test_pty_keyboard_modifiers`]: crate::vt_100_terminal_input_parser::integration_tests::pty_keyboard_modifiers_test::test_pty_keyboard_modifiers
+/// [`test_pty_mouse_events`]: crate::vt_100_terminal_input_parser::integration_tests::pty_mouse_events_test::test_pty_mouse_events
+/// [`test_pty_terminal_events`]: crate::vt_100_terminal_input_parser::integration_tests::pty_terminal_events_test::test_pty_terminal_events
+/// [`test_pty_utf8_text`]: crate::vt_100_terminal_input_parser::integration_tests::pty_utf8_text_test::test_pty_utf8_text
 #[cfg(test)]
 mod tests {
     use super::super::{paste_state_machine::PasteCollectionState,

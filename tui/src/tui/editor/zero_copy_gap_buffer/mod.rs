@@ -97,23 +97,23 @@
 //! Violation of this invariant may lead to buffer corruption, security vulnerabilities,
 //! or undefined behavior in zero-copy access operations.
 //!
-//! # UTF-8 Safety Architecture
+//! # [`UTF-8`] Safety Architecture
 //!
-//! This module implements a **"validate once, trust thereafter"** approach to UTF-8
+//! This module implements a **"validate once, trust thereafter"** approach to [`UTF-8`]
 //! safety that maximizes both correctness and performance:
 //!
 //! ## Input Validation (Write Path)
 //!
-//! UTF-8 validation occurs **at the API boundaries** where content enters the system:
+//! [`UTF-8`] validation occurs **at the API boundaries** where content enters the system:
 //!
 //! - **[`insert_text_at_grapheme(text: &str)`]** - Rust's `&str` type guarantees valid
-//!   UTF-8
+//!   [`UTF-8`]
 //! - **File loading** - Use `std::fs::read_to_string()` or `String::from_utf8()` which
 //!   validate
 //! - **User input** - Terminal/UI frameworks provide pre-validated strings
-//! - **Paste operations** - System clipboard provides UTF-8 validated content
+//! - **Paste operations** - System clipboard provides [`UTF-8`] validated content
 //!
-//! This ensures that **only valid UTF-8 ever enters the buffer**.
+//! This ensures that **only valid [`UTF-8`] ever enters the buffer**.
 //!
 //! ## Zero-Copy Access (Read Path)
 //!
@@ -124,7 +124,7 @@
 //! - **[`get_line_content()`]** - Zero-copy access to individual lines
 //! - **[`rebuild_line_segments()`]** - Fast string creation during metadata updates
 //!
-//! This avoids redundant UTF-8 validation in performance-critical paths like:
+//! This avoids redundant [`UTF-8`] validation in performance-critical paths like:
 //! - Markdown parsing (needs zero-copy `&str` access)
 //! - Text rendering (frequent line content access)
 //! - Segment rebuilding (called after every edit operation)
@@ -133,11 +133,11 @@
 //!
 //! The unsafe usage is **architecturally sound** because:
 //!
-//! 1. **Type System Validation**: `&str` parameters ensure UTF-8 validity at input
-//! 2. **Controlled Mutations**: All buffer modifications maintain UTF-8 boundaries
-//! 3. **Null-Padding Safety**: Unused capacity filled with `\0` (valid UTF-8)
-//! 4. **Debug Assertions**: Development builds validate UTF-8 to catch violations
-//! 5. **Comprehensive Testing**: Tests verify UTF-8 handling including edge cases
+//! 1. **Type System Validation**: `&str` parameters ensure [`UTF-8`] validity at input
+//! 2. **Controlled Mutations**: All buffer modifications maintain [`UTF-8`] boundaries
+//! 3. **Null-Padding Safety**: Unused capacity filled with `\0` (valid [`UTF-8`])
+//! 4. **Debug Assertions**: Development builds validate [`UTF-8`] to catch violations
+//! 5. **Comprehensive Testing**: Tests verify [`UTF-8`] handling including edge cases
 //!
 //! ## Performance Benefits
 //!
@@ -145,12 +145,12 @@
 //!
 //! - **Zero allocation** in read paths (no `Cow<str>` from [`String::from_utf8_lossy`])
 //! - **Zero validation overhead** in hot loops (segment rebuilding, parsing)
-//! - **Direct slice operations** without UTF-8 scanning
+//! - **Direct slice operations** without [`UTF-8`] scanning
 //! - **Optimal benchmark performance** (production builds skip all validation)
 //!
 //! ## Error Handling Strategy
 //!
-//! - **Input validation**: Return `Result<T, E>` for invalid UTF-8 at boundaries
+//! - **Input validation**: Return `Result<T, E>` for invalid [`UTF-8`] at boundaries
 //! - **Internal operations**: Use debug assertions to catch invariant violations
 //! - **Production safety**: Trust the input validation and skip redundant checks
 //!
@@ -207,13 +207,13 @@
 //! - **`get_line_with_newline`**: 0.57 ns - Access line including newline
 //! - **`as_bytes`**: 0.19 ns - Raw byte access to buffer
 //! - **`find_line_containing_byte`**: 1.72 ns - Locate line by byte offset
-//! - **`is_valid_utf8`**: 426.08 ns - Full UTF-8 validation (50 lines)
+//! - **`is_valid_utf8`**: 426.08 ns - Full [`UTF-8`] validation (50 lines)
 //!
 //! ## Segment Reconstruction
 //!
 //! Grapheme cluster analysis performance varies by content complexity:
 //!
-//! - **`rebuild_single_line_ascii`**: 79.07 ns - ASCII text (36 chars)
+//! - **`rebuild_single_line_ascii`**: 79.07 ns - [`ASCII`] text (36 chars)
 //! - **`rebuild_single_line_unicode`**: 365.45 ns - Unicode with emojis
 //! - **`rebuild_batch_10_lines`**: 753.85 ns - Batch rebuild (~75 ns/line)
 //! - **`append_optimization_single_char`**: 1.48 ns - Optimized single char append
@@ -228,8 +228,8 @@
 //! 1. **True Zero-Copy Access**: Read operations (0.19-0.88 ns) are essentially free,
 //!    showing that we're returning direct pointers without any processing overhead.
 //!
-//! 2. **Efficient Unicode Handling**: Unicode operations are 2-3x slower than ASCII but
-//!    still sub-microsecond, making them suitable for real-time text editing.
+//! 2. **Efficient Unicode Handling**: Unicode operations are 2-3x slower than [`ASCII`]
+//!    but still sub-microsecond, making them suitable for real-time text editing.
 //!
 //! 3. **Scalable Line Management**: Adding 100 lines takes only ~16 ns per line,
 //!    demonstrating good scalability for large documents.
@@ -267,9 +267,11 @@
 //! for all Unicode text, including emojis, combining characters, and complex scripts.
 //!
 //! [`as_str()`]: ZeroCopyGapBuffer::as_str
+//! [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
 //! [`get_line_content()`]: ZeroCopyGapBuffer::get_line_content
 //! [`insert_text_at_grapheme(text: &str)`]: ZeroCopyGapBuffer::insert_text_at_grapheme
 //! [`rebuild_line_segments()`]: ZeroCopyGapBuffer::rebuild_line_segments
+//! [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
 
 // Core types and data structures.
 mod zcgb_core;

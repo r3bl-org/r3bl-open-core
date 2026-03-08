@@ -3,17 +3,21 @@
 //! Tests for complex terminal state management operations.
 //!
 //! This module tests the preservation and interaction of various terminal states:
-//! - Cursor save/restore with active SGR attributes
+//! - Cursor save/restore with active [`SGR`] attributes
 //! - Character set preservation across save/restore operations
 //! - Mode state interactions with cursor operations
 //! - Scroll region effects on cursor save/restore
+//!
+//! [`SGR`]: crate::SgrCode
 
 use super::super::test_fixtures_vt_100_ansi_conformance::*;
 use crate::{ANSIBasicColor, EraseDisplayMode, SgrCode, col,
             core::ansi::vt_100_pty_output_parser::{CsiSequence, PrivateModeType},
             row, term_col, term_row};
 
-/// Tests for cursor save/restore with active SGR styling attributes.
+/// Tests for cursor save/restore with active [`SGR`] styling attributes.
+///
+/// [`SGR`]: crate::SgrCode
 pub mod cursor_save_restore_with_attributes {
     use super::*;
 

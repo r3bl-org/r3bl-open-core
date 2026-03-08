@@ -12,7 +12,7 @@ use std::pin::Pin;
 
 pub const DEFAULT_HEIGHT: usize = 5;
 
-/// Type alias for the boxed future returned by the choose function.
+/// Type alias for the pinned boxed future returned by the choose function.
 pub type ChooseFuture<'a> =
     Pin<Box<dyn Future<Output = miette::Result<ItemsOwned>> + 'a>>;
 
@@ -80,7 +80,7 @@ impl DefaultIoDevices {
 ///
 /// # Returns
 ///
-/// Returns a boxed pinned future that resolves to `Ok(ItemsOwned)` with the following
+/// Returns a pinned boxed future that resolves to `Ok(ItemsOwned)` with the following
 /// behavior:
 /// * **Single selection mode** (`HowToChoose::Single`):
 ///   - If user selects an item and presses Enter: returns an `ItemsOwned` containing the
@@ -103,9 +103,9 @@ impl DefaultIoDevices {
 /// * There are other async communication failures with the
 ///   [`crate::ReadlineAsyncContext`] integration
 ///
-/// # Why return a boxed pinned future?
+/// # Why return a pinned boxed future?
 ///
-/// This function returns a [`Box::pin`]ned future (> 16KB clippy threshold) for safer
+/// This function returns a pinned boxed future ([`Box::pin`]; > 16KB clippy threshold) for safer
 /// memory management and better performance characteristics.
 ///
 /// ## Performance Benefits
@@ -127,8 +127,8 @@ impl DefaultIoDevices {
 /// ## Probably not needed for this function, but done for defensive programming
 ///
 /// It is probably not needed here, but is done just for defensive programming
-/// "better safe than sorry" for stack depth management. Generally, the returned boxed
-/// pinned future from this function is used in the following contexts:
+/// "better safe than sorry" for stack depth management. Generally, the returned
+/// pinned boxed future from this function is used in the following contexts:
 /// - Single use: The future is created, awaited once, and then dropped - no loops or
 ///   repeated moves.
 /// - Not stored in a struct: The future isn't being stored in a data structure that would

@@ -1,110 +1,218 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-// cspell:words hndlr
-
 //! # [`PTY`] Module
 //!
 //! This module provides a high-level, async interface for spawning and controlling
-//! processes in [pseudo-terminals] ([`PTY`]s). It supports both read-only and read-write
-//! (read-write) sessions with optional [`OSC`] sequence capture for enhanced terminal
-//! features.
+//! processes in [pseudoterminals] ([`PTY`]s). It is designed to be the foundational
+//! engine for terminal multiplexers (like [`tmux`]), interactive shells, and TUI
+//! applications.
 //!
-//! ## [`PTY`] Architecture Overview
+//! ## The Developer's Journey
 //!
-//! The [`PTY`] (pseudo-terminal) acts as a bridge between your program and spawned
-//! processes:
+//! Imagine you're building a terminal multiplexer like [`tmux`]. You will need to handle
+//! the following tasks:
 //!
-//! ### Read-Only Mode
+//! 1. **Spawning**: You need to start a shell process (like [`bash`]) inside a [`PTY`] so
+//!    it thinks it's talking to a real terminal.
+//! 2. **Orchestration**: You need to manage the lifecycle of that shell process,
+//!    capturing its output while sending your keystrokes (from your app) to it (as if
+//!    this input was going directly into the managed shell process).
+//! 3. **Multiplexing**: You might want to provide the ability to spawn multiple shell
+//!    processes, and switch between them instantly, keeping each shell's state alive even
+//!    when it is not visible.
 //!
-//! ```text
-//! ┌──────────────┐ ◄── events ◄── ┌───────────────────────────────┐
-//! │ Your Program │                │ Spawned Task (1) in Read Only │
-//! │              │                │         session               │
-//! │              │                │            ↓                  │
-//! │ Handle       │                │ ◄─── PTY creates pair ───►    │
-//! │ events and   │                │ ┊Controller┊     ┊Controlled┊ │
-//! │ process      │                │     ↓                 ↓       │
-//! │ completion   │                │ Spawn Tokio       Controlled  │
-//! │ from read    │                │ blocking task     spawns      │
-//! │ only session │                │ (2) to read       child       │
-//! │              │                │ from              process (3) │
-//! │              │                │ Controller and                │
-//! │              │                │ generate events               │
-//! │              │                │ for your program              │
-//! └──────────────┘                └───────────────────────────────┘
-//! ```
+//! This module provides the building blocks for this journey, organized into a
+//! three-layer functional stack.
 //!
-//! ### Read-Write Mode
+//! ## The Functional Stack
+//!
+//! The [`PTY`] module is structured into three distinct layers of abstraction, with a 1-1
+//! mapping to each step in the developer's journey shown above. However, it is inverted -
+//! step 1 in the journey maps to the last layer below.
 //!
 //! ```text
-//! ┌──────────────┐   ┌────────────┐   ┌───────────────────┐
-//! │ Your Program │◄─►│    PTY     │   │ Spawned Process   │
-//! │ Reads/writes │   │ Controller │   │ stdin/stdout/     │
-//! │ through      │   │     ↕      │   │ stderr redirected │
-//! │ controller   │   │    PTY     │   │ to controlled     │
-//! │ side         │   │     ↕      │   │ side              │
-//! │              │   │ Controlled │◄─►│                   │
-//! └──────────────┘   └────────────┘   └───────────────────┘
+//! ┌──────────────────────────────────────────────────────────────────────────────┐
+//! │                              APPLICATION LAYER             (3. Multiplexing) │
+//! │         (e.g., PTY Mux, TUI App, Terminal Emulator, readline_async App)      │
+//! └──────────────────────────────────────┬───────────────────────────────────────┘
+//!                                        │
+//! ┌──────────────────────────────────────▼───────────────────────────────────────┐
+//! │                                SESSION LAYER              (2. Orchestration) │
+//! │        (Async orchestration, task management, event channels, OSC)           │
+//! │              ┌───────────────────────────────────────────────┐               │
+//! │              │           mod pty_session (Session layer)     │               │
+//! │              └───────────────────────────────────────────────┘               │
+//! └──────────────────────────────────────┬───────────────────────────────────────┘
+//!                                        │
+//! ┌──────────────────────────────────────▼───────────────────────────────────────┐
+//! │                                 ENGINE LAYER                   (1. Spawning) │
+//! │          (OS-level PTY pair creation, deadlock prevention, I/O)              │
+//! │              ┌───────────────────────────────────────────────┐               │
+//! │              │         mod pty_engine (PtyPair, etc.)        │               │
+//! │              └───────────────────────────────────────────────┘               │
+//! └──────────────────────────────────────────────────────────────────────────────┘
 //! ```
 //!
-//! ## Key Features
+//! 1. **Application Layer**: This is your code. Whether it's the built-in [`PTYMux`] or
+//!    your custom [`TUI`] or [`readline_async`] app, this layer consumes events from the
+//!    Session Layer and sends inputs generated by the end user interacting with your app,
+//!    to the Session Layer.
+//! 2. **[Session Layer]**: The async orchestration layer. It bridges the gap between
+//!    synchronous OS [`PTY`] I/O and your async application using [`tokio`] tasks and
+//!    channels. This is where the **Task Trio** lives.
+//! 3. **[Engine Layer]**: The low-level foundation. It handles the tricky business of
+//!    opening OS [`PTY`] pairs and programmatically preventing deadlocks caused by leaked
+//!    file descriptors. See [`PtyPair`] for details.
 //!
-//! - **Read-only sessions**: Capture command output with optional [`OSC`] sequence
-//!   processing
-//! - **Read-write sessions**: Full bidirectional communication with [`PTY`] processes
-//! - **[`OSC`] sequence support**: Capture progress updates and terminal escape sequences
-//! - **Flexible configuration**: Control what data is captured and processed
-//! - **Async/await support**: Built on [`tokio`] for non-blocking operation
+//! ## The Life of a Session
 //!
-//! ## Implementation Strategy
+//! Understanding the lifecycle of a [`PTY`] session, from its birth to its eventual
+//! teardown, is essential for building robust [`TUI`] and [`readline_async`] applications
+//! (that use this [`pty` module]). This journey involves coordinated interactions across
+//! all three layers of the functional stack.
 //!
-//! Both read-only and read-write modes use a multi-task async architecture:
+//! ### 1. Birth (Spawning)
 //!
-//! - **Completion Task**: Manages [`PTY`] pair creation, child process lifecycle, and
-//!   coordinates shutdown
-//! - **Reader Task**: Handles output from the spawned process using `spawn_blocking`
-//!   ([`PTY`] I/O is inherently synchronous)
-//! - **Input Handler Task**: (Read-write only) Manages input to the spawned process
-//! - **Bridge Task**: (Read-write only) Converts async input events to sync channel for
-//!   blocking I/O
+//! It all begins when your app ([`TUI`] or [`readline_async`]) uses
+//! [`PtySessionBuilder::start()`] to start a session. This kicks off the **initialization
+//! sequence** across all three layers.
+//!
+//! - **Session Layer**: [`PtySessionBuilder::start()`] orchestrates the entire startup.
+//!   First it uses the **Engine Layer** to spawn the child process in the [`PTY`]
+//!   environment, then wraps it in the **Task Trio** ([Reader], [Writer],
+//!   [Orchestrator]), and finally sets up the [MPSC channels].
+//! - **Engine Layer**: Called by the **Session Layer**, [`PtyPair::open_and_spawn()`]
+//!   creates the OS-level [`PTY`] pair and spawns the child process. Crucially, it
+//!   immediately drops the parent's copy of the **controlled** file descriptor to prevent
+//!   [resource-leaking deadlocks] at birth.
+//! - **App Layer**: Once the initialization sequence is complete, your application
+//!   receives a [`PtySession`] handle, ready to begin interaction.
+//!
+//! ### 2. Life (Interaction)
+//!
+//! Once the session is running, and your app is running, a balanced bidirectional data
+//! flow begins.
+//!
+//! - **App Layer**: Sends to the session and receives events from it:
+//!   - Sends [`PtyInputEvent`]s, e.g., keyboard input, and resize requests. See
+//!     [`ProcessManager::send_input()`] and [`ProcessManager::handle_terminal_resize()`])
+//!     for examples.
+//!   - Receives [`PtyOutputEvent`]s, e.g., process output, [`OSC`] sequences, and exit
+//!     status. See [`ProcessManager::poll_all_processes()`]) for examples.
+//! - **Session Layer**: The task trio works to connect the app layer to the engine.
+//!   - The [Writer Task] (blocking) pumps input events to the engine.
+//!   - The [Reader Task] (blocking) drains output from the engine.
+//!   - The [Orchestrator Task] (async) monitors the child process's lifecycle.
+//! - **Engine Layer**: Manages the low-level [`Controller`] and **controlled** process
+//!   I/O.
+//!
+//! ### 3. The Great Beyond (Teardown & Cleanup)
+//!
+//! A session can end in two ways: gracefully (initiated by the child) or forcefully
+//! (initiated by your app).
+//!
+//! #### Child-Initiated (Graceful Exit)
+//!
+//! 1. **Child Process Exits**: The process running inside the [`PTY`] (e.g., a shell
+//!    after an `exit` command) terminates.
+//! 2. **Engine Layer**: The OS closes the **controlled** side of the [`PTY`]. Because
+//!    [`PtyPair`] already dropped its copy of the controlled FD at birth, the kernel's
+//!    reference count hits zero.
+//! 3. **Signal**: The kernel sends a termination signal—[`EOF`] (or [`EIO`] on Linux)—to
+//!    the [`Controller`] reader.
+//! 4. **Session Layer**:
+//!    - The [Reader Task] sees this signal and exits cleanly.
+//!    - The [Orchestrator Task] (which was awaiting [`ControlledChild::wait()`]) detects
+//!      the exit.
+//!    - It joins both the [Reader] and [Writer] tasks to ensure all I/O is drained.
+//!    - Finally, it sends a [`PtyOutputEvent::Exit`] event to the App.
+//!
+//! #### App-Initiated (Forced Shutdown)
+//!
+//! When your application needs to shut down (e.g., the user quits your app), it should
+//! follow this **Critical Shutdown Pattern**:
+//!
+//! 1. **Kill**: Forcefully terminate the child process using the
+//!    [`PtySession::child_process_termination_handle`].
+//! 2. **Close**: Send a [`PtyInputEvent::Close`] to signal the [Writer Task] to stop.
+//! 3. **Drop**: Drop the [`PtySession`] handle.
+//!
+//! #### The Final Cleanup (RAII and the Drop Chain)
+//!
+//! When your app drops the [`PtySession`] handle, Rust's automatic resource management
+//! ([RAII]) triggers a cleanup chain across all internal components:
+//!
+//! - **Session Layer**:
+//!   - The [MPSC channels] are closed when their halves are dropped.
+//!   - The task trio join handles are dropped in a cascading chain:
+//!     - [`PtySession`] drops the [Orchestrator Task] handle.
+//!     - The Orchestrator, in turn, drops its internal [Reader Task] and [Writer Task]
+//!       handles.
+//! - **Engine Layer**:
+//!   - The [`Controller`] (from the [Engine Layer]) is dropped.
+//!   - The [`PtyPair`] (and its inner [`MasterPty`]) leverages [RAII] to guarantee that
+//!     all OS-level file descriptors are closed. This eliminates the risk of
+//!     [resource-leaking deadlocks] and ensures a clean system state.
+//!
+//! ## The Task Trio
+//!
+//! Every active [`PTY`] session is powered by a set of specialized tasks (the
+//! **Task Trio**).
+//!
+//! | Task             | Role             | Type         | Responsibility                                                                                            |
+//! | :--------------- | :--------------- | :----------- | :-------------------------------------------------------------------------------------------------------- |
+//! | **Reader**       | 📥 [`PTY`] ➜ App | **Blocking** | [`spawn_blocking_reader_task()`]: Reads raw bytes, processes [`OSC`], sends events to App.                |
+//! | **Writer**       | 📤 App ➜ [`PTY`] | **Blocking** | [`spawn_blocking_writer_task()`]: Receives input events from App and writes them to [`stdin`].            |
+//! | **Orchestrator** | 🏁 Lifecycle     | **Async**    | [`spawn_orchestrator_task()`]: Manages child process, waits for exit, and coordinates shutdown.           |
+//!
+//! ## Technical Deep Dive
+//!
+//! ### Session Architecture
+//!
+//! The **Task Trio** provides bidirectional communication between your app and the child
+//! process.
+//!
+//! ```text
+//!        ┌───────────────────────────────────────────────────────────────────────┐
+//! ┌──────▼───────┐   ┌──────────────────────────────────────────┐                │
+//! │ Your Program │   │           Orchestrator Task (1)          │                │
+//! │ (App Layer)  │   │            ↙               ↘             │                │
+//! │ Sends Input  ├───► Writer Task (3)         Reader Task (2)  ── Sends Output ─┘
+//! │ Events       │   │ (App → PTY)             (PTY → App)      │  Events
+//! │              │   └──────┬────────────────────────────▲──────┘
+//! │              │          │                            │
+//! │              │   ┌──────▼────────────────────────────┴──────┐
+//! │              │   │ ┊Controller┊  ← PTY Pair →  ┊Controlled┊ │
+//! └──────────────┘   └──────┬────────────────────────────▲──────┘
+//!                           │                            │
+//!                    ┌──────▼────────────────────────────┴──────┐
+//!                    │            Child Process                 │
+//!                    └──────────────────────────────────────────┘
+//! Legends:
+//! (1): The **Orchestrator** task - spawns other tasks, manages lifecycle and shutdown.
+//! (2): The **Reader** task - reads output from PTY and sends events to App.
+//! (3): The **Writer** task - receives input from App and writes to PTY.
+//! ```
 //!
 //! ### Task Coordination & Lifecycle
 //!
-//! | Time | Completion Task        | Reader Task    | Input Handler     | Bridge Task    |
-//! | :--- | :--------------------- | :------------- | :---------------- | :------------- |
-//! | 0    | 🛫 Spawn child         |                |                   |                |
-//! | 1    | 🛫 Spawn reader        | 🛫 Start read  |                   |                |
-//! | 2    | 🛫 Spawn input hndlr▪  | 📖 Read data   | 🛫 Start▪         |                |
-//! | 3    | 🛫 Spawn bridge▪       | 📤 Send events | 📥 Wait input▪    | 🛫 Start▪      |
-//! | 4    | 🛬 Wait `child.wait()` | 📖 Read data   | ✍️ Write [`PTY`]▪ | 🔄 Bridge I/O▪ |
-//! | 5    | 📤 Send Exit event     | 📖 Read EOF    | 📥 Wait input▪    | 🔄 Bridge I/O▪ |
-//! | 6    | 💀 drop(controlled)    | 🛬 Exit        | 🛬 Exit▪          | 🛬 Exit▪       |
-//! | 7    | 🛬 Wait all tasks      |                |                   |                |
-//! | 8    | ✅ Return status       |                |                   |                |
+//! | Time | Orchestrator Task                   | Reader Task      | Writer Task         |
+//! | :--- | :---------------------------------- | :--------------- | :------------------ |
+//! | 0    | 🛫 Spawn child                      |                  |                     |
+//! | 1    | 🛫 Spawn tasks                      | 🛫 Start read    | 🛫 Start            |
+//! | 2    | 🛬 Wait [`ControlledChild::wait()`] | 📖 Read data     | 📥 Wait input       |
+//! | 3    | 🛬 Wait tasks                       | 🛬 Exit (on EOF) | 🛬 Exit (on Close)  |
+//! | 4    | 📤 Send Exit event                  |                  |                     |
+//! | 5    | ✅ Return status                    |                  |                     |
 //!
 //! Legends:
 //! ```txt
-//! Task lifecycle:    🛫 start · 🛬 wait/exit · 💀 drop · ✅ done
-//! IO operations:     📖 read · ✍️ write
-//! Send/receive pair: 📤 send · 📥 receive
-//! Others:            ▪ Read-write mode only · 🔄 bridge
+//! Task lifecycle:    🛫 start  | 🛬 wait/exit | ✅ done
+//! IO operations:     📖 read   | ✍️ write
+//! Send/receive pair: 📤 send   | 📥 receive
 //! ```
 //!
-//! ### Event Communication
-//!
-//! ```text
-//! Your Program ◄─── MPSC Channel ◄─── Background Tasks
-//!              │                      │
-//!              │                      ├─ Reader Task → Output/OSC Events
-//!              │                      └─ Completion Task → Exit Events
-//!              │
-//!              └─ MPSC Channel ──► Input Handler (read-write only)
-//! ```
-//!
-//! Events flow through unbounded [MPSC channels], allowing your program to receive output
-//! asynchronously while background tasks handle the blocking [`PTY`] operations.
-//!
-//! ### Channel Architecture (Read-Write Mode)
+//! ### Channel Architecture
 //!
 //! ```text
 //! Your Program
@@ -113,17 +221,10 @@
 //!      │
 //! ┌────▼────────────────────────────────┐
 //! │    Async Input Channel              │
-//! │    (unbounded MPSC)                 │
+//! │    (bounded MPSC)                   │
 //! └─────────────────────────────────────┘
 //!      │
-//!      │ (Bridge Task converts async→sync)
-//!      │
-//! ┌────▼────────────────────────────────┐
-//! │    Sync Input Channel               │
-//! │    (std::sync::mpsc)                │
-//! └─────────────────────────────────────┘
-//!      │
-//!      │ (Input Handler Task - blocking)
+//!      │ (Writer Task - blocking)
 //!      │
 //! ┌────▼────────────────────────────────┐
 //! │    PTY Controller                   │
@@ -150,7 +251,7 @@
 //!      │
 //! ┌────▼────────────────────────────────┐
 //! │     Async Output Channel            │
-//! │     (unbounded MPSC)                │
+//! │     (bounded MPSC)                  │
 //! └─────────────────────────────────────┘
 //!      │
 //!      │ (async output)
@@ -159,95 +260,79 @@
 //! Your Program
 //! ```
 //!
-//! ## Critical [`PTY`] Lifecycle Management
-//!
-//! The controlled side of the [`PTY`] must be closed in the parent process immediately
-//! after spawning the child. Without this, reads from the controller will never see
-//! [`EOF`] -- even after the child exits -- causing permanent deadlocks.
-//!
-//! See [`PtyPair`] for the full explanation, including file descriptor ownership,
-//! the `Drop` chain, and why [`PtyPair::open_and_spawn()`] exists.
-//!
-//!
 //! ## Main Types
 //!
-//! - [`PtyCommandBuilder`]: Builder for configuring and spawning [`PTY`] commands
-//! - [`PtyReadWriteSession`]: Read-write [`PTY`] session handle
-//! - [`PtyReadOnlySession`]: Read-only [`PTY`] session handle
-//! - [`PtyReadWriteOutputEvent`]: Events received from [`PTY`] processes (output, [`OSC`]
-//!   sequences, exit)
-//! - [`PtyInputEvent`]: Input types that can be sent to interactive sessions
+//! - [`PtySessionBuilder`]: Builder for configuring and starting sessions via
+//!   [`start()`].
+//! - [`PtySession`]: [`PTY`] session handle.
+//! - [`PtyOutputEvent`]: Unified events received from [`PTY`] processes.
+//! - [`PtyInputEvent`]: Input types that can be sent to interactive sessions.
 //!
-//! ## Quick Start
-//!
-//! ### Read-only session (capture command output):
-//! ```rust
-//! use r3bl_tui::{PtyCommandBuilder, PtyConfigOption, PtyReadOnlyOutputEvent};
-//!
-//! # #[tokio::main]
-//! # async fn main() -> Result<(), Box<dyn std::error::Error>> {
-//! let mut session = PtyCommandBuilder::new("ls")
-//!     .args(["-la"])
-//!     .spawn_read_only(PtyConfigOption::Output)?;
-//!
-//! while let Some(event) = session.output_evt_ch_rx_half.recv().await {
-//!     match event {
-//!         PtyReadOnlyOutputEvent::Output(data) => {
-//!             print!("{}", String::from_utf8_lossy(&data));
-//!         }
-//!         PtyReadOnlyOutputEvent::Exit(_) => break,
-//!         _ => {}
-//!     }
-//! }
-//! # Ok(())
-//! # }
-//! ```
-//!
-//! ### Interactive session (send input to process):
-//! ```no_run
-//! # #[cfg(not(unix))]
-//! # fn main() {}
-//! # #[cfg(unix)]
-//! # #[tokio::main]
-//! # async fn main() -> Result<(), Box<dyn std::error::Error>> {
-//! use r3bl_tui::{PtyCommandBuilder, PtyReadWriteOutputEvent, PtyInputEvent, ControlSequence, CursorKeyMode, size, width, height};
-//!
-//! let mut session = PtyCommandBuilder::new("cat")
-//!     .spawn_read_write(size(width(80) + height(24)))?;
-//!
-//! // Send input
-//! session.input_event_ch_tx_half.send(PtyInputEvent::WriteLine("Hello, PTY!".into()))?;
-//! session.input_event_ch_tx_half.send(PtyInputEvent::SendControl(ControlSequence::CtrlD, CursorKeyMode::default()))?; // EOF
-//!
-//! // Read output
-//! while let Some(event) = session.output_event_receiver_half.recv().await {
-//!     match event {
-//!         PtyReadWriteOutputEvent::Output(data) => {
-//!             print!("{}", String::from_utf8_lossy(&data));
-//!         }
-//!         PtyReadWriteOutputEvent::Exit(_) => break,
-//!         _ => {}
-//!     }
-//! }
-//! # Ok(())
-//! # }
-//! ```
-//!
+//! [`bash`]: https://www.gnu.org/software/bash/
+//! [`ControlledChild::wait()`]: portable_pty::Child::wait
+//! [`EIO`]: https://man7.org/linux/man-pages/man3/errno.3.html
 //! [`EOF`]: https://en.wikipedia.org/wiki/End-of-file
+//! [`MasterPty`]: portable_pty::MasterPty
 //! [`OSC`]: crate::osc_codes::OscSequence
+//! [`ProcessManager::handle_terminal_resize()`]:
+//!     crate::ProcessManager::handle_terminal_resize
+//! [`ProcessManager::poll_all_processes()`]: crate::ProcessManager::poll_all_processes
+//! [`ProcessManager::send_input()`]: crate::ProcessManager::send_input
+//! [`pty` module]: mod@crate::core::pty
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
+//! [`PtyInputEvent`]: crate::PtyInputEvent
+//! [`PTYMux`]: crate::PTYMux
+//! [`PtyOutputEvent::Exit`]: crate::PtyOutputEvent::Exit
+//! [`PtyOutputEvent`]: crate::PtyOutputEvent
+//! [`PtyPair::open_and_spawn()`]: crate::PtyPair::open_and_spawn
+//! [`PtyPair`]: crate::PtyPair
+//! [`PtySession::child_process_termination_handle`]:
+//!     field@crate::PtySession::child_process_termination_handle
+//! [`PtySession`]: crate::PtySession
+//! [`PtySessionBuilder::start()`]: crate::PtySessionBuilder::start
+//! [`PtySessionBuilder`]: crate::PtySessionBuilder
+//! [`readline_async`]: crate::readline_async::ReadlineAsyncContext::try_new
+//! [`spawn_blocking_reader_task()`]:
+//!     crate::pty_session::tasks::reader_task::spawn_blocking_reader_task
+//! [`spawn_blocking_writer_task()`]:
+//!     crate::pty_session::tasks::writer_task::spawn_blocking_writer_task
+//! [`spawn_orchestrator_task()`]:
+//!     crate::pty_session::tasks::orchestrator::spawn_orchestrator_task
+//! [`start()`]: [`PtySessionBuilder::start()`]
+//! [`stdin`]: std::io::Stdin
+//! [`tmux`]: https://github.com/tmux/tmux
 //! [`tokio`]: tokio
+//! [`TUI`]: crate::tui::TerminalWindow::main_event_loop
+//! [Engine Layer]: crate::pty_engine
 //! [MPSC channels]: tokio::sync::mpsc
-//! [pseudo-terminals]: https://en.wikipedia.org/wiki/Pseudoterminal
+//! [Orchestrator Task]:
+//!     crate::pty_session::tasks::orchestrator::spawn_orchestrator_task
+//! [Orchestrator]:
+//!     crate::pty_session::tasks::orchestrator::spawn_orchestrator_task
+//! [pseudoterminals]: https://en.wikipedia.org/wiki/Pseudoterminal
+//! [RAII]: https://en.cppreference.com/w/cpp/language/raii
+//! [Reader Task]:
+//!     crate::pty_session::tasks::reader_task::spawn_blocking_reader_task
+//! [Reader]:
+//!     crate::pty_session::tasks::reader_task::spawn_blocking_reader_task
+//! [resource-leaking deadlocks]:
+//!     crate::pty_engine::pty_pair::PtyPair#resource-leaking-deadlock
+//! [Session Layer]: crate::pty_session
+//! [Session layer]: crate::pty_session
+//! [Writer Task]:
+//!     crate::pty_session::tasks::writer_task::spawn_blocking_writer_task
+//! [Writer]:
+//!     crate::pty_session::tasks::writer_task::spawn_blocking_writer_task
 
 // Attach.
-pub mod pty_command_builder;
-pub mod pty_config;
-pub mod pty_core;
-pub mod pty_read_only;
-pub mod pty_read_write;
+pub mod pty_engine;
+pub mod pty_mux;
+pub mod pty_session;
+
+#[cfg(test)]
+mod e2e_tests;
 
 // Re-export.
-pub use pty_command_builder::*;
-pub use pty_config::*;
-pub use pty_core::*;
+pub use pty_engine::*;
+pub use pty_mux::*;
+pub use pty_session::*;

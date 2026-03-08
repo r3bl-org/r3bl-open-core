@@ -46,8 +46,8 @@ pub enum PasteStateResult {
 /// so CRLF sequences are uncommon in practice.
 ///
 /// [`DirectToAnsi`]: mod@super::super
-/// [`VT100KeyCodeIR::Enter`]: crate::core::ansi::vt_100_terminal_input_parser::VT100KeyCodeIR::Enter
 /// [`next()`]: super::DirectToAnsiInputDevice::next
+/// [`VT100KeyCodeIR::Enter`]: crate::vt_100_terminal_input_parser::VT100KeyCodeIR::Enter
 #[derive(Debug)]
 pub enum PasteCollectionState {
     /// Not currently in a paste operation.

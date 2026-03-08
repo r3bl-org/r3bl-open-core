@@ -1,6 +1,6 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Terminal state operations for ESC sequences.
+//! Terminal state operations for [`ESC`] sequences.
 //!
 //! This module acts as a thin shim layer that delegates to the actual implementation.
 //! Refer to the module-level documentation in the operations module for details on the
@@ -26,7 +26,7 @@
 //!
 //! ```text
 //! ╭─────────────────╮    ╭────────────────╮    ╭─────────────────╮    ╭──────────────╮
-//! │ Child Process   │────▶ PTY Controller │────▶ VTE Parser      │────▶ OffscreenBuf │
+//! │ Child Process   │────► PTY Controller │────► VTE Parser      │────► OffscreenBuf │
 //! │ (vim, bash...)  │    │ (byte stream)  │    │ (state machine) │    │ (terminal    │
 //! ╰──────┬──────────╯    ╰────────────────╯    ╰───────┬─────────╯    │  buffer)     │
 //!        │                                             │              ╰───────┬──────╯
@@ -37,13 +37,13 @@
 //!        │                                    ╚═════════════════╝             │
 //!        │                                                                    │
 //!        │                                    ╭─────────────────╮             │
-//!        │                                    │ RenderPipeline  ◀─────────────╯
+//!        │                                    │ RenderPipeline  ◄─────────────╯
 //!        │                                    │ paint()         │
-//!        ╰────────────────────────────────────▶ Terminal Output │
+//!        ╰────────────────────────────────────► Terminal Output │
 //!                                             ╰─────────────────╯
 //! ```
 //!
-//! # `ESC` Sequence Architecture
+//! # [`ESC`] Sequence Architecture
 //!
 //! ```text
 //! Application sends "ESC c" (reset terminal)
@@ -64,13 +64,14 @@
 //!     Update OffscreenBuffer state
 //! ```
 //!
-//! Note: Cursor save/restore `ESC` sequences (`ESC 7`/`ESC 8`) are handled by
+//! Note: Cursor save/restore [`ESC`] sequences (`ESC 7`/`ESC 8`) are handled by
 //! [`cursor_ops`] functions to maintain consistency with `CSI` equivalents (`CSI s`/`CSI
 //! u`).
 //!
-//! [`cursor_ops`]: crate::core::ansi::vt_100_pty_output_parser::operations::vt_100_shim_cursor_ops
-//! [`impl_terminal_ops`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl::vt_100_impl_terminal_ops
-//! [`test_terminal_ops`]: crate::core::ansi::vt_100_pty_output_parser::vt_100_pty_output_conformance_tests::tests::vt_100_test_terminal_ops
+//! [`cursor_ops`]: crate::vt_100_pty_output_parser::operations::vt_100_shim_cursor_ops
+//! [`ESC`]: crate::EscSequence
+//! [`impl_terminal_ops`]: crate::vt_100_ansi_impl::vt_100_impl_terminal_ops
+//! [`test_terminal_ops`]: crate::vt_100_pty_output_conformance_tests::tests::vt_100_test_terminal_ops
 //! [module-level documentation]: self
 
 use super::super::ansi_parser_public_api::AnsiToOfsBufPerformer;
@@ -79,14 +80,18 @@ use crate::{Pos, TuiStyle};
 /// Clears all buffer content.
 fn clear_buffer(performer: &mut AnsiToOfsBufPerformer) { performer.ofs_buf.clear(); }
 
-/// Reset all `SGR` attributes to default state.
+/// Reset all [`SGR`] attributes to default state.
+///
+/// [`SGR`]: crate::SgrCode
 fn reset_sgr_attributes(performer: &mut AnsiToOfsBufPerformer) {
     performer.ofs_buf.ansi_parser_support.current_style = TuiStyle::default();
 }
 
 /// Reset terminal to initial state (`ESC c`).
 /// Clears the buffer, resets cursor, and clears saved state.
-/// Clears DECSTBM scroll region margins.
+/// Clears [`DECSTBM`] scroll region margins.
+///
+/// [`DECSTBM`]: https://vt100.net/docs/vt510-rm/DECSTBM.html
 pub fn reset_terminal(performer: &mut AnsiToOfsBufPerformer) {
     clear_buffer(performer);
 
@@ -110,14 +115,18 @@ pub fn reset_terminal(performer: &mut AnsiToOfsBufPerformer) {
     reset_sgr_attributes(performer);
 }
 
-/// Select ASCII character set (`ESC ( B`).
-/// Switches to normal ASCII character set for standard text rendering.
+/// Select [`ASCII`] character set (`ESC ( B`).
+/// Switches to normal [`ASCII`] character set for standard text rendering.
+///
+/// [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
 pub fn select_ascii_character_set(performer: &mut AnsiToOfsBufPerformer) {
     performer.ofs_buf.select_ascii_character_set();
 }
 
-/// Select DEC Special Graphics character set (`ESC ( 0`).
-/// Switches to DEC Special Graphics character set for box-drawing characters.
+/// Select [`DEC`] Special Graphics character set (`ESC ( 0`).
+/// Switches to [`DEC`] Special Graphics character set for box-drawing characters.
+///
+/// [`DEC`]: https://en.wikipedia.org/wiki/Digital_Equipment_Corporation
 pub fn select_dec_graphics_character_set(performer: &mut AnsiToOfsBufPerformer) {
     performer.ofs_buf.select_dec_graphics_character_set();
 }

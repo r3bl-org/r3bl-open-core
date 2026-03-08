@@ -83,6 +83,43 @@ cargo rustdoc-fmt --workspace
 
 ---
 
+## lychee (external URL link checker)
+
+**Purpose:** Detect broken external URLs in rustdoc comments
+
+**When it runs:**
+- Automatically as part of `./check.fish --full`, scoped to git-modified files
+
+**What it does:**
+- Checks HTTP/HTTPS URLs in changed files for 404s, timeouts, and other errors
+- Complements `cargo doc --no-deps` which only validates intra-doc links (Rust paths)
+- Uses `lychee.toml` (repo root) for exclusions and configuration
+
+**Config (`lychee.toml`):**
+- Accepts 429 (rate limit) as non-error
+- Excludes `file://` URIs (example paths in docs)
+- Excludes test fixture URLs (`test.com`, `link1.com`)
+- 30s timeout per request, 8 max concurrent requests
+
+**Findings categories:**
+
+| Category | Action |
+|:---------|:-------|
+| Real 404s | Fix the URL (find the new location) |
+| `file://` URIs | Excluded in config (example paths in docs) |
+| Test fixture URLs | Excluded in config |
+| 403 Forbidden | May need exclusion (sites blocking automated requests) |
+| 429 Rate limit | Accepted as non-error in config |
+| Redirects | Informational only (docs.rs short URLs always 302) |
+
+**Installation:**
+```bash
+fish run.fish install-cargo-tools
+# (installs lychee via cargo binstall)
+```
+
+---
+
 ## cargo doc --no-deps
 
 **Purpose:** Generate documentation and verify no warnings

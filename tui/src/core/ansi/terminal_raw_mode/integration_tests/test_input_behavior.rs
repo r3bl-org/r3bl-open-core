@@ -11,11 +11,10 @@ use crate::{
     CONTROL_C,
     CONTROL_D,
     CONTROL_LF,
-    SingleThreadSafeControlledChild,
-    PtyPair,
     PtyTestMode,
+    PtyTestContext,
 };
-use std::{io::{BufRead, BufReader, Read, Write},
+use std::{io::{BufRead, Read, Write},
           time::Duration};
 
 generate_pty_test! {
@@ -43,18 +42,15 @@ generate_pty_test! {
 
 /// Controller process: sends input and verifies controlled process reports correct bytes.
 #[allow(clippy::too_many_lines)]
-fn pty_controller_entry_point(pty_pair: PtyPair, child: SingleThreadSafeControlledChild) {
-    eprintln!("🚀 PTY Controller: Starting input behavior test...");
+fn pty_controller_entry_point(context: PtyTestContext) {
+    let PtyTestContext {
+        pty_pair,
+        child,
+        mut buf_reader,
+        mut writer,
+    } = context;
 
-    let mut writer = pty_pair
-        .controller()
-        .take_writer()
-        .expect("Failed to get writer");
-    let reader = pty_pair
-        .controller()
-        .try_clone_reader()
-        .expect("Failed to get reader");
-    let mut buf_reader = BufReader::new(reader);
+    eprintln!("🚀 PTY Controller: Starting input behavior test...");
 
     eprintln!("📝 PTY Controller: Waiting for controlled process to be ready...");
 

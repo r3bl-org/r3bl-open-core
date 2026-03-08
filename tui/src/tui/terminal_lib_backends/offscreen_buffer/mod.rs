@@ -1,6 +1,6 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Offscreen buffer module for terminal rendering and VT100/ANSI terminal emulation.
+//! Offscreen buffer module for terminal rendering and VT100/[`ANSI`] terminal emulation.
 //!
 //! # You Are Here: **Stage 3-4 Data Bridge**
 //!
@@ -40,7 +40,7 @@
 //!
 //! This module serves **two integration points**:
 //! 1. **As the Compositor's Output**: Receives rendering operations from the pipeline
-//! 2. **As a VT100/ANSI Terminal Emulator**: Processes escape sequences from child
+//! 2. **As a VT100/[`ANSI`] Terminal Emulator**: Processes escape sequences from child
 //!    processes
 //!
 //! # Architecture Overview
@@ -50,14 +50,14 @@
 //!
 //! ```text
 //! ╭─────────────────╮    ╭────────────────╮    ╭─────────────────╮    ╭──────────────╮
-//! │ Child Process   │───▶│ PTY Controller │───▶│ VTE Parser      │───▶│ OffscreenBuf │
+//! │ Child Process   │───►│ PTY Controller │───►│ VTE Parser      │───►│ OffscreenBuf │
 //! │ (vim, bash...)  │    │ (byte stream)  │    │ (state machine) │    │ (terminal    │
 //! ╰──────┬──────────╯    ╰────────────────╯    ╰─────────────────╯    │  buffer)     │
 //!        │                                                            ╰──────┬───────╯
 //!        │                                     ╭─────────────────╮           │
-//!        │                                     │ RenderPipeline  │◀──────────╯
+//!        │                                     │ RenderPipeline  │◄──────────╯
 //!        │                                     │ paint()         │
-//!        ╰─────────────────────────────────────▶ Terminal Output │
+//!        ╰─────────────────────────────────────► Terminal Output │
 //!                                              ╰─────────────────╯
 //! ```
 //!
@@ -65,13 +65,13 @@
 //!
 //! The offscreen buffer is designed to work seamlessly with two major subsystems:
 //!
-//! ## 1. ANSI/VT100 Terminal Emulation
+//! ## 1. [`ANSI`]/VT100 Terminal Emulation
 //!
 //! - **Parser Integration**: Processes escape sequences via [`vt_100_ansi_impl`]
 //!   implementations
 //! - **State Management**: Maintains cursor position, character sets, scrolling regions
 //! - **Protocol Compliance**: Full VT100 specification compliance with conformance tests
-//! - **Character Handling**: Supports both ASCII and DEC graphics character sets
+//! - **Character Handling**: Supports both [`ASCII`] and [`DEC`] graphics character sets
 //!
 //! ## 2. Render Pipeline Integration
 //!
@@ -122,7 +122,7 @@
 //! ```
 //!
 //! This 1:1 mapping provides:
-//! - **Predictable Navigation**: Easy to find implementation for any ANSI operation
+//! - **Predictable Navigation**: Easy to find implementation for any [`ANSI`] operation
 //! - **Clear Separation**: Parser logic separate from buffer implementation
 //! - **Comprehensive Testing**: Each implementation file has full unit test coverage
 //!
@@ -278,24 +278,16 @@
 //! - **Zero allocation**: Methods return references to existing buffer data
 //! - **Error Prevention**: Eliminates common off-by-one errors in manual bounds checking
 //!
-//! [`IndexOps`]: crate::core::coordinates::bounds_check::IndexOps
-//! [`LengthOps`]: crate::core::coordinates::bounds_check::LengthOps
-//! [`Option<&PixelCharLine>`]: std::option::Option
-//! [`Option<PixelChar>`]: std::option::Option
-//! [`Option<PixelCharDiffChunks>`]: std::option::Option
-//! [`Option<T>`]: std::option::Option
-//! [`PixelChar::Void`]: PixelChar::Void
-//! [`Pos`]: crate::Pos
-//! [`RangeBoundsExt`]: crate::core::coordinates::bounds_check::RangeBoundsExt
-//! [`RenderPipeline::paint()`]: crate::RenderPipeline::paint
-//! [`TuiStyle`]: crate::TuiStyle
-//! [`bounds_check`]: crate::core::coordinates::bounds_check
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
+//! [`bounds_check`]: crate::bounds_check
 //! [`clear_line()`]: crate::OffscreenBuffer::clear_line
 //! [`copy_chars_within_line()`]: crate::OffscreenBuffer::copy_chars_within_line
 //! [`cursor_backward()`]: crate::OffscreenBuffer::cursor_backward
 //! [`cursor_down()`]: crate::OffscreenBuffer::cursor_down
 //! [`cursor_forward()`]: crate::OffscreenBuffer::cursor_forward
 //! [`cursor_up()`]: crate::OffscreenBuffer::cursor_up
+//! [`DEC`]: https://en.wikipedia.org/wiki/Digital_Equipment_Corporation
 //! [`delete_chars_at_cursor()`]: crate::OffscreenBuffer::delete_chars_at_cursor
 //! [`diff()`]: crate::OffscreenBuffer::diff
 //! [`fill_char_range()`]: crate::OffscreenBuffer::fill_char_range
@@ -304,13 +296,24 @@
 //! [`handle_backspace()`]: crate::OffscreenBuffer::handle_backspace
 //! [`handle_line_feed()`]: crate::OffscreenBuffer::handle_line_feed
 //! [`handle_tab()`]: crate::OffscreenBuffer::handle_tab
+//! [`IndexOps`]: crate::bounds_check::IndexOps
 //! [`insert_chars_at_cursor()`]: crate::OffscreenBuffer::insert_chars_at_cursor
-//! [`ofs_buf_range_validation`]: mod@crate::tui::terminal_lib_backends::offscreen_buffer::ofs_buf_range_validation
+//! [`LengthOps`]: crate::bounds_check::LengthOps
+//! [`ofs_buf_range_validation`]: mod@crate::offscreen_buffer::ofs_buf_range_validation
+//! [`Option<&PixelCharLine>`]: std::option::Option
+//! [`Option<PixelChar>`]: std::option::Option
+//! [`Option<PixelCharDiffChunks>`]: std::option::Option
+//! [`Option<T>`]: std::option::Option
+//! [`PixelChar::Void`]: PixelChar::Void
+//! [`Pos`]: crate::Pos
+//! [`RangeBoundsExt`]: crate::bounds_check::RangeBoundsExt
+//! [`RenderPipeline::paint()`]: crate::RenderPipeline::paint
 //! [`reset_all_style_attributes()`]: crate::OffscreenBuffer::reset_all_style_attributes
 //! [`set_char()`]: crate::OffscreenBuffer::set_char
 //! [`set_foreground_color()`]: crate::OffscreenBuffer::set_foreground_color
 //! [`shift_lines_down()`]: crate::OffscreenBuffer::shift_lines_down
 //! [`shift_lines_up()`]: crate::OffscreenBuffer::shift_lines_up
+//! [`TuiStyle`]: crate::TuiStyle
 //! [`validate_col_range_mut()`]: crate::OffscreenBuffer::validate_col_range_mut
 //! [`validate_row_range_mut()`]: crate::OffscreenBuffer::validate_row_range_mut
 //! [rendering pipeline overview]: mod@crate::terminal_lib_backends#rendering-pipeline-architecture

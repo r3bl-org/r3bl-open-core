@@ -2,8 +2,11 @@
 
 //! For more information on error types, see:
 //!
-//! 1. [Article](https://developerlife.com/2024/06/10/rust-miette-error-handling/)
-//! 2. [Video](https://youtu.be/TmLF7vI8lKk)
+//! 1. [Article]
+//! 2. [Video]
+//!
+//! [Article]: https://developerlife.com/2024/06/10/rust-miette-error-handling/
+//! [Video]: https://youtu.be/TmLF7vI8lKk
 
 use std::{error::Error,
           fmt::{Debug, Display, Formatter, Result}};
@@ -38,7 +41,7 @@ pub type CommonResult<R> = miette::Result<R>;
 pub type CommonResultWithError<R, E> = miette::Result<R, E>;
 
 /// Common error struct. Read custom error docs
-/// [here](https://learning-rust.github.io/docs/e7.custom_error_types.html).
+/// [here].
 ///
 /// # Example
 ///
@@ -57,6 +60,8 @@ pub type CommonResultWithError<R, E> = miette::Result<R, E>;
 ///   }
 /// }
 /// ```
+///
+/// [here]: https://doc.rust-lang.org/rust-by-example/error/multiple_error_types/define_error_type.html
 #[derive(Debug, Clone)]
 pub struct CommonError {
     pub error_type: CommonErrorType,

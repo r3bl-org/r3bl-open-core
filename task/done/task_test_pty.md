@@ -36,7 +36,7 @@
 ## Overview
 
 Testing PTY-based code that captures OSC sequences requires spawning processes with
-pseudo-terminals. This document outlines comprehensive testing strategies for validating the OSC
+pseudoterminals. This document outlines comprehensive testing strategies for validating the OSC
 sequence capture functionality, from low-level parser unit tests to high-level integration tests
 with real PTY sessions. The goal is to ensure robust handling of progress indicators, error states,
 and edge cases across different platforms and terminal scenarios.

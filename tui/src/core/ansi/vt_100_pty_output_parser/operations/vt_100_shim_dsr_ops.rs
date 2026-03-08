@@ -1,6 +1,6 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Device Status Report (DSR) operations.
+//! Device Status Report ([`DSR`]) operations.
 //!
 //! This module acts as a thin shim layer that delegates to the actual implementation.
 //! Refer to the module-level documentation in the operations module for details on the
@@ -26,7 +26,7 @@
 //!
 //! ```text
 //! ╭─────────────────╮    ╭────────────────╮    ╭─────────────────╮    ╭──────────────╮
-//! │ Child Process   │────▶ PTY Controller │────▶ VTE Parser      │────▶ OffscreenBuf │
+//! │ Child Process   │────► PTY Controller │────► VTE Parser      │────► OffscreenBuf │
 //! │ (vim, bash...)  │    │ (byte stream)  │    │ (state machine) │    │ (terminal    │
 //! ╰──────┬──────────╯    ╰────────────────╯    ╰───────┬─────────╯    │  buffer)     │
 //!        │                                             │              ╰───────┬──────╯
@@ -37,13 +37,13 @@
 //!        │                                    ╚═════════════════╝             │
 //!        │                                                                    │
 //!        │                                    ╭─────────────────╮             │
-//!        │                                    │ RenderPipeline  ◀─────────────╯
+//!        │                                    │ RenderPipeline  ◄─────────────╯
 //!        │                                    │ paint()         │
-//!        ╰────────────────────────────────────▶ Terminal Output │
+//!        ╰────────────────────────────────────► Terminal Output │
 //!                                             ╰─────────────────╯
 //! ```
 //!
-//! # `CSI` Sequence Processing Flow
+//! # [`CSI`] Sequence Processing Flow
 //!
 //! ```text
 //! Application sends "ESC [6n" (request cursor position)
@@ -67,8 +67,10 @@
 //!     Update OffscreenBuffer state
 //! ```
 //!
-//! [`impl_dsr_ops`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl::vt_100_impl_dsr_ops
-//! [`test_dsr_ops`]: crate::core::ansi::vt_100_pty_output_parser::vt_100_pty_output_conformance_tests::tests::vt_100_test_dsr_ops
+//! [`CSI`]: crate::CsiSequence
+//! [`DSR`]: crate::DsrSequence
+//! [`impl_dsr_ops`]: crate::vt_100_ansi_impl::vt_100_impl_dsr_ops
+//! [`test_dsr_ops`]: crate::vt_100_pty_output_conformance_tests::tests::vt_100_test_dsr_ops
 //! [module-level documentation]: self
 
 use crate::core::ansi::{generator::DsrRequestType,
@@ -77,8 +79,11 @@ use crate::core::ansi::{generator::DsrRequestType,
 /// Handle Device Status Report (`CSI n`) command.
 ///
 /// This command is used by applications to query the terminal's status.
-/// Generates DSR response events that will be processed by the process manager
-/// and sent back to the child process through the PTY input channel.
+/// Generates [`DSR`] response events that will be processed by the process manager
+/// and sent back to the child process through the [`PTY`] input channel.
+///
+/// [`DSR`]: crate::DsrSequence
+/// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 pub fn status_report(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) {
     match DsrRequestType::from(params) {
         DsrRequestType::RequestStatus => {

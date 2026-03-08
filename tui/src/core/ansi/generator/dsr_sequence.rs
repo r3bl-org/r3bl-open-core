@@ -25,12 +25,10 @@
 //! [`DSR`]: crate::DsrSequence
 //! [`ESC`]: crate::EscSequence
 
-use crate::{ParamsExt, TermCol, TermRow,
-            core::{ansi::constants::{CSI_PARAM_SEPARATOR,
-                                     DSR_CURSOR_POSITION_RESPONSE_END,
-                                     DSR_RESPONSE_START, DSR_STATUS_OK_CODE,
-                                     DSR_STATUS_RESPONSE_END},
-                   common::fast_stringify::{BufTextStorage, FastStringify}}};
+use crate::{
+    BufTextStorage, FastStringify, ParamsExt, TermCol, TermRow, CSI_PARAM_SEPARATOR,
+    DSR_CURSOR_POSITION_RESPONSE_END, DSR_RESPONSE_START, DSR_STATUS_OK_RESPONSE_STR,
+};
 use std::fmt::{self, Display};
 
 // [`DSR`] request types for parsing incoming [`DSR`] [`CSI`] sequences.
@@ -134,20 +132,19 @@ mod dsr_sequence_impl {
 
     impl FastStringify for DsrSequence {
         fn write_to_buf(&self, acc: &mut BufTextStorage) -> fmt::Result {
-            acc.push_str(DSR_RESPONSE_START);
             match self {
                 DsrSequence::StatusOkResponse => {
-                    acc.push_str(DSR_STATUS_OK_CODE);
-                    acc.push(DSR_STATUS_RESPONSE_END);
+                    acc.push_str(DSR_STATUS_OK_RESPONSE_STR);
                 }
                 DsrSequence::CursorPositionResponse { row, col } => {
+                    acc.push_str(DSR_RESPONSE_START);
                     acc.push_str(&row.as_u16().to_string());
                     acc.push(CSI_PARAM_SEPARATOR);
                     acc.push_str(&col.as_u16().to_string());
                     acc.push(DSR_CURSOR_POSITION_RESPONSE_END);
                 }
             }
-            Ok(())
+            ok!()
         }
 
         fn write_buf_to_fmt(

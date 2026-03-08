@@ -10,8 +10,8 @@ use tokio::sync::broadcast;
 
 /// [Sender]-half of the [broadcast channel] that carries [`RRTEvent<E>`] to subscribers.
 ///
-/// [Sender]: tokio::sync::broadcast::Sender
 /// [broadcast channel]: tokio::sync::broadcast
+/// [Sender]: tokio::sync::broadcast::Sender
 pub type BroadcastSender<E> = broadcast::Sender<RRTEvent<E>>;
 
 /// Errors from [`RRT::subscribe()`].
@@ -27,7 +27,7 @@ pub type BroadcastSender<E> = broadcast::Sender<RRTEvent<E>>;
 ///
 /// [`MutexPoisoned`]: Self::MutexPoisoned
 /// [`RRT::subscribe()`]: super::RRT::subscribe
-/// [`RRTWorker::create_and_register_os_sources()`]: crate::core::resilient_reactor_thread::RRTWorker::create_and_register_os_sources
+/// [`RRTWorker::create_and_register_os_sources()`]: crate::RRTWorker::create_and_register_os_sources
 /// [`ThreadSpawn`]: Self::ThreadSpawn
 /// [`WorkerCreation`]: Self::WorkerCreation
 /// [diagnostic code]: miette::Diagnostic::code
@@ -54,7 +54,7 @@ pub enum SubscribeError {
     /// via pattern matching.
     ///
     /// [`PollCreationError`]: crate::terminal_lib_backends::PollCreationError
-    /// [`RRTWorker::create_and_register_os_sources()`]: crate::core::resilient_reactor_thread::RRTWorker::create_and_register_os_sources
+    /// [`RRTWorker::create_and_register_os_sources()`]: crate::RRTWorker::create_and_register_os_sources
     /// [`WakerCreationError`]: crate::terminal_lib_backends::WakerCreationError
     #[error("Failed to create worker thread resources")]
     #[diagnostic(code(r3bl_tui::rrt::worker_creation))]

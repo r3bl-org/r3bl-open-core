@@ -38,7 +38,7 @@ This release involves significant documentation updates and a new crate publicat
 1. **DirectToAnsi backend** - Our own input/output device implementation (no Crossterm on Linux, only on macOS/Windows)
 2. **Full VT100 parser engine** - Complete VT100 input and output parser for terminal escape sequences
 3. **Resilient Reactor Thread (RRT) pattern** - Generic infrastructure for dedicated worker threads
-4. **PTY testing infrastructure** - "Real world" testing with pseudo-terminals
+4. **PTY testing infrastructure** - "Real world" testing with pseudoterminals
 5. **Benchmark testing** - Performance regression detection framework
 6. Enhanced readline_async: Tab, BackTab, navigation keys, FnKey support
 7. Type-safe editor state methods in readline_async
@@ -95,7 +95,7 @@ Add these items to the existing v0.7.7 section:
   - Full VT100 ANSI escape sequence support (cursor, erase, scroll, SGR, etc.)
   - VTE parser integration with custom `Performer` implementation
   - Enables visual verification of terminal output in PTY tests
-- **PTY testing infrastructure** - Real-world testing in pseudo-terminals, not mocks
+- **PTY testing infrastructure** - Real-world testing in pseudoterminals, not mocks
   - `generate_pty_test!` macro for single-feature tests
   - `spawn_controlled_in_pty` for multi-backend comparison tests
   - Controller/Controlled pattern for isolation
@@ -373,7 +373,7 @@ the OffscreenBuffer VT100 implementation.
 ```markdown
 # PTY-Based Integration Testing
 
-The R3BL TUI library includes a comprehensive PTY (pseudo-terminal) testing
+The R3BL TUI library includes a comprehensive PTY (pseudoterminal) testing
 infrastructure that validates code in **real terminal environments**, not mocks.
 
 ## Why PTY Testing?
@@ -385,7 +385,7 @@ Unit tests with mocked I/O miss real-world issues:
 - Raw mode edge cases
 - Platform-specific terminal quirks
 
-PTY tests spawn actual processes in pseudo-terminals, sending real byte sequences
+PTY tests spawn actual processes in pseudoterminals, sending real byte sequences
 and observing real terminal behavior. **This catches bugs that hypothetical scenarios miss.**
 
 ## Architecture: Controller/Controlled Pattern

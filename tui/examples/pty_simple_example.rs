@@ -9,9 +9,9 @@
 use r3bl_tui::{AnsiSequenceGenerator, InputEvent, Key, KeyPress, KeyState,
                ModifierKeysMask, RawMode, col,
                core::{get_size,
-                      pty::{ControlSequence, CursorKeyMode, PtyCommandBuilder,
-                            PtyInputEvent, PtyReadWriteOutputEvent,
-                            PtyReadWriteSession},
+                      pty::{ControlSequence, CursorKeyMode, DefaultPtySessionConfig,
+                            PtyInputEvent, PtyOutputEvent, PtySession,
+                            PtySessionBuilder, PtySessionConfigOption},
                       terminal_io::{InputDevice, OutputDevice},
                       try_initialize_logging_global},
                lock_output_device_as_mut, row, set_mimalloc_in_main};
@@ -55,7 +55,11 @@ async fn main() -> miette::Result<()> {
 
     tracing::debug!("Spawning htop with PTY size: {:?}", terminal_size);
 
-    let session = PtyCommandBuilder::new("htop").spawn_read_write(terminal_size)?;
+    let session = PtySessionBuilder::new("htop")
+        .with_config(
+            DefaultPtySessionConfig + PtySessionConfigOption::Size(terminal_size),
+        )
+        .start()?;
 
     tracing::debug!("htop process started successfully");
 
@@ -76,7 +80,7 @@ async fn main() -> miette::Result<()> {
 }
 
 async fn run_event_loop(
-    mut session: PtyReadWriteSession,
+    mut session: PtySession,
     input_device: &mut InputDevice,
     output_device: &mut OutputDevice,
 ) -> miette::Result<()> {
@@ -88,9 +92,9 @@ async fn run_event_loop(
     loop {
         tokio::select! {
             // Handle PTY output - properly wait for data.
-            Some(event) = session.output_event_receiver_half.recv() => {
+            Some(event) = session.rx_output_event.recv() => {
                 match event {
-                    PtyReadWriteOutputEvent::Output(data) => {
+                    PtyOutputEvent::Output(data) => {
                         output_count += 1;
                         if output_count <= 10 || output_count.is_multiple_of(100) {
                             tracing::debug!("PTY output #{}: {} bytes", output_count, data.len());
@@ -112,7 +116,7 @@ async fn run_event_loop(
                             tracing::error!("Failed to flush output device: {}", e);
                         }
                     }
-                    PtyReadWriteOutputEvent::Exit(status) => {
+                    PtyOutputEvent::Exit(status) => {
                         tracing::debug!("PTY exited with status: {:?}", status);
                         return Ok(());
                     }
@@ -136,12 +140,12 @@ async fn run_event_loop(
                             tracing::debug!("Ctrl+Q pressed, starting shutdown");
                             // First send Ctrl+C to terminate htop gracefully.
                             tracing::debug!("Sending Ctrl+C to htop");
-                            let _unused = session.input_event_ch_tx_half.send(PtyInputEvent::SendControl(ControlSequence::CtrlC, CursorKeyMode::default()));
+                            let _unused = session.tx_input_event.try_send(PtyInputEvent::SendControl(ControlSequence::CtrlC, CursorKeyMode::default()));
                             // Wait a moment for bash to exit.
                             tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
                             // Send close to PTY.
                             tracing::debug!("Sending Close event to PTY");
-                            let _unused = session.input_event_ch_tx_half.send(PtyInputEvent::Close);
+                            let _unused = session.tx_input_event.try_send(PtyInputEvent::Close);
                             // Wait for session to close.
                             tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
                             tracing::debug!("Exiting event loop");
@@ -158,7 +162,7 @@ async fn run_event_loop(
                                 tracing::debug!("Sending control bytes: {:02x?}", ctrl.to_bytes(*mode).as_ref());
                             }
 
-                            if let Err(e) = session.input_event_ch_tx_half.send(event.clone()) {
+                            if let Err(e) = session.tx_input_event.try_send(event.clone()) {
                                 tracing::error!("Failed to send input to PTY: {}", e);
                             } else {
                                 tracing::debug!("Successfully sent input event: {:?}", event);
@@ -169,7 +173,7 @@ async fn run_event_loop(
                     }
                     InputEvent::Resize(new_size) => {
                         // Handle resize.
-                        let _unused = session.input_event_ch_tx_half.send(PtyInputEvent::Resize(new_size));
+                        let _unused = session.tx_input_event.try_send(PtyInputEvent::Resize(new_size));
                     }
                     _ => {}
                 }

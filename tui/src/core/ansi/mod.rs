@@ -36,12 +36,12 @@
 //!   │ (emulator state) │             │ Logic        │
 //!   └──────────────────┘             └──────┬───────┘
 //!                                           │
-//!                                    ┌──────▼───────────┐
-//!                                    │  Generator       │
-//!                                    │  • RenderOpOutput│
-//!                                    │  • SgrCode       │
-//!                                    │  • CliText       │
-//!                                    └──────┬───────────┘
+//!                                    ┌──────▼────────────┐
+//!                                    │  Generator        │
+//!                                    │  • RenderOpOutput │
+//!                                    │  • SgrCode        │
+//!                                    │  • CliText        │
+//!                                    └──────┬────────────┘
 //!                                           │
 //!                                           ▼
 //!                                    ANSI Sequences
@@ -50,11 +50,11 @@
 //!                                    Real Terminal
 //!                                    (stdout display)
 //!
-//!         ┌─────────────────────────────────────┐
-//!         │  Constants & Color (ANSI specs)     │ ← Shared by all components
-//!         │  • Color types (RGB ↔ ANSI256)      │
-//!         │  • Escape sequence definitions      │
-//!         └─────────────────────────────────────┘
+//! ┌──────────────────────────────────┐
+//! │  Constants & Color (ANSI specs)  │ ← Shared by all components
+//! │  • Color types (RGB ↔ ANSI256)   │
+//! │  • Escape sequence definitions   │
+//! └──────────────────────────────────┘
 //! ```
 //!
 //! ## Terminal Input Modes: Raw vs Cooked
@@ -143,7 +143,7 @@
 //! ```text
 //! PTY Read 1: [0x1B, 0x5B, 0x31]        // ESC [ 1
 //! PTY Read 2: [0x3B, 0x35, 0x41]        // ; 5 A
-//! Complete:   ESC[1;5A (Ctrl+Up Arrow)
+//! Complete:   ESC [ 1 ; 5 A (Ctrl+Up Arrow)
 //! ```
 //!
 //! [`VTE`] handles this by maintaining parse state across `advance()` calls, buffering
@@ -168,7 +168,7 @@
 //!    burst** in single writes:
 //!    ```text
 //!    User presses:   Up Arrow
-//!    Terminal sends: "\x1B[A" (3 bytes in one syscall)
+//!    Terminal sends: "ESC [ A" (3 bytes in one syscall)
 //!    stdin read():   [0x1B, 0x5B, 0x41] (always complete)
 //!    ```
 //!
@@ -214,7 +214,7 @@
 //!
 //! [`Alacritty`]: https://alacritty.org/
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`CliTextInline`]: crate::core::ansi::CliTextInline
+//! [`CliTextInline`]: crate::CliTextInline
 //! [`CSI`]: crate::CsiSequence
 //! [`ESC`]: crate::EscSequence
 //! [`Kitty`]: https://sw.kovidgoyal.net/kitty/
@@ -223,18 +223,20 @@
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`RenderOpOutput`]: crate::RenderOpOutput
 //! [`SGR`]: crate::SgrCode
-//! [`SgrCode`]: crate::core::ansi::SgrCode
+//! [`SgrCode`]: crate::SgrCode
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
-//! [`VT100InputEventIR`]: crate::core::ansi::vt_100_terminal_input_parser::VT100InputEventIR
-//! [`vt_100_pty_output_parser`]: mod@crate::core::ansi::vt_100_pty_output_parser
-//! [`vt_100_terminal_input_parser`]: mod@crate::core::ansi::vt_100_terminal_input_parser
+//! [`VT100InputEventIR`]: crate::vt_100_terminal_input_parser::VT100InputEventIR
+//! [`vt_100_pty_output_parser`]: mod@crate::vt_100_pty_output_parser
+//! [`vt_100_terminal_input_parser`]: mod@crate::vt_100_terminal_input_parser
 //! [`VTE`]: mod@vte
 
 #![rustfmt::skip]
 
+// Public modules.
+pub mod constants;
+
 // Private modules.
 mod color;
-mod constants;
 mod detect_color_support;
 
 // XMARK: conditional visibility for docs and test only

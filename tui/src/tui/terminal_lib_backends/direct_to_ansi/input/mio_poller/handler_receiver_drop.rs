@@ -16,8 +16,8 @@ use tokio::sync::broadcast::Sender;
 /// [`RRTWorker`] trait and receives `sender` as a parameter.
 ///
 /// [`MioPollWorker`]: super::MioPollWorker
-/// [`RRTWorker`]: crate::core::resilient_reactor_thread::RRTWorker
 /// [`ReceiverDropWaker`]: super::sources::SourceKindReady::ReceiverDropWaker
+/// [`RRTWorker`]: crate::RRTWorker
 #[must_use]
 pub fn handle_receiver_drop_waker_with_sender(
     sender: &Sender<RRTEvent<PollerEvent>>,

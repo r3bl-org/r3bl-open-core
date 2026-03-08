@@ -382,8 +382,8 @@ impl Spinner {
 mod tests {
     use super::{Duration, LineStateControlSignal, SharedWriter, Spinner, SpinnerStyle,
                 TTYResult};
-    use crate::{OutputDevice, OutputDeviceExt, SpinnerColor, SpinnerTemplate,
-                is_output_interactive};
+    use crate::{OutputDevice, OutputDeviceExt, SGR_FG_RED_STR, SGR_RESET_STR,
+                SpinnerColor, SpinnerTemplate, is_output_interactive};
     use smallvec::SmallVec;
 
     type ArrayVec = SmallVec<[LineStateControlSignal; FACTOR as usize]>;
@@ -577,7 +577,7 @@ mod tests {
         tokio::time::sleep(QUANTUM * 2).await;
 
         // Update with ANSI codes (should be stripped)
-        spinner.update_message("\x1b[31mupdated with ansi\x1b[0m");
+        spinner.update_message(format!("{SGR_FG_RED_STR}updated with ansi{SGR_RESET_STR}"));
 
         // Let it run with the ANSI-stripped message.
         tokio::time::sleep(QUANTUM).await;

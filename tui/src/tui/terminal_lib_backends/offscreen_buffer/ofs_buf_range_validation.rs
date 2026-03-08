@@ -89,7 +89,7 @@
 //! }
 //! ```
 //!
-//! [`RangeBoundsExt`]: crate::core::coordinates::bounds_check::RangeBoundsExt
+//! [`RangeBoundsExt`]: crate::bounds_check::RangeBoundsExt
 
 use super::{OffscreenBuffer, PixelCharLine};
 use crate::{ColIndex, RangeValidityStatus, RowIndex,

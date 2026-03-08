@@ -53,8 +53,8 @@ pub enum ShutdownReason {
     /// times than the [`RestartPolicy`] allows.
     ///
     /// [`Continuation::Restart`]: crate::Continuation::Restart
-    /// [`RRTWorker`]: super::RRTWorker
     /// [`RestartPolicy`]: super::RestartPolicy
+    /// [`RRTWorker`]: super::RRTWorker
     RestartPolicyExhausted {
         /// Total restart attempts made before giving up.
         attempts: u8,
@@ -70,10 +70,10 @@ pub enum ShutdownReason {
     /// Unlike [`RestartPolicyExhausted`], which indicates transient resource issues, a
     /// panic signals a logic bug that self-healing cannot fix.
     ///
-    /// [`RRTWorker`]: super::RRTWorker
-    /// [`RestartPolicyExhausted`]: Self::RestartPolicyExhausted
     /// [`block_until_ready_then_dispatch()`]: super::RRTWorker::block_until_ready_then_dispatch
     /// [`catch_unwind`]: std::panic::catch_unwind
+    /// [`RestartPolicyExhausted`]: Self::RestartPolicyExhausted
+    /// [`RRTWorker`]: super::RRTWorker
     /// [`subscribe()`]: super::RRT::subscribe
     Panic,
 }

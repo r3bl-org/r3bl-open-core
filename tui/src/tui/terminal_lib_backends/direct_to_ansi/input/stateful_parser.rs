@@ -9,20 +9,23 @@ use std::collections::VecDeque;
 /// Stateful parser for terminal input bytes.
 ///
 /// Accumulates bytes and parses them into [`VT100InputEventIR`] events using the
-/// `more` flag for `ESC` disambiguation (see [ESC Detection Limitations]):
+/// `more` flag for [`ESC`] disambiguation (see [ESC Detection Limitations]):
 ///
 /// - `more = true`: More bytes might be coming, wait before deciding
-/// - `more = false`: No more bytes available, a lone `ESC` is the `ESC` key
+/// - `more = false`: No more bytes available, a lone [`ESC`] is the [`ESC`] key
 ///
 /// This works because if [`read()`] fills the entire buffer, more data is likely
 /// waiting; if it returns fewer bytes, we've drained all available input.
 ///
-/// [ESC Detection Limitations]: super::mio_poller#esc-detection-limitations
+/// [`ESC`]: crate::EscSequence
 /// [`read()`]: std::io::Read::read
+/// [ESC Detection Limitations]: super::mio_poller#esc-detection-limitations
 #[derive(Debug)]
 pub struct StatefulInputParser {
-    /// Accumulator for current ANSI escape sequence being parsed (capacity: 256
+    /// Accumulator for current [`ANSI`] escape sequence being parsed (capacity: 256
     /// bytes).
+    ///
+    /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
     buffer: Vec<u8>,
 
     /// Queue of parsed events ready to be consumed (capacity: 128).
@@ -153,12 +156,14 @@ mod tests_basic_parsing {
     }
 }
 
-/// Tests for the core ESC disambiguation logic using the `more` flag.
+/// Tests for the core [`ESC`] disambiguation logic using the `more` flag.
 ///
 /// The `more` flag indicates whether additional bytes are likely waiting
 /// in the kernel buffer.
-/// - When `more=true`, `ESC` (1B) is treated as the start of an escape sequence.
-/// - When `more=false`, it's a standalone `ESC` key press.
+/// - When `more=true`, [`ESC`] (1B) is treated as the start of an escape sequence.
+/// - When `more=false`, it's a standalone [`ESC`] key press.
+///
+/// [`ESC`]: crate::EscSequence
 #[cfg(test)]
 mod tests_esc_disambiguation {
     use super::test_fixtures::*;

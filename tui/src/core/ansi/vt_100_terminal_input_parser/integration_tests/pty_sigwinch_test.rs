@@ -28,15 +28,15 @@
 //! ──────────                          ─────────────────────────────
 //!     │                                       │
 //!     │  1. spawn in PTY (24×80)              │
-//!     ├──────────────────────────────────────▶│
+//!     ├──────────────────────────────────────►│
 //!     │                                       │ 2. setup DirectToAnsiInputDevice
 //!     │                                       │    • tokio::signal::unix::Signal
 //!     │                                       │      listens for SIGWINCH
 //!     │  3. wait for "CONTROLLED_READY"       │
-//!     │◀──────────────────────────────────────┤
+//!     │◄──────────────────────────────────────┤
 //!     │                                       │
 //!     │  4. resize PTY to 100×30              │
-//!     ├───────────────────────────────────────│──▶ kernel sends SIGWINCH
+//!     ├───────────────────────────────────────│──► kernel sends SIGWINCH
 //!     │                                       │
 //!     │                                       │ 5. tokio::select! wakes up
 //!     │                                       │    on sigwinch_receiver.recv()
@@ -46,7 +46,7 @@
 //!     │                                       │
 //!     │                                       │ 7. Returns InputEvent::Resize(100×30)
 //!     │  8. verify "Resize: 100x30"           │
-//!     │◀──────────────────────────────────────┤
+//!     │◄──────────────────────────────────────┤
 //!     │                                       │
 //! ```
 //!
@@ -56,14 +56,12 @@
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`SIGWINCH`]: https://man7.org/linux/man-pages/man7/signal.7.html
 
-use crate::{SingleThreadSafeControlledChild, InputEvent, PtyPair, PtyTestMode,
+use crate::{CONTROLLED_READY, CONTROLLED_STARTING, InputEvent, PtyTestMode,
+            PtyTestContext, TEST_RUNNING,
             tui::terminal_lib_backends::direct_to_ansi::DirectToAnsiInputDevice};
 use crate::{Size, height, size, width};
-use std::{io::{BufRead, BufReader, Write},
+use std::{io::{BufRead, Write},
           time::Duration};
-
-/// Ready signal sent by controlled process after initialization.
-const CONTROLLED_READY: &str = "CONTROLLED_READY";
 
 generate_pty_test! {
     test_fn: test_pty_sigwinch,
@@ -77,19 +75,19 @@ generate_pty_test! {
 ///
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 /// [`SIGWINCH`]: https://man7.org/linux/man-pages/man7/signal.7.html
-fn pty_controller_entry_point(mut pty_pair: PtyPair, child: SingleThreadSafeControlledChild) {
+fn pty_controller_entry_point(context: PtyTestContext) {
+    let PtyTestContext {
+        mut pty_pair,
+        child,
+        mut buf_reader,
+        ..
+    } = context;
+
     eprintln!("🚀 PTY Controller: Starting SIGWINCH test...");
-
-    let reader = pty_pair
-        .controller()
-        .try_clone_reader()
-        .expect("Failed to get reader");
-    let mut buf_reader = BufReader::new(reader);
-
     eprintln!("📝 PTY Controller: Waiting for controlled process to start...");
 
-    // Wait for controlled to confirm it's running. The controlled process sends
-    // TEST_RUNNING and CONTROLLED_READY immediately on startup.
+    // Wait for controlled to confirm it's running and ready. The controlled process sends
+    // TEST_RUNNING, CONTROLLED_STARTING, and CONTROLLED_READY on startup.
     let mut test_running_seen = false;
 
     loop {
@@ -100,12 +98,15 @@ fn pty_controller_entry_point(mut pty_pair: PtyPair, child: SingleThreadSafeCont
                 let trimmed = line.trim();
                 eprintln!("  ← Controlled output: {trimmed}");
 
-                if trimmed.contains("TEST_RUNNING") {
+                if trimmed.contains(TEST_RUNNING) {
                     test_running_seen = true;
                     eprintln!("  ✓ Test is running in controlled");
                 }
+                if trimmed.contains(CONTROLLED_STARTING) {
+                    eprintln!("  ✓ Controlled process confirmed starting!");
+                }
                 if trimmed.contains(CONTROLLED_READY) {
-                    eprintln!("  ✓ Controlled process confirmed running!");
+                    eprintln!("  ✓ Controlled is ready (input device created)");
                     break;
                 }
             }
@@ -184,8 +185,9 @@ fn pty_controller_entry_point(mut pty_pair: PtyPair, child: SingleThreadSafeCont
 ///
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 /// [`SIGWINCH`]: https://man7.org/linux/man-pages/man7/signal.7.html
-fn pty_controlled_entry_point() -> ! {
-    println!("{CONTROLLED_READY}");
+fn pty_controlled_entry_point() {
+    // Print to stdout immediately to confirm controlled is starting.
+    println!("{CONTROLLED_STARTING}");
     std::io::stdout().flush().expect("Failed to flush");
 
     let runtime = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
@@ -194,6 +196,12 @@ fn pty_controlled_entry_point() -> ! {
         eprintln!("🔍 PTY Controlled: Starting DirectToAnsiInputDevice...");
         let mut input_device = DirectToAnsiInputDevice::new();
         eprintln!("🔍 PTY Controlled: Device created, waiting for SIGWINCH...");
+
+        // Signal to controller that we're ready to receive input. MUST be after
+        // DirectToAnsiInputDevice::new() so the mio poller thread is already
+        // watching stdin before the controller sends any input through the PTY.
+        println!("{CONTROLLED_READY}");
+        std::io::stdout().flush().expect("Failed to flush");
 
         let inactivity_timeout = Duration::from_secs(5);
         let mut inactivity_deadline = tokio::time::Instant::now() + inactivity_timeout;
@@ -234,6 +242,4 @@ fn pty_controlled_entry_point() -> ! {
         eprintln!("🔍 PTY Controlled: Completed");
     });
 
-    eprintln!("🔍 PTY Controlled: Exiting");
-    std::process::exit(0);
 }

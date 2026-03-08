@@ -40,7 +40,7 @@ For granular control, use individual commands:
 | `./check.fish --test` | `cargo test` + doctests |
 | `./check.fish --doc` | `cargo doc --no-deps` (quick docs) |
 | `./check.fish --quick-doc` | `cargo doc --no-deps` (fastest, no staging/sync) |
-| `./check.fish --full` | All of the above |
+| `./check.fish --full` | All of the above + lychee link rot check |
 
 ## Step-by-Step Approach (Alternative)
 
@@ -82,6 +82,15 @@ during development. Use `--doc` for final verification before commits (includes 
 
 If there are link warnings, use the `/fix-intradoc-links` command to resolve them.
 
+**Heading Anchor (Slug) Integrity**:
+If you modified any heading text (e.g., `# My Heading`), the automatically generated HTML anchor
+(e.g., `#my-heading`) will change.
+- **Identify Changes**: Look for changed headings in git-dirty files.
+- **Proactive Search**: Use `grep_search` to find any existing links (e.g., `path#old-slug`)
+  that point to the old anchors and update them.
+- **Validation**: While `cargo doc` warns about many broken fragments, proactive searching
+  prevents "orphan" links in external documentation or complex intra-doc paths.
+
 **CRITICAL: Never remove intra-doc links to fix warnings.** When you encounter:
 - Unresolved link to a symbol → Fix the path using `crate::` prefix (see `write-documentation` skill)
 - Unresolved link to a test module → Add `#[cfg(any(test, doc))]` visibility (see `organize-modules` skill)
@@ -89,7 +98,19 @@ If there are link warnings, use the `/fix-intradoc-links` command to resolve the
 
 Links provide refactoring safety - `cargo doc` catches stale references. Converting to plain backticks removes this protection.
 
-### 5. Linting
+### 5. Link Rot Check (External URLs)
+
+Included automatically in `./check.fish --full`. Runs `lychee` on git-modified files to detect
+broken external URLs in rustdoc comments.
+
+`cargo doc --no-deps` (step 4) validates intra-doc links but not external HTTP/HTTPS URLs.
+lychee fills that gap. Config in `lychee.toml` (repo root) excludes known false positives
+(example `file://` URIs, test fixture URLs, sites that block automated requests).
+
+If lychee reports 404s, fix the URL by finding the new location. See the task file
+`task/add-lychee-to-detect-link-rot.md` for the full categorization of findings.
+
+### 6. Linting
 
 ```bash
 ./check.fish --clippy
@@ -98,7 +119,7 @@ Links provide refactoring safety - `cargo doc` catches stale references. Convert
 
 Runs clippy and enforces code style standards.
 
-### 6. Run All Tests
+### 7. Run All Tests
 
 ```bash
 ./check.fish --test
@@ -109,7 +130,22 @@ Runs all tests (unit, integration, doctests).
 
 If tests fail, use the Task tool with `subagent_type='test-runner'` to fix failures.
 
-### 7. Cross-Platform Verification (Optional)
+### 8. Stress Test (Optional - After Major Refactors)
+
+After major refactors or changes that affect process spawning, PTY tests, or async
+infrastructure, run the full test suite 20 times back-to-back to detect flaky regressions:
+
+```bash
+for i in {1..20}; do echo "=== Run $i/20 ===" && cargo test --all-targets -- --nocapture 2>&1 | grep -E "^test result:" | head -3 || { echo "FAILED on run $i"; exit 1; }; done && echo "ALL 20 RUNS PASSED"
+```
+
+**When to run:**
+- After refactoring PTY test infrastructure (`generate_pty_test!`, `spawn_controlled_in_pty`)
+- After changes to process lifecycle, signal handling, or async I/O code
+- After modifying the resilient reactor thread (RRT) restart logic
+- Before merging large cross-cutting changes that touch many test files
+
+### 9. Cross-Platform Verification (Optional)
 
 For code with platform-specific `#[cfg]` gates (especially Unix-only code), verify Windows compatibility:
 

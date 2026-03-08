@@ -68,6 +68,9 @@
 # Uses a two-tier build system with eventual consistency for cross-crate links.
 # See script_lib.fish for detailed documentation of the algorithm.
 #
+# NOTE: --doc uses a different path (check_docs_full with dep-doc caching,
+# not the two-tier watch architecture below). This diagram is --watch-doc only.
+#
 # ARCHITECTURE OVERVIEW:
 #
 #   File change detected
@@ -75,7 +78,7 @@
 #       ▼
 #   ┌─────────────────────────────────────────────┐
 #   │ Quick build (~5-7s) [BLOCKING]              │
-#   │ • cargo doc -p r3bl_tui --no-deps           │
+#   │ • cargo doc --workspace --no-deps           │
 #   │ • Fast feedback, broken cross-crate links   │
 #   └─────────────────────────────────────────────┘
 #       │
@@ -84,15 +87,16 @@
 #       │
 #       ▼
 #   ┌─────────────────────────────────────────────┐
-#   │ Full build (~90s) [FORKED TO BACKGROUND]    │
-#   │ • cargo doc (all deps)                      │
+#   │ Full build (~5-90s) [FORKED TO BACKGROUND]  │
+#   │ • cargo doc (dep-doc caching: --no-deps if  │
+#   │   Cargo.lock + rust-toolchain.toml unchanged)│
 #   │ • Fixes all cross-crate links               │
 #   └─────────────────────────────────────────────┘
 #       │
 #       └──► Catch-up check (if changes during full build)
 #                 │
 #                 ▼
-#            Quick build (~5-7s) → forks Full build (~90s)
+#            Quick build (~5-7s) → forks Full build (~5-90s)
 #                 │                      │
 #                 ▼                      ▼
 #            [fast feedback]      [fixes links eventually]
@@ -105,6 +109,11 @@
 # The --no-deps flag makes builds fast but rustdoc can't resolve cross-crate
 # links (e.g., to crossterm, tokio) because it doesn't know they exist.
 # Full build documents everything, so links become correct.
+#
+# DEP-DOC CACHING (full builds):
+# Full builds check a hash of Cargo.lock + rust-toolchain.toml. If unchanged,
+# deps are skipped (--no-deps, ~5-7s instead of ~90s). Cached dep docs in the
+# serving dir are preserved because rsync -a without --delete never removes files.
 #
 # BLIND SPOTS:
 # While a build runs, inotifywait isn't watching. Changes during this window
@@ -362,14 +371,17 @@ function run_checks_for_type
 
             if test $result -eq 0
                 sync_docs_to_serving full
+                # Update hash after successful full sync so next run hits the cache.
+                # Hash is stored in staging dir to survive serving directory wipes.
+                update_dep_docs_hash $CHECK_TARGET_DIR_DOC_STAGING_FULL
                 echo ""
                 set_color green --bold
                 echo "["(timestamp)"] ✅ All checks passed!"
                 set_color normal
-                send_system_notification "Watch: All Passed ✅" "Tests, doctests, and docs passed" "success" $NOTIFICATION_EXPIRE_MS
+                send_system_notification "Watch ($WORKSPACE_NAME): All Passed ✅" "Tests, doctests, and docs passed" "success" $NOTIFICATION_EXPIRE_MS
             else
                 # Notify on failure in watch mode
-                send_system_notification "Watch: Checks Failed ❌" "One or more checks failed" "critical" $NOTIFICATION_EXPIRE_MS
+                send_system_notification "Watch ($WORKSPACE_NAME): Checks Failed ❌" "One or more checks failed" "critical" $NOTIFICATION_EXPIRE_MS
             end
             return $result
 
@@ -380,7 +392,7 @@ function run_checks_for_type
                 return 2  # Recoverable error
             end
             if test $status -ne 0
-                send_system_notification "Watch: Tests Failed ❌" "cargo test failed" "critical" $NOTIFICATION_EXPIRE_MS
+                send_system_notification "Watch ($WORKSPACE_NAME): Tests Failed ❌" "cargo test failed" "critical" $NOTIFICATION_EXPIRE_MS
                 return 1
             end
 
@@ -389,7 +401,7 @@ function run_checks_for_type
                 return 2  # Recoverable error
             end
             if test $status -ne 0
-                send_system_notification "Watch: Doctests Failed ❌" "doctests failed" "critical" $NOTIFICATION_EXPIRE_MS
+                send_system_notification "Watch ($WORKSPACE_NAME): Doctests Failed ❌" "doctests failed" "critical" $NOTIFICATION_EXPIRE_MS
                 return 1
             end
 
@@ -397,7 +409,7 @@ function run_checks_for_type
             set_color green --bold
             echo "["(timestamp)"] ✅ All test checks passed!"
             set_color normal
-            send_system_notification "Watch: Tests Passed ✅" "All tests and doctests passed" "success" $NOTIFICATION_EXPIRE_MS
+            send_system_notification "Watch ($WORKSPACE_NAME): Tests Passed ✅" "All tests and doctests passed" "success" $NOTIFICATION_EXPIRE_MS
             return 0
 
         case "doc"
@@ -428,32 +440,32 @@ function run_checks_for_type
             # Runs before epoch capture so fmt changes don't trigger catch-up rebuilds.
             run_rustdoc_fmt >/dev/null 2>&1
 
-            # Step 1: Quick build (BLOCKING - targets only r3bl_tui for fast feedback)
-            log_and_print $CHECK_LOG_FILE "["(timestamp)"] 🔨 Quick build starting (r3bl_tui only)..."
+            # Step 1: Quick build (BLOCKING - workspace-wide, no ext links for speed)
+            log_and_print $CHECK_LOG_FILE "["(timestamp)"] 🔨 Quick build starting ($WORKSPACE_NAME workspace)..."
 
             # Capture build start time for catch-up detection
             set -l build_start_epoch (date +%s)
 
             # Use extracted function for quick build + sync
             if build_and_sync_quick_docs $CHECK_TARGET_DIR_DOC_STAGING_QUICK $CHECK_TARGET_DIR
-                log_and_print $CHECK_LOG_FILE "["(timestamp)"] 📄 Quick build done!"
-                log_and_print $CHECK_LOG_FILE "    📖 Read the docs at: file://$CHECK_TARGET_DIR/doc/r3bl_tui/index.html"
+                log_and_print $CHECK_LOG_FILE "["(timestamp)"] 📄 Quick build done ($WORKSPACE_NAME workspace)!"
+                log_and_print $CHECK_LOG_FILE "    📖 Read the docs at: file://$CHECK_TARGET_DIR/doc/"
                 log_and_print $CHECK_LOG_FILE ""
-                send_system_notification "Watch: Quick Docs Ready ⚡" "r3bl_tui done w/ broken dep links - full build starting" "success" $NOTIFICATION_EXPIRE_MS
+                send_system_notification "Watch ($WORKSPACE_NAME): Quick Docs Ready ⚡" "Workspace ready (no ext crate links) - full build starting..." "success" $NOTIFICATION_EXPIRE_MS
 
                 # Step 1.5: Catch-up check - did any source files change during the build?
                 # Uses has_source_changes_since from script_lib.fish (checks SRC_DIRS)
                 if has_source_changes_since $build_start_epoch
                     log_and_print $CHECK_LOG_FILE "["(timestamp)"] ⚡ Files changed during build, catching up..."
                     if build_and_sync_quick_docs $CHECK_TARGET_DIR_DOC_STAGING_QUICK $CHECK_TARGET_DIR
-                        log_and_print $CHECK_LOG_FILE "["(timestamp)"] 📄 Catch-up build done!"
+                        log_and_print $CHECK_LOG_FILE "["(timestamp)"] 📄 Catch-up build done ($WORKSPACE_NAME workspace)!"
                     else
                         log_and_print $CHECK_LOG_FILE "["(timestamp)"] ⚠️ Catch-up build failed (non-fatal)"
                     end
                 end
             else
-                log_and_print $CHECK_LOG_FILE "["(timestamp)"] ❌ Quick build failed!"
-                send_system_notification "Watch: Quick Doc Build Failed ❌" "cargo doc -p r3bl_tui failed" "critical" $NOTIFICATION_EXPIRE_MS
+                log_and_print $CHECK_LOG_FILE "["(timestamp)"] ❌ Quick build failed ($WORKSPACE_NAME workspace)!"
+                send_system_notification "Watch ($WORKSPACE_NAME): Quick Doc Build Failed ❌" "cargo doc --workspace failed" "critical" $NOTIFICATION_EXPIRE_MS
                 return 1
             end
 

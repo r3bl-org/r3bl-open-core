@@ -167,9 +167,11 @@ mod cube_mapping {
         find_closest(blue_value, 35, 115, 155, 195, 235)
     }
 
-    /// - ANSI 256 colors are represented as a `6×6×6` cube.
+    /// - [`ANSI`] 256 colors are represented as a `6×6×6` cube.
     /// - On each axis, the six indices map to `[0, 95, 135, 175, 215, 255]` RGB component
     ///   values.
+    ///
+    /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
     #[must_use]
     pub const fn find_closest(
         value: u8,
@@ -307,11 +309,12 @@ pub mod ansi_constants {
         255, 255, 255, 255, 255, 231, 231, 231, 231, 231, 231, 231, 231, 231,
     ];
 
-    /// ANSI Color Palette.
+    /// [`ANSI`] Color Palette.
     /// - `u32` value encodes R (u8), G (u8), B(u8).
     /// - [`RgbValue::from`] can be used to convert `u32` into [`RgbValue`].
     /// - Hex literals are in the format `0xRRGGBB` without separators for consistency.
     ///
+    /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
     /// [`RgbValue::from`]: crate::RgbValue::from
     /// [`RgbValue`]: crate::RgbValue
     #[allow(clippy::unreadable_literal)]

@@ -482,7 +482,7 @@ impl LineMetadata {
     ///
     /// # Unicode Safety
     /// This method properly handles:
-    /// - Multi-byte UTF-8 characters
+    /// - Multi-byte [`UTF-8`] characters
     /// - Emoji and other wide characters
     /// - Complex grapheme clusters (e.g., family emoji with zero-width joiners)
     /// - Characters with display width different from byte length
@@ -500,6 +500,7 @@ impl LineMetadata {
     /// [`ColIndex`]: crate::ColIndex
     /// [`ColWidth`]: crate::ColWidth
     /// [`Range<ByteIndex>`]: std::ops::Range
+    /// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
     #[must_use]
     pub fn clip_to_range<'a>(
         &'a self,

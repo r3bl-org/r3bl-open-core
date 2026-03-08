@@ -1,26 +1,29 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Device Status Report (DSR) operations for VT100/ANSI terminal emulation.
+//! Device Status Report ([`DSR`]) operations for VT100/[`ANSI`] terminal emulation.
 //!
-//! This module implements DSR operations that correspond to ANSI DSR
+//! This module implements [`DSR`] operations that correspond to [`ANSI`] [`DSR`]
 //! sequences handled by the `vt_100_pty_output_parser::operations::dsr_ops` module. These
 //! include:
 //!
-//! - **DSR 5** (Device Status Report) - [`handle_status_report_request`]
-//! - **DSR 6** (Cursor Position Report) - [`handle_cursor_position_request`]
+//! - **[`DSR`] 5** (Device Status Report) - [`handle_status_report_request`]
+//! - **[`DSR`] 6** (Cursor Position Report) - [`handle_cursor_position_request`]
 //!
 //! All operations maintain VT100 compliance and handle proper response
-//! queueing for later transmission back to the PTY.
+//! queueing for later transmission back to the [`PTY`].
 //!
-//! This module implements the business logic for DSR operations delegated from
+//! This module implements the business logic for [`DSR`] operations delegated from
 //! the parser shim. The `impl_` prefix follows our naming convention for searchable
 //! code organization. See the architecture documentation above
 //! for the complete three-layer architecture.
 //!
 //! **Related Files:**
 //!
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`DSR`]: crate::DsrSequence
 //! [`handle_cursor_position_request`]: crate::OffscreenBuffer::handle_cursor_position_request
 //! [`handle_status_report_request`]: crate::OffscreenBuffer::handle_status_report_request
+//! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 
 #[allow(clippy::wildcard_imports)]
 use super::super::*;
@@ -28,7 +31,9 @@ use crate::{DsrRequestFromPtyEvent, TermCol, TermRow};
 
 impl OffscreenBuffer {
     /// Handles device status report request.
-    /// Queues a response indicating terminal is OK (ESC[0n).
+    /// Queues a response indicating terminal is OK ([`ESC`][0n).
+    ///
+    /// [`ESC`]: crate::EscSequence
     pub fn handle_status_report_request(&mut self) {
         self.ansi_parser_support
             .pending_dsr_responses
@@ -36,8 +41,10 @@ impl OffscreenBuffer {
     }
 
     /// Handles cursor position report request.
-    /// Queues a response with current cursor position (ESC[row;colR).
+    /// Queues a response with current cursor position ([`ESC`][row;colR).
     /// Converts 0-based internal position to 1-based terminal position.
+    ///
+    /// [`ESC`]: crate::EscSequence
     pub fn handle_cursor_position_request(&mut self) {
         // Convert 0-based internal position to 1-based terminal position.
         // Uses type-safe From<RowIndex>/From<ColIndex> conversions.

@@ -24,8 +24,8 @@ use crate::{AnsiValue, ColorSupport, RgbValue, TransformColor, TuiColor};
 ///
 /// ## Key Design Principle
 ///
-/// Rather than having individual converters (crossterm, ANSI SGR codes, etc.) each
-/// handle their own color degradation logic, this module centralizes the algorithm.
+/// Rather than having individual converters (crossterm, [`ANSI`] [`SGR`] codes, etc.)
+/// each handle their own color degradation logic, this module centralizes the algorithm.
 /// This ensures:
 /// - **Consistency**: All color output is degraded the same way
 /// - **Maintainability**: One place to fix color issues
@@ -34,7 +34,7 @@ use crate::{AnsiValue, ColorSupport, RgbValue, TransformColor, TuiColor};
 /// ## Degradation Algorithm
 ///
 /// For **Basic Colors (indices 0-15)** - Special handling:
-/// - **Truecolor/Ansi256**: Keep as-is (standard ANSI palette)
+/// - **Truecolor/Ansi256**: Keep as-is (standard [`ANSI`] palette)
 /// - **Grayscale**: Convert each basic color to its grayscale equivalent
 /// - **`NoColor`**: Convert to terminal default (black/reset)
 ///
@@ -57,14 +57,14 @@ use crate::{AnsiValue, ColorSupport, RgbValue, TransformColor, TuiColor};
 /// 3. Call `degrade_color(original_color, color_support)` to get a terminal-safe color
 /// 4. The result is now in a form safe for the terminal:
 ///    - If Truecolor: RGB unchanged
-///    - If Ansi256: Converted to nearest ANSI palette color
+///    - If Ansi256: Converted to nearest [`ANSI`] palette color
 ///    - If Grayscale: Converted to grayscale equivalent
 ///    - If `NoColor`: Converted to default (black/reset)
 ///
 /// ## Integration Points
 ///
 /// - **crossterm converter**: `From<TuiColor> for crossterm::style::Color`
-/// - **ANSI output generator**: `PixelCharRenderer.color_to_sgr()`
+/// - **[`ANSI`] output generator**: `PixelCharRenderer.color_to_sgr()`
 /// - **CLI text rendering**: `CliTextInline` and related structures
 ///
 /// This module is used in both places to ensure colors are degraded consistently.
@@ -88,10 +88,14 @@ use crate::{AnsiValue, ColorSupport, RgbValue, TransformColor, TuiColor};
 /// # Examples
 ///
 /// For RGB color `(255, 0, 0)` (bright red):
-/// - On **Ansi256** terminal: Returns `TuiColor::Ansi(9)` - bright red from ANSI palette
+/// - On **Ansi256** terminal: Returns `TuiColor::Ansi(9)` - bright red from [`ANSI`]
+///   palette
 /// - On **Grayscale** terminal: Returns grayscale approximation
 /// - On **Truecolor** terminal: Returns `TuiColor::Rgb((255, 0, 0))` - unchanged
 /// - On **`NoColor`** terminal: Returns `TuiColor::Ansi(0)` - default/black
+///
+/// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+/// [`SGR`]: crate::SgrCode
 #[must_use]
 pub fn degrade_color(color: TuiColor, color_support: ColorSupport) -> TuiColor {
     match color {
@@ -152,12 +156,14 @@ pub fn degrade_color(color: TuiColor, color_support: ColorSupport) -> TuiColor {
 ///
 /// # Arguments
 ///
-/// * `index` - A color index in range 0-15 (ANSI basic colors)
+/// * `index` - A color index in range 0-15 ([`ANSI`] basic colors)
 /// * `color_support` - The detected terminal color support level
 ///
 /// # Returns
 ///
 /// A `TuiColor` representing the degraded color
+///
+/// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 fn degrade_basic_color(index: u8, color_support: ColorSupport) -> TuiColor {
     debug_assert!(index < 16, "index must be < 16 for basic colors");
 
@@ -177,12 +183,12 @@ fn degrade_basic_color(index: u8, color_support: ColorSupport) -> TuiColor {
     }
 }
 
-/// Converts a basic ANSI color index (0-15) to its RGB representation.
+/// Converts a basic [`ANSI`] color index (0-15) to its RGB representation.
 ///
 /// This allows us to convert basic colors to grayscale by first
 /// converting to RGB, then using the grayscale algorithm.
 ///
-/// # Standard ANSI Colors
+/// # Standard [`ANSI`] Colors
 ///
 /// ```text
 ///  0 = Black       (0,0,0)
@@ -202,6 +208,8 @@ fn degrade_basic_color(index: u8, color_support: ColorSupport) -> TuiColor {
 /// 14 = Dark Cyan   (0,128,128)
 /// 15 = Gray        (192,192,192)
 /// ```
+///
+/// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 fn basic_color_to_rgb(index: u8) -> RgbValue {
     match index {
         0 => (0, 0, 0).into(),        // Black

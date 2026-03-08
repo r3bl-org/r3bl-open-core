@@ -11,9 +11,9 @@
 //! the [`terminal_raw_mode`] module. These functions automatically dispatch to the
 //! correct implementation based on [`TERMINAL_LIB_BACKEND`].
 //!
-//! [`enable_raw_mode()`]: crate::enable_raw_mode
 //! [`disable_raw_mode()`]: crate::disable_raw_mode
-//! [`terminal_raw_mode`]: crate::core::ansi::terminal_raw_mode
+//! [`enable_raw_mode()`]: crate::enable_raw_mode
+//! [`terminal_raw_mode`]: crate::terminal_raw_mode
 
 /// Terminal library backend selection for the TUI system.
 ///
@@ -21,18 +21,23 @@
 /// the backend that best fits their needs. Currently supported backends include:
 ///
 /// - **Crossterm**: Cross-platform terminal library (default and recommended)
-/// - **`DirectToAnsi`**: Pure Rust ANSI sequence generation without external dependencies
+/// - **`DirectToAnsi`**: Pure Rust [`ANSI`] sequence generation without external
+///   dependencies
+///
+/// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 #[derive(Debug)]
 pub enum TerminalLibBackend {
     /// Cross-platform terminal library (default).
     Crossterm,
-    /// Pure Rust ANSI sequence generation.
+    /// Pure Rust [`ANSI`] sequence generation.
+    ///
+    /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
     DirectToAnsi,
 }
 
 /// The default terminal library backend for this platform.
 ///
-/// On **Linux**, [`DirectToAnsi`] is selected for pure Rust ANSI sequence generation
+/// On **Linux**, [`DirectToAnsi`] is selected for pure Rust [`ANSI`] sequence generation
 /// without external dependencies.
 ///
 /// # Platform Selection
@@ -51,6 +56,7 @@ pub enum TerminalLibBackend {
 /// Benchmarked using 8-second continuous workload with 999Hz sampling and scripted
 /// input (see `script_lib.fish::run_example_with_flamegraph_profiling_perf_fold`).
 ///
+/// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 /// [`DirectToAnsi`]: variant@TerminalLibBackend::DirectToAnsi
 #[cfg(target_os = "linux")]
 pub const TERMINAL_LIB_BACKEND: TerminalLibBackend = TerminalLibBackend::DirectToAnsi;

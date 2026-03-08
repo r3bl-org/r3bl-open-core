@@ -4,7 +4,9 @@ use crossterm::event::Event;
 use futures_core::Stream;
 use std::{io::Error, pin::Pin, sync::Arc};
 
-/// Disambiguate the type of `StdMutex` from stdlib and tokio to avoid conflicts.
+/// Disambiguate the type of `StdMutex` from stdlib and [`tokio`] to avoid conflicts.
+///
+/// [`tokio`]: tokio
 pub type StdMutex<T> = std::sync::Mutex<T>;
 
 /// Type alias for a `Send`-able output device (raw terminal, `SharedWriter`, etc).

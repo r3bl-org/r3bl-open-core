@@ -46,7 +46,7 @@ where
     fn get_id(&self) -> FlexBoxId { self.data.id }
 
     /// This shim simply calls
-    /// [DialogEngineApi::render_engine](DialogEngineApi::render_engine) w/ all the
+    /// [DialogEngineApi::render_engine] w/ all the
     /// necessary arguments:
     /// - Global scope: [`GlobalData`] containing the app's state.
     /// - Has focus: [`HasFocus`] containing whether the current box has focus.
@@ -58,6 +58,8 @@ where
     ///    painting itself over the entire screen.
     /// 2. However, [`SurfaceBounds`] is saved for later use. And it is used to restrict
     ///    where the dialog can be placed on the screen.
+    ///
+    /// [DialogEngineApi::render_engine]: DialogEngineApi::render_engine
     fn render(
         &mut self,
         global_data: &mut GlobalData<S, AS>,
@@ -94,15 +96,18 @@ where
     }
 
     /// This shim simply calls
-    /// [DialogEngineApi::apply_event](DialogEngineApi::apply_event) w/ all the necessary
+    /// [DialogEngineApi::apply_event] w/ all the necessary
     /// arguments:
     /// - Global scope: [`GlobalData`] containing the app's state.
     /// - User input (from [`crate::main_event_loop`]): [`InputEvent`].
     /// - Has focus: [`HasFocus`] containing whether the current box has focus.
     ///
     /// Usually a component must have focus in order for the [`crate::App`] to
-    /// [`route_event_to_focused_component`](crate::ComponentRegistry::route_event_to_focused_component)
+    /// [`route_event_to_focused_component`]
     /// in the first place.
+    ///
+    /// [`route_event_to_focused_component`]: crate::ComponentRegistry::route_event_to_focused_component
+    /// [DialogEngineApi::apply_event]: DialogEngineApi::apply_event
     fn handle_event(
         &mut self,
         global_data: &mut GlobalData<S, AS>,

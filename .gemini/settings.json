@@ -3,13 +3,6 @@
     "rust-refactor": {
       "command": "/home/nazmul/.cargo/bin/rustmcp",
       "args": []
-    },
-    "multi-lang-analyze": {
-      "command": "/home/nazmul/.cargo/bin/narsil-mcp",
-      "args": [
-        "-r",
-        "."
-      ]
     }
   }
 }

@@ -349,7 +349,7 @@ advertise = true            # Advertise via mDNS when in network mode
 
 ```
 ┌──────────────┐    clipboard    ┌─────────────┐
-│              │   ──────────▶   │             │
+│              │   ──────────►   │             │
 │ Chi Helper   │                 │   Claude    │
 │    Apps      │                 │     PTY     │
 │              │                 │             │
@@ -877,15 +877,15 @@ discovery and TLS with pre-shared keys (PSK) for secure communication.
 
 ```
 ┌───────────────────────────────────────────────────────────────────────────────┐
-│                        REMOTE CONTROL TOPOLOGY                                 │
+│                        REMOTE CONTROL TOPOLOGY                                │
 │                                                                               │
 │  ┌──────────────────────────┐              ┌────────────────────────────────┐ │
 │  │  CONTROLLER CHI          │   TLS/TCP    │  CONTROLLED CHI                │ │
-│  │  (e.g., nazmul-desktop)  │─────────────▶│  (e.g., nazmul-laptop)         │ │
+│  │  (e.g., nazmul-desktop)  │─────────────►│  (e.g., nazmul-laptop)         │ │
 │  │                          │              │                                │ │
-│  │  • Displays remote view  │   Input ──▶  │  • Runs chi in "puppet mode"   │ │
+│  │  • Displays remote view  │   Input ──►  │  • Runs chi in "puppet mode"   │ │
 │  │  • Captures local input  │              │  • Executes all commands       │ │
-│  │  • User interaction here │  ◀── Output  │  • Sends OffscreenBuffer bytes │ │
+│  │  • User interaction here │  ◄── Output  │  • Sends OffscreenBuffer bytes │ │
 │  │  • Sets viewport size    │              │  • Local display blanked       │ │
 │  └──────────────────────────┘              └────────────────────────────────┘ │
 └───────────────────────────────────────────────────────────────────────────────┘
@@ -902,17 +902,17 @@ Similar to the `mio_poller` pattern, Remote Control Mode uses a dedicated thread
 
 ```
 ┌───────────────────────────────────────────────────────────────────────────────┐
-│                       NETWORK THREAD ARCHITECTURE                              │
+│                       NETWORK THREAD ARCHITECTURE                             │
 │                                                                               │
 │  ┌────────────────────────────────────┐    ┌────────────────────────────────┐ │
 │  │ Network Thread (std::thread)       │    │ Main Thread (tokio runtime)    │ │
 │  │                                    │    │                                │ │
-│  │ mDNS (mdns-sd crate):              │───▶│ rx.recv().await for:           │ │
+│  │ mDNS (mdns-sd crate):              │───►│ rx.recv().await for:           │ │
 │  │   • Advertise "_chi._tcp.local"    │    │   • PeerDiscovered { info }    │ │
 │  │   • Discover other chi instances   │    │   • PeerLost { hostname }      │ │
 │  │                                    │    │   • RemoteControlRequest       │ │
 │  │ TLS Server (rustls):               │    │   • InputEvent (as controlled) │ │
-│  │   • Accept incoming connections    │◀───│   • OutputFrame (as controller)│ │
+│  │   • Accept incoming connections    │◄───│   • OutputFrame (as controller)│ │
 │  │   • Validate PSK                   │    │                                │ │
 │  │                                    │    │ Orchestrates mode transitions  │ │
 │  │ TLS Client (rustls):               │    │                                │ │

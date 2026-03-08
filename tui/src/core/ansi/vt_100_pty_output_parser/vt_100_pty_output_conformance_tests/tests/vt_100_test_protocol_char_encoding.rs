@@ -1,6 +1,8 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Tests for character encoding support - UTF-8, emojis, and wide characters.
+//! Tests for character encoding support - [`UTF-8`], emojis, and wide characters.
+//!
+//! [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
 
 use super::super::test_fixtures_vt_100_ansi_conformance::*;
 use crate::{AnsiToOfsBufPerformer, offscreen_buffer::test_fixtures_ofs_buf::*};

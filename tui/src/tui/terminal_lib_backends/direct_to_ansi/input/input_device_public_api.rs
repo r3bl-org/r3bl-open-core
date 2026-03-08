@@ -20,7 +20,7 @@ use tokio::sync::broadcast::error::RecvError;
 ///
 /// One of two real [`InputDevice`] backends (the other being [`CrosstermInputDevice`]).
 /// Selected via [`TERMINAL_LIB_BACKEND`] on Linux; talks directly to the terminal using
-/// ANSI/VT100 protocols without relying on [`crossterm`] for terminal I/O.
+/// [`ANSI`]/VT100 protocols without relying on [`crossterm`] for terminal I/O.
 ///
 /// This **newtype** delegates to [`SINGLETON`] for [`std::io::Stdin`] reading and buffer
 /// management. This process global singleton supports restart cycles with thread reuse
@@ -31,15 +31,15 @@ use tokio::sync::broadcast::error::RecvError;
 /// - [`stdin`] channel receiver (process global singleton, outlives device instances)
 /// - Parsing happens in the reader thread using the [`more` flag pattern]
 /// - [ESC key disambiguation]: waits for more bytes only when data is likely pending
-/// - Dispatch to protocol parsers (keyboard, mouse, terminal events, UTF-8)
+/// - Dispatch to protocol parsers (keyboard, mouse, terminal events, [`UTF-8`])
 ///
 /// # Architecture
 ///
 /// This module provides cancel-safe async terminal input for a process, by bridging a
 /// synchronous [`mio`]-based reader thread with async consumers via a [`broadcast`]
-/// channel. It handles keyboard input (including ANSI escape sequences for arrow keys,
-/// function keys, etc.) and terminal resize signals ([`SIGWINCH`]) reliably, even over
-/// [`SSH`].
+/// channel. It handles keyboard input (including [`ANSI`] escape sequences for arrow
+/// keys, function keys, etc.) and terminal resize signals ([`SIGWINCH`]) reliably, even
+/// over [`SSH`].
 ///
 /// ## [Loosely Coupled And Strongly Coherent]
 ///
@@ -77,10 +77,10 @@ use tokio::sync::broadcast::error::RecvError;
 ///    - Starting one app, exiting, **dropped keystrokes**, starting another, exit,
 ///      **dropped keystrokes**, starting another, and so on.
 ///
-/// 3. **Flawed `ESC` detection over [`SSH`].** Our original approach had flawed logic for
-///    distinguishing the `ESC` key from escape sequences (like `ESC [ A` for Up Arrow).
-///    It worked locally but failed over [`SSH`]. We now use [`crossterm`]'s `more` flag
-///    heuristic (see [ESC Detection Limitations] in [`MioPollWorker`]).
+/// 3. **Flawed [`ESC`] detection over [`SSH`].** Our original approach had flawed logic
+///    for distinguishing the [`ESC`] key from escape sequences (like `ESC [ A` for Up
+///    Arrow). It worked locally but failed over [`SSH`]. We now use [`crossterm`]'s
+///    `more` flag heuristic (see [ESC Detection Limitations] in [`MioPollWorker`]).
 ///
 /// ### The Solution
 ///
@@ -123,7 +123,7 @@ use tokio::sync::broadcast::error::RecvError;
 /// 2. **Data preserved**: Global state survives TUI app lifecycle transitions in the same
 ///    process.
 ///
-/// To solve the third problem for `ESC` detection, we use [`crossterm`]'s `more` flag
+/// To solve the third problem for [`ESC`] detection, we use [`crossterm`]'s `more` flag
 /// heuristic (see [ESC Detection Limitations] in [`MioPollWorker`]).
 ///
 /// ## Architecture Overview
@@ -154,7 +154,7 @@ use tokio::sync::broadcast::error::RecvError;
 /// all share the same underlying channel and process global (singleton) reader thread.
 ///
 /// See [`MioPollWorker`] for details on how the mio poller thread works, including file
-/// descriptor handling, parsing, thread lifecycle, and ESC detection limitations.
+/// descriptor handling, parsing, thread lifecycle, and [`ESC`] detection limitations.
 ///
 /// # Device Lifecycle
 ///
@@ -385,11 +385,11 @@ use tokio::sync::broadcast::error::RecvError;
 ///   [`VT100InputEventIR`]. This device calls [`try_parse_input_event`] to perform the
 ///   actual parsing.
 ///
-/// # ESC Key Disambiguation (crossterm `more` flag pattern)
+/// # [`ESC`] Key Disambiguation (crossterm `more` flag pattern)
 ///
-/// **The Problem**: Distinguishing ESC key presses from escape sequences (e.g., Up Arrow
-/// = `ESC [ A`). When we see a lone `0x1B` byte, is it the ESC key or the start of an
-/// escape sequence?
+/// **The Problem**: Distinguishing [`ESC`] key presses from escape sequences (e.g., Up
+/// Arrow = `ESC [ A`). When we see a lone `0x1B` byte, is it the [`ESC`] key or the start
+/// of an escape sequence?
 ///
 /// **The Solution**: We use crossterm's `more` flag pattern—a clever heuristic based on
 /// read buffer fullness:
@@ -409,10 +409,10 @@ use tokio::sync::broadcast::error::RecvError;
 /// ## How It Works
 ///
 /// - **`more = true`**: Read filled the entire buffer, meaning more data is likely
-///   waiting in the kernel buffer. Wait before deciding—this `ESC` is probably the start
-///   of an escape sequence.
+///   waiting in the kernel buffer. Wait before deciding—this [`ESC`] is probably the
+///   start of an escape sequence.
 /// - **`more = false`**: Read returned fewer bytes than buffer size, meaning we've
-///   drained all available input. A lone `ESC` is the ESC key.
+///   drained all available input. A lone [`ESC`] is the [`ESC`] key.
 ///
 /// ## Why This Works
 ///
@@ -462,9 +462,9 @@ use tokio::sync::broadcast::error::RecvError;
 ///    have the same global singleton pattern here.
 /// 2. **[`mio`]-based polling**: Their [`mio.rs`] uses [`mio::Poll`] with
 ///    [`signal-hook-mio`] for [`SIGWINCH`] and we do the same.
-/// 3. **ESC disambiguation**: The `more` flag heuristic for distinguishing ESC key from
-///    escape sequences without timeouts. We inherit both its benefits (zero latency) and
-///    limitations (see [ESC Detection Limitations] in [`MioPollWorker`]).
+/// 3. **[`ESC`] disambiguation**: The `more` flag heuristic for distinguishing [`ESC`]
+///    key from escape sequences without timeouts. We inherit both its benefits (zero
+///    latency) and limitations (see [ESC Detection Limitations] in [`MioPollWorker`]).
 /// 4. **Process-lifetime cleanup**: They rely on OS cleanup at process exit rather than
 ///    explicit thread termination, and so do we.
 ///
@@ -479,64 +479,67 @@ use tokio::sync::broadcast::error::RecvError;
 /// For the complete lifecycle diagram including the [race condition] where a fast
 /// subscriber can reuse the existing thread, see the [inherent race condition] docs.
 ///
-/// [Architecture]: Self#architecture
-/// [Device Lifecycle]: Self#device-lifecycle
-/// [ESC Detection Limitations]: super::mio_poller#esc-detection-limitations
-/// [ESC key disambiguation]: Self#esc-key-disambiguation-crossterm-more-flag-pattern
-/// [How It Works]: super::mio_poller#how-it-works
-/// [Loosely Coupled And Strongly Coherent]:
-///     https://developerlife.com/2015/11/05/loosely-coupled-strongly-coherent/
-/// [No exclusive access]: super::mio_poller#no-exclusive-access
-/// [The Problems]: Self#the-problems
-/// [Tokio's stdin]: tokio::io::stdin
-/// [`CrosstermInputDevice`]:
-///     crate::tui::terminal_lib_backends::crossterm_backend::CrosstermInputDevice
-/// [`DirectToAnsi`]: mod@crate::direct_to_ansi
-/// [`EventStream`]: crossterm::event::EventStream
-/// [`INTERNAL_EVENT_READER`]:
-///     https://github.com/crossterm-rs/crossterm/blob/0.29/src/event.rs#L149
-/// [`InputDevice`]: crate::InputDevice
-/// [`MioPollWorker`]: super::mio_poller::MioPollWorker
-/// [`SIGWINCH`]: signal_hook::consts::SIGWINCH
-/// [`SINGLETON`]: super::input_device_impl::global_input_resource::SINGLETON
-/// [`SSH`]: https://en.wikipedia.org/wiki/Secure_Shell
-/// [`SubscriberGuard`]: crate::core::resilient_reactor_thread::SubscriberGuard
-/// [`SubscriberGuard`'s drop behavior]:
-///     crate::core::resilient_reactor_thread::SubscriberGuard#drop-behavior
-/// [`TERMINAL_LIB_BACKEND`]: crate::tui::TERMINAL_LIB_BACKEND
-/// [`VT100InputEventIR`]:
-///     crate::core::ansi::vt_100_terminal_input_parser::VT100InputEventIR
+/// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 /// [`broadcast`]: tokio::sync::broadcast
 /// [`crossterm`]: crossterm
+/// [`CrosstermInputDevice`]:
+///     crate::crossterm_backend::CrosstermInputDevice
+/// [`DirectToAnsi`]: mod@crate::direct_to_ansi
 /// [`epoll`]: https://man7.org/linux/man-pages/man7/epoll.7.html
+/// [`ESC`]: crate::EscSequence
+/// [`EventStream`]: crossterm::event::EventStream
 /// [`fd`]: https://en.wikipedia.org/wiki/File_descriptor
+/// [`InputDevice`]: crate::InputDevice
+/// [`INTERNAL_EVENT_READER`]:
+///     https://github.com/crossterm-rs/crossterm/blob/0.29/src/event.rs#L149
 /// [`kqueue`]: https://man.freebsd.org/cgi/man.cgi?query=kqueue&sektion=2
 /// [`mio.rs`]:
 ///     https://github.com/crossterm-rs/crossterm/blob/0.29/src/event/source/unix/mio.rs
 /// [`mio::Poll`]: mio::Poll
 /// [`mio_poller`]: super::mio_poller
+/// [`MioPollWorker`]: super::mio_poller::MioPollWorker
 /// [`more` flag pattern]: Self#esc-key-disambiguation-crossterm-more-flag-pattern
 /// [`new()`]: Self::new
 /// [`next()`]: Self::next
 /// [`pty_mio_poller_thread_reuse_test`]:
-///     crate::core::ansi::vt_100_terminal_input_parser::integration_tests::pty_mio_poller_thread_reuse_test
+///     crate::vt_100_terminal_input_parser::integration_tests::pty_mio_poller_thread_reuse_test
 /// [`signal-hook-mio`]: signal_hook_mio
-/// [`std::io::Stdin`]: std::io::Stdin
+/// [`SIGWINCH`]: signal_hook::consts::SIGWINCH
+/// [`SINGLETON`]: super::input_device_impl::global_input_resource::SINGLETON
+/// [`SSH`]: https://en.wikipedia.org/wiki/Secure_Shell
 /// [`std::io::stdin()`]: std::io::stdin
+/// [`std::io::Stdin`]: std::io::Stdin
 /// [`stdin`]: std::io::stdin
-/// [`subscribe()`]: crate::core::resilient_reactor_thread::RRT::subscribe
+/// [`subscribe()`]: crate::RRT::subscribe
+/// [`SubscriberGuard`'s drop behavior]:
+///     crate::SubscriberGuard#drop-behavior
+/// [`SubscriberGuard`]: crate::SubscriberGuard
 /// [`super::at_most_one_instance_assert::release()`]:
 ///     super::at_most_one_instance_assert::release
 /// [`syscall`]: https://man7.org/linux/man-pages/man2/syscalls.2.html
+/// [`TERMINAL_LIB_BACKEND`]: crate::tui::TERMINAL_LIB_BACKEND
 /// [`tokio::io::stdin()`]: tokio::io::stdin
 /// [`tokio::select!`]: tokio::select
 /// [`tokio::signal`]: tokio::signal
 /// [`try_parse_input_event`]:
-///     crate::core::ansi::vt_100_terminal_input_parser::try_parse_input_event
-/// [`vt_100_terminal_input_parser`]: mod@crate::core::ansi::vt_100_terminal_input_parser
+///     crate::vt_100_terminal_input_parser::try_parse_input_event
+/// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
+/// [`VT100InputEventIR`]:
+///     crate::vt_100_terminal_input_parser::VT100InputEventIR
+/// [`vt_100_terminal_input_parser`]: mod@crate::vt_100_terminal_input_parser
+/// [Architecture]: Self#architecture
+/// [Device Lifecycle]: Self#device-lifecycle
+/// [ESC Detection Limitations]: super::mio_poller#esc-detection-limitations
+/// [ESC key disambiguation]: Self#esc-key-disambiguation-crossterm-more-flag-pattern
+/// [How It Works]: super::mio_poller#how-it-works
 /// [inherent race condition]:
 ///     crate::core::resilient_reactor_thread#the-inherent-race-condition
+/// [Loosely Coupled And Strongly Coherent]:
+///     https://developerlife.com/2015/11/05/loosely-coupled-strongly-coherent/
+/// [No exclusive access]: super::mio_poller#no-exclusive-access
 /// [race condition]: crate::core::resilient_reactor_thread#the-inherent-race-condition
+/// [The Problems]: Self#the-problems
+/// [Tokio's stdin]: tokio::io::stdin
 pub struct DirectToAnsiInputDevice {
     /// This device's subscription to the global input broadcast channel.
     ///
@@ -579,12 +582,12 @@ impl DirectToAnsiInputDevice {
     /// checks [`receiver_count()`] (before it decides to exit). See the [race condition
     /// documentation] in [`SubscriberGuard`] for details.
     ///
-    /// [`SubscriberGuard`]: super::input_device_impl::InputSubscriberGuard
     /// [`mio_poller`]: crate::direct_to_ansi::input::mio_poller
     /// [`new()`]: Self::new
     /// [`receiver_count()`]: tokio::sync::broadcast::Sender::receiver_count
     /// [`stdin`]: std::io::Stdin
     /// [`subscribe()`]: Self::subscribe
+    /// [`SubscriberGuard`]: super::input_device_impl::InputSubscriberGuard
     /// [race condition documentation]: super::input_device_impl::InputSubscriberGuard#race-condition-and-correctness
     #[must_use]
     pub fn new() -> Self {
@@ -612,7 +615,7 @@ impl DirectToAnsiInputDevice {
     ///
     /// [`mio_poller`]: super::mio_poller
     /// [`new()`]: Self::new
-    /// [`pty_mio_poller_subscribe_test`]: crate::core::ansi::vt_100_terminal_input_parser::integration_tests::pty_mio_poller_subscribe_test
+    /// [`pty_mio_poller_subscribe_test`]: crate::vt_100_terminal_input_parser::integration_tests::pty_mio_poller_subscribe_test
     /// [`subscribe()`]: Self::subscribe
     #[must_use]
     pub fn subscribe(&self) -> InputSubscriberGuard {
@@ -625,7 +628,7 @@ impl DirectToAnsiInputDevice {
     ///
     /// `None` if [`stdin`] is closed ([`EOF`]). Or [`InputEvent`] variants for:
     /// - **Keyboard**: Character input, arrow keys, function keys, modifiers (with 0ms
-    ///   `ESC` latency)
+    ///   [`ESC`] latency)
     /// - **Mouse**: Clicks, drags, motion, scrolling with position and modifiers
     /// - **Resize**: Terminal window size change (rows, cols)
     /// - **Focus**: Terminal gained/lost focus
@@ -717,7 +720,7 @@ impl DirectToAnsiInputDevice {
     /// 3. Apply paste state machine and return event
     ///
     /// Events arrive fully parsed from the reader thread. See [ESC key disambiguation]
-    /// for zero-latency `ESC` detection.
+    /// for zero-latency [`ESC`] detection.
     ///
     /// # Cancel Safety
     ///
@@ -733,19 +736,20 @@ impl DirectToAnsiInputDevice {
     ///
     /// Panics if called after [`Drop`] has already been invoked (internal invariant).
     ///
-    /// [Architecture]: Self#architecture
-    /// [ESC key disambiguation]: Self#esc-key-disambiguation-crossterm-more-flag-pattern
     /// [`EOF`]: https://en.wikipedia.org/wiki/End-of-file
+    /// [`ESC`]: crate::EscSequence
     /// [`InputDevice::next()`]: crate::InputDevice::next
     /// [`InputDevice`]: crate::InputDevice
-    /// [`RestartPolicy`]: crate::core::resilient_reactor_thread::RestartPolicy
-    /// [`SINGLETON`]: super::input_device_impl::global_input_resource::SINGLETON
-    /// [`Self::next()`]: Self::next
-    /// [`ShutdownReason`]: crate::core::resilient_reactor_thread::ShutdownReason
     /// [`mio::Poll`]: mio::Poll
+    /// [`RestartPolicy`]: crate::RestartPolicy
+    /// [`Self::next()`]: Self::next
+    /// [`ShutdownReason`]: crate::ShutdownReason
+    /// [`SINGLETON`]: super::input_device_impl::global_input_resource::SINGLETON
     /// [`stdin`]: std::io::stdin
     /// [`tokio::io::stdin()`]: tokio::io::stdin
     /// [`tokio::sync::broadcast::Receiver::recv`]: tokio::sync::broadcast::Receiver::recv
+    /// [Architecture]: Self#architecture
+    /// [ESC key disambiguation]: Self#esc-key-disambiguation-crossterm-more-flag-pattern
     pub async fn next(&mut self) -> Option<InputEvent> {
         // Receiver was subscribed eagerly in new() - just use it.
         let subscriber_guard = &mut self.subscriber_guard;
@@ -811,7 +815,7 @@ impl Drop for DirectToAnsiInputDevice {
     /// Clears gate, then Rust drops [`Self::subscriber_guard`], which triggers
     /// [`SubscriberGuard::drop()`]. See [Drop behavior] for full mechanism.
     ///
-    /// [Drop behavior]: DirectToAnsiInputDevice#drop-behavior
     /// [`SubscriberGuard::drop()`]: super::input_device_impl::InputSubscriberGuard#drop-behavior
+    /// [Drop behavior]: DirectToAnsiInputDevice#drop-behavior
     fn drop(&mut self) { super::at_most_one_instance_assert::release(); }
 }

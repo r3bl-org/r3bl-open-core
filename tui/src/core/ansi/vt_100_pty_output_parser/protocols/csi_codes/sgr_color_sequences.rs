@@ -88,7 +88,7 @@
 //! [`CSI`]: crate::CsiSequence
 //! [`extract_nth_many_raw()`]: crate::ParamsExt::extract_nth_many_raw
 //! [`ParamsExt`]: crate::ParamsExt
-//! [`SGR_SET_GRAPHICS`]: crate::core::ansi::constants::SGR_SET_GRAPHICS
+//! [`SGR_SET_GRAPHICS`]: crate::constants::SGR_SET_GRAPHICS
 //! [`SGR`]: crate::SgrCode
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 //! [`VTE`]: mod@vte
