@@ -1,5 +1,7 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+#![rustfmt::skip]
+
 // Macro-defining modules FIRST (order matters for #[macro_use]).
 #[macro_use]
 pub mod decl_macros;
@@ -60,3 +62,16 @@ pub use terminal_io::*;
 pub use test_fixtures::*;
 pub use tui_style::*;
 pub use tui_styled_text::*;
+
+// Rustdoc search link fixes.
+
+#[cfg(any(test, doc))] // Guard needed: ansi::constants sub-modules are only pub in doc/test builds.
+#[doc(inline)] // Create doc pages at re-export path so rustdoc search links resolve.
+pub use ansi::{csi, dsr, esc, generic, input_sequences, mouse, raw_mode, sgr, utf8};
+#[doc(inline)] // Create doc pages at re-export path so rustdoc search links resolve.
+pub use coordinates::{bounds_check, buffer_coords, byte, percent_spec, primitives,
+                      vt_100_ansi_coords};
+#[doc(inline)] // Create doc pages at re-export path so rustdoc search links resolve.
+pub use graphemes::{gc_string, traits, unicode_segment, word_boundaries};
+#[doc(inline)] // Create doc pages at re-export path so rustdoc search links resolve.
+pub use pty::{pty_engine, pty_mux, pty_session};

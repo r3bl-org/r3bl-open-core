@@ -364,9 +364,7 @@
 
 // XMARK: impl trait rustdoc link definition heading-anchor (eg: #impl-Drop-for) see above
 
-// Skip rustfmt for rest of file.
-// https://stackoverflow.com/a/75910283/2085356
-#![cfg_attr(rustfmt, rustfmt_skip)]
+#![rustfmt::skip]
 
 // RRT-based waker + worker types.
 #[cfg(any(test, doc))]

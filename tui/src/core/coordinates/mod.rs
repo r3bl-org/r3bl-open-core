@@ -208,19 +208,17 @@
 //! [`vt_100_ansi_coords`]: vt_100_ansi_coords
 //! [`ZeroCopyGapBuffer`]: crate::ZeroCopyGapBuffer
 
-// Skip rustfmt for rest of file.
-// https://stackoverflow.com/a/75910283/2085356
-#![cfg_attr(rustfmt, rustfmt_skip)]
+#![rustfmt::skip]
 
-// ╔════════════════════════════════════════════════════════════════════════════╗
+// ╔═══════════════════════════════════════════════════════════════════════════╗
 // ║                   COORDINATE SYSTEM MODULE ORGANIZATION                   ║
 // ║                    (Private modules with public re-exports)               ║
-// ║                                                                            ║
-// ║ This module follows the pattern from CLAUDE.md:                          ║
-// ║ - Submodules are kept private (hide internal structure)                  ║
-// ║ - Public re-exports provide a flat, stable API surface                   ║
-// ║ - Users should import from the flat re-exports, not qualified paths      ║
-// ╚════════════════════════════════════════════════════════════════════════════╝
+// ║                                                                           ║
+// ║ This module follows the pattern from CLAUDE.md:                           ║
+// ║ - Submodules are kept private (hide internal structure)                   ║
+// ║ - Public re-exports provide a flat, stable API surface                    ║
+// ║ - Users should import from the flat re-exports, not qualified paths       ║
+// ╚═══════════════════════════════════════════════════════════════════════════╝
 
 // Submodule declarations (internal implementation detail).
 // Note: These are public to support existing codebase that uses qualified paths.
@@ -240,10 +238,10 @@ pub mod vt_100_ansi_coords;
 // All public types and traits from submodules are re-exported at this level
 // to provide a clean, flat API. Users should import from here.
 //
-// ✅ GOOD:
+// GOOD:
 //    use r3bl_tui::{RowIndex, ColIndex, ViewportBoundsCheck, TermRow, TermCol};
 //
-// ❌ AVOID:
+// AVOID:
 //    use r3bl_tui::core::coordinates::buffer_coords::{RowIndex, ColIndex};
 //    use r3bl_tui::core::coordinates::bounds_check::ViewportBoundsCheck;
 //
@@ -255,3 +253,15 @@ pub use byte::*;
 pub use percent_spec::*;
 pub use primitives::*;
 pub use vt_100_ansi_coords::*;
+
+// Rustdoc search link fixes.
+
+#[doc(inline)] // Create doc pages at re-export path so rustdoc search links resolve.
+pub use bounds_check::{
+    array_bounds_check, cursor_bounds_check, index_ops, length_ops, numeric_value,
+    range_bounds_check_ext, range_convert_ext, result_enums, viewport_bounds_check,
+};
+#[doc(inline)] // Create doc pages at re-export path so rustdoc search links resolve.
+pub use buffer_coords::{
+    caret, col_index, col_width, index, length, pos, row_height, row_index, scr_ofs, size,
+};

@@ -257,6 +257,55 @@ When linking to conditionally public modules in documentation, use the `mod@` pr
 
 See the `write-documentation` skill for complete details on rustdoc links.
 
+### Step 6: Multi-Level Barrel Exports and Rustdoc Search
+
+When rustdoc generates documentation, the search index includes all public items and
+modules. For multi-level barrel exports (`pub mod intermediate; pub use intermediate::*;`),
+the search index resolves the "shortest public path" for items. But rustdoc only generates
+HTML pages at the **canonical definition path**, not at the flattened re-export path.
+
+This means searching for an item re-exported via a barrel might produce a link to a page
+that doesn't exist (e.g., `core/ansi/csi/index.html` instead of
+`core/ansi/constants/csi/index.html`).
+
+**The fix:** Use `#[doc(inline)]` to re-export submodules at the parent level, but **only when**
+the intermediate module is a well-documented organizational hub (has module-level `//!` docs,
+organization tables, etc.) AND its submodules are `pub mod`.
+
+| Intermediate module characteristics          | Action                       | Why                                                     |
+| :------------------------------------------- | :--------------------------- | :------------------------------------------------------ |
+| Public, has module docs, organization tables | Add `#[doc(inline)]`        | Submodules are discoverable via search; pages must exist |
+| Private with `pub use *;` only (pure barrel) | No action needed             | Submodules aren't in the search index at all             |
+| Public but no module docs (structural only)  | No action needed             | Not worth the doc noise; users won't search for these   |
+
+In the parent module's `mod.rs`, add explicit `#[doc(inline)]` re-exports alongside the
+existing glob re-export:
+
+```rust
+// Existing: keeps flat item access working
+pub use constants::*;
+
+// New: creates rustdoc pages at the parent path for searchability
+#[doc(inline)] // Create doc pages at re-export path so rustdoc search links resolve.
+pub use constants::{csi, dsr};
+```
+
+Always include the inline comment on `#[doc(inline)]` lines:
+```rust
+#[doc(inline)] // Create doc pages at re-export path so rustdoc search links resolve.
+```
+
+If the re-exported modules use conditional visibility (`#[cfg(any(test, doc))]`), add the
+guard with its own inline comment:
+```rust
+#[cfg(any(test, doc))] // Guard needed: constants sub-modules are only pub in doc/test builds.
+#[doc(inline)] // Create doc pages at re-export path so rustdoc search links resolve.
+pub use constants::{csi, dsr};
+```
+
+This creates pages at **both** paths (`ansi/csi/` AND `ansi/constants/csi/`), so rustdoc
+search links work regardless of which path the search index resolves.
+
 ## Benefits of This Pattern
 
 ### 1. Clean, Flat API

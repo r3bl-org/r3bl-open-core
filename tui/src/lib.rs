@@ -9,8 +9,7 @@
 // - <https://symbl.cc/en/collections/crosses/>
 
 // XMARK: Prevent rustfmt from reformatting entire file.
-// The `custom_inner_attributes` nightly feature enables `#![rustfmt::skip]` (replacing
-// `#![cfg_attr(rustfmt, rustfmt_skip)]`).
+// The `custom_inner_attributes` nightly feature enables `#![rustfmt::skip]`.
 #![feature(custom_inner_attributes)]
 #![rustfmt::skip]
 
@@ -2643,7 +2642,7 @@ pub mod network_io;
 // 4. Rust resolves ambiguity by precedence (later imports take precedence)
 // See CLAUDE.md module organization pattern for rationale.
 #[allow(ambiguous_glob_reexports)]
-pub use core::*;
+pub use crate::core::*;
 #[allow(ambiguous_glob_reexports)]
 pub use network_io::*;
 #[allow(ambiguous_glob_reexports)]

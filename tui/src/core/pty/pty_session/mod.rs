@@ -68,8 +68,7 @@
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`select!`]: tokio::select
 //! [Background Tasks]: crate::core::pty#background-tasks-the-task-trio
-//! [Core Async Concepts]:
-//!     crate::main_event_loop_impl#core-async-concepts-pin-and-unpin
+//! [Core Async Concepts]: crate::main_event_loop_impl#core-async-concepts-pin-and-unpin
 
 pub mod pty_input_event;
 pub mod pty_output_event;

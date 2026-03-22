@@ -6,10 +6,6 @@
       "id": "7db0597e-e949-458d-bff9-072e239021e5",
       "tabs": [
         {
-          "path": "todo.md",
-          "isPinned": true
-        },
-        {
           "path": "task/introduce-resilient-reactor-thread.md",
           "isPinned": true
         },
@@ -152,8 +148,7 @@
       ],
       "taskFile": "task/task_refactor_input_device.md",
       "createdAt": 1763496885607,
-      "lastAccessed": 1763666457216,
-      "activeTab": "tui/src/core/ansi/vt_100_terminal_input_parser/mod.rs"
+      "lastAccessed": 1763666457216
     },
     {
       "name": "[1.1] task_readline_async_add_shortcuts",
@@ -237,10 +232,6 @@
       "name": "introduce-resilient-reactor-thread",
       "id": "495991d8-1bfb-4913-b790-313fb191f3fc",
       "tabs": [
-        {
-          "path": "todo.md",
-          "isPinned": true
-        },
         {
           "path": "task/introduce-resilient-reactor-thread.md",
           "isPinned": true
@@ -335,8 +326,7 @@
         }
       ],
       "taskFile": "task/introduce-resilient-reactor-thread.md",
-      "createdAt": 1768407329970,
-      "activeTab": "tui/src/core/resilient_reactor_thread/rrt_worker.rs"
+      "createdAt": 1768407329970
     }
   ]
 }

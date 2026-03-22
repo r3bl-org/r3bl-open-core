@@ -6,8 +6,7 @@
 #![cfg_attr(not(test), deny(clippy::unwrap_in_result))]
 
 // XMARK: Prevent rustfmt from reformatting entire file.
-// The `custom_inner_attributes` nightly feature enables `#![rustfmt::skip]` (replacing
-// `#![cfg_attr(rustfmt, rustfmt_skip)]`).
+// The `custom_inner_attributes` nightly feature enables `#![rustfmt::skip]`.
 #![feature(custom_inner_attributes)]
 #![rustfmt::skip]
 

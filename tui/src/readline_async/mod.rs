@@ -315,10 +315,8 @@
 //! [rustyline-async]: https://github.com/zyansheep/rustyline-async
 //! [this]: https://github.com/nazmulidris/rust-scratch/blob/fcd730c4b17ed0b09ff2c1a7ac4dd5b4a0c66e49/tcp-api-server/src/client_task.rs#L275
 
-// XMARK: rustfmt prevent from reformatting entire file.
-// Skip rustfmt for rest of file.
-// https://stackoverflow.com/a/75910283/2085356
-#![cfg_attr(rustfmt, rustfmt_skip)]
+// XMARK: Prevent rustfmt from reformatting entire file.
+#![rustfmt::skip]
 
 // Attach sources.
 // #[macro_use] propagates macros textually (order matters).

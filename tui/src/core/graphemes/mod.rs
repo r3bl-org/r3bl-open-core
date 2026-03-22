@@ -258,7 +258,16 @@ pub mod unicode_segment;
 pub mod word_boundaries;
 
 // Re-export.
+#[doc(inline)] // Create doc pages at re-export path so rustdoc search links resolve.
+pub use gc_string::owned;
 pub use gc_string::*;
+
+#[doc(inline)] // Create doc pages at re-export path so rustdoc search links resolve.
+pub use traits::{grapheme_doc, grapheme_string, grapheme_string_owned_ext, seg_content};
 pub use traits::*;
+
+#[doc(inline)] // Create doc pages at re-export path so rustdoc search links resolve.
+pub use unicode_segment::{seg, seg_index, seg_length, segment_builder};
 pub use unicode_segment::*;
+
 pub use word_boundaries::*;

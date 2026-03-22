@@ -268,7 +268,7 @@ pub mod vt_100_pty_output_parser;
 #[cfg(not(any(test, doc)))]
 mod vt_100_pty_output_parser;
 
-// Input parsing module - public for protocol access
+// Input parsing module - public for protocol access.
 pub mod vt_100_terminal_input_parser;
 
 // Re-export flat public API.
@@ -282,3 +282,9 @@ pub use terminal_raw_mode::*;
 // Re-export test fixtures for testing purposes only.
 #[cfg(test)]
 pub use vt_100_pty_output_parser::vt_100_pty_output_conformance_tests;
+
+// Rustdoc search link fixes.
+
+#[cfg(any(test, doc))] // Guard needed: constants sub-modules are only pub in doc/test builds.
+#[doc(inline)] // Create doc pages at re-export path so rustdoc search links resolve.
+pub use constants::{csi, dsr, esc, generic, input_sequences, mouse, raw_mode, sgr, utf8};

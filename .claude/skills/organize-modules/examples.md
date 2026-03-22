@@ -702,3 +702,53 @@ Should this module be public?
 ```
 
 Use this decision tree when organizing any Rust module!
+
+---
+
+## Example 8: Multi-Level Barrel Export with Doc Inline
+
+**Project:** A library with deeply nested constants that are discovery points.
+
+### Problem
+
+Searching for `CSI` in rustdoc returns a link to `core::ansi::csi` because `ansi` re-exports
+everything from `constants`. But `core::ansi::csi` doesn't have an HTML page; the page is
+at `core::ansi::constants::csi`. The link is broken.
+
+### Implementation
+
+**tui/src/core/ansi/mod.rs:**
+```rust
+//! ANSI module re-exports.
+
+// Intermediate module is a well-documented hub (has //! docs, tables)
+pub mod constants;
+
+// ❌ Before: Broken search link (link goes to ansi/csi/ but page is at ansi/constants/csi/)
+pub use constants::*;
+
+// ✅ After: Working search link (creates page at ansi/csi/)
+pub use constants::*;
+
+#[doc(inline)] // Create doc pages at re-export path so rustdoc search links resolve.
+pub use constants::{csi, dsr};
+```
+
+**tui/src/core/ansi/constants/mod.rs:**
+```rust
+//! Well-documented constants hub.
+//!
+//! | Module | Description |
+//! | :--- | :--- |
+//! | [`csi`] | CSI sequences |
+//! | [`dsr`] | DSR sequences |
+
+pub mod csi;
+pub mod dsr;
+```
+
+### Result
+
+1. Items are still accessible via `ansi::ITEM` (flat API).
+2. Rustdoc search links for `csi` or items inside it now navigate to a valid page at `ansi/csi/`.
+3. The intermediate hub `ansi::constants` remains discoverable.

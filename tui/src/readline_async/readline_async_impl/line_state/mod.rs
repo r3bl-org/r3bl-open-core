@@ -45,9 +45,7 @@
 //! [`Readline`]: crate::Readline
 //! [`SegIndex`]: crate::SegIndex
 
-// Skip rustfmt for rest of file.
-// https://stackoverflow.com/a/75910283/2085356
-#![cfg_attr(rustfmt, rustfmt_skip)]
+#![rustfmt::skip]
 
 // Private modules organized by functional responsibility.
 #[macro_use] mod core;

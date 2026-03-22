@@ -32,9 +32,7 @@
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [parent module]: mod@super
 
-// Skip rustfmt for rest of file.
-// https://stackoverflow.com/a/75910283/2085356
-#![cfg_attr(rustfmt, rustfmt_skip)]
+#![rustfmt::skip]
 
 // These PTY tests use DirectToAnsiInputDevice which is Linux-only.
 // On macOS/Windows, Crossterm backend is used instead and these tests are skipped.

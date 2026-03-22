@@ -1,5 +1,7 @@
 // Copyright (c) 2023-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+#![rustfmt::skip]
+
 // cspell:words undisplayable
 
 /// Enable or disable generating log output for telemetry data. This has higher precedence
@@ -77,3 +79,9 @@ pub use rsx::*;
 pub use syntax_highlighting::*;
 pub use terminal_lib_backends::*;
 pub use terminal_window::*;
+
+// Rustdoc search link fixes.
+
+#[doc(inline)] // Create doc pages at re-export path so rustdoc search links resolve.
+pub use md_parser::{block, convert_to_plain_text, extended, fragment,
+                    md_parser_constants, md_parser_types, parse_markdown, single_line};

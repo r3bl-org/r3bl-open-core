@@ -109,9 +109,7 @@
 //! [`vt_100_terminal_input_parser::integration_tests`]: mod@crate::vt_100_terminal_input_parser::integration_tests
 //! [rendering pipeline overview]: mod@crate::terminal_lib_backends#rendering-pipeline-architecture
 
-// Skip rustfmt for rest of file to preserve manual alignment.
-// https://stackoverflow.com/a/75910283/2085356
-#![cfg_attr(rustfmt, rustfmt_skip)]
+#![rustfmt::skip]
 
 // Private inner modules (hide implementation structure).
 // Conditionally public for documentation links.

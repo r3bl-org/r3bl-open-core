@@ -156,8 +156,8 @@
 //!
 //! ## The Task Trio
 //!
-//! Every active [`PTY`] session is powered by a set of specialized tasks (the
-//! **Task Trio**).
+//! Every active [`PTY`] session is powered by a set of specialized tasks (the **Task
+//! Trio**).
 //!
 //! | Task             | Role             | Type         | Responsibility                                                                                            |
 //! | :--------------- | :--------------- | :----------- | :-------------------------------------------------------------------------------------------------------- |
@@ -305,24 +305,20 @@
 //! [`TUI`]: crate::tui::TerminalWindow::main_event_loop
 //! [Engine Layer]: crate::pty_engine
 //! [MPSC channels]: tokio::sync::mpsc
-//! [Orchestrator Task]:
-//!     crate::pty_session::tasks::orchestrator::spawn_orchestrator_task
-//! [Orchestrator]:
-//!     crate::pty_session::tasks::orchestrator::spawn_orchestrator_task
+//! [Orchestrator Task]: crate::pty_session::tasks::orchestrator::spawn_orchestrator_task
+//! [Orchestrator]: crate::pty_session::tasks::orchestrator::spawn_orchestrator_task
 //! [pseudoterminals]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [RAII]: https://en.cppreference.com/w/cpp/language/raii
-//! [Reader Task]:
-//!     crate::pty_session::tasks::reader_task::spawn_blocking_reader_task
-//! [Reader]:
-//!     crate::pty_session::tasks::reader_task::spawn_blocking_reader_task
+//! [Reader Task]: crate::pty_session::tasks::reader_task::spawn_blocking_reader_task
+//! [Reader]: crate::pty_session::tasks::reader_task::spawn_blocking_reader_task
 //! [resource-leaking deadlocks]:
 //!     crate::pty_engine::pty_pair::PtyPair#resource-leaking-deadlock
 //! [Session Layer]: crate::pty_session
 //! [Session layer]: crate::pty_session
-//! [Writer Task]:
-//!     crate::pty_session::tasks::writer_task::spawn_blocking_writer_task
-//! [Writer]:
-//!     crate::pty_session::tasks::writer_task::spawn_blocking_writer_task
+//! [Writer Task]: crate::pty_session::tasks::writer_task::spawn_blocking_writer_task
+//! [Writer]: crate::pty_session::tasks::writer_task::spawn_blocking_writer_task
+
+#![rustfmt::skip]
 
 // Attach.
 pub mod pty_engine;
@@ -336,3 +332,9 @@ mod e2e_tests;
 pub use pty_engine::*;
 pub use pty_mux::*;
 pub use pty_session::*;
+
+// Rustdoc search link fixes.
+
+#[doc(inline)] // Create doc pages at re-export path so rustdoc search links resolve.
+pub use pty_session::{pty_input_event, pty_output_event, pty_session_builder,
+                      pty_session_types, tasks};

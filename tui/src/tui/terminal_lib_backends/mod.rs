@@ -181,9 +181,7 @@
 //! [`ZOrder`]: enum@z_order::ZOrder
 //! [dual rendering paths]: mod@crate#dual-rendering-paths
 
-// Skip rustfmt for rest of file.
-// https://stackoverflow.com/a/75910283/2085356
-#![cfg_attr(rustfmt, rustfmt_skip)]
+#![rustfmt::skip]
 
 /**************************/
 /** Attach source files. **/

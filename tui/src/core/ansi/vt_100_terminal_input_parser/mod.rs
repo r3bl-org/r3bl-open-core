@@ -196,8 +196,7 @@
 //! [`X10`]: https://invisible-island.net/xterm/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
 
 // Skip rustfmt for rest of file.
-// https://stackoverflow.com/a/75910283/2085356
-#![cfg_attr(rustfmt, rustfmt_skip)]
+#![rustfmt::skip]
 
 // Main entry point module (router/dispatcher)
 // This is listed FIRST to emphasize it's the primary API surface
