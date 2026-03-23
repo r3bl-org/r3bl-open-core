@@ -2,8 +2,8 @@
 # Used by check.fish --full (scoped to git-modified files).
 #
 # Categories of lychee findings:
-#   Real 404s     → Fix the URL (find new location)
-#   file:// URIs  → Example paths in docs, excluded below
+#   Real 404s     → Fix the URL (find new location), do NOT add to exclude list
+#   file:// URIs  → Example/intra-doc paths in docs, excluded below
 #   Test URLs     → Fixture URLs in test code, excluded below
 #   429 Rate limit → Accepted as non-error below
 #   Redirects     → Informational only (docs.rs short URLs always 302)
@@ -20,12 +20,15 @@ max_retries = 1
 # Max concurrent requests (avoid rate limiting).
 max_concurrency = 8
 
-# Exclude URLs that are not meant to resolve.
+# Exclude URLs that are intentionally non-resolvable.
 exclude = [
-    # Example file:// URIs in documentation (e.g., osc_hyperlink.rs).
+    # Example file:// URIs and rustdoc intra-doc link syntax (mod@, field@, fn@, struct@).
     "^file://",
-    # Test fixture URLs in test code.
+    # Test fixture URLs in test code (not meant to resolve).
     "^https?://test\\.com",
-    # Example/placeholder URLs in test/doc code.
     "^https?://link1\\.com",
+    # Placeholder images in markdown parser conformance test data.
+    "^https?://via\\.placeholder\\.com/",
+    # YouTube blocks automated link checkers (returns 404 to bots).
+    "^https?://(www\\.)?youtu(\\.be|be\\.com)/",
 ]

@@ -309,18 +309,11 @@ edi --version
 
 ## Project Task Organization
 
-This project uses a two-tier task management system for organizing day-to-day development work:
-lightweight pointers with simple tasks in root-level files, and detailed task files with
-implementation plans in the `./task/` directory.
+This project uses a task management system for organizing day-to-day development work using
+detailed task files with implementation plans in the `./task/` directory.
 
 ### Task Management Files
 
-- **[`todo.md`](https://github.com/r3bl-org/r3bl-open-core/blob/main/todo.md)** - Active tasks,
-  immediate priorities, and pointers to detailed task files. Latest changes at top. Uses status
-  markers: `[ ]` (pending), `[⌛]` (in progress), `[x]` (completed)
-- **[`done.md`](https://github.com/r3bl-org/r3bl-open-core/blob/main/done.md)** - Completed tasks
-  and achievements, providing a historical record of progress. Links to archived task files in
-  `./task/done/`
 - **[`./task/`](https://github.com/r3bl-org/r3bl-open-core/tree/main/task)** - Directory containing
   detailed task management files:
   - **Active tasks**: `task_*.md` files in root of `./task/` - Complex tasks currently in progress
@@ -376,14 +369,14 @@ More detailed steps...
 
 ### Task Workflow Commands
 
-The `/task` slash command (defined in
-[`.claude/commands/task.md`](https://github.com/r3bl-org/r3bl-open-core/blob/main/.claude/commands/task.md))
+The `/r3bl-task` slash command (defined in
+[`.claude/commands/r3bl-task.md`](https://github.com/r3bl-org/r3bl-open-core/blob/main/.claude/commands/r3bl-task.md))
 manages the task lifecycle:
 
 **Create a new task:**
 
 ```sh
-/task create my_feature_name
+/r3bl-task create my_feature_name
 ```
 
 - Creates `./task/task_my_feature_name.md` from your detailed plan
@@ -393,17 +386,16 @@ manages the task lifecycle:
 **Update an existing task:**
 
 ```sh
-/task update my_feature_name
+/r3bl-task update my_feature_name
 ```
 
 - Updates progress markers in `./task/task_my_feature_name.md`
 - Moves completed task files to `./task/done/` when all steps are `[COMPLETE]`
-- Updates `todo.md` and `done.md` cross-references as needed
 
 **Resume working on a task:**
 
 ```sh
-/task load my_feature_name
+/r3bl-task load my_feature_name
 ```
 
 - Loads `./task/task_my_feature_name.md` for continued work
@@ -416,18 +408,13 @@ The task organization workflow connects strategic planning with tactical executi
 
 - **Strategic Planning** (`docs/` folder): Feature roadmaps, architectural decisions, design
   documents
-- **Planning to Active Work**: Complex features are documented in `docs/` first, then planned into
-  `todo.md`
+- **Planning to Active Work**: Complex features are documented in `docs/` first.
 - **Tactical Execution**:
-  1. Simple tasks stay in `todo.md` as checklist items
-  2. Complex tasks get detailed planning → `/task create` → `./task/task_*.md`
-  3. Work progresses through hierarchical steps with `/task update` marking progress
-  4. Completion → Task moved to `./task/done/` via `/task update`
-  5. `done.md` maintains archive links for historical reference
-- **Continuous Sync**: `todo.md` is synchronized with the GitHub project dashboard for visibility
-  across team members
+  1. Complex tasks get detailed planning → `/r3bl-task create` → `./task/task_*.md`
+  2. Work progresses through hierarchical steps with `/r3bl-task update` marking progress
+  3. Completion → Task moved to `./task/done/` via `/r3bl-task update`
 
-This three-level approach (docs → todo.md → ./task/) ensures strategic planning, tactical planning,
+This approach (docs → ./task/) ensures strategic planning, tactical planning,
 and detailed execution are well-organized and connected.
 
 ### Development Tools Integration
@@ -591,68 +578,6 @@ fish run.fish install-cargo-tools
 - **Shared Utilities**: Leverages utility functions from script_lib.fish for consistency
 
 ## IDE Setup and Extensions
-
-Choose the development environment that works best for you. R3BL provides extensions and plugins for
-both VSCode and IntelliJ IDEA.
-
-### R3BL IntelliJ Plugins
-
-For developers using IntelliJ IDEA, RustRover, or other JetBrains IDEs, install the R3BL plugins
-directly from the JetBrains Marketplace:
-
-**Available Plugins:**
-
-- **[R3BL Theme](https://plugins.jetbrains.com/plugin/28943-r3bl-theme/)** - Vibrant dark theme with
-  carefully chosen colors for visual clarity and reduced eye strain. Optimized for Rust, Markdown,
-  and 30+ languages.
-- **[R3BL Copy Selection Path](https://plugins.jetbrains.com/plugin/28944-r3bl-copy-selection-path-and-range/)** -
-  Copy file paths with selected line ranges in Claude Code compatible format. Press `Alt+O` to copy
-  the current file path with line numbers.
-
-**Installation from JetBrains Marketplace:**
-
-1. Open IntelliJ IDEA / RustRover
-2. Go to `Settings` → `Plugins` → `Marketplace`
-3. Search for "R3BL Theme" and "R3BL Copy Selection Path"
-4. Click `Install` on each plugin
-5. Restart the IDE
-
-**Or install from disk (for latest development builds):**
-
-```sh
-# Clone the plugins repository
-git clone https://github.com/r3bl-org/r3bl-intellij-plugins.git
-cd r3bl-intellij-plugins
-
-# Build the plugins
-./gradlew buildPlugin
-
-# In IntelliJ: Settings → Plugins → ⚙️ → Install Plugin from Disk
-# Select the .zip files from:
-# - plugins/r3bl-theme/build/distributions/r3bl-theme-*.zip
-# - plugins/r3bl-copy-selection-path/build/distributions/r3bl-copy-selection-path-*.zip
-```
-
-**Benefits for r3bl-open-core development:**
-
-- **Vibrant Color Scheme**: Enhanced syntax highlighting makes Rust code more readable
-- **Claude Code Integration**: Quickly copy file paths with line ranges using `Alt+O` to share code
-  references with Claude Code
-- **Reduced Eye Strain**: Carefully balanced colors optimized for long coding sessions
-- **Multi-Language Support**: Works great with Rust, Markdown, TOML, and all file types in this
-  project
-
-**Post-installation:**
-
-1. Restart IntelliJ IDEA / RustRover
-2. Go to `Settings` → `Appearance & Behavior` → `Appearance` → `Theme` → Select "R3BL"
-3. Use `Alt+O` to copy file paths with line ranges (great for Claude Code interactions!)
-
-**Task Workflow Integration:**
-
-IntelliJ IDEA and RustRover include a built-in Task Management plugin that works seamlessly
-alongside the `./task/` file management system in this project. Use it to organize your work
-contexts while the `./task/` files track your implementation progress.
 
 ### R3BL VSCode Extensions
 

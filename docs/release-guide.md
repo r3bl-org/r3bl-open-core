@@ -211,6 +211,20 @@ Use these releases as style guides:
 - **tui**: Library crate - no install instructions needed, release is for notification only
 - **build-infra**: Binary crate - include install instructions and Coming Soon section
 
+#### URL pinning in CHANGELOG.md
+
+When writing CHANGELOG.md entries, use SHA-pinned or release-tag-pinned URLs instead of `main`
+branch URLs. URLs pointing to `main` break when files or directories are moved, renamed, or
+deleted in later commits -- but pinned URLs are immutable snapshots that remain valid as a
+historical record.
+
+- **Tag-pinned** (preferred when a release tag exists):
+  `https://github.com/r3bl-org/r3bl-open-core/blob/v0.7.7-tui/tui/README.md`
+- **SHA-pinned** (when no tag is available):
+  `https://github.com/r3bl-org/r3bl-open-core/blob/abc1234/path/to/file`
+- **Avoid**:
+  `https://github.com/r3bl-org/r3bl-open-core/blob/main/path/to/file`
+
 ## This Week in Rust submission
 
 After publishing a release, submit it to [This Week in Rust](https://this-week-in-rust.org/) for

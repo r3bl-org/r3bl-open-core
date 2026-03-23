@@ -613,8 +613,8 @@ those extraneous crates are archived.
 
 These videos have been an inspiration for many of these changes:
 
-- [Data oriented design](https://youtu.be/WwkuAqObplU)
-- [Memory alloc](https://youtu.be/pJ-FRRB5E84)
+- [Data oriented design](https://www.youtube.com/watch?v=WwkuAqObplU)
+- [Memory alloc](https://www.youtube.com/watch?v=pJ-FRRB5E84)
 
 Fixed:
 
@@ -935,8 +935,8 @@ handle many more corner cases.
     for this change. Here's the [issue](https://github.com/r3bl-org/r3bl-open-core/issues/196) and
     [PR](https://github.com/r3bl-org/r3bl-open-core/pull/205) for this change. Here are some videos
     that go over this massive change:
-    - <https://youtu.be/o2CVEikbEAQ>
-    - <https://youtu.be/Ne5-MXxt97A>
+    - <https://www.youtube.com/watch?v=o2CVEikbEAQ>
+    - <https://www.youtube.com/watch?v=Ne5-MXxt97A>
   - In the editor component, disable the syntect highlighter for the editor by default and just use
     the custom MD parser. For files that are not Markdown, we will probably need to enable syntect
     in the future since it is not covered by the custom MD parser & highlighter combo.
@@ -1130,7 +1130,7 @@ Documentation update for the `ch` command.
 - Added:
   - Documentation for the `ch` command and its features, including usage examples and configuration
     options in the `README.md` file and `lib.rs` (for `docs.rs`).
-  - ![ch video](https://raw.githubusercontent.com/r3bl-org/r3bl-open-core/main/cmdr/videos/ch.gif?raw=true)
+  - ![ch video](https://raw.githubusercontent.com/r3bl-org/r3bl-open-core/0a2c2aa1f220/cmdr/videos/ch.gif?raw=true)
 
 ### v0.0.23 (2025-08-15)
 
@@ -1140,7 +1140,7 @@ Refactored `ch` command type system and enhanced user experience with improved o
   - Refactored `ch` command result type to `ChResult` for improved type clarity and better output
     formatting
   - Enhanced output messages for better user experience
-  - ![ch video](https://raw.githubusercontent.com/r3bl-org/r3bl-open-core/main/cmdr/videos/ch.gif?raw=true)
+  - ![ch video](https://raw.githubusercontent.com/r3bl-org/r3bl-open-core/0a2c2aa1f220/cmdr/videos/ch.gif?raw=true)
 
 ### v0.0.22 (2025-08-15)
 
@@ -1157,7 +1157,7 @@ resilient real-time feedback during the update process.
   - Image handling with automatic saving to `~/Downloads` directory using friendly filenames
   - Smart project matching that finds Claude projects from current or parent directories
   - Interactive terminal detection with graceful error handling for non-interactive environments
-  - ![ch video](https://raw.githubusercontent.com/r3bl-org/r3bl-open-core/main/cmdr/videos/ch.gif?raw=true)
+  - ![ch video](https://raw.githubusercontent.com/r3bl-org/r3bl-open-core/0a2c2aa1f220/cmdr/videos/ch.gif?raw=true)
 - Enhanced upgrade experience:
   - Complete overhaul of upgrade command using PTY for resilient and rich user experience
   - Real-time feedback showing live progress from rustup and cargo install messages
@@ -1664,7 +1664,7 @@ this crate. This [PR](https://github.com/r3bl-org/r3bl-open-core/pull/360) conta
 
 - Deleted:
   - Move the Jaeger tracing module to the `tcp-api-server` crate in the
-    [`rust-scratch`](https://github.comnazmulidris/rust-scratch/) repo. This wasn't really used
+    [`rust-scratch`](https://github.com/nazmulidris/rust-scratch/) repo. This wasn't really used
     anywhere else. Also remove all the OpenTelemetry related dependencies from this crate.
   - Move the tracing module into the `r3bl_core` crate, in the mono repo.
 
@@ -1727,7 +1727,7 @@ This release migrates the test fixtures out of this crate and into a new top lev
 test the fixtures and allow all the other crates in this monorepo to use them. Here are all the
 links for this release: [crates.io](https://crates.io/crates/r3bl_terminal_async),
 [docs.rs](https://docs.rs/r3bl_terminal_async),
-[GitHub](https://github.com/r3bl-org/r3bl-open-core/tree/main/terminal_async).
+[GitHub](https://github.com/r3bl-org/r3bl-open-core/tree/5b5fb022/terminal_async).
 
 - Changed:
   - Remove the test fixtures out of this crate and into a new top level crate in the
@@ -1920,8 +1920,8 @@ patterns are used in this release.
 
 These videos have been an inspiration for many of these changes:
 
-- [Data oriented design](https://youtu.be/WwkuAqObplU)
-- [Memory alloc](https://youtu.be/pJ-FRRB5E84)
+- [Data oriented design](https://www.youtube.com/watch?v=WwkuAqObplU)
+- [Memory alloc](https://www.youtube.com/watch?v=pJ-FRRB5E84)
 - [Compiler driven development](https://www.youtube.com/watch?v=_oaGNy3_798)
 
 Here are the highlights:
@@ -2352,7 +2352,7 @@ input events coming from user input via keyboard and mouse (eg: crossterm events
 output that is sent to `stdout` which it mocks. Here are all the links for this release:
 [crates.io](https://crates.io/crates/r3bl_test_fixtures),
 [docs.rs](https://docs.rs/r3bl_test_fixtures),
-[GitHub](https://github.com/r3bl-org/r3bl-open-core/tree/main/test_fixtures).
+[GitHub](https://github.com/r3bl-org/r3bl-open-core/tree/5b9c6a00/test_fixtures).
 
 - Added:
   - Add a new top level crate in the `r3bl-open-core` monorepo called `r3bl_test_fixtures`. This is
@@ -2480,12 +2480,12 @@ Changed:
 - The name of this repo used to be [`r3bl_rs_utils_macro`](#rename-to-r3bl_macro).
 - The modules and functions in this crate which are used (by other crates in this monorepo) are left
   unchanged. Only the unused modules and functions are moved to the
-  [`r3bl-open-core-archive`](https://github.com/r3bl-open-core-archive) repo.
+  [`r3bl-open-core-archive`](https://github.com/r3bl-org/r3bl-open-core-archive) repo.
 
 Deleted:
 
 - Move all the unused modules and functions to the
-  [`r3bl-open-core-archive`](https://github.com/r3bl-open-core-archive) repo.
+  [`r3bl-open-core-archive`](https://github.com/r3bl-org/r3bl-open-core-archive) repo.
 
 ## `r3bl_simple_logger`
 
@@ -2645,4 +2645,3 @@ purposes. It is no longer maintained.
 # More info on changelogs
 
 - https://keepachangelog.com/en/1.0.0/
-- https://co-pilot.dev/changelog

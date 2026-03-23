@@ -31,7 +31,7 @@ let a=1;
 
 # Random writing from star wars text lorem ipsum generator
 
-1. A hyperlink [link](https://forcemipsum.com/)
+1. A hyperlink [link](https://link1.com/)
    inline code `code`
     2. Did you hear that?
        They've shut down the main reactor.

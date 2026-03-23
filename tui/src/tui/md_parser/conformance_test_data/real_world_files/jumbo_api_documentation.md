@@ -467,4 +467,4 @@ as_str_slice_test_case!(limited, limit: 100, "long", "content", "here");
 
 ---
 
-**© 2025 R3BL LLC** • [Website](https://r3bl.com) • [GitHub](https://github.com/r3bl-org/r3bl-open-core) • [Documentation](https://docs.r3bl.com)
+**© 2025 R3BL LLC** • [Website](https://r3bl.com) • [GitHub](https://github.com/r3bl-org/r3bl-open-core) • [Documentation](https://test.com)
