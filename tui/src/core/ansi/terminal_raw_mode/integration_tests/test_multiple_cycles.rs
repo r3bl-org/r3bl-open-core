@@ -2,13 +2,16 @@
 
 //! Test 4: Multiple enable/disable cycles.
 //!
-//! Verifies that raw mode can be enabled and disabled multiple times without
-//! issues. Tests edge cases like:
-//! - Calling `enable()` when already enabled
-//! - Calling `disable()` when already disabled
-//! - Original settings are preserved across cycles
+//! Verifies that raw mode can be enabled and disabled multiple times without issues.
+//! Tests edge cases like:
+//! - Calling [`enable_raw_mode()`] when already enabled
+//! - Calling [`disable_raw_mode()`] when already disabled
+//! - Saved settings are preserved across cycles
+//!
+//! [`disable_raw_mode()`]: crate::disable_raw_mode
+//! [`enable_raw_mode()`]: crate::enable_raw_mode
 
-use crate::{PtyTestMode, PtyTestContext};
+use crate::{PtyTestContext, PtyTestMode};
 use rustix::termios;
 use std::{io::{BufRead, Write},
           time::{Duration, Instant}};
@@ -17,21 +20,24 @@ generate_pty_test! {
     /// [`PTY`]-based integration test for multiple raw mode cycles.
     ///
     /// Verifies that enabling and disabling raw mode multiple times works correctly:
-    /// 1. First enable/disable cycle
-    /// 2. Second enable/disable cycle
-    /// 3. Third enable/disable cycle
-    /// 4. Settings restore correctly after each cycle
-    /// 5. Multiple `enable()` calls don't fail
+    /// 1. First [`enable`]/[`disable`] cycle.
+    /// 2. Second [`enable`]/[`disable`] cycle.
+    /// 3. Third [`enable`]/[`disable`] cycle.
+    /// 4. Settings restore correctly after each cycle.
+    /// 5. Multiple [`enable`] calls don't fail.
     ///
-    /// This catches edge cases with the `ORIGINAL_TERMIOS` static and ensures
-    /// the implementation is robust for repeated use.
+    /// This catches edge cases with the [`SAVED_TERMIOS`] static and ensures the
+    /// implementation is robust for repeated use.
     ///
     /// Run with:
     /// ```bash
     /// cargo test -p r3bl_tui --lib test_raw_mode_cycles -- --nocapture
     /// ```
     ///
+    /// [`disable`]: crate::disable_raw_mode
+    /// [`enable`]: crate::enable_raw_mode
     /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
+    /// [`SAVED_TERMIOS`]: crate::terminal_raw_mode::raw_mode_unix::SAVED_TERMIOS
     test_fn: test_raw_mode_cycles,
     controller: pty_controller_entry_point,
     controlled: pty_controlled_entry_point,
@@ -102,6 +108,7 @@ fn pty_controller_entry_point(context: PtyTestContext) {
 }
 
 /// Controlled process: performs multiple enable/disable cycles.
+#[allow(clippy::too_many_lines)]
 fn pty_controlled_entry_point() -> ! {
     println!("SLAVE_STARTING");
     std::io::stdout().flush().expect("Failed to flush");
@@ -202,7 +209,9 @@ fn pty_controlled_entry_point() -> ! {
         std::process::exit(1);
     }
 
-    // Second enable should not fail (it's a no-op if already in raw mode)
+    // Second enable should not fail. SAVED_TERMIOS already holds the cooked
+    // settings from the first enable, so the is_none() guard skips the save.
+    // Raw mode is re-applied (harmless), and the saved cooked state is preserved.
     if let Err(e) = crate::enable_raw_mode() {
         eprintln!("⚠️  Controlled: Failed second enable in double test: {e}");
         println!("FAILED: Second enable failed in double test");
@@ -211,7 +220,7 @@ fn pty_controlled_entry_point() -> ! {
     }
     eprintln!("  ✓ Double enable succeeded");
 
-    // Clean up
+    // Disable should restore the cooked settings saved by the first enable.
     if let Err(e) = crate::disable_raw_mode() {
         eprintln!("⚠️  Controlled: Failed to disable after double enable: {e}");
         println!("FAILED: Cleanup failed after double enable");
@@ -219,7 +228,56 @@ fn pty_controlled_entry_point() -> ! {
         std::process::exit(1);
     }
 
-    // All cycles passed!
+    // Verify cooked mode was properly restored after double-enable.
+    let after_double = match termios::tcgetattr(&stdin) {
+        Ok(t) => t,
+        Err(e) => {
+            eprintln!("⚠️  Controlled: Failed to get termios after double enable: {e}");
+            println!("FAILED: Could not read termios after double enable cleanup");
+            std::io::stdout().flush().expect("Failed to flush");
+            std::process::exit(1);
+        }
+    };
+    if after_double.local_modes != original_termios.local_modes {
+        eprintln!("⚠️  Controlled: Settings not restored after double enable");
+        eprintln!("    Original: {:?}", original_termios.local_modes);
+        eprintln!("    Restored: {:?}", after_double.local_modes);
+        println!("FAILED: Settings not properly restored after double enable");
+        std::io::stdout().flush().expect("Failed to flush");
+        std::process::exit(1);
+    }
+    eprintln!("  ✓ Settings restored correctly after double enable");
+
+    // Test calling disable() when already disabled (should be a safe no-op).
+    eprintln!("🔍 Controlled: Testing double disable...");
+    if let Err(e) = crate::disable_raw_mode() {
+        eprintln!("⚠️  Controlled: Failed second disable in double test: {e}");
+        println!("FAILED: Second disable failed in double test");
+        std::io::stdout().flush().expect("Failed to flush");
+        std::process::exit(1);
+    }
+
+    // Terminal settings should be unchanged (still cooked).
+    let after_double_disable = match termios::tcgetattr(&stdin) {
+        Ok(t) => t,
+        Err(e) => {
+            eprintln!("⚠️  Controlled: Failed to get termios after double disable: {e}");
+            println!("FAILED: Could not read termios after double disable");
+            std::io::stdout().flush().expect("Failed to flush");
+            std::process::exit(1);
+        }
+    };
+    if after_double_disable.local_modes != original_termios.local_modes {
+        eprintln!("⚠️  Controlled: Settings changed after double disable");
+        eprintln!("    Original: {:?}", original_termios.local_modes);
+        eprintln!("    After:    {:?}", after_double_disable.local_modes);
+        println!("FAILED: Double disable changed terminal settings");
+        std::io::stdout().flush().expect("Failed to flush");
+        std::process::exit(1);
+    }
+    eprintln!("  ✓ Double disable was a safe no-op");
+
+    // All tests passed!
     println!("SUCCESS: All cycles completed successfully");
     std::io::stdout().flush().expect("Failed to flush");
 

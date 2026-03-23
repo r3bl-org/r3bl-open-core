@@ -9,8 +9,10 @@
 //!
 //! ## The Developer's Journey
 //!
-//! Imagine you're building a terminal multiplexer like [`tmux`]. You will need to handle
-//! the following tasks:
+//! Imagine you're building a terminal multiplexer (like [`tmux`]), or a coding agent
+//! (like [`gemini-cli`]) in which you must run programs and capture their output while
+//! providing them input (and these programs must think they are running in an interactive
+//! terminal). You will need to handle the following tasks:
 //!
 //! 1. **Spawning**: You need to start a shell process (like [`bash`]) inside a [`PTY`] so
 //!    it thinks it's talking to a real terminal.
@@ -272,6 +274,7 @@
 //! [`ControlledChild::wait()`]: portable_pty::Child::wait
 //! [`EIO`]: https://man7.org/linux/man-pages/man3/errno.3.html
 //! [`EOF`]: https://en.wikipedia.org/wiki/End-of-file
+//! [`gemini-cli`]: https://github.com/google-gemini/gemini-cli
 //! [`MasterPty`]: portable_pty::MasterPty
 //! [`OSC`]: crate::osc_codes::OscSequence
 //! [`ProcessManager::handle_terminal_resize()`]:

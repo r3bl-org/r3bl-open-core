@@ -59,7 +59,7 @@ use crate::{PtyCommand, PtyPair, height, size, width};
 ///
 /// The spawned child process handle MUST be held by the caller for the duration of the
 /// test. If dropped, the OS may terminate the child process prematurely, leading to
-/// unexpected `EOF` or `EIO` errors.
+/// unexpected [`EOF`] or [`EIO`] errors.
 ///
 /// For complete implementations using this helper, see:
 /// - [`backend_compat_output_test`] - Output backend comparison using **snapshot
@@ -67,8 +67,12 @@ use crate::{PtyCommand, PtyPair, height, size, width};
 /// - [`backend_compat_input_test`] - Input backend comparison (compares parsed
 ///   [`InputEvent`]s).
 ///
-/// [`backend_compat_input_test`]: mod@crate::backend_compat_tests::backend_compat_input_test
-/// [`backend_compat_output_test`]: mod@crate::backend_compat_tests::backend_compat_output_test
+/// [`backend_compat_input_test`]:
+///     mod@crate::backend_compat_tests::backend_compat_input_test
+/// [`backend_compat_output_test`]:
+///     mod@crate::backend_compat_tests::backend_compat_output_test
+/// [`EIO`]: https://man7.org/linux/man-pages/man3/errno.3.html
+/// [`EOF`]: https://en.wikipedia.org/wiki/End-of-file
 /// [`generate_pty_test!`]: crate::generate_pty_test
 /// [`InputEvent`]: crate::InputEvent
 /// [`OffscreenBuffer`]: crate::OffscreenBuffer

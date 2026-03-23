@@ -27,8 +27,8 @@ use std::sync::atomic::{AtomicBool, Ordering};
 /// [`Mutex`]: std::sync::Mutex
 static DEVICE_EXISTS: AtomicBool = AtomicBool::new(false);
 
-/// Marks that a device now exists. It can only be called once. Must call
-/// [`release()`] before you can call it again.
+/// Marks that a device now exists. It can only be called once. Must call [`release()`]
+/// before you can call it again.
 ///
 /// # Panics
 ///
@@ -49,11 +49,10 @@ pub fn release() { DEVICE_EXISTS.store(false, Ordering::SeqCst); }
 
 // XMARK: Process isolated test.
 
-/// Process-isolated tests for
-/// [`at_most_one_instance_assert`].
+/// Process-isolated tests for [`at_most_one_instance_assert`].
 ///
-/// These tests touch global state (`DEVICE_EXISTS` static), so they must run
-/// in an isolated process to avoid interference with other tests.
+/// These tests touch global state (`DEVICE_EXISTS` static), so they must run in an
+/// isolated process to avoid interference with other tests.
 ///
 /// [`at_most_one_instance_assert`]: super::at_most_one_instance_assert
 #[cfg(test)]

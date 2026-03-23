@@ -2,6 +2,7 @@
 
 // cspell:words urxvt wezterm konsole
 
+use crate::{TtyStatus, is_tty_stderr, is_tty_stdout};
 use std::{env,
           sync::atomic::{AtomicI8, Ordering}};
 
@@ -247,8 +248,8 @@ pub mod global_color_support {
 /// [`OSC`]: crate::osc_codes::OscSequence
 /// [exclusion list]: https://inclusivenaming.org/word-lists/tier-1/
 pub mod global_hyperlink_support {
-    use super::{AtomicI8, HyperlinkSupport, Ordering,
-                examine_env_vars_to_determine_hyperlink_support};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     /// Global override for hyperlink support detection.
     ///
@@ -415,72 +416,109 @@ pub fn examine_env_vars_to_determine_hyperlink_support() -> HyperlinkSupport {
 ///
 /// **This function is expensive and should not be called repeatedly!**
 ///
-/// This function performs multiple environment variable lookups (`env::var()` calls)
+/// This function performs multiple environment variable lookups ([`env::var()`] calls)
 /// which involve system calls and are computationally expensive:
 ///
-/// - `NO_COLOR` - Check for color disabling
-/// - `TERM` - Terminal type detection
-/// - `TERM_PROGRAM` - Specific terminal application detection (macOS)
-/// - `COLORTERM` - Modern color support indication
-/// - `CLICOLOR` - Legacy color support flag
-/// - `IGNORE_IS_TERMINAL` - Override for non-[`TTY`] environments
+/// - [`NO_COLOR`] - Check for color disabling.
+/// - [`TERM`] - Terminal type detection.
+/// - [`TERM_PROGRAM`] - Specific terminal application detection (macOS).
+/// - [`COLORTERM`] - Modern color support indication.
+/// - [`CLICOLOR`] - Legacy color support flag.
+/// - [`FORCE_COLOR`] - Set to non-zero number as override for non-[`TTY`] environments.
+/// - [`is_ci::uncached()`] - CI environment detection.
 ///
-/// When called thousands of times per render (as was happening before caching),
-/// this function consumed ~24% of total execution time in flamegraph analysis.
+/// When called thousands of times per render (as was happening before caching), this
+/// function consumed ~24% of total execution time in flamegraph analysis.
 ///
 /// ## Caching Strategy
 ///
-/// This function should only be called through [`global_color_support::detect()`]
-/// which implements proper memoization. Direct calls to this function bypass
-/// the performance optimization and should be avoided in production code.
+/// This function should only be called through [`global_color_support::detect()`] which
+/// implements proper memoization. Direct calls to this function bypass the performance
+/// optimization and should be avoided in production code.
 ///
 /// ## Detection Logic
 ///
-/// The function implements a comprehensive heuristic strategy:
-/// 1. Check for explicit color disabling (`NO_COLOR`, `TERM=dumb`)
-/// 2. Verify [`TTY`] capability (unless overridden)
-/// 3. Apply platform-specific detection logic (macOS, Linux, Windows)
-/// 4. Fallback to generic environment variable checks
+/// The function implements a prioritized heuristic strategy:
+/// 1. [`NO_COLOR`] or [`TERM=dumb`] → [`NoColor`] (always wins)
+/// 2. [`FORCE_COLOR`] (overrides TTY check). Per the spec: `1`/`2` → [`Ansi256`], `3` or
+///    any other non-zero value → [`Truecolor`].
 ///
+/// 3. Not a [`TTY`] → [`NoColor`]
+/// 4. Platform-specific detection (macOS, Linux, Windows)
+/// 5. Generic env var fallback ([`COLORTERM`], [`TERM`], [`CLICOLOR`], CI)
+///
+/// [`Ansi256`]: ColorSupport::Ansi256
+/// [`CLICOLOR`]: https://bixense.com/clicolors/
+/// [`COLORTERM`]: https://github.com/termstandard/colors#checking-for-colorterm
+/// [`FORCE_COLOR`]: https://force-color.org/
+/// [`NO_COLOR`]: https://no-color.org/
+/// [`NoColor`]: ColorSupport::NoColor
+/// [`TERM=dumb`]: https://man7.org/linux/man-pages/man7/term.7.html
+/// [`TERM_PROGRAM`]: https://github.com/termstandard/colors#querying-the-terminal
+/// [`TERM`]: https://man7.org/linux/man-pages/man7/term.7.html
+/// [`Truecolor`]: ColorSupport::Truecolor
 /// [`TTY`]: https://en.wikipedia.org/wiki/Tty_(Unix)
 #[must_use]
 pub fn examine_env_vars_to_determine_color_support(stream: Stream) -> ColorSupport {
-    if helpers::env_no_color()
-        || env::var("TERM").is_ok_and(|v| v == "dumb")
-        || !(helpers::is_a_tty(stream)
-            || env::var("IGNORE_IS_TERMINAL").is_ok_and(|v| v != "0"))
-    {
+    // 1. NO_COLOR always wins (https://no-color.org/).
+    let is_term_dumb = env::var("TERM").is_ok_and(|v| v == "dumb");
+    if helpers::env_no_color() || is_term_dumb {
         return ColorSupport::NoColor;
     }
 
-    if env::consts::OS == "macos" {
-        if env::var("TERM_PROGRAM").is_ok_and(|v| v == "Apple_Terminal")
-            && env::var("TERM").is_ok_and(|term| helpers::check_256_color(&term))
-        {
-            return ColorSupport::Ansi256;
+    // 2. FORCE_COLOR overrides TTY detection (https://force-color.org/).
+    if let Ok(val) = env::var("FORCE_COLOR") {
+        return match val.as_str() {
+            "0" => ColorSupport::NoColor,
+            "1" | "2" => ColorSupport::Ansi256,
+            _ => ColorSupport::Truecolor, // "3" or any other non-zero
+        };
+    }
+
+    // 3. Non-TTY environments get no color.
+    let tty_status = match stream {
+        Stream::Stdout => is_tty_stdout(),
+        Stream::Stderr => is_tty_stderr(),
+    };
+    if tty_status == TtyStatus::IsNotTty {
+        return ColorSupport::NoColor;
+    }
+
+    // 4. Platform-specific detection logic.
+    match env::consts::OS {
+        "macos" => {
+            let is_apple_terminal =
+                env::var("TERM_PROGRAM").is_ok_and(|v| v == "Apple_Terminal");
+            let is_256_color =
+                env::var("TERM").is_ok_and(|term| helpers::check_256_color(&term));
+            if is_apple_terminal && is_256_color {
+                return ColorSupport::Ansi256;
+            }
+
+            let is_iterm = env::var("TERM_PROGRAM").is_ok_and(|v| v == "iTerm.app");
+            let is_truecolor = env::var("COLORTERM").is_ok_and(|v| v == "truecolor");
+            if is_iterm || is_truecolor {
+                return ColorSupport::Truecolor;
+            }
         }
-
-        if env::var("TERM_PROGRAM").is_ok_and(|v| v == "iTerm.app")
-            || env::var("COLORTERM").is_ok_and(|v| v == "truecolor")
-        {
-            return ColorSupport::Truecolor;
+        "windows" => return ColorSupport::Truecolor,
+        // Unix/Linux/BSD: check COLORTERM for truecolor support.
+        _ => {
+            let is_truecolor = env::var("COLORTERM").is_ok_and(|v| v == "truecolor");
+            if is_truecolor {
+                return ColorSupport::Truecolor;
+            }
         }
     }
 
-    if env::consts::OS == "linux" && env::var("COLORTERM").is_ok_and(|v| v == "truecolor")
-    {
-        return ColorSupport::Truecolor;
-    }
+    // 5. Final fallback: Generic environment variable checks.
+    let colorterm_is_set = env::var("COLORTERM").is_ok();
+    let term_is_ansi =
+        env::var("TERM").is_ok_and(|term| helpers::check_ansi_color(&term));
+    let clicolor_is_set = env::var("CLICOLOR").is_ok_and(|v| v != "0");
+    let is_ci_env = is_ci::uncached();
 
-    if env::consts::OS == "windows" {
-        return ColorSupport::Truecolor;
-    }
-
-    if env::var("COLORTERM").is_ok()
-        || env::var("TERM").is_ok_and(|term| helpers::check_ansi_color(&term))
-        || env::var("CLICOLOR").is_ok_and(|v| v != "0")
-        || is_ci::uncached()
-    {
+    if colorterm_is_set || term_is_ansi || clicolor_is_set || is_ci_env {
         return ColorSupport::Truecolor;
     }
 
@@ -571,16 +609,8 @@ mod convert_between_color_and_i8 {
 }
 
 mod helpers {
-    use super::{Stream, as_str, env};
-
-    #[must_use]
-    pub fn is_a_tty(stream: Stream) -> bool {
-        use std::io::IsTerminal;
-        match stream {
-            Stream::Stdout => std::io::stdout().is_terminal(),
-            Stream::Stderr => std::io::stderr().is_terminal(),
-        }
-    }
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     #[must_use]
     pub fn check_256_color(term: &str) -> bool {

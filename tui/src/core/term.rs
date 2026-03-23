@@ -2,6 +2,7 @@
 
 // cspell:words isatty winsize tcgetwinsize
 
+#[allow(unused_imports)]
 #[cfg(unix)]
 use crate::tui::terminal_lib_backends::{TERMINAL_LIB_BACKEND, TerminalLibBackend};
 use crate::{ColWidth, Size, height, width};
@@ -18,38 +19,87 @@ pub const DEFAULT_WIDTH: u16 = 80;
 // │ backends use std::io::IsTerminal.                                            │
 // └──────────────────────────────────────────────────────────────────────────────┘
 
-#[cfg(unix)]
-fn is_tty_stdin() -> bool {
-    match TERMINAL_LIB_BACKEND {
-        TerminalLibBackend::Crossterm => std::io::stdin().is_terminal(),
-        TerminalLibBackend::DirectToAnsi => rustix::termios::isatty(std::io::stdin()),
+#[derive(Debug, PartialEq, Clone, Copy)]
+pub enum TtyStatus {
+    IsTty,
+    IsNotTty,
+}
+
+#[must_use]
+pub fn is_tty_stdin() -> TtyStatus {
+    #[cfg(unix)]
+    {
+        let result = match TERMINAL_LIB_BACKEND {
+            TerminalLibBackend::Crossterm => std::io::stdin().is_terminal(),
+            TerminalLibBackend::DirectToAnsi => rustix::termios::isatty(std::io::stdin()),
+        };
+        if result {
+            TtyStatus::IsTty
+        } else {
+            TtyStatus::IsNotTty
+        }
+    }
+    #[cfg(not(unix))]
+    {
+        if std::io::stdin().is_terminal() {
+            TtyStatus::IsTty
+        } else {
+            TtyStatus::IsNotTty
+        }
     }
 }
 
-#[cfg(not(unix))]
-fn is_tty_stdin() -> bool { std::io::stdin().is_terminal() }
-
-#[cfg(unix)]
-fn is_tty_stdout() -> bool {
-    match TERMINAL_LIB_BACKEND {
-        TerminalLibBackend::Crossterm => std::io::stdout().is_terminal(),
-        TerminalLibBackend::DirectToAnsi => rustix::termios::isatty(std::io::stdout()),
+#[must_use]
+pub fn is_tty_stdout() -> TtyStatus {
+    #[cfg(unix)]
+    {
+        let result = match TERMINAL_LIB_BACKEND {
+            TerminalLibBackend::Crossterm => std::io::stdout().is_terminal(),
+            TerminalLibBackend::DirectToAnsi => {
+                rustix::termios::isatty(std::io::stdout())
+            }
+        };
+        if result {
+            TtyStatus::IsTty
+        } else {
+            TtyStatus::IsNotTty
+        }
+    }
+    #[cfg(not(unix))]
+    {
+        if std::io::stdout().is_terminal() {
+            TtyStatus::IsTty
+        } else {
+            TtyStatus::IsNotTty
+        }
     }
 }
 
-#[cfg(not(unix))]
-fn is_tty_stdout() -> bool { std::io::stdout().is_terminal() }
-
-#[cfg(unix)]
-fn is_tty_stderr() -> bool {
-    match TERMINAL_LIB_BACKEND {
-        TerminalLibBackend::Crossterm => std::io::stderr().is_terminal(),
-        TerminalLibBackend::DirectToAnsi => rustix::termios::isatty(std::io::stderr()),
+#[must_use]
+pub fn is_tty_stderr() -> TtyStatus {
+    #[cfg(unix)]
+    {
+        let result = match TERMINAL_LIB_BACKEND {
+            TerminalLibBackend::Crossterm => std::io::stderr().is_terminal(),
+            TerminalLibBackend::DirectToAnsi => {
+                rustix::termios::isatty(std::io::stderr())
+            }
+        };
+        if result {
+            TtyStatus::IsTty
+        } else {
+            TtyStatus::IsNotTty
+        }
+    }
+    #[cfg(not(unix))]
+    {
+        if std::io::stderr().is_terminal() {
+            TtyStatus::IsTty
+        } else {
+            TtyStatus::IsNotTty
+        }
     }
 }
-
-#[cfg(not(unix))]
-fn is_tty_stderr() -> bool { std::io::stderr().is_terminal() }
 
 #[must_use]
 pub fn get_terminal_width_no_default() -> Option<ColWidth> {
@@ -70,50 +120,44 @@ pub fn get_terminal_width() -> ColWidth {
 
 /// Gets the terminal size.
 ///
-/// Uses [`crossterm`] for the Crossterm backend, or [`rustix`] [`tcgetwinsize`] syscall
-/// for the [`DirectToAnsi`] backend.
+/// Uses [`crossterm`] for the [`Crossterm backend`], or [`rustix`] [`tcgetwinsize`]
+/// syscall for the [`DirectToAnsi`] backend. On non-Unix platforms (Windows), this always
+/// uses [`Crossterm backend`] regardless of [`TERMINAL_LIB_BACKEND`] since
+/// [`DirectToAnsi`] is Linux-only.
 ///
 /// # Errors
 ///
 /// Returns an error if:
-/// - The terminal size cannot be determined
-/// - The terminal is not available or not a TTY
+/// - The terminal size cannot be determined.
+/// - The terminal is not available or not a [`TTY`].
 ///
+/// [`Crossterm backend`]: crate::TerminalLibBackend::Crossterm
+/// [`crossterm`]: crossterm
 /// [`DirectToAnsi`]: mod@crate::direct_to_ansi
+/// [`rustix`]: rustix
 /// [`tcgetwinsize`]: fn@rustix::termios::tcgetwinsize
-#[cfg(unix)]
+/// [`TERMINAL_LIB_BACKEND`]: crate::TERMINAL_LIB_BACKEND
+/// [`TTY`]: https://en.wikipedia.org/wiki/Tty_(Unix)
 pub fn get_size() -> miette::Result<Size> {
-    match TERMINAL_LIB_BACKEND {
-        TerminalLibBackend::Crossterm => {
-            let (columns, rows) = crossterm::terminal::size().into_diagnostic()?;
-            Ok(width(columns) + height(rows))
-        }
-        TerminalLibBackend::DirectToAnsi => {
-            let winsize = rustix::termios::tcgetwinsize(std::io::stdout())
-                .map_err(|e| miette::miette!("tcgetwinsize failed: {}", e))?;
-            Ok(width(winsize.ws_col) + height(winsize.ws_row))
+    #[cfg(unix)]
+    {
+        match TERMINAL_LIB_BACKEND {
+            TerminalLibBackend::Crossterm => {
+                let (columns, rows) = crossterm::terminal::size().into_diagnostic()?;
+                Ok(width(columns) + height(rows))
+            }
+            TerminalLibBackend::DirectToAnsi => {
+                let winsize = rustix::termios::tcgetwinsize(std::io::stdout())
+                    .map_err(|e| miette::miette!("tcgetwinsize failed: {}", e))?;
+                Ok(width(winsize.ws_col) + height(winsize.ws_row))
+            }
         }
     }
-}
-
-/// Gets the terminal size.
-///
-/// # Errors
-///
-/// Returns an error if:
-/// - The terminal size cannot be determined
-/// - The terminal is not available or not a TTY
-///
-/// # Note
-///
-/// On non-Unix platforms (Windows), this always uses Crossterm regardless of
-/// [`TERMINAL_LIB_BACKEND`] since DirectToAnsi is Linux-only.
-///
-/// [`TERMINAL_LIB_BACKEND`]: crate::TERMINAL_LIB_BACKEND
-#[cfg(not(unix))]
-pub fn get_size() -> miette::Result<Size> {
-    let (columns, rows) = crossterm::terminal::size().into_diagnostic()?;
-    Ok(width(columns) + height(rows))
+    #[cfg(not(unix))]
+    {
+        let (columns, rows) = crossterm::terminal::size().into_diagnostic()?;
+        Ok(width(columns) + height(rows))
+    }
 }
 
 #[derive(Debug)]
@@ -128,22 +172,50 @@ pub enum StdoutIsPipedResult {
     StdoutIsNotPiped,
 }
 
-/// If you run `echo "test" | cargo run` the following will return true.
-/// More info: <https://unix.stackexchange.com/questions/597083/how-does-piping-affect-stdin>
+/// Returns [`StdinIsPiped`] when [`stdin`] is redirected (e.g., `echo "test" | cargo
+/// run`).
+///
+/// A pipe replaces the terminal [`fd`] with a pipe [`fd`], so "not a [`TTY`]" is
+/// equivalent to "piped". This function wraps [`is_tty_stdin()`] and inverts the
+/// interpretation.
+///
+/// See [this explanation] for how piping affects [`stdin`].
+///
+/// [`fd`]: https://man7.org/linux/man-pages/man2/open.2.html
+/// [`is_tty_stdin()`]: crate::is_tty_stdin
+/// [`stdin`]: std::io::stdin
+/// [`StdinIsPiped`]: StdinIsPipedResult::StdinIsPiped
+/// [`TTY`]: https://en.wikipedia.org/wiki/Tty_(Unix)
+/// [this explanation]:
+///     https://unix.stackexchange.com/questions/597083/how-does-piping-affect-stdin
 #[must_use]
 pub fn is_stdin_piped() -> StdinIsPipedResult {
-    if is_tty_stdin() {
+    if is_tty_stdin() == TtyStatus::IsTty {
         StdinIsPipedResult::StdinIsNotPiped
     } else {
         StdinIsPipedResult::StdinIsPiped
     }
 }
 
-/// If you run `cargo run | grep foo` the following will return true.
-/// More info: <https://unix.stackexchange.com/questions/597083/how-does-piping-affect-stdin>
+/// Returns [`StdoutIsPiped`] when [`stdout`] is redirected (e.g., `cargo run | grep
+/// foo`).
+///
+/// A pipe replaces the terminal [`fd`] with a pipe [`fd`], so "not a [`TTY`]" is
+/// equivalent to "piped". This function wraps [`is_tty_stdout()`] and inverts the
+/// interpretation.
+///
+/// See [this explanation] for how piping affects [`stdout`].
+///
+/// [`fd`]: https://man7.org/linux/man-pages/man2/open.2.html
+/// [`is_tty_stdout()`]: crate::is_tty_stdout
+/// [`stdout`]: std::io::stdout
+/// [`StdoutIsPiped`]: StdoutIsPipedResult::StdoutIsPiped
+/// [`TTY`]: https://en.wikipedia.org/wiki/Tty_(Unix)
+/// [this explanation]:
+///     https://unix.stackexchange.com/questions/597083/how-does-piping-affect-stdin
 #[must_use]
 pub fn is_stdout_piped() -> StdoutIsPipedResult {
-    if is_tty_stdout() {
+    if is_tty_stdout() == TtyStatus::IsTty {
         StdoutIsPipedResult::StdoutIsNotPiped
     } else {
         StdoutIsPipedResult::StdoutIsPiped
@@ -156,29 +228,41 @@ pub enum TTYResult {
     IsNotInteractive,
 }
 
-/// Returns [`TTYResult::IsInteractive`] if stdin is an interactive terminal (TTY).
+/// Returns [`TTYResult::IsInteractive`] if stdin is an interactive terminal ([`TTY`]).
 ///
 /// This is useful for checking if the program can receive interactive input from the
-/// user. For example, a terminal multiplexer needs stdin to be a TTY to read keystrokes.
+/// user. For example, a terminal multiplexer needs stdin to be a [`TTY`] to read
+/// keystrokes.
 ///
-/// Note: This only checks stdin. Use [`is_headless`] to check if *all* streams (stdin,
-/// stdout, stderr) are non-interactive, or [`is_output_interactive`] to check if output
-/// streams are interactive.
+/// Note: This only checks stdin. Use [`is_headless`] to check if *all* streams
+/// ([`stdin`], [`stdout`], [`stderr`]) are non-interactive, or [`is_output_interactive`]
+/// to check if output streams are interactive.
+///
+/// [`stderr`]: std::io::stderr
+/// [`stdin`]: std::io::stdin
+/// [`stdout`]: std::io::stdout
+/// [`TTY`]: https://en.wikipedia.org/wiki/Tty_(Unix)
 #[must_use]
 pub fn is_stdin_interactive() -> TTYResult {
-    if is_tty_stdin() {
+    if is_tty_stdin() == TtyStatus::IsTty {
         TTYResult::IsInteractive
     } else {
         TTYResult::IsNotInteractive
     }
 }
 
-/// Returns [`TTYResult::IsNotInteractive`] if stdin, stdout, and stderr are *all*
-/// non-interactive (not TTYs). This typically happens when running under `cargo test`
-/// or in other headless/batch environments.
+/// Returns [`TTYResult::IsNotInteractive`] if [`stdin`], [`stdout`], and [`stderr`] are
+/// *all* non-interactive (not [`TTY`]s). This typically happens when running under
+/// [`cargo test`] or in other headless/batch environments.
 ///
 /// Use this to detect fully non-interactive environments where no terminal I/O is
 /// possible.
+///
+/// [`cargo test`]: https://doc.rust-lang.org/cargo/commands/cargo-test.html
+/// [`stderr`]: std::io::stderr
+/// [`stdin`]: std::io::stdin
+/// [`stdout`]: std::io::stdout
+/// [`TTY`]: https://en.wikipedia.org/wiki/Tty_(Unix)
 #[must_use]
 pub fn is_headless() -> TTYResult {
     // Windows workaround: cargo redirects streams, causing false non-TTY detection.
@@ -188,28 +272,37 @@ pub fn is_headless() -> TTYResult {
         return TTYResult::IsInteractive;
     }
 
-    if !is_tty_stdin() && !is_tty_stdout() && !is_tty_stderr() {
+    if is_tty_stdin() == TtyStatus::IsNotTty
+        && is_tty_stdout() == TtyStatus::IsNotTty
+        && is_tty_stderr() == TtyStatus::IsNotTty
+    {
         TTYResult::IsNotInteractive
     } else {
         TTYResult::IsInteractive
     }
 }
 
-/// Returns [`TTYResult::IsInteractive`] if both stdout and stderr are interactive TTYs.
+/// Returns [`TTYResult::IsInteractive`] if both [`stdout`] and [`stderr`] are interactive
+/// [`TTY`]s.
 ///
 /// This is useful for checking if the program can display output to an interactive
-/// terminal. Returns [`TTYResult::IsNotInteractive`] if *either* stdout or stderr is
-/// redirected or piped.
+/// terminal. Returns [`TTYResult::IsNotInteractive`] if *either* [`stdout`] or [`stderr`]
+/// is redirected or piped.
 ///
-/// Example scenario where this returns `IsNotInteractive`:
+/// Example scenario where this returns [`TTYResult::IsNotInteractive`]:
 /// ```bash
 /// command >file 2>&1
 /// ```
-/// Here stdin may still be a TTY, but output streams are redirected to a file.
+/// Here [`stdin`] may still be a [`TTY`], but output streams are redirected to a file.
+///
+/// [`stderr`]: std::io::stderr
+/// [`stdin`]: std::io::stdin
+/// [`stdout`]: std::io::stdout
+/// [`TTY`]: https://en.wikipedia.org/wiki/Tty_(Unix)
 #[must_use]
 pub fn is_output_interactive() -> TTYResult {
     // If either stdout or stderr is not a TTY, consider output non-interactive.
-    if !is_tty_stdout() || !is_tty_stderr() {
+    if is_tty_stdout() == TtyStatus::IsNotTty || is_tty_stderr() == TtyStatus::IsNotTty {
         TTYResult::IsNotInteractive
     } else {
         TTYResult::IsInteractive
