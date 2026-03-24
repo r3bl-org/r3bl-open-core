@@ -232,7 +232,7 @@
 /// [`PtyTestContext`]: crate::PtyTestContext
 /// [`PtyTestWatchdog`]: crate::PtyTestWatchdog
 /// [`raw_mode_integration_tests`]:
-///     mod@crate::terminal_raw_mode::integration_tests
+///     mod@crate::terminal_raw_mode::raw_mode_integration_tests
 /// [`Raw`]: PtyTestMode::Raw
 /// [`read_line_state()`]: crate::SingleThreadSafeControlledChild::read_line_state
 /// [`SingleThreadSafeControlledChild`]: crate::SingleThreadSafeControlledChild

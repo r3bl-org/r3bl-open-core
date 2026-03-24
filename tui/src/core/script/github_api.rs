@@ -52,19 +52,14 @@ pub async fn try_get_latest_release_tag_from_github(
 #[cfg(test)]
 mod tests_github_api {
     use super::*;
-    use crate::{TTYResult, is_output_interactive, retry_until_success_test_async};
+    use crate::retry_until_success_test_async;
     use std::time::Duration;
     use tokio::time::timeout;
 
     const TIMEOUT: Duration = Duration::from_secs(1);
 
-    /// Do not run this in CI/CD since it makes API calls to github.com.
     #[tokio::test]
     async fn test_get_latest_tag_from_github() {
-        if let TTYResult::IsNotInteractive = is_output_interactive() {
-            return;
-        }
-
         let org = "cloudflare";
         let repo = "cfssl";
 

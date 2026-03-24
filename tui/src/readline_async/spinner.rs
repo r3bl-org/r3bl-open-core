@@ -1,9 +1,9 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use crate::{InlineString, LineStateControlSignal, OutputDevice, SafeBool,
-            SafeInlineString, SharedWriter, SpinnerStyle, StdMutex, StdoutIsPipedResult,
-            TTYResult, contains_ansi_escape_sequence, get_terminal_width, is_headless,
-            is_stdout_piped, spinner_print, spinner_render};
+            SafeInlineString, SharedWriter, SpinnerStyle, StdMutex,
+            TTYResult, contains_ansi_escape_sequence, get_terminal_width,
+            is_output_interactive, spinner_print, spinner_render};
 use std::{sync::Arc, time::Duration};
 use tokio::{sync::broadcast, time::interval};
 
@@ -87,11 +87,9 @@ impl Spinner {
     ///
     /// # Returns
     /// 1. This will return an error if the task is already running.
-    /// 2. If the terminal is not fully interactive then it will return [None], and won't
-    ///    start the task. This is when the terminal is not considered fully interactive:
+    /// 2. If the terminal is not interactive then it will return [None], and won't
+    ///    start the task. This is when the terminal is not considered interactive:
     ///    - `stdout` is piped, eg: `echo "foo" | cargo run --example spinner`.
-    ///    - or all three `stdin`, `stdout`, `stderr` are not `is_tty`, eg when running in
-    ///      `cargo test`.
     /// 3. Otherwise, it will start the task and return a [Spinner] instance.
     ///
     /// More info on terminal piping:
@@ -112,11 +110,8 @@ impl Spinner {
         output_device: OutputDevice,
         maybe_shared_writer: Option<SharedWriter>,
     ) -> miette::Result<Option<Spinner>> {
-        // Early return if the terminal is not fully interactive.
-        if let StdoutIsPipedResult::StdoutIsPiped = is_stdout_piped() {
-            return Ok(None);
-        }
-        if let TTYResult::IsNotInteractive = is_headless() {
+        // Early return if the terminal is not interactive.
+        if let TTYResult::IsNotInteractive = is_output_interactive() {
             return Ok(None);
         }
 

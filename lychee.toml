@@ -31,4 +31,6 @@ exclude = [
     "^https?://via\\.placeholder\\.com/",
     # YouTube blocks automated link checkers (returns 404 to bots).
     "^https?://(www\\.)?youtu(\\.be|be\\.com)/",
+    # GitHub API template URLs with {placeholders} that lychee URL-encodes to %7B...%7D.
+    "api\\.github\\.com/repos/.*%7B",
 ]

@@ -3,8 +3,9 @@
 use crate::{ChannelCapacity, CommonResult, CursorPositionBoundsStatus, GCStringOwned,
             InputDevice, LineStateControlSignal, OutputDevice,
             READLINE_ASYNC_INITIAL_PROMPT_DISPLAY_CURSOR_SHOW_DELAY, Readline,
-            ReadlineEvent, SegIndex, SharedWriter, StdinIsPipedResult,
-            StdoutIsPipedResult, TTYResult, is_headless, is_stdin_piped, is_stdout_piped};
+            ReadlineEvent, SegIndex, SharedWriter, TTYResult,
+            emit_stderr_redirection_disclaimer, is_input_interactive,
+            is_output_interactive};
 use futures_util::FutureExt;
 use miette::IntoDiagnostic;
 use tokio::sync::broadcast;
@@ -118,12 +119,10 @@ impl ReadlineAsyncContext {
     ///   [`ChannelCapacity`] documentation for detailed guidance.
     ///
     /// # Returns
-    /// 1. If the terminal is not fully interactive, then it will return [None], and won't
-    ///    create the [Readline]. This is when the terminal is not considered fully
+    /// 1. If the terminal is not interactive, then it will return [None], and won't
+    ///    create the [Readline]. This is when the terminal is not considered
     ///    interactive:
-    ///    - `stdout` is piped, e.g., `echo "foo" | cargo run --example spinner`.
-    ///    - or all three `stdin`, `stdout`, `stderr` are not `is_tty`, e.g., when running
-    ///      in `cargo test`.
+    ///    - `stdin` or `stdout` is piped, e.g., `echo "foo" | cargo run --example spinner`.
     /// 2. Otherwise, it will return a [`ReadlineAsyncContext`] instance.
     /// 3. If any issues arise when putting the terminal into raw mode, or getting the
     ///    terminal size, it will return an error.
@@ -143,15 +142,14 @@ impl ReadlineAsyncContext {
         read_line_prompt: Option<impl AsRef<str>>,
         channel_capacity: Option<ChannelCapacity>,
     ) -> miette::Result<Option<ReadlineAsyncContext>> {
-        if let StdinIsPipedResult::StdinIsPiped = is_stdin_piped() {
+        if let TTYResult::IsNotInteractive = is_input_interactive() {
             return Ok(None);
         }
-        if let StdoutIsPipedResult::StdoutIsPiped = is_stdout_piped() {
+        if let TTYResult::IsNotInteractive = is_output_interactive() {
             return Ok(None);
         }
-        if let TTYResult::IsNotInteractive = is_headless() {
-            return Ok(None);
-        }
+
+        emit_stderr_redirection_disclaimer();
 
         let output_device = OutputDevice::new_stdout();
         let input_device = InputDevice::default();

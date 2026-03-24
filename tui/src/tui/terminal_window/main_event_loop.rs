@@ -9,7 +9,8 @@ use crate::{Ansi256GradientIndex, ColorWheel, ColorWheelConfig, ColorWheelSpeed,
             InputEvent, LockedOutputDevice, MinSize, OffscreenBufferPool, OutputDevice,
             RawMode, RenderOpCommon, RenderOpFlush, RenderOpIR, RenderPipeline, Size,
             SufficientSize, TelemetryAtomHint, TerminalWindowMainThreadSignal,
-            TextColorizationPolicy, ZOrder, ch, col, glyphs, height, row,
+            TextColorizationPolicy, ZOrder, ch, col, emit_stderr_redirection_disclaimer,
+            glyphs, height, row,
             telemetry::{Telemetry, telemetry_default_constants},
             width};
 use smallvec::smallvec;
@@ -210,6 +211,8 @@ where
             mpsc::channel::<TerminalWindowMainThreadSignal<AS>>(
                 DefaultSize::MainThreadSignalChannelBufferSize.into(),
             );
+
+        emit_stderr_redirection_disclaimer();
 
         // Initialize global data.
         let global_data = GlobalData::try_to_create_instance(
@@ -885,7 +888,7 @@ mod tests {
                 OutputDeviceExt, PixelChar, RenderOpCommon, RenderOpIRVec,
                 RenderPipeline, SpecialKey, TTYResult, TerminalWindowMainThreadSignal,
                 TextColorizationPolicy, TuiStyle, TuiStyleAttribs, ZOrder, ch, col,
-                defaults::get_default_gradient_stops, height, is_headless,
+                defaults::get_default_gradient_stops, height, is_fully_interactive,
                 is_output_interactive, main_event_loop_impl,
                 render_tui_styled_texts_into, tui_style_attrib, width};
     use smallvec::smallvec;
@@ -980,7 +983,7 @@ mod tests {
 
         // This is for CI/CD environment. It does not support truecolor, and degrades to
         // ANSI 256 colors
-        if let TTYResult::IsNotInteractive = is_headless() {
+        if let TTYResult::IsNotInteractive = is_fully_interactive() {
             // Check pixel char at 4 x 7.
             {
                 let PixelChar::PlainText {

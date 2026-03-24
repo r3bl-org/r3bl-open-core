@@ -49,7 +49,7 @@
 
 use r3bl_tui::{core::{get_size,
                       pty_mux::{PTYMux, Process},
-                      term::{TTYResult, is_stdin_interactive},
+                      term::{TTYResult, is_input_interactive, is_output_interactive},
                       try_initialize_logging_global},
                set_mimalloc_in_main};
 
@@ -62,7 +62,9 @@ async fn main() -> miette::Result<()> {
     tracing::debug!("Starting PTYMux Example");
 
     // Check if running in interactive terminal.
-    if is_stdin_interactive() == TTYResult::IsNotInteractive {
+    if is_input_interactive() == TTYResult::IsNotInteractive
+        || is_output_interactive() == TTYResult::IsNotInteractive
+    {
         eprintln!("❌ This example requires an interactive terminal to run.");
         eprintln!(
             "   Please run directly in a terminal, not through pipes or non-TTY environments."

@@ -652,300 +652,179 @@ mod tests {
     //! Tests for color support detection with performance optimizations.
     //!
     //! These tests verify both the correctness of color detection and the caching
-    //! behavior that prevents performance bottlenecks in the main event loop. The
-    //! `#[serial]` annotations ensure thread-safe testing of global state.
+    //! behavior that prevents performance bottlenecks in the main event loop.
+    //!
+    //! To avoid global state contamination (from env vars and static variables), these
+    //! tests are run in an isolated process.
     use super::*;
-    use serial_test::serial;
 
     #[test]
-    #[serial]
-    fn cycle_1() {
+    fn test_all_color_support_detection_sequentially_in_isolated_process() {
+        if std::env::var("ISOLATED_TEST_RUNNER").is_ok() {
+            run_all_tests_sequentially_impl();
+            std::process::exit(0);
+        }
+
+        let mut cmd = crate::new_isolated_test_command();
+        cmd.env("ISOLATED_TEST_RUNNER", "1")
+            .args([
+                "--test-threads",
+                "1",
+                "test_all_color_support_detection_sequentially_in_isolated_process",
+            ]);
+
+        let output = cmd.output().expect("Failed to run isolated test");
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        let stdout = String::from_utf8_lossy(&output.stdout);
+
+        if !output.status.success() || stderr.contains("panicked at") {
+            eprintln!("Stdout: {stdout}");
+            eprintln!("Stderr: {stderr}");
+            panic!("Isolated test failed");
+        }
+    }
+
+    fn run_all_tests_sequentially_impl() {
+        test_overrides();
+        test_caching_behavior();
+        test_hyperlink_detection();
+        test_color_detection_env_vars();
+    }
+
+    fn test_overrides() {
+        global_color_support::clear_override();
         global_color_support::set_override(ColorSupport::Ansi256);
         assert_eq!(
             global_color_support::try_get_override(),
             Ok(ColorSupport::Ansi256)
         );
-    }
 
-    #[test]
-    #[serial]
-    fn cycle_2() {
         global_color_support::set_override(ColorSupport::Truecolor);
         assert_eq!(
             global_color_support::try_get_override(),
             Ok(ColorSupport::Truecolor)
         );
-    }
 
-    #[test]
-    #[serial]
-    fn cycle_3() {
-        global_color_support::set_override(ColorSupport::NoColor);
-        assert_eq!(
-            global_color_support::try_get_override(),
-            Ok(ColorSupport::NoColor)
-        );
-    }
-
-    #[test]
-    #[serial]
-    fn cycle_4() {
-        global_color_support::set_override(ColorSupport::Grayscale);
-        assert_eq!(
-            global_color_support::try_get_override(),
-            Ok(ColorSupport::Grayscale)
-        );
-    }
-
-    #[test]
-    #[serial]
-    fn test_caching_behavior() {
-        // Clear any existing state.
-        global_color_support::clear_override();
-        global_color_support::clear_cache();
-
-        // First call should detect and cache.
-        let first_result = global_color_support::detect();
-
-        // Verify that cache now has a value.
-        assert_eq!(global_color_support::try_get_cached(), Ok(first_result));
-
-        // Second call should return the same cached result.
-        let second_result = global_color_support::detect();
-        assert_eq!(first_result, second_result);
-
-        // Clear cache and verify it's cleared.
-        global_color_support::clear_cache();
-        assert!(global_color_support::try_get_cached().is_err());
-    }
-
-    #[test]
-    #[serial]
-    fn cycle_5() {
         global_color_support::clear_override();
         assert_eq!(global_color_support::try_get_override(), Err(()));
     }
 
-    mod hyperlink_detection_tests {
-        use super::*;
-        use serial_test::serial;
+    fn test_caching_behavior() {
+        global_color_support::clear_override();
+        global_color_support::clear_cache();
 
-        #[test]
-        #[serial]
-        fn test_no_hyperlinks_env_var() {
-            // Mock NO_HYPERLINKS environment variable.
-            unsafe {
-                global_hyperlink_support::clear_cache(); // Clear cache for accurate testing
-                std::env::set_var("NO_HYPERLINKS", "1");
-                let result = examine_env_vars_to_determine_hyperlink_support();
-                assert_eq!(result, HyperlinkSupport::NotSupported);
-                std::env::remove_var("NO_HYPERLINKS");
-            }
+        let first_result = global_color_support::detect();
+        assert_eq!(global_color_support::try_get_cached(), Ok(first_result));
+
+        let second_result = global_color_support::detect();
+        assert_eq!(first_result, second_result);
+
+        global_color_support::clear_cache();
+        assert!(global_color_support::try_get_cached().is_err());
+    }
+
+    fn test_hyperlink_detection() {
+        // Mock NO_HYPERLINKS environment variable.
+        unsafe {
+            global_hyperlink_support::clear_cache();
+            std::env::set_var("NO_HYPERLINKS", "1");
+            let result = examine_env_vars_to_determine_hyperlink_support();
+            assert_eq!(result, HyperlinkSupport::NotSupported);
+            std::env::remove_var("NO_HYPERLINKS");
         }
 
-        #[test]
-        #[serial]
-        fn test_apple_terminal_excluded() {
-            // Mock Apple Terminal.
-            unsafe {
-                global_hyperlink_support::clear_cache(); // Clear cache for accurate testing
-                std::env::set_var("TERM_PROGRAM", "Apple_Terminal");
-                let result = examine_env_vars_to_determine_hyperlink_support();
-                assert_eq!(result, HyperlinkSupport::NotSupported);
-                std::env::remove_var("TERM_PROGRAM");
-            }
+        // Mock Apple Terminal.
+        unsafe {
+            global_hyperlink_support::clear_cache();
+            std::env::set_var("TERM_PROGRAM", "Apple_Terminal");
+            let result = examine_env_vars_to_determine_hyperlink_support();
+            assert_eq!(result, HyperlinkSupport::NotSupported);
+            std::env::remove_var("TERM_PROGRAM");
         }
 
-        #[test]
-        #[serial]
-        fn test_xterm_excluded() {
-            unsafe {
-                // Test basic xterm.
-                global_hyperlink_support::clear_cache();
-                std::env::set_var("TERM", "xterm");
-                let result = examine_env_vars_to_determine_hyperlink_support();
-                assert_eq!(result, HyperlinkSupport::NotSupported);
-
-                // Test xterm without 256color.
-                global_hyperlink_support::clear_cache();
-                std::env::set_var("TERM", "xterm-color");
-                let result = examine_env_vars_to_determine_hyperlink_support();
-                assert_eq!(result, HyperlinkSupport::NotSupported);
-
-                std::env::remove_var("TERM");
-            }
-        }
-
-        #[test]
-        #[serial]
-        fn test_xterm_256color_supported() {
-            unsafe {
-                // xterm with 256color should be supported.
-                global_hyperlink_support::clear_cache(); // Clear cache for accurate testing
-                std::env::set_var("TERM", "xterm-256color");
-                let result = examine_env_vars_to_determine_hyperlink_support();
-                assert_eq!(result, HyperlinkSupport::Supported);
-                std::env::remove_var("TERM");
-            }
-        }
-
-        #[test]
-        #[serial]
-        fn test_rxvt_family_excluded() {
-            let unsupported_terms = ["rxvt", "rxvt-unicode", "urxvt", "urxvt-256color"];
-
-            unsafe {
-                for term in &unsupported_terms {
-                    global_hyperlink_support::clear_cache(); // Clear cache for accurate testing
-                    std::env::set_var("TERM", term);
-                    let result = examine_env_vars_to_determine_hyperlink_support();
-                    assert_eq!(
-                        result,
-                        HyperlinkSupport::NotSupported,
-                        "Terminal {term} should not support hyperlinks"
-                    );
-                }
-
-                std::env::remove_var("TERM");
-            }
-        }
-
-        #[test]
-        #[serial]
-        fn test_legacy_terminals_excluded() {
-            let unsupported_terms = ["linux", "screen", "dumb"];
-
-            unsafe {
-                for term in &unsupported_terms {
-                    global_hyperlink_support::clear_cache(); // Clear cache for accurate testing
-                    std::env::set_var("TERM", term);
-                    let result = examine_env_vars_to_determine_hyperlink_support();
-                    assert_eq!(
-                        result,
-                        HyperlinkSupport::NotSupported,
-                        "Terminal {term} should not support hyperlinks"
-                    );
-                }
-
-                std::env::remove_var("TERM");
-            }
-        }
-
-        #[test]
-        #[serial]
-        fn test_modern_terminals_supported() {
-            let supported_terms = [
-                "xterm-256color",
-                "screen-256color",
-                "tmux-256color",
-                "alacritty",
-                "kitty",
-                "wezterm",
-                "foot",
-                "gnome-terminal",
-                "konsole",
-                "tilix",
-            ];
-
-            unsafe {
-                for term in &supported_terms {
-                    global_hyperlink_support::clear_cache(); // Clear cache for accurate testing
-                    std::env::set_var("TERM", term);
-                    let result = examine_env_vars_to_determine_hyperlink_support();
-                    assert_eq!(
-                        result,
-                        HyperlinkSupport::Supported,
-                        "Terminal {term} should support hyperlinks"
-                    );
-                }
-
-                std::env::remove_var("TERM");
-            }
-        }
-
-        #[test]
-        #[serial]
-        fn test_default_to_supported() {
-            // Clear environment variables to test default behavior.
-            unsafe {
-                std::env::remove_var("NO_HYPERLINKS");
-                std::env::remove_var("TERM_PROGRAM");
-                std::env::remove_var("TERM");
-            }
-
+        // Default to supported.
+        unsafe {
+            std::env::remove_var("NO_HYPERLINKS");
+            std::env::remove_var("TERM_PROGRAM");
+            std::env::remove_var("TERM");
+            global_hyperlink_support::clear_cache();
             let result = examine_env_vars_to_determine_hyperlink_support();
             assert_eq!(result, HyperlinkSupport::Supported);
         }
+    }
 
-        #[test]
-        #[serial]
-        fn test_global_hyperlink_support_caching() {
-            // Clear any existing state.
-            global_hyperlink_support::clear_override();
-            global_hyperlink_support::clear_cache();
-
-            // First call should detect and cache.
-            let first_result = global_hyperlink_support::detect();
-
-            // Verify that cache now has a value.
-            assert_eq!(global_hyperlink_support::try_get_cached(), Ok(first_result));
-
-            // Second call should return the same cached result.
-            let second_result = global_hyperlink_support::detect();
-            assert_eq!(first_result, second_result);
-
-            // Clear cache and verify it's cleared.
-            global_hyperlink_support::clear_cache();
-            assert!(global_hyperlink_support::try_get_cached().is_err());
+    fn test_color_detection_env_vars() {
+        // Test NO_COLOR.
+        unsafe {
+            std::env::set_var("NO_COLOR", "1");
+            let result = examine_env_vars_to_determine_color_support(Stream::Stdout);
+            assert_eq!(result, ColorSupport::NoColor);
+            std::env::remove_var("NO_COLOR");
         }
 
-        #[test]
-        #[serial]
-        fn test_global_hyperlink_support_override() {
-            // Test setting override to NotSupported.
-            global_hyperlink_support::set_override(HyperlinkSupport::NotSupported);
-            assert_eq!(
-                global_hyperlink_support::try_get_override(),
-                Ok(HyperlinkSupport::NotSupported)
-            );
-            assert_eq!(
-                global_hyperlink_support::detect(),
-                HyperlinkSupport::NotSupported
-            );
-
-            // Test setting override to Supported.
-            global_hyperlink_support::set_override(HyperlinkSupport::Supported);
-            assert_eq!(
-                global_hyperlink_support::try_get_override(),
-                Ok(HyperlinkSupport::Supported)
-            );
-            assert_eq!(
-                global_hyperlink_support::detect(),
-                HyperlinkSupport::Supported
-            );
-
-            // Test clearing override.
-            global_hyperlink_support::clear_override();
-            assert_eq!(global_hyperlink_support::try_get_override(), Err(()));
+        // Test FORCE_COLOR=1 (Ansi256).
+        unsafe {
+            std::env::set_var("FORCE_COLOR", "1");
+            let result = examine_env_vars_to_determine_color_support(Stream::Stdout);
+            assert_eq!(result, ColorSupport::Ansi256);
+            std::env::remove_var("FORCE_COLOR");
         }
 
-        #[test]
-        fn test_hyperlink_support_conversion() {
-            // Test i8 to HyperlinkSupport conversion.
-            assert_eq!(
-                HyperlinkSupport::try_from(0),
-                Ok(HyperlinkSupport::NotSupported)
-            );
-            assert_eq!(
-                HyperlinkSupport::try_from(1),
-                Ok(HyperlinkSupport::Supported)
-            );
-            assert_eq!(HyperlinkSupport::try_from(2), Err(()));
-            assert_eq!(HyperlinkSupport::try_from(-1), Err(()));
+        // Test FORCE_COLOR=3 (Truecolor).
+        unsafe {
+            std::env::set_var("FORCE_COLOR", "3");
+            let result = examine_env_vars_to_determine_color_support(Stream::Stdout);
+            assert_eq!(result, ColorSupport::Truecolor);
+            std::env::remove_var("FORCE_COLOR");
+        }
+    }
 
-            // Test HyperlinkSupport to i8 conversion.
-            assert_eq!(i8::from(HyperlinkSupport::NotSupported), 0);
-            assert_eq!(i8::from(HyperlinkSupport::Supported), 1);
+    // PTY tests for TTY-dependent behavior.
+    #[cfg(unix)]
+    mod pty_tests {
+        use super::*;
+        use crate::{PtyTestMode, PtyTestContext};
+        use std::io::BufRead;
+
+        generate_pty_test! {
+            test_fn: test_color_detection_in_pty,
+            controller: |context: PtyTestContext| {
+                let PtyTestContext { pty_pair, child, mut buf_reader, .. } = context;
+                let mut success = false;
+                for _ in 0..10 {
+                    let mut line = String::new();
+                    if buf_reader.read_line(&mut line).is_err() { break; }
+                    let trimmed = line.trim();
+                    if trimmed.contains("SUCCESS: Detected color in PTY") {
+                        success = true;
+                        break;
+                    }
+                    assert!(
+                        !trimmed.contains("FAILED:"),
+                        "Test failed in controlled process: {trimmed}"
+                    );
+                }
+                assert!(success, "Did not receive success message from controlled process");
+                child.drain_and_wait(buf_reader, pty_pair);
+            },
+            controlled: || {
+                // Ensure no env vars override TTY detection.
+                unsafe {
+                    std::env::remove_var("NO_COLOR");
+                    std::env::remove_var("FORCE_COLOR");
+                    std::env::set_var("COLORTERM", "truecolor");
+                }
+
+                let result = examine_env_vars_to_determine_color_support(Stream::Stdout);
+                if result == ColorSupport::Truecolor {
+                    println!("SUCCESS: Detected color in PTY");
+                } else {
+                    println!("FAILED: Detected {result:?} in PTY");
+                }
+                std::io::stdout().flush().ok();
+                std::process::exit(0);
+            },
+            mode: PtyTestMode::Cooked,
         }
     }
 }

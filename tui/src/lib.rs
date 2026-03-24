@@ -2559,7 +2559,7 @@
 //! [`integration_tests`]:
 //!     mod@crate::vt_100_terminal_input_parser::integration_tests
 //! [`raw_mode_integration_tests`]:
-//!     mod@crate::terminal_raw_mode::integration_tests
+//!     mod@crate::terminal_raw_mode::raw_mode_integration_tests
 //! [`test_pty_input_device`]:
 //!     mod@crate::vt_100_terminal_input_parser::integration_tests::pty_input_device_test
 //! [`DirectToAnsiInputDevice`]: crate::DirectToAnsiInputDevice

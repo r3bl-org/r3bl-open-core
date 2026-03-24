@@ -60,16 +60,16 @@ bugs and improve readability in related code discovered during the consolidation
 - [x] **Fix broken links**: `gemini-cli`, `crossterm` version tag in `raw_mode_unix.rs`.
 - [x] **Validation**: `./check.fish --full` passes with zero warnings.
 
-### Phase 2: Fix API and Logic Bugs
+### Phase 2: Fix API and Logic Bugs [COMPLETE]
 
 Fix the design flaws and the Windows `cargo run` bug.
 
-- [ ] **Fix Windows Workaround**:
+- [x] **Fix Windows Workaround**:
   - Move the `cargo run` environment check from `is_headless()` into the low-level
     `is_tty_*` helpers so all components (color, raw mode, spinner) benefit.
   - **Note**: This is a conscious decision to favor "out of the box" experience on
     Windows (ensuring color and TUI work under `cargo run`) over strict detection.
-- [ ] **Refactor API in `term.rs`**:
+- [x] **Refactor API in `term.rs`**:
   - **Module Documentation**: Add comprehensive mod-level rustdoc explaining the global
     terminal interactivity strategy:
     - `is_input_interactive()`: Can we read keystrokes? (`stdin`).
@@ -84,10 +84,10 @@ Fix the design flaws and the Windows `cargo run` bug.
   - **Add `emit_stderr_redirection_disclaimer()`**: A helper that, if `is_tty_stderr()`
     is `IsNotTty`, writes a one-line message to `stderr`.
   - Move all functions to return `TTYResult`.
-- [ ] **Deprecation/Cleanup**:
+- [x] **Deprecation/Cleanup**:
   - Remove `is_stdout_piped()`, `is_stdin_piped()`, `StdoutIsPipedResult`,
     `StdinIsPipedResult`, and `is_headless()`.
-- [ ] **Update Call Sites**:
+- [x] **Update Call Sites**:
   - `Spinner::try_start()`: Use `is_output_interactive()`.
   - `ReadlineAsyncContext::try_new()`: Use `is_input_interactive()` and
     `is_output_interactive()`. Call `emit_stderr_redirection_disclaimer()`.
