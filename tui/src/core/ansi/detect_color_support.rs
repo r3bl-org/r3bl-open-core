@@ -658,22 +658,16 @@ mod tests {
     //! tests are run in an isolated process.
     use super::*;
 
-    #[test]
-    fn test_all_color_support_detection_sequentially_in_isolated_process() {
-        if std::env::var("ISOLATED_TEST_RUNNER").is_ok() {
-            run_all_tests_sequentially_impl();
-            std::process::exit(0);
-        }
+    generate_isolated_process_test!(
+        test_all_color_support_detection_sequentially_in_isolated_process,
+        controller_fn,
+        run_all_tests_sequentially_impl,
+        std::process::Stdio::null(),
+        std::process::Stdio::piped(),
+        std::process::Stdio::piped()
+    );
 
-        let mut cmd = crate::new_isolated_test_command();
-        cmd.env("ISOLATED_TEST_RUNNER", "1")
-            .args([
-                "--test-threads",
-                "1",
-                "test_all_color_support_detection_sequentially_in_isolated_process",
-            ]);
-
-        let output = cmd.output().expect("Failed to run isolated test");
+    fn controller_fn(output: std::process::Output) {
         let stderr = String::from_utf8_lossy(&output.stderr);
         let stdout = String::from_utf8_lossy(&output.stdout);
 

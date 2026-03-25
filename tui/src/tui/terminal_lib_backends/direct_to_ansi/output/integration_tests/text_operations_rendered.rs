@@ -344,43 +344,32 @@ fn run_all_rendered_tests_sequentially() {
     global_color_support::clear_override();
 }
 
-/// Runs all rendered output tests in an isolated process.
-///
-/// This test coordinator spawns itself in a subprocess with `ISOLATED_RENDERED_TEST=1`,
-/// where it runs all rendered tests sequentially with controlled global state. This
-/// prevents race conditions when tests run in parallel.
-///
-/// # Why Process Isolation?
-///
-/// These tests use [`global_color_support::set_override`] which modifies a static mutable
-/// variable. When tests run in parallel:
-/// - Test A sets override → Test B sets override → Test A clears → Test B gets `NoColor`
-/// - `degrade_color(yellow, NoColor)` returns black (index 0) instead of yellow (index 3)
-///
-/// By running in an isolated process, we ensure the global state is controlled and cannot
-/// be affected by other tests.
-#[test]
-fn test_all_rendered_output_in_isolated_process() {
-    crate::suppress_wer_dialogs();
-    if std::env::var("ISOLATED_RENDERED_TEST").is_ok() {
-        // This is the actual test running in the isolated process.
-        run_all_rendered_tests_sequentially();
-        // If we reach here without errors, exit normally.
-        std::process::exit(0);
-    }
 
-    // This is the test coordinator - spawn the actual test in a new process.
-    let mut cmd = crate::new_isolated_test_command();
-    cmd.env("ISOLATED_RENDERED_TEST", "1")
-        .env("RUST_BACKTRACE", "1") // Get better error info.
-        .args([
-            "--test-threads",
-            "1",
-            "test_all_rendered_output_in_isolated_process",
-        ]);
+generate_isolated_process_test!(
+    /// Runs all rendered output tests in an isolated process.
+    ///
+    /// This test coordinator spawns itself in a subprocess with `ISOLATED_RENDERED_TEST=1`,
+    /// where it runs all rendered tests sequentially with controlled global state. This
+    /// prevents race conditions when tests run in parallel.
+    ///
+    /// # Why Process Isolation?
+    ///
+    /// These tests use [`global_color_support::set_override`] which modifies a static mutable
+    /// variable. When tests run in parallel:
+    /// - Test A sets override → Test B sets override → Test A clears → Test B gets `NoColor`
+    /// - `degrade_color(yellow, NoColor)` returns black (index 0) instead of yellow (index 3)
+    ///
+    /// By running in an isolated process, we ensure the global state is controlled and cannot
+    /// be affected by other tests.
+    test_all_rendered_output_in_isolated_process,
+    controller_fn,
+    run_all_rendered_tests_sequentially,
+    std::process::Stdio::null(),
+    std::process::Stdio::piped(),
+    std::process::Stdio::piped()
+);
 
-    let output = cmd.output().expect("Failed to run isolated test");
-
+fn controller_fn(output: std::process::Output) {
     // Check if the child process exited successfully or if there's a panic message.
     let stderr = String::from_utf8_lossy(&output.stderr).to_string();
 

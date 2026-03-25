@@ -284,25 +284,17 @@ fn run_all_restart_tests_sequentially() {
     test_subscribe_after_panic_recovery();
 }
 
-/// Process-isolated test entry point.
-#[test]
-fn test_rrt_restart_in_isolated_process() {
-    crate::suppress_wer_dialogs();
-    if std::env::var("ISOLATED_TEST_RUNNER").is_ok() {
-        run_all_restart_tests_sequentially();
-        std::process::exit(0);
-    }
+generate_isolated_process_test!(
+    /// Process-isolated test entry point.
+    test_rrt_restart_in_isolated_process,
+    controller_fn,
+    run_all_restart_tests_sequentially,
+    std::process::Stdio::null(),
+    std::process::Stdio::piped(),
+    std::process::Stdio::piped()
+);
 
-    let mut cmd = crate::new_isolated_test_command();
-    cmd.env("ISOLATED_TEST_RUNNER", "1")
-        .env("RUST_BACKTRACE", "1")
-        .args([
-            "--test-threads",
-            "1",
-            "test_rrt_restart_in_isolated_process",
-        ]);
-
-    let output = cmd.output().expect("Failed to run isolated test");
+fn controller_fn(output: std::process::Output) {
     let stderr = String::from_utf8_lossy(&output.stderr).to_string();
 
     if !output.status.success()

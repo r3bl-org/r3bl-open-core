@@ -3,42 +3,47 @@
 use crate::is_output_interactive;
 use std::io::Write;
 
-const ENV_VAR: &str = "R3BL_TEST_PIPED_STDOUT";
+generate_isolated_process_test!(
+    /// Verifies that [`is_output_interactive()`] returns [`IsNotInteractive`] when
+    /// [`stdout`] is a pipe (not a [`TTY`]).
+    ///
+    /// Run this test with:
+    /// ```bash
+    /// cargo test -- --nocapture test_piped_stdout_is_interactive
+    /// ```
+    ///
+    /// [`is_output_interactive()`]: crate::is_output_interactive
+    /// [`IsNotInteractive`]: TTYResult::IsNotInteractive
+    /// [`stdout`]: std::io::stdout
+    /// [`TTY`]: https://en.wikipedia.org/wiki/Tty_(Unix)
+    test_piped_stdout_is_interactive,
+    controller_fn,
+    controlled_fn,
+    std::process::Stdio::null(),
+    std::process::Stdio::piped(),
+    std::process::Stdio::piped()
+);
 
-/// Verifies that [`is_output_interactive()`] returns [`IsNotInteractive`] when
-/// stdout is a pipe (not a [`TTY`]).
-///
-/// [`is_output_interactive()`]: crate::is_output_interactive
-/// [`IsNotInteractive`]: TTYResult::IsNotInteractive
-/// [`TTY`]: https://en.wikipedia.org/wiki/Tty_(Unix)
-#[test]
-fn test_piped_stdout_is_not_interactive() {
-    if std::env::var(ENV_VAR).is_ok() {
-        // Controlled path: stdout is piped, report the result and exit.
-        let result = is_output_interactive();
-        println!("{result:?}");
-        std::io::stdout().flush().ok();
-        std::process::exit(0);
-    }
-
-    // Controller path: spawn self with piped streams.
-    let output = super::test_fixtures::spawn_self_with_piped_streams(
-        "test_piped_stdout_is_not_interactive",
-        ENV_VAR,
-    );
-
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    let stderr = String::from_utf8_lossy(&output.stderr);
+fn controller_fn(spawned_self_process_output: std::process::Output) {
+    let stdout = String::from_utf8_lossy(&spawned_self_process_output.stdout);
+    let stderr = String::from_utf8_lossy(&spawned_self_process_output.stderr);
     eprintln!("  child stdout: {stdout}");
     eprintln!("  child stderr: {stderr}");
 
+    let status = spawned_self_process_output.status;
     assert!(
-        output.status.success(),
-        "Child process failed with status: {:?}",
-        output.status
+        status.success(),
+        "Child process failed with status: {status:?}"
     );
     assert!(
         stdout.contains("IsNotInteractive"),
         "Expected IsNotInteractive in stdout, got: {stdout}"
     );
+}
+
+/// Controlled path: stdout is piped, report the result and exit.
+fn controlled_fn() {
+    let result = is_output_interactive();
+    println!("{result:?}");
+    std::io::stdout().flush().ok();
 }

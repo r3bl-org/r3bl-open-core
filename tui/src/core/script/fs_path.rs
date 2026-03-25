@@ -677,41 +677,31 @@ mod tests {
         test_try_change_directory_invalid_name();
     }
 
-    /// This test function runs all the tests that change the current working directory
-    /// in an isolated process. This ensures that the current working directory is
-    /// only changed in a completely isolated environment, eliminating any potential
-    /// side effects on other tests running in parallel.
-    ///
-    /// The issue is that when these tests are run by cargo test (in parallel in the SAME
-    /// process), it leads to undefined behavior and flaky test failures, since the
-    /// current working directory is changed per process, and all the tests are
-    /// running in parallel in the same process.
-    ///
-    /// By running all these tests in an isolated process, we ensure that any changes to
-    /// the current working directory are completely isolated and cannot affect other
-    /// tests.
-    #[test]
-    fn test_all_fs_path_functions_in_isolated_process() {
-        crate::suppress_wer_dialogs();
-        if std::env::var("ISOLATED_TEST_RUNNER").is_ok() {
-            // This is the actual test running in the isolated process.
-            run_all_fs_path_functions_sequentially_impl();
-            // If we reach here without errors, exit normally.
-            std::process::exit(0);
-        }
+    use crate::generate_isolated_process_test;
 
-        // This is the test coordinator - spawn the actual test in a new process.
-        let mut cmd = crate::new_isolated_test_command();
-        cmd.env("ISOLATED_TEST_RUNNER", "1")
-            .env("RUST_BACKTRACE", "1") // Get better error info
-            .args([
-                "--test-threads",
-                "1",
-                "test_all_fs_path_functions_in_isolated_process",
-            ]);
+    generate_isolated_process_test!(
+        /// This test function runs all the tests that change the current working directory
+        /// in an isolated process. This ensures that the current working directory is
+        /// only changed in a completely isolated environment, eliminating any potential
+        /// side effects on other tests running in parallel.
+        ///
+        /// The issue is that when these tests are run by cargo test (in parallel in the SAME
+        /// process), it leads to undefined behavior and flaky test failures, since the
+        /// current working directory is changed per process, and all the tests are
+        /// running in parallel in the same process.
+        ///
+        /// By running all these tests in an isolated process, we ensure that any changes to
+        /// the current working directory are completely isolated and cannot affect other
+        /// tests.
+        test_all_fs_path_functions_in_isolated_process,
+        controller_fn,
+        run_all_fs_path_functions_sequentially_impl,
+        std::process::Stdio::null(),
+        std::process::Stdio::piped(),
+        std::process::Stdio::piped()
+    );
 
-        let output = cmd.output().expect("Failed to run isolated test");
-
+    fn controller_fn(output: std::process::Output) {
         // Check if the child process exited successfully or if there's a panic message in
         // stderr
         let stderr = String::from_utf8_lossy(&output.stderr).to_string();

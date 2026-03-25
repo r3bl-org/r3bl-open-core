@@ -173,8 +173,7 @@ mod tests {
     use super::*;
     use crate::{script::git::{git_test_fixtures::helper_setup_git_repo_with_commit,
                               types::{BranchExists,
-                                      git_ui_strings::CURRENT_BRANCH_PREFIX,
-                                      test_config::TEST_ENV_ISOLATED_TEST_RUNNER}},
+                                      git_ui_strings::CURRENT_BRANCH_PREFIX}},
                 try_create_temp_dir_and_cd};
 
     async fn test_try_get_current_branch_name() -> miette::Result<()> {
@@ -488,28 +487,18 @@ mod tests {
         ok!(())
     }
 
-    #[tokio::test]
-    async fn test_branch_ops_in_isolated_process() {
-        crate::suppress_wer_dialogs();
-        if std::env::var(TEST_ENV_ISOLATED_TEST_RUNNER).is_ok() {
-            if let Err(err) = run_branch_ops_tests().await {
-                eprintln!("Test failed with error: {err}");
-                std::process::exit(1);
-            }
-            std::process::exit(0);
-        }
+    use crate::generate_async_isolated_process_test;
 
-        let mut cmd = crate::new_isolated_test_command();
-        cmd.env(TEST_ENV_ISOLATED_TEST_RUNNER, "1")
-            .env("RUST_BACKTRACE", "1")
-            .args([
-                "--test-threads",
-                "1",
-                "--nocapture",
-                "test_branch_ops_in_isolated_process",
-            ]);
+    generate_async_isolated_process_test!(
+        test_branch_ops_in_isolated_process,
+        controller_fn,
+        run_branch_ops_tests,
+        std::process::Stdio::null(),
+        std::process::Stdio::piped(),
+        std::process::Stdio::piped()
+    );
 
-        let output = cmd.output().expect("Failed to run isolated test");
+    fn controller_fn(output: std::process::Output) {
         let stderr = String::from_utf8_lossy(&output.stderr).to_string();
 
         if !output.status.success()

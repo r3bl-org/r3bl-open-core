@@ -56,7 +56,6 @@ mod tests {
                                                          GIT_CONFIG_USER_EMAIL,
                                                          GIT_CONFIG_USER_NAME},
                                        test_config::{TEST_EMAIL,
-                                                     TEST_ENV_ISOLATED_TEST_RUNNER,
                                                      TEST_GPG_SIGN_DISABLED,
                                                      TEST_INITIAL_COMMIT_MSG,
                                                      TEST_USER_NAME}}},
@@ -151,30 +150,18 @@ mod tests {
         ok!(())
     }
 
-    #[tokio::test]
-    async fn test_status_ops_in_isolated_process() {
-        crate::suppress_wer_dialogs();
-        if std::env::var(TEST_ENV_ISOLATED_TEST_RUNNER).is_ok() {
-            // This is the actual test running in the isolated process.
-            if let Err(err) = run_status_ops_tests().await {
-                eprintln!("Test failed with error: {err}");
-                std::process::exit(1);
-            }
-            std::process::exit(0);
-        }
+    use crate::generate_async_isolated_process_test;
 
-        // This is the test coordinator - spawn the actual test in a new process.
-        let mut cmd = crate::new_isolated_test_command();
-        cmd.env(TEST_ENV_ISOLATED_TEST_RUNNER, "1")
-            .env("RUST_BACKTRACE", "1")
-            .args([
-                "--test-threads",
-                "1",
-                "--nocapture",
-                "test_status_ops_in_isolated_process",
-            ]);
+    generate_async_isolated_process_test!(
+        test_status_ops_in_isolated_process,
+        controller_fn,
+        run_status_ops_tests,
+        std::process::Stdio::null(),
+        std::process::Stdio::piped(),
+        std::process::Stdio::piped()
+    );
 
-        let output = cmd.output().expect("Failed to run isolated test");
+    fn controller_fn(output: std::process::Output) {
         let stderr = String::from_utf8_lossy(&output.stderr).to_string();
 
         if !output.status.success()

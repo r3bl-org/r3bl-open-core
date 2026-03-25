@@ -5,6 +5,8 @@
 // Attach sources.
 #[macro_use] // Propagate macros textually (order matters).
 pub mod pty_test_fixtures;
+#[macro_use] // Propagate macros textually (order matters).
+pub mod isolated_process_fixtures;
 pub mod input_device_fixtures;
 pub mod output_device_fixtures;
 pub mod tcp_stream_fixtures;
@@ -13,6 +15,7 @@ pub mod retry;
 
 // Re-export.
 pub use input_device_fixtures::*;
+pub use isolated_process_fixtures::*;
 pub use output_device_fixtures::*;
 pub use pty_test_fixtures::*;
 pub use retry::*;
