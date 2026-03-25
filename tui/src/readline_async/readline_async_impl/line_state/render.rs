@@ -1,6 +1,7 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::core::LineState;
+use crate::{early_return_if_paused, ok};
 use crate::{CsiSequence, EraseDisplayMode, LineStateLiveness, StringLength, width};
 use std::io::{self, Write};
 

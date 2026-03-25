@@ -1,5 +1,6 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+use crate::{lock_output_device_as_mut, ok, queue_commands, queue_commands_no_lock};
 use crate::{CommonResult, LockedOutputDevice, OutputDevice, SharedWriter, SpinnerStyle};
 use crossterm::{cursor::{Hide, MoveToColumn, MoveToNextLine, MoveToPreviousLine, Show},
                 style::Print,

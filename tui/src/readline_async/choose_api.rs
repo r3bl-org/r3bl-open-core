@@ -1,11 +1,12 @@
 // Copyright (c) 2023-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{CalculateResizeHint, ColWidth, DEVELOPMENT_MODE, EventLoopResult, Header,
-            InputDevice, InputEvent, ItemsOwned, Key, KeyPress, KeyState,
-            LineStateControlSignal, ModifierKeysMask, OutputDevice, RowHeight,
-            SelectComponent, SharedWriter, SpecialKey, State, StyleSheet, ch,
-            enter_event_loop_async, get_size,
-            tui::md_parser::md_parser_constants::SPACE_CHAR};
+use crate::{CalculateResizeHint, CaretVerticalViewportLocation, ColWidth,
+            DEVELOPMENT_MODE, EventLoopResult, Header, InputDevice, InputEvent,
+            ItemsOwned, Key, KeyPress, KeyState, LineStateControlSignal,
+            ModifierKeysMask, OutputDevice, RowHeight, SelectComponent, SharedWriter,
+            SpecialKey, State, StyleSheet, ch, enter_event_loop_async, fg_green,
+            get_size, inline_string, tui::md_parser::md_parser_constants::SPACE_CHAR,
+            usize};
 use clap::ValueEnum;
 use miette::IntoDiagnostic;
 use std::pin::Pin;
@@ -95,9 +96,8 @@ impl DefaultIoDevices {
 ///
 /// # Errors
 ///
-/// Returns [`miette::Error`] if there are communication errors with the shared
-/// writer's line state control channel when sending pause/resume signals. This can occur
-/// when:
+/// Returns [`miette::Error`] if there are communication errors with the shared writer's
+/// line state control channel when sending pause/resume signals. This can occur when:
 /// * The shared writer's channel receiver has been dropped
 /// * The channel is closed or disconnected
 /// * There are other async communication failures with the
@@ -105,8 +105,8 @@ impl DefaultIoDevices {
 ///
 /// # Why return a pinned boxed future?
 ///
-/// This function returns a pinned boxed future ([`Box::pin`]; > 16KB clippy threshold) for safer
-/// memory management and better performance characteristics.
+/// This function returns a pinned boxed future ([`Box::pin`]; > 16KB clippy threshold)
+/// for safer memory management and better performance characteristics.
 ///
 /// ## Performance Benefits
 ///
@@ -126,9 +126,9 @@ impl DefaultIoDevices {
 ///
 /// ## Probably not needed for this function, but done for defensive programming
 ///
-/// It is probably not needed here, but is done just for defensive programming
-/// "better safe than sorry" for stack depth management. Generally, the returned
-/// pinned boxed future from this function is used in the following contexts:
+/// It is probably not needed here, but is done just for defensive programming "better
+/// safe than sorry" for stack depth management. Generally, the returned pinned boxed
+/// future from this function is used in the following contexts:
 /// - Single use: The future is created, awaited once, and then dropped - no loops or
 ///   repeated moves.
 /// - Not stored in a struct: The future isn't being stored in a data structure that would
@@ -227,8 +227,8 @@ pub fn choose<'a>(
 }
 
 mod keypress_handler_helper {
-    use crate::{CalculateResizeHint, CaretVerticalViewportLocation, DEVELOPMENT_MODE,
-                EventLoopResult, State, fg_green, usize};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     pub fn handle_resize_event(state: &mut State, size: crate::Size) -> EventLoopResult {
         DEVELOPMENT_MODE.then(|| {

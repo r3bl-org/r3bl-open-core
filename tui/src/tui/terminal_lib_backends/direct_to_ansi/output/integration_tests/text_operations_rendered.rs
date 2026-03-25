@@ -36,7 +36,8 @@
 //! [`text_operations`]: super::text_operations
 
 use super::test_helpers_rendered::*;
-use crate::{ANSIBasicColor, ColorSupport, RgbValue, TuiColor, global_color_support,
+use crate::{ANSIBasicColor, ColorSupport, RgbValue, TuiColor,
+            generate_isolated_process_test, global_color_support,
             offscreen_buffer::test_fixtures_ofs_buf::*};
 
 /// Verify styled text with foreground color renders correct characters and color.
@@ -343,7 +344,6 @@ fn run_all_rendered_tests_sequentially() {
     test_paint_text_with_rgb_combined_rendered();
     global_color_support::clear_override();
 }
-
 
 generate_isolated_process_test!(
     /// Runs all rendered output tests in an isolated process.

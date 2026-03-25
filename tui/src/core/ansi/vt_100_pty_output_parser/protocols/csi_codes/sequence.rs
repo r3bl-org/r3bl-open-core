@@ -10,6 +10,7 @@
 
 use super::{erase_mode::{EraseDisplayMode, EraseLineMode},
             private_mode::PrivateModeType};
+use crate::{generate_impl_display_for_fast_stringify, ok};
 use crate::{BufTextStorage, CsiCount, FastStringify, NumericConversions, TermCol,
             TermColDelta, TermRow, TermRowDelta,
             core::ansi::{constants::{CHA_CURSOR_COLUMN, CNL_CURSOR_NEXT_LINE,

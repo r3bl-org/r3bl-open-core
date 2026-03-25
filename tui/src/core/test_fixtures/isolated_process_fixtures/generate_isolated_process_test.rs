@@ -1,5 +1,10 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+//! Spawns the current test executable in an isolated child process. See
+//! [`generate_isolated_process_test!`] for details.
+//!
+//! [`generate_isolated_process_test!`]: macro@crate::generate_isolated_process_test
+
 use std::process::{Output, Stdio};
 
 /// Environment variable used to signal that the current process is the controlled
@@ -23,6 +28,8 @@ pub const ISOLATED_PROCESS_ENV_VAR: &str = "R3BL_TEST_ISOLATED_PROCESS";
 ///
 /// Panics if the child process cannot be spawned.
 ///
+/// [`generate_async_isolated_process_test!`]: crate::generate_async_isolated_process_test
+/// [`generate_isolated_process_test!`]: macro@crate::generate_isolated_process_test
 /// [`new_isolated_test_command()`]: crate::new_isolated_test_command
 /// [`suppress_wer_dialogs()`]: crate::suppress_wer_dialogs
 #[must_use]
@@ -48,20 +55,20 @@ pub fn spawn_isolated_process(
 /// Generates a test that spawns itself in an isolated process to avoid global state
 /// contamination (environment variables, static variables, current working directory).
 ///
-/// Use this macro for tests that need to modify global state that cannot be easily
-/// mocked or localized (e.g., environment variables, `std::env::set_current_dir`, or
-/// static variables used by third-party libraries).
+/// Use this macro for tests that need to modify global state that cannot be easily mocked
+/// or localized (e.g., environment variables, [`std::env::set_current_dir`], or static
+/// variables used by third-party libraries).
 ///
-/// For **PTY-based integration tests**, use [`generate_pty_test!`] instead.
+/// For **[`PTY`]-based integration tests**, use [`generate_pty_test!`] instead.
 ///
 /// # When to Use This Macro vs [`generate_pty_test!`]
 ///
 /// | Feature          | `generate_isolated_process_test!` | `generate_pty_test!`          |
 /// | ---------------- | --------------------------------- | ----------------------------- |
-/// | Isolation Type   | Standard process (no PTY)         | PTY-based process             |
+/// | Isolation Type   | Standard process (no [`PTY`])     | [`PTY`]-based process         |
 /// | Primary Purpose  | Global state (env/cwd/statics)    | Terminal UI & Event handling  |
 /// | Async Support    | Use async variant                 | Native async support          |
-/// | Windows Support  | Yes                               | Yes (via `ConPTY`)            |
+/// | Windows Support  | Yes                               | Yes (via [`ConPTY`])          |
 ///
 /// # Architecture
 ///
@@ -118,6 +125,11 @@ pub fn spawn_isolated_process(
 ///     println!("Hello from child");
 /// }
 /// ```
+///
+/// [`ConPTY`]:
+///     https://learn.microsoft.com/en-us/windows/console/creating-a-pseudoconsole-session
+/// [`generate_pty_test!`]: crate::generate_pty_test
+/// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 #[macro_export]
 macro_rules! generate_isolated_process_test {
     (
@@ -146,7 +158,7 @@ macro_rules! generate_isolated_process_test {
 /// global state contamination (environment variables, static variables, current working
 /// directory).
 ///
-/// This is the asynchronous version (using `tokio`). For synchronous tests, use
+/// This is the asynchronous version (using [`tokio`]). For synchronous tests, use
 /// [`generate_isolated_process_test!`] instead.
 ///
 /// # Architecture
@@ -182,6 +194,9 @@ macro_rules! generate_isolated_process_test {
 ///     // Run async logic here
 /// }
 /// ```
+///
+/// [`generate_isolated_process_test!`]: macro@crate::generate_isolated_process_test
+/// [`tokio`]: tokio
 #[macro_export]
 macro_rules! generate_async_isolated_process_test {
     (

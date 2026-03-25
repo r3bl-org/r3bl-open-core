@@ -66,6 +66,7 @@
 //! [rendering pipeline overview]: mod@crate::terminal_lib_backends#rendering-pipeline-architecture
 
 use super::RenderOpCommon;
+use crate::ok;
 use crate::{InlineString, InlineVec, TuiStyle};
 use std::{fmt::{Debug, Formatter, Result},
           ops::{AddAssign, Deref, DerefMut}};

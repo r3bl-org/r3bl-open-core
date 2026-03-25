@@ -1,11 +1,11 @@
 // Copyright (c) 2023-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{
-    BufTextStorage, ColIndex, ColWidth, FastStringify, GCStringOwned, InlineString,
-    InlineVec, PixelChar, PixelCharRenderer, SgrCode, TuiColor, TuiStyle, TuiStyleAttribs,
-    UNICODE_REPLACEMENT_CHAR, cli_text_inline_impl::CliTextConvertOptions,
-    tui_style_attrib::{Bold, Dim, Italic, Strikethrough, Underline},
-};
+use crate::{BufTextStorage, ColIndex, ColWidth, FastStringify, GCStringOwned,
+            InlineString, InlineVec, PixelChar, PixelCharRenderer, SgrCode, TuiColor,
+            TuiStyle, TuiStyleAttribs, UNICODE_REPLACEMENT_CHAR,
+            cli_text_inline_impl::CliTextConvertOptions,
+            generate_impl_display_for_fast_stringify, inline_string, ok, tui_color,
+            tui_style_attrib::{Bold, Dim, Italic, Strikethrough, Underline}};
 use std::fmt::Result;
 use strum_macros::EnumCount;
 
@@ -936,7 +936,7 @@ generate_impl_display_for_fast_stringify!(CliTextInline);
 mod tests {
     use super::{cli_text_inline_impl::CliTextConvertOptions, dim};
     use crate::{CliTextInline, ColIndex, ColorSupport, InlineVec, PixelChar, TuiColor,
-                TuiStyle, TuiStyleAttribs, global_color_support,
+                TuiStyle, TuiStyleAttribs, global_color_support, tui_color,
                 tui_style::tui_style_attrib::Bold, tui_style_attribs, width};
     use pretty_assertions::assert_eq;
     use serial_test::serial;

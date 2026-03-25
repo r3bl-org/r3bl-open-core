@@ -1,6 +1,7 @@
 // Copyright (c) 2023-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::KeyPressReader;
+use crate::execute_commands;
 use crate::{CalculateResizeHint, CommonResult, FunctionComponent, InputDevice,
             InputEvent, ItemsOwned, TTYResult, is_output_interactive};
 use crossterm::cursor::{Hide, Show};

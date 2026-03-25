@@ -43,11 +43,12 @@
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`subscribe()`]: crate::direct_to_ansi::DirectToAnsiInputDevice::subscribe
 
-use crate::{PtyTestMode, PtyTestContext,
+use crate::{PtyTestContext, PtyTestMode,
             core::resilient_reactor_thread::{LivenessState, RRTEvent},
             direct_to_ansi::{DirectToAnsiInputDevice,
                              input::{channel_types::{PollerEvent, StdinEvent},
-                                     global_input_resource::SINGLETON}}};
+                                     global_input_resource::SINGLETON}},
+            generate_pty_test};
 use std::{io::{BufRead, BufReader, Write},
           time::Duration};
 
@@ -268,5 +269,4 @@ fn subscribe_controlled_entry_point() {
         println!("{TEST_PASSED}");
         std::io::stdout().flush().expect("Failed to flush");
     });
-
 }

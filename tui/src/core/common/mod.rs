@@ -1,9 +1,7 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 // Attach sources.
-#[macro_use]
 pub mod telemetry;
-#[macro_use]
 pub mod fast_stringify;
 pub mod common_atomic;
 pub mod common_enums;

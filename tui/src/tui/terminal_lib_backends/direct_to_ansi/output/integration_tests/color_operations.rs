@@ -23,7 +23,7 @@
 //! [`SGR`]: crate::SgrCode
 
 use super::test_helpers::*;
-use crate::{AnsiSequenceGenerator, render_op::RenderOpCommon};
+use crate::{AnsiSequenceGenerator, render_op::RenderOpCommon, tui_color};
 
 #[test]
 fn test_set_fg_color_basic_red() {

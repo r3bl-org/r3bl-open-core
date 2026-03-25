@@ -11,6 +11,7 @@
 //! Previously located in `color_wheel_core/truecolor_gradient.rs`.
 
 use super::super::color_wheel_config::sizing::{StringHexColor, VecSteps};
+use crate::tui_color;
 use colorgrad::Gradient;
 use rand::{Rng, rngs::ThreadRng};
 
@@ -120,7 +121,7 @@ mod random_color {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{TuiColor, cli_text_inline, usize};
+    use crate::{TuiColor, assert_eq2, cli_text_inline, new_style, usize};
 
     #[test]
     fn test_generate_random_truecolor_gradient() {

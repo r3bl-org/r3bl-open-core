@@ -22,7 +22,7 @@
 
 use super::test_helpers::*;
 use crate::{AnsiSequenceGenerator, ColIndex, RowIndex, col, height, pos,
-            render_op::RenderOpCommon, row, term_row_delta};
+            render_op::RenderOpCommon, row, term_row_delta, tui_color};
 
 #[test]
 fn test_move_cursor_absolute_origin() {

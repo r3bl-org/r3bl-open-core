@@ -18,7 +18,7 @@
 //! [`TuiStyle`]: crate::TuiStyle
 
 use super::test_helpers::*;
-use crate::{CSI_START, TuiStyle, tui_style_attrib};
+use crate::{CSI_START, TuiStyle, tui_color, tui_style_attrib};
 
 #[test]
 fn test_paint_text_plain_without_style() {

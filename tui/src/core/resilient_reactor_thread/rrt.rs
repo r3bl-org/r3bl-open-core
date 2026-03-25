@@ -7,6 +7,7 @@
 use super::{BroadcastSender, LivenessState, RRTEvent, RRTWorker, RestartPolicy,
             SharedWakerSlot, ShutdownReason, SubscribeError, SubscriberGuard,
             TerminationGuard, WakerSlotWriter};
+use crate::ok;
 use crate::core::common::{AtomicU8Ext, Continuation};
 use std::{panic::{AssertUnwindSafe, catch_unwind},
           sync::{Arc, LazyLock, Mutex, atomic::AtomicU8},

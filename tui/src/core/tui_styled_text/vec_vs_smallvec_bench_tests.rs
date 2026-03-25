@@ -30,7 +30,7 @@
 #[cfg(test)]
 mod benchmarks {
     extern crate test;
-    use crate::{TuiStyle, TuiStyledText};
+    use crate::{TuiStyle, TuiStyledText, tui_styled_text};
     use smallvec::SmallVec;
     use test::Bencher;
 

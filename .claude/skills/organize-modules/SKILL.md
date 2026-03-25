@@ -26,7 +26,7 @@ the default pattern.
 
 This provides a clean API while maintaining flexibility to refactor internal structure.
 
-[barrel export]: https://en.wikipedia.org/wiki/Barrel_(computer_science)
+[barrel export]: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/export#re-exporting_aggregating
 
 ```rust
 // mod.rs - Module coordinator
@@ -305,6 +305,43 @@ pub use constants::{csi, dsr};
 
 This creates pages at **both** paths (`ansi/csi/` AND `ansi/constants/csi/`), so rustdoc
 search links work regardless of which path the search index resolves.
+
+### Step 7: Macro Module Organization
+
+For modules that define `#[macro_export]` macros, do NOT use `#[macro_use]` on module declarations.
+Instead, use explicit imports at call sites:
+
+```rust
+// mod.rs - Do NOT use #[macro_use]
+pub mod macros;  // ✅ Just declare the module
+
+// At each call site that uses the macro:
+use crate::my_macro;  // ✅ Explicit import
+my_macro!();
+```
+
+**Why:** `#[macro_use]` is a Rust 2015 pattern that depends on module declaration order and breaks
+silently when modules are reordered. `#[macro_export]` macros are available at the crate root in
+Rust 2018+, so `use crate::macro_name;` works everywhere.
+
+**Inner modules:** `use crate::macro_name;` imports do NOT propagate into child `mod` blocks.
+Each inner module that uses a macro needs its own import:
+
+```rust
+use crate::ok;  // Available in this file's scope
+
+mod inner {
+    use crate::ok;  // Must import separately - parent scope doesn't propagate
+    fn example() { ok!() }
+}
+```
+
+**Test-only macros:** Guard imports with `#[cfg(test)]` to avoid unused import warnings:
+
+```rust
+#[cfg(test)]
+use crate::assert_eq2;
+```
 
 ## Benefits of This Pattern
 

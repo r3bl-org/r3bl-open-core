@@ -1,9 +1,11 @@
 // Copyright (c) 2023-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
+
 use crate::{CaretMovementDirection, CaretScrAdj, DeleteSelectionWith, EditorBuffer,
             GetMemSize, InlineString, InlineVec, ItemsOwned, RowIndex, SelectionRange,
             caret_scr_adj, fg_color,
             glyphs::{CUT_GLYPH, DIRECTION_GLYPH, ELLIPSIS_GLYPH, TIRE_MARKS_GLYPH,
-                     VERT_LINE_DASHED_GLYPH}};
+                     VERT_LINE_DASHED_GLYPH},
+            inline_string, join, tui_color};
 use sizing::VecRowIndex;
 use smallvec::{SmallVec, smallvec};
 use std::fmt::Debug;
@@ -43,7 +45,8 @@ pub type SelectionListItem = (RowIndex, SelectionRange);
 
 #[test]
 fn test_selection_map_direction_change() {
-    use super::*;
+    use crate::assert_eq2;
+
     // Not set.
     {
         let map = SelectionList {

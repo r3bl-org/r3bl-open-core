@@ -319,10 +319,9 @@
 #![rustfmt::skip]
 
 // Attach sources.
-// #[macro_use] propagates macros textually (order matters).
-#[macro_use] pub mod readline_async_api;
-#[macro_use] pub mod choose_impl;
-#[macro_use] pub mod readline_async_impl;
+pub mod readline_async_api;
+pub mod choose_impl;
+pub mod readline_async_impl;
 pub mod choose_api;
 pub mod spinner;
 pub mod spinner_impl;

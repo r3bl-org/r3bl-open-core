@@ -4,7 +4,7 @@ use crate::{ChUnit, CliTextInline, CommonResult, DEVELOPMENT_MODE, FunctionCompo
             GCStringOwned, Header, HowToChoose, InlineString, InlineVec, OutputDevice,
             State, StyleSheet, TuiStyle, ch, cli_text_inline, col,
             core::common::string_repeat_cache::get_spaces, fg_blue, get_terminal_width,
-            usize, width};
+            inline_string, lock_output_device_as_mut, queue_commands, usize, width};
 use crossterm::{cursor::{MoveToColumn, MoveToNextLine, MoveToPreviousLine},
                 style::{Print, ResetColor},
                 terminal::{Clear, ClearType}};
@@ -84,15 +84,8 @@ impl FunctionComponent<State> for SelectComponent {
 }
 
 mod render_helper {
-    use super::{ChUnit, Clear, ClearType, CliTextInline, CommonResult, DEVELOPMENT_MODE,
-                FunctionComponent, GCStringOwned, Header, HowToChoose, IS_FOCUSED,
-                IS_NOT_FOCUSED, InlineString, InlineVec, MULTI_SELECT_IS_NOT_SELECTED,
-                MULTI_SELECT_IS_SELECTED, MoveToColumn, MoveToNextLine,
-                MoveToPreviousLine, OutputDevice, Print, ResetColor,
-                SINGLE_SELECT_IS_NOT_SELECTED, SINGLE_SELECT_IS_SELECTED,
-                SelectComponent, State, StyleSheet, TuiStyle, ch, cli_text_inline,
-                clip_string_to_width_with_ellipsis, col, fg_blue, get_spaces,
-                get_terminal_width, usize, width};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     pub struct RenderContext {
         pub header_viewport_height: ChUnit,

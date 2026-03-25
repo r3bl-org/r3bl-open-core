@@ -1,9 +1,9 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use crate::{AsyncDebouncedDeadline, CONTROLLED_READY, CONTROLLED_STARTING,
-            DebouncedState,
-            PtyTestMode, TEST_RUNNING, core::test_fixtures::StdoutMock,
-            readline_async::readline_async_impl::LineState, PtyTestContext};
+            DebouncedState, PtyTestContext, PtyTestMode, TEST_RUNNING,
+            core::test_fixtures::StdoutMock, generate_pty_test,
+            readline_async::readline_async_impl::LineState};
 use std::{io::{BufRead, Write},
           sync::{Arc, Mutex as StdMutex},
           time::Duration};
@@ -87,9 +87,7 @@ fn pty_controller_entry_point(context: PtyTestContext) {
                 }
                 if trimmed.contains(CONTROLLED_READY) {
                     controlled_ready_seen = true;
-                    eprintln!(
-                        "  ✓ Controlled is ready (input device created)"
-                    );
+                    eprintln!("  ✓ Controlled is ready (input device created)");
                     break;
                 }
             }
@@ -262,5 +260,4 @@ fn pty_controlled_entry_point() {
         println!("🔍 PTY Controlled: Completed, exiting");
         std::io::stdout().flush().expect("Failed to flush");
     });
-
 }

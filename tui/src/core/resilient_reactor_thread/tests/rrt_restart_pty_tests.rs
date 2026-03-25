@@ -1,31 +1,33 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 //! [`PTY`] integration test for production
-//! `MioPollWorker::create_and_register_os_sources()` restart cycles.
+//! [`MioPollWorker::create_and_register_os_sources()`] restart cycles.
 //!
 //! Each worker processes a **real keystroke** from the controller via
-//! `MioPollWorker::block_until_ready_then_dispatch()` before restarting. This proves:
+//! [`MioPollWorker::block_until_ready_then_dispatch()`] before restarting. This proves:
 //!
-//! - `MioPollWorker::create_and_register_os_sources()` works correctly 3 times in
+//! - [`MioPollWorker::create_and_register_os_sources()`] works correctly 3 times in
 //!   sequence
-//! - Each restarted worker can actually poll stdin and process events
+//! - Each restarted worker can actually poll [`stdin`] and process events
 //! - No [`fd`] leaks or stale [`epoll`] state between create/drop cycles
 //! - Production [`MioPollWaker`] correctly couples to new Poll registry each time
 //!
-//! The [`PTY`] provides real terminal stdin ([`fd 0`] on the controlled end), which is
-//! required for `epoll_ctl` registration.
+//! The [`PTY`] provides real terminal [`stdin`] ([`fd 0`] on the controlled end), which
+//! is required for [`epoll_ctl`] registration.
 //!
 //! See also: Group B Step 5.7 in [`rrt_restart_tests`] for the production poll-error path
 //! test.
 //!
+//! [`epoll_ctl`]: https://man7.org/linux/man-pages/man2/epoll_ctl.2.html
 //! [`epoll`]: https://man7.org/linux/man-pages/man7/epoll.7.html
 //! [`fd 0`]: https://man7.org/linux/man-pages/man3/stdin.3.html
 //! [`fd`]: https://en.wikipedia.org/wiki/File_descriptor
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`rrt_restart_tests`]: super::rrt_restart_tests
+//! [`stdin`]: std::io::stdin
 
-use super::super::*;
-use crate::{Continuation, MioPollWaker, PtyTestContext, PtyTestMode,
+use crate::{Continuation, LivenessState, MioPollWaker, PtyTestContext, PtyTestMode, RRT,
+            RRTEvent, RRTWorker, RestartPolicy, generate_pty_test,
             tui::terminal_lib_backends::direct_to_ansi::input::{channel_types::PollerEvent,
                                                                 mio_poller::MioPollWorker}};
 use std::{io::{BufRead, BufReader, Read, Write, stdout},
@@ -34,13 +36,17 @@ use std::{io::{BufRead, BufReader, Read, Write, stdout},
           time::{Duration, Instant}};
 use tokio::sync::broadcast;
 
-/// Worker that delegates the first `block_until_ready_then_dispatch()` call to the real
-/// [`MioPollWorker`], then returns [`Continuation::Restart`] or
-/// [`Continuation::Stop`] on the second call.
+/// Worker that delegates the first [`block_until_ready_then_dispatch()`] call to the real
+/// [`MioPollWorker`], then returns [`Continuation::Restart`] or [`Continuation::Stop`] on
+/// the second call.
 ///
-/// This proves each restarted worker can actually process stdin events
-/// via the production poll loop, not just that `create_and_register_os_sources()`
-/// returns `Ok`.
+/// This proves each restarted worker can actually process [`stdin`] events via the
+/// production poll loop, not just that [`create_and_register_os_sources()`] returns
+/// [`Ok`].
+///
+/// [`block_until_ready_then_dispatch()`]: RRTWorker::block_until_ready_then_dispatch
+/// [`create_and_register_os_sources()`]: RRTWorker::create_and_register_os_sources
+/// [`stdin`]: std::io::stdin
 struct RestartTestWorker {
     inner: MioPollWorker,
     poll_count: u32,

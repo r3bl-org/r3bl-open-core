@@ -193,9 +193,10 @@
 //! [`OffscreenBuffer::apply_ansi_bytes`]: crate::OffscreenBuffer::apply_ansi_bytes
 //! [`PTY`]: crate::core::pty
 //! [`SharedWriter`]: crate::SharedWriter
+
 use crate::{CONTROLLED_STARTING, LineStateControlSignal, OffscreenBuffer,
-            PtyTestMode, SharedWriter, TEST_RUNNING, height,
-            readline_async::readline_async_impl::LineState, width, PtyTestContext};
+            PtyTestContext, PtyTestMode, SharedWriter, TEST_RUNNING, generate_pty_test,
+            height, readline_async::readline_async_impl::LineState, width};
 use std::io::Write;
 
 generate_pty_test! {
@@ -420,5 +421,4 @@ fn pty_controlled_entry_point() {
 
     println!("CONTROLLED_DONE");
     std::io::stdout().flush().expect("Failed to flush");
-
 }

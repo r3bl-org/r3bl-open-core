@@ -1,5 +1,6 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+use crate::ok;
 use crate::{InlineString, LineStateControlSignal, OutputDevice, SafeBool,
             SafeInlineString, SharedWriter, SpinnerStyle, StdMutex,
             TTYResult, contains_ansi_escape_sequence, get_terminal_width,

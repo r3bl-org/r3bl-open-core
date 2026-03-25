@@ -3,14 +3,11 @@
 // cspell:words FAILCRITICALERRORS HKLM NOGPFAULTERRORBOX
 
 // Attach sources.
-#[macro_use] // Propagate macros textually (order matters).
 pub mod pty_test_fixtures;
-#[macro_use] // Propagate macros textually (order matters).
 pub mod isolated_process_fixtures;
 pub mod input_device_fixtures;
 pub mod output_device_fixtures;
 pub mod tcp_stream_fixtures;
-#[macro_use] // Propagate macros textually (order matters).
 pub mod retry;
 
 // Re-export.

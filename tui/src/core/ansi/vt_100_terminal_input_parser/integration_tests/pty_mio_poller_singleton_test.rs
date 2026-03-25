@@ -37,7 +37,7 @@
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`subscribe()`]: crate::direct_to_ansi::DirectToAnsiInputDevice::subscribe
 
-use crate::{PtyTestMode, PtyTestContext,
+use crate::{PtyTestContext, PtyTestMode, generate_pty_test,
             tui::terminal_lib_backends::direct_to_ansi::DirectToAnsiInputDevice};
 use std::io::{BufRead, BufReader, Write};
 
@@ -152,5 +152,4 @@ fn singleton_controlled_entry_point() {
     eprintln!("All singleton test assertions passed!");
     println!("{TEST_PASSED}");
     std::io::stdout().flush().expect("Failed to flush");
-
 }

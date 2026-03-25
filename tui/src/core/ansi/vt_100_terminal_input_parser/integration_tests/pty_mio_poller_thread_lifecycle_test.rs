@@ -44,9 +44,10 @@
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [Device Lifecycle]: crate::direct_to_ansi::DirectToAnsiInputDevice#device-lifecycle
 
-use crate::{PtyTestMode, PtyTestContext,
+use crate::{PtyTestContext, PtyTestMode,
             core::resilient_reactor_thread::LivenessState,
-            direct_to_ansi::{DirectToAnsiInputDevice, input::global_input_resource}};
+            direct_to_ansi::{DirectToAnsiInputDevice, input::global_input_resource},
+            generate_pty_test};
 use std::{io::{BufRead, BufReader, Write},
           time::Duration};
 
@@ -254,5 +255,4 @@ fn lifecycle_controlled_entry_point() {
         // Clean up.
         drop(device_b);
     });
-
 }

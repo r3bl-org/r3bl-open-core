@@ -55,10 +55,8 @@
 mod debug;
 mod input_device_impl;
 
-#[macro_use]
 #[cfg(any(test, doc))]
 pub mod crossterm_paint_render_op_impl;
-#[macro_use]
 #[cfg(not(any(test, doc)))]
 mod crossterm_paint_render_op_impl;
 

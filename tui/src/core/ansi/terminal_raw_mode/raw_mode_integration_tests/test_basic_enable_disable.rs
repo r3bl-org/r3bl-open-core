@@ -7,11 +7,8 @@
 //! that ensures the basic lifecycle works.
 //!
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
-use crate::{
-    PtyTestMode,
-    RawModeGuard,
-    PtyTestContext,
-};
+
+use crate::{PtyTestContext, PtyTestMode, RawModeGuard, generate_pty_test};
 use rustix::termios;
 use std::{io::{BufRead, Write},
           time::{Duration, Instant}};

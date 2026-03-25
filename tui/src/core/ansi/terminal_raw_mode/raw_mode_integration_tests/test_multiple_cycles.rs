@@ -11,7 +11,7 @@
 //! [`disable_raw_mode()`]: crate::disable_raw_mode
 //! [`enable_raw_mode()`]: crate::enable_raw_mode
 
-use crate::{PtyTestContext, PtyTestMode};
+use crate::{PtyTestContext, PtyTestMode, generate_pty_test};
 use rustix::termios;
 use std::{io::{BufRead, Write},
           time::{Duration, Instant}};

@@ -6,16 +6,22 @@
 //!
 //! - **Group A** (Step 4): Pure function tests for [`advance_backoff_delay`] - no
 //!   threads, no OS resources.
-//! - **Group B** (Step 5): `run_worker_loop` tests using [`mpsc`] channels.
-//! - **Group C** (Step 6): `RRT<TestWorker>` integration tests with real thread spawning.
+//! - **Group B** (Step 5): [`run_worker_loop`] tests using [`mpsc`] channels.
+//! - **Group C** (Step 6): [`RRT<TestWorker>`] integration tests with real thread
+//!   spawning.
 //! - **Process-isolated coordinator** (Step 3): Groups B and C run in a subprocess to
 //!   avoid static state interference between tests.
 //!
 //! [`advance_backoff_delay`]: super::super::advance_backoff_delay
 //! [`mpsc`]: std::sync::mpsc
 
-use super::super::*;
-use crate::{Continuation, PtyTestContext, PtyTestMode};
+use crate::{Continuation, PtyTestContext, PtyTestMode, generate_isolated_process_test,
+            generate_pty_test,
+            resilient_reactor_thread::{BroadcastSender, LivenessState, RRT, RRTEvent,
+                                       RRTWaker, RRTWorker, RestartPolicy,
+                                       SharedWakerSlot, ShutdownReason,
+                                       WakerSlotWriter, advance_backoff_delay,
+                                       run_worker_loop}};
 use std::{collections::VecDeque,
           io::{BufRead, BufReader, Write},
           sync::{Arc, Mutex,
@@ -294,13 +300,27 @@ generate_isolated_process_test!(
     std::process::Stdio::piped()
 );
 
+/// Validates that the child process succeeded without unexpected panics.
+///
+/// The test deliberately panics worker threads to verify [`run_worker_loop()`]'s restart
+/// logic. That function uses [`catch_unwind`] around the worker loop body, but Rust's
+/// default panic hook still prints the message to [`stderr`] *before* the catch. Since
+/// [`spawn_isolated_process()`], from [`generate_isolated_process_test!`], passes
+/// `--nocapture`, these deliberate panic messages appear in the piped [`stderr`]. We must
+/// tolerate them, since they are expected and not failure cases.
+///
+/// [`catch_unwind`]: std::panic::catch_unwind
+/// [`generate_isolated_process_test!`]: crate::generate_isolated_process_test
+/// [`run_worker_loop()`]: crate::run_worker_loop
+/// [`spawn_isolated_process()`]: crate::spawn_isolated_process
+/// [`stderr`]: std::io::stderr
 fn controller_fn(output: std::process::Output) {
     let stderr = String::from_utf8_lossy(&output.stderr).to_string();
 
-    if !output.status.success()
-        || stderr.contains("panicked at")
-        || stderr.contains("Test failed with error")
-    {
+    let has_unexpected_error = stderr.contains("Test failed with error")
+        || (!stderr.contains("deliberate panic") && stderr.contains("panicked at"));
+
+    if !output.status.success() || has_unexpected_error {
         eprintln!("Exit status: {:?}", output.status);
         eprintln!("Stdout: {}", String::from_utf8_lossy(&output.stdout));
         eprintln!("Stderr: {stderr}");

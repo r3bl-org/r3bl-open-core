@@ -224,8 +224,8 @@
 // Note: These are public to support existing codebase that uses qualified paths.
 // New code should avoid importing from qualified paths and instead use the
 // public re-exports below.
-#[macro_use] pub mod buffer_coords;
-#[macro_use] pub mod percent_spec;
+pub mod buffer_coords;
+pub mod percent_spec;
 pub mod bounds_check;
 pub mod byte;
 pub mod primitives;

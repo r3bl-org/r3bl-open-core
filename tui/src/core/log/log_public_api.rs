@@ -1,5 +1,6 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+use crate::ok;
 use crate::{DisplayPreference, TracingConfig, WriterConfig};
 use std::{fs::OpenOptions, io::Write, ops::Add, path::Path};
 use tracing::dispatcher;

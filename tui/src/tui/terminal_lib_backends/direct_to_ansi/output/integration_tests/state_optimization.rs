@@ -17,7 +17,7 @@
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 
 use super::test_helpers::*;
-use crate::{AnsiSequenceGenerator, col, pos, render_op::RenderOpCommon, row};
+use crate::{AnsiSequenceGenerator, col, pos, render_op::RenderOpCommon, row, tui_color};
 
 #[test]
 fn test_duplicate_cursor_position_updates_state() {

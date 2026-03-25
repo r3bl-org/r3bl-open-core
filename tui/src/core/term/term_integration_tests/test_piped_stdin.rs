@@ -1,6 +1,6 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::is_input_interactive;
+use crate::{generate_isolated_process_test, is_input_interactive};
 use std::io::Write;
 
 generate_isolated_process_test!(

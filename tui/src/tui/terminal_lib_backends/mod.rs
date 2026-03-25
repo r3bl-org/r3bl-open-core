@@ -189,18 +189,13 @@
 // Private mod.
 mod backend_selection;
 
-// Macro-defining modules FIRST (order matters for #[macro_use]).
-#[macro_use]
 #[cfg(any(test, doc))]
 pub mod render_pipeline;
-#[macro_use]
 #[cfg(not(any(test, doc)))]
 mod render_pipeline;
 
-#[macro_use]
 #[cfg(any(test, doc))]
 pub mod crossterm_backend;
-#[macro_use]
 #[cfg(not(any(test, doc)))]
 mod crossterm_backend;
 

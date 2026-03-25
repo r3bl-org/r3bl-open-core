@@ -126,12 +126,12 @@ use crate::{CONTROLLED_READY, ColorSupport, EIO, InlineString, OffscreenBuffer,
             OutputDevice, PtyPair, RenderOpOutput, RenderOpPaint, RenderOpsLocalData,
             Size, TuiStyle, TuiStyleAttribs, col,
             core::ansi::terminal_raw_mode,
-            global_color_support, height, pos,
+            global_color_support, height, lock_output_device_as_mut, pos,
             render_op::RenderOpCommon,
             retry_until_success_test, row, spawn_controlled_in_pty,
             terminal_lib_backends::{crossterm_backend::PaintRenderOpImplCrossterm,
                                     direct_to_ansi::RenderOpPaintImplDirectToAnsi},
-            tui_style_attrib, wait_for_ready, width};
+            tui_color, tui_style_attrib, wait_for_ready, width};
 use std::{fmt::Write as _,
           io::{Read, Write}};
 

@@ -114,7 +114,7 @@ mod screen_clearing_tests {
 
 #[cfg(test)]
 mod color_tests {
-    use crate::{AnsiSequenceGenerator, AnsiValue, SgrColorSequence, TuiColor};
+    use crate::{AnsiSequenceGenerator, AnsiValue, SgrColorSequence, TuiColor, tui_color};
 
     #[test]
     fn test_reset_color() {

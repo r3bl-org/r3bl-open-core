@@ -168,7 +168,9 @@
 //! [`SharedWriter`]: crate::SharedWriter
 //! [blank line test]: super::pty_shared_writer_no_blank_line_test
 
-use crate::{CONTROLLED_STARTING, PtyTestMode, PtyTestContext, TEST_RUNNING};
+use crate::{CONTROLLED_STARTING, LineStateControlSignal, OffscreenBuffer,
+            PtyTestContext, PtyTestMode, SharedWriter, TEST_RUNNING, generate_pty_test,
+            height, readline_async::readline_async_impl::LineState, width};
 use std::io::Write;
 
 generate_pty_test! {
@@ -336,9 +338,6 @@ fn get_line_content(buf: &crate::OffscreenBuffer, row: usize, max_cols: usize) -
 /// [`SharedWriter`]: crate::SharedWriter
 /// [module docs]: self
 fn pty_controlled_entry_point() {
-    use crate::{LineStateControlSignal, OffscreenBuffer, SharedWriter, height,
-                readline_async::readline_async_impl::LineState, width};
-
     println!("{CONTROLLED_STARTING}");
     std::io::stdout().flush().expect("Failed to flush");
 
@@ -440,5 +439,4 @@ fn pty_controlled_entry_point() {
 
     println!("CONTROLLED_DONE");
     std::io::stdout().flush().expect("Failed to flush");
-
 }

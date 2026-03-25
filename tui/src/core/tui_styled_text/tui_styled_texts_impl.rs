@@ -1,7 +1,8 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::{TuiStyledText, sizing::VecTuiStyledText};
-use crate::{ConvertToPlainText, GCStringOwned, InlineString};
+use crate::{ColWidth, ConvertToPlainText, GCStringOwned, InlineString, join,
+            join_with_index_fmt, ok};
 use std::{fmt::Debug,
           ops::{AddAssign, Index}};
 
@@ -46,7 +47,8 @@ pub struct TuiStyledTexts {
 }
 
 mod impl_ops {
-    use super::{AddAssign, Index, TuiStyledText, TuiStyledTexts};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     impl TuiStyledTexts {
         #[must_use]
@@ -72,8 +74,8 @@ mod impl_ops {
 }
 
 mod impl_display {
-    use super::{ConvertToPlainText, GCStringOwned, InlineString, TuiStyledTexts};
-    use crate::ColWidth;
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     impl ConvertToPlainText for TuiStyledTexts {
         fn to_plain_text(&self) -> InlineString {
@@ -97,7 +99,8 @@ mod impl_display {
 }
 
 mod impl_debug {
-    use super::{Debug, TuiStyledTexts};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     impl Debug for TuiStyledTexts {
         fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -118,8 +121,11 @@ mod impl_debug {
 
 #[cfg(test)]
 mod tests {
+    #[allow(clippy::wildcard_imports)]
     use super::*;
-    use crate::{CommonResult, TuiStyle, TuiStylesheet, ch};
+    use crate::{CommonResult, TuiStyle, TuiStylesheet, assert_eq2, ch, throws,
+                throws_with_return, tui_color, tui_style_id, tui_styled_text,
+                tui_stylesheet};
 
     #[test]
     fn test_create_styled_text_with_dsl() -> CommonResult<()> {
@@ -132,7 +138,6 @@ mod tests {
 
     mod helpers {
         use super::*;
-        use crate::tui_style_id;
 
         pub fn create_styled_text() -> CommonResult<TuiStyledTexts> {
             throws_with_return!({

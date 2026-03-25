@@ -1,9 +1,11 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
+
 use crate::{ChannelCapacity, CommonResultWithError, CursorBoundsCheck,
             CursorPositionBoundsStatus, GCStringOwned, History, InputDevice, InputEvent,
             KeyPress, LineState, LineStateControlSignal, LineStateLiveness,
             ModifierKeysMask, OutputDevice, PauseBuffer, SafeHistory, SafeLineState,
-            SafePauseBuffer, SegIndex, SendRawTerminal, SharedWriter, Size, StdMutex};
+            SafePauseBuffer, SegIndex, SendRawTerminal, SharedWriter, Size, StdMutex,
+            execute_commands_no_lock, join, key_press, lock_output_device_as_mut};
 use crossterm::{ExecutableCommand, QueueableCommand, cursor,
                 terminal::{self, Clear}};
 use miette::Report as ErrorReport;
@@ -290,10 +292,8 @@ pub enum ControlFlowLimited<E> {
 /// [`PauseBuffer`]. When the terminal is resumed, the buffer is drained and the output is
 /// written to the terminal.
 pub mod manage_shared_writer_output {
-    use super::{Arc, CommonResultWithError, ControlFlowLimited, JoinHandle, LineState,
-                LineStateControlSignal, LineStateLiveness, OutputDevice, PauseBuffer,
-                ReadlineError, SafeLineState, SafePauseBuffer, SendRawTerminal,
-                StdMutex, broadcast, io, mpsc, spawn};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     /// - Receiver end of the channel, which does the actual writing to the terminal.
     /// - The sender end of the channel is in [`crate::SharedWriter`].
@@ -1112,7 +1112,8 @@ mod test_readline {
                 LineStateLiveness, OutputDevice, Readline, ReadlineEvent, StdMutex,
                 broadcast, readline_internal, readline_test_fixtures::get_input_vec,
                 sleep};
-    use crate::{OutputDeviceExt, TTYResult, is_output_interactive};
+    use crate::{OutputDeviceExt, TTYResult, is_output_interactive,
+                lock_output_device_as_mut};
 
     #[tokio::test]
     #[allow(clippy::needless_return)]

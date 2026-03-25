@@ -138,8 +138,8 @@ mod text_operations_rendered;
 #[cfg(test)]
 mod test_helpers {
     use crate::{LockedOutputDevice, OutputDevice, RenderOpOutput, RenderOpPaint,
-                RenderOpsLocalData, Size, StdoutMock, TuiColor, col, height, pos,
-                render_op::RenderOpCommon, row,
+                RenderOpsLocalData, Size, StdoutMock, TuiColor, col, height,
+                lock_output_device_as_mut, pos, render_op::RenderOpCommon, row,
                 terminal_lib_backends::direct_to_ansi::RenderOpPaintImplDirectToAnsi,
                 test_fixtures::output_device_fixtures::OutputDeviceExt, width};
 

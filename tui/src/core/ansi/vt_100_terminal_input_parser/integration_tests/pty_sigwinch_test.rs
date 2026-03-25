@@ -56,10 +56,9 @@
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`SIGWINCH`]: https://man7.org/linux/man-pages/man7/signal.7.html
 
-use crate::{CONTROLLED_READY, CONTROLLED_STARTING, InputEvent, PtyTestMode,
-            PtyTestContext, TEST_RUNNING,
-            tui::terminal_lib_backends::direct_to_ansi::DirectToAnsiInputDevice};
-use crate::{Size, height, size, width};
+use crate::{CONTROLLED_READY, CONTROLLED_STARTING, InputEvent, PtyTestContext,
+            PtyTestMode, Size, TEST_RUNNING, generate_pty_test, height, size,
+            tui::terminal_lib_backends::direct_to_ansi::DirectToAnsiInputDevice, width};
 use std::{io::{BufRead, Write},
           time::Duration};
 
@@ -241,5 +240,4 @@ fn pty_controlled_entry_point() {
 
         eprintln!("🔍 PTY Controlled: Completed");
     });
-
 }

@@ -1,6 +1,8 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
+
 use super::{TuiColor, TuiStyleAttribs, tui_style_attrib};
-use crate::{ChUnit, InlineVecStr, TinyInlineString, ch};
+use crate::{ChUnit, InlineVecStr, TinyInlineString, ch, join, join_fmt, ok,
+            tiny_inline_string};
 use core::fmt::Debug;
 use std::{fmt::{Display, Formatter},
           ops::{Add, AddAssign, Deref}};
@@ -373,6 +375,8 @@ mod style_impl {
 #[cfg(test)]
 mod test_style {
     use super::*;
+    use crate::{assert_eq2, tui_color};
+
     #[test]
     fn test_all_fields_in_style() {
         let attribs = TuiStyleAttribs {

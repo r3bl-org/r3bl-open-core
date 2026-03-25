@@ -18,8 +18,8 @@
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
 
-use crate::{CONTROLLED_READY, CONTROLLED_STARTING, InputEvent, PtyTestMode,
-            PtyTestContext, TEST_RUNNING,
+use crate::{CONTROLLED_READY, CONTROLLED_STARTING, InputEvent, PtyTestContext,
+            PtyTestMode, TEST_RUNNING, generate_pty_test,
             tui::terminal_lib_backends::direct_to_ansi::DirectToAnsiInputDevice};
 use std::{io::{BufRead, Write},
           time::Duration};
@@ -50,7 +50,8 @@ fn pty_controller_entry_point(context: PtyTestContext) {
     eprintln!("📝 PTY Controller: Waiting for controlled process to start...");
 
     // Wait for controlled to confirm it's running and ready.
-    child.wait_for_ready(&mut buf_reader, CONTROLLED_READY)
+    child
+        .wait_for_ready(&mut buf_reader, CONTROLLED_READY)
         .expect("Failed to wait for ready signal");
 
     // Generate test cases using abstractions (no magic strings!)
@@ -180,5 +181,4 @@ fn pty_controlled_entry_point() {
 
         eprintln!("🔍 PTY Controlled: Completed, exiting");
     });
-
 }

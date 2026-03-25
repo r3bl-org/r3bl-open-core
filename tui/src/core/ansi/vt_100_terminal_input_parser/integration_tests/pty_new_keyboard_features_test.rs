@@ -14,8 +14,8 @@
 //!
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 
-use crate::{CONTROLLED_READY, CONTROLLED_STARTING, InputEvent, PtyTestMode,
-            PtyTestContext, TEST_RUNNING,
+use crate::{CONTROLLED_READY, CONTROLLED_STARTING, InputEvent, PtyTestContext,
+            PtyTestMode, TEST_RUNNING,
             core::ansi::constants::{ANSI_CSI_BRACKET, ANSI_ESC,
                                     ANSI_FUNCTION_KEY_TERMINATOR, ANSI_SS3_O,
                                     BACKTAB_FINAL, CONTROL_NUL, CONTROL_TAB,
@@ -26,6 +26,7 @@ use crate::{CONTROLLED_READY, CONTROLLED_STARTING, InputEvent, PtyTestMode,
                                     SS3_NUMPAD_DIVIDE, SS3_NUMPAD_ENTER,
                                     SS3_NUMPAD_MINUS, SS3_NUMPAD_MULTIPLY,
                                     SS3_NUMPAD_PLUS},
+            generate_pty_test,
             tui::terminal_lib_backends::direct_to_ansi::DirectToAnsiInputDevice};
 use std::{io::{BufRead, Write},
           time::Duration};
@@ -352,5 +353,4 @@ fn pty_controlled_entry_point() {
 
         eprintln!("🎯 PTY Controlled: Completed, exiting");
     });
-
 }

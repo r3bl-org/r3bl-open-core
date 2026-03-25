@@ -10,6 +10,7 @@
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 
 use super::ProcessManager;
+use crate::lock_output_device_as_mut;
 use crate::{ANSIBasicColor, ArrayOverflowResult, FlushKind, IndexOps, LengthOps,
             OffscreenBuffer, OutputDevice, PixelChar, Size, TuiStyle, col,
             core::coordinates::{idx, len},

@@ -752,3 +752,42 @@ pub mod dsr;
 1. Items are still accessible via `ansi::ITEM` (flat API).
 2. Rustdoc search links for `csi` or items inside it now navigate to a valid page at `ansi/csi/`.
 3. The intermediate hub `ansi::constants` remains discoverable.
+
+---
+
+## Example 7: Module That Defines `#[macro_export]` Macros
+
+**Scenario:** A module defines `#[macro_export]` macros that are used throughout the crate.
+
+### The Anti-Pattern (Don't Do This)
+
+```rust
+// mod.rs - ❌ Fragile: depends on declaration order
+#[macro_use]
+pub mod macros;  // Must come before modules that use the macros
+pub mod consumer_a;
+pub mod consumer_b;
+```
+
+### The Correct Pattern
+
+```rust
+// mod.rs - ✅ Order-independent
+pub mod macros;
+pub mod consumer_a;
+pub mod consumer_b;
+```
+
+```rust
+// consumer_a.rs - Explicit import at each call site
+use crate::my_macro;
+
+fn example() {
+    my_macro!();
+}
+
+mod inner_helper {
+    use crate::my_macro;  // Must import again - parent scope doesn't propagate
+    fn helper() { my_macro!(); }
+}
+```

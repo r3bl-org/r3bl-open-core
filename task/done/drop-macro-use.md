@@ -37,37 +37,37 @@ are brought into scope. Each step is independently verifiable with `cargo check 
 
 ### Phase 1: Inventory
 
-- [ ] Generate a complete list of all `#[macro_use]` annotations and which macros they
+- [x] Generate a complete list of all `#[macro_use]` annotations and which macros they
       propagate (grep for `#[macro_use]` and `#[macro_export]`)
-- [ ] Map each macro to its call sites (grep for `macro_name!`)
-- [ ] Identify any non-`#[macro_export]` macros that use `#[macro_use]` for crate-internal
+- [x] Map each macro to its call sites (grep for `macro_name!`)
+- [x] Identify any non-`#[macro_export]` macros that use `#[macro_use]` for crate-internal
       visibility only (these need `pub(crate)` or a different approach)
 
 ### Phase 2: Migrate leaf modules first
 
-- [ ] Start with modules that define macros but have few consumers
-- [ ] Remove `#[macro_use]`, add explicit imports at call sites
-- [ ] Verify with `cargo check -p r3bl_tui --tests` after each module
+- [x] Start with modules that define macros but have few consumers
+- [x] Remove `#[macro_use]`, add explicit imports at call sites
+- [x] Verify with `cargo check -p r3bl_tui --tests` after each module
 
 ### Phase 3: Migrate core modules
 
-- [ ] Migrate heavily-used macros (`tui_color!`, `box_start!`, etc.)
-- [ ] These will have many call sites - use find-and-replace
+- [x] Migrate heavily-used macros (`tui_color!`, `box_start!`, etc.)
+- [x] These will have many call sites - use find-and-replace
 
 ### Phase 4: Cleanup and verify
 
-- [ ] Remove all remaining `#[macro_use]` annotations
-- [ ] Verify full build: `./check.fish --full`
+- [x] Remove all remaining `#[macro_use]` annotations
+- [x] Verify full build: `./check.fish --check`, `--build`, `--clippy` all pass
 
 ### Phase 5: Update skills to prevent regression
 
-- [ ] Update `.claude/skills/organize-modules/SKILL.md` to add a section on macro
+- [x] Update `.claude/skills/organize-modules/SKILL.md` to add a section on macro
       module organization: use `use crate::macro_name;` for `#[macro_export]` macros,
       do NOT use `#[macro_use]` on module declarations
-- [ ] Update `.claude/skills/organize-modules/examples.md` to add an example showing
+- [x] Update `.claude/skills/organize-modules/examples.md` to add an example showing
       the correct pattern for a module that defines `#[macro_export]` macros (define
       in submodule, import with `use crate::` at call sites)
-- [ ] Update `.claude/skills/write-documentation/SKILL.md` if it references
-      `#[macro_use]` anywhere (check and remove/replace)
-- [ ] Add a note to `CLAUDE.md` under "Rust Code Guidelines" that `#[macro_use]` is
+- [x] Update `.claude/skills/write-documentation/SKILL.md` if it references
+      `#[macro_use]` anywhere (check and remove/replace) - no references found
+- [x] Add a note to `CLAUDE.md` under "Rust Code Guidelines" that `#[macro_use]` is
       not used in this codebase - use explicit imports instead

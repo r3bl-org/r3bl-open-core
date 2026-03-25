@@ -15,7 +15,7 @@ use crate::{CodeBlockLineContent, CodeBlockLines, CommonError, CommonErrorType,
             get_code_block_content_style, get_code_block_lang_style,
             get_foreground_dim_style, get_foreground_style, get_inline_code_style,
             get_italic_style, get_link_text_style, get_link_url_style,
-            get_list_bullet_style, parse_markdown, try_get_syntax_ref,
+            get_list_bullet_style, join, new_style, parse_markdown, try_get_syntax_ref,
             tui::md_parser::md_parser_constants::{AUTHORS, BACK_TICK, CHECKED_OUTPUT,
                                                   CODE_BLOCK_START_PARTIAL, DATE,
                                                   LEFT_BRACKET, LEFT_IMAGE,
@@ -88,7 +88,8 @@ pub fn try_parse_and_highlight(
 #[cfg(test)]
 mod tests_try_parse_and_highlight {
     use super::*;
-    use crate::{ColorSupport, fg_cyan, global_color_support};
+    use crate::{ColorSupport, assert_eq2, fg_cyan, global_color_support, new_style,
+                throws, tui_color};
     use serial_test::serial;
 
     /// [`RAII`] guard for color support override cleanup
@@ -731,12 +732,11 @@ impl From<TuiStyledTexts> for StyleUSSpanLine {
 
 #[cfg(test)]
 mod tests_style_us_span_lines_from {
-
     use super::*;
-    use crate::{CodeBlockLine, ColorSupport, HeadingLevel,
+    use crate::{BulletKind, CodeBlockLine, ColorSupport, HeadingLevel, assert_eq2,
                 get_metadata_tags_marker_style, get_metadata_tags_values_style,
                 get_metadata_title_marker_style, get_metadata_title_value_style,
-                global_color_support};
+                global_color_support, new_style, parse_list, throws, tui_color};
     use serial_test::serial;
 
     /// [`RAII`] guard for color support override cleanup
@@ -1073,7 +1073,6 @@ mod tests_style_us_span_lines_from {
     /// [StyleUSSpanLines::from_block]: StyleUSSpanLines::from_block
     mod from_block {
         use super::*;
-        use crate::BulletKind;
 
         #[test]
         #[serial]

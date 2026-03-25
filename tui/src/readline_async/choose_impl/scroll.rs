@@ -45,6 +45,7 @@
 //!    ╰─────────────────────╯ <- AtAbsoluteBottom
 //! ```
 
+use crate::inline_string;
 use crate::{ChUnit, DEVELOPMENT_MODE, ch, fg_green};
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]

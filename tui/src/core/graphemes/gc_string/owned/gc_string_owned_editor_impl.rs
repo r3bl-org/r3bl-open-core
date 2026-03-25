@@ -21,6 +21,7 @@
 //! that needs to be migrated during the [`crate::ZeroCopyGapBuffer`] transition.
 
 use super::{GCStringOwned, SegStringOwned};
+use crate::join;
 use crate::{ColIndex, ColWidth, InlineString, InlineVecStr, Seg, ch, seg_index,
             seg_length, usize, width};
 

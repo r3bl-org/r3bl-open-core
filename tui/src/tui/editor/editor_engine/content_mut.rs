@@ -4,7 +4,8 @@ use super::{DeleteSelectionWith, scroll_editor_content};
 use crate::{CaretScrAdj, ColIndex, ColWidth, CursorBoundsCheck,
             CursorPositionBoundsStatus, EditorArgsMut, EditorBuffer, EditorEngine,
             InlineString, InlineVec, RowIndex, SelectionList, SelectionRange,
-            ZeroCopyGapBuffer, caret_locate::locate_col, caret_scr_adj, col, len, row,
+            ZeroCopyGapBuffer, caret_locate::locate_col, caret_scr_adj, col,
+            empty_check_early_return, len, multiline_disabled_check_early_return, row,
             validate_buffer_mut::EditorBufferMutWithDrop, width};
 use std::collections::HashMap;
 
@@ -881,7 +882,7 @@ mod tests {
     //! checking.
 
     use crate::{CaretDirection, DEFAULT_SYN_HI_FILE_EXT, EditorArgsMut, EditorBuffer,
-                EditorEvent, GCStringOwned, caret_scr_adj,
+                EditorEvent, GCStringOwned, assert_eq2, caret_scr_adj,
                 clipboard_service::clipboard_test_fixtures::TestClipboard,
                 col,
                 editor::test_fixtures_editor::{assert, mock_real_objects_for_editor},

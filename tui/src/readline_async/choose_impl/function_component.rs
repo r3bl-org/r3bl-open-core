@@ -1,5 +1,7 @@
 // Copyright (c) 2023-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+use crate::queue_commands;
+use crate::throws;
 use crate::{ChUnit, DEVELOPMENT_MODE, OutputDevice, ResizeHint, Size};
 use crossterm::{cursor::{MoveToNextLine, MoveToPreviousLine},
                 terminal::{Clear, ClearType}};

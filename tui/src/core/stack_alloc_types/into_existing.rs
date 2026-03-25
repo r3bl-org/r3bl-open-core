@@ -71,6 +71,12 @@
 //! [`fast_stringify`]: ../common/fast_stringify
 //! [`FastStringify`]: crate::FastStringify
 
+use crate::{DEFAULT_READ_BUFFER_SIZE, ok};
+use miette::{Context, IntoDiagnostic};
+use smallstr::SmallString;
+use smallvec::Array;
+use std::{fs::File, io::Read, path::PathBuf, str::from_utf8};
+
 // XMARK: Clever Rust, use of decl macro w/ `tt` to allow any number of arguments.
 
 /// A macro to pad a [`crate::InlineString`] (which is allocated elsewhere) with a
@@ -295,11 +301,8 @@ mod join_with_index_fmt_tests {
 
 #[allow(clippy::large_stack_arrays)]
 pub mod read_from_file {
-    use crate::DEFAULT_READ_BUFFER_SIZE;
-    use miette::{Context, IntoDiagnostic};
-    use smallstr::SmallString;
-    use smallvec::Array;
-    use std::{fs::File, io::Read, path::PathBuf, str::from_utf8};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     // XMARK: Clever Rust, use of `A` to allow any size `Array` to be passed in.
 

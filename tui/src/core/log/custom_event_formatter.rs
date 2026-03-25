@@ -134,6 +134,7 @@
 //! - Additional fields form key-value pairs in the body
 //! - Empty field values are skipped to avoid blank lines
 
+use crate::{inline_string, new_style, tui_color};
 use crate::{ColWidth, ColorWheel, GCStringOwned, InlineString, OrderedMap, RgbValue,
             TuiColor, TuiStyle, cli_text_inline, fg_color, get_terminal_width, glyphs,
             remove_escaped_quotes, truncate_from_right, tui_style_attrib, usize, width};

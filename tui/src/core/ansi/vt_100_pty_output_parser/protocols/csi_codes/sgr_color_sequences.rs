@@ -93,6 +93,7 @@
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 //! [`VTE`]: mod@vte
 
+use crate::generate_impl_display_for_fast_stringify;
 use crate::{AnsiValue, RgbValue, TuiColor,
             core::{ansi::constants::{CSI_START, CSI_SUB_PARAM_SEPARATOR,
                                      SGR_BG_EXTENDED, SGR_COLOR_MODE_256,

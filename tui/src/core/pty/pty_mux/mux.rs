@@ -9,6 +9,7 @@
 
 use super::{InputRouter, OutputRenderer, Process, ProcessManager, output_renderer,
             show_notification};
+use crate::lock_output_device_as_mut;
 use crate::{AnsiSequenceGenerator, Continuation, InputEvent, RawMode, Size, col,
             core::{get_size,
                    osc::OscController,

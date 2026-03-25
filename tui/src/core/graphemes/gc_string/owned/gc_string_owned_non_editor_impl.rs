@@ -16,6 +16,7 @@
 //! separation of concerns during the [`crate::ZeroCopyGapBuffer`] migration.
 
 use super::GCStringOwned;
+use crate::pad_fmt;
 use crate::{ByteIndex, ColIndex, ColWidth, InlineString, NumericValue, SegIndex,
             byte_index, ch, seg_index, usize};
 use std::ops::Add;

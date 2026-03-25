@@ -2,6 +2,7 @@
 
 // cspell:words noconfirm
 
+use crate::{command, ok};
 use miette::IntoDiagnostic;
 
 /// Supported package manager types.

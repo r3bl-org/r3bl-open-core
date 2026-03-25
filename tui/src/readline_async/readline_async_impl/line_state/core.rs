@@ -2,6 +2,7 @@
 
 // cspell:words testx
 
+use crate::ok;
 use crate::{ColIndex, ColWidth, GCStringOwned, MemoizedLenMap, SegIndex, Size,
             StringLength, height, width};
 use std::io::{self, Write};

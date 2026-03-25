@@ -1,6 +1,6 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{InlineString, ItemsOwned, ResultAndCommand, Run,
+use crate::{InlineString, ItemsOwned, ResultAndCommand, Run, command,
             script::git::types::{LocalBranchInfo,
                                  git_command_args::{GIT_ARG_CREATE_BRANCH,
                                                     GIT_ARG_DELETE_FORCE,
@@ -171,10 +171,11 @@ pub(super) async fn try_execute_git_command_to_get_branches()
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{script::git::{git_test_fixtures::helper_setup_git_repo_with_commit,
+    use crate::{inline_vec, ok,
+                script::git::{git_test_fixtures::helper_setup_git_repo_with_commit,
                               types::{BranchExists,
                                       git_ui_strings::CURRENT_BRANCH_PREFIX}},
-                try_create_temp_dir_and_cd};
+                try_create_temp_dir_and_cd, with_saved_pwd};
 
     async fn test_try_get_current_branch_name() -> miette::Result<()> {
         with_saved_pwd!(async {

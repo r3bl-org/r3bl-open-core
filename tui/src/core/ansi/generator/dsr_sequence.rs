@@ -25,6 +25,7 @@
 //! [`DSR`]: crate::DsrSequence
 //! [`ESC`]: crate::EscSequence
 
+use crate::{generate_impl_display_for_fast_stringify, ok};
 use crate::{
     BufTextStorage, FastStringify, ParamsExt, TermCol, TermRow, CSI_PARAM_SEPARATOR,
     DSR_CURSOR_POSITION_RESPONSE_END, DSR_RESPONSE_START, DSR_STATUS_OK_RESPONSE_STR,

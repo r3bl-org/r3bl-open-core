@@ -2,8 +2,9 @@
 
 // cspell:words ello
 
-use crate::{AsyncDebouncedDeadline, CONTROLLED_READY, DebouncedState, LINE_PREFIX, PtyTestMode, PtyTestContext,
-            core::test_fixtures::StdoutMock, direct_to_ansi::DirectToAnsiInputDevice,
+use crate::{AsyncDebouncedDeadline, CONTROLLED_READY, DebouncedState, LINE_PREFIX,
+            PtyTestContext, PtyTestMode, core::test_fixtures::StdoutMock,
+            direct_to_ansi::DirectToAnsiInputDevice, generate_pty_test,
             readline_async::readline_async_impl::LineState};
 use std::{io::Write,
           sync::{Arc, Mutex as StdMutex},
@@ -205,5 +206,4 @@ fn pty_controlled_entry_point() {
         println!("🔍 PTY Controlled: Completed, exiting");
         std::io::stdout().flush().expect("Failed to flush");
     });
-
 }

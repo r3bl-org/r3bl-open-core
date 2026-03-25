@@ -657,6 +657,7 @@ mod tests {
     //! To avoid global state contamination (from env vars and static variables), these
     //! tests are run in an isolated process.
     use super::*;
+    use crate::{PtyTestContext, PtyTestMode, generate_isolated_process_test};
 
     generate_isolated_process_test!(
         test_all_color_support_detection_sequentially_in_isolated_process,
@@ -777,7 +778,7 @@ mod tests {
     #[cfg(unix)]
     mod pty_tests {
         use super::*;
-        use crate::{PtyTestMode, PtyTestContext};
+        use crate::generate_pty_test;
         use std::io::BufRead;
 
         generate_pty_test! {

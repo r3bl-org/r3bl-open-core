@@ -18,12 +18,13 @@
 //! [`DirectToAnsiInputDevice`]: crate::direct_to_ansi::DirectToAnsiInputDevice
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 
-use crate::{CONTROLLED_READY, CONTROLLED_STARTING, InputEvent, KeyState,
-            PtyTestMode, PtyTestContext, TEST_RUNNING,
+use crate::{CONTROLLED_READY, CONTROLLED_STARTING, InputEvent, KeyState, PtyTestContext,
+            PtyTestMode, TEST_RUNNING,
             core::ansi::{generator::generate_keyboard_sequence,
                          vt_100_terminal_input_parser::ir_event_types::{VT100InputEventIR,
                                                                         VT100KeyCodeIR,
                                                                         VT100KeyModifiersIR}},
+            generate_pty_test,
             tui::terminal_lib_backends::direct_to_ansi::DirectToAnsiInputDevice};
 use std::{io::{BufRead, Write},
           time::Duration};
@@ -274,5 +275,4 @@ fn pty_controlled_entry_point() {
 
         eprintln!("🔍 PTY Controlled: Completed, exiting");
     });
-
 }

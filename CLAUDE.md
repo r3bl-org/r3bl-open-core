@@ -119,6 +119,12 @@ When writing or modifying rustdoc comments in code, **proactively apply** these 
 
 Don't wait for `check-code-quality` to catch issues - write docs correctly the first time.
 
+### Macro Imports
+
+Do NOT use `#[macro_use]` on module declarations. For `#[macro_export]` macros, use explicit
+imports: `use crate::macro_name;`. Each `mod` block that uses a macro needs its own import -
+parent scope imports don't propagate into child modules.
+
 ### Cross-Platform Verification
 
 When working with platform-specific code (`#[cfg(unix)]`, `#[cfg(not(unix))]`), verify Windows

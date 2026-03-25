@@ -1,7 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{PtyTestContext, PtyTestMode, TTYResult, is_fully_interactive,
-            is_input_interactive, is_output_interactive};
+use crate::{PtyTestContext, PtyTestMode, TTYResult, generate_pty_test,
+            is_fully_interactive, is_input_interactive, is_output_interactive};
 use std::io::{BufRead, Write};
 
 generate_pty_test! {

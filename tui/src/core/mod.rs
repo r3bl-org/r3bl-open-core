@@ -2,32 +2,18 @@
 
 #![rustfmt::skip]
 
-// Macro-defining modules FIRST (order matters for #[macro_use]).
-#[macro_use]
 pub mod decl_macros;
-#[macro_use]
 pub mod stack_alloc_types;
-#[macro_use]
 pub mod tui_style;
-#[macro_use]
 pub mod tui_styled_text;
-#[macro_use]
 pub mod coordinates;
-#[macro_use]
 pub mod script;
-#[macro_use]
 pub mod terminal_io;
-#[macro_use]
 pub mod test_fixtures;
-#[macro_use]
 pub mod common;
-#[macro_use]
 pub mod log;
-#[macro_use]
 pub mod misc;
-#[macro_use]
 pub mod heap_alloc_types;
-#[macro_use]
 pub mod ansi;
 
 // Consumer-only modules.

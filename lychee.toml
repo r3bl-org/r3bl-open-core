@@ -33,4 +33,6 @@ exclude = [
     "^https?://(www\\.)?youtu(\\.be|be\\.com)/",
     # GitHub API template URLs with {placeholders} that lychee URL-encodes to %7B...%7D.
     "api\\.github\\.com/repos/.*%7B",
+    # crates.io API template URLs with {placeholders}.
+    "crates\\.io/api/.*%7B",
 ]

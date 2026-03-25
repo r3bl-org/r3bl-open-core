@@ -33,6 +33,7 @@
 //!
 //! [`sled`]: https://github.com/spacejam/sled
 
+use crate::inline_string;
 use crate::fg_cyan;
 use kv::{Config, Json, Store};
 use miette::{Context, IntoDiagnostic};

@@ -447,7 +447,7 @@ pub fn inc_caret_row(
 #[cfg(test)]
 mod tests {
     use crate::{CaretDirection, DEFAULT_SYN_HI_FILE_EXT, EditorBuffer, EditorEvent,
-                GCStringOwned, caret_raw, caret_scr_adj,
+                GCStringOwned, assert_eq2, caret_raw, caret_scr_adj,
                 clipboard_service::clipboard_test_fixtures::TestClipboard, col,
                 editor::test_fixtures_editor::mock_real_objects_for_editor, height, row,
                 scr_ofs, width};

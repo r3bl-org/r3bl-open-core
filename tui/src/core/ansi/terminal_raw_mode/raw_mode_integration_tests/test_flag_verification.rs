@@ -1,18 +1,15 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+// cspell:words IEXTEN VMIN VTIME OPOST ICRNL INLCR IGNCR IXON ISTRIP
+
 //! Test 2: Termios flag verification.
 //!
 //! Verifies that raw mode sets the *correct* termios flags, not just that
 //! *something* changed. This test documents the exact contract of raw mode
 //! and catches regressions in flag handling.
 
-use crate::{
-    PtyTestMode,
-    RawModeGuard,
-    VMIN_RAW_MODE,
-    VTIME_RAW_MODE,
-    PtyTestContext,
-};
+use crate::{PtyTestContext, PtyTestMode, RawModeGuard, VMIN_RAW_MODE, VTIME_RAW_MODE,
+            generate_pty_test};
 use rustix::termios::{self, ControlModes, InputModes, LocalModes, OutputModes,
                       SpecialCodeIndex};
 use std::{io::{BufRead, Write},

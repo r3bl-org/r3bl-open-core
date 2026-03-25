@@ -380,9 +380,9 @@ mod render_helper {
 #[cfg(test)]
 mod tests {
     use super::{render_helper::style_eq, *};
-    use crate::{ColWidth, RenderOpsLocalData,
+    use crate::{ColWidth, RenderOpsLocalData, assert_eq2,
                 compositor_render_ops_to_ofs_buf::print_text_with_attributes, height,
-                width};
+                new_style, tui_color, width};
 
     /// Helper function to make an `OffscreenBuffer`.
     fn make_offscreen_buffer_plain_text() -> OffscreenBuffer {

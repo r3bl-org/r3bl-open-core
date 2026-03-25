@@ -3,10 +3,8 @@
 #![allow(clippy::literal_string_with_formatting_args)]
 
 // Private modules (hide internal structure)
-#[macro_use]
 mod command_impl;
 mod crates_api;
-#[macro_use]
 mod directory_change;
 mod directory_create;
 mod download;
@@ -14,10 +12,8 @@ mod download;
 pub mod environment;
 #[cfg(not(any(test, doc)))]
 mod environment;
-#[macro_use]
 #[cfg(any(test, doc))]
 pub mod fs_path;
-#[macro_use]
 #[cfg(not(any(test, doc)))]
 mod fs_path;
 #[cfg(any(test, doc))]
@@ -28,7 +24,6 @@ mod github_api;
 mod http_client;
 mod package_manager;
 mod permissions;
-#[macro_use]
 mod temp_dir;
 
 // Re-export.

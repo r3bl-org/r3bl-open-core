@@ -1,5 +1,6 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+use crate::{inline_string, ok};
 use crate::{ChannelCapacity, CommonResult, CursorPositionBoundsStatus, GCStringOwned,
             InputDevice, LineStateControlSignal, OutputDevice,
             READLINE_ASYNC_INITIAL_PROMPT_DISPLAY_CURSOR_SHOW_DELAY, Readline,

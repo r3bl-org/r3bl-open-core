@@ -38,9 +38,7 @@
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 
 // Private modules (hide internal structure).
-#[macro_use]
 mod key_press;
-#[macro_use]
 mod output_device;
 mod enhanced_keys;
 mod input_device;

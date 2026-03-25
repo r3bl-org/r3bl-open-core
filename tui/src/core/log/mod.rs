@@ -1,7 +1,6 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 // Attach sources.
-#[macro_use]
 pub mod tracing_init;
 pub mod custom_event_formatter;
 pub mod log_public_api;

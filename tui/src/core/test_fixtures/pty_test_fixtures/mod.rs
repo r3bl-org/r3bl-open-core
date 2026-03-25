@@ -8,7 +8,6 @@ mod debounced_state;
 mod pty_test_watchdog;
 mod single_thread_safe_controlled_child;
 mod spawn_controlled_in_pty;
-#[macro_use] // Propagate macros textually (order matters).
 mod generate_pty_test;
 
 // Export flat public API.

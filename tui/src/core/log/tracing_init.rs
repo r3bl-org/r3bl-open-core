@@ -238,7 +238,7 @@ mod fixtures {
 #[cfg(test)]
 mod test_tracing_shared_writer_output {
     use super::{fixtures::get_expected, *};
-    use crate::{InlineString, InlineVec, LineStateControlSignal, SharedWriter};
+    use crate::{InlineString, InlineVec, LineStateControlSignal, SharedWriter, join};
     use smallvec::smallvec;
 
     #[tokio::test]

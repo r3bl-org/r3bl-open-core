@@ -13,10 +13,11 @@ use crate::{ColWidth, CommonResult, CursorBoundsCheck, CursorPositionBoundsStatu
             caret_scr_adj,
             clipboard_support::ClipboardService,
             col, convert_syntect_to_styled_text, fg_green, get_selection_style, glyphs,
-            height,
+            height, inline_string, new_style,
             render_cache::{RenderCache, UseRenderCache},
-            render_pipeline, render_tui_styled_texts_into, row, try_get_syntax_ref,
-            try_parse_and_highlight, usize};
+            render_pipeline, render_tui_styled_texts_into, row, throws,
+            throws_with_return, try_get_syntax_ref, try_parse_and_highlight, tui_color,
+            usize};
 use syntect::easy::HighlightLines;
 
 /// Checks if we should stop rendering at this row index.
@@ -723,7 +724,7 @@ mod tests {
     use super::*;
     use crate::{CaretDirection, EditorEngineConfig, FlexBoxId, ModifierKeysMask, Pos,
                 RenderList, clipboard_service::clipboard_test_fixtures::TestClipboard,
-                width};
+                key_press, width};
 
     #[test]
     fn test_undo_redo_clears_ast_cache() {

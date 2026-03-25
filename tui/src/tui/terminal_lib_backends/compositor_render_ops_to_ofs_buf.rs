@@ -77,7 +77,7 @@ use crate::{ColWidth, CommonError, CommonErrorType, CommonResult, DEBUG_TUI_COMP
             GCStringOwned, MemoizedLenMap, PixelChar, PixelCharLine, Pos,
             RenderOpsLocalData, Size, StringLength, TuiStyle, ZOrder, ch,
             glyphs::{self, SPACER_GLYPH},
-            usize, width};
+            inline_string, usize, width};
 
 impl RenderPipeline {
     /// Converts the render pipeline to an offscreen buffer.
@@ -692,7 +692,7 @@ mod print_text_with_attributes_helper {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{col, height, row};
+    use crate::{assert_eq2, col, height, new_style, render_pipeline, row, tui_color};
     use std::collections::HashMap;
 
     #[allow(clippy::too_many_lines)]

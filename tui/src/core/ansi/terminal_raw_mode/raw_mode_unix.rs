@@ -60,6 +60,7 @@
 //!     mod@crate::terminal_raw_mode#raw-mode-vs-cooked-mode
 //! [termios]: https://man7.org/linux/man-pages/man3/termios.3.html
 
+use crate::ok;
 use crate::{TtyStatus, is_tty_stdin};
 use miette::miette;
 use rustix::{fd::{AsFd, BorrowedFd},

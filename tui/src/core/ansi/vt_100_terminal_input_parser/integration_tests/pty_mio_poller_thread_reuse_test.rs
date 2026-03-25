@@ -76,7 +76,8 @@
 use crate::{PtyTestContext, PtyTestMode,
             core::resilient_reactor_thread::LivenessState,
             direct_to_ansi::{DirectToAnsiInputDevice,
-                             input::global_input_resource::SINGLETON}};
+                             input::global_input_resource::SINGLETON},
+            generate_pty_test};
 use std::{io::{BufRead, BufReader, Write},
           time::Duration};
 

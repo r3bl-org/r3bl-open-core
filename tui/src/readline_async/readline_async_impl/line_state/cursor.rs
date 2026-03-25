@@ -1,6 +1,7 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::core::LineState;
+use crate::ok;
 use crate::{ArrayBoundsCheck, ArrayOverflowResult, ColWidth, CsiSequence,
             CursorBoundsCheck, NumericValue, Seg, StringLength, TermCol, TermColDelta,
             TermRowDelta, col, seg_index, term_col_delta, term_row_delta, width};

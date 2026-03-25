@@ -6,6 +6,7 @@
 //!
 //! [here]: https://rust-lang.github.io/rust-clippy/master/index.html#ptr_arg
 
+use crate::ok;
 use miette::Diagnostic;
 use std::{env, fs,
           fs::File,
@@ -261,7 +262,7 @@ pub fn try_write_file(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::try_create_temp_dir;
+    use crate::{try_create_temp_dir, with_saved_pwd};
     #[cfg(unix)]
     use std::os::unix::fs::PermissionsExt;
 

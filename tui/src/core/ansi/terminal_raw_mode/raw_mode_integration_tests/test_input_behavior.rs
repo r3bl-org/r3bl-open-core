@@ -6,14 +6,8 @@
 //! flags are set correctly. Verifies character-by-character reading without
 //! buffering, echo, or signal interpretation.
 
-use crate::{
-    ANSI_ESC,
-    CONTROL_C,
-    CONTROL_D,
-    CONTROL_LF,
-    PtyTestMode,
-    PtyTestContext,
-};
+use crate::{ANSI_ESC, CONTROL_C, CONTROL_D, CONTROL_LF, PtyTestContext, PtyTestMode,
+            generate_pty_test};
 use std::{io::{BufRead, Read, Write},
           time::Duration};
 

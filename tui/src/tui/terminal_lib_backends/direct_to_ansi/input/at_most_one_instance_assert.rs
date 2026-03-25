@@ -58,6 +58,7 @@ pub fn release() { DEVICE_EXISTS.store(false, Ordering::SeqCst); }
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::generate_isolated_process_test;
 
     generate_isolated_process_test!(
         test_at_most_one_instance_in_isolated_process,
@@ -68,13 +69,25 @@ mod tests {
         std::process::Stdio::piped()
     );
 
+    /// Validates that the child process succeeded without unexpected panics.
+    ///
+    /// Test 3 deliberately double-claims to verify the panic guard.
+    /// [`catch_unwind`] catches the panic, but Rust's default panic hook still prints
+    /// the message to stderr *before* the catch. Since [`spawn_isolated_process()`],
+    /// from [`generate_isolated_process_test!`], passes `--nocapture`, these deliberate
+    /// panic messages appear in the piped stderr. We must tolerate them.
+    ///
+    /// [`catch_unwind`]: std::panic::catch_unwind
+    /// [`generate_isolated_process_test!`]: crate::generate_isolated_process_test
+    /// [`spawn_isolated_process()`]: crate::spawn_isolated_process
     fn controller_fn(output: std::process::Output) {
         let stderr = String::from_utf8_lossy(&output.stderr).to_string();
 
-        if !output.status.success()
-            || stderr.contains("panicked at")
-            || stderr.contains("Test failed with error")
-        {
+        let has_unexpected_error = stderr.contains("Test failed with error")
+            || (!stderr.contains("another device exists")
+                && stderr.contains("panicked at"));
+
+        if !output.status.success() || has_unexpected_error {
             eprintln!("Exit status: {:?}", output.status);
             eprintln!("Stdout: {}", String::from_utf8_lossy(&output.stdout));
             eprintln!("Stderr: {stderr}");

@@ -39,6 +39,7 @@
 //! [`reset`]: https://man7.org/linux/man-pages/man1/reset.1.html
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 
+use crate::{generate_impl_display_for_fast_stringify, ok};
 use crate::{BufTextStorage, ESC_INDEX_DOWN_STR, ESC_RESET_TERMINAL_STR,
             ESC_RESTORE_CURSOR_STR, ESC_REVERSE_INDEX_STR, ESC_SAVE_CURSOR_STR,
             ESC_SELECT_ASCII_STR, ESC_SELECT_DEC_GRAPHICS_STR, FastStringify};

@@ -1,18 +1,18 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use super::{BoxedSafeApp, DefaultInputEventHandler, EventPropagation,
-            MainEventLoopFuture};
-use crate::{Ansi256GradientIndex, ColorWheel, ColorWheelConfig, ColorWheelSpeed,
-            CommonResult, ComponentRegistryMap, Continuation, DEBUG_TUI_MOD,
-            DISPLAY_LOG_TELEMETRY, DefaultSize, DefaultTiming, FlushKind, GCStringOwned,
-            GetMemSize, GlobalData, GradientGenerationPolicy, HasFocus, InputDevice,
-            InputEvent, LockedOutputDevice, MinSize, OffscreenBufferPool, OutputDevice,
-            RawMode, RenderOpCommon, RenderOpFlush, RenderOpIR, RenderPipeline, Size,
-            SufficientSize, TelemetryAtomHint, TerminalWindowMainThreadSignal,
-            TextColorizationPolicy, ZOrder, ch, col, emit_stderr_redirection_disclaimer,
-            glyphs, height, row,
+use crate::{Ansi256GradientIndex, BoxedSafeApp, ColorWheel, ColorWheelConfig,
+            ColorWheelSpeed, CommonResult, ComponentRegistryMap, Continuation,
+            DEBUG_TUI_MOD, DISPLAY_LOG_TELEMETRY, DefaultInputEventHandler, DefaultSize,
+            DefaultTiming, EventPropagation, FlushKind, GCStringOwned, GetMemSize,
+            GlobalData, GradientGenerationPolicy, HasFocus, InputDevice, InputEvent,
+            LockedOutputDevice, MainEventLoopFuture, MinSize, OffscreenBufferPool,
+            OutputDevice, RawMode, RenderOpCommon, RenderOpFlush, RenderOpIR,
+            RenderPipeline, Size, SufficientSize, TelemetryAtomHint,
+            TerminalWindowMainThreadSignal, TextColorizationPolicy, ZOrder, ch, col,
+            emit_stderr_redirection_disclaimer, glyphs, height, inline_string,
+            lock_output_device_as_mut, new_style, ok, render_pipeline, row,
             telemetry::{Telemetry, telemetry_default_constants},
-            width};
+            telemetry_record, width};
 use smallvec::smallvec;
 use std::{fmt::{Debug, Display},
           marker::PhantomData};
@@ -881,16 +881,19 @@ fn render_window_too_small_error(window_size: Size) -> RenderPipeline {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use crate::{App, ColorWheel, ColorWheelConfig, ColorWheelSpeed, CommonResult,
                 ComponentRegistryMap, CrosstermEventResult, EventPropagation,
                 GlobalData, GradientGenerationPolicy, GradientLengthKind, HasFocus,
                 InlineVec, InputDevice, InputEvent, Key, KeyPress, OutputDevice,
                 OutputDeviceExt, PixelChar, RenderOpCommon, RenderOpIRVec,
                 RenderPipeline, SpecialKey, TTYResult, TerminalWindowMainThreadSignal,
-                TextColorizationPolicy, TuiStyle, TuiStyleAttribs, ZOrder, ch, col,
-                defaults::get_default_gradient_stops, height, is_fully_interactive,
-                is_output_interactive, main_event_loop_impl,
-                render_tui_styled_texts_into, tui_style_attrib, width};
+                TextColorizationPolicy, TuiStyle, TuiStyleAttribs, ZOrder, assert_eq2,
+                ch, col, defaults::get_default_gradient_stops, height,
+                is_fully_interactive, is_output_interactive, key_press,
+                main_event_loop_impl, render_tui_styled_texts_into, send_signal,
+                throws_with_return, tui_color, tui_style_attrib, tui_styled_text,
+                tui_styled_texts, width};
     use smallvec::smallvec;
     use std::{fmt::{Debug, Display, Formatter},
               time::Duration};

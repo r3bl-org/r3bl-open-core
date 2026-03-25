@@ -2626,11 +2626,10 @@
 #![allow(macro_expanded_macro_exports_accessed_by_absolute_paths)]
 
 // Attach modules (re-exported below to provide clean public API).
-// #[macro_use] propagates macros textually to subsequent sibling modules.
-#[macro_use] pub mod core;
+pub mod core;
 pub mod network_io;
-#[macro_use] pub mod readline_async;
-#[macro_use] pub mod tui;
+pub mod readline_async;
+pub mod tui;
 
 // Re-export stable public API using glob imports for ergonomic, flat API surface.
 //

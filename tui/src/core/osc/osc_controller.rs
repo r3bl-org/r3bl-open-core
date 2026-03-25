@@ -5,6 +5,7 @@
 //! [`OSC`]: crate::osc_codes::OscSequence
 
 use super::{OscEvent, osc_codes::OscSequence};
+use crate::lock_output_device_as_mut;
 use crate::core::terminal_io::OutputDevice;
 use miette::IntoDiagnostic;
 

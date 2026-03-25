@@ -243,10 +243,8 @@ mod detect_color_support;
 
 // Module is public only when building documentation or tests.
 // This allows rustdoc links to work while keeping it private in release builds.
-#[macro_use]
 #[cfg(any(test, doc))]
 pub mod generator;
-#[macro_use]
 #[cfg(not(any(test, doc)))]
 mod generator;
 

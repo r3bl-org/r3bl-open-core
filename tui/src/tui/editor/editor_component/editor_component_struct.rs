@@ -1,20 +1,20 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+use super::HasEditorBuffers;
 use crate::{BoxedSafeComponent, CommonResult, Component, DEFAULT_SYN_HI_FILE_EXT,
             EditorBuffer, EditorEngine, EditorEngineApplyEventResult,
             EditorEngineConfig, EventPropagation, FlexBox, FlexBoxId, GlobalData,
-            HasEditorBuffers, HasFocus, InputEvent, RenderPipeline, SurfaceBounds,
-            SystemClipboard, TerminalWindowMainThreadSignal,
-            editor_engine::engine_public_api};
+            HasFocus, InputEvent, RenderPipeline, SurfaceBounds, SystemClipboard,
+            TerminalWindowMainThreadSignal, editor_engine::engine_public_api, ok};
 use std::fmt::Debug;
 use tokio::sync::mpsc::Sender;
 
-#[derive(Debug)]
 /// This is a shim which allows the reusable [`EditorEngine`] to be used in the context of
 /// [`crate::Component`] and [`crate::App`].
 ///
 /// The main methods here simply pass thru all their
 /// arguments to the [`EditorEngine`].
+#[derive(Debug)]
 pub struct EditorComponent<S, AS>
 where
     S: Debug + Default + Clone + Sync + Send,
@@ -39,11 +39,8 @@ pub type OnEditorBufferChangeFn<A> =
     fn(FlexBoxId, Sender<TerminalWindowMainThreadSignal<A>>);
 
 pub mod editor_component_impl_component_trait {
-    use super::{CommonResult, Component, DEFAULT_SYN_HI_FILE_EXT, Debug, EditorBuffer,
-                EditorComponent, EditorComponentData, EditorEngineApplyEventResult,
-                EventPropagation, FlexBox, FlexBoxId, GlobalData, HasEditorBuffers,
-                HasFocus, InputEvent, RenderPipeline, SurfaceBounds, SystemClipboard,
-                engine_public_api};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     fn get_existing_mut_editor_buffer_from_state_or_create_new_one<S>(
         mut_state: &mut S,

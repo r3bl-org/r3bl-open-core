@@ -39,6 +39,7 @@
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`ST`]: OSC_TERMINATOR_ST
 
+use crate::{generate_impl_display_for_fast_stringify, ok};
 use crate::{core::common::fast_stringify::{BufTextStorage, FastStringify},
             define_ansi_const};
 use std::fmt;

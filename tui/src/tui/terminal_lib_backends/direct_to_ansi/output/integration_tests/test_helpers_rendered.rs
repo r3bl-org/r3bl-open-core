@@ -32,8 +32,8 @@
 //! [`StdoutMock`]: crate::StdoutMock
 
 use crate::{LockedOutputDevice, OffscreenBuffer, OutputDevice, RenderOpOutput,
-            RenderOpPaint, RenderOpsLocalData, Size, col, height, pos,
-            render_op::RenderOpCommon, row,
+    RenderOpPaint, RenderOpsLocalData, Size, col, height,
+    lock_output_device_as_mut, pos, render_op::RenderOpCommon, row,
             terminal_lib_backends::direct_to_ansi::RenderOpPaintImplDirectToAnsi,
             test_fixtures::output_device_fixtures::OutputDeviceExt, width};
 
