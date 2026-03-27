@@ -5,9 +5,11 @@
 
 use miette::{IntoDiagnostic, miette};
 use r3bl_tui::{ChannelCapacity, InlineVec, LineStateControlSignal, OutputDevice,
-               SendRawTerminal, SharedWriter, SpinnerStyle, bold, fg_color, fg_red,
+               SendRawTerminal, SharedWriter, SpinnerStyle, TerminalInteractiveStatus,
+               TuiAvailability, bold, check_is_terminal_interactive, fg_color, fg_red,
                fg_slate_gray, inline_string,
                log::{DisplayPreference, try_initialize_logging_global},
+               ok,
                readline_async::{Readline, ReadlineAsyncContext, ReadlineEvent, Spinner},
                rla_println, set_mimalloc_in_main, tui_color};
 use smallvec::smallvec;
@@ -119,17 +121,27 @@ impl Default for State {
 async fn main() -> miette::Result<()> {
     set_mimalloc_in_main!();
 
+    match check_is_terminal_interactive() {
+        TerminalInteractiveStatus::Available => {}
+        TerminalInteractiveStatus::NotAvailable(reason) => {
+            eprintln!("{}", reason.as_err_msg());
+            std::process::exit(1);
+        }
+    }
+
     let prompt = {
         let prompt_seg_1 = fg_slate_gray("╭>╮").bg_moonlight_blue();
         let prompt_seg_2 = " ";
         format!("{prompt_seg_1}{prompt_seg_2}")
     };
 
-    let maybe_rl_ctx = ReadlineAsyncContext::try_new(Some(prompt), None).await?;
-
-    // If the terminal is not fully interactive, then return early.
-    let Some(mut rl_ctx) = maybe_rl_ctx else {
-        return Ok(());
+    let mut rl_ctx = match ReadlineAsyncContext::try_new(Some(prompt), None).await {
+        TuiAvailability::Available(rl_ctx) => rl_ctx,
+        TuiAvailability::NotAvailable(reason) => {
+            eprintln!("{}", reason.as_err_msg());
+            return Ok(());
+        }
+        TuiAvailability::Broken(e) => return Err(e),
     };
 
     // Pre-populate the readline's history with some entries.
@@ -386,7 +398,7 @@ mod long_running_task {
 
         spawn(async move {
             // Try to create and start a spinner.
-            let maybe_spinner = Spinner::try_start(
+            let res_spinner = Spinner::try_start(
                 format!("{task_name} - This is a sample indeterminate progress message"),
                 format!(
                     "{task_name} - Task ended. Resuming terminal and showing any output that was generated while spinner was active."
@@ -398,9 +410,14 @@ mod long_running_task {
             )
             .await;
 
+            let mut maybe_spinner = match res_spinner {
+                TuiAvailability::Available(spinner) => Some(spinner),
+                _ => None,
+            };
+
             loop {
                 // Check for spinner shutdown (via interruption).
-                if let Ok(Some(ref spinner)) = maybe_spinner
+                if let Some(ref spinner) = maybe_spinner
                     && spinner.is_shutdown()
                 {
                     break;
@@ -424,7 +441,7 @@ mod long_running_task {
             }
 
             // Don't forget to stop the spinner.
-            if let Ok(Some(mut spinner)) = maybe_spinner {
+            if let Some(mut spinner) = maybe_spinner.take() {
                 spinner.request_shutdown();
                 spinner.await_shutdown().await;
             }

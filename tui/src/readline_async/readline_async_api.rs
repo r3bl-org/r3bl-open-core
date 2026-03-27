@@ -1,36 +1,34 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{inline_string, ok};
 use crate::{ChannelCapacity, CommonResult, CursorPositionBoundsStatus, GCStringOwned,
             InputDevice, LineStateControlSignal, OutputDevice,
             READLINE_ASYNC_INITIAL_PROMPT_DISPLAY_CURSOR_SHOW_DELAY, Readline,
-            ReadlineEvent, SegIndex, SharedWriter, TTYResult,
-            emit_stderr_redirection_disclaimer, is_input_interactive,
-            is_output_interactive};
+            ReadlineEvent, SegIndex, SharedWriter, TerminalInteractiveStatus,
+            TuiAvailability, check_is_terminal_interactive,
+            emit_stderr_redirection_disclaimer, get_size, inline_string, ok};
 use futures_util::FutureExt;
 use miette::IntoDiagnostic;
 use tokio::sync::broadcast;
 
-/// This is the context for the readline async API. It contains the
-/// [Readline] instance, the shared writer, and the shutdown completion
-/// channel.
+/// This is the context for the readline async API. It contains the [Readline] instance,
+/// the shared writer, and the shutdown completion channel.
 ///
-/// The mental model for this is that you create a readline async context
-/// and then use it to read lines from the terminal. You can re-use the
-/// `Readline` to read as many lines as you want. The `SharedWriter` is used to
-/// write to the terminal. This context can be paused and resumed.
+/// The mental model for this is that you create a readline async context and then use it
+/// to read lines from the terminal. You can re-use the `Readline` to read as many lines
+/// as you want. The `SharedWriter` is used to write to the terminal. This context can be
+/// paused and resumed.
 ///
 /// When you are done with the context, you should call
-/// [`ReadlineAsyncContext::request_shutdown()`] to request a shutdown. This will
-/// cause the readline loop to exit and the context to be dropped. You should
-/// also call [`ReadlineAsyncContext::await_shutdown()`] to wait for the shutdown
-/// to complete. This is important because there is a lot of machinery that needs
-/// to be cleaned up and shutdown. This is done in a non-blocking way, so you
-/// can continue to use the context until the shutdown is complete.
+/// [`ReadlineAsyncContext::request_shutdown()`] to request a shutdown. This will cause
+/// the readline loop to exit and the context to be dropped. You should also call
+/// [`ReadlineAsyncContext::await_shutdown()`] to wait for the shutdown to complete. This
+/// is important because there is a lot of machinery that needs to be cleaned up and
+/// shutdown. This is done in a non-blocking way, so you can continue to use the context
+/// until the shutdown is complete.
 ///
-/// Finally, another benefit of having a non-blocking readline, is that if you
-/// call [`ReadlineAsyncContext::request_shutdown()`] it will exit a readline loop
-/// that might currently be running!
+/// Finally, another benefit of having a non-blocking readline, is that if you call
+/// [`ReadlineAsyncContext::request_shutdown()`] it will exit a readline loop that might
+/// currently be running!
 ///
 /// # Example
 ///
@@ -40,14 +38,20 @@ use tokio::sync::broadcast;
 /// # async fn foo() -> miette::Result<()> {
 ///     # use r3bl_tui::readline_async::ReadlineAsyncContext;
 ///     # use r3bl_tui::ChannelCapacity;
+///     # use r3bl_tui::TuiAvailability;
 ///     # use r3bl_tui::ok;
-///     let Some(mut rl_ctx) = ReadlineAsyncContext::try_new(
+///     let mut rl_ctx = match ReadlineAsyncContext::try_new(
 ///         Some("> "),
 ///         Some(ChannelCapacity::VeryLarge),
-///     ).await?
-///     else {
-///         return Err(miette::miette!("Failed to create terminal"));
+///     ).await {
+///         TuiAvailability::Available(rl_ctx) => rl_ctx,
+///         TuiAvailability::NotAvailable(reason) => {
+///             eprintln!("{}", reason.as_err_msg());
+///             return ok!();
+///         }
+///         TuiAvailability::Broken(e) => return Err(e),
 ///     };
+///
 ///     let ReadlineAsyncContext { readline: ref mut rl, .. } = rl_ctx;
 ///     let user_input = rl.readline().await;
 ///     rl_ctx.request_shutdown(Some("Shutting down...")).await?;
@@ -109,8 +113,8 @@ macro_rules! rla_println_prefixed {
 impl ReadlineAsyncContext {
     /// Creates a new instance of [`ReadlineAsyncContext`]. Example of `prompt` is `"> "`.
     /// It is safe to have [`ANSI`] escape sequences inside the `prompt` as this is taken
-    /// into account when calculating the width of the terminal when displaying it in
-    /// the "line editor".
+    /// into account when calculating the width of the terminal when displaying it in the
+    /// "line editor".
     ///
     /// # Arguments
     ///
@@ -120,68 +124,90 @@ impl ReadlineAsyncContext {
     ///   [`ChannelCapacity`] documentation for detailed guidance.
     ///
     /// # Returns
-    /// 1. If the terminal is not interactive, then it will return [None], and won't
-    ///    create the [Readline]. This is when the terminal is not considered
-    ///    interactive:
-    ///    - `stdin` or `stdout` is piped, e.g., `echo "foo" | cargo run --example spinner`.
-    /// 2. Otherwise, it will return a [`ReadlineAsyncContext`] instance.
-    /// 3. If any issues arise when putting the terminal into raw mode, or getting the
-    ///    terminal size, it will return an error.
     ///
-    /// More info on terminal piping:
-    /// - <https://unix.stackexchange.com/questions/597083/how-does-piping-affect-stdin>
+    /// Returns a [`TuiAvailability`] containing the [`ReadlineAsyncContext`] if the
+    /// terminal is interactive.
     ///
     /// # Errors
     ///
     /// Returns an error if:
-    /// - The terminal cannot be put into raw mode
-    /// - The terminal size cannot be determined
+    /// - The terminal cannot be put into [raw mode]
     /// - The readline instance cannot be created
     ///
+    /// More info on terminal piping:
+    /// - <https://unix.stackexchange.com/questions/597083/how-does-piping-affect-stdin>
+    ///
+    /// # Note on [`stderr`] redirection
+    ///
+    /// This function calls [`emit_stderr_redirection_disclaimer()`] to ensure that if
+    /// [`stderr`] is redirected, the user is notified that application logs are handled
+    /// internally.
+    ///
+    /// # Other entry points
+    ///
+    /// See [interactive terminal application entry points].
+    ///
     /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+    /// [`check_is_terminal_interactive()`]: crate::check_is_terminal_interactive
+    /// [`emit_stderr_redirection_disclaimer()`]:
+    ///     crate::emit_stderr_redirection_disclaimer
+    /// [`stderr`]: std::io::stderr
+    /// [interactive terminal application entry points]: crate#interactive-terminal-application-entry-points
+    /// [raw mode]: mod@crate::terminal_raw_mode#raw-mode-vs-cooked-mode
     pub async fn try_new(
         read_line_prompt: Option<impl AsRef<str>>,
         channel_capacity: Option<ChannelCapacity>,
-    ) -> miette::Result<Option<ReadlineAsyncContext>> {
-        if let TTYResult::IsNotInteractive = is_input_interactive() {
-            return Ok(None);
+    ) -> TuiAvailability<ReadlineAsyncContext> {
+        match check_is_terminal_interactive() {
+            TerminalInteractiveStatus::Available => {
+                let init = async || {
+                    emit_stderr_redirection_disclaimer();
+
+                    let initial_size = get_size()?;
+                    let output_device = OutputDevice::new_stdout();
+                    let input_device = InputDevice::default();
+
+                    let prompt = read_line_prompt
+                        .map_or_else(|| "> ".to_owned(), |p| p.as_ref().to_string());
+
+                    // Use the provided channel capacity or default to VeryLarge.
+                    let capacity = channel_capacity.unwrap_or_default();
+
+                    // Create a channel to signal when shutdown is complete.
+                    let shutdown_complete_channel = broadcast::channel::<()>(1);
+                    let (shutdown_complete_sender, _) = shutdown_complete_channel;
+
+                    let (readline, stdout) = Readline::try_new(
+                        prompt.clone(),
+                        output_device,
+                        input_device,
+                        shutdown_complete_sender.clone(),
+                        capacity,
+                        initial_size,
+                    )
+                    .into_diagnostic()?;
+
+                    // Sleep for READLINE_ASYNC_INITIAL_PROMPT_DISPLAY_CURSOR_SHOW_DELAY.
+                    tokio::time::sleep(
+                        READLINE_ASYNC_INITIAL_PROMPT_DISPLAY_CURSOR_SHOW_DELAY,
+                    )
+                    .await;
+
+                    Ok(ReadlineAsyncContext {
+                        readline,
+                        shared_writer: stdout,
+                        shutdown_complete_sender,
+                    })
+                };
+                match init().await {
+                    Ok(ctx) => TuiAvailability::Available(ctx),
+                    Err(e) => TuiAvailability::Broken(e),
+                }
+            }
+            TerminalInteractiveStatus::NotAvailable(reason) => {
+                TuiAvailability::NotAvailable(reason)
+            }
         }
-        if let TTYResult::IsNotInteractive = is_output_interactive() {
-            return Ok(None);
-        }
-
-        emit_stderr_redirection_disclaimer();
-
-        let output_device = OutputDevice::new_stdout();
-        let input_device = InputDevice::default();
-
-        let prompt =
-            read_line_prompt.map_or_else(|| "> ".to_owned(), |p| p.as_ref().to_string());
-
-        // Use the provided channel capacity or default to VeryLarge.
-        let capacity = channel_capacity.unwrap_or_default();
-
-        // Create a channel to signal when shutdown is complete.
-        let shutdown_complete_channel = broadcast::channel::<()>(1);
-        let (shutdown_complete_sender, _) = shutdown_complete_channel;
-
-        let (readline, stdout) = Readline::try_new(
-            prompt.clone(),
-            output_device,
-            input_device,
-            shutdown_complete_sender.clone(),
-            capacity,
-        )
-        .into_diagnostic()?;
-
-        // Sleep for READLINE_ASYNC_INITIAL_PROMPT_DISPLAY_CURSOR_SHOW_DELAY.
-        tokio::time::sleep(READLINE_ASYNC_INITIAL_PROMPT_DISPLAY_CURSOR_SHOW_DELAY).await;
-
-        Ok(Some(ReadlineAsyncContext {
-            readline,
-            shared_writer: stdout,
-            shutdown_complete_sender,
-        }))
     }
 
     #[must_use]

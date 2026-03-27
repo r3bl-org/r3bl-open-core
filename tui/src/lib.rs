@@ -75,6 +75,7 @@
 //!   - [Partial TUI for simple choice](#partial-tui-for-simple-choice)
 //!   - [Partial TUI for REPL](#partial-tui-for-repl)
 //!   - [Full TUI for immersive apps](#full-tui-for-immersive-apps)
+//!   - [Terminal multiplexer](#terminal-multiplexer)
 //!   - [Power via composition](#power-via-composition)
 //! - [Changelog](#changelog)
 //! - [Learn how these crates are built, provide
@@ -292,6 +293,24 @@
 //! - [Build with Naz: async
 //!   readline](https://www.youtube.com/playlist?list=PLofhE49PEwmwelPkhfiqdFQ9IXnmGdnSE)
 //!
+//! ## Interactive terminal application entry points
+//!
+//! This crate provides five entry points for building interactive terminal applications.
+//! Each internalizes terminal availability and size checks, and returns a
+//! [`TuiAvailability<T>`] enum.
+//!
+//! | Entry Point                           | Purpose                 | Returns                                   | Best For                                                               |
+//! |:--------------------------------------|:------------------------|:------------------------------------------|:-----------------------------------------------------------------------|
+//! | [`TerminalWindow::main_event_loop()`] | Full TUI framework      | [`TuiAvailability<MainEventLoopFuture>`]  | Complex, multi-component apps with layouts, dialogs, and custom logic. |
+//! | [`ReadlineAsyncContext::try_new()`]   | Async Readline          | [`TuiAvailability<ReadlineAsyncContext>`] | CLI-style line input, REPLs, and background logging.                   |
+//! | [`choose()`]                          | Interactive Selection   | [`TuiAvailability<ChooseFuture>`]         | Prompting user to select one or more items from a list.                |
+//! | [`PTYMuxBuilder::build()`]            | Terminal Multiplexer    | [`TuiAvailability<PTYMux>`]               | Wrapping existing CLI tools (like `htop`, `bash`) in a multi-pane TUI. |
+//! | [`Spinner::try_start()`]              | Indeterminate Progress  | [`TuiAvailability<Spinner>`]              | Long-running tasks needing visual feedback (standalone or embedded).   |
+//!
+//! [`Spinner::try_start()`] only checks stdout interactivity (not stdin), so it works
+//! with piped stdin. It can run standalone or embedded within a
+//! [`ReadlineAsyncContext`] session.
+//!
 //! ## Partial TUI for simple choice
 //!
 //! [`mod@readline_async::choose_api`] allows you to build less interactive apps that ask
@@ -337,7 +356,12 @@
 //!
 //! **The bulk of this document is about this**. [`mod@tui::terminal_window_api`] gives
 //! you "raw mode", "alternate screen" and "full screen" support, while being totally
-//! async. An example of this is the "Full TUI" app `edi` in the
+//! async. It provides a full-featured framework with:
+//! - **[`App`] trait**: Unidirectional data flow architecture.
+//! - **`FlexBox`**: Responsive layout engine.
+//! - **Component System**: Reusable UI elements (editors, dialogs, etc.).
+//!
+//! An example of this is the "Full TUI" app `edi` in the
 //! [`r3bl-cmdr`](https://github.com/r3bl-org/r3bl-open-core/tree/main/cmdr) crate. You
 //! can install & run this with the following command:
 //!
@@ -345,6 +369,14 @@
 //! cargo install r3bl-cmdr
 //! edi
 //! ```
+//!
+//! ## Terminal multiplexer
+//!
+//! [`PTYMux::run()`] lets you build a terminal multiplexer similar to [`tmux`]. It manages
+//! multiple child processes (each in its own PTY) with per-process virtual terminal
+//! buffers and instant switching. See the
+//! [`pty_mux_example`](https://github.com/r3bl-org/r3bl-open-core/tree/main/tui/examples/pty_mux_example.rs)
+//! for a working example that wraps `bash`, `htop`, and other CLI tools.
 //!
 //! ## Power via composition
 //!
@@ -2301,24 +2333,26 @@
 //! **Intentionally unimplemented legacy features**: Custom tab stops (HTS, TBC), legacy
 //! line control (NEL), and legacy terminal modes (IRM, DECOM) are not implemented as
 //! they're primarily used by mainframe terminals and very old applications.
-//!
 //! ### Usage Example
 //!
 //! ```no_run
-//! use r3bl_tui::core::{pty_mux::{PTYMux, Process}, get_size};
+//! use r3bl_tui::{TuiAvailability, core::pty_mux::PTYMux};
 //!
 //! #[tokio::main]
 //! async fn main() -> miette::Result<()> {
-//!     let terminal_size = get_size()?;
-//!     let processes = vec![
-//!         Process::new("bash", "bash", vec![], terminal_size),
-//!         Process::new("editor", "nvim", vec![], terminal_size),
-//!         Process::new("monitor", "htop", vec![], terminal_size),
-//!     ];
-//!
-//!     let multiplexer = PTYMux::builder()
-//!         .processes(processes)
-//!         .build()?;
+//!     let multiplexer = match PTYMux::builder()
+//!         .add_process("bash", "bash", vec![])
+//!         .add_process("editor", "nvim", vec![])
+//!         .add_process("monitor", "htop", vec![])
+//!         .build()
+//!     {
+//!         TuiAvailability::Available(mux) => mux,
+//!         TuiAvailability::NotAvailable(reason) => {
+//!             eprintln!("{}", reason.as_err_msg());
+//!             return Ok(());
+//!         }
+//!         TuiAvailability::Broken(e) => return Err(e),
+//!     };
 //!
 //!     multiplexer.run().await?;  // F1/F2/F3 to switch, Ctrl+Q to quit
 //!     Ok(())
@@ -2482,8 +2516,23 @@
 //!
 //! <!-- Type references for documentation links -->
 //!
+//! [`PTYMuxBuilder::build()`]: crate::pty_mux::PTYMuxBuilder::build
+//! [`Available`]: crate::TerminalInteractiveStatus::Available
+//! [`TerminalWindow::main_event_loop()`]: crate::tui::TerminalWindow::main_event_loop
+//! [`TuiAvailability<ChooseFuture>`]: crate::TuiAvailability
+//! [`TuiAvailability<MainEventLoopFuture>`]: crate::TuiAvailability
+//! [`TuiAvailability<PTYMux>`]: crate::TuiAvailability
+//! [`TuiAvailability<ReadlineAsyncContext>`]: crate::TuiAvailability
+//! [`TuiAvailability<Spinner>`]: crate::TuiAvailability
+//! [`TuiAvailability<T>`]: crate::TuiAvailability
+//! [`Spinner::try_start()`]: crate::Spinner::try_start
+//! [`tmux`]: https://github.com/tmux/tmux
+//! [`ReadlineAsyncContext::try_new()`]: crate::ReadlineAsyncContext::try_new
+//! [`PTYMux::run()`]: crate::pty_mux::PTYMux::run
+//! [`choose()`]: crate::choose
 //! [`readline_async`]: crate::readline_async::ReadlineAsyncContext::try_new
 //! [`TUI`]: crate::tui::TerminalWindow::main_event_loop
+//! [`stderr` redirection disclaimers]: crate::emit_stderr_redirection_disclaimer
 //! [App]: crate::App
 //! [Component]: crate::Component
 //! [`pty_test_fixtures::drain_and_wait()`]: crate::pty_test_fixtures::drain_and_wait
@@ -2504,19 +2553,15 @@
 //! [ZOrder]: crate::ZOrder
 //! [`paint`]: mod@crate::paint
 //! [`paint()`]: fn@crate::paint
-//! [`OffscreenBufferPaintImplCrossterm`]:
-//!     struct@crate::OffscreenBufferPaintImplCrossterm
+//! [`OffscreenBufferPaintImplCrossterm`]: struct@crate::OffscreenBufferPaintImplCrossterm
 //! [EditorComponent]: crate::EditorComponent
 //! [EditorEngine]: crate::EditorEngine
 //! [EditorBuffer]: crate::EditorBuffer
 //! [HasEditorBuffers]: crate::HasEditorBuffers
 //! [ZeroCopyGapBuffer]: crate::ZeroCopyGapBuffer
-//! [`zero_copy_gap_buffer` module documentation]:
-//!     mod@crate::zero_copy_gap_buffer
-//! [`ZeroCopyGapBuffer::as_str()`]:
-//!     crate::ZeroCopyGapBuffer::as_str
-//! [`ZeroCopyGapBuffer::get_line_content()`]:
-//!     crate::ZeroCopyGapBuffer::get_line_content
+//! [`zero_copy_gap_buffer` module documentation]: mod@crate::zero_copy_gap_buffer
+//! [`ZeroCopyGapBuffer::as_str()`]: crate::ZeroCopyGapBuffer::as_str
+//! [`ZeroCopyGapBuffer::get_line_content()`]: crate::ZeroCopyGapBuffer::get_line_content
 //! [`&str`]: prim@str
 //! [`Component::handle_event()`]: crate::Component::handle_event
 //! [`Component::render()`]: crate::Component::render
@@ -2525,8 +2570,7 @@
 //! [MdDocument]: crate::MdDocument
 //! [parse_markdown()]: crate::parse_markdown()
 //! [parse_smart_list]: crate::parse_smart_list
-//! [try_parse_and_highlight]:
-//!     crate::try_parse_and_highlight
+//! [try_parse_and_highlight]: crate::try_parse_and_highlight
 //! [PTYMux]: crate::PTYMux
 //! [`pty_mux` module documentation]: mod@crate::pty_mux
 //! [CsiSequence]: crate::CsiSequence
@@ -2556,8 +2600,7 @@
 //! [`child`]: field@PtyTestContext::child
 //! [`buf_reader`]: field@PtyTestContext::buf_reader
 //! [`writer`]: field@PtyTestContext::writer
-//! [`integration_tests`]:
-//!     mod@crate::vt_100_terminal_input_parser::integration_tests
+//! [`integration_tests`]: mod@crate::vt_100_terminal_input_parser::integration_tests
 //! [`raw_mode_integration_tests`]:
 //!     mod@crate::terminal_raw_mode::raw_mode_integration_tests
 //! [`test_pty_input_device`]:
@@ -2592,7 +2635,8 @@
 //! [Architecture Overview]: crate::resilient_reactor_thread#architecture-overview
 //! [ANSI X3.64 Standard]:
 //!     https://www.ecma-international.org/wp-content/uploads/ECMA-48_5th_edition_june_1991.pdf
-//! [Inter-process communication]: https://en.wikipedia.org/wiki/Inter-process_communication
+//! [Inter-process communication]:
+//!     https://en.wikipedia.org/wiki/Inter-process_communication
 //! [Message passing]: https://en.wikipedia.org/wiki/Message_passing
 //! [`VT-100` spec]: https://vt100.net/docs/vt100-ug/chapter3.html
 //! [`VT-100` User Guide]: https://vt100.net/docs/vt100-ug/

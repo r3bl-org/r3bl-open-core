@@ -530,6 +530,7 @@ impl Readline {
         /* move */ input_device: InputDevice,
         /* move */ shutdown_complete_sender: broadcast::Sender<()>,
         channel_capacity: ChannelCapacity,
+        size: crate::Size,
     ) -> CommonResultWithError<(Self, SharedWriter), ReadlineError> {
         // Immediately hide the cursor. Then wait for
         // `READLINE_ASYNC_INITIAL_PROMPT_DISPLAY_CURSOR_SHOW_DELAY` to display the cursor
@@ -557,7 +558,7 @@ impl Readline {
         let safe_history = Arc::new(StdMutex::new(history));
 
         // Line state.
-        let line_state = LineState::new(prompt, terminal::size()?);
+        let line_state = LineState::new(prompt, size);
         let safe_line_state = Arc::new(StdMutex::new(line_state));
 
         // Pause buffer.
@@ -1131,12 +1132,14 @@ mod test_readline {
         let (output_device, stdout_mock) = OutputDevice::new_mock();
         let input_device = InputDevice::new_mock(get_input_vec());
         let (shutdown_sender, _) = broadcast::channel::<()>(1);
+        let test_size = crate::Size::new((crate::width(100), crate::height(100)));
         let (readline, _) = Readline::try_new(
             prompt_str.into(),
             output_device.clone(),
             /* move */ input_device,
             /* move */ shutdown_sender,
             ChannelCapacity::Minimal, // Test uses minimal capacity
+            test_size,
         )
         .unwrap();
 
@@ -1183,12 +1186,14 @@ mod test_readline {
         let (output_device, stdout_mock) = OutputDevice::new_mock();
         let input_device = InputDevice::new_mock(get_input_vec());
         let (shutdown_sender, _) = broadcast::channel::<()>(1);
+        let test_size = crate::Size::new((crate::width(100), crate::height(100)));
         let (mut readline, _) = Readline::try_new(
             prompt_str.into(),
             output_device.clone(),
             /* move */ input_device,
             shutdown_sender,
             ChannelCapacity::Minimal, // Test uses minimal capacity
+            test_size,
         )
         .unwrap();
 
@@ -1221,12 +1226,14 @@ mod test_readline {
         let (output_device, _) = OutputDevice::new_mock();
         let input_device = InputDevice::new_mock(get_input_vec());
         let (shutdown_sender, _) = broadcast::channel::<()>(1);
+        let test_size = crate::Size::new((crate::width(100), crate::height(100)));
         let (readline, shared_writer) = Readline::try_new(
             prompt_str.into(),
             output_device.clone(),
             /* move */ input_device,
             shutdown_sender,
             ChannelCapacity::Minimal, // Test uses minimal capacity
+            test_size,
         )
         .unwrap();
 
@@ -1268,12 +1275,14 @@ mod test_readline {
         let (output_device, _) = OutputDevice::new_mock();
         let input_device = InputDevice::new_mock(get_input_vec());
         let (shutdown_sender, _) = broadcast::channel::<()>(1);
+        let test_size = crate::Size::new((crate::width(100), crate::height(100)));
         let (readline, shared_writer) = Readline::try_new(
             prompt_str.into(),
             output_device.clone(),
             /* move */ input_device,
             shutdown_sender,
             ChannelCapacity::Minimal, // Test uses minimal capacity
+            test_size,
         )
         .unwrap();
 
@@ -1327,12 +1336,14 @@ mod test_readline {
         let (output_device, _) = OutputDevice::new_mock();
         let input_device = InputDevice::new_mock(smallvec::smallvec![]);
         let (shutdown_sender, _) = broadcast::channel::<()>(1);
+        let test_size = crate::Size::new((crate::width(100), crate::height(100)));
         let (readline, _) = Readline::try_new(
             prompt_str.into(),
             output_device,
             input_device,
             shutdown_sender,
             ChannelCapacity::Minimal,
+            test_size,
         )
         .unwrap();
 
@@ -1359,12 +1370,14 @@ mod test_readline {
         let (output_device, _) = OutputDevice::new_mock();
         let input_device = InputDevice::new_mock(smallvec::smallvec![]);
         let (shutdown_sender, _) = broadcast::channel::<()>(1);
+        let test_size = crate::Size::new((crate::width(100), crate::height(100)));
         let (readline, _) = Readline::try_new(
             prompt_str.into(),
             output_device,
             input_device,
             shutdown_sender,
             ChannelCapacity::Minimal,
+            test_size,
         )
         .unwrap();
 
@@ -1398,12 +1411,14 @@ mod test_readline {
         let (output_device, _) = OutputDevice::new_mock();
         let input_device = InputDevice::new_mock(smallvec::smallvec![]);
         let (shutdown_sender, _) = broadcast::channel::<()>(1);
+        let test_size = crate::Size::new((crate::width(100), crate::height(100)));
         let (readline, _) = Readline::try_new(
             prompt_str.into(),
             output_device,
             input_device,
             shutdown_sender,
             ChannelCapacity::Minimal,
+            test_size,
         )
         .unwrap();
 
@@ -1456,8 +1471,9 @@ mod test_pause_and_resume_support {
     #[test]
     fn test_flush_internal_paused() {
         // Create a mock `LineState` with initial data.
+        let test_size = crate::Size::new((crate::width(100), crate::height(100)));
         let safe_line_state =
-            Arc::new(Mutex::new(LineState::new("> ".to_string(), (100, 100))));
+            Arc::new(Mutex::new(LineState::new("> ".to_string(), test_size)));
 
         // Create a mock `SafePauseBuffer` with some paused lines.
         let mut pause_buffer = PauseBuffer::new();
@@ -1489,8 +1505,9 @@ mod test_pause_and_resume_support {
     #[test]
     fn test_flush_internal_not_paused() {
         // Create a mock `LineState` with initial data.
+        let test_size = crate::Size::new((crate::width(100), crate::height(100)));
         let safe_line_state =
-            Arc::new(Mutex::new(LineState::new("> ".to_string(), (100, 100))));
+            Arc::new(Mutex::new(LineState::new("> ".to_string(), test_size)));
 
         // Create a mock `SafePauseBuffer` with some paused lines.
         let mut pause_buffer = PauseBuffer::new();

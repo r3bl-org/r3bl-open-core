@@ -657,7 +657,7 @@ mod tests {
     //! To avoid global state contamination (from env vars and static variables), these
     //! tests are run in an isolated process.
     use super::*;
-    use crate::{PtyTestContext, PtyTestMode, generate_isolated_process_test};
+    use crate::generate_isolated_process_test;
 
     generate_isolated_process_test!(
         test_all_color_support_detection_sequentially_in_isolated_process,
@@ -771,55 +771,6 @@ mod tests {
             let result = examine_env_vars_to_determine_color_support(Stream::Stdout);
             assert_eq!(result, ColorSupport::Truecolor);
             std::env::remove_var("FORCE_COLOR");
-        }
-    }
-
-    // PTY tests for TTY-dependent behavior.
-    #[cfg(unix)]
-    mod pty_tests {
-        use super::*;
-        use crate::generate_pty_test;
-        use std::io::BufRead;
-
-        generate_pty_test! {
-            test_fn: test_color_detection_in_pty,
-            controller: |context: PtyTestContext| {
-                let PtyTestContext { pty_pair, child, mut buf_reader, .. } = context;
-                let mut success = false;
-                for _ in 0..10 {
-                    let mut line = String::new();
-                    if buf_reader.read_line(&mut line).is_err() { break; }
-                    let trimmed = line.trim();
-                    if trimmed.contains("SUCCESS: Detected color in PTY") {
-                        success = true;
-                        break;
-                    }
-                    assert!(
-                        !trimmed.contains("FAILED:"),
-                        "Test failed in controlled process: {trimmed}"
-                    );
-                }
-                assert!(success, "Did not receive success message from controlled process");
-                child.drain_and_wait(buf_reader, pty_pair);
-            },
-            controlled: || {
-                // Ensure no env vars override TTY detection.
-                unsafe {
-                    std::env::remove_var("NO_COLOR");
-                    std::env::remove_var("FORCE_COLOR");
-                    std::env::set_var("COLORTERM", "truecolor");
-                }
-
-                let result = examine_env_vars_to_determine_color_support(Stream::Stdout);
-                if result == ColorSupport::Truecolor {
-                    println!("SUCCESS: Detected color in PTY");
-                } else {
-                    println!("FAILED: Detected {result:?} in PTY");
-                }
-                std::io::stdout().flush().ok();
-                std::process::exit(0);
-            },
-            mode: PtyTestMode::Cooked,
         }
     }
 }

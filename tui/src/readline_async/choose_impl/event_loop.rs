@@ -1,9 +1,9 @@
 // Copyright (c) 2023-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::KeyPressReader;
-use crate::execute_commands;
 use crate::{CalculateResizeHint, CommonResult, FunctionComponent, InputDevice,
-            InputEvent, ItemsOwned, TTYResult, is_output_interactive};
+            InputEvent, ItemsOwned, TTYResult, emit_stderr_redirection_disclaimer,
+            execute_commands, is_output_interactive};
 use crossterm::cursor::{Hide, Show};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -32,6 +32,8 @@ pub async fn enter_event_loop_async<S: CalculateResizeHint>(
     if let TTYResult::IsNotInteractive = is_output_interactive() {
         return Ok(ExitWithError);
     }
+
+    emit_stderr_redirection_disclaimer();
 
     run_before_event_loop(state, function_component)?;
 
@@ -73,6 +75,8 @@ pub fn enter_event_loop_sync<S: CalculateResizeHint>(
     if let TTYResult::IsNotInteractive = is_output_interactive() {
         return Ok(ExitWithError);
     }
+
+    emit_stderr_redirection_disclaimer();
 
     run_before_event_loop(state, function_component)?;
 

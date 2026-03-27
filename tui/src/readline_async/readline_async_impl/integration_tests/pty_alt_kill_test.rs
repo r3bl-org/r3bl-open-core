@@ -3,7 +3,7 @@
 use crate::{AsyncDebouncedDeadline, CONTROLLED_READY, CONTROLLED_STARTING,
             DebouncedState, PtyTestContext, PtyTestMode, TEST_RUNNING,
             core::test_fixtures::StdoutMock, generate_pty_test,
-            readline_async::readline_async_impl::LineState};
+            readline_async::readline_async_impl::LineState, height, width, Size};
 use std::{io::{BufRead, Write},
           sync::{Arc, Mutex as StdMutex},
           time::Duration};
@@ -224,7 +224,7 @@ fn pty_controlled_entry_point() {
     runtime.block_on(async {
         println!("🔍 PTY Controlled: Starting...");
 
-        let mut line_state = LineState::new(String::new(), (100, 100));
+        let mut line_state = LineState::new(String::new(), Size::new((width(100), height(100))));
         let stdout_mock = StdoutMock::default();
         let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
         let (history, _) = crate::readline_async::readline_async_impl::History::new();

@@ -50,7 +50,8 @@
 use super::ui_str;
 use crate::{DEBUG_ANALYTICS_CLIENT_MOD, prefix_single_select_instruction_header};
 use r3bl_tui::{DefaultIoDevices, HowToChoose, InlineString, OscEvent, OutputDevice,
-               SpinnerStyle, StyleSheet, choose, cli_text_inline, cli_text_line,
+               SpinnerStyle, StyleSheet, TerminalInteractiveStatus, TuiAvailability,
+               check_is_terminal_interactive, choose, cli_text_inline, cli_text_line,
                core::pty::{DefaultPtySessionConfig, PtyOutputEvent, PtySessionBuilder,
                            PtySessionConfigOption},
                height, inline_string,
@@ -171,19 +172,36 @@ pub async fn show_exit_message(context: ExitContext) {
         };
         let mut io = DefaultIoDevices::default();
 
+        if let TerminalInteractiveStatus::NotAvailable(_) =
+            check_is_terminal_interactive()
+        {
+            // If not interactive, we can't show the choose prompt.
+            // Just print goodbye and return.
+            println!("{}", ui_str::goodbye_greetings::thanks_msg_simple());
+            return;
+        }
+
         // Get the first item selected by the user.
-        let maybe_user_choice = choose(
-            header_with_instructions,
-            yes_no_options,
-            Some(height(yes_no_options.len())),
-            None,
-            HowToChoose::Single,
-            StyleSheet::default(),
-            io.as_mut_tuple(),
-        )
-        .await
-        .ok()
-        .and_then(|items| items.into_iter().next());
+        let maybe_user_choice = {
+            match choose(
+                header_with_instructions,
+                yes_no_options,
+                Some(height(yes_no_options.len())),
+                None,
+                HowToChoose::Single,
+                StyleSheet::default(),
+                io.as_mut_tuple(),
+            ) {
+                TuiAvailability::Available(choice_future) => {
+                    if let Ok(items) = choice_future.await {
+                        items.into_iter().next() // First item.
+                    } else {
+                        None
+                    }
+                }
+                TuiAvailability::Broken(_) | TuiAvailability::NotAvailable(_) => None,
+            }
+        };
 
         // If they chose "Yes, upgrade now", run `cargo install …`.
         if let Some(user_choice) = maybe_user_choice
@@ -364,7 +382,7 @@ async fn install_upgrade_command_with_spinner_and_ctrl_c() {
     let crate_name = get_self_crate_name();
 
     // Setup spinner with initial message for rustup update.
-    let mut maybe_spinner = if let Ok(Some(spinner)) = Spinner::try_start(
+    let res_spinner = Spinner::try_start(
         "Updating Rust toolchain...", // Initial message for rustup
         ui_str::upgrade_install::stop_msg(),
         Duration::from_millis(100),
@@ -372,11 +390,11 @@ async fn install_upgrade_command_with_spinner_and_ctrl_c() {
         OutputDevice::default(),
         None,
     )
-    .await
-    {
-        Some(spinner)
-    } else {
-        None
+    .await;
+
+    let mut maybe_spinner = match res_spinner {
+        TuiAvailability::Available(spinner) => Some(spinner),
+        _ => None,
     };
 
     // First: Run rustup update (spinner shows with output-based progress).

@@ -18,9 +18,10 @@ mod ex_rc;
 
 // Use other crates.
 // Re-export items for sub-modules that use `crate::` imports.
-use r3bl_tui::{CommonError, CommonResult, DEBUG_TUI_MOD, InputEvent, TerminalWindow,
-               fg_color, fg_frozen_blue, fg_pink, fg_slate_gray, get_size,
-               inline_string, key_press,
+use r3bl_tui::{CommonError, CommonResult, DEBUG_TUI_MOD, Size,
+               TerminalInteractiveStatus, TuiAvailability,
+               check_is_terminal_interactive, fg_color, fg_frozen_blue, fg_pink,
+               fg_slate_gray, get_size, inline_string,
                log::try_initialize_logging_global,
                ok,
                readline_async::{ReadlineAsyncContext, ReadlineEvent},
@@ -53,8 +54,18 @@ async fn main_impl() -> CommonResult<()> {
         try_initialize_logging_global(tracing_core::LevelFilter::DEBUG).ok();
     }
 
+    // Check terminal interactivity before entering the interactive loop.
+    match check_is_terminal_interactive() {
+        TerminalInteractiveStatus::Available => {}
+        TerminalInteractiveStatus::NotAvailable(reason) => {
+            return CommonError::new_error_result_with_only_msg(reason.as_err_msg());
+        }
+    }
+
+    let size = get_size()?;
+
     // Show welcome message once at startup.
-    let msg = inline_string!("{}", &generate_help_msg());
+    let msg = inline_string!("{}", &generate_help_msg(size));
     let msg_fmt = fg_color(tui_color!(lizard_green), &msg);
     println!("{msg_fmt}");
 
@@ -66,7 +77,7 @@ async fn main_impl() -> CommonResult<()> {
 
         // Create a fresh ReadlineAsyncContext each iteration.
         // This ensures no stale InputDevice state persists across example runs.
-        let Some(mut rl_ctx) = ReadlineAsyncContext::try_new(
+        let mut rl_ctx = match ReadlineAsyncContext::try_new(
             {
                 // Generate prompt.
                 let prompt_seg_1 = fg_slate_gray("╭>╮").bg_moonlight_blue();
@@ -75,11 +86,13 @@ async fn main_impl() -> CommonResult<()> {
             },
             None, // Use default channel capacity
         )
-        .await?
-        else {
-            return CommonError::new_error_result_with_only_msg(
-                "Terminal is not fully interactive",
-            );
+        .await
+        {
+            TuiAvailability::Available(rl_ctx) => rl_ctx,
+            TuiAvailability::NotAvailable(reason) => {
+                return CommonError::new_error_result_with_only_msg(reason.as_err_msg());
+            }
+            TuiAvailability::Broken(e) => return Err(e),
         };
 
         // Pre-populate the readline's history with static command entries.
@@ -232,11 +245,9 @@ enum AutoCompleteCommand {
     Exit,
 }
 
-fn generate_help_msg() -> String {
+fn generate_help_msg(window_size: Size) -> String {
     use AutoCompleteCommand::{Commander, Editor, NoLayout, OneColLayout, Slides,
                               TwoColLayout};
-
-    let window_size = get_size().unwrap_or_default();
 
     let it = format!(
         "\

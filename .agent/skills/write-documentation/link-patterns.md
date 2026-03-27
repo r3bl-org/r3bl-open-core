@@ -494,6 +494,33 @@ impl TerminalState {
 }
 ```
 
+### Using super:: Paths (For Co-located Items with Long crate:: Paths)
+
+`super::` paths are valid in intra-doc links. Prefer `crate::` paths since they tend to be
+shorter, but use `super::` when the `crate::` path would be excessively long and the target
+symbol is co-located (in the same parent module).
+
+```rust
+// ✅ Good: crate:: is short and clear
+/// [`ReadlineAsyncContext`]: crate::ReadlineAsyncContext
+
+// ✅ Good: super:: avoids a very long crate:: path for a co-located symbol
+/// [`apply_event_to_line_state_and_render()`]:
+///     super::readline_internal::apply_event_to_line_state_and_render()
+
+// ❌ Unnecessary: super:: when crate:: is just as short
+/// [`Foo`]: super::Foo  // crate::Foo would be shorter
+```
+
+**When to use `super::`:**
+- The `crate::` path has 3+ segments and the target is in a sibling or parent module
+- The symbol is co-located with the file where the link is being added
+
+**When to stick with `crate::`:**
+- The path is short (1-2 segments after `crate::`)
+- The symbol is re-exported at the crate root
+- Clarity matters more than brevity
+
 ---
 
 ## Pattern 13: Linking Between Modules

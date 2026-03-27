@@ -1,4 +1,4 @@
-<!-- cspell:words ratatui -->
+<!-- cspell:words ratatui Substeps Inclusivity inclusivity binstall intradoc -->
 
 # r3bl-open-core
 
@@ -225,12 +225,30 @@ Here are some videos that you can watch to get a better understanding of TTY pro
 - [Build with Naz: TTY playlist](https://www.youtube.com/playlist?list=PLofhE49PEwmw3MKOU1Kn3xbP4FRQR4Mb3)
 - [Build with Naz: async readline](https://www.youtube.com/playlist?list=PLofhE49PEwmwelPkhfiqdFQ9IXnmGdnSE)
 
+This crate provides five entry points for building interactive terminal applications. Each
+internalizes terminal availability and size checks, and returns a `TuiAvailability<T>`
+enum:
+
+| Entry Point                         | Purpose                | Best For                                                               |
+|:------------------------------------|:-----------------------|:-----------------------------------------------------------------------|
+| `TerminalWindow::main_event_loop()` | Full TUI framework     | Complex, multi-component apps with layouts, dialogs, and custom logic. |
+| `ReadlineAsyncContext::try_new()`   | Async Readline         | CLI-style line input, REPLs, and background logging.                   |
+| `choose()`                          | Interactive Selection  | Prompting user to select one or more items from a list.                |
+| `PTYMuxBuilder::build()`            | Terminal Multiplexer   | Wrapping existing CLI tools (like `htop`, `bash`) in a multi-pane TUI. |
+| `Spinner::try_start()`              | Indeterminate Progress | Long-running tasks needing visual feedback (standalone or embedded).   |
+
 ### Full TUI (async, raw mode, full screen) for immersive TUI apps
 
-[`tui`](https://github.com/r3bl-org/r3bl-open-core/tree/main/tui/src/tui) gives you "raw mode",
-"alternate screen" and "full screen" support, while being totally async. An example of this is the
-"Full TUI" app `edi` in the [`r3bl-cmdr`](https://github.com/r3bl-org/r3bl-open-core/tree/main/cmdr)
-crate. You can install & run this with the following command:
+[`tui`](https://github.com/r3bl-org/r3bl-open-core/tree/main/tui/src/tui) gives you "raw
+mode", "alternate screen" and "full screen" support, while being totally async. It
+provides a full-featured framework with:
+- **`App` trait**: Unidirectional data flow architecture.
+- **`FlexBox`**: Responsive layout engine.
+- **Component System**: Reusable UI elements (editors, dialogs, etc.).
+
+An example of this is the "Full TUI" app `edi` in the
+[`r3bl-cmdr`](https://github.com/r3bl-org/r3bl-open-core/tree/main/cmdr) crate. You can
+install & run this with the following command:
 
 ```sh
 cargo install r3bl-cmdr
@@ -240,12 +258,12 @@ edi
 ### Partial TUI (async, partial raw mode, async readline) for choice based user interaction
 
 [`choose`](https://github.com/r3bl-org/r3bl-open-core/blob/main/tui/src/readline_async/choose_api.rs)
-allows you to build less interactive apps that ask a user user to make choices from a list of
-options and then use a decision tree to perform actions.
+allows you to build less interactive apps that ask a user user to make choices from a list
+of options and then use a decision tree to perform actions.
 
 An example of this is this "Partial TUI" app `giti` in the
-[`r3bl-cmdr`](https://github.com/r3bl-org/r3bl-open-core/tree/main/cmdr) crate. You can install &
-run this with the following command:
+[`r3bl-cmdr`](https://github.com/r3bl-org/r3bl-open-core/tree/main/cmdr) crate. You can
+install & run this with the following command:
 
 ```sh
 cargo install r3bl-cmdr
@@ -276,6 +294,14 @@ Here are other examples of this:
 
 1. https://github.com/nazmulidris/rust-scratch/tree/main/tcp-api-server
 2. https://github.com/r3bl-org/r3bl-open-core/tree/main/tui/examples
+
+### Terminal multiplexer
+
+[`PTYMux::run()`](https://github.com/r3bl-org/r3bl-open-core/blob/main/tui/src/core/pty/pty_mux/mux.rs)
+lets you build a terminal multiplexer similar to `tmux`. It manages multiple child processes (each
+in its own PTY) with per-process virtual terminal buffers and instant switching. See the
+[`pty_mux_example`](https://github.com/r3bl-org/r3bl-open-core/tree/main/tui/examples/pty_mux_example.rs)
+for a working example that wraps `bash`, `htop`, and other CLI tools.
 
 ## Power via composition
 
@@ -845,7 +871,7 @@ Now tools build in parallel without interfering with each other.
 
 Generally speaking you can just add `CARGO_TARGET_DIR=target/XYZ` in the command, for eg you can run
 the following in your terminal to run `claude` with the `CARGO_TARGET_DIR` env var set, and all the
-`cargo` commands spawned by `claude` will have their own taret directory to work with:
+`cargo` commands spawned by `claude` will have their own target directory to work with:
 
 ```bash
 CARGO_TARGET_DIR=target/claude $argv

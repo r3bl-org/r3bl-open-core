@@ -31,7 +31,7 @@
 //! different logic, leading to inconsistencies (e.g., the app thinking it was interactive
 //! while color detection disagreed).
 //!
-//! ## Interactivity levels
+//! ## Interactivity levels and the [`TerminalInteractiveStatus`] pattern
 //!
 //! The crate distinguishes between three levels of interactivity:
 //!
@@ -44,6 +44,10 @@
 //!    ([`stdin`], [`stdout`], [`stderr`]) connected to a [`TTY`]? This is the strictest
 //!    check, used primarily by tests to verify a "clean" terminal environment for
 //!    assertions like color depth.
+//!
+//! [Interactive terminal application entry points] return their status via
+//! [`TuiAvailability`]. This allows callers to apply their own policy when a terminal
+//! is not available (e.g., fallback to a non-interactive mode or exit with an error).
 //!
 //! ## Windows `cargo run` workaround
 //!
@@ -96,10 +100,12 @@
 //! The [`emit_stderr_redirection_disclaimer()`] function exists to make this explicit. It
 //! writes a single informational line to [`stderr`] explaining that application logs are
 //! handled internally and only unexpected panics will appear in the [redirected stream].
-//! This is called automatically by [`TUI`] and [`readline_async`]. And
+//! This is called automatically by [`TUI`], [`readline_async`], [`PTYMux`], and
+//! [`choose()`].
 //!
 //! [`/dev/tty`]: https://man7.org/linux/man-pages/man4/tty.4.html
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`choose()`]: crate::choose
 //! [`Crossterm`]: crate::TerminalLibBackend::Crossterm
 //! [`DirectToAnsi`]: mod@crate::direct_to_ansi
 //! [`GetConsoleMode`]: https://learn.microsoft.com/en-us/windows/console/getconsolemode
@@ -108,7 +114,10 @@
 //! [`isatty`]: https://man7.org/linux/man-pages/man3/isatty.3.html
 //! [`IsTerminal`]: std::io::IsTerminal
 //! [`OffscreenBuffer`]: crate::OffscreenBuffer
+//! [`PTYMux`]: crate::pty_mux::PTYMux
+//! [`PTYMuxBuilder::build()`]: crate::pty_mux::PTYMuxBuilder::build
 //! [`readline_async`]: mod@crate::readline_async
+//! [`ReadlineAsyncContext::try_new()`]: crate::ReadlineAsyncContext::try_new
 //! [`ReadlineAsyncContext`]: crate::ReadlineAsyncContext
 //! [`SharedWriter`]: crate::SharedWriter
 //! [`Spinner`]: crate::Spinner
@@ -116,17 +125,22 @@
 //! [`stdin`]: std::io::stdin
 //! [`stdout`]: std::io::stdout
 //! [`tcsetattr`]: https://man7.org/linux/man-pages/man3/tcsetattr.3.html
+//! [`TerminalInteractiveStatus`]: crate::TerminalInteractiveStatus
+//! [`TerminalWindow::main_event_loop()`]: crate::tui::TerminalWindow::main_event_loop
 //! [`TracingConfig`]: crate::TracingConfig
 //! [`TTY`]: https://en.wikipedia.org/wiki/Tty_(Unix)
 //! [`TUI`]: crate::tui::TerminalWindow::main_event_loop
+//! [`TuiAvailability`]: crate::TuiAvailability
 //! [Color detection]: crate::examine_env_vars_to_determine_color_support
 //! [Console Handles]: https://learn.microsoft.com/en-us/windows/console/console-handles
+//! [interactive terminal application entry points]: crate#interactive-terminal-application-entry-points
 //! [Raw mode]: crate::terminal_raw_mode
 //! [redirected stream]:
 //!     https://en.wikipedia.org/wiki/Redirection_(computing)#Redirecting_to_and_from_the_standard_file_handles
 //! [Windows `cargo run` workaround]: #windows-cargo-run-workaround
 
 // Attach.
+mod constants;
 pub mod term_api;
 pub mod term_api_impl;
 

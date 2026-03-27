@@ -81,8 +81,9 @@
 //! [YouTube channel]: https://www.youtube.com/@developerlifecom?sub_confirmation=1
 
 use miette::IntoDiagnostic;
-use r3bl_tui::{SharedWriter, fg_guards_red, fg_lizard_green, fg_slate_gray,
-               inline_string, ok,
+use r3bl_tui::{SharedWriter, TerminalInteractiveStatus, TuiAvailability,
+               check_is_terminal_interactive, fg_guards_red, fg_lizard_green,
+               fg_slate_gray, inline_string, ok,
                readline_async::{ReadlineAsyncContext, ReadlineEvent,
                                 ReadlineEvent::{BackTab, Eof, FnKey, Insert,
                                                 Interrupted, Line, PageDown, PageUp,
@@ -97,6 +98,14 @@ use tokio::{io::{AsyncBufReadExt, AsyncWriteExt},
 #[allow(clippy::needless_return)]
 async fn main() -> miette::Result<()> {
     set_mimalloc_in_main!();
+
+    match check_is_terminal_interactive() {
+        TerminalInteractiveStatus::Available => {}
+        TerminalInteractiveStatus::NotAvailable(reason) => {
+            eprintln!("{}", reason.as_err_msg());
+            std::process::exit(1);
+        }
+    }
 
     // Create a broadcast channel for shutdown.
     let (shutdown_sender, _) = broadcast::channel::<()>(1);
@@ -281,7 +290,8 @@ pub mod monitor_child_output {
 }
 
 pub mod terminal_async_constructor {
-    use super::{ReadlineAsyncContext, SharedWriter, fg_slate_gray, inline_string, ok};
+    use super::{ReadlineAsyncContext, SharedWriter, TuiAvailability, fg_slate_gray,
+                inline_string, ok};
 
     #[allow(missing_debug_implementations)]
     pub struct TerminalAsyncHandle {
@@ -302,9 +312,12 @@ pub mod terminal_async_constructor {
             format!("{prompt_seg_1}{prompt_seg_2}")
         };
 
-        let Ok(Some(rl_ctx)) = ReadlineAsyncContext::try_new(Some(prompt), None).await
-        else {
-            miette::bail!("Failed to create ReadlineAsyncContext instance");
+        let rl_ctx = match ReadlineAsyncContext::try_new(Some(prompt), None).await {
+            TuiAvailability::Available(rl_ctx) => rl_ctx,
+            TuiAvailability::NotAvailable(reason) => {
+                miette::bail!("{}", reason.as_err_msg());
+            }
+            TuiAvailability::Broken(e) => return Err(e),
         };
 
         let shared_writer = rl_ctx.clone_shared_writer();

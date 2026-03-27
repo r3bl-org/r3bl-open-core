@@ -7,8 +7,8 @@ use crate::{AnalyticsAction, common,
                    ui_str::{self}},
             report_analytics};
 use r3bl_tui::{BranchExists, CliTextInline, CommandRunResult, CommonResult,
-               DefaultIoDevices, InlineString, InlineVec, ItemsOwned, choose,
-               cli_text_inline, cli_text_line, height, inline_vec,
+               DefaultIoDevices, InlineString, InlineVec, ItemsOwned, TuiAvailability,
+               choose, cli_text_inline, cli_text_line, height, inline_vec,
                readline_async::{HowToChoose, StyleSheet},
                try_delete_branches, try_get_local_branches};
 use smallvec::smallvec;
@@ -145,7 +145,7 @@ mod user_interaction {
         };
 
         let mut default_io_devices = DefaultIoDevices::default();
-        choose(
+        match choose(
             header_with_instructions,
             branch_options,
             Some(height(20)),
@@ -153,8 +153,14 @@ mod user_interaction {
             HowToChoose::Multiple,
             StyleSheet::default(),
             default_io_devices.as_mut_tuple(),
-        )
-        .await
+        ) {
+            TuiAvailability::Available(choice_future) => {
+                let items = choice_future.await?;
+                Ok(items)
+            }
+            TuiAvailability::NotAvailable(reason) => reason.as_err(),
+            TuiAvailability::Broken(e) => Err(e),
+        }
     }
 
     pub fn create_confirmation_prompt(
@@ -227,18 +233,23 @@ mod user_interaction {
         };
 
         let mut default_io_devices = DefaultIoDevices::default();
-        let selected_option = choose(
-            header_with_instructions,
-            confirmation_options,
-            Some(height(20)),
-            None,
-            HowToChoose::Single,
-            StyleSheet::default(),
-            default_io_devices.as_mut_tuple(),
-        )
-        .await?;
+        let user_choice = {
+            match choose(
+                header_with_instructions,
+                confirmation_options,
+                Some(height(20)),
+                None,
+                HowToChoose::Single,
+                StyleSheet::default(),
+                default_io_devices.as_mut_tuple(),
+            ) {
+                TuiAvailability::Available(choice_future) => choice_future.await?,
+                TuiAvailability::NotAvailable(reason) => return reason.as_err(),
+                TuiAvailability::Broken(e) => return Err(e),
+            }
+        };
 
-        Ok(parse_user_choice::Selection::from(selected_option))
+        Ok(parse_user_choice::Selection::from(user_choice))
     }
 }
 

@@ -97,6 +97,27 @@ Fix the design flaws and the Windows `cargo run` bug.
   - `main_event_loop.rs` (test): Update to use `is_fully_interactive()`.
   - `choose_impl/event_loop.rs`: Verify `stdout`-only semantics are acceptable.
 
+### Phase 2.1: Addendum (Missing Call Sites & Idempotency) [COMPLETE]
+
+Address the gaps in disclaimer coverage and interactivity checks discovered during the review of Phase 2.
+
+- [x] **Make `emit_stderr_redirection_disclaimer()` idempotent**:
+  - Add a `static AtomicBool` to `term_api.rs` to ensure the message is only printed once per application lifetime. This prevents spam when starting multiple `Spinner` instances.
+- [x] **Add Test Verification**:
+  - Add `test_disclaimer.rs` using `generate_isolated_process_test!` to verify that the disclaimer is printed exactly once when `stderr` is redirected, even if called multiple times.
+- [x] **Add Interactivity Checks to `PTYMux`**:
+  - Update `PTYMux::run()` to check both `is_input_interactive()` and `is_output_interactive()` before starting raw mode.
+- [x] **Update Missing Disclaimer Call Sites**:
+  - `PTYMux::run()` (`tui/src/core/pty/pty_mux/mux.rs`)
+  - `enter_event_loop_async()` (`tui/src/readline_async/choose_impl/event_loop.rs`)
+  - `Spinner::try_start()` (`tui/src/readline_async/spinner.rs`)
+  - `pty_mux_example.rs` (`tui/examples/pty_mux_example.rs`)
+- [x] **Update Documentation & Fix Typo**:
+  - Fix the trailing "And" typo in `tui/src/core/term/mod.rs`.
+  - Update `term_api.rs` doc comments for `is_output_interactive()` to list `PTYMux` and `choose()` as primary consumers.
+- [x] **Investigate/Fix `TerminalWindow` Input Check**:
+  - `TerminalWindow::main_event_loop` currently only checks `is_output_interactive()`. Verify if it should also check `is_input_interactive()` to match `ReadlineAsyncContext`.
+
 ### Phase 3: PTY Integration & CI Migration
 
 Migrate tests to run in CI using the PTY infrastructure.

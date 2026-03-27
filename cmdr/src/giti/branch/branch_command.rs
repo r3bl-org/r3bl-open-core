@@ -6,8 +6,8 @@ use crate::{common,
                    get_giti_command_subcommand_names, handle_branch_checkout_command,
                    handle_branch_delete_command, handle_branch_new_command, ui_str}};
 use clap::ValueEnum;
-use r3bl_tui::{CommandRunResult, CommonResult, DefaultIoDevices, choose,
-               cli_text_inline, cli_text_line, height, inline_vec,
+use r3bl_tui::{CommandRunResult, CommonResult, DefaultIoDevices, TuiAvailability,
+               choose, cli_text_inline, cli_text_line, height, inline_vec,
                readline_async::{HowToChoose, StyleSheet}};
 
 /// The main function to for `giti branch` command. This is the main routing function that
@@ -52,18 +52,26 @@ async fn prompt_for_sub_command() -> CommonResult<CommandRunResult<CommandRunDet
         prefix_single_select_instruction_header(inline_vec![last_line])
     };
     let mut default_io_devices = DefaultIoDevices::default();
-    let maybe_user_choice = choose(
-        header_with_instructions,
-        branch_subcommand_options,
-        Some(height(20)),
-        None,
-        HowToChoose::Single,
-        StyleSheet::default(),
-        default_io_devices.as_mut_tuple(),
-    )
-    .await?
-    .into_iter()
-    .next();
+
+    // Return the first item selected by the user.
+    let maybe_user_choice = {
+        match choose(
+            header_with_instructions,
+            branch_subcommand_options,
+            Some(height(20)),
+            None,
+            HowToChoose::Single,
+            StyleSheet::default(),
+            default_io_devices.as_mut_tuple(),
+        ) {
+            TuiAvailability::Available(choice_future) => {
+                let items = choice_future.await?;
+                items.into_iter().next() // First item.
+            }
+            TuiAvailability::NotAvailable(reason) => return reason.as_err(),
+            TuiAvailability::Broken(e) => return Err(e),
+        }
+    };
 
     // Early return if the user didn't select anything.
     let Some(user_choice) = maybe_user_choice else {

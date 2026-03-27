@@ -4,7 +4,7 @@
 
 use crate::ok;
 use crate::{ColIndex, ColWidth, GCStringOwned, MemoizedLenMap, SegIndex, Size,
-            StringLength, height, width};
+            StringLength, width};
 use std::io::{self, Write};
 
 /// This struct actually handles the line editing, and rendering. This works hand in hand
@@ -121,16 +121,11 @@ macro_rules! early_return_if_paused {
 
 impl LineState {
     /// Creates a new `LineState` with the given prompt and terminal size.
-    ///
-    /// The `term_size` parameter accepts a `(u16, u16)` tuple: `(width_cols,
-    /// height_rows)`.
     #[must_use]
-    pub fn new(prompt: String, term_size: (u16, u16)) -> Self {
+    pub fn new(prompt: String, term_size: Size) -> Self {
         let mut memoized_len_map = MemoizedLenMap::new();
         let current_column =
             StringLength::StripAnsi.calculate(prompt.as_str(), &mut memoized_len_map);
-        // Convert (width, height) tuple to Size struct.
-        let term_size = Size::new((width(term_size.0), height(term_size.1)));
         Self {
             prompt,
             last_line_completed: true,
@@ -183,12 +178,12 @@ impl LineState {
 mod tests {
     use super::{LineState, LineStateLiveness};
     use crate::{GCStringOwned, History, InputEvent, Key, KeyPress, StdMutex,
-                core::test_fixtures::StdoutMock, seg_index};
+                core::test_fixtures::StdoutMock, seg_index, height, width, Size};
     use std::sync::Arc;
 
     #[tokio::test]
     async fn test_pause_resume_state() {
-        let mut line = LineState::new(String::new(), (100, 100));
+        let mut line = LineState::new(String::new(), Size::new((width(100), height(100))));
         let stdout_mock = StdoutMock::default();
         let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
         let (history, _) = History::new();

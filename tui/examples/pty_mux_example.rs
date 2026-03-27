@@ -1,5 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+// cspell:words adduser
+
 //! `PTYMux` terminal multiplexer example with universal process compatibility.
 //!
 //! This example demonstrates how to use the `pty_mux` module to create a terminal
@@ -47,11 +49,9 @@
 //!
 //! [`OSC`]: crate::osc_codes::OscSequence
 
-use r3bl_tui::{core::{get_size,
-                      pty_mux::{PTYMux, Process},
-                      term::{TTYResult, is_input_interactive, is_output_interactive},
-                      try_initialize_logging_global},
-               set_mimalloc_in_main};
+use r3bl_tui::{TerminalInteractiveStatus, TuiAvailability,
+               check_is_terminal_interactive, core::pty_mux::PTYMux,
+               set_mimalloc_in_main, try_initialize_logging_global};
 
 #[tokio::main]
 async fn main() -> miette::Result<()> {
@@ -61,18 +61,8 @@ async fn main() -> miette::Result<()> {
     try_initialize_logging_global(tracing_core::LevelFilter::DEBUG).ok();
     tracing::debug!("Starting PTYMux Example");
 
-    // Check if running in interactive terminal.
-    if is_input_interactive() == TTYResult::IsNotInteractive
-        || is_output_interactive() == TTYResult::IsNotInteractive
-    {
-        eprintln!("❌ This example requires an interactive terminal to run.");
-        eprintln!(
-            "   Please run directly in a terminal, not through pipes or non-TTY environments."
-        );
-        std::process::exit(1);
-    }
-
     println!("🚀 Starting PTYMux Example - Universal Process Compatibility");
+
     println!("📋 Configured processes: claude, less, htop, gitui, bash");
     println!("🌟 Demonstrates universal compatibility:");
     println!("   • AI assistant (claude) with interactive chat");
@@ -90,38 +80,34 @@ async fn main() -> miette::Result<()> {
     println!("📝 Debug output will be written to log.txt");
     println!();
 
-    // Get terminal size for process creation.
-    let terminal_size = get_size()?;
+    // Check terminal status.
+    match check_is_terminal_interactive() {
+        TerminalInteractiveStatus::Available => {}
+        TerminalInteractiveStatus::NotAvailable(reason) => {
+            eprintln!("{}", reason.as_err_msg());
+            std::process::exit(1);
+        }
+    }
 
     // Mixed process types demonstrating universal compatibility:
     // - claude: AI assistant (existing TUI app)
     // - TUI apps: less, htop, gitui (proper TUI applications)
     // - bash: Interactive shell (universal compatibility demonstration)
-    let processes = vec![
-        Process::new(
-            "claude",
-            "/home/nazmul/.claude/local/claude",
-            vec![],
-            terminal_size,
-        ),
-        Process::new(
-            "less",
-            "less",
-            vec!["/etc/adduser.conf".to_string()],
-            terminal_size,
-        ),
-        Process::new("htop", "htop", vec![], terminal_size),
-        Process::new("gitui", "gitui", vec![], terminal_size),
-        Process::new("bash", "bash", vec![], terminal_size),
-    ];
-
-    println!(
-        "🔧 Building multiplexer with {} processes...",
-        processes.len()
-    );
-
-    // Build and run multiplexer using the pty_mux module.
-    let multiplexer = PTYMux::builder().processes(processes).build()?;
+    let multiplexer = match PTYMux::builder()
+        .add_process("claude", "/home/nazmul/.claude/local/claude", vec![])
+        .add_process("less", "less", vec!["/etc/adduser.conf".to_string()])
+        .add_process("htop", "htop", vec![])
+        .add_process("gitui", "gitui", vec![])
+        .add_process("bash", "bash", vec![])
+        .build()
+    {
+        TuiAvailability::Available(mux) => mux,
+        TuiAvailability::NotAvailable(reason) => {
+            eprintln!("{}", reason.as_err_msg());
+            return Ok(());
+        }
+        TuiAvailability::Broken(e) => return Err(e),
+    };
 
     println!("▶️  Starting multiplexer event loop...");
     println!("   (All processes will be started immediately for fast switching)");

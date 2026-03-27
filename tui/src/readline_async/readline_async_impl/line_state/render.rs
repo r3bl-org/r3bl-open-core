@@ -73,11 +73,11 @@ impl LineState {
 mod tests {
     use super::*;
     use crate::{CHA_CURSOR_COLUMN, CSI_START, ED_ERASE_DISPLAY, ED_ERASE_TO_END,
-                GCStringOwned, core::test_fixtures::StdoutMock};
+                GCStringOwned, core::test_fixtures::StdoutMock, height, width, Size};
 
     #[test]
     fn test_clear_writes_escape_sequences() {
-        let line_state = LineState::new("prompt> ".into(), (80, 24));
+        let line_state = LineState::new("prompt> ".into(), Size::new((width(80), height(24))));
         let mut stdout_mock = StdoutMock::default();
 
         line_state.clear(&mut stdout_mock).unwrap();
@@ -100,7 +100,7 @@ mod tests {
 
     #[test]
     fn test_render_and_flush_outputs_prompt_and_line() {
-        let mut line_state = LineState::new("$ ".into(), (80, 24));
+        let mut line_state = LineState::new("$ ".into(), Size::new((width(80), height(24))));
         line_state.line = GCStringOwned::new("hello");
         let mut stdout_mock = StdoutMock::default();
 

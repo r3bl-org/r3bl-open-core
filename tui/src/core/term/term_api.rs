@@ -2,28 +2,101 @@
 
 // cspell:words winsize tcgetwinsize
 
-//! High-level terminal interactivity, size detection, and [`stderr`] redirection
-//! disclaimer.
+//! Terminal interactivity, size detection, and [`stderr`] redirection disclaimer.
+//! See [`TerminalInteractiveStatus`], [`TerminalNotInteractiveReason`], and
+//! [`emit_stderr_redirection_disclaimer()`].
 //!
-//! These functions build on the low-level [`TTY`] helpers in [`term_api_impl`] to provide
-//! the primary API consumed by [`Spinner`], [`ReadlineAsyncContext`], [`TUI`], and tests.
-//!
-//! [`ReadlineAsyncContext`]: crate::ReadlineAsyncContext
-//! [`Spinner`]: crate::Spinner
 //! [`stderr`]: std::io::stderr
-//! [`term_api_impl`]: super::term_api_impl
-//! [`TTY`]: https://en.wikipedia.org/wiki/Tty_(Unix)
-//! [`TUI`]: crate::tui::TerminalWindow::main_event_loop
 
-#[allow(unused_imports)]
-#[cfg(unix)]
-use crate::tui::terminal_lib_backends::{TERMINAL_LIB_BACKEND, TerminalLibBackend};
-use crate::{ColWidth, Size, TtyStatus, height, is_tty_stderr, is_tty_stdin,
-            is_tty_stdout, width};
+use super::constants::{DEFAULT_WIDTH, ERR_MSG_BOTH_NOT_INTERACTIVE,
+                       ERR_MSG_STDIN_NOT_INTERACTIVE, ERR_MSG_STDOUT_NOT_INTERACTIVE};
+use crate::{AtomicU8Ext as _, ColWidth, Size,
+            TTYResult::{IsInteractive, IsNotInteractive},
+            TtyStatus, height, is_tty_stderr, is_tty_stdin, is_tty_stdout, width};
 use miette::IntoDiagnostic;
-use std::io::Write;
+use std::{io::Write, sync::atomic::AtomicU8};
 
-pub const DEFAULT_WIDTH: u16 = 80;
+/// Returned by [interactive terminal application entry points] (which are fallible).
+///
+/// Initialization ([`get_size()`], entering [raw mode], etc.) is fallible, since they
+/// require the use of [`ioctl`] (which is wrapped by [`rustix`]), so this type has a
+/// [`Broken`] variant to represent this state.
+///
+/// [`Broken`]: Self::Broken
+/// [`ioctl`]: https://man7.org/linux/man-pages/man2/ioctl.2.html
+/// [`rustix`]: rustix
+/// [interactive terminal application entry points]: crate#interactive-terminal-application-entry-points
+#[derive(Debug)]
+pub enum TuiAvailability<T> {
+    Available(T),
+    NotAvailable(TerminalNotInteractiveReason),
+    Broken(miette::Report),
+}
+
+/// Represents the interactivity status of the terminal. This does not represent any
+/// fallible states. [`check_is_terminal_interactive()`] returns this.
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub enum TerminalInteractiveStatus {
+    Available,
+    NotAvailable(TerminalNotInteractiveReason),
+}
+
+/// Gets the interactivity status of the terminal by querying [`isatty`] on [`stdin`]
+/// and [`stdout`], which is infallible, so there is no [`Broken`] variant.
+///
+/// [`Broken`]: TuiAvailability::Broken
+/// [`isatty`]: https://man7.org/linux/man-pages/man3/isatty.3.html
+/// [`stdin`]: std::io::stdin
+/// [`stdout`]: std::io::stdout
+#[must_use]
+pub fn check_is_terminal_interactive() -> TerminalInteractiveStatus {
+    match (is_input_interactive(), is_output_interactive()) {
+        (IsInteractive, IsInteractive) => TerminalInteractiveStatus::Available,
+        (IsNotInteractive, IsInteractive) => TerminalInteractiveStatus::NotAvailable(
+            TerminalNotInteractiveReason::StdinNotInteractive,
+        ),
+        (IsInteractive, IsNotInteractive) => TerminalInteractiveStatus::NotAvailable(
+            TerminalNotInteractiveReason::StdoutNotInteractive,
+        ),
+        (IsNotInteractive, IsNotInteractive) => TerminalInteractiveStatus::NotAvailable(
+            TerminalNotInteractiveReason::BothStdinAndStdoutNotInteractive,
+        ),
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TerminalNotInteractiveReason {
+    StdinNotInteractive,
+    StdoutNotInteractive,
+    BothStdinAndStdoutNotInteractive,
+}
+
+impl TerminalNotInteractiveReason {
+    #[must_use]
+    pub fn as_err_msg(&self) -> &'static str {
+        match self {
+            Self::StdinNotInteractive => ERR_MSG_STDIN_NOT_INTERACTIVE,
+            Self::StdoutNotInteractive => ERR_MSG_STDOUT_NOT_INTERACTIVE,
+            Self::BothStdinAndStdoutNotInteractive => ERR_MSG_BOTH_NOT_INTERACTIVE,
+        }
+    }
+
+    /// Returns an [`Err`] containing this reason's error message from
+    /// [`as_err_msg()`].
+    ///
+    /// # Errors
+    ///
+    /// Always returns [`Err`] with the reason's message.
+    ///
+    /// [`as_err_msg()`]: Self::as_err_msg
+    pub fn as_err<T>(&self) -> miette::Result<T> {
+        miette::bail!("{}", self.as_err_msg())
+    }
+}
+
+/// Tracks whether [`emit_stderr_redirection_disclaimer()`] has already run.
+/// `0` = not yet emitted, `1` = already emitted.
+static DISCLAIMER_ALREADY_EMITTED: AtomicU8 = AtomicU8::new(0);
 
 #[must_use]
 pub fn get_terminal_width_no_default() -> Option<ColWidth> {
@@ -33,7 +106,7 @@ pub fn get_terminal_width_no_default() -> Option<ColWidth> {
     }
 }
 
-/// Gets the terminal width. If there is a problem, return the default width.
+/// Gets the terminal width. If there is a problem, return `DEFAULT_WIDTH`.
 #[must_use]
 pub fn get_terminal_width() -> ColWidth {
     match get_size() {
@@ -65,6 +138,8 @@ pub fn get_terminal_width() -> ColWidth {
 pub fn get_size() -> miette::Result<Size> {
     #[cfg(unix)]
     {
+        use crate::tui::terminal_lib_backends::{TERMINAL_LIB_BACKEND, TerminalLibBackend};
+
         match TERMINAL_LIB_BACKEND {
             TerminalLibBackend::Crossterm => {
                 let (columns, rows) = crossterm::terminal::size().into_diagnostic()?;
@@ -110,17 +185,29 @@ pub fn is_input_interactive() -> TTYResult {
 
 /// Returns [`TTYResult::IsInteractive`] if [`stdout`] is an interactive [`TTY`].
 ///
-/// This is the primary check for UI components (Spinner, Readline), reflecting that the
-/// TUI renders to [`stdout`] and should not be disabled by [`stderr`] redirection.
+/// This is the primary check for UI components ([`Spinner`], [`ReadlineAsyncContext`],
+/// [`TUI`], [`PTYMux`], [`choose()`]), reflecting that the TUI renders to [`stdout`] and
+/// should not be disabled by [`stderr`] redirection. Diagnostic output (tracing, logs)
+/// is routed to [`stderr`] via [`DisplayPreference::Stderr`], keeping it separate from
+/// TUI rendering.
 ///
 /// Example scenario where this returns [`TTYResult::IsInteractive`] despite redirection:
 /// ```bash
 /// command 2>log.txt
 /// ```
+/// In this case, [`emit_stderr_redirection_disclaimer()`] is called to notify the user
+/// that [`stderr`] is redirected.
 ///
+/// [`choose()`]: crate::choose
+/// [`DisplayPreference::Stderr`]: crate::DisplayPreference::Stderr
+/// [`emit_stderr_redirection_disclaimer()`]: crate::emit_stderr_redirection_disclaimer
+/// [`PTYMux`]: crate::pty_mux::PTYMux
+/// [`ReadlineAsyncContext`]: crate::ReadlineAsyncContext
+/// [`Spinner`]: crate::Spinner
 /// [`stderr`]: std::io::stderr
 /// [`stdout`]: std::io::stdout
 /// [`TTY`]: https://en.wikipedia.org/wiki/Tty_(Unix)
+/// [`TUI`]: crate::tui::TerminalWindow::main_event_loop
 #[must_use]
 pub fn is_output_interactive() -> TTYResult {
     if is_tty_stdout() == TtyStatus::IsTty {
@@ -155,11 +242,18 @@ pub fn is_fully_interactive() -> TTYResult {
 /// If [`stderr`] is redirected, emits a one-line disclaimer explaining that logs are
 /// handled internally and only catastrophic panics will appear in the redirected stream.
 ///
+/// This function is idempotent; calling it multiple times will only result in a single
+/// message being printed per application lifetime.
+///
 /// This is useful for interactive applications where the user might wonder why their
-/// redirected `stderr` is mostly empty.
+/// redirected [`stderr`] is mostly empty.
 ///
 /// [`stderr`]: std::io::stderr
 pub fn emit_stderr_redirection_disclaimer() {
+    if DISCLAIMER_ALREADY_EMITTED.get() != 0 {
+        return;
+    }
+
     if is_tty_stderr() == TtyStatus::IsNotTty {
         let _unused = writeln!(
             std::io::stderr(),
@@ -167,4 +261,6 @@ pub fn emit_stderr_redirection_disclaimer() {
              only catastrophic panics will appear here."
         );
     }
+
+    DISCLAIMER_ALREADY_EMITTED.set(1);
 }

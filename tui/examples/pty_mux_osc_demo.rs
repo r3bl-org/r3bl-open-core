@@ -8,9 +8,8 @@
 //! [`OSC`]: crate::osc_codes::OscSequence
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 
-use r3bl_tui::{Size,
-               core::pty_mux::{PTYMux, Process},
-               height, width};
+use r3bl_tui::{TerminalInteractiveStatus, TuiAvailability,
+               check_is_terminal_interactive, core::pty_mux::PTYMux};
 
 #[tokio::main]
 async fn main() -> miette::Result<()> {
@@ -19,18 +18,19 @@ async fn main() -> miette::Result<()> {
         .with_max_level(tracing::Level::DEBUG)
         .init();
 
-    // Get terminal size.
-    let (cols, rows) = crossterm::terminal::size()
-        .map_err(|e| miette::miette!("Failed to get terminal size: {}", e))?;
-    let terminal_size = Size {
-        col_width: width(cols),
-        row_height: height(rows),
-    };
+    // Check terminal status.
+    match check_is_terminal_interactive() {
+        TerminalInteractiveStatus::Available => {}
+        TerminalInteractiveStatus::NotAvailable(reason) => {
+            eprintln!("{}", reason.as_err_msg());
+            std::process::exit(1);
+        }
+    }
 
-    // Create processes - one of them will emit OSC sequences.
-    let processes = vec![
-        Process::new("bash", "bash", vec![], terminal_size),
-        Process::new(
+    // Create and run the multiplexer.
+    let mux = match PTYMux::builder()
+        .add_process("bash", "bash", vec![])
+        .add_process(
             "OSC Demo",
             "bash",
             vec![
@@ -50,13 +50,17 @@ async fn main() -> miette::Result<()> {
                   exec bash"
                     .to_string(),
             ],
-            terminal_size,
-        ),
-        Process::new("htop", "htop", vec![], terminal_size),
-    ];
-
-    // Create and run the multiplexer.
-    let mux = PTYMux::builder().processes(processes).build()?;
+        )
+        .add_process("htop", "htop", vec![])
+        .build()
+    {
+        TuiAvailability::Available(mux) => mux,
+        TuiAvailability::NotAvailable(reason) => {
+            eprintln!("{}", reason.as_err_msg());
+            return Ok(());
+        }
+        TuiAvailability::Broken(e) => return Err(e),
+    };
 
     println!("PTY Mux OSC Demo");
     println!("================");

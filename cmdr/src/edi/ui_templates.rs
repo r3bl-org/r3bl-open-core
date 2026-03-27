@@ -3,7 +3,8 @@
 use super::CLIArg;
 use crate::{common, edi::ui_str, prefix_single_select_instruction_header};
 use r3bl_tui::{DefaultIoDevices, HowToChoose, InlineString, InlineVec, StyleSheet,
-               choose, cli_text_inline, cli_text_line, height, inline_vec};
+               TuiAvailability, choose, cli_text_inline, cli_text_line, height,
+               inline_vec};
 
 /// Ask the user to select a file to edit, and return the selected file path (if there is
 /// one).
@@ -25,7 +26,7 @@ pub async fn handle_multiple_files_not_supported_yet(
     };
 
     // Return the first item selected by the user.
-    choose(
+    match choose(
         header_with_instructions,
         file_path_options.as_slice(),
         Some(height(5)),
@@ -33,8 +34,14 @@ pub async fn handle_multiple_files_not_supported_yet(
         HowToChoose::Single,
         StyleSheet::default(),
         default_io_devices.as_mut_tuple(),
-    )
-    .await
-    .ok()
-    .and_then(|items| items.into_iter().next())
+    ) {
+        TuiAvailability::Available(choice_future) => {
+            if let Ok(items) = choice_future.await {
+                items.into_iter().next() // First item.
+            } else {
+                None
+            }
+        }
+        TuiAvailability::Broken(_) | TuiAvailability::NotAvailable(_) => None,
+    }
 }

@@ -45,8 +45,7 @@
 //!    ╰─────────────────────╯ <- AtAbsoluteBottom
 //! ```
 
-use crate::inline_string;
-use crate::{ChUnit, DEVELOPMENT_MODE, ch, fg_green};
+use crate::{ChUnit, DEVELOPMENT_MODE, ch, fg_green, inline_string};
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub enum CaretVerticalViewportLocation {

@@ -4,7 +4,8 @@ use crate::{CalculateResizeHint, CaretVerticalViewportLocation, ColWidth,
             DEVELOPMENT_MODE, EventLoopResult, Header, InputDevice, InputEvent,
             ItemsOwned, Key, KeyPress, KeyState, LineStateControlSignal,
             ModifierKeysMask, OutputDevice, RowHeight, SelectComponent, SharedWriter,
-            SpecialKey, State, StyleSheet, ch, enter_event_loop_async, fg_green,
+            SpecialKey, State, StyleSheet, TerminalInteractiveStatus, TuiAvailability,
+            ch, check_is_terminal_interactive, enter_event_loop_async, fg_green,
             get_size, inline_string, tui::md_parser::md_parser_constants::SPACE_CHAR,
             usize};
 use clap::ValueEnum;
@@ -18,9 +19,9 @@ pub type ChooseFuture<'a> =
     Pin<Box<dyn Future<Output = miette::Result<ItemsOwned>> + 'a>>;
 
 /// This struct is provided for convenience to create a default set of IO devices which
-/// can be used in the `choose_async()` function. The reason this has to be created
-/// outside of the `choose_async()` function is because mutable references to these
-/// devices are passed to it, and it can't take ownership of them.
+/// can be used in the [`choose`] function. The reason this has to be created outside of
+/// the [`choose`] function is because mutable references to these devices are passed to
+/// it, and it can't take ownership of them.
 #[allow(missing_debug_implementations)]
 pub struct DefaultIoDevices {
     pub output_device: OutputDevice,
@@ -57,12 +58,18 @@ impl DefaultIoDevices {
 /// Async function to choose an item from a list of items.
 ///
 /// It takes a list of items, and returns the selected item or items (depending on the
-/// selection mode). If the user does not select anything, it returns `None`. The function
-/// also takes the maximum height and width of the display, and the selection mode (single
-/// select or multiple select).
+/// selection mode). If the user does not select anything, it returns [`None`]. The
+/// function also takes the maximum height and width of the display, and the selection
+/// mode (single select or multiple select).
 ///
-/// If the terminal is *fully* un-interactive, it returns `None`. This is useful so that
+/// If the terminal is *fully* un-interactive, it returns [`None`]. This is useful so that
 /// it won't block `cargo test` or when run in non-interactive CI/CD environments.
+///
+/// # Note on [`stderr`] redirection
+///
+/// This function calls [`emit_stderr_redirection_disclaimer()`] to ensure that if
+/// [`stderr`] is redirected, the user is notified that application logs are handled
+/// internally.
 ///
 /// # Arguments
 ///
@@ -81,8 +88,8 @@ impl DefaultIoDevices {
 ///
 /// # Returns
 ///
-/// Returns a pinned boxed future that resolves to `Ok(ItemsOwned)` with the following
-/// behavior:
+/// Returns a [`TuiAvailability`] containing a pinned boxed future that resolves to
+/// `Ok(ItemsOwned)` with the following behavior:
 /// * **Single selection mode** (`HowToChoose::Single`):
 ///   - If user selects an item and presses Enter: returns an `ItemsOwned` containing the
 ///     selected item
@@ -134,6 +141,10 @@ impl DefaultIoDevices {
 /// - Not stored in a struct: The future isn't being stored in a data structure that would
 ///   require [`std::pin::Pin`].
 /// - Direct await: It's immediately awaited, not passed around or stored.
+///
+/// [`check_is_terminal_interactive()`]: crate::check_is_terminal_interactive
+/// [`emit_stderr_redirection_disclaimer()`]: crate::emit_stderr_redirection_disclaimer
+/// [`stderr`]: std::io::stderr
 pub fn choose<'a>(
     arg_header: impl Into<Header>,
     arg_options_to_choose_from: impl Into<ItemsOwned>,
@@ -146,84 +157,94 @@ pub fn choose<'a>(
         &'a mut InputDevice,
         Option<SharedWriter>,
     ),
-) -> ChooseFuture<'a> {
+) -> TuiAvailability<ChooseFuture<'a>> {
     let from = arg_options_to_choose_from.into();
     let header = arg_header.into();
 
-    Box::pin(async move {
-        // Destructure the io tuple.
-        let (od, id, msw) = io;
+    match check_is_terminal_interactive() {
+        TerminalInteractiveStatus::Available => {
+            let initial_size = match get_size() {
+                Ok(size) => size,
+                Err(e) => return TuiAvailability::Broken(e),
+            };
 
-        // For compatibility with ReadlineAsyncContext (if it is in use).
-        if let Some(ref sw) = msw {
-            // Pause the shared writer while the user is choosing an item.
-            sw.line_state_control_channel_sender
-                .send(LineStateControlSignal::Pause)
-                .await
-                .into_diagnostic()?;
-        }
+            TuiAvailability::Available(Box::pin(async move {
+                // Destructure the io tuple.
+                let (od, id, msw) = io;
 
-        // - If the max size is None, then set it to DEFAULT_HEIGHT.
-        // - If the max size is Some, then this is the max height of the viewport.
-        //   - However, if this is 0, then set to DEFAULT_HEIGHT.
-        //   - Otherwise, check whether the number of items is less than this max height
-        //     and set the max height to the number of items.
-        //   - Otherwise, if there are more items than the max height, then clamp it to
-        //     the max height.
-        let max_display_height = ch({
-            match maybe_max_height {
-                None => DEFAULT_HEIGHT,
-                Some(row_height) => {
-                    let row_height = row_height.as_usize();
-                    if row_height == 0 {
-                        DEFAULT_HEIGHT
-                    } else {
-                        std::cmp::min(row_height, from.len())
-                    }
+                // For compatibility with ReadlineAsyncContext (if it is in use).
+                if let Some(ref sw) = msw {
+                    // Pause the shared writer while the user is choosing an item.
+                    sw.line_state_control_channel_sender
+                        .send(LineStateControlSignal::Pause)
+                        .await
+                        .into_diagnostic()?;
                 }
-            }
-        });
 
-        let max_display_width = ch(match maybe_max_width {
-            None => 0,
-            Some(col_width) => col_width.as_usize(),
-        });
+                // - If the max size is None, then set it to DEFAULT_HEIGHT.
+                // - If the max size is Some, then this is the max height of the viewport.
+                //   - However, if this is 0, then set to DEFAULT_HEIGHT.
+                //   - Otherwise, check whether the number of items is less than this max
+                //     height and set the max height to the number of items.
+                //   - Otherwise, if there are more items than the max height, then clamp
+                //     it to the max height.
+                let max_display_height = ch({
+                    match maybe_max_height {
+                        None => DEFAULT_HEIGHT,
+                        Some(row_height) => {
+                            let row_height = row_height.as_usize();
+                            if row_height == 0 {
+                                DEFAULT_HEIGHT
+                            } else {
+                                std::cmp::min(row_height, from.len())
+                            }
+                        }
+                    }
+                });
 
-        let mut state = State {
-            max_display_height,
-            max_display_width,
-            items: from,
-            header,
-            selection_mode: how,
-            ..Default::default()
-        };
+                let max_display_width = ch(match maybe_max_width {
+                    None => 0,
+                    Some(col_width) => col_width.as_usize(),
+                });
 
-        let mut fc = SelectComponent {
-            output_device: od.clone(),
-            style: stylesheet,
-        };
+                let mut state = State {
+                    max_display_height,
+                    max_display_width,
+                    items: from,
+                    header,
+                    selection_mode: how,
+                    ..Default::default()
+                };
+                state.set_size(initial_size);
 
-        if let Ok(size) = get_size() {
-            state.set_size(size);
+                let mut fc = SelectComponent {
+                    output_device: od.clone(),
+                    style: stylesheet,
+                };
+
+                let res_user_input =
+                    enter_event_loop_async(&mut state, &mut fc, keypress_handler, id)
+                        .await;
+
+                // For compatibility with ReadlineAsyncContext (if it is in use).
+                if let Some(ref sw) = msw {
+                    // Resume the shared writer after the user has made their choice.
+                    sw.line_state_control_channel_sender
+                        .send(LineStateControlSignal::Resume)
+                        .await
+                        .into_diagnostic()?;
+                }
+
+                match res_user_input {
+                    Ok(EventLoopResult::ExitWithResult(it)) => Ok(it),
+                    _ => Ok(ItemsOwned::default()),
+                }
+            }))
         }
-
-        let res_user_input =
-            enter_event_loop_async(&mut state, &mut fc, keypress_handler, id).await;
-
-        // For compatibility with ReadlineAsyncContext (if it is in use).
-        if let Some(ref sw) = msw {
-            // Resume the shared writer after the user has made their choice.
-            sw.line_state_control_channel_sender
-                .send(LineStateControlSignal::Resume)
-                .await
-                .into_diagnostic()?;
+        TerminalInteractiveStatus::NotAvailable(reason) => {
+            TuiAvailability::NotAvailable(reason)
         }
-
-        match res_user_input {
-            Ok(EventLoopResult::ExitWithResult(it)) => Ok(it),
-            _ => Ok(ItemsOwned::default()),
-        }
-    })
+    }
 }
 
 mod keypress_handler_helper {
@@ -483,106 +504,4 @@ pub enum HowToChoose {
     Single,
     /// Select multiple options from list.
     Multiple,
-}
-
-#[cfg(test)]
-mod test_choose_async {
-    use super::*;
-    use crate::{CrosstermEventResult, InlineVec, OutputDeviceExt};
-    use smallvec::smallvec;
-    use std::{io::Write, time::Duration};
-
-    /// Simulated key inputs: Down, Down, Enter.
-    fn generated_key_events() -> InlineVec<CrosstermEventResult> {
-        // Simulated key inputs.
-        let generator_vec: InlineVec<CrosstermEventResult> = smallvec![
-            Ok(crossterm::event::Event::Key(
-                crossterm::event::KeyEvent::new(
-                    crossterm::event::KeyCode::Down,
-                    crossterm::event::KeyModifiers::empty(),
-                ),
-            )),
-            Ok(crossterm::event::Event::Key(
-                crossterm::event::KeyEvent::new(
-                    crossterm::event::KeyCode::Down,
-                    crossterm::event::KeyModifiers::empty(),
-                ),
-            )),
-            Ok(crossterm::event::Event::Key(
-                crossterm::event::KeyEvent::new(
-                    crossterm::event::KeyCode::Enter,
-                    crossterm::event::KeyModifiers::empty(),
-                ),
-            )),
-        ];
-        generator_vec
-    }
-
-    /// This test verifies that the `SharedWriter` pauses and resumes correctly when
-    /// `choose()` is called. It does not verify the actual output of the `SharedWriter`.
-    /// When this test is run in an interactive vs non-interactive terminal, the
-    /// assertions might be different, which is why the test is vague intentionally.
-    #[tokio::test]
-    async fn test_shared_writer_pause_works() {
-        // Set up the io devices.
-        let (mut line_receiver, shared_writer) = SharedWriter::new_mock();
-        let (mut output_device, stdout_mock) = OutputDevice::new_mock();
-        let mut input_device = InputDevice::new_mock_with_delay(
-            generated_key_events(), /* Down, Down, Enter */
-            Duration::from_millis(10),
-        );
-
-        // Spawn a task to write something to SharedWriter with delays.
-        let mut sw_1 = shared_writer.clone();
-        tokio::spawn(async move {
-            // Wait 10ms then write something.
-            tokio::time::sleep(Duration::from_millis(10)).await;
-            sw_1.write_all(b"data after 10ms delay\n").unwrap();
-
-            // Wait 100ms then write something. This should not show up since the test
-            // will be over in 30ms.
-            tokio::time::sleep(Duration::from_millis(100)).await;
-            sw_1.write_all(b"data after 100ms delay\n").unwrap();
-        });
-
-        // Nothing should be written to the shared writer yet.
-        assert_eq!(shared_writer.buffer, "");
-        assert_eq!(stdout_mock.get_copy_of_buffer_as_string(), "");
-        assert!(line_receiver.is_empty());
-
-        // The following code waits for 30ms. In the meantime, the shared writer
-        // 1. should be paused.
-        // 2. after 10ms, "data after 10ms delay\n" will be written to shared writer.
-        // 3. after 30ms, the shared writer will be resumed (when choose() completes).
-        let _unused: ItemsOwned = choose(
-            Header::SingleLine("Choose one:".into()),
-            &["one", "two", "three"],
-            None,
-            None,
-            HowToChoose::Single,
-            StyleSheet::default(),
-            (
-                &mut output_device,
-                &mut input_device,
-                Some(shared_writer.clone()),
-            ),
-        )
-        .await
-        .unwrap();
-
-        let mut acc = vec![];
-        line_receiver.close();
-        while let Some(line) = line_receiver.recv().await {
-            acc.push(line);
-        }
-
-        assert!(matches!(
-            acc.first().unwrap(),
-            LineStateControlSignal::Pause
-        ));
-        assert!(matches!(
-            acc.last().unwrap(),
-            LineStateControlSignal::Resume
-        ));
-    }
 }

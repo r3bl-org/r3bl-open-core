@@ -441,16 +441,38 @@ identify the file's purpose and link to the main type:
 //! [`ThreadSafeGlobalState`] for details.
 ```
 
-```rust
-//! Shared state container for the Resilient Reactor Thread pattern. See [`ThreadState`].
-```
+#### Dedicated Test Files (PTY Tests)
+
+For files dedicated to a single [`PTY`] integration test, use module-level documentation
+to describe the test's intent and provide execution instructions. This keeps the
+[`generate_pty_test!`] macro call clean.
+
+**Standard Pattern:**
+1.  **Summary**: What the test validates.
+2.  **Run with section**: Exact command to run the test directly.
+3.  **Test Protocol** (Optional): Step-by-step description of the controller/controlled exchange.
 
 ```rust
-//! [RAII] subscription guard for the Resilient Reactor Thread pattern. See
-//! [`SubscriberGuard`].
+//! [`PTY`]-based integration test for [Feature Name].
 //!
-//! [RAII]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
+//! Validates that [specific behavior] works correctly in a real terminal environment.
+//!
+//! Run with:
+//! ```bash
+//! cargo test -p r3bl_tui --lib [test_name] -- --nocapture
+//! ```
+//!
+//! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 ```
+
+**Why this matters:**
+- **Immediately actionable**: "Run with" instructions are at the top of the file.
+- **Clean implementation**: Documentation is separated from the macro configuration.
+- **Docs.rs discovery**: Module-level docs are the first thing users see when clicking
+  the module on docs.rs.
+
+[`generate_pty_test!`]: crate::generate_pty_test
+[`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 
 #### Multiple Types - Bullet List
 

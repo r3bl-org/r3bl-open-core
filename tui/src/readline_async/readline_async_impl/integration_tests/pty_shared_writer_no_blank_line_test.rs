@@ -196,7 +196,7 @@
 
 use crate::{CONTROLLED_STARTING, LineStateControlSignal, OffscreenBuffer,
             PtyTestContext, PtyTestMode, SharedWriter, TEST_RUNNING, generate_pty_test,
-            height, readline_async::readline_async_impl::LineState, width};
+            height, readline_async::readline_async_impl::LineState, width, Size};
 use std::io::Write;
 
 generate_pty_test! {
@@ -355,7 +355,7 @@ fn pty_controlled_entry_point() {
     let (tx, mut rx) = tokio::sync::mpsc::channel::<LineStateControlSignal>(100);
 
     // Create LineState and SharedWriter.
-    let mut line_state = LineState::new("> ".into(), (80, 24));
+    let mut line_state = LineState::new("> ".into(), Size::new((width(80), height(24))));
     let mut shared_writer = SharedWriter::new(tx);
 
     // Create an ANSI capture buffer to collect output bytes.

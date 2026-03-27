@@ -206,30 +206,35 @@
 //!
 //! ## [`Spinner::try_start()`]
 //!
-//! This displays an indeterminate spinner while waiting for a long-running task to
-//! complete. The intention with displaying this spinner is to give the user an indication
-//! that the program is still running and hasn't hung up or become unresponsive. When
-//! other tasks produce output concurrently, this spinner's output will not be clobbered.
-//! Neither will the spinner output clobber the output from other tasks. It suspends the
-//! output from all the [`crate::SharedWriter`] instances that are associated with one
-//! [`Readline`] instance. Both the `readline_async.rs` and `spinner.rs` examples shows
-//! this:
+//! [`Spinner::try_start()`] is an [interactive terminal application entry point] that
+//! displays an indeterminate spinner for long-running tasks. It operates in two modes:
+//!
+//! **Standalone mode**: Pass `None` for [`SharedWriter`] and use
+//! [`OutputDevice::default()`]. No [`ReadlineAsyncContext`] needed. This is useful when
+//! you just need visual feedback during a long operation (e.g., the upgrade check in
+//! `cmdr`).
+//!
+//! **Embedded mode** (with [`ReadlineAsyncContext`]): Pass a [`SharedWriter`] to
+//! coordinate output. The spinner suspends output from all [`SharedWriter`] instances
+//! associated with the [`Readline`] instance, preventing clobbering in either direction.
+//! Cancellation support is available in this mode: Ctrl+C and Ctrl+D are directed to
+//! the spinner to cancel it. Spinners can also be checked for completion or cancellation
+//! by long running tasks, to ensure that they [`request_shutdown`] as a response to user
+//! cancellation.
+//!
+//! Both the `readline_async.rs` and `spinner.rs` examples show embedded mode:
 //! ```bash
-//! cargo run --example readline_async` and `cargo run --example spinner
+//! cargo run --example readline_async
+//! cargo run --example spinner
 //! ```
 //!
-//! [`Spinner`]s also has cancellation support. Once a spinner is started, Ctrl+C and
-//! Ctrl+D are directed to the spinner, to cancel it. Spinners can also be checked for
-//! completion or cancellation by long running tasks, to ensure that they
-//! [`request_shutdown`] as a response to user cancellation. Take a look at the
-//! `examples/readline_async.rs` file to get an understanding of how to use this API.
 //!
 //! The third change is that [`ReadlineAsyncContext::try_new()`] now accepts prompts that
 //! can have [`ANSI`] escape sequences in them. Here's an example of this.
 //!
 //! ```
 //! # use r3bl_tui::readline_async::ReadlineAsyncContext;
-//! # use r3bl_tui::{fg_magenta, CliTextInline, ok};
+//! # use r3bl_tui::{fg_magenta, CliTextInline, ok, TuiAvailability};
 //! # pub async fn sample() -> Result<(), Box<dyn std::error::Error>> {
 //!     let prompt = {
 //!         let user = "naz";
@@ -238,9 +243,10 @@
 //!         let prompt_seg_3 = fg_magenta("╮").bg_dark_gray().to_string();
 //!         Some(format!("{}{}{} ", prompt_seg_1, prompt_seg_2, prompt_seg_3))
 //!     };
-//!     let maybe_rl_ctx = ReadlineAsyncContext::try_new(prompt, None).await?;
-//!     let Some(mut rl_ctx) = maybe_rl_ctx else {
-//!         return Err(miette::miette!("Failed to create terminal").into());
+//!     let mut rl_ctx = match ReadlineAsyncContext::try_new(prompt, None).await {
+//!         TuiAvailability::Available(rl_ctx) => rl_ctx,
+//!         TuiAvailability::NotAvailable(_) => return Ok(()),
+//!         TuiAvailability::Broken(e) => return Err(e.into()),
 //!     };
 //!     ok!()
 //! # }
@@ -287,6 +293,7 @@
 //! [`Eof`]: ReadlineEvent::Eof
 //! [`InputDevice`]: crate::InputDevice
 //! [`line_state_control_channel`]: field@crate::SharedWriter::line_state_control_channel_sender
+//! [`OutputDevice::default()`]: crate::OutputDevice::new_stdout
 //! [`OutputDevice`]: crate::OutputDevice
 //! [`panic!()`]: https://doc.rust-lang.org/std/panic/index.html
 //! [`process::request_shutdown()`]: https://doc.rust-lang.org/std/process/fn.exit.html
@@ -294,6 +301,7 @@
 //! [`readline_async`]: mod@crate::readline_async
 //! [`ReadlineAsyncContext::readline`]: field@ReadlineAsyncContext::readline
 //! [`request_shutdown`]: ReadlineAsyncContext::request_shutdown
+//! [`SharedWriter`]: crate::SharedWriter
 //! [`spinner`]: mod@crate::readline_async::spinner
 //! [`stderr`]: std::io::stderr
 //! [`stdout`]: std::io::stdout
@@ -309,6 +317,7 @@
 //! [Discussion: Stopping a thread in Rust]: https://users.rust-lang.org/t/stopping-a-thread/6328/7
 //! [Discussion: Support for `Thread::cancel()`]: https://internals.rust-lang.org/t/thread-cancel-support/3056/16
 //! [Docs: tokio's `stdin`]: https://docs.rs/tokio/latest/tokio/io/struct.Stdin.html
+//! [interactive terminal application entry point]: crate#interactive-terminal-application-entry-points
 //! [Linux TTY and async Rust - Article on developerlife.com]: https://developerlife.com/2024/08/20/tty-linux-async-rust/
 //! [Linux TTY and async Rust - Playlist on developerlife.com YT channel]: https://www.youtube.com/watch?v=bolScvh4x7I&list=PLofhE49PEwmw3MKOU1Kn3xbP4FRQR4Mb3
 //! [Linux TTY programming playlist]: https://www.youtube.com/playlist?list=PLofhE49PEwmw3MKOU1Kn3xbP4FRQR4Mb3

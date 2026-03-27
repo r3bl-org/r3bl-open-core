@@ -49,14 +49,6 @@ impl OutputDevice {
             is_mock: false,
         }
     }
-
-    #[must_use]
-    pub fn new_stderr() -> Self {
-        Self {
-            resource: Arc::new(StdMutex::new(std::io::stderr())),
-            is_mock: false,
-        }
-    }
 }
 
 impl OutputDevice {

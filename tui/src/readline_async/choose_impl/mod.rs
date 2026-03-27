@@ -1,22 +1,20 @@
 // Copyright (c) 2023-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! # Choose implementation module
-//!
-//! This module provides the implementation for the [`crate::choose()`] function, which
-//! creates an interactive selection UI in the terminal. It allows users to select one
-//! or multiple items from a list using keyboard navigation.
+//! This module provides the implementation for the [`choose()`] function, which creates
+//! an interactive selection UI in the terminal. It allows users to select one or multiple
+//! items from a list using keyboard navigation.
 //!
 //! The implementation is cross-platform (macOS, Linux, Windows) and automatically adapts
 //! to terminal capabilities (color support, input methods).
 //!
-//! # Quick example
+//! # Examples
 //!
 //! ```no_run
 //! # use r3bl_tui::*;
 //! # use r3bl_tui::readline_async::*;
 //! # async fn example() -> miette::Result<()> {
 //! let mut io_devices = DefaultIoDevices::default();
-//! let selection = choose(
+//! match choose(
 //!     "Select an item",
 //!     &["option 1", "option 2", "option 3"],
 //!     None,  // default height
@@ -24,12 +22,20 @@
 //!     HowToChoose::Single,
 //!     StyleSheet::default(),
 //!     io_devices.as_mut_tuple(),
-//! ).await?;
+//! ) {
+//!     TuiAvailability::Available(choice_future) => {
+//!         let selection = choice_future.await?;
+//!     }
+//!     TuiAvailability::NotAvailable(reason) => {
+//!         eprintln!("{}", reason.as_err_msg());
+//!     }
+//!     TuiAvailability::Broken(e) => return Err(e),
+//! }
 //! # Ok(())
 //! # }
 //! ```
 //!
-//! For complete examples, see `tui/examples/choose.rs`.
+//! For complete examples, see [`tui/examples/choose.rs`].
 //!
 //! # Styling
 //!
@@ -39,8 +45,14 @@
 //! - [`StyleSheet::sea_foam_style()`] - Sea foam color theme
 //! - [`StyleSheet::hot_pink_style()`] - Hot pink color theme
 //!
-//! You can also create custom styles by constructing a `StyleSheet` with your own
-//! [`crate::TuiStyle`] settings. See the examples for detailed styling demonstrations.
+//! You can also create custom styles by constructing a [`StyleSheet`] with your own
+//! [`TuiStyle`] settings. See the examples for detailed styling demonstrations.
+//!
+//! [`choose()`]: crate::choose
+//! [`StyleSheet`]: crate::StyleSheet
+//! [`tui/examples/choose.rs`]:
+//!     https://github.com/r3bl-org/r3bl-open-core/tree/main/tui/examples/choose.rs
+//! [`TuiStyle`]: crate::TuiStyle
 
 // https://github.com/rust-lang/rust-clippy
 // https://rust-lang.github.io/rust-clippy/master/index.html
@@ -67,3 +79,6 @@ pub use style::*;
 
 /// Enables file logging. You can use `tail -f log.txt` to watch the logs.
 pub const DEVELOPMENT_MODE: bool = false;
+
+#[cfg(any(all(unix, doc), test))]
+mod integration_tests;

@@ -228,7 +228,7 @@ impl LineState {
 mod tests {
     use super::*;
     use crate::{ANSI_CSI_BRACKET, CSI_START, CUD_CURSOR_DOWN, CUF_CURSOR_FORWARD,
-                ESC_START, core::test_fixtures::StdoutMock};
+                ESC_START, core::test_fixtures::StdoutMock, height, width, Size};
     use test_case::test_case;
 
     /// Checks if the string contains a `CursorForward` sequence ([`CSI`] <n> C).
@@ -313,7 +313,7 @@ mod tests {
     #[test_case(240, 3 ; "240 cols = 3 row boundary")]
     #[test_case(320, 4 ; "320 cols = 4 row boundary")]
     fn test_move_from_beginning_at_row_boundary(position: u16, expected_rows: u16) {
-        let line_state = LineState::new(String::new(), (80, 100));
+        let line_state = LineState::new(String::new(), Size::new((width(80), height(100))));
         let mut stdout_mock = StdoutMock::default();
 
         line_state
@@ -339,7 +339,7 @@ mod tests {
     /// Test position 0: should emit NO movement at all.
     #[test]
     fn test_move_from_beginning_at_zero() {
-        let line_state = LineState::new(String::new(), (80, 100));
+        let line_state = LineState::new(String::new(), Size::new((width(80), height(100))));
         let mut stdout_mock = StdoutMock::default();
 
         line_state
@@ -362,7 +362,7 @@ mod tests {
     #[test_case(40, 40 ; "40 cols = half row")]
     #[test_case(79, 79 ; "79 cols = last column before wrap")]
     fn test_move_from_beginning_within_first_row(position: u16, expected_cols: u16) {
-        let line_state = LineState::new(String::new(), (80, 100));
+        let line_state = LineState::new(String::new(), Size::new((width(80), height(100))));
         let mut stdout_mock = StdoutMock::default();
 
         line_state
@@ -397,7 +397,7 @@ mod tests {
         expected_rows: u16,
         expected_cols: u16,
     ) {
-        let line_state = LineState::new(String::new(), (80, 100));
+        let line_state = LineState::new(String::new(), Size::new((width(80), height(100))));
         let mut stdout_mock = StdoutMock::default();
 
         line_state

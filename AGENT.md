@@ -52,6 +52,14 @@ Some crates have additional instructions in their own `AGENT.md` files:
   `cargo install --path build-infra --force`** to update the installed binaries in
   `~/.cargo/bin`. See `build-infra/AGENT.md` for details.
 
+- **tui/**: Main crate (`r3bl_tui`). PTY test architecture:
+  - Tests use `generate_pty_test!` macro for single-feature PTY tests
+  - `spawn_controlled_in_pty()` for multi-backend comparison tests
+  - Use Controller/Controlled terminology (not master/slave)
+  - `drain_pty_and_wait()` prevents macOS PTY buffer deadlocks
+  - `try_clone_reader()` returns owned `Box<dyn Read>` (not a borrow), so reader and PtyPair
+    are independent
+
 When working on a specific crate, always check for a local `AGENT.md` file in that crate's
 directory for additional workflow requirements.
 
@@ -165,8 +173,9 @@ Commands with **no check.fish equivalent** (run directly):
 When writing or modifying rustdoc comments in code, **proactively apply** these conventions
 (all documented in `write-documentation` skill):
 
-1. **Intra-doc links**: Use `crate::` paths (not `super::`), reference-style links at bottom of
-   doc blocks. See `link-patterns.md` for patterns.
+1. **Intra-doc links**: Prefer `crate::` paths (shorter). Use `super::` when `crate::` paths
+   get too long and symbols are co-located. Reference-style links at bottom of doc blocks.
+   See `link-patterns.md` for patterns.
 
 2. **Human-readable constants**: Use binary for bitmasks (`0b0110_0000`), byte literals for
    printable chars (`b'['`), decimal for non-printables (`27`). Show hex in comments for
@@ -174,6 +183,11 @@ When writing or modifying rustdoc comments in code, **proactively apply** these 
 
 3. **Inverted pyramid**: High-level concepts at module/trait level, simple syntax examples at
    method level. See `examples.md`.
+
+4. **Sidebar headings**: Only `#` and `##` headings appear in the rustdoc sidebar navigation.
+   Use `**bold**` text instead of `###` for sub-sections within doc comments.
+
+5. **No em dashes**: Use regular dashes (`-`), never em dashes (`—`) in documentation.
 
 Don't wait for `check-code-quality` to catch issues - write docs correctly the first time.
 
@@ -207,6 +221,7 @@ For testing interactive terminal applications, use (both are installed):
 - Never use `git stash` / `git stash pop` to test against clean state - it destroys the staging
   area (index). Use the Task tool with `isolation: "worktree"` to run tests in a separate git
   worktree without touching the main working tree.
+- Use `git mv` instead of `mv` when moving or renaming files to preserve move history in git.
 - Never commit unless explicitly asked
 - When you do make commits, do not add an attribution to yourself in the commit message.
   Do not add the following trailing lines (or similar) in a commit message:

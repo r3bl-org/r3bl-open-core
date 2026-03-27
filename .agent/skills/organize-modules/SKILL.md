@@ -134,6 +134,27 @@ mod internal_parser;
 pub use internal_parser::*;  // Re-exports need the module to exist!
 ```
 
+#### Integration Tests Module
+
+For modules that contain [`PTY`] integration tests (typically under `integration_tests/`),
+follow these rules:
+
+1.  **Dedicated Files**: Each complex test gets its own file.
+2.  **Module Documentation**: Use `//!` at the top of the file to document the test's intent.
+3.  **Run Instructions**: Always include a "Run with:" section at the top of the file
+    (see `write-documentation` skill for details).
+4.  **Conditional Visibility**: Parent modules must make these test modules public for
+    doc and test builds.
+
+```rust
+// integration_tests/mod.rs
+
+#[cfg(any(test, doc))]
+pub mod pty_feature_test;
+```
+
+[`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
+
 #### Platform-Specific Modules with Cross-Platform Docs
 
 For modules that are **platform-specific but should have docs generated on all platforms**, use

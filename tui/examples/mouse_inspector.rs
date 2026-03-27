@@ -46,7 +46,8 @@
 
 use r3bl_tui::{AnsiSequenceGenerator, InputDevice, InputEvent, Key, KeyPress, KeyState,
                ModifierKeysMask, MouseInput, MouseInputKind, OutputDevice, Pos, RawMode,
-               RowIndex, TermCol, TermRow, col, get_size, lock_output_device_as_mut,
+               RowIndex, TermCol, TermRow, TerminalInteractiveStatus,
+               check_is_terminal_interactive, col, get_size, lock_output_device_as_mut,
                row, set_mimalloc_in_main};
 use std::collections::VecDeque;
 
@@ -221,7 +222,16 @@ async fn main() -> miette::Result<()> {
     set_mimalloc_in_main!();
 
     // Setup terminal
+    match check_is_terminal_interactive() {
+        TerminalInteractiveStatus::Available => {}
+        TerminalInteractiveStatus::NotAvailable(reason) => {
+            eprintln!("{}", reason.as_err_msg());
+            std::process::exit(1);
+        }
+    }
+
     let terminal_size = get_size()?;
+
     let mut output_device = OutputDevice::new_stdout();
     let mut input_device = InputDevice::default();
 

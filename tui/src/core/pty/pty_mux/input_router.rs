@@ -8,11 +8,10 @@
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 
 use super::{ProcessManager, show_notification};
-use crate::lock_output_device_as_mut;
 use crate::{AnsiSequenceGenerator, Continuation, InputEvent, Key, KeyPress, KeyState,
             ModifierKeysMask, PtyInputEvent, Size, col,
             core::{osc::OscController, terminal_io::OutputDevice},
-            row};
+            lock_output_device_as_mut, row};
 
 /// Routes input events to appropriate handlers and manages dynamic keyboard shortcuts.
 #[derive(Debug)]

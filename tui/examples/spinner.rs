@@ -1,7 +1,8 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use r3bl_tui::{CommonResult, OutputDevice, SGR_FG_RED_STR, SGR_RESET_STR, SpinnerColor,
-               SpinnerStyle, SpinnerTemplate,
+               SpinnerStyle, SpinnerTemplate, TerminalInteractiveStatus,
+               TuiAvailability, check_is_terminal_interactive,
                readline_async::{ReadlineAsyncContext, SafeInlineString, Spinner},
                set_mimalloc_in_main,
                spinner_constants::{ARTIFICIAL_UI_DELAY, DELAY_MS, DELAY_UNIT},
@@ -26,6 +27,14 @@ macro_rules! println_with_flush {
 // failure is a fatal error that should panic. The lint must be suppressed here.
 pub async fn main() -> CommonResult<()> {
     set_mimalloc_in_main!();
+
+    match check_is_terminal_interactive() {
+        TerminalInteractiveStatus::Available => {}
+        TerminalInteractiveStatus::NotAvailable(reason) => {
+            eprintln!("{}", reason.as_err_msg());
+            std::process::exit(1);
+        }
+    }
 
     // Without readline.
     {
@@ -87,8 +96,13 @@ pub async fn main() -> CommonResult<()> {
 
 #[allow(unused_assignments)]
 async fn example_with_concurrent_output(style: SpinnerStyle) -> miette::Result<()> {
-    let maybe_rl_ctx = ReadlineAsyncContext::try_new(Some("$ "), None).await?;
-    let rl_ctx = maybe_rl_ctx.expect("terminal is not fully interactive");
+    let rl_ctx = match ReadlineAsyncContext::try_new(Some("$ "), None).await {
+        TuiAvailability::Available(rl_ctx) => rl_ctx,
+        TuiAvailability::NotAvailable(reason) => {
+            miette::bail!("{}", reason.as_err_msg());
+        }
+        TuiAvailability::Broken(e) => return Err(e),
+    };
     let address = "127.0.0.1:8000";
     let message_trying_to_connect = format!(
         "This is a sample indeterminate progress message: trying to connect to server on {}",
@@ -98,7 +112,7 @@ async fn example_with_concurrent_output(style: SpinnerStyle) -> miette::Result<(
     let mut shared_writer = rl_ctx.clone_shared_writer();
 
     // Start spinner. Automatically pauses the terminal.
-    let mut maybe_spinner = Spinner::try_start(
+    let mut maybe_spinner = match Spinner::try_start(
         message_trying_to_connect,
         "Sample FINAL message for the spinner: Connected to server",
         DELAY_UNIT,
@@ -106,7 +120,11 @@ async fn example_with_concurrent_output(style: SpinnerStyle) -> miette::Result<(
         OutputDevice::default(),
         Some(shared_writer.clone()),
     )
-    .await?;
+    .await
+    {
+        TuiAvailability::Available(spinner) => Some(spinner),
+        _ => None,
+    };
 
     // Start another task to simulate some async work that uses an interval to display
     // output for a fixed amount of time, using the shared writer.
@@ -153,7 +171,7 @@ async fn example_with_concurrent_output_no_readline_async(
     );
 
     // Start spinner.
-    let mut maybe_spinner = Spinner::try_start(
+    let mut maybe_spinner = match Spinner::try_start(
         message_trying_to_connect,
         "Sample FINAL message for the spinner: Connected to server",
         DELAY_UNIT,
@@ -161,7 +179,11 @@ async fn example_with_concurrent_output_no_readline_async(
         OutputDevice::default(),
         None,
     )
-    .await?;
+    .await
+    {
+        TuiAvailability::Available(spinner) => Some(spinner),
+        _ => None,
+    };
 
     // Simulate some async work.
     sleep(ARTIFICIAL_UI_DELAY).await;
@@ -180,13 +202,18 @@ async fn example_with_concurrent_output_no_readline_async(
 /// Example showing how to update spinner messages dynamically.
 /// This demonstrates the new `update_message()` functionality.
 async fn example_with_message_updates(style: SpinnerStyle) -> miette::Result<()> {
-    let maybe_rl_ctx = ReadlineAsyncContext::try_new(Some("$ "), None).await?;
-    let rl_ctx = maybe_rl_ctx.expect("terminal is not fully interactive");
+    let rl_ctx = match ReadlineAsyncContext::try_new(Some("$ "), None).await {
+        TuiAvailability::Available(rl_ctx) => rl_ctx,
+        TuiAvailability::NotAvailable(reason) => {
+            miette::bail!("{}", reason.as_err_msg());
+        }
+        TuiAvailability::Broken(e) => return Err(e),
+    };
 
     let shared_writer = rl_ctx.clone_shared_writer();
 
     // Start spinner with initial message.
-    let mut maybe_spinner = Spinner::try_start(
+    let mut maybe_spinner = match Spinner::try_start(
         "Starting installation...",
         "Installation complete!",
         DELAY_UNIT,
@@ -194,7 +221,11 @@ async fn example_with_message_updates(style: SpinnerStyle) -> miette::Result<()>
         OutputDevice::default(),
         Some(shared_writer.clone()),
     )
-    .await?;
+    .await
+    {
+        TuiAvailability::Available(spinner) => Some(spinner),
+        _ => None,
+    };
 
     if let Some(ref spinner) = maybe_spinner {
         // Simulate different phases of work with updated messages.

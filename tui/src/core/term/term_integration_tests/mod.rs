@@ -2,6 +2,7 @@
 
 //! Automated integration and end to end tests for terminal interactivity detection.
 
+mod test_disclaimer;
 mod test_piped_stdin;
 mod test_piped_stdout;
 mod test_pty_is_interactive;

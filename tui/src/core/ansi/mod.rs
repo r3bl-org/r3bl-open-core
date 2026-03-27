@@ -234,12 +234,13 @@
 
 // Public modules.
 pub mod constants;
+pub mod detect_color;
+pub mod vt_100_terminal_input_parser;
+
+// XMARK: conditional visibility for docs and test only
 
 // Private modules.
 mod color;
-mod detect_color_support;
-
-// XMARK: conditional visibility for docs and test only
 
 // Module is public only when building documentation or tests.
 // This allows rustdoc links to work while keeping it private in release builds.
@@ -256,8 +257,6 @@ pub mod terminal_raw_mode;
 #[cfg(not(any(test, doc)))]
 mod terminal_raw_mode;
 
-// XMARK: Example for how to conditionally expose private modules for testing and documentation.
-
 // Module is public only when building documentation or tests.
 // This allows rustdoc links to work while keeping it private in release builds.
 #[cfg(any(test, doc))]
@@ -266,13 +265,10 @@ pub mod vt_100_pty_output_parser;
 #[cfg(not(any(test, doc)))]
 mod vt_100_pty_output_parser;
 
-// Input parsing module - public for protocol access.
-pub mod vt_100_terminal_input_parser;
-
 // Re-export flat public API.
 pub use color::*;
 pub use constants::*;
-pub use detect_color_support::*;
+pub use detect_color::*;
 pub use generator::*;
 pub use vt_100_pty_output_parser::*;
 pub use terminal_raw_mode::*;
@@ -282,7 +278,9 @@ pub use terminal_raw_mode::*;
 pub use vt_100_pty_output_parser::vt_100_pty_output_conformance_tests;
 
 // Rustdoc search link fixes.
-
 #[cfg(any(test, doc))] // Guard needed: constants sub-modules are only pub in doc/test builds.
 #[doc(inline)] // Create doc pages at re-export path so rustdoc search links resolve.
 pub use constants::{csi, dsr, esc, generic, input_sequences, mouse, raw_mode, sgr, utf8};
+#[cfg(any(test, doc))]
+#[doc(inline)] // Create doc pages at re-export path so rustdoc search links resolve.
+pub use detect_color::color_detection_integration_tests::pty_test_color_detection;

@@ -1,7 +1,8 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use r3bl_tui::{DefaultIoDevices, ItemsOwned, TuiColor, choose, cli_text_inline,
-               get_terminal_width, height, new_style,
+use r3bl_tui::{DefaultIoDevices, ItemsOwned, TerminalInteractiveStatus, TuiAvailability,
+               TuiColor, check_is_terminal_interactive, choose, cli_text_inline,
+               get_size, height, new_style,
                readline_async::{HowToChoose, StyleSheet},
                set_mimalloc_in_main, usize, width};
 use serde::{Deserialize, Serialize};
@@ -57,11 +58,21 @@ struct QuestionData {
 pub async fn main() -> miette::Result<()> {
     set_mimalloc_in_main!();
 
+    match check_is_terminal_interactive() {
+        TerminalInteractiveStatus::Available => {}
+        TerminalInteractiveStatus::NotAvailable(reason) => {
+            eprintln!("{}", reason.as_err_msg());
+            std::process::exit(1);
+        }
+    }
+
+    let size = get_size()?;
+
     // Parse string into Vec<QuestionData>
     let all_questions_and_answers: Vec<QuestionData> =
         serde_json::from_str(JSON_DATA).unwrap();
     // Get display size.
-    let max_width_col_count = usize(*get_terminal_width());
+    let max_width_col_count = usize(*size.col_width);
     let max_height_row_count: usize = 5;
 
     let mut score = 0;
@@ -76,7 +87,7 @@ pub async fn main() -> miette::Result<()> {
     for question_data in &all_questions_and_answers {
         let question = question_data.question.clone();
         let options = question_data.options.clone();
-        let user_input = choose(
+        let user_choice = match choose(
             question,
             options,
             Some(height(max_height_row_count)),
@@ -84,17 +95,23 @@ pub async fn main() -> miette::Result<()> {
             HowToChoose::Single,
             StyleSheet::default(),
             io_devices.as_mut_tuple(),
-        )
-        .await?;
+        ) {
+            TuiAvailability::Available(choice_future) => choice_future.await?,
+            TuiAvailability::NotAvailable(reason) => {
+                eprintln!("{}", reason.as_err_msg());
+                break;
+            }
+            TuiAvailability::Broken(e) => return Err(e),
+        };
 
-        if user_input.is_empty() {
+        if user_choice.is_empty() {
             println!("You did not select anything");
             // Exit the game.
             break;
         }
 
         check_user_input_and_display_result(
-            &user_input,
+            &user_choice,
             question_data,
             correct_answer_color,
             incorrect_answer_color,

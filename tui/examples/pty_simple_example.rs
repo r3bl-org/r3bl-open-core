@@ -7,7 +7,8 @@
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 
 use r3bl_tui::{AnsiSequenceGenerator, InputEvent, Key, KeyPress, KeyState,
-               ModifierKeysMask, RawMode, col,
+               ModifierKeysMask, RawMode, TerminalInteractiveStatus,
+               check_is_terminal_interactive, col,
                core::{get_size,
                       pty::{ControlSequence, CursorKeyMode, DefaultPtySessionConfig,
                             PtyInputEvent, PtyOutputEvent, PtySession,
@@ -30,8 +31,16 @@ async fn main() -> miette::Result<()> {
     println!("📝 Debug output will be written to log.txt");
     println!();
 
-    // Get terminal size.
+    match check_is_terminal_interactive() {
+        TerminalInteractiveStatus::Available => {}
+        TerminalInteractiveStatus::NotAvailable(reason) => {
+            eprintln!("{}", reason.as_err_msg());
+            std::process::exit(1);
+        }
+    }
+
     let terminal_size = get_size()?;
+
     let mut output_device = OutputDevice::new_stdout();
     let mut input_device = InputDevice::default();
 
