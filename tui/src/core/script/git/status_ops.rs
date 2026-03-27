@@ -49,7 +49,7 @@ pub async fn try_is_git_repo() -> ResultAndCommand<bool> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{ok,
+    use crate::{generate_async_isolated_process_test, ok,
                 script::git::{git_test_fixtures::helper_setup_git_repo_with_commit,
                               types::{git_command_names::{GIT_CMD_ADD,
                                                           GIT_CMD_COMMIT,
@@ -152,8 +152,6 @@ mod tests {
         test_try_is_git_repo().await?;
         ok!(())
     }
-
-    use crate::generate_async_isolated_process_test;
 
     generate_async_isolated_process_test!(
         test_status_ops_in_isolated_process,

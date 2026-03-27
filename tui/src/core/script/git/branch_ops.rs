@@ -171,7 +171,7 @@ pub(super) async fn try_execute_git_command_to_get_branches()
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{inline_vec, ok,
+    use crate::{generate_async_isolated_process_test, inline_vec, ok,
                 script::git::{git_test_fixtures::helper_setup_git_repo_with_commit,
                               types::{BranchExists,
                                       git_ui_strings::CURRENT_BRANCH_PREFIX}},
@@ -487,8 +487,6 @@ mod tests {
         test_try_execute_git_command_to_get_branches().await?;
         ok!(())
     }
-
-    use crate::generate_async_isolated_process_test;
 
     generate_async_isolated_process_test!(
         test_branch_ops_in_isolated_process,

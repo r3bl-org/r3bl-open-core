@@ -5,53 +5,6 @@
 //!
 //! [`generate_isolated_process_test!`]: macro@crate::generate_isolated_process_test
 
-use std::process::{Output, Stdio};
-
-/// Environment variable used to signal that the current process is the controlled
-/// (isolated) child. The controller sets this before spawning; the controlled checks it
-/// on entry.
-pub const ISOLATED_PROCESS_ENV_VAR: &str = "R3BL_TEST_ISOLATED_PROCESS";
-
-/// Spawns the current test executable in an isolated child process and returns its
-/// [`Output`].
-///
-/// This is the controller-side logic shared by both [`generate_isolated_process_test!`]
-/// and [`generate_async_isolated_process_test!`]. It:
-/// 1. Calls [`suppress_wer_dialogs()`] to prevent Windows crash dialogs.
-/// 2. Builds a command via [`new_isolated_test_command()`] with `--test-threads 1
-///    --nocapture` and the given `test_name`.
-/// 3. Sets `RUST_BACKTRACE=1` and the isolation environment variable.
-/// 4. Configures `stdin`, `stdout`, `stderr` as specified by the caller.
-/// 5. Runs the command and returns the captured [`Output`].
-///
-/// # Panics
-///
-/// Panics if the child process cannot be spawned.
-///
-/// [`generate_async_isolated_process_test!`]: crate::generate_async_isolated_process_test
-/// [`generate_isolated_process_test!`]: macro@crate::generate_isolated_process_test
-/// [`new_isolated_test_command()`]: crate::new_isolated_test_command
-/// [`suppress_wer_dialogs()`]: crate::suppress_wer_dialogs
-#[must_use]
-pub fn spawn_isolated_process(
-    test_name: &str,
-    stdin: Stdio,
-    stdout: Stdio,
-    stderr: Stdio,
-) -> Output {
-    crate::suppress_wer_dialogs();
-
-    let mut cmd = crate::new_isolated_test_command();
-    cmd.args(["--test-threads", "1", "--nocapture", test_name])
-        .env(ISOLATED_PROCESS_ENV_VAR, "1")
-        .env("RUST_BACKTRACE", "1")
-        .stdin(stdin)
-        .stdout(stdout)
-        .stderr(stderr);
-
-    cmd.output().expect("Failed to spawn child process")
-}
-
 /// Generates a test that spawns itself in an isolated process to avoid global state
 /// contamination (environment variables, static variables, current working directory).
 ///
@@ -219,4 +172,53 @@ macro_rules! generate_async_isolated_process_test {
             $controller_fn(output);
         }
     };
+}
+
+/// Environment variable used to signal that the current process is the controlled
+/// (isolated) child. The controller sets this before spawning; the controlled checks it
+/// on entry.
+pub const ISOLATED_PROCESS_ENV_VAR: &str = "R3BL_TEST_ISOLATED_PROCESS";
+
+/// Spawns the current test executable in an isolated child process and returns its
+/// [`Output`].
+///
+/// This is the controller-side logic shared by both [`generate_isolated_process_test!`]
+/// and [`generate_async_isolated_process_test!`]. It:
+/// 1. Calls [`suppress_wer_dialogs()`] to prevent Windows crash dialogs.
+/// 2. Builds a command via [`new_isolated_test_command()`] with `--test-threads 1
+///    --nocapture` and the given `test_name`.
+/// 3. Sets `RUST_BACKTRACE=1` and the isolation environment variable.
+/// 4. Configures [`stdin`], [`stdout`], [`stderr`] as specified by the caller.
+/// 5. Runs the command and returns the captured [`Output`].
+///
+/// # Panics
+///
+/// Panics if the child process cannot be spawned.
+///
+/// [`generate_async_isolated_process_test!`]: crate::generate_async_isolated_process_test
+/// [`generate_isolated_process_test!`]: macro@crate::generate_isolated_process_test
+/// [`new_isolated_test_command()`]: crate::new_isolated_test_command
+/// [`Output`]: std::process::Output
+/// [`stderr`]: std::io::stderr
+/// [`stdin`]: std::io::stdin
+/// [`stdout`]: std::io::stdout
+/// [`suppress_wer_dialogs()`]: crate::suppress_wer_dialogs
+#[must_use]
+pub fn spawn_isolated_process(
+    test_name: &str,
+    stdin: std::process::Stdio,
+    stdout: std::process::Stdio,
+    stderr: std::process::Stdio,
+) -> std::process::Output {
+    crate::suppress_wer_dialogs();
+
+    let mut cmd = crate::new_isolated_test_command();
+    cmd.args(["--test-threads", "1", "--nocapture", test_name])
+        .env(ISOLATED_PROCESS_ENV_VAR, "1")
+        .env("RUST_BACKTRACE", "1")
+        .stdin(stdin)
+        .stdout(stdout)
+        .stderr(stderr);
+
+    cmd.output().expect("Failed to spawn child process")
 }

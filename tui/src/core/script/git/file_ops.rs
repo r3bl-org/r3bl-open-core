@@ -132,7 +132,7 @@ async fn get_files_from_last_commit(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{ok,
+    use crate::{generate_async_isolated_process_test, ok,
                 script::git::types::{git_command_names::{GIT_CMD_ADD, GIT_CMD_COMMIT,
                                                          GIT_CMD_CONFIG, GIT_CMD_INIT},
                                      git_config_keys::{GIT_CONFIG_COMMIT_GPGSIGN,
@@ -223,8 +223,6 @@ mod tests {
         test_try_get_changed_files_by_ext().await?;
         ok!(())
     }
-
-    use crate::generate_async_isolated_process_test;
 
     generate_async_isolated_process_test!(
         test_changed_files_in_isolated_process,

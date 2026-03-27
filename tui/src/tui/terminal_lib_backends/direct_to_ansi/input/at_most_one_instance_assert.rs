@@ -19,7 +19,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 /// `lock().unwrap()` calls (e.g., in [`release()`] during drop) will panic, causing the
 /// test to hang or fail.
 ///
-/// `AtomicBool::swap()` is **panic-safe**---there's no lock to poison.
+/// `AtomicBool::swap()` is **panic-safe** as there's no lock to poison.
 ///
 /// [`catch_unwind`]: std::panic::catch_unwind
 /// [`DirectToAnsiInputDevice`]: super::DirectToAnsiInputDevice
