@@ -1,50 +1,52 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+//! [`PTY`]-based integration test for Ctrl+D delete character behavior.
+//!
+//! Validates that Ctrl+D on a non-empty line deletes the character at cursor position.
+//!
+//! # Run with:
+//!
+//! ```bash
+//! cargo test -p r3bl_tui --lib test_pty_ctrl_d_delete -- --nocapture
+//! ```
+//!
+//! # Test Protocol (Request-Response Pattern)
+//!
+//! This test uses a **request-response protocol** between controller and controlled:
+//!
+//! 1. **Controller sends input** (text and Ctrl+D sequences)
+//! 2. **Controller flushes** and blocks reading controlled stdout until it sees "Line:
+//!    ..."
+//! 3. **Controller makes assertion** on the line state
+//! 4. **Repeat** for next input sequence
+//!
+//! The ([`LineState`]) is checked in the test to make assertions against.
+//!
+//! [`LineState`]: crate::readline_async::readline_async_impl::LineState
+//! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
+
 // cspell:words ello
 
 use crate::{AsyncDebouncedDeadline, CONTROLLED_READY, DebouncedState, LINE_PREFIX,
-            PtyTestContext, PtyTestMode, core::test_fixtures::StdoutMock,
-            direct_to_ansi::DirectToAnsiInputDevice, generate_pty_test,
-            readline_async::readline_async_impl::LineState, height, width, Size};
+            PtyTestContext, PtyTestMode, Size, core::test_fixtures::StdoutMock,
+            direct_to_ansi::DirectToAnsiInputDevice, generate_pty_test, height,
+            readline_async::readline_async_impl::LineState, width};
 use std::{io::Write,
           sync::{Arc, Mutex as StdMutex},
           time::Duration};
 
 generate_pty_test! {
-    /// [`PTY`]-based integration test for Ctrl+D delete character behavior.
-    ///
-    /// Validates that Ctrl+D on a non-empty line deletes the character at cursor position.
-    ///
-    /// Run with:
-    /// ```bash
-    /// cargo test -p r3bl_tui --lib test_pty_ctrl_d_delete -- --nocapture
-    /// ```
-    ///
-    /// ## Test Protocol (Request-Response Pattern)
-    ///
-    /// This test uses a **request-response protocol** between controller and controlled:
-    ///
-    /// 1. **Controller sends input** (text and Ctrl+D sequences)
-    /// 2. **Controller flushes** and blocks reading controlled stdout until it sees
-    ///    "Line: ..."
-    /// 3. **Controller makes assertion** on the line state
-    /// 4. **Repeat** for next input sequence
-    ///
-    /// The ([`LineState`]) is checked in the test to make assertions against.
-    ///
-    /// [`LineState`]: crate::readline_async::readline_async_impl::LineState
-    /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
     test_fn: test_pty_ctrl_d_delete,
-    controller: pty_controller_entry_point,
-    controlled: pty_controlled_entry_point,
+    controller: controller,
+    controlled: controlled,
     mode: PtyTestMode::Raw,
 }
 
-/// [`PTY`] Controller: Send Ctrl+D on non-empty line and verify delete behavior
+/// [`PTY`] Controller: Send Ctrl+D on non-empty line and verify delete behavior.
 ///
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 #[allow(clippy::too_many_lines)]
-fn pty_controller_entry_point(context: PtyTestContext) {
+fn controller(context: PtyTestContext) {
     let PtyTestContext {
         pty_pair,
         child,
@@ -99,10 +101,11 @@ fn pty_controller_entry_point(context: PtyTestContext) {
     eprintln!("✅ PTY Controller: Test passed!");
 }
 
-/// [`PTY`] Controlled: Process readline input and report line state
+/// [`PTY`] Controlled: Process readline input and report line state. The harness performs
+/// [`std::process::exit(0)`] after this function returns.
 ///
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
-fn pty_controlled_entry_point() {
+fn controlled() {
     let runtime = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
 
     runtime.block_on(async {
@@ -119,24 +122,22 @@ fn pty_controlled_entry_point() {
         let mut input_device = DirectToAnsiInputDevice::new();
 
         // Signal to controller that we're ready to receive input. MUST be after
-        // DirectToAnsiInputDevice::new() so the mio poller thread is already
-        // watching stdin before the controller sends any input through the PTY.
+        // DirectToAnsiInputDevice::new() so the mio poller thread is already watching
+        // stdin before the controller sends any input through the PTY.
         println!("{CONTROLLED_READY}");
         std::io::stdout().flush().expect("Failed to flush");
 
         // ==================== Timing Configuration ====================
         //
-        // Inactivity watchdog: Exit if no events arrive for 5 seconds.
-        // Needs headroom for parallel test execution where CPU scheduling
-        // delays can cause input events to arrive late.
-        // Pattern: "Exit if this operation takes too long"
+        // Inactivity watchdog: Exit if no events arrive for 5 seconds. Needs headroom for
+        // parallel test execution where CPU scheduling delays can cause input events to
+        // arrive late. Pattern: "Exit if this operation takes too long"
         let mut inactivity_watchdog = AsyncDebouncedDeadline::new(Duration::from_secs(5));
         inactivity_watchdog.reset(); // Start the watchdog
 
-        // Debounced state: Buffer line state and print after 10ms of no events
-        // Pattern: "Do X after Y ms of no activity"
-        // This batches rapid input (e.g., "hello" arrives as 5 chars
-        // within ~1-2ms, all processed before first print at ~12ms)
+        // Debounced state: Buffer line state and print after 10ms of no events Pattern:
+        // "Do X after Y ms of no activity" This batches rapid input (e.g., "hello"
+        // arrives as 5 chars within ~1-2ms, all processed before first print at ~12ms)
         let mut buffered_state = DebouncedState::new(Duration::from_millis(10));
 
         // ==================== Event Loop ====================
@@ -160,13 +161,14 @@ fn pty_controlled_entry_point() {
                                 Ok(Some(readline_event)) => {
                                     println!("🔍 PTY Controlled: ReadlineEvent: {readline_event:?}");
 
-                                    // For this test, we don't exit on EOF
-                                    // We only test delete character behavior
+                                    // For this test, we don't exit on EOF We only test
+                                    // delete character behavior
                                 }
                                 Ok(None) => {
-                                    // Buffer the current line state and reset debounce timer.
-                                    // If another event arrives before 10ms, we update the buffered
-                                    // state and reset the timer again (batching rapid input).
+                                    // Buffer the current line state and reset debounce
+                                    // timer. If another event arrives before 10ms, we
+                                    // update the buffered state and reset the timer again
+                                    // (batching rapid input).
                                     buffered_state.set(format!(
                                         "{LINE_PREFIX} {}, Cursor: {}",
                                         line_state.line,
@@ -185,8 +187,9 @@ fn pty_controlled_entry_point() {
                     }
                 }
 
-                // -------- Branch 2: Debounce timer expired, print buffered state --------
-                // If we should poll the debounced state, then sleep until the debounce timer expires, and when it fires, execute this code.
+                // -------- Branch 2: Debounce timer expired, print buffered state
+                // -------- If we should poll the debounced state, then sleep until the
+                // debounce timer expires, and when it fires, execute this code.
                 () = buffered_state.sleep_until(), if buffered_state.should_poll() => {
                     // No new events arrived within 10ms, print the buffered line state
                     if let Some(state) = buffered_state.take() {

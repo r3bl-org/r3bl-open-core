@@ -1,36 +1,39 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{DefaultIoDevices, Header, PtyTestContext, PtyTestMode, SharedWriter,
-            TuiAvailability, generate_keyboard_sequence, generate_pty_test,
+//! [`PTY`]-based integration test verifying that [`choose()`] correctly sends [`Pause`]
+//! and [`Resume`] signals to the [`SharedWriter`].
+//!
+//! The controlled process runs [`choose()`] with real I/O devices in a real [`PTY`],
+//! collects the [`LineStateControlSignal`]s from the [`SharedWriter`], and prints them to
+//! [`stdout`]. The controller sends keystrokes via the [`PTY`] writer, reads the signal
+//! output, and asserts correctness.
+//!
+//! [`choose()`] handles switching in and out of [raw mode] on its own, which is why this
+//! test is run in [`PtyTestMode::Cooked`].
+//!
+//! # Run with:
+//!
+//! ```bash
+//! cargo test -p r3bl_tui --lib test_shared_writer_pause_works -- --nocapture
+//! ```
+//!
+//! [`choose()`]: crate::choose
+//! [`LineStateControlSignal`]: crate::LineStateControlSignal
+//! [`Pause`]: crate::LineStateControlSignal::Pause
+//! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
+//! [`Resume`]: crate::LineStateControlSignal::Resume
+//! [`SharedWriter`]: crate::SharedWriter
+//! [`stdout`]: std::io::stdout
+//! [raw mode]: mod@crate::terminal_raw_mode#raw-mode-vs-cooked-mode
+
+use crate::{CONTROLLED_READY, DefaultIoDevices, Header, LINE_PREFIX, PtyTestContext,
+            PtyTestMode, SUCCESS, SharedWriter, TuiAvailability,
+            generate_keyboard_sequence, generate_pty_test,
             vt_100_terminal_input_parser::{VT100InputEventIR, VT100KeyCodeIR,
                                            VT100KeyModifiersIR}};
 use std::io::Write;
 
 generate_pty_test! {
-    /// [`PTY`]-based integration test verifying that [`choose()`] correctly sends
-    /// [`Pause`] and [`Resume`] signals to the [`SharedWriter`].
-    ///
-    /// The controlled process runs [`choose()`] with real I/O devices in a real [`PTY`],
-    /// collects the [`LineStateControlSignal`]s from the [`SharedWriter`], and prints
-    /// them to [`stdout`]. The controller sends keystrokes via the [`PTY`] writer, reads
-    /// the signal output, and asserts correctness.
-    ///
-    /// [`choose()`] handles switching in and out of [raw mode] on its own, which is why
-    /// this test is run in [`PtyTestMode::Cooked`].
-    ///
-    /// Run with:
-    /// ```bash
-    /// cargo test -p r3bl_tui --lib test_shared_writer_pause_works -- --nocapture
-    /// ```
-    ///
-    /// [`choose()`]: crate::choose
-    /// [`LineStateControlSignal`]: crate::LineStateControlSignal
-    /// [`Pause`]: crate::LineStateControlSignal::Pause
-    /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
-    /// [`Resume`]: crate::LineStateControlSignal::Resume
-    /// [`SharedWriter`]: crate::SharedWriter
-    /// [`stdout`]: std::io::stdout
-    /// [raw mode]: mod@crate::terminal_raw_mode#raw-mode-vs-cooked-mode
     test_fn: test_shared_writer_pause_works,
     controller: controller,
     controlled: controlled,
@@ -56,7 +59,7 @@ fn controller(context: PtyTestContext) {
 
     // Wait for the controlled process to be ready.
     child
-        .wait_for_ready(&mut buf_reader, constants::READY_MARKER)
+        .wait_for_ready(&mut buf_reader, CONTROLLED_READY)
         .unwrap();
 
     // Give choose() time to render and start its event loop.
@@ -79,12 +82,11 @@ fn controller(context: PtyTestContext) {
 
     // Read signal lines printed by the controlled process. Use `contains`
     // because choose()'s ANSI rendering may precede the signal on the same line.
-    let result =
-        child.read_until_marker(&mut buf_reader, constants::DONE_MARKER, |line| {
-            line.contains(constants::SIGNAL_PREFIX)
-        });
+    let result = child.read_until_marker(&mut buf_reader, SUCCESS, |line| {
+        line.contains(LINE_PREFIX)
+    });
 
-    assert!(result.found_marker, "Controlled process did not print DONE");
+    assert!(result.found_marker, "Controlled process did not print SUCCESS");
     assert!(
         !result.lines.is_empty(),
         "No signals received from controlled process"
@@ -103,8 +105,9 @@ fn controller(context: PtyTestContext) {
     child.drain_and_wait(buf_reader, pty_pair);
 }
 
-/// Controlled: runs [`choose()`] with real I/O, collects [`SharedWriter`] signals,
-/// prints them to [`stdout`] for the controller to verify.
+/// Controlled: runs [`choose()`] with real I/O, collects [`SharedWriter`] signals, prints
+/// them to [`stdout`] for the controller to verify. The harness performs
+/// [`std::process::exit(0)`] after this function returns.
 ///
 /// [`choose()`]: crate::choose
 /// [`SharedWriter`]: crate::SharedWriter
@@ -116,7 +119,7 @@ fn controlled() {
         let mut io = DefaultIoDevices::default();
 
         // Signal readiness to the controller.
-        println!("{a}", a = constants::READY_MARKER);
+        println!("{CONTROLLED_READY}");
         std::io::stdout().flush().unwrap();
 
         // Run choose() with real I/O devices and the SharedWriter under test.
@@ -145,16 +148,10 @@ fn controlled() {
         // Collect signals and print them for the controller.
         line_receiver.close();
         while let Some(signal) = line_receiver.recv().await {
-            println!("{a}{b:?}", a = constants::SIGNAL_PREFIX, b = signal);
+            println!("{LINE_PREFIX}{signal:?}");
             std::io::stdout().flush().unwrap();
         }
-        println!("{a}", a = constants::DONE_MARKER);
+        println!("{SUCCESS}");
         std::io::stdout().flush().unwrap();
     });
-}
-
-pub mod constants {
-    pub const READY_MARKER: &str = "READY";
-    pub const SIGNAL_PREFIX: &str = "SIGNAL:";
-    pub const DONE_MARKER: &str = "DONE";
 }

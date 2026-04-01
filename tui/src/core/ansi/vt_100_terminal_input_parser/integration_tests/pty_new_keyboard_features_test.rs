@@ -12,6 +12,12 @@
 //! These tests validate that the complete input stack handles these new features
 //! correctly in a real [`PTY`] environment.
 //!
+//! # Run with:
+//!
+//! ```bash
+//! cargo test -p r3bl_tui --lib test_pty_new_keyboard_features -- --nocapture
+//! ```
+//!
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 
 use crate::{CONTROLLED_READY, CONTROLLED_STARTING, InputEvent, PtyTestContext,
@@ -31,12 +37,10 @@ use crate::{CONTROLLED_READY, CONTROLLED_STARTING, InputEvent, PtyTestContext,
 use std::{io::{BufRead, Write},
           time::Duration};
 
-// XMARK: Process isolated test with PTY.
-
 generate_pty_test! {
     test_fn: test_pty_new_keyboard_features,
-    controller: pty_controller_entry_point,
-    controlled: pty_controlled_entry_point,
+    controller: controller,
+    controlled: controlled,
     mode: PtyTestMode::Raw,
 }
 
@@ -44,7 +48,7 @@ generate_pty_test! {
 ///
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 #[allow(clippy::too_many_lines)]
-fn pty_controller_entry_point(context: PtyTestContext) {
+fn controller(context: PtyTestContext) {
     let PtyTestContext {
         pty_pair,
         child,
@@ -273,10 +277,11 @@ fn pty_controller_entry_point(context: PtyTestContext) {
     eprintln!("✅ PTY Controller: All new keyboard features tests passed!");
 }
 
-/// [`PTY`] Controlled: Parse keyboard input and echo results
+/// [`PTY`] Controlled: Parse keyboard input and echo results. The harness performs
+/// [`std::process::exit(0)`] after this function returns.
 ///
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
-fn pty_controlled_entry_point() {
+fn controlled() {
     // Print to stdout immediately to confirm controlled is starting.
     println!("{CONTROLLED_STARTING}");
     std::io::stdout().flush().expect("Failed to flush");

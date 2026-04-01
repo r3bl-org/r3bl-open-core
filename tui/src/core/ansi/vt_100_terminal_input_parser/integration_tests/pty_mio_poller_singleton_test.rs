@@ -5,11 +5,6 @@
 //! Tests that only one [`DirectToAnsiInputDevice`] can exist at a time, and that calling
 //! [`new()`] twice panics with a helpful message.
 //!
-//! Run with:
-//! ```bash
-//! cargo test -p r3bl_tui --lib test_pty_mio_poller_singleton -- --nocapture
-//! ```
-//!
 //! Tests that:
 //! 1. First [`new()`] succeeds
 //! 2. Second [`new()`] panics with message guiding to use [`subscribe()`]
@@ -33,6 +28,12 @@
 //! └─────────────────────────────────────────────────────────────────────────────┘
 //! ```
 //!
+//! # Run with:
+//!
+//! ```bash
+//! cargo test -p r3bl_tui --lib test_pty_mio_poller_singleton -- --nocapture
+//! ```
+//!
 //! [`new()`]: crate::direct_to_ansi::DirectToAnsiInputDevice::new
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`subscribe()`]: crate::direct_to_ansi::DirectToAnsiInputDevice::subscribe
@@ -49,8 +50,8 @@ const TEST_PASSED: &str = "SINGLETON_TEST_PASSED";
 
 generate_pty_test! {
     test_fn: test_pty_mio_poller_singleton,
-    controller: singleton_controller_entry_point,
-    controlled: singleton_controlled_entry_point,
+    controller: controller,
+    controlled: controlled,
     mode: PtyTestMode::Raw,
 }
 
@@ -73,7 +74,7 @@ fn wait_for_signal(buf_reader: &mut BufReader<impl std::io::Read>, signal: &str)
 }
 
 /// Controller process: waits for controlled to complete successfully.
-fn singleton_controller_entry_point(context: PtyTestContext) {
+fn controller(context: PtyTestContext) {
     let PtyTestContext {
         pty_pair,
         child,
@@ -98,8 +99,9 @@ fn singleton_controller_entry_point(context: PtyTestContext) {
     eprintln!("Singleton Controller: Test passed!");
 }
 
-/// Controlled process: tests singleton device semantics.
-fn singleton_controlled_entry_point() {
+/// Controlled process: tests singleton device semantics. The harness performs
+/// [`std::process::exit(0)`] after this function returns.
+fn controlled() {
     println!("{SINGLETON_READY}");
     std::io::stdout().flush().expect("Failed to flush");
 

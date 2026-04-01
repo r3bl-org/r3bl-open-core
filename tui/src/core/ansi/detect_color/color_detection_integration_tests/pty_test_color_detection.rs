@@ -1,11 +1,10 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! [`PTY`]-based integration test for color detection.
+//! Verifies that [`examine_env_vars_to_determine_color_support()`] correctly detects
+//! color support when running inside a real terminal environment.
 //!
-//! Verifies that [`examine_env_vars_to_determine_color_support()`] correctly
-//! detects color support when running inside a real terminal environment.
+//! # Run with:
 //!
-//! Run with:
 //! ```bash
 //! cargo test -p r3bl_tui --lib test_color_detection_in_pty -- --nocapture
 //! ```
@@ -18,12 +17,12 @@ use std::io::{BufRead, Write};
 
 generate_pty_test! {
     test_fn: test_color_detection_in_pty,
-    controller: pty_controller_entry_point,
-    controlled: pty_controlled_entry_point,
+    controller: controller,
+    controlled: controlled,
     mode: PtyTestMode::Cooked,
 }
 
-fn pty_controller_entry_point(context: PtyTestContext) {
+fn controller(context: PtyTestContext) {
     let PtyTestContext {
         pty_pair,
         child,
@@ -54,7 +53,8 @@ fn pty_controller_entry_point(context: PtyTestContext) {
     child.drain_and_wait(buf_reader, pty_pair);
 }
 
-fn pty_controlled_entry_point() -> ! {
+/// The harness performs [`std::process::exit(0)`] after this function returns.
+fn controlled() {
     // Ensure no env vars override TTY detection.
     unsafe {
         std::env::remove_var("NO_COLOR");

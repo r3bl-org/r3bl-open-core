@@ -31,6 +31,15 @@ pub const CONTROLLED_STARTING: &str = "CONTROLLED_STARTING";
 /// input device or runtime is fully initialized.
 pub const CONTROLLED_READY: &str = "CONTROLLED_READY";
 
+/// Signal used to report received input back to the controller.
+pub const RECEIVED: &str = "RECEIVED:";
+
+/// Signal used to report failure back to the controller.
+pub const FAILED: &str = "FAILED:";
+
+/// Signal used to report success back to the controller.
+pub const SUCCESS: &str = "SUCCESS:";
+
 /// Default prefix for line state output in [`readline_async`] integration tests.
 ///
 /// [`readline_async`]: crate::readline_async

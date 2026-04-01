@@ -3,6 +3,8 @@
 use crate::{emit_stderr_redirection_disclaimer, generate_isolated_process_test};
 use std::io::Write;
 
+// XMARK: Process isolated test.
+
 generate_isolated_process_test!(
     /// Verifies that [`emit_stderr_redirection_disclaimer()`] works as expected:
     /// 1. It prints a note to [`stderr`] when [`stderr`] is redirected.

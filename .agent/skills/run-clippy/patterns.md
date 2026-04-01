@@ -248,6 +248,24 @@ if flag {
 }
 ```
 
+**Example: option_map_unwrap_or (Suppress)**
+
+Prefer explicit `.map(f).unwrap_or(default)` chaining over `.map_or(default, f)` for readability.
+Suppress the lint rather than refactoring:
+
+```rust
+// ✅ Preferred - explicit chaining
+#[allow(clippy::map_unwrap_or)]
+fn get_count() -> u32 {
+    state.as_ref().map(|s| s.count).unwrap_or(0)
+}
+
+// ❌ Avoid - combined form
+fn get_count() -> u32 {
+    state.as_ref().map_or(0, |s| s.count)
+}
+```
+
 **Example: needless_return**
 
 ```rust

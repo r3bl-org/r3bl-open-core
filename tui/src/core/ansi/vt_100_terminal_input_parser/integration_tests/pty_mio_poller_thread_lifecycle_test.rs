@@ -8,11 +8,6 @@
 //! **Companion test**: [`pty_mio_poller_thread_reuse_test`] validates the opposite
 //! scenario -- thread reuse via overlapping subscriptions (fast path).
 //!
-//! Run with:
-//! ```bash
-//! cargo test -p r3bl_tui --lib test_pty_mio_poller_thread_lifecycle -- --nocapture
-//! ```
-//!
 //! Tests that:
 //! 1. Thread spawns on first subscribe (`thread_alive = true`, `receiver_count = 1`)
 //! 2. Thread exits when receiver drops (`thread_alive = false`, `receiver_count = 0`)
@@ -37,6 +32,12 @@
 //! │                                                                             │
 //! │  If all assertions pass → TEST_PASSED                                       │
 //! └─────────────────────────────────────────────────────────────────────────────┘
+//! ```
+//!
+//! # Run with:
+//!
+//! ```bash
+//! cargo test -p r3bl_tui --lib test_pty_mio_poller_thread_lifecycle -- --nocapture
 //! ```
 //!
 //! [`mio_poller`]: crate::direct_to_ansi::input::mio_poller
@@ -68,8 +69,8 @@ const TEST_PASSED: &str = "LIFECYCLE_TEST_PASSED";
 
 generate_pty_test! {
     test_fn: test_pty_mio_poller_thread_lifecycle,
-    controller: lifecycle_controller_entry_point,
-    controlled: lifecycle_controlled_entry_point,
+    controller: controller,
+    controlled: controlled,
     mode: PtyTestMode::Raw,
 }
 
@@ -92,7 +93,7 @@ fn wait_for_signal(buf_reader: &mut BufReader<impl std::io::Read>, signal: &str)
 }
 
 /// Controller process: sends input bytes and verifies controlled completes successfully.
-fn lifecycle_controller_entry_point(context: PtyTestContext) {
+fn controller(context: PtyTestContext) {
     let PtyTestContext {
         pty_pair,
         child,
@@ -134,8 +135,9 @@ fn lifecycle_controller_entry_point(context: PtyTestContext) {
     eprintln!("✅ Lifecycle Controller: Test passed!");
 }
 
-/// Controlled process: tests thread lifecycle with assertions.
-fn lifecycle_controlled_entry_point() {
+/// Controlled process: tests thread lifecycle with assertions. The harness performs
+/// [`std::process::exit(0)`] after this function returns.
+fn controlled() {
     println!("{LIFECYCLE_READY}");
     std::io::stdout().flush().expect("Failed to flush");
 

@@ -15,6 +15,12 @@
 //!
 //! See the [parent module documentation] for full testing philosophy.
 //!
+//! # Run with:
+//!
+//! ```bash
+//! cargo test -p r3bl_tui --lib test_pty_mouse_events -- --nocapture
+//! ```
+//!
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`validation_tests`]: mod@crate::vt_100_terminal_input_parser::validation_tests
@@ -33,12 +39,10 @@ use crate::{CONTROLLED_READY, CONTROLLED_STARTING, InputEvent, PtyTestContext,
 use std::{io::{BufRead, Write},
           time::Duration};
 
-// XMARK: Process isolated test with PTY.
-
 generate_pty_test! {
     test_fn: test_pty_mouse_events,
-    controller: pty_controller_entry_point,
-    controlled: pty_controlled_entry_point,
+    controller: controller,
+    controlled: controlled,
     mode: PtyTestMode::Raw,
 }
 
@@ -46,7 +50,7 @@ generate_pty_test! {
 ///
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 #[allow(clippy::too_many_lines)]
-fn pty_controller_entry_point(context: PtyTestContext) {
+fn controller(context: PtyTestContext) {
     let PtyTestContext {
         pty_pair,
         child,
@@ -158,10 +162,11 @@ fn pty_controller_entry_point(context: PtyTestContext) {
     eprintln!("✅ PTY Controller: Test passed!");
 }
 
-/// [`PTY`] Controlled: Read and parse mouse events
+/// [`PTY`] Controlled: Read and parse mouse events. The harness performs
+/// [`std::process::exit(0)`] after this function returns.
 ///
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
-fn pty_controlled_entry_point() {
+fn controlled() {
     // Print to stdout immediately to confirm controlled is starting.
     println!("{TEST_RUNNING}");
     println!("{CONTROLLED_STARTING}");

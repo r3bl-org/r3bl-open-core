@@ -1,44 +1,39 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Test 1: Basic enable/disable functionality.
-//!
-//! Verifies that raw mode can be enabled, disabled, and properly restores
-//! terminal state using actual [`PTY`] pairs. This is the foundational test
-//! that ensures the basic lifecycle works.
-//!
-//! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
-
-use crate::{PtyTestContext, PtyTestMode, RawModeGuard, generate_pty_test};
+/// [`PTY`]-based integration test for [raw mode] basic enable/disable that ensures
+/// the basic lifecycle works.
+///
+/// This test uses a controller/controlled [`PTY`] pair to verify that:
+/// 1. [raw mode] can be enabled on a real [`PTY`]
+/// 2. [raw mode] can be disabled and terminal settings restored
+/// 3. The [`RAII`] guard pattern works correctly
+///
+/// # Run with:
+///
+/// ```bash
+/// cargo test -p r3bl_tui --lib test_raw_mode_pty -- --nocapture
+/// ```
+///
+/// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
+/// [`RAII`]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
+/// [raw mode]: mod@crate::terminal_raw_mode#raw-mode-vs-cooked-mode
+use crate::{CONTROLLED_STARTING, FAILED, PtyTestContext, PtyTestMode, RawModeGuard,
+            SUCCESS, generate_pty_test};
 use rustix::termios;
 use std::{io::{BufRead, Write},
           time::{Duration, Instant}};
 
 generate_pty_test! {
-    /// [`PTY`]-based integration test for raw mode basic enable/disable.
-    ///
-    /// This test uses a controller/controlled [`PTY`] pair to verify that:
-    /// 1. Raw mode can be enabled on a real [`PTY`]
-    /// 2. Raw mode can be disabled and terminal settings restored
-    /// 3. The [`RAII`] guard pattern works correctly
-    ///
-    /// Run with:
-    /// ```bash
-    /// cargo test -p r3bl_tui --lib test_raw_mode_pty -- --nocapture
-    /// ```
-    ///
-    /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
-    /// [`RAII`]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
     test_fn: test_raw_mode_pty,
-    controller: pty_controller_entry_point,
-    controlled: pty_controlled_entry_point,
+    controller: controller,
+    controlled: controlled,
     mode: PtyTestMode::Cooked,
 }
 
-/// Controller process: verifies results.
-/// Receives [`PTY`] context from the macro.
+/// Controller process: verifies results. Receives [`PTY`] context from the macro.
 ///
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
-fn pty_controller_entry_point(context: PtyTestContext) {
+fn controller(context: PtyTestContext) {
     let PtyTestContext {
         pty_pair,
         child,
@@ -65,16 +60,16 @@ fn pty_controller_entry_point(context: PtyTestContext) {
                 let trimmed = line.trim();
                 eprintln!("  ← Controlled output: {trimmed}");
 
-                if trimmed.contains("SLAVE_STARTING") {
+                if trimmed.contains(CONTROLLED_STARTING) {
                     controlled_started = true;
                     eprintln!("  ✓ Controlled process confirmed starting");
                 }
-                if trimmed.contains("SUCCESS:") {
+                if trimmed.contains(SUCCESS) {
                     test_passed = true;
                     eprintln!("  ✓ Test passed: {trimmed}");
                     break;
                 }
-                assert!(!trimmed.contains("FAILED:"), "Test failed: {trimmed}");
+                assert!(!trimmed.contains(FAILED), "Test failed: {trimmed}");
             }
             Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {
                 std::thread::sleep(Duration::from_millis(10));
@@ -94,10 +89,10 @@ fn pty_controller_entry_point(context: PtyTestContext) {
     eprintln!("✅ PTY Controller: Raw mode test passed!");
 }
 
-/// Controlled process: enables raw mode and reports results.
-/// This function MUST exit before returning so other tests don't run.
-fn pty_controlled_entry_point() -> ! {
-    println!("SLAVE_STARTING");
+/// Controlled process: enables raw mode and reports results. The harness performs
+/// [`std::process::exit(0)`] after this function returns.
+fn controlled() {
+    println!("{CONTROLLED_STARTING}");
     std::io::stdout().flush().expect("Failed to flush");
 
     eprintln!("🔍 Controlled: Starting raw mode test...");
@@ -108,7 +103,7 @@ fn pty_controlled_entry_point() -> ! {
         Ok(t) => t,
         Err(e) => {
             eprintln!("⚠️  Controlled: Failed to get termios before: {e}");
-            println!("FAILED: Could not read termios");
+            println!("{FAILED} Could not read termios");
             std::io::stdout().flush().expect("Failed to flush");
             std::process::exit(1);
         }
@@ -119,7 +114,7 @@ fn pty_controlled_entry_point() -> ! {
         Ok(g) => g,
         Err(e) => {
             eprintln!("⚠️  Controlled: Failed to enable raw mode: {e}");
-            println!("FAILED: Could not enable raw mode");
+            println!("{FAILED} Could not enable raw mode");
             std::io::stdout().flush().expect("Failed to flush");
             std::process::exit(1);
         }
@@ -132,7 +127,7 @@ fn pty_controlled_entry_point() -> ! {
         Ok(t) => t,
         Err(e) => {
             eprintln!("⚠️  Controlled: Failed to get termios after: {e}");
-            println!("FAILED: Could not read termios after");
+            println!("{FAILED} Could not read termios after");
             std::io::stdout().flush().expect("Failed to flush");
             std::process::exit(1);
         }
@@ -141,7 +136,7 @@ fn pty_controlled_entry_point() -> ! {
     // Verify that settings actually changed
     if before_termios.local_modes == after_termios.local_modes {
         eprintln!("⚠️  Controlled: Local modes didn't change!");
-        println!("FAILED: Modes not changed");
+        println!("{FAILED} Modes not changed");
         std::io::stdout().flush().expect("Failed to flush");
         std::process::exit(1);
     }
@@ -149,7 +144,7 @@ fn pty_controlled_entry_point() -> ! {
     eprintln!("✓ Controlled: Terminal settings changed correctly");
 
     // Report success
-    println!("SUCCESS: Raw mode enabled and verified");
+    println!("{SUCCESS} Raw mode enabled and verified");
     std::io::stdout().flush().expect("Failed to flush");
 
     eprintln!("🔍 Controlled: Guard will be dropped now...");

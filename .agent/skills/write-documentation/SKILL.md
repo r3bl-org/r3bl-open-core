@@ -449,15 +449,19 @@ to describe the test's intent and provide execution instructions. This keeps the
 
 **Standard Pattern:**
 1.  **Summary**: What the test validates.
-2.  **Run with section**: Exact command to run the test directly.
-3.  **Test Protocol** (Optional): Step-by-step description of the controller/controlled exchange.
+2.  **Detailed Description/Protocol**: Explaining the test logic and ANSI sequences.
+3.  **Run with section**: MUST be the **last paragraph** before link definitions,
+    using an H1 header (`# Run with:`).
 
 ```rust
 //! [`PTY`]-based integration test for [Feature Name].
 //!
 //! Validates that [specific behavior] works correctly in a real terminal environment.
 //!
-//! Run with:
+//! [Detailed description...]
+//!
+//! # Run with:
+//!
 //! ```bash
 //! cargo test -p r3bl_tui --lib [test_name] -- --nocapture
 //! ```

@@ -307,8 +307,6 @@ fn test_paint_text_with_rgb_combined_rendered() {
     }
 }
 
-// XMARK: Process isolated test.
-
 /// Runs all rendered tests sequentially in a single process with controlled global state.
 ///
 /// This function runs tests in two phases:
@@ -344,6 +342,8 @@ fn run_all_rendered_tests_sequentially() {
     test_paint_text_with_rgb_combined_rendered();
     global_color_support::clear_override();
 }
+
+// XMARK: Process isolated test to run many other tests.
 
 generate_isolated_process_test!(
     /// Runs all rendered output tests in an isolated process.

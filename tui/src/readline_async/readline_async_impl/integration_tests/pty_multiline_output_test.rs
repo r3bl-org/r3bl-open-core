@@ -155,8 +155,8 @@
 //! 2. **Column alignment**: Each line starts at column 0 (or after prompt)
 //! 3. **Proper sequencing**: [`CHA(1)`] is emitted after each newline
 //!
-//! # Running the Test
-//!
+//! # Run with:
+//! 
 //! ```bash
 //! cargo test -p r3bl_tui --lib test_pty_multiline_output_starts_at_column_1 -- --nocapture
 //! ```
@@ -169,17 +169,12 @@
 //! [blank line test]: super::pty_shared_writer_no_blank_line_test
 
 use crate::{CONTROLLED_STARTING, LineStateControlSignal, OffscreenBuffer,
-            PtyTestContext, PtyTestMode, SharedWriter, TEST_RUNNING, generate_pty_test,
-            height, readline_async::readline_async_impl::LineState, width, Size};
+            PtyTestContext, PtyTestMode, SharedWriter, Size, TEST_RUNNING,
+            generate_pty_test, height, readline_async::readline_async_impl::LineState,
+            width};
 use std::io::Write;
 
 generate_pty_test! {
-    /// Verifies each line of multi-line [`SharedWriter`] output starts at column 1.
-    ///
-    /// See the [module docs] for test architecture and expected behavior.
-    ///
-    /// [`SharedWriter`]: crate::SharedWriter
-    /// [module docs]: self
     test_fn: test_pty_multiline_output_starts_at_column_1,
     controller: pty_controller_entry_point,
     controlled: pty_controlled_entry_point,

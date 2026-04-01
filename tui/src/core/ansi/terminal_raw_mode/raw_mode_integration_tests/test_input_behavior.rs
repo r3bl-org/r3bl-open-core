@@ -1,42 +1,45 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Test 3: Input behavior verification.
+//! [`PTY`]-based integration test for raw mode input behavior.
 //!
-//! Tests that raw mode *actually works* for input processing - not just that
-//! flags are set correctly. Verifies character-by-character reading without
-//! buffering, echo, or signal interpretation.
+//! Sends various input sequences from controller to controlled and verifies:
+//! 1. Characters arrive immediately (no line buffering)
+//! 2. Control characters pass through as bytes (e.g., Ctrl+C = `03` hex)
+//! 3. No echo (typed characters don't appear in output)
+//!
+//! This is the most important test as it validates actual terminal behavior, not just
+//! configuration settings.
+//!
+//! **Linux-only**: This test reads from [`PTY`] stdin which hangs on macOS due to
+//! [`kqueue`]/[`PTY`] interaction. Linux uses [`epoll`] which handles [`PTY`] stdin
+//! correctly.
+//!
+//! # Run with:
+//!
+//! ```bash
+//! cargo test -p r3bl_tui --lib test_raw_mode_input_behavior -- --nocapture
+//! ```
+//!
+//! [`epoll`]: https://man7.org/linux/man-pages/man7/epoll.7.html
+//! [`kqueue`]: https://www.freebsd.org/cgi/man.cgi?query=kqueue&sektion=2
+//! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 
-use crate::{ANSI_ESC, CONTROL_C, CONTROL_D, CONTROL_LF, PtyTestContext, PtyTestMode,
+use crate::{ANSI_ESC, CONTROL_C, CONTROL_D, CONTROL_LF, CONTROLLED_READY,
+            CONTROLLED_STARTING, FAILED, PtyTestContext, PtyTestMode, RECEIVED,
             generate_pty_test};
 use std::{io::{BufRead, Read, Write},
           time::Duration};
 
 generate_pty_test! {
-    /// [`PTY`]-based integration test for raw mode input behavior.
-    ///
-    /// Sends various input sequences from controller to controlled and verifies:
-    /// 1. Characters arrive immediately (no line buffering)
-    /// 2. Control characters pass through as bytes (e.g., Ctrl+C = 0x03)
-    /// 3. No echo (typed characters don't appear in output)
-    ///
-    /// This is the most important test as it validates actual terminal behavior,
-    /// not just configuration settings.
-    ///
-    /// Run with:
-    /// ```bash
-    /// cargo test -p r3bl_tui --lib test_raw_mode_input_behavior -- --nocapture
-    /// ```
-    ///
-    /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
     test_fn: test_raw_mode_input_behavior,
-    controller: pty_controller_entry_point,
-    controlled: pty_controlled_entry_point,
+    controller: controller,
+    controlled: controlled,
     mode: PtyTestMode::Cooked,
 }
 
 /// Controller process: sends input and verifies controlled process reports correct bytes.
 #[allow(clippy::too_many_lines)]
-fn pty_controller_entry_point(context: PtyTestContext) {
+fn controller(context: PtyTestContext) {
     let PtyTestContext {
         pty_pair,
         child,
@@ -56,11 +59,11 @@ fn pty_controller_entry_point(context: PtyTestContext) {
             Ok(_) => {
                 let trimmed = line.trim();
                 eprintln!("  ← Controlled output: {trimmed}");
-                if trimmed.contains("SLAVE_READY") {
+                if trimmed.contains(CONTROLLED_READY) {
                     eprintln!("  ✓ Controlled process is ready");
                     break true;
                 }
-                assert!(!trimmed.contains("FAILED:"), "Test failed: {trimmed}");
+                assert!(!trimmed.contains(FAILED), "Test failed: {trimmed}");
             }
             Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {
                 std::thread::sleep(Duration::from_millis(10));
@@ -79,7 +82,7 @@ fn pty_controller_entry_point(context: PtyTestContext) {
                 Ok(0) => panic!("EOF while reading response"),
                 Ok(_) => {
                     let trimmed = line.trim();
-                    if trimmed.starts_with("RECEIVED:") || trimmed.contains("FAILED:") {
+                    if trimmed.starts_with(RECEIVED) || trimmed.contains(FAILED) {
                         return trimmed.to_string();
                     }
                     eprintln!("  ⚠️  Skipping: {trimmed}");
@@ -100,7 +103,11 @@ fn pty_controller_entry_point(context: PtyTestContext) {
 
     let response = read_response();
     eprintln!("  ← Controlled response: {response}");
-    assert_eq!(response, "RECEIVED: 0x61 ('a')", "Expected to receive 'a'");
+    assert_eq!(
+        response,
+        format!("{RECEIVED} 0x{:02x} ('a')", b'a'),
+        "Expected to receive 'a'"
+    );
 
     // Test 2: Send Ctrl+C (should be 0x03, not trigger signal)
     eprintln!("📝 PTY Controller: Test 2 - Ctrl+C (should be 0x03)...");
@@ -113,7 +120,8 @@ fn pty_controller_entry_point(context: PtyTestContext) {
     let response = read_response();
     eprintln!("  ← Controlled response: {response}");
     assert_eq!(
-        response, "RECEIVED: 0x03 ('^C')",
+        response,
+        format!("{RECEIVED} 0x{CONTROL_C:02x} ('^C')"),
         "Expected Ctrl+C as 0x03, not signal"
     );
 
@@ -128,7 +136,8 @@ fn pty_controller_entry_point(context: PtyTestContext) {
     let response = read_response();
     eprintln!("  ← Controlled response: {response}");
     assert_eq!(
-        response, "RECEIVED: 0x04 ('^D')",
+        response,
+        format!("{RECEIVED} 0x{CONTROL_D:02x} ('^D')"),
         "Expected Ctrl+D as 0x04, not EOF"
     );
 
@@ -143,7 +152,8 @@ fn pty_controller_entry_point(context: PtyTestContext) {
     let response = read_response();
     eprintln!("  ← Controlled response: {response}");
     assert_eq!(
-        response, "RECEIVED: 0x0a ('\\n')",
+        response,
+        format!("{RECEIVED} 0x{CONTROL_LF:02x} ('\\n')"),
         "Expected newline as 0x0A"
     );
 
@@ -158,9 +168,10 @@ fn pty_controller_entry_point(context: PtyTestContext) {
     eprintln!("✅ PTY Controller: Input behavior test passed!");
 }
 
-/// Controlled process: enables raw mode and reads input byte-by-byte.
-fn pty_controlled_entry_point() -> ! {
-    println!("SLAVE_STARTING");
+/// Controlled process: enables raw mode and reads input byte-by-byte. The harness
+/// performs [`std::process::exit(0)`] after this function returns.
+fn controlled() {
+    println!("{CONTROLLED_STARTING}");
     std::io::stdout().flush().expect("Failed to flush");
 
     eprintln!("🔍 Controlled: Enabling raw mode...");
@@ -168,13 +179,13 @@ fn pty_controlled_entry_point() -> ! {
     // Enable raw mode
     if let Err(e) = crate::enable_raw_mode() {
         eprintln!("⚠️  Controlled: Failed to enable raw mode: {e}");
-        println!("FAILED: Could not enable raw mode");
+        println!("{FAILED} Could not enable raw mode");
         std::io::stdout().flush().expect("Failed to flush");
         std::process::exit(1);
     }
 
     eprintln!("✓ Controlled: Raw mode enabled, ready to read input");
-    println!("SLAVE_READY");
+    println!("{CONTROLLED_READY}");
     std::io::stdout().flush().expect("Failed to flush");
 
     let mut stdin = std::io::stdin();
@@ -205,12 +216,12 @@ fn pty_controlled_entry_point() -> ! {
                     _ => format!("0x{byte:02x}"),
                 };
 
-                println!("RECEIVED: 0x{byte:02x} ({display})");
+                println!("{RECEIVED} 0x{byte:02x} ({display})");
                 std::io::stdout().flush().expect("Failed to flush");
             }
             Err(e) => {
                 eprintln!("⚠️  Controlled: Read error: {e}");
-                println!("FAILED: Read error");
+                println!("{FAILED} Read error");
                 std::io::stdout().flush().expect("Failed to flush");
                 break;
             }

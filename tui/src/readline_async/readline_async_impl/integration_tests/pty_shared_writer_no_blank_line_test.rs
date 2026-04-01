@@ -182,8 +182,8 @@
 //! └──────────────┴────────────────────────────────────────────────────────────┘
 //! ```
 //!
-//! # Running the Test
-//!
+//! # Run with:
+//! 
 //! ```bash
 //! cargo test -p r3bl_tui --lib test_pty_shared_writer_no_blank_line -- --nocapture
 //! ```
@@ -191,22 +191,16 @@
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`CHA(1)`]: crate::CsiSequence::CursorHorizontalAbsolute
 //! [`OffscreenBuffer::apply_ansi_bytes`]: crate::OffscreenBuffer::apply_ansi_bytes
-//! [`PTY`]: crate::core::pty
+//! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`SharedWriter`]: crate::SharedWriter
 
 use crate::{CONTROLLED_STARTING, LineStateControlSignal, OffscreenBuffer,
-            PtyTestContext, PtyTestMode, SharedWriter, TEST_RUNNING, generate_pty_test,
-            height, readline_async::readline_async_impl::LineState, width, Size};
+            PtyTestContext, PtyTestMode, SharedWriter, Size, TEST_RUNNING,
+            generate_pty_test, height, readline_async::readline_async_impl::LineState,
+            width};
 use std::io::Write;
 
 generate_pty_test! {
-    /// Verifies no extra blank line appears between [`SharedWriter`] output and
-    /// the prompt.
-    ///
-    /// See the [module docs] for test architecture and expected behavior.
-    ///
-    /// [`SharedWriter`]: crate::SharedWriter
-    /// [module docs]: self
     test_fn: test_pty_shared_writer_no_blank_line,
     controller: pty_controller_entry_point,
     controlled: pty_controlled_entry_point,

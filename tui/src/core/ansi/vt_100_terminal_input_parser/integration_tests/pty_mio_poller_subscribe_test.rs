@@ -5,11 +5,6 @@
 //! Tests that [`DirectToAnsiInputDevice::subscribe()`] creates additional receivers that
 //! independently receive all input events via the broadcast channel.
 //!
-//! Run with:
-//! ```bash
-//! cargo test -p r3bl_tui --lib test_pty_mio_poller_subscribe -- --nocapture
-//! ```
-//!
 //! Tests that:
 //! 1. Thread spawns on first device (`receiver_count = 1`)
 //! 2. `subscribe()` creates additional receiver (`receiver_count = 2`)
@@ -40,6 +35,12 @@
 //! └─────────────────────────────────────────────────────────────────────────────┘
 //! ```
 //!
+//! # Run with:
+//!
+//! ```bash
+//! cargo test -p r3bl_tui --lib test_pty_mio_poller_subscribe -- --nocapture
+//! ```
+//!
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`subscribe()`]: crate::direct_to_ansi::DirectToAnsiInputDevice::subscribe
 
@@ -66,8 +67,8 @@ const TEST_PASSED: &str = "SUBSCRIBE_TEST_PASSED";
 
 generate_pty_test! {
     test_fn: test_pty_mio_poller_subscribe,
-    controller: subscribe_controller_entry_point,
-    controlled: subscribe_controlled_entry_point,
+    controller: controller,
+    controlled: controlled,
     mode: PtyTestMode::Raw,
 }
 
@@ -90,7 +91,7 @@ fn wait_for_signal(buf_reader: &mut BufReader<impl std::io::Read>, signal: &str)
 }
 
 /// Controller process: sends input bytes and verifies controlled completes successfully.
-fn subscribe_controller_entry_point(context: PtyTestContext) {
+fn controller(context: PtyTestContext) {
     let PtyTestContext {
         pty_pair,
         child,
@@ -128,9 +129,10 @@ fn subscribe_controller_entry_point(context: PtyTestContext) {
     eprintln!("Subscribe Controller: Test passed!");
 }
 
-/// Controlled process: tests [`subscribe()`] multi-receiver functionality.
+/// Controlled process: tests [`subscribe()`] multi-receiver functionality. The harness
+/// performs [`std::process::exit(0)`] after this function returns.
 #[allow(clippy::too_many_lines)]
-fn subscribe_controlled_entry_point() {
+fn controlled() {
     println!("{SUBSCRIBE_READY}");
     std::io::stdout().flush().expect("Failed to flush");
 

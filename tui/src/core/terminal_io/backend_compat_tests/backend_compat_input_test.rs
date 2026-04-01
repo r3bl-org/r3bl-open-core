@@ -58,7 +58,8 @@
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`TERMINAL_LIB_BACKEND`]: crate::TERMINAL_LIB_BACKEND
 //! [`terminal_raw_mode::enable_raw_mode()`]: crate::terminal_raw_mode::enable_raw_mode
-//! [`terminal_raw_mode::raw_mode_unix::enable_raw_mode`]: crate::terminal_raw_mode::raw_mode_unix::enable_raw_mode
+//! [`terminal_raw_mode::raw_mode_unix::enable_raw_mode`]:
+//!     crate::terminal_raw_mode::raw_mode_unix::enable_raw_mode
 
 use crate::{ARROW_DOWN_FINAL, ARROW_LEFT_FINAL, ARROW_RIGHT_FINAL, ARROW_UP_FINAL,
             ASCII_DEL, CONTROL_C, CONTROL_ENTER, CONTROL_TAB, CONTROLLED_READY,
@@ -279,7 +280,10 @@ pub mod controlled_common {
     }
 
     /// Exit the controlled process.
-    pub fn exit(_backend_name: &str) -> ! { std::process::exit(0); }
+    pub fn exit(backend_name: &str) -> ! {
+        eprintln!("{backend_name} exiting");
+        std::process::exit(0);
+    }
 
     /// Macro for the async event loop.
     ///
@@ -322,7 +326,7 @@ pub mod controlled_common {
     // only visible within their defining module by default. This makes it accessible
     // via `controlled_common::run_event_loop!` from `controlled_crossterm` and
     // `controlled_direct_to_ansi`.
-    pub(super) use run_event_loop;
+    pub(crate) use run_event_loop;
 }
 
 /// Crossterm backend controlled process.

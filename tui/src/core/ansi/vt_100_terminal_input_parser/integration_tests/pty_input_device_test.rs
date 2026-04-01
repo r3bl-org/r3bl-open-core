@@ -6,11 +6,6 @@
 //! `R3BL_PTY_TEST_CONTROLLED` is set, runs controlled logic and exits. Otherwise runs the
 //! controller test.
 //!
-//! Run with:
-//! ```bash
-//! cargo test -p r3bl_tui --lib test_pty_input_device -- --nocapture
-//! ```
-//!
 //! ## Test Architecture (2 Actors)
 //!
 //! This test validates [`DirectToAnsiInputDevice`] in a real [`PTY`] environment using a
@@ -72,6 +67,12 @@
 //! - **Coordinator-Worker Pattern**: Same test function handles both roles via env var
 //! - **Async Validation**: Properly tests [`tokio`] async I/O with real terminal input
 //!
+//! # Run with:
+//!
+//! ```bash
+//! cargo test -p r3bl_tui --lib test_pty_input_device -- --nocapture
+//! ```
+//!
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`DirectToAnsiInputDevice`]: crate::direct_to_ansi::DirectToAnsiInputDevice
 //! [`ESC`]: crate::EscSequence
@@ -89,16 +90,15 @@ use crate::{CONTROLLED_READY, CONTROLLED_STARTING, InputEvent, PtyTestContext,
 use std::{io::{BufRead, Write},
           time::Duration};
 
-// XMARK: Process isolated test with PTY.
-
 generate_pty_test! {
     test_fn: test_pty_input_device,
-    controller: pty_controller_entry_point,
-    controlled: pty_controlled_entry_point,
+    controller: controller,
+    controlled: controlled,
     mode: PtyTestMode::Raw,
 }
 
-/// ### Actor 1: [`PTY`] Controller (test entry, env var NOT set) - Synchronous code
+/// Actor 1: [`PTY`] Controller (test entry, env var NOT set) - Synchronous code
+///
 /// - Receives [`PTY`] pair and child process from macro
 /// - Writes [`ANSI`] sequences to [`PTY`] controller
 /// - Reads parsed output from controlled's stdout
@@ -107,7 +107,7 @@ generate_pty_test! {
 /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 #[allow(clippy::too_many_lines)]
-fn pty_controller_entry_point(context: PtyTestContext) {
+fn controller(context: PtyTestContext) {
     /// Helper to generate [`ANSI`] bytes from `InputEvent`.
     ///
     /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
@@ -211,7 +211,7 @@ fn pty_controller_entry_point(context: PtyTestContext) {
     eprintln!("✅ PTY Controller: Test passed!");
 }
 
-/// ### Actor 2: [`PTY`] Controlled (worker process)
+/// Actor 2: [`PTY`] Controlled (worker process).
 ///
 /// Runs in the spawned child process when `R3BL_PTY_TEST_CONTROLLED` env var is set.
 /// This process's stdin/stdout are connected to the controlled [`PTY`] [`file
@@ -226,10 +226,12 @@ fn pty_controller_entry_point(context: PtyTestContext) {
 /// 3. **Process Events**: Read and parse [`ANSI`] sequences into `InputEvents`
 /// 4. **Output Results**: Write parsed events to stdout for controller to verify
 ///
+/// The harness performs [`std::process::exit(0)`] after this function returns.
+///
 /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 /// [`file descriptor`]: https://en.wikipedia.org/wiki/File_descriptor
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
-fn pty_controlled_entry_point() {
+fn controlled() {
     // Print to stdout immediately to confirm controlled is starting.
     println!("{TEST_RUNNING}");
     println!("{CONTROLLED_STARTING}");

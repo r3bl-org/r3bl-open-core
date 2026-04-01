@@ -52,13 +52,8 @@ Some crates have additional instructions in their own `AGENT.md` files:
   `cargo install --path build-infra --force`** to update the installed binaries in
   `~/.cargo/bin`. See `build-infra/AGENT.md` for details.
 
-- **tui/**: Main crate (`r3bl_tui`). PTY test architecture:
-  - Tests use `generate_pty_test!` macro for single-feature PTY tests
-  - `spawn_controlled_in_pty()` for multi-backend comparison tests
-  - Use Controller/Controlled terminology (not master/slave)
-  - `drain_pty_and_wait()` prevents macOS PTY buffer deadlocks
-  - `try_clone_reader()` returns owned `Box<dyn Read>` (not a borrow), so reader and PtyPair
-    are independent
+- **tui/**: Main crate (`r3bl_tui`). For test directory taxonomy, PTY integration 
+  test conventions, and subprocess isolation patterns, use the `organize-tests` skill.
 
 When working on a specific crate, always check for a local `AGENT.md` file in that crate's
 directory for additional workflow requirements.
@@ -98,6 +93,9 @@ in that skill's directory (e.g., `patterns.md`, `reference.md`, `examples.md`).
 - **organize-modules** - Private modules with public re-exports (barrel export pattern), conditional
   visibility for docs/tests. Use when creating or organizing modules.
   - Supporting file: `examples.md` (6 complete module organization examples)
+
+- **organize-tests** - Test directory taxonomy (why a test is isolated), PTY conventions (Run with section, deadlock prevention), and isolated process orchestration. Use when adding or refactoring tests.
+  - Supporting files: `taxonomy.md` (directory guide), `pty-conventions.md` (PTY rules), `examples.md` (macro templates)
 
 - **check-bounds-safety** - Type-safe Index/Length patterns for arrays, cursors, viewports, and
   terminal cursor movement. Includes `TermRowDelta`/`TermColDelta` for safe relative cursor

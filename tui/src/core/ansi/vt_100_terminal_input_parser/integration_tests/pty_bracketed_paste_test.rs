@@ -6,11 +6,6 @@
 //! paste markers (`ESC [200~` ... `ESC [201~`) and emits a single
 //! [`InputEvent::BracketedPaste`] with the complete text.
 //!
-//! Run with:
-//! ```bash
-//! cargo test -p r3bl_tui --lib test_pty_bracketed_paste -- --nocapture
-//! ```
-//!
 //! ## Test Cases
 //!
 //! - Simple [`ASCII`] paste: "Hello"
@@ -18,7 +13,11 @@
 //! - [`UTF-8`] paste with multi-byte characters
 //! - Empty paste (Start immediately followed by End)
 //!
-//! Uses the coordinator-worker pattern with two processes.
+//! # Run with:
+//!
+//! ```bash
+//! cargo test -p r3bl_tui --lib test_pty_bracketed_paste -- --nocapture
+//! ```
 //!
 //! [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
 //! [`DirectToAnsiInputDevice`]: crate::direct_to_ansi::DirectToAnsiInputDevice
@@ -40,8 +39,8 @@ use std::{io::{BufRead, Write},
 
 generate_pty_test! {
     test_fn: test_pty_bracketed_paste,
-    controller: pty_controller_entry_point,
-    controlled: pty_controlled_entry_point,
+    controller: controller,
+    controlled: controlled,
     mode: PtyTestMode::Raw,
 }
 
@@ -49,7 +48,7 @@ generate_pty_test! {
 ///
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 #[allow(clippy::too_many_lines)]
-fn pty_controller_entry_point(context: PtyTestContext) {
+fn controller(context: PtyTestContext) {
     /// Helper to build a complete bracketed paste sequence from text.
     ///
     /// Returns (description, byte sequence) tuple.
@@ -152,10 +151,11 @@ fn pty_controller_entry_point(context: PtyTestContext) {
     eprintln!("✅ PTY Controller: Test passed!");
 }
 
-/// [`PTY`] Controlled: Read and parse bracketed paste events
+/// [`PTY`] Controlled: Read and parse bracketed paste events. The harness performs
+/// [`std::process::exit(0)`] after this function returns.
 ///
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
-fn pty_controlled_entry_point() {
+fn controlled() {
     // Print to stdout immediately to confirm controlled is starting.
     println!("{TEST_RUNNING}");
     println!("{CONTROLLED_STARTING}");

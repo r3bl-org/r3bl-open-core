@@ -1,22 +1,29 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+//! Verifies that all three interactivity checks return [`IsInteractive`] when running
+//! inside a real [`PTY`].
+//!
+//! # Run with:
+//!
+//! ```bash
+//! cargo test -p r3bl_tui --lib test_pty_is_interactive -- --nocapture
+//! ```
+//!
+//! [`IsInteractive`]: crate::TTYResult::IsInteractive
+//! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
+
 use crate::{PtyTestContext, PtyTestMode, TTYResult, generate_pty_test,
             is_fully_interactive, is_input_interactive, is_output_interactive};
 use std::io::{BufRead, Write};
 
 generate_pty_test! {
-    /// Verifies that all three interactivity checks return [`IsInteractive`] when
-    /// running inside a real [`PTY`].
-    ///
-    /// [`IsInteractive`]: TTYResult::IsInteractive
-    /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
     test_fn: test_pty_is_interactive,
-    controller: pty_controller_entry_point,
-    controlled: pty_controlled_entry_point,
+    controller: controller,
+    controlled: controlled,
     mode: PtyTestMode::Cooked,
 }
 
-fn pty_controller_entry_point(context: PtyTestContext) {
+fn controller(context: PtyTestContext) {
     let PtyTestContext {
         pty_pair,
         child,
@@ -55,30 +62,30 @@ fn pty_controller_entry_point(context: PtyTestContext) {
     child.drain_and_wait(buf_reader, pty_pair);
 }
 
-fn pty_controlled_entry_point() -> ! {
-    let input_ok = is_input_interactive() == TTYResult::IsInteractive;
-    let output_ok = is_output_interactive() == TTYResult::IsInteractive;
-    let full_ok = is_fully_interactive() == TTYResult::IsInteractive;
+fn controlled() {
+    let is_input_interactive = is_input_interactive() == TTYResult::IsInteractive;
+    let is_output_interactive = is_output_interactive() == TTYResult::IsInteractive;
+    let is_fully_interactive = is_fully_interactive() == TTYResult::IsInteractive;
 
-    if input_ok {
+    if is_input_interactive {
         println!("SUCCESS: is_input_interactive");
     } else {
         println!("FAILED: is_input_interactive returned IsNotInteractive");
     }
 
-    if output_ok {
+    if is_output_interactive {
         println!("SUCCESS: is_output_interactive");
     } else {
         println!("FAILED: is_output_interactive returned IsNotInteractive");
     }
 
-    if full_ok {
+    if is_fully_interactive {
         println!("SUCCESS: is_fully_interactive");
     } else {
         println!("FAILED: is_fully_interactive returned IsNotInteractive");
     }
 
     std::io::stdout().flush().ok();
-    let all_ok = input_ok && output_ok && full_ok;
+    let all_ok = is_input_interactive && is_output_interactive && is_fully_interactive;
     std::process::exit(i32::from(!all_ok));
 }

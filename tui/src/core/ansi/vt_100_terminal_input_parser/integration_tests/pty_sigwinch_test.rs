@@ -50,6 +50,12 @@
 //!     │                                       │
 //! ```
 //!
+//! # Run with:
+//!
+//! ```bash
+//! cargo test -p r3bl_tui --lib test_pty_sigwinch -- --nocapture
+//! ```
+//!
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`DirectToAnsiInputDevice`]: crate::direct_to_ansi::DirectToAnsiInputDevice
 //! [`pty_terminal_events_test`]: super::pty_terminal_events_test
@@ -64,8 +70,8 @@ use std::{io::{BufRead, Write},
 
 generate_pty_test! {
     test_fn: test_pty_sigwinch,
-    controller: pty_controller_entry_point,
-    controlled: pty_controlled_entry_point,
+    controller: controller,
+    controlled: controlled,
     mode: PtyTestMode::Raw,
 }
 
@@ -74,7 +80,7 @@ generate_pty_test! {
 ///
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 /// [`SIGWINCH`]: https://man7.org/linux/man-pages/man7/signal.7.html
-fn pty_controller_entry_point(context: PtyTestContext) {
+fn controller(context: PtyTestContext) {
     let PtyTestContext {
         mut pty_pair,
         child,
@@ -180,11 +186,12 @@ fn pty_controller_entry_point(context: PtyTestContext) {
     eprintln!("✅ PTY Controller: SIGWINCH test passed!");
 }
 
-/// [`PTY`] Controlled: Set up signal handler and wait for [`SIGWINCH`].
+/// [`PTY`] Controlled: Set up signal handler and wait for [`SIGWINCH`]. The harness
+/// performs [`std::process::exit(0)`] after this function returns.
 ///
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 /// [`SIGWINCH`]: https://man7.org/linux/man-pages/man7/signal.7.html
-fn pty_controlled_entry_point() {
+fn controlled() {
     // Print to stdout immediately to confirm controlled is starting.
     println!("{CONTROLLED_STARTING}");
     std::io::stdout().flush().expect("Failed to flush");

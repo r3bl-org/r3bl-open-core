@@ -47,8 +47,6 @@ pub fn claim_and_assert() {
 /// Clears it, so that you can call [`claim_and_assert()`] again.
 pub fn release() { DEVICE_EXISTS.store(false, Ordering::SeqCst); }
 
-// XMARK: Process isolated test.
-
 /// Process-isolated tests for [`at_most_one_instance_assert`].
 ///
 /// These tests touch global state (`DEVICE_EXISTS` static), so they must run in an

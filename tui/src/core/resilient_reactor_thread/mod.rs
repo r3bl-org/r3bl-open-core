@@ -898,6 +898,9 @@
 //! [Windows]:
 //!     https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-terminatethread
 
+#![rustfmt::skip]
+
+// Attach.
 mod rrt;
 mod rrt_event;
 mod rrt_restart_policy;
@@ -907,6 +910,7 @@ mod rrt_types;
 mod rrt_waker_slot;
 mod rrt_worker;
 
+// Re-export.
 pub use rrt::*;
 pub use rrt_event::*;
 pub use rrt_restart_policy::*;
@@ -916,5 +920,10 @@ pub use rrt_types::*;
 pub use rrt_waker_slot::*;
 pub use rrt_worker::*;
 
+// Tests.
 #[cfg(any(test, doc))]
-pub mod tests;
+pub mod integration_tests;
+#[cfg(any(test, doc))]
+pub mod process_isolated_tests;
+#[cfg(any(test, doc))]
+pub mod unit_tests;

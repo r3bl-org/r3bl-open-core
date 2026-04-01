@@ -7,8 +7,8 @@
 use super::{BroadcastSender, LivenessState, RRTEvent, RRTWorker, RestartPolicy,
             SharedWakerSlot, ShutdownReason, SubscribeError, SubscriberGuard,
             TerminationGuard, WakerSlotWriter};
-use crate::ok;
-use crate::core::common::{AtomicU8Ext, Continuation};
+use crate::{core::common::{AtomicU8Ext, Continuation},
+            ok};
 use std::{panic::{AssertUnwindSafe, catch_unwind},
           sync::{Arc, LazyLock, Mutex, atomic::AtomicU8},
           time::Duration};
@@ -638,7 +638,7 @@ impl<W: RRTWorker> RRT<W> {
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 /// [`RAII`]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
 /// [`Restart`]: Continuation::Restart
-/// [`rrt_restart_pty_tests`]: super::tests::rrt_restart_pty_tests
+/// [`rrt_restart_pty_tests`]: super::integration_tests::pty_test_production_factory_restart
 /// [`RRTEvent::Shutdown(Panic)`]: ShutdownReason::Panic
 /// [`RRTWaker`]: super::RRTWaker
 /// [`shared_waker_slot`]: field@RRT::shared_waker_slot

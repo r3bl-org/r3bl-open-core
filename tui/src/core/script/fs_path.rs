@@ -646,8 +646,6 @@ mod tests {
         });
     }
 
-    // XMARK: Process isolated test.
-
     /// This function runs all the tests that change the current working directory
     /// sequentially. This ensures that the current working directory is
     /// only changed in a controlled manner, eliminating flakiness when tests are run in

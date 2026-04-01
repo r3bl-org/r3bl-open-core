@@ -27,10 +27,79 @@ application startup. We use a **Bifurcated Internalized Check** pattern.
   don't use the high-level entry points. It returns the infallible
   `TerminalInteractiveStatus` (no `get_size()` call).
 - **No Convenience Escape Hatches**: `TuiAvailability<T>` intentionally does **not**
-    implement `into_result()` or `unwrap()`. These would silently collapse `NotAvailable`
+    have `into_result()` or `unwrap()`. These would silently collapse `NotAvailable`
     into an opaque error or panic - exactly what this task is designed to prevent. Callers
     must always handle all three variants explicitly.
-- **Scope**: This refactor affects ~60 call sites across the workspace, including
+    - **Ergonomic Error Handling (`IntoErr`)**: To reduce boilerplate while maintaining
+    explicitness, we use the `IntoErr` trait. This allows a concise 2-arm match at call
+    sites.
+    - `panic!`: **Forbidden** for terminal availability states (i.e., the program should
+    never crash because stdin/stdout isn't a TTY). The `unreachable!` in the
+    `IntoErr` impl is a different category - it guards against API misuse, not
+    terminal state.
+    - `miette::bail!`: Used **internally** within implementations to return early with an
+    error.
+    - `as_err()`: The **public extension method** provided by `IntoErr`. It converts a
+    non-success state (`NotAvailable` or `Broken`) into a `miette::Result<T>`.
+
+    #### Proposed Rust Definitions
+
+    ```rust
+    /// Trait to convert an error-like type into a [`miette::Result`].
+    /// Defined in `tui/src/core/common/common_result_and_error.rs`.
+    pub trait IntoErr {
+    fn as_err<T>(self) -> miette::Result<T>;
+    }
+
+    /// Implementations in `tui/src/core/term/term_api.rs`.
+    impl<T> IntoErr for TuiAvailability<T> {
+    fn as_err<U>(self) -> miette::Result<U> {
+        match self {
+            Self::Available(_) => unreachable!("logic error: as_err() called on Available"),
+            Self::NotAvailable(reason) => reason.as_err(),
+            Self::Broken(report) => report.as_err(),
+        }
+    }
+    }
+    ```
+
+    **Why it's safe:**
+    In your code, you will always write:
+    ```rust
+    match availability {
+        TuiAvailability::Available(res) => res, // If it's Available, we stop here.
+        it => return it.as_err(),               // 'it' is GUARANTEED to NOT be Available.
+    }
+    ```
+    Because the first arm "catches" the `Available` variant, the code in the second
+    arm can only ever be executed if the variant is `NotAvailable` or `Broken`.
+
+    **`unreachable!` tradeoff:** The `unreachable!` is not compiler-enforced - Rust's
+    type system cannot express "this value is `TuiAvailability` minus the `Available`
+    variant." It is structurally dead code in the intended 2-arm match pattern, since
+    the first arm always catches `Available` before the catch-all can execute. This was
+    verified across all 29 error-propagating call sites in the workspace. We accept
+    a convention-enforced guarantee over a compile-time guarantee, due to the ergonomic
+    benefits of this API design and the consistent usage pattern across all call sites.
+
+    **Summary of Benefits:**
+    - **Conciseness**: You go from 3 arms to 2 arms at every call site.
+    - **Precision**: Unlike a generic `.unwrap()` or `.into_result()`, calling
+      `.as_err()` explicitly signals your intent: "I know this isn't the success
+      case, so turn whatever error state it has into a `miette::Result`."
+    - **Catch-all Binding**: The `it => return it.as_err()` syntax binds the **entire
+      enum** to the variable `it`, allowing the trait method to handle the internal
+      delegation. This is one of the most powerful features of Rust's `match`
+      expressions:
+      1. **The Filter**: The first arm `TuiAvailability::Available(future)` matches
+         only that variant.
+      2. **The Catch-All**: The second arm `it` is a variable pattern. Since it's
+         the second arm, it only "sees" values that the first arm didn't catch.
+      3. **The Trait**: Because you've implemented `IntoErr` for the enum itself,
+         you can call `.as_err()` on that variable.
+
+    - **Scope**: This refactor affects ~60 call sites across the workspace, including
+
   `cmdr` logic (edi, giti, analytics_client), all `tui` examples, internal `tui`
   entry points, and rustdoc examples.
 - **Infallible Internals**: Lower-level components (like `Readline::try_new` or
@@ -172,8 +241,7 @@ availability and size checks are internalized.
 ```rust
 match TerminalWindow::main_event_loop(app, exit_keys, state) {
     TuiAvailability::Available(future) => future.await?,
-    TuiAvailability::NotAvailable(reason) => eprintln!("{}", reason.as_err_msg()),
-    TuiAvailability::Broken(e) => return Err(e),
+    it => return it.as_err(),
 }
 ```
 
@@ -183,8 +251,7 @@ match ReadlineAsyncContext::try_new(Some("> "), None).await {
     TuiAvailability::Available(mut rl_ctx) => {
         let line = rl_ctx.read_line().await?;
     }
-    TuiAvailability::NotAvailable(_) => { /* fallback */ }
-    TuiAvailability::Broken(e) => return Err(e),
+    it => return it.as_err(),
 }
 ```
 
@@ -207,8 +274,7 @@ match PTYMux::builder()
     .build()
 {
     TuiAvailability::Available(mux) => mux.run().await?,
-    TuiAvailability::NotAvailable(reason) => { /* handle */ }
-    TuiAvailability::Broken(e) => return Err(e),
+    it => return it.as_err(),
 }
 
 // Override: caller provides explicit size
@@ -218,7 +284,7 @@ match PTYMux::builder()
     .build()
 {
     TuiAvailability::Available(mux) => mux.run().await?,
-    // ...
+    it => return it.as_err(),
 }
 ```
 
@@ -229,56 +295,62 @@ match choose(header, options, ..., io) {
         let items = future.await?;
         // ... use items ...
     }
-    TuiAvailability::NotAvailable(_) => { /* handle */ }
-    TuiAvailability::Broken(e) => return Err(e),
+    it => return it.as_err(),
 }
 ```
 
 ## Implementation plan
 
-### Phase 1: Core Types (`tui/src/core/term/term_api.rs`)
+### Phase 0: Standardize TUI entry points (Internalize)
 
-- [ ] **Rename `TuiEnvironment` to `TerminalInteractiveStatus`**:
+- [x] **Rename `TuiEnvironment` to `TerminalInteractiveStatus`**:
   - Variants: `Available` (no payload), `NotAvailable(TerminalNotInteractiveReason)`.
   - Remove `Broken` variant (isatty cannot fail).
   - Derive `Clone`, `Copy`, `PartialEq`, `Eq` (now possible without `miette::Report`).
-- [ ] **Define `TuiAvailability<T>`**:
+- [x] **Define `TuiAvailability<T>`**:
   - `Available(T)`, `NotAvailable(TerminalNotInteractiveReason)`, `Broken(miette::Report)`.
   - No `into_result()` or `unwrap()` - force explicit 3-way match.
-- [ ] **Update `check_is_terminal_interactive()`**:
+- [x] **Update `check_is_terminal_interactive()`**:
   - Return `TerminalInteractiveStatus` (infallible, no `get_size()` call).
-
-### Phase 2: Refactor Entry Points (Internalize)
-
-- [ ] **`TerminalWindow::main_event_loop()`**: Call check internally, remove `Size` param.
-- [ ] **`PTYMuxBuilder::build()`**: Call check internally. Replace `.add_process(Process)`
+- [x] **`TerminalWindow::main_event_loop()`**: Call check internally, remove `Size` param.
+- [x] **`PTYMuxBuilder::build()`**: Call check internally. Replace `.add_process(Process)`
   and `.processes(Vec<Process>)` with `.add(name, command, args)` that stores raw config
   tuples. `build()` constructs `Process` instances with the correct size internally. Keep
   `.terminal_size(size)` as an **optional** override (if omitted, `build()` calls
   `get_size()`; if provided, uses the caller's size).
-- [ ] **`ReadlineAsyncContext::try_new()`**: Call check internally, remove `Size` param.
-- [ ] **`choose()`**: Call check internally, remove `Size` param.
-- [ ] **`Spinner::try_start()`**: Change return type from `miette::Result<Option<Spinner>>`
+- [x] **`ReadlineAsyncContext::try_new()`**: Call check internally, remove `Size` param.
+- [x] **`choose()`**: Call check internally, remove `Size` param.
+- [x] **`Spinner::try_start()`**: Change return type from `miette::Result<Option<Spinner>>`
   to `TuiAvailability<Spinner>`. Use `is_output_interactive()` internally (not the full
   `check_is_terminal_interactive()` — spinners only need stdout).
+- [x] **Migrate `choose()` tests**: Move `test_shared_writer_pause_works` from inline
+  `#[cfg(test)]` in `choose_api.rs` to
+  `choose_impl/integration_tests/pty_shared_writer_pause_test.rs`.
 
-### Phase 3: Update Call Sites
+### Phase 1: Ergonomic Error Handling (`IntoErr`)
+
+- [x] **Define `IntoErr` trait** in `common_result_and_error.rs`.
+- [x] **Implement `IntoErr` for `miette::Report`** in `common_result_and_error.rs`.
+- [x] **Implement `IntoErr` for `TerminalNotInteractiveReason`** in `term_api.rs`.
+- [x] **Implement `IntoErr` for `TuiAvailability<T>`** in `term_api.rs`.
+
+### Phase 2: Update Call Sites
 
 - [ ] Update `cmdr` (analytics_client, edi, giti) to remove manual pre-checks and `Size`
-      passing.
-- [ ] Update all `tui/examples` to reflect the new entry point signatures.
-- [ ] Update documentation examples to reflect the "one call" pattern, including rustdoc
-  examples in `tui/src/core/pty/pty_mux/mod.rs`, `tui/src/lib.rs`, and `tui/README.md`
-  that use `Process::new(name, cmd, args, terminal_size)` with the old API.
+      passing. Use the new 2-arm match pattern.
+- [ ] Update all `tui/examples` to reflect the new entry point signatures and use the new
+      2-arm match pattern.
+- [ ] Update documentation examples to reflect the "one call" pattern and use the new
+      2-arm match pattern.
 
-### Phase 4: Final Cleanup
+### Phase 3: Final Cleanup & Migration
 
 - [ ] For callers of entry points, verify `get_size()` is not called by callers directly,
       since it should be called by each entry point internally.
 - [ ] Verify `check_is_terminal_interactive()` is infallible (no `get_size()` call).
 - [ ] Run `./check.fish --clippy` and `./check.fish --test`.
 
-### Phase 5: Migrate mock-based tests to PTY integration tests
+#### 3.1: Migrate mock-based tests to PTY integration tests
 
 Now that `TuiAvailability` entry points internalize the `isatty` check, tests that
 use mock I/O devices as a workaround for non-interactive terminals should be migrated
@@ -287,23 +359,13 @@ to `generate_pty_test!` so they run in a real PTY with real I/O.
 Tests that use mocks for legitimate reasons (capturing render output, testing pure
 state logic) remain as unit tests.
 
-#### 5.1: `choose()` tests
-
-- [x] Move `test_shared_writer_pause_works` from inline `#[cfg(test)]` in
-      `choose_api.rs` to `choose_impl/integration_tests/pty_shared_writer_pause_test.rs`
-
-#### 5.2: `Spinner` tests (`readline_async/spinner.rs`)
-
-- [ ] `test_spinner_color` - uses `OutputDevice::new_mock()` to bypass `is_terminal_interactive()`
-- [ ] `test_spinner_no_color` - same pattern
-- [ ] `test_spinner_message_update` - same pattern
-
-#### 5.3: `readline()` tests (`readline_async/readline_async_impl/readline.rs`)
-
-- [ ] `test_readline` - calls `readline()` which checks isatty
-- [ ] `test_pause_resume` - same
-- [ ] `test_pause_resume_with_output` - same
-
-#### 5.4: `main_event_loop` test (`tui/terminal_window/main_event_loop.rs`)
-
-- [ ] `test_main_event_loop_impl` - checks `is_output_interactive()` with early return
+- [ ] **`Spinner` tests** (`readline_async/spinner.rs`):
+  - `test_spinner_color`
+  - `test_spinner_no_color`
+  - `test_spinner_message_update`
+- [ ] **`readline()` tests** (`readline_async/readline_async_impl/readline.rs`):
+  - `test_readline`
+  - `test_pause_resume`
+  - `test_pause_resume_with_output`
+- [ ] **`main_event_loop` test** (`tui/terminal_window/main_event_loop.rs`):
+  - `test_main_event_loop_impl`
