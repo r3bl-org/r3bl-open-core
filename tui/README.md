@@ -282,6 +282,12 @@ understanding of TTY programming.
 
 ### Interactive terminal application entry points
 
+<!--
+XMARK: entry points (public API) to build interactive terminal apps
+Canonical source of truth for the main entry points; link directly to this section w/
+crate#interactive-terminal-application-entry-points
+-->
+
 This crate provides five entry points for building interactive terminal applications.
 Each internalizes terminal availability and size checks, and returns a
 [`TuiAvailability<T>`] enum.
@@ -294,8 +300,8 @@ Each internalizes terminal availability and size checks, and returns a
 | [`PTYMuxBuilder::build()`]            | Terminal Multiplexer    | [`TuiAvailability<PTYMux>`]               | Wrapping existing CLI tools (like `htop`, `bash`) in a multi-pane TUI. |
 | [`Spinner::try_start()`]              | Indeterminate Progress  | [`TuiAvailability<Spinner>`]              | Long-running tasks needing visual feedback (standalone or embedded).   |
 
-[`Spinner::try_start()`] only checks stdout interactivity (not stdin), so it works
-with piped stdin. It can run standalone or embedded within a
+[`Spinner::try_start()`] only checks stdout interactivity (not [`stdin`]), so it works
+with piped [`stdin`]. It can run standalone or embedded within a
 [`ReadlineAsyncContext`] session.
 
 ### Partial TUI for simple choice
@@ -304,11 +310,10 @@ with piped stdin. It can run standalone or embedded within a
 a user user to make choices from a list of options and then use a decision tree to
 perform actions.
 
-An example of this is this "Partial TUI" app `giti` in the
-[`r3bl-cmdr`](https://github.com/r3bl-org/r3bl-open-core/tree/main/cmdr) crate. You
-can install & run this with the following command:
+An example of this is this "Partial TUI" app `giti` in the [`r3bl-cmdr`]. You can
+install & run this with the following command:
 
-```sh
+```bash
 cargo install r3bl-cmdr
 giti
 ```
@@ -325,11 +330,10 @@ write to stdout in an async manner, without clobbering the prompt / async readli
 the spinner. When the spinner is active, it pauses output to stdout, and resumes it
 when the spinner is stopped.
 
-An example of this is this "Partial TUI" app `giti` in the
-[`r3bl-cmdr`](https://github.com/r3bl-org/r3bl-open-core/tree/main/cmdr) crate. You
-can install & run this with the following command:
+An example of this is this "Partial TUI" app `giti` in the [`r3bl-cmdr`]. You can
+install & run this with the following command:
 
-```sh
+```bash
 cargo install r3bl-cmdr
 giti
 ```
@@ -348,22 +352,41 @@ async. It provides a full-featured framework with:
 - **`FlexBox`**: Responsive layout engine.
 - **Component System**: Reusable UI elements (editors, dialogs, etc.).
 
-An example of this is the "Full TUI" app `edi` in the
-[`r3bl-cmdr`](https://github.com/r3bl-org/r3bl-open-core/tree/main/cmdr) crate. You
-can install & run this with the following command:
+An example of this is the "Full TUI" app `edi` in the [`r3bl-cmdr`]. You can install &
+run this with the following command:
 
-```sh
+```bash
 cargo install r3bl-cmdr
 edi
 ```
 
 ### Terminal multiplexer
 
-[`PTYMux::run()`] lets you build a terminal multiplexer similar to [`tmux`]. It manages
-multiple child processes (each in its own PTY) with per-process virtual terminal
-buffers and instant switching. See the
-[`pty_mux_example`](https://github.com/r3bl-org/r3bl-open-core/tree/main/tui/examples/pty_mux_example.rs)
-for a working example that wraps `bash`, `htop`, and other CLI tools.
+[`PTYMux::run()`] lets you build a terminal multiplexer similar to [`tmux`]. It
+manages multiple child processes (each in its own PTY) with per-process virtual
+terminal buffers and instant switching. See the [`pty_mux_example`] for a working
+example that wraps `bash`, `htop`, and other CLI tools.
+
+### Indeterminate progress spinner
+
+[`Spinner::try_start()`] allows you to show an animated progress indicator while
+performing long-running tasks (like network requests, file system operations, or
+external command execution).
+
+A unique feature of this spinner is its ability to be "embedded" within a
+[`ReadlineAsyncContext`] session. In this mode, it safely pauses terminal output from
+other concurrent tasks so that the spinner animation and other output don't clobber
+each other.
+
+An example of this is the upgrade check in the [`r3bl-cmdr`] crate, which shows a
+spinner while running `rustup` and `cargo install`.
+
+You can see it in action by running the standalone spinner example:
+
+```bash
+cd tui/examples
+cargo run --release --example spinner
+```
 
 ### Power via composition
 
@@ -413,7 +436,7 @@ README](https://github.com/r3bl-org/r3bl-open-core/blob/main/README.md).
 
 After setup, you can run the examples interactively from the repository root:
 
-```sh
+```bash
 # Run examples interactively (choose from list)
 fish run.fish run-examples
 
@@ -425,7 +448,7 @@ fish run.fish run-examples --no-log
 ```
 
 You can also run examples directly:
-```sh
+```bash
 cd tui/examples
 cargo run --release --example demo -- --no-log
 ```
@@ -438,7 +461,7 @@ the repository root provides all development commands for the entire workspace.
 
 For TUI library development, use these commands from the repository root:
 
-```sh
+```bash
 # Terminal 1: Monitor logs from examples
 fish run.fish log
 
@@ -622,13 +645,13 @@ demonstrates:
 
 **Real-world applications:**
 - **Terminal input parsing**: [`integration_tests`] validates `VT-100` input sequences
-- **Raw mode behavior**: [`raw_mode_integration_tests`] tests termios configuration
+- **Raw mode behavior**: [`integration_tests`] tests termios configuration
 - **Interactive applications**: Tests readline, editor, and TUI component interactions
 
 For complete PTY test implementation details and examples, see:
 - Macro documentation: [`generate_pty_test!`]
 - Input parser tests: [`integration_tests`]
-- Raw mode tests: [`raw_mode_integration_tests`]
+- Raw mode tests: [`integration_tests`]
 
 For complete development setup and all available commands, see the [repository
 README](https://github.com/r3bl-org/r3bl-open-core/blob/main/README.md).
@@ -2316,7 +2339,7 @@ they're primarily used by mainframe terminals and very old applications.
 #### Usage Example
 
 ```rust
-use r3bl_tui::{TuiAvailability, core::pty_mux::PTYMux};
+use r3bl_tui::{TuiAvailability, IntoErr, core::pty_mux::PTYMux};
 
 #[tokio::main]
 async fn main() -> miette::Result<()> {
@@ -2327,11 +2350,7 @@ async fn main() -> miette::Result<()> {
         .build()
     {
         TuiAvailability::Available(mux) => mux,
-        TuiAvailability::NotAvailable(reason) => {
-            eprintln!("{}", reason.as_err_msg());
-            return Ok(());
-        }
-        TuiAvailability::Broken(e) => return Err(e),
+        it => return it.into_err(),
     };
 
     multiplexer.run().await?;  // F1/F2/F3 to switch, Ctrl+Q to quit
@@ -2496,6 +2515,7 @@ feature requests, feel free to add them there too 👍.
 
 <!-- Type references for documentation links -->
 
+[`stdin`]: std::io::stdin
 [`PTYMuxBuilder::build()`]: crate::pty_mux::PTYMuxBuilder::build
 [`Available`]: crate::TerminalInteractiveStatus::Available
 [`TerminalWindow::main_event_loop()`]: crate::tui::TerminalWindow::main_event_loop
@@ -2504,6 +2524,7 @@ feature requests, feel free to add them there too 👍.
 [`TuiAvailability<PTYMux>`]: crate::TuiAvailability
 [`TuiAvailability<ReadlineAsyncContext>`]: crate::TuiAvailability
 [`TuiAvailability<Spinner>`]: crate::TuiAvailability
+[`r3bl-cmdr`]: https://github.com/r3bl-org/r3bl-open-core/tree/main/cmdr
 [`TuiAvailability<T>`]: crate::TuiAvailability
 [`Spinner::try_start()`]: crate::Spinner::try_start
 [`tmux`]: https://github.com/tmux/tmux
@@ -2581,8 +2602,7 @@ feature requests, feel free to add them there too 👍.
 [`buf_reader`]: field@PtyTestContext::buf_reader
 [`writer`]: field@PtyTestContext::writer
 [`integration_tests`]: mod@crate::vt_100_terminal_input_parser::integration_tests
-[`raw_mode_integration_tests`]:
-    mod@crate::terminal_raw_mode::raw_mode_integration_tests
+[`integration_tests`]: mod@crate::terminal_raw_mode::integration_tests
 [`test_pty_input_device`]:
     mod@crate::vt_100_terminal_input_parser::integration_tests::pty_input_device_test
 [`DirectToAnsiInputDevice`]: crate::DirectToAnsiInputDevice
@@ -2621,5 +2641,7 @@ feature requests, feel free to add them there too 👍.
 [`VT-100` spec]: https://vt100.net/docs/vt100-ug/chapter3.html
 [`VT-100` User Guide]: https://vt100.net/docs/vt100-ug/
 [XTerm Control Sequences]: https://invisible-island.net/xterm/ctlseqs/ctlseqs.html
+[`pty_mux_example`]:
+    https://github.com/r3bl-org/r3bl-open-core/tree/main/tui/examples/pty_mux_example.rs
 
 License: Apache-2.0

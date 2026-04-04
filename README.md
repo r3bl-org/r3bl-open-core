@@ -250,7 +250,7 @@ An example of this is the "Full TUI" app `edi` in the
 [`r3bl-cmdr`](https://github.com/r3bl-org/r3bl-open-core/tree/main/cmdr) crate. You can
 install & run this with the following command:
 
-```sh
+```bash
 cargo install r3bl-cmdr
 edi
 ```
@@ -265,7 +265,7 @@ An example of this is this "Partial TUI" app `giti` in the
 [`r3bl-cmdr`](https://github.com/r3bl-org/r3bl-open-core/tree/main/cmdr) crate. You can
 install & run this with the following command:
 
-```sh
+```bash
 cargo install r3bl-cmdr
 giti
 ```
@@ -285,7 +285,7 @@ An example of this is this "Partial TUI" app `giti` in the
 [`r3bl-cmdr`](https://github.com/r3bl-org/r3bl-open-core/tree/main/cmdr) crate. You can install &
 run this with the following command:
 
-```sh
+```bash
 cargo install r3bl-cmdr
 giti
 ```
@@ -325,7 +325,7 @@ contains these apps:
 
 You can install & run this with the following command:
 
-```sh
+```bash
 cargo install r3bl-cmdr
 # Interactive git workflows made easy.
 giti --version
@@ -401,7 +401,7 @@ manages the task lifecycle:
 
 **Create a new task:**
 
-```sh
+```bash
 /r3bl-task create my_feature_name
 ```
 
@@ -411,7 +411,7 @@ manages the task lifecycle:
 
 **Update an existing task:**
 
-```sh
+```bash
 /r3bl-task update my_feature_name
 ```
 
@@ -420,7 +420,7 @@ manages the task lifecycle:
 
 **Resume working on a task:**
 
-```sh
+```bash
 /r3bl-task load my_feature_name
 ```
 
@@ -538,7 +538,7 @@ To learn how we built this crate, please take a look at the following resources.
 
 Use the bootstrap script to automatically install all required tools:
 
-```sh
+```bash
 # Clone the repository
 git clone https://github.com/r3bl-org/r3bl-open-core.git
 cd r3bl-open-core
@@ -568,7 +568,7 @@ for each concern (install_rustup, install_clang, install_shell_tools, etc.)
 
 If you prefer manual installation or are on Windows:
 
-```sh
+```bash
 # Install Rust
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 
@@ -631,7 +631,7 @@ marketplace and must be installed manually.
 
 **Installation:**
 
-```sh
+```bash
 # Clone the extension repository
 git clone https://github.com/r3bl-org/r3bl-vscode-extensions.git
 cd r3bl-vscode-extensions
@@ -730,7 +730,7 @@ To get a list of available commands, you can review the `fish` script in the roo
 [`run.fish`](https://github.com/r3bl-org/r3bl-open-core/blob/main/run.fish). To see all available
 commands:
 
-```sh
+```bash
 fish run.fish
 ```
 
@@ -1080,7 +1080,7 @@ choose based on your workflow preferences:
 For developers who want automated monitoring without the overhead of tmux, use the standalone check
 script:
 
-```sh
+```bash
 ./check.fish --watch
 ```
 
@@ -1135,7 +1135,7 @@ Adjust `DEBOUNCE_SECONDS` in the script if needed.
 
 **Usage:**
 
-```sh
+```bash
 # Show available options
 ./check.fish --help
 
@@ -1185,7 +1185,7 @@ For developers who prefer a multi-pane visual environment, the tmux dashboard co
 
 **Usage:**
 
-```sh
+```bash
 # Start the development dashboard
 fish run.fish dev-dashboard
 
@@ -1228,7 +1228,7 @@ The `--emit=metadata` flag tells rustc to stop after type checking and MIR gener
 generation and linking entirely. This validates all platform-specific cfg gates without needing a
 linker for the target platform.
 
-```sh
+```bash
 # Verify Windows cross-compilation
 fish run.fish check-windows-build
 
@@ -1241,7 +1241,7 @@ cargo rustc -p r3bl_tui --target x86_64-pc-windows-gnu -- --emit=metadata
 The Windows target is automatically installed by `fish run.fish install-cargo-tools`. To install
 manually:
 
-```sh
+```bash
 rustup target add x86_64-pc-windows-gnu
 ```
 
@@ -1372,7 +1372,7 @@ The locking mechanism uses:
 Intelligently finds and validates a stable nightly toolchain, preferring older versions for
 stability while ensuring they don't have ICE (Internal Compiler Error) bugs.
 
-```sh
+```bash
 # Via run.fish command
 fish run.fish toolchain-update
 
@@ -1453,7 +1453,7 @@ Toolchains directory size after cleanup: 2.6G
 
 Syncs your Rust environment to match whatever is specified in `rust-toolchain.toml`.
 
-```sh
+```bash
 # Via run.fish command
 fish run.fish toolchain-sync
 
@@ -1486,7 +1486,7 @@ fish run.fish toolchain-sync
 
 **Example workflow:**
 
-```sh
+```bash
 # Weekly script updates TOML to nightly-2025-09-11
 # But you need to stay on nightly-2025-09-05 for testing a specific feature
 git checkout rust-toolchain.toml  # Revert to 09-05
@@ -1499,7 +1499,7 @@ fish run.fish toolchain-sync  # Install components for 09-05
 Consolidated validation script providing two modes: quick component check or comprehensive
 build+test validation.
 
-```sh
+```bash
 # Quick mode: Fast component check (~1-2 seconds)
 fish run.fish toolchain-validate
 ./rust-toolchain-validate.fish quick
@@ -1573,7 +1573,7 @@ fish run.fish toolchain-validate-complete
 
 Removes ALL Rust toolchains for testing upgrade progress display (⚠️ DESTRUCTIVE).
 
-```sh
+```bash
 ./remove_toolchains.sh
 ```
 
@@ -1591,7 +1591,7 @@ Removes ALL Rust toolchains for testing upgrade progress display (⚠️ DESTRUC
 
 **Recovery after testing:**
 
-```sh
+```bash
 rustup toolchain install stable && rustup default stable
 # Or
 fish run.fish toolchain-update
@@ -1610,7 +1610,7 @@ All toolchain management scripts display detailed log file locations to stdout a
 
 This makes it easy to monitor progress and check detailed logs after operations complete:
 
-```sh
+```bash
 # Watch logs in real-time
 tail -f /home/nazmul/Downloads/rust-toolchain-update.log
 

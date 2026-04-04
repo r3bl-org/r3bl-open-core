@@ -18,9 +18,8 @@ mod ex_rc;
 
 // Use other crates.
 // Re-export items for sub-modules that use `crate::` imports.
-use r3bl_tui::{CommonError, CommonResult, DEBUG_TUI_MOD, Size,
-               TerminalInteractiveStatus, TuiAvailability,
-               check_is_terminal_interactive, fg_color, fg_frozen_blue, fg_pink,
+use r3bl_tui::{CommonError, CommonResult, DEBUG_TUI_MOD, IntoErr, Size, TuiAvailability,
+               assert_terminal_is_interactive, fg_color, fg_frozen_blue, fg_pink,
                fg_slate_gray, get_size, inline_string,
                log::try_initialize_logging_global,
                ok,
@@ -43,6 +42,7 @@ fn main() -> CommonResult<()> { run_with_safe_stack!(main_impl()) }
 #[allow(clippy::needless_return)]
 async fn main_impl() -> CommonResult<()> {
     set_mimalloc_in_main!();
+    assert_terminal_is_interactive();
 
     let args: Vec<String> = std::env::args().collect();
     let no_log_arg_passed = args.contains(&"--no-log".to_string());
@@ -52,14 +52,6 @@ async fn main_impl() -> CommonResult<()> {
         try_initialize_logging_global(tracing_core::LevelFilter::OFF).ok();
     } else if ENABLE_TRACE_EXAMPLES | DEBUG_TUI_MOD {
         try_initialize_logging_global(tracing_core::LevelFilter::DEBUG).ok();
-    }
-
-    // Check terminal interactivity before entering the interactive loop.
-    match check_is_terminal_interactive() {
-        TerminalInteractiveStatus::Available => {}
-        TerminalInteractiveStatus::NotAvailable(reason) => {
-            return CommonError::new_error_result_with_only_msg(reason.as_err_msg());
-        }
     }
 
     let size = get_size()?;
@@ -89,10 +81,7 @@ async fn main_impl() -> CommonResult<()> {
         .await
         {
             TuiAvailability::Available(rl_ctx) => rl_ctx,
-            TuiAvailability::NotAvailable(reason) => {
-                return CommonError::new_error_result_with_only_msg(reason.as_err_msg());
-            }
-            TuiAvailability::Broken(e) => return Err(e),
+            it => return it.into_err(),
         };
 
         // Pre-populate the readline's history with static command entries.

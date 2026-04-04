@@ -1,6 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use r3bl_tui::{InputDevice, OutputDevice, TerminalInteractiveStatus, TuiAvailability,
+use r3bl_tui::{InputDevice, IntoErr, OutputDevice, TuiAvailability,
+               TuiAvailabilityChooseExt, assert_terminal_is_interactive,
                fg_slate_gray, ok,
                readline_async::{Header, HowToChoose, ReadlineAsyncContext, StyleSheet,
                                 choose},
@@ -11,13 +12,7 @@ use std::io::Write;
 #[allow(clippy::needless_return)]
 async fn main() -> miette::Result<()> {
     set_mimalloc_in_main!();
-
-    if let TerminalInteractiveStatus::NotAvailable(reason) =
-        r3bl_tui::check_is_terminal_interactive()
-    {
-        eprintln!("{}", reason.as_err_msg());
-        std::process::exit(1);
-    }
+    assert_terminal_is_interactive();
 
     // Initialize tracing w/ file writer.
     try_initialize_logging_global(tracing_core::LevelFilter::DEBUG).ok();
@@ -32,24 +27,17 @@ async fn without_readline_async() -> miette::Result<()> {
     let mut output_device = OutputDevice::new_stdout();
     let mut input_device = InputDevice::default();
 
-    let user_choice = {
-        match choose(
-            Header::SingleLine("Choose one:".into()),
-            &["one", "two", "three"],
-            None,
-            None,
-            HowToChoose::Single,
-            StyleSheet::sea_foam_style(),
-            (&mut output_device, &mut input_device, None),
-        ) {
-            TuiAvailability::Available(choice_future) => choice_future.await?,
-            TuiAvailability::NotAvailable(reason) => {
-                eprintln!("{}", reason.as_err_msg());
-                return Ok(());
-            }
-            TuiAvailability::Broken(e) => return Err(e),
-        }
-    };
+    let user_choice = choose(
+        Header::SingleLine("Choose one:".into()),
+        &["one", "two", "three"],
+        None,
+        None,
+        HowToChoose::Single,
+        StyleSheet::sea_foam_style(),
+        (&mut output_device, &mut input_device, None),
+    )
+    .get_all_results()
+    .await?;
 
     println!(
         ">>> Chosen {:<25}: {:?}",
@@ -73,11 +61,7 @@ async fn with_readline_async() -> miette::Result<()> {
     .await
     {
         TuiAvailability::Available(rl_ctx) => rl_ctx,
-        TuiAvailability::NotAvailable(reason) => {
-            eprintln!("{}", reason.as_err_msg());
-            return Ok(());
-        }
-        TuiAvailability::Broken(e) => return Err(e),
+        it => return it.into_err(),
     };
 
     let mut sw_1 = rl_ctx.clone_shared_writer();
@@ -101,28 +85,21 @@ async fn with_readline_async() -> miette::Result<()> {
     });
 
     // Get the item selected by the user (or none).
-    let user_choice = {
-        match choose(
-            Header::SingleLine("Choose one:".into()),
-            &["one", "two", "three"],
-            None,
-            None,
-            HowToChoose::Single,
-            StyleSheet::hot_pink_style(),
-            (&mut output_device, input_device, Some(sw_2)),
-        ) {
-            TuiAvailability::Available(choice_future) => choice_future.await?,
-            TuiAvailability::NotAvailable(reason) => {
-                eprintln!("{}", reason.as_err_msg());
-                return Ok(());
-            }
-            TuiAvailability::Broken(e) => return Err(e),
-        }
-    };
+    let maybe_user_choice = choose(
+        Header::SingleLine("Choose one:".into()),
+        &["one", "two", "three"],
+        None,
+        None,
+        HowToChoose::Single,
+        StyleSheet::hot_pink_style(),
+        (&mut output_device, input_device, Some(sw_2)),
+    )
+    .get_first_result()
+    .await?;
 
     let message = format!(
         ">>> Chosen {:<25}: {:?}",
-        "(with readline_async)", user_choice
+        "(with readline_async)", maybe_user_choice
     );
     rl_ctx.request_shutdown(Some(message.as_str())).await?;
     rl_ctx.await_shutdown().await;

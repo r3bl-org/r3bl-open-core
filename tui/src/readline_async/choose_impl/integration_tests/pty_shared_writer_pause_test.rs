@@ -27,7 +27,7 @@
 //! [raw mode]: mod@crate::terminal_raw_mode#raw-mode-vs-cooked-mode
 
 use crate::{CONTROLLED_READY, DefaultIoDevices, Header, LINE_PREFIX, PtyTestContext,
-            PtyTestMode, SUCCESS, SharedWriter, TuiAvailability,
+            PtyTestMode, SUCCESS, SharedWriter, TuiAvailabilityChooseExt, choose,
             generate_keyboard_sequence, generate_pty_test,
             vt_100_terminal_input_parser::{VT100InputEventIR, VT100KeyCodeIR,
                                            VT100KeyModifiersIR}};
@@ -82,11 +82,13 @@ fn controller(context: PtyTestContext) {
 
     // Read signal lines printed by the controlled process. Use `contains`
     // because choose()'s ANSI rendering may precede the signal on the same line.
-    let result = child.read_until_marker(&mut buf_reader, SUCCESS, |line| {
-        line.contains(LINE_PREFIX)
-    });
+    let result = child
+        .read_until_marker(&mut buf_reader, SUCCESS, |line| line.contains(LINE_PREFIX));
 
-    assert!(result.found_marker, "Controlled process did not print SUCCESS");
+    assert!(
+        result.found_marker,
+        "Controlled process did not print SUCCESS"
+    );
     assert!(
         !result.lines.is_empty(),
         "No signals received from controlled process"
@@ -123,8 +125,8 @@ fn controlled() {
         std::io::stdout().flush().unwrap();
 
         // Run choose() with real I/O devices and the SharedWriter under test.
-        match crate::choose(
-            Header::SingleLine("Choose one:".into()),
+        let _unused = choose(
+            Header::SingleLine("Choose:".into()),
             &["one", "two", "three"],
             None,
             None,
@@ -135,15 +137,9 @@ fn controlled() {
                 &mut io.input_device,
                 Some(shared_writer),
             ),
-        ) {
-            TuiAvailability::Available(choice_future) => {
-                drop(choice_future.await);
-            }
-            TuiAvailability::Broken(e) => panic!("choose() returned Broken: {e}"),
-            TuiAvailability::NotAvailable(reason) => {
-                panic!("choose() returned NotAvailable: {}", reason.as_err_msg())
-            }
-        }
+        )
+        .get_first_result()
+        .await;
 
         // Collect signals and print them for the controller.
         line_receiver.close();

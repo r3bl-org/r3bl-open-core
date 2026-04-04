@@ -51,7 +51,7 @@ use tokio::{sync::broadcast, time::interval};
 /// ```no_run
 /// // This example requires terminal output for the spinner animation
 /// # use std::time::Duration;
-/// # use r3bl_tui::{SpinnerStyle, OutputDevice, Spinner, TuiAvailability};
+/// # use r3bl_tui::{SpinnerStyle, OutputDevice, Spinner, IntoErr, TuiAvailability};
 /// # async fn example() -> miette::Result<()> {
 ///     let mut spinner = match Spinner::try_start(
 ///         "Loading...",
@@ -63,11 +63,7 @@ use tokio::{sync::broadcast, time::interval};
 ///     )
 ///     .await {
 ///         TuiAvailability::Available(spinner) => spinner,
-///         TuiAvailability::NotAvailable(reason) => {
-///             eprintln!("{}", reason.as_err_msg());
-///             return Ok(());
-///         }
-///         TuiAvailability::Broken(e) => return Err(e),
+///         it => return it.into_err(),
 ///     };
 ///
 ///     // Some work happens here...
@@ -137,9 +133,14 @@ impl Spinner {
     /// - The spinner task cannot be started
     /// - The communication channels fail to initialize
     ///
+    /// # Other entry points for interactive terminal apps
+    ///
+    /// See [interactive terminal application entry points].
+    ///
     /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
     /// [`emit_stderr_redirection_disclaimer()`]: crate::emit_stderr_redirection_disclaimer
     /// [`stderr`]: std::io::stderr
+    /// [interactive terminal application entry points]: crate#interactive-terminal-application-entry-points
     pub async fn try_start(
         arg_interval_msg: impl AsRef<str>,
         arg_final_msg: impl AsRef<str>,
@@ -149,6 +150,10 @@ impl Spinner {
         maybe_shared_writer: Option<SharedWriter>,
     ) -> TuiAvailability<Spinner> {
         match check_is_terminal_interactive() {
+            TerminalInteractiveStatus::NotAvailable(reason) => {
+                TuiAvailability::NotAvailable(reason)
+            }
+            
             TerminalInteractiveStatus::Available => {
                 let init = async || {
                     emit_stderr_redirection_disclaimer();
@@ -198,9 +203,6 @@ impl Spinner {
                     Ok(spinner) => TuiAvailability::Available(spinner),
                     Err(e) => TuiAvailability::Broken(e),
                 }
-            }
-            TerminalInteractiveStatus::NotAvailable(reason) => {
-                TuiAvailability::NotAvailable(reason)
             }
         }
     }
@@ -418,242 +420,5 @@ impl Spinner {
             msg
         };
         *self.interval_message.lock().unwrap() = clean_msg;
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::{Duration, LineStateControlSignal, SharedWriter, Spinner, SpinnerStyle,
-                TerminalInteractiveStatus, TuiAvailability,
-                check_is_terminal_interactive};
-    use crate::{OutputDevice, OutputDeviceExt, SGR_FG_RED_STR, SGR_RESET_STR,
-                SpinnerColor, SpinnerTemplate};
-    use smallvec::SmallVec;
-
-    type ArrayVec = SmallVec<[LineStateControlSignal; FACTOR as usize]>;
-    const FACTOR: u32 = 5;
-    const QUANTUM: Duration = Duration::from_millis(100);
-
-    #[serial_test::serial]
-    #[tokio::test]
-    #[allow(clippy::needless_return)]
-    async fn test_spinner_color() {
-        if let TerminalInteractiveStatus::NotAvailable(_) =
-            check_is_terminal_interactive()
-        {
-            return;
-        }
-
-        let (output_device_mock, stdout_mock) = OutputDevice::new_mock();
-
-        let (line_sender, mut line_receiver) = tokio::sync::mpsc::channel(1_000);
-        let shared_writer = SharedWriter::new(line_sender);
-
-        let res_maybe_spinner = Spinner::try_start(
-            "message",
-            "final message",
-            QUANTUM,
-            SpinnerStyle {
-                template: SpinnerTemplate::Braille,
-                color: SpinnerColor::None,
-            },
-            output_device_mock,
-            Some(shared_writer),
-        )
-        .await;
-
-        let TuiAvailability::Available(mut spinner) = res_maybe_spinner else {
-            panic!("Spinner should be available")
-        };
-
-        // Let the spinner run for a while.
-        tokio::time::sleep(QUANTUM * FACTOR).await;
-
-        // This might take some time to finish, so we need to wait for it.
-        spinner.request_shutdown();
-        spinner.await_shutdown().await;
-
-        let output_buffer_data = stdout_mock.get_copy_of_buffer_as_string_strip_ansi();
-        println!("{output_buffer_data:?}");
-        assert!(output_buffer_data.contains("⠁ message\n"));
-        assert!(output_buffer_data.contains("final message\n"));
-
-        let line_control_signal_sink = {
-            let mut acc = ArrayVec::new();
-            loop {
-                let it = line_receiver.try_recv();
-                match it {
-                    Ok(signal) => {
-                        acc.push(signal);
-                    }
-                    Err(
-                        tokio::sync::mpsc::error::TryRecvError::Empty
-                        | tokio::sync::mpsc::error::TryRecvError::Disconnected,
-                    ) => {
-                        break;
-                    }
-                }
-            }
-            acc
-        };
-
-        // println!("{:?}", line_control_signal_sink);
-
-        assert_eq!(line_control_signal_sink.len(), 4);
-        matches!(
-            line_control_signal_sink[0],
-            LineStateControlSignal::SpinnerActive(_)
-        );
-        matches!(line_control_signal_sink[1], LineStateControlSignal::Pause);
-        matches!(
-            line_control_signal_sink[2],
-            LineStateControlSignal::SpinnerInactive
-        );
-        matches!(line_control_signal_sink[3], LineStateControlSignal::Resume);
-
-        drop(line_receiver);
-    }
-
-    #[serial_test::serial]
-    #[tokio::test]
-    #[allow(clippy::needless_return)]
-    async fn test_spinner_no_color() {
-        if let TerminalInteractiveStatus::NotAvailable(_) =
-            check_is_terminal_interactive()
-        {
-            return;
-        }
-
-        let (output_device_mock, stdout_mock) = OutputDevice::new_mock();
-
-        let (line_sender, mut line_receiver) = tokio::sync::mpsc::channel(1_000);
-        let shared_writer = SharedWriter::new(line_sender);
-
-        let res_maybe_spinner = Spinner::try_start(
-            "message",
-            "final message",
-            QUANTUM,
-            SpinnerStyle::default(),
-            output_device_mock,
-            Some(shared_writer),
-        )
-        .await;
-
-        let TuiAvailability::Available(mut spinner) = res_maybe_spinner else {
-            panic!("Spinner should be available")
-        };
-
-        // Let the spinner run for a while.
-        tokio::time::sleep(QUANTUM * FACTOR).await;
-
-        // This might take some time to finish, so we need to wait for it.
-        spinner.request_shutdown();
-        spinner.await_shutdown().await;
-
-        // spell-checker:disable
-        let output_buffer_data = stdout_mock.get_copy_of_buffer_as_string();
-        println!("{output_buffer_data:?}");
-        let stripped_output_buffer_data =
-            strip_ansi_escapes::strip_str(&output_buffer_data);
-        assert!(stripped_output_buffer_data.contains("⠁ message\n"));
-        assert!(stripped_output_buffer_data.contains("final message\n"));
-        // spell-checker:enable
-
-        let line_control_signal_sink = {
-            let mut acc = ArrayVec::new();
-            loop {
-                let it = line_receiver.try_recv();
-                match it {
-                    Ok(signal) => {
-                        acc.push(signal);
-                    }
-                    Err(
-                        tokio::sync::mpsc::error::TryRecvError::Empty
-                        | tokio::sync::mpsc::error::TryRecvError::Disconnected,
-                    ) => {
-                        break;
-                    }
-                }
-            }
-            acc
-        };
-        // println!("{:?}", line_control_signal_sink);
-
-        assert_eq!(line_control_signal_sink.len(), 4);
-        matches!(
-            line_control_signal_sink[0],
-            LineStateControlSignal::SpinnerActive(_)
-        );
-        matches!(line_control_signal_sink[1], LineStateControlSignal::Pause);
-        matches!(
-            line_control_signal_sink[2],
-            LineStateControlSignal::SpinnerInactive
-        );
-        matches!(line_control_signal_sink[3], LineStateControlSignal::Resume);
-
-        drop(line_receiver);
-    }
-
-    #[serial_test::serial]
-    #[tokio::test]
-    #[allow(clippy::needless_return)]
-    async fn test_spinner_message_update() {
-        if let TerminalInteractiveStatus::NotAvailable(_) =
-            check_is_terminal_interactive()
-        {
-            return;
-        }
-
-        let (output_device_mock, stdout_mock) = OutputDevice::new_mock();
-
-        let (line_sender, mut line_receiver) = tokio::sync::mpsc::channel(1_000);
-        let shared_writer = SharedWriter::new(line_sender);
-
-        let res_maybe_spinner = Spinner::try_start(
-            "initial message",
-            "final message",
-            QUANTUM,
-            SpinnerStyle::default(),
-            output_device_mock,
-            Some(shared_writer),
-        )
-        .await;
-
-        let TuiAvailability::Available(mut spinner) = res_maybe_spinner else {
-            panic!("Spinner should be available")
-        };
-
-        // Let the spinner run for a bit with initial message.
-        tokio::time::sleep(QUANTUM).await;
-
-        // Update the message.
-        spinner.update_message("updated message");
-
-        // Let it run with the updated message.
-        tokio::time::sleep(QUANTUM * 2).await;
-
-        // Update with ANSI codes (should be stripped)
-        spinner
-            .update_message(format!("{SGR_FG_RED_STR}updated with ansi{SGR_RESET_STR}"));
-
-        // Let it run with the ANSI-stripped message.
-        tokio::time::sleep(QUANTUM).await;
-
-        // Stop the spinner.
-        spinner.request_shutdown();
-        spinner.await_shutdown().await;
-
-        // Verify that both messages appeared in the output.
-        let output_buffer_data = stdout_mock.get_copy_of_buffer_as_string_strip_ansi();
-
-        // Should contain both the initial and updated messages.
-        assert!(output_buffer_data.contains("initial message"));
-        assert!(output_buffer_data.contains("updated message"));
-        assert!(output_buffer_data.contains("updated with ansi")); // ANSI should be stripped
-        assert!(output_buffer_data.contains("final message"));
-
-        // Clean up line receiver.
-        while line_receiver.try_recv().is_ok() {}
-        drop(line_receiver);
     }
 }

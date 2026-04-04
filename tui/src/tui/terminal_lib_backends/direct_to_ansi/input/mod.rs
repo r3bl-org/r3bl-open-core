@@ -127,6 +127,5 @@ pub use input_device_public_api::*;
 pub use mio_poller::*;
 
 // Documentation-only module pointing to actual PTY tests location.
-// Named differently from output::integration_tests to avoid ambiguous glob re-exports.
 #[cfg(any(test, doc))]
-pub mod integration_tests_docs;
+pub mod integration_tests_stub;

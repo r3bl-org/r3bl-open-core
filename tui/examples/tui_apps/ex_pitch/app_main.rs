@@ -380,7 +380,7 @@ mod status_bar {
             },
             tui_styled_text! {
                 @style: new_style!(dim underline color_fg: {color_fg} color_bg: {color_bg}),
-                @text: "Ctrl + q"
+                @text: "x"
             },
         };
 

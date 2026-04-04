@@ -6,7 +6,7 @@
 //! escape sequences). No real terminal or [`PTY`] is needed—we test [`ANSI`] sequence
 //! generation.
 //!
-//! **Looking for input tests?** See [`input::integration_tests_docs`] for [`PTY`] test
+//! **Looking for input tests?** See [`input::integration_tests_stub`] for [`PTY`] test
 //! documentation.
 //!
 //! # Testing Strategy: Two Complementary Layers
@@ -89,7 +89,7 @@
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`ClearScreen`]: crate::render_op::RenderOpCommon::ClearScreen
 //! [`HideCursor`]: crate::render_op::RenderOpCommon::HideCursor
-//! [`input::integration_tests_docs`]: mod@crate::terminal_lib_backends::direct_to_ansi::input::integration_tests_docs
+//! [`input::integration_tests_stub`]: mod@crate::terminal_lib_backends::direct_to_ansi::input::integration_tests_stub
 //! [`MoveCursorPositionAbs`]: crate::render_op::RenderOpCommon::MoveCursorPositionAbs
 //! [`MoveCursorPositionRelTo`]: crate::render_op::RenderOpCommon::MoveCursorPositionRelTo
 //! [`OffscreenBuffer::apply_ansi_bytes`]: crate::OffscreenBuffer::apply_ansi_bytes

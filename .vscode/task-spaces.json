@@ -1,5 +1,5 @@
 {
-  "version": "3.0",
+  "version": "4.0",
   "taskSpaces": [
     {
       "name": "[1.0] task_refactor_input_device",
@@ -327,6 +327,138 @@
       ],
       "taskFile": "task/introduce-resilient-reactor-thread.md",
       "createdAt": 1768407329970
+    },
+    {
+      "name": "build-infra-add-more-terms-to-seed-jsonc",
+      "id": "918ac205-dda6-433f-b204-8773ee073ef9",
+      "tabs": [],
+      "taskFile": "task/build-infra-add-more-terms-to-seed-jsonc.md",
+      "createdAt": 1775190178354
+    },
+    {
+      "name": "build-infra-upgrade-support",
+      "id": "86daa72c-5339-4d09-b8f5-9298919eae85",
+      "tabs": [],
+      "taskFile": "task/build-infra-upgrade-support.md",
+      "createdAt": 1775190178426
+    },
+    {
+      "name": "fix-future-incompat-warnings-2",
+      "id": "967c6049-861b-4b39-a969-920e0fe4e1a2",
+      "tabs": [],
+      "taskFile": "task/fix-future-incompat-warnings-2.md",
+      "createdAt": 1775190178440
+    },
+    {
+      "name": "fix-isatty-logic",
+      "id": "9d876470-f346-47e1-9ba0-fa8ec8af4662",
+      "tabs": [],
+      "taskFile": "task/fix-isatty-logic.md",
+      "createdAt": 1775190178583
+    },
+    {
+      "name": "fs-path-tests-refactor",
+      "id": "01745071-df8f-465d-bf64-bae440cbc333",
+      "tabs": [],
+      "taskFile": "task/fs-path-tests-refactor.md",
+      "createdAt": 1775190178662
+    },
+    {
+      "name": "generate pty test macro audit",
+      "id": "67723302-9a43-44a5-8003-9e7ad499e77c",
+      "tabs": [],
+      "taskFile": "task/generate_pty_test_macro_audit.md",
+      "createdAt": 1775190179124
+    },
+    {
+      "name": "mirror-3-ext-sites-to-docs-specs",
+      "id": "3d5fa4cd-021d-4665-aac3-36229a863a00",
+      "tabs": [],
+      "taskFile": "task/mirror-3-ext-sites-to-docs-specs.md",
+      "createdAt": 1775190179196
+    },
+    {
+      "name": "pty-module-fix-config",
+      "id": "37b94a25-2dec-465a-a9c1-60ad614542ec",
+      "tabs": [],
+      "taskFile": "task/pty-module-fix-config.md",
+      "createdAt": 1775190179216
+    },
+    {
+      "name": "pty-module-fix-osc-sequence-generation-docs",
+      "id": "75bac23d-295e-493f-b23f-7e73ddc798b1",
+      "tabs": [],
+      "taskFile": "task/pty-module-fix-osc-sequence-generation-docs.md",
+      "createdAt": 1775190179232
+    },
+    {
+      "name": "pty-module-pty-session-auto-resize",
+      "id": "444a38c0-0352-4dd1-905d-fe18bbcc40e0",
+      "tabs": [],
+      "taskFile": "task/pty-module-pty-session-auto-resize.md",
+      "createdAt": 1775190179273
+    },
+    {
+      "name": "pty-test-harness-harden-for-child-proc-crashing",
+      "id": "fa86288d-a3f5-4586-b591-35510758ba37",
+      "tabs": [],
+      "taskFile": "task/pty-test-harness-harden-for-child-proc-crashing.md",
+      "createdAt": 1775190179286
+    },
+    {
+      "name": "refactor-isolated-process-test-macro",
+      "id": "eccb8e7e-7a87-44d7-bb04-54b246eb903c",
+      "tabs": [],
+      "taskFile": "task/refactor-isolated-process-test-macro.md",
+      "createdAt": 1775190179300
+    },
+    {
+      "name": "replace-serde json-with-postcard",
+      "id": "5c2c4eb1-0631-441e-b9f3-da2978ececd6",
+      "tabs": [],
+      "taskFile": "task/replace-serde_json-with-postcard.md",
+      "createdAt": 1775190179314
+    },
+    {
+      "name": "rustdoc-fmt-clean-rust-code-fenced-blocks",
+      "id": "11daa29f-8435-42e5-a1dd-3d2f453ee8d3",
+      "tabs": [],
+      "taskFile": "task/rustdoc-fmt-clean-rust-code-fenced-blocks.md",
+      "createdAt": 1775190179328
+    },
+    {
+      "name": "rustdoc-fmt-fix-multiline-link-ref-def",
+      "id": "e0041b1d-ed2f-49e6-a7c3-6f8b0773fd57",
+      "tabs": [],
+      "taskFile": "task/rustdoc-fmt-fix-multiline-link-ref-def.md",
+      "createdAt": 1775190179342
+    },
+    {
+      "name": "shorter-ref-def-link-paths",
+      "id": "59c4d970-1226-4a47-b722-0ad93e2affc1",
+      "tabs": [],
+      "taskFile": "task/shorter-ref-def-link-paths.md",
+      "createdAt": 1775190179354
     }
+  ],
+  "nextQueueIds": [
+    "86daa72c-5339-4d09-b8f5-9298919eae85",
+    "967c6049-861b-4b39-a969-920e0fe4e1a2",
+    "9d876470-f346-47e1-9ba0-fa8ec8af4662",
+    "01745071-df8f-465d-bf64-bae440cbc333",
+    "67723302-9a43-44a5-8003-9e7ad499e77c",
+    "3d5fa4cd-021d-4665-aac3-36229a863a00",
+    "37b94a25-2dec-465a-a9c1-60ad614542ec",
+    "75bac23d-295e-493f-b23f-7e73ddc798b1",
+    "444a38c0-0352-4dd1-905d-fe18bbcc40e0",
+    "fa86288d-a3f5-4586-b591-35510758ba37",
+    "eccb8e7e-7a87-44d7-bb04-54b246eb903c",
+    "5c2c4eb1-0631-441e-b9f3-da2978ececd6",
+    "11daa29f-8435-42e5-a1dd-3d2f453ee8d3",
+    "e0041b1d-ed2f-49e6-a7c3-6f8b0773fd57",
+    "59c4d970-1226-4a47-b722-0ad93e2affc1"
+  ],
+  "previousStackIds": [
+    "0096aa0a-89a3-4ec6-a5e0-ac41b7a0c0ea"
   ]
 }

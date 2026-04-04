@@ -172,8 +172,8 @@
 /// `eprintln!()` creates a false impression that stderr is handled differently.
 ///
 /// For complete [`pty`] test implementations, see:
-/// - [`raw_mode_integration_tests`] - Tests raw mode itself.
-/// - [`integration_tests`] - Tests input parsing.
+/// - [`raw mode integration_tests`] - Tests raw mode itself.
+/// - [`input parser integration_tests`] - Tests input parsing.
 ///
 /// # Arguments
 ///
@@ -217,7 +217,7 @@
 /// [`drain_and_wait()`]: crate::SingleThreadSafeControlledChild::drain_and_wait
 /// [`exit()`]: std::process::exit
 /// [`generate_pty_test!`]: crate::generate_pty_test
-/// [`integration_tests`]:
+/// [`input parser integration_tests`]:
 ///     mod@crate::vt_100_terminal_input_parser::integration_tests
 /// [`mode: PtyTestMode::Cooked`]: PtyTestMode::Cooked
 /// [`mode: PtyTestMode::Raw`]: PtyTestMode::Raw
@@ -231,8 +231,8 @@
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 /// [`PtyTestContext`]: crate::PtyTestContext
 /// [`PtyTestWatchdog`]: crate::PtyTestWatchdog
-/// [`raw_mode_integration_tests`]:
-///     mod@crate::terminal_raw_mode::raw_mode_integration_tests
+/// [`raw mode integration_tests`]:
+///     mod@crate::terminal_raw_mode::integration_tests
 /// [`Raw`]: PtyTestMode::Raw
 /// [`read_line_state()`]: crate::SingleThreadSafeControlledChild::read_line_state
 /// [`SingleThreadSafeControlledChild`]: crate::SingleThreadSafeControlledChild

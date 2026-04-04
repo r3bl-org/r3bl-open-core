@@ -71,7 +71,10 @@ pub use layout::*;
 pub use md_parser::*;
 pub use rsx::*;
 pub use syntax_highlighting::*;
+// Needed for integration_tests module.
+#[allow(ambiguous_glob_reexports)]
 pub use terminal_lib_backends::*;
+#[allow(ambiguous_glob_reexports)]
 pub use terminal_window::*;
 
 // Rustdoc search link fixes.

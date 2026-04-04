@@ -24,7 +24,7 @@
 //! Run all integration tests:
 //!
 //! ```bash
-//! cargo test --package r3bl_tui --lib terminal_raw_mode::raw_mode_integration_tests -- --nocapture
+//! cargo test --package r3bl_tui --lib terminal_raw_mode::integration_tests -- --nocapture
 //! ```
 //!
 //! Run a specific test:

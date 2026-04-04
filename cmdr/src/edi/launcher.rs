@@ -1,7 +1,7 @@
 // Copyright (c) 2023-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use crate::edi::{AppMain, constructor};
-use r3bl_tui::{CommonResult, InputEvent, ModifierKeysMask, TerminalWindow,
+use r3bl_tui::{CommonResult, InputEvent, IntoErr, ModifierKeysMask, TerminalWindow,
                TuiAvailability, key_press, ok};
 
 /// Runs the editor application with an optional file to open.
@@ -20,8 +20,7 @@ pub async fn run_app(maybe_file_path: Option<&str>) -> CommonResult<()> {
         TuiAvailability::Available(future) => {
             future.await?;
         }
-        TuiAvailability::NotAvailable(reason) => return reason.as_err(),
-        TuiAvailability::Broken(e) => return Err(e),
+        it => return it.into_err(),
     }
 
     ok!()

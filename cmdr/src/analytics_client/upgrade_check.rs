@@ -51,7 +51,8 @@ use super::ui_str;
 use crate::{DEBUG_ANALYTICS_CLIENT_MOD, prefix_single_select_instruction_header};
 use r3bl_tui::{DefaultIoDevices, HowToChoose, InlineString, OscEvent, OutputDevice,
                SpinnerStyle, StyleSheet, TerminalInteractiveStatus, TuiAvailability,
-               check_is_terminal_interactive, choose, cli_text_inline, cli_text_line,
+               TuiAvailabilityChooseExt, check_is_terminal_interactive, choose,
+               cli_text_inline, cli_text_line,
                core::pty::{DefaultPtySessionConfig, PtyOutputEvent, PtySessionBuilder,
                            PtySessionConfigOption},
                height, inline_string,
@@ -182,26 +183,19 @@ pub async fn show_exit_message(context: ExitContext) {
         }
 
         // Get the first item selected by the user.
-        let maybe_user_choice = {
-            match choose(
-                header_with_instructions,
-                yes_no_options,
-                Some(height(yes_no_options.len())),
-                None,
-                HowToChoose::Single,
-                StyleSheet::default(),
-                io.as_mut_tuple(),
-            ) {
-                TuiAvailability::Available(choice_future) => {
-                    if let Ok(items) = choice_future.await {
-                        items.into_iter().next() // First item.
-                    } else {
-                        None
-                    }
-                }
-                TuiAvailability::Broken(_) | TuiAvailability::NotAvailable(_) => None,
-            }
-        };
+        let maybe_user_choice = choose(
+            header_with_instructions,
+            yes_no_options,
+            Some(height(yes_no_options.len())),
+            None,
+            HowToChoose::Single,
+            StyleSheet::default(),
+            io.as_mut_tuple(),
+        )
+        .get_first_result()
+        .await
+        .ok()
+        .flatten();
 
         // If they chose "Yes, upgrade now", run `cargo install …`.
         if let Some(user_choice) = maybe_user_choice

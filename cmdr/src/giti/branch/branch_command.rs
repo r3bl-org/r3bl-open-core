@@ -6,8 +6,9 @@ use crate::{common,
                    get_giti_command_subcommand_names, handle_branch_checkout_command,
                    handle_branch_delete_command, handle_branch_new_command, ui_str}};
 use clap::ValueEnum;
-use r3bl_tui::{CommandRunResult, CommonResult, DefaultIoDevices, TuiAvailability,
-               choose, cli_text_inline, cli_text_line, height, inline_vec,
+use r3bl_tui::{CommandRunResult, CommonResult, DefaultIoDevices,
+               TuiAvailabilityChooseExt, choose, cli_text_inline, cli_text_line, height,
+               inline_vec,
                readline_async::{HowToChoose, StyleSheet}};
 
 /// The main function to for `giti branch` command. This is the main routing function that
@@ -55,7 +56,7 @@ async fn prompt_for_sub_command() -> CommonResult<CommandRunResult<CommandRunDet
 
     // Return the first item selected by the user.
     let maybe_user_choice = {
-        match choose(
+        choose(
             header_with_instructions,
             branch_subcommand_options,
             Some(height(20)),
@@ -63,14 +64,9 @@ async fn prompt_for_sub_command() -> CommonResult<CommandRunResult<CommandRunDet
             HowToChoose::Single,
             StyleSheet::default(),
             default_io_devices.as_mut_tuple(),
-        ) {
-            TuiAvailability::Available(choice_future) => {
-                let items = choice_future.await?;
-                items.into_iter().next() // First item.
-            }
-            TuiAvailability::NotAvailable(reason) => return reason.as_err(),
-            TuiAvailability::Broken(e) => return Err(e),
-        }
+        )
+        .get_first_result()
+        .await?
     };
 
     // Early return if the user didn't select anything.

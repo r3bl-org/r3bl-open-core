@@ -1,8 +1,8 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use r3bl_tui::{CommonResult, OutputDevice, SGR_FG_RED_STR, SGR_RESET_STR, SpinnerColor,
-               SpinnerStyle, SpinnerTemplate, TerminalInteractiveStatus,
-               TuiAvailability, check_is_terminal_interactive,
+use r3bl_tui::{CommonResult, IntoErr, OutputDevice, SGR_FG_RED_STR, SGR_RESET_STR,
+               SpinnerColor, SpinnerStyle, SpinnerTemplate, TuiAvailability,
+               assert_terminal_is_interactive,
                readline_async::{ReadlineAsyncContext, SafeInlineString, Spinner},
                set_mimalloc_in_main,
                spinner_constants::{ARTIFICIAL_UI_DELAY, DELAY_MS, DELAY_UNIT},
@@ -27,14 +27,7 @@ macro_rules! println_with_flush {
 // failure is a fatal error that should panic. The lint must be suppressed here.
 pub async fn main() -> CommonResult<()> {
     set_mimalloc_in_main!();
-
-    match check_is_terminal_interactive() {
-        TerminalInteractiveStatus::Available => {}
-        TerminalInteractiveStatus::NotAvailable(reason) => {
-            eprintln!("{}", reason.as_err_msg());
-            std::process::exit(1);
-        }
-    }
+    assert_terminal_is_interactive();
 
     // Without readline.
     {
@@ -98,10 +91,7 @@ pub async fn main() -> CommonResult<()> {
 async fn example_with_concurrent_output(style: SpinnerStyle) -> miette::Result<()> {
     let rl_ctx = match ReadlineAsyncContext::try_new(Some("$ "), None).await {
         TuiAvailability::Available(rl_ctx) => rl_ctx,
-        TuiAvailability::NotAvailable(reason) => {
-            miette::bail!("{}", reason.as_err_msg());
-        }
-        TuiAvailability::Broken(e) => return Err(e),
+        it => return it.into_err(),
     };
     let address = "127.0.0.1:8000";
     let message_trying_to_connect = format!(
@@ -204,10 +194,7 @@ async fn example_with_concurrent_output_no_readline_async(
 async fn example_with_message_updates(style: SpinnerStyle) -> miette::Result<()> {
     let rl_ctx = match ReadlineAsyncContext::try_new(Some("$ "), None).await {
         TuiAvailability::Available(rl_ctx) => rl_ctx,
-        TuiAvailability::NotAvailable(reason) => {
-            miette::bail!("{}", reason.as_err_msg());
-        }
-        TuiAvailability::Broken(e) => return Err(e),
+        it => return it.into_err(),
     };
 
     let shared_writer = rl_ctx.clone_shared_writer();

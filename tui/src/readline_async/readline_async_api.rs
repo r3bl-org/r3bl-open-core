@@ -39,17 +39,14 @@ use tokio::sync::broadcast;
 ///     # use r3bl_tui::readline_async::ReadlineAsyncContext;
 ///     # use r3bl_tui::ChannelCapacity;
 ///     # use r3bl_tui::TuiAvailability;
+///     # use r3bl_tui::IntoErr;
 ///     # use r3bl_tui::ok;
 ///     let mut rl_ctx = match ReadlineAsyncContext::try_new(
 ///         Some("> "),
 ///         Some(ChannelCapacity::VeryLarge),
 ///     ).await {
 ///         TuiAvailability::Available(rl_ctx) => rl_ctx,
-///         TuiAvailability::NotAvailable(reason) => {
-///             eprintln!("{}", reason.as_err_msg());
-///             return ok!();
-///         }
-///         TuiAvailability::Broken(e) => return Err(e),
+///         it => return it.into_err(),
 ///     };
 ///
 ///     let ReadlineAsyncContext { readline: ref mut rl, .. } = rl_ctx;
@@ -143,7 +140,7 @@ impl ReadlineAsyncContext {
     /// [`stderr`] is redirected, the user is notified that application logs are handled
     /// internally.
     ///
-    /// # Other entry points
+    /// # Other entry points for interactive terminal apps
     ///
     /// See [interactive terminal application entry points].
     ///
@@ -159,6 +156,10 @@ impl ReadlineAsyncContext {
         channel_capacity: Option<ChannelCapacity>,
     ) -> TuiAvailability<ReadlineAsyncContext> {
         match check_is_terminal_interactive() {
+            TerminalInteractiveStatus::NotAvailable(reason) => {
+                TuiAvailability::NotAvailable(reason)
+            }
+
             TerminalInteractiveStatus::Available => {
                 let init = async || {
                     emit_stderr_redirection_disclaimer();
@@ -203,9 +204,6 @@ impl ReadlineAsyncContext {
                     Ok(ctx) => TuiAvailability::Available(ctx),
                     Err(e) => TuiAvailability::Broken(e),
                 }
-            }
-            TerminalInteractiveStatus::NotAvailable(reason) => {
-                TuiAvailability::NotAvailable(reason)
             }
         }
     }

@@ -8,24 +8,18 @@
 //! [`OSC`]: crate::osc_codes::OscSequence
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 
-use r3bl_tui::{TerminalInteractiveStatus, TuiAvailability,
-               check_is_terminal_interactive, core::pty_mux::PTYMux};
+use r3bl_tui::{IntoErr, TuiAvailability, assert_terminal_is_interactive,
+               core::pty_mux::PTYMux, set_mimalloc_in_main};
 
 #[tokio::main]
 async fn main() -> miette::Result<()> {
+    set_mimalloc_in_main!();
+    assert_terminal_is_interactive();
+
     // Initialize tracing for debugging.
     tracing_subscriber::fmt()
         .with_max_level(tracing::Level::DEBUG)
         .init();
-
-    // Check terminal status.
-    match check_is_terminal_interactive() {
-        TerminalInteractiveStatus::Available => {}
-        TerminalInteractiveStatus::NotAvailable(reason) => {
-            eprintln!("{}", reason.as_err_msg());
-            std::process::exit(1);
-        }
-    }
 
     // Create and run the multiplexer.
     let mux = match PTYMux::builder()
@@ -55,11 +49,7 @@ async fn main() -> miette::Result<()> {
         .build()
     {
         TuiAvailability::Available(mux) => mux,
-        TuiAvailability::NotAvailable(reason) => {
-            eprintln!("{}", reason.as_err_msg());
-            return Ok(());
-        }
-        TuiAvailability::Broken(e) => return Err(e),
+        it => return it.into_err(),
     };
 
     println!("PTY Mux OSC Demo");

@@ -108,7 +108,7 @@
 //!    first. Then run `cargo install r3bl-cmdr` to install this crate. Here are the
 //!    commands for Linux:
 //!
-//!    ```sh
+//!    ```bash
 //!    # Install Rust toolchain using rustup.
 //!    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 //!    # Install the r3bl-cmdr crate.
@@ -118,7 +118,7 @@
 //! 2. Build the binaries from the crate's source code. First clone this [repo](https://github.com/r3bl-org/r3bl-open-core/).
 //!    Then, run:
 //!
-//!    ```sh
+//!    ```bash
 //!    git clone https://github.com/r3bl-org/r3bl-open-core/ # clone the repo locally
 //!    cd r3bl-open-core       # navigate to the repo root
 //!    ./bootstrap.sh          # install all required tools

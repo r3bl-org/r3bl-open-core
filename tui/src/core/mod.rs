@@ -27,9 +27,7 @@ pub mod storage;
 pub mod term;
 
 // Re-export.
-pub use ansi::*;
 pub use color_wheel::*;
-pub use common::*;
 pub use coordinates::*;
 pub use decl_macros::*;
 pub use glyphs::*;
@@ -39,15 +37,25 @@ pub use log::*;
 pub use misc::*;
 pub use osc::*;
 pub use pty::*;
-pub use resilient_reactor_thread::*;
 pub use script::*;
 pub use stack_alloc_types::*;
 pub use storage::*;
-pub use term::*;
 pub use terminal_io::*;
 pub use test_fixtures::*;
 pub use tui_style::*;
 pub use tui_styled_text::*;
+// Needed for integration_tests module.
+#[allow(ambiguous_glob_reexports)]
+pub use resilient_reactor_thread::*;
+// Needed for integration_tests module.
+#[allow(ambiguous_glob_reexports)]
+pub use term::*;
+// Needed for integration_tests module.
+#[allow(ambiguous_glob_reexports)]
+pub use ansi::*;
+// Needed for integration_tests module.
+#[allow(ambiguous_glob_reexports)]
+pub use common::*;
 
 // Rustdoc search link fixes.
 

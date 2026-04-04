@@ -234,7 +234,7 @@
 //!
 //! ```
 //! # use r3bl_tui::readline_async::ReadlineAsyncContext;
-//! # use r3bl_tui::{fg_magenta, CliTextInline, ok, TuiAvailability};
+//! # use r3bl_tui::{fg_magenta, CliTextInline, ok, IntoErr, TuiAvailability};
 //! # pub async fn sample() -> Result<(), Box<dyn std::error::Error>> {
 //!     let prompt = {
 //!         let user = "naz";
@@ -245,8 +245,7 @@
 //!     };
 //!     let mut rl_ctx = match ReadlineAsyncContext::try_new(prompt, None).await {
 //!         TuiAvailability::Available(rl_ctx) => rl_ctx,
-//!         TuiAvailability::NotAvailable(_) => return Ok(()),
-//!         TuiAvailability::Broken(e) => return Err(e.into()),
+//!         it => return it.into_err()?,
 //!     };
 //!     ok!()
 //! # }
@@ -339,8 +338,14 @@ pub mod spinner_impl;
 pub use choose_api::*;
 pub use choose_impl::*;
 pub use readline_async_api::*;
-pub use readline_async_impl::*;
+// Needed for integration_tests module.
+#[allow(ambiguous_glob_reexports)]
 pub use spinner::*;
+// Needed for integration_tests module.
+#[allow(ambiguous_glob_reexports)]
+pub use readline_async_impl::*;
+// Needed for integration_tests module.
+#[allow(ambiguous_glob_reexports)]
 pub use spinner_impl::*;
 
 // r3bl-open-core crates.

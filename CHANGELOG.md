@@ -293,7 +293,7 @@ performance analysis tooling. Issue: <https://github.com/r3bl-org/r3bl-open-core
     highlighting (those that use file extension for this, such as RustRover).
   - Since all the excessive crates have been consolidated into one `r3bl_tui`, all the examples are
     now run using a single command:
-    ```sh
+    ```bash
     cd tui
     nu run.nu examples
     ```

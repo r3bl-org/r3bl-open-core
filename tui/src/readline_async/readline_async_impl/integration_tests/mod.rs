@@ -60,3 +60,5 @@ pub mod pty_alt_kill_test;
 pub mod pty_shared_writer_no_blank_line_test;
 #[cfg(any(all(unix, doc), test))]
 pub mod pty_multiline_output_test;
+#[cfg(any(all(unix, doc), test))]
+pub mod pty_readline_test;

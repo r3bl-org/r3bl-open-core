@@ -110,16 +110,12 @@ impl TerminalWindow {
     ///
     /// # Other entry points for interactive terminal apps
     ///
-    /// - [`ReadlineAsyncContext::try_new()`]: For simpler CLI-style line input.
-    /// - [`choose()`]: For interactive selection.
-    /// - [`PTYMuxBuilder::build()`]: For terminal multiplexing.
+    /// See [interactive terminal application entry points].
     ///
     /// [`App`]: crate::App
     /// [`check_is_terminal_interactive()`]: crate::check_is_terminal_interactive
-    /// [`choose()`]: crate::choose
     /// [`main_event_loop_impl()`]: crate::main_event_loop_impl()
-    /// [`PTYMuxBuilder::build()`]: crate::PTYMuxBuilder::build
-    /// [`ReadlineAsyncContext::try_new()`]: crate::ReadlineAsyncContext::try_new
+    /// [interactive terminal application entry points]: crate#interactive-terminal-application-entry-points
     pub fn main_event_loop<S, AS>(
         app: BoxedSafeApp<S, AS>,
         exit_keys: &[InputEvent],
@@ -130,6 +126,10 @@ impl TerminalWindow {
         AS: Debug + Default + Clone + Sync + Send + 'static,
     {
         match check_is_terminal_interactive() {
+            TerminalInteractiveStatus::NotAvailable(reason) => {
+                TuiAvailability::NotAvailable(reason)
+            }
+            
             TerminalInteractiveStatus::Available => {
                 let init = || -> miette::Result<MainEventLoopFuture<S, AS>> {
                     let initial_size = get_size()?;
@@ -150,9 +150,6 @@ impl TerminalWindow {
                     Ok(future) => TuiAvailability::Available(future),
                     Err(e) => TuiAvailability::Broken(e),
                 }
-            }
-            TerminalInteractiveStatus::NotAvailable(reason) => {
-                TuiAvailability::NotAvailable(reason)
             }
         }
     }

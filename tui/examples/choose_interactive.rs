@@ -1,38 +1,29 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use r3bl_tui::{CliTextInline, DefaultIoDevices, InlineVec, TerminalInteractiveStatus,
-               TuiAvailability, TuiColor, TuiStyle, check_is_terminal_interactive,
-               choose, cli_text_inline, cli_text_line, cli_text_lines, get_size, height,
+use r3bl_tui::{CliTextInline, DefaultIoDevices, InlineVec, TuiAvailabilityChooseExt,
+               TuiColor, TuiStyle, assert_terminal_is_interactive, choose,
+               cli_text_inline, cli_text_line, cli_text_lines, get_size, height,
                inline_vec,
                log::try_initialize_logging_global,
                new_style, ok,
                readline_async::{DEVELOPMENT_MODE, HowToChoose, style::StyleSheet},
                set_mimalloc_in_main, throws, tui_color, usize, width};
 
+const MULTI_LINE_HEADER: &str = "Multi line header";
+const SINGLE_LINE_HEADER: &str = "Single line header";
+const MULTIPLE_SELECT_SINGLE_ITEM: &str = "Multiple select, single item";
+const MULTIPLE_SELECT_13_ITEMS_VPH_5: &str =
+    "Multiple select, 13 items, viewport height = 5";
+const MULTIPLE_SELECT_2_ITEMS_VPH_5: &str =
+    "Multiple select, 2 items, viewport height = 5";
+const SINGLE_SELECT_13_ITEMS_VPH_5: &str = "Single select, 13 items, viewport height = 5";
+const SINGLE_SELECT_2_ITEMS_VPH_5: &str = "Single select, 2 items, viewport height = 5";
+
 #[tokio::main]
 #[allow(clippy::too_many_lines)]
 async fn main() -> miette::Result<()> {
-    const MULTI_LINE_HEADER: &str = "Multi line header";
-    const SINGLE_LINE_HEADER: &str = "Single line header";
-    const MULTIPLE_SELECT_SINGLE_ITEM: &str = "Multiple select, single item";
-    const MULTIPLE_SELECT_13_ITEMS_VPH_5: &str =
-        "Multiple select, 13 items, viewport height = 5";
-    const MULTIPLE_SELECT_2_ITEMS_VPH_5: &str =
-        "Multiple select, 2 items, viewport height = 5";
-    const SINGLE_SELECT_13_ITEMS_VPH_5: &str =
-        "Single select, 13 items, viewport height = 5";
-    const SINGLE_SELECT_2_ITEMS_VPH_5: &str =
-        "Single select, 2 items, viewport height = 5";
-
     set_mimalloc_in_main!();
-
-    match check_is_terminal_interactive() {
-        TerminalInteractiveStatus::Available => {}
-        TerminalInteractiveStatus::NotAvailable(reason) => {
-            eprintln!("{}", reason.as_err_msg());
-            std::process::exit(1);
-        }
-    }
+    assert_terminal_is_interactive();
 
     let size = get_size()?;
 
@@ -56,40 +47,31 @@ async fn main() -> miette::Result<()> {
         let hot_pink_style = StyleSheet::hot_pink_style();
 
         // Choose which example to run.
-        let mut default_io_devices = DefaultIoDevices::default();
-        let user_choice = match choose(
-            "Select which example to run",
-            &[
-                MULTI_LINE_HEADER,
-                SINGLE_LINE_HEADER,
-                MULTIPLE_SELECT_SINGLE_ITEM,
-                MULTIPLE_SELECT_13_ITEMS_VPH_5,
-                MULTIPLE_SELECT_2_ITEMS_VPH_5,
-                SINGLE_SELECT_13_ITEMS_VPH_5,
-                SINGLE_SELECT_2_ITEMS_VPH_5,
-            ],
-            Some(height(6)), /* height of the tuify component */
-            Some(width(0)),  /* width of the tuify component. 0 means it will use the
-                              * full terminal width */
-            HowToChoose::Single,
-            StyleSheet::default(),
-            default_io_devices.as_mut_tuple(),
-        ) {
-            TuiAvailability::Available(choice_future) => choice_future.await?,
-            TuiAvailability::NotAvailable(reason) => {
-                eprintln!("{}", reason.as_err_msg());
-                return Ok(());
-            }
-            TuiAvailability::Broken(e) => return Err(e),
+        let maybe_user_choice = {
+            let mut default_io_devices = DefaultIoDevices::default();
+            choose(
+                "Select which example to run",
+                &[
+                    MULTI_LINE_HEADER,
+                    SINGLE_LINE_HEADER,
+                    MULTIPLE_SELECT_SINGLE_ITEM,
+                    MULTIPLE_SELECT_13_ITEMS_VPH_5,
+                    MULTIPLE_SELECT_2_ITEMS_VPH_5,
+                    SINGLE_SELECT_13_ITEMS_VPH_5,
+                    SINGLE_SELECT_2_ITEMS_VPH_5,
+                ],
+                Some(height(6)), /* height of the tuify component */
+                Some(width(0)),  /* width of the tuify component. 0 means it will use the
+                                  * full terminal width */
+                HowToChoose::Single,
+                StyleSheet::default(),
+                default_io_devices.as_mut_tuple(),
+            )
+            .get_first_result()
+            .await?
         };
 
-        if user_choice.is_empty() {
-            println!("User did not select anything");
-            // Exit the program.
-            return Ok(());
-        }
-
-        match user_choice.first() {
+        match maybe_user_choice {
             Some(input_item) => {
                 if input_item == MULTI_LINE_HEADER {
                     multi_line_header().await?;
@@ -132,7 +114,11 @@ async fn main() -> miette::Result<()> {
                     println!("User did not select anything");
                 }
             }
-            None => println!("User did not select anything"),
+            None => {
+                println!("User did not select anything");
+                // Exit the program.
+                return ok!();
+            }
         }
 
         DEVELOPMENT_MODE.then(|| {
@@ -157,7 +143,7 @@ async fn multi_line_header() -> miette::Result<()> {
     instructions.push(line_5);
 
     let mut default_io_devices = DefaultIoDevices::default();
-    let user_choice = match choose(
+    let maybe_user_choice = choose(
         instructions,
         &[
             "item 1 of 13",
@@ -179,20 +165,15 @@ async fn multi_line_header() -> miette::Result<()> {
         HowToChoose::Multiple,
         StyleSheet::default(),
         default_io_devices.as_mut_tuple(),
-    ) {
-        TuiAvailability::Available(choice_future) => choice_future.await?,
-        TuiAvailability::NotAvailable(reason) => {
-            eprintln!("{}", reason.as_err_msg());
-            return Ok(());
-        }
-        TuiAvailability::Broken(e) => return Err(e),
-    };
+    )
+    .get_all_results()
+    .await?;
 
-    if user_choice.is_empty() {
+    let Some(user_choice) = maybe_user_choice else {
         println!("User did not select anything");
         // Exit the program.
-        return Ok(());
-    }
+        return ok!();
+    };
 
     println!("User selected: {user_choice:?}");
 
@@ -201,7 +182,7 @@ async fn multi_line_header() -> miette::Result<()> {
 
 async fn single_line_header(max_width_col_count: usize) -> miette::Result<()> {
     let mut default_io_devices = DefaultIoDevices::default();
-    let user_choice = match choose(
+    let maybe_user_choice = choose(
         "🦜 Please select one or more items. This is an example of a very long header text 🐧. You can pass emoji here 🐥 and text gets clipped off correctly 🐒, based on terminal size".to_string(),
         &[
             "item 1 of 13",
@@ -223,20 +204,15 @@ async fn single_line_header(max_width_col_count: usize) -> miette::Result<()> {
         HowToChoose::Multiple,
         StyleSheet::default(),
         default_io_devices.as_mut_tuple(),
-    ) {
-        TuiAvailability::Available(choice_future) => choice_future.await?,
-        TuiAvailability::NotAvailable(reason) => {
-            eprintln!("{}", reason.as_err_msg());
-            return Ok(());
-        }
-        TuiAvailability::Broken(e) => return Err(e),
-    };
+    )
+    .get_all_results()
+    .await?;
 
-    if user_choice.is_empty() {
+    let Some(user_choice) = maybe_user_choice else {
         println!("User did not select anything");
         // Exit the program.
-        return Ok(());
-    }
+        return ok!();
+    };
 
     println!("User selected: {user_choice:?}");
 
@@ -266,7 +242,7 @@ async fn multiple_select_single_item() -> miette::Result<()> {
     let list = inline_vec!["one element"];
 
     let mut default_io_devices = DefaultIoDevices::default();
-    let user_choice = match choose(
+    let maybe_user_choice = choose(
         instructions,
         list,
         Some(height(6)),
@@ -274,20 +250,15 @@ async fn multiple_select_single_item() -> miette::Result<()> {
         HowToChoose::Multiple,
         StyleSheet::default(),
         default_io_devices.as_mut_tuple(),
-    ) {
-        TuiAvailability::Available(choice_future) => choice_future.await?,
-        TuiAvailability::NotAvailable(reason) => {
-            eprintln!("{}", reason.as_err_msg());
-            return Ok(());
-        }
-        TuiAvailability::Broken(e) => return Err(e),
-    };
+    )
+    .get_all_results()
+    .await?;
 
-    if user_choice.is_empty() {
+    let Some(user_choice) = maybe_user_choice else {
         println!("User did not select anything");
         // Exit the program.
-        return Ok(());
-    }
+        return ok!();
+    };
 
     println!("User selected: {user_choice:?}");
 
@@ -311,7 +282,7 @@ async fn multiple_select_13_items_vph_5(
     instructions.push(inline_vec![header]);
 
     let mut default_io_devices = DefaultIoDevices::default();
-    let user_choice = match choose(
+    let maybe_user_choice = choose(
         instructions,
         &[
             "item 1 of 13",
@@ -333,20 +304,15 @@ async fn multiple_select_13_items_vph_5(
         HowToChoose::Multiple,
         style,
         default_io_devices.as_mut_tuple(),
-    ) {
-        TuiAvailability::Available(choice_future) => choice_future.await?,
-        TuiAvailability::NotAvailable(reason) => {
-            eprintln!("{}", reason.as_err_msg());
-            return Ok(());
-        }
-        TuiAvailability::Broken(e) => return Err(e),
-    };
+    )
+    .get_all_results()
+    .await?;
 
-    if user_choice.is_empty() {
+    let Some(user_choice) = maybe_user_choice else {
         println!("User did not select anything");
         // Exit the program.
-        return Ok(());
-    }
+        return ok!();
+    };
 
     println!("User selected: {user_choice:?}");
 
@@ -379,7 +345,7 @@ async fn multiple_select_2_items_vph_5(
     instructions.push(inline_vec![header]);
 
     let mut default_io_devices = DefaultIoDevices::default();
-    let user_choice = match choose(
+    let maybe_user_choice = choose(
         instructions,
         &["item 1 of 2", "item 2 of 2"],
         Some(height(max_height_row_count)),
@@ -387,20 +353,15 @@ async fn multiple_select_2_items_vph_5(
         HowToChoose::Multiple,
         style,
         default_io_devices.as_mut_tuple(),
-    ) {
-        TuiAvailability::Available(choice_future) => choice_future.await?,
-        TuiAvailability::NotAvailable(reason) => {
-            eprintln!("{}", reason.as_err_msg());
-            return Ok(());
-        }
-        TuiAvailability::Broken(e) => return Err(e),
-    };
+    )
+    .get_all_results()
+    .await?;
 
-    if user_choice.is_empty() {
+    let Some(user_choice) = maybe_user_choice else {
         println!("User did not select anything");
         // Exit the program.
-        return Ok(());
-    }
+        return ok!();
+    };
 
     println!("User selected: {user_choice:?}");
 
@@ -422,7 +383,7 @@ async fn single_select_13_items_vph_5(
     style: StyleSheet,
 ) -> miette::Result<()> {
     let mut default_io_devices = DefaultIoDevices::default();
-    let user_choice = match choose(
+    let maybe_user_choice = choose(
         "Single select",
         &[
             "item 1 of 13",
@@ -444,20 +405,15 @@ async fn single_select_13_items_vph_5(
         HowToChoose::Single,
         style,
         default_io_devices.as_mut_tuple(),
-    ) {
-        TuiAvailability::Available(choice_future) => choice_future.await?,
-        TuiAvailability::NotAvailable(reason) => {
-            eprintln!("{}", reason.as_err_msg());
-            return Ok(());
-        }
-        TuiAvailability::Broken(e) => return Err(e),
-    };
+    )
+    .get_first_result()
+    .await?;
 
-    if user_choice.is_empty() {
+    let Some(user_choice) = maybe_user_choice else {
         println!("User did not select anything");
         // Exit the program.
-        return Ok(());
-    }
+        return ok!();
+    };
 
     println!("User selected: {user_choice:?}");
 
@@ -489,7 +445,7 @@ async fn single_select_2_items_vph_5(
     instructions.push(inline_vec![header]);
 
     let mut default_io_devices = DefaultIoDevices::default();
-    let user_choice = match choose(
+    let maybe_user_choice = choose(
         instructions,
         &["item 1 of 2", "item 2 of 2"],
         Some(height(max_height_row_count)),
@@ -497,20 +453,15 @@ async fn single_select_2_items_vph_5(
         HowToChoose::Single,
         style,
         default_io_devices.as_mut_tuple(),
-    ) {
-        TuiAvailability::Available(choice_future) => choice_future.await?,
-        TuiAvailability::NotAvailable(reason) => {
-            eprintln!("{}", reason.as_err_msg());
-            return Ok(());
-        }
-        TuiAvailability::Broken(e) => return Err(e),
-    };
+    )
+    .get_first_result()
+    .await?;
 
-    if user_choice.is_empty() {
+    let Some(user_choice) = maybe_user_choice else {
         println!("User did not select anything");
         // Exit the program.
-        return Ok(());
-    }
+        return ok!();
+    };
 
     println!("User selected: {user_choice:?}");
 

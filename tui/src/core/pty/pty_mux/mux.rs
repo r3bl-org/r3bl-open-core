@@ -114,6 +114,10 @@ impl PTYMuxBuilder {
         }
 
         match check_is_terminal_interactive() {
+            TerminalInteractiveStatus::NotAvailable(reason) => {
+                TuiAvailability::NotAvailable(reason)
+            }
+
             TerminalInteractiveStatus::Available => {
                 let init = || -> miette::Result<PTYMux> {
                     let terminal_size = match self.terminal_size {
@@ -148,9 +152,6 @@ impl PTYMuxBuilder {
                     Err(e) => TuiAvailability::Broken(e),
                 }
             }
-            TerminalInteractiveStatus::NotAvailable(reason) => {
-                TuiAvailability::NotAvailable(reason)
-            }
         }
     }
 }
@@ -184,14 +185,12 @@ impl PTYMux {
     ///
     /// # Other entry points for interactive terminal apps
     ///
-    /// - [`TerminalWindow::main_event_loop()`]: For full TUI apps with complex layouts.
-    /// - [`ReadlineAsyncContext::try_new()`]: For simpler CLI-style line input.
+    /// See [interactive terminal application entry points].
     ///
     /// [`emit_stderr_redirection_disclaimer()`]: crate::emit_stderr_redirection_disclaimer
     /// [`OSC`]: crate::OscEvent
-    /// [`ReadlineAsyncContext::try_new()`]: crate::ReadlineAsyncContext::try_new
     /// [`stderr`]: std::io::stderr
-    /// [`TerminalWindow::main_event_loop()`]: crate::tui::TerminalWindow::main_event_loop
+    /// [interactive terminal application entry points]: crate#interactive-terminal-application-entry-points
     pub async fn run(mut self) -> miette::Result<()> {
         // Start raw mode using existing RawMode.
         RawMode::start(

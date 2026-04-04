@@ -28,9 +28,10 @@
 //!
 //! ## Navigation
 //! - **See complete architecture**: [`terminal_lib_backends` mod docs] (source of truth)
-//! - **Previous stage**: [`offscreen_buffer::paint_impl` mod docs] (Stage 4: Backend Converter - shared
-//!   by both Crossterm and `DirectToAnsi`)
-//! - **Alternative Stage 5**: [`crossterm_backend::crossterm_paint_render_op_impl` mod docs] (Crossterm-based executor)
+//! - **Previous stage**: [`offscreen_buffer::paint_impl` mod docs] (Stage 4: Backend
+//!   Converter - shared by both Crossterm and `DirectToAnsi`)
+//! - **Alternative Stage 5**: [`crossterm_backend::crossterm_paint_render_op_impl` mod
+//!   docs] (Crossterm-based executor)
 //! - **Next stage**: Terminal output (Stage 6)
 //!
 //! <div class="warning">
@@ -44,12 +45,11 @@
 //!
 //! [`DirectToAnsi`] is the **Stage 5 Backend Executor** that translates render operations
 //! into actual terminal control sequences. Unlike Crossterm (which uses FFI bindings to
-//! `libc` on UNIX and `winapi` on Windows), [`DirectToAnsi`] generates pure [`ANSI`] escape
-//! sequences in Rust.
+//! `libc` on UNIX and `winapi` on Windows), [`DirectToAnsi`] generates pure [`ANSI`]
+//! escape sequences in Rust.
 //!
-//! **Input**: [`RenderOpOutputVec`] from the Backend Converter
-//! **Output**: [`ANSI`] escape sequences written to terminal
-//! **Dependencies**: None (pure Rust)
+//! **Input**: [`RenderOpOutputVec`] from the Backend Converter **Output**: [`ANSI`]
+//! escape sequences written to terminal **Dependencies**: None (pure Rust)
 //!
 //! # Architecture
 //!
@@ -57,7 +57,8 @@
 //! 1. [`AnsiSequenceGenerator`]: Generates raw [`ANSI`] escape sequence bytes
 //! 2. [`RenderOpPaintImplDirectToAnsi`]: Implements [`RenderOpPaint`] trait for executing
 //!    render operations: [`RenderOpOutput`] and [`RenderOpCommon`]
-//! 3. [`PixelCharRenderer`]: Converts styled text to [`ANSI`] with smart attribute diffing
+//! 3. [`PixelCharRenderer`]: Converts styled text to [`ANSI`] with smart attribute
+//!    diffing
 //! 4. [`RenderToAnsi`]: Trait for rendering offscreen buffers to [`ANSI`]
 //!
 //! # Platform Support
@@ -69,9 +70,9 @@
 //!
 //! The **output** side works on all platforms (pure [`ANSI`] sequence generation).
 //!
-//! The **input** side is Linux-only due to macOS [`kqueue`] limitations with [`PTY`]/[`tty`]
-//! polling. See the [`input`] module documentation (Linux only) for details and potential
-//! future macOS support via [`filedescriptor::poll()`].
+//! The **input** side is Linux-only due to macOS [`kqueue`] limitations with
+//! [`PTY`]/[`tty`] polling. See the [`input`] module documentation (Linux only) for
+//! details and potential future macOS support via [`filedescriptor::poll()`].
 //!
 //! # Testing Strategy
 //!
@@ -79,19 +80,25 @@
 //!
 //! - **Output**: [`output::integration_tests`] — [`StdoutMock`]-based [`ANSI`] sequence
 //!   verification (cross-platform)
-//! - **Input**: [`input::integration_tests_docs`] — documentation module pointing to [`PTY`]-based
-//!   parser tests in [`vt_100_terminal_input_parser::integration_tests`] (Linux-only).
+//! - **Input**: [`input::integration_tests_stub`] — documentation module pointing to
+//!   [`PTY`]-based parser tests in [`vt_100_terminal_input_parser::integration_tests`]
+//!   (Linux-only).
 //!
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`AnsiSequenceGenerator`]: crate::AnsiSequenceGenerator
-//! [`compositor_render_ops_to_ofs_buf` mod docs]: mod@crate::compositor_render_ops_to_ofs_buf
-//! [`crossterm_backend::crossterm_paint_render_op_impl` mod docs]: mod@crate::crossterm_backend::crossterm_paint_render_op_impl
+//! [`compositor_render_ops_to_ofs_buf` mod docs]:
+//!     mod@crate::compositor_render_ops_to_ofs_buf
+//! [`crossterm_backend::crossterm_paint_render_op_impl` mod docs]:
+//!     mod@crate::crossterm_backend::crossterm_paint_render_op_impl
 //! [`DirectToAnsi`]: self
-//! [`filedescriptor::poll()`]: https://docs.rs/filedescriptor/latest/filedescriptor/fn.poll.html
-//! [`input::integration_tests_docs`]: mod@crate::terminal_lib_backends::direct_to_ansi::input::integration_tests_docs
+//! [`filedescriptor::poll()`]:
+//!     https://docs.rs/filedescriptor/latest/filedescriptor/fn.poll.html
+//! [`input::integration_tests_stub`]:
+//!     mod@crate::terminal_lib_backends::direct_to_ansi::input::integration_tests_stub
 //! [`kqueue`]: https://man.freebsd.org/cgi/man.cgi?query=kqueue&sektion=2
 //! [`offscreen_buffer::paint_impl` mod docs]: mod@crate::offscreen_buffer::paint_impl
-//! [`output::integration_tests`]: mod@crate::terminal_lib_backends::direct_to_ansi::output::integration_tests
+//! [`output::integration_tests`]:
+//!     mod@crate::terminal_lib_backends::direct_to_ansi::output::integration_tests
 //! [`PixelCharRenderer`]: crate::PixelCharRenderer
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`render_op_ir` mod docs]: mod@crate::render_op::render_op_ir
@@ -106,8 +113,10 @@
 //! [`StdoutMock`]: crate::StdoutMock
 //! [`terminal_lib_backends` mod docs]: mod@crate::tui::terminal_lib_backends
 //! [`tty`]: https://man7.org/linux/man-pages/man4/tty.4.html
-//! [`vt_100_terminal_input_parser::integration_tests`]: mod@crate::vt_100_terminal_input_parser::integration_tests
-//! [rendering pipeline overview]: mod@crate::terminal_lib_backends#rendering-pipeline-architecture
+//! [`vt_100_terminal_input_parser::integration_tests`]:
+//!     mod@crate::vt_100_terminal_input_parser::integration_tests
+//! [rendering pipeline overview]:
+//!     mod@crate::terminal_lib_backends#rendering-pipeline-architecture
 
 #![rustfmt::skip]
 

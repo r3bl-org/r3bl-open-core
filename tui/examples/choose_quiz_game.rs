@@ -1,8 +1,8 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use r3bl_tui::{DefaultIoDevices, ItemsOwned, TerminalInteractiveStatus, TuiAvailability,
-               TuiColor, check_is_terminal_interactive, choose, cli_text_inline,
-               get_size, height, new_style,
+use r3bl_tui::{DefaultIoDevices, InlineString, TuiAvailabilityChooseExt,
+               TuiColor, assert_terminal_is_interactive, choose,
+               cli_text_inline, get_size, height, new_style,
                readline_async::{HowToChoose, StyleSheet},
                set_mimalloc_in_main, usize, width};
 use serde::{Deserialize, Serialize};
@@ -57,14 +57,7 @@ struct QuestionData {
 #[tokio::main]
 pub async fn main() -> miette::Result<()> {
     set_mimalloc_in_main!();
-
-    match check_is_terminal_interactive() {
-        TerminalInteractiveStatus::Available => {}
-        TerminalInteractiveStatus::NotAvailable(reason) => {
-            eprintln!("{}", reason.as_err_msg());
-            std::process::exit(1);
-        }
-    }
+    assert_terminal_is_interactive();
 
     let size = get_size()?;
 
@@ -87,7 +80,7 @@ pub async fn main() -> miette::Result<()> {
     for question_data in &all_questions_and_answers {
         let question = question_data.question.clone();
         let options = question_data.options.clone();
-        let user_choice = match choose(
+        let maybe_user_choice = choose(
             question,
             options,
             Some(height(max_height_row_count)),
@@ -95,20 +88,15 @@ pub async fn main() -> miette::Result<()> {
             HowToChoose::Single,
             StyleSheet::default(),
             io_devices.as_mut_tuple(),
-        ) {
-            TuiAvailability::Available(choice_future) => choice_future.await?,
-            TuiAvailability::NotAvailable(reason) => {
-                eprintln!("{}", reason.as_err_msg());
-                break;
-            }
-            TuiAvailability::Broken(e) => return Err(e),
-        };
+        )
+        .get_first_result()
+        .await?;
 
-        if user_choice.is_empty() {
+        let Some(user_choice) = maybe_user_choice else {
             println!("You did not select anything");
             // Exit the game.
             break;
-        }
+        };
 
         check_user_input_and_display_result(
             &user_choice,
@@ -152,21 +140,13 @@ impl Display for Answer {
     }
 }
 
-fn check_answer(guess: &QuestionData, maybe_user_input: Option<&ItemsOwned>) -> Answer {
-    // If the maybe_user_input has 1 item then proceed. Otherwise return incorrect.
+fn check_answer(guess: &QuestionData, maybe_user_input: Option<&InlineString>) -> Answer {
     match maybe_user_input {
-        Some(user_input) => {
-            let maybe_user_answer = user_input.first();
-
-            match maybe_user_answer {
-                Some(user_answer) => {
-                    if *user_answer == guess.correct_answer {
-                        Answer::Correct
-                    } else {
-                        Answer::Incorrect
-                    }
-                }
-                None => Answer::Incorrect,
+        Some(user_answer) => {
+            if *user_answer == guess.correct_answer {
+                Answer::Correct
+            } else {
+                Answer::Incorrect
             }
         }
         None => Answer::Incorrect,
@@ -229,7 +209,7 @@ fn display_footer(
 }
 
 fn check_user_input_and_display_result(
-    user_input: &ItemsOwned,
+    user_input: &InlineString,
     question_data: &QuestionData,
     correct_answer_color: TuiColor,
     incorrect_answer_color: TuiColor,
@@ -258,10 +238,7 @@ fn check_user_input_and_display_result(
         .unwrap()
         + 1;
 
-    let user_input_str = match user_input.first() {
-        Some(input) => input,
-        None => "No answer",
-    };
+    let user_input_str = user_input.as_str();
 
     println!(
         "{a} {b} {c}",
@@ -312,8 +289,8 @@ mod tests {
             correct_answer: "Paris".to_string(),
         };
 
-        let correct_answer = Some(ItemsOwned::from(vec!["Paris".to_string()]));
-        let result = check_answer(&guess, correct_answer.as_ref());
+        let correct_answer = InlineString::from("Paris");
+        let result = check_answer(&guess, Some(&correct_answer));
         assert_eq!(result, Answer::Correct);
     }
 
@@ -329,8 +306,8 @@ mod tests {
             correct_answer: "Paris".to_string(),
         };
 
-        let incorrect_answer = Some(ItemsOwned::from(vec!["London".to_string()]));
-        let result = check_answer(&guess, incorrect_answer.as_ref());
+        let incorrect_answer = InlineString::from("London");
+        let result = check_answer(&guess, Some(&incorrect_answer));
         assert_eq!(result, Answer::Incorrect);
     }
 }

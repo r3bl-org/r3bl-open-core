@@ -47,7 +47,7 @@
 //! **Validation tests** require real shell environments and user actions, verifying
 //! edge cases that cannot be simulated with [`PTY`] pairs.
 //!
-//! [`integration_tests`]: mod@super::raw_mode_integration_tests
+//! [`integration_tests`]: mod@super::integration_tests
 //! [`portable_pty`]: https://docs.rs/portable-pty
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 

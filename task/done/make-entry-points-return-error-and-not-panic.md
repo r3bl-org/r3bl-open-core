@@ -39,7 +39,7 @@ application startup. We use a **Bifurcated Internalized Check** pattern.
     terminal state.
     - `miette::bail!`: Used **internally** within implementations to return early with an
     error.
-    - `as_err()`: The **public extension method** provided by `IntoErr`. It converts a
+    - `into_err()`: The **public extension method** provided by `IntoErr`. It converts a
     non-success state (`NotAvailable` or `Broken`) into a `miette::Result<T>`.
 
     #### Proposed Rust Definitions
@@ -48,16 +48,16 @@ application startup. We use a **Bifurcated Internalized Check** pattern.
     /// Trait to convert an error-like type into a [`miette::Result`].
     /// Defined in `tui/src/core/common/common_result_and_error.rs`.
     pub trait IntoErr {
-    fn as_err<T>(self) -> miette::Result<T>;
+    fn into_err<T>(self) -> miette::Result<T>;
     }
 
     /// Implementations in `tui/src/core/term/term_api.rs`.
     impl<T> IntoErr for TuiAvailability<T> {
-    fn as_err<U>(self) -> miette::Result<U> {
+    fn into_err<U>(self) -> miette::Result<U> {
         match self {
-            Self::Available(_) => unreachable!("logic error: as_err() called on Available"),
-            Self::NotAvailable(reason) => reason.as_err(),
-            Self::Broken(report) => report.as_err(),
+            Self::Available(_) => unreachable!("logic error: into_err() called on Available"),
+            Self::NotAvailable(reason) => reason.into_err(),
+            Self::Broken(report) => report.into_err(),
         }
     }
     }
@@ -68,7 +68,7 @@ application startup. We use a **Bifurcated Internalized Check** pattern.
     ```rust
     match availability {
         TuiAvailability::Available(res) => res, // If it's Available, we stop here.
-        it => return it.as_err(),               // 'it' is GUARANTEED to NOT be Available.
+        it => return it.into_err(),               // 'it' is GUARANTEED to NOT be Available.
     }
     ```
     Because the first arm "catches" the `Available` variant, the code in the second
@@ -85,9 +85,9 @@ application startup. We use a **Bifurcated Internalized Check** pattern.
     **Summary of Benefits:**
     - **Conciseness**: You go from 3 arms to 2 arms at every call site.
     - **Precision**: Unlike a generic `.unwrap()` or `.into_result()`, calling
-      `.as_err()` explicitly signals your intent: "I know this isn't the success
+      `.into_err()` explicitly signals your intent: "I know this isn't the success
       case, so turn whatever error state it has into a `miette::Result`."
-    - **Catch-all Binding**: The `it => return it.as_err()` syntax binds the **entire
+    - **Catch-all Binding**: The `it => return it.into_err()` syntax binds the **entire
       enum** to the variable `it`, allowing the trait method to handle the internal
       delegation. This is one of the most powerful features of Rust's `match`
       expressions:
@@ -96,7 +96,7 @@ application startup. We use a **Bifurcated Internalized Check** pattern.
       2. **The Catch-All**: The second arm `it` is a variable pattern. Since it's
          the second arm, it only "sees" values that the first arm didn't catch.
       3. **The Trait**: Because you've implemented `IntoErr` for the enum itself,
-         you can call `.as_err()` on that variable.
+         you can call `.into_err()` on that variable.
 
     - **Scope**: This refactor affects ~60 call sites across the workspace, including
 
@@ -241,7 +241,7 @@ availability and size checks are internalized.
 ```rust
 match TerminalWindow::main_event_loop(app, exit_keys, state) {
     TuiAvailability::Available(future) => future.await?,
-    it => return it.as_err(),
+    it => return it.into_err(),
 }
 ```
 
@@ -251,7 +251,7 @@ match ReadlineAsyncContext::try_new(Some("> "), None).await {
     TuiAvailability::Available(mut rl_ctx) => {
         let line = rl_ctx.read_line().await?;
     }
-    it => return it.as_err(),
+    it => return it.into_err(),
 }
 ```
 
@@ -274,7 +274,7 @@ match PTYMux::builder()
     .build()
 {
     TuiAvailability::Available(mux) => mux.run().await?,
-    it => return it.as_err(),
+    it => return it.into_err(),
 }
 
 // Override: caller provides explicit size
@@ -284,7 +284,7 @@ match PTYMux::builder()
     .build()
 {
     TuiAvailability::Available(mux) => mux.run().await?,
-    it => return it.as_err(),
+    it => return it.into_err(),
 }
 ```
 
@@ -295,7 +295,7 @@ match choose(header, options, ..., io) {
         let items = future.await?;
         // ... use items ...
     }
-    it => return it.as_err(),
+    it => return it.into_err(),
 }
 ```
 
@@ -336,19 +336,19 @@ match choose(header, options, ..., io) {
 
 ### Phase 2: Update Call Sites
 
-- [ ] Update `cmdr` (analytics_client, edi, giti) to remove manual pre-checks and `Size`
+- [x] Update `cmdr` (analytics_client, edi, giti) to remove manual pre-checks and `Size`
       passing. Use the new 2-arm match pattern.
-- [ ] Update all `tui/examples` to reflect the new entry point signatures and use the new
+- [x] Update all `tui/examples` to reflect the new entry point signatures and use the new
       2-arm match pattern.
-- [ ] Update documentation examples to reflect the "one call" pattern and use the new
+- [x] Update documentation examples to reflect the "one call" pattern and use the new
       2-arm match pattern.
 
 ### Phase 3: Final Cleanup & Migration
 
-- [ ] For callers of entry points, verify `get_size()` is not called by callers directly,
+- [x] For callers of entry points, verify `get_size()` is not called by callers directly,
       since it should be called by each entry point internally.
-- [ ] Verify `check_is_terminal_interactive()` is infallible (no `get_size()` call).
-- [ ] Run `./check.fish --clippy` and `./check.fish --test`.
+- [x] Verify `check_is_terminal_interactive()` is infallible (no `get_size()` call).
+- [x] Run `./check.fish --clippy` and `./check.fish --test`.
 
 #### 3.1: Migrate mock-based tests to PTY integration tests
 
@@ -359,13 +359,13 @@ to `generate_pty_test!` so they run in a real PTY with real I/O.
 Tests that use mocks for legitimate reasons (capturing render output, testing pure
 state logic) remain as unit tests.
 
-- [ ] **`Spinner` tests** (`readline_async/spinner.rs`):
+- [x] **`Spinner` tests** (`readline_async/spinner.rs`):
   - `test_spinner_color`
   - `test_spinner_no_color`
   - `test_spinner_message_update`
-- [ ] **`readline()` tests** (`readline_async/readline_async_impl/readline.rs`):
+- [x] **`readline()` tests** (`readline_async/readline_async_impl/readline.rs`):
   - `test_readline`
   - `test_pause_resume`
   - `test_pause_resume_with_output`
-- [ ] **`main_event_loop` test** (`tui/terminal_window/main_event_loop.rs`):
+- [x] **`main_event_loop` test** (`tui/terminal_window/main_event_loop.rs`):
   - `test_main_event_loop_impl`

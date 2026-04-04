@@ -46,9 +46,8 @@
 
 use r3bl_tui::{AnsiSequenceGenerator, InputDevice, InputEvent, Key, KeyPress, KeyState,
                ModifierKeysMask, MouseInput, MouseInputKind, OutputDevice, Pos, RawMode,
-               RowIndex, TermCol, TermRow, TerminalInteractiveStatus,
-               check_is_terminal_interactive, col, get_size, lock_output_device_as_mut,
-               row, set_mimalloc_in_main};
+               RowIndex, TermCol, TermRow, assert_terminal_is_interactive, col,
+               get_size, lock_output_device_as_mut, row, set_mimalloc_in_main};
 use std::collections::VecDeque;
 
 /// Helper: Clear screen and position cursor at home (0,0).
@@ -220,18 +219,10 @@ impl MouseInspector {
 #[allow(clippy::needless_return)]
 async fn main() -> miette::Result<()> {
     set_mimalloc_in_main!();
+    assert_terminal_is_interactive();
 
     // Setup terminal
-    match check_is_terminal_interactive() {
-        TerminalInteractiveStatus::Available => {}
-        TerminalInteractiveStatus::NotAvailable(reason) => {
-            eprintln!("{}", reason.as_err_msg());
-            std::process::exit(1);
-        }
-    }
-
     let terminal_size = get_size()?;
-
     let mut output_device = OutputDevice::new_stdout();
     let mut input_device = InputDevice::default();
 

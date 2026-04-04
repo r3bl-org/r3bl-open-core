@@ -11,6 +11,10 @@ pub mod shared_global_data;
 pub mod terminal_window_api;
 pub mod terminal_window_type_aliases;
 
+// Integration tests (Linux-only PTY tests).
+#[cfg(any(all(unix, doc), all(target_os = "linux", test)))]
+pub mod integration_tests;
+
 // Re-export.
 pub use app::*;
 pub use component::*;

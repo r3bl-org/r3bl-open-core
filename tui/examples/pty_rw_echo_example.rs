@@ -5,8 +5,7 @@
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 
 use r3bl_tui::{AnsiSequenceGenerator, InputEvent, Key, KeyPress, KeyState,
-               ModifierKeysMask, RawMode, TerminalInteractiveStatus,
-               check_is_terminal_interactive, col,
+               ModifierKeysMask, RawMode, assert_terminal_is_interactive, col,
                core::{get_size,
                       pty::{ControlSequence, CursorKeyMode, DefaultPtySessionConfig,
                             PtyInputEvent, PtyOutputEvent, PtySessionBuilder,
@@ -19,6 +18,7 @@ use std::io::Write;
 #[tokio::main]
 async fn main() -> miette::Result<()> {
     set_mimalloc_in_main!();
+    assert_terminal_is_interactive();
 
     // Initialize logging.
     try_initialize_logging_global(tracing_core::LevelFilter::DEBUG).ok();
@@ -27,14 +27,6 @@ async fn main() -> miette::Result<()> {
     println!("📋 Running 'cat' - it will echo whatever you type");
     println!("⌨️  Type anything, Ctrl+Q to quit");
     println!();
-
-    match check_is_terminal_interactive() {
-        TerminalInteractiveStatus::Available => {}
-        TerminalInteractiveStatus::NotAvailable(reason) => {
-            eprintln!("{}", reason.as_err_msg());
-            std::process::exit(1);
-        }
-    }
 
     let terminal_size = get_size()?;
 

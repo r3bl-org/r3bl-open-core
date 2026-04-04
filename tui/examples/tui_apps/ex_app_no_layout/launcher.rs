@@ -1,7 +1,8 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::{AppMain, State};
-use r3bl_tui::{CommonResult, InputEvent, TerminalWindow, TuiAvailability, key_press, ok};
+use r3bl_tui::{CommonResult, InputEvent, IntoErr, TerminalWindow,
+               TuiAvailability, key_press, ok};
 
 pub async fn run_app() -> CommonResult<()> {
     let app = AppMain::new_boxed();
@@ -11,10 +12,7 @@ pub async fn run_app() -> CommonResult<()> {
         TuiAvailability::Available(future) => {
             future.await?;
         }
-        TuiAvailability::NotAvailable(reason) => {
-            eprintln!("{}", reason.as_err_msg());
-        }
-        TuiAvailability::Broken(e) => return Err(e),
+        it => return it.into_err(),
     }
 
     ok!()

@@ -10,7 +10,7 @@
 
 use super::constants::{DEFAULT_WIDTH, ERR_MSG_BOTH_NOT_INTERACTIVE,
                        ERR_MSG_STDIN_NOT_INTERACTIVE, ERR_MSG_STDOUT_NOT_INTERACTIVE};
-use crate::{AtomicU8Ext as _, ColWidth, Size,
+use crate::{AtomicU8Ext as _, ColWidth, IntoErr, Size,
             TTYResult::{IsInteractive, IsNotInteractive},
             TtyStatus, height, is_tty_stderr, is_tty_stdin, is_tty_stdout, width};
 use miette::IntoDiagnostic;
@@ -31,6 +31,18 @@ pub enum TuiAvailability<T> {
     Available(T),
     NotAvailable(TerminalNotInteractiveReason),
     Broken(miette::Report),
+}
+
+impl<T> IntoErr for TuiAvailability<T> {
+    fn into_err<U>(self) -> miette::Result<U> {
+        match self {
+            Self::Available(_) => {
+                unreachable!("logic error: into_err() called on Available")
+            }
+            Self::NotAvailable(reason) => reason.into_err(),
+            Self::Broken(report) => report.into_err(),
+        }
+    }
 }
 
 /// Represents the interactivity status of the terminal. This does not represent any
@@ -64,6 +76,28 @@ pub fn check_is_terminal_interactive() -> TerminalInteractiveStatus {
     }
 }
 
+/// This is a convenience function for interactive terminal applications to ensure that
+/// the terminal is indeed interactive. It checks both [`stdin`] and [`stdout`] and prints
+/// the appropriate error message to [`stderr`] before [exiting with code `1`].
+///
+/// # Panics
+///
+/// Exits the process with an error message if the terminal is not interactive.
+///
+/// [`stderr`]: std::io::stderr
+/// [`stdin`]: std::io::stdin
+/// [`stdout`]: std::io::stdout
+/// [exiting with code `1`]: std::process::exit(1)
+pub fn assert_terminal_is_interactive() {
+    match check_is_terminal_interactive() {
+        TerminalInteractiveStatus::Available => {}
+        TerminalInteractiveStatus::NotAvailable(reason) => {
+            eprintln!("{}", reason.as_err_msg());
+            std::process::exit(1);
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TerminalNotInteractiveReason {
     StdinNotInteractive,
@@ -80,18 +114,10 @@ impl TerminalNotInteractiveReason {
             Self::BothStdinAndStdoutNotInteractive => ERR_MSG_BOTH_NOT_INTERACTIVE,
         }
     }
+}
 
-    /// Returns an [`Err`] containing this reason's error message from
-    /// [`as_err_msg()`].
-    ///
-    /// # Errors
-    ///
-    /// Always returns [`Err`] with the reason's message.
-    ///
-    /// [`as_err_msg()`]: Self::as_err_msg
-    pub fn as_err<T>(&self) -> miette::Result<T> {
-        miette::bail!("{}", self.as_err_msg())
-    }
+impl IntoErr for TerminalNotInteractiveReason {
+    fn into_err<T>(self) -> miette::Result<T> { miette::bail!("{}", self.as_err_msg()) }
 }
 
 /// Tracks whether [`emit_stderr_redirection_disclaimer()`] has already run.

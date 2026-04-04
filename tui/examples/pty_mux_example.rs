@@ -49,13 +49,14 @@
 //!
 //! [`OSC`]: crate::osc_codes::OscSequence
 
-use r3bl_tui::{TerminalInteractiveStatus, TuiAvailability,
-               check_is_terminal_interactive, core::pty_mux::PTYMux,
-               set_mimalloc_in_main, try_initialize_logging_global};
+use r3bl_tui::{IntoErr, TuiAvailability, assert_terminal_is_interactive,
+               core::pty_mux::PTYMux, set_mimalloc_in_main,
+               try_initialize_logging_global};
 
 #[tokio::main]
 async fn main() -> miette::Result<()> {
     set_mimalloc_in_main!();
+    assert_terminal_is_interactive();
 
     // Initialize logging to log.txt.
     try_initialize_logging_global(tracing_core::LevelFilter::DEBUG).ok();
@@ -80,15 +81,6 @@ async fn main() -> miette::Result<()> {
     println!("📝 Debug output will be written to log.txt");
     println!();
 
-    // Check terminal status.
-    match check_is_terminal_interactive() {
-        TerminalInteractiveStatus::Available => {}
-        TerminalInteractiveStatus::NotAvailable(reason) => {
-            eprintln!("{}", reason.as_err_msg());
-            std::process::exit(1);
-        }
-    }
-
     // Mixed process types demonstrating universal compatibility:
     // - claude: AI assistant (existing TUI app)
     // - TUI apps: less, htop, gitui (proper TUI applications)
@@ -102,11 +94,7 @@ async fn main() -> miette::Result<()> {
         .build()
     {
         TuiAvailability::Available(mux) => mux,
-        TuiAvailability::NotAvailable(reason) => {
-            eprintln!("{}", reason.as_err_msg());
-            return Ok(());
-        }
-        TuiAvailability::Broken(e) => return Err(e),
+        it => return it.into_err(),
     };
 
     println!("▶️  Starting multiplexer event loop...");

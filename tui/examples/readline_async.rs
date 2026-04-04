@@ -4,10 +4,10 @@
 // cspell:words nextest
 
 use miette::{IntoDiagnostic, miette};
-use r3bl_tui::{ChannelCapacity, InlineVec, LineStateControlSignal, OutputDevice,
-               SendRawTerminal, SharedWriter, SpinnerStyle, TerminalInteractiveStatus,
-               TuiAvailability, bold, check_is_terminal_interactive, fg_color, fg_red,
-               fg_slate_gray, inline_string,
+use r3bl_tui::{ChannelCapacity, InlineVec, IntoErr, LineStateControlSignal,
+               OutputDevice, SendRawTerminal, SharedWriter, SpinnerStyle,
+               TuiAvailability, assert_terminal_is_interactive, bold, fg_color,
+               fg_red, fg_slate_gray, inline_string,
                log::{DisplayPreference, try_initialize_logging_global},
                ok,
                readline_async::{Readline, ReadlineAsyncContext, ReadlineEvent, Spinner},
@@ -120,14 +120,7 @@ impl Default for State {
 #[allow(clippy::needless_return)]
 async fn main() -> miette::Result<()> {
     set_mimalloc_in_main!();
-
-    match check_is_terminal_interactive() {
-        TerminalInteractiveStatus::Available => {}
-        TerminalInteractiveStatus::NotAvailable(reason) => {
-            eprintln!("{}", reason.as_err_msg());
-            std::process::exit(1);
-        }
-    }
+    assert_terminal_is_interactive();
 
     let prompt = {
         let prompt_seg_1 = fg_slate_gray("╭>╮").bg_moonlight_blue();
@@ -137,11 +130,7 @@ async fn main() -> miette::Result<()> {
 
     let mut rl_ctx = match ReadlineAsyncContext::try_new(Some(prompt), None).await {
         TuiAvailability::Available(rl_ctx) => rl_ctx,
-        TuiAvailability::NotAvailable(reason) => {
-            eprintln!("{}", reason.as_err_msg());
-            return Ok(());
-        }
-        TuiAvailability::Broken(e) => return Err(e),
+        it => return it.into_err(),
     };
 
     // Pre-populate the readline's history with some entries.

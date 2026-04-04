@@ -7,8 +7,9 @@ use crate::{AnalyticsAction, common,
                    ui_str::{self}},
             report_analytics};
 use r3bl_tui::{BranchExists, CliTextInline, CommandRunResult, CommonResult,
-               DefaultIoDevices, InlineString, InlineVec, ItemsOwned, TuiAvailability,
-               choose, cli_text_inline, cli_text_line, height, inline_vec,
+               DefaultIoDevices, InlineString, InlineVec, ItemsOwned,
+               TuiAvailabilityChooseExt, choose, cli_text_inline, cli_text_line, height,
+               inline_vec,
                readline_async::{HowToChoose, StyleSheet},
                try_delete_branches, try_get_local_branches};
 use smallvec::smallvec;
@@ -78,17 +79,17 @@ pub async fn handle_branch_delete_command(
     if let Ok((_, branch_info)) = res
         && !branch_info.other_branches.is_empty()
     {
-        let branches =
+        let maybe_branches =
             user_interaction::select_branches_to_delete(branch_info.other_branches)
                 .await?;
 
         // If the user didn't select any branches, we don't need to do anything.
-        if branches.is_empty() {
+        let Some(branches) = maybe_branches else {
             return Ok(CommandRunResult::Noop(
                 ui_str::branch_delete_display::info_chose_not_to_msg(),
                 details::empty(),
             ));
-        }
+        };
 
         let (confirm_header, confirm_options) =
             user_interaction::create_confirmation_prompt(&branches);
@@ -135,7 +136,7 @@ mod user_interaction {
 
     pub async fn select_branches_to_delete(
         branch_options: ItemsOwned,
-    ) -> CommonResult<ItemsOwned> {
+    ) -> CommonResult<Option<ItemsOwned>> {
         let header_with_instructions = {
             let last_line = cli_text_line![cli_text_inline(
                 ui_str::branch_delete_display::select_branches_msg_raw(),
@@ -144,23 +145,22 @@ mod user_interaction {
             prefix_multi_select_instruction_header(inline_vec![last_line])
         };
 
-        let mut default_io_devices = DefaultIoDevices::default();
-        match choose(
-            header_with_instructions,
-            branch_options,
-            Some(height(20)),
-            None,
-            HowToChoose::Multiple,
-            StyleSheet::default(),
-            default_io_devices.as_mut_tuple(),
-        ) {
-            TuiAvailability::Available(choice_future) => {
-                let items = choice_future.await?;
-                Ok(items)
-            }
-            TuiAvailability::NotAvailable(reason) => reason.as_err(),
-            TuiAvailability::Broken(e) => Err(e),
-        }
+        let maybe_results = {
+            let mut default_io_devices = DefaultIoDevices::default();
+            choose(
+                header_with_instructions,
+                branch_options,
+                Some(height(20)),
+                None,
+                HowToChoose::Multiple,
+                StyleSheet::default(),
+                default_io_devices.as_mut_tuple(),
+            )
+            .get_all_results()
+            .await?
+        };
+
+        Ok(maybe_results)
     }
 
     pub fn create_confirmation_prompt(
@@ -232,9 +232,9 @@ mod user_interaction {
             prefix_single_select_instruction_header(header_last_lines_fmt)
         };
 
-        let mut default_io_devices = DefaultIoDevices::default();
         let user_choice = {
-            match choose(
+            let mut default_io_devices = DefaultIoDevices::default();
+            choose(
                 header_with_instructions,
                 confirmation_options,
                 Some(height(20)),
@@ -242,11 +242,9 @@ mod user_interaction {
                 HowToChoose::Single,
                 StyleSheet::default(),
                 default_io_devices.as_mut_tuple(),
-            ) {
-                TuiAvailability::Available(choice_future) => choice_future.await?,
-                TuiAvailability::NotAvailable(reason) => return reason.as_err(),
-                TuiAvailability::Broken(e) => return Err(e),
-            }
+            )
+            .get_first_result()
+            .await?
         };
 
         Ok(parse_user_choice::Selection::from(user_choice))
@@ -284,26 +282,24 @@ mod command_execute {
 }
 
 mod parse_user_choice {
-    use super::{ItemsOwned, ui_str};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     pub enum Selection {
         Delete,
         ExitProgram,
     }
 
-    impl From<ItemsOwned> for Selection {
-        fn from(selected: ItemsOwned) -> Selection {
-            let maybe_first = selected.into_iter().next();
-            let Some(first) = maybe_first else {
-                return Selection::ExitProgram;
-            };
-
-            if first == ui_str::branch_delete_display::yes_single_branch_msg_raw()
-                || first == ui_str::branch_delete_display::yes_multiple_branches_msg_raw()
-            {
-                Selection::Delete
-            } else {
-                Selection::ExitProgram
+    impl From<Option<InlineString>> for Selection {
+        fn from(maybe_selected: Option<InlineString>) -> Selection {
+            match maybe_selected {
+                Some(first)
+                    if first == ui_str::branch_delete_display::yes_single_branch_msg_raw()
+                        || first == ui_str::branch_delete_display::yes_multiple_branches_msg_raw() =>
+                {
+                    Selection::Delete
+                }
+                _ => Selection::ExitProgram,
             }
         }
     }

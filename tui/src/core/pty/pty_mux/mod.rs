@@ -49,7 +49,7 @@
 //! ## Usage Example
 //!
 //! ```no_run
-//! use r3bl_tui::{TuiAvailability, core::pty_mux::PTYMux};
+//! use r3bl_tui::{TuiAvailability, IntoErr, core::pty_mux::PTYMux};
 //!
 //! #[tokio::main]
 //! async fn main() -> miette::Result<()> {
@@ -60,11 +60,7 @@
 //!         .build()
 //!     {
 //!         TuiAvailability::Available(mux) => mux,
-//!         TuiAvailability::NotAvailable(reason) => {
-//!             eprintln!("{}", reason.as_err_msg());
-//!             return Ok(());
-//!         }
-//!         TuiAvailability::Broken(e) => return Err(e),
+//!         it => return it.into_err(),
 //!     };
 //!
 //!     multiplexer.run().await?;  // F1/F2/F3 to switch, Ctrl+Q to quit

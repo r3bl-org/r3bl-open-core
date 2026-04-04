@@ -9,3 +9,7 @@ pub use spinner_constants::*;
 pub use spinner_print::*;
 pub use spinner_render::*;
 pub use spinner_style::*;
+
+// Integration tests (conditional visibility).
+#[cfg(any(test, doc))]
+pub mod integration_tests;

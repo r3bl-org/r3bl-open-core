@@ -1,9 +1,9 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use crate::giti::{BranchNewDetails, CommandRunDetails, ui_str};
-use r3bl_tui::{BranchExists, CommandRunResult, CommonResult, ReadlineAsyncContext,
-               ReadlineEvent, TuiAvailability, try_create_and_switch_to_branch,
-               try_get_local_branches};
+use r3bl_tui::{BranchExists, CommandRunResult, CommonResult, IntoErr,
+               ReadlineAsyncContext, ReadlineEvent, TuiAvailability,
+               try_create_and_switch_to_branch, try_get_local_branches};
 
 /// The main function for `giti branch new` command.
 ///
@@ -89,8 +89,7 @@ mod user_interaction {
         let mut rl_ctx =
             match ReadlineAsyncContext::try_new(Some(&prompt_text), None).await {
                 TuiAvailability::Available(rl_ctx) => rl_ctx,
-                TuiAvailability::NotAvailable(reason) => return reason.as_err(),
-                TuiAvailability::Broken(e) => return Err(e),
+                it => return it.into_err(),
             };
 
         // The loop is just to handle the resize event.

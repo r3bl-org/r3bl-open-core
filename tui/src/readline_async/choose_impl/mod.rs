@@ -26,16 +26,13 @@
 //!     TuiAvailability::Available(choice_future) => {
 //!         let selection = choice_future.await?;
 //!     }
-//!     TuiAvailability::NotAvailable(reason) => {
-//!         eprintln!("{}", reason.as_err_msg());
-//!     }
-//!     TuiAvailability::Broken(e) => return Err(e),
+//!     it => return it.into_err(),
 //! }
 //! # Ok(())
 //! # }
 //! ```
 //!
-//! For complete examples, see [`tui/examples/choose.rs`].
+//! For complete examples, see [`tui/examples/choose_interactive.rs`].
 //!
 //! # Styling
 //!
@@ -50,8 +47,8 @@
 //!
 //! [`choose()`]: crate::choose
 //! [`StyleSheet`]: crate::StyleSheet
-//! [`tui/examples/choose.rs`]:
-//!     https://github.com/r3bl-org/r3bl-open-core/tree/main/tui/examples/choose.rs
+//! [`tui/examples/choose_interactive.rs`]:
+//!     https://github.com/r3bl-org/r3bl-open-core/tree/main/tui/examples/choose_interactive.rs
 //! [`TuiStyle`]: crate::TuiStyle
 
 // https://github.com/rust-lang/rust-clippy

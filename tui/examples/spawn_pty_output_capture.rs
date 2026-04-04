@@ -38,6 +38,7 @@
 use miette::IntoDiagnostic;
 use r3bl_tui::{OscEvent, SGR_FG_BRIGHT_GREEN_STR, SGR_FG_BRIGHT_RED_STR,
                SGR_FG_BRIGHT_YELLOW_STR, SGR_RESET_STR,
+               assert_terminal_is_interactive,
                core::pty::{DefaultPtySessionConfig, PtyOutputEvent, PtySessionBuilder,
                            PtySessionConfigOption},
                set_mimalloc_in_main};
@@ -156,6 +157,7 @@ async fn run_build_with_osc_capture(run_number: u32) -> miette::Result<()> {
 #[tokio::main]
 async fn main() -> miette::Result<()> {
     set_mimalloc_in_main!();
+    assert_terminal_is_interactive();
 
     println!(
         "\
