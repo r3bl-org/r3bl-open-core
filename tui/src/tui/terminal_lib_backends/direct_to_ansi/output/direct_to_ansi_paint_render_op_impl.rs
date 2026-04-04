@@ -51,7 +51,7 @@
 //! [rendering pipeline overview]: mod@crate::terminal_lib_backends#rendering-pipeline-architecture
 
 use crate::{AnsiSequenceGenerator, CliTextInline, ColIndex,
-            DEBUG_TUI_SHOW_TERMINAL_BACKEND, GCStringOwned, InlineString,
+            DEBUG_TUI_SHOW_DIRECT_TO_ANSI, GCStringOwned, InlineString,
             LockedOutputDevice, Pos, RenderOpCommon, RenderOpFlush, RenderOpOutput,
             RenderOpPaint, RenderOpsLocalData, RowHeight, Size, TermRowDelta, TuiColor,
             TuiStyle, cli_text_inline_impl::CliTextConvertOptions, col,
@@ -539,7 +539,7 @@ mod helpers {
         if !is_mock {
             match enable_raw_mode() {
                 Ok(()) => {
-                    DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
+                    DEBUG_TUI_SHOW_DIRECT_TO_ANSI.then(|| {
                         tracing::info!(
                             message = "direct-to-ansi: ✅ Succeeded",
                             details = "EnterRawMode -> enable_raw_mode()"
@@ -547,7 +547,7 @@ mod helpers {
                     });
                 }
                 Err(err) => {
-                    DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
+                    DEBUG_TUI_SHOW_DIRECT_TO_ANSI.then(|| {
                         tracing::error!(
                             message = "direct-to-ansi: ❌ Failed",
                             details = "EnterRawMode -> enable_raw_mode()",
@@ -601,7 +601,7 @@ mod helpers {
         if !is_mock {
             match disable_raw_mode() {
                 Ok(()) => {
-                    DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
+                    DEBUG_TUI_SHOW_DIRECT_TO_ANSI.then(|| {
                         tracing::info!(
                             message = "direct-to-ansi: ✅ Succeeded",
                             details = "ExitRawMode -> disable_raw_mode()"
@@ -609,7 +609,7 @@ mod helpers {
                     });
                 }
                 Err(err) => {
-                    DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
+                    DEBUG_TUI_SHOW_DIRECT_TO_ANSI.then(|| {
                         tracing::error!(
                             message = "direct-to-ansi: ❌ Failed",
                             details = "ExitRawMode -> disable_raw_mode()",
@@ -630,7 +630,7 @@ mod helpers {
     pub fn flush(locked_output_device: LockedOutputDevice<'_>, log_msg: &str) {
         match locked_output_device.flush() {
             Ok(()) => {
-                DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
+                DEBUG_TUI_SHOW_DIRECT_TO_ANSI.then(|| {
                     tracing::info!(
                         message = "direct-to-ansi: ✅ Succeeded",
                         details = %log_msg
@@ -638,7 +638,7 @@ mod helpers {
                 });
             }
             Err(err) => {
-                DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
+                DEBUG_TUI_SHOW_DIRECT_TO_ANSI.then(|| {
                     tracing::error!(
                         message = "direct-to-ansi: ❌ Failed",
                         details = %log_msg,

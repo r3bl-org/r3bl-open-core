@@ -41,7 +41,7 @@
 use super::{FlushKind, RenderOpsLocalData, RenderPipeline};
 use crate::{DEBUG_TUI_COMPOSITOR, DEBUG_TUI_SHOW_PIPELINE_EXPANDED, GlobalData,
             LengthOps, LockedOutputDevice, OffscreenBuffer, OffscreenBufferPaint,
-            OffscreenBufferPaintImplCrossterm, PixelCharDiffChunks, Pos, Size,
+            OffscreenBufferPaintImpl, PixelCharDiffChunks, Pos, Size,
             TERMINAL_LIB_BACKEND, TerminalLibBackend};
 use std::fmt::Debug;
 
@@ -53,7 +53,7 @@ fn perform_diff_paint(
 ) {
     match TERMINAL_LIB_BACKEND {
         TerminalLibBackend::Crossterm => {
-            let mut crossterm_impl = OffscreenBufferPaintImplCrossterm {};
+            let mut crossterm_impl = OffscreenBufferPaintImpl {};
             let render_ops = crossterm_impl.render_diff(diff_chunks);
             crossterm_impl.paint_diff(
                 render_ops,
@@ -66,7 +66,7 @@ fn perform_diff_paint(
             // DirectToAnsi uses the same converter as Crossterm
             // (OffscreenBuffer → RenderOpOutput)
             // The difference is only in execution (via routing in render_op_output.rs)
-            let mut converter = OffscreenBufferPaintImplCrossterm {};
+            let mut converter = OffscreenBufferPaintImpl {};
             let render_ops = converter.render_diff(diff_chunks);
             converter.paint_diff(render_ops, window_size, locked_output_device, is_mock);
         }
@@ -82,7 +82,7 @@ fn perform_full_paint(
 ) {
     match TERMINAL_LIB_BACKEND {
         TerminalLibBackend::Crossterm => {
-            let mut crossterm_impl = OffscreenBufferPaintImplCrossterm {};
+            let mut crossterm_impl = OffscreenBufferPaintImpl {};
             let render_ops = crossterm_impl.render(ofs_buf);
             crossterm_impl.paint(
                 render_ops,
@@ -96,7 +96,7 @@ fn perform_full_paint(
             // DirectToAnsi uses the same converter as Crossterm
             // (OffscreenBuffer → RenderOpOutput)
             // The difference is only in execution (via routing in render_op_output.rs)
-            let mut converter = OffscreenBufferPaintImplCrossterm {};
+            let mut converter = OffscreenBufferPaintImpl {};
             let render_ops = converter.render(ofs_buf);
             converter.paint(
                 render_ops,

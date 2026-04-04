@@ -7,7 +7,7 @@ use super::{super::channel_types::PollerEvent, MioPollWorker,
             handler_signals::consume_pending_signals_with_sender,
             handler_stdin::consume_stdin_input_with_sender, sources::SourceKindReady};
 use crate::{Continuation, core::resilient_reactor_thread::RRTEvent,
-            tui::DEBUG_TUI_SHOW_TERMINAL_BACKEND};
+            tui::DEBUG_TUI_SHOW_MIO_POLLER};
 use mio::Token;
 use tokio::sync::broadcast::Sender;
 
@@ -36,7 +36,7 @@ pub fn dispatch_with_sender(
 
 #[must_use]
 pub fn handle_unknown(token: Token) -> Continuation {
-    DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
+    DEBUG_TUI_SHOW_MIO_POLLER.then(|| {
         tracing::warn!(
             message = "mio_poller thread: unknown token",
             token = ?token

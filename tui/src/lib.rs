@@ -1631,7 +1631,7 @@
 //! | UTF-8 | Task                                                                                                           |
 //! |:------|:---------------------------------------------------------------------------------------------------------------|
 //! | Y     | convert [`RenderPipeline`] to `List<List<`[`PixelChar`]`>>` ([`OffscreenBuffer`])                            |
-//! | Y     | paint each [`PixelChar`] in `List<List<`[`PixelChar`]`>>` to stdout using [`OffscreenBufferPaintImplCrossterm`] |
+//! | Y     | paint each [`PixelChar`] in `List<List<`[`PixelChar`]`>>` to stdout using [`OffscreenBufferPaintImpl`] |
 //! | Y     | save the `List<List<`[`PixelChar`]`>>` to [`GlobalData`]                                                      |
 //!
 //! Currently [`crossterm`] and [`direct_to_ansi`] are supported for actually painting to
@@ -2574,7 +2574,7 @@
 //! [ZOrder]: crate::ZOrder
 //! [`paint`]: mod@crate::paint
 //! [`paint()`]: fn@crate::paint
-//! [`OffscreenBufferPaintImplCrossterm`]: struct@crate::OffscreenBufferPaintImplCrossterm
+//! [`OffscreenBufferPaintImpl`]: struct@crate::OffscreenBufferPaintImpl
 //! [EditorComponent]: crate::EditorComponent
 //! [EditorEngine]: crate::EditorEngine
 //! [EditorBuffer]: crate::EditorBuffer

@@ -43,6 +43,22 @@ pub const DEBUG_TUI_SHOW_PIPELINE_EXPANDED: bool = false;
 /// [`crate::queue_terminal_command!`] debugging output.
 pub const DEBUG_TUI_SHOW_TERMINAL_BACKEND: bool = false;
 
+/// Controls debug logging for the [`DirectToAnsi`] backend (input parsing and
+/// output rendering/flush operations).
+///
+/// [`DirectToAnsi`]: crate::terminal_lib_backends::direct_to_ansi
+pub const DEBUG_TUI_SHOW_DIRECT_TO_ANSI: bool = false;
+
+/// Controls input event debugging for the [`mio-poller`] thread.
+///
+/// [`mio-poller`]: crate::terminal_lib_backends::direct_to_ansi::input::mio_poller
+pub const DEBUG_TUI_SHOW_MIO_POLLER: bool = false;
+
+/// Controls whether desktop notifications are displayed by the [PTY multiplexer].
+///
+/// [PTY multiplexer]: crate::pty::pty_mux::PTYMux
+pub const DEBUG_TUI_SHOW_PTY_MUX_NOTIFICATIONS: bool = false;
+
 /// Unicode replacement character used when a grapheme cluster cannot be converted to a
 /// single char. This character (�) is the standard fallback for invalid/undisplayable
 /// characters.

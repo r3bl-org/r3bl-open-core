@@ -62,44 +62,56 @@ async fn main() -> miette::Result<()> {
     try_initialize_logging_global(tracing_core::LevelFilter::DEBUG).ok();
     tracing::debug!("Starting PTYMux Example");
 
+    // Mixed process types demonstrating universal compatibility:
+    // - claude: AI assistant (existing TUI app)
+    // - TUI apps: less, htop, gitui (proper TUI applications)
+    // - bash: Interactive shell (universal compatibility demonstration)
+    let processes = vec![
+        ("claude", "claude", vec![]),
+        ("less", "less", vec!["/etc/adduser.conf".to_string()]),
+        ("htop", "htop", vec![]),
+        ("gitui", "gitui", vec![]),
+        ("bash", "bash", vec![]),
+    ];
+
     println!("🚀 Starting PTYMux Example - Universal Process Compatibility");
 
-    println!("📋 Configured processes: claude, less, htop, gitui, bash");
-    println!("🌟 Demonstrates universal compatibility:");
-    println!("   • AI assistant (claude) with interactive chat");
-    println!("   • TUI applications (less, htop, gitui) with proper ANSI handling");
-    println!("   • Interactive shells (bash) with persistent command history");
-    println!("   • Per-process virtual terminals for instant switching");
-    println!("⌨️  Controls:");
-    println!("   • F1: claude (AI assistant)");
-    println!("   • F2: less (file viewer)");
-    println!("   • F3: htop (process monitor)");
-    println!("   • F4: gitui (git TUI)");
-    println!("   • F5: bash (interactive shell)");
+    // List available processes
+    println!("📋 Available processes:");
+    let mut current_f_key = 1;
+    for (name, command, _args) in &processes {
+        if r3bl_tui::is_command_available(command) {
+            println!("   • F{current_f_key}: {name} ({command})");
+            current_f_key += 1;
+        }
+    }
     println!("   • Ctrl+Q: Quit");
     println!("📊 Status bar shows live process status and shortcuts");
     println!("📝 Debug output will be written to log.txt");
     println!();
 
-    // Mixed process types demonstrating universal compatibility:
-    // - claude: AI assistant (existing TUI app)
-    // - TUI apps: less, htop, gitui (proper TUI applications)
-    // - bash: Interactive shell (universal compatibility demonstration)
-    let multiplexer = match PTYMux::builder()
-        .add_process("claude", "/home/nazmul/.claude/local/claude", vec![])
-        .add_process("less", "less", vec!["/etc/adduser.conf".to_string()])
-        .add_process("htop", "htop", vec![])
-        .add_process("gitui", "gitui", vec![])
-        .add_process("bash", "bash", vec![])
-        .build()
-    {
+    let mut builder = PTYMux::builder();
+    let mut added_count = 0;
+
+    for (name, command, args) in processes {
+        if r3bl_tui::is_command_available(command) {
+            builder = builder.add_process(name, command, args);
+            added_count += 1;
+        }
+    }
+
+    if added_count == 0 {
+        miette::bail!("No configured processes are available on this system. Please ensure at least one of (claude, less, htop, gitui, bash) is installed and in PATH.");
+    }
+
+    let multiplexer = match builder.build() {
         TuiAvailability::Available(mux) => mux,
         it => return it.into_err(),
     };
 
     println!("▶️  Starting multiplexer event loop...");
     println!("   (All processes will be started immediately for fast switching)");
-    println!("   Press F1-F4 to switch processes, Ctrl+Q to quit");
+    println!("   Press F1-F{added_count} to switch processes, Ctrl+Q to quit");
     println!();
 
     // Run the multiplexer event loop.

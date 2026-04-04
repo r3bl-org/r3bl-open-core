@@ -8,7 +8,7 @@
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 
 use super::{InputRouter, OutputRenderer, Process, ProcessManager, output_renderer,
-            show_notification};
+            show_notification_non_blocking};
 use crate::{AnsiSequenceGenerator, Continuation, InputEvent, RawMode, Size,
             TerminalInteractiveStatus, TuiAvailability, col,
             core::{check_is_terminal_interactive, emit_stderr_redirection_disclaimer,
@@ -281,7 +281,7 @@ impl PTYMux {
 
                     // Show desktop notification for input event (filter out mouse events)
                     if !matches!(input_event, InputEvent::Mouse(_)) {
-                        show_notification("PTY Mux - Input Event", &format!("Input event received: {input_event:?}"));
+                        show_notification_non_blocking("PTY Mux - Input Event", &format!("Input event received: {input_event:?}"));
                     }
 
                     // Create OSC controller for this input handling.

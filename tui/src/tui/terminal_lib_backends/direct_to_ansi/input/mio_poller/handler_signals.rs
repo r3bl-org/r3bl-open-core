@@ -4,7 +4,7 @@
 
 use super::{super::channel_types::PollerEvent, MioPollWorker};
 use crate::{Continuation, core::resilient_reactor_thread::RRTEvent, get_size,
-            tui::DEBUG_TUI_SHOW_TERMINAL_BACKEND};
+            tui::DEBUG_TUI_SHOW_MIO_POLLER};
 use signal_hook::consts::SIGWINCH;
 use tokio::sync::broadcast::Sender;
 
@@ -40,7 +40,7 @@ pub fn consume_pending_signals_with_sender(
         // Query terminal size. If it fails, drop the signal - there's no useful size to
         // report (typically means TTY disconnected).
         let Some(size) = get_size().ok() else {
-            DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
+            DEBUG_TUI_SHOW_MIO_POLLER.then(|| {
                 tracing::debug!(
                     message =
                         "mio-poller-thread: SIGWINCH received but get_size() failed"
@@ -49,7 +49,7 @@ pub fn consume_pending_signals_with_sender(
             return Continuation::Continue;
         };
 
-        DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
+        DEBUG_TUI_SHOW_MIO_POLLER.then(|| {
             tracing::debug!(message = "mio-poller-thread: SIGWINCH received", ?size);
         });
 
@@ -58,7 +58,7 @@ pub fn consume_pending_signals_with_sender(
             .is_err()
         {
             // Receiver dropped - exit gracefully.
-            DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
+            DEBUG_TUI_SHOW_MIO_POLLER.then(|| {
                 tracing::debug!(message = "mio-poller-thread: receiver dropped, exiting");
             });
             return Continuation::Stop;

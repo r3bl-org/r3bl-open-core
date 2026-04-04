@@ -331,9 +331,31 @@
     {
       "name": "build-infra-add-more-terms-to-seed-jsonc",
       "id": "918ac205-dda6-433f-b204-8773ee073ef9",
-      "tabs": [],
+      "tabs": [
+        {
+          "path": "task/fix-pty-mux-debug-session.md",
+          "isPinned": false
+        },
+        {
+          "path": "tui/src/core/pty/pty_mux/output_renderer.rs",
+          "isPinned": false
+        },
+        {
+          "path": "tui/src/core/tui_style/tui_color.rs",
+          "isPinned": false
+        },
+        {
+          "path": "tui/src/tui/terminal_lib_backends/direct_to_ansi/input/input_device_public_api.rs",
+          "isPinned": false
+        },
+        {
+          "path": "tui/src/tui/mod.rs",
+          "isPinned": false
+        }
+      ],
       "taskFile": "task/build-infra-add-more-terms-to-seed-jsonc.md",
-      "createdAt": 1775190178354
+      "createdAt": 1775190178354,
+      "activeTab": "tui/src/core/pty/pty_mux/output_renderer.rs"
     },
     {
       "name": "build-infra-upgrade-support",
@@ -439,6 +461,13 @@
       "tabs": [],
       "taskFile": "task/shorter-ref-def-link-paths.md",
       "createdAt": 1775190179354
+    },
+    {
+      "name": "fix-pty-mux-debug-session",
+      "id": "13330146-05c7-442a-b3c2-7b00e1b49e94",
+      "tabs": [],
+      "taskFile": "task/fix-pty-mux-debug-session.md",
+      "createdAt": 1775336506604
     }
   ],
   "nextQueueIds": [
@@ -456,7 +485,8 @@
     "5c2c4eb1-0631-441e-b9f3-da2978ececd6",
     "11daa29f-8435-42e5-a1dd-3d2f453ee8d3",
     "e0041b1d-ed2f-49e6-a7c3-6f8b0773fd57",
-    "59c4d970-1226-4a47-b722-0ad93e2affc1"
+    "59c4d970-1226-4a47-b722-0ad93e2affc1",
+    "13330146-05c7-442a-b3c2-7b00e1b49e94"
   ],
   "previousStackIds": [
     "0096aa0a-89a3-4ec6-a5e0-ac41b7a0c0ea"

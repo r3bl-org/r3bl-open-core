@@ -8,7 +8,7 @@ use super::{super::{channel_types::{PollerEvent, StdinEvent},
                     paste_state_machine::{PasteStateResult, apply_paste_state_machine}},
             MioPollWorker};
 use crate::{Continuation, core::resilient_reactor_thread::RRTEvent,
-            tui::DEBUG_TUI_SHOW_TERMINAL_BACKEND};
+            tui::DEBUG_TUI_SHOW_MIO_POLLER};
 use std::io::{ErrorKind, Read as _};
 use tokio::sync::broadcast::Sender;
 
@@ -51,7 +51,7 @@ pub fn consume_stdin_input_with_sender(
     match read_res {
         Ok(0) => {
             // EOF reached.
-            DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
+            DEBUG_TUI_SHOW_MIO_POLLER.then(|| {
                 tracing::debug!(message = "mio_poller thread: EOF (0 bytes)");
             });
             drop(sender.send(PollerEvent::Stdin(StdinEvent::Eof).into()));
@@ -72,7 +72,7 @@ pub fn consume_stdin_input_with_sender(
 
         Err(e) => {
             // Other error - send and exit.
-            DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
+            DEBUG_TUI_SHOW_MIO_POLLER.then(|| {
                 tracing::debug!(
                     message = "mio_poller thread: read error",
                     error = ?e
@@ -92,7 +92,7 @@ pub fn parse_stdin_bytes_with_sender(
     n: usize,
     sender: &Sender<RRTEvent<PollerEvent>>,
 ) -> Continuation {
-    DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
+    DEBUG_TUI_SHOW_MIO_POLLER.then(|| {
         tracing::debug!(message = "mio_poller thread: read bytes", bytes_read = n);
     });
 
@@ -114,7 +114,7 @@ pub fn parse_stdin_bytes_with_sender(
                     .is_err()
                 {
                     // Receiver dropped - exit gracefully.
-                    DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
+                    DEBUG_TUI_SHOW_MIO_POLLER.then(|| {
                         tracing::debug!(
                             message = "mio_poller thread: receiver dropped, exiting"
                         );
