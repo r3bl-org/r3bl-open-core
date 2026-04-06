@@ -29,15 +29,15 @@ static ROLLING_LOG_FILE_WRITER_GUARD: Mutex<Option<WorkerGuard>> = Mutex::new(No
 /// - Insufficient permissions to access the file or directory.
 /// - This method has already been called once.
 ///
+/// # Panics
+///
+/// Panics if the guard mutex is poisoned.
+///
 /// [`mio-poller`]: crate::terminal_lib_backends::direct_to_ansi::input::mio_poller
+#[allow(clippy::unwrap_in_result)]
 pub fn try_create(path_str: &str) -> miette::Result<NonBlocking> {
-    // Prevent double-init: replacing the guard would kill the first background thread,
-    // silently breaking any layers still holding the old NonBlocking writer.
-    if ROLLING_LOG_FILE_WRITER_GUARD
-        .lock()
-        .expect("guard mutex poisoned")
-        .is_some()
-    {
+    // Can only init this once per process.
+    if ROLLING_LOG_FILE_WRITER_GUARD.lock().unwrap().is_some() {
         miette::bail!("Rolling file appender already created");
     }
 
@@ -65,10 +65,8 @@ pub fn try_create(path_str: &str) -> miette::Result<NonBlocking> {
     let (non_blocking_rolling_file_appender, guard) =
         tracing_appender::non_blocking(rolling_file_appender);
 
-    // Store the guard so the background thread lives for the process lifetime.
-    *ROLLING_LOG_FILE_WRITER_GUARD
-        .lock()
-        .expect("guard mutex poisoned") = Some(guard);
+    // Save the guard so the background thread lives for the process lifetime.
+    *ROLLING_LOG_FILE_WRITER_GUARD.lock().unwrap() = Some(guard);
 
     Ok(non_blocking_rolling_file_appender)
 }

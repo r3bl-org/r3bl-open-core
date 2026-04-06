@@ -533,11 +533,11 @@ use tokio::sync::broadcast::error::RecvError;
 /// [ESC key disambiguation]: Self#esc-key-disambiguation-crossterm-more-flag-pattern
 /// [How It Works]: super::mio_poller#how-it-works
 /// [inherent race condition]:
-///     crate::core::resilient_reactor_thread#the-inherent-race-condition
+///     crate::core::resilient_reactor_thread#race-conditions-handled
 /// [Loosely Coupled And Strongly Coherent]:
 ///     https://developerlife.com/2015/11/05/loosely-coupled-strongly-coherent/
 /// [No exclusive access]: super::mio_poller#no-exclusive-access
-/// [race condition]: crate::core::resilient_reactor_thread#the-inherent-race-condition
+/// [race condition]: crate::core::resilient_reactor_thread#race-conditions-handled
 /// [The Problems]: Self#the-problems
 /// [Tokio's stdin]: tokio::io::stdin
 pub struct DirectToAnsiInputDevice {

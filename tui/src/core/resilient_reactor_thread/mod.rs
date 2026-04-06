@@ -506,7 +506,12 @@
 //! This design gives [`RRT`] flexibility: it works with [`mio`] today and [`io_uring`]
 //! tomorrow without [`RRT`] changes.
 //!
-//! ## The Inherent Race Condition
+//! ## Race Conditions Handled
+//!
+//! The [`RRT`] pattern orchestrates multithreaded lifecycles and is designed to handle
+//! tight race windows when subscribers rapidly disconnect and reconnect.
+//!
+//! ### 1. The Exit Decision Race (Kernel Scheduling)
 //!
 //! There's an unavoidable race window between when a receiver drops and when the [thread]
 //! checks if it should exit:
@@ -523,10 +528,39 @@
 //!    window start ───────── RACE WINDOW ─────────  window end
 //! ```
 //!
-//! The [kernel] schedules [thread]s independently, so there's no guarantee when the
-//! dedicated [thread] will wake up after the [`RRTWaker`] is called. The RRT pattern
-//! handles this correctly by checking the **current** [`receiver_count()`] at exit time,
-//! not the count when the [`RRTWaker`] was called.
+//! **How it's handled:**
+//! This race is mitigated by a two-part handshake:
+//! 1. When the last subscriber disconnects, its [Drop implementation] explicitly wakes
+//!    the dedicated thread.
+//! 2. The dedicated thread's [`RRTWorker::block_until_ready_then_dispatch()`]
+//!    implementation checks the **current** [`receiver_count()`] at exit time, not the
+//!    count when the waker was called.
+//!
+//! ### 2. The "Dead Thread, Live Subscriber" Race (Fast Path)
+//!
+//! When a subscriber drops, the dedicated thread initiates its exit sequence. However,
+//! there is a microsecond window where the thread has broken out of its I/O loop but
+//! hasn't yet dropped its [`TerminationGuard`] to clear the `waker` slot.
+//!
+//! ```text
+//! Timeline:
+//! ─────────────────────────────────────────────────────────────────►
+//! thread sees 0        subscribe()         TerminationGuard
+//! receivers and        called by new       drops, clearing
+//! exits loop           subscriber          waker slot
+//!    │                    │                    │
+//!    └────────────────────┴────────────────────┘
+//!    ▲                                         ▲
+//!    │    fast path sees waker = Some()        │
+//!    window start ──── RACE WINDOW ──── window end
+//! ```
+//!
+//! **How it's handled:**
+//! This race is mitigated by [`RRT::wait_for_thread_exit()`], which is called
+//! during the fast path of [`RRT::subscribe()`]. It detects the dying thread, explicitly
+//! yields the CPU to allow the thread to finish its cleanup, and forces the allocation of
+//! a fresh thread.
+//!
 //!
 //! # How to Use It
 //!
@@ -792,6 +826,7 @@
 //! [`Restart`]: crate::Continuation::Restart
 //! [`RestartPolicy::default()`]: RestartPolicy#impl-Default-for-RestartPolicy
 //! [`RestartPolicy`]: RestartPolicy
+//! [`RRT::wait_for_thread_exit()`]: RRT::wait_for_thread_exit
 //! [`RRT`]: RRT
 //! [`RRTEvent::Shutdown(Panic)`]: ShutdownReason::Panic
 //! [`RRTEvent::Shutdown(reason)`]: RRTEvent::Shutdown
@@ -852,13 +887,14 @@
 //! [default policy]: RestartPolicy#impl-Default-for-RestartPolicy
 //! [Dependency Injection]: https://en.wikipedia.org/wiki/Dependency_injection
 //! [design pattern]: https://en.wikipedia.org/wiki/Software_design_pattern
+//! [Drop implementation]: SubscriberGuard#method.drop
 //! [event mechanism]: https://man7.org/linux/man-pages/man7/epoll.7.html
 //! [Example]: #example
 //! [executor thread in the `tokio` async runtime]: tokio::runtime
 //! [executor threads in the async runtime]: tokio::runtime
 //! [file descriptors]: https://man7.org/linux/man-pages/man2/open.2.html
 //! [generation]: RRT::get_thread_generation
-//! [in the meantime]: #the-inherent-race-condition
+//! [in the meantime]: #race-conditions-handled
 //! [inversion of control]: https://en.wikipedia.org/wiki/Inversion_of_control
 //! [kernel]: https://en.wikipedia.org/wiki/Kernel_(operating_system)
 //! [known Darwin limitation]: https://nathancraddock.com/blog/macos-dev-tty-polling/

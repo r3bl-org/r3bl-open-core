@@ -315,7 +315,7 @@ use tokio::sync::broadcast;
 /// [Drop Behavior]: super::SubscriberGuard#drop-behavior
 /// [events]: super::RRTEvent
 /// [generation]: Self::get_thread_generation
-/// [inherent race condition]: super#the-inherent-race-condition
+/// [inherent race condition]: super#race-conditions-handled
 /// [running]: LivenessState::Running
 /// [self-healing restart details]: super#self-healing-restart-details
 /// [terminated or not started]: LivenessState::TerminatedOrNotStarted
@@ -432,12 +432,42 @@ impl<W: RRTWorker> RRT<W> {
         }
     }
 
+    /// Handles the "Dead thread, live subscriber" race condition.
+    ///
+    /// When a subscriber drops, the dedicated thread initiates its exit sequence.
+    /// However, there is a microsecond window where the thread has broken out of its
+    /// I/O loop but hasn't yet dropped its [`TerminationGuard`] to clear the [`waker`
+    /// slot].
+    ///
+    /// If a new [`subscribe()`] call happens in this window, it takes the "Fast Path"
+    /// (because the [`waker` slot] still exists). To prevent attaching a new subscriber
+    /// to a dying thread, [`subscribe()`] detects the `0` receiver count, drops its
+    /// lock, and calls this function to explicitly yield the CPU, letting the dying
+    /// thread finish.
+    ///
+    /// See [Race Conditions Handled] in the module documentation for details.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the shared waker slot mutex is poisoned.
+    ///
+    /// [`subscribe()`]: Self::subscribe()
+    /// [`TerminationGuard`]: TerminationGuard
+    /// [`waker` slot]: field@Self::shared_waker_slot
+    /// [Race Conditions Handled]: super#race-conditions-handled
+    pub fn wait_for_thread_exit(shared_waker_slot: &SharedWakerSlot<W::Waker>) {
+        // Spin-wait for the exiting thread to clear the waker slot.
+        while shared_waker_slot.lock().unwrap().is_some() {
+            std::thread::yield_now();
+        }
+    }
+
     /// Allocates a subscription, spawning the dedicated thread if needed.
     ///
     /// # Two Allocation Paths
     ///
-    /// The waker's [`Option`] state is the liveness signal: `Some` means the thread is
-    /// running, `None` means it terminated (cleared by [`TerminationGuard`] on thread
+    /// The waker's [`Option`] state is the liveness signal: [`Some`] means the thread is
+    /// running, [`None`] means it terminated (cleared by [`TerminationGuard`] on thread
     /// exit).
     ///
     /// | Condition              | Path          | What Happens                     |
@@ -476,26 +506,39 @@ impl<W: RRTWorker> RRT<W> {
     /// [`receiver_count()`]: tokio::sync::broadcast::Sender::receiver_count
     /// [`RRTWorker::create_and_register_os_sources()`]: RRTWorker::create_and_register_os_sources
     /// [`TerminationGuard`]: TerminationGuard
-    /// [race condition]: super#the-inherent-race-condition
+    /// [race condition]: super#race-conditions-handled
     /// [Two-Phase Setup]: #two-phase-setup
     pub fn subscribe(&self) -> Result<SubscriberGuard<W>, SubscribeError> {
         let sender = &*self.sender;
         let shared_waker_slot = &*self.shared_waker_slot;
 
-        // Is thread running? Lock the waker and check.
-        let mut waker_guard = shared_waker_slot
-            .lock()
-            .map_err(|_| SubscribeError::MutexPoisoned { which: "waker" })?;
-        let thread_is_running = waker_guard.is_some();
+        let needs_new_thread = {
+            let waker_guard = shared_waker_slot
+                .lock()
+                .map_err(|_| SubscribeError::MutexPoisoned { which: "waker" })?;
 
-        // FAST PATH: thread is running -> reuse it.
-        if thread_is_running {
-            return ok!(SubscriberGuard::new(sender, shared_waker_slot));
+            if waker_guard.is_none() {
+                // Thread not running, need to spawn.
+                true
+            } else if sender.receiver_count() == 0 {
+                // Thread is dying. waker_guard drops at the end of this block.
+                true
+            } else {
+                // Thread is healthy and running. Safe to attach a new subscriber.
+                return ok!(SubscriberGuard::new(sender, shared_waker_slot));
+            }
+        };
+
+        if needs_new_thread {
+            Self::wait_for_thread_exit(shared_waker_slot);
         }
 
         // SLOW PATH: thread terminated (or never started). Hold the waker lock (don't
         // drop the waker_guard) for the entire slow path to serialize concurrent
         // subscribe() calls.
+        let mut waker_guard = shared_waker_slot
+            .lock()
+            .map_err(|_| SubscribeError::MutexPoisoned { which: "waker" })?;
 
         // Create worker and waker pair.
         let (worker, waker) = W::create_and_register_os_sources()

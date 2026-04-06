@@ -13,7 +13,7 @@ use super::ProcessManager;
 use crate::{FlushKind, GCStringOwned, IndexOps, OffscreenBuffer, OutputDevice,
             PixelChar, Pos, RenderOpsLocalData, SPACE_CHAR, Size, TuiStyle, col,
             core::coordinates::{idx, len},
-            fg_lizard_green, lock_output_device_as_mut, print_text_with_attributes, row,
+            lock_output_device_as_mut, print_text_with_attributes, row,
             tui::terminal_lib_backends::{OffscreenBufferPaint, OffscreenBufferPaintImpl},
             tui_color,
             tui_style_attrib::Bold,

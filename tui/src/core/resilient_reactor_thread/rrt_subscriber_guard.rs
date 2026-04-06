@@ -88,7 +88,7 @@ use tokio::sync::broadcast::Receiver;
 /// [`WakerSlotWriter`]: super::WakerSlotWriter
 /// [broadcast channel]: tokio::sync::broadcast
 /// [Drop implementation]: WakeOnDrop#method.drop
-/// [race window]: super#the-inherent-race-condition
+/// [race window]: super#race-conditions-handled
 /// [RFC 1857]: https://rust-lang.github.io/rfcs/1857-stabilize-drop-order.html
 /// [Thread Lifecycle]: super::RRT#thread-lifecycle
 /// [two-phase setup]: super#two-phase-setup
