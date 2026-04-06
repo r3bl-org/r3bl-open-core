@@ -119,7 +119,10 @@ impl InputRouter {
                         tracing::debug!("Exit requested (Ctrl+Q)");
 
                         // Show notification for exit.
-                        show_notification_non_blocking("PTY Mux - Exit", "Exiting PTY Mux");
+                        show_notification_non_blocking(
+                            "PTY Mux - Exit",
+                            "Exiting PTY Mux",
+                        );
 
                         return Ok(Continuation::Stop); // Exit requested
                     }

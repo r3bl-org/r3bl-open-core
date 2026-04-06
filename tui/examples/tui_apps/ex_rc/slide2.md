@@ -43,9 +43,9 @@ cd tui/examples
 cargo run --release --example demo
 clear
 pushd tui
-tail -f -s 5 log.txt | lolcat
-rm log.txt
-touch log.txt
+tail -f -s 5 /tmp/r3bl_tui/log.txt | lolcat
+rm /tmp/r3bl_tui/log.txt
+touch /tmp/r3bl_tui/log.txt
 popd
 ```
 

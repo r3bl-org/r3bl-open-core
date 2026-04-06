@@ -142,7 +142,7 @@
 //! #### The Final Cleanup (RAII and the Drop Chain)
 //!
 //! When your app drops the [`PtySession`] handle, Rust's automatic resource management
-//! ([RAII]) triggers a cleanup chain across all internal components:
+//! ([`RAII`]) triggers a cleanup chain across all internal components:
 //!
 //! - **Session Layer**:
 //!   - The [MPSC channels] are closed when their halves are dropped.
@@ -152,7 +152,7 @@
 //!       handles.
 //! - **Engine Layer**:
 //!   - The [`Controller`] (from the [Engine Layer]) is dropped.
-//!   - The [`PtyPair`] (and its inner [`MasterPty`]) leverages [RAII] to guarantee that
+//!   - The [`PtyPair`] (and its inner [`MasterPty`]) leverages [`RAII`] to guarantee that
 //!     all OS-level file descriptors are closed. This eliminates the risk of
 //!     [resource-leaking deadlocks] and ensures a clean system state.
 //!
@@ -294,6 +294,7 @@
 //! [`PtySession`]: crate::PtySession
 //! [`PtySessionBuilder::start()`]: crate::PtySessionBuilder::start
 //! [`PtySessionBuilder`]: crate::PtySessionBuilder
+//! [`RAII`]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
 //! [`readline_async`]: crate::readline_async::ReadlineAsyncContext::try_new
 //! [`spawn_blocking_reader_task()`]:
 //!     crate::pty_session::tasks::reader_task::spawn_blocking_reader_task
@@ -311,7 +312,6 @@
 //! [Orchestrator Task]: crate::pty_session::tasks::orchestrator::spawn_orchestrator_task
 //! [Orchestrator]: crate::pty_session::tasks::orchestrator::spawn_orchestrator_task
 //! [pseudoterminals]: https://en.wikipedia.org/wiki/Pseudoterminal
-//! [RAII]: https://en.cppreference.com/w/cpp/language/raii
 //! [Reader Task]: crate::pty_session::tasks::reader_task::spawn_blocking_reader_task
 //! [Reader]: crate::pty_session::tasks::reader_task::spawn_blocking_reader_task
 //! [resource-leaking deadlocks]:

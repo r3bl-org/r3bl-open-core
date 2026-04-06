@@ -48,11 +48,13 @@ async fn main_impl() -> CommonResult<()> {
     let no_log_arg_passed = args.contains(&"--no-log".to_string());
 
     // Ignore errors: https://doc.rust-lang.org/std/result/enum.Result.html#method.ok
-    if no_log_arg_passed {
-        try_initialize_logging_global(tracing_core::LevelFilter::OFF).ok();
+    let _log_guard = if no_log_arg_passed {
+        try_initialize_logging_global(tracing_core::LevelFilter::OFF).ok()
     } else if ENABLE_TRACE_EXAMPLES | DEBUG_TUI_MOD {
-        try_initialize_logging_global(tracing_core::LevelFilter::DEBUG).ok();
-    }
+        try_initialize_logging_global(tracing_core::LevelFilter::DEBUG).ok()
+    } else {
+        None
+    };
 
     let size = get_size()?;
 

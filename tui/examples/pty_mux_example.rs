@@ -58,8 +58,8 @@ async fn main() -> miette::Result<()> {
     set_mimalloc_in_main!();
     assert_terminal_is_interactive();
 
-    // Initialize logging to log.txt.
-    try_initialize_logging_global(tracing_core::LevelFilter::DEBUG).ok();
+    // Initialize logging to /tmp/r3bl_tui/log.txt.
+    let _log_guard = try_initialize_logging_global(tracing_core::LevelFilter::DEBUG).ok();
     tracing::debug!("Starting PTYMux Example");
 
     // Mixed process types demonstrating universal compatibility:
@@ -87,7 +87,7 @@ async fn main() -> miette::Result<()> {
     }
     println!("   • Ctrl+Q: Quit");
     println!("📊 Status bar shows live process status and shortcuts");
-    println!("📝 Debug output will be written to log.txt");
+    println!("📝 Debug output will be written to /tmp/r3bl_tui/log.txt");
     println!();
 
     let mut builder = PTYMux::builder();
@@ -101,7 +101,9 @@ async fn main() -> miette::Result<()> {
     }
 
     if added_count == 0 {
-        miette::bail!("No configured processes are available on this system. Please ensure at least one of (claude, less, htop, gitui, bash) is installed and in PATH.");
+        miette::bail!(
+            "No configured processes are available on this system. Please ensure at least one of (claude, less, htop, gitui, bash) is installed and in PATH."
+        );
     }
 
     let multiplexer = match builder.build() {

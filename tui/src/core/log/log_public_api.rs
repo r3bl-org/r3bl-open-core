@@ -1,19 +1,17 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::ok;
-use crate::{DisplayPreference, TracingConfig, WriterConfig};
+use crate::{DisplayPreference, GlobalLogFileGuard, TracingConfig, ThreadLocalLogFileGuard, WriterConfig,
+            ok};
 use std::{fs::OpenOptions, io::Write, ops::Add, path::Path};
-use tracing::dispatcher;
 
-pub const DEFAULT_LOG_FILE_NAME: &str = "log.txt";
+pub const DEFAULT_LOG_FILE_NAME: &str = "/tmp/r3bl_tui/log.txt";
 
-/// Global default subscriber, which once set, can't be unset or changed.
-/// - This is great for apps.
-/// - Docs for [Global default tracing subscriber]
+/// Global default subscriber, which once set, can't be unset or changed - meant for use
+/// in apps.
+/// - Logging is **DISABLED** by **default**.
 /// - Configure this using [`TracingConfig`] (which supports [`Into<TracingConfig>]` from
 ///   multiple argument types). Look at [`TracingConfig`] for default configuration.
-///
-/// Logging is **DISABLED** by **default**.
+/// - [`tracing`] docs for [Global default tracing subscriber]
 ///
 /// If you don't call this function w/ a value other than
 /// [`tracing_core::LevelFilter::OFF`], then logging won't be enabled. It won't matter if
@@ -73,26 +71,24 @@ pub const DEFAULT_LOG_FILE_NAME: &str = "log.txt";
 /// [Global default tracing subscriber]: tracing::subscriber::set_global_default
 pub fn try_initialize_logging_global(
     arg_options: impl Into<TracingConfig>,
-) -> miette::Result<()> {
+) -> miette::Result<GlobalLogFileGuard> {
     let config: TracingConfig = arg_options.into();
 
     // Early return if the level filter is off.
     if matches!(config.get_level_filter(), tracing_core::LevelFilter::OFF) {
-        return ok!();
+        return ok!(GlobalLogFileGuard);
     }
 
     // Try to initialize the tracing system w/ (rolling) file log output.
     config.install_global()
 }
 
-/// Thread local subscriber, which is thread local, and you can assign different ones
-/// to different threads.
-/// - This is great for tests.
-/// - Docs for [Thread local tracing subscriber]
+/// Thread local subscriber, which is thread local, and you can assign different ones to
+/// different threads - meant for use in tests.
+/// - Logging is **DISABLED** by **default**.
 /// - Configure this using [`TracingConfig`] (which supports `Into<TracingConfig>` from
 ///   multiple argument types). Look at [`TracingConfig`] for default configuration.
-///
-/// Logging is **DISABLED** by **default**.
+/// - [`tracing`] docs for [Thread local tracing subscriber]
 ///
 /// If you don't call this function w/ a value other than
 /// [`tracing_core::LevelFilter::OFF`], then logging won't be enabled. It won't matter if
@@ -130,7 +126,7 @@ pub fn try_initialize_logging_global(
 /// [Thread local tracing subscriber]: tracing::subscriber::set_default
 pub fn try_initialize_logging_thread_local(
     arg_options: impl Into<TracingConfig>,
-) -> miette::Result<Option<dispatcher::DefaultGuard>> {
+) -> miette::Result<Option<ThreadLocalLogFileGuard>> {
     let config: TracingConfig = arg_options.into();
 
     // Early return if the level filter is off.
@@ -322,7 +318,7 @@ mod impl_elegant_constructor_dsl_pattern {
             let dp_shared = DisplayPreference::SharedWriter(shared_writer);
             let dp_stdout = DisplayPreference::Stdout;
             let dp_stderr = DisplayPreference::Stderr;
-            let fname = "log.txt".to_string();
+            let fname = "/tmp/r3bl_tui/log.txt".to_string();
 
             // Setup test configs.
             let none = WriterConfig::None;

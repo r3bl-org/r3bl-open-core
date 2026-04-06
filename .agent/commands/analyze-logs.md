@@ -1,10 +1,10 @@
 # Analyze Log Files
 
-Invoke the `analyze-log-files` skill to analyze `log.txt` (or other log files with ANSI escape sequences).
+Invoke the `analyze-log-files` skill to analyze `/tmp/r3bl_tui/log.txt` (or other log files with ANSI escape sequences).
 
 ## Default Target
 
-Analyze the `log.txt` file in the project root.
+Analyze the `/tmp/r3bl_tui/log.txt` file in the project root.
 
 ## Instructions
 

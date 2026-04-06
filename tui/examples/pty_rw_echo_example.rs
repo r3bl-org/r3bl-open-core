@@ -21,7 +21,7 @@ async fn main() -> miette::Result<()> {
     assert_terminal_is_interactive();
 
     // Initialize logging.
-    try_initialize_logging_global(tracing_core::LevelFilter::DEBUG).ok();
+    let _log_guard = try_initialize_logging_global(tracing_core::LevelFilter::DEBUG).ok();
 
     println!("🚀 Starting Echo Test");
     println!("📋 Running 'cat' - it will echo whatever you type");

@@ -1,8 +1,8 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use r3bl_tui::{InputDevice, IntoErr, OutputDevice, TuiAvailability,
-               TuiAvailabilityChooseExt, assert_terminal_is_interactive,
-               fg_slate_gray, ok,
+               TuiAvailabilityChooseExt, assert_terminal_is_interactive, fg_slate_gray,
+               ok,
                readline_async::{Header, HowToChoose, ReadlineAsyncContext, StyleSheet,
                                 choose},
                set_mimalloc_in_main, try_initialize_logging_global};
@@ -15,7 +15,7 @@ async fn main() -> miette::Result<()> {
     assert_terminal_is_interactive();
 
     // Initialize tracing w/ file writer.
-    try_initialize_logging_global(tracing_core::LevelFilter::DEBUG).ok();
+    let _log_guard = try_initialize_logging_global(tracing_core::LevelFilter::DEBUG).ok();
 
     without_readline_async().await?;
     with_readline_async().await?;

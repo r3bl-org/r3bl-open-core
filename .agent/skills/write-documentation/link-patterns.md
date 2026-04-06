@@ -208,9 +208,10 @@ pub use rrt::*;  // run_worker_loop is now linkable in docs
 Now intra-doc links resolve:
 
 ```rust
-//! Resources are cleaned up via [RAII] when [`run_worker_loop()`] returns.
+//! Resources are cleaned up via [`RAII`] when [`run_worker_loop()`] returns.
 //!
 //! [`run_worker_loop()`]: run_worker_loop
+//! [`RAII`]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
 ```
 
 **When to use which approach:**

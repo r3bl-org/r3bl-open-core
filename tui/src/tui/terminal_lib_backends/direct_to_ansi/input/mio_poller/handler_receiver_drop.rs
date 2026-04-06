@@ -31,11 +31,14 @@ pub fn handle_receiver_drop_waker_with_sender(
         );
     });
 
+    // BUG: fix-rrt-subscribe-race-condition.md
     // Check if we should self-terminate (no receivers left).
+    // IMPORTANT: Do NOT call tracing here. The thread must exit as fast as possible
+    // to avoid a race with subscribe() — if a new subscriber sees liveness=Running
+    // while this thread is still exiting, it won't spawn a replacement thread,
+    // leaving the new subscriber with no stdin reader. See:
+    // task/fix-make-log-file-writing-multithreaded.md
     if receiver_count == 0 {
-        DEBUG_TUI_SHOW_MIO_POLLER.then(|| {
-            tracing::debug!(message = "mio-poller-thread: no receivers left, exiting");
-        });
         return Continuation::Stop;
     }
 

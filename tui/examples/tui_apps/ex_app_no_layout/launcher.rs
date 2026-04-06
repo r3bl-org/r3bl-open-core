@@ -1,8 +1,8 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::{AppMain, State};
-use r3bl_tui::{CommonResult, InputEvent, IntoErr, TerminalWindow,
-               TuiAvailability, key_press, ok};
+use r3bl_tui::{CommonResult, InputEvent, IntoErr, TerminalWindow, TuiAvailability,
+               key_press, ok};
 
 pub async fn run_app() -> CommonResult<()> {
     let app = AppMain::new_boxed();

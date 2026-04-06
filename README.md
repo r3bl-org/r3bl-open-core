@@ -788,7 +788,7 @@ Development Session Commands:
     dev-dashboard        Start 2-pane tmux development dashboard
 
 Other commands:
-    log                  Monitor log.txt in cmdr or tui directory
+    log                  Monitor /tmp/r3bl_tui/log.txt
     help                 Show this help
 ```
 

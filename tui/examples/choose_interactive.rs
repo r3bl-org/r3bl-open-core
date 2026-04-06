@@ -28,13 +28,15 @@ async fn main() -> miette::Result<()> {
     let size = get_size()?;
 
     throws!({
-        DEVELOPMENT_MODE.then(|| {
-            try_initialize_logging_global(tracing_core::LevelFilter::DEBUG).ok();
+        let _log_guard = DEVELOPMENT_MODE.then(|| {
+            let guard =
+                try_initialize_logging_global(tracing_core::LevelFilter::DEBUG).ok();
             // % is Display, ? is Debug.
             tracing::debug!(
                 message = "Start logging...",
                 window_size = ?size
             );
+            guard
         });
 
         // Get display size.
@@ -60,9 +62,11 @@ async fn main() -> miette::Result<()> {
                     SINGLE_SELECT_13_ITEMS_VPH_5,
                     SINGLE_SELECT_2_ITEMS_VPH_5,
                 ],
-                Some(height(6)), /* height of the tuify component */
-                Some(width(0)),  /* width of the tuify component. 0 means it will use the
-                                  * full terminal width */
+                // height of the tuify component.
+                Some(height(6)),
+                // width of the tuify component.
+                // 0 means it will use the full terminal width.
+                Some(width(0)),
                 HowToChoose::Single,
                 StyleSheet::default(),
                 default_io_devices.as_mut_tuple(),

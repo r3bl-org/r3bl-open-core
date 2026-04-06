@@ -31,10 +31,11 @@ async fn main_impl() -> CommonResult<()> {
 
     let should_log = cli_arg.global_options.enable_logging;
 
-    should_log.then(|| {
-        try_initialize_logging_global(tracing_core::LevelFilter::DEBUG).ok();
+    let _log_guard = should_log.then(|| {
+        let guard = try_initialize_logging_global(tracing_core::LevelFilter::DEBUG).ok();
         // % is Display, ? is Debug.
         tracing::debug!(message = "Start logging...", cli_arg = ?cli_arg);
+        guard
     });
 
     // Check analytics reporting.

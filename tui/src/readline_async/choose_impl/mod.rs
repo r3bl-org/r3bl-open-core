@@ -74,7 +74,7 @@ pub use select_component::*;
 pub use state::*;
 pub use style::*;
 
-/// Enables file logging. You can use `tail -f log.txt` to watch the logs.
+/// Enables file logging. You can use `tail -f /tmp/r3bl_tui/log.txt` to watch the logs.
 pub const DEVELOPMENT_MODE: bool = false;
 
 #[cfg(any(all(unix, doc), test))]

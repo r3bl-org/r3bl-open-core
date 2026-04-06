@@ -7,7 +7,7 @@ description: Analyze log files by stripping ANSI escape sequences first. Use whe
 
 ## When to Use
 
-- When user asks to "analyze log.txt", "read the log file", "process logs", "check the logs"
+- When user asks to "analyze /tmp/r3bl_tui/log.txt", "read the log file", "process logs", "check the logs"
 - When dealing with any `.log` or log-related files that may contain ANSI escape sequences
 - When terminal output has been captured to a file and needs analysis
 - When log files appear garbled or contain escape sequence artifacts
@@ -33,7 +33,7 @@ These sequences make logs difficult to:
 Before analyzing any log file, first strip the ANSI sequences using `ansifilter`:
 
 ```bash
-ansifilter -i log.txt -o /tmp/clean_log.txt
+ansifilter -i /tmp/r3bl_tui/log.txt -o /tmp/clean_log.txt
 ```
 
 For other log file names, adjust accordingly:
@@ -58,15 +58,15 @@ When reporting findings to the user:
 
 ## Common Log File Locations
 
-- `log.txt` - General purpose log in project root
+- `/tmp/r3bl_tui/log.txt` - General purpose log in project root
 - `target/` - Cargo build logs
 - `/tmp/*.log` - Temporary logs
 
 ## Example Workflow
 
-User: "Can you analyze log.txt and tell me what's wrong?"
+User: "Can you analyze /tmp/r3bl_tui/log.txt and tell me what's wrong?"
 
-1. Run: `ansifilter -i log.txt -o /tmp/clean_log.txt`
+1. Run: `ansifilter -i /tmp/r3bl_tui/log.txt -o /tmp/clean_log.txt`
 2. Read: `/tmp/clean_log.txt`
 3. Analyze the content for errors, warnings, patterns
 4. Report findings to user

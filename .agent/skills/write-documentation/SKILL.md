@@ -830,10 +830,10 @@ link it. The cost of an extra link is near zero; the cost of excluding a reader 
 ```rust
 // ✅ Good: Links pedagogical terms for inclusivity
 //! This [design pattern] avoids all of this and allows async code to...
-//! Resources are cleaned up via [RAII] when the guard is dropped.
+//! Resources are cleaned up via [`RAII`] when the guard is dropped.
 //!
 //! [design pattern]: https://en.wikipedia.org/wiki/Software_design_pattern
-//! [RAII]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
+//! [`RAII`]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
 ```
 
 ```rust

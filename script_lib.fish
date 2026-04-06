@@ -860,8 +860,8 @@ function run_example_with_flamegraph_profiling_perf_fold
         end
 
         # Fix ownership of log.txt if it was created (happens when running with sudo)
-        if test -f log.txt
-            sudo chown "$current_user:$current_user" log.txt
+        if test -f /tmp/r3bl_tui/log.txt
+            sudo chown "$current_user:$current_user" /tmp/r3bl_tui/log.txt
         end
 
         # Check if inferno-collapse-perf is available

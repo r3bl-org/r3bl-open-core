@@ -21,14 +21,14 @@ async fn main() -> miette::Result<()> {
     set_mimalloc_in_main!();
     assert_terminal_is_interactive();
 
-    // Initialize logging to log.txt.
-    try_initialize_logging_global(tracing_core::LevelFilter::DEBUG).ok();
+    // Initialize logging to /tmp/r3bl_tui/log.txt.
+    let _log_guard = try_initialize_logging_global(tracing_core::LevelFilter::DEBUG).ok();
     tracing::debug!("Starting Simple PTY Example");
 
     println!("🚀 Starting Simple PTY Example");
     println!("📋 Running htop in a PTY");
     println!("⌨️  Use htop normally, Ctrl+Q to quit");
-    println!("📝 Debug output will be written to log.txt");
+    println!("📝 Debug output will be written to /tmp/r3bl_tui/log.txt");
     println!();
 
     let terminal_size = get_size()?;

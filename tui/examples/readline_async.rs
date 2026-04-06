@@ -6,8 +6,8 @@
 use miette::{IntoDiagnostic, miette};
 use r3bl_tui::{ChannelCapacity, InlineVec, IntoErr, LineStateControlSignal,
                OutputDevice, SendRawTerminal, SharedWriter, SpinnerStyle,
-               TuiAvailability, assert_terminal_is_interactive, bold, fg_color,
-               fg_red, fg_slate_gray, inline_string,
+               TuiAvailability, assert_terminal_is_interactive, bold, fg_color, fg_red,
+               fg_slate_gray, inline_string,
                log::{DisplayPreference, try_initialize_logging_global},
                ok,
                readline_async::{Readline, ReadlineAsyncContext, ReadlineEvent, Spinner},
@@ -139,7 +139,7 @@ async fn main() -> miette::Result<()> {
     }
 
     // Initialize tracing w/ the "async stdout" (SharedWriter), and file writer.
-    try_initialize_logging_global(DisplayPreference::SharedWriter(
+    let _log_guard = try_initialize_logging_global(DisplayPreference::SharedWriter(
         rl_ctx.clone_shared_writer(),
     ))?;
 

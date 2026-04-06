@@ -333,15 +333,7 @@
       "id": "918ac205-dda6-433f-b204-8773ee073ef9",
       "tabs": [
         {
-          "path": "task/fix-pty-mux-debug-session.md",
-          "isPinned": false
-        },
-        {
           "path": "tui/src/core/pty/pty_mux/output_renderer.rs",
-          "isPinned": false
-        },
-        {
-          "path": "tui/src/core/tui_style/tui_color.rs",
           "isPinned": false
         },
         {
@@ -351,11 +343,47 @@
         {
           "path": "tui/src/tui/mod.rs",
           "isPinned": false
+        },
+        {
+          "path": "task/fix-pty-mux-debug-session.md",
+          "isPinned": false
+        },
+        {
+          "path": "task/fix-mio-poller-edge-triggered-polling.md",
+          "isPinned": false
+        },
+        {
+          "path": "task/fix-make-log-file-writing-multithreaded.md",
+          "isPinned": false
+        },
+        {
+          "path": "cmdr/src/bin/edi.rs",
+          "isPinned": false
+        },
+        {
+          "path": "tui/src/core/log/log_public_api.rs",
+          "isPinned": false
+        },
+        {
+          "path": "tui/src/core/log/tracing_config.rs",
+          "isPinned": false
+        },
+        {
+          "path": "tui/src/core/log/mod.rs",
+          "isPinned": false
+        },
+        {
+          "path": "tui/src/core/log/rolling_file_appender_impl.rs",
+          "isPinned": false
+        },
+        {
+          "path": "tui/src/core/log/tracing_init.rs",
+          "isPinned": false
         }
       ],
       "taskFile": "task/build-infra-add-more-terms-to-seed-jsonc.md",
       "createdAt": 1775190178354,
-      "activeTab": "tui/src/core/pty/pty_mux/output_renderer.rs"
+      "activeTab": "tui/src/core/log/rolling_file_appender_impl.rs"
     },
     {
       "name": "build-infra-upgrade-support",
@@ -468,6 +496,20 @@
       "tabs": [],
       "taskFile": "task/fix-pty-mux-debug-session.md",
       "createdAt": 1775336506604
+    },
+    {
+      "name": "fix-make-log-file-writing-multithreaded",
+      "id": "00c04833-4cf6-4b5d-a929-ca98d851e786",
+      "tabs": [],
+      "taskFile": "task/fix-make-log-file-writing-multithreaded.md",
+      "createdAt": 1775436027158
+    },
+    {
+      "name": "fix-mio-poller-edge-triggered-polling",
+      "id": "a5084790-fc15-4498-9b64-666fb008c3fc",
+      "tabs": [],
+      "taskFile": "task/fix-mio-poller-edge-triggered-polling.md",
+      "createdAt": 1775436292533
     }
   ],
   "nextQueueIds": [
@@ -486,7 +528,9 @@
     "11daa29f-8435-42e5-a1dd-3d2f453ee8d3",
     "e0041b1d-ed2f-49e6-a7c3-6f8b0773fd57",
     "59c4d970-1226-4a47-b722-0ad93e2affc1",
-    "13330146-05c7-442a-b3c2-7b00e1b49e94"
+    "13330146-05c7-442a-b3c2-7b00e1b49e94",
+    "00c04833-4cf6-4b5d-a929-ca98d851e786",
+    "a5084790-fc15-4498-9b64-666fb008c3fc"
   ],
   "previousStackIds": [
     "0096aa0a-89a3-4ec6-a5e0-ac41b7a0c0ea"

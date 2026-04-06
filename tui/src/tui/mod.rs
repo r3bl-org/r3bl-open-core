@@ -52,7 +52,7 @@ pub const DEBUG_TUI_SHOW_DIRECT_TO_ANSI: bool = false;
 /// Controls input event debugging for the [`mio-poller`] thread.
 ///
 /// [`mio-poller`]: crate::terminal_lib_backends::direct_to_ansi::input::mio_poller
-pub const DEBUG_TUI_SHOW_MIO_POLLER: bool = false;
+pub const DEBUG_TUI_SHOW_MIO_POLLER: bool = true; // TODO: true => BREAKS ALL TUI APPS (except pty mux)
 
 /// Controls whether desktop notifications are displayed by the [PTY multiplexer].
 ///
