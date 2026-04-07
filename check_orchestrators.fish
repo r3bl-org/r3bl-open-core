@@ -44,12 +44,12 @@ function run_check_with_recovery
 
     echo ""
     set_color cyan
-    echo "["(timestamp)"] ▶️  Running $check_name..."
+    echo "["(timestamp)"] 🛫 Running $check_name..."
     set_color normal
 
     # Log to file (without duplicate timestamp since log_message adds one)
     if set -q CHECK_LOG_FILE; and test -n "$CHECK_LOG_FILE"
-        echo "["(timestamp)"] ▶️  Running $check_name..." >> $CHECK_LOG_FILE
+        echo "["(timestamp)"] 🛫 Running $check_name..." >> $CHECK_LOG_FILE
     end
 
     # Create temp file for error detection (output is suppressed)
@@ -239,7 +239,7 @@ function run_watch_checks
     set result_doctest $status
 
     # Full doc build with deps (used in watch "full" mode)
-    run_check_with_recovery check_docs_full "docs"
+    run_check_with_recovery check_docs_full "doc build"
     set result_docs $status
 
     # Aggregate: return 2 if ANY recoverable error, then 1 if ANY failure, else 0
@@ -269,7 +269,7 @@ function run_oneoff_checks
     set result_doctest $status
 
     # Quick doc build to staging dir, then sync to serving dir
-    run_check_with_recovery check_docs_quick "docs"
+    run_check_with_recovery check_docs_quick "doc build"
     set result_docs $status
 
     if test $result_docs -eq 0
@@ -412,10 +412,10 @@ function run_full_checks
     # Format rustdoc comments on changed files before building docs.
     run_rustdoc_fmt
 
-    run_check_with_recovery check_docs_full "docs"
+    run_check_with_recovery check_docs_full "doc build"
     set result_docs $status
 
-    run_check_with_recovery check_windows_build "windows"
+    run_check_with_recovery check_windows_build "windows build"
     set result_windows $status
 
     # Check external URLs in changed files for link rot (non-recoverable).

@@ -90,11 +90,11 @@ formatting.
 
 ## Summary of evidence
 
-| Evidence                                                                                                           | Key finding                                      | Strength               |
-| :----------------------------------------------------------------------------------------------------------------- | :----------------------------------------------- | :--------------------- |
-| [Rust RFC 1824 survey](https://rust-lang.github.io/rfcs/1824-crates.io-default-ranking.html)                       | Docs are #1 evaluation criterion (104 mentions)  | Strong (Rust-specific) |
-| [Academic study (2024)](https://arxiv.org/html/2403.03819v1)                                                       | 91% of practitioners depend on docs for adoption | Strong                 |
-| [GitHub survey (2017, n=5500)](https://opensourcesurvey.org/2017/)                                                 | 93% see poor docs as the top problem             | Strong                 |
-| [Stack Overflow (2024)](https://survey.stackoverflow.co/2024/)                                                     | 84% use docs to learn; 90% use API/SDK docs      | Strong                 |
-| [Library adoption research](https://journalofbigdata.springeropen.com/articles/10.1186/s40537-019-0201-8)          | Documentation builds trust for adoption          | Moderate               |
-| [Crate evaluation guide](https://crates.community/article/How_to_choose_the_best_Rust_crate_for_your_project.html) | Docs listed as a top evaluation criterion        | Moderate               |
+| Evidence                                                                                                  | Key finding                                      | Strength               |
+| :-------------------------------------------------------------------------------------------------------- | :----------------------------------------------- | :--------------------- |
+| [Rust RFC 1824 survey](https://rust-lang.github.io/rfcs/1824-crates.io-default-ranking.html)              | Docs are #1 evaluation criterion (104 mentions)  | Strong (Rust-specific) |
+| [Academic study (2024)](https://arxiv.org/html/2403.03819v1)                                              | 91% of practitioners depend on docs for adoption | Strong                 |
+| [GitHub survey (2017, n=5500)](https://opensourcesurvey.org/2017/)                                        | 93% see poor docs as the top problem             | Strong                 |
+| [Stack Overflow (2024)](https://survey.stackoverflow.co/2024/)                                            | 84% use docs to learn; 90% use API/SDK docs      | Strong                 |
+| [Library adoption research](https://journalofbigdata.springeropen.com/articles/10.1186/s40537-019-0201-8) | Documentation builds trust for adoption          | Moderate               |
+| [Rust crate evaluation guide](https://lib.rs/)                                                            | Docs listed as a top evaluation criterion        | Moderate               |

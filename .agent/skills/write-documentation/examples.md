@@ -133,13 +133,13 @@ This document provides full examples of well-documented Rust code following the 
 ///         // Move cursor to position
 ///         // Write text
 ///         // Return result
-///         Ok(())
+///         ok!()
 ///     }
 ///
 ///     fn set_style(&mut self, style: Style) -> Result<()> {
 ///         // Apply foreground/background colors
 ///         // Apply text attributes (bold, italic, etc.)
-///         Ok(())
+///         ok!()
 ///     }
 ///
 ///     // Implement other required methods...

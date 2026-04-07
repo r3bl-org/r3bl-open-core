@@ -4,7 +4,8 @@ use clap::Parser;
 use r3bl_build_infra::{cargo_rustdoc_fmt::{CLIArg, FileProcessor,
                                            TechnicalTermDictionary},
                        common::{cargo_fmt_runner, workspace_utils}};
-use r3bl_tui::core::script::{try_get_changed_files_by_ext, try_is_git_repo};
+use r3bl_tui::{core::script::{try_get_changed_files_by_ext, try_is_git_repo},
+               ok};
 use std::process;
 
 #[tokio::main]
@@ -132,7 +133,7 @@ async fn run() -> miette::Result<()> {
 
     if files.is_empty() {
         println!("No Rust files found to format.");
-        return Ok(());
+        return ok!();
     }
 
     // Dry-run mode: show files and exit
@@ -141,7 +142,7 @@ async fn run() -> miette::Result<()> {
         for file in &files {
             println!("  - {}", file.display());
         }
-        return Ok(());
+        return ok!();
     }
 
     if cli_arg.verbose {
@@ -220,5 +221,5 @@ async fn run() -> miette::Result<()> {
         process::exit(1);
     }
 
-    Ok(())
+    ok!()
 }

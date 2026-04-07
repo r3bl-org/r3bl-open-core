@@ -12,4 +12,4 @@ pub use readline_history::*;
 
 // Integration tests (conditional visibility).
 #[cfg(any(test, doc))]
-pub mod integration_tests;
+pub mod readline_async_integration_tests;

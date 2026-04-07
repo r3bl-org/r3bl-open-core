@@ -311,6 +311,13 @@ function install-cargo-tools
         echo '✓ rust-analyzer installed'
     end
 
+    if not rustup component list --installed | grep -q rust-src
+        echo 'Installing rust-src...'
+        rustup component add rust-src
+    else
+        echo '✓ rust-src installed'
+    end
+
     # Cross-compilation target for verifying platform-specific code
     install_windows_target
 end
@@ -519,8 +526,9 @@ end
 # Prerequisites:
 # - Windows target installed: `rustup target add x86_64-pc-windows-gnu`
 #   Or run: `fish run.fish install-cargo-tools`
-# - mingw-w64 GCC and binutils installed via `./bootstrap.sh`
+# - mingw-w64 GCC and binutils (dlltool) installed via `./bootstrap.sh`
 #   (Fedora: mingw64-gcc, Arch: mingw-w64-gcc, Ubuntu: gcc-mingw-w64-x86-64,
+#    openSUSE: cross-x86_64-w64-mingw32-gcc)
 #    macOS: brew install mingw-w64)
 #
 # Usage:
@@ -651,6 +659,10 @@ function docs
 end
 
 function serve-docs
+    if not command -v npm >/dev/null
+        echo (set_color red)"Error: npm is not installed. Please install Node.js and npm to use serve-docs."(set_color normal)
+        return 1
+    end
     npm i -g serve
     serve target/doc
 end

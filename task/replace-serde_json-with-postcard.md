@@ -146,7 +146,7 @@ mod tests_postcard_serde {
 
         assert_eq!(value, struct_from_bytes);
 
-        Ok(())
+        ok!()
     }
 }
 ```

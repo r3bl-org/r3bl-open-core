@@ -10,6 +10,6 @@ pub use detect_color_support::*;
 
 // Tests.
 #[cfg(any(test, doc))]
-pub use integration_tests::*;
+pub use detect_color_integration_tests::*;
 #[cfg(any(test, doc))]
-pub mod integration_tests;
+pub mod detect_color_integration_tests;

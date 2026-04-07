@@ -64,14 +64,10 @@ async fn with_readline_async() -> miette::Result<()> {
         it => return it.into_err(),
     };
 
-    let mut sw_1 = rl_ctx.clone_shared_writer();
-    let sw_2 = rl_ctx.clone_shared_writer();
-    let mut output_device = rl_ctx.clone_output_device();
-    let input_device = rl_ctx.mut_input_device();
-
     // Start a task to write some output to the shared writer. This output should be
     // paused (as long as choose() is active).
     tokio::spawn({
+        let mut sw_1 = rl_ctx.clone_shared_writer();
         async move {
             // Wait a moment to write to the shared writer. Give the main thread a chance
             // to start the choose() task, which will pause the shared writer output.
@@ -85,17 +81,22 @@ async fn with_readline_async() -> miette::Result<()> {
     });
 
     // Get the item selected by the user (or none).
-    let maybe_user_choice = choose(
-        Header::SingleLine("Choose one:".into()),
-        &["one", "two", "three"],
-        None,
-        None,
-        HowToChoose::Single,
-        StyleSheet::hot_pink_style(),
-        (&mut output_device, input_device, Some(sw_2)),
-    )
-    .get_first_result()
-    .await?;
+    let maybe_user_choice = {
+        let sw_2 = rl_ctx.clone_shared_writer();
+        let mut output_device = rl_ctx.clone_output_device();
+        let input_device = rl_ctx.mut_input_device();
+        choose(
+            Header::SingleLine("Choose one:".into()),
+            &["one", "two", "three"],
+            None,
+            None,
+            HowToChoose::Single,
+            StyleSheet::hot_pink_style(),
+            (&mut output_device, input_device, Some(sw_2)),
+        )
+        .get_first_result()
+        .await?
+    };
 
     let message = format!(
         ">>> Chosen {:<25}: {:?}",

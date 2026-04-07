@@ -31,8 +31,7 @@
 #     - ansifilter              Strips ANSI escape sequences from log files
 #
 #   Optional:
-#     - Node.js & npm           For Claude Code CLI installation
-#     - Claude Code             AI coding assistant (has built-in LSP)
+#     - Node.js & npm           Required by 'serve' tool for local doc hosting
 #
 # SUPPORTED PLATFORMS:
 #   - macOS (via Homebrew)
@@ -76,9 +75,9 @@ install_rustup() {
 }
 
 # Install mingw-w64 cross-compiler for Windows cross-compilation checks.
-# Needed by cc-rs build scripts (e.g. libmimalloc-sys) that probe for
-# x86_64-w64-mingw32-gcc even during metadata-only builds.
-# GCC packages pull in binutils (dlltool, etc.) as dependencies.
+# Needed by cc-rs build scripts (e.g. libmimalloc-sys, windows-sys) that probe for
+# x86_64-w64-mingw32-gcc and x86_64-w64-mingw32-dlltool even during
+# metadata-only builds.
 install_mingw_tools() {
     if [[ "$OSTYPE" == "darwin"* ]]; then
         if [[ -z "$PKG_MGR" ]] && ! command -v brew &>/dev/null; then
@@ -88,22 +87,22 @@ install_mingw_tools() {
         fi
     elif [[ -n "$PKG_MGR" ]]; then
         if command -v apt-get &>/dev/null; then
-            install_if_missing "x86_64-w64-mingw32-gcc" "$PKG_MGR gcc-mingw-w64-x86-64"
+            install_if_missing "x86_64-w64-mingw32-gcc" "$PKG_MGR gcc-mingw-w64-x86-64 binutils-mingw-w64-x86-64"
         elif command -v dnf &>/dev/null; then
-            install_if_missing "x86_64-w64-mingw32-gcc" "$PKG_MGR mingw64-gcc"
+            install_if_missing "x86_64-w64-mingw32-gcc" "$PKG_MGR mingw64-gcc mingw64-binutils"
         elif command -v pacman &>/dev/null; then
-            install_if_missing "x86_64-w64-mingw32-gcc" "$PKG_MGR mingw-w64-gcc"
+            install_if_missing "x86_64-w64-mingw32-gcc" "$PKG_MGR mingw-w64-gcc mingw-w64-binutils"
         elif command -v zypper &>/dev/null; then
-            install_if_missing "x86_64-w64-mingw32-gcc" "$PKG_MGR cross-x86_64-w64-mingw32-gcc"
+            install_if_missing "x86_64-w64-mingw32-gcc" "$PKG_MGR cross-x86_64-w64-mingw32-gcc cross-x86_64-w64-mingw32-binutils"
         elif command -v apk &>/dev/null; then
-            install_if_missing "x86_64-w64-mingw32-gcc" "$PKG_MGR mingw-w64-gcc"
+            install_if_missing "x86_64-w64-mingw32-gcc" "$PKG_MGR mingw-w64-gcc mingw-w64-binutils"
         fi
     else
-        echo "Warning: No supported package manager found. Install mingw-w64 GCC manually"
-        echo "  Ubuntu/Debian: sudo apt-get install gcc-mingw-w64-x86-64"
-        echo "  RHEL/CentOS/Fedora: sudo dnf install mingw64-gcc"
-        echo "  Arch: sudo pacman -S mingw-w64-gcc"
-        echo "  openSUSE: sudo zypper install cross-x86_64-w64-mingw32-gcc"
+        echo "Warning: No supported package manager found. Install mingw-w64 GCC and binutils manually"
+        echo "  Ubuntu/Debian: sudo apt-get install gcc-mingw-w64-x86-64 binutils-mingw-w64-x86-64"
+        echo "  RHEL/CentOS/Fedora: sudo dnf install mingw64-gcc mingw64-binutils"
+        echo "  Arch: sudo pacman -S mingw-w64-gcc mingw-w64-binutils"
+        echo "  openSUSE: sudo zypper install cross-x86_64-w64-mingw32-gcc cross-x86_64-w64-mingw32-binutils"
     fi
 }
 
@@ -243,27 +242,6 @@ install_nodejs() {
     fi
 }
 
-# Install Claude Code and plugins
-install_claude_code() {
-    if command -v npm &>/dev/null; then
-        if ! command -v claude &>/dev/null; then
-            echo "Installing Claude Code..."
-            npm install -g @anthropic-ai/claude-code
-            # Fix npm permissions
-            sudo chown -R $USER:$(id -gn) $(npm -g config get prefix)
-        else
-            echo "✓ claude already installed"
-        fi
-
-        # Claude Code now has built-in LSP server functionality - no plugins needed
-        if command -v claude &>/dev/null; then
-            echo "Claude Code installed successfully (has built-in LSP)"
-        fi
-    else
-        echo "Warning: npm not found. Cannot install Claude Code"
-    fi
-}
-
 # Setup development tools via run.fish
 setup_cargo_tools() {
     if command -v fish &>/dev/null; then
@@ -307,7 +285,6 @@ main() {
     install_file_watcher
     install_dev_utilities
     install_nodejs
-    install_claude_code
 
     echo ""
     echo "⚙️  Setting up Rust development tools..."

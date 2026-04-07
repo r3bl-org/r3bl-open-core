@@ -1,7 +1,7 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::{OffscreenBuffer, PixelCharLine};
-use crate::{RowIndex, row};
+use crate::{RowIndex, ok, row};
 
 /// Line-level operations.
 impl OffscreenBuffer {
@@ -24,7 +24,7 @@ impl OffscreenBuffer {
             miette::bail!("Operation failed");
         };
         *target_line = line;
-        Ok(())
+        ok!()
     }
 
     /// Swap two lines in the buffer.
@@ -54,7 +54,7 @@ impl OffscreenBuffer {
         );
 
         self.buffer.swap(row_1_idx, row_2_idx);
-        Ok(())
+        ok!()
     }
 }
 

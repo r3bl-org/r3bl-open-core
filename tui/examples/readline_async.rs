@@ -216,23 +216,24 @@ async fn main() -> miette::Result<()> {
     // There's no need to close readline_async or readline. Drop will take care of
     // cleaning up (closing raw mode).
 
-    Ok(())
+    ok!()
 }
 
 /// This task simply uses [`writeln`] and [`SharedWriter`] to print to stdout.
 mod task_1 {
     use super::{IntoDiagnostic, SharedWriter, State, Write};
+    use r3bl_tui::ok;
 
     pub fn tick(state: &mut State, stdout: &mut SharedWriter) -> miette::Result<()> {
         if !state.task_1_state.is_running {
-            return Ok(());
+            return ok!();
         }
 
         let counter_1 = state.task_1_state.counter;
         writeln!(stdout, "[{counter_1}] First interval went off!").into_diagnostic()?;
         state.task_1_state.counter += 1;
 
-        Ok(())
+        ok!()
     }
 }
 
@@ -327,24 +328,26 @@ mod process_input_event {
                     );
                 }
                 Command::Tree => {
-                    let mut shared_writer_clone = shared_writer.clone();
-                    spawn(async move {
-                        let mut_shared_writer = &mut shared_writer_clone;
-                        match file_walker::get_current_working_directory() {
-                            Ok((root_path, _)) => {
-                                match file_walker::display_tree(
-                                    root_path,
-                                    mut_shared_writer,
-                                    true,
-                                    None, // No limit - show all directories
-                                )
-                                .await
-                                {
-                                    Ok(()) => {}
-                                    Err(_) => todo!(),
+                    spawn({
+                        let mut shared_writer_clone = shared_writer.clone();
+                        async move {
+                            let mut_shared_writer = &mut shared_writer_clone;
+                            match file_walker::get_current_working_directory() {
+                                Ok((root_path, _)) => {
+                                    match file_walker::display_tree(
+                                        root_path,
+                                        mut_shared_writer,
+                                        true,
+                                        None, // No limit - show all directories
+                                    )
+                                    .await
+                                    {
+                                        Ok(()) => {}
+                                        Err(_) => todo!(),
+                                    }
                                 }
+                                Err(_) => todo!(),
                             }
-                            Err(_) => todo!(),
                         }
                     });
                 }
@@ -373,9 +376,6 @@ mod long_running_task {
 
         let task_name = task_name.to_string();
 
-        let shared_writer_clone_1 = shared_writer.clone();
-        let mut shared_writer_clone_2 = shared_writer.clone();
-
         if readline.safe_spinner_is_active.lock().unwrap().is_some() {
             // We don't care about the result of this operation.
             writeln!(
@@ -385,9 +385,12 @@ mod long_running_task {
             .ok();
         }
 
-        spawn(async move {
-            // Try to create and start a spinner.
-            let res_spinner = Spinner::try_start(
+        spawn({
+            let shared_writer_clone_1 = shared_writer.clone();
+            let mut shared_writer_clone_2 = shared_writer.clone();
+            async move {
+                // Try to create and start a spinner.
+                let res_spinner = Spinner::try_start(
                 format!("{task_name} - This is a sample indeterminate progress message"),
                 format!(
                     "{task_name} - Task ended. Resuming terminal and showing any output that was generated while spinner was active."
@@ -399,40 +402,41 @@ mod long_running_task {
             )
             .await;
 
-            let mut maybe_spinner = match res_spinner {
-                TuiAvailability::Available(spinner) => Some(spinner),
-                _ => None,
-            };
+                let mut maybe_spinner = match res_spinner {
+                    TuiAvailability::Available(spinner) => Some(spinner),
+                    _ => None,
+                };
 
-            loop {
-                // Check for spinner shutdown (via interruption).
-                if let Some(ref spinner) = maybe_spinner
-                    && spinner.is_shutdown()
-                {
-                    break;
-                }
+                loop {
+                    // Check for spinner shutdown (via interruption).
+                    if let Some(ref spinner) = maybe_spinner
+                        && spinner.is_shutdown()
+                    {
+                        break;
+                    }
 
-                // Wait for the interval duration (one tick).
-                interval.tick().await;
+                    // Wait for the interval duration (one tick).
+                    interval.tick().await;
 
-                // Don't print more than `max_tick_count` times.
-                tick_counter += 1;
-                if tick_counter >= max_tick_count {
-                    break;
-                }
+                    // Don't print more than `max_tick_count` times.
+                    tick_counter += 1;
+                    if tick_counter >= max_tick_count {
+                        break;
+                    }
 
-                // Display a message at every tick.
-                // We don't care about the result of this operation.
-                writeln!(
+                    // Display a message at every tick.
+                    // We don't care about the result of this operation.
+                    writeln!(
                     shared_writer_clone_2,
                     "[{task_name}] - [{tick_counter}] interval went off while spinner was spinning!"
                 ).ok();
-            }
+                }
 
-            // Don't forget to stop the spinner.
-            if let Some(mut spinner) = maybe_spinner.take() {
-                spinner.request_shutdown();
-                spinner.await_shutdown().await;
+                // Don't forget to stop the spinner.
+                if let Some(mut spinner) = maybe_spinner.take() {
+                    spinner.request_shutdown();
+                    spinner.await_shutdown().await;
+                }
             }
         });
     }
@@ -638,7 +642,7 @@ pub mod file_walker {
             }
         }
 
-        Ok(())
+        ok!()
     }
 
     /// Prints a node in the folder tree.
@@ -655,7 +659,7 @@ pub mod file_walker {
         )
         .into_diagnostic()?;
 
-        Ok(())
+        ok!()
     }
 }
 
@@ -723,5 +727,5 @@ async fn test_display_tree() -> miette::Result<()> {
     assert!(!output_lines.is_empty());
     assert!(output_lines.len() <= TEST_ITEM_LIMIT);
 
-    Ok(())
+    ok!()
 }

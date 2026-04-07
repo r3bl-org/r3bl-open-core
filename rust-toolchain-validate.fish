@@ -83,7 +83,16 @@ function validate_quick
     echo "   ✅ rust-analyzer installed"
     echo ""
 
-    # Step 5: Verify not corrupted
+    # Step 5: Check rust-src
+    echo "🔍 Checking rust-src component..."
+    if not is_component_installed $toolchain "rust-src"
+        echo "❌ rust-src component is MISSING"
+        return 2
+    end
+    echo "   ✅ rust-src installed"
+    echo ""
+
+    # Step 6: Verify not corrupted
     echo "🔍 Verifying toolchain integrity..."
     if not rustup run $toolchain rustc --version >/dev/null 2>&1
         echo "❌ Toolchain is CORRUPTED (rustc fails)"

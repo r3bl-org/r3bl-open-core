@@ -1,30 +1,29 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::fixtures::*;
-use crate::resilient_reactor_thread::{RRTEvent, RRTWaker, SharedWakerSlot,
-                                      ShutdownReason};
-use std::{sync::{Arc, Mutex, atomic::Ordering},
+use crate::resilient_reactor_thread::{RRTEvent, ShutdownReason, ThreadState};
+use std::{sync::{Arc, atomic::Ordering},
           thread::sleep,
           time::{Duration, Instant}};
 
-/// Verify that sending `Stop` causes the worker loop to exit and clear the waker slot.
+/// Verify that sending `Stop` causes the worker loop to exit and clear the software
+/// interrupt handle slot.
 ///
 /// # Panics
 ///
 /// Panics on assertion failure or if test infrastructure (mutex, channel) fails.
 pub fn test_worker_stop_exits_cleanly() {
-    let (worker, wake_fn, cmd_sender) = create_test_resources();
+    let (worker, interrupt, cmd_sender) = create_test_resources();
     let (sender, _receiver) = tokio::sync::broadcast::channel(16);
-    let shared_waker_slot: SharedWakerSlot<TestWaker> =
-        Arc::new(Mutex::new(Some(wake_fn)));
+    let shared_state = create_shared_state(interrupt);
 
     let (_notify_receiver, _senders) = setup_factory(vec![], no_delay_policy(3));
-    let handle = spawn_worker_loop(worker, sender, &shared_waker_slot);
+    let handle = spawn_worker_loop(worker, sender, Arc::clone(&shared_state));
 
     send_cmd(&cmd_sender, b's');
     handle.join().unwrap();
 
-    assert!(shared_waker_slot.lock().unwrap().is_none());
+    assert!(matches!(*shared_state.lock(), ThreadState::Stopped));
     teardown_factory();
 }
 
@@ -35,13 +34,12 @@ pub fn test_worker_stop_exits_cleanly() {
 ///
 /// Panics on assertion failure or if test infrastructure (mutex, channel) fails.
 pub fn test_worker_continue_then_stop() {
-    let (worker, wake_fn, cmd_sender) = create_test_resources();
+    let (worker, interrupt, cmd_sender) = create_test_resources();
     let (sender, mut receiver) = tokio::sync::broadcast::channel(16);
-    let shared_waker_slot: SharedWakerSlot<TestWaker> =
-        Arc::new(Mutex::new(Some(wake_fn)));
+    let shared_state = create_shared_state(interrupt);
 
     let (_notify_receiver, _senders) = setup_factory(vec![], no_delay_policy(3));
-    let handle = spawn_worker_loop(worker, sender, &shared_waker_slot);
+    let handle = spawn_worker_loop(worker, sender, Arc::clone(&shared_state));
 
     send_cmd(&cmd_sender, b'e');
     send_cmd(&cmd_sender, b'e');
@@ -64,13 +62,12 @@ pub fn test_worker_continue_then_stop() {
 ///
 /// Panics on assertion failure or if test infrastructure (mutex, channel) fails.
 pub fn test_domain_events_flow_through() {
-    let (worker, wake_fn, cmd_sender) = create_test_resources();
+    let (worker, interrupt, cmd_sender) = create_test_resources();
     let (sender, mut receiver) = tokio::sync::broadcast::channel(16);
-    let shared_waker_slot: SharedWakerSlot<TestWaker> =
-        Arc::new(Mutex::new(Some(wake_fn)));
+    let shared_state = create_shared_state(interrupt);
 
     let (_notify_receiver, _senders) = setup_factory(vec![], no_delay_policy(3));
-    let handle = spawn_worker_loop(worker, sender, &shared_waker_slot);
+    let handle = spawn_worker_loop(worker, sender, Arc::clone(&shared_state));
 
     send_cmd(&cmd_sender, b'e');
     send_cmd(&cmd_sender, b'e');
@@ -94,17 +91,16 @@ pub fn test_domain_events_flow_through() {
 ///
 /// Panics on assertion failure or if test infrastructure (mutex, channel, notify) fails.
 pub fn test_single_restart_success() {
-    let (worker1, wake_fn1, cmd_sender1) = create_test_resources();
+    let (worker1, interrupt1, cmd_sender1) = create_test_resources();
     let (ok2, cmd_sender2) = create_ok_result();
 
     let (notify_receiver, _senders) =
         setup_factory(vec![(ok2, Some(cmd_sender2.clone()))], no_delay_policy(3));
 
     let (sender, _receiver) = tokio::sync::broadcast::channel(16);
-    let shared_waker_slot: SharedWakerSlot<TestWaker> =
-        Arc::new(Mutex::new(Some(wake_fn1)));
+    let shared_state = create_shared_state(interrupt1);
 
-    let handle = spawn_worker_loop(worker1, sender, &shared_waker_slot);
+    let handle = spawn_worker_loop(worker1, sender, Arc::clone(&shared_state));
 
     // Worker1: restart.
     send_cmd(&cmd_sender1, b'r');
@@ -117,7 +113,7 @@ pub fn test_single_restart_success() {
     handle.join().unwrap();
 
     assert_eq!(get_create_count(), 1);
-    assert!(shared_waker_slot.lock().unwrap().is_none());
+    assert!(matches!(*shared_state.lock(), ThreadState::Stopped));
     teardown_factory();
 }
 
@@ -127,18 +123,17 @@ pub fn test_single_restart_success() {
 ///
 /// Panics on assertion failure or if test infrastructure (mutex, channel, notify) fails.
 pub fn test_restart_no_delay_fast() {
-    let (worker1, wake_fn1, cmd_sender1) = create_test_resources();
+    let (worker1, interrupt1, cmd_sender1) = create_test_resources();
     let (ok2, cmd_sender2) = create_ok_result();
 
     let (notify_receiver, _senders) =
         setup_factory(vec![(ok2, Some(cmd_sender2.clone()))], no_delay_policy(3));
 
     let (sender, _receiver) = tokio::sync::broadcast::channel(16);
-    let shared_waker_slot: SharedWakerSlot<TestWaker> =
-        Arc::new(Mutex::new(Some(wake_fn1)));
+    let shared_state = create_shared_state(interrupt1);
 
     let start = Instant::now();
-    let handle = spawn_worker_loop(worker1, sender, &shared_waker_slot);
+    let handle = spawn_worker_loop(worker1, sender, Arc::clone(&shared_state));
 
     send_cmd(&cmd_sender1, b'r');
     notify_receiver
@@ -157,17 +152,16 @@ pub fn test_restart_no_delay_fast() {
 ///
 /// Panics on assertion failure or if test infrastructure (mutex, channel, notify) fails.
 pub fn test_events_before_and_after_restart() {
-    let (worker1, wake_fn1, cmd_sender1) = create_test_resources();
+    let (worker1, interrupt1, cmd_sender1) = create_test_resources();
     let (ok2, cmd_sender2) = create_ok_result();
 
     let (notify_receiver, _senders) =
         setup_factory(vec![(ok2, Some(cmd_sender2.clone()))], no_delay_policy(3));
 
     let (sender, mut receiver) = tokio::sync::broadcast::channel(16);
-    let shared_waker_slot: SharedWakerSlot<TestWaker> =
-        Arc::new(Mutex::new(Some(wake_fn1)));
+    let shared_state = create_shared_state(interrupt1);
 
-    let handle = spawn_worker_loop(worker1, sender, &shared_waker_slot);
+    let handle = spawn_worker_loop(worker1, sender, Arc::clone(&shared_state));
 
     // Worker1: event then restart.
     send_cmd(&cmd_sender1, b'e');
@@ -188,56 +182,46 @@ pub fn test_events_before_and_after_restart() {
     teardown_factory();
 }
 
-/// Verify that the waker slot is swapped to a new waker after restart.
+/// Verify that the software interrupt handle slot is swapped to a new handle after restart.
 ///
 /// # Panics
 ///
-/// Panics on assertion failure, if the waker is not swapped within 5 seconds, or if test
+/// Panics on assertion failure, if the handle is not swapped within 5 seconds, or if test
 /// infrastructure (mutex, channel, notify) fails.
-pub fn test_waker_swap_on_restart() {
-    let (worker1, wake_fn1, cmd_sender1) = create_test_resources();
+pub fn test_interrupt_handle_swap_on_restart() {
+    let (worker1, interrupt1, cmd_sender1) = create_test_resources();
     let (ok2, cmd_sender2) = create_ok_result();
 
     let (notify_receiver, _senders) =
         setup_factory(vec![(ok2, Some(cmd_sender2.clone()))], no_delay_policy(3));
 
     let (sender, _receiver) = tokio::sync::broadcast::channel(16);
-    let shared_waker_slot: SharedWakerSlot<TestWaker> =
-        Arc::new(Mutex::new(Some(wake_fn1)));
+    let shared_state = create_shared_state(interrupt1);
 
-    let handle = spawn_worker_loop(worker1, sender, &shared_waker_slot);
+    let handle = spawn_worker_loop(worker1, sender, Arc::clone(&shared_state));
 
-    // Invoke the current waker to record its ID in LAST_WAKED_ID.
-    {
-        let guard = shared_waker_slot.lock().unwrap();
-        if let Some(w) = guard.as_ref() {
-            w.wake_and_unblock_dedicated_thread();
-        }
-    }
-    let old_id = LAST_WAKED_ID.load(Ordering::SeqCst);
+    // Invoke the current software interrupt to record its ID in LAST_INTERRUPT_ID.
+    shared_state.interrupt_if_running();
+    let old_id = LAST_INTERRUPT_ID.load(Ordering::SeqCst);
 
     send_cmd(&cmd_sender1, b'r');
     notify_receiver
         .recv_timeout(Duration::from_secs(5))
         .unwrap();
 
-    // Wait for the waker swap (happens right after create() returns).
-    // Each TestWaker records its unique ID in LAST_WAKED_ID when
-    // wake_and_unblock_dedicated_thread() is called.
+    // Wait for the interrupt handle swap (happens right after create() returns).
+    // Each TestInterrupt records its unique ID in LAST_INTERRUPT_ID when
+    // trigger_software_interrupt() is called.
     let deadline = Instant::now() + Duration::from_secs(5);
     loop {
         sleep(Duration::from_millis(1));
-        if let Ok(guard) = shared_waker_slot.lock()
-            && let Some(w) = guard.as_ref()
-        {
-            w.wake_and_unblock_dedicated_thread();
-            if LAST_WAKED_ID.load(Ordering::SeqCst) != old_id {
-                break;
-            }
+        shared_state.interrupt_if_running();
+        if LAST_INTERRUPT_ID.load(Ordering::SeqCst) != old_id {
+            break;
         }
         assert!(
             Instant::now() < deadline,
-            "Waker should have been swapped on restart"
+            "Interrupt handle should have been swapped on restart"
         );
     }
 
@@ -254,7 +238,7 @@ pub fn test_waker_swap_on_restart() {
 /// Panics on assertion failure or if test infrastructure (mutex, channel, notify) fails.
 pub fn test_budget_resets_on_successful_create() {
     // max_restarts=1, but each successful create resets the budget.
-    let (worker1, wake_fn1, cmd_sender1) = create_test_resources();
+    let (worker1, interrupt1, cmd_sender1) = create_test_resources();
     let (ok2, cmd_sender2) = create_ok_result();
     let (ok3, cmd_sender3) = create_ok_result();
     let (ok4, cmd_sender4) = create_ok_result();
@@ -269,10 +253,9 @@ pub fn test_budget_resets_on_successful_create() {
     );
 
     let (sender, _receiver) = tokio::sync::broadcast::channel(16);
-    let shared_waker_slot: SharedWakerSlot<TestWaker> =
-        Arc::new(Mutex::new(Some(wake_fn1)));
+    let shared_state = create_shared_state(interrupt1);
 
-    let handle = spawn_worker_loop(worker1, sender, &shared_waker_slot);
+    let handle = spawn_worker_loop(worker1, sender, Arc::clone(&shared_state));
 
     // W1 -> restart -> W2 created (budget resets).
     send_cmd(&cmd_sender1, b'r');
@@ -294,7 +277,7 @@ pub fn test_budget_resets_on_successful_create() {
     handle.join().unwrap();
 
     assert_eq!(get_create_count(), 3);
-    assert!(shared_waker_slot.lock().unwrap().is_none());
+    assert!(matches!(*shared_state.lock(), ThreadState::Stopped));
     teardown_factory();
 }
 
@@ -307,7 +290,7 @@ pub fn test_budget_resets_on_successful_create() {
 pub fn test_restart_exhaustion() {
     // max=2. W1 and W2 restart OK (budget resets each time). W3 restarts but
     // factory is empty -> create() fails repeatedly -> exhausts budget.
-    let (worker1, wake_fn1, cmd_sender1) = create_test_resources();
+    let (worker1, interrupt1, cmd_sender1) = create_test_resources();
     let (ok2, cmd_sender2) = create_ok_result();
     let (ok3, cmd_sender3) = create_ok_result();
 
@@ -320,10 +303,9 @@ pub fn test_restart_exhaustion() {
     );
 
     let (sender, mut receiver) = tokio::sync::broadcast::channel(16);
-    let shared_waker_slot: SharedWakerSlot<TestWaker> =
-        Arc::new(Mutex::new(Some(wake_fn1)));
+    let shared_state = create_shared_state(interrupt1);
 
-    let handle = spawn_worker_loop(worker1, sender, &shared_waker_slot);
+    let handle = spawn_worker_loop(worker1, sender, Arc::clone(&shared_state));
 
     send_cmd(&cmd_sender1, b'r');
     notify_receiver
@@ -355,15 +337,14 @@ pub fn test_restart_exhaustion() {
 ///
 /// Panics on assertion failure or if test infrastructure (mutex, channel) fails.
 pub fn test_zero_budget_immediate_exhaustion() {
-    let (worker1, wake_fn1, cmd_sender1) = create_test_resources();
+    let (worker1, interrupt1, cmd_sender1) = create_test_resources();
 
     let (_notify_receiver, _senders) = setup_factory(vec![], no_delay_policy(0));
 
     let (sender, mut receiver) = tokio::sync::broadcast::channel(16);
-    let shared_waker_slot: SharedWakerSlot<TestWaker> =
-        Arc::new(Mutex::new(Some(wake_fn1)));
+    let shared_state = create_shared_state(interrupt1);
 
-    let handle = spawn_worker_loop(worker1, sender, &shared_waker_slot);
+    let handle = spawn_worker_loop(worker1, sender, Arc::clone(&shared_state));
 
     send_cmd(&cmd_sender1, b'r');
     handle.join().unwrap();
@@ -384,15 +365,14 @@ pub fn test_zero_budget_immediate_exhaustion() {
 ///
 /// Panics on assertion failure or if test infrastructure (mutex, channel) fails.
 pub fn test_shutdown_event_payload() {
-    let (worker1, wake_fn1, cmd_sender1) = create_test_resources();
+    let (worker1, interrupt1, cmd_sender1) = create_test_resources();
 
     let (_notify_receiver, _senders) = setup_factory(vec![], no_delay_policy(0));
 
     let (sender, mut receiver) = tokio::sync::broadcast::channel(16);
-    let shared_waker_slot: SharedWakerSlot<TestWaker> =
-        Arc::new(Mutex::new(Some(wake_fn1)));
+    let shared_state = create_shared_state(interrupt1);
 
-    let handle = spawn_worker_loop(worker1, sender, &shared_waker_slot);
+    let handle = spawn_worker_loop(worker1, sender, Arc::clone(&shared_state));
 
     send_cmd(&cmd_sender1, b'r');
     handle.join().unwrap();
@@ -411,7 +391,7 @@ pub fn test_shutdown_event_payload() {
 ///
 /// Panics on assertion failure or if test infrastructure (mutex, channel, notify) fails.
 pub fn test_create_failure_then_success() {
-    let (worker1, wake_fn1, cmd_sender1) = create_test_resources();
+    let (worker1, interrupt1, cmd_sender1) = create_test_resources();
     let (ok2, cmd_sender2) = create_ok_result();
 
     let (notify_receiver, _senders) = setup_factory(
@@ -423,10 +403,9 @@ pub fn test_create_failure_then_success() {
     );
 
     let (sender, _receiver) = tokio::sync::broadcast::channel(16);
-    let shared_waker_slot: SharedWakerSlot<TestWaker> =
-        Arc::new(Mutex::new(Some(wake_fn1)));
+    let shared_state = create_shared_state(interrupt1);
 
-    let handle = spawn_worker_loop(worker1, sender, &shared_waker_slot);
+    let handle = spawn_worker_loop(worker1, sender, Arc::clone(&shared_state));
 
     send_cmd(&cmd_sender1, b'r');
     // Wait for second create() call (first fails, second succeeds).
@@ -450,7 +429,7 @@ pub fn test_create_failure_then_success() {
 ///
 /// Panics on assertion failure or if test infrastructure (mutex, channel) fails.
 pub fn test_persistent_create_failure() {
-    let (worker1, wake_fn1, cmd_sender1) = create_test_resources();
+    let (worker1, interrupt1, cmd_sender1) = create_test_resources();
 
     let (_notify_receiver, _senders) = setup_factory(
         vec![
@@ -462,10 +441,9 @@ pub fn test_persistent_create_failure() {
     );
 
     let (sender, mut receiver) = tokio::sync::broadcast::channel(16);
-    let shared_waker_slot: SharedWakerSlot<TestWaker> =
-        Arc::new(Mutex::new(Some(wake_fn1)));
+    let shared_state = create_shared_state(interrupt1);
 
-    let handle = spawn_worker_loop(worker1, sender, &shared_waker_slot);
+    let handle = spawn_worker_loop(worker1, sender, Arc::clone(&shared_state));
 
     send_cmd(&cmd_sender1, b'r');
     handle.join().unwrap();
@@ -485,48 +463,6 @@ pub fn test_persistent_create_failure() {
     teardown_factory();
 }
 
-/// Verify that the waker slot is cleared (`None`) after a normal `Stop`.
-///
-/// # Panics
-///
-/// Panics on assertion failure or if test infrastructure (mutex, channel) fails.
-pub fn test_guard_clears_waker_on_stop() {
-    let (worker, wake_fn, cmd_sender) = create_test_resources();
-    let (sender, _receiver) = tokio::sync::broadcast::channel(16);
-    let shared_waker_slot: SharedWakerSlot<TestWaker> =
-        Arc::new(Mutex::new(Some(wake_fn)));
-
-    let (_notify_receiver, _senders) = setup_factory(vec![], no_delay_policy(3));
-    let handle = spawn_worker_loop(worker, sender, &shared_waker_slot);
-
-    send_cmd(&cmd_sender, b's');
-    handle.join().unwrap();
-
-    assert!(shared_waker_slot.lock().unwrap().is_none());
-    teardown_factory();
-}
-
-/// Verify that the waker slot is cleared (`None`) after restart budget exhaustion.
-///
-/// # Panics
-///
-/// Panics on assertion failure or if test infrastructure (mutex, channel) fails.
-pub fn test_guard_clears_waker_on_exhaustion() {
-    let (worker, wake_fn, cmd_sender) = create_test_resources();
-    let (sender, _receiver) = tokio::sync::broadcast::channel(16);
-    let shared_waker_slot: SharedWakerSlot<TestWaker> =
-        Arc::new(Mutex::new(Some(wake_fn)));
-
-    let (_notify_receiver, _senders) = setup_factory(vec![], no_delay_policy(0));
-    let handle = spawn_worker_loop(worker, sender, &shared_waker_slot);
-
-    send_cmd(&cmd_sender, b'r');
-    handle.join().unwrap();
-
-    assert!(shared_waker_slot.lock().unwrap().is_none());
-    teardown_factory();
-}
-
 /// Verify that the backoff delay from [`RestartPolicy::initial_delay`] is applied between
 /// restart attempts (at least 50ms).
 ///
@@ -536,7 +472,7 @@ pub fn test_guard_clears_waker_on_exhaustion() {
 ///
 /// [`RestartPolicy::initial_delay`]: field@crate::RestartPolicy::initial_delay
 pub fn test_backoff_delay_applied() {
-    let (worker1, wake_fn1, cmd_sender1) = create_test_resources();
+    let (worker1, interrupt1, cmd_sender1) = create_test_resources();
     let (ok2, cmd_sender2) = create_ok_result();
 
     let policy = crate::resilient_reactor_thread::RestartPolicy {
@@ -549,11 +485,10 @@ pub fn test_backoff_delay_applied() {
         setup_factory(vec![(ok2, Some(cmd_sender2.clone()))], policy);
 
     let (sender, _receiver) = tokio::sync::broadcast::channel(16);
-    let shared_waker_slot: SharedWakerSlot<TestWaker> =
-        Arc::new(Mutex::new(Some(wake_fn1)));
+    let shared_state = create_shared_state(interrupt1);
 
     let start = Instant::now();
-    let handle = spawn_worker_loop(worker1, sender, &shared_waker_slot);
+    let handle = spawn_worker_loop(worker1, sender, Arc::clone(&shared_state));
 
     send_cmd(&cmd_sender1, b'r');
     notify_receiver
@@ -573,7 +508,7 @@ pub fn test_backoff_delay_applied() {
 ///
 /// Panics on assertion failure or if test infrastructure (mutex, channel, notify) fails.
 pub fn test_delay_resets_after_successful_create() {
-    let (worker1, wake_fn1, cmd_sender1) = create_test_resources();
+    let (worker1, interrupt1, cmd_sender1) = create_test_resources();
     let (ok2, cmd_sender2) = create_ok_result();
     let (ok3, cmd_sender3) = create_ok_result();
 
@@ -593,11 +528,10 @@ pub fn test_delay_resets_after_successful_create() {
     );
 
     let (sender, _receiver) = tokio::sync::broadcast::channel(16);
-    let shared_waker_slot: SharedWakerSlot<TestWaker> =
-        Arc::new(Mutex::new(Some(wake_fn1)));
+    let shared_state = create_shared_state(interrupt1);
 
     let start = Instant::now();
-    let handle = spawn_worker_loop(worker1, sender, &shared_waker_slot);
+    let handle = spawn_worker_loop(worker1, sender, Arc::clone(&shared_state));
 
     send_cmd(&cmd_sender1, b'r');
     notify_receiver
@@ -627,13 +561,12 @@ pub fn test_delay_resets_after_successful_create() {
 ///
 /// Panics on assertion failure or if test infrastructure (mutex, channel) fails.
 pub fn test_panic_sends_shutdown_panic() {
-    let (worker, wake_fn, cmd_sender) = create_test_resources();
+    let (worker, interrupt, cmd_sender) = create_test_resources();
     let (sender, mut receiver) = tokio::sync::broadcast::channel(16);
-    let shared_waker_slot: SharedWakerSlot<TestWaker> =
-        Arc::new(Mutex::new(Some(wake_fn)));
+    let shared_state = create_shared_state(interrupt);
 
     let (_notify_receiver, _senders) = setup_factory(vec![], no_delay_policy(3));
-    let handle = spawn_worker_loop(worker, sender, &shared_waker_slot);
+    let handle = spawn_worker_loop(worker, sender, Arc::clone(&shared_state));
 
     send_cmd(&cmd_sender, b'p');
     handle.join().unwrap();
@@ -652,13 +585,12 @@ pub fn test_panic_sends_shutdown_panic() {
 ///
 /// Panics on assertion failure or if test infrastructure (mutex, channel) fails.
 pub fn test_panic_after_events() {
-    let (worker, wake_fn, cmd_sender) = create_test_resources();
+    let (worker, interrupt, cmd_sender) = create_test_resources();
     let (sender, mut receiver) = tokio::sync::broadcast::channel(16);
-    let shared_waker_slot: SharedWakerSlot<TestWaker> =
-        Arc::new(Mutex::new(Some(wake_fn)));
+    let shared_state = create_shared_state(interrupt);
 
     let (_notify_receiver, _senders) = setup_factory(vec![], no_delay_policy(3));
-    let handle = spawn_worker_loop(worker, sender, &shared_waker_slot);
+    let handle = spawn_worker_loop(worker, sender, Arc::clone(&shared_state));
 
     send_cmd(&cmd_sender, b'e');
     send_cmd(&cmd_sender, b'p');
@@ -675,27 +607,6 @@ pub fn test_panic_after_events() {
     teardown_factory();
 }
 
-/// Verify that the waker slot is cleared (`None`) after a worker panic.
-///
-/// # Panics
-///
-/// Panics on assertion failure or if test infrastructure (mutex, channel) fails.
-pub fn test_guard_clears_waker_on_panic() {
-    let (worker, wake_fn, cmd_sender) = create_test_resources();
-    let (sender, _receiver) = tokio::sync::broadcast::channel(16);
-    let shared_waker_slot: SharedWakerSlot<TestWaker> =
-        Arc::new(Mutex::new(Some(wake_fn)));
-
-    let (_notify_receiver, _senders) = setup_factory(vec![], no_delay_policy(3));
-    let handle = spawn_worker_loop(worker, sender, &shared_waker_slot);
-
-    send_cmd(&cmd_sender, b'p');
-    handle.join().unwrap();
-
-    assert!(shared_waker_slot.lock().unwrap().is_none());
-    teardown_factory();
-}
-
 /// Verify that a panic does not trigger a restart - the loop exits immediately without
 /// calling `create_and_register_os_sources()`.
 ///
@@ -703,13 +614,12 @@ pub fn test_guard_clears_waker_on_panic() {
 ///
 /// Panics on assertion failure or if test infrastructure (mutex, channel) fails.
 pub fn test_no_restart_after_panic() {
-    let (worker, wake_fn, cmd_sender) = create_test_resources();
+    let (worker, interrupt, cmd_sender) = create_test_resources();
     let (sender, _receiver) = tokio::sync::broadcast::channel(16);
-    let shared_waker_slot: SharedWakerSlot<TestWaker> =
-        Arc::new(Mutex::new(Some(wake_fn)));
+    let shared_state = create_shared_state(interrupt);
 
     let (_notify_receiver, _senders) = setup_factory(vec![], no_delay_policy(3));
-    let handle = spawn_worker_loop(worker, sender, &shared_waker_slot);
+    let handle = spawn_worker_loop(worker, sender, Arc::clone(&shared_state));
 
     send_cmd(&cmd_sender, b'p');
     handle.join().unwrap();

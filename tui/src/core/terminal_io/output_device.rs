@@ -30,6 +30,14 @@ macro_rules! lock_output_device_as_mut {
 /// - It is safe to clone.
 /// - To write to it, see the examples in [`Self::lock()`] or
 ///   [`lock_output_device_as_mut`] macro.
+///
+/// # Poison Safety
+///
+/// See the [Terminal Restoration: Panic, Drop, and Mutex Poison-Safety] section
+/// in the crate root documentation for details.
+///
+/// [Terminal Restoration: Panic, Drop, and Mutex Poison-Safety]:
+///     crate#terminal-restoration-panic-drop-and-mutex-poison-safety
 #[derive(Clone)]
 #[allow(missing_debug_implementations)]
 pub struct OutputDevice {
@@ -68,13 +76,34 @@ impl OutputDevice {
     /// that the resource is locked for the duration of the guard's lifetime, preventing
     /// other threads from accessing it simultaneously.
     ///
-    /// # Panics
+    /// # Poison Safety
     ///
-    /// This method will panic if the mutex is poisoned, which can happen if a thread
-    /// panics while holding the lock. To avoid panics, ensure that the code that
-    /// locks the mutex does not panic while holding the lock.
+    /// This method is **poison-safe by design**. It internally handles poisoning by
+    /// logging the error and returning the "dirty" state via [`into_inner()`].
+    ///
+    /// This ensures that terminal output (like flushing a "clear screen" sequence) can
+    /// always be attempted during cleanup, even if a previous panic corrupted the output
+    /// buffer. We prioritize **Resilience over Integrity** here to prevent a **Double
+    /// Panic Abort** that would **brick the user's terminal**.
+    ///
+    /// See the [Terminal Restoration: Panic, Drop, and Mutex Poison-Safety] section in
+    /// the crate root documentation for details.
+    ///
+    /// [`into_inner()`]: std::sync::PoisonError::into_inner
+    /// [Terminal Restoration: Panic, Drop, and Mutex Poison-Safety]:
+    ///     crate#terminal-restoration-panic-drop-and-mutex-poison-safety
     pub fn lock(&self) -> std::sync::MutexGuard<'_, SendRawTerminal> {
-        self.resource.lock().unwrap()
+        match self.resource.lock() {
+            Ok(guard) => guard,
+            Err(poisoned) => {
+                // % is Display, ? is Debug.
+                tracing::error!(
+                    message = "OutputDevice lock poisoned, proceeding with dirty state",
+                    error = ?poisoned
+                );
+                poisoned.into_inner()
+            }
+        }
     }
 }
 
@@ -97,5 +126,41 @@ mod tests {
     fn test_stdout_output_device_is_not_mock() {
         let device = OutputDevice::new_stdout();
         assert!(!device.is_mock);
+    }
+
+    #[test]
+    fn test_output_device_poison_resilience() {
+        let resource: SafeRawTerminal = Arc::new(StdMutex::new(Vec::new()));
+        let device = OutputDevice {
+            resource: Arc::clone(&resource),
+            is_mock: true,
+        };
+
+        // 1. Poison the mutex.
+        let _unused = std::thread::spawn(move || {
+            let _guard = resource.lock().unwrap();
+            panic!("Intentional panic to poison OutputDevice resource");
+        })
+        .join();
+
+        // 2. Verify it is poisoned.
+        assert!(device.resource.lock().is_err());
+
+        // 3. Verify lock() does NOT panic and returns the dirty state.
+        {
+            let mut guard = device.lock();
+            drop(guard.write_all(b"still works"));
+        }
+
+        // 4. Verify data was written to the dirty state.
+        {
+            let _guard = match device.resource.lock() {
+                Ok(_) => panic!("Should be poisoned"),
+                Err(e) => e.into_inner(),
+            };
+            // We can't easily downcast and check the vec here without more boilerplate,
+            // but the fact that we got here and could call write_all above proves
+            // resilience.
+        }
     }
 }

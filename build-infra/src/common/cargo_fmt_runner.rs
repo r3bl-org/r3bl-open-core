@@ -3,6 +3,7 @@
 //! Run `cargo fmt` on specified files.
 
 use miette::{IntoDiagnostic, Result, WrapErr};
+use r3bl_tui::ok;
 use std::{path::PathBuf, process::Command};
 
 /// Run `cargo fmt` on the specified files.
@@ -32,7 +33,7 @@ use std::{path::PathBuf, process::Command};
 pub fn run_cargo_fmt_on_files(files: &[PathBuf], verbose: bool) -> Result<()> {
     // No-op if no files to format
     if files.is_empty() {
-        return Ok(());
+        return ok!();
     }
 
     if verbose {
@@ -69,7 +70,7 @@ pub fn run_cargo_fmt_on_files(files: &[PathBuf], verbose: bool) -> Result<()> {
         println!("cargo fmt completed successfully");
     }
 
-    Ok(())
+    ok!()
 }
 
 #[cfg(test)]

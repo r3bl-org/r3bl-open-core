@@ -20,7 +20,7 @@
 #[allow(clippy::wildcard_imports)]
 use super::super::*;
 use crate::{ArrayBoundsCheck, ArrayUnderflowResult, RowHeight,
-            core::coordinates::bounds_check::RangeConvertExt};
+            core::coordinates::bounds_check::RangeConvertExt, ok};
 
 impl OffscreenBuffer {
     /// Move cursor down one line, scrolling the buffer if at bottom.
@@ -75,7 +75,7 @@ impl OffscreenBuffer {
         {
             // Not at scroll region bottom - just move cursor down.
             self.cursor_down(RowHeight::from(1));
-            Ok(())
+            ok!()
         } else {
             // At scroll region bottom - scroll buffer content up by one line.
             self.scroll_buffer_up()
@@ -134,7 +134,7 @@ impl OffscreenBuffer {
         {
             // Not at scroll region top - just move cursor up.
             self.cursor_up(RowHeight::from(1));
-            Ok(())
+            ok!()
         } else {
             // At scroll region top - scroll buffer content down by one line.
             self.scroll_buffer_down()
@@ -229,7 +229,7 @@ impl OffscreenBuffer {
         for _ in 0..how_many.as_u16() {
             self.scroll_buffer_up()?;
         }
-        Ok(())
+        ok!()
     }
 
     /// Handle SD (Scroll Down) - scroll display down by n lines.
@@ -275,7 +275,7 @@ impl OffscreenBuffer {
         for _ in 0..how_many.as_u16() {
             self.scroll_buffer_down()?;
         }
-        Ok(())
+        ok!()
     }
 }
 

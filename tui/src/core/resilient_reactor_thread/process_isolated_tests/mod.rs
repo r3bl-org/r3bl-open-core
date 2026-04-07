@@ -29,7 +29,7 @@ fn run_all_restart_tests_sequentially() {
     group_b_run_worker_loop::test_single_restart_success();
     group_b_run_worker_loop::test_restart_no_delay_fast();
     group_b_run_worker_loop::test_events_before_and_after_restart();
-    group_b_run_worker_loop::test_waker_swap_on_restart();
+    group_b_run_worker_loop::test_interrupt_handle_swap_on_restart();
     group_b_run_worker_loop::test_budget_resets_on_successful_create();
 
     // Group B Step 5.2: Restart exhaustion paths.
@@ -41,10 +41,6 @@ fn run_all_restart_tests_sequentially() {
     group_b_run_worker_loop::test_create_failure_then_success();
     group_b_run_worker_loop::test_persistent_create_failure();
 
-    // Group B Step 5.4: TerminationGuard cleanup.
-    group_b_run_worker_loop::test_guard_clears_waker_on_stop();
-    group_b_run_worker_loop::test_guard_clears_waker_on_exhaustion();
-
     // Group B Step 5.5: Backoff timing.
     group_b_run_worker_loop::test_backoff_delay_applied();
     group_b_run_worker_loop::test_delay_resets_after_successful_create();
@@ -52,7 +48,6 @@ fn run_all_restart_tests_sequentially() {
     // Group B Step 5.6: Panic handling.
     group_b_run_worker_loop::test_panic_sends_shutdown_panic();
     group_b_run_worker_loop::test_panic_after_events();
-    group_b_run_worker_loop::test_guard_clears_waker_on_panic();
     group_b_run_worker_loop::test_no_restart_after_panic();
 
     // Group C Step 6: RRT<TestWorker> integration tests.

@@ -935,9 +935,7 @@ generate_impl_display_for_fast_stringify!(CliTextInline);
 #[cfg(test)]
 mod tests {
     use super::{cli_text_inline_impl::CliTextConvertOptions, dim};
-    use crate::{CliTextInline, ColIndex, ColorSupport, InlineVec, PixelChar, TuiColor,
-                TuiStyle, TuiStyleAttribs, global_color_support, tui_color,
-                tui_style::tui_style_attrib::Bold, tui_style_attribs, width};
+    use crate::{CliTextInline, ColIndex, ColorSupport, InlineVec, PixelChar, TuiColor, TuiStyle, TuiStyleAttribs, global_color_support, ok, tui_color, tui_style::tui_style_attrib::Bold, tui_style_attribs, width};
     use pretty_assertions::assert_eq;
     use serial_test::serial;
 
@@ -1015,7 +1013,7 @@ mod tests {
             "\x1b[1m\x1b[38;5;150m\x1b[48;5;16mWorld\x1b[0m".to_string()
         );
 
-        Ok(())
+        ok!()
     }
 
     #[serial]
@@ -1048,7 +1046,7 @@ mod tests {
             "\x1b[1m\x1b[38;5;150m\x1b[48;2;1;1;1mWorld\x1b[0m".to_string()
         );
 
-        Ok(())
+        ok!()
     }
 
     #[serial]
@@ -1085,7 +1083,7 @@ mod tests {
             "\u{1b}[1m\u{1b}[38;5;251m\u{1b}[48;5;16mWorld\u{1b}[0m".to_string()
         );
 
-        Ok(())
+        ok!()
     }
 
     #[serial]

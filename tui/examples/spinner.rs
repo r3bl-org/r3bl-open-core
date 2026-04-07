@@ -2,7 +2,7 @@
 
 use r3bl_tui::{CommonResult, IntoErr, OutputDevice, SGR_FG_RED_STR, SGR_RESET_STR,
                SpinnerColor, SpinnerStyle, SpinnerTemplate, TuiAvailability,
-               assert_terminal_is_interactive,
+               assert_terminal_is_interactive, ok,
                readline_async::{ReadlineAsyncContext, SafeInlineString, Spinner},
                set_mimalloc_in_main,
                spinner_constants::{ARTIFICIAL_UI_DELAY, DELAY_MS, DELAY_UNIT},
@@ -84,7 +84,7 @@ pub async fn main() -> CommonResult<()> {
         .await?;
     }
 
-    Ok(())
+    ok!()
 }
 
 #[allow(unused_assignments)]
@@ -147,7 +147,7 @@ async fn example_with_concurrent_output(style: SpinnerStyle) -> miette::Result<(
 
     sleep(ARTIFICIAL_UI_DELAY).await;
 
-    Ok(())
+    ok!()
 }
 
 #[allow(unused_assignments)]
@@ -186,7 +186,7 @@ async fn example_with_concurrent_output_no_readline_async(
 
     sleep(ARTIFICIAL_UI_DELAY).await;
 
-    Ok(())
+    ok!()
 }
 
 /// Example showing how to update spinner messages dynamically.
@@ -254,5 +254,5 @@ async fn example_with_message_updates(style: SpinnerStyle) -> miette::Result<()>
 
     sleep(ARTIFICIAL_UI_DELAY).await;
 
-    Ok(())
+    ok!()
 }

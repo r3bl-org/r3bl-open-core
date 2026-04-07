@@ -8,10 +8,7 @@
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 
 use super::{ProcessManager, show_notification_non_blocking};
-use crate::{AnsiSequenceGenerator, Continuation, InputEvent, Key, KeyPress, KeyState,
-            ModifierKeysMask, PtyInputEvent, Size, col,
-            core::{osc::OscController, terminal_io::OutputDevice},
-            lock_output_device_as_mut, row};
+use crate::{AnsiSequenceGenerator, Continuation, InputEvent, Key, KeyPress, KeyState, ModifierKeysMask, PtyInputEvent, Size, col, core::{osc::OscController, terminal_io::OutputDevice}, lock_output_device_as_mut, ok, row};
 
 /// Routes input events to appropriate handlers and manages dynamic keyboard shortcuts.
 #[derive(Debug)]
@@ -177,7 +174,7 @@ impl InputRouter {
             format!("PTYMux - {}", process_manager.active_name())
         };
         osc.set_title_and_tab(&title)?;
-        Ok(())
+        ok!()
     }
 
     /// Handles terminal resize events.

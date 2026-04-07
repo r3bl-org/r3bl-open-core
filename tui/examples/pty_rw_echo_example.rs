@@ -12,7 +12,7 @@ use r3bl_tui::{AnsiSequenceGenerator, InputEvent, Key, KeyPress, KeyState,
                             PtySessionConfigOption},
                       terminal_io::{InputDevice, OutputDevice},
                       try_initialize_logging_global},
-               lock_output_device_as_mut, row, set_mimalloc_in_main};
+               lock_output_device_as_mut, ok, row, set_mimalloc_in_main};
 use std::io::Write;
 
 #[tokio::main]
@@ -110,5 +110,5 @@ async fn main() -> miette::Result<()> {
     );
 
     println!("\n👋 Goodbye!");
-    Ok(())
+    ok!()
 }

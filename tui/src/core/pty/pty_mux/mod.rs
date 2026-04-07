@@ -49,7 +49,7 @@
 //! ## Usage Example
 //!
 //! ```no_run
-//! use r3bl_tui::{TuiAvailability, IntoErr, core::pty_mux::PTYMux};
+//! use r3bl_tui::{TuiAvailability, IntoErr, core::pty_mux::PTYMux, ok};
 //!
 //! #[tokio::main]
 //! async fn main() -> miette::Result<()> {
@@ -64,7 +64,7 @@
 //!     };
 //!
 //!     multiplexer.run().await?;  // F1/F2/F3 to switch, Ctrl+Q to quit
-//!     Ok(())
+//!     ok!()
 //! }
 //! ```
 //!

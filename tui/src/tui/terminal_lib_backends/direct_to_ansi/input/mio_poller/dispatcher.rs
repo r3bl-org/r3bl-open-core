@@ -2,10 +2,11 @@
 
 //! Event dispatching for the [`mio`] poller event loop.
 
-use super::{super::channel_types::PollerEvent, MioPollWorker,
-            handler_receiver_drop::handle_receiver_drop_waker_with_sender,
+use super::{MioPollWorker,
             handler_signals::consume_pending_signals_with_sender,
-            handler_stdin::consume_stdin_input_with_sender, sources::SourceKindReady};
+            handler_software_interrupt::handle_software_interrupt_with_sender,
+            handler_stdin::consume_stdin_input_with_sender, sources::SourceKindReady,
+            super::channel_types::PollerEvent};
 use crate::{Continuation, core::resilient_reactor_thread::RRTEvent,
             tui::DEBUG_TUI_SHOW_MIO_POLLER};
 use mio::Token;
@@ -25,11 +26,11 @@ pub fn dispatch_with_sender(
     worker: &mut MioPollWorker,
     sender: &Sender<RRTEvent<PollerEvent>>,
 ) -> Continuation {
-    use SourceKindReady::{ReceiverDropWaker, Signals, Stdin, Unknown};
+    use SourceKindReady::{Signals, SoftwareInterrupt, Stdin, Unknown};
     match SourceKindReady::from_token(token) {
         Stdin => consume_stdin_input_with_sender(worker, sender),
         Signals => consume_pending_signals_with_sender(worker, sender),
-        ReceiverDropWaker => handle_receiver_drop_waker_with_sender(sender),
+        SoftwareInterrupt => handle_software_interrupt_with_sender(sender),
         Unknown => handle_unknown(token),
     }
 }

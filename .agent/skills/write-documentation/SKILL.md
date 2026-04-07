@@ -145,6 +145,18 @@ Doc comments should read naturally and have clear subjects. Avoid abrupt sentenc
 /// This is the main trait - implement it to add your logic.
 ```
 
+### Technical Terminology Precision
+
+**Use precise terms for the code lifecycle and generics to maintain low cognitive load.**
+
+- **Declaration (Header)** vs. **Definition (Body)** vs. **Usage (Call Site)**.
+- **Parameters (Slots)** belong to the **Header** and **Body**.
+- **Arguments (Fillers)** belong to the **Call Site**.
+
+See [Technical Terminology Precision] for the complete mental model and table.
+
+[Technical Terminology Precision]: terminology-precision.md
+
 ### Escape Sequences: Use `ESC` Notation, Not `\x1B`
 
 **In documentation prose, write escape sequences using human-readable `ESC` notation, not Rust
@@ -1131,6 +1143,7 @@ Before committing documentation:
 | File | Content | When to Read |
 |------|---------|--------------|
 | `link-patterns.md` | Link source rubric + 15 detailed patterns | Choosing local vs external links, modules, private types, test functions, fragments |
+| `terminology-precision.md` | Full code lifecycle & generics terminology map | Ensuring precise use of "parameter", "argument", "declaration", etc. |
 | `constant-conventions.md` | Full human-readable constants guide | Writing byte constants, decision guide |
 | `examples.md` | 5 production-quality doc examples | Need to see inverted pyramid in action |
 | `rustdoc-formatting.md` | cargo rustdoc-fmt deep dive | Installing, troubleshooting formatter |
@@ -1144,6 +1157,15 @@ Before committing documentation:
 | `/docs` | Full documentation check (invokes this skill) |
 | `/fix-intradoc-links` | Fix only link issues |
 | `/fix-comments` | Fix only constant conventions |
+| `/fix-md-tables` | Fix only markdown tables |
+
+---
+
+## Related Skills
+
+- `check-code-quality` - Includes doc verification step
+- `organize-modules` - Re-export chains, conditional visibility for doc links
+- `run-clippy` - May suggest doc improvements
 | `/fix-md-tables` | Fix only markdown tables |
 
 ---

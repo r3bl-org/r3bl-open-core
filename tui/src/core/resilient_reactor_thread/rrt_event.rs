@@ -1,6 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Two-tier event model: [`RRTEvent`] and [`ShutdownReason`].
+//! Two-tier event model for the Resilient Reactor Thread (RRT) pattern. See [`RRTEvent`]
+//! and [`ShutdownReason`] for details.
 
 /// Wrapper enum that separates domain events from framework infrastructure events.
 /// Subscribers receive this type from the broadcast channel and must handle both tiers.
@@ -63,8 +64,8 @@ pub enum ShutdownReason {
     /// Your [`RRTWorker`] trait implementation panicked inside
     /// [`block_until_ready_then_dispatch()`]. The
     /// framework caught the panic (via [`catch_unwind`]) and is notifying subscribers so
-    /// they can take corrective action (e.g., call [`subscribe()`] to relaunch a fresh
-    /// thread).
+    /// they can take corrective action (e.g., call [`try_subscribe()`] to relaunch a
+    /// fresh thread).
     ///
     /// No restart is attempted after a panic - the thread exits after sending this event.
     /// Unlike [`RestartPolicyExhausted`], which indicates transient resource issues, a
@@ -74,6 +75,6 @@ pub enum ShutdownReason {
     /// [`catch_unwind`]: std::panic::catch_unwind
     /// [`RestartPolicyExhausted`]: Self::RestartPolicyExhausted
     /// [`RRTWorker`]: super::RRTWorker
-    /// [`subscribe()`]: super::RRT::subscribe
+    /// [`try_subscribe()`]: super::RRT::try_subscribe
     Panic,
 }

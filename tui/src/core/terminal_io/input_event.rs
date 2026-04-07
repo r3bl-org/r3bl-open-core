@@ -106,10 +106,10 @@ pub enum InputEvent {
     /// The input thread shut down. The [`ShutdownReason`] indicates why - either the RRT
     /// framework exhausted its [`RestartPolicy`] or caught a panic on the dedicated
     /// thread. The application should exit gracefully or try re-subscribing via
-    /// [`subscribe()`].
+    /// [`try_subscribe()`].
     ///
     /// [`RestartPolicy`]: crate::RestartPolicy
-    /// [`subscribe()`]: crate::RRT::subscribe
+    /// [`try_subscribe()`]: crate::RRT::try_subscribe
     Shutdown(ShutdownReason),
 }
 

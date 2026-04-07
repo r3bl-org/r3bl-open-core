@@ -110,11 +110,21 @@ impl InputDevice {
     ///
     /// Only available on Linux.
     ///
+    /// # Panics
+    ///
+    /// Panics if the [`DirectToAnsiInputDevice`] cannot be initialized (e.g., if OS
+    /// resources like [`epoll`] or [`eventfd`] are unavailable).
+    ///
     /// [`DirectToAnsi`]: crate::DirectToAnsiInputDevice
+    /// [`epoll`]: https://man7.org/linux/man-pages/man7/epoll.7.html
+    /// [`eventfd`]: https://man7.org/linux/man-pages/man2/eventfd.2.html
     #[cfg(target_os = "linux")]
     #[must_use]
     pub fn new_direct_to_ansi() -> Self {
-        Self::DirectToAnsi(DirectToAnsiInputDevice::new())
+        Self::DirectToAnsi(
+            DirectToAnsiInputDevice::new()
+                .expect("Failed to initialize DirectToAnsiInputDevice"),
+        )
     }
 
     /// Creates a new mock [`InputDevice`] for testing.

@@ -231,50 +231,51 @@ pub mod monitor_child_output {
         mut shared_writer: SharedWriter,
         shutdown_sender: broadcast::Sender<()>,
     ) -> tokio::task::JoinHandle<()> {
-        let mut stdout_lines = tokio::io::BufReader::new(stdout).lines();
-        let mut stderr_lines = tokio::io::BufReader::new(stderr).lines();
-        let mut shutdown_receiver = shutdown_sender.subscribe();
+        tokio::spawn({
+            let mut stdout_lines = tokio::io::BufReader::new(stdout).lines();
+            let mut stderr_lines = tokio::io::BufReader::new(stderr).lines();
+            let mut shutdown_receiver = shutdown_sender.subscribe();
+            async move {
+                loop {
+                    // Branch: Monitor shutdown signal. This is cancel safe as `recv()` is
+                    // cancel safe.
+                    tokio::select! {
+                        _ = shutdown_receiver.recv() => {
+                            break;
+                        }
 
-        tokio::spawn(async move {
-            loop {
-                // Branch: Monitor shutdown signal. This is cancel safe as `recv()` is
-                // cancel safe.
-                tokio::select! {
-                    _ = shutdown_receiver.recv() => {
-                        break;
-                    }
-
-                    // Branch: Monitor stdout for output from the child process. This is
-                    // cancel safe as `next_line()` is cancel safe.
-                    result_line = stdout_lines.next_line() => {
-                        match result_line {
-                            Ok(Some(line)) => {
-                                // We don't care about the result of this operation.
-                                writeln!(shared_writer, "{}", fg_lizard_green(&line)).ok();
-                            },
-                            _ => {
-                                // We don't care about the result of this operation.
-                                shutdown_sender.send(()).ok();
-                                break;
+                        // Branch: Monitor stdout for output from the child process. This is
+                        // cancel safe as `next_line()` is cancel safe.
+                        result_line = stdout_lines.next_line() => {
+                            match result_line {
+                                Ok(Some(line)) => {
+                                    // We don't care about the result of this operation.
+                                    writeln!(shared_writer, "{}", fg_lizard_green(&line)).ok();
+                                },
+                                _ => {
+                                    // We don't care about the result of this operation.
+                                    shutdown_sender.send(()).ok();
+                                    break;
+                                }
                             }
                         }
-                    }
 
-                    // Branch: Monitor stderr for output from the child process. This is
-                    // cancel safe as `next_line()` is cancel safe.
-                    result_line = stderr_lines.next_line() => {
-                        match result_line {
-                            Ok(Some(line)) => {
-                                // We don't care about the result of this operation.
-                                writeln!(shared_writer, "{}", fg_guards_red(&line)).ok();
+                        // Branch: Monitor stderr for output from the child process. This is
+                        // cancel safe as `next_line()` is cancel safe.
+                        result_line = stderr_lines.next_line() => {
+                            match result_line {
+                                Ok(Some(line)) => {
+                                    // We don't care about the result of this operation.
+                                    writeln!(shared_writer, "{}", fg_guards_red(&line)).ok();
+                                }
+                                _ => {
+                                    // We don't care about the result of this operation.
+                                    shutdown_sender.send(()).ok();
+                                    break;
+                                }
                             }
-                            _ => {
-                                // We don't care about the result of this operation.
-                                shutdown_sender.send(()).ok();
-                                break;
-                            }
-                        }
-                    },
+                        },
+                    }
                 }
             }
         })

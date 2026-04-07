@@ -25,12 +25,12 @@
 //! | [`DirectToAnsi`] | [`terminal_raw_mode::raw_mode_unix::enable_raw_mode()`] ([`rustix`]-based) |
 //! | [`Crossterm`]    | [`crossterm::terminal::enable_raw_mode()`]                                 |
 //!
-//! # Quick Start
+//! # Run with:
 //!
 //! Run the **main compatibility test** (compares both backends):
 //!
 //! ```bash
-//! cargo test -p r3bl_tui --lib test_backend_compat_output_compare -- --nocapture
+//! cargo test -p r3bl_tui test_backend_compat_output_compare -- --nocapture
 //! ```
 //!
 //! # Architecture
@@ -116,22 +116,16 @@
 //! [`PaintRenderOpImplCrossterm`]: crate::crossterm_backend::PaintRenderOpImplCrossterm
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`RenderOpOutput`]: crate::RenderOpOutput
-//! [`RenderOpPaintImplDirectToAnsi`]: crate::direct_to_ansi::RenderOpPaintImplDirectToAnsi
+//! [`RenderOpPaintImplDirectToAnsi`]:
+//!     crate::direct_to_ansi::RenderOpPaintImplDirectToAnsi
 //! [`rustix`]: https://docs.rs/rustix
 //! [`TERMINAL_LIB_BACKEND`]: crate::TERMINAL_LIB_BACKEND
 //! [`terminal_raw_mode::enable_raw_mode()`]: crate::terminal_raw_mode::enable_raw_mode
-//! [`terminal_raw_mode::raw_mode_unix::enable_raw_mode()`]: crate::terminal_raw_mode::raw_mode_unix::enable_raw_mode
+//! [`terminal_raw_mode::raw_mode_unix::enable_raw_mode()`]:
+//!     crate::terminal_raw_mode::raw_mode_unix::enable_raw_mode
 
-use crate::{CONTROLLED_READY, ColorSupport, EIO, InlineString, OffscreenBuffer,
-            OutputDevice, PtyPair, RenderOpOutput, RenderOpPaint, RenderOpsLocalData,
-            Size, TuiStyle, TuiStyleAttribs, col,
-            core::ansi::terminal_raw_mode,
-            global_color_support, height, lock_output_device_as_mut, pos,
-            render_op::RenderOpCommon,
-            retry_until_success_test, row, spawn_controlled_in_pty,
-            terminal_lib_backends::{crossterm_backend::PaintRenderOpImplCrossterm,
-                                    direct_to_ansi::RenderOpPaintImplDirectToAnsi},
-            tui_color, tui_style_attrib, wait_for_ready, width};
+use crate::{ColorSupport, EIO, InlineString, MSG_CONTROLLED_READY, OffscreenBuffer, OutputDevice, PtyPair, PtyTestChild, RenderOpOutput, RenderOpPaint, RenderOpsLocalData, Size, TuiStyle, TuiStyleAttribs, col, core::ansi::terminal_raw_mode, global_color_support, height, lock_output_device_as_mut, ok, pos, render_op::RenderOpCommon, retry_until_success_test, row, spawn_controlled_in_pty, terminal_lib_backends::{crossterm_backend::PaintRenderOpImplCrossterm,
+                                    direct_to_ansi::RenderOpPaintImplDirectToAnsi}, tui_color, tui_style_attrib, width};
 use std::{fmt::Write as _,
           io::{Read, Write}};
 
@@ -139,8 +133,8 @@ use std::{fmt::Write as _,
 const TEST_WIDTH: u16 = 80;
 const TEST_HEIGHT: u16 = 24;
 
-/// Completion signal sent by controlled process after all [`ANSI`] output.
-/// Uses null bytes which won't appear in normal [`ANSI`] sequences.
+/// Completion signal sent by controlled process after all [`ANSI`] output. Uses null
+/// bytes which won't appear in normal [`ANSI`] sequences.
 ///
 /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 const COMPLETION_SIGNAL: &[u8] = b"\x00\x00\x00DONE";
@@ -152,11 +146,6 @@ const OUTPUT_TEST_ENV_VAR: &str = "R3BL_PTY_OUTPUT_TEST_CONTROLLED";
 ///
 /// Creates [`PTY`] pairs directly (no subprocess indirection), captures raw [`ANSI`]
 /// output from each backend, applies to [`OffscreenBuffer`]s, and compares.
-///
-/// Run with:
-/// ```bash
-/// cargo test -p r3bl_tui --lib test_backend_compat_output_compare -- --nocapture
-/// ```
 ///
 /// # Panics
 ///
@@ -182,31 +171,31 @@ pub fn test_backend_compat_output_compare() {
     retry_until_success_test!({ run_single_test_attempt() });
 }
 
-/// Run a single attempt of the compatibility test.
-/// Returns `Ok(())` if identical, or `Err(String)` with diagnostic message.
+/// Run a single attempt of the compatibility test. Returns `Ok(())` if identical, or
+/// `Err(String)` with diagnostic message.
 fn run_single_test_attempt() -> Result<(), String> {
     // Run DirectToAnsi backend via PTY.
     eprintln!("\nRunning DirectToAnsi backend...");
-    let (name, pty_pair, _child) = spawn_controlled_in_pty(
+    let (name, pty_pair, child) = spawn_controlled_in_pty(
         "direct_to_ansi",
         OUTPUT_TEST_ENV_VAR,
         "test_backend_compat_output_compare",
         TEST_HEIGHT,
         TEST_WIDTH,
     );
-    let direct_bytes = controller::run((name, pty_pair))?;
+    let direct_bytes = controller::run((name, pty_pair, &child))?;
     eprintln!("  Captured {} bytes", direct_bytes.len());
 
     // Run Crossterm backend via PTY.
     eprintln!("\nRunning Crossterm backend...");
-    let (name, pty_pair, _child) = spawn_controlled_in_pty(
+    let (name, pty_pair, child) = spawn_controlled_in_pty(
         "crossterm",
         OUTPUT_TEST_ENV_VAR,
         "test_backend_compat_output_compare",
         TEST_HEIGHT,
         TEST_WIDTH,
     );
-    let crossterm_bytes = controller::run((name, pty_pair))?;
+    let crossterm_bytes = controller::run((name, pty_pair, &child))?;
     eprintln!("  Captured {} bytes", crossterm_bytes.len());
 
     // Create OffscreenBuffers and apply the captured ANSI bytes.
@@ -222,7 +211,7 @@ fn run_single_test_attempt() -> Result<(), String> {
     if buffer_direct == buffer_crossterm {
         eprintln!("  OffscreenBuffers are IDENTICAL!");
         eprintln!("  Both backends produce the same terminal state.");
-        Ok(())
+        ok!()
     } else {
         let mut msg = String::from("OffscreenBuffers DIFFER!\n");
 
@@ -269,12 +258,12 @@ pub mod controller {
 
     /// Capture all raw [`ANSI`] bytes from the controlled process.
     ///
-    /// Reads from [`PTY`] until it sees the completion signal, then strips the signal
-    /// and returns just the [`ANSI`] bytes. The controlled process sends the completion
+    /// Reads from [`PTY`] until it sees the completion signal, then strips the signal and
+    /// returns just the [`ANSI`] bytes. The controlled process sends the completion
     /// signal immediately after finishing its output, so blocking reads work.
     ///
-    /// See [`wait_for_ready#robust-synchronization-pattern`] for details on how the
-    /// [`PTY`] handshake is handled without data loss.
+    /// See [`PtyTestChild::wait_for_ready()`] for details on how the [`PTY`] handshake is
+    /// handled without data loss.
     ///
     /// # Errors
     ///
@@ -283,7 +272,7 @@ pub mod controller {
     ///
     /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
     /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
-    pub fn run((backend_name, pty_pair): (&str, PtyPair)) -> Result<Vec<u8>, String> {
+    pub fn run((backend_name, pty_pair, child): (&str, PtyPair, &PtyTestChild)) -> Result<Vec<u8>, String> {
         eprintln!("{backend_name} Controller: Starting...");
 
         let reader = pty_pair
@@ -292,10 +281,10 @@ pub mod controller {
             .map_err(|e| format!("Failed to get reader: {e}"))?;
         let mut buf_reader = std::io::BufReader::new(reader);
 
-        // Wait for CONTROLLED_READY (line-based, before OPOST is disabled).
-        // Because it uses a buffered reader, any data arriving after the signal
-        // is preserved in the reader's internal buffer.
-        wait_for_ready(&mut buf_reader, CONTROLLED_READY)?;
+        // Wait for CONTROLLED_READY (line-based, before OPOST is disabled). Because it
+        // uses a buffered reader, any data arriving after the signal is preserved in the
+        // reader's internal buffer.
+        child.wait_for_ready(&mut buf_reader, MSG_CONTROLLED_READY)?;
 
         // Read raw bytes until we see the completion signal.
         let mut all_bytes = Vec::new();
@@ -350,15 +339,15 @@ pub mod controlled_crossterm {
 
     /// Crossterm controlled process entry point.
     ///
-    /// Uses `crossterm::terminal::enable_raw_mode()` explicitly,
-    /// which is what crossterm uses internally.
+    /// Uses `crossterm::terminal::enable_raw_mode()` explicitly, which is what crossterm
+    /// uses internally.
     ///
     /// # Panics
     ///
     /// Panics if stdout flush fails.
     pub fn run() -> ! {
         // 1. Signal ready (before enabling raw mode so newlines work normally).
-        println!("{}", crate::CONTROLLED_READY);
+        println!("{}", crate::MSG_CONTROLLED_READY);
         std::io::stdout().flush().expect("Failed to flush");
 
         // 2. Enable raw mode using Crossterm's raw mode.
@@ -426,7 +415,7 @@ pub mod controlled_direct_to_ansi {
     /// [`rustix`]: https://docs.rs/rustix
     pub fn run() -> ! {
         // 1. Signal ready (before enabling raw mode so newlines work normally).
-        println!("{}", crate::CONTROLLED_READY);
+        println!("{}", crate::MSG_CONTROLLED_READY);
         std::io::stdout().flush().expect("Failed to flush");
 
         // 2. Enable raw mode using DirectToAnsi's raw mode (rustix-based).
@@ -483,8 +472,8 @@ pub mod generate_test_render_ops {
 
     /// All test render operation sequences for backend compatibility testing.
     ///
-    /// Returns render ops that will be executed by both backends for comparison.
-    /// The resulting terminal state (`OffscreenBuffer`) should be identical.
+    /// Returns render ops that will be executed by both backends for comparison. The
+    /// resulting terminal state (`OffscreenBuffer`) should be identical.
     #[must_use]
     #[allow(clippy::too_many_lines, clippy::vec_init_then_push)]
     pub fn all() -> Vec<RenderOpOutput> {

@@ -320,6 +320,7 @@ mod impl_debug {
 /// Efficient Display implementation for telemetry logging.
 mod impl_display {
     use super::{Display, Formatter, Result, State};
+    use r3bl_tui::ok;
 
     impl Display for State {
         /// This must be a fast implementation, so we avoid deep traversal of the
@@ -358,7 +359,7 @@ mod impl_display {
                 write!(f, "\n  ]")?;
             }
 
-            Ok(())
+            ok!()
         }
     }
 }

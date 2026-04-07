@@ -105,7 +105,7 @@ async fn main_impl() -> CommonResult<()> {
                 match readline_event {
                     ReadlineEvent::Line(input) => {
                         tracing::debug!(
-                            message = "tui_apps: ▶️ running example",
+                            message = "tui_apps: 🛫 running example",
                             input = %input
                         );
 
@@ -193,7 +193,7 @@ async fn run_user_selected_example(selection: String) -> CommonResult<()> {
                 a = fg_frozen_blue("Invalid selection:"),
                 b = fg_pink(&selection).bold(),
             );
-            Ok(())
+            ok!()
         }
     }
 }

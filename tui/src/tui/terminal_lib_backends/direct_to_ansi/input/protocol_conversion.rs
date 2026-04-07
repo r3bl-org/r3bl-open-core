@@ -84,17 +84,34 @@ pub fn convert_input_event(vt100_event: VT100InputEventIR) -> Option<InputEvent>
             action,
             modifiers,
         } => {
-            let button_kind = match button {
-                VT100MouseButtonIR::Left => Button::Left,
-                VT100MouseButtonIR::Right => Button::Right,
-                VT100MouseButtonIR::Middle => Button::Middle,
-                VT100MouseButtonIR::Unknown => return None,
-            };
-
             let kind = match action {
-                VT100MouseActionIR::Press => MouseInputKind::MouseDown(button_kind),
-                VT100MouseActionIR::Release => MouseInputKind::MouseUp(button_kind),
-                VT100MouseActionIR::Drag => MouseInputKind::MouseDrag(button_kind),
+                VT100MouseActionIR::Press => {
+                    let button_kind = match button {
+                        VT100MouseButtonIR::Left => Button::Left,
+                        VT100MouseButtonIR::Right => Button::Right,
+                        VT100MouseButtonIR::Middle => Button::Middle,
+                        VT100MouseButtonIR::Unknown => return None,
+                    };
+                    MouseInputKind::MouseDown(button_kind)
+                }
+                VT100MouseActionIR::Release => {
+                    let button_kind = match button {
+                        VT100MouseButtonIR::Left => Button::Left,
+                        VT100MouseButtonIR::Right => Button::Right,
+                        VT100MouseButtonIR::Middle => Button::Middle,
+                        VT100MouseButtonIR::Unknown => return None,
+                    };
+                    MouseInputKind::MouseUp(button_kind)
+                }
+                VT100MouseActionIR::Drag => {
+                    let button_kind = match button {
+                        VT100MouseButtonIR::Left => Button::Left,
+                        VT100MouseButtonIR::Right => Button::Right,
+                        VT100MouseButtonIR::Middle => Button::Middle,
+                        VT100MouseButtonIR::Unknown => return None,
+                    };
+                    MouseInputKind::MouseDrag(button_kind)
+                }
                 VT100MouseActionIR::Motion => MouseInputKind::MouseMove,
                 VT100MouseActionIR::Scroll(direction) => match direction {
                     VT100ScrollDirectionIR::Up => MouseInputKind::ScrollUp,

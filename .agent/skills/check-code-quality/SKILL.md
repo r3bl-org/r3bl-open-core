@@ -119,7 +119,27 @@ If lychee reports 404s, fix the URL by finding the new location. See the task fi
 
 Runs clippy and enforces code style standards.
 
-### 7. Run All Tests
+### 7. Concurrency Safety Check
+
+Invoke the `concurrency-safety` skill to verify thread-safety patterns.
+
+**Checklist:**
+- **Loud Lock Releases**: Are `drop(guard)` calls explicit and as early as possible?
+- **Chain of Custody**: Are `MutexGuard`s passed and returned by value to prevent stale usage?
+- **Ergonomic Atomics**: Is `AtomicU8Ext` used instead of raw `load`/`store`?
+- **No Deadlocks**: Are locks released before calling macros or long-running async blocks?
+
+### 8. Bounds Safety Check
+
+Invoke the `check-bounds-safety` skill to verify index and length handling.
+
+**Checklist:**
+- **Type Safety**: Are `Index` and `Length` types used instead of raw `usize`?
+- **Correct Trait**: Is `ArrayBoundsCheck` used for buffer access and `CursorBoundsCheck` for positioning?
+- **CSI Zero Prevention**: Are `TermRowDelta` and `TermColDelta` used for relative cursor movement?
+- **Off-by-One**: verify `index < length` for access and `index <= length` for cursor.
+
+### 9. Run All Tests
 
 ```bash
 ./check.fish --test
@@ -160,6 +180,26 @@ This checks that `#[cfg(unix)]` and `#[cfg(not(unix))]` gates compile correctly 
 - When working on platform-abstraction code
 - Before committing changes to `DirectToAnsi` input handling or other Unix-specific code
 
+### 10. Final Step: Manual Review
+
+A task, phase, or sub-phase is not complete until a manual review has been performed by the user. 
+This is the final verification before marking a task as done.
+
+- **Type-Safe Errors**: Did you use custom error types (enums/structs with \`thiserror\` and \`miette\`) instead of raw \`String\` for \`Result\` errors?
+- **Technical Precision**: are terms like "parameter", "argument", "declaration", and "definition" used accurately in documentation and comments? See the [Terminology Precision] guide.
+- **Mandatory Checkbox List:** You MUST automatically add a "Mandatory manual review" 
+
+[Terminology Precision]: ../write-documentation/terminology-precision.md  step with a checkbox list of all modified files to the end of every task, phase, 
+  and sub-phase you create or update.
+- **Review Workflow:** When the user prompts for a manual review at the end of a 
+  task/phase/sub-phase:
+  1. Use `run_shell_command("codium-insider <file_path>")` to open the first file with a checkbox.
+  2. Ask the user to manually review it.
+  3. Once the user confirms ("good" or similar), check the box in the task file using `replace`.
+  4. Move to the next file and repeat until all checkboxes are checked.
+- **Completion:** Do not mark the task/phase as complete in the task file until ALL 
+  file-level checkboxes are checked and the user has given final approval.
+
 ## ICE Recovery and Toolchain Escalation
 
 The `./check.fish --full` command includes automatic recovery from Internal Compiler Errors:
@@ -187,6 +227,23 @@ After running all checks, report results concisely to the user:
 - ⚠️ Some checks failed → Summarize which steps failed and what needs fixing
 - 🔧 Auto-fixed issues → Report what was automatically fixed
 
+## Communication Guardrails (Anti-Hallucination)
+
+When performing quality checks or complex refactorings:
+
+1. **Frequent Status Reports:** Provide a concise summary of progress every 3-5 file 
+   modifications.
+2. **Milestone Review Pauses:** Stop and request a manual review after any meaningful 
+   progress (e.g., refactoring is complete and `cargo check` passes).
+3. **Attention Signal:** Run `fish -c "beep"` when stopping for a mandatory review point 
+   to alert the user.
+4. **Validation First:** Never present broken code to the user. Always run 
+   `./check.fish --check` or `cargo check` before asking for a review.
+5. **Strict Documentation Preservation:** Maintain absolute byte-perfect integrity of 
+   surrounding documentation when performing surgical edits.
+6. **Mandatory Manual Review:** Follow the file-by-file `codium-insider` review 
+   workflow described in the "Final Step" section above for all modified files.
+
 ## Optional Performance Analysis
 
 For performance-critical code changes, consider also running:
@@ -208,7 +265,9 @@ This skill includes additional reference material:
 ## Related Skills
 
 - `write-documentation` - For rustdoc formatting (step 3) and fixing doc link warnings (step 4)
-- `run-clippy` - For linting and code style (step 5)
+- `run-clippy` - For linting and code style (step 6)
+- `concurrency-safety` - For lock and atomic safety (step 7)
+- `check-bounds-safety` - For type-safe index/length handling (step 8)
 - `analyze-performance` - For optional performance checks
 - `test-runner` agent - For fixing test failures (step 6)
 

@@ -415,6 +415,16 @@ pub use constants::*;  // Items public
 mod constants;  // No conflict! This is in a different scope
 ```
 
+**⚠️ Warning: Re-export Collisions**
+
+While private module names don't collide, their **public contents** (including public submodules) will collide if they share the same name and are pulled into the same parent namespace via glob re-exports (`pub use module::*;`).
+
+If multiple modules in the same hierarchy have submodules with identical names (e.g., several `integration_tests` modules), glob re-exporting them into a single parent module will cause **ambiguous re-export** errors.
+
+To avoid this:
+- Use unique, descriptive names for submodules that are intended to be public for docs/tests (e.g., `log_integration_tests`, `rrt_integration_tests`).
+- Avoid generic names like `integration_tests` or `tests` for modules that will be re-exported through a flat API.
+
 ### 4. Encapsulation
 
 Module structure is an implementation detail, not part of the API:

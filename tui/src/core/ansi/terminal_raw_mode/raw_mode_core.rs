@@ -197,5 +197,17 @@ impl RawModeGuard {
 }
 
 impl Drop for RawModeGuard {
+    /// # Poison Safety
+    ///
+    /// This implementation is **poison-safe**. It delegates to [`disable_raw_mode()`],
+    /// which is poison-safe and ensures that the terminal is restored even if the
+    /// internal state is corrupted. We prioritize **Resilience over Integrity** here
+    /// to prevent a **Double Panic Abort** that would **brick the user's terminal**.
+    ///
+    /// See the [Terminal Restoration: Panic, Drop, and Mutex Poison-Safety] section
+    /// in the crate root documentation for details.
+    ///
+    /// [Terminal Restoration: Panic, Drop, and Mutex Poison-Safety]:
+    ///     crate#terminal-restoration-panic-drop-and-mutex-poison-safety
     fn drop(&mut self) { drop(disable_raw_mode()); }
 }

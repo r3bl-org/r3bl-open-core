@@ -41,7 +41,7 @@ macro_rules! set_mimalloc_in_main {
 /// # Usage
 ///
 /// ```no_run
-/// use r3bl_tui::{CommonResult, run_with_safe_stack};
+/// use r3bl_tui::{CommonResult, run_with_safe_stack, ok};
 ///
 /// fn main() -> CommonResult<()> {
 ///     run_with_safe_stack!(main_impl())
@@ -53,7 +53,7 @@ macro_rules! set_mimalloc_in_main {
 /// #[allow(clippy::unwrap_in_result)]
 /// async fn main_impl() -> CommonResult<()> {
 ///     // Your actual main logic here
-///     Ok(())
+///     ok!()
 /// }
 /// ```
 #[macro_export]

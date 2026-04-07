@@ -280,7 +280,7 @@ where
         );
 
         self.log_startup_info();
-        Ok(())
+        ok!()
     }
 
     /// Logs startup information if debugging is enabled.
@@ -460,7 +460,7 @@ where
             event_loop_state.global_data.set_hud_report(telemetry.report());
         }
     );
-    Ok(())
+    ok!()
 }
 
 /// Handles app signal from the main thread.

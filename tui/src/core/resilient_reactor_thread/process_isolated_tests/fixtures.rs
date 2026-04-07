@@ -1,9 +1,11 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{BroadcastSender, Continuation, RRTEvent, RRTWaker, RRTWorker, RestartPolicy,
-            SharedWakerSlot, WakerSlotWriter, run_worker_loop};
+use crate::{BroadcastSender, Continuation,
+            DeadlockPreventionPolicy::PanicOnAnyLockNesting, InterruptHandle, RRTEvent,
+            RRTSoftwareInterrupt, RRTWorker, RestartPolicy, ScopedMutex,
+            ThreadLifecycleMonitor, ThreadState, run_worker_loop, scoped_mutex};
 use std::{collections::VecDeque,
-          sync::{Mutex,
+          sync::{Arc, LazyLock,
                  atomic::{AtomicU32, Ordering},
                  mpsc}};
 
@@ -11,24 +13,24 @@ use std::{collections::VecDeque,
 #[derive(Clone, Debug, PartialEq)]
 pub struct TestEvent(pub u32);
 
-/// Monotonic counter for unique waker IDs.
-pub static NEXT_WAKER_ID: AtomicU32 = AtomicU32::new(0);
+/// Monotonic counter for unique interrupt handle IDs.
+pub static NEXT_INTERRUPT_ID: AtomicU32 = AtomicU32::new(0);
 
-/// Tracks the most recently invoked waker's ID.
-pub static LAST_WAKED_ID: AtomicU32 = AtomicU32::new(0);
+/// Tracks the most recently invoked interrupt handle's ID.
+pub static LAST_INTERRUPT_ID: AtomicU32 = AtomicU32::new(0);
 
-/// Test waker that records its ID in [`LAST_WAKED_ID`] when
-/// [`wake_and_unblock_dedicated_thread()`] is called.
+/// Test interrupt handle that records its ID in [`LAST_INTERRUPT_ID`] when
+/// [`trigger_software_interrupt()`] is called.
 ///
-/// [`wake_and_unblock_dedicated_thread()`]: RRTWaker::wake_and_unblock_dedicated_thread
+/// [`trigger_software_interrupt()`]: RRTSoftwareInterrupt::trigger_software_interrupt
 #[derive(Debug)]
-pub struct TestWaker {
+pub struct TestInterrupt {
     pub id: u32,
 }
 
-impl RRTWaker for TestWaker {
-    fn wake_and_unblock_dedicated_thread(&self) {
-        LAST_WAKED_ID.store(self.id, Ordering::SeqCst);
+impl RRTSoftwareInterrupt for TestInterrupt {
+    fn trigger_software_interrupt(&self) {
+        LAST_INTERRUPT_ID.store(self.id, Ordering::SeqCst);
     }
 }
 
@@ -41,19 +43,20 @@ pub struct TestWorker {
 
 impl RRTWorker for TestWorker {
     type Event = TestEvent;
-    type Waker = TestWaker;
+    type Interrupt = TestInterrupt;
 
-    fn create_and_register_os_sources() -> miette::Result<(Self, Self::Waker)> {
-        let mut guard = TEST_FACTORY_STATE.lock().unwrap();
-        let state = guard.as_mut().expect("TEST_FACTORY_STATE not initialized");
-        state.create_count += 1;
-        if let Some(ref notify_sender) = state.create_notify {
-            notify_sender.send(()).ok();
-        }
-        state
-            .create_results
-            .pop_front()
-            .unwrap_or_else(|| Err(miette::miette!("TestWorker: no create results")))
+    fn create_and_register_os_sources() -> miette::Result<(Self, Self::Interrupt)> {
+        TEST_FACTORY_STATE.write(|guard: &mut Option<TestFactoryState>| {
+            let state = guard.as_mut().expect("TEST_FACTORY_STATE not initialized");
+            state.create_count += 1;
+            if let Some(ref notify_sender) = state.create_notify {
+                let _ = notify_sender.send(());
+            }
+            state
+                .create_results
+                .pop_front()
+                .unwrap_or_else(|| Err(miette::miette!("TestWorker: no create results")))
+        })
     }
 
     fn block_until_ready_then_dispatch(
@@ -77,41 +80,55 @@ impl RRTWorker for TestWorker {
     }
 
     fn restart_policy() -> RestartPolicy {
-        TEST_FACTORY_STATE
-            .lock()
-            .unwrap()
-            .as_ref()
-            .expect("TEST_FACTORY_STATE not initialized")
-            .restart_policy
-            .clone()
+        TEST_FACTORY_STATE.read(|guard: &Option<TestFactoryState>| {
+            guard
+                .as_ref()
+                .expect("TEST_FACTORY_STATE not initialized")
+                .restart_policy
+                .clone()
+        })
     }
 }
 
 /// Shared state controlling [`TestWorker::create_and_register_os_sources()`] behavior.
 #[derive(Debug)]
 pub struct TestFactoryState {
-    pub create_results: VecDeque<miette::Result<(TestWorker, TestWaker)>>,
+    pub create_results: VecDeque<miette::Result<(TestWorker, TestInterrupt)>>,
     pub create_count: u32,
     pub restart_policy: RestartPolicy,
     pub create_notify: Option<mpsc::Sender<()>>,
 }
 
-pub static TEST_FACTORY_STATE: Mutex<Option<TestFactoryState>> = Mutex::new(None);
+pub static TEST_FACTORY_STATE: LazyLock<
+    ScopedMutex<Option<TestFactoryState>, { PanicOnAnyLockNesting }>,
+> = LazyLock::new(|| scoped_mutex!(ANY, None));
 
-pub fn create_test_resources() -> (TestWorker, TestWaker, mpsc::Sender<u8>) {
+pub fn create_test_resources() -> (TestWorker, TestInterrupt, mpsc::Sender<u8>) {
     let (cmd_sender, cmd_receiver) = mpsc::channel();
     let worker = TestWorker {
         cmd_receiver,
         event_counter: 0,
     };
-    let waker_id = NEXT_WAKER_ID.fetch_add(1, Ordering::Relaxed);
-    let waker = TestWaker { id: waker_id };
-    (worker, waker, cmd_sender)
+    let interrupt_id = NEXT_INTERRUPT_ID.fetch_add(1, Ordering::Relaxed);
+    let interrupt = TestInterrupt { id: interrupt_id };
+    (worker, interrupt, cmd_sender)
 }
 
-pub fn create_ok_result() -> (miette::Result<(TestWorker, TestWaker)>, mpsc::Sender<u8>) {
-    let (worker, wake_fn, cmd_sender) = create_test_resources();
-    (Ok((worker, wake_fn)), cmd_sender)
+pub fn create_ok_result() -> (
+    miette::Result<(TestWorker, TestInterrupt)>,
+    mpsc::Sender<u8>,
+) {
+    let (worker, interrupt, cmd_sender) = create_test_resources();
+    (Ok((worker, interrupt)), cmd_sender)
+}
+
+#[must_use]
+pub fn create_shared_state(
+    interrupt: TestInterrupt,
+) -> Arc<ThreadLifecycleMonitor<TestWorker>> {
+    Arc::new(ThreadLifecycleMonitor::<TestWorker>::new(
+        ThreadState::Running(InterruptHandle::new(interrupt)),
+    ))
 }
 
 /// Initialize [`TEST_FACTORY_STATE`] with pre-programmed create results and a restart
@@ -123,7 +140,7 @@ pub fn create_ok_result() -> (miette::Result<(TestWorker, TestWaker)>, mpsc::Sen
 #[allow(clippy::type_complexity)]
 pub fn setup_factory(
     results_and_senders: Vec<(
-        miette::Result<(TestWorker, TestWaker)>,
+        miette::Result<(TestWorker, TestInterrupt)>,
         Option<mpsc::Sender<u8>>,
     )>,
     policy: RestartPolicy,
@@ -139,12 +156,13 @@ pub fn setup_factory(
         }
     }
 
-    let mut guard = TEST_FACTORY_STATE.lock().unwrap();
-    *guard = Some(TestFactoryState {
-        create_results,
-        create_count: 0,
-        restart_policy: policy,
-        create_notify: Some(notify_sender),
+    TEST_FACTORY_STATE.write(|guard: &mut Option<TestFactoryState>| {
+        *guard = Some(TestFactoryState {
+            create_results,
+            create_count: 0,
+            restart_policy: policy,
+            create_notify: Some(notify_sender),
+        });
     });
 
     (notify_receiver, cmd_senders)
@@ -156,8 +174,9 @@ pub fn setup_factory(
 ///
 /// Panics if the [`TEST_FACTORY_STATE`] mutex is poisoned.
 pub fn teardown_factory() {
-    let mut guard = TEST_FACTORY_STATE.lock().unwrap();
-    *guard = None;
+    TEST_FACTORY_STATE.write(|guard: &mut Option<TestFactoryState>| {
+        *guard = None;
+    });
 }
 
 /// Return how many times [`TestWorker::create_and_register_os_sources()`] has been
@@ -168,12 +187,9 @@ pub fn teardown_factory() {
 /// Panics if the [`TEST_FACTORY_STATE`] mutex is poisoned.
 pub fn get_create_count() -> u32 {
     #[allow(clippy::map_unwrap_or)]
-    TEST_FACTORY_STATE
-        .lock()
-        .unwrap()
-        .as_ref()
-        .map(|s| s.create_count)
-        .unwrap_or(0)
+    TEST_FACTORY_STATE.read(|guard: &Option<TestFactoryState>| {
+        guard.as_ref().map(|s| s.create_count).unwrap_or(0)
+    })
 }
 
 /// Send a command byte to a [`TestWorker`]'s command channel.
@@ -207,13 +223,12 @@ pub const THREAD_NAME: &str = "test-rrt-worker";
 pub fn spawn_worker_loop(
     worker: TestWorker,
     sender: BroadcastSender<TestEvent>,
-    shared_waker_slot: &SharedWakerSlot<TestWaker>,
+    shared_state: Arc<ThreadLifecycleMonitor<TestWorker>>,
 ) -> std::thread::JoinHandle<()> {
-    let waker_slot_writer: WakerSlotWriter<TestWaker> = shared_waker_slot.into();
     std::thread::Builder::new()
         .name(THREAD_NAME.into())
         .spawn(move || {
-            run_worker_loop::<TestWorker>(worker, sender, waker_slot_writer);
+            run_worker_loop::<TestWorker>(worker, sender, shared_state);
         })
         .unwrap()
 }

@@ -59,6 +59,11 @@ pub const DEBUG_TUI_SHOW_MIO_POLLER: bool = false;
 /// [PTY multiplexer]: crate::pty::pty_mux::PTYMux
 pub const DEBUG_TUI_SHOW_PTY_MUX_NOTIFICATIONS: bool = false;
 
+/// Controls debug logging for the [Resilient Reactor Thread].
+///
+/// [Resilient Reactor Thread]: crate::core::resilient_reactor_thread
+pub const DEBUG_TUI_SHOW_RESILIENT_REACTOR_THREAD: bool = false;
+
 /// Unicode replacement character used when a grapheme cluster cannot be converted to a
 /// single char. This character (�) is the standard fallback for invalid/undisplayable
 /// characters.
@@ -87,10 +92,7 @@ pub use layout::*;
 pub use md_parser::*;
 pub use rsx::*;
 pub use syntax_highlighting::*;
-// Needed for integration_tests module.
-#[allow(ambiguous_glob_reexports)]
 pub use terminal_lib_backends::*;
-#[allow(ambiguous_glob_reexports)]
 pub use terminal_window::*;
 
 // Rustdoc search link fixes.

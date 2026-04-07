@@ -30,11 +30,8 @@
 
 #[allow(clippy::wildcard_imports)]
 use super::super::*;
-use crate::{ArrayBoundsCheck, ArrayOverflowResult, ColIndex, Length, NumericValue,
-            RowIndex, col,
-            core::coordinates::bounds_check::{CursorBoundsCheck, LengthOps,
-                                              RangeBoundsExt, RangeConvertExt},
-            height, width};
+use crate::{ArrayBoundsCheck, ArrayOverflowResult, ColIndex, Length, NumericValue, RowIndex, col, core::coordinates::bounds_check::{CursorBoundsCheck, LengthOps,
+                                              RangeBoundsExt, RangeConvertExt}, height, ok, width};
 
 impl OffscreenBuffer {
     /// Insert blank characters at cursor position (for ICH - Insert Character).
@@ -123,7 +120,7 @@ impl OffscreenBuffer {
         line[fill_range.start.as_usize()..fill_range.end.as_usize()]
             .fill(PixelChar::Spacer);
 
-        Ok(())
+        ok!()
     }
 
     /// Delete characters at cursor position (for DCH - Delete Character).
@@ -216,7 +213,7 @@ impl OffscreenBuffer {
             fill_range
         );
 
-        Ok(())
+        ok!()
     }
 
     /// Erase characters at cursor position (for ECH - Erase Character).
@@ -354,7 +351,8 @@ impl OffscreenBuffer {
                 self.cursor_pos.col_index = new_col;
             }
         }
-        Ok(())
+
+        ok!()
     }
 }
 

@@ -14,7 +14,7 @@ use r3bl_tui::{AnsiSequenceGenerator, InputEvent, Key, KeyPress, KeyState,
                             PtySessionBuilder, PtySessionConfigOption},
                       terminal_io::{InputDevice, OutputDevice},
                       try_initialize_logging_global},
-               lock_output_device_as_mut, row, set_mimalloc_in_main};
+               lock_output_device_as_mut, ok, row, set_mimalloc_in_main};
 
 #[tokio::main]
 async fn main() -> miette::Result<()> {
@@ -119,7 +119,7 @@ async fn run_event_loop(
                     }
                     PtyOutputEvent::Exit(status) => {
                         tracing::debug!("PTY exited with status: {:?}", status);
-                        return Ok(());
+                        return ok!();
                     }
                     _ => {}
                 }
@@ -150,7 +150,7 @@ async fn run_event_loop(
                             // Wait for session to close.
                             tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
                             tracing::debug!("Exiting event loop");
-                            return Ok(());
+                            return ok!();
                         }
 
                         // Convert key to PTY input event and send.

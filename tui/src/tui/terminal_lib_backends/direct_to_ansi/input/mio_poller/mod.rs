@@ -4,8 +4,8 @@
 
 //! # Architecture Overview
 //!
-//! This module encapsulates all state and logic for the [`mio`] poller thread. It
-//! manages the following:
+//! This module encapsulates all state and logic for the [`mio`] poller thread. It manages
+//! the following:
 //!
 //! ## Resources Managed
 //!
@@ -26,6 +26,7 @@
 //! | [`dispatch_with_sender()`]                       | Routes ready events to appropriate handlers                           |
 //! | [`consume_stdin_input_with_sender()`]            | Reads and parses [`stdin`] bytes into [`InputEvent`]s                 |
 //! | [`consume_pending_signals_with_sender()`]        | Drains [`SIGWINCH`] signals, sends [`SignalEvent::Resize`]            |
+//! | [`handle_software_interrupt_with_sender()`]      | Handles lifecycle interrupts (eg: [`SubscriberGuard`] drop)           |
 //! | [VT100 input parser] ([`StatefulInputParser`])   | Accumulates bytes, parses [`VT100InputEventIR`] with [`ESC`] handling |
 //! | [paste state machine] ([`PasteCollectionState`]) | Collects text between bracketed paste markers                         |
 //!
@@ -37,7 +38,8 @@
 //!    handler of [`SIGWINCH`], blocking on [`mio::Poll::poll()`].
 //! 2. **Multiple async consumers** - The [`tokio::sync::broadcast`] channel bridges sync
 //!    and async worlds, supporting multiple consumers that each receive all events. Each
-//!    consumer is a [`tokio`] task that awaits on the receiver end of the broadcast channel.
+//!    consumer is a [`tokio`] task that awaits on the receiver end of the broadcast
+//!    channel.
 //!
 //! The sections below explain each component in detail.
 //!
@@ -52,8 +54,8 @@
 //! │                                    │           │                                 │
 //! │ mio::Poll waits on:                ├───────────► receiver.recv().await (fan-out) │
 //! │   • stdin fd (Token 0)             │ broadcast │                                 │
-//! │   • SIGWINCH signal (Token 1)      │           │                                 │
-//! │   • ReceiverDropWaker (Token 2)    │           │                                 │
+//! │ • SIGWINCH signal (Token 1)        │           │                                 │
+//! │ • Software Interrupt (Token 2)     │           │                                 │
 //! └────────────────────────────────────┘           └─────────────────────────────────┘
 //! ```
 //!
@@ -69,17 +71,18 @@
 //!
 //!
 //! See [Device Lifecycle] for a detailed diagram showing how threads spawn and exit with
-//! each app lifecycle, and [Related Tests] for [`PTY`]-based integration tests validating
-//! the lifecycle behavior.
+//! each app lifecycle, and [`integration_tests`] for [`PTY`]-based integration tests
+//! validating the lifecycle behavior.
 //!
 //! Key properties:
 //! - **No external termination**: See the [RRT module docs] for why threads cannot be
-//!   forcibly terminated and how RRT provides cooperative termination via the [`RRTWaker`].
-//!   External code signals the thread to exit gracefully by dropping the
-//!   [`DirectToAnsiInputDevice`] — each TUI app creates one on startup and drops it on
-//!   exit (a process may run multiple TUI apps sequentially). Dropping the device drops
-//!   its internal [`SubscriberGuard`], waking the thread to check [`receiver_count()`].
-//!   When all receivers are dropped, the thread exits on its own.
+//!   forcibly terminated and how RRT provides cooperative termination via the
+//!   [`RRTSoftwareInterrupt`]. External code signals the thread to exit gracefully by
+//!   dropping the [`DirectToAnsiInputDevice`] — each TUI app creates one on startup and
+//!   drops it on exit (a process may run multiple TUI apps sequentially). Dropping the
+//!   device drops its internal [`SubscriberGuard`], which triggers a software interrupt
+//!   on the thread's **CONTROL PLANE** to check [`receiver_count()`]. When all receivers
+//!   are dropped, the thread exits on its own.
 //! - It is the **designated reader** of [`stdin`]—other code should access input events
 //!   via the broadcast channel, not by reading [`stdin`] directly.
 //!
@@ -96,16 +99,16 @@
 //!
 //! 1. Thread Self-Termination (process continues)
 //!
-//!    The thread exits gracefully while the process continues running. There are no not
-//!    a silent failure in the thread, since async consumers are notified of the error
-//!    case. This allows async consumers to react (e.g., save state, clean up) before the
+//!    The thread exits gracefully while the process continues running. There are no not a
+//!    silent failure in the thread, since async consumers are notified of the error case.
+//!    This allows async consumers to react (e.g., save state, clean up) before the
 //!    application decides to exit:
 //!
-//!    | Trigger                    | Behavior                                                                                                          |
-//!    | :------------------------- | :---------------------------------------------------------------------------------------------------------------- |
-//!    | [`stdin`] [`EOF`]          | [`read()`] returns `0` → sends [`StdinEvent::Eof`] → thread exits; see [`EOF`] note below)                        |
-//!    | I/O error (not [`EINTR`])  | Sends [`StdinEvent::Error`] → thread exits (see [`EINTR`] handling below)                                         |
-//!    | All receivers dropped      | [`SubscriberGuard::drop()`] wakes thread → checks `receiver_count() == 0` → exits (~1ms); see below               |
+//!    | Trigger                    | Behavior                                                                                                           |
+//!    | :------------------------- | :----------------------------------------------------------------------------------------------------------------- |
+//!    | [`stdin`] [`EOF`]          | [`read()`] returns `0` → sends [`StdinEvent::Eof`] → thread exits; see [`EOF`] note below)                         |
+//!    | I/O error (not [`EINTR`])  | Sends [`StdinEvent::Error`] → thread exits (see [`EINTR`] handling below)                                          |
+//!    | All receivers dropped      | [`SubscriberGuard::drop()`] triggers software interrupt → checks `receiver_count() == 0` → exits (~1ms); see below |
 //!
 //!    **Note on [`EOF`]**: TUI apps run in [raw mode], where `Ctrl+D` is just
 //!    [`CONTROL_D`]—it doesn't trigger [`EOF`].
@@ -123,16 +126,16 @@
 //!    | Network timeout ([`SSH`])        | sshd eventually closes connection → [`EOF`]                           |
 //!    | Pipe closed                      | Writer closes pipe → reader gets [`EOF`]                              |
 //!
-//!    **Note on receiver drop (thread restart)**: When all [`broadcast::Receiver`]s are
+//!    **Note on software interrupt (thread restart)**: When all [`broadcast::Receiver`]s are
 //!    dropped, the thread exits. This typically happens when:
 //!    - [`DirectToAnsiInputDevice`] is dropped (it holds a receiver internally)
 //!    - A TUI app exits and drops its input device
 //!    - All async consumers finish and drop their receivers
 //!
-//!    **The thread is restartable**: When the next [`DirectToAnsiInputDevice`] is created
-//!    (or [`subscribe()`] is called), the terminated thread is detected via
-//!    the liveness flag, and a new thread is spawned automatically. This allows sequential TUI
-//!    apps in the same process to share the input system seamlessly.
+//!    **The thread is restartable**: When the next [`DirectToAnsiInputDevice::new()`]
+//!    call occurs, [`RRT::try_subscribe()`] observes [`ThreadState::Stopped`] and spawns
+//!    a new thread generation automatically. This allows sequential TUI apps in the same
+//!    process to share the input system seamlessly.
 //!
 //! 2. Process Termination (OS kills everything)
 //!
@@ -146,7 +149,8 @@
 //!    | `Ctrl+C` / [`SIGINT`]      | OS terminates process → all threads killed             |
 //!
 //! This is safe because:
-//! - [`SINGLETON`] is a static [`Mutex`], never dropped until process exit.
+//! - [`SINGLETON`] is a process-global static [`RRT`] container, never dropped until
+//!   process exit.
 //! - The thread is doing nothing when blocked—[`mio`] uses efficient OS primitives.
 //! - There are no resources to leak—[`stdin`] is [`fd`][`file descriptor`] `0`, which is
 //!   not owned by us.
@@ -155,8 +159,8 @@
 //!
 //! [`EINTR`] ([`ErrorKind::Interrupted`]) occurs when a signal interrupts a blocking
 //! [`syscall`]. Both [`poll()`] and [`read()`] can return this error. Unlike other
-//! errors, [`EINTR`] is **retried** (not sent as [`StdinEvent::Error`])—the operation simply
-//! resumes on the next loop iteration.
+//! errors, [`EINTR`] is **retried** (not sent as [`StdinEvent::Error`])—the operation
+//! simply resumes on the next loop iteration.
 //!
 //! ## What is [`mio`]?
 //!
@@ -165,30 +169,31 @@
 //! - **Linux**: [`epoll`]
 //! - **macOS**: [`kqueue`]
 //!
-//! It's *blocking* but efficient - [`poll.poll(&mut events, None)`] blocks the thread until
-//! something happens on either [`file descriptor`]. Unlike [`select()`] or raw [`poll()`], [`mio`] uses the
-//! optimal [`syscall`] per platform.
+//! It's *blocking* but efficient - [`poll.poll(&mut events, None)`] blocks the thread
+//! until something happens on either [`file descriptor`]. Unlike [`select()`] or raw
+//! [`poll()`], [`mio`] uses the optimal [`syscall`] per platform.
 //!
 //! <div class="warning">
 //!
-//! **Why not [`tokio`] for stdin?** Because [`tokio::io::stdin()`] uses a blocking threadpool
-//! internally, and cancelling a [`tokio::select!`] branch doesn't stop the underlying
-//! read - it keeps running as a "zombie", causing the problems described in
+//! **Why not [`tokio`] for stdin?** Because [`tokio::io::stdin()`] uses a blocking
+//! threadpool internally, and cancelling a [`tokio::select!`] branch doesn't stop the
+//! underlying read - it keeps running as a "zombie", causing the problems described in
 //! [The Problems section in `DirectToAnsiInputDevice`].
 //!
-//! **Why is this not implemented for macOS?** See [Why Linux-Only?] in
-//! the parent module—macOS [`kqueue`] can't poll [`PTY`]/[`tty`] file descriptors.
+//! **Why is this not implemented for macOS?** See [Why Linux-Only?] in the parent
+//! module—macOS [`kqueue`] can't poll [`PTY`]/[`tty`] file descriptors.
 //!
 //! </div>
 //!
 //! ## The Two File Descriptors
 //!
-//! A [`file descriptor`] ([`fd`]) is a Unix integer handle to an I/O resource (file, [`socket`],
-//! pipe, etc.). Two [`fd`]s are registered with [`mio`]'s registry so a single [`poll()`] call
-//! can wait on either becoming ready:
+//! A [`file descriptor`] ([`fd`]) is a Unix integer handle to an I/O resource (file,
+//! [`socket`], pipe, etc.). Two [`fd`]s are registered with [`mio`]'s registry so a
+//! single [`poll()`] call can wait on either becoming ready:
 //!
-//! **1. `stdin` [`fd`]** - The raw [`file descriptor`] ([`fd 0`]) for standard input, obtained via
-//! [`std::io::stdin().as_raw_fd()`][AsRawFd::as_raw_fd]. We wrap it in [`SourceFd`] so [`mio`] can poll it:
+//! **1. `stdin` [`fd`]** - The raw [`file descriptor`] ([`fd 0`]) for standard input,
+//! obtained via [`std::io::stdin().as_raw_fd()`][AsRawFd::as_raw_fd]. We wrap it in
+//! [`SourceFd`] so [`mio`] can poll it:
 //!
 //! <!-- It is ok to use ignore here -->
 //!
@@ -216,9 +221,9 @@
 //! ```
 //!
 //! The parser handles three tricky cases:
-//! - **[`ESC`] disambiguation**: The `more` flag indicates if more bytes might be waiting.
-//!   If `read_count == buffer_size`, we wait before deciding a lone [`ESC`] is the [`ESC`]
-//!   key.
+//! - **[`ESC`] disambiguation**: The `more` flag indicates if more bytes might be
+//!   waiting. If `read_count == buffer_size`, we wait before deciding a lone [`ESC`] is
+//!   the [`ESC`] key.
 //! - **Chunked input**: The buffer accumulates bytes until a complete sequence is parsed.
 //! - **[`UTF-8`]**: Multi-byte characters can span multiple reads.
 //!
@@ -237,8 +242,8 @@
 //! # [`ESC`] Detection Limitations
 //!
 //! Both the [`ESC`] key and escape sequences (like `Up Arrow` = `ESC [ A`) start with the
-//! same byte (`1B`). When we read a lone [`ESC`] byte, is it the [`ESC`] key or the start of
-//! a sequence?
+//! same byte (`1B`). When we read a lone [`ESC`] byte, is it the [`ESC`] key or the start
+//! of a sequence?
 //!
 //! ## The `more` Flag Heuristic
 //!
@@ -251,13 +256,14 @@
 //!
 //! ## Why This is a Heuristic, Not a Guarantee
 //!
-//! **This approach assumes that if [`read()`] returns fewer bytes than the buffer size, all
-//! pending data has been consumed.** This is usually true, but not guaranteed:
+//! **This approach assumes that if [`read()`] returns fewer bytes than the buffer size,
+//! all pending data has been consumed.** This is usually true, but not guaranteed:
 //!
 //! - **Local terminals**: Escape sequences are typically written atomically, so they
 //!   arrive complete in one [`read()`]. The heuristic works well.
-//! - **Over [`SSH`]**: [`TCP`] can fragment data arbitrarily. If [`ESC`] arrives in one packet
-//!   and `[ A` in the next (even microseconds later), we might incorrectly emit [`ESC`].
+//! - **Over [`SSH`]**: [`TCP`] can fragment data arbitrarily. If [`ESC`] arrives in one
+//!   packet and `[ A` in the next (even microseconds later), we might incorrectly emit
+//!   [`ESC`].
 //! - **High latency networks**: The more latency and packet fragmentation, the higher the
 //!   chance of incorrect [`ESC`] detection.
 //!
@@ -269,20 +275,23 @@
 //!
 //! We chose the `more` flag heuristic (following [`crossterm`]) because:
 //! - Zero latency for [`ESC`] key in the common case (local terminal).
-//! - Acceptable behavior for most [`SSH`] connections ([`TCP`] usually delivers related bytes
-//!   together). In our testing there were no issues over [`SSH`].
+//! - Acceptable behavior for most [`SSH`] connections ([`TCP`] usually delivers related
+//!   bytes together). In our testing there were no issues over [`SSH`].
 //! - The failure mode ([`ESC`] emitted early) is annoying but not catastrophic.
 //!
 //! **Trade-off**: Faster [`ESC`] response vs. occasional incorrect detection on
 //! high-latency connections.
 //!
-//! [100ms `ttimeoutlen` delay]: https://vi.stackexchange.com/questions/24925/usage-of-timeoutlen-and-ttimeoutlen
+//! [100ms `ttimeoutlen` delay]:
+//!     https://vi.stackexchange.com/questions/24925/usage-of-timeoutlen-and-ttimeoutlen
 //! [`Arc<AtomicBool>`]: std::sync::atomic::AtomicBool
 //! [`broadcast::Receiver`]: tokio::sync::broadcast::Receiver
-//! [`consume_pending_signals_with_sender()`]: handler_signals::consume_pending_signals_with_sender
+//! [`consume_pending_signals_with_sender()`]:
+//!     handler_signals::consume_pending_signals_with_sender
 //! [`consume_stdin_input_with_sender()`]: handler_stdin::consume_stdin_input_with_sender
 //! [`CONTROL_D`]: crate::CONTROL_D
 //! [`crossterm`]: crossterm
+//! [`DirectToAnsiInputDevice::new()`]: super::DirectToAnsiInputDevice::new
 //! [`DirectToAnsiInputDevice`]: super::DirectToAnsiInputDevice
 //! [`dispatch_with_sender()`]: dispatcher::dispatch_with_sender
 //! [`EINTR`]: https://man7.org/linux/man-pages/man3/errno.3.html
@@ -293,8 +302,10 @@
 //! [`fd 0`]: https://man7.org/linux/man-pages/man3/stdin.3.html
 //! [`fd`]: https://en.wikipedia.org/wiki/File_descriptor
 //! [`file descriptor`]: https://en.wikipedia.org/wiki/File_descriptor
-//! [`handle_receiver_drop_waker_with_sender()`]: handler_receiver_drop::handle_receiver_drop_waker_with_sender
+//! [`handle_software_interrupt_with_sender()`]:
+//!     handler_software_interrupt::handle_software_interrupt_with_sender
 //! [`InputEvent`]: crate::InputEvent
+//! [`integration_tests`]: crate::core::resilient_reactor_thread::rrt_integration_tests
 //! [`kqueue`]: https://man.freebsd.org/cgi/man.cgi?query=kqueue&sektion=2
 //! [`mio::Poll`]: mio::Poll
 //! [`mio::Token`]: mio::Token
@@ -313,7 +324,9 @@
 //! [`read()`]: https://man7.org/linux/man-pages/man2/read.2.html
 //! [`receiver_count()`]: tokio::sync::broadcast::Sender::receiver_count
 //! [`resilient_reactor_thread`]: crate::core::resilient_reactor_thread
-//! [`RRTWaker`]: crate::RRTWaker
+//! [`RRT::try_subscribe()`]: crate::RRT::try_subscribe
+//! [`RRT`]: crate::RRT
+//! [`RRTSoftwareInterrupt`]: crate::RRTSoftwareInterrupt
 //! [`rustix::event::poll()`]: https://docs.rs/rustix/latest/rustix/event/fn.poll.html
 //! [`select()`]: https://man7.org/linux/man-pages/man2/select.2.html
 //! [`sender.send()`]: tokio::sync::broadcast::Sender::send
@@ -336,41 +349,41 @@
 //! [`stdin`]: std::io::stdin
 //! [`StdinEvent::Eof`]: super::channel_types::StdinEvent::Eof
 //! [`StdinEvent::Error`]: super::channel_types::StdinEvent::Error
-//! [`subscribe()`]: crate::RRT::subscribe
-//! [`SubscriberGuard::drop()`]: crate::SubscriberGuard#impl-Drop-for-SubscriberGuard
+//! [`SubscriberGuard::drop()`]: crate::SubscriberGuard#method.drop
 //! [`SubscriberGuard`]: crate::SubscriberGuard
 //! [`syscall`]: https://man7.org/linux/man-pages/man2/syscalls.2.html
 //! [`TCP`]: https://en.wikipedia.org/wiki/Transmission_Control_Protocol
+//! [`ThreadState::Stopped`]: crate::core::resilient_reactor_thread::ThreadState::Stopped
 //! [`tokio::io::stdin()`]: tokio::io::stdin
 //! [`tokio::select!`]: tokio::select
 //! [`tokio::sync::broadcast`]: tokio::sync::broadcast
 //! [`tokio`]: tokio
+//! [`try_subscribe()`]: crate::RRT::try_subscribe
 //! [`tty`]: https://man7.org/linux/man-pages/man4/tty.4.html
 //! [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
 //! [`VEOF`]: https://man7.org/linux/man-pages/man3/termios.3.html
-//! [`VT100InputEventIR`]: crate::vt_100_terminal_input_parser::VT100InputEventIR
-//! [`waker.wake()`]: mio::Waker::wake
+//! [`VT100InputEventIR`]: crate::core::ansi::vt_100_terminal_input_parser::VT100InputEventIR
 //! [AsRawFd::as_raw_fd]: std::os::unix::io::AsRawFd::as_raw_fd
 //! [canonical mode]: crate::terminal_raw_mode#raw-mode-vs-cooked-mode
 //! [Device Lifecycle]: super::DirectToAnsiInputDevice#device-lifecycle
 //! [line discipline]: https://en.wikipedia.org/wiki/Line_discipline
 //! [paste state machine]: super::paste_state_machine::PasteCollectionState
 //! [raw mode]: crate::terminal_raw_mode#raw-mode-vs-cooked-mode
-//! [Related Tests]: crate::core::resilient_reactor_thread#related-tests
 //! [RRT module docs]: crate::core::resilient_reactor_thread
-//! [The Problems section in `DirectToAnsiInputDevice`]: super::DirectToAnsiInputDevice#the-problems
+//! [The Problems section in `DirectToAnsiInputDevice`]:
+//!     super::DirectToAnsiInputDevice#the-problems
 //! [VT100 input parser]: super::stateful_parser::StatefulInputParser
 //! [Why Linux-Only?]: super#why-linux-only
 
-// XMARK: impl trait rustdoc link definition heading-anchor (eg: #impl-Drop-for) see above
+// XMARK: impl trait rustdoc link definition heading-anchor (eg: #method.drop) see above
 
 #![rustfmt::skip]
 
-// RRT-based waker + worker types.
+// RRT-based interrupt + worker types.
 #[cfg(any(test, doc))]
-pub mod mio_poll_waker;
+pub mod mio_poll_interrupt;
 #[cfg(not(any(test, doc)))]
-mod mio_poll_waker;
+mod mio_poll_interrupt;
 
 #[cfg(any(test, doc))]
 pub mod mio_poll_worker;
@@ -398,12 +411,11 @@ pub mod handler_stdin;
 mod handler_stdin;
 
 #[cfg(any(test, doc))]
-pub mod handler_receiver_drop;
+pub mod handler_software_interrupt;
 #[cfg(not(any(test, doc)))]
-mod handler_receiver_drop;
+mod handler_software_interrupt;
 
 // Re-export public API.
-pub use mio_poll_waker::*;
+pub use mio_poll_interrupt::*;
 pub use mio_poll_worker::*;
 pub use sources::*;
-

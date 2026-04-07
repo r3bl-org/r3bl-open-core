@@ -37,10 +37,11 @@ static DEVICE_EXISTS: AtomicBool = AtomicBool::new(false);
 pub fn claim_and_assert() {
     // swap() returns the OLD value - false means there is no a preexisting device.
     let device_already_exists = DEVICE_EXISTS.swap(true, Ordering::SeqCst);
-    assert_eq!(
-        device_already_exists, false,
+    assert!(
+        !device_already_exists,
         "DirectToAnsiInputDevice::new() called while another device exists. \
-         Use device.subscribe() for additional receivers."
+         Use device.try_subscribe() (fallible) to get a guard, then guard.try_subscribe() \
+         for additional receivers."
     );
 }
 

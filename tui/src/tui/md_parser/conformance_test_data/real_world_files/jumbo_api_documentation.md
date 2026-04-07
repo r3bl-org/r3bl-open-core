@@ -156,7 +156,7 @@ let parser = Parser::new()
 Non-blocking parsing for large documents:
 
 ```rust
-use r3bl_tui::{AsyncParser, ProgressCallback};
+use r3bl_tui::{AsyncParser, ProgressCallback, ok};
 use tokio;
 
 #[tokio::main]
@@ -173,7 +173,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .await?;
 
     println!("Parsed {} elements", result.elements.len());
-    Ok(())
+    ok!()
 }
 ```
 

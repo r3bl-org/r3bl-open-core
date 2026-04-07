@@ -21,10 +21,10 @@
 //! [`CrosstermInputDevice`] produce identical [`InputEvent`] values for the same [`ANSI`]
 //! byte sequences.
 //!
-//! Run the tests with:
+//! # Run with:
 //!
 //! ```bash
-//! cargo test -p r3bl_tui --lib test_pty_backend -- --nocapture
+//! cargo test -p r3bl_tui terminal_io -- --nocapture
 //! ```
 //!
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
@@ -38,13 +38,13 @@
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 
 // Private modules (hide internal structure).
-mod key_press;
-mod output_device;
 mod enhanced_keys;
 mod input_device;
 mod input_event;
+mod key_press;
 mod modifier_keys_mask;
 mod mouse_input;
+mod output_device;
 mod shared_writer;
 mod terminal_io_type_aliases;
 

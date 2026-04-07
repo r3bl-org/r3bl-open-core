@@ -8,6 +8,14 @@ documentation = "https://docs.rs/analytics_schema"
 homepage = "https://r3bl.com"
 license = "Apache-2.0"
 
+# https://blog.rust-lang.org/2026/04/04/docsrs-only-default-targets/
+[package.metadata.docs.rs]
+targets = [
+  "x86_64-unknown-linux-gnu",
+  "x86_64-apple-darwin",
+  "x86_64-pc-windows-msvc",
+]
+
 [lints]
 workspace = true
 

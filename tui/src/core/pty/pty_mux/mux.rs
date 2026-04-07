@@ -9,13 +9,10 @@
 
 use super::{InputRouter, OutputRenderer, Process, ProcessManager, output_renderer,
             show_notification_non_blocking};
-use crate::{AnsiSequenceGenerator, Continuation, InputEvent, RawMode, Size,
-            TerminalInteractiveStatus, TuiAvailability, col,
-            core::{check_is_terminal_interactive, emit_stderr_redirection_disclaimer,
+use crate::{AnsiSequenceGenerator, Continuation, InputEvent, RawMode, Size, TerminalInteractiveStatus, TuiAvailability, col, core::{check_is_terminal_interactive, emit_stderr_redirection_disclaimer,
                    get_size,
                    osc::OscController,
-                   terminal_io::{InputDevice, OutputDevice}},
-            lock_output_device_as_mut, row};
+                   terminal_io::{InputDevice, OutputDevice}}, lock_output_device_as_mut, ok, row};
 
 /// Main [`PTY`] multiplexer that orchestrates all components.
 ///
@@ -311,7 +308,7 @@ impl PTYMux {
 
         tracing::debug!("Event loop completed - returning Ok(())");
 
-        Ok(())
+        ok!()
     }
 
     /// Updates terminal size for all components.

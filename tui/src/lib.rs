@@ -13,6 +13,9 @@
 #![feature(custom_inner_attributes)]
 #![rustfmt::skip]
 
+// Allow const generic params to accept types other than bool and char.
+#![feature(adt_const_params)]
+
 //! # Why R3BL?
 //!
 //! <img
@@ -98,10 +101,13 @@
 //! - [Type-safe bounds checking](#type-safe-bounds-checking)
 //!   - [The Problem](#the-problem)
 //!   - [The Solution](#the-solution)
-//!   - [Key Benefits](#key-benefits)
-//!   - [Architecture](#architecture)
-//!   - [Common Patterns](#common-patterns)
-//!   - [Learn More](#learn-more)
+//! - [Terminal Restoration: Panic, Drop, and Mutex
+//!   Poison-Safety](#terminal-restoration-panic-drop-and-mutex-poison-safety)
+//!   - [Panic vs. Drop handling](#panic-vs-drop-handling)
+//!   - [Mutex Locking: Fail-Fast vs.
+//!     Poison-Safe](#mutex-locking-fail-fast-vs-poison-safe)
+//!   - [Deadlock Prevention: Scoped Access vs. Chain of
+//!     Custody](#deadlock-prevention-scoped-access-vs-chain-of-custody)
 //! - [Grapheme support](#grapheme-support)
 //!   - [The Challenge](#the-challenge)
 //!   - [The Solution: Three Index Types](#the-solution-three-index-types)
@@ -609,7 +615,7 @@
 //! **Example test structure:**
 //!
 //! ```no_run
-//! # use r3bl_tui::{generate_pty_test, PtyTestMode, DirectToAnsiInputDevice, PtyPair, SingleThreadSafeControlledChild, PtyTestContext};
+//! # use r3bl_tui::{generate_pty_test, PtyTestMode, DirectToAnsiInputDevice, PtyPair, PtyTestChild, PtyTestContext};
 //! # use std::io::{Write, BufRead};
 //! # fn process_terminal_events(_: &DirectToAnsiInputDevice) {}
 //! generate_pty_test! {
@@ -635,7 +641,8 @@
 //!     },
 //!     controlled: || {
 //!         // Runs in PTY controlled - fully interactive terminal
-//!         let mut input_device = DirectToAnsiInputDevice::new();
+//!         let mut input_device = DirectToAnsiInputDevice::new()
+//!             .expect("Failed to initialize DirectToAnsiInputDevice");
 //!         println!("CONTROLLED_READY");
 //!         process_terminal_events(&input_device);
 //!         std::process::exit(0);
@@ -660,14 +667,14 @@
 //! - Proper process coordination and cleanup
 //!
 //! **Real-world applications:**
-//! - **Terminal input parsing**: [`integration_tests`] validates `VT-100` input sequences
-//! - **Raw mode behavior**: [`integration_tests`] tests termios configuration
+//! - **Terminal input parsing**: [`input_parser_integration_tests`] validates `VT-100` input sequences
+//! - **Raw mode behavior**: [`raw_mode_integration_tests`] tests termios configuration
 //! - **Interactive applications**: Tests readline, editor, and TUI component interactions
 //!
 //! For complete PTY test implementation details and examples, see:
 //! - Macro documentation: [`generate_pty_test!`]
-//! - Input parser tests: [`integration_tests`]
-//! - Raw mode tests: [`integration_tests`]
+//! - Input parser tests: [`input_parser_integration_tests`]
+//! - Raw mode tests: [`raw_mode_integration_tests`]
 //!
 //! For complete development setup and all available commands, see the [repository
 //! README](https://github.com/r3bl-org/r3bl-open-core/blob/main/README.md).
@@ -897,6 +904,172 @@
 //!
 //! See the extensive and detailed [`bounds_check` module
 //! documentation](mod@crate::bounds_check).
+//!
+//! # Terminal Restoration: Panic, Drop, and Mutex Poison-Safety
+//!
+//! Terminal applications have a unique responsibility: they must ensure the user's shell
+//! is never left in a corrupted state (e.g., "stuck" in [raw mode]), even if the
+//! application crashes or deadlocks.
+//!
+//! > To recover from this a user would have to run the `reset` program via the command
+//! > line (to put the terminal back into "cooked mode") which is a bad user experience.
+//!
+//! To achieve this, this crate uses architectural patterns that guarantee terminal
+//! restoration through [`RAII`] (Resource Acquisition Is Initialization) and poison-safe
+//! cleanup. This section details how we handle the interplay between panic handling,
+//! resource cleanup via [`Drop`], and mutex poison-safety.
+//!
+//! ## Panic vs. Drop handling
+//!
+//! In Rust, a panic can happen at any time. When it does, the stack is unwound, and
+//! [`Drop`] implementations are called for all resources currently in scope. In a TUI
+//! application, this is a critical moment: if the terminal is in [raw mode], it **must**
+//! be restored to "cooked mode" before the process exits, or the user's shell will be
+//! left in a corrupted state (no echo, broken line endings, etc.).
+//!
+//! ### The **Double Panic Abort** Risk
+//!
+//! In a TUI application, the highest risk is a **Double Panic Abort**. This happens if a
+//! panic occurs while another panic is already being processed. Here's a scenario that
+//! may play out:
+//! 1. A thread holds the [`OutputDevice`] mutex to write to the screen. Lets call this
+//!    Thread A (typically the main thread running the event loop in a [`TUI`] or
+//!    [`readline_async`] app).
+//! 2. Thread A panics, e.g., via an `unwrap()` on an unrelated `Option` while holding
+//!    this lock.
+//! 3. The [`OutputDevice`] mutex is now **poisoned** because Thread A was holding it when
+//!    it started to panic.
+//! 4. The panic triggers stack unwinding **on Thread A**, calling `drop()` on other
+//!    **[`RAII`] guards** that were created by the application and are still in scope.
+//! 5. These `drop()` implementations (for components like **[`Readline`]** or
+//!    **[`RawModeGuard`]**) must write to the terminal to restore it. Tasks include:
+//!    moving the cursor to the left margin (done by [`Readline`]), showing the cursor if
+//!    hidden, switching back to the main screen, and disabling raw mode (done by
+//!    [`RawModeGuard`]).
+//! 6. To do so, one of the `drop()` implementations (on Thread A) attempts to re-acquire
+//!    the **same [`OutputDevice`] lock**.
+//! 7. Since it is using the same mutex, a call to `lock().unwrap()` will hit the poisoned
+//!    mutex and **panic a second time**.
+//! 8. **Result**: The Rust runtime immediately **Aborts** the process because Thread A is
+//!    panicking while already panicking. This is the **Double Panic Abort**. No further
+//!    `drop()` calls occur, and the user's terminal is left "bricked" in raw mode.
+//!
+//! To avoid this, we ensure that our **Cleanup Paths** are poison-safe, allowing them to
+//! proceed even if they encounter a poisoned mutex.
+//!
+//! ### Philosophy: **Resilience over Integrity**
+//!
+//! During cleanup, we prioritize **Resilience over Integrity**. It is better to attempt
+//! terminal restoration using "dirty" or inconsistent state than to abort and leave the
+//! terminal unusable.
+//!
+//! To ensure this, we follow these rules:
+//! 1. **[`RAII`] for Terminal State**: We use guards like [`RawModeGuard`] that implement
+//!    [`Drop`] to automatically disable [raw mode].
+//! 2. **Poison-Safe Cleanup**: Mutexes used during cleanup (like those protecting the
+//!    terminal output device) must be "poison-safe".
+//!
+//! ## Mutex Locking: Fail-Fast vs. Poison-Safe
+//!
+//! We distinguish between two types of mutex locking based on the context:
+//!
+//! ### 1. Normal Paths (Fail-Fast)
+//!
+//! For standard application logic, we prefer the "Fail-Fast" approach. If a mutex is
+//! poisoned, it means a previous thread panicked while holding the lock, and the
+//! protected data is likely in an inconsistent/corrupted state. In these cases, we use:
+//! ```no_run
+//! # use std::sync::Mutex;
+//! # let mutex = Mutex::new(0);
+//! let guard = mutex.lock().expect("Mutex poisoned");
+//! ```
+//! This intentionally propagates the panic, preventing the system from operating on
+//! corrupted state. [`ScopedMutex`] follows this pattern in its [`read()`] and
+//! [`write()`] methods.
+//!
+//! ### 2. Cleanup Paths (Poison-Safe)
+//!
+//! For cleanup and terminal restoration paths (e.g., inside a `drop()` implementation or
+//! a shutdown sequence), we **must** be "Poison-Safe". A panic in a cleanup path is a
+//! "Double Panic", which causes the Rust runtime to abort the process immediately,
+//! bypassing all remaining `Drop` implementations.
+//!
+//! To prevent this, we use the `into_inner()` method on the `PoisonError` to access the
+//! underlying data even if it's "dirty":
+//! ```no_run
+//! # use std::sync::Mutex;
+//! # let mutex = Mutex::new(0);
+//! let guard = match mutex.lock() {
+//!     Ok(guard) => guard,
+//!     Err(poisoned) => {
+//!         tracing::error!("Mutex poisoned during cleanup, proceeding with dirty state");
+//!         poisoned.into_inner()
+//!     }
+//! };
+//! ```
+//! This ensures that even if a prior panic corrupted the state, the terminal restoration
+//! logic can still attempt to call [`disable_raw_mode()`] and exit gracefully.
+//! [`ScopedMutex`] provides the [`lock_raw()`] method specifically for this purpose.
+//!
+//! ## Deadlock Prevention: Scoped Access vs. Chain of Custody
+//!
+//! Beyond poison-safety, terminal applications must also be resilient against
+//! deadlocks. We use two primary patterns to manage shared state safely:
+//!
+//! ### 1. Scoped Access (Friction-as-a-Feature)
+//!
+//! For simple shared state (global settings, caches, single statistics), we use the
+//! [`ScopedMutex`] wrapper. This pattern structurally prevents deadlocks by making it
+//! impossible to hold a lock guard longer than the execution of a single closure.
+//!
+//! To further mitigate recursion-based deadlocks, [`ScopedMutex`] includes **Recursion
+//! Detection** (enabled by default). If a recursive lock is detected on the same thread,
+//! it will panic with a clear message instead of hanging the terminal. This behavior is
+//! controlled by the chosen policy **coordinate** (generic over value). For
+//! performance-critical hot paths, this check can be opted-out at compile-time. See the
+//! [Parameters] section in [`ScopedMutex`] for more info.
+//!
+//! ### 2. Chain of Custody (Guard Passing)
+//!
+//! For complex state machines or thread coordination (e.g., the Resilient Reactor Thread
+//! engine), we use the [`Monitor`] pattern. Unlike [`ScopedMutex`], a [`Monitor`] must
+//! return the guard because primitives like [`Condvar::wait()`] need to consume and then
+//! re-acquire the lock.
+//!
+//! To manage this safely, we use the **Chain of Custody** protocol: the caller becomes
+//! the temporary "custodian" of the lock and must eventually "return" the guard to the
+//! [`Monitor`] by dropping it or passing it back into another method (like
+//! [`Monitor::wait()`]).
+//!
+//! ## Poison Safety Architecture: Summary of Components
+//!
+//! This table summarizes the architectural decisions made at each critical mutex
+//! boundary. Documentation for these components follows the standardized dual-heading
+//! format (`# Panics` and `# Poison Safety`).
+//!
+//! | Component                  | File                           | Implementation  | # Panics | # Poison Safety |
+//! | :------------------------- | :----------------------------- | :-------------- | :------: | :-------------: |
+//! | [`OutputDevice::lock()`]   | [`output_device.rs`]           | **Poison-Safe** |    N     |        Y        |
+//! | [`RawModeGuard::drop()`]   | [`raw_mode_core.rs`]           | **Poison-Safe** |    N     |        Y        |
+//! | [`Readline::drop()`]       | [`readline.rs`]                | **Poison-Safe** |    N     |        Y        |
+//! | [`TerminationGuard`]       | [`rrt_termination_guard.rs`]   | **Poison-Safe** |    N     |        Y        |
+//! | [`SubscriberGuard`]        | [`rrt_subscriber_guard.rs`]    | **Poison-Safe** |    N     |        Y        |
+//! | [`ScopedMutex::read()`]    | [`scoped_mutex.rs`]            | **Fail-Fast**   |    Y     |        Y        |
+//! | [`ScopedMutex::lock_raw()`]| [`scoped_mutex.rs`]            | **Poison-Safe** |    N     |        Y        |
+//! | [`Monitor::lock()`]        | [`monitor.rs`]                 | **Fail-Fast**   |    Y     |        Y        |
+//! | [`rrt_monitor::lock()`]    | [`rrt_monitor.rs`]             | **Fail-Fast**   |    Y     |        Y        |
+//! | [`run_worker_loop()`]      | [`rrt_engine.rs`]              | **Fail-Fast**   |    Y     |        Y        |
+//! | [`Spinner`] methods        | [`spinner.rs`]                 | **Fail-Fast**   |    Y     |        Y        |
+//!
+//! ## Key Poison-Safe Components
+//!
+//! - **[`OutputDevice`]**: The global output device lock is poison-safe to ensure
+//!   restoration logic can always write to the terminal.
+//! - **[`SAVED_TERMIOS`]**: The static storage for terminal settings is poison-safe.
+//! - **[`Readline`]**: The `drop` implementation for the async-readline ensures terminal
+//!   cleanup even if the internal state is poisoned.
+//! - **[`Monitor`]**: The low-level [`Monitor`] and [`ThreadLifecycleMonitor`] used in
+//!   the Resilient Reactor Thread (RRT) provide [`lock_raw()`] for poison-safe cleanup.
 //!
 //! # Grapheme support
 //!
@@ -1755,7 +1928,7 @@
 //! │         ▲                                ────► │  SubscriberGuard C │  │
 //! │         │                                      └─────────┬──────────┘  │
 //! │         │                                                │             │
-//! │         └── wake_and_unblock_dedicated_thread() on drop ─┘             │
+//! │         └── trigger_software_interrupt() on drop ────────┘             │
 //! │                                                                        │
 //! └────────────────────────────────────────────────────────────────────────┘
 //! ```
@@ -1770,7 +1943,7 @@
 //! | [`RRT`]                      | Framework entry point for RRT instances          |
 //! | [`SubscriberGuard`]          | RAII guard managing subscription lifecycle       |
 //! | [`RRTWorker`]                | Trait for the blocking work loop                 |
-//! | [`RRTWaker`]                 | Trait for interrupting blocked threads                |
+//! | [`RRTSoftwareInterrupt`]     | Trait for interrupting blocked threads           |
 //!
 //! ## Key benefits
 //!
@@ -2046,7 +2219,7 @@
 //! - Sends input via PTY writer
 //! - Reads output via PTY reader
 //! - Performs assertions
-//! - Performs [`drain_and_wait()`] cleanup
+//! - Performs [`PtyTestChild::drain_and_wait()`] cleanup
 //!
 //! **Controlled** (runs in spawned child):
 //!
@@ -2081,7 +2254,7 @@
 //! For complete implementations, see:
 //!
 //! - [`pty_test_fixtures`] - Test infrastructure
-//! - [`integration_tests`] - Input parsing tests
+//! - [`input_parser_integration_tests`] - Input parsing tests
 //! - [`backend_compat_tests`] - Backend comparison tests
 //!
 //! # How does the editor component work?
@@ -2359,7 +2532,7 @@
 //! ### Usage Example
 //!
 //! ```no_run
-//! use r3bl_tui::{TuiAvailability, IntoErr, core::pty_mux::PTYMux};
+//! use r3bl_tui::{TuiAvailability, IntoErr, core::pty_mux::PTYMux, ok};
 //!
 //! #[tokio::main]
 //! async fn main() -> miette::Result<()> {
@@ -2374,7 +2547,7 @@
 //!     };
 //!
 //!     multiplexer.run().await?;  // F1/F2/F3 to switch, Ctrl+Q to quit
-//!     Ok(())
+//!     ok!()
 //! }
 //! ```
 //!
@@ -2535,6 +2708,17 @@
 //!
 //! <!-- Type references for documentation links -->
 //!
+//! [`read()`]: ScopedMutex::read()
+//! [`write()`]: ScopedMutex::write()
+//! [`OutputDevice`]: crate::OutputDevice
+//! [`Readline`]: crate::Readline
+//! [`Monitor`]: crate::Monitor
+//! [`ThreadLifecycleMonitor`]: crate::ThreadLifecycleMonitor
+//! [`lock_raw()`]: crate::Monitor::lock_raw
+//! [raw mode]: mod@crate::terminal_raw_mode#raw-mode-vs-cooked-mode
+//! [`disable_raw_mode()`]: crate::disable_raw_mode
+//! [`SAVED_TERMIOS`]: crate::core::ansi::terminal_raw_mode::raw_mode_unix::SAVED_TERMIOS
+//! [`RAII`]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
 //! [`stdin`]: std::io::stdin
 //! [`PTYMuxBuilder::build()`]: crate::pty_mux::PTYMuxBuilder::build
 //! [`Available`]: crate::TerminalInteractiveStatus::Available
@@ -2556,7 +2740,7 @@
 //! [`stderr` redirection disclaimers]: crate::emit_stderr_redirection_disclaimer
 //! [App]: crate::App
 //! [Component]: crate::Component
-//! [`pty_test_fixtures::drain_and_wait()`]: crate::pty_test_fixtures::drain_and_wait
+//! [`PtyTestChild::drain_and_wait()`]: crate::PtyTestChild::drain_and_wait
 //! [TerminalWindow]: crate::TerminalWindow
 //! [FlexBox]: crate::FlexBox
 //! [Surface]: crate::Surface
@@ -2616,15 +2800,17 @@
 //! [DialogEngineConfigOptions]: crate::DialogEngineConfigOptions
 //! [`generate_pty_test!`]: crate::generate_pty_test
 //! [`PtyTestContext`]: crate::PtyTestContext
-//! [`drain_and_wait()`]: crate::SingleThreadSafeControlledChild::drain_and_wait
+//! [`PtyTestChild::drain_and_wait()`]: crate::PtyTestChild::drain_and_wait
 //! [`pty_pair`]: field@PtyTestContext::pty_pair
 //! [`child`]: field@PtyTestContext::child
 //! [`buf_reader`]: field@PtyTestContext::buf_reader
 //! [`writer`]: field@PtyTestContext::writer
-//! [`integration_tests`]: mod@crate::vt_100_terminal_input_parser::integration_tests
-//! [`integration_tests`]: mod@crate::terminal_raw_mode::integration_tests
+//! [`input_parser_integration_tests`]:
+//!     mod@crate::vt_100_terminal_input_parser::vt_100_parser_integration_tests
+//! [`raw_mode_integration_tests`]:
+//!     mod@crate::terminal_raw_mode::raw_mode_integration_tests
 //! [`test_pty_input_device`]:
-//!     mod@crate::vt_100_terminal_input_parser::integration_tests::pty_input_device_test
+//!     mod@crate::vt_100_terminal_input_parser::vt_100_parser_integration_tests::pty_input_device_test
 //! [`DirectToAnsiInputDevice`]: crate::DirectToAnsiInputDevice
 //! [`pty_test_fixtures`]: crate::pty_test_fixtures
 //! [`backend_compat_tests`]: crate::backend_compat_tests
@@ -2632,6 +2818,25 @@
 //! [`direct_to_ansi`]: crate::direct_to_ansi
 //! [`crossterm_backend`]: crate::crossterm_backend
 //! [`vt_100_terminal_input_parser`]: crate::vt_100_terminal_input_parser
+//! [`OutputDevice::lock()`]: crate::OutputDevice::lock
+//! [`RawModeGuard::drop()`]: crate::RawModeGuard::drop
+//! [`output_device.rs`]: crate::OutputDevice
+//! [`raw_mode_core.rs`]: crate::RawModeGuard
+//! [`readline.rs`]: crate::Readline
+//! [`rrt_termination_guard.rs`]: crate::resilient_reactor_thread::TerminationGuard
+//! [`rrt_subscriber_guard.rs`]: crate::resilient_reactor_thread::SubscriberGuard
+//! [`monitor.rs`]: crate::core::common::Monitor
+//! [`scoped_mutex.rs`]: crate::core::common::ScopedMutex
+//! [`rrt_monitor.rs`]: crate::resilient_reactor_thread::ThreadLifecycleMonitor
+//! [`rrt_engine.rs`]: crate::resilient_reactor_thread::run_worker_loop
+//! [`spinner.rs`]: crate::readline_async::Spinner
+//! [`Readline::drop()`]: crate::Readline::drop
+//! [`TerminationGuard`]: crate::resilient_reactor_thread::TerminationGuard
+//! [`SubscriberGuard`]: crate::resilient_reactor_thread::SubscriberGuard
+//! [`Monitor::lock()`]: crate::core::common::Monitor::lock
+//! [`rrt_monitor::lock()`]: crate::resilient_reactor_thread::ThreadLifecycleMonitor::lock
+//! [`run_worker_loop()`]: crate::resilient_reactor_thread::run_worker_loop
+//! [`Spinner`]: crate::readline_async::Spinner
 //! [`RawModeGuard`]: crate::RawModeGuard
 //! [`terminal_raw_mode`]: crate::terminal_raw_mode
 //! [`raw_mode_unix`]: crate::terminal_raw_mode::raw_mode_unix
@@ -2639,7 +2844,7 @@
 //! [`RRT`]: crate::RRT
 //! [`SubscriberGuard`]: crate::SubscriberGuard
 //! [`RRTWorker`]: crate::RRTWorker
-//! [`RRTWaker`]: crate::RRTWaker
+//! [`RRTSoftwareInterrupt`]: crate::RRTSoftwareInterrupt
 //! [`resilient_reactor_thread`]: crate::resilient_reactor_thread
 //! [`mio_poller`]: crate::mio_poller
 //! [`io_uring`]: https://kernel.dk/io_uring.pdf
@@ -2663,6 +2868,8 @@
 //! [XTerm Control Sequences]: https://invisible-island.net/xterm/ctlseqs/ctlseqs.html
 //! [`pty_mux_example`]:
 //!     https://github.com/r3bl-org/r3bl-open-core/tree/main/tui/examples/pty_mux_example.rs
+//! [`Condvar::wait()`]: std::sync::Condvar::wait
+//! [Parameters]: crate::ScopedMutex#parameters
 
 // Enable benchmarking for nightly Rust.
 #![cfg_attr(test, feature(test))]
@@ -2699,18 +2906,10 @@ pub mod tui;
 
 // Re-export stable public API using glob imports for ergonomic, flat API surface.
 //
-// Note on ambiguous_glob_reexports: Some names (like 'raw_mode', 'integration_tests')
-// appear in multiple modules. This is intentional and acceptable because:
-// 1. Users typically import specific items: `use r3bl_tui::InputEvent;`
-// 2. Users can disambiguate with full paths: `use r3bl_tui::core::ansi::raw_mode;`
-// 3. Explicit imports would require listing 100+ items (violates DRY principle)
-// 4. Rust resolves ambiguity by precedence (later imports take precedence)
-// See CLAUDE.md module organization pattern for rationale.
-#[allow(ambiguous_glob_reexports)]
+// All internal modules MUST have unique names to prevent namespace collisions in these
+// glob re-exports. This ensures a clean, warning-free flat API surface for library users.
+// See `organize-modules` skill for the mandated naming convention.
 pub use crate::core::*;
-#[allow(ambiguous_glob_reexports)]
 pub use network_io::*;
-#[allow(ambiguous_glob_reexports)]
 pub use readline_async::*;
-#[allow(ambiguous_glob_reexports)]
 pub use tui::*;

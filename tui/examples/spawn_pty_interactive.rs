@@ -25,7 +25,7 @@ use r3bl_tui::{SGR_FG_BRIGHT_BLUE_STR, SGR_FG_BRIGHT_CYAN_STR, SGR_FG_BRIGHT_GRE
                core::pty::{ControlSequence, CursorKeyMode, DefaultPtySessionConfig,
                            PtyInputEvent, PtyOutputEvent, PtySessionBuilder,
                            PtySessionConfigOption},
-               height, set_mimalloc_in_main, size, width};
+               height, ok, set_mimalloc_in_main, size, width};
 use tokio::time::{Duration, sleep};
 
 // ANSI color constants for terminal output.
@@ -198,7 +198,7 @@ async fn run_python_repl_demo() -> miette::Result<()> {
         final_output.len()
     );
 
-    Ok(())
+    ok!()
 }
 
 /// Demonstrates an interactive shell session with multiple commands.
@@ -295,7 +295,7 @@ async fn run_shell_demo() -> miette::Result<()> {
 
     println!("\n{GREEN}✅ Shell session completed successfully!{RESET}");
 
-    Ok(())
+    ok!()
 }
 
 #[tokio::main]
@@ -337,5 +337,5 @@ async fn main() -> miette::Result<()> {
         {GREEN}   • Managing interactive sessions{RESET}"
     );
 
-    Ok(())
+    ok!()
 }

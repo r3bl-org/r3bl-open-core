@@ -51,7 +51,7 @@ use tokio::{sync::broadcast, time::interval};
 /// ```no_run
 /// // This example requires terminal output for the spinner animation
 /// # use std::time::Duration;
-/// # use r3bl_tui::{SpinnerStyle, OutputDevice, Spinner, IntoErr, TuiAvailability};
+/// # use r3bl_tui::{ok, SpinnerStyle, OutputDevice, Spinner, IntoErr, TuiAvailability};
 /// # async fn example() -> miette::Result<()> {
 ///     let mut spinner = match Spinner::try_start(
 ///         "Loading...",
@@ -72,7 +72,7 @@ use tokio::{sync::broadcast, time::interval};
 ///     spinner.request_shutdown();
 ///     // Wait for the spinner to completely shutdown
 ///     spinner.await_shutdown().await;
-/// # Ok(())
+/// # ok!()
 /// # }
 /// ```
 ///
@@ -153,7 +153,6 @@ impl Spinner {
             TerminalInteractiveStatus::NotAvailable(reason) => {
                 TuiAvailability::NotAvailable(reason)
             }
-            
             TerminalInteractiveStatus::Available => {
                 let init = async || {
                     emit_stderr_redirection_disclaimer();
@@ -214,9 +213,15 @@ impl Spinner {
     ///
     /// # Panics
     ///
-    /// This will panic if the lock is poisoned, which can happen if a thread
-    /// panics while holding the lock. To avoid panics, ensure that the code that
-    /// locks the mutex does not panic while holding the lock.
+    /// Panics if the internal mutex is poisoned.
+    ///
+    /// # Poison Safety
+    ///
+    /// See the [Terminal Restoration: Panic, Drop, and Mutex Poison-Safety] section
+    /// in the crate root documentation for details.
+    ///
+    /// [Terminal Restoration: Panic, Drop, and Mutex Poison-Safety]:
+    ///     crate#terminal-restoration-panic-drop-and-mutex-poison-safety
     #[must_use]
     pub fn is_shutdown(&self) -> bool { *self.safe_is_shutdown.lock().unwrap() }
 
@@ -231,17 +236,24 @@ impl Spinner {
     ///
     /// # Panics
     ///
-    /// This will panic if the lock is poisoned, which can happen if a thread
-    /// panics while holding the lock. To avoid panics, ensure that the code that
-    /// locks the mutex does not panic while holding the lock.
+    /// Panics if the internal mutex is poisoned.
+    ///
+    /// # Poison Safety
+    ///
+    /// See the [Terminal Restoration: Panic, Drop, and Mutex Poison-Safety] section
+    /// in the crate root documentation for details.
     ///
     /// # Errors
     ///
     /// Returns an error if:
     /// - The spinner task cannot be spawned
     /// - The communication channels fail
+    ///
+    /// [Terminal Restoration: Panic, Drop, and Mutex Poison-Safety]:
+    ///     crate#terminal-restoration-panic-drop-and-mutex-poison-safety
     pub async fn try_start_task(&mut self) -> miette::Result<()> {
         // Tell readline that spinner is active & register the spinner shutdown sender.
+
         if let Some(shared_writer) = self.maybe_shared_writer.as_ref() {
             // We don't care about the result of this operation.
             shared_writer
@@ -276,100 +288,100 @@ impl Spinner {
             tokio::sync::oneshot::channel::<()>();
         self.maybe_shutdown_complete_rx = Some(shutdown_complete_receiver);
 
-        // These are all moved into the spawn block.
-        let output_device_clone = self.output_device.clone();
-        let interval_message_clone = self.interval_message.clone();
-        let final_message_clone = self.final_message.clone();
-        let maybe_shared_writer_clone = self.maybe_shared_writer.clone();
-        let mut style_clone = self.style.clone();
-        let tick_delay_clone = self.tick_delay;
+        tokio::spawn({
+            let output_device_clone = self.output_device.clone();
+            let interval_message_clone = self.interval_message.clone();
+            let final_message_clone = self.final_message.clone();
+            let maybe_shared_writer_clone = self.maybe_shared_writer.clone();
+            let mut style_clone = self.style.clone();
+            let tick_delay_clone = self.tick_delay;
+            async move {
+                let mut interval = interval(tick_delay_clone);
 
-        tokio::spawn(async move {
-            let mut interval = interval(tick_delay_clone);
+                // Count is used to determine the output.
+                let mut count = 0;
 
-            // Count is used to determine the output.
-            let mut count = 0;
+                loop {
+                    tokio::select! {
+                        // Poll shutdown channel.
+                        // This branch is cancel safe because recv is cancel safe.
+                        _ = shutdown_receiver.recv() => {
+                            // Cancel the interval.
+                            drop(interval);
 
-            loop {
-                tokio::select! {
-                    // Poll shutdown channel.
-                    // This branch is cancel safe because recv is cancel safe.
-                    _ = shutdown_receiver.recv() => {
-                        // Cancel the interval.
-                        drop(interval);
+                            // Tell readline that spinner is inactive.
+                            if let Some(shared_writer) = maybe_shared_writer_clone.as_ref() {
+                                // We don't care about the result of this operation.
+                                shared_writer
+                                    .line_state_control_channel_sender
+                                    .send(LineStateControlSignal::SpinnerInactive)
+                                    .await.ok();
+                            }
 
-                        // Tell readline that spinner is inactive.
-                        if let Some(shared_writer) = maybe_shared_writer_clone.as_ref() {
+                            // Print the final message.
+                            let final_output = spinner_render::render_final_tick(
+                                &style_clone,
+                                &final_message_clone,
+                                get_terminal_width(),
+                            );
                             // We don't care about the result of this operation.
-                            shared_writer
-                                .line_state_control_channel_sender
-                                .send(LineStateControlSignal::SpinnerInactive)
-                                .await.ok();
-                        }
+                            spinner_print::print_tick_final_msg(
+                                &style_clone,
+                                &final_output,
+                                output_device_clone.clone(),
+                                &maybe_shared_writer_clone,
+                            ).ok();
 
-                        // Print the final message.
-                        let final_output = spinner_render::render_final_tick(
-                            &style_clone,
-                            &final_message_clone,
-                            get_terminal_width(),
-                        );
-                        // We don't care about the result of this operation.
-                        spinner_print::print_tick_final_msg(
-                            &style_clone,
-                            &final_output,
-                            output_device_clone.clone(),
-                            &maybe_shared_writer_clone,
-                        ).ok();
+                            // Resume the terminal.
+                            if let Some(shared_writer) = maybe_shared_writer_clone.as_ref() {
+                                // We don't care about the result of this operation.
+                                shared_writer
+                                    .line_state_control_channel_sender
+                                    .send(LineStateControlSignal::Resume)
+                                    .await.ok();
+                            }
 
-                        // Resume the terminal.
-                        if let Some(shared_writer) = maybe_shared_writer_clone.as_ref() {
+                            // This spinner is now shutdown, so other task(s) using it will
+                            // know that this spinner has been shutdown by user interaction or
+                            // other means.
+                            *self_safe_is_shutdown.lock().unwrap() = true;
+
+                            // Signal that the task has completely shutdown. It's okay if this
+                            // fails - it just means the receiver was dropped.
                             // We don't care about the result of this operation.
-                            shared_writer
-                                .line_state_control_channel_sender
-                                .send(LineStateControlSignal::Resume)
-                                .await.ok();
-                        }
+                            shutdown_complete_sender.send(()).ok();
 
-                        // This spinner is now shutdown, so other task(s) using it will
-                        // know that this spinner has been shutdown by user interaction or
-                        // other means.
-                        *self_safe_is_shutdown.lock().unwrap() = true;
-
-                        // Signal that the task has completely shutdown. It's okay if this
-                        // fails - it just means the receiver was dropped.
-                        // We don't care about the result of this operation.
-                        shutdown_complete_sender.send(()).ok();
-
-                        break;
-                    }
-
-                    // Poll interval.
-                    // This branch is cancel safe because tick is cancel safe.
-                    // https://developerlife.com/2024/07/10/rust-async-cancellation-safety-tokio/#example-1-right-and-wrong-way-to-sleep-and-interval
-                    _ = interval.tick() => {
-                        // Early return if the spinner is shutdown.
-                        if *self_safe_is_shutdown.lock().unwrap() {
                             break;
                         }
 
-                        // Render and print the interval message, based on style.
-                        let current_message = interval_message_clone.lock().unwrap().clone();
-                        let output = spinner_render::render_tick(
-                            &mut style_clone,
-                            &current_message,
-                            count,
-                            get_terminal_width(),
-                        );
-                        // We don't care about the result of this operation.
-                        spinner_print::print_tick_interval_msg(
-                            &style_clone,
-                            &output,
-                            output_device_clone.clone()
-                        ).ok();
+                        // Poll interval.
+                        // This branch is cancel safe because tick is cancel safe.
+                        // https://developerlife.com/2024/07/10/rust-async-cancellation-safety-tokio/#example-1-right-and-wrong-way-to-sleep-and-interval
+                        _ = interval.tick() => {
+                            // Early return if the spinner is shutdown.
+                            if *self_safe_is_shutdown.lock().unwrap() {
+                                break;
+                            }
 
-                        // Increment count to affect the output in the next iteration of this loop.
-                        count += 1;
-                    },
+                            // Render and print the interval message, based on style.
+                            let current_message = interval_message_clone.lock().unwrap().clone();
+                            let output = spinner_render::render_tick(
+                                &mut style_clone,
+                                &current_message,
+                                count,
+                                get_terminal_width(),
+                            );
+                            // We don't care about the result of this operation.
+                            spinner_print::print_tick_interval_msg(
+                                &style_clone,
+                                &output,
+                                output_device_clone.clone()
+                            ).ok();
+
+                            // Increment count to affect the output in the next iteration of this loop.
+                            count += 1;
+                        },
+                    }
                 }
             }
         });
@@ -399,18 +411,23 @@ impl Spinner {
         }
     }
 
-    /// Updates the interval message that's displayed during spinner animation.
-    /// This can be called from another task/thread to update progress.
+    /// Updates the interval message that's displayed during spinner animation. This can
+    /// be called from another task/thread to update progress.
     ///
     /// [`ANSI`] escape sequences are stripped from the message if present.
     ///
     /// # Panics
     ///
-    /// This will panic if the lock is poisoned, which can happen if a thread
-    /// panics while holding the lock. To avoid panics, ensure that the code that
-    /// locks the mutex does not panic while holding the lock.
+    /// Panics if the internal mutex is poisoned.
+    ///
+    /// # Poison Safety
+    ///
+    /// See the [Terminal Restoration: Panic, Drop, and Mutex Poison-Safety] section in
+    /// the crate root documentation for details.
     ///
     /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+    /// [Terminal Restoration: Panic, Drop, and Mutex Poison-Safety]:
+    ///     crate#terminal-restoration-panic-drop-and-mutex-poison-safety
     pub fn update_message(&self, new_message: impl Into<InlineString>) {
         let msg = new_message.into();
         // Strip ANSI codes if present.

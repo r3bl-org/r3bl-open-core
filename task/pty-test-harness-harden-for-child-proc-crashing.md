@@ -2,23 +2,23 @@
 
 ## Overview
 
-Currently, the PTY test harness (`drain_and_wait`) ignores the exit status of the `controlled` process. It only logs the status to `stderr`, which is only visible when running tests with `--nocapture`. This means if a `controlled` process crashes (segfault) or panics, the test might still pass if the `controller` doesn't happen to encounter a failure string in the PTY output.
+Currently, the PTY test harness (`PtyTestChild::drain_and_wait()`) ignores the exit status of the `controlled` process. It only logs the status to `stderr`, which is only visible when running tests with `--nocapture`. This means if a `controlled` process crashes (segfault) or panics, the test might still pass if the `controller` doesn't happen to encounter a failure string in the PTY output.
 
 Additionally, many existing PTY tests use manual `std::process::exit()` calls, which is a code smell, bypasses standard harness cleanup, and creates "ghost signals" that the harness doesn't officially validate.
 
 ## Goals
 
-1.  **Deterministic Failure Detection**: Make the exit status of the `controlled` process a primary validation channel in `drain_and_wait`.
+1.  **Deterministic Failure Detection**: Make the exit status of the `controlled` process a primary validation channel in `PtyTestChild::drain_and_wait()`.
 2.  **Clean Failure Reporting**: Use Rust's `panic!()` mechanism in `controlled` functions instead of manual `exit(1)`.
 3.  **Harness Authority**: Ensure the harness is responsible for reaping the process and validating its integrity.
 4.  **Remove Redundancy**: Remove `std::process::exit(0)` from `controlled` functions as the macro already handles this.
 
 ## Proposed Changes
 
-### 1. Update the Harness (`drain_and_wait`)
-Modify `tui/src/core/test_fixtures/pty_test_fixtures/single_thread_safe_controlled_child.rs`:
-- Change the `match child.wait()` block in `drain_and_wait` to assert that the status is successful.
-- From: `eprintln!("✅ drain_and_wait: child exited: {status:?}");`
+### 1. Update the Harness (`PtyTestChild::drain_and_wait()`)
+Modify `tui/src/core/test_fixtures/pty_test_fixtures/pty_test_child/pty_test_child_impl.rs`:
+- Change the `match self.child.wait()` block in `drain_and_wait` to assert that the status is successful.
+- From: `eprintln!("{GLYPH_SUCCESS} drain_and_wait: child exited: {status:?}");`
 - To: `assert!(status.success(), "Controlled process failed with: {status:?}");`
 
 ### 2. Refactor Smelly PTY Tests
@@ -43,7 +43,7 @@ Update files that show the old `exit(0)` pattern in examples or docs:
 ## Implementation Plan
 
 - [ ] **Phase 1: Harness Update**
-    - Update `drain_and_wait` to assert `status.success()`.
+    - Update `PtyTestChild::drain_and_wait()` to assert `status.success()`.
     - Run existing PTY tests: `./check.fish --test -p r3bl_tui`.
     - Note: Some tests might fail immediately if they were "silently" failing before.
 

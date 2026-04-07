@@ -205,7 +205,7 @@ pub fn dump_to_uncompressed_file<T: Serialize, P: AsRef<Path>>(
     let mut writer = BufWriter::new(f);
     let bytes = postcard::to_stdvec(o)?;
     writer.write_all(&bytes).map_err(postcard::Error::Io)?;
-    Ok(())
+    ok!()
 }
 ```
 
@@ -241,7 +241,7 @@ pub fn dump_to_file<T: Serialize, P: AsRef<Path>>(o: &T, path: P) -> BincodeResu
     let mut encoder = ZlibEncoder::new(f, Compression::best());
     serialize_into(&mut encoder, o)?;
     encoder.finish()?;
-    Ok(())
+    ok!()
 }
 
 // NEW
@@ -254,7 +254,7 @@ pub fn dump_to_file<T: Serialize, P: AsRef<Path>>(
     let bytes = postcard::to_stdvec(o)?;
     encoder.write_all(&bytes).map_err(postcard::Error::Io)?;
     encoder.finish().map_err(postcard::Error::Io)?;
-    Ok(())
+    ok!()
 }
 ```
 

@@ -9,7 +9,7 @@
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 
 use r3bl_tui::{IntoErr, TuiAvailability, assert_terminal_is_interactive,
-               core::pty_mux::PTYMux, set_mimalloc_in_main};
+               core::pty_mux::PTYMux, ok, set_mimalloc_in_main};
 
 #[tokio::main]
 async fn main() -> miette::Result<()> {
@@ -62,5 +62,5 @@ async fn main() -> miette::Result<()> {
 
     mux.run().await?;
 
-    Ok(())
+    ok!()
 }

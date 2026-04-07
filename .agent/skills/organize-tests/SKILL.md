@@ -36,7 +36,7 @@ pub mod unit_tests;
 #[cfg(any(test, doc))]
 pub mod process_isolated_tests;
 #[cfg(any(test, doc))]
-pub mod integration_tests;
+pub mod my_module_integration_tests;
 ```
 
 ## Related Skills

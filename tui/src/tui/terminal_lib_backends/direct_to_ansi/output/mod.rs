@@ -45,4 +45,4 @@ mod tests;
 
 // Integration tests are conditionally public for documentation links.
 #[cfg(any(test, doc))]
-pub mod integration_tests;
+pub mod direct_to_ansi_output_integration_tests;

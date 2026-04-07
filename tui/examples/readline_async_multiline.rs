@@ -33,7 +33,7 @@
 //! [`SharedWriter`]: r3bl_tui::SharedWriter
 
 use miette::IntoDiagnostic;
-use r3bl_tui::{IntoErr, TuiAvailability, assert_terminal_is_interactive,
+use r3bl_tui::{IntoErr, TuiAvailability, assert_terminal_is_interactive, ok,
                readline_async::{ReadlineAsyncContext, ReadlineEvent},
                rla_println, set_mimalloc_in_main};
 use std::io::Write;
@@ -100,5 +100,5 @@ async fn main() -> miette::Result<()> {
         .await?;
     rl_ctx.await_shutdown().await;
 
-    Ok(())
+    ok!()
 }

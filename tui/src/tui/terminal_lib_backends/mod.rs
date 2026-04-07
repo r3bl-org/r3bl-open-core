@@ -157,7 +157,7 @@
 //! ### Supporting Modules
 //! - [`offscreen_buffer_pool`] - Buffer pooling for efficiency
 //! - [`z_order`] - Z-order layer management
-//! - [`raw_mode`] - Terminal raw mode setup/teardown
+//! - [`raw_mode_backend`] - Terminal raw mode setup/teardown
 //! - [`mod@paint`] - Text painting utilities
 //! - [`direct_to_ansi`] - **(Stage 5 Alternative)** Direct [`ANSI`] escape sequence
 //!   generation (Linux only)
@@ -227,9 +227,9 @@ pub mod paint;
 mod paint;
 
 #[cfg(any(test, doc))]
-pub mod raw_mode;
+pub mod raw_mode_backend;
 #[cfg(not(any(test, doc)))]
-mod raw_mode;
+mod raw_mode_backend;
 
 #[cfg(any(test, doc))]
 pub mod render_op;
@@ -253,7 +253,7 @@ pub use compositor_render_ops_to_ofs_buf::*;
 pub use offscreen_buffer::*;
 pub use offscreen_buffer_pool::*;
 pub use paint::*;
-pub use raw_mode::*;
+pub use raw_mode_backend::*;
 pub use render_op::*;
 pub use render_pipeline::*;
 pub use render_tui_styled_texts::*;
