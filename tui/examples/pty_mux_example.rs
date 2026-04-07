@@ -50,7 +50,7 @@
 //! [`OSC`]: crate::osc_codes::OscSequence
 
 use r3bl_tui::{IntoErr, TuiAvailability, assert_terminal_is_interactive,
-               core::pty_mux::PTYMux, set_mimalloc_in_main,
+               core::pty_mux::PTYMux, ok, set_mimalloc_in_main,
                try_initialize_logging_global};
 
 #[tokio::main]
@@ -111,7 +111,7 @@ async fn main() -> miette::Result<()> {
         it => return it.into_err(),
     };
 
-    println!("▶️  Starting multiplexer event loop...");
+    println!("🛫 Starting multiplexer event loop...");
     println!("   (All processes will be started immediately for fast switching)");
     println!("   Press F1-F{added_count} to switch processes, Ctrl+Q to quit");
     println!();
@@ -131,5 +131,5 @@ async fn main() -> miette::Result<()> {
     // Allow a brief moment for any final cleanup.
     tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
 
-    Ok(())
+    ok!()
 }

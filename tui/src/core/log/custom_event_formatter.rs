@@ -258,6 +258,8 @@ mod heading_cache {
 }
 
 mod helpers {
+    use crate::ok;
+
     #[allow(clippy::wildcard_imports)]
     use super::*;
 
@@ -305,7 +307,7 @@ mod helpers {
                 );
                 write!(f, "{scope_str_fmt}")
             }
-            None => Ok(()),
+            None => ok!(),
         }
     }
 
@@ -421,20 +423,20 @@ mod helpers {
         let style = Some(new_style!(bold));
         let cache_key = super::heading_cache::HeadingCacheKey::new(&line_1_text, style);
 
-        let line_1_text_fmt = if let Ok(mut cache_guard) =
-            super::heading_cache::COLORIZED_HEADING_CACHE.lock()
-        {
-            if let Some(cached) = cache_guard.get(&cache_key) {
-                cached.clone()
-            } else {
-                let colorized = ColorWheel::lolcat_into_string(&line_1_text, style);
-                cache_guard.insert(cache_key, colorized.clone());
-                colorized
-            }
-        } else {
-            // Cache lock failed, compute without caching.
-            ColorWheel::lolcat_into_string(&line_1_text, style)
-        };
+        let line_1_text_fmt = super::heading_cache::COLORIZED_HEADING_CACHE.write(
+            |cache_guard: &mut crate::LruCache<
+                super::heading_cache::HeadingCacheKey,
+                String,
+            >| {
+                if let Some(cached) = cache_guard.get(&cache_key) {
+                    cached.clone()
+                } else {
+                    let colorized = ColorWheel::lolcat_into_string(&line_1_text, style);
+                    cache_guard.insert(cache_key, colorized.clone());
+                    colorized
+                }
+            },
+        );
 
         writeln!(f, "{line_1_text_fmt}")?;
 
@@ -458,7 +460,7 @@ mod helpers {
             }
         }
 
-        Ok(())
+        ok!()
     }
 }
 
@@ -608,46 +610,6 @@ mod tests_tracing_custom_event_formatter {
     use std::sync::Mutex;
     use tracing::{info, subscriber::set_default};
     use tracing_subscriber::fmt::SubscriberBuilder;
-
-    #[test]
-    fn test_custom_formatter_with_special_message_field_handling() {
-        let mock_stdout = StdoutMock::new();
-        let mock_stdout_clone = mock_stdout.clone();
-        let subscriber = SubscriberBuilder::default()
-            .event_format(CustomEventFormatter)
-            .with_writer(Mutex::new(mock_stdout))
-            .finish();
-
-        // Note that tests, or libraries for that matter, should NOT call
-        // `subscriber::set_global_default()`.
-        let _drop_guard = set_default(subscriber);
-
-        info!(
-            message = "This is now the heading, not the body!",
-            "foo" = "bar"
-        );
-
-        let time = Local::now().format("%I:%M%P").to_string();
-        let it = mock_stdout_clone.get_copy_of_buffer_as_string();
-        let it_no_ansi = mock_stdout_clone.get_copy_of_buffer_as_string_strip_ansi();
-
-        // println!("{}", it);
-        // println!("{}", it_no_ansi);
-
-        // lolcat colorized each char in the heading, so strip the colors.
-        assert!(!it_no_ansi.contains("message"));
-        assert!(it_no_ansi.contains("This is now the heading, not the body!"));
-
-        // lolcat colorized each char in the heading, so strip the colors.
-        assert!(it_no_ansi.contains("foo"));
-        assert!(it.contains("bar"));
-
-        assert!(it.matches(FIRST_LINE_PREFIX).count() >= 1);
-        assert!(it.matches(SPACER).count() >= 1);
-        assert!(it.contains(&format!("{INFO_SIGIL}{LEVEL_SUFFIX}")));
-        assert!(it.contains(&time));
-        assert_eq!(it.matches('\n').count(), 5); // There are many new lines.
-    }
 
     #[test]
     fn test_custom_formatter_no_message_field_name() {

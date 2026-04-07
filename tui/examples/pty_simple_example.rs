@@ -14,7 +14,7 @@ use r3bl_tui::{AnsiSequenceGenerator, InputEvent, Key, KeyPress, KeyState,
                             PtySessionBuilder, PtySessionConfigOption},
                       terminal_io::{InputDevice, OutputDevice},
                       try_initialize_logging_global},
-               lock_output_device_as_mut, row, set_mimalloc_in_main};
+               ok, row, set_mimalloc_in_main};
 
 #[tokio::main]
 async fn main() -> miette::Result<()> {
@@ -37,21 +37,18 @@ async fn main() -> miette::Result<()> {
     let mut input_device = InputDevice::default();
 
     // Start raw mode.
-    RawMode::start(
-        terminal_size,
-        lock_output_device_as_mut!(&output_device),
-        false,
-    );
+    output_device.write(|out| {
+        RawMode::start(terminal_size, out, false);
+    });
     tracing::debug!("Raw mode started");
 
     // Clear screen and reset cursor.
-    {
-        let out = lock_output_device_as_mut!(&output_device);
+    output_device.write(|out| {
         let _unused = out.write_all(AnsiSequenceGenerator::clear_screen().as_bytes());
         let _unused = out
             .write_all(AnsiSequenceGenerator::cursor_position(row(0), col(0)).as_bytes());
         let _unused = out.flush();
-    }
+    });
     tracing::debug!("Screen cleared");
 
     tracing::debug!("Spawning htop with PTY size: {:?}", terminal_size);
@@ -69,11 +66,9 @@ async fn main() -> miette::Result<()> {
 
     // Cleanup.
     tracing::debug!("Starting cleanup");
-    RawMode::end(
-        terminal_size,
-        lock_output_device_as_mut!(&output_device),
-        false,
-    );
+    output_device.write(|out| {
+        RawMode::end(terminal_size, out, false);
+    });
     tracing::debug!("Raw mode ended, cleanup complete");
 
     println!("👋 Goodbye!");
@@ -109,17 +104,18 @@ async fn run_event_loop(
                         }
 
                         // Write the PTY output to the output device.
-                        let out = lock_output_device_as_mut!(output_device);
-                        if let Err(e) = out.write_all(&data) {
-                            tracing::error!("Failed to write to output device: {}", e);
-                        }
-                        if let Err(e) = out.flush() {
-                            tracing::error!("Failed to flush output device: {}", e);
-                        }
+                        output_device.write(|out| {
+                            if let Err(e) = out.write_all(&data) {
+                                tracing::error!("Failed to write to output device: {}", e);
+                            }
+                            if let Err(e) = out.flush() {
+                                tracing::error!("Failed to flush output device: {}", e);
+                            }
+                        });
                     }
                     PtyOutputEvent::Exit(status) => {
                         tracing::debug!("PTY exited with status: {:?}", status);
-                        return Ok(());
+                        return ok!();
                     }
                     _ => {}
                 }
@@ -150,7 +146,7 @@ async fn run_event_loop(
                             // Wait for session to close.
                             tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
                             tracing::debug!("Exiting event loop");
-                            return Ok(());
+                            return ok!();
                         }
 
                         // Convert key to PTY input event and send.

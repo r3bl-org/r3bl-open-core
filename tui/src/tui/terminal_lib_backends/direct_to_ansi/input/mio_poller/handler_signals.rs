@@ -23,7 +23,6 @@ use tokio::sync::broadcast::Sender;
 /// # Returns
 ///
 /// - [`Continuation::Continue`]: Successfully processed.
-/// - [`Continuation::Stop`]: Receiver dropped.
 ///
 /// [`get_size()`]: crate::get_size
 /// [`MioPollWorker`]: super::MioPollWorker
@@ -57,11 +56,13 @@ pub fn consume_pending_signals_with_sender(
             .send(PollerEvent::Signal(size.into()).into())
             .is_err()
         {
-            // Receiver dropped - exit gracefully.
+            // Receiver dropped. Let run_worker_loop() evaluate shutdown.
             DEBUG_TUI_SHOW_MIO_POLLER.then(|| {
-                tracing::debug!(message = "mio-poller-thread: receiver dropped, exiting");
+                tracing::debug!(
+                    message = "mio-poller-thread: receiver dropped while sending signal"
+                );
             });
-            return Continuation::Stop;
+            return Continuation::Continue;
         }
     }
 

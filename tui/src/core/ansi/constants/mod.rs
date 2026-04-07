@@ -74,17 +74,17 @@
 //!
 //! Constants are grouped by protocol domain:
 //!
-//! | Module                  | Domain                                                          |
-//! | :---------------------- | :-------------------------------------------------------------- |
-//! | **[`generic`]**         | Terminal modes, [`DEC`] modes, mouse tracking, alternate screen |
-//! | **[`csi`]**             | [`CSI`] sequences, cursor movement, [`SGR`] parameters, colors  |
-//! | **[`esc`]**             | [`ESC`] sequences, character set selection, C0 control chars    |
-//! | **[`dsr`]**             | Device Status Report response constants                         |
-//! | **[`input_sequences`]** | Keyboard input, control characters                              |
-//! | **[`mouse`]**           | Mouse protocol constants ([`SGR`], [`X10`], [`RXVT`])           |
-//! | **[`raw_mode`]**        | Raw mode terminal configuration (VMIN, VTIME)                   |
-//! | **[`sgr`]**             | [`SGR`] byte constants for performance-critical paths           |
-//! | **[`utf8`]**            | [`UTF-8`] encoding constants for byte-level text parsing        |
+//! | Module                     | Domain                                                          |
+//! | :------------------------- | :-------------------------------------------------------------- |
+//! | **[`generic`]**            | Terminal modes, [`DEC`] modes, mouse tracking, alternate screen |
+//! | **[`csi`]**                | [`CSI`] sequences, cursor movement, [`SGR`] parameters, colors  |
+//! | **[`esc`]**                | [`ESC`] sequences, character set selection, C0 control chars    |
+//! | **[`dsr`]**                | Device Status Report response constants                         |
+//! | **[`input_sequences`]**    | Keyboard input, control characters                              |
+//! | **[`mouse`]**              | Mouse protocol constants ([`SGR`], [`X10`], [`RXVT`])           |
+//! | **[`raw_mode_constants`]** | Raw mode terminal configuration (VMIN, VTIME)                   |
+//! | **[`sgr`]**                | [`SGR`] byte constants for performance-critical paths           |
+//! | **[`utf8`]**               | [`UTF-8`] encoding constants for byte-level text parsing        |
 //!
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`CSI`]: crate::CsiSequence
@@ -131,9 +131,9 @@ pub mod mouse;
 #[cfg(not(any(test, doc)))]
 mod mouse;
 #[cfg(any(test, doc))]
-pub mod raw_mode;
+pub mod raw_mode_constants;
 #[cfg(not(any(test, doc)))]
-mod raw_mode;
+mod raw_mode_constants;
 #[cfg(any(test, doc))]
 pub mod sgr;
 #[cfg(not(any(test, doc)))]
@@ -152,7 +152,7 @@ pub use dsr::*;
 pub use esc::*;
 pub use generic::*;
 pub use input_sequences::*;
-pub use raw_mode::*;
+pub use raw_mode_constants::*;
 pub use sgr::*;
 pub use utf8::*;
 #[allow(unused_imports)]

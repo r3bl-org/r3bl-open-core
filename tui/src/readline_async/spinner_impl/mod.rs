@@ -12,4 +12,4 @@ pub use spinner_style::*;
 
 // Integration tests (conditional visibility).
 #[cfg(any(test, doc))]
-pub mod integration_tests;
+pub mod spinner_integration_tests;

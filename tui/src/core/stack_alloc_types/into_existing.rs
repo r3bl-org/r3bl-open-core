@@ -71,11 +71,14 @@
 //! [`fast_stringify`]: ../common/fast_stringify
 //! [`FastStringify`]: crate::FastStringify
 
-use crate::{DEFAULT_READ_BUFFER_SIZE, ok};
+use crate::{CommonResult, DEFAULT_READ_BUFFER_SIZE, ok};
 use miette::{Context, IntoDiagnostic};
 use smallstr::SmallString;
 use smallvec::Array;
-use std::{fs::File, io::Read, path::PathBuf, str::from_utf8};
+use std::{fs::File,
+          io::{Read, Write},
+          path::PathBuf,
+          str::from_utf8};
 
 // XMARK: Clever Rust, use of decl macro w/ `tt` to allow any number of arguments.
 
@@ -93,7 +96,7 @@ use std::{fs::File, io::Read, path::PathBuf, str::from_utf8};
 /// # Example
 ///
 /// ```
-/// use r3bl_tui::{pad_fmt, InlineString};
+/// use r3bl_tui::{pad_fmt, InlineString, ok};
 ///
 /// let mut acc = InlineString::new();
 /// pad_fmt!(fmt: acc, pad_str: "-", repeat_count: 5);
@@ -111,7 +114,7 @@ use std::{fs::File, io::Read, path::PathBuf, str::from_utf8};
 ///             repeat_count: 3
 ///         );
 ///         write!(f, "{}", buffer)?;
-///         Ok(())
+///         ok!()
 ///     }
 /// }
 /// assert_eq!(format!("{:?}", Foo), "XXX");
@@ -196,7 +199,9 @@ macro_rules! join_fmt {
 }
 
 #[cfg(test)]
-mod join_fmt_tests {
+mod tests_join_fmt {
+    use crate::ok;
+
     struct Foo {
         items: Vec<String>,
     }
@@ -210,7 +215,7 @@ mod join_fmt_tests {
                 delim: ", ",
                 format: "'{item}'"
             );
-            Ok(())
+            ok!()
         }
     }
 
@@ -269,7 +274,9 @@ macro_rules! join_with_index_fmt {
 }
 
 #[cfg(test)]
-mod join_with_index_fmt_tests {
+mod tests_join_with_index_fmt {
+    use crate::ok;
+
     struct Foo {
         items: Vec<String>,
     }
@@ -284,7 +291,7 @@ mod join_with_index_fmt_tests {
                 delim: ", ",
                 format: "[{index}]'{item}'"
             );
-            Ok(())
+            ok!()
         }
     }
 
@@ -355,9 +362,8 @@ pub mod read_from_file {
 }
 
 pub mod write_to_file {
-    use crate::CommonResult;
-    use miette::IntoDiagnostic;
-    use std::{fs::File, io::Write, path::PathBuf};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     /// # Errors
     ///
@@ -367,13 +373,13 @@ pub mod write_to_file {
     pub fn try_write_str_to_file(path: &PathBuf, contents: &str) -> CommonResult<()> {
         let mut file = File::create(path).into_diagnostic()?;
         file.write_all(contents.as_bytes()).into_diagnostic()?;
-        Ok(())
+        ok!()
     }
 }
 
 #[cfg(test)]
 mod tests_write_to_file {
-    use crate::{into_existing::write_to_file::try_write_str_to_file, try_create_temp_dir};
+    use crate::{into_existing::write_to_file::try_write_str_to_file, ok, try_create_temp_dir};
     use miette::IntoDiagnostic;
     use std::fs;
 
@@ -398,7 +404,7 @@ mod tests_write_to_file {
         assert_eq!(read_content, content);
 
         // 6. Temp dir is automatically cleaned up when `temp_dir` goes out of scope.
-        Ok(())
+        ok!()
     }
 
     #[test]

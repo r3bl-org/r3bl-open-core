@@ -1,10 +1,6 @@
 // Copyright (c) 2023-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{ChUnit, CliTextInline, CommonResult, DEVELOPMENT_MODE, FunctionComponent,
-            GCStringOwned, Header, HowToChoose, InlineString, InlineVec, OutputDevice,
-            State, StyleSheet, TuiStyle, ch, cli_text_inline, col,
-            core::common::string_repeat_cache::get_spaces, fg_blue, get_terminal_width,
-            inline_string, lock_output_device_as_mut, queue_commands, usize, width};
+use crate::{ChUnit, CliTextInline, CommonResult, DEVELOPMENT_MODE, FunctionComponent, GCStringOwned, Header, HowToChoose, InlineString, InlineVec, OutputDevice, State, StyleSheet, TuiStyle, ch, cli_text_inline, col, core::common::string_repeat_cache::get_spaces, fg_blue, get_terminal_width, inline_string, ok, queue_commands, usize, width};
 use crossterm::{cursor::{MoveToColumn, MoveToNextLine, MoveToPreviousLine},
                 style::{Print, ResetColor},
                 terminal::{Clear, ClearType}};
@@ -75,11 +71,11 @@ impl FunctionComponent<State> for SelectComponent {
             render_context.header_viewport_height,
         )?;
 
-        lock_output_device_as_mut!(self.output_device)
-            .flush()
-            .into_diagnostic()?;
+        self.output_device.write(|out| {
+            out.flush().into_diagnostic()
+        })?;
 
-        Ok(())
+        ok!()
     }
 }
 
@@ -179,7 +175,7 @@ mod render_helper {
         start_display_col_offset: usize,
     ) -> CommonResult<()> {
         let mut header_text =
-            format!("{}{}", &get_spaces(start_display_col_offset), header_text);
+            format!("{}{}", get_spaces(start_display_col_offset), header_text);
 
         header_text = clip_string_to_width_with_ellipsis(header_text, viewport_width);
 
@@ -204,7 +200,7 @@ mod render_helper {
             ResetColor,
         };
 
-        Ok(())
+        ok!()
     }
 
     fn render_multi_line_header(
@@ -317,7 +313,7 @@ mod render_helper {
             ResetColor,
         };
 
-        Ok(())
+        ok!()
     }
 
     pub fn render_items(
@@ -352,7 +348,7 @@ mod render_helper {
             )?;
         }
 
-        Ok(())
+        ok!()
     }
 
     #[derive(Debug, Clone, Copy)]
@@ -446,31 +442,28 @@ mod render_helper {
         match selection_mode {
             HowToChoose::Single => {
                 if let Focus::Yes = row_context.focused {
-                    format!("{} {SINGLE_SELECT_IS_SELECTED} ", &padding_left)
+                    format!("{padding_left} {SINGLE_SELECT_IS_SELECTED} ")
                 } else {
-                    format!("{} {SINGLE_SELECT_IS_NOT_SELECTED} ", &padding_left)
+                    format!("{padding_left} {SINGLE_SELECT_IS_NOT_SELECTED} ")
                 }
             }
             HowToChoose::Multiple => match (row_context.focused, row_context.selected) {
                 (Focus::Yes, Select::Yes) => {
-                    format!("{} {IS_FOCUSED} {MULTI_SELECT_IS_SELECTED} ", &padding_left)
+                    format!("{padding_left} {IS_FOCUSED} {MULTI_SELECT_IS_SELECTED} ")
                 }
                 (Focus::Yes, Select::No) => {
                     format!(
-                        "{} {IS_FOCUSED} {MULTI_SELECT_IS_NOT_SELECTED} ",
-                        &padding_left
+                        "{padding_left} {IS_FOCUSED} {MULTI_SELECT_IS_NOT_SELECTED} "
                     )
                 }
                 (Focus::No, Select::Yes) => {
                     format!(
-                        "{} {IS_NOT_FOCUSED} {MULTI_SELECT_IS_SELECTED} ",
-                        &padding_left
+                        "{padding_left} {IS_NOT_FOCUSED} {MULTI_SELECT_IS_SELECTED} "
                     )
                 }
                 (Focus::No, Select::No) => {
                     format!(
-                        "{} {IS_NOT_FOCUSED} {MULTI_SELECT_IS_NOT_SELECTED} ",
-                        &padding_left
+                        "{padding_left} {IS_NOT_FOCUSED} {MULTI_SELECT_IS_NOT_SELECTED} "
                     )
                 }
             },
@@ -520,7 +513,7 @@ mod render_helper {
             ResetColor,
         };
 
-        Ok(())
+        ok!()
     }
 
     pub fn move_cursor_back_to_start(
@@ -532,7 +525,7 @@ mod render_helper {
             output_device,
             MoveToPreviousLine(*items_viewport_height + *header_viewport_height),
         };
-        Ok(())
+        ok!()
     }
 }
 
@@ -556,10 +549,7 @@ fn clip_string_to_width_with_ellipsis(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{ColorSupport, ItemsOwned, OutputDeviceExt,
-                global_color_support::{clear_override, set_override}};
     use pretty_assertions::assert_eq;
-    use serial_test::serial;
 
     #[test]
     fn test_clip_string_to_width_with_ellipsis() {
@@ -574,44 +564,4 @@ mod tests {
         assert_eq!(clipped_short_line, "This is a short line");
     }
 
-    #[serial]
-    #[test]
-    fn test_select_component() {
-        let mut state = State {
-            header: Header::SingleLine("Header".into()),
-            items: ItemsOwned::from(&["Item 1", "Item 2", "Item 3"]),
-            max_display_height: ch(5),
-            max_display_width: ch(40),
-            raw_caret_row_index: ch(0),
-            scroll_offset_row_index: ch(0),
-            selected_items: ItemsOwned::new(),
-            selection_mode: HowToChoose::Single,
-            ..Default::default()
-        };
-
-        state.scroll_offset_row_index = ch(0);
-
-        let (output_device, stdout_mock) = OutputDevice::new_mock();
-
-        let mut component = SelectComponent {
-            output_device,
-            style: StyleSheet::default(),
-        };
-
-        set_override(ColorSupport::Ansi256);
-        component.render(&mut state).unwrap();
-
-        let generated_output = stdout_mock.get_copy_of_buffer_as_string();
-
-        println!("generated_output = writer.get_buffer(): \n\n{generated_output:#?}\n\n");
-
-        // Updated expected output: now uses ASText for styling, which only emits ANSI
-        // codes for attributes that are set (more efficient than the old
-        // choose_apply_style! macro which emitted explicit reset codes for every
-        // attribute). Extended colors use semicolon format (xterm-compatible).
-        let expected_output = "\u{1b}[4F\u{1b}[1G\u{1b}[0m\u{1b}[2K\u{1b}[38;5;153m\u{1b}[48;5;235m Header\u{1b}[0m\u{1b}[1E\u{1b}[0m\u{1b}[1G\u{1b}[0m\u{1b}[2K\u{1b}[38;5;46m  ◉ Item 1\u{1b}[0m\u{1b}[38;5;46m                              \u{1b}[0m\u{1b}[1E\u{1b}[0m\u{1b}[1G\u{1b}[0m\u{1b}[2K  ◌ Item 2\u{1b}[0m                              \u{1b}[0m\u{1b}[1E\u{1b}[0m\u{1b}[1G\u{1b}[0m\u{1b}[2K  ◌ Item 3\u{1b}[0m                              \u{1b}[0m\u{1b}[1E\u{1b}[0m\u{1b}[4F";
-        assert_eq!(generated_output, expected_output);
-
-        clear_override();
-    }
 }

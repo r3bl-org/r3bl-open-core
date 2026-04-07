@@ -2,7 +2,7 @@
 
 use r3bl_tui::{CommonResult, IntoErr, OutputDevice, SGR_FG_RED_STR, SGR_RESET_STR,
                SpinnerColor, SpinnerStyle, SpinnerTemplate, TuiAvailability,
-               assert_terminal_is_interactive,
+               assert_terminal_is_interactive, ok,
                readline_async::{ReadlineAsyncContext, SafeInlineString, Spinner},
                set_mimalloc_in_main,
                spinner_constants::{ARTIFICIAL_UI_DELAY, DELAY_MS, DELAY_UNIT},
@@ -84,7 +84,7 @@ pub async fn main() -> CommonResult<()> {
         .await?;
     }
 
-    Ok(())
+    ok!()
 }
 
 #[allow(unused_assignments)]
@@ -95,8 +95,7 @@ async fn example_with_concurrent_output(style: SpinnerStyle) -> miette::Result<(
     };
     let address = "127.0.0.1:8000";
     let message_trying_to_connect = format!(
-        "This is a sample indeterminate progress message: trying to connect to server on {}",
-        &address
+        "This is a sample indeterminate progress message: trying to connect to server on {address}"
     );
 
     let mut shared_writer = rl_ctx.clone_shared_writer();
@@ -147,7 +146,7 @@ async fn example_with_concurrent_output(style: SpinnerStyle) -> miette::Result<(
 
     sleep(ARTIFICIAL_UI_DELAY).await;
 
-    Ok(())
+    ok!()
 }
 
 #[allow(unused_assignments)]
@@ -156,8 +155,7 @@ async fn example_with_concurrent_output_no_readline_async(
 ) -> miette::Result<()> {
     let address = "127.0.0.1:8000";
     let message_trying_to_connect = format!(
-        "This is a sample indeterminate progress message: trying to connect to server on {}",
-        &address
+        "This is a sample indeterminate progress message: trying to connect to server on {address}"
     );
 
     // Start spinner.
@@ -186,7 +184,7 @@ async fn example_with_concurrent_output_no_readline_async(
 
     sleep(ARTIFICIAL_UI_DELAY).await;
 
-    Ok(())
+    ok!()
 }
 
 /// Example showing how to update spinner messages dynamically.
@@ -233,8 +231,9 @@ async fn example_with_message_updates(style: SpinnerStyle) -> miette::Result<()>
         // (alternative to using update_message() method)
         sleep(Duration::from_millis(500)).await;
         let safe_message: &SafeInlineString = &spinner.interval_message;
-        *safe_message.lock().unwrap() =
-            "Direct field access via SafeInlineString!".into();
+        safe_message.write(|it| {
+            *it = "Direct field access via SafeInlineString!".into();
+        });
 
         sleep(Duration::from_millis(800)).await;
 
@@ -254,5 +253,5 @@ async fn example_with_message_updates(style: SpinnerStyle) -> miette::Result<()>
 
     sleep(ARTIFICIAL_UI_DELAY).await;
 
-    Ok(())
+    ok!()
 }

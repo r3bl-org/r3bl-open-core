@@ -1,0 +1,39 @@
+{
+	"files": [
+		{
+			"path": "tui/src/core/common/scoped_mutex/thread_lock_state_machine.rs",
+			"bookmarks": [
+				{
+					"line": 93,
+					"column": 0,
+					"label": ""
+				}
+			]
+		},
+		{
+			"path": "tui/src/core/common/scoped_mutex/deadlock_prevention.rs",
+			"bookmarks": [
+				{
+					"line": 14,
+					"column": 0,
+					"label": ""
+				}
+			]
+		},
+		{
+			"path": "tui/src/readline_async/readline_async_impl/readline.rs",
+			"bookmarks": [
+				{
+					"line": 333,
+					"column": 4,
+					"label": ""
+				},
+				{
+					"line": 1163,
+					"column": 69,
+					"label": ""
+				}
+			]
+		}
+	]
+}

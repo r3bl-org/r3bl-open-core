@@ -141,11 +141,11 @@ macro_rules! retry_until_success_test_async {
 /// # Examples
 ///
 /// ```rust
-/// use r3bl_tui::retry_until_success;
+/// use r3bl_tui::{retry_until_success, ok};
 ///
 /// let result = retry_until_success(3, || {
 ///     // Some flaky operation
-///     if true { Ok(()) } else { Err("failed".to_string()) }
+///     if true { ok!() } else { Err("failed".to_string()) }
 /// });
 /// assert!(result.is_ok());
 /// ```
@@ -162,18 +162,21 @@ where
     F: FnMut() -> Result<T, E>,
     E: std::fmt::Display,
 {
+    use crate::{GLYPH_SUCCESS, GLYPH_WARNING};
     let mut last_error: Option<E> = None;
 
     for attempt in 1..=max_attempts {
         match f() {
             Ok(val) => {
                 if attempt > 1 {
-                    eprintln!("✅ Passed on attempt {attempt}/{max_attempts}");
+                    eprintln!(
+                        "{GLYPH_SUCCESS} Passed on attempt {attempt}/{max_attempts}"
+                    );
                 }
                 return Ok(val);
             }
             Err(e) => {
-                eprintln!("⚠️ Attempt {attempt}/{max_attempts} failed: {e}");
+                eprintln!("{GLYPH_WARNING} Attempt {attempt}/{max_attempts} failed: {e}");
                 last_error = Some(e);
                 if attempt < max_attempts {
                     eprintln!("🔄 Retrying...");
@@ -203,18 +206,21 @@ where
     Fut: std::future::Future<Output = Result<T, E>>,
     E: std::fmt::Display,
 {
+    use crate::{GLYPH_SUCCESS, GLYPH_WARNING};
     let mut last_error: Option<E> = None;
 
     for attempt in 1..=max_attempts {
         match f().await {
             Ok(val) => {
                 if attempt > 1 {
-                    eprintln!("✅ Passed on attempt {attempt}/{max_attempts}");
+                    eprintln!(
+                        "{GLYPH_SUCCESS} Passed on attempt {attempt}/{max_attempts}"
+                    );
                 }
                 return Ok(val);
             }
             Err(e) => {
-                eprintln!("⚠️ Attempt {attempt}/{max_attempts} failed: {e}");
+                eprintln!("{GLYPH_WARNING} Attempt {attempt}/{max_attempts} failed: {e}");
                 last_error = Some(e);
                 if attempt < max_attempts {
                     eprintln!("🔄 Retrying...");

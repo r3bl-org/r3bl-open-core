@@ -88,8 +88,8 @@ Centralize all logging across the workspace to a single predictable location: `/
 - `run.fish`: Update `help` text and change the `log` command logic to unconditionally tail `/tmp/r3bl_tui/log.txt` (removing the choice between tui/cmdr directories).
 - `script_lib.fish`: Update the `chown` fallback logic (around line 862) to check and `chown` `/tmp/r3bl_tui/log.txt`.
 - `README.md`: Update references to `log.txt` in the CLI commands section.
-- `.agent/commands/analyze-logs.md`: Update the command description to point to `/tmp/r3bl_tui/log.txt`.
-- `.agent/skills/analyze-log-files/SKILL.md`: Update the `ansifilter` examples and "Common Log File Locations" section.
+- `.agents/commands/analyze-logs.md`: Update the command description to point to `/tmp/r3bl_tui/log.txt`.
+- `.agents/skills/analyze-log-files/SKILL.md`: Update the `ansifilter` examples and "Common Log File Locations" section.
 - `tui/src/readline_async/choose_impl/mod.rs`: Fix the rustdoc comment `tail -f log.txt`.
 
 ## Verification

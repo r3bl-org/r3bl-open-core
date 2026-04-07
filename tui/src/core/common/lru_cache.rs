@@ -36,8 +36,8 @@
 //! ```
 
 use rustc_hash::{FxBuildHasher, FxHashMap};
-use std::{hash::Hash,
-          sync::{Arc, Mutex}};
+use std::{hash::Hash, sync::Arc};
+use crate::StdMutex;
 
 /// Entry in the LRU cache containing the value and access metadata.
 #[derive(Clone, Debug)]
@@ -203,7 +203,7 @@ where
 ///
 /// This type provides a convenient way to share an LRU cache across threads
 /// using Arc<Mutex<>>. All operations acquire the mutex lock internally.
-pub type ThreadSafeLruCache<K, V> = Arc<Mutex<LruCache<K, V>>>;
+pub type ThreadSafeLruCache<K, V> = Arc<StdMutex<LruCache<K, V>>>;
 
 /// Creates a new thread-safe LRU cache with the specified capacity.
 ///
@@ -220,7 +220,7 @@ where
     K: Hash + Eq + Clone,
     V: Clone,
 {
-    Arc::new(Mutex::new(LruCache::new(capacity)))
+    Arc::new(StdMutex::new(LruCache::new(capacity)))
 }
 
 #[cfg(test)]
@@ -329,15 +329,13 @@ mod tests {
         let cache = new_threadsafe_lru_cache(10);
 
         // Insert in one thread.
-        {
-            let mut cache_guard = cache.lock().unwrap();
-            cache_guard.insert("key".to_string(), 42);
-        }
+        cache.write(|cache: &mut LruCache<String, i32>| {
+            cache.insert("key".to_string(), 42);
+        });
 
         // Read in another context.
-        {
-            let mut cache_guard = cache.lock().unwrap();
-            assert_eq!(cache_guard.get(&"key".to_string()), Some(&42));
-        }
+        cache.write(|cache: &mut LruCache<String, i32>| {
+            assert_eq!(cache.get(&"key".to_string()), Some(&42));
+        });
     }
 }

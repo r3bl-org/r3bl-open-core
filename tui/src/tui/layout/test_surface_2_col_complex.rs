@@ -24,7 +24,7 @@ mod tests {
 
             surface.surface_end()?;
 
-            println!("{:?}", &surface.render_pipeline);
+            println!("{:?}", surface.render_pipeline);
         });
     }
 

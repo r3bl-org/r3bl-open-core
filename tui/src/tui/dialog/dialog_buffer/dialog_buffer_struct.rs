@@ -1,7 +1,7 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use crate::{ChUnit, DEFAULT_SYN_HI_FILE_EXT, EditorBuffer, InlineString, ItemsOwned, ch,
-            fmt_option};
+            fmt_option, ok};
 use std::fmt::{Debug, Display, Formatter, Result};
 
 /// Please do not construct this struct directly and use
@@ -93,7 +93,7 @@ mod impl_display {
             // This already includes line count and memory size info.
             write!(f, ":{}", self.editor_buffer)?;
 
-            Ok(())
+            ok!()
         }
     }
 }

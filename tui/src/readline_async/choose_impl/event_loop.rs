@@ -3,7 +3,7 @@
 use super::KeyPressReader;
 use crate::{CalculateResizeHint, CommonResult, FunctionComponent, InputDevice,
             InputEvent, ItemsOwned, TTYResult, emit_stderr_redirection_disclaimer,
-            execute_commands, is_output_interactive};
+            execute_commands, is_output_interactive, ok};
 use crossterm::cursor::{Hide, Show};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -115,7 +115,7 @@ fn run_before_event_loop<S: CalculateResizeHint>(
     // First render before blocking the main thread for user input.
     function_component.render(state)?;
 
-    Ok(())
+    ok!()
 }
 
 fn run_after_event_loop<S: CalculateResizeHint>(
@@ -123,7 +123,7 @@ fn run_after_event_loop<S: CalculateResizeHint>(
 ) -> CommonResult<()> {
     execute_commands!(function_component.get_output_device(), Show);
     crate::disable_raw_mode()?;
-    Ok(())
+    ok!()
 }
 
 fn handle_event_loop_result<S: CalculateResizeHint>(

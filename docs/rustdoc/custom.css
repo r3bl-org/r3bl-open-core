@@ -1,14 +1,19 @@
-/* Monospace fonts render wider per character than proportional fonts at the same size.
-   Use a fixed px size to avoid em compounding across nested elements like .docblock.
-   Override rustdoc's default body font to use the same monospace font as code blocks. */
-body,
-.docblock {
-    font-size: 17px !important;
-    font-family: "Adwaita Mono", "SFMono Nerd Font", "Source Code Pro", "DejaVu Sans Mono", monospace !important;
+/* Override CSS variables for fonts globally to ensure all elements (including theme-specific ones)
+   use the preferred monospace font stack. */
+:root, * {
+    --font-family: "Adwaita Mono", "SFMono Nerd Font", "Source Code Pro", "DejaVu Sans Mono", monospace !important;
+    --font-family-code: "Adwaita Mono", "SFMono Nerd Font", "Source Code Pro", "DejaVu Sans Mono", monospace !important;
 }
 
-/* Rustdoc uses a variable-width font (Fira Sans) for headings and sidebar elements.
-   Override to match the monospace body font for visual consistency. */
+/* Monospace fonts render wider per character than proportional fonts at the same size.
+   Use a fixed px size to avoid em compounding across nested elements like .docblock. */
+body,
+.docblock {
+    font-size: 18px !important;
+}
+
+/* Rustdoc uses an explicit sans-serif font stack for headings and sidebars instead of the CSS variables.
+   Override them directly for monospace visual consistency. */
 h1, h2, h3, h4, h5, h6,
 .sidebar, .sidebar-crate, .rustdoc-breadcrumbs, .main-heading {
     font-family: "Adwaita Mono", "SFMono Nerd Font", "Source Code Pro", "DejaVu Sans Mono", monospace !important;

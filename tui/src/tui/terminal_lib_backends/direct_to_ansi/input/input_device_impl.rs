@@ -8,17 +8,17 @@
 //! This module uses the **Resilient Reactor Thread (RRT)** infrastructure:
 //!
 //! - **[`SINGLETON`]** (container): Static [`RRT`], lives for process lifetime. Holds the
-//!   broadcast channel (created once, never replaced) and a safe waker wrapper.
-//! - **Thread-generation state**: Liveness tracking and `shared_waker_slot` are swapped
-//!   on each relaunch; the channel persists across all generations.
+//!   broadcast channel (created once, never replaced) and a safe software interrupt
+//!   handle wrapper.
+//! - **Thread-generation state**: `ThreadLifecycleMonitor` state is swapped on each
+//!   relaunch; the channel persists across all generations.
 //!
-//! Module contents: [`global_input_resource`] (operations + [`SINGLETON`]).
+//! Module contents: `global_input_resource` (operations + [`SINGLETON`]).
 //!
 //! See [`DirectToAnsiInputDevice`] for the big picture (architecture, lifecycle, I/O
 //! pipeline).
 //!
 //! [`DirectToAnsiInputDevice`]: super::DirectToAnsiInputDevice
-//! [`global_input_resource`]: mod@global_input_resource
 //! [`RRT`]: crate::RRT
 //! [`SINGLETON`]: global_input_resource::SINGLETON
 
@@ -27,17 +27,15 @@ use crate::core::resilient_reactor_thread::{RRT, SubscriberGuard};
 
 /// Type alias for the input device's subscriber guard.
 ///
-/// This is the [`RAII`] guard returned by [`SINGLETON.subscribe()`] and
-/// [`SINGLETON.subscribe_to_existing()`]. Holding this guard keeps you subscribed to
-/// input events; dropping it triggers the cleanup protocol that may cause the thread to
-/// exit.
+/// This is the [`RAII`] guard returned by [`SINGLETON.try_subscribe()`]. Holding this
+/// guard keeps you subscribed to input events; dropping it triggers the cleanup protocol
+/// that may cause the thread to exit.
 ///
 /// [`RAII`]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
-/// [`SINGLETON.subscribe()`]: global_input_resource::SINGLETON
-/// [`SINGLETON.subscribe_to_existing()`]: global_input_resource::SINGLETON
+/// [`SINGLETON.try_subscribe()`]: crate::RRT::try_subscribe
 pub type InputSubscriberGuard = SubscriberGuard<MioPollWorker>;
 
-/// Process-global input resource singleton.
+/// Process-global input resource singleton (crate-internal).
 ///
 /// See [`RRT`] for what the singleton holds when active.
 ///
@@ -46,21 +44,20 @@ pub mod global_input_resource {
     #[allow(clippy::wildcard_imports)]
     use super::*;
 
-    /// **Static container** (lives for process lifetime) with three top-level fields.
-    /// The broadcast channel and `shared_waker_slot` wrapper are lazily initialized on
-    /// first access (via [`LazyLock`]); liveness tracking is per-generation and
-    /// replaced on each relaunch.
+    /// **Static container** (lives for process lifetime) with three top-level fields. The
+    /// broadcast channel and `shared_state` monitor are lazily initialized on first
+    /// access (via [`LazyLock`]); thread lifecycle state is per-generation and replaced
+    /// on each relaunch.
     ///
     /// Lifecycle states:
-    /// - **Inert** (all empty) until [`subscribe()`] spawns the poller thread
+    /// - **Inert** (all empty) until [`try_subscribe()`] spawns the poller thread
     /// - **Active** (all populated) while thread is running
-    /// - **Dormant** (liveness terminated, `shared_waker_slot` cleared) when all
-    ///   [`SubscriberGuard`]s drop and thread exits
-    /// - **Reactivates** on next [`subscribe()`] call (spawns fresh thread, swaps
-    ///   `shared_waker_slot`, replaces liveness)
+    /// - **Dormant** (state transitions to `Stopped`) when all [`SubscriberGuard`]s drop
+    ///   and thread exits
+    /// - **Reactivates** on next [`try_subscribe()`] call (spawns fresh thread and
+    ///   transitions state back to `Running`)
     ///
     /// See [`RRT`] for details on the three-field structure.
-    ///
     ///
     /// # Why `RRT`?
     ///
@@ -68,15 +65,18 @@ pub mod global_input_resource {
     /// - Deferred initialization ([`syscalls`] can't be `const`)
     /// - Thread lifecycle management (spawn, exit, restart)
     /// - Race condition handling (fast-path thread reuse)
-    /// - Waker coupling with Poll
+    /// - Software interrupt handle coupling with [`Poll`]
     ///
-    /// # Usage
+    /// # Usage (crate-internal)
     ///
     /// ```ignore
     /// use crate::direct_to_ansi::input::global_input_resource::SINGLETON;
     ///
-    /// let subscriber_guard = SINGLETON.subscribe()?;
-    /// let running = SINGLETON.is_thread_running();
+    /// let subscriber_guard = SINGLETON.try_subscribe()?;
+    /// let running = matches!(
+    ///     *SINGLETON.shared_state.lock().unwrap(),
+    ///     crate::ThreadState::Running { .. }
+    /// );
     /// let count = SINGLETON.get_receiver_count();
     /// ```
     ///
@@ -85,10 +85,11 @@ pub mod global_input_resource {
     ///
     /// [`LazyLock`]: std::sync::LazyLock
     /// [`MioPollWorker`]: super::super::mio_poller::MioPollWorker
+    /// [`Poll`]: mio::Poll
     /// [`RRT`]: crate::RRT
-    /// [`subscribe()`]: RRT::subscribe
     /// [`SubscriberGuard`]: crate::SubscriberGuard
     /// [`syscalls`]: https://man7.org/linux/man-pages/man2/syscalls.2.html
+    /// [`try_subscribe()`]: RRT::try_subscribe
     /// [Architecture]: super::super::DirectToAnsiInputDevice#architecture
     pub static SINGLETON: RRT<MioPollWorker> = RRT::new();
 }
@@ -101,11 +102,11 @@ pub mod global_input_resource {
 /// - [`test_pty_terminal_events`]
 ///
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
-/// [`test_pty_input_device`]: crate::vt_100_terminal_input_parser::integration_tests::pty_input_device_test::test_pty_input_device
-/// [`test_pty_keyboard_modifiers`]: crate::vt_100_terminal_input_parser::integration_tests::pty_keyboard_modifiers_test::test_pty_keyboard_modifiers
-/// [`test_pty_mouse_events`]: crate::vt_100_terminal_input_parser::integration_tests::pty_mouse_events_test::test_pty_mouse_events
-/// [`test_pty_terminal_events`]: crate::vt_100_terminal_input_parser::integration_tests::pty_terminal_events_test::test_pty_terminal_events
-/// [`test_pty_utf8_text`]: crate::vt_100_terminal_input_parser::integration_tests::pty_utf8_text_test::test_pty_utf8_text
+/// [`test_pty_input_device`]: crate::vt_100_terminal_input_parser::vt_100_parser_integration_tests::pty_input_device_test::test_pty_input_device
+/// [`test_pty_keyboard_modifiers`]: crate::vt_100_terminal_input_parser::vt_100_parser_integration_tests::pty_keyboard_modifiers_test::test_pty_keyboard_modifiers
+/// [`test_pty_mouse_events`]: crate::vt_100_terminal_input_parser::vt_100_parser_integration_tests::pty_mouse_events_test::test_pty_mouse_events
+/// [`test_pty_terminal_events`]: crate::vt_100_terminal_input_parser::vt_100_parser_integration_tests::pty_terminal_events_test::test_pty_terminal_events
+/// [`test_pty_utf8_text`]: crate::vt_100_terminal_input_parser::vt_100_parser_integration_tests::pty_utf8_text_test::test_pty_utf8_text
 #[cfg(test)]
 mod tests {
     use super::super::{paste_state_machine::PasteCollectionState,

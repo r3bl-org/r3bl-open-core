@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "rust-refactor": {
+      "command": "/home/nazmul/.cargo/bin/rustmcp",
+      "args": []
+    }
+  }
+}

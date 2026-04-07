@@ -9,13 +9,10 @@
 
 use super::{InputRouter, OutputRenderer, Process, ProcessManager, output_renderer,
             show_notification_non_blocking};
-use crate::{AnsiSequenceGenerator, Continuation, InputEvent, RawMode, Size,
-            TerminalInteractiveStatus, TuiAvailability, col,
-            core::{check_is_terminal_interactive, emit_stderr_redirection_disclaimer,
+use crate::{AnsiSequenceGenerator, Continuation, InputEvent, RawMode, Size, TerminalInteractiveStatus, TuiAvailability, col, core::{check_is_terminal_interactive, emit_stderr_redirection_disclaimer,
                    get_size,
                    osc::OscController,
-                   terminal_io::{InputDevice, OutputDevice}},
-            lock_output_device_as_mut, row};
+                   terminal_io::{InputDevice, OutputDevice}}, ok, row};
 
 /// Main [`PTY`] multiplexer that orchestrates all components.
 ///
@@ -193,11 +190,9 @@ impl PTYMux {
     /// [interactive terminal application entry points]: crate#interactive-terminal-application-entry-points
     pub async fn run(mut self) -> miette::Result<()> {
         // Start raw mode using existing RawMode.
-        RawMode::start(
-            self.terminal_size,
-            lock_output_device_as_mut!(&self.output_device),
-            false,
-        );
+        self.output_device.write(|out| {
+            RawMode::start(self.terminal_size, out, false);
+        });
         tracing::debug!("Raw mode started");
 
         // Set initial terminal title using OSC controller.
@@ -211,14 +206,13 @@ impl PTYMux {
         self.process_manager.start_all_processes()?;
 
         // Clear screen before showing first process.
-        {
-            let out = lock_output_device_as_mut!(&self.output_device);
+        self.output_device.write(|out| {
             let _unused = out.write_all(AnsiSequenceGenerator::clear_screen().as_bytes());
             let _unused = out.write_all(
                 AnsiSequenceGenerator::cursor_position(row(0), col(0)).as_bytes(),
             );
             let _unused = out.flush();
-        }
+        });
 
         // Trigger initial process switch to show first process.
         self.process_manager.switch_to(0);
@@ -311,7 +305,7 @@ impl PTYMux {
 
         tracing::debug!("Event loop completed - returning Ok(())");
 
-        Ok(())
+        ok!()
     }
 
     /// Updates terminal size for all components.
@@ -354,39 +348,40 @@ impl PTYMux {
 
         // Force flush any pending output.
         tracing::debug!("Step 3: Flushing pending output");
-        match lock_output_device_as_mut!(&self.output_device).flush() {
-            Ok(()) => tracing::debug!("Step 3: Output flush successful"),
-            Err(e) => tracing::warn!("Step 3: Output flush failed: {:?}", e),
-        }
+        self.output_device.write(|out| {
+            match out.flush() {
+                Ok(()) => tracing::debug!("Step 3: Output flush successful"),
+                Err(e) => tracing::warn!("Step 3: Output flush failed: {:?}", e),
+            }
+        });
         tracing::debug!("Step 3 completed in {:?}", start_time.elapsed());
 
         // Clear screen
         tracing::debug!("Step 4: Clearing screen and homing cursor");
-        {
-            let out = lock_output_device_as_mut!(&self.output_device);
+        self.output_device.write(|out| {
             let _unused = out.write_all(AnsiSequenceGenerator::clear_screen().as_bytes());
             let _unused = out.write_all(
                 AnsiSequenceGenerator::cursor_position(row(0), col(0)).as_bytes(),
             );
             let _unused = out.flush();
-        }
+        });
         tracing::debug!("Step 4 completed in {:?}", start_time.elapsed());
 
         // Force flush after escape sequences.
         tracing::debug!("Step 5: Final output flush after escape sequences");
-        match lock_output_device_as_mut!(&self.output_device).flush() {
-            Ok(()) => tracing::debug!("Step 5: Final flush successful"),
-            Err(e) => tracing::warn!("Step 5: Final flush failed: {:?}", e),
-        }
+        self.output_device.write(|out| {
+            match out.flush() {
+                Ok(()) => tracing::debug!("Step 5: Final flush successful"),
+                Err(e) => tracing::warn!("Step 5: Final flush failed: {:?}", e),
+            }
+        });
         tracing::debug!("Step 5 completed in {:?}", start_time.elapsed());
 
         // End raw mode
         tracing::debug!("Step 6: Ending raw mode");
-        RawMode::end(
-            self.terminal_size,
-            lock_output_device_as_mut!(&self.output_device),
-            false,
-        );
+        self.output_device.write(|out| {
+            RawMode::end(self.terminal_size, out, false);
+        });
         tracing::debug!("Step 6: Raw mode ended successfully");
 
         let total_time = start_time.elapsed();

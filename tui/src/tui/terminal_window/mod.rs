@@ -13,7 +13,7 @@ pub mod terminal_window_type_aliases;
 
 // Integration tests (Linux-only PTY tests).
 #[cfg(any(all(unix, doc), all(target_os = "linux", test)))]
-pub mod integration_tests;
+pub mod terminal_window_integration_tests;
 
 // Re-export.
 pub use app::*;

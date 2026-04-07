@@ -103,7 +103,7 @@
 use super::{LINE_PAGE_SIZE, ZeroCopyGapBuffer};
 use crate::{ArrayBoundsCheck, ArrayOverflowResult, ByteIndex, CursorBoundsCheck,
             CursorPositionBoundsStatus, LINE_FEED_BYTE, LengthOps, NULL_BYTE,
-            NumericValue, RowIndex, SegIndex, byte_offset, len};
+            NumericValue, RowIndex, SegIndex, byte_offset, len, ok};
 use miette::{Result, miette};
 
 impl ZeroCopyGapBuffer {
@@ -148,7 +148,7 @@ impl ZeroCopyGapBuffer {
         // Rebuild line segments after insertion.
         self.rebuild_line_segments(line_index)?;
 
-        Ok(())
+        ok!()
     }
 
     /// Insert text at a specific byte position within a line.
@@ -303,7 +303,7 @@ impl ZeroCopyGapBuffer {
             }
         }
 
-        Ok(())
+        ok!()
     }
 
     /// Insert a new empty line at the specified position.
@@ -335,7 +335,7 @@ impl ZeroCopyGapBuffer {
         // Use the internal method that properly shifts buffer content.
         self.insert_line_with_buffer_shift(line_index);
 
-        Ok(())
+        ok!()
     }
 }
 
@@ -365,7 +365,7 @@ mod tests {
         assert_eq!(line_info.grapheme_count, len(5));
         assert_eq!(line_info.content_byte_len, len(5));
 
-        Ok(())
+        ok!()
     }
 
     #[test]
@@ -389,7 +389,7 @@ mod tests {
             .ok_or_else(|| miette!("Failed to get line info"))?;
         assert_eq!(line_info.grapheme_count, len(11));
 
-        Ok(())
+        ok!()
     }
 
     #[test]
@@ -408,7 +408,7 @@ mod tests {
             .ok_or_else(|| miette!("Failed to get line content"))?;
         assert_eq!(content, "Hello");
 
-        Ok(())
+        ok!()
     }
 
     #[test]
@@ -437,7 +437,7 @@ mod tests {
             .ok_or_else(|| miette!("Failed to get line content after second insert"))?;
         assert_eq!(content, "Hello 😀 World");
 
-        Ok(())
+        ok!()
     }
 
     #[test]
@@ -461,7 +461,7 @@ mod tests {
         assert_eq!(line_info.grapheme_count, len(300));
         assert!(line_info.capacity.as_usize() >= 301); // 300 + newline
 
-        Ok(())
+        ok!()
     }
 
     #[test]
@@ -494,7 +494,7 @@ mod tests {
             .ok_or_else(|| miette!("Failed to get line 2 content"))?;
         assert_eq!(content, "Line 2");
 
-        Ok(())
+        ok!()
     }
 
     #[test]
@@ -510,7 +510,7 @@ mod tests {
             .to_string();
         assert!(err_msg.contains("out of bounds"));
 
-        Ok(())
+        ok!()
     }
 
     #[test]
@@ -532,7 +532,7 @@ mod tests {
         // The family emoji is 1 grapheme cluster despite being multiple code points.
         assert_eq!(line_info.grapheme_count, len(8)); // 1 + space + 6 letters
 
-        Ok(())
+        ok!()
     }
 
     #[test]
@@ -567,7 +567,7 @@ mod tests {
             );
         }
 
-        Ok(())
+        ok!()
     }
 
     #[test]
@@ -605,7 +605,7 @@ mod tests {
             );
         }
 
-        Ok(())
+        ok!()
     }
 
     #[test]
@@ -644,7 +644,7 @@ mod tests {
             );
         }
 
-        Ok(())
+        ok!()
     }
 }
 

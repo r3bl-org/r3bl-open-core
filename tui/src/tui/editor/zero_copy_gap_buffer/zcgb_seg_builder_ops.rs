@@ -89,8 +89,7 @@
 //! [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
 
 use super::super::ZeroCopyGapBuffer;
-use crate::{ByteIndexRangeExt, RowIndex, len,
-            segment_builder::{build_segments_for_str, calculate_display_width}};
+use crate::{ByteIndexRangeExt, RowIndex, len, ok, segment_builder::{build_segments_for_str, calculate_display_width}};
 use miette::{Result, miette};
 use std::str::from_utf8_unchecked;
 
@@ -201,7 +200,7 @@ impl ZeroCopyGapBuffer {
         line_info.display_width = display_width;
         line_info.grapheme_count = grapheme_count;
 
-        Ok(())
+        ok!()
     }
 
     /// Rebuild grapheme cluster segments for multiple lines.
@@ -263,7 +262,7 @@ impl ZeroCopyGapBuffer {
                 miette!("Failed to rebuild line {}: {}", line_index.as_usize(), e)
             })?;
         }
-        Ok(())
+        ok!()
     }
 }
 
@@ -285,7 +284,7 @@ mod tests {
         assert_eq!(line_info.grapheme_count, len(0));
         assert_eq!(line_info.display_width, width(0));
 
-        Ok(())
+        ok!()
     }
 
     #[test]
@@ -301,7 +300,7 @@ mod tests {
         assert_eq!(line_info.grapheme_count, len(5));
         assert_eq!(line_info.display_width, width(5));
 
-        Ok(())
+        ok!()
     }
 
     #[test]
@@ -317,7 +316,7 @@ mod tests {
         assert_eq!(line_info.grapheme_count, len(6));
         assert_eq!(line_info.display_width, width(8)); // 1+1+1+2+1+2
 
-        Ok(())
+        ok!()
     }
 
     #[test]
@@ -342,7 +341,7 @@ mod tests {
             assert_eq!(line_info.display_width, width(6));
         }
 
-        Ok(())
+        ok!()
     }
 
     #[test]
@@ -373,7 +372,7 @@ mod tests {
         assert_eq!(line_info.grapheme_count, len(4));
         assert_eq!(line_info.display_width, width(4));
 
-        Ok(())
+        ok!()
     }
 
     #[test]
@@ -402,7 +401,7 @@ mod tests {
         assert_eq!(line_info.grapheme_count, len(4));
         assert_eq!(line_info.display_width, width(4));
 
-        Ok(())
+        ok!()
     }
 
     #[test]
@@ -431,7 +430,7 @@ mod tests {
         // Total display width should be 7 (5 for "abcab" + 2 for emoji)
         assert_eq!(line_info.display_width, width(7));
 
-        Ok(())
+        ok!()
     }
 
     #[test]
@@ -462,7 +461,7 @@ mod tests {
         // for the backspace operation.
         assert_eq!(line_info.grapheme_segments.len(), 6);
 
-        Ok(())
+        ok!()
     }
 
     #[test]
@@ -502,7 +501,7 @@ mod tests {
         // Total width should be 5 (1 + 1 + 2 + 1)
         assert_eq!(line_info.display_width, width(5));
 
-        Ok(())
+        ok!()
     }
 }
 

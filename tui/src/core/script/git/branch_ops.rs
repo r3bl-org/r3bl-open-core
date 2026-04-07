@@ -1,7 +1,6 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{InlineString, ItemsOwned, ResultAndCommand, Run, command,
-            script::git::types::{LocalBranchInfo,
+use crate::{InlineString, ItemsOwned, ResultAndCommand, Run, command, ok, script::git::types::{LocalBranchInfo,
                                  git_command_args::{GIT_ARG_CREATE_BRANCH,
                                                     GIT_ARG_DELETE_FORCE,
                                                     GIT_ARG_FORMAT,
@@ -45,7 +44,7 @@ pub async fn try_checkout_existing_local_branch(
         return (err, cmd);
     };
 
-    (Ok(()), cmd)
+    (ok!(), cmd)
 }
 
 pub async fn try_create_and_switch_to_branch(branch_name: &str) -> ResultAndCommand<()> {
@@ -61,7 +60,7 @@ pub async fn try_create_and_switch_to_branch(branch_name: &str) -> ResultAndComm
         return (err, cmd);
     };
 
-    (Ok(()), cmd)
+    (ok!(), cmd)
 }
 
 pub async fn try_delete_branches(branches: &ItemsOwned) -> ResultAndCommand<()> {
@@ -78,7 +77,7 @@ pub async fn try_delete_branches(branches: &ItemsOwned) -> ResultAndCommand<()> 
         return (err, cmd);
     };
 
-    (Ok(()), cmd)
+    (ok!(), cmd)
 }
 
 /// Gets all the local branches as a tuple.

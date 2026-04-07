@@ -737,19 +737,17 @@ impl ColorWheel {
 
             // Try to get from cache.
             let cache = color_wheel_cache::COLORIZATION_CACHE.clone();
-            if let Ok(mut cache_guard) = cache.lock()
-                && let Some(cached) = cache_guard.get(&key)
+            if let Some(cached) =
+                cache.write(|cache_guard| cache_guard.get(&key).cloned())
             {
-                return cached.clone();
+                return cached;
             }
 
             // Not in cache, compute and store.
             self.generate_gradient(us, gradient_generation_policy);
             let result = self.generate_styled_texts(text_colorization_policy, us);
 
-            if let Ok(mut cache_guard) = cache.lock() {
-                cache_guard.insert(key, result.clone());
-            }
+            cache.write(|cache_guard| cache_guard.insert(key, result.clone()));
 
             return result;
         }

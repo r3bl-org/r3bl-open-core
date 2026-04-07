@@ -40,7 +40,7 @@ use r3bl_tui::{OscEvent, SGR_FG_BRIGHT_GREEN_STR, SGR_FG_BRIGHT_RED_STR,
                SGR_FG_BRIGHT_YELLOW_STR, SGR_RESET_STR, assert_terminal_is_interactive,
                core::pty::{DefaultPtySessionConfig, PtyOutputEvent, PtySessionBuilder,
                            PtySessionConfigOption},
-               set_mimalloc_in_main};
+               ok, set_mimalloc_in_main};
 
 // ANSI color constants for terminal output.
 
@@ -78,7 +78,7 @@ async fn run_cargo_clean() -> miette::Result<()> {
         }
     }
 
-    Ok(())
+    ok!()
 }
 
 /// Runs a single cargo build with [`OSC`] capture.
@@ -150,7 +150,7 @@ async fn run_build_with_osc_capture(run_number: u32) -> miette::Result<()> {
         }
     }
 
-    Ok(())
+    ok!()
 }
 
 #[tokio::main]
@@ -183,5 +183,5 @@ async fn main() -> miette::Result<()> {
         "\n{GREEN}✨ Demo complete! The generic spawn_pty_command successfully captured OSC sequences.{RESET}"
     );
 
-    Ok(())
+    ok!()
 }

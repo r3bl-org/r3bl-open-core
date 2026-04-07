@@ -270,11 +270,7 @@ pub use color::*;
 pub use constants::*;
 pub use generator::*;
 pub use vt_100_pty_output_parser::*;
-// Needed for integration_tests module.
-#[allow(ambiguous_glob_reexports)]
 pub use terminal_raw_mode::*;
-// Needed for integration_tests module.
-#[allow(ambiguous_glob_reexports)]
 pub use detect_color::*;
 
 // Re-export test fixtures for testing purposes only.
@@ -284,7 +280,7 @@ pub use vt_100_pty_output_parser::vt_100_pty_output_conformance_tests;
 // Rustdoc search link fixes.
 #[cfg(any(test, doc))] // Guard needed: constants sub-modules are only pub in doc/test builds.
 #[doc(inline)] // Create doc pages at re-export path so rustdoc search links resolve.
-pub use constants::{csi, dsr, esc, generic, input_sequences, mouse, raw_mode, sgr, utf8};
+pub use constants::{csi, dsr, esc, generic, input_sequences, mouse, raw_mode_constants, sgr, utf8};
 #[cfg(any(test, doc))]
 #[doc(inline)] // Create doc pages at re-export path so rustdoc search links resolve.
-pub use detect_color::integration_tests::pty_test_color_detection;
+pub use detect_color::detect_color_integration_tests::pty_test_color_detection;

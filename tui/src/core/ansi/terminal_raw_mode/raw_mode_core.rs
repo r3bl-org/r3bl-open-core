@@ -74,12 +74,11 @@ pub fn enable_raw_mode() -> miette::Result<()> {
             backend = ?TERMINAL_LIB_BACKEND
         );
     });
-
     let result = match TERMINAL_LIB_BACKEND {
         TerminalLibBackend::DirectToAnsi => {
             #[cfg(unix)]
             {
-                raw_mode_unix::enable_raw_mode()
+                raw_mode_unix::enable_raw_mode().map_err(miette::Report::from)
             }
 
             #[cfg(windows)]
@@ -143,7 +142,7 @@ pub fn disable_raw_mode() -> miette::Result<()> {
         TerminalLibBackend::DirectToAnsi => {
             #[cfg(unix)]
             {
-                raw_mode_unix::disable_raw_mode()
+                raw_mode_unix::disable_raw_mode().map_err(miette::Report::from)
             }
 
             #[cfg(windows)]
@@ -197,5 +196,17 @@ impl RawModeGuard {
 }
 
 impl Drop for RawModeGuard {
+    /// # Poison Safety
+    ///
+    /// This implementation is **poison-safe**. It delegates to [`disable_raw_mode()`],
+    /// which is poison-safe and ensures that the terminal is restored even if the
+    /// internal state is corrupted. We prioritize **Resilience over Integrity** here
+    /// to prevent a **Double Panic Abort** that would **brick the user's terminal**.
+    ///
+    /// See the [Terminal Restoration: Panic, Drop, and Mutex Poison-Safety] section
+    /// in the crate root documentation for details.
+    ///
+    /// [Terminal Restoration: Panic, Drop, and Mutex Poison-Safety]:
+    ///     crate#terminal-restoration-panic-drop-and-mutex-poison-safety
     fn drop(&mut self) { drop(disable_raw_mode()); }
 }

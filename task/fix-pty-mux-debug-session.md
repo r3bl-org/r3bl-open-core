@@ -1,3 +1,4 @@
+<!-- cspell:words setsid TIOCSCTTY cmdbuilder -->
 # Task: Fix PTYMux UI Freeze (stdout Backpressure)
 
 ## Overview
@@ -134,7 +135,7 @@ This allows observing DirectToAnsi flush/write timing without noise from other s
 
 - [x] **DirectToAnsi flush logging confirms burst-then-gap blocking pattern.**
   After fixing the flush dispatch (Phase 3) and enabling `DEBUG_TUI_SHOW_DIRECT_TO_ANSI`, the log
-  shows 241 `"direct-to-ansi: ✅ Succeeded"` flush entries with a clear blocking pattern:
+  shows 241 `"direct_to_ansi: ✅ Succeeded"` flush entries with a clear blocking pattern:
   - **Bursts**: rapid clusters of flushes spaced 5-11 lines apart (stdout buffer has room).
   - **Gaps**: 34-97 line gaps between clusters (flush blocks on saturated stdout pipe).
   - **During gaps**: keyboard input events arrive and get logged by mio-poller, but the tokio

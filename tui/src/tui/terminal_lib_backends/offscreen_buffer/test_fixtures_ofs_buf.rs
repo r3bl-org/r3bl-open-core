@@ -184,7 +184,7 @@ pub fn assert_empty_at(buffer: &OffscreenBuffer, row_idx: usize, col_idx: usize)
             // This is what we expect - unstyled space.
         }
         other => {
-            panic!("Expected empty/spacer at {pos:?}, but found {other:?}",);
+            panic!("Expected empty/spacer at {pos:?}, but found {other:?}");
         }
     }
 }

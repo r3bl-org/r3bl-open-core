@@ -1,11 +1,11 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{ChannelCapacity, CommonResultWithError, CursorBoundsCheck,
+use crate::{ChannelCapacity, CommonResultWithError, Continuation, CursorBoundsCheck,
             CursorPositionBoundsStatus, GCStringOwned, History, InputDevice, InputEvent,
             KeyPress, LineState, LineStateControlSignal, LineStateLiveness,
             ModifierKeysMask, OutputDevice, PauseBuffer, SafeHistory, SafeLineState,
             SafePauseBuffer, SegIndex, SendRawTerminal, SharedWriter, Size, StdMutex,
-            execute_commands_no_lock, join, key_press, lock_output_device_as_mut};
+            disable_raw_mode, execute_commands_no_lock, join, key_press, ok};
 use crossterm::{ExecutableCommand, QueueableCommand, cursor,
                 terminal::{self, Clear}};
 use miette::Report as ErrorReport;
@@ -146,15 +146,23 @@ pub const READLINE_ASYNC_INITIAL_PROMPT_DISPLAY_CURSOR_SHOW_DELAY: Duration =
 /// - By calling [`manage_shared_writer_output::flush_internal()`].
 ///
 /// You can provide your own implementation of [`crate::SafeRawTerminal`], like
-/// [`OutputDevice`], via [dependency injection],
-/// so that you can mock terminal output for testing. You can also extend this struct to
-/// adapt your own terminal output using this mechanism. Essentially anything that
-/// compiles with `dyn std::io::Write + Send` trait bounds can be used.
+/// [`OutputDevice`], via [dependency injection], so that you can mock terminal output for
+/// testing. You can also extend this struct to adapt your own terminal output using this
+/// mechanism. Essentially anything that compiles with `dyn std::io::Write + Send` trait
+/// bounds can be used.
 ///
-/// [`crossterm::event::EventStream`]: https://docs.rs/crossterm/latest/crossterm/event/struct.EventStream.html
+/// # Poison Safety
+///
+/// See the [Terminal Restoration: Panic, Drop, and Mutex Poison-Safety] section in the
+/// crate root documentation for why this is designed to be poison-safe.
+///
+/// [`crossterm::event::EventStream`]:
+///     https://docs.rs/crossterm/latest/crossterm/event/struct.EventStream.html
 /// [`Pin`]: std::pin::Pin
 /// [Core Async Concepts]: crate::main_event_loop_impl#core-async-concepts-pin-and-unpin
 /// [dependency injection]: https://developerlife.com/category/DI/
+/// [Terminal Restoration: Panic, Drop, and Mutex Poison-Safety]:
+///     crate#terminal-restoration-panic-drop-and-mutex-poison-safety
 #[allow(missing_debug_implementations)]
 pub struct Readline {
     /// Device used to write rendered display output to (usually `stdout`).
@@ -186,28 +194,6 @@ pub struct Readline {
 
     /// Shutdown channel.
     shutdown_complete_sender: broadcast::Sender<()>,
-}
-
-/// Error returned from [`readline()`][Readline::readline]. Such errors generally require
-/// specific procedures to recover from.
-#[derive(Debug, Error)]
-pub enum ReadlineError {
-    /// An internal I/O error occurred.
-    #[error(transparent)]
-    IO(#[from] io::Error),
-
-    /// `readline()` was called after the [`SharedWriter`] was dropped and everything
-    /// written to the `SharedWriter` was already output.
-    #[error("line writers closed")]
-    Closed,
-}
-
-/// For convenience, convert [`ErrorReport`] to [`ReadlineError`],
-/// so that `into_diagnostic()` works.
-impl From<ErrorReport> for ReadlineError {
-    fn from(report: ErrorReport) -> Self {
-        ReadlineError::IO(io::Error::other(format!("{report}")))
-    }
 }
 
 /// Events emitted by [`Readline::readline()`].
@@ -250,21 +236,6 @@ pub enum ReadlineEvent {
 
     /// The terminal was resized.
     Resized(Size),
-}
-
-/// Internal control flow for the `readline` method. This is used primarily to make
-/// testing easier.
-#[derive(Debug, PartialEq, Clone)]
-pub enum ControlFlowExtended<T, E> {
-    ReturnOk(T),
-    ReturnError(E),
-    Continue,
-}
-
-#[derive(Debug, PartialEq, Clone)]
-pub enum ControlFlowLimited<E> {
-    ReturnError(E),
-    Continue,
 }
 
 /// # Task creation, shutdown and cleanup
@@ -326,19 +297,24 @@ pub mod manage_shared_writer_output {
                             safe_spinner_is_active.clone(),
                         );
                         match control_flow {
-                            ControlFlowLimited::ReturnError(_) => {
-                                // Initiate shutdown.
+                            Continuation::ReturnError(_) => {
+                                // Signal that this task is exiting and break the loop.
                                 // We don't care about the result of this operation.
                                 shutdown_complete_sender.send(()).ok();
                                 break;
                             }
-                            ControlFlowLimited::Continue => {
-                                // continue.
+                            Continuation::Continue => {
+                                // Do nothing and continue the loop.
+                            }
+                            Continuation::Stop | Continuation::Restart => {
+                                unreachable!(
+                                    "process_line_control_signal never returns Stop or Restart"
+                                )
                             }
                         }
                     }
                     _ => {
-                        // Initiate shutdown.
+                        // Signal that this task is exiting and break the loop.
                         // We don't care about the result of this operation.
                         shutdown_complete_sender.send(()).ok();
                         break;
@@ -353,9 +329,12 @@ pub mod manage_shared_writer_output {
     ///
     /// # Panics
     ///
-    /// This will panic if the lock is poisoned, which can happen if a thread
-    /// panics while holding the lock. To avoid panics, ensure that the code that
-    /// locks the mutex does not panic while holding the lock.
+    /// Panics if the internal mutex is poisoned.
+    ///
+    /// # Poison Safety
+    ///
+    /// See the [Terminal Restoration: Panic, Drop, and Mutex Poison-Safety] section
+    /// in the crate root documentation for details.
     #[allow(clippy::needless_pass_by_value)]
     pub fn process_line_control_signal(
         line_control_signal: LineStateControlSignal,
@@ -363,94 +342,132 @@ pub mod manage_shared_writer_output {
         self_safe_line_state: SafeLineState,
         output_device: OutputDevice,
         self_safe_spinner_is_active: Arc<StdMutex<Option<broadcast::Sender<()>>>>,
-    ) -> ControlFlowLimited<ReadlineError> {
+    ) -> Continuation<ReadlineError> {
         match line_control_signal {
-            LineStateControlSignal::ExitReadlineLoop => {
-                // This causes the readline loop to request_shutdown by using
-                // `Readline::shutdown_sender`.
-                return ControlFlowLimited::ReturnError(ReadlineError::Closed);
-            }
+            // XMARK: Clever use of block, containing ? call, with .into() for err
+            // conversion
 
             // Handle a line of text from user input w/ support for pause & resume.
             LineStateControlSignal::Line(buf) => {
-                // Early return if paused. Push the line to pause_buffer, don't render
-                // anything, and return!
-                let mut line_state = self_safe_line_state.lock().unwrap();
-                if line_state.is_paused.is_paused() {
-                    let pause_buffer = &mut *self_safe_is_paused_buffer.lock().unwrap();
-                    pause_buffer.push(buf);
-                    return ControlFlowLimited::Continue;
-                }
+                self_safe_line_state.write(|line_state| {
+                    // Early return if paused. Push the line to pause_buffer, don't print
+                    // it.
+                    if line_state.is_paused.is_paused() {
+                        self_safe_is_paused_buffer.write(|pause_buffer| {
+                            pause_buffer.push(buf);
+                        });
+                        return Continuation::Continue;
+                    }
 
-                // Print the line to the terminal.
-                let term = lock_output_device_as_mut!(output_device);
-                if let Err(err) = line_state.print_data_and_flush(buf.as_ref(), term) {
-                    return ControlFlowLimited::ReturnError(err);
-                }
-                if let Err(err) = term.flush() {
-                    return ControlFlowLimited::ReturnError(err.into());
-                }
-            }
-
-            // Handle a flush signal.
-            LineStateControlSignal::Flush => {
-                let is_paused = self_safe_line_state.lock().unwrap().is_paused;
-                let term = lock_output_device_as_mut!(output_device);
-                let line_state = self_safe_line_state.lock().unwrap();
-                // We don't care about the result of this operation.
-                flush_internal(&self_safe_is_paused_buffer, is_paused, line_state, term)
-                    .ok();
+                    // Try to immediately print the incoming output and flush.
+                    output_device
+                        .write(|term| {
+                            line_state.print_data_and_flush(buf.as_ref(), term)?;
+                            term.flush()?;
+                            ok!()
+                        })
+                        .into()
+                })
             }
 
             // Pause the terminal.
-            LineStateControlSignal::Pause => {
-                let new_value = LineStateLiveness::Paused;
-                let term = lock_output_device_as_mut!(output_device);
-                let mut line_state = self_safe_line_state.lock().unwrap();
-                if line_state.set_paused(new_value, term).is_err() {
-                    return ControlFlowLimited::ReturnError(ReadlineError::IO(
-                        io::Error::other("failed to pause terminal"),
-                    ));
-                }
-            }
+            LineStateControlSignal::Pause => self_safe_line_state.write(|line_state| {
+                output_device
+                    .write(|term| {
+                        // Try to pause the terminal, so incoming output is buffered, not
+                        // printed.
+                        line_state
+                            .set_paused(LineStateLiveness::Paused, term)
+                            .map_err(|_| {
+                                ReadlineError::IO(io::Error::other(
+                                    "failed to pause terminal",
+                                ))
+                            })?;
+
+                        ok!()
+                    })
+                    .into()
+            }),
 
             // Resume the terminal.
-            LineStateControlSignal::Resume => {
-                let new_value = LineStateLiveness::NotPaused;
-                let mut line_state = self_safe_line_state.lock().unwrap();
-                let term = lock_output_device_as_mut!(output_device);
-                // Resume the terminal.
-                if line_state.set_paused(new_value, term).is_err() {
-                    return ControlFlowLimited::ReturnError(ReadlineError::IO(
-                        io::Error::other("failed to resume terminal"),
-                    ));
-                }
-                // We don't care about the result of this operation.
-                flush_internal(&self_safe_is_paused_buffer, new_value, line_state, term)
-                    .ok();
+            LineStateControlSignal::Resume => self_safe_line_state.write(|line_state| {
+                output_device
+                    .write(|term| {
+                        // Try to resume the terminal and flush any buffered output.
+                        line_state
+                            .set_paused(LineStateLiveness::NotPaused, term)
+                            .map_err(|_| {
+                                ReadlineError::IO(io::Error::other(
+                                    "failed to resume terminal",
+                                ))
+                            })?;
+
+                        // We don't care about the result of this operation.
+                        drop(flush_internal(
+                            &self_safe_is_paused_buffer,
+                            LineStateLiveness::NotPaused,
+                            line_state,
+                            term,
+                        ));
+
+                        ok!()
+                    })
+                    .into()
+            }),
+
+            LineStateControlSignal::ExitReadlineLoop => {
+                // Signal the background task to stop and trigger a broadcast shutdown. By
+                // returning an error to the caller, the caller will then send a signal to
+                // the channel using `shutdown_complete_sender.send(())` and break the
+                // loop.
+                Err(ReadlineError::Closed).into()
             }
+
+            // Handle a flush signal.
+            LineStateControlSignal::Flush => self_safe_line_state.write(|line_state| {
+                let is_paused = line_state.is_paused;
+                output_device
+                    .write(|term| {
+                        // We don't care about the result of this operation.
+                        drop(flush_internal(
+                            &self_safe_is_paused_buffer,
+                            is_paused,
+                            line_state,
+                            term,
+                        ));
+                        ok!()
+                    })
+                    .into()
+            }),
+
             LineStateControlSignal::SpinnerActive(spinner_shutdown_sender) => {
                 // Handle spinner active signal & register the spinner shutdown sender.
-                let mut spinner_is_active = self_safe_spinner_is_active.lock().unwrap();
-                *spinner_is_active = Some(spinner_shutdown_sender);
+                self_safe_spinner_is_active.write(|spinner_is_active| {
+                    *spinner_is_active = Some(spinner_shutdown_sender);
+                });
+                Continuation::Continue
             }
+
             LineStateControlSignal::SpinnerInactive => {
                 // Handle spinner inactive signal & remove the spinner shutdown sender.
-                let mut spinner_is_active = self_safe_spinner_is_active.lock().unwrap();
-                let _unused: Option<_> = spinner_is_active.take();
+                self_safe_spinner_is_active.write(|spinner_is_active| {
+                    drop(spinner_is_active.take());
+                });
+                Continuation::Continue
             }
         }
-
-        ControlFlowLimited::Continue
     }
 
     /// Flushes all writers to terminal and erase the prompt string.
     ///
     /// # Panics
     ///
-    /// This will panic if the lock is poisoned, which can happen if a thread
-    /// panics while holding the lock. To avoid panics, ensure that the code that
-    /// locks the mutex does not panic while holding the lock.
+    /// Panics if the internal mutex is poisoned.
+    ///
+    /// # Poison Safety
+    ///
+    /// See the [Terminal Restoration: Panic, Drop, and Mutex Poison-Safety] section
+    /// in the crate root documentation for details.
     ///
     /// # Errors
     ///
@@ -459,42 +476,64 @@ pub mod manage_shared_writer_output {
     pub fn flush_internal(
         self_safe_is_paused_buffer: &SafePauseBuffer,
         is_paused: LineStateLiveness,
-        mut line_state: std::sync::MutexGuard<'_, LineState>,
+        line_state: &mut LineState,
         term: &mut SendRawTerminal,
     ) -> CommonResultWithError<(), ReadlineError> {
         // If paused, then return!
         if is_paused.is_paused() {
-            return Ok(());
+            return ok!();
         }
 
         let is_paused_buffer = {
-            let paused_text_buffer: PauseBuffer = self_safe_is_paused_buffer
-                .lock()
-                .unwrap()
-                .drain(..)
-                .collect();
-            join!(
-                from: paused_text_buffer,
-                each: text,
-                delim: "",
-                format: "{text}"
-            )
+            self_safe_is_paused_buffer.write(|paused_text_buffer_guard| {
+                let paused_text_buffer: PauseBuffer =
+                    paused_text_buffer_guard.drain(..).collect();
+                join!(
+                    from: paused_text_buffer,
+                    each: text,
+                    delim: "",
+                    format: "{text}"
+                )
+            })
         };
 
         line_state.print_data_and_flush(is_paused_buffer.as_bytes(), term)?;
         line_state.clear_and_render_and_flush(term)?;
 
-        Ok(())
+        ok!()
     }
 }
 
 impl Drop for Readline {
+    /// Performs terminal-output related cleanup.
+    ///
+    /// # Poison Safety
+    ///
+    /// This implementation is designed to be **infallible and poison-safe** to prevent a
+    /// [Double Panic Abort] (which would **brick the user's terminal**). It uses
+    /// poison-safe locking to ensure that even if the input buffer or line state is
+    /// corrupted, it can still attempt to restore the terminal to a usable state before
+    /// the process exits. We prioritize **Resilience over Integrity** here.
+    ///
+    /// See the [Terminal Restoration: Panic, Drop, and Mutex Poison-Safety] section in
+    /// the crate root documentation for details.
+    ///
+    /// [Double Panic Abort]: crate#the-double-panic-abort-risk
+    /// [Terminal Restoration: Panic, Drop, and Mutex Poison-Safety]:
+    ///     crate#terminal-restoration-panic-drop-and-mutex-poison-safety
     fn drop(&mut self) {
-        let term = lock_output_device_as_mut!(self.output_device);
-        // We don't care about the result of this operation.
-        self.safe_line_state.lock().unwrap().exit(term).ok();
-        // We don't care about the result of this operation.
-        crate::disable_raw_mode().ok();
+        // Use lock_raw_poison_safe() to bypass the ledger during drop (emergency
+        // restoration).
+        self.output_device.lock_raw_poison_safe(|term| {
+            self.safe_line_state.lock_raw_poison_safe(|line_state| {
+                // We don't care about the result of this operation.
+                drop(line_state.exit(term));
+
+                // We don't care about the result of this operation.
+                // disable_raw_mode() is also poison-safe.
+                drop(disable_raw_mode());
+            });
+        });
     }
 }
 
@@ -515,9 +554,12 @@ impl Readline {
     ///
     /// # Panics
     ///
-    /// This will panic if the lock is poisoned, which can happen if a thread
-    /// panics while holding the lock. To avoid panics, ensure that the code that
-    /// locks the mutex does not panic while holding the lock.
+    /// Panics if the internal mutex is poisoned.
+    ///
+    /// # Poison Safety
+    ///
+    /// See the [Terminal Restoration: Panic, Drop, and Mutex Poison-Safety] section
+    /// in the crate root documentation for details.
     ///
     /// # Errors
     ///
@@ -536,11 +578,11 @@ impl Readline {
         // `READLINE_ASYNC_INITIAL_PROMPT_DISPLAY_CURSOR_SHOW_DELAY` to display the cursor
         // (try to eliminate jank). It makes it appear as if the cursor is animated into
         // place.
-        {
-            let writer = lock_output_device_as_mut!(output_device);
+        output_device.write(|writer| {
             execute_commands_no_lock!(writer, cursor::Hide);
             execute_commands_no_lock!(writer, terminal::EnableLineWrap);
-        } // This drops the writer lock.
+            Ok::<(), miette::Report>(())
+        })?;
 
         // Enable raw mode. Drop will disable raw mode.
         crate::enable_raw_mode()?;
@@ -590,26 +632,24 @@ impl Readline {
         };
 
         // Print the prompt.
-        {
-            let term = lock_output_device_as_mut!(output_device);
+        output_device.write(|term| {
             readline
                 .safe_line_state
-                .lock()
-                .unwrap()
-                .render_and_flush(term)?;
-        } // Drop the term lock.
+                .write(|line_state| line_state.render_and_flush(term))
+        })?;
 
-        let output_device_clone = output_device.clone();
         spawn({
+            let output_device_clone = output_device.clone();
             async move {
                 // In a background task, wait for
                 // `READLINE_ASYNC_INITIAL_PROMPT_DISPLAY_CURSOR_SHOW_DELAY` to
                 // display the cursor (try to eliminate jank). This does not make
                 // caller wait.
                 sleep(READLINE_ASYNC_INITIAL_PROMPT_DISPLAY_CURSOR_SHOW_DELAY).await;
-                let term = lock_output_device_as_mut!(output_device_clone);
-                // We don't care about the result of this operation.
-                term.execute(cursor::Show).ok();
+                output_device_clone.write(|term| {
+                    // We don't care about the result of this operation.
+                    drop(term.execute(cursor::Show));
+                });
             }
         });
 
@@ -624,9 +664,12 @@ impl Readline {
     ///
     /// # Panics
     ///
-    /// This will panic if the lock is poisoned, which can happen if a thread
-    /// panics while holding the lock. To avoid panics, ensure that the code that
-    /// locks the mutex does not panic while holding the lock.
+    /// Panics if the internal mutex is poisoned.
+    ///
+    /// # Poison Safety
+    ///
+    /// See the [Terminal Restoration: Panic, Drop, and Mutex Poison-Safety] section
+    /// in the crate root documentation for details.
     ///
     /// # Errors
     ///
@@ -636,48 +679,54 @@ impl Readline {
         &mut self,
         prompt: &str,
     ) -> CommonResultWithError<(), ReadlineError> {
-        let term = lock_output_device_as_mut!(self.output_device);
-        self.safe_line_state
-            .lock()
-            .unwrap()
-            .update_prompt(prompt, term)?;
-        Ok(())
+        self.output_device.write(|term| {
+            self.safe_line_state
+                .write(|line_state| line_state.update_prompt(prompt, term))
+        })?;
+        ok!()
     }
 
     /// Clears the screen.
     ///
     /// # Panics
     ///
-    /// This will panic if the lock is poisoned, which can happen if a thread
-    /// panics while holding the lock. To avoid panics, ensure that the code that
-    /// locks the mutex does not panic while holding the lock.
+    /// Panics if the internal mutex is poisoned.
+    ///
+    /// # Poison Safety
+    ///
+    /// See the [Terminal Restoration: Panic, Drop, and Mutex Poison-Safety] section
+    /// in the crate root documentation for details.
     ///
     /// # Errors
     ///
     /// Returns an error if clearing the screen fails.
     #[allow(clippy::unwrap_in_result)] /* This is for lock.unwrap() */
     pub fn clear(&mut self) -> CommonResultWithError<(), ReadlineError> {
-        let term = lock_output_device_as_mut!(self.output_device);
-        term.queue(Clear(terminal::ClearType::All))?;
-        self.safe_line_state
-            .lock()
-            .unwrap()
-            .clear_and_render_and_flush(term)?;
-        term.flush()?;
-        Ok(())
+        self.output_device.write(|term| {
+            term.queue(Clear(terminal::ClearType::All))?;
+            self.safe_line_state
+                .write(|line_state| line_state.clear_and_render_and_flush(term))?;
+            term.flush()?;
+            Ok::<(), ReadlineError>(())
+        })?;
+        ok!()
     }
 
     /// Sets maximum history length. The default length is [`crate::HISTORY_SIZE_MAX`].
     ///
     /// # Panics
     ///
-    /// This will panic if the lock is poisoned, which can happen if a thread
-    /// panics while holding the lock. To avoid panics, ensure that the code that
-    /// locks the mutex does not panic while holding the lock.
+    /// Panics if the internal mutex is poisoned.
+    ///
+    /// # Poison Safety
+    ///
+    /// See the [Terminal Restoration: Panic, Drop, and Mutex Poison-Safety] section
+    /// in the crate root documentation for details.
     pub fn set_max_history(&mut self, max_size: usize) {
-        let mut history = self.safe_history.lock().unwrap();
-        history.max_size = max_size;
-        history.entries.truncate(max_size);
+        self.safe_history.write(|history| {
+            history.max_size = max_size;
+            history.entries.truncate(max_size);
+        });
     }
 
     /// Sets whether the input line should remain on the screen after events.
@@ -692,13 +741,17 @@ impl Readline {
     ///
     /// # Panics
     ///
-    /// This will panic if the lock is poisoned, which can happen if a thread
-    /// panics while holding the lock. To avoid panics, ensure that the code that
-    /// locks the mutex does not panic while holding the lock.
+    /// Panics if the internal mutex is poisoned.
+    ///
+    /// # Poison Safety
+    ///
+    /// See the [Terminal Restoration: Panic, Drop, and Mutex Poison-Safety] section
+    /// in the crate root documentation for details.
     pub fn should_print_line_on(&mut self, enter: bool, control_c: bool) {
-        let mut line_state = self.safe_line_state.lock().unwrap();
-        line_state.should_print_line_on_enter = enter;
-        line_state.should_print_line_on_control_c = control_c;
+        self.safe_line_state.write(|line_state| {
+            line_state.should_print_line_on_enter = enter;
+            line_state.should_print_line_on_control_c = control_c;
+        });
     }
 
     /// This function returns when <kbd>Ctrl+D</kbd>, <kbd>Ctrl+C</kbd>, or
@@ -715,9 +768,12 @@ impl Readline {
     ///
     /// # Panics
     ///
-    /// This will panic if the lock is poisoned, which can happen if a thread
-    /// panics while holding the lock. To avoid panics, ensure that the code that
-    /// locks the mutex does not panic while holding the lock.
+    /// Panics if the internal mutex is poisoned.
+    ///
+    /// # Poison Safety
+    ///
+    /// See the [Terminal Restoration: Panic, Drop, and Mutex Poison-Safety] section
+    /// in the crate root documentation for details.
     ///
     /// # Errors
     ///
@@ -737,20 +793,23 @@ impl Readline {
                 //   pinned_input_stream isn't used, and the state isn't modified.
                 maybe_input_event = self.input_device.next() => {
                     if let Some(input_event) = maybe_input_event {
-                        match readline_internal::apply_event_to_line_state_and_render(
-                            input_event,
-                            &self.safe_line_state,
-                            lock_output_device_as_mut!(self.output_device),
-                            &self.safe_history,
-                            &self.safe_spinner_is_active,
-                        ) {
-                            ControlFlowExtended::ReturnOk(ok_value) => {
+                        let result = self.output_device.write(|term| {
+                            readline_internal::apply_event_to_line_state_and_render(
+                                input_event,
+                                &self.safe_line_state,
+                                term,
+                                &self.safe_history,
+                                &self.safe_spinner_is_active,
+                            )
+                        });
+                        match result {
+                            ReadlineControlFlow::ReturnOk(ok_value) => {
                                 return Ok(ok_value);
-                            },
-                            ControlFlowExtended::ReturnError(err_value) => {
+                            }
+                            ReadlineControlFlow::ReturnError(err_value) => {
                                 return Err(err_value);
-                            },
-                            ControlFlowExtended::Continue => {}
+                            }
+                            ReadlineControlFlow::Continue => {}
                         }
                     }
                 },
@@ -758,7 +817,9 @@ impl Readline {
                 // Poll for history updates.
                 // This branch is cancel safe because recv is cancel safe.
                 maybe_line = self.history_receiver.recv() => {
-                    self.safe_history.lock().unwrap().update(maybe_line);
+                    self.safe_history.write(|history| {
+                        history.update(maybe_line);
+                    });
                 },
 
                 // Poll for shutdown signal.
@@ -782,15 +843,19 @@ impl Readline {
     ///
     /// # Panics
     ///
-    /// This will panic if the lock is poisoned, which can happen if a thread
-    /// panics while holding the lock. To avoid panics, ensure that the code that
-    /// locks the mutex does not panic while holding the lock.
+    /// Panics if the internal mutex is poisoned.
+    ///
+    /// # Poison Safety
+    ///
+    /// See the [Terminal Restoration: Panic, Drop, and Mutex Poison-Safety] section
+    /// in the crate root documentation for details.
     ///
     /// [`display_width`]: GCStringOwned::display_width
     /// [`segment_count()`]: GCStringOwned::segment_count
     #[must_use]
     pub fn get_buffer(&self) -> GCStringOwned {
-        self.safe_line_state.lock().unwrap().line.clone()
+        self.safe_line_state
+            .read(|line_state| line_state.line.clone())
     }
 
     /// Returns the cursor position as a type-safe grapheme segment index (0-based).
@@ -800,14 +865,18 @@ impl Readline {
     ///
     /// # Panics
     ///
-    /// This will panic if the lock is poisoned, which can happen if a thread
-    /// panics while holding the lock. To avoid panics, ensure that the code that
-    /// locks the mutex does not panic while holding the lock.
+    /// Panics if the internal mutex is poisoned.
+    ///
+    /// # Poison Safety
+    ///
+    /// See the [Terminal Restoration: Panic, Drop, and Mutex Poison-Safety] section
+    /// in the crate root documentation for details.
     ///
     /// [`ArrayBoundsCheck`]: crate::ArrayBoundsCheck
     #[must_use]
     pub fn get_cursor_position(&self) -> SegIndex {
-        self.safe_line_state.lock().unwrap().line_cursor_grapheme
+        self.safe_line_state
+            .read(|line_state| line_state.line_cursor_grapheme)
     }
 
     /// Returns the cursor position status relative to the buffer content.
@@ -845,9 +914,12 @@ impl Readline {
     ///
     /// # Panics
     ///
-    /// This will panic if the lock is poisoned, which can happen if a thread
-    /// panics while holding the lock. To avoid panics, ensure that the code that
-    /// locks the mutex does not panic while holding the lock.
+    /// Panics if the internal mutex is poisoned.
+    ///
+    /// # Poison Safety
+    ///
+    /// See the [Terminal Restoration: Panic, Drop, and Mutex Poison-Safety] section
+    /// in the crate root documentation for details.
     ///
     /// [`AtEnd`]: CursorPositionBoundsStatus::AtEnd
     /// [`AtStart`]: CursorPositionBoundsStatus::AtStart
@@ -856,11 +928,12 @@ impl Readline {
     /// [`Within`]: CursorPositionBoundsStatus::Within
     #[must_use]
     pub fn get_cursor_position_status(&self) -> CursorPositionBoundsStatus {
-        let line_state = self.safe_line_state.lock().unwrap();
-        line_state
-            .line
-            .segment_count()
-            .check_cursor_position_bounds(line_state.line_cursor_grapheme)
+        self.safe_line_state.read(|line_state| {
+            line_state
+                .line
+                .segment_count()
+                .check_cursor_position_bounds(line_state.line_cursor_grapheme)
+        })
     }
 }
 
@@ -870,48 +943,42 @@ pub mod readline_internal {
 
     /// # Panics
     ///
-    /// This will panic if the lock is poisoned, which can happen if a thread
-    /// panics while holding the lock. To avoid panics, ensure that the code that
-    /// locks the mutex does not panic while holding the lock.
+    /// Panics if the internal mutex is poisoned.
+    ///
+    /// # Poison Safety
+    ///
+    /// See the [Terminal Restoration: Panic, Drop, and Mutex Poison-Safety] section
+    /// in the crate root documentation for details.
     pub fn apply_event_to_line_state_and_render(
         input_event: InputEvent,
         self_line_state: &SafeLineState,
         term: &mut dyn Write,
         self_safe_history: &SafeHistory,
         self_safe_is_spinner_active: &Arc<StdMutex<Option<broadcast::Sender<()>>>>,
-    ) -> ControlFlowExtended<ReadlineEvent, ReadlineError> {
+    ) -> ReadlineControlFlow<ReadlineEvent, ReadlineError> {
         // Check if this is Ctrl+C or Ctrl+D
         let is_ctrl_c_or_d = input_event.matches_any_of_these_keypresses(&[
             key_press!(@char ModifierKeysMask::new().with_ctrl(), 'c'),
             key_press!(@char ModifierKeysMask::new().with_ctrl(), 'd'),
         ]);
 
-        let mut line_state = self_line_state.lock().unwrap();
+        self_line_state.write(|line_state| {
+            // Intercept Ctrl+C or Ctrl+D here and send a signal to spinner (if it is
+            // active). And early return!
+            let is_spinner_active = self_safe_is_spinner_active.write(Option::take);
 
-        // Intercept Ctrl+C or Ctrl+D here and send a signal to spinner (if it is
-        // active). And early return!
-        let is_spinner_active = self_safe_is_spinner_active.lock().unwrap().take();
-        if is_ctrl_c_or_d && let Some(spinner_shutdown_sender) = is_spinner_active {
-            // Send signal to SharedWriter spinner shutdown channel.
-            // We don't care about the result of this operation.
-            spinner_shutdown_sender.send(()).ok();
-            return ControlFlowExtended::Continue;
-        }
-
-        // Regular readline event handling - use the canonical InputEvent directly
-        let result_maybe_readline_event =
-            line_state.apply_event_and_render(&input_event, term, self_safe_history);
-
-        match result_maybe_readline_event {
-            Ok(maybe_readline_event) => {
-                if let Some(readline_event) = maybe_readline_event {
-                    return ControlFlowExtended::ReturnOk(readline_event);
-                }
+            if is_ctrl_c_or_d && let Some(spinner_shutdown_sender) = is_spinner_active {
+                // Send signal to SharedWriter spinner shutdown channel.
+                // We don't care about the result of this operation.
+                spinner_shutdown_sender.send(()).ok();
+                return ReadlineControlFlow::Continue;
             }
-            Err(e) => return ControlFlowExtended::ReturnError(e),
-        }
 
-        ControlFlowExtended::Continue
+            // Regular readline event handling - use the canonical InputEvent directly
+            line_state
+                .apply_event_and_render(&input_event, term, self_safe_history)
+                .into()
+        })
     }
 
     /// Converts crossterm `KeyCode` to canonical `Key`
@@ -1074,6 +1141,82 @@ pub mod readline_internal {
     }
 }
 
+/// Internal control flow for the [`readline()`] method. This is used primarily to make
+/// testing easier.
+///
+/// # Result Conversion
+///
+/// This type supports implicit conversion from [`Result<Option<T>, E>`] via [`.into()`],
+/// allowing for a fluid functional style when working with locks and loops.
+///
+/// # Usage Guidance
+///
+/// To maintain high readability and low cognitive load, follow these conventions:
+/// 1. **Errors**: Prefer `ReturnError(E)` directly for early exits with errors.
+/// 2. **Success**: Prefer `ReturnOk(T)` directly for successful completion.
+/// 3. **Early Returns**: Use [`Self::Continue`] directly for early returns in a state
+///    machine loop.
+///
+/// [`.into()`]: Into::into
+/// [`readline()`]: crate::Readline::readline
+#[derive(Debug, PartialEq, Clone)]
+pub enum ReadlineControlFlow<T, E> {
+    ReturnOk(T),
+    ReturnError(E),
+    Continue,
+}
+
+impl<T, E> From<Result<Option<T>, E>> for ReadlineControlFlow<T, E> {
+    fn from(result: Result<Option<T>, E>) -> Self {
+        match result {
+            Ok(Some(val)) => Self::ReturnOk(val),
+            Ok(None) => Self::Continue,
+            Err(err) => Self::ReturnError(err),
+        }
+    }
+}
+
+/// Error returned from [`readline()`]. Such errors generally require specific procedures
+/// to recover from.
+///
+/// # High-Fidelity Diagnostics
+///
+/// This type implements [`miette::Diagnostic`], which allows for high-fidelity error
+/// reporting with help text and error codes. Use [`.into_diagnostic()`] to convert this
+/// into a [`miette::Report`].
+///
+/// # Implicit Conversions
+///
+/// - **From Result**: Supports implicit conversion into the core [`Continuation`] type
+///   via [`.into()`] (useful for loop control flow).
+/// - **From Report**: Supports implicit conversion from [`miette::Report`] (via
+///   [`From<ErrorReport>`]).
+///
+/// [`.into()`]: Into::into
+/// [`.into_diagnostic()`]: miette::IntoDiagnostic::into_diagnostic
+/// [`readline()`]: crate::Readline::readline
+#[derive(Debug, Error, miette::Diagnostic)]
+pub enum ReadlineError {
+    /// An internal I/O error occurred.
+    #[error(transparent)]
+    IO(#[from] io::Error),
+
+    /// `readline()` was called after the [`SharedWriter`] was dropped and everything
+    /// written to the `SharedWriter` was already output.
+    #[error("line writers closed")]
+    Closed,
+}
+
+/// For convenience, convert [`ErrorReport`] to [`ReadlineError`], so that
+/// [`into_diagnostic()`] works.
+///
+/// [`into_diagnostic()`]: miette::IntoDiagnostic::into_diagnostic
+impl From<ErrorReport> for ReadlineError {
+    fn from(report: ErrorReport) -> Self {
+        ReadlineError::IO(io::Error::other(format!("{report}")))
+    }
+}
+
 #[cfg(test)]
 pub mod readline_test_fixtures {
     use crate::{CrosstermEventResult, InlineVec};
@@ -1107,188 +1250,6 @@ pub mod readline_test_fixtures {
 }
 
 #[cfg(test)]
-mod test_readline {
-    use super::{Arc, ChannelCapacity, ControlFlowExtended, CursorPositionBoundsStatus,
-                History, InputDevice, OutputDevice, Readline, StdMutex,
-                broadcast, readline_internal, readline_test_fixtures::get_input_vec};
-    use crate::{OutputDeviceExt, TTYResult, is_output_interactive,
-                lock_output_device_as_mut};
-
-    #[tokio::test]
-    #[allow(clippy::needless_return)]
-    async fn test_readline_internal_process_event_and_terminal_output() {
-        let vec = get_input_vec();
-        let mut iter = vec.iter();
-
-        let prompt_str = "> ";
-
-        if let TTYResult::IsNotInteractive = is_output_interactive() {
-            return;
-        }
-
-        // We will get the `line_state` out of this to test.
-        let (output_device, stdout_mock) = OutputDevice::new_mock();
-        let input_device = InputDevice::new_mock(get_input_vec());
-        let (shutdown_sender, _) = broadcast::channel::<()>(1);
-        let test_size = crate::Size::new((crate::width(100), crate::height(100)));
-        let (readline, _) = Readline::try_new(
-            prompt_str.into(),
-            output_device.clone(),
-            /* move */ input_device,
-            /* move */ shutdown_sender,
-            ChannelCapacity::Minimal, // Test uses minimal capacity
-            test_size,
-        )
-        .unwrap();
-
-        let safe_is_spinner_active = Arc::new(StdMutex::new(None));
-
-        let history = History::new();
-        let safe_history = Arc::new(StdMutex::new(history.0));
-
-        // Simulate 'a'.
-        let Some(Ok(event)) = iter.next() else {
-            panic!();
-        };
-        let Some(input_event) =
-            readline_internal::convert_crossterm_event_to_input_event(event.clone())
-        else {
-            panic!("Failed to convert event");
-        };
-        let control_flow = readline_internal::apply_event_to_line_state_and_render(
-            input_event,
-            &readline.safe_line_state,
-            lock_output_device_as_mut!(output_device),
-            &safe_history,
-            &safe_is_spinner_active,
-        );
-
-        assert!(matches!(control_flow, ControlFlowExtended::Continue));
-        assert_eq!(readline.safe_line_state.lock().unwrap().line.as_str(), "a");
-
-        let output_buffer_data = stdout_mock.get_copy_of_buffer_as_string_strip_ansi();
-        // println!("\n`{}`\n", output_buffer_data);
-        assert!(output_buffer_data.contains("> a"));
-    }
-
-    #[tokio::test]
-    #[allow(clippy::needless_return)]
-    async fn test_editor_state_empty_buffer() {
-        use crate::seg_index;
-
-        let prompt_str = "> ";
-
-        if let TTYResult::IsNotInteractive = is_output_interactive() {
-            return;
-        }
-
-        let (output_device, _) = OutputDevice::new_mock();
-        let input_device = InputDevice::new_mock(smallvec::smallvec![]);
-        let (shutdown_sender, _) = broadcast::channel::<()>(1);
-        let test_size = crate::Size::new((crate::width(100), crate::height(100)));
-        let (readline, _) = Readline::try_new(
-            prompt_str.into(),
-            output_device,
-            input_device,
-            shutdown_sender,
-            ChannelCapacity::Minimal,
-            test_size,
-        )
-        .unwrap();
-
-        assert!(readline.get_buffer().is_empty());
-        assert_eq!(
-            readline.get_cursor_position_status(),
-            CursorPositionBoundsStatus::AtStart
-        );
-        assert_eq!(readline.get_cursor_position(), seg_index(0));
-        assert_eq!(readline.get_buffer().as_str(), "");
-    }
-
-    #[tokio::test]
-    #[allow(clippy::needless_return)]
-    async fn test_editor_state_with_content() {
-        use crate::{GCStringOwned, seg_index};
-
-        let prompt_str = "> ";
-
-        if let TTYResult::IsNotInteractive = is_output_interactive() {
-            return;
-        }
-
-        let (output_device, _) = OutputDevice::new_mock();
-        let input_device = InputDevice::new_mock(smallvec::smallvec![]);
-        let (shutdown_sender, _) = broadcast::channel::<()>(1);
-        let test_size = crate::Size::new((crate::width(100), crate::height(100)));
-        let (readline, _) = Readline::try_new(
-            prompt_str.into(),
-            output_device,
-            input_device,
-            shutdown_sender,
-            ChannelCapacity::Minimal,
-            test_size,
-        )
-        .unwrap();
-
-        // Manually set buffer content for testing.
-        {
-            let mut line_state = readline.safe_line_state.lock().unwrap();
-            line_state.line = GCStringOwned::new("hello");
-            line_state.line_cursor_grapheme = seg_index(5);
-        }
-
-        assert!(!readline.get_buffer().is_empty());
-        assert_eq!(
-            readline.get_cursor_position_status(),
-            CursorPositionBoundsStatus::AtEnd
-        );
-        assert_eq!(readline.get_cursor_position(), seg_index(5));
-        assert_eq!(readline.get_buffer().as_str(), "hello");
-    }
-
-    #[tokio::test]
-    #[allow(clippy::needless_return)]
-    async fn test_editor_state_cursor_at_start_with_content() {
-        use crate::{GCStringOwned, seg_index};
-
-        let prompt_str = "> ";
-
-        if let TTYResult::IsNotInteractive = is_output_interactive() {
-            return;
-        }
-
-        let (output_device, _) = OutputDevice::new_mock();
-        let input_device = InputDevice::new_mock(smallvec::smallvec![]);
-        let (shutdown_sender, _) = broadcast::channel::<()>(1);
-        let test_size = crate::Size::new((crate::width(100), crate::height(100)));
-        let (readline, _) = Readline::try_new(
-            prompt_str.into(),
-            output_device,
-            input_device,
-            shutdown_sender,
-            ChannelCapacity::Minimal,
-            test_size,
-        )
-        .unwrap();
-
-        // Buffer has content but cursor is at start (like after pressing Home).
-        {
-            let mut line_state = readline.safe_line_state.lock().unwrap();
-            line_state.line = GCStringOwned::new("hello");
-            line_state.line_cursor_grapheme = seg_index(0);
-        }
-
-        assert!(!readline.get_buffer().is_empty());
-        assert_eq!(
-            readline.get_cursor_position_status(),
-            CursorPositionBoundsStatus::AtStart
-        );
-        assert_eq!(readline.get_cursor_position(), seg_index(0));
-        assert_eq!(readline.get_buffer().as_str(), "hello");
-    }
-}
-
-#[cfg(test)]
 mod test_streams {
     use super::*;
     use crate::core::test_fixtures::gen_input_stream;
@@ -1315,14 +1276,15 @@ mod test_pause_and_resume_support {
     use super::*;
     use crate::core::test_fixtures::StdoutMock;
     use manage_shared_writer_output::flush_internal;
-    use std::sync::Mutex;
 
     #[test]
     fn test_flush_internal_paused() {
         // Create a mock `LineState` with initial data.
         let test_size = crate::Size::new((crate::width(100), crate::height(100)));
-        let safe_line_state =
-            Arc::new(Mutex::new(LineState::new("> ".to_string(), test_size)));
+        let safe_line_state = Arc::new(crate::scoped_mutex!(
+            SPECIFIC,
+            LineState::new("> ".to_string(), test_size)
+        ));
 
         // Create a mock `SafePauseBuffer` with some paused lines.
         let mut pause_buffer = PauseBuffer::new();
@@ -1330,22 +1292,22 @@ mod test_pause_and_resume_support {
         pause_buffer.push("Paused line 2".into());
 
         // Create a mock `SafeIsPausedBuffer` with the pause buffer.
-        let safe_is_paused_buffer = Arc::new(Mutex::new(pause_buffer));
+        let safe_is_paused_buffer = Arc::new(StdMutex::new(pause_buffer));
 
         let mut stdout_mock = StdoutMock::default();
 
-        let line_state = safe_line_state.lock().unwrap();
+        safe_line_state.write(|line_state| {
+            // Call the `flush_internal` function.
+            let result = flush_internal(
+                &safe_is_paused_buffer,
+                LineStateLiveness::Paused,
+                line_state,
+                &mut stdout_mock,
+            );
 
-        // Call the `flush_internal` function.
-        let result = flush_internal(
-            &safe_is_paused_buffer,
-            LineStateLiveness::Paused,
-            line_state,
-            &mut stdout_mock,
-        );
-
-        // Assert that the function returns Ok(())
-        assert!(result.is_ok());
+            // Assert that the function returns Ok(())
+            assert!(result.is_ok());
+        });
 
         // Assert that the mock terminal received the expected output.
         assert_eq!(stdout_mock.get_copy_of_buffer_as_string_strip_ansi(), "");
@@ -1355,8 +1317,10 @@ mod test_pause_and_resume_support {
     fn test_flush_internal_not_paused() {
         // Create a mock `LineState` with initial data.
         let test_size = crate::Size::new((crate::width(100), crate::height(100)));
-        let safe_line_state =
-            Arc::new(Mutex::new(LineState::new("> ".to_string(), test_size)));
+        let safe_line_state = Arc::new(crate::scoped_mutex!(
+            SPECIFIC,
+            LineState::new("> ".to_string(), test_size)
+        ));
 
         // Create a mock `SafePauseBuffer` with some paused lines.
         let mut pause_buffer = PauseBuffer::new();
@@ -1364,22 +1328,22 @@ mod test_pause_and_resume_support {
         pause_buffer.push("Paused line 2".into());
 
         // Create a mock `SafeIsPausedBuffer` with the pause buffer.
-        let safe_is_paused_buffer = Arc::new(Mutex::new(pause_buffer));
+        let safe_is_paused_buffer = Arc::new(StdMutex::new(pause_buffer));
 
         let mut stdout_mock = StdoutMock::default();
 
-        let line_state = safe_line_state.lock().unwrap();
+        safe_line_state.write(|line_state| {
+            // Call the `flush_internal` function.
+            let result = flush_internal(
+                &safe_is_paused_buffer,
+                LineStateLiveness::NotPaused,
+                line_state,
+                &mut stdout_mock,
+            );
 
-        // Call the `flush_internal` function.
-        let result = flush_internal(
-            &safe_is_paused_buffer,
-            LineStateLiveness::NotPaused,
-            line_state,
-            &mut stdout_mock,
-        );
-
-        // Assert that the function returns Ok(())
-        assert!(result.is_ok());
+            // Assert that the function returns Ok(())
+            assert!(result.is_ok());
+        });
 
         // Assert that the mock terminal received the expected output.
         assert_eq!(

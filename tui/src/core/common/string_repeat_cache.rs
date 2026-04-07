@@ -1,11 +1,21 @@
-// Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
+// Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! # String Repeat Cache Module
+// cspell:words LIST_SPACE_DISPLAY HEADING SPACE_CHAR SPACE_CACHE LIST_SPACE_DISPLAY_CHAR
+// cspell:words HORIZ_LINE_CACHE
+
+//! String Repeat Cache Module
 //!
-//! This module provides high-performance string repetition functions that are optimized
-//! for TUI rendering hot paths.
+//! This module provides a mechanism to cache strings of repeated characters (like spaces,
+//! horizontal lines, and hash symbols) to avoid frequent allocations.
 //!
-//! ## Why Cache Instead of `String::repeat()`?
+//! It uses two levels of caching:
+//! 1. **Static Cache**: Pre-computed strings for common sizes (e.g., 0-64 spaces). These
+//!    are zero-cost lookups that return `&'static str`.
+//! 2. **Dynamic Cache**: A thread-safe [`ScopedMutex<HashMap>`] for larger or less common
+//!    sizes. This uses the **Scoped Access** pattern to ensure safety and prevent
+//!    deadlocks.
+//!
+//! # Why Cache Instead of `String::repeat()`?
 //!
 //! In a TUI application, string repetition operations (spaces, lines, hashes) are called
 //! extremely frequently during rendering:
@@ -16,7 +26,7 @@
 //! - **Logging operations**: Debug output often needs formatted alignment
 //! - **Parser operations**: Markdown parsing requires indentation tracking
 //!
-//! ### Performance Impact
+//! ## Performance Impact
 //!
 //! Without caching, each `String::repeat()` call:
 //! 1. Allocates new memory on the heap
@@ -27,7 +37,7 @@
 //! - Without cache: 50 allocations per frame × 60 fps = 3,000 allocations/second
 //! - With cache: 0 allocations (after warm-up) for common cases
 //!
-//! ### Caching Strategy
+//! ## Caching Strategy
 //!
 //! We use a two-tier caching approach:
 //!
@@ -38,34 +48,30 @@
 //!
 //! 2. **Dynamic runtime cache** (for edge cases):
 //!    - Handles counts beyond pre-computed ranges
-//!    - Thread-safe with Mutex protection
+//!    - Thread-safe using the **Scoped Access** pattern via [`ScopedMutex<HashMap>`]
 //!    - Prevents memory leaks (unlike [`Box::leak()`])
 //!
-//! ### Memory Trade-off
+//! ## Memory Trade-off
 //!
 //! Total static memory usage:
 //! - Space cache: 65 strings × average 32 chars = ~2KB
 //! - Line cache: 65 strings × average 32 chars = ~2KB
 //! - Hash cache: 11 strings × average 5 chars = ~55 bytes
 //! - Total: ~4KB of memory for massive performance gains
-//!
-//! This is a negligible memory cost for eliminating thousands of allocations per second
-//! in the rendering hot path.
 
-use crate::md_parser::md_parser_constants::{HEADING, LIST_SPACE_DISPLAY,
-                                            LIST_SPACE_DISPLAY_CHAR, SPACE, SPACE_CHAR};
-use std::{borrow::Cow,
-          collections::HashMap,
-          sync::{LazyLock, Mutex}};
+use crate::{DeadlockPreventionPolicy::OptOut, ScopedMutex, scoped_mutex};
+use std::{borrow::Cow, collections::HashMap, sync::LazyLock};
+
+const SPACE_CHAR: char = ' ';
+const SPACE: &str = " ";
+const LIST_SPACE_DISPLAY_CHAR: char = '─';
+const LIST_SPACE_DISPLAY: &str = "─";
+const HEADING: &str = "#";
 
 /// Static cache for space strings to avoid repeated allocations.
-/// Pre-computes space strings for common lengths (0 to 64 spaces).
-/// This cache is used across the entire TUI library to optimize
-/// performance in render loops and parsers.
+/// Pre-computes space strings for common lengths (0 to 64 chars).
 static SPACE_CACHE: LazyLock<HashMap<usize, String>> = LazyLock::new(|| {
     let mut cache = HashMap::new();
-    // Pre-populate cache for common space lengths (0 to 64 spaces).
-    // This covers most practical use cases for indentation, padding, and formatting.
     for i in 0..=64 {
         cache.insert(i, SPACE.repeat(i));
     }
@@ -73,20 +79,16 @@ static SPACE_CACHE: LazyLock<HashMap<usize, String>> = LazyLock::new(|| {
 });
 
 /// Static cache for horizontal line strings to avoid repeated allocations.
-/// Pre-computes horizontal line strings for common lengths (0 to 64 chars).
-/// This is commonly used for TUI borders, separators, and decorations.
+/// Pre-computes line strings for common lengths (0 to 64 chars).
 static HORIZ_LINE_CACHE: LazyLock<HashMap<usize, String>> = LazyLock::new(|| {
     let mut cache = HashMap::new();
-    // Pre-populate cache for common horizontal line lengths.
     for i in 0..=64 {
         cache.insert(i, LIST_SPACE_DISPLAY.repeat(i));
     }
     cache
 });
 
-/// Dynamic cache for large strings that don't fit in the static caches.
-///
-/// ## Purpose
+/// Dynamic cache for repeated strings that aren't in the static caches.
 ///
 /// While the static caches handle common cases (0-64 for spaces/lines, 0-10 for hashes),
 /// some edge cases require larger strings:
@@ -107,10 +109,22 @@ static HORIZ_LINE_CACHE: LazyLock<HashMap<usize, String>> = LazyLock::new(|| {
 /// - [`usize`]: The count of repetitions
 /// - This allows sharing the cache across all string types
 ///
-/// ### Thread Safety: [`Mutex<HashMap<...>>`]
-/// - Multiple threads may render simultaneously
-/// - [`Mutex`] ensures safe concurrent access
-/// - Slight performance cost is acceptable for edge cases
+/// # Architectural Rationale for [`OptOut`] (`OPT_OUT`)
+///
+/// We use the `OPT_OUT` policy here because:
+/// 1. **Hot Path Performance**: This cache is in the rendering hot path. To maintain 60
+///    FPS performance, we **intentionally bypass** the global ledger and deadlock
+///    protection overhead. This is a "Pattern without Protection" choice.
+/// 2. **Thread Safety**: Multiple threads may render simultaneously (e.g., during
+///    background log rendering or complex UI updates). [`ScopedMutex`] still uses the
+///    **Scoped Access pattern** (closure-based API) to prevent manual lock management
+///    errors, even though it bypasses the crate's deadlock protections.
+/// 3. **Leaf Utility**: The string repeat cache is a leaf-level utility. It does not call
+///    into other components that might acquire locks, making the decision to forgo
+///    deadlock protections an acceptable architectural trade-off for this specific
+///    component.
+///
+/// See the [Parameters] section in [`ScopedMutex`] for more info.
 ///
 /// ### Memory Management
 /// - Unlike [`Box::leak()`] (which intentionally leaks memory), this cache:
@@ -134,11 +148,16 @@ static HORIZ_LINE_CACHE: LazyLock<HashMap<usize, String>> = LazyLock::new(|| {
 ///
 /// [`Box::leak()`]: std::boxed::Box::leak
 /// [`char`]: std::primitive::char
+/// [`DeadlockPreventionPolicy::OptOut`]: variant@crate::DeadlockPreventionPolicy::OptOut
 /// [`HashMap`]: std::collections::HashMap
-/// [`Mutex`]: std::sync::Mutex
+/// [`OptOut`]: variant@crate::DeadlockPreventionPolicy::OptOut
+/// [`ScopedMutex<_, DeadlockPreventionPolicy::OptOut>`]: crate::ScopedMutex
+/// [`ScopedMutex`]: crate::core::common::ScopedMutex
 /// [`usize`]: std::primitive::usize
-pub static DYNAMIC_CACHE: LazyLock<Mutex<HashMap<(char, usize), String>>> =
-    LazyLock::new(|| Mutex::new(HashMap::new()));
+/// [Parameters]: crate::ScopedMutex#parameters
+pub static DYNAMIC_CACHE: LazyLock<
+    ScopedMutex<HashMap<(char, usize), String>, { OptOut }>,
+> = LazyLock::new(|| scoped_mutex!(OPT_OUT, HashMap::new()));
 
 /// Static cache for heading hash strings to avoid repeated allocations.
 /// Pre-computes heading hash strings for common lengths (0 to 10 chars).
@@ -167,11 +186,12 @@ fn get_cached_repeated_string(
         Cow::Borrowed("")
     } else {
         // Use dynamic cache for large counts.
-        let mut cache = DYNAMIC_CACHE.lock().unwrap();
-        let repeated_str = cache
-            .entry((char_to_repeat, count))
-            .or_insert_with(|| str_to_repeat.repeat(count))
-            .clone();
+        let repeated_str = DYNAMIC_CACHE.write(|cache| {
+            cache
+                .entry((char_to_repeat, count))
+                .or_insert_with(|| str_to_repeat.repeat(count))
+                .clone()
+        });
         Cow::Owned(repeated_str)
     }
 }
@@ -194,10 +214,11 @@ fn get_cached_repeated_string(
 ///
 /// # Panics
 ///
-/// [`DYNAMIC_CACHE`] is a [`Mutex`], so it can panic if poisoned.
+/// [`DYNAMIC_CACHE`] uses the **Scoped Access** pattern via [`ScopedMutex`], so it can
+/// panic if the internal mutex is poisoned.
 ///
 /// [`DYNAMIC_CACHE`]: crate::DYNAMIC_CACHE
-/// [`Mutex`]: std::sync::Mutex
+/// [`ScopedMutex`]: crate::core::common::ScopedMutex
 #[must_use]
 pub fn get_spaces(count: usize) -> Cow<'static, str> {
     get_cached_repeated_string(count, &SPACE_CACHE, SPACE_CHAR, SPACE)
@@ -221,10 +242,11 @@ pub fn get_spaces(count: usize) -> Cow<'static, str> {
 ///
 /// # Panics
 ///
-/// [`DYNAMIC_CACHE`] is a [`Mutex`], so it can panic if poisoned.
+/// [`DYNAMIC_CACHE`] uses the **Scoped Access** pattern via [`ScopedMutex`], so it can
+/// panic if the internal mutex is poisoned.
 ///
 /// [`DYNAMIC_CACHE`]: crate::DYNAMIC_CACHE
-/// [`Mutex`]: std::sync::Mutex
+/// [`ScopedMutex`]: crate::core::common::ScopedMutex
 #[must_use]
 pub fn get_horiz_lines(count: usize) -> Cow<'static, str> {
     get_cached_repeated_string(
@@ -253,10 +275,11 @@ pub fn get_horiz_lines(count: usize) -> Cow<'static, str> {
 ///
 /// # Panics
 ///
-/// [`DYNAMIC_CACHE`] is a [`Mutex`], so it can panic if poisoned.
+/// [`DYNAMIC_CACHE`] uses the **Scoped Access** pattern via [`ScopedMutex`], so it can
+/// panic if the internal mutex is poisoned.
 ///
 /// [`DYNAMIC_CACHE`]: crate::DYNAMIC_CACHE
-/// [`Mutex`]: std::sync::Mutex
+/// [`ScopedMutex`]: crate::core::common::ScopedMutex
 #[must_use]
 pub fn get_hashes(count: usize) -> Cow<'static, str> {
     get_cached_repeated_string(count, &HASH_CACHE, '#', HEADING)
@@ -381,10 +404,11 @@ mod tests {
         assert_eq!(hashes_20_first, hashes_20_second);
 
         // Verify the cache contains these entries.
-        let cache = DYNAMIC_CACHE.lock().unwrap();
-        assert!(cache.contains_key(&(SPACE_CHAR, 100)));
-        assert!(cache.contains_key(&(LIST_SPACE_DISPLAY_CHAR, 100)));
-        assert!(cache.contains_key(&('#', 20)));
+        DYNAMIC_CACHE.read(|cache| {
+            assert!(cache.contains_key(&(SPACE_CHAR, 100)));
+            assert!(cache.contains_key(&(LIST_SPACE_DISPLAY_CHAR, 100)));
+            assert!(cache.contains_key(&('#', 20)));
+        });
     }
 
     #[test]
@@ -399,10 +423,11 @@ mod tests {
         assert_eq!(spaces_90.len(), 90);
 
         // All should be in the dynamic cache.
-        let cache = DYNAMIC_CACHE.lock().unwrap();
-        assert!(cache.contains_key(&(SPACE_CHAR, 70)));
-        assert!(cache.contains_key(&(SPACE_CHAR, 80)));
-        assert!(cache.contains_key(&(SPACE_CHAR, 90)));
+        DYNAMIC_CACHE.read(|cache| {
+            assert!(cache.contains_key(&(SPACE_CHAR, 70)));
+            assert!(cache.contains_key(&(SPACE_CHAR, 80)));
+            assert!(cache.contains_key(&(SPACE_CHAR, 90)));
+        });
     }
 
     #[test]
@@ -432,13 +457,14 @@ mod tests {
         }
 
         // Verify all entries are in the cache.
-        let cache = DYNAMIC_CACHE.lock().unwrap();
-        for i in 0..10 {
-            let base = 100 + i * 10;
-            assert!(cache.contains_key(&(SPACE_CHAR, base)));
-            assert!(cache.contains_key(&(LIST_SPACE_DISPLAY_CHAR, base)));
-            assert!(cache.contains_key(&('#', base)));
-        }
+        DYNAMIC_CACHE.read(|cache| {
+            for i in 0..10 {
+                let base = 100 + i * 10;
+                assert!(cache.contains_key(&(SPACE_CHAR, base)));
+                assert!(cache.contains_key(&(LIST_SPACE_DISPLAY_CHAR, base)));
+                assert!(cache.contains_key(&('#', base)));
+            }
+        });
     }
 
     #[test]
@@ -468,7 +494,8 @@ mod tests {
         assert!(matches!(result, Cow::Owned(_)));
 
         // Verify it's in the dynamic cache.
-        let cache = DYNAMIC_CACHE.lock().unwrap();
-        assert!(cache.contains_key(&('y', 5)));
+        DYNAMIC_CACHE.read(|cache| {
+            assert!(cache.contains_key(&('y', 5)));
+        });
     }
 }

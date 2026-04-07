@@ -1,7 +1,7 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::{OffscreenBuffer, PixelChar};
-use crate::{ArrayOverflowResult, ColIndex, LengthOps, Pos, RowIndex, row};
+use crate::{ArrayOverflowResult, ColIndex, LengthOps, Pos, RowIndex, ok, row};
 use std::ops::Range;
 
 /// Buffer manipulation methods - provides encapsulated access to buffer data.
@@ -51,7 +51,7 @@ impl OffscreenBuffer {
             "Character assignment failed at position {pos:?}"
         );
 
-        Ok(())
+        ok!()
     }
 
     /// Fill a range of characters in a line with the specified character.
@@ -74,7 +74,7 @@ impl OffscreenBuffer {
         };
 
         line[start_col..end_col].fill(char);
-        Ok(())
+        ok!()
     }
 
     /// Copy characters within a line from source range to destination position.
@@ -105,7 +105,7 @@ impl OffscreenBuffer {
 
         // Perform the copy operation.
         line.copy_within(source_start..source_end, dest_start.as_usize());
-        Ok(())
+        ok!()
     }
 }
 

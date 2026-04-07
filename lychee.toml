@@ -35,4 +35,10 @@ exclude = [
     "api\\.github\\.com/repos/.*%7B",
     # crates.io API template URLs with {placeholders}.
     "crates\\.io/api/.*%7B",
+    # Claude.ai blocks scrapers.
+    "^https?://claude\\.ai/",
+    # Star-history often has transient 503s or blocks scrapers.
+    "^https?://api\\.star-history\\.com/",
+    # Medium blocks scrapers.
+    "^https?://medium\\.com/",
 ]

@@ -110,13 +110,15 @@ mod tests {
 
         let handles: Vec<_> = (0..MAX_THREAD_COUNT)
             .map(|_| {
-                let shared_counter = Arc::clone(&counter);
-                thread::spawn(move || {
-                    let mut seen = Vec::with_capacity(INCREMENTS_PER_THREAD);
-                    for _ in 0..INCREMENTS_PER_THREAD {
-                        seen.push(shared_counter.increment());
+                thread::spawn({
+                    let counter = Arc::clone(&counter);
+                    move || {
+                        let mut seen = Vec::with_capacity(INCREMENTS_PER_THREAD);
+                        for _ in 0..INCREMENTS_PER_THREAD {
+                            seen.push(counter.increment());
+                        }
+                        seen
                     }
-                    seen
                 })
             })
             .collect();
@@ -157,10 +159,12 @@ mod tests {
 
         let handles: Vec<_> = (0..MAX_THREAD_COUNT)
             .map(|_| {
-                let counter = Arc::clone(&counter);
-                thread::spawn(move || {
-                    for _ in 0..INCREMENTS_PER_THREAD {
-                        counter.increment();
+                thread::spawn({
+                    let counter = Arc::clone(&counter);
+                    move || {
+                        for _ in 0..INCREMENTS_PER_THREAD {
+                            counter.increment();
+                        }
                     }
                 })
             })

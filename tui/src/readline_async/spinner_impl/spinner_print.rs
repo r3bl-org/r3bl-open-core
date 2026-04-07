@@ -1,7 +1,7 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{CommonResult, LockedOutputDevice, OutputDevice, SharedWriter, SpinnerStyle,
-            lock_output_device_as_mut, ok, queue_commands, queue_commands_no_lock};
+use crate::{CommonResult, LockedOutputDevice, OutputDevice, SharedWriter, SpinnerStyle, ok,
+            queue_commands, queue_commands_no_lock};
 use crossterm::{cursor::{Hide, MoveToColumn, MoveToNextLine, MoveToPreviousLine, Show},
                 style::Print,
                 terminal::{Clear, ClearType}};
@@ -18,25 +18,27 @@ fn clear_lines_for_spinner(
         return ok!();
     }
 
-    let writer = lock_output_device_as_mut!(output_device);
+    output_device.write(|writer| {
+        queue_commands_no_lock!(writer, Hide, Clear(ClearType::CurrentLine));
 
-    queue_commands_no_lock!(writer, Hide, Clear(ClearType::CurrentLine));
+        // Clear subsequent lines by moving down and clearing. This loop runs
+        // (num_lines_to_clear - 1) times.
+        for _ in 1..num_lines_to_clear {
+            queue_commands_no_lock!(writer, MoveToNextLine(1), Clear(ClearType::CurrentLine));
+        }
 
-    // Clear subsequent lines by moving down and clearing. This loop runs
-    // (num_lines_to_clear - 1) times.
-    for _ in 1..num_lines_to_clear {
-        queue_commands_no_lock!(writer, MoveToNextLine(1), Clear(ClearType::CurrentLine));
-    }
+        // Move cursor back to the start of the first line that was cleared. If
+        // num_lines_to_clear is 1, no downward movement occurred, so no upward movement
+        // is needed. Otherwise, move up by (num_lines_to_clear - 1) lines.
+        if num_lines_to_clear > 1 {
+            queue_commands_no_lock!(writer, MoveToPreviousLine(num_lines_to_clear - 1));
+        }
+        queue_commands_no_lock!(writer, MoveToColumn(0));
 
-    // Move cursor back to the start of the first line that was cleared. If
-    // num_lines_to_clear is 1, no downward movement occurred, so no upward movement
-    // is needed. Otherwise, move up by (num_lines_to_clear - 1) lines.
-    if num_lines_to_clear > 1 {
-        queue_commands_no_lock!(writer, MoveToPreviousLine(num_lines_to_clear - 1));
-    }
-    queue_commands_no_lock!(writer, MoveToColumn(0));
+        writer.flush().into_diagnostic()?;
 
-    writer.flush().into_diagnostic()?;
+        Ok::<(), miette::Report>(())
+    })?;
 
     ok!()
 }
@@ -87,9 +89,10 @@ pub fn print_tick_interval_msg(
         MoveToColumn(0)
     );
 
-    lock_output_device_as_mut!(output_device)
-        .flush()
-        .into_diagnostic()?;
+    output_device.write(|writer| {
+        writer.flush().into_diagnostic()?;
+        Ok::<(), miette::Report>(())
+    })?;
 
     ok!()
 }
@@ -106,31 +109,33 @@ pub fn print_tick_final_msg(
     output_device: OutputDevice,
     maybe_shared_writer: &Option<SharedWriter>,
 ) -> CommonResult<()> {
-    let writer = lock_output_device_as_mut!(output_device);
+    output_device.write(|writer| {
+        queue_commands_no_lock!(
+            writer,
+            // Ensure cursor is at the beginning of the spinner line. This is usually true
+            // if called after print_tick_interval_msg, but it's safer to be explicit.
+            MoveToColumn(0),
+            // Clear the current line (where the spinner interval message was).
+            Clear(ClearType::CurrentLine),
+            // Print the final output on this cleared line. The \n will move the cursor to
+            // the beginning of the next line.
+            Print(format!("{output}\n")),
+            // Now, from the current cursor position (start of the line after the final
+            // message), clear downwards. This is to clean up any other concurrent output
+            // that might have appeared below the spinner.
+            Clear(ClearType::FromCursorDown)
+        );
 
-    queue_commands_no_lock!(
-        writer,
-        // Ensure cursor is at the beginning of the spinner line. This is usually true
-        // if called after print_tick_interval_msg, but it's safer to be explicit.
-        MoveToColumn(0),
-        // Clear the current line (where the spinner interval message was).
-        Clear(ClearType::CurrentLine),
-        // Print the final output on this cleared line. The \n will move the cursor to
-        // the beginning of the next line.
-        Print(format!("{output}\n")),
-        // Now, from the current cursor position (start of the line after the final
-        // message), clear downwards. This is to clean up any other concurrent output
-        // that might have appeared below the spinner.
-        Clear(ClearType::FromCursorDown)
-    );
+        // Only run this if the spinner is not running in a `ReadlineAsyncContext` context.
+        if maybe_shared_writer.is_none() {
+            // We don't care about the result of this operation.
+            drop(print_end_if_standalone(writer));
+        }
 
-    // Only run this if the spinner is not running in a `ReadlineAsyncContext` context.
-    if maybe_shared_writer.is_none() {
-        // We don't care about the result of this operation.
-        print_end_if_standalone(writer).ok();
-    }
+        writer.flush().into_diagnostic()?;
 
-    writer.flush().into_diagnostic()?;
+        Ok::<(), miette::Report>(())
+    })?;
 
     ok!()
 }

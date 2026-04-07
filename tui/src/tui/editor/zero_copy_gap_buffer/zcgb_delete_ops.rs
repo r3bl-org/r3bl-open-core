@@ -101,9 +101,7 @@
 //! [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
 
 use super::ZeroCopyGapBuffer;
-use crate::{ArrayBoundsCheck, ArrayOverflowResult, ByteIndex, ByteOffset,
-            LINE_FEED_BYTE, LengthOps, NULL_BYTE, RangeBoundsExt, RangeValidityStatus,
-            RowIndex, SegIndex, byte_index, len, seg_length};
+use crate::{ArrayBoundsCheck, ArrayOverflowResult, ByteIndex, ByteOffset, LINE_FEED_BYTE, LengthOps, NULL_BYTE, RangeBoundsExt, RangeValidityStatus, RowIndex, SegIndex, byte_index, len, ok, seg_length};
 use miette::{Result, miette};
 use std::ops::Range;
 
@@ -159,7 +157,7 @@ impl ZeroCopyGapBuffer {
         // Rebuild segments for this line.
         self.rebuild_line_segments(line_index)?;
 
-        Ok(())
+        ok!()
     }
 
     /// Delete a range of grapheme clusters
@@ -202,7 +200,7 @@ impl ZeroCopyGapBuffer {
             != RangeValidityStatus::Valid
         {
             if start_seg >= end_seg {
-                return Ok(()); // Empty range - nothing to delete
+                return ok!(); // Empty range - nothing to delete
             }
             return Err(miette!(
                 "Invalid range: start {} must be less than end {} and within segment count {}",
@@ -233,7 +231,7 @@ impl ZeroCopyGapBuffer {
         // Rebuild segments for this line.
         self.rebuild_line_segments(line_index)?;
 
-        Ok(())
+        ok!()
     }
 
     /// Delete bytes within a specified range using line-relative byte positions
@@ -280,7 +278,7 @@ impl ZeroCopyGapBuffer {
         // Validate range using type-safe bounds checking.
         if start_index >= end_index {
             // Range is empty or inverted - nothing to delete.
-            return Ok(());
+            return ok!();
         }
 
         // Check if start position is within content bounds using type-safe overflow
@@ -349,7 +347,7 @@ impl ZeroCopyGapBuffer {
         })?;
         line_info_mut.content_byte_len = new_content_len;
 
-        Ok(())
+        ok!()
     }
 
     // The [`rebuild_line_segments`] method is now in

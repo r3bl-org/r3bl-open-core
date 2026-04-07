@@ -205,7 +205,7 @@ function main
             return $clippy_status
         case full
             # Full mode: comprehensive pre-commit check
-            # Runs: check + build + clippy + tests + doctests + docs + windows + lychee
+            # Runs: check + build + clippy + tests + doctests + doc build + windows build + lychee
             check_config_changed $CHECK_TARGET_DIR $CONFIG_FILES_TO_WATCH
 
             ensure_toolchain_installed
@@ -217,7 +217,7 @@ function main
             end
 
             echo ""
-            echo "🚀 Running comprehensive checks (check + build + clippy + tests + doctests + docs + windows + lychee)..."
+            echo "🚀 Running comprehensive checks (check + build + clippy + tests + doctests + doc build + windows build + lychee)..."
 
             # Run all checks with recovery (ICE, stale artifacts)
             run_full_checks_with_recovery
@@ -248,7 +248,7 @@ function main
                 set_color green --bold
                 echo "["(timestamp)"] ✅ All comprehensive checks passed!"
                 set_color normal
-                send_system_notification "Full Checks Complete ($WORKSPACE_NAME) ✅" "check, build, clippy, tests, doctests, docs, windows, lychee all passed" "success" $NOTIFICATION_EXPIRE_MS
+                send_system_notification "Full Checks Complete ($WORKSPACE_NAME) ✅" "check, build, clippy, tests, doctests, doc build, windows build, lychee all passed" "success" $NOTIFICATION_EXPIRE_MS
             else
                 echo ""
                 set_color red --bold
@@ -278,13 +278,13 @@ function main
 
             echo ""
             echo "⚡ Building documentation (quick-doc, no ext crate links)..."
-            run_check_with_recovery check_docs_quick "docs"
+            run_check_with_recovery check_docs_quick "doc build"
             set -l doc_status $status
 
             if test $doc_status -eq 2
                 # Recoverable error - cleanup and retry once
                 cleanup_for_recovery $CHECK_TARGET_DIR_DOC_STAGING_QUICK
-                run_check_with_recovery check_docs_quick "docs"
+                run_check_with_recovery check_docs_quick "doc build"
                 set doc_status $status
                 hint_toolchain_update_on_persistent_failure $doc_status
             end
@@ -325,13 +325,13 @@ function main
 
             echo ""
             echo "📚 Building documentation (full, with deps)..."
-            run_check_with_recovery check_docs_full "docs"
+            run_check_with_recovery check_docs_full "doc build"
             set -l doc_status $status
 
             if test $doc_status -eq 2
                 # Recoverable error - cleanup and retry once
                 cleanup_for_recovery $CHECK_TARGET_DIR_DOC_STAGING_FULL
-                run_check_with_recovery check_docs_full "docs"
+                run_check_with_recovery check_docs_full "doc build"
                 set doc_status $status
                 hint_toolchain_update_on_persistent_failure $doc_status
             end
@@ -463,7 +463,7 @@ function main
             # Log and send desktop notification for final result
             if test $check_status -eq 0
                 log_message "✅ All checks passed!"
-                send_system_notification "Build Checks Complete ($WORKSPACE_NAME) ✅" "All tests, doctests, and docs passed" "success" $NOTIFICATION_EXPIRE_MS
+                send_system_notification "Build Checks Complete ($WORKSPACE_NAME) ✅" "All tests, doctests, and doc build passed" "success" $NOTIFICATION_EXPIRE_MS
             else
                 log_message "❌ Checks failed"
                 send_system_notification "Build Checks Failed ($WORKSPACE_NAME) ❌" "One or more checks failed - see terminal" "critical" $NOTIFICATION_EXPIRE_MS

@@ -44,24 +44,17 @@ pub use terminal_io::*;
 pub use test_fixtures::*;
 pub use tui_style::*;
 pub use tui_styled_text::*;
-// Needed for integration_tests module.
-#[allow(ambiguous_glob_reexports)]
 pub use resilient_reactor_thread::*;
-// Needed for integration_tests module.
-#[allow(ambiguous_glob_reexports)]
 pub use term::*;
-// Needed for integration_tests module.
-#[allow(ambiguous_glob_reexports)]
 pub use ansi::*;
-// Needed for integration_tests module.
-#[allow(ambiguous_glob_reexports)]
 pub use common::*;
 
 // Rustdoc search link fixes.
 
 #[cfg(any(test, doc))] // Guard needed: ansi::constants sub-modules are only pub in doc/test builds.
 #[doc(inline)] // Create doc pages at re-export path so rustdoc search links resolve.
-pub use ansi::{csi, dsr, esc, generic, input_sequences, mouse, raw_mode, sgr, utf8};
+pub use ansi::{csi, dsr, esc, generic, input_sequences, raw_mode_constants, sgr, utf8};
+
 #[doc(inline)] // Create doc pages at re-export path so rustdoc search links resolve.
 pub use coordinates::{bounds_check, buffer_coords, byte, percent_spec, primitives,
                       vt_100_ansi_coords};

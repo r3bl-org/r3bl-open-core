@@ -2,7 +2,7 @@
 
 use r3bl_tui::{DefaultIoDevices, InlineString, TuiAvailabilityChooseExt, TuiColor,
                assert_terminal_is_interactive, choose, cli_text_inline, get_size,
-               height, new_style,
+               height, new_style, ok,
                readline_async::{HowToChoose, StyleSheet},
                set_mimalloc_in_main, usize, width};
 use serde::{Deserialize, Serialize};
@@ -110,7 +110,7 @@ pub async fn main() -> miette::Result<()> {
 
     display_footer(score, &all_questions_and_answers, line_length);
 
-    Ok(())
+    ok!()
 }
 
 #[derive(Debug, PartialEq)]
@@ -243,7 +243,7 @@ fn check_user_input_and_display_result(
     println!(
         "{a} {b} {c}",
         a = cli_text_inline(
-            format!("{}. {}", question_number, &question_data.question),
+            format!("{}. {}", question_number, question_data.question),
             new_style!(color_bg: {background_color}),
         ),
         b = user_input_str,

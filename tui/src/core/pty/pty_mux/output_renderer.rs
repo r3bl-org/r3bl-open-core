@@ -10,14 +10,7 @@
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 
 use super::ProcessManager;
-use crate::{FlushKind, GCStringOwned, IndexOps, OffscreenBuffer, OutputDevice,
-            PixelChar, Pos, RenderOpsLocalData, SPACE_CHAR, Size, TuiStyle, col,
-            core::coordinates::{idx, len},
-            lock_output_device_as_mut, print_text_with_attributes, row,
-            tui::terminal_lib_backends::{OffscreenBufferPaint, OffscreenBufferPaintImpl},
-            tui_color,
-            tui_style_attrib::Bold,
-            tui_style_attribs, width};
+use crate::{FlushKind, GCStringOwned, IndexOps, OffscreenBuffer, OutputDevice, PixelChar, Pos, RenderOpsLocalData, SPACE_CHAR, Size, TuiStyle, col, core::coordinates::{idx, len}, ok, print_text_with_attributes, row, tui::terminal_lib_backends::{OffscreenBufferPaint, OffscreenBufferPaintImpl}, tui_color, tui_style_attrib::Bold, tui_style_attribs, width};
 
 /// [`RowHeight`] reserved for the status bar at the bottom of the terminal.
 ///
@@ -83,7 +76,7 @@ impl OutputRenderer {
         // Paint the composite buffer to terminal.
         paint_buffer(&composite_buffer, output_device);
 
-        Ok(())
+        ok!()
     }
 
     /// Composite status bar into the last row of the given [`OffscreenBuffer`].
@@ -243,11 +236,13 @@ impl OutputRenderer {
 fn paint_buffer(ofs_buf: &OffscreenBuffer, output_device: &OutputDevice) {
     let mut crossterm_impl = OffscreenBufferPaintImpl {};
     let render_ops = crossterm_impl.render(ofs_buf);
-    crossterm_impl.paint(
-        render_ops,
-        FlushKind::JustFlush,
-        ofs_buf.window_size, // Don't use self.terminal_size (may be different).
-        lock_output_device_as_mut!(output_device),
-        false, // is_mock = false
-    );
+    output_device.write(|out| {
+        crossterm_impl.paint(
+            render_ops,
+            FlushKind::JustFlush,
+            ofs_buf.window_size, // Don't use self.terminal_size (may be different).
+            out,
+            false, // is_mock = false
+        );
+    });
 }

@@ -54,8 +54,7 @@ impl IntoErr for miette::Report {
     fn into_err<T>(self) -> miette::Result<T> { Err(self) }
 }
 
-/// Common error struct. Read custom error docs
-/// [here].
+/// Common error struct. Read custom error docs [here].
 ///
 /// # Example
 ///
@@ -75,8 +74,9 @@ impl IntoErr for miette::Report {
 /// }
 /// ```
 ///
-/// [here]: https://doc.rust-lang.org/rust-by-example/error/multiple_error_types/define_error_type.html
-#[derive(Debug, Clone)]
+/// [here]:
+///     https://doc.rust-lang.org/rust-by-example/error/multiple_error_types/define_error_type.html
+#[derive(Debug, Clone, miette::Diagnostic)]
 pub struct CommonError {
     pub error_type: CommonErrorType,
     pub error_message: Option<String>,

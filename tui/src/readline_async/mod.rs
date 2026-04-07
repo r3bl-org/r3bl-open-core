@@ -338,14 +338,8 @@ pub mod spinner_impl;
 pub use choose_api::*;
 pub use choose_impl::*;
 pub use readline_async_api::*;
-// Needed for integration_tests module.
-#[allow(ambiguous_glob_reexports)]
 pub use spinner::*;
-// Needed for integration_tests module.
-#[allow(ambiguous_glob_reexports)]
 pub use readline_async_impl::*;
-// Needed for integration_tests module.
-#[allow(ambiguous_glob_reexports)]
 pub use spinner_impl::*;
 
 // r3bl-open-core crates.

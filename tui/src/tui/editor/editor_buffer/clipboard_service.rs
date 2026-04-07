@@ -1,8 +1,7 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::{ClipboardResult, ClipboardService};
-use crate::throws;
-use crate::DEBUG_TUI_COPY_PASTE;
+use crate::{DEBUG_TUI_COPY_PASTE, ok, throws};
 use copypasta_ext::{copypasta::ClipboardProvider, x11_fork::ClipboardContext};
 
 #[derive(Debug)]
@@ -36,7 +35,8 @@ impl ClipboardService for SystemClipboard {
 }
 
 pub mod clipboard_test_fixtures {
-    use super::{ClipboardResult, ClipboardService};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     #[derive(Debug, Default)]
     pub struct TestClipboard {
@@ -49,11 +49,11 @@ pub mod clipboard_test_fixtures {
             content: String,
         ) -> ClipboardResult<()> {
             self.content = content;
-            Ok(())
+            ok!()
         }
 
         fn try_to_get_content_from_clipboard(&mut self) -> ClipboardResult<String> {
-            Ok(self.content.clone())
+            ok!(self.content.clone())
         }
     }
 }

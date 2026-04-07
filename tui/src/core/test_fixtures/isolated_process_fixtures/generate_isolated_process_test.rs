@@ -88,7 +88,8 @@ macro_rules! generate_isolated_process_test {
     (
         $(#[$meta:meta])*
         $test_name:ident,
-        $controller_fn:ident, $controlled_fn:ident,
+        $controller_fn:ident,
+        $controlled_fn:ident,
         $stdin:expr, $stdout:expr, $stderr:expr
     ) => {
         $(#[$meta])*

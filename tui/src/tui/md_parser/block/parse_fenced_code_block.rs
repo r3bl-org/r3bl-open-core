@@ -315,7 +315,7 @@ mod tests {
             let lang = "bash";
             let code_lines = vec!["pip install foobar"];
             let input = ["```bash", "pip install foobar", "```", ""].join("\n");
-            println!("{:#?}", &input);
+            println!("{input:#?}");
             let (remainder, code_block_lines) = parse_fenced_code_block(&input).unwrap();
             assert_eq2!(remainder, "");
             assert_eq2!(

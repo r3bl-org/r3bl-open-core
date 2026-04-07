@@ -78,10 +78,10 @@
 //!
 //! Integration tests are organized by component:
 //!
-//! - **Output**: [`output::integration_tests`] — [`StdoutMock`]-based [`ANSI`] sequence
+//! - **Output**: [`output::direct_to_ansi_output_integration_tests`] — [`StdoutMock`]-based [`ANSI`] sequence
 //!   verification (cross-platform)
 //! - **Input**: [`input::integration_tests_stub`] — documentation module pointing to
-//!   [`PTY`]-based parser tests in [`vt_100_terminal_input_parser::integration_tests`]
+//!   [`PTY`]-based parser tests in [`vt_100_terminal_input_parser::vt_100_parser_integration_tests`]
 //!   (Linux-only).
 //!
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
@@ -97,8 +97,8 @@
 //!     mod@crate::terminal_lib_backends::direct_to_ansi::input::integration_tests_stub
 //! [`kqueue`]: https://man.freebsd.org/cgi/man.cgi?query=kqueue&sektion=2
 //! [`offscreen_buffer::paint_impl` mod docs]: mod@crate::offscreen_buffer::paint_impl
-//! [`output::integration_tests`]:
-//!     mod@crate::terminal_lib_backends::direct_to_ansi::output::integration_tests
+//! [`output::direct_to_ansi_output_integration_tests`]:
+//!     mod@crate::terminal_lib_backends::direct_to_ansi::output::direct_to_ansi_output_integration_tests
 //! [`PixelCharRenderer`]: crate::PixelCharRenderer
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`render_op_ir` mod docs]: mod@crate::render_op::render_op_ir
@@ -113,8 +113,8 @@
 //! [`StdoutMock`]: crate::StdoutMock
 //! [`terminal_lib_backends` mod docs]: mod@crate::tui::terminal_lib_backends
 //! [`tty`]: https://man7.org/linux/man-pages/man4/tty.4.html
-//! [`vt_100_terminal_input_parser::integration_tests`]:
-//!     mod@crate::vt_100_terminal_input_parser::integration_tests
+//! [`vt_100_terminal_input_parser::vt_100_parser_integration_tests`]:
+//!     mod@crate::vt_100_terminal_input_parser::vt_100_parser_integration_tests
 //! [rendering pipeline overview]:
 //!     mod@crate::terminal_lib_backends#rendering-pipeline-architecture
 

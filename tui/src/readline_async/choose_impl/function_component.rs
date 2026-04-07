@@ -1,7 +1,6 @@
 // Copyright (c) 2023-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{ChUnit, DEVELOPMENT_MODE, OutputDevice, ResizeHint, Size, queue_commands,
-            throws};
+use crate::{ChUnit, DEVELOPMENT_MODE, OutputDevice, ResizeHint, Size, ok, queue_commands, throws};
 use crossterm::{cursor::{MoveToNextLine, MoveToPreviousLine},
                 terminal::{Clear, ClearType}};
 
@@ -71,7 +70,7 @@ pub trait FunctionComponent<S: CalculateResizeHint> {
                     self.calculate_header_viewport_height(state)
                 }
                 // Nothing to do, since resize didn't happen.
-                None => return Ok(()),
+                None => return ok!(),
             };
 
             // Clear the viewport.

@@ -28,7 +28,7 @@
 //!     }
 //!     it => return it.into_err(),
 //! }
-//! # Ok(())
+//! # ok!()
 //! # }
 //! ```
 //!
@@ -78,4 +78,4 @@ pub use style::*;
 pub const DEVELOPMENT_MODE: bool = false;
 
 #[cfg(any(all(unix, doc), test))]
-mod integration_tests;
+mod choose_integration_tests;

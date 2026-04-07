@@ -81,10 +81,11 @@
 //! use crossterm::{self, *, terminal::*, style::*, cursor::*, event::*};
 //! use std::io::*;
 //! use std::collections::*;
+//! use r3bl_tui::*;
 //!
 //! pub fn test_crossterm_grapheme_cluster_width_calc() -> Result<()> {
 //!   // Enter raw mode, clear screen.
-//!   enable_raw_mode()?;
+//!   terminal::enable_raw_mode()?;
 //!   execute!(stdout(), EnterAlternateScreen)?;
 //!   execute!(stdout(), Clear(ClearType::All))?;
 //!   execute!(stdout(), MoveTo(0, 0))?;
@@ -116,7 +117,7 @@
 //!       value.orig_pos = orig_pos;
 //!       value.col_width = new_pos.0 - orig_pos.0;
 //!     }
-//!     Ok(())
+//!     ok!()
 //!   }
 //!
 //!   process_map(&mut map)?;
@@ -134,10 +135,10 @@
 //!   execute!(stdout(), terminal::Clear(ClearType::All))?;
 //!   execute!(stdout(), cursor::MoveTo(0, 0))?;
 //!   execute!(stdout(), LeaveAlternateScreen)?;
-//!   disable_raw_mode().expect("Unable to disable raw mode");
+//!   terminal::disable_raw_mode().expect("Unable to disable raw mode");
 //!   println!("map:{:#?}", map);
 //!
-//!   Ok(())
+//!   ok!()
 //! }
 //! ```
 //!

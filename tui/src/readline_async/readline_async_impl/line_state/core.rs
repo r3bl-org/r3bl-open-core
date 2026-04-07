@@ -2,9 +2,8 @@
 
 // cspell:words testx
 
-use crate::ok;
 use crate::{ColIndex, ColWidth, GCStringOwned, MemoizedLenMap, SegIndex, Size,
-            StringLength, width};
+            StringLength, ok, width};
 use std::io::{self, Write};
 
 /// This struct actually handles the line editing, and rendering. This works hand in hand
@@ -177,13 +176,14 @@ impl LineState {
 #[cfg(test)]
 mod tests {
     use super::{LineState, LineStateLiveness};
-    use crate::{GCStringOwned, History, InputEvent, Key, KeyPress, StdMutex,
-                core::test_fixtures::StdoutMock, seg_index, height, width, Size};
+    use crate::{GCStringOwned, History, InputEvent, Key, KeyPress, Size, StdMutex,
+                core::test_fixtures::StdoutMock, height, seg_index, width};
     use std::sync::Arc;
 
     #[tokio::test]
     async fn test_pause_resume_state() {
-        let mut line = LineState::new(String::new(), Size::new((width(100), height(100))));
+        let mut line =
+            LineState::new(String::new(), Size::new((width(100), height(100))));
         let stdout_mock = StdoutMock::default();
         let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
         let (history, _) = History::new();
@@ -193,43 +193,35 @@ mod tests {
         line.line_cursor_grapheme = seg_index(4);
 
         // Pause the line state.
-        line.set_paused(
-            LineStateLiveness::Paused,
-            &mut *safe_output_terminal.lock().unwrap(),
-        )
-        .unwrap();
+        safe_output_terminal.write(|term| {
+            line.set_paused(LineStateLiveness::Paused, term).unwrap();
+        });
 
         // Try to send input while paused - should be ignored.
         let char_event = InputEvent::Keyboard(KeyPress::Plain {
             key: Key::Character('x'),
         });
 
-        let result = line.apply_event_and_render(
-            &char_event,
-            &mut *safe_output_terminal.lock().unwrap(),
-            &safe_history,
-        );
+        safe_output_terminal.write(|term| {
+            let result = line.apply_event_and_render(&char_event, term, &safe_history);
+            assert!(matches!(result, Ok(None)));
+        });
 
-        assert!(matches!(result, Ok(None)));
         // Line should be unchanged because it's paused.
         assert_eq!(line.line.as_str(), "test");
         assert_eq!(line.line_cursor_grapheme, seg_index(4));
 
         // Resume the line state.
-        line.set_paused(
-            LineStateLiveness::NotPaused,
-            &mut *safe_output_terminal.lock().unwrap(),
-        )
-        .unwrap();
+        safe_output_terminal.write(|term| {
+            line.set_paused(LineStateLiveness::NotPaused, term).unwrap();
+        });
 
         // Now input should work.
-        let result = line.apply_event_and_render(
-            &char_event,
-            &mut *safe_output_terminal.lock().unwrap(),
-            &safe_history,
-        );
+        safe_output_terminal.write(|term| {
+            let result = line.apply_event_and_render(&char_event, term, &safe_history);
+            assert!(matches!(result, Ok(None)));
+        });
 
-        assert!(matches!(result, Ok(None)));
         // Line should now have the character appended.
         assert_eq!(line.line.as_str(), "testx");
     }

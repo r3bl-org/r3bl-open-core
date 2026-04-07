@@ -71,7 +71,7 @@ mod tests_github_api {
                 Ok(Ok(tag)) => {
                     assert!(!tag.is_empty());
                     println!("Latest tag: {}", fg_magenta(&tag));
-                    Ok(())
+                    ok!()
                 }
                 Ok(Err(err)) => Err(format!("API error: {err:?}")),
                 Err(_) => Err("Timeout: GitHub was too slow".to_string()),

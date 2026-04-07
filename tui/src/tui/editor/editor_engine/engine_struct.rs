@@ -187,17 +187,17 @@ mod tests {
         // Test EditMode variants.
         assert_eq2!(EditMode::ReadOnly, EditMode::ReadOnly);
         assert_eq2!(EditMode::ReadWrite, EditMode::ReadWrite);
-        assert!(EditMode::ReadOnly != EditMode::ReadWrite);
+        assert_ne!(EditMode::ReadOnly, EditMode::ReadWrite);
 
         // Test LineMode variants.
         assert_eq2!(LineMode::SingleLine, LineMode::SingleLine);
         assert_eq2!(LineMode::MultiLine, LineMode::MultiLine);
-        assert!(LineMode::SingleLine != LineMode::MultiLine);
+        assert_ne!(LineMode::SingleLine, LineMode::MultiLine);
 
         // Test SyntaxHighlightMode variants.
         assert_eq2!(SyntaxHighlightMode::Enable, SyntaxHighlightMode::Enable);
         assert_eq2!(SyntaxHighlightMode::Disable, SyntaxHighlightMode::Disable);
-        assert!(SyntaxHighlightMode::Enable != SyntaxHighlightMode::Disable);
+        assert_ne!(SyntaxHighlightMode::Enable, SyntaxHighlightMode::Disable);
     }
 
     #[test]

@@ -1,6 +1,6 @@
 #!/usr/bin/env fish
 
-# cspell:words cloc warloc binstall pushd popd pangrams idiomaticity
+# cspell:words cloc warloc binstall pushd popd pangrams idiomaticity rustmcp
 
 # fish docs
 # - getting started: https://developerlife.com/2021/01/19/fish-scripting-manual/
@@ -288,7 +288,7 @@ function install-cargo-tools
     end
 
     # Install git-based Refactoring Engine (Dex)
-    install_if_missing "rustmcp" "cargo install --git https://github.com/dexwritescode/rust-mcp.git"
+    install_if_missing "rustmcp" "cargo install --path vendored-crates/rust-mcp"
 
     # Configure Gemini MCP servers if Gemini is installed
     if command -v gemini >/dev/null
@@ -309,6 +309,13 @@ function install-cargo-tools
         rustup component add rust-analyzer
     else
         echo '✓ rust-analyzer installed'
+    end
+
+    if not rustup component list --installed | grep -q rust-src
+        echo 'Installing rust-src...'
+        rustup component add rust-src
+    else
+        echo '✓ rust-src installed'
     end
 
     # Cross-compilation target for verifying platform-specific code
@@ -519,8 +526,9 @@ end
 # Prerequisites:
 # - Windows target installed: `rustup target add x86_64-pc-windows-gnu`
 #   Or run: `fish run.fish install-cargo-tools`
-# - mingw-w64 GCC and binutils installed via `./bootstrap.sh`
+# - mingw-w64 GCC and binutils (dlltool) installed via `./bootstrap.sh`
 #   (Fedora: mingw64-gcc, Arch: mingw-w64-gcc, Ubuntu: gcc-mingw-w64-x86-64,
+#    openSUSE: cross-x86_64-w64-mingw32-gcc)
 #    macOS: brew install mingw-w64)
 #
 # Usage:
@@ -651,6 +659,10 @@ function docs
 end
 
 function serve-docs
+    if not command -v npm >/dev/null
+        echo (set_color red)"Error: npm is not installed. Please install Node.js and npm to use serve-docs."(set_color normal)
+        return 1
+    end
     npm i -g serve
     serve target/doc
 end
@@ -726,10 +738,10 @@ function update-cargo-tools
         echo (set_color yellow)"⚠️  Some crates.io updates may have failed. Continuing with local packages..."(set_color normal)
     end
 
-    # Update git-based tools
+    # Update vendored tools
     echo ""
-    echo (set_color cyan --bold)"Updating git-based tools..."(set_color normal)
-    cargo install --git https://github.com/dexwritescode/rust-mcp.git
+    echo (set_color cyan --bold)"Updating vendored tools..."(set_color normal)
+    cargo install --path vendored-crates/rust-mcp --force
 
     # Rebuild local source packages
     # This ensures cmdr and build-infra are compiled with the current toolchain

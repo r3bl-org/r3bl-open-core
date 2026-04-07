@@ -481,7 +481,7 @@ impl OffscreenBuffer {
         }
 
         locked_device.flush().into_diagnostic()?;
-        Ok(())
+        ok!()
     }
 
     /// Helper: Render a single line to ANSI bytes using PixelCharRenderer.
@@ -541,7 +541,7 @@ pub mod adapter {
         }
 
         buffer.cursor_pos = Pos::new(row, col);
-        Ok(())
+        ok!()
     }
 
     /// Execute a "clear current line" command.
@@ -559,7 +559,7 @@ pub mod adapter {
             line[col] = PixelChar::Spacer;
         }
 
-        Ok(())
+        ok!()
     }
 
     /// Execute a "clear all" command on viewport.
@@ -569,7 +569,7 @@ pub mod adapter {
                 line[col] = PixelChar::Spacer;
             }
         }
-        Ok(())
+        ok!()
     }
 
     /// Execute a "print text" command with attributes.
@@ -609,7 +609,7 @@ pub mod adapter {
         );
         buffer.cursor_pos = Pos::new(start_pos.row, new_col);
 
-        Ok(())
+        ok!()
     }
 
     /// Execute a "move to next line" command.
@@ -624,7 +624,7 @@ pub mod adapter {
         }
 
         buffer.cursor_pos.col = 0;
-        Ok(())
+        ok!()
     }
 
     /// Execute a "move to previous line" command.
@@ -636,7 +636,7 @@ pub mod adapter {
         }
 
         buffer.cursor_pos.col = 0;
-        Ok(())
+        ok!()
     }
 
     /// Execute a "move to column" command.
@@ -652,7 +652,7 @@ pub mod adapter {
         }
 
         buffer.cursor_pos.col = col;
-        Ok(())
+        ok!()
     }
 }
 
@@ -893,7 +893,7 @@ fn render(&mut self, state: &mut State) -> CommonResult<()> {
     )?;
 
     lock_output_device_as_mut!(self.output_device).flush()?;
-    Ok(())
+    ok!()
 }
 
 // ~40 lines of helper functions for space allocation and cursor management
@@ -921,7 +921,7 @@ fn render(&mut self, state: &mut State) -> CommonResult<()> {
     // Paint to terminal (single call, all positioning handled)
     buffer.paint_viewport_to_terminal(&mut self.output_device)?;
 
-    Ok(())
+    ok!()
 }
 
 fn render_to_buffer(
@@ -951,7 +951,7 @@ fn render_to_buffer(
         viewport_buffer_cmd!(move_to_next_line, buffer, 1)?;
     }
 
-    Ok(())
+    ok!()
 }
 
 // ~15 lines, much simpler and clearer intent
@@ -1081,7 +1081,7 @@ fn render_menu(buffer: &mut OffscreenBuffer, items: &[&str]) -> miette::Result<(
         adapter::move_to_next_line(buffer, 1)?;
     }
 
-    Ok(())
+    ok!()
 }
 ```
 
@@ -1111,7 +1111,7 @@ fn render_with_macro(buffer: &mut OffscreenBuffer) -> miette::Result<()> {
         None
     )?;
 
-    Ok(())
+    ok!()
 }
 ```
 
@@ -1142,7 +1142,7 @@ impl SelectComponent {
         // Manual cursor restoration
         self.move_cursor_back_to_start(total_height)?;
 
-        Ok(())
+        ok!()
     }
 
     fn allocate_viewport_height_space(&mut self, state: &State) -> CommonResult<()> {
@@ -1154,7 +1154,7 @@ impl SelectComponent {
             self.output_device,
             MoveToPreviousLine(total_height),
         };
-        Ok(())
+        ok!()
     }
 
     fn move_cursor_back_to_start(&mut self, height: usize) -> CommonResult<()> {
@@ -1162,7 +1162,7 @@ impl SelectComponent {
             self.output_device,
             MoveToPreviousLine(height),
         };
-        Ok(())
+        ok!()
     }
 
     // ... more manual management code ...
@@ -1197,7 +1197,7 @@ impl SelectComponent {
         // Paint to terminal (one line!)
         buffer.paint_viewport_to_terminal(&mut self.output_device)?;
 
-        Ok(())
+        ok!()
     }
 
     fn render_content(
@@ -1225,7 +1225,7 @@ impl SelectComponent {
             viewport_buffer_cmd!(move_to_next_line, buffer, 1)?;
         }
 
-        Ok(())
+        ok!()
     }
 }
 ```
@@ -1419,7 +1419,7 @@ fn render(&mut self, state: &mut State) -> CommonResult<()> {
     render_header(&mut self.output_device, ...)?;
     render_items(&mut self.output_device, ...)?;
     move_cursor_back_to_start(&mut self.output_device, ...)?;
-    Ok(())
+    ok!()
 }
 
 // New
@@ -1436,7 +1436,7 @@ fn render(&mut self, state: &mut State) -> CommonResult<()> {
 
     self.render_to_buffer(&mut buffer, state)?;
     buffer.paint_viewport_to_terminal(&mut self.output_device)?;
-    Ok(())
+    ok!()
 }
 ```
 
@@ -1586,7 +1586,7 @@ impl SelectComponent {
                 }
             }
         }
-        Ok(())
+        ok!()
     }
 }
 ```
@@ -1609,7 +1609,7 @@ impl ViewportBufferWithDiff {
             output.write_ansi_for_pixel(&change)?;
         }
         self.previous = self.current.clone();
-        Ok(())
+        ok!()
     }
 }
 ```
@@ -1746,7 +1746,7 @@ let buffer = OffscreenBuffer::new_full_terminal(size, mode);
 pub fn resize_viewport(&mut self, new_size: Size) -> miette::Result<()> {
     self.buffer = PixelCharLines::new(new_size);
     self.window_size = new_size;
-    Ok(())
+    ok!()
 }
 ```
 
@@ -1834,7 +1834,7 @@ fn allocate_viewport_height_space(&mut self, state: &mut S) -> miette::Result<()
             MoveToPreviousLine(*viewport_height),
         };
     });
-    Ok(())
+    ok!()
 }
 ```
 

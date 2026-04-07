@@ -210,7 +210,7 @@ static UPGRADE_CHECK: r3bl_tui::UpgradeCheckResult = r3bl_tui::UpgradeCheckResul
 ```rust
 if cli_arg.upgrade {
     r3bl_tui::run_upgrade_with_spinner(env!("CARGO_PKG_NAME")).await;
-    return Ok(());
+    return ok!();
 }
 ```
 

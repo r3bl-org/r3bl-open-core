@@ -33,7 +33,7 @@
 //!
 //! [`sled`]: https://github.com/spacejam/sled
 
-use crate::inline_string;
+use crate::{inline_string, ok};
 use crate::fg_cyan;
 use kv::{Config, Json, Store};
 use miette::{Context, IntoDiagnostic};
@@ -189,7 +189,7 @@ pub fn insert_into_bucket<
         value = %value_str_fmt
     );
 
-    Ok(())
+    ok!()
 }
 
 /// The value in the key/value store is serialized using JSON. Upon loading that value it
@@ -430,7 +430,7 @@ mod kv_tests {
         // Remove from bucket.
         assert_eq!(remove_from_bucket(&bucket, "foo".to_string())?, None);
 
-        Ok(())
+        ok!()
     }
 
     #[instrument]
@@ -535,7 +535,7 @@ mod kv_tests {
             }
         }
 
-        Ok(())
+        ok!()
     }
 
     /// Run this test in serial, not parallel.

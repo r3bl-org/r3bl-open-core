@@ -1,15 +1,17 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+use crate::ok;
 use std::{io::Result,
           pin::Pin,
           task::{Context, Poll}};
 use tokio::io::{AsyncRead, AsyncWrite};
 
 /// A mock struct for the [`tokio::net::TcpStream`].
-/// - Alternative to [`tokio_test::io::Builder`](https://docs.rs/tokio-test/latest/tokio_test/io/struct.Builder.html)
-///   in the `tokio-test` crate.
+/// - Alternative to [`tokio_test::io::Builder`] in the `tokio-test` crate.
 /// - The difference is that [`MockAsyncStream`] allows access to the expected write
 ///   buffer.
+///
+/// [`tokio_test::io::Builder`]: https://docs.rs/tokio-test/latest/tokio_test/io/struct.Builder.html
 #[derive(Debug)]
 pub struct MockAsyncStream {
     pub expected_buffer: Vec<u8>,
@@ -24,15 +26,15 @@ impl AsyncWrite for MockAsyncStream {
         buf: &[u8],
     ) -> Poll<Result<usize>> {
         self.expected_buffer.extend_from_slice(buf);
-        Poll::Ready(Ok(buf.len()))
+        Poll::Ready(ok!(buf.len()))
     }
 
     fn poll_flush(self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<Result<()>> {
-        Poll::Ready(Ok(()))
+        Poll::Ready(ok!())
     }
 
     fn poll_shutdown(self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<Result<()>> {
-        Poll::Ready(Ok(()))
+        Poll::Ready(ok!())
     }
 }
 
@@ -48,6 +50,6 @@ impl AsyncRead for MockAsyncStream {
         let len = std::cmp::min(data.len(), buf.remaining());
         buf.put_slice(&data[..len]);
         self.expected_buffer.drain(..len);
-        Poll::Ready(Ok(()))
+        Poll::Ready(ok!())
     }
 }

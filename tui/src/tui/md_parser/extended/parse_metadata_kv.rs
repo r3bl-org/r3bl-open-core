@@ -126,7 +126,7 @@ mod test_parse_title_no_eol {
     #[test]
     fn test_no_quoted_with_eol_title_with_postfix_content_1() {
         let input = "@title: \nfoo\nbar";
-        println!("input: '{}'", fg_black(input).bg_cyan(),);
+        println!("input: '{}'", fg_black(input).bg_cyan());
 
         let (input, output) = parse_unique_kv_opt_eol(TITLE, input).unwrap();
         println!(
@@ -141,7 +141,7 @@ mod test_parse_title_no_eol {
     #[test]
     fn test_no_quoted_with_eol_title_with_postfix_content_2() {
         let input = "@title:  a\nfoo\nbar";
-        println!("input: '{}'", fg_black(input).bg_cyan(),);
+        println!("input: '{}'", fg_black(input).bg_cyan());
 
         let (input, output) = parse_unique_kv_opt_eol(TITLE, input).unwrap();
         println!(
@@ -156,7 +156,7 @@ mod test_parse_title_no_eol {
     #[test]
     fn test_no_quoted_with_eol_title_with_postfix_content_3() {
         let input = "@title: \n\n# heading1\n## heading2";
-        println!("❯ input: \n'{}'", fg_black(input).bg_cyan(),);
+        println!("❯ input: \n'{}'", fg_black(input).bg_cyan());
 
         let (remainder, title) = parse_unique_kv_opt_eol(TITLE, input).unwrap();
         println!(

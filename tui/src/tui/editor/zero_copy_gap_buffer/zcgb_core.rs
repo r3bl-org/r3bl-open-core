@@ -7,10 +7,7 @@
 //! management.
 
 use super::{GapBufferLine, INITIAL_LINE_SIZE, LINE_PAGE_SIZE, LineMetadata};
-use crate::{ArrayBoundsCheck, ArrayOverflowResult, ColIndex, CursorBoundsCheck,
-            GraphemeDoc, GraphemeDocMut, LINE_FEED_BYTE, Length, NULL_BYTE,
-            NumericValue, RowIndex, SegIndex, SegmentArray, byte_index, byte_offset,
-            len, row};
+use crate::{ArrayBoundsCheck, ArrayOverflowResult, ColIndex, CursorBoundsCheck, GraphemeDoc, GraphemeDocMut, LINE_FEED_BYTE, Length, NULL_BYTE, NumericValue, RowIndex, SegIndex, SegmentArray, byte_index, byte_offset, len, ok, row};
 use std::{borrow::Cow, fmt::Display};
 
 /// Zero-copy gap buffer data structure for storing editor content
@@ -497,7 +494,7 @@ impl GraphemeDocMut for ZeroCopyGapBuffer {
         // Remove the next line.
         self.remove_line(next_row);
 
-        Ok(())
+        ok!()
     }
 
     fn split_line(
@@ -523,7 +520,7 @@ impl GraphemeDocMut for ZeroCopyGapBuffer {
         )
         .map_err(|e| miette::miette!("{}", e))?;
 
-        Ok(())
+        ok!()
     }
 }
 

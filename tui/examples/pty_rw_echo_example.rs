@@ -12,7 +12,7 @@ use r3bl_tui::{AnsiSequenceGenerator, InputEvent, Key, KeyPress, KeyState,
                             PtySessionConfigOption},
                       terminal_io::{InputDevice, OutputDevice},
                       try_initialize_logging_global},
-               lock_output_device_as_mut, row, set_mimalloc_in_main};
+               ok, row, set_mimalloc_in_main};
 use std::io::Write;
 
 #[tokio::main]
@@ -34,20 +34,17 @@ async fn main() -> miette::Result<()> {
     let mut input_device = InputDevice::default();
 
     // Start raw mode.
-    RawMode::start(
-        terminal_size,
-        lock_output_device_as_mut!(&output_device),
-        false,
-    );
+    output_device.write(|out| {
+        RawMode::start(terminal_size, out, false);
+    });
 
     // Clear screen.
-    {
-        let out = lock_output_device_as_mut!(&output_device);
+    output_device.write(|out| {
         let _unused = out.write_all(AnsiSequenceGenerator::clear_screen().as_bytes());
         let _unused = out
             .write_all(AnsiSequenceGenerator::cursor_position(row(0), col(0)).as_bytes());
         let _unused = out.flush();
-    }
+    });
 
     // Spawn cat process (simple echo).
     let mut session = PtySessionBuilder::new("cat")
@@ -103,12 +100,10 @@ async fn main() -> miette::Result<()> {
     }
 
     // Cleanup.
-    RawMode::end(
-        terminal_size,
-        lock_output_device_as_mut!(&output_device),
-        false,
-    );
+    output_device.write(|out| {
+        RawMode::end(terminal_size, out, false);
+    });
 
     println!("\n👋 Goodbye!");
-    Ok(())
+    ok!()
 }

@@ -863,7 +863,7 @@ The corrected `switch_to` method should only use fake resize:
 
 ```rust
 pub async fn switch_to(&mut self, index: usize) -> miette::Result<()> {
-    if index >= self.processes.len() { return Ok(()); }
+    if index >= self.processes.len() { return ok!(); }
 
     let old_index = self.active_index;
     self.active_index = index;
@@ -883,7 +883,7 @@ pub async fn switch_to(&mut self, index: usize) -> miette::Result<()> {
         session.resize(real_size)?;
     }
 
-    Ok(())
+    ok!()
 }
 ```
 
@@ -1295,7 +1295,7 @@ impl OutputRenderer {
                 )?;
             }
         }
-        Ok(())
+        ok!()
     }
 
     fn process_pty_output(&mut self, data: &[u8]) {
@@ -1357,7 +1357,7 @@ impl OutputRenderer {
 
         // Save current buffer for next diff
         self.previous_buffer = Some(self.offscreen_buffer.clone());
-        Ok(())
+        ok!()
     }
 
     fn generate_status_text(&self, process_manager: &ProcessManager) -> String {

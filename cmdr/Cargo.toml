@@ -22,6 +22,14 @@ documentation = "https://docs.rs/r3bl-cmdr"
 # More info on default-run: https://stackoverflow.com/a/51790493/2085356
 default-run = "rc"
 
+# https://blog.rust-lang.org/2026/04/04/docsrs-only-default-targets/
+[package.metadata.docs.rs]
+targets = [
+    "x86_64-unknown-linux-gnu",
+    "x86_64-apple-darwin",
+    "x86_64-pc-windows-msvc",
+]
+
 [lints]
 workspace = true
 

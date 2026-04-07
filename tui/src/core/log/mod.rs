@@ -13,3 +13,7 @@ pub use log_public_api::*;
 pub use rolling_file_appender_impl::*;
 pub use tracing_config::*;
 pub use tracing_init::*;
+
+// Tests.
+#[cfg(test)]
+pub mod log_integration_tests;

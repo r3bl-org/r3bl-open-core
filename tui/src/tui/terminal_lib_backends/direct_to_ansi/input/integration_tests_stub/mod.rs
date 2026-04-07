@@ -53,19 +53,19 @@
 //! [`DirectToAnsi`]: crate::terminal_lib_backends::direct_to_ansi
 //! [`DirectToAnsiInputDevice`]: crate::DirectToAnsiInputDevice
 //! [`InputEvent`]: crate::InputEvent
-//! [`output::integration_tests`]: mod@crate::terminal_lib_backends::direct_to_ansi::output::integration_tests
-//! [`pty_bracketed_paste_test`]: mod@crate::vt_100_terminal_input_parser::integration_tests::pty_bracketed_paste_test
-//! [`pty_input_device_test`]: mod@crate::vt_100_terminal_input_parser::integration_tests::pty_input_device_test
-//! [`pty_keyboard_modifiers_test`]: mod@crate::vt_100_terminal_input_parser::integration_tests::pty_keyboard_modifiers_test
-//! [`pty_mio_poller_thread_lifecycle_test`]: mod@crate::vt_100_terminal_input_parser::integration_tests::pty_mio_poller_thread_lifecycle_test
-//! [`pty_mio_poller_thread_reuse_test`]: mod@crate::vt_100_terminal_input_parser::integration_tests::pty_mio_poller_thread_reuse_test
-//! [`pty_mouse_events_test`]: mod@crate::vt_100_terminal_input_parser::integration_tests::pty_mouse_events_test
-//! [`pty_new_keyboard_features_test`]: mod@crate::vt_100_terminal_input_parser::integration_tests::pty_new_keyboard_features_test
-//! [`pty_sigwinch_test`]: mod@crate::vt_100_terminal_input_parser::integration_tests::pty_sigwinch_test
-//! [`pty_terminal_events_test`]: mod@crate::vt_100_terminal_input_parser::integration_tests::pty_terminal_events_test
-//! [`pty_utf8_text_test`]: mod@crate::vt_100_terminal_input_parser::integration_tests::pty_utf8_text_test
+//! [`output::integration_tests`]: mod@crate::terminal_lib_backends::direct_to_ansi::output::direct_to_ansi_output_integration_tests
+//! [`pty_bracketed_paste_test`]: mod@crate::vt_100_terminal_input_parser::vt_100_parser_integration_tests::pty_bracketed_paste_test
+//! [`pty_input_device_test`]: mod@crate::vt_100_terminal_input_parser::vt_100_parser_integration_tests::pty_input_device_test
+//! [`pty_keyboard_modifiers_test`]: mod@crate::vt_100_terminal_input_parser::vt_100_parser_integration_tests::pty_keyboard_modifiers_test
+//! [`pty_mio_poller_thread_lifecycle_test`]: mod@crate::vt_100_terminal_input_parser::vt_100_parser_integration_tests::pty_mio_poller_thread_lifecycle_test
+//! [`pty_mio_poller_thread_reuse_test`]: mod@crate::vt_100_terminal_input_parser::vt_100_parser_integration_tests::pty_mio_poller_thread_reuse_test
+//! [`pty_mouse_events_test`]: mod@crate::vt_100_terminal_input_parser::vt_100_parser_integration_tests::pty_mouse_events_test
+//! [`pty_new_keyboard_features_test`]: mod@crate::vt_100_terminal_input_parser::vt_100_parser_integration_tests::pty_new_keyboard_features_test
+//! [`pty_sigwinch_test`]: mod@crate::vt_100_terminal_input_parser::vt_100_parser_integration_tests::pty_sigwinch_test
+//! [`pty_terminal_events_test`]: mod@crate::vt_100_terminal_input_parser::vt_100_parser_integration_tests::pty_terminal_events_test
+//! [`pty_utf8_text_test`]: mod@crate::vt_100_terminal_input_parser::vt_100_parser_integration_tests::pty_utf8_text_test
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
-//! [`vt_100_terminal_input_parser::integration_tests`]: mod@crate::vt_100_terminal_input_parser::integration_tests
+//! [`vt_100_terminal_input_parser::integration_tests`]: mod@crate::vt_100_terminal_input_parser::vt_100_parser_integration_tests
 //! [parser module's testing strategy]: mod@crate::vt_100_terminal_input_parser#testing-strategy
 //! [Why Linux-Only?]: super#why-linux-only

@@ -150,4 +150,4 @@ pub use term_api_impl::*;
 
 // Integration tests.
 #[cfg(any(test, doc))]
-pub mod integration_tests;
+pub mod term_integration_tests;

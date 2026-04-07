@@ -199,6 +199,7 @@ impl LineState {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use smallvec::SmallVec;
     use crate::{core::test_fixtures::StdoutMock, Size, height, width};
 
     /// Helper to decode [`ANSI`] escape sequences in output for debugging.
@@ -267,7 +268,7 @@ mod tests {
 
         // Simulate initial state: prompt has been rendered.
         line_state.render_and_flush(&mut stdout_mock).unwrap();
-        stdout_mock.buffer.lock().unwrap().clear();
+        stdout_mock.buffer.write(SmallVec::clear);
 
         // First log line (ends with newline).
         line_state
@@ -281,7 +282,7 @@ mod tests {
         );
 
         // Clear buffer for second call.
-        stdout_mock.buffer.lock().unwrap().clear();
+        stdout_mock.buffer.write(SmallVec::clear);
 
         // Second log line (ends with newline).
         line_state
@@ -317,7 +318,7 @@ mod tests {
         let mut stdout_mock = StdoutMock::default();
 
         line_state.render_and_flush(&mut stdout_mock).unwrap();
-        stdout_mock.buffer.lock().unwrap().clear();
+        stdout_mock.buffer.write(SmallVec::clear);
 
         // Partial line (no newline at end).
         line_state
@@ -354,7 +355,7 @@ mod tests {
         let mut stdout_mock = StdoutMock::default();
 
         line_state.render_and_flush(&mut stdout_mock).unwrap();
-        stdout_mock.buffer.lock().unwrap().clear();
+        stdout_mock.buffer.write(SmallVec::clear);
 
         // Multiple lines in single call.
         line_state

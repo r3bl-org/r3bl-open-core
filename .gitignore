@@ -15,3 +15,5 @@ crash_log.txt
 rustc-ice-*.txt
 rust-toolchain-script.lock*
 .claude/worktrees
+.vscode/task-spaces.json
+.antigravitycli/

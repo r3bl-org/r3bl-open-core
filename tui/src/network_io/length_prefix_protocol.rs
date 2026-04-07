@@ -228,7 +228,7 @@ pub mod byte_io {
         // Flush the buffer.
         buf_writer.flush().await.into_diagnostic()?;
 
-        Ok(())
+        ok!()
     }
 
     /// Ready the payload from the client. Use the length-prefix [`LengthPrefixType`],

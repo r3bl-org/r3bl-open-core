@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{InlineVec, StdMutex};
+use crate::{InlineVec, StdMutex, ok};
 #[cfg(test)]
 use crate::{SGR_FG_RED_STR, SGR_RESET_STR};
 use smallvec::smallvec;
@@ -40,9 +40,7 @@ impl StdoutMock {
     /// panics while holding the lock. To avoid panics, ensure that the code that
     /// locks the mutex does not panic while holding the lock.
     #[must_use]
-    pub fn get_copy_of_buffer(&self) -> InlineVec<u8> {
-        self.buffer.lock().unwrap().clone()
-    }
+    pub fn get_copy_of_buffer(&self) -> InlineVec<u8> { self.buffer.read(Clone::clone) }
 
     /// # Panics
     ///
@@ -51,8 +49,8 @@ impl StdoutMock {
     /// locks the mutex does not panic while holding the lock.
     #[must_use]
     pub fn get_copy_of_buffer_as_string(&self) -> String {
-        let buffer_data = self.buffer.lock().unwrap();
-        String::from_utf8(buffer_data.to_vec()).expect("utf8")
+        self.buffer
+            .read(|buffer_data| String::from_utf8(buffer_data.to_vec()).expect("utf8"))
     }
 
     /// # Panics
@@ -62,9 +60,10 @@ impl StdoutMock {
     /// locks the mutex does not panic while holding the lock.
     #[must_use]
     pub fn get_copy_of_buffer_as_string_strip_ansi(&self) -> String {
-        let buffer_data = self.buffer.lock().unwrap();
-        let buffer_data = strip(buffer_data.to_vec());
-        String::from_utf8(buffer_data).expect("utf8")
+        self.buffer.read(|buffer_data| {
+            let buffer_data = strip(buffer_data);
+            String::from_utf8(buffer_data).expect("utf8")
+        })
     }
 }
 
@@ -72,12 +71,14 @@ impl Write for StdoutMock {
     #[allow(clippy::unwrap_in_result)] /* unwrap is ok to use here, since it is for lock. */
     #[allow(clippy::missing_errors_doc)]
     fn write(&mut self, buf: &[u8]) -> Result<usize> {
-        self.buffer.lock().unwrap().extend_from_slice(buf);
+        self.buffer.write(|buffer| {
+            buffer.extend_from_slice(buf);
+        });
         Ok(buf.len())
     }
 
     #[allow(clippy::missing_errors_doc)]
-    fn flush(&mut self) -> Result<()> { Ok(()) }
+    fn flush(&mut self) -> Result<()> { ok!() }
 }
 
 #[tokio::test]

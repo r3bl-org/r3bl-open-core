@@ -375,7 +375,7 @@ mod tests {
 
         // Change in window size should invalidate the cache and result in a cache miss.
         let window_size_new = height(50) + width(15);
-        assert!(window_size_new != get_window_size_og());
+        assert_ne!(window_size_new, get_window_size_og());
         RenderCache::render_content(
             buffer,
             engine,
@@ -418,7 +418,7 @@ mod tests {
         // Change in scroll_offset should invalidate the cache and result in a cache miss.
         let scr_ofs_old = buffer.get_scr_ofs();
         let scr_ofs_new = scr_ofs(col(1) + row(1));
-        assert!(scr_ofs_new != scr_ofs_old);
+        assert_ne!(scr_ofs_new, scr_ofs_old);
 
         buffer.content.scr_ofs = scr_ofs_new;
         RenderCache::render_content(
@@ -493,6 +493,6 @@ mod tests {
                 .clone()
         };
 
-        assert!(snapshot_1 != snapshot_2);
+        assert_ne!(snapshot_1, snapshot_2);
     }
 }

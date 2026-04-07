@@ -39,6 +39,7 @@
     "pkief.material-icon-theme", // Material "file icon" theme for file extension, folder, symbol, etc icons
     "pkief.material-product-icons", // Material "product icon" theme for activity bar, status bar, etc.
     "hoovercj.vscode-settings-cycler", // Settings Cycler.
+    "alefragnani.bookmarks", // Bookmarks.
   ],
   // List of extensions that should not be recommended for users of this workspace.
   "unwantedRecommendations": [
@@ -47,7 +48,6 @@
     "ms-vscode-remote.remote-containers", // Remote - Containers.
     "github.vscode-pull-request-github", // Github Pull Requests and Issues.
     "esbenp.prettier-vscode", // [SLOW] Prettier -> very slow for large docs.
-    "alefragnani.bookmarks", // Bookmarks.
     "wayou.vscode-todo-highlight", // Todo Highlight.
     "fabiospampinato.vscode-todo-plus", // Todo+.
     "lorenzopirro.rust-flash-snippets", // Rust Flash Snippets.

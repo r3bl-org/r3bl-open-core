@@ -7,7 +7,7 @@ use std::{error::Error,
 
 /// Main error struct.
 /// <https://learning-rust.github.io/docs/e7.custom_error_types.html>
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, miette::Diagnostic)]
 #[allow(dead_code)]
 pub struct LayoutError {
     pub error_type: LayoutErrorType,

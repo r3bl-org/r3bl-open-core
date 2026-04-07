@@ -66,7 +66,7 @@
 /// I/O without mocks. This is the entire purpose of the test fixture: exercise real
 /// terminal code paths. A typical exchange looks like:
 ///
-/// 1. Controlled prints a ready marker (e.g. [`CONTROLLED_READY`]) to [`stdout`].
+/// 1. Controlled prints a ready marker (e.g. [`MSG_CONTROLLED_READY`]) to [`stdout`].
 /// 2. Controller calls [`wait_for_ready()`] to synchronize with the child.
 /// 3. Controller writes raw bytes (e.g. [`ANSI`] key sequences) to the [`pty`] writer.
 /// 4. Controlled reads those bytes from its [`stdin`], processes them, and prints
@@ -91,11 +91,10 @@
 ///
 /// ## How This Macro Prevents It
 ///
-/// This macro wraps the child in [`SingleThreadSafeControlledChild`], which hides
-/// [`wait()`] entirely. The only exit path is [`drain_and_wait()`]. A [`PtyTestWatchdog`]
-/// runs alongside as a safety net - if the controller hangs for any reason, the watchdog
-/// terminates the child process after [`timeout`], converting an infinite hang into a
-/// bounded test failure.
+/// This macro wraps the child in [`PtyTestChild`], which hides [`wait()`] entirely. The
+/// only exit path is [`drain_and_wait()`]. A [`PtyTestWatchdog`] runs alongside as a
+/// safety net - if the controller hangs for any reason, the watchdog terminates the child
+/// process after [`timeout`], converting an infinite hang into a bounded test failure.
 ///
 /// <div class="warning">
 ///
@@ -146,7 +145,7 @@
 /// **Important:** In a [`pty`], [`stdout`] and [`stderr`] are **merged into a single
 /// stream** from the controller's perspective. This means:
 ///
-/// - Controlled's `println!()` and `eprintln!()` both go to the same merged stream.
+/// - Controlled's [`println!()`] and [`eprintln!()`] both go to the same merged stream.
 /// - Controller reads both streams together via
 ///   [`pty_pair.controller().try_clone_reader()`].
 /// - There is NO semantic difference between [`stdout`] and [`stderr`] in [`pty`] tests.
@@ -155,21 +154,21 @@
 /// ## Example
 ///
 /// ```no_run
-/// # use std::io::BufRead;
-/// # use r3bl_tui::SingleThreadSafeControlledChild;
-/// # fn _doc_test(child: SingleThreadSafeControlledChild, mut buf_reader: impl BufRead) {
-/// // Controlled code (both println! & eprintln! go to the same stream!)
-/// println!("Line: hello, Cursor: 5");        // Protocol message
-/// println!("🔍 PTY Controlled: Event: ..."); // Debug message
+/// use std::io::BufRead;
+/// use r3bl_tui::PtyTestChild;
+/// fn fun(child: PtyTestChild, mut buf_reader: impl BufRead) {
+///     // Controlled code (both println! & eprintln! go to the same stream!)
+///     println!("Line: hello, Cursor: 5");        // Protocol message
+///     println!("🔍 PTY Controlled: Event: ..."); // Debug message
 ///
-/// // Controller code (uses read_line_state to handle filtering and synchronization)
-/// let result = child.read_line_state(&mut buf_reader, "Line:");
-/// assert_eq!(result, "Line: hello, Cursor: 5");
-/// # }
+///     // Controller code (uses read_line_state to handle filtering and synchronization)
+///     let result = child.read_line_state(&mut buf_reader, |line| line.starts_with("Line:"));
+///     assert_eq!(result, "Line: hello, Cursor: 5");
+/// }
 /// ```
 ///
-/// This is why all output in [`pty`] controlled processes should use `println!()` - using
-/// `eprintln!()` creates a false impression that stderr is handled differently.
+/// This is why all output in [`pty`] controlled processes should use [`println!()`] -
+/// using [`eprintln!()`] creates a false impression that stderr is handled differently.
 ///
 /// For complete [`pty`] test implementations, see:
 /// - [`raw mode integration_tests`] - Tests raw mode itself.
@@ -178,7 +177,7 @@
 /// # Arguments
 ///
 /// - `test_fn`: The test function name (used as identifier, not string).
-/// - `controller`: A function that accepts a [`PtyTestContext`] parameter.
+/// - `controller`: A function or expression that accepts a [`PtyTestContext`] parameter.
 /// - `controlled`: A function or expression that runs in the controlled process (must not
 ///   return).
 /// - `mode`: A [`PtyTestMode`] value - [`Raw`] to enable raw mode before calling the
@@ -189,9 +188,8 @@
 /// Your controller function receives a [`PtyTestContext`] which bundles the following:
 /// - [`pty_pair: PtyPair`] - The [`PTY`] pair that provides the controller and controlled
 ///   ends of the terminal used by the controller and controlled processes.
-/// - [`child: SingleThreadSafeControlledChild`] - A handle to the spawned controlled
-///   process, wrapped in a guard that enforces correct cleanup (see
-///   [`SingleThreadSafeControlledChild`]).
+/// - [`child: PtyTestChild`] - A handle to the spawned controlled process, wrapped in a
+///   guard that enforces correct cleanup (see [`PtyTestChild`]).
 /// - [`buf_reader: BufReader<ControllerReader>`] - A buffered reader for the [`PTY`]
 ///   controller side.
 /// - [`writer: ControllerWriter`] - A writer for sending input to the [`PTY`] controller
@@ -206,36 +204,37 @@
 ///
 /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 /// [`buf_reader: BufReader<ControllerReader>`]: field@crate::PtyTestContext::buf_reader
-/// [`child: SingleThreadSafeControlledChild`]: field@crate::PtyTestContext::child
+/// [`child: PtyTestChild`]: field@crate::PtyTestContext::child
 /// [`context.buf_reader`]: field@crate::PtyTestContext::buf_reader
 /// [`context.child.drain_and_wait(context.buf_reader, context.pty_pair)`]:
-///     crate::SingleThreadSafeControlledChild::drain_and_wait
+///     crate::PtyTestChild::drain_and_wait
 /// [`context.writer`]: field@crate::PtyTestContext::writer
-/// [`CONTROLLED_READY`]: crate::pty_test_fixtures::CONTROLLED_READY
 /// [`Cooked`]: PtyTestMode::Cooked
 /// [`DI`]: https://en.wikipedia.org/wiki/Dependency_injection
-/// [`drain_and_wait()`]: crate::SingleThreadSafeControlledChild::drain_and_wait
+/// [`drain_and_wait()`]: crate::PtyTestChild::drain_and_wait
+/// [`eprintln!()`]: std::eprintln
 /// [`exit()`]: std::process::exit
 /// [`generate_pty_test!`]: crate::generate_pty_test
 /// [`input parser integration_tests`]:
-///     mod@crate::vt_100_terminal_input_parser::integration_tests
+///     mod@crate::vt_100_terminal_input_parser::vt_100_parser_integration_tests
 /// [`mode: PtyTestMode::Cooked`]: PtyTestMode::Cooked
 /// [`mode: PtyTestMode::Raw`]: PtyTestMode::Raw
+/// [`MSG_CONTROLLED_READY`]: crate::pty_test_fixtures::MSG_CONTROLLED_READY
 /// [`OffscreenBuffer`]: crate::OffscreenBuffer
+/// [`println!()`]: std::println
 /// [`pty_pair.controller().try_clone_reader()`]:
 ///     portable_pty::MasterPty::try_clone_reader
 /// [`pty_pair.controller_mut().take_writer()`]: portable_pty::MasterPty::take_writer
 /// [`pty_pair: PtyPair`]: field@crate::PtyTestContext::pty_pair
 /// [`pty_types`]: mod@crate::pty_engine::pty_engine_types
 /// [`pty`]: crate::core::pty
-/// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
+/// [`PTY`]: crate::core::pty::pty_engine::pty_pair#what-is-a-pty
+/// [`PtyTestChild`]: crate::PtyTestChild
 /// [`PtyTestContext`]: crate::PtyTestContext
 /// [`PtyTestWatchdog`]: crate::PtyTestWatchdog
-/// [`raw mode integration_tests`]:
-///     mod@crate::terminal_raw_mode::integration_tests
+/// [`raw mode integration_tests`]: mod@crate::terminal_raw_mode::raw_mode_integration_tests
 /// [`Raw`]: PtyTestMode::Raw
-/// [`read_line_state()`]: crate::SingleThreadSafeControlledChild::read_line_state
-/// [`SingleThreadSafeControlledChild`]: crate::SingleThreadSafeControlledChild
+/// [`read_line_state()`]: crate::PtyTestChild::read_line_state
 /// [`spawn_controlled_in_pty`]: crate::spawn_controlled_in_pty
 /// [`std::process::exit(0)`]: std::process::exit
 /// [`stderr`]: std::io::Stderr
@@ -244,20 +243,63 @@
 /// [`timeout`]: crate::PTY_TEST_WATCHDOG_TIMEOUT
 /// [`tokio`]: tokio
 /// [`wait()`]: portable_pty::Child::wait
-/// [`wait_for_ready()`]:
-///     crate::pty_test_fixtures::SingleThreadSafeControlledChild::wait_for_ready
+/// [`wait_for_ready()`]: crate::pty_test_fixtures::PtyTestChild::wait_for_ready
 /// [`writer: ControllerWriter`]: field@crate::PtyTestContext::writer
 /// [raw mode]: crate::terminal_raw_mode#raw-mode-vs-cooked-mode
 /// [standard terminal size]: crate::DefaultPtySize
 /// [two types of PTY deadlock]: crate::PtyPair#two-types-of-deadlocks
 #[macro_export]
 macro_rules! generate_pty_test {
+    // -------------------------------------------------------------------------
+    // Public API branches
+    // -------------------------------------------------------------------------
+
+    // Branch for identifier (function name).
     (
         $(#[$meta:meta])*
         test_fn: $test_name:ident,
         controller: $controller_fn:expr,
-        controlled: $controlled_fn:expr,
+        controlled: $controlled_ident:ident,
         mode: $mode:expr $(,)?
+    ) => {
+        $crate::generate_pty_test! {
+            @impl
+            $(#[$meta])*
+            test_name: $test_name,
+            controller_fn: $controller_fn,
+            controlled_tt: [ $controlled_ident() ],
+            mode: $mode
+        }
+    };
+
+    // Branch for expression (function call or block).
+    (
+        $(#[$meta:meta])*
+        test_fn: $test_name:ident,
+        controller: $controller_fn:expr,
+        controlled: $controlled_expr:expr,
+        mode: $mode:expr $(,)?
+    ) => {
+        $crate::generate_pty_test! {
+            @impl
+            $(#[$meta])*
+            test_name: $test_name,
+            controller_fn: $controller_fn,
+            controlled_tt: [ $controlled_expr ],
+            mode: $mode
+        }
+    };
+
+    // -------------------------------------------------------------------------
+    // Internal implementation branch
+    // -------------------------------------------------------------------------
+    (
+        @impl
+        $(#[$meta:meta])*
+        test_name: $test_name:ident,
+        controller_fn: $controller_fn:expr,
+        controlled_tt: [ $($controlled_tt:tt)* ],
+        mode: $mode:expr
     ) => {
         $(#[$meta])*
         #[test]
@@ -266,17 +308,24 @@ macro_rules! generate_pty_test {
             use $crate::{PtyCommand, PtyPair};
 
             // Immediate debug output to confirm test is running
-            let pty_controlled_env_var = std::env::var($crate::PTY_CONTROLLED_ENV_VAR);
-            eprintln!("🔍 TEST ENTRY: {} env = {:?}", $crate::PTY_CONTROLLED_ENV_VAR, pty_controlled_env_var);
+            let pty_controlled_env_var = std::env::var($crate::ENV_VAR_PTY_CONTROLLED);
+            eprintln!("{} TEST ENTRY: {} env = {:?}",
+                $crate::GLYPH_CONTROLLED,
+                $crate::ENV_VAR_PTY_CONTROLLED,
+                pty_controlled_env_var
+            );
 
             // Also print to stdout to ensure it gets through PTY
-            println!("{}", $crate::TEST_RUNNING);
+            println!("{}", $crate::MSG_TEST_RUNNING);
             std::io::stdout().flush().expect("Failed to flush stdout");
 
             // Check if we're running as the controlled process
             if pty_controlled_env_var.is_ok() {
-                eprintln!("🔍 TEST: {} detected, running controlled mode", $crate::PTY_CONTROLLED_ENV_VAR);
-                println!("{}", $crate::CONTROLLED_STARTING);
+                eprintln!("{} TEST: {} detected, running controlled mode",
+                    $crate::GLYPH_CONTROLLED,
+                    $crate::ENV_VAR_PTY_CONTROLLED
+                );
+                println!("{}", $crate::MSG_CONTROLLED_STARTING);
                 std::io::stdout().flush().expect("Failed to flush stdout");
 
                 // Enable raw mode if requested by the test.
@@ -287,7 +336,7 @@ macro_rules! generate_pty_test {
                 }
 
                 // Run the controlled logic.
-                $controlled_fn();
+                $($controlled_tt)*;
 
                 // Restore cooked mode for correctness.
                 #[allow(unreachable_code)]
@@ -300,25 +349,33 @@ macro_rules! generate_pty_test {
             }
 
             // Otherwise, run as controller - create PTY and spawn controlled
-            eprintln!("🚀 TEST: No {} var, running as controller", $crate::PTY_CONTROLLED_ENV_VAR);
+            eprintln!("{} TEST: No {} var, running as controller",
+                $crate::GLYPH_CONTROLLER,
+                $crate::ENV_VAR_PTY_CONTROLLED
+            );
 
             // Spawn controlled process
             let test_binary =
                 std::env::current_exe().expect("Failed to get current executable");
             let mut cmd = PtyCommand::new(&test_binary);
-            cmd.env($crate::PTY_CONTROLLED_ENV_VAR, "1");
+            cmd.env($crate::ENV_VAR_PTY_CONTROLLED, "1");
             cmd.env("RUST_BACKTRACE", "1");
             cmd.args(&["--test-threads", "1", "--nocapture", stringify!($test_name)]);
 
-            eprintln!("🚀 Controller: Spawning controlled process...");
+            eprintln!("{} Controller: Spawning controlled process...",
+                $crate::GLYPH_CONTROLLER
+            );
             let (pty_pair, child) = PtyPair::open_and_spawn($crate::DefaultPtySize, cmd)
                 .expect("Failed to spawn controlled process");
-            eprintln!("🔍 Controller: PTY pair created");
-            eprintln!("🔍 Controller: Controlled side closed (parent no longer holds controlled fd)");
+            eprintln!("{} Controller: PTY pair created", $crate::GLYPH_CONTROLLED);
+            eprintln!(
+                "{} Controller: Controlled side closed (parent no longer holds controlled fd)",
+                $crate::GLYPH_CONTROLLED
+            );
 
-            // Wrap in SingleThreadSafeControlledChild — bare child.wait() is now impossible.
-            // The only exit path is drain_and_wait(), preventing PTY buffer deadlocks.
-            let child = $crate::SingleThreadSafeControlledChild::new(child);
+            // Wrap in PtyTestChild — bare child.wait() is now impossible. The only exit
+            // path is drain_and_wait(), preventing PTY buffer deadlocks.
+            let child = $crate::PtyTestChild::new(child);
 
             // Start watchdog timer — kills child after timeout if controller hangs.
             let termination_handle = child.clone_termination_handle();
@@ -326,9 +383,8 @@ macro_rules! generate_pty_test {
                 termination_handle,
             );
 
-            // Call user's controller function with PTY resources.
-            // When this returns, _watchdog drops → sets cancelled flag → thread exits
-            // cleanly on wake.
+            // Call user's controller function with PTY resources. When this returns,
+            // _watchdog drops → sets cancelled flag → thread exits cleanly on wake.
             let reader = pty_pair
                 .controller()
                 .try_clone_reader()
@@ -345,7 +401,7 @@ macro_rules! generate_pty_test {
                 writer,
             };
 
-            $controller_fn(context);
+            ($controller_fn)(context);
         }
     };
 }
@@ -372,9 +428,9 @@ pub enum PtyTestMode {
     /// [`stdin`]: std::io::Stdin
     /// [raw mode]: crate::terminal_raw_mode#raw-mode-vs-cooked-mode
     Raw,
-    /// Do not change the terminal mode. The controlled process starts in the
-    /// default [cooked mode]. Use for tests that manage raw mode themselves or that
-    /// never read [`stdin`].
+    /// Do not change the terminal mode. The controlled process starts in the default
+    /// [cooked mode]. Use for tests that manage raw mode themselves or that never read
+    /// [`stdin`].
     ///
     /// [`stdin`]: std::io::Stdin
     /// [cooked mode]: crate::terminal_raw_mode#raw-mode-vs-cooked-mode

@@ -47,41 +47,45 @@
 use r3bl_tui::{AnsiSequenceGenerator, InputDevice, InputEvent, Key, KeyPress, KeyState,
                ModifierKeysMask, MouseInput, MouseInputKind, OutputDevice, Pos, RawMode,
                RowIndex, TermCol, TermRow, assert_terminal_is_interactive, col,
-               get_size, lock_output_device_as_mut, row, set_mimalloc_in_main};
+               get_size, ok, row, set_mimalloc_in_main};
 use std::collections::VecDeque;
 
 /// Helper: Clear screen and position cursor at home (0,0).
 fn clear_screen_and_home(output: &OutputDevice) {
-    let out = lock_output_device_as_mut!(output);
-    let _unused = out.write_all(AnsiSequenceGenerator::clear_screen().as_bytes());
-    let _unused =
-        out.write_all(AnsiSequenceGenerator::cursor_position(row(0), col(0)).as_bytes());
-    let _unused = out.flush();
+    output.write(|out| {
+        let _unused = out.write_all(AnsiSequenceGenerator::clear_screen().as_bytes());
+        let _unused = out
+            .write_all(AnsiSequenceGenerator::cursor_position(row(0), col(0)).as_bytes());
+        let _unused = out.flush();
+    });
 }
 
 /// Helper: Move cursor to specified terminal position (1-based row, 1-based col).
 fn cursor_to(output: &OutputDevice, term_row: u16, term_col: u16) {
-    let out = lock_output_device_as_mut!(output);
-    // Convert 1-based terminal coords to 0-based indices for AnsiSequenceGenerator.
-    let _unused = out.write_all(
-        AnsiSequenceGenerator::cursor_position(
-            row(term_row.saturating_sub(1) as usize),
-            col(term_col.saturating_sub(1) as usize),
-        )
-        .as_bytes(),
-    );
+    output.write(|out| {
+        // Convert 1-based terminal coords to 0-based indices for AnsiSequenceGenerator.
+        let _unused = out.write_all(
+            AnsiSequenceGenerator::cursor_position(
+                row(term_row.saturating_sub(1) as usize),
+                col(term_col.saturating_sub(1) as usize),
+            )
+            .as_bytes(),
+        );
+    });
 }
 
 /// Helper: Write text at current cursor position.
 fn print_text(output: &OutputDevice, text: &str) {
-    let out = lock_output_device_as_mut!(output);
-    let _unused = out.write_all(text.as_bytes());
+    output.write(|out| {
+        let _unused = out.write_all(text.as_bytes());
+    });
 }
 
 /// Helper: Flush output to ensure all bytes are written.
 fn flush(output: &OutputDevice) {
-    let out = lock_output_device_as_mut!(output);
-    let _unused = out.flush();
+    output.write(|out| {
+        let _unused = out.flush();
+    });
 }
 
 /// Maximum number of events to keep in history
@@ -227,11 +231,9 @@ async fn main() -> miette::Result<()> {
     let mut input_device = InputDevice::default();
 
     // Start raw mode (enables mouse tracking automatically)
-    RawMode::start(
-        terminal_size,
-        lock_output_device_as_mut!(&output_device),
-        false,
-    );
+    output_device.write(|out| {
+        RawMode::start(terminal_size, out, false);
+    });
 
     // Clear screen
     clear_screen_and_home(&output_device);
@@ -240,11 +242,9 @@ async fn main() -> miette::Result<()> {
     let result = run_inspector(&mut input_device, &mut output_device).await;
 
     // Cleanup terminal (disable raw mode and mouse tracking)
-    RawMode::end(
-        terminal_size,
-        lock_output_device_as_mut!(&output_device),
-        false,
-    );
+    output_device.write(|out| {
+        RawMode::end(terminal_size, out, false);
+    });
 
     result
 }
@@ -276,7 +276,7 @@ async fn run_inspector(
         }
     }
 
-    Ok(())
+    ok!()
 }
 
 /// Renders the current inspector state using direct terminal output

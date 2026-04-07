@@ -38,7 +38,7 @@
 //! for use in [`select!`] branches.
 //!
 //! ```rust,ignore
-//! use r3bl_tui::{PtySessionBuilder, PtyOutputEvent, PtyInputEvent};
+//! use r3bl_tui::{PtySessionBuilder, PtyOutputEvent, PtyInputEvent, ok};
 //!
 //! #[tokio::main]
 //! async fn main() -> miette::Result<()> {
@@ -61,7 +61,7 @@
 //!             }
 //!         }
 //!     }
-//!     Ok(())
+//!     ok!()
 //! }
 //! ```
 //!

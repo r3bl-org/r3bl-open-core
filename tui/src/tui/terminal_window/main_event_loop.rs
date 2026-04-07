@@ -9,8 +9,8 @@ use crate::{Ansi256GradientIndex, BoxedSafeApp, ColorWheel, ColorWheelConfig,
             OutputDevice, RawMode, RenderOpCommon, RenderOpFlush, RenderOpIR,
             RenderPipeline, Size, SufficientSize, TelemetryAtomHint,
             TerminalWindowMainThreadSignal, TextColorizationPolicy, ZOrder, ch, col,
-            emit_stderr_redirection_disclaimer, glyphs, height, inline_string,
-            lock_output_device_as_mut, new_style, ok, render_pipeline, row,
+            emit_stderr_redirection_disclaimer, glyphs, height, inline_string, new_style,
+            ok, render_pipeline, row,
             telemetry::{Telemetry, telemetry_default_constants},
             telemetry_record, width};
 use smallvec::smallvec;
@@ -252,11 +252,13 @@ where
         output_device: &OutputDevice,
     ) -> CommonResult<()> {
         // Start raw mode
-        RawMode::start(
-            self.global_data.window_size,
-            lock_output_device_as_mut!(output_device),
-            output_device.is_mock,
-        );
+        output_device.write(|writer| {
+            RawMode::start(
+                self.global_data.window_size,
+                writer,
+                output_device.is_mock,
+            );
+        });
 
         // Initialize app and render.
         let telemetry = &mut self.telemetry;
@@ -265,14 +267,16 @@ where
             @hint: TelemetryAtomHint::Render,
             @block: {
                 app.app_init(&mut self.component_registry_map, &mut self.has_focus);
-                AppManager::render_app(
-                    app,
-                    &mut self.global_data,
-                    &mut self.component_registry_map,
-                    &mut self.has_focus,
-                    lock_output_device_as_mut!(output_device),
-                    output_device.is_mock,
-                )?;
+                output_device.write(|writer| {
+                    AppManager::render_app(
+                        app,
+                        &mut self.global_data,
+                        &mut self.component_registry_map,
+                        &mut self.has_focus,
+                        writer,
+                        output_device.is_mock,
+                    )
+                })?;
             },
             @after_block: {
                 self.global_data.set_hud_report(telemetry.report());
@@ -280,7 +284,7 @@ where
         );
 
         self.log_startup_info();
-        Ok(())
+        ok!()
     }
 
     /// Logs startup information if debugging is enabled.
@@ -414,11 +418,13 @@ where
 {
     match signal {
         TerminalWindowMainThreadSignal::Exit => {
-            RawMode::end(
-                event_loop_state.global_data.window_size,
-                lock_output_device_as_mut!(output_device),
-                output_device.is_mock,
-            );
+            output_device.write(|writer| {
+                RawMode::end(
+                    event_loop_state.global_data.window_size,
+                    writer,
+                    output_device.is_mock,
+                );
+            });
             Ok(true) // Request exit
         }
         TerminalWindowMainThreadSignal::Render(_) => {
@@ -447,20 +453,22 @@ where
         @telemetry: telemetry,
         @hint: TelemetryAtomHint::Render,
         @block: {
-            AppManager::render_app(
-                app,
-                &mut event_loop_state.global_data,
-                &mut event_loop_state.component_registry_map,
-                &mut event_loop_state.has_focus,
-                lock_output_device_as_mut!(output_device),
-                output_device.is_mock,
-            )?;
+            output_device.write(|writer| {
+                AppManager::render_app(
+                    app,
+                    &mut event_loop_state.global_data,
+                    &mut event_loop_state.component_registry_map,
+                    &mut event_loop_state.has_focus,
+                    writer,
+                    output_device.is_mock,
+                )
+            })?;
         },
         @after_block: {
             event_loop_state.global_data.set_hud_report(telemetry.report());
         }
     );
-    Ok(())
+    ok!()
 }
 
 /// Handles app signal from the main thread.
@@ -485,17 +493,19 @@ fn handle_app_signal<S, AS>(
                 &mut event_loop_state.component_registry_map,
                 &mut event_loop_state.has_focus,
             );
-            handle_result_generated_by_app_after_handling_action_or_input_event(
-                result,
-                None,
-                exit_keys,
-                app,
-                &mut event_loop_state.global_data,
-                &mut event_loop_state.component_registry_map,
-                &mut event_loop_state.has_focus,
-                lock_output_device_as_mut!(output_device),
-                output_device.is_mock,
-            );
+            output_device.write(|writer| {
+                handle_result_generated_by_app_after_handling_action_or_input_event(
+                    result,
+                    None,
+                    exit_keys,
+                    app,
+                    &mut event_loop_state.global_data,
+                    &mut event_loop_state.component_registry_map,
+                    &mut event_loop_state.has_focus,
+                    writer,
+                    output_device.is_mock,
+                );
+            });
         },
         @after_block: {
             event_loop_state.global_data.set_hud_report(telemetry.report());
@@ -556,15 +566,17 @@ fn handle_resize_event<S, AS>(
         @telemetry: telemetry,
         @hint: TelemetryAtomHint::Resize,
         @block: {
-            handle_resize(
-                new_size,
-                &mut event_loop_state.global_data,
-                app,
-                &mut event_loop_state.component_registry_map,
-                &mut event_loop_state.has_focus,
-                lock_output_device_as_mut!(output_device),
-                output_device.is_mock,
-            );
+            output_device.write(|writer| {
+                handle_resize(
+                    new_size,
+                    &mut event_loop_state.global_data,
+                    app,
+                    &mut event_loop_state.component_registry_map,
+                    &mut event_loop_state.has_focus,
+                    writer,
+                    output_device.is_mock,
+                );
+            });
         },
         @after_block: {
             event_loop_state.global_data.set_hud_report(telemetry.report());
@@ -588,16 +600,18 @@ fn process_input_event<S, AS>(
         @telemetry: telemetry,
         @hint: TelemetryAtomHint::Input,
         @block: {
-            actually_process_input_event(
-                &mut event_loop_state.global_data,
-                app,
-                input_event,
-                exit_keys,
-                &mut event_loop_state.component_registry_map,
-                &mut event_loop_state.has_focus,
-                lock_output_device_as_mut!(output_device),
-                output_device.is_mock,
-            );
+            output_device.write(|writer| {
+                actually_process_input_event(
+                    &mut event_loop_state.global_data,
+                    app,
+                    input_event,
+                    exit_keys,
+                    &mut event_loop_state.component_registry_map,
+                    &mut event_loop_state.has_focus,
+                    writer,
+                    output_device.is_mock,
+                );
+            });
         },
         @after_block: {
             event_loop_state.global_data.set_hud_report(telemetry.report());

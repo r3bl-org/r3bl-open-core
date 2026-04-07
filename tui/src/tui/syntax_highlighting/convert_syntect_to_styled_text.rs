@@ -42,12 +42,13 @@ pub type SyntectStyleStrSpanLine<'a> = Vec<SyntectStyleStrSpan<'a>>;
 /// for better support of TypeScript, TOML, etc., `syntect` makes that easy:
 /// ```no_run
 /// # use syntect::parsing::SyntaxSet;
+/// # use r3bl_tui::ok;
 /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
-/// // Example of loading additional syntaxes
-/// let mut builder = SyntaxSet::load_defaults_newlines().into_builder();
-/// builder.add_from_folder("path/to/extra/syntaxes", true)?;
-/// let syntax_set = builder.build();
-/// # Ok(())
+///     // Example of loading additional syntaxes
+///     let mut builder = SyntaxSet::load_defaults_newlines().into_builder();
+///     builder.add_from_folder("path/to/extra/syntaxes", true)?;
+///     let syntax_set = builder.build();
+///     # ok!()
 /// # }
 /// ```
 fn map_language_to_extension(lang: &str) -> &str {

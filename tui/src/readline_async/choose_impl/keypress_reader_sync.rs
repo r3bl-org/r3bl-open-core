@@ -28,14 +28,10 @@ impl KeyPressReader for TestVecKeyPressReader {
         // Increment index every time this function is called until the end of the vector
         // and then wrap around.
         match self.index {
-            Some(index) => {
-                if index < self.key_press_vec.len() - 1 {
-                    self.index = Some(index + 1);
-                } else {
-                    self.index = Some(0);
-                }
+            Some(index) if index < self.key_press_vec.len() - 1 => {
+                self.index = Some(index + 1);
             }
-            None => {
+            Some(_) | None => {
                 self.index = Some(0);
             }
         }

@@ -267,7 +267,7 @@ pub use raw_mode_core::*;
 
 // Integration tests (Unix only).
 #[cfg(all(unix, any(test, doc)))]
-pub mod integration_tests;
+pub mod raw_mode_integration_tests;
 
 // Conditional re-export for manual validation tests (Unix only).
 #[cfg(all(unix, any(test, doc)))]

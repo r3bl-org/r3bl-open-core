@@ -51,7 +51,7 @@ pub fn get_top_border_line(bounds_width: ColWidth) -> InlineString {
         width: bounds_width,
     };
 
-    if let Ok(mut cache) = BORDER_CACHE.lock() {
+    BORDER_CACHE.write(|cache: &mut crate::LruCache<BorderCacheKey, InlineString>| {
         if let Some(cached) = cache.get(&key) {
             return cached.clone();
         }
@@ -59,10 +59,7 @@ pub fn get_top_border_line(bounds_width: ColWidth) -> InlineString {
         let text = create_top_border_line(bounds_width);
         cache.insert(key, text.clone());
         text
-    } else {
-        // Fallback if cache lock fails.
-        create_top_border_line(bounds_width)
-    }
+    })
 }
 
 /// Gets a cached middle border line or creates and caches it.
@@ -72,7 +69,7 @@ pub fn get_middle_border_line(bounds_width: ColWidth) -> InlineString {
         width: bounds_width,
     };
 
-    if let Ok(mut cache) = BORDER_CACHE.lock() {
+    BORDER_CACHE.write(|cache: &mut crate::LruCache<BorderCacheKey, InlineString>| {
         if let Some(cached) = cache.get(&key) {
             return cached.clone();
         }
@@ -80,10 +77,7 @@ pub fn get_middle_border_line(bounds_width: ColWidth) -> InlineString {
         let text = create_middle_border_line(bounds_width);
         cache.insert(key, text.clone());
         text
-    } else {
-        // Fallback if cache lock fails.
-        create_middle_border_line(bounds_width)
-    }
+    })
 }
 
 /// Gets a cached bottom border line or creates and caches it.
@@ -93,7 +87,7 @@ pub fn get_bottom_border_line(bounds_width: ColWidth) -> InlineString {
         width: bounds_width,
     };
 
-    if let Ok(mut cache) = BORDER_CACHE.lock() {
+    BORDER_CACHE.write(|cache: &mut crate::LruCache<BorderCacheKey, InlineString>| {
         if let Some(cached) = cache.get(&key) {
             return cached.clone();
         }
@@ -101,10 +95,7 @@ pub fn get_bottom_border_line(bounds_width: ColWidth) -> InlineString {
         let text = create_bottom_border_line(bounds_width);
         cache.insert(key, text.clone());
         text
-    } else {
-        // Fallback if cache lock fails.
-        create_bottom_border_line(bounds_width)
-    }
+    })
 }
 
 /// Gets a cached separator line or creates and caches it.
@@ -114,7 +105,7 @@ pub fn get_separator_line(bounds_width: ColWidth) -> InlineString {
         width: bounds_width,
     };
 
-    if let Ok(mut cache) = BORDER_CACHE.lock() {
+    BORDER_CACHE.write(|cache: &mut crate::LruCache<BorderCacheKey, InlineString>| {
         if let Some(cached) = cache.get(&key) {
             return cached.clone();
         }
@@ -122,10 +113,7 @@ pub fn get_separator_line(bounds_width: ColWidth) -> InlineString {
         let text = create_separator_line(bounds_width);
         cache.insert(key, text.clone());
         text
-    } else {
-        // Fallback if cache lock fails.
-        create_separator_line(bounds_width)
-    }
+    })
 }
 
 // Helper functions to create border strings.

@@ -598,7 +598,7 @@ impl TerminalMultiplexer {
         RawMode::end(self.terminal_size,
                     lock_output_device_as_mut!(&self.output_device),
                     false);
-        Ok(())
+        ok!()
     }
 
     // Signal handling (SIGTERM, SIGINT, SIGWINCH)
@@ -683,7 +683,7 @@ impl TerminalMultiplexer {
 
         self.active_pty = ActivePty::ChiInput;
         self.clear_and_show_mode_banner("CHI INPUT - Ctrl+Enter to return");
-        Ok(())
+        ok!()
     }
 
     async fn switch_to_chi_history(&mut self) -> miette::Result<()> {
@@ -696,7 +696,7 @@ impl TerminalMultiplexer {
 
         self.active_pty = ActivePty::ChiHistory;
         self.clear_and_show_mode_banner("CHI HISTORY - Enter to paste, Esc to cancel");
-        Ok(())
+        ok!()
     }
 }
 ```
@@ -721,7 +721,7 @@ impl TerminalMultiplexer {
                 .send(PtyInputEvent::Text(clipboard_content))?;
         }
 
-        Ok(())
+        ok!()
     }
 
     async fn return_to_claude_no_paste(&mut self) -> miette::Result<()> {
@@ -731,7 +731,7 @@ impl TerminalMultiplexer {
         // Restore Claude display
         self.replay_buffered_claude_output();
 
-        Ok(())
+        ok!()
     }
 }
 ```
@@ -763,7 +763,7 @@ impl TerminalMultiplexer {
                 }
             }
         }
-        Ok(())
+        ok!()
     }
 
     fn replay_buffered_claude_output(&mut self) {

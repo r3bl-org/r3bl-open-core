@@ -5,7 +5,7 @@
 //! [`OSC`]: crate::osc_codes::OscSequence
 
 use super::{OscEvent, osc_codes::OscSequence};
-use crate::lock_output_device_as_mut;
+use crate::ok;
 use crate::core::terminal_io::OutputDevice;
 use miette::IntoDiagnostic;
 
@@ -58,7 +58,7 @@ impl<'a> OscController<'a> {
             OscEvent::SetTitleAndTab(text) => self.set_title_and_tab(&text),
             // For other events, we would need to implement their formatting.
             // For now, we'll focus on the title setting functionality.
-            _ => Ok(()), // Ignore other events for now
+            _ => ok!(), // Ignore other events for now
         }
     }
 
@@ -66,8 +66,10 @@ impl<'a> OscController<'a> {
     ///
     /// [`OSC`]: crate::osc_codes::OscSequence
     fn write_sequence(&mut self, sequence: &str) -> miette::Result<()> {
-        write!(lock_output_device_as_mut!(self.output_device), "{sequence}")
-            .into_diagnostic()?;
-        Ok(())
+        self.output_device.write(|writer| {
+            write!(writer, "{sequence}").into_diagnostic()?;
+            Ok::<(), miette::Report>(())
+        })?;
+        ok!()
     }
 }
