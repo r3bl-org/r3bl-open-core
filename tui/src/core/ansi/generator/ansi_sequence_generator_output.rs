@@ -338,6 +338,13 @@ mod terminal_modes {
         #[must_use]
         pub fn enable_mouse_tracking() -> String {
             let mut result = String::new();
+            // Mouse Mode Extension (1015) - URXVT mouse extension
+            result.push_str(
+                &CsiSequence::EnablePrivateMode(PrivateModeType::Other(
+                    URXVT_MOUSE_EXTENSION,
+                ))
+                .to_string(),
+            );
             // SGR Mouse Mode (1006) - modern extended mode supporting mouse wheel and
             // movement
             result.push_str(
@@ -351,13 +358,6 @@ mod terminal_modes {
                 ))
                 .to_string(),
             );
-            // Mouse Mode Extension (1015) - URXVT mouse extension
-            result.push_str(
-                &CsiSequence::EnablePrivateMode(PrivateModeType::Other(
-                    URXVT_MOUSE_EXTENSION,
-                ))
-                .to_string(),
-            );
             result
         }
 
@@ -368,6 +368,13 @@ mod terminal_modes {
         #[must_use]
         pub fn disable_mouse_tracking() -> String {
             let mut result = String::new();
+            // Mouse Mode Extension (1015)
+            result.push_str(
+                &CsiSequence::DisablePrivateMode(PrivateModeType::Other(
+                    URXVT_MOUSE_EXTENSION,
+                ))
+                .to_string(),
+            );
             // SGR Mouse Mode (1006)
             result.push_str(
                 &CsiSequence::DisablePrivateMode(PrivateModeType::Other(SGR_MOUSE_MODE))
@@ -377,13 +384,6 @@ mod terminal_modes {
             result.push_str(
                 &CsiSequence::DisablePrivateMode(PrivateModeType::Other(
                     APPLICATION_MOUSE_TRACKING,
-                ))
-                .to_string(),
-            );
-            // Mouse Mode Extension (1015)
-            result.push_str(
-                &CsiSequence::DisablePrivateMode(PrivateModeType::Other(
-                    URXVT_MOUSE_EXTENSION,
                 ))
                 .to_string(),
             );
