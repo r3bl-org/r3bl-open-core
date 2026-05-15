@@ -84,26 +84,7 @@ pub fn convert_input_event(vt100_event: VT100InputEventIR) -> Option<InputEvent>
             action,
             modifiers,
         } => {
-            let button_kind = match button {
-                VT100MouseButtonIR::Left => Button::Left,
-                VT100MouseButtonIR::Right => Button::Right,
-                VT100MouseButtonIR::Middle => Button::Middle,
-                VT100MouseButtonIR::Unknown => return None,
-            };
-
-            let kind = match action {
-                VT100MouseActionIR::Press => MouseInputKind::MouseDown(button_kind),
-                VT100MouseActionIR::Release => MouseInputKind::MouseUp(button_kind),
-                VT100MouseActionIR::Drag => MouseInputKind::MouseDrag(button_kind),
-                VT100MouseActionIR::Motion => MouseInputKind::MouseMove,
-                VT100MouseActionIR::Scroll(direction) => match direction {
-                    VT100ScrollDirectionIR::Up => MouseInputKind::ScrollUp,
-                    VT100ScrollDirectionIR::Down => MouseInputKind::ScrollDown,
-                    VT100ScrollDirectionIR::Left => MouseInputKind::ScrollLeft,
-                    VT100ScrollDirectionIR::Right => MouseInputKind::ScrollRight,
-                },
-            };
-
+            // Compute shared fields early
             let maybe_modifier_keys = if modifiers.shift == KeyState::Pressed
                 || modifiers.ctrl == KeyState::Pressed
                 || modifiers.alt == KeyState::Pressed
@@ -122,6 +103,46 @@ pub fn convert_input_event(vt100_event: VT100InputEventIR) -> Option<InputEvent>
             let canonical_pos = Pos {
                 col_index: pos.col.to_zero_based(),
                 row_index: pos.row.to_zero_based(),
+            };
+
+            // Handle action types that don't require a valid button
+            match action {
+                VT100MouseActionIR::Scroll(direction) => {
+                    let kind = match direction {
+                        VT100ScrollDirectionIR::Up => MouseInputKind::ScrollUp,
+                        VT100ScrollDirectionIR::Down => MouseInputKind::ScrollDown,
+                        VT100ScrollDirectionIR::Left => MouseInputKind::ScrollLeft,
+                        VT100ScrollDirectionIR::Right => MouseInputKind::ScrollRight,
+                    };
+                    return Some(InputEvent::Mouse(MouseInput {
+                        pos: canonical_pos,
+                        kind,
+                        maybe_modifier_keys,
+                    }));
+                }
+                VT100MouseActionIR::Motion => {
+                    return Some(InputEvent::Mouse(MouseInput {
+                        pos: canonical_pos,
+                        kind: MouseInputKind::MouseMove,
+                        maybe_modifier_keys,
+                    }));
+                }
+                _ => {}
+            }
+
+            // Remaining events (Press, Release, Drag) require a valid button
+            let button_kind = match button {
+                VT100MouseButtonIR::Left => Button::Left,
+                VT100MouseButtonIR::Right => Button::Right,
+                VT100MouseButtonIR::Middle => Button::Middle,
+                VT100MouseButtonIR::Unknown => return None,
+            };
+
+            let kind = match action {
+                VT100MouseActionIR::Press => MouseInputKind::MouseDown(button_kind),
+                VT100MouseActionIR::Release => MouseInputKind::MouseUp(button_kind),
+                VT100MouseActionIR::Drag => MouseInputKind::MouseDrag(button_kind),
+                VT100MouseActionIR::Motion | VT100MouseActionIR::Scroll(_) => unreachable!(),
             };
 
             let mouse_input = MouseInput {

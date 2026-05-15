@@ -131,3 +131,8 @@ debug = false
 [profile.test]
 debug = false
 # incremental = false  # Disable to avoid rustc dep graph ICE on nightly
+# Temporary patch: proc-macro2 1.0.106 is broken with nightly-2026-02-15
+# (missing #![feature(proc_macro_span)] in main crate compilation).
+# Remove before merge once a fixed release is published.
+[patch.crates-io]
+proc-macro2 = { git = "https://github.com/dtolnay/proc-macro2" }

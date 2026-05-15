@@ -356,11 +356,11 @@ mod terminal_mode_tests {
         // (1015)
         let expected = format!(
             "{}{}{}",
+            CsiSequence::EnablePrivateMode(PrivateModeType::Other(URXVT_MOUSE_EXTENSION)),
             CsiSequence::EnablePrivateMode(PrivateModeType::Other(SGR_MOUSE_MODE)),
             CsiSequence::EnablePrivateMode(PrivateModeType::Other(
                 APPLICATION_MOUSE_TRACKING
-            )),
-            CsiSequence::EnablePrivateMode(PrivateModeType::Other(URXVT_MOUSE_EXTENSION))
+            ))
         );
         assert_eq!(seq, expected);
     }
@@ -372,12 +372,12 @@ mod terminal_mode_tests {
         // (1015)
         let expected = format!(
             "{}{}{}",
+            CsiSequence::DisablePrivateMode(PrivateModeType::Other(
+                URXVT_MOUSE_EXTENSION
+            )),
             CsiSequence::DisablePrivateMode(PrivateModeType::Other(SGR_MOUSE_MODE)),
             CsiSequence::DisablePrivateMode(PrivateModeType::Other(
                 APPLICATION_MOUSE_TRACKING
-            )),
-            CsiSequence::DisablePrivateMode(PrivateModeType::Other(
-                URXVT_MOUSE_EXTENSION
             ))
         );
         assert_eq!(seq, expected);

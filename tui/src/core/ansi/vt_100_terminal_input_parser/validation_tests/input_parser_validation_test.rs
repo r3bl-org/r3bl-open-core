@@ -209,8 +209,8 @@ mod mouse_events {
 
     #[test]
     fn test_scroll_up_with_modifiers() {
-        // CONFIRMED: Button 66 = scroll up at col 37, row 14 (from terminal observation)
-        let seq = b"\x1b[<66;37;14M";
+        // CONFIRMED: Button 64 = scroll up at col 37, row 14 (from terminal observation)
+        let seq = b"\x1b[<64;37;14M";
         let (event, _bytes_consumed) =
             parse_mouse_sequence(seq).expect("Should parse observed scroll sequence");
 

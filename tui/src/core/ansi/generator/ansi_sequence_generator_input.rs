@@ -534,9 +534,11 @@ mod mouse {
                 code |= MOUSE_MOTION_FLAG; // Drag flag (bit 5)
                 MOUSE_SGR_PRESS as char
             }
-            VT100MouseActionIR::Press
-            | VT100MouseActionIR::Motion
-            | VT100MouseActionIR::Scroll(_) => MOUSE_SGR_PRESS as char,
+            VT100MouseActionIR::Motion => {
+                code |= MOUSE_MOTION_FLAG; // Motion flag (bit 5), same as Drag
+                MOUSE_SGR_PRESS as char
+            }
+            VT100MouseActionIR::Press | VT100MouseActionIR::Scroll(_) => MOUSE_SGR_PRESS as char,
         };
 
         code = apply_modifiers(code, modifiers);
@@ -628,9 +630,8 @@ mod mouse {
     /// Converts button enum to protocol code.
     fn button_to_code(button: VT100MouseButtonIR) -> u16 {
         match button {
-            VT100MouseButtonIR::Left | VT100MouseButtonIR::Unknown => {
-                MOUSE_LEFT_BUTTON_CODE
-            }
+            VT100MouseButtonIR::Left => MOUSE_LEFT_BUTTON_CODE,
+            VT100MouseButtonIR::Unknown => MOUSE_RELEASE_BUTTON_CODE,
             VT100MouseButtonIR::Middle => MOUSE_MIDDLE_BUTTON_CODE,
             VT100MouseButtonIR::Right => MOUSE_RIGHT_BUTTON_CODE,
         }
