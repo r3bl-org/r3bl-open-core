@@ -107,13 +107,13 @@
 use super::ir_event_types::{VT100InputEventIR, VT100KeyModifiersIR, VT100MouseActionIR,
                             VT100MouseButtonIR, VT100ScrollDirectionIR};
 use crate::{ByteOffset, KeyState, TermPos, byte_offset,
-            core::ansi::constants::{CSI_PREFIX, CSI_PREFIX_LEN, MOUSE_BASE_BUTTON_MASK,
-                                    MOUSE_BUTTON_BITS_MASK, MOUSE_BUTTON_CODE_MASK,
-                                    MOUSE_MODIFIER_ALT, MOUSE_MODIFIER_CTRL,
-                                    MOUSE_MODIFIER_SHIFT, MOUSE_MOTION_FLAG,
-                                    MOUSE_SCROLL_THRESHOLD, MOUSE_SGR_PREFIX,
-                                    MOUSE_SGR_PREFIX_LEN, MOUSE_SGR_PRESS,
-                                    MOUSE_SGR_RELEASE, MOUSE_X10_MARKER,
+            core::ansi::constants::{CSI_PREFIX, CSI_PREFIX_LEN, MOUSE_BUTTON_BITS_MASK,
+                                    MOUSE_BUTTON_CODE_MASK, MOUSE_MODIFIER_ALT,
+                                    MOUSE_MODIFIER_CTRL, MOUSE_MODIFIER_SHIFT, MOUSE_MOTION_FLAG,
+                                    MOUSE_SCROLL_DOWN_BUTTON, MOUSE_SCROLL_LEFT_BUTTON,
+                                    MOUSE_SCROLL_RIGHT_BUTTON, MOUSE_SCROLL_THRESHOLD,
+                                    MOUSE_SCROLL_UP_BUTTON, MOUSE_SGR_PREFIX, MOUSE_SGR_PREFIX_LEN,
+                                    MOUSE_SGR_PRESS, MOUSE_SGR_RELEASE, MOUSE_X10_MARKER,
                                     MOUSE_X10_PREFIX}};
 
 #[must_use]
@@ -592,26 +592,24 @@ fn detect_mouse_button(cb: u16) -> Option<VT100MouseButtonIR> {
 /// Drag flag is bit 5 (value 32) in the button byte.
 fn is_drag_event(cb: u16) -> bool { (cb & MOUSE_MOTION_FLAG) != 0 }
 
-/// Detects scroll events (up/down/left/right).
+/// Detects scroll events (up/down/left/right), accounting for modifier keys.
 ///
-/// Scroll button codes:
-/// - 64 = scroll up
-/// - 65 = scroll down
-/// - 66 = scroll left (rare) - but often used for scroll up with modifiers!
-/// - 67 = scroll right (rare)
+/// In SGR mouse encoding, modifier keys are ORed into the button byte:
+///   bit 2 (4)  = Shift
+///   bit 3 (8)  = Alt
+///   bit 4 (16) = Ctrl
+///
+/// Masking out those bits with !(SHIFT | ALT | CTRL) leaves the base scroll code,
+/// which is then matched against the named constants. Validated on rxvt, xterm,
+/// wezterm, and konsole (up/down); left/right follow the same encoding convention.
 fn detect_scroll_event(cb: u16) -> Option<VT100ScrollDirectionIR> {
-    // Check raw button code first (before masking modifiers)
-    // Buttons 64+ indicate scroll events
-    if cb >= MOUSE_SCROLL_THRESHOLD {
-        // Mask to get base button (without modifiers but keeping scroll bit)
-        let base_button = cb & MOUSE_BASE_BUTTON_MASK; // Keep bit 6 (value 64)
-
-        match base_button {
-            68..=71 => Some(VT100ScrollDirectionIR::Down), // All scroll down variants
-            _ /* 64..=67 */ => Some(VT100ScrollDirectionIR::Up), /* All scroll up variants + default to up for unknown scroll events */
-        }
-    } else {
-        None
+    let base = cb & !(MOUSE_MODIFIER_SHIFT | MOUSE_MODIFIER_ALT | MOUSE_MODIFIER_CTRL);
+    match base {
+        MOUSE_SCROLL_UP_BUTTON    => Some(VT100ScrollDirectionIR::Up),
+        MOUSE_SCROLL_DOWN_BUTTON  => Some(VT100ScrollDirectionIR::Down),
+        MOUSE_SCROLL_LEFT_BUTTON  => Some(VT100ScrollDirectionIR::Left),
+        MOUSE_SCROLL_RIGHT_BUTTON => Some(VT100ScrollDirectionIR::Right),
+        _ => None,
     }
 }
 
@@ -1455,6 +1453,97 @@ mod tests {
                 assert_eq!(pos.row.as_u16(), 1, "Row should be 1-based");
             }
             _ => panic!("Expected Mouse event"),
+        }
+    }
+
+    #[test]
+    fn test_sgr_scroll_down() {
+        // SGR: Scroll down at col 10, row 5
+        // Generated sequence: ESC[<65;10;5M (button 65 = scroll down, fixed from 68)
+        let seq = sgr_mouse_sequence(
+            VT100MouseButtonIR::Left,
+            10,
+            5,
+            VT100MouseActionIR::Scroll(VT100ScrollDirectionIR::Down),
+            VT100KeyModifiersIR::default(),
+        );
+        let (event, bytes_consumed) = parse_mouse_sequence(&seq).expect("Should parse");
+
+        assert_eq!(bytes_consumed.as_usize(), seq.len());
+        match event {
+            VT100InputEventIR::Mouse { action, pos, .. } => {
+                assert_eq!(
+                    action,
+                    VT100MouseActionIR::Scroll(VT100ScrollDirectionIR::Down)
+                );
+                assert_eq!(pos.col.as_u16(), 10);
+                assert_eq!(pos.row.as_u16(), 5);
+            }
+            _ => panic!("Expected Mouse scroll-down event"),
+        }
+    }
+
+    #[test]
+    fn test_sgr_scroll_with_modifiers() {
+        // SGR: Ctrl+Scroll-up: cb = 64 (scroll up) | 16 (Ctrl) = 80
+        // Modifier bits must be stripped before matching scroll codes.
+        // Generated sequence: ESC[<80;5;3M
+        let seq = sgr_mouse_sequence(
+            VT100MouseButtonIR::Left,
+            5,
+            3,
+            VT100MouseActionIR::Scroll(VT100ScrollDirectionIR::Up),
+            VT100KeyModifiersIR {
+                ctrl: KeyState::Pressed,
+                shift: KeyState::NotPressed,
+                alt: KeyState::NotPressed,
+            },
+        );
+        let (event, bytes_consumed) = parse_mouse_sequence(&seq).expect("Should parse");
+
+        assert_eq!(bytes_consumed.as_usize(), seq.len());
+        match event {
+            VT100InputEventIR::Mouse {
+                action, modifiers, ..
+            } => {
+                assert_eq!(
+                    action,
+                    VT100MouseActionIR::Scroll(VT100ScrollDirectionIR::Up),
+                    "Scroll direction should survive modifier stripping"
+                );
+                assert_eq!(modifiers.ctrl, KeyState::Pressed);
+            }
+            _ => panic!("Expected Mouse scroll event with modifier"),
+        }
+    }
+
+    #[test]
+    fn test_sgr_buttonless_motion() {
+        // SGR: Buttonless mouse move: cb = 35 (motion flag bit 5 set, no button held)
+        // Generated sequence: ESC[<35;20;10M
+        // commit cf2055c4: motion flag set with Unknown button => Motion (not Drag).
+        let seq = sgr_mouse_sequence(
+            VT100MouseButtonIR::Unknown,
+            20,
+            10,
+            VT100MouseActionIR::Motion,
+            VT100KeyModifiersIR::default(),
+        );
+        let (event, bytes_consumed) = parse_mouse_sequence(&seq).expect("Should parse");
+
+        assert_eq!(bytes_consumed.as_usize(), seq.len());
+        match event {
+            VT100InputEventIR::Mouse { button, action, pos, .. } => {
+                assert_eq!(
+                    action,
+                    VT100MouseActionIR::Motion,
+                    "Buttonless move should produce Motion, not Drag"
+                );
+                assert_eq!(button, VT100MouseButtonIR::Unknown);
+                assert_eq!(pos.col.as_u16(), 20);
+                assert_eq!(pos.row.as_u16(), 10);
+            }
+            _ => panic!("Expected Mouse Motion event"),
         }
     }
 }

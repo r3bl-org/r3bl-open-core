@@ -214,14 +214,14 @@ pub const MOUSE_SCROLL_THRESHOLD: u16 = 0b0100_0000;
 /// [`SGR`]: crate::SgrCode
 pub const MOUSE_SCROLL_UP_BUTTON: u16 = 64;
 
-/// [`SGR`] Scroll Down ([`SGR`]): Button code `68` for scroll down events.
+/// [`SGR`] Scroll Down ([`SGR`]): Button code `65` for scroll down events.
 ///
-/// Value: `68`.
+/// Value: `65`.
 ///
 /// Used in [`SGR`] mouse protocol.
 ///
 /// [`SGR`]: crate::SgrCode
-pub const MOUSE_SCROLL_DOWN_BUTTON: u16 = 68;
+pub const MOUSE_SCROLL_DOWN_BUTTON: u16 = 65;
 
 /// [`SGR`] Scroll Left ([`SGR`]): Button code `66` for horizontal scroll left events.
 ///
