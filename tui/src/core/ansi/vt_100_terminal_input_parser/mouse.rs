@@ -111,10 +111,9 @@ use crate::{ByteOffset, KeyState, TermPos, byte_offset,
                                     MOUSE_BUTTON_CODE_MASK, MOUSE_MODIFIER_ALT,
                                     MOUSE_MODIFIER_CTRL, MOUSE_MODIFIER_SHIFT, MOUSE_MOTION_FLAG,
                                     MOUSE_SCROLL_DOWN_BUTTON, MOUSE_SCROLL_LEFT_BUTTON,
-                                    MOUSE_SCROLL_RIGHT_BUTTON, MOUSE_SCROLL_THRESHOLD,
-                                    MOUSE_SCROLL_UP_BUTTON, MOUSE_SGR_PREFIX, MOUSE_SGR_PREFIX_LEN,
-                                    MOUSE_SGR_PRESS, MOUSE_SGR_RELEASE, MOUSE_X10_MARKER,
-                                    MOUSE_X10_PREFIX}};
+                                    MOUSE_SCROLL_RIGHT_BUTTON, MOUSE_SCROLL_UP_BUTTON,
+                                    MOUSE_SGR_PREFIX, MOUSE_SGR_PREFIX_LEN, MOUSE_SGR_PRESS,
+                                    MOUSE_SGR_RELEASE, MOUSE_X10_MARKER, MOUSE_X10_PREFIX}};
 
 #[must_use]
 pub fn parse_mouse_sequence(buffer: &[u8]) -> Option<(VT100InputEventIR, ByteOffset)> {
@@ -219,11 +218,15 @@ fn parse_sgr_mouse(sequence: &[u8]) -> Option<(VT100InputEventIR, ByteOffset)> {
     }
 
     // Detect button type
-    let button = detect_mouse_button(cb)?;
+    let button = detect_mouse_button(cb);
 
     // Detect action
     let action = if is_drag_event(cb) {
-        VT100MouseActionIR::Drag
+        if button == VT100MouseButtonIR::Unknown {
+            VT100MouseActionIR::Motion
+        } else {
+            VT100MouseActionIR::Drag
+        }
     } else if action_char == 'M' {
         VT100MouseActionIR::Press
     } else {
@@ -569,21 +572,14 @@ fn parse_rxvt_mouse(sequence: &[u8]) -> Option<(VT100InputEventIR, ByteOffset)> 
 /// - 3 = release (for legacy modes, [`SGR`] uses 'M'/'m' instead)
 ///
 /// [`SGR`]: crate::SgrCode
-fn detect_mouse_button(cb: u16) -> Option<VT100MouseButtonIR> {
+fn detect_mouse_button(cb: u16) -> VT100MouseButtonIR {
     // Mask out modifier and drag bits (keep only bits 0-5)
     let button_code = cb & MOUSE_BUTTON_CODE_MASK;
-
-    // Scroll events are handled separately
-    if button_code >= MOUSE_SCROLL_THRESHOLD {
-        return None;
-    }
-
-    // Get base button (bits 0-1)
     match button_code & MOUSE_BUTTON_BITS_MASK {
-        0 => Some(VT100MouseButtonIR::Left),
-        1 => Some(VT100MouseButtonIR::Middle),
-        2 => Some(VT100MouseButtonIR::Right),
-        _ => Some(VT100MouseButtonIR::Unknown),
+        0 => VT100MouseButtonIR::Left,
+        1 => VT100MouseButtonIR::Middle,
+        2 => VT100MouseButtonIR::Right,
+        _ => VT100MouseButtonIR::Unknown,
     }
 }
 
