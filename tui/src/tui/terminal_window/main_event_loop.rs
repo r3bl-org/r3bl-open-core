@@ -255,13 +255,16 @@ where
             output_device.is_mock,
         );
 
-        // Initialize app and render.
+        // Initialize app and start background tasks before the first render.
+        app.app_init(&mut self.component_registry_map, &mut self.has_focus);
+        app.app_start(&mut self.global_data);
+
+        // Render the first frame.
         let telemetry = &mut self.telemetry;
         telemetry_record!(
             @telemetry: telemetry,
             @hint: TelemetryAtomHint::Render,
             @block: {
-                app.app_init(&mut self.component_registry_map, &mut self.has_focus);
                 AppManager::render_app(
                     app,
                     &mut self.global_data,
@@ -1094,6 +1097,10 @@ mod tests {
         #[derive(Default)]
         pub struct AppDataTest {
             pub color_wheel_rgb: ColorWheel,
+            /// Set to `true` by `app_init`; checked by `app_start` to verify ordering.
+            pub init_called: bool,
+            /// Set to `true` by `app_start`; checked by `app_render` to verify ordering.
+            pub start_called: bool,
         }
     }
 
@@ -1111,6 +1118,11 @@ mod tests {
                 _component_registry_map: &mut ComponentRegistryMap<State, AppSignal>,
                 _has_focus: &mut HasFocus,
             ) -> CommonResult<RenderPipeline> {
+                // Verify app_start was called before the first render.
+                assert!(
+                    self.data.start_called,
+                    "app_start must be called before app_render"
+                );
                 throws_with_return!({
                     let state_string =
                         inline_string!("{a:?}", a = global_data_mut_ref.state);
@@ -1291,6 +1303,16 @@ mod tests {
                     ColorWheelSpeed::Fast,
                     25,
                 )]);
+                data.init_called = true;
+            }
+
+            fn app_start(&mut self, _global_data: &mut GlobalData<State, AppSignal>) {
+                // Verify app_init was called before app_start.
+                assert!(
+                    self.data.init_called,
+                    "app_init must be called before app_start"
+                );
+                self.data.start_called = true;
             }
         }
     }
