@@ -1215,9 +1215,9 @@
 //!       processed the entire [App] gets re-rendered. This is the unidirectional data
 //!       flow architecture inspired by React and Elm.
 //! - Your [App] trait impl is the main entry point for laying out the entire application.
-//!   Before the first render, the [App] is initialized (via a call to [`App::app_init`]),
-//!   and is responsible for creating all the [Component]s that it uses, and saving them
-//!   to the [`ComponentRegistryMap`].
+//!   Before the first render, the [App] is initialized (via a call to [`App::app_init_components`]
+//!   and [`App::app_start_background_services`]). The `app_init_components` method is responsible
+//!   for creating all the [Component]s that it uses, and saving them to the [`ComponentRegistryMap`].
 //!   - State is stored in many places. Globally at the [`GlobalData`] level, and also in
 //!     [App], and also in [Component].
 //! - This sets everything up so that [`App::app_render`],
