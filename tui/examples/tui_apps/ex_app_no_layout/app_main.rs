@@ -100,7 +100,7 @@ mod app_main_impl_trait_app {
         type S = State;
         type AS = AppSignal;
 
-        fn app_init(
+        fn app_init_components(
             &mut self,
             _component_registry_map: &mut ComponentRegistryMap<State, AppSignal>,
             _has_focus: &mut HasFocus,

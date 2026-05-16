@@ -3,7 +3,7 @@
 - [x] PTY MUX UI Freeze
   - [x] [fix-pty-mux-debug-session.md](file:///home/nazmul/github/roc/task/fix-pty-mux-debug-session.md)
 - [ ] Polling and Event Loop Fixes
-  - [ ] https://github.com/r3bl-org/r3bl-open-core/pull/450
+  - [x] https://github.com/r3bl-org/r3bl-open-core/pull/450
   - [ ] [fix-mio-poller-edge-triggered-polling.md](file:///home/nazmul/github/roc/task/fix-mio-poller-edge-triggered-polling.md)
 - [ ] Terminal Parsing (Pending PRs)
   - [ ] https://github.com/r3bl-org/r3bl-open-core/pull/448

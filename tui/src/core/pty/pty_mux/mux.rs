@@ -20,6 +20,7 @@ use crate::{AnsiSequenceGenerator, Continuation, DEBUG_TUI_PTY_MUX, InputEvent, 
             ok, row};
 use std::{fmt::Debug,
           time::{Duration, Instant}};
+use tokio::time::interval;
 
 /// Builder for configuring and creating a [`PTYMux`] instance.
 #[derive(Default, Debug)]
@@ -267,7 +268,6 @@ impl PTYMux {
     async fn run_event_loop(&mut self) -> miette::Result<()> {
         use adaptive_render_budget::{AdaptiveRenderResult::{Render, Skip},
                                      Budget};
-        use tokio::time::interval;
 
         // Create a periodic timer for status bar updates.
         let mut status_bar_interval = interval(Duration::from_millis(500));
@@ -275,7 +275,7 @@ impl PTYMux {
         // Create a fast timer for polling PTY output.
         let mut output_poll_interval = interval(Duration::from_millis(10));
 
-        let mut render_budget = Budget::new();
+        let mut render_budget = Budget::default();
 
         loop {
             tokio::select! {
@@ -394,6 +394,7 @@ impl PTYMux {
     }
 
     /// Cleanup terminal state - always called on exit.
+    #[allow(clippy::too_many_lines)]
     fn cleanup_terminal(&mut self) {
         let start_time = std::time::Instant::now();
         DEBUG_TUI_PTY_MUX.then(|| {
@@ -628,15 +629,17 @@ pub mod adaptive_render_budget {
         pub maybe_render_start: Option<Instant>,
     }
 
-    impl Budget {
-        pub fn new() -> Self {
+    impl Default for Budget {
+        fn default() -> Self {
             Self {
                 last_render_time: Instant::now(),
                 render_cooldown_delay: DEFAULT_FRAME_DELAY_MS,
                 maybe_render_start: None,
             }
         }
+    }
 
+    impl Budget {
         /// Decides if we should render this frame based on output and budget.
         pub fn should_render(
             &self,
@@ -666,9 +669,10 @@ pub mod adaptive_render_budget {
         /// [`mark_end()`]: Self::mark_end
         /// [`mark_start()`]: Self::mark_start
         pub fn mark_start(&mut self) {
-            if self.maybe_render_start.is_some() {
-                panic!("Can't call mark_start() more than once");
-            }
+            assert!(
+                self.maybe_render_start.is_none(),
+                "Can't call mark_start() more than once"
+            );
             self.maybe_render_start = Some(Instant::now());
         }
 
@@ -697,52 +701,49 @@ pub mod adaptive_render_budget {
             // implementing asymmetric backoff.
             let backpressure_detected =
                 render_duration > RENDER_TIME_BACKPRESSURE_THRESHOLD_MS;
-            match backpressure_detected {
-                true => {
-                    // Penalize render budget for backpressure.
-                    self.render_cooldown_delay = self
-                        .render_cooldown_delay
-                        .saturating_add(THROTTLE_PENALTY_MS)
-                        .min(MAX_FRAME_DELAY_MS);
+            if backpressure_detected {
+                // Penalize render budget for backpressure.
+                self.render_cooldown_delay = self
+                    .render_cooldown_delay
+                    .saturating_add(THROTTLE_PENALTY_MS)
+                    .min(MAX_FRAME_DELAY_MS);
 
+                DEBUG_TUI_PTY_MUX.then(|| {
+                    // % is Display, ? is Debug.
+                    tracing::info! {
+                        message = "Budget::mark_end",
+                        info = %crate::inline_string!(
+                            "Render took {:?} (> {:?}). Throttling frame delay to {:?}",
+                            render_duration,
+                            RENDER_TIME_BACKPRESSURE_THRESHOLD_MS,
+                            self.render_cooldown_delay
+                        )
+                    };
+                });
+            } else {
+                // Used for logging.
+                let old_delay = self.render_cooldown_delay;
+
+                // Reward render budget for smooth rendering.
+                self.render_cooldown_delay = self
+                    .render_cooldown_delay
+                    .saturating_sub(RECOVERY_REWARD_MS)
+                    .max(MIN_FRAME_DELAY_MS);
+
+                // Only log recovery if the delay actually changed to avoid spamming
+                // the logs
+                if old_delay != self.render_cooldown_delay {
                     DEBUG_TUI_PTY_MUX.then(|| {
                         // % is Display, ? is Debug.
                         tracing::info! {
                             message = "Budget::mark_end",
                             info = %crate::inline_string!(
-                                "Render took {:?} (> {:?}). Throttling frame delay to {:?}",
+                                "Render took {:?}. Recovering frame delay to {:?}",
                                 render_duration,
-                                RENDER_TIME_BACKPRESSURE_THRESHOLD_MS,
                                 self.render_cooldown_delay
                             )
                         };
                     });
-                }
-                false => {
-                    // Used for logging.
-                    let old_delay = self.render_cooldown_delay;
-
-                    // Reward render budget for smooth rendering.
-                    self.render_cooldown_delay = self
-                        .render_cooldown_delay
-                        .saturating_sub(RECOVERY_REWARD_MS)
-                        .max(MIN_FRAME_DELAY_MS);
-
-                    // Only log recovery if the delay actually changed to avoid spamming
-                    // the logs
-                    if old_delay != self.render_cooldown_delay {
-                        DEBUG_TUI_PTY_MUX.then(|| {
-                            // % is Display, ? is Debug.
-                            tracing::info! {
-                                message = "Budget::mark_end",
-                                info = %crate::inline_string!(
-                                    "Render took {:?}. Recovering frame delay to {:?}",
-                                    render_duration,
-                                    self.render_cooldown_delay
-                                )
-                            };
-                        });
-                    }
                 }
             }
         }
