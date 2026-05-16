@@ -260,13 +260,17 @@ where
             );
         });
 
-        // Initialize app and render.
+        // Initialize app and start background tasks before the first render. Both these
+        // operations are not recorded in telemetry.
+        app.app_init_components(&mut self.component_registry_map, &mut self.has_focus);
+        app.app_start_background_services(&mut self.global_data);
+
+        // Render the first frame.
         let telemetry = &mut self.telemetry;
         telemetry_record!(
             @telemetry: telemetry,
             @hint: TelemetryAtomHint::Render,
             @block: {
-                app.app_init(&mut self.component_registry_map, &mut self.has_focus);
                 output_device.write(|writer| {
                     AppManager::render_app(
                         app,

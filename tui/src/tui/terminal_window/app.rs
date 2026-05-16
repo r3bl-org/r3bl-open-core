@@ -29,11 +29,21 @@ pub trait App {
     /// This is called once at the beginning of the app's lifecycle. It is used to
     /// initialize the [`ComponentRegistryMap`] and [`HasFocus`] structs. It is called
     /// before the first render by the [`crate::TerminalWindow::main_event_loop`].
-    fn app_init(
+    fn app_init_components(
         &mut self,
         component_registry_map: &mut ComponentRegistryMap<Self::S, Self::AS>,
         has_focus: &mut HasFocus,
     );
+
+    /// Called once immediately after [`App::app_init_components`], before the first
+    /// render.
+    ///
+    /// Use this to start background tasks that need
+    /// [`global_data.main_thread_channel_sender`] to communicate back to the main thread.
+    ///
+    /// [`global_data.main_thread_channel_sender`]:
+    ///     crate::GlobalData::main_thread_channel_sender
+    fn app_start_background_services(&mut self, _global_data: &mut GlobalData<Self::S, Self::AS>) {}
 
     /// At a high level:
     /// - Use the `input_event` to dispatch an action to the store if needed.

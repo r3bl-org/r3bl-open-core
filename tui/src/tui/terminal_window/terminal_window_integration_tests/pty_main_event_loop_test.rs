@@ -144,8 +144,16 @@ impl Debug for State {
     }
 }
 
+#[derive(Debug, Default)]
+pub struct TestData {
+    pub init_called: bool,
+    pub start_called: bool,
+}
+
 #[derive(Default)]
-struct AppMainTest;
+struct AppMainTest {
+    pub data: TestData,
+}
 
 impl App for AppMainTest {
     type S = State;
@@ -157,6 +165,10 @@ impl App for AppMainTest {
         _component_registry_map: &mut ComponentRegistryMap<State, AppSignal>,
         _has_focus: &mut HasFocus,
     ) -> CommonResult<RenderPipeline> {
+        assert!(
+            self.data.start_called,
+            "app_start must be called before app_render"
+        );
         throws_with_return!({ RenderPipeline::default() });
     }
 
@@ -209,10 +221,19 @@ impl App for AppMainTest {
         });
     }
 
-    fn app_init(
+    fn app_init_components(
         &mut self,
         _component_registry_map: &mut ComponentRegistryMap<State, AppSignal>,
         _has_focus: &mut HasFocus,
     ) {
+        self.data.init_called = true;
+    }
+
+    fn app_start_background_services(&mut self, _global_data: &mut GlobalData<State, AppSignal>) {
+        assert!(
+            self.data.init_called,
+            "app_init_components must be called before app_start_background_services"
+        );
+        self.data.start_called = true;
     }
 }
