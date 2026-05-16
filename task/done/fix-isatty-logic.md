@@ -118,15 +118,15 @@ Address the gaps in disclaimer coverage and interactivity checks discovered duri
 - [x] **Investigate/Fix `TerminalWindow` Input Check**:
   - `TerminalWindow::main_event_loop` currently only checks `is_output_interactive()`. Verify if it should also check `is_input_interactive()` to match `ReadlineAsyncContext`.
 
-### Phase 3: PTY Integration & CI Migration
+### Phase 3: PTY Integration & CI Migration [COMPLETE]
 
 Migrate tests to run in CI using the PTY infrastructure.
 
-- [ ] **Verify with PTY**:
+- [x] **Verify with PTY**:
   - Add `generate_pty_test!` for `term.rs` functions.
   - Include negative tests (controlled process redirects a stream and verifies
     `IsNotInteractive`).
-- [ ] **Add tests for `examine_env_vars_to_determine_color_support()`**:
+- [x] **Add tests for `examine_env_vars_to_determine_color_support()`**:
   - Currently has zero test coverage for the detection logic (only the cache/override
     layer is tested).
   - Env var tests (`NO_COLOR`, `TERM=dumb`, `FORCE_COLOR` levels 0/1/2/3, `COLORTERM`,
@@ -134,7 +134,7 @@ Migrate tests to run in CI using the PTY infrastructure.
     hyperlink detection tests).
   - TTY-dependent behavior (step 3: non-TTY → NoColor) needs `generate_pty_test!` for
     the positive case (real TTY) and a piped stream for the negative case.
-- [ ] **Migrate `detect_color_support.rs` tests to process isolation**:
+- [x] **Migrate `detect_color_support.rs` tests to process isolation**:
   - The existing `#[serial]` tests in `detect_color_support.rs` modify global state
     (env vars, static overrides) and serialize across the entire test suite.
   - Migrate to the isolated process pattern used elsewhere in the codebase (e.g.,
@@ -142,10 +142,15 @@ Migrate tests to run in CI using the PTY infrastructure.
     spawn the test in a subprocess via `ISOLATED_TEST_RUNNER` env var so global state
     mutations cannot interfere with other tests.
   - This also applies to the new env var tests added above.
-- [ ] **Migrate terminal I/O tests** to `generate_pty_test!`:
+- [x] **Migrate terminal I/O tests** to `generate_pty_test!`:
   - Move `spinner.rs` and `readline.rs` tests.
   - **Important**: Wrap `async` test logic in
     `tokio::runtime::Runtime::new().unwrap().block_on(...)`.
-- [ ] **Network tests** (`github_api.rs`, `package_manager.rs`, `crates_api.rs`): Remove
+- [x] **Network tests** (`github_api.rs`, `package_manager.rs`, `crates_api.rs`): Remove
   the `is_output_interactive()` guards entirely. These tests don't need a terminal — the
   interactivity check was a hack to skip them in CI.
+- [x] **Mandatory manual review**: Verify every file modified in this phase for correct
+  implementation and ensure no regressions.
+  - [x] `tui/src/core/ansi/detect_color/detect_color_support.rs`
+  - [x] `tui/src/core/script/crates_api.rs`
+  - [x] `tui/src/core/script/package_manager.rs`

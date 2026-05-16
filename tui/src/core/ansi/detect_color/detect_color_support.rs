@@ -757,9 +757,33 @@ mod tests {
             std::env::remove_var("NO_COLOR");
         }
 
+        // Test TERM=dumb.
+        unsafe {
+            std::env::set_var("TERM", "dumb");
+            let result = examine_env_vars_to_determine_color_support(Stream::Stdout);
+            assert_eq!(result, ColorSupport::NoColor);
+            std::env::remove_var("TERM");
+        }
+
+        // Test FORCE_COLOR=0 (NoColor).
+        unsafe {
+            std::env::set_var("FORCE_COLOR", "0");
+            let result = examine_env_vars_to_determine_color_support(Stream::Stdout);
+            assert_eq!(result, ColorSupport::NoColor);
+            std::env::remove_var("FORCE_COLOR");
+        }
+
         // Test FORCE_COLOR=1 (Ansi256).
         unsafe {
             std::env::set_var("FORCE_COLOR", "1");
+            let result = examine_env_vars_to_determine_color_support(Stream::Stdout);
+            assert_eq!(result, ColorSupport::Ansi256);
+            std::env::remove_var("FORCE_COLOR");
+        }
+
+        // Test FORCE_COLOR=2 (Ansi256).
+        unsafe {
+            std::env::set_var("FORCE_COLOR", "2");
             let result = examine_env_vars_to_determine_color_support(Stream::Stdout);
             assert_eq!(result, ColorSupport::Ansi256);
             std::env::remove_var("FORCE_COLOR");
