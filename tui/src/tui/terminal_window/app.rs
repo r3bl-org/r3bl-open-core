@@ -35,6 +35,12 @@ pub trait App {
         has_focus: &mut HasFocus,
     );
 
+    /// Called once immediately after [`App::app_init`], before the first render.
+    ///
+    /// Use this to start background tasks that need
+    /// `global_data.main_thread_channel_sender` to communicate back to the main thread.
+    fn app_start(&mut self, _global_data: &mut GlobalData<Self::S, Self::AS>) {}
+
     /// At a high level:
     /// - Use the `input_event` to dispatch an action to the store if needed.
     /// - It returns an [`EventPropagation`].
