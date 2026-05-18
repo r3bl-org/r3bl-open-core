@@ -164,9 +164,13 @@ impl PerformPositioningAndSizing for Surface {
         let new_pos: Pos = current_insertion_pos + allocated_size;
 
         // Adjust `new_pos` using Direction.
+        // Preserve the non-directional component: for vertical keep the
+        // column, for horizontal keep the row.  The multiplication-by-mask
+        // approach (`* (1, 0)`) incorrectly zeroes the preserved axis when
+        // the parent container isn't at (0, 0).
         let new_pos: Pos = match current_box.dir {
-            LayoutDirection::Vertical => new_pos * (width(0) + height(1)),
-            LayoutDirection::Horizontal => new_pos * (width(1) + height(0)),
+            LayoutDirection::Vertical => new_pos.row_index + current_insertion_pos.col_index,
+            LayoutDirection::Horizontal => current_insertion_pos.row_index + new_pos.col_index,
         };
 
         // Update the box_cursor_pos of the current layout.
