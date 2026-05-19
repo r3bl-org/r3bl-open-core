@@ -1,5 +1,6 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+use crate::ok;
 use std::{fmt::{Display, Formatter, Result},
           time::Duration};
 
@@ -78,7 +79,8 @@ mod converters {
 }
 
 mod display_formatter {
-    use super::{Display, Formatter, Result, TimeDuration};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     impl Display for TimeDuration {
         fn fmt(&self, f: &mut Formatter<'_>) -> Result {

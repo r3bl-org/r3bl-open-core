@@ -4,7 +4,8 @@ use crate::{CaretDirection, ContainsWideSegments, CursorBoundsCheck,
             CursorPositionBoundsStatus, EditorArgsMut, EditorBuffer, EditorEngine,
             NumericValue, SegStringOwned,
             caret_locate::{self, RowContentPositionStatus, locate_col},
-            caret_mut, caret_scr_adj, col, row};
+            caret_mut, caret_scr_adj, col, empty_check_early_return,
+            multiline_disabled_check_early_return, row};
 
 pub fn up(buffer: &mut EditorBuffer, engine: &mut EditorEngine, sel_mod: SelectMode) {
     empty_check_early_return!(buffer, @Nothing);
@@ -559,7 +560,7 @@ mod left_helper {
 #[cfg(test)]
 mod tests {
     use crate::{CaretDirection, DEFAULT_SYN_HI_FILE_EXT, EditorBuffer, EditorEvent,
-                caret_raw, caret_scr_adj,
+                assert_eq2, caret_raw, caret_scr_adj,
                 clipboard_service::clipboard_test_fixtures::TestClipboard,
                 col,
                 editor::test_fixtures_editor::{assert, mock_real_objects_for_editor},

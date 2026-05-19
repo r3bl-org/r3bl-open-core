@@ -1,6 +1,7 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::super::{FlushKind, RenderOpOutputVec};
+use crate::{inline_string, ok};
 use crate::{GetMemSize, LockedOutputDevice, MemorySize, Pos, Size, TermRow, TuiStyle,
             osc::OscEvent};
 use std::fmt::Debug;

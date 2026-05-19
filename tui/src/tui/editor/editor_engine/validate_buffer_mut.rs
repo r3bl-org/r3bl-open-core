@@ -344,7 +344,7 @@ pub fn adjust_caret_col_if_not_in_middle_of_grapheme_cluster(
 #[cfg(test)]
 mod tests {
     use crate::{ArrayBoundsCheck, ArrayOverflowResult, EditorBuffer, EditorEngine,
-                EditorEngineConfig, col, height, row, width};
+                EditorEngineConfig, assert_eq2, col, height, row, width};
 
     #[test]
     fn test_adjust_caret_col_if_not_in_bounds_of_line() {

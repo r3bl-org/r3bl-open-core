@@ -8,29 +8,23 @@
 //! [`OSC`]: crate::osc_codes::OscSequence
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 
-use r3bl_tui::{Size,
-               core::pty_mux::{PTYMux, Process},
-               height, width};
+use r3bl_tui::{IntoErr, TuiAvailability, assert_terminal_is_interactive,
+               core::pty_mux::PTYMux, ok, set_mimalloc_in_main};
 
 #[tokio::main]
 async fn main() -> miette::Result<()> {
+    set_mimalloc_in_main!();
+    assert_terminal_is_interactive();
+
     // Initialize tracing for debugging.
     tracing_subscriber::fmt()
         .with_max_level(tracing::Level::DEBUG)
         .init();
 
-    // Get terminal size.
-    let (cols, rows) = crossterm::terminal::size()
-        .map_err(|e| miette::miette!("Failed to get terminal size: {}", e))?;
-    let terminal_size = Size {
-        col_width: width(cols),
-        row_height: height(rows),
-    };
-
-    // Create processes - one of them will emit OSC sequences.
-    let processes = vec![
-        Process::new("bash", "bash", vec![], terminal_size),
-        Process::new(
+    // Create and run the multiplexer.
+    let mux = match PTYMux::builder()
+        .add_process("bash", "bash", vec![])
+        .add_process(
             "OSC Demo",
             "bash",
             vec![
@@ -50,13 +44,13 @@ async fn main() -> miette::Result<()> {
                   exec bash"
                     .to_string(),
             ],
-            terminal_size,
-        ),
-        Process::new("htop", "htop", vec![], terminal_size),
-    ];
-
-    // Create and run the multiplexer.
-    let mux = PTYMux::builder().processes(processes).build()?;
+        )
+        .add_process("htop", "htop", vec![])
+        .build()
+    {
+        TuiAvailability::Available(mux) => mux,
+        it => return it.into_err(),
+    };
 
     println!("PTY Mux OSC Demo");
     println!("================");
@@ -68,5 +62,5 @@ async fn main() -> miette::Result<()> {
 
     mux.run().await?;
 
-    Ok(())
+    ok!()
 }

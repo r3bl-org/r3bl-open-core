@@ -5,6 +5,8 @@
 //! This test verifies that raw mode works correctly when stdin is not a tty,
 //! which happens in real-world scenarios like piped input.
 
+use crate::{GLYPH_CONTROLLED, GLYPH_CONTROLLER_CLEANUP, GLYPH_FAILURE, GLYPH_SKIPPING,
+            GLYPH_SUCCESS, GLYPH_WARNING};
 use rustix::termios::LocalModes;
 use std::io::Write;
 
@@ -17,7 +19,7 @@ use std::io::Write;
 /// Run this test in a real terminal using:
 /// ```bash
 /// # Test with piped input (stdin is NOT a tty, but /dev/tty works)
-/// echo "test" | cargo test --package r3bl_tui --lib test_dev_tty_fallback_manual -- --ignored --nocapture
+/// echo "test" | cargo test --package r3bl_tui test_dev_tty_fallback_manual -- --ignored --nocapture
 /// ```
 ///
 /// # Why This Must Be Run Manually
@@ -62,7 +64,7 @@ fn test_dev_tty_fallback_manual() {
 
     if stdin_is_tty {
         println!();
-        println!("⚠️  WARNING: stdin IS a tty");
+        println!("{GLYPH_WARNING}  WARNING: stdin IS a tty");
         println!(
             "   This test should be run with redirected stdin to verify the fallback."
         );
@@ -75,18 +77,20 @@ fn test_dev_tty_fallback_manual() {
         panic!("Test requires redirected stdin to verify /dev/tty fallback");
     }
 
-    println!("   ✓ Confirmed: stdin is NOT a tty (as expected for this test)");
+    println!(
+        "   {GLYPH_SUCCESS} Confirmed: stdin is NOT a tty (as expected for this test)"
+    );
     println!();
 
     // Try to enable raw mode - should succeed via /dev/tty fallback
     println!("🔧 Testing raw mode with /dev/tty fallback...");
     match crate::enable_raw_mode() {
         Ok(()) => {
-            println!("   ✓ Raw mode enabled successfully!");
+            println!("   {GLYPH_SUCCESS} Raw mode enabled successfully!");
             println!();
         }
         Err(e) => {
-            println!("   ✗ Failed to enable raw mode: {e:?}");
+            println!("   {GLYPH_FAILURE} Failed to enable raw mode: {e:?}");
             println!();
 
             // Check if /dev/tty exists
@@ -101,7 +105,7 @@ fn test_dev_tty_fallback_manual() {
                         "   This is expected in environments without a controlling terminal (CI, etc.)"
                     );
                     println!();
-                    println!("⏭️  Skipping test - no controlling terminal");
+                    println!("{GLYPH_SKIPPING} Skipping test - no controlling terminal");
                     return;
                 }
             }
@@ -109,7 +113,7 @@ fn test_dev_tty_fallback_manual() {
     }
 
     // Verify /dev/tty is accessible and in raw mode
-    println!("🔍 Verifying /dev/tty terminal settings...");
+    println!("{GLYPH_CONTROLLED} Verifying /dev/tty terminal settings...");
     match std::fs::File::options()
         .read(true)
         .write(true)
@@ -118,35 +122,41 @@ fn test_dev_tty_fallback_manual() {
         Ok(tty) => {
             match rustix::termios::tcgetattr(&tty) {
                 Ok(termios) => {
-                    println!("   ✓ Successfully read /dev/tty termios");
+                    println!("   {GLYPH_SUCCESS} Successfully read /dev/tty termios");
 
                     // Verify key raw mode flags
                     if termios.local_modes.contains(LocalModes::ICANON) {
-                        println!("   ✗ ICANON is ON (should be OFF in raw mode)");
+                        println!(
+                            "   {GLYPH_FAILURE} ICANON is ON (should be OFF in raw mode)"
+                        );
                         panic!("Raw mode not properly enabled - ICANON still set");
                     }
-                    println!("   ✓ ICANON is OFF (raw mode active)");
+                    println!("   {GLYPH_SUCCESS} ICANON is OFF (raw mode active)");
 
                     if termios.local_modes.contains(LocalModes::ECHO) {
-                        println!("   ✗ ECHO is ON (should be OFF in raw mode)");
+                        println!(
+                            "   {GLYPH_FAILURE} ECHO is ON (should be OFF in raw mode)"
+                        );
                         panic!("Raw mode not properly enabled - ECHO still set");
                     }
-                    println!("   ✓ ECHO is OFF (raw mode active)");
+                    println!("   {GLYPH_SUCCESS} ECHO is OFF (raw mode active)");
 
                     if termios.local_modes.contains(LocalModes::ISIG) {
-                        println!("   ✗ ISIG is ON (should be OFF in raw mode)");
+                        println!(
+                            "   {GLYPH_FAILURE} ISIG is ON (should be OFF in raw mode)"
+                        );
                         panic!("Raw mode not properly enabled - ISIG still set");
                     }
-                    println!("   ✓ ISIG is OFF (raw mode active)");
+                    println!("   {GLYPH_SUCCESS} ISIG is OFF (raw mode active)");
                 }
                 Err(e) => {
-                    println!("   ✗ Failed to read /dev/tty termios: {e}");
+                    println!("   {GLYPH_FAILURE} Failed to read /dev/tty termios: {e}");
                     panic!("Could not verify /dev/tty settings: {e}");
                 }
             }
         }
         Err(e) => {
-            println!("   ✗ Failed to open /dev/tty: {e}");
+            println!("   {GLYPH_FAILURE} Failed to open /dev/tty: {e}");
             panic!("Could not open /dev/tty for verification: {e}");
         }
     }
@@ -154,20 +164,20 @@ fn test_dev_tty_fallback_manual() {
     println!();
 
     // Disable raw mode
-    println!("🧹 Cleaning up...");
+    println!("{GLYPH_CONTROLLER_CLEANUP} Cleaning up...");
     match crate::disable_raw_mode() {
         Ok(()) => {
-            println!("   ✓ Raw mode disabled successfully");
+            println!("   {GLYPH_SUCCESS} Raw mode disabled successfully");
         }
         Err(e) => {
-            println!("   ✗ Failed to disable raw mode: {e:?}");
+            println!("   {GLYPH_FAILURE} Failed to disable raw mode: {e:?}");
             panic!("Failed to disable raw mode: {e:?}");
         }
     }
 
     println!();
     println!("╔═══════════════════════════════════════════════════════╗");
-    println!("║   ✅ /dev/tty Fallback Test PASSED                     ║");
+    println!("║   {GLYPH_SUCCESS} /dev/tty Fallback Test PASSED                     ║");
     println!("╚═══════════════════════════════════════════════════════╝");
     println!();
     println!("Summary:");

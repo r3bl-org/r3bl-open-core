@@ -238,7 +238,7 @@ mod fixtures {
 #[cfg(test)]
 mod test_tracing_shared_writer_output {
     use super::{fixtures::get_expected, *};
-    use crate::{InlineString, InlineVec, LineStateControlSignal, SharedWriter};
+    use crate::{InlineString, InlineVec, LineStateControlSignal, SharedWriter, join};
     use smallvec::smallvec;
 
     #[tokio::test]
@@ -248,7 +248,7 @@ mod test_tracing_shared_writer_output {
 
         // Create a new tracing layer with stdout.
         let display_pref = DisplayPreference::SharedWriter(SharedWriter::new(sender));
-        let default_guard = TracingConfig {
+        let tracing_guard = TracingConfig {
             writer_config: WriterConfig::Display(display_pref),
             level_filter: LevelFilter::DEBUG,
         }
@@ -285,6 +285,6 @@ mod test_tracing_shared_writer_output {
             assert!(output.contains(it));
         }
 
-        drop(default_guard);
+        drop(tracing_guard);
     }
 }

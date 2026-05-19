@@ -4,7 +4,7 @@
 
 use super::{super::channel_types::PollerEvent, MioPollWorker};
 use crate::{Continuation, core::resilient_reactor_thread::RRTEvent, get_size,
-            tui::DEBUG_TUI_SHOW_TERMINAL_BACKEND};
+            tui::DEBUG_TUI_SHOW_MIO_POLLER};
 use signal_hook::consts::SIGWINCH;
 use tokio::sync::broadcast::Sender;
 
@@ -23,7 +23,6 @@ use tokio::sync::broadcast::Sender;
 /// # Returns
 ///
 /// - [`Continuation::Continue`]: Successfully processed.
-/// - [`Continuation::Stop`]: Receiver dropped.
 ///
 /// [`get_size()`]: crate::get_size
 /// [`MioPollWorker`]: super::MioPollWorker
@@ -40,7 +39,7 @@ pub fn consume_pending_signals_with_sender(
         // Query terminal size. If it fails, drop the signal - there's no useful size to
         // report (typically means TTY disconnected).
         let Some(size) = get_size().ok() else {
-            DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
+            DEBUG_TUI_SHOW_MIO_POLLER.then(|| {
                 tracing::debug!(
                     message =
                         "mio-poller-thread: SIGWINCH received but get_size() failed"
@@ -49,7 +48,7 @@ pub fn consume_pending_signals_with_sender(
             return Continuation::Continue;
         };
 
-        DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
+        DEBUG_TUI_SHOW_MIO_POLLER.then(|| {
             tracing::debug!(message = "mio-poller-thread: SIGWINCH received", ?size);
         });
 
@@ -57,11 +56,13 @@ pub fn consume_pending_signals_with_sender(
             .send(PollerEvent::Signal(size.into()).into())
             .is_err()
         {
-            // Receiver dropped - exit gracefully.
-            DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
-                tracing::debug!(message = "mio-poller-thread: receiver dropped, exiting");
+            // Receiver dropped. Let run_worker_loop() evaluate shutdown.
+            DEBUG_TUI_SHOW_MIO_POLLER.then(|| {
+                tracing::debug!(
+                    message = "mio-poller-thread: receiver dropped while sending signal"
+                );
             });
-            return Continuation::Stop;
+            return Continuation::Continue;
         }
     }
 

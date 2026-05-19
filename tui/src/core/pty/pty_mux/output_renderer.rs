@@ -10,13 +10,7 @@
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 
 use super::ProcessManager;
-use crate::{ANSIBasicColor, ArrayOverflowResult, FlushKind, IndexOps, LengthOps,
-            OffscreenBuffer, OutputDevice, PixelChar, Size, TuiStyle, col,
-            core::coordinates::{idx, len},
-            tui::terminal_lib_backends::{OffscreenBufferPaint,
-                                         OffscreenBufferPaintImplCrossterm},
-            tui_style_attrib::Bold,
-            tui_style_attribs};
+use crate::{FlushKind, GCStringOwned, IndexOps, OffscreenBuffer, OutputDevice, PixelChar, Pos, RenderOpsLocalData, SPACE_CHAR, Size, TuiStyle, col, core::coordinates::{idx, len}, lock_output_device_as_mut, ok, print_text_with_attributes, row, tui::terminal_lib_backends::{OffscreenBufferPaint, OffscreenBufferPaintImpl}, tui_color, tui_style_attrib::Bold, tui_style_attribs, width};
 
 /// [`RowHeight`] reserved for the status bar at the bottom of the terminal.
 ///
@@ -80,9 +74,9 @@ impl OutputRenderer {
         self.composite_status_bar_into_buffer(&mut composite_buffer, process_manager);
 
         // Paint the composite buffer to terminal.
-        self.paint_buffer(&composite_buffer, output_device);
+        paint_buffer(&composite_buffer, output_device);
 
-        Ok(())
+        ok!()
     }
 
     /// Composite status bar into the last row of the given [`OffscreenBuffer`].
@@ -93,48 +87,64 @@ impl OutputRenderer {
         ofs_buf: &mut OffscreenBuffer,
         process_manager: &ProcessManager,
     ) {
-        let status_text = self.generate_status_text(process_manager);
-        let last_row_idx = self.terminal_size.row_height.as_usize().saturating_sub(1);
+        // The buffer is shorter than the terminal by STATUS_BAR_HEIGHT rows, so use
+        // buf_size (not self.terminal_size) when indexing into it.
+        let buf_size = ofs_buf.window_size;
+        let last_row_idx = buf_size.row_height.as_usize().saturating_sub(1);
 
-        // Clear status bar row.
-        for col_idx in 0..self.terminal_size.col_width.as_usize() {
-            ofs_buf[last_row_idx][col_idx] = PixelChar::Spacer;
-        }
-
-        // Write status text with appropriate style.
         let status_style = TuiStyle {
             attribs: tui_style_attribs(Bold),
-            color_fg: Some(ANSIBasicColor::White.into()),
-            color_bg: Some(ANSIBasicColor::Blue.into()),
+            color_fg: Some(tui_color!(lizard_green)),
+            color_bg: Some(tui_color!(night_blue)),
             ..Default::default()
         };
 
-        for (col_idx, ch) in status_text.chars().enumerate() {
-            if self.terminal_size.col_width.is_overflowed_by(col(col_idx))
-                == ArrayOverflowResult::Overflowed
-            {
-                break;
-            }
+        // Fill entire status bar row with styled spaces (background color spans full
+        // width).
+        for col_idx in 0..buf_size.col_width.as_usize() {
             ofs_buf[last_row_idx][col_idx] = PixelChar::PlainText {
-                display_char: ch,
+                display_char: SPACE_CHAR,
                 style: status_style,
             };
         }
-    }
 
-    /// Paint the given [`OffscreenBuffer`] to terminal using existing paint
-    /// infrastructure.
-    fn paint_buffer(&mut self, ofs_buf: &OffscreenBuffer, output_device: &OutputDevice) {
-        let mut crossterm_impl = OffscreenBufferPaintImplCrossterm {};
-        let render_ops = crossterm_impl.render(ofs_buf);
+        // Use print_text_with_attributes() to write styled text into the buffer.
+        // This correctly handles Unicode display widths, grapheme clusters, and
+        // clipping — the same code path used by the full rendering pipeline.
+        let status_text = self.generate_status_text(process_manager);
+        let render_local_data = RenderOpsLocalData {
+            fg_color: status_style.color_fg,
+            bg_color: status_style.color_bg,
+            ..Default::default()
+        };
 
-        crossterm_impl.paint(
-            render_ops,
-            FlushKind::JustFlush,
-            self.terminal_size,
-            lock_output_device_as_mut!(output_device),
-            false, // is_mock = false
-        );
+        // Position cursor at the start of the status bar row.
+        ofs_buf.cursor_pos = Pos::new((row(last_row_idx), col(0)));
+
+        match print_text_with_attributes(
+            &status_text,
+            Some(&status_style),
+            ofs_buf,
+            None,
+            &render_local_data,
+        ) {
+            Ok(new_pos) => {
+                tracing::debug!(
+                    "Status bar rendered OK: text_len={}, new_pos={:?}",
+                    status_text.len(),
+                    new_pos
+                );
+            }
+            Err(e) => {
+                tracing::error!(
+                    "Status bar render FAILED: {:?}, row={}, buf_rows={}, text='{}'",
+                    e,
+                    last_row_idx,
+                    buf_size.row_height.as_usize(),
+                    status_text
+                );
+            }
+        }
     }
 
     /// Generate the complete status bar text with process tabs and shortcuts.
@@ -142,7 +152,8 @@ impl OutputRenderer {
         let mut status_parts = Vec::new();
 
         // Show process tabs with live status indicators: 1:[🟢claude] 2:[🔴btop] etc.
-        let mut current_width = 0usize;
+        let mut current_width = width(0);
+
         for (i, process) in process_manager.processes().iter().enumerate() {
             let is_active = i == process_manager.active_index();
             let status_indicator = if process.is_running() { "🟢" } else { "🔴" };
@@ -153,15 +164,12 @@ impl OutputRenderer {
                 format!(" {}:{}{} ", i + 1, status_indicator, process.name)
             };
 
-            // Check if we have space for this tab.
-            let tab_width = tab_text.chars().count();
+            // Use display width (not char count) to account for wide chars like emoji.
+            let tab_width = GCStringOwned::from(tab_text.as_str())
+                .display_width()
+                .as_usize();
             let new_width = current_width + tab_width;
-            if self
-                .terminal_size
-                .col_width
-                .is_overflowed_by(col(new_width))
-                == ArrayOverflowResult::Overflowed
-            {
+            if new_width > self.terminal_size.col_width {
                 break;
             }
 
@@ -173,15 +181,9 @@ impl OutputRenderer {
         let process_count = process_manager.processes().len();
         let shortcuts = Self::generate_shortcuts_text(process_count);
 
-        // Check if we have space for shortcuts.
-        let shortcuts_width = shortcuts.chars().count();
+        let shortcuts_width = GCStringOwned::from(shortcuts.as_str()).display_width();
         let total_width = current_width + shortcuts_width;
-        if self
-            .terminal_size
-            .col_width
-            .is_overflowed_by(col(total_width))
-            == ArrayOverflowResult::Overflowed
-        {
+        if total_width > self.terminal_size.col_width {
             return status_parts.join("");
         }
         status_parts.push(shortcuts);
@@ -227,4 +229,18 @@ impl OutputRenderer {
     pub fn update_terminal_size(&mut self, new_size: Size) {
         self.terminal_size = new_size;
     }
+}
+
+/// Paint the given [`OffscreenBuffer`] to terminal using existing paint
+/// infrastructure.
+fn paint_buffer(ofs_buf: &OffscreenBuffer, output_device: &OutputDevice) {
+    let mut crossterm_impl = OffscreenBufferPaintImpl {};
+    let render_ops = crossterm_impl.render(ofs_buf);
+    crossterm_impl.paint(
+        render_ops,
+        FlushKind::JustFlush,
+        ofs_buf.window_size, // Don't use self.terminal_size (may be different).
+        lock_output_device_as_mut!(output_device),
+        false, // is_mock = false
+    );
 }

@@ -15,7 +15,7 @@
 //! terminal). You will need to handle the following tasks:
 //!
 //! 1. **Spawning**: You need to start a shell process (like [`bash`]) inside a [`PTY`] so
-//!    it thinks it's talking to a real terminal.
+//!    it thinks it's talking to a real terminal (see [What is a `TTY`]).
 //! 2. **Orchestration**: You need to manage the lifecycle of that shell process,
 //!    capturing its output while sending your keystrokes (from your app) to it (as if
 //!    this input was going directly into the managed shell process).
@@ -64,7 +64,7 @@
 //!    channels. This is where the **Task Trio** lives.
 //! 3. **[Engine Layer]**: The low-level foundation. It handles the tricky business of
 //!    opening OS [`PTY`] pairs and programmatically preventing deadlocks caused by leaked
-//!    file descriptors. See [`PtyPair`] for details.
+//!    file descriptors. See [`PtyPair`] for details (and the [`PTY` Primer]).
 //!
 //! ## The Life of a Session
 //!
@@ -81,8 +81,8 @@
 //!
 //! - **Session Layer**: [`PtySessionBuilder::start()`] orchestrates the entire startup.
 //!   First it uses the **Engine Layer** to spawn the child process in the [`PTY`]
-//!   environment, then wraps it in the **Task Trio** ([Reader], [Writer],
-//!   [Orchestrator]), and finally sets up the [MPSC channels].
+//!   environment (see [Child process perspective]), then wraps it in the **Task Trio**
+//!   ([Reader], [Writer], [Orchestrator]), and finally sets up the [MPSC channels].
 //! - **Engine Layer**: Called by the **Session Layer**, [`PtyPair::open_and_spawn()`]
 //!   creates the OS-level [`PTY`] pair and spawns the child process. Crucially, it
 //!   immediately drops the parent's copy of the **controlled** file descriptor to prevent
@@ -142,7 +142,7 @@
 //! #### The Final Cleanup (RAII and the Drop Chain)
 //!
 //! When your app drops the [`PtySession`] handle, Rust's automatic resource management
-//! ([RAII]) triggers a cleanup chain across all internal components:
+//! ([`RAII`]) triggers a cleanup chain across all internal components:
 //!
 //! - **Session Layer**:
 //!   - The [MPSC channels] are closed when their halves are dropped.
@@ -152,7 +152,7 @@
 //!       handles.
 //! - **Engine Layer**:
 //!   - The [`Controller`] (from the [Engine Layer]) is dropped.
-//!   - The [`PtyPair`] (and its inner [`MasterPty`]) leverages [RAII] to guarantee that
+//!   - The [`PtyPair`] (and its inner [`MasterPty`]) leverages [`RAII`] to guarantee that
 //!     all OS-level file descriptors are closed. This eliminates the risk of
 //!     [resource-leaking deadlocks] and ensures a clean system state.
 //!
@@ -282,6 +282,7 @@
 //! [`ProcessManager::poll_all_processes()`]: crate::ProcessManager::poll_all_processes
 //! [`ProcessManager::send_input()`]: crate::ProcessManager::send_input
 //! [`pty` module]: mod@crate::core::pty
+//! [`PTY` Primer]: crate::pty_engine::pty_pair::PtyPair#pty-primer
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`PtyInputEvent`]: crate::PtyInputEvent
 //! [`PTYMux`]: crate::PTYMux
@@ -294,6 +295,7 @@
 //! [`PtySession`]: crate::PtySession
 //! [`PtySessionBuilder::start()`]: crate::PtySessionBuilder::start
 //! [`PtySessionBuilder`]: crate::PtySessionBuilder
+//! [`RAII`]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
 //! [`readline_async`]: crate::readline_async::ReadlineAsyncContext::try_new
 //! [`spawn_blocking_reader_task()`]:
 //!     crate::pty_session::tasks::reader_task::spawn_blocking_reader_task
@@ -306,18 +308,19 @@
 //! [`tmux`]: https://github.com/tmux/tmux
 //! [`tokio`]: tokio
 //! [`TUI`]: crate::tui::TerminalWindow::main_event_loop
+//! [Child process perspective]: crate::pty_engine::pty_pair::PtyPair#child-process-perspective
 //! [Engine Layer]: crate::pty_engine
 //! [MPSC channels]: tokio::sync::mpsc
 //! [Orchestrator Task]: crate::pty_session::tasks::orchestrator::spawn_orchestrator_task
 //! [Orchestrator]: crate::pty_session::tasks::orchestrator::spawn_orchestrator_task
 //! [pseudoterminals]: https://en.wikipedia.org/wiki/Pseudoterminal
-//! [RAII]: https://en.cppreference.com/w/cpp/language/raii
 //! [Reader Task]: crate::pty_session::tasks::reader_task::spawn_blocking_reader_task
 //! [Reader]: crate::pty_session::tasks::reader_task::spawn_blocking_reader_task
 //! [resource-leaking deadlocks]:
 //!     crate::pty_engine::pty_pair::PtyPair#resource-leaking-deadlock
 //! [Session Layer]: crate::pty_session
 //! [Session layer]: crate::pty_session
+//! [What is a `TTY`]: crate::pty_engine::pty_pair::PtyPair#what-is-a-tty
 //! [Writer Task]: crate::pty_session::tasks::writer_task::spawn_blocking_writer_task
 //! [Writer]: crate::pty_session::tasks::writer_task::spawn_blocking_writer_task
 

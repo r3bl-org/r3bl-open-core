@@ -43,21 +43,36 @@ pub const DEBUG_TUI_SHOW_PIPELINE_EXPANDED: bool = false;
 /// [`crate::queue_terminal_command!`] debugging output.
 pub const DEBUG_TUI_SHOW_TERMINAL_BACKEND: bool = false;
 
+/// Controls debug logging for the [`DirectToAnsi`] backend (input parsing and
+/// output rendering/flush operations).
+///
+/// [`DirectToAnsi`]: crate::terminal_lib_backends::direct_to_ansi
+pub const DEBUG_TUI_SHOW_DIRECT_TO_ANSI: bool = false;
+
+/// Controls input event debugging for the [`mio-poller`] thread.
+///
+/// [`mio-poller`]: crate::terminal_lib_backends::direct_to_ansi::input::mio_poller
+pub const DEBUG_TUI_SHOW_MIO_POLLER: bool = false;
+
+/// Controls whether desktop notifications are displayed by the [PTY multiplexer].
+///
+/// [PTY multiplexer]: crate::pty::pty_mux::PTYMux
+pub const DEBUG_TUI_SHOW_PTY_MUX_NOTIFICATIONS: bool = false;
+
+/// Controls debug logging for the [Resilient Reactor Thread].
+///
+/// [Resilient Reactor Thread]: crate::core::resilient_reactor_thread
+pub const DEBUG_TUI_SHOW_RESILIENT_REACTOR_THREAD: bool = false;
+
 /// Unicode replacement character used when a grapheme cluster cannot be converted to a
 /// single char. This character (�) is the standard fallback for invalid/undisplayable
 /// characters.
 pub const UNICODE_REPLACEMENT_CHAR: char = '�';
 
 // Attach sources.
-// #[macro_use] propagates macros textually (order matters).
-// `rsx` before `layout` so box_start!/box_end! are visible to layout's tests.
-#[macro_use]
 pub mod rsx;
-#[macro_use]
 pub mod layout;
-#[macro_use]
 pub mod editor;
-#[macro_use]
 pub mod terminal_lib_backends;
 pub mod animator;
 pub mod cmd_line_args;

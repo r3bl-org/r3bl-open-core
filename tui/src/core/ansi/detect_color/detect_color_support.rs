@@ -1,0 +1,800 @@
+// Copyright (c) 2023-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
+
+// cspell:words urxvt wezterm konsole
+
+use crate::{TtyStatus, is_tty_stderr, is_tty_stdout};
+use std::{env,
+          sync::atomic::{AtomicI8, Ordering}};
+
+/// Terminal Color Support Detection with Performance Optimization
+///
+/// This module provides efficient color support detection for terminal applications with
+/// critical performance optimizations to prevent render loop bottlenecks.
+///
+/// # Performance Critical Implementation
+///
+/// **CRITICAL**: This implementation includes memoization to prevent a severe performance
+/// bottleneck identified through flamegraph analysis. Without caching, color support
+/// detection can consume ~24% of execution time in the main event loop.
+///
+/// ## The Problem (Before Optimization)
+/// - [`examine_env_vars_to_determine_color_support()`] was called thousands of times per
+///   render
+/// - Each call performed expensive environment variable lookups
+/// - Flamegraph analysis showed 24% of CPU time spent in color detection
+/// - Caused significant editor lag during typing/editing operations
+///
+/// ## The Solution (Current Implementation)
+/// - Added [`global_color_support::COLOR_SUPPORT_CACHED`] static variable for memoization
+/// - Detection runs once and caches result for subsequent calls
+/// - Provides ~24% reduction in execution time for editor operations
+/// - Maintains thread-safety with atomic operations
+///
+/// # Usage Patterns
+///
+/// This module supports two primary use cases:
+/// 1. **Override color support** - For testing or user preferences
+/// 2. **Cached detection** - For production performance (default behavior)
+///
+/// ## Correct Usage (Performance Optimized)
+///
+/// ```rust
+/// use r3bl_tui::{global_color_support, ColorSupport};
+///
+/// // CORRECT: Use the cached detect() function
+/// let color_support = global_color_support::detect();
+///
+/// // CORRECT: For testing, use overrides
+/// global_color_support::set_override(ColorSupport::NoColor);
+/// let overridden = global_color_support::detect(); // Returns NoColor
+/// global_color_support::clear_override();
+/// ```
+///
+/// ## Incorrect Usage (Performance Killer)
+///
+/// ```rust
+/// use r3bl_tui::{examine_env_vars_to_determine_color_support, Stream};
+///
+/// // WRONG: Direct calls bypass caching and kill performance
+/// let color_support = examine_env_vars_to_determine_color_support(Stream::Stdout);
+/// ```
+///
+/// # Global Variables
+///
+/// Two global atomic variables manage the color detection state:
+/// - [`global_color_support::COLOR_SUPPORT_GLOBAL`]: Explicit override values (highest
+///   priority)
+/// - [`global_color_support::COLOR_SUPPORT_CACHED`]: Memoized detection results
+///   (performance optimization)
+pub mod global_color_support {
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
+
+    /// Global override for color support detection.
+    ///
+    /// This variable stores an explicit override value that takes precedence over all.
+    /// automatic color detection logic. When set via [`set_override()`], the [`detect()`]
+    /// function will always return this value instead of examining environment variables
+    /// or using cached detection results.
+    ///
+    /// # Usage Flow in [`detect()`]
+    /// 1. **First priority**: Check this override value
+    /// 2. If override is set, return it immediately (skip cache and detection)
+    /// 3. If not set, proceed to check [`COLOR_SUPPORT_CACHED`]
+    ///
+    /// # Use Cases
+    /// - Testing: Force specific color support levels for unit tests
+    /// - User preference: Allow applications to override automatic detection
+    /// - Debugging: Temporarily disable colors regardless of terminal capabilities
+    ///
+    /// # Thread Safety
+    /// Uses [`AtomicI8`] with [`Release`]/[`Acquire`] ordering to ensure thread-safe
+    /// access, across the application.
+    ///
+    /// [`Acquire`]: std::sync::atomic::Ordering::Acquire
+    /// [`Release`]: std::sync::atomic::Ordering::Release
+    pub static mut COLOR_SUPPORT_GLOBAL: AtomicI8 = AtomicI8::new(NOT_SET_VALUE);
+
+    /// Cached result of automatic color support detection.
+    ///
+    /// This variable stores the memoized result from.
+    /// [`examine_env_vars_to_determine_color_support()`] to avoid repeatedly checking
+    /// environment variables and terminal capabilities on every call to [`detect()`].
+    ///
+    /// # Usage Flow in [`detect()`]
+    /// 1. First priority: Check [`COLOR_SUPPORT_GLOBAL`] for overrides
+    /// 2. **Second priority**: Check this cached value
+    /// 3. If cache hit, return the cached result immediately
+    /// 4. If cache miss, run detection, store result here, then return it
+    ///
+    /// # Caching Behavior
+    /// - Initially set to [`NOT_SET_VALUE`] (-1)
+    /// - Populated on first call to [`detect()`] when no override is set
+    /// - Remains valid until explicitly cleared via [`clear_cache()`]
+    /// - Can be manually set via [`set_cached()`] for testing purposes
+    ///
+    /// # Performance Benefits
+    /// Eliminates expensive environment variable lookups and terminal capability.
+    /// checks on subsequent calls, providing O(1) color support detection after
+    /// the initial detection run.
+    pub static mut COLOR_SUPPORT_CACHED: AtomicI8 = AtomicI8::new(NOT_SET_VALUE);
+
+    pub const NOT_SET_VALUE: i8 = -1;
+
+    /// This is the main function that is used to determine whether color is supported.
+    /// And if so what type of color is supported.
+    ///
+    /// ## Performance-Critical Implementation
+    ///
+    /// This function implements a three-tier detection strategy optimized for.
+    /// performance:
+    ///
+    /// 1. **Override Check**: If [`set_override`] was called, return that value
+    ///    immediately
+    /// 2. **Cache Check**: If detection was previously run, return cached result (O(1))
+    /// 3. **Detection**: Only run expensive environment detection on cache miss
+    ///
+    /// ## Why Caching is Critical
+    ///
+    /// Without caching, this function was identified as a major performance bottleneck:
+    /// - Called thousands of times during editor operations
+    /// - Each call performed expensive environment variable lookups
+    /// - Consumed ~24% of total execution time in flamegraph analysis
+    /// - Caused noticeable lag during typing and editing
+    ///
+    /// With caching, detection runs once per application lifetime, providing dramatic.
+    /// performance improvements for interactive applications.
+    ///
+    /// ## Thread Safety
+    ///
+    /// Uses atomic operations with `Acquire`/`Release` ordering for thread-safe access.
+    /// across multiple threads without requiring external synchronization.
+    #[must_use]
+    pub fn detect() -> ColorSupport {
+        // First check for explicit override.
+        match try_get_override() {
+            Ok(it) => it,
+            Err(()) => {
+                // Check if we've already cached the detection result.
+                if let Ok(cached) = try_get_cached() {
+                    cached
+                } else {
+                    // Not cached yet, so detect once and cache the result.
+                    let detected =
+                        examine_env_vars_to_determine_color_support(Stream::Stdout);
+                    set_cached(detected);
+                    detected
+                }
+            }
+        }
+    }
+
+    /// Override the color support. Regardless of the value of the environment variables
+    /// the value you set here will be used when you call [`detect()`].
+    ///
+    /// # Testing support
+    ///
+    /// The [serial_test] crate is used to test this function. In any test in which this
+    /// function is called, please use the `#[serial]` attribute to annotate that test.
+    /// Otherwise there will be flakiness in the test results (tests are run in parallel
+    /// using many threads).
+    ///
+    /// [serial_test]: https://crates.io/crates/serial_test
+    #[allow(clippy::result_unit_err, static_mut_refs)]
+    pub fn set_override(value: ColorSupport) {
+        let it = i8::from(value);
+        unsafe { COLOR_SUPPORT_GLOBAL.store(it, Ordering::Release) }
+    }
+
+    #[allow(static_mut_refs)]
+    pub fn clear_override() {
+        unsafe { COLOR_SUPPORT_GLOBAL.store(NOT_SET_VALUE, Ordering::Release) };
+    }
+
+    /// Clears the cached color support detection result, forcing re-detection on next.
+    /// call. This is useful for testing or when environment might have changed.
+    #[allow(static_mut_refs)]
+    pub fn clear_cache() {
+        unsafe { COLOR_SUPPORT_CACHED.store(NOT_SET_VALUE, Ordering::Release) };
+    }
+
+    /// Gets the cached color support detection result.
+    /// - If detection has been run and cached, that value will be returned.
+    /// - Otherwise, an error will be returned.
+    ///
+    /// # Errors
+    ///
+    /// Returns `Err(())` if no cached value has been set yet.
+    #[allow(clippy::result_unit_err, static_mut_refs)]
+    pub fn try_get_cached() -> Result<ColorSupport, ()> {
+        let it = unsafe { COLOR_SUPPORT_CACHED.load(Ordering::Acquire) };
+        ColorSupport::try_from(it)
+    }
+
+    /// Sets the cached color support detection result.
+    #[allow(static_mut_refs)]
+    pub fn set_cached(value: ColorSupport) {
+        let it = i8::from(value);
+        unsafe { COLOR_SUPPORT_CACHED.store(it, Ordering::Release) };
+    }
+
+    /// Gets the color support override value.
+    /// - If the value has been set using [`crate::global_color_support::set_override`],
+    ///   then that value will be returned.
+    /// - Otherwise, an error will be returned.
+    ///
+    /// # Errors
+    ///
+    /// Returns `Err(())` if no override value has been set.
+    #[allow(clippy::result_unit_err, static_mut_refs)]
+    pub fn try_get_override() -> Result<ColorSupport, ()> {
+        let it = unsafe { COLOR_SUPPORT_GLOBAL.load(Ordering::Acquire) };
+        ColorSupport::try_from(it)
+    }
+}
+
+/// # Terminal Hyperlink ([`OSC`] 8) Support Detection with Performance Optimization
+///
+/// This module provides efficient hyperlink support detection for terminal applications.
+/// with the same performance-critical caching strategy used for color detection.
+///
+/// ## Exclusion List Approach
+///
+/// This implementation uses an [exclusion list] approach where hyperlink support is
+/// assumed to be available by default, and only disabled for terminals known to lack
+/// [`OSC`] 8 support. This approach is future-proof as most modern terminals (2018+)
+/// support [`OSC`] 8.
+///
+/// [`OSC`]: crate::osc_codes::OscSequence
+/// [exclusion list]: https://inclusivenaming.org/word-lists/tier-1/
+pub mod global_hyperlink_support {
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
+
+    /// Global override for hyperlink support detection.
+    ///
+    /// - `NOT_SET_VALUE`: Detection not performed yet
+    /// - `0`: `NotSupported` (excluded terminal)
+    /// - `1`: Supported (default assumption)
+    static HYPERLINK_SUPPORT_GLOBAL: AtomicI8 = AtomicI8::new(NOT_SET_VALUE);
+
+    /// Cached result of hyperlink support detection.
+    ///
+    /// Uses the same caching strategy as color support to avoid repeated expensive.
+    /// environment variable lookups.
+    static HYPERLINK_SUPPORT_CACHED: AtomicI8 = AtomicI8::new(NOT_SET_VALUE);
+
+    const NOT_SET_VALUE: i8 = -1;
+
+    /// Detects hyperlink support with caching for performance.
+    ///
+    /// This is the primary entry point for hyperlink support detection.
+    /// It implements the same memoization strategy as color detection to prevent.
+    /// performance bottlenecks.
+    ///
+    /// # Returns
+    /// - [`HyperlinkSupport::Supported`] - Terminal supports [`OSC`] 8 hyperlinks
+    ///   (default)
+    /// - [`HyperlinkSupport::NotSupported`] - Terminal is known to lack [`OSC`] 8 support
+    ///
+    /// [`OSC`]: crate::osc_codes::OscSequence
+    #[must_use]
+    pub fn detect() -> HyperlinkSupport {
+        // Check for global override first.
+        if let Ok(override_value) = try_get_override() {
+            return override_value;
+        }
+
+        // Check for cached value.
+        if let Ok(cached_value) = try_get_cached() {
+            return cached_value;
+        }
+
+        // Perform detection and cache result.
+        let detected = examine_env_vars_to_determine_hyperlink_support();
+        set_cached(detected);
+        detected
+    }
+
+    /// Sets a global override for hyperlink support detection.
+    ///
+    /// This allows applications to force enable/disable hyperlink support.
+    /// regardless of terminal detection.
+    pub fn set_override(hyperlink_support: HyperlinkSupport) {
+        let value = hyperlink_support as i8;
+        HYPERLINK_SUPPORT_GLOBAL.store(value, Ordering::Release);
+    }
+
+    /// Clears the global override, returning to automatic detection.
+    pub fn clear_override() {
+        HYPERLINK_SUPPORT_GLOBAL.store(NOT_SET_VALUE, Ordering::Release);
+    }
+
+    /// Clears the cached detection result, forcing re-detection on next call.
+    pub fn clear_cache() {
+        HYPERLINK_SUPPORT_CACHED.store(NOT_SET_VALUE, Ordering::Release);
+    }
+
+    /// Attempts to get the cached hyperlink support result.
+    ///
+    /// # Errors
+    ///
+    /// Returns `Err(())` if no cached value is available (i.e., the value is -1).
+    #[allow(clippy::result_unit_err, static_mut_refs)]
+    pub fn try_get_cached() -> Result<HyperlinkSupport, ()> {
+        let it = HYPERLINK_SUPPORT_CACHED.load(Ordering::Acquire);
+        HyperlinkSupport::try_from(it)
+    }
+
+    /// Sets the cached hyperlink support result.
+    fn set_cached(hyperlink_support: HyperlinkSupport) {
+        let value = hyperlink_support as i8;
+        HYPERLINK_SUPPORT_CACHED.store(value, Ordering::Release);
+    }
+
+    /// Attempts to get the global override result.
+    ///
+    /// # Errors
+    ///
+    /// Returns `Err(())` if no override value has been set (i.e., the value is -1).
+    #[allow(clippy::result_unit_err, static_mut_refs)]
+    pub fn try_get_override() -> Result<HyperlinkSupport, ()> {
+        let it = HYPERLINK_SUPPORT_GLOBAL.load(Ordering::Acquire);
+        HyperlinkSupport::try_from(it)
+    }
+}
+
+/// Determines whether [`OSC`] 8 hyperlinks are supported heuristically.
+///
+/// ## Exclusion List Strategy
+///
+/// This function implements an [exclusion list] approach where hyperlink support is
+/// assumed to be available by default, and only disabled for terminals known to lack
+/// support:
+///
+/// - Apple Terminal (`TERM_PROGRAM=Apple_Terminal`)
+/// - [`xterm`] (legacy versions)
+/// - [`rxvt`]/[`urxvt`] family
+/// - Other legacy terminals
+///
+/// ## Environment Variables Checked
+///
+/// - `NO_HYPERLINKS` - Explicit opt-out (similar to `NO_COLOR`)
+/// - `TERM_PROGRAM` - Specific terminal detection
+/// - `TERM` - Terminal type detection
+///
+/// ## Performance Note
+///
+/// Like color detection, this function is expensive due to environment variable. lookups
+/// and should only be called through [`global_hyperlink_support::detect()`].
+///
+/// [`OSC`]: crate::osc_codes::OscSequence
+/// [`rxvt`]: https://en.wikipedia.org/wiki/Rxvt
+/// [`urxvt`]: https://en.wikipedia.org/wiki/Rxvt-unicode
+/// [`xterm`]: https://en.wikipedia.org/wiki/Xterm
+/// [exclusion list]: https://inclusivenaming.org/word-lists/tier-1/
+#[must_use]
+pub fn examine_env_vars_to_determine_hyperlink_support() -> HyperlinkSupport {
+    // Check for explicit opt-out.
+    if env::var("NO_HYPERLINKS").is_ok() {
+        return HyperlinkSupport::NotSupported;
+    }
+
+    // Check for known unsupported terminals by TERM_PROGRAM.
+    if let Ok(term_program) = env::var("TERM_PROGRAM")
+        && term_program == "Apple_Terminal"
+    {
+        return HyperlinkSupport::NotSupported;
+    }
+
+    // Check for known unsupported terminals by TERM.
+    if let Ok(term) = env::var("TERM") {
+        // xterm (unless it's a modern variant with 256color support)
+        if term == "xterm" || term.starts_with("xterm-") && !term.contains("256color") {
+            return HyperlinkSupport::NotSupported;
+        }
+
+        // rxvt family
+        if term.starts_with("rxvt") || term.starts_with("urxvt") {
+            return HyperlinkSupport::NotSupported;
+        }
+
+        // Other known unsupported terminals.
+        if term == "linux" || term == "screen" || term == "dumb" {
+            return HyperlinkSupport::NotSupported;
+        }
+    }
+
+    // Default to supported (modern terminal assumption)
+    HyperlinkSupport::Supported
+}
+
+/// Determine whether color is supported heuristically. This is based on the environment
+/// variables.
+///
+/// ## Performance Warning
+///
+/// **This function is expensive and should not be called repeatedly!**
+///
+/// This function performs multiple environment variable lookups ([`env::var()`] calls)
+/// which involve system calls and are computationally expensive:
+///
+/// - [`NO_COLOR`] - Check for color disabling.
+/// - [`TERM`] - Terminal type detection.
+/// - [`TERM_PROGRAM`] - Specific terminal application detection (macOS).
+/// - [`COLORTERM`] - Modern color support indication.
+/// - [`CLICOLOR`] - Legacy color support flag.
+/// - [`FORCE_COLOR`] - Set to non-zero number as override for non-[`TTY`] environments.
+/// - [`is_ci::uncached()`] - CI environment detection.
+///
+/// When called thousands of times per render (as was happening before caching), this
+/// function consumed ~24% of total execution time in flamegraph analysis.
+///
+/// ## Caching Strategy
+///
+/// This function should only be called through [`global_color_support::detect()`] which
+/// implements proper memoization. Direct calls to this function bypass the performance
+/// optimization and should be avoided in production code.
+///
+/// ## Detection Logic
+///
+/// The function implements a prioritized heuristic strategy:
+/// 1. [`NO_COLOR`] or [`TERM=dumb`] → [`NoColor`] (always wins)
+/// 2. [`FORCE_COLOR`] (overrides TTY check). Per the spec: `1`/`2` → [`Ansi256`], `3` or
+///    any other non-zero value → [`Truecolor`].
+///
+/// 3. Not a [`TTY`] → [`NoColor`]
+/// 4. Platform-specific detection (macOS, Linux, Windows)
+/// 5. Generic env var fallback ([`COLORTERM`], [`TERM`], [`CLICOLOR`], CI)
+///
+/// [`Ansi256`]: ColorSupport::Ansi256
+/// [`CLICOLOR`]: https://bixense.com/clicolors/
+/// [`COLORTERM`]: https://github.com/termstandard/colors#checking-for-colorterm
+/// [`FORCE_COLOR`]: https://force-color.org/
+/// [`NO_COLOR`]: https://no-color.org/
+/// [`NoColor`]: ColorSupport::NoColor
+/// [`TERM=dumb`]: https://man7.org/linux/man-pages/man7/term.7.html
+/// [`TERM_PROGRAM`]: https://github.com/termstandard/colors#querying-the-terminal
+/// [`TERM`]: https://man7.org/linux/man-pages/man7/term.7.html
+/// [`Truecolor`]: ColorSupport::Truecolor
+/// [`TTY`]: https://en.wikipedia.org/wiki/Tty_(Unix)
+#[must_use]
+pub fn examine_env_vars_to_determine_color_support(stream: Stream) -> ColorSupport {
+    // 1. NO_COLOR always wins (https://no-color.org/).
+    let is_term_dumb = env::var("TERM").is_ok_and(|v| v == "dumb");
+    if helpers::env_no_color() || is_term_dumb {
+        return ColorSupport::NoColor;
+    }
+
+    // 2. FORCE_COLOR overrides TTY detection (https://force-color.org/).
+    if let Ok(val) = env::var("FORCE_COLOR") {
+        return match val.as_str() {
+            "0" => ColorSupport::NoColor,
+            "1" | "2" => ColorSupport::Ansi256,
+            _ => ColorSupport::Truecolor, // "3" or any other non-zero
+        };
+    }
+
+    // 3. Non-TTY environments get no color.
+    let tty_status = match stream {
+        Stream::Stdout => is_tty_stdout(),
+        Stream::Stderr => is_tty_stderr(),
+    };
+    if tty_status == TtyStatus::IsNotTty {
+        return ColorSupport::NoColor;
+    }
+
+    // 4. Platform-specific detection logic.
+    match env::consts::OS {
+        "macos" => {
+            let is_apple_terminal =
+                env::var("TERM_PROGRAM").is_ok_and(|v| v == "Apple_Terminal");
+            let is_256_color =
+                env::var("TERM").is_ok_and(|term| helpers::check_256_color(&term));
+            if is_apple_terminal && is_256_color {
+                return ColorSupport::Ansi256;
+            }
+
+            let is_iterm = env::var("TERM_PROGRAM").is_ok_and(|v| v == "iTerm.app");
+            let is_truecolor = env::var("COLORTERM").is_ok_and(|v| v == "truecolor");
+            if is_iterm || is_truecolor {
+                return ColorSupport::Truecolor;
+            }
+        }
+        "windows" => return ColorSupport::Truecolor,
+        // Unix/Linux/BSD: check COLORTERM for truecolor support.
+        _ => {
+            let is_truecolor = env::var("COLORTERM").is_ok_and(|v| v == "truecolor");
+            if is_truecolor {
+                return ColorSupport::Truecolor;
+            }
+        }
+    }
+
+    // 5. Final fallback: Generic environment variable checks.
+    let colorterm_is_set = env::var("COLORTERM").is_ok();
+    let term_is_ansi =
+        env::var("TERM").is_ok_and(|term| helpers::check_ansi_color(&term));
+    let clicolor_is_set = env::var("CLICOLOR").is_ok_and(|v| v != "0");
+    let is_ci_env = is_ci::uncached();
+
+    if colorterm_is_set || term_is_ansi || clicolor_is_set || is_ci_env {
+        return ColorSupport::Truecolor;
+    }
+
+    ColorSupport::NoColor
+}
+
+/// The stream to check for color support.
+#[derive(Clone, Copy, Debug)]
+pub enum Stream {
+    Stdout,
+    Stderr,
+}
+
+/// The result of the color support check.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ColorSupport {
+    Truecolor,
+    Ansi256,
+    Grayscale,
+    NoColor,
+}
+
+/// Represents hyperlink ([`OSC`] 8) support in the terminal.
+///
+/// [`OSC`]: crate::osc_codes::OscSequence
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum HyperlinkSupport {
+    NotSupported,
+    Supported,
+}
+
+/// These trait implementations allow us to use [`HyperlinkSupport`] and [`i8`]
+/// interchangeably.
+mod convert_between_hyperlink_and_i8 {
+    impl TryFrom<i8> for super::HyperlinkSupport {
+        type Error = ();
+
+        #[rustfmt::skip]
+        fn try_from(value: i8) -> Result<Self, Self::Error> {
+            match value {
+                0 => Ok(super::HyperlinkSupport::NotSupported),
+                1 => Ok(super::HyperlinkSupport::Supported),
+                _ => Err(()),
+            }
+        }
+    }
+
+    impl From<super::HyperlinkSupport> for i8 {
+        #[rustfmt::skip]
+        fn from(hyperlink_support: super::HyperlinkSupport) -> Self {
+            match hyperlink_support {
+                super::HyperlinkSupport::NotSupported => 0,
+                super::HyperlinkSupport::Supported => 1,
+            }
+        }
+    }
+}
+
+/// These trait implementations allow us to use [`ColorSupport`] and [`i8`]
+/// interchangeably.
+mod convert_between_color_and_i8 {
+    impl TryFrom<i8> for super::ColorSupport {
+        type Error = ();
+
+        #[rustfmt::skip]
+        fn try_from(value: i8) -> Result<Self, Self::Error> {
+            match value {
+                1 => Ok(super::ColorSupport::Ansi256),
+                2 => Ok(super::ColorSupport::Truecolor),
+                3 => Ok(super::ColorSupport::NoColor),
+                4 => Ok(super::ColorSupport::Grayscale),
+                _ => Err(()),
+            }
+        }
+    }
+
+    impl From<super::ColorSupport> for i8 {
+        #[rustfmt::skip]
+        fn from(value: super::ColorSupport) -> Self {
+            match value {
+                super::ColorSupport::Ansi256   => 1,
+                super::ColorSupport::Truecolor => 2,
+                super::ColorSupport::NoColor   => 3,
+                super::ColorSupport::Grayscale => 4,
+            }
+        }
+    }
+}
+
+mod helpers {
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
+
+    #[must_use]
+    pub fn check_256_color(term: &str) -> bool {
+        term.ends_with("256") || term.ends_with("256color")
+    }
+
+    #[must_use]
+    pub fn check_ansi_color(term: &str) -> bool {
+        term.starts_with("screen")
+            || term.starts_with("vscode")
+            || term.starts_with("xterm")
+            || term.starts_with("vt100")
+            || term.starts_with("vt220")
+            || term.starts_with("rxvt")
+            || term.contains("color")
+            || term.contains("ansi")
+            || term.contains("cygwin")
+            || term.contains("linux")
+    }
+
+    #[must_use]
+    pub fn env_no_color() -> bool {
+        match as_str(&env::var("NO_COLOR")) {
+            Ok("0") | Err(_) => false,
+            Ok(_) => true,
+        }
+    }
+}
+
+fn as_str<E>(option: &Result<String, E>) -> Result<&str, &E> {
+    match option {
+        Ok(inner) => Ok(inner),
+        Err(e) => Err(e),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    //! Tests for color support detection with performance optimizations.
+    //!
+    //! These tests verify both the correctness of color detection and the caching
+    //! behavior that prevents performance bottlenecks in the main event loop.
+    //!
+    //! To avoid global state contamination (from env vars and static variables), these
+    //! tests are run in an isolated process.
+    use super::*;
+    use crate::generate_isolated_process_test;
+
+    generate_isolated_process_test!(
+        test_all_color_support_detection_sequentially_in_isolated_process,
+        controller_fn,
+        run_all_tests_sequentially_impl,
+        std::process::Stdio::null(),
+        std::process::Stdio::piped(),
+        std::process::Stdio::piped()
+    );
+
+    fn controller_fn(output: std::process::Output) {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        let stdout = String::from_utf8_lossy(&output.stdout);
+
+        if !output.status.success() || stderr.contains("panicked at") {
+            eprintln!("Stdout: {stdout}");
+            eprintln!("Stderr: {stderr}");
+            panic!("Isolated test failed");
+        }
+    }
+
+    fn run_all_tests_sequentially_impl() {
+        test_overrides();
+        test_caching_behavior();
+        test_hyperlink_detection();
+        test_color_detection_env_vars();
+    }
+
+    fn test_overrides() {
+        global_color_support::clear_override();
+        global_color_support::set_override(ColorSupport::Ansi256);
+        assert_eq!(
+            global_color_support::try_get_override(),
+            Ok(ColorSupport::Ansi256)
+        );
+
+        global_color_support::set_override(ColorSupport::Truecolor);
+        assert_eq!(
+            global_color_support::try_get_override(),
+            Ok(ColorSupport::Truecolor)
+        );
+
+        global_color_support::clear_override();
+        assert_eq!(global_color_support::try_get_override(), Err(()));
+    }
+
+    fn test_caching_behavior() {
+        global_color_support::clear_override();
+        global_color_support::clear_cache();
+
+        let first_result = global_color_support::detect();
+        assert_eq!(global_color_support::try_get_cached(), Ok(first_result));
+
+        let second_result = global_color_support::detect();
+        assert_eq!(first_result, second_result);
+
+        global_color_support::clear_cache();
+        assert!(global_color_support::try_get_cached().is_err());
+    }
+
+    fn test_hyperlink_detection() {
+        // Mock NO_HYPERLINKS environment variable.
+        unsafe {
+            global_hyperlink_support::clear_cache();
+            std::env::set_var("NO_HYPERLINKS", "1");
+            let result = examine_env_vars_to_determine_hyperlink_support();
+            assert_eq!(result, HyperlinkSupport::NotSupported);
+            std::env::remove_var("NO_HYPERLINKS");
+        }
+
+        // Mock Apple Terminal.
+        unsafe {
+            global_hyperlink_support::clear_cache();
+            std::env::set_var("TERM_PROGRAM", "Apple_Terminal");
+            let result = examine_env_vars_to_determine_hyperlink_support();
+            assert_eq!(result, HyperlinkSupport::NotSupported);
+            std::env::remove_var("TERM_PROGRAM");
+        }
+
+        // Default to supported.
+        unsafe {
+            std::env::remove_var("NO_HYPERLINKS");
+            std::env::remove_var("TERM_PROGRAM");
+            std::env::remove_var("TERM");
+            global_hyperlink_support::clear_cache();
+            let result = examine_env_vars_to_determine_hyperlink_support();
+            assert_eq!(result, HyperlinkSupport::Supported);
+        }
+    }
+
+    fn test_color_detection_env_vars() {
+        // Test NO_COLOR.
+        unsafe {
+            std::env::set_var("NO_COLOR", "1");
+            let result = examine_env_vars_to_determine_color_support(Stream::Stdout);
+            assert_eq!(result, ColorSupport::NoColor);
+            std::env::remove_var("NO_COLOR");
+        }
+
+        // Test TERM=dumb.
+        unsafe {
+            std::env::set_var("TERM", "dumb");
+            let result = examine_env_vars_to_determine_color_support(Stream::Stdout);
+            assert_eq!(result, ColorSupport::NoColor);
+            std::env::remove_var("TERM");
+        }
+
+        // Test FORCE_COLOR=0 (NoColor).
+        unsafe {
+            std::env::set_var("FORCE_COLOR", "0");
+            let result = examine_env_vars_to_determine_color_support(Stream::Stdout);
+            assert_eq!(result, ColorSupport::NoColor);
+            std::env::remove_var("FORCE_COLOR");
+        }
+
+        // Test FORCE_COLOR=1 (Ansi256).
+        unsafe {
+            std::env::set_var("FORCE_COLOR", "1");
+            let result = examine_env_vars_to_determine_color_support(Stream::Stdout);
+            assert_eq!(result, ColorSupport::Ansi256);
+            std::env::remove_var("FORCE_COLOR");
+        }
+
+        // Test FORCE_COLOR=2 (Ansi256).
+        unsafe {
+            std::env::set_var("FORCE_COLOR", "2");
+            let result = examine_env_vars_to_determine_color_support(Stream::Stdout);
+            assert_eq!(result, ColorSupport::Ansi256);
+            std::env::remove_var("FORCE_COLOR");
+        }
+
+        // Test FORCE_COLOR=3 (Truecolor).
+        unsafe {
+            std::env::set_var("FORCE_COLOR", "3");
+            let result = examine_env_vars_to_determine_color_support(Stream::Stdout);
+            assert_eq!(result, ColorSupport::Truecolor);
+            std::env::remove_var("FORCE_COLOR");
+        }
+    }
+}

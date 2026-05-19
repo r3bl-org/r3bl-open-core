@@ -29,6 +29,8 @@ use std::{io::{Result as IoResult, Write},
           time::Duration};
 use tokio::io::AsyncReadExt;
 
+use crate::ok;
+
 // ============================================================================
 // Main Test
 // ============================================================================
@@ -65,7 +67,7 @@ pub async fn observe_terminal() -> IoResult<()> {
     // Skip in CI
     if is_ci::cached() {
         println!("⏭️  Skipped in CI (requires interactive terminal)");
-        return Ok(());
+        return ok!();
     }
 
     let terminal_name = detect_terminal_name();
@@ -130,7 +132,7 @@ pub async fn observe_terminal() -> IoResult<()> {
     )?;
     stdout.flush()?;
 
-    Ok(())
+    ok!()
 }
 
 // ============================================================================
@@ -155,7 +157,7 @@ struct TestCase {
 fn write_raw_message(stdout: &mut std::io::Stdout, message: &str) -> IoResult<()> {
     write!(stdout, "{message}\n\r")?;
     stdout.flush()?;
-    Ok(())
+    ok!()
 }
 
 // ============================================================================
@@ -256,7 +258,7 @@ async fn run_capture_phase_with_output(stdout: &mut std::io::Stdout) -> IoResult
         tokio::time::sleep(delay_between_tests).await;
     }
 
-    Ok(())
+    ok!()
 }
 
 // ============================================================================
@@ -319,7 +321,7 @@ fn enable_terminal_capture_mode() -> IoResult<()> {
     }
 
     stdout.flush()?;
-    Ok(())
+    ok!()
 }
 
 /// Disable mouse tracking and restore terminal to normal mode.
@@ -341,7 +343,7 @@ fn disable_terminal_capture_mode() -> IoResult<()> {
     stdout.write_all(b"\x1b[?2004l")?;
 
     stdout.flush()?;
-    Ok(())
+    ok!()
 }
 
 /// Detects which terminal emulator is running by checking environment variables.

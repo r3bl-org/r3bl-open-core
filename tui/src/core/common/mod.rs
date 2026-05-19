@@ -1,9 +1,7 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 // Attach sources.
-#[macro_use]
 pub mod telemetry;
-#[macro_use]
 pub mod fast_stringify;
 pub mod common_atomic;
 pub mod common_enums;
@@ -13,6 +11,8 @@ pub mod get_mem_size;
 pub mod lru_cache;
 pub mod memoized_value;
 pub mod miette_setup_global_report_handler;
+pub mod monitor;
+pub mod scoped_mutex;
 pub mod ordered_map;
 pub mod rate_limiter;
 pub mod ring_buffer;
@@ -31,6 +31,8 @@ pub use get_mem_size::*;
 pub use lru_cache::*;
 pub use memoized_value::*;
 pub use miette_setup_global_report_handler::*;
+pub use monitor::*;
+pub use scoped_mutex::*;
 pub use ordered_map::*;
 pub use rate_limiter::*;
 pub use ring_buffer::*;

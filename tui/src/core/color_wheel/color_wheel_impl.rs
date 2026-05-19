@@ -1,23 +1,23 @@
 // Copyright (c) 2023-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Main `ColorWheel` implementation.
+//! Main [`ColorWheel`] implementation.
 //!
-//! This module contains the primary `ColorWheel` struct and its implementation,
+//! This module contains the primary [`ColorWheel`] struct and its implementation,
 //! providing the main interface for color wheel functionality:
 //! - Text colorization with various policies
 //! - Gradient generation and management
 //! - Support for RGB, [`ANSI`] 256, and Lolcat color modes
 //! - Iterator interface for color cycling
 //!
-//! The `ColorWheel` automatically adapts to terminal capabilities and provides
+//! The [`ColorWheel`] automatically adapts to terminal capabilities and provides
 //! a unified interface for all color wheel operations. Previously located
 //! in `color_wheel/color_wheel_impl.rs`.
 //!
 //! # Caching Strategy
 //!
-//! The `ColorWheel` implements intelligent caching to optimize performance, particularly
-//! for repetitive colorization tasks like dialog border rendering (which showed 11.71%
-//! CPU usage in flamegraph analysis).
+//! The [`ColorWheel`] implements intelligent caching to optimize performance,
+//! particularly for repetitive colorization tasks like dialog border rendering (which
+//! showed 11.71% CPU usage in flamegraph analysis).
 //!
 //! ## Cacheable Policies (Deterministic Output)
 //!
@@ -88,19 +88,23 @@
 //! - **Result**: 87% reduction in ColorWheel-related CPU usage
 //!
 //! The optimization successfully eliminated the hash operation bottleneck, making
-//! `ColorWheel` operations negligible in the overall performance profile.
+//! [`ColorWheel`] operations negligible in the overall performance profile.
 //!
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-use super::{Ansi256GradientIndex, ColorWheelConfig, ColorWheelDirection,
-            ColorWheelSpeed, Colorize, GradientKind, GradientLengthKind, Lolcat,
-            LolcatBuilder, Seed,
-            color_wheel_config::{defaults::{Defaults, get_default_gradient_stops},
-                                 sizing::VecSteps},
-            color_wheel_helpers, generate_random_truecolor_gradient,
-            generate_truecolor_gradient, get_gradient_array_for};
-use crate::{ChUnit, FastStringify, GCStringOwned, GradientGenerationPolicy, RgbValue,
-            TextColorizationPolicy, TuiColor, TuiStyle, TuiStyledText, TuiStyledTexts,
-            ch, cli_text_inline, glyphs::SPACER_GLYPH as SPACER, u8, usize};
+
+use crate::{Ansi256GradientIndex, ChUnit, ColorWheelConfig, ColorWheelDirection,
+            ColorWheelSpeed, Colorize, FastStringify, GCStringOwned,
+            GradientGenerationPolicy, GradientKind, GradientLengthKind, Lolcat,
+            LolcatBuilder, RgbValue, Seed, TextColorizationPolicy, TuiColor, TuiStyle,
+            TuiStyledText, TuiStyledTexts, ch, cli_text_inline,
+            color_wheel::{color_wheel_config::{defaults::{Defaults,
+                                                          get_default_gradient_stops},
+                                               sizing::VecSteps},
+                          color_wheel_helpers},
+            generate_random_truecolor_gradient, generate_truecolor_gradient,
+            get_gradient_array_for,
+            glyphs::SPACER_GLYPH as SPACER,
+            tui_color, tui_styled_text, u8, usize};
 use sizing::VecConfigs;
 use smallvec::SmallVec;
 use std::{collections::hash_map::DefaultHasher,
@@ -1165,7 +1169,7 @@ mod lolcat_bg_helper {
 #[cfg(test)]
 mod tests_color_wheel_rgb {
     use super::*;
-    use crate::{ColorSupport, global_color_support,
+    use crate::{ColorSupport, assert_eq2, global_color_support,
                 tui_style::tui_style_attrib::{Bold, Dim},
                 tui_style_attribs};
     use serial_test::serial;

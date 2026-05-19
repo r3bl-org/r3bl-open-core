@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{InlineVec, StdMutex};
+use crate::{InlineVec, StdMutex, ok};
 #[cfg(test)]
 use crate::{SGR_FG_RED_STR, SGR_RESET_STR};
 use smallvec::smallvec;
@@ -77,7 +77,7 @@ impl Write for StdoutMock {
     }
 
     #[allow(clippy::missing_errors_doc)]
-    fn flush(&mut self) -> Result<()> { Ok(()) }
+    fn flush(&mut self) -> Result<()> { ok!() }
 }
 
 #[tokio::test]

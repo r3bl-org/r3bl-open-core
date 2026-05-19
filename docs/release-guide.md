@@ -25,7 +25,7 @@
 
 ## Full workflow
 
-```sh
+```bash
 cd analytics_schema
 # 1. Update version in Cargo.toml (for self) and this file
 # 2. Update CHANGELOG.md (don't forget to update TOC)
@@ -292,7 +292,7 @@ See [PR #7555](https://github.com/rust-lang/this-week-in-rust/pull/7555) for a c
 This used to be apply to the crates that are currently archived in
 [r3bl-open-core-archive](https://github.com/r3bl-org/r3bl-open-core-archive) repo.
 
-```sh
+```bash
 cd tuify
 # Update version in Cargo.toml and this file
 # Update CHANGELOG.md

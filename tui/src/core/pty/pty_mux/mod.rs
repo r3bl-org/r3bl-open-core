@@ -49,28 +49,28 @@
 //! ## Usage Example
 //!
 //! ```no_run
-//! use r3bl_tui::core::{pty_mux::{PTYMux, Process}, get_size};
+//! use r3bl_tui::{TuiAvailability, IntoErr, core::pty_mux::PTYMux, ok};
 //!
 //! #[tokio::main]
 //! async fn main() -> miette::Result<()> {
-//!     let terminal_size = get_size()?;
+//!     let multiplexer = match PTYMux::builder()
+//!         .add_process("bash", "bash", vec![])
+//!         .add_process("editor", "nvim", vec![])
+//!         .add_process("monitor", "htop", vec![])
+//!         .build()
+//!     {
+//!         TuiAvailability::Available(mux) => mux,
+//!         it => return it.into_err(),
+//!     };
 //!
-//!     // Mix of different program types - all supported!
-//!     let processes = vec![
-//!         Process::new("bash", "bash", vec![], terminal_size),
-//!         Process::new("editor", "nvim", vec![], terminal_size),
-//!         Process::new("monitor", "htop", vec![], terminal_size),
-//!     ];
-//!
-//!     let multiplexer = PTYMux::builder()
-//!         .processes(processes)
-//!         .build()?;
-//!
-//!     // F1/F2/F3 to switch processes, Ctrl+Q to quit
-//!     multiplexer.run().await?;
-//!     Ok(())
+//!     multiplexer.run().await?;  // F1/F2/F3 to switch, Ctrl+Q to quit
+//!     ok!()
 //! }
 //! ```
+//!
+//! [`OSC`]: crate::osc_codes::OscSequence
+//! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
+
 //!
 //! ## Underlying protocol parser
 //!

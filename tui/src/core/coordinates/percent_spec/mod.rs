@@ -37,9 +37,7 @@
 //! [`RowHeight`]: crate::coordinates::buffer_coords::RowHeight
 
 // Attach source files.
-#[macro_use]
 pub mod pc;
-#[macro_use]
 pub mod req_size_pc;
 
 // Re-export.

@@ -1,6 +1,6 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{PtyCommand, PtyPair, height, size, width};
+use crate::{PtyCommand, PtyPair, PtyTestChild, height, size, width};
 
 /// Creates a [`PTY`] pair and spawns the current test binary as a controlled process.
 ///
@@ -48,8 +48,8 @@ use crate::{PtyCommand, PtyPair, height, size, width};
 /// # Returns
 ///
 /// A tuple containing `backend` name, the owned [`PtyPair`], and the owned
-/// [`crate::ControlledChild`]. Ownership of the child handle is returned so that the
-/// caller can ensure the process remains alive for the duration of the test.
+/// [`PtyTestChild`]. Ownership of the child handle is returned so that the caller can
+/// ensure the process remains alive for the duration of the test.
 ///
 /// # Panics
 ///
@@ -76,7 +76,7 @@ use crate::{PtyCommand, PtyPair, height, size, width};
 /// [`generate_pty_test!`]: crate::generate_pty_test
 /// [`InputEvent`]: crate::InputEvent
 /// [`OffscreenBuffer`]: crate::OffscreenBuffer
-/// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
+/// [`PTY`]: crate::core::pty::pty_engine::pty_pair#what-is-a-pty
 #[must_use]
 pub fn spawn_controlled_in_pty<'a>(
     backend: &'a str,
@@ -87,10 +87,10 @@ pub fn spawn_controlled_in_pty<'a>(
 ) -> (
     /* backend */ &'a str,
     /* return ownership of */ PtyPair,
-    /* return ownership of */ crate::ControlledChild,
+    /* return ownership of */ PtyTestChild,
 ) {
-    // Spawn controlled process and close the controlled side automatically,
-    // preventing deadlocks from a leaked parent fd.
+    // Spawn controlled process and close the controlled side automatically, preventing
+    // deadlocks from a leaked parent fd.
     let test_binary = std::env::current_exe().expect("Failed to get current executable");
     let mut cmd = PtyCommand::new(&test_binary);
     cmd.env(env_var, backend);
@@ -100,5 +100,5 @@ pub fn spawn_controlled_in_pty<'a>(
         PtyPair::open_and_spawn(size(width(cols) + height(rows)), cmd)
             .expect("Failed to spawn controlled process");
 
-    (backend, pty_pair, child)
+    (backend, pty_pair, PtyTestChild::new(child))
 }

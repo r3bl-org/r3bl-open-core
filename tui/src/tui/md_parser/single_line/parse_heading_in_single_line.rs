@@ -79,6 +79,7 @@ fn parse_heading_tag(input: &str) -> IResult<&str, HeadingLevel> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::assert_eq2;
     use nom::{Err as NomErr,
               error::{Error, ErrorKind}};
 

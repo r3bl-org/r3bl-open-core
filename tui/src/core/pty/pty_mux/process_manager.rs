@@ -14,7 +14,7 @@ use super::output_renderer::STATUS_BAR_HEIGHT;
 use crate::{OffscreenBuffer, Size,
             core::{osc::OscEvent,
                    pty::{PtyInputEvent, PtyOutputEvent, PtySession, PtySessionBuilder}},
-            height};
+            height, ok};
 use std::fmt::{Debug, Formatter, Result};
 
 /// Manages multiple [`PTY`] processes and handles switching between them.
@@ -243,7 +243,7 @@ impl ProcessManager {
                 );
             }
         }
-        Ok(())
+        ok!()
     }
 
     /// Switch to the process at the given index.
@@ -306,7 +306,7 @@ impl ProcessManager {
 
         process.session = Some(session);
         process.is_running = true;
-        Ok(())
+        ok!()
     }
 
     /// Poll all processes and update their virtual terminal buffers.
@@ -367,7 +367,7 @@ impl ProcessManager {
         if let Some(session) = &self.processes[self.active_index].session {
             let _unused = session.tx_input_event.try_send(event);
         }
-        Ok(())
+        ok!()
     }
 
     /// Gets the name of the currently active process.

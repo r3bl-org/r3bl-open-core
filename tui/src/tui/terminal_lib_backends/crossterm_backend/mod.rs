@@ -30,7 +30,7 @@
 //!
 //! ### Stage 4: Backend Converter (Shared)
 //! - **Not in this module** - Stage 4 is shared across all backends
-//! - See [`offscreen_buffer::paint_impl`] for the `OffscreenBufferPaintImplCrossterm`
+//! - See [`offscreen_buffer::paint_impl`] for the `OffscreenBufferPaintImpl`
 //!   converter
 //! - Converts [`OffscreenBuffer`] → [`RenderOpOutputVec`] (shared by both Crossterm and
 //!   `DirectToAnsi`)
@@ -55,10 +55,8 @@
 mod debug;
 mod input_device_impl;
 
-#[macro_use]
 #[cfg(any(test, doc))]
 pub mod crossterm_paint_render_op_impl;
-#[macro_use]
 #[cfg(not(any(test, doc)))]
 mod crossterm_paint_render_op_impl;
 

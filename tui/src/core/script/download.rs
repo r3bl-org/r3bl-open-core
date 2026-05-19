@@ -2,6 +2,7 @@
 
 // cspell::ignore cfssljson
 
+use crate::ok;
 use crate::script::http_client::create_client_with_user_agent;
 use miette::IntoDiagnostic;
 use std::{fs, io::Write, path::Path};

@@ -1,9 +1,7 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 // Attach source files.
-#[macro_use]
 pub mod layout_error;
-#[macro_use]
 pub mod surface;
 pub mod flex_box;
 pub mod flex_box_id;

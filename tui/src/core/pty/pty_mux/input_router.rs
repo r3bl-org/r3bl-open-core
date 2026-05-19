@@ -7,11 +7,8 @@
 //!
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 
-use super::{ProcessManager, show_notification};
-use crate::{AnsiSequenceGenerator, Continuation, InputEvent, Key, KeyPress, KeyState,
-            ModifierKeysMask, PtyInputEvent, Size, col,
-            core::{osc::OscController, terminal_io::OutputDevice},
-            row};
+use super::{ProcessManager, show_notification_non_blocking};
+use crate::{AnsiSequenceGenerator, Continuation, InputEvent, Key, KeyPress, KeyState, ModifierKeysMask, PtyInputEvent, Size, col, core::{osc::OscController, terminal_io::OutputDevice}, lock_output_device_as_mut, ok, row};
 
 /// Routes input events to appropriate handlers and manages dynamic keyboard shortcuts.
 #[derive(Debug)]
@@ -72,7 +69,7 @@ impl InputRouter {
                                 // Show notification for process switching.
                                 let process_name =
                                     &process_manager.processes()[process_index].command;
-                                show_notification(
+                                show_notification_non_blocking(
                                     "PTY Mux - Process Switch",
                                     &format!("Switching to {process_name}"),
                                 );
@@ -119,13 +116,16 @@ impl InputRouter {
                         tracing::debug!("Exit requested (Ctrl+Q)");
 
                         // Show notification for exit.
-                        show_notification("PTY Mux - Exit", "Exiting PTY Mux");
+                        show_notification_non_blocking(
+                            "PTY Mux - Exit",
+                            "Exiting PTY Mux",
+                        );
 
                         return Ok(Continuation::Stop); // Exit requested
                     }
                     _ => {
                         // Show notification for other key presses (useful for debugging)
-                        show_notification(
+                        show_notification_non_blocking(
                             "PTY Mux - Key Press",
                             &format!("Key pressed: {key:?}"),
                         );
@@ -174,7 +174,7 @@ impl InputRouter {
             format!("PTYMux - {}", process_manager.active_name())
         };
         osc.set_title_and_tab(&title)?;
-        Ok(())
+        ok!()
     }
 
     /// Handles terminal resize events.

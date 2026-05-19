@@ -16,8 +16,8 @@
 //! 2. Then convert [`StyleUSSpanLine`] into a [`TuiStyledTexts`].
 
 use super::{StyleUSSpan, StyleUSSpanLine};
-use crate::{RenderList, TuiColor, TuiStyle, TuiStyleAttribs, TuiStyledTexts,
-            tui_style_attrib};
+use crate::{RenderList, TuiColor, TuiStyle, TuiStyleAttribs, TuiStyledTexts, tui_color,
+            tui_style_attrib, tui_styled_text};
 use syntect::parsing::SyntaxSet;
 
 // Type aliases for syntect types.
@@ -42,12 +42,13 @@ pub type SyntectStyleStrSpanLine<'a> = Vec<SyntectStyleStrSpan<'a>>;
 /// for better support of TypeScript, TOML, etc., `syntect` makes that easy:
 /// ```no_run
 /// # use syntect::parsing::SyntaxSet;
+/// # use r3bl_tui::ok;
 /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
-/// // Example of loading additional syntaxes
-/// let mut builder = SyntaxSet::load_defaults_newlines().into_builder();
-/// builder.add_from_folder("path/to/extra/syntaxes", true)?;
-/// let syntax_set = builder.build();
-/// # Ok(())
+///     // Example of loading additional syntaxes
+///     let mut builder = SyntaxSet::load_defaults_newlines().into_builder();
+///     builder.add_from_folder("path/to/extra/syntaxes", true)?;
+///     let syntax_set = builder.build();
+///     # ok!()
 /// # }
 /// ```
 fn map_language_to_extension(lang: &str) -> &str {
@@ -164,9 +165,9 @@ pub fn convert_span_line_from_syntect_to_tui_styled_texts(
 
 #[cfg(test)]
 mod tests_simple_md_highlight {
-    use crate::{ConvertToPlainText, TuiStyledTexts,
+    use crate::{ConvertToPlainText, TuiStyledTexts, assert_eq2,
                 convert_span_line_from_syntect_to_tui_styled_texts,
-                get_cached_syntax_set, get_cached_theme};
+                get_cached_syntax_set, get_cached_theme, tui_color};
     use syntect::{easy::HighlightLines, highlighting::Style, util::LinesWithEndings};
 
     #[test]
@@ -246,7 +247,8 @@ mod tests_simple_md_highlight {
 
 #[cfg(test)]
 mod tests_convert_span_line_and_highlighted_line {
-    use crate::{TuiStyledTexts, convert_span_line_from_syntect_to_tui_styled_texts};
+    use crate::{TuiStyledTexts, assert_eq2,
+                convert_span_line_from_syntect_to_tui_styled_texts, tui_color};
 
     #[test]
     fn syntect_conversion() {
@@ -348,8 +350,10 @@ mod tests_convert_span_line_and_highlighted_line {
 
 #[cfg(test)]
 mod tests_convert_style_and_color {
-    use crate::{CommonResult, InlineVec, TuiStyle, TuiStyleAttribs, TuiStylesheet, ch,
-                convert_style_from_syntect_to_tui, tui_style_attrib, tui_style_id};
+    use crate::{CommonResult, InlineVec, TuiStyle, TuiStyleAttribs, TuiStylesheet,
+                assert_eq2, ch, console_log, convert_style_from_syntect_to_tui,
+                get_tui_style, get_tui_styles, new_style, throws, tui_color,
+                tui_style_attrib, tui_style_id, tui_stylesheet};
     use smallvec::smallvec;
 
     #[test]

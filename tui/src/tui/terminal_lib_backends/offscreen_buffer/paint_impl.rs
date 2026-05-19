@@ -73,13 +73,15 @@ use crate::{ColIndex, DEBUG_TUI_COMPOSITOR, DEBUG_TUI_SHOW_PIPELINE, FlushKind,
             GCStringOwned, InlineString, LockedOutputDevice, OffscreenBuffer,
             OffscreenBufferPaint, PixelChar, PixelCharDiffChunks, RenderOpCommon,
             RenderOpFlush, RenderOpOutput, RenderOpOutputVec, RenderOpsExec, RowIndex,
-            Size, TuiStyle, ch, col, glyphs::SPACER_GLYPH, row,
-            terminal_lib_backends::crossterm_backend::PaintRenderOpImplCrossterm};
+            Size, TERMINAL_LIB_BACKEND, TerminalLibBackend, TuiStyle, ch, col,
+            glyphs::SPACER_GLYPH, row,
+            terminal_lib_backends::{crossterm_backend::PaintRenderOpImplCrossterm,
+                                    direct_to_ansi::RenderOpPaintImplDirectToAnsi}};
 
 #[derive(Debug)]
-pub struct OffscreenBufferPaintImplCrossterm;
+pub struct OffscreenBufferPaintImpl;
 
-impl OffscreenBufferPaint for OffscreenBufferPaintImplCrossterm {
+impl OffscreenBufferPaint for OffscreenBufferPaintImpl {
     fn paint(
         &mut self,
         render_ops: RenderOpOutputVec,
@@ -90,8 +92,17 @@ impl OffscreenBufferPaint for OffscreenBufferPaintImplCrossterm {
     ) {
         let mut skip_flush = false;
 
-        if let FlushKind::ClearBeforeFlush = flush_kind {
-            PaintRenderOpImplCrossterm.clear_before_flush(locked_output_device);
+        match TERMINAL_LIB_BACKEND {
+            TerminalLibBackend::Crossterm => {
+                if let FlushKind::ClearBeforeFlush = flush_kind {
+                    PaintRenderOpImplCrossterm.clear_before_flush(locked_output_device);
+                }
+            }
+            TerminalLibBackend::DirectToAnsi => {
+                if let FlushKind::ClearBeforeFlush = flush_kind {
+                    RenderOpPaintImplDirectToAnsi.clear_before_flush(locked_output_device);
+                }
+            }
         }
 
         // Execute each RenderOpOutput using the ExecutableRenderOps trait.
@@ -104,14 +115,21 @@ impl OffscreenBufferPaint for OffscreenBufferPaintImplCrossterm {
 
         // Flush everything to the terminal.
         if !skip_flush {
-            PaintRenderOpImplCrossterm.flush(locked_output_device);
+            match TERMINAL_LIB_BACKEND {
+                TerminalLibBackend::Crossterm => {
+                    PaintRenderOpImplCrossterm.flush(locked_output_device);
+                }
+                TerminalLibBackend::DirectToAnsi => {
+                    RenderOpPaintImplDirectToAnsi.flush(locked_output_device);
+                }
+            }
         }
 
         // Debug output.
         DEBUG_TUI_SHOW_PIPELINE.then(|| {
             // % is Display, ? is Debug.
             tracing::info!(
-                message = "🎨 offscreen_buffer_paint_impl_crossterm::paint() ok 🟢",
+                message = "🎨 OffscreenBufferPaintImpl::paint() ok 🟢",
                 render_ops = ?render_ops
             );
         });
@@ -136,14 +154,21 @@ impl OffscreenBufferPaint for OffscreenBufferPaintImplCrossterm {
 
         // Flush everything to the terminal.
         if !skip_flush {
-            PaintRenderOpImplCrossterm.flush(locked_output_device);
+            match TERMINAL_LIB_BACKEND {
+                TerminalLibBackend::Crossterm => {
+                    PaintRenderOpImplCrossterm.flush(locked_output_device);
+                }
+                TerminalLibBackend::DirectToAnsi => {
+                    RenderOpPaintImplDirectToAnsi.flush(locked_output_device);
+                }
+            }
         }
 
         // Debug output.
         DEBUG_TUI_SHOW_PIPELINE.then(|| {
             // % is Display, ? is Debug.
             tracing::info!(
-                message = "🎨 offscreen_buffer_paint_impl_crossterm::paint_diff() ok 🟢",
+                message = "🎨 OffscreenBufferPaintImpl::paint_diff() ok 🟢",
                 render_ops = ?render_ops
             );
         });
@@ -380,9 +405,9 @@ mod render_helper {
 #[cfg(test)]
 mod tests {
     use super::{render_helper::style_eq, *};
-    use crate::{ColWidth, RenderOpsLocalData,
+    use crate::{ColWidth, RenderOpsLocalData, assert_eq2,
                 compositor_render_ops_to_ofs_buf::print_text_with_attributes, height,
-                width};
+                new_style, tui_color, width};
 
     /// Helper function to make an `OffscreenBuffer`.
     fn make_offscreen_buffer_plain_text() -> OffscreenBuffer {
@@ -440,7 +465,7 @@ mod tests {
     fn test_render_plain_text() {
         let my_offscreen_buffer = make_offscreen_buffer_plain_text();
         // println!("my_offscreen_buffer: \n{:#?}", my_offscreen_buffer);
-        let mut paint = OffscreenBufferPaintImplCrossterm {};
+        let mut paint = OffscreenBufferPaintImpl {};
         let render_ops = paint.render(&my_offscreen_buffer);
         // println!("render_ops: {:#?}", render_ops);
 

@@ -1,7 +1,6 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 // Attach.
-#[macro_use]
 pub mod line_state;
 pub mod readline;
 pub mod readline_history;
@@ -13,4 +12,4 @@ pub use readline_history::*;
 
 // Integration tests (conditional visibility).
 #[cfg(any(test, doc))]
-pub mod integration_tests;
+pub mod readline_async_integration_tests;

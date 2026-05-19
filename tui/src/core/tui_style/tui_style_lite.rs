@@ -100,8 +100,9 @@ macro_rules! apply_style {
 
 #[cfg(test)]
 mod tests {
-    use crate::{TuiStyle, TuiStyleId, ch};
-    const BLACK: crate::TuiColor = tui_color!(black);
+    use crate::{TuiColor, TuiStyle, TuiStyleId, ch, tui_color};
+
+    const BLACK: TuiColor = tui_color!(black);
 
     #[test]
     fn test_syntax_bold_italic() {

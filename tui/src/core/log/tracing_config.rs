@@ -1,7 +1,7 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::try_create_layers;
-use crate::SharedWriter;
+use crate::{GlobalLogFileGuard, SharedWriter};
 use std::fmt::Debug;
 use tracing::dispatcher;
 use tracing_core::LevelFilter;
@@ -166,9 +166,11 @@ impl TracingConfig {
     /// Returns an error if:
     /// - The file writer cannot be created (invalid path, permissions)
     /// - The tracing layer cannot be initialized
-    pub fn install_thread_local(self) -> miette::Result<dispatcher::DefaultGuard> {
-        try_create_layers(&self)
-            .map(|layers| tracing_subscriber::registry().with(layers).set_default())
+    pub fn install_thread_local(self) -> miette::Result<ThreadLocalLogFileGuard> {
+        try_create_layers(&self).map(|layers| ThreadLocalLogFileGuard {
+            _default_guard: tracing_subscriber::registry().with(layers).set_default(),
+            _log_file_guard: GlobalLogFileGuard,
+        })
     }
 
     /// Global scope is used in production, for an app that needs to log to a file or
@@ -180,10 +182,26 @@ impl TracingConfig {
     /// - The file writer cannot be created (invalid path, permissions)
     /// - The tracing layer cannot be initialized
     /// - A global subscriber has already been set
-    pub fn install_global(self) -> miette::Result<()> {
-        try_create_layers(&self)
-            .map(|layers| tracing_subscriber::registry().with(layers).init())
+    pub fn install_global(self) -> miette::Result<GlobalLogFileGuard> {
+        try_create_layers(&self).map(|layers| {
+            tracing_subscriber::registry().with(layers).init();
+            GlobalLogFileGuard
+        })
     }
+}
+
+/// Combined [`RAII`] guard for thread-local tracing subscribers.
+///
+/// Returned by [`TracingConfig::install_thread_local()`]. Holds both the tracing
+/// [`dispatcher::DefaultGuard`] (which resets the thread-local subscriber on drop) and
+/// a [`GlobalLogFileGuard`] (which flushes the non-blocking file writer on drop). Callers
+/// hold a single value instead of managing two guards separately.
+///
+/// [`RAII`]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
+#[derive(Debug)]
+pub struct ThreadLocalLogFileGuard {
+    _default_guard: dispatcher::DefaultGuard,
+    _log_file_guard: GlobalLogFileGuard,
 }
 
 impl TracingConfig {

@@ -11,7 +11,7 @@ use std::{fs, path::Path};
 /// This function never returns an error on Windows.
 #[cfg(target_os = "windows")]
 pub fn set_permission(_file: impl AsRef<Path>, _mode: u32) -> miette::Result<()> {
-    Ok(())
+    crate::ok!()
 }
 
 /// # Errors

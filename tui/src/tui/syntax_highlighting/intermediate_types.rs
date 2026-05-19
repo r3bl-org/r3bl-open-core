@@ -23,7 +23,7 @@ use crate::{CharacterMatchResult, ColIndex, ColWidth, GCStringOwned, InlineStrin
             get_metadata_tags_values_style, get_metadata_title_marker_style,
             get_metadata_title_value_style,
             md_parser::md_parser_constants::{COLON, COMMA, SPACE},
-            width};
+            tiny_inline_string, tui_styled_text, width};
 
 /// Spans are chunks of a text that have an associated style. There are usually multiple
 /// spans in a line of text.
@@ -232,7 +232,8 @@ impl StyleUSSpanLine {
 }
 
 mod convert {
-    use super::{StyleUSSpan, StyleUSSpanLine, TuiStyle, TuiStyledTexts};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     impl From<(&TuiStyle, &str)> for StyleUSSpan {
         fn from((style, text): (&TuiStyle, &str)) -> Self { Self::new(*style, text) }
@@ -258,8 +259,8 @@ mod convert {
 #[cfg(test)]
 mod tests_clip_styled_texts {
     use super::*;
-    use crate::{ChUnitPrimitiveType, ConvertToPlainText, RenderList, ch, col, row,
-                scr_ofs};
+    use crate::{ChUnitPrimitiveType, ConvertToPlainText, RenderList, assert_eq2, ch,
+                col, new_style, render_list, row, scr_ofs, tui_color};
 
     mod fixtures {
         use super::*;

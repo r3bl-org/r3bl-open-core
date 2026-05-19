@@ -1,7 +1,9 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::{BoxedSafeApp, GlobalData, main_event_loop_impl};
-use crate::{CommonResult, FlexBoxId, InputDevice, InputEvent, OutputDevice, get_size};
+use crate::{CommonResult, FlexBoxId, InputDevice, InputEvent, OutputDevice,
+            TerminalInteractiveStatus, TuiAvailability, check_is_terminal_interactive,
+            get_size};
 use std::{fmt::{Debug, Display},
           pin::Pin};
 
@@ -66,8 +68,8 @@ impl TerminalWindow {
     ///
     /// # Returns
     ///
-    /// Returns a [`miette::Result`] containing a [`MainEventLoopFuture`] that resolves to
-    /// a [`CommonResult`] with:
+    /// Returns a [`TuiAvailability`] containing the [`MainEventLoopFuture`] if the
+    /// terminal is interactive. The future resolves to a [`CommonResult`] with:
     /// * `global_data` - The final [`GlobalData`] state after the event loop exits.
     /// * `event_stream` - The [`InputDevice`] used for input events.
     /// * `stdout` - The [`OutputDevice`] used for output.
@@ -101,37 +103,54 @@ impl TerminalWindow {
     ///
     /// # Errors
     ///
-    /// Returns [`miette::Error`] if there are errors during:
-    /// * Terminal initialization (getting initial size).
-    ///
     /// The returned future may produce [`miette::Error`] during:
     /// * Input/output device creation.
     /// * Event loop execution (input processing, rendering, signal handling).
-    /// * Terminal cleanup and restoration.
+    /// - Terminal cleanup and restoration.
+    ///
+    /// # Other entry points for interactive terminal apps
+    ///
+    /// See [interactive terminal application entry points].
     ///
     /// [`App`]: crate::App
+    /// [`check_is_terminal_interactive()`]: crate::check_is_terminal_interactive
     /// [`main_event_loop_impl()`]: crate::main_event_loop_impl()
+    /// [interactive terminal application entry points]: crate#interactive-terminal-application-entry-points
     pub fn main_event_loop<S, AS>(
         app: BoxedSafeApp<S, AS>,
         exit_keys: &[InputEvent],
         state: S,
-    ) -> miette::Result<MainEventLoopFuture<S, AS>>
+    ) -> TuiAvailability<MainEventLoopFuture<S, AS>>
     where
         S: Display + Debug + Default + Clone + Sync + Send + 'static,
         AS: Debug + Default + Clone + Sync + Send + 'static,
     {
-        let initial_size = get_size()?;
-        let input_device = InputDevice::default();
-        let output_device = OutputDevice::new_stdout();
-        let exit_keys = exit_keys.to_vec();
+        match check_is_terminal_interactive() {
+            TerminalInteractiveStatus::NotAvailable(reason) => {
+                TuiAvailability::NotAvailable(reason)
+            }
+            
+            TerminalInteractiveStatus::Available => {
+                let init = || -> miette::Result<MainEventLoopFuture<S, AS>> {
+                    let initial_size = get_size()?;
+                    let input_device = InputDevice::default();
+                    let output_device = OutputDevice::new_stdout();
+                    let exit_keys = exit_keys.to_vec();
 
-        Ok(main_event_loop_impl(
-            app,
-            exit_keys,
-            state,
-            initial_size,
-            input_device,
-            output_device,
-        ))
+                    Ok(main_event_loop_impl(
+                        app,
+                        exit_keys,
+                        state,
+                        initial_size,
+                        input_device,
+                        output_device,
+                    ))
+                };
+                match init() {
+                    Ok(future) => TuiAvailability::Available(future),
+                    Err(e) => TuiAvailability::Broken(e),
+                }
+            }
+        }
     }
 }

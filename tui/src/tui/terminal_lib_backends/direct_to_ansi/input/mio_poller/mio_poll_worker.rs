@@ -19,13 +19,14 @@
 use super::{super::{channel_types::{PollerEvent, StdinEvent},
                     paste_state_machine::PasteCollectionState,
                     stateful_parser::StatefulInputParser},
-            MioPollWaker, SourceKindReady, SourceRegistry,
+            MioSoftwareInterrupt, SourceKindReady,
             dispatcher::dispatch_with_sender,
-            handler_stdin::STDIN_READ_BUFFER_SIZE};
+            handler_stdin::STDIN_READ_BUFFER_SIZE,
+            sources::SourceRegistry};
 use crate::{Continuation,
             core::resilient_reactor_thread::{RRTEvent, RRTWorker}};
 use miette::Diagnostic;
-use mio::{Events, Interest, Poll, Waker, unix::SourceFd};
+use mio::{Events, Interest, Poll, unix::SourceFd};
 use signal_hook::consts::SIGWINCH;
 use signal_hook_mio::v1_0::Signals;
 use std::{io::ErrorKind, os::fd::AsRawFd as _};
@@ -56,7 +57,7 @@ const EVENTS_CAPACITY: usize = 8;
 /// [`poll_handle`]: Self::poll_handle
 /// [`sources`]: Self::sources
 /// [`stdin_buffer`]: Self::stdin_unparsed_byte_buffer
-#[allow(missing_debug_implementations)]
+#[derive(Debug)]
 pub struct MioPollWorker {
     /// [`mio`] poll instance for efficient I/O multiplexing.
     pub poll_handle: Poll,
@@ -79,20 +80,21 @@ pub struct MioPollWorker {
 
 impl RRTWorker for MioPollWorker {
     type Event = PollerEvent;
-    type Waker = MioPollWaker;
+    type Interrupt = MioSoftwareInterrupt;
 
-    /// Creates a new mio poll worker and [`MioPollWaker`] pair.
+    /// Creates a new mio poll worker and [`MioSoftwareInterrupt`] pair.
     ///
     /// This method:
     /// 1. Creates a new [`mio::Poll`] instance
-    /// 2. Creates a [`mio::Waker`] from the poll's registry (for shutdown signaling)
+    /// 2. Creates a [`MioSoftwareInterrupt`] from the poll's registry (for shutdown
+    ///    signaling)
     /// 3. Registers stdin and SIGWINCH with the poll
-    /// 4. Returns both the worker (for the thread) and a [`MioPollWaker`] wrapping the
-    ///    [`mio::Waker`] (for the global state)
+    /// 4. Returns both the worker (for the thread) and a [`MioSoftwareInterrupt`]
+    ///    wrapping the [`mio::Waker`] (for the global state)
     ///
-    /// The [`MioPollWaker`] is tightly coupled to this worker's [`mio::Poll`] - it was
-    /// created from the same poll's registry. If the poll is dropped, calling
-    /// [`wake_and_unblock_dedicated_thread()`] has no effect. This is why
+    /// The [`MioSoftwareInterrupt`] is tightly coupled to this worker's [`mio::Poll`] -
+    /// it was created from the same poll's registry. If the poll is dropped, calling
+    /// [`trigger_software_interrupt()`] has no effect. This is why
     /// [`create_and_register_os_sources()`] returns both together.
     ///
     /// # Errors
@@ -102,20 +104,22 @@ impl RRTWorker for MioPollWorker {
     /// [`create_and_register_os_sources()`]: RRTWorker::create_and_register_os_sources
     /// [`mio::Poll`]: mio::Poll
     /// [`mio::Waker`]: mio::Waker
-    /// [`wake_and_unblock_dedicated_thread()`]:
-    ///     crate::RRTWaker::wake_and_unblock_dedicated_thread
-    fn create_and_register_os_sources() -> miette::Result<(Self, Self::Waker)> {
+    /// [`trigger_software_interrupt()`]:
+    ///     crate::RRTSoftwareInterrupt::trigger_software_interrupt
+    fn create_and_register_os_sources() -> miette::Result<(Self, Self::Interrupt)> {
         // Create mio::Poll (epoll on Linux, kqueue on macOS).
         let poll_handle = Poll::new().map_err(PollCreationError)?;
+        let mio_registry = poll_handle.registry();
+
+        // Create & register the synthetic software interrupt.
 
         // Create waker from poll's registry (must be created BEFORE registering sources).
-        let waker = Waker::new(
-            poll_handle.registry(),
-            SourceKindReady::ReceiverDropWaker.to_token(),
-        )
-        .map_err(WakerCreationError)?;
+        let software_interrupt = MioSoftwareInterrupt::create_and_register_synthetic_software_interrupt_source(
+            mio_registry,
+            SourceKindReady::SoftwareInterrupt.to_token(),
+        )?;
 
-        let mio_registry = poll_handle.registry();
+        // DATA PLANE: Register real hardware/OS sources (stdin, signals).
 
         // Register stdin with mio.
         let stdin = std::io::stdin();
@@ -146,7 +150,7 @@ impl RRTWorker for MioPollWorker {
                 vt_100_input_seq_parser: StatefulInputParser::default(),
                 paste_collection_state: PasteCollectionState::Inactive,
             },
-            MioPollWaker(waker),
+            software_interrupt,
         ))
     }
 
@@ -175,14 +179,14 @@ impl MioPollWorker {
     /// # Returns
     ///
     /// - [`Continuation::Continue`]: Successfully processed or retryable error.
-    /// - [`Continuation::Stop`]: Thread should exit (e.g., no receivers left).
+    /// - [`Continuation::Stop`]: Worker-domain stop (e.g., EOF/fatal worker condition).
     /// - [`Continuation::Restart`]: OS resources corrupted (non-[`EINTR`] poll error).
     ///
-    /// See [EINTR handling] for how interrupted syscalls are retried.
+    /// See [`EINTR` handling] for how interrupted syscalls are retried.
     ///
+    /// [`EINTR` handling]: super#eintr-handling
     /// [`EINTR`]: super#eintr-handling
     /// [`stdin`]: std::io::stdin
-    /// [EINTR handling]: super#eintr-handling
     pub fn block_until_ready_then_dispatch_impl(
         &mut self,
         sender: &Sender<RRTEvent<PollerEvent>>,
@@ -236,15 +240,6 @@ impl MioPollWorker {
     help("This usually means the system ran out of file descriptors")
 )]
 pub struct PollCreationError(#[source] pub std::io::Error);
-
-/// Failed to create [`mio::Waker`] (eventfd/pipe creation failed).
-#[derive(Debug, thiserror::Error, Diagnostic)]
-#[error("Failed to create mio::Waker")]
-#[diagnostic(
-    code(r3bl_tui::mio::waker_creation),
-    help("This usually means the system ran out of file descriptors")
-)]
-pub struct WakerCreationError(#[source] pub std::io::Error);
 
 /// Failed to register stdin with mio.
 #[derive(Debug, thiserror::Error, Diagnostic)]

@@ -8,12 +8,11 @@
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 
 use super::{InputRouter, OutputRenderer, Process, ProcessManager, output_renderer,
-            show_notification};
-use crate::{AnsiSequenceGenerator, Continuation, InputEvent, RawMode, Size, col,
-            core::{get_size,
+            show_notification_non_blocking};
+use crate::{AnsiSequenceGenerator, Continuation, InputEvent, RawMode, Size, TerminalInteractiveStatus, TuiAvailability, col, core::{check_is_terminal_interactive, emit_stderr_redirection_disclaimer,
+                   get_size,
                    osc::OscController,
-                   terminal_io::{InputDevice, OutputDevice}},
-            row};
+                   terminal_io::{InputDevice, OutputDevice}}, lock_output_device_as_mut, ok, row};
 
 /// Main [`PTY`] multiplexer that orchestrates all components.
 ///
@@ -43,58 +42,114 @@ impl std::fmt::Debug for PTYMux {
 /// Builder for configuring and creating a [`PTYMux`] instance.
 #[derive(Default, Debug)]
 pub struct PTYMuxBuilder {
-    processes: Vec<Process>,
+    process_configs: Vec<(String, String, Vec<String>)>,
+    terminal_size: Option<Size>,
 }
 
 impl PTYMuxBuilder {
     /// Sets the processes to be managed by the multiplexer.
     #[must_use]
-    pub fn processes(mut self, processes: Vec<Process>) -> Self {
-        self.processes = processes;
+    pub fn processes(
+        mut self,
+        processes: Vec<(impl Into<String>, impl Into<String>, Vec<String>)>,
+    ) -> Self {
+        self.process_configs = processes
+            .into_iter()
+            .map(|(n, c, a)| (n.into(), c.into(), a))
+            .collect();
         self
     }
 
     /// Adds a single process to the multiplexer.
     #[must_use]
-    pub fn add_process(mut self, process: Process) -> Self {
-        self.processes.push(process);
+    pub fn add_process(
+        mut self,
+        name: impl Into<String>,
+        command: impl Into<String>,
+        args: Vec<String>,
+    ) -> Self {
+        self.process_configs
+            .push((name.into(), command.into(), args));
+        self
+    }
+
+    /// Sets the terminal size for the multiplexer.
+    #[must_use]
+    pub fn terminal_size(mut self, size: Size) -> Self {
+        self.terminal_size = Some(size);
         self
     }
 
     /// Builds the [`PTYMux`] instance.
+    ///
+    /// # Returns
+    ///
+    /// Returns a [`TuiAvailability`] containing the [`PTYMux`] instance if the
+    /// terminal is interactive.
     ///
     /// # Errors
     ///
     /// Returns an error if:
     /// - No processes are configured
     /// - More than [`MAX_PROCESSES`] processes are configured
-    /// - Terminal size query fails
     ///
+    /// [`check_is_terminal_interactive()`]: crate::check_is_terminal_interactive
     /// [`MAX_PROCESSES`]: output_renderer::MAX_PROCESSES
-    pub fn build(self) -> miette::Result<PTYMux> {
-        if self.processes.is_empty() {
-            miette::bail!("At least one process must be configured");
+    #[must_use]
+    pub fn build(self) -> TuiAvailability<PTYMux> {
+        if self.process_configs.is_empty() {
+            return TuiAvailability::Broken(miette::miette!(
+                "At least one process must be configured"
+            ));
         }
 
-        if self.processes.len() > output_renderer::MAX_PROCESSES {
-            miette::bail!(
+        if self.process_configs.len() > output_renderer::MAX_PROCESSES {
+            return TuiAvailability::Broken(miette::miette!(
                 "Maximum of {} processes allowed",
                 output_renderer::MAX_PROCESSES
-            );
+            ));
         }
 
-        let terminal_size = get_size()?;
-        let output_device = OutputDevice::new_stdout();
-        let input_device = InputDevice::default();
+        match check_is_terminal_interactive() {
+            TerminalInteractiveStatus::NotAvailable(reason) => {
+                TuiAvailability::NotAvailable(reason)
+            }
 
-        Ok(PTYMux {
-            process_manager: ProcessManager::new(self.processes, terminal_size),
-            input_router: InputRouter::new(),
-            output_renderer: OutputRenderer::new(terminal_size),
-            terminal_size,
-            output_device,
-            input_device,
-        })
+            TerminalInteractiveStatus::Available => {
+                let init = || -> miette::Result<PTYMux> {
+                    let terminal_size = match self.terminal_size {
+                        Some(size) => size,
+                        None => get_size()?,
+                    };
+
+                    let processes = self
+                        .process_configs
+                        .into_iter()
+                        .map(|(name, command, args)| {
+                            Process::new(name, command, args, terminal_size)
+                        })
+                        .collect();
+
+                    emit_stderr_redirection_disclaimer();
+
+                    let output_device = OutputDevice::new_stdout();
+                    let input_device = InputDevice::default();
+
+                    Ok(PTYMux {
+                        process_manager: ProcessManager::new(processes, terminal_size),
+                        input_router: InputRouter::new(),
+                        output_renderer: OutputRenderer::new(terminal_size),
+                        terminal_size,
+                        output_device,
+                        input_device,
+                    })
+                };
+                match init() {
+                    Ok(mux) => TuiAvailability::Available(mux),
+                    Err(e) => TuiAvailability::Broken(e),
+                }
+            }
+        }
     }
 }
 
@@ -119,7 +174,20 @@ impl PTYMux {
     /// - Status bar rendering fails
     /// - Input or output event handling fails during the main loop
     ///
+    /// # Note on [`stderr`] redirection
+    ///
+    /// This function calls [`emit_stderr_redirection_disclaimer()`] to ensure that if
+    /// [`stderr`] is redirected, the user is notified that application logs are handled
+    /// internally.
+    ///
+    /// # Other entry points for interactive terminal apps
+    ///
+    /// See [interactive terminal application entry points].
+    ///
+    /// [`emit_stderr_redirection_disclaimer()`]: crate::emit_stderr_redirection_disclaimer
     /// [`OSC`]: crate::OscEvent
+    /// [`stderr`]: std::io::stderr
+    /// [interactive terminal application entry points]: crate#interactive-terminal-application-entry-points
     pub async fn run(mut self) -> miette::Result<()> {
         // Start raw mode using existing RawMode.
         RawMode::start(
@@ -210,7 +278,7 @@ impl PTYMux {
 
                     // Show desktop notification for input event (filter out mouse events)
                     if !matches!(input_event, InputEvent::Mouse(_)) {
-                        show_notification("PTY Mux - Input Event", &format!("Input event received: {input_event:?}"));
+                        show_notification_non_blocking("PTY Mux - Input Event", &format!("Input event received: {input_event:?}"));
                     }
 
                     // Create OSC controller for this input handling.
@@ -240,7 +308,7 @@ impl PTYMux {
 
         tracing::debug!("Event loop completed - returning Ok(())");
 
-        Ok(())
+        ok!()
     }
 
     /// Updates terminal size for all components.

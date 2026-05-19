@@ -19,7 +19,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 /// `lock().unwrap()` calls (e.g., in [`release()`] during drop) will panic, causing the
 /// test to hang or fail.
 ///
-/// `AtomicBool::swap()` is **panic-safe**—there's no lock to poison.
+/// `AtomicBool::swap()` is **panic-safe** as there's no lock to poison.
 ///
 /// [`catch_unwind`]: std::panic::catch_unwind
 /// [`DirectToAnsiInputDevice`]: super::DirectToAnsiInputDevice
@@ -37,17 +37,16 @@ static DEVICE_EXISTS: AtomicBool = AtomicBool::new(false);
 pub fn claim_and_assert() {
     // swap() returns the OLD value - false means there is no a preexisting device.
     let device_already_exists = DEVICE_EXISTS.swap(true, Ordering::SeqCst);
-    assert_eq!(
-        device_already_exists, false,
+    assert!(
+        !device_already_exists,
         "DirectToAnsiInputDevice::new() called while another device exists. \
-         Use device.subscribe() for additional receivers."
+         Use device.try_subscribe() (fallible) to get a guard, then guard.try_subscribe() \
+         for additional receivers."
     );
 }
 
 /// Clears it, so that you can call [`claim_and_assert()`] again.
 pub fn release() { DEVICE_EXISTS.store(false, Ordering::SeqCst); }
-
-// XMARK: Process isolated test.
 
 /// Process-isolated tests for [`at_most_one_instance_assert`].
 ///
@@ -58,6 +57,47 @@ pub fn release() { DEVICE_EXISTS.store(false, Ordering::SeqCst); }
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::generate_isolated_process_test;
+
+    generate_isolated_process_test!(
+        test_at_most_one_instance_in_isolated_process,
+        controller_fn,
+        run_tests_impl,
+        std::process::Stdio::null(),
+        std::process::Stdio::piped(),
+        std::process::Stdio::piped()
+    );
+
+    /// Validates that the child process succeeded without unexpected panics.
+    ///
+    /// Test 3 deliberately double-claims to verify the panic guard.
+    /// [`catch_unwind`] catches the panic, but Rust's default panic hook still prints
+    /// the message to stderr *before* the catch. Since [`spawn_isolated_process()`],
+    /// from [`generate_isolated_process_test!`], passes `--nocapture`, these deliberate
+    /// panic messages appear in the piped stderr. We must tolerate them.
+    ///
+    /// [`catch_unwind`]: std::panic::catch_unwind
+    /// [`generate_isolated_process_test!`]: crate::generate_isolated_process_test
+    /// [`spawn_isolated_process()`]: crate::spawn_isolated_process
+    fn controller_fn(output: std::process::Output) {
+        let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+
+        let has_unexpected_error = stderr.contains("Test failed with error")
+            || (!stderr.contains("another device exists")
+                && stderr.contains("panicked at"));
+
+        if !output.status.success() || has_unexpected_error {
+            eprintln!("Exit status: {:?}", output.status);
+            eprintln!("Stdout: {}", String::from_utf8_lossy(&output.stdout));
+            eprintln!("Stderr: {stderr}");
+
+            panic!(
+                "Isolated test failed with status code {:?}: {}",
+                output.status.code(),
+                stderr
+            );
+        }
+    }
 
     /// Runs all tests sequentially in an isolated process.
     fn run_tests_impl() {
@@ -84,44 +124,5 @@ mod tests {
             "Expected claim_and_assert() to panic when called twice"
         );
         release();
-    }
-
-    #[test]
-    fn test_at_most_one_instance_in_isolated_process() {
-        crate::suppress_wer_dialogs();
-        if std::env::var("ISOLATED_TEST_RUNNER").is_ok() {
-            // This is the actual test running in the isolated process.
-            run_tests_impl();
-            std::process::exit(0);
-        }
-
-        // This is the test coordinator - spawn the actual test in a new process.
-        let mut cmd = crate::new_isolated_test_command();
-        cmd.env("ISOLATED_TEST_RUNNER", "1")
-            .env("RUST_BACKTRACE", "1")
-            .args([
-                "--test-threads",
-                "1",
-                "test_at_most_one_instance_in_isolated_process",
-            ]);
-
-        let output = cmd.output().expect("Failed to run isolated test");
-
-        let stderr = String::from_utf8_lossy(&output.stderr).to_string();
-
-        if !output.status.success()
-            || stderr.contains("panicked at")
-            || stderr.contains("Test failed with error")
-        {
-            eprintln!("Exit status: {:?}", output.status);
-            eprintln!("Stdout: {}", String::from_utf8_lossy(&output.stdout));
-            eprintln!("Stderr: {stderr}");
-
-            panic!(
-                "Isolated test failed with status code {:?}: {}",
-                output.status.code(),
-                stderr
-            );
-        }
     }
 }

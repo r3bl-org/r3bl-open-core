@@ -68,6 +68,7 @@
 //! [`Crossterm backend`]: crate::crossterm_backend
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 //! [`xterm`]: https://en.wikipedia.org/wiki/Xterm
+use crate::{generate_impl_display_for_fast_stringify, ok};
 use crate::{
     ANSIBasicColor, AnsiValue, CSI_START, FastStringify, SGR_BOLD_STR, SGR_DIM_STR,
     SGR_HIDDEN_STR, SGR_INVERT_STR, SGR_ITALIC_STR, SGR_OVERLINE_STR, SGR_RAPID_BLINK_STR,

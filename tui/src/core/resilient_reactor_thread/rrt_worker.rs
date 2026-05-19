@@ -1,10 +1,11 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-// cspell:words EINTR SIGWINCH epoll kqueue threadwaker rrtwaker
+// cspell:words EINTR SIGWINCH epoll kqueue threadwaker rrtwaker rrtsoftwareinterrupt
+// cspell:words IORING
 
 //! Core traits for adding your business logic, using [dependency injection], into the
 //! reusable Resilient Reactor Thread ([`RRT`]) [framework]. See the following for more
-//! details: [`RRTWorker`], [`RRTWaker`].
+//! details: [`RRTWorker`], [`RRTSoftwareInterrupt`].
 //!
 //! [`RRT`]: super::RRT
 //! [`syscalls`]: https://man7.org/linux/man-pages/man2/syscalls.2.html
@@ -13,131 +14,169 @@
 
 use super::{RRTEvent, RestartPolicy};
 use crate::core::common::Continuation;
+use std::fmt::Debug;
 use tokio::sync::broadcast::Sender;
 
-/// A trait for waking the blocked [framework]-managed dedicated RRT thread.
+/// A trait for interrupting the blocked [framework]-managed dedicated RRT thread.
 ///
-/// Your implementation of [`RRTWaker`] wraps whatever mechanism your [blocking I/O
-/// backend] provides for interrupt signaling. For example, [`MioPollWaker`] wraps a
-/// [`mio::Waker`] that triggers an [`epoll`]/[`kqueue`] wakeup.
+/// Your implementation of [`RRTSoftwareInterrupt`] wraps whatever mechanism your
+/// [blocking I/O backend] provides for interrupt signaling. For example,
+/// [`MioSoftwareInterrupt`] wraps a [`mio::Waker`] that triggers an [`epoll`]/[`kqueue`]
+/// wakeup.
 ///
-/// [`SubscriberGuard::drop()`] calls [`wake_and_unblock_dedicated_thread()`] to signal
-/// the dedicated thread to check if it should exit.
+/// When a [`SubscriberGuard`] is dropped, its [`Drop`] impl calls
+/// [`ThreadLifecycleMonitor::interrupt_if_running()`], which acquires the [`lock()`] lock
+/// and (if the variant is [`Running`]) reaches into the wrapped [`InterruptHandle`] and
+/// calls [`trigger_software_interrupt()`] - signaling the dedicated thread to check
+/// whether it should exit.
 ///
-/// # Trait Bounds - [`Send`] + [`Sync`] + `'static`
+/// # Trait Bounds - [`Send`] + [`Sync`] + `'static` + [`Debug`]
 ///
-/// There is exactly **one waker** inside [`RRT`]'s shared [`shared_waker_slot`] wrapper,
-/// which all [`SubscriberGuard`] instances share. When any subscriber drops its guard,
-/// the guard's [`Drop`] impl calls [`wake_and_unblock_dedicated_thread()`] to interrupt
-/// the blocking thread:
+/// There is exactly **one interrupt handle** at any time, wrapped in a
+/// [`InterruptHandle`] held by the [`Running`] variant of [`ThreadState`] inside
+/// [`RRT`]'s shared [`ThreadLifecycleMonitor`]. Every [`SubscriberGuard`] holds an
+/// [`Arc`] clone of the same monitor. When any subscriber drops its guard, the chain runs
+/// through the monitor:
 ///
 /// ```text
 /// ┌─────────────────────┐
-/// │  Dedicated Thread   │ ◄─── waker.wake_and_unblock_dedicated_thread()
+/// │  Dedicated Thread   │ ◄─── trigger_software_interrupt()
 /// │  (blocking on Poll) │      interrupts blocking call
 /// └─────────────────────┘
-///           ▲
-///           │
-///    ┌──────┴──────┐
-///    │     ONE     │ ◄─┬─── Async Task A drops guard
-///    │    waker    │   │    └──► waker.wake_and_unblock_dedicated_thread()
-///    │   (shared)  │ ◄─┴─── Async Task B drops guard
-///    └─────────────┘        └──► waker.wake_and_unblock_dedicated_thread()
+///            ▲
+///            │
+///    ┌──────────────────┐
+///    │       ONE        │ ◄─┬─── Async Task A drops guard
+///    │ InterruptHandle  │   │    └──► monitor.interrupt_if_running()
+///    │   (in Running)   │ ◄─┴─── Async Task B drops guard
+///    └──────────────────┘        └──► monitor.interrupt_if_running()
 /// ```
 ///
-/// This shared-access pattern requires [`Send`] + [`Sync`]:
+/// The shared-monitor access pattern requires [`Send`] + [`Sync`]:
 ///
-/// - **[`Send`]**: The closure lives inside [`RRT`]'s shared waker wrapper. For `Arc<T>`
-///   to be `Send`, `T` must be `Send + Sync`, so the closure must be `Send`.
-/// - **[`Sync`]**: Multiple async tasks (each holding a [`SubscriberGuard`]) may lock the
-///   shared waker and call the closure concurrently from different [runtime threads]. The
-///   closure must be thread-safe.
+/// - **[`Send`] + [`Sync`]**: An instance of `Self` lives inside the [`Running`] variant
+///   of [`ThreadState`], owned by [`ThreadLifecycleMonitor`], and shared via [`Arc`] to
+///   every [`SubscriberGuard`] across [`tokio`] [runtime threads]. For the [`Arc`] to
+///   cross thread boundaries, every type it transitively contains - including `Self`
+///   (wrapped in an [`InterruptHandle`]) - must be [`Send`] + [`Sync`].
 /// - **[`'static`]**: Required for thread spawning. See [`RRT`] for a detailed
 ///   explanation of the [`'static` trait bound][`'static`].
-///
+/// - **[`Debug`]**: Required for framework observability and logging.
 ///
 /// # Idempotency
 ///
-/// Multiple concurrent calls are safe and harmless. Wakes may coalesce (the dedicated
-/// thread wakes once) or cause multiple wakeups (it loops again). Either way, the
-/// dedicated thread just checks [`receiver_count()`] and decides whether to exit.
+/// Multiple concurrent calls are safe and harmless. Software interrupts may coalesce (the
+/// dedicated thread wakes once) or cause multiple wakeups (it loops again). Either way,
+/// the dedicated thread just checks [`receiver_count()`] and decides whether to exit.
 ///
-/// # Poll -> Registry -> Waker Chain
+/// # Poll -> Registry -> Software Interrupt Chain
 ///
-/// Your [`RRTWaker`] implementation is tightly coupled to its [blocking mechanism] (e.g.,
-/// [`mio::Poll`]):
+/// Your [`RRTSoftwareInterrupt`] implementation is tightly coupled to its [blocking
+/// mechanism] (e.g., [`Poll`]):
 ///
 /// ```text
-/// mio::Poll::new()                       // Creates OS event mechanism
+/// Poll::new()                            // Creates OS event mechanism
 ///       │                                // (epoll fd / kqueue)
 ///       ▼
 /// poll.registry()                        // Handle to register interest
 ///       │
 ///       ▼
-/// Waker::new(registry)                   // Registers with THIS Poll's mechanism
+/// SoftwareInterrupt::new(registry)       // Registers with THIS Poll's mechanism
 ///       │
 ///       ▼
-/// waker                                  // Triggers event → poll.poll() returns
-/// .wake_and_unblock_dedicated_thread()
+/// interrupt                              // Triggers event → poll.poll() returns
+/// .trigger_software_interrupt()
 /// ```
 ///
-/// Since a [`Waker`] is bound to the [`Poll`] instance it was created from, replacing one
-/// without the other leaves a dead reference. This is why the slow path replaces **both**
-/// together (see [two-phase setup]).
+/// Since a [`SoftwareInterrupt`] is bound to the [`Poll`] instance it was created
+/// from, replacing one without the other leaves a dead reference. This is why the worker
+/// and its interrupt handle are always created together as a pair (see [two-phase
+/// setup]).
 ///
 /// # Why User-Provided?
 ///
-/// Wake strategies are backend-specific. See [Why is `RRTWaker` User-Provided?]
+/// Interrupt strategies are backend-specific. See [Why is `RRTSoftwareInterrupt`
+/// User-Provided?]
 ///
 /// [`'static`]: super::RRT#static-trait-bound-vs-static-lifetime-annotation
 /// [`Arc`]: std::sync::Arc
 /// [`epoll`]: https://man7.org/linux/man-pages/man7/epoll.7.html
+/// [`InterruptHandle`]: super::InterruptHandle
 /// [`kqueue`]: https://man.freebsd.org/cgi/man.cgi?query=kqueue
+/// [`lock()`]: super::ThreadLifecycleMonitor::lock
 /// [`mio::Waker`]: mio::Waker
-/// [`MioPollWaker`]: crate::terminal_lib_backends::MioPollWaker
+/// [`MioSoftwareInterrupt`]: crate::mio_poller::MioSoftwareInterrupt
 /// [`Poll`]: mio::Poll
 /// [`receiver_count()`]: tokio::sync::broadcast::Sender::receiver_count
 /// [`RRT`]: super::RRT
-/// [`shared_waker_slot`]: field@super::RRT::shared_waker_slot
-/// [`SubscriberGuard::drop()`]: super::SubscriberGuard
+/// [`Running`]: super::ThreadState::Running
+/// [`SoftwareInterrupt`]: crate::mio_poller::MioSoftwareInterrupt
 /// [`SubscriberGuard`]: super::SubscriberGuard
+/// [`ThreadLifecycleMonitor::interrupt_if_running()`]:
+///     super::ThreadLifecycleMonitor::interrupt_if_running
+/// [`ThreadLifecycleMonitor`]: super::ThreadLifecycleMonitor
+/// [`ThreadState`]: super::ThreadState
 /// [`tokio`]: tokio
-/// [`wake_and_unblock_dedicated_thread()`]: Self::wake_and_unblock_dedicated_thread
-/// [`Waker`]: mio::Waker
+/// [`trigger_software_interrupt()`]: Self::trigger_software_interrupt
 /// [blocking I/O backend]: super#understanding-blocking-io
 /// [blocking mechanism]: super#understanding-blocking-io
 /// [framework]: crate::core::resilient_reactor_thread#the-rrt-contract-and-benefits
 /// [runtime threads]: tokio::runtime
 /// [two-phase setup]: super#two-phase-setup
-/// [Why is `RRTWaker` User-Provided?]: super#why-is-rrtwaker-user-provided
-pub trait RRTWaker: Send + Sync + 'static {
-    /// Wakes the OS event mechanism registered during
+/// [Why is `RRTSoftwareInterrupt` User-Provided?]:
+///     super#why-is-rrtsoftwareinterrupt-user-provided
+pub trait RRTSoftwareInterrupt: Send + Sync + Debug + 'static {
+    /// Triggers the OS event mechanism registered during
     /// [`create_and_register_os_sources()`], unblocking the dedicated RRT thread's
     /// [`block_until_ready_then_dispatch()`] call.
     ///
-    /// This method is called by [`SubscriberGuard::drop()`] to interrupt the dedicated
-    /// thread's blocking [`syscall`] (e.g., [`mio::Poll::poll()`]). The thread then
-    /// checks [`receiver_count()`] and decides whether to exit.
+    /// This method is called via [`ThreadLifecycleMonitor::interrupt_if_running()`] when
+    /// a [`SubscriberGuard`] is dropped, to interrupt the dedicated thread's blocking
+    /// [`syscall`] (e.g., [`Poll::poll()`]). The thread then checks
+    /// [`receiver_count()`] and decides whether to exit.
     ///
     /// Implementations should be idempotent - multiple concurrent calls must be safe.
     ///
+    /// # Design Rationale: Why Not `Waker` Directly?
+    ///
+    /// Different I/O backends need different interrupt strategies:
+    /// - [`Poll`] uses [`Waker`] (which typically uses [`eventfd`] or a self-pipe).
+    /// - A TCP [`accept()`] loop might need a "connect-to-self" pattern.
+    /// - [`io_uring`] might use [`IORING_OP_MSG_RING`].
+    ///
+    /// Since the [`Interrupt`] is bound to the specific OS resources it was created from
+    /// (e.g., a [`Waker`] is bound to the [`Poll`] registry it was registered
+    /// with), the framework doesn't create it. Instead, your [`RRTWorker`]
+    /// implementation creates the appropriate [`Interrupt`] during its two-phase
+    /// setup.
+    ///
+    /// [`accept()`]: std::net::TcpListener::accept
     /// [`block_until_ready_then_dispatch()`]: RRTWorker::block_until_ready_then_dispatch
     /// [`create_and_register_os_sources()`]: RRTWorker::create_and_register_os_sources
-    /// [`mio::Poll::poll()`]: mio::Poll::poll
+    /// [`eventfd`]: https://man7.org/linux/man-pages/man2/eventfd.2.html
+    /// [`Interrupt`]: Self
+    /// [`io_uring`]: https://kernel.dk/io_uring.pdf
+    /// [`IORING_OP_MSG_RING`]:
+    ///     https://man7.org/linux/man-pages/man3/io_uring_prep_msg_ring.3.html
+    /// [`Poll::poll()`]: mio::Poll::poll
+    /// [`Poll`]: mio::Poll
     /// [`receiver_count()`]: tokio::sync::broadcast::Sender::receiver_count
-    /// [`SubscriberGuard::drop()`]: super::SubscriberGuard
+    /// [`SubscriberGuard`]: super::SubscriberGuard
     /// [`syscall`]: https://man7.org/linux/man-pages/man2/syscalls.2.html
-    fn wake_and_unblock_dedicated_thread(&self);
+    /// [`ThreadLifecycleMonitor::interrupt_if_running()`]:
+    ///     super::ThreadLifecycleMonitor::interrupt_if_running
+    /// [`Waker`]: mio::Waker
+    fn trigger_software_interrupt(&self);
 }
 
-/// A trait for implementing the blocking ]I/O worker on the [framework]-managed dedicated
+/// A trait for implementing the blocking I/O worker on the [framework]-managed dedicated
 /// RRT thread.
 ///
 /// This is the main "entry point" for you to use the RRT [framework]. The journey begins
 /// with you defining a static singleton of type [`RRT`] in your code and providing a
 /// concrete type that implements this trait. See the [DI overview] for what each piece
-/// ([`RRTWorker`], [`RRTWaker`], [`Event`]) provides and how the [framework] orchestrates
-/// them.
+/// ([`RRTWorker`], [`RRTSoftwareInterrupt`], [`Event`]) provides and how the [framework]
+/// orchestrates them.
 ///
 /// This trait handles both **resource creation**
 /// ([`create_and_register_os_sources()`]) and **one iteration of the blocking I/O loop**
@@ -157,7 +196,7 @@ pub trait RRTWaker: Send + Sync + 'static {
 /// that are ready and then converts them into a domain-specific [`event`] type that is
 /// broadcast to all the async consumers.
 ///
-/// Returning [`Continuation::Restart`] triggers [self-healing restart] - the framework
+/// Returning [`Continuation::Restart`] triggers [self-healing restart] - the [framework]
 /// drops the current worker, applies the [`RestartPolicy`], and creates a fresh worker
 /// via [`create_and_register_os_sources()`].
 ///
@@ -167,7 +206,7 @@ pub trait RRTWaker: Send + Sync + 'static {
 /// thread and is owned exclusively by it. This is why
 /// we need the following trait bounds:
 /// - ✓ [`Send`]: The implementing type must be [`Send`] to move from the [async executor
-///   thread] (on which [`subscribe()`] runs) to the [framework]-managed dedicated RRT
+///   thread] (on which [`try_subscribe()`] runs) to the [framework]-managed dedicated RRT
 ///   thread.
 /// - ✓ [`'static`]: Required for [`std::thread::spawn()`]. See [`RRT`] for a detailed
 ///   explanation of the [`'static` trait bound][`'static`].
@@ -184,30 +223,31 @@ pub trait RRTWaker: Send + Sync + 'static {
 /// This trait requires [`block_until_ready_then_dispatch()`] (one iteration) rather than
 /// `run()` (entire loop). This inversion of control provides:
 ///
-/// - **Framework control**: Inject logging, metrics between iterations
+/// - **[Framework] control**: Inject logging, metrics between iterations
 /// - **Single responsibility**: Your [`RRTWorker`] implementation handles events,
-///   framework handles lifecycle
+///   [framework] handles lifecycle
 /// - **Testability**: Unit test [`block_until_ready_then_dispatch()`] in isolation
 ///
 /// [`'static`]: super::RRT#static-trait-bound-vs-static-lifetime-annotation
 /// [`block_until_ready_then_dispatch()`]: Self::block_until_ready_then_dispatch
 /// [`create_and_register_os_sources()`]: Self::create_and_register_os_sources
 /// [`event`]: Self::Event
-/// [`MioPollWorker`]: crate::terminal_lib_backends::MioPollWorker
+/// [`MioPollWorker`]: crate::mio_poller::MioPollWorker
 /// [`restart_policy()`]: Self::restart_policy
 /// [`RRT`]: super::RRT
 /// [`signals`]: https://man7.org/linux/man-pages/man7/signal.7.html
 /// [`stdin`]: std::io::stdin
-/// [`subscribe()`]: super::RRT::subscribe
 /// [`syscalls`]: https://man7.org/linux/man-pages/man2/syscalls.2.html
+/// [`try_subscribe()`]: super::RRT::try_subscribe
 /// [default policy]: RestartPolicy#impl-Default-for-RestartPolicy
 /// [DI overview]: super#separation-of-concerns-and-dependency-injection-di
 /// [Event]: Self::Event
+/// [Framework]: crate::core::resilient_reactor_thread#the-rrt-contract-and-benefits
 /// [framework]: crate::core::resilient_reactor_thread#the-rrt-contract-and-benefits
 /// [module docs]: super::RRT#two-phase-setup
 /// [self-healing restart]: super#self-healing-restart-details
 /// [two-phase setup]: super::RRT#two-phase-setup
-pub trait RRTWorker: Send + 'static {
+pub trait RRTWorker: Send + Debug + 'static {
     /// Capacity of the [`broadcast channel`] for events.
     ///
     /// When the buffer is full, the oldest message is dropped to make room for new
@@ -232,7 +272,7 @@ pub trait RRTWorker: Send + 'static {
     /// This type must be [`Clone`] + [`Send`] + `'static` to satisfy the requirements of
     /// - ✓ [`Clone`]: The [`broadcast channel`] clones each event for every [`Receiver`]
     ///   resulting in one clone per [`SubscriberGuard`].
-    /// - ✓ [`Send`]: Events are produced on the [framework]-managed dedicated RRT thread
+    /// - ✓ [`Send`]: Events are produced on the framework-managed dedicated RRT thread
     ///   and consumed by async consumers / tasks running on [`tokio`] [executor threads]
     ///   (in the [multithreaded runtime]).
     /// - ✓ [`'static`]: Required for thread spawning. See [`RRT`] for a detailed
@@ -245,43 +285,49 @@ pub trait RRTWorker: Send + 'static {
     /// [`SubscriberGuard`]: super::SubscriberGuard
     /// [`tokio`]: tokio
     /// [executor threads]: tokio::runtime
-    /// [framework]: crate::core::resilient_reactor_thread#the-rrt-contract-and-benefits
     /// [multithreaded runtime]: tokio::runtime::Builder::new_multi_thread
     type Event: Clone + Send + Sync + 'static;
 
-    /// The concrete waker type returned by [`create_and_register_os_sources()`]
-    /// alongside the worker.
+    /// The concrete interrupt handle type returned by
+    /// [`create_and_register_os_sources()`] alongside the worker.
     ///
-    /// This associated type threads the concrete waker through framework types
-    /// ([`SharedWakerSlot`], [`SubscriberGuard`], [`TerminationGuard`]) at the type
+    /// The framework wraps this returned interrupt handle in an [`InterruptHandle`]
+    /// inside the [`Running`] state. This associated type threads your concrete interrupt
+    /// handle through the framework types ([`InterruptHandle`],
+    /// [`ThreadLifecycleMonitor`], [`SubscriberGuard`], [`TerminationGuard`]) at the type
     /// level, eliminating dynamic dispatch.
     ///
     /// [`create_and_register_os_sources()`]: Self::create_and_register_os_sources
-    /// [`SharedWakerSlot`]: super::SharedWakerSlot
+    /// [`InterruptHandle`]: super::InterruptHandle
+    /// [`Running`]: super::ThreadState::Running
     /// [`SubscriberGuard`]: super::SubscriberGuard
     /// [`TerminationGuard`]: super::TerminationGuard
-    type Waker: RRTWaker;
+    /// [`ThreadLifecycleMonitor`]: super::ThreadLifecycleMonitor
+    type Interrupt: RRTSoftwareInterrupt;
 
     /// Creates OS resources, registers event sources, and returns a coupled worker +
-    /// [waker] pair.
+    /// [interrupt handle] pair.
     ///
     /// The specifics of which [`syscalls`] your implementation uses, and what sources are
     /// registered, are totally left up to your implementation of this method. Your
     /// concrete type (that implements this method) is an injected dependency containing
     /// business logic that the [framework] is not aware of by design.
     ///
-    /// The [waker] is tightly coupled to the worker's blocking mechanism (e.g.,
-    /// [`mio::Poll`]). Since a [`mio::Waker`] is bound to the [`Poll`] instance it was
-    /// created from, this worker and [waker] must be created together. This is why this
-    /// method returns both as a pair. See [`RRT`]'s [Two-Phase Setup] section for the
-    /// full explanation of why the pair is returned and where each piece goes (waker to
-    /// [`shared_waker_slot`], worker to thread-local stack in [`run_worker_loop()`]).
+    /// The [interrupt handle] is tightly coupled to the worker's blocking mechanism
+    /// (e.g., [`Poll`]). Since a [`SoftwareInterrupt`] is bound to the [`Poll`]
+    /// instance it was created from, this worker and [interrupt handle] must be
+    /// created together. This is why this method returns both as a pair. See
+    /// [`RRT`]'s [Two-Phase Setup] section for the full explanation of why the pair
+    /// is returned and where each piece goes (interrupt handle wrapped in an
+    /// [`InterruptHandle`] held by the [`Running`] variant of [`ThreadState`] inside
+    /// [`ThreadLifecycleMonitor`], worker to thread-local stack in
+    /// [`run_worker_loop()`]).
     ///
-    /// The concrete waker type [`Self::Waker`] is threaded through framework types
-    /// at the type level, eliminating dynamic dispatch.
+    /// The concrete interrupt handle type [`Self::Interrupt`] is threaded through
+    /// [framework] types at the type level, eliminating dynamic dispatch.
     ///
     /// This method does not spawn the dedicated thread - that happens when your app calls
-    /// [`subscribe()`]. See [Thread Lifecycle] for the full spawn/reuse/terminate
+    /// [`try_subscribe()`]. See [Thread Lifecycle] for the full spawn/reuse/terminate
     /// sequence.
     ///
     /// This method is also called during [self-healing restart] to create fresh OS
@@ -289,28 +335,32 @@ pub trait RRTWorker: Send + 'static {
     ///
     /// # Returns
     ///
-    /// This worker and its [waker] pair. See [Two-Phase Setup] for how these are
-    /// distributed between the spawned thread and [`RRT`]'s shared waker wrapper.
+    /// This worker and its [interrupt handle] pair. See [Two-Phase Setup] for how these
+    /// are distributed between the spawned thread and the shared
+    /// [`ThreadLifecycleMonitor`].
     ///
     /// # Errors
     ///
     /// Returns an error if OS resources cannot be created.
     ///
+    /// [`InterruptHandle`]: super::InterruptHandle
     /// [`mio::Poll`]: mio::Poll
-    /// [`mio::Waker`]: mio::Waker
     /// [`Poll`]: mio::Poll
     /// [`RRT`]: super::RRT
     /// [`run_worker_loop()`]: super::run_worker_loop
-    /// [`Self::Waker`]: Self::Waker
-    /// [`shared_waker_slot`]: field@super::RRT::shared_waker_slot
-    /// [`subscribe()`]: super::RRT::subscribe
+    /// [`Running`]: super::ThreadState::Running
+    /// [`Self::Interrupt`]: Self::Interrupt
+    /// [`SoftwareInterrupt`]: crate::mio_poller::MioSoftwareInterrupt
     /// [`syscalls`]: https://man7.org/linux/man-pages/man2/syscalls.2.html
+    /// [`ThreadLifecycleMonitor`]: super::ThreadLifecycleMonitor
+    /// [`ThreadState`]: super::ThreadState
+    /// [`try_subscribe()`]: super::RRT::try_subscribe
     /// [framework]: crate::core::resilient_reactor_thread#the-rrt-contract-and-benefits
+    /// [interrupt handle]: super::RRTSoftwareInterrupt
     /// [self-healing restart]: super#self-healing-restart-details
     /// [Thread Lifecycle]: super::RRT#thread-lifecycle
     /// [Two-Phase Setup]: super::RRT#two-phase-setup
-    /// [waker]: super::RRTWaker
-    fn create_and_register_os_sources() -> miette::Result<(Self, Self::Waker)>
+    fn create_and_register_os_sources() -> miette::Result<(Self, Self::Interrupt)>
     where
         Self: Sized;
 
@@ -346,7 +396,7 @@ pub trait RRTWorker: Send + 'static {
     /// trait method.
     ///
     /// Your implementation wraps domain events in [`RRTEvent::Worker(...)`] before
-    /// sending them through `sender`. The framework uses `sender` to send
+    /// sending them through `sender`. The [framework] uses `sender` to send
     /// [`RRTEvent::Shutdown`] when the restart policy is exhausted.
     ///
     /// Pro-tip - you can call [`sender.receiver_count()`] to check if any subscribers

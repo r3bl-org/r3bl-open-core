@@ -55,6 +55,7 @@
 //! [rendering pipeline overview]: mod@crate::terminal_lib_backends#rendering-pipeline-architecture
 
 use super::{ZOrder, paint::paint};
+use crate::ok;
 use crate::{FlushKind, GlobalData, InlineVec, LockedOutputDevice, RenderOpIRVec,
             tui::DEBUG_TUI_SHOW_PIPELINE_EXPANDED};
 use smallvec::smallvec;

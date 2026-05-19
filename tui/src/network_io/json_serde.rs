@@ -46,7 +46,7 @@ pub fn try_deserialize<T: for<'de> Deserialize<'de>>(
 
 #[cfg(test)]
 mod tests_json_serde {
-    use crate::{Buffer, json_serde};
+    use crate::{Buffer, json_serde, ok};
     use pretty_assertions::assert_eq;
     use serde::{Deserialize, Serialize};
 
@@ -81,6 +81,6 @@ mod tests_json_serde {
 
         assert_eq!(value, struct_from_bytes);
 
-        Ok(())
+        ok!()
     }
 }

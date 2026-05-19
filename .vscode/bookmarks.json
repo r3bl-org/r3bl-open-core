@@ -1,0 +1,34 @@
+{
+	"files": [
+		{
+			"path": "tui/src/core/common/scoped_mutex/thread_lock_state_machine.rs",
+			"bookmarks": [
+				{
+					"line": 93,
+					"column": 0,
+					"label": ""
+				}
+			]
+		},
+		{
+			"path": "tui/src/core/common/scoped_mutex/deadlock_prevention.rs",
+			"bookmarks": [
+				{
+					"line": 14,
+					"column": 0,
+					"label": ""
+				}
+			]
+		},
+		{
+			"path": "README.md",
+			"bookmarks": [
+				{
+					"line": 668,
+					"column": 0,
+					"label": ""
+				}
+			]
+		}
+	]
+}

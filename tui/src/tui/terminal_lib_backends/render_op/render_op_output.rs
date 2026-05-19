@@ -36,6 +36,7 @@
 //! [rendering pipeline overview]: mod@crate::terminal_lib_backends#rendering-pipeline-architecture
 
 use super::{RenderOpCommon, RenderOpsExec};
+use crate::ok;
 use crate::{InlineString, InlineVec, LockedOutputDevice, RenderOpsLocalData, Size,
             TERMINAL_LIB_BACKEND, TerminalLibBackend, TuiStyle,
             terminal_lib_backends::{crossterm_backend::PaintRenderOpImplCrossterm,

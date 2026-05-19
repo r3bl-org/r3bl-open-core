@@ -3,7 +3,8 @@
 use crate::{giti::{BranchCheckoutDetails, CommandRunDetails, ui_str},
             prefix_single_select_instruction_header};
 use r3bl_tui::{BranchExists, CommandRunResult, CommonResult, DefaultIoDevices,
-               RepoStatus, choose, cli_text_inline, cli_text_line, height, inline_vec,
+               RepoStatus, TuiAvailabilityChooseExt, choose, cli_text_inline,
+               cli_text_line, height, inline_vec,
                readline_async::{HowToChoose, StyleSheet},
                try_checkout_existing_local_branch, try_get_current_branch_name,
                try_get_local_branches, try_is_working_directory_clean};
@@ -151,6 +152,7 @@ mod user_interaction {
             )];
             prefix_single_select_instruction_header(inline_vec![last_line])
         };
+
         let mut default_io_devices = DefaultIoDevices::default();
         let maybe_user_choice = choose(
             header_with_instructions,
@@ -161,9 +163,8 @@ mod user_interaction {
             StyleSheet::default(),
             default_io_devices.as_mut_tuple(),
         )
-        .await? // Propagate UI errors (e.g., I/O errors).
-        .into_iter() // Convert InlineVec<InlineString> to iterator.
-        .next(); // Get the first (and only) selected item, if any.
+        .get_first_result()
+        .await?;
 
         // Early return if the user did not select a branch.
         let Some(user_choice) = maybe_user_choice else {

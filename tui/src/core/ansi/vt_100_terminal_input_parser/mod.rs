@@ -248,4 +248,4 @@ pub mod validation_tests;
 #[cfg(any(test, doc))]
 pub mod unit_tests;
 #[cfg(any(test, doc))]
-pub mod integration_tests;
+pub mod vt_100_parser_integration_tests;

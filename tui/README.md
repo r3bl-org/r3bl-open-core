@@ -62,6 +62,7 @@ in which this crate is meant to exist.
   - [Partial TUI for simple choice](#partial-tui-for-simple-choice)
   - [Partial TUI for REPL](#partial-tui-for-repl)
   - [Full TUI for immersive apps](#full-tui-for-immersive-apps)
+  - [Terminal multiplexer](#terminal-multiplexer)
   - [Power via composition](#power-via-composition)
 - [Changelog](#changelog)
 - [Learn how these crates are built, provide
@@ -84,10 +85,13 @@ in which this crate is meant to exist.
 - [Type-safe bounds checking](#type-safe-bounds-checking)
   - [The Problem](#the-problem)
   - [The Solution](#the-solution)
-  - [Key Benefits](#key-benefits)
-  - [Architecture](#architecture)
-  - [Common Patterns](#common-patterns)
-  - [Learn More](#learn-more)
+- [Terminal Restoration: Panic, Drop, and Mutex
+  Poison-Safety](#terminal-restoration-panic-drop-and-mutex-poison-safety)
+  - [Panic vs. Drop handling](#panic-vs-drop-handling)
+  - [Mutex Locking: Fail-Fast vs.
+    Poison-Safe](#mutex-locking-fail-fast-vs-poison-safe)
+  - [Deadlock Prevention: Scoped Access vs. Chain of
+    Custody](#deadlock-prevention-scoped-access-vs-chain-of-custody)
 - [Grapheme support](#grapheme-support)
   - [The Challenge](#the-challenge)
   - [The Solution: Three Index Types](#the-solution-three-index-types)
@@ -279,17 +283,40 @@ understanding of TTY programming.
 - [Build with Naz: async
   readline](https://www.youtube.com/playlist?list=PLofhE49PEwmwelPkhfiqdFQ9IXnmGdnSE)
 
+### Interactive terminal application entry points
+
+<!--
+XMARK: entry points (public API) to build interactive terminal apps
+Canonical source of truth for the main entry points; link directly to this section w/
+crate#interactive-terminal-application-entry-points
+-->
+
+This crate provides five entry points for building interactive terminal applications.
+Each internalizes terminal availability and size checks, and returns a
+[`TuiAvailability<T>`] enum.
+
+| Entry Point                           | Purpose                 | Returns                                   | Best For                                                               |
+|:--------------------------------------|:------------------------|:------------------------------------------|:-----------------------------------------------------------------------|
+| [`TerminalWindow::main_event_loop()`] | Full TUI framework      | [`TuiAvailability<MainEventLoopFuture>`]  | Complex, multi-component apps with layouts, dialogs, and custom logic. |
+| [`ReadlineAsyncContext::try_new()`]   | Async Readline          | [`TuiAvailability<ReadlineAsyncContext>`] | CLI-style line input, REPLs, and background logging.                   |
+| [`choose()`]                          | Interactive Selection   | [`TuiAvailability<ChooseFuture>`]         | Prompting user to select one or more items from a list.                |
+| [`PTYMuxBuilder::build()`]            | Terminal Multiplexer    | [`TuiAvailability<PTYMux>`]               | Wrapping existing CLI tools (like `htop`, `bash`) in a multi-pane TUI. |
+| [`Spinner::try_start()`]              | Indeterminate Progress  | [`TuiAvailability<Spinner>`]              | Long-running tasks needing visual feedback (standalone or embedded).   |
+
+[`Spinner::try_start()`] only checks stdout interactivity (not [`stdin`]), so it works
+with piped [`stdin`]. It can run standalone or embedded within a
+[`ReadlineAsyncContext`] session.
+
 ### Partial TUI for simple choice
 
 [`mod@readline_async::choose_api`] allows you to build less interactive apps that ask
 a user user to make choices from a list of options and then use a decision tree to
 perform actions.
 
-An example of this is this "Partial TUI" app `giti` in the
-[`r3bl-cmdr`](https://github.com/r3bl-org/r3bl-open-core/tree/main/cmdr) crate. You
-can install & run this with the following command:
+An example of this is this "Partial TUI" app `giti` in the [`r3bl-cmdr`]. You can
+install & run this with the following command:
 
-```sh
+```bash
 cargo install r3bl-cmdr
 giti
 ```
@@ -306,11 +333,10 @@ write to stdout in an async manner, without clobbering the prompt / async readli
 the spinner. When the spinner is active, it pauses output to stdout, and resumes it
 when the spinner is stopped.
 
-An example of this is this "Partial TUI" app `giti` in the
-[`r3bl-cmdr`](https://github.com/r3bl-org/r3bl-open-core/tree/main/cmdr) crate. You
-can install & run this with the following command:
+An example of this is this "Partial TUI" app `giti` in the [`r3bl-cmdr`]. You can
+install & run this with the following command:
 
-```sh
+```bash
 cargo install r3bl-cmdr
 giti
 ```
@@ -324,13 +350,45 @@ Here are other examples of this:
 
 **The bulk of this document is about this**. [`mod@tui::terminal_window_api`] gives
 you "raw mode", "alternate screen" and "full screen" support, while being totally
-async. An example of this is the "Full TUI" app `edi` in the
-[`r3bl-cmdr`](https://github.com/r3bl-org/r3bl-open-core/tree/main/cmdr) crate. You
-can install & run this with the following command:
+async. It provides a full-featured framework with:
+- **[`App`] trait**: Unidirectional data flow architecture.
+- **`FlexBox`**: Responsive layout engine.
+- **Component System**: Reusable UI elements (editors, dialogs, etc.).
 
-```sh
+An example of this is the "Full TUI" app `edi` in the [`r3bl-cmdr`]. You can install &
+run this with the following command:
+
+```bash
 cargo install r3bl-cmdr
 edi
+```
+
+### Terminal multiplexer
+
+[`PTYMux::run()`] lets you build a terminal multiplexer similar to [`tmux`]. It
+manages multiple child processes (each in its own PTY) with per-process virtual
+terminal buffers and instant switching. See the [`pty_mux_example`] for a working
+example that wraps `bash`, `htop`, and other CLI tools.
+
+### Indeterminate progress spinner
+
+[`Spinner::try_start()`] allows you to show an animated progress indicator while
+performing long-running tasks (like network requests, file system operations, or
+external command execution).
+
+A unique feature of this spinner is its ability to be "embedded" within a
+[`ReadlineAsyncContext`] session. In this mode, it safely pauses terminal output from
+other concurrent tasks so that the spinner animation and other output don't clobber
+each other.
+
+An example of this is the upgrade check in the [`r3bl-cmdr`] crate, which shows a
+spinner while running `rustup` and `cargo install`.
+
+You can see it in action by running the standalone spinner example:
+
+```bash
+cd tui/examples
+cargo run --release --example spinner
 ```
 
 ### Power via composition
@@ -381,7 +439,7 @@ README](https://github.com/r3bl-org/r3bl-open-core/blob/main/README.md).
 
 After setup, you can run the examples interactively from the repository root:
 
-```sh
+```bash
 # Run examples interactively (choose from list)
 fish run.fish run-examples
 
@@ -393,7 +451,7 @@ fish run.fish run-examples --no-log
 ```
 
 You can also run examples directly:
-```sh
+```bash
 cd tui/examples
 cargo run --release --example demo -- --no-log
 ```
@@ -406,7 +464,7 @@ the repository root provides all development commands for the entire workspace.
 
 For TUI library development, use these commands from the repository root:
 
-```sh
+```bash
 # Terminal 1: Monitor logs from examples
 fish run.fish log
 
@@ -564,7 +622,8 @@ generate_pty_test! {
     },
     controlled: || {
         // Runs in PTY controlled - fully interactive terminal
-        let mut input_device = DirectToAnsiInputDevice::new();
+        let mut input_device = DirectToAnsiInputDevice::new()
+            .expect("Failed to initialize DirectToAnsiInputDevice");
         println!("CONTROLLED_READY");
         process_terminal_events(&input_device);
         std::process::exit(0);
@@ -589,13 +648,13 @@ demonstrates:
 - Proper process coordination and cleanup
 
 **Real-world applications:**
-- **Terminal input parsing**: [`integration_tests`] validates `VT-100` input sequences
+- **Terminal input parsing**: [`input_parser_integration_tests`] validates `VT-100` input sequences
 - **Raw mode behavior**: [`raw_mode_integration_tests`] tests termios configuration
 - **Interactive applications**: Tests readline, editor, and TUI component interactions
 
 For complete PTY test implementation details and examples, see:
 - Macro documentation: [`generate_pty_test!`]
-- Input parser tests: [`integration_tests`]
+- Input parser tests: [`input_parser_integration_tests`]
 - Raw mode tests: [`raw_mode_integration_tests`]
 
 For complete development setup and all available commands, see the [repository
@@ -824,7 +883,167 @@ For comprehensive documentation including:
 - Advanced patterns (range validation, scroll regions, text selections)
 
 See the extensive and detailed [`bounds_check` module
-documentation](mod@crate::core::coordinates::bounds_check).
+documentation](mod@crate::bounds_check).
+
+## Terminal Restoration: Panic, Drop, and Mutex Poison-Safety
+
+Terminal applications have a unique responsibility: they must ensure the user's shell
+is never left in a corrupted state (e.g., "stuck" in [raw mode]), even if the
+application crashes or deadlocks.
+
+> To recover from this a user would have to run the `reset` program via the command
+> line (to put the terminal back into "cooked mode") which is a bad user experience.
+
+To achieve this, this crate uses architectural patterns that guarantee terminal
+restoration through [`RAII`] (Resource Acquisition Is Initialization) and poison-safe
+cleanup. This section details how we handle the interplay between panic handling,
+resource cleanup via [`Drop`], and mutex poison-safety.
+
+### Panic vs. Drop handling
+
+In Rust, a panic can happen at any time. When it does, the stack is unwound, and
+[`Drop`] implementations are called for all resources currently in scope. In a TUI
+application, this is a critical moment: if the terminal is in [raw mode], it **must**
+be restored to "cooked mode" before the process exits, or the user's shell will be
+left in a corrupted state (no echo, broken line endings, etc.).
+
+#### The **Double Panic Abort** Risk
+
+In a TUI application, the highest risk is a **Double Panic Abort**. This happens if a
+panic occurs while another panic is already being processed. Here's a scenario that
+may play out:
+1. A thread holds the [`OutputDevice`] mutex to write to the screen. Lets call this
+   Thread A (typically the main thread running the event loop in a [`TUI`] or
+   [`readline_async`] app).
+2. Thread A panics, e.g., via an `unwrap()` on an unrelated `Option` while holding
+   this lock.
+3. The [`OutputDevice`] mutex is now **poisoned** because Thread A was holding it when
+   it started to panic.
+4. The panic triggers stack unwinding **on Thread A**, calling `drop()` on other
+   **[`RAII`] guards** that were created by the application and are still in scope.
+5. These `drop()` implementations (for components like **[`Readline`]** or
+   **[`RawModeGuard`]**) must write to the terminal to restore it. Tasks include:
+   moving the cursor to the left margin (done by [`Readline`]), showing the cursor if
+   hidden, switching back to the main screen, and disabling raw mode (done by
+   [`RawModeGuard`]).
+6. To do so, one of the `drop()` implementations (on Thread A) attempts to re-acquire
+   the **same [`OutputDevice`] lock**.
+7. Since it is using the same mutex, a call to `lock().unwrap()` will hit the poisoned
+   mutex and **panic a second time**.
+8. **Result**: The Rust runtime immediately **Aborts** the process because Thread A is
+   panicking while already panicking. This is the **Double Panic Abort**. No further
+   `drop()` calls occur, and the user's terminal is left "bricked" in raw mode.
+
+To avoid this, we ensure that our **Cleanup Paths** are poison-safe, allowing them to
+proceed even if they encounter a poisoned mutex.
+
+#### Philosophy: **Resilience over Integrity**
+
+During cleanup, we prioritize **Resilience over Integrity**. It is better to attempt
+terminal restoration using "dirty" or inconsistent state than to abort and leave the
+terminal unusable.
+
+To ensure this, we follow these rules:
+1. **[`RAII`] for Terminal State**: We use guards like [`RawModeGuard`] that implement
+   [`Drop`] to automatically disable [raw mode].
+2. **Poison-Safe Cleanup**: Mutexes used during cleanup (like those protecting the
+   terminal output device) must be "poison-safe".
+
+### Mutex Locking: Fail-Fast vs. Poison-Safe
+
+We distinguish between two types of mutex locking based on the context:
+
+#### 1. Normal Paths (Fail-Fast)
+
+For standard application logic, we prefer the "Fail-Fast" approach. If a mutex is
+poisoned, it means a previous thread panicked while holding the lock, and the
+protected data is likely in an inconsistent/corrupted state. In these cases, we use:
+```rust
+let guard = mutex.lock().expect("Mutex poisoned");
+```
+This intentionally propagates the panic, preventing the system from operating on
+corrupted state. [`ScopedMutex`] follows this pattern in its [`read()`] and
+[`write()`] methods.
+
+#### 2. Cleanup Paths (Poison-Safe)
+
+For cleanup and terminal restoration paths (e.g., inside a `drop()` implementation or
+a shutdown sequence), we **must** be "Poison-Safe". A panic in a cleanup path is a
+"Double Panic", which causes the Rust runtime to abort the process immediately,
+bypassing all remaining `Drop` implementations.
+
+To prevent this, we use the `into_inner()` method on the `PoisonError` to access the
+underlying data even if it's "dirty":
+```rust
+let guard = match mutex.lock() {
+    Ok(guard) => guard,
+    Err(poisoned) => {
+        tracing::error!("Mutex poisoned during cleanup, proceeding with dirty state");
+        poisoned.into_inner()
+    }
+};
+```
+This ensures that even if a prior panic corrupted the state, the terminal restoration
+logic can still attempt to call [`disable_raw_mode()`] and exit gracefully.
+[`ScopedMutex`] provides the [`lock_raw()`] method specifically for this purpose.
+
+### Deadlock Prevention: Scoped Access vs. Chain of Custody
+
+Beyond poison-safety, terminal applications must also be resilient against
+deadlocks. We use two primary patterns to manage shared state safely:
+
+#### 1. Scoped Access (Friction-as-a-Feature)
+
+For simple shared state (global settings, caches, single statistics), we use the
+[`ScopedMutex`] wrapper. This pattern structurally prevents deadlocks by making it
+impossible to hold a lock guard longer than the execution of a single closure.
+
+To further mitigate recursion-based deadlocks, [`ScopedMutex`] includes **Recursion
+Detection** (enabled by default). If a recursive lock is detected on the same thread,
+it will panic with a clear message instead of hanging the terminal. For
+performance-critical hot paths, this check can be opted-out at compile-time.
+
+#### 2. Chain of Custody (Guard Passing)
+
+For complex state machines or thread coordination (e.g., the Resilient Reactor Thread
+engine), we use the [`Monitor`] pattern. Unlike [`ScopedMutex`], a [`Monitor`] must
+return the guard because primitives like [`Condvar::wait()`] need to consume and then
+re-acquire the lock.
+
+To manage this safely, we use the **Chain of Custody** protocol: the caller becomes
+the temporary "custodian" of the lock and must eventually "return" the guard to the
+[`Monitor`] by dropping it or passing it back into another method (like
+[`Monitor::wait()`]).
+
+### Poison Safety Architecture: Summary of Components
+
+This table summarizes the architectural decisions made at each critical mutex
+boundary. Documentation for these components follows the standardized dual-heading
+format (`# Panics` and `# Poison Safety`).
+
+| Component                  | File                           | Implementation  | # Panics | # Poison Safety |
+| :------------------------- | :----------------------------- | :-------------- | :------: | :-------------: |
+| [`OutputDevice::lock()`]   | [`output_device.rs`]           | **Poison-Safe** |    N     |        Y        |
+| [`RawModeGuard::drop()`]   | [`raw_mode_core.rs`]           | **Poison-Safe** |    N     |        Y        |
+| [`Readline::drop()`]       | [`readline.rs`]                | **Poison-Safe** |    N     |        Y        |
+| [`TerminationGuard`]       | [`rrt_termination_guard.rs`]   | **Poison-Safe** |    N     |        Y        |
+| [`SubscriberGuard`]        | [`rrt_subscriber_guard.rs`]    | **Poison-Safe** |    N     |        Y        |
+| [`ScopedMutex::read()`]    | [`scoped_mutex.rs`]            | **Fail-Fast**   |    Y     |        Y        |
+| [`ScopedMutex::lock_raw()`]| [`scoped_mutex.rs`]            | **Poison-Safe** |    N     |        Y        |
+| [`Monitor::lock()`]        | [`monitor.rs`]                 | **Fail-Fast**   |    Y     |        Y        |
+| [`rrt_monitor::lock()`]    | [`rrt_monitor.rs`]             | **Fail-Fast**   |    Y     |        Y        |
+| [`run_worker_loop()`]      | [`rrt_engine.rs`]              | **Fail-Fast**   |    Y     |        Y        |
+| [`Spinner`] methods        | [`spinner.rs`]                 | **Fail-Fast**   |    Y     |        Y        |
+
+### Key Poison-Safe Components
+
+- **[`OutputDevice`]**: The global output device lock is poison-safe to ensure
+  restoration logic can always write to the terminal.
+- **[`SAVED_TERMIOS`]**: The static storage for terminal settings is poison-safe.
+- **[`Readline`]**: The `drop` implementation for the async-readline ensures terminal
+  cleanup even if the internal state is poisoned.
+- **[`Monitor`]**: The low-level [`Monitor`] and [`ThreadLifecycleMonitor`] used in
+  the Resilient Reactor Thread (RRT) provide [`lock_raw()`] for poison-safe cleanup.
 
 ## Grapheme support
 
@@ -1559,7 +1778,7 @@ color). Syntax highlighted text is also just [`TuiStyledText`].
 | UTF-8 | Task                                                                                                           |
 |:------|:---------------------------------------------------------------------------------------------------------------|
 | Y     | convert [`RenderPipeline`] to `List<List<`[`PixelChar`]`>>` ([`OffscreenBuffer`])                            |
-| Y     | paint each [`PixelChar`] in `List<List<`[`PixelChar`]`>>` to stdout using [`OffscreenBufferPaintImplCrossterm`] |
+| Y     | paint each [`PixelChar`] in `List<List<`[`PixelChar`]`>>` to stdout using [`OffscreenBufferPaintImpl`] |
 | Y     | save the `List<List<`[`PixelChar`]`>>` to [`GlobalData`]                                                      |
 
 Currently [`crossterm`] and [`direct_to_ansi`] are supported for actually painting to
@@ -1683,7 +1902,7 @@ dedicating a thread to blocking I/O.
 │         ▲                                ────► │  SubscriberGuard C │  │
 │         │                                      └─────────┬──────────┘  │
 │         │                                                │             │
-│         └── wake_and_unblock_dedicated_thread() on drop ─┘             │
+│         └── trigger_software_interrupt() on drop ────────┘             │
 │                                                                        │
 └────────────────────────────────────────────────────────────────────────┘
 ```
@@ -1698,7 +1917,7 @@ For the type hierarchy and implementation details, see the [Architecture Overvie
 | [`RRT`]                      | Framework entry point for RRT instances          |
 | [`SubscriberGuard`]          | RAII guard managing subscription lifecycle       |
 | [`RRTWorker`]                | Trait for the blocking work loop                 |
-| [`RRTWaker`]                 | Trait for interrupting blocked threads                |
+| [`RRTSoftwareInterrupt`]     | Trait for interrupting blocked threads           |
 
 ### Key benefits
 
@@ -1971,7 +2190,7 @@ The macro handles:
 - Sends input via PTY writer
 - Reads output via PTY reader
 - Performs assertions
-- Performs [`drain_and_wait()`] cleanup
+- Performs [`PtyTestChild::drain_and_wait()`] cleanup
 
 **Controlled** (runs in spawned child):
 
@@ -2006,7 +2225,7 @@ and controlled processes.
 For complete implementations, see:
 
 - [`pty_test_fixtures`] - Test infrastructure
-- [`integration_tests`] - Input parsing tests
+- [`input_parser_integration_tests`] - Input parsing tests
 - [`backend_compat_tests`] - Backend comparison tests
 
 ## How does the editor component work?
@@ -2281,27 +2500,25 @@ This naming convention enables **predictable IDE navigation**: searching for
 **Intentionally unimplemented legacy features**: Custom tab stops (HTS, TBC), legacy
 line control (NEL), and legacy terminal modes (IRM, DECOM) are not implemented as
 they're primarily used by mainframe terminals and very old applications.
-
 #### Usage Example
 
 ```rust
-use r3bl_tui::core::{pty_mux::{PTYMux, Process}, get_size};
+use r3bl_tui::{TuiAvailability, IntoErr, core::pty_mux::PTYMux, ok};
 
 #[tokio::main]
 async fn main() -> miette::Result<()> {
-    let terminal_size = get_size()?;
-    let processes = vec![
-        Process::new("bash", "bash", vec![], terminal_size),
-        Process::new("editor", "nvim", vec![], terminal_size),
-        Process::new("monitor", "htop", vec![], terminal_size),
-    ];
-
-    let multiplexer = PTYMux::builder()
-        .processes(processes)
-        .build()?;
+    let multiplexer = match PTYMux::builder()
+        .add_process("bash", "bash", vec![])
+        .add_process("editor", "nvim", vec![])
+        .add_process("monitor", "htop", vec![])
+        .build()
+    {
+        TuiAvailability::Available(mux) => mux,
+        it => return it.into_err(),
+    };
 
     multiplexer.run().await?;  // F1/F2/F3 to switch, Ctrl+Q to quit
-    Ok(())
+    ok!()
 }
 ```
 
@@ -2462,11 +2679,37 @@ feature requests, feel free to add them there too 👍.
 
 <!-- Type references for documentation links -->
 
+[`OutputDevice`]: crate::OutputDevice
+[`Readline`]: crate::Readline
+[`Monitor`]: crate::Monitor
+[`ThreadLifecycleMonitor`]: crate::ThreadLifecycleMonitor
+[`lock_raw()`]: crate::Monitor::lock_raw
+[raw mode]: mod@crate::terminal_raw_mode#raw-mode-vs-cooked-mode
+[`disable_raw_mode()`]: crate::disable_raw_mode
+[`SAVED_TERMIOS`]: crate::core::ansi::terminal_raw_mode::raw_mode_unix::SAVED_TERMIOS
+[`RAII`]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
+[`stdin`]: std::io::stdin
+[`PTYMuxBuilder::build()`]: crate::pty_mux::PTYMuxBuilder::build
+[`Available`]: crate::TerminalInteractiveStatus::Available
+[`TerminalWindow::main_event_loop()`]: crate::tui::TerminalWindow::main_event_loop
+[`TuiAvailability<ChooseFuture>`]: crate::TuiAvailability
+[`TuiAvailability<MainEventLoopFuture>`]: crate::TuiAvailability
+[`TuiAvailability<PTYMux>`]: crate::TuiAvailability
+[`TuiAvailability<ReadlineAsyncContext>`]: crate::TuiAvailability
+[`TuiAvailability<Spinner>`]: crate::TuiAvailability
+[`r3bl-cmdr`]: https://github.com/r3bl-org/r3bl-open-core/tree/main/cmdr
+[`TuiAvailability<T>`]: crate::TuiAvailability
+[`Spinner::try_start()`]: crate::Spinner::try_start
+[`tmux`]: https://github.com/tmux/tmux
+[`ReadlineAsyncContext::try_new()`]: crate::ReadlineAsyncContext::try_new
+[`PTYMux::run()`]: crate::pty_mux::PTYMux::run
+[`choose()`]: crate::choose
 [`readline_async`]: crate::readline_async::ReadlineAsyncContext::try_new
 [`TUI`]: crate::tui::TerminalWindow::main_event_loop
+[`stderr` redirection disclaimers]: crate::emit_stderr_redirection_disclaimer
 [App]: crate::App
 [Component]: crate::Component
-[`pty_test_fixtures::drain_and_wait()`]: crate::pty_test_fixtures::drain_and_wait
+[`PtyTestChild::drain_and_wait()`]: crate::PtyTestChild::drain_and_wait
 [TerminalWindow]: crate::TerminalWindow
 [FlexBox]: crate::FlexBox
 [Surface]: crate::Surface
@@ -2482,37 +2725,32 @@ feature requests, feel free to add them there too 👍.
 [OffscreenBuffer]: crate::OffscreenBuffer
 [PixelChar]: crate::PixelChar
 [ZOrder]: crate::ZOrder
-[`paint`]: mod@crate::tui::terminal_lib_backends::paint
-[`paint()`]: fn@crate::tui::terminal_lib_backends::paint::paint
-[`OffscreenBufferPaintImplCrossterm`]:
-    struct@crate::OffscreenBufferPaintImplCrossterm
+[`paint`]: mod@crate::paint
+[`paint()`]: fn@crate::paint
+[`OffscreenBufferPaintImpl`]: struct@crate::OffscreenBufferPaintImpl
 [EditorComponent]: crate::EditorComponent
 [EditorEngine]: crate::EditorEngine
 [EditorBuffer]: crate::EditorBuffer
 [HasEditorBuffers]: crate::HasEditorBuffers
-[ZeroCopyGapBuffer]: crate::tui::editor::zero_copy_gap_buffer::ZeroCopyGapBuffer
-[`zero_copy_gap_buffer` module documentation]:
-    mod@crate::tui::editor::zero_copy_gap_buffer
-[`ZeroCopyGapBuffer::as_str()`]:
-    crate::tui::editor::zero_copy_gap_buffer::ZeroCopyGapBuffer::as_str
-[`ZeroCopyGapBuffer::get_line_content()`]:
-    crate::tui::editor::zero_copy_gap_buffer::ZeroCopyGapBuffer::get_line_content
+[ZeroCopyGapBuffer]: crate::ZeroCopyGapBuffer
+[`zero_copy_gap_buffer` module documentation]: mod@crate::zero_copy_gap_buffer
+[`ZeroCopyGapBuffer::as_str()`]: crate::ZeroCopyGapBuffer::as_str
+[`ZeroCopyGapBuffer::get_line_content()`]: crate::ZeroCopyGapBuffer::get_line_content
 [`&str`]: prim@str
 [`Component::handle_event()`]: crate::Component::handle_event
 [`Component::render()`]: crate::Component::render
-[`EditorEngine::apply_event()`]: fn@crate::tui::editor::editor_engine::apply_event
-[`EditorEngine::render_engine()`]: fn@crate::tui::editor::editor_engine::render_engine
-[MdDocument]: crate::tui::md_parser::MdDocument
-[parse_markdown()]: fn@crate::tui::md_parser::parse_markdown::parse_markdown
-[parse_smart_list]: crate::tui::md_parser::parse_smart_list
-[try_parse_and_highlight]:
-    crate::tui::syntax_highlighting::md_parser_syn_hi::try_parse_and_highlight
-[PTYMux]: crate::core::pty_mux::PTYMux
-[`pty_mux` module documentation]: mod@crate::core::pty_mux
+[`EditorEngine::apply_event()`]: crate::apply_event
+[`EditorEngine::render_engine()`]: crate::render_engine
+[MdDocument]: crate::MdDocument
+[parse_markdown()]: crate::parse_markdown()
+[parse_smart_list]: crate::parse_smart_list
+[try_parse_and_highlight]: crate::try_parse_and_highlight
+[PTYMux]: crate::PTYMux
+[`pty_mux` module documentation]: mod@crate::pty_mux
 [CsiSequence]: crate::CsiSequence
 [EscSequence]: crate::EscSequence
 [SgrCode]: crate::SgrCode
-[`vt_100_pty_output_parser`]: mod@crate::core::ansi::vt_100_pty_output_parser
+[`vt_100_pty_output_parser`]: mod@crate::vt_100_pty_output_parser
 [RowIndex]: crate::RowIndex
 [ColIndex]: crate::ColIndex
 [ColWidth]: crate::ColWidth
@@ -2531,34 +2769,50 @@ feature requests, feel free to add them there too 👍.
 [DialogEngineConfigOptions]: crate::DialogEngineConfigOptions
 [`generate_pty_test!`]: crate::generate_pty_test
 [`PtyTestContext`]: crate::PtyTestContext
-[`drain_and_wait()`]: crate::SingleThreadSafeControlledChild::drain_and_wait
+[`PtyTestChild::drain_and_wait()`]: crate::PtyTestChild::drain_and_wait
 [`pty_pair`]: field@PtyTestContext::pty_pair
 [`child`]: field@PtyTestContext::child
 [`buf_reader`]: field@PtyTestContext::buf_reader
 [`writer`]: field@PtyTestContext::writer
-[`integration_tests`]:
-    mod@crate::core::ansi::vt_100_terminal_input_parser::integration_tests
-[`raw_mode_integration_tests`]:
-    mod@crate::core::ansi::terminal_raw_mode::integration_tests
+[`input_parser_integration_tests`]: mod@crate::vt_100_terminal_input_parser::vt_100_parser_integration_tests
+[`raw_mode_integration_tests`]: mod@crate::terminal_raw_mode::raw_mode_integration_tests
 [`test_pty_input_device`]:
-    mod@crate::core::ansi::vt_100_terminal_input_parser::integration_tests::pty_input_device_test
-[`DirectToAnsiInputDevice`]: crate::direct_to_ansi::DirectToAnsiInputDevice
-[`pty_test_fixtures`]: crate::core::test_fixtures::pty_test_fixtures
-[`backend_compat_tests`]: crate::core::terminal_io::backend_compat_tests
-[`terminal_lib_backends`]: crate::tui::terminal_lib_backends
+    mod@crate::vt_100_terminal_input_parser::vt_100_parser_integration_tests::pty_input_device_test
+[`DirectToAnsiInputDevice`]: crate::DirectToAnsiInputDevice
+[`pty_test_fixtures`]: crate::pty_test_fixtures
+[`backend_compat_tests`]: crate::backend_compat_tests
+[`terminal_lib_backends`]: crate::terminal_lib_backends
 [`direct_to_ansi`]: crate::direct_to_ansi
-[`crossterm_backend`]: crate::tui::terminal_lib_backends::crossterm_backend
-[`vt_100_terminal_input_parser`]: crate::core::ansi::vt_100_terminal_input_parser
-[`RawModeGuard`]: crate::core::ansi::terminal_raw_mode::RawModeGuard
-[`terminal_raw_mode`]: crate::core::ansi::terminal_raw_mode
-[`raw_mode_unix`]: crate::core::ansi::terminal_raw_mode::raw_mode_unix
+[`crossterm_backend`]: crate::crossterm_backend
+[`vt_100_terminal_input_parser`]: crate::vt_100_terminal_input_parser
+[`OutputDevice::lock()`]: crate::OutputDevice::lock
+[`RawModeGuard::drop()`]: crate::RawModeGuard::drop
+[`output_device.rs`]: crate::OutputDevice
+[`raw_mode_core.rs`]: crate::RawModeGuard
+[`readline.rs`]: crate::Readline
+[`rrt_termination_guard.rs`]: crate::resilient_reactor_thread::TerminationGuard
+[`rrt_subscriber_guard.rs`]: crate::resilient_reactor_thread::SubscriberGuard
+[`monitor.rs`]: crate::core::common::Monitor
+[`rrt_monitor.rs`]: crate::resilient_reactor_thread::ThreadLifecycleMonitor
+[`rrt_engine.rs`]: crate::resilient_reactor_thread::run_worker_loop
+[`spinner.rs`]: crate::readline_async::Spinner
+[`Readline::drop()`]: crate::Readline::drop
+[`TerminationGuard`]: crate::resilient_reactor_thread::TerminationGuard
+[`SubscriberGuard`]: crate::resilient_reactor_thread::SubscriberGuard
+[`Monitor::lock()`]: crate::core::common::Monitor::lock
+[`rrt_monitor::lock()`]: crate::resilient_reactor_thread::ThreadLifecycleMonitor::lock
+[`run_worker_loop()`]: crate::resilient_reactor_thread::run_worker_loop
+[`Spinner`]: crate::readline_async::Spinner
+[`RawModeGuard`]: crate::RawModeGuard
+[`terminal_raw_mode`]: crate::terminal_raw_mode
+[`raw_mode_unix`]: crate::terminal_raw_mode::raw_mode_unix
 [`OffscreenBuffer::apply_ansi_bytes()`]: crate::OffscreenBuffer::apply_ansi_bytes
-[`RRT`]: core::resilient_reactor_thread::RRT
-[`SubscriberGuard`]: core::resilient_reactor_thread::SubscriberGuard
-[`RRTWorker`]: core::resilient_reactor_thread::RRTWorker
-[`RRTWaker`]: core::resilient_reactor_thread::RRTWaker
-[`resilient_reactor_thread`]: core::resilient_reactor_thread
-[`mio_poller`]: crate::direct_to_ansi::input::mio_poller
+[`RRT`]: crate::RRT
+[`SubscriberGuard`]: crate::SubscriberGuard
+[`RRTWorker`]: crate::RRTWorker
+[`RRTSoftwareInterrupt`]: crate::RRTSoftwareInterrupt
+[`resilient_reactor_thread`]: crate::resilient_reactor_thread
+[`mio_poller`]: crate::mio_poller
 [`io_uring`]: https://kernel.dk/io_uring.pdf
 [`crossterm`]: crossterm
 [`mio`]: mio
@@ -2569,13 +2823,16 @@ feature requests, feel free to add them there too 👍.
 [`vte`]: vte
 [`RenderOpOutput`]: crate::RenderOpOutput
 [`TERMINAL_LIB_BACKEND`]: crate::TERMINAL_LIB_BACKEND
-[Architecture Overview]: core::resilient_reactor_thread#architecture-overview
+[Architecture Overview]: crate::resilient_reactor_thread#architecture-overview
 [ANSI X3.64 Standard]:
     https://www.ecma-international.org/wp-content/uploads/ECMA-48_5th_edition_june_1991.pdf
-[Inter-process communication]: https://en.wikipedia.org/wiki/Inter-process_communication
+[Inter-process communication]:
+    https://en.wikipedia.org/wiki/Inter-process_communication
 [Message passing]: https://en.wikipedia.org/wiki/Message_passing
 [`VT-100` spec]: https://vt100.net/docs/vt100-ug/chapter3.html
 [`VT-100` User Guide]: https://vt100.net/docs/vt100-ug/
 [XTerm Control Sequences]: https://invisible-island.net/xterm/ctlseqs/ctlseqs.html
+[`pty_mux_example`]:
+    https://github.com/r3bl-org/r3bl-open-core/tree/main/tui/examples/pty_mux_example.rs
 
 License: Apache-2.0

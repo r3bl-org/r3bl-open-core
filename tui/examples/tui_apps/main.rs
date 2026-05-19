@@ -18,9 +18,9 @@ mod ex_rc;
 
 // Use other crates.
 // Re-export items for sub-modules that use `crate::` imports.
-use r3bl_tui::{CommonError, CommonResult, DEBUG_TUI_MOD, InputEvent, TerminalWindow,
-               fg_color, fg_frozen_blue, fg_pink, fg_slate_gray, get_size,
-               inline_string, key_press,
+use r3bl_tui::{CommonError, CommonResult, DEBUG_TUI_MOD, IntoErr, Size, TuiAvailability,
+               assert_terminal_is_interactive, fg_color, fg_frozen_blue, fg_pink,
+               fg_slate_gray, get_size, inline_string,
                log::try_initialize_logging_global,
                ok,
                readline_async::{ReadlineAsyncContext, ReadlineEvent},
@@ -42,19 +42,24 @@ fn main() -> CommonResult<()> { run_with_safe_stack!(main_impl()) }
 #[allow(clippy::needless_return)]
 async fn main_impl() -> CommonResult<()> {
     set_mimalloc_in_main!();
+    assert_terminal_is_interactive();
 
     let args: Vec<String> = std::env::args().collect();
     let no_log_arg_passed = args.contains(&"--no-log".to_string());
 
     // Ignore errors: https://doc.rust-lang.org/std/result/enum.Result.html#method.ok
-    if no_log_arg_passed {
-        try_initialize_logging_global(tracing_core::LevelFilter::OFF).ok();
+    let _log_guard = if no_log_arg_passed {
+        try_initialize_logging_global(tracing_core::LevelFilter::OFF).ok()
     } else if ENABLE_TRACE_EXAMPLES | DEBUG_TUI_MOD {
-        try_initialize_logging_global(tracing_core::LevelFilter::DEBUG).ok();
-    }
+        try_initialize_logging_global(tracing_core::LevelFilter::DEBUG).ok()
+    } else {
+        None
+    };
+
+    let size = get_size()?;
 
     // Show welcome message once at startup.
-    let msg = inline_string!("{}", &generate_help_msg());
+    let msg = inline_string!("{}", &generate_help_msg(size));
     let msg_fmt = fg_color(tui_color!(lizard_green), &msg);
     println!("{msg_fmt}");
 
@@ -66,7 +71,7 @@ async fn main_impl() -> CommonResult<()> {
 
         // Create a fresh ReadlineAsyncContext each iteration.
         // This ensures no stale InputDevice state persists across example runs.
-        let Some(mut rl_ctx) = ReadlineAsyncContext::try_new(
+        let mut rl_ctx = match ReadlineAsyncContext::try_new(
             {
                 // Generate prompt.
                 let prompt_seg_1 = fg_slate_gray("╭>╮").bg_moonlight_blue();
@@ -75,11 +80,10 @@ async fn main_impl() -> CommonResult<()> {
             },
             None, // Use default channel capacity
         )
-        .await?
-        else {
-            return CommonError::new_error_result_with_only_msg(
-                "Terminal is not fully interactive",
-            );
+        .await
+        {
+            TuiAvailability::Available(rl_ctx) => rl_ctx,
+            it => return it.into_err(),
         };
 
         // Pre-populate the readline's history with static command entries.
@@ -101,7 +105,7 @@ async fn main_impl() -> CommonResult<()> {
                 match readline_event {
                     ReadlineEvent::Line(input) => {
                         tracing::debug!(
-                            message = "tui_apps: ▶️ running example",
+                            message = "tui_apps: 🛫 running example",
                             input = %input
                         );
 
@@ -189,7 +193,7 @@ async fn run_user_selected_example(selection: String) -> CommonResult<()> {
                 a = fg_frozen_blue("Invalid selection:"),
                 b = fg_pink(&selection).bold(),
             );
-            Ok(())
+            ok!()
         }
     }
 }
@@ -232,11 +236,9 @@ enum AutoCompleteCommand {
     Exit,
 }
 
-fn generate_help_msg() -> String {
+fn generate_help_msg(window_size: Size) -> String {
     use AutoCompleteCommand::{Commander, Editor, NoLayout, OneColLayout, Slides,
                               TwoColLayout};
-
-    let window_size = get_size().unwrap_or_default();
 
     let it = format!(
         "\

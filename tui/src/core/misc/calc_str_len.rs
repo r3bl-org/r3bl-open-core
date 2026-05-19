@@ -120,6 +120,8 @@ mod to_from_string_impl {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::timed;
+
     #[test]
     fn test_sha256() {
         let input = "foo";

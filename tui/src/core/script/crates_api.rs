@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{SCRIPT_MOD_DEBUG, fg_magenta, script::http_client};
+use crate::{SCRIPT_MOD_DEBUG, fg_magenta, ok, script::http_client};
 use miette::IntoDiagnostic;
 
 mod constants {
@@ -45,7 +45,7 @@ pub async fn try_get_latest_release_version_from_crates_io(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{TTYResult, is_output_interactive};
+    use crate::console_log;
     use nom::{IResult, Parser,
               character::complete::{char, digit0},
               combinator::map_res};
@@ -70,10 +70,6 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_latest_version_from_crates_io() {
-        if let TTYResult::IsNotInteractive = is_output_interactive() {
-            return;
-        }
-
         let crate_name = "serde";
 
         match timeout(

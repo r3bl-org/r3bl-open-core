@@ -1,11 +1,11 @@
 // Copyright (c) 2023-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{
-    BufTextStorage, ColIndex, ColWidth, FastStringify, GCStringOwned, InlineString,
-    InlineVec, PixelChar, PixelCharRenderer, SgrCode, TuiColor, TuiStyle, TuiStyleAttribs,
-    UNICODE_REPLACEMENT_CHAR, cli_text_inline_impl::CliTextConvertOptions,
-    tui_style_attrib::{Bold, Dim, Italic, Strikethrough, Underline},
-};
+use crate::{BufTextStorage, ColIndex, ColWidth, FastStringify, GCStringOwned,
+            InlineString, InlineVec, PixelChar, PixelCharRenderer, SgrCode, TuiColor,
+            TuiStyle, TuiStyleAttribs, UNICODE_REPLACEMENT_CHAR,
+            cli_text_inline_impl::CliTextConvertOptions,
+            generate_impl_display_for_fast_stringify, inline_string, ok, tui_color,
+            tui_style_attrib::{Bold, Dim, Italic, Strikethrough, Underline}};
 use std::fmt::Result;
 use strum_macros::EnumCount;
 
@@ -935,9 +935,7 @@ generate_impl_display_for_fast_stringify!(CliTextInline);
 #[cfg(test)]
 mod tests {
     use super::{cli_text_inline_impl::CliTextConvertOptions, dim};
-    use crate::{CliTextInline, ColIndex, ColorSupport, InlineVec, PixelChar, TuiColor,
-                TuiStyle, TuiStyleAttribs, global_color_support,
-                tui_style::tui_style_attrib::Bold, tui_style_attribs, width};
+    use crate::{CliTextInline, ColIndex, ColorSupport, InlineVec, PixelChar, TuiColor, TuiStyle, TuiStyleAttribs, global_color_support, ok, tui_color, tui_style::tui_style_attrib::Bold, tui_style_attribs, width};
     use pretty_assertions::assert_eq;
     use serial_test::serial;
 
@@ -1015,7 +1013,7 @@ mod tests {
             "\x1b[1m\x1b[38;5;150m\x1b[48;5;16mWorld\x1b[0m".to_string()
         );
 
-        Ok(())
+        ok!()
     }
 
     #[serial]
@@ -1048,7 +1046,7 @@ mod tests {
             "\x1b[1m\x1b[38;5;150m\x1b[48;2;1;1;1mWorld\x1b[0m".to_string()
         );
 
-        Ok(())
+        ok!()
     }
 
     #[serial]
@@ -1085,7 +1083,7 @@ mod tests {
             "\u{1b}[1m\u{1b}[38;5;251m\u{1b}[48;5;16mWorld\u{1b}[0m".to_string()
         );
 
-        Ok(())
+        ok!()
     }
 
     #[serial]

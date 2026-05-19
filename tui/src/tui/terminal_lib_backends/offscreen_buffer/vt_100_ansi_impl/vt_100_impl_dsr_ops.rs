@@ -41,7 +41,7 @@ impl OffscreenBuffer {
     }
 
     /// Handles cursor position report request.
-    /// Queues a response with current cursor position ([`ESC`][row;colR).
+    /// Queues a response with current cursor position ([`ESC`] `row;colR`).
     /// Converts 0-based internal position to 1-based terminal position.
     ///
     /// [`ESC`]: crate::EscSequence

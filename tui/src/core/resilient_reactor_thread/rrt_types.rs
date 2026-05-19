@@ -2,8 +2,8 @@
 
 // cspell:words maxfiles taskthreads
 
-//! Public API types for the RRT framework. See [`SubscribeError`], [`BroadcastSender`],
-//! and [`LivenessState`] for details.
+//! Public API types for the Resilient Reactor Thread (RRT) pattern. See
+//! [`SubscribeError`] and [`BroadcastSender`] for details.
 
 use crate::resilient_reactor_thread::RRTEvent;
 use tokio::sync::broadcast;
@@ -14,7 +14,30 @@ use tokio::sync::broadcast;
 /// [Sender]: tokio::sync::broadcast::Sender
 pub type BroadcastSender<E> = broadcast::Sender<RRTEvent<E>>;
 
-/// Errors from [`RRT::subscribe()`].
+/// The outcome of a restart retry loop. Used to make the control flow in
+/// [`run_worker_loop()`] more readable by avoiding ambiguous `bool` returns.
+///
+/// [`run_worker_loop()`]: super::run_worker_loop
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RetryLoopExhaustion {
+    /// The restart budget was exhausted before a new worker could be created.
+    Yes,
+    /// A new worker was successfully created before the budget was exhausted.
+    No,
+}
+
+/// The reason why an orderly stop of the dedicated thread was initiated.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum StopReason {
+    /// The framework loop detected that all subscribers have dropped.
+    ZeroReceivers,
+    /// The worker implementation returned [`Continuation::Stop`] (e.g., due to EOF).
+    ///
+    /// [`Continuation::Stop`]: crate::Continuation::Stop
+    WorkerRequested,
+}
+
+/// Errors from [`RRT::try_subscribe()`].
 ///
 /// Each variant represents a distinct failure mode with a dedicated OS specific (where
 /// appropriate) [diagnostic code] and actionable help text. The three failure modes are:
@@ -26,15 +49,15 @@ pub type BroadcastSender<E> = broadcast::Sender<RRTEvent<E>>;
 /// | [`ThreadSpawn`]     | [`std::thread::Builder::spawn()`] failed (thread limits)                        | Maybe        |
 ///
 /// [`MutexPoisoned`]: Self::MutexPoisoned
-/// [`RRT::subscribe()`]: super::RRT::subscribe
+/// [`RRT::try_subscribe()`]: super::RRT::try_subscribe
 /// [`RRTWorker::create_and_register_os_sources()`]: crate::RRTWorker::create_and_register_os_sources
 /// [`ThreadSpawn`]: Self::ThreadSpawn
 /// [`WorkerCreation`]: Self::WorkerCreation
 /// [diagnostic code]: miette::Diagnostic::code
 #[derive(Debug, thiserror::Error, miette::Diagnostic)]
 pub enum SubscribeError {
-    /// Internal mutex was poisoned by a prior thread panic.
-    #[error("RRT internal mutex poisoned ({which})")]
+    /// Internal state mutex was poisoned by a prior thread panic.
+    #[error("RRT internal state mutex poisoned")]
     #[diagnostic(
         code(r3bl_tui::rrt::mutex_poisoned),
         help(
@@ -42,20 +65,17 @@ pub enum SubscribeError {
              Consider restarting the application."
         )
     )]
-    MutexPoisoned {
-        /// Which mutex was poisoned (`"liveness"` or `"waker"`).
-        which: &'static str,
-    },
+    MutexPoisoned,
 
     /// [`RRTWorker::create_and_register_os_sources()`] failed to acquire OS resources.
     ///
     /// The inner [`miette::Report`] preserves the full error chain from the worker
-    /// implementation (e.g., [`PollCreationError`], [`WakerCreationError`]). Access it
+    /// implementation (e.g., [`PollCreationError`], [`SoftwareInterruptCreationError`]). Access it
     /// via pattern matching.
     ///
     /// [`PollCreationError`]: crate::terminal_lib_backends::PollCreationError
     /// [`RRTWorker::create_and_register_os_sources()`]: crate::RRTWorker::create_and_register_os_sources
-    /// [`WakerCreationError`]: crate::terminal_lib_backends::WakerCreationError
+    /// [`SoftwareInterruptCreationError`]: crate::terminal_lib_backends::SoftwareInterruptCreationError
     #[error("Failed to create worker thread resources")]
     #[diagnostic(code(r3bl_tui::rrt::worker_creation))]
     #[cfg_attr(
@@ -112,11 +132,4 @@ pub enum SubscribeError {
         ))
     )]
     ThreadSpawn(#[source] std::io::Error),
-}
-
-/// An indication of whether the dedicated thread is running or terminated.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum LivenessState {
-    Running,
-    TerminatedOrNotStarted,
 }

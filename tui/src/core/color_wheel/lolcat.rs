@@ -13,6 +13,7 @@
 //! the previously separate `lolcat_api.rs` and `lolcat_impl.rs` files.
 
 use super::{ColorChangeSpeed, ColorWheelControl, Seed, SeedDelta, color_wheel_helpers};
+use crate::{tui_color, tui_styled_text};
 use crate::{GCStringOwned, TuiStyle, TuiStyledTexts};
 use std::{borrow::Cow,
           fmt::{Debug, Formatter, Result}};

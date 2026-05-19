@@ -45,7 +45,7 @@ pub fn take_text_in_single_line<'input>() ->
 #[cfg(test)]
 mod test_text_until_opt_eol {
     use super::*;
-    use crate::fg_lizard_green;
+    use crate::{assert_eq2, fg_lizard_green};
 
     #[test]
     fn test_text_until_opt_eol() {

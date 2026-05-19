@@ -1,6 +1,6 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-// cspell:words CLOEXEC errno ptmx isatty TIOCGWINSZ Xenix DUPFD SETFD fcntl
+// cspell:words CLOEXEC errno ptmx isatty TIOCGWINSZ Xenix DUPFD SETFD fcntl ONLCR
 
 //! See [`PtyPair`] for the main wrapper struct.
 
@@ -16,10 +16,9 @@ use crate::Size;
 /// [`PTY`] I/O signaling ([`EOF`] vs [`EIO`]) into a reliable [`PTY`] session lifecycle.
 ///
 /// When a [`PTY`] pair is created, both the parent and child processes initially hold
-/// copies of the controlled [`fd`]. This creates a [critical deadlock
-/// risk](#resource-leaking-deadlock): the kernel only delivers a termination signal
-/// ([`EIO`] on Linux, [`EOF`] on others) to the controller when **all** copies of the
-/// controlled [`fd`] are closed.
+/// copies of the controlled [`fd`]. This creates a [Resource-leaking deadlock] risk. The
+/// kernel only delivers a termination signal ([`EIO`] on Linux, [`EOF`] on others) to the
+/// controller when **all** copies of the controlled [`fd`] are closed.
 ///
 /// If the parent process fails to drop its bootstrapping copy, the kernel's reference
 /// count never reaches zero. Consequently, any blocking [`read()`] on the controller will
@@ -30,8 +29,8 @@ use crate::Size;
 /// [`Option`] and programmatically closing it immediately after spawning. This ensures
 /// controlled side's only ones remaining, guaranteeing that the controller's reader
 /// receives a termination signal. The library's reader tasks and test fixtures (like
-/// [`pty_test_fixtures::drain_and_wait()`]) then programmatically handle both [`EOF`]
-/// (`Ok(0)`) and [`EIO`] ([`Err`] with `errno 5` on Linux) to ensure clean,
+/// [`PtyTestChild::drain_and_wait()`]) then programmatically handle both [`EOF`]
+/// (`Ok(0)`) and [`EIO`] ([`Err`] with `errno` `5` on Linux) to ensure clean,
 /// cross-platform termination.
 ///
 /// # Higher-level Sessions
@@ -54,26 +53,47 @@ use crate::Size;
 /// A [`PTY`] (pseudoterminal, introduced in [`4.2BSD`] in 1983, standardized in
 /// [`POSIX.1-2001`]) is a kernel-provided virtual terminal. It lets your application
 /// spawn a child process that believes it is running in a fully interactive terminal
-/// environment. Yet it runs without any terminal device attached. What is a "terminal
-/// device"? Any of the following:
+/// environment, even without any physical terminal hardware attached.
 ///
-/// - [physical terminal] (1960s-80s) - hardware teletypewriter, [DEC video terminals]
-///   (1978) terminal hardware.
-/// - [terminal emulator] window (1984 to now) - GUI apps like [`xterm`] (1984) and
-///   [`WezTerm`] (2018) that create their own [`PTY`].
-/// - [kernel virtual console] (1984 to now) - first on [`Xenix`] (1984), then on [Linux
-///   (1992)]: `Ctrl+Alt+F1-F6` aka `/dev/tty1-/dev/tty6`.
+/// ## What is a [`TTY`]?
 ///
-/// ## Child process perspective (spawned)
+/// [`TTY`] (Teletypewriter) is a generic term for any device that implements the POSIX
+/// terminal interface (the [POSIX terminal API] or [`termios`] API). It is a broad
+/// interface, not a specific device. There are three main types:
 ///
-/// The **child process** gets a [`/dev/pts/N`] device - the same kind that terminal
-/// emulators like [`xterm`], [`WezTerm`] or [`Alacritty`] get - so it can do all of the
-/// following via the standard [POSIX terminal API]:
+/// | Device Type                | Timeline  | Description/Examples                                                                           |
+/// | :------------------------- | :-------- | :--------------------------------------------------------------------------------------------- |
+/// | [physical terminal]        | 1960s-80s | Hardware teletypewriter, [DEC video terminals] (1978).                                         |
+/// | [terminal emulator] window | 1984-now  | GUI apps like [`xterm`] (1984) and [`WezTerm`] (2018) that create their own [`PTY`].           |
+/// | [kernel virtual console]   | 1984-now  | First on [`Xenix`] (1984), then on [Linux (1992)]: `Ctrl+Alt+F1-F6` aka `/dev/tty1-/dev/tty6`. |
+/// | [`PTY`] controlled         | 1998-now  | The specific device node (e.g., `/dev/pts/0`) that acts as the terminal for a child process.   |
+///
+/// ### Is the [`PTY`] controlled side a "real" [`TTY`]?
+///
+/// Yes. To the Linux kernel and any process running inside it, the controlled side of a
+/// [`PTY`] is indistinguishable from a "real" terminal. If you call [`isatty()`] in the
+/// child process, it returns `true`. It has a [line discipline], it handles [`termios`]
+/// flags (like [`ONLCR`], [`ECHO`], [`ICANON`]), and it responds to [`ioctl`] calls to
+/// set window size.
+///
+/// ## Child process perspective
+///
+/// When you spawn a process in a [`PTY`], the **child process** gets a [`/dev/pts/N`]
+/// device node—the same kind used by terminal emulators like [`xterm`], [`WezTerm`] or
+/// [`Alacritty`]. This allows it to:
 /// - call [`isatty()`] and get `true`,
 /// - set [raw mode] with [`tcsetattr()`],
 /// - query window size with [`ioctl(TIOCGWINSZ)`],
-/// - send [`ANSI`] escape sequences,
-/// - read keystrokes.
+/// - send [`ANSI`] escape sequences, and read keystrokes.
+///
+/// ## Summary (TL;DR)
+///
+/// - **[`PTY`]** is the mechanism (the pair).
+/// - **Controlled side** is the specific device node (`/dev/pts/N`).
+/// - **[`TTY`]** is the class of device.
+///
+/// So, saying "the child process's [`TTY`]" is technically precise; it refers to the
+/// controlled [`PTY`] device that is acting as the child process's terminal.
 ///
 /// When [`portable_pty's spawn_command()`] creates the child process, it redirects each
 /// of its streams to the controlled [`fd`]. Here's how the streams are connected:
@@ -329,9 +349,11 @@ use crate::Size;
 /// [`PtyPair::spawn_command_and_close_controlled()`] can drop it while the controller
 /// stays alive.
 ///
-/// **POSIX [`EOF`] vs Linux [`EIO`].** When all controlled [`fd`]s close, the parent's
-/// blocking [`read()`] call on the controller (in the parent process's thread) returns
-/// one of two signals depending on the platform:
+/// # POSIX [`EOF`] vs Linux [`EIO`]
+///
+/// When all controlled [`fd`]s close, the parent's blocking [`read()`] call on the
+/// controller (in the parent process's thread) returns one of two signals depending on
+/// the platform:
 ///
 /// - [`EOF`] (`0` bytes returned) - traditionally means "no more data right now, but the
 ///   channel is still valid". BSD/macOS uses this for controlled-side closure.
@@ -340,16 +362,18 @@ use crate::Size;
 ///
 /// Any code that reads from the controller must handle **both** to avoid cross-platform
 /// polling bugs. For more information take a look at the following:
-/// - The [kernel patch that documents this behavior].
-/// - The [`pty_test_fixtures::drain_and_wait()`] implementation for an example of correct
+/// - The [Linux `PTY` man page] and the [Linux `pty.c` source].
+/// - The [`PtyTestChild::drain_and_wait()`] implementation for an example of correct
 ///   cross-platform handling.
+/// - The [`BufReadExt`] trait which provides a safe way to normalize [`EIO`] to [`EOF`]
+///   when reading lines from a [`PTY`] controller.
 ///
 /// # Two Types of Deadlocks
 ///
 /// Understanding these two distinct deadlock scenarios is critical for safe [`PTY`]
 /// orchestration.
 ///
-/// ### 1. [Resource-leaking deadlock](#resource-leaking-deadlock) (Production & Test)
+/// ### 1. [Resource-leaking deadlock] (Production & Test)
 /// - **Cause**: The parent process leaks its bootstrapping copy of the controlled [`fd`].
 /// - **Effect**: The kernel's reference count for the controlled side stays above zero
 ///   even after the child process exits.
@@ -373,25 +397,24 @@ use crate::Size;
 ///   up.
 /// - **Symptom**: The child blocks on its final [`write()`] [`syscall`], while the parent
 ///   blocks on its [`ControlledChild::wait()`] call.
-/// - **Solution**: [`pty_test_fixtures::drain_and_wait()`] (used in test fixtures)
-///   ensures all remaining bytes are consumed until [`EIO`]/[`EOF`] before calling
+/// - **Solution**: [`PtyTestChild::drain_and_wait()`] (used in test fixtures) ensures all
+///   remaining bytes are consumed until [`EIO`]/[`EOF`] before calling
 ///   [`ControlledChild::wait()`].
 ///
 /// # Deadlock-safe API design
 ///
 /// The API is designed so that every codepath either closes the controlled [`fd`]
 /// automatically or never exposes it. There is no way to obtain a raw [`Controlled`]
-/// value, so the deadlock described in [Controlled side lifecycle] is structurally
+/// value, so the deadlock described in [Resource-leaking deadlock] is structurally
 /// impossible.
 ///
 /// 1. [`PtyPair::open_and_spawn()`] is the primary way to spawn a child.
 ///    [`PtyPair::spawn_command_and_close_controlled()`] is another way. Both close the
 ///    parent's controlled [`fd`] immediately after spawning, so the child's copies are
-///    the only ones left, eliminating any chance of [resource-leaking
-///    deadlock](#resource-leaking-deadlock).
+///    the only ones left, eliminating any chance of [Resource-leaking deadlock].
 /// 2. [`PtyPair::into_controller()`] is the only way to extract an owned [`Controller`].
 ///    It drops the controlled side automatically if it is still open, as a safety net,
-///    eliminating any change of [resource-leaking deadlock](#resource-leaking-deadlock).
+///    eliminating any chance of [Resource-leaking deadlock].
 ///
 /// The example below shows [`PtyPair::open_and_spawn()`] handling everything in a single
 /// call:
@@ -446,6 +469,7 @@ use crate::Size;
 /// [`4.2BSD`]: https://en.wikipedia.org/wiki/Berkeley_Software_Distribution#4.2BSD
 /// [`Alacritty`]: https://alacritty.org/
 /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+/// [`BufReadExt`]: crate::BufReadExt
 /// [`Command::spawn()`]: std::process::Command::spawn
 /// [`Command::stderr()`]: std::process::Command::stderr
 /// [`Command::stdin()`]: std::process::Command::stdin
@@ -454,33 +478,38 @@ use crate::Size;
 /// [`ControlledChild::wait()`]: portable_pty::Child::wait
 /// [`controller()`]: PtyPair::controller
 /// [`controller_mut()`]: PtyPair::controller_mut
+/// [`DEC`]: https://en.wikipedia.org/wiki/Digital_Equipment_Corporation
 /// [`DefaultPtySize`]: crate::DefaultPtySize
 /// [`dup2()`]: https://man7.org/linux/man-pages/man2/dup2.2.html
+/// [`ECHO`]: https://man7.org/linux/man-pages/man3/termios.3.html
 /// [`EIO`]: https://man7.org/linux/man-pages/man3/errno.3.html
 /// [`EOF`]: https://en.wikipedia.org/wiki/End-of-file
 /// [`exec()`]: https://man7.org/linux/man-pages/man3/exec.3.html
 /// [`FD_CLOEXEC`]: https://man7.org/linux/man-pages/man2/fcntl.2.html
 /// [`fd`]: https://man7.org/linux/man-pages/man2/open.2.html
 /// [`fork()`]: https://man7.org/linux/man-pages/man2/fork.2.html
+/// [`ICANON`]: https://man7.org/linux/man-pages/man3/termios.3.html
 /// [`ioctl(TIOCGWINSZ)`]: https://man7.org/linux/man-pages/man2/ioctl_tty.2.html
+/// [`ioctl`]: https://man7.org/linux/man-pages/man2/ioctl.2.html
 /// [`isatty()`]: https://man7.org/linux/man-pages/man3/isatty.3.html
+/// [`ONLCR`]: https://man7.org/linux/man-pages/man3/termios.3.html
 /// [`openpty()`]: https://man7.org/linux/man-pages/man3/openpty.3.html
 /// [`openpty(3)`]: https://man7.org/linux/man-pages/man3/openpty.3.html
 /// [`portable_pty's CommandBuilder`]: portable_pty::CommandBuilder
 /// [`portable_pty's openpty()`]: portable_pty::PtySystem::openpty
 /// [`portable_pty's spawn_command()`]: portable_pty::SlavePty::spawn_command
 /// [`POSIX.1-2001`]: https://pubs.opengroup.org/onlinepubs/009695399/
-/// [`pty_test_fixtures::drain_and_wait()`]: crate::pty_test_fixtures::drain_and_wait
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 /// [`PtyPair::into_controller()`]: PtyPair::into_controller
 /// [`PtyPair::open_raw_pair()`]: Self::open_raw_pair
 /// [`PtyPair::spawn_command_and_close_controlled()`]:
 ///     Self::spawn_command_and_close_controlled
 /// [`PtySession`]: crate::PtySession
+/// [`PtyTestChild::drain_and_wait()`]: crate::PtyTestChild::drain_and_wait
 /// [`read()`]: https://man7.org/linux/man-pages/man2/read.2.html
 /// [`readline_async`]: crate::readline_async::ReadlineAsyncContext::try_new
 /// [`select!`]: tokio::select
-/// [`SIGINT`]: https://man7.org/linux/man-pages/7/signal.7.html
+/// [`SIGINT`]: https://man7.org/linux/man-pages/man7/signal.7.html
 /// [`std::read()`]: std::io::Read::read
 /// [`std::spawn()`]: Self::open_and_spawn
 /// [`std::write()`]: std::io::Write::write
@@ -491,27 +520,30 @@ use crate::Size;
 ///     https://elixir.bootlin.com/linux/v6.19.3/source/include/linux/fs.h#L1256
 /// [`syscall`]: https://man7.org/linux/man-pages/man2/syscalls.2.html
 /// [`tcsetattr()`]: https://man7.org/linux/man-pages/man3/tcsetattr.3.html
+/// [`termios`]: https://man7.org/linux/man-pages/man3/termios.3.html
 /// [`tokio`]: tokio
-/// [`top`]: https://man7.org/linux/man-pages/1/top.1.html
+/// [`top`]: https://man7.org/linux/man-pages/man1/top.1.html
+/// [`TTY`]: https://en.wikipedia.org/wiki/Tty_(Unix)
 /// [`TUI`]: crate::tui::TerminalWindow::main_event_loop
 /// [`WezTerm`]: https://wezfurlong.org/wezterm/
 /// [`write()`]: https://man7.org/linux/man-pages/man2/write.2.html
 /// [`Xenix`]: https://en.wikipedia.org/wiki/Xenix
 /// [`xterm`]: https://en.wikipedia.org/wiki/Xterm
-/// [Controlled side lifecycle]: #resource-leaking-deadlock
 /// [DEC video terminals]: https://vt100.net/shuford/terminal/dec.html
 /// [fork-exec]: https://en.wikipedia.org/wiki/Fork-exec
 /// [Inclusive Naming Initiative - Tier 1 Terms]:
 ///     https://inclusivenaming.org/word-lists/tier-1/
-/// [kernel patch that documents this behavior]:
-///     https://lists.archive.carbon60.com/linux/kernel/1790583
 /// [kernel virtual console]: https://en.wikipedia.org/wiki/Virtual_console
 /// [line discipline]: https://en.wikipedia.org/wiki/Line_discipline
 /// [Linux (1992)]: https://en.wikipedia.org/wiki/Linux_console
+/// [Linux `pty.c` source]:
+///     https://github.com/torvalds/linux/blob/master/drivers/tty/pty.c
+/// [Linux `PTY` man page]: https://man7.org/linux/man-pages/man7/pty.7.html
 /// [physical terminal]: https://en.wikipedia.org/wiki/Computer_terminal
 /// [portable_pty's `CommandBuilder`]: portable_pty::CommandBuilder
 /// [POSIX terminal API]: https://man7.org/linux/man-pages/man3/termios.3.html
 /// [raw mode]: mod@crate::terminal_raw_mode#raw-mode-vs-cooked-mode
+/// [Resource-leaking deadlock]: #resource-leaking-deadlock
 /// [terminal emulator]: https://en.wikipedia.org/wiki/Terminal_emulator
 /// [two processes]: #file-descriptor-ownership
 #[allow(missing_debug_implementations)]
@@ -607,7 +639,7 @@ impl PtyPair {
     /// - Call [`PtyPair::into_controller()`] which drops the controlled side as a safety
     ///   net.
     ///
-    /// See [`PtyPair`]'s [Controlled side lifecycle] section for why the controlled
+    /// See [`PtyPair`]'s [Resource-leaking deadlock] section for why the controlled
     /// [`fd`] must be closed before reading from the controller.
     ///
     /// # Errors
@@ -616,7 +648,7 @@ impl PtyPair {
     ///
     /// [`fd`]: https://man7.org/linux/man-pages/man2/open.2.html
     /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
-    /// [Controlled side lifecycle]: #resource-leaking-deadlock
+    /// [Resource-leaking deadlock]: #resource-leaking-deadlock
     pub fn open_raw_pair(
         arg_pty_size: impl Into<portable_pty::PtySize>,
     ) -> miette::Result<PtyPair> {
@@ -634,7 +666,7 @@ impl PtyPair {
     /// is exposed as an associated function for use-cases that need to separate [`PTY`]
     /// creation from spawning (e.g., tests that configure the pair before spawning).
     ///
-    /// See [`PtyPair`]'s [Controlled side lifecycle] section for why the controlled
+    /// See [`PtyPair`]'s [Resource-leaking deadlock] section for why the controlled
     /// [`fd`] must be closed immediately after spawning.
     ///
     /// # Returns
@@ -643,7 +675,7 @@ impl PtyPair {
     /// before returning.
     ///
     /// See the [Two Types of Deadlocks] section for how this prevents the primary
-    /// **resource-leaking deadlock**.
+    /// [Resource-leaking deadlock].
     ///
     /// # Errors
     ///
@@ -653,7 +685,7 @@ impl PtyPair {
     ///
     /// [`fd`]: https://man7.org/linux/man-pages/man2/open.2.html
     /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
-    /// [Controlled side lifecycle]: #resource-leaking-deadlock
+    /// [Resource-leaking deadlock]: #resource-leaking-deadlock
     /// [Two Types of Deadlocks]: #two-types-of-pty-deadlocks
     pub fn spawn_command_and_close_controlled(
         pair: &mut PtyPair,

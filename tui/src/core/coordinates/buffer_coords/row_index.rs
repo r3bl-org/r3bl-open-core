@@ -1,6 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::{RowHeight, height};
+use crate::generate_index_type_impl;
 use crate::{ChUnit, Index};
 use std::hash::Hash;
 

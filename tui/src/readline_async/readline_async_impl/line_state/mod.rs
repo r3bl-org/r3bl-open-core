@@ -48,7 +48,7 @@
 #![rustfmt::skip]
 
 // Private modules organized by functional responsibility.
-#[macro_use] mod core;
+mod core;
 mod cursor;
 mod event_handlers;
 mod output;

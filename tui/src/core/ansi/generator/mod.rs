@@ -20,7 +20,7 @@
 #![rustfmt::skip]
 
 // Private modules (hide internal structure).
-#[macro_use] mod cli_text;
+mod cli_text;
 mod ansi_sequence_generator_output;
 mod dsr_sequence;
 mod esc_sequence;

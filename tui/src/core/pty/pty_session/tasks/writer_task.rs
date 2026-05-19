@@ -1,7 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use crate::{Continuation, Controller, ControllerWriter, LINE_FEED_BYTE, PtyInputEvent,
-            PtyOutputEvent};
+            PtyOutputEvent, ok};
 use miette::miette;
 use std::io::Write;
 use tokio::sync::mpsc::{Receiver, Sender};
@@ -49,7 +49,7 @@ pub fn spawn_blocking_writer_task(
                 }
             }
         }
-        Ok(())
+        ok!()
     })
 }
 
@@ -126,6 +126,6 @@ mod writer_task_impl {
                 .blocking_send(PtyOutputEvent::WriteError(format!("Flush failed: {e}")));
             miette!("{error_msg}")
         })?;
-        Ok(())
+        ok!()
     }
 }

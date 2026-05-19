@@ -40,6 +40,20 @@ pub type CommonResult<R> = miette::Result<R>;
 
 pub type CommonResultWithError<R, E> = miette::Result<R, E>;
 
+/// Trait to convert an error-like type into a [`miette::Result`].
+pub trait IntoErr {
+    /// Converts the type into a [`miette::Result`].
+    ///
+    /// # Errors
+    ///
+    /// Always returns an [`Err`] containing the converted error.
+    fn into_err<T>(self) -> miette::Result<T>;
+}
+
+impl IntoErr for miette::Report {
+    fn into_err<T>(self) -> miette::Result<T> { Err(self) }
+}
+
 /// Common error struct. Read custom error docs
 /// [here].
 ///

@@ -8,7 +8,7 @@ use super::{super::{channel_types::{PollerEvent, StdinEvent},
                     paste_state_machine::{PasteStateResult, apply_paste_state_machine}},
             MioPollWorker};
 use crate::{Continuation, core::resilient_reactor_thread::RRTEvent,
-            tui::DEBUG_TUI_SHOW_TERMINAL_BACKEND};
+            tui::DEBUG_TUI_SHOW_MIO_POLLER};
 use std::io::{ErrorKind, Read as _};
 use tokio::sync::broadcast::Sender;
 
@@ -23,7 +23,7 @@ pub const STDIN_READ_BUFFER_SIZE: usize = 1_024;
 /// Handles [`stdin`] becoming readable, using explicit `sender` parameter.
 ///
 /// Reads bytes from [`stdin`], parses them into [`VT100InputEventIR`] events, applies
-/// the paste state machine, and sends final events to the channel. See [EINTR Handling]
+/// the paste state machine, and sends final events to the channel. See [`EINTR` Handling]
 /// for how interrupted syscalls are handled.
 ///
 /// This variant is used by [`MioPollWorker`] which implements the generic
@@ -32,14 +32,14 @@ pub const STDIN_READ_BUFFER_SIZE: usize = 1_024;
 /// # Returns
 ///
 /// - [`Continuation::Continue`]: Successfully processed or recoverable error.
-/// - [`Continuation::Stop`]: [`EOF`], fatal error, or receiver dropped.
+/// - [`Continuation::Stop`]: [`EOF`] or fatal worker-domain error.
 ///
+/// [`EINTR` Handling]: super#eintr-handling
 /// [`EOF`]: https://en.wikipedia.org/wiki/End-of-file
 /// [`MioPollWorker`]: super::MioPollWorker
 /// [`RRTWorker`]: crate::RRTWorker
 /// [`stdin`]: std::io::stdin
-/// [`VT100InputEventIR`]: crate::vt_100_terminal_input_parser::VT100InputEventIR
-/// [EINTR Handling]: super#eintr-handling
+/// [`VT100InputEventIR`]: crate::core::ansi::vt_100_terminal_input_parser::VT100InputEventIR
 pub fn consume_stdin_input_with_sender(
     worker: &mut MioPollWorker,
     sender: &Sender<RRTEvent<PollerEvent>>,
@@ -51,7 +51,7 @@ pub fn consume_stdin_input_with_sender(
     match read_res {
         Ok(0) => {
             // EOF reached.
-            DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
+            DEBUG_TUI_SHOW_MIO_POLLER.then(|| {
                 tracing::debug!(message = "mio_poller thread: EOF (0 bytes)");
             });
             drop(sender.send(PollerEvent::Stdin(StdinEvent::Eof).into()));
@@ -72,7 +72,7 @@ pub fn consume_stdin_input_with_sender(
 
         Err(e) => {
             // Other error - send and exit.
-            DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
+            DEBUG_TUI_SHOW_MIO_POLLER.then(|| {
                 tracing::debug!(
                     message = "mio_poller thread: read error",
                     error = ?e
@@ -92,7 +92,7 @@ pub fn parse_stdin_bytes_with_sender(
     n: usize,
     sender: &Sender<RRTEvent<PollerEvent>>,
 ) -> Continuation {
-    DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
+    DEBUG_TUI_SHOW_MIO_POLLER.then(|| {
         tracing::debug!(message = "mio_poller thread: read bytes", bytes_read = n);
     });
 
@@ -113,13 +113,14 @@ pub fn parse_stdin_bytes_with_sender(
                     .send(PollerEvent::Stdin(StdinEvent::Input(input_event)).into())
                     .is_err()
                 {
-                    // Receiver dropped - exit gracefully.
-                    DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
+                    // Receiver dropped. Let run_worker_loop() evaluate shutdown.
+                    DEBUG_TUI_SHOW_MIO_POLLER.then(|| {
                         tracing::debug!(
-                            message = "mio_poller thread: receiver dropped, exiting"
+                            message =
+                                "mio_poller thread: receiver dropped while sending input event"
                         );
                     });
-                    return Continuation::Stop;
+                    return Continuation::Continue;
                 }
             }
             PasteStateResult::Absorbed => {

@@ -25,7 +25,9 @@ use std::fmt::{Display, Formatter, Result};
 ///    [`Display`] implementation
 ///
 /// ```rust
-///    # use r3bl_tui::{FastStringify, BufTextStorage, generate_impl_display_for_fast_stringify};
+///    # use r3bl_tui::{
+///    #    FastStringify, BufTextStorage, generate_impl_display_for_fast_stringify, ok
+///    # };
 ///    # use std::fmt::{Result, Write};
 ///    # struct MyType { value: i32 }
 ///    impl FastStringify for MyType {
@@ -33,7 +35,7 @@ use std::fmt::{Display, Formatter, Result};
 ///            acc.push_str("MyType { value: ");
 ///            write!(acc, "{}", self.value)?;  // Use write! only when formatting needed
 ///            acc.push_str(" }");
-///            Ok(())
+///            ok!()
 ///        }
 ///    }
 ///
@@ -190,7 +192,9 @@ pub type BufTextStorage = String;
 /// # Basic Usage
 ///
 /// ```rust
-/// # use r3bl_tui::{FastStringify, BufTextStorage, generate_impl_display_for_fast_stringify};
+/// # use r3bl_tui::{
+/// #    FastStringify, BufTextStorage, generate_impl_display_for_fast_stringify, ok
+/// # };
 /// # use std::fmt::{Result, Write};
 /// struct MyType { value: i32 }
 ///
@@ -199,7 +203,7 @@ pub type BufTextStorage = String;
 ///         acc.push_str("MyType { value: ");
 ///         write!(acc, "{}", self.value)?;
 ///         acc.push_str(" }");
-///         Ok(())
+///         ok!()
 ///     }
 /// }
 ///
@@ -225,6 +229,8 @@ macro_rules! generate_impl_display_for_fast_stringify {
 
 #[cfg(test)]
 mod tests {
+    use crate::ok;
+
     use super::*;
     use pretty_assertions::assert_eq;
     use std::fmt::Write;
@@ -239,7 +245,7 @@ mod tests {
             acc.push_str("SimpleType { value: ");
             write!(acc, "{}", self.value)?;
             acc.push_str(" }");
-            Ok(())
+            ok!()
         }
     }
 
@@ -255,7 +261,7 @@ mod tests {
     struct EmptyType;
 
     impl FastStringify for EmptyType {
-        fn write_to_buf(&self, _acc: &mut BufTextStorage) -> Result { Ok(()) }
+        fn write_to_buf(&self, _acc: &mut BufTextStorage) -> Result { ok!() }
     }
 
     generate_impl_display_for_fast_stringify!(EmptyType);

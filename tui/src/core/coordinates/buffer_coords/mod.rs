@@ -42,7 +42,6 @@
 //! [`ZeroCopyGapBuffer`]: crate::ZeroCopyGapBuffer
 
 // Attach source files.
-#[macro_use]
 pub mod index_and_length_impl_macros;
 pub mod caret;
 pub mod col_index;

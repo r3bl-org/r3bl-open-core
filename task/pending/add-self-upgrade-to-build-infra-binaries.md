@@ -406,7 +406,7 @@ async fn check_and_prompt_upgrade() -> miette::Result<()> {
     ).await?;
 
     if !result.update_available {
-        return Ok(());
+        return ok!();
     }
 
     println!("New version available: {} -> {}", result.current, result.latest);
@@ -445,7 +445,7 @@ async fn check_and_prompt_upgrade() -> miette::Result<()> {
         println!("Upgrade complete!");
     }
 
-    Ok(())
+    ok!()
 }
 ```
 

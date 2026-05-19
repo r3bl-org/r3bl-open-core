@@ -1,4 +1,5 @@
 // Copyright (c) 2023-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
+
 use crate::{BulletKind, CheckboxParsePolicy, InlineVec, Lines, MdLineFragment,
             ParseList, SmartListIRStr, SmartListLine, SmartListLineStr, get_spaces,
             md_parser::md_parser_constants::{CHECKED, LIST_PREFIX_BASE_WIDTH, NEW_LINE,
@@ -7,7 +8,9 @@ use crate::{BulletKind, CheckboxParsePolicy, InlineVec, Lines, MdLineFragment,
                                              SPACE_CHAR, UNCHECKED,
                                              UNORDERED_LIST_PREFIX},
             parse_block_markdown_text_with_checkbox_policy_with_or_without_new_line,
-            parse_null_padded_line::is};
+            parse_list,
+            parse_null_padded_line::is,
+            tiny_inline_string};
 use nom::{IResult, Parser,
           branch::alt,
           bytes::complete::{is_not, tag, take_while},
@@ -126,6 +129,8 @@ mod parse_block_smart_list_helper {
 #[cfg(test)]
 mod tests_parse_block_smart_list {
     use super::*;
+    use crate::assert_eq2;
+
     #[test]
     fn test_with_unicode() {
         let input = "- straight 😃 foo bar baz\n";
@@ -448,6 +453,8 @@ pub fn parse_smart_list(
 #[cfg(test)]
 mod tests_bullet_kinds {
     use super::*;
+    use crate::assert_eq2;
+
     #[test]
     fn test_bullet_kinds() {
         // Unordered.
@@ -469,7 +476,7 @@ mod tests_bullet_kinds {
 #[cfg(test)]
 mod tests_parse_smart_list {
     use super::*;
-    use crate::SmartListIR;
+    use crate::{SmartListIR, assert_eq2};
 
     #[test]
     fn test_invalid_ul_list() {
@@ -858,6 +865,8 @@ fn parse_multi_line_content<'a>(
 #[cfg(test)]
 mod tests_parse_smart_list_content_lines {
     use super::*;
+    use crate::assert_eq2;
+
     #[test]
     fn test_single_line_no_newline() {
         let input = "foo bar";

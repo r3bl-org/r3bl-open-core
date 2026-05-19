@@ -61,7 +61,7 @@
 
 use crate::{Length, OffscreenBuffer, PixelChar, RowHeight, RowIndex,
             core::coordinates::bounds_check::{RangeBoundsExt, RangeBoundsResult,
-                                              RangeConvertExt}};
+                                              RangeConvertExt}, ok};
 use std::ops::Range;
 
 impl OffscreenBuffer {
@@ -88,7 +88,7 @@ impl OffscreenBuffer {
             "Line clear operation failed at row {row:?}"
         );
 
-        Ok(())
+        ok!()
     }
 
     /// Shift lines up within a range by the specified amount.
@@ -131,7 +131,7 @@ impl OffscreenBuffer {
             self.buffer[end_idx.saturating_sub(1)].fill(PixelChar::Spacer);
         }
 
-        Ok(())
+        ok!()
     }
 
     /// Shift lines down within a range by the specified amount.
@@ -177,7 +177,7 @@ impl OffscreenBuffer {
             self.buffer[start_idx].fill(PixelChar::Spacer);
         }
 
-        Ok(())
+        ok!()
     }
 
     /// Insert multiple blank lines at the specified row position.
@@ -206,7 +206,7 @@ impl OffscreenBuffer {
         // Only operate within scroll region - use type-safe inclusive range checking.
         if scroll_region.check_index_is_within(row_index) != RangeBoundsResult::Within {
             // Skip operation - cursor is outside scroll region.
-            return Ok(());
+            return ok!();
         }
 
         let scroll_bottom = *scroll_region.end();
@@ -226,7 +226,7 @@ impl OffscreenBuffer {
             }
         }
 
-        Ok(())
+        ok!()
     }
 
     /// Delete multiple lines at the specified row position.
@@ -255,7 +255,7 @@ impl OffscreenBuffer {
         // Only operate within scroll region - use type-safe inclusive range checking.
         if scroll_region.check_index_is_within(row_index) != RangeBoundsResult::Within {
             // Skip operation - cursor is outside scroll region.
-            return Ok(());
+            return ok!();
         }
 
         // Use shift_lines_up to shift lines up by how_many positions.
@@ -275,7 +275,7 @@ impl OffscreenBuffer {
             }
         }
 
-        Ok(())
+        ok!()
     }
 }
 

@@ -7,6 +7,7 @@
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [here]: https://www.ditig.com/256-colors-cheat-sheet
 
+use crate::{new_style, tui_color};
 use crate::{Ansi256GradientIndex, ColorSupport, ColorWheel, ColorWheelConfig,
             ColorWheelSpeed, HeadingData, TuiStyle, global_color_support};
 use smallvec::smallvec;

@@ -14,14 +14,10 @@
   // List of extensions which should be recommended for users of this workspace.
   "recommendations": [
     // R3BL Extensions.
-    "R3BL.r3bl-auto-insert-copyright",
-    "R3BL.r3bl-copy-selection-path-and-range",
     "R3BL.r3bl-extension-pack",
-    "R3BL.r3bl-fuzzy-search",
-    "R3BL.r3bl-semantic-config",
-    "R3BL.r3bl-shared",
-    "R3BL.r3bl-task-management",
-    "R3BL.r3bl-theme",
+    // Gemini.
+    "google.gemini-cli-vscode-ide-companion",
+    "google.geminicodeassist",
     // Others.
     "ryuta46.multi-command", // Multi Command.
     "streetsidesoftware.code-spell-checker", // [SLOW] Code Spell Checker. Configure it so it doesn't slow down IDE
@@ -42,16 +38,16 @@
     "ms-vscode.cpptools", // C/C++. Debugger.
     "pkief.material-icon-theme", // Material "file icon" theme for file extension, folder, symbol, etc icons
     "pkief.material-product-icons", // Material "product icon" theme for activity bar, status bar, etc.
-    "anthropic.claude-code", // Claude Code.
     "hoovercj.vscode-settings-cycler", // Settings Cycler.
+    "alefragnani.bookmarks", // Bookmarks.
   ],
   // List of extensions that should not be recommended for users of this workspace.
   "unwantedRecommendations": [
+    "anthropic.claude-code", // Claude Code.
     "s-nlf-fh.glassit", // GlassIt (does not work w/ Wayland, only X11).
     "ms-vscode-remote.remote-containers", // Remote - Containers.
     "github.vscode-pull-request-github", // Github Pull Requests and Issues.
     "esbenp.prettier-vscode", // [SLOW] Prettier -> very slow for large docs.
-    "alefragnani.bookmarks", // Bookmarks.
     "wayou.vscode-todo-highlight", // Todo Highlight.
     "fabiospampinato.vscode-todo-plus", // Todo+.
     "lorenzopirro.rust-flash-snippets", // Rust Flash Snippets.

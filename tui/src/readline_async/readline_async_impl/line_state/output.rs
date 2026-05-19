@@ -1,6 +1,7 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::core::LineState;
+use crate::{early_return_if_paused, ok};
 use crate::{CsiSequence, GCStringOwned, LINE_FEED_BYTE, LineStateLiveness,
             ReadlineError, TermCol, TermColDelta, TermRowDelta, width};
 use std::io::Write;
@@ -198,7 +199,7 @@ impl LineState {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::core::test_fixtures::StdoutMock;
+    use crate::{core::test_fixtures::StdoutMock, Size, height, width};
 
     /// Helper to decode [`ANSI`] escape sequences in output for debugging.
     ///
@@ -261,7 +262,7 @@ mod tests {
     /// exactly one LF in the output, preventing extra blank lines before the prompt.
     #[test]
     fn test_print_data_no_extra_newlines_issue_442() {
-        let mut line_state = LineState::new("> ".into(), (80, 24));
+        let mut line_state = LineState::new("> ".into(), Size::new((width(80), height(24))));
         let mut stdout_mock = StdoutMock::default();
 
         // Simulate initial state: prompt has been rendered.
@@ -312,7 +313,7 @@ mod tests {
     /// [`CHA(1)`]: crate::CsiSequence::CursorHorizontalAbsolute
     #[test]
     fn test_print_data_partial_line_emits_cha() {
-        let mut line_state = LineState::new("> ".into(), (80, 24));
+        let mut line_state = LineState::new("> ".into(), Size::new((width(80), height(24))));
         let mut stdout_mock = StdoutMock::default();
 
         line_state.render_and_flush(&mut stdout_mock).unwrap();
@@ -349,7 +350,7 @@ mod tests {
     /// [`CHA(1)`]: crate::CsiSequence::CursorHorizontalAbsolute
     #[test]
     fn test_print_data_multiple_segments() {
-        let mut line_state = LineState::new("> ".into(), (80, 24));
+        let mut line_state = LineState::new("> ".into(), Size::new((width(80), height(24))));
         let mut stdout_mock = StdoutMock::default();
 
         line_state.render_and_flush(&mut stdout_mock).unwrap();
@@ -377,7 +378,7 @@ mod tests {
 
     #[test]
     fn test_exit_clears_line() {
-        let mut line_state = LineState::new("$ ".into(), (80, 24));
+        let mut line_state = LineState::new("$ ".into(), Size::new((width(80), height(24))));
         line_state.line = GCStringOwned::new("some content");
         let mut stdout_mock = StdoutMock::default();
 
@@ -389,7 +390,7 @@ mod tests {
 
     #[test]
     fn test_update_prompt_changes_prompt() {
-        let mut line_state = LineState::new("old> ".into(), (80, 24));
+        let mut line_state = LineState::new("old> ".into(), Size::new((width(80), height(24))));
         let mut stdout_mock = StdoutMock::default();
 
         line_state.update_prompt("new> ", &mut stdout_mock).unwrap();
@@ -399,7 +400,7 @@ mod tests {
 
     #[test]
     fn test_print_data_sets_last_line_completed() {
-        let mut line_state = LineState::new("$ ".into(), (80, 24));
+        let mut line_state = LineState::new("$ ".into(), Size::new((width(80), height(24))));
         let mut stdout_mock = StdoutMock::default();
 
         // Data ending with newline.

@@ -7,31 +7,32 @@
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 
 use r3bl_tui::{AnsiSequenceGenerator, InputEvent, Key, KeyPress, KeyState,
-               ModifierKeysMask, RawMode, col,
+               ModifierKeysMask, RawMode, assert_terminal_is_interactive, col,
                core::{get_size,
                       pty::{ControlSequence, CursorKeyMode, DefaultPtySessionConfig,
                             PtyInputEvent, PtyOutputEvent, PtySession,
                             PtySessionBuilder, PtySessionConfigOption},
                       terminal_io::{InputDevice, OutputDevice},
                       try_initialize_logging_global},
-               lock_output_device_as_mut, row, set_mimalloc_in_main};
+               lock_output_device_as_mut, ok, row, set_mimalloc_in_main};
 
 #[tokio::main]
 async fn main() -> miette::Result<()> {
     set_mimalloc_in_main!();
+    assert_terminal_is_interactive();
 
-    // Initialize logging to log.txt.
-    try_initialize_logging_global(tracing_core::LevelFilter::DEBUG).ok();
+    // Initialize logging to /tmp/r3bl_tui/log.txt.
+    let _log_guard = try_initialize_logging_global(tracing_core::LevelFilter::DEBUG).ok();
     tracing::debug!("Starting Simple PTY Example");
 
     println!("🚀 Starting Simple PTY Example");
     println!("📋 Running htop in a PTY");
     println!("⌨️  Use htop normally, Ctrl+Q to quit");
-    println!("📝 Debug output will be written to log.txt");
+    println!("📝 Debug output will be written to /tmp/r3bl_tui/log.txt");
     println!();
 
-    // Get terminal size.
     let terminal_size = get_size()?;
+
     let mut output_device = OutputDevice::new_stdout();
     let mut input_device = InputDevice::default();
 
@@ -118,7 +119,7 @@ async fn run_event_loop(
                     }
                     PtyOutputEvent::Exit(status) => {
                         tracing::debug!("PTY exited with status: {:?}", status);
-                        return Ok(());
+                        return ok!();
                     }
                     _ => {}
                 }
@@ -149,7 +150,7 @@ async fn run_event_loop(
                             // Wait for session to close.
                             tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
                             tracing::debug!("Exiting event loop");
-                            return Ok(());
+                            return ok!();
                         }
 
                         // Convert key to PTY input event and send.

@@ -81,8 +81,8 @@
 //! [YouTube channel]: https://www.youtube.com/@developerlifecom?sub_confirmation=1
 
 use miette::IntoDiagnostic;
-use r3bl_tui::{SharedWriter, fg_guards_red, fg_lizard_green, fg_slate_gray,
-               inline_string, ok,
+use r3bl_tui::{SharedWriter, TuiAvailability, assert_terminal_is_interactive,
+               fg_guards_red, fg_lizard_green, fg_slate_gray, inline_string, ok,
                readline_async::{ReadlineAsyncContext, ReadlineEvent,
                                 ReadlineEvent::{BackTab, Eof, FnKey, Insert,
                                                 Interrupted, Line, PageDown, PageUp,
@@ -97,6 +97,7 @@ use tokio::{io::{AsyncBufReadExt, AsyncWriteExt},
 #[allow(clippy::needless_return)]
 async fn main() -> miette::Result<()> {
     set_mimalloc_in_main!();
+    assert_terminal_is_interactive();
 
     // Create a broadcast channel for shutdown.
     let (shutdown_sender, _) = broadcast::channel::<()>(1);
@@ -230,50 +231,51 @@ pub mod monitor_child_output {
         mut shared_writer: SharedWriter,
         shutdown_sender: broadcast::Sender<()>,
     ) -> tokio::task::JoinHandle<()> {
-        let mut stdout_lines = tokio::io::BufReader::new(stdout).lines();
-        let mut stderr_lines = tokio::io::BufReader::new(stderr).lines();
-        let mut shutdown_receiver = shutdown_sender.subscribe();
+        tokio::spawn({
+            let mut stdout_lines = tokio::io::BufReader::new(stdout).lines();
+            let mut stderr_lines = tokio::io::BufReader::new(stderr).lines();
+            let mut shutdown_receiver = shutdown_sender.subscribe();
+            async move {
+                loop {
+                    // Branch: Monitor shutdown signal. This is cancel safe as `recv()` is
+                    // cancel safe.
+                    tokio::select! {
+                        _ = shutdown_receiver.recv() => {
+                            break;
+                        }
 
-        tokio::spawn(async move {
-            loop {
-                // Branch: Monitor shutdown signal. This is cancel safe as `recv()` is
-                // cancel safe.
-                tokio::select! {
-                    _ = shutdown_receiver.recv() => {
-                        break;
-                    }
-
-                    // Branch: Monitor stdout for output from the child process. This is
-                    // cancel safe as `next_line()` is cancel safe.
-                    result_line = stdout_lines.next_line() => {
-                        match result_line {
-                            Ok(Some(line)) => {
-                                // We don't care about the result of this operation.
-                                writeln!(shared_writer, "{}", fg_lizard_green(&line)).ok();
-                            },
-                            _ => {
-                                // We don't care about the result of this operation.
-                                shutdown_sender.send(()).ok();
-                                break;
+                        // Branch: Monitor stdout for output from the child process. This is
+                        // cancel safe as `next_line()` is cancel safe.
+                        result_line = stdout_lines.next_line() => {
+                            match result_line {
+                                Ok(Some(line)) => {
+                                    // We don't care about the result of this operation.
+                                    writeln!(shared_writer, "{}", fg_lizard_green(&line)).ok();
+                                },
+                                _ => {
+                                    // We don't care about the result of this operation.
+                                    shutdown_sender.send(()).ok();
+                                    break;
+                                }
                             }
                         }
-                    }
 
-                    // Branch: Monitor stderr for output from the child process. This is
-                    // cancel safe as `next_line()` is cancel safe.
-                    result_line = stderr_lines.next_line() => {
-                        match result_line {
-                            Ok(Some(line)) => {
-                                // We don't care about the result of this operation.
-                                writeln!(shared_writer, "{}", fg_guards_red(&line)).ok();
+                        // Branch: Monitor stderr for output from the child process. This is
+                        // cancel safe as `next_line()` is cancel safe.
+                        result_line = stderr_lines.next_line() => {
+                            match result_line {
+                                Ok(Some(line)) => {
+                                    // We don't care about the result of this operation.
+                                    writeln!(shared_writer, "{}", fg_guards_red(&line)).ok();
+                                }
+                                _ => {
+                                    // We don't care about the result of this operation.
+                                    shutdown_sender.send(()).ok();
+                                    break;
+                                }
                             }
-                            _ => {
-                                // We don't care about the result of this operation.
-                                shutdown_sender.send(()).ok();
-                                break;
-                            }
-                        }
-                    },
+                        },
+                    }
                 }
             }
         })
@@ -281,7 +283,9 @@ pub mod monitor_child_output {
 }
 
 pub mod terminal_async_constructor {
-    use super::{ReadlineAsyncContext, SharedWriter, fg_slate_gray, inline_string, ok};
+    use super::{ReadlineAsyncContext, SharedWriter, TuiAvailability, fg_slate_gray,
+                inline_string, ok};
+    use r3bl_tui::IntoErr;
 
     #[allow(missing_debug_implementations)]
     pub struct TerminalAsyncHandle {
@@ -302,9 +306,9 @@ pub mod terminal_async_constructor {
             format!("{prompt_seg_1}{prompt_seg_2}")
         };
 
-        let Ok(Some(rl_ctx)) = ReadlineAsyncContext::try_new(Some(prompt), None).await
-        else {
-            miette::bail!("Failed to create ReadlineAsyncContext instance");
+        let rl_ctx = match ReadlineAsyncContext::try_new(Some(prompt), None).await {
+            TuiAvailability::Available(rl_ctx) => rl_ctx,
+            it => return it.into_err(),
         };
 
         let shared_writer = rl_ctx.clone_shared_writer();

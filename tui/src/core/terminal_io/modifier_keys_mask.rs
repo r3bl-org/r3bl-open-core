@@ -174,6 +174,8 @@ impl From<KeyModifiers> for ModifierKeysMask {
 #[cfg(test)]
 mod tests_modifier_keys_mask {
     use super::*;
+    use crate::assert_eq2;
+
     #[test]
     fn test_empty_mask() {
         let mask = ModifierKeysMask::new();

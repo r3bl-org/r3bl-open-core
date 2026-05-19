@@ -1,5 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+// cspell:words adduser
+
 //! `PTYMux` terminal multiplexer example with universal process compatibility.
 //!
 //! This example demonstrates how to use the `pty_mux` module to create a terminal
@@ -47,83 +49,71 @@
 //!
 //! [`OSC`]: crate::osc_codes::OscSequence
 
-use r3bl_tui::{core::{get_size,
-                      pty_mux::{PTYMux, Process},
-                      term::{TTYResult, is_stdin_interactive},
-                      try_initialize_logging_global},
-               set_mimalloc_in_main};
+use r3bl_tui::{IntoErr, TuiAvailability, assert_terminal_is_interactive,
+               core::pty_mux::PTYMux, ok, set_mimalloc_in_main,
+               try_initialize_logging_global};
 
 #[tokio::main]
 async fn main() -> miette::Result<()> {
     set_mimalloc_in_main!();
+    assert_terminal_is_interactive();
 
-    // Initialize logging to log.txt.
-    try_initialize_logging_global(tracing_core::LevelFilter::DEBUG).ok();
+    // Initialize logging to /tmp/r3bl_tui/log.txt.
+    let _log_guard = try_initialize_logging_global(tracing_core::LevelFilter::DEBUG).ok();
     tracing::debug!("Starting PTYMux Example");
-
-    // Check if running in interactive terminal.
-    if is_stdin_interactive() == TTYResult::IsNotInteractive {
-        eprintln!("❌ This example requires an interactive terminal to run.");
-        eprintln!(
-            "   Please run directly in a terminal, not through pipes or non-TTY environments."
-        );
-        std::process::exit(1);
-    }
-
-    println!("🚀 Starting PTYMux Example - Universal Process Compatibility");
-    println!("📋 Configured processes: claude, less, htop, gitui, bash");
-    println!("🌟 Demonstrates universal compatibility:");
-    println!("   • AI assistant (claude) with interactive chat");
-    println!("   • TUI applications (less, htop, gitui) with proper ANSI handling");
-    println!("   • Interactive shells (bash) with persistent command history");
-    println!("   • Per-process virtual terminals for instant switching");
-    println!("⌨️  Controls:");
-    println!("   • F1: claude (AI assistant)");
-    println!("   • F2: less (file viewer)");
-    println!("   • F3: htop (process monitor)");
-    println!("   • F4: gitui (git TUI)");
-    println!("   • F5: bash (interactive shell)");
-    println!("   • Ctrl+Q: Quit");
-    println!("📊 Status bar shows live process status and shortcuts");
-    println!("📝 Debug output will be written to log.txt");
-    println!();
-
-    // Get terminal size for process creation.
-    let terminal_size = get_size()?;
 
     // Mixed process types demonstrating universal compatibility:
     // - claude: AI assistant (existing TUI app)
     // - TUI apps: less, htop, gitui (proper TUI applications)
     // - bash: Interactive shell (universal compatibility demonstration)
     let processes = vec![
-        Process::new(
-            "claude",
-            "/home/nazmul/.claude/local/claude",
-            vec![],
-            terminal_size,
-        ),
-        Process::new(
-            "less",
-            "less",
-            vec!["/etc/adduser.conf".to_string()],
-            terminal_size,
-        ),
-        Process::new("htop", "htop", vec![], terminal_size),
-        Process::new("gitui", "gitui", vec![], terminal_size),
-        Process::new("bash", "bash", vec![], terminal_size),
+        ("claude", "claude", vec![]),
+        ("less", "less", vec!["/etc/adduser.conf".to_string()]),
+        ("htop", "htop", vec![]),
+        ("gitui", "gitui", vec![]),
+        ("bash", "bash", vec![]),
     ];
 
-    println!(
-        "🔧 Building multiplexer with {} processes...",
-        processes.len()
-    );
+    println!("🚀 Starting PTYMux Example - Universal Process Compatibility");
 
-    // Build and run multiplexer using the pty_mux module.
-    let multiplexer = PTYMux::builder().processes(processes).build()?;
+    // List available processes
+    println!("📋 Available processes:");
+    let mut current_f_key = 1;
+    for (name, command, _args) in &processes {
+        if r3bl_tui::is_command_available(command) {
+            println!("   • F{current_f_key}: {name} ({command})");
+            current_f_key += 1;
+        }
+    }
+    println!("   • Ctrl+Q: Quit");
+    println!("📊 Status bar shows live process status and shortcuts");
+    println!("📝 Debug output will be written to /tmp/r3bl_tui/log.txt");
+    println!();
 
-    println!("▶️  Starting multiplexer event loop...");
+    let mut builder = PTYMux::builder();
+    let mut added_count = 0;
+
+    for (name, command, args) in processes {
+        if r3bl_tui::is_command_available(command) {
+            builder = builder.add_process(name, command, args);
+            added_count += 1;
+        }
+    }
+
+    if added_count == 0 {
+        miette::bail!(
+            "No configured processes are available on this system. Please ensure at least one of (claude, less, htop, gitui, bash) is installed and in PATH."
+        );
+    }
+
+    let multiplexer = match builder.build() {
+        TuiAvailability::Available(mux) => mux,
+        it => return it.into_err(),
+    };
+
+    println!("🛫 Starting multiplexer event loop...");
     println!("   (All processes will be started immediately for fast switching)");
-    println!("   Press F1-F4 to switch processes, Ctrl+Q to quit");
+    println!("   Press F1-F{added_count} to switch processes, Ctrl+Q to quit");
     println!();
 
     // Run the multiplexer event loop.
@@ -141,5 +131,5 @@ async fn main() -> miette::Result<()> {
     // Allow a brief moment for any final cleanup.
     tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
 
-    Ok(())
+    ok!()
 }

@@ -1,9 +1,11 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
+
 use crate::{ChannelCapacity, CommonResultWithError, CursorBoundsCheck,
             CursorPositionBoundsStatus, GCStringOwned, History, InputDevice, InputEvent,
             KeyPress, LineState, LineStateControlSignal, LineStateLiveness,
             ModifierKeysMask, OutputDevice, PauseBuffer, SafeHistory, SafeLineState,
-            SafePauseBuffer, SegIndex, SendRawTerminal, SharedWriter, Size, StdMutex};
+            SafePauseBuffer, SegIndex, SendRawTerminal, SharedWriter, Size, StdMutex,
+            execute_commands_no_lock, join, key_press, lock_output_device_as_mut, ok};
 use crossterm::{ExecutableCommand, QueueableCommand, cursor,
                 terminal::{self, Clear}};
 use miette::Report as ErrorReport;
@@ -144,15 +146,23 @@ pub const READLINE_ASYNC_INITIAL_PROMPT_DISPLAY_CURSOR_SHOW_DELAY: Duration =
 /// - By calling [`manage_shared_writer_output::flush_internal()`].
 ///
 /// You can provide your own implementation of [`crate::SafeRawTerminal`], like
-/// [`OutputDevice`], via [dependency injection],
-/// so that you can mock terminal output for testing. You can also extend this struct to
-/// adapt your own terminal output using this mechanism. Essentially anything that
-/// compiles with `dyn std::io::Write + Send` trait bounds can be used.
+/// [`OutputDevice`], via [dependency injection], so that you can mock terminal output for
+/// testing. You can also extend this struct to adapt your own terminal output using this
+/// mechanism. Essentially anything that compiles with `dyn std::io::Write + Send` trait
+/// bounds can be used.
 ///
-/// [`crossterm::event::EventStream`]: https://docs.rs/crossterm/latest/crossterm/event/struct.EventStream.html
+/// # Poison Safety
+///
+/// See the [Terminal Restoration: Panic, Drop, and Mutex Poison-Safety] section in the
+/// crate root documentation for why this is designed to be poison-safe.
+///
+/// [`crossterm::event::EventStream`]:
+///     https://docs.rs/crossterm/latest/crossterm/event/struct.EventStream.html
 /// [`Pin`]: std::pin::Pin
 /// [Core Async Concepts]: crate::main_event_loop_impl#core-async-concepts-pin-and-unpin
 /// [dependency injection]: https://developerlife.com/category/DI/
+/// [Terminal Restoration: Panic, Drop, and Mutex Poison-Safety]:
+///     crate#terminal-restoration-panic-drop-and-mutex-poison-safety
 #[allow(missing_debug_implementations)]
 pub struct Readline {
     /// Device used to write rendered display output to (usually `stdout`).
@@ -290,10 +300,8 @@ pub enum ControlFlowLimited<E> {
 /// [`PauseBuffer`]. When the terminal is resumed, the buffer is drained and the output is
 /// written to the terminal.
 pub mod manage_shared_writer_output {
-    use super::{Arc, CommonResultWithError, ControlFlowLimited, JoinHandle, LineState,
-                LineStateControlSignal, LineStateLiveness, OutputDevice, PauseBuffer,
-                ReadlineError, SafeLineState, SafePauseBuffer, SendRawTerminal,
-                StdMutex, broadcast, io, mpsc, spawn};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     /// - Receiver end of the channel, which does the actual writing to the terminal.
     /// - The sender end of the channel is in [`crate::SharedWriter`].
@@ -353,9 +361,12 @@ pub mod manage_shared_writer_output {
     ///
     /// # Panics
     ///
-    /// This will panic if the lock is poisoned, which can happen if a thread
-    /// panics while holding the lock. To avoid panics, ensure that the code that
-    /// locks the mutex does not panic while holding the lock.
+    /// Panics if the internal mutex is poisoned.
+    ///
+    /// # Poison Safety
+    ///
+    /// See the [Terminal Restoration: Panic, Drop, and Mutex Poison-Safety] section
+    /// in the crate root documentation for details.
     #[allow(clippy::needless_pass_by_value)]
     pub fn process_line_control_signal(
         line_control_signal: LineStateControlSignal,
@@ -448,9 +459,12 @@ pub mod manage_shared_writer_output {
     ///
     /// # Panics
     ///
-    /// This will panic if the lock is poisoned, which can happen if a thread
-    /// panics while holding the lock. To avoid panics, ensure that the code that
-    /// locks the mutex does not panic while holding the lock.
+    /// Panics if the internal mutex is poisoned.
+    ///
+    /// # Poison Safety
+    ///
+    /// See the [Terminal Restoration: Panic, Drop, and Mutex Poison-Safety] section
+    /// in the crate root documentation for details.
     ///
     /// # Errors
     ///
@@ -464,7 +478,7 @@ pub mod manage_shared_writer_output {
     ) -> CommonResultWithError<(), ReadlineError> {
         // If paused, then return!
         if is_paused.is_paused() {
-            return Ok(());
+            return ok!();
         }
 
         let is_paused_buffer = {
@@ -484,16 +498,48 @@ pub mod manage_shared_writer_output {
         line_state.print_data_and_flush(is_paused_buffer.as_bytes(), term)?;
         line_state.clear_and_render_and_flush(term)?;
 
-        Ok(())
+        ok!()
     }
 }
 
 impl Drop for Readline {
+    /// Performs terminal-output related cleanup.
+    ///
+    /// # Poison Safety
+    ///
+    /// This implementation is designed to be **infallible and poison-safe** to prevent
+    /// a **Double Panic Abort** (which would **brick the user's terminal**). It uses
+    /// poison-safe locking to ensure that even if the input buffer or line state
+    /// is corrupted, it can still attempt to restore the terminal to a usable state
+    /// before the process exits. We prioritize **Resilience over Integrity** here.
+    ///
+    /// See the [Terminal Restoration: Panic, Drop, and Mutex Poison-Safety] section
+    /// in the crate root documentation for details.
+    ///
+    /// [Terminal Restoration: Panic, Drop, and Mutex Poison-Safety]:
+    ///     crate#terminal-restoration-panic-drop-and-mutex-poison-safety
     fn drop(&mut self) {
+        // OutputDevice::lock() is now poison-safe, so this macro will not panic.
         let term = lock_output_device_as_mut!(self.output_device);
+
+        // Poison-safe lock for line state.
+        let mut line_state = match self.safe_line_state.lock() {
+            Ok(guard) => guard,
+            Err(poisoned) => {
+                // % is Display, ? is Debug.
+                tracing::error!(
+                    message = "Readline::drop: safe_line_state lock poisoned, attempting exit anyway",
+                    error = ?poisoned
+                );
+                poisoned.into_inner()
+            }
+        };
+
         // We don't care about the result of this operation.
-        self.safe_line_state.lock().unwrap().exit(term).ok();
+        line_state.exit(term).ok();
+
         // We don't care about the result of this operation.
+        // disable_raw_mode() is also poison-safe.
         crate::disable_raw_mode().ok();
     }
 }
@@ -515,9 +561,12 @@ impl Readline {
     ///
     /// # Panics
     ///
-    /// This will panic if the lock is poisoned, which can happen if a thread
-    /// panics while holding the lock. To avoid panics, ensure that the code that
-    /// locks the mutex does not panic while holding the lock.
+    /// Panics if the internal mutex is poisoned.
+    ///
+    /// # Poison Safety
+    ///
+    /// See the [Terminal Restoration: Panic, Drop, and Mutex Poison-Safety] section
+    /// in the crate root documentation for details.
     ///
     /// # Errors
     ///
@@ -530,6 +579,7 @@ impl Readline {
         /* move */ input_device: InputDevice,
         /* move */ shutdown_complete_sender: broadcast::Sender<()>,
         channel_capacity: ChannelCapacity,
+        size: crate::Size,
     ) -> CommonResultWithError<(Self, SharedWriter), ReadlineError> {
         // Immediately hide the cursor. Then wait for
         // `READLINE_ASYNC_INITIAL_PROMPT_DISPLAY_CURSOR_SHOW_DELAY` to display the cursor
@@ -557,7 +607,7 @@ impl Readline {
         let safe_history = Arc::new(StdMutex::new(history));
 
         // Line state.
-        let line_state = LineState::new(prompt, terminal::size()?);
+        let line_state = LineState::new(prompt, size);
         let safe_line_state = Arc::new(StdMutex::new(line_state));
 
         // Pause buffer.
@@ -598,8 +648,8 @@ impl Readline {
                 .render_and_flush(term)?;
         } // Drop the term lock.
 
-        let output_device_clone = output_device.clone();
         spawn({
+            let output_device_clone = output_device.clone();
             async move {
                 // In a background task, wait for
                 // `READLINE_ASYNC_INITIAL_PROMPT_DISPLAY_CURSOR_SHOW_DELAY` to
@@ -623,9 +673,12 @@ impl Readline {
     ///
     /// # Panics
     ///
-    /// This will panic if the lock is poisoned, which can happen if a thread
-    /// panics while holding the lock. To avoid panics, ensure that the code that
-    /// locks the mutex does not panic while holding the lock.
+    /// Panics if the internal mutex is poisoned.
+    ///
+    /// # Poison Safety
+    ///
+    /// See the [Terminal Restoration: Panic, Drop, and Mutex Poison-Safety] section
+    /// in the crate root documentation for details.
     ///
     /// # Errors
     ///
@@ -640,16 +693,19 @@ impl Readline {
             .lock()
             .unwrap()
             .update_prompt(prompt, term)?;
-        Ok(())
+        ok!()
     }
 
     /// Clears the screen.
     ///
     /// # Panics
     ///
-    /// This will panic if the lock is poisoned, which can happen if a thread
-    /// panics while holding the lock. To avoid panics, ensure that the code that
-    /// locks the mutex does not panic while holding the lock.
+    /// Panics if the internal mutex is poisoned.
+    ///
+    /// # Poison Safety
+    ///
+    /// See the [Terminal Restoration: Panic, Drop, and Mutex Poison-Safety] section
+    /// in the crate root documentation for details.
     ///
     /// # Errors
     ///
@@ -663,16 +719,19 @@ impl Readline {
             .unwrap()
             .clear_and_render_and_flush(term)?;
         term.flush()?;
-        Ok(())
+        ok!()
     }
 
     /// Sets maximum history length. The default length is [`crate::HISTORY_SIZE_MAX`].
     ///
     /// # Panics
     ///
-    /// This will panic if the lock is poisoned, which can happen if a thread
-    /// panics while holding the lock. To avoid panics, ensure that the code that
-    /// locks the mutex does not panic while holding the lock.
+    /// Panics if the internal mutex is poisoned.
+    ///
+    /// # Poison Safety
+    ///
+    /// See the [Terminal Restoration: Panic, Drop, and Mutex Poison-Safety] section
+    /// in the crate root documentation for details.
     pub fn set_max_history(&mut self, max_size: usize) {
         let mut history = self.safe_history.lock().unwrap();
         history.max_size = max_size;
@@ -691,9 +750,12 @@ impl Readline {
     ///
     /// # Panics
     ///
-    /// This will panic if the lock is poisoned, which can happen if a thread
-    /// panics while holding the lock. To avoid panics, ensure that the code that
-    /// locks the mutex does not panic while holding the lock.
+    /// Panics if the internal mutex is poisoned.
+    ///
+    /// # Poison Safety
+    ///
+    /// See the [Terminal Restoration: Panic, Drop, and Mutex Poison-Safety] section
+    /// in the crate root documentation for details.
     pub fn should_print_line_on(&mut self, enter: bool, control_c: bool) {
         let mut line_state = self.safe_line_state.lock().unwrap();
         line_state.should_print_line_on_enter = enter;
@@ -714,9 +776,12 @@ impl Readline {
     ///
     /// # Panics
     ///
-    /// This will panic if the lock is poisoned, which can happen if a thread
-    /// panics while holding the lock. To avoid panics, ensure that the code that
-    /// locks the mutex does not panic while holding the lock.
+    /// Panics if the internal mutex is poisoned.
+    ///
+    /// # Poison Safety
+    ///
+    /// See the [Terminal Restoration: Panic, Drop, and Mutex Poison-Safety] section
+    /// in the crate root documentation for details.
     ///
     /// # Errors
     ///
@@ -781,9 +846,12 @@ impl Readline {
     ///
     /// # Panics
     ///
-    /// This will panic if the lock is poisoned, which can happen if a thread
-    /// panics while holding the lock. To avoid panics, ensure that the code that
-    /// locks the mutex does not panic while holding the lock.
+    /// Panics if the internal mutex is poisoned.
+    ///
+    /// # Poison Safety
+    ///
+    /// See the [Terminal Restoration: Panic, Drop, and Mutex Poison-Safety] section
+    /// in the crate root documentation for details.
     ///
     /// [`display_width`]: GCStringOwned::display_width
     /// [`segment_count()`]: GCStringOwned::segment_count
@@ -799,9 +867,12 @@ impl Readline {
     ///
     /// # Panics
     ///
-    /// This will panic if the lock is poisoned, which can happen if a thread
-    /// panics while holding the lock. To avoid panics, ensure that the code that
-    /// locks the mutex does not panic while holding the lock.
+    /// Panics if the internal mutex is poisoned.
+    ///
+    /// # Poison Safety
+    ///
+    /// See the [Terminal Restoration: Panic, Drop, and Mutex Poison-Safety] section
+    /// in the crate root documentation for details.
     ///
     /// [`ArrayBoundsCheck`]: crate::ArrayBoundsCheck
     #[must_use]
@@ -844,9 +915,12 @@ impl Readline {
     ///
     /// # Panics
     ///
-    /// This will panic if the lock is poisoned, which can happen if a thread
-    /// panics while holding the lock. To avoid panics, ensure that the code that
-    /// locks the mutex does not panic while holding the lock.
+    /// Panics if the internal mutex is poisoned.
+    ///
+    /// # Poison Safety
+    ///
+    /// See the [Terminal Restoration: Panic, Drop, and Mutex Poison-Safety] section
+    /// in the crate root documentation for details.
     ///
     /// [`AtEnd`]: CursorPositionBoundsStatus::AtEnd
     /// [`AtStart`]: CursorPositionBoundsStatus::AtStart
@@ -869,9 +943,12 @@ pub mod readline_internal {
 
     /// # Panics
     ///
-    /// This will panic if the lock is poisoned, which can happen if a thread
-    /// panics while holding the lock. To avoid panics, ensure that the code that
-    /// locks the mutex does not panic while holding the lock.
+    /// Panics if the internal mutex is poisoned.
+    ///
+    /// # Poison Safety
+    ///
+    /// See the [Terminal Restoration: Panic, Drop, and Mutex Poison-Safety] section
+    /// in the crate root documentation for details.
     pub fn apply_event_to_line_state_and_render(
         input_event: InputEvent,
         self_line_state: &SafeLineState,
@@ -1105,323 +1182,19 @@ pub mod readline_test_fixtures {
     }
 }
 
-#[cfg(test)]
-mod test_readline {
-    use super::{Arc, ChannelCapacity, ControlFlowExtended, CursorPositionBoundsStatus,
-                Duration, History, InputDevice, LineStateControlSignal,
-                LineStateLiveness, OutputDevice, Readline, ReadlineEvent, StdMutex,
-                broadcast, readline_internal, readline_test_fixtures::get_input_vec,
-                sleep};
-    use crate::{OutputDeviceExt, TTYResult, is_output_interactive};
-
-    #[tokio::test]
-    #[allow(clippy::needless_return)]
-    async fn test_readline_internal_process_event_and_terminal_output() {
-        let vec = get_input_vec();
-        let mut iter = vec.iter();
-
-        let prompt_str = "> ";
-
-        if let TTYResult::IsNotInteractive = is_output_interactive() {
-            return;
-        }
-
-        // We will get the `line_state` out of this to test.
-        let (output_device, stdout_mock) = OutputDevice::new_mock();
-        let input_device = InputDevice::new_mock(get_input_vec());
-        let (shutdown_sender, _) = broadcast::channel::<()>(1);
-        let (readline, _) = Readline::try_new(
-            prompt_str.into(),
-            output_device.clone(),
-            /* move */ input_device,
-            /* move */ shutdown_sender,
-            ChannelCapacity::Minimal, // Test uses minimal capacity
-        )
-        .unwrap();
-
-        let safe_is_spinner_active = Arc::new(StdMutex::new(None));
-
-        let history = History::new();
-        let safe_history = Arc::new(StdMutex::new(history.0));
-
-        // Simulate 'a'.
-        let Some(Ok(event)) = iter.next() else {
-            panic!();
-        };
-        let Some(input_event) =
-            readline_internal::convert_crossterm_event_to_input_event(event.clone())
-        else {
-            panic!("Failed to convert event");
-        };
-        let control_flow = readline_internal::apply_event_to_line_state_and_render(
-            input_event,
-            &readline.safe_line_state,
-            lock_output_device_as_mut!(output_device),
-            &safe_history,
-            &safe_is_spinner_active,
-        );
-
-        assert!(matches!(control_flow, ControlFlowExtended::Continue));
-        assert_eq!(readline.safe_line_state.lock().unwrap().line.as_str(), "a");
-
-        let output_buffer_data = stdout_mock.get_copy_of_buffer_as_string_strip_ansi();
-        // println!("\n`{}`\n", output_buffer_data);
-        assert!(output_buffer_data.contains("> a"));
-    }
-
-    #[tokio::test]
-    #[allow(clippy::needless_return)]
-    async fn test_readline() {
-        let prompt_str = "> ";
-
-        if let TTYResult::IsNotInteractive = is_output_interactive() {
-            return;
-        }
-
-        // We will get the `line_state` out of this to test.
-        let (output_device, stdout_mock) = OutputDevice::new_mock();
-        let input_device = InputDevice::new_mock(get_input_vec());
-        let (shutdown_sender, _) = broadcast::channel::<()>(1);
-        let (mut readline, _) = Readline::try_new(
-            prompt_str.into(),
-            output_device.clone(),
-            /* move */ input_device,
-            shutdown_sender,
-            ChannelCapacity::Minimal, // Test uses minimal capacity
-        )
-        .unwrap();
-
-        let result = readline.readline().await;
-        assert!(matches!(result, Ok(ReadlineEvent::Line(_))));
-        pretty_assertions::assert_eq!(
-            result.unwrap(),
-            ReadlineEvent::Line("abc".to_string())
-        );
-        pretty_assertions::assert_eq!(
-            readline.safe_line_state.lock().unwrap().line.as_str(),
-            ""
-        );
-
-        let output_buffer_data = stdout_mock.get_copy_of_buffer_as_string_strip_ansi();
-        // println!("\n`{}`\n", output_buffer_data);
-        assert!(output_buffer_data.contains("> abc"));
-    }
-
-    #[tokio::test]
-    #[allow(clippy::needless_return)]
-    async fn test_pause_resume() {
-        let prompt_str = "> ";
-
-        if let TTYResult::IsNotInteractive = is_output_interactive() {
-            return;
-        }
-
-        // We will get the `line_state` out of this to test.
-        let (output_device, _) = OutputDevice::new_mock();
-        let input_device = InputDevice::new_mock(get_input_vec());
-        let (shutdown_sender, _) = broadcast::channel::<()>(1);
-        let (readline, shared_writer) = Readline::try_new(
-            prompt_str.into(),
-            output_device.clone(),
-            /* move */ input_device,
-            shutdown_sender,
-            ChannelCapacity::Minimal, // Test uses minimal capacity
-        )
-        .unwrap();
-
-        shared_writer
-            .line_state_control_channel_sender
-            .send(LineStateControlSignal::Pause)
-            .await
-            .unwrap();
-        sleep(Duration::from_millis(1)).await;
-
-        assert_eq!(
-            readline.safe_line_state.lock().unwrap().is_paused,
-            LineStateLiveness::Paused
-        );
-
-        shared_writer
-            .line_state_control_channel_sender
-            .send(LineStateControlSignal::Resume)
-            .await
-            .unwrap();
-        sleep(Duration::from_millis(1)).await;
-
-        assert_eq!(
-            readline.safe_line_state.lock().unwrap().is_paused,
-            LineStateLiveness::NotPaused
-        );
-    }
-
-    #[tokio::test]
-    #[allow(clippy::needless_return)]
-    async fn test_pause_resume_with_output() {
-        let prompt_str = "> ";
-
-        if let TTYResult::IsNotInteractive = is_output_interactive() {
-            return;
-        }
-
-        // We will get the `line_state` out of this to test.
-        let (output_device, _) = OutputDevice::new_mock();
-        let input_device = InputDevice::new_mock(get_input_vec());
-        let (shutdown_sender, _) = broadcast::channel::<()>(1);
-        let (readline, shared_writer) = Readline::try_new(
-            prompt_str.into(),
-            output_device.clone(),
-            /* move */ input_device,
-            shutdown_sender,
-            ChannelCapacity::Minimal, // Test uses minimal capacity
-        )
-        .unwrap();
-
-        shared_writer
-            .line_state_control_channel_sender
-            .send(LineStateControlSignal::Pause)
-            .await
-            .unwrap();
-        sleep(Duration::from_millis(1)).await;
-
-        assert_eq!(
-            readline.safe_line_state.lock().unwrap().is_paused,
-            LineStateLiveness::Paused
-        );
-
-        shared_writer
-            .line_state_control_channel_sender
-            .send(LineStateControlSignal::Line("abc".into()))
-            .await
-            .unwrap();
-        sleep(Duration::from_millis(1)).await;
-
-        let pause_buffer = readline.safe_is_paused_buffer.lock().unwrap().clone();
-        assert_eq!(pause_buffer.len(), 1);
-        assert_eq!(pause_buffer[0], "abc");
-
-        shared_writer
-            .line_state_control_channel_sender
-            .send(LineStateControlSignal::Resume)
-            .await
-            .unwrap();
-        sleep(Duration::from_millis(1)).await;
-
-        assert_eq!(
-            readline.safe_line_state.lock().unwrap().is_paused,
-            LineStateLiveness::NotPaused
-        );
-    }
-
-    #[tokio::test]
-    #[allow(clippy::needless_return)]
-    async fn test_editor_state_empty_buffer() {
-        use crate::seg_index;
-
-        let prompt_str = "> ";
-
-        if let TTYResult::IsNotInteractive = is_output_interactive() {
-            return;
-        }
-
-        let (output_device, _) = OutputDevice::new_mock();
-        let input_device = InputDevice::new_mock(smallvec::smallvec![]);
-        let (shutdown_sender, _) = broadcast::channel::<()>(1);
-        let (readline, _) = Readline::try_new(
-            prompt_str.into(),
-            output_device,
-            input_device,
-            shutdown_sender,
-            ChannelCapacity::Minimal,
-        )
-        .unwrap();
-
-        assert!(readline.get_buffer().is_empty());
-        assert_eq!(
-            readline.get_cursor_position_status(),
-            CursorPositionBoundsStatus::AtStart
-        );
-        assert_eq!(readline.get_cursor_position(), seg_index(0));
-        assert_eq!(readline.get_buffer().as_str(), "");
-    }
-
-    #[tokio::test]
-    #[allow(clippy::needless_return)]
-    async fn test_editor_state_with_content() {
-        use crate::{GCStringOwned, seg_index};
-
-        let prompt_str = "> ";
-
-        if let TTYResult::IsNotInteractive = is_output_interactive() {
-            return;
-        }
-
-        let (output_device, _) = OutputDevice::new_mock();
-        let input_device = InputDevice::new_mock(smallvec::smallvec![]);
-        let (shutdown_sender, _) = broadcast::channel::<()>(1);
-        let (readline, _) = Readline::try_new(
-            prompt_str.into(),
-            output_device,
-            input_device,
-            shutdown_sender,
-            ChannelCapacity::Minimal,
-        )
-        .unwrap();
-
-        // Manually set buffer content for testing.
-        {
-            let mut line_state = readline.safe_line_state.lock().unwrap();
-            line_state.line = GCStringOwned::new("hello");
-            line_state.line_cursor_grapheme = seg_index(5);
-        }
-
-        assert!(!readline.get_buffer().is_empty());
-        assert_eq!(
-            readline.get_cursor_position_status(),
-            CursorPositionBoundsStatus::AtEnd
-        );
-        assert_eq!(readline.get_cursor_position(), seg_index(5));
-        assert_eq!(readline.get_buffer().as_str(), "hello");
-    }
-
-    #[tokio::test]
-    #[allow(clippy::needless_return)]
-    async fn test_editor_state_cursor_at_start_with_content() {
-        use crate::{GCStringOwned, seg_index};
-
-        let prompt_str = "> ";
-
-        if let TTYResult::IsNotInteractive = is_output_interactive() {
-            return;
-        }
-
-        let (output_device, _) = OutputDevice::new_mock();
-        let input_device = InputDevice::new_mock(smallvec::smallvec![]);
-        let (shutdown_sender, _) = broadcast::channel::<()>(1);
-        let (readline, _) = Readline::try_new(
-            prompt_str.into(),
-            output_device,
-            input_device,
-            shutdown_sender,
-            ChannelCapacity::Minimal,
-        )
-        .unwrap();
-
-        // Buffer has content but cursor is at start (like after pressing Home).
-        {
-            let mut line_state = readline.safe_line_state.lock().unwrap();
-            line_state.line = GCStringOwned::new("hello");
-            line_state.line_cursor_grapheme = seg_index(0);
-        }
-
-        assert!(!readline.get_buffer().is_empty());
-        assert_eq!(
-            readline.get_cursor_position_status(),
-            CursorPositionBoundsStatus::AtStart
-        );
-        assert_eq!(readline.get_cursor_position(), seg_index(0));
-        assert_eq!(readline.get_buffer().as_str(), "hello");
-    }
-}
+// The following tests have been migrated to a PTY integration test because they
+// instantiate `Readline`, which calls `enable_raw_mode()` and `disable_raw_mode()` (via
+// `Drop`). Running them as unit tests causes the "staircase effect" in the developer's
+// terminal.
+//
+// Migrated tests:
+// 1. `test_readline_internal_process_event_and_terminal_output`
+// 2. `test_editor_state_empty_buffer`
+// 3. `test_editor_state_with_content`
+// 4. `test_editor_state_cursor_at_start_with_content`
+//
+// New location:
+// `tui/src/readline_async/readline_async_impl/integration_tests/pty_editor_state_test.rs`
 
 #[cfg(test)]
 mod test_streams {
@@ -1455,8 +1228,9 @@ mod test_pause_and_resume_support {
     #[test]
     fn test_flush_internal_paused() {
         // Create a mock `LineState` with initial data.
+        let test_size = crate::Size::new((crate::width(100), crate::height(100)));
         let safe_line_state =
-            Arc::new(Mutex::new(LineState::new("> ".to_string(), (100, 100))));
+            Arc::new(Mutex::new(LineState::new("> ".to_string(), test_size)));
 
         // Create a mock `SafePauseBuffer` with some paused lines.
         let mut pause_buffer = PauseBuffer::new();
@@ -1488,8 +1262,9 @@ mod test_pause_and_resume_support {
     #[test]
     fn test_flush_internal_not_paused() {
         // Create a mock `LineState` with initial data.
+        let test_size = crate::Size::new((crate::width(100), crate::height(100)));
         let safe_line_state =
-            Arc::new(Mutex::new(LineState::new("> ".to_string(), (100, 100))));
+            Arc::new(Mutex::new(LineState::new("> ".to_string(), test_size)));
 
         // Create a mock `SafePauseBuffer` with some paused lines.
         let mut pause_buffer = PauseBuffer::new();

@@ -1,5 +1,6 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+use crate::ok;
 use crate::{SCRIPT_MOD_DEBUG, fg_magenta, script::http_client};
 use miette::IntoDiagnostic;
 
@@ -52,19 +53,14 @@ pub async fn try_get_latest_release_tag_from_github(
 #[cfg(test)]
 mod tests_github_api {
     use super::*;
-    use crate::{TTYResult, is_output_interactive, retry_until_success_test_async};
+    use crate::retry_until_success_test_async;
     use std::time::Duration;
     use tokio::time::timeout;
 
     const TIMEOUT: Duration = Duration::from_secs(1);
 
-    /// Do not run this in CI/CD since it makes API calls to github.com.
     #[tokio::test]
     async fn test_get_latest_tag_from_github() {
-        if let TTYResult::IsNotInteractive = is_output_interactive() {
-            return;
-        }
-
         let org = "cloudflare";
         let repo = "cfssl";
 
@@ -75,7 +71,7 @@ mod tests_github_api {
                 Ok(Ok(tag)) => {
                     assert!(!tag.is_empty());
                     println!("Latest tag: {}", fg_magenta(&tag));
-                    Ok(())
+                    ok!()
                 }
                 Ok(Err(err)) => Err(format!("API error: {err:?}")),
                 Err(_) => Err("Timeout: GitHub was too slow".to_string()),

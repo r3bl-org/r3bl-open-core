@@ -419,7 +419,7 @@ cargo xtask dev-dashboard
 **Precedents:**
 
 - [rust-analyzer](https://github.com/rust-lang/rust-analyzer/tree/master/xtask)
-- [tokio](https://github.com/tokio-rs/tokio/tree/master/xtask)
+- [tokio](https://github.com/tokio-rs/tokio/tree/main/xtask)
 
 ---
 
@@ -948,7 +948,7 @@ fn test_example_picker_navigation() {
 
 - [cargo-xtask pattern](https://github.com/matklad/cargo-xtask)
 - [rust-analyzer xtask](https://github.com/rust-lang/rust-analyzer/tree/master/xtask)
-- [tokio xtask](https://github.com/tokio-rs/tokio/tree/master/xtask)
+- [tokio xtask](https://github.com/tokio-rs/tokio/tree/main/xtask)
 - [cargo-make](https://github.com/sagiegurari/cargo-make)
 - [just task runner](https://github.com/casey/just)
 

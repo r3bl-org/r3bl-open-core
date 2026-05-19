@@ -1,8 +1,10 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+// cspell:words GPGSIGN
+
 //! Operations for detecting and filtering changed files in git repositories.
 
-use crate::{ResultAndCommand, Run,
+use crate::{ResultAndCommand, Run, command,
             script::git::types::{git_command_args::{GIT_ARG_DIFF_FILTER_NO_DELETES,
                                                     GIT_ARG_HEAD, GIT_ARG_NAME_ONLY,
                                                     GIT_ARG_NO_COMMIT_ID,
@@ -130,17 +132,16 @@ async fn get_files_from_last_commit(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{script::git::types::{git_command_names::{GIT_CMD_ADD, GIT_CMD_COMMIT,
+    use crate::{generate_async_isolated_process_test, ok,
+                script::git::types::{git_command_names::{GIT_CMD_ADD, GIT_CMD_COMMIT,
                                                          GIT_CMD_CONFIG, GIT_CMD_INIT},
                                      git_config_keys::{GIT_CONFIG_COMMIT_GPGSIGN,
                                                        GIT_CONFIG_USER_EMAIL,
                                                        GIT_CONFIG_USER_NAME},
-                                     test_config::{TEST_EMAIL,
-                                                   TEST_ENV_ISOLATED_TEST_RUNNER,
-                                                   TEST_GPG_SIGN_DISABLED,
+                                     test_config::{TEST_EMAIL, TEST_GPG_SIGN_DISABLED,
                                                    TEST_INITIAL_COMMIT_MSG,
                                                    TEST_USER_NAME}},
-                try_create_temp_dir_and_cd, try_write_file};
+                try_create_temp_dir_and_cd, try_write_file, with_saved_pwd};
 
     async fn test_try_get_changed_files_by_ext() -> miette::Result<()> {
         with_saved_pwd!(async {
@@ -223,28 +224,16 @@ mod tests {
         ok!(())
     }
 
-    #[tokio::test]
-    async fn test_changed_files_in_isolated_process() {
-        crate::suppress_wer_dialogs();
-        if std::env::var(TEST_ENV_ISOLATED_TEST_RUNNER).is_ok() {
-            if let Err(err) = run_changed_files_tests().await {
-                eprintln!("Test failed with error: {err}");
-                std::process::exit(1);
-            }
-            std::process::exit(0);
-        }
+    generate_async_isolated_process_test!(
+        test_changed_files_in_isolated_process,
+        controller_fn,
+        run_changed_files_tests,
+        std::process::Stdio::null(),
+        std::process::Stdio::piped(),
+        std::process::Stdio::piped()
+    );
 
-        let mut cmd = crate::new_isolated_test_command();
-        cmd.env(TEST_ENV_ISOLATED_TEST_RUNNER, "1")
-            .env("RUST_BACKTRACE", "1")
-            .args([
-                "--test-threads",
-                "1",
-                "--nocapture",
-                "test_changed_files_in_isolated_process",
-            ]);
-
-        let output = cmd.output().expect("Failed to run isolated test");
+    fn controller_fn(output: std::process::Output) {
         let stderr = String::from_utf8_lossy(&output.stderr).to_string();
 
         if !output.status.success()

@@ -1182,7 +1182,7 @@ mod tests {
         // Simulates rrt.rs pattern: single-line and multi-line ref defs interleaved.
         let text = concat!(
             "Content here.\n\n",
-            "[`RAII`]: https://en.wikipedia.org/wiki/RAII\n",
+            "[`RAII`]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization\n",
             "[`RRTWaker::wake()`]:\n",
             "    super::RRTWaker::wake\n",
             "[`RRTWorker`]: super::RRTWorker\n",

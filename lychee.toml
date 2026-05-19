@@ -31,4 +31,14 @@ exclude = [
     "^https?://via\\.placeholder\\.com/",
     # YouTube blocks automated link checkers (returns 404 to bots).
     "^https?://(www\\.)?youtu(\\.be|be\\.com)/",
+    # GitHub API template URLs with {placeholders} that lychee URL-encodes to %7B...%7D.
+    "api\\.github\\.com/repos/.*%7B",
+    # crates.io API template URLs with {placeholders}.
+    "crates\\.io/api/.*%7B",
+    # Claude.ai blocks scrapers.
+    "^https?://claude\\.ai/",
+    # Star-history often has transient 503s or blocks scrapers.
+    "^https?://api\\.star-history\\.com/",
+    # Medium blocks scrapers.
+    "^https?://medium\\.com/",
 ]

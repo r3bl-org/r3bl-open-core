@@ -1,12 +1,14 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
+
 use super::{SelectionList, history::EditorHistory, render_cache::RenderCache};
 use crate::{CaretRaw, CaretScrAdj, ColWidth, CursorPositionBoundsStatus,
             DEBUG_TUI_COPY_PASTE, DEBUG_TUI_MOD, DEFAULT_SYN_HI_FILE_EXT,
             EditorBufferMutWithDrop, GapBufferLine, GetMemSize, InlineString, LengthOps,
             MemoizedMemorySize, MemorySize, NumericValue, RowHeight, RowIndex, ScrOfs,
             SegStringOwned, Size, TinyInlineString, ZeroCopyGapBuffer,
-            caret_locate::locate_col, format_as_kilobytes_with_commas, glyphs, row,
-            validate_buffer_mut::EditorBufferMutNoDrop, width};
+            caret_locate::locate_col, format_as_kilobytes_with_commas, glyphs,
+            inline_string, ok, row, validate_buffer_mut::EditorBufferMutNoDrop, width,
+            with_mut};
 use std::fmt::{Debug, Display, Formatter, Result};
 
 /// Stores the data for a single editor buffer using [`ZeroCopyGapBuffer`] for efficient
@@ -818,8 +820,8 @@ mod debug_impl {
 #[cfg(test)]
 mod test_memory_cache_invalidation {
     use super::*;
-    use crate::{CaretMovementDirection, EditorEngine, RingBuffer, caret_scr_adj, col,
-                height, len};
+    use crate::{CaretMovementDirection, EditorEngine, RingBuffer, assert_eq2,
+                caret_scr_adj, col, height, len};
 
     #[test]
     fn test_cache_invalidated_on_get_mut() {

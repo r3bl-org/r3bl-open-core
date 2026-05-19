@@ -82,8 +82,15 @@ function check_lychee_changed_files
         # No HEAD yet (initial commit).
         set changed_files (git diff --name-only 2>/dev/null)
     end
-    # Deduplicate and filter empty strings.
+    # Deduplicate, filter empty strings, and remove deleted files (which crash lychee).
     set changed_files (string match -v '' $changed_files | sort -u)
+    set -l existing_files
+    for f in $changed_files
+        if test -e $f
+            set -a existing_files $f
+        end
+    end
+    set changed_files $existing_files
 
     if test (count $changed_files) -eq 0
         echo "No changed files to check."

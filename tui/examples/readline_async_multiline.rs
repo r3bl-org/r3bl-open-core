@@ -33,17 +33,19 @@
 //! [`SharedWriter`]: r3bl_tui::SharedWriter
 
 use miette::IntoDiagnostic;
-use r3bl_tui::{readline_async::{ReadlineAsyncContext, ReadlineEvent},
-               rla_println};
+use r3bl_tui::{IntoErr, TuiAvailability, assert_terminal_is_interactive, ok,
+               readline_async::{ReadlineAsyncContext, ReadlineEvent},
+               rla_println, set_mimalloc_in_main};
 use std::io::Write;
 
 #[tokio::main]
 async fn main() -> miette::Result<()> {
-    let maybe_rl_ctx = ReadlineAsyncContext::try_new(Some("> "), None).await?;
+    set_mimalloc_in_main!();
+    assert_terminal_is_interactive();
 
-    let Some(mut rl_ctx) = maybe_rl_ctx else {
-        println!("Not an interactive terminal.");
-        return Ok(());
+    let mut rl_ctx = match ReadlineAsyncContext::try_new(Some("> "), None).await {
+        TuiAvailability::Available(rl_ctx) => rl_ctx,
+        it => return it.into_err(),
     };
 
     // Get the shared writer for logging.
@@ -98,5 +100,5 @@ async fn main() -> miette::Result<()> {
         .await?;
     rl_ctx.await_shutdown().await;
 
-    Ok(())
+    ok!()
 }

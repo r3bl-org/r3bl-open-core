@@ -16,7 +16,7 @@
   - [The Fix](#the-fix)
     - [Step 1: Restructure `PtyPair` to support early slave close](#step-1-restructure-ptypair-to-support-early-slave-close)
     - [Step 2: Close slave immediately after spawn in the macro](#step-2-close-slave-immediately-after-spawn-in-the-macro)
-    - [Step 3: Consolidate `drain_pty_and_wait` into `single_thread_safe_controlled_child.rs`](#step-3-consolidate-drain_pty_and_wait-into-single_thread_safe_controlled_childrs)
+    - [Step 3: Consolidate `drain_pty_and_wait` into `pty_test_child.rs`](#step-3-consolidate-drain_pty_and_wait-into-pty_test_childrs)
     - [Step 4: Update `drain_pty_and_wait` docs](#step-4-update-drain_pty_and_wait-docs)
   - [Why This Is Standard Unix PTY Hygiene](#why-this-is-standard-unix-pty-hygiene)
   - [Verification](#verification)
@@ -28,7 +28,7 @@
 
 ## Overview
 
-During a routine audit of the `SingleThreadSafeControlledChild` documentation, we discovered that
+During a routine audit of the `PtyTestChild` documentation, we discovered that
 `test_pty_mio_poller_thread_reuse` would **hang indefinitely** when run as part of the full test
 suite (`./check.fish --test`), while passing instantly in isolation. Investigation revealed this was
 **not** a timing issue but a real **file descriptor leak** in the `generate_pty_test!` macro that
@@ -44,7 +44,7 @@ loop that waited for child output would hang forever.
 
 - **Any** controller function that reads from the PTY in a loop and relies on EOF to detect child
   exit was vulnerable.
-- The `SingleThreadSafeControlledChild` / `drain_and_wait` mechanism masked this for the **happy
+- The `PtyTestChild` / `drain_and_wait` mechanism masked this for the **happy
   path** (child exits normally) because it happened to drain quickly. But if the child **panicked**
   or exited abnormally, the controller's read loop would deadlock permanently.
 - The 30-second `PtyTestWatchdog` would kill the child process — but the child was already dead (a
@@ -99,7 +99,7 @@ let child = pty_pair.controlled()            // borrows slave
     .expect("...");
                                               // parent STILL holds slave fd in pty_pair!
 
-let child = SingleThreadSafeControlledChild::new(child);
+let child = PtyTestChild::new(child);
 let _watchdog = PtyTestWatchdog::new(...);
 
 $controller_fn(pty_pair, child);             // controller gets pty_pair with slave still open
@@ -183,7 +183,7 @@ let child = pty_pair.controlled()
 // NEW: Close the slave side immediately after spawning.
 pty_pair.close_controlled();
 
-let child = SingleThreadSafeControlledChild::new(child);
+let child = PtyTestChild::new(child);
 ```
 
 Now the fd ownership is correct:
@@ -201,12 +201,12 @@ When the child exits (normally or via panic), its slave fds close, and the kerne
 the master reader. The controller's `read_line()` loop can now detect child death and fail with a
 clear message instead of hanging.
 
-### Step 3: Consolidate `drain_pty_and_wait` into `single_thread_safe_controlled_child.rs`
+### Step 3: Consolidate `drain_pty_and_wait` into `pty_test_child.rs`
 
 **Deleted: `drain_pty_and_wait.rs`**
 
-Moved the function into `single_thread_safe_controlled_child.rs` since it's the only caller (via
-`SingleThreadSafeControlledChild::drain_and_wait`). Updated docs to reflect that the slave is now
+Moved the function into `pty_test_child.rs` since it's the only caller (via
+`PtyTestChild::drain_and_wait`). Updated docs to reflect that the slave is now
 closed before the read loop, not during drain.
 
 ### Step 4: Update `drain_pty_and_wait` docs
@@ -253,7 +253,7 @@ After the fix:
 | :--------------------------------------- | :---------------------------------------------------------------------------------------------------- |
 | `tui/src/core/pty/pty_core/pty_types.rs` | `PtyPair` restructured to `Option<Controlled>`, added `close_controlled()`, removed `into_inner()`    |
 | `generate_pty_test.rs`                   | Added `pty_pair.close_controlled()` after spawn, added orchestration docs                             |
-| `single_thread_safe_controlled_child.rs` | Absorbed `drain_pty_and_wait` function, updated docs                                                  |
-| `drain_pty_and_wait.rs`                  | Deleted (moved into `single_thread_safe_controlled_child.rs`)                                         |
-| `mod.rs`                                 | Removed `drain_pty_and_wait` module, renamed `guarded_child` to `single_thread_safe_controlled_child` |
-| `task/done/check-fix-hung-test-proc.md`  | Updated plan to reflect `SingleThreadSafeControlledChild` naming and `clone_termination_handle`       |
+| `pty_test_child.rs` | Absorbed `drain_pty_and_wait` function, updated docs                                                  |
+| `drain_pty_and_wait.rs`                  | Deleted (moved into `pty_test_child.rs`)                                         |
+| `mod.rs`                                 | Removed `drain_pty_and_wait` module, renamed `guarded_child` to `pty_test_child` |
+| `task/done/check-fix-hung-test-proc.md`  | Updated plan to reflect `PtyTestChild` naming and `clone_termination_handle`       |

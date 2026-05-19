@@ -4,12 +4,13 @@
 
 use mio::Token;
 use signal_hook_mio::v1_0::Signals;
-use std::io::Stdin;
+use std::{fmt::{Debug, Formatter},
+          io::Stdin};
 
 /// Registry of all event sources monitored by [`mio::Poll`].
 ///
 /// This struct centralizes the management of heterogeneous event sources ([`stdin`],
-/// [signals]) that are registered with [`mio`] for I/O multiplexing. Each source has a
+/// [`signals`]) that are registered with [`mio`] for I/O multiplexing. Each source has a
 /// corresponding [`Token`] in [`SourceKindReady`] for dispatch routing.
 ///
 /// # What is a "Source"?
@@ -46,11 +47,10 @@ use std::io::Stdin;
 /// [`Poll`]: mio::Poll
 /// [`read()`]: std::io::Read::read
 /// [`Signals`]: signal_hook_mio::v1_0::Signals
+/// [`signals`]: signal_hook_mio::v1_0::Signals
 /// [`Stdin`]: std::io::Stdin
 /// [`stdin`]: std::io::stdin
 /// [`Token`]: mio::Token
-/// [signals]: signal_hook_mio::v1_0::Signals
-#[allow(missing_debug_implementations)]
 pub struct SourceRegistry {
     /// [`Stdin`] handle registered with [`mio::Poll`].
     ///
@@ -81,6 +81,15 @@ pub struct SourceRegistry {
     pub signals: Signals,
 }
 
+impl Debug for SourceRegistry {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("SourceRegistry")
+            .field("stdin", &"Stdin")
+            .field("signals", &"Signals")
+            .finish()
+    }
+}
+
 /// Identifies which event source became ready.
 ///
 /// This enum is the single source of truth for [`mio`] [`Token`] ↔ source mapping.
@@ -105,17 +114,27 @@ pub enum SourceKindReady {
     ///
     /// [`SIGWINCH`]: signal_hook::consts::SIGWINCH
     Signals,
-    /// Wakeup signal from [`SubscriberGuard`] drop - check if thread should exit.
+    /// **CONTROL PLANE** software interrupt triggered by [`SubscriberGuard`] drop.
     ///
-    /// When a [`SubscriberGuard`] is dropped, it calls [`Waker::wake()`] to interrupt the
-    /// poll. Then [`handle_receiver_drop_waker_with_sender()`] checks if
-    /// [`receiver_count()`] is `0` and exits the thread if so.
+    /// When a [`SubscriberGuard`] is dropped, it calls
+    /// [`RRTSoftwareInterrupt::trigger_software_interrupt()`] to physically unblock
+    /// the parked [`mio::Poll::poll()`] call.
     ///
-    /// [`handle_receiver_drop_waker_with_sender()`]: super::handler_receiver_drop::handle_receiver_drop_waker_with_sender
+    /// Once unblocked, [`MioPollWorker`] identifies this as a [`SoftwareInterrupt`]
+    /// variant, dispatches it, and then checks if [`receiver_count()`] has dropped to
+    /// `0`. If no subscribers remain, the worker returns [`Continuation::Stop`] to
+    /// exit the thread.
+    ///
+    /// [`Continuation::Stop`]: crate::Continuation::Stop
+    /// [`handle_software_interrupt_with_sender()`]:
+    ///     super::handler_software_interrupt::handle_software_interrupt_with_sender
+    /// [`MioPollWorker`]: super::MioPollWorker
     /// [`receiver_count()`]: tokio::sync::broadcast::Sender::receiver_count
+    /// [`RRTSoftwareInterrupt::trigger_software_interrupt()`]:
+    ///     crate::RRTSoftwareInterrupt::trigger_software_interrupt
+    /// [`SoftwareInterrupt`]: SourceKindReady::SoftwareInterrupt
     /// [`SubscriberGuard`]: crate::SubscriberGuard
-    /// [`Waker::wake()`]: mio::Waker::wake
-    ReceiverDropWaker,
+    SoftwareInterrupt,
     /// Unknown token - should not happen in normal operation.
     Unknown,
 }
@@ -138,7 +157,7 @@ impl SourceKindReady {
         match self {
             Self::Stdin => Token(0),
             Self::Signals => Token(1),
-            Self::ReceiverDropWaker => Token(2),
+            Self::SoftwareInterrupt => Token(2),
             Self::Unknown => panic!("Unknown source has no token"),
         }
     }
@@ -156,7 +175,7 @@ impl SourceKindReady {
         match token.0 {
             0 => Self::Stdin,
             1 => Self::Signals,
-            2 => Self::ReceiverDropWaker,
+            2 => Self::SoftwareInterrupt,
             _ => Self::Unknown,
         }
     }

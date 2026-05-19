@@ -2,6 +2,7 @@
 
 // cspell:words noconfirm
 
+use crate::{command, ok};
 use miette::IntoDiagnostic;
 
 /// Supported package manager types.
@@ -244,7 +245,6 @@ pub fn get_package_manager() -> Option<PackageManager> { PackageManager::detect(
 #[cfg(test)]
 mod tests_package_manager {
     use super::*;
-    use crate::{TTYResult, is_output_interactive};
 
     #[test]
     fn test_package_manager_detection() {
@@ -261,10 +261,6 @@ mod tests_package_manager {
 
     #[tokio::test]
     async fn test_check_if_package_is_installed() {
-        if let TTYResult::IsNotInteractive = is_output_interactive() {
-            return;
-        }
-
         // bash should be installed on any Unix-like system
         let package_name = "bash";
         let result = check_if_package_is_installed(package_name).await;
@@ -277,10 +273,6 @@ mod tests_package_manager {
 
     #[tokio::test]
     async fn test_install_nonexistent_package() {
-        if let TTYResult::IsNotInteractive = is_output_interactive() {
-            return;
-        }
-
         let package_name = "this_package_definitely_does_not_exist_12345";
         let result = install_package(package_name).await;
 

@@ -14,3 +14,5 @@ crash_log.txt
 .serena/memories
 rustc-ice-*.txt
 rust-toolchain-script.lock*
+.claude/worktrees
+.vscode/task-spaces.json

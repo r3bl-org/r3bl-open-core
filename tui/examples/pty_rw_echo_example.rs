@@ -5,22 +5,23 @@
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 
 use r3bl_tui::{AnsiSequenceGenerator, InputEvent, Key, KeyPress, KeyState,
-               ModifierKeysMask, RawMode, col,
+               ModifierKeysMask, RawMode, assert_terminal_is_interactive, col,
                core::{get_size,
                       pty::{ControlSequence, CursorKeyMode, DefaultPtySessionConfig,
                             PtyInputEvent, PtyOutputEvent, PtySessionBuilder,
                             PtySessionConfigOption},
                       terminal_io::{InputDevice, OutputDevice},
                       try_initialize_logging_global},
-               lock_output_device_as_mut, row, set_mimalloc_in_main};
+               lock_output_device_as_mut, ok, row, set_mimalloc_in_main};
 use std::io::Write;
 
 #[tokio::main]
 async fn main() -> miette::Result<()> {
     set_mimalloc_in_main!();
+    assert_terminal_is_interactive();
 
     // Initialize logging.
-    try_initialize_logging_global(tracing_core::LevelFilter::DEBUG).ok();
+    let _log_guard = try_initialize_logging_global(tracing_core::LevelFilter::DEBUG).ok();
 
     println!("🚀 Starting Echo Test");
     println!("📋 Running 'cat' - it will echo whatever you type");
@@ -28,6 +29,7 @@ async fn main() -> miette::Result<()> {
     println!();
 
     let terminal_size = get_size()?;
+
     let output_device = OutputDevice::new_stdout();
     let mut input_device = InputDevice::default();
 
@@ -108,5 +110,5 @@ async fn main() -> miette::Result<()> {
     );
 
     println!("\n👋 Goodbye!");
-    Ok(())
+    ok!()
 }

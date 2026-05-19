@@ -1,6 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::RowIndex;
+use crate::generate_length_type_impl;
 use crate::ChUnit;
 use std::hash::Hash;
 

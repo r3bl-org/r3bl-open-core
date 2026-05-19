@@ -355,8 +355,10 @@ impl Default for PixelCharRenderer {
 
 #[cfg(test)]
 mod tests {
-    use crate::{SGR_BOLD_STR, SGR_ITALIC_STR, SGR_RESET_STR, SGR_UNDERLINE_STR};
     use super::*;
+    use crate::{SGR_BOLD_STR, SGR_ITALIC_STR, SGR_RESET_STR, SGR_UNDERLINE_STR,
+                new_style, tui_color};
+
     #[test]
     fn test_render_plain_text_no_style() {
         let mut renderer = PixelCharRenderer::new();

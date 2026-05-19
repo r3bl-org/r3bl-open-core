@@ -137,7 +137,7 @@ impl From<&[GCStringOwned]> for ZeroCopyGapBuffer {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::RowIndex;
+    use crate::{RowIndex, assert_eq2};
 
     #[test]
     fn test_convert_empty_lines() {

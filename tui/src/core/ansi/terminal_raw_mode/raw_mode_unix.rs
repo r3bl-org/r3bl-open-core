@@ -60,18 +60,57 @@
 //!     mod@crate::terminal_raw_mode#raw-mode-vs-cooked-mode
 //! [termios]: https://man7.org/linux/man-pages/man3/termios.3.html
 
-use crate::{TtyStatus, is_tty_stdin};
-use miette::miette;
+use crate::{DeadlockPreventionPolicy::PanicOnAnyLockNesting, ScopedMutex, TtyStatus,
+            is_tty_stdin, ok, scoped_mutex};
 use rustix::{fd::{AsFd, BorrowedFd},
              termios::{self, OptionalActions, Termios}};
 use std::{fs::File,
           io,
-          sync::{LazyLock, Mutex}};
+          sync::{LazyLock, LockResult, MutexGuard}};
+
 
 /// Stores the terminal settings saved by [`enable_raw_mode()`] before entering raw mode,
 /// so they can be restored by [`disable_raw_mode()`].
-pub static SAVED_TERMIOS: LazyLock<Mutex<Option<Termios>>> =
-    LazyLock::new(|| Mutex::new(None));
+///
+/// # Architectural Rationale for [`PanicOnAnyLockNesting`] (ANY)
+///
+/// We use the most restrictive policy (`ANY`) here because:
+/// 1. **Foundational State Protection**: Terminal raw mode is a foundational system state
+///    that is enabled and disabled exactly once. Using `ANY` protects these critical
+///    transitions from interference, ensuring they happen before the thread begins
+///    acquiring more granular `SPECIFIC` locks (like [`Readline`] or [`OutputDevice`]).
+///    This enforces a loud and fast failure if any other subsystem tries to nest locks
+///    during these sensitive terminal state changes.
+/// 2. **Emergency Bypass**: The implementation of [`enable_raw_mode()`] and
+///    [`disable_raw_mode()`] in this file intentionally uses [`lock_raw()`] instead of
+///    [`write()`]. This **bypasses the shared ledger** and recursion detection to ensure
+///    that terminal restoration (often called during [`Drop`] or panic unwinding) can
+///    always proceed, even in complex failure states. This is critical to prevent a
+///    [Double Panic Abort], which would brick the user's terminal.
+///
+/// See the [Parameters] section in [`ScopedMutex`] for more info.
+///
+/// # Poison Safety
+///
+/// See the [Terminal Restoration: Panic, Drop, and Mutex Poison-Safety] section in the
+/// crate root documentation for details.
+///
+/// [`lock_raw()`]: scoped_mutex::ScopedMutex::lock_raw
+/// [`OutputDevice`]: crate::OutputDevice
+/// [`Readline`]: crate::Readline
+/// [Double Panic Abort]: crate#the-double-panic-abort-risk
+/// [`lock_raw()`]: ScopedMutex::lock_raw
+/// [`PanicOnAnyLockNesting`]:
+///     variant@crate::DeadlockPreventionPolicy::PanicOnAnyLockNesting
+/// [`read()`]: ScopedMutex::read
+/// [`write()`]: ScopedMutex::write
+/// [Double Panic Abort]: crate#the-double-panic-abort-risk
+/// [Parameters]: crate::ScopedMutex#parameters
+/// [Terminal Restoration: Panic, Drop, and Mutex Poison-Safety]:
+///     crate#terminal-restoration-panic-drop-and-mutex-poison-safety
+pub static SAVED_TERMIOS: LazyLock<
+    ScopedMutex<Option<Termios>, { PanicOnAnyLockNesting }>,
+> = LazyLock::new(|| scoped_mutex!(ANY, None));
 
 /// Enables raw mode on the terminal (Unix/Linux/macOS implementation).
 ///
@@ -107,7 +146,18 @@ pub static SAVED_TERMIOS: LazyLock<Mutex<Option<Termios>>> =
 /// Returns miette diagnostic errors if:
 /// - Terminal file descriptor cannot be obtained
 /// - Terminal attributes cannot be retrieved or set
-/// - Mutex lock is poisoned
+///
+/// # Poison Safety
+///
+/// This method is **poison-safe**. It will not panic if the internal [`SAVED_TERMIOS`]
+/// mutex is poisoned. Instead, it will proceed with the dirty state via
+/// [`ScopedMutex::lock_raw()`] and [`into_inner()`] ensuring that even after a panic,
+/// subsequent attempts to enable/disable raw mode do not cause a **Double Panic Abort**
+/// (which would **brick the user's terminal**). We prioritize **Resilience over
+/// Integrity** here.
+///
+/// See the [Terminal Restoration: Panic, Drop, and Mutex Poison-Safety] section in the
+/// crate root documentation for details.
 ///
 /// [`/dev/tty`]: https://man7.org/linux/man-pages/man4/tty.4.html
 /// [`cfmakeraw`]: https://man7.org/linux/man-pages/man3/cfmakeraw.3.html
@@ -117,6 +167,7 @@ pub static SAVED_TERMIOS: LazyLock<Mutex<Option<Termios>>> =
 /// [`ECHO`]: https://man7.org/linux/man-pages/man3/termios.3.html
 /// [`ECHONL`]: https://man7.org/linux/man-pages/man3/termios.3.html
 /// [`ICANON`]: https://man7.org/linux/man-pages/man3/termios.3.html
+/// [`into_inner()`]: std::sync::PoisonError::into_inner
 /// [`ISIG`]: https://man7.org/linux/man-pages/man3/termios.3.html
 /// [`make_raw()`]: rustix::termios::Termios::make_raw
 /// [`rustix`]: https://docs.rs/rustix
@@ -127,6 +178,8 @@ pub static SAVED_TERMIOS: LazyLock<Mutex<Option<Termios>>> =
 /// [`VMIN`]: https://man7.org/linux/man-pages/man3/termios.3.html
 /// [`VTIME`]: https://man7.org/linux/man-pages/man3/termios.3.html
 /// [module documentation]: mod@crate::terminal_raw_mode
+/// [Terminal Restoration: Panic, Drop, and Mutex Poison-Safety]:
+///     crate#terminal-restoration-panic-drop-and-mutex-poison-safety
 pub fn enable_raw_mode() -> miette::Result<()> {
     let fd = terminal_fd::get()
         .map_err(|e| miette::miette!("failed to get terminal file descriptor: {e}"))?;
@@ -135,16 +188,24 @@ pub fn enable_raw_mode() -> miette::Result<()> {
         .map_err(|e| miette::miette!("failed to retrieve terminal attributes: {e}"))?;
 
     // Save original settings.
-    {
-        let mut guard_saved_termios = SAVED_TERMIOS
-            .lock()
-            .map_err(|e| miette!("terminal settings lock poisoned: {e}"))?;
+    SAVED_TERMIOS.lock_raw(|result: LockResult<MutexGuard<'_, Option<Termios>>>| {
+        let mut guard = match result {
+            Ok(guard) => guard,
+            Err(poisoned) => {
+                // % is Display, ? is Debug.
+                tracing::error!(
+                    message = "SAVED_TERMIOS lock poisoned, proceeding with dirty state",
+                    error = ?poisoned
+                );
+                poisoned.into_inner()
+            }
+        };
 
-        if guard_saved_termios.is_none() {
+        if guard.is_none() {
             // rustix's Termios doesn't implement Copy, so we need to clone.
-            *guard_saved_termios = Some(termios.clone());
+            *guard = Some(termios.clone());
         }
-    }
+    });
 
     // See "Crossterm approach" section in the rustdoc above for details.
     termios.make_raw();
@@ -153,7 +214,7 @@ pub fn enable_raw_mode() -> miette::Result<()> {
     termios::tcsetattr(&fd, OptionalActions::Now, &termios)
         .map_err(|e| miette::miette!("failed to set terminal attributes: {e}"))?;
 
-    Ok(())
+    ok!()
 }
 
 /// Disable raw mode and restore original terminal settings (Unix/Linux/macOS
@@ -168,28 +229,52 @@ pub fn enable_raw_mode() -> miette::Result<()> {
 /// Returns [`miette`] diagnostic errors if:
 /// - Terminal file descriptor cannot be obtained.
 /// - Terminal attributes cannot be set.
-/// - [`Mutex`] lock is poisoned.
+///
+/// # Poison Safety
+///
+/// This method is **poison-safe**. It will not panic if the internal [`SAVED_TERMIOS`]
+/// mutex is poisoned. Instead, it will use [`ScopedMutex::lock_raw()`] to proceed with
+/// the dirty state, ensuring that terminal restoration is attempted even during stack
+/// unwinding after a panic. This prevents a **Double Panic Abort** (which would **brick
+/// the user's terminal**). We prioritize **Resilience over Integrity** here.
+///
+/// See the [Terminal Restoration: Panic, Drop, and Mutex Poison-Safety] section in the
+/// crate root documentation for details.
 ///
 /// [`/dev/tty`]: https://man7.org/linux/man-pages/man4/tty.4.html
 /// [`enable_raw_mode()`]: crate::enable_raw_mode
 /// [`miette`]: mod@miette
 /// [`stdin`]: std::io::stdin
 /// [`TTY`]: https://en.wikipedia.org/wiki/Tty_(Unix)
+/// [Terminal Restoration: Panic, Drop, and Mutex Poison-Safety]:
+///     crate#terminal-restoration-panic-drop-and-mutex-poison-safety
 pub fn disable_raw_mode() -> miette::Result<()> {
-    let mut guard_saved_termios = SAVED_TERMIOS
-        .lock()
-        .map_err(|e| miette!("terminal settings lock poisoned: {e}"))?;
+    SAVED_TERMIOS.lock_raw(|result: LockResult<MutexGuard<'_, Option<Termios>>>| {
+        let mut guard = match result {
+            Ok(guard) => guard,
+            Err(poisoned) => {
+                // % is Display, ? is Debug.
+                tracing::error!(
+                    message = "SAVED_TERMIOS lock poisoned, attempting restoration anyway",
+                    error = ?poisoned
+                );
+                poisoned.into_inner()
+            }
+        };
 
-    if let Some(ref saved_termios) = *guard_saved_termios {
-        let fd = terminal_fd::get().map_err(|e| {
-            miette::miette!("failed to get terminal file descriptor: {e}")
-        })?;
-        termios::tcsetattr(&fd, OptionalActions::Now, saved_termios)
-            .map_err(|e| miette::miette!("failed to set terminal attributes: {e}"))?;
-    }
+        if let Some(ref saved_termios) = *guard {
+            let fd = terminal_fd::get().map_err(|e| {
+                miette::miette!("failed to get terminal file descriptor: {e}")
+            })?;
+            termios::tcsetattr(&fd, OptionalActions::Now, saved_termios)
+                .map_err(|e| miette::miette!("failed to set terminal attributes: {e}"))?;
+        }
 
-    // Clear so a subsequent enable_raw_mode() saves a fresh snapshot.
-    *guard_saved_termios = None;
+        // Clear so a subsequent enable_raw_mode() saves a fresh snapshot.
+        *guard = None;
+
+        Ok::<(), miette::Report>(())
+    })?;
 
     ok!()
 }
@@ -239,15 +324,15 @@ mod terminal_fd {
     ///
     /// [`/dev/tty`] is a special file in Unix-like systems that acts as a "backdoor" to
     /// the **controlling terminal** of the current process. Even when [`stdin`] is
-    /// redirected to a pipe, [`/dev/tty`] still provides access to the physical
-    /// terminal device. This allows the application to call [`tcsetattr`] and enable
-    /// raw mode on the actual terminal window where the user is interacting.
+    /// redirected to a pipe, [`/dev/tty`] still provides access to the physical terminal
+    /// device. This allows the application to call [`tcsetattr`] and enable raw mode on
+    /// the actual terminal window where the user is interacting.
     ///
     /// ### Design Rationale: Backend-Aware [`TTY`] Detection
     ///
     /// This function uses the crate's centralized [`TTY`] detection logic (via
-    /// [`term.rs`]) to ensure consistency. This "backend-aware" routing ensures that
-    /// the entire crate respects the same [`TERMINAL_LIB_BACKEND`] configuration when
+    /// [`term.rs`]) to ensure consistency. This "backend-aware" routing ensures that the
+    /// entire crate respects the same [`TERMINAL_LIB_BACKEND`] configuration when
     /// determining terminal interactivity.
     ///
     /// # Errors
@@ -272,3 +357,12 @@ mod terminal_fd {
         }
     }
 }
+
+// The following test has been migrated to a PTY integration test because it calls
+// `enable_raw_mode()`, which mutates the global terminal state.
+//
+// Migrated test:
+// 1. `test_saved_termios_poisoning_recovery`
+//
+// New location:
+// `tui/src/core/ansi/terminal_raw_mode/integration_tests/test_poison_recovery.rs`
