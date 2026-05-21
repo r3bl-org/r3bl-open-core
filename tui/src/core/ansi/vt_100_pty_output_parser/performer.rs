@@ -508,7 +508,10 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
             }
 
             // Graphics operations.
-            SGR_SET_GRAPHICS => {
+            // Private CSI sequences with intermediates (e.g. CSI > 4 ; 1 m, kitty
+            // keyboard protocol) must not be treated as SGR. SGR is CSI Ps... m with
+            // no intermediates per ECMA-48.
+            SGR_SET_GRAPHICS if intermediates.is_empty() => {
                 vt_100_shim_sgr_ops::set_graphics_rendition(self, params);
             }
 
