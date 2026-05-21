@@ -32,7 +32,7 @@ fn test_vim_status_line_pattern() {
 
     // Use the vim_sequences builder to create a realistic status line
     let sequence = vim_sequences::vim_status_line("INSERT", nz(25));
-    let (osc_events, dsr_responses) = ofs_buf.apply_ansi_bytes(sequence);
+    let (osc_events, dsr_responses, _da_responses) = ofs_buf.apply_ansi_bytes(sequence);
 
     // Verify no OSC/DSR events for this operation
     assert_eq!(osc_events.len(), 0);

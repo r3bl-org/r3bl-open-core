@@ -615,13 +615,37 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
                 tracing::warn!("CSI t: Window manipulation not supported in multiplexer");
             }
             'c' => {
-                // DA (Device Attributes) - Request terminal type/capabilities
-                // Not needed: Multiplexer doesn't respond to queries, parent terminal
-                // does. See [mod-level docs](crate::vt_100_pty_output_parser) for
-                // rationale
-                tracing::warn!(
-                    "CSI c: Device Attributes query not supported in multiplexer"
-                );
+                // DA (Device Attributes) - Request terminal type/capabilities.
+                // CSI c without params or with param 0 is a DA1 (Primary Device
+                // Attributes) query. Terminal apps like fish, vim, and neovim send
+                // this to detect terminal capabilities. If the multiplexer doesn't
+                // respond, the app waits ~10s and falls back with reduced features
+                // (fish shows a warning, vim treats colors as 8-color, etc.).
+                //
+                // We respond with CSI ? 62 ; 22 c:
+                //   62 = VT220 (basic terminal with scrolling regions)
+                //   22 = ANSI color support (enables 256-color mode in fish/vim)
+                //
+                // This is a conservative response that enables ANSI colors and basic
+                // VT features without claiming capabilities we don't implement.
+                // Params greater than 0 or '>' prefix (DA2/DA3) are ignored -
+                // responding to DA1 is sufficient for all common terminal apps.
+                let params_empty_or_zero = params
+                    .iter()
+                    .all(|p| p.len() == 0 || (p.len() == 1 && p[0] == 0));
+                if intermediates.is_empty() && params_empty_or_zero {
+                    self.ofs_buf
+                        .ansi_parser_support
+                        .pending_da_responses
+                        .push("\x1b[?62;22c".to_string());
+                    tracing::debug!("CSI c: DA1 responded with CSI ? 62 ; 22 c");
+                } else {
+                    tracing::debug!(
+                        "CSI c: DA query ignored (params={:?}, intermediates={:?})",
+                        params,
+                        intermediates
+                    );
+                }
             }
             'q' => {
                 // DECSCUSR (Set Cursor Style) - Change cursor shape/blink

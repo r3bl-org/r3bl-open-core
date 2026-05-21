@@ -133,6 +133,16 @@ pub struct AnsiParserSupport {
     /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
     pub pending_dsr_responses: Vec<crate::DsrRequestFromPtyEvent>,
 
+    /// DA (Device Attributes) response strings accumulated during processing - need to
+    /// be sent back to [`PTY`]. Terminal apps (fish, vim, etc.) send CSI c (DA1) to
+    /// detect terminal capabilities. If the terminal emulator (us) doesn't respond, the
+    /// app waits ~10s and falls back with limited features.
+    ///
+    /// Each entry is a raw ANSI response string (e.g. `"\x1b[?62;22c"`).
+    ///
+    /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
+    pub pending_da_responses: Vec<String>,
+
     /// Top margin for the **scrollable region** ([`DECSTBM`]) - 1-based row number.
     ///
     /// This variable defines the **upper boundary** of the area where scrolling occurs.
@@ -194,6 +204,7 @@ impl Default for AnsiParserSupport {
             current_style: TuiStyle::default(),
             pending_osc_events: Vec::new(),
             pending_dsr_responses: Vec::new(),
+            pending_da_responses: Vec::new(),
             scroll_region_top: None, // Default: no top margin (uses row 1)
             scroll_region_bottom: None, // Default: no bottom margin (uses last row)
         }
