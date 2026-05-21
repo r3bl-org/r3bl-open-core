@@ -18,7 +18,7 @@
 //! [parser module docs]: super::super
 
 use super::super::test_fixtures_vt_100_ansi_conformance::*;
-use crate::{CsiCount, col,
+use crate::{ANSIBasicColor, CsiCount, EraseDisplayMode, EraseLineMode, SgrCode, col,
             core::ansi::vt_100_pty_output_parser::{CsiSequence,
                                                    ansi_parser_public_api::AnsiToOfsBufPerformer},
             row, term_col, term_row};
@@ -226,5 +226,212 @@ pub mod delete_line {
         for r in 0..5 {
             assert_line_content(&ofs_buf, r, &format!("Line{r:02}"));
         }
+    }
+}
+
+/// Tests for Erase Line (EL) operations.
+pub mod erase_line {
+    use super::*;
+
+    #[test]
+    fn test_erase_from_cursor_to_end() {
+        let mut ofs_buf = create_numbered_buffer(3, 10);
+
+        // Move cursor to row 1 (0-based), col 3 (0-based) and erase to end.
+        let move_cursor = term_row(nz(2)) + term_col(nz(4));
+        let erase = CsiSequence::EraseLine(EraseLineMode::FromCursorToEnd);
+        let sequence = format!("{move_cursor}{erase}");
+        let _result = ofs_buf.apply_ansi_bytes(sequence);
+
+        // Line 0 unchanged.
+        assert_line_content(&ofs_buf, 0, "Line00");
+        // Line 1: "Lin" preserved, rest erased to spaces.
+        assert_line_content(&ofs_buf, 1, "Lin       ");
+        // Line 2 unchanged.
+        assert_line_content(&ofs_buf, 2, "Line02");
+    }
+
+    #[test]
+    fn test_erase_from_start_to_cursor() {
+        let mut ofs_buf = create_numbered_buffer(3, 10);
+
+        // Move cursor to row 1 (0-based), col 3 (0-based) and erase from start.
+        let move_cursor = term_row(nz(2)) + term_col(nz(4));
+        let erase = CsiSequence::EraseLine(EraseLineMode::FromStartToCursor);
+        let sequence = format!("{move_cursor}{erase}");
+        let _result = ofs_buf.apply_ansi_bytes(sequence);
+
+        // Line 0 unchanged.
+        assert_line_content(&ofs_buf, 0, "Line00");
+        // Line 1: cols 0-3 erased, "01" preserved, trailing columns are spaces.
+        assert_line_content(&ofs_buf, 1, "    01    ");
+        // Line 2 unchanged.
+        assert_line_content(&ofs_buf, 2, "Line02");
+    }
+
+    #[test]
+    fn test_erase_entire_line() {
+        let mut ofs_buf = create_numbered_buffer(3, 10);
+
+        // Move cursor to row 1 (0-based) and erase entire line.
+        let move_cursor = term_row(nz(2)) + term_col(nz(1));
+        let erase = CsiSequence::EraseLine(EraseLineMode::EntireLine);
+        let sequence = format!("{move_cursor}{erase}");
+        let _result = ofs_buf.apply_ansi_bytes(sequence);
+
+        // Line 0 unchanged.
+        assert_line_content(&ofs_buf, 0, "Line00");
+        // Line 1 entirely erased.
+        assert_line_content(&ofs_buf, 1, "          ");
+        // Line 2 unchanged.
+        assert_line_content(&ofs_buf, 2, "Line02");
+    }
+
+    #[test]
+    fn test_erase_line_preserves_sgr_style() {
+        let mut ofs_buf = create_numbered_buffer(3, 10);
+
+        // Set a background color via SGR
+        let sgr = format!("{}", SgrCode::BackgroundBasic(ANSIBasicColor::Blue));
+        let _result = ofs_buf.apply_ansi_bytes(sgr);
+
+        // Move cursor to row 1 (0-based) and erase entire line
+        let move_cursor = CsiSequence::CursorPosition {
+            row: term_row(nz(2)),
+            col: term_col(nz(1)),
+        };
+        let erase = CsiSequence::EraseLine(EraseLineMode::EntireLine);
+        let sequence = format!("{move_cursor}{erase}");
+        let _result = ofs_buf.apply_ansi_bytes(sequence);
+
+        // Verify erased cells are PixelChar::PlainText with the active style
+        for c in 0..10 {
+            match &ofs_buf.buffer[1][c] {
+                crate::PixelChar::PlainText { display_char, style } => {
+                    assert_eq!(*display_char, ' ');
+                    assert_eq!(
+                        style.color_bg,
+                        Some(ANSIBasicColor::Blue.into()),
+                        "SGR background style not preserved in erased cell at col {c}"
+                    );
+                }
+                _ => panic!(
+                    "Expected styled PlainText at row 1 col {c}, got {:?}",
+                    ofs_buf.buffer[1][c]
+                ),
+            }
+        }
+
+        // Line 0 and 2 unchanged
+        assert_line_content(&ofs_buf, 0, "Line00");
+        assert_line_content(&ofs_buf, 2, "Line02");
+    }
+}
+
+/// Tests for Erase Display (ED) operations.
+pub mod erase_display {
+    use super::*;
+
+    #[test]
+    fn test_erase_display_from_cursor_to_end() {
+        let mut ofs_buf = create_numbered_buffer(3, 10);
+
+        // Move cursor to row 1 (0-based), col 3 (0-based) and erase to end.
+        let move_cursor = term_row(nz(2)) + term_col(nz(4));
+        let erase = CsiSequence::EraseDisplay(EraseDisplayMode::FromCursorToEnd);
+        let sequence = format!("{move_cursor}{erase}");
+        let _result = ofs_buf.apply_ansi_bytes(sequence);
+
+        // Line 0 unchanged.
+        assert_line_content(&ofs_buf, 0, "Line00");
+        // Line 1: "Lin" preserved, rest erased to spaces.
+        assert_line_content(&ofs_buf, 1, "Lin       ");
+        // Line 2 entirely erased.
+        assert_line_content(&ofs_buf, 2, "          ");
+    }
+
+    #[test]
+    fn test_erase_display_from_start_to_cursor() {
+        let mut ofs_buf = create_numbered_buffer(3, 10);
+
+        // Move cursor to row 1 (0-based), col 3 (0-based) and erase from start.
+        let move_cursor = term_row(nz(2)) + term_col(nz(4));
+        let erase = CsiSequence::EraseDisplay(EraseDisplayMode::FromStartToCursor);
+        let sequence = format!("{move_cursor}{erase}");
+        let _result = ofs_buf.apply_ansi_bytes(sequence);
+
+        // Line 0 entirely erased.
+        assert_line_content(&ofs_buf, 0, "          ");
+        // Line 1: cols 0-3 erased, "01" preserved, trailing columns are spaces.
+        assert_line_content(&ofs_buf, 1, "    01    ");
+        // Line 2 unchanged.
+        assert_line_content(&ofs_buf, 2, "Line02");
+    }
+
+    #[test]
+    fn test_erase_display_entire_screen() {
+        let mut ofs_buf = create_numbered_buffer(3, 10);
+
+        // Erase entire screen.
+        let erase = CsiSequence::EraseDisplay(EraseDisplayMode::EntireScreen);
+        let sequence = format!("{erase}");
+        let _result = ofs_buf.apply_ansi_bytes(sequence);
+
+        // All lines entirely erased.
+        assert_line_content(&ofs_buf, 0, "          ");
+        assert_line_content(&ofs_buf, 1, "          ");
+        assert_line_content(&ofs_buf, 2, "          ");
+    }
+
+    #[test]
+    fn test_erase_display_preserves_sgr_style() {
+        let mut ofs_buf = create_numbered_buffer(3, 10);
+
+        // Set a background color via SGR
+        let sgr = format!("{}", SgrCode::BackgroundBasic(ANSIBasicColor::Blue));
+        let _result = ofs_buf.apply_ansi_bytes(sgr);
+
+        // Erase entire display
+        let erase = CsiSequence::EraseDisplay(EraseDisplayMode::EntireScreen);
+        let sequence = format!("{erase}");
+        let _result = ofs_buf.apply_ansi_bytes(sequence);
+
+        // Verify all erased cells are PixelChar::PlainText with the active style
+        for r in 0..3 {
+            for c in 0..10 {
+                match &ofs_buf.buffer[r][c] {
+                    crate::PixelChar::PlainText { display_char, style } => {
+                        assert_eq!(*display_char, ' ');
+                        assert_eq!(
+                            style.color_bg,
+                            Some(ANSIBasicColor::Blue.into()),
+                            "SGR background style not preserved in erased cell at row {r} col {c}"
+                        );
+                    }
+                    _ => panic!(
+                        "Expected styled PlainText at row {r} col {c}, got {:?}",
+                        ofs_buf.buffer[r][c]
+                    ),
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_erase_display_entire_screen_and_scrollback() {
+        let mut ofs_buf = create_numbered_buffer(3, 10);
+
+        // Erase entire display and scrollback buffer.
+        // VT-100 specifies mode 3 for this, which in this implementation
+        // is treated identically to mode 2 (EntireScreen).
+        let erase =
+            CsiSequence::EraseDisplay(EraseDisplayMode::EntireScreenAndScrollback);
+        let sequence = format!("{erase}");
+        let _result = ofs_buf.apply_ansi_bytes(sequence);
+
+        // All lines entirely erased.
+        assert_line_content(&ofs_buf, 0, "          ");
+        assert_line_content(&ofs_buf, 1, "          ");
+        assert_line_content(&ofs_buf, 2, "          ");
     }
 }

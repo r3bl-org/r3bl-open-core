@@ -59,9 +59,9 @@
 //!     Route to operations module:
 //!       - cursor_ops:: for movement (A,B,C,D,H)
 //!       - scroll_ops:: for scrolling (S,T)
-//!       - sgr_ops:: for styling (m)     ╭───────────╮
-//!       - line_ops:: for lines (L,M) <- │THIS MODULE│
-//!       - char_ops:: for chars (@,P,X)  ╰───────────╯
+//!       - sgr_ops:: for styling (m)         ╭───────────╮
+//!       - line_ops:: for lines (J,K,L,M) <- │THIS MODULE│
+//!       - char_ops:: for chars (@,P,X)      ╰───────────╯
 //!         ↓
 //!     Update OffscreenBuffer state
 //! ```
@@ -96,7 +96,7 @@
 //! [module-level documentation]: self
 
 use super::super::ansi_parser_public_api::AnsiToOfsBufPerformer;
-use crate::ParamsExt;
+use crate::{EraseDisplayMode, EraseLineMode, ParamsExt};
 
 /// Handle IL (Insert Line) - insert n blank lines at cursor position.
 /// Lines below cursor and within scroll region shift down.
@@ -143,4 +143,46 @@ pub fn delete_lines(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params)
         result.is_ok(),
         "Failed to delete {how_many:?} lines at row {at:?}",
     );
+}
+
+/// Handle EL (Erase Line) - erase part or all of current line.
+///
+/// Fills affected cells with spaces using the current SGR style (preserving active
+/// background color). This differs from [`clear_line`] which fills with unstyled
+/// [`PixelChar::Spacer`].
+///
+/// **[`VT-100`] Protocol**: The mode parameter selects the erase region:
+/// - `0` (default, missing) - From cursor to end of line
+/// - `1` - From start of line to cursor
+/// - `2` - Entire line
+///
+/// [`PixelChar::Spacer`]: crate::PixelChar::Spacer
+/// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+/// [`clear_line`]: crate::OffscreenBuffer::clear_line
+pub fn erase_line(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) {
+    let mode: EraseLineMode = params
+        .extract_nth_single_opt_raw(0)
+        .unwrap_or(0)
+        .into();
+    performer.ofs_buf.erase_line(mode);
+}
+
+/// Handle ED (Erase Display) - erase part or all of the display.
+///
+/// Fills affected cells with spaces using the current SGR style (preserving active
+/// background color).
+///
+/// **[`VT-100`] Protocol**: The mode parameter selects the erase region:
+/// - `0` (default, missing) - From cursor to end of display
+/// - `1` - From start of display to cursor
+/// - `2` - Entire display
+/// - `3` - Entire display and scrollback buffer (treated same as `2`)
+///
+/// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+pub fn erase_display(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) {
+    let mode: EraseDisplayMode = params
+        .extract_nth_single_opt_raw(0)
+        .unwrap_or(0)
+        .into();
+    performer.ofs_buf.erase_display(mode);
 }

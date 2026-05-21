@@ -7,7 +7,8 @@
 //!
 //! - **IL** (Insert Lines) - [`shift_lines_down()`]
 //! - **DL** (Delete Lines) - [`shift_lines_up()`]
-//! - **EL** (Erase Line) - [`clear_line()`]
+//! - **EL** (Erase Line) - [`erase_line()`]
+//! - **ED** (Erase Display) - [`erase_display()`]
 //!
 //! All operations maintain VT100 compliance and handle proper line manipulation
 //! within scroll regions as specified in VT100 documentation.
@@ -54,12 +55,15 @@
 //!
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`clear_line()`]: crate::OffscreenBuffer::clear_line
+//! [`erase_line()`]: crate::OffscreenBuffer::erase_line
+//! [`erase_display()`]: crate::OffscreenBuffer::erase_display
 //! [`shift_lines_down()`]: crate::OffscreenBuffer::shift_lines_down
 //! [`shift_lines_up()`]: crate::OffscreenBuffer::shift_lines_up
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 //! [Interval Notation]: crate::bounds_check#interval-notation
 
-use crate::{Length, OffscreenBuffer, PixelChar, RowHeight, RowIndex,
+use crate::{EraseDisplayMode, EraseLineMode, Length, OffscreenBuffer, PixelChar,
+            RowHeight, RowIndex,
             core::coordinates::bounds_check::{RangeBoundsExt, RangeBoundsResult,
                                               RangeConvertExt}, ok};
 use std::ops::Range;
@@ -89,6 +93,105 @@ impl OffscreenBuffer {
         );
 
         ok!()
+    }
+
+    /// Erase part or all of the current line, filling with spaces that use the active
+    /// SGR style (including background color).
+    ///
+    /// This implements [`VT-100`] EL (Erase Line) behavior for the ANSI parser. Unlike
+    /// [`clear_line`], the erased cells preserve the current SGR state so background
+    /// colors extend to the end of the line.
+    ///
+    /// Per [`VT-100`] spec, EL silently no-ops for out-of-bounds cursor positions — there
+    /// is no error path.
+    ///
+    /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+    /// [`clear_line`]: crate::OffscreenBuffer::clear_line
+    pub fn erase_line(&mut self, mode: EraseLineMode) {
+        let row = self.cursor_pos.row_index.as_usize();
+        let col = self.cursor_pos.col_index.as_usize();
+        let current_style = self.ansi_parser_support.current_style;
+
+        let Some(line) = self.buffer.get_mut(row) else {
+            return;
+        };
+
+        let fill = PixelChar::PlainText {
+            display_char: ' ',
+            style: current_style,
+        };
+
+        match mode {
+            EraseLineMode::FromCursorToEnd => {
+                let start = col.min(line.len());
+                for c in start..line.len() {
+                    line[c] = fill;
+                }
+            }
+            EraseLineMode::FromStartToCursor => {
+                debug_assert!(!line.is_empty(), "VT-100 lines have positive width; inclusive range 0..=end would panic on empty line");
+                let end = col.min(line.len().saturating_sub(1));
+                for c in 0..=end {
+                    line[c] = fill;
+                }
+            }
+            EraseLineMode::EntireLine => {
+                line.fill(fill);
+            }
+        }
+    }
+
+    /// Erase part or all of the display, filling with spaces that use the active SGR
+    /// style.
+    ///
+    /// This implements [`VT-100`] ED (Erase Display) behavior for the ANSI parser.
+    ///
+    /// Like [`erase_line`](Self::erase_line), this operation uses [`Vec::get_mut`] on
+    /// each row it touches. Per [`VT-100`] spec, ED silently no-ops for out-of-bounds
+    /// cursor positions — there is no error path.
+    ///
+    /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+    pub fn erase_display(&mut self, mode: EraseDisplayMode) {
+        let fill = PixelChar::PlainText {
+            display_char: ' ',
+            style: self.ansi_parser_support.current_style,
+        };
+
+        let cursor_row = self.cursor_pos.row_index.as_usize();
+        let cursor_col = self.cursor_pos.col_index.as_usize();
+
+        match mode {
+            EraseDisplayMode::FromCursorToEnd => {
+                if let Some(line) = self.buffer.get_mut(cursor_row) {
+                    let col = cursor_col.min(line.len());
+                    for c in col..line.len() {
+                        line[c] = fill;
+                    }
+                }
+                for r in (cursor_row + 1)..self.buffer.len() {
+                    self.buffer[r].fill(fill);
+                }
+            }
+            EraseDisplayMode::FromStartToCursor => {
+                let end = cursor_row.min(self.buffer.len());
+                for r in 0..end {
+                    self.buffer[r].fill(fill);
+                }
+                if let Some(line) = self.buffer.get_mut(cursor_row) {
+                    debug_assert!(!line.is_empty(), "VT-100 lines have positive width; inclusive range 0..=col would panic on empty line");
+                    let col = cursor_col.min(line.len().saturating_sub(1));
+                    for c in 0..=col {
+                        line[c] = fill;
+                    }
+                }
+            }
+            EraseDisplayMode::EntireScreen
+            | EraseDisplayMode::EntireScreenAndScrollback => {
+                for line in self.buffer.iter_mut() {
+                    line.fill(fill);
+                }
+            }
+        }
     }
 
     /// Shift lines up within a range by the specified amount.
@@ -538,6 +641,246 @@ mod tests_line_ops {
         let line4 = buffer.get_line(row(4)).unwrap();
         for col_idx in 0..4 {
             assert_eq!(line4[col_idx], create_test_char('Y'));
+        }
+    }
+
+    #[test]
+    fn test_erase_line_from_cursor_to_end() {
+        let mut buffer = create_test_buffer();
+        buffer.cursor_pos = row(1) + col(2);
+
+        // Fill the line with test characters.
+        for col_idx in 0..4 {
+            let _unused = buffer.set_char(row(1) + col(col_idx), create_test_char('X'));
+        }
+
+        // Erase from cursor to end of line.
+        buffer.erase_line(EraseLineMode::FromCursorToEnd);
+
+        // Columns 0-1 should still be 'X', columns 2-3 should be erased (styled space).
+        for col_idx in 0..2 {
+            assert_eq!(
+                buffer.get_char(row(1) + col(col_idx)).unwrap(),
+                create_test_char('X')
+            );
+        }
+        for col_idx in 2..4 {
+            assert_eq!(
+                buffer.get_char(row(1) + col(col_idx)).unwrap(),
+                create_plain_test_char(' ')
+            );
+        }
+    }
+
+    #[test]
+    fn test_erase_line_from_start_to_cursor() {
+        let mut buffer = create_test_buffer();
+        buffer.cursor_pos = row(1) + col(2);
+
+        // Fill the line with test characters.
+        for col_idx in 0..4 {
+            let _unused = buffer.set_char(row(1) + col(col_idx), create_test_char('X'));
+        }
+
+        // Erase from start of line to cursor.
+        buffer.erase_line(EraseLineMode::FromStartToCursor);
+
+        // Columns 0-2 should be erased (styled space), column 3 should still be 'X'.
+        for col_idx in 0..=2 {
+            assert_eq!(
+                buffer.get_char(row(1) + col(col_idx)).unwrap(),
+                create_plain_test_char(' ')
+            );
+        }
+        assert_eq!(
+            buffer.get_char(row(1) + col(3)).unwrap(),
+            create_test_char('X')
+        );
+    }
+
+    #[test]
+    fn test_erase_line_entire_line() {
+        let mut buffer = create_test_buffer();
+        buffer.cursor_pos = row(1) + col(2);
+
+        // Fill the line with test characters.
+        for col_idx in 0..4 {
+            let _unused = buffer.set_char(row(1) + col(col_idx), create_test_char('X'));
+        }
+
+        // Erase entire line.
+        buffer.erase_line(EraseLineMode::EntireLine);
+
+        // All columns should be erased.
+        for col_idx in 0..4 {
+            assert_eq!(
+                buffer.get_char(row(1) + col(col_idx)).unwrap(),
+                create_plain_test_char(' ')
+            );
+        }
+    }
+
+    #[test]
+    fn test_erase_line_out_of_bounds() {
+        let mut buffer = create_test_buffer();
+
+        // Position cursor outside the buffer.
+        buffer.cursor_pos = row(10) + col(0);
+        buffer.erase_line(EraseLineMode::EntireLine);
+        // Must silently no-op, not panic — per VT-100 spec.
+    }
+
+    #[test]
+    fn test_erase_display_from_cursor_to_end() {
+        let mut buffer = create_test_buffer();
+        buffer.cursor_pos = row(2) + col(2);
+
+        // Fill the entire buffer with test characters.
+        for row_idx in 0..5 {
+            for col_idx in 0..4 {
+                let _unused =
+                    buffer.set_char(row(row_idx) + col(col_idx), create_test_char('X'));
+            }
+        }
+
+        // Erase from cursor to end of display.
+        buffer.erase_display(EraseDisplayMode::FromCursorToEnd);
+
+        // Rows 0-1 should still be 'X' (unchanged).
+        for row_idx in 0..2 {
+            for col_idx in 0..4 {
+                assert_eq!(
+                    buffer.get_char(row(row_idx) + col(col_idx)).unwrap(),
+                    create_test_char('X')
+                );
+            }
+        }
+
+        // Row 2: col 0-1 unchanged, col 2-3 erased.
+        for col_idx in 0..2 {
+            assert_eq!(
+                buffer.get_char(row(2) + col(col_idx)).unwrap(),
+                create_test_char('X')
+            );
+        }
+        for col_idx in 2..4 {
+            assert_eq!(
+                buffer.get_char(row(2) + col(col_idx)).unwrap(),
+                create_plain_test_char(' ')
+            );
+        }
+
+        // Rows 3-4 should be entirely erased.
+        for row_idx in 3..5 {
+            for col_idx in 0..4 {
+                assert_eq!(
+                    buffer.get_char(row(row_idx) + col(col_idx)).unwrap(),
+                    create_plain_test_char(' ')
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn test_erase_display_from_start_to_cursor() {
+        let mut buffer = create_test_buffer();
+        buffer.cursor_pos = row(2) + col(2);
+
+        // Fill the entire buffer with test characters.
+        for row_idx in 0..5 {
+            for col_idx in 0..4 {
+                let _unused =
+                    buffer.set_char(row(row_idx) + col(col_idx), create_test_char('X'));
+            }
+        }
+
+        // Erase from start of display to cursor.
+        buffer.erase_display(EraseDisplayMode::FromStartToCursor);
+
+        // Rows 0-1 should be entirely erased.
+        for row_idx in 0..2 {
+            for col_idx in 0..4 {
+                assert_eq!(
+                    buffer.get_char(row(row_idx) + col(col_idx)).unwrap(),
+                    create_plain_test_char(' ')
+                );
+            }
+        }
+
+        // Row 2: col 0-2 erased, col 3 unchanged.
+        for col_idx in 0..=2 {
+            assert_eq!(
+                buffer.get_char(row(2) + col(col_idx)).unwrap(),
+                create_plain_test_char(' ')
+            );
+        }
+        assert_eq!(
+            buffer.get_char(row(2) + col(3)).unwrap(),
+            create_test_char('X')
+        );
+
+        // Rows 3-4 should still be 'X' (unchanged).
+        for row_idx in 3..5 {
+            for col_idx in 0..4 {
+                assert_eq!(
+                    buffer.get_char(row(row_idx) + col(col_idx)).unwrap(),
+                    create_test_char('X')
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn test_erase_display_entire_screen() {
+        let mut buffer = create_test_buffer();
+        buffer.cursor_pos = row(2) + col(2);
+
+        // Fill the entire buffer with test characters.
+        for row_idx in 0..5 {
+            for col_idx in 0..4 {
+                let _unused =
+                    buffer.set_char(row(row_idx) + col(col_idx), create_test_char('X'));
+            }
+        }
+
+        // Erase entire screen.
+        buffer.erase_display(EraseDisplayMode::EntireScreen);
+
+        // All rows should be entirely erased.
+        for row_idx in 0..5 {
+            for col_idx in 0..4 {
+                assert_eq!(
+                    buffer.get_char(row(row_idx) + col(col_idx)).unwrap(),
+                    create_plain_test_char(' ')
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn test_erase_display_entire_screen_and_scrollback() {
+        let mut buffer = create_test_buffer();
+        buffer.cursor_pos = row(2) + col(2);
+
+        // Fill the entire buffer with test characters.
+        for row_idx in 0..5 {
+            for col_idx in 0..4 {
+                let _unused =
+                    buffer.set_char(row(row_idx) + col(col_idx), create_test_char('X'));
+            }
+        }
+
+        // Erase entire screen and scrollback.
+        buffer.erase_display(EraseDisplayMode::EntireScreenAndScrollback);
+
+        // All rows should be entirely erased.
+        for row_idx in 0..5 {
+            for col_idx in 0..4 {
+                assert_eq!(
+                    buffer.get_char(row(row_idx) + col(col_idx)).unwrap(),
+                    create_plain_test_char(' ')
+                );
+            }
         }
     }
 

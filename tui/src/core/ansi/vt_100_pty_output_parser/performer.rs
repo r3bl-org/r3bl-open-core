@@ -367,7 +367,7 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
     ///       - cursor_ops:: for movement (A,B,C,D,H)
     ///       - scroll_ops:: for scrolling (S,T)
     ///       - sgr_ops:: for styling (m)
-    ///       - line_ops:: for lines (L,M)
+    ///       - line_ops:: for lines (J,K,L,M)
     ///       - char_ops:: for chars (@,P,X)
     ///         ↓
     ///     Update OffscreenBuffer state
@@ -400,7 +400,7 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
     /// - Scrolling: SU (Scroll Up), SD (Scroll Down)
     /// - Line operations: IL (Insert Line), DL (Delete Line)
     /// - Character operations: ICH (Insert Char), DCH (Delete Char), ECH (Erase Char)
-    /// - Display control: ED, EL (explicitly ignored - see comments)
+    /// - Display control: ED (Erase Display), EL (Erase Line)
     /// - Cursor save/restore: SCP, RCP
     /// - Margins: [`DECSTBM`] (Set Top and Bottom Margins)
     /// - Modes: SM, RM (including private modes with ? prefix)
@@ -526,13 +526,12 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
                 vt_100_shim_cursor_ops::vertical_position_absolute(self, params);
             }
 
-            // Display control operations (explicitly ignored).
-            ED_ERASE_DISPLAY | EL_ERASE_LINE => {
-                // Clear screen/line - ignore, TUI apps will repaint themselves
-                tracing::warn!(
-                    "CSI {}: Clear display/line operation ignored",
-                    dispatch_char
-                );
+            // Display control operations.
+            ED_ERASE_DISPLAY => {
+                vt_100_shim_line_ops::erase_display(self, params);
+            }
+            EL_ERASE_LINE => {
+                vt_100_shim_line_ops::erase_line(self, params);
             }
 
             // Other unimplemented CSI sequences.
