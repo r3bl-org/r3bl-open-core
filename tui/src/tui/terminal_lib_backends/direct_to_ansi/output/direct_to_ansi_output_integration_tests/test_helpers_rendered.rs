@@ -108,7 +108,7 @@ pub fn execute_and_render_to_buffer_with_size(
     // Step 4: Create OffscreenBuffer and apply bytes.
     let mut ofs_buf =
         OffscreenBuffer::new_empty(buffer_size.row_height + buffer_size.col_width);
-    let (_osc_events, _dsr_responses) = ofs_buf.apply_ansi_bytes(ansi_bytes);
+    let (_osc_events, _dsr_responses, _da_responses) = ofs_buf.apply_ansi_bytes(ansi_bytes);
 
     ofs_buf
 }

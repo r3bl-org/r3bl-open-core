@@ -20,13 +20,14 @@
 //!     SgrCode::ForegroundBasic(ANSIBasicColor::Red),
 //!     SgrCode::Reset
 //! );
-//! let (osc_events, dsr_responses) = buffer.apply_ansi_bytes(pty_output);
-//! // Buffer now contains styled text, events contain any OSC/DSR commands
+//! let (osc_events, dsr_responses, _da_responses) = buffer.apply_ansi_bytes(pty_output);
+//! // Buffer now contains styled text, events contain any OSC/DSR/DA commands
 //! ```
 //!
 //! # Returns
 //!
-//! [`OSC`] events (window titles, etc.) and [`DSR`] responses (terminal status queries).
+//! [`OSC`] events (window titles, etc.), [`DSR`] responses (terminal status queries),
+//! and [`DA`] responses (device attributes queries).
 //!
 //! For implementation details, architecture patterns, and testing strategy, see the the
 //! architecture and testing strategy which covers the shim → impl → test design pattern.
@@ -214,6 +215,11 @@ impl OffscreenBuffer {
     ///   detected.
     /// - A vector of [`DSR response events`] that need to be sent back to the child
     ///   process through the [`PTY`] input channel.
+    /// - A vector of [`DA`] (Device Attributes) response strings that need to be sent
+    ///   back to the child process through the [`PTY`] input channel. Terminal apps
+    ///   (fish, vim, etc.) send `CSI c` to detect terminal capabilities; these
+    ///   pre-formatted ANSI strings (e.g. `"\x1b[?62;22c"`) must be written back to
+    ///   the PTY to prevent timeouts.
     ///
     /// # Example
     ///
@@ -224,7 +230,7 @@ impl OffscreenBuffer {
     /// let red_text = format!("Hello{a}Red Text{b}",
     ///     a = SgrCode::ForegroundBasic(ANSIBasicColor::DarkRed),
     ///     b = SgrCode::Reset);
-    /// let (osc_events, dsr_responses) = ofs_buf.apply_ansi_bytes(red_text);
+    /// let (osc_events, dsr_responses, _da_responses) = ofs_buf.apply_ansi_bytes(red_text);
     /// ```
     ///
     /// # Processing details
@@ -256,7 +262,7 @@ impl OffscreenBuffer {
     pub fn apply_ansi_bytes(
         &mut self,
         bytes: impl AsRef<[u8]>,
-    ) -> (Vec<OscEvent>, Vec<DsrRequestFromPtyEvent>) {
+    ) -> (Vec<OscEvent>, Vec<DsrRequestFromPtyEvent>, Vec<String>) {
         let mut performer = AnsiToOfsBufPerformer::new(self);
         performer.apply_ansi_bytes(bytes.as_ref());
 
@@ -265,8 +271,10 @@ impl OffscreenBuffer {
             take(&mut performer.ofs_buf.ansi_parser_support.pending_osc_events);
         let pending_dsr_requests =
             take(&mut performer.ofs_buf.ansi_parser_support.pending_dsr_responses);
+        let pending_da_responses =
+            take(&mut performer.ofs_buf.ansi_parser_support.pending_da_responses);
 
-        (osc_events, pending_dsr_requests)
+        (osc_events, pending_dsr_requests, pending_da_responses)
     }
 }
 
@@ -302,7 +310,7 @@ mod tests {
         //                               ╰─ cursor ends here
 
         // Test that the public API processes text correctly.
-        let (osc_events, dsr_responses) = ofs_buf.apply_ansi_bytes(TEXT);
+        let (osc_events, dsr_responses, _da_responses) = ofs_buf.apply_ansi_bytes(TEXT);
 
         // Should not produce any OSC events for SGR sequences.
         assert_eq!(osc_events.len(), 0, "no OSC events expected");
@@ -341,7 +349,7 @@ mod tests {
         // Sequence: ESC[31m + "Red Text" + ESC[0m
 
         // Test processing with ANSI color codes.
-        let (osc_events, dsr_responses) = ofs_buf.apply_ansi_bytes(format!(
+        let (osc_events, dsr_responses, _da_responses) = ofs_buf.apply_ansi_bytes(format!(
             "{red_fg}{text}{reset}",
             red_fg = SgrCode::ForegroundBasic(ANSIBasicColor::Red),
             text = TEXT,
@@ -397,7 +405,7 @@ mod tests {
         // 5. Write 'D' at (0,4) → cursor moves to (0,5)
 
         // Test cursor movement sequences.
-        let (osc_events, dsr_responses) = ofs_buf.apply_ansi_bytes(format!(
+        let (osc_events, dsr_responses, _da_responses) = ofs_buf.apply_ansi_bytes(format!(
             "A{right_2}B{up_1}D",
             // SAFETY: 2 and 1 are non-zero
             right_2 = CsiSequence::CursorForward(term_col_delta(2).unwrap()),
@@ -428,7 +436,7 @@ mod tests {
 
         // First call with OSC sequence (set title).
         let osc_title = OscSequence::SetTitleAndIcon("First Title".into()).to_string();
-        let (osc_events, dsr_responses) = ofs_buf.apply_ansi_bytes(&osc_title);
+        let (osc_events, dsr_responses, _da_responses) = ofs_buf.apply_ansi_bytes(&osc_title);
 
         assert_eq!(osc_events.len(), 1, "should get one OSC event");
         assert_eq!(dsr_responses.len(), 0, "no DSR responses expected");
@@ -442,7 +450,7 @@ mod tests {
 
         // Second call with another OSC sequence.
         let osc_title2 = OscSequence::SetTitleAndIcon("Second Title".into()).to_string();
-        let (osc_events2, dsr_responses2) = ofs_buf.apply_ansi_bytes(&osc_title2);
+        let (osc_events2, dsr_responses2, _da_responses2) = ofs_buf.apply_ansi_bytes(&osc_title2);
 
         assert_eq!(
             osc_events2.len(),
@@ -463,7 +471,7 @@ mod tests {
 
         // Third call with no OSC sequences.
         let plain_text = "Hello";
-        let (osc_events3, dsr_responses3) = ofs_buf.apply_ansi_bytes(plain_text);
+        let (osc_events3, dsr_responses3, _da_responses3) = ofs_buf.apply_ansi_bytes(plain_text);
 
         assert_eq!(
             osc_events3.len(),
@@ -479,7 +487,7 @@ mod tests {
 
         // First DSR request (status report).
         let dsr_status = DSR_STATUS_REQUEST.to_string();
-        let (osc_events, dsr_responses) = ofs_buf.apply_ansi_bytes(&dsr_status);
+        let (osc_events, dsr_responses, _da_responses) = ofs_buf.apply_ansi_bytes(&dsr_status);
 
         assert_eq!(osc_events.len(), 0, "no OSC events expected");
         assert_eq!(dsr_responses.len(), 1, "should get one DSR response");
@@ -487,7 +495,7 @@ mod tests {
 
         // Second call with cursor position request.
         let dsr_cursor = DSR_CURSOR_POSITION_REQUEST.to_string();
-        let (osc_events2, dsr_responses2) = ofs_buf.apply_ansi_bytes(&dsr_cursor);
+        let (osc_events2, dsr_responses2, _da_responses2) = ofs_buf.apply_ansi_bytes(&dsr_cursor);
 
         assert_eq!(osc_events2.len(), 0, "no OSC events expected");
         assert_eq!(
@@ -516,7 +524,7 @@ mod tests {
 
         // Third call with no DSR requests.
         let plain_text = "Test";
-        let (osc_events3, dsr_responses3) = ofs_buf.apply_ansi_bytes(plain_text);
+        let (osc_events3, dsr_responses3, _da_responses3) = ofs_buf.apply_ansi_bytes(plain_text);
 
         assert_eq!(osc_events3.len(), 0, "no OSC events expected");
         assert_eq!(
@@ -538,7 +546,7 @@ mod tests {
             crate::DSR_CURSOR_POSITION_REQUEST                  // DSR: Cursor position
         );
 
-        let (osc_events, dsr_responses) = ofs_buf.apply_ansi_bytes(&mixed_sequence);
+        let (osc_events, dsr_responses, _da_responses) = ofs_buf.apply_ansi_bytes(&mixed_sequence);
 
         // Should get exactly one OSC event.
         assert_eq!(osc_events.len(), 1, "should get one OSC event");
@@ -566,7 +574,7 @@ mod tests {
         }
 
         // Verify both are drained on next call.
-        let (osc_events2, dsr_responses2) = ofs_buf.apply_ansi_bytes("text");
+        let (osc_events2, dsr_responses2, _da_responses2) = ofs_buf.apply_ansi_bytes("text");
         assert_eq!(osc_events2.len(), 0, "OSC events should be drained");
         assert_eq!(dsr_responses2.len(), 0, "DSR responses should be drained");
     }
@@ -583,7 +591,7 @@ mod tests {
             OscSequence::SetIcon("Icon Name".into())          // OSC 1
         );
 
-        let (osc_events, dsr_responses) = ofs_buf.apply_ansi_bytes(&multi_osc);
+        let (osc_events, dsr_responses, _da_responses) = ofs_buf.apply_ansi_bytes(&multi_osc);
 
         assert_eq!(osc_events.len(), 3, "should get three OSC events");
         assert_eq!(dsr_responses.len(), 0, "no DSR responses expected");
@@ -597,7 +605,7 @@ mod tests {
         }
 
         // Next call should have empty events.
-        let (osc_events2, dsr_responses2) = ofs_buf.apply_ansi_bytes("normal text");
+        let (osc_events2, dsr_responses2, _da_responses2) = ofs_buf.apply_ansi_bytes("normal text");
         assert_eq!(osc_events2.len(), 0, "OSC events should be drained");
         assert_eq!(dsr_responses2.len(), 0, "DSR responses should be drained");
     }
@@ -631,7 +639,7 @@ mod tests {
     fn test_public_api_csi_position_change() {
         let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
 
-        let (osc_events, dsr_responses) = ofs_buf.apply_ansi_bytes(format!(
+        let (osc_events, dsr_responses, _da_responses) = ofs_buf.apply_ansi_bytes(format!(
             "Start{move_to_r2_c3}Mid{move_to_r1_c1}Home{move_to_r8_c8}End",
             move_to_r2_c3 = csi_seq_cursor_pos(term_row(nz(2)) + term_col(nz(3))),
             move_to_r1_c1 = csi_seq_cursor_pos(term_row(nz(1)) + term_col(nz(1))),

@@ -110,7 +110,7 @@ impl Process {
     pub fn process_pty_output_and_update_buffer(&mut self, output: Vec<u8>) {
         if !output.is_empty() {
             // Process bytes and extract any OSC and DSR events.
-            let (osc_events, dsr_requests) = self.ofs_buf.apply_ansi_bytes(&output);
+            let (osc_events, dsr_requests, da_responses) = self.ofs_buf.apply_ansi_bytes(&output);
 
             // Handle any OSC events that were detected.
             for event in osc_events {
@@ -144,6 +144,24 @@ impl Process {
                     let _unused = session
                         .tx_input_event
                         .try_send(crate::PtyInputEvent::Write(response_bytes));
+                }
+            }
+
+            // Handle any DA response strings - send them back through PTY.
+            if !da_responses.is_empty()
+                && let Some(session) = &self.session
+            {
+                for da_response in da_responses {
+                    tracing::debug!(
+                        "Process '{}' sending DA response: {:?}",
+                        self.name,
+                        da_response
+                    );
+                    let _unused = session
+                        .tx_input_event
+                        .try_send(crate::PtyInputEvent::Write(
+                            da_response.into_bytes(),
+                        ));
                 }
             }
             self.has_unrendered_output = true;
