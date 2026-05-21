@@ -72,7 +72,7 @@ fn test_duplicate_fg_color_skips_output() {
     let output2 = execute_and_capture(op2, &mut state, &output_device2, &stdout_mock2);
 
     // First operation generates ANSI sequence
-    assert_eq!(output1, "\x1b[38:5:1m");
+    assert_eq!(output1, "\x1b[31m");
 
     // Second operation with same color produces NO output (optimization)
     assert!(output2.is_empty());
@@ -98,7 +98,7 @@ fn test_duplicate_bg_color_skips_output() {
     let op2 = RenderOpCommon::SetBgColor(green);
     let output2 = execute_and_capture(op2, &mut state, &output_device2, &stdout_mock2);
 
-    assert_eq!(output1, "\x1b[48:5:2m");
+    assert_eq!(output1, "\x1b[42m");
     assert!(output2.is_empty());
     assert_eq!(state.bg_color, Some(green));
 }

@@ -8,7 +8,8 @@
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 
 use crate::{ColIndex, ColorTarget, EraseDisplayMode, EraseLineMode, RowIndex,
-            SgrColorSequence, TermRowDelta, TuiColor, TuiStyle,
+            SgrCode, SgrColorSequence, TermRowDelta, TuiColor, TuiStyle,
+            ansi_value_to_basic_color,
             core::{ansi::{constants::{APPLICATION_MOUSE_TRACKING,
                                       BRACKETED_PASTE_MODE, CSI_PARAM_SEPARATOR,
                                       CSI_START, SGR_BOLD, SGR_DIM, SGR_ITALIC,
@@ -191,6 +192,11 @@ mod color_ops {
         /// Generate foreground color sequence
         #[must_use]
         pub fn fg_color(color: TuiColor) -> String {
+            if let TuiColor::Ansi(ansi) = color {
+                if let Some(basic) = ansi_value_to_basic_color(ansi.index) {
+                    return SgrCode::ForegroundBasic(basic).to_string();
+                }
+            }
             let seq: SgrColorSequence = (color, ColorTarget::Foreground).into();
             seq.to_string()
         }
@@ -198,6 +204,11 @@ mod color_ops {
         /// Generate background color sequence
         #[must_use]
         pub fn bg_color(color: TuiColor) -> String {
+            if let TuiColor::Ansi(ansi) = color {
+                if let Some(basic) = ansi_value_to_basic_color(ansi.index) {
+                    return SgrCode::BackgroundBasic(basic).to_string();
+                }
+            }
             let seq: SgrColorSequence = (color, ColorTarget::Background).into();
             seq.to_string()
         }

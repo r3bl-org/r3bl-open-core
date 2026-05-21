@@ -192,42 +192,42 @@ fn degrade_basic_color(index: u8, color_support: ColorSupport) -> TuiColor {
 ///
 /// ```text
 ///  0 = Black       (0,0,0)
-///  1 = Red         (255,0,0)
-///  2 = Green       (0,255,0)
-///  3 = Yellow      (255,255,0)
-///  4 = Blue        (0,0,255)
-///  5 = Magenta     (255,0,255)
-///  6 = Cyan        (0,255,255)
-///  7 = White       (255,255,255)
+///  1 = Dark Red    (128,0,0)
+///  2 = Dark Green  (0,128,0)
+///  3 = Dark Yellow (128,128,0)
+///  4 = Dark Blue   (0,0,128)
+///  5 = Dark Magenta(128,0,128)
+///  6 = Dark Cyan   (0,128,128)
+///  7 = Light Gray  (192,192,192)
 ///  8 = Dark Gray   (128,128,128)
-///  9 = Dark Red    (128,0,0)
-/// 10 = Dark Green  (0,128,0)
-/// 11 = Dark Yellow (128,128,0)
-/// 12 = Dark Blue   (0,0,128)
-/// 13 = Dark Magenta(128,0,128)
-/// 14 = Dark Cyan   (0,128,128)
-/// 15 = Gray        (192,192,192)
+///  9 = Red         (255,0,0)
+/// 10 = Green       (0,255,0)
+/// 11 = Yellow      (255,255,0)
+/// 12 = Blue        (0,0,255)
+/// 13 = Magenta     (255,0,255)
+/// 14 = Cyan        (0,255,255)
+/// 15 = White       (255,255,255)
 /// ```
 ///
 /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 fn basic_color_to_rgb(index: u8) -> RgbValue {
     match index {
         0 => (0, 0, 0).into(),        // Black
-        1 => (255, 0, 0).into(),      // Red
-        2 => (0, 255, 0).into(),      // Green
-        3 => (255, 255, 0).into(),    // Yellow
-        4 => (0, 0, 255).into(),      // Blue
-        5 => (255, 0, 255).into(),    // Magenta
-        6 => (0, 255, 255).into(),    // Cyan
-        7 => (255, 255, 255).into(),  // White
+        1 => (128, 0, 0).into(),      // Dark Red
+        2 => (0, 128, 0).into(),      // Dark Green
+        3 => (128, 128, 0).into(),   // Dark Yellow
+        4 => (0, 0, 128).into(),     // Dark Blue
+        5 => (128, 0, 128).into(),   // Dark Magenta
+        6 => (0, 128, 128).into(),   // Dark Cyan
+        7 => (192, 192, 192).into(),  // Light Gray
         8 => (128, 128, 128).into(),  // Dark Gray
-        9 => (128, 0, 0).into(),      // Dark Red
-        10 => (0, 128, 0).into(),     // Dark Green
-        11 => (128, 128, 0).into(),   // Dark Yellow
-        12 => (0, 0, 128).into(),     // Dark Blue
-        13 => (128, 0, 128).into(),   // Dark Magenta
-        14 => (0, 128, 128).into(),   // Dark Cyan
-        15 => (192, 192, 192).into(), // Gray
+        9 => (255, 0, 0).into(),      // Red
+        10 => (0, 255, 0).into(),     // Green
+        11 => (255, 255, 0).into(),   // Yellow
+        12 => (0, 0, 255).into(),     // Blue
+        13 => (255, 0, 255).into(),   // Magenta
+        14 => (0, 255, 255).into(),   // Cyan
+        15 => (255, 255, 255).into(), // White
         _ => unreachable!("index < 16 is guaranteed by caller"),
     }
 }

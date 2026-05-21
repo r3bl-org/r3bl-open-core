@@ -3,6 +3,7 @@
 use crate::{BufTextStorage, ColIndex, ColWidth, FastStringify, GCStringOwned,
             InlineString, InlineVec, PixelChar, PixelCharRenderer, SgrCode, TuiColor,
             TuiStyle, TuiStyleAttribs, UNICODE_REPLACEMENT_CHAR,
+            ansi_value_to_basic_color,
             cli_text_inline_impl::CliTextConvertOptions,
             generate_impl_display_for_fast_stringify, inline_string, ok, tui_color,
             tui_style_attrib::{Bold, Dim, Italic, Strikethrough, Underline}};
@@ -860,7 +861,13 @@ impl FastStringify for CliStyle {
             match color_support {
                 ColorSupport::Ansi256 => {
                     let ansi = color.as_ansi();
-                    if is_foreground {
+                    if let Some(basic) = ansi_value_to_basic_color(ansi.index) {
+                        if is_foreground {
+                            SgrCode::ForegroundBasic(basic)
+                        } else {
+                            SgrCode::BackgroundBasic(basic)
+                        }
+                    } else if is_foreground {
                         SgrCode::ForegroundAnsi256(ansi)
                     } else {
                         SgrCode::BackgroundAnsi256(ansi)

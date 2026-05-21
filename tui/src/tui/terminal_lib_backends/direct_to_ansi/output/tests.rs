@@ -114,7 +114,8 @@ mod screen_clearing_tests {
 
 #[cfg(test)]
 mod color_tests {
-    use crate::{AnsiSequenceGenerator, AnsiValue, SgrColorSequence, TuiColor, tui_color};
+    use crate::{ANSIBasicColor, AnsiSequenceGenerator, AnsiValue, SgrCode,
+                SgrColorSequence, TuiColor, tui_color};
 
     #[test]
     fn test_reset_color() {
@@ -127,56 +128,49 @@ mod color_tests {
     fn test_fg_ansi_black() {
         let color = tui_color!(black);
         let seq = AnsiSequenceGenerator::fg_color(color);
-        // Uses extended palette format with colons: SGR 38:5:N
-        assert_eq!(seq, SgrColorSequence::SetForegroundAnsi256(0).to_string());
+        assert_eq!(seq, SgrCode::ForegroundBasic(ANSIBasicColor::Black).to_string());
     }
 
     #[test]
     fn test_fg_ansi_red() {
         let color = tui_color!(red);
         let seq = AnsiSequenceGenerator::fg_color(color);
-        // ANSI 1 in extended palette format
-        assert_eq!(seq, SgrColorSequence::SetForegroundAnsi256(1).to_string());
+        assert_eq!(seq, SgrCode::ForegroundBasic(ANSIBasicColor::DarkRed).to_string());
     }
 
     #[test]
     fn test_fg_ansi_green() {
         let color = tui_color!(green);
         let seq = AnsiSequenceGenerator::fg_color(color);
-        // ANSI 2 in extended palette format
-        assert_eq!(seq, SgrColorSequence::SetForegroundAnsi256(2).to_string());
+        assert_eq!(seq, SgrCode::ForegroundBasic(ANSIBasicColor::DarkGreen).to_string());
     }
 
     #[test]
     fn test_fg_ansi_blue() {
         let color = tui_color!(blue);
         let seq = AnsiSequenceGenerator::fg_color(color);
-        // ANSI 4 in extended palette format
-        assert_eq!(seq, SgrColorSequence::SetForegroundAnsi256(4).to_string());
+        assert_eq!(seq, SgrCode::ForegroundBasic(ANSIBasicColor::DarkBlue).to_string());
     }
 
     #[test]
     fn test_bg_ansi_black() {
         let color = tui_color!(black);
         let seq = AnsiSequenceGenerator::bg_color(color);
-        // Background extended palette format: SGR 48:5:N
-        assert_eq!(seq, SgrColorSequence::SetBackgroundAnsi256(0).to_string());
+        assert_eq!(seq, SgrCode::BackgroundBasic(ANSIBasicColor::Black).to_string());
     }
 
     #[test]
     fn test_bg_ansi_red() {
         let color = tui_color!(red);
         let seq = AnsiSequenceGenerator::bg_color(color);
-        // ANSI 1 background in extended palette format
-        assert_eq!(seq, SgrColorSequence::SetBackgroundAnsi256(1).to_string());
+        assert_eq!(seq, SgrCode::BackgroundBasic(ANSIBasicColor::DarkRed).to_string());
     }
 
     #[test]
     fn test_bg_ansi_green() {
         let color = tui_color!(green);
         let seq = AnsiSequenceGenerator::bg_color(color);
-        // ANSI 2 background in extended palette format
-        assert_eq!(seq, SgrColorSequence::SetBackgroundAnsi256(2).to_string());
+        assert_eq!(seq, SgrCode::BackgroundBasic(ANSIBasicColor::DarkGreen).to_string());
     }
 
     // ANSI Extended Palette (16-255)
@@ -282,22 +276,21 @@ mod color_tests {
     fn test_fg_ansi_dark_red() {
         let color = tui_color!(dark_red);
         let seq = AnsiSequenceGenerator::fg_color(color);
-        // Dark colors use extended palette mode with colons
-        assert_eq!(seq, SgrColorSequence::SetForegroundAnsi256(9).to_string());
+        assert_eq!(seq, SgrCode::ForegroundBasic(ANSIBasicColor::Red).to_string());
     }
 
     #[test]
     fn test_fg_ansi_dark_green() {
         let color = tui_color!(dark_green);
         let seq = AnsiSequenceGenerator::fg_color(color);
-        assert_eq!(seq, SgrColorSequence::SetForegroundAnsi256(10).to_string());
+        assert_eq!(seq, SgrCode::ForegroundBasic(ANSIBasicColor::Green).to_string());
     }
 
     #[test]
     fn test_bg_ansi_dark_blue() {
         let color = tui_color!(dark_blue);
         let seq = AnsiSequenceGenerator::bg_color(color);
-        assert_eq!(seq, SgrColorSequence::SetBackgroundAnsi256(12).to_string());
+        assert_eq!(seq, SgrCode::BackgroundBasic(ANSIBasicColor::Blue).to_string());
     }
 }
 
