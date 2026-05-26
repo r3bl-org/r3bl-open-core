@@ -167,6 +167,23 @@ pub struct AnsiParserSupport {
     /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
     pub auto_wrap_mode: AutoWrapState,
 
+    /// Tracks the VT100 "pending wrap" (aka "wrapneeded") state.
+    ///
+    /// When auto-wrap mode is enabled and a printable character is written to the
+    /// last column, the terminal does **not** immediately wrap to the next line.
+    /// Instead, it enters a "pending wrap" state where the cursor stays at the
+    /// right margin (visual column = width) but the next printable character
+    /// triggers the actual wrap. Cursor movement commands (CR, LF, CUP, etc.)
+    /// and screen scrolling cancel the pending wrap.
+    ///
+    /// This behavior is critical for correct fish-shell rendering where
+    /// `abandon_line_string` does: write to last col, then `\r` — the `\r`
+    /// must cancel the pending wrap and move to column 0 of the *same* line.
+    ///
+    /// When `true`: the next printable character must wrap to start of next line
+    /// before being printed. When `false`: normal printing behavior.
+    pub pending_wrap: bool,
+
     /// Complete computed style combining attributes and colors for efficient rendering.
     pub current_style: TuiStyle,
 
@@ -248,6 +265,7 @@ impl Default for AnsiParserSupport {
             cursor_pos_for_esc_save_and_restore: None,
             character_set: CharacterSet::default(),
             auto_wrap_mode: AutoWrapState::Enabled, // DECAWM default: Enabled
+            pending_wrap: false,
             current_style: TuiStyle::default(),
             pending_osc_events: Vec::new(),
             pending_dsr_responses: Vec::new(),
