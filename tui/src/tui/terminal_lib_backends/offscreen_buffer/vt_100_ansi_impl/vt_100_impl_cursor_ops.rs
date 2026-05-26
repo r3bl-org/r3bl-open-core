@@ -56,6 +56,7 @@ impl OffscreenBuffer {
     ///
     /// [`DECSTBM`]: https://vt100.net/docs/vt510-rm/DECSTBM.html
     pub fn cursor_up(&mut self, how_many: RowHeight) {
+        self.ansi_parser_support.pending_wrap = false;
         let current_row = self.cursor_pos.row_index;
         let scroll_top_boundary = *self.get_scroll_range_inclusive().start();
 
@@ -70,6 +71,7 @@ impl OffscreenBuffer {
     ///
     /// [`DECSTBM`]: https://vt100.net/docs/vt510-rm/DECSTBM.html
     pub fn cursor_down(&mut self, how_many: RowHeight) {
+        self.ansi_parser_support.pending_wrap = false;
         let current_row = self.cursor_pos.row_index;
         let scroll_bottom_boundary = *self.get_scroll_range_inclusive().end();
 
@@ -102,6 +104,7 @@ impl OffscreenBuffer {
     /// Result: Cursor moved forward 3 columns, clamped to screen width
     /// ```
     pub fn cursor_forward(&mut self, how_many: ColWidth) {
+        self.ansi_parser_support.pending_wrap = false;
         let new_col = self.cursor_pos.col_index + how_many;
         self.cursor_pos.col_index =
             new_col.clamp_to_max_length(self.window_size.col_width);
@@ -109,6 +112,7 @@ impl OffscreenBuffer {
 
     /// Move cursor backward by n columns.
     pub fn cursor_backward(&mut self, how_many: ColWidth) {
+        self.ansi_parser_support.pending_wrap = false;
         let current_col = self.cursor_pos.col_index;
         self.cursor_pos.col_index = current_col - how_many;
     }
@@ -116,6 +120,7 @@ impl OffscreenBuffer {
     /// Set cursor position to specific row and column coordinates.
     /// Coordinates are clamped to valid screen boundaries and scroll regions.
     pub fn cursor_to_position(&mut self, row: RowIndex, col: ColIndex) {
+        self.ansi_parser_support.pending_wrap = false;
         let scroll_region = self.get_scroll_range_inclusive();
 
         // Clamp row to scroll region boundaries.
@@ -131,16 +136,21 @@ impl OffscreenBuffer {
     }
 
     /// Move cursor to beginning of current line.
-    pub fn cursor_to_line_start(&mut self) { self.cursor_pos.col_index = col(0); }
+    pub fn cursor_to_line_start(&mut self) {
+        self.ansi_parser_support.pending_wrap = false;
+        self.cursor_pos.col_index = col(0);
+    }
 
     /// Move cursor to beginning of next line.
     pub fn cursor_to_next_line_start(&mut self) {
+        self.ansi_parser_support.pending_wrap = false;
         self.cursor_pos.col_index = col(0);
         self.cursor_down(crate::RowHeight::from(1));
     }
 
     /// Move cursor to specific column on current line.
     pub fn cursor_to_column(&mut self, target_col: ColIndex) {
+        self.ansi_parser_support.pending_wrap = false;
         // Convert from 1-based to 0-based, clamp to buffer width.
         self.cursor_pos.col_index =
             target_col.clamp_to_max_length(self.window_size.col_width);
@@ -163,6 +173,7 @@ impl OffscreenBuffer {
 
     /// Move cursor to specific row on current column.
     pub fn cursor_to_row(&mut self, target_row: RowIndex) {
+        self.ansi_parser_support.pending_wrap = false;
         // Clamp to valid range (conversion from 1-based to 0-based already done).
         let new_row = target_row.clamp_to_max_length(self.window_size.row_height);
         // Update only the row, preserve column.
@@ -256,5 +267,81 @@ mod tests_cursor_ops {
         buffer.restore_cursor_position();
 
         assert_eq!(buffer.cursor_pos, initial_pos);
+    }
+
+    #[test]
+    fn test_cursor_to_position_clears_pending_wrap() {
+        let mut buffer = create_test_buffer();
+        buffer.ansi_parser_support.pending_wrap = true;
+
+        buffer.cursor_to_position(row(2), col(5));
+
+        assert!(!buffer.ansi_parser_support.pending_wrap);
+    }
+
+    #[test]
+    fn test_cursor_up_clears_pending_wrap() {
+        let mut buffer = create_test_buffer();
+        buffer.cursor_pos = row(3) + col(2);
+        buffer.ansi_parser_support.pending_wrap = true;
+
+        buffer.cursor_up(crate::RowHeight::from(2));
+
+        assert!(!buffer.ansi_parser_support.pending_wrap);
+    }
+
+    #[test]
+    fn test_cursor_down_clears_pending_wrap() {
+        let mut buffer = create_test_buffer();
+        buffer.cursor_pos = row(1) + col(2);
+        buffer.ansi_parser_support.pending_wrap = true;
+
+        buffer.cursor_down(crate::RowHeight::from(2));
+
+        assert!(!buffer.ansi_parser_support.pending_wrap);
+    }
+
+    #[test]
+    fn test_cursor_forward_clears_pending_wrap() {
+        let mut buffer = create_test_buffer();
+        buffer.cursor_pos = row(1) + col(2);
+        buffer.ansi_parser_support.pending_wrap = true;
+
+        buffer.cursor_forward(crate::ColWidth::from(3));
+
+        assert!(!buffer.ansi_parser_support.pending_wrap);
+    }
+
+    #[test]
+    fn test_cursor_backward_clears_pending_wrap() {
+        let mut buffer = create_test_buffer();
+        buffer.cursor_pos = row(1) + col(5);
+        buffer.ansi_parser_support.pending_wrap = true;
+
+        buffer.cursor_backward(crate::ColWidth::from(2));
+
+        assert!(!buffer.ansi_parser_support.pending_wrap);
+    }
+
+    #[test]
+    fn test_cursor_to_line_start_clears_pending_wrap() {
+        let mut buffer = create_test_buffer();
+        buffer.cursor_pos = row(1) + col(5);
+        buffer.ansi_parser_support.pending_wrap = true;
+
+        buffer.cursor_to_line_start();
+
+        assert!(!buffer.ansi_parser_support.pending_wrap);
+    }
+
+    #[test]
+    fn test_cursor_to_column_clears_pending_wrap() {
+        let mut buffer = create_test_buffer();
+        buffer.cursor_pos = row(1) + col(2);
+        buffer.ansi_parser_support.pending_wrap = true;
+
+        buffer.cursor_to_column(col(5));
+
+        assert!(!buffer.ansi_parser_support.pending_wrap);
     }
 }

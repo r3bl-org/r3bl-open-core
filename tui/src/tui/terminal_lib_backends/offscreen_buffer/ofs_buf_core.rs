@@ -118,6 +118,23 @@ pub struct AnsiParserSupport {
     /// [`AnsiToOfsBufPerformer`]: crate::AnsiToOfsBufPerformer
     pub auto_wrap_mode: bool,
 
+    /// Tracks the VT100 "pending wrap" (aka "wrapneeded") state.
+    ///
+    /// When auto-wrap mode is enabled and a printable character is written to the
+    /// last column, the terminal does **not** immediately wrap to the next line.
+    /// Instead, it enters a "pending wrap" state where the cursor stays at the
+    /// right margin (visual column = width) but the next printable character
+    /// triggers the actual wrap. Cursor movement commands (CR, LF, CUP, etc.)
+    /// and screen scrolling cancel the pending wrap.
+    ///
+    /// This behavior is critical for correct fish-shell rendering where
+    /// `abandon_line_string` does: write to last col, then `\r` — the `\r`
+    /// must cancel the pending wrap and move to column 0 of the *same* line.
+    ///
+    /// When `true`: the next printable character must wrap to start of next line
+    /// before being printed. When `false`: normal printing behavior.
+    pub pending_wrap: bool,
+
     /// Complete computed style combining attributes and colors for efficient rendering.
     pub current_style: TuiStyle,
 
@@ -191,6 +208,7 @@ impl Default for AnsiParserSupport {
             cursor_pos_for_esc_save_and_restore: None,
             character_set: CharacterSet::default(),
             auto_wrap_mode: true, // DECAWM default: enabled (VT100 compliant)
+            pending_wrap: false,
             current_style: TuiStyle::default(),
             pending_osc_events: Vec::new(),
             pending_dsr_responses: Vec::new(),
