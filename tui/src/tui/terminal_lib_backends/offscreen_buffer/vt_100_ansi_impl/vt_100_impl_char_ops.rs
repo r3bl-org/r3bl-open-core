@@ -287,6 +287,8 @@ impl OffscreenBuffer {
             let next_row: RowIndex = self.cursor_pos.row_index + 1;
             if next_row.overflows(row_max) == ArrayOverflowResult::Within {
                 self.cursor_pos.row_index = next_row;
+            } else {
+                let _unused = self.index_down();
             }
             self.cursor_pos.col_index = col(0);
         }
@@ -1153,16 +1155,31 @@ mod tests_print_char {
     #[test]
     fn test_apply_pending_wrap_clamped_at_bottom() {
         let mut buffer = create_test_buffer_with_size(width(5), height(3));
+        let bottom = row(2);
 
-        // Last row of 3-height buffer is row(2).
-        buffer.cursor_pos = row(2) + col(4);
+        let row_above = row(1);
+        let _unused = buffer.set_char(
+            row_above + col(0),
+            PixelChar::PlainText {
+                display_char: 'A',
+                style: Default::default(),
+            },
+        );
+
+        buffer.cursor_pos = bottom + col(4);
         buffer.ansi_parser_support.pending_wrap = true;
 
         buffer.apply_pending_wrap();
 
         assert!(!buffer.ansi_parser_support.pending_wrap);
-        // Stays on same row since next row would overflow. Col resets.
-        assert_eq!(buffer.cursor_pos, row(2) + col(0));
+        assert_eq!(buffer.cursor_pos, bottom + col(0));
+
+        let scrolled_up = row(0) + col(0);
+        let ch = buffer.get_char(scrolled_up).unwrap();
+        match ch {
+            PixelChar::PlainText { display_char, .. } => assert_eq!(display_char, 'A'),
+            _ => panic!("Expected PlainText with 'A'"),
+        }
     }
 
     #[test]
