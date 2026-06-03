@@ -26,7 +26,7 @@
 //! ```
 //!
 //! Once running:
-//! - `F1` to switch to claude (AI assistant)
+//! - `F1` to switch to hx (Helix text editor)
 //! - `F2` to switch to less (file viewer)
 //! - `F3` to switch to htop (process monitor)
 //! - `F4` to switch to gitui (git TUI)
@@ -37,7 +37,7 @@
 //! ## Configured Processes
 //!
 //! This example demonstrates universal compatibility with different process types:
-//! - `claude` - Claude AI assistant CLI (interactive TUI app)
+//! - `hx` - Helix modal text editor (interactive TUI app)
 //! - `less /etc/adduser.conf` - File pager for viewing configuration
 //! - `htop` - Process monitor (full-screen TUI)
 //! - `gitui` - Git terminal user interface (interactive TUI)
@@ -63,12 +63,12 @@ async fn main() -> miette::Result<()> {
     tracing::debug!("Starting PTYMux Example");
 
     // Mixed process types demonstrating universal compatibility:
-    // - claude: AI assistant (existing TUI app)
+    // - hx: Helix text editor (existing TUI app)
     // - TUI apps: less, htop, gitui (proper TUI applications)
     // - bash: Interactive shell (universal compatibility demonstration)
     let processes = vec![
-        ("claude", "claude", vec![]),
-        ("less", "less", vec!["/etc/adduser.conf".to_string()]),
+        ("hx", "hx", vec![]),
+        ("less", "less", vec!["Cargo.toml".to_string()]),
         ("htop", "htop", vec![]),
         ("gitui", "gitui", vec![]),
         ("bash", "bash", vec![]),
@@ -102,7 +102,7 @@ async fn main() -> miette::Result<()> {
 
     if added_count == 0 {
         miette::bail!(
-            "No configured processes are available on this system. Please ensure at least one of (claude, less, htop, gitui, bash) is installed and in PATH."
+            "No configured processes are available on this system. Please ensure at least one of (hx, less, htop, gitui, bash) is installed and in PATH."
         );
     }
 

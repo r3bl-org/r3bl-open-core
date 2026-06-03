@@ -59,6 +59,11 @@ pub const DEBUG_TUI_SHOW_MIO_POLLER: bool = false;
 /// [PTY multiplexer]: crate::pty::pty_mux::PTYMux
 pub const DEBUG_TUI_SHOW_PTY_MUX_NOTIFICATIONS: bool = false;
 
+/// Controls debug logging for the [PTY multiplexer], including adaptive rendering.
+///
+/// [PTY multiplexer]: crate::pty::pty_mux::PTYMux
+pub const DEBUG_TUI_PTY_MUX: bool = true;
+
 /// Controls debug logging for the [Resilient Reactor Thread].
 ///
 /// [Resilient Reactor Thread]: crate::core::resilient_reactor_thread
