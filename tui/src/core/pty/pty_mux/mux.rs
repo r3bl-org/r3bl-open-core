@@ -1,5 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+// cspell:words cooldown
+
 //! Main [`PTY`] multiplexer orchestrator.
 //!
 //! This module provides the main [`PTYMux`] struct that coordinates all components and
@@ -9,35 +11,15 @@
 
 use super::{InputRouter, OutputRenderer, Process, ProcessManager, output_renderer,
             show_notification_non_blocking};
-use crate::{AnsiSequenceGenerator, Continuation, InputEvent, RawMode, Size, TerminalInteractiveStatus, TuiAvailability, col, core::{check_is_terminal_interactive, emit_stderr_redirection_disclaimer,
+use crate::{AnsiSequenceGenerator, Continuation, DEBUG_TUI_PTY_MUX, InputEvent, RawMode,
+            Size, TerminalInteractiveStatus, TuiAvailability, col,
+            core::{check_is_terminal_interactive, emit_stderr_redirection_disclaimer,
                    get_size,
                    osc::OscController,
-                   terminal_io::{InputDevice, OutputDevice}}, ok, row};
-
-/// Main [`PTY`] multiplexer that orchestrates all components.
-///
-/// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
-pub struct PTYMux {
-    process_manager: ProcessManager,
-    input_router: InputRouter,
-    output_renderer: OutputRenderer,
-    terminal_size: Size,
-    output_device: OutputDevice,
-    input_device: InputDevice,
-}
-
-impl std::fmt::Debug for PTYMux {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("PTYMux")
-            .field("process_manager", &self.process_manager)
-            .field("input_router", &self.input_router)
-            .field("output_renderer", &self.output_renderer)
-            .field("terminal_size", &self.terminal_size)
-            .field("output_device", &"<OutputDevice>")
-            .field("input_device", &"<InputDevice>")
-            .finish()
-    }
-}
+                   terminal_io::{InputDevice, OutputDevice}},
+            ok, row};
+use std::{fmt::Debug,
+          time::{Duration, Instant}};
 
 /// Builder for configuring and creating a [`PTYMux`] instance.
 #[derive(Default, Debug)]
@@ -153,6 +135,31 @@ impl PTYMuxBuilder {
     }
 }
 
+/// Main [`PTY`] multiplexer that orchestrates all components.
+///
+/// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
+pub struct PTYMux {
+    process_manager: ProcessManager,
+    input_router: InputRouter,
+    output_renderer: OutputRenderer,
+    terminal_size: Size,
+    output_device: OutputDevice,
+    input_device: InputDevice,
+}
+
+impl Debug for PTYMux {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("PTYMux")
+            .field("process_manager", &self.process_manager)
+            .field("input_router", &self.input_router)
+            .field("output_renderer", &self.output_renderer)
+            .field("terminal_size", &self.terminal_size)
+            .field("output_device", &"<OutputDevice>")
+            .field("input_device", &"<InputDevice>")
+            .finish()
+    }
+}
+
 impl PTYMux {
     /// Creates a new builder for configuring a [`PTYMux`] instance.
     #[must_use]
@@ -193,7 +200,13 @@ impl PTYMux {
         self.output_device.write(|out| {
             RawMode::start(self.terminal_size, out, false);
         });
-        tracing::debug!("Raw mode started");
+        DEBUG_TUI_PTY_MUX.then(|| {
+            // % is Display, ? is Debug.
+            tracing::debug! {
+                message = "PTYMux::run",
+                info = %crate::inline_string!("Raw mode started")
+            };
+        });
 
         // Set initial terminal title using OSC controller.
         {
@@ -202,7 +215,13 @@ impl PTYMux {
         }
 
         // Start all processes at startup.
-        tracing::debug!("Starting all processes");
+        DEBUG_TUI_PTY_MUX.then(|| {
+            // % is Display, ? is Debug.
+            tracing::debug! {
+                message = "PTYMux::run",
+                info = %crate::inline_string!("Starting all processes")
+            };
+        });
         self.process_manager.start_all_processes()?;
 
         // Clear screen before showing first process.
@@ -222,9 +241,21 @@ impl PTYMux {
             .render_initial_status_bar(&self.output_device, &self.process_manager)?;
 
         // Main event loop
-        tracing::debug!("Starting main event loop");
+        DEBUG_TUI_PTY_MUX.then(|| {
+            // % is Display, ? is Debug.
+            tracing::debug! {
+                message = "PTYMux::run",
+                info = %crate::inline_string!("Starting main event loop")
+            };
+        });
         let result = self.run_event_loop().await;
-        tracing::debug!("Main event loop exited with result: {:?}", result);
+        DEBUG_TUI_PTY_MUX.then(|| {
+            // % is Display, ? is Debug.
+            tracing::debug! {
+                message = "PTYMux::run",
+                info = %crate::inline_string!("Main event loop exited with result: {:?}", result)
+            };
+        });
 
         // Always cleanup regardless of error.
         self.cleanup_terminal();
@@ -234,44 +265,57 @@ impl PTYMux {
 
     /// Main event loop that handles input and output events.
     async fn run_event_loop(&mut self) -> miette::Result<()> {
+        use adaptive_render_budget::{AdaptiveRenderResult::{Render, Skip},
+                                     Budget};
+        use tokio::time::interval;
+
         // Create a periodic timer for status bar updates.
-        let mut status_bar_interval =
-            tokio::time::interval(tokio::time::Duration::from_millis(500));
+        let mut status_bar_interval = interval(Duration::from_millis(500));
 
         // Create a fast timer for polling PTY output.
-        let mut output_poll_interval =
-            tokio::time::interval(tokio::time::Duration::from_millis(10));
+        let mut output_poll_interval = interval(Duration::from_millis(10));
+
+        let mut render_budget = Budget::new();
 
         loop {
             tokio::select! {
                 // Poll ALL processes and update their virtual terminal buffers.
                 // https://developerlife.com/2024/07/10/rust-async-cancellation-safety-tokio/#example-1-right-and-wrong-way-to-sleep-and-interval
                 _ = output_poll_interval.tick() => {
-                    // **Core of per-process virtual terminal architecture**:
-                    // Poll ALL processes continuously (every 10ms), not just the active one.
-                    // Each process updates its own OffscreenBuffer independently.
-                    // This is what enables instant switching with full state preservation.
-                    let active_had_output = self.process_manager.poll_all_processes();
+                    match render_budget.should_render(&mut self.process_manager) {
+                        Render => {
+                            render_budget.mark_start();
+                            // Get the active process's virtual terminal and render it.
+                            self.output_renderer.render_from_active_buffer(
+                                &self.output_device,
+                                &self.process_manager
+                            )?;
+                            // Clear the "needs rendering" flag for the active process.
+                            self.process_manager.mark_active_as_rendered();
+                            render_budget.mark_end();
+                        },
+                        Skip => {
+                            DEBUG_TUI_PTY_MUX.then(|| {
+                                // % is Display, ? is Debug.
+                                tracing::info! {
+                                    message = "Skipping render, backpressure detected in stdout",
+                                    info = %crate::inline_string!("Current frame delay: {:?}", render_budget.render_cooldown_delay)
+                                };
+                            });
+                        },
 
-                    // **Selective rendering optimization**:
-                    // Only render when the currently visible process has new output.
-                    // All other processes continue updating their virtual terminals.
-                    // in the background, ready for instant switching.
-                    if active_had_output {
-                        // Get the active process's virtual terminal and render it.
-                        self.output_renderer.render_from_active_buffer(
-                            &self.output_device,
-                            &self.process_manager
-                        )?;
-
-                        // Clear the "needs rendering" flag for the active process.
-                        self.process_manager.mark_active_as_rendered();
                     }
                 }
 
                 // Handle user input using existing InputDevice.
                 Some(input_event) = self.input_device.next() => {
-                    tracing::debug!("Received input event: {:?}", input_event);
+                    crate::DEBUG_TUI_PTY_MUX.then(|| {
+                        // % is Display, ? is Debug.
+                        tracing::debug! {
+                            message = "PTYMux::run_event_loop",
+                            info = %crate::inline_string!("Received input event: {:?}", input_event)
+                        };
+                    });
 
                     // Show desktop notification for input event (filter out mouse events)
                     if !matches!(input_event, InputEvent::Mouse(_)) {
@@ -282,7 +326,13 @@ impl PTYMux {
                     let mut osc = OscController::new(&self.output_device);
 
                     // Handle input events using the input router.
-                    tracing::debug!("Handling input event: {:?}", input_event);
+                    crate::DEBUG_TUI_PTY_MUX.then(|| {
+                        // % is Display, ? is Debug.
+                        tracing::debug! {
+                            message = "PTYMux::run_event_loop",
+                            info = %crate::inline_string!("Handling input event: {:?}", input_event)
+                        };
+                    });
                     let continuation = self.input_router.handle_input(
                         input_event,
                         &mut self.process_manager,
@@ -291,7 +341,13 @@ impl PTYMux {
                     )?;
 
                     if continuation == Continuation::Stop {
-                        tracing::debug!("Exit requested by input router - breaking main event loop");
+                        crate::DEBUG_TUI_PTY_MUX.then(|| {
+                            // % is Display, ? is Debug.
+                            tracing::debug! {
+                                message = "PTYMux::run_event_loop",
+                                info = %crate::inline_string!("Exit requested by input router - breaking main event loop")
+                            };
+                        });
                         break;
                     }
                 }
@@ -303,7 +359,13 @@ impl PTYMux {
             }
         }
 
-        tracing::debug!("Event loop completed - returning Ok(())");
+        DEBUG_TUI_PTY_MUX.then(|| {
+            // % is Display, ? is Debug.
+            tracing::debug! {
+                message = "PTYMux::run_event_loop",
+                info = %crate::inline_string!("Event loop completed - returning Ok(())")
+            };
+        });
 
         ok!()
     }
@@ -334,30 +396,92 @@ impl PTYMux {
     /// Cleanup terminal state - always called on exit.
     fn cleanup_terminal(&mut self) {
         let start_time = std::time::Instant::now();
-        tracing::debug!("Starting cleanup - terminal size: {:?}", self.terminal_size);
+        DEBUG_TUI_PTY_MUX.then(|| {
+            // % is Display, ? is Debug.
+            tracing::debug! {
+                message = "PTYMux::cleanup_terminal",
+                info = %crate::inline_string!("Starting cleanup - terminal size: {:?}", self.terminal_size)
+            };
+        });
 
         // First, kill all running processes.
-        tracing::debug!("Step 1: Shutting down process manager");
+        DEBUG_TUI_PTY_MUX.then(|| {
+            // % is Display, ? is Debug.
+            tracing::debug! {
+                message = "PTYMux::cleanup_terminal",
+                info = %crate::inline_string!("Step 1: Shutting down process manager")
+            };
+        });
         self.process_manager.shutdown_all_processes();
-        tracing::debug!("Step 1 completed in {:?}", start_time.elapsed());
+        DEBUG_TUI_PTY_MUX.then(|| {
+            // % is Display, ? is Debug.
+            tracing::debug! {
+                message = "PTYMux::cleanup_terminal",
+                info = %crate::inline_string!("Step 1 completed in {:?}", start_time.elapsed())
+            };
+        });
 
         // Give processes a short time to terminate gracefully, then force exit.
-        tracing::debug!("Step 2: Waiting 100ms for processes to terminate gracefully");
+        DEBUG_TUI_PTY_MUX.then(|| {
+            // % is Display, ? is Debug.
+            tracing::debug! {
+                message = "PTYMux::cleanup_terminal",
+                info = %crate::inline_string!("Step 2: Waiting 100ms for processes to terminate gracefully")
+            };
+        });
         std::thread::sleep(std::time::Duration::from_millis(100));
-        tracing::debug!("Step 2 completed in {:?}", start_time.elapsed());
+        DEBUG_TUI_PTY_MUX.then(|| {
+            // % is Display, ? is Debug.
+            tracing::debug! {
+                message = "PTYMux::cleanup_terminal",
+                info = %crate::inline_string!("Step 2 completed in {:?}", start_time.elapsed())
+            };
+        });
 
         // Force flush any pending output.
-        tracing::debug!("Step 3: Flushing pending output");
-        self.output_device.write(|out| {
-            match out.flush() {
-                Ok(()) => tracing::debug!("Step 3: Output flush successful"),
-                Err(e) => tracing::warn!("Step 3: Output flush failed: {:?}", e),
+        DEBUG_TUI_PTY_MUX.then(|| {
+            // % is Display, ? is Debug.
+            tracing::debug! {
+                message = "PTYMux::cleanup_terminal",
+                info = %crate::inline_string!("Step 3: Flushing pending output")
+            };
+        });
+        self.output_device.write(|out| match out.flush() {
+            Ok(()) => {
+                crate::DEBUG_TUI_PTY_MUX.then(|| {
+                    // % is Display, ? is Debug.
+                    tracing::debug! {
+                        message = "PTYMux::cleanup_terminal",
+                        info = "Step 3: Output flush successful"
+                    };
+                });
+            }
+            Err(e) => {
+                crate::DEBUG_TUI_PTY_MUX.then(|| {
+                    // % is Display, ? is Debug.
+                    tracing::warn! {
+                        message = "PTYMux::cleanup_terminal",
+                        info = %crate::inline_string!("Step 3: Output flush failed: {:?}", e)
+                    };
+                });
             }
         });
-        tracing::debug!("Step 3 completed in {:?}", start_time.elapsed());
+        DEBUG_TUI_PTY_MUX.then(|| {
+            // % is Display, ? is Debug.
+            tracing::debug! {
+                message = "PTYMux::cleanup_terminal",
+                info = %crate::inline_string!("Step 3 completed in {:?}", start_time.elapsed())
+            };
+        });
 
         // Clear screen
-        tracing::debug!("Step 4: Clearing screen and homing cursor");
+        DEBUG_TUI_PTY_MUX.then(|| {
+            // % is Display, ? is Debug.
+            tracing::debug! {
+                message = "PTYMux::cleanup_terminal",
+                info = %crate::inline_string!("Step 4: Clearing screen and homing cursor")
+            };
+        });
         self.output_device.write(|out| {
             let _unused = out.write_all(AnsiSequenceGenerator::clear_screen().as_bytes());
             let _unused = out.write_all(
@@ -365,37 +489,262 @@ impl PTYMux {
             );
             let _unused = out.flush();
         });
-        tracing::debug!("Step 4 completed in {:?}", start_time.elapsed());
+        DEBUG_TUI_PTY_MUX.then(|| {
+            // % is Display, ? is Debug.
+            tracing::debug! {
+                message = "PTYMux::cleanup_terminal",
+                info = %crate::inline_string!("Step 4 completed in {:?}", start_time.elapsed())
+            };
+        });
 
         // Force flush after escape sequences.
-        tracing::debug!("Step 5: Final output flush after escape sequences");
-        self.output_device.write(|out| {
-            match out.flush() {
-                Ok(()) => tracing::debug!("Step 5: Final flush successful"),
-                Err(e) => tracing::warn!("Step 5: Final flush failed: {:?}", e),
+        DEBUG_TUI_PTY_MUX.then(|| {
+            // % is Display, ? is Debug.
+            tracing::debug! {
+                message = "PTYMux::cleanup_terminal",
+                info = %crate::inline_string!("Step 5: Final output flush after escape sequences")
+            };
+        });
+        self.output_device.write(|out| match out.flush() {
+            Ok(()) => {
+                crate::DEBUG_TUI_PTY_MUX.then(|| {
+                    // % is Display, ? is Debug.
+                    tracing::debug! {
+                        message = "PTYMux::cleanup_terminal",
+                        info = "Step 5: Final flush successful"
+                    };
+                });
+            }
+            Err(e) => {
+                crate::DEBUG_TUI_PTY_MUX.then(|| {
+                    // % is Display, ? is Debug.
+                    tracing::warn! {
+                        message = "PTYMux::cleanup_terminal",
+                        info = %crate::inline_string!("Step 5: Final flush failed: {:?}", e)
+                    };
+                });
             }
         });
-        tracing::debug!("Step 5 completed in {:?}", start_time.elapsed());
+        DEBUG_TUI_PTY_MUX.then(|| {
+            // % is Display, ? is Debug.
+            tracing::debug! {
+                message = "PTYMux::cleanup_terminal",
+                info = %crate::inline_string!("Step 5 completed in {:?}", start_time.elapsed())
+            };
+        });
 
         // End raw mode
-        tracing::debug!("Step 6: Ending raw mode");
+        DEBUG_TUI_PTY_MUX.then(|| {
+            // % is Display, ? is Debug.
+            tracing::debug! {
+                message = "PTYMux::cleanup_terminal",
+                info = %crate::inline_string!("Step 6: Ending raw mode")
+            };
+        });
         self.output_device.write(|out| {
             RawMode::end(self.terminal_size, out, false);
         });
-        tracing::debug!("Step 6: Raw mode ended successfully");
+        DEBUG_TUI_PTY_MUX.then(|| {
+            // % is Display, ? is Debug.
+            tracing::debug! {
+                message = "PTYMux::cleanup_terminal",
+                info = %crate::inline_string!("Step 6: Raw mode ended successfully")
+            };
+        });
 
         let total_time = start_time.elapsed();
-        tracing::debug!("Cleanup completed successfully in {:?}", total_time);
+        DEBUG_TUI_PTY_MUX.then(|| {
+            // % is Display, ? is Debug.
+            tracing::debug! {
+                message = "PTYMux::cleanup_terminal",
+                info = %crate::inline_string!("Cleanup completed successfully in {:?}", total_time)
+            };
+        });
 
         if total_time > std::time::Duration::from_millis(500) {
-            tracing::warn!("Cleanup took longer than expected: {:?}", total_time);
+            DEBUG_TUI_PTY_MUX.then(|| {
+                // % is Display, ? is Debug.
+                tracing::warn! {
+                    message = "PTYMux::cleanup_terminal",
+                    info = %crate::inline_string!("Cleanup took longer than expected: {:?}", total_time)
+                };
+            });
         }
 
         // If cleanup took too long, there might be zombie processes.
-        // Force exit to prevent hanging.
         if total_time > std::time::Duration::from_secs(1) {
-            tracing::error!("Cleanup took over 1 second, forcing exit to prevent hang");
-            std::process::exit(0);
+            DEBUG_TUI_PTY_MUX.then(|| {
+                // % is Display, ? is Debug.
+                tracing::error! {
+                    message = "PTYMux::cleanup_terminal",
+                    info = %crate::inline_string!("Cleanup took over 1 second; check for potential zombie processes")
+                };
+            });
+        }
+    }
+}
+
+pub mod adaptive_render_budget {
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
+    use crate::DEBUG_TUI_PTY_MUX;
+
+    /// Default render speed is ~60 FPS.
+    pub const DEFAULT_FRAME_DELAY_MS: Duration = Duration::from_millis(16);
+
+    /// Slowest render speed is ~10 FPS.
+    pub const MAX_FRAME_DELAY_MS: Duration = Duration::from_millis(100);
+
+    /// Min FPS is uncapped. If the terminal is fast enough, there is no throttling and it
+    /// will render as fast as possible.
+    pub const MIN_FRAME_DELAY_MS: Duration = Duration::from_millis(0);
+
+    /// Flush taking >5ms indicates pressure.
+    pub const RENDER_TIME_BACKPRESSURE_THRESHOLD_MS: Duration =
+        Duration::from_millis(RENDER_TIME_BASE * 5);
+
+    // Asymmetric backoff - penalty is 5 x higher than reward. If we detect backpressure,
+    // we backoff and hit the brakes hard.
+    pub const THROTTLE_PENALTY_MS: Duration =
+        Duration::from_millis(RENDER_TIME_BASE * 10);
+
+    // Asymmetric backoff - reward is 5 x lower than reward. If we detect flushing is
+    // getting faster, we are easy into the recovery, by getting back on the gas
+    // gradually.
+    pub const RECOVERY_REWARD_MS: Duration = Duration::from_millis(RENDER_TIME_BASE);
+
+    const RENDER_TIME_BASE: u64 = 1;
+
+    #[derive(Debug)]
+    pub enum AdaptiveRenderResult {
+        Skip,
+        Render,
+    }
+
+    #[derive(Debug)]
+    pub struct Budget {
+        pub last_render_time: Instant,
+        pub render_cooldown_delay: Duration,
+        pub maybe_render_start: Option<Instant>,
+    }
+
+    impl Budget {
+        pub fn new() -> Self {
+            Self {
+                last_render_time: Instant::now(),
+                render_cooldown_delay: DEFAULT_FRAME_DELAY_MS,
+                maybe_render_start: None,
+            }
+        }
+
+        /// Decides if we should render this frame based on output and budget.
+        pub fn should_render(
+            &self,
+            process_manager: &mut ProcessManager,
+        ) -> AdaptiveRenderResult {
+            let process_had_output = process_manager.poll_all_processes();
+            if !process_had_output {
+                return AdaptiveRenderResult::Skip;
+            }
+            let time_since_last_render = self.last_render_time.elapsed();
+            if time_since_last_render >= self.render_cooldown_delay {
+                AdaptiveRenderResult::Render
+            } else {
+                AdaptiveRenderResult::Skip
+            }
+        }
+
+        /// Marks the start of a rendering pass. This timestamp is used to measure how
+        /// long the rendering operation takes, which informs the adaptive budget
+        /// calculation.
+        ///
+        /// # Panics
+        ///
+        /// Panics if called twice without an intervening [`mark_end()`] call, enforcing
+        /// the strict [`mark_start()`] -> render -> [`mark_end()`] state machine.
+        ///
+        /// [`mark_end()`]: Self::mark_end
+        /// [`mark_start()`]: Self::mark_start
+        pub fn mark_start(&mut self) {
+            if self.maybe_render_start.is_some() {
+                panic!("Can't call mark_start() more than once");
+            }
+            self.maybe_render_start = Some(Instant::now());
+        }
+
+        /// Updates the budget based on how long the render actually took.
+        ///
+        /// # Panics
+        ///
+        /// Panics if called without a preceding [`mark_start()`] call, enforcing the
+        /// strict [`mark_start()`] -> render -> [`mark_end()`] state machine.
+        ///
+        /// [`mark_end()`]: Self::mark_end
+        /// [`mark_start()`]: Self::mark_start
+        pub fn mark_end(&mut self) {
+            // Mark the end of the render pass. This is how long a render pass took.
+            let render_duration = self
+                .maybe_render_start
+                .take()
+                .expect("Can't call mark_end() without calling mark_start() first")
+                .elapsed();
+
+            // Mark the current time as the last render time. This will be used in the
+            // should_render() method.
+            self.last_render_time = Instant::now();
+
+            // Adjust budget dynamically based on detected back pressure. We are
+            // implementing asymmetric backoff.
+            let backpressure_detected =
+                render_duration > RENDER_TIME_BACKPRESSURE_THRESHOLD_MS;
+            match backpressure_detected {
+                true => {
+                    // Penalize render budget for backpressure.
+                    self.render_cooldown_delay = self
+                        .render_cooldown_delay
+                        .saturating_add(THROTTLE_PENALTY_MS)
+                        .min(MAX_FRAME_DELAY_MS);
+
+                    DEBUG_TUI_PTY_MUX.then(|| {
+                        // % is Display, ? is Debug.
+                        tracing::info! {
+                            message = "Budget::mark_end",
+                            info = %crate::inline_string!(
+                                "Render took {:?} (> {:?}). Throttling frame delay to {:?}",
+                                render_duration,
+                                RENDER_TIME_BACKPRESSURE_THRESHOLD_MS,
+                                self.render_cooldown_delay
+                            )
+                        };
+                    });
+                }
+                false => {
+                    // Used for logging.
+                    let old_delay = self.render_cooldown_delay;
+
+                    // Reward render budget for smooth rendering.
+                    self.render_cooldown_delay = self
+                        .render_cooldown_delay
+                        .saturating_sub(RECOVERY_REWARD_MS)
+                        .max(MIN_FRAME_DELAY_MS);
+
+                    // Only log recovery if the delay actually changed to avoid spamming
+                    // the logs
+                    if old_delay != self.render_cooldown_delay {
+                        DEBUG_TUI_PTY_MUX.then(|| {
+                            // % is Display, ? is Debug.
+                            tracing::info! {
+                                message = "Budget::mark_end",
+                                info = %crate::inline_string!(
+                                    "Render took {:?}. Recovering frame delay to {:?}",
+                                    render_duration,
+                                    self.render_cooldown_delay
+                                )
+                            };
+                        });
+                    }
+                }
+            }
         }
     }
 }

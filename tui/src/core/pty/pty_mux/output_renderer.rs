@@ -151,7 +151,7 @@ impl OutputRenderer {
     fn generate_status_text(&self, process_manager: &ProcessManager) -> String {
         let mut status_parts = Vec::new();
 
-        // Show process tabs with live status indicators: 1:[🟢claude] 2:[🔴btop] etc.
+        // Show process tabs with live status indicators: 1:[🟢hx] 2:[🔴btop] etc.
         let mut current_width = width(0);
 
         for (i, process) in process_manager.processes().iter().enumerate() {

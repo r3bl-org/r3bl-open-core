@@ -1,12 +1,13 @@
 # Meta Task: Prepare v0.8.0 Release
 
-- [ ] PTY MUX UI Freeze
-  - [ ] [fix-pty-mux-debug-session.md](file:///home/nazmul/github/roc/task/fix-pty-mux-debug-session.md)
+- [x] PTY MUX UI Freeze
+  - [x] [fix-pty-mux-debug-session.md](file:///home/nazmul/github/roc/task/fix-pty-mux-debug-session.md)
 - [ ] Polling and Event Loop Fixes
-  - [ ] [fix-mio-poller-edge-triggered-polling.md](file:///home/nazmul/github/roc/task/fix-mio-poller-edge-triggered-polling.md)
   - [ ] https://github.com/r3bl-org/r3bl-open-core/pull/450
+  - [ ] [fix-mio-poller-edge-triggered-polling.md](file:///home/nazmul/github/roc/task/fix-mio-poller-edge-triggered-polling.md)
 - [ ] Terminal Parsing (Pending PRs)
   - [ ] https://github.com/r3bl-org/r3bl-open-core/pull/448
+  - [ ] [improve-immature-vt100-shim.md](file:///home/nazmul/github/roc/task/improve-immature-vt100-shim.md)
 - [ ] RRT API (Pending PRs & Issues)
   - [ ] https://github.com/r3bl-org/r3bl-open-core/pull/452
   - [ ] https://github.com/r3bl-org/r3bl-open-core/issues/451

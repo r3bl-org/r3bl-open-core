@@ -8,7 +8,7 @@
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 
 use super::{ProcessManager, show_notification_non_blocking};
-use crate::{AnsiSequenceGenerator, Continuation, InputEvent, Key, KeyPress, KeyState, ModifierKeysMask, PtyInputEvent, Size, col, core::{osc::OscController, terminal_io::OutputDevice}, ok, row};
+use crate::{Continuation, InputEvent, Key, KeyPress, KeyState, ModifierKeysMask, PtyInputEvent, Size, core::{osc::OscController, terminal_io::OutputDevice}, ok};
 
 /// Routes input events to appropriate handlers and manages dynamic keyboard shortcuts.
 #[derive(Debug)]
@@ -34,7 +34,7 @@ impl InputRouter {
         event: InputEvent,
         process_manager: &mut ProcessManager,
         osc: &mut OscController<'_>,
-        output_device: &OutputDevice,
+        _output_device: &OutputDevice,
     ) -> miette::Result<Continuation> {
         match event {
             InputEvent::Keyboard(key) => {
@@ -74,22 +74,7 @@ impl InputRouter {
                                     &format!("Switching to {process_name}"),
                                 );
 
-                                // Clear the screen before switching.
-                                output_device.write(|out| {
-                                    let _unused = out.write_all(
-                                        AnsiSequenceGenerator::clear_screen().as_bytes(),
-                                    );
-                                    let _unused = out.write_all(
-                                        AnsiSequenceGenerator::cursor_position(
-                                            row(0),
-                                            col(0),
-                                        )
-                                        .as_bytes(),
-                                    );
-                                    let _unused = out.flush();
-                                });
-
-                                process_manager.switch_to(process_index);
+                                 process_manager.switch_to(process_index);
                                 Self::update_terminal_title(process_manager, osc)?;
                                 tracing::debug!("Process switch completed successfully");
                             }
