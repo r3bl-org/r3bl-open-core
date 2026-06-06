@@ -302,8 +302,8 @@ macro_rules! generate_pty_test {
         mode: $mode:expr
     ) => {
         $(#[$meta])*
-        #[test]
-        fn $test_name() {
+        #[cfg_attr(not(doc), test)]
+        pub fn $test_name() {
             use std::io::Write;
             use $crate::{PtyCommand, PtyPair};
 

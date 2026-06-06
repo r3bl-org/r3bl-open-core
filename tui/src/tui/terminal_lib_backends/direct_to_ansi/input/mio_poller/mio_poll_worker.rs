@@ -1,6 +1,6 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-// cspell:words EINTR epoll sigaction signalfd
+// cspell:words EINTR epoll sigaction signalfd fcntl getfl setfl NONBLOCK
 
 //! mio-specific worker implementation for the Resilient Reactor Thread pattern.
 //!
@@ -12,7 +12,8 @@
 //! This type integrates with the generic RRT infrastructure in
 //! [`crate::core::resilient_reactor_thread`].
 //!
-//! [`block_until_ready_then_dispatch()`]: crate::RRTWorker::block_until_ready_then_dispatch
+//! [`block_until_ready_then_dispatch()`]:
+//!     crate::RRTWorker::block_until_ready_then_dispatch
 //! [`create_and_register_os_sources()`]: crate::RRTWorker::create_and_register_os_sources
 //! [`RRTWorker`]: crate::RRTWorker
 
@@ -35,11 +36,14 @@ use tokio::sync::broadcast::Sender;
 /// Capacity for the [`mio::Events`] buffer.
 const EVENTS_CAPACITY: usize = 8;
 
-/// mio-based worker for terminal input handling.
+/// [`mio`]-based worker for terminal input handling.
 ///
 /// Implements [`RRTWorker`] to integrate with the generic RRT infrastructure. Each call
-/// to [`block_until_ready_then_dispatch()`] blocks until stdin data or signals are ready,
-/// processes them, and returns whether to continue or stop.
+/// to [`block_until_ready_then_dispatch()`] blocks until [`stdin`] data or signals are
+/// ready, processes them, and returns whether to continue or stop.
+///
+/// This struct works hand in hand with [`mio_poller::consume_stdin_input_with_sender`].
+/// Read the [Why We Need Non-Blocking Read] section for more details.
 ///
 /// # Resources Managed
 ///
@@ -51,12 +55,17 @@ const EVENTS_CAPACITY: usize = 8;
 /// | [`parser`]            | VT100 input sequence parser                |
 /// | [`paste_state`]       | Bracketed paste mode state machine         |
 ///
-/// [`block_until_ready_then_dispatch()`]: Self::block_until_ready_then_dispatch
-/// [`parser`]: Self::vt_100_input_seq_parser
-/// [`paste_state`]: Self::paste_collection_state
-/// [`poll_handle`]: Self::poll_handle
-/// [`sources`]: Self::sources
-/// [`stdin_buffer`]: Self::stdin_unparsed_byte_buffer
+/// [`block_until_ready_then_dispatch()`]: MioPollWorker::block_until_ready_then_dispatch
+/// [`mio_poller::consume_stdin_input_with_sender`]:
+///     super::handler_stdin::consume_stdin_input_with_sender
+/// [`parser`]: field@MioPollWorker::vt_100_input_seq_parser
+/// [`paste_state`]: field@MioPollWorker::paste_collection_state
+/// [`poll_handle`]: field@MioPollWorker::poll_handle
+/// [`sources`]: field@MioPollWorker::sources
+/// [`stdin_buffer`]: field@MioPollWorker::stdin_unparsed_byte_buffer
+/// [`stdin`]: std::io::stdin
+/// [Why We Need Non-Blocking Read]:
+///     super::handler_stdin::consume_stdin_input_with_sender#why-we-need-non-blocking-read
 #[derive(Debug)]
 pub struct MioPollWorker {
     /// [`mio`] poll instance for efficient I/O multiplexing.
@@ -76,6 +85,12 @@ pub struct MioPollWorker {
 
     /// Paste state machine for bracketed paste handling.
     pub paste_collection_state: PasteCollectionState,
+
+    /// Original [`stdin`] file status flags to restore on [`Drop`].
+    ///
+    /// [`Drop`]: #method.drop
+    /// [`stdin`]: std::io::stdin
+    pub original_stdin_flags: Option<rustix::fs::OFlags>,
 }
 
 impl RRTWorker for MioPollWorker {
@@ -88,7 +103,8 @@ impl RRTWorker for MioPollWorker {
     /// 1. Creates a new [`mio::Poll`] instance
     /// 2. Creates a [`MioSoftwareInterrupt`] from the poll's registry (for shutdown
     ///    signaling)
-    /// 3. Registers stdin and SIGWINCH with the poll
+    /// 3. Registers stdin and [`SIGWINCH`] with the poll (and crucially, sets stdin to
+    ///    non-blocking mode which is required by [`consume_stdin_input_with_sender()`])
     /// 4. Returns both the worker (for the thread) and a [`MioSoftwareInterrupt`]
     ///    wrapping the [`mio::Waker`] (for the global state)
     ///
@@ -101,6 +117,8 @@ impl RRTWorker for MioPollWorker {
     ///
     /// Returns [`miette::Report`] if any OS resource creation or registration fails.
     ///
+    /// [`consume_stdin_input_with_sender()`]:
+    ///     super::handler_stdin::consume_stdin_input_with_sender
     /// [`create_and_register_os_sources()`]: RRTWorker::create_and_register_os_sources
     /// [`mio::Poll`]: mio::Poll
     /// [`mio::Waker`]: mio::Waker
@@ -123,6 +141,13 @@ impl RRTWorker for MioPollWorker {
 
         // Register stdin with mio.
         let stdin = std::io::stdin();
+        let original_stdin_flags = if let Ok(flags) = rustix::fs::fcntl_getfl(&stdin) {
+            let _ = rustix::fs::fcntl_setfl(&stdin, flags | rustix::fs::OFlags::NONBLOCK);
+            Some(flags)
+        } else {
+            None
+        };
+
         mio_registry
             .register(
                 &mut SourceFd(&stdin.as_raw_fd()),
@@ -149,6 +174,7 @@ impl RRTWorker for MioPollWorker {
                 stdin_unparsed_byte_buffer: [0u8; STDIN_READ_BUFFER_SIZE],
                 vt_100_input_seq_parser: StatefulInputParser::default(),
                 paste_collection_state: PasteCollectionState::Inactive,
+                original_stdin_flags,
             },
             software_interrupt,
         ))
@@ -225,6 +251,22 @@ impl MioPollWorker {
     /// [`ready_events_buffer`]: field@MioPollWorker::ready_events_buffer
     pub fn collect_ready_tokens(events: &Events) -> Vec<mio::Token> {
         events.iter().map(mio::event::Event::token).collect()
+    }
+}
+
+impl Drop for MioPollWorker {
+    /// Restores the original [`stdin`] file status flags when the worker is dropped.
+    ///
+    /// This is an [`RAII`] guard that ensures we don't permanently leave the terminal's
+    /// [`stdin`] in non-blocking mode if the poller thread panics or the application
+    /// exits. Failing to do so would break the user's shell after the application exits.
+    ///
+    /// [`RAII`]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
+    /// [`stdin`]: std::io::stdin
+    fn drop(&mut self) {
+        if let Some(original_flags) = self.original_stdin_flags {
+            let _ = rustix::fs::fcntl_setfl(&self.sources.stdin, original_flags);
+        }
     }
 }
 
