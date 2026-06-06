@@ -1,18 +1,18 @@
 # Meta Task: Prepare v0.8.0 Release
 
 - [x] PTY MUX UI Freeze
-  - [x] [fix-pty-mux-debug-session.md](file:///home/nazmul/github/roc/task/fix-pty-mux-debug-session.md)
-- [ ] Polling and Event Loop Fixes
+  - [x] [fix-pty-mux-debug-session.md](done/fix-pty-mux-debug-session.md)
+- [x] Polling and Event Loop Fixes
   - [x] https://github.com/r3bl-org/r3bl-open-core/pull/450
-  - [ ] [fix-mio-poller-edge-triggered-polling.md](file:///home/nazmul/github/roc/task/fix-mio-poller-edge-triggered-polling.md)
+  - [x] [fix-mio-poller-edge-triggered-polling.md](fix-mio-poller-edge-triggered-polling.md)
 - [ ] Terminal Parsing (Pending PRs)
   - [ ] https://github.com/r3bl-org/r3bl-open-core/pull/448
-  - [ ] [improve-immature-vt100-shim.md](file:///home/nazmul/github/roc/task/improve-immature-vt100-shim.md)
+  - [ ] [improve-immature-vt100-shim.md](improve-immature-vt100-shim.md)
 - [ ] RRT API (Pending PRs & Issues)
   - [ ] https://github.com/r3bl-org/r3bl-open-core/pull/452
   - [ ] https://github.com/r3bl-org/r3bl-open-core/issues/451
 - [ ] Core Types Refactor
-  - [ ] [upgrade-range-for-rust_1_96_0.md](file:///home/nazmul/github/roc/task/upgrade-range-for-rust_1_96_0.md)
+  - [ ] [upgrade-range-for-rust_1_96_0.md](upgrade-range-for-rust_1_96_0.md)
 - [ ] Release Verification & Publication
   - [ ] Test everything on macOS.
   - [ ] Test everything on Windows.

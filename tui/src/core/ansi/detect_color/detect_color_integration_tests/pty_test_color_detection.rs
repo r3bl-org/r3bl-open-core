@@ -60,6 +60,8 @@ fn controlled() {
         std::env::remove_var("NO_COLOR");
         std::env::remove_var("FORCE_COLOR");
         std::env::set_var("COLORTERM", "truecolor");
+        // Prevent `TERM=dumb` from overriding color detection in test environments
+        std::env::set_var("TERM", "xterm-256color");
     }
 
     let result = examine_env_vars_to_determine_color_support(Stream::Stdout);
