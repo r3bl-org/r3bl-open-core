@@ -142,6 +142,11 @@ pub mod vt_100_impl_char_ops;
 pub(super) mod vt_100_impl_char_ops;
 
 #[cfg(any(test, doc))]
+pub mod vt_100_impl_clear_ops;
+#[cfg(not(any(test, doc)))]
+pub(super) mod vt_100_impl_clear_ops;
+
+#[cfg(any(test, doc))]
 pub mod vt_100_impl_control_ops;
 #[cfg(not(any(test, doc)))]
 pub(super) mod vt_100_impl_control_ops;

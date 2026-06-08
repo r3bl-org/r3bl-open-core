@@ -72,7 +72,7 @@
 #[cfg(test)]
 mod pixel_char_benchmarks {
     extern crate test;
-    use crate::{PixelChar, RgbValue, TuiColor, TuiStyle};
+    use crate::{PixelChar, RgbValue, SPACER_GLYPH_CHAR, TuiColor, TuiStyle};
     use smallvec::SmallVec;
     use test::Bencher;
 
@@ -95,7 +95,7 @@ mod pixel_char_benchmarks {
                     },
                 },
                 1 => PixelChar::PlainText {
-                    display_char: ' ',
+                    display_char: SPACER_GLYPH_CHAR,
                     style: TuiStyle::default(),
                 },
                 _ => PixelChar::Spacer,

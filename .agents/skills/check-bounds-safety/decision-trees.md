@@ -194,7 +194,7 @@ Range 10..150:
 
 ## Comparison Table: When to Use Each
 
-| Scenario                          | Trait                 | Method                                     | Example                                       |
+| Scenario                          | Trait                 | Method                                     | Example                                      |
 |-----------------------------------|-----------------------|-------------------------------------------|-----------------------------------------------|
 | Buffer read/write                 | `ArrayBoundsCheck`    | `index.overflows(length)`                 | `buffer[idx]`                                 |
 | Text cursor position              | `CursorBoundsCheck`   | `len.check_cursor_position_bounds(pos)`   | Cursor after last char                        |
@@ -202,6 +202,7 @@ Range 10..150:
 | Iterator range validation         | `RangeBoundsExt`      | `range.check_range_is_valid_for_length()` | `for i in 10..50 { ... }`                     |
 | Scroll region membership          | `RangeBoundsExt`      | `range.check_index_is_within(index)`      | Is cursor in scrollable region?               |
 | VT-100 range conversion           | `RangeConvertExt`     | `inclusive.to_exclusive()`                | Convert `1..=10` to `1..11`                   |
+| Strongly-typed range to raw range | `RangeExt`            | `range.as_usize_range()`                  | Slice index standard Rust collections         |
 
 ---
 

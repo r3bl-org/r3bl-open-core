@@ -1,5 +1,7 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+// cspell:words BCDEF
+
 //! Character operations for VT100/[`ANSI`] terminal emulation.
 //!
 //! This module implements character-level operations that correspond to [`ANSI`] escape
@@ -30,8 +32,11 @@
 
 #[allow(clippy::wildcard_imports)]
 use super::super::*;
-use crate::{ArrayBoundsCheck, ArrayOverflowResult, ColIndex, Length, NumericValue, RowIndex, col, core::coordinates::bounds_check::{CursorBoundsCheck, LengthOps,
-                                              RangeBoundsExt, RangeConvertExt}, height, ok, width};
+use crate::{ArrayBoundsCheck, ArrayOverflowResult, ColIndex, Length, NumericValue,
+            RowIndex, col,
+            core::coordinates::bounds_check::{CursorBoundsCheck, LengthOps,
+                                              RangeBoundsExt, RangeConvertExt},
+            height, ok, width};
 
 impl OffscreenBuffer {
     /// Insert blank characters at cursor position (for ICH - Insert Character).

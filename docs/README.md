@@ -45,7 +45,7 @@ The [`contributing_guides`](contributing_guides) folder contains templates and g
 
 ### Technical Documentation and Design Docs
 
-- [`CLAUDE.md`](CLAUDE.md) - Claude AI integration documentation
+- [`AGENTS.md`](../AGENTS.md) - AI agent integration documentation
 - [`dd_parser_conformance.md`](dd_parser_conformance.md) - Parser conformance testing documentation
 
 ### Plans

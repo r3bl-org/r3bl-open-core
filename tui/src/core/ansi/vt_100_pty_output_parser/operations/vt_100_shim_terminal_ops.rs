@@ -19,29 +19,12 @@
 //! - **Unit tests** in the implementation layer (with `#[test]` functions)
 //! - **Integration tests** in the conformance tests validating the full pipeline
 //!
-//! For the complete testing philosophy,
-//! and rationale behind this approach.
+//! For the complete testing philosophy and rationale behind this approach,
+//! see the [operations module].
 //!
 //! # Architecture Overview
 //!
-//! ```text
-//! ╭─────────────────╮    ╭────────────────╮    ╭─────────────────╮    ╭──────────────╮
-//! │ Child Process   │────► PTY Controller │────► VTE Parser      │────► OffscreenBuf │
-//! │ (vim, bash...)  │    │ (byte stream)  │    │ (state machine) │    │ (terminal    │
-//! ╰──────┬──────────╯    ╰────────────────╯    ╰───────┬─────────╯    │  buffer)     │
-//!        │                                             │              ╰───────┬──────╯
-//!        │                                             │                      │
-//!        │                                    ╔════════▼════════╗             │
-//!        │                                    ║ Perform Trait   ║             │
-//!        │                                    ║ Implementation  ║             │
-//!        │                                    ╚═════════════════╝             │
-//!        │                                                                    │
-//!        │                                    ╭─────────────────╮             │
-//!        │                                    │ RenderPipeline  ◄─────────────╯
-//!        │                                    │ paint()         │
-//!        ╰────────────────────────────────────► Terminal Output │
-//!                                             ╰─────────────────╯
-//! ```
+//! See the [module-level Architecture Overview].
 //!
 //! # [`ESC`] Sequence Architecture
 //!
@@ -72,7 +55,9 @@
 //! [`ESC`]: crate::EscSequence
 //! [`impl_terminal_ops`]: crate::vt_100_ansi_impl::vt_100_impl_terminal_ops
 //! [`test_terminal_ops`]: crate::vt_100_pty_output_conformance_tests::tests::vt_100_test_terminal_ops
+//! [module-level Architecture Overview]: super#architecture-overview
 //! [module-level documentation]: self
+//! [operations module]: crate::core::ansi::vt_100_pty_output_parser::operations
 
 use super::super::ansi_parser_public_api::AnsiToOfsBufPerformer;
 use crate::{Pos, TuiStyle};

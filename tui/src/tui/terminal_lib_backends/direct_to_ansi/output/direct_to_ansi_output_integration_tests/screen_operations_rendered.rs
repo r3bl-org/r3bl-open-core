@@ -8,13 +8,12 @@
 //!
 //! # Important Design Note
 //!
-//! The [`OffscreenBuffer`] [`ANSI`] parser **intentionally ignores** clear operations
-//! (ED/EL sequences). This is by design because TUI applications repaint themselves
-//! after clear operations. See [`performer.rs`] where `ED_ERASE_DISPLAY` and
-//! `EL_ERASE_LINE` are explicitly ignored.
+//! The [`OffscreenBuffer`] [`ANSI`] parser fully supports and applies clear operations
+//! (ED/EL sequences) to the visual buffer. 
 //!
 //! As a result, these tests verify:
 //! - Clear [`ANSI`] sequences are **generated correctly** (verified by byte-level tests)
+//! - Clear operations correctly update the visual buffer (replacing characters with spaces)
 //! - Text painting **after** clear operations works correctly (cursor positioning)
 //! - Buffer state is correct for content that **isn't** cleared
 //!
@@ -26,17 +25,17 @@
 use super::test_helpers_rendered::*;
 use crate::{offscreen_buffer::test_fixtures_ofs_buf::*, render_op::RenderOpCommon};
 
-/// Verify text can be painted at various positions.
+/// Verify text can be painted at various positions and clear sequences work correctly.
 ///
-/// NOTE: Clear operations (`ClearScreen`, `ClearLine`, etc.) are intentionally ignored
-/// by [`OffscreenBuffer`]'s [`ANSI`] parser - TUI apps repaint themselves. This test
-/// verifies the cursor positioning and text painting still work correctly.
+/// NOTE: Previously, Clear operations (`ClearScreen`, `ClearLine`, etc.) were
+/// intentionally ignored. They are now fully supported, so this test verifies
+/// that the screen is actually cleared and subsequent text painting still works correctly.
 ///
 /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 #[test]
 fn test_paint_after_clear_sequence_rendered() {
-    // Even though ClearScreen is ignored by the parser, the cursor positioning
-    // and subsequent text painting should work correctly.
+    // The ClearScreen operation should now properly clear the buffer.
+    // The cursor positioning and subsequent text painting should work correctly.
     let ops = vec![
         move_cursor_abs(5, 5),
         paint_text("X", None),
@@ -48,8 +47,8 @@ fn test_paint_after_clear_sequence_rendered() {
 
     let buffer = execute_ops_and_render(ops);
 
-    // Both 'X' and 'Y' should be present (clear is ignored).
-    assert_plain_char_at(&buffer, 5, 5, 'X');
+    // 'X' should be cleared (space), and 'Y' should be present.
+    assert_plain_char_at(&buffer, 5, 5, ' ');
     assert_plain_char_at(&buffer, 3, 3, 'Y');
 }
 

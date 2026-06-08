@@ -49,6 +49,7 @@
 //! | [`ViewportBoundsCheck`]   | [`viewport_bounds_check.rs`]    | [`check_viewport_bounds()`]                                                                                                               |
 //! | [`RangeBoundsExt`]        | [`range_bounds_check_ext.rs`]   | [`check_range_is_valid_for_length()`], [`clamp_range_to()`], [`check_index_is_within()`] (supports both [`Range`] and [`RangeInclusive`]) |
 //! | [`RangeConvertExt`]       | [`range_convert_ext.rs`]        | [`to_exclusive()`] - Convert [`RangeInclusive`] → [`Range`] for iteration                                                                 |
+//! | [`RangeExt`]              | [`range_bounds_check_ext.rs`]   | [`as_usize_range()`] - Convert coordinate ranges into [`usize`] ranges for slice indexing                                                 |
 //!
 //! ### Why Import These Traits?
 //!
@@ -141,13 +142,14 @@
 //!
 //! ### Semantic Traits (Use Case Validation)
 //!
-//! | Task                            | Trait                     | File                            | Key Question                                      |
-//! | ------------------------------- | ------------------------- | ------------------------------- | ------------------------------------------------- |
-//! | Validate array access safety    | [`ArrayBoundsCheck`]      | [`array_bounds_check.rs`]       | "Can I access array`[index]` correctly?"          |
-//! | Check cursor position bounds    | [`CursorBoundsCheck`]     | [`cursor_bounds_check.rs`]      | "Can a cursor be placed at position N?"           |
-//! | Determine viewport visibility   | [`ViewportBoundsCheck`]   | [`viewport_bounds_check.rs`]    | "Is this content visible in my viewport?"         |
-//! | Validate range structure        | [`RangeBoundsExt`]        | [`range_bounds_check_ext.rs`]   | "Is this [`Range`]/[`RangeInclusive`] valid?"     |
-//! | Convert range types             | [`RangeConvertExt`]       | [`range_convert_ext.rs`]        | "How do I convert inclusive → exclusive range?"   |
+//! | Task                            | Trait                     | File                            | Key Question                                                                 |
+//! | ------------------------------- | ------------------------- | ------------------------------- | ---------------------------------------------------------------------------- |
+//! | Validate array access safety    | [`ArrayBoundsCheck`]      | [`array_bounds_check.rs`]       | "Can I access array`[index]` correctly?"                                     |
+//! | Check cursor position bounds    | [`CursorBoundsCheck`]     | [`cursor_bounds_check.rs`]      | "Can a cursor be placed at position N?"                                      |
+//! | Determine viewport visibility   | [`ViewportBoundsCheck`]   | [`viewport_bounds_check.rs`]    | "Is this content visible in my viewport?"                                    |
+//! | Validate range structure        | [`RangeBoundsExt`]        | [`range_bounds_check_ext.rs`]   | "Is this [`Range`]/[`RangeInclusive`] valid?"                                |
+//! | Convert range types             | [`RangeConvertExt`]       | [`range_convert_ext.rs`]        | "How do I convert inclusive → exclusive range?"                              |
+//! | Convert range to `usize` range  | [`RangeExt`]              | [`range_bounds_check_ext.rs`]   | "How do I convert a coordinate range to a `usize` range for slice indexing?" |
 //!
 //! #### When to Use Semantic Traits Directly
 //!
@@ -1059,7 +1061,7 @@
 //!   zero-copy editor implementation. Unlike [`ByteIndex`] and [`ByteLength`] which form
 //!   a standard index/length pair, [`ByteOffset`] is intentionally separate from the
 //!   bounds checking system.
-//!
+//! 
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`array_bounds_check.rs`]: mod@crate::array_bounds_check
 //! [`ArrayBoundsCheck`]: crate::ArrayBoundsCheck
@@ -1067,6 +1069,7 @@
 //! [`as_u16()`]: crate::NumericConversions::as_u16
 //! [`as_u16`]: NumericConversions::as_u16
 //! [`as_usize()`]: crate::NumericConversions::as_usize
+//! [`as_usize_range()`]: crate::RangeExt::as_usize_range
 //! [`as_usize`]: NumericConversions::as_usize
 //! [`ByteIndex`]: crate::ByteIndex
 //! [`ByteLength`]: crate::ByteLength
@@ -1130,6 +1133,7 @@
 //! [`RangeBoundsExt`]: crate::RangeBoundsExt
 //! [`RangeBoundsResult`]: crate::RangeBoundsResult
 //! [`RangeConvertExt`]: crate::RangeConvertExt
+//! [`RangeExt`]: crate::RangeExt
 //! [`RangeInclusive<Index>`]: std::ops::RangeInclusive
 //! [`RangeInclusive`]: std::ops::RangeInclusive
 //! [`RangeValidityStatus`]: crate::RangeValidityStatus

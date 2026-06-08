@@ -68,7 +68,7 @@ After making changes, run these checks in order:
 Follow the standard Rust module organization:
 - Private implementation modules
 - Public re-exports in `mod.rs` for clean API
-- See root `CLAUDE.md` for general Rust guidelines
+- See root `AGENTS.md` for general Rust guidelines
 
 ### Testing Best Practices
 

@@ -284,27 +284,34 @@ mod tests {
 
         // Test positions outside viewport
         assert_ne!(
-            idx(9).check_viewport_bounds(viewport_start, viewport_size), RangeBoundsResult::Within
+            idx(9).check_viewport_bounds(viewport_start, viewport_size),
+            RangeBoundsResult::Within
         );
         assert_ne!(
-            idx(30).check_viewport_bounds(viewport_start, viewport_size), RangeBoundsResult::Within
+            idx(30).check_viewport_bounds(viewport_start, viewport_size),
+            RangeBoundsResult::Within
         );
         assert_ne!(
-            idx(35).check_viewport_bounds(viewport_start, viewport_size), RangeBoundsResult::Within
+            idx(35).check_viewport_bounds(viewport_start, viewport_size),
+            RangeBoundsResult::Within
         );
 
         // Test positions within viewport [10, 30)
         assert_eq!(
-            idx(10).check_viewport_bounds(viewport_start, viewport_size), RangeBoundsResult::Within
+            idx(10).check_viewport_bounds(viewport_start, viewport_size),
+            RangeBoundsResult::Within
         );
         assert_eq!(
-            idx(15).check_viewport_bounds(viewport_start, viewport_size), RangeBoundsResult::Within
+            idx(15).check_viewport_bounds(viewport_start, viewport_size),
+            RangeBoundsResult::Within
         );
         assert_eq!(
-            idx(25).check_viewport_bounds(viewport_start, viewport_size), RangeBoundsResult::Within
+            idx(25).check_viewport_bounds(viewport_start, viewport_size),
+            RangeBoundsResult::Within
         );
         assert_eq!(
-            idx(29).check_viewport_bounds(viewport_start, viewport_size), RangeBoundsResult::Within
+            idx(29).check_viewport_bounds(viewport_start, viewport_size),
+            RangeBoundsResult::Within
         );
     }
 
@@ -319,7 +326,8 @@ mod tests {
             RangeBoundsResult::Overflowed
         );
         assert_ne!(
-            idx(5).check_viewport_bounds(viewport_start, zero_size), RangeBoundsResult::Within
+            idx(5).check_viewport_bounds(viewport_start, zero_size),
+            RangeBoundsResult::Within
         );
     }
 
@@ -344,13 +352,16 @@ mod tests {
 
         // Boolean tests
         assert_ne!(
-            idx(2).check_viewport_bounds(viewport_start, unit_size), RangeBoundsResult::Within
+            idx(2).check_viewport_bounds(viewport_start, unit_size),
+            RangeBoundsResult::Within
         );
         assert_eq!(
-            idx(3).check_viewport_bounds(viewport_start, unit_size), RangeBoundsResult::Within
+            idx(3).check_viewport_bounds(viewport_start, unit_size),
+            RangeBoundsResult::Within
         );
         assert_ne!(
-            idx(4).check_viewport_bounds(viewport_start, unit_size), RangeBoundsResult::Within
+            idx(4).check_viewport_bounds(viewport_start, unit_size),
+            RangeBoundsResult::Within
         );
     }
 
@@ -375,13 +386,16 @@ mod tests {
 
         // Boolean tests
         assert_eq!(
-            idx(0).check_viewport_bounds(viewport_start, viewport_size), RangeBoundsResult::Within
+            idx(0).check_viewport_bounds(viewport_start, viewport_size),
+            RangeBoundsResult::Within
         );
         assert_eq!(
-            idx(4).check_viewport_bounds(viewport_start, viewport_size), RangeBoundsResult::Within
+            idx(4).check_viewport_bounds(viewport_start, viewport_size),
+            RangeBoundsResult::Within
         );
         assert_ne!(
-            idx(5).check_viewport_bounds(viewport_start, viewport_size), RangeBoundsResult::Within
+            idx(5).check_viewport_bounds(viewport_start, viewport_size),
+            RangeBoundsResult::Within
         );
     }
 }

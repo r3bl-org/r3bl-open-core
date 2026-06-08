@@ -50,6 +50,9 @@
 pub mod vt_100_test_char_ops;
 
 #[cfg(any(test, doc))]
+pub mod vt_100_test_clear_ops;
+
+#[cfg(any(test, doc))]
 pub mod vt_100_test_control_ops;
 
 #[cfg(any(test, doc))]

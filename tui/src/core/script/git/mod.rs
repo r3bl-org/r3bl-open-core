@@ -7,7 +7,7 @@
 //! - Branch listing, creation, checkout, and deletion
 //! - Tracking changed files by extension
 //!
-//! The module follows the pattern from CLAUDE.md with private submodules and public
+//! The module follows the pattern from AGENTS.md with private submodules and public
 //! re-exports to provide a clean, flat API surface.
 
 #![rustfmt::skip]

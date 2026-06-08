@@ -16,9 +16,9 @@ use std::ops::{Add, Range, RangeInclusive};
 ///
 /// <div class="warning">
 ///
-/// We cannot add inherent methods to [`Range`] or [`RangeInclusive`] (orphan rule,
-/// since they are in [`std`]), so we use an extension trait that can be implemented on
-/// foreign types.
+/// We cannot add inherent methods to [`Range`] or [`RangeInclusive`] (orphan rule, since
+/// they are in [`std`]), so we use an extension trait that can be implemented on foreign
+/// types.
 ///
 /// </div>
 ///
@@ -258,8 +258,8 @@ where
 
     /// Clamp this range to fit within buffer/line bounds.
     ///
-    /// Ensures both start and end are valid for the given buffer length, preserving
-    /// range type semantics (exclusive vs inclusive). Inverted ranges become empty.
+    /// Ensures both start and end are valid for the given buffer length, preserving range
+    /// type semantics (exclusive vs inclusive). Inverted ranges become empty.
     ///
     /// See the [trait documentation][Self] for detailed semantics.
     ///
@@ -271,8 +271,8 @@ where
 
     /// Checks if an index is within this range's bounds.
     ///
-    /// Boundary semantics depend on range type (exclusive vs inclusive).
-    /// See the [trait documentation][Self] for detailed semantics.
+    /// Boundary semantics depend on range type (exclusive vs inclusive). See the [trait
+    /// documentation][Self] for detailed semantics.
     ///
     /// # Returns
     /// - [`RangeBoundsResult::Underflowed`] if index < start
@@ -319,8 +319,8 @@ where
             return RangeValidityStatus::StartOutOfBounds;
         }
 
-        // End can be equal to length for exclusive ranges (special case).
-        // Use CursorPositionBoundsStatus to handle this correctly.
+        // End can be equal to length for exclusive ranges (special case). Use
+        // CursorPositionBoundsStatus to handle this correctly.
         if length.check_cursor_position_bounds(self.end)
             == CursorPositionBoundsStatus::Beyond
         {
@@ -347,8 +347,8 @@ where
             == CursorPositionBoundsStatus::Beyond
         {
             // For exclusive ranges, the end can equal the length (unlike regular index
-            // bounds checking). Use CursorBoundsCheck to get the position where
-            // index == length, which is the valid exclusive range end.
+            // bounds checking). Use CursorBoundsCheck to get the position where index ==
+            // length, which is the valid exclusive range end.
             buffer_length.eol_cursor_position()
         } else {
             self.end
@@ -412,8 +412,8 @@ where
             return RangeValidityStatus::StartOutOfBounds;
         }
 
-        // IMPORTANT: For inclusive ranges, the end is INCLUDED, so it must also be
-        // a valid array index (< length), not just a valid cursor position (<= length).
+        // IMPORTANT: For inclusive ranges, the end is INCLUDED, so it must also be a
+        // valid array index (< length), not just a valid cursor position (<= length).
         // This is the key difference from exclusive Range validation.
         if self.end().overflows(length) != ArrayOverflowResult::Within {
             return RangeValidityStatus::EndOutOfBounds;
@@ -442,8 +442,8 @@ where
                 *self.end()
             };
 
-        // Ensure range is not inverted.
-        // For RangeInclusive, if start == end, it's a valid single-element range.
+        // Ensure range is not inverted. For RangeInclusive, if start == end, it's a valid
+        // single-element range.
         if clamped_start > clamped_end {
             // Return single-element range at start position (mimics empty range behavior)
             clamped_start..=clamped_start
@@ -460,6 +460,75 @@ where
         } else {
             RangeBoundsResult::Within
         }
+    }
+}
+
+/// Extension trait to convert strongly-typed index ranges into raw [`usize`] ranges for
+/// slice indexing.
+pub trait RangeExt {
+    /// The equivalent [`usize`] range type.
+    type RangeUsize;
+
+    /// Converts this range into a [`usize`] range suitable for slice indexing.
+    ///
+    /// This provides a clean way to use coordinate ranges for accessing elements in
+    /// standard Rust collections (like [`Vec`] or slices) without manually casting the
+    /// endpoints.
+    ///
+    /// # Returns
+    /// A range with [`usize`] boundaries that can be used directly as a [`SliceIndex`].
+    ///
+    /// [`SliceIndex`]: std::slice::SliceIndex
+    #[must_use]
+    fn as_usize_range(&self) -> Self::RangeUsize;
+}
+
+impl<I: crate::NumericConversions> RangeExt for Range<I> {
+    type RangeUsize = Range<usize>;
+
+    fn as_usize_range(&self) -> Self::RangeUsize {
+        self.start.as_usize()..self.end.as_usize()
+    }
+}
+
+impl<I: crate::NumericConversions> RangeExt for RangeInclusive<I> {
+    type RangeUsize = RangeInclusive<usize>;
+
+    fn as_usize_range(&self) -> Self::RangeUsize {
+        self.start().as_usize()..=self.end().as_usize()
+    }
+}
+
+impl<I: crate::NumericConversions> RangeExt for std::ops::RangeFrom<I> {
+    type RangeUsize = std::ops::RangeFrom<usize>;
+
+    fn as_usize_range(&self) -> Self::RangeUsize { self.start.as_usize().. }
+}
+
+impl<I: crate::NumericConversions> RangeExt for std::ops::RangeTo<I> {
+    type RangeUsize = std::ops::RangeTo<usize>;
+
+    fn as_usize_range(&self) -> Self::RangeUsize { ..self.end.as_usize() }
+}
+
+#[cfg(test)]
+mod tests_range_ext {
+    use super::*;
+    use crate::{col, idx};
+
+    #[test]
+    fn test_as_usize_range() {
+        let range = idx(2)..idx(5);
+        assert_eq!(range.as_usize_range(), 2..5);
+
+        let range_inclusive = idx(2)..=idx(5);
+        assert_eq!(range_inclusive.as_usize_range(), 2..=5);
+
+        let range_from = col(2)..;
+        assert_eq!(range_from.as_usize_range(), 2..);
+
+        let range_to = ..col(5);
+        assert_eq!(range_to.as_usize_range(), ..5);
     }
 }
 
@@ -614,8 +683,8 @@ mod tests_range_clamp {
     fn test_range_clamp_exclusive_end_semantics() {
         let content_width = len(10); // Columns 0-9, length 10
 
-        // Test that exclusive end semantics are preserved
-        // Range 5..10 should remain 5..10 (end == length is valid for exclusive ranges)
+        // Test that exclusive end semantics are preserved Range 5..10 should remain 5..10
+        // (end == length is valid for exclusive ranges)
         let range_to_end: Range<Index> = idx(5)..idx(10);
         let clamped_to_end = range_to_end.clamp_range_to(content_width);
         assert_eq!(
@@ -815,8 +884,8 @@ mod tests_range_inclusive_clamp {
     fn test_range_inclusive_clamp_end_beyond_bounds() {
         let content_width = len(10); // Columns 0-9, length 10
 
-        // CRITICAL TEST: Range 5..=10 should clamp to 5..=9
-        // This demonstrates the key difference from exclusive ranges
+        // CRITICAL TEST: Range 5..=10 should clamp to 5..=9 This demonstrates the key
+        // difference from exclusive ranges
         let range1: RangeInclusive<Index> = idx(5)..=idx(10);
         let clamped1 = range1.clamp_range_to(content_width);
         assert_eq!(

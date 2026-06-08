@@ -72,7 +72,8 @@ fn test_zero_length_consistency_across_traits() {
     // Viewport: zero-size viewport contains nothing
     let zero_viewport_size = len(0);
     assert_ne!(
-        any_idx.check_viewport_bounds(idx(0), zero_viewport_size), RangeBoundsResult::Within
+        any_idx.check_viewport_bounds(idx(0), zero_viewport_size),
+        RangeBoundsResult::Within
     );
 
     // This consistency is crucial for avoiding special-case code throughout the
@@ -152,7 +153,8 @@ fn test_real_world_viewport_scrolling() {
 
     // Verify cursor is now visible after scrolling
     assert_eq!(
-        cursor_row.check_viewport_bounds(viewport_start, viewport_height), RangeBoundsResult::Within
+        cursor_row.check_viewport_bounds(viewport_start, viewport_height),
+        RangeBoundsResult::Within
     );
 
     // Additional verification: viewport should be within buffer
@@ -175,7 +177,8 @@ fn test_real_world_viewport_scrolling() {
     }
 
     assert_eq!(
-        bottom_cursor.check_viewport_bounds(test_viewport, viewport_height), RangeBoundsResult::Within
+        bottom_cursor.check_viewport_bounds(test_viewport, viewport_height),
+        RangeBoundsResult::Within
     );
     assert_eq!(test_viewport, row(75)); // 100 - 25 = 75
 }

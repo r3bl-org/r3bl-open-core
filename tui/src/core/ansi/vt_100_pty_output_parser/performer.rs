@@ -213,12 +213,12 @@
 
 // Import the operation modules and public API.
 use super::{ansi_parser_public_api::AnsiToOfsBufPerformer,
-            operations::{vt_100_shim_char_ops, vt_100_shim_control_ops,
-                         vt_100_shim_cursor_ops, vt_100_shim_dsr_ops,
-                         vt_100_shim_line_ops, vt_100_shim_margin_ops,
-                         vt_100_shim_mode_ops, vt_100_shim_osc_ops,
-                         vt_100_shim_scroll_ops, vt_100_shim_sgr_ops,
-                         vt_100_shim_terminal_ops}};
+            operations::{vt_100_shim_char_ops, vt_100_shim_clear_ops,
+                         vt_100_shim_control_ops, vt_100_shim_cursor_ops,
+                         vt_100_shim_dsr_ops, vt_100_shim_line_ops,
+                         vt_100_shim_margin_ops, vt_100_shim_mode_ops,
+                         vt_100_shim_osc_ops, vt_100_shim_scroll_ops,
+                         vt_100_shim_sgr_ops, vt_100_shim_terminal_ops}};
 use crate::core::ansi::constants::{BACKSPACE, CARRIAGE_RETURN, CHA_CURSOR_COLUMN,
                                    CHARSET_ASCII, CHARSET_DEC_GRAPHICS,
                                    CNL_CURSOR_NEXT_LINE, CPL_CURSOR_PREV_LINE,
@@ -526,13 +526,12 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
                 vt_100_shim_cursor_ops::vertical_position_absolute(self, params);
             }
 
-            // Display control operations (explicitly ignored).
-            ED_ERASE_DISPLAY | EL_ERASE_LINE => {
-                // Clear screen/line - ignore, TUI apps will repaint themselves
-                tracing::warn!(
-                    "CSI {}: Clear display/line operation ignored",
-                    dispatch_char
-                );
+            // Display control operations.
+            ED_ERASE_DISPLAY => {
+                vt_100_shim_clear_ops::erase_in_display(self, params);
+            }
+            EL_ERASE_LINE => {
+                vt_100_shim_clear_ops::erase_in_line(self, params);
             }
 
             // Other unimplemented CSI sequences.
