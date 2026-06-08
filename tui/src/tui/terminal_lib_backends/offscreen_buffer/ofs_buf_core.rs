@@ -94,6 +94,9 @@ pub struct OffscreenBuffer {
     ///     crate::main_event_loop::EventLoopState::log_telemetry_info()
     /// [`new_empty()`]: Self::new_empty()
     pub cached_memory_size: MemorySize,
+
+    /// Scrollback history for lines that have scrolled off the top of the screen.
+    pub scrollback: super::ScrollbackBuffer,
 }
 
 impl GetMemSize for OffscreenBuffer {
@@ -107,6 +110,9 @@ impl GetMemSize for OffscreenBuffer {
     /// [`new_empty()`]: Self::new_empty()
     fn get_mem_size(&self) -> usize { self.cached_memory_size.size().unwrap_or(0) }
 }
+
+// Forward declarations for types defined in their own modules, just for this file.
+use super::pixel_char_line::PixelCharLine;
 
 /// Trait for painting offscreen buffer content to terminal output.
 ///
@@ -257,6 +263,7 @@ impl OffscreenBuffer {
             window_size,
             cursor_pos: Pos::default(),
             cached_memory_size,
+            scrollback: super::ScrollbackBuffer::default(),
         }
     }
 
@@ -269,6 +276,18 @@ impl OffscreenBuffer {
                 }
             }
         }
+    }
+
+    /// Number of lines in scrollback history.
+    #[must_use]
+    pub fn scrollback_len(&self) -> usize {
+        self.scrollback.len()
+    }
+
+    /// Get a scrollback line by index (0 = oldest).
+    #[must_use]
+    pub fn scrollback_get(&self, idx: usize) -> Option<&PixelCharLine> {
+        self.scrollback.get(idx)
     }
 }
 

@@ -90,6 +90,7 @@ impl OfsBufVT100 {
         ok!()
     }
 
+
     /// Shift lines up within a range by the specified amount.
     ///
     /// - Lines at the bottom of the range are filled with blank lines.

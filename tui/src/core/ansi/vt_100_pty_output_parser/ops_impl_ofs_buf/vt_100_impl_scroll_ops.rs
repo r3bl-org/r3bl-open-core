@@ -156,6 +156,18 @@ impl OfsBufVT100 {
         // exclusive for iteration.
         let scroll_region = self.get_scroll_range_inclusive();
 
+        // Capture the line scrolling off the top into scrollback, but only when
+        // the scroll region touches the top of the visible screen AND the primary
+        // screen buffer is active. Alternate screen (vim, less, etc.) should not
+        // populate scrollback.
+        if scroll_region.start().as_usize() == 0
+            && self.terminal_mode.alternate_screen
+                == super::super::AlternateScreenState::Inactive
+        {
+            let top_line = self.buffer[scroll_region.start().as_usize()].clone();
+            self.scrollback.push(top_line);
+        }
+
         // Use shift_lines_up to shift lines up within the scroll region.
         self.shift_lines_up(scroll_region.to_exclusive(), 1)
     }

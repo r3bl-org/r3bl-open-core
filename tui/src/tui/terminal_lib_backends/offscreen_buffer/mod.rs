@@ -349,6 +349,7 @@ mod paint_impl;
 mod pixel_char;
 mod pixel_char_line;
 mod pixel_char_lines;
+mod scrollback_buffer;
 
 // Re-export public API (flat, ergonomic surface).
 pub use diff_chunks::*;
@@ -357,5 +358,8 @@ pub use paint_impl::*;
 pub use pixel_char::*;
 pub use pixel_char_line::*;
 pub use pixel_char_lines::*;
+pub use scrollback_buffer::*;
+
+// Test fixtures (only available during testing).
 #[cfg(any(test, doc))]
 pub mod test_fixtures_ofs_buf;
