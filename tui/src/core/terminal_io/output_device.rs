@@ -1,9 +1,12 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{SafeRawTerminal, SendRawTerminal, StdMutex};
-use std::sync::Arc;
+// cspell:words O_NONBLOCK
 
-pub type LockedOutputDevice<'a> = &'a mut dyn std::io::Write;
+use crate::{SafeRawTerminal, SendRawTerminal, StdMutex};
+use std::{io::{Stdout, Write, stdout},
+          sync::Arc};
+
+pub type LockedOutputDevice<'a> = &'a mut dyn Write;
 
 /// This struct represents an output device that can be used to write to the terminal.
 /// - It is safe to clone.
@@ -32,11 +35,99 @@ impl Default for OutputDevice {
 }
 
 impl OutputDevice {
+    /// Creates a new output device wrapping [`stdout`].
+    ///
+    /// The standard output is wrapped in [`FullBufferWaitingStdout`] to safely handle
+    /// [`WouldBlock`] errors that occur when [`stdin`] is set to non-blocking mode.
+    ///
+    /// [`stdin`]: std::io::stdin
+    /// [`stdout`]: std::io::stdout
+    /// [`WouldBlock`]: std::io::ErrorKind::WouldBlock
     #[must_use]
     pub fn new_stdout() -> Self {
         Self {
-            resource: Arc::new(StdMutex::new(std::io::stdout())),
+            resource: Arc::new(StdMutex::new(FullBufferWaitingStdout(stdout()))),
             is_mock: false,
+        }
+    }
+}
+
+/// A wrapper around [`stdout`] that politely waits and retries when the OS terminal
+/// buffer is full.
+///
+/// # The Mental Model
+///
+/// 1. **The Problem:** We made [`stdin`] non-blocking so our event loop doesn't freeze.
+///    On Linux, [`stdout`] uses the exact same underlying file description, so [`stdout`]
+///    accidentally became non-blocking too.
+/// 2. **The Symptom:** If we try to write a ton of text to the terminal all at once (like
+///    a huge UI render or a massive [`cat`] command), the operating system's terminal
+///    buffer gets full. Normally, the OS would pause our thread and wait for space. But
+///    because it's non-blocking now, the OS panics and throws a "buffer full, try again
+///    later" error ([`WouldBlock`]).
+/// 3. **The Fix:** We built this wrapper to catch that "try again later" error. Instead
+///    of crashing, it literally tells the thread to wait ([`std::thread::yield_now()`])
+///    and loops to try writing the text again. We are essentially faking normal terminal
+///    behavior so the rest of the app doesn't have to know that [`stdout`] is acting
+///    weird under the hood.
+///
+/// # Blocking vs. Busy-Waiting vs. Yielding
+///
+/// Why use [`std::thread::yield_now()`] instead of just looping (busy-waiting) or letting
+/// the OS handle it (blocking)?
+///
+/// - **Blocking (Going to Sleep):** This is the default behavior of [`stdout`]. When the
+///   buffer is full, the OS takes the thread off the CPU and puts it to sleep until space
+///   frees up. CPU usage is 0%. We lost this behavior when [`stdin`] became non-blocking.
+/// - **Busy-Waiting (The Bad Way):** If we caught [`WouldBlock`] and just looped (`loop {
+///   match ... }`) without yielding, our thread would stay on the CPU asking the OS "Is
+///   it ready?" millions of times a second. This burns 100% of a CPU core doing nothing
+///   useful.
+/// - **Yielding (Polite Waiting):** By calling [`yield_now()`], the thread immediately
+///   pauses its execution and gives up its timeslice to the OS scheduler. The thread is
+///   not asleep, but it goes to the back of the line. In the fraction of a second while
+///   other programs run, the terminal emulator clears the OS buffer. When our thread gets
+///   its turn again, the buffer has space. This is highly CPU-efficient active polling.
+///
+/// # Cross-References
+/// - Root cause: [Why We Need Non-Blocking Read]
+/// - Where it originates: In  [`MioPollWorker`], see [`original_stdin_flags`] field and
+///   [`drop()`] method.
+///
+/// [`cat`]: https://en.wikipedia.org/wiki/Cat_(Unix)
+/// [`drop()`]: crate::tui::terminal_lib_backends::direct_to_ansi::input::mio_poller::MioPollWorker#method.drop
+/// [`MioPollWorker`]:
+///     crate::tui::terminal_lib_backends::direct_to_ansi::input::mio_poller::MioPollWorker
+/// [`original_stdin_flags`]: crate::tui::terminal_lib_backends::direct_to_ansi::input::mio_poller::MioPollWorker::original_stdin_flags
+/// [`stdin`]: std::io::stdin
+/// [`stdout`]: std::io::stdout
+/// [`WouldBlock`]: std::io::ErrorKind::WouldBlock
+/// [`yield_now()`]: std::thread::yield_now
+/// [Why We Need Non-Blocking Read]:
+///     crate::tui::terminal_lib_backends::direct_to_ansi::input::mio_poller::handler_stdin::consume_stdin_input_with_sender#why-we-need-non-blocking-read
+#[derive(Debug)]
+pub struct FullBufferWaitingStdout(pub Stdout);
+
+impl Write for FullBufferWaitingStdout {
+    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+        loop {
+            match self.0.write(buf) {
+                Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {
+                    std::thread::yield_now();
+                }
+                other => return other,
+            }
+        }
+    }
+
+    fn flush(&mut self) -> std::io::Result<()> {
+        loop {
+            match self.0.flush() {
+                Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {
+                    std::thread::yield_now();
+                }
+                other => return other,
+            }
         }
     }
 }
@@ -54,7 +145,7 @@ impl OutputDevice {
     /// - Panics if a recursive lock is detected on the same instance.
     pub fn read<F, R>(&self, fun: F) -> R
     where
-        F: FnOnce(&dyn std::io::Write) -> R,
+        F: FnOnce(&dyn Write) -> R,
     {
         self.resource.read(|writer| fun(writer))
     }

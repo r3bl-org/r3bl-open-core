@@ -630,6 +630,53 @@ Section headings are converted to fragments:
 
 **Best Practice:** When linking to a section in another module, always use the full `crate::` path.
 
+### ⚠️ Rustfmt Comment-Wrapping Bug with Fragment Anchor Links
+
+When `wrap_comments = true` is configured in `rustfmt.toml` (with a specific `comment_width`, e.g., `90`), any doc comment line that exceeds the width limit will be wrapped by `rustfmt`. 
+
+While `rustfmt` is smart enough to avoid wrapping standard HTTP/HTTPS URLs, **it does not natively recognize Rust intra-doc paths (or relative paths) as URLs.**
+
+If you have a reference definition pointing to an intra-doc path with a fragment (e.g., `#section-name`), and the total line length exceeds the comment width:
+1. `rustfmt` will force-wrap the line, breaking the path right after the `#` character.
+2. It then treats the subsequent line in the doc comment as part of the same paragraph, wrapping them together and completely corrupting the reference link block.
+
+#### ❌ Bad: Long Relative/Absolute Path triggers `rustfmt` wrapping
+
+```rust
+/// [How this affects stdout as well]:
+///     super::handler_stdin::consume_stdin_input_with_sender#how-this-affects-stdout-as-well
+```
+
+Because the second line (indented URL) is 93 characters (exceeding 90), `rustfmt` wraps it, corrupting it into:
+
+```rust
+/// [How this affects stdout as well]:
+///     super::handler_stdin::consume_stdin_input_with_sender#
+/// how-this-affects-stdout-as-well [Why We Need Non-Blocking Read]:
+```
+
+#### ✅ Clever Workaround: Import the Symbol and Shorten the Link
+
+To prevent `rustfmt` from wrapping, keep the line length under the `comment_width` limit. The cleanest way to do this is to **import the target symbol into the current module** so that you can reference it directly by name instead of using a long relative or absolute path.
+
+To avoid compiler warnings about unused imports, always:
+1. **Separate** the doc-only import from the main, nested `use` group of the file.
+2. Tag it with `#[allow(unused_imports)]` and add an explanatory comment.
+
+1. **Import the symbol:**
+   ```rust
+   // Imported specifically for the intra-doc links in the struct documentation.
+   #[allow(unused_imports)]
+   use super::handler_stdin::consume_stdin_input_with_sender;
+   ```
+
+2. **Use the shorter direct reference:**
+   ```rust
+   /// [How this affects stdout as well]:
+   ///     consume_stdin_input_with_sender#how-this-affects-stdout-as-well
+   ```
+   *Line length is now only 71 characters, safely below the 90-character wrapping threshold!*
+
 ### Heading Renames Break Fragment Links Silently
 
 Rustdoc slugifies heading text into a heading anchor (e.g., `## My Section` becomes
