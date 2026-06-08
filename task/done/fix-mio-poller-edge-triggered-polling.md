@@ -41,14 +41,16 @@ returns `ErrorKind::WouldBlock`.
    is empty, `stdin` MUST be set to non-blocking mode. In `mio_poll_worker.rs`, we use
    `rustix::fs::fcntl_setfl` to set `OFlags::NONBLOCK` when the worker is created, and
    restore the original flags when it is dropped to prevent breaking the terminal. This
-   was required to fix the following tests that were deadlocking after the `loop` refactor:
+   was required to fix the following tests that were deadlocking after the `loop`
+   refactor:
    - `test_pty_mio_poller_thread_lifecycle`
    - `test_pty_mio_poller_subscribe`
    - `test_production_factory_restart_cycle`
 
 ## Implementation Steps
 
-- [x] In `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/mio_poller/handler_stdin.rs`,
+- [x] In
+      `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/mio_poller/handler_stdin.rs`,
       modify `consume_stdin_input_with_sender` to use a `loop`.
 - [x] Ensure that `parse_stdin_bytes_with_sender` is called on each successful read chunk.
 - [x] If `parse_stdin_bytes_with_sender` returns `Continuation::Stop`, break the loop and
@@ -67,5 +69,89 @@ returns `ErrorKind::WouldBlock`.
 
 ## Mandatory Manual Review
 - [x] `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/mio_poller/handler_stdin.rs`
-- [x] `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/mio_poller/mio_poll_worker.rs`
-- [x] `tui/src/core/ansi/detect_color/detect_color_integration_tests/pty_test_color_detection.rs`
+- [x]
+  `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/mio_poller/mio_poll_worker.rs`
+- [x]
+  `tui/src/core/ansi/detect_color/detect_color_integration_tests/pty_test_color_detection.rs`
+
+# Fix side effect of this fix (stdout is also non blocking now)
+
+- [x] Fix bug introduced by mio-poller-edge-triggered-polling:
+  https://github.com/r3bl-org/r3bl-open-core/issues/453
+  - [x] Implemented `FullBufferWaitingStdout` in `OutputDevice::new_stdout()` to yield
+    execution and retry when encountering `ErrorKind::WouldBlock`.
+
+## Plan: Integration Test & Rustdoc Updates
+
+### Phase 1: Rustdoc Updates
+
+- [x] In `tui/src/core/terminal_io/output_device.rs`:
+  - [x] Rename `RetryStdout` to `pub struct FullBufferWaitingStdout`.
+  - [x] Add rustdocs to `OutputDevice::new_stdout()` (around line 35) explaining that it
+    wraps `stdout` in `FullBufferWaitingStdout` to handle non-blocking writes.
+  - [x] Overhaul the `FullBufferWaitingStdout` rustdocs to include the "Mental Model" (why
+    it exists) and an educational section on "Blocking vs. Busy-Waiting vs. Yielding" to
+    explain exactly what `yield_now()` is doing.
+  - [x] In the `FullBufferWaitingStdout` rustdocs, add intra-doc links to
+    `crate::tui::terminal_lib_backends::direct_to_ansi::input::mio_poller::handler_stdin::consume_stdin_input_with_sender#why-we-need-non-blocking-read`,
+    the `original_stdin_flags` field in
+    `crate::tui::terminal_lib_backends::direct_to_ansi::input::mio_poller::MioPollWorker`,
+    and `#method.drop`.
+
+- [x] In
+  `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/mio_poller/mio_poll_worker.rs`:
+  - [x] Add a new heading & section documenting the side-effect that setting `O_NONBLOCK`
+    on `stdin` also makes `stdout` non-blocking since they share the same file
+    description.
+  - [x] Link to
+    `super::handler_stdin::consume_stdin_input_with_sender#how-this-affects-stdout-as-well`.
+  - [x] Add intra-doc links to ``[`crate::core::terminal_io::FullBufferWaitingStdout`]``
+    and ``[`crate::core::terminal_io::OutputDevice::new_stdout`]``.
+
+- [x] In
+      `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/mio_poller/handler_stdin.rs`:
+  - [x] In `# Why We Need Non-Blocking Read` item 1, explicitly state that setting non-blocking mode on `stdin` uses `O_NONBLOCK`.
+  - [x] In the rustdocs for `consume_stdin_input_with_sender()`, add a new section titled
+    `## How this affects stdout as well` just before the `# Returns` section (and do not repeat `O_NONBLOCK` detail there).
+  - [x] In this new section, add intra-doc links pointing to `super::MioPollWorker`,
+    specifically highlighting the `original_stdin_flags` field and `#method.drop` where
+    the stdout side effect originates.
+
+### Phase 2: Integration Test for OutputDevice `WouldBlock` Recovery
+
+- [x] Add a new PTY integration test using the `generate_pty_test!` macro.
+- [x] **Location:**
+  `tui/src/core/terminal_io/backend_compat_tests/pty_non_blocking_stdout_no_panic_test.rs` (or
+  create a new `integration_tests/` folder in `terminal_io/`).
+- [x] **Test Architecture:**
+  - Create a **single integration test** that executes both scenarios sequentially within
+    the same PTY slave process.
+  - Spawn the child process (PTY slave).
+  - In the slave, explicitly set `stdin` to non-blocking using `rustix` (replicating the
+    condition created by `MioPollWorker`).
+  - Create an instance of `OutputDevice::new_stdout()`.
+  - **Scenario 1 (Small Write):** Perform a small write (e.g., a short string). Assert
+    that it succeeds immediately. This verifies that standard output still behaves
+    normally under the non-blocking flag when the PTY buffer has plenty of space.
+  - **Scenario 2 (Massive Write):** Immediately following the small write, perform a
+    massive, continuous write operation that exceeds the PTY buffer capacity. Assert that
+    the write successfully completes without panicking on an `EAGAIN` / `WouldBlock`
+    error. This explicitly triggers and tests the `FullBufferWaitingStdout` yield/retry
+    loop.
+
+### Phase 3: Manual Review
+
+- [x] **Mandatory manual review:** Verify every file modified in this phase for correct
+  implementation and ensure no regressions.
+  - [x] `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/mio_poller/mio_poll_worker.rs`
+  - [x] `tui/src/core/terminal_io/output_device.rs`
+  - [x] `tui/src/core/terminal_io/backend_compat_tests/pty_non_blocking_stdout_no_panic_test.rs`
+  - [x] `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/mio_poller/handler_stdin.rs`
+
+- [x] Manual test verification
+  - [x] Run `run.fish run-examples` and use `shell_async`. Then run `cat README.md` which
+        works. This is a very large 151KB file.
+
+- [ ] Create a commit closing https://github.com/r3bl-org/r3bl-open-core/issues/453 and
+      move this commit down (there's a WIP commit in progress). Then push only this commit
+      to origin main branch (do not push the WIP commit in progress).

@@ -64,9 +64,9 @@ pub const STDIN_READ_BUFFER_SIZE: usize = 1_024;
 ///
 /// This non-blocking behavior implementation spans two files:
 /// 1. In [`MioPollWorker::create_and_register_os_sources()`] we actually set non-blocking
-///    mode explicitly on [`stdin`] and restore in an [`RAII`] guard. The original
-///    [`stdin`] flags are saved to [`original_stdin_flags`] and restored in the [`Drop`]
-///    implementation ([`RAII`] guard) to prevent breaking the terminal.
+///    mode explicitly on [`stdin`], using [`O_NONBLOCK`]. The original [`stdin`] flags
+///    are saved to [`original_stdin_flags`] and restored in the [`Drop`] implementation
+///    ([`RAII`] guard) to prevent breaking the terminal.
 /// 1. In this file, we use the non-blocking mode [`stdin`], to ensure that if the
 ///    [`stdin`] [`fd`] is empty, [`.read()`] returns immediately with
 ///    [`ErrorKind::WouldBlock`]. This allows the loop to break and yield back to the
@@ -76,6 +76,17 @@ pub const STDIN_READ_BUFFER_SIZE: usize = 1_024;
 /// - [`test_pty_mio_poller_thread_lifecycle`]
 /// - [`test_pty_mio_poller_subscribe`]
 /// - [`test_production_factory_restart_cycle`]
+///
+/// ## How this affects [`stdout`] as well
+///
+/// Because [`stdin`] and [`stdout`] share the same underlying file description on Linux,
+/// setting non-blocking mode on [`stdin`] makes [`stdout`] non-blocking as well. This
+/// causes [`stdout`] to return [`ErrorKind::WouldBlock`] instead of safely sleeping the
+/// thread when the terminal buffer is full.
+///
+/// To resolve this without removing the non-blocking behavior from [`stdin`], [`stdout`]
+/// uses a polite polling mechanism. See [`FullBufferWaitingStdout`] / [`new_stdout()`]
+/// for the implementation of the fix.
 ///
 /// # Returns
 ///
@@ -90,17 +101,21 @@ pub const STDIN_READ_BUFFER_SIZE: usize = 1_024;
 /// [`EPOLLET`]: https://man7.org/linux/man-pages/man7/epoll.7.html
 /// [`ErrorKind::WouldBlock`]: std::io::ErrorKind::WouldBlock
 /// [`fd`]: https://man7.org/linux/man-pages/man2/open.2.html
+/// [`FullBufferWaitingStdout`]: crate::core::terminal_io::FullBufferWaitingStdout
 /// [`kevent`]: https://man.freebsd.org/cgi/man.cgi?query=kqueue
 /// [`kqueue`]: https://man.freebsd.org/cgi/man.cgi?query=kqueue
 /// [`mio::Poll`]: mio::Poll
 /// [`MioPollWorker::create_and_register_os_sources()`]:
 ///     super::MioPollWorker#method.create_and_register_os_sources
 /// [`MioPollWorker`]: super::MioPollWorker
+/// [`new_stdout()`]: crate::core::terminal_io::OutputDevice::new_stdout
+/// [`O_NONBLOCK`]: rustix::fs::OFlags::NONBLOCK
 /// [`original_stdin_flags`]: field@super::MioPollWorker::original_stdin_flags
 /// [`poll`]: mio::Poll::poll
 /// [`RAII`]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
 /// [`RRTWorker`]: crate::RRTWorker
 /// [`stdin`]: std::io::stdin
+/// [`stdout`]: std::io::stdout
 /// [`syscall`]: https://man7.org/linux/man-pages/man2/syscalls.2.html
 /// [`test_production_factory_restart_cycle`]:
 ///     crate::core::resilient_reactor_thread::rrt_integration_tests::pty_test_production_factory_restart::test_production_factory_restart_cycle

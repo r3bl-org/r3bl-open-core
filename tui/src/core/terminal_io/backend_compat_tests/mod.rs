@@ -1,5 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+// cspell:words wouldblock
+
 //! Backend compatibility tests for input and output backends.
 //!
 //! These tests verify that different backends produce consistent results:
@@ -64,3 +66,6 @@ pub mod backend_compat_input_test;
 
 #[cfg(any(all(unix, doc), all(target_os = "linux", test)))]
 pub mod backend_compat_output_test;
+
+#[cfg(any(all(unix, doc), all(target_os = "linux", test)))]
+pub mod pty_non_blocking_stdout_no_panic_test;

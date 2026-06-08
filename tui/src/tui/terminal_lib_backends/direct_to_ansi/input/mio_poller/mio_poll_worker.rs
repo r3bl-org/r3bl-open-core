@@ -24,6 +24,9 @@ use super::{super::{channel_types::{PollerEvent, StdinEvent},
             dispatcher::dispatch_with_sender,
             handler_stdin::STDIN_READ_BUFFER_SIZE,
             sources::SourceRegistry};
+// Imported specifically for the intra-doc links in the struct documentation.
+#[allow(unused_imports)]
+use super::handler_stdin::consume_stdin_input_with_sender;
 use crate::{Continuation,
             core::resilient_reactor_thread::{RRTEvent, RRTWorker}};
 use miette::Diagnostic;
@@ -55,17 +58,30 @@ const EVENTS_CAPACITY: usize = 8;
 /// | [`parser`]            | VT100 input sequence parser                |
 /// | [`paste_state`]       | Bracketed paste mode state machine         |
 ///
+/// ## How this affects [`stdout`] as well
+///
+/// Because [`stdin`] and [`stdout`] share the same underlying file description on Linux,
+/// setting `O_NONBLOCK` on [`stdin`] accidentally makes [`stdout`] non-blocking as well.
+/// See the [How this affects stdout as well] section for details on how this is handled,
+/// and see [`FullBufferWaitingStdout`] / [`OutputDevice::new_stdout()`] for the
+/// implementation of the fix.
+///
 /// [`block_until_ready_then_dispatch()`]: MioPollWorker::block_until_ready_then_dispatch
+/// [`FullBufferWaitingStdout`]: crate::core::terminal_io::FullBufferWaitingStdout
 /// [`mio_poller::consume_stdin_input_with_sender`]:
 ///     super::handler_stdin::consume_stdin_input_with_sender
+/// [`OutputDevice::new_stdout()`]: crate::core::terminal_io::OutputDevice::new_stdout
 /// [`parser`]: field@MioPollWorker::vt_100_input_seq_parser
 /// [`paste_state`]: field@MioPollWorker::paste_collection_state
 /// [`poll_handle`]: field@MioPollWorker::poll_handle
 /// [`sources`]: field@MioPollWorker::sources
 /// [`stdin_buffer`]: field@MioPollWorker::stdin_unparsed_byte_buffer
 /// [`stdin`]: std::io::stdin
+/// [`stdout`]: std::io::stdout
+/// [How this affects stdout as well]:
+///     consume_stdin_input_with_sender#how-this-affects-stdout-as-well
 /// [Why We Need Non-Blocking Read]:
-///     super::handler_stdin::consume_stdin_input_with_sender#why-we-need-non-blocking-read
+///     consume_stdin_input_with_sender#why-we-need-non-blocking-read
 #[derive(Debug)]
 pub struct MioPollWorker {
     /// [`mio`] poll instance for efficient I/O multiplexing.
