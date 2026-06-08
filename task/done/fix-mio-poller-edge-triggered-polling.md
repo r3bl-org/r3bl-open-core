@@ -152,6 +152,6 @@ returns `ErrorKind::WouldBlock`.
   - [x] Run `run.fish run-examples` and use `shell_async`. Then run `cat README.md` which
         works. This is a very large 151KB file.
 
-- [ ] Create a commit closing https://github.com/r3bl-org/r3bl-open-core/issues/453 and
+- [x] Create a commit closing https://github.com/r3bl-org/r3bl-open-core/issues/453 and
       move this commit down (there's a WIP commit in progress). Then push only this commit
       to origin main branch (do not push the WIP commit in progress).

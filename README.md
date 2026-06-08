@@ -360,13 +360,13 @@ using detailed task files with implementation plans in the `./task/` directory.
   - **`done/`**: Completed task files moved from root after all steps are marked
     `[COMPLETE]`
   - **`archive/`**: Abandoned tasks retained for historical reference
-  - **`CLAUDE.md`**: Rules and format specifications for creating and maintaining task
+  - **`AGENTS.md`**: Rules and format specifications for creating and maintaining task
     files
 
 ### Task File Format
 
 Detailed task files follow a structured format defined in
-[`./task/CLAUDE.md`](https://github.com/r3bl-org/r3bl-open-core/blob/main/task/CLAUDE.md):
+[`./task/AGENTS.md`](https://github.com/r3bl-org/r3bl-open-core/blob/main/task/AGENTS.md):
 
 **Structure:**
 
@@ -713,11 +713,6 @@ If you use an AI (LLM) coding agent (like `Gemini CLI`, `Claude Code`, or others
 it to the instructions in
 [`AGENTS.md`](https://github.com/r3bl-org/r3bl-open-core/blob/main/AGENTS.md). This file
 contains our design philosophy, coding standards, and crate-specific guidance.
-
-> For convenience,
-> [`GEMINI.md`](https://github.com/r3bl-org/r3bl-open-core/blob/main/GEMINI.md) and
-> [`CLAUDE.md`](https://github.com/r3bl-org/r3bl-open-core/blob/main/CLAUDE.md) are also
-> provided as entry points that link to `AGENTS.md`.
 
 **Available Skills (`.agents/skills/`):**
 

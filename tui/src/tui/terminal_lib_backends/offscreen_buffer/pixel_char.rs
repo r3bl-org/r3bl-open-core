@@ -65,9 +65,7 @@ impl Debug for PixelChar {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{height, new_style,
-                tui::terminal_lib_backends::offscreen_buffer::OffscreenBuffer,
-                tui_color, tui_style_attrib::Underline, tui_style_attribs, width};
+    use crate::{SPACER_GLYPH_CHAR, height, new_style, tui::terminal_lib_backends::offscreen_buffer::OffscreenBuffer, tui_color, tui_style_attrib::Underline, tui_style_attribs, width};
 
     fn create_test_buffer() -> OffscreenBuffer {
         let window_size = width(4) + height(2);
@@ -135,7 +133,7 @@ mod tests {
 
         // Test space character with no style.
         ofs_buf.buffer[1][1] = PixelChar::PlainText {
-            display_char: ' ',
+            display_char: SPACER_GLYPH_CHAR,
             style: TuiStyle::default(),
         };
 
@@ -144,7 +142,7 @@ mod tests {
                 display_char,
                 style,
             } => {
-                assert_eq!(*display_char, ' ');
+                assert_eq!(*display_char, SPACER_GLYPH_CHAR);
                 assert_eq!(*style, TuiStyle::default());
             }
             _ => panic!("Expected PlainText with space"),
@@ -152,7 +150,7 @@ mod tests {
 
         // Test space character with style.
         ofs_buf.buffer[1][2] = PixelChar::PlainText {
-            display_char: ' ',
+            display_char: SPACER_GLYPH_CHAR,
             style: new_style!(color_bg: {tui_color!(blue)}),
         };
 
@@ -161,7 +159,7 @@ mod tests {
                 display_char,
                 style: actual_style,
             } => {
-                assert_eq!(*display_char, ' ');
+                assert_eq!(*display_char, SPACER_GLYPH_CHAR);
                 assert_eq!(actual_style.color_bg, Some(tui_color!(blue)));
             }
             _ => panic!("Expected styled space"),

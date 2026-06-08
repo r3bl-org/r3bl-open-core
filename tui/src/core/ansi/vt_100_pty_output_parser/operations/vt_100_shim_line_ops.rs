@@ -19,29 +19,12 @@
 //! - **Unit tests** in the implementation layer (with `#[test]` functions)
 //! - **Integration tests** in the conformance tests validating the full pipeline
 //!
-//! For the complete testing philosophy,
-//! and rationale behind this approach.
+//! For the complete testing philosophy and rationale behind this approach,
+//! see the [operations module].
 //!
 //! # Architecture Overview
 //!
-//! ```text
-//! ╭─────────────────╮    ╭────────────────╮    ╭─────────────────╮    ╭──────────────╮
-//! │ Child Process   │────► PTY Controller │────► VTE Parser      │────► OffscreenBuf │
-//! │ (vim, bash...)  │    │ (byte stream)  │    │ (state machine) │    │ (terminal    │
-//! ╰──────┬──────────╯    ╰────────────────╯    ╰───────┬─────────╯    │  buffer)     │
-//!        │                                             │              ╰───────┬──────╯
-//!        │                                             │                      │
-//!        │                                    ╔════════▼════════╗             │
-//!        │                                    ║ Perform Trait   ║             │
-//!        │                                    ║ Implementation  ║             │
-//!        │                                    ╚═════════════════╝             │
-//!        │                                                                    │
-//!        │                                    ╭─────────────────╮             │
-//!        │                                    │ RenderPipeline  ◄─────────────╯
-//!        │                                    │ paint()         │
-//!        ╰────────────────────────────────────► Terminal Output │
-//!                                             ╰─────────────────╯
-//! ```
+//! See the [module-level Architecture Overview].
 //!
 //! # [`CSI`] Sequence Processing Flow
 //!
@@ -93,7 +76,9 @@
 //! [`NonZeroU16`]: std::num::NonZeroU16
 //! [`test_line_ops`]: crate::vt_100_pty_output_conformance_tests::tests::vt_100_test_line_ops
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+//! [module-level Architecture Overview]: super#architecture-overview
 //! [module-level documentation]: self
+//! [operations module]: crate::core::ansi::vt_100_pty_output_parser::operations
 
 use super::super::ansi_parser_public_api::AnsiToOfsBufPerformer;
 use crate::ParamsExt;

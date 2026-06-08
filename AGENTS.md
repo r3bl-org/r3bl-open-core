@@ -353,15 +353,29 @@ git -c credential.helper=store push origin my-branch
 
 ### Commit Message Format
 
-When a commit implements work from a `task/*.md` file, add a `Task:` trailer as the last line:
+When a commit implements work from a `task/*.md` file, add a `Task:` trailer as the last line.
 
-```
-[scope] Short summary of the change
+Note: Do **NOT** include any directory prefixes (like `task/` or `task/done/`) in the task filenames.
 
-Optional body with more detail.
+- **Single Task**:
+  ```
+  [scope] Short summary of the change
 
-Task: task/some-task-name.md
-```
+  Optional body with more detail.
+
+  Task: some-task-name.md
+  ```
+
+- **Multiple Tasks**: List them on separate lines, with a comma ending each line except the last:
+  ```
+  [scope] Short summary of the change
+
+  Optional body with more detail.
+
+  Task: one.md,
+        two.md,
+        three.md
+  ```
 
 The `Task:` trailer links the commit to its plan/design document for traceability.
 

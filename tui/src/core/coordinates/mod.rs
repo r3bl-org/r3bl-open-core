@@ -214,7 +214,7 @@
 // ║                   COORDINATE SYSTEM MODULE ORGANIZATION                   ║
 // ║                    (Private modules with public re-exports)               ║
 // ║                                                                           ║
-// ║ This module follows the pattern from CLAUDE.md:                           ║
+// ║ This module follows the pattern from AGENTS.md:                           ║
 // ║ - Submodules are kept private (hide internal structure)                   ║
 // ║ - Public re-exports provide a flat, stable API surface                    ║
 // ║ - Users should import from the flat re-exports, not qualified paths       ║

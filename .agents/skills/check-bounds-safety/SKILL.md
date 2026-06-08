@@ -79,7 +79,7 @@ use std::ops::Range;
 use r3bl_tui::{
     // Traits
     ArrayBoundsCheck, CursorBoundsCheck, ViewportBoundsCheck,
-    RangeBoundsExt, RangeConvertExt, IndexOps, LengthOps,
+    RangeBoundsExt, RangeConvertExt, RangeExt, IndexOps, LengthOps,
 
     // Status enums
     ArrayOverflowResult, CursorPositionBoundsStatus,
@@ -95,15 +95,16 @@ use r3bl_tui::{
 
 ## Quick Pattern Reference
 
-| Use Case                | Trait                 | Key Method                                   | When to Use                                                 |
-| ----------------------- | --------------------- | -------------------------------------------- | ----------------------------------------------------------- |
-| **Array access**        | `ArrayBoundsCheck`    | `index.overflows(length)`                    | Validating `buffer[index]` access (`index < length`)        |
-| **Cursor positioning**  | `CursorBoundsCheck`   | `length.check_cursor_position_bounds(pos)`   | Text editing where cursor can be at end (`index <= length`) |
-| **Viewport visibility** | `ViewportBoundsCheck` | `index.check_viewport_bounds(start, size)`   | Rendering optimization (is content on-screen?)              |
-| **Range validation**    | `RangeBoundsExt`      | `range.check_range_is_valid_for_length(len)` | Iterator bounds, algorithm parameters                       |
-| **Range membership**    | `RangeBoundsExt`      | `range.check_index_is_within(index)`         | VT-100 scroll regions, text selections                      |
-| **Range conversion**    | `RangeConvertExt`     | `inclusive_range.to_exclusive()`             | Converting VT-100 ranges for Rust iteration                 |
-| **Relative movement**   | `TermRowDelta`/`TermColDelta` | `TermRowDelta::new(n)` returns `Option` | ANSI cursor movement preventing CSI zero bug                |
+| Use Case                | Trait                         | Key Method                                   | When to Use                                                                         |
+| ----------------------- | ---------------------         | -------------------------------------------- | ----------------------------------------------------------------------------------- |
+| **Array access**        | `ArrayBoundsCheck`            | `index.overflows(length)`                    | Validating `buffer[index]` access (`index < length`)                                |
+| **Cursor positioning**  | `CursorBoundsCheck`           | `length.check_cursor_position_bounds(pos)`   | Text editing where cursor can be at end (`index <= length`)                         |
+| **Viewport visibility** | `ViewportBoundsCheck`         | `index.check_viewport_bounds(start, size)`   | Rendering optimization (is content on-screen?)                                      |
+| **Range validation**    | `RangeBoundsExt`              | `range.check_range_is_valid_for_length(len)` | Iterator bounds, algorithm parameters                                               |
+| **Range membership**    | `RangeBoundsExt`              | `range.check_index_is_within(index)`         | VT-100 scroll regions, text selections                                              |
+| **Range conversion**    | `RangeConvertExt`             | `inclusive_range.to_exclusive()`             | Converting VT-100 ranges for Rust iteration                                         |
+| **Slice indexing**      | `RangeExt`                    | `range.as_usize_range()`                     | Converting strongly-typed index ranges into raw [`usize`] ranges for slice indexing |
+| **Relative movement**   | `TermRowDelta`/`TermColDelta` | `TermRowDelta::new(n)` returns `Option` | ANSI cursor movement preventing CSI zero bug                                             |
 
 ## Detailed Examples
 
@@ -318,6 +319,27 @@ let right_one = CsiSequence::CursorForward(TermColDelta::ONE);
 **Key difference from absolute positioning:**
 - `TermRow`/`TermCol`: 1-based absolute coordinates (for `CursorPosition`)
 - `TermRowDelta`/`TermColDelta`: Relative movement amounts (for `CursorUp/Down/Forward/Backward`)
+
+### Example 9: Slice Indexing with Coordinate Ranges
+
+**Use `RangeExt` to convert strongly-typed index ranges into primitive `usize` ranges for slice indexing.**
+
+```rust
+use r3bl_tui::{idx, RangeExt};
+
+let index_range = idx(2)..idx(5); // Range<Index>
+
+// Convert to standard Range<usize> cleanly:
+for item in &mut buffer[index_range.as_usize_range()] {
+    process(item);
+}
+```
+
+**Supported range types:**
+- `Range<I>` (e.g. `start..end`)
+- `RangeInclusive<I>` (e.g. `start..=end`)
+- `RangeFrom<I>` (e.g. `start..`)
+- `RangeTo<I>` (e.g. `..end`)
 
 ## Decision Trees
 

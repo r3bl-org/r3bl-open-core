@@ -15,7 +15,7 @@ if $1 is "create" then:
   create a plan before using this command
 - Take your todo list (from your planning tool) and save it to a file in task/$2 (if $2
   ends with .md use it as-is, otherwise append .md)
-- Follow the format in task/CLAUDE.md: short overview, then flat checkboxes grouped under
+- Follow the format in task/AGENTS.md: short overview, then flat checkboxes grouped under
   phase headers. Keep it concise - one line per step, no code blocks in the plan.
 - After creating the file, suggest that the user create a task space in VS Code to link to
   this file using Alt+Shift+T or the command palette

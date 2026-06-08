@@ -87,7 +87,7 @@ Instead of removing the link, add a reference at the bottom of the doc comment:
 ```
 
 If these types are private, then you can use you can even use `#[cfg(any(test, doc))]` to
-make symbols visible for tests & docs (also in CLAUDE.md). You can use
+make symbols visible for tests & docs (also in AGENTS.md). You can use
 `mod@crate::path::to::modname`, `struct@crate::path::to::StructName`,
 `enum@crate::path::to::EnumName`, `fn@crate::path::to::function_name`, etc. to be more
 explicit.

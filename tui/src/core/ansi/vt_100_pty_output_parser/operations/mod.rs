@@ -22,6 +22,27 @@
 //! and maintainable, with clear boundaries between protocol translation and buffer
 //! management.
 //!
+//! # Architecture Overview
+//!
+//! ```text
+//! ╭─────────────────╮    ╭────────────────╮    ╭─────────────────╮    ╭──────────────╮
+//! │ Child Process   │────► PTY Controller │────► VTE Parser      │────► OffscreenBuf │
+//! │ (vim, bash...)  │    │ (byte stream)  │    │ (state machine) │    │ (terminal    │
+//! ╰──────┬──────────╯    ╰────────────────╯    ╰───────┬─────────╯    │  buffer)     │
+//!        │                                             │              ╰───────┬──────╯
+//!        │                                             │                      │
+//!        │                                    ╔════════▼════════╗             │
+//!        │                                    ║ Perform Trait   ║             │
+//!        │                                    ║ Implementation  ║             │
+//!        │                                    ╚═════════════════╝             │
+//!        │                                                                    │
+//!        │                                    ╭─────────────────╮             │
+//!        │                                    │ RenderPipeline  ◄─────────────╯
+//!        │                                    │ paint()         │
+//!        ╰────────────────────────────────────► Terminal Output │
+//!                                             ╰─────────────────╯
+//! ```
+//!
 //! # Testing Strategy
 //!
 //! The operation modules in this directory **intentionally do not have direct unit
@@ -151,6 +172,7 @@
 //!     crate::vt_100_pty_output_conformance_tests::tests::vt_100_test_terminal_ops
 
 pub mod vt_100_shim_char_ops;
+pub mod vt_100_shim_clear_ops;
 pub mod vt_100_shim_control_ops;
 pub mod vt_100_shim_cursor_ops;
 pub mod vt_100_shim_dsr_ops;

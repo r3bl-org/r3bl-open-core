@@ -44,7 +44,7 @@
 #
 # SEE ALSO:
 #   - run.fish: Rust-specific development commands (build, test, lint, etc.)
-#   - CLAUDE.md: Project conventions and Claude Code instructions
+#   - AGENTS.md: Project conventions and AI agent instructions
 
 # Install tool if missing
 install_if_missing() {
