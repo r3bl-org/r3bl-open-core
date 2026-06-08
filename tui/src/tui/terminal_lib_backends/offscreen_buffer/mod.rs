@@ -348,6 +348,7 @@ mod paint_impl;
 mod pixel_char;
 mod pixel_char_line;
 mod pixel_char_lines;
+mod scrollback_buffer;
 
 #[cfg(any(test, doc))]
 pub mod vt_100_ansi_impl;
@@ -361,6 +362,7 @@ pub use paint_impl::*;
 pub use pixel_char::*;
 pub use pixel_char_line::*;
 pub use pixel_char_lines::*;
+pub use scrollback_buffer::*;
 
 // Test fixtures (only available during testing).
 #[cfg(any(test, doc))]
