@@ -37,6 +37,7 @@ impl OffscreenBuffer {
     /// Handles backspace control character (0x08).
     /// Moves cursor left one position if not at leftmost column.
     pub fn handle_backspace(&mut self) {
+        self.ansi_parser_support.pending_wrap = false;
         let current_col = self.cursor_pos.col_index;
         if !current_col.is_zero() {
             self.cursor_pos.col_index = current_col - 1;
@@ -46,6 +47,7 @@ impl OffscreenBuffer {
     /// Handles tab control character (0x09).
     /// Moves cursor to next 8-column tab stop boundary.
     pub fn handle_tab(&mut self) {
+        self.ansi_parser_support.pending_wrap = false;
         let current_col = self.cursor_pos.col_index;
         let max_col = self.window_size.col_width;
 
@@ -70,16 +72,22 @@ impl OffscreenBuffer {
     /// Handles line feed control character (0x0A).
     /// Moves cursor down one line if not at bottom boundary.
     pub fn handle_line_feed(&mut self) {
+        self.ansi_parser_support.pending_wrap = false;
         let max_row = self.window_size.row_height;
         let next_row: RowIndex = self.cursor_pos.row_index + 1;
         if next_row.overflows(max_row) == ArrayOverflowResult::Within {
             self.cursor_pos.row_index = next_row;
+            } else {
+            let _unused = self.index_down();
         }
     }
 
     /// Handles carriage return control character (0x0D).
     /// Moves cursor to start of current line (column 0).
-    pub fn handle_carriage_return(&mut self) { self.cursor_pos.col_index = col(0); }
+    pub fn handle_carriage_return(&mut self) {
+        self.ansi_parser_support.pending_wrap = false;
+        self.cursor_pos.col_index = col(0);
+    }
 }
 
 #[cfg(test)]
@@ -166,11 +174,31 @@ mod tests_control_ops {
     #[test]
     fn test_handle_line_feed_at_bottom() {
         let mut buffer = create_test_buffer();
-        buffer.cursor_pos = row(5) + col(3); // bottom row for height 6
+        let bottom = row(5); // bottom row for height 6 (0-based)
+
+        // Place a marker char at row just above bottom.
+        let row_above = row(4);
+        let _unused = buffer.set_char(
+            row_above + col(0),
+            PixelChar::PlainText {
+                display_char: 'A',
+                style: Default::default(),
+            },
+        );
+
+        buffer.cursor_pos = bottom + col(3);
 
         buffer.handle_line_feed();
 
-        // Should not move when at bottom.
+        // Buffer scrolled up: char from row 4 moved to row 3.
+        let scrolled_up = row(3) + col(0);
+        let ch = buffer.get_char(scrolled_up).unwrap();
+        match ch {
+            PixelChar::PlainText { display_char, .. } => assert_eq!(display_char, 'A'),
+            _ => panic!("Expected PlainText with 'A'"),
+        }
+
+        // Cursor stays at bottom row, column reset to 0.
         assert_eq!(buffer.cursor_pos.row_index, row(5));
         assert_eq!(buffer.cursor_pos.col_index, col(3));
     }
@@ -196,5 +224,50 @@ mod tests_control_ops {
         // Should work correctly when already at start.
         assert_eq!(buffer.cursor_pos.row_index, row(3));
         assert_eq!(buffer.cursor_pos.col_index, col(0));
+    }
+
+    #[test]
+    fn test_handle_carriage_return_clears_pending_wrap() {
+        let mut buffer = create_test_buffer();
+        buffer.cursor_pos = row(3) + col(7);
+        buffer.ansi_parser_support.pending_wrap = true;
+
+        buffer.handle_carriage_return();
+
+        assert!(!buffer.ansi_parser_support.pending_wrap);
+        assert_eq!(buffer.cursor_pos.col_index, col(0));
+    }
+
+    #[test]
+    fn test_handle_line_feed_clears_pending_wrap() {
+        let mut buffer = create_test_buffer();
+        buffer.cursor_pos = row(2) + col(5);
+        buffer.ansi_parser_support.pending_wrap = true;
+
+        buffer.handle_line_feed();
+
+        assert!(!buffer.ansi_parser_support.pending_wrap);
+    }
+
+    #[test]
+    fn test_handle_tab_clears_pending_wrap() {
+        let mut buffer = create_test_buffer();
+        buffer.cursor_pos = row(1) + col(3);
+        buffer.ansi_parser_support.pending_wrap = true;
+
+        buffer.handle_tab();
+
+        assert!(!buffer.ansi_parser_support.pending_wrap);
+    }
+
+    #[test]
+    fn test_handle_backspace_clears_pending_wrap() {
+        let mut buffer = create_test_buffer();
+        buffer.cursor_pos = row(2) + col(5);
+        buffer.ansi_parser_support.pending_wrap = true;
+
+        buffer.handle_backspace();
+
+        assert!(!buffer.ansi_parser_support.pending_wrap);
     }
 }
