@@ -58,6 +58,7 @@
 //! [operations module]: crate::core::ansi::vt_100_pty_output_parser::operations
 
 use super::super::{PrivateModeType, ansi_parser_public_api::AnsiToOfsBufPerformer};
+use crate::{RequestedScreenMode, core::ansi::constants::CSI_PRIVATE_MODE_PREFIX};
 use vte::Params;
 
 /// Handle Set Mode (`CSI h`) command.
@@ -67,12 +68,15 @@ pub fn set_mode(
     params: &Params,
     intermediates: &[u8],
 ) {
-    let is_private_mode = intermediates.contains(&b'?');
+    let is_private_mode = intermediates.contains(&(CSI_PRIVATE_MODE_PREFIX as u8));
     if is_private_mode {
         let mode = PrivateModeType::from(params);
         match mode {
             PrivateModeType::AutoWrap => {
                 performer.ofs_buf.set_auto_wrap_mode(true);
+            }
+            PrivateModeType::AlternateScreenBuffer => {
+                performer.ofs_buf.set_alt_screen_mode(RequestedScreenMode::Alternate);
             }
             _ => {
                 tracing::warn!("CSI ?{}h: Unhandled private mode", mode.as_u16());
@@ -90,12 +94,15 @@ pub fn reset_mode(
     params: &Params,
     intermediates: &[u8],
 ) {
-    let is_private_mode = intermediates.contains(&b'?');
+    let is_private_mode = intermediates.contains(&(CSI_PRIVATE_MODE_PREFIX as u8));
     if is_private_mode {
         let mode = PrivateModeType::from(params);
         match mode {
             PrivateModeType::AutoWrap => {
                 performer.ofs_buf.set_auto_wrap_mode(false);
+            }
+            PrivateModeType::AlternateScreenBuffer => {
+                performer.ofs_buf.set_alt_screen_mode(RequestedScreenMode::Primary);
             }
             _ => {
                 tracing::warn!("CSI ?{}l: Unhandled private mode", mode.as_u16());

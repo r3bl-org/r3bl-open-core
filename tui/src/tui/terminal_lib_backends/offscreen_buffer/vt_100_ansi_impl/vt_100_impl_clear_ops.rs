@@ -10,7 +10,8 @@ impl OffscreenBuffer {
     /// background style according to [`VT-100`] specifications.
     ///
     /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
-    fn create_empty_pixel_char(&self) -> PixelChar {
+    #[must_use]
+    pub fn create_empty_pixel_char(&self) -> PixelChar {
         PixelChar::PlainText {
             display_char: SPACER_GLYPH_CHAR,
             style: self.ansi_parser_support.current_style,

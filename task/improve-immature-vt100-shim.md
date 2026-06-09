@@ -20,11 +20,11 @@ buffers, and cursor visibility events.
 
 ### 1. Erase Display (`ED`) and Erase Line (`EL`) are Ignored
 
-- **Location**: `tui/src/core/ansi/vt_100_pty_output_parser/performer.rs` (around line
-  530)
-- **Current Behavior**: Discards `ED_ERASE_DISPLAY` (`CSI J`) and `EL_ERASE_LINE` (`CSI
-  K`), erroneously assuming that TUI applications will simply repaint themselves over
-  unchanged areas.
+- **Location**: `tui/src/core/ansi/vt_100_pty_output_parser/performer.rs` (around
+  line 530)
+- **Current Behavior**: Discards `ED_ERASE_DISPLAY` (`CSI J`) and `EL_ERASE_LINE`
+  (`CSI K`), erroneously assuming that TUI applications will simply repaint themselves
+  over unchanged areas.
 - **The Issue**: Any text from previous frames or long command prompts remains visible
   under shorter strings, causing overlapping text and visual corruption.
 - **Solution**:
@@ -108,15 +108,49 @@ buffers, and cursor visibility events.
 
 ### Phase 2: Dual Screen Buffers (Alternate Screen)
 
-- [ ] **Refactor `OffscreenBuffer` to support Alternate Buffer**:
-  - Introduce an `active_buffer` flag and a secondary grid buffer (`alt_buffer:
-    Option<PixelCharLines>`) inside `OffscreenBuffer`.
-  - Ensure cursor states are stored independently for both primary and alternate buffers.
-- [ ] **Implement Mode Toggle**:
-  - Update `vt_100_shim_mode_ops.rs` to process `1049` mode.
-  - Toggle the active buffer on `SM ?1049h` (Set Mode) and `RM ?1049l` (Reset Mode).
-- [ ] **Write Alternate Buffer Tests**: Verify switching buffers preserves primary buffer
-      scrollback and isolates alternate buffer changes.
+- [x] **Refactor `OffscreenBuffer` to support Alternate Buffer**:
+  - Add an encapsulated `AltScreenSupport` struct in `ofs_buf_core.rs` containing
+    `alt_buffer: PixelCharLines` (always allocated), `cursor_pos_primary: Pos`, and
+    `cursor_pos_alt: Pos`.
+  - Add `alt_screen_support: AltScreenSupport` to `OffscreenBuffer` and initialize via
+    `AltScreenSupport::new_empty(window_size)`.
+- [x] **Implement Mode Toggle and BCE (Background Color Erase)**:
+  - Implement `set_alt_screen_mode` inside `vt_100_impl_mode_ops.rs` to swap grids
+    in-place and restore independent cursor positions.
+  - Clear the alternate screen buffer using `create_empty_pixel_char()` to ensure cleared
+    cells carry the currently active background style, fully complying with BCE
+    specifications.
+  - Update `vt_100_shim_mode_ops.rs` to route `PrivateModeType::AlternateScreenBuffer` to
+    the new toggle using `ALT_SCREEN_BUFFER` constant instead of magic numbers.
+- [x] **Write Alternate Buffer Tests**:
+  - Add unit tests (in `vt_100_impl_mode_ops.rs`) verifying SGR style inheritance,
+    independent cursor state preservation, and BCE-compliant clears on switch.
+  - Add integration tests (in `vt_100_test_mode_ops.rs`) using
+    `CsiSequence::EnablePrivateMode(PrivateModeType::AlternateScreenBuffer)` /
+    `DisablePrivateMode` to verify full parser pipeline compliance with zero magic
+    strings.
+- [x] Manually verify the code works using `cargo run --example pty_mux_example`
+  - **Results**: htop works best, gitui has minimal artifacts, hx is slow/artifact-heavy
+    but functional.
+    - **Details**: Just ran the manual tests using `cargo run --example pty_mux_example`.
+      - it is better than before. but there are still many functional and rendering
+        issues. the log.txt file is in /tmp/r3bl_tui/log.txt
+      - htop works the best of all the examples
+      - gitui works the 2nd best - there are minimal artifacts on the edges of the screen
+      - hx works very slowly and has lots of visual artifacts, but it still functions
+      - what is pretty badly broken are:
+        - less - the pager doesn't work and the screen starts off blank
+        - bash - the cursor does not show and running cat README.md only shows the first
+          page of output, and not the rest. bash is unresponsive to user input after that,
+          but i can switch back and fort using F1-5.
+  - **Critical Failures**: `less` screen starts blank. `bash` cursor is missing, running
+    `cat README.md` stops at the first page, and becomes unresponsive to input. Log at
+    `/tmp/r3bl_tui/log.txt`.
+- [x] **Fix scrolling bug (`less`/`bash`)**: Update `handle_line_feed` to call
+      `index_down()` instead of just stopping at the bottom boundary, allowing text to
+      properly scroll up.
+- [x] **Re-verify `less` and `bash`**: Manually run `pty_mux_example` to confirm the
+      scrolling bug is resolved.
 
 ### Phase 3: Cursor Visibility & Secondary Private Modes
 

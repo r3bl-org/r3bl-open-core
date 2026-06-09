@@ -392,6 +392,31 @@ use std::fs::File;
 
 **cargo fmt will automatically organize imports when configured with `group_imports = "StdExternalCrate"`**
 
+### Clean Imports over Inline Absolute Paths (Mandatory)
+
+Do NOT write inline absolute paths like `crate::Type` or `crate::Size` inside function signatures or block bodies. Instead, import them cleanly via `use` statements at the top of the file, then reference the type directly. This keeps the code highly readable and reduces cognitive clutter.
+
+**✅ Good:**
+```rust
+// At the top of the file:
+use crate::{Size, Pos, PixelChar};
+
+// In signatures and bodies:
+pub fn render(size: Size, pos: Pos) -> PixelChar {
+    let empty = PixelChar::default();
+    // ...
+}
+```
+
+**❌ Bad:**
+```rust
+// Inline absolute references cluttering signatures and bodies:
+pub fn render(size: crate::Size, pos: crate::Pos) -> crate::PixelChar {
+    let empty = crate::PixelChar::default();
+    // ...
+}
+```
+
 ---
 
 ### Trailing Commas

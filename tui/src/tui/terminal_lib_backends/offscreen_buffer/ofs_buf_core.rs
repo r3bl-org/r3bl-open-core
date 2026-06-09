@@ -1,10 +1,9 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::super::{FlushKind, RenderOpOutputVec};
-use crate::{inline_string, ok};
 use crate::{GetMemSize, LockedOutputDevice, MemorySize, Pos, Size, TermRow, TuiStyle,
-            osc::OscEvent};
-use std::fmt::Debug;
+            inline_string, ok, osc::OscEvent};
+use std::{fmt::Debug, mem::size_of};
 
 /// Character set modes for terminal emulation.
 ///
@@ -30,6 +29,54 @@ pub enum CharacterSet {
     /// [`DEC`]: https://en.wikipedia.org/wiki/Digital_Equipment_Corporation
     /// [`ESC`]: crate::EscSequence
     DECGraphics,
+}
+
+/// Encapsulated state representing the alternate screen support and its independent
+/// cursor positions.
+///
+/// # [`SGR`] Style Inheritance & [`BCE`] (Background Color Erase) Compliance
+///
+/// Under VT100, [`xterm`], and standard [`ANSI`] specifications, graphic rendition states
+/// (foreground/background colors, bold, italic) are globally shared and preserved across
+/// screen buffer switches.
+///
+/// This struct implements this specification by separating the alternate buffer
+/// ([`alt_buffer`]) from the overall parser emulation state. When entering the alternate
+/// screen:
+/// - The alternate buffer inherits the active graphic style from the main buffer.
+/// - The buffer is cleared utilizing [`create_empty_pixel_char()`] to ensure that erased
+///   cells carry the active background color and attributes, fully complying with
+///   Background Color Erase ([`BCE`]) rules.
+///
+/// [`alt_buffer`]: AltScreenSupport::alt_buffer
+/// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+/// [`BCE`]: https://invisible-island.net/xterm/xterm.faq.html#what_is_bce
+/// [`create_empty_pixel_char()`]: crate::OffscreenBuffer::create_empty_pixel_char
+/// [`SGR`]: crate::SgrCode
+/// [`xterm`]: https://en.wikipedia.org/wiki/Xterm
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct AltScreenSupport {
+    /// The secondary buffer grid representing the alternate screen. Always allocated at
+    /// buffer creation time to avoid having to use [`Option`] which adds needless
+    /// complexity for a very small cost in terms of memory.
+    pub alt_buffer: PixelCharLines,
+
+    /// Saved cursor position for the primary buffer.
+    pub cursor_pos_primary: Pos,
+
+    /// Saved cursor position for the alternate buffer.
+    pub cursor_pos_alt: Pos,
+}
+
+impl AltScreenSupport {
+    #[must_use]
+    pub fn new_empty(window_size: Size) -> Self {
+        Self {
+            alt_buffer: PixelCharLines::new_empty(window_size),
+            cursor_pos_primary: Pos::default(),
+            cursor_pos_alt: Pos::default(),
+        }
+    }
 }
 
 /// Support structure for [`ANSI`] escape sequence parsing and terminal state management.
@@ -224,6 +271,13 @@ pub enum AlternateScreenState {
     Active,
     /// Alternate screen buffer inactive, using primary screen
     Inactive,
+}
+
+/// The requested screen buffer mode.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RequestedScreenMode {
+    Primary,
+    Alternate,
 }
 
 /// Mouse event tracking state.
@@ -429,6 +483,10 @@ pub struct OffscreenBuffer {
     ///
     /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
     pub ansi_parser_support: AnsiParserSupport,
+
+    /// Support for the VT100 alternate screen buffer (?1049 mode) and independent cursor
+    /// state.
+    pub alt_screen_support: AltScreenSupport,
 }
 
 impl GetMemSize for OffscreenBuffer {
@@ -574,13 +632,21 @@ impl OffscreenBuffer {
         let window_size = arg_window_size.into();
         let buffer = PixelCharLines::new_empty(window_size);
 
-        // Calculate memory size once - it will never change since buffer dimensions are
-        // fixed.
-        let memory_size = MemorySize::new(
-            buffer.get_mem_size()
-                + std::mem::size_of::<Size>()
-                + std::mem::size_of::<Pos>(),
-        );
+        let memory_size = {
+            // Calculate memory size once - it will never change since buffer dimensions
+            // are fixed. Account for both the primary and alternate screen
+            // buffers, as well as all cursor states.
+            let primary_buffer_mem = buffer.get_mem_size();
+            let alt_buffer_mem = primary_buffer_mem;
+            MemorySize::new(
+                primary_buffer_mem
+                + alt_buffer_mem
+                + size_of::<Size>() // window_size
+                + size_of::<Pos>()  // cursor_pos
+                + size_of::<Pos>()  // cursor_pos_primary
+                + size_of::<Pos>(), // cursor_pos_alt
+            )
+        };
 
         Self {
             buffer,
@@ -589,6 +655,7 @@ impl OffscreenBuffer {
             terminal_mode: TerminalModeState::default(),
             memory_size,
             ansi_parser_support: super::AnsiParserSupport::default(),
+            alt_screen_support: AltScreenSupport::new_empty(window_size),
         }
     }
 

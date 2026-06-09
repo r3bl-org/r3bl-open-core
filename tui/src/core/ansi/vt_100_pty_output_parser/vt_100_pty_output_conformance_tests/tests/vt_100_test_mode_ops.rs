@@ -1,5 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+// cspell:words KLMNOP ABCDEFGHIP
+
 //! Tests for terminal mode operations (SM/RM).
 //!
 //! Tests the complete pipeline from [`ANSI`] sequences through the shim to implementation
@@ -215,5 +217,44 @@ pub mod mode_interactions {
 
         // Mode should persist (not affected by cursor restore)
         assert!(ofs_buf.ansi_parser_support.auto_wrap_mode);
+    }
+}
+
+/// Tests for the Alternate Screen Buffer (?1049) mode operations.
+pub mod alt_screen_mode {
+    use super::*;
+    use crate::AlternateScreenState;
+
+    #[test]
+    fn test_alt_screen_enable_and_disable_via_ansi() {
+        let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
+
+        // Initially inactive.
+        assert_eq!(
+            ofs_buf.terminal_mode.alternate_screen,
+            AlternateScreenState::Inactive
+        );
+
+        // Enable alternate screen buffer (?1049h)
+        let enable_sequence = format!(
+            "{}",
+            CsiSequence::EnablePrivateMode(PrivateModeType::AlternateScreenBuffer)
+        );
+        let _result = ofs_buf.apply_ansi_bytes(enable_sequence);
+        assert_eq!(
+            ofs_buf.terminal_mode.alternate_screen,
+            AlternateScreenState::Active
+        );
+
+        // Disable alternate screen buffer (?1049l)
+        let disable_sequence = format!(
+            "{}",
+            CsiSequence::DisablePrivateMode(PrivateModeType::AlternateScreenBuffer)
+        );
+        let _result = ofs_buf.apply_ansi_bytes(disable_sequence);
+        assert_eq!(
+            ofs_buf.terminal_mode.alternate_screen,
+            AlternateScreenState::Inactive
+        );
     }
 }
