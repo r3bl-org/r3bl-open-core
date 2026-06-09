@@ -78,7 +78,9 @@ pub fn status_report(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params
             performer.ofs_buf.handle_cursor_position_request();
         }
         DsrRequestType::Other(n) => {
-            tracing::warn!("CSI {}n (DSR): Unsupported device status report request", n);
+            crate::DEBUG_TUI_VT100_PARSER.then(|| {
+                tracing::warn!("CSI {}n (DSR): Unsupported device status report request", n);
+            });
         }
     }
 }

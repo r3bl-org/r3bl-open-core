@@ -10,7 +10,17 @@
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 
 use super::ProcessManager;
-use crate::{FlushKind, GCStringOwned, IndexOps, OffscreenBuffer, OutputDevice, PixelChar, Pos, RenderOpsLocalData, SPACE_CHAR, Size, TuiStyle, col, core::coordinates::{idx, len}, ok, print_text_with_attributes, row, tui::terminal_lib_backends::{OffscreenBufferPaint, OffscreenBufferPaintImpl}, tui_color, tui_style_attrib::Bold, tui_style_attribs, width};
+use crate::{ArrayBoundsCheck, PaintMode, ArrayOverflowResult, FlushKind, GCStringOwned, IndexOps,
+            OffscreenBuffer, OutputDevice, PixelChar, RangeExt, RenderOpsLocalData,
+            SPACE_CHAR, Size, TuiStyle, col,
+            core::coordinates::{idx, len},
+            ok, print_text_with_attributes, row,
+            tui::{DEBUG_TUI_PTY_MUX,
+                  terminal_lib_backends::{CursorVisibilityState, OffscreenBufferPaint,
+                                          OffscreenBufferPaintImpl}},
+            tui_color,
+            tui_style_attrib::{self, Bold},
+            tui_style_attribs, width};
 
 /// [`RowHeight`] reserved for the status bar at the bottom of the terminal.
 ///
@@ -43,8 +53,8 @@ impl OutputRenderer {
 
     /// Renders the active process's buffer with the status bar composited on top.
     ///
-    /// **Buffer compositing**:
-    /// This method demonstrates how the virtual terminal architecture works:
+    /// **Buffer compositing**: This method demonstrates how the virtual terminal
+    /// architecture works:
     /// 1. Get the active process's complete virtual terminal ([`OffscreenBuffer`])
     /// 2. Clone it for compositing (preserves the original state)
     /// 3. Composite the status bar into the last row
@@ -67,10 +77,26 @@ impl OutputRenderer {
         // Get the active process's buffer.
         let active_buffer = process_manager.get_active_buffer();
 
-        // Clone the buffer for compositing (we don't modify the original)
-        let mut composite_buffer = active_buffer.clone();
+        // Create a new composite buffer sized for the full terminal height.
+        let mut composite_buffer = OffscreenBuffer::new_empty(self.terminal_size);
 
-        // Composite status bar into the last row.
+        // Copy the active buffer (PTY output) into the top rows of the composite buffer.
+        let pty_rows = active_buffer.window_size.row_height.as_usize();
+        let pty_cols = active_buffer.window_size.col_width.as_usize();
+        for r in 0..pty_rows {
+            for c in 0..pty_cols {
+                composite_buffer[r][c] = active_buffer[r][c];
+            }
+        }
+
+        // Inherit the cursor and ANSI parser state.
+        composite_buffer.cursor_pos = active_buffer.cursor_pos;
+        composite_buffer.ansi_parser_support = active_buffer.ansi_parser_support.clone();
+
+        // 1. Composite PTY virtual cursor if it's visible.
+        Self::composite_virtual_cursor_into_buffer(&mut composite_buffer);
+
+        // 2. Composite status bar into the last row.
         self.composite_status_bar_into_buffer(&mut composite_buffer, process_manager);
 
         // Paint the composite buffer to terminal.
@@ -79,16 +105,108 @@ impl OutputRenderer {
         ok!()
     }
 
+    /// Composites a virtual block cursor into the buffer.
+    ///
+    /// This framework handles [display widths] and [segmentation] prior to populating the
+    /// [`OffscreenBuffer`], allowing us to flip the [`Reverse`] attribute on the existing
+    /// [`PixelChar`]. This inverts the colors without corrupting wide characters or
+    /// disrupting alignment.
+    ///
+    /// [`PixelChar`]: crate::PixelChar
+    /// [`Reverse`]: crate::tui_style_attrib::Reverse
+    /// [display widths]: unicode-width
+    /// [segmentation]: crate::graphemes
+    fn composite_virtual_cursor_into_buffer(ofs_buf: &mut OffscreenBuffer) {
+        // Only do something if the child process requested a visible cursor.
+        if ofs_buf.ansi_parser_support.cursor_visibility == CursorVisibilityState::Hidden
+        {
+            return;
+        }
+
+        // Locate the requested cursor position in the offscreen buffer.
+        let row_idx = ofs_buf.cursor_pos.row_index;
+        let col_idx = ofs_buf.cursor_pos.col_index;
+
+        // Bounds check.
+        let buf_size = ofs_buf.window_size;
+        if row_idx.overflows(buf_size.row_height) == ArrayOverflowResult::Overflowed
+            || col_idx.overflows(buf_size.col_width) == ArrayOverflowResult::Overflowed
+        {
+            return;
+        }
+
+        // Grab the pixel char at that position.
+        let row_usize = row_idx.as_usize();
+        let mut col_usize = col_idx.as_usize();
+        let original_col = col_usize;
+
+        // If the cursor lands on a Void, it's inside the trailing columns of a wide
+        // grapheme cluster (like a jumbo emoji). We scan backwards to find the origin
+        // character and invert that instead, highlighting the entire wide cluster.
+        while let PixelChar::Void = ofs_buf[row_usize][col_usize] {
+            if col_usize == 0 {
+                break;
+            }
+            col_usize -= 1;
+        }
+
+        // Generate a structured trace log if the cursor was snapped backwards
+        if original_col != col_usize {
+            DEBUG_TUI_PTY_MUX.then(|| {
+                // % is Display, ? is Debug.
+                tracing::info! {
+                    message = "OutputRenderer::composite_virtual_cursor_into_buffer",
+                    status = "Cursor landed on Void, snapped back to grapheme origin",
+                    original_col = ?original_col,
+                    snapped_col = ?col_usize,
+                };
+            });
+        }
+
+        let mut pixel_char = ofs_buf[row_usize][col_usize];
+
+        match &mut pixel_char {
+            PixelChar::PlainText { style, .. } => {
+                style.attribs.reverse = Some(tui_style_attrib::Reverse);
+            }
+            PixelChar::Spacer => {
+                let mut style = TuiStyle::default();
+                style.attribs.reverse = Some(crate::tui_style_attrib::Reverse);
+                pixel_char = PixelChar::PlainText {
+                    display_char: SPACE_CHAR,
+                    style,
+                };
+            }
+            PixelChar::Void => {
+                // Fallback: If we hit a malformed buffer (e.g. Void at column 0), do
+                // nothing.
+                DEBUG_TUI_PTY_MUX.then(|| {
+                    // % is Display, ? is Debug.
+                    tracing::info! {
+                        message = "OutputRenderer::composite_virtual_cursor_into_buffer",
+                        status = "Cursor landed on malformed Void (column 0), ignoring",
+                        row = ?row_usize,
+                        col = ?col_usize,
+                    };
+                });
+            }
+        }
+
+        ofs_buf[row_usize][col_usize] = pixel_char;
+    }
+
     /// Composite status bar into the last row of the given [`OffscreenBuffer`].
     ///
     /// This modifies the provided buffer by writing the status bar to its last row.
+    ///
+    /// The `ofs_buf` parameter is expected to be the full terminal height, so we draw the
+    /// status bar on the very last row, without clobbering any pre-existing content from
+    /// other processes.
     fn composite_status_bar_into_buffer(
         &mut self,
         ofs_buf: &mut OffscreenBuffer,
         process_manager: &ProcessManager,
     ) {
-        // The buffer is shorter than the terminal by STATUS_BAR_HEIGHT rows, so use
-        // buf_size (not self.terminal_size) when indexing into it.
         let buf_size = ofs_buf.window_size;
         let last_row_idx = buf_size.row_height.as_usize().saturating_sub(1);
 
@@ -101,12 +219,11 @@ impl OutputRenderer {
 
         // Fill entire status bar row with styled spaces (background color spans full
         // width).
-        for col_idx in 0..buf_size.col_width.as_usize() {
-            ofs_buf[last_row_idx][col_idx] = PixelChar::PlainText {
-                display_char: SPACE_CHAR,
-                style: status_style,
-            };
-        }
+        let col_range = (..buf_size.col_width).as_usize_range();
+        ofs_buf[last_row_idx][col_range].fill(PixelChar::PlainText {
+            display_char: SPACE_CHAR,
+            style: status_style,
+        });
 
         // Use print_text_with_attributes() to write styled text into the buffer.
         // This correctly handles Unicode display widths, grapheme clusters, and
@@ -119,7 +236,7 @@ impl OutputRenderer {
         };
 
         // Position cursor at the start of the status bar row.
-        ofs_buf.cursor_pos = Pos::new((row(last_row_idx), col(0)));
+        ofs_buf.cursor_pos = row(last_row_idx) + col(0);
 
         match print_text_with_attributes(
             &status_text,
@@ -231,18 +348,28 @@ impl OutputRenderer {
     }
 }
 
-/// Paint the given [`OffscreenBuffer`] to terminal using existing paint
-/// infrastructure.
+/// Paint the given [`OffscreenBuffer`] to terminal using existing paint infrastructure.
+///
+/// # Note on Side Effects
+///
+/// We explicitly pass [`CursorVisibilityState::Hidden`] here instead of the parsed
+/// visibility state. This permanently suppresses the hardware cursor when the multiplexer
+/// is active, preventing flickering and cursor parking issues.
+///
+/// There is no danger of this messing up the chrome UI since it doesn't natively require
+/// a hardware cursor. If interactive regions (like a find feature) are added to the
+/// chrome in the future, they will be handled by compositing another virtual caret.
 fn paint_buffer(ofs_buf: &OffscreenBuffer, output_device: &OutputDevice) {
-    let mut crossterm_impl = OffscreenBufferPaintImpl {};
-    let render_ops = crossterm_impl.render(ofs_buf);
+    let mut ofs_buf_paint_impl = OffscreenBufferPaintImpl {};
+    let render_ops = ofs_buf_paint_impl.render(ofs_buf);
     output_device.write(|out| {
-        crossterm_impl.paint(
+        ofs_buf_paint_impl.paint(
             render_ops,
             FlushKind::JustFlush,
-            ofs_buf.window_size, // Don't use self.terminal_size (may be different).
+            ofs_buf.window_size,
             out,
-            false, // is_mock = false
+            PaintMode::Real,
+            CursorVisibilityState::Hidden, // Always hide the hardware cursor
         );
     });
 }

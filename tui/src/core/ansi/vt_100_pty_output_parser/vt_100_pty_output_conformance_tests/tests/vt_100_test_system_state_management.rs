@@ -11,6 +11,7 @@
 //! [`SGR`]: crate::SgrCode
 
 use super::super::test_fixtures_vt_100_ansi_conformance::*;
+use crate::AutoWrapState;
 use crate::{ANSIBasicColor, EraseDisplayMode, SgrCode, col,
             core::ansi::vt_100_pty_output_parser::{CsiSequence, PrivateModeType},
             row, term_col, term_row};
@@ -244,7 +245,7 @@ pub mod character_set_state_management {
             ofs_buf.ansi_parser_support.character_set,
             crate::CharacterSet::DECGraphics
         );
-        assert!(!ofs_buf.ansi_parser_support.auto_wrap_mode);
+        assert_eq!(ofs_buf.ansi_parser_support.auto_wrap_mode, AutoWrapState::Disabled);
 
         // Change modes but keep character set
         let mode_change = format!(
@@ -254,7 +255,7 @@ pub mod character_set_state_management {
         let _result = ofs_buf.apply_ansi_bytes(mode_change);
 
         // Auto-wrap should change but character set should persist
-        assert!(ofs_buf.ansi_parser_support.auto_wrap_mode);
+        assert_eq!(ofs_buf.ansi_parser_support.auto_wrap_mode, AutoWrapState::Enabled);
         assert_eq!(
             ofs_buf.ansi_parser_support.character_set,
             crate::CharacterSet::DECGraphics
@@ -395,7 +396,9 @@ pub mod scroll_region_state_interactions {
 
 /// Tests for complex state combinations and edge cases.
 pub mod complex_state_combinations {
-    use super::*;
+    use crate::AutoWrapState;
+
+use super::*;
 
     #[test]
     fn test_full_state_combination() {
@@ -456,7 +459,7 @@ pub mod complex_state_combinations {
             ofs_buf.ansi_parser_support.character_set,
             crate::CharacterSet::Ascii
         );
-        assert!(ofs_buf.ansi_parser_support.auto_wrap_mode);
+        assert_eq!(ofs_buf.ansi_parser_support.auto_wrap_mode, AutoWrapState::Enabled);
     }
 
     #[test]
@@ -491,7 +494,7 @@ pub mod complex_state_combinations {
             ofs_buf.ansi_parser_support.character_set,
             crate::CharacterSet::DECGraphics
         );
-        assert!(!ofs_buf.ansi_parser_support.auto_wrap_mode);
+        assert_eq!(ofs_buf.ansi_parser_support.auto_wrap_mode, AutoWrapState::Disabled);
 
         // Current style should still have bold
         assert!(

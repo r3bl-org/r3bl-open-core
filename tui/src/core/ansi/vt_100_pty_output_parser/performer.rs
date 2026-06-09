@@ -440,10 +440,12 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
     ) {
         // Discard malformed sequences - see module docs for rationale
         if ignore {
-            tracing::warn!(
+            crate::DEBUG_TUI_VT100_PARSER.then(|| {
+                tracing::warn!(
                 "CSI {}: Discarding malformed sequence (VTE parser exceeded limits)",
                 dispatch_char
             );
+            });
             return;
         }
 
@@ -539,124 +541,160 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
                 // CHT (Cursor Horizontal Tab) - Move cursor forward N tab stops
                 // Not needed: Tab handling is done via execute() with TAB character.
                 // See [mod-level docs](crate::vt_100_pty_output_parser) for rationale
-                tracing::warn!("CSI I: Cursor Horizontal Tab not implemented");
+                crate::DEBUG_TUI_VT100_PARSER.then(|| {
+                    tracing::warn!("CSI I: Cursor Horizontal Tab not implemented");
+                });
             }
             'Z' => {
                 // CBT (Cursor Backward Tab) - Move cursor backward N tab stops
                 // Not needed: Reverse tab rarely used, complex tab stop tracking required
                 // See [mod-level docs](crate::vt_100_pty_output_parser) for rationale
-                tracing::warn!("CSI Z: Cursor Backward Tab not implemented");
+                crate::DEBUG_TUI_VT100_PARSER.then(|| {
+                    tracing::warn!("CSI Z: Cursor Backward Tab not implemented");
+                });
             }
             'g' => {
                 // TBC (Tab Clear) - Clear tab stops (0=current, 3=all)
                 // Not needed: Tab stops are application-specific, TUI apps manage their
                 // own. See [mod-level docs](crate::vt_100_pty_output_parser) for
                 // rationale
-                tracing::warn!("CSI g: Tab Clear not implemented");
+                crate::DEBUG_TUI_VT100_PARSER.then(|| {
+                    tracing::warn!("CSI g: Tab Clear not implemented");
+                });
             }
             'a' => {
                 // HPR (Horizontal Position Relative) - Same as CUF (Cursor Forward)
                 // Not needed: CUF already implemented, this is redundant
                 // See [mod-level docs](crate::vt_100_pty_output_parser) for rationale
-                tracing::warn!(
+                crate::DEBUG_TUI_VT100_PARSER.then(|| {
+                    tracing::warn!(
                     "CSI a: Horizontal Position Relative not implemented (use CUF instead)"
                 );
+                });
             }
             'e' => {
                 // VPR (Vertical Position Relative) - Same as CUD (Cursor Down)
                 // Not needed: CUD already implemented, this is redundant
                 // See [mod-level docs](crate::vt_100_pty_output_parser) for rationale
-                tracing::warn!(
+                crate::DEBUG_TUI_VT100_PARSER.then(|| {
+                    tracing::warn!(
                     "CSI e: Vertical Position Relative not implemented (use CUD instead)"
                 );
+                });
             }
             '`' => {
                 // HPA (Horizontal Position Absolute) - Same as CHA
                 // Not needed: CHA already implemented, this is redundant
                 // See [mod-level docs](crate::vt_100_pty_output_parser) for rationale
-                tracing::warn!(
+                crate::DEBUG_TUI_VT100_PARSER.then(|| {
+                    tracing::warn!(
                     "CSI `: Horizontal Position Absolute not implemented (use CHA instead)"
                 );
+                });
             }
             'U' => {
                 // NP (Next Page) - Move to next page in page memory
                 // Not needed: Page memory not supported in multiplexer.
                 // See [mod-level docs](crate::vt_100_pty_output_parser) for rationale
-                tracing::warn!("CSI U: Next Page not supported in multiplexer");
+                crate::DEBUG_TUI_VT100_PARSER.then(|| {
+                    tracing::warn!("CSI U: Next Page not supported in multiplexer");
+                });
             }
             'V' => {
                 // PP (Preceding Page) - Move to previous page in page memory
                 // Not needed: Page memory not supported in multiplexer.
                 // See [mod-level docs](crate::vt_100_pty_output_parser) for rationale
-                tracing::warn!("CSI V: Preceding Page not supported in multiplexer");
+                crate::DEBUG_TUI_VT100_PARSER.then(|| {
+                    tracing::warn!("CSI V: Preceding Page not supported in multiplexer");
+                });
             }
             '~' => {
                 // DECLL (DEC Load LEDs) - Set keyboard LED indicators
                 // Not needed: Hardware control not applicable in multiplexer.
                 // See [mod-level docs](crate::vt_100_pty_output_parser) for rationale
-                tracing::warn!("CSI ~: DEC Load LEDs not supported in multiplexer");
+                crate::DEBUG_TUI_VT100_PARSER.then(|| {
+                    tracing::warn!("CSI ~: DEC Load LEDs not supported in multiplexer");
+                });
             }
             '}' => {
                 // DECIC (DEC Insert Column) - Insert blank columns at cursor
                 // Not needed: Column insertion rarely used, complex for TUI apps
                 // See [mod-level docs](crate::vt_100_pty_output_parser) for rationale
-                tracing::warn!("CSI }}: DEC Insert Column not implemented");
+                crate::DEBUG_TUI_VT100_PARSER.then(|| {
+                    tracing::warn!("CSI }}: DEC Insert Column not implemented");
+                });
             }
             '|' => {
                 // DECDC (DEC Delete Column) - Delete columns at cursor
                 // Not needed: Column deletion rarely used, complex for TUI apps
                 // See [mod-level docs](crate::vt_100_pty_output_parser) for rationale
-                tracing::warn!("CSI |: DEC Delete Column not implemented");
+                crate::DEBUG_TUI_VT100_PARSER.then(|| {
+                    tracing::warn!("CSI |: DEC Delete Column not implemented");
+                });
             }
             't' => {
                 // Window manipulation (resize, move, iconify, etc.)
                 // Not needed: Window ops handled by terminal emulator, not multiplexer
                 // See [mod-level docs](crate::vt_100_pty_output_parser) for rationale
-                tracing::warn!("CSI t: Window manipulation not supported in multiplexer");
+                crate::DEBUG_TUI_VT100_PARSER.then(|| {
+                    tracing::warn!("CSI t: Window manipulation not supported in multiplexer");
+                });
             }
             'c' => {
                 // DA (Device Attributes) - Request terminal type/capabilities
                 // Not needed: Multiplexer doesn't respond to queries, parent terminal
                 // does. See [mod-level docs](crate::vt_100_pty_output_parser) for
                 // rationale
-                tracing::warn!(
+                crate::DEBUG_TUI_VT100_PARSER.then(|| {
+                    tracing::warn!(
                     "CSI c: Device Attributes query not supported in multiplexer"
                 );
+                });
             }
             'q' => {
                 // DECSCUSR (Set Cursor Style) - Change cursor shape/blink
                 // Not needed: Cursor rendering handled by terminal emulator.
                 // See [mod-level docs](crate::vt_100_pty_output_parser) for rationale
-                tracing::warn!("CSI q: Set Cursor Style not supported in multiplexer");
+                crate::DEBUG_TUI_VT100_PARSER.then(|| {
+                    tracing::warn!("CSI q: Set Cursor Style not supported in multiplexer");
+                });
             }
             'p' => {
                 // Various DEC private sequences (DECRQM, etc.)
                 // Not needed: Private mode requests handled by parent terminal.
                 // See [mod-level docs](crate::vt_100_pty_output_parser) for rationale
-                tracing::warn!(
+                crate::DEBUG_TUI_VT100_PARSER.then(|| {
+                    tracing::warn!(
                     "CSI p: DEC private sequences not supported in multiplexer"
                 );
+                });
             }
             'x' => {
                 // DECREQTPARM (Request Terminal Parameters) - Request terminal settings
                 // Not needed: Terminal parameters managed by parent emulator.
                 // See [mod-level docs](crate::vt_100_pty_output_parser) for rationale
-                tracing::warn!(
+                crate::DEBUG_TUI_VT100_PARSER.then(|| {
+                    tracing::warn!(
                     "CSI x: Request Terminal Parameters not supported in multiplexer"
                 );
+                });
             }
             'z' => {
                 // DECERA/DECSERA (DEC Erase/Selective Erase Rectangular Area)
                 // Not needed: Rectangular operations complex, rarely used
                 // See [mod-level docs](crate::vt_100_pty_output_parser) for rationale
-                tracing::warn!("CSI z: DEC Rectangular Erase not implemented");
+                crate::DEBUG_TUI_VT100_PARSER.then(|| {
+                    tracing::warn!("CSI z: DEC Rectangular Erase not implemented");
+                });
             }
 
             // Any other unrecognized sequences.
             _ => {
                 // Unknown CSI sequence - safely ignore.
                 // Multiplexer passes through raw data, parent terminal handles unknowns.
-                tracing::warn!("CSI {}: Unknown CSI sequence", dispatch_char);
+                crate::DEBUG_TUI_VT100_PARSER.then(|| {
+                    tracing::warn!("CSI {}: Unknown CSI sequence", dispatch_char);
+                });
             }
         }
     }
@@ -833,10 +871,12 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
     fn esc_dispatch(&mut self, intermediates: &[u8], ignore: bool, byte: u8) {
         // Discard malformed sequences - see module docs for rationale
         if ignore {
-            tracing::warn!(
+            crate::DEBUG_TUI_VT100_PARSER.then(|| {
+                tracing::warn!(
                 "ESC {}: Discarding malformed sequence (VTE parser exceeded limits)",
                 byte as char
             );
+            });
             return;
         }
 

@@ -6,8 +6,8 @@
 //! sequences handled by the [`mode_ops`] module.
 //! These include:
 //!
-//! - **SM h** (Set Mode) - [`set_auto_wrap_mode`] (enabled=true)
-//! - **RM l** (Reset Mode) - [`set_auto_wrap_mode`] (enabled=false)
+//! - **SM h** (Set Mode) - [`set_requested_auto_wrap_mode`] (`AutoWrapState::Enabled`)
+//! - **RM l** (Reset Mode) - [`set_requested_auto_wrap_mode`] (`AutoWrapState::Disabled`)
 //!
 //! All operations maintain VT100 compliance and handle proper mode state
 //! management for terminal operations.
@@ -21,7 +21,7 @@
 //!
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`mode_ops`]: crate::vt_100_pty_output_parser::operations::vt_100_shim_mode_ops
-//! [`set_auto_wrap_mode`]: crate::OffscreenBuffer::set_auto_wrap_mode
+//! [`set_requested_auto_wrap_mode`]: crate::OffscreenBuffer::set_requested_auto_wrap_mode
 
 #[allow(clippy::wildcard_imports)]
 use super::super::*;
@@ -31,8 +31,17 @@ impl OffscreenBuffer {
     /// Set auto wrap mode on.
     /// When enabled, text automatically wraps to the next line when it
     /// reaches the right margin.
-    pub fn set_auto_wrap_mode(&mut self, enabled: bool) {
-        self.ansi_parser_support.auto_wrap_mode = enabled;
+    pub fn set_requested_auto_wrap_mode(&mut self, requested_state: AutoWrapState) {
+        self.ansi_parser_support.auto_wrap_mode = requested_state;
+    }
+
+    /// Set the cursor visibility mode.
+    /// Controls whether the terminal cursor is visible (DECTCEM ?25 mode).
+    pub fn set_requested_cursor_visibility_mode(
+        &mut self,
+        requested_state: CursorVisibilityState,
+    ) {
+        self.ansi_parser_support.cursor_visibility = requested_state;
     }
 
     /// Toggle between the primary and alternate screen buffers.
@@ -118,18 +127,18 @@ mod tests_mode_ops {
         let mut buffer = create_test_buffer();
 
         // Initially should be enabled by default.
-        assert!(buffer.ansi_parser_support.auto_wrap_mode);
+        assert_eq!(buffer.ansi_parser_support.auto_wrap_mode, AutoWrapState::Enabled);
 
-        buffer.set_auto_wrap_mode(true);
-        assert!(buffer.ansi_parser_support.auto_wrap_mode);
+        buffer.set_requested_auto_wrap_mode(AutoWrapState::Enabled);
+        assert_eq!(buffer.ansi_parser_support.auto_wrap_mode, AutoWrapState::Enabled);
     }
 
     #[test]
     fn test_set_auto_wrap_mode_disabled() {
         let mut buffer = create_test_buffer();
 
-        buffer.set_auto_wrap_mode(false);
-        assert!(!buffer.ansi_parser_support.auto_wrap_mode);
+        buffer.set_requested_auto_wrap_mode(AutoWrapState::Disabled);
+        assert_eq!(buffer.ansi_parser_support.auto_wrap_mode, AutoWrapState::Disabled);
     }
 
     #[test]
@@ -137,16 +146,16 @@ mod tests_mode_ops {
         let mut buffer = create_test_buffer();
 
         // Start enabled.
-        buffer.set_auto_wrap_mode(true);
-        assert!(buffer.ansi_parser_support.auto_wrap_mode);
+        buffer.set_requested_auto_wrap_mode(AutoWrapState::Enabled);
+        assert_eq!(buffer.ansi_parser_support.auto_wrap_mode, AutoWrapState::Enabled);
 
         // Disable.
-        buffer.set_auto_wrap_mode(false);
-        assert!(!buffer.ansi_parser_support.auto_wrap_mode);
+        buffer.set_requested_auto_wrap_mode(AutoWrapState::Disabled);
+        assert_eq!(buffer.ansi_parser_support.auto_wrap_mode, AutoWrapState::Disabled);
 
         // Enable again.
-        buffer.set_auto_wrap_mode(true);
-        assert!(buffer.ansi_parser_support.auto_wrap_mode);
+        buffer.set_requested_auto_wrap_mode(AutoWrapState::Enabled);
+        assert_eq!(buffer.ansi_parser_support.auto_wrap_mode, AutoWrapState::Enabled);
     }
 
     #[test]

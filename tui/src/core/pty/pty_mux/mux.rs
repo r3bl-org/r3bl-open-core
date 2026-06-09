@@ -11,7 +11,7 @@
 
 use super::{InputRouter, OutputRenderer, Process, ProcessManager, output_renderer,
             show_notification_non_blocking};
-use crate::{AnsiSequenceGenerator, Continuation, DEBUG_TUI_PTY_MUX, InputEvent, RawMode,
+use crate::{AnsiSequenceGenerator, Continuation, PaintMode, DEBUG_TUI_PTY_MUX, InputEvent, RawMode,
             Size, TerminalInteractiveStatus, TuiAvailability, col,
             core::{check_is_terminal_interactive, emit_stderr_redirection_disclaimer,
                    get_size,
@@ -199,7 +199,7 @@ impl PTYMux {
     pub async fn run(mut self) -> miette::Result<()> {
         // Start raw mode using existing RawMode.
         self.output_device.write(|out| {
-            RawMode::start(self.terminal_size, out, false);
+            RawMode::start(self.terminal_size, out, PaintMode::Real);
         });
         DEBUG_TUI_PTY_MUX.then(|| {
             // % is Display, ? is Debug.
@@ -543,7 +543,7 @@ impl PTYMux {
             };
         });
         self.output_device.write(|out| {
-            RawMode::end(self.terminal_size, out, false);
+            RawMode::end(self.terminal_size, out, PaintMode::Real);
         });
         DEBUG_TUI_PTY_MUX.then(|| {
             // % is Display, ? is Debug.

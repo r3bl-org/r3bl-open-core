@@ -39,18 +39,30 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::{FlushKind, RenderOpsLocalData, RenderPipeline};
-use crate::{DEBUG_TUI_COMPOSITOR, DEBUG_TUI_SHOW_PIPELINE_EXPANDED, GlobalData,
+use crate::{DEBUG_TUI_COMPOSITOR, PaintMode, DEBUG_TUI_SHOW_PIPELINE_EXPANDED, GlobalData,
             LengthOps, LockedOutputDevice, OffscreenBuffer, OffscreenBufferPaint,
             OffscreenBufferPaintImpl, PixelCharDiffChunks, Pos, Size,
             TERMINAL_LIB_BACKEND, TerminalLibBackend};
 use std::fmt::Debug;
 
+/// Executes a selective redraw (diff) paint.
+///
+/// It extracts the [`cursor_visibility`] from the [`OffscreenBuffer`] (which tracks the
+/// parsed [`DECTCEM`] `?25h`/`l` state) and injects it into the execution layer. This
+/// ensures the physical terminal cursor correctly matches the simulated state before
+/// rendering any ops.
+///
+/// [`cursor_visibility`]: crate::AnsiParserSupport::cursor_visibility
+/// [`DECTCEM`]: https://en.wikipedia.org/wiki/ANSI_escape_code#Set_terminal_mode
+/// [`OffscreenBuffer`]: crate::OffscreenBuffer
 fn perform_diff_paint(
+    ofs_buf: &OffscreenBuffer,
     diff_chunks: &PixelCharDiffChunks,
     window_size: Size,
     locked_output_device: LockedOutputDevice<'_>,
-    is_mock: bool,
+    paint_mode: PaintMode,
 ) {
+    let cursor_visibility = ofs_buf.ansi_parser_support.cursor_visibility;
     match TERMINAL_LIB_BACKEND {
         TerminalLibBackend::Crossterm => {
             let mut crossterm_impl = OffscreenBufferPaintImpl {};
@@ -59,7 +71,8 @@ fn perform_diff_paint(
                 render_ops,
                 window_size,
                 locked_output_device,
-                is_mock,
+                paint_mode,
+                cursor_visibility,
             );
         }
         TerminalLibBackend::DirectToAnsi => {
@@ -68,18 +81,31 @@ fn perform_diff_paint(
             // The difference is only in execution (via routing in render_op_output.rs)
             let mut converter = OffscreenBufferPaintImpl {};
             let render_ops = converter.render_diff(diff_chunks);
-            converter.paint_diff(render_ops, window_size, locked_output_device, is_mock);
+            converter.paint_diff(
+                render_ops,
+                window_size,
+                locked_output_device,
+                paint_mode,
+                cursor_visibility,
+            );
         }
     }
 }
 
+/// Executes a complete redraw (full) paint.
+///
+/// It extracts the `cursor_visibility` from the `OffscreenBuffer` (which tracks the
+/// parsed `DECTCEM` `?25h`/`l` state) and injects it into the execution layer. This
+/// ensures the physical terminal cursor correctly matches the simulated state before
+/// rendering any ops.
 fn perform_full_paint(
     ofs_buf: &OffscreenBuffer,
     flush_kind: FlushKind,
     window_size: Size,
     locked_output_device: LockedOutputDevice<'_>,
-    is_mock: bool,
+    paint_mode: PaintMode,
 ) {
+    let cursor_visibility = ofs_buf.ansi_parser_support.cursor_visibility;
     match TERMINAL_LIB_BACKEND {
         TerminalLibBackend::Crossterm => {
             let mut crossterm_impl = OffscreenBufferPaintImpl {};
@@ -89,7 +115,8 @@ fn perform_full_paint(
                 flush_kind,
                 window_size,
                 locked_output_device,
-                is_mock,
+                paint_mode,
+                cursor_visibility,
             );
         }
         TerminalLibBackend::DirectToAnsi => {
@@ -103,7 +130,8 @@ fn perform_full_paint(
                 flush_kind,
                 window_size,
                 locked_output_device,
-                is_mock,
+                paint_mode,
+                cursor_visibility,
             );
         }
     }
@@ -136,7 +164,7 @@ pub fn paint<S, AS>(
     flush_kind: FlushKind,
     global_data: &mut GlobalData<S, AS>,
     locked_output_device: LockedOutputDevice<'_>,
-    is_mock: bool,
+    paint_mode: PaintMode,
 ) where
     S: Debug + Default + Clone + Sync + Send,
     AS: Debug + Default + Clone + Sync + Send,
@@ -164,7 +192,7 @@ pub fn paint<S, AS>(
                 flush_kind,
                 window_size,
                 locked_output_device,
-                is_mock,
+                paint_mode,
             );
         }
         Some(saved_offscreen_buffer) => {
@@ -176,15 +204,16 @@ pub fn paint<S, AS>(
                         flush_kind,
                         window_size,
                         locked_output_device,
-                        is_mock,
+                        paint_mode,
                     );
                 }
                 Some(ref diff_chunks) => {
                     perform_diff_paint(
+                        &buffer_from_pool,
                         diff_chunks,
                         window_size,
                         locked_output_device,
-                        is_mock,
+                        paint_mode,
                     );
                 }
             }

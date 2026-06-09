@@ -15,9 +15,6 @@
   "recommendations": [
     // R3BL Extensions.
     "R3BL.r3bl-extension-pack",
-    // Gemini.
-    "google.gemini-cli-vscode-ide-companion",
-    "google.geminicodeassist",
     // Others.
     "ryuta46.multi-command", // Multi Command.
     "streetsidesoftware.code-spell-checker", // [SLOW] Code Spell Checker. Configure it so it doesn't slow down IDE

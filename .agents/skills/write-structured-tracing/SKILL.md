@@ -11,6 +11,11 @@ This skill documents the project's standard for writing tracing logs (`tracing::
 
 All `tracing::*!` calls must be gated behind a specific debug flag from `tui/src/tui/mod.rs` (or similar location) using the `.then(|| { ... })` pattern. This ensures the tracing macro and any string allocations are completely bypassed when the flag is disabled.
 
+**Choosing the right flag (Scope Specificity):**
+Make sure the flag you use is specifically scoped to the module or subsystem you are debugging. This scope can be narrow or broad depending on the requirements.
+- Do NOT reuse a broad orchestrator flag (e.g., `DEBUG_TUI_PTY_MUX`) for a microscopic, high-volume subsystem (like a byte-stream parser). Doing so would spam the orchestrator logs.
+- If a suitable module-specific flag does not exist, create a new one (e.g., `DEBUG_TUI_VT100_PARSER`) to ensure developers can isolate and filter logs effectively without overwhelming the IO overhead.
+
 ```rust
 crate::DEBUG_TUI_MOD.then(|| {
     // ... tracing call ...

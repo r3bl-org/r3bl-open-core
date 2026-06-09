@@ -16,9 +16,8 @@
 //! separation of concerns during the [`crate::ZeroCopyGapBuffer`] migration.
 
 use super::GCStringOwned;
-use crate::pad_fmt;
 use crate::{ByteIndex, ColIndex, ColWidth, InlineString, NumericValue, SegIndex,
-            byte_index, ch, seg_index, usize};
+            byte_index, ch, pad_fmt, seg_index, usize};
 use std::ops::Add;
 
 /// Converts between different types of indices. This unifies the API so that different

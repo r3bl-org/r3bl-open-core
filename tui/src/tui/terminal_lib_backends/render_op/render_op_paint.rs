@@ -1,7 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::RenderOpsLocalData;
-use crate::{LockedOutputDevice, RenderOpOutput, Size};
+use crate::{LockedOutputDevice, PaintMode, RenderOpOutput, Size};
 
 /// Trait for executing individual [`RenderOpOutput`] operations on a terminal.
 ///
@@ -90,7 +90,7 @@ use crate::{LockedOutputDevice, RenderOpOutput, Size};
 ///         window_size,
 ///         &mut local_data,  // Shared state for optimization
 ///         locked_output,
-///         is_mock,
+///         paint_mode,
 ///     );
 /// }
 /// ```
@@ -104,15 +104,15 @@ use crate::{LockedOutputDevice, RenderOpOutput, Size};
 /// 3. **Consistent behavior** across different terminal library backends
 /// 4. **Easy addition** of new backends without changing core pipeline
 ///
-/// # About the `is_mock` Parameter
+/// # About the `paint_mode` Parameter
 ///
-/// The `is_mock: bool` parameter is present in all implementations for **API
+/// The `paint_mode: PaintMode` parameter is present in all implementations for **API
 /// consistency** across different backends. However, actual mock behavior is handled at
 /// the I/O boundary:
 ///
-/// - **Source of Truth**: [`crate::OutputDevice::is_mock`] is the definitive source of
+/// - **Source of Truth**: [`crate::OutputDevice::paint_mode`] is the definitive source of
 ///   mock status
-/// - **Paint Functions**: Always execute fully; they do NOT check `is_mock` and return
+/// - **Paint Functions**: Always execute fully; they do NOT check `paint_mode` and return
 ///   early
 /// - **I/O Boundary**: The [`crate::OutputDevice`] decides whether to actually write
 ///   terminal commands
@@ -125,9 +125,9 @@ use crate::{LockedOutputDevice, RenderOpOutput, Size};
 /// - **Future-Proofing**: Avoids breaking API changes if a backend later needs it
 ///
 /// **Example scenarios:**
-/// - [`crossterm`]: Ignores `is_mock`, relies on [`crate::OutputDevice::is_mock`]
+/// - [`crossterm`]: Ignores `paint_mode`, relies on [`crate::OutputDevice::paint_mode`]
 ///   (current behavior)
-/// - [`DirectToAnsi`]: May use `is_mock` to skip operations (not yet implemented)
+/// - [`DirectToAnsi`]: May use `paint_mode` to skip operations (not yet implemented)
 ///
 /// # Implementations
 ///
@@ -165,14 +165,14 @@ pub trait RenderOpPaint {
     ///   - Backend queues commands to this output device
     ///   - Operations are buffered, not immediately flushed
     ///   - The actual [`crate::OutputDevice`] contains the authoritative
-    ///     [`crate::OutputDevice::is_mock`] flag
+    ///     [`crate::OutputDevice::paint_mode`] flag
     ///
-    /// - `is_mock`: Backend-specific mock flag (see trait docs for details)
+    /// - `paint_mode`: Backend-specific mock flag (see trait docs for details)
     ///   - Not checked by paint functions themselves
     ///   - Included for API consistency across all backend implementations
     ///   - Some backends may use this in the future (e.g., [`DirectToAnsi`])
     ///   - [`crossterm`] currently ignores this and relies on
-    ///     [`crate::OutputDevice::is_mock`]
+    ///     [`crate::OutputDevice::paint_mode`]
     ///
     /// # Behavior
     ///
@@ -193,6 +193,6 @@ pub trait RenderOpPaint {
         window_size: Size,
         render_local_data: &mut RenderOpsLocalData,
         locked_output_device: LockedOutputDevice<'_>,
-        is_mock: bool,
+        paint_mode: PaintMode,
     );
 }

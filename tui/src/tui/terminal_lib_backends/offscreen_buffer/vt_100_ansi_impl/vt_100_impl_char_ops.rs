@@ -32,7 +32,7 @@
 
 #[allow(clippy::wildcard_imports)]
 use super::super::*;
-use crate::{ArrayBoundsCheck, ArrayOverflowResult, ColIndex, Length, NumericValue,
+use crate::{ArrayBoundsCheck, ArrayOverflowResult, AutoWrapState, ColIndex, Length, NumericValue,
             RowIndex, col,
             core::coordinates::bounds_check::{CursorBoundsCheck, LengthOps,
                                               RangeBoundsExt, RangeConvertExt},
@@ -341,7 +341,7 @@ impl OffscreenBuffer {
 
             // Handle line wrap based on DECAWM (Auto Wrap Mode).
             if new_col.overflows(col_max) == ArrayOverflowResult::Overflowed {
-                if self.ansi_parser_support.auto_wrap_mode {
+                if self.ansi_parser_support.auto_wrap_mode == AutoWrapState::Enabled {
                     // DECAWM enabled: wrap to next line (default behavior).
                     self.cursor_pos.col_index = col(0);
                     let next_row: RowIndex = current_row + 1;
@@ -1066,7 +1066,7 @@ mod tests_print_char {
         let mut buffer = create_test_buffer_with_size(width(5), height(3));
 
         // Ensure DECAWM is enabled (default).
-        buffer.ansi_parser_support.auto_wrap_mode = true;
+        buffer.ansi_parser_support.auto_wrap_mode = AutoWrapState::Enabled;
 
         // Position cursor at end of line (column 4 in 5-width buffer).
         buffer.cursor_pos = row(1) + col(4);

@@ -37,7 +37,7 @@
 
 use super::{RenderOpCommon, RenderOpsExec};
 use crate::ok;
-use crate::{InlineString, InlineVec, LockedOutputDevice, RenderOpsLocalData, Size,
+use crate::{InlineString, PaintMode, InlineVec, LockedOutputDevice, RenderOpsLocalData, Size,
             TERMINAL_LIB_BACKEND, TerminalLibBackend, TuiStyle,
             terminal_lib_backends::{crossterm_backend::PaintRenderOpImplCrossterm,
                                     direct_to_ansi::RenderOpPaintImplDirectToAnsi}};
@@ -125,14 +125,14 @@ impl RenderOpOutputVec {
     /// - `render_op_output`: The specific Output operation to execute
     /// - `window_size`: Current terminal window dimensions
     /// - `locked_output_device`: Locked terminal output for thread-safe writing
-    /// - `is_mock`: Whether this is a mock execution for testing
+    /// - `paint_mode`: Whether to execute against the real terminal or in mock mode
     fn route_paint_render_op_output_to_backend(
         render_local_data: &mut RenderOpsLocalData,
         skip_flush: &mut bool,
         render_op_output: &RenderOpOutput,
         window_size: Size,
         locked_output_device: LockedOutputDevice<'_>,
-        is_mock: bool,
+        paint_mode: PaintMode,
     ) {
         match TERMINAL_LIB_BACKEND {
             TerminalLibBackend::Crossterm => match render_op_output {
@@ -143,7 +143,7 @@ impl RenderOpOutputVec {
                         window_size,
                         render_local_data,
                         locked_output_device,
-                        is_mock,
+                        paint_mode,
                     );
                 }
                 RenderOpOutput::CompositorNoClipTruncPaintTextWithAttributes(
@@ -167,7 +167,7 @@ impl RenderOpOutputVec {
                         window_size,
                         render_local_data,
                         locked_output_device,
-                        is_mock,
+                        paint_mode,
                     );
                 }
                 RenderOpOutput::CompositorNoClipTruncPaintTextWithAttributes(
@@ -281,7 +281,7 @@ impl RenderOpsExec for RenderOpOutputVec {
         skip_flush: &mut bool,
         window_size: Size,
         locked_output_device: LockedOutputDevice<'_>,
-        is_mock: bool,
+        paint_mode: PaintMode,
     ) {
         let mut render_local_data = RenderOpsLocalData::default();
         for render_op_output in &self.list {
@@ -291,7 +291,7 @@ impl RenderOpsExec for RenderOpOutputVec {
                 render_op_output,
                 window_size,
                 locked_output_device,
-                is_mock,
+                paint_mode,
             );
         }
     }

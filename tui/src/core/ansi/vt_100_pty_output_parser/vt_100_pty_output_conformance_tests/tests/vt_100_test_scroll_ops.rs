@@ -13,6 +13,7 @@
 //! - Interactions between scroll regions and cursor positioning
 
 use super::super::test_fixtures_vt_100_ansi_conformance::*;
+use crate::AutoWrapState;
 use crate::{EscSequence, TuiStyle, col,
             core::ansi::{constants::{IND_INDEX_DOWN, RI_REVERSE_INDEX_UP},
                          vt_100_pty_output_parser::{CsiSequence, PrivateModeType,
@@ -64,7 +65,7 @@ pub mod auto_wrap {
 
         // Verify auto-wrap is enabled by default.
         assert!(
-            performer.ofs_buf.ansi_parser_support.auto_wrap_mode,
+            performer.ofs_buf.ansi_parser_support.auto_wrap_mode == AutoWrapState::Enabled,
             "Auto-wrap mode should be enabled by default"
         );
 
@@ -126,7 +127,7 @@ pub mod auto_wrap {
 
         // Verify auto-wrap is now disabled.
         assert!(
-            !performer.ofs_buf.ansi_parser_support.auto_wrap_mode,
+            performer.ofs_buf.ansi_parser_support.auto_wrap_mode == AutoWrapState::Disabled,
             "Auto-wrap mode should be disabled after CSI ?7l"
         );
 
@@ -156,19 +157,19 @@ pub mod auto_wrap {
         let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf);
 
         // Start with default (enabled)
-        assert!(performer.ofs_buf.ansi_parser_support.auto_wrap_mode);
+        assert_eq!(performer.ofs_buf.ansi_parser_support.auto_wrap_mode, AutoWrapState::Enabled);
 
         // Disable auto-wrap.
         let disable_sequence =
             CsiSequence::DisablePrivateMode(PrivateModeType::AutoWrap).to_string();
         performer.apply_ansi_bytes(disable_sequence);
-        assert!(!performer.ofs_buf.ansi_parser_support.auto_wrap_mode);
+        assert_eq!(performer.ofs_buf.ansi_parser_support.auto_wrap_mode, AutoWrapState::Disabled);
 
         // Re-enable auto-wrap using CSI ?7h.
         let enable_sequence =
             CsiSequence::EnablePrivateMode(PrivateModeType::AutoWrap).to_string();
         performer.apply_ansi_bytes(enable_sequence);
-        assert!(performer.ofs_buf.ansi_parser_support.auto_wrap_mode);
+        assert_eq!(performer.ofs_buf.ansi_parser_support.auto_wrap_mode, AutoWrapState::Enabled);
 
         // Test that wrapping works again.
         for ch in 'A'..='K' {

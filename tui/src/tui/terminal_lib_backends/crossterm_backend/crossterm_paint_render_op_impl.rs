@@ -47,7 +47,7 @@
 //! [rendering pipeline overview]: mod@crate::terminal_lib_backends#rendering-pipeline-architecture
 
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
-use crate::{CliTextInline, GCStringOwned, LockedOutputDevice, Pos, RCP_RESTORE_CURSOR_BYTES,
+use crate::{CliTextInline, PaintMode, GCStringOwned, LockedOutputDevice, Pos, RCP_RESTORE_CURSOR_BYTES,
             RenderOpCommon, RenderOpFlush, RenderOpOutput, RenderOpPaint,
             RenderOpsLocalData, SCP_SAVE_CURSOR_BYTES, Size, TuiColor, TuiStyle,
             cli_text_inline_impl::CliTextConvertOptions, sanitize_and_save_abs_pos,
@@ -63,7 +63,7 @@ use crossterm::{cursor::{Hide, MoveTo, Show},
 #[macro_export]
 macro_rules! crossterm_op {
     (
-        $arg_is_mock:expr, // Mock flag - if true, skip the operation.
+        $arg_paint_mode:expr, // PaintMode - if Mock, skip the operation.
         $arg_log_msg:expr, // Log message.
         $op:expr,          // The crossterm operation to perform.
         $success_msg:expr, // Success log message.
@@ -72,7 +72,7 @@ macro_rules! crossterm_op {
         use $crate::tui::DEBUG_TUI_SHOW_TERMINAL_BACKEND;
 
         // Skip the operation in mock mode (consistent with flush_now! behavior).
-        if !$arg_is_mock {
+        if matches!($arg_paint_mode, $crate::PaintMode::Real) {
             match $op {
                 Ok(_) => {
                     DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
@@ -158,11 +158,11 @@ macro_rules! flush_now {
 #[macro_export]
 macro_rules! disable_raw_mode_now {
     (
-        $arg_is_mock: expr,
+        $arg_paint_mode: expr,
         $arg_log_msg: expr
     ) => {{
         $crate::crossterm_op!(
-            $arg_is_mock,
+            $arg_paint_mode,
             $arg_log_msg,
             crossterm::terminal::disable_raw_mode(),
             "crossterm: ✅ Succeeded",
@@ -174,11 +174,11 @@ macro_rules! disable_raw_mode_now {
 #[macro_export]
 macro_rules! enable_raw_mode_now {
     (
-        $arg_is_mock: expr,
+        $arg_paint_mode: expr,
         $arg_log_msg: expr
     ) => {{
         $crate::crossterm_op!(
-            $arg_is_mock,
+            $arg_paint_mode,
             $arg_log_msg,
             crossterm::terminal::enable_raw_mode(),
             "crossterm: ✅ Succeeded",
@@ -202,7 +202,7 @@ impl RenderOpPaint for PaintRenderOpImplCrossterm {
         window_size: Size,
         render_local_data: &mut RenderOpsLocalData,
         locked_output_device: LockedOutputDevice<'_>,
-        is_mock: bool,
+        paint_mode: PaintMode,
     ) {
         match render_op {
             RenderOpOutput::Common(common_op) => {
@@ -212,7 +212,7 @@ impl RenderOpPaint for PaintRenderOpImplCrossterm {
                     window_size,
                     render_local_data,
                     locked_output_device,
-                    is_mock,
+                    paint_mode,
                 );
             }
             RenderOpOutput::CompositorNoClipTruncPaintTextWithAttributes(
@@ -261,7 +261,7 @@ impl PaintRenderOpImplCrossterm {
         window_size: Size,
         render_local_data: &mut RenderOpsLocalData,
         locked_output_device: LockedOutputDevice<'_>,
-        is_mock: bool,
+        paint_mode: PaintMode,
     ) {
         match command_ref {
             RenderOpCommon::Noop => {}
@@ -269,14 +269,14 @@ impl PaintRenderOpImplCrossterm {
                 PaintRenderOpImplCrossterm::raw_mode_enter(
                     skip_flush,
                     locked_output_device,
-                    is_mock,
+                    paint_mode,
                 );
             }
             RenderOpCommon::ExitRawMode => {
                 PaintRenderOpImplCrossterm::raw_mode_exit(
                     skip_flush,
                     locked_output_device,
-                    is_mock,
+                    paint_mode,
                 );
             }
             RenderOpCommon::MoveCursorPositionAbs(abs_pos) => {
@@ -449,7 +449,7 @@ impl PaintRenderOpImplCrossterm {
     pub fn raw_mode_exit(
         skip_flush: &mut bool,
         locked_output_device: LockedOutputDevice<'_>,
-        is_mock: bool,
+        paint_mode: PaintMode,
     ) {
         queue_terminal_command!(
             locked_output_device,
@@ -460,11 +460,11 @@ impl PaintRenderOpImplCrossterm {
             DisableMouseCapture
         );
 
-        if !is_mock {
+        if matches!(paint_mode, PaintMode::Real) {
             flush_now!(locked_output_device, "ExitRawMode -> flush()");
         }
 
-        disable_raw_mode_now!(is_mock, "ExitRawMode -> disable_raw_mode()");
+        disable_raw_mode_now!(paint_mode, "ExitRawMode -> disable_raw_mode()");
 
         *skip_flush = true;
     }
@@ -481,9 +481,9 @@ impl PaintRenderOpImplCrossterm {
     pub fn raw_mode_enter(
         skip_flush: &mut bool,
         locked_output_device: LockedOutputDevice<'_>,
-        is_mock: bool,
+        paint_mode: PaintMode,
     ) {
-        enable_raw_mode_now!(is_mock, "EnterRawMode -> enable_raw_mode()");
+        enable_raw_mode_now!(paint_mode, "EnterRawMode -> enable_raw_mode()");
 
         queue_terminal_command!(
             locked_output_device,
@@ -496,7 +496,7 @@ impl PaintRenderOpImplCrossterm {
             Hide,
         );
 
-        if !is_mock {
+        if matches!(paint_mode, PaintMode::Real) {
             flush_now!(locked_output_device, "EnterRawMode -> flush()");
         }
 

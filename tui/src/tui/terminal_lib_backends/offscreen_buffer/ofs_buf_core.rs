@@ -1,8 +1,7 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::super::{FlushKind, RenderOpOutputVec};
-use crate::{GetMemSize, LockedOutputDevice, MemorySize, Pos, Size, TermRow, TuiStyle,
-            inline_string, ok, osc::OscEvent};
+use crate::{DsrRequestFromPtyEvent, PaintMode, GetMemSize, LockedOutputDevice, MemorySize, Pos, Size, TermRow, TuiStyle, inline_string, ok, osc::OscEvent};
 use std::{fmt::Debug, mem::size_of};
 
 /// Character set modes for terminal emulation.
@@ -163,7 +162,7 @@ pub struct AnsiParserSupport {
     ///
     /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
     /// [`AnsiToOfsBufPerformer`]: crate::AnsiToOfsBufPerformer
-    pub auto_wrap_mode: bool,
+    pub auto_wrap_mode: AutoWrapState,
 
     /// Complete computed style combining attributes and colors for efficient rendering.
     pub current_style: TuiStyle,
@@ -178,7 +177,7 @@ pub struct AnsiParserSupport {
     ///
     /// [`DSR`]: crate::DsrSequence
     /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
-    pub pending_dsr_responses: Vec<crate::DsrRequestFromPtyEvent>,
+    pub pending_dsr_responses: Vec<DsrRequestFromPtyEvent>,
 
     /// Top margin for the **scrollable region** ([`DECSTBM`]) - 1-based row number.
     ///
@@ -229,6 +228,11 @@ pub struct AnsiParserSupport {
     /// [`DECSTBM`]: https://vt100.net/docs/vt510-rm/DECSTBM.html
     /// [`ESC`]: crate::EscSequence
     pub scroll_region_bottom: Option<TermRow>,
+
+    /// Controls whether the terminal cursor is visible.
+    ///
+    /// Corresponds to the DECTCEM (?25) private mode.
+    pub cursor_visibility: CursorVisibilityState,
 }
 
 impl Default for AnsiParserSupport {
@@ -237,14 +241,40 @@ impl Default for AnsiParserSupport {
         Self {
             cursor_pos_for_esc_save_and_restore: None,
             character_set: CharacterSet::default(),
-            auto_wrap_mode: true, // DECAWM default: enabled (VT100 compliant)
+            auto_wrap_mode: AutoWrapState::Enabled, // DECAWM default: enabled (VT100 compliant)
             current_style: TuiStyle::default(),
             pending_osc_events: Vec::new(),
             pending_dsr_responses: Vec::new(),
             scroll_region_top: None, // Default: no top margin (uses row 1)
             scroll_region_bottom: None, // Default: no bottom margin (uses last row)
+            cursor_visibility: CursorVisibilityState::Visible, // DECTCEM default: visible
         }
     }
+}
+
+/// Auto-wrap mode (DECAWM) state.
+///
+/// Controls line wrapping behavior when text reaches the right margin.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum AutoWrapState {
+    /// Characters automatically wrap to the next line (DECAWM ?7h)
+    #[default]
+    Enabled,
+    /// Characters overwrite at the right margin (DECAWM ?7l)
+    Disabled,
+}
+
+/// Terminal cursor visibility state.
+///
+/// Controls whether the terminal cursor is displayed or hidden.
+/// Corresponds to the DECTCEM (?25) private mode.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum CursorVisibilityState {
+    /// Cursor is visible (DECTCEM ?25h)
+    #[default]
+    Visible,
+    /// Cursor is hidden (DECTCEM ?25l)
+    Hidden,
 }
 
 /// Raw mode state for terminal input processing.
@@ -521,22 +551,36 @@ pub trait OffscreenBufferPaint {
     ) -> RenderOpOutputVec;
 
     /// Execute terminal operations on the display.
+    ///
+    /// The `cursor_visibility` parameter ensures that the terminal's physical cursor state
+    /// perfectly matches the emulator's parsed state ([`DECTCEM`] `?25h`/`l`). This decouples
+    /// the parsing of the state from its actual execution, which happens right before flush.
+    ///
+    /// [`DECTCEM`]: https://vt100.net/docs/vt510-rm/DECTCEM.html
     fn paint(
         &mut self,
         render_ops: RenderOpOutputVec,
         flush_kind: FlushKind,
         window_size: Size,
         locked_output_device: LockedOutputDevice<'_>,
-        is_mock: bool,
+        paint_mode: PaintMode,
+        cursor_visibility: CursorVisibilityState,
     );
 
     /// Execute diff operations on the display (selective redraw).
+    ///
+    /// The `cursor_visibility` parameter ensures that the terminal's physical cursor state
+    /// perfectly matches the emulator's parsed state ([`DECTCEM`] `?25h`/`l`). This decouples
+    /// the parsing of the state from its actual execution, which happens right before flush.
+    ///
+    /// [`DECTCEM`]: https://vt100.net/docs/vt510-rm/DECTCEM.html
     fn paint_diff(
         &mut self,
         render_ops: RenderOpOutputVec,
         window_size: Size,
         locked_output_device: LockedOutputDevice<'_>,
-        is_mock: bool,
+        paint_mode: PaintMode,
+        cursor_visibility: CursorVisibilityState,
     );
 }
 

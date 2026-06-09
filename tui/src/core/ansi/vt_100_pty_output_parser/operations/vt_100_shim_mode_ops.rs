@@ -58,7 +58,7 @@
 //! [operations module]: crate::core::ansi::vt_100_pty_output_parser::operations
 
 use super::super::{PrivateModeType, ansi_parser_public_api::AnsiToOfsBufPerformer};
-use crate::{RequestedScreenMode, core::ansi::constants::CSI_PRIVATE_MODE_PREFIX};
+use crate::{AutoWrapState, CursorVisibilityState, RequestedScreenMode, core::ansi::constants::CSI_PRIVATE_MODE_PREFIX};
 use vte::Params;
 
 /// Handle Set Mode (`CSI h`) command.
@@ -73,17 +73,32 @@ pub fn set_mode(
         let mode = PrivateModeType::from(params);
         match mode {
             PrivateModeType::AutoWrap => {
-                performer.ofs_buf.set_auto_wrap_mode(true);
+                performer.ofs_buf.set_requested_auto_wrap_mode(AutoWrapState::Enabled);
             }
             PrivateModeType::AlternateScreenBuffer => {
                 performer.ofs_buf.set_alt_screen_mode(RequestedScreenMode::Alternate);
             }
+            PrivateModeType::ShowCursor => {
+                performer.ofs_buf.set_requested_cursor_visibility_mode(CursorVisibilityState::Visible);
+            }
+            // Safely suppress/ignore modern TUI extensions (like mouse tracking and bracketed paste).
+            // Currently, the multiplexer does not support routing rich input events back into the PTY.
+            // Downgrading to debug prevents heavy log spam from interactive TUIs (like hx/gitui).
+            PrivateModeType::Other(1000 | 1002 | 1003 | 1005 | 1006 | 1015 | 2004) => {
+                crate::DEBUG_TUI_VT100_PARSER.then(|| {
+                    tracing::debug!("CSI ?{}h: Suppressed/shimmed private mode", mode.as_u16());
+                });
+            }
             _ => {
-                tracing::warn!("CSI ?{}h: Unhandled private mode", mode.as_u16());
+                crate::DEBUG_TUI_VT100_PARSER.then(|| {
+                    tracing::warn!("CSI ?{}h: Unhandled private mode", mode.as_u16());
+                });
             }
         }
     } else {
-        tracing::warn!("CSI h: Standard mode setting not implemented");
+        crate::DEBUG_TUI_VT100_PARSER.then(|| {
+            tracing::warn!("CSI h: Standard mode setting not implemented");
+        });
     }
 }
 
@@ -99,16 +114,31 @@ pub fn reset_mode(
         let mode = PrivateModeType::from(params);
         match mode {
             PrivateModeType::AutoWrap => {
-                performer.ofs_buf.set_auto_wrap_mode(false);
+                performer.ofs_buf.set_requested_auto_wrap_mode(AutoWrapState::Disabled);
             }
             PrivateModeType::AlternateScreenBuffer => {
                 performer.ofs_buf.set_alt_screen_mode(RequestedScreenMode::Primary);
             }
+            PrivateModeType::ShowCursor => {
+                performer.ofs_buf.set_requested_cursor_visibility_mode(CursorVisibilityState::Hidden);
+            }
+            // Safely suppress/ignore modern TUI extensions (like mouse tracking and bracketed paste).
+            // Currently, the multiplexer does not support routing rich input events back into the PTY.
+            // Downgrading to debug prevents heavy log spam from interactive TUIs (like hx/gitui).
+            PrivateModeType::Other(1000 | 1002 | 1003 | 1005 | 1006 | 1015 | 2004) => {
+                crate::DEBUG_TUI_VT100_PARSER.then(|| {
+                    tracing::debug!("CSI ?{}l: Suppressed/shimmed private mode", mode.as_u16());
+                });
+            }
             _ => {
-                tracing::warn!("CSI ?{}l: Unhandled private mode", mode.as_u16());
+                crate::DEBUG_TUI_VT100_PARSER.then(|| {
+                    tracing::warn!("CSI ?{}l: Unhandled private mode", mode.as_u16());
+                });
             }
         }
     } else {
-        tracing::warn!("CSI l: Standard mode reset not implemented");
+        crate::DEBUG_TUI_VT100_PARSER.then(|| {
+            tracing::warn!("CSI l: Standard mode reset not implemented");
+        });
     }
 }
