@@ -322,7 +322,7 @@
 //!
 //! // Apply vim status line sequence
 //! let sequence = vim_sequences::vim_status_line("INSERT", 25);
-//! let (osc_events, dsr_responses) = ofs_buf.apply_ansi_bytes(sequence);
+//! let (osc_events, dsr_responses, _da_responses) = ofs_buf.apply_ansi_bytes(sequence);
 //!
 //! // Verify status line appears at bottom with correct styling
 //! assert_styled_char_at(&ofs_buf, 24, 0, '-', |style| {

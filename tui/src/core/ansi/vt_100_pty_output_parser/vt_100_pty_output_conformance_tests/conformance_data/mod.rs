@@ -146,7 +146,7 @@
 //!
 //!     // Apply sequence using conformance data
 //!     let sequence = vim_sequences::vim_status_line("INSERT", 25);
-//!     let (osc_events, dsr_responses) = ofs_buf.apply_ansi_bytes(sequence);
+//!     let (osc_events, dsr_responses, _da_responses) = ofs_buf.apply_ansi_bytes(sequence);
 //!
 //!     // Validate behavior
 //!     assert_eq!(osc_events.len(), 0);
