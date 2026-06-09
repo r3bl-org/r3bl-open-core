@@ -31,14 +31,16 @@ use crate::{core::ansi::vt_100_pty_output_parser::{CsiSequence, PrivateModeType}
 
 /// Tests for DECAWM (Auto Wrap Mode) operations.
 pub mod auto_wrap_mode {
-    use super::*;
+    use crate::AutoWrapState;
+
+use super::*;
 
     #[test]
     fn test_decawm_enable() {
         let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
 
         // Auto wrap is enabled by default
-        assert!(ofs_buf.ansi_parser_support.auto_wrap_mode);
+        assert_eq!(ofs_buf.ansi_parser_support.auto_wrap_mode, AutoWrapState::Enabled);
 
         // Disable first to test enable
         let disable_sequence = format!(
@@ -46,7 +48,7 @@ pub mod auto_wrap_mode {
             CsiSequence::DisablePrivateMode(PrivateModeType::AutoWrap)
         );
         let _result = ofs_buf.apply_ansi_bytes(disable_sequence);
-        assert!(!ofs_buf.ansi_parser_support.auto_wrap_mode);
+        assert_eq!(ofs_buf.ansi_parser_support.auto_wrap_mode, AutoWrapState::Disabled);
 
         // Enable auto wrap mode
         let enable_sequence = format!(
@@ -56,7 +58,7 @@ pub mod auto_wrap_mode {
         let _result = ofs_buf.apply_ansi_bytes(enable_sequence);
 
         // Verify mode is enabled
-        assert!(ofs_buf.ansi_parser_support.auto_wrap_mode);
+        assert_eq!(ofs_buf.ansi_parser_support.auto_wrap_mode, AutoWrapState::Enabled);
     }
 
     #[test]
@@ -64,7 +66,7 @@ pub mod auto_wrap_mode {
         let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
 
         // Auto wrap is enabled by default
-        assert!(ofs_buf.ansi_parser_support.auto_wrap_mode);
+        assert_eq!(ofs_buf.ansi_parser_support.auto_wrap_mode, AutoWrapState::Enabled);
 
         // Disable auto wrap mode
         let disable_sequence = format!(
@@ -74,7 +76,7 @@ pub mod auto_wrap_mode {
         let _result = ofs_buf.apply_ansi_bytes(disable_sequence);
 
         // Verify mode is disabled
-        assert!(!ofs_buf.ansi_parser_support.auto_wrap_mode);
+        assert_eq!(ofs_buf.ansi_parser_support.auto_wrap_mode, AutoWrapState::Disabled);
     }
 
     #[test]
@@ -127,7 +129,7 @@ pub mod auto_wrap_mode {
             CsiSequence::DisablePrivateMode(PrivateModeType::AutoWrap)
         );
         let _result = ofs_buf.apply_ansi_bytes(disable_sequence);
-        assert!(!ofs_buf.ansi_parser_support.auto_wrap_mode);
+        assert_eq!(ofs_buf.ansi_parser_support.auto_wrap_mode, AutoWrapState::Disabled);
 
         // Perform other operations
         let move_sequence = format!(
@@ -141,7 +143,7 @@ pub mod auto_wrap_mode {
         let _result = ofs_buf.apply_ansi_bytes("Test");
 
         // Mode should persist
-        assert!(!ofs_buf.ansi_parser_support.auto_wrap_mode);
+        assert_eq!(ofs_buf.ansi_parser_support.auto_wrap_mode, AutoWrapState::Disabled);
 
         // Re-enable and verify
         let enable_sequence = format!(
@@ -149,20 +151,22 @@ pub mod auto_wrap_mode {
             CsiSequence::EnablePrivateMode(PrivateModeType::AutoWrap)
         );
         let _result = ofs_buf.apply_ansi_bytes(enable_sequence);
-        assert!(ofs_buf.ansi_parser_support.auto_wrap_mode);
+        assert_eq!(ofs_buf.ansi_parser_support.auto_wrap_mode, AutoWrapState::Enabled);
     }
 }
 
 /// Tests for mode state combinations and interactions.
 pub mod mode_interactions {
-    use super::*;
+    use crate::AutoWrapState;
+
+use super::*;
 
     #[test]
     fn test_multiple_mode_changes() {
         let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
 
         // Start with defaults
-        assert!(ofs_buf.ansi_parser_support.auto_wrap_mode);
+        assert_eq!(ofs_buf.ansi_parser_support.auto_wrap_mode, AutoWrapState::Enabled);
 
         // Toggle auto wrap multiple times
         let disable_sequence = format!(
@@ -170,21 +174,21 @@ pub mod mode_interactions {
             CsiSequence::DisablePrivateMode(PrivateModeType::AutoWrap)
         );
         let _result = ofs_buf.apply_ansi_bytes(disable_sequence);
-        assert!(!ofs_buf.ansi_parser_support.auto_wrap_mode);
+        assert_eq!(ofs_buf.ansi_parser_support.auto_wrap_mode, AutoWrapState::Disabled);
 
         let enable_sequence = format!(
             "{}",
             CsiSequence::EnablePrivateMode(PrivateModeType::AutoWrap)
         );
         let _result = ofs_buf.apply_ansi_bytes(enable_sequence);
-        assert!(ofs_buf.ansi_parser_support.auto_wrap_mode);
+        assert_eq!(ofs_buf.ansi_parser_support.auto_wrap_mode, AutoWrapState::Enabled);
 
         let disable_sequence2 = format!(
             "{}",
             CsiSequence::DisablePrivateMode(PrivateModeType::AutoWrap)
         );
         let _result = ofs_buf.apply_ansi_bytes(disable_sequence2);
-        assert!(!ofs_buf.ansi_parser_support.auto_wrap_mode);
+        assert_eq!(ofs_buf.ansi_parser_support.auto_wrap_mode, AutoWrapState::Disabled);
     }
 
     #[test]
@@ -197,7 +201,7 @@ pub mod mode_interactions {
             CsiSequence::DisablePrivateMode(PrivateModeType::AutoWrap)
         );
         let _result = ofs_buf.apply_ansi_bytes(disable_sequence);
-        assert!(!ofs_buf.ansi_parser_support.auto_wrap_mode);
+        assert_eq!(ofs_buf.ansi_parser_support.auto_wrap_mode, AutoWrapState::Disabled);
 
         // Save cursor
         let save_sequence = format!("{}", CsiSequence::SaveCursor);
@@ -209,14 +213,14 @@ pub mod mode_interactions {
             CsiSequence::EnablePrivateMode(PrivateModeType::AutoWrap)
         );
         let _result = ofs_buf.apply_ansi_bytes(enable_sequence);
-        assert!(ofs_buf.ansi_parser_support.auto_wrap_mode);
+        assert_eq!(ofs_buf.ansi_parser_support.auto_wrap_mode, AutoWrapState::Enabled);
 
         // Restore cursor
         let restore_sequence = format!("{}", CsiSequence::RestoreCursor);
         let _result = ofs_buf.apply_ansi_bytes(restore_sequence);
 
         // Mode should persist (not affected by cursor restore)
-        assert!(ofs_buf.ansi_parser_support.auto_wrap_mode);
+        assert_eq!(ofs_buf.ansi_parser_support.auto_wrap_mode, AutoWrapState::Enabled);
     }
 }
 

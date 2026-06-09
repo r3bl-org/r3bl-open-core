@@ -91,12 +91,16 @@ pub fn erase_in_display(performer: &mut AnsiToOfsBufPerformer, params: &vte::Par
         ED_ERASE_FROM_START => performer.ofs_buf.erase_display_from_start_to_cursor(),
         ED_ERASE_ALL => performer.ofs_buf.erase_display_entire(),
         _ => {
-            tracing::warn!("CSI {} J: Unsupported Erase Display mode", mode);
+            crate::DEBUG_TUI_VT100_PARSER.then(|| {
+                tracing::warn!("CSI {} J: Unsupported Erase Display mode", mode);
+            });
             ok!()
         }
     };
     if let Err(err) = result {
-        tracing::error!("Failed to erase display (mode {}): {:?}", mode, err);
+        crate::DEBUG_TUI_VT100_PARSER.then(|| {
+            tracing::error!("Failed to erase display (mode {}): {:?}", mode, err);
+        });
     }
 }
 
@@ -129,11 +133,15 @@ pub fn erase_in_line(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params
         EL_ERASE_FROM_START => performer.ofs_buf.erase_line_from_start_to_cursor(),
         EL_ERASE_ALL => performer.ofs_buf.erase_line_entire(),
         _ => {
-            tracing::warn!("CSI {} K: Unsupported Erase Line mode", mode);
+            crate::DEBUG_TUI_VT100_PARSER.then(|| {
+                tracing::warn!("CSI {} K: Unsupported Erase Line mode", mode);
+            });
             ok!()
         }
     };
     if let Err(err) = result {
-        tracing::error!("Failed to erase line (mode {}): {:?}", mode, err);
+        crate::DEBUG_TUI_VT100_PARSER.then(|| {
+            tracing::error!("Failed to erase line (mode {}): {:?}", mode, err);
+        });
     }
 }

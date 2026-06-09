@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{OutputDevice, StdoutMock, StdMutex};
+use crate::{OutputDevice, PaintMode, StdoutMock, StdMutex};
 use std::sync::Arc;
 
 pub trait OutputDeviceExt {
@@ -12,7 +12,7 @@ impl OutputDeviceExt for OutputDevice {
         let stdout_mock = StdoutMock::default();
         let this = OutputDevice {
             resource: Arc::new(StdMutex::new(stdout_mock.clone())),
-            is_mock: true,
+            paint_mode: PaintMode::Mock,
         };
         (this, stdout_mock)
     }
@@ -21,7 +21,7 @@ impl OutputDeviceExt for OutputDevice {
 #[cfg(test)]
 mod tests {
     use super::OutputDeviceExt;
-    use crate::OutputDevice;
+    use crate::{OutputDevice, PaintMode};
 
     #[test]
     fn test_mock_output_device() {
@@ -38,6 +38,6 @@ mod tests {
     #[test]
     fn test_mock_output_device_is_mock() {
         let (device, _) = OutputDevice::new_mock();
-        assert!(device.is_mock);
+        assert_eq!(device.paint_mode, PaintMode::Mock);
     }
 }

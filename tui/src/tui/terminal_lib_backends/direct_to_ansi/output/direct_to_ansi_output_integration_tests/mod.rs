@@ -190,7 +190,7 @@ mod test_helpers {
                 window_size,
                 state,
                 mut_ref,
-                output_device.is_mock,
+                output_device.paint_mode,
             );
         });
 
@@ -217,7 +217,7 @@ mod test_helpers {
                     window_size,
                     state,
                     mut_ref,
-                    output_device.is_mock,
+                    output_device.paint_mode,
                 );
             });
         }
@@ -252,7 +252,7 @@ mod test_helpers {
                 window_size,
                 state,
                 mut_ref,
-                output_device.is_mock,
+                output_device.paint_mode,
             );
         });
 

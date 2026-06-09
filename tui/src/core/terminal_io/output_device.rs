@@ -8,6 +8,17 @@ use std::{io::{Stdout, Write, stdout},
 
 pub type LockedOutputDevice<'a> = &'a mut dyn Write;
 
+/// Whether to execute paint operations against the real terminal or in mock mode
+/// for testing.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PaintMode {
+    /// Send execution commands to the real, active physical terminal backend.
+    Real,
+    /// Record execution commands in memory without outputting to the screen (used
+    /// for testing).
+    Mock,
+}
+
 /// This struct represents an output device that can be used to write to the terminal.
 /// - It is safe to clone.
 /// - To write to it, use the [`Self::write()`] method.
@@ -27,7 +38,7 @@ pub type LockedOutputDevice<'a> = &'a mut dyn Write;
 #[allow(missing_debug_implementations)]
 pub struct OutputDevice {
     pub resource: SafeRawTerminal,
-    pub is_mock: bool,
+    pub paint_mode: PaintMode,
 }
 
 impl Default for OutputDevice {
@@ -47,7 +58,7 @@ impl OutputDevice {
     pub fn new_stdout() -> Self {
         Self {
             resource: Arc::new(StdMutex::new(FullBufferWaitingStdout(stdout()))),
-            is_mock: false,
+            paint_mode: PaintMode::Real,
         }
     }
 }
@@ -207,13 +218,13 @@ mod tests {
             drop(writer.write_all(b"Hello, world!\n"));
         });
 
-        assert!(!output_device.is_mock);
+        assert_eq!(output_device.paint_mode, PaintMode::Real);
     }
 
     #[test]
     fn test_stdout_output_device_is_not_mock() {
         let device = OutputDevice::new_stdout();
-        assert!(!device.is_mock);
+        assert_eq!(device.paint_mode, PaintMode::Real);
     }
 
     #[test]
@@ -221,7 +232,7 @@ mod tests {
         let resource: SafeRawTerminal = Arc::new(StdMutex::new(Vec::new()));
         let device = OutputDevice {
             resource: Arc::clone(&resource),
-            is_mock: true,
+            paint_mode: PaintMode::Mock,
         };
 
         // 1. Poison the mutex.

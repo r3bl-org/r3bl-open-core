@@ -50,7 +50,7 @@
 //! [`RenderOpsLocalData`]: crate::RenderOpsLocalData
 //! [rendering pipeline overview]: mod@crate::terminal_lib_backends#rendering-pipeline-architecture
 
-use crate::{AnsiSequenceGenerator, CliTextInline, ColIndex,
+use crate::{AnsiSequenceGenerator, PaintMode, CliTextInline, ColIndex,
             DEBUG_TUI_SHOW_DIRECT_TO_ANSI, GCStringOwned, InlineString,
             LockedOutputDevice, Pos, RenderOpCommon, RenderOpFlush, RenderOpOutput,
             RenderOpPaint, RenderOpsLocalData, RowHeight, Size, TermRowDelta, TuiColor,
@@ -88,7 +88,7 @@ impl RenderOpPaint for RenderOpPaintImplDirectToAnsi {
         window_size: Size,
         render_local_data: &mut RenderOpsLocalData,
         locked_output_device: LockedOutputDevice<'_>,
-        is_mock: bool,
+        paint_mode: PaintMode,
     ) {
         match render_op {
             RenderOpOutput::Common(common_op) => {
@@ -98,7 +98,7 @@ impl RenderOpPaint for RenderOpPaintImplDirectToAnsi {
                     window_size,
                     render_local_data,
                     locked_output_device,
-                    is_mock,
+                    paint_mode,
                 );
             }
             RenderOpOutput::CompositorNoClipTruncPaintTextWithAttributes(
@@ -165,18 +165,18 @@ impl RenderOpPaintImplDirectToAnsi {
         window_size: Size,
         render_local_data: &mut RenderOpsLocalData,
         locked_output_device: LockedOutputDevice<'_>,
-        is_mock: bool,
+        paint_mode: PaintMode,
     ) {
         match render_op {
             // Group A: No-ops
             RenderOpCommon::Noop => {}
 
             RenderOpCommon::EnterRawMode => {
-                helpers::raw_mode_enter(skip_flush, locked_output_device, is_mock);
+                helpers::raw_mode_enter(skip_flush, locked_output_device, paint_mode);
             }
 
             RenderOpCommon::ExitRawMode => {
-                helpers::raw_mode_exit(skip_flush, locked_output_device, is_mock);
+                helpers::raw_mode_exit(skip_flush, locked_output_device, paint_mode);
             }
 
             // Group B: Cursor movement
@@ -534,9 +534,9 @@ mod helpers {
     pub fn raw_mode_enter(
         skip_flush: &mut bool,
         locked_output_device: LockedOutputDevice<'_>,
-        is_mock: bool,
+        paint_mode: PaintMode,
     ) {
-        if !is_mock {
+        if matches!(paint_mode, PaintMode::Real) {
             match enable_raw_mode() {
                 Ok(()) => {
                     DEBUG_TUI_SHOW_DIRECT_TO_ANSI.then(|| {
@@ -571,7 +571,7 @@ mod helpers {
             .write_all(ansi_output.as_bytes())
             .expect("Failed to write TUI setup ANSI sequences");
 
-        if !is_mock {
+        if matches!(paint_mode, PaintMode::Real) {
             helpers::flush(locked_output_device, "EnterRawMode -> flush()");
         }
 
@@ -581,7 +581,7 @@ mod helpers {
     pub fn raw_mode_exit(
         skip_flush: &mut bool,
         locked_output_device: LockedOutputDevice<'_>,
-        is_mock: bool,
+        paint_mode: PaintMode,
     ) {
         // Generate ANSI sequences for TUI teardown (restore screen, mouse, cursor, etc.).
         let mut ansi_output = String::new();
@@ -594,11 +594,11 @@ mod helpers {
             .write_all(ansi_output.as_bytes())
             .expect("Failed to write TUI teardown ANSI sequences");
 
-        if !is_mock {
+        if matches!(paint_mode, PaintMode::Real) {
             helpers::flush(locked_output_device, "ExitRawMode -> flush()");
         }
 
-        if !is_mock {
+        if matches!(paint_mode, PaintMode::Real) {
             match disable_raw_mode() {
                 Ok(()) => {
                     DEBUG_TUI_SHOW_DIRECT_TO_ANSI.then(|| {

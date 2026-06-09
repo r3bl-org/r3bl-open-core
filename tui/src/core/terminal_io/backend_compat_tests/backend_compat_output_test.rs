@@ -384,7 +384,7 @@ pub mod controlled_crossterm {
                     window_size,
                     &mut state,
                     writer,
-                    output_device.is_mock,
+                    output_device.paint_mode,
                 );
             });
         }
@@ -453,7 +453,7 @@ pub mod controlled_direct_to_ansi {
                     window_size,
                     &mut state,
                     writer,
-                    output_device.is_mock,
+                    output_device.paint_mode,
                 );
             });
         }

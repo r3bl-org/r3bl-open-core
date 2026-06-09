@@ -6,7 +6,7 @@
 //!
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 
-use r3bl_tui::{AnsiSequenceGenerator, InputEvent, Key, KeyPress, KeyState,
+use r3bl_tui::{AnsiSequenceGenerator, PaintMode, InputEvent, Key, KeyPress, KeyState,
                ModifierKeysMask, RawMode, assert_terminal_is_interactive, col,
                core::{get_size,
                       pty::{ControlSequence, CursorKeyMode, DefaultPtySessionConfig,
@@ -38,7 +38,7 @@ async fn main() -> miette::Result<()> {
 
     // Start raw mode.
     output_device.write(|out| {
-        RawMode::start(terminal_size, out, false);
+        RawMode::start(terminal_size, out, PaintMode::Real);
     });
     tracing::debug!("Raw mode started");
 
@@ -67,7 +67,7 @@ async fn main() -> miette::Result<()> {
     // Cleanup.
     tracing::debug!("Starting cleanup");
     output_device.write(|out| {
-        RawMode::end(terminal_size, out, false);
+        RawMode::end(terminal_size, out, PaintMode::Real);
     });
     tracing::debug!("Raw mode ended, cleanup complete");
 

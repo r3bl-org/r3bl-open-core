@@ -76,10 +76,11 @@ complex or long-running tasks, you MUST follow these loop-in-the-user rules:
      and sub-phase you create or update.
    - **Review Workflow:** When the user prompts for a manual review at the end of a
      task/phase/sub-phase:
-     1. Use `codium <file_path>` to open the first file with a checkbox.
-     2. Ask the user to manually review it.
-     3. Once the user confirms ("good" or similar), check the box in the task file.
-     4. Move to the next file and repeat until all checkboxes are checked.
+     1. Ask the user which IDE to use, eg: code, antigravity-ide, codium.
+     2. Then use `<IDE> <file_path>` to open the first file with a checkbox.
+     3. Ask the user to manually review it.
+     4. Once the user confirms ("good" or similar), check the box in the task file.
+     5. Move to the next file and repeat until all checkboxes are checked.
 6. **Strict Documentation Preservation:** Documentation is as critical as code. Any
    surgical edit that touches doc comments must be byte-perfect in its preservation of
    surrounding text.
@@ -108,6 +109,11 @@ command:
 1. Look inside the `.agents/` directory.
 2. Read the markdown instructions inside that folder.
 3. Execute the underlying shell/scripts exactly as instructed.
+
+**C. Bulk String Replacements (Shell):** When performing bulk find-and-replace operations across
+multiple files using shell commands, **always use `perl -pi -e`** instead of `sed` or `python`.
+`perl` handles regex, special character escaping, and capturing groups significantly more reliably
+than `sed` in cross-platform environments.
 
 ## Context Guardrail
 

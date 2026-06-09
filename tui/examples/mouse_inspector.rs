@@ -44,7 +44,7 @@
 //! [`OutputDevice`]: r3bl_tui::OutputDevice
 //! [`RawMode`]: r3bl_tui::RawMode
 
-use r3bl_tui::{AnsiSequenceGenerator, InputDevice, InputEvent, Key, KeyPress, KeyState,
+use r3bl_tui::{AnsiSequenceGenerator, PaintMode, InputDevice, InputEvent, Key, KeyPress, KeyState,
                ModifierKeysMask, MouseInput, MouseInputKind, OutputDevice, Pos, RawMode,
                RowIndex, TermCol, TermRow, assert_terminal_is_interactive, col,
                get_size, ok, row, set_mimalloc_in_main};
@@ -232,7 +232,7 @@ async fn main() -> miette::Result<()> {
 
     // Start raw mode (enables mouse tracking automatically)
     output_device.write(|out| {
-        RawMode::start(terminal_size, out, false);
+        RawMode::start(terminal_size, out, PaintMode::Real);
     });
 
     // Clear screen
@@ -243,7 +243,7 @@ async fn main() -> miette::Result<()> {
 
     // Cleanup terminal (disable raw mode and mouse tracking)
     output_device.write(|out| {
-        RawMode::end(terminal_size, out, false);
+        RawMode::end(terminal_size, out, PaintMode::Real);
     });
 
     result

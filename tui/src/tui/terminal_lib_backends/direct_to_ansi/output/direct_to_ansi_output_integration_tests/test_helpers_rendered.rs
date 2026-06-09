@@ -97,7 +97,7 @@ pub fn execute_and_render_to_buffer_with_size(
                 buffer_size,
                 &mut state,
                 mut_ref,
-                output_device.is_mock,
+                output_device.paint_mode,
             );
         });
     }

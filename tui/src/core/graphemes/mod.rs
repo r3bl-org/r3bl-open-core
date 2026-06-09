@@ -244,8 +244,8 @@
 //! [`ColIndex`]: crate::ColIndex
 //! [`reedline`]: https://crates.io/crates/reedline
 //! [`repaint_buffer()`]: https://github.com/nushell/reedline/blob/79e7d8da92cd5ae4f8e459f901189d7419c3adfd/src/painting/painter.rs#L129
-//! [`unicode-segmentation`]: https://crates.io/crates/unicode-segmentation
-//! [`unicode-width`]: https://crates.io/crates/unicode-width
+//! [`unicode-segmentation`]: unicode-segmentation
+//! [`unicode-width`]: unicode-width
 //! [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
 //! [Grapheme clusters]: https://www.unicode.org/reports/tr29/#Grapheme_Cluster_Boundaries
 //! [Live coding video on Rust String]: https://youtu.be/7I11degAElQ?si=xPDIhITDro7Pa_gq
@@ -262,13 +262,10 @@ pub mod word_boundaries;
 #[doc(inline)] // Create doc pages at re-export path so rustdoc search links resolve.
 pub use gc_string::owned;
 pub use gc_string::*;
-
+pub use traits::*;
 #[doc(inline)] // Create doc pages at re-export path so rustdoc search links resolve.
 pub use traits::{grapheme_doc, grapheme_string, grapheme_string_owned_ext, seg_content};
-pub use traits::*;
-
+pub use unicode_segment::*;
 #[doc(inline)] // Create doc pages at re-export path so rustdoc search links resolve.
 pub use unicode_segment::{seg, seg_index, seg_length, segment_builder};
-pub use unicode_segment::*;
-
 pub use word_boundaries::*;

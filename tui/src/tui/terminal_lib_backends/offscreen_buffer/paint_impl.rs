@@ -69,11 +69,12 @@
 //! [rendering pipeline overview]: mod@crate::terminal_lib_backends#rendering-pipeline-architecture
 
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
-use crate::{ColIndex, DEBUG_TUI_COMPOSITOR, DEBUG_TUI_SHOW_PIPELINE, FlushKind,
+use crate::{ColIndex, PaintMode, DEBUG_TUI_COMPOSITOR, DEBUG_TUI_SHOW_PIPELINE, FlushKind,
             GCStringOwned, InlineString, LockedOutputDevice, OffscreenBuffer,
             OffscreenBufferPaint, PixelChar, PixelCharDiffChunks, RenderOpCommon,
             RenderOpFlush, RenderOpOutput, RenderOpOutputVec, RenderOpsExec, RowIndex,
             Size, TERMINAL_LIB_BACKEND, TerminalLibBackend, TuiStyle, ch, col,
+            CursorVisibilityState,
             glyphs::SPACER_GLYPH, row,
             terminal_lib_backends::{crossterm_backend::PaintRenderOpImplCrossterm,
                                     direct_to_ansi::RenderOpPaintImplDirectToAnsi}};
@@ -84,11 +85,12 @@ pub struct OffscreenBufferPaintImpl;
 impl OffscreenBufferPaint for OffscreenBufferPaintImpl {
     fn paint(
         &mut self,
-        render_ops: RenderOpOutputVec,
+        mut render_ops: RenderOpOutputVec,
         flush_kind: FlushKind,
         window_size: Size,
         locked_output_device: LockedOutputDevice<'_>,
-        is_mock: bool,
+        paint_mode: PaintMode,
+        cursor_visibility: CursorVisibilityState,
     ) {
         let mut skip_flush = false;
 
@@ -105,12 +107,18 @@ impl OffscreenBufferPaint for OffscreenBufferPaintImpl {
             }
         }
 
+        // Apply cursor visibility state.
+        match cursor_visibility {
+            CursorVisibilityState::Visible => render_ops.push(RenderOpCommon::ShowCursor),
+            CursorVisibilityState::Hidden => render_ops.push(RenderOpCommon::HideCursor),
+        }
+
         // Execute each RenderOpOutput using the ExecutableRenderOps trait.
         render_ops.execute_all(
             &mut skip_flush,
             window_size,
             locked_output_device,
-            is_mock,
+            paint_mode,
         );
 
         // Flush everything to the terminal.
@@ -137,19 +145,26 @@ impl OffscreenBufferPaint for OffscreenBufferPaintImpl {
 
     fn paint_diff(
         &mut self,
-        render_ops: RenderOpOutputVec,
+        mut render_ops: RenderOpOutputVec,
         window_size: Size,
         locked_output_device: LockedOutputDevice<'_>,
-        is_mock: bool,
+        paint_mode: PaintMode,
+        cursor_visibility: CursorVisibilityState,
     ) {
         let mut skip_flush = false;
+
+        // Apply cursor visibility state.
+        match cursor_visibility {
+            CursorVisibilityState::Visible => render_ops.push(RenderOpCommon::ShowCursor),
+            CursorVisibilityState::Hidden => render_ops.push(RenderOpCommon::HideCursor),
+        }
 
         // Execute each RenderOpOutput using the ExecutableRenderOps trait.
         render_ops.execute_all(
             &mut skip_flush,
             window_size,
             locked_output_device,
-            is_mock,
+            paint_mode,
         );
 
         // Flush everything to the terminal.
