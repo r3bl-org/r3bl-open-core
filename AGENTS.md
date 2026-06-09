@@ -280,6 +280,22 @@ When writing or modifying rustdoc comments in code, **proactively apply** these 
 
 Don't wait for `check-code-quality` to catch issues - write docs correctly the first time.
 
+### Clean Imports over Inline Absolute Paths (Mandatory)
+
+Do NOT write absolute inline paths like `crate::Type` or `crate::Size` inside function signatures or bodies; instead, import them cleanly via `use` statements at the top of the file, then reference the type directly. This keeps code highly readable and reduces cognitive clutter.
+
+**✅ Good:**
+```rust
+use crate::{Size, Pos};
+
+pub fn render(size: Size) -> Pos { ... }
+```
+
+**❌ Bad:**
+```rust
+pub fn render(size: crate::Size) -> crate::Pos { ... }
+```
+
 ### Macro Imports
 
 Do NOT use `#[macro_use]` on module declarations. For `#[macro_export]` macros, use explicit

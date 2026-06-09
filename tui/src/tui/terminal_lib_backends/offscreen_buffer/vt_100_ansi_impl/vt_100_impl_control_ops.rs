@@ -30,8 +30,7 @@
 #[allow(clippy::wildcard_imports)]
 use super::super::*;
 use super::TAB_STOP_WIDTH;
-use crate::{ArrayBoundsCheck, ArrayOverflowResult, LengthOps, NumericValue, RowIndex,
-            col};
+use crate::{ArrayBoundsCheck, ArrayOverflowResult, LengthOps, NumericValue, col};
 
 impl OffscreenBuffer {
     /// Handles backspace control character (0x08).
@@ -68,14 +67,9 @@ impl OffscreenBuffer {
     }
 
     /// Handles line feed control character (0x0A).
-    /// Moves cursor down one line if not at bottom boundary.
-    pub fn handle_line_feed(&mut self) {
-        let max_row = self.window_size.row_height;
-        let next_row: RowIndex = self.cursor_pos.row_index + 1;
-        if next_row.overflows(max_row) == ArrayOverflowResult::Within {
-            self.cursor_pos.row_index = next_row;
-        }
-    }
+    /// Moves cursor down one line. If at the bottom of the scroll region,
+    /// it scrolls the region up by one line.
+    pub fn handle_line_feed(&mut self) { let _unused = self.index_down(); }
 
     /// Handles carriage return control character (0x0D).
     /// Moves cursor to start of current line (column 0).
