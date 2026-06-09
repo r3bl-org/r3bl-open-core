@@ -46,6 +46,7 @@ impl OffscreenBuffer {
     ///
     /// Returns an error if the operation fails (though bounded safely).
     pub fn erase_line_from_cursor_to_end(&mut self) -> miette::Result<()> {
+        self.ansi_parser_support.pending_wrap = false;
         let cursor_row = self.cursor_pos.row_index;
         let cursor_col = self.cursor_pos.col_index;
         let empty_char = self.create_empty_pixel_char();
@@ -92,6 +93,7 @@ impl OffscreenBuffer {
     ///
     /// Returns an error if the operation fails (though bounded safely).
     pub fn erase_line_from_start_to_cursor(&mut self) -> miette::Result<()> {
+        self.ansi_parser_support.pending_wrap = false;
         let cursor_row = self.cursor_pos.row_index;
         let cursor_col = self.cursor_pos.col_index;
         let empty_char = self.create_empty_pixel_char();
@@ -137,6 +139,7 @@ impl OffscreenBuffer {
     ///
     /// Returns an error if the operation fails (though bounded safely).
     pub fn erase_line_entire(&mut self) -> miette::Result<()> {
+        self.ansi_parser_support.pending_wrap = false;
         let cursor_row = self.cursor_pos.row_index;
         let empty_char = self.create_empty_pixel_char();
 
@@ -187,6 +190,7 @@ impl OffscreenBuffer {
     ///
     /// Returns an error if the operation fails.
     pub fn erase_display_from_cursor_to_end(&mut self) -> miette::Result<()> {
+        self.ansi_parser_support.pending_wrap = false;
         self.erase_line_from_cursor_to_end()?;
 
         let cursor_row = self.cursor_pos.row_index;
@@ -244,6 +248,7 @@ impl OffscreenBuffer {
     ///
     /// Returns an error if the operation fails.
     pub fn erase_display_from_start_to_cursor(&mut self) -> miette::Result<()> {
+        self.ansi_parser_support.pending_wrap = false;
         let cursor_row = self.cursor_pos.row_index;
         let empty_char = self.create_empty_pixel_char();
 
@@ -296,6 +301,7 @@ impl OffscreenBuffer {
     ///
     /// Returns an error if the operation fails.
     pub fn erase_display_entire(&mut self) -> miette::Result<()> {
+        self.ansi_parser_support.pending_wrap = false;
         let empty_char = self.create_empty_pixel_char();
         for row in self.buffer.iter_mut() {
             row.fill(empty_char);

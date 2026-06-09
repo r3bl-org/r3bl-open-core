@@ -279,6 +279,19 @@ impl OffscreenBuffer {
         self.fill_char_range(at.row_index, erase_range, PixelChar::Spacer)
     }
 
+    /// Apply the VT100 "pending wrap" state if set.
+    pub fn apply_pending_wrap(&mut self) {
+        if self.ansi_parser_support.pending_wrap {
+            self.ansi_parser_support.pending_wrap = false;
+            let row_max = self.window_size.row_height;
+            let next_row: RowIndex = self.cursor_pos.row_index + 1;
+            if next_row.overflows(row_max) == ArrayOverflowResult::Within {
+                self.cursor_pos.row_index = next_row;
+            }
+            self.cursor_pos.col_index = col(0);
+        }
+    }
+
     /// Handles printable characters with character set translation, bounds checking, and
     /// line wrapping.
     ///
@@ -292,12 +305,14 @@ impl OffscreenBuffer {
     /// * `ch` - The character to print
     ///
     /// # Behavior
-    /// 1. Applies character set translation if in graphics mode
-    /// 2. Writes character to buffer at current cursor position (if within bounds)
-    /// 3. Advances cursor, handling line wrap based on DECAWM mode
+    /// 1. Applies pending wrap if set (VT100 wrapneeded semantics)
+    /// 2. Applies character set translation if in graphics mode
+    /// 3. Writes character to buffer at current cursor position (if within bounds)
+    /// 4. Advances cursor, entering pending-wrap state when at last column
     ///
     /// # Line Wrapping
-    /// - **DECAWM enabled** (default): wraps to next line when reaching right margin
+    /// - **DECAWM enabled** (default): enters pending-wrap state on last column;
+    ///   actual wrap happens on the *next* printable character
     /// - **DECAWM disabled**: cursor stays at right margin, new chars overwrite
     ///
     /// # Returns
@@ -310,6 +325,8 @@ impl OffscreenBuffer {
     ///
     /// [`DEC`]: https://en.wikipedia.org/wiki/Digital_Equipment_Corporation
     pub fn print_char(&mut self, ch: char) -> miette::Result<()> {
+        self.apply_pending_wrap();
+
         // Apply character set translation if in graphics mode.
         let display_char = match self.ansi_parser_support.character_set {
             CharacterSet::DECGraphics => Self::translate_dec_graphics(ch),
@@ -342,12 +359,9 @@ impl OffscreenBuffer {
             // Handle line wrap based on DECAWM (Auto Wrap Mode).
             if new_col.overflows(col_max) == ArrayOverflowResult::Overflowed {
                 if self.ansi_parser_support.auto_wrap_mode {
-                    // DECAWM enabled: wrap to next line (default behavior).
-                    self.cursor_pos.col_index = col(0);
-                    let next_row: RowIndex = current_row + 1;
-                    if next_row.overflows(row_max) == ArrayOverflowResult::Within {
-                        self.cursor_pos.row_index = next_row;
-                    }
+                    // DECAWM enabled: enter pending-wrap state.
+                    // Actual wrap to next line happens on the next printable char.
+                    self.ansi_parser_support.pending_wrap = true;
                 } else {
                     // DECAWM disabled: stay at right margin (clamp cursor position).
                     self.cursor_pos.col_index = col_max.convert_to_index();
@@ -1062,7 +1076,7 @@ mod tests_print_char {
     }
 
     #[test]
-    fn test_print_char_line_wrap() {
+    fn test_print_char_line_wrap_pending() {
         let mut buffer = create_test_buffer_with_size(width(5), height(3));
 
         // Ensure DECAWM is enabled (default).
@@ -1071,7 +1085,8 @@ mod tests_print_char {
         // Position cursor at end of line (column 4 in 5-width buffer).
         buffer.cursor_pos = row(1) + col(4);
 
-        // Print a character - should wrap to next line.
+        // Print a character — should NOT immediately wrap. Cursor stays on current line
+        // and pending_wrap is set.
         let _unused = buffer.print_char('X');
 
         // Verify character was printed at end of current line.
@@ -1081,7 +1096,78 @@ mod tests_print_char {
             _ => panic!("Expected PlainText with 'X'"),
         }
 
-        // Verify cursor wrapped to beginning of next line.
+        // Verify cursor stays on same line (pending wrap, not immediate wrap).
+        assert!(buffer.ansi_parser_support.pending_wrap);
+        assert_eq!(buffer.cursor_pos.row_index, row(1));
+
+        // Next printable character triggers the actual wrap.
+        let _unused = buffer.print_char('Y');
+        assert!(!buffer.ansi_parser_support.pending_wrap);
+        // Y should be printed at start of next line.
+        let printed_char = buffer.get_char(row(2) + col(0)).unwrap();
+        match printed_char {
+            PixelChar::PlainText { display_char, .. } => assert_eq!(display_char, 'Y'),
+            _ => panic!("Expected PlainText with 'Y'"),
+        }
+    }
+
+    #[test]
+    fn test_print_char_no_wrap_when_decawn_disabled() {
+        let mut buffer = create_test_buffer_with_size(width(5), height(3));
+
+        buffer.ansi_parser_support.auto_wrap_mode = false;
+        buffer.cursor_pos = row(0) + col(4);
+
+        let _unused = buffer.print_char('Z');
+        assert!(!buffer.ansi_parser_support.pending_wrap);
+        // Cursor clamped to right margin.
+        assert_eq!(buffer.cursor_pos.col_index, col(4));
+    }
+
+    #[test]
+    fn test_apply_pending_wrap_wraps_to_next_line() {
+        let mut buffer = create_test_buffer_with_size(width(5), height(3));
+
+        buffer.cursor_pos = row(0) + col(4);
+        buffer.ansi_parser_support.pending_wrap = true;
+
+        buffer.apply_pending_wrap();
+
+        assert!(!buffer.ansi_parser_support.pending_wrap);
+        assert_eq!(buffer.cursor_pos, row(1) + col(0));
+    }
+
+    #[test]
+    fn test_apply_pending_wrap_noop_when_false() {
+        let mut buffer = create_test_buffer_with_size(width(5), height(3));
+
+        buffer.cursor_pos = row(0) + col(4);
+        buffer.ansi_parser_support.pending_wrap = false;
+
+        buffer.apply_pending_wrap();
+
+        // Cursor unchanged.
+        assert_eq!(buffer.cursor_pos, row(0) + col(4));
+    }
+
+    #[test]
+    fn test_apply_pending_wrap_clamped_at_bottom() {
+        let mut buffer = create_test_buffer_with_size(width(5), height(3));
+
+        // Last row of 3-height buffer is row(2).
+        buffer.cursor_pos = row(2) + col(4);
+        buffer.ansi_parser_support.pending_wrap = true;
+
+        buffer.apply_pending_wrap();
+
+        assert!(!buffer.ansi_parser_support.pending_wrap);
+        // Stays on same row since next row would overflow. Col resets.
         assert_eq!(buffer.cursor_pos, row(2) + col(0));
+    }
+
+    #[test]
+    fn test_pending_wrap_defaults_to_false() {
+        let buffer = create_test_buffer_with_size(width(5), height(3));
+        assert!(!buffer.ansi_parser_support.pending_wrap);
     }
 }
