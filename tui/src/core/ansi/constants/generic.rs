@@ -194,6 +194,49 @@ pub const ALT_SCREEN_BUFFER: u16 = 1049;
 
 // Input Modes - Mouse and Paste (xterm and community extensions).
 
+/// X11 Mouse Tracking ([`xterm private mode 1000`]): Basic mouse event reporting.
+///
+/// Value: `1000`.
+///
+/// - When set: Terminal reports mouse clicks and releases.
+/// - When reset: Mouse events are not reported (default).
+///
+/// This mode only reports button presses and releases, without reporting drag or motion
+/// events. Superseded by broader modes like [`APPLICATION_MOUSE_TRACKING`] (`1003`).
+///
+/// [`APPLICATION_MOUSE_TRACKING`]: crate::APPLICATION_MOUSE_TRACKING
+/// [`xterm private mode 1000`]: https://invisible-island.net/xterm/ctlseqs/ctlseqs.html
+pub const X11_MOUSE_TRACKING: u16 = 1000;
+
+/// Cell Motion Mouse Tracking ([`xterm private mode 1002`]): Drag event reporting.
+///
+/// Value: `1002`.
+///
+/// - When set: Terminal reports button presses, releases, and motion while a button is
+///   held.
+/// - When reset: Mouse events are not reported (default).
+///
+/// Provides intermediate mouse tracking capabilities by reporting mouse motion only when
+/// a button is pressed (dragging).
+///
+/// [`xterm private mode 1002`]: https://invisible-island.net/xterm/ctlseqs/ctlseqs.html
+pub const CELL_MOTION_MOUSE_TRACKING: u16 = 1002;
+
+/// [`UTF-8`] Mouse Extension ([`xterm private mode 1005`]): Extended coordinate encoding.
+///
+/// Value: `1005`.
+///
+/// - When set: Mouse coordinates are encoded as [`UTF-8`] bytes.
+/// - When reset: Mouse coordinates use standard single-byte encoding (default).
+///
+/// An older extension designed to support terminal coordinates greater than 223 by
+/// encoding them as [`UTF-8`]. Largely superseded by [`SGR_MOUSE_MODE`] (`1006`).
+///
+/// [`SGR_MOUSE_MODE`]: crate::SGR_MOUSE_MODE
+/// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
+/// [`xterm private mode 1005`]: https://invisible-island.net/xterm/ctlseqs/ctlseqs.html
+pub const UTF8_MOUSE_EXTENSION: u16 = 1005;
+
 /// Application Mouse Tracking ([`xterm private mode 1003`]): Enables event reporting.
 ///
 /// Value: `1003`.

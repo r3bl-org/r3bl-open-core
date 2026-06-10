@@ -353,11 +353,11 @@ impl OutputRenderer {
 /// # Note on Side Effects
 ///
 /// We explicitly pass [`CursorVisibilityState::Hidden`] here instead of the parsed
-/// visibility state. This permanently suppresses the hardware cursor when the multiplexer
+/// visibility state. This permanently suppresses the terminal emulator cursor when the multiplexer
 /// is active, preventing flickering and cursor parking issues.
 ///
 /// There is no danger of this messing up the chrome UI since it doesn't natively require
-/// a hardware cursor. If interactive regions (like a find feature) are added to the
+/// a terminal emulator cursor. If interactive regions (like a find feature) are added to the
 /// chrome in the future, they will be handled by compositing another virtual caret.
 fn paint_buffer(ofs_buf: &OffscreenBuffer, output_device: &OutputDevice) {
     let mut ofs_buf_paint_impl = OffscreenBufferPaintImpl {};
@@ -369,7 +369,7 @@ fn paint_buffer(ofs_buf: &OffscreenBuffer, output_device: &OutputDevice) {
             ofs_buf.window_size,
             out,
             PaintMode::Real,
-            CursorVisibilityState::Hidden, // Always hide the hardware cursor
+            CursorVisibilityState::Hidden, // Always hide the terminal emulator cursor
         );
     });
 }

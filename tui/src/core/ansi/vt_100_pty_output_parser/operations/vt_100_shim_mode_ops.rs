@@ -29,7 +29,7 @@
 //! # [`CSI`] Sequence Processing Flow
 //!
 //! ```text
-//! Application sends "ESC [?7h" (set autowrap mode)
+//! Application sends `ESC [?7h` (set autowrap mode)
 //!         ↓
 //!     PTY Controlled (escape sequence)
 //!         ↓
@@ -57,7 +57,13 @@
 //! [module-level documentation]: self
 //! [operations module]: crate::core::ansi::vt_100_pty_output_parser::operations
 
-use super::super::{PrivateModeType, ansi_parser_public_api::AnsiToOfsBufPerformer};
+use crate::{
+    APPLICATION_MOUSE_TRACKING, BRACKETED_PASTE_MODE, CELL_MOTION_MOUSE_TRACKING,
+    DEBUG_TUI_VT100_PARSER, SGR_MOUSE_MODE, URXVT_MOUSE_EXTENSION, UTF8_MOUSE_EXTENSION,
+    X11_MOUSE_TRACKING,
+};
+
+use super::super::{ansi_parser_public_api::AnsiToOfsBufPerformer, PrivateModeType};
 use crate::{AutoWrapState, CursorVisibilityState, RequestedScreenMode, core::ansi::constants::CSI_PRIVATE_MODE_PREFIX};
 use vte::Params;
 
@@ -84,19 +90,27 @@ pub fn set_mode(
             // Safely suppress/ignore modern TUI extensions (like mouse tracking and bracketed paste).
             // Currently, the multiplexer does not support routing rich input events back into the PTY.
             // Downgrading to debug prevents heavy log spam from interactive TUIs (like hx/gitui).
-            PrivateModeType::Other(1000 | 1002 | 1003 | 1005 | 1006 | 1015 | 2004) => {
-                crate::DEBUG_TUI_VT100_PARSER.then(|| {
+            PrivateModeType::Other(
+                X11_MOUSE_TRACKING
+                | CELL_MOTION_MOUSE_TRACKING
+                | APPLICATION_MOUSE_TRACKING
+                | UTF8_MOUSE_EXTENSION
+                | SGR_MOUSE_MODE
+                | URXVT_MOUSE_EXTENSION
+                | BRACKETED_PASTE_MODE,
+            ) => {
+                DEBUG_TUI_VT100_PARSER.then(|| {
                     tracing::debug!("CSI ?{}h: Suppressed/shimmed private mode", mode.as_u16());
                 });
             }
             _ => {
-                crate::DEBUG_TUI_VT100_PARSER.then(|| {
+                DEBUG_TUI_VT100_PARSER.then(|| {
                     tracing::warn!("CSI ?{}h: Unhandled private mode", mode.as_u16());
                 });
             }
         }
     } else {
-        crate::DEBUG_TUI_VT100_PARSER.then(|| {
+        DEBUG_TUI_VT100_PARSER.then(|| {
             tracing::warn!("CSI h: Standard mode setting not implemented");
         });
     }
@@ -125,19 +139,27 @@ pub fn reset_mode(
             // Safely suppress/ignore modern TUI extensions (like mouse tracking and bracketed paste).
             // Currently, the multiplexer does not support routing rich input events back into the PTY.
             // Downgrading to debug prevents heavy log spam from interactive TUIs (like hx/gitui).
-            PrivateModeType::Other(1000 | 1002 | 1003 | 1005 | 1006 | 1015 | 2004) => {
-                crate::DEBUG_TUI_VT100_PARSER.then(|| {
+            PrivateModeType::Other(
+                X11_MOUSE_TRACKING
+                | CELL_MOTION_MOUSE_TRACKING
+                | APPLICATION_MOUSE_TRACKING
+                | UTF8_MOUSE_EXTENSION
+                | SGR_MOUSE_MODE
+                | URXVT_MOUSE_EXTENSION
+                | BRACKETED_PASTE_MODE,
+            ) => {
+                DEBUG_TUI_VT100_PARSER.then(|| {
                     tracing::debug!("CSI ?{}l: Suppressed/shimmed private mode", mode.as_u16());
                 });
             }
             _ => {
-                crate::DEBUG_TUI_VT100_PARSER.then(|| {
+                DEBUG_TUI_VT100_PARSER.then(|| {
                     tracing::warn!("CSI ?{}l: Unhandled private mode", mode.as_u16());
                 });
             }
         }
     } else {
-        crate::DEBUG_TUI_VT100_PARSER.then(|| {
+        DEBUG_TUI_VT100_PARSER.then(|| {
             tracing::warn!("CSI l: Standard mode reset not implemented");
         });
     }

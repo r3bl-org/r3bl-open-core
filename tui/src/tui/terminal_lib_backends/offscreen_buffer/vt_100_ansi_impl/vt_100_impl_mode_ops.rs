@@ -36,7 +36,10 @@ impl OffscreenBuffer {
     }
 
     /// Set the cursor visibility mode.
-    /// Controls whether the terminal cursor is visible (DECTCEM ?25 mode).
+    ///
+    /// Controls whether the terminal cursor is visible ([`DECTCEM`] `?25` mode).
+    ///
+    /// [`DECTCEM`]: https://en.wikipedia.org/wiki/ANSI_escape_code#Set_terminal_mode
     pub fn set_requested_cursor_visibility_mode(
         &mut self,
         requested_state: CursorVisibilityState,
@@ -235,7 +238,7 @@ mod tests_mode_ops {
         buffer.set_alt_screen_mode(RequestedScreenMode::Primary);
 
         // --- SECOND CYCLE: Primary -> Alternate ---
-        
+
         // Move primary cursor to a new location.
         buffer.cursor_pos = col(7) + row(8);
 

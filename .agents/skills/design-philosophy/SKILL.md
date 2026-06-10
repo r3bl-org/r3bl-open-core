@@ -24,6 +24,8 @@ Code should be easy to understand without loading too much into working memory.
 - Good Separation of Concerns (SoC) means fewer "things" to keep in mind
 - Each module/function should have a single, clear responsibility
 - Limit the number of concepts a reader must hold simultaneously
+- **Clean Imports**: Use `use` statements at the top of files rather than inline absolute paths (e.g. `crate::Type`) to reduce visual noise and cognitive clutter in function bodies.
+- **No Magic Numbers/Strings**: Extract domain-specific numbers and strings (like ANSI mode integers or escape sequences) into named constants (e.g., in `tui/src/core/ansi/constants/`). Do not use magic numbers directly in business logic or pattern matches, as this requires readers to memorize their meaning.
 - **Technical Precision**: Use standard, precise terminology (e.g., Parameter vs. Argument) to ensure the reader's mental model matches the implementation exactly. See the [Terminology Precision] guide.
 
 [Terminology Precision]: ../write-documentation/terminology-precision.md

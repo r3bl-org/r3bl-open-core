@@ -50,7 +50,7 @@ use crate::{LockedOutputDevice, PaintMode, Size};
 /// # Example
 ///
 /// ```no_run
-/// # use r3bl_tui::{RenderOpsExec, RenderOpOutputVec, Size};
+/// # use r3bl_tui::{RenderOpsExec, RenderOpOutputVec, Size, PaintMode};
 /// # fn example(ops: &RenderOpOutputVec) {
 /// // Only RenderOpOutputVec implements this trait
 /// ops.execute_all(&mut false, Size::default(), todo!(), PaintMode::Real);
@@ -59,7 +59,7 @@ use crate::{LockedOutputDevice, PaintMode, Size};
 ///
 /// If you try with `RenderOpIRVec`, it won't compile:
 /// ```compile_fail
-/// # use r3bl_tui::{RenderOpsExec, RenderOpIRVec, Size};
+/// # use r3bl_tui::{RenderOpsExec, RenderOpIRVec, Size, PaintMode};
 /// # fn example(ops: &RenderOpIRVec) {
 /// ops.execute_all(&mut false, Size::default(), todo!(), PaintMode::Real); // ❌ Compile error!
 /// # }

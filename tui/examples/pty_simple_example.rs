@@ -6,8 +6,9 @@
 //!
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 
-use r3bl_tui::{AnsiSequenceGenerator, PaintMode, InputEvent, Key, KeyPress, KeyState,
-               ModifierKeysMask, RawMode, assert_terminal_is_interactive, col,
+use r3bl_tui::{AnsiSequenceGenerator, InputEvent, Key, KeyPress, KeyState,
+               ModifierKeysMask, PaintMode, RawMode, assert_terminal_is_interactive,
+               col,
                core::{get_size,
                       pty::{ControlSequence, CursorKeyMode, DefaultPtySessionConfig,
                             PtyInputEvent, PtyOutputEvent, PtySession,
