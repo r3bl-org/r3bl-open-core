@@ -49,7 +49,7 @@ use std::fmt::Debug;
 ///
 /// It extracts the [`cursor_visibility`] from the [`OffscreenBuffer`] (which tracks the
 /// parsed [`DECTCEM`] `?25h`/`l` state) and injects it into the execution layer. This
-/// ensures the physical terminal cursor correctly matches the simulated state before
+/// ensures the terminal emulator cursor correctly matches the simulated state before
 /// rendering any ops.
 ///
 /// [`cursor_visibility`]: crate::AnsiParserSupport::cursor_visibility
@@ -94,10 +94,14 @@ fn perform_diff_paint(
 
 /// Executes a complete redraw (full) paint.
 ///
-/// It extracts the `cursor_visibility` from the `OffscreenBuffer` (which tracks the
-/// parsed `DECTCEM` `?25h`/`l` state) and injects it into the execution layer. This
-/// ensures the physical terminal cursor correctly matches the simulated state before
+/// It extracts the [`cursor_visibility`] from the [`OffscreenBuffer`] (which tracks the
+/// parsed [`DECTCEM`] `?25h`/`l` state) and injects it into the execution layer. This
+/// ensures the terminal emulator cursor correctly matches the simulated state before
 /// rendering any ops.
+///
+/// [`cursor_visibility`]: crate::AnsiParserSupport::cursor_visibility
+/// [`DECTCEM`]: https://en.wikipedia.org/wiki/ANSI_escape_code#Set_terminal_mode
+/// [`OffscreenBuffer`]: crate::OffscreenBuffer
 fn perform_full_paint(
     ofs_buf: &OffscreenBuffer,
     flush_kind: FlushKind,

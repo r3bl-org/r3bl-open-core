@@ -127,6 +127,10 @@ This applies:
 - Spacing around operators and braces
 - Import organization
 
+### Step 7: Enforce Clean Imports
+
+Ensure that code does not use absolute inline paths like `crate::Type` or `crate::CONSTANT` inside function signatures or bodies. They must be cleanly imported via `use` statements at the top of the file.
+
 ## Reporting Results
 
 After completing all steps, report concisely:

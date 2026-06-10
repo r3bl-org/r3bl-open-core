@@ -79,20 +79,20 @@ use crate::{LockedOutputDevice, PaintMode, RenderOpOutput, RenderOpOutputVec, Re
 /// # Usage
 ///
 /// ```no_run
-/// # use r3bl_tui::{RawMode, OutputDevice, width, height};
+/// # use r3bl_tui::{RawMode, OutputDevice, width, height, PaintMode};
 /// let window_size = width(80) + height(24);
 /// let output = OutputDevice::new_stdout();
 ///
 /// // Enter raw mode through the render pipeline.
 /// output.write(|writer| {
-///     RawMode::start(window_size, writer, false);
+///     RawMode::start(window_size, writer, PaintMode::Real);
 /// });
 ///
 /// // ... application code ...
 ///
 /// // Exit raw mode through the render pipeline.
 /// output.write(|writer| {
-///     RawMode::end(window_size, writer, false);
+///     RawMode::end(window_size, writer, PaintMode::Real);
 /// });
 /// ```
 ///

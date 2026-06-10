@@ -44,10 +44,10 @@
 //! [`OutputDevice`]: r3bl_tui::OutputDevice
 //! [`RawMode`]: r3bl_tui::RawMode
 
-use r3bl_tui::{AnsiSequenceGenerator, PaintMode, InputDevice, InputEvent, Key, KeyPress, KeyState,
-               ModifierKeysMask, MouseInput, MouseInputKind, OutputDevice, Pos, RawMode,
-               RowIndex, TermCol, TermRow, assert_terminal_is_interactive, col,
-               get_size, ok, row, set_mimalloc_in_main};
+use r3bl_tui::{AnsiSequenceGenerator, InputDevice, InputEvent, Key, KeyPress, KeyState,
+               ModifierKeysMask, MouseInput, MouseInputKind, OutputDevice, PaintMode,
+               Pos, RawMode, RowIndex, TermCol, TermRow, assert_terminal_is_interactive,
+               col, get_size, ok, row, set_mimalloc_in_main};
 use std::collections::VecDeque;
 
 /// Helper: Clear screen and position cursor at home (0,0).

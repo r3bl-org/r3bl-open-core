@@ -60,8 +60,10 @@
 //! [operations module]: crate::core::ansi::vt_100_pty_output_parser::operations
 
 use super::super::ansi_parser_public_api::AnsiToOfsBufPerformer;
-use crate::{ED_ERASE_ALL, ED_ERASE_FROM_START, ED_ERASE_TO_END, EL_ERASE_ALL,
-            EL_ERASE_FROM_START, EL_ERASE_TO_END, ParamsExt, ok};
+use crate::{
+    DEBUG_TUI_VT100_PARSER, ED_ERASE_ALL, ED_ERASE_FROM_START, ED_ERASE_TO_END,
+    EL_ERASE_ALL, EL_ERASE_FROM_START, EL_ERASE_TO_END, ParamsExt, ok,
+};
 
 /// Handle ED (Erase in Display) - clear screen relative to cursor.
 ///
@@ -91,14 +93,14 @@ pub fn erase_in_display(performer: &mut AnsiToOfsBufPerformer, params: &vte::Par
         ED_ERASE_FROM_START => performer.ofs_buf.erase_display_from_start_to_cursor(),
         ED_ERASE_ALL => performer.ofs_buf.erase_display_entire(),
         _ => {
-            crate::DEBUG_TUI_VT100_PARSER.then(|| {
+            DEBUG_TUI_VT100_PARSER.then(|| {
                 tracing::warn!("CSI {} J: Unsupported Erase Display mode", mode);
             });
             ok!()
         }
     };
     if let Err(err) = result {
-        crate::DEBUG_TUI_VT100_PARSER.then(|| {
+        DEBUG_TUI_VT100_PARSER.then(|| {
             tracing::error!("Failed to erase display (mode {}): {:?}", mode, err);
         });
     }
@@ -133,14 +135,14 @@ pub fn erase_in_line(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params
         EL_ERASE_FROM_START => performer.ofs_buf.erase_line_from_start_to_cursor(),
         EL_ERASE_ALL => performer.ofs_buf.erase_line_entire(),
         _ => {
-            crate::DEBUG_TUI_VT100_PARSER.then(|| {
+            DEBUG_TUI_VT100_PARSER.then(|| {
                 tracing::warn!("CSI {} K: Unsupported Erase Line mode", mode);
             });
             ok!()
         }
     };
     if let Err(err) = result {
-        crate::DEBUG_TUI_VT100_PARSER.then(|| {
+        DEBUG_TUI_VT100_PARSER.then(|| {
             tracing::error!("Failed to erase line (mode {}): {:?}", mode, err);
         });
     }

@@ -24,17 +24,24 @@
 ///
 /// Value: `27` dec, `1B` hex.
 ///
+/// - See the [`esc` module] for direct 2-byte sequences like `ESC 7`.
+/// - See the [`esc` generator] for functions to build [`ESC`] sequences.
+///
 /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-/// [`ESC`]: crate::ANSI_ESC
+/// [`esc` generator]: crate::EscSequence
+/// [`esc` module]: mod@crate::core::ansi::constants::esc
+/// [`ESC`]: crate::EscSequence
 pub const ANSI_ESC: u8 = 27;
 
-/// Control Sequence Introducer ([`CSI`]): Bracket byte `[`.
+/// [Control Sequence Introducer] ([`CSI`]): Bracket byte `[`.
 ///
 /// Sequence: `ESC [` (second byte of [`CSI`] prefix).
 ///
 /// Value: `91` dec, `5B` hex.
 ///
 /// [`CSI`]: crate::CsiSequence
+/// [Control Sequence Introducer]:
+///     https://en.wikipedia.org/wiki/ANSI_escape_code#CSI_(Control_Sequence_Introducer)_sequences
 pub const ANSI_CSI_BRACKET: u8 = b'[';
 
 /// Single Shift 3 (SS3): `O` byte for `ESC O` sequences.
@@ -372,8 +379,8 @@ pub const SS3_NUMPAD_MULTIPLY: u8 = b'j';
 /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 pub const SS3_NUMPAD_PLUS: u8 = b'k';
 
-/// SS3 Numpad Comma ([`ANSI`]): Application mode numpad `,` final byte.
-/// Not all terminals support this.
+/// SS3 Numpad Comma ([`ANSI`]): Application mode numpad `,` final byte. Not all terminals
+/// support this.
 ///
 /// Value: `'l'` dec, `6C` hex.
 ///
@@ -742,8 +749,8 @@ pub const ASCII_DEL: u8 = 127;
 
 // ==================== ASCII Character Constants ====================
 //
-// ASCII byte values for digits (0x30-0x39) and letters (A-Z, a-z).
-// Note: Cannot use these in match arms due to RFC 1445; use if/else or matches!.
+// ASCII byte values for digits (0x30-0x39) and letters (A-Z, a-z). Note: Cannot use these
+// in match arms due to RFC 1445; use if/else or matches!.
 
 /// [`ASCII`] Digit 0 ([`ASCII`]): Byte value for character `'0'`.
 ///
@@ -862,8 +869,8 @@ pub const CSI_PREFIX_LEN: usize = CSI_PREFIX.len();
 
 // ==================== DECCKM Cursor Key Mode Sequences ====================
 //
-// Complete byte sequences for detecting DECCKM mode changes in PTY output.
-// Used by `CursorModeDetector::scan_for_mode_change()`.
+// Complete byte sequences for detecting DECCKM mode changes in PTY output. Used by
+// `CursorModeDetector::scan_for_mode_change()`.
 
 /// [`DEC`] Cursor Key Mode (DECCKM) Enable: Switch to application mode cursor keys.
 ///

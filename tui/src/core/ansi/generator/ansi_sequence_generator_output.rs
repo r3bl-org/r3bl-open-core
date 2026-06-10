@@ -391,7 +391,7 @@ mod terminal_modes {
         }
 
         /// Enable bracketed paste mode
-        /// [`CSI`] ?2004h
+        /// [`CSI`] `?2004h`
         ///
         /// [`CSI`]: crate::CsiSequence
         #[must_use]
@@ -401,7 +401,7 @@ mod terminal_modes {
         }
 
         /// Disable bracketed paste mode
-        /// [`CSI`] ?2004l
+        /// [`CSI`] `?2004l`
         ///
         /// [`CSI`]: crate::CsiSequence
         #[must_use]

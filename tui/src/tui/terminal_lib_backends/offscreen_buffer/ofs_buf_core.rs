@@ -1,13 +1,14 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::super::{FlushKind, RenderOpOutputVec};
-use crate::{DsrRequestFromPtyEvent, PaintMode, GetMemSize, LockedOutputDevice, MemorySize, Pos, Size, TermRow, TuiStyle, inline_string, ok, osc::OscEvent};
+use crate::{DsrRequestFromPtyEvent, GetMemSize, LockedOutputDevice, MemorySize,
+            PaintMode, Pos, Size, TermRow, TuiStyle, inline_string, ok, osc::OscEvent};
 use std::{fmt::Debug, mem::size_of};
 
 /// Character set modes for terminal emulation.
 ///
-/// Used by [`AnsiToOfsBufPerformer`] to handle
-/// [`ESC`] ( sequences that switch between [`ASCII`] and [`DEC`] line-drawing graphics.
+/// Used by [`AnsiToOfsBufPerformer`] to handle [`ESC`] ( sequences that switch between
+/// [`ASCII`] and [`DEC`] line-drawing graphics.
 ///
 /// [`AnsiToOfsBufPerformer`]: crate::AnsiToOfsBufPerformer
 /// [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
@@ -21,8 +22,8 @@ pub enum CharacterSet {
     /// [`ESC`]: crate::EscSequence
     #[default]
     Ascii,
-    /// [`DEC`] Special Graphics character set for line drawing ([`ESC`] ( 0).
-    /// Maps [`ASCII`] characters to box-drawing Unicode characters.
+    /// [`DEC`] Special Graphics character set for line drawing ([`ESC`] ( 0). Maps
+    /// [`ASCII`] characters to box-drawing Unicode characters.
     ///
     /// [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
     /// [`DEC`]: https://en.wikipedia.org/wiki/Digital_Equipment_Corporation
@@ -100,9 +101,8 @@ pub struct AnsiParserSupport {
     /// does NOT track the current cursor position - that's stored in
     /// [`OffscreenBuffer::cursor_pos`].
     ///
-    /// Used by [`AnsiToOfsBufPerformer`] to implement
-    /// the DECSC ([`ESC`] 7) and DECRC ([`ESC`] 8) escape sequences for saving and
-    /// restoring cursor position.
+    /// Used by [`AnsiToOfsBufPerformer`] to implement the DECSC ([`ESC`] 7) and DECRC
+    /// ([`ESC`] 8) escape sequences for saving and restoring cursor position.
     ///
     /// ## Data Flow:
     /// ```text
@@ -126,10 +126,10 @@ pub struct AnsiParserSupport {
 
     /// Active character set for [`ANSI`] escape sequence support.
     ///
-    /// Used by [`AnsiToOfsBufPerformer`] to implement
-    /// character set switching via [`ESC`] ( B ([`ASCII`]) and [`ESC`] ( 0 ([`DEC`]
-    /// graphics). When in Graphics mode, characters like 'q' are translated to
-    /// box-drawing characters like '─' during the `print()` operation.
+    /// Used by [`AnsiToOfsBufPerformer`] to implement character set switching via [`ESC`]
+    /// ( B ([`ASCII`]) and [`ESC`] ( 0 ([`DEC`] graphics). When in Graphics mode,
+    /// characters like 'q' are translated to box-drawing characters like '─' during the
+    /// `print()` operation.
     ///
     /// ## Character Set Usage:
     /// ```text
@@ -144,24 +144,27 @@ pub struct AnsiParserSupport {
     /// [`ESC`]: crate::EscSequence
     pub character_set: CharacterSet,
 
-    /// Auto-wrap mode (DECAWM) for [`ANSI`] escape sequence support.
+    /// Auto-wrap mode ([`DECAWM`]) for [`ANSI`] escape sequence support.
     ///
-    /// Used by [`AnsiToOfsBufPerformer`] to control
-    /// line wrapping behavior when printing characters. This implements the VT100
-    /// DECAWM (Auto Wrap Mode) specification.
+    /// Used by [`AnsiToOfsBufPerformer`] to control line wrapping behavior when printing
+    /// characters. This implements the [`VT-100`] [`DECAWM`] (Auto Wrap Mode)
+    /// specification.
     ///
-    /// ## DECAWM Control:
+    /// ## [`DECAWM`] Control:
+    ///
     /// ```text
     /// ESC[?7h: Enable auto-wrap (default)  - Characters wrap to next line
-    /// ESC[?7l: Disable auto-wrap          - Characters overwrite at right margin
+    /// ESC[?7l: Disable auto-wrap           - Characters overwrite at right margin
     /// ```
     ///
     /// When enabled (default), characters that would exceed the right margin
-    /// automatically wrap to the beginning of the next line. When disabled,
-    /// the cursor stays at the right margin and subsequent characters overwrite.
+    /// automatically wrap to the beginning of the next line. When disabled, the cursor
+    /// stays at the right margin and subsequent characters overwrite.
     ///
     /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
     /// [`AnsiToOfsBufPerformer`]: crate::AnsiToOfsBufPerformer
+    /// [`DECAWM`]: https://vt100.net/docs/vt510-rm/DECAWM.html
+    /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
     pub auto_wrap_mode: AutoWrapState,
 
     /// Complete computed style combining attributes and colors for efficient rendering.
@@ -187,10 +190,9 @@ pub struct AnsiParserSupport {
     /// Used by [`AnsiToOfsBufPerformer`] to implement [`DECSTBM`] (Set Top and Bottom
     /// Margins) functionality via [`ESC`] [ top ; bottom r.
     ///
-    /// When `None`, the default top margin is row 1 (first row), making the
-    /// entire terminal screen the scrollable region.
-    /// When `Some(n)`, scrolling operations only affect rows from n to
-    /// `scroll_region_bottom`.
+    /// When `None`, the default top margin is row 1 (first row), making the entire
+    /// terminal screen the scrollable region. When `Some(n)`, scrolling operations only
+    /// affect rows from n to `scroll_region_bottom`.
     ///
     /// ## [`DECSTBM`] Usage:
     /// ```text
@@ -212,10 +214,9 @@ pub struct AnsiParserSupport {
     /// Used by [`AnsiToOfsBufPerformer`] to implement [`DECSTBM`] (Set Top and Bottom
     /// Margins) functionality via [`ESC`] [ top ; bottom r.
     ///
-    /// When `None`, the default bottom margin is the last row of the terminal,
-    /// making the entire terminal screen the scrollable region.
-    /// When `Some(n)`, scrolling operations only affect rows from `scroll_region_top` to
-    /// n.
+    /// When `None`, the default bottom margin is the last row of the terminal, making the
+    /// entire terminal screen the scrollable region. When `Some(n)`, scrolling operations
+    /// only affect rows from `scroll_region_top` to n.
     ///
     /// ## [`DECSTBM`] Behavior:
     /// - Scrolling commands ([`ESC`] D, [`ESC`] M, [`CSI`] S, [`CSI`] T) only affect the
@@ -231,17 +232,22 @@ pub struct AnsiParserSupport {
 
     /// Controls whether the terminal cursor is visible.
     ///
-    /// Corresponds to the DECTCEM (?25) private mode.
+    /// Corresponds to the [`DECTCEM`] (`?25`) private mode.
+    ///
+    /// [`DECTCEM`]: https://vt100.net/docs/vt510-rm/DECTCEM.html
     pub cursor_visibility: CursorVisibilityState,
 }
 
 impl Default for AnsiParserSupport {
-    /// Creates a new `AnsiParserSupport` with VT100-compliant defaults.
+    /// Creates a new [`AnsiParserSupport`] with [`VT-100`] compliant defaults.
+    ///
+    /// [`AnsiParserSupport`]: crate::AnsiParserSupport
+    /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
     fn default() -> Self {
         Self {
             cursor_pos_for_esc_save_and_restore: None,
             character_set: CharacterSet::default(),
-            auto_wrap_mode: AutoWrapState::Enabled, // DECAWM default: enabled (VT100 compliant)
+            auto_wrap_mode: AutoWrapState::Enabled, // DECAWM default: Enabled
             current_style: TuiStyle::default(),
             pending_osc_events: Vec::new(),
             pending_dsr_responses: Vec::new(),
@@ -252,36 +258,72 @@ impl Default for AnsiParserSupport {
     }
 }
 
-/// Auto-wrap mode (DECAWM) state.
+/// Auto-wrap mode ([`DECAWM`]) state.
 ///
 /// Controls line wrapping behavior when text reaches the right margin.
+///
+/// [`DECAWM`]: https://vt100.net/docs/vt510-rm/DECAWM.html
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum AutoWrapState {
-    /// Characters automatically wrap to the next line (DECAWM ?7h)
+    /// Characters automatically wrap to the next line (DECAWM `?7h`)
     #[default]
     Enabled,
-    /// Characters overwrite at the right margin (DECAWM ?7l)
+    /// Characters overwrite at the right margin (DECAWM `?7l`)
     Disabled,
 }
 
 /// Terminal cursor visibility state.
 ///
-/// Controls whether the terminal cursor is displayed or hidden.
-/// Corresponds to the DECTCEM (?25) private mode.
+/// Controls whether the terminal cursor is displayed or hidden. Corresponds to the
+/// [`DECTCEM`] (`?25`) private mode.
+///
+/// # Dual Usage Architecture
+///
+/// This enum serves two distinct roles in the rendering pipeline depending on the
+/// context:
+///
+/// 1. **Parsing & Virtual Composition ([`PTY Mux`])**: When used inside
+///    [`AnsiParserSupport::cursor_visibility`], it stores the *requested* visibility
+///    state of the child process. The [`PTY Mux`] compositor
+///    (`OutputRenderer::composite_virtual_cursor_into_buffer`) reads this to determine if
+///    it needs to paint a simulated, virtual block cursor into the grid.
+///
+/// 2. **Terminal Emulator Cursor Rendering (Backend)**: When passed as an argument to
+///    backend executor traits (e.g., [`OffscreenBufferPaintImpl::paint`]), it pushes
+///    either a [`RenderOpCommon::ShowCursor`] or [`RenderOpCommon::HideCursor`] operation
+///    to command the terminal emulator to display or hide its terminal emulator cursor.
+///
+///    > Note: The [`PTY Mux`] explicitly passes [`CursorVisibilityState::Hidden`] to the
+///    > backend to suppress the terminal emulator's cursor.
+///
+/// [`AnsiParserSupport::cursor_visibility`]: crate::AnsiParserSupport::cursor_visibility
+/// [`CursorVisibilityState::Hidden`]:
+///     crate::tui::terminal_lib_backends::CursorVisibilityState::Hidden
+/// [`DECTCEM`]: https://vt100.net/docs/vt510-rm/DECTCEM.html
+/// [`OffscreenBufferPaintImpl::paint`]:
+///     crate::tui::terminal_lib_backends::OffscreenBufferPaintImpl::paint
+/// [`OutputRenderer`]: crate::core::pty::OutputRenderer
+/// [`PTY Mux`]: crate::PTYMux
+/// [`RenderOpCommon::HideCursor`]: crate::RenderOpCommon::HideCursor
+/// [`RenderOpCommon::ShowCursor`]: crate::RenderOpCommon::ShowCursor
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum CursorVisibilityState {
-    /// Cursor is visible (DECTCEM ?25h)
+    /// Cursor is visible ([`DECTCEM`] `ESC [ ? 25 h`)
+    ///
+    /// [`DECTCEM`]: https://vt100.net/docs/vt510-rm/DECTCEM.html
     #[default]
     Visible,
-    /// Cursor is hidden (DECTCEM ?25l)
+    /// Cursor is hidden ([`DECTCEM`] `ESC [ ? 25 l`)
+    ///
+    /// [`DECTCEM`]: https://vt100.net/docs/vt510-rm/DECTCEM.html
     Hidden,
 }
 
 /// Raw mode state for terminal input processing.
 ///
 /// Raw mode (POSIX non-canonical mode) controls whether terminal input is processed
-/// character-by-character without line buffering. This is essential for interactive
-/// TUI applications that need immediate character feedback.
+/// character-by-character without line buffering. This is essential for interactive TUI
+/// applications that need immediate character feedback.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RawModeState {
     /// Raw mode enabled - input processed character-by-character
@@ -293,8 +335,8 @@ pub enum RawModeState {
 /// Alternate screen buffer state.
 ///
 /// Controls whether terminal output is redirected to an alternate screen buffer,
-/// preserving the original screen content. This is used by full-screen applications
-/// (vim, less, etc.) to avoid cluttering the shell history.
+/// preserving the original screen content. This is used by full-screen applications (vim,
+/// less, etc.) to avoid cluttering the shell history.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AlternateScreenState {
     /// Alternate screen buffer active
@@ -312,8 +354,8 @@ pub enum RequestedScreenMode {
 
 /// Mouse event tracking state.
 ///
-/// Controls whether the terminal captures mouse click, movement, and scroll events.
-/// This enables interactive mouse support in TUI applications.
+/// Controls whether the terminal captures mouse click, movement, and scroll events. This
+/// enables interactive mouse support in TUI applications.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MouseTrackingState {
     /// Mouse tracking enabled - terminal sends mouse events
@@ -324,9 +366,9 @@ pub enum MouseTrackingState {
 
 /// Bracketed paste mode state.
 ///
-/// Controls whether text pasted from clipboard is wrapped with special escape
-/// sequences ([`OSC`] 52), allowing applications to distinguish pasted text from
-/// keyboard input. This prevents misinterpretation of pasted content.
+/// Controls whether text pasted from clipboard is wrapped with special escape sequences
+/// ([`OSC`] 52), allowing applications to distinguish pasted text from keyboard input.
+/// This prevents misinterpretation of pasted content.
 ///
 /// [`OSC`]: crate::osc_codes::OscSequence
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -339,9 +381,9 @@ pub enum BracketedPasteState {
 
 /// Terminal mode state tracking for terminal control sequences.
 ///
-/// This struct groups together all terminal mode flags that track the state of
-/// various terminal features that can be controlled via escape sequences.
-/// These modes affect how the terminal processes and displays output.
+/// This struct groups together all terminal mode flags that track the state of various
+/// terminal features that can be controlled via escape sequences. These modes affect how
+/// the terminal processes and displays output.
 ///
 /// ## Terminal Modes
 ///
@@ -350,8 +392,8 @@ pub enum BracketedPasteState {
 /// - **Mouse Tracking**: Capability to capture mouse events
 /// - **Bracketed Paste**: Ability to distinguish pasted text from keyboard input
 ///
-/// Used by render pipeline and [`ANSI`] parser performer to maintain complete
-/// terminal state information.
+/// Used by render pipeline and [`ANSI`] parser performer to maintain complete terminal
+/// state information.
 ///
 /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 /// [`RenderOpCommon`]: enum@crate::RenderOpCommon
@@ -359,9 +401,9 @@ pub enum BracketedPasteState {
 pub struct TerminalModeState {
     /// Raw mode status (POSIX non-canonical mode).
     ///
-    /// When enabled, terminal input is processed character-by-character without
-    /// line buffering. This is essential for interactive TUI applications that
-    /// need immediate character feedback.
+    /// When enabled, terminal input is processed character-by-character without line
+    /// buffering. This is essential for interactive TUI applications that need immediate
+    /// character feedback.
     ///
     /// Set via:
     /// - [`RenderOpCommon`] variant `EnterRawMode` (enables)
@@ -373,8 +415,8 @@ pub struct TerminalModeState {
     /// Alternate screen buffer status.
     ///
     /// When active, terminal output is redirected to an alternate screen buffer,
-    /// preserving the original screen content. This is used by full-screen
-    /// applications (vim, less, etc.) to avoid cluttering the shell history.
+    /// preserving the original screen content. This is used by full-screen applications
+    /// (vim, less, etc.) to avoid cluttering the shell history.
     ///
     /// Set via:
     /// - [`RenderOpCommon`] variant `EnterAlternateScreen` (activates)
@@ -385,8 +427,8 @@ pub struct TerminalModeState {
 
     /// Mouse event tracking status.
     ///
-    /// When enabled, terminal sends mouse click, movement, and scroll events.
-    /// This enables interactive mouse support in TUI applications.
+    /// When enabled, terminal sends mouse click, movement, and scroll events. This
+    /// enables interactive mouse support in TUI applications.
     ///
     /// Set via:
     /// - [`RenderOpCommon`] variant `EnableMouseTracking` (enables)
@@ -397,9 +439,9 @@ pub struct TerminalModeState {
 
     /// Bracketed paste mode status.
     ///
-    /// When enabled, text pasted from clipboard is wrapped with special escape
-    /// sequences ([`OSC`] 52), allowing applications to distinguish pasted text from
-    /// keyboard input. This prevents misinterpretation of pasted content.
+    /// When enabled, text pasted from clipboard is wrapped with special escape sequences
+    /// ([`OSC`] 52), allowing applications to distinguish pasted text from keyboard
+    /// input. This prevents misinterpretation of pasted content.
     ///
     /// Set via:
     /// - [`RenderOpCommon`] variant `EnableBracketedPaste` (enables)
@@ -413,8 +455,8 @@ pub struct TerminalModeState {
 impl Default for TerminalModeState {
     /// Creates a new `TerminalModeState` with VT100-compliant defaults.
     ///
-    /// All modes are disabled by default, representing a standard terminal state
-    /// before any special features are activated.
+    /// All modes are disabled by default, representing a standard terminal state before
+    /// any special features are activated.
     fn default() -> Self {
         Self {
             raw_mode: RawModeState::Disabled,
@@ -427,12 +469,12 @@ impl Default for TerminalModeState {
 
 /// Core terminal screen buffer structure with VT100/[`ANSI`] support.
 ///
-/// For comprehensive architectural overview and integration details, see the
-/// [module documentation].
+/// For comprehensive architectural overview and integration details, see the [module
+/// documentation].
 ///
-/// This struct represents the main terminal screen buffer as a 2D grid where each
-/// cell maps directly to a terminal screen position. It handles variable-width
-/// characters (like emoji) using [`PixelChar::Void`] placeholders.
+/// This struct represents the main terminal screen buffer as a 2D grid where each cell
+/// maps directly to a terminal screen position. It handles variable-width characters
+/// (like emoji) using [`PixelChar::Void`] placeholders.
 ///
 /// ## Key Features
 /// - **Dual Integration**: Works with both render pipeline and [`ANSI`] terminal
@@ -484,29 +526,31 @@ pub struct OffscreenBuffer {
     ///   sequence processing
     /// - **Terminal emulation**: Tracks where the next character should be rendered
     ///
-    /// Note: This is different from [`cursor_pos_for_esc_save_and_restore`] which is
-    /// only used for DECSC/DECRC ([`ESC`] 7/8) save/restore operations.
+    /// Note: This is different from [`cursor_pos_for_esc_save_and_restore`] which is only
+    /// used for DECSC/DECRC ([`ESC`] 7/8) save/restore operations.
     ///
     /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-    /// [`cursor_pos_for_esc_save_and_restore`]: AnsiParserSupport::cursor_pos_for_esc_save_and_restore
+    /// [`cursor_pos_for_esc_save_and_restore`]:
+    ///     AnsiParserSupport::cursor_pos_for_esc_save_and_restore
     /// [`ESC`]: crate::EscSequence
     /// [`RenderOpCommon`]: enum@crate::RenderOpCommon
     pub cursor_pos: Pos,
 
     /// Terminal mode state tracking (raw mode, alternate screen, mouse tracking, etc.).
     ///
-    /// This field tracks the state of various terminal control modes that affect
-    /// how the terminal processes input and displays output. These modes are set
-    /// via control escape sequences or render operations.
+    /// This field tracks the state of various terminal control modes that affect how the
+    /// terminal processes input and displays output. These modes are set via control
+    /// escape sequences or render operations.
     pub terminal_mode: TerminalModeState,
 
-    /// Pre-calculated memory size of this buffer.
-    /// Since the buffer has fixed dimensions and each cell is a fixed-size enum,
-    /// this value is calculated once at creation and never changes.
+    /// Pre-calculated memory size of this buffer. Since the buffer has fixed dimensions
+    /// and each cell is a fixed-size enum, this value is calculated once at creation and
+    /// never changes.
     ///
     /// Used in [`log_telemetry_info`] which is called in a hot loop on every render.
     ///
-    /// [`log_telemetry_info`]: crate::main_event_loop::EventLoopState::log_telemetry_info()
+    /// [`log_telemetry_info`]:
+    ///     crate::main_event_loop::EventLoopState::log_telemetry_info()
     memory_size: MemorySize,
 
     /// [`ANSI`] parser support fields grouped together for better organization.
@@ -514,15 +558,17 @@ pub struct OffscreenBuffer {
     /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
     pub ansi_parser_support: AnsiParserSupport,
 
-    /// Support for the VT100 alternate screen buffer (?1049 mode) and independent cursor
-    /// state.
+    /// Support for the [`VT-100`] alternate screen buffer (`?1049` mode) and independent
+    /// cursor state.
+    ///
+    /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
     pub alt_screen_support: AltScreenSupport,
 }
 
 impl GetMemSize for OffscreenBuffer {
-    /// Returns the pre-calculated memory size of this buffer.
-    /// Since buffer dimensions are fixed and cells are fixed-size enums,
-    /// this value was calculated once at creation and never changes.
+    /// Returns the pre-calculated memory size of this buffer. Since buffer dimensions are
+    /// fixed and cells are fixed-size enums, this value was calculated once at creation
+    /// and never changes.
     fn get_mem_size(&self) -> usize { self.memory_size.size().unwrap_or(0) }
 }
 
@@ -552,9 +598,10 @@ pub trait OffscreenBufferPaint {
 
     /// Execute terminal operations on the display.
     ///
-    /// The `cursor_visibility` parameter ensures that the terminal's physical cursor state
-    /// perfectly matches the emulator's parsed state ([`DECTCEM`] `?25h`/`l`). This decouples
-    /// the parsing of the state from its actual execution, which happens right before flush.
+    /// The `cursor_visibility` parameter ensures that the terminal emulator's cursor
+    /// state perfectly matches the emulator's parsed state ([`DECTCEM`] `ESC [ ? 25 h` /
+    /// `ESC [ ? 25 l`). This decouples the parsing of the state from its actual
+    /// execution, which happens right before flush.
     ///
     /// [`DECTCEM`]: https://vt100.net/docs/vt510-rm/DECTCEM.html
     fn paint(
@@ -569,9 +616,10 @@ pub trait OffscreenBufferPaint {
 
     /// Execute diff operations on the display (selective redraw).
     ///
-    /// The `cursor_visibility` parameter ensures that the terminal's physical cursor state
-    /// perfectly matches the emulator's parsed state ([`DECTCEM`] `?25h`/`l`). This decouples
-    /// the parsing of the state from its actual execution, which happens right before flush.
+    /// The `cursor_visibility` parameter ensures that the terminal emulator's cursor
+    /// state perfectly matches the emulator's parsed state ([`DECTCEM`] `ESC [ ? 25 h` /
+    /// `ESC [ ? 25 l`). This decouples the parsing of the state from its actual
+    /// execution, which happens right before flush.
     ///
     /// [`DECTCEM`]: https://vt100.net/docs/vt510-rm/DECTCEM.html
     fn paint_diff(
@@ -678,8 +726,8 @@ impl OffscreenBuffer {
 
         let memory_size = {
             // Calculate memory size once - it will never change since buffer dimensions
-            // are fixed. Account for both the primary and alternate screen
-            // buffers, as well as all cursor states.
+            // are fixed. Account for both the primary and alternate screen buffers, as
+            // well as all cursor states.
             let primary_buffer_mem = buffer.get_mem_size();
             let alt_buffer_mem = primary_buffer_mem;
             MemorySize::new(
@@ -842,8 +890,8 @@ mod tests {
         let buffer2 = create_test_buffer();
 
         let diff = buffer1.diff(&buffer2);
-        // The buffers should be identical, so diff should return None.
-        // However, if Some is returned with an empty list, that's also acceptable.
+        // The buffers should be identical, so diff should return None. However, if Some
+        // is returned with an empty list, that's also acceptable.
         match diff {
             None => {} // Expected case
             Some(chunks) => assert!(

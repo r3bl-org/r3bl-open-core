@@ -13,6 +13,7 @@ This consolidated skill covers all aspects of writing high-quality rustdoc:
 4. **Links** - Intra-doc link patterns
 5. **Constants** - Human-readable numeric literals
 6. **Formatting** - Markdown tables and cargo rustdoc-fmt
+7. **ANSI Escape Codes** - Spaced `ESC [` notation (see `ansi-escape-codes.md`)
 
 ## When to Use
 

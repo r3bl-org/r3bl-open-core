@@ -120,7 +120,7 @@ pub mod auto_wrap {
 
         let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf);
 
-        // Disable auto-wrap mode using CSI ?7l.
+        // Disable auto-wrap mode using CSI `?7l`.
         let sequence =
             CsiSequence::DisablePrivateMode(PrivateModeType::AutoWrap).to_string();
         performer.apply_ansi_bytes(sequence);
@@ -165,7 +165,7 @@ pub mod auto_wrap {
         performer.apply_ansi_bytes(disable_sequence);
         assert_eq!(performer.ofs_buf.ansi_parser_support.auto_wrap_mode, AutoWrapState::Disabled);
 
-        // Re-enable auto-wrap using CSI ?7h.
+        // Re-enable auto-wrap using CSI `?7h`.
         let enable_sequence =
             CsiSequence::EnablePrivateMode(PrivateModeType::AutoWrap).to_string();
         performer.apply_ansi_bytes(enable_sequence);

@@ -224,7 +224,7 @@ use super::*;
     }
 }
 
-/// Tests for the Alternate Screen Buffer (?1049) mode operations.
+/// Tests for the Alternate Screen Buffer (`?1049`) mode operations.
 pub mod alt_screen_mode {
     use super::*;
     use crate::AlternateScreenState;
@@ -239,7 +239,7 @@ pub mod alt_screen_mode {
             AlternateScreenState::Inactive
         );
 
-        // Enable alternate screen buffer (?1049h)
+        // Enable alternate screen buffer (`?1049h`)
         let enable_sequence = format!(
             "{}",
             CsiSequence::EnablePrivateMode(PrivateModeType::AlternateScreenBuffer)
@@ -250,7 +250,7 @@ pub mod alt_screen_mode {
             AlternateScreenState::Active
         );
 
-        // Disable alternate screen buffer (?1049l)
+        // Disable alternate screen buffer (`?1049l`)
         let disable_sequence = format!(
             "{}",
             CsiSequence::DisablePrivateMode(PrivateModeType::AlternateScreenBuffer)

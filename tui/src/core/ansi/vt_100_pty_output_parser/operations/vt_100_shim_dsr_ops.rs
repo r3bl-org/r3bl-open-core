@@ -58,8 +58,13 @@
 //! [module-level documentation]: self
 //! [operations module]: crate::core::ansi::vt_100_pty_output_parser::operations
 
-use crate::core::ansi::{generator::DsrRequestType,
-                        vt_100_pty_output_parser::ansi_parser_public_api::AnsiToOfsBufPerformer};
+use crate::{
+    core::ansi::{
+        generator::DsrRequestType,
+        vt_100_pty_output_parser::ansi_parser_public_api::AnsiToOfsBufPerformer,
+    },
+    DEBUG_TUI_VT100_PARSER,
+};
 
 /// Handle Device Status Report (`CSI n`) command.
 ///
@@ -78,7 +83,7 @@ pub fn status_report(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params
             performer.ofs_buf.handle_cursor_position_request();
         }
         DsrRequestType::Other(n) => {
-            crate::DEBUG_TUI_VT100_PARSER.then(|| {
+            DEBUG_TUI_VT100_PARSER.then(|| {
                 tracing::warn!("CSI {}n (DSR): Unsupported device status report request", n);
             });
         }
