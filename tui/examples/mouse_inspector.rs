@@ -327,7 +327,7 @@ fn render(inspector: &MouseInspector, output: &OutputDevice) {
         print_text(
             output,
             &format!(
-                "│ Position: ({:>2}, {:>2})             │",
+                "│ Pos: (col: {:>3}, row: {:>3})      │",
                 evt.pos.col_index.as_usize(),
                 evt.pos.row_index.as_usize()
             ),
@@ -394,7 +394,7 @@ fn render(inspector: &MouseInspector, output: &OutputDevice) {
         };
 
         let line = format!(
-            "│ • ({:>2},{:>2}) {:<15}{:<44}│",
+            "│ • ({:>3},{:>3}) {:<15}{:<42}│",
             evt.pos.col_index.as_usize(),
             evt.pos.row_index.as_usize(),
             kind_str,
