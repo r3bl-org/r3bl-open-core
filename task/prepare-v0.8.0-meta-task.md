@@ -6,9 +6,9 @@
   - [x] https://github.com/r3bl-org/r3bl-open-core/pull/450
   - [x] [fix-mio-poller-edge-triggered-polling.md](done/fix-mio-poller-edge-triggered-polling.md)
   - [x] [Fix bug introduce by mio-poller-edge-triggered-polling](https://github.com/r3bl-org/r3bl-open-core/issues/453)
-- [ ] Terminal Parsing (Pending PRs)
+- [x] Terminal Parsing (Pending PRs)
   - [x] [improve-immature-vt100-shim.md](improve-immature-vt100-shim.md)
-  - [ ] https://github.com/r3bl-org/r3bl-open-core/pull/448
+  - [x] [pr-448-fix.md](done/pr-448-fix.md) - https://github.com/r3bl-org/r3bl-open-core/pull/448
 - [ ] RRT API (Pending PRs & Issues)
   - [ ] https://github.com/r3bl-org/r3bl-open-core/pull/452
   - [ ] https://github.com/r3bl-org/r3bl-open-core/issues/451

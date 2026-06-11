@@ -56,7 +56,7 @@ pub enum MouseInputKind {
     MouseDown(Button),
     /// Mouse button released at a position.
     MouseUp(Button),
-    /// Mouse cursor moved without any buttons pressed.
+    /// Mouse cursor moved without any buttons pressed (hover).
     MouseMove,
     /// Mouse moved while a button is held down (dragging).
     MouseDrag(Button),

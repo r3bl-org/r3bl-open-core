@@ -352,15 +352,14 @@ mod terminal_mode_tests {
     #[test]
     fn test_enable_mouse_tracking() {
         let seq = AnsiSequenceGenerator::enable_mouse_tracking();
-        // Order: SGR Mode (1006), Application Mouse Tracking (1003), Mouse Mode Extension
-        // (1015)
+        // Order: Application Mouse Tracking (1003), Mouse Mode Extension (1015), SGR Mode (1006)
         let expected = format!(
             "{}{}{}",
-            CsiSequence::EnablePrivateMode(PrivateModeType::Other(SGR_MOUSE_MODE)),
             CsiSequence::EnablePrivateMode(PrivateModeType::Other(
                 APPLICATION_MOUSE_TRACKING
             )),
-            CsiSequence::EnablePrivateMode(PrivateModeType::Other(URXVT_MOUSE_EXTENSION))
+            CsiSequence::EnablePrivateMode(PrivateModeType::Other(URXVT_MOUSE_EXTENSION)),
+            CsiSequence::EnablePrivateMode(PrivateModeType::Other(SGR_MOUSE_MODE))
         );
         assert_eq!(seq, expected);
     }
@@ -368,16 +367,15 @@ mod terminal_mode_tests {
     #[test]
     fn test_disable_mouse_tracking() {
         let seq = AnsiSequenceGenerator::disable_mouse_tracking();
-        // Order: SGR Mode (1006), Application Mouse Tracking (1003), Mouse Mode Extension
-        // (1015)
+        // Order: SGR Mode (1006), Mouse Mode Extension (1015), Application Mouse Tracking (1003)
         let expected = format!(
             "{}{}{}",
             CsiSequence::DisablePrivateMode(PrivateModeType::Other(SGR_MOUSE_MODE)),
             CsiSequence::DisablePrivateMode(PrivateModeType::Other(
-                APPLICATION_MOUSE_TRACKING
+                URXVT_MOUSE_EXTENSION
             )),
             CsiSequence::DisablePrivateMode(PrivateModeType::Other(
-                URXVT_MOUSE_EXTENSION
+                APPLICATION_MOUSE_TRACKING
             ))
         );
         assert_eq!(seq, expected);

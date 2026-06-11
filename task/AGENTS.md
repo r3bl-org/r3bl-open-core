@@ -42,6 +42,7 @@ Keep it concise:
 - Avoid large code blocks. Use descriptive text for intent, but a brief snippet is
   encouraged if it's the highest-signal way to define the goal.
 - Technical notes and context belong in the Overview, not repeated per step.
+- **Formatting**: Always run `npx prettier --write <file>` on any markdown files after creating or editing them to ensure they are properly formatted and easy to review in the user's IDE.
 
 ## Folder structure
 
