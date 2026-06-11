@@ -443,6 +443,11 @@ pub struct PtySessionConfig {
     /// See [`PtySessionConfigOption::DetectCursorMode`] for details.
     pub detect_cursor_mode: DetectFlag,
 
+    /// Whether to detect terminal mouse tracking mode changes.
+    ///
+    /// See [`PtySessionConfigOption::DetectMouseMode`] for details.
+    pub detect_mouse_mode: DetectFlag,
+
     /// The initial window size for the [`PTY`].
     ///
     /// See [`PtySessionConfigOption::Size`] for details.
@@ -478,6 +483,7 @@ mod impl_default_pty_session_config {
                 capture_osc: CaptureFlag::NoCapture,
                 capture_output: CaptureFlag::Capture,
                 detect_cursor_mode: DetectFlag::Detect,
+                detect_mouse_mode: DetectFlag::Detect,
                 pty_size: DefaultPtySize.into(),
             }
         }
@@ -552,6 +558,19 @@ pub enum PtySessionConfigOption {
     /// bytes via [`PtyOutputEvent::Output`].
     NoDetectCursorMode,
 
+    /// Enable detection of terminal mouse tracking mode changes.
+    ///
+    /// Intercepts escape sequences that enable/disable xterm mouse tracking
+    /// (private modes 1000, 1002, 1003) and emits them as
+    /// [`PtyOutputEvent::MouseModeChange`].
+    DetectMouseMode,
+
+    /// Disable terminal mouse tracking mode detection.
+    ///
+    /// When disabled, mouse mode escape sequences are delivered as raw output
+    /// bytes via [`PtyOutputEvent::Output`].
+    NoDetectMouseMode,
+
     /// Specify the initial window size ([`rows`] and [`columns`]) for the [`PTY`].
     ///
     /// Correct sizing is essential for **`TUI`** applications like `htop` or
@@ -604,6 +623,12 @@ mod impl_elegant_constructor_dsl_pattern {
                 }
                 PtySessionConfigOption::NoDetectCursorMode => {
                     self.detect_cursor_mode = DetectFlag::NoDetect;
+                }
+                PtySessionConfigOption::DetectMouseMode => {
+                    self.detect_mouse_mode = DetectFlag::Detect;
+                }
+                PtySessionConfigOption::NoDetectMouseMode => {
+                    self.detect_mouse_mode = DetectFlag::NoDetect;
                 }
                 PtySessionConfigOption::Size(size) => self.pty_size = size,
             }

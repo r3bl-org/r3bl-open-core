@@ -1,7 +1,8 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{CSI_START, ControlSequence, CursorKeyMode, FunctionKey, Key, KeyPress,
-            KeyState, ModifierKeysMask, Size, SpecialKey};
+use crate::{CSI_START, ControlSequence, CursorKeyMode, FunctionKey, InputEvent, Key,
+            KeyPress, KeyState, ModifierKeysMask, Pos, Size, SpecialKey,
+            TerminalModeState};
 
 /// Input events that can be sent to an interactive [`PTY`] session.
 ///
@@ -83,6 +84,54 @@ impl From<KeyPress> for Option<PtyInputEvent> {
                 convert_modified_key(key, ModifierState::from_mask(mask))
             }
         }
+    }
+}
+
+impl PtyInputEvent {
+    /// Convert an [`InputEvent`] to a [`PtyInputEvent`], using the terminal's current
+    /// [`TerminalModeState`] and pane origin to control behaviors:
+    ///
+    /// - **Bracketed paste**: wrapping is applied based on
+    ///   [`TerminalModeState::bracketed_paste`].
+    /// - **Mouse**: forwarding is gated by
+    ///   [`TerminalModeState::mouse_tracking_mode`] and coordinates are offset by
+    ///   `origin` (the pane's top-left corner in terminal-global 0-based coordinates).
+    pub fn from_input_event(
+        event: &InputEvent,
+        terminal_mode: &TerminalModeState,
+        origin: Pos,
+    ) -> Option<Self> {
+        match event {
+            InputEvent::Keyboard(keypress) => Option::<PtyInputEvent>::from(*keypress),
+            InputEvent::BracketedPaste(text) => {
+                let wrapped = encode_bracketed_paste(
+                    text,
+                    terminal_mode.bracketed_paste == crate::BracketedPasteState::Enabled,
+                );
+                Some(PtyInputEvent::Write(wrapped))
+            }
+            InputEvent::Mouse(mouse) => {
+                if terminal_mode.mouse_tracking_mode.should_forward(&mouse.kind) {
+                    Some(PtyInputEvent::Write(mouse.to_sgr_bytes(origin)))
+                } else {
+                    None
+                }
+            }
+            _ => None,
+        }
+    }
+}
+
+/// Encode paste text as bytes, wrapping in bracketed paste markers
+/// (`\x1b[200~` … `\x1b[201~`) when `enabled` is true.
+fn encode_bracketed_paste(text: &str, enabled: bool) -> Vec<u8> {
+    if enabled {
+        let mut v = b"\x1b[200~".to_vec();
+        v.extend(text.as_bytes());
+        v.extend(b"\x1b[201~");
+        v
+    } else {
+        text.as_bytes().to_vec()
     }
 }
 

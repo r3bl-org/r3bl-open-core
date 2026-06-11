@@ -1,7 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{CaptureFlag, ControllerReader, CursorModeDetector, DetectFlag, OscBuffer,
-            PtyOutputEvent, PtySessionConfig, READ_BUFFER_SIZE, ok};
+use crate::{CaptureFlag, ControllerReader, CursorModeDetector, DetectFlag, MouseModeDetector,
+            OscBuffer, PtyOutputEvent, PtySessionConfig, READ_BUFFER_SIZE, ok};
 use std::io::Read;
 use tokio::sync::mpsc::Sender;
 
@@ -12,11 +12,13 @@ use tokio::sync::mpsc::Sender;
 ///
 /// # Processing Engine
 ///
-/// The reader task performs three main functions on the incoming byte stream:
+/// The reader task performs four main functions on the incoming byte stream:
 /// 1. **Capture Output**: Raw bytes are bundled into [`PtyOutputEvent::Output`] and sent.
 /// 2. **[`OSC`] Detection**: Scans for [`OSC`] sequences (like terminal titles) if
 ///    enabled.
-/// 3. **Cursor Detection**: Monitors for terminal mode changes if enabled.
+/// 3. **Cursor Detection**: Monitors for DECCKM mode changes if enabled.
+/// 4. **Mouse Mode Detection**: Monitors for mouse tracking mode changes
+///    (modes 1000, 1002, 1003) if enabled.
 ///
 /// # Backpressure Mechanism
 ///
@@ -47,6 +49,7 @@ pub fn spawn_blocking_reader_task(
         let mut buf = [0u8; READ_BUFFER_SIZE];
         let mut osc_buffer = OscBuffer::new();
         let mut cursor_detector = CursorModeDetector::new();
+        let mut mouse_mode_detector = MouseModeDetector::new();
 
         loop {
             match reader.read(&mut buf) {
@@ -75,6 +78,15 @@ pub fn spawn_blocking_reader_task(
                     {
                         let _unused = output_event_ch_tx_half
                             .blocking_send(PtyOutputEvent::CursorModeChange(mode));
+                    }
+
+                    // 4. Detect mouse tracking mode changes if enabled.
+                    if config.detect_mouse_mode == DetectFlag::Detect
+                        && let Some(mode) =
+                            mouse_mode_detector.scan_for_mode_change(&buf[..n])
+                    {
+                        let _unused = output_event_ch_tx_half
+                            .blocking_send(PtyOutputEvent::MouseModeChange(mode));
                     }
                 }
                 Err(e) => {
