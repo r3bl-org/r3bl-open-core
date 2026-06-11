@@ -338,12 +338,6 @@ mod terminal_modes {
         #[must_use]
         pub fn enable_mouse_tracking() -> String {
             let mut result = String::new();
-            // SGR Mouse Mode (1006) - modern extended mode supporting mouse wheel and
-            // movement
-            result.push_str(
-                &CsiSequence::EnablePrivateMode(PrivateModeType::Other(SGR_MOUSE_MODE))
-                    .to_string(),
-            );
             // Application Mouse Tracking (1003) - motion reporting
             result.push_str(
                 &CsiSequence::EnablePrivateMode(PrivateModeType::Other(
@@ -358,11 +352,17 @@ mod terminal_modes {
                 ))
                 .to_string(),
             );
+            // SGR Mouse Mode (1006) - modern extended mode supporting mouse wheel and
+            // movement
+            result.push_str(
+                &CsiSequence::EnablePrivateMode(PrivateModeType::Other(SGR_MOUSE_MODE))
+                    .to_string(),
+            );
             result
         }
 
         /// Disable mouse tracking
-        /// [`CSI`] ?1003l [`CSI`] ?1015l [`CSI`] ?1006l
+        /// [`CSI`] ?1006l [`CSI`] ?1015l [`CSI`] ?1003l
         ///
         /// [`CSI`]: crate::CsiSequence
         #[must_use]
@@ -373,17 +373,17 @@ mod terminal_modes {
                 &CsiSequence::DisablePrivateMode(PrivateModeType::Other(SGR_MOUSE_MODE))
                     .to_string(),
             );
-            // Application Mouse Tracking (1003)
-            result.push_str(
-                &CsiSequence::DisablePrivateMode(PrivateModeType::Other(
-                    APPLICATION_MOUSE_TRACKING,
-                ))
-                .to_string(),
-            );
             // Mouse Mode Extension (1015)
             result.push_str(
                 &CsiSequence::DisablePrivateMode(PrivateModeType::Other(
                     URXVT_MOUSE_EXTENSION,
+                ))
+                .to_string(),
+            );
+            // Application Mouse Tracking (1003)
+            result.push_str(
+                &CsiSequence::DisablePrivateMode(PrivateModeType::Other(
+                    APPLICATION_MOUSE_TRACKING,
                 ))
                 .to_string(),
             );

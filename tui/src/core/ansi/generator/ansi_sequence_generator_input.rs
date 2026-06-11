@@ -51,7 +51,8 @@ use crate::{KeyState,
                                      MOUSE_SCROLL_RIGHT_BUTTON,
                                      MOUSE_SCROLL_UP_BUTTON, MOUSE_SGR_PREFIX,
                                      MOUSE_SGR_PRESS, MOUSE_SGR_RELEASE,
-                                     MOUSE_X10_MARKER, MOUSE_X10_PREFIX,
+                                     MOUSE_X10_COORD_OFFSET, MOUSE_X10_MARKER,
+                                     MOUSE_X10_PREFIX,
                                      PASTE_END_GENERATE_CODE,
                                      PASTE_START_GENERATE_CODE,
                                      RESIZE_EVENT_GENERATE_CODE, RESIZE_TERMINATOR,
@@ -510,19 +511,7 @@ mod mouse {
         action: VT100MouseActionIR,
         modifiers: VT100KeyModifiersIR,
     ) -> Vec<u8> {
-        // Handle scroll events: buttons 64-67 (up/down/left/right)
-        let button_code = match action {
-            VT100MouseActionIR::Scroll(scroll_dir) => {
-                use crate::core::ansi::vt_100_terminal_input_parser::VT100ScrollDirectionIR;
-                match scroll_dir {
-                    VT100ScrollDirectionIR::Up => MOUSE_SCROLL_UP_BUTTON,
-                    VT100ScrollDirectionIR::Down => MOUSE_SCROLL_DOWN_BUTTON,
-                    VT100ScrollDirectionIR::Left => MOUSE_SCROLL_LEFT_BUTTON,
-                    VT100ScrollDirectionIR::Right => MOUSE_SCROLL_RIGHT_BUTTON,
-                }
-            }
-            _ => button_to_code(button),
-        };
+        let button_code = action_to_base_button_code(&action, button);
 
         // Apply modifiers and action flags to button code
         let mut code = button_code;
@@ -530,13 +519,11 @@ mod mouse {
         // Handle action/drag flag
         let action_char = match action {
             VT100MouseActionIR::Release => MOUSE_SGR_RELEASE as char,
-            VT100MouseActionIR::Drag => {
-                code |= MOUSE_MOTION_FLAG; // Drag flag (bit 5)
+            VT100MouseActionIR::Drag | VT100MouseActionIR::Motion => {
+                code |= MOUSE_MOTION_FLAG; // Motion/Drag flag (bit 5)
                 MOUSE_SGR_PRESS as char
             }
-            VT100MouseActionIR::Press
-            | VT100MouseActionIR::Motion
-            | VT100MouseActionIR::Scroll(_) => MOUSE_SGR_PRESS as char,
+            VT100MouseActionIR::Press | VT100MouseActionIR::Scroll(_) => MOUSE_SGR_PRESS as char,
         };
 
         code = apply_modifiers(code, modifiers);
@@ -562,7 +549,7 @@ mod mouse {
         action: VT100MouseActionIR,
         modifiers: VT100KeyModifiersIR,
     ) -> Vec<u8> {
-        let mut cb = button_to_code(button);
+        let mut cb = action_to_base_button_code(&action, button);
 
         // Handle action
         match action {
@@ -575,11 +562,11 @@ mod mouse {
 
         cb = apply_modifiers(cb, modifiers);
 
-        // X10 coordinate encoding: add 32 to make printable ASCII
+        // X10 coordinate encoding: add offset to make printable ASCII
         #[allow(clippy::cast_possible_truncation)]
-        let cx = (col + 32) as u8;
+        let cx = (col + MOUSE_X10_COORD_OFFSET) as u8;
         #[allow(clippy::cast_possible_truncation)]
-        let cy = (row + 32) as u8;
+        let cy = (row + MOUSE_X10_COORD_OFFSET) as u8;
 
         // Build sequence: ESC [ M Cb Cx Cy
         let mut bytes = MOUSE_X10_PREFIX.to_vec();
@@ -601,7 +588,7 @@ mod mouse {
         action: VT100MouseActionIR,
         modifiers: VT100KeyModifiersIR,
     ) -> Vec<u8> {
-        let mut cb = button_to_code(button);
+        let mut cb = action_to_base_button_code(&action, button);
 
         // Handle action
         match action {
@@ -628,11 +615,31 @@ mod mouse {
     /// Converts button enum to protocol code.
     fn button_to_code(button: VT100MouseButtonIR) -> u16 {
         match button {
-            VT100MouseButtonIR::Left | VT100MouseButtonIR::Unknown => {
-                MOUSE_LEFT_BUTTON_CODE
-            }
+            VT100MouseButtonIR::Left => MOUSE_LEFT_BUTTON_CODE,
+            VT100MouseButtonIR::Unknown => MOUSE_RELEASE_BUTTON_CODE,
             VT100MouseButtonIR::Middle => MOUSE_MIDDLE_BUTTON_CODE,
             VT100MouseButtonIR::Right => MOUSE_RIGHT_BUTTON_CODE,
+        }
+    }
+
+    /// Converts a mouse action and button into its base protocol button code.
+    ///
+    /// This handles overriding the button code for scroll events (which map to 64+).
+    fn action_to_base_button_code(
+        action: &VT100MouseActionIR,
+        button: VT100MouseButtonIR,
+    ) -> u16 {
+        match action {
+            VT100MouseActionIR::Scroll(scroll_dir) => {
+                use crate::core::ansi::vt_100_terminal_input_parser::VT100ScrollDirectionIR;
+                match scroll_dir {
+                    VT100ScrollDirectionIR::Up => MOUSE_SCROLL_UP_BUTTON,
+                    VT100ScrollDirectionIR::Down => MOUSE_SCROLL_DOWN_BUTTON,
+                    VT100ScrollDirectionIR::Left => MOUSE_SCROLL_LEFT_BUTTON,
+                    VT100ScrollDirectionIR::Right => MOUSE_SCROLL_RIGHT_BUTTON,
+                }
+            }
+            _ => button_to_code(button),
         }
     }
 

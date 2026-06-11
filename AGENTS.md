@@ -76,7 +76,7 @@ complex or long-running tasks, you MUST follow these loop-in-the-user rules:
      and sub-phase you create or update.
    - **Review Workflow:** When the user prompts for a manual review at the end of a
      task/phase/sub-phase:
-     1. Ask the user which IDE to use, eg: code, antigravity-ide, codium.
+     1. Ask the user: "choose your ide: 1: antigravity-ide, 2: code, 3: codium, if you press enter we will default to 1". (Note: if the user types "agy-ide" or similar, map it to "antigravity-ide").
      2. Then use `<IDE> <file_path>` to open the first file with a checkbox.
      3. Ask the user to manually review it.
      4. Once the user confirms ("good" or similar), check the box in the task file.

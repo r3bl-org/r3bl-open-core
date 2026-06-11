@@ -208,8 +208,8 @@ mod mouse_events {
     }
 
     #[test]
-    fn test_scroll_up_with_modifiers() {
-        // CONFIRMED: Button 66 = scroll up at col 37, row 14 (from terminal observation)
+    fn test_scroll_left() {
+        // CONFIRMED: Button 66 = scroll left at col 37, row 14
         let seq = b"\x1b[<66;37;14M";
         let (event, _bytes_consumed) =
             parse_mouse_sequence(seq).expect("Should parse observed scroll sequence");
@@ -218,7 +218,7 @@ mod mouse_events {
             VT100InputEventIR::Mouse { action, pos, .. } => {
                 assert_eq!(
                     action,
-                    VT100MouseActionIR::Scroll(VT100ScrollDirectionIR::Up)
+                    VT100MouseActionIR::Scroll(VT100ScrollDirectionIR::Left)
                 );
                 assert_eq!(pos.col.as_u16(), 37);
                 assert_eq!(pos.row.as_u16(), 14);
