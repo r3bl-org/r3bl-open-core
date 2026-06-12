@@ -1,8 +1,45 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{DECCKM_DISABLE_BYTES, DECCKM_ENABLE_BYTES, DECCKM_SEQ_LEN, OscEvent,
-            PtyControlledChildExitStatus};
+use crate::{DECCKM_DISABLE_BYTES, DECCKM_ENABLE_BYTES, DECCKM_SEQ_LEN, MouseInputKind,
+            OscEvent, PtyControlledChildExitStatus};
 use std::borrow::Cow;
+
+/// Mouse tracking mode for terminal applications.
+///
+/// Corresponds to [xterm private modes] 1000, 1002, and 1003.
+///
+/// [xterm private modes]: https://invisible-island.net/xterm/ctlseqs/ctlseqs.html
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum MouseTrackingMode {
+    /// No mouse tracking enabled (default).
+    #[default]
+    None,
+    /// Basic mouse tracking (mode 1000) — reports button press and release.
+    Basic,
+    /// Button-event tracking (mode 1002) — adds drag events while a button is held.
+    ButtonDrag,
+    /// Any-event tracking (mode 1003) — reports all motion regardless of button state.
+    AnyEvent,
+}
+
+impl MouseTrackingMode {
+    /// Returns `true` if this mode would forward an event of the given kind.
+    pub fn should_forward(&self, kind: &MouseInputKind) -> bool {
+        match self {
+            MouseTrackingMode::None => false,
+            MouseTrackingMode::Basic => {
+                matches!(kind, MouseInputKind::MouseDown(_) | MouseInputKind::MouseUp(_))
+            }
+            MouseTrackingMode::ButtonDrag => matches!(
+                kind,
+                MouseInputKind::MouseDown(_)
+                    | MouseInputKind::MouseUp(_)
+                    | MouseInputKind::MouseDrag(_)
+            ),
+            MouseTrackingMode::AnyEvent => true,
+        }
+    }
+}
 
 /// Events received from a [`PTY`] process.
 ///
@@ -35,6 +72,12 @@ pub enum PtyOutputEvent {
     /// More info about cursor modes (Application vs Normal) and their detection is in
     /// [`CursorModeDetector`].
     CursorModeChange(CursorKeyMode),
+
+    /// Terminal mouse tracking mode changed.
+    ///
+    /// Emitted when the PTY child enables or disables xterm mouse tracking
+    /// (private modes 1000, 1002, 1003).
+    MouseModeChange(MouseTrackingMode),
 }
 
 /// Cursor key mode for terminal compatibility.
@@ -220,5 +263,88 @@ impl CursorModeDetector {
 }
 
 impl Default for CursorModeDetector {
+    fn default() -> Self { Self::new() }
+}
+
+// ─── Mouse Mode Detection ──────────────────────────────────────────────────
+
+/// Enable sequence for xterm basic mouse tracking (mode 1000).
+const MOUSE_MODE_1000_ENABLE: &[u8] = b"\x1b[?1000h";
+/// Disable sequence for xterm basic mouse tracking (mode 1000).
+const MOUSE_MODE_1000_DISABLE: &[u8] = b"\x1b[?1000l";
+/// Enable sequence for xterm button-event tracking (mode 1002).
+const MOUSE_MODE_1002_ENABLE: &[u8] = b"\x1b[?1002h";
+/// Disable sequence for xterm button-event tracking (mode 1002).
+const MOUSE_MODE_1002_DISABLE: &[u8] = b"\x1b[?1002l";
+/// Enable sequence for xterm any-event tracking (mode 1003).
+const MOUSE_MODE_1003_ENABLE: &[u8] = b"\x1b[?1003h";
+/// Disable sequence for xterm any-event tracking (mode 1003).
+const MOUSE_MODE_1003_DISABLE: &[u8] = b"\x1b[?1003l";
+
+/// Length of all mouse mode sequences above (all are 8 bytes).
+const MOUSE_MODE_SEQ_LEN: usize = 8;
+
+/// Mouse mode detector for parsing [`PTY`] output streams.
+///
+/// Scans for xterm private mode 1000/1002/1003 enable/disable sequences and
+/// maintains a buffer for partial sequence detection across read boundaries.
+///
+/// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
+#[derive(Debug)]
+pub struct MouseModeDetector {
+    buffer: Vec<u8>,
+}
+
+impl MouseModeDetector {
+    /// Creates a new mouse mode detector.
+    #[must_use]
+    pub fn new() -> Self { Self { buffer: Vec::new() } }
+
+    /// Scans incoming data for mouse mode change sequences.
+    ///
+    /// Maintains an internal buffer to handle sequences that span multiple reads.
+    ///
+    /// # Returns
+    ///
+    /// - `Some(mode)` if a mode change sequence is detected
+    /// - `None` otherwise
+    pub fn scan_for_mode_change(&mut self, data: &[u8]) -> Option<MouseTrackingMode> {
+        self.buffer.extend_from_slice(data);
+
+        let result = None
+            .or_else(|| self.scan(MOUSE_MODE_1003_ENABLE, MOUSE_MODE_1003_DISABLE, MouseTrackingMode::AnyEvent))
+            .or_else(|| self.scan(MOUSE_MODE_1002_ENABLE, MOUSE_MODE_1002_DISABLE, MouseTrackingMode::ButtonDrag))
+            .or_else(|| self.scan(MOUSE_MODE_1000_ENABLE, MOUSE_MODE_1000_DISABLE, MouseTrackingMode::Basic));
+
+        if self.buffer.len() > 100 {
+            self.buffer.drain(..50);
+        }
+
+        result
+    }
+
+    fn scan(
+        &mut self,
+        enable: &[u8],
+        disable: &[u8],
+        mode: MouseTrackingMode,
+    ) -> Option<MouseTrackingMode> {
+        // Check for enable sequence.
+        if let Some(pos) = self.buffer.windows(MOUSE_MODE_SEQ_LEN).position(|w| w == enable) {
+            self.buffer.drain(..pos + MOUSE_MODE_SEQ_LEN);
+            return Some(mode);
+        }
+
+        // Check for disable sequence.
+        if let Some(pos) = self.buffer.windows(MOUSE_MODE_SEQ_LEN).position(|w| w == disable) {
+            self.buffer.drain(..pos + MOUSE_MODE_SEQ_LEN);
+            return Some(MouseTrackingMode::None);
+        }
+
+        None
+    }
+}
+
+impl Default for MouseModeDetector {
     fn default() -> Self { Self::new() }
 }

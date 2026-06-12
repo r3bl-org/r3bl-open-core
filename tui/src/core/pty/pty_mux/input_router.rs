@@ -8,7 +8,7 @@
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 
 use super::{ProcessManager, show_notification_non_blocking};
-use crate::{Continuation, InputEvent, Key, KeyPress, KeyState, ModifierKeysMask, PtyInputEvent, Size, core::{osc::OscController, terminal_io::OutputDevice}, ok};
+use crate::{Continuation, InputEvent, Key, KeyPress, KeyState, ModifierKeysMask, Pos, PtyInputEvent, Size, core::{osc::OscController, terminal_io::OutputDevice}, ok};
 
 /// Routes input events to appropriate handlers and manages dynamic keyboard shortcuts.
 #[derive(Debug)]
@@ -131,9 +131,13 @@ impl InputRouter {
                 // events that will never come.
                 return Ok(Continuation::Stop);
             }
-            _ => {
-                // Other input events (Mouse, Focus, BracketedPaste) are
-                // ignored for now.
+            other => {
+                let terminal_mode = &process_manager.get_active_buffer().terminal_mode;
+                if let Some(pty_event) =
+                    PtyInputEvent::from_input_event(&other, terminal_mode, Pos::default())
+                {
+                    process_manager.send_input(pty_event)?;
+                }
             }
         }
 

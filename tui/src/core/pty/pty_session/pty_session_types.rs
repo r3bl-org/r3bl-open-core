@@ -30,7 +30,7 @@ pub enum CaptureFlag {
     NoCapture,
 }
 
-/// Whether to detect terminal cursor mode changes from the [`PTY`].
+/// Whether to detect terminal mode changes from the [`PTY`].
 ///
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

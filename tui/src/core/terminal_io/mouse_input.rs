@@ -131,3 +131,64 @@ impl From<MouseButton> for Button {
         }
     }
 }
+
+impl MouseInput {
+    /// Encode this mouse event as an SGR-format byte sequence suitable for writing
+    /// to a PTY child process.
+    ///
+    /// `origin` is the top-left corner of the pane in terminal-global coordinates
+    /// (0-based). The method transforms global mouse coordinates to pane-relative
+    /// 1-based values as required by the SGR protocol.
+    pub(crate) fn to_sgr_bytes(self, origin: Pos) -> Vec<u8> {
+        let x = self
+            .pos
+            .col_index
+            .as_u16()
+            .saturating_sub(origin.col_index.as_u16())
+            .saturating_add(1);
+        let y = self
+            .pos
+            .row_index
+            .as_u16()
+            .saturating_sub(origin.row_index.as_u16())
+            .saturating_add(1);
+
+        let (code, suffix) = mouse_code_and_suffix(self.kind);
+
+        format!("\x1b[<{};{};{}{}", code, x, y, suffix as char).into_bytes()
+    }
+}
+
+fn mouse_code_and_suffix(kind: MouseInputKind) -> (u16, u8) {
+    match kind {
+        MouseInputKind::MouseDown(button) => {
+            let b = match button {
+                Button::Left => 0,
+                Button::Middle => 1,
+                Button::Right => 2,
+            };
+            (b, b'M')
+        }
+        MouseInputKind::MouseUp(button) => {
+            let b = match button {
+                Button::Left => 0,
+                Button::Middle => 1,
+                Button::Right => 2,
+            };
+            (b, b'm')
+        }
+        MouseInputKind::MouseDrag(button) => {
+            let b = match button {
+                Button::Left => 32,
+                Button::Middle => 33,
+                Button::Right => 34,
+            };
+            (b, b'M')
+        }
+        MouseInputKind::MouseMove => (35, b'M'),
+        MouseInputKind::ScrollUp => (64, b'M'),
+        MouseInputKind::ScrollDown => (65, b'M'),
+        MouseInputKind::ScrollLeft => (66, b'M'),
+        MouseInputKind::ScrollRight => (67, b'M'),
+    }
+}
