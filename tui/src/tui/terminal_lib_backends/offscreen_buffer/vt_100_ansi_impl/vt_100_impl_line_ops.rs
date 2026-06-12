@@ -91,6 +91,7 @@ impl OffscreenBuffer {
         ok!()
     }
 
+
     /// Shift lines up within a range by the specified amount.
     /// Lines at the bottom of the range are filled with blank lines.
     /// Returns true if the operation was successful.
