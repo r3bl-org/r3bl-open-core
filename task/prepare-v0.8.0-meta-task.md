@@ -10,8 +10,14 @@
   - [x] [improve-immature-vt100-shim.md](improve-immature-vt100-shim.md)
   - [x] [pr-448-fix.md](done/pr-448-fix.md) - https://github.com/r3bl-org/r3bl-open-core/pull/448
 - [ ] RRT API (Pending PRs & Issues)
-  - [ ] https://github.com/r3bl-org/r3bl-open-core/pull/452
+  - [x] [pr-452-fix.md](pr-452-fix.md) - https://github.com/r3bl-org/r3bl-open-core/pull/452
   - [ ] https://github.com/r3bl-org/r3bl-open-core/issues/451
+- [ ] PRs from Cecile
+  - [ ] https://github.com/r3bl-org/r3bl-open-core/pull/455
+  - [ ] https://github.com/r3bl-org/r3bl-open-core/pull/456
+  - [ ] https://github.com/r3bl-org/r3bl-open-core/pull/457
+  - [ ] https://github.com/r3bl-org/r3bl-open-core/pull/458
+  - [ ] https://github.com/r3bl-org/r3bl-open-core/pull/459
 - [ ] Core Types Refactor
   - [ ] [upgrade-range-for-rust_1_96_0.md](upgrade-range-for-rust_1_96_0.md)
 - [ ] Release Verification & Publication

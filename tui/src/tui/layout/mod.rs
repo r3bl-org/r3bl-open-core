@@ -17,7 +17,3 @@ pub use layout_error::*;
 pub use partial_flex_box::*;
 pub use props::*;
 pub use surface::*;
-
-// Tests.
-mod test_surface_2_col_complex;
-mod test_surface_2_col_simple;

@@ -210,6 +210,8 @@ in that skill's directory (e.g., `patterns.md`, `reference.md`, `examples.md`).
 - **release-crate** - Full crate release workflow: version bump, changelog, publish to crates.io,
   git tag, GitHub release. Use when releasing a new version of any workspace crate.
 
+- **pr-review** - Create a structured integration and review plan for a Pull Request. Use when the user wants to systematically integrate a community PR.
+
 ### Log Analysis
 
 - **analyze-log-files** - Strip ANSI escape sequences from log files before analysis. Use when
@@ -237,6 +239,7 @@ in that skill's directory (e.g., `patterns.md`, `reference.md`, `examples.md`).
 | `/check-regression` | analyze-performance |
 | `/analyze-logs` | analyze-log-files |
 | `/release` | release-crate |
+| `/pr-review` | pr-review |
 | `/r3bl-task` | Task management (see below) |
 | `/boxes` | Unicode box-drawing character set |
 
@@ -408,6 +411,10 @@ The `Task:` trailer links the commit to its plan/design document for traceabilit
 The `/r3bl-task` slash command is available to manage all the details of a long-running
 task. Follow the **Standard Workflow** (Alignment -> Plan -> Execute) when using this system.
 All tasks are stored in the `./task/` directory as individual Markdown files.
+
+### Task File Formatting
+
+Always run `npx prettier --write <file>` on any `task/*.md` files after creating or updating them. This ensures markdown is correctly formatted and easy to review in the user's IDE.
 
 ### Folder Structure
 
