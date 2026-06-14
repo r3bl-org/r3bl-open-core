@@ -11,7 +11,7 @@
   - [x] [pr-448-fix.md](done/pr-448-fix.md) - https://github.com/r3bl-org/r3bl-open-core/pull/448
 - [ ] RRT API (Pending PRs & Issues)
   - [x] [pr-452-fix.md](pr-452-fix.md) - https://github.com/r3bl-org/r3bl-open-core/pull/452
-  - [ ] https://github.com/r3bl-org/r3bl-open-core/issues/451
+  - [ ] [issue-451-fix.md](issue-451-fix.md) - https://github.com/r3bl-org/r3bl-open-core/issues/451
 - [ ] PRs from Cecile
   - [ ] https://github.com/r3bl-org/r3bl-open-core/pull/455
   - [ ] https://github.com/r3bl-org/r3bl-open-core/pull/456
