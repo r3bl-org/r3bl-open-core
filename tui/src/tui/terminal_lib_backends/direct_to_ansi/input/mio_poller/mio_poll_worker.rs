@@ -110,7 +110,7 @@ pub struct MioPollWorker {
 }
 
 impl RRTWorker for MioPollWorker {
-    type Event = PollerEvent;
+    type Output = PollerEvent;
     type Interrupt = MioSoftwareInterrupt;
 
     /// Creates a new mio poll worker and [`MioSoftwareInterrupt`] pair.
@@ -140,7 +140,10 @@ impl RRTWorker for MioPollWorker {
     /// [`mio::Waker`]: mio::Waker
     /// [`trigger_software_interrupt()`]:
     ///     crate::RRTSoftwareInterrupt::trigger_software_interrupt
-    fn create_and_register_os_sources() -> miette::Result<(Self, Self::Interrupt)> {
+    fn create_and_register_os_sources(
+        _config: Self::Config,
+        _receiver: tokio::sync::broadcast::Receiver<Self::Input>,
+    ) -> miette::Result<(Self, Self::Interrupt)> {
         // Create mio::Poll (epoll on Linux, kqueue on macOS).
         let poll_handle = Poll::new().map_err(PollCreationError)?;
         let mio_registry = poll_handle.registry();
@@ -207,7 +210,7 @@ impl RRTWorker for MioPollWorker {
     /// [`MioPollWorker::block_until_ready_then_dispatch_impl()`]: Self::block_until_ready_then_dispatch_impl
     fn block_until_ready_then_dispatch(
         &mut self,
-        sender: &Sender<RRTEvent<Self::Event>>,
+        sender: &Sender<RRTEvent<Self::Output>>,
     ) -> Continuation {
         self.block_until_ready_then_dispatch_impl(sender)
     }

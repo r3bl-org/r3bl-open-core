@@ -37,7 +37,7 @@ use super::{InterruptHandle, RRTWorker, StopReason};
 /// [`ThreadState`] enum, the compiler prevents you from accessing it when the thread is
 /// [`Stopping`] or [`Stopped`].
 /// - You literally cannot extract it without pattern matching on
-///   [`Running(interrupt_handle)`].
+///   [`Running(interrupt_handle, input_sender)`].
 /// - If the state is [`Stopping`] or [`Stopped`], the memory holding the [software
 ///   interrupt handle] is literally gone.
 ///
@@ -60,7 +60,7 @@ use super::{InterruptHandle, RRTWorker, StopReason};
 ///     super#historical-context-race-conditions-eliminated
 /// [`Mutex`]: std::sync::Mutex
 /// [`readline_async`]: crate::readline_async::ReadlineAsyncContext::try_new
-/// [`Running(interrupt_handle)`]: ThreadState::Running
+/// [`Running(interrupt_handle, input_sender)`]: ThreadState::Running
 /// [`Running`]: ThreadState::Running
 /// [`Starting`]: ThreadState::Starting
 /// [`state`]: super::ThreadLifecycleMonitor::lock()
@@ -194,7 +194,7 @@ pub enum ThreadState<W: RRTWorker> {
     /// [software interrupt handle]: crate::RRTSoftwareInterrupt
     /// [sources]: mio::event::Source
     /// [worker]: crate::RRTWorker
-    Running(InterruptHandle<W::Interrupt>),
+    Running(InterruptHandle<W::Interrupt>, tokio::sync::broadcast::Sender<W::Input>),
 
     /// # Current State
     ///
@@ -292,15 +292,25 @@ pub enum ThreadState<W: RRTWorker> {
     Restarting,
 }
 
+/// Describes whether the thread state is currently stable or in a transition phase.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ThreadStateStatus {
+    /// The state is stable ([`ThreadState::Running`] or [`ThreadState::Stopped`]).
+    Stable,
+    /// The state is transient ([`ThreadState::Starting`], [`ThreadState::Stopping`], or [`ThreadState::Restarting`]).
+    Transient,
+}
+
 impl<W: RRTWorker> ThreadState<W> {
-    /// Returns `true` if the state is considered stable (not in a transient transition
-    /// phase).
+    /// Returns the current [`ThreadStateStatus`] (stable or transient).
     ///
     /// Stable states:
     /// - [`Running`]: The thread is fully alive and polling for I/O.
     /// - [`Stopped`]: No thread exists; ready for a fresh spawn.
     ///
-    /// Transient states ([`Starting`], [`Stopping`], [`Restarting`]) return `false`.
+    /// Transient states:
+    /// - [`Starting`], [`Stopping`], [`Restarting`]: The framework is currently mutating
+    ///   OS resources or spawning/joining threads.
     ///
     /// [`Restarting`]: ThreadState::Restarting
     /// [`Running`]: ThreadState::Running
@@ -308,18 +318,10 @@ impl<W: RRTWorker> ThreadState<W> {
     /// [`Stopped`]: ThreadState::Stopped
     /// [`Stopping`]: ThreadState::Stopping
     #[must_use]
-    pub const fn is_stable(&self) -> bool {
-        matches!(self, ThreadState::Running(_) | ThreadState::Stopped)
+    pub const fn status(&self) -> ThreadStateStatus {
+        match self {
+            ThreadState::Running(_, _) | ThreadState::Stopped => ThreadStateStatus::Stable,
+            _ => ThreadStateStatus::Transient,
+        }
     }
-
-    /// Returns `true` if the state is in a transient transition phase.
-    ///
-    /// Transient states ([`Starting`], [`Stopping`], [`Restarting`]) indicate that the
-    /// framework is currently mutating OS resources or spawning/joining threads.
-    ///
-    /// [`Restarting`]: ThreadState::Restarting
-    /// [`Starting`]: ThreadState::Starting
-    /// [`Stopping`]: ThreadState::Stopping
-    #[must_use]
-    pub const fn is_transient(&self) -> bool { !self.is_stable() }
 }

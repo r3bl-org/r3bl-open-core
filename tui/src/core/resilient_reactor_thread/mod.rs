@@ -702,16 +702,19 @@
 //! struct MyWorker { /* resources, e.g., mio::Poll */ }
 //!
 //! impl RRTWorker for MyWorker {
-//!     type Event = MyEvent;
+//!     type Output = MyEvent;
 //!     type Interrupt = MyInterrupt;
 //!
-//!     fn create_and_register_os_sources() -> miette::Result<(Self, Self::Interrupt)> {
+//!     fn create_and_register_os_sources(
+//!         _config: Self::Config,
+//!         _receiver: tokio::sync::broadcast::Receiver<Self::Input>,
+//!     ) -> miette::Result<(Self, Self::Interrupt)> {
 //!         // Create worker with OS resources and a coupled RRTSoftwareInterrupt.
 //!         // e.g., create mio::Poll, register fds, create mio::Waker from registry.
 //!         Ok((MyWorker { /* ... */ }, MyInterrupt))
 //!     }
 //!
-//!     fn block_until_ready_then_dispatch(&mut self, sender: &Sender<RRTEvent<Self::Event>>) -> Continuation {
+//!     fn block_until_ready_then_dispatch(&mut self, sender: &Sender<RRTEvent<Self::Output>>) -> Continuation {
 //!         todo!("Do one iteration of work, broadcast events via RRTEvent::Worker(...)")
 //!     }
 //!
@@ -726,7 +729,7 @@
 //!
 //! # fn main() -> Result<(), Box<dyn std::error::Error>> {
 //! // 3. Subscribe to events
-//! let subscriber_guard = GLOBAL.try_subscribe()?;
+//! let subscriber_guard = GLOBAL.try_subscribe(())?;
 //! # ok!()
 //! # }
 //! ```
@@ -907,7 +910,7 @@
 //! [`EOF`]: https://en.wikipedia.org/wiki/End-of-file
 //! [`epoll_wait()`]: https://man7.org/linux/man-pages/man2/epoll_wait.2.html
 //! [`epoll`]: https://man7.org/linux/man-pages/man7/epoll.7.html
-//! [`Event`]: RRTWorker::Event
+//! [`Event`]: RRTWorker::Output
 //! [`eventfd`]: https://man7.org/linux/man-pages/man2/eventfd.2.html
 //! [`fd 0`]: https://man7.org/linux/man-pages/man3/stdin.3.html
 //! [`fd`]: https://man7.org/linux/man-pages/man2/open.2.html
@@ -1016,7 +1019,7 @@
 //! [`tty`]: https://man7.org/linux/man-pages/man4/tty.4.html
 //! [`TUI`]: crate::tui::TerminalWindow::main_event_loop
 //! [`UDP`]: https://en.wikipedia.org/wiki/User_Datagram_Protocol
-//! [`W::Event`]: RRTWorker::Event
+//! [`W::Event`]: RRTWorker::Output
 //! [`Wayland`]: https://wayland.freedesktop.org/
 //! [`WezTerm`]: https://wezfurlong.org/wezterm/
 //! [Actor]: https://en.wikipedia.org/wiki/Actor_model
@@ -1143,6 +1146,11 @@ pub mod rrt_worker;
 #[cfg(not(any(test, doc)))]
 mod rrt_worker;
 
+#[cfg(any(test, doc))]
+pub mod rrt_input_sender;
+#[cfg(not(any(test, doc)))]
+mod rrt_input_sender;
+
 // Re-export.
 
 // --- Public API (What you use) ---
@@ -1151,15 +1159,14 @@ pub use rrt_event::*;
 pub use rrt_restart_policy::*;
 pub use rrt_subscriber_guard::*;
 pub use rrt_types::*;
+pub use rrt_interrupt_handle::*;
 pub use rrt_worker::*;
-
+pub use rrt_input_sender::*;
 // --- Internal Implementation (How it works) ---
 pub use rrt_engine::*;
 pub use rrt_monitor::*;
 pub use rrt_termination_guard::*;
 pub use rrt_thread_state::*;
-pub use rrt_interrupt_handle::*;
-
 // Tests.
 #[cfg(any(test, doc))]
 pub mod rrt_integration_tests;

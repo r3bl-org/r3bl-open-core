@@ -18,31 +18,36 @@ impl RRTSoftwareInterrupt for TestInterrupt {
 #[derive(Debug)]
 struct TestWorker;
 impl RRTWorker for TestWorker {
-    type Event = ();
     type Interrupt = TestInterrupt;
-    fn create_and_register_os_sources() -> miette::Result<(Self, Self::Interrupt)> {
+    fn create_and_register_os_sources(
+        _config: Self::Config,
+        _receiver: tokio::sync::broadcast::Receiver<Self::Input>,
+    ) -> miette::Result<(Self, Self::Interrupt)> {
         unimplemented!()
     }
     fn block_until_ready_then_dispatch(
         &mut self,
-        _sender: &tokio::sync::broadcast::Sender<RRTEvent<Self::Event>>,
+        _sender: &tokio::sync::broadcast::Sender<RRTEvent<Self::Output>>,
     ) -> Continuation {
         unimplemented!()
     }
 }
 
+use super::super::ThreadStateStatus;
+
 #[test]
-fn test_state_is_stable_is_transient() {
+fn test_state_status() {
     let interrupted = Arc::new(AtomicBool::new(false));
     let interrupt = TestInterrupt { interrupted };
 
+    let (tx, _rx) = tokio::sync::broadcast::channel(16);
+
     let stable_states = vec![
         ThreadState::<TestWorker>::Stopped,
-        ThreadState::<TestWorker>::Running(InterruptHandle::new(interrupt)),
+        ThreadState::<TestWorker>::Running(InterruptHandle::new(interrupt), tx),
     ];
     for state in stable_states {
-        assert!(state.is_stable());
-        assert!(!state.is_transient());
+        assert_eq!(state.status(), ThreadStateStatus::Stable);
     }
 
     let transient_states = vec![
@@ -51,8 +56,7 @@ fn test_state_is_stable_is_transient() {
         ThreadState::<TestWorker>::Restarting,
     ];
     for state in transient_states {
-        assert!(!state.is_stable());
-        assert!(state.is_transient());
+        assert_eq!(state.status(), ThreadStateStatus::Transient);
     }
 }
 
@@ -65,6 +69,7 @@ fn test_interrupt_if_running() {
 
     let monitor = ThreadLifecycleMonitor::<TestWorker>::new(ThreadState::Running(
         InterruptHandle::new(interrupt),
+        tokio::sync::broadcast::channel(1).0,
     ));
 
     // 1. Running -> Should interrupt.
@@ -141,7 +146,7 @@ fn test_block_until_stable_state_reached() {
     let handle = std::thread::spawn(move || {
         // Blocks because state is Starting.
         let guard = monitor_clone.block_until_stable_state_reached();
-        matches!(*guard, ThreadState::Running(_))
+        matches!(*guard, ThreadState::Running(_, _))
     });
 
     // Wait a bit to ensure it's blocked.
@@ -151,9 +156,15 @@ fn test_block_until_stable_state_reached() {
     {
         let interrupted = Arc::new(AtomicBool::new(false));
         let interrupt = TestInterrupt { interrupted };
-        let mut state = monitor.lock();
-        *state = ThreadState::Running(InterruptHandle::new(interrupt));
-        monitor.notify_all();
+        let state = monitor.lock();
+        let state = monitor.set_state(
+            state,
+            ThreadState::Running(
+                InterruptHandle::new(interrupt),
+                tokio::sync::broadcast::channel(1).0,
+            )
+        );
+        drop(state);
     }
 
     let is_running = handle.join().unwrap();
@@ -178,9 +189,9 @@ fn test_block_until_stable_state_reached_failure_recovery() {
 
     // Transition to Stopped (representing a failure to start).
     {
-        let mut state = monitor.lock();
-        *state = ThreadState::Stopped;
-        monitor.notify_all();
+        let state = monitor.lock();
+        let state = monitor.set_state(state, ThreadState::Stopped);
+        drop(state);
     }
 
     let is_stopped = handle.join().unwrap();

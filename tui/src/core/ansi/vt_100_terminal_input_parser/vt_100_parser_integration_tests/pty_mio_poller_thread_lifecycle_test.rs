@@ -141,7 +141,7 @@ fn controlled() {
         let is_running = || {
             matches!(
                 *global_input_resource::SINGLETON.shared_state.lock(),
-                ThreadState::Running(_)
+                ThreadState::Running(_, _)
             )
         };
         let is_stopped = || {

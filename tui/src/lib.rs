@@ -16,6 +16,9 @@
 // Allow const generic params to accept types other than bool and char.
 #![feature(adt_const_params)]
 
+// Allow default types for associated types in traits.
+#![feature(associated_type_defaults)]
+
 //! # Why R3BL?
 //!
 //! <img

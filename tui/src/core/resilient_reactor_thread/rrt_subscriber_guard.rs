@@ -5,7 +5,8 @@
 //!
 //! [`RAII`]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
 
-use super::{BroadcastSender, RRTEvent, RRTWorker, SubscribeError, ThreadLifecycleMonitor};
+use super::{BroadcastSender, InputSender, RRTEvent, RRTWorker, SubscribeError,
+            ThreadLifecycleMonitor};
 use std::sync::Arc;
 use tokio::sync::broadcast::Receiver;
 
@@ -87,7 +88,7 @@ pub struct SubscriberGuard<W: RRTWorker> {
     /// The broadcast receiver for events. Do not reorder - see [Drop Behavior].
     ///
     /// [Drop Behavior]: SubscriberGuard#drop-behavior
-    pub receiver: Receiver<RRTEvent<W::Event>>,
+    pub receiver: Receiver<RRTEvent<W::Output>>,
 
     /// Interrupts the dedicated thread on drop. Do not reorder - see [Drop Behavior].
     ///
@@ -96,13 +97,42 @@ pub struct SubscriberGuard<W: RRTWorker> {
 
     /// Clone of the broadcast sender, used to create additional subscriptions from an
     /// existing guard.
-    pub sender: BroadcastSender<W::Event>,
+    pub sender: BroadcastSender<W::Output>,
 }
 
 impl<W: RRTWorker> SubscriberGuard<W> {
+    /// Returns an [`InputSender`] that allows you to send [`W::Input`] messages into the
+    /// blocking worker thread.
+    ///
+    /// # Architecture: Why are there two ways to get an [`InputSender`]?
+    ///
+    /// You can obtain an [`InputSender`] directly from the [`RRT`] instance, or from this
+    /// active [`SubscriberGuard`].
+    ///
+    /// You should use **this** method when your component is already an active reader
+    /// (e.g., a terminal UI that draws subprocess output to the screen) and needs a
+    /// convenient way to send a command back into the worker without having to keep a
+    /// separate reference to the root `RRT` instance.
+    ///
+    /// Conversely, if your component is **Write-Only** (e.g., an app-level event loop
+    /// that only forwards keystrokes to the background worker), you should call
+    /// [`RRT::get_input_sender()`] directly. This avoids accidentally subscribing and
+    /// creating a "ghost receiver" that forces the underlying [`tokio::sync::broadcast`]
+    /// channel to buffer and evict messages for a listener that never polls.
+    ///
+    /// [`RRT::get_input_sender()`]: super::RRT::get_input_sender
+    /// [`RRT`]: super::RRT
+    /// [`W::Input`]: super::RRTWorker::Input
+    #[must_use]
+    pub fn get_input_sender(&self) -> InputSender<W> {
+        InputSender {
+            shared_state: self.interrupt_on_drop.shared_state.clone(),
+        }
+    }
+
     pub fn new(
-        sender: BroadcastSender<W::Event>,
-        receiver: Receiver<RRTEvent<W::Event>>,
+        sender: BroadcastSender<W::Output>,
+        receiver: Receiver<RRTEvent<W::Output>>,
         shared_state: Arc<ThreadLifecycleMonitor<W>>,
     ) -> Self {
         Self {
@@ -131,8 +161,8 @@ impl<W: RRTWorker> SubscriberGuard<W> {
     /// [`Running`]: crate::resilient_reactor_thread::ThreadState::Running
     /// [`Stopped`]: crate::resilient_reactor_thread::ThreadState::Stopped
     /// [`try_subscribe()`]: crate::resilient_reactor_thread::try_subscribe
-    pub fn try_subscribe(&self) -> Result<Self, SubscribeError> {
-        super::try_subscribe(&self.sender, &self.interrupt_on_drop.shared_state)
+    pub fn try_subscribe(&self, config: W::Config) -> Result<Self, SubscribeError> {
+        super::try_subscribe(&self.sender, &self.interrupt_on_drop.shared_state, config)
     }
 }
 
@@ -183,7 +213,10 @@ mod drop_order_tests {
 
         // Build the monitor with state in Running(InterruptHandle::new(...)).
         let shared_state = Arc::new(ThreadLifecycleMonitor::<DropOrderTestWorker>::new(
-            ThreadState::Running(InterruptHandle::new(interrupt)),
+            ThreadState::Running(
+                InterruptHandle::new(interrupt),
+                tokio::sync::broadcast::channel(1).0,
+            ),
         ));
 
         let receiver = sender.subscribe();
@@ -222,16 +255,21 @@ mod drop_order_tests {
     struct DropOrderTestWorker;
 
     impl RRTWorker for DropOrderTestWorker {
-        type Event = ();
+        type Config = ();
+        type Input = ();
+        type Output = ();
         type Interrupt = DropOrderInterrupt;
 
-        fn create_and_register_os_sources() -> miette::Result<(Self, Self::Interrupt)> {
+        fn create_and_register_os_sources(
+            _config: Self::Config,
+            _receiver: broadcast::Receiver<Self::Input>,
+        ) -> miette::Result<(Self, Self::Interrupt)> {
             unimplemented!("Not used in drop-order test")
         }
 
         fn block_until_ready_then_dispatch(
             &mut self,
-            _sender: &broadcast::Sender<RRTEvent<Self::Event>>,
+            _sender: &broadcast::Sender<RRTEvent<Self::Output>>,
         ) -> Continuation {
             unimplemented!("Not used in drop-order test")
         }

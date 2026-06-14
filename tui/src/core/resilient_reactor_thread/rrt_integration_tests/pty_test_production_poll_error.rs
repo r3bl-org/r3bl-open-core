@@ -60,7 +60,9 @@ fn controlled() {
     println!("{POLL_ERROR_READY}");
     std::io::stdout().flush().expect("Failed to flush");
 
-    let (mut worker, _waker) = MioPollWorker::create_and_register_os_sources().unwrap();
+    let (mut worker, _waker) =
+        MioPollWorker::create_and_register_os_sources((), tokio::sync::broadcast::channel(1).1)
+            .unwrap();
 
     let (sender, mut receiver) =
         tokio::sync::broadcast::channel::<RRTEvent<PollerEvent>>(16);

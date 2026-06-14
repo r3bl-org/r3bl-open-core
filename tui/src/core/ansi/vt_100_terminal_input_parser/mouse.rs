@@ -1006,7 +1006,7 @@ mod tests {
             1,
             1,
             VT100MouseActionIR::Scroll(VT100ScrollDirectionIR::Up),
-            modifiers.clone(),
+            modifiers,
         );
 
         let (event, _) = parse_mouse_sequence(&seq).expect("Should parse X10");
@@ -1370,7 +1370,7 @@ mod tests {
             1,
             1,
             VT100MouseActionIR::Scroll(VT100ScrollDirectionIR::Up),
-            modifiers.clone(),
+            modifiers,
         );
 
         let (event, _) = parse_mouse_sequence(&seq).expect("Should parse RXVT");
@@ -1545,7 +1545,7 @@ mod tests {
             1,
             1,
             VT100MouseActionIR::Scroll(VT100ScrollDirectionIR::Up),
-            modifiers.clone(),
+            modifiers,
         );
 
         let (event, _) = parse_mouse_sequence(&seq).expect("Should parse");
