@@ -594,7 +594,7 @@ impl DirectToAnsiInputDevice {
     /// [race condition documentation]: super::input_device_impl::InputSubscriberGuard#race-condition-and-correctness
     pub fn new() -> Result<Self, SubscribeError> {
         super::at_most_one_instance_assert::claim_and_assert();
-        match global_input_resource::SINGLETON.try_subscribe() {
+        match global_input_resource::SINGLETON.try_subscribe(()) {
             Ok(subscriber_guard) => Ok(Self { subscriber_guard }),
             Err(err) => {
                 super::at_most_one_instance_assert::release();
@@ -638,7 +638,7 @@ impl DirectToAnsiInputDevice {
     /// [`SubscribeError`]: crate::core::resilient_reactor_thread::SubscribeError
     /// [`try_subscribe()`]: Self::try_subscribe
     pub fn try_subscribe(&self) -> Result<InputSubscriberGuard, SubscribeError> {
-        self.subscriber_guard.try_subscribe()
+        self.subscriber_guard.try_subscribe(())
     }
 
     /// Read the next input event asynchronously.

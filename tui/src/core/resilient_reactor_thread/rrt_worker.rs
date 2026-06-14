@@ -175,7 +175,7 @@ pub trait RRTSoftwareInterrupt: Send + Sync + Debug + 'static {
 /// This is the main "entry point" for you to use the RRT [framework]. The journey begins
 /// with you defining a static singleton of type [`RRT`] in your code and providing a
 /// concrete type that implements this trait. See the [DI overview] for what each piece
-/// ([`RRTWorker`], [`RRTSoftwareInterrupt`], [`Event`]) provides and how the [framework]
+/// ([`RRTWorker`], [`RRTSoftwareInterrupt`], [`Output`]) provides and how the [framework]
 /// orchestrates them.
 ///
 /// This trait handles both **resource creation**
@@ -193,7 +193,7 @@ pub trait RRTSoftwareInterrupt: Send + Sync + Debug + 'static {
 /// The [framework] repeatedly calls [`block_until_ready_then_dispatch()`] on the
 /// implementing type until it returns [`Continuation::Stop`] or
 /// [`Continuation::Restart`]. Typically, your business logic gets any data from sources
-/// that are ready and then converts them into a domain-specific [`event`] type that is
+/// that are ready and then converts them into a domain-specific [`Output`] type that is
 /// broadcast to all the async consumers.
 ///
 /// Returning [`Continuation::Restart`] triggers [self-healing restart] - the [framework]
@@ -231,8 +231,8 @@ pub trait RRTSoftwareInterrupt: Send + Sync + Debug + 'static {
 /// [`'static`]: super::RRT#static-trait-bound-vs-static-lifetime-annotation
 /// [`block_until_ready_then_dispatch()`]: Self::block_until_ready_then_dispatch
 /// [`create_and_register_os_sources()`]: Self::create_and_register_os_sources
-/// [`event`]: Self::Event
 /// [`MioPollWorker`]: crate::mio_poller::MioPollWorker
+/// [`Output`]: Self::Output
 /// [`restart_policy()`]: Self::restart_policy
 /// [`RRT`]: super::RRT
 /// [`signals`]: https://man7.org/linux/man-pages/man7/signal.7.html
@@ -241,30 +241,34 @@ pub trait RRTSoftwareInterrupt: Send + Sync + Debug + 'static {
 /// [`try_subscribe()`]: super::RRT::try_subscribe
 /// [default policy]: RestartPolicy#impl-Default-for-RestartPolicy
 /// [DI overview]: super#separation-of-concerns-and-dependency-injection-di
-/// [Event]: Self::Event
 /// [Framework]: crate::core::resilient_reactor_thread#the-rrt-contract-and-benefits
 /// [framework]: crate::core::resilient_reactor_thread#the-rrt-contract-and-benefits
 /// [module docs]: super::RRT#two-phase-setup
 /// [self-healing restart]: super#self-healing-restart-details
 /// [two-phase setup]: super::RRT#two-phase-setup
 pub trait RRTWorker: Send + Debug + 'static {
-    /// Capacity of the [`broadcast channel`] for events.
+    /// Capacity of the [`tokio::sync::broadcast`] channel for inbound commands or data
+    /// sent to the worker. Default is `1_024`. Override this if your worker requires a
+    /// different inbound buffer size.
+    const INPUT_CHANNEL_CAPACITY: usize = 1_024;
+
+    /// Capacity of the [`tokio::sync::broadcast`] channel for outbound events or data
+    /// produced by the worker. Default is `4_096`. Override this if your worker is
+    /// high-volume (e.g., [`stdout`] streaming).
     ///
-    /// When the buffer is full, the oldest message is dropped to make room for new
-    /// ones. Slow consumers will receive [`Lagged`] on their next [`recv()`] call,
-    /// indicating how many messages they missed.
+    /// [`stdout`]: std::io::stdout
+    const OUTPUT_CHANNEL_CAPACITY: usize = 4_096;
+
+    /// The type containing startup configuration passed to
+    /// [`create_and_register_os_sources`]. Set to `()` if your worker does not require
+    /// dynamic configuration.
     ///
-    /// `4_096` is generous for typical event streams, but cheap (events are usually
-    /// small) and provides headroom for debug/logging consumers that might occasionally
-    /// lag.
-    ///
-    /// Override this in your [`RRTWorker`] implementation to customize the channel
-    /// capacity.
-    ///
-    /// [`broadcast channel`]: tokio::sync::broadcast
-    /// [`Lagged`]: tokio::sync::broadcast::error::RecvError::Lagged
-    /// [`recv()`]: tokio::sync::broadcast::Receiver::recv
-    const CHANNEL_CAPACITY: usize = 4_096;
+    /// [`create_and_register_os_sources`]: Self::create_and_register_os_sources
+    type Config: Clone + Send + Debug + 'static = ();
+
+    /// The type containing domain-specific commands or data sent into your worker from
+    /// async code. Set to `()` if your worker does not require inbound messaging.
+    type Input: Clone + Send + Debug + 'static = ();
 
     /// The type containing domain-specific data to broadcast from your implementation to
     /// async consumers.
@@ -286,7 +290,7 @@ pub trait RRTWorker: Send + Debug + 'static {
     /// [`tokio`]: tokio
     /// [executor threads]: tokio::runtime
     /// [multithreaded runtime]: tokio::runtime::Builder::new_multi_thread
-    type Event: Clone + Send + Sync + 'static;
+    type Output: Clone + Send + Sync + Debug + 'static = ();
 
     /// The concrete interrupt handle type returned by
     /// [`create_and_register_os_sources()`] alongside the worker.
@@ -360,7 +364,10 @@ pub trait RRTWorker: Send + Debug + 'static {
     /// [self-healing restart]: super#self-healing-restart-details
     /// [Thread Lifecycle]: super::RRT#thread-lifecycle
     /// [Two-Phase Setup]: super::RRT#two-phase-setup
-    fn create_and_register_os_sources() -> miette::Result<(Self, Self::Interrupt)>
+    fn create_and_register_os_sources(
+        config: Self::Config,
+        receiver: tokio::sync::broadcast::Receiver<Self::Input>,
+    ) -> miette::Result<(Self, Self::Interrupt)>
     where
         Self: Sized;
 
@@ -422,6 +429,6 @@ pub trait RRTWorker: Send + Debug + 'static {
     /// [trait docs]: Self
     fn block_until_ready_then_dispatch(
         &mut self,
-        sender: &Sender<RRTEvent<Self::Event>>,
+        sender: &Sender<RRTEvent<Self::Output>>,
     ) -> Continuation;
 }

@@ -2,7 +2,7 @@
 
 //! Thread monitor implementation for the Resilient Reactor Thread (RRT) pattern. See
 //! [`ThreadLifecycleMonitor`] for details.
-use super::{RRTWorker, ThreadState};
+use super::{RRTWorker, ThreadState, ThreadStateStatus};
 use crate::core::common::Monitor;
 use std::sync::{LockResult, MutexGuard, atomic::AtomicU8};
 
@@ -28,30 +28,35 @@ use std::sync::{LockResult, MutexGuard, atomic::AtomicU8};
 ///     crate#terminal-restoration-panic-drop-and-mutex-poison-safety
 #[derive(Debug)]
 pub struct ThreadLifecycleMonitor<W: RRTWorker> {
-    /// The definitive lifecycle state of the dedicated thread. By combining the
-    /// typestate pattern and a state machine, this robust mechanism eliminates race
-    /// conditions by making them unrepresentable in the type system.
-    pub(super) monitor: Monitor<ThreadState<W>>,
+    /// The definitive lifecycle state of the dedicated thread. By combining the typestate
+    /// pattern and a state machine, this robust mechanism eliminates race conditions by
+    /// making them unrepresentable in the type system.
+    pub state_monitor: Monitor<ThreadState<W>>,
 
     /// Per-thread-generation counter. Incremented each time a new thread is spawned.
     ///
-    /// This counter is shared between the [`RRT`] singleton and all
-    /// [`SubscriberGuard`]s. No [`Mutex`] needed - atomic operations are sufficient
-    /// for a single counter.
+    /// This counter is shared between the [`RRT`] singleton and all [`SubscriberGuard`]s.
+    /// No [`Mutex`] needed - atomic operations are sufficient for a single counter.
     ///
-    /// [`Condvar`]: std::sync::Condvar
     /// [`Mutex`]: std::sync::Mutex
     /// [`RRT`]: crate::resilient_reactor_thread::RRT
     /// [`SubscriberGuard`]: crate::resilient_reactor_thread::SubscriberGuard
-    pub(super) thread_generation: AtomicU8,
+    pub thread_generation: AtomicU8,
+
+    /// Triggered whenever the thread state changes. This allows [`InputSender`] to await
+    /// a restart seamlessly without polling.
+    ///
+    /// [`InputSender`]: crate::resilient_reactor_thread::InputSender
+    pub smart_sender_notify: AsyncNotify,
 }
 
 impl<W: RRTWorker> ThreadLifecycleMonitor<W> {
     /// Creates a new [`ThreadLifecycleMonitor`] with the given initial state.
-    pub const fn new(state: ThreadState<W>) -> Self {
+    pub fn new(state: ThreadState<W>) -> Self {
         Self {
-            monitor: Monitor::new(state),
+            state_monitor: Monitor::new(state),
             thread_generation: AtomicU8::new(0),
+            smart_sender_notify: AsyncNotify::new(),
         }
     }
 
@@ -70,7 +75,7 @@ impl<W: RRTWorker> ThreadLifecycleMonitor<W> {
     ///     crate#terminal-restoration-panic-drop-and-mutex-poison-safety
     #[allow(clippy::elidable_lifetime_names)]
     pub fn lock<'this>(&'this self) -> MutexGuard<'this, ThreadState<W>> {
-        self.monitor.lock()
+        self.state_monitor.lock()
     }
 
     /// This is a **poison-safe** alternative to [`Self::lock()`] specifically designed
@@ -87,9 +92,10 @@ impl<W: RRTWorker> ThreadLifecycleMonitor<W> {
     ///
     /// Use this method when **restoring the user's terminal is more important than the
     /// integrity of the internal state**. This is the **Resilience over Integrity**
-    /// philosophy. It returns a raw [`std::sync::LockResult`], allowing you to use a pattern like:
-    /// `lock_raw().unwrap_or_else(|e| e.into_inner())` to retrieve the (possibly dirty)
-    /// state and proceed with terminal restoration rather than aborting the process.
+    /// philosophy. It returns a raw [`std::sync::LockResult`], allowing you to use a
+    /// pattern like: `lock_raw().unwrap_or_else(|e| e.into_inner())` to retrieve the
+    /// (possibly dirty) state and proceed with terminal restoration rather than aborting
+    /// the process.
     ///
     /// # Errors
     ///
@@ -106,7 +112,7 @@ impl<W: RRTWorker> ThreadLifecycleMonitor<W> {
     ///     crate#terminal-restoration-panic-drop-and-mutex-poison-safety
     #[allow(clippy::elidable_lifetime_names)]
     pub fn lock_raw<'this>(&'this self) -> LockResult<MutexGuard<'this, ThreadState<W>>> {
-        self.monitor.lock_raw()
+        self.state_monitor.lock_raw()
     }
 
     /// Blocks the current thread until the dedicated thread reaches a stable state
@@ -137,7 +143,9 @@ impl<W: RRTWorker> ThreadLifecycleMonitor<W> {
         &'this self,
     ) -> MutexGuard<'this, ThreadState<W>> {
         let state_guard = self.lock();
-        self.wait_until(state_guard, |state| !state.is_transient())
+        self.wait_until(state_guard, |state| {
+            state.status() == ThreadStateStatus::Stable
+        })
     }
 
     /// Blocks the current thread on the internal condition variable, releasing the
@@ -159,7 +167,7 @@ impl<W: RRTWorker> ThreadLifecycleMonitor<W> {
         &'this self,
         guard: MutexGuard<'this, ThreadState<W>>,
     ) -> MutexGuard<'this, ThreadState<W>> {
-        self.monitor.wait(guard)
+        self.state_monitor.wait(guard)
     }
 
     /// Blocks the current thread on the internal condition variable until the
@@ -186,7 +194,7 @@ impl<W: RRTWorker> ThreadLifecycleMonitor<W> {
     where
         F: FnMut(&mut ThreadState<W>) -> bool,
     {
-        self.monitor.wait_until(guard, condition)
+        self.state_monitor.wait_until(guard, condition)
     }
 
     /// Interrupts the dedicated thread if it is currently in the [`Running`] state. No-op
@@ -309,7 +317,7 @@ impl<W: RRTWorker> ThreadLifecycleMonitor<W> {
             }
         };
 
-        if let ThreadState::Running(interrupt_handle) = &*state_guard {
+        if let ThreadState::Running(interrupt_handle, _) = &*state_guard {
             // Perform the interrupt while holding the lock to ensure the Running state
             // remains valid.
             interrupt_handle.trigger_software_interrupt();
@@ -317,14 +325,6 @@ impl<W: RRTWorker> ThreadLifecycleMonitor<W> {
 
         drop(state_guard);
     }
-
-    /// Wakes up all threads that are currently blocked on this monitor's condition
-    /// variable.
-    pub fn notify_all(&self) { self.monitor.notify_all(); }
-
-    /// Wakes up one thread that is currently blocked on this monitor's condition
-    /// variable.
-    pub fn notify_one(&self) { self.monitor.notify_one(); }
 
     /// Updates the current [`ThreadState`] and logs the transition (if
     /// [`DEBUG_TUI_SHOW_RESILIENT_REACTOR_THREAD`] is enabled).
@@ -383,8 +383,23 @@ impl<W: RRTWorker> ThreadLifecycleMonitor<W> {
             );
         });
 
+        // Get the status before the state is moved.
+        let thread_state_status = new_state.status();
+
         // Delegate to the underlying monitor.
-        self.monitor.set_state(guard, new_state)
+        let guard = self.state_monitor.set_state(guard, new_state);
+
+        // Automatically wake up both sync OS threads (waiting in try_subscribe) and async
+        // Tokio tasks (waiting in InputSender::send) once the state stabilizes.
+        match thread_state_status {
+            ThreadStateStatus::Stable => {
+                self.smart_sender_notify.notify_all();
+                self.state_monitor.notify_all();
+            }
+            ThreadStateStatus::Transient => {}
+        }
+
+        guard
     }
 
     /// Updates the current [`ThreadState`] by applying the provided closure `f`.
@@ -411,7 +426,7 @@ impl<W: RRTWorker> ThreadLifecycleMonitor<W> {
         });
 
         // Delegate to the underlying monitor.
-        self.monitor.update_state(guard, fun)
+        self.state_monitor.update_state(guard, fun)
     }
 
     /// Reads the current [`ThreadState`] by applying the provided closure `f`.
@@ -438,6 +453,51 @@ impl<W: RRTWorker> ThreadLifecycleMonitor<W> {
         });
 
         // Delegate to the underlying monitor.
-        self.monitor.read_state(guard, f)
+        self.state_monitor.read_state(guard, f)
     }
+}
+
+/// A wrapper around [`tokio::sync::Notify`] that provides intuitive,
+/// [`std::sync::Condvar`]-like method names to improve code readability.
+///
+/// [`tokio::sync::Notify`] uses confusing naming:
+/// - [`notified()`]`.await` to wait, and
+/// - [`notify_waiters()`] to notify all.
+///
+/// This wrapper provides [`wait()`] and [`notify_all()`] which are easy to read and
+/// understand.
+///
+/// [`notified()`]: tokio::sync::Notify::notified
+/// [`notify_all()`]: Self::notify_all
+/// [`notify_waiters()`]: tokio::sync::Notify::notify_waiters
+/// [`wait()`]: Self::wait
+#[derive(Debug, Default)]
+pub struct AsyncNotify {
+    inner: tokio::sync::Notify,
+}
+
+impl AsyncNotify {
+    #[must_use]
+    pub const fn new() -> Self {
+        Self {
+            inner: tokio::sync::Notify::const_new(),
+        }
+    }
+
+    /// Synchronously registers a waiter and returns a Future that yields when
+    /// [`notify_all()`] is called.
+    ///
+    /// This must be called *while* holding the state mutex to prevent missed wakeups.
+    ///
+    /// [`notify_all()`]: Self::notify_all
+    pub fn wait(&self) -> impl std::future::Future<Output = ()> + '_ {
+        self.inner.notified()
+    }
+
+    /// Wakes up all tasks currently suspended in [`wait()`].
+    ///
+    /// This wraps [`tokio::sync::Notify::notify_waiters()`].
+    ///
+    /// [`wait()`]: Self::wait
+    pub fn notify_all(&self) { self.inner.notify_waiters(); }
 }

@@ -5,7 +5,7 @@ use crate::resilient_reactor_thread::{RRT, RRTEvent, ShutdownReason, ThreadState
 use std::time::{Duration, Instant};
 
 fn is_running(rrt: &RRT<TestWorker>) -> bool {
-    matches!(*rrt.shared_state.lock(), ThreadState::Running(_))
+    matches!(*rrt.shared_state.lock(), ThreadState::Running(_, _))
 }
 
 fn is_stopped(rrt: &RRT<TestWorker>) -> bool {
@@ -27,7 +27,7 @@ pub fn test_subscribe_spawns_thread() {
     );
 
     let rrt: RRT<TestWorker> = RRT::new();
-    let _guard = rrt.try_subscribe().unwrap();
+    let _guard = rrt.try_subscribe(()).unwrap();
 
     // Should be running immediately after try_subscribe returns Ok.
     assert!(is_running(&rrt));
@@ -59,12 +59,12 @@ pub fn test_subscribe_fast_path_reuse() {
     );
 
     let rrt: RRT<TestWorker> = RRT::new();
-    let _guard1 = rrt.try_subscribe().unwrap();
+    let _guard1 = rrt.try_subscribe(()).unwrap();
 
     let gen1 = rrt.get_thread_generation();
 
     // Second subscribe reuses the thread (fast path).
-    let _guard2 = rrt.try_subscribe().unwrap();
+    let _guard2 = rrt.try_subscribe(()).unwrap();
     let gen2 = rrt.get_thread_generation();
 
     assert_eq!(gen1, gen2, "Expected same generation (thread reuse)");
@@ -103,7 +103,7 @@ pub fn test_subscribe_slow_path_after_termination() {
 
     // First subscribe.
     {
-        let _guard = rrt.try_subscribe().unwrap();
+        let _guard = rrt.try_subscribe(()).unwrap();
         let gen1 = rrt.get_thread_generation();
 
         send_cmd(&cmd_sender1, b's');
@@ -117,7 +117,7 @@ pub fn test_subscribe_slow_path_after_termination() {
         assert!(is_stopped(&rrt));
 
         // Second subscribe after termination (slow path).
-        let _guard2 = rrt.try_subscribe().unwrap();
+        let _guard2 = rrt.try_subscribe(()).unwrap();
         let gen2 = rrt.get_thread_generation();
 
         assert_ne!(gen1, gen2, "Expected new generation (thread relaunch)");
@@ -150,7 +150,7 @@ pub fn test_shutdown_received_by_subscriber() {
     );
 
     let rrt: RRT<TestWorker> = RRT::new();
-    let guard = rrt.try_subscribe().unwrap();
+    let guard = rrt.try_subscribe(()).unwrap();
     let mut receiver = guard.receiver.resubscribe();
 
     // Worker returns Restart, budget=0 -> immediate exhaustion.
@@ -202,7 +202,7 @@ pub fn test_subscribe_after_panic_recovery() {
 
     // First subscribe.
     {
-        let _guard = rrt.try_subscribe().unwrap();
+        let _guard = rrt.try_subscribe(()).unwrap();
         let gen1 = rrt.get_thread_generation();
 
         // Cause a panic.
@@ -217,7 +217,7 @@ pub fn test_subscribe_after_panic_recovery() {
         assert!(is_stopped(&rrt));
 
         // Subscribe again after panic (should relaunch).
-        let _guard2 = rrt.try_subscribe().unwrap();
+        let _guard2 = rrt.try_subscribe(()).unwrap();
         let gen2 = rrt.get_thread_generation();
 
         assert_ne!(gen1, gen2, "Expected new generation after panic recovery");

@@ -68,7 +68,5 @@ impl<W: RRTWorker> Drop for TerminationGuard<W> {
             self.shared_state
                 .set_state(state_guard, ThreadState::Stopped),
         );
-
-        self.shared_state.notify_all();
     }
 }

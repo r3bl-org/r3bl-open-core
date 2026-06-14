@@ -42,10 +42,13 @@ pub struct TestWorker {
 }
 
 impl RRTWorker for TestWorker {
-    type Event = TestEvent;
+    type Output = TestEvent;
     type Interrupt = TestInterrupt;
 
-    fn create_and_register_os_sources() -> miette::Result<(Self, Self::Interrupt)> {
+    fn create_and_register_os_sources(
+        _config: Self::Config,
+        _receiver: tokio::sync::broadcast::Receiver<Self::Input>,
+    ) -> miette::Result<(Self, Self::Interrupt)> {
         TEST_FACTORY_STATE.write(|guard: &mut Option<TestFactoryState>| {
             let state = guard.as_mut().expect("TEST_FACTORY_STATE not initialized");
             state.create_count += 1;
@@ -61,7 +64,7 @@ impl RRTWorker for TestWorker {
 
     fn block_until_ready_then_dispatch(
         &mut self,
-        sender: &tokio::sync::broadcast::Sender<RRTEvent<Self::Event>>,
+        sender: &tokio::sync::broadcast::Sender<RRTEvent<Self::Output>>,
     ) -> Continuation {
         #[allow(clippy::match_same_arms)]
         match self.cmd_receiver.recv() {
@@ -127,7 +130,10 @@ pub fn create_shared_state(
     interrupt: TestInterrupt,
 ) -> Arc<ThreadLifecycleMonitor<TestWorker>> {
     Arc::new(ThreadLifecycleMonitor::<TestWorker>::new(
-        ThreadState::Running(InterruptHandle::new(interrupt)),
+        ThreadState::Running(
+            InterruptHandle::new(interrupt),
+            tokio::sync::broadcast::channel(1).0,
+        ),
     ))
 }
 
@@ -228,7 +234,7 @@ pub fn spawn_worker_loop(
     std::thread::Builder::new()
         .name(THREAD_NAME.into())
         .spawn(move || {
-            run_worker_loop::<TestWorker>(worker, sender, shared_state);
+            run_worker_loop::<TestWorker>(worker, (), sender, shared_state);
         })
         .unwrap()
 }

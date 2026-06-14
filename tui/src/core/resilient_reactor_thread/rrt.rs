@@ -5,7 +5,7 @@
 //! Thread lifecycle manager and entry point for the Resilient Reactor Thread (RRT)
 //! pattern. See [`RRT`] for details.
 
-use super::{BroadcastSender, InterruptHandle, RRTWorker, SubscribeError,
+use super::{BroadcastSender, InputSender, InterruptHandle, RRTWorker, SubscribeError,
             SubscriberGuard, ThreadLifecycleMonitor, ThreadState, run_worker_loop};
 use crate::{DEBUG_TUI_SHOW_RESILIENT_REACTOR_THREAD, core::common::AtomicU8Ext};
 use std::sync::{Arc, LazyLock};
@@ -30,8 +30,9 @@ use tokio::sync::broadcast;
 /// [`ThreadSpawn`]: SubscribeError::ThreadSpawn
 /// [`WorkerCreation`]: SubscribeError::WorkerCreation
 pub fn try_subscribe<W: RRTWorker>(
-    sender: &BroadcastSender<W::Event>,
+    sender: &BroadcastSender<W::Output>,
     shared_state: &Arc<ThreadLifecycleMonitor<W>>,
+    config: W::Config,
 ) -> Result<SubscriberGuard<W>, SubscribeError> {
     let state_guard = shared_state.block_until_stable_state_reached();
 
@@ -61,22 +62,29 @@ pub fn try_subscribe<W: RRTWorker>(
             state_guard = shared_state.set_state(state_guard, ThreadState::Starting);
             drop(state_guard);
 
+            // Create the initial input channel.
+            let (input_sender, input_receiver) =
+                tokio::sync::broadcast::channel(W::INPUT_CHANNEL_CAPACITY);
+
             // Allocate OS resources (outside the lock).
-            let (worker, interrupt) = match W::create_and_register_os_sources() {
-                Ok(pair) => pair,
-                Err(err) => {
-                    DEBUG_TUI_SHOW_RESILIENT_REACTOR_THREAD.then(|| {
-                        tracing::error!(
-                            message = "RRT: Failed to allocate OS resources.",
-                            error = ?err
-                        );
-                    });
-                    let state_guard = shared_state.lock();
-                    drop(shared_state.set_state(state_guard, ThreadState::Stopped));
-                    shared_state.notify_all();
-                    return Err(SubscribeError::WorkerCreation(err));
-                }
-            };
+            let (worker, interrupt) =
+                match W::create_and_register_os_sources(config.clone(), input_receiver) {
+                    Ok(pair) => pair,
+                    Err(err) => {
+                        DEBUG_TUI_SHOW_RESILIENT_REACTOR_THREAD.then(|| {
+                            tracing::error!(
+                                message = "RRT: Failed to allocate OS resources.",
+                                error = ?err
+                            );
+                        });
+
+                        let mut state_guard = shared_state.lock();
+                        state_guard = shared_state.set_state(state_guard, ThreadState::Stopped);
+                        drop(state_guard);
+
+                        return Err(SubscribeError::WorkerCreation(err));
+                    }
+                };
 
             // Re-acquire lock to perform atomic Running transition and spawn.
             let mut state_guard = shared_state.lock();
@@ -89,11 +97,12 @@ pub fn try_subscribe<W: RRTWorker>(
 
             state_guard = shared_state.set_state(
                 state_guard,
-                ThreadState::Running(InterruptHandle::new(interrupt)),
+                ThreadState::Running(InterruptHandle::new(interrupt), input_sender),
             );
 
             let thread_move_sender = sender.clone();
             let thread_move_shared_state = Arc::clone(shared_state);
+            let thread_move_config = config;
 
             DEBUG_TUI_SHOW_RESILIENT_REACTOR_THREAD.then(|| {
                 tracing::info!(
@@ -107,6 +116,7 @@ pub fn try_subscribe<W: RRTWorker>(
                 .spawn(move || {
                     run_worker_loop::<W>(
                         worker,
+                        thread_move_config,
                         thread_move_sender,
                         thread_move_shared_state,
                     );
@@ -114,7 +124,6 @@ pub fn try_subscribe<W: RRTWorker>(
 
             match res_join_handle {
                 Ok(_) => {
-                    shared_state.notify_all();
                     drop(state_guard);
                     Ok(SubscriberGuard::new(
                         sender.clone(),
@@ -133,7 +142,6 @@ pub fn try_subscribe<W: RRTWorker>(
                     // Revert to Stopped (we already hold the lock).
                     state_guard =
                         shared_state.set_state(state_guard, ThreadState::Stopped);
-                    shared_state.notify_all();
                     drop(state_guard);
 
                     // Explicitly drop the receiver (allocated under lock but no
@@ -170,7 +178,7 @@ pub fn try_subscribe<W: RRTWorker>(
 ///
 ///    fn main() -> miette::Result<()> {
 ///        // Subscribe to get a guard that auto-manages the thread.
-///        let guard = SINGLETON.try_subscribe()?;
+///        let guard = SINGLETON.try_subscribe(())?;
 ///        ok!()
 ///    }
 ///    ```
@@ -187,7 +195,7 @@ pub fn try_subscribe<W: RRTWorker>(
 ///         let rrt: RRT<MioPollWorker> = RRT::new();
 ///
 ///         // Subscribe to get a guard that auto-manages the thread.
-///         let guard = rrt.try_subscribe()?;
+///         let guard = rrt.try_subscribe(())?;
 ///         ok!()
 ///    }
 ///    ```
@@ -424,7 +432,7 @@ pub fn try_subscribe<W: RRTWorker>(
 ///
 /// For thread spawning, `T: 'static` is required because the spawned thread could outlive
 /// the caller - any borrowed data with a shorter lifetime might become invalid. This is
-/// why the traits [`RRTWorker`], [`RRTSoftwareInterrupt`], and the associated [`Event`]
+/// why the traits [`RRTWorker`], [`RRTSoftwareInterrupt`], and the associated [`Output`]
 /// type all require `'static`.
 ///
 /// # Self-Healing Restart Sequence
@@ -479,7 +487,6 @@ pub fn try_subscribe<W: RRTWorker>(
 /// [`direct_to_ansi`]: crate::terminal_lib_backends::direct_to_ansi
 /// [`EOF`]: https://en.wikipedia.org/wiki/End-of-file
 /// [`epoll`]: https://man7.org/linux/man-pages/man7/epoll.7.html
-/// [`Event`]: super::RRTWorker::Event
 /// [`fd`]: https://en.wikipedia.org/wiki/File_descriptor
 /// [`global_input_resource::SINGLETON`]:
 ///     crate::terminal_lib_backends::direct_to_ansi::input::global_input_resource::SINGLETON
@@ -493,6 +500,7 @@ pub fn try_subscribe<W: RRTWorker>(
 /// [`Monitor`]: crate::core::common::Monitor
 /// [`Mutex`]: std::sync::Mutex
 /// [`notify_all()`]: std::sync::Condvar::notify_all
+/// [`Output`]: super::RRTWorker::Output
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 /// [`RAII`]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
 /// [`receiver_count()`]: tokio::sync::broadcast::Sender::receiver_count
@@ -572,7 +580,7 @@ pub struct RRT<W: RRTWorker> {
     /// [receiver]: tokio::sync::broadcast::Receiver
     /// [sender]: tokio::sync::broadcast::Sender
     /// [thread generation]: RRT#thread-lifecycle
-    pub sender: LazyLock<BroadcastSender<W::Event>>,
+    pub sender: LazyLock<BroadcastSender<W::Output>>,
 
     /// Lazily initialized [`ThreadLifecycleMonitor`] - the [monitor] holding the state
     /// machine (wrapped in a [`Mutex`]) and [`Condvar`] that govern the dedicated
@@ -643,7 +651,7 @@ impl<W: RRTWorker> RRT<W> {
     #[must_use]
     pub const fn new() -> Self {
         Self {
-            sender: LazyLock::new(|| broadcast::channel(W::CHANNEL_CAPACITY).0),
+            sender: LazyLock::new(|| broadcast::channel(W::OUTPUT_CHANNEL_CAPACITY).0),
             shared_state: LazyLock::new(|| {
                 Arc::new(ThreadLifecycleMonitor::new(ThreadState::Stopped))
             }),
@@ -712,8 +720,11 @@ impl<W: RRTWorker> RRT<W> {
     /// [`TUI`]: crate::tui::TerminalWindow::main_event_loop
     /// [`WorkerCreation`]: SubscribeError::WorkerCreation
     /// [lock for the `state`]: super::ThreadLifecycleMonitor::lock()
-    pub fn try_subscribe(&self) -> Result<SubscriberGuard<W>, SubscribeError> {
-        try_subscribe::<W>(&self.sender, &self.shared_state)
+    pub fn try_subscribe(
+        &self,
+        config: W::Config,
+    ) -> Result<SubscriberGuard<W>, SubscribeError> {
+        try_subscribe::<W>(&self.sender, &self.shared_state, config)
     }
 
     /// Queries how many receivers are subscribed to the broadcast channel.
@@ -741,6 +752,74 @@ impl<W: RRTWorker> RRT<W> {
     #[must_use]
     pub fn get_thread_generation(&self) -> u8 {
         self.shared_state.thread_generation.get()
+    }
+
+    /// Returns a [`InputSender`] that allows you to send [`W::Input`] messages into the
+    /// blocking worker thread.
+    ///
+    /// Unlike a raw [`tokio::sync::broadcast::Sender`], this [`InputSender`] is aware of
+    /// the RRT lifecycle. If the worker encounters an error and is restarted by the
+    /// framework, the underlying channel is dropped and recreated. The [`InputSender`]
+    /// handles this transparently by intercepting disconnect errors, waiting for the new
+    /// worker to spin up, and retrying the send operation on the new channel. It also
+    /// inherently handles race conditions where the worker crashes again before the send
+    /// operation can acquire the lock, by seamlessly going back to sleep.
+    ///
+    /// # Architecture: Why are there two ways to get an [`InputSender`]?
+    ///
+    /// You can obtain an [`InputSender`] directly from this [`RRT`] engine, or from an
+    /// active [`SubscriberGuard`].
+    ///
+    /// You should use **this** method when your component is **Write-Only** (e.g., an
+    /// app-level event loop that forwards keystrokes to a background process). If a
+    /// Write-Only component were forced to call [`try_subscribe()`], it would
+    /// accidentally instantiate a [`tokio::sync::broadcast::Receiver`] that it never
+    /// polls. This creates a "ghost subscriber", forcing the [`tokio::sync::broadcast`]
+    /// channel to buffer messages and drop them for a lagging receiver. By calling this
+    /// method directly, pure writers avoid creating ghost receivers.
+    ///
+    /// Conversely, if your component is already an active reader (e.g., a terminal UI
+    /// that draws subprocess output to the screen), it should use
+    /// [`SubscriberGuard::get_input_sender()`] as a convenience, rather than requiring an
+    /// explicit reference to the root engine.
+    ///
+    /// # Optional Usage for Worker Authors
+    ///
+    /// Inbound messages are functionally optional. If you are writing a worker that
+    /// doesn't care about inbound messages from the UI (e.g. [`MioPollWorker`]), you just
+    /// "opt out" at the type level:
+    ///
+    /// 1. You define `type Input = ();` in your `impl RRTWorker` block.
+    /// 2. You ignore the argument in your implementation by prefixing it with an
+    ///    underscore:
+    ///
+    /// <!-- It is ok to use ignore here - shows trait impl w/out full impl  -->
+    ///
+    /// ```ignore
+    /// impl RRTWorker for MioPollWorker {
+    ///     type Config = ();
+    ///     type Input = ();
+    ///     // ... other associated types ...
+    ///
+    ///     fn create_and_register_os_sources(
+    ///         _config: Self::Config,
+    ///         _receiver: tokio::sync::broadcast::Receiver<Self::Input>,
+    ///     ) -> miette::Result<(Self, Self::Interrupt)> {
+    ///         // ... implementation ...
+    ///     }
+    ///     // ...
+    /// }
+    /// ```
+    ///
+    /// [`MioPollWorker`]: crate::mio_poller::MioPollWorker
+    /// [`SubscriberGuard::get_input_sender()`]: super::SubscriberGuard::get_input_sender
+    /// [`SubscriberGuard`]: super::SubscriberGuard
+    /// [`try_subscribe()`]: RRT::try_subscribe
+    /// [`W::Input`]: RRTWorker::Input
+    pub fn get_input_sender(&self) -> InputSender<W> {
+        InputSender {
+            shared_state: self.shared_state.clone(),
+        }
     }
 }
 
@@ -779,7 +858,7 @@ impl<W: RRTWorker> From<&ThreadState<W>> for SubscriptionStrategy {
     fn from(state: &ThreadState<W>) -> Self {
         match state {
             ThreadState::Stopped => SubscriptionStrategy::SlowPath,
-            ThreadState::Running(_) => SubscriptionStrategy::FastPath,
+            ThreadState::Running(_, _) => SubscriptionStrategy::FastPath,
             _ => {
                 unreachable!("block_until_stable_state_reached guarantees a stable state")
             }

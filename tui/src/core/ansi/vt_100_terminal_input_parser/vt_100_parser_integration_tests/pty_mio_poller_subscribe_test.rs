@@ -134,7 +134,7 @@ fn controlled() {
         let is_running = || {
             matches!(
                 *SINGLETON.shared_state.lock(),
-                ThreadState::Running(_)
+                ThreadState::Running(_, _)
             )
         };
         let is_stopped = || {
@@ -175,7 +175,7 @@ fn controlled() {
             .try_subscribe()
             .expect("Failed to create InputSubscriberGuard from device");
         let mut subscriber = subscriber_seed
-            .try_subscribe()
+            .try_subscribe(())
             .expect("Failed to create InputSubscriberGuard from existing guard");
         drop(subscriber_seed);
         assert_eq!(
