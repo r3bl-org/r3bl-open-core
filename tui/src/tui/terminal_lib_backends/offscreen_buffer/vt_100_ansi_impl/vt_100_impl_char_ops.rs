@@ -32,8 +32,8 @@
 
 #[allow(clippy::wildcard_imports)]
 use super::super::*;
-use crate::{ArrayBoundsCheck, ArrayOverflowResult, AutoWrapState, ColIndex, Length, NumericValue,
-            RowIndex, col,
+use crate::{ArrayBoundsCheck, ArrayOverflowResult, ArrayUnderflowResult, AutoWrapState, ColIndex,
+            Length, NumericValue, col,
             core::coordinates::bounds_check::{CursorBoundsCheck, LengthOps,
                                               RangeBoundsExt, RangeConvertExt},
             height, ok, width};
@@ -280,13 +280,22 @@ impl OffscreenBuffer {
     }
 
     /// Apply the VT100 "pending wrap" state if set.
+    ///
+    /// Respects [`DECSTBM`] scroll region bounds: if the cursor is at the bottom of the
+    /// scroll region, the region scrolls up instead of clamping the cursor.
     pub fn apply_pending_wrap(&mut self) {
         if self.ansi_parser_support.pending_wrap {
             self.ansi_parser_support.pending_wrap = false;
-            let row_max = self.window_size.row_height;
-            let next_row: RowIndex = self.cursor_pos.row_index + 1;
-            if next_row.overflows(row_max) == ArrayOverflowResult::Within {
-                self.cursor_pos.row_index = next_row;
+            let scroll_bottom = *self.get_scroll_range_inclusive().end();
+            if self
+                .cursor_pos
+                .row_index
+                .underflows(scroll_bottom)
+                == ArrayUnderflowResult::Underflowed
+            {
+                self.cursor_pos.row_index = self.cursor_pos.row_index + 1;
+            } else {
+                let _unused = self.index_down();
             }
             self.cursor_pos.col_index = col(0);
         }
