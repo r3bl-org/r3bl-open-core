@@ -160,12 +160,32 @@ mod tests_control_ops {
     #[test]
     fn test_handle_line_feed_at_bottom() {
         let mut buffer = create_test_buffer();
-        buffer.cursor_pos = row(5) + col(3); // bottom row for height 6
+        let bottom = row(5); // bottom row for height 6 (0-based)
+        let row_above = row(4);
+
+        // Place a marker char at row above bottom.
+        let _unused = buffer.set_char(
+            row_above + col(0),
+            PixelChar::PlainText {
+                display_char: 'A',
+                style: Default::default(),
+            },
+        );
+
+        buffer.cursor_pos = bottom + col(3);
 
         buffer.handle_line_feed();
 
-        // Should not move when at bottom.
-        assert_eq!(buffer.cursor_pos.row_index, row(5));
+        // Buffer scrolled up: char from row 4 moved to row 3.
+        let scrolled_up = row(3) + col(0);
+        let ch = buffer.get_char(scrolled_up).unwrap();
+        match ch {
+            PixelChar::PlainText { display_char, .. } => assert_eq!(display_char, 'A'),
+            _ => panic!("Expected PlainText with 'A'"),
+        }
+
+        // Cursor stays at bottom row, column preserved.
+        assert_eq!(buffer.cursor_pos.row_index, bottom);
         assert_eq!(buffer.cursor_pos.col_index, col(3));
     }
 
