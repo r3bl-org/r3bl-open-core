@@ -3,3 +3,4 @@
 pub mod double_panic_prevention_test;
 pub mod pty_test_production_factory_restart;
 pub mod pty_test_production_poll_error;
+pub mod smart_sender_test;

@@ -111,9 +111,10 @@ command:
 3. Execute the underlying shell/scripts exactly as instructed.
 
 **C. Bulk String Replacements (Shell):** When performing bulk find-and-replace operations across
-multiple files using shell commands, **always use `perl -pi -e`** instead of `sed` or `python`.
+multiple files or any find-and-replace tasks using shell commands, **always use `perl -pi -e`** instead of `sed` or `python`.
+Do NOT write or execute `python` scripts or use Python commands/libraries for find-replace tasks.
 `perl` handles regex, special character escaping, and capturing groups significantly more reliably
-than `sed` in cross-platform environments.
+than `sed` or `python` in cross-platform environments.
 
 ## Context Guardrail
 

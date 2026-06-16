@@ -19,20 +19,20 @@ fn is_stopped(rrt: &RRT<TestWorker>) -> bool {
 ///
 /// Panics on assertion failure or if test infrastructure (mutex, channel) fails.
 pub fn test_subscribe_spawns_thread() {
-    let (worker, interrupt, cmd_sender) = create_test_resources();
+    let (worker, interrupt, _cmd_sender) = create_test_resources();
 
-    let (_notify_receiver, _senders) = setup_factory(
-        vec![(Ok((worker, interrupt)), Some(cmd_sender.clone()))],
+    let _notify_receiver = setup_factory(
+        vec![(Ok((worker, interrupt)))],
         no_delay_policy(3),
     );
 
     let rrt: RRT<TestWorker> = RRT::new();
-    let _guard = rrt.try_subscribe(()).unwrap();
+    let guard = rrt.try_subscribe(()).unwrap();
 
     // Should be running immediately after try_subscribe returns Ok.
     assert!(is_running(&rrt));
 
-    send_cmd(&cmd_sender, b's');
+    send_cmd_via_guard(&guard, b's');
     // Wait for thread to exit (transition to Stopped).
     {
         let mut state_guard = rrt.shared_state.lock();
@@ -51,10 +51,10 @@ pub fn test_subscribe_spawns_thread() {
 ///
 /// Panics on assertion failure or if test infrastructure (mutex, channel) fails.
 pub fn test_subscribe_fast_path_reuse() {
-    let (worker, interrupt, cmd_sender) = create_test_resources();
+    let (worker, interrupt, _cmd_sender) = create_test_resources();
 
-    let (_notify_receiver, _senders) = setup_factory(
-        vec![(Ok((worker, interrupt)), Some(cmd_sender.clone()))],
+    let _notify_receiver = setup_factory(
+        vec![(Ok((worker, interrupt)))],
         no_delay_policy(3),
     );
 
@@ -64,13 +64,13 @@ pub fn test_subscribe_fast_path_reuse() {
     let gen1 = rrt.get_thread_generation();
 
     // Second subscribe reuses the thread (fast path).
-    let _guard2 = rrt.try_subscribe(()).unwrap();
+    let guard2 = rrt.try_subscribe(()).unwrap();
     let gen2 = rrt.get_thread_generation();
 
     assert_eq!(gen1, gen2, "Expected same generation (thread reuse)");
     assert_eq!(rrt.get_receiver_count(), 2);
 
-    send_cmd(&cmd_sender, b's');
+    send_cmd_via_guard(&guard2, b's');
     // Wait for thread to exit (transition to Stopped).
     {
         let mut state_guard = rrt.shared_state.lock();
@@ -88,13 +88,13 @@ pub fn test_subscribe_fast_path_reuse() {
 ///
 /// Panics on assertion failure or if test infrastructure (mutex, channel) fails.
 pub fn test_subscribe_slow_path_after_termination() {
-    let (worker1, interrupt1, cmd_sender1) = create_test_resources();
-    let (worker2, interrupt2, cmd_sender2) = create_test_resources();
+    let (worker1, interrupt1, _cmd_sender1) = create_test_resources();
+    let (worker2, interrupt2, _cmd_sender2) = create_test_resources();
 
-    let (_notify_receiver, _senders) = setup_factory(
+    let _notify_receiver = setup_factory(
         vec![
-            (Ok((worker1, interrupt1)), Some(cmd_sender1.clone())),
-            (Ok((worker2, interrupt2)), Some(cmd_sender2.clone())),
+            (Ok((worker1, interrupt1))),
+            (Ok((worker2, interrupt2))),
         ],
         no_delay_policy(3),
     );
@@ -103,10 +103,10 @@ pub fn test_subscribe_slow_path_after_termination() {
 
     // First subscribe.
     {
-        let _guard = rrt.try_subscribe(()).unwrap();
+        let guard = rrt.try_subscribe(()).unwrap();
         let gen1 = rrt.get_thread_generation();
 
-        send_cmd(&cmd_sender1, b's');
+        send_cmd_via_guard(&guard, b's');
         // Wait for thread to exit (transition to Stopped).
         {
             let mut state_guard = rrt.shared_state.lock();
@@ -117,12 +117,12 @@ pub fn test_subscribe_slow_path_after_termination() {
         assert!(is_stopped(&rrt));
 
         // Second subscribe after termination (slow path).
-        let _guard2 = rrt.try_subscribe(()).unwrap();
+        let guard2 = rrt.try_subscribe(()).unwrap();
         let gen2 = rrt.get_thread_generation();
 
         assert_ne!(gen1, gen2, "Expected new generation (thread relaunch)");
 
-        send_cmd(&cmd_sender2, b's');
+        send_cmd_via_guard(&guard2, b's');
         // Wait for thread to exit (transition to Stopped).
         {
             let mut state_guard = rrt.shared_state.lock();
@@ -142,10 +142,10 @@ pub fn test_subscribe_slow_path_after_termination() {
 /// Panics on assertion failure, if the shutdown event is not received within 5 seconds,
 /// or if test infrastructure (mutex, channel) fails.
 pub fn test_shutdown_received_by_subscriber() {
-    let (worker, interrupt, cmd_sender) = create_test_resources();
+    let (worker, interrupt, _cmd_sender) = create_test_resources();
 
-    let (_notify_receiver, _senders) = setup_factory(
-        vec![(Ok((worker, interrupt)), Some(cmd_sender.clone()))],
+    let _notify_receiver = setup_factory(
+        vec![(Ok((worker, interrupt)))],
         no_delay_policy(0),
     );
 
@@ -154,7 +154,7 @@ pub fn test_shutdown_received_by_subscriber() {
     let mut receiver = guard.receiver.resubscribe();
 
     // Worker returns Restart, budget=0 -> immediate exhaustion.
-    send_cmd(&cmd_sender, b'r');
+    send_cmd_via_guard(&guard, b'r');
 
     // Wait for the shutdown event.
     let rt = tokio::runtime::Builder::new_current_thread()
@@ -187,13 +187,13 @@ pub fn test_shutdown_received_by_subscriber() {
 ///
 /// Panics on assertion failure or if test infrastructure (mutex, channel) fails.
 pub fn test_subscribe_after_panic_recovery() {
-    let (worker1, interrupt1, cmd_sender1) = create_test_resources();
-    let (worker2, interrupt2, cmd_sender2) = create_test_resources();
+    let (worker1, interrupt1, _cmd_sender1) = create_test_resources();
+    let (worker2, interrupt2, _cmd_sender2) = create_test_resources();
 
-    let (_notify_receiver, _senders) = setup_factory(
+    let _notify_receiver = setup_factory(
         vec![
-            (Ok((worker1, interrupt1)), Some(cmd_sender1.clone())),
-            (Ok((worker2, interrupt2)), Some(cmd_sender2.clone())),
+            (Ok((worker1, interrupt1))),
+            (Ok((worker2, interrupt2))),
         ],
         no_delay_policy(3),
     );
@@ -202,11 +202,11 @@ pub fn test_subscribe_after_panic_recovery() {
 
     // First subscribe.
     {
-        let _guard = rrt.try_subscribe(()).unwrap();
+        let guard = rrt.try_subscribe(()).unwrap();
         let gen1 = rrt.get_thread_generation();
 
         // Cause a panic.
-        send_cmd(&cmd_sender1, b'p');
+        send_cmd_via_guard(&guard, b'p');
         // Wait for thread to exit (transition to Stopped).
         {
             let mut state_guard = rrt.shared_state.lock();
@@ -217,13 +217,13 @@ pub fn test_subscribe_after_panic_recovery() {
         assert!(is_stopped(&rrt));
 
         // Subscribe again after panic (should relaunch).
-        let _guard2 = rrt.try_subscribe(()).unwrap();
+        let guard2 = rrt.try_subscribe(()).unwrap();
         let gen2 = rrt.get_thread_generation();
 
         assert_ne!(gen1, gen2, "Expected new generation after panic recovery");
         assert!(is_running(&rrt));
 
-        send_cmd(&cmd_sender2, b's');
+        send_cmd_via_guard(&guard2, b's');
         // Wait for thread to exit (transition to Stopped).
         {
             let mut state_guard = rrt.shared_state.lock();

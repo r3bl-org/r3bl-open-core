@@ -572,6 +572,7 @@ fn detect_scroll_event(button_byte: u16) -> Option<VT100ScrollDirectionIR> {
         // Mask to get base button (without modifiers but keeping scroll bit)
         let base_button = button_byte & MOUSE_BASE_BUTTON_MASK; // Keep bit 6 (value 64)
 
+        #[allow(clippy::match_same_arms)]
         match base_button {
             64 => Some(VT100ScrollDirectionIR::Up),
             65 => Some(VT100ScrollDirectionIR::Down),

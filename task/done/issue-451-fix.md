@@ -538,3 +538,59 @@ async consumer.
 - [x] Verify all tests and adapted workers compile and run successfully.
   - [x] `tui/src/core/resilient_reactor_thread/rrt_integration_tests/`
   - [x] `tui/src/core/resilient_reactor_thread/process_isolated_tests/`
+
+## Test coverage
+
+### Phase 5: Test Coverage for Config & Smart Sender
+
+#### Phase 5.1: Unit Test for `InputSender` State Transitions
+
+- [x] Create `tui/src/core/resilient_reactor_thread/unit_tests/group_c_input_sender.rs`.
+- [x] Test the asynchronous retry loop of `InputSender` in isolation:
+  - [x] Manually instantiate a `ThreadLifecycleMonitor` and an `InputSender`.
+  - [x] Set the state to `ThreadState::Restarting`.
+  - [x] Spawn a Tokio task that calls `input_sender.send("msg")`. It should yield and
+        wait.
+  - [x] From the main thread, transition the state to `ThreadState::Running` with a fresh
+        channel and trigger `input_sender_notify`.
+  - [x] Assert the blocked Tokio task wakes up, successfully delivers the message to the
+        new channel, and it is received correctly.
+
+#### Phase 5.2: End-to-End Integration Test
+
+- [x] Create
+      `tui/src/core/resilient_reactor_thread/rrt_integration_tests/smart_sender_test.rs`.
+- [x] Verify the end-to-end behavior of `Config` preservation and `InputSender` retry
+      within the actual running engine:
+  - [x] Define `SmartWorker` with `type Config = String;` and `type Input = String;`.
+  - [x] Ensure `create_and_register_os_sources` asserts that `config` equals expected
+        value.
+  - [x] The `block_until_ready_then_dispatch` will await the `Input` channel.
+  - [x] Start `RRT<SmartWorker>` with config `"test_config_value"`.
+  - [x] Grab the `input_sender`.
+  - [x] Send `"crash"`. Worker deliberately returns `Continuation::Restart`.
+  - [x] Immediately `await` sending the next message `"hello after crash"`. The
+        `InputSender` should seamlessly handle channel disconnect, wait for recreation,
+        and deliver it.
+  - [x] Verify the new worker received the preserved config, and received
+        `"hello after crash"`.
+
+#### Phase 5.3: Modernize Existing Process-Isolated Fixtures
+
+- [x] Refactor `TestWorker` in
+      `tui/src/core/resilient_reactor_thread/process_isolated_tests/fixtures.rs`.
+  - [x] Change `TestWorker` to use `type Input = u8;`.
+  - [x] Remove the manual `cmd_receiver: mpsc::Receiver<u8>` from `TestWorker`.
+  - [x] Remove `cmd_sender` from the global `TEST_FACTORY_STATE`.
+- [x] Update all process-isolated tests (e.g., `group_b_run_worker_loop.rs` and
+      `group_c_rrt_integration.rs`) to retrieve the `InputSender` from the
+      `SubscriberGuard` and use it to drive tests.
+
+#### Phase 5.4: Mandatory manual review
+
+- [x] Verify newly added unit and integration tests compile and pass.
+- [x] Verify the modernized process isolated tests still run successfully and use the
+      `InputSender`.
+- [x] Make sure this task md file is up to date with the progress made.
+- [x] Move this task file to task/done.
+- [x] Make a commit.

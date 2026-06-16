@@ -9,9 +9,9 @@
 - [x] Terminal Parsing (Pending PRs)
   - [x] [improve-immature-vt100-shim.md](improve-immature-vt100-shim.md)
   - [x] [pr-448-fix.md](done/pr-448-fix.md) - https://github.com/r3bl-org/r3bl-open-core/pull/448
-- [ ] RRT API (Pending PRs & Issues)
-  - [x] [pr-452-fix.md](pr-452-fix.md) - https://github.com/r3bl-org/r3bl-open-core/pull/452
-  - [ ] [issue-451-fix.md](issue-451-fix.md) - https://github.com/r3bl-org/r3bl-open-core/issues/451
+- [x] RRT API (Pending PRs & Issues)
+  - [x] [pr-452-fix.md](done/pr-452-fix.md) - https://github.com/r3bl-org/r3bl-open-core/pull/452
+  - [x] [issue-451-fix.md](done/issue-451-fix.md) - https://github.com/r3bl-org/r3bl-open-core/issues/451
 - [ ] Cursor display issues
   - [ ] https://github.com/r3bl-org/r3bl-open-core/issues/461
 - [ ] PRs from Cecile

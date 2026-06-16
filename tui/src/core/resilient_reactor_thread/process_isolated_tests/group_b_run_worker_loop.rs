@@ -15,12 +15,13 @@ use std::{sync::{Arc, atomic::Ordering},
 pub fn test_worker_stop_exits_cleanly() {
     let (worker, interrupt, cmd_sender) = create_test_resources();
     let (sender, _receiver) = tokio::sync::broadcast::channel(16);
-    let shared_state = create_shared_state(interrupt);
+    let shared_state = create_shared_state(interrupt, cmd_sender.clone());
 
-    let (_notify_receiver, _senders) = setup_factory(vec![], no_delay_policy(3));
-    let handle = spawn_worker_loop(worker, sender, Arc::clone(&shared_state));
+    let _notify_receiver = setup_factory(vec![], no_delay_policy(3));
+    let handle = spawn_worker_loop(worker, sender.clone(), Arc::clone(&shared_state));
 
-    send_cmd(&cmd_sender, b's');
+    let guard = create_mock_guard(sender.clone(), shared_state.clone());
+    send_cmd_via_guard(&guard, b's');
     handle.join().unwrap();
 
     assert!(matches!(*shared_state.lock(), ThreadState::Stopped));
@@ -36,15 +37,16 @@ pub fn test_worker_stop_exits_cleanly() {
 pub fn test_worker_continue_then_stop() {
     let (worker, interrupt, cmd_sender) = create_test_resources();
     let (sender, mut receiver) = tokio::sync::broadcast::channel(16);
-    let shared_state = create_shared_state(interrupt);
+    let shared_state = create_shared_state(interrupt, cmd_sender.clone());
 
-    let (_notify_receiver, _senders) = setup_factory(vec![], no_delay_policy(3));
-    let handle = spawn_worker_loop(worker, sender, Arc::clone(&shared_state));
+    let _notify_receiver = setup_factory(vec![], no_delay_policy(3));
+    let handle = spawn_worker_loop(worker, sender.clone(), Arc::clone(&shared_state));
 
-    send_cmd(&cmd_sender, b'e');
-    send_cmd(&cmd_sender, b'e');
-    send_cmd(&cmd_sender, b'e');
-    send_cmd(&cmd_sender, b's');
+    let guard = create_mock_guard(sender.clone(), shared_state.clone());
+    send_cmd_via_guard(&guard, b'e');
+    send_cmd_via_guard(&guard, b'e');
+    send_cmd_via_guard(&guard, b'e');
+    send_cmd_via_guard(&guard, b's');
     handle.join().unwrap();
 
     let mut count = 0;
@@ -64,14 +66,15 @@ pub fn test_worker_continue_then_stop() {
 pub fn test_domain_events_flow_through() {
     let (worker, interrupt, cmd_sender) = create_test_resources();
     let (sender, mut receiver) = tokio::sync::broadcast::channel(16);
-    let shared_state = create_shared_state(interrupt);
+    let shared_state = create_shared_state(interrupt, cmd_sender.clone());
 
-    let (_notify_receiver, _senders) = setup_factory(vec![], no_delay_policy(3));
-    let handle = spawn_worker_loop(worker, sender, Arc::clone(&shared_state));
+    let _notify_receiver = setup_factory(vec![], no_delay_policy(3));
+    let handle = spawn_worker_loop(worker, sender.clone(), Arc::clone(&shared_state));
 
-    send_cmd(&cmd_sender, b'e');
-    send_cmd(&cmd_sender, b'e');
-    send_cmd(&cmd_sender, b's');
+    let guard = create_mock_guard(sender.clone(), shared_state.clone());
+    send_cmd_via_guard(&guard, b'e');
+    send_cmd_via_guard(&guard, b'e');
+    send_cmd_via_guard(&guard, b's');
     handle.join().unwrap();
 
     match receiver.try_recv().unwrap() {
@@ -92,24 +95,24 @@ pub fn test_domain_events_flow_through() {
 /// Panics on assertion failure or if test infrastructure (mutex, channel, notify) fails.
 pub fn test_single_restart_success() {
     let (worker1, interrupt1, cmd_sender1) = create_test_resources();
-    let (ok2, cmd_sender2) = create_ok_result();
+    let _ok = create_ok_result();
 
-    let (notify_receiver, _senders) =
-        setup_factory(vec![(ok2, Some(cmd_sender2.clone()))], no_delay_policy(3));
+    let notify_receiver = setup_factory(vec![create_ok_result()], no_delay_policy(3));
 
     let (sender, _receiver) = tokio::sync::broadcast::channel(16);
-    let shared_state = create_shared_state(interrupt1);
+    let shared_state = create_shared_state(interrupt1, cmd_sender1.clone());
 
-    let handle = spawn_worker_loop(worker1, sender, Arc::clone(&shared_state));
+    let handle = spawn_worker_loop(worker1, sender.clone(), Arc::clone(&shared_state));
 
     // Worker1: restart.
-    send_cmd(&cmd_sender1, b'r');
+    let guard = create_mock_guard(sender.clone(), shared_state.clone());
+    send_cmd_via_guard(&guard, b'r');
     // Wait for create() to be called.
     notify_receiver
         .recv_timeout(Duration::from_secs(5))
         .unwrap();
     // Worker2: stop.
-    send_cmd(&cmd_sender2, b's');
+    send_cmd_via_guard(&guard, b's');
     handle.join().unwrap();
 
     assert_eq!(get_create_count(), 1);
@@ -124,22 +127,22 @@ pub fn test_single_restart_success() {
 /// Panics on assertion failure or if test infrastructure (mutex, channel, notify) fails.
 pub fn test_restart_no_delay_fast() {
     let (worker1, interrupt1, cmd_sender1) = create_test_resources();
-    let (ok2, cmd_sender2) = create_ok_result();
+    let _ok = create_ok_result();
 
-    let (notify_receiver, _senders) =
-        setup_factory(vec![(ok2, Some(cmd_sender2.clone()))], no_delay_policy(3));
+    let notify_receiver = setup_factory(vec![create_ok_result()], no_delay_policy(3));
 
     let (sender, _receiver) = tokio::sync::broadcast::channel(16);
-    let shared_state = create_shared_state(interrupt1);
+    let shared_state = create_shared_state(interrupt1, cmd_sender1.clone());
 
     let start = Instant::now();
-    let handle = spawn_worker_loop(worker1, sender, Arc::clone(&shared_state));
+    let handle = spawn_worker_loop(worker1, sender.clone(), Arc::clone(&shared_state));
 
-    send_cmd(&cmd_sender1, b'r');
+    let guard = create_mock_guard(sender.clone(), shared_state.clone());
+    send_cmd_via_guard(&guard, b'r');
     notify_receiver
         .recv_timeout(Duration::from_secs(5))
         .unwrap();
-    send_cmd(&cmd_sender2, b's');
+    send_cmd_via_guard(&guard, b's');
     handle.join().unwrap();
 
     assert!(start.elapsed() < Duration::from_millis(500));
@@ -153,25 +156,25 @@ pub fn test_restart_no_delay_fast() {
 /// Panics on assertion failure or if test infrastructure (mutex, channel, notify) fails.
 pub fn test_events_before_and_after_restart() {
     let (worker1, interrupt1, cmd_sender1) = create_test_resources();
-    let (ok2, cmd_sender2) = create_ok_result();
+    let _ok = create_ok_result();
 
-    let (notify_receiver, _senders) =
-        setup_factory(vec![(ok2, Some(cmd_sender2.clone()))], no_delay_policy(3));
+    let notify_receiver = setup_factory(vec![create_ok_result()], no_delay_policy(3));
 
     let (sender, mut receiver) = tokio::sync::broadcast::channel(16);
-    let shared_state = create_shared_state(interrupt1);
+    let shared_state = create_shared_state(interrupt1, cmd_sender1.clone());
 
-    let handle = spawn_worker_loop(worker1, sender, Arc::clone(&shared_state));
+    let handle = spawn_worker_loop(worker1, sender.clone(), Arc::clone(&shared_state));
 
     // Worker1: event then restart.
-    send_cmd(&cmd_sender1, b'e');
-    send_cmd(&cmd_sender1, b'r');
+    let guard = create_mock_guard(sender.clone(), shared_state.clone());
+    send_cmd_via_guard(&guard, b'e');
+    send_cmd_via_guard(&guard, b'r');
     notify_receiver
         .recv_timeout(Duration::from_secs(5))
         .unwrap();
     // Worker2: event then stop.
-    send_cmd(&cmd_sender2, b'e');
-    send_cmd(&cmd_sender2, b's');
+    send_cmd_via_guard(&guard, b'e');
+    send_cmd_via_guard(&guard, b's');
     handle.join().unwrap();
 
     // Both events should arrive (from different worker instances).
@@ -182,7 +185,8 @@ pub fn test_events_before_and_after_restart() {
     teardown_factory();
 }
 
-/// Verify that the software interrupt handle slot is swapped to a new handle after restart.
+/// Verify that the software interrupt handle slot is swapped to a new handle after
+/// restart.
 ///
 /// # Panics
 ///
@@ -190,21 +194,21 @@ pub fn test_events_before_and_after_restart() {
 /// infrastructure (mutex, channel, notify) fails.
 pub fn test_interrupt_handle_swap_on_restart() {
     let (worker1, interrupt1, cmd_sender1) = create_test_resources();
-    let (ok2, cmd_sender2) = create_ok_result();
+    let _ok = create_ok_result();
 
-    let (notify_receiver, _senders) =
-        setup_factory(vec![(ok2, Some(cmd_sender2.clone()))], no_delay_policy(3));
+    let notify_receiver = setup_factory(vec![create_ok_result()], no_delay_policy(3));
 
     let (sender, _receiver) = tokio::sync::broadcast::channel(16);
-    let shared_state = create_shared_state(interrupt1);
+    let shared_state = create_shared_state(interrupt1, cmd_sender1.clone());
 
-    let handle = spawn_worker_loop(worker1, sender, Arc::clone(&shared_state));
+    let handle = spawn_worker_loop(worker1, sender.clone(), Arc::clone(&shared_state));
 
     // Invoke the current software interrupt to record its ID in LAST_INTERRUPT_ID.
     shared_state.interrupt_if_running();
     let old_id = LAST_INTERRUPT_ID.load(Ordering::SeqCst);
 
-    send_cmd(&cmd_sender1, b'r');
+    let guard = create_mock_guard(sender.clone(), shared_state.clone());
+    send_cmd_via_guard(&guard, b'r');
     notify_receiver
         .recv_timeout(Duration::from_secs(5))
         .unwrap();
@@ -225,7 +229,7 @@ pub fn test_interrupt_handle_swap_on_restart() {
         );
     }
 
-    send_cmd(&cmd_sender2, b's');
+    send_cmd_via_guard(&guard, b's');
     handle.join().unwrap();
     teardown_factory();
 }
@@ -239,41 +243,38 @@ pub fn test_interrupt_handle_swap_on_restart() {
 pub fn test_budget_resets_on_successful_create() {
     // max_restarts=1, but each successful create resets the budget.
     let (worker1, interrupt1, cmd_sender1) = create_test_resources();
-    let (ok2, cmd_sender2) = create_ok_result();
-    let (ok3, cmd_sender3) = create_ok_result();
-    let (ok4, cmd_sender4) = create_ok_result();
+    let _ok = create_ok_result();
+    let _ok = create_ok_result();
+    let _ok = create_ok_result();
 
-    let (notify_receiver, _senders) = setup_factory(
-        vec![
-            (ok2, Some(cmd_sender2.clone())),
-            (ok3, Some(cmd_sender3.clone())),
-            (ok4, Some(cmd_sender4.clone())),
-        ],
+    let notify_receiver = setup_factory(
+        vec![create_ok_result(), create_ok_result(), create_ok_result()],
         no_delay_policy(1),
     );
 
     let (sender, _receiver) = tokio::sync::broadcast::channel(16);
-    let shared_state = create_shared_state(interrupt1);
+    let shared_state = create_shared_state(interrupt1, cmd_sender1.clone());
 
-    let handle = spawn_worker_loop(worker1, sender, Arc::clone(&shared_state));
+    let handle = spawn_worker_loop(worker1, sender.clone(), Arc::clone(&shared_state));
 
     // W1 -> restart -> W2 created (budget resets).
-    send_cmd(&cmd_sender1, b'r');
+    let guard = create_mock_guard(sender.clone(), shared_state.clone());
+    send_cmd_via_guard(&guard, b'r');
     notify_receiver
         .recv_timeout(Duration::from_secs(5))
         .unwrap();
     // W2 -> restart -> W3 created (budget resets again).
-    send_cmd(&cmd_sender2, b'r');
+    send_cmd_via_guard(&guard, b'r');
     notify_receiver
         .recv_timeout(Duration::from_secs(5))
         .unwrap();
     // W3 -> restart -> W4 created (budget resets again).
-    send_cmd(&cmd_sender3, b'r');
+    send_cmd_via_guard(&guard, b'r');
     notify_receiver
         .recv_timeout(Duration::from_secs(5))
         .unwrap();
     // W4 -> stop.
-    send_cmd(&cmd_sender4, b's');
+    send_cmd_via_guard(&guard, b's');
     handle.join().unwrap();
 
     assert_eq!(get_create_count(), 3);
@@ -291,32 +292,30 @@ pub fn test_restart_exhaustion() {
     // max=2. W1 and W2 restart OK (budget resets each time). W3 restarts but
     // factory is empty -> create() fails repeatedly -> exhausts budget.
     let (worker1, interrupt1, cmd_sender1) = create_test_resources();
-    let (ok2, cmd_sender2) = create_ok_result();
-    let (ok3, cmd_sender3) = create_ok_result();
+    let _ok = create_ok_result();
+    let _ok = create_ok_result();
 
-    let (notify_receiver, _senders) = setup_factory(
-        vec![
-            (ok2, Some(cmd_sender2.clone())),
-            (ok3, Some(cmd_sender3.clone())),
-        ],
+    let notify_receiver = setup_factory(
+        vec![create_ok_result(), create_ok_result()],
         no_delay_policy(2),
     );
 
     let (sender, mut receiver) = tokio::sync::broadcast::channel(16);
-    let shared_state = create_shared_state(interrupt1);
+    let shared_state = create_shared_state(interrupt1, cmd_sender1.clone());
 
-    let handle = spawn_worker_loop(worker1, sender, Arc::clone(&shared_state));
+    let handle = spawn_worker_loop(worker1, sender.clone(), Arc::clone(&shared_state));
 
-    send_cmd(&cmd_sender1, b'r');
+    let guard = create_mock_guard(sender.clone(), shared_state.clone());
+    send_cmd_via_guard(&guard, b'r');
     notify_receiver
         .recv_timeout(Duration::from_secs(5))
         .unwrap();
-    send_cmd(&cmd_sender2, b'r');
+    send_cmd_via_guard(&guard, b'r');
     notify_receiver
         .recv_timeout(Duration::from_secs(5))
         .unwrap();
     // W3 restarts, factory is empty -> create() returns Err -> budget exhausted.
-    send_cmd(&cmd_sender3, b'r');
+    send_cmd_via_guard(&guard, b'r');
     handle.join().unwrap();
 
     // Should have received a Shutdown event.
@@ -339,14 +338,15 @@ pub fn test_restart_exhaustion() {
 pub fn test_zero_budget_immediate_exhaustion() {
     let (worker1, interrupt1, cmd_sender1) = create_test_resources();
 
-    let (_notify_receiver, _senders) = setup_factory(vec![], no_delay_policy(0));
+    let _notify_receiver = setup_factory(vec![], no_delay_policy(0));
 
     let (sender, mut receiver) = tokio::sync::broadcast::channel(16);
-    let shared_state = create_shared_state(interrupt1);
+    let shared_state = create_shared_state(interrupt1, cmd_sender1.clone());
 
-    let handle = spawn_worker_loop(worker1, sender, Arc::clone(&shared_state));
+    let handle = spawn_worker_loop(worker1, sender.clone(), Arc::clone(&shared_state));
 
-    send_cmd(&cmd_sender1, b'r');
+    let guard = create_mock_guard(sender.clone(), shared_state.clone());
+    send_cmd_via_guard(&guard, b'r');
     handle.join().unwrap();
 
     match receiver.try_recv().unwrap() {
@@ -367,14 +367,15 @@ pub fn test_zero_budget_immediate_exhaustion() {
 pub fn test_shutdown_event_payload() {
     let (worker1, interrupt1, cmd_sender1) = create_test_resources();
 
-    let (_notify_receiver, _senders) = setup_factory(vec![], no_delay_policy(0));
+    let _notify_receiver = setup_factory(vec![], no_delay_policy(0));
 
     let (sender, mut receiver) = tokio::sync::broadcast::channel(16);
-    let shared_state = create_shared_state(interrupt1);
+    let shared_state = create_shared_state(interrupt1, cmd_sender1.clone());
 
-    let handle = spawn_worker_loop(worker1, sender, Arc::clone(&shared_state));
+    let handle = spawn_worker_loop(worker1, sender.clone(), Arc::clone(&shared_state));
 
-    send_cmd(&cmd_sender1, b'r');
+    let guard = create_mock_guard(sender.clone(), shared_state.clone());
+    send_cmd_via_guard(&guard, b'r');
     handle.join().unwrap();
 
     match receiver.try_recv().unwrap() {
@@ -392,22 +393,23 @@ pub fn test_shutdown_event_payload() {
 /// Panics on assertion failure or if test infrastructure (mutex, channel, notify) fails.
 pub fn test_create_failure_then_success() {
     let (worker1, interrupt1, cmd_sender1) = create_test_resources();
-    let (ok2, cmd_sender2) = create_ok_result();
+    let _ok = create_ok_result();
 
-    let (notify_receiver, _senders) = setup_factory(
+    let notify_receiver = setup_factory(
         vec![
-            (Err(miette::miette!("transient error")), None),
-            (ok2, Some(cmd_sender2.clone())),
+            (Err(miette::miette!("transient error"))),
+            create_ok_result(),
         ],
         no_delay_policy(3),
     );
 
     let (sender, _receiver) = tokio::sync::broadcast::channel(16);
-    let shared_state = create_shared_state(interrupt1);
+    let shared_state = create_shared_state(interrupt1, cmd_sender1.clone());
 
-    let handle = spawn_worker_loop(worker1, sender, Arc::clone(&shared_state));
+    let handle = spawn_worker_loop(worker1, sender.clone(), Arc::clone(&shared_state));
 
-    send_cmd(&cmd_sender1, b'r');
+    let guard = create_mock_guard(sender.clone(), shared_state.clone());
+    send_cmd_via_guard(&guard, b'r');
     // Wait for second create() call (first fails, second succeeds).
     notify_receiver
         .recv_timeout(Duration::from_secs(5))
@@ -415,7 +417,7 @@ pub fn test_create_failure_then_success() {
     notify_receiver
         .recv_timeout(Duration::from_secs(5))
         .unwrap();
-    send_cmd(&cmd_sender2, b's');
+    send_cmd_via_guard(&guard, b's');
     handle.join().unwrap();
 
     assert_eq!(get_create_count(), 2);
@@ -431,21 +433,22 @@ pub fn test_create_failure_then_success() {
 pub fn test_persistent_create_failure() {
     let (worker1, interrupt1, cmd_sender1) = create_test_resources();
 
-    let (_notify_receiver, _senders) = setup_factory(
+    let _notify_receiver = setup_factory(
         vec![
-            (Err(miette::miette!("fail 1")), None),
-            (Err(miette::miette!("fail 2")), None),
-            (Err(miette::miette!("fail 3")), None),
+            (Err(miette::miette!("fail 1"))),
+            (Err(miette::miette!("fail 2"))),
+            (Err(miette::miette!("fail 3"))),
         ],
         no_delay_policy(3),
     );
 
     let (sender, mut receiver) = tokio::sync::broadcast::channel(16);
-    let shared_state = create_shared_state(interrupt1);
+    let shared_state = create_shared_state(interrupt1, cmd_sender1.clone());
 
-    let handle = spawn_worker_loop(worker1, sender, Arc::clone(&shared_state));
+    let handle = spawn_worker_loop(worker1, sender.clone(), Arc::clone(&shared_state));
 
-    send_cmd(&cmd_sender1, b'r');
+    let guard = create_mock_guard(sender.clone(), shared_state.clone());
+    send_cmd_via_guard(&guard, b'r');
     handle.join().unwrap();
 
     let mut found_shutdown = false;
@@ -473,7 +476,7 @@ pub fn test_persistent_create_failure() {
 /// [`RestartPolicy::initial_delay`]: field@crate::RestartPolicy::initial_delay
 pub fn test_backoff_delay_applied() {
     let (worker1, interrupt1, cmd_sender1) = create_test_resources();
-    let (ok2, cmd_sender2) = create_ok_result();
+    let _ok = create_ok_result();
 
     let policy = crate::resilient_reactor_thread::RestartPolicy {
         max_restarts: 1,
@@ -481,20 +484,20 @@ pub fn test_backoff_delay_applied() {
         backoff_multiplier: None,
         max_delay: None,
     };
-    let (notify_receiver, _senders) =
-        setup_factory(vec![(ok2, Some(cmd_sender2.clone()))], policy);
+    let notify_receiver = setup_factory(vec![create_ok_result()], policy);
 
     let (sender, _receiver) = tokio::sync::broadcast::channel(16);
-    let shared_state = create_shared_state(interrupt1);
+    let shared_state = create_shared_state(interrupt1, cmd_sender1.clone());
 
     let start = Instant::now();
-    let handle = spawn_worker_loop(worker1, sender, Arc::clone(&shared_state));
+    let handle = spawn_worker_loop(worker1, sender.clone(), Arc::clone(&shared_state));
 
-    send_cmd(&cmd_sender1, b'r');
+    let guard = create_mock_guard(sender.clone(), shared_state.clone());
+    send_cmd_via_guard(&guard, b'r');
     notify_receiver
         .recv_timeout(Duration::from_secs(5))
         .unwrap();
-    send_cmd(&cmd_sender2, b's');
+    send_cmd_via_guard(&guard, b's');
     handle.join().unwrap();
 
     assert!(start.elapsed() >= Duration::from_millis(50));
@@ -509,8 +512,8 @@ pub fn test_backoff_delay_applied() {
 /// Panics on assertion failure or if test infrastructure (mutex, channel, notify) fails.
 pub fn test_delay_resets_after_successful_create() {
     let (worker1, interrupt1, cmd_sender1) = create_test_resources();
-    let (ok2, cmd_sender2) = create_ok_result();
-    let (ok3, cmd_sender3) = create_ok_result();
+    let _ok = create_ok_result();
+    let _ok = create_ok_result();
 
     let policy = crate::resilient_reactor_thread::RestartPolicy {
         max_restarts: 3,
@@ -518,33 +521,34 @@ pub fn test_delay_resets_after_successful_create() {
         backoff_multiplier: Some(2.0),
         max_delay: None,
     };
-    let (notify_receiver, _senders) = setup_factory(
+    let notify_receiver = setup_factory(
         vec![
-            (Err(miette::miette!("transient")), None),
-            (ok2, Some(cmd_sender2.clone())),
-            (ok3, Some(cmd_sender3.clone())),
+            (Err(miette::miette!("transient"))),
+            create_ok_result(),
+            create_ok_result(),
         ],
         policy,
     );
 
     let (sender, _receiver) = tokio::sync::broadcast::channel(16);
-    let shared_state = create_shared_state(interrupt1);
+    let shared_state = create_shared_state(interrupt1, cmd_sender1.clone());
 
     let start = Instant::now();
-    let handle = spawn_worker_loop(worker1, sender, Arc::clone(&shared_state));
+    let handle = spawn_worker_loop(worker1, sender.clone(), Arc::clone(&shared_state));
 
-    send_cmd(&cmd_sender1, b'r');
+    let guard = create_mock_guard(sender.clone(), shared_state.clone());
+    send_cmd_via_guard(&guard, b'r');
     notify_receiver
         .recv_timeout(Duration::from_secs(5))
         .unwrap();
     notify_receiver
         .recv_timeout(Duration::from_secs(5))
         .unwrap();
-    send_cmd(&cmd_sender2, b'r');
+    send_cmd_via_guard(&guard, b'r');
     notify_receiver
         .recv_timeout(Duration::from_secs(5))
         .unwrap();
-    send_cmd(&cmd_sender3, b's');
+    send_cmd_via_guard(&guard, b's');
     handle.join().unwrap();
 
     let elapsed = start.elapsed();
@@ -563,12 +567,13 @@ pub fn test_delay_resets_after_successful_create() {
 pub fn test_panic_sends_shutdown_panic() {
     let (worker, interrupt, cmd_sender) = create_test_resources();
     let (sender, mut receiver) = tokio::sync::broadcast::channel(16);
-    let shared_state = create_shared_state(interrupt);
+    let shared_state = create_shared_state(interrupt, cmd_sender.clone());
 
-    let (_notify_receiver, _senders) = setup_factory(vec![], no_delay_policy(3));
-    let handle = spawn_worker_loop(worker, sender, Arc::clone(&shared_state));
+    let _notify_receiver = setup_factory(vec![], no_delay_policy(3));
+    let handle = spawn_worker_loop(worker, sender.clone(), Arc::clone(&shared_state));
 
-    send_cmd(&cmd_sender, b'p');
+    let guard = create_mock_guard(sender.clone(), shared_state.clone());
+    send_cmd_via_guard(&guard, b'p');
     handle.join().unwrap();
 
     match receiver.try_recv().unwrap() {
@@ -587,13 +592,14 @@ pub fn test_panic_sends_shutdown_panic() {
 pub fn test_panic_after_events() {
     let (worker, interrupt, cmd_sender) = create_test_resources();
     let (sender, mut receiver) = tokio::sync::broadcast::channel(16);
-    let shared_state = create_shared_state(interrupt);
+    let shared_state = create_shared_state(interrupt, cmd_sender.clone());
 
-    let (_notify_receiver, _senders) = setup_factory(vec![], no_delay_policy(3));
-    let handle = spawn_worker_loop(worker, sender, Arc::clone(&shared_state));
+    let _notify_receiver = setup_factory(vec![], no_delay_policy(3));
+    let handle = spawn_worker_loop(worker, sender.clone(), Arc::clone(&shared_state));
 
-    send_cmd(&cmd_sender, b'e');
-    send_cmd(&cmd_sender, b'p');
+    let guard = create_mock_guard(sender.clone(), shared_state.clone());
+    send_cmd_via_guard(&guard, b'e');
+    send_cmd_via_guard(&guard, b'p');
     handle.join().unwrap();
 
     match receiver.try_recv().unwrap() {
@@ -616,12 +622,13 @@ pub fn test_panic_after_events() {
 pub fn test_no_restart_after_panic() {
     let (worker, interrupt, cmd_sender) = create_test_resources();
     let (sender, _receiver) = tokio::sync::broadcast::channel(16);
-    let shared_state = create_shared_state(interrupt);
+    let shared_state = create_shared_state(interrupt, cmd_sender.clone());
 
-    let (_notify_receiver, _senders) = setup_factory(vec![], no_delay_policy(3));
-    let handle = spawn_worker_loop(worker, sender, Arc::clone(&shared_state));
+    let _notify_receiver = setup_factory(vec![], no_delay_policy(3));
+    let handle = spawn_worker_loop(worker, sender.clone(), Arc::clone(&shared_state));
 
-    send_cmd(&cmd_sender, b'p');
+    let guard = create_mock_guard(sender.clone(), shared_state.clone());
+    send_cmd_via_guard(&guard, b'p');
     handle.join().unwrap();
 
     assert_eq!(get_create_count(), 0);

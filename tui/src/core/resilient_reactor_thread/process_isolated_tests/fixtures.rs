@@ -3,7 +3,9 @@
 use crate::{BroadcastSender, Continuation,
             DeadlockPreventionPolicy::PanicOnAnyLockNesting, InterruptHandle, RRTEvent,
             RRTSoftwareInterrupt, RRTWorker, RestartPolicy, ScopedMutex,
-            ThreadLifecycleMonitor, ThreadState, run_worker_loop, scoped_mutex};
+            ThreadLifecycleMonitor, ThreadState,
+            core::resilient_reactor_thread::SubscriberGuard, run_worker_loop,
+            scoped_mutex};
 use std::{collections::VecDeque,
           sync::{Arc, LazyLock,
                  atomic::{AtomicU32, Ordering},
@@ -34,20 +36,22 @@ impl RRTSoftwareInterrupt for TestInterrupt {
     }
 }
 
-/// Test worker driven by an [`mpsc`] command channel.
+/// Test worker driven by a broadcast command channel.
 #[derive(Debug)]
 pub struct TestWorker {
-    pub cmd_receiver: mpsc::Receiver<u8>,
+    pub input_receiver: Option<tokio::sync::broadcast::Receiver<u8>>,
     pub event_counter: u32,
 }
 
 impl RRTWorker for TestWorker {
+    type Config = ();
+    type Input = u8;
     type Output = TestEvent;
     type Interrupt = TestInterrupt;
 
     fn create_and_register_os_sources(
         _config: Self::Config,
-        _receiver: tokio::sync::broadcast::Receiver<Self::Input>,
+        receiver: tokio::sync::broadcast::Receiver<Self::Input>,
     ) -> miette::Result<(Self, Self::Interrupt)> {
         TEST_FACTORY_STATE.write(|guard: &mut Option<TestFactoryState>| {
             let state = guard.as_mut().expect("TEST_FACTORY_STATE not initialized");
@@ -55,10 +59,17 @@ impl RRTWorker for TestWorker {
             if let Some(ref notify_sender) = state.create_notify {
                 let _ = notify_sender.send(());
             }
-            state
+            let res = state
                 .create_results
                 .pop_front()
-                .unwrap_or_else(|| Err(miette::miette!("TestWorker: no create results")))
+                .unwrap_or_else(|| Err(miette::miette!("TestWorker: no create results")));
+
+            if let Ok(mut worker_interrupt) = res {
+                worker_interrupt.0.input_receiver = Some(receiver);
+                Ok(worker_interrupt)
+            } else {
+                res
+            }
         })
     }
 
@@ -66,8 +77,11 @@ impl RRTWorker for TestWorker {
         &mut self,
         sender: &tokio::sync::broadcast::Sender<RRTEvent<Self::Output>>,
     ) -> Continuation {
+        let Some(rx) = self.input_receiver.as_mut() else {
+            return Continuation::Stop;
+        };
         #[allow(clippy::match_same_arms)]
-        match self.cmd_receiver.recv() {
+        match rx.blocking_recv() {
             Ok(b'c') => Continuation::Continue,
             Ok(b'r') => Continuation::Restart,
             Ok(b's') => Continuation::Stop,
@@ -106,10 +120,14 @@ pub static TEST_FACTORY_STATE: LazyLock<
     ScopedMutex<Option<TestFactoryState>, { PanicOnAnyLockNesting }>,
 > = LazyLock::new(|| scoped_mutex!(ANY, None));
 
-pub fn create_test_resources() -> (TestWorker, TestInterrupt, mpsc::Sender<u8>) {
-    let (cmd_sender, cmd_receiver) = mpsc::channel();
+pub fn create_test_resources() -> (
+    TestWorker,
+    TestInterrupt,
+    tokio::sync::broadcast::Sender<u8>,
+) {
+    let (cmd_sender, cmd_receiver) = tokio::sync::broadcast::channel(10);
     let worker = TestWorker {
-        cmd_receiver,
+        input_receiver: Some(cmd_receiver),
         event_counter: 0,
     };
     let interrupt_id = NEXT_INTERRUPT_ID.fetch_add(1, Ordering::Relaxed);
@@ -117,23 +135,24 @@ pub fn create_test_resources() -> (TestWorker, TestInterrupt, mpsc::Sender<u8>) 
     (worker, interrupt, cmd_sender)
 }
 
-pub fn create_ok_result() -> (
-    miette::Result<(TestWorker, TestInterrupt)>,
-    mpsc::Sender<u8>,
-) {
-    let (worker, interrupt, cmd_sender) = create_test_resources();
-    (Ok((worker, interrupt)), cmd_sender)
+/// Create a successful test worker and interrupt wrapped in a [`miette::Result`].
+///
+/// # Errors
+///
+/// This function never actually returns an error, but returns [`Result`] to match the
+/// expected type signature in [`TestFactoryState`].
+pub fn create_ok_result() -> miette::Result<(TestWorker, TestInterrupt)> {
+    let (worker, interrupt, _cmd_sender) = create_test_resources();
+    Ok((worker, interrupt))
 }
 
 #[must_use]
 pub fn create_shared_state(
     interrupt: TestInterrupt,
+    cmd_sender: tokio::sync::broadcast::Sender<u8>,
 ) -> Arc<ThreadLifecycleMonitor<TestWorker>> {
     Arc::new(ThreadLifecycleMonitor::<TestWorker>::new(
-        ThreadState::Running(
-            InterruptHandle::new(interrupt),
-            tokio::sync::broadcast::channel(1).0,
-        ),
+        ThreadState::Running(InterruptHandle::new(interrupt), cmd_sender),
     ))
 }
 
@@ -145,21 +164,14 @@ pub fn create_shared_state(
 /// Panics if the [`TEST_FACTORY_STATE`] mutex is poisoned.
 #[allow(clippy::type_complexity)]
 pub fn setup_factory(
-    results_and_senders: Vec<(
-        miette::Result<(TestWorker, TestInterrupt)>,
-        Option<mpsc::Sender<u8>>,
-    )>,
+    create_results_vec: Vec<miette::Result<(TestWorker, TestInterrupt)>>,
     policy: RestartPolicy,
-) -> (mpsc::Receiver<()>, Vec<mpsc::Sender<u8>>) {
+) -> mpsc::Receiver<()> {
     let (notify_sender, notify_receiver) = mpsc::channel();
-    let mut cmd_senders = Vec::new();
     let mut create_results = VecDeque::new();
 
-    for (result, sender) in results_and_senders {
+    for result in create_results_vec {
         create_results.push_back(result);
-        if let Some(s) = sender {
-            cmd_senders.push(s);
-        }
     }
 
     TEST_FACTORY_STATE.write(|guard: &mut Option<TestFactoryState>| {
@@ -171,7 +183,7 @@ pub fn setup_factory(
         });
     });
 
-    (notify_receiver, cmd_senders)
+    notify_receiver
 }
 
 /// Reset [`TEST_FACTORY_STATE`] to `None`.
@@ -203,7 +215,27 @@ pub fn get_create_count() -> u32 {
 /// # Panics
 ///
 /// Panics if the receiver has been dropped.
-pub fn send_cmd(cmd_sender: &mpsc::Sender<u8>, cmd: u8) { cmd_sender.send(cmd).unwrap(); }
+pub fn send_cmd(cmd_sender: &tokio::sync::broadcast::Sender<u8>, cmd: u8) {
+    let _ = cmd_sender.send(cmd);
+}
+
+/// Send a command byte via a [`SubscriberGuard`].
+///
+/// # Panics
+///
+/// Panics if the [`tokio`] runtime fails to build, or if the underlying send operation
+/// fails.
+///
+/// [`tokio`]: tokio
+pub fn send_cmd_via_guard(guard: &SubscriberGuard<TestWorker>, cmd: u8) {
+    let rt = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .unwrap();
+    rt.block_on(async {
+        guard.get_input_sender().send(cmd).await.unwrap();
+    });
+}
 
 #[must_use]
 pub fn no_delay_policy(max_restarts: u8) -> RestartPolicy {
@@ -264,4 +296,11 @@ pub fn controller_fn(output: std::process::Output) {
             stderr
         );
     }
+}
+
+pub fn create_mock_guard(
+    sender: BroadcastSender<TestEvent>,
+    shared_state: Arc<ThreadLifecycleMonitor<TestWorker>>,
+) -> SubscriberGuard<TestWorker> {
+    SubscriberGuard::new(sender.clone(), sender.subscribe(), shared_state)
 }

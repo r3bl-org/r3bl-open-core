@@ -511,7 +511,7 @@ mod mouse {
         action: VT100MouseActionIR,
         modifiers: VT100KeyModifiersIR,
     ) -> Vec<u8> {
-        let button_code = action_to_base_button_code(&action, button);
+        let button_code = action_to_base_button_code(action, button);
 
         // Apply modifiers and action flags to button code
         let mut code = button_code;
@@ -549,7 +549,7 @@ mod mouse {
         action: VT100MouseActionIR,
         modifiers: VT100KeyModifiersIR,
     ) -> Vec<u8> {
-        let mut cb = action_to_base_button_code(&action, button);
+        let mut cb = action_to_base_button_code(action, button);
 
         // Handle action
         match action {
@@ -588,7 +588,7 @@ mod mouse {
         action: VT100MouseActionIR,
         modifiers: VT100KeyModifiersIR,
     ) -> Vec<u8> {
-        let mut cb = action_to_base_button_code(&action, button);
+        let mut cb = action_to_base_button_code(action, button);
 
         // Handle action
         match action {
@@ -626,7 +626,7 @@ mod mouse {
     ///
     /// This handles overriding the button code for scroll events (which map to 64+).
     fn action_to_base_button_code(
-        action: &VT100MouseActionIR,
+        action: VT100MouseActionIR,
         button: VT100MouseButtonIR,
     ) -> u16 {
         match action {
