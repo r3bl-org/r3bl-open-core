@@ -231,12 +231,12 @@ buffers, and cursor visibility events.
 - bash
   - problem with cursor - its parked on the bottom right of the window, exactly like less
 
-### Phase 3.1: Virtualized Hardware Cursor & Compositor Fixes
+### Phase 3.1: Virtualized Terminal Cursor & Compositor Fixes
 
-- [x] **Hide the Global Hardware Cursor**:
+- [x] **Hide the Global Terminal Cursor**:
   - Update `paint_buffer()` in `tui/src/core/pty/pty_mux/output_renderer.rs` to explicitly
     pass `CursorVisibilityState::Hidden` instead of the parsed cursor state. This
-    permanently suppresses the hardware cursor when the multiplexer is active.
+    permanently suppresses the terminal cursor when the multiplexer is active.
 - [x] **Rename Stale Variable**:
   - Rename `crossterm_impl` to `ofs_buf_paint_impl` in `paint_buffer()`.
 - [x] **Composite the Virtual Cursor**:
@@ -264,7 +264,7 @@ buffers, and cursor visibility events.
   - Check the output logs with `DEBUG_TUI_PTY_MUX=true` to verify no more warning entries
     exist for `CSI J`, `CSI K`, or `CSI ?1049h/l`.
 - [x] **Verify Specific Use Cases**:
-  - **Bash & Less**: The blinking hardware cursor is gone, replaced by a clean,
+  - **Bash & Less**: The blinking terminal cursor is gone, replaced by a clean,
     virtualized inverted-block cursor that moves correctly in sync with typing.
   - **Less & Htop Find Bar**: Hitting `/` correctly opens the search/find bar on the PTY's
     bottom line immediately above the multiplexer status bar, completely eliminating the
@@ -287,9 +287,9 @@ All updates were made within
    cursor is currently located. Since R3BL TUI has already handled wide characters (jumbo
    emojis, grapheme clusters) by this stage, this safely inverts the colors of the cell
    without breaking layout alignment.
-2. **Global Hardware Cursor Suppression**: When `paint_buffer()` is finally called, we
+2. **Global Terminal Cursor Suppression**: When `paint_buffer()` is finally called, we
    explicitly pass `CursorVisibilityState::Hidden` instead of the child's requested
-   visibility. This permanently suppresses the hardware cursor in the multiplexer,
+   visibility. This permanently suppresses the terminal cursor in the multiplexer,
    ensuring no more flickering or "parking" at the bottom right.
 3. **Preserved PTY Bottom Row (The `/` find bar fix)**: The critical bug causing the
    `less`/`htop` find bar to disappear has been fixed. Previously, the `composite_buffer`
@@ -307,7 +307,7 @@ All updates were made within
   - Ran `./check.fish --clippy` to verify clean compilation with no warnings or style
     lints.
 - **Integration & Manual Verification**:
-  - **Bash & Less**: The blinking hardware cursor is gone, replaced by a clean,
+  - **Bash & Less**: The blinking terminal cursor is gone, replaced by a clean,
     virtualized inverted-block cursor that moves correctly in sync with typing.
   - **Less & Htop Find Bar**: Hitting `/` correctly opens the search/find bar on the PTY's
     bottom line immediately above the multiplexer status bar, completely eliminating the
