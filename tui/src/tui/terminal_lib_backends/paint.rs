@@ -46,23 +46,12 @@ use crate::{DEBUG_TUI_COMPOSITOR, PaintMode, DEBUG_TUI_SHOW_PIPELINE_EXPANDED, G
 use std::fmt::Debug;
 
 /// Executes a selective redraw (diff) paint.
-///
-/// It extracts the [`cursor_visibility`] from the [`OffscreenBuffer`] (which tracks the
-/// parsed [`DECTCEM`] `?25h`/`l` state) and injects it into the execution layer. This
-/// ensures the terminal emulator cursor correctly matches the simulated state before
-/// rendering any ops.
-///
-/// [`cursor_visibility`]: crate::AnsiParserSupport::cursor_visibility
-/// [`DECTCEM`]: https://en.wikipedia.org/wiki/ANSI_escape_code#Set_terminal_mode
-/// [`OffscreenBuffer`]: crate::OffscreenBuffer
 fn perform_diff_paint(
-    ofs_buf: &OffscreenBuffer,
     diff_chunks: &PixelCharDiffChunks,
     window_size: Size,
     locked_output_device: LockedOutputDevice<'_>,
     paint_mode: PaintMode,
 ) {
-    let cursor_visibility = ofs_buf.ansi_parser_support.cursor_visibility;
     match TERMINAL_LIB_BACKEND {
         TerminalLibBackend::Crossterm => {
             let mut crossterm_impl = OffscreenBufferPaintImpl {};
@@ -72,7 +61,6 @@ fn perform_diff_paint(
                 window_size,
                 locked_output_device,
                 paint_mode,
-                cursor_visibility,
             );
         }
         TerminalLibBackend::DirectToAnsi => {
@@ -86,22 +74,12 @@ fn perform_diff_paint(
                 window_size,
                 locked_output_device,
                 paint_mode,
-                cursor_visibility,
             );
         }
     }
 }
 
 /// Executes a complete redraw (full) paint.
-///
-/// It extracts the [`cursor_visibility`] from the [`OffscreenBuffer`] (which tracks the
-/// parsed [`DECTCEM`] `?25h`/`l` state) and injects it into the execution layer. This
-/// ensures the terminal emulator cursor correctly matches the simulated state before
-/// rendering any ops.
-///
-/// [`cursor_visibility`]: crate::AnsiParserSupport::cursor_visibility
-/// [`DECTCEM`]: https://en.wikipedia.org/wiki/ANSI_escape_code#Set_terminal_mode
-/// [`OffscreenBuffer`]: crate::OffscreenBuffer
 fn perform_full_paint(
     ofs_buf: &OffscreenBuffer,
     flush_kind: FlushKind,
@@ -109,7 +87,6 @@ fn perform_full_paint(
     locked_output_device: LockedOutputDevice<'_>,
     paint_mode: PaintMode,
 ) {
-    let cursor_visibility = ofs_buf.ansi_parser_support.cursor_visibility;
     match TERMINAL_LIB_BACKEND {
         TerminalLibBackend::Crossterm => {
             let mut crossterm_impl = OffscreenBufferPaintImpl {};
@@ -120,7 +97,6 @@ fn perform_full_paint(
                 window_size,
                 locked_output_device,
                 paint_mode,
-                cursor_visibility,
             );
         }
         TerminalLibBackend::DirectToAnsi => {
@@ -135,7 +111,6 @@ fn perform_full_paint(
                 window_size,
                 locked_output_device,
                 paint_mode,
-                cursor_visibility,
             );
         }
     }
@@ -213,7 +188,6 @@ pub fn paint<S, AS>(
                 }
                 Some(ref diff_chunks) => {
                     perform_diff_paint(
-                        &buffer_from_pool,
                         diff_chunks,
                         window_size,
                         locked_output_device,

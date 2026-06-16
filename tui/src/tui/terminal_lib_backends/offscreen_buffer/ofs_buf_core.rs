@@ -611,7 +611,6 @@ pub trait OffscreenBufferPaint {
         window_size: Size,
         locked_output_device: LockedOutputDevice<'_>,
         paint_mode: PaintMode,
-        cursor_visibility: CursorVisibilityState,
     );
 
     /// Execute diff operations on the display (selective redraw).
@@ -628,7 +627,6 @@ pub trait OffscreenBufferPaint {
         window_size: Size,
         locked_output_device: LockedOutputDevice<'_>,
         paint_mode: PaintMode,
-        cursor_visibility: CursorVisibilityState,
     );
 }
 

@@ -12,6 +12,7 @@
 use super::ProcessManager;
 use crate::{ArrayBoundsCheck, PaintMode, ArrayOverflowResult, FlushKind, GCStringOwned, IndexOps,
             OffscreenBuffer, OutputDevice, PixelChar, RangeExt, RenderOpsLocalData,
+            RenderOpCommon,
             SPACE_CHAR, Size, TuiStyle, col,
             core::coordinates::{idx, len},
             ok, print_text_with_attributes, row,
@@ -352,7 +353,7 @@ impl OutputRenderer {
 ///
 /// # Note on Side Effects
 ///
-/// We explicitly pass [`CursorVisibilityState::Hidden`] here instead of the parsed
+/// We explicitly push [`RenderOpCommon::HideCursor`] here instead of passing the parsed
 /// visibility state. This permanently suppresses the terminal emulator cursor when the multiplexer
 /// is active, preventing flickering and cursor parking issues.
 ///
@@ -361,7 +362,8 @@ impl OutputRenderer {
 /// chrome in the future, they will be handled by compositing another virtual caret.
 fn paint_buffer(ofs_buf: &OffscreenBuffer, output_device: &OutputDevice) {
     let mut ofs_buf_paint_impl = OffscreenBufferPaintImpl {};
-    let render_ops = ofs_buf_paint_impl.render(ofs_buf);
+    let mut render_ops = ofs_buf_paint_impl.render(ofs_buf);
+    render_ops.push(RenderOpCommon::HideCursor);
     output_device.write(|out| {
         ofs_buf_paint_impl.paint(
             render_ops,
@@ -369,7 +371,6 @@ fn paint_buffer(ofs_buf: &OffscreenBuffer, output_device: &OutputDevice) {
             ofs_buf.window_size,
             out,
             PaintMode::Real,
-            CursorVisibilityState::Hidden, // Always hide the terminal emulator cursor
         );
     });
 }

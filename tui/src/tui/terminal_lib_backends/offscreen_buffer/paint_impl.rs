@@ -74,7 +74,6 @@ use crate::{ColIndex, PaintMode, DEBUG_TUI_COMPOSITOR, DEBUG_TUI_SHOW_PIPELINE, 
             OffscreenBufferPaint, PixelChar, PixelCharDiffChunks, RenderOpCommon,
             RenderOpFlush, RenderOpOutput, RenderOpOutputVec, RenderOpsExec, RowIndex,
             Size, TERMINAL_LIB_BACKEND, TerminalLibBackend, TuiStyle, ch, col,
-            CursorVisibilityState,
             glyphs::SPACER_GLYPH, row,
             terminal_lib_backends::{crossterm_backend::PaintRenderOpImplCrossterm,
                                     direct_to_ansi::RenderOpPaintImplDirectToAnsi}};
@@ -85,12 +84,11 @@ pub struct OffscreenBufferPaintImpl;
 impl OffscreenBufferPaint for OffscreenBufferPaintImpl {
     fn paint(
         &mut self,
-        mut render_ops: RenderOpOutputVec,
+        render_ops: RenderOpOutputVec,
         flush_kind: FlushKind,
         window_size: Size,
         locked_output_device: LockedOutputDevice<'_>,
         paint_mode: PaintMode,
-        cursor_visibility: CursorVisibilityState,
     ) {
         let mut skip_flush = false;
 
@@ -105,12 +103,6 @@ impl OffscreenBufferPaint for OffscreenBufferPaintImpl {
                     RenderOpPaintImplDirectToAnsi.clear_before_flush(locked_output_device);
                 }
             }
-        }
-
-        // Apply cursor visibility state.
-        match cursor_visibility {
-            CursorVisibilityState::Visible => render_ops.push(RenderOpCommon::ShowCursor),
-            CursorVisibilityState::Hidden => render_ops.push(RenderOpCommon::HideCursor),
         }
 
         // Execute each RenderOpOutput using the ExecutableRenderOps trait.
@@ -145,19 +137,12 @@ impl OffscreenBufferPaint for OffscreenBufferPaintImpl {
 
     fn paint_diff(
         &mut self,
-        mut render_ops: RenderOpOutputVec,
+        render_ops: RenderOpOutputVec,
         window_size: Size,
         locked_output_device: LockedOutputDevice<'_>,
         paint_mode: PaintMode,
-        cursor_visibility: CursorVisibilityState,
     ) {
         let mut skip_flush = false;
-
-        // Apply cursor visibility state.
-        match cursor_visibility {
-            CursorVisibilityState::Visible => render_ops.push(RenderOpCommon::ShowCursor),
-            CursorVisibilityState::Hidden => render_ops.push(RenderOpCommon::HideCursor),
-        }
 
         // Execute each RenderOpOutput using the ExecutableRenderOps trait.
         render_ops.execute_all(
