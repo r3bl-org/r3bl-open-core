@@ -3,7 +3,7 @@
 //! [`OSC`] (Operating System Command) operations for VT100/[`ANSI`] terminal emulation.
 //!
 //! This module implements [`OSC`] operations that correspond to [`ANSI`] [`OSC`]
-//! sequences handled by the `vt_100_pty_output_parser::operations::osc_ops` module. These
+//! sequences handled by the `vt_100_pty_output_parser::ops::osc_ops` module. These
 //! include:
 //!
 //! - **[`OSC`] 0/1/2** (Set Title/Icon) - [`handle_title_and_icon`]
@@ -20,21 +20,21 @@
 //! **Related Files:**
 //!
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`handle_hyperlink`]: crate::OffscreenBuffer::handle_hyperlink
-//! [`handle_title_and_icon`]: crate::OffscreenBuffer::handle_title_and_icon
+//! [`handle_hyperlink`]: crate::OfsBufVT100::handle_hyperlink
+//! [`handle_title_and_icon`]: crate::OfsBufVT100::handle_title_and_icon
 //! [`OSC`]: crate::osc_codes::OscSequence
 
 #[allow(clippy::wildcard_imports)]
 use super::super::*;
 use crate::core::osc::OscEvent;
 
-impl OffscreenBuffer {
+impl OfsBufVT100 {
     /// Handle [`OSC`] title and icon sequences ([`OSC`] 0, 1, 2).
     /// Sets window title and/or icon name by queuing an [`OSC`] event.
     ///
     /// [`OSC`]: crate::osc_codes::OscSequence
     pub fn handle_title_and_icon(&mut self, title: &str) {
-        self.ansi_parser_support
+        self.parser_global_state
             .pending_osc_events
             .push(OscEvent::SetTitleAndTab(title.to_string()));
     }
@@ -45,7 +45,7 @@ impl OffscreenBuffer {
     ///
     /// [`OSC`]: crate::osc_codes::OscSequence
     pub fn handle_hyperlink(&mut self, uri: &str) {
-        self.ansi_parser_support
+        self.parser_global_state
             .pending_osc_events
             .push(OscEvent::Hyperlink {
                 uri: uri.to_string(),
@@ -57,11 +57,11 @@ impl OffscreenBuffer {
 #[cfg(test)]
 mod tests_osc_ops {
     use super::*;
-    use crate::{height, width};
+    use crate::{OfsBufVT100, height, width};
 
-    fn create_test_buffer() -> OffscreenBuffer {
+    fn create_test_buffer() -> OfsBufVT100 {
         let size = width(10) + height(6);
-        OffscreenBuffer::new_empty(size)
+        OfsBufVT100::new_empty(size)
     }
 
     #[test]
@@ -69,14 +69,14 @@ mod tests_osc_ops {
         let mut buffer = create_test_buffer();
 
         // Initially no pending OSC events.
-        assert!(buffer.ansi_parser_support.pending_osc_events.is_empty());
+        assert!(buffer.parser_global_state.pending_osc_events.is_empty());
 
         buffer.handle_title_and_icon("My Window Title");
 
         // Should have one SetTitleAndTab event.
-        assert_eq!(buffer.ansi_parser_support.pending_osc_events.len(), 1);
+        assert_eq!(buffer.parser_global_state.pending_osc_events.len(), 1);
         if let OscEvent::SetTitleAndTab(title) =
-            &buffer.ansi_parser_support.pending_osc_events[0]
+            &buffer.parser_global_state.pending_osc_events[0]
         {
             assert_eq!(title, "My Window Title");
         } else {
@@ -91,9 +91,9 @@ mod tests_osc_ops {
         buffer.handle_hyperlink("https://example.com");
 
         // Should have one Hyperlink event.
-        assert_eq!(buffer.ansi_parser_support.pending_osc_events.len(), 1);
+        assert_eq!(buffer.parser_global_state.pending_osc_events.len(), 1);
         if let OscEvent::Hyperlink { uri, text } =
-            &buffer.ansi_parser_support.pending_osc_events[0]
+            &buffer.parser_global_state.pending_osc_events[0]
         {
             assert_eq!(uri, "https://example.com");
             assert_eq!(text, ""); // Text is handled separately
@@ -111,19 +111,19 @@ mod tests_osc_ops {
         buffer.handle_title_and_icon("Title 2");
 
         // Should have three events queued.
-        assert_eq!(buffer.ansi_parser_support.pending_osc_events.len(), 3);
+        assert_eq!(buffer.parser_global_state.pending_osc_events.len(), 3);
 
         // Check order is preserved.
         assert!(matches!(
-            buffer.ansi_parser_support.pending_osc_events[0],
+            buffer.parser_global_state.pending_osc_events[0],
             OscEvent::SetTitleAndTab(_)
         ));
         assert!(matches!(
-            buffer.ansi_parser_support.pending_osc_events[1],
+            buffer.parser_global_state.pending_osc_events[1],
             OscEvent::Hyperlink { .. }
         ));
         assert!(matches!(
-            buffer.ansi_parser_support.pending_osc_events[2],
+            buffer.parser_global_state.pending_osc_events[2],
             OscEvent::SetTitleAndTab(_)
         ));
     }
@@ -134,9 +134,9 @@ mod tests_osc_ops {
 
         buffer.handle_title_and_icon("");
 
-        assert_eq!(buffer.ansi_parser_support.pending_osc_events.len(), 1);
+        assert_eq!(buffer.parser_global_state.pending_osc_events.len(), 1);
         if let OscEvent::SetTitleAndTab(title) =
-            &buffer.ansi_parser_support.pending_osc_events[0]
+            &buffer.parser_global_state.pending_osc_events[0]
         {
             assert_eq!(title, "");
         } else {
@@ -150,9 +150,9 @@ mod tests_osc_ops {
 
         buffer.handle_hyperlink("");
 
-        assert_eq!(buffer.ansi_parser_support.pending_osc_events.len(), 1);
+        assert_eq!(buffer.parser_global_state.pending_osc_events.len(), 1);
         if let OscEvent::Hyperlink { uri, text } =
-            &buffer.ansi_parser_support.pending_osc_events[0]
+            &buffer.parser_global_state.pending_osc_events[0]
         {
             assert_eq!(uri, "");
             assert_eq!(text, "");

@@ -28,11 +28,11 @@ impl OffscreenBuffer {
 #[cfg(test)]
 mod tests_bulk_ops {
     use super::*;
-    use crate::{TuiStyle, col, height, row, width};
+    use crate::{OfsBufVT100, TuiStyle, col, height, row, width};
 
-    fn create_test_buffer() -> OffscreenBuffer {
+    fn create_test_buffer() -> OfsBufVT100 {
         let size = width(4) + height(4);
-        OffscreenBuffer::new_empty(size)
+        OfsBufVT100::new_empty(size)
     }
 
     fn create_test_char(ch: char) -> PixelChar {

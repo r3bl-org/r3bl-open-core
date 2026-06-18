@@ -67,7 +67,7 @@
 //!
 //! ## 1. [`ANSI`]/VT100 Terminal Emulation
 //!
-//! - **Parser Integration**: Processes escape sequences via [`vt_100_ansi_impl`]
+//! - **Parser Integration**: Processes escape sequences via [`ofs_buf_vt_100`]
 //!   implementations
 //! - **State Management**: Maintains cursor position, character sets, scrolling regions
 //! - **Protocol Compliance**: Full VT100 specification compliance with conformance tests
@@ -111,14 +111,14 @@
 //! mapping:
 //!
 //! ```text
-//! vt_100_pty_output_parser/operations/   offscreen_buffer/vt_100_ansi_impl/
-//! ├── vt_100_shim_char_ops            →  ├── vt_100_impl_char_ops    (print_char, ICH, DCH, ECH)
-//! ├── vt_100_shim_control_ops         →  ├── vt_100_impl_control_ops (BS, TAB, LF, CR)
-//! ├── vt_100_shim_cursor_ops          →  ├── vt_100_impl_cursor_ops  (movement, positioning)
-//! ├── vt_100_shim_line_ops            →  ├── vt_100_impl_line_ops    (insert/delete lines)
-//! ├── vt_100_shim_scroll_ops          →  ├── vt_100_impl_scroll_ops  (scrolling, regions)
-//! ├── vt_100_shim_terminal_ops        →  ├── vt_100_impl_terminal_ops(reset, clear, charset)
-//! └── bounds_check.rs                 →  └── vt_100_impl_ansi_scroll_helper (scroll region utilities)
+//! vt_100_pty_output_parser/ops/   offscreen_buffer/ofs_buf_vt_100/
+//! ├── vt_100_shim_char_ops      → ├── impl_char_ops    (print_char, ICH, DCH, ECH)
+//! ├── vt_100_shim_control_ops   → ├── impl_control_ops (BS, TAB, LF, CR)
+//! ├── vt_100_shim_cursor_ops    → ├── impl_cursor_ops  (movement, positioning)
+//! ├── vt_100_shim_line_ops      → ├── impl_line_ops    (insert/delete lines)
+//! ├── vt_100_shim_scroll_ops    → ├── impl_scroll_ops  (scrolling, regions)
+//! ├── vt_100_shim_terminal_ops  → ├── impl_terminal_ops(reset, clear, charset)
+//! └── bounds_check.rs           → └── impl_ansi_scroll_helper (scroll region utilities)
 //! ```
 //!
 //! This 1:1 mapping provides:
@@ -209,11 +209,11 @@
 //! Debug assertions catch issues during development:
 //! ```rust
 //! # use r3bl_tui::*;
-//! # let mut buffer = OffscreenBuffer::new_empty(Size { col_width: width(10), row_height: height(5) });
-//! # buffer.cursor_pos = Pos { row_index: row(1), col_index: col(1) };
+//! # let mut vt100 = OfsBufVT100::new_empty(Size { col_width: width(10), row_height: height(5) });
+//! # vt100.ofs_buf.cursor_pos = Pos { row_index: row(1), col_index: col(1) };
 //! # let count = Length::from(1);
 //! // In parser operations
-//! let success = buffer.delete_chars_at_cursor(count);
+//! let success = vt100.delete_chars_at_cursor(count);
 //! debug_assert!(success.is_ok(), "Failed to delete {:?} chars at cursor", count);
 //!
 //! # let row = RowIndex::from(1);
@@ -221,7 +221,7 @@
 //! # let end = ColIndex::from(1);
 //! # let dest = ColIndex::from(2);
 //! // In internal operations with edge case awareness
-//! let success = buffer.copy_chars_within_line(row, source..end, dest);
+//! let success = vt100.ofs_buf.copy_chars_within_line(row, source..end, dest);
 //! debug_assert!(success.is_ok() || source >= end,
 //!     "Failed to copy chars, range: {:?}..{:?}", source, end);
 //! ```
@@ -281,25 +281,26 @@
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
 //! [`bounds_check`]: crate::bounds_check
-//! [`clear_line()`]: crate::OffscreenBuffer::clear_line
+//! [`clear_line()`]: crate::OfsBufVT100::clear_line
 //! [`copy_chars_within_line()`]: crate::OffscreenBuffer::copy_chars_within_line
-//! [`cursor_backward()`]: crate::OffscreenBuffer::cursor_backward
-//! [`cursor_down()`]: crate::OffscreenBuffer::cursor_down
-//! [`cursor_forward()`]: crate::OffscreenBuffer::cursor_forward
-//! [`cursor_up()`]: crate::OffscreenBuffer::cursor_up
+//! [`cursor_backward()`]: crate::OfsBufVT100::cursor_backward
+//! [`cursor_down()`]: crate::OfsBufVT100::cursor_down
+//! [`cursor_forward()`]: crate::OfsBufVT100::cursor_forward
+//! [`cursor_up()`]: crate::OfsBufVT100::cursor_up
 //! [`DEC`]: https://en.wikipedia.org/wiki/Digital_Equipment_Corporation
-//! [`delete_chars_at_cursor()`]: crate::OffscreenBuffer::delete_chars_at_cursor
+//! [`delete_chars_at_cursor()`]: crate::OfsBufVT100::delete_chars_at_cursor
 //! [`diff()`]: crate::OffscreenBuffer::diff
 //! [`fill_char_range()`]: crate::OffscreenBuffer::fill_char_range
 //! [`get_char()`]: crate::OffscreenBuffer::get_char
 //! [`get_line()`]: crate::OffscreenBuffer::get_line
-//! [`handle_backspace()`]: crate::OffscreenBuffer::handle_backspace
-//! [`handle_line_feed()`]: crate::OffscreenBuffer::handle_line_feed
-//! [`handle_tab()`]: crate::OffscreenBuffer::handle_tab
+//! [`handle_backspace()`]: crate::OfsBufVT100::handle_backspace
+//! [`handle_line_feed()`]: crate::OfsBufVT100::handle_line_feed
+//! [`handle_tab()`]: crate::OfsBufVT100::handle_tab
 //! [`IndexOps`]: crate::bounds_check::IndexOps
-//! [`insert_chars_at_cursor()`]: crate::OffscreenBuffer::insert_chars_at_cursor
+//! [`insert_chars_at_cursor()`]: crate::OfsBufVT100::insert_chars_at_cursor
 //! [`LengthOps`]: crate::bounds_check::LengthOps
 //! [`ofs_buf_range_validation`]: mod@crate::offscreen_buffer::ofs_buf_range_validation
+//! [`ofs_buf_vt_100`]: crate::core::ansi::vt_100_pty_output_parser::ops_impl_ofs_buf
 //! [`Option<&PixelCharLine>`]: std::option::Option
 //! [`Option<PixelChar>`]: std::option::Option
 //! [`Option<PixelCharDiffChunks>`]: std::option::Option
@@ -308,11 +309,11 @@
 //! [`Pos`]: crate::Pos
 //! [`RangeBoundsExt`]: crate::bounds_check::RangeBoundsExt
 //! [`RenderPipeline::paint()`]: crate::RenderPipeline::paint
-//! [`reset_all_style_attributes()`]: crate::OffscreenBuffer::reset_all_style_attributes
+//! [`reset_all_style_attributes()`]: crate::OfsBufVT100::reset_all_style_attributes
 //! [`set_char()`]: crate::OffscreenBuffer::set_char
-//! [`set_foreground_color()`]: crate::OffscreenBuffer::set_foreground_color
-//! [`shift_lines_down()`]: crate::OffscreenBuffer::shift_lines_down
-//! [`shift_lines_up()`]: crate::OffscreenBuffer::shift_lines_up
+//! [`set_foreground_color()`]: crate::OfsBufVT100::set_foreground_color
+//! [`shift_lines_down()`]: crate::OfsBufVT100::shift_lines_down
+//! [`shift_lines_up()`]: crate::OfsBufVT100::shift_lines_up
 //! [`TuiStyle`]: crate::TuiStyle
 //! [`validate_col_range_mut()`]: crate::OffscreenBuffer::validate_col_range_mut
 //! [`validate_row_range_mut()`]: crate::OffscreenBuffer::validate_row_range_mut
@@ -349,11 +350,6 @@ mod pixel_char;
 mod pixel_char_line;
 mod pixel_char_lines;
 
-#[cfg(any(test, doc))]
-pub mod vt_100_ansi_impl;
-#[cfg(not(any(test, doc)))]
-mod vt_100_ansi_impl;
-
 // Re-export public API (flat, ergonomic surface).
 pub use diff_chunks::*;
 pub use ofs_buf_core::*;
@@ -361,7 +357,5 @@ pub use paint_impl::*;
 pub use pixel_char::*;
 pub use pixel_char_line::*;
 pub use pixel_char_lines::*;
-
-// Test fixtures (only available during testing).
 #[cfg(any(test, doc))]
 pub mod test_fixtures_ofs_buf;

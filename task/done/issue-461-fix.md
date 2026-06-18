@@ -199,3 +199,92 @@ memory overhead. Here is the exact list of places we would need to migrate to
    - `OutputRenderer`: Will accept the `VT100TerminalState`, do its virtual cursor
      compositing, and then pass the inner `OffscreenBuffer` to the generic
      `paint_buffer()` engine.
+
+### Composition (Structural Split) Implementation Plan
+
+- [x] **Step 1: Define `VT100TerminalState` & Strip `OffscreenBuffer`**
+  - [x] In `tui/src/tui/terminal_lib_backends/offscreen_buffer/ofs_buf_core.rs`:
+    - Define `VT100TerminalState` containing `ofs_buf: OffscreenBuffer`,
+      `parser_global_state: ParserGlobalState`, `hidden_screen_state: HiddenScreenState`,
+      and `terminal_mode: TerminalModeState`.
+    - Strip `OffscreenBuffer` to contain only `buffer`, `window_size`, `cursor_pos`, and
+      `memory_size`.
+    - Implement `Deref` and `DerefMut` for `VT100TerminalState` pointing to
+      `OffscreenBuffer`.
+    - Update `GetMemSize` for both structs.
+    - Implement `new_empty()` constructors for both structs.
+  - [x] In `tui/src/tui/terminal_lib_backends/compositor_render_ops_to_ofs_buf.rs`:
+    - Remove the mutations to `ofs_buf.terminal_mode` in `process_common_render_op` (e.g.,
+      for `EnterRawMode`, `EnterAlternateScreen`, `EnableMouseTracking`,
+      `EnableBracketedPaste`), as they are terminal-only state operations and
+      `OffscreenBuffer` no longer holds this state.
+
+- [x] **Step 2: Update ANSI Parser Performer & Public API**
+  - [x] In `tui/src/core/ansi/vt_100_pty_output_parser/ansi_parser_public_api.rs`:
+    - Update `AnsiToOfsBufPerformer`'s `ofs_buf` field to type
+      `&'a mut VT100TerminalState`.
+    - Move `apply_ansi_bytes` implementation block to `VT100TerminalState`.
+  - [x] In `tui/src/core/ansi/vt_100_pty_output_parser/performer.rs`:
+    - Update imports and performer definition to type-reference `VT100TerminalState`.
+
+- [x] **Step 3: Migrate VT100 Emulator Implementations**
+  - [x] For all 14 files in
+        `tui/src/tui/terminal_lib_backends/offscreen_buffer/vt_100_ansi_impl/`:
+    - Change `impl OffscreenBuffer` to `impl VT100TerminalState`.
+    - Update `create_test_buffer()` and other test/unit helper functions to use/return
+      `VT100TerminalState`.
+  - [x] In
+        `tui/src/core/ansi/vt_100_pty_output_parser/vt_100_pty_output_conformance_tests/`:
+    - Update `test_fixtures_vt_100_ansi_conformance.rs` to return `VT100TerminalState`.
+    - Update all conformance tests to use `VT100TerminalState`.
+
+- [x] **Step 4: Update PTY Multiplexer & Processes**
+  - [x] Update `ProcessManager` and active process state to track `VT100TerminalState`
+        instead of `OffscreenBuffer`.
+  - [x] In `tui/src/core/pty/pty_mux/output_renderer.rs`:
+    - Update `render_from_active_buffer`, `composite_virtual_cursor_into_buffer`, and
+      other methods to accept/use `VT100TerminalState`.
+    - In `paint_buffer()`, pass `&terminal_state.ofs_buf` (the inner `OffscreenBuffer`) to
+      the generic canvas painting pipeline.
+
+- [x] **Step 5: Integration & Verification**
+  - [x] Run `./check.fish --check` to verify compilation.
+  - [x] Run `./check.fish --test` to verify all tests pass.
+- [x] **Mandatory manual review**:
+  - [x] `ofs_buf_core.rs`
+  - [x] `ansi_parser_public_api.rs`
+  - [x] `performer.rs`
+  - [x] `output_renderer.rs`
+  - [x] Conformance tests and visual check success verified.
+
+## Phase 5: Relocate VT100 Terminal State Code
+
+The `vt_100_terminal_state.rs` file (renamed to `ofs_buf_vt_100.rs`) and the
+`vt_100_ansi_impl/` directory were intrinsically part of the VT100 parsing system, not the
+generic offscreen buffer. They have been relocated from
+`tui/src/tui/terminal_lib_backends/offscreen_buffer/` to their new home.
+
+- [x] Move and rename `vt_100_terminal_state.rs` to
+      `tui/src/core/ansi/vt_100_pty_output_parser/ofs_buf_vt_100.rs`.
+- [x] Move the entire `vt_100_ansi_impl/` directory to
+      `tui/src/core/ansi/vt_100_pty_output_parser/`.
+- [x] Update `mod.rs` files and visibility appropriately.
+- [x] Run `./check.fish --check` to ensure no broken imports.
+- [x] **Mandatory manual review**:
+  - [x] `tui/src/core/ansi/vt_100_pty_output_parser/mod.rs`
+  - [x] `tui/src/core/ansi/vt_100_pty_output_parser/ops_impl_ofs_buf/mod.rs`
+  - [x] `tui/src/core/ansi/vt_100_pty_output_parser/ofs_buf_vt_100.rs`
+
+## Phase 6: DX and Folder Structure Alignment
+
+Made DX improvements for IDE and CLI tooling (like fd-find):
+- Renamed the parent folder `operations` -> `ops`
+- Renamed the impl folder to match -> `ops_impl_ofs_buf`. This is the impl for OffscreenBuffer. In the future this opens the door to be able to impl this for other structs.
+- Prefixed `vt_100_` in front of all 3 types of files (`shim`, `impl`, and `test`).
+
+This ensures they sort lexicographically and related domains group beautifully together. For example, searching for `vt_100_char_ops` returns:
+- ops/vt_100_shim_char_ops.rs
+- ops_impl_ofs_buf/vt_100_impl_char_ops.rs
+- tests/vt_100_test_char_ops.rs
+
+In the future, this opens the door to be able to have ops_impl_XYZ/.

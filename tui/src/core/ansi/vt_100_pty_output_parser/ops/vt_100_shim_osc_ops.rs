@@ -3,11 +3,11 @@
 //! [`OSC`] (Operating System Command) sequence operations.
 //!
 //! This module acts as a thin shim layer that delegates to the actual implementation.
-//! Refer to the module-level documentation in the operations module for details on the
+//! Refer to the module-level documentation in the ops module for details on the
 //! "shim → impl → test" architecture and naming conventions.
 //!
 //! **Related Files:**
-//! - **Implementation**: [`impl_osc_ops`] - Business logic with unit tests
+//! - **Implementation**: [`vt_100_impl_osc_ops`] - Business logic with unit tests
 //! - **Integration Tests**: [`test_osc_ops`] - Full pipeline testing via public API
 //!
 //! # Testing Strategy
@@ -20,7 +20,7 @@
 //! - **Integration tests** in the conformance tests validating the full pipeline
 //!
 //! For the complete testing philosophy and rationale behind this approach,
-//! see the [operations module].
+//! see the [ops module].
 //!
 //! # Architecture Overview
 //!
@@ -39,9 +39,9 @@
 //!         ↓
 //!     osc_dispatch() [routes to functions below]
 //!         ↓
-//!     Route to `OSC` operations:                          ╭───────────╮
-//!       - osc_ops:: for OS commands (title, hyperlink) <- │THIS MODULE│
-//!         ↓                                               ╰───────────╯
+//!     Route to `OSC` operations:                               ╭───────────╮
+//!       - osc_ops:: for OS commands (title, hyperlink)      <- │THIS MODULE│
+//!         ↓                                                    ╰───────────╯
 //!     Queue OscEvent for later rendering
 //! ```
 //!
@@ -57,12 +57,12 @@
 //!
 //! [`OSC`] sequences are queued as events for later processing by the output renderer.
 //!
-//! [`impl_osc_ops`]: crate::vt_100_ansi_impl::vt_100_impl_osc_ops
 //! [`OSC`]: crate::osc_codes::OscSequence
 //! [`test_osc_ops`]: crate::vt_100_pty_output_conformance_tests::tests::vt_100_test_osc_ops
+//! [`vt_100_impl_osc_ops`]: crate::core::ansi::vt_100_pty_output_parser::ops_impl_ofs_buf::vt_100_impl_osc_ops
 //! [module-level Architecture Overview]: super#architecture-overview
 //! [module-level documentation]: self
-//! [operations module]: crate::core::ansi::vt_100_pty_output_parser::operations
+//! [ops module]: crate::core::ansi::vt_100_pty_output_parser::ops
 
 use super::super::ansi_parser_public_api::AnsiToOfsBufPerformer;
 use crate::core::osc::osc_codes;
@@ -118,7 +118,7 @@ pub fn dispatch_osc(
 /// [`OSC`]: crate::osc_codes::OscSequence
 /// [`SetTitleAndTab`]: crate::OscEvent::SetTitleAndTab
 pub fn handle_title_and_icon(performer: &mut AnsiToOfsBufPerformer, title: &str) {
-    performer.ofs_buf.handle_title_and_icon(title);
+    performer.ofs_buf_vt_100.handle_title_and_icon(title);
 }
 
 /// Handle `OSC 8` hyperlink sequences.
@@ -126,5 +126,5 @@ pub fn handle_title_and_icon(performer: &mut AnsiToOfsBufPerformer, title: &str)
 /// The display text is handled separately via `print()` calls.
 /// Queues Hyperlink event for later processing by output renderer.
 pub fn handle_hyperlink(performer: &mut AnsiToOfsBufPerformer, uri: &str) {
-    performer.ofs_buf.handle_hyperlink(uri);
+    performer.ofs_buf_vt_100.handle_hyperlink(uri);
 }

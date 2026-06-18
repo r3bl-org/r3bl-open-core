@@ -10,7 +10,6 @@
 
 use super::{erase_mode::{EraseDisplayMode, EraseLineMode},
             private_mode::PrivateModeType};
-use crate::{generate_impl_display_for_fast_stringify, ok};
 use crate::{BufTextStorage, CsiCount, FastStringify, NumericConversions, TermCol,
             TermColDelta, TermRow, TermRowDelta,
             core::ansi::{constants::{CHA_CURSOR_COLUMN, CNL_CURSOR_NEXT_LINE,
@@ -28,6 +27,7 @@ use crate::{BufTextStorage, CsiCount, FastStringify, NumericConversions, TermCol
                                      SD_SCROLL_DOWN, SM_SET_PRIVATE_MODE,
                                      SU_SCROLL_UP, VPA_VERTICAL_POSITION},
                          generator::DsrRequestType},
+            generate_impl_display_for_fast_stringify, ok,
             stack_alloc_types::usize_fmt::{convert_u16_to_string_slice, u16_to_u8_array}};
 use std::fmt::{Formatter, Result};
 
@@ -178,13 +178,15 @@ pub enum CsiSequence {
     /// [`ESC`]: crate::EscSequence
     DeviceStatusReport(DsrRequestType),
     /// Enable Private Mode - [`ESC`] [ ? n h (n = mode number like `DECAWM_AUTO_WRAP`).
-    /// See [`crate::offscreen_buffer::AnsiParserSupport::auto_wrap_mode`]
+    /// See [`auto_wrap_mode`]
     ///
+    /// [`auto_wrap_mode`]: crate::ParserGlobalState::auto_wrap_mode
     /// [`ESC`]: crate::EscSequence
     EnablePrivateMode(PrivateModeType),
     /// Disable Private Mode - [`ESC`] [ ? n l (n = mode number like `DECAWM_AUTO_WRAP`).
-    /// See [`crate::offscreen_buffer::AnsiParserSupport::auto_wrap_mode`]
+    /// See [`auto_wrap_mode`]
     ///
+    /// [`auto_wrap_mode`]: crate::ParserGlobalState::auto_wrap_mode
     /// [`ESC`]: crate::EscSequence
     DisablePrivateMode(PrivateModeType),
     /// Insert Line (IL) - [`ESC`] [ n L.

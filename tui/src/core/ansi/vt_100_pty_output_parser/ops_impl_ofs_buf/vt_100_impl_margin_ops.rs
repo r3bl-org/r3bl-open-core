@@ -3,7 +3,7 @@
 //! Scroll margin operations for VT100/[`ANSI`] terminal emulation.
 //!
 //! This module implements scroll margin operations that correspond to [`ANSI`]
-//! sequences handled by the `vt_100_pty_output_parser::operations::margin_ops` module.
+//! sequences handled by the `vt_100_pty_output_parser::ops::margin_ops` module.
 //! These include:
 //!
 //! - **[`DECSTBM`]** (Set Top and Bottom Margins) - [`set_scroll_margins`]
@@ -21,21 +21,21 @@
 //!
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`DECSTBM`]: https://vt100.net/docs/vt510-rm/DECSTBM.html
-//! [`reset_scroll_margins`]: crate::OffscreenBuffer::reset_scroll_margins
-//! [`set_scroll_margins`]: crate::OffscreenBuffer::set_scroll_margins
+//! [`reset_scroll_margins`]: crate::OfsBufVT100::reset_scroll_margins
+//! [`set_scroll_margins`]: crate::OfsBufVT100::set_scroll_margins
 
 #[allow(clippy::wildcard_imports)]
 use super::super::*;
 use crate::core::coordinates::{TermRow, bounds_check::LengthOps};
 use std::num::NonZeroU16;
 
-impl OffscreenBuffer {
+impl OfsBufVT100 {
     /// Reset scroll margins to full screen (no restrictions).
     /// This disables any active scroll region and allows operations
     /// to affect the entire buffer.
     pub fn reset_scroll_margins(&mut self) {
-        self.ansi_parser_support.scroll_region_top = None;
-        self.ansi_parser_support.scroll_region_bottom = None;
+        self.parser_global_state.scroll_region_top = None;
+        self.parser_global_state.scroll_region_bottom = None;
     }
 
     /// Set top and bottom scroll margins for the buffer.
@@ -70,22 +70,22 @@ impl OffscreenBuffer {
         debug_assert!(clamped_bottom_raw >= 1);
         let clamped_bottom_nz = unsafe { NonZeroU16::new_unchecked(clamped_bottom_raw) };
 
-        self.ansi_parser_support.scroll_region_top = Some(top);
-        self.ansi_parser_support.scroll_region_bottom =
+        self.parser_global_state.scroll_region_top = Some(top);
+        self.parser_global_state.scroll_region_bottom =
             Some(TermRow::from_raw_non_zero_value(clamped_bottom_nz));
     }
 }
 
 #[cfg(test)]
 mod tests_margin_ops {
-    use super::*;
-    use crate::{core::{ansi::vt_100_pty_output_conformance_tests::test_fixtures_vt_100_ansi_conformance::nz,
+
+    use crate::{OfsBufVT100, core::{ansi::vt_100_pty_output_conformance_tests::test_fixtures_vt_100_ansi_conformance::nz,
                        coordinates::term_row},
                 height, width};
 
-    fn create_test_buffer() -> OffscreenBuffer {
+    fn create_test_buffer() -> OfsBufVT100 {
         let size = width(10) + height(6);
-        OffscreenBuffer::new_empty(size)
+        OfsBufVT100::new_empty(size)
     }
 
     #[test]
@@ -93,14 +93,14 @@ mod tests_margin_ops {
         let mut buffer = create_test_buffer();
 
         // Set some margins first.
-        buffer.ansi_parser_support.scroll_region_top = Some(term_row(nz(2)));
-        buffer.ansi_parser_support.scroll_region_bottom = Some(term_row(nz(4)));
+        buffer.parser_global_state.scroll_region_top = Some(term_row(nz(2)));
+        buffer.parser_global_state.scroll_region_bottom = Some(term_row(nz(4)));
 
         buffer.reset_scroll_margins();
 
         // Should be reset to None.
-        assert!(buffer.ansi_parser_support.scroll_region_top.is_none());
-        assert!(buffer.ansi_parser_support.scroll_region_bottom.is_none());
+        assert!(buffer.parser_global_state.scroll_region_top.is_none());
+        assert!(buffer.parser_global_state.scroll_region_bottom.is_none());
     }
 
     #[test]
@@ -111,11 +111,11 @@ mod tests_margin_ops {
 
         // Check that margins were set.
         assert_eq!(
-            buffer.ansi_parser_support.scroll_region_top,
+            buffer.parser_global_state.scroll_region_top,
             Some(term_row(nz(2)))
         );
         assert_eq!(
-            buffer.ansi_parser_support.scroll_region_bottom,
+            buffer.parser_global_state.scroll_region_bottom,
             Some(term_row(nz(4)))
         );
     }
@@ -127,8 +127,8 @@ mod tests_margin_ops {
         buffer.set_scroll_margins(term_row(nz(4)), term_row(nz(2)));
 
         // Margins should remain unchanged. (None).
-        assert!(buffer.ansi_parser_support.scroll_region_top.is_none());
-        assert!(buffer.ansi_parser_support.scroll_region_bottom.is_none());
+        assert!(buffer.parser_global_state.scroll_region_top.is_none());
+        assert!(buffer.parser_global_state.scroll_region_bottom.is_none());
     }
 
     #[test]
@@ -140,11 +140,11 @@ mod tests_margin_ops {
 
         // Bottom should be clamped to buffer height.
         assert_eq!(
-            buffer.ansi_parser_support.scroll_region_top,
+            buffer.parser_global_state.scroll_region_top,
             Some(term_row(nz(2)))
         );
         assert_eq!(
-            buffer.ansi_parser_support.scroll_region_bottom,
+            buffer.parser_global_state.scroll_region_bottom,
             Some(term_row(nz(6)))
         );
     }
@@ -156,7 +156,7 @@ mod tests_margin_ops {
         buffer.set_scroll_margins(term_row(nz(3)), term_row(nz(3)));
 
         // Margins should remain unchanged.
-        assert!(buffer.ansi_parser_support.scroll_region_top.is_none());
-        assert!(buffer.ansi_parser_support.scroll_region_bottom.is_none());
+        assert!(buffer.parser_global_state.scroll_region_top.is_none());
+        assert!(buffer.parser_global_state.scroll_region_bottom.is_none());
     }
 }

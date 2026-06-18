@@ -9,12 +9,13 @@
 //!
 //! **Related Files:**
 //! - **Shim**: [`line_ops`] - Parameter translation (tested indirectly by this module)
-//! - **Implementation**: [`impl_line_ops`] - Business logic (has separate unit tests)
+//! - **Implementation**: [`vt_100_impl_line_ops`] - Business logic (has separate unit
+//!   tests)
 //!
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`apply_ansi_bytes`]: crate::OffscreenBuffer::apply_ansi_bytes
-//! [`impl_line_ops`]: crate::vt_100_ansi_impl::vt_100_impl_line_ops
-//! [`line_ops`]: crate::vt_100_pty_output_parser::operations::vt_100_shim_line_ops
+//! [`apply_ansi_bytes`]: crate::OfsBufVT100::apply_ansi_bytes
+//! [`line_ops`]: crate::core::ansi::vt_100_pty_output_parser::ops::vt_100_shim_line_ops
+//! [`vt_100_impl_line_ops`]: crate::core::ansi::vt_100_pty_output_parser::ops_impl_ofs_buf::vt_100_impl_line_ops
 //! [parser module docs]: super::super
 
 use super::super::test_fixtures_vt_100_ansi_conformance::*;
@@ -29,52 +30,52 @@ pub mod insert_line {
 
     #[test]
     fn test_insert_single_line() {
-        let mut ofs_buf = create_numbered_buffer(5, 10);
+        let mut ofs_buf_vt_100 = create_numbered_buffer(5, 10);
 
         // Move cursor to row 2 (0-based) and insert one line
         let move_cursor = term_row(nz(3)) + term_col(nz(1)); // Move to row 3, col 1 (1-based)
         let insert_line = CsiSequence::InsertLine(CsiCount::ONE);
         let sequence = format!("{move_cursor}{insert_line}");
-        let _result = ofs_buf.apply_ansi_bytes(sequence);
+        let _result = ofs_buf_vt_100.apply_ansi_bytes(sequence);
 
         // Verify lines have shifted down.
-        assert_blank_line(&ofs_buf, 2); // New blank line at cursor
-        assert_line_content(&ofs_buf, 0, "Line00"); // Line 0 unchanged
-        assert_line_content(&ofs_buf, 1, "Line01"); // Line 1 unchanged
-        assert_line_content(&ofs_buf, 3, "Line02"); // Line 2 shifted to 3
-        assert_line_content(&ofs_buf, 4, "Line03"); // Line 3 shifted to 4
+        assert_blank_line(&ofs_buf_vt_100, 2); // New blank line at cursor
+        assert_line_content(&ofs_buf_vt_100, 0, "Line00"); // Line 0 unchanged
+        assert_line_content(&ofs_buf_vt_100, 1, "Line01"); // Line 1 unchanged
+        assert_line_content(&ofs_buf_vt_100, 3, "Line02"); // Line 2 shifted to 3
+        assert_line_content(&ofs_buf_vt_100, 4, "Line03"); // Line 3 shifted to 4
         // Line 4 ("Line04") was lost (shifted off bottom)
     }
 
     #[test]
     fn test_insert_multiple_lines() {
-        let mut ofs_buf = create_numbered_buffer(5, 10);
+        let mut ofs_buf_vt_100 = create_numbered_buffer(5, 10);
 
         // Move cursor to row 1 (0-based) and insert three lines
         let move_cursor = term_row(nz(2)) + term_col(nz(1)); // Move to row 2, col 1 (1-based)
         let insert_lines = CsiSequence::InsertLine(CsiCount::new(3).unwrap());
         let sequence = format!("{move_cursor}{insert_lines}");
-        let _result = ofs_buf.apply_ansi_bytes(sequence);
+        let _result = ofs_buf_vt_100.apply_ansi_bytes(sequence);
 
         // Verify lines have shifted down by 3.
-        assert_line_content(&ofs_buf, 0, "Line00"); // Line 0 unchanged
-        assert_blank_line(&ofs_buf, 1); // New blank lines
-        assert_blank_line(&ofs_buf, 2);
-        assert_blank_line(&ofs_buf, 3);
-        assert_line_content(&ofs_buf, 4, "Line01"); // Line 1 shifted to 4
+        assert_line_content(&ofs_buf_vt_100, 0, "Line00"); // Line 0 unchanged
+        assert_blank_line(&ofs_buf_vt_100, 1); // New blank lines
+        assert_blank_line(&ofs_buf_vt_100, 2);
+        assert_blank_line(&ofs_buf_vt_100, 3);
+        assert_line_content(&ofs_buf_vt_100, 4, "Line01"); // Line 1 shifted to 4
         // Lines 2, 3, 4 were lost.
     }
 
     #[test]
     fn test_insert_lines_with_margins() {
-        let mut ofs_buf = create_numbered_buffer(10, 10);
+        let mut ofs_buf_vt_100 = create_numbered_buffer(10, 10);
 
         // Set scroll margins: rows 3-7 (1-based)
         let set_margins = CsiSequence::SetScrollingMargins {
             top: Some(term_row(nz(3))),
             bottom: Some(term_row(nz(7))),
         };
-        let _result = ofs_buf.apply_ansi_bytes(format!("{set_margins}"));
+        let _result = ofs_buf_vt_100.apply_ansi_bytes(format!("{set_margins}"));
 
         // Move cursor to row 5 (1-based, within margins) and insert one line
         let move_cursor = CsiSequence::CursorPosition {
@@ -83,42 +84,47 @@ pub mod insert_line {
         };
         let insert_line = CsiSequence::InsertLine(CsiCount::ONE);
         let sequence = format!("{move_cursor}{insert_line}");
-        let _result = ofs_buf.apply_ansi_bytes(sequence);
+        let _result = ofs_buf_vt_100.apply_ansi_bytes(sequence);
 
         // Verify only lines within margins are affected.
-        assert_line_content(&ofs_buf, 0, "Line00"); // Outside margins, unchanged
-        assert_line_content(&ofs_buf, 1, "Line01"); // Outside margins, unchanged
-        assert_line_content(&ofs_buf, 2, "Line02"); // Top margin, unchanged
-        assert_line_content(&ofs_buf, 3, "Line03"); // Within margins, unchanged
-        assert_blank_line(&ofs_buf, 4); // Inserted blank line
-        assert_line_content(&ofs_buf, 5, "Line04"); // Shifted within margins
-        assert_line_content(&ofs_buf, 6, "Line05"); // Shifted within margins
+        assert_line_content(&ofs_buf_vt_100, 0, "Line00"); // Outside margins, unchanged
+        assert_line_content(&ofs_buf_vt_100, 1, "Line01"); // Outside margins, unchanged
+        assert_line_content(&ofs_buf_vt_100, 2, "Line02"); // Top margin, unchanged
+        assert_line_content(&ofs_buf_vt_100, 3, "Line03"); // Within margins, unchanged
+        assert_blank_line(&ofs_buf_vt_100, 4); // Inserted blank line
+        assert_line_content(&ofs_buf_vt_100, 5, "Line04"); // Shifted within margins
+        assert_line_content(&ofs_buf_vt_100, 6, "Line05"); // Shifted within margins
         // Line06 was lost at bottom of scroll region.
-        assert_line_content(&ofs_buf, 7, "Line07"); // Outside margins, unchanged
-        assert_line_content(&ofs_buf, 8, "Line08"); // Outside margins, unchanged
-        assert_line_content(&ofs_buf, 9, "Line09"); // Outside margins, unchanged
+        assert_line_content(&ofs_buf_vt_100, 7, "Line07"); // Outside margins, unchanged
+        assert_line_content(&ofs_buf_vt_100, 8, "Line08"); // Outside margins, unchanged
+        assert_line_content(&ofs_buf_vt_100, 9, "Line09"); // Outside margins, unchanged
     }
 
     #[test]
     fn test_insert_line_outside_margins_ignored() {
-        let mut ofs_buf = create_numbered_buffer(5, 10);
-        let performer = AnsiToOfsBufPerformer::new(&mut ofs_buf);
+        let mut ofs_buf_vt_100 = create_numbered_buffer(5, 10);
+        let performer = AnsiToOfsBufPerformer::new(&mut ofs_buf_vt_100);
 
         // Set scroll margins: rows 2-4 (1-based) = 1-3 (0-based)
-        performer.ofs_buf.ansi_parser_support.scroll_region_top = Some(term_row(nz(2)));
-        performer.ofs_buf.ansi_parser_support.scroll_region_bottom =
-            Some(term_row(nz(4)));
+        performer
+            .ofs_buf_vt_100
+            .parser_global_state
+            .scroll_region_top = Some(term_row(nz(2)));
+        performer
+            .ofs_buf_vt_100
+            .parser_global_state
+            .scroll_region_bottom = Some(term_row(nz(4)));
 
         // Move cursor to row 0 (outside margins)
-        performer.ofs_buf.cursor_pos = row(0) + col(0);
+        performer.ofs_buf_vt_100.cursor_pos = row(0) + col(0);
 
         // Try to insert line: ESC[L (should be ignored)
         let insert_line_sequence = format!("{}", CsiSequence::InsertLine(CsiCount::ONE));
-        let _result = ofs_buf.apply_ansi_bytes(insert_line_sequence);
+        let _result = ofs_buf_vt_100.apply_ansi_bytes(insert_line_sequence);
 
         // Verify no changes occurred.
         for r in 0..5 {
-            assert_line_content(&ofs_buf, r, &format!("Line{r:02}"));
+            assert_line_content(&ofs_buf_vt_100, r, &format!("Line{r:02}"));
         }
     }
 }
@@ -129,7 +135,7 @@ pub mod delete_line {
 
     #[test]
     fn test_delete_single_line() {
-        let mut ofs_buf = create_numbered_buffer(5, 10);
+        let mut ofs_buf_vt_100 = create_numbered_buffer(5, 10);
 
         // Move cursor to row 3 (1-based) and delete one line
         let move_cursor = CsiSequence::CursorPosition {
@@ -138,20 +144,20 @@ pub mod delete_line {
         };
         let delete_line = CsiSequence::DeleteLine(CsiCount::ONE);
         let sequence = format!("{move_cursor}{delete_line}");
-        let _result = ofs_buf.apply_ansi_bytes(sequence);
+        let _result = ofs_buf_vt_100.apply_ansi_bytes(sequence);
 
         // Verify lines have shifted up.
-        assert_line_content(&ofs_buf, 0, "Line00"); // Line 0 unchanged
-        assert_line_content(&ofs_buf, 1, "Line01"); // Line 1 unchanged
-        assert_line_content(&ofs_buf, 2, "Line03"); // Line 3 shifted to 2
-        assert_line_content(&ofs_buf, 3, "Line04"); // Line 4 shifted to 3
-        assert_blank_line(&ofs_buf, 4); // New blank line at bottom
+        assert_line_content(&ofs_buf_vt_100, 0, "Line00"); // Line 0 unchanged
+        assert_line_content(&ofs_buf_vt_100, 1, "Line01"); // Line 1 unchanged
+        assert_line_content(&ofs_buf_vt_100, 2, "Line03"); // Line 3 shifted to 2
+        assert_line_content(&ofs_buf_vt_100, 3, "Line04"); // Line 4 shifted to 3
+        assert_blank_line(&ofs_buf_vt_100, 4); // New blank line at bottom
         // Line 2 ("Line02") was deleted
     }
 
     #[test]
     fn test_delete_multiple_lines() {
-        let mut ofs_buf = create_numbered_buffer(5, 10);
+        let mut ofs_buf_vt_100 = create_numbered_buffer(5, 10);
 
         // Move cursor to row 2 (1-based) and delete three lines
         let move_cursor = CsiSequence::CursorPosition {
@@ -160,27 +166,27 @@ pub mod delete_line {
         };
         let delete_lines = CsiSequence::DeleteLine(CsiCount::new(3).unwrap());
         let sequence = format!("{move_cursor}{delete_lines}");
-        let _result = ofs_buf.apply_ansi_bytes(sequence);
+        let _result = ofs_buf_vt_100.apply_ansi_bytes(sequence);
 
         // Verify lines have shifted up by 3.
-        assert_line_content(&ofs_buf, 0, "Line00"); // Line 0 unchanged
-        assert_line_content(&ofs_buf, 1, "Line04"); // Line 4 shifted to 1
-        assert_blank_line(&ofs_buf, 2); // New blank lines at bottom
-        assert_blank_line(&ofs_buf, 3);
-        assert_blank_line(&ofs_buf, 4);
+        assert_line_content(&ofs_buf_vt_100, 0, "Line00"); // Line 0 unchanged
+        assert_line_content(&ofs_buf_vt_100, 1, "Line04"); // Line 4 shifted to 1
+        assert_blank_line(&ofs_buf_vt_100, 2); // New blank lines at bottom
+        assert_blank_line(&ofs_buf_vt_100, 3);
+        assert_blank_line(&ofs_buf_vt_100, 4);
         // Lines 1, 2, 3 were deleted.
     }
 
     #[test]
     fn test_delete_lines_with_margins() {
-        let mut ofs_buf = create_numbered_buffer(10, 10);
+        let mut ofs_buf_vt_100 = create_numbered_buffer(10, 10);
 
         // Set scroll margins: rows 3-7 (1-based)
         let set_margins = CsiSequence::SetScrollingMargins {
             top: Some(term_row(nz(3))),
             bottom: Some(term_row(nz(7))),
         };
-        let _result = ofs_buf.apply_ansi_bytes(format!("{set_margins}"));
+        let _result = ofs_buf_vt_100.apply_ansi_bytes(format!("{set_margins}"));
 
         // Move cursor to row 5 (1-based, within margins) and delete one line
         let move_cursor = CsiSequence::CursorPosition {
@@ -189,42 +195,47 @@ pub mod delete_line {
         };
         let delete_line = CsiSequence::DeleteLine(CsiCount::ONE);
         let sequence = format!("{move_cursor}{delete_line}");
-        let _result = ofs_buf.apply_ansi_bytes(sequence);
+        let _result = ofs_buf_vt_100.apply_ansi_bytes(sequence);
 
         // Verify only lines within margins are affected.
-        assert_line_content(&ofs_buf, 0, "Line00"); // Outside margins, unchanged
-        assert_line_content(&ofs_buf, 1, "Line01"); // Outside margins, unchanged
-        assert_line_content(&ofs_buf, 2, "Line02"); // Top margin, unchanged
-        assert_line_content(&ofs_buf, 3, "Line03"); // Within margins, unchanged
-        assert_line_content(&ofs_buf, 4, "Line05"); // Line05 shifted to 4
-        assert_line_content(&ofs_buf, 5, "Line06"); // Line06 shifted to 5
-        assert_blank_line(&ofs_buf, 6); // New blank line at bottom of region
-        assert_line_content(&ofs_buf, 7, "Line07"); // Outside margins, unchanged
-        assert_line_content(&ofs_buf, 8, "Line08"); // Outside margins, unchanged
-        assert_line_content(&ofs_buf, 9, "Line09"); // Outside margins, unchanged
+        assert_line_content(&ofs_buf_vt_100, 0, "Line00"); // Outside margins, unchanged
+        assert_line_content(&ofs_buf_vt_100, 1, "Line01"); // Outside margins, unchanged
+        assert_line_content(&ofs_buf_vt_100, 2, "Line02"); // Top margin, unchanged
+        assert_line_content(&ofs_buf_vt_100, 3, "Line03"); // Within margins, unchanged
+        assert_line_content(&ofs_buf_vt_100, 4, "Line05"); // Line05 shifted to 4
+        assert_line_content(&ofs_buf_vt_100, 5, "Line06"); // Line06 shifted to 5
+        assert_blank_line(&ofs_buf_vt_100, 6); // New blank line at bottom of region
+        assert_line_content(&ofs_buf_vt_100, 7, "Line07"); // Outside margins, unchanged
+        assert_line_content(&ofs_buf_vt_100, 8, "Line08"); // Outside margins, unchanged
+        assert_line_content(&ofs_buf_vt_100, 9, "Line09"); // Outside margins, unchanged
         // Line04 was deleted.
     }
 
     #[test]
     fn test_delete_line_outside_margins_ignored() {
-        let mut ofs_buf = create_numbered_buffer(5, 10);
-        let performer = AnsiToOfsBufPerformer::new(&mut ofs_buf);
+        let mut ofs_buf_vt_100 = create_numbered_buffer(5, 10);
+        let performer = AnsiToOfsBufPerformer::new(&mut ofs_buf_vt_100);
 
         // Set scroll margins: rows 2-4 (1-based) = 1-3 (0-based)
-        performer.ofs_buf.ansi_parser_support.scroll_region_top = Some(term_row(nz(2)));
-        performer.ofs_buf.ansi_parser_support.scroll_region_bottom =
-            Some(term_row(nz(4)));
+        performer
+            .ofs_buf_vt_100
+            .parser_global_state
+            .scroll_region_top = Some(term_row(nz(2)));
+        performer
+            .ofs_buf_vt_100
+            .parser_global_state
+            .scroll_region_bottom = Some(term_row(nz(4)));
 
         // Move cursor to row 4 (outside margins)
-        performer.ofs_buf.cursor_pos = row(4) + col(0);
+        performer.ofs_buf_vt_100.cursor_pos = row(4) + col(0);
 
         // Try to delete line: ESC[M (should be ignored)
         let delete_line_sequence = format!("{}", CsiSequence::DeleteLine(CsiCount::ONE));
-        let _result = ofs_buf.apply_ansi_bytes(delete_line_sequence);
+        let _result = ofs_buf_vt_100.apply_ansi_bytes(delete_line_sequence);
 
         // Verify no changes occurred.
         for r in 0..5 {
-            assert_line_content(&ofs_buf, r, &format!("Line{r:02}"));
+            assert_line_content(&ofs_buf_vt_100, r, &format!("Line{r:02}"));
         }
     }
 }

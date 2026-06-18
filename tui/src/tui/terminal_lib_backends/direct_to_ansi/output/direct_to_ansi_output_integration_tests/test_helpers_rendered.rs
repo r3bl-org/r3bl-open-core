@@ -3,14 +3,15 @@
 //! Test helpers for rendered output integration tests.
 //!
 //! These helpers execute render operations via [`StdoutMock`], capture the [`ANSI`]
-//! output, then apply those bytes to an [`OffscreenBuffer`] for behavioral verification.
+//! output, then apply those bytes to an [`OfsBufVT100`] for behavioral
+//! verification.
 //!
 //! # Testing Pattern
 //!
 //! ```text
 //! RenderOpOutput → RenderOpPaintImplDirectToAnsi → StdoutMock (ANSI bytes)
 //!                                                       ↓
-//!                                    OffscreenBuffer::apply_ansi_bytes()
+//!                                    OfsBufVT100::apply_ansi_bytes()
 //!                                                       ↓
 //!                                    Assert buffer state (chars, colors, positions)
 //! ```
@@ -28,10 +29,10 @@
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`ColorSupport::Truecolor`]: crate::ColorSupport::Truecolor
 //! [`global_color_support::set_override`]: crate::global_color_support::set_override
-//! [`OffscreenBuffer`]: crate::OffscreenBuffer
+//! [`OfsBufVT100`]: crate::OfsBufVT100
 //! [`StdoutMock`]: crate::StdoutMock
 
-use crate::{OffscreenBuffer, OutputDevice, RenderOpOutput, RenderOpPaint,
+use crate::{OfsBufVT100, OutputDevice, RenderOpOutput, RenderOpPaint,
             RenderOpsLocalData, Size, col, height, pos, render_op::RenderOpCommon, row,
             terminal_lib_backends::direct_to_ansi::RenderOpPaintImplDirectToAnsi,
             test_fixtures::output_device_fixtures::OutputDeviceExt, width};
@@ -48,20 +49,21 @@ pub fn create_rendered_test_state() -> RenderOpsLocalData {
     }
 }
 
-/// Execute render operations via [`StdoutMock`] and render result to [`OffscreenBuffer`].
+/// Execute render operations via [`StdoutMock`] and render result to
+/// [`OfsBufVT100`].
 ///
 /// This is the core helper for behavioral testing. It:
 /// 1. Creates a [`StdoutMock`] output device
 /// 2. Executes render operations via [`RenderOpPaintImplDirectToAnsi`]
 /// 3. Captures the [`ANSI`] byte output
-/// 4. Creates an [`OffscreenBuffer`] and applies the captured bytes
+/// 4. Creates an [`OfsBufVT100`] and applies the captured bytes
 /// 5. Returns the buffer for assertions
 ///
 /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-/// [`OffscreenBuffer`]: crate::OffscreenBuffer
+/// [`OfsBufVT100`]: crate::OfsBufVT100
 /// [`RenderOpPaintImplDirectToAnsi`]: crate::RenderOpPaintImplDirectToAnsi
 /// [`StdoutMock`]: crate::StdoutMock
-pub fn execute_and_render_to_buffer(ops: Vec<RenderOpOutput>) -> OffscreenBuffer {
+pub fn execute_and_render_to_buffer(ops: Vec<RenderOpOutput>) -> OfsBufVT100 {
     let buffer_size = rendered_test_buffer_size();
     execute_and_render_to_buffer_with_size(ops, buffer_size)
 }
@@ -80,7 +82,7 @@ pub fn execute_and_render_to_buffer(ops: Vec<RenderOpOutput>) -> OffscreenBuffer
 pub fn execute_and_render_to_buffer_with_size(
     ops: Vec<RenderOpOutput>,
     buffer_size: Size,
-) -> OffscreenBuffer {
+) -> OfsBufVT100 {
     // Step 1: Create mock output device.
     let (output_device, stdout_mock) = OutputDevice::new_mock();
 
@@ -105,9 +107,9 @@ pub fn execute_and_render_to_buffer_with_size(
     // Step 3: Get captured ANSI bytes.
     let ansi_bytes = stdout_mock.get_copy_of_buffer_as_string();
 
-    // Step 4: Create OffscreenBuffer and apply bytes.
+    // Step 4: Create OfsBufVT100 and apply bytes.
     let mut ofs_buf =
-        OffscreenBuffer::new_empty(buffer_size.row_height + buffer_size.col_width);
+        OfsBufVT100::new_empty(buffer_size.row_height + buffer_size.col_width);
     let (_osc_events, _dsr_responses) = ofs_buf.apply_ansi_bytes(ansi_bytes);
 
     ofs_buf
@@ -116,7 +118,7 @@ pub fn execute_and_render_to_buffer_with_size(
 /// Execute a sequence of operations including cursor movement and text paint.
 ///
 /// This is useful for tests that need to position cursor before painting text.
-pub fn execute_ops_and_render(ops: Vec<RenderOpOutput>) -> OffscreenBuffer {
+pub fn execute_ops_and_render(ops: Vec<RenderOpOutput>) -> OfsBufVT100 {
     execute_and_render_to_buffer(ops)
 }
 

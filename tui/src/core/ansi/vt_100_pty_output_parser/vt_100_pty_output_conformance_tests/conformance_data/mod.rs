@@ -142,16 +142,16 @@
 //! ```ignore
 //! #[test]
 //! fn test_vim_status_line_display() {
-//!     let mut ofs_buf = create_realistic_terminal_buffer();
+//!     let mut ofs_buf_vt_100 = create_realistic_terminal_buffer();
 //!
 //!     // Apply sequence using conformance data
 //!     let sequence = vim_sequences::vim_status_line("INSERT", 25);
-//!     let (osc_events, dsr_responses) = ofs_buf.apply_ansi_bytes(sequence);
+//!     let (osc_events, dsr_responses) = ofs_buf_vt_100.apply_ansi_bytes(sequence);
 //!
 //!     // Validate behavior
 //!     assert_eq!(osc_events.len(), 0);
 //!     assert_eq!(dsr_responses.len(), 0);
-//!     assert_styled_char_at(&ofs_buf, 24, 0, '-',
+//!     assert_styled_char_at(&ofs_buf_vt_100, 24, 0, '-',
 //!         |style| matches!(style.attribs.invert, Some(_)),
 //!         "status line reverse video");
 //! }
@@ -169,11 +169,11 @@
 //!
 //! // Clear screen and move cursor to home
 //! let sequence = basic_sequences::clear_and_home();
-//! ofs_buf.apply_ansi_bytes(sequence);
+//! ofs_buf_vt_100.apply_ansi_bytes(sequence);
 //!
 //! // Print text at specific position
 //! let text_seq = basic_sequences::move_and_print(5, 10, "Hello World");
-//! ofs_buf.apply_ansi_bytes(text_seq);
+//! ofs_buf_vt_100.apply_ansi_bytes(text_seq);
 //! ```
 //!
 //! ### Styling Operations
@@ -187,11 +187,11 @@
 //!
 //! // Apply colored text
 //! let red_text = styling_sequences::colored_text(ANSIBasicColor::Red, "Error");
-//! ofs_buf.apply_ansi_bytes(red_text);
+//! ofs_buf_vt_100.apply_ansi_bytes(red_text);
 //!
 //! // Create rainbow text
 //! let rainbow = styling_sequences::rainbow_text("RAINBOW");
-//! ofs_buf.apply_ansi_bytes(rainbow);
+//! ofs_buf_vt_100.apply_ansi_bytes(rainbow);
 //! ```
 //!
 //! ### Real-World Scenarios
@@ -204,11 +204,11 @@
 //!
 //! // Simulate vim status line
 //! let vim_status = vim_sequences::vim_status_line("NORMAL", 24);
-//! ofs_buf.apply_ansi_bytes(vim_status);
+//! ofs_buf_vt_100.apply_ansi_bytes(vim_status);
 //!
 //! // Simulate tmux status bar
 //! let tmux_status = tmux_sequences::tmux_status_bar();
-//! ofs_buf.apply_ansi_bytes(tmux_status);
+//! ofs_buf_vt_100.apply_ansi_bytes(tmux_status);
 //! ```
 //!
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code

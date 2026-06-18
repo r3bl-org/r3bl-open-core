@@ -3,7 +3,7 @@
 //! Device Status Report ([`DSR`]) operations for VT100/[`ANSI`] terminal emulation.
 //!
 //! This module implements [`DSR`] operations that correspond to [`ANSI`] [`DSR`]
-//! sequences handled by the `vt_100_pty_output_parser::operations::dsr_ops` module. These
+//! sequences handled by the `vt_100_pty_output_parser::ops::dsr_ops` module. These
 //! include:
 //!
 //! - **[`DSR`] 5** (Device Status Report) - [`handle_status_report_request`]
@@ -21,21 +21,19 @@
 //!
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`DSR`]: crate::DsrSequence
-//! [`handle_cursor_position_request`]: crate::OffscreenBuffer::handle_cursor_position_request
-//! [`handle_status_report_request`]: crate::OffscreenBuffer::handle_status_report_request
+//! [`handle_cursor_position_request`]: crate::OfsBufVT100::handle_cursor_position_request
+//! [`handle_status_report_request`]: crate::OfsBufVT100::handle_status_report_request
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 
-#[allow(clippy::wildcard_imports)]
-use super::super::*;
-use crate::{DsrRequestFromPtyEvent, TermCol, TermRow};
+use crate::{DsrRequestFromPtyEvent, OfsBufVT100, TermCol, TermRow};
 
-impl OffscreenBuffer {
+impl OfsBufVT100 {
     /// Handles device status report request.
     /// Queues a response indicating terminal is OK ([`ESC`][0n).
     ///
     /// [`ESC`]: crate::EscSequence
     pub fn handle_status_report_request(&mut self) {
-        self.ansi_parser_support
+        self.parser_global_state
             .pending_dsr_responses
             .push(DsrRequestFromPtyEvent::TerminalStatus);
     }
@@ -50,7 +48,7 @@ impl OffscreenBuffer {
         // Uses type-safe From<RowIndex>/From<ColIndex> conversions.
         let row = TermRow::from(self.cursor_pos.row_index);
         let col = TermCol::from(self.cursor_pos.col_index);
-        self.ansi_parser_support
+        self.parser_global_state
             .pending_dsr_responses
             .push(DsrRequestFromPtyEvent::CursorPosition { row, col });
     }
@@ -59,11 +57,11 @@ impl OffscreenBuffer {
 #[cfg(test)]
 mod tests_dsr_ops {
     use super::*;
-    use crate::{col, height, row, width};
+    use crate::{OfsBufVT100, col, height, row, width};
 
-    fn create_test_buffer() -> OffscreenBuffer {
+    fn create_test_buffer() -> OfsBufVT100 {
         let size = width(10) + height(6);
-        OffscreenBuffer::new_empty(size)
+        OfsBufVT100::new_empty(size)
     }
 
     #[test]
@@ -71,14 +69,14 @@ mod tests_dsr_ops {
         let mut buffer = create_test_buffer();
 
         // Initially no pending responses.
-        assert!(buffer.ansi_parser_support.pending_dsr_responses.is_empty());
+        assert!(buffer.parser_global_state.pending_dsr_responses.is_empty());
 
         buffer.handle_status_report_request();
 
         // Should have one terminal status response.
-        assert_eq!(buffer.ansi_parser_support.pending_dsr_responses.len(), 1);
+        assert_eq!(buffer.parser_global_state.pending_dsr_responses.len(), 1);
         assert!(matches!(
-            buffer.ansi_parser_support.pending_dsr_responses[0],
+            buffer.parser_global_state.pending_dsr_responses[0],
             DsrRequestFromPtyEvent::TerminalStatus
         ));
     }
@@ -91,9 +89,9 @@ mod tests_dsr_ops {
         buffer.handle_cursor_position_request();
 
         // Should have one cursor position response.
-        assert_eq!(buffer.ansi_parser_support.pending_dsr_responses.len(), 1);
+        assert_eq!(buffer.parser_global_state.pending_dsr_responses.len(), 1);
         if let DsrRequestFromPtyEvent::CursorPosition { row, col } =
-            &buffer.ansi_parser_support.pending_dsr_responses[0]
+            &buffer.parser_global_state.pending_dsr_responses[0]
         {
             // 0-based internal (2,5) becomes 1-based terminal (3,6)
             assert_eq!(row.as_u16(), 3);
@@ -111,13 +109,13 @@ mod tests_dsr_ops {
         buffer.handle_cursor_position_request();
 
         // Should have both responses queued.
-        assert_eq!(buffer.ansi_parser_support.pending_dsr_responses.len(), 2);
+        assert_eq!(buffer.parser_global_state.pending_dsr_responses.len(), 2);
         assert!(matches!(
-            buffer.ansi_parser_support.pending_dsr_responses[0],
+            buffer.parser_global_state.pending_dsr_responses[0],
             DsrRequestFromPtyEvent::TerminalStatus
         ));
         assert!(matches!(
-            buffer.ansi_parser_support.pending_dsr_responses[1],
+            buffer.parser_global_state.pending_dsr_responses[1],
             DsrRequestFromPtyEvent::CursorPosition { .. }
         ));
     }

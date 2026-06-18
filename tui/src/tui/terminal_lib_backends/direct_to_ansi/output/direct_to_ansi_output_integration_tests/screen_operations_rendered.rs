@@ -1,6 +1,6 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Behavioral tests for screen operations via [`OffscreenBuffer`] rendering.
+//! Behavioral tests for screen operations via [`OfsBufVT100`] rendering.
 //!
 //! These tests complement the byte-level tests in [`screen_operations`] by verifying
 //! that clear operations produce the correct **visual result** when [`ANSI`] sequences
@@ -8,18 +8,19 @@
 //!
 //! # Important Design Note
 //!
-//! The [`OffscreenBuffer`] [`ANSI`] parser fully supports and applies clear operations
-//! (ED/EL sequences) to the visual buffer. 
+//! The [`OfsBufVT100`] [`ANSI`] parser fully supports and applies clear operations
+//! (ED/EL sequences) to the visual buffer.
 //!
 //! As a result, these tests verify:
 //! - Clear [`ANSI`] sequences are **generated correctly** (verified by byte-level tests)
-//! - Clear operations correctly update the visual buffer (replacing characters with spaces)
+//! - Clear operations correctly update the visual buffer (replacing characters with
+//!   spaces)
 //! - Text painting **after** clear operations works correctly (cursor positioning)
 //! - Buffer state is correct for content that **isn't** cleared
 //!
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`OffscreenBuffer`]: crate::OffscreenBuffer
-//! [`performer.rs`]: crate::vt_100_pty_output_parser::performer
+//! [`OfsBufVT100`]: crate::OfsBufVT100
+//! [`performer.rs`]: crate::core::ansi::vt_100_pty_output_parser::performer
 //! [`screen_operations`]: super::screen_operations
 
 use super::test_helpers_rendered::*;
@@ -29,7 +30,8 @@ use crate::{offscreen_buffer::test_fixtures_ofs_buf::*, render_op::RenderOpCommo
 ///
 /// NOTE: Previously, Clear operations (`ClearScreen`, `ClearLine`, etc.) were
 /// intentionally ignored. They are now fully supported, so this test verifies
-/// that the screen is actually cleared and subsequent text painting still works correctly.
+/// that the screen is actually cleared and subsequent text painting still works
+/// correctly.
 ///
 /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 #[test]

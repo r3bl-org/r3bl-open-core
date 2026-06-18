@@ -3,7 +3,7 @@
 //! Control character operations for VT100/[`ANSI`] terminal emulation.
 //!
 //! This module implements control character handling that corresponds to [`ANSI`] control
-//! sequences handled by the `vt_100_pty_output_parser::operations::control_ops` module.
+//! sequences handled by the `vt_100_pty_output_parser::ops::control_ops` module.
 //! These include:
 //!
 //! - **BS** (Backspace) - [`handle_backspace`]
@@ -22,17 +22,16 @@
 //! **Related Files:**
 //!
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`handle_backspace`]: crate::OffscreenBuffer::handle_backspace
-//! [`handle_carriage_return`]: crate::OffscreenBuffer::handle_carriage_return
-//! [`handle_line_feed`]: crate::OffscreenBuffer::handle_line_feed
-//! [`handle_tab`]: crate::OffscreenBuffer::handle_tab
+//! [`handle_backspace`]: crate::OfsBufVT100::handle_backspace
+//! [`handle_carriage_return`]: crate::OfsBufVT100::handle_carriage_return
+//! [`handle_line_feed`]: crate::OfsBufVT100::handle_line_feed
+//! [`handle_tab`]: crate::OfsBufVT100::handle_tab
 
-#[allow(clippy::wildcard_imports)]
-use super::super::*;
 use super::TAB_STOP_WIDTH;
-use crate::{ArrayBoundsCheck, ArrayOverflowResult, LengthOps, NumericValue, col};
+use crate::{ArrayBoundsCheck, ArrayOverflowResult, LengthOps, NumericValue, OfsBufVT100,
+            col};
 
-impl OffscreenBuffer {
+impl OfsBufVT100 {
     /// Handles backspace control character (0x08).
     /// Moves cursor left one position if not at leftmost column.
     pub fn handle_backspace(&mut self) {
@@ -79,11 +78,11 @@ impl OffscreenBuffer {
 #[cfg(test)]
 mod tests_control_ops {
     use super::*;
-    use crate::{height, row, width};
+    use crate::{OfsBufVT100, height, row, width};
 
-    fn create_test_buffer() -> OffscreenBuffer {
+    fn create_test_buffer() -> OfsBufVT100 {
         let size = width(10) + height(6);
-        OffscreenBuffer::new_empty(size)
+        OfsBufVT100::new_empty(size)
     }
 
     #[test]

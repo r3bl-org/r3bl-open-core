@@ -707,10 +707,11 @@ impl PaintRenderOpImplCrossterm {
     }
 
     /// Save cursor position to be restored later.
-    /// Maps to [`CSI`] `s` [`ANSI`] sequence (DECSC - save cursor).
+    /// Maps to [`CSI`] `s` [`ANSI`] sequence ([`DECSC`] - save cursor).
     ///
     /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
     /// [`CSI`]: crate::CsiSequence
+    /// [`DECSC`]: https://vt100.net/docs/vt510-rm/DECSC.html
     pub fn save_cursor_position(locked_output_device: LockedOutputDevice<'_>) {
         // crossterm doesn't have a direct SaveCursorPosition command,
         // so we write the ANSI sequence directly.
@@ -720,10 +721,11 @@ impl PaintRenderOpImplCrossterm {
     }
 
     /// Restore cursor position previously saved with [`SaveCursorPosition`].
-    /// Maps to [`CSI`] `u` [`ANSI`] sequence (DECRC - restore cursor).
+    /// Maps to [`CSI`] `u` [`ANSI`] sequence ([`DECRC`] - restore cursor).
     ///
     /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
     /// [`CSI`]: crate::CsiSequence
+    /// [`DECRC`]: https://vt100.net/docs/vt510-rm/DECRC.html
     /// [`SaveCursorPosition`]: PaintRenderOpImplCrossterm::save_cursor_position
     pub fn restore_cursor_position(locked_output_device: LockedOutputDevice<'_>) {
         // crossterm doesn't have a direct RestoreCursorPosition command,

@@ -13,10 +13,10 @@
 //!
 //! This module uses **two testing layers** that verify complementary properties:
 //!
-//! | Layer                              | Tests                        | Catches                    |
-//! | ---------------------------------- | ---------------------------- | -------------------------- |
-//! | **[`StdoutMock`]** (byte-level)    | "Did we emit correct bytes?" | Typos, wrong [`SGR`] codes |
-//! | **[`OffscreenBuffer`]** (rendered) | "Did it render correctly?"   | Off-by-one, semantic bugs  |
+//! | Layer                           | Tests                        | Catches                    |
+//! | ------------------------------- | ---------------------------- | -------------------------- |
+//! | **[`StdoutMock`]** (byte-level) | "Did we emit correct bytes?" | Typos, wrong [`SGR`] codes |
+//! | **[`OfsBufVT100`]** (rendered)  | "Did it render correctly?"   | Off-by-one, semantic bugs  |
 //!
 //! ## Byte-Level Tests ([`StdoutMock`])
 //!
@@ -24,14 +24,14 @@
 //! - `color_operations`, `cursor_movement`, `screen_operations`, `text_operations`
 //! - `state_optimization` (tracks operation counts)
 //!
-//! ## Rendered Tests ([`OffscreenBuffer`])
+//! ## Rendered Tests ([`OfsBufVT100`])
 //!
-//! Verify **behavioral correctness** by applying [`ANSI`] output to [`OffscreenBuffer`]:
-//! - `cursor_movement_rendered`: Cursor positions characters correctly
+//! Verify **behavioral correctness** by applying [`ANSI`] output to [`OfsBufVT100`]:
 //! - `text_operations_rendered`: Styled text renders with correct colors/attributes
 //! - `screen_operations_rendered`: Clear operations affect correct regions
+//! - `cursor_movement_rendered`: Cursor positions characters correctly
 //!
-//! The rendered tests use [`OffscreenBuffer::apply_ansi_bytes`] to parse the [`ANSI`]
+//! The rendered tests use [`OfsBufVT100::apply_ansi_bytes`] to parse the [`ANSI`]
 //! output and verify the visual result.
 //!
 //!
@@ -92,8 +92,8 @@
 //! [`input::integration_tests_stub`]: mod@crate::terminal_lib_backends::direct_to_ansi::input::integration_tests_stub
 //! [`MoveCursorPositionAbs`]: crate::render_op::RenderOpCommon::MoveCursorPositionAbs
 //! [`MoveCursorPositionRelTo`]: crate::render_op::RenderOpCommon::MoveCursorPositionRelTo
-//! [`OffscreenBuffer::apply_ansi_bytes`]: crate::OffscreenBuffer::apply_ansi_bytes
-//! [`OffscreenBuffer`]: crate::OffscreenBuffer
+//! [`OfsBufVT100::apply_ansi_bytes`]: crate::OfsBufVT100::apply_ansi_bytes
+//! [`OfsBufVT100`]: crate::OfsBufVT100
 //! [`OutputDevice`]: crate::OutputDevice
 //! [`Pos`]: crate::Pos
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
@@ -124,7 +124,7 @@ mod state_optimization;
 #[cfg(test)]
 mod text_operations;
 
-// Rendered tests (OffscreenBuffer).
+// Rendered tests (OfsBufVT100).
 #[cfg(test)]
 mod cursor_movement_rendered;
 #[cfg(test)]

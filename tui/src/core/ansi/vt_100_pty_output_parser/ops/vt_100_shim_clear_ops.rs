@@ -17,7 +17,7 @@
 //! - **Integration tests** in the conformance tests validating the full pipeline
 //!
 //! For the complete testing philosophy and rationale behind this approach, see the
-//! [operations module].
+//! [ops module].
 //!
 //! # Architecture Overview
 //!
@@ -57,13 +57,11 @@
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 //! [`vte`]: https://docs.rs/vte
 //! [module-level Architecture Overview]: super#architecture-overview
-//! [operations module]: crate::core::ansi::vt_100_pty_output_parser::operations
+//! [ops module]: crate::core::ansi::vt_100_pty_output_parser::ops
 
 use super::super::ansi_parser_public_api::AnsiToOfsBufPerformer;
-use crate::{
-    DEBUG_TUI_VT100_PARSER, ED_ERASE_ALL, ED_ERASE_FROM_START, ED_ERASE_TO_END,
-    EL_ERASE_ALL, EL_ERASE_FROM_START, EL_ERASE_TO_END, ParamsExt, ok,
-};
+use crate::{DEBUG_TUI_VT100_PARSER, ED_ERASE_ALL, ED_ERASE_FROM_START, ED_ERASE_TO_END,
+            EL_ERASE_ALL, EL_ERASE_FROM_START, EL_ERASE_TO_END, ParamsExt, ok};
 
 /// Handle ED (Erase in Display) - clear screen relative to cursor.
 ///
@@ -74,24 +72,26 @@ use crate::{
 /// - `1`: Beginning of screen to cursor.
 /// - `2`: Entire screen.
 ///
-/// See [`OffscreenBuffer::erase_display_from_cursor_to_end`],
-/// [`OffscreenBuffer::erase_display_from_start_to_cursor`], and
-/// [`OffscreenBuffer::erase_display_entire`] for the implementations of this shim.
+/// See [`OfsBufVT100::erase_display_from_cursor_to_end`],
+/// [`OfsBufVT100::erase_display_from_start_to_cursor`], and
+/// [`OfsBufVT100::erase_display_entire`] for the implementations of this shim.
 ///
-/// [`OffscreenBuffer::erase_display_entire`]:
-///     crate::OffscreenBuffer::erase_display_entire
-/// [`OffscreenBuffer::erase_display_from_cursor_to_end`]:
-///     crate::OffscreenBuffer::erase_display_from_cursor_to_end
-/// [`OffscreenBuffer::erase_display_from_start_to_cursor`]:
-///     crate::OffscreenBuffer::erase_display_from_start_to_cursor
+/// [`OfsBufVT100::erase_display_entire`]:
+///     crate::OfsBufVT100::erase_display_entire
+/// [`OfsBufVT100::erase_display_from_cursor_to_end`]:
+///     crate::OfsBufVT100::erase_display_from_cursor_to_end
+/// [`OfsBufVT100::erase_display_from_start_to_cursor`]:
+///     crate::OfsBufVT100::erase_display_from_start_to_cursor
 /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 /// [module-level documentation]: self
 pub fn erase_in_display(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) {
     let mode = params.extract_nth_single_opt_raw(0).unwrap_or(0);
     let result = match mode {
-        ED_ERASE_TO_END => performer.ofs_buf.erase_display_from_cursor_to_end(),
-        ED_ERASE_FROM_START => performer.ofs_buf.erase_display_from_start_to_cursor(),
-        ED_ERASE_ALL => performer.ofs_buf.erase_display_entire(),
+        ED_ERASE_TO_END => performer.ofs_buf_vt_100.erase_display_from_cursor_to_end(),
+        ED_ERASE_FROM_START => performer
+            .ofs_buf_vt_100
+            .erase_display_from_start_to_cursor(),
+        ED_ERASE_ALL => performer.ofs_buf_vt_100.erase_display_entire(),
         _ => {
             DEBUG_TUI_VT100_PARSER.then(|| {
                 tracing::warn!("CSI {} J: Unsupported Erase Display mode", mode);
@@ -115,15 +115,15 @@ pub fn erase_in_display(performer: &mut AnsiToOfsBufPerformer, params: &vte::Par
 /// - `1`: Beginning of line to cursor.
 /// - `2`: Entire line.
 ///
-/// See [`OffscreenBuffer::erase_line_from_cursor_to_end`],
-/// [`OffscreenBuffer::erase_line_from_start_to_cursor`], and
-/// [`OffscreenBuffer::erase_line_entire`] for the implementations of this shim.
+/// See [`OfsBufVT100::erase_line_from_cursor_to_end`],
+/// [`OfsBufVT100::erase_line_from_start_to_cursor`], and
+/// [`OfsBufVT100::erase_line_entire`] for the implementations of this shim.
 ///
-/// [`OffscreenBuffer::erase_line_entire`]: crate::OffscreenBuffer::erase_line_entire
-/// [`OffscreenBuffer::erase_line_from_cursor_to_end`]:
-///     crate::OffscreenBuffer::erase_line_from_cursor_to_end
-/// [`OffscreenBuffer::erase_line_from_start_to_cursor`]:
-///     crate::OffscreenBuffer::erase_line_from_start_to_cursor
+/// [`OfsBufVT100::erase_line_entire`]: crate::OfsBufVT100::erase_line_entire
+/// [`OfsBufVT100::erase_line_from_cursor_to_end`]:
+///     crate::OfsBufVT100::erase_line_from_cursor_to_end
+/// [`OfsBufVT100::erase_line_from_start_to_cursor`]:
+///     crate::OfsBufVT100::erase_line_from_start_to_cursor
 /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 /// [module-level documentation]: self
 pub fn erase_in_line(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) {
@@ -131,9 +131,9 @@ pub fn erase_in_line(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params
         .extract_nth_single_opt_raw(0)
         .unwrap_or(EL_ERASE_TO_END);
     let result = match mode {
-        EL_ERASE_TO_END => performer.ofs_buf.erase_line_from_cursor_to_end(),
-        EL_ERASE_FROM_START => performer.ofs_buf.erase_line_from_start_to_cursor(),
-        EL_ERASE_ALL => performer.ofs_buf.erase_line_entire(),
+        EL_ERASE_TO_END => performer.ofs_buf_vt_100.erase_line_from_cursor_to_end(),
+        EL_ERASE_FROM_START => performer.ofs_buf_vt_100.erase_line_from_start_to_cursor(),
+        EL_ERASE_ALL => performer.ofs_buf_vt_100.erase_line_entire(),
         _ => {
             DEBUG_TUI_VT100_PARSER.then(|| {
                 tracing::warn!("CSI {} K: Unsupported Erase Line mode", mode);

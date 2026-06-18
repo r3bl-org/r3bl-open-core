@@ -69,12 +69,14 @@
 //! [rendering pipeline overview]: mod@crate::terminal_lib_backends#rendering-pipeline-architecture
 
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
-use crate::{ColIndex, PaintMode, DEBUG_TUI_COMPOSITOR, DEBUG_TUI_SHOW_PIPELINE, FlushKind,
+use crate::{ColIndex, DEBUG_TUI_COMPOSITOR, DEBUG_TUI_SHOW_PIPELINE, FlushKind,
             GCStringOwned, InlineString, LockedOutputDevice, OffscreenBuffer,
-            OffscreenBufferPaint, PixelChar, PixelCharDiffChunks, RenderOpCommon,
-            RenderOpFlush, RenderOpOutput, RenderOpOutputVec, RenderOpsExec, RowIndex,
-            Size, TERMINAL_LIB_BACKEND, TerminalLibBackend, TuiStyle, ch, col,
-            glyphs::SPACER_GLYPH, row,
+            OffscreenBufferPaint, PaintMode, PixelChar, PixelCharDiffChunks,
+            RenderOpCommon, RenderOpFlush, RenderOpOutput, RenderOpOutputVec,
+            RenderOpsExec, RowIndex, Size, TERMINAL_LIB_BACKEND, TerminalLibBackend,
+            TuiStyle, ch, col,
+            glyphs::SPACER_GLYPH,
+            row,
             terminal_lib_backends::{crossterm_backend::PaintRenderOpImplCrossterm,
                                     direct_to_ansi::RenderOpPaintImplDirectToAnsi}};
 
@@ -100,7 +102,8 @@ impl OffscreenBufferPaint for OffscreenBufferPaintImpl {
             }
             TerminalLibBackend::DirectToAnsi => {
                 if let FlushKind::ClearBeforeFlush = flush_kind {
-                    RenderOpPaintImplDirectToAnsi.clear_before_flush(locked_output_device);
+                    RenderOpPaintImplDirectToAnsi
+                        .clear_before_flush(locked_output_device);
                 }
             }
         }

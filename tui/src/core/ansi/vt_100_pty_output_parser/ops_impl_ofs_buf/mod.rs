@@ -1,28 +1,28 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! VT100/[`ANSI`] terminal operation implementations for `OffscreenBuffer`.
+//! VT100/[`ANSI`] terminal operation implementations for [`OfsBufVT100`].
 //!
 //! This module contains the actual implementations of VT100 and [`ANSI`] escape sequence
-//! operations that are delegated from the `vt_100_pty_output_parser::operations` module.
-//! The structure mirrors `vt_100_pty_output_parser/operations/` to provide a clear 1:1
-//! mapping between the parser shim layer and the implementation layer.
+//! operations that are delegated from the [`vt_100_pty_output_parser::ops`]
+//! module. The structure mirrors [`vt_100_pty_output_parser/ops/`] to provide a
+//! clear 1:1 mapping between the parser shim layer and the implementation layer.
 //!
 //! # Architecture
 //!
 //! ```text
-//! vt_100_pty_output_parser/operations/vt_100_shim_char_ops <- (shim - minimal logic)
+//! vt_100_pty_output_parser/ops/vt_100_shim_char_ops <- (shim - minimal logic)
 //!           ↓ delegates to
-//! vt_100_ansi_impl/vt_100_impl_char_ops                  <- (implementation - full logic)
+//! ops_impl_ofs_buf/vt_100_impl_char_ops             <- (implementation - full logic)
 //! ```
 //!
-//! ## The `impl_` Prefix Convention
+//! ## The `vt_100_impl_` Prefix Convention
 //!
-//! All implementation files in this module use the `impl_` prefix. This deliberate
+//! All implementation files in this module use the `vt_100_impl_` prefix. This deliberate
 //! naming convention creates a searchable namespace that distinguishes implementations
 //! from their corresponding shim layers and tests. When searching for any operation
 //! (e.g., "`char_ops`"), developers can easily identify:
 //! - The shim (no prefix): Protocol translation
-//! - The implementation (`impl_` prefix): Business logic
+//! - The implementation (`vt_100_impl_` prefix): Business logic
 //! - The tests (`test_` prefix): Validation
 //!
 //! This naming pattern solves the IDE search problem by creating a predictable hierarchy
@@ -32,7 +32,7 @@
 //!
 //! # Module Organization
 //!
-//! Each file corresponds directly to a file in `vt_100_pty_output_parser/operations/`:
+//! Each file corresponds directly to a file in `vt_100_pty_output_parser/ops/`:
 //!
 //! - [`vt_100_impl_char_ops`] - Character operations (`print_char`, ICH, DCH, ECH)
 //! - [`vt_100_impl_control_ops`] - Control character handling (BS, TAB, LF, CR)
@@ -54,7 +54,8 @@
 //!
 //! ## Unit Tests in Implementation Files
 //!
-//! Each `impl_*.rs` file contains comprehensive unit tests using `#[test]` functions:
+//! Each `vt_100_impl_*.rs` file contains comprehensive unit tests using `#[test]`
+//! functions:
 //!
 //! ```text
 //! vt_100_impl_char_ops ──── Contains unit tests for:
@@ -109,6 +110,7 @@
 //!
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`DECSTBM`]: https://vt100.net/docs/vt510-rm/DECSTBM.html
+//! [`OfsBufVT100`]: crate::core::ansi::vt_100_pty_output_parser::OfsBufVT100
 //! [`vt_100_impl_ansi_scroll_helper`]: vt_100_impl_ansi_scroll_helper
 //! [`vt_100_impl_char_ops`]: vt_100_impl_char_ops
 //! [`vt_100_impl_control_ops`]: vt_100_impl_control_ops
@@ -121,14 +123,19 @@
 //! [`vt_100_impl_scroll_ops`]: vt_100_impl_scroll_ops
 //! [`vt_100_impl_sgr_ops`]: vt_100_impl_sgr_ops
 //! [`vt_100_impl_terminal_ops`]: vt_100_impl_terminal_ops
+//! [`vt_100_pty_output_parser/ops/`]: crate::core::ansi::vt_100_pty_output_parser::ops
+//! [`vt_100_pty_output_parser::ops`]: crate::core::ansi::vt_100_pty_output_parser::ops
 
 /// Standard terminal tab stop width (8 columns).
 /// Used for calculating tab positions in VT100 terminal emulation.
 /// This is a widely-adopted standard across most terminal emulators.
 pub const TAB_STOP_WIDTH: usize = 8;
 
+// Barrel Export: core struct and state.
+// (Lifted to vt_100_pty_output_parser/ofs_buf_vt_100.rs)
+
 // Attach modules - conditionally public for documentation and testing.
-// These modules contain impl blocks for OffscreenBuffer and are accessed by
+// These modules contain impl blocks for OfsBufVT100 and are accessed by
 // the parser shim layer. Making them conditionally public allows rustdoc links
 // to work while keeping them private in release builds.
 #[cfg(any(test, doc))]
@@ -198,4 +205,4 @@ pub(super) mod vt_100_impl_terminal_ops;
 
 // Note: Individual modules are accessed by the parser shim layer
 // (vt_100_pty_output_parser). No re-exports needed here since the impl blocks extend
-// OffscreenBuffer directly.
+// OfsBufVT100 directly.

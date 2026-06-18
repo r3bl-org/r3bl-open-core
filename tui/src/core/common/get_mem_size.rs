@@ -40,7 +40,7 @@ pub fn ring_buffer_size<T: GetMemSize, const N: usize>(
 /// This struct wraps a memory size value and provides a `Display` implementation
 /// that shows the size in kilobytes with commas for readability, or "?" if the
 /// size is not available.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MemorySize {
     inner: Option<usize>,
 }

@@ -6,7 +6,7 @@
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 
 use super::PixelCharRenderer;
-use crate::{CRLF_BYTES, OffscreenBuffer, SGR_RESET_BYTES};
+use crate::{CRLF_BYTES, OfsBufVT100, SGR_RESET_BYTES};
 
 /// Trait for rendering content to [`ANSI`] escape sequences.
 ///
@@ -17,7 +17,7 @@ use crate::{CRLF_BYTES, OffscreenBuffer, SGR_RESET_BYTES};
 /// ## Architecture
 ///
 /// ```text
-/// OffscreenBuffer (full TUI)
+/// OfsBufVT100 (full TUI)
 ///        │
 ///        ├─────────────────┐
 ///        │                 │
@@ -36,7 +36,7 @@ use crate::{CRLF_BYTES, OffscreenBuffer, SGR_RESET_BYTES};
 /// Unified interface for rendering content to [`ANSI`] escape sequences.
 ///
 /// This trait defines a contract for any buffer-like type to render itself as
-/// [`ANSI`]-encoded bytes. Both full TUI (via [`OffscreenBuffer`]) and lightweight modes
+/// [`ANSI`]-encoded bytes. Both full TUI (via [`OfsBufVT100`]) and lightweight modes
 /// (via alternative buffer types) can implement this to provide consistent [`ANSI`]
 /// generation.
 ///
@@ -51,7 +51,7 @@ use crate::{CRLF_BYTES, OffscreenBuffer, SGR_RESET_BYTES};
 ///
 /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 /// [`choose()`]: crate::choose
-/// [`OffscreenBuffer`]: crate::OffscreenBuffer
+/// [`OfsBufVT100`]: crate::OfsBufVT100
 pub trait RenderToAnsi {
     /// Render this buffer to [`ANSI`] escape sequence bytes.
     ///
@@ -84,7 +84,7 @@ pub trait RenderToAnsi {
     fn render_to_ansi(&self) -> Vec<u8>;
 }
 
-impl RenderToAnsi for OffscreenBuffer {
+impl RenderToAnsi for OfsBufVT100 {
     fn render_to_ansi(&self) -> Vec<u8> {
         let mut output = Vec::new();
         let mut renderer = PixelCharRenderer::new();
@@ -118,7 +118,7 @@ mod tests {
 
     #[test]
     fn test_render_to_ansi_empty_buffer() {
-        let buffer = OffscreenBuffer::new_empty(height(2) + width(3));
+        let buffer = OfsBufVT100::new_empty(height(2) + width(3));
         let ansi = buffer.render_to_ansi();
 
         // Empty buffer (all spacers) should still produce output (spaces + line separator
@@ -134,7 +134,7 @@ mod tests {
 
     #[test]
     fn test_render_to_ansi_single_line() {
-        let mut buffer = OffscreenBuffer::new_empty(height(1) + width(5));
+        let mut buffer = OfsBufVT100::new_empty(height(1) + width(5));
 
         // Add some plain text
         if let Some(first_line) = buffer.buffer.first_mut() {
@@ -160,7 +160,7 @@ mod tests {
 
     #[test]
     fn test_render_to_ansi_multi_line() {
-        let mut buffer = OffscreenBuffer::new_empty(height(2) + width(3));
+        let mut buffer = OfsBufVT100::new_empty(height(2) + width(3));
 
         // Populate two lines
         if buffer.buffer.len() >= 2 {
@@ -196,7 +196,7 @@ mod tests {
 
     #[test]
     fn test_render_to_ansi_with_spacers() {
-        let mut buffer = OffscreenBuffer::new_empty(height(1) + width(5));
+        let mut buffer = OfsBufVT100::new_empty(height(1) + width(5));
 
         if let Some(first_line) = buffer.buffer.first_mut() {
             first_line.pixel_chars.clear();
@@ -220,7 +220,7 @@ mod tests {
 
     #[test]
     fn test_render_to_ansi_with_void() {
-        let mut buffer = OffscreenBuffer::new_empty(height(1) + width(5));
+        let mut buffer = OfsBufVT100::new_empty(height(1) + width(5));
 
         if let Some(first_line) = buffer.buffer.first_mut() {
             first_line.pixel_chars.clear();

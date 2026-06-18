@@ -70,8 +70,7 @@
 //! [`render_pipeline`]: mod@crate::render_pipeline
 //! [rendering pipeline overview]: mod@crate::terminal_lib_backends#rendering-pipeline-architecture
 
-use super::{AlternateScreenState, BracketedPasteState, MouseTrackingState,
-            OffscreenBuffer, RawModeState, RenderOpCommon, RenderOpIR, RenderPipeline,
+use super::{OffscreenBuffer, RenderOpCommon, RenderOpIR, RenderPipeline,
             sanitize_and_save_abs_pos};
 use crate::{ColWidth, CommonError, CommonErrorType, CommonResult, DEBUG_TUI_COMPOSITOR,
             GCStringOwned, MemoizedLenMap, PixelChar, PixelCharLine, Pos,
@@ -169,32 +168,10 @@ fn process_common_render_op(
 ) {
     match common_op {
         // ===== Terminal Mode State Operations =====
-        // These operations update the OffscreenBuffer's terminal mode state while also
-        // being executed by the terminal backend to affect actual terminal behavior.
-        RenderOpCommon::EnterRawMode => {
-            ofs_buf.terminal_mode.raw_mode = RawModeState::Enabled;
-        }
-        RenderOpCommon::ExitRawMode => {
-            ofs_buf.terminal_mode.raw_mode = RawModeState::Disabled;
-        }
-        RenderOpCommon::EnterAlternateScreen => {
-            ofs_buf.terminal_mode.alternate_screen = AlternateScreenState::Active;
-        }
-        RenderOpCommon::ExitAlternateScreen => {
-            ofs_buf.terminal_mode.alternate_screen = AlternateScreenState::Inactive;
-        }
-        RenderOpCommon::EnableMouseTracking => {
-            ofs_buf.terminal_mode.mouse_tracking = MouseTrackingState::Enabled;
-        }
-        RenderOpCommon::DisableMouseTracking => {
-            ofs_buf.terminal_mode.mouse_tracking = MouseTrackingState::Disabled;
-        }
-        RenderOpCommon::EnableBracketedPaste => {
-            ofs_buf.terminal_mode.bracketed_paste = BracketedPasteState::Enabled;
-        }
-        RenderOpCommon::DisableBracketedPaste => {
-            ofs_buf.terminal_mode.bracketed_paste = BracketedPasteState::Disabled;
-        }
+        // These operations update the terminal mode state in the backend, but the
+        // OffscreenBuffer no longer tracks terminal mode state (since the refactor to OfsBufVT100).
+        // They are just passed through here to the backend during diffing.
+
         // ===== Incremental Rendering Operations - Complete implementation
         // These operations are executed both by the backend AND need to
         // update buffer state for consistency and future extensibility (e.g., if
@@ -270,7 +247,15 @@ fn process_common_render_op(
         | RenderOpCommon::ShowCursor
         | RenderOpCommon::HideCursor
         | RenderOpCommon::SaveCursorPosition
-        | RenderOpCommon::RestoreCursorPosition => {}
+        | RenderOpCommon::RestoreCursorPosition
+        | RenderOpCommon::EnterRawMode
+        | RenderOpCommon::ExitRawMode
+        | RenderOpCommon::EnterAlternateScreen
+        | RenderOpCommon::ExitAlternateScreen
+        | RenderOpCommon::EnableMouseTracking
+        | RenderOpCommon::DisableMouseTracking
+        | RenderOpCommon::EnableBracketedPaste
+        | RenderOpCommon::DisableBracketedPaste => {}
         // Do process these.
         RenderOpCommon::ClearScreen => {
             ofs_buf.clear();

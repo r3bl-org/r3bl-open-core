@@ -3,7 +3,7 @@
 //! Test modules for [`VT-100`] [`ANSI`] conformance validation.
 //!
 //! This module organizes conformance tests by functionality and architectural layer:
-//! - Operations tests (test_*_ops.rs) - Test operations modules directly
+//! - Operations tests (test_*_ops.rs) - Test ops modules directly
 //! - Protocol tests (`test_protocol_*.rs`) - Test [`ANSI`]/[`VT-100`] protocol parsing
 //! - System tests (`test_system_*.rs`) - Test system components and lifecycle
 //! - Integration tests (`test_integration_*.rs`) - Test cross-cutting scenarios
@@ -14,9 +14,9 @@
 //! architecture, creating a clear 1:1:1 mapping for navigation:
 //!
 //! ```text
-//! vt_100_test_char_ops ←→ operations/vt_100_shim_char_ops ←→ vt_100_ansi_impl/vt_100_impl_char_ops
-//! vt_100_test_cursor_ops ←→ operations/vt_100_shim_cursor_ops ←→ vt_100_ansi_impl/vt_100_impl_cursor_ops
-//! vt_100_test_sgr_ops ←→ operations/vt_100_shim_sgr_ops ←→ vt_100_ansi_impl/vt_100_impl_sgr_ops
+//! vt_100_test_char_ops ←→ operations/vt_100_shim_char_ops ←→ ofs_buf_vt_100/impl_char_ops
+//! vt_100_test_cursor_ops ←→ operations/vt_100_shim_cursor_ops ←→ ofs_buf_vt_100/impl_cursor_ops
+//! vt_100_test_sgr_ops ←→ operations/vt_100_shim_sgr_ops ←→ ofs_buf_vt_100/impl_sgr_ops
 //! ...and so on
 //! ```
 //!
@@ -24,7 +24,7 @@
 //!
 //! When working on any test file, you can easily navigate to its corresponding:
 //! - **Shim Layer**: [`operations`] - The delegation layer being tested indirectly
-//! - **Implementation Layer**: [`vt_100_ansi_impl`] - The business logic being tested
+//! - **Implementation Layer**: [`ofs_buf_vt_100`] - The business logic being tested
 //! - **Parent Documentation**: See [conformance tests] for the integration testing
 //!   philosophy
 //!
@@ -32,15 +32,15 @@
 //! 1. **Integration**: [`vt_100_test_char_ops`] - Tests using [`apply_ansi_bytes`] public
 //!    API
 //! 2. **Shim**: [`operations::char_ops`] - Parameter translation (no direct tests)
-//! 3. **Implementation**: [`impl_char_ops`] - Buffer logic (has unit tests)
+//! 3. **Implementation**: [`vt_100_impl_char_ops`] - Buffer logic (has unit tests)
 //!
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`apply_ansi_bytes`]: crate::OffscreenBuffer::apply_ansi_bytes
-//! [`impl_char_ops`]: crate::vt_100_ansi_impl::vt_100_impl_char_ops
-//! [`operations::char_ops`]: super::super::operations::vt_100_shim_char_ops
-//! [`operations`]: super::super::operations
+//! [`apply_ansi_bytes`]: crate::OfsBufVT100::apply_ansi_bytes
+//! [`ofs_buf_vt_100`]: crate::core::ansi::vt_100_pty_output_parser::ops_impl_ofs_buf
+//! [`operations::char_ops`]: super::super::ops::vt_100_shim_char_ops
+//! [`operations`]: super::super::ops
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
-//! [`vt_100_ansi_impl`]: crate::vt_100_ansi_impl
+//! [`vt_100_impl_char_ops`]: crate::core::ansi::vt_100_pty_output_parser::ops_impl_ofs_buf::vt_100_impl_char_ops
 //! [conformance tests]: super
 
 // === OPERATIONS TESTS ===

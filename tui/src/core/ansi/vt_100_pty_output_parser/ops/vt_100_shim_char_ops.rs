@@ -3,11 +3,11 @@
 //! Character insertion, deletion, and erasure operations.
 //!
 //! This module acts as a thin shim layer that delegates to the actual implementation.
-//! Refer to the module-level documentation in the operations module for details on the
+//! Refer to the module-level documentation in the ops module for details on the
 //! "shim → impl → test" architecture and naming conventions.
 //!
 //! **Related Files:**
-//! - **Implementation**: [`impl_char_ops`] - Business logic with unit tests
+//! - **Implementation**: [`vt_100_impl_char_ops`] - Business logic with unit tests
 //! - **Integration Tests**: [`test_char_ops`] - Full pipeline testing via public API
 //!
 //! # Testing Strategy
@@ -20,7 +20,7 @@
 //! - **Integration tests** in the conformance tests validating the full pipeline
 //!
 //! For the complete testing philosophy and rationale behind this approach,
-//! see the [operations module].
+//! see the [ops module].
 //!
 //! # Architecture Overview
 //!
@@ -39,13 +39,13 @@
 //!         ↓
 //!     csi_dispatch() [routes to modules below]
 //!         ↓
-//!     Route to operations module:
+//!     Route to ops module:
 //!       - cursor_ops:: for movement (A,B,C,D,H)
 //!       - scroll_ops:: for scrolling (S,T)
 //!       - sgr_ops:: for styling (m)
-//!       - line_ops:: for lines (L,M)      ╭───────────╮
-//!       - char_ops:: for chars (@,P,X) <- │THIS MODULE│
-//!         ↓                               ╰───────────╯
+//!       - line_ops:: for lines (L,M)                           ╭───────────╮
+//!       - char_ops:: for chars (@,P,X)                      <- │THIS MODULE│
+//!         ↓                                                    ╰───────────╯
 //!     Update OffscreenBuffer state
 //! ```
 //!
@@ -65,13 +65,13 @@
 //!
 //! [`CSI`]: crate::CsiSequence
 //! [`extract_nth_single_non_zero()`]: crate::ParamsExt::extract_nth_single_non_zero
-//! [`impl_char_ops`]: crate::vt_100_ansi_impl::vt_100_impl_char_ops
 //! [`NonZeroU16`]: std::num::NonZeroU16
 //! [`test_char_ops`]: crate::vt_100_pty_output_conformance_tests::tests::vt_100_test_char_ops
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+//! [`vt_100_impl_char_ops`]: crate::core::ansi::vt_100_pty_output_parser::ops_impl_ofs_buf::vt_100_impl_char_ops
 //! [module-level Architecture Overview]: super#architecture-overview
 //! [module-level documentation]: self
-//! [operations module]: crate::core::ansi::vt_100_pty_output_parser::operations
+//! [ops module]: crate::core::ansi::vt_100_pty_output_parser::ops
 
 use super::super::ansi_parser_public_api::AnsiToOfsBufPerformer;
 use crate::ParamsExt;
@@ -83,19 +83,20 @@ use crate::ParamsExt;
 /// **Behavior**: Characters to the right of cursor shift right, characters beyond margin
 /// are lost.
 ///
-/// See [`OffscreenBuffer::insert_chars_at_cursor`] for the implementation of this shim.
+/// See [`OfsBufVT100::insert_chars_at_cursor`] for the implementation of this
+/// shim.
 ///
-/// [`OffscreenBuffer::insert_chars_at_cursor`]: crate::OffscreenBuffer::insert_chars_at_cursor
+/// [`OfsBufVT100::insert_chars_at_cursor`]: crate::OfsBufVT100::insert_chars_at_cursor
 /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 /// [module-level documentation]: self
 pub fn insert_chars(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) {
     let how_many = params.extract_nth_single_non_zero(0).get().into();
-    let result = performer.ofs_buf.insert_chars_at_cursor(how_many);
+    let result = performer.ofs_buf_vt_100.insert_chars_at_cursor(how_many);
     debug_assert!(
         result.is_ok(),
         "Failed to insert {:?} chars at cursor position {:?}",
         how_many,
-        performer.ofs_buf.cursor_pos
+        performer.ofs_buf_vt_100.cursor_pos
     );
 }
 
@@ -106,19 +107,20 @@ pub fn insert_chars(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params)
 /// **Behavior**: Characters to the right of cursor shift left, blanks are inserted at
 /// line end.
 ///
-/// See [`OffscreenBuffer::delete_chars_at_cursor`] for the implementation of this shim.
+/// See [`OfsBufVT100::delete_chars_at_cursor`] for the implementation of this
+/// shim.
 ///
-/// [`OffscreenBuffer::delete_chars_at_cursor`]: crate::OffscreenBuffer::delete_chars_at_cursor
+/// [`OfsBufVT100::delete_chars_at_cursor`]: crate::OfsBufVT100::delete_chars_at_cursor
 /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 /// [module-level documentation]: self
 pub fn delete_chars(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) {
     let how_many = params.extract_nth_single_non_zero(0).get().into();
-    let result = performer.ofs_buf.delete_chars_at_cursor(how_many);
+    let result = performer.ofs_buf_vt_100.delete_chars_at_cursor(how_many);
     debug_assert!(
         result.is_ok(),
         "Failed to delete {:?} chars at cursor position {:?}",
         how_many,
-        performer.ofs_buf.cursor_pos
+        performer.ofs_buf_vt_100.cursor_pos
     );
 }
 
@@ -128,19 +130,19 @@ pub fn delete_chars(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params)
 ///
 /// **Behavior**: Characters are replaced with blanks, no shifting occurs (unlike DCH).
 ///
-/// See [`OffscreenBuffer::erase_chars_at_cursor`] for the implementation of this shim.
+/// See [`OfsBufVT100::erase_chars_at_cursor`] for the implementation of this shim.
 ///
-/// [`OffscreenBuffer::erase_chars_at_cursor`]: crate::OffscreenBuffer::erase_chars_at_cursor
+/// [`OfsBufVT100::erase_chars_at_cursor`]: crate::OfsBufVT100::erase_chars_at_cursor
 /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 /// [module-level documentation]: self
 pub fn erase_chars(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) {
     let how_many = params.extract_nth_single_non_zero(0).get().into();
-    let result = performer.ofs_buf.erase_chars_at_cursor(how_many);
+    let result = performer.ofs_buf_vt_100.erase_chars_at_cursor(how_many);
     debug_assert!(
         result.is_ok(),
         "Failed to erase {:?} chars at cursor position {:?}",
         how_many,
-        performer.ofs_buf.cursor_pos
+        performer.ofs_buf_vt_100.cursor_pos
     );
 }
 
@@ -149,17 +151,17 @@ pub fn erase_chars(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) 
 /// **[`VT-100`] Behavior**: Character set translation applied if [`DEC`] graphics mode is
 /// active.
 ///
-/// See [`OffscreenBuffer::print_char`] for the implementation of this shim.
+/// See [`OfsBufVT100::print_char`] for the implementation of this shim.
 ///
 /// [`DEC`]: https://en.wikipedia.org/wiki/Digital_Equipment_Corporation
-/// [`OffscreenBuffer::print_char`]: crate::OffscreenBuffer::print_char
+/// [`OfsBufVT100::print_char`]: crate::OfsBufVT100::print_char
 /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 pub fn print_char(performer: &mut AnsiToOfsBufPerformer, ch: char) {
-    let result = performer.ofs_buf.print_char(ch);
+    let result = performer.ofs_buf_vt_100.print_char(ch);
     debug_assert!(
         result.is_ok(),
         "Failed to print char {:?} at cursor position {:?}",
         ch,
-        performer.ofs_buf.cursor_pos
+        performer.ofs_buf_vt_100.cursor_pos
     );
 }

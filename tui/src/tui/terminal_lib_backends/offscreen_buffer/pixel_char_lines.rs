@@ -19,6 +19,19 @@ pub struct PixelCharLines {
 }
 
 impl GetMemSize for PixelCharLines {
+    /// Calculates the memory footprint by performing a full traversal of the 2D grid.
+    ///
+    /// This method is an `O(rows * columns)` operation because it iterates over every
+    /// [`PixelCharLine`] and every [`PixelChar`] within it to sum their sizes.
+    ///
+    /// # Performance
+    ///
+    /// Due to the significant runtime cost of this full grid traversal, callers (such as
+    /// parent structs that wrap this grid) should cache the result upon initialization.
+    /// Calling this method dynamically inside a hot loop, such as during a render cycle,
+    /// will result in a severe performance regression.
+    ///
+    /// [`PixelChar`]: crate::PixelChar
     fn get_mem_size(&self) -> usize { get_mem_size::slice_size(self.lines.as_ref()) }
 }
 

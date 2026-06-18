@@ -3,11 +3,11 @@
 //! Margin setting operations ([`DECSTBM`]).
 //!
 //! This module acts as a thin shim layer that delegates to the actual implementation.
-//! Refer to the module-level documentation in the operations module for details on the
+//! Refer to the module-level documentation in the ops module for details on the
 //! "shim → impl → test" architecture and naming conventions.
 //!
 //! **Related Files:**
-//! - **Implementation**: [`impl_margin_ops`] - Business logic with unit tests
+//! - **Implementation**: [`vt_100_impl_margin_ops`] - Business logic with unit tests
 //! - **Integration Tests**: [`test_margin_ops`] - Full pipeline testing via public API
 //!
 //! # Testing Strategy
@@ -20,7 +20,7 @@
 //! - **Integration tests** in the conformance tests validating the full pipeline
 //!
 //! For the complete testing philosophy and rationale behind this approach,
-//! see the [operations module].
+//! see the [ops module].
 //!
 //! # Architecture Overview
 //!
@@ -39,24 +39,24 @@
 //!         ↓
 //!     csi_dispatch() [routes to modules below]
 //!         ↓
-//!     Route to operations module:
+//!     Route to ops module:
 //!       - cursor_ops:: for movement (A,B,C,D,H)
 //!       - scroll_ops:: for scrolling (S,T)
 //!       - sgr_ops:: for styling (m)
 //!       - line_ops:: for lines (L,M)
-//!       - char_ops:: for chars (@,P,X)    ╭───────────╮
-//!       - margin_ops:: for margins (r) <- │THIS MODULE│
-//!         ↓                               ╰───────────╯
+//!       - char_ops:: for chars (@,P,X)                         ╭───────────╮
+//!       - margin_ops:: for margins (r)                      <- │THIS MODULE│
+//!         ↓                                                    ╰───────────╯
 //!     Update OffscreenBuffer state
 //! ```
 //!
 //! [`CSI`]: crate::CsiSequence
 //! [`DECSTBM`]: https://vt100.net/docs/vt510-rm/DECSTBM.html
-//! [`impl_margin_ops`]: crate::vt_100_ansi_impl::vt_100_impl_margin_ops
 //! [`test_margin_ops`]: crate::vt_100_pty_output_conformance_tests::tests::vt_100_test_margin_ops
+//! [`vt_100_impl_margin_ops`]: crate::core::ansi::vt_100_pty_output_parser::ops_impl_ofs_buf::vt_100_impl_margin_ops
 //! [module-level Architecture Overview]: super#architecture-overview
 //! [module-level documentation]: self
-//! [operations module]: crate::core::ansi::vt_100_pty_output_parser::operations
+//! [ops module]: crate::core::ansi::vt_100_pty_output_parser::ops
 
 use super::super::{MarginRequest, ansi_parser_public_api::AnsiToOfsBufPerformer};
 use vte::Params;
@@ -73,10 +73,10 @@ pub fn set_margins(performer: &mut AnsiToOfsBufPerformer, params: &Params) {
 
     match request {
         MarginRequest::Reset => {
-            performer.ofs_buf.reset_scroll_margins();
+            performer.ofs_buf_vt_100.reset_scroll_margins();
         }
         MarginRequest::SetRegion { top, bottom } => {
-            performer.ofs_buf.set_scroll_margins(top, bottom);
+            performer.ofs_buf_vt_100.set_scroll_margins(top, bottom);
         }
     }
 }

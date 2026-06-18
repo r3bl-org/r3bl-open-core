@@ -18,22 +18,25 @@ use crate::define_ansi_const;
 
 // Cursor Save/Restore Operations
 
-/// Save Cursor (DECSC): Saves the current cursor position and attributes.
+/// Save Cursor ([`DECSC`]): Saves the current cursor position and attributes.
 ///
 /// Value: `55` dec, `37` hex.
 ///
 /// Sequence: `ESC 7`.
 ///
+/// [`DECSC`]: https://vt100.net/docs/vt510-rm/DECSC.html
 /// [`ESC`]: crate::EscSequence
 /// [VT-100]: https://vt100.net/docs/vt100-ug/chapter3.html
 pub const DECSC_SAVE_CURSOR: u8 = b'7';
 
-/// Restore Cursor (DECRC): Restores the previously saved cursor position and attributes.
+/// Restore Cursor ([`DECRC`]): Restores the previously saved cursor position and
+/// attributes.
 ///
 /// Value: `56` dec, `38` hex.
 ///
 /// Sequence: `ESC 8`.
 ///
+/// [`DECRC`]: https://vt100.net/docs/vt510-rm/DECRC.html
 /// [`ESC`]: crate::EscSequence
 /// [VT-100]: https://vt100.net/docs/vt100-ug/chapter3.html
 pub const DECRC_RESTORE_CURSOR: u8 = b'8';

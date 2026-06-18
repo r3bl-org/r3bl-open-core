@@ -20,19 +20,19 @@
 //! **Related Files:**
 //!
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`mode_ops`]: crate::vt_100_pty_output_parser::operations::vt_100_shim_mode_ops
-//! [`set_requested_auto_wrap_mode`]: crate::OffscreenBuffer::set_requested_auto_wrap_mode
+//! [`mode_ops`]: crate::core::ansi::vt_100_pty_output_parser::ops::vt_100_shim_mode_ops
+//! [`set_requested_auto_wrap_mode`]: crate::OfsBufVT100::set_requested_auto_wrap_mode
 
 #[allow(clippy::wildcard_imports)]
 use super::super::*;
 use std::mem::swap;
 
-impl OffscreenBuffer {
+impl OfsBufVT100 {
     /// Set auto wrap mode on.
     /// When enabled, text automatically wraps to the next line when it
     /// reaches the right margin.
     pub fn set_requested_auto_wrap_mode(&mut self, requested_state: AutoWrapState) {
-        self.ansi_parser_support.auto_wrap_mode = requested_state;
+        self.parser_global_state.auto_wrap_mode = requested_state;
     }
 
     /// Set the cursor visibility mode.
@@ -44,7 +44,7 @@ impl OffscreenBuffer {
         &mut self,
         requested_state: CursorVisibilityState,
     ) {
-        self.ansi_parser_support.cursor_visibility = requested_state;
+        self.parser_global_state.cursor_visibility = requested_state;
     }
 
     /// Toggle between the primary and alternate screen buffers.
@@ -52,7 +52,7 @@ impl OffscreenBuffer {
     /// When switching to the alternate screen buffer:
     /// - Saves the primary cursor position.
     /// - Swaps the 2D grid buffers ([`self.buffer`] and
-    ///   [`self.alt_screen_support.alt_buffer`]).
+    ///   [`self.hidden_screen_state.hidden_buffer`]).
     /// - Sets the active cursor position to the saved alternate cursor position.
     /// - Clears the alternate screen buffer with cells carrying the active style to be
     ///   [`BCE`] (Background Color Erase) compliant.
@@ -67,20 +67,21 @@ impl OffscreenBuffer {
     /// [`AlternateScreenState::Active`]: crate::AlternateScreenState::Active
     /// [`AlternateScreenState::Inactive`]: crate::AlternateScreenState::Inactive
     /// [`BCE`]: https://invisible-island.net/xterm/xterm.faq.html#what_is_bce
-    /// [`self.alt_screen_support.alt_buffer`]: field@crate::AltScreenSupport::alt_buffer
-    /// [`self.buffer`]: field@crate::OffscreenBuffer::buffer
+    /// [`self.buffer`]: field@crate::OfsBufVT100::ofs_buf
+    /// [`self.hidden_screen_state.hidden_buffer`]: field@crate::HiddenScreenState::hidden_buffer
     pub fn set_alt_screen_mode(&mut self, requested_screen_mode: RequestedScreenMode) {
         match (self.terminal_mode.alternate_screen, requested_screen_mode) {
             // Transition: Primary -> Alternate Screen
             (AlternateScreenState::Inactive, RequestedScreenMode::Alternate) => {
-                // Save primary cursor.
-                self.alt_screen_support.cursor_pos_primary = self.cursor_pos;
-
-                // Swap the screen buffer grids.
-                swap(&mut self.buffer, &mut self.alt_screen_support.alt_buffer);
-
-                // Restore alternate cursor.
-                self.cursor_pos = self.alt_screen_support.cursor_pos_alt;
+                // Swap the screen buffer grids and their respective cursor positions.
+                swap(
+                    &mut self.ofs_buf.buffer,
+                    &mut self.hidden_screen_state.hidden_buffer,
+                );
+                swap(
+                    &mut self.ofs_buf.cursor_pos,
+                    &mut self.hidden_screen_state.hidden_cursor_pos,
+                );
 
                 // Update mode status.
                 self.terminal_mode.alternate_screen = AlternateScreenState::Active;
@@ -96,14 +97,15 @@ impl OffscreenBuffer {
 
             // Transition: Alternate -> Primary Screen
             (AlternateScreenState::Active, RequestedScreenMode::Primary) => {
-                // Save alternate cursor.
-                self.alt_screen_support.cursor_pos_alt = self.cursor_pos;
-
-                // Swap back to primary buffer.
-                swap(&mut self.buffer, &mut self.alt_screen_support.alt_buffer);
-
-                // Restore primary cursor.
-                self.cursor_pos = self.alt_screen_support.cursor_pos_primary;
+                // Swap the screen buffer grids and their respective cursor positions.
+                swap(
+                    &mut self.ofs_buf.buffer,
+                    &mut self.hidden_screen_state.hidden_buffer,
+                );
+                swap(
+                    &mut self.ofs_buf.cursor_pos,
+                    &mut self.hidden_screen_state.hidden_cursor_pos,
+                );
 
                 // Update mode status.
                 self.terminal_mode.alternate_screen = AlternateScreenState::Inactive;
@@ -118,11 +120,12 @@ impl OffscreenBuffer {
 #[cfg(test)]
 mod tests_mode_ops {
     use super::*;
-    use crate::{Pos, RequestedScreenMode, col, height, new_style, row, width};
+    use crate::{OfsBufVT100, Pos, RequestedScreenMode, col, height, new_style, row,
+                width};
 
-    fn create_test_buffer() -> OffscreenBuffer {
+    fn create_test_buffer() -> OfsBufVT100 {
         let size = width(10) + height(6);
-        OffscreenBuffer::new_empty(size)
+        OfsBufVT100::new_empty(size)
     }
 
     #[test]
@@ -130,10 +133,16 @@ mod tests_mode_ops {
         let mut buffer = create_test_buffer();
 
         // Initially should be enabled by default.
-        assert_eq!(buffer.ansi_parser_support.auto_wrap_mode, AutoWrapState::Enabled);
+        assert_eq!(
+            buffer.parser_global_state.auto_wrap_mode,
+            AutoWrapState::Enabled
+        );
 
         buffer.set_requested_auto_wrap_mode(AutoWrapState::Enabled);
-        assert_eq!(buffer.ansi_parser_support.auto_wrap_mode, AutoWrapState::Enabled);
+        assert_eq!(
+            buffer.parser_global_state.auto_wrap_mode,
+            AutoWrapState::Enabled
+        );
     }
 
     #[test]
@@ -141,7 +150,10 @@ mod tests_mode_ops {
         let mut buffer = create_test_buffer();
 
         buffer.set_requested_auto_wrap_mode(AutoWrapState::Disabled);
-        assert_eq!(buffer.ansi_parser_support.auto_wrap_mode, AutoWrapState::Disabled);
+        assert_eq!(
+            buffer.parser_global_state.auto_wrap_mode,
+            AutoWrapState::Disabled
+        );
     }
 
     #[test]
@@ -150,15 +162,24 @@ mod tests_mode_ops {
 
         // Start enabled.
         buffer.set_requested_auto_wrap_mode(AutoWrapState::Enabled);
-        assert_eq!(buffer.ansi_parser_support.auto_wrap_mode, AutoWrapState::Enabled);
+        assert_eq!(
+            buffer.parser_global_state.auto_wrap_mode,
+            AutoWrapState::Enabled
+        );
 
         // Disable.
         buffer.set_requested_auto_wrap_mode(AutoWrapState::Disabled);
-        assert_eq!(buffer.ansi_parser_support.auto_wrap_mode, AutoWrapState::Disabled);
+        assert_eq!(
+            buffer.parser_global_state.auto_wrap_mode,
+            AutoWrapState::Disabled
+        );
 
         // Enable again.
         buffer.set_requested_auto_wrap_mode(AutoWrapState::Enabled);
-        assert_eq!(buffer.ansi_parser_support.auto_wrap_mode, AutoWrapState::Enabled);
+        assert_eq!(
+            buffer.parser_global_state.auto_wrap_mode,
+            AutoWrapState::Enabled
+        );
     }
 
     #[test]
@@ -174,7 +195,7 @@ mod tests_mode_ops {
 
         // Set a styled current_style to verify BCE clearing.
         let custom_style = new_style!(bold);
-        buffer.ansi_parser_support.current_style = custom_style;
+        buffer.parser_global_state.current_style = custom_style;
 
         // Move primary cursor.
         buffer.cursor_pos = col(2) + row(3);
@@ -188,9 +209,9 @@ mod tests_mode_ops {
 
         // Cursor pos should be reset to default/alt state (0, 0).
         assert_eq!(buffer.cursor_pos, Pos::default());
-        // Saved primary cursor should be (2, 3).
+        // Saved hidden (primary) cursor should be (2, 3).
         assert_eq!(
-            buffer.alt_screen_support.cursor_pos_primary,
+            buffer.hidden_screen_state.hidden_cursor_pos,
             col(2) + row(3)
         );
 
@@ -223,8 +244,11 @@ mod tests_mode_ops {
 
         // Cursor pos should restore to (2, 3).
         assert_eq!(buffer.cursor_pos, col(2) + row(3));
-        // Saved alternate cursor should be (4, 5).
-        assert_eq!(buffer.alt_screen_support.cursor_pos_alt, col(4) + row(5));
+        // Saved hidden (alternate) cursor should be (4, 5).
+        assert_eq!(
+            buffer.hidden_screen_state.hidden_cursor_pos,
+            col(4) + row(5)
+        );
     }
 
     #[test]
@@ -244,7 +268,7 @@ mod tests_mode_ops {
 
         // Change the active style to verify the second BCE clear.
         let new_style = new_style!(italic);
-        buffer.ansi_parser_support.current_style = new_style;
+        buffer.parser_global_state.current_style = new_style;
 
         // Toggle to Alternate Screen again.
         buffer.set_alt_screen_mode(RequestedScreenMode::Alternate);
@@ -253,9 +277,9 @@ mod tests_mode_ops {
             AlternateScreenState::Active
         );
 
-        // Saved primary cursor should now be the new location (7, 8).
+        // Saved hidden (primary) cursor should now be the new location (7, 8).
         assert_eq!(
-            buffer.alt_screen_support.cursor_pos_primary,
+            buffer.hidden_screen_state.hidden_cursor_pos,
             col(7) + row(8)
         );
 

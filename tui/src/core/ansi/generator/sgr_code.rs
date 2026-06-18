@@ -58,7 +58,7 @@
 //!
 //! Note: Our [`VT-100`] *parser* accepts both formats for maximum compatibility when
 //! parsing output from other applications. See
-//! [`crate::vt_100_pty_output_parser`].
+//! [`crate::core::ansi::vt_100_pty_output_parser`].
 //!
 //! More info:
 //! - <https://doc.rust-lang.org/reference/tokens.html#ascii-escapes>

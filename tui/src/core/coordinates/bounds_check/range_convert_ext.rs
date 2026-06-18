@@ -240,7 +240,7 @@ use std::ops::{Add, Range, RangeInclusive};
 /// [`RangeInclusive`]: std::ops::RangeInclusive
 /// [`to_exclusive()`]: RangeConvertExt::to_exclusive
 /// [`VT-100`]:
-///     mod@crate::vt_100_pty_output_parser::operations::vt_100_shim_scroll_ops
+///     mod@crate::core::ansi::vt_100_pty_output_parser::ops::vt_100_shim_scroll_ops
 /// [Interval Notation]: mod@crate::bounds_check#interval-notation
 /// [Module documentation]: mod@crate::bounds_check
 pub trait RangeConvertExt {
@@ -257,7 +257,7 @@ pub trait RangeConvertExt {
     ///
     /// [`Range`]: std::ops::Range
     /// [`VT-100`]:
-    ///     mod@crate::vt_100_pty_output_parser::operations::vt_100_shim_scroll_ops
+    ///     mod@crate::core::ansi::vt_100_pty_output_parser::ops::vt_100_shim_scroll_ops
     /// [trait documentation]: Self
     #[must_use]
     fn to_exclusive(self) -> Range<Self::IndexType>;
@@ -270,7 +270,7 @@ pub trait RangeConvertExt {
 /// use with iteration and slice operations.
 ///
 /// [`VT-100`]:
-///     mod@crate::vt_100_pty_output_parser::operations::vt_100_shim_scroll_ops
+///     mod@crate::core::ansi::vt_100_pty_output_parser::ops::vt_100_shim_scroll_ops
 impl<I> RangeConvertExt for RangeInclusive<I>
 where
     I: IndexOps + Add<Output = I>,

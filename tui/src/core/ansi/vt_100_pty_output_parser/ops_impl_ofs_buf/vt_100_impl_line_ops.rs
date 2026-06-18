@@ -53,18 +53,19 @@
 //! the scroll region, the operation is skipped entirely.
 //!
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`clear_line()`]: crate::OffscreenBuffer::clear_line
-//! [`shift_lines_down()`]: crate::OffscreenBuffer::shift_lines_down
-//! [`shift_lines_up()`]: crate::OffscreenBuffer::shift_lines_up
+//! [`clear_line()`]: crate::OfsBufVT100::clear_line
+//! [`shift_lines_down()`]: crate::OfsBufVT100::shift_lines_down
+//! [`shift_lines_up()`]: crate::OfsBufVT100::shift_lines_up
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 //! [Interval Notation]: crate::bounds_check#interval-notation
 
-use crate::{Length, OffscreenBuffer, PixelChar, RowHeight, RowIndex,
+use crate::{Length, OfsBufVT100, PixelChar, RowHeight, RowIndex,
             core::coordinates::bounds_check::{RangeBoundsExt, RangeBoundsResult,
-                                              RangeConvertExt}, ok};
+                                              RangeConvertExt},
+            ok};
 use std::ops::Range;
 
-impl OffscreenBuffer {
+impl OfsBufVT100 {
     /// Clear an entire line by filling it with blank characters.
     /// Returns true if the operation was successful.
     ///
@@ -282,14 +283,14 @@ impl OffscreenBuffer {
 #[cfg(test)]
 mod tests_line_ops {
     use super::*;
-    use crate::{PixelCharLine, TermRow, col, height, len, row,
+    use crate::{OfsBufVT100, PixelCharLine, TermRow, col, height, len, row,
                 test_fixtures_ofs_buf::{create_plain_test_char,
-                                        create_test_buffer_with_size,
-                                        create_test_line_with_chars},
+                                        create_test_line_with_chars,
+                                        create_vt100_test_buffer_with_size},
                 width};
 
-    fn create_test_buffer() -> OffscreenBuffer {
-        create_test_buffer_with_size(width(4), height(5))
+    fn create_test_buffer() -> OfsBufVT100 {
+        create_vt100_test_buffer_with_size(width(4), height(5))
     }
 
     fn create_test_char(ch: char) -> PixelChar { create_plain_test_char(ch) }
@@ -422,8 +423,8 @@ mod tests_line_ops {
         let mut buffer = create_test_buffer();
 
         // Set scroll region to rows 1-3 (inclusive).
-        buffer.ansi_parser_support.scroll_region_top = Some(TermRow::from(row(1)));
-        buffer.ansi_parser_support.scroll_region_bottom = Some(TermRow::from(row(3)));
+        buffer.parser_global_state.scroll_region_top = Some(TermRow::from(row(1)));
+        buffer.parser_global_state.scroll_region_bottom = Some(TermRow::from(row(3)));
 
         // Set up initial lines.
         let _unused = buffer.set_line(row(1), create_test_line(&['A', 'A', 'A', 'A']));
@@ -451,8 +452,8 @@ mod tests_line_ops {
         let mut buffer = create_test_buffer();
 
         // Set scroll region to rows 1-3 (inclusive).
-        buffer.ansi_parser_support.scroll_region_top = Some(TermRow::from(row(1)));
-        buffer.ansi_parser_support.scroll_region_bottom = Some(TermRow::from(row(3)));
+        buffer.parser_global_state.scroll_region_top = Some(TermRow::from(row(1)));
+        buffer.parser_global_state.scroll_region_bottom = Some(TermRow::from(row(3)));
 
         // Set up initial lines.
         let _unused = buffer.set_line(row(0), create_test_line(&['X', 'X', 'X', 'X']));
@@ -484,8 +485,8 @@ mod tests_line_ops {
         let mut buffer = create_test_buffer();
 
         // Set scroll region to rows 1-3 (inclusive).
-        buffer.ansi_parser_support.scroll_region_top = Some(TermRow::from(row(1)));
-        buffer.ansi_parser_support.scroll_region_bottom = Some(TermRow::from(row(3)));
+        buffer.parser_global_state.scroll_region_top = Some(TermRow::from(row(1)));
+        buffer.parser_global_state.scroll_region_bottom = Some(TermRow::from(row(3)));
 
         // Set up initial lines.
         let _unused = buffer.set_line(row(1), create_test_line(&['A', 'A', 'A', 'A']));
@@ -513,8 +514,8 @@ mod tests_line_ops {
         let mut buffer = create_test_buffer();
 
         // Set scroll region to rows 1-3 (inclusive).
-        buffer.ansi_parser_support.scroll_region_top = Some(TermRow::from(row(1)));
-        buffer.ansi_parser_support.scroll_region_bottom = Some(TermRow::from(row(3)));
+        buffer.parser_global_state.scroll_region_top = Some(TermRow::from(row(1)));
+        buffer.parser_global_state.scroll_region_bottom = Some(TermRow::from(row(3)));
 
         // Set up initial lines.
         let _unused = buffer.set_line(row(0), create_test_line(&['X', 'X', 'X', 'X']));
@@ -546,8 +547,8 @@ mod tests_line_ops {
         let mut buffer = create_test_buffer();
 
         // Set scroll region to rows 0-4 (entire buffer).
-        buffer.ansi_parser_support.scroll_region_top = Some(TermRow::from(row(0)));
-        buffer.ansi_parser_support.scroll_region_bottom = Some(TermRow::from(row(4)));
+        buffer.parser_global_state.scroll_region_top = Some(TermRow::from(row(0)));
+        buffer.parser_global_state.scroll_region_bottom = Some(TermRow::from(row(4)));
 
         // Set up initial lines.
         let _unused = buffer.set_line(row(0), create_test_line(&['A', 'A', 'A', 'A']));
@@ -582,8 +583,8 @@ mod tests_line_ops {
         let mut buffer = create_test_buffer();
 
         // Set scroll region to rows 0-4 (entire buffer).
-        buffer.ansi_parser_support.scroll_region_top = Some(TermRow::from(row(0)));
-        buffer.ansi_parser_support.scroll_region_bottom = Some(TermRow::from(row(4)));
+        buffer.parser_global_state.scroll_region_top = Some(TermRow::from(row(0)));
+        buffer.parser_global_state.scroll_region_bottom = Some(TermRow::from(row(4)));
 
         // Set up initial lines.
         let _unused = buffer.set_line(row(0), create_test_line(&['A', 'A', 'A', 'A']));

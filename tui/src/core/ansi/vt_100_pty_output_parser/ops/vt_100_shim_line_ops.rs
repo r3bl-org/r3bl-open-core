@@ -3,11 +3,11 @@
 //! Line insertion and deletion operations.
 //!
 //! This module acts as a thin shim layer that delegates to the actual implementation.
-//! Refer to the module-level documentation in the operations module for details on the
+//! Refer to the module-level documentation in the ops module for details on the
 //! "shim → impl → test" architecture and naming conventions.
 //!
 //! **Related Files:**
-//! - **Implementation**: [`impl_line_ops`] - Business logic with unit tests
+//! - **Implementation**: [`vt_100_impl_line_ops`] - Business logic with unit tests
 //! - **Integration Tests**: [`test_line_ops`] - Full pipeline testing via public API
 //!
 //! # Testing Strategy
@@ -20,7 +20,7 @@
 //! - **Integration tests** in the conformance tests validating the full pipeline
 //!
 //! For the complete testing philosophy and rationale behind this approach,
-//! see the [operations module].
+//! see the [ops module].
 //!
 //! # Architecture Overview
 //!
@@ -39,12 +39,12 @@
 //!         ↓
 //!     csi_dispatch() [routes to modules below]
 //!         ↓
-//!     Route to operations module:
+//!     Route to ops module:
 //!       - cursor_ops:: for movement (A,B,C,D,H)
 //!       - scroll_ops:: for scrolling (S,T)
-//!       - sgr_ops:: for styling (m)     ╭───────────╮
-//!       - line_ops:: for lines (L,M) <- │THIS MODULE│
-//!       - char_ops:: for chars (@,P,X)  ╰───────────╯
+//!       - sgr_ops:: for styling (m)                            ╭───────────╮
+//!       - line_ops:: for lines (L,M)                        <- │THIS MODULE│
+//!       - char_ops:: for chars (@,P,X)                         ╰───────────╯
 //!         ↓
 //!     Update OffscreenBuffer state
 //! ```
@@ -72,13 +72,13 @@
 //! [`CSI`]: crate::CsiSequence
 //! [`DECSTBM`]: https://vt100.net/docs/vt510-rm/DECSTBM.html
 //! [`extract_nth_single_non_zero()`]: crate::ParamsExt::extract_nth_single_non_zero
-//! [`impl_line_ops`]: crate::vt_100_ansi_impl::vt_100_impl_line_ops
 //! [`NonZeroU16`]: std::num::NonZeroU16
 //! [`test_line_ops`]: crate::vt_100_pty_output_conformance_tests::tests::vt_100_test_line_ops
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+//! [`vt_100_impl_line_ops`]: crate::core::ansi::vt_100_pty_output_parser::ops_impl_ofs_buf::vt_100_impl_line_ops
 //! [module-level Architecture Overview]: super#architecture-overview
 //! [module-level documentation]: self
-//! [operations module]: crate::core::ansi::vt_100_pty_output_parser::operations
+//! [ops module]: crate::core::ansi::vt_100_pty_output_parser::ops
 
 use super::super::ansi_parser_public_api::AnsiToOfsBufPerformer;
 use crate::ParamsExt;
@@ -90,16 +90,16 @@ use crate::ParamsExt;
 /// (missing/zero parameters default to 1) and scroll region interaction.
 ///
 /// This operation respects [`VT-100`] scroll region boundaries.
-/// See [`OffscreenBuffer::insert_lines_at`] for detailed behavior and scroll region
+/// See [`OfsBufVT100::insert_lines_at`] for detailed behavior and scroll region
 /// handling.
 ///
-/// [`OffscreenBuffer::insert_lines_at`]: crate::OffscreenBuffer::insert_lines_at
+/// [`OfsBufVT100::insert_lines_at`]: crate::OfsBufVT100::insert_lines_at
 /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 /// [module-level documentation]: self
 pub fn insert_lines(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) {
     let how_many = params.extract_nth_single_non_zero(0).get().into();
-    let at = performer.ofs_buf.cursor_pos.row_index;
-    let result = performer.ofs_buf.insert_lines_at(at, how_many);
+    let at = performer.ofs_buf_vt_100.cursor_pos.row_index;
+    let result = performer.ofs_buf_vt_100.insert_lines_at(at, how_many);
     debug_assert!(
         result.is_ok(),
         "Failed to insert {how_many:?} lines at row {at:?}",
@@ -114,16 +114,16 @@ pub fn insert_lines(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params)
 /// (missing/zero parameters default to 1) and scroll region interaction.
 ///
 /// This operation respects [`VT-100`] scroll region boundaries.
-/// See [`OffscreenBuffer::delete_lines_at`] for detailed behavior and scroll region
+/// See [`OfsBufVT100::delete_lines_at`] for detailed behavior and scroll region
 /// handling.
 ///
-/// [`OffscreenBuffer::delete_lines_at`]: crate::OffscreenBuffer::delete_lines_at
+/// [`OfsBufVT100::delete_lines_at`]: crate::OfsBufVT100::delete_lines_at
 /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 /// [module-level documentation]: self
 pub fn delete_lines(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) {
     let how_many = params.extract_nth_single_non_zero(0).get().into();
-    let at = performer.ofs_buf.cursor_pos.row_index;
-    let result = performer.ofs_buf.delete_lines_at(at, how_many);
+    let at = performer.ofs_buf_vt_100.cursor_pos.row_index;
+    let result = performer.ofs_buf_vt_100.delete_lines_at(at, how_many);
     debug_assert!(
         result.is_ok(),
         "Failed to delete {how_many:?} lines at row {at:?}",

@@ -1,6 +1,6 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! [`ANSI`] cursor movement operations for `OffscreenBuffer`.
+//! [`ANSI`] cursor movement operations for `OfsBufVT100`.
 //!
 //! This module provides methods for moving the cursor position within the buffer,
 //! handling boundary conditions, scroll regions, and cursor state management
@@ -15,12 +15,10 @@
 //!
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 
-#[allow(clippy::wildcard_imports)]
-use super::super::*;
-use crate::{ColIndex, ColWidth, Pos, RowHeight, RowIndex, col,
+use crate::{ColIndex, ColWidth, OfsBufVT100, Pos, RowHeight, RowIndex, col,
             core::coordinates::bounds_check::IndexOps};
 
-impl OffscreenBuffer {
+impl OfsBufVT100 {
     /// Move cursor up by n lines.
     /// Respects [`DECSTBM`] scroll region margins.
     ///
@@ -148,14 +146,14 @@ impl OffscreenBuffer {
 
     /// Save current cursor position for later restoration.
     pub fn save_cursor_position(&mut self) {
-        self.ansi_parser_support.cursor_pos_for_esc_save_and_restore =
+        self.parser_global_state.cursor_pos_for_esc_save_and_restore =
             Some(self.cursor_pos);
     }
 
     /// Restore previously saved cursor position.
     pub fn restore_cursor_position(&mut self) {
         if let Some(saved_pos) =
-            self.ansi_parser_support.cursor_pos_for_esc_save_and_restore
+            self.parser_global_state.cursor_pos_for_esc_save_and_restore
         {
             self.cursor_pos = saved_pos;
         }
@@ -173,11 +171,11 @@ impl OffscreenBuffer {
 #[cfg(test)]
 mod tests_cursor_ops {
     use super::*;
-    use crate::{height, row, width};
+    use crate::{OfsBufVT100, height, row, width};
 
-    fn create_test_buffer() -> OffscreenBuffer {
+    fn create_test_buffer() -> OfsBufVT100 {
         let size = width(10) + height(6);
-        OffscreenBuffer::new_empty(size)
+        OfsBufVT100::new_empty(size)
     }
 
     #[test]

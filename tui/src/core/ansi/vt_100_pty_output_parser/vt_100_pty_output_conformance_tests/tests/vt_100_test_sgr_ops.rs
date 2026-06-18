@@ -20,7 +20,7 @@ pub mod sgr_styling {
 
     #[test]
     fn test_sgr_reset_behavior() {
-        let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
 
         #[allow(clippy::items_after_statements)]
         const RED: &str = "RED";
@@ -39,7 +39,7 @@ pub mod sgr_styling {
         // Sequence: ESC[1m ESC[31m "RED" ESC[0m "NORM"
 
         // Set bold+red, write "RED", reset all, write "NORM".
-        let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf);
+        let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf_vt_100);
         performer.apply_ansi_bytes(format!(
             "{bold}{fg_red}{text1}{reset_all}{text2}",
             bold = SgrCode::Bold,
@@ -52,7 +52,7 @@ pub mod sgr_styling {
         // Verify "RED" has bold and red color.
         for (col, expected_char) in RED.chars().enumerate() {
             assert_styled_char_at(
-                &ofs_buf,
+                &ofs_buf_vt_100,
                 0,
                 col,
                 expected_char,
@@ -65,16 +65,16 @@ pub mod sgr_styling {
         }
 
         // Verify "NORM" has no styling (SGR 0 reset everything)
-        assert_plain_text_at(&ofs_buf, 0, RED.len(), NORM);
+        assert_plain_text_at(&ofs_buf_vt_100, 0, RED.len(), NORM);
 
         // Verify empty cells after "NORM".
         for col_idx in (RED.len() + NORM.len())..10 {
-            assert_empty_at(&ofs_buf, 0, col_idx);
+            assert_empty_at(&ofs_buf_vt_100, 0, col_idx);
         }
 
-        // Verify final cursor position in ofs_buf.my_pos.
+        // Verify final cursor position in ofs_buf_vt_100.my_pos.
         assert_eq!(
-            ofs_buf.cursor_pos,
+            ofs_buf_vt_100.cursor_pos,
             row(0) + col(RED.len() + NORM.len()),
             "final cursor position after writing RED and NORM should be at row 0, col 7",
         );
@@ -82,7 +82,7 @@ pub mod sgr_styling {
 
     #[test]
     fn test_sgr_partial_reset() {
-        let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
 
         // SGR partial reset test (SGR 22 resets bold/dim only):
         //
@@ -97,7 +97,7 @@ pub mod sgr_styling {
         // Sequence: ESC[1m ESC[3m ESC[31m A ESC[22m B
 
         // Test partial SGR resets (SGR 22 resets bold/dim only)
-        let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf);
+        let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf_vt_100);
 
         // Set bold+italic+red, write "A", reset bold/dim only, write "B"
         performer.apply_ansi_bytes(format!(
@@ -110,7 +110,7 @@ pub mod sgr_styling {
 
         // Verify 'A' has bold, italic, and red.
         assert_styled_char_at(
-            &ofs_buf,
+            &ofs_buf_vt_100,
             0,
             0,
             'A',
@@ -124,7 +124,7 @@ pub mod sgr_styling {
 
         // Verify 'B' has italic and red but NOT bold (SGR 22 reset bold/dim)
         assert_styled_char_at(
-            &ofs_buf,
+            &ofs_buf_vt_100,
             0,
             1,
             'B',
@@ -137,12 +137,12 @@ pub mod sgr_styling {
 
         // Verify empty cells after "AB".
         for col_idx in 2..10 {
-            assert_empty_at(&ofs_buf, 0, col_idx);
+            assert_empty_at(&ofs_buf_vt_100, 0, col_idx);
         }
 
-        // Verify final cursor position in ofs_buf.my_pos.
+        // Verify final cursor position in ofs_buf_vt_100.my_pos.
         assert_eq!(
-            ofs_buf.cursor_pos,
+            ofs_buf_vt_100.cursor_pos,
             row(0) + col(2),
             "final cursor position after writing AB should be at row 0, col 2",
         );
@@ -151,7 +151,7 @@ pub mod sgr_styling {
     #[test]
     #[allow(clippy::too_many_lines)]
     fn test_sgr_color_attributes() {
-        let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
 
         // SGR color attributes test:
         //
@@ -172,7 +172,7 @@ pub mod sgr_styling {
         //           ESC[31mESC[44mZ ESC[0m
 
         // Test various SGR color sequences through VTE parser.
-        let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf);
+        let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf_vt_100);
 
         // Test foreground colors: black, red, green, white, then background colors
         performer.apply_ansi_bytes(format!(
@@ -189,7 +189,7 @@ pub mod sgr_styling {
 
         // Verify colors in buffer.
         assert_styled_char_at(
-            &ofs_buf,
+            &ofs_buf_vt_100,
             0,
             0,
             'B',
@@ -200,7 +200,7 @@ pub mod sgr_styling {
         );
 
         assert_styled_char_at(
-            &ofs_buf,
+            &ofs_buf_vt_100,
             0,
             1,
             'R',
@@ -211,7 +211,7 @@ pub mod sgr_styling {
         );
 
         assert_styled_char_at(
-            &ofs_buf,
+            &ofs_buf_vt_100,
             0,
             2,
             'G',
@@ -222,7 +222,7 @@ pub mod sgr_styling {
         );
 
         assert_styled_char_at(
-            &ofs_buf,
+            &ofs_buf_vt_100,
             0,
             3,
             'W',
@@ -232,10 +232,10 @@ pub mod sgr_styling {
             "white foreground",
         );
 
-        assert_plain_char_at(&ofs_buf, 0, 4, ' '); // Space after reset
+        assert_plain_char_at(&ofs_buf_vt_100, 0, 4, ' '); // Space after reset
 
         assert_styled_char_at(
-            &ofs_buf,
+            &ofs_buf_vt_100,
             0,
             5,
             'X',
@@ -246,7 +246,7 @@ pub mod sgr_styling {
         );
 
         assert_styled_char_at(
-            &ofs_buf,
+            &ofs_buf_vt_100,
             0,
             6,
             'Y',
@@ -257,7 +257,7 @@ pub mod sgr_styling {
         );
 
         assert_styled_char_at(
-            &ofs_buf,
+            &ofs_buf_vt_100,
             0,
             7,
             'Z',
@@ -271,8 +271,8 @@ pub mod sgr_styling {
 
     #[test]
     fn test_sgr_slow_blink() {
-        let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
-        let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf);
+        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+        let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf_vt_100);
 
         // Test ESC[5m (slow blink)
         performer.apply_ansi_bytes(format!(
@@ -284,7 +284,7 @@ pub mod sgr_styling {
         // Test each character in "BLINK" for the blink attribute.
         for (col, expected_char) in "BLINK".chars().enumerate() {
             assert_styled_char_at(
-                &ofs_buf,
+                &ofs_buf_vt_100,
                 0,
                 col,
                 expected_char,
@@ -299,8 +299,8 @@ pub mod sgr_styling {
 
     #[test]
     fn test_sgr_rapid_blink() {
-        let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
-        let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf);
+        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+        let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf_vt_100);
 
         // Test ESC[6m (rapid blink) - this tests our bug fix!
         performer.apply_ansi_bytes(format!(
@@ -312,7 +312,7 @@ pub mod sgr_styling {
         // Test each character in "RAPID" for the blink attribute.
         for (col, expected_char) in "RAPID".chars().enumerate() {
             assert_styled_char_at(
-                &ofs_buf,
+                &ofs_buf_vt_100,
                 0,
                 col,
                 expected_char,
@@ -371,8 +371,8 @@ pub mod sgr_styling {
 
     #[test]
     fn test_sgr_blink_reset() {
-        let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
-        let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf);
+        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+        let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf_vt_100);
 
         // Set blink, write char, reset blink, write char.
         performer.apply_ansi_bytes(format!(
@@ -385,7 +385,7 @@ pub mod sgr_styling {
 
         // First char should have blink.
         assert_styled_char_at(
-            &ofs_buf,
+            &ofs_buf_vt_100,
             0,
             0,
             'A',
@@ -396,15 +396,15 @@ pub mod sgr_styling {
         );
 
         // Second char should not have blink (should be plain text)
-        assert_plain_char_at(&ofs_buf, 0, 1, 'B');
+        assert_plain_char_at(&ofs_buf_vt_100, 0, 1, 'B');
     }
 
     #[test]
     fn test_sgr_extended_256_colors() {
         use crate::core::ansi::vt_100_pty_output_parser::vt_100_pty_output_conformance_tests::test_sequence_generators::extended_color_builders::*;
 
-        let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
-        let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf);
+        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+        let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf_vt_100);
 
         // Test 256-color sequences (both colon and semicolon formats)
         //
@@ -427,7 +427,7 @@ pub mod sgr_styling {
 
         // Verify 'F' has 256-color foreground (index 196)
         assert_styled_char_at(
-            &ofs_buf,
+            &ofs_buf_vt_100,
             0,
             0,
             'F',
@@ -440,7 +440,7 @@ pub mod sgr_styling {
 
         // Verify 'B' has 256-color background (index 196)
         assert_styled_char_at(
-            &ofs_buf,
+            &ofs_buf_vt_100,
             0,
             1,
             'B',
@@ -453,7 +453,7 @@ pub mod sgr_styling {
 
         // Verify 'M' has both 256-color foreground and background
         assert_styled_char_at(
-            &ofs_buf,
+            &ofs_buf_vt_100,
             0,
             2,
             'M',
@@ -468,8 +468,8 @@ pub mod sgr_styling {
     fn test_sgr_extended_rgb_colors() {
         use crate::core::ansi::vt_100_pty_output_parser::vt_100_pty_output_conformance_tests::test_sequence_generators::extended_color_builders::*;
 
-        let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
-        let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf);
+        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+        let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf_vt_100);
 
         // Test RGB color sequences (colon-separated format)
         //
@@ -492,7 +492,7 @@ pub mod sgr_styling {
 
         // Verify 'R' has RGB foreground
         assert_styled_char_at(
-            &ofs_buf,
+            &ofs_buf_vt_100,
             0,
             0,
             'R',
@@ -502,7 +502,7 @@ pub mod sgr_styling {
 
         // Verify 'G' has RGB background
         assert_styled_char_at(
-            &ofs_buf,
+            &ofs_buf_vt_100,
             0,
             1,
             'G',
@@ -512,7 +512,7 @@ pub mod sgr_styling {
 
         // Verify 'B' has both RGB foreground and background
         assert_styled_char_at(
-            &ofs_buf,
+            &ofs_buf_vt_100,
             0,
             2,
             'B',
@@ -527,8 +527,8 @@ pub mod sgr_styling {
     fn test_sgr_extended_colors_mixed() {
         use crate::core::ansi::vt_100_pty_output_parser::vt_100_pty_output_conformance_tests::test_sequence_generators::extended_color_builders::*;
 
-        let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
-        let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf);
+        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+        let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf_vt_100);
 
         // Test mixing basic ANSI, 256-color, and RGB sequences
         //
@@ -553,7 +553,7 @@ pub mod sgr_styling {
 
         // Verify 'A' has basic fg + 256-color bg
         assert_styled_char_at(
-            &ofs_buf,
+            &ofs_buf_vt_100,
             0,
             0,
             'A',
@@ -565,7 +565,7 @@ pub mod sgr_styling {
 
         // Verify 'B' has 256-color fg + basic bg
         assert_styled_char_at(
-            &ofs_buf,
+            &ofs_buf_vt_100,
             0,
             1,
             'B',
@@ -577,7 +577,7 @@ pub mod sgr_styling {
 
         // Verify 'C' has RGB fg + basic bg
         assert_styled_char_at(
-            &ofs_buf,
+            &ofs_buf_vt_100,
             0,
             2,
             'C',
@@ -595,8 +595,8 @@ pub mod sgr_styling {
     /// [196]]`.
     #[test]
     fn test_sgr_extended_256_colors_semicolon_format() {
-        let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
-        let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf);
+        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+        let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf_vt_100);
 
         // Test 256-color sequences with semicolon format (legacy)
         //
@@ -612,7 +612,7 @@ pub mod sgr_styling {
 
         // Verify 'F' has 256-color foreground.
         assert_styled_char_at(
-            &ofs_buf,
+            &ofs_buf_vt_100,
             0,
             0,
             'F',
@@ -622,7 +622,7 @@ pub mod sgr_styling {
 
         // Verify 'B' has 256-color background.
         assert_styled_char_at(
-            &ofs_buf,
+            &ofs_buf_vt_100,
             0,
             1,
             'B',
@@ -632,7 +632,7 @@ pub mod sgr_styling {
 
         // Verify 'M' has both 256-color fg and bg.
         assert_styled_char_at(
-            &ofs_buf,
+            &ofs_buf_vt_100,
             0,
             2,
             'M',
@@ -646,8 +646,8 @@ pub mod sgr_styling {
     /// Test semicolon-separated RGB color sequences (legacy format).
     #[test]
     fn test_sgr_extended_rgb_colors_semicolon_format() {
-        let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
-        let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf);
+        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+        let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf_vt_100);
 
         // Test RGB color sequences with semicolon format (legacy)
         //
@@ -663,7 +663,7 @@ pub mod sgr_styling {
 
         // Verify 'R' has RGB foreground.
         assert_styled_char_at(
-            &ofs_buf,
+            &ofs_buf_vt_100,
             0,
             0,
             'R',
@@ -673,7 +673,7 @@ pub mod sgr_styling {
 
         // Verify 'G' has RGB background.
         assert_styled_char_at(
-            &ofs_buf,
+            &ofs_buf_vt_100,
             0,
             1,
             'G',
@@ -683,7 +683,7 @@ pub mod sgr_styling {
 
         // Verify 'B' has both RGB fg and bg.
         assert_styled_char_at(
-            &ofs_buf,
+            &ofs_buf_vt_100,
             0,
             2,
             'B',
@@ -699,17 +699,17 @@ pub mod sgr_styling {
     /// [`SGR`]: crate::SgrCode
     #[test]
     fn test_sgr_semicolon_extended_colors_with_attributes() {
-        let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
 
         // Test: bold + semicolon 256-color fg
         // Sequence: ESC[1;38;5;196m (bold + fg index 196)
         {
-            let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf);
+            let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf_vt_100);
             performer.apply_ansi_bytes("\x1b[1;38;5;196mA\x1b[0m");
         }
 
         assert_styled_char_at(
-            &ofs_buf,
+            &ofs_buf_vt_100,
             0,
             0,
             'A',
@@ -722,12 +722,12 @@ pub mod sgr_styling {
         // Test: semicolon 256-color fg + bold (reversed order)
         // Sequence: ESC[38;5;196;1m (fg index 196 + bold)
         {
-            let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf);
+            let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf_vt_100);
             performer.apply_ansi_bytes("\x1b[38;5;196;1mB\x1b[0m");
         }
 
         assert_styled_char_at(
-            &ofs_buf,
+            &ofs_buf_vt_100,
             0,
             1,
             'B',
@@ -745,9 +745,9 @@ pub mod character_sets {
 
     #[test]
     fn test_esc_character_set_switching() {
-        let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
 
-        let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf);
+        let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf_vt_100);
 
         // Start with ASCII mode and write 'q'.
         performer.apply_ansi_bytes(EscSequence::SelectAscii.to_string());
@@ -757,12 +757,12 @@ pub mod character_sets {
         performer.apply_ansi_bytes(EscSequence::SelectDECGraphics.to_string());
 
         assert_eq!(
-            ofs_buf.ansi_parser_support.character_set,
+            ofs_buf_vt_100.parser_global_state.character_set,
             CharacterSet::DECGraphics
         );
 
         // Currently in DEC graphics mode.
-        let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf);
+        let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf_vt_100);
 
         // Write 'q' which should be translated to '─' (horizontal line)
         performer.print('q');
@@ -778,14 +778,14 @@ pub mod character_sets {
 
         // Verify character set state after performer is dropped.
         assert_eq!(
-            ofs_buf.ansi_parser_support.character_set,
+            ofs_buf_vt_100.parser_global_state.character_set,
             CharacterSet::Ascii
         );
 
         // Verify the characters.
-        assert_plain_char_at(&ofs_buf, 0, 0, 'q'); // ASCII 'q'
-        assert_plain_char_at(&ofs_buf, 0, 1, '─'); // DEC graphics 'q' -> horizontal line
-        assert_plain_char_at(&ofs_buf, 0, 2, '│'); // DEC graphics 'x' -> vertical line
-        assert_plain_char_at(&ofs_buf, 0, 3, 'q'); // ASCII 'q' again
+        assert_plain_char_at(&ofs_buf_vt_100, 0, 0, 'q'); // ASCII 'q'
+        assert_plain_char_at(&ofs_buf_vt_100, 0, 1, '─'); // DEC graphics 'q' -> horizontal line
+        assert_plain_char_at(&ofs_buf_vt_100, 0, 2, '│'); // DEC graphics 'x' -> vertical line
+        assert_plain_char_at(&ofs_buf_vt_100, 0, 3, 'q'); // ASCII 'q' again
     }
 }

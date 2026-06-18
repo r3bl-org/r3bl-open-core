@@ -1,6 +1,6 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! [`ANSI`] vertical scrolling operations for `OffscreenBuffer`.
+//! [`ANSI`] vertical scrolling operations for `OfsBufVT100`.
 //!
 //! This module provides methods for vertical line-based scrolling operations,
 //! including index operations (IND/RI) and scroll operations (SU/SD).
@@ -17,12 +17,10 @@
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`DECSTBM`]: https://vt100.net/docs/vt510-rm/DECSTBM.html
 
-#[allow(clippy::wildcard_imports)]
-use super::super::*;
-use crate::{ArrayBoundsCheck, ArrayUnderflowResult, RowHeight,
+use crate::{ArrayBoundsCheck, ArrayUnderflowResult, OfsBufVT100, RowHeight,
             core::coordinates::bounds_check::RangeConvertExt, ok};
 
-impl OffscreenBuffer {
+impl OfsBufVT100 {
     /// Move cursor down one line, scrolling the buffer if at bottom.
     /// Implements the [`ESC`] D (IND) escape sequence.
     /// Respects [`DECSTBM`] scroll region margins.
@@ -153,7 +151,7 @@ impl OffscreenBuffer {
     ///
     /// [`DECSTBM`]: https://vt100.net/docs/vt510-rm/DECSTBM.html
     /// [`ESC`]: crate::EscSequence
-    /// [`shift_lines_up()`]: crate::OffscreenBuffer::shift_lines_up
+    /// [`shift_lines_up()`]: crate::OfsBufVT100::shift_lines_up
     pub fn scroll_buffer_up(&mut self) -> miette::Result<()> {
         // Get scroll region as an inclusive range and convert to
         // exclusive for iteration.
@@ -176,7 +174,7 @@ impl OffscreenBuffer {
     ///
     /// [`DECSTBM`]: https://vt100.net/docs/vt510-rm/DECSTBM.html
     /// [`ESC`]: crate::EscSequence
-    /// [`shift_lines_down()`]: crate::OffscreenBuffer::shift_lines_down
+    /// [`shift_lines_down()`]: crate::OfsBufVT100::shift_lines_down
     pub fn scroll_buffer_down(&mut self) -> miette::Result<()> {
         // Get scroll region as an inclusive range and convert to
         // exclusive for iteration.
@@ -282,16 +280,16 @@ impl OffscreenBuffer {
 #[cfg(test)]
 mod tests_scroll_vert_ops {
     use super::*;
-    use crate::{col, height, idx, row, term_row, width,
+    use crate::{OfsBufVT100, col, height, idx, row, term_row, width,
                 core::ansi::vt_100_pty_output_conformance_tests::test_fixtures_vt_100_ansi_conformance::nz,
                 test_fixtures_ofs_buf::{assert_plain_char_at,
-                                        create_test_buffer_with_size}};
+                                        create_vt100_test_buffer_with_size}};
 
-    fn create_test_buffer() -> OffscreenBuffer {
-        create_test_buffer_with_size(width(10), height(6))
+    fn create_test_buffer() -> OfsBufVT100 {
+        create_vt100_test_buffer_with_size(width(10), height(6))
     }
 
-    fn fill_buffer_with_test_content(buffer: &mut OffscreenBuffer) {
+    fn fill_buffer_with_test_content(buffer: &mut OfsBufVT100) {
         // Fill buffer with identifiable content:
         // Row 0: "0000000000"
         // Row 1: "1111111111"
@@ -457,8 +455,8 @@ mod tests_scroll_vert_ops {
         fill_buffer_with_test_content(&mut buffer);
 
         // Set up scroll region from row 1 to row 4.
-        buffer.ansi_parser_support.scroll_region_top = Some(term_row(nz(2)));
-        buffer.ansi_parser_support.scroll_region_bottom = Some(term_row(nz(5)));
+        buffer.parser_global_state.scroll_region_top = Some(term_row(nz(2)));
+        buffer.parser_global_state.scroll_region_bottom = Some(term_row(nz(5)));
 
         // Position cursor at scroll region bottom.
         buffer.cursor_pos = row(4) + col(0);

@@ -47,10 +47,10 @@
 //!           ┌──────────────────────────────────────────────────────────────┐
 //!           │                  SNAPSHOT COMPARISON TEST                    │
 //!           │ Raw ANSI byte sequences may DIFFER between backends, but     │
-//!           │ resulting terminal STATE (OffscreenBuffer) must be IDENTICAL │
+//!           │ resulting terminal STATE (OfsBufVT100) must be IDENTICAL     │
 //!           │                                                              │
 //!           │   ┌─────────────────┐         ┌─────────────────┐            │
-//!           │   │ OffscreenBuffer │   ==    │ OffscreenBuffer │            │
+//!           │   │ OfsBufVT100     │   ==    │ OfsBufVT100     │            │
 //!           │   │    (direct)     │─────────│   (crossterm)   │            │
 //!           │   └────────▲────────┘         └───▲─────────────┘            │
 //!           │            │                      │                          │
@@ -91,11 +91,11 @@
 //!  └───────────────────────────────────┘   └───────────────────────────────────┘
 //! ```
 //!
-//! # Why `OffscreenBuffer` Comparison?
+//! # Why [`OfsBufVT100`] Comparison?
 //!
 //! The raw [`ANSI`] bytes from each backend may differ in encoding (e.g., crossterm might
 //! use different [`CSI`] parameter formats), but they should produce **identical terminal
-//! state**. By applying bytes to [`OffscreenBuffer`]s and comparing those, we test
+//! state**. By applying bytes to [`OfsBufVT100`]s and comparing those, we test
 //! semantic equivalence rather than byte-for-byte equality. This is a rendered output
 //! snapshot test that confirms that both backends "look the same" at the end, regardless
 //! what [`ANSI`] escape code encoded byte sequences they used to get there.
@@ -112,7 +112,7 @@
 //! [`Crossterm`]: crate::TerminalLibBackend::Crossterm
 //! [`CSI`]: crate::CsiSequence
 //! [`DirectToAnsi`]: crate::TerminalLibBackend::DirectToAnsi
-//! [`OffscreenBuffer`]: crate::OffscreenBuffer
+//! [`OfsBufVT100`]: crate::OfsBufVT100
 //! [`PaintRenderOpImplCrossterm`]: crate::crossterm_backend::PaintRenderOpImplCrossterm
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`RenderOpOutput`]: crate::RenderOpOutput
@@ -124,12 +124,13 @@
 //! [`terminal_raw_mode::raw_mode_unix::enable_raw_mode()`]:
 //!     crate::terminal_raw_mode::raw_mode_unix::enable_raw_mode
 
-use crate::{ColorSupport, EIO, InlineString, MSG_CONTROLLED_READY, OffscreenBuffer,
+use crate::{ColorSupport, EIO, InlineString, MSG_CONTROLLED_READY, OfsBufVT100,
             OutputDevice, PtyPair, PtyTestChild, RenderOpOutput, RenderOpPaint,
             RenderOpsLocalData, Size, TuiStyle, TuiStyleAttribs, col,
-            core::ansi::terminal_raw_mode, global_color_support, height, ok, pos,
-            render_op::RenderOpCommon, retry_until_success_test, row,
-            spawn_controlled_in_pty,
+            core::ansi::terminal_raw_mode,
+            global_color_support, height, ok, pos,
+            render_op::RenderOpCommon,
+            retry_until_success_test, row, spawn_controlled_in_pty,
             terminal_lib_backends::{crossterm_backend::PaintRenderOpImplCrossterm,
                                     direct_to_ansi::RenderOpPaintImplDirectToAnsi},
             tui_color, tui_style_attrib, width};
@@ -152,7 +153,7 @@ const OUTPUT_TEST_ENV_VAR: &str = "R3BL_PTY_OUTPUT_TEST_CONTROLLED";
 /// Runs both backend tests and compares their rendered outputs.
 ///
 /// Creates [`PTY`] pairs directly (no subprocess indirection), captures raw [`ANSI`]
-/// output from each backend, applies to [`OffscreenBuffer`]s, and compares.
+/// output from each backend, applies to [`OfsBufVT100`]s, and compares.
 ///
 /// # Panics
 ///
@@ -207,8 +208,8 @@ fn run_single_test_attempt() -> Result<(), String> {
 
     // Create OffscreenBuffers and apply the captured ANSI bytes.
     let buffer_size = height(TEST_HEIGHT) + width(TEST_WIDTH);
-    let mut buffer_direct = OffscreenBuffer::new_empty(buffer_size);
-    let mut buffer_crossterm = OffscreenBuffer::new_empty(buffer_size);
+    let mut buffer_direct = OfsBufVT100::new_empty(buffer_size);
+    let mut buffer_crossterm = OfsBufVT100::new_empty(buffer_size);
 
     drop(buffer_direct.apply_ansi_bytes(&direct_bytes));
     drop(buffer_crossterm.apply_ansi_bytes(&crossterm_bytes));
@@ -279,7 +280,9 @@ pub mod controller {
     ///
     /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
     /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
-    pub fn run((backend_name, pty_pair, child): (&str, PtyPair, &PtyTestChild)) -> Result<Vec<u8>, String> {
+    pub fn run(
+        (backend_name, pty_pair, child): (&str, PtyPair, &PtyTestChild),
+    ) -> Result<Vec<u8>, String> {
         eprintln!("{backend_name} Controller: Starting...");
 
         let reader = pty_pair
@@ -482,7 +485,7 @@ pub mod generate_test_render_ops {
     /// All test render operation sequences for backend compatibility testing.
     ///
     /// Returns render ops that will be executed by both backends for comparison. The
-    /// resulting terminal state (`OffscreenBuffer`) should be identical.
+    /// resulting terminal state (`OfsBufVT100`) should be identical.
     #[must_use]
     #[allow(clippy::too_many_lines, clippy::vec_init_then_push)]
     pub fn all() -> Vec<RenderOpOutput> {

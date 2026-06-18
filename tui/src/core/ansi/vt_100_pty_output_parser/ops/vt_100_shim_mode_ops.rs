@@ -3,11 +3,11 @@
 //! Mode setting operations (SM/RM).
 //!
 //! This module acts as a thin shim layer that delegates to the actual implementation.
-//! Refer to the module-level documentation in the operations module for details on the
+//! Refer to the module-level documentation in the ops module for details on the
 //! "shim → impl → test" architecture and naming conventions.
 //!
 //! **Related Files:**
-//! - **Implementation**: [`impl_mode_ops`] - Business logic with unit tests
+//! - **Implementation**: [`vt_100_impl_mode_ops`] - Business logic with unit tests
 //! - **Integration Tests**: [`test_mode_ops`] - Full pipeline testing via public API
 //!
 //! # Testing Strategy
@@ -20,7 +20,7 @@
 //! - **Integration tests** in the conformance tests validating the full pipeline
 //!
 //! For the complete testing philosophy and rationale behind this approach,
-//! see the [operations module].
+//! see the [ops module].
 //!
 //! # Architecture Overview
 //!
@@ -39,32 +39,30 @@
 //!         ↓
 //!     csi_dispatch() [routes to modules below]
 //!         ↓
-//!     Route to operations module:
+//!     Route to ops module:
 //!       - cursor_ops:: for movement (A,B,C,D,H)
 //!       - scroll_ops:: for scrolling (S,T)
 //!       - sgr_ops:: for styling (m)
 //!       - line_ops:: for lines (L,M)
-//!       - char_ops:: for chars (@,P,X)  ╭───────────╮
-//!       - mode_ops:: for modes (h,l) <- │THIS MODULE│
-//!         ↓                             ╰───────────╯
+//!       - char_ops:: for chars (@,P,X)                         ╭───────────╮
+//!       - mode_ops:: for modes (h,l)                        <- │THIS MODULE│
+//!         ↓                                                    ╰───────────╯
 //!     Update OffscreenBuffer state
 //! ```
 //!
 //! [`CSI`]: crate::CsiSequence
-//! [`impl_mode_ops`]: crate::vt_100_ansi_impl::vt_100_impl_mode_ops
 //! [`test_mode_ops`]: crate::vt_100_pty_output_conformance_tests::tests::vt_100_test_mode_ops
+//! [`vt_100_impl_mode_ops`]: crate::core::ansi::vt_100_pty_output_parser::ops_impl_ofs_buf::vt_100_impl_mode_ops
 //! [module-level Architecture Overview]: super#architecture-overview
 //! [module-level documentation]: self
-//! [operations module]: crate::core::ansi::vt_100_pty_output_parser::operations
+//! [ops module]: crate::core::ansi::vt_100_pty_output_parser::ops
 
-use crate::{
-    APPLICATION_MOUSE_TRACKING, BRACKETED_PASTE_MODE, CELL_MOTION_MOUSE_TRACKING,
-    DEBUG_TUI_VT100_PARSER, SGR_MOUSE_MODE, URXVT_MOUSE_EXTENSION, UTF8_MOUSE_EXTENSION,
-    X11_MOUSE_TRACKING,
-};
-
-use super::super::{ansi_parser_public_api::AnsiToOfsBufPerformer, PrivateModeType};
-use crate::{AutoWrapState, CursorVisibilityState, RequestedScreenMode, core::ansi::constants::CSI_PRIVATE_MODE_PREFIX};
+use super::super::{PrivateModeType, ansi_parser_public_api::AnsiToOfsBufPerformer};
+use crate::{APPLICATION_MOUSE_TRACKING, AutoWrapState, BRACKETED_PASTE_MODE,
+            CELL_MOTION_MOUSE_TRACKING, CursorVisibilityState, DEBUG_TUI_VT100_PARSER,
+            RequestedScreenMode, SGR_MOUSE_MODE, URXVT_MOUSE_EXTENSION,
+            UTF8_MOUSE_EXTENSION, X11_MOUSE_TRACKING,
+            core::ansi::constants::CSI_PRIVATE_MODE_PREFIX};
 use vte::Params;
 
 /// Handle Set Mode (`CSI h`) command.
@@ -79,17 +77,24 @@ pub fn set_mode(
         let mode = PrivateModeType::from(params);
         match mode {
             PrivateModeType::AutoWrap => {
-                performer.ofs_buf.set_requested_auto_wrap_mode(AutoWrapState::Enabled);
+                performer
+                    .ofs_buf_vt_100
+                    .set_requested_auto_wrap_mode(AutoWrapState::Enabled);
             }
             PrivateModeType::AlternateScreenBuffer => {
-                performer.ofs_buf.set_alt_screen_mode(RequestedScreenMode::Alternate);
+                performer
+                    .ofs_buf_vt_100
+                    .set_alt_screen_mode(RequestedScreenMode::Alternate);
             }
             PrivateModeType::ShowCursor => {
-                performer.ofs_buf.set_requested_cursor_visibility_mode(CursorVisibilityState::Visible);
+                performer
+                    .ofs_buf_vt_100
+                    .set_requested_cursor_visibility_mode(CursorVisibilityState::Visible);
             }
-            // Safely suppress/ignore modern TUI extensions (like mouse tracking and bracketed paste).
-            // Currently, the multiplexer does not support routing rich input events back into the PTY.
-            // Downgrading to debug prevents heavy log spam from interactive TUIs (like hx/gitui).
+            // Safely suppress/ignore modern TUI extensions (like mouse tracking and
+            // bracketed paste). Currently, the multiplexer does not support
+            // routing rich input events back into the PTY. Downgrading to
+            // debug prevents heavy log spam from interactive TUIs (like hx/gitui).
             PrivateModeType::Other(
                 X11_MOUSE_TRACKING
                 | CELL_MOTION_MOUSE_TRACKING
@@ -100,7 +105,10 @@ pub fn set_mode(
                 | BRACKETED_PASTE_MODE,
             ) => {
                 DEBUG_TUI_VT100_PARSER.then(|| {
-                    tracing::debug!("CSI ?{}h: Suppressed/shimmed private mode", mode.as_u16());
+                    tracing::debug!(
+                        "CSI ?{}h: Suppressed/shimmed private mode",
+                        mode.as_u16()
+                    );
                 });
             }
             _ => {
@@ -128,17 +136,24 @@ pub fn reset_mode(
         let mode = PrivateModeType::from(params);
         match mode {
             PrivateModeType::AutoWrap => {
-                performer.ofs_buf.set_requested_auto_wrap_mode(AutoWrapState::Disabled);
+                performer
+                    .ofs_buf_vt_100
+                    .set_requested_auto_wrap_mode(AutoWrapState::Disabled);
             }
             PrivateModeType::AlternateScreenBuffer => {
-                performer.ofs_buf.set_alt_screen_mode(RequestedScreenMode::Primary);
+                performer
+                    .ofs_buf_vt_100
+                    .set_alt_screen_mode(RequestedScreenMode::Primary);
             }
             PrivateModeType::ShowCursor => {
-                performer.ofs_buf.set_requested_cursor_visibility_mode(CursorVisibilityState::Hidden);
+                performer
+                    .ofs_buf_vt_100
+                    .set_requested_cursor_visibility_mode(CursorVisibilityState::Hidden);
             }
-            // Safely suppress/ignore modern TUI extensions (like mouse tracking and bracketed paste).
-            // Currently, the multiplexer does not support routing rich input events back into the PTY.
-            // Downgrading to debug prevents heavy log spam from interactive TUIs (like hx/gitui).
+            // Safely suppress/ignore modern TUI extensions (like mouse tracking and
+            // bracketed paste). Currently, the multiplexer does not support
+            // routing rich input events back into the PTY. Downgrading to
+            // debug prevents heavy log spam from interactive TUIs (like hx/gitui).
             PrivateModeType::Other(
                 X11_MOUSE_TRACKING
                 | CELL_MOTION_MOUSE_TRACKING
@@ -149,7 +164,10 @@ pub fn reset_mode(
                 | BRACKETED_PASTE_MODE,
             ) => {
                 DEBUG_TUI_VT100_PARSER.then(|| {
-                    tracing::debug!("CSI ?{}l: Suppressed/shimmed private mode", mode.as_u16());
+                    tracing::debug!(
+                        "CSI ?{}l: Suppressed/shimmed private mode",
+                        mode.as_u16()
+                    );
                 });
             }
             _ => {

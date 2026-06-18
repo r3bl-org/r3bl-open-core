@@ -9,12 +9,13 @@
 //!
 //! **Related Files:**
 //! - **Shim**: [`char_ops`] - Parameter translation (tested indirectly by this module)
-//! - **Implementation**: [`impl_char_ops`] - Business logic (has separate unit tests)
+//! - **Implementation**: [`vt_100_impl_char_ops`] - Business logic (has separate unit
+//!   tests)
 //!
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`apply_ansi_bytes`]: crate::OffscreenBuffer::apply_ansi_bytes
-//! [`char_ops`]: crate::vt_100_pty_output_parser::operations::vt_100_shim_char_ops
-//! [`impl_char_ops`]: crate::vt_100_ansi_impl::vt_100_impl_char_ops
+//! [`apply_ansi_bytes`]: crate::OfsBufVT100::apply_ansi_bytes
+//! [`char_ops`]: crate::core::ansi::vt_100_pty_output_parser::ops::vt_100_shim_char_ops
+//! [`vt_100_impl_char_ops`]: crate::core::ansi::vt_100_pty_output_parser::ops_impl_ofs_buf::vt_100_impl_char_ops
 //! [parser module docs]: super::super
 
 use super::super::test_fixtures_vt_100_ansi_conformance::*;
@@ -22,7 +23,7 @@ use crate::{CsiCount, TermCol, TuiStyle,
             core::ansi::vt_100_pty_output_parser::CsiSequence};
 
 /// Helper to create a buffer with "ABCDEFGHIJ" in the first row.
-fn create_alphabet_buffer() -> crate::OffscreenBuffer {
+fn create_alphabet_buffer() -> crate::OfsBufVT100 {
     let mut buf = create_test_offscreen_buffer_10r_by_10c();
     let alphabet = "ABCDEFGHIJ";
     for (i, ch) in alphabet.chars().enumerate() {
@@ -40,7 +41,7 @@ pub mod delete_char {
 
     #[test]
     fn test_delete_single_char() {
-        let mut ofs_buf = create_alphabet_buffer();
+        let mut ofs_buf_vt_100 = create_alphabet_buffer();
 
         // Move cursor to column 3 (letter 'D') and delete one character
         let move_cursor = CsiSequence::CursorHorizontalAbsolute(
@@ -48,15 +49,15 @@ pub mod delete_char {
         ); // Move to column 4 (1-based)
         let delete_char = CsiSequence::DeleteChar(CsiCount::ONE);
         let sequence = format!("{move_cursor}{delete_char}");
-        let _result = ofs_buf.apply_ansi_bytes(sequence);
+        let _result = ofs_buf_vt_100.apply_ansi_bytes(sequence);
 
         // Verify: "ABC" + "EFGHIJ" + " " (D deleted, chars shifted left, blank at end)
-        assert_line_content(&ofs_buf, 0, "ABCEFGHIJ ");
+        assert_line_content(&ofs_buf_vt_100, 0, "ABCEFGHIJ ");
     }
 
     #[test]
     fn test_delete_multiple_chars() {
-        let mut ofs_buf = create_alphabet_buffer();
+        let mut ofs_buf_vt_100 = create_alphabet_buffer();
 
         // Move cursor to column 2 (letter 'C') and delete three characters
         let move_cursor = CsiSequence::CursorHorizontalAbsolute(
@@ -64,16 +65,16 @@ pub mod delete_char {
         ); // Move to column 3 (1-based)
         let delete_chars = CsiSequence::DeleteChar(CsiCount::new(3).unwrap());
         let sequence = format!("{move_cursor}{delete_chars}");
-        let _result = ofs_buf.apply_ansi_bytes(sequence);
+        let _result = ofs_buf_vt_100.apply_ansi_bytes(sequence);
 
         // Verify: "AB" + "FGHIJ" + "   " (CDE deleted, chars shifted left, 3 blanks at
         // end).
-        assert_line_content(&ofs_buf, 0, "ABFGHIJ   ");
+        assert_line_content(&ofs_buf_vt_100, 0, "ABFGHIJ   ");
     }
 
     #[test]
     fn test_delete_chars_at_end_of_line() {
-        let mut ofs_buf = create_alphabet_buffer();
+        let mut ofs_buf_vt_100 = create_alphabet_buffer();
 
         // Move cursor to column 8 (letter 'I') and delete 5 chars
         let move_cursor = CsiSequence::CursorHorizontalAbsolute(
@@ -81,15 +82,15 @@ pub mod delete_char {
         ); // Move to column 9 (1-based)
         let delete_chars = CsiSequence::DeleteChar(CsiCount::new(5).unwrap());
         let sequence = format!("{move_cursor}{delete_chars}");
-        let _result = ofs_buf.apply_ansi_bytes(sequence);
+        let _result = ofs_buf_vt_100.apply_ansi_bytes(sequence);
 
         // Verify: "ABCDEFGH" + "  " (IJ deleted, 2 blanks at end)
-        assert_line_content(&ofs_buf, 0, "ABCDEFGH  ");
+        assert_line_content(&ofs_buf_vt_100, 0, "ABCDEFGH  ");
     }
 
     #[test]
     fn test_delete_chars_beyond_right_margin_ignored() {
-        let mut ofs_buf = create_alphabet_buffer();
+        let mut ofs_buf_vt_100 = create_alphabet_buffer();
 
         // Move cursor beyond right margin and try to delete.
         // The cursor will be clamped to column 10, and delete will happen there.
@@ -98,11 +99,11 @@ pub mod delete_char {
         ); // Move to column 11 (beyond)
         let delete_char = CsiSequence::DeleteChar(CsiCount::ONE);
         let sequence = format!("{move_cursor}{delete_char}");
-        let _result = ofs_buf.apply_ansi_bytes(sequence);
+        let _result = ofs_buf_vt_100.apply_ansi_bytes(sequence);
 
         // When cursor is clamped to position 10, DeleteChar will delete 'J' at position
         // 10, leaving a space at the end.
-        assert_line_content(&ofs_buf, 0, "ABCDEFGHI ");
+        assert_line_content(&ofs_buf_vt_100, 0, "ABCDEFGHI ");
     }
 }
 
@@ -112,7 +113,7 @@ pub mod insert_char {
 
     #[test]
     fn test_insert_single_char() {
-        let mut ofs_buf = create_alphabet_buffer();
+        let mut ofs_buf_vt_100 = create_alphabet_buffer();
 
         // Move cursor to column 3 (letter 'D') and insert one character.
         let move_cursor = CsiSequence::CursorHorizontalAbsolute(
@@ -120,15 +121,15 @@ pub mod insert_char {
         ); // Move to column 4 (1-based)
         let insert_char = CsiSequence::InsertChar(CsiCount::ONE);
         let sequence = format!("{move_cursor}{insert_char}");
-        let _result = ofs_buf.apply_ansi_bytes(sequence);
+        let _result = ofs_buf_vt_100.apply_ansi_bytes(sequence);
 
         // Verify: "ABC" + " " + "DEFGHI" (blank inserted, chars shifted right, J lost).
-        assert_line_content(&ofs_buf, 0, "ABC DEFGHI");
+        assert_line_content(&ofs_buf_vt_100, 0, "ABC DEFGHI");
     }
 
     #[test]
     fn test_insert_multiple_chars() {
-        let mut ofs_buf = create_alphabet_buffer();
+        let mut ofs_buf_vt_100 = create_alphabet_buffer();
 
         // Move cursor to column 2 (letter 'C') and insert three characters
         let move_cursor = CsiSequence::CursorHorizontalAbsolute(
@@ -136,16 +137,16 @@ pub mod insert_char {
         ); // Move to column 3 (1-based)
         let insert_chars = CsiSequence::InsertChar(CsiCount::new(3).unwrap());
         let sequence = format!("{move_cursor}{insert_chars}");
-        let _result = ofs_buf.apply_ansi_bytes(sequence);
+        let _result = ofs_buf_vt_100.apply_ansi_bytes(sequence);
 
         // Verify: "AB" + "   " + "CDEFG" (3 blanks inserted, chars shifted right, HIJ
         // lost).
-        assert_line_content(&ofs_buf, 0, "AB   CDEFG");
+        assert_line_content(&ofs_buf_vt_100, 0, "AB   CDEFG");
     }
 
     #[test]
     fn test_insert_chars_at_end_of_line() {
-        let mut ofs_buf = create_alphabet_buffer();
+        let mut ofs_buf_vt_100 = create_alphabet_buffer();
 
         // Move cursor to column 8 (letter 'I') and insert three characters
         let move_cursor = CsiSequence::CursorHorizontalAbsolute(
@@ -153,15 +154,15 @@ pub mod insert_char {
         ); // Move to column 9 (1-based)
         let insert_chars = CsiSequence::InsertChar(CsiCount::new(3).unwrap());
         let sequence = format!("{move_cursor}{insert_chars}");
-        let _result = ofs_buf.apply_ansi_bytes(sequence);
+        let _result = ofs_buf_vt_100.apply_ansi_bytes(sequence);
 
         // Verify: "ABCDEFGH" + "  " (only 2 blanks can be inserted, IJ lost)
-        assert_line_content(&ofs_buf, 0, "ABCDEFGH  ");
+        assert_line_content(&ofs_buf_vt_100, 0, "ABCDEFGH  ");
     }
 
     #[test]
     fn test_insert_chars_beyond_right_margin_ignored() {
-        let mut ofs_buf = create_alphabet_buffer();
+        let mut ofs_buf_vt_100 = create_alphabet_buffer();
 
         // Move cursor beyond right margin and try to insert.
         // The cursor will be clamped to column 10, and insert will happen there.
@@ -170,11 +171,11 @@ pub mod insert_char {
         ); // Move to column 11 (beyond)
         let insert_char = CsiSequence::InsertChar(CsiCount::ONE);
         let sequence = format!("{move_cursor}{insert_char}");
-        let _result = ofs_buf.apply_ansi_bytes(sequence);
+        let _result = ofs_buf_vt_100.apply_ansi_bytes(sequence);
 
         // When cursor is clamped to position 10, InsertChar will insert a space at
         // position 10, pushing 'J' off the right edge.
-        assert_line_content(&ofs_buf, 0, "ABCDEFGHI ");
+        assert_line_content(&ofs_buf_vt_100, 0, "ABCDEFGHI ");
     }
 }
 
@@ -184,7 +185,7 @@ pub mod erase_char {
 
     #[test]
     fn test_erase_single_char() {
-        let mut ofs_buf = create_alphabet_buffer();
+        let mut ofs_buf_vt_100 = create_alphabet_buffer();
 
         // Move cursor to column 3 (letter 'D') and erase one character
         let move_cursor = CsiSequence::CursorHorizontalAbsolute(
@@ -192,15 +193,15 @@ pub mod erase_char {
         ); // Move to column 4 (1-based)
         let erase_char = CsiSequence::EraseChar(CsiCount::ONE);
         let sequence = format!("{move_cursor}{erase_char}");
-        let _result = ofs_buf.apply_ansi_bytes(sequence);
+        let _result = ofs_buf_vt_100.apply_ansi_bytes(sequence);
 
         // Verify: "ABC" + " " + "EFGHIJ" (D erased to blank, no shifting)
-        assert_line_content(&ofs_buf, 0, "ABC EFGHIJ");
+        assert_line_content(&ofs_buf_vt_100, 0, "ABC EFGHIJ");
     }
 
     #[test]
     fn test_erase_multiple_chars() {
-        let mut ofs_buf = create_alphabet_buffer();
+        let mut ofs_buf_vt_100 = create_alphabet_buffer();
 
         // Move cursor to column 2 (letter 'C') and erase three characters
         let move_cursor = CsiSequence::CursorHorizontalAbsolute(
@@ -208,15 +209,15 @@ pub mod erase_char {
         ); // Move to column 3 (1-based)
         let erase_chars = CsiSequence::EraseChar(CsiCount::new(3).unwrap());
         let sequence = format!("{move_cursor}{erase_chars}");
-        let _result = ofs_buf.apply_ansi_bytes(sequence);
+        let _result = ofs_buf_vt_100.apply_ansi_bytes(sequence);
 
         // Verify: "AB" + "   " + "FGHIJ" (CDE erased to blanks, no shifting)
-        assert_line_content(&ofs_buf, 0, "AB   FGHIJ");
+        assert_line_content(&ofs_buf_vt_100, 0, "AB   FGHIJ");
     }
 
     #[test]
     fn test_erase_chars_at_end_of_line() {
-        let mut ofs_buf = create_alphabet_buffer();
+        let mut ofs_buf_vt_100 = create_alphabet_buffer();
 
         // Move cursor to column 8 (letter 'I') and erase five characters
         let move_cursor = CsiSequence::CursorHorizontalAbsolute(
@@ -224,15 +225,15 @@ pub mod erase_char {
         ); // Move to column 9 (1-based)
         let erase_chars = CsiSequence::EraseChar(CsiCount::new(5).unwrap());
         let sequence = format!("{move_cursor}{erase_chars}");
-        let _result = ofs_buf.apply_ansi_bytes(sequence);
+        let _result = ofs_buf_vt_100.apply_ansi_bytes(sequence);
 
         // Verify: "ABCDEFGH" + "  " (IJ erased to blanks)
-        assert_line_content(&ofs_buf, 0, "ABCDEFGH  ");
+        assert_line_content(&ofs_buf_vt_100, 0, "ABCDEFGH  ");
     }
 
     #[test]
     fn test_erase_chars_beyond_right_margin_ignored() {
-        let mut ofs_buf = create_alphabet_buffer();
+        let mut ofs_buf_vt_100 = create_alphabet_buffer();
 
         // Move cursor beyond right margin and try to erase.
         // The cursor will be clamped to column 10, and erase will happen there.
@@ -241,11 +242,11 @@ pub mod erase_char {
         ); // Move to column 11 (beyond)
         let erase_char = CsiSequence::EraseChar(CsiCount::ONE);
         let sequence = format!("{move_cursor}{erase_char}");
-        let _result = ofs_buf.apply_ansi_bytes(sequence);
+        let _result = ofs_buf_vt_100.apply_ansi_bytes(sequence);
 
         // When cursor is clamped to position 10, EraseChar will erase 'J' at position 10,
         // replacing it with a space.
-        assert_line_content(&ofs_buf, 0, "ABCDEFGHI ");
+        assert_line_content(&ofs_buf_vt_100, 0, "ABCDEFGHI ");
     }
 
     #[test]
