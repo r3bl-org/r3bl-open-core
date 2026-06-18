@@ -10,13 +10,13 @@
   - [x] [improve-immature-vt100-shim.md](done/improve-immature-vt100-shim.md)
   - [x] [pr-448-fix.md](done/pr-448-fix.md) - https://github.com/r3bl-org/r3bl-open-core/pull/448
   - [x] [issue-451-fix.md](done/issue-451-fix.md) - https://github.com/r3bl-org/r3bl-open-core/issues/451
-  - [ ] [remove crossterm mental model pollution](remove-crossterm-mental-model-pollution.md)
-  - [ ] [rustdocs - fix readability of esc codes](fix-esc-code-formatting.md)
 - [x] RRT API (Pending PRs & Issues)
   - [x] [pr-452-fix.md](done/pr-452-fix.md) -
         https://github.com/r3bl-org/r3bl-open-core/pull/452
-- [ ] Cursor display issues
-  - [ ] https://github.com/r3bl-org/r3bl-open-core/issues/461
+- [x] Cursor display issues
+  - [x] [issue-461-fix.md](done/issue-461-fix.md) - https://github.com/r3bl-org/r3bl-open-core/issues/461
+  - [ ] [remove crossterm mental model pollution](remove-crossterm-mental-model-pollution.md)
+  - [ ] [rustdocs - fix readability of esc codes](fix-esc-code-formatting.md)
 - [ ] PRs from Cecile
   - [ ] https://github.com/r3bl-org/r3bl-open-core/pull/455
   - [ ] https://github.com/r3bl-org/r3bl-open-core/pull/456

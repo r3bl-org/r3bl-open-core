@@ -211,7 +211,11 @@ in that skill's directory (e.g., `patterns.md`, `reference.md`, `examples.md`).
 - **release-crate** - Full crate release workflow: version bump, changelog, publish to crates.io,
   git tag, GitHub release. Use when releasing a new version of any workspace crate.
 
-- **pr-review** - Create a structured integration and review plan for a Pull Request. Use when the user wants to systematically integrate a community PR.
+- **review-pr** - Create a structured integration and review plan for a Pull Request. Use when the user wants to systematically integrate a community PR.
+
+- **create-pr** - Push local changes and create a GitHub Pull Request. Use when you have local changes that need a PR but didn't start with `/fix-issue`.
+
+- **merge-pr** - Workflow for pushing a completed task branch, creating a Pull Request, and merging it to main via rebase.
 
 ### Log Analysis
 
@@ -240,7 +244,9 @@ in that skill's directory (e.g., `patterns.md`, `reference.md`, `examples.md`).
 | `/check-regression` | analyze-performance |
 | `/analyze-logs` | analyze-log-files |
 | `/release` | release-crate |
-| `/pr-review` | pr-review |
+| `/review-pr` | review-pr |
+| `/create-pr` | create-pr |
+| `/merge-pr` | merge-pr |
 | `/r3bl-task` | Task management (see below) |
 | `/boxes` | Unicode box-drawing character set |
 
@@ -336,6 +342,21 @@ For testing interactive terminal applications, use (both are installed):
 - `screen`
 
 ## Git Workflow
+
+### PR Lifecycle & Commands
+
+We have a cohesive, interconnected lifecycle for Pull Requests codified in `.agents/skills/`:
+
+1. **Start a new task:** `/fix-issue`
+   - Creates the branch, pushes it, and opens a Draft PR (`gh pr create --draft`) to track the work.
+2. **Review community work:** `/review-pr`
+   - Fetches an existing PR to systematically audit, test, and rewrite locally.
+3. **Manual PR creation:** `/create-pr`
+   - For when you have local changes on a branch and just want to push and open a PR (`gh pr create --fill`) without going through the full `/fix-issue` design process.
+4. **Merge and complete:** `/merge-pr`
+   - The endpoint for all of the above. Pushes the finalized local branch and linearly merges the existing PR (`gh pr merge --rebase`), then cleans up the local workspace.
+
+### General Rules
 
 - **No Destructive Resets**: NEVER use `git reset HEAD~n`, `git reset --hard`, or `git clean`
   unless explicitly and specifically commanded to do so by the user. These commands are

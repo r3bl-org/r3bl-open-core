@@ -1,11 +1,11 @@
 ---
-name: pr-review
+name: review-pr
 description: Create a structured integration and review plan for a Pull Request
 ---
 
 # PR Review and Integration Workflow
 
-Use this skill when the user runs the `/pr-review <number>` slash command or uses any of these natural language triggers:
+Use this skill when the user runs the `/review-pr <number>` slash command or uses any of these natural language triggers:
 - "lets review pr <number>"
 - "lets work on pr <number>"
 - "lets take a look at pr <number>"
@@ -64,15 +64,7 @@ _(Once all headings are successfully implemented and checked off, we will procee
 ### Final Verification & Cleanup
 
 - [ ] Verify full test suite coverage using `./check.fish --full`.
-- [ ] Hijack the PR branch to apply our rewritten code while preserving their authorship credit:
-  - `git checkout main` and identify our rewrite commit (`FIX_COMMIT`) and the commit before it (`MAIN_COMMIT`).
-  - `git reset --hard <MAIN_COMMIT>` and `git push --force origin main` to cleanly separate our fix from main.
-  - `gh pr checkout <number>` to pull down their branch.
-  - `AUTHOR=$(git log -1 --format="%an <%ae>")` to extract their authorship.
-  - `git reset --hard <FIX_COMMIT>` to wipe their changes and plonk our code into their branch.
-  - `git commit --amend --author="$AUTHOR" --no-edit` to give them credit for our rewrite.
-  - `git push --force` to update the PR on GitHub.
-- [ ] Merge the PR into `main` (`gh pr merge <number>`).
+- [ ] When ready to merge, invoke the `/merge-pr` slash command to push the changes, optionally update the author, and cleanly merge to `main`.
 - [ ] Update the current meta-task (e.g. `task/prepare-vX.Y.Z-meta-task.md`) to check off PR #<number>.
 - [ ] **Mandatory manual review:** Verify every file modified in this task for correct implementation and ensure no regressions.
   - [ ] `path/to/modified_file_1.rs`
