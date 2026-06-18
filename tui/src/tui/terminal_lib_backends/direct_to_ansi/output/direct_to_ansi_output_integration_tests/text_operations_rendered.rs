@@ -1,6 +1,6 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Behavioral tests for text painting operations via [`OffscreenBuffer`] rendering.
+//! Behavioral tests for text painting operations via [`OfsBufVT100`] rendering.
 //!
 //! These tests complement the byte-level tests in [`text_operations`] by verifying that
 //! styled text produces the correct **visual result** when [`ANSI`] sequences are
@@ -32,7 +32,7 @@
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`ColorSupport::Truecolor`]: crate::ColorSupport::Truecolor
 //! [`global_color_support::set_override`]: crate::global_color_support::set_override
-//! [`OffscreenBuffer`]: crate::OffscreenBuffer
+//! [`OfsBufVT100`]: crate::OfsBufVT100
 //! [`text_operations`]: super::text_operations
 
 use super::test_helpers_rendered::*;
@@ -187,7 +187,7 @@ fn test_paint_unicode_text_rendered() {
 
     // Verify each Unicode character.
     // Note: These are full-width characters, so they may occupy 2 columns each.
-    // The exact behavior depends on OffscreenBuffer's Unicode handling.
+    // The exact behavior depends on OfsBufVT100's Unicode handling.
     // For now, just verify the first character exists.
     let pos = crate::row(0) + crate::col(0);
     let pixel_char = buffer.get_char(pos);

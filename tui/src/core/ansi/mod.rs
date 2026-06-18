@@ -226,7 +226,7 @@
 //! [`SgrCode`]: crate::SgrCode
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 //! [`VT100InputEventIR`]: crate::vt_100_terminal_input_parser::VT100InputEventIR
-//! [`vt_100_pty_output_parser`]: mod@crate::vt_100_pty_output_parser
+//! [`vt_100_pty_output_parser`]: mod@crate::core::ansi::vt_100_pty_output_parser
 //! [`vt_100_terminal_input_parser`]: mod@crate::vt_100_terminal_input_parser
 //! [`VTE`]: mod@vte
 

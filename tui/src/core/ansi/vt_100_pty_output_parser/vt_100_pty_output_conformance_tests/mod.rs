@@ -29,13 +29,13 @@
 //! ```
 //!
 //! These conformance tests **intentionally** test the entire pipeline using
-//! [`OffscreenBuffer::apply_ansi_bytes`], not individual shim or implementation
+//! [`OfsBufVT100::apply_ansi_bytes`], not individual shim or implementation
 //! functions. This approach:
 //!
 //! 1. **Tests Real-World Usage**: Uses the same public API that production code uses
 //! 2. **Validates Complete Pipeline**: Ensures [`ANSI`] parsing → shim → impl → buffer
 //!    works together
-//! 3. **Complements Unit Tests**: While [`vt_100_ansi_impl`] files have unit tests, these
+//! 3. **Complements Unit Tests**: While [`ofs_buf_vt_100`] files have unit tests, these
 //!    test the integrated system
 //! 4. **Replaces Shim Tests**: Since the operation shims are pure delegation, these tests
 //!    provide their coverage
@@ -53,7 +53,7 @@
 //! └────────────────────────────────────────────────────────────────────────────┘
 //!                                     ↕ complements
 //! ┌────────────────────────────────────────────────────────────────────────────┐
-//! │                        UNIT TESTS (vt_100_ansi_impl)                       │
+//! │                        UNIT TESTS (ofs_buf_vt_100)                         │
 //! │  • Direct method calls to implementation functions                         │
 //! │  • Tests isolated buffer manipulation logic                                │
 //! │  • Fast execution, precise error diagnosis                                 │
@@ -69,14 +69,15 @@
 //! When working with any test file, you can navigate to its related implementation
 //! layers:
 //! - **Shim Layer**: The delegation layer being tested indirectly
-//! - **Implementation Layer**: [`vt_100_ansi_impl`] - The business logic being tested
+//! - **Implementation Layer**: [`ofs_buf_vt_100`] - The business logic being tested
 //! - **Testing Philosophy**: For the complete three-layer strategy
 //!
 //! For example, when working on character operations:
 //! 1. **Integration Tests**: Character operation tests (test-only) - Full [`ANSI`]
 //!    sequence testing
 //! 2. **Shim**: The delegation layer (tested indirectly here)
-//! 3. **Implementation**: [`impl_char_ops`] - Buffer logic (has separate unit tests)
+//! 3. **Implementation**: [`vt_100_impl_char_ops`] - Buffer logic (has separate unit
+//!    tests)
 //!
 //! ## Test Organization
 //!
@@ -109,8 +110,8 @@
 //! meant as runnable example -->
 //!
 //! ```ignore
-//! fn create_realistic_terminal_buffer() -> OffscreenBuffer {
-//!     OffscreenBuffer::new_empty(height(25) + width(80))
+//! fn create_realistic_terminal_buffer() -> OfsBufVT100 {
+//!     OfsBufVT100::new_empty(height(25) + width(80))
 //! }
 //! ```
 //!
@@ -318,14 +319,14 @@
 //! use crate::vt_100_pty_output_conformance_tests::conformance_data::vim_sequences;
 //!
 //! // Create realistic terminal buffer
-//! let mut ofs_buf = OffscreenBuffer::new_empty(height(25) + width(80));
+//! let mut ofs_buf_vt_100 = OfsBufVT100::new_empty(height(25) + width(80));
 //!
 //! // Apply vim status line sequence
 //! let sequence = vim_sequences::vim_status_line("INSERT", 25);
-//! let (osc_events, dsr_responses) = ofs_buf.apply_ansi_bytes(sequence);
+//! let (osc_events, dsr_responses) = ofs_buf_vt_100.apply_ansi_bytes(sequence);
 //!
 //! // Verify status line appears at bottom with correct styling
-//! assert_styled_char_at(&ofs_buf, 24, 0, '-', |style| {
+//! assert_styled_char_at(&ofs_buf_vt_100, 24, 0, '-', |style| {
 //!     matches!(style.attribs.invert, Some(_))
 //! }, "status line reverse video");
 //! ```
@@ -337,8 +338,8 @@
 //! [`ESC`]: crate::EscSequence
 //! [`EscSequence`]: crate::EscSequence
 //! [`FastStringify`]: crate::fast_stringify::FastStringify
-//! [`impl_char_ops`]: crate::vt_100_ansi_impl::vt_100_impl_char_ops
-//! [`OffscreenBuffer::apply_ansi_bytes`]: crate::OffscreenBuffer::apply_ansi_bytes
+//! [`ofs_buf_vt_100`]: crate::core::ansi::vt_100_pty_output_parser::ops_impl_ofs_buf
+//! [`OfsBufVT100::apply_ansi_bytes`]: crate::OfsBufVT100::apply_ansi_bytes
 //! [`OSC`]: crate::osc_codes::OscSequence
 //! [`OscSequence`]: crate::core::osc::osc_codes::OscSequence
 //! [`SGR`]: crate::SgrCode
@@ -346,7 +347,7 @@
 //! [`test_char_ops`]: tests::vt_100_test_char_ops
 //! [`VT-100` spec]: https://vt100.net/docs/vt100-ug/chapter3.html
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
-//! [`vt_100_ansi_impl`]: crate::vt_100_ansi_impl
+//! [`vt_100_impl_char_ops`]: crate::core::ansi::vt_100_pty_output_parser::ops_impl_ofs_buf::vt_100_impl_char_ops
 //! [`vte`]: https://docs.rs/vte
 
 #[cfg(any(test, doc))]

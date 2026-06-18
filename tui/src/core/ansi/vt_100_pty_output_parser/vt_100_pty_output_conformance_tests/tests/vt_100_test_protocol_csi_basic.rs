@@ -13,40 +13,40 @@ use crate::{CsiCount, TermCol, TermRow, col, row};
 
 #[test]
 fn test_basic_delete_char_integration() {
-    let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
+    let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
 
     // Write test text using our sequence builder
     let text_sequence = basic_sequences::insert_text("ABCDEF");
-    let _write_result = ofs_buf.apply_ansi_bytes(text_sequence);
+    let _write_result = ofs_buf_vt_100.apply_ansi_bytes(text_sequence);
 
     // Move to position 4 (letter 'D') and delete it using sequence builder
     let delete_sequence = basic_sequences::move_and_delete_chars(
         TermCol::from_raw_non_zero_value(nz(4)),
         CsiCount::ONE,
     );
-    let _result = ofs_buf.apply_ansi_bytes(delete_sequence);
+    let _result = ofs_buf_vt_100.apply_ansi_bytes(delete_sequence);
 
     // Should now read "ABCEF " (D deleted, chars shifted left, blank at end)
-    assert_line_content(&ofs_buf, 0, "ABCEF ");
+    assert_line_content(&ofs_buf_vt_100, 0, "ABCEF ");
 }
 
 #[test]
 fn test_basic_insert_char_integration() {
-    let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
+    let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
 
     // Write test text using our sequence builder
     let text_sequence = basic_sequences::insert_text("HELLO");
-    let _write_result = ofs_buf.apply_ansi_bytes(text_sequence);
+    let _write_result = ofs_buf_vt_100.apply_ansi_bytes(text_sequence);
 
     // Move to position 3 and insert a blank character using sequence builder
     let insert_sequence = basic_sequences::move_and_insert_chars(
         TermCol::from_raw_non_zero_value(nz(3)),
         CsiCount::ONE,
     );
-    let _result = ofs_buf.apply_ansi_bytes(insert_sequence);
+    let _result = ofs_buf_vt_100.apply_ansi_bytes(insert_sequence);
 
     // Should now read "HE LLO" (blank inserted at position 3)
-    let actual: String = ofs_buf.buffer[0]
+    let actual: String = ofs_buf_vt_100.buffer[0]
         .iter()
         .take(6) // "HE LLO" is 6 chars
         .map(|pixel_char| match pixel_char {
@@ -59,21 +59,21 @@ fn test_basic_insert_char_integration() {
 
 #[test]
 fn test_basic_erase_char_integration() {
-    let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
+    let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
 
     // Write test text using our sequence builder
     let text_sequence = basic_sequences::insert_text("HELLO");
-    let _write_result = ofs_buf.apply_ansi_bytes(text_sequence);
+    let _write_result = ofs_buf_vt_100.apply_ansi_bytes(text_sequence);
 
     // Move to position 3 ('L') and erase it using sequence builder
     let erase_sequence = basic_sequences::move_and_erase_chars(
         TermCol::from_raw_non_zero_value(nz(3)),
         CsiCount::ONE,
     );
-    let _result = ofs_buf.apply_ansi_bytes(erase_sequence);
+    let _result = ofs_buf_vt_100.apply_ansi_bytes(erase_sequence);
 
     // Should now read "HE LO" (L erased to blank, no shifting)
-    let actual: String = ofs_buf.buffer[0]
+    let actual: String = ofs_buf_vt_100.buffer[0]
         .iter()
         .take(5) // "HE LO" is 5 chars
         .map(|pixel_char| match pixel_char {
@@ -86,17 +86,17 @@ fn test_basic_erase_char_integration() {
 
 #[test]
 fn test_basic_vpa_integration() {
-    let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
+    let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
 
     // Move to specific position using our sequence builder
     let move_sequence = cursor_sequences::move_to_position(nz(5), nz(7));
-    let _move_result = ofs_buf.apply_ansi_bytes(move_sequence);
+    let _move_result = ofs_buf_vt_100.apply_ansi_bytes(move_sequence);
 
     // Use VPA to move to specific row while maintaining column
     let vpa_sequence =
         cursor_sequences::move_to_row(TermRow::from_raw_non_zero_value(nz(3)));
-    let _result = ofs_buf.apply_ansi_bytes(vpa_sequence);
+    let _result = ofs_buf_vt_100.apply_ansi_bytes(vpa_sequence);
 
     // Should be at row 2 (0-based), column 6 (0-based)
-    assert_eq!(ofs_buf.cursor_pos, row(2) + col(6));
+    assert_eq!(ofs_buf_vt_100.cursor_pos, row(2) + col(6));
 }

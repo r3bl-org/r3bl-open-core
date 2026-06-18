@@ -1,26 +1,28 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Test modules for ANSI parser implementation.
+//! Test modules for [`ANSI`] parser implementation.
+//!
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 
-use crate::{OffscreenBuffer, TuiStyle, height, width};
+use crate::{OfsBufVT100, TuiStyle, height, width};
 use std::num::NonZeroU16;
 
-/// Creates a test `OffscreenBuffer` with 10x10 dimensions.
+/// Creates a test `OfsBufVT100` with 10x10 dimensions.
 #[must_use]
-pub fn create_test_offscreen_buffer_10r_by_10c() -> OffscreenBuffer {
-    OffscreenBuffer::new_empty(height(10) + width(10))
+pub fn create_test_offscreen_buffer_10r_by_10c() -> OfsBufVT100 {
+    OfsBufVT100::new_empty(height(10) + width(10))
 }
 
-/// Creates a test `OffscreenBuffer` with 20x20 dimensions for larger test scenarios.
+/// Creates a test `OfsBufVT100` with 20x20 dimensions for larger test scenarios.
 #[must_use]
-pub fn create_test_offscreen_buffer_20r_by_20c() -> OffscreenBuffer {
-    OffscreenBuffer::new_empty(height(20) + width(20))
+pub fn create_test_offscreen_buffer_20r_by_20c() -> OfsBufVT100 {
+    OfsBufVT100::new_empty(height(20) + width(20))
 }
 
 /// Creates a test buffer with numbered lines for easier test verification.
 #[must_use]
-pub fn create_numbered_buffer(rows: usize, cols: usize) -> OffscreenBuffer {
-    let mut buf = OffscreenBuffer::new_empty(height(rows) + width(cols));
+pub fn create_numbered_buffer(rows: usize, cols: usize) -> OfsBufVT100 {
+    let mut buf = OfsBufVT100::new_empty(height(rows) + width(cols));
     for r in 0..rows {
         let line_text = format!("Line{r:02}");
         for (c, ch) in line_text.chars().enumerate() {
@@ -43,7 +45,7 @@ pub fn create_numbered_buffer(rows: usize, cols: usize) -> OffscreenBuffer {
 ///
 /// # Panics
 /// Panics if `row` is out of bounds for the buffer.
-pub fn assert_line_content(buf: &OffscreenBuffer, row: usize, expected: &str) {
+pub fn assert_line_content(buf: &OfsBufVT100, row: usize, expected: &str) {
     let actual: String = buf.buffer[row]
         .iter()
         .take(expected.len())
@@ -63,7 +65,7 @@ pub fn assert_line_content(buf: &OffscreenBuffer, row: usize, expected: &str) {
 ///
 /// # Panics
 /// Panics if `row` is out of bounds for the buffer.
-pub fn assert_blank_line(buf: &OffscreenBuffer, row: usize) {
+pub fn assert_blank_line(buf: &OfsBufVT100, row: usize) {
     let is_blank = buf.buffer[row]
         .iter()
         .all(|pixel_char| matches!(pixel_char, crate::PixelChar::Spacer));

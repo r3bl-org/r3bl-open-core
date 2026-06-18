@@ -3,11 +3,11 @@
 //! Scrolling operations.
 //!
 //! This module acts as a thin shim layer that delegates to the actual implementation.
-//! Refer to the module-level documentation in the operations module for details on the
+//! Refer to the module-level documentation in the ops module for details on the
 //! "shim → impl → test" architecture and naming conventions.
 //!
 //! **Related Files:**
-//! - **Implementation**: [`impl_scroll_ops`] - Business logic with unit tests
+//! - **Implementation**: [`vt_100_impl_scroll_ops`] - Business logic with unit tests
 //! - **Integration Tests**: [`test_scroll_ops`] - Full pipeline testing via public API
 //!
 //! # Testing Strategy
@@ -20,7 +20,7 @@
 //! - **Integration tests** in the conformance tests validating the full pipeline
 //!
 //! For the complete testing philosophy and rationale behind this approach,
-//! see the [operations module].
+//! see the [ops module].
 //!
 //! # Architecture Overview
 //!
@@ -39,10 +39,10 @@
 //!         ↓
 //!     csi_dispatch() [routes to modules below]
 //!         ↓
-//!     Route to operations module:
-//!       - cursor_ops:: for movement (A,B,C,D,H) ╭───────────╮
-//!       - scroll_ops:: for scrolling (S,T) <--- │THIS MODULE│
-//!       - sgr_ops:: for styling (m)             ╰───────────╯
+//!     Route to ops module:
+//!       - cursor_ops:: for movement (A,B,C,D,H)                ╭───────────╮
+//!       - scroll_ops:: for scrolling (S,T)                  <- │THIS MODULE│
+//!       - sgr_ops:: for styling (m)                            ╰───────────╯
 //!       - line_ops:: for lines (L,M)
 //!       - char_ops:: for chars (@,P,X)
 //!         ↓
@@ -73,14 +73,14 @@
 //! [`CSI`]: crate::CsiSequence
 //! [`DECSTBM`]: https://vt100.net/docs/vt510-rm/DECSTBM.html
 //! [`extract_nth_single_non_zero()`]: crate::ParamsExt::extract_nth_single_non_zero
-//! [`impl_scroll_ops`]: crate::vt_100_ansi_impl::vt_100_impl_scroll_ops
 //! [`NonZeroU16`]: std::num::NonZeroU16
 //! [`OffscreenBuffer`]: crate::OffscreenBuffer
 //! [`test_scroll_ops`]: crate::vt_100_pty_output_conformance_tests::tests::vt_100_test_scroll_ops
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+//! [`vt_100_impl_scroll_ops`]: crate::core::ansi::vt_100_pty_output_parser::ops_impl_ofs_buf::vt_100_impl_scroll_ops
 //! [module-level Architecture Overview]: super#architecture-overview
 //! [module-level documentation]: self
-//! [operations module]: crate::core::ansi::vt_100_pty_output_parser::operations
+//! [ops module]: crate::core::ansi::vt_100_pty_output_parser::ops
 
 use super::super::ansi_parser_public_api::AnsiToOfsBufPerformer;
 use crate::ParamsExt;
@@ -97,11 +97,11 @@ use crate::ParamsExt;
 /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 /// [module-level documentation]: self
 pub fn index_down(performer: &mut AnsiToOfsBufPerformer) {
-    let result = performer.ofs_buf.index_down();
+    let result = performer.ofs_buf_vt_100.index_down();
     debug_assert!(
         result.is_ok(),
         "Failed to index down at cursor position {:?}",
-        performer.ofs_buf.cursor_pos
+        performer.ofs_buf_vt_100.cursor_pos
     );
 }
 
@@ -117,11 +117,11 @@ pub fn index_down(performer: &mut AnsiToOfsBufPerformer) {
 /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 /// [module-level documentation]: self
 pub fn reverse_index_up(performer: &mut AnsiToOfsBufPerformer) {
-    let result = performer.ofs_buf.reverse_index_up();
+    let result = performer.ofs_buf_vt_100.reverse_index_up();
     debug_assert!(
         result.is_ok(),
         "Failed to reverse index up at cursor position {:?}",
-        performer.ofs_buf.cursor_pos
+        performer.ofs_buf_vt_100.cursor_pos
     );
 }
 
@@ -136,11 +136,11 @@ pub fn reverse_index_up(performer: &mut AnsiToOfsBufPerformer) {
 /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 /// [module-level documentation]: self
 pub fn scroll_buffer_up(performer: &mut AnsiToOfsBufPerformer) {
-    let result = performer.ofs_buf.scroll_buffer_up();
+    let result = performer.ofs_buf_vt_100.scroll_buffer_up();
     debug_assert!(
         result.is_ok(),
         "Failed to scroll buffer up at cursor position {:?}",
-        performer.ofs_buf.cursor_pos
+        performer.ofs_buf_vt_100.cursor_pos
     );
 }
 
@@ -155,11 +155,11 @@ pub fn scroll_buffer_up(performer: &mut AnsiToOfsBufPerformer) {
 /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 /// [module-level documentation]: self
 pub fn scroll_buffer_down(performer: &mut AnsiToOfsBufPerformer) {
-    let result = performer.ofs_buf.scroll_buffer_down();
+    let result = performer.ofs_buf_vt_100.scroll_buffer_down();
     debug_assert!(
         result.is_ok(),
         "Failed to scroll buffer down at cursor position {:?}",
-        performer.ofs_buf.cursor_pos
+        performer.ofs_buf_vt_100.cursor_pos
     );
 }
 
@@ -172,12 +172,12 @@ pub fn scroll_buffer_down(performer: &mut AnsiToOfsBufPerformer) {
 /// [module-level documentation]: self
 pub fn scroll_up(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) {
     let how_many = params.extract_nth_single_non_zero(0).get().into();
-    let result = performer.ofs_buf.scroll_up(how_many);
+    let result = performer.ofs_buf_vt_100.scroll_up(how_many);
     debug_assert!(
         result.is_ok(),
         "Failed to scroll up {:?} lines at cursor position {:?}",
         how_many,
-        performer.ofs_buf.cursor_pos
+        performer.ofs_buf_vt_100.cursor_pos
     );
 }
 
@@ -190,11 +190,11 @@ pub fn scroll_up(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) {
 /// [module-level documentation]: self
 pub fn scroll_down(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) {
     let how_many = params.extract_nth_single_non_zero(0).get().into();
-    let result = performer.ofs_buf.scroll_down(how_many);
+    let result = performer.ofs_buf_vt_100.scroll_down(how_many);
     debug_assert!(
         result.is_ok(),
         "Failed to scroll down {:?} lines at cursor position {:?}",
         how_many,
-        performer.ofs_buf.cursor_pos
+        performer.ofs_buf_vt_100.cursor_pos
     );
 }

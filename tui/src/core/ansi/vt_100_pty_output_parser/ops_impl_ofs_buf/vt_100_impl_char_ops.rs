@@ -5,7 +5,7 @@
 //! Character operations for VT100/[`ANSI`] terminal emulation.
 //!
 //! This module implements character-level operations that correspond to [`ANSI`] escape
-//! sequences handled by the `vt_100_pty_output_parser/operations/vt_100_shim_char_ops`
+//! sequences handled by the `vt_100_pty_output_parser/ops/vt_100_shim_char_ops`
 //! shim. These include:
 //!
 //! - **ICH** (Insert Character) - [`insert_chars_at_cursor`]
@@ -25,20 +25,20 @@
 //! **Related Files:**
 //!
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`delete_chars_at_cursor`]: crate::OffscreenBuffer::delete_chars_at_cursor
-//! [`erase_chars_at_cursor`]: crate::OffscreenBuffer::erase_chars_at_cursor
-//! [`insert_chars_at_cursor`]: crate::OffscreenBuffer::insert_chars_at_cursor
-//! [`print_char`]: crate::OffscreenBuffer::print_char
+//! [`delete_chars_at_cursor`]: crate::OfsBufVT100::delete_chars_at_cursor
+//! [`erase_chars_at_cursor`]: crate::OfsBufVT100::erase_chars_at_cursor
+//! [`insert_chars_at_cursor`]: crate::OfsBufVT100::insert_chars_at_cursor
+//! [`print_char`]: crate::OfsBufVT100::print_char
 
 #[allow(clippy::wildcard_imports)]
 use super::super::*;
-use crate::{ArrayBoundsCheck, ArrayOverflowResult, AutoWrapState, ColIndex, Length, NumericValue,
-            RowIndex, col,
+use crate::{ArrayBoundsCheck, ArrayOverflowResult, AutoWrapState, ColIndex, Length,
+            NumericValue, OfsBufVT100, PixelChar, RowIndex, col,
             core::coordinates::bounds_check::{CursorBoundsCheck, LengthOps,
                                               RangeBoundsExt, RangeConvertExt},
             height, ok, width};
 
-impl OffscreenBuffer {
+impl OfsBufVT100 {
     /// Insert blank characters at cursor position (for ICH - Insert Character).
     /// Characters at and after the cursor shift right by `how_many`.
     /// Characters that would shift beyond the line width are lost.
@@ -311,7 +311,7 @@ impl OffscreenBuffer {
     /// [`DEC`]: https://en.wikipedia.org/wiki/Digital_Equipment_Corporation
     pub fn print_char(&mut self, ch: char) -> miette::Result<()> {
         // Apply character set translation if in graphics mode.
-        let display_char = match self.ansi_parser_support.character_set {
+        let display_char = match self.parser_global_state.character_set {
             CharacterSet::DECGraphics => Self::translate_dec_graphics(ch),
             CharacterSet::Ascii => ch,
         };
@@ -325,11 +325,12 @@ impl OffscreenBuffer {
         if current_row.overflows(row_max) == ArrayOverflowResult::Within
             && current_col.overflows(col_max) == ArrayOverflowResult::Within
         {
+            let current_style = self.parser_global_state.current_style;
             let result = self.set_char(
                 current_row + current_col,
                 PixelChar::PlainText {
                     display_char, // Use the translated character
-                    style: self.ansi_parser_support.current_style,
+                    style: current_style,
                 },
             );
             if result.is_err() {
@@ -341,7 +342,7 @@ impl OffscreenBuffer {
 
             // Handle line wrap based on DECAWM (Auto Wrap Mode).
             if new_col.overflows(col_max) == ArrayOverflowResult::Overflowed {
-                if self.ansi_parser_support.auto_wrap_mode == AutoWrapState::Enabled {
+                if self.parser_global_state.auto_wrap_mode == AutoWrapState::Enabled {
                     // DECAWM enabled: wrap to next line (default behavior).
                     self.cursor_pos.col_index = col(0);
                     let next_row: RowIndex = current_row + 1;
@@ -364,18 +365,18 @@ impl OffscreenBuffer {
 #[cfg(test)]
 mod tests_shifting_ops {
     use super::*;
-    use crate::{TuiStyle, len, row,
+    use crate::{OfsBufVT100, TuiStyle, len, row,
                 test_fixtures_ofs_buf::{create_plain_test_char,
-                                        create_test_buffer_with_size}};
+                                        create_vt100_test_buffer_with_size}};
 
-    fn create_test_buffer() -> OffscreenBuffer {
-        create_test_buffer_with_size(width(6), height(3))
+    fn create_test_buffer() -> OfsBufVT100 {
+        create_vt100_test_buffer_with_size(width(6), height(3))
     }
 
     fn create_test_char(ch: char) -> PixelChar { create_plain_test_char(ch) }
 
     fn setup_line_with_chars(
-        buffer: &mut OffscreenBuffer,
+        buffer: &mut OfsBufVT100,
         test_row: RowIndex,
         chars: &[char],
     ) {
@@ -733,7 +734,7 @@ mod tests_shifting_ops {
         }
 
         let size = width(10) + height(3);
-        let mut buffer = OffscreenBuffer::new_empty(size);
+        let mut buffer = OfsBufVT100::new_empty(size);
         let test_row = row(0);
 
         // Set up initial line with characters: "ABCDEFGHIJ".
@@ -841,7 +842,7 @@ mod tests_shifting_ops {
         }
 
         let size = width(5) + height(2);
-        let mut buffer = OffscreenBuffer::new_empty(size);
+        let mut buffer = OfsBufVT100::new_empty(size);
         let test_row = row(0);
 
         // Set up initial line with characters: "ABCDE".
@@ -1018,11 +1019,11 @@ mod tests_shifting_ops {
 #[cfg(test)]
 mod tests_print_char {
     use super::*;
-    use crate::{row, test_fixtures_ofs_buf::create_test_buffer_with_size};
+    use crate::{row, test_fixtures_ofs_buf::create_vt100_test_buffer_with_size};
 
     #[test]
     fn test_print_char_basic() {
-        let mut buffer = create_test_buffer_with_size(width(10), height(5));
+        let mut buffer = create_vt100_test_buffer_with_size(width(10), height(5));
 
         // Set cursor position.
         buffer.cursor_pos = row(1) + col(2);
@@ -1043,10 +1044,10 @@ mod tests_print_char {
 
     #[test]
     fn test_print_char_dec_graphics_mode() {
-        let mut buffer = create_test_buffer_with_size(width(10), height(5));
+        let mut buffer = create_vt100_test_buffer_with_size(width(10), height(5));
 
         // Set DEC graphics character set.
-        buffer.ansi_parser_support.character_set = CharacterSet::DECGraphics;
+        buffer.parser_global_state.character_set = CharacterSet::DECGraphics;
 
         buffer.cursor_pos = row(0) + col(0);
 
@@ -1063,10 +1064,10 @@ mod tests_print_char {
 
     #[test]
     fn test_print_char_line_wrap() {
-        let mut buffer = create_test_buffer_with_size(width(5), height(3));
+        let mut buffer = create_vt100_test_buffer_with_size(width(5), height(3));
 
         // Ensure DECAWM is enabled (default).
-        buffer.ansi_parser_support.auto_wrap_mode = AutoWrapState::Enabled;
+        buffer.parser_global_state.auto_wrap_mode = AutoWrapState::Enabled;
 
         // Position cursor at end of line (column 4 in 5-width buffer).
         buffer.cursor_pos = row(1) + col(4);

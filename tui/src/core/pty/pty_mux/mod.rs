@@ -76,21 +76,21 @@
 //!
 //! - [`vt_100_pty_output_parser`]: The [`ANSI`] parser module that processes escape
 //!   sequences from child processes. The [`ProcessManager`] uses this via
-//!   [`OffscreenBuffer::apply_ansi_bytes`]
+//!   [`OfsBufVT100::apply_ansi_bytes`]
 //! - [`core::ansi`]: Parent module containing all [`ANSI`]/[`VT-100`] protocol handling
 //!
 //! [`ANSI Parser`]: crate::AnsiToOfsBufPerformer
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`core::ansi`]: mod@crate::core::ansi
-//! [`OffscreenBuffer::apply_ansi_bytes`]: crate::OffscreenBuffer::apply_ansi_bytes
 //! [`OffscreenBuffer`]: crate::OffscreenBuffer
+//! [`OfsBufVT100::apply_ansi_bytes`]: crate::OfsBufVT100::apply_ansi_bytes
 //! [`OSC`]: crate::osc_codes::OscSequence
 //! [`PTY Session`]: crate::PtySession
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`readline_async`]: crate::readline_async::ReadlineAsyncContext::try_new
 //! [`TUI`]: crate::tui::TerminalWindow::main_event_loop
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
-//! [`vt_100_pty_output_parser`]: mod@crate::vt_100_pty_output_parser
+//! [`vt_100_pty_output_parser`]: mod@crate::core::ansi::vt_100_pty_output_parser
 
 // Attach.
 mod input_router;

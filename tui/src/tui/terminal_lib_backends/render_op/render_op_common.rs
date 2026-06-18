@@ -189,7 +189,7 @@ pub enum RenderOpCommon {
 
     /// Save cursor position to be restored later.
     ///
-    /// Maps to [`CSI`] `s` [`ANSI`] sequence (also known as DECSC - save cursor).
+    /// Maps to [`CSI`] `s` [`ANSI`] sequence (also known as [`DECSC`] - save cursor).
     ///
     /// Saves the current cursor position (row and column) in terminal memory.
     /// Use with [`RenderOpCommon::RestoreCursorPosition`] to return to this position.
@@ -199,12 +199,13 @@ pub enum RenderOpCommon {
     ///
     /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
     /// [`CSI`]: crate::CsiSequence
+    /// [`DECSC`]: https://vt100.net/docs/vt510-rm/DECSC.html
     SaveCursorPosition,
 
     /// Restore cursor position previously saved with
     /// [`RenderOpCommon::SaveCursorPosition`].
     ///
-    /// Maps to [`CSI`] `u` [`ANSI`] sequence (also known as DECRC - restore cursor).
+    /// Maps to [`CSI`] `u` [`ANSI`] sequence (also known as [`DECRC`] - restore cursor).
     ///
     /// Restores the cursor to the position that was previously saved.
     ///
@@ -213,6 +214,7 @@ pub enum RenderOpCommon {
     ///
     /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
     /// [`CSI`]: crate::CsiSequence
+    /// [`DECRC`]: https://vt100.net/docs/vt510-rm/DECRC.html
     RestoreCursorPosition,
 
     /// Switches to alternate screen buffer for full-screen applications.

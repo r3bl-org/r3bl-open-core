@@ -22,7 +22,7 @@ pub mod decstbm_margins {
 
     #[test]
     fn test_set_margins_valid_range() {
-        let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
 
         // Set margins from row 3 to 7 (1-based)
         let csi_sequence = format!(
@@ -32,19 +32,22 @@ pub mod decstbm_margins {
                 bottom: Some(term_row(nz(7)))
             }
         );
-        let _result = ofs_buf.apply_ansi_bytes(csi_sequence.as_bytes());
+        let _result = ofs_buf_vt_100.apply_ansi_bytes(csi_sequence.as_bytes());
 
         // For this basic test, just verify the sequence was processed
-        // (The exact margin behavior would be tested in the operations module)
+        // (The exact margin behavior would be tested in the ops module)
     }
 
     #[test]
     fn test_basic_margin_functionality() {
-        let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
 
         // Verify initial state - no margins set
-        assert_eq!(ofs_buf.ansi_parser_support.scroll_region_top, None);
-        assert_eq!(ofs_buf.ansi_parser_support.scroll_region_bottom, None);
+        assert_eq!(ofs_buf_vt_100.parser_global_state.scroll_region_top, None);
+        assert_eq!(
+            ofs_buf_vt_100.parser_global_state.scroll_region_bottom,
+            None
+        );
 
         // Set margins from row 3 to 7 (1-based)
         let csi_sequence = format!(
@@ -54,15 +57,15 @@ pub mod decstbm_margins {
                 bottom: Some(term_row(nz(7)))
             }
         );
-        let _result = ofs_buf.apply_ansi_bytes(csi_sequence.as_bytes());
+        let _result = ofs_buf_vt_100.apply_ansi_bytes(csi_sequence.as_bytes());
 
         // For this basic test, just verify the sequence was processed
-        // (The exact margin behavior would be tested in the operations module)
+        // (The exact margin behavior would be tested in the ops module)
     }
 
     #[test]
     fn test_margin_edge_cases() {
-        let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
 
         // Test setting margins to full buffer
         let full_buffer = format!(
@@ -72,7 +75,7 @@ pub mod decstbm_margins {
                 bottom: Some(term_row(nz(10)))
             }
         );
-        let _result = ofs_buf.apply_ansi_bytes(full_buffer.as_bytes());
+        let _result = ofs_buf_vt_100.apply_ansi_bytes(full_buffer.as_bytes());
 
         // Test invalid range (bottom < top)
         let invalid_range = format!(
@@ -82,7 +85,7 @@ pub mod decstbm_margins {
                 bottom: Some(term_row(nz(3)))
             }
         );
-        let _result = ofs_buf.apply_ansi_bytes(invalid_range.as_bytes());
+        let _result = ofs_buf_vt_100.apply_ansi_bytes(invalid_range.as_bytes());
 
         // Test reset margins (no parameters = reset to full screen)
         let reset = format!(
@@ -92,7 +95,7 @@ pub mod decstbm_margins {
                 bottom: None
             }
         );
-        let _result = ofs_buf.apply_ansi_bytes(reset.as_bytes());
+        let _result = ofs_buf_vt_100.apply_ansi_bytes(reset.as_bytes());
 
         // Basic functionality test - the detailed behavior is tested elsewhere
     }

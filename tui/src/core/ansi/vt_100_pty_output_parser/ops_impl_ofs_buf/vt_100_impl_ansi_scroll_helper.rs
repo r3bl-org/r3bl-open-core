@@ -1,5 +1,5 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
-//! [`ANSI`] terminal scroll helper operations for `OffscreenBuffer`.
+//! [`ANSI`] terminal scroll helper operations for `OfsBufVT100`.
 //!
 //! This module provides helper methods for [`ANSI`] escape sequence scrolling operations,
 //! including scroll region boundary detection and row clamping within defined scroll
@@ -7,11 +7,10 @@
 //!
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 
-#[allow(clippy::wildcard_imports)]
-use super::super::*;
-use crate::{LengthOps, RowIndex, core::coordinates::bounds_check::IndexOps, row};
+use crate::{LengthOps, OfsBufVT100, RowIndex, core::coordinates::bounds_check::IndexOps,
+            row};
 
-impl OffscreenBuffer {
+impl OfsBufVT100 {
     /// Gets the scroll region as an inclusive range.
     ///
     /// Returns `RangeInclusive<RowIndex>` representing the [`VT-100`] scroll region
@@ -48,12 +47,12 @@ impl OffscreenBuffer {
     /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
     #[must_use]
     pub fn get_scroll_range_inclusive(&self) -> std::ops::RangeInclusive<RowIndex> {
-        let scroll_top = self.ansi_parser_support.scroll_region_top.map_or(
+        let scroll_top = self.parser_global_state.scroll_region_top.map_or(
             /* None */ row(0),
             /* Some */ |term_row| term_row.to_zero_based(),
         );
 
-        let scroll_bottom = self.ansi_parser_support.scroll_region_bottom.map_or(
+        let scroll_bottom = self.parser_global_state.scroll_region_bottom.map_or(
             /* None */ self.window_size.row_height.convert_to_index(),
             /* Some */ |term_row| term_row.to_zero_based(),
         );
@@ -101,12 +100,12 @@ impl OffscreenBuffer {
 #[cfg(test)]
 mod tests_bounds_check_ops {
     use super::*;
-    use crate::{height, term_row, width,
+    use crate::{OfsBufVT100, height, term_row, width,
                 core::ansi::vt_100_pty_output_conformance_tests::test_fixtures_vt_100_ansi_conformance::nz};
 
-    fn create_test_buffer() -> OffscreenBuffer {
+    fn create_test_buffer() -> OfsBufVT100 {
         let size = width(10) + height(6);
-        OffscreenBuffer::new_empty(size)
+        OfsBufVT100::new_empty(size)
     }
 
     #[test]
@@ -124,7 +123,7 @@ mod tests_bounds_check_ops {
         let mut buffer = create_test_buffer();
 
         // Set scroll region top to row 3 (1-based) = row 2 (0-based)
-        buffer.ansi_parser_support.scroll_region_top = Some(term_row(nz(3)));
+        buffer.parser_global_state.scroll_region_top = Some(term_row(nz(3)));
 
         // Should return [2, 5] (top boundary to end of buffer)
         let range = buffer.get_scroll_range_inclusive();
@@ -137,7 +136,7 @@ mod tests_bounds_check_ops {
         let mut buffer = create_test_buffer();
 
         // Set scroll region bottom to row 4 (1-based) = row 3 (0-based)
-        buffer.ansi_parser_support.scroll_region_bottom = Some(term_row(nz(4)));
+        buffer.parser_global_state.scroll_region_bottom = Some(term_row(nz(4)));
 
         // Should return [0, 3] (start of buffer to bottom boundary)
         let range = buffer.get_scroll_range_inclusive();
@@ -150,8 +149,8 @@ mod tests_bounds_check_ops {
         let mut buffer = create_test_buffer();
 
         // Set scroll region from row 2 to row 4 (1-based: 3 to 5)
-        buffer.ansi_parser_support.scroll_region_top = Some(term_row(nz(3)));
-        buffer.ansi_parser_support.scroll_region_bottom = Some(term_row(nz(5)));
+        buffer.parser_global_state.scroll_region_top = Some(term_row(nz(3)));
+        buffer.parser_global_state.scroll_region_bottom = Some(term_row(nz(5)));
 
         // Should return [2, 4] (0-based)
         let range = buffer.get_scroll_range_inclusive();
@@ -164,8 +163,8 @@ mod tests_bounds_check_ops {
         let mut buffer = create_test_buffer();
 
         // Set scroll region from row 2 to row 4 (1-based: 3 to 5)
-        buffer.ansi_parser_support.scroll_region_top = Some(term_row(nz(3)));
-        buffer.ansi_parser_support.scroll_region_bottom = Some(term_row(nz(5)));
+        buffer.parser_global_state.scroll_region_top = Some(term_row(nz(3)));
+        buffer.parser_global_state.scroll_region_bottom = Some(term_row(nz(5)));
 
         let range = buffer.get_scroll_range_inclusive();
 
@@ -190,8 +189,8 @@ mod tests_bounds_check_ops {
         let mut buffer = create_test_buffer();
 
         // Set scroll region from row 2 to row 4 (1-based: 3 to 5)
-        buffer.ansi_parser_support.scroll_region_top = Some(term_row(nz(3)));
-        buffer.ansi_parser_support.scroll_region_bottom = Some(term_row(nz(5)));
+        buffer.parser_global_state.scroll_region_top = Some(term_row(nz(3)));
+        buffer.parser_global_state.scroll_region_bottom = Some(term_row(nz(5)));
 
         // Row 3 (0-based) is within the scroll region
         assert_eq!(buffer.clamp_row_to_scroll_region(row(3)), row(3));
@@ -202,8 +201,8 @@ mod tests_bounds_check_ops {
         let mut buffer = create_test_buffer();
 
         // Set scroll region from row 2 to row 4 (1-based: 3 to 5)
-        buffer.ansi_parser_support.scroll_region_top = Some(term_row(nz(3)));
-        buffer.ansi_parser_support.scroll_region_bottom = Some(term_row(nz(5)));
+        buffer.parser_global_state.scroll_region_top = Some(term_row(nz(3)));
+        buffer.parser_global_state.scroll_region_bottom = Some(term_row(nz(5)));
 
         // Row 0 is above scroll region - should be clamped to top (row 2)
         assert_eq!(buffer.clamp_row_to_scroll_region(row(0)), row(2));
@@ -214,8 +213,8 @@ mod tests_bounds_check_ops {
         let mut buffer = create_test_buffer();
 
         // Set scroll region from row 2 to row 4 (1-based: 3 to 5)
-        buffer.ansi_parser_support.scroll_region_top = Some(term_row(nz(3)));
-        buffer.ansi_parser_support.scroll_region_bottom = Some(term_row(nz(5)));
+        buffer.parser_global_state.scroll_region_top = Some(term_row(nz(3)));
+        buffer.parser_global_state.scroll_region_bottom = Some(term_row(nz(5)));
 
         // Row 5 is below scroll region - should be clamped to bottom (row 4)
         assert_eq!(buffer.clamp_row_to_scroll_region(row(5)), row(4));

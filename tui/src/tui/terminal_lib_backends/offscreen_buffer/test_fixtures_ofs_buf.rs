@@ -5,8 +5,8 @@
 //! This module provides assertion functions that are used by various test modules
 //! to verify the state of the offscreen buffer contents.
 
-use crate::{ColWidth, LengthOps, OffscreenBuffer, PixelChar, PixelCharLine, RowHeight,
-            SPACER_GLYPH_CHAR, TuiStyle, col, row};
+use crate::{ColWidth, LengthOps, OffscreenBuffer, OfsBufVT100, PixelChar, PixelCharLine,
+            RowHeight, SPACER_GLYPH_CHAR, TuiStyle, col, row};
 
 /// Assert that a plain character exists at the given position.
 /// This function checks that:
@@ -217,6 +217,15 @@ pub fn create_test_buffer_with_size(
     buffer_height: RowHeight,
 ) -> OffscreenBuffer {
     OffscreenBuffer::new_empty(buffer_width + buffer_height)
+}
+
+#[cfg(test)]
+#[must_use]
+pub fn create_vt100_test_buffer_with_size(
+    buffer_width: ColWidth,
+    buffer_height: RowHeight,
+) -> OfsBufVT100 {
+    OfsBufVT100::new_empty(buffer_width + buffer_height)
 }
 
 /// Creates a plain text [`PixelChar`] with default styling.

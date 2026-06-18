@@ -7,11 +7,12 @@
 //! parser]. Process switching is instant - just display a different buffer.
 //!
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`OffscreenBuffer`]: crate::OffscreenBuffer
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [ANSI parser]: crate::AnsiToOfsBufPerformer
 
 use super::output_renderer::STATUS_BAR_HEIGHT;
-use crate::{OffscreenBuffer, Size,
+use crate::{OfsBufVT100, Size,
             core::{osc::OscEvent,
                    pty::{PtyInputEvent, PtyOutputEvent, PtySession, PtySessionBuilder}},
             height, ok};
@@ -29,7 +30,7 @@ pub struct ProcessManager {
 
 /// Represents a single process that can be managed by the multiplexer.
 ///
-/// Each process maintains its own virtual terminal state through an [`OffscreenBuffer`]
+/// Each process maintains its own virtual terminal state through a [`OfsBufVT100`]
 /// and [`ANSI parser`], enabling true terminal multiplexing where switching between
 /// processes is instant and preserves the complete terminal state.
 ///
@@ -48,7 +49,7 @@ pub struct Process {
     /// Whether the process is currently running
     is_running: bool,
     /// Virtual terminal buffer for this process (per-process buffer architecture)
-    ofs_buf: OffscreenBuffer,
+    pub terminal_state: OfsBufVT100,
 
     /// Tracks if this process has unrendered output since last render
     has_unrendered_output: bool,
@@ -83,7 +84,7 @@ impl Process {
             args,
             session: None,
             is_running: false,
-            ofs_buf: OffscreenBuffer::new_empty(buffer_size),
+            terminal_state: OfsBufVT100::new_empty(buffer_size),
 
             has_unrendered_output: false,
             terminal_title: None,
@@ -97,7 +98,7 @@ impl Process {
     /// Updates the process's virtual terminal buffer with new [`PTY`] output.
     ///
     /// This is the core of the per-process virtual terminal architecture: Each process
-    /// maintains its own complete terminal state through an [`OffscreenBuffer`]. Raw
+    /// maintains its own complete terminal state through a [`OfsBufVT100`]. Raw
     /// [`PTY`] bytes are processed through the [`ANSI`] parser and converted into
     /// [`PixelChar`] updates in the virtual terminal buffer.
     ///
@@ -110,7 +111,8 @@ impl Process {
     pub fn process_pty_output_and_update_buffer(&mut self, output: Vec<u8>) {
         if !output.is_empty() {
             // Process bytes and extract any OSC and DSR events.
-            let (osc_events, dsr_requests) = self.ofs_buf.apply_ansi_bytes(&output);
+            let (osc_events, dsr_requests) =
+                self.terminal_state.apply_ansi_bytes(&output);
 
             // Handle any OSC events that were detected.
             for event in osc_events {
@@ -152,7 +154,7 @@ impl Process {
                 "Process '{}' updated buffer with {} bytes, cursor at {:?}",
                 self.name,
                 output.len(),
-                self.ofs_buf.cursor_pos
+                self.terminal_state.cursor_pos
             );
         }
     }
@@ -202,7 +204,7 @@ impl Debug for Process {
             .field("args", &self.args)
             .field("session", &self.session)
             .field("is_running", &self.is_running)
-            .field("offscreen_buffer", &self.ofs_buf)
+            .field("terminal_state", &self.terminal_state)
             .field("has_unrendered_output", &self.has_unrendered_output)
             .field("terminal_title", &self.terminal_title)
             .finish()
@@ -258,7 +260,7 @@ impl ProcessManager {
     /// 3. The next render will display the target process's virtual terminal
     ///
     /// **Why this works universally**:
-    /// - TUI apps: Their complete screen state is preserved in the [`OffscreenBuffer`]
+    /// - TUI apps: Their complete screen state is preserved in the [`OfsBufVT100`]
     /// - bash: Your command history and current prompt state remain intact
     /// - CLI tools: All their output is preserved exactly as they generated it
     pub fn switch_to(&mut self, index: usize) -> Option<usize> {
@@ -315,7 +317,7 @@ impl ProcessManager {
     ///
     /// **Key Innovation**: ALL processes are polled continuously, not just the active
     /// one. Each process maintains its own complete virtual terminal state through its
-    /// [`OffscreenBuffer`]. When you switch between processes, you're instantly seeing
+    /// [`OfsBufVT100`]. When you switch between processes, you're instantly seeing
     /// their maintained terminal state - no delays, no fake resize tricks needed.
     ///
     /// **How it works**:
@@ -390,8 +392,8 @@ impl ProcessManager {
 
     /// Gets read-only access to the active process's virtual terminal buffer.
     #[must_use]
-    pub fn get_active_buffer(&self) -> &OffscreenBuffer {
-        &self.processes[self.active_index].ofs_buf
+    pub fn get_active_buffer(&self) -> &OfsBufVT100 {
+        &self.processes[self.active_index].terminal_state
     }
 
     /// Marks the active process as having been rendered.
@@ -424,7 +426,7 @@ impl ProcessManager {
         // Update all processes with new buffers and parsers.
         for (i, process) in self.processes.iter_mut().enumerate() {
             // Create fresh buffer at new size.
-            process.ofs_buf = OffscreenBuffer::new_empty(pty_size);
+            process.terminal_state = OfsBufVT100::new_empty(pty_size);
 
             // Clear unrendered output flag since we're starting fresh.
             process.has_unrendered_output = false;

@@ -66,14 +66,14 @@
 //!
 //! ```text
 //! ┌───────────────────────────────────────────────────────────┐
-//! │ Shim Layer (operations/*)                                 │
+//! │ Shim Layer (ops/*)                                        │
 //! │ • NO DIRECT TESTS (by design)                             │
 //! │ • Pure delegation, no business logic                      │
 //! └────────────────────┬──────────────────────────────────────┘
 //!                      │ delegates to
 //!                      │
 //! ┌────────────────────▼──────────────────────────────────────┐
-//! │ Implementation Layer (vt_100_ansi_impl/impl_*)            │
+//! │ Implementation Layer (ops_impl_ofs_buf/vt_100_impl_*)     │
 //! │ • UNIT TESTS: #[test] functions                           │
 //! │ • Contains all business logic                             │
 //! └───────────────────────────────────────────────────────────┘
@@ -92,7 +92,7 @@
 //!
 //! When working with any operation module, you can navigate to its related testing
 //! layers:
-//! - **Implementation with Unit Tests**: [`vt_100_ansi_impl`] module
+//! - **Implementation with Unit Tests**: [`ops_impl_ofs_buf`] module
 //! - **Integration Tests**: See the conformance test modules
 //!
 //! # Naming Convention
@@ -108,35 +108,35 @@
 //!
 //! This same pattern applies to all operation types:
 //!
-//! | Shim                            | Ops                            | Tests                            |
-//! | ------------------------------- | ------------------------------ | -------------------------------- |
-//! | [`vt_100_shim_char_ops`]        | [`vt_100_impl_char_ops`]       | [`vt_100_test_char_ops`]         |
-//! | [`vt_100_shim_control_ops`]     | [`vt_100_impl_control_ops`]    | [`vt_100_test_control_ops`]      |
-//! | [`vt_100_shim_cursor_ops`]      | [`vt_100_impl_cursor_ops`]     | [`vt_100_test_cursor_ops`]       |
-//! | [`vt_100_shim_dsr_ops`]         | [`vt_100_impl_dsr_ops`]        | [`vt_100_test_dsr_ops`]          |
-//! | [`vt_100_shim_line_ops`]        | [`vt_100_impl_line_ops`]       | [`vt_100_test_line_ops`]         |
-//! | [`vt_100_shim_margin_ops`]      | [`vt_100_impl_margin_ops`]     | [`vt_100_test_margin_ops`]       |
-//! | [`vt_100_shim_mode_ops`]        | [`vt_100_impl_mode_ops`]       | [`vt_100_test_mode_ops`]         |
-//! | [`vt_100_shim_osc_ops`]         | [`vt_100_impl_osc_ops`]        | [`vt_100_test_osc_ops`]          |
-//! | [`vt_100_shim_scroll_ops`]      | [`vt_100_impl_scroll_ops`]     | [`vt_100_test_scroll_ops`]       |
-//! | [`vt_100_shim_sgr_ops`]         | [`vt_100_impl_sgr_ops`]        | [`vt_100_test_sgr_ops`]          |
-//! | [`vt_100_shim_terminal_ops`]    | [`vt_100_impl_terminal_ops`]   | [`vt_100_test_terminal_ops`]     |
+//! | Shim                         | Impl                         | Tests                        |
+//! | ---------------------------- | ---------------------------- | ---------------------------- |
+//! | [`vt_100_shim_char_ops`]     | [`vt_100_impl_char_ops`]     | [`vt_100_test_char_ops`]     |
+//! | [`vt_100_shim_control_ops`]  | [`vt_100_impl_control_ops`]  | [`vt_100_test_control_ops`]  |
+//! | [`vt_100_shim_cursor_ops`]   | [`vt_100_impl_cursor_ops`]   | [`vt_100_test_cursor_ops`]   |
+//! | [`vt_100_shim_dsr_ops`]      | [`vt_100_impl_dsr_ops`]      | [`vt_100_test_dsr_ops`]      |
+//! | [`vt_100_shim_line_ops`]     | [`vt_100_impl_line_ops`]     | [`vt_100_test_line_ops`]     |
+//! | [`vt_100_shim_margin_ops`]   | [`vt_100_impl_margin_ops`]   | [`vt_100_test_margin_ops`]   |
+//! | [`vt_100_shim_mode_ops`]     | [`vt_100_impl_mode_ops`]     | [`vt_100_test_mode_ops`]     |
+//! | [`vt_100_shim_osc_ops`]      | [`vt_100_impl_osc_ops`]      | [`vt_100_test_osc_ops`]      |
+//! | [`vt_100_shim_scroll_ops`]   | [`vt_100_impl_scroll_ops`]   | [`vt_100_test_scroll_ops`]   |
+//! | [`vt_100_shim_sgr_ops`]      | [`vt_100_impl_sgr_ops`]      | [`vt_100_test_sgr_ops`]      |
+//! | [`vt_100_shim_terminal_ops`] | [`vt_100_impl_terminal_ops`] | [`vt_100_test_terminal_ops`] |
 //!
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`OffscreenBuffer`]: crate::OffscreenBuffer
+//! [`ops_impl_ofs_buf`]: crate::core::ansi::vt_100_pty_output_parser::ops_impl_ofs_buf
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
-//! [`vt_100_ansi_impl`]: crate::vt_100_ansi_impl
-//! [`vt_100_impl_char_ops`]: crate::vt_100_ansi_impl::vt_100_impl_char_ops
-//! [`vt_100_impl_control_ops`]: crate::vt_100_ansi_impl::vt_100_impl_control_ops
-//! [`vt_100_impl_cursor_ops`]: crate::vt_100_ansi_impl::vt_100_impl_cursor_ops
-//! [`vt_100_impl_dsr_ops`]: crate::vt_100_ansi_impl::vt_100_impl_dsr_ops
-//! [`vt_100_impl_line_ops`]: crate::vt_100_ansi_impl::vt_100_impl_line_ops
-//! [`vt_100_impl_margin_ops`]: crate::vt_100_ansi_impl::vt_100_impl_margin_ops
-//! [`vt_100_impl_mode_ops`]: crate::vt_100_ansi_impl::vt_100_impl_mode_ops
-//! [`vt_100_impl_osc_ops`]: crate::vt_100_ansi_impl::vt_100_impl_osc_ops
-//! [`vt_100_impl_scroll_ops`]: crate::vt_100_ansi_impl::vt_100_impl_scroll_ops
-//! [`vt_100_impl_sgr_ops`]: crate::vt_100_ansi_impl::vt_100_impl_sgr_ops
-//! [`vt_100_impl_terminal_ops`]: crate::vt_100_ansi_impl::vt_100_impl_terminal_ops
+//! [`vt_100_impl_char_ops`]: crate::core::ansi::vt_100_pty_output_parser::ops_impl_ofs_buf::vt_100_impl_char_ops
+//! [`vt_100_impl_control_ops`]: crate::core::ansi::vt_100_pty_output_parser::ops_impl_ofs_buf::vt_100_impl_control_ops
+//! [`vt_100_impl_cursor_ops`]: crate::core::ansi::vt_100_pty_output_parser::ops_impl_ofs_buf::vt_100_impl_cursor_ops
+//! [`vt_100_impl_dsr_ops`]: crate::core::ansi::vt_100_pty_output_parser::ops_impl_ofs_buf::vt_100_impl_dsr_ops
+//! [`vt_100_impl_line_ops`]: crate::core::ansi::vt_100_pty_output_parser::ops_impl_ofs_buf::vt_100_impl_line_ops
+//! [`vt_100_impl_margin_ops`]: crate::core::ansi::vt_100_pty_output_parser::ops_impl_ofs_buf::vt_100_impl_margin_ops
+//! [`vt_100_impl_mode_ops`]: crate::core::ansi::vt_100_pty_output_parser::ops_impl_ofs_buf::vt_100_impl_mode_ops
+//! [`vt_100_impl_osc_ops`]: crate::core::ansi::vt_100_pty_output_parser::ops_impl_ofs_buf::vt_100_impl_osc_ops
+//! [`vt_100_impl_scroll_ops`]: crate::core::ansi::vt_100_pty_output_parser::ops_impl_ofs_buf::vt_100_impl_scroll_ops
+//! [`vt_100_impl_sgr_ops`]: crate::core::ansi::vt_100_pty_output_parser::ops_impl_ofs_buf::vt_100_impl_sgr_ops
+//! [`vt_100_impl_terminal_ops`]: crate::core::ansi::vt_100_pty_output_parser::ops_impl_ofs_buf::vt_100_impl_terminal_ops
 //! [`vt_100_shim_char_ops`]: vt_100_shim_char_ops
 //! [`vt_100_shim_control_ops`]: vt_100_shim_control_ops
 //! [`vt_100_shim_cursor_ops`]: vt_100_shim_cursor_ops

@@ -10,16 +10,16 @@
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 
 use super::ProcessManager;
-use crate::{ArrayBoundsCheck, PaintMode, ArrayOverflowResult, FlushKind, GCStringOwned, IndexOps,
-            OffscreenBuffer, OutputDevice, PixelChar, RangeExt, RenderOpsLocalData,
-            RenderOpCommon,
-            SPACE_CHAR, Size, TuiStyle, col,
+use crate::{ArrayBoundsCheck, ArrayOverflowResult, FlushKind, GCStringOwned, IndexOps,
+            OffscreenBuffer, OutputDevice, PaintMode, PixelChar, RangeExt,
+            RenderOpCommon, RenderOpsLocalData, SPACE_CHAR, Size, TuiStyle, col,
             core::coordinates::{idx, len},
             ok, print_text_with_attributes, row,
             tui::{DEBUG_TUI_PTY_MUX,
-                  terminal_lib_backends::{CursorVisibilityState, OffscreenBufferPaint,
+                  terminal_lib_backends::{OffscreenBufferPaint,
                                           OffscreenBufferPaintImpl}},
             tui_color,
+            CursorVisibilityState,
             tui_style_attrib::{self, Bold},
             tui_style_attribs, width};
 
@@ -90,12 +90,14 @@ impl OutputRenderer {
             }
         }
 
-        // Inherit the cursor and ANSI parser state.
+        // Inherit the cursor.
         composite_buffer.cursor_pos = active_buffer.cursor_pos;
-        composite_buffer.ansi_parser_support = active_buffer.ansi_parser_support.clone();
 
         // 1. Composite PTY virtual cursor if it's visible.
-        Self::composite_virtual_cursor_into_buffer(&mut composite_buffer);
+        Self::composite_virtual_cursor_into_buffer(
+            &mut composite_buffer,
+            active_buffer.parser_global_state.cursor_visibility,
+        );
 
         // 2. Composite status bar into the last row.
         self.composite_status_bar_into_buffer(&mut composite_buffer, process_manager);
@@ -117,10 +119,12 @@ impl OutputRenderer {
     /// [`Reverse`]: crate::tui_style_attrib::Reverse
     /// [display widths]: unicode-width
     /// [segmentation]: crate::graphemes
-    fn composite_virtual_cursor_into_buffer(ofs_buf: &mut OffscreenBuffer) {
+    pub fn composite_virtual_cursor_into_buffer(
+        ofs_buf: &mut OffscreenBuffer,
+        cursor_visibility: CursorVisibilityState,
+    ) {
         // Only do something if the child process requested a visible cursor.
-        if ofs_buf.ansi_parser_support.cursor_visibility == CursorVisibilityState::Hidden
-        {
+        if cursor_visibility == CursorVisibilityState::Hidden {
             return;
         }
 
@@ -354,12 +358,12 @@ impl OutputRenderer {
 /// # Note on Side Effects
 ///
 /// We explicitly push [`RenderOpCommon::HideCursor`] here instead of passing the parsed
-/// visibility state. This permanently suppresses the terminal emulator cursor when the multiplexer
-/// is active, preventing flickering and cursor parking issues.
+/// visibility state. This permanently suppresses the terminal emulator cursor when the
+/// multiplexer is active, preventing flickering and cursor parking issues.
 ///
 /// There is no danger of this messing up the chrome UI since it doesn't natively require
-/// a terminal emulator cursor. If interactive regions (like a find feature) are added to the
-/// chrome in the future, they will be handled by compositing another virtual caret.
+/// a terminal emulator cursor. If interactive regions (like a find feature) are added to
+/// the chrome in the future, they will be handled by compositing another virtual caret.
 fn paint_buffer(ofs_buf: &OffscreenBuffer, output_device: &OutputDevice) {
     let mut ofs_buf_paint_impl = OffscreenBufferPaintImpl {};
     let mut render_ops = ofs_buf_paint_impl.render(ofs_buf);

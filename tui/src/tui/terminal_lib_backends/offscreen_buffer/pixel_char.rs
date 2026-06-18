@@ -26,10 +26,7 @@ pub enum PixelChar {
     Spacer,
 
     /// An actual printable character with associated styling information.
-    PlainText {
-        display_char: char,
-        style: TuiStyle,
-    },
+    PlainText { display_char: char, style: TuiStyle },
 }
 
 pub const EMPTY_CHAR: char = '╳';
@@ -74,7 +71,9 @@ impl Debug for PixelChar {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{SPACER_GLYPH_CHAR, height, new_style, tui::terminal_lib_backends::offscreen_buffer::OffscreenBuffer, tui_color, tui_style_attrib::Underline, tui_style_attribs, width};
+    use crate::{SPACER_GLYPH_CHAR, height, new_style,
+                tui::terminal_lib_backends::offscreen_buffer::OffscreenBuffer,
+                tui_color, tui_style_attrib::Underline, tui_style_attribs, width};
 
     fn create_test_buffer() -> OffscreenBuffer {
         let window_size = width(4) + height(2);

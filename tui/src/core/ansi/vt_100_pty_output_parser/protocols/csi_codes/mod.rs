@@ -42,7 +42,7 @@
 //!
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`CSI`]: crate::CsiSequence
-//! [`esc_codes`]: crate::vt_100_pty_output_parser::protocols::esc_codes
+//! [`esc_codes`]: crate::core::ansi::vt_100_pty_output_parser::protocols::esc_codes
 //! [`ESC`]: crate::EscSequence
 
 // Attach private module to avoid naming conflicts (hide inner details).

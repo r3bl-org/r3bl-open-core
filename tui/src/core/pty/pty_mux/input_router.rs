@@ -8,7 +8,10 @@
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 
 use super::{ProcessManager, show_notification_non_blocking};
-use crate::{Continuation, InputEvent, Key, KeyPress, KeyState, ModifierKeysMask, PtyInputEvent, Size, core::{osc::OscController, terminal_io::OutputDevice}, ok};
+use crate::{Continuation, InputEvent, Key, KeyPress, KeyState, ModifierKeysMask,
+            PtyInputEvent, Size,
+            core::{osc::OscController, terminal_io::OutputDevice},
+            ok};
 
 /// Routes input events to appropriate handlers and manages dynamic keyboard shortcuts.
 #[derive(Debug)]
@@ -74,7 +77,7 @@ impl InputRouter {
                                     &format!("Switching to {process_name}"),
                                 );
 
-                                 process_manager.switch_to(process_index);
+                                process_manager.switch_to(process_index);
                                 Self::update_terminal_title(process_manager, osc)?;
                                 tracing::debug!("Process switch completed successfully");
                             }

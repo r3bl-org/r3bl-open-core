@@ -3,7 +3,7 @@
 //! [`SGR`] (Select Graphic Rendition) operations for VT100/[`ANSI`] terminal emulation.
 //!
 //! This module implements [`SGR`] operations that correspond to [`ANSI`] [`SGR`]
-//! sequences handled by the `vt_100_pty_output_parser::operations::sgr_ops` module. These
+//! sequences handled by the `vt_100_pty_output_parser::ops::sgr_ops` module. These
 //! include:
 //!
 //! - **[`SGR`] 0** (Reset) - [`reset_all_style_attributes()`]
@@ -31,33 +31,33 @@
 //! **Related Files:**
 //!
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`apply_style_attribute()`]: crate::OffscreenBuffer::apply_style_attribute
-//! [`reset_all_style_attributes()`]: crate::OffscreenBuffer::reset_all_style_attributes
-//! [`set_background_color()`]: crate::OffscreenBuffer::set_background_color
-//! [`set_foreground_color()`]: crate::OffscreenBuffer::set_foreground_color
+//! [`apply_style_attribute()`]: crate::OfsBufVT100::apply_style_attribute
+//! [`reset_all_style_attributes()`]: crate::OfsBufVT100::reset_all_style_attributes
+//! [`set_background_color()`]: crate::OfsBufVT100::set_background_color
+//! [`set_foreground_color()`]: crate::OfsBufVT100::set_foreground_color
 //! [`SGR`]: crate::SgrCode
 
-use crate::{AnsiValue, ColorTarget, OffscreenBuffer, RgbValue, SgrColorSequence,
-            TuiColor, TuiStyle, TuiStyleAttribs};
+use crate::{AnsiValue, ColorTarget, OfsBufVT100, RgbValue, SgrColorSequence, TuiColor,
+            TuiStyle, TuiStyleAttribs};
 
-impl OffscreenBuffer {
+impl OfsBufVT100 {
     /// Reset all [`SGR`] attributes to default state.
     ///
     /// [`SGR`]: crate::SgrCode
     pub fn reset_all_style_attributes(&mut self) {
-        self.ansi_parser_support.current_style = TuiStyle::default();
+        self.parser_global_state.current_style = TuiStyle::default();
     }
 
     /// Apply style attributes to the current style by merging with new attributes.
     pub fn apply_style_attribute(&mut self, attribs: TuiStyleAttribs) {
-        self.ansi_parser_support.current_style.attribs =
-            self.ansi_parser_support.current_style.attribs + attribs;
+        self.parser_global_state.current_style.attribs =
+            self.parser_global_state.current_style.attribs + attribs;
     }
 
     /// Reset specific style attributes. Only fields that are `Some` in the input are
     /// reset.
     pub fn reset_style_attribute(&mut self, attribs: TuiStyleAttribs) {
-        let style = &mut self.ansi_parser_support.current_style;
+        let style = &mut self.parser_global_state.current_style;
 
         if attribs.bold.is_some() || attribs.dim.is_some() {
             style.attribs.bold = None;
@@ -90,7 +90,7 @@ impl OffscreenBuffer {
     ///
     /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
     pub fn set_foreground_color(&mut self, ansi_color: u16) {
-        self.ansi_parser_support.current_style.color_fg =
+        self.parser_global_state.current_style.color_fg =
             Some(TuiColor::from(AnsiValue::from(ansi_color)));
     }
 
@@ -98,18 +98,18 @@ impl OffscreenBuffer {
     ///
     /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
     pub fn set_background_color(&mut self, ansi_color: u16) {
-        self.ansi_parser_support.current_style.color_bg =
+        self.parser_global_state.current_style.color_bg =
             Some(TuiColor::from(AnsiValue::from(ansi_color)));
     }
 
     /// Reset foreground color to default.
     pub fn reset_foreground_color(&mut self) {
-        self.ansi_parser_support.current_style.color_fg = None;
+        self.parser_global_state.current_style.color_fg = None;
     }
 
     /// Reset background color to default.
     pub fn reset_background_color(&mut self) {
-        self.ansi_parser_support.current_style.color_bg = None;
+        self.parser_global_state.current_style.color_bg = None;
     }
 
     /// Set foreground color using 256-color palette index.
@@ -122,7 +122,7 @@ impl OffscreenBuffer {
     ///
     /// Used with: `ESC[38;5;nm` or `ESC[38:5:nm`
     pub fn set_foreground_ansi256(&mut self, index: u8) {
-        self.ansi_parser_support.current_style.color_fg =
+        self.parser_global_state.current_style.color_fg =
             Some(TuiColor::Ansi(AnsiValue::new(index)));
     }
 
@@ -136,7 +136,7 @@ impl OffscreenBuffer {
     ///
     /// Used with: `ESC[48;5;nm` or `ESC[48:5:nm`
     pub fn set_background_ansi256(&mut self, index: u8) {
-        self.ansi_parser_support.current_style.color_bg =
+        self.parser_global_state.current_style.color_bg =
             Some(TuiColor::Ansi(AnsiValue::new(index)));
     }
 
@@ -152,7 +152,7 @@ impl OffscreenBuffer {
     ///
     /// Used with: `ESC[38;2;r;g;bm` or `ESC[38:2:r:g:bm`
     pub fn set_foreground_rgb(&mut self, r: u8, g: u8, b: u8) {
-        self.ansi_parser_support.current_style.color_fg =
+        self.parser_global_state.current_style.color_fg =
             Some(TuiColor::Rgb(RgbValue::from_u8(r, g, b)));
     }
 
@@ -168,7 +168,7 @@ impl OffscreenBuffer {
     ///
     /// Used with: `ESC[48;2;r;g;bm` or `ESC[48:2:r:g:bm`
     pub fn set_background_rgb(&mut self, r: u8, g: u8, b: u8) {
-        self.ansi_parser_support.current_style.color_bg =
+        self.parser_global_state.current_style.color_bg =
             Some(TuiColor::Rgb(RgbValue::from_u8(r, g, b)));
     }
     /// Apply an extended color sequence to the current style.
@@ -184,9 +184,9 @@ impl OffscreenBuffer {
     /// # Example
     ///
     /// ```
-    /// use r3bl_tui::{SgrColorSequence, OffscreenBuffer, height, width};
+    /// use r3bl_tui::{SgrColorSequence, OfsBufVT100, height, width};
     ///
-    /// let mut buffer = OffscreenBuffer::new_empty(height(10) + width(20));
+    /// let mut buffer = OfsBufVT100::new_empty(height(10) + width(20));
     ///
     /// // Parse an extended color sequence (256-color foreground)
     /// let params = &[38, 5, 196];
@@ -201,10 +201,10 @@ impl OffscreenBuffer {
         let tui_color = TuiColor::from(color_seq);
         match color_seq.target() {
             ColorTarget::Foreground => {
-                self.ansi_parser_support.current_style.color_fg = Some(tui_color);
+                self.parser_global_state.current_style.color_fg = Some(tui_color);
             }
             ColorTarget::Background => {
-                self.ansi_parser_support.current_style.color_bg = Some(tui_color);
+                self.parser_global_state.current_style.color_bg = Some(tui_color);
             }
         }
     }
@@ -213,11 +213,11 @@ impl OffscreenBuffer {
 #[cfg(test)]
 mod tests_sgr_ops {
     use super::*;
-    use crate::{height, tui_style_attrib, width};
+    use crate::{OfsBufVT100, height, tui_style_attrib, width};
 
-    fn create_test_buffer() -> OffscreenBuffer {
+    fn create_test_buffer() -> OfsBufVT100 {
         let size = width(10) + height(6);
-        OffscreenBuffer::new_empty(size)
+        OfsBufVT100::new_empty(size)
     }
 
     #[test]
@@ -231,18 +231,18 @@ mod tests_sgr_ops {
         // Verify they're set
         assert!(
             buffer
-                .ansi_parser_support
+                .parser_global_state
                 .current_style
                 .attribs
                 .bold
                 .is_some()
         );
-        assert!(buffer.ansi_parser_support.current_style.color_fg.is_some());
+        assert!(buffer.parser_global_state.current_style.color_fg.is_some());
 
         buffer.reset_all_style_attributes();
 
         // Should be reset to defaults
-        let style = &buffer.ansi_parser_support.current_style;
+        let style = &buffer.parser_global_state.current_style;
         assert!(style.attribs.bold.is_none());
         assert!(style.color_fg.is_none());
         assert!(style.color_bg.is_none());
@@ -256,7 +256,7 @@ mod tests_sgr_ops {
 
         assert!(
             buffer
-                .ansi_parser_support
+                .parser_global_state
                 .current_style
                 .attribs
                 .bold
@@ -272,7 +272,7 @@ mod tests_sgr_ops {
 
         assert!(
             buffer
-                .ansi_parser_support
+                .parser_global_state
                 .current_style
                 .attribs
                 .italic
@@ -292,7 +292,7 @@ mod tests_sgr_ops {
 
         assert!(
             buffer
-                .ansi_parser_support
+                .parser_global_state
                 .current_style
                 .attribs
                 .bold
@@ -300,7 +300,7 @@ mod tests_sgr_ops {
         );
         assert!(
             buffer
-                .ansi_parser_support
+                .parser_global_state
                 .current_style
                 .attribs
                 .dim
@@ -314,8 +314,8 @@ mod tests_sgr_ops {
 
         buffer.set_foreground_color(31); // Red
 
-        assert!(buffer.ansi_parser_support.current_style.color_fg.is_some());
-        if let Some(color) = buffer.ansi_parser_support.current_style.color_fg {
+        assert!(buffer.parser_global_state.current_style.color_fg.is_some());
+        if let Some(color) = buffer.parser_global_state.current_style.color_fg {
             // Should be red color
             // Red is ANSI color 31, which maps to palette index 9 (basic red)
             assert!(matches!(color, TuiColor::Ansi(a) if a.index < 16));
@@ -328,8 +328,8 @@ mod tests_sgr_ops {
 
         buffer.set_background_color(42); // Green background
 
-        assert!(buffer.ansi_parser_support.current_style.color_bg.is_some());
-        if let Some(color) = buffer.ansi_parser_support.current_style.color_bg {
+        assert!(buffer.parser_global_state.current_style.color_bg.is_some());
+        if let Some(color) = buffer.parser_global_state.current_style.color_bg {
             // Should be green color
             // Green is ANSI color 42, which maps to palette index 10 (basic green)
             assert!(matches!(color, TuiColor::Ansi(a) if a.index < 16));
@@ -341,10 +341,10 @@ mod tests_sgr_ops {
         let mut buffer = create_test_buffer();
 
         buffer.set_foreground_color(31);
-        assert!(buffer.ansi_parser_support.current_style.color_fg.is_some());
+        assert!(buffer.parser_global_state.current_style.color_fg.is_some());
 
         buffer.reset_foreground_color();
-        assert!(buffer.ansi_parser_support.current_style.color_fg.is_none());
+        assert!(buffer.parser_global_state.current_style.color_fg.is_none());
     }
 
     #[test]
@@ -352,10 +352,10 @@ mod tests_sgr_ops {
         let mut buffer = create_test_buffer();
 
         buffer.set_background_color(42);
-        assert!(buffer.ansi_parser_support.current_style.color_bg.is_some());
+        assert!(buffer.parser_global_state.current_style.color_bg.is_some());
 
         buffer.reset_background_color();
-        assert!(buffer.ansi_parser_support.current_style.color_bg.is_none());
+        assert!(buffer.parser_global_state.current_style.color_bg.is_none());
     }
 
     #[test]
@@ -366,7 +366,7 @@ mod tests_sgr_ops {
         buffer.apply_style_attribute(TuiStyleAttribs::from(tui_style_attrib::Italic));
         buffer.apply_style_attribute(TuiStyleAttribs::from(tui_style_attrib::Underline));
 
-        let style = &buffer.ansi_parser_support.current_style;
+        let style = &buffer.parser_global_state.current_style;
         assert!(style.attribs.bold.is_some());
         assert!(style.attribs.italic.is_some());
         assert!(style.attribs.underline.is_some());

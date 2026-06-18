@@ -16,14 +16,14 @@ use crate::{
 
 #[test]
 fn test_dsr_status_report() {
-    let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
+    let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
 
     // Send CSI 5n (status report request)
     let dsr_request = format!(
         "{}",
         CsiSequence::DeviceStatusReport(DsrRequestType::RequestStatus)
     );
-    let (osc_events, dsr_responses) = ofs_buf.apply_ansi_bytes(&dsr_request);
+    let (osc_events, dsr_responses) = ofs_buf_vt_100.apply_ansi_bytes(&dsr_request);
 
     // Should not produce OSC events.
     assert_eq!(osc_events.len(), 0, "no OSC events expected");
@@ -49,17 +49,17 @@ fn test_dsr_status_report() {
 
 #[test]
 fn test_dsr_cursor_position_report() {
-    let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
+    let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
 
     // Move cursor to position (3, 5) - 0-based internally
-    ofs_buf.cursor_pos = row(3) + col(5);
+    ofs_buf_vt_100.cursor_pos = row(3) + col(5);
 
     // Send CSI 6n (cursor position report request)
     let dsr_request = format!(
         "{}",
         CsiSequence::DeviceStatusReport(DsrRequestType::RequestCursorPosition)
     );
-    let (osc_events, dsr_responses) = ofs_buf.apply_ansi_bytes(&dsr_request);
+    let (osc_events, dsr_responses) = ofs_buf_vt_100.apply_ansi_bytes(&dsr_request);
 
     // Should not produce OSC events.
     assert_eq!(osc_events.len(), 0, "no OSC events expected");
@@ -89,17 +89,17 @@ fn test_dsr_cursor_position_report() {
 
 #[test]
 fn test_dsr_cursor_position_at_origin() {
-    let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
+    let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
 
     // Cursor starts at (0, 0) - 0-based internally
-    assert_eq!(ofs_buf.cursor_pos, row(0) + col(0));
+    assert_eq!(ofs_buf_vt_100.cursor_pos, row(0) + col(0));
 
     // Send CSI 6n (cursor position report request)
     let dsr_request = format!(
         "{}",
         CsiSequence::DeviceStatusReport(DsrRequestType::RequestCursorPosition)
     );
-    let (_osc_events, dsr_responses) = ofs_buf.apply_ansi_bytes(&dsr_request);
+    let (_osc_events, dsr_responses) = ofs_buf_vt_100.apply_ansi_bytes(&dsr_request);
 
     // Should produce cursor position report at (1, 1) in 1-based coordinates
     assert_eq!(
@@ -123,14 +123,14 @@ fn test_dsr_cursor_position_at_origin() {
 
 #[test]
 fn test_dsr_unknown_request() {
-    let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
+    let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
 
     // Send CSI 99n (unknown DSR request)
     let dsr_request = format!(
         "{}",
         CsiSequence::DeviceStatusReport(DsrRequestType::Other(99))
     );
-    let (osc_events, dsr_responses) = ofs_buf.apply_ansi_bytes(&dsr_request);
+    let (osc_events, dsr_responses) = ofs_buf_vt_100.apply_ansi_bytes(&dsr_request);
 
     // Should not produce any events for unknown DSR requests.
     assert_eq!(osc_events.len(), 0, "no OSC events expected");
@@ -143,10 +143,10 @@ fn test_dsr_unknown_request() {
 
 #[test]
 fn test_multiple_dsr_requests() {
-    let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
+    let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
 
     // Move cursor to (2, 3)
-    ofs_buf.cursor_pos = row(2) + col(3);
+    ofs_buf_vt_100.cursor_pos = row(2) + col(3);
 
     // Send multiple DSR requests in one sequence.
     let dsr_requests = format!(
@@ -155,7 +155,7 @@ fn test_multiple_dsr_requests() {
         CsiSequence::DeviceStatusReport(DsrRequestType::RequestCursorPosition), /* Cursor position */
         CsiSequence::DeviceStatusReport(DsrRequestType::Other(99)) // Unknown
     );
-    let (_osc_events, dsr_responses) = ofs_buf.apply_ansi_bytes(&dsr_requests);
+    let (_osc_events, dsr_responses) = ofs_buf_vt_100.apply_ansi_bytes(&dsr_requests);
 
     // Should produce exactly two DSR responses (status and cursor position)
     assert_eq!(dsr_responses.len(), 2, "expected two DSR responses");
@@ -173,19 +173,19 @@ fn test_multiple_dsr_requests() {
 
 #[test]
 fn test_dsr_events_are_cleared_after_processing() {
-    let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
+    let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
 
     // First DSR request.
     let dsr_request = format!(
         "{}",
         CsiSequence::DeviceStatusReport(DsrRequestType::RequestStatus)
     );
-    let (_, dsr_responses1) = ofs_buf.apply_ansi_bytes(&dsr_request);
+    let (_, dsr_responses1) = ofs_buf_vt_100.apply_ansi_bytes(&dsr_request);
     assert_eq!(dsr_responses1.len(), 1, "expected one DSR response");
 
     // Second call without any DSR request.
     let plain_text = "Hello";
-    let (_, dsr_responses2) = ofs_buf.apply_ansi_bytes(plain_text);
+    let (_, dsr_responses2) = ofs_buf_vt_100.apply_ansi_bytes(plain_text);
     assert_eq!(
         dsr_responses2.len(),
         0,
@@ -197,7 +197,7 @@ fn test_dsr_events_are_cleared_after_processing() {
         "{}",
         CsiSequence::DeviceStatusReport(DsrRequestType::RequestCursorPosition)
     );
-    let (_, dsr_responses3) = ofs_buf.apply_ansi_bytes(&dsr_request);
+    let (_, dsr_responses3) = ofs_buf_vt_100.apply_ansi_bytes(&dsr_request);
     assert_eq!(
         dsr_responses3.len(),
         1,

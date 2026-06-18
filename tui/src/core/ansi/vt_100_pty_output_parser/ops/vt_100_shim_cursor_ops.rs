@@ -3,11 +3,11 @@
 //! Cursor movement operations.
 //!
 //! This module acts as a thin shim layer that delegates to the actual implementation.
-//! Refer to the module-level documentation in the operations module for details on the
+//! Refer to the module-level documentation in the ops module for details on the
 //! "shim → impl → test" architecture and naming conventions.
 //!
 //! **Related Files:**
-//! - **Implementation**: [`impl_cursor_ops`] - Business logic with unit tests
+//! - **Implementation**: [`vt_100_impl_cursor_ops`] - Business logic with unit tests
 //! - **Integration Tests**: [`test_cursor_ops`] - Full pipeline testing via public API
 //!
 //! # Testing Strategy
@@ -20,7 +20,7 @@
 //! - **Integration tests** in the conformance tests validating the full pipeline
 //!
 //! For the complete testing philosophy and rationale behind this approach,
-//! see the [operations module].
+//! see the [ops module].
 //!
 //! # Architecture Overview
 //!
@@ -39,9 +39,9 @@
 //!         ↓
 //!     csi_dispatch() [routes to modules below]
 //!         ↓
-//!     Route to operations module:                  ╭───────────╮
-//!       - cursor_ops:: for movement (A,B,C,D,H) <- │THIS MODULE│
-//!       - scroll_ops:: for scrolling (S,T)         ╰───────────╯
+//!     Route to ops module:                                     ╭───────────╮
+//!       - cursor_ops:: for movement (A,B,C,D,H)             <- │THIS MODULE│
+//!       - scroll_ops:: for scrolling (S,T)                     ╰───────────╯
 //!       - sgr_ops:: for styling (m)
 //!       - line_ops:: for lines (L,M)
 //!       - char_ops:: for chars (@,P,X)
@@ -70,9 +70,9 @@
 //!
 //! ```text
 //! [`VT-100`] Wire Format    →    1-based Types    →    0-based Indices
-//! ─────────────────         ──────────────         ───────────────
-//! ESC [5;10H                TermRow(5)             RowIndex(4)
-//!                           TermCol(10)            ColIndex(9)
+//! ──────────────────────         ──────────────        ───────────────
+//! ESC [5;10H                     TermRow(5)            RowIndex(4)
+//!                                TermCol(10)           ColIndex(9)
 //! ```
 //!
 //! Conversion flow:
@@ -84,16 +84,16 @@
 //! [`ColIndex`]: crate::ColIndex
 //! [`CSI`]: crate::CsiSequence
 //! [`extract_nth_single_non_zero()`]: crate::ParamsExt::extract_nth_single_non_zero
-//! [`impl_cursor_ops`]: crate::vt_100_ansi_impl::vt_100_impl_cursor_ops
 //! [`NonZeroU16`]: std::num::NonZeroU16
 //! [`RowIndex`]: crate::RowIndex
 //! [`TermCol::from_raw_non_zero_value()`]: crate::TermCol::from_raw_non_zero_value
 //! [`TermRow::from_raw_non_zero_value()`]: crate::TermRow::from_raw_non_zero_value
 //! [`test_cursor_ops`]: crate::vt_100_pty_output_conformance_tests::tests::vt_100_test_cursor_ops
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+//! [`vt_100_impl_cursor_ops`]: crate::core::ansi::vt_100_pty_output_parser::ops_impl_ofs_buf::vt_100_impl_cursor_ops
 //! [module-level Architecture Overview]: super#architecture-overview
 //! [module-level documentation]: self
-//! [operations module]: crate::core::ansi::vt_100_pty_output_parser::operations
+//! [ops module]: crate::core::ansi::vt_100_pty_output_parser::ops
 
 use super::super::{ansi_parser_public_api::AnsiToOfsBufPerformer,
                    protocols::parse_cursor_position};
@@ -107,15 +107,15 @@ use vte::Params;
 ///
 /// **Behavior**: Respects [`DECSTBM`] scroll region margins.
 ///
-/// **Implementation**: See [`OffscreenBuffer::cursor_up`] for detailed behavior.
+/// **Implementation**: See [`OfsBufVT100::cursor_up`] for detailed behavior.
 ///
 /// [`DECSTBM`]: https://vt100.net/docs/vt510-rm/DECSTBM.html
-/// [`OffscreenBuffer::cursor_up`]: crate::OffscreenBuffer::cursor_up
+/// [`OfsBufVT100::cursor_up`]: crate::OfsBufVT100::cursor_up
 /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 /// [module-level documentation]: self
 pub fn cursor_up(performer: &mut AnsiToOfsBufPerformer, params: &Params) {
     let how_many = params.extract_nth_single_non_zero(0).get().into();
-    performer.ofs_buf.cursor_up(how_many);
+    performer.ofs_buf_vt_100.cursor_up(how_many);
 }
 
 /// Move cursor down by n lines.
@@ -125,15 +125,15 @@ pub fn cursor_up(performer: &mut AnsiToOfsBufPerformer, params: &Params) {
 ///
 /// **Behavior**: Respects [`DECSTBM`] scroll region margins.
 ///
-/// **Implementation**: See [`OffscreenBuffer::cursor_down`] for detailed behavior.
+/// **Implementation**: See [`OfsBufVT100::cursor_down`] for detailed behavior.
 ///
 /// [`DECSTBM`]: https://vt100.net/docs/vt510-rm/DECSTBM.html
-/// [`OffscreenBuffer::cursor_down`]: crate::OffscreenBuffer::cursor_down
+/// [`OfsBufVT100::cursor_down`]: crate::OfsBufVT100::cursor_down
 /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 /// [module-level documentation]: self
 pub fn cursor_down(performer: &mut AnsiToOfsBufPerformer, params: &Params) {
     let how_many = params.extract_nth_single_non_zero(0).get().into();
-    performer.ofs_buf.cursor_down(how_many);
+    performer.ofs_buf_vt_100.cursor_down(how_many);
 }
 
 /// Move cursor forward by n columns.
@@ -141,14 +141,14 @@ pub fn cursor_down(performer: &mut AnsiToOfsBufPerformer, params: &Params) {
 /// **[`VT-100`] Protocol**: See [module-level documentation] for parameter handling
 /// (missing/zero parameters default to 1).
 ///
-/// **Implementation**: See [`OffscreenBuffer::cursor_forward`] for detailed behavior.
+/// **Implementation**: See [`OfsBufVT100::cursor_forward`] for detailed behavior.
 ///
-/// [`OffscreenBuffer::cursor_forward`]: crate::OffscreenBuffer::cursor_forward
+/// [`OfsBufVT100::cursor_forward`]: crate::OfsBufVT100::cursor_forward
 /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 /// [module-level documentation]: self
 pub fn cursor_forward(performer: &mut AnsiToOfsBufPerformer, params: &Params) {
     let how_many = params.extract_nth_single_non_zero(0).get().into();
-    performer.ofs_buf.cursor_forward(how_many);
+    performer.ofs_buf_vt_100.cursor_forward(how_many);
 }
 
 /// Move cursor backward by n columns.
@@ -156,14 +156,14 @@ pub fn cursor_forward(performer: &mut AnsiToOfsBufPerformer, params: &Params) {
 /// **[`VT-100`] Protocol**: See [module-level documentation] for parameter handling
 /// (missing/zero parameters default to 1).
 ///
-/// **Implementation**: See [`OffscreenBuffer::cursor_backward`] for detailed behavior.
+/// **Implementation**: See [`OfsBufVT100::cursor_backward`] for detailed behavior.
 ///
-/// [`OffscreenBuffer::cursor_backward`]: crate::OffscreenBuffer::cursor_backward
+/// [`OfsBufVT100::cursor_backward`]: crate::OfsBufVT100::cursor_backward
 /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 /// [module-level documentation]: self
 pub fn cursor_backward(performer: &mut AnsiToOfsBufPerformer, params: &Params) {
     let how_many = params.extract_nth_single_non_zero(0).get().into();
-    performer.ofs_buf.cursor_backward(how_many);
+    performer.ofs_buf_vt_100.cursor_backward(how_many);
 }
 
 /// Sets cursor position to (row, column).
@@ -180,7 +180,7 @@ pub fn cursor_backward(performer: &mut AnsiToOfsBufPerformer, params: &Params) {
 /// [module-level documentation]: self
 pub fn cursor_position(performer: &mut AnsiToOfsBufPerformer, params: &Params) {
     let (row, col) = parse_cursor_position(params);
-    performer.ofs_buf.cursor_to_position(row, col);
+    performer.ofs_buf_vt_100.cursor_to_position(row, col);
 }
 
 /// Handle CNL (Cursor Next Line) - move cursor to beginning of line n lines down.
@@ -192,8 +192,8 @@ pub fn cursor_position(performer: &mut AnsiToOfsBufPerformer, params: &Params) {
 /// [module-level documentation]: self
 pub fn cursor_next_line(performer: &mut AnsiToOfsBufPerformer, params: &Params) {
     let how_many = params.extract_nth_single_non_zero(0).get().into();
-    performer.ofs_buf.cursor_down(how_many);
-    performer.ofs_buf.cursor_to_line_start();
+    performer.ofs_buf_vt_100.cursor_down(how_many);
+    performer.ofs_buf_vt_100.cursor_to_line_start();
 }
 
 /// Handle CPL (Cursor Previous Line) - move cursor to beginning of line n lines up.
@@ -205,8 +205,8 @@ pub fn cursor_next_line(performer: &mut AnsiToOfsBufPerformer, params: &Params) 
 /// [module-level documentation]: self
 pub fn cursor_prev_line(performer: &mut AnsiToOfsBufPerformer, params: &Params) {
     let how_many = params.extract_nth_single_non_zero(0).get().into();
-    performer.ofs_buf.cursor_up(how_many);
-    performer.ofs_buf.cursor_to_line_start();
+    performer.ofs_buf_vt_100.cursor_up(how_many);
+    performer.ofs_buf_vt_100.cursor_to_line_start();
 }
 
 /// Handle CHA (Cursor Horizontal Absolute) - move cursor to column n.
@@ -221,17 +221,17 @@ pub fn cursor_column(performer: &mut AnsiToOfsBufPerformer, params: &Params) {
     let target_col =
         TermCol::from_raw_non_zero_value(params.extract_nth_single_non_zero(0))
             .to_zero_based();
-    performer.ofs_buf.cursor_to_column(target_col);
+    performer.ofs_buf_vt_100.cursor_to_column(target_col);
 }
 
 /// Handle SCP (Save Cursor Position) - save current cursor position.
 pub fn save_cursor_position(performer: &mut AnsiToOfsBufPerformer) {
-    performer.ofs_buf.save_cursor_position();
+    performer.ofs_buf_vt_100.save_cursor_position();
 }
 
 /// Handle RCP (Restore Cursor Position) - restore saved cursor position.
 pub fn restore_cursor_position(performer: &mut AnsiToOfsBufPerformer) {
-    performer.ofs_buf.restore_cursor_position();
+    performer.ofs_buf_vt_100.restore_cursor_position();
 }
 
 /// Handle VPA (Vertical Position Absolute) - move cursor to specified row.
@@ -251,5 +251,5 @@ pub fn vertical_position_absolute(
     let target_row =
         TermRow::from_raw_non_zero_value(params.extract_nth_single_non_zero(0))
             .to_zero_based();
-    performer.ofs_buf.cursor_to_row(target_row);
+    performer.ofs_buf_vt_100.cursor_to_row(target_row);
 }

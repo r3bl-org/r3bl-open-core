@@ -21,7 +21,7 @@ use crate::{FastStringify, PixelChar, SGR_RESET_BYTES, SgrCode, TuiColor, TuiSty
 /// ## Architecture Overview
 ///
 /// ```text
-/// PixelChar[] (from OffscreenBuffer)
+/// PixelChar[] (from OfsBufVT100)
 ///     │
 /// ┌───▼──────────────────────────────┐
 /// │  PixelCharRenderer               │
@@ -66,7 +66,7 @@ use crate::{FastStringify, PixelChar, SGR_RESET_BYTES, SgrCode, TuiColor, TuiSty
 ///
 /// ## Integration Points
 ///
-/// - `OffscreenBuffer::render_to_ansi()` will call this renderer
+/// - `OfsBufVT100::render_to_ansi()` will call this renderer
 /// - `CliTextInline::Display` will use this renderer
 /// - `choose()` and `readline_async` will use this renderer
 /// - [`RenderOpOutput`] variant `CompositorNoClipTruncPaintTextWithAttributes` will use

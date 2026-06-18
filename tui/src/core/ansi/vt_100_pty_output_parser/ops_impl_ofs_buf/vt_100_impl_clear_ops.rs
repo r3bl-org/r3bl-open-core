@@ -1,11 +1,11 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use crate::{ArrayBoundsCheck as _, ArrayOverflowResult, CursorBoundsCheck as _,
-            OffscreenBuffer, PixelChar, RangeBoundsExt as _, RangeExt as _,
+            OfsBufVT100, PixelChar, RangeBoundsExt as _, RangeExt as _,
             glyphs::SPACER_GLYPH_CHAR, height, ok, row, width};
 use std::cmp::min;
 
-impl OffscreenBuffer {
+impl OfsBufVT100 {
     /// Creates a pixel character configured for erasing, using the current active
     /// background style according to [`VT-100`] specifications.
     ///
@@ -14,7 +14,7 @@ impl OffscreenBuffer {
     pub fn create_empty_pixel_char(&self) -> PixelChar {
         PixelChar::PlainText {
             display_char: SPACER_GLYPH_CHAR,
-            style: self.ansi_parser_support.current_style,
+            style: self.parser_global_state.current_style,
         }
     }
 
@@ -308,15 +308,15 @@ impl OffscreenBuffer {
 
 #[cfg(test)]
 mod tests {
-    use crate::{OffscreenBuffer, PixelChar, TuiStyle, col, height, row, width};
+    use crate::{OfsBufVT100, PixelChar, TuiStyle, col, height, row, width};
 
-    fn create_test_buffer() -> OffscreenBuffer {
-        let mut buf = OffscreenBuffer::new_empty(height(3) + width(4));
+    fn create_test_buffer() -> OfsBufVT100 {
+        let mut buf = OfsBufVT100::new_empty(height(3) + width(4));
         let style = TuiStyle {
             id: None,
             ..Default::default()
         };
-        buf.ansi_parser_support.current_style = style;
+        buf.parser_global_state.current_style = style;
 
         let char_x = PixelChar::PlainText {
             display_char: 'x',

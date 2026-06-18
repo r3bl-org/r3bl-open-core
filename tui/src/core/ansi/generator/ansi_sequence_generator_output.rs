@@ -77,7 +77,7 @@ use crate::{ColIndex, ColorTarget, EraseDisplayMode, EraseLineMode, RowIndex,
 /// [`CsiSequence`]: crate::CsiSequence
 /// [`FastStringify`]: crate::fast_stringify::FastStringify
 /// [`SgrColorSequence`]: crate::SgrColorSequence
-/// [`vt_100_pty_output_parser`]: mod@crate::vt_100_pty_output_parser
+/// [`vt_100_pty_output_parser`]: mod@crate::core::ansi::vt_100_pty_output_parser
 #[derive(Debug)]
 pub struct AnsiSequenceGenerator;
 
@@ -207,7 +207,7 @@ mod color_ops {
         /// infrastructure
         ///
         /// [`SGR`]: crate::SgrCode
-        /// [`vt_100_pty_output_parser`]: mod@crate::vt_100_pty_output_parser
+        /// [`vt_100_pty_output_parser`]: mod@crate::core::ansi::vt_100_pty_output_parser
         #[must_use]
         pub fn text_attributes(style: &TuiStyle) -> String {
             // Build SGR sequence with all applicable attributes
@@ -288,17 +288,17 @@ mod cursor_save_restore {
     use super::*;
 
     impl AnsiSequenceGenerator {
-        /// Save cursor position
-        /// [`CSI`] s (DECSC: Save Cursor)
+        /// Save cursor position - [`CSI`] s (Save Cursor, i.e., [`DECSC`]).
         ///
         /// [`CSI`]: crate::CsiSequence
+        /// [`DECSC`]: https://vt100.net/docs/vt510-rm/DECSC.html
         #[must_use]
         pub fn save_cursor_position() -> String { CsiSequence::SaveCursor.to_string() }
 
-        /// Restore cursor position
-        /// [`CSI`] u (DECRC: Restore Cursor)
+        /// Restore cursor position - [`CSI`] u (Restore Cursor, i.e., [`DECRC`]).
         ///
         /// [`CSI`]: crate::CsiSequence
+        /// [`DECRC`]: https://vt100.net/docs/vt510-rm/DECRC.html
         #[must_use]
         pub fn restore_cursor_position() -> String {
             CsiSequence::RestoreCursor.to_string()

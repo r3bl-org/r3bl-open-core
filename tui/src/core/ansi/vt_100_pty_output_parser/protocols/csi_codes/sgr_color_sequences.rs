@@ -93,13 +93,13 @@
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 //! [`VTE`]: mod@vte
 
-use crate::{generate_impl_display_for_fast_stringify, ok};
 use crate::{AnsiValue, RgbValue, TuiColor,
             core::{ansi::constants::{CSI_START, CSI_SUB_PARAM_SEPARATOR,
                                      SGR_BG_EXTENDED, SGR_COLOR_MODE_256,
                                      SGR_COLOR_MODE_RGB, SGR_FG_EXTENDED,
                                      SGR_SET_GRAPHICS},
                    common::fast_stringify::{BufTextStorage, FastStringify}},
+            generate_impl_display_for_fast_stringify, ok,
             stack_alloc_types::usize_fmt::{convert_u16_to_string_slice, u16_to_u8_array}};
 use std::fmt::Result;
 

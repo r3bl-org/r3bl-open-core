@@ -2002,7 +2002,7 @@
 //! pty_mux (receives child process output)
 //!      │
 //!      ▼
-//! OffscreenBuffer::apply_ansi_bytes()
+//! OfsBufVT100::apply_ansi_bytes()
 //!      │
 //!      │ Uses VTE state machine
 //!      ▼
@@ -2018,7 +2018,7 @@
 //! ## In-memory terminal emulation
 //!
 //! [`OffscreenBuffer`] can function as a **standalone in-memory terminal emulator**. By
-//! calling [`OffscreenBuffer::apply_ansi_bytes()`], you can feed raw `VT-100` ANSI escape
+//! calling [`OfsBufVT100::apply_ansi_bytes()`], you can feed raw `VT-100` ANSI escape
 //! sequences directly into the buffer — no real terminal or PTY required:
 //!
 //! <!-- It is ok to use ignore here - demonstrates API usage with types not importable
@@ -2518,7 +2518,7 @@
 //! **Three-layer architecture** for maintainability:
 //! ```text
 //! Layer 1: SHIM           → Protocol delegation (vt_100_shim_char_ops)
-//! Layer 2: IMPLEMENTATION → Business logic (vt_100_impl_char_ops)
+//! Layer 2: IMPLEMENTATION → Business logic (impl_char_ops)
 //! Layer 3: TESTS          → Conformance validation (vt_100_test_char_ops)
 //! ```
 //!
@@ -2785,7 +2785,7 @@
 //! [CsiSequence]: crate::CsiSequence
 //! [EscSequence]: crate::EscSequence
 //! [SgrCode]: crate::SgrCode
-//! [`vt_100_pty_output_parser`]: mod@crate::vt_100_pty_output_parser
+//! [`vt_100_pty_output_parser`]: mod@crate::core::ansi::vt_100_pty_output_parser
 //! [RowIndex]: crate::RowIndex
 //! [ColIndex]: crate::ColIndex
 //! [ColWidth]: crate::ColWidth
@@ -2845,7 +2845,7 @@
 //! [`RawModeGuard`]: crate::RawModeGuard
 //! [`terminal_raw_mode`]: crate::terminal_raw_mode
 //! [`raw_mode_unix`]: crate::terminal_raw_mode::raw_mode_unix
-//! [`OffscreenBuffer::apply_ansi_bytes()`]: crate::OffscreenBuffer::apply_ansi_bytes
+//! [`OfsBufVT100::apply_ansi_bytes()`]: crate::OfsBufVT100::apply_ansi_bytes
 //! [`RRT`]: crate::RRT
 //! [`SubscriberGuard`]: crate::SubscriberGuard
 //! [`RRTWorker`]: crate::RRTWorker

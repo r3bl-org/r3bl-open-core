@@ -10,11 +10,11 @@ use crate::{core::osc::{OscEvent, osc_codes::OscSequence},
 
 #[test]
 fn test_osc_title_sequences() {
-    let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
+    let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
 
     // Test OSC 0 (set title and icon)
     let sequence1 = OscSequence::SetTitleAndIcon("Test Title".to_string()).to_string();
-    let (osc_events1, dsr_responses1) = ofs_buf.apply_ansi_bytes(sequence1);
+    let (osc_events1, dsr_responses1) = ofs_buf_vt_100.apply_ansi_bytes(sequence1);
 
     // Should get one OSC event.
     assert_eq!(osc_events1.len(), 1);
@@ -29,7 +29,7 @@ fn test_osc_title_sequences() {
 
     // Test OSC 2 (set title only)
     let sequence2 = OscSequence::SetTitle("Window Title".to_string()).to_string();
-    let (osc_events2, dsr_responses2) = ofs_buf.apply_ansi_bytes(sequence2);
+    let (osc_events2, dsr_responses2) = ofs_buf_vt_100.apply_ansi_bytes(sequence2);
 
     // Should get one new OSC event (not accumulated)
     assert_eq!(osc_events2.len(), 1);
@@ -45,7 +45,7 @@ fn test_osc_title_sequences() {
 
 #[test]
 fn test_osc_hyperlink() {
-    let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
+    let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
 
     // Test OSC 8 hyperlink.
     let hyperlink_start = OscSequence::HyperlinkStart {
@@ -54,7 +54,7 @@ fn test_osc_hyperlink() {
     };
     let hyperlink_end = OscSequence::HyperlinkEnd;
     let sequence = format!("{hyperlink_start}Link Text{hyperlink_end}");
-    let (osc_events, dsr_responses) = ofs_buf.apply_ansi_bytes(sequence);
+    let (osc_events, dsr_responses) = ofs_buf_vt_100.apply_ansi_bytes(sequence);
 
     // Should get two OSC events (start and end hyperlink)
     assert_eq!(osc_events.len(), 2);
@@ -68,10 +68,10 @@ fn test_osc_hyperlink() {
     }
 
     // Verify text was written.
-    assert_plain_text_at(&ofs_buf, 0, 0, "Link Text");
+    assert_plain_text_at(&ofs_buf_vt_100, 0, 0, "Link Text");
 
     // Verify events are drained on next call.
-    let (osc_events2, dsr_responses2) = ofs_buf.apply_ansi_bytes("more text");
+    let (osc_events2, dsr_responses2) = ofs_buf_vt_100.apply_ansi_bytes("more text");
     assert_eq!(osc_events2.len(), 0, "OSC events should be drained");
     assert_eq!(dsr_responses2.len(), 0, "DSR responses should be empty");
 }

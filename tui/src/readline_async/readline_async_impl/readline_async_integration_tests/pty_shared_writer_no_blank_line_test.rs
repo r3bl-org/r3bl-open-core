@@ -85,7 +85,7 @@
 //!   │  │                                                 │                  │  │
 //!   │  │                                                 ▼                  │  │
 //!   │  │                                         ┌────────────────┐         │  │
-//!   │  │                                         │ OffscreenBuffer│         │  │
+//!   │  │                                         │ OfsBufVT100    │         │  │
 //!   │  │                                         │ .apply_ansi    │         │  │
 //!   │  │                                         │ _bytes()       │         │  │
 //!   │  │                                         │                │         │  │
@@ -127,7 +127,7 @@
 //! └─────────────────────────────────────────────────────────────────────────────┘
 //! ```
 //!
-//! ## [`OffscreenBuffer::apply_ansi_bytes`]
+//! ## [`OfsBufVT100::apply_ansi_bytes`]
 //!
 //! Parses [`ANSI`] escape sequences and renders them to a virtual terminal buffer, giving
 //! us the **exact visual output** a user would see:
@@ -154,7 +154,7 @@
 //! │                     │                                                       │
 //! │                     ▼                                                       │
 //! │   ┌─────────────────────────────────────────────────────────────────────┐   │
-//! │   │ OffscreenBuffer (2D grid of PixelChars)                             │   │
+//! │   │ OfsBufVT100 (2D grid of PixelChars)                                 │   │
 //! │   │                                                                     │   │
 //! │   │   Col:  0   1   2   3   4                                           │   │
 //! │   │       ┌───┬───┬───┬───┬───┐                                         │   │
@@ -190,11 +190,15 @@
 //!
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`CHA(1)`]: crate::CsiSequence::CursorHorizontalAbsolute
-//! [`OffscreenBuffer::apply_ansi_bytes`]: crate::OffscreenBuffer::apply_ansi_bytes
+//! [`OfsBufVT100::apply_ansi_bytes`]: crate::OfsBufVT100::apply_ansi_bytes
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`SharedWriter`]: crate::SharedWriter
 
-use crate::{GLYPH_CONTROLLED, GLYPH_CONTROLLER, GLYPH_SUCCESS, GLYPH_WARNING, LineStateControlSignal, MSG_CONTROLLED_STARTING, MSG_TEST_RUNNING, OffscreenBuffer, PtyTestContext, PtyTestMode, SharedWriter, Size, generate_pty_test, height, ok, readline_async::readline_async_impl::LineState, width};
+use crate::{GLYPH_CONTROLLED, GLYPH_CONTROLLER, GLYPH_SUCCESS, GLYPH_WARNING,
+            LineStateControlSignal, MSG_CONTROLLED_STARTING, MSG_TEST_RUNNING,
+            OfsBufVT100, PtyTestContext, PtyTestMode, SharedWriter, Size,
+            generate_pty_test, height, ok,
+            readline_async::readline_async_impl::LineState, width};
 use std::io::Write;
 
 generate_pty_test! {
@@ -274,11 +278,11 @@ fn controller(context: PtyTestContext) {
 }
 
 /// Captures raw [`ANSI`] bytes for later processing with
-/// [`OffscreenBuffer::apply_ansi_bytes`].
+/// [`OfsBufVT100::apply_ansi_bytes`].
 ///
 /// This struct implements [`Write`] to collect terminal output bytes (including escape
 /// sequences) that would normally go to stdout. The captured bytes can then be fed to
-/// [`OffscreenBuffer::apply_ansi_bytes`] to render them in a virtual terminal buffer,
+/// [`OfsBufVT100::apply_ansi_bytes`] to render them in a virtual terminal buffer,
 /// allowing inspection of the exact visual output.
 ///
 /// # Example Flow
@@ -293,13 +297,13 @@ fn controller(context: PtyTestContext) {
 ///           │ take_bytes()
 ///           ▼
 /// ┌─────────────────────┐
-/// │ OffscreenBuffer     │  ← Renders to virtual 2D grid
+/// │ OfsBufVT100         │  ← Renders to virtual 2D grid
 /// │ .apply_ansi_bytes() │
 /// └─────────────────────┘
 /// ```
 ///
 /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-/// [`OffscreenBuffer::apply_ansi_bytes`]: crate::OffscreenBuffer::apply_ansi_bytes
+/// [`OfsBufVT100::apply_ansi_bytes`]: crate::OfsBufVT100::apply_ansi_bytes
 struct CaptureOutputBytes(Vec<u8>);
 
 impl CaptureOutputBytes {
@@ -315,10 +319,10 @@ impl Write for CaptureOutputBytes {
     fn flush(&mut self) -> std::io::Result<()> { ok!() }
 }
 
-/// Extracts text content from an [`OffscreenBuffer`] row for verification.
+/// Extracts text content from an [`OfsBufVT100`] row for verification.
 ///
-/// [`OffscreenBuffer`]: crate::OffscreenBuffer
-fn get_line_content(buf: &crate::OffscreenBuffer, row: usize, max_cols: usize) -> String {
+/// [`OfsBufVT100`]: crate::OfsBufVT100
+fn get_line_content(buf: &crate::OfsBufVT100, row: usize, max_cols: usize) -> String {
     buf.buffer[row]
         .iter()
         .take(max_cols)
@@ -332,13 +336,13 @@ fn get_line_content(buf: &crate::OffscreenBuffer, row: usize, max_cols: usize) -
 }
 
 /// [`PTY`] controlled process: simulates [`SharedWriter`] output and checks for blank
-/// lines before the prompt via [`OffscreenBuffer::apply_ansi_bytes`].
+/// lines before the prompt via [`OfsBufVT100::apply_ansi_bytes`].
 ///
 /// See the [module docs] for the full test architecture.
 ///
 /// The harness performs [`std::process::exit(0)`] after this function returns.
 ///
-/// [`OffscreenBuffer::apply_ansi_bytes`]: crate::OffscreenBuffer::apply_ansi_bytes
+/// [`OfsBufVT100::apply_ansi_bytes`]: crate::OfsBufVT100::apply_ansi_bytes
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 /// [`SharedWriter`]: crate::SharedWriter
 /// [module docs]: self
@@ -377,9 +381,9 @@ fn controlled() {
         }
     });
 
-    // Apply the captured ANSI bytes to an OffscreenBuffer to see the actual
+    // Apply the captured ANSI bytes to an OfsBufVT100 to see the actual
     // rendered output - this is what the user would see in the terminal.
-    let mut ofs_buf = OffscreenBuffer::new_empty(height(24) + width(80));
+    let mut ofs_buf = OfsBufVT100::new_empty(height(24) + width(80));
     let captured_bytes = capture_output_bytes.take_bytes();
     let _events = ofs_buf.apply_ansi_bytes(&captured_bytes);
 

@@ -6,16 +6,16 @@
 
 use super::super::test_fixtures_vt_100_ansi_conformance::*;
 use crate::{
-    ANSIBasicColor, EraseDisplayMode, EscSequence, OffscreenBuffer, SgrCode, height, width,
+    ANSIBasicColor, EraseDisplayMode, EscSequence, OfsBufVT100, SgrCode, height, width,
             offscreen_buffer::test_fixtures_ofs_buf::*,
             term_col, term_row, tui_style_attrib};
 use crate::core::ansi::vt_100_pty_output_parser::{ansi_parser_public_api::AnsiToOfsBufPerformer,
                                             CsiSequence,
                                             vt_100_pty_output_conformance_tests::test_sequence_generators::csi_builders::csi_seq_cursor_pos};
 
-/// Creates a test `OffscreenBuffer` with 24x80 dimensions (more realistic terminal size).
-fn create_offscreen_buffer_24r_by_80c() -> OffscreenBuffer {
-    OffscreenBuffer::new_empty(height(24) + width(80))
+/// Creates a test [`OfsBufVT100`] with 24x80 dimensions (more realistic terminal size).
+fn create_offscreen_buffer_24r_by_80c() -> OfsBufVT100 {
+    OfsBufVT100::new_empty(height(24) + width(80))
 }
 
 /// Tests for complex real-world [`ANSI`] sequences.
@@ -27,9 +27,9 @@ mod full_sequences {
     #[test]
     #[allow(clippy::items_after_statements)]
     fn test_vim_like_sequence() {
-        let mut ofs_buf = create_offscreen_buffer_24r_by_80c();
+        let mut ofs_buf_vt_100 = create_offscreen_buffer_24r_by_80c();
 
-        let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf);
+        let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf_vt_100);
 
         // Simulate a vim-like sequence using proper builders.
         let sequence = format!(
@@ -51,7 +51,7 @@ mod full_sequences {
         // Verify the sequence worked correctly.
         // Status line should be at top with reverse video.
         assert_styled_char_at(
-            &ofs_buf,
+            &ofs_buf_vt_100,
             0,
             0,
             '-',
@@ -60,17 +60,17 @@ mod full_sequences {
         );
 
         // Command prompt should be at bottom.
-        assert_plain_char_at(&ofs_buf, 23, 0, ':');
+        assert_plain_char_at(&ofs_buf_vt_100, 23, 0, ':');
 
         // Content should be restored at saved position.
-        assert_plain_text_at(&ofs_buf, 0, 12, "Hello World!");
+        assert_plain_text_at(&ofs_buf_vt_100, 0, 12, "Hello World!");
     }
 
     #[test]
     fn test_complex_ansi_sequences() {
-        let mut ofs_buf = create_offscreen_buffer_24r_by_80c();
+        let mut ofs_buf_vt_100 = create_offscreen_buffer_24r_by_80c();
 
-        let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf);
+        let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf_vt_100);
 
         // Simulate: Bold text, colored text, cursor movement
         let sequence = format!(
@@ -85,7 +85,7 @@ mod full_sequences {
         // Verify "Bold" with bold style.
         for (i, ch) in "Bold".chars().enumerate() {
             assert_styled_char_at(
-                &ofs_buf,
+                &ofs_buf_vt_100,
                 0,
                 i,
                 ch,
@@ -95,12 +95,12 @@ mod full_sequences {
         }
 
         // Verify space at position 4.
-        assert_plain_char_at(&ofs_buf, 0, 4, ' ');
+        assert_plain_char_at(&ofs_buf_vt_100, 0, 4, ' ');
 
         // Verify "Green" with green color.
         for (i, ch) in "Green".chars().enumerate() {
             assert_styled_char_at(
-                &ofs_buf,
+                &ofs_buf_vt_100,
                 0,
                 5 + i,
                 ch,
@@ -119,10 +119,10 @@ mod vte_parser {
 
     #[test]
     fn test_vte_parser_integration() {
-        let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
 
         // Process ANSI sequences through VTE parser.
-        let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf);
+        let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf_vt_100);
 
         // Print "Hello" with red foreground.
         let input = format!(
@@ -133,14 +133,14 @@ mod vte_parser {
         performer.apply_ansi_bytes(&input);
 
         // Verify cursor position after processing.
-        assert_eq!(performer.ofs_buf.cursor_pos.col_index.as_usize(), 6);
+        assert_eq!(performer.ofs_buf_vt_100.cursor_pos.col_index.as_usize(), 6);
 
         // Verify "Hello" is in the buffer.
-        assert_plain_text_at(&ofs_buf, 0, 0, "Hello");
+        assert_plain_text_at(&ofs_buf_vt_100, 0, 0, "Hello");
 
         // Verify 'R' has red color.
         assert_styled_char_at(
-            &ofs_buf,
+            &ofs_buf_vt_100,
             0,
             5,
             'R',
@@ -152,7 +152,7 @@ mod vte_parser {
 
         // Verify rest of line is empty.
         for col in 6..10 {
-            assert_empty_at(&ofs_buf, 0, col);
+            assert_empty_at(&ofs_buf_vt_100, 0, col);
         }
     }
 }

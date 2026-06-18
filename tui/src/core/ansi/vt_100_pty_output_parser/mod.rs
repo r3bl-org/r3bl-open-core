@@ -3,14 +3,14 @@
 //! [`ANSI`]/[`VT-100`] sequence parsing for terminal emulation
 //!
 //! This module provides a comprehensive [`VT-100`]-compliant [`ANSI`] escape sequence
-//! parser that processes terminal output and converts it into structured operations.
+//! parser that processes terminal output and converts it into structured ops.
 //!
 //! ## Architecture
 //!
 //! - **[`performer`]**: [`VTE`] [`Perform`] trait implementation - handles state
 //!   transitions
 //! - **[`protocols`]**: [`ANSI`] sequence types and constants
-//! - **[`operations`]**: Protocol handlers that translate sequences into operations
+//! - **[`ops`]**: Protocol handlers that translate sequences into ops
 //! - **[`vt_100_pty_output_conformance_tests`]**: Comprehensive [`VT-100`] conformance
 //!   tests
 //!
@@ -22,7 +22,7 @@
 //!
 //! ## Primary Consumer
 //!
-//! This parser is primarily used by [`OffscreenBuffer::apply_ansi_bytes`], which
+//! This parser is primarily used by [`OfsBufVT100::apply_ansi_bytes`], which
 //! processes [`PTY`] output from child processes and updates the terminal display state.
 //!
 //! ```text
@@ -30,7 +30,7 @@
 //!    │
 //!    │ Receives bytes from child process (bash, vim, etc.)
 //!    ▼
-//! OffscreenBuffer::apply_ansi_bytes()
+//! OfsBufVT100::apply_ansi_bytes()
 //!    │
 //!    │ Delegates to this parser
 //!    ▼
@@ -44,7 +44,7 @@
 //! For terminal multiplexer architecture, see the [`pty_mux`] module.
 //!
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`OffscreenBuffer::apply_ansi_bytes`]: crate::OffscreenBuffer::apply_ansi_bytes
+//! [`OfsBufVT100::apply_ansi_bytes`]: crate::OfsBufVT100::apply_ansi_bytes
 //! [`Perform`]: vte::Perform
 //! [`pty_mux`]: mod@crate::core::pty_mux
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
@@ -52,14 +52,29 @@
 //! [`VTE`]: mod@vte
 
 pub mod ansi_parser_public_api;
-pub mod operations;
+pub mod ofs_buf_vt_100;
 pub mod performer;
 pub mod protocols;
+
+#[cfg(any(test, doc))]
+pub mod ops;
+#[cfg(not(any(test, doc)))]
+mod ops;
+
+
+
+#[cfg(any(test, doc))]
+pub mod ops_impl_ofs_buf;
+#[cfg(not(any(test, doc)))]
+mod ops_impl_ofs_buf;
+
+pub use ops_impl_ofs_buf::*;
 
 // `VT-100` conformance tests module
 pub mod vt_100_pty_output_conformance_tests;
 
 // Re-export public API
 pub use ansi_parser_public_api::*;
-pub use operations::*;
+pub use ofs_buf_vt_100::*;
+pub use ops::*;
 pub use protocols::*;

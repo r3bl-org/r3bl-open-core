@@ -28,7 +28,7 @@
 //!
 //! - A controlled process executes [`RenderOpOutput`] via the specific backend
 //! - [`ANSI`] output is captured and written to stdout ([`PTY`] controlled side)
-//! - The main test applies both outputs to [`OffscreenBuffer`] and compares
+//! - The main test applies both outputs to [`OfsBufVT100`] and compares
 //!
 //! # Platform Support
 //!
@@ -36,19 +36,19 @@
 //! both [`DirectToAnsiInputDevice`] and the `DirectToAnsi` output backend, which are
 //! only available on Linux.
 //!
-//! | Test                                   | Linux   | macOS   | Windows   |
-//! | :------------------------------------- | :------ | :------ | :-------- |
-//! | [`test_pty_backend_direct_to_ansi`]    | ✅      | ❌      | ❌        |
-//! | [`test_pty_backend_crossterm`]         | ✅      | ❌      | ❌        |
-//! | [`test_backend_compat_input_compare`]  | ✅      | ❌      | ❌        |
-//! | [`test_backend_compat_output_compare`] | ✅      | ❌      | ❌        |
+//! | Test                                   | Linux | macOS | Windows |
+//! | :------------------------------------- | :---- | :---- | :------ |
+//! | [`test_pty_backend_direct_to_ansi`]    | ✅    | ❌    | ❌      |
+//! | [`test_pty_backend_crossterm`]         | ✅    | ❌    | ❌      |
+//! | [`test_backend_compat_input_compare`]  | ✅    | ❌    | ❌      |
+//! | [`test_backend_compat_output_compare`] | ✅    | ❌    | ❌      |
 //!
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`CrosstermInputDevice`]: crate::CrosstermInputDevice
 //! [`DirectToAnsiInputDevice`]: crate::direct_to_ansi::DirectToAnsiInputDevice
 //! [`InputDevice`]: crate::InputDevice
 //! [`InputEvent`]: crate::InputEvent
-//! [`OffscreenBuffer`]: crate::OffscreenBuffer
+//! [`OfsBufVT100`]: crate::OfsBufVT100
 //! [`PaintRenderOpImplCrossterm`]: crate::crossterm_backend::PaintRenderOpImplCrossterm
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`RenderOpOutput`]: crate::RenderOpOutput

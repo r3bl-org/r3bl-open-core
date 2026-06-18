@@ -1,10 +1,10 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! [`ANSI`] character set selection operations for `OffscreenBuffer`.
+//! [`ANSI`] character set selection operations for `OfsBufVT100`.
 //!
 //! This module provides methods for selecting different character sets
 //! as required by [`ANSI`] terminal emulation standards, particularly for
-//! [`ESC`] ( B ([`ASCII`]) and [`ESC`] ( 0 ([`DEC`] Special Graphics) sequences.
+//! `ESC ( B` ([`ASCII`]) and `ESC ( 0` ([`DEC`] Special Graphics) sequences.
 //!
 //! This module implements the business logic for terminal operations delegated from
 //! the parser shim. The `impl_` prefix follows our naming convention for searchable
@@ -21,10 +21,10 @@
 #[allow(clippy::wildcard_imports)]
 use super::super::*;
 
-impl OffscreenBuffer {
+impl OfsBufVT100 {
     /// Select [`ASCII`] character set for normal text rendering.
     ///
-    /// Used by [`ESC`] ( B sequence to switch to normal [`ASCII`] character set.
+    /// Used by `ESC ( B` sequence to switch to normal [`ASCII`] character set.
     /// This is the default character set for most text operations.
     ///
     /// # Example
@@ -37,12 +37,12 @@ impl OffscreenBuffer {
     /// [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
     /// [`ESC`]: crate::EscSequence
     pub fn select_ascii_character_set(&mut self) {
-        self.ansi_parser_support.character_set = CharacterSet::Ascii;
+        self.parser_global_state.character_set = CharacterSet::Ascii;
     }
 
     /// Select [`DEC`] Special Graphics character set for box-drawing characters.
     ///
-    /// Used by [`ESC`] ( 0 sequence to switch to [`DEC`] Special Graphics character set.
+    /// Used by `ESC ( 0` sequence to switch to [`DEC`] Special Graphics character set.
     /// This enables rendering of box-drawing and line-drawing characters commonly
     /// used for terminal-based user interfaces.
     ///
@@ -56,11 +56,11 @@ impl OffscreenBuffer {
     /// [`DEC`]: https://en.wikipedia.org/wiki/Digital_Equipment_Corporation
     /// [`ESC`]: crate::EscSequence
     pub fn select_dec_graphics_character_set(&mut self) {
-        self.ansi_parser_support.character_set = CharacterSet::DECGraphics;
+        self.parser_global_state.character_set = CharacterSet::DECGraphics;
     }
 
     /// Translate [`DEC`] Special Graphics characters to Unicode box-drawing characters.
-    /// Used when `character_set` is [`DECGraphics`] (after [`ESC`] ( 0).
+    /// Used when `character_set` is [`DECGraphics`] (after `ESC ( 0`).
     ///
     /// [`DEC`]: https://en.wikipedia.org/wiki/Digital_Equipment_Corporation
     /// [`DECGraphics`]: crate::CharacterSet::DECGraphics
@@ -87,11 +87,11 @@ impl OffscreenBuffer {
 #[cfg(test)]
 mod tests_char_set_ops {
     use super::*;
-    use crate::{height, width};
+    use crate::{OfsBufVT100, height, width};
 
-    fn create_test_buffer() -> OffscreenBuffer {
+    fn create_test_buffer() -> OfsBufVT100 {
         let size = width(10) + height(6);
-        OffscreenBuffer::new_empty(size)
+        OfsBufVT100::new_empty(size)
     }
 
     #[test]
@@ -99,12 +99,12 @@ mod tests_char_set_ops {
         let mut buffer = create_test_buffer();
 
         // Start with DEC graphics character set.
-        buffer.ansi_parser_support.character_set = CharacterSet::DECGraphics;
+        buffer.parser_global_state.character_set = CharacterSet::DECGraphics;
 
         buffer.select_ascii_character_set();
 
         assert_eq!(
-            buffer.ansi_parser_support.character_set,
+            buffer.parser_global_state.character_set,
             CharacterSet::Ascii
         );
     }
@@ -114,12 +114,12 @@ mod tests_char_set_ops {
         let mut buffer = create_test_buffer();
 
         // Start with ASCII character set (default).
-        buffer.ansi_parser_support.character_set = CharacterSet::Ascii;
+        buffer.parser_global_state.character_set = CharacterSet::Ascii;
 
         buffer.select_dec_graphics_character_set();
 
         assert_eq!(
-            buffer.ansi_parser_support.character_set,
+            buffer.parser_global_state.character_set,
             CharacterSet::DECGraphics
         );
     }
@@ -127,37 +127,37 @@ mod tests_char_set_ops {
     #[test]
     fn test_translate_dec_graphics_corners() {
         // Test corner characters.
-        assert_eq!(OffscreenBuffer::translate_dec_graphics('j'), '┘'); // Lower right
-        assert_eq!(OffscreenBuffer::translate_dec_graphics('k'), '┐'); // Upper right
-        assert_eq!(OffscreenBuffer::translate_dec_graphics('l'), '┌'); // Upper left
-        assert_eq!(OffscreenBuffer::translate_dec_graphics('m'), '└'); // Lower left
+        assert_eq!(OfsBufVT100::translate_dec_graphics('j'), '┘'); // Lower right
+        assert_eq!(OfsBufVT100::translate_dec_graphics('k'), '┐'); // Upper right
+        assert_eq!(OfsBufVT100::translate_dec_graphics('l'), '┌'); // Upper left
+        assert_eq!(OfsBufVT100::translate_dec_graphics('m'), '└'); // Lower left
     }
 
     #[test]
     fn test_translate_dec_graphics_lines() {
         // Test line characters.
-        assert_eq!(OffscreenBuffer::translate_dec_graphics('q'), '─'); // Horizontal line
-        assert_eq!(OffscreenBuffer::translate_dec_graphics('x'), '│'); // Vertical line
-        assert_eq!(OffscreenBuffer::translate_dec_graphics('n'), '┼'); // Crossing lines
+        assert_eq!(OfsBufVT100::translate_dec_graphics('q'), '─'); // Horizontal line
+        assert_eq!(OfsBufVT100::translate_dec_graphics('x'), '│'); // Vertical line
+        assert_eq!(OfsBufVT100::translate_dec_graphics('n'), '┼'); // Crossing lines
     }
 
     #[test]
     fn test_translate_dec_graphics_tees() {
         // Test T-junction characters.
-        assert_eq!(OffscreenBuffer::translate_dec_graphics('t'), '├'); // Left "T"
-        assert_eq!(OffscreenBuffer::translate_dec_graphics('u'), '┤'); // Right "T"
-        assert_eq!(OffscreenBuffer::translate_dec_graphics('v'), '┴'); // Bottom "T"
-        assert_eq!(OffscreenBuffer::translate_dec_graphics('w'), '┬'); // Top "T"
+        assert_eq!(OfsBufVT100::translate_dec_graphics('t'), '├'); // Left "T"
+        assert_eq!(OfsBufVT100::translate_dec_graphics('u'), '┤'); // Right "T"
+        assert_eq!(OfsBufVT100::translate_dec_graphics('v'), '┴'); // Bottom "T"
+        assert_eq!(OfsBufVT100::translate_dec_graphics('w'), '┬'); // Top "T"
     }
 
     #[test]
     fn test_translate_dec_graphics_unmapped_characters() {
         // Test that unmapped characters pass through unchanged.
-        assert_eq!(OffscreenBuffer::translate_dec_graphics('a'), 'a');
-        assert_eq!(OffscreenBuffer::translate_dec_graphics('Z'), 'Z');
-        assert_eq!(OffscreenBuffer::translate_dec_graphics('1'), '1');
-        assert_eq!(OffscreenBuffer::translate_dec_graphics('@'), '@');
-        assert_eq!(OffscreenBuffer::translate_dec_graphics(' '), ' ');
+        assert_eq!(OfsBufVT100::translate_dec_graphics('a'), 'a');
+        assert_eq!(OfsBufVT100::translate_dec_graphics('Z'), 'Z');
+        assert_eq!(OfsBufVT100::translate_dec_graphics('1'), '1');
+        assert_eq!(OfsBufVT100::translate_dec_graphics('@'), '@');
+        assert_eq!(OfsBufVT100::translate_dec_graphics(' '), ' ');
     }
 
     #[test]
@@ -179,7 +179,7 @@ mod tests_char_set_ops {
 
         for (input, expected) in mappings {
             assert_eq!(
-                OffscreenBuffer::translate_dec_graphics(input),
+                OfsBufVT100::translate_dec_graphics(input),
                 expected,
                 "Translation failed for character '{input}'"
             );
@@ -192,21 +192,21 @@ mod tests_char_set_ops {
 
         // Verify initial state is ASCII (default).
         assert_eq!(
-            buffer.ansi_parser_support.character_set,
+            buffer.parser_global_state.character_set,
             CharacterSet::Ascii
         );
 
         // Switch to DEC graphics and verify persistence.
         buffer.select_dec_graphics_character_set();
         assert_eq!(
-            buffer.ansi_parser_support.character_set,
+            buffer.parser_global_state.character_set,
             CharacterSet::DECGraphics
         );
 
         // Switch back to ASCII and verify persistence.
         buffer.select_ascii_character_set();
         assert_eq!(
-            buffer.ansi_parser_support.character_set,
+            buffer.parser_global_state.character_set,
             CharacterSet::Ascii
         );
     }
@@ -219,13 +219,13 @@ mod tests_char_set_ops {
         for _ in 0..3 {
             buffer.select_dec_graphics_character_set();
             assert_eq!(
-                buffer.ansi_parser_support.character_set,
+                buffer.parser_global_state.character_set,
                 CharacterSet::DECGraphics
             );
 
             buffer.select_ascii_character_set();
             assert_eq!(
-                buffer.ansi_parser_support.character_set,
+                buffer.parser_global_state.character_set,
                 CharacterSet::Ascii
             );
         }
@@ -241,7 +241,7 @@ mod tests_char_set_ops {
             box_chars.iter().zip(expected_unicode.iter())
         {
             assert_eq!(
-                OffscreenBuffer::translate_dec_graphics(*dec_char),
+                OfsBufVT100::translate_dec_graphics(*dec_char),
                 *expected_unicode_char,
                 "Failed to translate box drawing character '{dec_char}'"
             );

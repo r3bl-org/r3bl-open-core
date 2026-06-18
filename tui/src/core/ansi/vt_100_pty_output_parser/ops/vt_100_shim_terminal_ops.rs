@@ -3,11 +3,11 @@
 //! Terminal state operations for [`ESC`] sequences.
 //!
 //! This module acts as a thin shim layer that delegates to the actual implementation.
-//! Refer to the module-level documentation in the operations module for details on the
+//! Refer to the module-level documentation in the ops module for details on the
 //! "shim → impl → test" architecture and naming conventions.
 //!
 //! **Related Files:**
-//! - **Implementation**: [`impl_terminal_ops`] - Business logic with unit tests
+//! - **Implementation**: [`vt_100_impl_terminal_ops`] - Business logic with unit tests
 //! - **Integration Tests**: [`test_terminal_ops`] - Full pipeline testing via public API
 //!
 //! # Testing Strategy
@@ -20,7 +20,7 @@
 //! - **Integration tests** in the conformance tests validating the full pipeline
 //!
 //! For the complete testing philosophy and rationale behind this approach,
-//! see the [operations module].
+//! see the [ops module].
 //!
 //! # Architecture Overview
 //!
@@ -51,25 +51,27 @@
 //! [`cursor_ops`] functions to maintain consistency with `CSI` equivalents (`CSI s`/`CSI
 //! u`).
 //!
-//! [`cursor_ops`]: crate::vt_100_pty_output_parser::operations::vt_100_shim_cursor_ops
+//! [`cursor_ops`]: crate::core::ansi::vt_100_pty_output_parser::ops::vt_100_shim_cursor_ops
 //! [`ESC`]: crate::EscSequence
-//! [`impl_terminal_ops`]: crate::vt_100_ansi_impl::vt_100_impl_terminal_ops
 //! [`test_terminal_ops`]: crate::vt_100_pty_output_conformance_tests::tests::vt_100_test_terminal_ops
+//! [`vt_100_impl_terminal_ops`]: crate::core::ansi::vt_100_pty_output_parser::ops_impl_ofs_buf::vt_100_impl_terminal_ops
 //! [module-level Architecture Overview]: super#architecture-overview
 //! [module-level documentation]: self
-//! [operations module]: crate::core::ansi::vt_100_pty_output_parser::operations
+//! [ops module]: crate::core::ansi::vt_100_pty_output_parser::ops
 
 use super::super::ansi_parser_public_api::AnsiToOfsBufPerformer;
 use crate::{Pos, TuiStyle};
 
 /// Clears all buffer content.
-fn clear_buffer(performer: &mut AnsiToOfsBufPerformer) { performer.ofs_buf.clear(); }
+fn clear_buffer(performer: &mut AnsiToOfsBufPerformer) {
+    performer.ofs_buf_vt_100.clear();
+}
 
 /// Reset all [`SGR`] attributes to default state.
 ///
 /// [`SGR`]: crate::SgrCode
 fn reset_sgr_attributes(performer: &mut AnsiToOfsBufPerformer) {
-    performer.ofs_buf.ansi_parser_support.current_style = TuiStyle::default();
+    performer.ofs_buf_vt_100.parser_global_state.current_style = TuiStyle::default();
 }
 
 /// Reset terminal to initial state (`ESC c`).
@@ -81,20 +83,26 @@ pub fn reset_terminal(performer: &mut AnsiToOfsBufPerformer) {
     clear_buffer(performer);
 
     // Reset cursor to home position.
-    performer.ofs_buf.cursor_pos = Pos::default();
+    performer.ofs_buf_vt_100.cursor_pos = Pos::default();
 
     // Clear saved cursor state.
     performer
-        .ofs_buf
-        .ansi_parser_support
+        .ofs_buf_vt_100
+        .parser_global_state
         .cursor_pos_for_esc_save_and_restore = None;
 
     // Reset to ASCII character set.
     select_ascii_character_set(performer);
 
     // Clear DECSTBM scroll region margins.
-    performer.ofs_buf.ansi_parser_support.scroll_region_top = None;
-    performer.ofs_buf.ansi_parser_support.scroll_region_bottom = None;
+    performer
+        .ofs_buf_vt_100
+        .parser_global_state
+        .scroll_region_top = None;
+    performer
+        .ofs_buf_vt_100
+        .parser_global_state
+        .scroll_region_bottom = None;
 
     // Clear any `SGR` attributes.
     reset_sgr_attributes(performer);
@@ -105,7 +113,7 @@ pub fn reset_terminal(performer: &mut AnsiToOfsBufPerformer) {
 ///
 /// [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
 pub fn select_ascii_character_set(performer: &mut AnsiToOfsBufPerformer) {
-    performer.ofs_buf.select_ascii_character_set();
+    performer.ofs_buf_vt_100.select_ascii_character_set();
 }
 
 /// Select [`DEC`] Special Graphics character set (`ESC ( 0`).
@@ -113,5 +121,5 @@ pub fn select_ascii_character_set(performer: &mut AnsiToOfsBufPerformer) {
 ///
 /// [`DEC`]: https://en.wikipedia.org/wiki/Digital_Equipment_Corporation
 pub fn select_dec_graphics_character_set(performer: &mut AnsiToOfsBufPerformer) {
-    performer.ofs_buf.select_dec_graphics_character_set();
+    performer.ofs_buf_vt_100.select_dec_graphics_character_set();
 }

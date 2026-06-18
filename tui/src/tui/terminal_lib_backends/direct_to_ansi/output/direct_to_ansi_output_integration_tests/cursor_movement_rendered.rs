@@ -1,6 +1,6 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Behavioral tests for cursor movement operations via [`OffscreenBuffer`] rendering.
+//! Behavioral tests for cursor movement operations via [`OfsBufVT100`] rendering.
 //!
 //! These tests complement the byte-level tests in [`cursor_movement`] by verifying
 //! that cursor positioning produces the correct **visual result** when [`ANSI`] sequences
@@ -14,7 +14,7 @@
 //!
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`cursor_movement`]: super::cursor_movement
-//! [`OffscreenBuffer`]: crate::OffscreenBuffer
+//! [`OfsBufVT100`]: crate::OfsBufVT100
 
 use super::test_helpers_rendered::*;
 use crate::{col, offscreen_buffer::test_fixtures_ofs_buf::*, pos,

@@ -3,11 +3,11 @@
 //! Style/Graphics Rendition operations.
 //!
 //! This module acts as a thin shim layer that delegates to the actual implementation.
-//! Refer to the module-level documentation in the operations module for details on the
+//! Refer to the module-level documentation in the ops module for details on the
 //! "shim → impl → test" architecture and naming conventions.
 //!
 //! **Related Files:**
-//! - **Implementation**: [`impl_sgr_ops`] - Business logic with unit tests
+//! - **Implementation**: [`vt_100_impl_sgr_ops`] - Business logic with unit tests
 //! - **Integration Tests**: [`test_sgr_ops`] - Full pipeline testing via public API
 //!
 //! # Testing Strategy
@@ -20,7 +20,7 @@
 //! - **Integration tests** in the conformance tests validating the full pipeline
 //!
 //! For the complete testing philosophy and rationale behind this approach,
-//! see the [operations module].
+//! see the [ops module].
 //!
 //! # Architecture Overview
 //!
@@ -39,22 +39,22 @@
 //!         ↓
 //!     csi_dispatch() [routes to modules below]
 //!         ↓
-//!     Route to operations module:
+//!     Route to ops module:
 //!       - cursor_ops:: for movement (A,B,C,D,H)
-//!       - scroll_ops:: for scrolling (S,T) ╭───────────╮
-//!       - sgr_ops:: for styling (m) <----- │THIS MODULE│
-//!       - line_ops:: for lines (L,M)       ╰───────────╯
+//!       - scroll_ops:: for scrolling (S,T)                     ╭───────────╮
+//!       - sgr_ops:: for styling (m)                         <- │THIS MODULE│
+//!       - line_ops:: for lines (L,M)                           ╰───────────╯
 //!       - char_ops:: for chars (@,P,X)
 //!         ↓
 //!     Update OffscreenBuffer state
 //! ```
 //!
 //! [`CSI`]: crate::CsiSequence
-//! [`impl_sgr_ops`]: crate::vt_100_ansi_impl::vt_100_impl_sgr_ops
 //! [`test_sgr_ops`]: crate::vt_100_pty_output_conformance_tests::tests::vt_100_test_sgr_ops
+//! [`vt_100_impl_sgr_ops`]: crate::core::ansi::vt_100_pty_output_parser::ops_impl_ofs_buf::vt_100_impl_sgr_ops
 //! [module-level Architecture Overview]: super#architecture-overview
 //! [module-level documentation]: self
-//! [operations module]: crate::core::ansi::vt_100_pty_output_parser::operations
+//! [ops module]: crate::core::ansi::vt_100_pty_output_parser::ops
 
 use super::super::{AnsiToOfsBufPerformer, ParamsExt};
 use crate::{SgrColorSequence,
@@ -81,105 +81,105 @@ use vte::Params;
 fn apply_sgr_param(performer: &mut AnsiToOfsBufPerformer, param: u16) {
     match param {
         SGR_RESET => {
-            performer.ofs_buf.reset_all_style_attributes();
+            performer.ofs_buf_vt_100.reset_all_style_attributes();
         }
         SGR_BOLD => {
             performer
-                .ofs_buf
+                .ofs_buf_vt_100
                 .apply_style_attribute(tui_style_attrib::Bold.into());
         }
         SGR_DIM => {
             performer
-                .ofs_buf
+                .ofs_buf_vt_100
                 .apply_style_attribute(tui_style_attrib::Dim.into());
         }
         SGR_ITALIC => {
             performer
-                .ofs_buf
+                .ofs_buf_vt_100
                 .apply_style_attribute(tui_style_attrib::Italic.into());
         }
         SGR_UNDERLINE => {
             performer
-                .ofs_buf
+                .ofs_buf_vt_100
                 .apply_style_attribute(tui_style_attrib::Underline.into());
         }
         SGR_BLINK => {
             performer
-                .ofs_buf
+                .ofs_buf_vt_100
                 .apply_style_attribute(tui_style_attrib::BlinkMode::Slow.into());
         }
         SGR_RAPID_BLINK => {
             performer
-                .ofs_buf
+                .ofs_buf_vt_100
                 .apply_style_attribute(tui_style_attrib::BlinkMode::Rapid.into());
         }
         SGR_REVERSE => {
             performer
-                .ofs_buf
+                .ofs_buf_vt_100
                 .apply_style_attribute(tui_style_attrib::Reverse.into());
         }
         SGR_HIDDEN => {
             performer
-                .ofs_buf
+                .ofs_buf_vt_100
                 .apply_style_attribute(tui_style_attrib::Hidden.into());
         }
         SGR_STRIKETHROUGH => {
             performer
-                .ofs_buf
+                .ofs_buf_vt_100
                 .apply_style_attribute(tui_style_attrib::Strikethrough.into());
         }
         SGR_RESET_BOLD_DIM => {
             performer
-                .ofs_buf
+                .ofs_buf_vt_100
                 .reset_style_attribute(tui_style_attrib::Bold.into());
         }
         SGR_RESET_ITALIC => {
             performer
-                .ofs_buf
+                .ofs_buf_vt_100
                 .reset_style_attribute(tui_style_attrib::Italic.into());
         }
         SGR_RESET_UNDERLINE => {
             performer
-                .ofs_buf
+                .ofs_buf_vt_100
                 .reset_style_attribute(tui_style_attrib::Underline.into());
         }
         SGR_RESET_BLINK => {
             performer
-                .ofs_buf
+                .ofs_buf_vt_100
                 .reset_style_attribute(tui_style_attrib::BlinkMode::Slow.into());
         }
         SGR_RESET_REVERSE => {
             performer
-                .ofs_buf
+                .ofs_buf_vt_100
                 .reset_style_attribute(tui_style_attrib::Reverse.into());
         }
         SGR_RESET_HIDDEN => {
             performer
-                .ofs_buf
+                .ofs_buf_vt_100
                 .reset_style_attribute(tui_style_attrib::Hidden.into());
         }
         SGR_RESET_STRIKETHROUGH => {
             performer
-                .ofs_buf
+                .ofs_buf_vt_100
                 .reset_style_attribute(tui_style_attrib::Strikethrough.into());
         }
         SGR_FG_BLACK..=SGR_FG_WHITE => {
-            performer.ofs_buf.set_foreground_color(param);
+            performer.ofs_buf_vt_100.set_foreground_color(param);
         }
         SGR_FG_DEFAULT => {
-            performer.ofs_buf.reset_foreground_color();
+            performer.ofs_buf_vt_100.reset_foreground_color();
         }
         SGR_BG_BLACK..=SGR_BG_WHITE => {
-            performer.ofs_buf.set_background_color(param);
+            performer.ofs_buf_vt_100.set_background_color(param);
         }
         SGR_BG_DEFAULT => {
-            performer.ofs_buf.reset_background_color();
+            performer.ofs_buf_vt_100.reset_background_color();
         }
         SGR_FG_BRIGHT_BLACK..=SGR_FG_BRIGHT_WHITE => {
-            performer.ofs_buf.set_foreground_color(param);
+            performer.ofs_buf_vt_100.set_foreground_color(param);
         }
         SGR_BG_BRIGHT_BLACK..=SGR_BG_BRIGHT_WHITE => {
-            performer.ofs_buf.set_background_color(param);
+            performer.ofs_buf_vt_100.set_background_color(param);
         }
         _ => {
             // Ignore other unsupported SGR parameters:
@@ -221,7 +221,9 @@ pub fn set_graphics_rendition(performer: &mut AnsiToOfsBufPerformer, params: &Pa
     while let Some(param_slice) = params.extract_nth_many_raw(idx) {
         // Case 1: Colon-separated format (already grouped by VTE as a single slice).
         if let Some(color_seq) = SgrColorSequence::parse_from_raw_slice(param_slice) {
-            performer.ofs_buf.apply_extended_color_sequence(color_seq);
+            performer
+                .ofs_buf_vt_100
+                .apply_extended_color_sequence(color_seq);
             idx += 1;
             continue;
         }
@@ -284,7 +286,9 @@ fn try_parse_semicolon_extended_color(
             } else {
                 SgrColorSequence::SetBackgroundAnsi256(index as u8)
             };
-            performer.ofs_buf.apply_extended_color_sequence(color_seq);
+            performer
+                .ofs_buf_vt_100
+                .apply_extended_color_sequence(color_seq);
             Some(3) // Consumed: [38/48], [5], [index]
         }
         SGR_COLOR_MODE_RGB => {
@@ -301,7 +305,9 @@ fn try_parse_semicolon_extended_color(
             } else {
                 SgrColorSequence::SetBackgroundRgb(r as u8, g as u8, b as u8)
             };
-            performer.ofs_buf.apply_extended_color_sequence(color_seq);
+            performer
+                .ofs_buf_vt_100
+                .apply_extended_color_sequence(color_seq);
             Some(5) // Consumed: [38/48], [2], [r], [g], [b]
         }
         _ => None, // Unknown mode, not an extended color.

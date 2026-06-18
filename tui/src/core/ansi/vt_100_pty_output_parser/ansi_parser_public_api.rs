@@ -15,12 +15,12 @@
 //! use r3bl_tui::{*, height, width};
 //!
 //! // Entry point: Process ANSI sequences from PTY output
-//! let mut buffer = OffscreenBuffer::new_empty(height(24) + width(80));
+//! let mut ofs_buf_vt_100 = OfsBufVT100::new_empty(height(24) + width(80));
 //! let pty_output = format!("{}Red text{}",
 //!     SgrCode::ForegroundBasic(ANSIBasicColor::Red),
 //!     SgrCode::Reset
 //! );
-//! let (osc_events, dsr_responses) = buffer.apply_ansi_bytes(pty_output);
+//! let (osc_events, dsr_responses) = ofs_buf_vt_100.apply_ansi_bytes(pty_output);
 //! // Buffer now contains styled text, events contain any OSC/DSR commands
 //! ```
 //!
@@ -121,7 +121,7 @@
 //! that don't need parameters.
 //!
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`apply_ansi_bytes`]: crate::OffscreenBuffer::apply_ansi_bytes
+//! [`apply_ansi_bytes`]: crate::OfsBufVT100::apply_ansi_bytes
 //! [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
 //! [`CSI`]: crate::CsiSequence
 //! [`DSR`]: crate::DsrSequence
@@ -132,15 +132,15 @@
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 //! [`vte`]: https://docs.rs/vte
 
-use crate::{DsrRequestFromPtyEvent, OffscreenBuffer, core::osc::OscEvent};
+use crate::{DsrRequestFromPtyEvent, OfsBufVT100, core::osc::OscEvent};
 use std::mem::take;
 
 /// Terminal state context for [`ANSI`] sequence processing.
 ///
-/// This performer is created by [`OffscreenBuffer::apply_ansi_bytes`] and passed to the
+/// This performer is created by [`OfsBufVT100::apply_ansi_bytes`] and passed to the
 /// [`VTE`] [`Parser`] implementation. It provides direct access to persistent terminal
-/// state stored in the buffer's [`OffscreenBuffer::ansi_parser_support`] field. All state
-/// is stored directly in the buffer and persisted between performer instances.
+/// state stored in the buffer's [`OfsBufVT100::parser_global_state`] field. All state is
+/// stored directly in the buffer and persisted between performer instances.
 ///
 /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 /// [`Parser`]: vte::Parser
@@ -149,19 +149,22 @@ use std::mem::take;
 pub struct AnsiToOfsBufPerformer<'a> {
     /// Target buffer receiving processed terminal output and storing all persistent
     /// terminal state. Characters are written at the current cursor position, and the
-    /// buffer's viewport and scrolling are managed automatically as content flows
-    /// beyond boundaries.
-    pub ofs_buf: &'a mut OffscreenBuffer,
+    /// buffer's viewport and scrolling are managed automatically as content flows beyond
+    /// boundaries.
+    pub ofs_buf_vt_100: &'a mut OfsBufVT100,
 }
 
 impl<'a> AnsiToOfsBufPerformer<'a> {
-    /// Creates a new performer for the given `ofs_buf`.
+    /// Creates a new performer for the given `ofs_buf_vt_100`.
     ///
     /// This creates a performer instance that provides direct access to persistent
-    /// terminal state stored in the buffer's `ansi_parser_support` field.
-    /// All terminal state is maintained in the buffer and persists between performer
-    /// instances.
-    pub fn new(ofs_buf: &'a mut OffscreenBuffer) -> Self { Self { ofs_buf } }
+    /// terminal state stored in the buffer's [`parser_global_state`] field. All terminal
+    /// state is maintained in the buffer and persists between performer instances.
+    ///
+    /// [`parser_global_state`]: OfsBufVT100::parser_global_state
+    pub fn new(ofs_buf_vt_100: &'a mut OfsBufVT100) -> Self {
+        Self { ofs_buf_vt_100 }
+    }
 
     /// Handles the core parsing loop where each byte is fed to the [`VTE parser`], which
     /// in turn calls methods on the performer (via the [`Perform`] trait).
@@ -178,11 +181,11 @@ impl<'a> AnsiToOfsBufPerformer<'a> {
 }
 
 /// Public API to process [`ANSI`]/[`VT-100`] sequences and apply them to an
-/// [`OffscreenBuffer`].
+/// [`OfsBufVT100`].
 ///
 /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
-impl OffscreenBuffer {
+impl OfsBufVT100 {
     /// Process & apply [`ANSI`]/[`VT-100`] sequences directly to this buffer.
     ///
     /// ## Data Flow:
@@ -218,13 +221,13 @@ impl OffscreenBuffer {
     /// # Example
     ///
     /// ```
-    /// use r3bl_tui::{OffscreenBuffer, Size, height, width, SgrCode, ANSIBasicColor};
+    /// use r3bl_tui::{OfsBufVT100, Size, height, width, SgrCode, ANSIBasicColor};
     ///
-    /// let mut ofs_buf = OffscreenBuffer::new_empty(height(10) + width(10));
+    /// let mut ofs_buf_vt_100 = OfsBufVT100::new_empty(height(10) + width(10));
     /// let red_text = format!("Hello{a}Red Text{b}",
     ///     a = SgrCode::ForegroundBasic(ANSIBasicColor::DarkRed),
     ///     b = SgrCode::Reset);
-    /// let (osc_events, dsr_responses) = ofs_buf.apply_ansi_bytes(red_text);
+    /// let (osc_events, dsr_responses) = ofs_buf_vt_100.apply_ansi_bytes(red_text);
     /// ```
     ///
     /// # Processing details
@@ -235,17 +238,20 @@ impl OffscreenBuffer {
     /// - Style attributes (`bold`, `fg_color`, etc.) are [`SGR`] (Select Graphic
     ///   Rendition) attributes that apply to characters being written. These styles get
     ///   baked into the [`PixelChar`] objects in the buffer and stored in the buffer's
-    ///   `ansi_parser_support` field for persistence.
-    /// - Cursor position is read from and written directly to `buffer.my_pos` during
-    ///   processing - no copying or synchronization is needed.
+    ///   [`parser_global_state`] field for persistence.
+    /// - Cursor position is read from and written directly to the buffer's [`cursor_pos`]
+    ///   field during processing - no copying or synchronization is needed.
     /// - All persistent state lives in the [`OffscreenBuffer`], accessed directly by the
     ///   performer through mutable references.
     /// - The [`VTE Parser`] (which must maintain state across reads for split sequences)
     ///   is kept separately in the [`Process`] struct.
     ///
     /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+    /// [`cursor_pos`]: crate::OffscreenBuffer::cursor_pos
     /// [`DSR response events`]: crate::DsrRequestFromPtyEvent
+    /// [`OffscreenBuffer`]: crate::OffscreenBuffer
     /// [`OSC events`]: crate::core::osc::OscEvent
+    /// [`parser_global_state`]: OfsBufVT100::parser_global_state
     /// [`PixelChar`]: crate::PixelChar
     /// [`Process`]: crate::pty_mux::Process
     /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
@@ -261,10 +267,18 @@ impl OffscreenBuffer {
         performer.apply_ansi_bytes(bytes.as_ref());
 
         // Use std::mem::take to move events out and leave empty vectors.
-        let osc_events =
-            take(&mut performer.ofs_buf.ansi_parser_support.pending_osc_events);
-        let pending_dsr_requests =
-            take(&mut performer.ofs_buf.ansi_parser_support.pending_dsr_responses);
+        let osc_events = take(
+            &mut performer
+                .ofs_buf_vt_100
+                .parser_global_state
+                .pending_osc_events,
+        );
+        let pending_dsr_requests = take(
+            &mut performer
+                .ofs_buf_vt_100
+                .parser_global_state
+                .pending_dsr_responses,
+        );
 
         (osc_events, pending_dsr_requests)
     }
@@ -286,7 +300,7 @@ mod tests {
     #[test]
     #[allow(clippy::items_after_statements)]
     fn test_public_api_plain_text() {
-        let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
 
         const TEXT: &str = "Hello";
 
@@ -302,18 +316,18 @@ mod tests {
         //                               ╰─ cursor ends here
 
         // Test that the public API processes text correctly.
-        let (osc_events, dsr_responses) = ofs_buf.apply_ansi_bytes(TEXT);
+        let (osc_events, dsr_responses) = ofs_buf_vt_100.apply_ansi_bytes(TEXT);
 
         // Should not produce any OSC events for SGR sequences.
         assert_eq!(osc_events.len(), 0, "no OSC events expected");
         assert_eq!(dsr_responses.len(), 0, "no DSR responses expected");
 
         // Verify "Hello" is in the buffer.
-        assert_plain_text_at(&ofs_buf, 0, 0, TEXT);
+        assert_plain_text_at(&ofs_buf_vt_100, 0, 0, TEXT);
 
         // Verify cursor position is updated correctly.
         assert_eq!(
-            ofs_buf.cursor_pos,
+            ofs_buf_vt_100.cursor_pos,
             row(0) + col(TEXT.len()),
             "cursor should be at end of text"
         );
@@ -322,7 +336,7 @@ mod tests {
     #[test]
     #[allow(clippy::items_after_statements)]
     fn test_public_api_with_colors() {
-        let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
 
         const TEXT: &str = "Red Text";
 
@@ -341,7 +355,7 @@ mod tests {
         // Sequence: ESC[31m + "Red Text" + ESC[0m
 
         // Test processing with ANSI color codes.
-        let (osc_events, dsr_responses) = ofs_buf.apply_ansi_bytes(format!(
+        let (osc_events, dsr_responses) = ofs_buf_vt_100.apply_ansi_bytes(format!(
             "{red_fg}{text}{reset}",
             red_fg = SgrCode::ForegroundBasic(ANSIBasicColor::Red),
             text = TEXT,
@@ -355,7 +369,7 @@ mod tests {
         // Verify the text with proper styling.
         for (col, expected_char) in TEXT.chars().enumerate() {
             assert_styled_char_at(
-                &ofs_buf,
+                &ofs_buf_vt_100,
                 0,
                 col,
                 expected_char,
@@ -368,7 +382,7 @@ mod tests {
 
         // Verify cursor position is updated correctly.
         assert_eq!(
-            ofs_buf.cursor_pos,
+            ofs_buf_vt_100.cursor_pos,
             row(0) + col(TEXT.len()),
             "cursor should be at end of text"
         );
@@ -376,7 +390,7 @@ mod tests {
 
     #[test]
     fn test_public_api_cursor_movement() {
-        let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
 
         // Note: OffscreenBuffer uses 0-based index, and terminal (CSI, ESC seq, etc) uses
         // 1-based index.
@@ -397,7 +411,7 @@ mod tests {
         // 5. Write 'D' at (0,4) → cursor moves to (0,5)
 
         // Test cursor movement sequences.
-        let (osc_events, dsr_responses) = ofs_buf.apply_ansi_bytes(format!(
+        let (osc_events, dsr_responses) = ofs_buf_vt_100.apply_ansi_bytes(format!(
             "A{right_2}B{up_1}D",
             // SAFETY: 2 and 1 are non-zero
             right_2 = CsiSequence::CursorForward(term_col_delta(2).unwrap()),
@@ -410,25 +424,25 @@ mod tests {
 
         // Verify cursor position after all operations.
         assert_eq!(
-            ofs_buf.cursor_pos,
+            ofs_buf_vt_100.cursor_pos,
             row(0) + col(5),
             "cursor should be at (0,5) after writing 'D'"
         );
 
         // Verify characters at specific positions instead of continuous string.
-        assert_plain_char_at(&ofs_buf, 0, 0, 'A');
-        assert_empty_at(&ofs_buf, 0, 1); // Empty space
-        assert_empty_at(&ofs_buf, 0, 2); // Empty space
-        assert_plain_text_at(&ofs_buf, 0, 3, "BD");
+        assert_plain_char_at(&ofs_buf_vt_100, 0, 0, 'A');
+        assert_empty_at(&ofs_buf_vt_100, 0, 1); // Empty space
+        assert_empty_at(&ofs_buf_vt_100, 0, 2); // Empty space
+        assert_plain_text_at(&ofs_buf_vt_100, 0, 3, "BD");
     }
 
     #[test]
     fn test_osc_events_are_drained_not_accumulated() {
-        let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
 
         // First call with OSC sequence (set title).
         let osc_title = OscSequence::SetTitleAndIcon("First Title".into()).to_string();
-        let (osc_events, dsr_responses) = ofs_buf.apply_ansi_bytes(&osc_title);
+        let (osc_events, dsr_responses) = ofs_buf_vt_100.apply_ansi_bytes(&osc_title);
 
         assert_eq!(osc_events.len(), 1, "should get one OSC event");
         assert_eq!(dsr_responses.len(), 0, "no DSR responses expected");
@@ -442,7 +456,7 @@ mod tests {
 
         // Second call with another OSC sequence.
         let osc_title2 = OscSequence::SetTitleAndIcon("Second Title".into()).to_string();
-        let (osc_events2, dsr_responses2) = ofs_buf.apply_ansi_bytes(&osc_title2);
+        let (osc_events2, dsr_responses2) = ofs_buf_vt_100.apply_ansi_bytes(&osc_title2);
 
         assert_eq!(
             osc_events2.len(),
@@ -463,7 +477,7 @@ mod tests {
 
         // Third call with no OSC sequences.
         let plain_text = "Hello";
-        let (osc_events3, dsr_responses3) = ofs_buf.apply_ansi_bytes(plain_text);
+        let (osc_events3, dsr_responses3) = ofs_buf_vt_100.apply_ansi_bytes(plain_text);
 
         assert_eq!(
             osc_events3.len(),
@@ -475,11 +489,11 @@ mod tests {
 
     #[test]
     fn test_dsr_events_are_drained_in_public_api() {
-        let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
 
         // First DSR request (status report).
         let dsr_status = DSR_STATUS_REQUEST.to_string();
-        let (osc_events, dsr_responses) = ofs_buf.apply_ansi_bytes(&dsr_status);
+        let (osc_events, dsr_responses) = ofs_buf_vt_100.apply_ansi_bytes(&dsr_status);
 
         assert_eq!(osc_events.len(), 0, "no OSC events expected");
         assert_eq!(dsr_responses.len(), 1, "should get one DSR response");
@@ -487,7 +501,7 @@ mod tests {
 
         // Second call with cursor position request.
         let dsr_cursor = DSR_CURSOR_POSITION_REQUEST.to_string();
-        let (osc_events2, dsr_responses2) = ofs_buf.apply_ansi_bytes(&dsr_cursor);
+        let (osc_events2, dsr_responses2) = ofs_buf_vt_100.apply_ansi_bytes(&dsr_cursor);
 
         assert_eq!(osc_events2.len(), 0, "no OSC events expected");
         assert_eq!(
@@ -516,7 +530,7 @@ mod tests {
 
         // Third call with no DSR requests.
         let plain_text = "Test";
-        let (osc_events3, dsr_responses3) = ofs_buf.apply_ansi_bytes(plain_text);
+        let (osc_events3, dsr_responses3) = ofs_buf_vt_100.apply_ansi_bytes(plain_text);
 
         assert_eq!(osc_events3.len(), 0, "no OSC events expected");
         assert_eq!(
@@ -528,7 +542,7 @@ mod tests {
 
     #[test]
     fn test_mixed_osc_and_dsr_events() {
-        let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
 
         // Send a mix of OSC and DSR sequences in one call.
         let mixed_sequence = format!(
@@ -538,7 +552,8 @@ mod tests {
             crate::DSR_CURSOR_POSITION_REQUEST                  // DSR: Cursor position
         );
 
-        let (osc_events, dsr_responses) = ofs_buf.apply_ansi_bytes(&mixed_sequence);
+        let (osc_events, dsr_responses) =
+            ofs_buf_vt_100.apply_ansi_bytes(&mixed_sequence);
 
         // Should get exactly one OSC event.
         assert_eq!(osc_events.len(), 1, "should get one OSC event");
@@ -566,14 +581,14 @@ mod tests {
         }
 
         // Verify both are drained on next call.
-        let (osc_events2, dsr_responses2) = ofs_buf.apply_ansi_bytes("text");
+        let (osc_events2, dsr_responses2) = ofs_buf_vt_100.apply_ansi_bytes("text");
         assert_eq!(osc_events2.len(), 0, "OSC events should be drained");
         assert_eq!(dsr_responses2.len(), 0, "DSR responses should be drained");
     }
 
     #[test]
     fn test_multiple_osc_events_in_one_call() {
-        let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
 
         // Send multiple OSC sequences in one call.
         let multi_osc = format!(
@@ -583,7 +598,7 @@ mod tests {
             OscSequence::SetIcon("Icon Name".into())          // OSC 1
         );
 
-        let (osc_events, dsr_responses) = ofs_buf.apply_ansi_bytes(&multi_osc);
+        let (osc_events, dsr_responses) = ofs_buf_vt_100.apply_ansi_bytes(&multi_osc);
 
         assert_eq!(osc_events.len(), 3, "should get three OSC events");
         assert_eq!(dsr_responses.len(), 0, "no DSR responses expected");
@@ -597,7 +612,8 @@ mod tests {
         }
 
         // Next call should have empty events.
-        let (osc_events2, dsr_responses2) = ofs_buf.apply_ansi_bytes("normal text");
+        let (osc_events2, dsr_responses2) =
+            ofs_buf_vt_100.apply_ansi_bytes("normal text");
         assert_eq!(osc_events2.len(), 0, "OSC events should be drained");
         assert_eq!(dsr_responses2.len(), 0, "DSR responses should be drained");
     }
@@ -629,9 +645,9 @@ mod tests {
     /// [`OffscreenBuffer`]: crate::OffscreenBuffer
     #[test]
     fn test_public_api_csi_position_change() {
-        let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
 
-        let (osc_events, dsr_responses) = ofs_buf.apply_ansi_bytes(format!(
+        let (osc_events, dsr_responses) = ofs_buf_vt_100.apply_ansi_bytes(format!(
             "Start{move_to_r2_c3}Mid{move_to_r1_c1}Home{move_to_r8_c8}End",
             move_to_r2_c3 = csi_seq_cursor_pos(term_row(nz(2)) + term_col(nz(3))),
             move_to_r1_c1 = csi_seq_cursor_pos(term_row(nz(1)) + term_col(nz(1))),
@@ -642,13 +658,13 @@ mod tests {
         assert_eq!(dsr_responses.len(), 0, "no DSR responses expected");
 
         // Verify layout matches diagram.
-        assert_plain_text_at(&ofs_buf, 0, 0, "Homet");
-        assert_plain_text_at(&ofs_buf, 1, 2, "Mid");
-        assert_plain_text_at(&ofs_buf, 7, 7, "End");
+        assert_plain_text_at(&ofs_buf_vt_100, 0, 0, "Homet");
+        assert_plain_text_at(&ofs_buf_vt_100, 1, 2, "Mid");
+        assert_plain_text_at(&ofs_buf_vt_100, 7, 7, "End");
 
         // Cursor wraps from (7,10) to (8,0).
         assert_eq!(
-            ofs_buf.cursor_pos,
+            ofs_buf_vt_100.cursor_pos,
             row(8) + col(0),
             "cursor should be at (8,0) wrapping after 'End'"
         );
