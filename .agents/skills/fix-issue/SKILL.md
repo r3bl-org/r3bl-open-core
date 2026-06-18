@@ -1,5 +1,5 @@
 ---
-name: issue-fix
+name: fix-issue
 description:
   Guidelines for deeply exploring the problem space first and designing the best solution
   before implementing.
@@ -41,9 +41,10 @@ Before proposing any changes or writing a task file, gather context on the probl
 
 ### Step 2: Design Doc (Task File Creation)
 
-Create the task file under `task/issue-<id>-fix.md` or `task/<name>.md`. Instead of a
-simple todo list, format this task file as a **Design Document** with the following
-sections:
+Create the task file under `task/issue-<id>-fix.md` or `task/<name>.md`. 
+Create a new git branch for this task, push it, and open a Draft PR using `gh pr create --draft --fill` to track the work.
+
+Instead of a simple todo list, format this task file as a **Design Document** with the following sections:
 
 #### 1. Overview
 
@@ -96,3 +97,8 @@ Only after the design doc is approved, load the task and begin implementation
 step-by-step.
 
 - Run quality checks (`./check.fish`) and pause for manual reviews frequently.
+
+### Step 5: Merge & Complete
+
+Once the implementation is fully tested and manually reviewed:
+- Remind the user to run the `/merge-pr` slash command to push the final code and merge the existing Pull Request into `main`.
