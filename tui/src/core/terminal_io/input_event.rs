@@ -65,6 +65,7 @@ pub enum InputEvent {
     Resize(Size),
     Mouse(MouseInput),
     Focus(FocusEvent),
+
     /// Text pasted via terminal's paste mechanism (not Ctrl+V).
     ///
     /// # Bracketed Paste vs Clipboard Paste
@@ -97,12 +98,11 @@ pub enum InputEvent {
     /// - **Bracketed paste**: Terminal-native, works even without clipboard access
     /// - **Ctrl+V**: Application-controlled, consistent with desktop applications
     ///
-    /// Note: Bracketed paste must be enabled via
-    /// [`EnableBracketedPaste`] in raw
-    /// mode.
+    /// Note: Bracketed paste must be enabled via [`enable_bracketed_paste`] in raw mode.
     ///
-    /// [`EnableBracketedPaste`]: crate::PaintRenderOpImplCrossterm::raw_mode_enter
+    /// [`enable_bracketed_paste`]: crate::TerminalModeController::enable_bracketed_paste
     BracketedPaste(String),
+
     /// The input thread shut down. The [`ShutdownReason`] indicates why - either the RRT
     /// framework exhausted its [`RestartPolicy`] or caught a panic on the dedicated
     /// thread. The application should exit gracefully or try re-subscribing via

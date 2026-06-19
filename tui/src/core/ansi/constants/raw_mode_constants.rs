@@ -14,7 +14,7 @@
 //! ```text
 //! ┌──────────────────────────────────────────────────────────────┐
 //! │  terminal_lib_backends/raw_mode_backend.rs (High-level)      │
-//! │  └─ RawMode struct for render pipeline integration           │
+//! │  └─ RawModeGuard struct for render pipeline integration      │
 //! ├──────────────────────────────────────────────────────────────┤
 //! │  terminal_raw_mode/ (Mid-level)                              │
 //! │  └─ enable_raw_mode(), disable_raw_mode(), RawModeGuard      │
@@ -29,7 +29,7 @@
 //!
 //! **See also**:
 //! - [`terminal_raw_mode`] - Core enable/disable functions and RAII guard
-//! - [`RawMode`] - High-level render pipeline integration
+//! - [`RawModeGuard`] - High-level render pipeline integration
 //!
 //! # Raw Mode Configuration
 //!
@@ -85,7 +85,7 @@
 //!
 //! Raw mode uses **VMIN=1, VTIME=0** for immediate, blocking input.
 //!
-//! [`RawMode`]: crate::RawMode
+//! [`RawModeGuard`]: crate::RawModeGuard
 //! [`terminal_raw_mode`]: crate::terminal_raw_mode
 
 // ==================== Special Codes for Raw Mode ====================

@@ -55,9 +55,8 @@
 //! [rendering pipeline overview]: mod@crate::terminal_lib_backends#rendering-pipeline-architecture
 
 use super::{ZOrder, paint::paint};
-use crate::ok;
-use crate::{FlushKind, GlobalData, PaintMode, InlineVec, LockedOutputDevice, RenderOpIRVec,
-            tui::DEBUG_TUI_SHOW_PIPELINE_EXPANDED};
+use crate::{FlushKind, GlobalData, InlineVec, LockedOutputDevice,
+            RenderOpIRVec, ok, tui::DEBUG_TUI_SHOW_PIPELINE_EXPANDED};
 use smallvec::smallvec;
 use std::{collections::{HashMap, hash_map::Entry},
           fmt::Debug,
@@ -267,13 +266,16 @@ impl RenderPipeline {
         flush_kind: FlushKind,
         global_data: &mut GlobalData<S, AS>,
         locked_output_device: LockedOutputDevice<'_>,
-        paint_mode: PaintMode,
     ) where
         S: Debug + Default + Clone + Sync + Send,
         AS: Debug + Default + Clone + Sync + Send,
     {
-        paint(self, flush_kind, global_data, locked_output_device, paint_mode);
-        // FUTURE: support termion, along w/ crossterm, by providing another impl of this
+        paint(
+            self,
+            flush_kind,
+            global_data,
+            locked_output_device,
+        );
     }
 
     /// Move the [`RenderOpIRVec`] in the 'from' [`ZOrder`] (in self) to the 'to'

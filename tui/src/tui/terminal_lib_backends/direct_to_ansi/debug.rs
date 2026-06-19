@@ -3,14 +3,11 @@
 use crate::{RenderOpCommon,
             RenderOpCommon::{ApplyColors, ClearCurrentLine, ClearScreen,
                              ClearToEndOfLine, ClearToStartOfLine,
-                             DisableBracketedPaste, DisableMouseTracking,
-                             EnableBracketedPaste, EnableMouseTracking,
-                             EnterAlternateScreen, EnterRawMode, ExitAlternateScreen,
-                             ExitRawMode, HideCursor, MoveCursorPositionAbs,
-                             MoveCursorPositionRelTo, MoveCursorToColumn,
-                             MoveCursorToNextLine, MoveCursorToPreviousLine, Noop,
-                             PrintStyledText, ResetColor, RestoreCursorPosition,
-                             SaveCursorPosition, SetBgColor, SetFgColor, ShowCursor},
+                             MoveCursorPositionAbs, MoveCursorPositionRelTo,
+                             MoveCursorToColumn, MoveCursorToNextLine,
+                             MoveCursorToPreviousLine, Noop, PrintStyledText,
+                             ResetColor, RestoreCursorPosition, SaveCursorPosition,
+                             SetBgColor, SetFgColor},
             RenderOpDebugFormat};
 use std::fmt::{Formatter, Result};
 
@@ -21,8 +18,6 @@ impl RenderOpDebugFormat for DirectToAnsiDebugFormatRenderOp {
     fn fmt_debug(&self, this: &RenderOpCommon, f: &mut Formatter<'_>) -> Result {
         match this {
             Noop => f.write_str("Noop"),
-            EnterRawMode => f.write_str("EnterRawMode"),
-            ExitRawMode => f.write_str("ExitRawMode"),
             ClearScreen => f.write_str("ClearScreen"),
             ResetColor => f.write_str("ResetColor"),
             SetFgColor(fg_color) => {
@@ -45,7 +40,6 @@ impl RenderOpDebugFormat for DirectToAnsiDebugFormatRenderOp {
             PrintStyledText(text) => {
                 write!(f, "PrintStyledText({} bytes)", text.len())
             }
-            // ===== Incremental Rendering Operations (Phase 1) =====
             MoveCursorToColumn(col_index) => {
                 write!(f, "MoveCursorToColumn({col_index:?})")
             }
@@ -58,17 +52,8 @@ impl RenderOpDebugFormat for DirectToAnsiDebugFormatRenderOp {
             ClearCurrentLine => f.write_str("ClearCurrentLine"),
             ClearToEndOfLine => f.write_str("ClearToEndOfLine"),
             ClearToStartOfLine => f.write_str("ClearToStartOfLine"),
-            ShowCursor => f.write_str("ShowCursor"),
-            HideCursor => f.write_str("HideCursor"),
             SaveCursorPosition => f.write_str("SaveCursorPosition"),
             RestoreCursorPosition => f.write_str("RestoreCursorPosition"),
-            // ===== Terminal Mode Operations =====
-            EnterAlternateScreen => f.write_str("EnterAlternateScreen"),
-            ExitAlternateScreen => f.write_str("ExitAlternateScreen"),
-            EnableMouseTracking => f.write_str("EnableMouseTracking"),
-            DisableMouseTracking => f.write_str("DisableMouseTracking"),
-            EnableBracketedPaste => f.write_str("EnableBracketedPaste"),
-            DisableBracketedPaste => f.write_str("DisableBracketedPaste"),
         }
     }
 }

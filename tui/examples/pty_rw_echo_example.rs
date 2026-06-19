@@ -5,7 +5,7 @@
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 
 use r3bl_tui::{AnsiSequenceGenerator, InputEvent, Key, KeyPress, KeyState,
-               ModifierKeysMask, PaintMode, RawMode, assert_terminal_is_interactive,
+               ModifierKeysMask, TerminalModeController, assert_terminal_is_interactive,
                col,
                core::{get_size,
                       pty::{ControlSequence, CursorKeyMode, DefaultPtySessionConfig,
@@ -34,10 +34,9 @@ async fn main() -> miette::Result<()> {
     let output_device = OutputDevice::new_stdout();
     let mut input_device = InputDevice::default();
 
-    // Start raw mode.
-    output_device.write(|out| {
-        RawMode::start(terminal_size, out, PaintMode::Real);
-    });
+    // Start raw mode and full screen TUI
+    let _raw_mode_guard = output_device.enter_raw_mode()?;
+    let _fullscreen_tui_mode_guard = output_device.setup_full_screen_tui()?;
 
     // Clear screen.
     output_device.write(|out| {
@@ -101,9 +100,8 @@ async fn main() -> miette::Result<()> {
     }
 
     // Cleanup.
-    output_device.write(|out| {
-        RawMode::end(terminal_size, out, PaintMode::Real);
-    });
+    // `_fullscreen_tui_mode_guard` and `_raw_mode_guard` are dropped here.
+    output_device.flush()?;
 
     println!("\n👋 Goodbye!");
     ok!()

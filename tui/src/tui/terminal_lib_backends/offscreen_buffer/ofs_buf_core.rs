@@ -4,7 +4,7 @@ use super::{super::{FlushKind, RenderOpOutputVec},
             PixelCharDiffChunks,
             pixel_char::PixelChar,
             pixel_char_lines::PixelCharLines};
-use crate::{GetMemSize, List, LockedOutputDevice, MemorySize, PaintMode, Pos, Size, col,
+use crate::{GetMemSize, List, LockedOutputDevice, MemorySize, Pos, Size, col,
             fg_green, inline_string, ok, row};
 use std::{fmt::{Debug, {self}},
           mem::size_of,
@@ -138,7 +138,6 @@ pub trait OffscreenBufferPaint {
         flush_kind: FlushKind,
         window_size: Size,
         locked_output_device: LockedOutputDevice<'_>,
-        paint_mode: PaintMode,
     );
 
     /// Execute diff operations on the display (selective redraw).
@@ -147,7 +146,6 @@ pub trait OffscreenBufferPaint {
         render_ops: RenderOpOutputVec,
         window_size: Size,
         locked_output_device: LockedOutputDevice<'_>,
-        paint_mode: PaintMode,
     );
 }
 

@@ -670,7 +670,8 @@
 //! - Proper process coordination and cleanup
 //!
 //! **Real-world applications:**
-//! - **Terminal input parsing**: [`input_parser_integration_tests`] validates `VT-100` input sequences
+//! - **Terminal input parsing**: [`input_parser_integration_tests`] validates `VT-100`
+//!   input sequences
 //! - **Raw mode behavior**: [`raw_mode_integration_tests`] tests termios configuration
 //! - **Interactive applications**: Tests readline, editor, and TUI component interactions
 //!
@@ -1016,8 +1017,8 @@
 //!
 //! ## Deadlock Prevention: Scoped Access vs. Chain of Custody
 //!
-//! Beyond poison-safety, terminal applications must also be resilient against
-//! deadlocks. We use two primary patterns to manage shared state safely:
+//! Beyond poison-safety, terminal applications must also be resilient against deadlocks.
+//! We use two primary patterns to manage shared state safely:
 //!
 //! ### 1. Scoped Access (Friction-as-a-Feature)
 //!
@@ -1218,9 +1219,10 @@
 //!       processed the entire [App] gets re-rendered. This is the unidirectional data
 //!       flow architecture inspired by React and Elm.
 //! - Your [App] trait impl is the main entry point for laying out the entire application.
-//!   Before the first render, the [App] is initialized (via a call to [`App::app_init_components`]
-//!   and [`App::app_start_background_services`]). The `app_init_components` method is responsible
-//!   for creating all the [Component]s that it uses, and saving them to the [`ComponentRegistryMap`].
+//!   Before the first render, the [App] is initialized (via a call to
+//!   [`App::app_init_components`] and [`App::app_start_background_services`]). The
+//!   `app_init_components` method is responsible for creating all the [Component]s that
+//!   it uses, and saving them to the [`ComponentRegistryMap`].
 //!   - State is stored in many places. Globally at the [`GlobalData`] level, and also in
 //!     [App], and also in [Component].
 //! - This sets everything up so that [`App::app_render`],
@@ -1534,6 +1536,21 @@
 //! This enables:
 //! - **Composed Path**: [`RenderOpOutputVec`] execution → [`PixelCharRenderer`] → bytes
 //! - **Direct Path**: [`CliTextInline`] → [`PixelChar`] → [`PixelCharRenderer`] → bytes
+//!
+//! ## Terminal Mode Control: [`TerminalModeController`]
+//!
+//! Terminal state transitions (e.g., entering raw mode, toggling the alternate screen, or
+//! hiding the cursor) are managed independently of the rendering pipeline. The
+//! [`TerminalModeController`] trait provides an ergonomic API to explicitly control these
+//! global modes:
+//!
+//! - **Separation of concerns**: Lifecycle operations are kept entirely separate from UI
+//!   components and the `RenderOp` queue.
+//! - **Implementations**: The main implementation is on [`OutputDevice`], which delegates
+//!   raw mode calls to [`terminal_raw_mode`] and writes ANSI mode-setting bytes directly.
+//! - **Panic-Safety**: Global setups like `enter_raw_mode` and alternate screen are
+//!   wrapped in [`RAII`] guards (e.g., [`RawModeGuard`] and [`FullScreenTuiModeGuard`])
+//!   to ensure the terminal state is always correctly restored upon exit or panic.
 //!
 //! ## [`CliTextInline`]: Styled Text Fragments
 //!
@@ -2119,13 +2136,13 @@
 //! context to run -->
 //!
 //! ```ignore
-//! use r3bl_tui::RawModeGuard;
-//!
+//! use r3bl_tui::{TerminalModeController, OutputDevice};
 //! {
-//!     let _guard = RawModeGuard::new()?;
+//!     let output_device = OutputDevice::new_stdout();
+//!     let _guard = output_device.enter_raw_mode()?;
 //!     // Terminal is now in raw mode
 //!     // ... process input ...
-//! } // Raw mode automatically disabled when guard drops
+//! } // Raw mode automatically disabled when guard drops.
 //! ```
 //!
 //! ## Terminal state management
@@ -2133,11 +2150,12 @@
 //! Raw mode settings are stored statically and restored on disable. The implementation
 //! handles:
 //!
-//! - **stdin redirection**: If stdin isn't a tty, falls back to `/dev/tty`
-//! - **Panic safety**: [`RawModeGuard`] ensures restoration even on panic
-//! - **Multiple enables**: Safe to call `enable_raw_mode()` multiple times
+//! - **stdin redirection**: If stdin isn't a tty, falls back to `/dev/tty`.
+//! - **Panic safety**: [`RawModeGuard`] ensures restoration even on panic.
+//! - **Multiple enables**: Safe to call [`output_device.enter_raw_mode()`] multiple
+//!   times.
 //!
-//! For implementation details and historical context (TTY, line discipline, `stty`):
+//! For implementation details and historical context ([`TTY`], line discipline, `stty`):
 //!
 //! - [`terminal_raw_mode`] - Main documentation
 //! - [`raw_mode_unix`] - Linux/macOS impl
@@ -2712,9 +2730,16 @@
 //!
 //! <!-- Type references for documentation links -->
 //!
+//! [`TTY`]: https://en.wikipedia.org/wiki/Tty_(Unix)
+//! [`TerminalModeController`]: crate::TerminalModeController
+//! [`FullScreenTuiModeGuard`]: crate::FullScreenTuiModeGuard
+//! [`RawModeGuard`]: crate::RawModeGuard
+//! [`terminal_raw_mode`]: crate::terminal_raw_mode
+//! [`RAII`]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
 //! [`read()`]: ScopedMutex::read()
 //! [`write()`]: ScopedMutex::write()
 //! [`OutputDevice`]: crate::OutputDevice
+//! [`output_device.enter_raw_mode()`]: crate::OutputDevice::enter_raw_mode
 //! [`Readline`]: crate::Readline
 //! [`Monitor`]: crate::Monitor
 //! [`ThreadLifecycleMonitor`]: crate::ThreadLifecycleMonitor

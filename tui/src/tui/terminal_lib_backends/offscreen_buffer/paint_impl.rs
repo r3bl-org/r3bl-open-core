@@ -71,7 +71,7 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 use crate::{ColIndex, DEBUG_TUI_COMPOSITOR, DEBUG_TUI_SHOW_PIPELINE, FlushKind,
             GCStringOwned, InlineString, LockedOutputDevice, OffscreenBuffer,
-            OffscreenBufferPaint, PaintMode, PixelChar, PixelCharDiffChunks,
+            OffscreenBufferPaint, PixelChar, PixelCharDiffChunks,
             RenderOpCommon, RenderOpFlush, RenderOpOutput, RenderOpOutputVec,
             RenderOpsExec, RowIndex, Size, TERMINAL_LIB_BACKEND, TerminalLibBackend,
             TuiStyle, ch, col,
@@ -90,9 +90,7 @@ impl OffscreenBufferPaint for OffscreenBufferPaintImpl {
         flush_kind: FlushKind,
         window_size: Size,
         locked_output_device: LockedOutputDevice<'_>,
-        paint_mode: PaintMode,
     ) {
-        let mut skip_flush = false;
 
         match TERMINAL_LIB_BACKEND {
             TerminalLibBackend::Crossterm => {
@@ -110,21 +108,17 @@ impl OffscreenBufferPaint for OffscreenBufferPaintImpl {
 
         // Execute each RenderOpOutput using the ExecutableRenderOps trait.
         render_ops.execute_all(
-            &mut skip_flush,
             window_size,
             locked_output_device,
-            paint_mode,
         );
 
         // Flush everything to the terminal.
-        if !skip_flush {
-            match TERMINAL_LIB_BACKEND {
-                TerminalLibBackend::Crossterm => {
-                    PaintRenderOpImplCrossterm.flush(locked_output_device);
-                }
-                TerminalLibBackend::DirectToAnsi => {
-                    RenderOpPaintImplDirectToAnsi.flush(locked_output_device);
-                }
+        match TERMINAL_LIB_BACKEND {
+            TerminalLibBackend::Crossterm => {
+                PaintRenderOpImplCrossterm.flush(locked_output_device);
+            }
+            TerminalLibBackend::DirectToAnsi => {
+                RenderOpPaintImplDirectToAnsi.flush(locked_output_device);
             }
         }
 
@@ -143,27 +137,20 @@ impl OffscreenBufferPaint for OffscreenBufferPaintImpl {
         render_ops: RenderOpOutputVec,
         window_size: Size,
         locked_output_device: LockedOutputDevice<'_>,
-        paint_mode: PaintMode,
     ) {
-        let mut skip_flush = false;
-
         // Execute each RenderOpOutput using the ExecutableRenderOps trait.
         render_ops.execute_all(
-            &mut skip_flush,
             window_size,
             locked_output_device,
-            paint_mode,
         );
 
         // Flush everything to the terminal.
-        if !skip_flush {
-            match TERMINAL_LIB_BACKEND {
-                TerminalLibBackend::Crossterm => {
-                    PaintRenderOpImplCrossterm.flush(locked_output_device);
-                }
-                TerminalLibBackend::DirectToAnsi => {
-                    RenderOpPaintImplDirectToAnsi.flush(locked_output_device);
-                }
+        match TERMINAL_LIB_BACKEND {
+            TerminalLibBackend::Crossterm => {
+                PaintRenderOpImplCrossterm.flush(locked_output_device);
+            }
+            TerminalLibBackend::DirectToAnsi => {
+                RenderOpPaintImplDirectToAnsi.flush(locked_output_device);
             }
         }
 

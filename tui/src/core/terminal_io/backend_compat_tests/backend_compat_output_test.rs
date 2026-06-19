@@ -376,18 +376,15 @@ pub mod controlled_crossterm {
             fg_color: None,
             bg_color: None,
         };
-        let mut skip_flush = false;
-        let mut painter = PaintRenderOpImplCrossterm;
+        let mut painter = PaintRenderOpImplCrossterm {};
 
         for op in &ops {
             output_device.write(|writer| {
                 painter.paint(
-                    &mut skip_flush,
                     op,
                     window_size,
                     &mut state,
                     writer,
-                    output_device.paint_mode,
                 );
             });
         }
@@ -445,18 +442,15 @@ pub mod controlled_direct_to_ansi {
             fg_color: None,
             bg_color: None,
         };
-        let mut skip_flush = false;
         let mut painter = RenderOpPaintImplDirectToAnsi;
 
         for op in &ops {
             output_device.write(|writer| {
                 painter.paint(
-                    &mut skip_flush,
                     op,
                     window_size,
                     &mut state,
                     writer,
-                    output_device.paint_mode,
                 );
             });
         }

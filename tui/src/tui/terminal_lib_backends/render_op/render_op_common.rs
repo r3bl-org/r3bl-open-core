@@ -19,7 +19,7 @@
 //!
 //! # Context
 //!
-//! These 27 shared operations are used identically in:
+//! These shared operations are used identically in:
 //! - [`crate::RenderOpIR`] - IR layer for components/app (with clipping info)
 //! - [`crate::RenderOpOutput`] - Output layer for backend (post-clipping)
 //!
@@ -32,19 +32,6 @@ use crate::{ColIndex, InlineString, Pos, RowHeight, TuiColor, TuiStyle};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum RenderOpCommon {
-    /// Enables terminal raw mode for direct control over input/output.
-    ///
-    /// Raw mode disables line buffering and special character processing,
-    /// allowing the application to receive keystrokes immediately and
-    /// handle all terminal control sequences directly.
-    EnterRawMode,
-
-    /// Exits terminal raw mode and restores normal terminal behavior.
-    ///
-    /// This restores line buffering and standard terminal input processing.
-    /// Should always be called before application exit to avoid leaving
-    /// the terminal in an unusable state.
-    ExitRawMode,
 
     /// Move cursor to absolute position. This is always painted on top.
     ///
@@ -163,29 +150,6 @@ pub enum RenderOpCommon {
     /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
     PrintStyledText(InlineString),
 
-    /// Show cursor (make it visible).
-    ///
-    /// Maps to [`CSI`] `?25h` [`ANSI`] sequence ([`DEC`] Private Mode Set).
-    ///
-    /// Restores cursor visibility after it has been hidden with
-    /// [`RenderOpCommon::HideCursor`].
-    ///
-    /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-    /// [`CSI`]: crate::CsiSequence
-    /// [`DEC`]: https://en.wikipedia.org/wiki/Digital_Equipment_Corporation
-    ShowCursor,
-
-    /// Hide cursor (make it invisible).
-    ///
-    /// Maps to [`CSI`] `?25l` [`ANSI`] sequence ([`DEC`] Private Mode Reset).
-    ///
-    /// Useful for animations or rendering where cursor visibility would be distracting.
-    /// Remember to call [`RenderOpCommon::ShowCursor`] before normal operation resumes.
-    ///
-    /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-    /// [`CSI`]: crate::CsiSequence
-    /// [`DEC`]: https://en.wikipedia.org/wiki/Digital_Equipment_Corporation
-    HideCursor,
 
     /// Save cursor position to be restored later.
     ///
@@ -217,84 +181,6 @@ pub enum RenderOpCommon {
     /// [`DECRC`]: https://vt100.net/docs/vt510-rm/DECRC.html
     RestoreCursorPosition,
 
-    /// Switches to alternate screen buffer for full-screen applications.
-    ///
-    /// When enabled, the terminal saves the current screen content and switches to an
-    /// alternate buffer. This is used by full-screen applications (vim, less, etc.) to
-    /// preserve shell history and avoid cluttering the original screen.
-    ///
-    /// Maps to [`CSI`] `?1049h` [`ANSI`] sequence ([`DEC`] Private Mode Set).
-    ///
-    /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-    /// [`CSI`]: crate::CsiSequence
-    /// [`DEC`]: https://en.wikipedia.org/wiki/Digital_Equipment_Corporation
-    EnterAlternateScreen,
-
-    /// Exits alternate screen buffer and restores original screen content.
-    ///
-    /// Restores the screen content that was saved when
-    /// [`RenderOpCommon::EnterAlternateScreen`] was called. Should always be called
-    /// before returning to normal shell operation.
-    ///
-    /// Maps to [`CSI`] `?1049l` [`ANSI`] sequence ([`DEC`] Private Mode Reset).
-    ///
-    /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-    /// [`CSI`]: crate::CsiSequence
-    /// [`DEC`]: https://en.wikipedia.org/wiki/Digital_Equipment_Corporation
-    ExitAlternateScreen,
-
-    /// Enables mouse event tracking (clicks, movement, scroll).
-    ///
-    /// When enabled, the terminal reports mouse events to the application.
-    /// This includes mouse clicks, movements, and scroll wheel events.
-    ///
-    /// Maps to [`CSI`] `?1000h` [`ANSI`] sequence ([`DEC`] Private Mode Set for mouse
-    /// tracking).
-    ///
-    /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-    /// [`CSI`]: crate::CsiSequence
-    /// [`DEC`]: https://en.wikipedia.org/wiki/Digital_Equipment_Corporation
-    EnableMouseTracking,
-
-    /// Disables mouse event tracking.
-    ///
-    /// Restores normal mouse behavior where the terminal no longer reports mouse events
-    /// to the application. Called to restore normal operation after mouse tracking is
-    /// no longer needed.
-    ///
-    /// Maps to [`CSI`] `?1000l` [`ANSI`] sequence ([`DEC`] Private Mode Reset).
-    ///
-    /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-    /// [`CSI`]: crate::CsiSequence
-    /// [`DEC`]: https://en.wikipedia.org/wiki/Digital_Equipment_Corporation
-    DisableMouseTracking,
-
-    /// Enables bracketed paste mode for distinguishing pasted text.
-    ///
-    /// When enabled, text pasted from the clipboard is wrapped with special escape
-    /// sequences, allowing the application to distinguish pasted content from keyboard
-    /// input. This prevents pasted content from being misinterpreted as commands.
-    ///
-    /// Maps to [`CSI`] `?2004h` [`ANSI`] sequence ([`DEC`] Private Mode Set for bracketed
-    /// paste).
-    ///
-    /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-    /// [`CSI`]: crate::CsiSequence
-    /// [`DEC`]: https://en.wikipedia.org/wiki/Digital_Equipment_Corporation
-    EnableBracketedPaste,
-
-    /// Disables bracketed paste mode.
-    ///
-    /// Restores normal paste behavior where the terminal doesn't wrap pasted text
-    /// with special escape sequences. Called when clipboard detection is no longer
-    /// needed.
-    ///
-    /// Maps to [`CSI`] `?2004l` [`ANSI`] sequence ([`DEC`] Private Mode Reset).
-    ///
-    /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-    /// [`CSI`]: crate::CsiSequence
-    /// [`DEC`]: https://en.wikipedia.org/wiki/Digital_Equipment_Corporation
-    DisableBracketedPaste,
 
     /// No-operation render operation that does nothing when executed.
     ///

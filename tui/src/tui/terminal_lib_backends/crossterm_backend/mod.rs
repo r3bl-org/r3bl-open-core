@@ -22,7 +22,6 @@
 //! > **For the complete 6-stage rendering pipeline with visual diagrams and stage
 //! > reference table**, see the [rendering pipeline overview].
 //!
-//!
 //! ## Module Organization
 //!
 //! This module contains the **Crossterm-specific Stage 5 backend executor**
@@ -30,10 +29,9 @@
 //!
 //! ### Stage 4: Backend Converter (Shared)
 //! - **Not in this module** - Stage 4 is shared across all backends
-//! - See [`offscreen_buffer::paint_impl`] for the `OffscreenBufferPaintImpl`
-//!   converter
+//! - See [`offscreen_buffer::paint_impl`] for the [`OffscreenBufferPaintImpl`] converter
 //! - Converts [`OffscreenBuffer`] → [`RenderOpOutputVec`] (shared by both Crossterm and
-//!   `DirectToAnsi`)
+//!   [`DirectToAnsi`])
 //!
 //! ### Stage 5: Backend Executor (`crossterm_paint_render_op_impl`)
 //! - **Implemented in this module** - Crossterm-specific execution
@@ -43,13 +41,16 @@
 //! - Uses [`RenderOpsLocalData`] for state tracking (avoid redundant commands)
 //! - Handles colors, cursor movement, and text output
 //!
+//! [`DirectToAnsi`]: crate::TerminalLibBackend::DirectToAnsi
 //! [`offscreen_buffer::paint_impl`]: mod@crate::offscreen_buffer::paint_impl
 //! [`OffscreenBuffer`]: crate::OffscreenBuffer
 //! [`OffscreenBufferPaint`]: crate::OffscreenBufferPaint
+//! [`OffscreenBufferPaintImpl`]: crate::OffscreenBufferPaintImpl
 //! [`RenderOpOutputVec`]: crate::RenderOpOutputVec
 //! [`RenderOpPaint`]: crate::RenderOpPaint
 //! [`RenderOpsLocalData`]: crate::RenderOpsLocalData
-//! [rendering pipeline overview]: mod@crate::terminal_lib_backends#rendering-pipeline-architecture
+//! [rendering pipeline overview]:
+//!     mod@crate::terminal_lib_backends#rendering-pipeline-architecture
 
 // Attach.
 mod debug;

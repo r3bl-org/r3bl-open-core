@@ -44,7 +44,7 @@
 //!   operations
 //! - `cursor_movement`: Tests for [`MoveCursorPositionAbs`], [`MoveCursorPositionRelTo`]
 //!   operations
-//! - `screen_operations`: Tests for [`ClearScreen`], [`ShowCursor`], [`HideCursor`]
+//! - `screen_operations`: Tests for [`ClearScreen`], [`show_cursor`], [`hide_cursor`]
 //!   operations
 //! - `state_optimization`: Tests for redundant operation skipping and state persistence
 //!
@@ -79,8 +79,8 @@
 //!   optimization
 //! - [`Pos`]: Position with `row_index` and `col_index` fields (0-based indices)
 //! - [`RenderOpCommon`]: Enum variants for common operations ([`SetFgColor`],
-//!   [`SetBgColor`], [`MoveCursorPositionAbs`], [`ClearScreen`], [`ShowCursor`],
-//!   [`HideCursor`], etc.)
+//!   [`SetBgColor`], [`MoveCursorPositionAbs`], [`ClearScreen`], [`show_cursor`],
+//!   [`hide_cursor`], etc.)
 //! - [`TuiStyle`]: Styling information for text (foreground color, background color,
 //!   attributes)
 //! - [`StdoutMock`]: Captures [`ANSI`] output for verification
@@ -88,7 +88,7 @@
 //!
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`ClearScreen`]: crate::render_op::RenderOpCommon::ClearScreen
-//! [`HideCursor`]: crate::render_op::RenderOpCommon::HideCursor
+//! [`hide_cursor`]: crate::TerminalModeController::hide_cursor
 //! [`input::integration_tests_stub`]: mod@crate::terminal_lib_backends::direct_to_ansi::input::integration_tests_stub
 //! [`MoveCursorPositionAbs`]: crate::render_op::RenderOpCommon::MoveCursorPositionAbs
 //! [`MoveCursorPositionRelTo`]: crate::render_op::RenderOpCommon::MoveCursorPositionRelTo
@@ -108,7 +108,7 @@
 //! [`SetBgColor`]: crate::render_op::RenderOpCommon::SetBgColor
 //! [`SetFgColor`]: crate::render_op::RenderOpCommon::SetFgColor
 //! [`SGR`]: crate::SgrCode
-//! [`ShowCursor`]: crate::render_op::RenderOpCommon::ShowCursor
+//! [`show_cursor`]: crate::TerminalModeController::show_cursor
 //! [`StdoutMock`]: crate::StdoutMock
 //! [`TuiStyle`]: crate::TuiStyle
 
@@ -179,18 +179,15 @@ mod test_helpers {
     ) -> String {
         let render_op = RenderOpOutput::Common(op);
         let window_size = test_window_size();
-        let mut skip_flush = false;
 
         let mut painter = RenderOpPaintImplDirectToAnsi;
 
         output_device.write(|mut_ref| {
             painter.paint(
-                &mut skip_flush,
                 &render_op,
                 window_size,
                 state,
                 mut_ref,
-                output_device.paint_mode,
             );
         });
 
@@ -205,19 +202,16 @@ mod test_helpers {
         stdout_mock: &StdoutMock,
     ) -> String {
         let window_size = test_window_size();
-        let mut skip_flush = false;
         let mut painter = RenderOpPaintImplDirectToAnsi;
 
         for op in ops {
             let render_op = RenderOpOutput::Common(op);
             output_device.write(|mut_ref| {
                 painter.paint(
-                    &mut skip_flush,
                     &render_op,
                     window_size,
                     state,
                     mut_ref,
-                    output_device.paint_mode,
                 );
             });
         }
@@ -238,7 +232,6 @@ mod test_helpers {
         stdout_mock: &StdoutMock,
     ) -> String {
         let window_size = test_window_size();
-        let mut skip_flush = false;
         let mut painter = RenderOpPaintImplDirectToAnsi;
         let render_op = RenderOpOutput::CompositorNoClipTruncPaintTextWithAttributes(
             crate::InlineString::from(text),
@@ -247,12 +240,10 @@ mod test_helpers {
 
         output_device.write(|mut_ref| {
             painter.paint(
-                &mut skip_flush,
                 &render_op,
                 window_size,
                 state,
                 mut_ref,
-                output_device.paint_mode,
             );
         });
 

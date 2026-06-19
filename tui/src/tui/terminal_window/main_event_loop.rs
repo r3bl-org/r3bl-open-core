@@ -1,16 +1,16 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{Ansi256GradientIndex, PaintMode, BoxedSafeApp, ColorWheel, ColorWheelConfig,
+use crate::{Ansi256GradientIndex, BoxedSafeApp, ColorWheel, ColorWheelConfig,
             ColorWheelSpeed, CommonResult, ComponentRegistryMap, Continuation,
             DEBUG_TUI_MOD, DISPLAY_LOG_TELEMETRY, DefaultInputEventHandler, DefaultSize,
             DefaultTiming, EventPropagation, FlushKind, GCStringOwned, GetMemSize,
             GlobalData, GradientGenerationPolicy, HasFocus, InputDevice, InputEvent,
             LockedOutputDevice, MainEventLoopFuture, MinSize, OffscreenBufferPool,
-            OutputDevice, RawMode, RenderOpCommon, RenderOpFlush, RenderOpIR,
+            OutputDevice, PaintMode, RenderOpCommon, RenderOpFlush, RenderOpIR,
             RenderPipeline, Size, SufficientSize, TelemetryAtomHint,
-            TerminalWindowMainThreadSignal, TextColorizationPolicy, ZOrder, ch, col,
-            emit_stderr_redirection_disclaimer, glyphs, height, inline_string, new_style,
-            ok, render_pipeline, row,
+            TerminalModeController, TerminalWindowMainThreadSignal,
+            TextColorizationPolicy, ZOrder, ch, col, emit_stderr_redirection_disclaimer,
+            glyphs, height, inline_string, new_style, ok, render_pipeline, row,
             telemetry::{Telemetry, telemetry_default_constants},
             telemetry_record, width};
 use smallvec::smallvec;
@@ -161,6 +161,17 @@ where
 {
     Box::pin(async move {
         let mut app = app;
+
+        // Start raw mode.
+        let _raw_mode_guard = if matches!(output_device.paint_mode, PaintMode::Real) {
+            Some(output_device.enter_raw_mode()?)
+        } else {
+            None
+        };
+
+        // Start full screen TUI mode.
+        let _fullscreen_tui_mode_guard = output_device.setup_full_screen_tui()?;
+
         let event_loop_state = EventLoopState::initialize(
             state,
             initial_size,
@@ -168,14 +179,21 @@ where
             &mut app,
         )?;
 
-        run_main_event_loop(
+        let result = run_main_event_loop(
             event_loop_state,
             app,
             &exit_keys,
             input_device,
-            output_device,
+            output_device.clone(),
         )
-        .await
+        .await;
+
+        // End raw mode and teardown full screen TUI mode.
+        //
+        // `_fullscreen_tui_mode_guard` and `_raw_mode_guard` are dropped here. RAII
+        // guards securely restore the terminal to its original state.
+
+        result
     })
 }
 
@@ -251,15 +269,6 @@ where
         app: &mut BoxedSafeApp<S, AS>,
         output_device: &OutputDevice,
     ) -> CommonResult<()> {
-        // Start raw mode
-        output_device.write(|writer| {
-            RawMode::start(
-                self.global_data.window_size,
-                writer,
-                output_device.paint_mode,
-            );
-        });
-
         // Initialize app and start background tasks before the first render. Both these
         // operations are not recorded in telemetry.
         app.app_init_components(&mut self.component_registry_map, &mut self.has_focus);
@@ -278,7 +287,6 @@ where
                         &mut self.component_registry_map,
                         &mut self.has_focus,
                         writer,
-                        output_device.paint_mode,
                     )
                 })?;
             },
@@ -377,8 +385,8 @@ where
                         &mut app,
                         exit_keys,
                         &output_device,
-                    )? {
-                        break; // Exit requested
+                    )? == Continuation::Stop {
+                        break; // Exit requested.
                     }
             }
 
@@ -415,29 +423,22 @@ fn handle_main_thread_signal<S, AS>(
     app: &mut BoxedSafeApp<S, AS>,
     exit_keys: &[InputEvent],
     output_device: &OutputDevice,
-) -> CommonResult<bool>
+) -> CommonResult<Continuation>
 where
     S: Display + Debug + Default + Clone + Sync + Send,
     AS: Debug + Default + Clone + Sync + Send + 'static,
 {
     match signal {
         TerminalWindowMainThreadSignal::Exit => {
-            output_device.write(|writer| {
-                RawMode::end(
-                    event_loop_state.global_data.window_size,
-                    writer,
-                    output_device.paint_mode,
-                );
-            });
-            Ok(true) // Request exit
+            Ok(Continuation::Stop) // Request exit.
         }
         TerminalWindowMainThreadSignal::Render(_) => {
             handle_render_signal(event_loop_state, app, output_device)?;
-            Ok(false)
+            Ok(Continuation::Continue)
         }
         TerminalWindowMainThreadSignal::ApplyAppSignal(action) => {
             handle_app_signal(&action, event_loop_state, app, exit_keys, output_device);
-            Ok(false)
+            Ok(Continuation::Continue)
         }
     }
 }
@@ -464,7 +465,6 @@ where
                     &mut event_loop_state.component_registry_map,
                     &mut event_loop_state.has_focus,
                     writer,
-                    output_device.paint_mode,
                 )
             })?;
         },
@@ -507,7 +507,6 @@ fn handle_app_signal<S, AS>(
                     &mut event_loop_state.component_registry_map,
                     &mut event_loop_state.has_focus,
                     writer,
-                    output_device.paint_mode,
                 );
             });
         },
@@ -578,7 +577,6 @@ fn handle_resize_event<S, AS>(
                     &mut event_loop_state.component_registry_map,
                     &mut event_loop_state.has_focus,
                     writer,
-                    output_device.paint_mode,
                 );
             });
         },
@@ -613,7 +611,6 @@ fn process_input_event<S, AS>(
                     &mut event_loop_state.component_registry_map,
                     &mut event_loop_state.has_focus,
                     writer,
-                    output_device.paint_mode,
                 );
             });
         },
@@ -633,7 +630,6 @@ fn actually_process_input_event<S, AS>(
     component_registry_map: &mut ComponentRegistryMap<S, AS>,
     has_focus: &mut HasFocus,
     locked_output_device: LockedOutputDevice<'_>,
-    paint_mode: PaintMode,
 ) where
     S: Display + Debug + Default + Clone + Sync + Send,
     AS: Debug + Default + Clone + Sync + Send + 'static,
@@ -654,7 +650,6 @@ fn actually_process_input_event<S, AS>(
         component_registry_map,
         has_focus,
         locked_output_device,
-        paint_mode,
     );
 }
 
@@ -670,7 +665,6 @@ pub fn handle_resize<S, AS>(
     component_registry_map: &mut ComponentRegistryMap<S, AS>,
     has_focus: &mut HasFocus,
     locked_output_device: LockedOutputDevice<'_>,
-    paint_mode: PaintMode,
 ) where
     S: Display + Debug + Default + Clone + Sync + Send,
     AS: Debug + Default + Clone + Sync + Send,
@@ -686,7 +680,6 @@ pub fn handle_resize<S, AS>(
         component_registry_map,
         has_focus,
         locked_output_device,
-        paint_mode,
     )
     .ok();
 }
@@ -706,7 +699,6 @@ fn handle_result_generated_by_app_after_handling_action_or_input_event<S, AS>(
     component_registry_map: &mut ComponentRegistryMap<S, AS>,
     has_focus: &mut HasFocus,
     locked_output_device: LockedOutputDevice<'_>,
-    paint_mode: PaintMode,
 ) where
     S: Display + Debug + Default + Clone + Sync + Send,
     AS: Debug + Default + Clone + Sync + Send + 'static,
@@ -733,7 +725,6 @@ fn handle_result_generated_by_app_after_handling_action_or_input_event<S, AS>(
                     component_registry_map,
                     has_focus,
                     locked_output_device,
-                    paint_mode,
                 )
                 .ok();
             }
@@ -797,7 +788,6 @@ where
         component_registry_map: &mut ComponentRegistryMap<S, AS>,
         has_focus: &mut HasFocus,
         locked_output_device: LockedOutputDevice<'_>,
-        paint_mode: PaintMode,
     ) -> CommonResult<()> {
         let window_size = global_data_mut_ref.window_size;
 
@@ -836,7 +826,6 @@ where
                     FlushKind::ClearBeforeFlush,
                     global_data_mut_ref,
                     locked_output_device,
-                    paint_mode,
                 );
             }
         }

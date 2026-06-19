@@ -46,8 +46,8 @@
 
 use r3bl_tui::{AnsiSequenceGenerator, InputDevice, InputEvent, Key, KeyPress, KeyState,
                ModifierKeysMask, MouseInput, MouseInputKind, OutputDevice, PaintMode,
-               Pos, RawMode, RowIndex, TermCol, TermRow, assert_terminal_is_interactive,
-               col, get_size, ok, row, set_mimalloc_in_main};
+               Pos, RowIndex, TermCol, TermRow, TerminalModeController,
+               assert_terminal_is_interactive, col, ok, row, set_mimalloc_in_main};
 use std::collections::VecDeque;
 
 /// Helper: Clear screen and position cursor at home (0,0).
@@ -226,14 +226,13 @@ async fn main() -> miette::Result<()> {
     assert_terminal_is_interactive();
 
     // Setup terminal
-    let terminal_size = get_size()?;
+
     let mut output_device = OutputDevice::new_stdout();
     let mut input_device = InputDevice::default();
 
-    // Start raw mode (enables mouse tracking automatically)
-    output_device.write(|out| {
-        RawMode::start(terminal_size, out, PaintMode::Real);
-    });
+    // Start raw mode and full screen TUI
+    let _raw_mode_guard = output_device.enter_raw_mode()?;
+    let _fullscreen_tui_mode_guard = output_device.setup_full_screen_tui()?;
 
     // Clear screen
     clear_screen_and_home(&output_device);
@@ -241,10 +240,11 @@ async fn main() -> miette::Result<()> {
     // Run the inspector
     let result = run_inspector(&mut input_device, &mut output_device).await;
 
-    // Cleanup terminal (disable raw mode and mouse tracking)
-    output_device.write(|out| {
-        RawMode::end(terminal_size, out, PaintMode::Real);
-    });
+    if matches!(output_device.paint_mode, PaintMode::Real) {
+        output_device.flush()?;
+    }
+    // `_fullscreen_tui_mode_guard` and `_raw_mode_guard` are dropped here,
+    // which securely restores the terminal to its original state.
 
     result
 }

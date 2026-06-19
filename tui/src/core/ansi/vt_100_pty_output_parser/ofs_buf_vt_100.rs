@@ -352,17 +352,18 @@ pub enum AutoWrapState {
 /// it needs to paint a simulated, virtual block cursor into the [`OffscreenBuffer`].
 ///
 /// > Note: The host terminal emulator's actual cursor is permanently suppressed via
-/// > [`RenderOpCommon::HideCursor`] when the multiplexer is active. We rely exclusively
+/// > [`hide_cursor`] when the multiplexer is active. We rely exclusively
 /// > on the virtual block cursor rendering (which allows us to have multiple cursors).
 ///
 /// [`DECTCEM`]: https://vt100.net/docs/vt510-rm/DECTCEM.html
+/// [`hide_cursor`]: crate::TerminalModeController::hide_cursor
 /// [`OffscreenBuffer`]: crate::OffscreenBuffer
 /// [`OutputRenderer::composite_virtual_cursor_into_buffer`]:
 ///     crate::core::pty::OutputRenderer::composite_virtual_cursor_into_buffer
 /// [`ParserGlobalState::cursor_visibility`]: crate::ParserGlobalState::cursor_visibility
 /// [`PTY Mux`]: crate::PTYMux
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
-/// [`RenderOpCommon::HideCursor`]: crate::RenderOpCommon::HideCursor
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum CursorVisibilityState {
     /// Cursor is visible ([`DECTCEM`] `ESC [ ? 25 h`)

@@ -37,7 +37,7 @@
 
 use super::{RenderOpCommon, RenderOpsExec};
 use crate::ok;
-use crate::{InlineString, PaintMode, InlineVec, LockedOutputDevice, RenderOpsLocalData, Size,
+use crate::{InlineString, InlineVec, LockedOutputDevice, RenderOpsLocalData, Size,
             TERMINAL_LIB_BACKEND, TerminalLibBackend, TuiStyle,
             terminal_lib_backends::{crossterm_backend::PaintRenderOpImplCrossterm,
                                     direct_to_ansi::RenderOpPaintImplDirectToAnsi}};
@@ -120,30 +120,29 @@ impl RenderOpOutputVec {
     /// backend (Crossterm or `DirectAnsi`) and delegating the actual rendering work.
     ///
     /// # Arguments
-    /// - `render_local_data`: Mutable state for render optimization
-    /// - `skip_flush`: Mutable reference to control flush behavior
-    /// - `render_op_output`: The specific Output operation to execute
+    /// - `render_local_data`: Shared mutable state for optimization
+    ///   - Tracks current cursor position and colors
+    ///   - Allows skipping redundant commands
+    /// - `render_op_output`: The specific output operation to execute
+    ///   - Evaluated by the backend to determine precise terminal commands
     /// - `window_size`: Current terminal window dimensions
-    /// - `locked_output_device`: Locked terminal output for thread-safe writing
-    /// - `paint_mode`: Whether to execute against the real terminal or in mock mode
+    ///   - Used for bounds checking to prevent off-screen rendering
+    /// - `locked_output_device`: Thread-safe access to terminal output
+    ///   - Backend queues commands to this output device
     fn route_paint_render_op_output_to_backend(
         render_local_data: &mut RenderOpsLocalData,
-        skip_flush: &mut bool,
         render_op_output: &RenderOpOutput,
         window_size: Size,
         locked_output_device: LockedOutputDevice<'_>,
-        paint_mode: PaintMode,
     ) {
         match TERMINAL_LIB_BACKEND {
             TerminalLibBackend::Crossterm => match render_op_output {
                 RenderOpOutput::Common(common_op) => {
                     PaintRenderOpImplCrossterm {}.paint_common(
-                        skip_flush,
                         common_op,
                         window_size,
                         render_local_data,
                         locked_output_device,
-                        paint_mode,
                     );
                 }
                 RenderOpOutput::CompositorNoClipTruncPaintTextWithAttributes(
@@ -162,12 +161,10 @@ impl RenderOpOutputVec {
             TerminalLibBackend::DirectToAnsi => match render_op_output {
                 RenderOpOutput::Common(common_op) => {
                     RenderOpPaintImplDirectToAnsi {}.paint_common(
-                        skip_flush,
                         common_op,
                         window_size,
                         render_local_data,
                         locked_output_device,
-                        paint_mode,
                     );
                 }
                 RenderOpOutput::CompositorNoClipTruncPaintTextWithAttributes(
@@ -278,20 +275,16 @@ impl Debug for RenderOpOutputVec {
 impl RenderOpsExec for RenderOpOutputVec {
     fn execute_all(
         &self,
-        skip_flush: &mut bool,
         window_size: Size,
         locked_output_device: LockedOutputDevice<'_>,
-        paint_mode: PaintMode,
     ) {
         let mut render_local_data = RenderOpsLocalData::default();
         for render_op_output in &self.list {
             RenderOpOutputVec::route_paint_render_op_output_to_backend(
                 &mut render_local_data,
-                skip_flush,
                 render_op_output,
                 window_size,
                 locked_output_device,
-                paint_mode,
             );
         }
     }
@@ -320,7 +313,7 @@ mod tests {
         assert_eq!(render_ops.len(), 0);
 
         // Add a single RenderOpOutput variant
-        let op = RenderOpOutput::Common(RenderOpCommon::EnterRawMode);
+        let op = RenderOpOutput::Common(RenderOpCommon::ClearScreen);
 
         render_ops += op.clone();
 
@@ -334,16 +327,16 @@ mod tests {
         let mut render_ops = RenderOpOutputVec::new();
 
         // Add via Into conversion from RenderOpCommon
-        let op_common = RenderOpCommon::ExitRawMode;
+        let op_common = RenderOpCommon::ResetColor;
         render_ops += RenderOpOutput::Common(op_common.clone());
 
         assert_eq!(render_ops.len(), 1);
 
         match &render_ops[0] {
-            RenderOpOutput::Common(RenderOpCommon::ExitRawMode) => {
+            RenderOpOutput::Common(RenderOpCommon::ResetColor) => {
                 // Test passed - the operation was converted and stored correctly
             }
-            _ => panic!("Expected ExitRawMode"),
+            _ => panic!("Expected ResetColor"),
         }
     }
 
@@ -352,8 +345,8 @@ mod tests {
         let mut render_ops = RenderOpOutputVec::new();
 
         // Add multiple operations using += operator
-        let op1 = RenderOpCommon::EnterRawMode;
-        let op2 = RenderOpCommon::ExitRawMode;
+        let op1 = RenderOpCommon::ClearScreen;
+        let op2 = RenderOpCommon::ResetColor;
         let op3 = RenderOpCommon::ClearScreen;
 
         render_ops += RenderOpOutput::Common(op1);
@@ -389,7 +382,7 @@ mod tests {
 
         // This demonstrates the ergonomic improvement over .push()
         // Push accepts Into<RenderOpOutput>, so RenderOpCommon works directly
-        render_ops.push(RenderOpCommon::EnterRawMode);
+        render_ops.push(RenderOpCommon::ClearScreen);
 
         assert_eq!(render_ops.len(), 1);
     }
@@ -400,9 +393,9 @@ mod tests {
 
         // Mix push() and += operator
         // push() accepts Into<RenderOpOutput>, but += expects RenderOpOutput directly
-        render_ops.push(RenderOpCommon::EnterRawMode);
+        render_ops.push(RenderOpCommon::ClearScreen);
 
-        render_ops += RenderOpOutput::Common(RenderOpCommon::ExitRawMode);
+        render_ops += RenderOpOutput::Common(RenderOpCommon::ResetColor);
 
         render_ops.push(RenderOpCommon::ClearScreen);
 
@@ -414,18 +407,18 @@ mod tests {
         let mut render_ops = RenderOpOutputVec::new();
 
         // Add RenderOpCommon directly without wrapping in RenderOpOutput::Common
-        render_ops += RenderOpCommon::EnterRawMode;
-        render_ops += RenderOpCommon::ExitRawMode;
+        render_ops += RenderOpCommon::ClearScreen;
+        render_ops += RenderOpCommon::ResetColor;
         render_ops += RenderOpCommon::ClearScreen;
 
         assert_eq!(render_ops.len(), 3);
 
         // Verify the operations were wrapped correctly
         match &render_ops[0] {
-            RenderOpOutput::Common(RenderOpCommon::EnterRawMode) => {
+            RenderOpOutput::Common(RenderOpCommon::ClearScreen) => {
                 // First operation is correct
             }
-            _ => panic!("Expected EnterRawMode at index 0"),
+            _ => panic!("Expected ClearScreen at index 0"),
         }
     }
 }

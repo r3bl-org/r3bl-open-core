@@ -1,25 +1,18 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Integration tests for screen operations ([`ClearScreen`], [`ShowCursor`],
-//! [`HideCursor`], etc.)
+//! Integration tests for screen operations ([`ClearScreen`], [`ClearCurrentLine`],
+//! etc.)
 //!
 //! These tests validate:
 //! 1. [`ClearScreen`] generates correct [`CSI`] 2J sequence
-//! 2. [`ShowCursor`] generates DECTCEM set (show) sequence
-//! 3. [`HideCursor`] generates DECTCEM reset (hide) sequence
-//! 4. [`EnterAlternateScreen`] / [`ExitAlternateScreen`] for full-screen apps
-//! 5. [`ClearCurrentLine`], [`ClearToEndOfLine`], [`ClearToStartOfLine`] operations
-//! 6. State preservation across screen operations
+//! 2. [`ClearCurrentLine`], [`ClearToEndOfLine`], [`ClearToStartOfLine`] operations
+//! 3. State preservation across screen operations
 //!
 //! [`ClearCurrentLine`]: crate::render_op::RenderOpCommon::ClearCurrentLine
 //! [`ClearScreen`]: crate::render_op::RenderOpCommon::ClearScreen
 //! [`ClearToEndOfLine`]: crate::render_op::RenderOpCommon::ClearToEndOfLine
 //! [`ClearToStartOfLine`]: crate::render_op::RenderOpCommon::ClearToStartOfLine
 //! [`CSI`]: crate::CsiSequence
-//! [`EnterAlternateScreen`]: crate::render_op::RenderOpCommon::EnterAlternateScreen
-//! [`ExitAlternateScreen`]: crate::render_op::RenderOpCommon::ExitAlternateScreen
-//! [`HideCursor`]: crate::render_op::RenderOpCommon::HideCursor
-//! [`ShowCursor`]: crate::render_op::RenderOpCommon::ShowCursor
 
 use super::test_helpers::*;
 use crate::{AnsiSequenceGenerator, col, pos, render_op::RenderOpCommon, row};
@@ -35,32 +28,6 @@ fn test_clear_screen() {
 
     // CSI 2J clears entire screen
     assert_eq!(output, AnsiSequenceGenerator::clear_screen());
-}
-
-#[test]
-fn test_show_cursor() {
-    // Test that ShowCursor generates correct DECTCEM set sequence
-    let (output_device, stdout_mock) = create_mock_output();
-    let mut state = create_test_state();
-
-    let op = RenderOpCommon::ShowCursor;
-    let output = execute_and_capture(op, &mut state, &output_device, &stdout_mock);
-
-    // CSI ?25h sets DECTCEM (show cursor)
-    assert_eq!(output, AnsiSequenceGenerator::show_cursor());
-}
-
-#[test]
-fn test_hide_cursor() {
-    // Test that HideCursor generates correct DECTCEM reset sequence
-    let (output_device, stdout_mock) = create_mock_output();
-    let mut state = create_test_state();
-
-    let op = RenderOpCommon::HideCursor;
-    let output = execute_and_capture(op, &mut state, &output_device, &stdout_mock);
-
-    // CSI ?25l resets DECTCEM (hide cursor)
-    assert_eq!(output, AnsiSequenceGenerator::hide_cursor());
 }
 
 #[test]
@@ -103,32 +70,6 @@ fn test_clear_to_start_of_line() {
 }
 
 #[test]
-fn test_enter_alternate_screen() {
-    // Test that EnterAlternateScreen generates correct sequence
-    let (output_device, stdout_mock) = create_mock_output();
-    let mut state = create_test_state();
-
-    let op = RenderOpCommon::EnterAlternateScreen;
-    let output = execute_and_capture(op, &mut state, &output_device, &stdout_mock);
-
-    // CSI ?1049h enters alternate screen
-    assert_eq!(output, AnsiSequenceGenerator::enter_alternate_screen());
-}
-
-#[test]
-fn test_exit_alternate_screen() {
-    // Test that ExitAlternateScreen generates correct sequence
-    let (output_device, stdout_mock) = create_mock_output();
-    let mut state = create_test_state();
-
-    let op = RenderOpCommon::ExitAlternateScreen;
-    let output = execute_and_capture(op, &mut state, &output_device, &stdout_mock);
-
-    // CSI ?1049l exits alternate screen
-    assert_eq!(output, AnsiSequenceGenerator::exit_alternate_screen());
-}
-
-#[test]
 fn test_screen_operations_preserve_cursor_state() {
     // Test that screen operations don't affect cursor state
     let (output_device, stdout_mock) = create_mock_output();
@@ -147,41 +88,6 @@ fn test_screen_operations_preserve_cursor_state() {
 
     // Cursor position should be unchanged
     assert_eq!(state.cursor_pos, saved_pos);
-}
-
-#[test]
-fn test_hide_and_show_cursor_sequence() {
-    // Test hiding and then showing cursor
-    let (output_device, stdout_mock) = create_mock_output();
-    let mut state = create_test_state();
-
-    let ops = vec![RenderOpCommon::HideCursor, RenderOpCommon::ShowCursor];
-
-    let output =
-        execute_sequence_and_capture(ops, &mut state, &output_device, &stdout_mock);
-
-    // Should contain both sequences
-    assert!(output.contains(&AnsiSequenceGenerator::hide_cursor()));
-    assert!(output.contains(&AnsiSequenceGenerator::show_cursor()));
-}
-
-#[test]
-fn test_enter_and_exit_alternate_screen_sequence() {
-    // Test entering and exiting alternate screen
-    let (output_device, stdout_mock) = create_mock_output();
-    let mut state = create_test_state();
-
-    let ops = vec![
-        RenderOpCommon::EnterAlternateScreen,
-        RenderOpCommon::ExitAlternateScreen,
-    ];
-
-    let output =
-        execute_sequence_and_capture(ops, &mut state, &output_device, &stdout_mock);
-
-    // Should contain both sequences
-    assert!(output.contains(&AnsiSequenceGenerator::enter_alternate_screen()));
-    assert!(output.contains(&AnsiSequenceGenerator::exit_alternate_screen()));
 }
 
 #[test]

@@ -50,12 +50,12 @@
 //! [`RenderOpsLocalData`]: crate::RenderOpsLocalData
 //! [rendering pipeline overview]: mod@crate::terminal_lib_backends#rendering-pipeline-architecture
 
-use crate::{AnsiSequenceGenerator, PaintMode, CliTextInline, ColIndex,
+use crate::{AnsiSequenceGenerator, CliTextInline, ColIndex,
             DEBUG_TUI_SHOW_DIRECT_TO_ANSI, GCStringOwned, InlineString,
             LockedOutputDevice, Pos, RenderOpCommon, RenderOpFlush, RenderOpOutput,
             RenderOpPaint, RenderOpsLocalData, RowHeight, Size, TermRowDelta, TuiColor,
             TuiStyle, cli_text_inline_impl::CliTextConvertOptions, col,
-            disable_raw_mode, enable_raw_mode, row, sanitize_and_save_abs_pos,
+            sanitize_and_save_abs_pos,
             terminal_lib_backends::direct_to_ansi::PixelCharRenderer};
 
 /// Implements [`RenderOpPaint`] trait using direct [`ANSI`] sequence generation.
@@ -83,22 +83,18 @@ pub struct RenderOpPaintImplDirectToAnsi;
 impl RenderOpPaint for RenderOpPaintImplDirectToAnsi {
     fn paint(
         &mut self,
-        skip_flush: &mut bool,
         render_op: &RenderOpOutput,
         window_size: Size,
         render_local_data: &mut RenderOpsLocalData,
         locked_output_device: LockedOutputDevice<'_>,
-        paint_mode: PaintMode,
     ) {
         match render_op {
             RenderOpOutput::Common(common_op) => {
                 self.paint_common(
-                    skip_flush,
                     common_op,
                     window_size,
                     render_local_data,
                     locked_output_device,
-                    paint_mode,
                 );
             }
             RenderOpOutput::CompositorNoClipTruncPaintTextWithAttributes(
@@ -134,22 +130,19 @@ impl RenderOpFlush for RenderOpPaintImplDirectToAnsi {
 impl RenderOpPaintImplDirectToAnsi {
     /// Paint a single common render operation using direct [`ANSI`] sequence generation.
     ///
-    /// This method handles all 27 [`RenderOpCommon`] variants, generating appropriate
+    /// This method handles all 17 [`RenderOpCommon`] variants, generating appropriate
     /// [`ANSI`] escape sequences and writing them directly to the output device. It
     /// tracks state (cursor position and colors) in [`RenderOpsLocalData`] to avoid
     /// sending redundant sequences when the state hasn't changed.
     ///
     /// # Variant Groups
     ///
-    /// The 27 variants are organized into 8 logical groups:
-    /// - **A**: No-ops (`EnterRawMode`, `ExitRawMode`, `Noop`) - return early
-    /// - **B**: Cursor movement (5 variants) - with optimization to skip if unchanged
-    /// - **C**: Screen clearing (4 variants) - direct [`ANSI`] generation
-    /// - **D**: Color operations (4 variants) - with caching to skip if unchanged
-    /// - **E**: Text rendering (1 variant) - pass-through
-    /// - **F**: Cursor visibility (2 variants) - direct [`ANSI`] generation
-    /// - **G**: Cursor save/restore (2 variants) - direct [`ANSI`] generation
-    /// - **H**: Terminal modes (6 variants) - direct [`ANSI`] generation
+    /// - **No-ops** (`Noop`) - return early
+    /// - **Cursor movement** (5 variants) - with optimization to skip if unchanged
+    /// - **Screen clearing** (4 variants) - direct [`ANSI`] generation
+    /// - **Color operations** (4 variants) - with caching to skip if unchanged
+    /// - **Text rendering** (1 variant) - pass-through
+    /// - **Cursor save/restore** (2 variants) - direct [`ANSI`] generation
     ///
     /// # Panics
     ///
@@ -160,26 +153,15 @@ impl RenderOpPaintImplDirectToAnsi {
     #[allow(clippy::too_many_lines)]
     pub fn paint_common(
         &mut self,
-        skip_flush: &mut bool,
         render_op: &RenderOpCommon,
         window_size: Size,
         render_local_data: &mut RenderOpsLocalData,
         locked_output_device: LockedOutputDevice<'_>,
-        paint_mode: PaintMode,
     ) {
         match render_op {
-            // Group A: No-ops
             RenderOpCommon::Noop => {}
 
-            RenderOpCommon::EnterRawMode => {
-                helpers::raw_mode_enter(skip_flush, locked_output_device, paint_mode);
-            }
 
-            RenderOpCommon::ExitRawMode => {
-                helpers::raw_mode_exit(skip_flush, locked_output_device, paint_mode);
-            }
-
-            // Group B: Cursor movement
             RenderOpCommon::MoveCursorPositionAbs(abs_pos) => {
                 helpers::move_cursor_position_abs(
                     *abs_pos,
@@ -223,7 +205,7 @@ impl RenderOpPaintImplDirectToAnsi {
                 );
             }
 
-            // Group C: Screen clearing
+
             RenderOpCommon::ClearScreen => {
                 let ansi = AnsiSequenceGenerator::clear_screen();
                 locked_output_device
@@ -252,7 +234,7 @@ impl RenderOpPaintImplDirectToAnsi {
                     .expect("Failed to write clear to start of line ANSI");
             }
 
-            // Group D: Color operations
+
             RenderOpCommon::SetFgColor(color) => {
                 helpers::set_fg_color(*color, render_local_data, locked_output_device);
             }
@@ -278,87 +260,29 @@ impl RenderOpPaintImplDirectToAnsi {
                 );
             }
 
-            // Group E: Text rendering
+
             RenderOpCommon::PrintStyledText(text) => {
                 locked_output_device
                     .write_all(text.as_bytes())
                     .expect("Failed to write styled text");
             }
 
-            // Group F: Cursor visibility
-            RenderOpCommon::ShowCursor => {
-                let ansi = AnsiSequenceGenerator::show_cursor();
-                locked_output_device
-                    .write_all(ansi.as_bytes())
-                    .expect("Failed to write show cursor ANSI");
-            }
 
-            RenderOpCommon::HideCursor => {
-                let ansi = AnsiSequenceGenerator::hide_cursor();
-                locked_output_device
-                    .write_all(ansi.as_bytes())
-                    .expect("Failed to write hide cursor ANSI");
-            }
-
-            // Group G: Cursor save/restore
             RenderOpCommon::SaveCursorPosition => {
                 let ansi = AnsiSequenceGenerator::save_cursor_position();
                 locked_output_device
                     .write_all(ansi.as_bytes())
                     .expect("Failed to write save cursor position ANSI");
             }
-
             RenderOpCommon::RestoreCursorPosition => {
                 let ansi = AnsiSequenceGenerator::restore_cursor_position();
                 locked_output_device
                     .write_all(ansi.as_bytes())
                     .expect("Failed to write restore cursor position ANSI");
             }
-
-            // Group H: Terminal modes
-            RenderOpCommon::EnterAlternateScreen => {
-                let ansi = AnsiSequenceGenerator::enter_alternate_screen();
-                locked_output_device
-                    .write_all(ansi.as_bytes())
-                    .expect("Failed to write enter alternate screen ANSI");
-            }
-
-            RenderOpCommon::ExitAlternateScreen => {
-                let ansi = AnsiSequenceGenerator::exit_alternate_screen();
-                locked_output_device
-                    .write_all(ansi.as_bytes())
-                    .expect("Failed to write exit alternate screen ANSI");
-            }
-
-            RenderOpCommon::EnableMouseTracking => {
-                let ansi = AnsiSequenceGenerator::enable_mouse_tracking();
-                locked_output_device
-                    .write_all(ansi.as_bytes())
-                    .expect("Failed to write enable mouse tracking ANSI");
-            }
-
-            RenderOpCommon::DisableMouseTracking => {
-                let ansi = AnsiSequenceGenerator::disable_mouse_tracking();
-                locked_output_device
-                    .write_all(ansi.as_bytes())
-                    .expect("Failed to write disable mouse tracking ANSI");
-            }
-
-            RenderOpCommon::EnableBracketedPaste => {
-                let ansi = AnsiSequenceGenerator::enable_bracketed_paste();
-                locked_output_device
-                    .write_all(ansi.as_bytes())
-                    .expect("Failed to write enable bracketed paste ANSI");
-            }
-
-            RenderOpCommon::DisableBracketedPaste => {
-                let ansi = AnsiSequenceGenerator::disable_bracketed_paste();
-                locked_output_device
-                    .write_all(ansi.as_bytes())
-                    .expect("Failed to write disable bracketed paste ANSI");
-            }
         }
     }
+
 
     /// Paint text with optional styling (post-compositor text rendering).
     ///
@@ -531,97 +455,7 @@ mod helpers {
         }
     }
 
-    pub fn raw_mode_enter(
-        skip_flush: &mut bool,
-        locked_output_device: LockedOutputDevice<'_>,
-        paint_mode: PaintMode,
-    ) {
-        if matches!(paint_mode, PaintMode::Real) {
-            match enable_raw_mode() {
-                Ok(()) => {
-                    DEBUG_TUI_SHOW_DIRECT_TO_ANSI.then(|| {
-                        tracing::info!(
-                            message = "direct_to_ansi: ✅ Succeeded",
-                            details = "EnterRawMode -> enable_raw_mode()"
-                        );
-                    });
-                }
-                Err(err) => {
-                    DEBUG_TUI_SHOW_DIRECT_TO_ANSI.then(|| {
-                        tracing::error!(
-                            message = "direct_to_ansi: ❌ Failed",
-                            details = "EnterRawMode -> enable_raw_mode()",
-                            error = %err
-                        );
-                    });
-                }
-            }
-        }
 
-        // Generate ANSI sequences for TUI setup (alternate screen, mouse, cursor, etc.).
-        let mut ansi_output = String::new();
-        ansi_output.push_str(&AnsiSequenceGenerator::enable_bracketed_paste());
-        ansi_output.push_str(&AnsiSequenceGenerator::enable_mouse_tracking());
-        ansi_output.push_str(&AnsiSequenceGenerator::enter_alternate_screen());
-        ansi_output.push_str(&AnsiSequenceGenerator::cursor_position(row(0), col(0)));
-        ansi_output.push_str(&AnsiSequenceGenerator::clear_screen());
-        ansi_output.push_str(&AnsiSequenceGenerator::hide_cursor());
-
-        locked_output_device
-            .write_all(ansi_output.as_bytes())
-            .expect("Failed to write TUI setup ANSI sequences");
-
-        if matches!(paint_mode, PaintMode::Real) {
-            helpers::flush(locked_output_device, "EnterRawMode -> flush()");
-        }
-
-        *skip_flush = true;
-    }
-
-    pub fn raw_mode_exit(
-        skip_flush: &mut bool,
-        locked_output_device: LockedOutputDevice<'_>,
-        paint_mode: PaintMode,
-    ) {
-        // Generate ANSI sequences for TUI teardown (restore screen, mouse, cursor, etc.).
-        let mut ansi_output = String::new();
-        ansi_output.push_str(&AnsiSequenceGenerator::disable_bracketed_paste());
-        ansi_output.push_str(&AnsiSequenceGenerator::disable_mouse_tracking());
-        ansi_output.push_str(&AnsiSequenceGenerator::exit_alternate_screen());
-        ansi_output.push_str(&AnsiSequenceGenerator::show_cursor());
-
-        locked_output_device
-            .write_all(ansi_output.as_bytes())
-            .expect("Failed to write TUI teardown ANSI sequences");
-
-        if matches!(paint_mode, PaintMode::Real) {
-            helpers::flush(locked_output_device, "ExitRawMode -> flush()");
-        }
-
-        if matches!(paint_mode, PaintMode::Real) {
-            match disable_raw_mode() {
-                Ok(()) => {
-                    DEBUG_TUI_SHOW_DIRECT_TO_ANSI.then(|| {
-                        tracing::info!(
-                            message = "direct_to_ansi: ✅ Succeeded",
-                            details = "ExitRawMode -> disable_raw_mode()"
-                        );
-                    });
-                }
-                Err(err) => {
-                    DEBUG_TUI_SHOW_DIRECT_TO_ANSI.then(|| {
-                        tracing::error!(
-                            message = "direct_to_ansi: ❌ Failed",
-                            details = "ExitRawMode -> disable_raw_mode()",
-                            error = %err
-                        );
-                    });
-                }
-            }
-        }
-
-        *skip_flush = true;
-    }
 
     /// Flush the output device with logging.
     ///
@@ -654,11 +488,12 @@ mod helpers {
 
 #[cfg(test)]
 mod tests {
+    use crate::{col, row};
     use super::*;
     use crate::{AnsiValue, ESC_START, height};
 
     #[test]
-    fn test_paint_common_noop_variant() {
+    fn test_ansi_sequence_generator_noop_variant() {
         // No-op should not produce any output
         // Simply verify Noop variant exists and can be constructed
         let _render_op = RenderOpCommon::Noop;
@@ -666,7 +501,7 @@ mod tests {
     }
 
     #[test]
-    fn test_paint_common_clear_screen() {
+    fn test_ansi_sequence_generator_clear_screen() {
         // ClearScreen should generate appropriate ANSI sequence
         let ansi = AnsiSequenceGenerator::clear_screen();
         assert!(!ansi.is_empty());
@@ -674,7 +509,7 @@ mod tests {
     }
 
     #[test]
-    fn test_paint_common_clear_current_line() {
+    fn test_ansi_sequence_generator_clear_current_line() {
         // ClearCurrentLine should generate appropriate ANSI sequence
         let ansi = AnsiSequenceGenerator::clear_current_line();
         assert!(!ansi.is_empty());
@@ -682,7 +517,7 @@ mod tests {
     }
 
     #[test]
-    fn test_paint_common_clear_to_end_of_line() {
+    fn test_ansi_sequence_generator_clear_to_end_of_line() {
         // ClearToEndOfLine should generate appropriate ANSI sequence
         let ansi = AnsiSequenceGenerator::clear_to_end_of_line();
         assert!(!ansi.is_empty());
@@ -690,7 +525,7 @@ mod tests {
     }
 
     #[test]
-    fn test_paint_common_clear_to_start_of_line() {
+    fn test_ansi_sequence_generator_clear_to_start_of_line() {
         // ClearToStartOfLine should generate appropriate ANSI sequence
         let ansi = AnsiSequenceGenerator::clear_to_start_of_line();
         assert!(!ansi.is_empty());
@@ -698,7 +533,7 @@ mod tests {
     }
 
     #[test]
-    fn test_paint_common_cursor_movement_position() {
+    fn test_ansi_sequence_generator_cursor_movement_position() {
         // MoveCursorPositionAbs should generate cursor positioning ANSI
         let row_idx = row(5);
         let col_idx = col(10);
@@ -709,7 +544,7 @@ mod tests {
     }
 
     #[test]
-    fn test_paint_common_cursor_to_column() {
+    fn test_ansi_sequence_generator_cursor_to_column() {
         // MoveCursorToColumn should generate column positioning ANSI
         let col_idx = col(15);
         let ansi = AnsiSequenceGenerator::cursor_to_column(col_idx);
@@ -718,7 +553,7 @@ mod tests {
     }
 
     #[test]
-    fn test_paint_common_cursor_next_line() {
+    fn test_ansi_sequence_generator_cursor_next_line() {
         // MoveCursorToNextLine should generate next line ANSI
         let row_height = height(3);
         // SAFETY: 3 is always non-zero
@@ -730,7 +565,7 @@ mod tests {
     }
 
     #[test]
-    fn test_paint_common_cursor_previous_line() {
+    fn test_ansi_sequence_generator_cursor_previous_line() {
         // MoveCursorToPreviousLine should generate previous line ANSI
         let row_height = height(2);
         // SAFETY: 2 is always non-zero
@@ -742,88 +577,88 @@ mod tests {
     }
 
     #[test]
-    fn test_paint_common_show_cursor() {
-        // ShowCursor should generate appropriate ANSI sequence
+    fn test_ansi_sequence_generator_show_cursor() {
+        // show_cursor should generate appropriate ANSI sequence
         let ansi = AnsiSequenceGenerator::show_cursor();
         assert!(!ansi.is_empty());
         assert!(ansi.contains(ESC_START));
     }
 
     #[test]
-    fn test_paint_common_hide_cursor() {
-        // HideCursor should generate appropriate ANSI sequence
+    fn test_ansi_sequence_generator_hide_cursor() {
+        // hide_cursor should generate appropriate ANSI sequence
         let ansi = AnsiSequenceGenerator::hide_cursor();
         assert!(!ansi.is_empty());
         assert!(ansi.contains(ESC_START));
     }
 
     #[test]
-    fn test_paint_common_save_cursor_position() {
-        // SaveCursorPosition should generate DECSC ANSI sequence
+    fn test_ansi_sequence_generator_save_cursor_position() {
+        // save_cursor_position should generate DECSC ANSI sequence
         let ansi = AnsiSequenceGenerator::save_cursor_position();
         assert!(!ansi.is_empty());
         assert!(ansi.contains(ESC_START));
     }
 
     #[test]
-    fn test_paint_common_restore_cursor_position() {
-        // RestoreCursorPosition should generate DECRC ANSI sequence
+    fn test_ansi_sequence_generator_restore_cursor_position() {
+        // restore_cursor_position should generate DECRC ANSI sequence
         let ansi = AnsiSequenceGenerator::restore_cursor_position();
         assert!(!ansi.is_empty());
         assert!(ansi.contains(ESC_START));
     }
 
     #[test]
-    fn test_paint_common_enter_alternate_screen() {
-        // EnterAlternateScreen should generate appropriate ANSI sequence
+    fn test_ansi_sequence_generator_enter_alternate_screen() {
+        // enter_alternate_screen should generate appropriate ANSI sequence
         let ansi = AnsiSequenceGenerator::enter_alternate_screen();
         assert!(!ansi.is_empty());
         assert!(ansi.contains(ESC_START));
     }
 
     #[test]
-    fn test_paint_common_exit_alternate_screen() {
-        // ExitAlternateScreen should generate appropriate ANSI sequence
+    fn test_ansi_sequence_generator_exit_alternate_screen() {
+        // exit_alternate_screen should generate appropriate ANSI sequence
         let ansi = AnsiSequenceGenerator::exit_alternate_screen();
         assert!(!ansi.is_empty());
         assert!(ansi.contains(ESC_START));
     }
 
     #[test]
-    fn test_paint_common_enable_mouse_tracking() {
-        // EnableMouseTracking should generate appropriate ANSI sequences
+    fn test_ansi_sequence_generator_enable_mouse_tracking() {
+        // enable_mouse_tracking should generate appropriate ANSI sequences
         let ansi = AnsiSequenceGenerator::enable_mouse_tracking();
         assert!(!ansi.is_empty());
         assert!(ansi.contains(ESC_START));
     }
 
     #[test]
-    fn test_paint_common_disable_mouse_tracking() {
-        // DisableMouseTracking should generate appropriate ANSI sequences
+    fn test_ansi_sequence_generator_disable_mouse_tracking() {
+        // disable_mouse_tracking should generate appropriate ANSI sequences
         let ansi = AnsiSequenceGenerator::disable_mouse_tracking();
         assert!(!ansi.is_empty());
         assert!(ansi.contains(ESC_START));
     }
 
     #[test]
-    fn test_paint_common_enable_bracketed_paste() {
-        // EnableBracketedPaste should generate appropriate ANSI sequence
+    fn test_ansi_sequence_generator_enable_bracketed_paste() {
+        // enable_bracketed_paste should generate appropriate ANSI sequence
         let ansi = AnsiSequenceGenerator::enable_bracketed_paste();
         assert!(!ansi.is_empty());
         assert!(ansi.contains(ESC_START));
     }
 
     #[test]
-    fn test_paint_common_disable_bracketed_paste() {
-        // DisableBracketedPaste should generate appropriate ANSI sequence
+    fn test_ansi_sequence_generator_disable_bracketed_paste() {
+        // disable_bracketed_paste should generate appropriate ANSI sequence
         let ansi = AnsiSequenceGenerator::disable_bracketed_paste();
         assert!(!ansi.is_empty());
         assert!(ansi.contains(ESC_START));
     }
 
     #[test]
-    fn test_paint_common_reset_color() {
-        // ResetColor should generate SGR reset ANSI sequence
+    fn test_ansi_sequence_generator_reset_color() {
+        // reset_color should generate SGR reset ANSI sequence
         let ansi = AnsiSequenceGenerator::reset_color();
         assert!(!ansi.is_empty());
         assert!(ansi.contains(ESC_START));
@@ -913,8 +748,6 @@ mod tests {
         // This test verifies we've handled all cases by checking variant count
         // in the match statement through successful compilation.
         let _noop = RenderOpCommon::Noop;
-        let _enter_raw = RenderOpCommon::EnterRawMode;
-        let _exit_raw = RenderOpCommon::ExitRawMode;
         let _move_abs = RenderOpCommon::MoveCursorPositionAbs(Pos::default());
         let _clear = RenderOpCommon::ClearScreen;
         let white_color = TuiColor::Ansi(AnsiValue::new(7)); // White (ANSI 7)
@@ -922,16 +755,8 @@ mod tests {
         let _set_fg = RenderOpCommon::SetFgColor(white_color);
         let _set_bg = RenderOpCommon::SetBgColor(black_color);
         let _reset = RenderOpCommon::ResetColor;
-        let _show = RenderOpCommon::ShowCursor;
-        let _hide = RenderOpCommon::HideCursor;
         let _save = RenderOpCommon::SaveCursorPosition;
         let _restore = RenderOpCommon::RestoreCursorPosition;
-        let _enter_alt = RenderOpCommon::EnterAlternateScreen;
-        let _exit_alt = RenderOpCommon::ExitAlternateScreen;
-        let _enable_mouse = RenderOpCommon::EnableMouseTracking;
-        let _disable_mouse = RenderOpCommon::DisableMouseTracking;
-        let _enable_paste = RenderOpCommon::EnableBracketedPaste;
-        let _disable_paste = RenderOpCommon::DisableBracketedPaste;
 
         // All variants successfully created - test passes
     }

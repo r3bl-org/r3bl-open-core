@@ -1,6 +1,6 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{LockedOutputDevice, PaintMode, Size};
+use crate::{LockedOutputDevice, Size};
 
 /// Trait for render operation collections that can be executed.
 ///
@@ -53,7 +53,7 @@ use crate::{LockedOutputDevice, PaintMode, Size};
 /// # use r3bl_tui::{RenderOpsExec, RenderOpOutputVec, Size, PaintMode};
 /// # fn example(ops: &RenderOpOutputVec) {
 /// // Only RenderOpOutputVec implements this trait
-/// ops.execute_all(&mut false, Size::default(), todo!(), PaintMode::Real);
+/// ops.execute_all(Size::default(), todo!());
 /// # }
 /// ```
 ///
@@ -61,7 +61,7 @@ use crate::{LockedOutputDevice, PaintMode, Size};
 /// ```compile_fail
 /// # use r3bl_tui::{RenderOpsExec, RenderOpIRVec, Size, PaintMode};
 /// # fn example(ops: &RenderOpIRVec) {
-/// ops.execute_all(&mut false, Size::default(), todo!(), PaintMode::Real); // ❌ Compile error!
+/// ops.execute_all(Size::default(), todo!()); // ❌ Compile error!
 /// # }
 /// ```
 ///
@@ -79,15 +79,11 @@ pub trait RenderOpsExec {
     /// ```
     ///
     /// # Arguments
-    /// - `skip_flush`: Mutable reference to control flush behavior
     /// - `window_size`: Current terminal window dimensions
     /// - `locked_output_device`: Locked terminal output for thread-safe writing
-    /// - `paint_mode`: Whether to execute against the real terminal or in mock mode
     fn execute_all(
         &self,
-        skip_flush: &mut bool,
         window_size: Size,
         locked_output_device: LockedOutputDevice<'_>,
-        paint_mode: PaintMode,
     );
 }

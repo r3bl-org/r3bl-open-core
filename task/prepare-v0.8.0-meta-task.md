@@ -15,16 +15,16 @@
         https://github.com/r3bl-org/r3bl-open-core/pull/452
 - [x] Cursor display issues
   - [x] [issue-461-fix.md](done/issue-461-fix.md) - https://github.com/r3bl-org/r3bl-open-core/issues/461
-  - [ ] [remove crossterm mental model pollution](remove-crossterm-mental-model-pollution.md)
+- [ ] Core Types Refactor
+  - [x] [remove crossterm mental model pollution](done/remove-crossterm-mental-model-pollution.md)
+  - [ ] [upgrade-range-for-rust_1_96_0.md](upgrade-range-for-rust_1_96_0.md)
   - [ ] [rustdocs - fix readability of esc codes](fix-esc-code-formatting.md)
 - [ ] PRs from Cecile
   - [ ] https://github.com/r3bl-org/r3bl-open-core/pull/455
   - [ ] https://github.com/r3bl-org/r3bl-open-core/pull/456
-  - [ ] https://github.com/r3bl-org/r3bl-open-core/pull/457
   - [ ] https://github.com/r3bl-org/r3bl-open-core/pull/458
   - [ ] https://github.com/r3bl-org/r3bl-open-core/pull/459
-- [ ] Core Types Refactor
-  - [ ] [upgrade-range-for-rust_1_96_0.md](upgrade-range-for-rust_1_96_0.md)
+  - [ ] https://github.com/r3bl-org/r3bl-open-core/pull/462
 - [ ] Release Verification & Publication
   - [ ] Test everything on macOS.
   - [ ] Test everything on Windows.

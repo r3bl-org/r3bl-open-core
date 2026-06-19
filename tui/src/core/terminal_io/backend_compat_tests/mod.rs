@@ -69,3 +69,6 @@ pub mod backend_compat_output_test;
 
 #[cfg(any(all(unix, doc), all(target_os = "linux", test)))]
 pub mod pty_non_blocking_stdout_no_panic_test;
+
+#[cfg(any(all(unix, doc), all(target_os = "linux", test)))]
+pub mod pty_terminal_mode_test;

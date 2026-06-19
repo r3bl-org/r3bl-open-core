@@ -11,8 +11,8 @@
 
 use super::ProcessManager;
 use crate::{ArrayBoundsCheck, ArrayOverflowResult, FlushKind, GCStringOwned, IndexOps,
-            OffscreenBuffer, OutputDevice, PaintMode, PixelChar, RangeExt,
-            RenderOpCommon, RenderOpsLocalData, SPACE_CHAR, Size, TuiStyle, col,
+            OffscreenBuffer, OutputDevice, PixelChar, RangeExt,
+            RenderOpsLocalData, SPACE_CHAR, Size, TuiStyle, col,
             core::coordinates::{idx, len},
             ok, print_text_with_attributes, row,
             tui::{DEBUG_TUI_PTY_MUX,
@@ -357,24 +357,24 @@ impl OutputRenderer {
 ///
 /// # Note on Side Effects
 ///
-/// We explicitly push [`RenderOpCommon::HideCursor`] here instead of passing the parsed
+/// We explicitly push [`hide_cursor`] here instead of passing the parsed
 /// visibility state. This permanently suppresses the terminal emulator cursor when the
 /// multiplexer is active, preventing flickering and cursor parking issues.
 ///
 /// There is no danger of this messing up the chrome UI since it doesn't natively require
 /// a terminal emulator cursor. If interactive regions (like a find feature) are added to
 /// the chrome in the future, they will be handled by compositing another virtual caret.
+///
+/// [`hide_cursor`]: crate::TerminalModeController::hide_cursor
 fn paint_buffer(ofs_buf: &OffscreenBuffer, output_device: &OutputDevice) {
     let mut ofs_buf_paint_impl = OffscreenBufferPaintImpl {};
-    let mut render_ops = ofs_buf_paint_impl.render(ofs_buf);
-    render_ops.push(RenderOpCommon::HideCursor);
+    let render_ops = ofs_buf_paint_impl.render(ofs_buf);
     output_device.write(|out| {
         ofs_buf_paint_impl.paint(
             render_ops,
             FlushKind::JustFlush,
             ofs_buf.window_size,
             out,
-            PaintMode::Real,
         );
     });
 }

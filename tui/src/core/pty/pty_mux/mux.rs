@@ -12,11 +12,11 @@
 use super::{InputRouter, OutputRenderer, Process, ProcessManager, output_renderer,
             show_notification_non_blocking};
 use crate::{AnsiSequenceGenerator, Continuation, DEBUG_TUI_PTY_MUX, InputEvent,
-            PaintMode, RawMode, Size, TerminalInteractiveStatus, TuiAvailability, col,
+            Size, TerminalInteractiveStatus, TuiAvailability, col,
             core::{check_is_terminal_interactive, emit_stderr_redirection_disclaimer,
                    get_size,
                    osc::OscController,
-                   terminal_io::{InputDevice, OutputDevice}},
+                   terminal_io::{InputDevice, OutputDevice, TerminalModeController}},
             ok, row};
 use std::{fmt::Debug,
           time::{Duration, Instant}};
@@ -197,10 +197,10 @@ impl PTYMux {
     /// [`stderr`]: std::io::stderr
     /// [interactive terminal application entry points]: crate#interactive-terminal-application-entry-points
     pub async fn run(mut self) -> miette::Result<()> {
-        // Start raw mode using existing RawMode.
-        self.output_device.write(|out| {
-            RawMode::start(self.terminal_size, out, PaintMode::Real);
-        });
+        // Start raw mode.
+        let _raw_mode_guard = self.output_device.enter_raw_mode()?;
+        let _fullscreen_tui_mode_guard = self.output_device.setup_full_screen_tui()?;
+
         DEBUG_TUI_PTY_MUX.then(|| {
             // % is Display, ? is Debug.
             tracing::debug! {
@@ -261,6 +261,8 @@ impl PTYMux {
         // Always cleanup regardless of error.
         self.cleanup_terminal();
 
+        // `_fullscreen_tui_mode_guard` and `_raw_mode_guard` are dropped here,
+        // which securely restores the terminal to its original state.
         result
     }
 
@@ -542,9 +544,7 @@ impl PTYMux {
                 info = %crate::inline_string!("Step 6: Ending raw mode")
             };
         });
-        self.output_device.write(|out| {
-            RawMode::end(self.terminal_size, out, PaintMode::Real);
-        });
+        self.output_device.teardown_full_screen_tui().ok();
         DEBUG_TUI_PTY_MUX.then(|| {
             // % is Display, ? is Debug.
             tracing::debug! {

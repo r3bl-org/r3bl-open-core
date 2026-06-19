@@ -246,7 +246,7 @@ mod tests {
         assert_eq!(render_ops.len(), 0);
 
         // Add a single RenderOpIR variant
-        let op = RenderOpIR::Common(RenderOpCommon::EnterRawMode);
+        let op = RenderOpIR::Common(RenderOpCommon::ClearScreen);
         render_ops += op.clone();
 
         assert_eq!(render_ops.len(), 1);
@@ -258,15 +258,15 @@ mod tests {
         let mut render_ops = RenderOpIRVec::new();
 
         // Add via Into conversion from RenderOpCommon
-        let op_common = RenderOpCommon::ExitRawMode;
+        let op_common = RenderOpCommon::ResetColor;
         render_ops += RenderOpIR::Common(op_common.clone());
 
         assert_eq!(render_ops.len(), 1);
         match &render_ops[0] {
-            RenderOpIR::Common(RenderOpCommon::ExitRawMode) => {
+            RenderOpIR::Common(RenderOpCommon::ResetColor) => {
                 // Test passed - the operation was converted and stored correctly
             }
-            _ => panic!("Expected ExitRawMode"),
+            _ => panic!("Expected ResetColor"),
         }
     }
 
@@ -275,8 +275,8 @@ mod tests {
         let mut render_ops = RenderOpIRVec::new();
 
         // Add multiple operations using += operator
-        let op1 = RenderOpCommon::EnterRawMode;
-        let op2 = RenderOpCommon::ExitRawMode;
+        let op1 = RenderOpCommon::ClearScreen;
+        let op2 = RenderOpCommon::ResetColor;
         let op3 = RenderOpCommon::ClearScreen;
 
         render_ops += RenderOpIR::Common(op1);
@@ -309,7 +309,7 @@ mod tests {
         let mut render_ops = RenderOpIRVec::new();
 
         // This demonstrates the ergonomic improvement over .push()
-        render_ops += RenderOpIR::Common(RenderOpCommon::EnterRawMode);
+        render_ops += RenderOpIR::Common(RenderOpCommon::ClearScreen);
 
         assert_eq!(render_ops.len(), 1);
     }
@@ -319,8 +319,8 @@ mod tests {
         let mut render_ops = RenderOpIRVec::new();
 
         // Mix push() and += operator
-        render_ops.push(RenderOpCommon::EnterRawMode);
-        render_ops += RenderOpIR::Common(RenderOpCommon::ExitRawMode);
+        render_ops.push(RenderOpCommon::ClearScreen);
+        render_ops += RenderOpIR::Common(RenderOpCommon::ResetColor);
         render_ops.push(RenderOpCommon::ClearScreen);
 
         assert_eq!(render_ops.len(), 3);
@@ -331,18 +331,18 @@ mod tests {
         let mut render_ops = RenderOpIRVec::new();
 
         // Add RenderOpCommon directly without wrapping in RenderOpIR::Common
-        render_ops += RenderOpCommon::EnterRawMode;
-        render_ops += RenderOpCommon::ExitRawMode;
+        render_ops += RenderOpCommon::ClearScreen;
+        render_ops += RenderOpCommon::ResetColor;
         render_ops += RenderOpCommon::ClearScreen;
 
         assert_eq!(render_ops.len(), 3);
 
         // Verify the operations were wrapped correctly
         match &render_ops[0] {
-            RenderOpIR::Common(RenderOpCommon::EnterRawMode) => {
+            RenderOpIR::Common(RenderOpCommon::ClearScreen) => {
                 // First operation is correct
             }
-            _ => panic!("Expected EnterRawMode at index 0"),
+            _ => panic!("Expected ClearScreen at index 0"),
         }
     }
 }

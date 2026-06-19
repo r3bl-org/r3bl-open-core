@@ -88,18 +88,15 @@ pub fn execute_and_render_to_buffer_with_size(
 
     // Step 2: Execute operations via DirectToAnsi painter.
     let mut state = create_rendered_test_state();
-    let mut skip_flush = false;
     let mut painter = RenderOpPaintImplDirectToAnsi;
 
     for op in &ops {
         output_device.write(|mut_ref| {
             painter.paint(
-                &mut skip_flush,
                 op,
                 buffer_size,
                 &mut state,
                 mut_ref,
-                output_device.paint_mode,
             );
         });
     }

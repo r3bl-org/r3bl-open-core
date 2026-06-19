@@ -1,7 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::RenderOpsLocalData;
-use crate::{LockedOutputDevice, PaintMode, RenderOpOutput, Size};
+use crate::{LockedOutputDevice, RenderOpOutput, Size};
 
 /// Trait for executing individual [`RenderOpOutput`] operations on a terminal.
 ///
@@ -84,13 +84,11 @@ use crate::{LockedOutputDevice, PaintMode, RenderOpOutput, Size};
 /// // In backend converter (e.g., OffscreenBufferPaintImpl):
 /// for render_op_output in &render_ops_collection {
 ///     let mut painter = CrosstermPainter::new();
-///     painter.paint(
-///         &mut skip_flush,
-///         render_op_output,
+///     RenderOpPaintImplCrossterm {}.paint(
+///         &output_op,
 ///         window_size,
 ///         &mut local_data,  // Shared state for optimization
 ///         locked_output,
-///         paint_mode,
 ///     );
 /// }
 /// ```
@@ -103,31 +101,6 @@ use crate::{LockedOutputDevice, PaintMode, RenderOpOutput, Size};
 /// 2. **Per-operation optimization** (skip redundant color/position commands)
 /// 3. **Consistent behavior** across different terminal library backends
 /// 4. **Easy addition** of new backends without changing core pipeline
-///
-/// # About the `paint_mode` Parameter
-///
-/// The `paint_mode: PaintMode` parameter is present in all implementations for **API
-/// consistency** across different backends. However, actual mock behavior is handled at
-/// the I/O boundary:
-///
-/// - **Source of Truth**: [`crate::OutputDevice::paint_mode`] is the definitive source of
-///   mock status
-/// - **Paint Functions**: Always execute fully; they do NOT check `paint_mode` and return
-///   early
-/// - **I/O Boundary**: The [`crate::OutputDevice`] decides whether to actually write
-///   terminal commands
-///
-/// **Why keep the parameter if backends don't use it?**
-/// - **Backend Flexibility**: Some backends (like [`DirectToAnsi`]) may use it in the
-///   future
-/// - **API Stability**: Consistent signature across all implementations
-/// - **Test Infrastructure**: Allows test harnesses to pass backend-specific mock flags
-/// - **Future-Proofing**: Avoids breaking API changes if a backend later needs it
-///
-/// **Example scenarios:**
-/// - [`crossterm`]: Ignores `paint_mode`, relies on [`crate::OutputDevice::paint_mode`]
-///   (current behavior)
-/// - [`DirectToAnsi`]: May use `paint_mode` to skip operations (not yet implemented)
 ///
 /// # Implementations
 ///
@@ -144,11 +117,7 @@ pub trait RenderOpPaint {
     ///
     /// # Arguments
     ///
-    /// - `skip_flush`: Mutable reference controlling whether to flush output
-    ///   - If `true`, the backend should skip flushing (another operation will do it)
-    ///   - If `false`, normal flush behavior applies
-    ///
-    /// - `render_op`: The specific output operation to execute
+    /// - `render_op_output`: The specific output operation to execute
     ///   - Can be a common operation (cursor movement, color changes)
     ///   - Or a paint operation (styled text to terminal)
     ///
@@ -167,13 +136,6 @@ pub trait RenderOpPaint {
     ///   - The actual [`crate::OutputDevice`] contains the authoritative
     ///     [`crate::OutputDevice::paint_mode`] flag
     ///
-    /// - `paint_mode`: Backend-specific mock flag (see trait docs for details)
-    ///   - Not checked by paint functions themselves
-    ///   - Included for API consistency across all backend implementations
-    ///   - Some backends may use this in the future (e.g., [`DirectToAnsi`])
-    ///   - [`crossterm`] currently ignores this and relies on
-    ///     [`crate::OutputDevice::paint_mode`]
-    ///
     /// # Behavior
     ///
     /// This method should:
@@ -188,11 +150,9 @@ pub trait RenderOpPaint {
     /// [`DirectToAnsi`]: crate::TerminalLibBackend::DirectToAnsi
     fn paint(
         &mut self,
-        skip_flush: &mut bool,
-        render_op: &RenderOpOutput,
+        render_op_output: &RenderOpOutput,
         window_size: Size,
         render_local_data: &mut RenderOpsLocalData,
         locked_output_device: LockedOutputDevice<'_>,
-        paint_mode: PaintMode,
     );
 }

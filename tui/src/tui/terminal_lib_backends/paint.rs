@@ -39,7 +39,7 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::{FlushKind, RenderOpsLocalData, RenderPipeline};
-use crate::{DEBUG_TUI_COMPOSITOR, PaintMode, DEBUG_TUI_SHOW_PIPELINE_EXPANDED, GlobalData,
+use crate::{DEBUG_TUI_COMPOSITOR, DEBUG_TUI_SHOW_PIPELINE_EXPANDED, GlobalData,
             LengthOps, LockedOutputDevice, OffscreenBuffer, OffscreenBufferPaint,
             OffscreenBufferPaintImpl, PixelCharDiffChunks, Pos, Size,
             TERMINAL_LIB_BACKEND, TerminalLibBackend};
@@ -50,7 +50,6 @@ fn perform_diff_paint(
     diff_chunks: &PixelCharDiffChunks,
     window_size: Size,
     locked_output_device: LockedOutputDevice<'_>,
-    paint_mode: PaintMode,
 ) {
     match TERMINAL_LIB_BACKEND {
         TerminalLibBackend::Crossterm => {
@@ -60,7 +59,6 @@ fn perform_diff_paint(
                 render_ops,
                 window_size,
                 locked_output_device,
-                paint_mode,
             );
         }
         TerminalLibBackend::DirectToAnsi => {
@@ -73,7 +71,6 @@ fn perform_diff_paint(
                 render_ops,
                 window_size,
                 locked_output_device,
-                paint_mode,
             );
         }
     }
@@ -85,7 +82,6 @@ fn perform_full_paint(
     flush_kind: FlushKind,
     window_size: Size,
     locked_output_device: LockedOutputDevice<'_>,
-    paint_mode: PaintMode,
 ) {
     match TERMINAL_LIB_BACKEND {
         TerminalLibBackend::Crossterm => {
@@ -96,7 +92,6 @@ fn perform_full_paint(
                 flush_kind,
                 window_size,
                 locked_output_device,
-                paint_mode,
             );
         }
         TerminalLibBackend::DirectToAnsi => {
@@ -110,7 +105,6 @@ fn perform_full_paint(
                 flush_kind,
                 window_size,
                 locked_output_device,
-                paint_mode,
             );
         }
     }
@@ -143,7 +137,6 @@ pub fn paint<S, AS>(
     flush_kind: FlushKind,
     global_data: &mut GlobalData<S, AS>,
     locked_output_device: LockedOutputDevice<'_>,
-    paint_mode: PaintMode,
 ) where
     S: Debug + Default + Clone + Sync + Send,
     AS: Debug + Default + Clone + Sync + Send,
@@ -171,7 +164,6 @@ pub fn paint<S, AS>(
                 flush_kind,
                 window_size,
                 locked_output_device,
-                paint_mode,
             );
         }
         Some(saved_offscreen_buffer) => {
@@ -183,7 +175,6 @@ pub fn paint<S, AS>(
                         flush_kind,
                         window_size,
                         locked_output_device,
-                        paint_mode,
                     );
                 }
                 Some(ref diff_chunks) => {
@@ -191,7 +182,6 @@ pub fn paint<S, AS>(
                         diff_chunks,
                         window_size,
                         locked_output_device,
-                        paint_mode,
                     );
                 }
             }

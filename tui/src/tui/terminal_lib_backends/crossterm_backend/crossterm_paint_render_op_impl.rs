@@ -47,16 +47,15 @@
 //! [rendering pipeline overview]: mod@crate::terminal_lib_backends#rendering-pipeline-architecture
 
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
-use crate::{CliTextInline, PaintMode, GCStringOwned, LockedOutputDevice, Pos, RCP_RESTORE_CURSOR_BYTES,
-            RenderOpCommon, RenderOpFlush, RenderOpOutput, RenderOpPaint,
-            RenderOpsLocalData, SCP_SAVE_CURSOR_BYTES, Size, TuiColor, TuiStyle,
-            cli_text_inline_impl::CliTextConvertOptions, sanitize_and_save_abs_pos,
+use crate::{CliTextInline, GCStringOwned, LockedOutputDevice, Pos,
+            RCP_RESTORE_CURSOR_BYTES, RenderOpCommon, RenderOpFlush, RenderOpOutput,
+            RenderOpPaint, RenderOpsLocalData, SCP_SAVE_CURSOR_BYTES, Size, TuiColor,
+            TuiStyle, cli_text_inline_impl::CliTextConvertOptions,
+            sanitize_and_save_abs_pos,
             tui::terminal_lib_backends::direct_to_ansi::PixelCharRenderer};
-use crossterm::{cursor::{Hide, MoveTo, Show},
-                event::{DisableBracketedPaste, DisableMouseCapture,
-                        EnableBracketedPaste, EnableMouseCapture},
+use crossterm::{cursor::MoveTo,
                 style::{ResetColor, SetBackgroundColor, SetForegroundColor},
-                terminal::{Clear, ClearType, EnterAlternateScreen, LeaveAlternateScreen}};
+                terminal::{Clear, ClearType}};
 
 // Macro definitions MUST come before their first usage within the same file,
 // because macro_rules! macros have textual (top-down) visibility.
@@ -197,22 +196,18 @@ pub struct PaintRenderOpImplCrossterm;
 impl RenderOpPaint for PaintRenderOpImplCrossterm {
     fn paint(
         &mut self,
-        skip_flush: &mut bool,
-        render_op: &RenderOpOutput,
+        render_op_output: &RenderOpOutput,
         window_size: Size,
         render_local_data: &mut RenderOpsLocalData,
         locked_output_device: LockedOutputDevice<'_>,
-        paint_mode: PaintMode,
     ) {
-        match render_op {
+        match render_op_output {
             RenderOpOutput::Common(common_op) => {
                 self.paint_common(
-                    skip_flush,
                     common_op,
                     window_size,
                     render_local_data,
                     locked_output_device,
-                    paint_mode,
                 );
             }
             RenderOpOutput::CompositorNoClipTruncPaintTextWithAttributes(
@@ -256,29 +251,14 @@ impl PaintRenderOpImplCrossterm {
     #[allow(clippy::too_many_lines)]
     pub fn paint_common(
         &mut self,
-        skip_flush: &mut bool,
         command_ref: &RenderOpCommon,
         window_size: Size,
         render_local_data: &mut RenderOpsLocalData,
         locked_output_device: LockedOutputDevice<'_>,
-        paint_mode: PaintMode,
     ) {
         match command_ref {
             RenderOpCommon::Noop => {}
-            RenderOpCommon::EnterRawMode => {
-                PaintRenderOpImplCrossterm::raw_mode_enter(
-                    skip_flush,
-                    locked_output_device,
-                    paint_mode,
-                );
-            }
-            RenderOpCommon::ExitRawMode => {
-                PaintRenderOpImplCrossterm::raw_mode_exit(
-                    skip_flush,
-                    locked_output_device,
-                    paint_mode,
-                );
-            }
+
             RenderOpCommon::MoveCursorPositionAbs(abs_pos) => {
                 PaintRenderOpImplCrossterm::move_cursor_position_abs(
                     *abs_pos,
@@ -352,59 +332,12 @@ impl PaintRenderOpImplCrossterm {
             RenderOpCommon::ClearToStartOfLine => {
                 PaintRenderOpImplCrossterm::clear_to_start_of_line(locked_output_device);
             }
-            RenderOpCommon::ShowCursor => {
-                queue_terminal_command!(locked_output_device, "ShowCursor", Show,);
-            }
-            RenderOpCommon::HideCursor => {
-                queue_terminal_command!(locked_output_device, "HideCursor", Hide,);
-            }
+
             RenderOpCommon::SaveCursorPosition => {
                 PaintRenderOpImplCrossterm::save_cursor_position(locked_output_device);
             }
             RenderOpCommon::RestoreCursorPosition => {
                 PaintRenderOpImplCrossterm::restore_cursor_position(locked_output_device);
-            }
-            RenderOpCommon::EnterAlternateScreen => {
-                queue_terminal_command!(
-                    locked_output_device,
-                    "EnterAlternateScreen",
-                    EnterAlternateScreen
-                );
-            }
-            RenderOpCommon::ExitAlternateScreen => {
-                queue_terminal_command!(
-                    locked_output_device,
-                    "ExitAlternateScreen",
-                    LeaveAlternateScreen
-                );
-            }
-            RenderOpCommon::EnableMouseTracking => {
-                queue_terminal_command!(
-                    locked_output_device,
-                    "EnableMouseTracking",
-                    EnableMouseCapture
-                );
-            }
-            RenderOpCommon::DisableMouseTracking => {
-                queue_terminal_command!(
-                    locked_output_device,
-                    "DisableMouseTracking",
-                    DisableMouseCapture
-                );
-            }
-            RenderOpCommon::EnableBracketedPaste => {
-                queue_terminal_command!(
-                    locked_output_device,
-                    "EnableBracketedPaste",
-                    EnableBracketedPaste
-                );
-            }
-            RenderOpCommon::DisableBracketedPaste => {
-                queue_terminal_command!(
-                    locked_output_device,
-                    "DisableBracketedPaste",
-                    DisableBracketedPaste
-                );
             }
         }
     }
@@ -444,63 +377,6 @@ impl PaintRenderOpImplCrossterm {
             "MoveCursorPosition",
             MoveTo(col, row)
         );
-    }
-
-    pub fn raw_mode_exit(
-        skip_flush: &mut bool,
-        locked_output_device: LockedOutputDevice<'_>,
-        paint_mode: PaintMode,
-    ) {
-        queue_terminal_command!(
-            locked_output_device,
-            "ExitRawMode -> DisableBracketedPaste, Show, LeaveAlternateScreen, DisableMouseCapture",
-            DisableBracketedPaste,
-            Show,
-            LeaveAlternateScreen,
-            DisableMouseCapture
-        );
-
-        if matches!(paint_mode, PaintMode::Real) {
-            flush_now!(locked_output_device, "ExitRawMode -> flush()");
-        }
-
-        disable_raw_mode_now!(paint_mode, "ExitRawMode -> disable_raw_mode()");
-
-        *skip_flush = true;
-    }
-
-    /// Enter raw mode, enabling bracketed paste, mouse capture, and entering the
-    /// alternate screen. This is used to prepare the terminal for rendering.
-    /// It also clears the screen and hides the cursor.
-    ///
-    /// Bracketed paste allows the terminal to distinguish between typed text and
-    /// pasted text. See [`crate::InputEvent::BracketedPaste`] for details on how
-    /// paste events work.
-    ///
-    /// More info: <https://en.wikipedia.org/wiki/Bracketed-paste>
-    pub fn raw_mode_enter(
-        skip_flush: &mut bool,
-        locked_output_device: LockedOutputDevice<'_>,
-        paint_mode: PaintMode,
-    ) {
-        enable_raw_mode_now!(paint_mode, "EnterRawMode -> enable_raw_mode()");
-
-        queue_terminal_command!(
-            locked_output_device,
-            "EnterRawMode -> EnableBracketedPaste, EnableMouseCapture, EnterAlternateScreen, MoveTo(0,0), Clear(ClearType::All), Hide",
-            EnableBracketedPaste,
-            EnableMouseCapture,
-            EnterAlternateScreen,
-            MoveTo(0, 0),
-            Clear(ClearType::All),
-            Hide,
-        );
-
-        if matches!(paint_mode, PaintMode::Real) {
-            flush_now!(locked_output_device, "EnterRawMode -> flush()");
-        }
-
-        *skip_flush = true;
     }
 
     pub fn set_fg_color(color: TuiColor, locked_output_device: LockedOutputDevice<'_>) {

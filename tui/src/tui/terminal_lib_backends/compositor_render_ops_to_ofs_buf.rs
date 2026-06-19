@@ -169,13 +169,13 @@ fn process_common_render_op(
     match common_op {
         // ===== Terminal Mode State Operations =====
         // These operations update the terminal mode state in the backend, but the
-        // OffscreenBuffer no longer tracks terminal mode state (since the refactor to OfsBufVT100).
-        // They are just passed through here to the backend during diffing.
+        // OffscreenBuffer no longer tracks terminal mode state (since the refactor to
+        // OfsBufVT100). They are just passed through here to the backend during diffing.
 
         // ===== Incremental Rendering Operations - Complete implementation
-        // These operations are executed both by the backend AND need to
-        // update buffer state for consistency and future extensibility (e.g., if
-        // choose() or readline_async migrates to use OffscreenBuffer).
+        // These operations are executed both by the backend AND need to update buffer
+        // state for consistency and future extensibility (e.g., if choose() or
+        // readline_async migrates to use OffscreenBuffer).
         RenderOpCommon::MoveCursorToColumn(col_index) => {
             ofs_buf.cursor_pos.col_index = *col_index;
         }
@@ -244,18 +244,8 @@ fn process_common_render_op(
         }
         // Terminal-only state operations and no-op operations - no buffer effect needed
         RenderOpCommon::Noop
-        | RenderOpCommon::ShowCursor
-        | RenderOpCommon::HideCursor
         | RenderOpCommon::SaveCursorPosition
-        | RenderOpCommon::RestoreCursorPosition
-        | RenderOpCommon::EnterRawMode
-        | RenderOpCommon::ExitRawMode
-        | RenderOpCommon::EnterAlternateScreen
-        | RenderOpCommon::ExitAlternateScreen
-        | RenderOpCommon::EnableMouseTracking
-        | RenderOpCommon::DisableMouseTracking
-        | RenderOpCommon::EnableBracketedPaste
-        | RenderOpCommon::DisableBracketedPaste => {}
+        | RenderOpCommon::RestoreCursorPosition => {}
         // Do process these.
         RenderOpCommon::ClearScreen => {
             ofs_buf.clear();

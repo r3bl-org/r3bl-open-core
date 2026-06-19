@@ -37,14 +37,6 @@ pub trait RenderOpCommonExt: Sized {
     /// Converts a common operation into this specific type (IR or Output).
     fn from_common(common: RenderOpCommon) -> Self;
 
-    // === Terminal Mode Operations ===
-
-    #[must_use]
-    fn enter_raw_mode() -> Self { Self::from_common(RenderOpCommon::EnterRawMode) }
-
-    #[must_use]
-    fn exit_raw_mode() -> Self { Self::from_common(RenderOpCommon::ExitRawMode) }
-
     // === Cursor Movement Operations ===
 
     #[must_use]
@@ -119,14 +111,6 @@ pub trait RenderOpCommonExt: Sized {
         Self::from_common(RenderOpCommon::PrintStyledText(text))
     }
 
-    // === Cursor Visibility Operations ===
-
-    #[must_use]
-    fn show_cursor() -> Self { Self::from_common(RenderOpCommon::ShowCursor) }
-
-    #[must_use]
-    fn hide_cursor() -> Self { Self::from_common(RenderOpCommon::HideCursor) }
-
     // === Cursor Position Save/Restore ===
 
     #[must_use]
@@ -137,42 +121,6 @@ pub trait RenderOpCommonExt: Sized {
     #[must_use]
     fn restore_cursor_position() -> Self {
         Self::from_common(RenderOpCommon::RestoreCursorPosition)
-    }
-
-    // === Alternate Screen Operations ===
-
-    #[must_use]
-    fn enter_alternate_screen() -> Self {
-        Self::from_common(RenderOpCommon::EnterAlternateScreen)
-    }
-
-    #[must_use]
-    fn exit_alternate_screen() -> Self {
-        Self::from_common(RenderOpCommon::ExitAlternateScreen)
-    }
-
-    // === Mouse Tracking Operations ===
-
-    #[must_use]
-    fn enable_mouse_tracking() -> Self {
-        Self::from_common(RenderOpCommon::EnableMouseTracking)
-    }
-
-    #[must_use]
-    fn disable_mouse_tracking() -> Self {
-        Self::from_common(RenderOpCommon::DisableMouseTracking)
-    }
-
-    // === Bracketed Paste Operations ===
-
-    #[must_use]
-    fn enable_bracketed_paste() -> Self {
-        Self::from_common(RenderOpCommon::EnableBracketedPaste)
-    }
-
-    #[must_use]
-    fn disable_bracketed_paste() -> Self {
-        Self::from_common(RenderOpCommon::DisableBracketedPaste)
     }
 
     // === No-op ===
