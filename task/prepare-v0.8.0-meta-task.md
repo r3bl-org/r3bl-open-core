@@ -1,32 +1,84 @@
-# Meta Task: Prepare v0.8.0 Release
+_Meta Task: Prepare v0.8.0 Release_
 
-- [x] PTY MUX UI Freeze
-  - [x] [fix-pty-mux-debug-session.md](done/fix-pty-mux-debug-session.md)
-- [x] Polling and Event Loop Fixes
-  - [x] https://github.com/r3bl-org/r3bl-open-core/pull/450
-  - [x] [fix-mio-poller-edge-triggered-polling.md](done/fix-mio-poller-edge-triggered-polling.md)
-  - [x] [Fix bug introduce by mio-poller-edge-triggered-polling](https://github.com/r3bl-org/r3bl-open-core/issues/453)
-- [x] Terminal Parsing (Pending PRs)
-  - [x] [improve-immature-vt100-shim.md](done/improve-immature-vt100-shim.md)
-  - [x] [pr-448-fix.md](done/pr-448-fix.md) - https://github.com/r3bl-org/r3bl-open-core/pull/448
-  - [x] [issue-451-fix.md](done/issue-451-fix.md) - https://github.com/r3bl-org/r3bl-open-core/issues/451
-- [x] RRT API (Pending PRs & Issues)
-  - [x] [pr-452-fix.md](done/pr-452-fix.md) -
-        https://github.com/r3bl-org/r3bl-open-core/pull/452
-- [x] Cursor display issues
-  - [x] [issue-461-fix.md](done/issue-461-fix.md) - https://github.com/r3bl-org/r3bl-open-core/issues/461
-- [ ] Core Types Refactor
-  - [x] [remove crossterm mental model pollution](done/remove-crossterm-mental-model-pollution.md)
-  - [ ] [upgrade-range-for-rust_1_96_0.md](upgrade-range-for-rust_1_96_0.md)
-  - [ ] [rustdocs - fix readability of esc codes](fix-esc-code-formatting.md)
-- [ ] PRs from Cecile
-  - [ ] https://github.com/r3bl-org/r3bl-open-core/pull/455
-  - [ ] https://github.com/r3bl-org/r3bl-open-core/pull/456
-  - [ ] https://github.com/r3bl-org/r3bl-open-core/pull/458
-  - [ ] https://github.com/r3bl-org/r3bl-open-core/pull/459
-  - [ ] https://github.com/r3bl-org/r3bl-open-core/pull/462
-- [ ] Release Verification & Publication
-  - [ ] Test everything on macOS.
-  - [ ] Test everything on Windows.
-  - [ ] Update CHANGELOG.md (this is a huge & breaking change)
-  - [ ] Make release v0.8.0.
+# [DONE] PTY MUX UI Freeze
+
+- [x] [fix-pty-mux-debug-session.md](done/fix-pty-mux-debug-session.md)
+
+# [DONE] Polling and Event Loop Fixes
+
+- [x] https://github.com/r3bl-org/r3bl-open-core/pull/450
+- [x] [fix-mio-poller-edge-triggered-polling.md](done/fix-mio-poller-edge-triggered-polling.md)
+- [x] [Fix bug introduce by mio-poller-edge-triggered-polling](https://github.com/r3bl-org/r3bl-open-core/issues/453)
+
+# [DONE] Terminal Parsing
+
+- [x] [improve-immature-vt100-shim.md](done/improve-immature-vt100-shim.md)
+- [x] [pr-448-fix.md](done/pr-448-fix.md) -
+      https://github.com/r3bl-org/r3bl-open-core/pull/448
+- [x] [issue-451-fix.md](done/issue-451-fix.md) -
+      https://github.com/r3bl-org/r3bl-open-core/issues/451
+
+# [DONE] RRT API
+
+- [x] [pr-452-fix.md](done/pr-452-fix.md) -
+      https://github.com/r3bl-org/r3bl-open-core/pull/452
+
+# [DONE] Cursor display issues
+
+- [x] [issue-461-fix.md](done/issue-461-fix.md) -
+      https://github.com/r3bl-org/r3bl-open-core/issues/461
+
+# [DONE] Core Types Refactor
+
+- [x] [remove crossterm mental model pollution](done/remove-crossterm-mental-model-pollution.md)
+
+# [WIP] Complete PRs from Cecile
+
+- [ ] [LF scroll-up test fix](pr-462-fix.md) - https://github.com/r3bl-org/r3bl-open-core/pull/462
+- [ ] [DA1 Responses timeout fix](pr-455-fix.md) - https://github.com/r3bl-org/r3bl-open-core/pull/455
+- [ ] [VT100 Pending Wrap fix](pr-456-fix.md) - https://github.com/r3bl-org/r3bl-open-core/pull/456
+- [ ] [Scrollback Buffer for PTY](pr-459-fix.md) - https://github.com/r3bl-org/r3bl-open-core/pull/459
+- [ ] [Mouse Event Forwarding](pr-458-fix.md) - https://github.com/r3bl-org/r3bl-open-core/pull/458
+
+# [TODO] Unify rendering
+
+- [ ] [unify the interactive entry points to alternate screen](task_refactor_interactive_apis_to_alternate_screen.md)
+- [ ] [unify styling](task_unify_cli_and_styled_text.md)
+- [ ] [ofs buf 1d array perf enhancement](task_ofs_buf_1d_array.md)
+
+# [TODO] Clean up tasks
+
+- [ ] [upgrade-range-for-rust_1_96_0.md](upgrade-range-for-rust_1_96_0.md)
+- [ ] [rustdocs - fix readability of esc codes](fix-esc-code-formatting.md)
+
+# [TODO] build-infra tasks
+
+- [ ] [build-infra-add-more-terms-to-seed-jsonc.md](build-infra-add-more-terms-to-seed-jsonc.md)
+- [ ] [build-infra-upgrade-support.md](build-infra-upgrade-support.md)
+
+# [TODO] Release Verification & Publication
+
+- [ ] **Code Quality & Documentation**
+  - [ ] Run `./check.fish --full` to verify Linux builds, tests, clippy, and rustdoc
+        generation.
+  - [ ] Update `CHANGELOG.md` to comprehensively reflect this massive & breaking release
+        (e.g., PTY multiplexer, VT100 parser extraction, scrollback, timeout fixes).
+- [ ] **Cross-Platform Manual Verification**
+  - [ ] macOS: Run interactive PTY examples (e.g., `cargo run --example pty_mux_example`)
+        and verify mouse input, scrollback, and DA1 timeout fixes.
+  - [ ] Windows: Boot Windows VM/environment, verify compilation, and test interactive
+        TUI/PTY examples.
+- [ ] **Publication Workflow (via `/release` skill)**
+  - [ ] `r3bl_tui`
+    - [ ] Bump version numbers to `0.8.0` in `Cargo.toml` (workspace and/or crates).
+    - [ ] Run `cargo publish --dry-run`.
+    - [ ] Publish to crates.io.
+    - [ ] Create and push git tag `v0.8.0`.
+    - [ ] Draft and publish a GitHub Release using the updated changelog notes.
+  - [ ] `r3bl-build-infra`
+    - [ ] Bump version numbers to `???` in `Cargo.toml` (workspace and/or crates).
+    - [ ] Run `cargo publish --dry-run`.
+    - [ ] Publish to crates.io.
+    - [ ] Create and push git tag `v???`.
+    - [ ] Draft and publish a GitHub Release using the updated changelog notes.
+

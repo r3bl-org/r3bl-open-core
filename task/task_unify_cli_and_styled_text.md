@@ -78,8 +78,9 @@
 
 # Task: Consolidate cli_text and tui_styled_text
 
-**Status**: Planned (Ready for Implementation) **Priority**: Medium (Maintenance & Code Quality)
-**Estimated Effort**: 17-23 hours **Dependencies**: None (can be done independently)
+**Status**: Planned (Ready for Implementation) **Priority**: High (Critical Prerequisite)
+**Estimated Effort**: 17-23 hours **Dependencies**: Must be completed BEFORE
+`task_refactor_interactive_apis_to_alternate_screen.md`.
 
 ## Overview
 
@@ -87,23 +88,34 @@
 
 The codebase currently maintains two parallel systems for styled text:
 
-1. **CliTextInline** (~1800 lines): Ergonomic API for interactive CLI prompts (choose, readline)
-2. **TuiStyledText** (~100 lines): Type-safe system for full-screen TUI components with stylesheet
-   support
+1. **CliTextInline** (~1800 lines): Ergonomic API for interactive CLI prompts (choose,
+   readline)
+2. **TuiStyledText** (~100 lines): Type-safe system for full-screen TUI components with
+   stylesheet support
 
-Both converge at the same underlying rendering infrastructure (`PixelCharRenderer` → ANSI bytes) and
-represent the same conceptual entity: **styled text with colors and attributes**.
+Both converge at the same underlying rendering infrastructure (`PixelCharRenderer` → ANSI
+bytes) and represent the same conceptual entity: **styled text with colors and
+attributes**.
 
 **Problem**: Maintaining two parallel implementations violates DRY and creates confusion:
 
 - Developers must learn two APIs for the same concept
 - Bug fixes and features must be implemented twice
 - ~1800 lines of duplicated logic and tests
-- Inconsistent feature availability (e.g., CLI can't use stylesheets, TUI can't use convenience
-  functions)
+- Inconsistent feature availability (e.g., CLI can't use stylesheets, TUI can't use
+  convenience functions)
 
-**Solution**: Consolidate under `TuiStyledText` as the single unified type, extending it with the
-ergonomic builder API from CLI context.
+**The Prerequisite Problem:** We are migrating `choose` and `readline_async` to use the
+full `OffscreenBuffer` and `RenderOps` pipeline (see
+`task_refactor_interactive_apis_to_alternate_screen.md`). Because `RenderOps` natively
+requires `TuiStyledText`, migrating those APIs without unifying text types first would
+force library consumers to abandon the ergonomic builder API (`fg_red("...").bold()`) and
+use clunky macros for simple CLI tasks.
+
+**Solution**: Consolidate under `TuiStyledText` as the single unified type, extending it
+with the ergonomic builder API from the CLI context. This unification acts as the vital
+bridge allowing `choose` to use `RenderOps` internally without degrading the public
+developer experience.
 
 ### Current State
 
@@ -305,7 +317,8 @@ let styled = TuiStyledText::new(
 
 ### Why Consolidation Works
 
-**Key Insight**: Both systems represent the same conceptual entity with different feature sets:
+**Key Insight**: Both systems represent the same conceptual entity with different feature
+sets:
 
 | Aspect          | CliTextInline           | TuiStyledText                | Solution                          |
 | --------------- | ----------------------- | ---------------------------- | --------------------------------- |
@@ -640,7 +653,8 @@ cargo test --doc tui_styled_text
 
 ## Step 2: Add Compatibility Layer [PENDING] (1 hour)
 
-**Goal**: Make `CliTextInline` a transparent alias to `TuiStyledText` to support gradual migration.
+**Goal**: Make `CliTextInline` a transparent alias to `TuiStyledText` to support gradual
+migration.
 
 **Files Modified**:
 
@@ -834,7 +848,8 @@ In `cli_text.rs`, **KEEP**:
 
 - `struct CliTextInline` definition (lines ~11-95)
 - `impl CliTextInline { ... }` (lines ~200-820)
-- Constructor functions (lines ~355-738) — these are now in `tui_styled_text_constructors.rs`
+- Constructor functions (lines ~355-738) — these are now in
+  `tui_styled_text_constructors.rs`
 - `impl FastStringify for CliTextInline` (lines ~907-925)
 - All tests (lines ~930-1836)
 - Deprecated wrapper functions (from Phase 2)
@@ -964,9 +979,9 @@ cargo bench --package r3bl_tui 2>/dev/null || echo "No benchmarks yet"
 
 **Goal**: Optimize the text field storage for better memory efficiency.
 
-**Background**: `CliTextInline` uses `InlineString` (~64 bytes, stack-allocated for typical text),
-while `TuiStyledText` currently uses `String` (heap-allocated, 24 bytes base). For most CLI use
-cases, the text is short enough to fit on the stack.
+**Background**: `CliTextInline` uses `InlineString` (~64 bytes, stack-allocated for
+typical text), while `TuiStyledText` currently uses `String` (heap-allocated, 24 bytes
+base). For most CLI use cases, the text is short enough to fit on the stack.
 
 **Options**:
 
@@ -1009,8 +1024,8 @@ impl TuiStyledText {
 | Lookup performance   | 1 alloc for long text | Perfect cache locality |
 | TUI fit              | Good                  | Better for CLI         |
 
-**Recommendation**: Profile with benchmarks (Phase 5) to decide. If most text is <50 chars,
-InlineString might be better. If mostly <10 chars, SmallString is fine.
+**Recommendation**: Profile with benchmarks (Phase 5) to decide. If most text is <50
+chars, InlineString might be better. If mostly <10 chars, SmallString is fine.
 
 #### Phase 6 Implementation:
 
@@ -1045,8 +1060,8 @@ InlineString might be better. If mostly <10 chars, SmallString is fine.
 
 ## Step 7: Zero-Cost Abstractions [DEFERRED] (2-3 hours)
 
-**Goal**: Use conditional compilation to exclude unused fields from TuiStyle when not needed
-(advanced optimization).
+**Goal**: Use conditional compilation to exclude unused fields from TuiStyle when not
+needed (advanced optimization).
 
 **Problem**: In CLI context, `TuiStyle` has 8-16 unused bytes:
 
@@ -1272,8 +1287,8 @@ cargo test styled --lib
 cargo test --doc styled
 ```
 
-**Decision**: Implement if it improves ergonomics. If `styled_text()` + builders is already
-sufficient, skip.
+**Decision**: Implement if it improves ergonomics. If `styled_text()` + builders is
+already sufficient, skip.
 
 ## Testing & Validation
 
@@ -1330,7 +1345,8 @@ cargo fmt --check
 
 ### Risk 1: Call Sites Missed During Migration
 
-**Scenario**: Some `cli_text_inline()` calls not updated, leading to incomplete consolidation.
+**Scenario**: Some `cli_text_inline()` calls not updated, leading to incomplete
+consolidation.
 
 **Mitigation**:
 
@@ -1446,14 +1462,14 @@ If unrecoverable issues arise:
 
 ### Post-Consolidation (Out of Scope)
 
-1. **Universal Styled Text Type**: Investigate if other text types (CliTextLine, CliTextLines) could
-   be unified
+1. **Universal Styled Text Type**: Investigate if other text types (CliTextLine,
+   CliTextLines) could be unified
 2. **Rendering Abstraction**: Create trait for `to_pixel_chars()` for other text types
 3. **Style Composition**: Add style merging/inheritance for advanced styling
-4. **Performance Specialized Types**: If needed, create optimized variants (e.g., `TinyStyledText`
-   for <16 char strings)
+4. **Performance Specialized Types**: If needed, create optimized variants (e.g.,
+   `TinyStyledText` for <16 char strings)
 
 ---
 
-**Document Version**: 1.0 **Last Updated**: 2025-10-27 **Author**: Claude Code **Status**: Ready for
-Implementation
+**Document Version**: 1.0 **Last Updated**: 2025-10-27 **Author**: Claude Code **Status**:
+Ready for Implementation
