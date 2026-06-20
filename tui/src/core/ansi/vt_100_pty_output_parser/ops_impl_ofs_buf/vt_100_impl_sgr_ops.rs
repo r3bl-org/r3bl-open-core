@@ -1,9 +1,10 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! [`SGR`] (Select Graphic Rendition) operations for VT100/[`ANSI`] terminal emulation.
+//! [`SGR`] (Select Graphic Rendition) operations for [`VT-100`]/[`ANSI`] terminal
+//! emulation.
 //!
 //! This module implements [`SGR`] operations that correspond to [`ANSI`] [`SGR`]
-//! sequences handled by the `vt_100_pty_output_parser::ops::sgr_ops` module. These
+//! sequences handled by the [`vt_100_pty_output_parser::ops::sgr_ops`] module. These
 //! include:
 //!
 //! - **[`SGR`] 0** (Reset) - [`reset_all_style_attributes()`]
@@ -20,15 +21,13 @@
 //! - **[`SGR`] 90-97** (Bright foreground) - [`set_foreground_color()`]
 //! - **[`SGR`] 100-107** (Bright background) - [`set_background_color()`]
 //!
-//! All operations maintain VT100 compliance and handle proper style state
-//! management for terminal text rendering.
+//! All operations maintain [`VT-100`] compliance and handle proper style state management for
+//! terminal text rendering.
 //!
-//! This module implements the business logic for [`SGR`] operations delegated from
-//! the parser shim. The `impl_` prefix follows our naming convention for searchable
-//! code organization. See the architecture documentation above
-//! for the complete three-layer architecture.
-//!
-//! **Related Files:**
+//! This module implements the business logic for [`SGR`] operations delegated from the
+//! parser shim. The `impl_` prefix follows our naming convention for searchable code
+//! organization. See the architecture documentation above for the complete three-layer
+//! architecture.
 //!
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`apply_style_attribute()`]: crate::OfsBufVT100::apply_style_attribute
@@ -36,6 +35,9 @@
 //! [`set_background_color()`]: crate::OfsBufVT100::set_background_color
 //! [`set_foreground_color()`]: crate::OfsBufVT100::set_foreground_color
 //! [`SGR`]: crate::SgrCode
+//! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+//! [`vt_100_pty_output_parser::ops::sgr_ops`]:
+//!     crate::core::ansi::vt_100_pty_output_parser::ops::vt_100_shim_sgr_ops
 
 use crate::{AnsiValue, ColorTarget, OfsBufVT100, RgbValue, SgrColorSequence, TuiColor,
             TuiStyle, TuiStyleAttribs};
@@ -54,7 +56,7 @@ impl OfsBufVT100 {
             self.parser_global_state.current_style.attribs + attribs;
     }
 
-    /// Reset specific style attributes. Only fields that are `Some` in the input are
+    /// Reset specific style attributes. Only fields that are [`Some`] in the input are
     /// reset.
     pub fn reset_style_attribute(&mut self, attribs: TuiStyleAttribs) {
         let style = &mut self.parser_global_state.current_style;
@@ -118,9 +120,11 @@ impl OfsBufVT100 {
     ///
     /// * `index` - Palette index (0-255)
     ///
-    /// # VT100 Sequences
+    /// # [`VT-100`] Sequences
     ///
     /// Used with: `ESC[38;5;nm` or `ESC[38:5:nm`
+    ///
+    /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
     pub fn set_foreground_ansi256(&mut self, index: u8) {
         self.parser_global_state.current_style.color_fg =
             Some(TuiColor::Ansi(AnsiValue::new(index)));
@@ -132,9 +136,11 @@ impl OfsBufVT100 {
     ///
     /// * `index` - Palette index (0-255)
     ///
-    /// # VT100 Sequences
+    /// # [`VT-100`] Sequences
     ///
     /// Used with: `ESC[48;5;nm` or `ESC[48:5:nm`
+    ///
+    /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
     pub fn set_background_ansi256(&mut self, index: u8) {
         self.parser_global_state.current_style.color_bg =
             Some(TuiColor::Ansi(AnsiValue::new(index)));
@@ -148,9 +154,11 @@ impl OfsBufVT100 {
     /// * `g` - Green component (0-255)
     /// * `b` - Blue component (0-255)
     ///
-    /// # VT100 Sequences
+    /// # [`VT-100`] Sequences
     ///
     /// Used with: `ESC[38;2;r;g;bm` or `ESC[38:2:r:g:bm`
+    ///
+    /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
     pub fn set_foreground_rgb(&mut self, r: u8, g: u8, b: u8) {
         self.parser_global_state.current_style.color_fg =
             Some(TuiColor::Rgb(RgbValue::from_u8(r, g, b)));
@@ -164,9 +172,11 @@ impl OfsBufVT100 {
     /// * `g` - Green component (0-255)
     /// * `b` - Blue component (0-255)
     ///
-    /// # VT100 Sequences
+    /// # [`VT-100`] Sequences
     ///
     /// Used with: `ESC[48;2;r;g;bm` or `ESC[48:2:r:g:bm`
+    ///
+    /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
     pub fn set_background_rgb(&mut self, r: u8, g: u8, b: u8) {
         self.parser_global_state.current_style.color_bg =
             Some(TuiColor::Rgb(RgbValue::from_u8(r, g, b)));

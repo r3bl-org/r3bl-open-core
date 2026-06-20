@@ -88,8 +88,15 @@ verify it visually.
 ### Final Verification & Cleanup
 
 - [ ] Verify full test suite coverage using `./check.fish --full`.
-- [ ] Ensure all work was done on a new branch (e.g., `feat-scrollback-buffer`), rather than committing directly to `main` or Cecile's divergent branch.
-- [ ] When ready to merge, open a PR and include `Supersedes #459` in the description to gracefully close Cecile's draft PR. (Optionally include `Co-authored-by: cecton <email>` in the commit message).
+- [ ] Ensure all work was done on a new branch (e.g., `feat-scrollback-buffer`), rather
+      than committing directly to `main` or Cecile's divergent branch.
+- [ ] When ready to merge, open a PR and include `Supersedes #459` in the description to
+      gracefully close Cecile's draft PR.
+- [ ] **Important Attribution:** We are implementing our own fixes based on her original
+      intent. We must absolutely add a
+      `Co-authored-by: Cecile Tonglet <cecile.tonglet@cecton.com>` trailer to all of
+      the commits we make for this task to ensure she gets proper attribution for the
+      feature!
 - [ ] Use the `/merge-pr` slash command to cleanly rebase and merge to `main`.
 - [ ] Update the meta-task `task/prepare-v0.8.0-meta-task.md` to check off PR #459.
 - [ ] **Mandatory manual review:** Verify every file modified in this task.

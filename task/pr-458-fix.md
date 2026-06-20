@@ -89,6 +89,11 @@ Remove the abandoned `CursorModeDetector` pattern from the reader task.
 - [ ] Commit these changes locally on `main` and push to remote.
 - [ ] Close PR #458 manually on GitHub, stating that its feature was subsumed by our newly
       designed commit. (We are NOT merging the PR or its code).
+- [ ] **Important Attribution:** We are implementing our own fixes based on her original
+      intent. We must absolutely add a
+      `Co-authored-by: Cecile Tonglet <cecile.tonglet@cecton.com>` trailer to all of
+      the commits we make for this task to ensure she gets proper attribution for the
+      feature!
 - [ ] Update the current meta-task (e.g. `task/prepare-v0.8.0-meta-task.md`) to check off
       PR #458.
 - [ ] **Mandatory manual review:** Verify every file modified in this task for correct

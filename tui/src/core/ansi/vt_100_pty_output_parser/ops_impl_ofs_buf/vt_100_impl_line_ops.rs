@@ -1,30 +1,27 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Line manipulation operations for VT100/[`ANSI`] terminal emulation.
+//! Line manipulation operations for [`VT-100`]/[`ANSI`] terminal emulation.
 //!
 //! This module implements line-level operations that correspond to [`ANSI`] line
 //! sequences. These include:
 //!
-//! - **IL** (Insert Lines) - [`shift_lines_down()`]
-//! - **DL** (Delete Lines) - [`shift_lines_up()`]
-//! - **EL** (Erase Line) - [`clear_line()`]
+//! - `IL` (Insert Lines) - [`shift_lines_down()`]
+//! - `DL` (Delete Lines) - [`shift_lines_up()`]
+//! - `EL` (Erase Line) - [`clear_line()`]
 //!
-//! All operations maintain VT100 compliance and handle proper line manipulation
-//! within scroll regions as specified in VT100 documentation.
+//! All operations maintain [`VT-100`] compliance and handle proper line manipulation
+//! within scroll regions as specified in [`VT-100`] documentation.
 //!
-//! This module implements the business logic for line operations delegated from
-//! the parser shim. The `impl_` prefix follows our naming convention for searchable
-//! code organization. See the three-layer architecture documentation above for
-//! architecture.
-//!
-//! **Related Files:**
+//! This module implements the business logic for line operations delegated from the
+//! parser shim. The `impl_` prefix follows our naming convention for searchable code
+//! organization. See the three-layer architecture documentation above for architecture.
 //!
 //! # [`VT-100`] Scroll Region Boundaries
 //!
 //! Line insertion and deletion operations respect [`VT-100`] scroll region boundaries.
-//! The scroll region defines an inclusive range `[scroll_top, scroll_bottom]` where
-//! line operations are confined. Lines outside this region remain fixed.
-//! See [Interval Notation] for details on mathematical range syntax.
+//! The scroll region defines an inclusive range `[scroll_top, scroll_bottom]` where line
+//! operations are confined. Lines outside this region remain fixed. See [Interval
+//! Notation] for details on mathematical range syntax.
 //!
 //! ```text
 //! Terminal Buffer:
@@ -49,8 +46,8 @@
 //! - row_index=6 → false (below scroll region)
 //! ```
 //!
-//! Operations only affect lines within the scroll region. If the cursor is outside
-//! the scroll region, the operation is skipped entirely.
+//! Operations only affect lines within the scroll region. If the cursor is outside the
+//! scroll region, the operation is skipped entirely.
 //!
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`clear_line()`]: crate::OfsBufVT100::clear_line
@@ -67,6 +64,7 @@ use std::ops::Range;
 
 impl OfsBufVT100 {
     /// Clear an entire line by filling it with blank characters.
+    ///
     /// Returns true if the operation was successful.
     ///
     /// # Errors
@@ -93,11 +91,11 @@ impl OfsBufVT100 {
     }
 
     /// Shift lines up within a range by the specified amount.
-    /// Lines at the bottom of the range are filled with blank lines.
-    /// Returns true if the operation was successful.
     ///
-    /// Used by [`ANSI`] DL (Delete Line) and SU (Scroll Up) operations.
+    /// - Lines at the bottom of the range are filled with blank lines.
+    /// - Returns true if the operation was successful.
     ///
+    /// Used by [`ANSI`] `DL` (Delete Line) and `SU` (Scroll Up) operations.
     ///
     /// # Errors
     ///
@@ -136,14 +134,14 @@ impl OfsBufVT100 {
     }
 
     /// Shift lines down within a range by the specified amount.
-    /// Lines at the top of the range are filled with blank lines.
-    /// Returns true if the operation was successful.
     ///
-    /// Used by [`ANSI`] IL (Insert Line) and SD (Scroll Down) operations.
+    /// - Lines at the top of the range are filled with blank lines.
+    /// - Returns true if the operation was successful.
+    ///
+    /// Used by [`ANSI`] `IL` (Insert Line) and `SD` (Scroll Down) operations.
     ///
     /// For scrolling operations, this is also used to scroll buffer content down.
     /// The bottom line is lost, and a new empty line appears at top.
-    ///
     ///
     /// # Errors
     ///
@@ -182,13 +180,14 @@ impl OfsBufVT100 {
     }
 
     /// Insert multiple blank lines at the specified row position.
-    /// Lines below the insertion point shift down within the scroll region.
-    /// Lines at the bottom of the scroll region are lost.
+    ///
+    /// - Lines below the insertion point shift down within the scroll region.
+    /// - Lines at the bottom of the scroll region are lost.
     ///
     /// This operation respects [`VT-100`] scroll region boundaries. If the specified row
     /// is outside the scroll region, the operation is skipped.
     ///
-    /// Used by [`ANSI`] IL (Insert Line) operations.
+    /// Used by [`ANSI`] `IL` (Insert Line) operations.
     ///
     /// # Errors
     ///
@@ -231,13 +230,14 @@ impl OfsBufVT100 {
     }
 
     /// Delete multiple lines at the specified row position.
-    /// Lines below the deletion point shift up within the scroll region.
-    /// Blank lines are added at the bottom of the scroll region.
+    ///
+    /// - Lines below the deletion point shift up within the scroll region.
+    /// - Blank lines are added at the bottom of the scroll region.
     ///
     /// This operation respects [`VT-100`] scroll region boundaries. If the specified row
     /// is outside the scroll region, the operation is skipped.
     ///
-    /// Used by [`ANSI`] DL (Delete Line) operations.
+    /// Used by [`ANSI`] `DL` (Delete Line) operations.
     ///
     /// # Errors
     ///

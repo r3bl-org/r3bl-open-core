@@ -1,35 +1,44 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! [`OSC`] (Operating System Command) operations for VT100/[`ANSI`] terminal emulation.
+//! [`OSC`] (Operating System Command) operations for [`VT-100`]/[`ANSI`] terminal
+//! emulation.
 //!
 //! This module implements [`OSC`] operations that correspond to [`ANSI`] [`OSC`]
-//! sequences handled by the `vt_100_pty_output_parser::ops::osc_ops` module. These
+//! sequences handled by the [`vt_100_pty_output_parser::ops::osc_ops`] module. These
 //! include:
 //!
-//! - **[`OSC`] 0/1/2** (Set Title/Icon) - [`handle_title_and_icon`]
-//! - **[`OSC`] 8** (Hyperlinks) - [`handle_hyperlink`]
+//! - `ESC ] 0` (Set Icon Name and Window Title) - [`handle_title_and_icon`]
+//! - `ESC ] 1` (Set Icon Name) - [`handle_title_and_icon`]
+//! - `ESC ] 2` (Set Window Title) - [`handle_title_and_icon`]
+//! - `ESC ] 8` (Hyperlinks) - [`handle_hyperlink`]
 //!
-//! All operations maintain VT100 compliance and handle proper [`OSC`] event
-//! queueing for later transmission to the rendering layer.
+//! All operations maintain [`VT-100`] compliance and handle proper [`OSC`] event queueing
+//! for later transmission to the rendering layer.
 //!
-//! This module implements the business logic for [`OSC`] operations delegated from
-//! the parser shim. The `impl_` prefix follows our naming convention for searchable
-//! code organization. See the architecture documentation above
-//! for the complete three-layer architecture.
-//!
-//! **Related Files:**
+//! This module implements the business logic for [`OSC`] operations delegated from the
+//! parser shim. The `impl_` prefix follows our naming convention for searchable code
+//! organization. See the architecture documentation above for the complete three-layer
+//! architecture.
 //!
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`handle_hyperlink`]: crate::OfsBufVT100::handle_hyperlink
 //! [`handle_title_and_icon`]: crate::OfsBufVT100::handle_title_and_icon
 //! [`OSC`]: crate::osc_codes::OscSequence
+//! [`print_char()`]: crate::OfsBufVT100::print_char
+//! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+//! [`vt_100_pty_output_parser::ops::osc_ops`]:
+//!     crate::core::ansi::vt_100_pty_output_parser::ops::vt_100_shim_osc_ops
 
 #[allow(clippy::wildcard_imports)]
 use super::super::*;
 use crate::core::osc::OscEvent;
 
 impl OfsBufVT100 {
-    /// Handle [`OSC`] title and icon sequences ([`OSC`] 0, 1, 2).
+    /// Handle:
+    /// - `ESC ] 0` (Set Icon Name and Window Title),
+    /// - `ESC ] 1` (Set Icon Name),
+    /// - `ESC ] 2` (Set Window Title) sequences.
+    ///
     /// Sets window title and/or icon name by queuing an [`OSC`] event.
     ///
     /// [`OSC`]: crate::osc_codes::OscSequence
@@ -39,9 +48,10 @@ impl OfsBufVT100 {
             .push(OscEvent::SetTitleAndTab(title.to_string()));
     }
 
-    /// Handle [`OSC`] 8 hyperlink sequences.
-    /// Creates hyperlinks with URI by queuing an [`OSC`] event.
-    /// The display text is handled separately via `print()` calls.
+    /// Handle `ESC ] 8` hyperlink sequences.
+    ///
+    /// Creates hyperlinks with URI by queuing an [`OSC`] event. The display text is
+    /// handled separately via [`print_char()`] calls.
     ///
     /// [`OSC`]: crate::osc_codes::OscSequence
     pub fn handle_hyperlink(&mut self, uri: &str) {

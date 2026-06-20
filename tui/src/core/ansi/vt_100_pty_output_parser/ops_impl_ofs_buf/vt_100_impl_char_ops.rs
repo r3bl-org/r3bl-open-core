@@ -2,33 +2,32 @@
 
 // cspell:words BCDEF
 
-//! Character operations for VT100/[`ANSI`] terminal emulation.
+//! Character operations for [`VT-100`]/[`ANSI`] terminal emulation.
 //!
 //! This module implements character-level operations that correspond to [`ANSI`] escape
-//! sequences handled by the `vt_100_pty_output_parser/ops/vt_100_shim_char_ops`
-//! shim. These include:
+//! sequences handled by the [`char_ops`] shim. These include:
 //!
-//! - **ICH** (Insert Character) - [`insert_chars_at_cursor`]
-//! - **DCH** (Delete Character) - [`delete_chars_at_cursor`]
-//! - **ECH** (Erase Character) - [`erase_chars_at_cursor`]
-//! - **Print Character** - [`print_char`] (printable character handling with VT100
+//! - `ICH` (Insert Character) - [`insert_chars_at_cursor`]
+//! - `DCH` (Delete Character) - [`delete_chars_at_cursor`]
+//! - `ECH` (Erase Character) - [`erase_chars_at_cursor`]
+//! - `Print Character` - [`print_char`] (printable character handling with [`VT-100`]
 //!   features)
 //!
-//! All operations maintain VT100 compliance and handle proper character shifting,
-//! bounds checking, and cursor positioning as specified in VT100 documentation.
+//! All operations maintain [`VT-100`] compliance and handle proper character shifting,
+//! bounds checking, and cursor positioning as specified in [`VT-100`] documentation.
 //!
-//! This module implements the business logic for character operations delegated from
-//! the parser shim. The `impl_` prefix follows our naming convention for searchable
-//! code organization. See the architecture documentation above
-//! for the complete three-layer architecture.
-//!
-//! **Related Files:**
+//! This module implements the business logic for character operations delegated from the
+//! parser shim. The `impl_` prefix follows our naming convention for searchable code
+//! organization. See the architecture documentation above for the complete three-layer
+//! architecture.
 //!
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`char_ops`]: crate::core::ansi::vt_100_pty_output_parser::ops::vt_100_shim_char_ops
 //! [`delete_chars_at_cursor`]: crate::OfsBufVT100::delete_chars_at_cursor
 //! [`erase_chars_at_cursor`]: crate::OfsBufVT100::erase_chars_at_cursor
 //! [`insert_chars_at_cursor`]: crate::OfsBufVT100::insert_chars_at_cursor
 //! [`print_char`]: crate::OfsBufVT100::print_char
+//! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 
 #[allow(clippy::wildcard_imports)]
 use super::super::*;
@@ -39,10 +38,10 @@ use crate::{ArrayBoundsCheck, ArrayOverflowResult, AutoWrapState, ColIndex, Leng
             height, ok, width};
 
 impl OfsBufVT100 {
-    /// Insert blank characters at cursor position (for ICH - Insert Character).
-    /// Characters at and after the cursor shift right by `how_many`.
-    /// Characters that would shift beyond the line width are lost.
-    /// Returns true if the operation was successful.
+    /// Insert blank characters at cursor position (for `ICH` - Insert Character).
+    ///
+    /// - Characters at and after the cursor shift right by `how_many`.
+    /// - Characters that would shift beyond the line width are lost.
     ///
     /// Example - Inserting 2 blank characters at cursor position.
     ///
@@ -128,10 +127,10 @@ impl OfsBufVT100 {
         ok!()
     }
 
-    /// Delete characters at cursor position (for DCH - Delete Character).
-    /// Characters at and after the deletion point shift left by `how_many`.
-    /// Blank characters are inserted at the end of the line.
-    /// Returns true if the operation was successful.
+    /// Delete characters at cursor position (for `DCH` - Delete Character).
+    ///
+    /// - Characters at and after the deletion point shift left by `how_many`.
+    /// - Blank characters are inserted at the end of the line.
     ///
     /// Example - Deleting 2 characters at cursor position.
     ///
@@ -221,9 +220,9 @@ impl OfsBufVT100 {
         ok!()
     }
 
-    /// Erase characters at cursor position (for ECH - Erase Character).
+    /// Erase characters at cursor position (for `ECH` - Erase Character).
+    ///
     /// Characters are replaced with blanks, no shifting occurs.
-    /// Returns true if the operation was successful.
     ///
     /// Example - Erasing 3 characters at cursor position.
     ///
@@ -286,7 +285,7 @@ impl OfsBufVT100 {
     /// - [`DEC`] graphics character translation
     /// - Bounds checking
     /// - Character writing to buffer
-    /// - DECAWM (Auto Wrap Mode) line wrap handling
+    /// - [`DECAWM`] (Auto Wrap Mode) line wrap handling
     ///
     /// # Arguments
     /// * `ch` - The character to print
@@ -294,21 +293,18 @@ impl OfsBufVT100 {
     /// # Behavior
     /// 1. Applies character set translation if in graphics mode
     /// 2. Writes character to buffer at current cursor position (if within bounds)
-    /// 3. Advances cursor, handling line wrap based on DECAWM mode
+    /// 3. Advances cursor, handling line wrap based on [`DECAWM`] mode
     ///
     /// # Line Wrapping
-    /// - **DECAWM enabled** (default): wraps to next line when reaching right margin
-    /// - **DECAWM disabled**: cursor stays at right margin, new chars overwrite
-    ///
-    /// # Returns
-    /// Returns true if the character was successfully processed (even if out of bounds),
-    /// false if an internal operation failed.
+    /// - [`DECAWM`] enabled (default): wraps to next line when reaching right margin
+    /// - [`DECAWM`] disabled: cursor stays at right margin, new chars overwrite
     ///
     /// # Errors
     ///
     /// Returns an error if the character cannot be processed or if the operation fails.
     ///
     /// [`DEC`]: https://en.wikipedia.org/wiki/Digital_Equipment_Corporation
+    /// [`DECAWM`]: https://vt100.net/docs/vt510-rm/DECAWM.html
     pub fn print_char(&mut self, ch: char) -> miette::Result<()> {
         // Apply character set translation if in graphics mode.
         let display_char = match self.parser_global_state.character_set {

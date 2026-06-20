@@ -1,37 +1,37 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Device Status Report ([`DSR`]) operations for VT100/[`ANSI`] terminal emulation.
+//! Device Status Report ([`DSR`]) operations for [`VT-100`]/[`ANSI`] terminal emulation.
 //!
 //! This module implements [`DSR`] operations that correspond to [`ANSI`] [`DSR`]
-//! sequences handled by the `vt_100_pty_output_parser::ops::dsr_ops` module. These
+//! sequences handled by the [`vt_100_pty_output_parser::ops::dsr_ops`] module. These
 //! include:
 //!
 //! - **[`DSR`] 5** (Device Status Report) - [`handle_status_report_request`]
 //! - **[`DSR`] 6** (Cursor Position Report) - [`handle_cursor_position_request`]
 //!
-//! All operations maintain VT100 compliance and handle proper response
-//! queueing for later transmission back to the [`PTY`].
+//! All operations maintain [`VT-100`] compliance and handle proper response queueing for
+//! later transmission back to the [`PTY`].
 //!
-//! This module implements the business logic for [`DSR`] operations delegated from
-//! the parser shim. The `impl_` prefix follows our naming convention for searchable
-//! code organization. See the architecture documentation above
-//! for the complete three-layer architecture.
-//!
-//! **Related Files:**
+//! This module implements the business logic for [`DSR`] operations delegated from the
+//! parser shim. The `impl_` prefix follows our naming convention for searchable code
+//! organization. See the architecture documentation above for the complete three-layer
+//! architecture.
 //!
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`DSR`]: crate::DsrSequence
 //! [`handle_cursor_position_request`]: crate::OfsBufVT100::handle_cursor_position_request
 //! [`handle_status_report_request`]: crate::OfsBufVT100::handle_status_report_request
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
+//! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+//! [`vt_100_pty_output_parser::ops::dsr_ops`]:
+//!     crate::core::ansi::vt_100_pty_output_parser::ops::vt_100_shim_dsr_ops
 
 use crate::{DsrRequestFromPtyEvent, OfsBufVT100, TermCol, TermRow};
 
 impl OfsBufVT100 {
     /// Handles device status report request.
-    /// Queues a response indicating terminal is OK ([`ESC`][0n).
     ///
-    /// [`ESC`]: crate::EscSequence
+    /// Queues a response indicating terminal is OK (`ESC [ 0 n`).
     pub fn handle_status_report_request(&mut self) {
         self.parser_global_state
             .pending_dsr_responses
@@ -39,10 +39,9 @@ impl OfsBufVT100 {
     }
 
     /// Handles cursor position report request.
-    /// Queues a response with current cursor position ([`ESC`] `row;colR`).
-    /// Converts 0-based internal position to 1-based terminal position.
     ///
-    /// [`ESC`]: crate::EscSequence
+    /// Queues a response with current cursor position (`ESC [ row ; col R`).
+    /// Converts 0-based internal position to 1-based terminal position.
     pub fn handle_cursor_position_request(&mut self) {
         // Convert 0-based internal position to 1-based terminal position.
         // Uses type-safe From<RowIndex>/From<ColIndex> conversions.

@@ -1,28 +1,28 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Scroll margin operations for VT100/[`ANSI`] terminal emulation.
+//! Scroll margin operations for [`VT-100`]/[`ANSI`] terminal emulation.
 //!
-//! This module implements scroll margin operations that correspond to [`ANSI`]
-//! sequences handled by the `vt_100_pty_output_parser::ops::margin_ops` module.
-//! These include:
+//! This module implements scroll margin operations that correspond to [`ANSI`] sequences
+//! handled by the [`vt_100_pty_output_parser::ops::margin_ops`] module. These include:
 //!
 //! - **[`DECSTBM`]** (Set Top and Bottom Margins) - [`set_scroll_margins`]
 //! - **Reset margins** - [`reset_scroll_margins`]
 //!
-//! All operations maintain VT100 compliance and handle proper scroll region
+//! All operations maintain [`VT-100`] compliance and handle proper scroll region
 //! boundaries for terminal operations.
 //!
-//! This module implements the business logic for margin operations delegated from
-//! the parser shim. The `impl_` prefix follows our naming convention for searchable
-//! code organization. See the architecture documentation above
-//! for the complete three-layer architecture.
-//!
-//! **Related Files:**
+//! This module implements the business logic for margin operations delegated from the
+//! parser shim. The `impl_` prefix follows our naming convention for searchable code
+//! organization. See the architecture documentation above for the complete three-layer
+//! architecture.
 //!
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`DECSTBM`]: https://vt100.net/docs/vt510-rm/DECSTBM.html
 //! [`reset_scroll_margins`]: crate::OfsBufVT100::reset_scroll_margins
 //! [`set_scroll_margins`]: crate::OfsBufVT100::set_scroll_margins
+//! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+//! [`vt_100_pty_output_parser::ops::margin_ops`]:
+//!     crate::core::ansi::vt_100_pty_output_parser::ops::vt_100_shim_margin_ops
 
 #[allow(clippy::wildcard_imports)]
 use super::super::*;
@@ -31,19 +31,23 @@ use std::num::NonZeroU16;
 
 impl OfsBufVT100 {
     /// Reset scroll margins to full screen (no restrictions).
-    /// This disables any active scroll region and allows operations
-    /// to affect the entire buffer.
+    ///
+    /// This disables any active scroll region and allows operations to affect the entire
+    /// buffer.
     pub fn reset_scroll_margins(&mut self) {
         self.parser_global_state.scroll_region_top = None;
         self.parser_global_state.scroll_region_bottom = None;
     }
 
     /// Set top and bottom scroll margins for the buffer.
-    /// Operations like scrolling and line insertion/deletion will be
-    /// restricted to this region.
     ///
-    /// Validates input parameters and sets margins only if valid. Invalid
-    /// parameters (e.g., top >= bottom) are logged and ignored per VTE spec.
+    /// Operations like scrolling and line insertion/deletion will be restricted to this
+    /// region.
+    ///
+    /// Validates input parameters and sets margins only if valid. Invalid parameters
+    /// (e.g., top >= bottom) are logged and ignored per [`VT-100`] spec.
+    ///
+    /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
     pub fn set_scroll_margins(&mut self, top: TermRow, bottom: TermRow) {
         let buffer_height = self.window_size.row_height;
         let top_value = top.as_u16();
@@ -79,9 +83,8 @@ impl OfsBufVT100 {
 #[cfg(test)]
 mod tests_margin_ops {
 
-    use crate::{OfsBufVT100, core::{ansi::vt_100_pty_output_conformance_tests::test_fixtures_vt_100_ansi_conformance::nz,
-                       coordinates::term_row},
-                height, width};
+    use crate::{OfsBufVT100, core::coordinates::term_row, height, width};
+    use crate::vt_100_pty_output_conformance_tests::nz;
 
     fn create_test_buffer() -> OfsBufVT100 {
         let size = width(10) + height(6);

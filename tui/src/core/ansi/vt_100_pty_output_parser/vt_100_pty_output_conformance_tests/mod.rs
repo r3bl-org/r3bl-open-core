@@ -357,6 +357,9 @@ pub mod conformance_data;
 pub mod test_fixtures_vt_100_ansi_conformance; // Re-export existing test fixtures
 
 #[cfg(any(test, doc))]
+pub use test_fixtures_vt_100_ansi_conformance::nz;
+
+#[cfg(any(test, doc))]
 pub mod test_sequence_generators; // Test-only convenience generators for ANSI sequences
 
 // Re-export test modules for both test and doc builds

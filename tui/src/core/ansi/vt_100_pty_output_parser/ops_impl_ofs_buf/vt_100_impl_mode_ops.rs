@@ -1,27 +1,25 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Mode setting operations for VT100/[`ANSI`] terminal emulation.
+//! Mode setting operations for [`VT-100`]/[`ANSI`] terminal emulation.
 //!
-//! This module implements mode operations that correspond to [`ANSI`] mode
-//! sequences handled by the [`mode_ops`] module.
-//! These include:
+//! This module implements mode operations that correspond to [`ANSI`] mode sequences
+//! handled by the [`mode_ops`] module. These include:
 //!
-//! - **SM h** (Set Mode) - [`set_requested_auto_wrap_mode`] (`AutoWrapState::Enabled`)
-//! - **RM l** (Reset Mode) - [`set_requested_auto_wrap_mode`] (`AutoWrapState::Disabled`)
+//! - `SM h` (Set Mode) - [`set_requested_auto_wrap_mode`] ([`AutoWrapState::Enabled`])
+//! - `RM l` (Reset Mode) - [`set_requested_auto_wrap_mode`] ([`AutoWrapState::Disabled`])
 //!
-//! All operations maintain VT100 compliance and handle proper mode state
-//! management for terminal operations.
+//! All operations maintain [`VT-100`] compliance and handle proper mode state management
+//! for terminal operations.
 //!
-//! This module implements the business logic for mode operations delegated from
-//! the parser shim. The `impl_` prefix follows our naming convention for searchable
-//! code organization. See the architecture documentation above
-//! for the complete three-layer architecture.
-//!
-//! **Related Files:**
+//! This module implements the business logic for mode operations delegated from the
+//! parser shim. The `impl_` prefix follows our naming convention for searchable code
+//! organization. See the architecture documentation above for the complete three-layer
+//! architecture.
 //!
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`mode_ops`]: crate::core::ansi::vt_100_pty_output_parser::ops::vt_100_shim_mode_ops
 //! [`set_requested_auto_wrap_mode`]: crate::OfsBufVT100::set_requested_auto_wrap_mode
+//! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 
 #[allow(clippy::wildcard_imports)]
 use super::super::*;
@@ -29,8 +27,9 @@ use std::mem::swap;
 
 impl OfsBufVT100 {
     /// Set auto wrap mode on.
-    /// When enabled, text automatically wraps to the next line when it
-    /// reaches the right margin.
+    ///
+    /// When enabled, text automatically wraps to the next line when it reaches the right
+    /// margin.
     pub fn set_requested_auto_wrap_mode(&mut self, requested_state: AutoWrapState) {
         self.parser_global_state.auto_wrap_mode = requested_state;
     }

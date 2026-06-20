@@ -34,7 +34,7 @@ _Meta Task: Prepare v0.8.0 Release_
 
 # [WIP] Complete PRs from Cecile
 
-- [ ] [LF scroll-up test fix](pr-462-fix.md) - https://github.com/r3bl-org/r3bl-open-core/pull/462
+- [x] [LF scroll-up test fix](done/pr-462-fix.md) - https://github.com/r3bl-org/r3bl-open-core/pull/462
 - [ ] [DA1 Responses timeout fix](pr-455-fix.md) - https://github.com/r3bl-org/r3bl-open-core/pull/455
 - [ ] [VT100 Pending Wrap fix](pr-456-fix.md) - https://github.com/r3bl-org/r3bl-open-core/pull/456
 - [ ] [Scrollback Buffer for PTY](pr-459-fix.md) - https://github.com/r3bl-org/r3bl-open-core/pull/459
