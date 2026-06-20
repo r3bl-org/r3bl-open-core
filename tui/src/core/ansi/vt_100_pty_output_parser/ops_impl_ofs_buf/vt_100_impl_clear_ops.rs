@@ -18,9 +18,10 @@ impl OfsBufVT100 {
         }
     }
 
-    /// Clears the line from the cursor to the end of the line (for EL 0 - Erase in Line).
+    /// Clears the line from the cursor to the end of the line (for `EL 0` - Erase in
+    /// Line).
+    ///
     /// Characters from the cursor position to the right margin are replaced with blanks.
-    /// Returns true if the operation was successful.
     ///
     /// Example - Erasing from cursor (col 2) to end of line.
     ///
@@ -64,9 +65,9 @@ impl OfsBufVT100 {
         ok!()
     }
 
-    /// Clears the line from the beginning of the line to the cursor (for EL 1 - Erase in
-    /// Line). Characters from the left margin up to and including the cursor position are
-    /// replaced with blanks. Returns true if the operation was successful.
+    /// Clears the line from the beginning of the line to the cursor (for `EL 1` - Erase
+    /// in Line). Characters from the left margin up to and including the cursor position
+    /// are replaced with blanks.
     ///
     /// Example - Erasing from start to cursor (col 2).
     ///
@@ -109,9 +110,8 @@ impl OfsBufVT100 {
         ok!()
     }
 
-    /// Clears the entire current line (for EL 2 - Erase in Line). All characters on the
-    /// current line are replaced with blanks. Returns true if the operation was
-    /// successful.
+    /// Clears the entire current line (for `EL 2` - Erase in Line). All characters on the
+    /// current line are replaced with blanks.
     ///
     /// Example - Erasing entire line.
     ///
@@ -150,9 +150,8 @@ impl OfsBufVT100 {
         ok!()
     }
 
-    /// Clears the display from the cursor to the end of the screen (for ED 0 - Erase in
+    /// Clears the display from the cursor to the end of the screen (for `ED 0` - Erase in
     /// Display). Clears from the cursor to the end of the line, and all lines below.
-    /// Returns true if the operation was successful.
     ///
     /// Example - Erasing display from cursor (row 1, col 2) to end.
     ///
@@ -207,9 +206,9 @@ impl OfsBufVT100 {
         ok!()
     }
 
-    /// Clears the display from the beginning of the screen to the cursor (for ED 1 -
+    /// Clears the display from the beginning of the screen to the cursor (for `ED 1` -
     /// Erase in Display). Clears all lines above the cursor, and from the start of the
-    /// line to the cursor. Returns true if the operation was successful.
+    /// line to the cursor.
     ///
     /// Example - Erasing display from start to cursor (row 1, col 2).
     ///
@@ -260,8 +259,8 @@ impl OfsBufVT100 {
         ok!()
     }
 
-    /// Clears the entire screen display (for ED 2 - Erase in Display). All lines are
-    /// replaced with blanks. Returns true if the operation was successful.
+    /// Clears the entire screen display (for `ED 2` - Erase in Display). All lines are
+    /// replaced with blanks.
     ///
     /// Example - Erasing entire display.
     ///

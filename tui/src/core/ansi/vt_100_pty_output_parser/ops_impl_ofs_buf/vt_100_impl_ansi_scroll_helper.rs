@@ -1,5 +1,6 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
-//! [`ANSI`] terminal scroll helper operations for `OfsBufVT100`.
+
+//! [`ANSI`] terminal scroll helper operations for [`OfsBufVT100`].
 //!
 //! This module provides helper methods for [`ANSI`] escape sequence scrolling operations,
 //! including scroll region boundary detection and row clamping within defined scroll
@@ -13,11 +14,9 @@ use crate::{LengthOps, OfsBufVT100, RowIndex, core::coordinates::bounds_check::I
 impl OfsBufVT100 {
     /// Gets the scroll region as an inclusive range.
     ///
-    /// Returns `RangeInclusive<RowIndex>` representing the [`VT-100`] scroll region
+    /// Returns [`RangeInclusive<RowIndex>`] representing the [`VT-100`] scroll region
     /// boundaries where line operations are confined. The range includes both
     /// the top and bottom boundaries (inclusive on both ends).
-    ///
-    /// # Returns
     ///
     /// - If no scroll region is set: `[0, max_row_index]` (entire buffer)
     /// - If scroll region is set: `[scroll_top, scroll_bottom]` (confined region)
@@ -44,6 +43,7 @@ impl OfsBufVT100 {
     /// range.contains(&row(4))  // true (within region)
     /// ```
     ///
+    /// [`RangeInclusive<RowIndex>`]: std::ops::RangeInclusive
     /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
     #[must_use]
     pub fn get_scroll_range_inclusive(&self) -> std::ops::RangeInclusive<RowIndex> {
@@ -62,8 +62,8 @@ impl OfsBufVT100 {
 
     /// Clamp a row to stay within the scroll region boundaries.
     ///
-    /// This ensures row positions respect [`ANSI`] scroll region settings,
-    /// keeping the cursor within the defined scrollable area.
+    /// This ensures row positions respect [`ANSI`] scroll region settings, keeping the
+    /// cursor within the defined scrollable area.
     ///
     /// ```text
     /// Terminal Buffer:
@@ -100,8 +100,8 @@ impl OfsBufVT100 {
 #[cfg(test)]
 mod tests_bounds_check_ops {
     use super::*;
-    use crate::{OfsBufVT100, height, term_row, width,
-                core::ansi::vt_100_pty_output_conformance_tests::test_fixtures_vt_100_ansi_conformance::nz};
+    use crate::{OfsBufVT100, height, term_row, width};
+    use crate::vt_100_pty_output_conformance_tests::nz;
 
     fn create_test_buffer() -> OfsBufVT100 {
         let size = width(10) + height(6);

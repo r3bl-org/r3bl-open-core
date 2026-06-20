@@ -9,7 +9,7 @@
 #[cfg(test)]
 mod cursor_positioning_tests {
     use crate::{AnsiSequenceGenerator, CsiSequence, TermCol, col, row, term_col, term_row, term_row_delta};
-    use crate::core::ansi::vt_100_pty_output_parser::vt_100_pty_output_conformance_tests::test_fixtures_vt_100_ansi_conformance::nz;
+    use crate::vt_100_pty_output_conformance_tests::nz;
 
     #[test]
     fn test_cursor_position_absolute() {

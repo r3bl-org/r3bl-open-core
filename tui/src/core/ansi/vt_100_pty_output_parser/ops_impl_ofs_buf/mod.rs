@@ -1,11 +1,11 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! VT100/[`ANSI`] terminal operation implementations for [`OfsBufVT100`].
+//! [`VT-100`]/[`ANSI`] terminal operation implementations for [`OfsBufVT100`].
 //!
-//! This module contains the actual implementations of VT100 and [`ANSI`] escape sequence
-//! operations that are delegated from the [`vt_100_pty_output_parser::ops`]
-//! module. The structure mirrors [`vt_100_pty_output_parser/ops/`] to provide a
-//! clear 1:1 mapping between the parser shim layer and the implementation layer.
+//! This module contains the actual implementations of [`VT-100`] and [`ANSI`] escape
+//! sequence operations that are delegated from the [`vt_100_pty_output_parser::ops`]
+//! module. The structure mirrors [`vt_100_pty_output_parser/ops/`] to provide a clear 1:1
+//! mapping between the parser shim layer and the implementation layer.
 //!
 //! # Architecture
 //!
@@ -26,9 +26,8 @@
 //! - The tests (`test_` prefix): Validation
 //!
 //! This naming pattern solves the IDE search problem by creating a predictable hierarchy
-//! that makes code navigation efficient and intuitive. See [parser module
-//! documentation for the complete
-//! architectural pattern explanation.
+//! that makes code navigation efficient and intuitive. See [parser module documentation
+//! for the complete architectural pattern explanation.
 //!
 //! # Module Organization
 //!
@@ -74,7 +73,8 @@
 //! ## Integration Testing Relationship
 //!
 //! While this module contains unit tests, the **complete pipeline testing** is handled by
-//! integration tests for VT100 conformance. This creates two complementary test layers:
+//! integration tests for [`VT-100`] conformance. This creates two complementary test
+//! layers:
 //!
 //! ```text
 //! Integration Tests (conformance_tests) ─── Tests complete pipeline:
@@ -103,14 +103,14 @@
 //! you can navigate to its corresponding shim and test layers, or by using IDE search
 //! with the operation name to find all related files.
 //!
+//! # [`VT-100`] Compliance
 //!
-//! # VT100 Compliance
-//!
-//! These implementations follow VT100 terminal specifications.
+//! These implementations follow [`VT-100`] terminal specifications.
 //!
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`DECSTBM`]: https://vt100.net/docs/vt510-rm/DECSTBM.html
 //! [`OfsBufVT100`]: crate::core::ansi::vt_100_pty_output_parser::OfsBufVT100
+//! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 //! [`vt_100_impl_ansi_scroll_helper`]: vt_100_impl_ansi_scroll_helper
 //! [`vt_100_impl_char_ops`]: vt_100_impl_char_ops
 //! [`vt_100_impl_control_ops`]: vt_100_impl_control_ops
@@ -127,12 +127,12 @@
 //! [`vt_100_pty_output_parser::ops`]: crate::core::ansi::vt_100_pty_output_parser::ops
 
 /// Standard terminal tab stop width (8 columns).
-/// Used for calculating tab positions in VT100 terminal emulation.
+///
+/// Used for calculating tab positions in [`VT-100`] terminal emulation.
 /// This is a widely-adopted standard across most terminal emulators.
+///
+/// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 pub const TAB_STOP_WIDTH: usize = 8;
-
-// Barrel Export: core struct and state.
-// (Lifted to vt_100_pty_output_parser/ofs_buf_vt_100.rs)
 
 // Attach modules - conditionally public for documentation and testing.
 // These modules contain impl blocks for OfsBufVT100 and are accessed by

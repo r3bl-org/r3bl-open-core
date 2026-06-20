@@ -1,17 +1,15 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! [`ANSI`] character set selection operations for `OfsBufVT100`.
+//! [`ANSI`] character set selection operations for [`OfsBufVT100`].
 //!
-//! This module provides methods for selecting different character sets
-//! as required by [`ANSI`] terminal emulation standards, particularly for
-//! `ESC ( B` ([`ASCII`]) and `ESC ( 0` ([`DEC`] Special Graphics) sequences.
+//! This module provides methods for selecting different character sets as required by
+//! [`ANSI`] terminal emulation standards, particularly for `ESC ( B` ([`ASCII`]) and `ESC
+//! ( 0` ([`DEC`] Special Graphics) sequences.
 //!
-//! This module implements the business logic for terminal operations delegated from
-//! the parser shim. The `impl_` prefix follows our naming convention for searchable
-//! code organization. See the architecture documentation above
-//! for the complete three-layer architecture.
-//!
-//! **Related Files:**
+//! This module implements the business logic for terminal operations delegated from the
+//! parser shim. The `impl_` prefix follows our naming convention for searchable code
+//! organization. See the architecture documentation above for the complete three-layer
+//! architecture.
 //!
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
@@ -24,8 +22,8 @@ use super::super::*;
 impl OfsBufVT100 {
     /// Select [`ASCII`] character set for normal text rendering.
     ///
-    /// Used by `ESC ( B` sequence to switch to normal [`ASCII`] character set.
-    /// This is the default character set for most text operations.
+    /// Used by `ESC ( B` sequence to switch to normal [`ASCII`] character set. This is
+    /// the default character set for most text operations.
     ///
     /// # Example
     ///
@@ -43,8 +41,8 @@ impl OfsBufVT100 {
     /// Select [`DEC`] Special Graphics character set for box-drawing characters.
     ///
     /// Used by `ESC ( 0` sequence to switch to [`DEC`] Special Graphics character set.
-    /// This enables rendering of box-drawing and line-drawing characters commonly
-    /// used for terminal-based user interfaces.
+    /// This enables rendering of box-drawing and line-drawing characters commonly used
+    /// for terminal-based user interfaces.
     ///
     /// # Example
     ///

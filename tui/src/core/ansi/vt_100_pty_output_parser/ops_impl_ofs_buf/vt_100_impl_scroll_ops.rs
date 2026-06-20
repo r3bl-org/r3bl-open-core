@@ -1,18 +1,16 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! [`ANSI`] vertical scrolling operations for `OfsBufVT100`.
+//! [`ANSI`] vertical scrolling operations for [`OfsBufVT100`].
 //!
-//! This module provides methods for vertical line-based scrolling operations,
-//! including index operations (IND/RI) and scroll operations (SU/SD).
-//! These operations respect [`DECSTBM`] scroll region margins and handle
-//! cursor positioning as required by [`ANSI`] terminal emulation standards.
+//! This module provides methods for vertical line-based scrolling operations, including
+//! index operations (`IND`/`RI`) and scroll operations (`SU`/`SD`). These operations
+//! respect [`DECSTBM`] scroll region margins and handle cursor positioning as required by
+//! [`ANSI`] terminal emulation standards.
 //!
-//! This module implements the business logic for scroll operations delegated from
-//! the parser shim. The `impl_` prefix follows our naming convention for searchable
-//! code organization. See the architecture documentation above
-//! for the complete three-layer architecture.
-//!
-//! **Related Files:**
+//! This module implements the business logic for scroll operations delegated from the
+//! parser shim. The `impl_` prefix follows our naming convention for searchable code
+//! organization. See the architecture documentation above for the complete three-layer
+//! architecture.
 //!
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`DECSTBM`]: https://vt100.net/docs/vt510-rm/DECSTBM.html
@@ -22,8 +20,9 @@ use crate::{ArrayBoundsCheck, ArrayUnderflowResult, OfsBufVT100, RowHeight,
 
 impl OfsBufVT100 {
     /// Move cursor down one line, scrolling the buffer if at bottom.
-    /// Implements the [`ESC`] D (IND) escape sequence.
-    /// Respects [`DECSTBM`] scroll region margins.
+    ///
+    /// Implements the `ESC D` (`IND`) escape sequence. Respects [`DECSTBM`] scroll
+    /// region margins.
     ///
     /// Example - Index down at scroll region bottom triggers scroll
     ///
@@ -31,16 +30,16 @@ impl OfsBufVT100 {
     /// Before:        Row: 0-based
     /// max_height=6 ╮  ↓  ┌─────────────────────────────────────┐
     /// (1-based)    │  0  │ Header line (outside scroll region) │
-    ///              │     ├─────────────────────────────────────┤ ← scroll_top (row 1, 0-based)
-    ///              │  1  │ Line A                              │
+    ///              │     ├─────────────────────────────────────┤ ← scroll_top
+    ///              │  1  │ Line A                              │   (row 1, 0-based)
     ///              │  2  │ Line B                              │
     ///              │  3  │ Line C                              │
     ///              │  4  │ Line D  ← cursor at scroll_bottom   │
-    ///              │     ├─────────────────────────────────────┤ ← scroll_bottom (row 4, 0-based)
-    ///              ╰  5  │ Footer line (outside scroll region) │
+    ///              │     ├─────────────────────────────────────┤ ← scroll_bottom
+    ///              ╰  5  │ Footer line (outside scroll region) │   (row 4, 0-based)
     ///                    └─────────────────────────────────────┘
     ///
-    /// After IND:
+    /// After `IND`:
     /// max_height=6 ╮     ┌─────────────────────────────────────┐
     /// (1-based)    │  0  │ Header line (outside scroll region) │
     ///              │     ├─────────────────────────────────────┤
@@ -60,7 +59,6 @@ impl OfsBufVT100 {
     /// Returns an error if the scroll operation fails.
     ///
     /// [`DECSTBM`]: https://vt100.net/docs/vt510-rm/DECSTBM.html
-    /// [`ESC`]: crate::EscSequence
     pub fn index_down(&mut self) -> miette::Result<()> {
         let current_row = self.cursor_pos.row_index;
 
@@ -81,8 +79,9 @@ impl OfsBufVT100 {
     }
 
     /// Move cursor up one line, scrolling the buffer if at top.
-    /// Implements the [`ESC`] M (RI) escape sequence.
-    /// Respects [`DECSTBM`] scroll region margins.
+    ///
+    /// Implements the `ESC M` (`RI`) escape sequence. Respects [`DECSTBM`] scroll
+    /// region margins.
     ///
     /// Example - Reverse index up at scroll region top triggers scroll
     ///
@@ -90,16 +89,16 @@ impl OfsBufVT100 {
     /// Before:        Row: 0-based
     /// max_height=6 ╮  ↓  ┌─────────────────────────────────────┐
     /// (1-based)    │  0  │ Header line (outside scroll region) │
-    ///              │     ├─────────────────────────────────────┤ ← scroll_top (row 1, 0-based)
-    ///              │  1  │ Line A  ← cursor at scroll_top       │
+    ///              │     ├─────────────────────────────────────┤ ← scroll_top
+    ///              │  1  │ Line A  ← cursor at scroll_top      │ (row 1, 0-based)
     ///              │  2  │ Line B                              │
     ///              │  3  │ Line C                              │
     ///              │  4  │ Line D                              │
-    ///              │     ├─────────────────────────────────────┤ ← scroll_bottom (row 4, 0-based)
-    ///              ╰  5  │ Footer line (outside scroll region) │
+    ///              │     ├─────────────────────────────────────┤ ← scroll_bottom
+    ///              ╰  5  │ Footer line (outside scroll region) │ (row 4, 0-based)
     ///                    └─────────────────────────────────────┘
     ///
-    /// After RI:
+    /// After `RI`:
     /// max_height=6 ╮     ┌─────────────────────────────────────┐
     /// (1-based)    │  0  │ Header line (outside scroll region) │
     ///              │     ├─────────────────────────────────────┤
@@ -119,7 +118,6 @@ impl OfsBufVT100 {
     /// Returns an error if the scroll operation fails.
     ///
     /// [`DECSTBM`]: https://vt100.net/docs/vt510-rm/DECSTBM.html
-    /// [`ESC`]: crate::EscSequence
     pub fn reverse_index_up(&mut self) -> miette::Result<()> {
         let current_row = self.cursor_pos.row_index;
 
@@ -139,18 +137,19 @@ impl OfsBufVT100 {
         }
     }
 
-    /// Scroll buffer content up by one line (for [`ESC`] D at bottom).
-    /// The top line is lost, and a new empty line appears at bottom.
-    /// Respects [`DECSTBM`] scroll region margins.
-    /// See [`shift_lines_up()`] for detailed behavior and examples.
+    /// Scroll buffer content up by one line (for `ESC D` at bottom).
     ///
+    /// The top line is lost, and a new empty line appears at bottom.
+    ///
+    /// Respects [`DECSTBM`] scroll region margins.
+    ///
+    /// See [`shift_lines_up()`] for detailed behavior and examples.
     ///
     /// # Errors
     ///
     /// Returns an error if the scroll operation fails.
     ///
     /// [`DECSTBM`]: https://vt100.net/docs/vt510-rm/DECSTBM.html
-    /// [`ESC`]: crate::EscSequence
     /// [`shift_lines_up()`]: crate::OfsBufVT100::shift_lines_up
     pub fn scroll_buffer_up(&mut self) -> miette::Result<()> {
         // Get scroll region as an inclusive range and convert to
@@ -161,19 +160,19 @@ impl OfsBufVT100 {
         self.shift_lines_up(scroll_region.to_exclusive(), 1)
     }
 
-    /// Scroll buffer content down by one line (for [`ESC`] M at top).
-    /// The bottom line is lost, and a new empty line appears at top.
-    /// Respects [`DECSTBM`] scroll region margins.
-    /// See [`shift_lines_down()`] for detailed behavior and
-    /// examples.
+    /// Scroll buffer content down by one line (for `ESC M` at top).
     ///
+    /// The bottom line is lost, and a new empty line appears at top.
+    ///
+    /// Respects [`DECSTBM`] scroll region margins.
+    ///
+    /// See [`shift_lines_down()`] for detailed behavior and examples.
     ///
     /// # Errors
     ///
     /// Returns an error if the scroll operation fails.
     ///
     /// [`DECSTBM`]: https://vt100.net/docs/vt510-rm/DECSTBM.html
-    /// [`ESC`]: crate::EscSequence
     /// [`shift_lines_down()`]: crate::OfsBufVT100::shift_lines_down
     pub fn scroll_buffer_down(&mut self) -> miette::Result<()> {
         // Get scroll region as an inclusive range and convert to
@@ -184,9 +183,10 @@ impl OfsBufVT100 {
         self.shift_lines_down(scroll_region.to_exclusive(), 1)
     }
 
-    /// Handle SU (Scroll Up) - scroll display up by n lines.
-    /// Multiple lines at the top are lost, new empty lines appear at bottom.
-    /// Respects [`DECSTBM`] scroll region margins.
+    /// Handle `SU` (Scroll Up) - scroll display up by n lines.
+    ///
+    /// Multiple lines at the top are lost, new empty lines appear at bottom. Respects
+    /// [`DECSTBM`] scroll region margins.
     ///
     /// Example - Scrolling up by 2 lines
     ///
@@ -194,13 +194,13 @@ impl OfsBufVT100 {
     /// Before:        Row: 0-based
     /// max_height=6 ╮  ↓  ┌─────────────────────────────────────┐
     /// (1-based)    │  0  │ Header line (outside scroll region) │
-    ///              │     ├─────────────────────────────────────┤ ← scroll_top (row 1, 0-based)
-    ///              │  1  │ Line A (will be lost)               │
+    ///              │     ├─────────────────────────────────────┤ ← scroll_top
+    ///              │  1  │ Line A (will be lost)               │   (row 1, 0-based)
     ///              │  2  │ Line B (will be lost)               │
     ///              │  3  │ Line C                              │
     ///              │  4  │ Line D                              │
-    ///              │     ├─────────────────────────────────────┤ ← scroll_bottom (row 4, 0-based)
-    ///              ╰  5  │ Footer line (outside scroll region) │
+    ///              │     ├─────────────────────────────────────┤ ← scroll_bottom
+    ///              ╰  5  │ Footer line (outside scroll region) │   (row 4, 0-based)
     ///                    └─────────────────────────────────────┘
     ///
     /// After scroll_up(2):
@@ -230,9 +230,10 @@ impl OfsBufVT100 {
         ok!()
     }
 
-    /// Handle SD (Scroll Down) - scroll display down by n lines.
-    /// Multiple lines at the bottom are lost, new empty lines appear at top.
-    /// Respects [`DECSTBM`] scroll region margins.
+    /// Handle `SD` (Scroll Down) - scroll display down by n lines.
+    ///
+    /// Multiple lines at the bottom are lost, new empty lines appear at top. Respects
+    /// [`DECSTBM`] scroll region margins.
     ///
     /// Example - Scrolling down by 2 lines
     ///
@@ -240,13 +241,13 @@ impl OfsBufVT100 {
     /// Before:        Row: 0-based
     /// max_height=6 ╮  ↓  ┌─────────────────────────────────────┐
     /// (1-based)    │  0  │ Header line (outside scroll region) │
-    ///              │     ├─────────────────────────────────────┤ ← scroll_top (row 1, 0-based)
-    ///              │  1  │ Line A                              │
+    ///              │     ├─────────────────────────────────────┤ ← scroll_top
+    ///              │  1  │ Line A                              │   (row 1, 0-based)
     ///              │  2  │ Line B                              │
     ///              │  3  │ Line C (will be lost)               │
     ///              │  4  │ Line D (will be lost)               │
-    ///              │     ├─────────────────────────────────────┤ ← scroll_bottom (row 4, 0-based)
-    ///              ╰  5  │ Footer line (outside scroll region) │
+    ///              │     ├─────────────────────────────────────┤ ← scroll_bottom
+    ///              ╰  5  │ Footer line (outside scroll region) │   (row 4, 0-based)
     ///                    └─────────────────────────────────────┘
     ///
     /// After scroll_down(2):
@@ -281,9 +282,9 @@ impl OfsBufVT100 {
 mod tests_scroll_vert_ops {
     use super::*;
     use crate::{OfsBufVT100, col, height, idx, row, term_row, width,
-                core::ansi::vt_100_pty_output_conformance_tests::test_fixtures_vt_100_ansi_conformance::nz,
                 test_fixtures_ofs_buf::{assert_plain_char_at,
                                         create_vt100_test_buffer_with_size}};
+    use crate::vt_100_pty_output_conformance_tests::nz;
 
     fn create_test_buffer() -> OfsBufVT100 {
         create_vt100_test_buffer_with_size(width(10), height(6))

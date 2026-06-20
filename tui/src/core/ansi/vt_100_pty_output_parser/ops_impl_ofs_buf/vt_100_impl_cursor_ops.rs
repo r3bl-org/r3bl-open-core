@@ -1,17 +1,15 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! [`ANSI`] cursor movement operations for `OfsBufVT100`.
+//! [`ANSI`] cursor movement operations for [`OfsBufVT100`].
 //!
 //! This module provides methods for moving the cursor position within the buffer,
-//! handling boundary conditions, scroll regions, and cursor state management
-//! as required by [`ANSI`] terminal emulation standards.
+//! handling boundary conditions, scroll regions, and cursor state management as required
+//! by [`ANSI`] terminal emulation standards.
 //!
-//! This module implements the business logic for cursor operations delegated from
-//! the parser shim. The `impl_` prefix follows our naming convention for searchable
-//! code organization. See the architecture documentation above
-//! for the complete three-layer architecture.
-//!
-//! **Related Files:**
+//! This module implements the business logic for cursor operations delegated from the
+//! parser shim. The `impl_` prefix follows our naming convention for searchable code
+//! organization. See the architecture documentation above for the complete three-layer
+//! architecture.
 //!
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 
@@ -20,6 +18,7 @@ use crate::{ColIndex, ColWidth, OfsBufVT100, Pos, RowHeight, RowIndex, col,
 
 impl OfsBufVT100 {
     /// Move cursor up by n lines.
+    ///
     /// Respects [`DECSTBM`] scroll region margins.
     ///
     /// Example - Moving cursor up by 2 lines with scroll region
@@ -28,13 +27,13 @@ impl OfsBufVT100 {
     /// Before:        Row: 0-based
     /// max_height=6 ╮  ↓  ┌─────────────────────────────────────┐
     /// (1-based)    │  0  │ Header line (outside scroll region) │
-    ///              │     ├─────────────────────────────────────┤ ← scroll_top (row 1, 0-based)
-    ///              │  1  │ Line A                              │
+    ///              │     ├─────────────────────────────────────┤ ← scroll_top
+    ///              │  1  │ Line A                              │   (row 1, 0-based)
     ///              │  2  │ Line B                              │
     ///              │  3  │ Line C                              │
     ///              │  4  │ Line D  ← cursor (row 4, 0-based)   │ ← Move up 2 lines
-    ///              │     ├─────────────────────────────────────┤ ← scroll_bottom (row 4, 0-based)
-    ///              ╰  5  │ Footer line (outside scroll region) │
+    ///              │     ├─────────────────────────────────────┤ ← scroll_bottom
+    ///              ╰  5  │ Footer line (outside scroll region) │   (row 4, 0-based)
     ///                    └─────────────────────────────────────┘
     ///
     /// After CUU 2:
@@ -64,6 +63,7 @@ impl OfsBufVT100 {
     }
 
     /// Move cursor down by n lines.
+    ///
     /// Respects [`DECSTBM`] scroll region margins.
     ///
     /// [`DECSTBM`]: https://vt100.net/docs/vt510-rm/DECSTBM.html
@@ -112,6 +112,7 @@ impl OfsBufVT100 {
     }
 
     /// Set cursor position to specific row and column coordinates.
+    ///
     /// Coordinates are clamped to valid screen boundaries and scroll regions.
     pub fn cursor_to_position(&mut self, row: RowIndex, col: ColIndex) {
         let scroll_region = self.get_scroll_range_inclusive();

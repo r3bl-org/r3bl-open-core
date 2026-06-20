@@ -288,11 +288,12 @@ impl OfsBufVT100 {
 mod tests {
     use crate::{ANSIBasicColor, DSR_CURSOR_POSITION_REQUEST, DSR_STATUS_REQUEST,
         DsrRequestFromPtyEvent::TerminalStatus, SgrCode, col,
-        core::ansi::vt_100_pty_output_parser::{CsiSequence,
+        CsiSequence,
         vt_100_pty_output_conformance_tests::{
-            test_fixtures_vt_100_ansi_conformance::{
-                create_test_offscreen_buffer_10r_by_10c, nz},
-        test_sequence_generators::csi_builders::csi_seq_cursor_pos}},
+            nz,
+            test_fixtures_vt_100_ansi_conformance::create_test_offscreen_buffer_10r_by_10c,
+            test_sequence_generators::csi_builders::csi_seq_cursor_pos,
+        },
         offscreen_buffer::test_fixtures_ofs_buf::*,
         row, term_col, term_col_delta, term_row, term_row_delta};
     use crate::core::osc::osc_codes::OscSequence;

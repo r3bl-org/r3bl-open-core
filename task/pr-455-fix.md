@@ -9,6 +9,13 @@ waiting for a terminal capability response.
 It responds with `CSI ? 62 ; 22 c` on DA1 (VT220 + ANSI color) and correctly forwards DA
 responses alongside existing OSC and DSR channels.
 
+## PR Handling & Attribution
+
+We are implementing our own fixes based on Cecile's original intent and closing her PR
+without merging it directly due to underlying architectural changes. We must absolutely
+add a `Co-authored-by: Cecile Tonglet <cecile.tonglet@cecton.com>` trailer to all of
+the commits we make for this task to ensure she gets proper attribution for the feature!
+
 ## Implementation plan
 
 ### Phase 1: DA1 Support
