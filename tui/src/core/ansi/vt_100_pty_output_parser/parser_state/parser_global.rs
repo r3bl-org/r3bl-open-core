@@ -233,6 +233,11 @@ pub struct ParserGlobalState {
     /// state between calls to correctly handle multi-byte escape sequences that
     /// may be split across chunks.
     pub vte_parser: Option<vte::Parser>,
+
+    /// Last printed display character for REP (Repeat Character) support.
+    /// Set by `print_char` after each printable character. Used by `CSI n b`
+    /// to repeat the last printable character.
+    pub last_printed_char: Option<char>,
 }
 
 impl fmt::Debug for ParserGlobalState {
@@ -252,6 +257,7 @@ impl fmt::Debug for ParserGlobalState {
             .field("scroll_region_bottom", &self.scroll_region_bottom)
             .field("cursor_visibility", &self.cursor_visibility)
             .field("vte_parser", &self.vte_parser.as_ref().map(|_| &"..."))
+            .field("last_printed_char", &self.last_printed_char)
             .finish()
     }
 }
@@ -272,6 +278,7 @@ impl Clone for ParserGlobalState {
             scroll_region_bottom: self.scroll_region_bottom.clone(),
             cursor_visibility: self.cursor_visibility.clone(),
             vte_parser: None,
+            last_printed_char: self.last_printed_char,
         }
     }
 }
@@ -289,6 +296,7 @@ impl PartialEq for ParserGlobalState {
             && self.scroll_region_top == other.scroll_region_top
             && self.scroll_region_bottom == other.scroll_region_bottom
             && self.cursor_visibility == other.cursor_visibility
+            && self.last_printed_char == other.last_printed_char
     }
 }
 

@@ -162,7 +162,7 @@ mod tests {
         {
             // First we assert against a dummy value to see the real sizes in the test
             // output, then we will update it.
-            assert_eq!(size_of::<OfsBufVT100>(), 648);
+            assert_eq!(size_of::<OfsBufVT100>(), 656);
         }
     }
 
