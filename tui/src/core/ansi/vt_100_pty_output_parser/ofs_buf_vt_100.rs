@@ -2,7 +2,7 @@
 
 use crate::{DsrRequestFromPtyEvent, GetMemSize, MemorySize, OffscreenBuffer,
             PixelCharLines, Pos, Size, TermRow, TuiStyle, osc::OscEvent};
-use std::{fmt::Debug,
+use std::{fmt,
           mem::size_of,
           ops::{Deref, DerefMut}};
 
@@ -131,7 +131,7 @@ mod vt_100_terminal_state_impl {
 /// [`std::mem::swap()`]: std::mem::swap
 /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 /// [`xterm`]: https://en.wikipedia.org/wiki/Xterm
-#[derive(Debug, Clone, PartialEq, Default)]
+#[derive(Default)]
 pub struct ParserGlobalState {
     /// Temporary cursor position storage for [`DECSC`]/[`DECRC`] escape sequences only.
     ///
@@ -292,6 +292,66 @@ pub struct ParserGlobalState {
     ///
     /// [`DECTCEM`]: https://vt100.net/docs/vt510-rm/DECTCEM.html
     pub cursor_visibility: CursorVisibilityState,
+
+    /// Persistent VTE parser state machine across PTY read chunks.
+    /// When processing PTY output in chunks, the parser must maintain its internal
+    /// state between calls to correctly handle multi-byte escape sequences that
+    /// may be split across chunks.
+    pub vte_parser: Option<vte::Parser>,
+}
+
+impl fmt::Debug for ParserGlobalState {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("ParserGlobalState")
+            .field("cursor_pos_for_esc_save_and_restore", &self.cursor_pos_for_esc_save_and_restore)
+            .field("character_set", &self.character_set)
+            .field("auto_wrap_mode", &self.auto_wrap_mode)
+            .field("current_style", &self.current_style)
+            .field("pending_osc_events", &self.pending_osc_events)
+            .field("pending_dsr_responses", &self.pending_dsr_responses)
+            .field("pending_da_responses", &self.pending_da_responses)
+            .field("pending_wrap", &self.pending_wrap)
+            .field("scroll_region_top", &self.scroll_region_top)
+            .field("scroll_region_bottom", &self.scroll_region_bottom)
+            .field("cursor_visibility", &self.cursor_visibility)
+            .field("vte_parser", &self.vte_parser.as_ref().map(|_| &"..."))
+            .finish()
+    }
+}
+
+impl Clone for ParserGlobalState {
+    fn clone(&self) -> Self {
+        Self {
+            cursor_pos_for_esc_save_and_restore: self.cursor_pos_for_esc_save_and_restore.clone(),
+            character_set: self.character_set.clone(),
+            auto_wrap_mode: self.auto_wrap_mode.clone(),
+            current_style: self.current_style.clone(),
+            pending_osc_events: self.pending_osc_events.clone(),
+            pending_dsr_responses: self.pending_dsr_responses.clone(),
+            pending_da_responses: self.pending_da_responses.clone(),
+            pending_wrap: self.pending_wrap.clone(),
+            scroll_region_top: self.scroll_region_top.clone(),
+            scroll_region_bottom: self.scroll_region_bottom.clone(),
+            cursor_visibility: self.cursor_visibility.clone(),
+            vte_parser: None,
+        }
+    }
+}
+
+impl PartialEq for ParserGlobalState {
+    fn eq(&self, other: &Self) -> bool {
+        self.cursor_pos_for_esc_save_and_restore == other.cursor_pos_for_esc_save_and_restore
+            && self.character_set == other.character_set
+            && self.auto_wrap_mode == other.auto_wrap_mode
+            && self.current_style == other.current_style
+            && self.pending_osc_events == other.pending_osc_events
+            && self.pending_dsr_responses == other.pending_dsr_responses
+            && self.pending_da_responses == other.pending_da_responses
+            && self.pending_wrap == other.pending_wrap
+            && self.scroll_region_top == other.scroll_region_top
+            && self.scroll_region_bottom == other.scroll_region_bottom
+            && self.cursor_visibility == other.cursor_visibility
+    }
 }
 
 /// Character set modes for terminal emulation.
@@ -428,9 +488,6 @@ pub struct TerminalModeState {
 }
 
 mod terminal_mode_state_todo {
-    #[allow(clippy::wildcard_imports)]
-    use super::*;
-
     /// Mouse event tracking state.
     ///
     /// Controls whether the terminal captures mouse click, movement, and scroll events.

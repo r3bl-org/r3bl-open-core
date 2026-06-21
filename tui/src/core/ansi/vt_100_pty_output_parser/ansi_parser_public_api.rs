@@ -169,14 +169,24 @@ impl<'a> AnsiToOfsBufPerformer<'a> {
     /// Handles the core parsing loop where each byte is fed to the [`VTE parser`], which
     /// in turn calls methods on the performer (via the [`Perform`] trait).
     ///
+    /// The [`vte::Parser`] is stored in [`OffscreenBuffer::ansi_parser_support`] and
+    /// re-used across calls so that escape sequences split across PTY read chunks are
+    /// parsed correctly instead of having their tail interpreted as literal text.
+    ///
     /// [`Perform`]: vte::Perform
     /// [`VTE parser`]: vte::Parser
     pub fn apply_ansi_bytes(&mut self, bytes: impl AsRef<[u8]>) {
-        let mut parser = vte::Parser::new();
+        let mut parser = self
+            .ofs_buf_vt_100
+            .parser_global_state
+            .vte_parser
+            .take()
+            .unwrap_or_default();
         let performer = self;
         for &byte in bytes.as_ref() {
             parser.advance(performer, &[byte]);
         }
+        performer.ofs_buf_vt_100.parser_global_state.vte_parser = Some(parser);
     }
 }
 
