@@ -231,7 +231,8 @@ use crate::{DEBUG_TUI_VT100_PARSER,
                                     DSR_DEVICE_STATUS, ECH_ERASE_CHAR,
                                     ED_ERASE_DISPLAY, EL_ERASE_LINE,
                                     G0_CHARSET_INTERMEDIATE, HVP_CURSOR_POSITION,
-                                    ICH_INSERT_CHAR, IL_INSERT_LINE, IND_INDEX_DOWN,
+                                     ICH_INSERT_CHAR, IL_INSERT_LINE, IND_INDEX_DOWN,
+                                     REP_REPEAT_CHAR,
                                     LINE_FEED, RCP_RESTORE_CURSOR, RI_REVERSE_INDEX_UP,
                                     RIS_RESET_TERMINAL, RM_RESET_MODE, SCP_SAVE_CURSOR,
                                     SD_SCROLL_DOWN, SGR_SET_GRAPHICS, SM_SET_MODE,
@@ -524,6 +525,7 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
                 vt_100_shim_char_ops::insert_chars(self, params);
             }
             ECH_ERASE_CHAR => vt_100_shim_char_ops::erase_chars(self, params),
+            REP_REPEAT_CHAR => vt_100_shim_char_ops::repeat_chars(self, params),
 
             // Additional cursor positioning.
             VPA_VERTICAL_POSITION => {
