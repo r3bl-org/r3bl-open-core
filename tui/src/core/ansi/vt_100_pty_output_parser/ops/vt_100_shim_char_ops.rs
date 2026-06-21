@@ -146,6 +146,29 @@ pub fn erase_chars(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) 
     );
 }
 
+/// Handle REP (Repeat Character) - repeat last printable character n times.
+///
+/// **[`VT-100`] Protocol**: See [module-level documentation] for parameter handling.
+///
+/// **Behavior**: The last printable character (tracked by parser state) is repeated
+/// at the current cursor position.
+///
+/// See [`OfsBufVT100::repeat_chars_at_cursor`] for the implementation of this shim.
+///
+/// [`OfsBufVT100::repeat_chars_at_cursor`]: crate::OfsBufVT100::repeat_chars_at_cursor
+/// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+/// [module-level documentation]: self
+pub fn repeat_chars(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) {
+    let how_many = params.extract_nth_single_non_zero(0).get().into();
+    let result = performer.ofs_buf_vt_100.repeat_chars_at_cursor(how_many);
+    debug_assert!(
+        result.is_ok(),
+        "Failed to repeat {:?} chars at cursor position {:?}",
+        how_many,
+        performer.ofs_buf_vt_100.cursor_pos
+    );
+}
+
 /// Handles printable character printing - display character at cursor position.
 ///
 /// **[`VT-100`] Behavior**: Character set translation applied if [`DEC`] graphics mode is

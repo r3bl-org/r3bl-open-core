@@ -292,6 +292,73 @@ pub struct ParserGlobalState {
     ///
     /// [`DECTCEM`]: https://vt100.net/docs/vt510-rm/DECTCEM.html
     pub cursor_visibility: CursorVisibilityState,
+
+    /// Persistent VTE parser state machine across PTY read chunks.
+    /// When processing PTY output in chunks, the parser must maintain its internal
+    /// state between calls to correctly handle multi-byte escape sequences that
+    /// may be split across chunks.
+    pub vte_parser: Option<vte::Parser>,
+
+    /// Last printed display character for REP (Repeat Character) support.
+    /// Set by `print_char` after each printable character. Used by `CSI n b`
+    /// to repeat the last printable character.
+    pub last_printed_char: Option<char>,
+}
+
+impl fmt::Debug for ParserGlobalState {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("ParserGlobalState")
+            .field("cursor_pos_for_esc_save_and_restore", &self.cursor_pos_for_esc_save_and_restore)
+            .field("character_set", &self.character_set)
+            .field("auto_wrap_mode", &self.auto_wrap_mode)
+            .field("current_style", &self.current_style)
+            .field("pending_osc_events", &self.pending_osc_events)
+            .field("pending_dsr_responses", &self.pending_dsr_responses)
+            .field("pending_da_responses", &self.pending_da_responses)
+            .field("pending_wrap", &self.pending_wrap)
+            .field("scroll_region_top", &self.scroll_region_top)
+            .field("scroll_region_bottom", &self.scroll_region_bottom)
+            .field("cursor_visibility", &self.cursor_visibility)
+            .field("vte_parser", &self.vte_parser.as_ref().map(|_| &"..."))
+            .field("last_printed_char", &self.last_printed_char)
+            .finish()
+    }
+}
+
+impl Clone for ParserGlobalState {
+    fn clone(&self) -> Self {
+        Self {
+            cursor_pos_for_esc_save_and_restore: self.cursor_pos_for_esc_save_and_restore.clone(),
+            character_set: self.character_set.clone(),
+            auto_wrap_mode: self.auto_wrap_mode.clone(),
+            current_style: self.current_style.clone(),
+            pending_osc_events: self.pending_osc_events.clone(),
+            pending_dsr_responses: self.pending_dsr_responses.clone(),
+            pending_da_responses: self.pending_da_responses.clone(),
+            pending_wrap: self.pending_wrap.clone(),
+            scroll_region_top: self.scroll_region_top.clone(),
+            scroll_region_bottom: self.scroll_region_bottom.clone(),
+            cursor_visibility: self.cursor_visibility.clone(),
+            vte_parser: None,
+            last_printed_char: self.last_printed_char,
+        }
+    }
+}
+
+impl PartialEq for ParserGlobalState {
+    fn eq(&self, other: &Self) -> bool {
+        self.cursor_pos_for_esc_save_and_restore == other.cursor_pos_for_esc_save_and_restore
+            && self.character_set == other.character_set
+            && self.auto_wrap_mode == other.auto_wrap_mode
+            && self.current_style == other.current_style
+            && self.pending_osc_events == other.pending_osc_events
+            && self.pending_dsr_responses == other.pending_dsr_responses
+            && self.pending_da_responses == other.pending_da_responses
+            && self.pending_wrap == other.pending_wrap
+            && self.scroll_region_top == other.scroll_region_top
+            && self.scroll_region_bottom == other.scroll_region_bottom
+            && self.cursor_visibility == other.cursor_visibility
+            && self.last_printed_char == other.last_printed_char
 }
 
 /// Character set modes for terminal emulation.

@@ -287,6 +287,16 @@ pub const ICH_INSERT_CHAR: char = '@';
 /// [`CSI`]: crate::CsiSequence
 pub const ECH_ERASE_CHAR: char = 'X';
 
+/// Repeat Character (REP): Repeats the last printable character N times.
+///
+/// Sequence: `CSI n b`
+///
+/// The last printable character is tracked by the parser state and is repeated
+/// at the current cursor position.
+///
+/// [`CSI`]: crate::CsiSequence
+pub const REP_REPEAT_CHAR: char = 'b';
+
 // Additional Cursor Positioning.
 
 /// Vertical Position Absolute (VPA): Moves cursor to specified row (default 1).

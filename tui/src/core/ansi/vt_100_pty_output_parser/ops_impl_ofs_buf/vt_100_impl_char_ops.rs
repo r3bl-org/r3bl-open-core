@@ -90,6 +90,8 @@ impl OfsBufVT100 {
             return Err(miette::miette!("Operation failed"));
         }
 
+        let empty_char = self.create_empty_pixel_char();
+
         let Some(line) = self.buffer.get_mut(at.row_index.as_usize()) else {
             return Err(miette::miette!("Operation failed"));
         };
@@ -122,7 +124,7 @@ impl OfsBufVT100 {
         let fill_end_col = copy_dest_start_col;
         let fill_range = (at.col_index..fill_end_col).clamp_range_to(max_width);
         line[fill_range.start.as_usize()..fill_range.end.as_usize()]
-            .fill(PixelChar::Spacer);
+            .fill(empty_char);
 
         ok!()
     }
@@ -208,8 +210,9 @@ impl OfsBufVT100 {
         // Convert to exclusive range for fill operation.
         let fill_range = fill_range_inclusive.to_exclusive();
 
+        let empty_char = self.create_empty_pixel_char();
         let fill_result =
-            self.fill_char_range(at.row_index, fill_range.clone(), PixelChar::Spacer);
+            self.fill_char_range(at.row_index, fill_range.clone(), empty_char);
         debug_assert!(
             fill_result.is_ok() || fill_range.is_empty(),
             "Failed to fill char range during delete_chars_at_cursor at row {:?}, fill range: {:?}",
@@ -275,7 +278,8 @@ impl OfsBufVT100 {
         let cursor_col = at.col_index;
         let fill_end_col = cursor_col + how_many_clamped;
         let erase_range = (cursor_col..fill_end_col).clamp_range_to(max_width);
-        self.fill_char_range(at.row_index, erase_range, PixelChar::Spacer)
+        let empty_char = self.create_empty_pixel_char();
+        self.fill_char_range(at.row_index, erase_range, empty_char)
     }
 
     /// Handles printable characters with character set translation, bounds checking, and
@@ -311,6 +315,9 @@ impl OfsBufVT100 {
             CharacterSet::DECGraphics => Self::translate_dec_graphics(ch),
             CharacterSet::Ascii => ch,
         };
+
+        // Track last printed character for REP support.
+        self.parser_global_state.last_printed_char = Some(display_char);
 
         let row_max = self.window_size.row_height;
         let col_max = self.window_size.col_width;
@@ -354,6 +361,18 @@ impl OfsBufVT100 {
             }
         }
 
+        ok!()
+    }
+
+    /// Handle REP (Repeat Character) - repeat the last printed character n times.
+    /// The last printed character is tracked in `parser_global_state.last_printed_char`.
+    pub fn repeat_chars_at_cursor(&mut self, how_many: Length) -> miette::Result<()> {
+        let Some(ch) = self.parser_global_state.last_printed_char else {
+            return ok!();
+        };
+        for _ in 0..how_many.as_usize() {
+            self.print_char(ch)?;
+        }
         ok!()
     }
 }
