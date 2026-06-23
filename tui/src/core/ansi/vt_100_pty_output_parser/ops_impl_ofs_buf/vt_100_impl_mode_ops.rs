@@ -46,12 +46,15 @@ impl OfsBufVT100 {
         self.parser_global_state.cursor_visibility = requested_state;
     }
 
-    /// Toggle between the primary and alternate screen buffers.
+    pub fn set_focus_events_mode(&mut self, enabled: bool) {
+        self.terminal_mode.focus_events = enabled;
+    }
+
+    /// Handle alternate screen buffer transitions.
     ///
     /// When switching to the alternate screen buffer:
     /// - Saves the primary cursor position.
-    /// - Swaps the 2D grid buffers ([`self.buffer`] and
-    ///   [`self.hidden_screen_state.hidden_buffer`]).
+    /// - Swaps the 2D grid buffers.
     /// - Sets the active cursor position to the saved alternate cursor position.
     /// - Clears the alternate screen buffer with cells carrying the active style to be
     ///   [`BCE`] (Background Color Erase) compliant.
