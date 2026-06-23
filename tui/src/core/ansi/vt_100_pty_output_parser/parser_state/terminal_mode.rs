@@ -85,4 +85,10 @@ pub struct TerminalModeState {
     /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
     #[allow(dead_code)]
     pub bracketed_paste: terminal_mode_state_todo::BracketedPasteMode,
+
+    /// Focus event reporting mode.
+    ///
+    /// When enabled (by `CSI ? 1004 h`), the PTY child wants to receive
+    /// `CSI I` / `CSI O` focus events from the terminal multiplexer.
+    pub focus_events: bool,
 }
