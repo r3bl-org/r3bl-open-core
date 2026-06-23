@@ -192,6 +192,16 @@ define_ansi_const!(@csi_str : ALT_SCREEN_DISABLE_STR = ["?1049l"] =>
 /// [`xterm private mode 1049`]: https://invisible-island.net/xterm/ctlseqs/ctlseqs.html
 pub const ALT_SCREEN_BUFFER: u16 = 1049;
 
+/// Focus Events ([`xterm private mode 1004`]): Terminal focus event reporting.
+///
+/// Value: `1004`.
+///
+/// - When set: Terminal sends `CSI I` on focus gained, `CSI O` on focus lost.
+/// - When reset: Focus events are not reported (default).
+///
+/// [`xterm private mode 1004`]: https://invisible-island.net/xterm/ctlseqs/ctlseqs.html
+pub const FOCUS_EVENTS: u16 = 1004;
+
 // Input Modes - Mouse and Paste (xterm and community extensions).
 
 /// X11 Mouse Tracking ([`xterm private mode 1000`]): Basic mouse event reporting.

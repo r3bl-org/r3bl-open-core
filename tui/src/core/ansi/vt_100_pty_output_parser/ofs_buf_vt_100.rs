@@ -425,6 +425,22 @@ pub struct TerminalModeState {
     /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
     #[allow(dead_code)]
     pub bracketed_paste: terminal_mode_state_todo::BracketedPasteState,
+
+    /// Focus event reporting mode.
+    ///
+    /// **TODO**: The parser currently ignores this [`VT-100`] sequence
+    /// (`vt_100_shim_mode_ops.rs`) because the [`PTY`] multiplexer does not yet route
+    /// complex input events. When supported, this field should be wired up to the
+    /// [`ANSI`] parser and the `dead_code` allowance removed.
+    ///
+    /// When enabled (by `CSI ? 1004 h`), the PTY child wants to receive
+    /// `CSI I` / `CSI O` focus events from the terminal multiplexer.
+    ///
+    /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+    /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
+    /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+    #[allow(dead_code)]
+    pub focus_events: bool,
 }
 
 mod terminal_mode_state_todo {

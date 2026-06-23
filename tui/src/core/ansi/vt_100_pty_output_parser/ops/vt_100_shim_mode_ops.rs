@@ -91,6 +91,9 @@ pub fn set_mode(
                     .ofs_buf_vt_100
                     .set_requested_cursor_visibility_mode(CursorVisibilityState::Visible);
             }
+            PrivateModeType::FocusEvents => {
+                performer.ofs_buf_vt_100.set_focus_events_mode(true);
+            }
             // Safely suppress/ignore modern TUI extensions (like mouse tracking and
             // bracketed paste). Currently, the multiplexer does not support
             // routing rich input events back into the PTY. Downgrading to
@@ -149,6 +152,9 @@ pub fn reset_mode(
                 performer
                     .ofs_buf_vt_100
                     .set_requested_cursor_visibility_mode(CursorVisibilityState::Hidden);
+            }
+            PrivateModeType::FocusEvents => {
+                performer.ofs_buf_vt_100.set_focus_events_mode(false);
             }
             // Safely suppress/ignore modern TUI extensions (like mouse tracking and
             // bracketed paste). Currently, the multiplexer does not support
