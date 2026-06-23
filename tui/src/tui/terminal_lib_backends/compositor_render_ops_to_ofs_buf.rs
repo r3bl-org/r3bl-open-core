@@ -525,9 +525,14 @@ mod print_text_with_attributes_helper {
         if let Some(maybe_style) = maybe_style_ref {
             // We get the attributes from `maybe_style_ref`.
             let mut it = *maybe_style;
-            // We get the colors from local render data.
-            it.color_fg = render_local_data.fg_color;
-            it.color_bg = render_local_data.bg_color;
+            // We get the colors from local render data as fallback,
+            // but prefer the style's own colors when present.
+            if it.color_fg.is_none() {
+                it.color_fg = render_local_data.fg_color;
+            }
+            if it.color_bg.is_none() {
+                it.color_bg = render_local_data.bg_color;
+            }
             Some(it)
         } else if render_local_data.fg_color.is_some()
             || render_local_data.bg_color.is_some()
