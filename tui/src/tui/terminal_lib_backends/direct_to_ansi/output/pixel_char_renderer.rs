@@ -6,8 +6,9 @@
 //!
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 
-use crate::{FastStringify, PixelChar, SGR_RESET_BYTES, SgrCode, TuiColor, TuiStyle,
-            degrade_color, global_color_support, tui_style};
+use crate::{FastStringify, PixelChar, SGR_RESET_BYTES, SgrCode, TuiColor,
+            TuiStyle, ansi_value_to_basic_color, degrade_color, global_color_support,
+            tui_style};
 
 /// # Unified [`ANSI`] Generator for [`PixelChar`] Rendering
 ///
@@ -323,7 +324,13 @@ impl PixelCharRenderer {
 
         match degraded {
             TuiColor::Ansi(ansi) => {
-                if is_foreground {
+                if let Some(basic) = ansi_value_to_basic_color(ansi.index) {
+                    if is_foreground {
+                        SgrCode::ForegroundBasic(basic)
+                    } else {
+                        SgrCode::BackgroundBasic(basic)
+                    }
+                } else if is_foreground {
                     SgrCode::ForegroundAnsi256(ansi)
                 } else {
                     SgrCode::BackgroundAnsi256(ansi)

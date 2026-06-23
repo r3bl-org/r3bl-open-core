@@ -347,22 +347,48 @@ impl ANSIBasicColor {
     pub fn palette_index(&self) -> u8 {
         match self {
             ANSIBasicColor::Black => 0,
-            ANSIBasicColor::Red => 1,
-            ANSIBasicColor::Green => 2,
-            ANSIBasicColor::Yellow => 3,
-            ANSIBasicColor::Blue => 4,
-            ANSIBasicColor::Magenta => 5,
-            ANSIBasicColor::Cyan => 6,
-            ANSIBasicColor::White => 7,
+            ANSIBasicColor::Red => 9,
+            ANSIBasicColor::Green => 10,
+            ANSIBasicColor::Yellow => 11,
+            ANSIBasicColor::Blue => 12,
+            ANSIBasicColor::Magenta => 13,
+            ANSIBasicColor::Cyan => 14,
+            ANSIBasicColor::White => 15,
             ANSIBasicColor::DarkGray => 8,
-            ANSIBasicColor::DarkRed => 9,
-            ANSIBasicColor::DarkGreen => 10,
-            ANSIBasicColor::DarkYellow => 11,
-            ANSIBasicColor::DarkBlue => 12,
-            ANSIBasicColor::DarkMagenta => 13,
-            ANSIBasicColor::DarkCyan => 14,
-            ANSIBasicColor::Gray => 15,
+            ANSIBasicColor::DarkRed => 1,
+            ANSIBasicColor::DarkGreen => 2,
+            ANSIBasicColor::DarkYellow => 3,
+            ANSIBasicColor::DarkBlue => 4,
+            ANSIBasicColor::DarkMagenta => 5,
+            ANSIBasicColor::DarkCyan => 6,
+            ANSIBasicColor::Gray => 7,
         }
+    }
+}
+
+/// Maps an [`AnsiValue`] (0-15) to its corresponding [`ANSIBasicColor`].
+///
+/// Returns `None` for indices >= 16 (extended palette colors).
+#[must_use]
+pub fn ansi_value_to_basic_color(index: u8) -> Option<ANSIBasicColor> {
+    match index {
+        0 => Some(ANSIBasicColor::Black),
+        1 => Some(ANSIBasicColor::DarkRed),
+        2 => Some(ANSIBasicColor::DarkGreen),
+        3 => Some(ANSIBasicColor::DarkYellow),
+        4 => Some(ANSIBasicColor::DarkBlue),
+        5 => Some(ANSIBasicColor::DarkMagenta),
+        6 => Some(ANSIBasicColor::DarkCyan),
+        7 => Some(ANSIBasicColor::Gray),
+        8 => Some(ANSIBasicColor::DarkGray),
+        9 => Some(ANSIBasicColor::Red),
+        10 => Some(ANSIBasicColor::Green),
+        11 => Some(ANSIBasicColor::Yellow),
+        12 => Some(ANSIBasicColor::Blue),
+        13 => Some(ANSIBasicColor::Magenta),
+        14 => Some(ANSIBasicColor::Cyan),
+        15 => Some(ANSIBasicColor::White),
+        _ => None,
     }
 }
 
@@ -390,25 +416,25 @@ mod convenience_conversions {
         /// [`SGR`]: crate::SgrCode
         fn from(ansi_value: AnsiValue) -> Self {
             match ansi_value.index {
-                // Standard foreground colors (30-37) → palette indices 9-15, 0
+                // Standard foreground colors (30-37) → palette indices 0-7
                 30 | 40 => TuiColor::Ansi(AnsiValue::new(0)), // black
-                31 | 41 => TuiColor::Ansi(AnsiValue::new(9)), // dark_red
-                32 | 42 => TuiColor::Ansi(AnsiValue::new(10)), // dark_green
-                33 | 43 => TuiColor::Ansi(AnsiValue::new(11)), // dark_yellow
-                34 | 44 => TuiColor::Ansi(AnsiValue::new(12)), // dark_blue
-                35 | 45 => TuiColor::Ansi(AnsiValue::new(13)), // dark_magenta
-                36 | 46 => TuiColor::Ansi(AnsiValue::new(14)), // dark_cyan
-                37 | 47 => TuiColor::Ansi(AnsiValue::new(15)), // gray
+                31 | 41 => TuiColor::Ansi(AnsiValue::new(1)), // dark_red
+                32 | 42 => TuiColor::Ansi(AnsiValue::new(2)), // dark_green
+                33 | 43 => TuiColor::Ansi(AnsiValue::new(3)), // dark_yellow
+                34 | 44 => TuiColor::Ansi(AnsiValue::new(4)), // dark_blue
+                35 | 45 => TuiColor::Ansi(AnsiValue::new(5)), // dark_magenta
+                36 | 46 => TuiColor::Ansi(AnsiValue::new(6)), // dark_cyan
+                37 | 47 => TuiColor::Ansi(AnsiValue::new(7)), // white
 
-                // Bright colors (90-97, 100-107) → palette indices 8, 1-7
+                // Bright colors (90-97, 100-107) → palette indices 8-15
                 90 | 100 => TuiColor::Ansi(AnsiValue::new(8)), // dark_gray
-                91 | 101 => TuiColor::Ansi(AnsiValue::new(1)), // red
-                92 | 102 => TuiColor::Ansi(AnsiValue::new(2)), // green
-                93 | 103 => TuiColor::Ansi(AnsiValue::new(3)), // yellow
-                94 | 104 => TuiColor::Ansi(AnsiValue::new(4)), // blue
-                95 | 105 => TuiColor::Ansi(AnsiValue::new(5)), // magenta
-                96 | 106 => TuiColor::Ansi(AnsiValue::new(6)), // cyan
-                97 | 107 => TuiColor::Ansi(AnsiValue::new(7)), // white
+                91 | 101 => TuiColor::Ansi(AnsiValue::new(9)), // red
+                92 | 102 => TuiColor::Ansi(AnsiValue::new(10)), // green
+                93 | 103 => TuiColor::Ansi(AnsiValue::new(11)), // yellow
+                94 | 104 => TuiColor::Ansi(AnsiValue::new(12)), // blue
+                95 | 105 => TuiColor::Ansi(AnsiValue::new(13)), // magenta
+                96 | 106 => TuiColor::Ansi(AnsiValue::new(14)), // cyan
+                97 | 107 => TuiColor::Ansi(AnsiValue::new(15)), // white
 
                 // All other values: treat as 256-color palette indices
                 _ => TuiColor::Ansi(ansi_value),
