@@ -923,9 +923,9 @@ impl FastStringify for CliTextInline {
         // ansi_output is UTF-8 valid since it contains ANSI codes and UTF-8 characters
         acc.push_str(std::str::from_utf8(ansi_output).map_err(|_| std::fmt::Error)?);
 
-        // Emit final reset code (consistent with old behavior - always emitted)
-        SgrCode::Reset.write_to_buf(acc)?;
-
+        // Final reset is now handled gracefully inside PixelCharRenderer 
+        // to avoid double resets or redundant resets when no style was applied.
+        
         ok!()
     }
 }

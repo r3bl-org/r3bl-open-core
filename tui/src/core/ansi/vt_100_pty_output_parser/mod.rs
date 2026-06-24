@@ -52,6 +52,7 @@
 //! [`VTE`]: mod@vte
 
 pub mod ansi_parser_public_api;
+pub mod pty_response_event;
 pub mod ofs_buf_vt_100;
 pub mod performer;
 pub mod protocols;
@@ -75,6 +76,7 @@ pub mod vt_100_pty_output_conformance_tests;
 
 // Re-export public API
 pub use ansi_parser_public_api::*;
+pub use pty_response_event::*;
 pub use ofs_buf_vt_100::*;
 pub use ops::*;
 pub use protocols::*;

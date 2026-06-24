@@ -65,4 +65,16 @@ macro_rules! define_ansi_const {
         #[doc = "[`DSR`]: crate::DsrSequence"]
         pub const $const_name: &str = concat!("\x1b[", $val);
     };
+
+    // === DA (Device Attributes) - Subset of CSI ===
+    // &str variant
+    (@da_str : $const_name:ident = [$val:literal] => $doc_title:literal : $doc_details:literal) => {
+        #[doc = concat!($doc_title, ": ", $doc_details)]
+        #[doc = ""]
+        #[doc = concat!("Full sequence: `DA ", $val, "` (CSI ", $val, ")")]
+        #[doc = ""]
+        #[doc = "[`CSI`]: crate::CsiSequence"]
+        #[doc = "[`DA`]: crate::DaSequence"]
+        pub const $const_name: &str = concat!("\x1b[", $val);
+    };
 }

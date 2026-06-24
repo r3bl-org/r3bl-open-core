@@ -183,6 +183,7 @@ pub mod vt_100_shim_osc_ops;
 pub mod vt_100_shim_scroll_ops;
 pub mod vt_100_shim_sgr_ops;
 pub mod vt_100_shim_terminal_ops;
+pub mod vt_100_shim_da_ops;
 
 // Re-export all operations for easier access.
 pub use vt_100_shim_char_ops::*;
@@ -196,3 +197,4 @@ pub use vt_100_shim_osc_ops::*;
 pub use vt_100_shim_scroll_ops::*;
 pub use vt_100_shim_sgr_ops::*;
 pub use vt_100_shim_terminal_ops::*;
+pub use vt_100_shim_da_ops::*;

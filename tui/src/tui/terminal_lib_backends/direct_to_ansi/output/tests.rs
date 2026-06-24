@@ -8,8 +8,8 @@
 
 #[cfg(test)]
 mod cursor_positioning_tests {
-    use crate::{AnsiSequenceGenerator, CsiSequence, TermCol, col, row, term_col, term_row, term_row_delta};
-    use crate::vt_100_pty_output_conformance_tests::nz;
+    use crate::{AnsiSequenceGenerator, CsiSequence, TermCol, col, row, term_col,
+                term_row, term_row_delta, vt_100_pty_output_conformance_tests::nz};
 
     #[test]
     fn test_cursor_position_absolute() {
@@ -352,7 +352,8 @@ mod terminal_mode_tests {
     #[test]
     fn test_enable_mouse_tracking() {
         let seq = AnsiSequenceGenerator::enable_mouse_tracking();
-        // Order: Application Mouse Tracking (1003), Mouse Mode Extension (1015), SGR Mode (1006)
+        // Order: Application Mouse Tracking (1003), Mouse Mode Extension (1015), SGR Mode
+        // (1006)
         let expected = format!(
             "{}{}{}",
             CsiSequence::EnablePrivateMode(PrivateModeType::Other(
@@ -367,7 +368,8 @@ mod terminal_mode_tests {
     #[test]
     fn test_disable_mouse_tracking() {
         let seq = AnsiSequenceGenerator::disable_mouse_tracking();
-        // Order: SGR Mode (1006), Mouse Mode Extension (1015), Application Mouse Tracking (1003)
+        // Order: SGR Mode (1006), Mouse Mode Extension (1015), Application Mouse Tracking
+        // (1003)
         let expected = format!(
             "{}{}{}",
             CsiSequence::DisablePrivateMode(PrivateModeType::Other(SGR_MOUSE_MODE)),

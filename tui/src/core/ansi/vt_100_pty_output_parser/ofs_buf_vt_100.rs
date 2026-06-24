@@ -1,6 +1,6 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{DsrRequestFromPtyEvent, GetMemSize, MemorySize, OffscreenBuffer,
+use crate::{PtyResponseEvent, GetMemSize, MemorySize, OffscreenBuffer,
             PixelCharLines, Pos, Size, TermRow, TuiStyle, osc::OscEvent};
 use std::{fmt::Debug,
           mem::size_of,
@@ -120,7 +120,7 @@ mod vt_100_terminal_state_impl {
 /// [`DEC`]: https://en.wikipedia.org/wiki/Digital_Equipment_Corporation
 /// [`DECRC`]: https://vt100.net/docs/vt510-rm/DECRC.html
 /// [`DECSC`]: https://vt100.net/docs/vt510-rm/DECSC.html
-/// [`DSR`]: crate::DsrRequestFromPtyEvent
+/// [`DSR`]: crate::PtyResponseEvent
 /// [`hidden_buffer`]: crate::HiddenScreenState::hidden_buffer
 /// [`hidden_cursor_pos`]: crate::HiddenScreenState::hidden_cursor_pos
 /// [`OffscreenBuffer::cursor_pos`]: crate::OffscreenBuffer::cursor_pos
@@ -232,7 +232,7 @@ pub struct ParserGlobalState {
     ///
     /// [`DSR`]: crate::DsrSequence
     /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
-    pub pending_dsr_responses: Vec<DsrRequestFromPtyEvent>,
+    pub pending_pty_response_events: Vec<PtyResponseEvent>,
 
     /// Top margin for the **scrollable region** ([`DECSTBM`]) - 1-based row number.
     ///

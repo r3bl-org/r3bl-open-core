@@ -17,11 +17,13 @@ use crate::define_ansi_const;
 // DSR request sequences.
 
 define_ansi_const!(@dsr_str : DSR_CURSOR_POSITION_REQUEST = ["6n"] =>
-    "Cursor Position Request (DSR 6n)" : "Terminal asks host for cursor position. Host replies with `ESC [ row ; col R`."
+    "Cursor Position Request (DSR 6n)" :
+    "Terminal asks host for cursor position. Host replies with `ESC [ row ; col R`."
 );
 
 define_ansi_const!(@dsr_str : DSR_STATUS_REQUEST = ["5n"] =>
-    "Status Request (DSR 5n)" : "Terminal asks host for status. Host replies with `ESC [ 0 n` if OK."
+    "Status Request (DSR 5n)" :
+    "Terminal asks host for status. Host replies with `ESC [ 0 n` if OK."
 );
 
 // DSR response sequence components.

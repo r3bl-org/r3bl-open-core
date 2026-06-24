@@ -1,5 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+// cspell:words terminfo
+
 //! # [`PTY`] Module
 //!
 //! This module provides a high-level, async interface for spawning and controlling
@@ -10,7 +12,7 @@
 //! ## The Developer's Journey
 //!
 //! Imagine you're building a terminal multiplexer (like [`tmux`]), or a coding agent
-//! (like [`gemini-cli`]) in which you must run programs and capture their output while
+//! (like [`agy-cli`]) in which you must run programs and capture their output while
 //! providing them input (and these programs must think they are running in an interactive
 //! terminal). You will need to handle the following tasks:
 //!
@@ -262,6 +264,38 @@
 //! Your Program
 //! ```
 //!
+//! ## Terminal Emulation & [`terminfo`] Masquerading
+//!
+//! Because the internal rendering engine ([`DirectToAnsi`]) speaks raw, standard
+//! [`ANSI`], the [`pty_mux`] does not require you to create or distribute a custom
+//! [`terminfo`] database (something like `TERM=r3bl-pty`).
+//!
+//! Instead, the engine relies on **masquerading** as a standard terminal emulator (e.g.,
+//! [`xterm-256color`]). This tricks the child process into behaving as if it were running
+//! in that emulator, leveraging the host OS's existing [`terminfo`] database. This design
+//! provides several major benefits:
+//!
+//! 1. **Universal Compatibility**: Every CLI app (`vim`, `htop`, `bat`) already has
+//!    battle-tested support for [`xterm-256color`].
+//! 2. **Zero Configuration**: Users do not need to configure their child apps or shell
+//!    profiles to recognize a custom [`TERM`] variable.
+//! 3. **Zero Deployment Dependencies**: It avoids the need for users to manually install
+//!    a custom [`terminfo`] database (like `r3bl-pty`) into `/usr/share/terminfo/` on
+//!    every host machine (which requires root access).
+//!
+//! Here are the technical details of how masquerading works:
+//! - By default, child processes inherit the parent's environment (including [`TERM`]).
+//! - If specific capabilities are needed (like [`OSC 9`] progress bars from [`cargo`]),
+//!   the caller can explicitly inject an environment variable like
+//!   [`TERM=xterm-256color`] into the child session via the [`PtySessionBuilder`].
+//! - The child process will query its local OS [`terminfo`] database for
+//!   [`xterm-256color`], emit standard [`ANSI`] sequences, and the [`pty_mux`] will parse
+//!   them.
+//!
+//! > **Note on TUI Rendering**: While child processes use [`terminfo`] masquerading, our
+//! > own rendering engine entirely bypasses [`terminfo`]. See the [`direct_to_ansi` mod
+//! > docs: Bypassing `terminfo`] section for why this provides robustness over SSH.
+//!
 //! ## Main Types
 //!
 //! - [`PtySessionBuilder`]: Builder for configuring and starting sessions via
@@ -270,17 +304,24 @@
 //! - [`PtyOutputEvent`]: Unified events received from [`PTY`] processes.
 //! - [`PtyInputEvent`]: Input types that can be sent to interactive sessions.
 //!
+//! [`agy-cli`]: https://antigravity.google/product/antigravity-cli
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`bash`]: https://www.gnu.org/software/bash/
+//! [`cargo`]: https://github.com/rust-lang/cargo
 //! [`ControlledChild::wait()`]: portable_pty::Child::wait
+//! [`direct_to_ansi` mod docs: Bypassing `terminfo`]:
+//!     mod@crate::tui::terminal_lib_backends::direct_to_ansi#architecture-note-bypassing-terminfo
+//! [`DirectToAnsi`]: crate::TerminalLibBackend::DirectToAnsi
 //! [`EIO`]: https://man7.org/linux/man-pages/man3/errno.3.html
 //! [`EOF`]: https://en.wikipedia.org/wiki/End-of-file
-//! [`gemini-cli`]: https://github.com/google-gemini/gemini-cli
 //! [`MasterPty`]: portable_pty::MasterPty
+//! [`OSC 9`]: crate::osc_codes::OscSequence
 //! [`OSC`]: crate::osc_codes::OscSequence
 //! [`ProcessManager::handle_terminal_resize()`]:
 //!     crate::ProcessManager::handle_terminal_resize
 //! [`ProcessManager::poll_all_processes()`]: crate::ProcessManager::poll_all_processes
 //! [`ProcessManager::send_input()`]: crate::ProcessManager::send_input
+//! [`pty_mux`]: mod@crate::core::pty::pty_mux
 //! [`pty` module]: mod@crate::core::pty
 //! [`PTY` Primer]: crate::pty_engine::pty_pair::PtyPair#pty-primer
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
@@ -305,10 +346,15 @@
 //!     crate::pty_session::tasks::orchestrator::spawn_orchestrator_task
 //! [`start()`]: [`PtySessionBuilder::start()`]
 //! [`stdin`]: std::io::Stdin
+//! [`TERM=xterm-256color`]: https://en.wikipedia.org/wiki/Xterm#256-color_mode
+//! [`TERM`]: https://man7.org/linux/man-pages/man7/term.7.html
+//! [`terminfo`]: https://en.wikipedia.org/wiki/Terminfo
 //! [`tmux`]: https://github.com/tmux/tmux
 //! [`tokio`]: tokio
 //! [`TUI`]: crate::tui::TerminalWindow::main_event_loop
-//! [Child process perspective]: crate::pty_engine::pty_pair::PtyPair#child-process-perspective
+//! [`xterm-256color`]: https://en.wikipedia.org/wiki/Xterm#256-color_mode
+//! [Child process perspective]:
+//!     crate::pty_engine::pty_pair::PtyPair#child-process-perspective
 //! [Engine Layer]: crate::pty_engine
 //! [MPSC channels]: tokio::sync::mpsc
 //! [Orchestrator Task]: crate::pty_session::tasks::orchestrator::spawn_orchestrator_task

@@ -92,12 +92,7 @@ pub fn execute_and_render_to_buffer_with_size(
 
     for op in &ops {
         output_device.write(|mut_ref| {
-            painter.paint(
-                op,
-                buffer_size,
-                &mut state,
-                mut_ref,
-            );
+            painter.paint(op, buffer_size, &mut state, mut_ref);
         });
     }
 

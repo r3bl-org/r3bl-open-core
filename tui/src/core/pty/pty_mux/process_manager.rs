@@ -111,7 +111,7 @@ impl Process {
     pub fn process_pty_output_and_update_buffer(&mut self, output: Vec<u8>) {
         if !output.is_empty() {
             // Process bytes and extract any OSC and DSR events.
-            let (osc_events, dsr_requests) =
+            let (osc_events, pty_response_events) =
                 self.terminal_state.apply_ansi_bytes(&output);
 
             // Handle any OSC events that were detected.
@@ -132,15 +132,15 @@ impl Process {
             }
 
             // Handle any DSR response events - send them back through PTY.
-            if !dsr_requests.is_empty()
+            if !pty_response_events.is_empty()
                 && let Some(session) = &self.session
             {
-                for dsr_event in dsr_requests {
-                    let response_bytes = dsr_event.to_string().into_bytes();
+                for response_event in pty_response_events {
+                    let response_bytes = response_event.to_string().into_bytes();
                     tracing::debug!(
                         "Process '{}' sending DSR response: {:?}",
                         self.name,
-                        dsr_event
+                        response_event
                     );
                     // Send the response back through the PTY input channel.
                     let _unused = session

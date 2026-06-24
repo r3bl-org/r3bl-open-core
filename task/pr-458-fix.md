@@ -90,7 +90,7 @@ Remove the abandoned `CursorModeDetector` pattern from the reader task.
 - [ ] Close PR #458 manually on GitHub, stating that its feature was subsumed by our newly
       designed commit. (We are NOT merging the PR or its code).
 - [ ] **Important Attribution:** We are implementing our own fixes based on her original
-      intent. We must absolutely add a
+      intent. We will add a
       `Co-authored-by: Cecile Tonglet <cecile.tonglet@cecton.com>` trailer to all of
       the commits we make for this task to ensure she gets proper attribution for the
       feature!

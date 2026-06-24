@@ -514,12 +514,36 @@ pub use types::*;
 
 ---
 
+## Attribute Documentation (allow/expect)
+
+When suppressing warnings or lints using `#[allow(...)]` or `#[expect(...)]`, always use the built-in `reason` parameter rather than placing an ad-hoc comment above the attribute. This ensures the reasoning is explicitly tied to the attribute at the compiler level and is properly formatted and idiomatic in modern Rust.
+
+**✅ Good:**
+```rust
+#[allow(unused_imports, reason = "Used for shorter rustdoc link ref defs")]
+use crate::core::ansi::vt_100_pty_output_parser::ParserGlobalState;
+```
+
+**❌ Bad:**
+```rust
+// Used for shorter rustdoc link ref defs
+#[allow(unused_imports)]
+use crate::core::ansi::vt_100_pty_output_parser::ParserGlobalState;
+
+// Or worse, invalid syntax that breaks compilation:
+#[allow(unused_imports), "Used for shorter rustdoc link ref defs"]
+use crate::core::ansi::vt_100_pty_output_parser::ParserGlobalState;
+```
+
+---
+
 ## Summary Checklist
 
 When running the `run-clippy` skill:
 
 - [ ] `cargo clippy --all-targets` shows no warnings
 - [ ] Comment punctuation follows rules (single-line: period, wrapped: period at end, independent: each gets period)
+- [ ] Suppressed lints (`#[allow(...)]`) include the built-in `reason` parameter
 - [ ] Module organization follows private + re-export pattern where appropriate
 - [ ] Rustdoc reference-style links properly formatted (if applicable)
 - [ ] Tests pass after auto-fixes: `cargo test --all-targets`

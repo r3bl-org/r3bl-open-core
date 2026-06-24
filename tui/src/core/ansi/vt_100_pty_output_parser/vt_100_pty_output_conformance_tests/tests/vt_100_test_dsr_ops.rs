@@ -6,7 +6,7 @@
 
 use super::super::test_fixtures_vt_100_ansi_conformance::{create_test_offscreen_buffer_10r_by_10c, nz};
 use crate::{
-    DsrRequestFromPtyEvent, DsrRequestType, col,
+    PtyResponseEvent, DsrRequestType, col,
             core::ansi::{
                 constants::DSR_STATUS_OK_FULL_RESPONSE,
                 vt_100_pty_output_parser::{CsiSequence,
@@ -34,7 +34,7 @@ fn test_dsr_status_report() {
     // Check the response is a status report.
     assert_eq!(
         dsr_responses[0],
-        DsrRequestFromPtyEvent::TerminalStatus,
+        PtyResponseEvent::TerminalStatus,
         "expected status report response"
     );
 
@@ -70,7 +70,7 @@ fn test_dsr_cursor_position_report() {
     // Check the response is a cursor position report with correct 1-based position.
     assert_eq!(
         dsr_responses[0],
-        DsrRequestFromPtyEvent::CursorPosition {
+        PtyResponseEvent::CursorPosition {
             row: term_row(nz(4)),
             col: term_col(nz(6))
         },
@@ -104,7 +104,7 @@ fn test_dsr_cursor_position_at_origin() {
     // Should produce cursor position report at (1, 1) in 1-based coordinates
     assert_eq!(
         dsr_responses[0],
-        DsrRequestFromPtyEvent::CursorPosition {
+        PtyResponseEvent::CursorPosition {
             row: term_row(nz(1)),
             col: term_col(nz(1))
         },
@@ -161,10 +161,10 @@ fn test_multiple_dsr_requests() {
     assert_eq!(dsr_responses.len(), 2, "expected two DSR responses");
 
     // Check the responses.
-    assert_eq!(dsr_responses[0], DsrRequestFromPtyEvent::TerminalStatus);
+    assert_eq!(dsr_responses[0], PtyResponseEvent::TerminalStatus);
     assert_eq!(
         dsr_responses[1],
-        DsrRequestFromPtyEvent::CursorPosition {
+        PtyResponseEvent::CursorPosition {
             row: term_row(nz(3)),
             col: term_col(nz(4))
         }

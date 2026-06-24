@@ -115,6 +115,7 @@
 //! [`vt_100_impl_char_ops`]: vt_100_impl_char_ops
 //! [`vt_100_impl_control_ops`]: vt_100_impl_control_ops
 //! [`vt_100_impl_cursor_ops`]: vt_100_impl_cursor_ops
+//! [`vt_100_impl_da_ops`]: vt_100_impl_da_ops
 //! [`vt_100_impl_dsr_ops`]: vt_100_impl_dsr_ops
 //! [`vt_100_impl_line_ops`]: vt_100_impl_line_ops
 //! [`vt_100_impl_margin_ops`]: vt_100_impl_margin_ops
@@ -202,6 +203,11 @@ pub(super) mod vt_100_impl_sgr_ops;
 pub mod vt_100_impl_terminal_ops;
 #[cfg(not(any(test, doc)))]
 pub(super) mod vt_100_impl_terminal_ops;
+
+#[cfg(any(test, doc))]
+pub mod vt_100_impl_da_ops;
+#[cfg(not(any(test, doc)))]
+pub(super) mod vt_100_impl_da_ops;
 
 // Note: Individual modules are accessed by the parser shim layer
 // (vt_100_pty_output_parser). No re-exports needed here since the impl blocks extend

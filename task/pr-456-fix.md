@@ -10,7 +10,7 @@ resolving spurious blank line issues in `fish`.
 ## PR Handling & Attribution
 
 We are implementing our own fixes based on Cecile's original intent and closing her PR
-without merging it directly due to underlying architectural changes. We must absolutely
+without merging it directly due to underlying architectural changes. We will add a
 add a `Co-authored-by: Cecile Tonglet <cecile.tonglet@cecton.com>` trailer to all of
 the commits we make for this task to ensure she gets proper attribution for the feature!
 

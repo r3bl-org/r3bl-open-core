@@ -11,8 +11,8 @@
 
 use super::{InputRouter, OutputRenderer, Process, ProcessManager, output_renderer,
             show_notification_non_blocking};
-use crate::{AnsiSequenceGenerator, Continuation, DEBUG_TUI_PTY_MUX, InputEvent,
-            Size, TerminalInteractiveStatus, TuiAvailability, col,
+use crate::{AnsiSequenceGenerator, Continuation, DEBUG_TUI_PTY_MUX, InputEvent, Size,
+            TerminalInteractiveStatus, TuiAvailability, col,
             core::{check_is_terminal_interactive, emit_stderr_redirection_disclaimer,
                    get_size,
                    osc::OscController,

@@ -59,6 +59,9 @@ pub mod vt_100_test_control_ops;
 pub mod vt_100_test_cursor_ops;
 
 #[cfg(any(test, doc))]
+pub mod vt_100_test_da_ops;
+
+#[cfg(any(test, doc))]
 pub mod vt_100_test_dsr_ops;
 
 #[cfg(any(test, doc))]

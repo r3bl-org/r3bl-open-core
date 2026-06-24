@@ -25,12 +25,10 @@
 //! [`DSR`]: crate::DsrSequence
 //! [`ESC`]: crate::EscSequence
 
-use crate::{generate_impl_display_for_fast_stringify, ok};
-use crate::{
-    BufTextStorage, FastStringify, ParamsExt, TermCol, TermRow, CSI_PARAM_SEPARATOR,
-    DSR_CURSOR_POSITION_RESPONSE_END, DSR_RESPONSE_START, DSR_STATUS_OK_RESPONSE_STR,
-};
-use std::fmt::{self, Display};
+use crate::{BufTextStorage, CSI_PARAM_SEPARATOR, DSR_CURSOR_POSITION_RESPONSE_END,
+            DSR_RESPONSE_START, DSR_STATUS_OK_RESPONSE_STR, FastStringify, ParamsExt,
+            TermCol, TermRow, generate_impl_display_for_fast_stringify, ok};
+use std::fmt::{self};
 
 // [`DSR`] request types for parsing incoming [`DSR`] [`CSI`] sequences.
 
@@ -114,6 +112,7 @@ mod dsr_request_type_impl {
 /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 /// [`CSI`]: crate::CsiSequence
 /// [`CsiSequence`]: crate::CsiSequence
+/// [`Display`]: std::fmt::Display
 /// [`DSR` spec]: https://en.wikipedia.org/wiki/ANSI_escape_code#DSR
 /// [`DSR`]: crate::DsrSequence
 /// [`OSC`]: crate::osc_codes::OscSequence
@@ -167,8 +166,7 @@ generate_impl_display_for_fast_stringify!(DsrSequence);
 ///
 /// 1. **Child process → [`PTY`] → Parser**: Child process sends `CSI 6n` (request cursor
 ///    position)
-/// 2. **Parser → Event**: Parser creates `DsrRequestFromPtyEvent::CursorPosition { row,
-///    col }`
+/// 2. **Parser → Event**: Parser creates `PtyResponseEvent::CursorPosition { row, col }`
 /// 3. **Event → Manager**: Process manager receives the request event
 /// 4. **Manager → [`PTY`] → Child process**: Manager sends response bytes back:
 ///    `[`[`ESC`]`] [ row ; col R`
@@ -178,10 +176,10 @@ generate_impl_display_for_fast_stringify!(DsrSequence);
 /// ## Usage Example
 ///
 /// ```rust
-/// use r3bl_tui::{DsrRequestFromPtyEvent, term_row, term_col};
+/// use r3bl_tui::{PtyResponseEvent, term_row, term_col};
 /// use std::num::NonZeroU16;
 ///
-/// let request = DsrRequestFromPtyEvent::CursorPosition {
+/// let request = PtyResponseEvent::CursorPosition {
 ///     row: term_row(NonZeroU16::new(10).unwrap()),
 ///     col: term_col(NonZeroU16::new(25).unwrap())
 /// };
@@ -193,45 +191,6 @@ generate_impl_display_for_fast_stringify!(DsrSequence);
 /// [`DSR`]: crate::DsrSequence
 /// [`ESC`]: crate::EscSequence
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
-#[derive(Debug, Clone, PartialEq)]
-pub enum DsrRequestFromPtyEvent {
-    /// Terminal status report requested (`CSI 5n` received).
-    ///
-    /// Should respond with `ESC [ 0 n` (terminal OK).
-    TerminalStatus,
-
-    /// Cursor position report requested (`CSI 6n` received).
-    ///
-    /// Should respond with `ESC [ row ; col R` (1-based coordinates).
-    CursorPosition { row: TermRow, col: TermCol },
-}
-
-mod dsr_request_from_pty_event_impl {
-    #[allow(clippy::wildcard_imports)]
-    use super::*;
-
-    impl From<&DsrRequestFromPtyEvent> for DsrSequence {
-        fn from(event: &DsrRequestFromPtyEvent) -> Self {
-            match event {
-                DsrRequestFromPtyEvent::TerminalStatus => DsrSequence::StatusOkResponse,
-                DsrRequestFromPtyEvent::CursorPosition { row, col } => {
-                    DsrSequence::CursorPositionResponse {
-                        row: *row,
-                        col: *col,
-                    }
-                }
-            }
-        }
-    }
-
-    impl Display for DsrRequestFromPtyEvent {
-        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-            // Delegate to DsrSequence for formatting.
-            DsrSequence::from(self).fmt(f)
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -269,42 +228,5 @@ mod tests {
         sequence.write_to_buf(&mut acc).unwrap();
         let expected = dsr_cursor_position_response(term_row(nz(42)), term_col(nz(84)));
         assert_eq!(acc.clone(), expected);
-    }
-
-    #[test]
-    fn test_dsr_request_status_display() {
-        let request = DsrRequestFromPtyEvent::TerminalStatus;
-        assert_eq!(request.to_string(), DSR_STATUS_OK_FULL_RESPONSE);
-    }
-
-    #[test]
-    fn test_dsr_request_cursor_position_display() {
-        let request = DsrRequestFromPtyEvent::CursorPosition {
-            row: term_row(nz(10)),
-            col: term_col(nz(25)),
-        };
-        let expected = dsr_cursor_position_response(term_row(nz(10)), term_col(nz(25)));
-        assert_eq!(request.to_string(), expected);
-    }
-
-    #[test]
-    fn test_from_trait_conversion() {
-        let request = DsrRequestFromPtyEvent::CursorPosition {
-            row: term_row(nz(3)),
-            col: term_col(nz(7)),
-        };
-        let expected_sequence = DsrSequence::CursorPositionResponse {
-            row: term_row(nz(3)),
-            col: term_col(nz(7)),
-        };
-
-        assert_eq!(DsrSequence::from(&request), expected_sequence);
-    }
-
-    #[test]
-    fn test_to_bytes_conversion() {
-        let request = DsrRequestFromPtyEvent::TerminalStatus;
-        let bytes = request.to_string().into_bytes();
-        assert_eq!(bytes, DSR_STATUS_OK_FULL_RESPONSE.as_bytes());
     }
 }

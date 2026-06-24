@@ -1,5 +1,7 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+// cspell:words desync
+
 //! This module implements [`PixelCharRenderer`], which converts [`PixelChar`] arrays to
 //! byte arrays containing [`ANSI`] escape sequences using intelligent style diffing to
 //! minimize redundant codes.
@@ -58,7 +60,7 @@ use crate::{FastStringify, PixelChar, SGR_RESET_BYTES, SgrCode, TuiColor, TuiSty
 ///
 /// 1. **Same style** → No [`ANSI`] codes emitted
 /// 2. **Default → Styled** → Apply new style codes
-/// 3. **Styled → Default** → Emit reset (`\x1b[0m`)
+/// 3. **Styled → Default** → Emit reset ([`SGR_RESET_BYTES`])
 /// 4. **Styled → Different Styled** → Emit reset first (if attributes conflict), then new
 ///    codes
 ///
@@ -79,6 +81,7 @@ use crate::{FastStringify, PixelChar, SGR_RESET_BYTES, SgrCode, TuiColor, TuiSty
 /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 /// [`OutputDevice`]: crate::OutputDevice
 /// [`RenderOpOutput`]: enum@crate::RenderOpOutput
+/// [`SGR_RESET_BYTES`]: crate::SGR_RESET_BYTES
 #[derive(Debug, Clone)]
 pub struct PixelCharRenderer {
     /// Pre-allocated [`ANSI`] escape sequence buffer (typically 4KB).
@@ -114,10 +117,34 @@ impl PixelCharRenderer {
     ///
     /// This is the main rendering method. It:
     /// - Clears the internal buffer
+    /// - Forcibly resets its internal `current_style` tracking state to
+    ///   [`TuiStyle::default()`]
     /// - Iterates through each [`PixelChar`]
     /// - Applies smart style diffing
     /// - Writes character bytes
+    /// - **Appends an automatic [`ANSI`] reset ([`SGR_RESET_BYTES`]) at the end if a
+    ///   style was left active**
     /// - Returns a reference to the [`ANSI`]-encoded bytes
+    ///
+    /// # Stateless Nature & Auto-Resets
+    ///
+    /// This method is intentionally **stateless** across multiple calls. Every time
+    /// [`render_line()`] is invoked, it resets its internal `current_style` memory. It
+    /// assumes the physical hardware terminal is also currently in a clean, default
+    /// state.
+    ///
+    /// If [`render_line()`] draws a styled character at the very end of the line, the
+    /// physical hardware terminal is left in that active style. To prevent a **state
+    /// desync** where the *next* call to [`render_line()`] assumes the terminal is clean
+    /// when it actually isn't, this method guarantees that it always cleans up after
+    /// itself by emitting an explicit reset sequence ([`SGR_RESET_BYTES`]) before it
+    /// returns.
+    ///
+    /// If you are building a tool and require direct, manual control over terminal state
+    /// across multiple operations (where you *want* to leave a color turned on and print
+    /// several things before turning it off), you should bypass this high-level method
+    /// and use the atomic [`RenderOp`] enum variants (e.g., [`SetFgColor`],
+    /// [`ResetColor`]) directly.
     ///
     /// # Arguments
     ///
@@ -129,17 +156,25 @@ impl PixelCharRenderer {
     ///
     /// # Algorithm
     ///
-    /// For each `PixelChar`:
-    /// - `PlainText { display_char, style }`: Check if style changed, apply style if
+    /// For each [`PixelChar`]:
+    /// - [`PlainText { display_char, style }`] - Check if style changed, apply style if
     ///   needed, write character [`UTF-8`] bytes
-    /// - `Spacer`: Write a space character (typically already handled by positioning)
-    /// - `Void`: Skip (positioning already handled)
+    /// - [`Spacer`] - Write a space character (typically already handled by positioning)
+    /// - [`Void`] -  Skip (positioning already handled)
     ///
     /// The style diffing is the key optimization: we only emit [`ANSI`] codes when the
     /// style actually changes, reducing output size by ~30%.
     ///
     /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+    /// [`PlainText { display_char, style }`]: crate::PixelChar::PlainText
+    /// [`render_line()`]: Self::render_line
+    /// [`RenderOp`]: crate::render_op::RenderOpCommon
+    /// [`ResetColor`]: crate::render_op::RenderOpCommon::ResetColor
+    /// [`SetFgColor`]: crate::render_op::RenderOpCommon::SetFgColor
+    /// [`SGR_RESET_BYTES`]: crate::SGR_RESET_BYTES
+    /// [`Spacer`]: crate::PixelChar::Spacer
     /// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
+    /// [`Void`]: crate::PixelChar::Void
     pub fn render_line(&mut self, pixels: &[PixelChar]) -> &[u8] {
         self.buffer.clear();
         self.current_style = TuiStyle::default();
@@ -172,6 +207,13 @@ impl PixelCharRenderer {
                     // and don't contribute visible content
                 }
             }
+        }
+
+        // Ensure we don't bleed styles to the next render op!
+        if self.has_active_style {
+            self.buffer.extend_from_slice(SGR_RESET_BYTES);
+            self.has_active_style = false;
+            self.current_style = TuiStyle::default();
         }
 
         &self.buffer
@@ -471,10 +513,10 @@ mod tests {
         let output = renderer.render_line(&pixels);
         let output_str = String::from_utf8_lossy(output);
 
-        // Should have only one bold sequence at the beginning
+        // Should have only one bold sequence at the beginning and one reset at the end
         let bold_count = output_str.matches(SGR_BOLD_STR).count();
         assert_eq!(bold_count, 1);
-        assert_eq!(output_str, format!("{SGR_BOLD_STR}ABC"));
+        assert_eq!(output_str, format!("{SGR_BOLD_STR}ABC{SGR_RESET_STR}"));
     }
 
     #[test]
@@ -557,21 +599,25 @@ mod tests {
     fn test_reset_tracking() {
         let mut renderer = PixelCharRenderer::new();
 
-        // Render with style - has_active_style should be true
+        // Render with style - has_active_style should be reset to false at the end
         let pixels = vec![PixelChar::PlainText {
             display_char: 'A',
             style: new_style!(bold),
         }];
-        let _output = renderer.render_line(&pixels);
-        assert!(renderer.has_active_style);
+        let output = renderer.render_line(&pixels).to_vec();
+        let output_str = String::from_utf8_lossy(&output);
+        assert!(!renderer.has_active_style);
+        assert!(output_str.ends_with(SGR_RESET_STR));
 
         // Render back to default - has_active_style should be false
         let pixels = vec![PixelChar::PlainText {
             display_char: 'B',
             style: TuiStyle::default(),
         }];
-        let _output = renderer.render_line(&pixels);
+        let output = renderer.render_line(&pixels).to_vec();
+        let output_str = String::from_utf8_lossy(&output);
         assert!(!renderer.has_active_style);
+        assert!(!output_str.contains(SGR_RESET_STR));
     }
 
     #[test]
@@ -584,5 +630,34 @@ mod tests {
         assert_eq!(renderer2.buffer.len(), 0);
         assert_eq!(renderer1.current_style, renderer2.current_style);
         assert_eq!(renderer1.has_active_style, renderer2.has_active_style);
+    }
+
+    #[test]
+    fn test_stateless_render_prevents_style_leakage() {
+        let mut renderer = PixelCharRenderer::new();
+
+        // Pass 1: Render a styled string. The renderer should auto-reset at the end.
+        let pixels1 = vec![PixelChar::PlainText {
+            display_char: 'A',
+            style: new_style!(bold),
+        }];
+        let output1 = renderer.render_line(&pixels1).to_vec();
+        let output1_str = String::from_utf8_lossy(&output1);
+
+        assert!(output1_str.starts_with(SGR_BOLD_STR));
+        assert!(output1_str.ends_with(SGR_RESET_STR));
+
+        // Pass 2: The next render call should assume a clean terminal state.
+        // It should NOT emit any ANSI escapes if we ask it to draw default text.
+        // If Pass 1 didn't end with SGR_RESET_STR, the terminal would be left bold,
+        // and Pass 2 would silently draw bold 'B's!
+        let pixels2 = vec![PixelChar::PlainText {
+            display_char: 'B',
+            style: TuiStyle::default(),
+        }];
+        let output2 = renderer.render_line(&pixels2).to_vec();
+        let output2_str = String::from_utf8_lossy(&output2);
+
+        assert_eq!(output2_str, "B");
     }
 }

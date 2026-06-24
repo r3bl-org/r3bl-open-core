@@ -368,7 +368,18 @@ mod style_impl {
     use super::*;
 
     impl TuiStyle {
+        /// Removes background color from `self`.
         pub fn remove_bg_color(&mut self) { self.color_bg = None; }
+
+        /// Returns a new style with all text attributes and foreground colors cleared,
+        /// retaining only the background color.
+        #[must_use]
+        pub fn retain_bg_color_only(&self) -> Self {
+            TuiStyle {
+                color_bg: self.color_bg,
+                ..Default::default()
+            }
+        }
     }
 }
 

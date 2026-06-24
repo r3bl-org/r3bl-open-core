@@ -1,6 +1,6 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-// cspell:words kqueue filedescriptor
+// cspell:words kqueue filedescriptor terminfo undercurls
 
 //! # [`DirectToAnsi`] Terminal Backend
 //!
@@ -45,11 +45,38 @@
 //!
 //! [`DirectToAnsi`] is the **Stage 5 Backend Executor** that translates render operations
 //! into actual terminal control sequences. Unlike Crossterm (which uses FFI bindings to
-//! `libc` on UNIX and `winapi` on Windows), [`DirectToAnsi`] generates pure [`ANSI`]
+//! [`libc`] on UNIX and [`winapi`] on Windows), [`DirectToAnsi`] generates pure [`ANSI`]
 //! escape sequences in Rust.
 //!
-//! **Input**: [`RenderOpOutputVec`] from the Backend Converter **Output**: [`ANSI`]
-//! escape sequences written to terminal **Dependencies**: None (pure Rust)
+//! - **Input**: [`RenderOpOutputVec`] from the Backend Converter
+//! - **Output**: [`ANSI`] escape sequences written to terminal
+//! - **Dependencies**: None (pure Rust)
+//!
+//! ## Architecture Note: Bypassing [`terminfo`]
+//!
+//! Unlike traditional terminal libraries (such as [`ncurses`]), [`DirectToAnsi`] **does
+//! not** query the OS-level [`terminfo`] database to determine terminal capabilities or
+//! escape sequences.
+//!
+//! Instead, it takes the modern approach: hardcoding standard [`VT-100`] and [`ANSI`]
+//! escape sequences. Because almost all modern terminal emulators ([`WezTerm`],
+//! [`Alacritty`], [`GNOME Terminal`], etc.) support standard [`ANSI`] natively, bypassing
+//! [`terminfo`] provides several massive architectural advantages:
+//!
+//! 1. **Zero Deployment Dependencies**: The application remains a standalone binary.
+//!    There is no need to install a custom `.terminfo` file on the target system (which
+//!    requires root access).
+//! 2. **Cross-OS Determinism**: [`terminfo`] databases vary wildly between OSes.
+//!    Hardcoding ensures identical byte output across macOS, Linux, and FreeBSD.
+//! 3. **SSH Robustness**: TUI applications will render perfectly over SSH even when the
+//!    user's specific terminal [`terminfo`] file (e.g., [`wezterm.terminfo`]) is missing
+//!    on the remote server.
+//! 4. **Modern Capabilities**: Immediately leverages modern features (like 24-bit
+//!    Truecolor or "undercurls") without waiting for OS databases to adopt them.
+//!
+//! > **Note on Child Processes**: While the renderer *bypasses* [`terminfo`] for output,
+//! > the [`pty` mod docs: Masquerading] section explains how child processes use
+//! > [`terminfo`] masquerading to know how to draw to the TUI.
 //!
 //! # Architecture
 //!
@@ -78,12 +105,13 @@
 //!
 //! Integration tests are organized by component:
 //!
-//! - **Output**: [`output::direct_to_ansi_output_integration_tests`] — [`StdoutMock`]-based [`ANSI`] sequence
-//!   verification (cross-platform)
+//! - **Output**: [`output::direct_to_ansi_output_integration_tests`] —
+//!   [`StdoutMock`]-based [`ANSI`] sequence verification (cross-platform)
 //! - **Input**: [`input::integration_tests_stub`] — documentation module pointing to
-//!   [`PTY`]-based parser tests in [`vt_100_terminal_input_parser::vt_100_parser_integration_tests`]
-//!   (Linux-only).
+//!   [`PTY`]-based parser tests in
+//!   [`vt_100_terminal_input_parser::vt_100_parser_integration_tests`] (Linux-only).
 //!
+//! [`Alacritty`]: https://alacritty.org/
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`AnsiSequenceGenerator`]: crate::AnsiSequenceGenerator
 //! [`compositor_render_ops_to_ofs_buf` mod docs]:
@@ -93,13 +121,18 @@
 //! [`DirectToAnsi`]: self
 //! [`filedescriptor::poll()`]:
 //!     https://docs.rs/filedescriptor/latest/filedescriptor/fn.poll.html
+//! [`GNOME Terminal`]: https://help.gnome.org/users/gnome-terminal/stable/
 //! [`input::integration_tests_stub`]:
 //!     mod@crate::terminal_lib_backends::direct_to_ansi::input::integration_tests_stub
 //! [`kqueue`]: https://man.freebsd.org/cgi/man.cgi?query=kqueue&sektion=2
+//! [`libc`]: https://crates.io/crates/libc
+//! [`ncurses`]: https://en.wikipedia.org/wiki/Ncurses
 //! [`offscreen_buffer::paint_impl` mod docs]: mod@crate::offscreen_buffer::paint_impl
 //! [`output::direct_to_ansi_output_integration_tests`]:
 //!     mod@crate::terminal_lib_backends::direct_to_ansi::output::direct_to_ansi_output_integration_tests
 //! [`PixelCharRenderer`]: crate::PixelCharRenderer
+//! [`pty` mod docs: Masquerading]:
+//!     mod@crate::core::pty#terminal-emulation--terminfo-masquerading
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`render_op_ir` mod docs]: mod@crate::render_op::render_op_ir
 //! [`RenderOpCommon`]: crate::RenderOpCommon
@@ -112,9 +145,14 @@
 //! [`RenderToAnsi`]: crate::RenderToAnsi
 //! [`StdoutMock`]: crate::StdoutMock
 //! [`terminal_lib_backends` mod docs]: mod@crate::tui::terminal_lib_backends
+//! [`terminfo`]: https://en.wikipedia.org/wiki/Terminfo
 //! [`tty`]: https://man7.org/linux/man-pages/man4/tty.4.html
+//! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 //! [`vt_100_terminal_input_parser::vt_100_parser_integration_tests`]:
 //!     mod@crate::vt_100_terminal_input_parser::vt_100_parser_integration_tests
+//! [`wezterm.terminfo`]: https://wezfurlong.org/wezterm/faq.html
+//! [`WezTerm`]: https://wezfurlong.org/wezterm/
+//! [`winapi`]: https://crates.io/crates/winapi
 //! [rendering pipeline overview]:
 //!     mod@crate::terminal_lib_backends#rendering-pipeline-architecture
 

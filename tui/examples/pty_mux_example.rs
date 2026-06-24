@@ -2,12 +2,12 @@
 
 // cspell:words adduser
 
-//! `PTYMux` terminal multiplexer example with universal process compatibility.
+//! [`PTYMux`] terminal multiplexer example with universal process compatibility.
 //!
-//! This example demonstrates how to use the `pty_mux` module to create a terminal
+//! This example demonstrates how to use the [`pty_mux`] module to create a terminal
 //! multiplexer similar to tmux, but with enhanced support for truecolor and TUI apps that
-//! frequently re-render their UI, with support for ALL types of programs:
-//! interactive shells, TUI applications, and CLI tools.
+//! frequently re-render their UI, with support for ALL types of programs: interactive
+//! shells, TUI applications, and CLI tools.
 //!
 //! ## Features
 //!
@@ -31,6 +31,7 @@
 //! - `F3` to switch to htop (process monitor)
 //! - `F4` to switch to gitui (git TUI)
 //! - `F5` to switch to bash (interactive shell)
+//! - `F6` to switch to fish (interactive shell)
 //! - `Ctrl+Q` to quit
 //! - The status bar shows live process status and available shortcuts
 //!
@@ -42,16 +43,21 @@
 //! - `htop` - Process monitor (full-screen TUI)
 //! - `gitui` - Git terminal user interface (interactive TUI)
 //! - `bash` - Interactive shell (demonstrates universal compatibility)
+//! - `fish` - Interactive shell (demonstrates universal compatibility without timeouts)
 //!
-//! Note: All processes are started immediately at startup for fast switching.
-//! All applications are proper TUI applications that respond to SIGWINCH
-//! and will repaint correctly when switching between them.
+//! Note: All processes are started immediately at startup for fast switching. All
+//! applications are proper TUI applications that respond to [`SIGWINCH`] and will repaint
+//! correctly when switching between them.
 //!
-//! [`OSC`]: crate::osc_codes::OscSequence
+//! [`OSC`]: r3bl_tui::core::ansi::osc_codes::OscSequence
+//! [`pty_mux`]: r3bl_tui::core::pty_mux
+//! [`PTYMux`]: r3bl_tui::core::pty_mux::PTYMux
+//! [`SIGWINCH`]: signal_hook::consts::SIGWINCH
 
 use r3bl_tui::{IntoErr, TuiAvailability, assert_terminal_is_interactive,
                core::pty_mux::PTYMux, ok, set_mimalloc_in_main,
                try_initialize_logging_global};
+use tracing_core::LevelFilter;
 
 #[tokio::main]
 async fn main() -> miette::Result<()> {
@@ -59,19 +65,20 @@ async fn main() -> miette::Result<()> {
     assert_terminal_is_interactive();
 
     // Initialize logging to /tmp/r3bl_tui/log.txt.
-    let _log_guard = try_initialize_logging_global(tracing_core::LevelFilter::DEBUG).ok();
+    let _log_guard = try_initialize_logging_global(LevelFilter::DEBUG).ok();
     tracing::debug!("Starting PTYMux Example");
 
     // Mixed process types demonstrating universal compatibility:
     // - hx: Helix text editor (existing TUI app)
     // - TUI apps: less, htop, gitui (proper TUI applications)
-    // - bash: Interactive shell (universal compatibility demonstration)
+    // - bash, fish: Interactive shells (universal compatibility demonstration)
     let processes = vec![
         ("hx", "hx", vec![]),
         ("less", "less", vec!["Cargo.toml".to_string()]),
         ("htop", "htop", vec![]),
         ("gitui", "gitui", vec![]),
         ("bash", "bash", vec![]),
+        ("fish", "fish", vec![]),
     ];
 
     println!("🚀 Starting PTYMux Example - Universal Process Compatibility");
@@ -102,7 +109,9 @@ async fn main() -> miette::Result<()> {
 
     if added_count == 0 {
         miette::bail!(
-            "No configured processes are available on this system. Please ensure at least one of (hx, less, htop, gitui, bash) is installed and in PATH."
+            "No configured processes are available on this system. \
+            Please ensure at least one of (hx, less, htop, gitui, bash, fish) \
+            is installed and in PATH."
         );
     }
 

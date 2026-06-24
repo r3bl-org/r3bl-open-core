@@ -132,7 +132,7 @@
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 //! [`vte`]: https://docs.rs/vte
 
-use crate::{DsrRequestFromPtyEvent, OfsBufVT100, core::osc::OscEvent};
+use crate::{OfsBufVT100, PtyResponseEvent, core::osc::OscEvent};
 use std::mem::take;
 
 /// Terminal state context for [`ANSI`] sequence processing.
@@ -162,9 +162,7 @@ impl<'a> AnsiToOfsBufPerformer<'a> {
     /// state is maintained in the buffer and persists between performer instances.
     ///
     /// [`parser_global_state`]: OfsBufVT100::parser_global_state
-    pub fn new(ofs_buf_vt_100: &'a mut OfsBufVT100) -> Self {
-        Self { ofs_buf_vt_100 }
-    }
+    pub fn new(ofs_buf_vt_100: &'a mut OfsBufVT100) -> Self { Self { ofs_buf_vt_100 } }
 
     /// Handles the core parsing loop where each byte is fed to the [`VTE parser`], which
     /// in turn calls methods on the performer (via the [`Perform`] trait).
@@ -248,7 +246,7 @@ impl OfsBufVT100 {
     ///
     /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
     /// [`cursor_pos`]: crate::OffscreenBuffer::cursor_pos
-    /// [`DSR response events`]: crate::DsrRequestFromPtyEvent
+    /// [`DSR response events`]: crate::PtyResponseEvent
     /// [`OffscreenBuffer`]: crate::OffscreenBuffer
     /// [`OSC events`]: crate::core::osc::OscEvent
     /// [`parser_global_state`]: OfsBufVT100::parser_global_state
@@ -262,7 +260,7 @@ impl OfsBufVT100 {
     pub fn apply_ansi_bytes(
         &mut self,
         bytes: impl AsRef<[u8]>,
-    ) -> (Vec<OscEvent>, Vec<DsrRequestFromPtyEvent>) {
+    ) -> (Vec<OscEvent>, Vec<PtyResponseEvent>) {
         let mut performer = AnsiToOfsBufPerformer::new(self);
         performer.apply_ansi_bytes(bytes.as_ref());
 
@@ -277,7 +275,7 @@ impl OfsBufVT100 {
             &mut performer
                 .ofs_buf_vt_100
                 .parser_global_state
-                .pending_dsr_responses,
+                .pending_pty_response_events,
         );
 
         (osc_events, pending_dsr_requests)
@@ -286,16 +284,13 @@ impl OfsBufVT100 {
 
 #[cfg(test)]
 mod tests {
-    use crate::{ANSIBasicColor, DSR_CURSOR_POSITION_REQUEST, DSR_STATUS_REQUEST,
-        DsrRequestFromPtyEvent::TerminalStatus, SgrCode, col,
-        CsiSequence,
-        vt_100_pty_output_conformance_tests::{
+    use crate::{
+        ANSIBasicColor, CsiSequence, DSR_CURSOR_POSITION_REQUEST, DSR_STATUS_REQUEST, OscEvent, PtyResponseEvent::{self, TerminalStatus}, SgrCode, col, offscreen_buffer::test_fixtures_ofs_buf::*, row, term_col, term_col_delta, term_row, term_row_delta, vt_100_pty_output_conformance_tests::{
             nz,
             test_fixtures_vt_100_ansi_conformance::create_test_offscreen_buffer_10r_by_10c,
             test_sequence_generators::csi_builders::csi_seq_cursor_pos,
-        },
-        offscreen_buffer::test_fixtures_ofs_buf::*,
-        row, term_col, term_col_delta, term_row, term_row_delta};
+        }
+    };
     use crate::core::osc::osc_codes::OscSequence;
 
     #[test]
@@ -449,7 +444,7 @@ mod tests {
         assert_eq!(dsr_responses.len(), 0, "no DSR responses expected");
 
         match &osc_events[0] {
-            crate::OscEvent::SetTitleAndTab(title) => {
+            OscEvent::SetTitleAndTab(title) => {
                 assert_eq!(title, "First Title");
             }
             _ => panic!("Expected SetTitleAndTab event"),
@@ -467,7 +462,7 @@ mod tests {
         assert_eq!(dsr_responses2.len(), 0, "no DSR responses expected");
 
         match &osc_events2[0] {
-            crate::OscEvent::SetTitleAndTab(title) => {
+            OscEvent::SetTitleAndTab(title) => {
                 assert_eq!(
                     title, "Second Title",
                     "should be the new title, not accumulated with first"
@@ -512,7 +507,7 @@ mod tests {
         );
 
         match &dsr_responses2[0] {
-            crate::DsrRequestFromPtyEvent::CursorPosition { row, col } => {
+            PtyResponseEvent::CursorPosition { row, col } => {
                 assert_eq!(
                     row.as_u16(),
                     1,
@@ -524,7 +519,7 @@ mod tests {
                     "cursor at origin should be col 1 (1-based)"
                 );
             }
-            TerminalStatus => {
+            _ => {
                 panic!("Expected CursorPositionReport")
             }
         }
@@ -549,8 +544,8 @@ mod tests {
         let mixed_sequence = format!(
             "{}{}{}",
             OscSequence::SetTitleAndIcon("Mixed Title".into()), // OSC 0: Set title
-            crate::DSR_STATUS_REQUEST,                          // DSR: Status report
-            crate::DSR_CURSOR_POSITION_REQUEST                  // DSR: Cursor position
+            DSR_STATUS_REQUEST,                                 // DSR: Status report
+            DSR_CURSOR_POSITION_REQUEST                         // DSR: Cursor position
         );
 
         let (osc_events, dsr_responses) =
@@ -559,7 +554,7 @@ mod tests {
         // Should get exactly one OSC event.
         assert_eq!(osc_events.len(), 1, "should get one OSC event");
         match &osc_events[0] {
-            crate::OscEvent::SetTitleAndTab(title) => {
+            OscEvent::SetTitleAndTab(title) => {
                 assert_eq!(title, "Mixed Title");
             }
             _ => panic!("Expected SetTitleAndTab event"),
@@ -567,16 +562,13 @@ mod tests {
 
         // Should get exactly two DSR responses.
         assert_eq!(dsr_responses.len(), 2, "should get two DSR responses");
-        assert_eq!(
-            dsr_responses[0],
-            crate::DsrRequestFromPtyEvent::TerminalStatus
-        );
+        assert_eq!(dsr_responses[0], PtyResponseEvent::TerminalStatus);
         match &dsr_responses[1] {
-            crate::DsrRequestFromPtyEvent::CursorPosition { row, col } => {
+            PtyResponseEvent::CursorPosition { row, col } => {
                 assert_eq!(row.as_u16(), 1);
                 assert_eq!(col.as_u16(), 1);
             }
-            TerminalStatus => {
+            _ => {
                 panic!("Expected CursorPositionReport")
             }
         }
@@ -607,7 +599,7 @@ mod tests {
         // All should be SetTitleAndTab events.
         for event in &osc_events {
             match event {
-                crate::OscEvent::SetTitleAndTab(_) => {}
+                OscEvent::SetTitleAndTab(_) => {}
                 _ => panic!("Expected SetTitleAndTab event"),
             }
         }
@@ -669,5 +661,34 @@ mod tests {
             row(8) + col(0),
             "cursor should be at (8,0) wrapping after 'End'"
         );
+    }
+
+    #[test]
+    fn test_da1_query_parsing() {
+        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+
+        // CSI c
+        let (_, responses) = ofs_buf_vt_100.apply_ansi_bytes("\x1b[c");
+        assert_eq!(responses.len(), 1);
+        assert_eq!(
+            responses[0],
+            PtyResponseEvent::PrimaryDeviceAttributes
+        );
+
+        // CSI 0 c
+        let (_, responses2) = ofs_buf_vt_100.apply_ansi_bytes("\x1b[0c");
+        assert_eq!(responses2.len(), 1);
+        assert_eq!(
+            responses2[0],
+            PtyResponseEvent::PrimaryDeviceAttributes
+        );
+
+        // DA2 should be ignored
+        let (_, responses3) = ofs_buf_vt_100.apply_ansi_bytes("\x1b[>c");
+        assert_eq!(responses3.len(), 0);
+
+        // Invalid params should be ignored
+        let (_, responses4) = ofs_buf_vt_100.apply_ansi_bytes("\x1b[1c");
+        assert_eq!(responses4.len(), 0);
     }
 }

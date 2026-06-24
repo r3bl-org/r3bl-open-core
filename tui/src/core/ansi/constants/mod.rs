@@ -143,6 +143,11 @@ pub mod utf8;
 #[cfg(not(any(test, doc)))]
 mod utf8;
 
+#[cfg(any(test, doc))]
+pub mod da;
+#[cfg(not(any(test, doc)))]
+mod da;
+
 // Macros for const expansion.
 mod macros;
 
@@ -155,5 +160,6 @@ pub use input_sequences::*;
 pub use raw_mode_constants::*;
 pub use sgr::*;
 pub use utf8::*;
+pub use da::*;
 #[allow(unused_imports)]
 pub use mouse::*;

@@ -93,7 +93,7 @@ verify it visually.
 - [ ] When ready to merge, open a PR and include `Supersedes #459` in the description to
       gracefully close Cecile's draft PR.
 - [ ] **Important Attribution:** We are implementing our own fixes based on her original
-      intent. We must absolutely add a
+      intent. We will add a
       `Co-authored-by: Cecile Tonglet <cecile.tonglet@cecton.com>` trailer to all of
       the commits we make for this task to ensure she gets proper attribution for the
       feature!

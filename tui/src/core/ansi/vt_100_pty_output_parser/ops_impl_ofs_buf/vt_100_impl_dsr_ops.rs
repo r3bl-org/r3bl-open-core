@@ -26,7 +26,7 @@
 //! [`vt_100_pty_output_parser::ops::dsr_ops`]:
 //!     crate::core::ansi::vt_100_pty_output_parser::ops::vt_100_shim_dsr_ops
 
-use crate::{DsrRequestFromPtyEvent, OfsBufVT100, TermCol, TermRow};
+use crate::{PtyResponseEvent, OfsBufVT100, TermCol, TermRow};
 
 impl OfsBufVT100 {
     /// Handles device status report request.
@@ -34,8 +34,8 @@ impl OfsBufVT100 {
     /// Queues a response indicating terminal is OK (`ESC [ 0 n`).
     pub fn handle_status_report_request(&mut self) {
         self.parser_global_state
-            .pending_dsr_responses
-            .push(DsrRequestFromPtyEvent::TerminalStatus);
+            .pending_pty_response_events
+            .push(PtyResponseEvent::TerminalStatus);
     }
 
     /// Handles cursor position report request.
@@ -48,8 +48,8 @@ impl OfsBufVT100 {
         let row = TermRow::from(self.cursor_pos.row_index);
         let col = TermCol::from(self.cursor_pos.col_index);
         self.parser_global_state
-            .pending_dsr_responses
-            .push(DsrRequestFromPtyEvent::CursorPosition { row, col });
+            .pending_pty_response_events
+            .push(PtyResponseEvent::CursorPosition { row, col });
     }
 }
 
@@ -68,15 +68,15 @@ mod tests_dsr_ops {
         let mut buffer = create_test_buffer();
 
         // Initially no pending responses.
-        assert!(buffer.parser_global_state.pending_dsr_responses.is_empty());
+        assert!(buffer.parser_global_state.pending_pty_response_events.is_empty());
 
         buffer.handle_status_report_request();
 
         // Should have one terminal status response.
-        assert_eq!(buffer.parser_global_state.pending_dsr_responses.len(), 1);
+        assert_eq!(buffer.parser_global_state.pending_pty_response_events.len(), 1);
         assert!(matches!(
-            buffer.parser_global_state.pending_dsr_responses[0],
-            DsrRequestFromPtyEvent::TerminalStatus
+            buffer.parser_global_state.pending_pty_response_events[0],
+            PtyResponseEvent::TerminalStatus
         ));
     }
 
@@ -88,9 +88,9 @@ mod tests_dsr_ops {
         buffer.handle_cursor_position_request();
 
         // Should have one cursor position response.
-        assert_eq!(buffer.parser_global_state.pending_dsr_responses.len(), 1);
-        if let DsrRequestFromPtyEvent::CursorPosition { row, col } =
-            &buffer.parser_global_state.pending_dsr_responses[0]
+        assert_eq!(buffer.parser_global_state.pending_pty_response_events.len(), 1);
+        if let PtyResponseEvent::CursorPosition { row, col } =
+            &buffer.parser_global_state.pending_pty_response_events[0]
         {
             // 0-based internal (2,5) becomes 1-based terminal (3,6)
             assert_eq!(row.as_u16(), 3);
@@ -108,14 +108,14 @@ mod tests_dsr_ops {
         buffer.handle_cursor_position_request();
 
         // Should have both responses queued.
-        assert_eq!(buffer.parser_global_state.pending_dsr_responses.len(), 2);
+        assert_eq!(buffer.parser_global_state.pending_pty_response_events.len(), 2);
         assert!(matches!(
-            buffer.parser_global_state.pending_dsr_responses[0],
-            DsrRequestFromPtyEvent::TerminalStatus
+            buffer.parser_global_state.pending_pty_response_events[0],
+            PtyResponseEvent::TerminalStatus
         ));
         assert!(matches!(
-            buffer.parser_global_state.pending_dsr_responses[1],
-            DsrRequestFromPtyEvent::CursorPosition { .. }
+            buffer.parser_global_state.pending_pty_response_events[1],
+            PtyResponseEvent::CursorPosition { .. }
         ));
     }
 }

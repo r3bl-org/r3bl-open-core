@@ -788,6 +788,17 @@ define_ansi_const!(@csi_str : CSI_ERASE_DISPLAY_ALL = ["2J"] =>
 /// [`DSR`]: crate::DsrSequence
 pub const DSR_DEVICE_STATUS: char = 'n';
 
+/// Device Attributes ([`DA`]): Request terminal type/capabilities.
+/// `0` or no parameters = request primary device attributes.
+///
+/// Value: `'c'` dec, `63` hex.
+///
+/// Sequence: `CSI c` or `CSI 0 c`.
+///
+/// [`CSI`]: crate::CsiSequence
+/// [`DA`]: crate::DaSequence
+pub const DA_DEVICE_ATTRIBUTES: char = 'c';
+
 // Mode Setting.
 
 /// Set Mode (SM): Sets various terminal modes.
@@ -845,3 +856,63 @@ pub const DECTCEM_SHOW_CURSOR: u16 = 25;
 // - **This file (`csi_codes/csi_constants.rs`)**: CSI-specific sequencing details
 // - **Parent file (`protocols/generic_ansi_constants.rs`)**: General ANSI/terminal
 //   feature constants
+
+// Unimplemented / Ignored Dispatch Characters.
+
+/// Cursor Horizontal Tab (CHT): Move cursor forward `N` tab stops.
+pub const CHT_CURSOR_FORWARD_TAB: char = 'I';
+
+/// Cursor Backward Tab (CBT): Move cursor backward `N` tab stops.
+pub const CBT_CURSOR_BACKWARD_TAB: char = 'Z';
+
+/// Tab Clear (TBC): Clear tab stops.
+pub const TBC_TAB_CLEAR: char = 'g';
+
+/// Horizontal Position Relative (HPR): Same as CUF.
+pub const HPR_HORIZONTAL_POSITION_RELATIVE: char = 'a';
+
+/// Vertical Position Relative (VPR): Same as CUD.
+pub const VPR_VERTICAL_POSITION_RELATIVE: char = 'e';
+
+/// Horizontal Position Absolute (HPA): Same as CHA.
+pub const HPA_HORIZONTAL_POSITION_ABSOLUTE: char = '`';
+
+/// Next Page (NP): Move to next page in page memory.
+pub const NP_NEXT_PAGE: char = 'U';
+
+/// Preceding Page (PP): Move to previous page in page memory.
+pub const PP_PRECEDING_PAGE: char = 'V';
+
+/// [`DEC`] Load LEDs (DECLL): Set keyboard LED indicators.
+///
+/// [`DEC`]: https://en.wikipedia.org/wiki/Digital_Equipment_Corporation
+pub const DECLL_LOAD_LEDS: char = '~';
+
+/// [`DEC`] Insert Column (DECIC): Insert blank columns at cursor.
+///
+/// [`DEC`]: https://en.wikipedia.org/wiki/Digital_Equipment_Corporation
+pub const DECIC_INSERT_COLUMN: char = '}';
+
+/// [`DEC`] Delete Column (DECDC): Delete columns at cursor.
+///
+/// [`DEC`]: https://en.wikipedia.org/wiki/Digital_Equipment_Corporation
+pub const DECDC_DELETE_COLUMN: char = '|';
+
+/// Window manipulation (resize, move, iconify, etc.).
+pub const WINDOW_MANIPULATION: char = 't';
+
+/// Set Cursor Style (DECSCUSR): Change cursor shape/blink.
+pub const DECSCUSR_SET_CURSOR_STYLE: char = 'q';
+
+/// Various [`DEC`] private sequences (DECRQM, etc.).
+///
+/// [`DEC`]: https://en.wikipedia.org/wiki/Digital_Equipment_Corporation
+pub const DEC_PRIVATE_SEQUENCES: char = 'p';
+
+/// Request Terminal Parameters (DECREQTPARM): Request terminal settings.
+pub const DECREQTPARM_REQUEST_TERMINAL_PARAMETERS: char = 'x';
+
+/// [`DEC`] Erase/Selective Erase Rectangular Area (DECERA/DECSERA).
+///
+/// [`DEC`]: https://en.wikipedia.org/wiki/Digital_Equipment_Corporation
+pub const DECERA_RECTANGULAR_ERASE: char = 'z';

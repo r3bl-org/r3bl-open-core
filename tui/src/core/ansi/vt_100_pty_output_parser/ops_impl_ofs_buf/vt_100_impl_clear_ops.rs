@@ -1,20 +1,37 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{ArrayBoundsCheck as _, ArrayOverflowResult, CursorBoundsCheck as _,
-            OfsBufVT100, PixelChar, RangeBoundsExt as _, RangeExt as _,
-            glyphs::SPACER_GLYPH_CHAR, height, ok, row, width};
+use crate::{ArrayBoundsCheck as _, ArrayOverflowResult, CursorBoundsCheck as _, OfsBufVT100, PixelChar, RangeBoundsExt as _, RangeExt as _, glyphs::SPACER_GLYPH_CHAR, height, ok, row, width};
 use std::cmp::min;
 
 impl OfsBufVT100 {
-    /// Creates a pixel character configured for erasing, using the current active
-    /// background style according to [`VT-100`] specifications.
+    /// Creates a pixel character configured for erasing, correctly implementing
+    /// Background Color Erase ([`BCE`]) according to the [`VT-100`]/[`xterm`]
+    /// specifications.
     ///
+    /// When terminal clear/erase commands (like `CSI 2 J` to clear the screen, or `EL 0`
+    /// to clear a line) are executed, the erased areas are filled with space characters.
+    /// According to the [`BCE`] specification, these spaces must inherit the **currently
+    /// active background color**, but they must **not** inherit text attributes like
+    /// underline, bold, italic, or foreground color.
+    ///
+    /// For example, if a shell (like [`fish`]) happens to leave the terminal in an
+    /// underlined state right before issuing a [`clear`] command, the cleared screen must
+    /// be filled with plain spaces (with the correct background color), not underlined
+    /// spaces. This method guarantees that behavior by returning a [`PixelChar`] with a
+    /// clean text style that retains only the active [`color_bg`].
+    ///
+    /// [`BCE`]: https://en.wikipedia.org/wiki/ANSI_escape_code#Colors
+    /// [`clear`]: https://en.wikipedia.org/wiki/Clear_(Unix)
+    /// [`color_bg`]: crate::TuiStyle::color_bg
+    /// [`fish`]: https://fishshell.com/
+    /// [`PixelChar`]: crate::PixelChar
     /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+    /// [`xterm`]: https://en.wikipedia.org/wiki/Xterm
     #[must_use]
     pub fn create_empty_pixel_char(&self) -> PixelChar {
         PixelChar::PlainText {
             display_char: SPACER_GLYPH_CHAR,
-            style: self.parser_global_state.current_style,
+            style: self.parser_global_state.current_style.retain_bg_color_only(),
         }
     }
 
@@ -375,5 +392,42 @@ mod tests {
         assert_char_eq(&buf.buffer[1][2], ' ');
         assert_char_eq(&buf.buffer[2][0], ' ');
         assert_char_eq(&buf.buffer[2][3], ' ');
+    }
+
+    #[test]
+    fn test_bce_strips_attributes_but_keeps_bg_color() {
+        use crate::{tui_color, tui_style_attrib};
+        
+        let mut buf = create_test_buffer();
+        
+        // Simulate a state where the terminal has both background color and text attributes (like bold/underline).
+        let active_style = TuiStyle {
+            color_bg: Some(tui_color!(red)),
+            color_fg: Some(tui_color!(blue)),
+            attribs: crate::TuiStyleAttribs {
+                bold: Some(tui_style_attrib::Bold),
+                underline: Some(tui_style_attrib::Underline),
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+        buf.parser_global_state.current_style = active_style;
+
+        let empty_char = buf.create_empty_pixel_char();
+
+        if let PixelChar::PlainText { display_char, style } = empty_char {
+            // Must be a blank space
+            assert_eq!(display_char, ' ');
+            
+            // BCE MANDATE: Must retain the background color
+            assert_eq!(style.color_bg, Some(tui_color!(red)));
+            
+            // BCE MANDATE: Must strip all foreground colors and text attributes
+            assert_eq!(style.color_fg, None);
+            assert!(style.attribs.bold.is_none());
+            assert!(style.attribs.underline.is_none());
+        } else {
+            panic!("Expected PlainText");
+        }
     }
 }

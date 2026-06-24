@@ -10,8 +10,8 @@
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 
 use super::ProcessManager;
-use crate::{ArrayBoundsCheck, ArrayOverflowResult, FlushKind, GCStringOwned, IndexOps,
-            OffscreenBuffer, OutputDevice, PixelChar, RangeExt,
+use crate::{ArrayBoundsCheck, ArrayOverflowResult, CursorVisibilityState, FlushKind,
+            GCStringOwned, IndexOps, OffscreenBuffer, OutputDevice, PixelChar, RangeExt,
             RenderOpsLocalData, SPACE_CHAR, Size, TuiStyle, col,
             core::coordinates::{idx, len},
             ok, print_text_with_attributes, row,
@@ -19,7 +19,6 @@ use crate::{ArrayBoundsCheck, ArrayOverflowResult, FlushKind, GCStringOwned, Ind
                   terminal_lib_backends::{OffscreenBufferPaint,
                                           OffscreenBufferPaintImpl}},
             tui_color,
-            CursorVisibilityState,
             tui_style_attrib::{self, Bold},
             tui_style_attribs, width};
 

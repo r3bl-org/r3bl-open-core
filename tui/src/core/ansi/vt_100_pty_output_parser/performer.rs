@@ -213,29 +213,33 @@
 
 // Import the operation modules and public API.
 use super::{ansi_parser_public_api::AnsiToOfsBufPerformer,
-            ops::{vt_100_shim_char_ops, vt_100_shim_clear_ops,
-                         vt_100_shim_control_ops, vt_100_shim_cursor_ops,
-                         vt_100_shim_dsr_ops, vt_100_shim_line_ops,
-                         vt_100_shim_margin_ops, vt_100_shim_mode_ops,
-                         vt_100_shim_osc_ops, vt_100_shim_scroll_ops,
-                         vt_100_shim_sgr_ops, vt_100_shim_terminal_ops}};
+            ops::{vt_100_shim_char_ops, vt_100_shim_clear_ops, vt_100_shim_control_ops,
+                  vt_100_shim_cursor_ops, vt_100_shim_dsr_ops, vt_100_shim_line_ops,
+                  vt_100_shim_margin_ops, vt_100_shim_mode_ops, vt_100_shim_osc_ops,
+                  vt_100_shim_scroll_ops, vt_100_shim_sgr_ops, vt_100_shim_terminal_ops}};
 use crate::{DEBUG_TUI_VT100_PARSER,
             core::ansi::constants::{BACKSPACE, CARRIAGE_RETURN, CHA_CURSOR_COLUMN,
                                     CHARSET_ASCII, CHARSET_DEC_GRAPHICS,
                                     CNL_CURSOR_NEXT_LINE, CPL_CURSOR_PREV_LINE,
-                                    CUB_CURSOR_BACKWARD, CUD_CURSOR_DOWN,
-                                    CUF_CURSOR_FORWARD, CUP_CURSOR_POSITION,
-                                    CUU_CURSOR_UP, DCH_DELETE_CHAR,
-                                    DECRC_RESTORE_CURSOR, DECSC_SAVE_CURSOR,
-                                    DECSTBM_SET_MARGINS, DL_DELETE_LINE,
-                                    DSR_DEVICE_STATUS, ECH_ERASE_CHAR,
-                                    ED_ERASE_DISPLAY, EL_ERASE_LINE,
+                                    CUB_CURSOR_BACKWARD, CUD_CURSOR_DOWN, CUF_CURSOR_FORWARD,
+                                    CUP_CURSOR_POSITION, CUU_CURSOR_UP, DA_DEVICE_ATTRIBUTES,
+                                    DCH_DELETE_CHAR, DECRC_RESTORE_CURSOR, DECSC_SAVE_CURSOR,
+                                    DECSTBM_SET_MARGINS, DL_DELETE_LINE, DSR_DEVICE_STATUS,
+                                    ECH_ERASE_CHAR, ED_ERASE_DISPLAY, EL_ERASE_LINE,
                                     G0_CHARSET_INTERMEDIATE, HVP_CURSOR_POSITION,
                                     ICH_INSERT_CHAR, IL_INSERT_LINE, IND_INDEX_DOWN,
                                     LINE_FEED, RCP_RESTORE_CURSOR, RI_REVERSE_INDEX_UP,
                                     RIS_RESET_TERMINAL, RM_RESET_MODE, SCP_SAVE_CURSOR,
                                     SD_SCROLL_DOWN, SGR_SET_GRAPHICS, SM_SET_MODE,
-                                    SU_SCROLL_UP, TAB, VPA_VERTICAL_POSITION}};
+                                    SU_SCROLL_UP, VPA_VERTICAL_POSITION,
+                                    CHT_CURSOR_FORWARD_TAB, CBT_CURSOR_BACKWARD_TAB, TBC_TAB_CLEAR,
+                                    HPR_HORIZONTAL_POSITION_RELATIVE, VPR_VERTICAL_POSITION_RELATIVE,
+                                    HPA_HORIZONTAL_POSITION_ABSOLUTE, NP_NEXT_PAGE, PP_PRECEDING_PAGE,
+                                    DECLL_LOAD_LEDS, DECIC_INSERT_COLUMN, DECDC_DELETE_COLUMN,
+                                    WINDOW_MANIPULATION, DECSCUSR_SET_CURSOR_STYLE,
+                                    DEC_PRIVATE_SEQUENCES, DECREQTPARM_REQUEST_TERMINAL_PARAMETERS,
+                                    DECERA_RECTANGULAR_ERASE, TAB},
+            vt_100_shim_da_ops};
 use vte::{Params, Perform};
 
 /// Internal methods for `AnsiToOfsBufPerformer` to implement [`Perform`] trait.
@@ -494,9 +498,12 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
                 vt_100_shim_margin_ops::set_margins(self, params);
             }
 
-            // Device status operations.
+            // Device status and attributes.
             DSR_DEVICE_STATUS => {
                 vt_100_shim_dsr_ops::status_report(self, params);
+            }
+            DA_DEVICE_ATTRIBUTES => {
+                vt_100_shim_da_ops::device_attributes(self, params, intermediates);
             }
 
             // Mode operations.
@@ -539,156 +546,160 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
             }
 
             // Other unimplemented CSI sequences.
-            'I' => {
+            CHT_CURSOR_FORWARD_TAB => {
                 // CHT (Cursor Horizontal Tab) - Move cursor forward N tab stops
                 // Not needed: Tab handling is done via execute() with TAB character.
-                // See [mod-level docs](crate::core::ansi::vt_100_pty_output_parser) for rationale
+                // See [mod-level docs](crate::core::ansi::vt_100_pty_output_parser) for
+                // rationale
                 DEBUG_TUI_VT100_PARSER.then(|| {
                     tracing::warn!("CSI I: Cursor Horizontal Tab not implemented");
                 });
             }
-            'Z' => {
+            CBT_CURSOR_BACKWARD_TAB => {
                 // CBT (Cursor Backward Tab) - Move cursor backward N tab stops
                 // Not needed: Reverse tab rarely used, complex tab stop tracking required
-                // See [mod-level docs](crate::core::ansi::vt_100_pty_output_parser) for rationale
+                // See [mod-level docs](crate::core::ansi::vt_100_pty_output_parser) for
+                // rationale
                 DEBUG_TUI_VT100_PARSER.then(|| {
                     tracing::warn!("CSI Z: Cursor Backward Tab not implemented");
                 });
             }
-            'g' => {
+            TBC_TAB_CLEAR => {
                 // TBC (Tab Clear) - Clear tab stops (0=current, 3=all)
                 // Not needed: Tab stops are application-specific, TUI apps manage their
-                // own. See [mod-level docs](crate::core::ansi::vt_100_pty_output_parser) for
-                // rationale
+                // own. See [mod-level docs](crate::core::ansi::vt_100_pty_output_parser)
+                // for rationale
                 DEBUG_TUI_VT100_PARSER.then(|| {
                     tracing::warn!("CSI g: Tab Clear not implemented");
                 });
             }
-            'a' => {
+            HPR_HORIZONTAL_POSITION_RELATIVE => {
                 // HPR (Horizontal Position Relative) - Same as CUF (Cursor Forward)
                 // Not needed: CUF already implemented, this is redundant
-                // See [mod-level docs](crate::core::ansi::vt_100_pty_output_parser) for rationale
+                // See [mod-level docs](crate::core::ansi::vt_100_pty_output_parser) for
+                // rationale
                 DEBUG_TUI_VT100_PARSER.then(|| {
                     tracing::warn!(
                     "CSI a: Horizontal Position Relative not implemented (use CUF instead)"
                 );
                 });
             }
-            'e' => {
+            VPR_VERTICAL_POSITION_RELATIVE => {
                 // VPR (Vertical Position Relative) - Same as CUD (Cursor Down)
                 // Not needed: CUD already implemented, this is redundant
-                // See [mod-level docs](crate::core::ansi::vt_100_pty_output_parser) for rationale
+                // See [mod-level docs](crate::core::ansi::vt_100_pty_output_parser) for
+                // rationale
                 DEBUG_TUI_VT100_PARSER.then(|| {
                     tracing::warn!(
                     "CSI e: Vertical Position Relative not implemented (use CUD instead)"
                 );
                 });
             }
-            '`' => {
+            HPA_HORIZONTAL_POSITION_ABSOLUTE => {
                 // HPA (Horizontal Position Absolute) - Same as CHA
                 // Not needed: CHA already implemented, this is redundant
-                // See [mod-level docs](crate::core::ansi::vt_100_pty_output_parser) for rationale
+                // See [mod-level docs](crate::core::ansi::vt_100_pty_output_parser) for
+                // rationale
                 DEBUG_TUI_VT100_PARSER.then(|| {
                     tracing::warn!(
                     "CSI `: Horizontal Position Absolute not implemented (use CHA instead)"
                 );
                 });
             }
-            'U' => {
+            NP_NEXT_PAGE => {
                 // NP (Next Page) - Move to next page in page memory
                 // Not needed: Page memory not supported in multiplexer.
-                // See [mod-level docs](crate::core::ansi::vt_100_pty_output_parser) for rationale
+                // See [mod-level docs](crate::core::ansi::vt_100_pty_output_parser) for
+                // rationale
                 DEBUG_TUI_VT100_PARSER.then(|| {
                     tracing::warn!("CSI U: Next Page not supported in multiplexer");
                 });
             }
-            'V' => {
+            PP_PRECEDING_PAGE => {
                 // PP (Preceding Page) - Move to previous page in page memory
                 // Not needed: Page memory not supported in multiplexer.
-                // See [mod-level docs](crate::core::ansi::vt_100_pty_output_parser) for rationale
+                // See [mod-level docs](crate::core::ansi::vt_100_pty_output_parser) for
+                // rationale
                 DEBUG_TUI_VT100_PARSER.then(|| {
                     tracing::warn!("CSI V: Preceding Page not supported in multiplexer");
                 });
             }
-            '~' => {
+            DECLL_LOAD_LEDS => {
                 // DECLL (DEC Load LEDs) - Set keyboard LED indicators
                 // Not needed: Hardware control not applicable in multiplexer.
-                // See [mod-level docs](crate::core::ansi::vt_100_pty_output_parser) for rationale
+                // See [mod-level docs](crate::core::ansi::vt_100_pty_output_parser) for
+                // rationale
                 DEBUG_TUI_VT100_PARSER.then(|| {
                     tracing::warn!("CSI ~: DEC Load LEDs not supported in multiplexer");
                 });
             }
-            '}' => {
+            DECIC_INSERT_COLUMN => {
                 // DECIC (DEC Insert Column) - Insert blank columns at cursor
                 // Not needed: Column insertion rarely used, complex for TUI apps
-                // See [mod-level docs](crate::core::ansi::vt_100_pty_output_parser) for rationale
+                // See [mod-level docs](crate::core::ansi::vt_100_pty_output_parser) for
+                // rationale
                 DEBUG_TUI_VT100_PARSER.then(|| {
                     tracing::warn!("CSI }}: DEC Insert Column not implemented");
                 });
             }
-            '|' => {
+            DECDC_DELETE_COLUMN => {
                 // DECDC (DEC Delete Column) - Delete columns at cursor
                 // Not needed: Column deletion rarely used, complex for TUI apps
-                // See [mod-level docs](crate::core::ansi::vt_100_pty_output_parser) for rationale
+                // See [mod-level docs](crate::core::ansi::vt_100_pty_output_parser) for
+                // rationale
                 DEBUG_TUI_VT100_PARSER.then(|| {
                     tracing::warn!("CSI |: DEC Delete Column not implemented");
                 });
             }
-            't' => {
+            WINDOW_MANIPULATION => {
                 // Window manipulation (resize, move, iconify, etc.)
                 // Not needed: Window ops handled by terminal emulator, not multiplexer
-                // See [mod-level docs](crate::core::ansi::vt_100_pty_output_parser) for rationale
+                // See [mod-level docs](crate::core::ansi::vt_100_pty_output_parser) for
+                // rationale
                 DEBUG_TUI_VT100_PARSER.then(|| {
                     tracing::warn!(
                         "CSI t: Window manipulation not supported in multiplexer"
                     );
                 });
             }
-            'c' => {
-                // DA (Device Attributes) - Request terminal type/capabilities
-                // Not needed: Multiplexer doesn't respond to queries, parent terminal
-                // does. See [mod-level docs](crate::core::ansi::vt_100_pty_output_parser) for
-                // rationale
-                DEBUG_TUI_VT100_PARSER.then(|| {
-                    tracing::warn!(
-                        "CSI c: Device Attributes query not supported in multiplexer"
-                    );
-                });
-            }
-            'q' => {
+            DECSCUSR_SET_CURSOR_STYLE => {
                 // DECSCUSR (Set Cursor Style) - Change cursor shape/blink
                 // Not needed: Cursor rendering handled by terminal emulator.
-                // See [mod-level docs](crate::core::ansi::vt_100_pty_output_parser) for rationale
+                // See [mod-level docs](crate::core::ansi::vt_100_pty_output_parser) for
+                // rationale
                 DEBUG_TUI_VT100_PARSER.then(|| {
                     tracing::warn!(
                         "CSI q: Set Cursor Style not supported in multiplexer"
                     );
                 });
             }
-            'p' => {
+            DEC_PRIVATE_SEQUENCES => {
                 // Various DEC private sequences (DECRQM, etc.)
                 // Not needed: Private mode requests handled by parent terminal.
-                // See [mod-level docs](crate::core::ansi::vt_100_pty_output_parser) for rationale
+                // See [mod-level docs](crate::core::ansi::vt_100_pty_output_parser) for
+                // rationale
                 DEBUG_TUI_VT100_PARSER.then(|| {
                     tracing::warn!(
                         "CSI p: DEC private sequences not supported in multiplexer"
                     );
                 });
             }
-            'x' => {
+            DECREQTPARM_REQUEST_TERMINAL_PARAMETERS => {
                 // DECREQTPARM (Request Terminal Parameters) - Request terminal settings
                 // Not needed: Terminal parameters managed by parent emulator.
-                // See [mod-level docs](crate::core::ansi::vt_100_pty_output_parser) for rationale
+                // See [mod-level docs](crate::core::ansi::vt_100_pty_output_parser) for
+                // rationale
                 DEBUG_TUI_VT100_PARSER.then(|| {
                     tracing::warn!(
                         "CSI x: Request Terminal Parameters not supported in multiplexer"
                     );
                 });
             }
-            'z' => {
+            DECERA_RECTANGULAR_ERASE => {
                 // DECERA/DECSERA (DEC Erase/Selective Erase Rectangular Area)
                 // Not needed: Rectangular operations complex, rarely used
-                // See [mod-level docs](crate::core::ansi::vt_100_pty_output_parser) for rationale
+                // See [mod-level docs](crate::core::ansi::vt_100_pty_output_parser) for
+                // rationale
                 DEBUG_TUI_VT100_PARSER.then(|| {
                     tracing::warn!("CSI z: DEC Rectangular Erase not implemented");
                 });

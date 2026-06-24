@@ -402,7 +402,8 @@ git -c credential.helper=store push origin my-branch
 
 - **Subject Line**: Keep the subject line to a maximum of 72 characters (including the scope prefix).
 - **Body Line Length**: Wrap the commit message body to 72 characters.
-- **Task Trailer**: When a commit implements work from a `task/*.md` file, add a `Task:` trailer as the last line.
+- **Trailer Block**: All trailers (e.g., `Task:`, `Closes #XXX`, `Co-authored-by:`) MUST be grouped together in a single contiguous block at the absolute end of the commit message. There must be exactly one blank line before the start of the trailer block, and **zero blank lines** between the trailers themselves.
+- **Task Trailer**: When a commit implements work from a `task/*.md` file, add a `Task:` trailer as part of the final trailer block.
 
 Note: Do **NOT** include any directory prefixes (like `task/` or `task/done/`) in the task filenames.
 

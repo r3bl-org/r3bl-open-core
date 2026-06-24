@@ -183,12 +183,7 @@ mod test_helpers {
         let mut painter = RenderOpPaintImplDirectToAnsi;
 
         output_device.write(|mut_ref| {
-            painter.paint(
-                &render_op,
-                window_size,
-                state,
-                mut_ref,
-            );
+            painter.paint(&render_op, window_size, state, mut_ref);
         });
 
         stdout_mock.get_copy_of_buffer_as_string()
@@ -207,12 +202,7 @@ mod test_helpers {
         for op in ops {
             let render_op = RenderOpOutput::Common(op);
             output_device.write(|mut_ref| {
-                painter.paint(
-                    &render_op,
-                    window_size,
-                    state,
-                    mut_ref,
-                );
+                painter.paint(&render_op, window_size, state, mut_ref);
             });
         }
 
@@ -239,12 +229,7 @@ mod test_helpers {
         );
 
         output_device.write(|mut_ref| {
-            painter.paint(
-                &render_op,
-                window_size,
-                state,
-                mut_ref,
-            );
+            painter.paint(&render_op, window_size, state, mut_ref);
         });
 
         stdout_mock.get_copy_of_buffer_as_string()

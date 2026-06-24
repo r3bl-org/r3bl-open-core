@@ -161,7 +161,6 @@ impl RenderOpPaintImplDirectToAnsi {
         match render_op {
             RenderOpCommon::Noop => {}
 
-
             RenderOpCommon::MoveCursorPositionAbs(abs_pos) => {
                 helpers::move_cursor_position_abs(
                     *abs_pos,
@@ -205,7 +204,6 @@ impl RenderOpPaintImplDirectToAnsi {
                 );
             }
 
-
             RenderOpCommon::ClearScreen => {
                 let ansi = AnsiSequenceGenerator::clear_screen();
                 locked_output_device
@@ -234,7 +232,6 @@ impl RenderOpPaintImplDirectToAnsi {
                     .expect("Failed to write clear to start of line ANSI");
             }
 
-
             RenderOpCommon::SetFgColor(color) => {
                 helpers::set_fg_color(*color, render_local_data, locked_output_device);
             }
@@ -260,13 +257,11 @@ impl RenderOpPaintImplDirectToAnsi {
                 );
             }
 
-
             RenderOpCommon::PrintStyledText(text) => {
                 locked_output_device
                     .write_all(text.as_bytes())
                     .expect("Failed to write styled text");
             }
-
 
             RenderOpCommon::SaveCursorPosition => {
                 let ansi = AnsiSequenceGenerator::save_cursor_position();
@@ -282,7 +277,6 @@ impl RenderOpPaintImplDirectToAnsi {
             }
         }
     }
-
 
     /// Paint text with optional styling (post-compositor text rendering).
     ///
@@ -455,8 +449,6 @@ mod helpers {
         }
     }
 
-
-
     /// Flush the output device with logging.
     ///
     /// This is the [`direct_to_ansi`] equivalent of the crossterm `flush_now!` macro,
@@ -488,9 +480,8 @@ mod helpers {
 
 #[cfg(test)]
 mod tests {
-    use crate::{col, row};
     use super::*;
-    use crate::{AnsiValue, ESC_START, height};
+    use crate::{AnsiValue, ESC_START, col, height, row};
 
     #[test]
     fn test_ansi_sequence_generator_noop_variant() {
