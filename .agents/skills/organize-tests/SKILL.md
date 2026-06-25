@@ -1,3 +1,7 @@
+---
+name: organize-tests
+description: Organize tests by isolation requirements, adhering to PTY conventions and subprocess isolation patterns.
+---
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 # Skill: organize-tests
