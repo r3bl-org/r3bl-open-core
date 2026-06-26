@@ -285,13 +285,23 @@ impl OfsBufVT100 {
 #[cfg(test)]
 mod tests {
     use crate::{
-        ANSIBasicColor, CsiSequence, DSR_CURSOR_POSITION_REQUEST, DSR_STATUS_REQUEST, OscEvent, PtyResponseEvent::{self, TerminalStatus}, SgrCode, col, offscreen_buffer::test_fixtures_ofs_buf::*, row, term_col, term_col_delta, term_row, term_row_delta, vt_100_pty_output_conformance_tests::{
+        core::ansi::constants::{CSI_START, DA_DEVICE_ATTRIBUTES},
+        core::osc::osc_codes::OscSequence,
+        ANSIBasicColor, CARRIAGE_RETURN, CsiSequence, DSR_CURSOR_POSITION_REQUEST,
+        DSR_STATUS_REQUEST, OscEvent, PtyResponseEvent::{self, TerminalStatus},
+        SgrCode, col,
+        offscreen_buffer::test_fixtures_ofs_buf::{
+            assert_empty_at, assert_plain_char_at, assert_plain_text_at,
+            assert_styled_char_at,
+        },
+        row, term_col, term_col_delta, term_row, term_row_delta,
+        vt_100_pty_output_conformance_tests::{
             nz,
+            conformance_data::cursor_sequences::move_left,
             test_fixtures_vt_100_ansi_conformance::create_test_offscreen_buffer_10r_by_10c,
             test_sequence_generators::csi_builders::csi_seq_cursor_pos,
         }
     };
-    use crate::core::osc::osc_codes::OscSequence;
 
     #[test]
     #[allow(clippy::items_after_statements)]
@@ -626,10 +636,11 @@ mod tests {
     ///         ├───┼───┼───┼───┼───┼───┼───┼───┼───┼───┤
     ///         │ … │ … │ … │ … │ … │ … │ … │ … │ … │ … │
     ///         ├───┼───┼───┼───┼───┼───┼───┼───┼───┼───┤
-    /// Row 7:  │   │   │   │   │   │   │   │ E │ n │ d │
-    ///         ├───┼───┼───┼───┼───┼───┼───┼───┼───┼───┤
-    /// Row 8:  │ ␩ │   │   │   │   │   │   │   │   │   │ ← cursor ends here (8,0)
-    ///         └───┴───┴───┴───┴───┴───┴───┴───┴───┴───┘   after wrapping
+    /// Row 7:  │   │   │   │   │   │   │   │ E │ n │ d │ ← cursor ends at 'd'
+    ///         │   │   │   │   │   │   │   │   │   │ ␩ │   (row 7, col 9)
+    ///         ├───┼───┼───┼───┼───┼───┼───┼───┼───┼───┤   and not at
+    /// Row 8:  │   │   │   │   │   │   │   │   │   │   │   (row 8, col 0)
+    ///         └───┴───┴───┴───┴───┴───┴───┴───┴───┴───┘
     /// Sequence: "Start" → move(2,3) → "Mid" → move(1,1) → "Home" → move(8,8) → "End"
     /// ```
     ///
@@ -655,12 +666,72 @@ mod tests {
         assert_plain_text_at(&ofs_buf_vt_100, 1, 2, "Mid");
         assert_plain_text_at(&ofs_buf_vt_100, 7, 7, "End");
 
-        // Cursor wraps from (7,10) to (8,0).
+        // Cursor clamps at (7,9) because of deferred wrap.
         assert_eq!(
             ofs_buf_vt_100.cursor_pos,
-            row(8) + col(0),
-            "cursor should be at (8,0) wrapping after 'End'"
+            row(7) + col(9),
+            "cursor should be clamped at (7,9) after 'End'"
         );
+        assert_eq!(
+            ofs_buf_vt_100.parser_global_state.pending_wrap,
+            crate::PendingWrap::Yes,
+            "pending wrap should be set"
+        );
+    }
+
+    #[test]
+    fn test_public_api_csi_clears_pending_wrap() {
+        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+
+        // 1. Fill the line up to right margin -> creates pending wrap.
+        let _unused = ofs_buf_vt_100.apply_ansi_bytes("0123456789");
+        assert_eq!(ofs_buf_vt_100.cursor_pos, row(0) + col(9));
+        assert_eq!(
+            ofs_buf_vt_100.parser_global_state.pending_wrap,
+            crate::PendingWrap::Yes
+        );
+
+        // 2. Perform a cursor movement (e.g. Move Left 1) -> clears pending wrap.
+        let cursor_back = &move_left(1); // Cursor Back (CUB)
+        let _unused = ofs_buf_vt_100.apply_ansi_bytes(cursor_back);
+
+        // 3. Verify wrap was cleared and cursor moved properly.
+        assert_eq!(
+            ofs_buf_vt_100.parser_global_state.pending_wrap,
+            crate::PendingWrap::No
+        );
+        assert_eq!(ofs_buf_vt_100.cursor_pos, row(0) + col(8));
+
+        // 4. Print 'A'. It should overwrite '8' and not wrap.
+        let _unused = ofs_buf_vt_100.apply_ansi_bytes("A");
+        assert_plain_char_at(&ofs_buf_vt_100, 0, 8, 'A');
+        assert_eq!(
+            ofs_buf_vt_100.parser_global_state.pending_wrap,
+            crate::PendingWrap::No
+        );
+    }
+
+    #[test]
+    fn test_public_api_control_char_clears_pending_wrap() {
+        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+
+        // 1. Fill the line up to right margin -> creates pending wrap.
+        let _unused = ofs_buf_vt_100.apply_ansi_bytes("0123456789");
+        assert_eq!(ofs_buf_vt_100.cursor_pos, row(0) + col(9));
+        assert_eq!(
+            ofs_buf_vt_100.parser_global_state.pending_wrap,
+            crate::PendingWrap::Yes
+        );
+
+        // 2. Apply a CR (\r) -> clears pending wrap.
+        let _unused = ofs_buf_vt_100.apply_ansi_bytes([CARRIAGE_RETURN]);
+
+        // 3. Verify wrap was cleared and cursor moved to column 0.
+        assert_eq!(
+            ofs_buf_vt_100.parser_global_state.pending_wrap,
+            crate::PendingWrap::No
+        );
+        assert_eq!(ofs_buf_vt_100.cursor_pos, row(0) + col(0));
     }
 
     #[test]
@@ -668,27 +739,25 @@ mod tests {
         let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
 
         // CSI c
-        let (_, responses) = ofs_buf_vt_100.apply_ansi_bytes("\x1b[c");
+        let (_, responses) = ofs_buf_vt_100
+            .apply_ansi_bytes(format!("{CSI_START}{DA_DEVICE_ATTRIBUTES}"));
         assert_eq!(responses.len(), 1);
-        assert_eq!(
-            responses[0],
-            PtyResponseEvent::PrimaryDeviceAttributes
-        );
+        assert_eq!(responses[0], PtyResponseEvent::PrimaryDeviceAttributes);
 
         // CSI 0 c
-        let (_, responses2) = ofs_buf_vt_100.apply_ansi_bytes("\x1b[0c");
+        let (_, responses2) = ofs_buf_vt_100
+            .apply_ansi_bytes(format!("{CSI_START}0{DA_DEVICE_ATTRIBUTES}"));
         assert_eq!(responses2.len(), 1);
-        assert_eq!(
-            responses2[0],
-            PtyResponseEvent::PrimaryDeviceAttributes
-        );
+        assert_eq!(responses2[0], PtyResponseEvent::PrimaryDeviceAttributes);
 
         // DA2 should be ignored
-        let (_, responses3) = ofs_buf_vt_100.apply_ansi_bytes("\x1b[>c");
+        let (_, responses3) = ofs_buf_vt_100
+            .apply_ansi_bytes(format!("{CSI_START}>{DA_DEVICE_ATTRIBUTES}"));
         assert_eq!(responses3.len(), 0);
 
         // Invalid params should be ignored
-        let (_, responses4) = ofs_buf_vt_100.apply_ansi_bytes("\x1b[1c");
+        let (_, responses4) = ofs_buf_vt_100
+            .apply_ansi_bytes(format!("{CSI_START}1{DA_DEVICE_ATTRIBUTES}"));
         assert_eq!(responses4.len(), 0);
     }
 }

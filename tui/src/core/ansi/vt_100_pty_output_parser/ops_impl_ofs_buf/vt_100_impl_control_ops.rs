@@ -40,6 +40,7 @@ impl OfsBufVT100 {
         if !current_col.is_zero() {
             self.cursor_pos.col_index = current_col - 1;
         }
+        self.parser_global_state.clear_pending_wrap();
     }
 
     /// Handles tab control character (`9` dec, `0x09` hex).
@@ -65,18 +66,25 @@ impl OfsBufVT100 {
             } else {
                 next_col_index
             };
+        self.parser_global_state.clear_pending_wrap();
     }
 
     /// Handles line feed control character (`10` dec, `0x0A` hex).
     ///
-    /// Moves cursor down one line. If at the bottom of the scroll region,
-    /// it scrolls the region up by one line.
-    pub fn handle_line_feed(&mut self) { let _unused = self.index_down(); }
+    /// Moves cursor down one line. If at the bottom of the scroll region, it scrolls the
+    /// region up by one line.
+    pub fn handle_line_feed(&mut self) {
+        let _unused = self.index_down();
+        self.parser_global_state.clear_pending_wrap();
+    }
 
     /// Handles carriage return control character (`13` dec, `0x0D` hex).
     ///
     /// Moves cursor to start of current line (column 0).
-    pub fn handle_carriage_return(&mut self) { self.cursor_pos.col_index = col(0); }
+    pub fn handle_carriage_return(&mut self) {
+        self.cursor_pos.col_index = col(0);
+        self.parser_global_state.clear_pending_wrap();
+    }
 }
 
 #[cfg(test)]

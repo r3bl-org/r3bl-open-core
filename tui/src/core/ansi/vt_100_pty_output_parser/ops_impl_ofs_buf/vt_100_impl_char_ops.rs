@@ -32,7 +32,7 @@
 #[allow(clippy::wildcard_imports)]
 use super::super::*;
 use crate::{ArrayBoundsCheck, ArrayOverflowResult, AutoWrapState, ColIndex, Length,
-            NumericValue, OfsBufVT100, PixelChar, RowIndex, col,
+            NumericValue, OfsBufVT100, PixelChar,
             core::coordinates::bounds_check::{CursorBoundsCheck, LengthOps,
                                               RangeBoundsExt, RangeConvertExt},
             height, ok, width};
@@ -278,6 +278,23 @@ impl OfsBufVT100 {
         self.fill_char_range(at.row_index, erase_range, PixelChar::Spacer)
     }
 
+    /// Applies the deferred pending wrap by performing a carriage return and line feed.
+    ///
+    /// This is called when the terminal is in a pending wrap state and receives the next
+    /// printable character. It delegates to [`handle_carriage_return`] and [`index_down`]
+    /// which automatically handles [`DECSTBM`] scrolling regions correctly.
+    ///
+    /// # Errors
+    /// Returns an error if the scrolling operation fails.
+    ///
+    /// [`DECSTBM`]: https://vt100.net/docs/vt510-rm/DECSTBM.html
+    pub fn apply_pending_wrap(&mut self) -> miette::Result<()> {
+        self.handle_carriage_return();
+        self.index_down()?;
+        self.parser_global_state.clear_pending_wrap();
+        ok!()
+    }
+
     /// Handles printable characters with character set translation, bounds checking, and
     /// line wrapping.
     ///
@@ -306,6 +323,12 @@ impl OfsBufVT100 {
     /// [`DEC`]: https://en.wikipedia.org/wiki/Digital_Equipment_Corporation
     /// [`DECAWM`]: https://vt100.net/docs/vt510-rm/DECAWM.html
     pub fn print_char(&mut self, ch: char) -> miette::Result<()> {
+        // If there's a pending wrap, apply it before printing this new character. Handle
+        // pending line wrap based on DECAWM (Auto Wrap Mode).
+        if self.parser_global_state.get_pending_wrap() == PendingWrap::Yes {
+            self.apply_pending_wrap()?;
+        }
+
         // Apply character set translation if in graphics mode.
         let display_char = match self.parser_global_state.character_set {
             CharacterSet::DECGraphics => Self::translate_dec_graphics(ch),
@@ -337,18 +360,21 @@ impl OfsBufVT100 {
             let new_col: ColIndex = current_col + 1;
 
             // Handle line wrap based on DECAWM (Auto Wrap Mode).
+            //
+            // This logic only triggers when `print_char()` places a character into the
+            // very last column on the screen (when `new_col` overflows the maximum
+            // column). When that happens, the terminal does not jump to the next line
+            // yet. It just parks the cursor directly on top of the character it just
+            // printed at the right edge and flags itself with `PendingWrap::Yes`.
             if new_col.overflows(col_max) == ArrayOverflowResult::Overflowed {
                 if self.parser_global_state.auto_wrap_mode == AutoWrapState::Enabled {
-                    // DECAWM enabled: wrap to next line (default behavior).
-                    self.cursor_pos.col_index = col(0);
-                    let next_row: RowIndex = current_row + 1;
-                    if next_row.overflows(row_max) == ArrayOverflowResult::Within {
-                        self.cursor_pos.row_index = next_row;
-                    }
-                } else {
-                    // DECAWM disabled: stay at right margin (clamp cursor position).
-                    self.cursor_pos.col_index = col_max.convert_to_index();
+                    // DECAWM enabled: enter pending wrap state.
+                    self.parser_global_state.set_pending_wrap();
                 }
+
+                // In both modes (DECAWM enabled or not), the cursor is clamped to the
+                // right margin.
+                self.cursor_pos.col_index = col_max.convert_to_index();
             } else {
                 self.cursor_pos.col_index = new_col;
             }
@@ -361,7 +387,7 @@ impl OfsBufVT100 {
 #[cfg(test)]
 mod tests_shifting_ops {
     use super::*;
-    use crate::{OfsBufVT100, TuiStyle, len, row,
+    use crate::{OfsBufVT100, RowIndex, TuiStyle, col, len, row,
                 test_fixtures_ofs_buf::{create_plain_test_char,
                                         create_vt100_test_buffer_with_size}};
 
@@ -1015,7 +1041,7 @@ mod tests_shifting_ops {
 #[cfg(test)]
 mod tests_print_char {
     use super::*;
-    use crate::{row, test_fixtures_ofs_buf::create_vt100_test_buffer_with_size};
+    use crate::{col, row, test_fixtures_ofs_buf::create_vt100_test_buffer_with_size};
 
     #[test]
     fn test_print_char_basic() {
@@ -1078,7 +1104,21 @@ mod tests_print_char {
             _ => panic!("Expected PlainText with 'X'"),
         }
 
-        // Verify cursor wrapped to beginning of next line.
-        assert_eq!(buffer.cursor_pos, row(2) + col(0));
+        // Verify cursor stays at right margin.
+        assert_eq!(buffer.cursor_pos, row(1) + col(4));
+        // Verify pending wrap is true.
+        assert_eq!(buffer.parser_global_state.get_pending_wrap(), PendingWrap::Yes);
+
+        // Print another character - should wrap to next line, and print at column 0.
+        let _unused = buffer.print_char('Y');
+        let printed_char = buffer.get_char(row(2) + col(0)).unwrap();
+        match printed_char {
+            PixelChar::PlainText { display_char, .. } => assert_eq!(display_char, 'Y'),
+            _ => panic!("Expected PlainText with 'Y'"),
+        }
+
+        // Verify cursor advanced to next column on the new line.
+        assert_eq!(buffer.cursor_pos, row(2) + col(1));
+        assert_eq!(buffer.parser_global_state.get_pending_wrap(), PendingWrap::No);
     }
 }

@@ -213,6 +213,12 @@ pub struct ParserGlobalState {
     /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
     pub auto_wrap_mode: AutoWrapState,
 
+    /// Pending wrap state for deferred wrapping.
+    ///
+    /// Tracks if the cursor is waiting to wrap to the next line upon receiving the next
+    /// printable character.
+    pub pending_wrap: PendingWrap,
+
     /// Currently active [`SGR`] (Select Graphic Rendition) text formatting.
     ///
     /// Accumulates text attributes (bold, italic, etc.) and colors from `ESC [ ... m`
@@ -294,6 +300,24 @@ pub struct ParserGlobalState {
     pub cursor_visibility: CursorVisibilityState,
 }
 
+impl ParserGlobalState {
+    /// Puts the terminal into a pending wrap state.
+    pub fn set_pending_wrap(&mut self) {
+        self.pending_wrap = PendingWrap::Yes;
+    }
+
+    /// Clears the pending wrap state.
+    pub fn clear_pending_wrap(&mut self) {
+        self.pending_wrap = PendingWrap::No;
+    }
+
+    /// Returns the current pending wrap state.
+    #[must_use]
+    pub fn get_pending_wrap(&self) -> PendingWrap {
+        self.pending_wrap
+    }
+}
+
 /// Character set modes for terminal emulation.
 ///
 /// Used by [`AnsiToOfsBufPerformer`] to handle `ESC ( <char>` sequences that switch
@@ -337,6 +361,16 @@ pub enum AutoWrapState {
     Enabled,
     /// Characters overwrite at the right margin (DECAWM `?7l`)
     Disabled,
+}
+
+/// Pending wrap state for deferred wrapping.
+///
+/// Controls whether a wrap to the next line is pending.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum PendingWrap {
+    Yes,
+    #[default]
+    No,
 }
 
 /// Terminal cursor visibility state.

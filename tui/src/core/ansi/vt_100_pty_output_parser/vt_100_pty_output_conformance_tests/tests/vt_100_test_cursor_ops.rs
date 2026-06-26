@@ -119,19 +119,24 @@ pub mod positioning {
 
         performer.print('A');
 
-        // Verify cursor moved to next position (r:5,c:0) after writing 'A'
+        // Verify cursor stays at (r:4,c:9) because of deferred wrapping
         assert_eq!(
             performer.ofs_buf_vt_100.cursor_pos,
-            row(5) + col(0),
-            "Cursor should move to next line start after writing A"
+            row(4) + col(9),
+            "Cursor should be at (r:4,c:9) after writing A"
+        );
+        assert_eq!(
+            performer.ofs_buf_vt_100.parser_global_state.pending_wrap,
+            crate::PendingWrap::Yes,
+            "Pending wrap should be set"
         );
 
         // Verify character was written at correct position.
         assert_plain_char_at(&ofs_buf_vt_100, 4, 9, 'A');
         assert_eq!(
             ofs_buf_vt_100.cursor_pos,
-            row(5) + col(0),
-            "Final cursor position should be at (r:5,c:0)"
+            row(4) + col(9),
+            "Final cursor position should be at (r:4,c:9)"
         );
     }
 

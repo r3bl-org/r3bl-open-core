@@ -60,6 +60,7 @@ impl OfsBufVT100 {
         let potential_new_row = current_row - how_many;
         let new_row = potential_new_row.clamp(scroll_top_boundary, current_row);
         self.cursor_pos.row_index = new_row;
+        self.parser_global_state.clear_pending_wrap();
     }
 
     /// Move cursor down by n lines.
@@ -75,6 +76,7 @@ impl OfsBufVT100 {
         let potential_new_row = current_row + how_many;
         let new_row = potential_new_row.clamp(current_row, scroll_bottom_boundary);
         self.cursor_pos.row_index = new_row;
+        self.parser_global_state.clear_pending_wrap();
     }
 
     /// Move cursor forward by n columns.
@@ -103,12 +105,14 @@ impl OfsBufVT100 {
         let new_col = self.cursor_pos.col_index + how_many;
         self.cursor_pos.col_index =
             new_col.clamp_to_max_length(self.window_size.col_width);
+        self.parser_global_state.clear_pending_wrap();
     }
 
     /// Move cursor backward by n columns.
     pub fn cursor_backward(&mut self, how_many: ColWidth) {
         let current_col = self.cursor_pos.col_index;
         self.cursor_pos.col_index = current_col - how_many;
+        self.parser_global_state.clear_pending_wrap();
     }
 
     /// Set cursor position to specific row and column coordinates.
@@ -127,15 +131,20 @@ impl OfsBufVT100 {
             row_index: clamped_row,
             col_index: new_col,
         };
+        self.parser_global_state.clear_pending_wrap();
     }
 
     /// Move cursor to beginning of current line.
-    pub fn cursor_to_line_start(&mut self) { self.cursor_pos.col_index = col(0); }
+    pub fn cursor_to_line_start(&mut self) {
+        self.cursor_pos.col_index = col(0);
+        self.parser_global_state.clear_pending_wrap();
+    }
 
     /// Move cursor to beginning of next line.
     pub fn cursor_to_next_line_start(&mut self) {
         self.cursor_pos.col_index = col(0);
         self.cursor_down(crate::RowHeight::from(1));
+        self.parser_global_state.clear_pending_wrap();
     }
 
     /// Move cursor to specific column on current line.
@@ -143,6 +152,7 @@ impl OfsBufVT100 {
         // Convert from 1-based to 0-based, clamp to buffer width.
         self.cursor_pos.col_index =
             target_col.clamp_to_max_length(self.window_size.col_width);
+        self.parser_global_state.clear_pending_wrap();
     }
 
     /// Save current cursor position for later restoration.
@@ -166,6 +176,7 @@ impl OfsBufVT100 {
         let new_row = target_row.clamp_to_max_length(self.window_size.row_height);
         // Update only the row, preserve column.
         self.cursor_pos.row_index = new_row;
+        self.parser_global_state.clear_pending_wrap();
     }
 }
 

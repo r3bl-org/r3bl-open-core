@@ -74,12 +74,15 @@ pub mod auto_wrap {
             performer.print(ch);
         }
 
-        // Verify cursor is at (r:1,c:0) - wrapped to next line after hitting right
-        // boundary
+        // Verify cursor is clamped at right margin with pending wrap
         assert_eq!(
             performer.ofs_buf_vt_100.cursor_pos,
-            row(1) + col(0),
-            "Cursor should be at (r:1,c:0) after printing 10 characters"
+            row(0) + col(9),
+            "Cursor should be at (r:0,c:9) clamped after printing 10 characters"
+        );
+        assert_eq!(
+            performer.ofs_buf_vt_100.parser_global_state.pending_wrap,
+            crate::PendingWrap::Yes,
         );
 
         // The 11th character (should be added to the next line)
@@ -235,11 +238,15 @@ pub mod auto_wrap {
             performer.print(ch);
         }
 
-        // Now cursor should be at (r:1,c:0) after wrapping
+        // Now cursor should be clamped at (r:0,c:9) with pending wrap
         assert_eq!(
             performer.ofs_buf_vt_100.cursor_pos,
-            row(1) + col(0),
-            "Cursor should be at (r:1,c:0) after printing 10 characters"
+            row(0) + col(9),
+            "Cursor should be clamped at (r:0,c:9) after printing 10 characters"
+        );
+        assert_eq!(
+            performer.ofs_buf_vt_100.parser_global_state.pending_wrap,
+            crate::PendingWrap::Yes,
         );
 
         // Disable auto-wrap mode.
@@ -761,12 +768,15 @@ pub mod line_wrap_scroll_interaction {
         // Verify no scrolling occurred - "Line-0" should still be at top.
         assert_plain_text_at(performer.ofs_buf_vt_100, 0, 0, "Line-0");
 
-        // J gets written at (9,9), cursor tries to advance but wraps to (9,0)
-        // since we're at the bottom row.
+        // J gets written at (9,9), cursor enters pending wrap state
         assert_eq!(
             performer.ofs_buf_vt_100.cursor_pos,
-            row(9) + col(0),
-            "Cursor should wrap to (9,0) after printing J"
+            row(9) + col(9),
+            "Cursor should clamp at (9,9) after printing J"
+        );
+        assert_eq!(
+            performer.ofs_buf_vt_100.parser_global_state.pending_wrap,
+            crate::PendingWrap::Yes,
         );
 
         // The 'J' character should be at position (9,9) where it was printed
@@ -790,12 +800,15 @@ pub mod line_wrap_scroll_interaction {
         // Print character that should wrap.
         performer.print('X');
 
-        // The print method writes the char, advances cursor, then handles wrap.
-        // So X gets written at (5,9), cursor advances to (6,0)
+        // X gets written at (5,9), cursor enters pending wrap state
         assert_eq!(
             performer.ofs_buf_vt_100.cursor_pos,
-            row(6) + col(0),
-            "Cursor should wrap to next line (6,0) after printing"
+            row(5) + col(9),
+            "Cursor should clamp to (5,9) after printing"
+        );
+        assert_eq!(
+            performer.ofs_buf_vt_100.parser_global_state.pending_wrap,
+            crate::PendingWrap::Yes,
         );
 
         // Verify 'X' is at position (5,9) where it was printed.
@@ -824,30 +837,34 @@ pub mod line_wrap_scroll_interaction {
         performer.print('B'); // written at (9,8), cursor to (9,9)
         performer.print('C'); // written at (9,9), cursor wraps to (9,0)
 
-        // After wrap, cursor should be at (9,0)
+        // After wrap, cursor should be at (9,9) with pending wrap Yes
         assert_eq!(
             performer.ofs_buf_vt_100.cursor_pos,
-            row(9) + col(0),
-            "Should wrap to column 0 after printing C"
+            row(9) + col(9),
+            "Should clamp to column 9 after printing C"
+        );
+        assert_eq!(
+            performer.ofs_buf_vt_100.parser_global_state.pending_wrap,
+            crate::PendingWrap::Yes,
         );
 
-        // Verify no scrolling - Line-0 still at top.
+        // Verify no scrolling yet - Line-0 still at top.
         assert_plain_text_at(performer.ofs_buf_vt_100, 0, 0, "Line-0");
 
-        // Continue printing - should continue from wrapped position.
-        performer.print('D'); // written at (9,0), cursor to (9,1)
-        performer.print('E'); // written at (9,1), cursor to (9,2)
+        // Continue printing - should apply pending wrap, move to next row (which scrolls buffer), and write at column 0.
+        performer.print('D'); // scrolls, writes at (9,0), cursor to (9,1)
+        performer.print('E'); // writes at (9,1), cursor to (9,2)
 
-        // Verify characters are placed correctly.
-        assert_plain_char_at(performer.ofs_buf_vt_100, 9, 7, 'A'); // A at original pos
-        assert_plain_char_at(performer.ofs_buf_vt_100, 9, 8, 'B'); // B at original pos
-        assert_plain_char_at(performer.ofs_buf_vt_100, 9, 9, 'C'); // C at rightmost pos
-        assert_plain_char_at(performer.ofs_buf_vt_100, 9, 0, 'D'); // D overwrites Line-9 start
+        // Verify characters are placed correctly on the scrolled lines.
+        assert_plain_char_at(performer.ofs_buf_vt_100, 8, 7, 'A'); // A moved to row 8
+        assert_plain_char_at(performer.ofs_buf_vt_100, 8, 8, 'B'); // B moved to row 8
+        assert_plain_char_at(performer.ofs_buf_vt_100, 8, 9, 'C'); // C moved to row 8
+        assert_plain_char_at(performer.ofs_buf_vt_100, 9, 0, 'D'); // D at new bottom
         assert_plain_char_at(performer.ofs_buf_vt_100, 9, 1, 'E'); // E follows D
 
-        // Original content should still be present where not overwritten.
-        assert_plain_text_at(performer.ofs_buf_vt_100, 0, 0, "Line-0");
-        assert_plain_text_at(performer.ofs_buf_vt_100, 8, 0, "Line-8");
+        // Original content moved up
+        assert_plain_text_at(performer.ofs_buf_vt_100, 0, 0, "Line-1"); // Line-0 is lost
+        assert_plain_text_at(performer.ofs_buf_vt_100, 7, 0, "Line-8");
     }
 }
 

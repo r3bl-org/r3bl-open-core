@@ -300,13 +300,13 @@ mod tests_scroll_vert_ops {
         // Row 5: "5555555555"
         for row_idx in 0..6 {
             for col_idx in 0..10 {
-                buffer.cursor_pos = row(row_idx) + col(col_idx);
+                buffer.cursor_to_position(row(row_idx), col(col_idx));
                 let index = idx(row_idx);
                 let _unused =
                     buffer.print_char(char::from_digit(index.as_u32(), 10).unwrap());
             }
         }
-        buffer.cursor_pos = row(0) + col(0);
+        buffer.cursor_to_position(row(0), col(0));
     }
 
     #[test]
