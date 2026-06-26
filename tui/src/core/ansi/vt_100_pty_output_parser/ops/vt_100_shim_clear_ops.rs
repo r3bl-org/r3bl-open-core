@@ -60,8 +60,9 @@
 //! [ops module]: crate::core::ansi::vt_100_pty_output_parser::ops
 
 use super::super::ansi_parser_public_api::AnsiToOfsBufPerformer;
-use crate::{DEBUG_TUI_VT100_PARSER, ED_ERASE_ALL, ED_ERASE_FROM_START, ED_ERASE_TO_END,
-            EL_ERASE_ALL, EL_ERASE_FROM_START, EL_ERASE_TO_END, ParamsExt, ok};
+use crate::{DEBUG_TUI_VT100_PARSER, ED_ERASE_ALL, ED_ERASE_ALL_AND_SCROLLBACK,
+            ED_ERASE_FROM_START, ED_ERASE_TO_END, EL_ERASE_ALL, EL_ERASE_FROM_START,
+            EL_ERASE_TO_END, ParamsExt, ok};
 
 /// Handle ED (Erase in Display) - clear screen relative to cursor.
 ///
@@ -92,6 +93,9 @@ pub fn erase_in_display(performer: &mut AnsiToOfsBufPerformer, params: &vte::Par
             .ofs_buf_vt_100
             .erase_display_from_start_to_cursor(),
         ED_ERASE_ALL => performer.ofs_buf_vt_100.erase_display_entire(),
+        ED_ERASE_ALL_AND_SCROLLBACK => performer
+            .ofs_buf_vt_100
+            .erase_display_entire_and_scrollback(),
         _ => {
             DEBUG_TUI_VT100_PARSER.then(|| {
                 tracing::warn!("CSI {} J: Unsupported Erase Display mode", mode);

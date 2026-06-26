@@ -425,6 +425,12 @@ pub struct TerminalModeState {
     /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
     #[allow(dead_code)]
     pub bracketed_paste: terminal_mode_state_todo::BracketedPasteState,
+
+    /// Synchronized output mode (DEC private mode 2026).
+    ///
+    /// When enabled, the terminal should defer rendering until the mode is
+    /// reset, allowing atomic screen updates.
+    pub synchronized_output: bool,
 }
 
 mod terminal_mode_state_todo {

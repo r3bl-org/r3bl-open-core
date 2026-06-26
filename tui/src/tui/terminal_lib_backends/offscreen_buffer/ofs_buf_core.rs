@@ -289,6 +289,17 @@ impl OffscreenBuffer {
     pub fn scrollback_get(&self, idx: usize) -> Option<&PixelCharLine> {
         self.scrollback.get(idx)
     }
+
+    /// Number of scrollback lines evicted (overwritten) since last reset.
+    #[must_use]
+    pub fn scrollback_eviction_count(&self) -> usize {
+        self.scrollback.eviction_count()
+    }
+
+    /// Reset the scrollback eviction counter.
+    pub fn reset_scrollback_eviction_count(&mut self) {
+        self.scrollback.reset_eviction_count();
+    }
 }
 
 #[cfg(test)]

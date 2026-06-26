@@ -21,6 +21,7 @@ pub struct ScrollbackBuffer {
     start: usize,
     len: usize,
     cap: usize,
+    evictions: usize,
 }
 
 impl Default for ScrollbackBuffer {
@@ -38,6 +39,7 @@ impl ScrollbackBuffer {
             start: 0,
             len: 0,
             cap,
+            evictions: 0,
         }
     }
 
@@ -70,6 +72,7 @@ impl ScrollbackBuffer {
         } else {
             self.lines[self.start] = line;
             self.start = (self.start + 1) % self.cap;
+            self.evictions += 1;
         }
     }
 
@@ -87,11 +90,23 @@ impl ScrollbackBuffer {
         (0..self.len).filter_map(move |i| self.get(i))
     }
 
+    /// Number of lines evicted since last reset.
+    #[must_use]
+    pub fn eviction_count(&self) -> usize {
+        self.evictions
+    }
+
+    /// Reset the eviction counter.
+    pub fn reset_eviction_count(&mut self) {
+        self.evictions = 0;
+    }
+
     /// Clear all stored lines.
     pub fn clear(&mut self) {
         self.lines.clear();
         self.start = 0;
         self.len = 0;
+        self.evictions = 0;
     }
 }
 

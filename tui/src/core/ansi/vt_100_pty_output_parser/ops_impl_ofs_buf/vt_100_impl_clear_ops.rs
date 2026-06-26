@@ -317,8 +317,21 @@ impl OfsBufVT100 {
         for row in self.buffer.iter_mut() {
             row.fill(empty_char);
         }
-        self.scrollback.clear();
 
+        ok!()
+    }
+
+    /// Clears the entire screen display AND all scrollback history (for `ED 3`).
+    ///
+    /// This is the standard behavior for `ESC[3J`: the visible buffer is filled
+    /// with blanks and the scrollback ring buffer is emptied.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the operation fails.
+    pub fn erase_display_entire_and_scrollback(&mut self) -> miette::Result<()> {
+        self.erase_display_entire()?;
+        self.scrollback.clear();
         ok!()
     }
 }

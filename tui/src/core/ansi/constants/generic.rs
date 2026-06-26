@@ -311,3 +311,12 @@ define_ansi_const!(@csi_str : SGR_MOUSE_MODE_DISABLE_STR = ["?1006l"] =>
 /// [`CSI`]: crate::CsiSequence
 /// [`xterm private mode 2004`]: https://invisible-island.net/xterm/ctlseqs/ctlseqs.html
 pub const BRACKETED_PASTE_MODE: u16 = 2004;
+
+/// Synchronized Output (DEC private mode 2026).
+///
+/// When enabled, the terminal should defer rendering until the mode is reset,
+/// allowing atomic screen updates. Used by programs like kimi to avoid flicker
+/// during clear+repaint cycles.
+///
+/// [`DEC`]: https://terminal-wg.pages.freedesktop.org/synchronized-updates
+pub const SYNC_UP_OUTPUT: u16 = 2026;
