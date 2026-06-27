@@ -1742,7 +1742,7 @@ screen using the composed component pipeline (Path 1).
 │ │             │  │             │ │                          │
 │ │      ───────┼──┼─────────────┼─┼────⟩ RenderPipeline ─╮   │
 │ │             │  │             │ │                      │   │
-│ │             │  │             │ │                      ⎩ ✚ ⎩
+│ │             │  │             │ │                      ⎩ + ⎩
 │ │             │  │             │ │       ╭─────────────────────╮
 │ └─────────────┘  └─────────────┘ │       │                     │
 │                                  │       │  OffscreenBuffer    │

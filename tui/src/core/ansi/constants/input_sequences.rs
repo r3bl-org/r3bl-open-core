@@ -869,8 +869,7 @@ pub const CSI_PREFIX_LEN: usize = CSI_PREFIX.len();
 
 // ==================== DECCKM Cursor Key Mode Sequences ====================
 //
-// Complete byte sequences for detecting DECCKM mode changes in PTY output. Used by
-// `CursorModeDetector::scan_for_mode_change()`.
+// Complete byte sequences for detecting DECCKM mode changes in PTY output.
 
 /// [`DEC`] Cursor Key Mode (DECCKM) Enable: Switch to application mode cursor keys.
 ///

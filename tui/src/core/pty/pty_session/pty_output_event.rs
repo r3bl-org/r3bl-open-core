@@ -29,12 +29,6 @@ pub enum PtyOutputEvent {
     ///
     /// This gives users a chance to understand why the session ended.
     WriteError(String),
-
-    /// Terminal cursor mode changed.
-    ///
-    /// More info about cursor modes (Application vs Normal) and their detection is in
-    /// [`CursorModeDetector`].
-    CursorModeChange(CursorKeyMode),
 }
 
 /// Cursor key mode for terminal compatibility.
@@ -160,65 +154,4 @@ impl ControlSequence {
             ControlSequence::RawSequence(bytes) => Cow::Owned(bytes.clone()),
         }
     }
-}
-
-/// Cursor mode detector for parsing [`PTY`] output streams.
-///
-/// Scans for terminal mode switching sequences and maintains a buffer for partial
-/// sequence detection across read boundaries.
-///
-/// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
-#[derive(Debug)]
-pub struct CursorModeDetector {
-    buffer: Vec<u8>,
-}
-
-impl CursorModeDetector {
-    /// Creates a new cursor mode detector.
-    #[must_use]
-    pub fn new() -> Self { Self { buffer: Vec::new() } }
-
-    /// Scans incoming data for cursor mode change sequences.
-    ///
-    /// Maintains an internal buffer to handle sequences that span multiple reads.
-    ///
-    /// # Returns
-    ///
-    /// - `Some(mode)` if a mode change sequence is detected
-    /// - `None` otherwise
-    pub fn scan_for_mode_change(&mut self, data: &[u8]) -> Option<CursorKeyMode> {
-        // Add new data to buffer.
-        self.buffer.extend_from_slice(data);
-
-        // Look for application mode enable: ESC[?1h (DECCKM set).
-        if let Some(pos) = self
-            .buffer
-            .windows(DECCKM_SEQ_LEN)
-            .position(|w| w == DECCKM_ENABLE_BYTES)
-        {
-            self.buffer.drain(..pos + DECCKM_SEQ_LEN); // Remove processed bytes.
-            return Some(CursorKeyMode::Application);
-        }
-
-        // Look for application mode disable (normal mode): ESC[?1l (DECCKM reset).
-        if let Some(pos) = self
-            .buffer
-            .windows(DECCKM_SEQ_LEN)
-            .position(|w| w == DECCKM_DISABLE_BYTES)
-        {
-            self.buffer.drain(..pos + DECCKM_SEQ_LEN);
-            return Some(CursorKeyMode::Normal);
-        }
-
-        // Keep buffer reasonable size (prevent memory growth)
-        if self.buffer.len() > 100 {
-            self.buffer.drain(..50);
-        }
-
-        None
-    }
-}
-
-impl Default for CursorModeDetector {
-    fn default() -> Self { Self::new() }
 }
