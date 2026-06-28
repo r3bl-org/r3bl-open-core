@@ -37,8 +37,8 @@ _Meta Task: Prepare v0.8.0 Release_
 - [x] [LF scroll-up test fix](done/pr-462-fix.md) - https://github.com/r3bl-org/r3bl-open-core/pull/462
 - [x] [DA1 Responses timeout fix](done/pr-455-fix.md) - https://github.com/r3bl-org/r3bl-open-core/pull/455
 - [x] [VT100 Pending Wrap fix](done/pr-456-fix.md) - https://github.com/r3bl-org/r3bl-open-core/pull/456
-- [ ] [Scrollback Buffer for PTY](pr-459-fix.md) - https://github.com/r3bl-org/r3bl-open-core/pull/459
 - [ ] [Mouse Event Forwarding](pr-458-fix.md) - https://github.com/r3bl-org/r3bl-open-core/pull/458
+- [ ] [Scrollback Buffer for PTY](pr-459-fix.md) - https://github.com/r3bl-org/r3bl-open-core/pull/459
 - [ ] **NEEDS RESEARCH & PLANNING** https://github.com/r3bl-org/r3bl-open-core/pull/468
 - [ ] **NEEDS RESEARCH & PLANNING** https://github.com/r3bl-org/r3bl-open-core/pull/466
 - [ ] **NEEDS RESEARCH & PLANNING** https://github.com/r3bl-org/r3bl-open-core/pull/467
