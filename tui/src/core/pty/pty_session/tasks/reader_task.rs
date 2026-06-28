@@ -1,6 +1,6 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{CaptureFlag, ControllerReader, CursorModeDetector, DetectFlag, OscBuffer,
+use crate::{CaptureFlag, ControllerReader, OscBuffer,
             PtyOutputEvent, PtySessionConfig, READ_BUFFER_SIZE, ok};
 use std::io::Read;
 use tokio::sync::mpsc::Sender;
@@ -46,8 +46,6 @@ pub fn spawn_blocking_reader_task(
     tokio::task::spawn_blocking(move || -> miette::Result<()> {
         let mut buf = [0u8; READ_BUFFER_SIZE];
         let mut osc_buffer = OscBuffer::new();
-        let mut cursor_detector = CursorModeDetector::new();
-
         loop {
             match reader.read(&mut buf) {
                 Ok(0) => break, // EOF
@@ -68,14 +66,6 @@ pub fn spawn_blocking_reader_task(
                         }
                     }
 
-                    // 3. Detect cursor mode changes if enabled.
-                    if config.detect_cursor_mode == DetectFlag::Detect
-                        && let Some(mode) =
-                            cursor_detector.scan_for_mode_change(&buf[..n])
-                    {
-                        let _unused = output_event_ch_tx_half
-                            .blocking_send(PtyOutputEvent::CursorModeChange(mode));
-                    }
                 }
                 Err(e) => {
                     // This error is expected when the PTY is closed (e.g., child

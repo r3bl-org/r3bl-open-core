@@ -459,6 +459,13 @@ pub struct TerminalModeState {
     /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
     #[allow(dead_code)]
     pub bracketed_paste: terminal_mode_state_todo::BracketedPasteState,
+
+    /// Cursor key mode (DECCKM).
+    ///
+    /// When set to [`CursorKeyMode::Application`], cursor keys (including Home and End)
+    /// send SS3 (`ESC O`) sequences. In [`CursorKeyMode::Normal`] they send CSI
+    /// (`ESC [`) sequences.
+    pub cursor_key_mode: crate::CursorKeyMode,
 }
 
 mod terminal_mode_state_todo {
@@ -605,7 +612,7 @@ mod tests {
         {
             // First we assert against a dummy value to see the real sizes in the test
             // output, then we will update it.
-            assert_eq!(size_of::<OfsBufVT100>(), 928);
+            assert_eq!(size_of::<OfsBufVT100>(), 1448);
         }
     }
 
