@@ -37,9 +37,9 @@ pub enum CursorKeyMode {
     /// Normal mode ([`ANSI`][ - `ESC`][ sequences
     ///
     /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+    #[default]
     Normal,
     /// Application mode (VT52) - `ESC O` sequences
-    #[default]
     Application,
 }
 
@@ -124,9 +124,15 @@ impl ControlSequence {
                 CursorKeyMode::Application => Cow::Borrowed(&[0x1B, 0x4F, 0x44]), /* ESC O D */
             },
 
-            // Navigation keys (mode-independent)
-            ControlSequence::Home => Cow::Borrowed(&[0x1B, 0x5B, 0x48]), // ESC[H
-            ControlSequence::End => Cow::Borrowed(&[0x1B, 0x5B, 0x46]),  // ESC[F
+            // Navigation keys (mode-aware)
+            ControlSequence::Home => match mode {
+                CursorKeyMode::Normal => Cow::Borrowed(&[0x1B, 0x5B, 0x48]), // ESC[H
+                CursorKeyMode::Application => Cow::Borrowed(&[0x1B, 0x4F, 0x48]), /* ESC O H */
+            },
+            ControlSequence::End => match mode {
+                CursorKeyMode::Normal => Cow::Borrowed(&[0x1B, 0x5B, 0x46]), // ESC[F
+                CursorKeyMode::Application => Cow::Borrowed(&[0x1B, 0x4F, 0x46]), /* ESC O F */
+            },
             ControlSequence::PageUp => Cow::Borrowed(&[0x1B, 0x5B, 0x35, 0x7E]), // ESC[5~
             ControlSequence::PageDown => Cow::Borrowed(&[0x1B, 0x5B, 0x36, 0x7E]), /* ESC[6~ */
 
@@ -153,5 +159,92 @@ impl ControlSequence {
             // Raw sequence - pass through as-is (requires owned data)
             ControlSequence::RawSequence(bytes) => Cow::Owned(bytes.clone()),
         }
+    }
+}
+/// Cursor mode detector for parsing [`PTY`] output streams.
+///
+/// Scans for terminal mode switching sequences and maintains a buffer for partial
+/// sequence detection across read boundaries.
+///
+/// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
+#[derive(Debug)]
+pub struct CursorModeDetector {
+    buffer: Vec<u8>,
+}
+
+impl CursorModeDetector {
+    /// Creates a new cursor mode detector.
+    #[must_use]
+    pub fn new() -> Self { Self { buffer: Vec::new() } }
+
+    /// Scans incoming data for cursor mode change sequences.
+    ///
+    /// Maintains an internal buffer to handle sequences that span multiple reads.
+    ///
+    /// # Returns
+    ///
+    /// - `Some(mode)` if a mode change sequence is detected
+    /// - `None` otherwise
+    pub fn scan_for_mode_change(&mut self, data: &[u8]) -> Option<CursorKeyMode> {
+        // Add new data to buffer.
+        self.buffer.extend_from_slice(data);
+
+        // Look for application mode enable: ESC[?1h (DECCKM set).
+        if let Some(pos) = self
+            .buffer
+            .windows(DECCKM_SEQ_LEN)
+            .position(|w| w == DECCKM_ENABLE_BYTES)
+        {
+            self.buffer.drain(..pos + DECCKM_SEQ_LEN); // Remove processed bytes.
+            return Some(CursorKeyMode::Application);
+        }
+
+        // Look for application mode disable (normal mode): ESC[?1l (DECCKM reset).
+        if let Some(pos) = self
+            .buffer
+            .windows(DECCKM_SEQ_LEN)
+            .position(|w| w == DECCKM_DISABLE_BYTES)
+        {
+            self.buffer.drain(..pos + DECCKM_SEQ_LEN);
+            return Some(CursorKeyMode::Normal);
+        }
+
+        // Keep buffer reasonable size (prevent memory growth)
+        if self.buffer.len() > 100 {
+            self.buffer.drain(..50);
+        }
+
+        None
+    }
+}
+
+impl Default for CursorModeDetector {
+    fn default() -> Self { Self::new() }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{ControlSequence, CursorKeyMode};
+
+    #[test]
+    fn home_end_are_cursor_mode_aware() {
+        // Normal mode: CSI sequences.
+        assert_eq!(
+            ControlSequence::Home.to_bytes(CursorKeyMode::Normal).as_ref(),
+            b"\x1b[H"
+        );
+        assert_eq!(
+            ControlSequence::End.to_bytes(CursorKeyMode::Normal).as_ref(),
+            b"\x1b[F"
+        );
+        // Application mode: SS3 sequences (required by tig, vim, etc.).
+        assert_eq!(
+            ControlSequence::Home.to_bytes(CursorKeyMode::Application).as_ref(),
+            b"\x1bOH"
+        );
+        assert_eq!(
+            ControlSequence::End.to_bytes(CursorKeyMode::Application).as_ref(),
+            b"\x1bOF"
+        );
     }
 }
