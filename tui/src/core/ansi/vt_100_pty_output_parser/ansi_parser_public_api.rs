@@ -135,6 +135,27 @@
 use crate::{OfsBufVT100, PtyResponseEvent, core::osc::OscEvent};
 use std::mem::take;
 
+/// Maximum size of the synchronized output buffer before force-flush.
+const MAX_SYNC_BUFFER: usize = 1_048_576;
+
+const SYNC_ON: &[u8] = b"\x1b[?2026h";
+const SYNC_OFF: &[u8] = b"\x1b[?2026l";
+
+/// Result of processing ANSI bytes through [`OfsBufVT100::feed_pty_bytes`].
+#[derive(Debug, Clone)]
+pub struct AnsiBytesResult {
+    pub osc_events: Vec<OscEvent>,
+    pub pty_response_events: Vec<PtyResponseEvent>,
+    pub combined_before: usize,
+    pub combined_after: usize,
+    pub evictions: usize,
+}
+
+/// Find a subsequence in a byte slice.
+fn find_seq(data: &[u8], needle: &[u8]) -> Option<usize> {
+    data.windows(needle.len()).position(|w| w == needle)
+}
+
 /// Terminal state context for [`ANSI`] sequence processing.
 ///
 /// This performer is created by [`OfsBufVT100::apply_ansi_bytes`] and passed to the
@@ -279,6 +300,141 @@ impl OfsBufVT100 {
         );
 
         (osc_events, pending_dsr_requests)
+    }
+
+    /// Feed raw PTY bytes, handling DEC 2026 synchronized output.
+    ///
+    /// During an active sync period (between `ESC[?2026h` and `ESC[?2026l`),
+    /// bytes are buffered internally without modifying the offscreen buffer.
+    /// On sync-off, all buffered content is parsed atomically and the buffer
+    /// is updated in one shot.
+    ///
+    /// Returns `None` while buffering (no state change — suppress render).
+    /// Returns `Some(result)` when bytes were applied to the buffer.
+    #[must_use]
+    pub fn feed_pty_bytes(&mut self, bytes: &[u8]) -> Option<AnsiBytesResult> {
+        if self.sync_buffering {
+            self.sync_buffer.extend_from_slice(bytes);
+
+            if self.sync_buffer.len() > MAX_SYNC_BUFFER {
+                return Some(self.force_flush_sync());
+            }
+
+            if let Some(off) = find_seq(&self.sync_buffer, SYNC_OFF) {
+                let content = self.sync_buffer[SYNC_ON.len()..off].to_vec();
+                let remaining = self.sync_buffer[off + SYNC_OFF.len()..].to_vec();
+                self.sync_buffer.clear();
+                self.sync_buffering = false;
+
+                let flush_result = if content.is_empty() {
+                    None
+                } else {
+                    Some(self.parse_with_tracking(&content))
+                };
+
+                if remaining.is_empty() {
+                    return flush_result;
+                }
+
+                let rest = self.feed_pty_bytes(&remaining);
+                return merge_results(flush_result, rest);
+            }
+
+            None
+        } else if let Some(on) = find_seq(bytes, SYNC_ON) {
+            let (before, from_sync) = bytes.split_at(on);
+
+            let pre_result = if before.is_empty() {
+                None
+            } else {
+                Some(self.parse_with_tracking(before))
+            };
+
+            self.sync_buffer = from_sync.to_vec();
+            self.sync_buffering = true;
+
+            if let Some(off) = find_seq(&self.sync_buffer, SYNC_OFF) {
+                let content = self.sync_buffer[SYNC_ON.len()..off].to_vec();
+                let remaining = self.sync_buffer[off + SYNC_OFF.len()..].to_vec();
+                self.sync_buffer.clear();
+                self.sync_buffering = false;
+
+                let sync_result = if content.is_empty() {
+                    None
+                } else {
+                    Some(self.parse_with_tracking(&content))
+                };
+
+                let merged = merge_results(pre_result, sync_result);
+
+                if remaining.is_empty() {
+                    return merged;
+                }
+
+                let rest = self.feed_pty_bytes(&remaining);
+                return merge_results(merged, rest);
+            }
+
+            if pre_result.is_some() {
+                return pre_result;
+            }
+            None
+        } else {
+            Some(self.parse_with_tracking(bytes))
+        }
+    }
+
+    fn parse_with_tracking(&mut self, bytes: &[u8]) -> AnsiBytesResult {
+        self.reset_scrollback_eviction_count();
+        let combined_before = self.scrollback_len().saturating_add(self.buffer.len());
+        {
+            let mut performer = AnsiToOfsBufPerformer::new(self);
+            performer.apply_ansi_bytes(bytes);
+        }
+        let combined_after = self.scrollback_len().saturating_add(self.buffer.len());
+        let evictions = self.scrollback_eviction_count();
+        let osc_events = take(&mut self.parser_global_state.pending_osc_events);
+        let pty_response_events =
+            take(&mut self.parser_global_state.pending_pty_response_events);
+        AnsiBytesResult {
+            osc_events,
+            pty_response_events,
+            combined_before,
+            combined_after,
+            evictions,
+        }
+    }
+
+    fn force_flush_sync(&mut self) -> AnsiBytesResult {
+        let buffer = std::mem::take(&mut self.sync_buffer);
+        let result = self.parse_with_tracking(&buffer);
+        self.sync_buffering = false;
+        result
+    }
+}
+
+fn merge_results(
+    a: Option<AnsiBytesResult>,
+    b: Option<AnsiBytesResult>,
+) -> Option<AnsiBytesResult> {
+    match (a, b) {
+        (None, None) => None,
+        (Some(r), None) | (None, Some(r)) => Some(r),
+        (Some(a), Some(b)) => Some(AnsiBytesResult {
+            osc_events: {
+                let mut v = a.osc_events;
+                v.extend(b.osc_events);
+                v
+            },
+            pty_response_events: {
+                let mut v = a.pty_response_events;
+                v.extend(b.pty_response_events);
+                v
+            },
+            combined_before: a.combined_before,
+            combined_after: b.combined_after,
+            evictions: a.evictions + b.evictions,
+        }),
     }
 }
 

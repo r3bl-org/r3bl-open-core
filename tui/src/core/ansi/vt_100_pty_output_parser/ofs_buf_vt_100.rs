@@ -29,6 +29,13 @@ pub struct OfsBufVT100 {
     pub parser_global_state: ParserGlobalState,
     pub hidden_screen_state: HiddenScreenState,
     pub terminal_mode: TerminalModeState,
+
+    /// Raw PTY bytes accumulated during DEC 2026 synchronized output.
+    /// Flushed through the VTE parser atomically when sync-off is received.
+    pub sync_buffer: Vec<u8>,
+
+    /// Whether we are currently in a synchronized output buffering period.
+    pub sync_buffering: bool,
 }
 
 mod vt_100_terminal_state_impl {
@@ -68,6 +75,8 @@ mod vt_100_terminal_state_impl {
                 parser_global_state: ParserGlobalState::default(),
                 hidden_screen_state: HiddenScreenState::new_empty(window_size),
                 terminal_mode: TerminalModeState::default(),
+                sync_buffer: Vec::new(),
+                sync_buffering: false,
             }
         }
     }
@@ -425,12 +434,6 @@ pub struct TerminalModeState {
     /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
     #[allow(dead_code)]
     pub bracketed_paste: terminal_mode_state_todo::BracketedPasteState,
-
-    /// Synchronized output mode (DEC private mode 2026).
-    ///
-    /// When enabled, the terminal should defer rendering until the mode is
-    /// reset, allowing atomic screen updates.
-    pub synchronized_output: bool,
 }
 
 mod terminal_mode_state_todo {

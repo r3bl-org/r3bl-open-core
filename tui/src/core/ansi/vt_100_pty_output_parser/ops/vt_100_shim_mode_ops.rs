@@ -91,9 +91,7 @@ pub fn set_mode(
                     .ofs_buf_vt_100
                     .set_requested_cursor_visibility_mode(CursorVisibilityState::Visible);
             }
-            PrivateModeType::SynchronizedOutput => {
-                performer.ofs_buf_vt_100.set_synchronized_output(true);
-            }
+
             // Safely suppress/ignore modern TUI extensions (like mouse tracking and
             // bracketed paste). Currently, the multiplexer does not support
             // routing rich input events back into the PTY. Downgrading to
@@ -153,9 +151,7 @@ pub fn reset_mode(
                     .ofs_buf_vt_100
                     .set_requested_cursor_visibility_mode(CursorVisibilityState::Hidden);
             }
-            PrivateModeType::SynchronizedOutput => {
-                performer.ofs_buf_vt_100.set_synchronized_output(false);
-            }
+
             // Safely suppress/ignore modern TUI extensions (like mouse tracking and
             // bracketed paste). Currently, the multiplexer does not support
             // routing rich input events back into the PTY. Downgrading to
