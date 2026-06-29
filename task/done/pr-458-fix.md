@@ -1,5 +1,7 @@
 _Task: PR 458 Integration (Mouse Tracking Mode)_
 
+<!-- cspell:words DECSET -->
+
 # User Story & Context
 
 ## Problem
@@ -55,10 +57,10 @@ Remove the abandoned `CursorModeDetector` pattern from the reader task.
   `PtyOutputEvent::CursorModeChange` which is ignored by all consumers.
 - _The Fix:_ Delete `CursorModeDetector`, remove it from `reader_task.rs`, and remove
   `PtyOutputEvent::CursorModeChange` to simplify the PTY reader pipeline.
-- _File(s) Touched:_ `tui/src/core/pty/pty_mux/reader_task.rs`, `pty_output_event.rs`, and
+- _File(s) Touched:_ `tui/src/core/pty/pty_session/tasks/reader_task.rs`, `pty_output_event.rs`, and
   related modules.
 
-## Phase 2: VT100 Parser State Tracking
+## [x] Phase 2: VT100 Parser State Tracking
 
 Implement parsing and state tracking for xterm mouse mode escape sequences (1000, 1002,
 1003, 1006) natively within the VT100 parser.
@@ -76,7 +78,7 @@ Implement parsing and state tracking for xterm mouse mode escape sequences (1000
   - `tui/src/core/ansi/vt_100_pty_output_parser/ops/vt_100_shim_mode_ops.rs`
   - `tui/src/core/ansi/vt_100_pty_output_parser/ofs_buf_vt_100.rs`
 
-## Phase 3: Input Routing & SGR Translation
+## [x] Phase 3: Input Routing & SGR Translation
 
 Translate and route `crate::InputEvent::Mouse` events to the PTY stdin when mouse tracking
 is active, utilizing strict type-safe coordinates.
@@ -191,15 +193,15 @@ is active, utilizing strict type-safe coordinates.
   - `tui/src/core/ansi/generator/sgr_mouse.rs`
   - `tui/src/core/pty/pty_mux/input_router.rs`
 
-## Phase 4: Testing
+## [x] Phase 4: Testing
 
 Add unit tests to ensure the new state machine and byte generator behave exactly according
 to the VT-100/Xterm specifications.
 
-- [ ] **Parser State Tests:** In `vt_100_pty_output_conformance_tests.rs` (or similar),
+- [x] **Parser State Tests:** In `vt_100_pty_output_conformance_tests.rs` (or similar),
       write tests verifying that sending `CSI ? 1000 h`, `1002 h`, etc. correctly
       transitions `mouse_tracking` to `Enabled`, and `l` resets it.
-- [ ] **SGR Byte Generator Tests:** Add unit tests for `SgrMouseSequence::generate()`
+- [x] **SGR Byte Generator Tests:** Add unit tests for `SgrMouseSequence::generate()`
       verifying all the complex bitwise logic (avoid magic strings; build expected outputs
       using `CSI_START`, `MOUSE_*` constants, and formatting macros):
   - Left click at x=10, y=10 ->
@@ -210,19 +212,77 @@ to the VT-100/Xterm specifications.
     `format!("{CSI_START}<{}{CSI_PARAM_SEPARATOR}10{CSI_PARAM_SEPARATOR}10{MOUSE_SGR_PRESS}", MOUSE_RIGHT_BUTTON_CODE | MOUSE_MODIFIER_SHIFT).into_bytes()`
   - Scroll Up/Down -> correct button IDs and state characters
 
+## [x] Phase 5: Clean up contract between pty_mux_example and pty_mux core module
+
+1. **Problem Statement:** The core `InputRouter` currently hardcodes application-specific
+   UX logic (like `Ctrl+Q` to exit, `F1-F12` for process switching, and desktop
+   notifications). This conflates the example application's requirements with the core
+   multiplexer logic.
+2. **Injection Point (Interceptor):** Introduce a type alias for the interceptor closure
+   that the `PTYMuxBuilder` can accept. This interceptor runs _before_ the `InputRouter`
+   gets the event.
+   ```rust
+   // Readable type alias for the interceptor closure
+   pub type InputInterceptorFn = Box<dyn FnMut(&InputEvent, &mut ProcessManager) -> EventPropagation>;
+   ```
+   We will use the existing `r3bl_tui::EventPropagation` enum to control the bubbling:
+   - `Propagate`: Application ignored the event, let core route it.
+   - `Consumed`: Application handled the event (e.g., switched process).
+   - `ExitMainEventLoop`: Application handled the event and wants to shut down `PTYMux`.
+3. **Refactor `InputRouter`:** Strip out the `F1-F12` and `Ctrl+Q` logic from
+   `InputRouter::handle_input`. Its only responsibilities should be:
+   - Translating `InputEvent::Mouse` into `SGR` sequences and sending them to the active
+     PTY.
+   - Fallback forwarding of all other `InputEvent::Keyboard` events to the active PTY.
+   - Handling `InputEvent::Resize` and `Shutdown`.
+4. **Update `pty_mux_example`:** Implement the interceptor in the example code to provide
+   a closure configuring `F1-F12` to switch processes via `process_manager.switch_to(idx)`
+   and return `EventConsumed::Consumed`, and returning `EventConsumed::Propagate` for all
+   others.
+5. **Clean up dependencies:** Move `show_notification_non_blocking` into
+   `core/notification.rs`.
+
+## [x] Phase 6: String Allocation Architecture (`fast_strings`)
+
+Establish a definitive Zero-Allocation and Performance String architecture for the entire
+codebase.
+
+- _Context:_ We identified confusion and redundant documentation regarding
+  `FastStringify`, `format_no_alloc!`, and `inline_string!`.
+- _The Fix:_
+  - Extracted performance-critical string operations into a new module:
+    `tui/src/core/common/fast_strings/`.
+  - Created a definitive Source of Truth (SOT) in `fast_strings/mod.rs` outlining the
+    Performance Hierarchy.
+  - Linked all relevant types and macros to this central SOT via intra-doc links.
+  - Created a new `fast-string-allocations` skill in `.agents/skills/`.
+
 ---
 
 ## Final Verification & Cleanup
 
-- [ ] Verify full test suite coverage using `./check.fish --full`. and run
+- [x] Verify full test suite coverage using `./check.fish --full`. and run
       `check code quality` skill.
-- [ ] **Mandatory manual review:** Verify every file modified in this task.
-  - [ ] `tui/src/core/ansi/vt_100_pty_output_parser/protocols/csi_codes/private_mode.rs`
-  - [ ] `tui/src/core/ansi/vt_100_pty_output_parser/ops/vt_100_shim_mode_ops.rs`
-  - [ ] `tui/src/core/ansi/vt_100_pty_output_parser/ofs_buf_vt_100.rs`
-  - [ ] `tui/src/core/pty/pty_mux/input_router.rs`
-  - [ ] `tui/src/core/pty/pty_mux/reader_task.rs`
-  - [ ] `task/prepare-v0.8.0-meta-task.md`
+- [x] **Mandatory manual review:** Verify every file modified in this task.
+  - [x] `tui/src/core/common/fast_strings/fast_stringify.rs`
+  - [x] `tui/src/core/common/fast_strings/format_no_alloc.rs`
+  - [x] `tui/src/core/common/fast_strings/mod.rs`
+  - [x] `tui/src/core/pty/pty_mux/mod.rs`
+  - [x] `tui/src/core/pty/pty_mux/mux.rs`
+  - [x] `tui/src/core/pty/pty_mux/adaptive_render_budget.rs`
+  - [x] `tui/src/core/ansi/vt_100_pty_output_parser/protocols/csi_codes/private_mode.rs`
+  - [x] `tui/src/core/pty/pty_mux/input_router.rs`
+  - [x] `tui/src/core/ansi/vt_100_pty_output_parser/types.rs`
+  - [x] `tui/src/core/ansi/vt_100_pty_output_parser/ops/vt_100_shim_mode_ops.rs`
+  - [x] `tui/src/core/ansi/vt_100_pty_output_parser/ofs_buf_vt_100.rs`
+  - [x] `tui/src/core/pty/pty_session/tasks/reader_task.rs`
+  - [x] `tui/src/core/ansi/generator/sgr_mouse_sequence.rs`
+  - [x] `tui/src/core/pty/pty_mux/process_manager.rs`
+  - [x] `tui/src/core/mod.rs`
+  - [x] `tui/src/core/notification.rs`
+  - [x] `tui/src/tui/mod.rs`
+  - [x] `tui/examples/pty_mux_example.rs`
+  - [x] `task/prepare-v0.8.0-meta-task.md`
 - [ ] Ensure all work was done on a new branch (e.g., `feat-pty-mouse-tracking`), rather
       than committing directly to `main` or Cecile's divergent branch.
 - [ ] When ready to merge, use the `/merge-pr` slash command to cleanly rebase and merge

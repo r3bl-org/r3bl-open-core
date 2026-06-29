@@ -11,7 +11,7 @@
 //! [`SGR`]: crate::SgrCode
 
 use super::super::test_fixtures_vt_100_ansi_conformance::*;
-use crate::{ANSIBasicColor, AutoWrapState, EraseDisplayMode, SgrCode, col,
+use crate::{ANSIBasicColor, AutoWrapMode, EraseDisplayMode, SgrCode, col,
             core::ansi::vt_100_pty_output_parser::{CsiSequence, PrivateModeType},
             row, term_col, term_row};
 
@@ -246,7 +246,7 @@ pub mod character_set_state_management {
         );
         assert_eq!(
             ofs_buf_vt_100.parser_global_state.auto_wrap_mode,
-            AutoWrapState::Disabled
+            AutoWrapMode::Disabled
         );
 
         // Change modes but keep character set
@@ -259,7 +259,7 @@ pub mod character_set_state_management {
         // Auto-wrap should change but character set should persist
         assert_eq!(
             ofs_buf_vt_100.parser_global_state.auto_wrap_mode,
-            AutoWrapState::Enabled
+            AutoWrapMode::Enabled
         );
         assert_eq!(
             ofs_buf_vt_100.parser_global_state.character_set,
@@ -405,7 +405,7 @@ pub mod scroll_region_state_interactions {
 /// Tests for complex state combinations and edge cases.
 pub mod complex_state_combinations {
     use super::*;
-    use crate::AutoWrapState;
+    use crate::AutoWrapMode;
 
     #[test]
     fn test_full_state_combination() {
@@ -468,7 +468,7 @@ pub mod complex_state_combinations {
         );
         assert_eq!(
             ofs_buf_vt_100.parser_global_state.auto_wrap_mode,
-            AutoWrapState::Enabled
+            AutoWrapMode::Enabled
         );
     }
 
@@ -506,7 +506,7 @@ pub mod complex_state_combinations {
         );
         assert_eq!(
             ofs_buf_vt_100.parser_global_state.auto_wrap_mode,
-            AutoWrapState::Disabled
+            AutoWrapMode::Disabled
         );
 
         // Current style should still have bold

@@ -200,6 +200,8 @@ in that skill's directory (e.g., `patterns.md`, `reference.md`, `examples.md`).
 - **concurrency-safety** - Thread safety, Chain of Custody, Loud Lock Releases, and AtomicU8Ext patterns. Use when working with threads, locks, or atomics.
   - Supporting file: `patterns.md` (good/bad examples of lock management)
 
+- **fast-string-allocations** - Zero-allocation string building strategies. Use when formatting strings, generating ANSI codes, or writing hot loops to avoid heap allocations and Formatter overhead.
+
 ### Performance
 
 - **analyze-performance** - Flamegraph-based performance regression detection. Use when optimizing

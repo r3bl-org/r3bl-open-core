@@ -31,7 +31,7 @@
 
 #[allow(clippy::wildcard_imports)]
 use super::super::*;
-use crate::{ArrayBoundsCheck, ArrayOverflowResult, AutoWrapState, ColIndex, Length,
+use crate::{ArrayBoundsCheck, ArrayOverflowResult, AutoWrapMode, ColIndex, Length,
             NumericValue, OfsBufVT100, PixelChar,
             core::coordinates::bounds_check::{CursorBoundsCheck, LengthOps,
                                               RangeBoundsExt, RangeConvertExt},
@@ -367,7 +367,7 @@ impl OfsBufVT100 {
             // yet. It just parks the cursor directly on top of the character it just
             // printed at the right edge and flags itself with `PendingWrap::Yes`.
             if new_col.overflows(col_max) == ArrayOverflowResult::Overflowed {
-                if self.parser_global_state.auto_wrap_mode == AutoWrapState::Enabled {
+                if self.parser_global_state.auto_wrap_mode == AutoWrapMode::Enabled {
                     // DECAWM enabled: enter pending wrap state.
                     self.parser_global_state.set_pending_wrap();
                 }
@@ -1089,7 +1089,7 @@ mod tests_print_char {
         let mut buffer = create_vt100_test_buffer_with_size(width(5), height(3));
 
         // Ensure DECAWM is enabled (default).
-        buffer.parser_global_state.auto_wrap_mode = AutoWrapState::Enabled;
+        buffer.parser_global_state.auto_wrap_mode = AutoWrapMode::Enabled;
 
         // Position cursor at end of line (column 4 in 5-width buffer).
         buffer.cursor_pos = row(1) + col(4);

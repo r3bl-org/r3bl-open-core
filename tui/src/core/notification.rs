@@ -1,6 +1,5 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::tui::DEBUG_TUI_SHOW_PTY_MUX_NOTIFICATIONS;
 use notify_rust::{Notification, Timeout};
 
 /// Default notification display duration.
@@ -15,10 +14,6 @@ pub const NOTIFICATION_TIMEOUT_MS: u32 = 1_000;
 ///
 /// [`show()`]: notify_rust::Notification::show
 pub fn show_notification_non_blocking(title: &str, message: &str) {
-    if !DEBUG_TUI_SHOW_PTY_MUX_NOTIFICATIONS {
-        return;
-    }
-
     // Don't block calling thread since this is synchronous blocking OS API call.
     std::thread::spawn({
         let title_owned = title.to_string();

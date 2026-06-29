@@ -33,7 +33,7 @@ use crate::{core::ansi::vt_100_pty_output_parser::{CsiSequence, PrivateModeType}
 /// Tests for DECAWM (Auto Wrap Mode) operations.
 pub mod auto_wrap_mode {
     use super::*;
-    use crate::AutoWrapState;
+    use crate::AutoWrapMode;
 
     #[test]
     fn test_decawm_enable() {
@@ -42,7 +42,7 @@ pub mod auto_wrap_mode {
         // Auto wrap is enabled by default
         assert_eq!(
             ofs_buf_vt_100.parser_global_state.auto_wrap_mode,
-            AutoWrapState::Enabled
+            AutoWrapMode::Enabled
         );
 
         // Disable first to test enable
@@ -53,7 +53,7 @@ pub mod auto_wrap_mode {
         let _result = ofs_buf_vt_100.apply_ansi_bytes(disable_sequence);
         assert_eq!(
             ofs_buf_vt_100.parser_global_state.auto_wrap_mode,
-            AutoWrapState::Disabled
+            AutoWrapMode::Disabled
         );
 
         // Enable auto wrap mode
@@ -66,7 +66,7 @@ pub mod auto_wrap_mode {
         // Verify mode is enabled
         assert_eq!(
             ofs_buf_vt_100.parser_global_state.auto_wrap_mode,
-            AutoWrapState::Enabled
+            AutoWrapMode::Enabled
         );
     }
 
@@ -77,7 +77,7 @@ pub mod auto_wrap_mode {
         // Auto wrap is enabled by default
         assert_eq!(
             ofs_buf_vt_100.parser_global_state.auto_wrap_mode,
-            AutoWrapState::Enabled
+            AutoWrapMode::Enabled
         );
 
         // Disable auto wrap mode
@@ -90,7 +90,7 @@ pub mod auto_wrap_mode {
         // Verify mode is disabled
         assert_eq!(
             ofs_buf_vt_100.parser_global_state.auto_wrap_mode,
-            AutoWrapState::Disabled
+            AutoWrapMode::Disabled
         );
     }
 
@@ -146,7 +146,7 @@ pub mod auto_wrap_mode {
         let _result = ofs_buf_vt_100.apply_ansi_bytes(disable_sequence);
         assert_eq!(
             ofs_buf_vt_100.parser_global_state.auto_wrap_mode,
-            AutoWrapState::Disabled
+            AutoWrapMode::Disabled
         );
 
         // Perform other operations
@@ -163,7 +163,7 @@ pub mod auto_wrap_mode {
         // Mode should persist
         assert_eq!(
             ofs_buf_vt_100.parser_global_state.auto_wrap_mode,
-            AutoWrapState::Disabled
+            AutoWrapMode::Disabled
         );
 
         // Re-enable and verify
@@ -174,7 +174,7 @@ pub mod auto_wrap_mode {
         let _result = ofs_buf_vt_100.apply_ansi_bytes(enable_sequence);
         assert_eq!(
             ofs_buf_vt_100.parser_global_state.auto_wrap_mode,
-            AutoWrapState::Enabled
+            AutoWrapMode::Enabled
         );
     }
 }
@@ -182,7 +182,7 @@ pub mod auto_wrap_mode {
 /// Tests for mode state combinations and interactions.
 pub mod mode_interactions {
     use super::*;
-    use crate::AutoWrapState;
+    use crate::AutoWrapMode;
 
     #[test]
     fn test_multiple_mode_changes() {
@@ -191,7 +191,7 @@ pub mod mode_interactions {
         // Start with defaults
         assert_eq!(
             ofs_buf_vt_100.parser_global_state.auto_wrap_mode,
-            AutoWrapState::Enabled
+            AutoWrapMode::Enabled
         );
 
         // Toggle auto wrap multiple times
@@ -202,7 +202,7 @@ pub mod mode_interactions {
         let _result = ofs_buf_vt_100.apply_ansi_bytes(disable_sequence);
         assert_eq!(
             ofs_buf_vt_100.parser_global_state.auto_wrap_mode,
-            AutoWrapState::Disabled
+            AutoWrapMode::Disabled
         );
 
         let enable_sequence = format!(
@@ -212,7 +212,7 @@ pub mod mode_interactions {
         let _result = ofs_buf_vt_100.apply_ansi_bytes(enable_sequence);
         assert_eq!(
             ofs_buf_vt_100.parser_global_state.auto_wrap_mode,
-            AutoWrapState::Enabled
+            AutoWrapMode::Enabled
         );
 
         let disable_sequence2 = format!(
@@ -222,7 +222,7 @@ pub mod mode_interactions {
         let _result = ofs_buf_vt_100.apply_ansi_bytes(disable_sequence2);
         assert_eq!(
             ofs_buf_vt_100.parser_global_state.auto_wrap_mode,
-            AutoWrapState::Disabled
+            AutoWrapMode::Disabled
         );
     }
 
@@ -238,7 +238,7 @@ pub mod mode_interactions {
         let _result = ofs_buf_vt_100.apply_ansi_bytes(disable_sequence);
         assert_eq!(
             ofs_buf_vt_100.parser_global_state.auto_wrap_mode,
-            AutoWrapState::Disabled
+            AutoWrapMode::Disabled
         );
 
         // Save cursor
@@ -253,7 +253,7 @@ pub mod mode_interactions {
         let _result = ofs_buf_vt_100.apply_ansi_bytes(enable_sequence);
         assert_eq!(
             ofs_buf_vt_100.parser_global_state.auto_wrap_mode,
-            AutoWrapState::Enabled
+            AutoWrapMode::Enabled
         );
 
         // Restore cursor
@@ -263,7 +263,7 @@ pub mod mode_interactions {
         // Mode should persist (not affected by cursor restore)
         assert_eq!(
             ofs_buf_vt_100.parser_global_state.auto_wrap_mode,
-            AutoWrapState::Enabled
+            AutoWrapMode::Enabled
         );
     }
 }
@@ -271,7 +271,7 @@ pub mod mode_interactions {
 /// Tests for the Alternate Screen Buffer (`?1049`) mode operations.
 pub mod alt_screen_mode {
     use super::*;
-    use crate::AlternateScreenState;
+    use crate::ActiveScreenBuffer;
 
     #[test]
     fn test_alt_screen_enable_and_disable_via_ansi() {
@@ -279,8 +279,8 @@ pub mod alt_screen_mode {
 
         // Initially inactive.
         assert_eq!(
-            ofs_buf_vt_100.terminal_mode.alternate_screen,
-            AlternateScreenState::Inactive
+            ofs_buf_vt_100.terminal_mode.active_screen_buffer,
+            ActiveScreenBuffer::Primary
         );
 
         // Enable alternate screen buffer (`?1049h`)
@@ -290,8 +290,8 @@ pub mod alt_screen_mode {
         );
         let _result = ofs_buf_vt_100.apply_ansi_bytes(enable_sequence);
         assert_eq!(
-            ofs_buf_vt_100.terminal_mode.alternate_screen,
-            AlternateScreenState::Active
+            ofs_buf_vt_100.terminal_mode.active_screen_buffer,
+            ActiveScreenBuffer::Alternate
         );
 
         // Disable alternate screen buffer (`?1049l`)
@@ -301,8 +301,57 @@ pub mod alt_screen_mode {
         );
         let _result = ofs_buf_vt_100.apply_ansi_bytes(disable_sequence);
         assert_eq!(
-            ofs_buf_vt_100.terminal_mode.alternate_screen,
-            AlternateScreenState::Inactive
+            ofs_buf_vt_100.terminal_mode.active_screen_buffer,
+            ActiveScreenBuffer::Primary
         );
+    }
+}
+
+/// Tests for Mouse Tracking Mode operations.
+pub mod mouse_tracking_mode {
+    use super::*;
+    use crate::MouseTrackingMode;
+
+    #[test]
+    fn test_mouse_tracking_enable_and_disable() {
+        let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
+
+        // Initially disabled.
+        assert_eq!(ofs_buf.terminal_mode.mouse_tracking, MouseTrackingMode::Disabled);
+
+        // Enable legacy mouse tracking (1000)
+        let enable_1000 = format!("{}", CsiSequence::EnablePrivateMode(PrivateModeType::X11MouseTracking));
+        let _unused = ofs_buf.apply_ansi_bytes(enable_1000);
+        assert_eq!(ofs_buf.terminal_mode.mouse_tracking, MouseTrackingMode::Enabled);
+
+        // Disable legacy mouse tracking
+        let disable_1000 = format!("{}", CsiSequence::DisablePrivateMode(PrivateModeType::X11MouseTracking));
+        let _unused = ofs_buf.apply_ansi_bytes(disable_1000);
+        assert_eq!(ofs_buf.terminal_mode.mouse_tracking, MouseTrackingMode::Disabled);
+
+        // Enable legacy mouse tracking (1002)
+        let enable_1002 = format!("{}", CsiSequence::EnablePrivateMode(PrivateModeType::CellMotionMouseTracking));
+        let _unused = ofs_buf.apply_ansi_bytes(enable_1002);
+        assert_eq!(ofs_buf.terminal_mode.mouse_tracking, MouseTrackingMode::Enabled);
+        let _unused = ofs_buf.apply_ansi_bytes(format!("{}", CsiSequence::DisablePrivateMode(PrivateModeType::CellMotionMouseTracking)));
+
+        // Enable legacy mouse tracking (1003)
+        let enable_1003 = format!("{}", CsiSequence::EnablePrivateMode(PrivateModeType::ApplicationMouseTracking));
+        let _unused = ofs_buf.apply_ansi_bytes(enable_1003);
+        assert_eq!(ofs_buf.terminal_mode.mouse_tracking, MouseTrackingMode::Enabled);
+        
+        // Enable SGR mouse tracking (1006)
+        let enable_1006 = format!("{}", CsiSequence::EnablePrivateMode(PrivateModeType::SgrMouseMode));
+        let _unused = ofs_buf.apply_ansi_bytes(enable_1006);
+        assert_eq!(ofs_buf.terminal_mode.mouse_tracking, MouseTrackingMode::Enabled);
+
+        // Disable SGR mouse tracking
+        let disable_1006 = format!("{}", CsiSequence::DisablePrivateMode(PrivateModeType::SgrMouseMode));
+        let _unused = ofs_buf.apply_ansi_bytes(disable_1006);
+        assert_eq!(ofs_buf.terminal_mode.mouse_tracking, MouseTrackingMode::Enabled);
+
+        // Finally disable tracking
+        let _unused = ofs_buf.apply_ansi_bytes(format!("{}", CsiSequence::DisablePrivateMode(PrivateModeType::ApplicationMouseTracking)));
+        assert_eq!(ofs_buf.terminal_mode.mouse_tracking, MouseTrackingMode::Disabled);
     }
 }

@@ -5,8 +5,8 @@
 //! This module implements mode operations that correspond to [`ANSI`] mode sequences
 //! handled by the [`mode_ops`] module. These include:
 //!
-//! - `SM h` (Set Mode) - [`set_requested_auto_wrap_mode`] ([`AutoWrapState::Enabled`])
-//! - `RM l` (Reset Mode) - [`set_requested_auto_wrap_mode`] ([`AutoWrapState::Disabled`])
+//! - `SM h` (Set Mode) - [`set_requested_auto_wrap_mode`] ([`AutoWrapMode::Enabled`])
+//! - `RM l` (Reset Mode) - [`set_requested_auto_wrap_mode`] ([`AutoWrapMode::Disabled`])
 //!
 //! All operations maintain [`VT-100`] compliance and handle proper mode state management
 //! for terminal operations.
@@ -21,6 +21,8 @@
 //! [`set_requested_auto_wrap_mode`]: crate::OfsBufVT100::set_requested_auto_wrap_mode
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 
+
+
 #[allow(clippy::wildcard_imports)]
 use super::super::*;
 use std::mem::swap;
@@ -30,7 +32,7 @@ impl OfsBufVT100 {
     ///
     /// When enabled, text automatically wraps to the next line when it reaches the right
     /// margin.
-    pub fn set_requested_auto_wrap_mode(&mut self, requested_state: AutoWrapState) {
+    pub fn set_requested_auto_wrap_mode(&mut self, requested_state: AutoWrapMode) {
         self.parser_global_state.auto_wrap_mode = requested_state;
     }
 
@@ -41,9 +43,17 @@ impl OfsBufVT100 {
     /// [`DECTCEM`]: https://en.wikipedia.org/wiki/ANSI_escape_code#Set_terminal_mode
     pub fn set_requested_cursor_visibility_mode(
         &mut self,
-        requested_state: CursorVisibilityState,
+        requested_state: CursorVisibilityMode,
     ) {
         self.parser_global_state.cursor_visibility = requested_state;
+    }
+
+    /// Set the mouse tracking mode.
+    ///
+    /// Controls whether the terminal captures and reports mouse events (e.g. click,
+    /// scroll).
+    pub fn set_requested_mouse_tracking_mode(&mut self, state: MouseTrackingMode) {
+        self.terminal_mode.mouse_tracking = state;
     }
 
     /// Toggle between the primary and alternate screen buffers.
@@ -55,23 +65,23 @@ impl OfsBufVT100 {
     /// - Sets the active cursor position to the saved alternate cursor position.
     /// - Clears the alternate screen buffer with cells carrying the active style to be
     ///   [`BCE`] (Background Color Erase) compliant.
-    /// - Updates the terminal mode to [`AlternateScreenState::Active`].
+    /// - Updates the terminal mode to [`ActiveScreenBuffer::Alternate`].
     ///
     /// When switching back to the primary screen buffer:
     /// - Saves the alternate cursor position.
     /// - Swaps the 2D grid buffers back.
     /// - Restores the primary cursor position.
-    /// - Updates the terminal mode to [`AlternateScreenState::Inactive`].
+    /// - Updates the terminal mode to [`ActiveScreenBuffer::Primary`].
     ///
-    /// [`AlternateScreenState::Active`]: crate::AlternateScreenState::Active
-    /// [`AlternateScreenState::Inactive`]: crate::AlternateScreenState::Inactive
+    /// [`ActiveScreenBuffer::Alternate`]: crate::ActiveScreenBuffer::Alternate
+    /// [`ActiveScreenBuffer::Primary`]: crate::ActiveScreenBuffer::Primary
     /// [`BCE`]: https://invisible-island.net/xterm/xterm.faq.html#what_is_bce
     /// [`self.buffer`]: field@crate::OfsBufVT100::ofs_buf
     /// [`self.hidden_screen_state.hidden_buffer`]: field@crate::HiddenScreenState::hidden_buffer
     pub fn set_alt_screen_mode(&mut self, requested_screen_mode: RequestedScreenMode) {
-        match (self.terminal_mode.alternate_screen, requested_screen_mode) {
-            // Transition: Primary -> Alternate Screen
-            (AlternateScreenState::Inactive, RequestedScreenMode::Alternate) => {
+        match (self.terminal_mode.active_screen_buffer, requested_screen_mode) {
+            // Transition: Primary -> Alternate Screen.
+            (ActiveScreenBuffer::Primary, RequestedScreenMode::Alternate) => {
                 // Swap the screen buffer grids and their respective cursor positions.
                 swap(
                     &mut self.ofs_buf.buffer,
@@ -83,7 +93,7 @@ impl OfsBufVT100 {
                 );
 
                 // Update mode status.
-                self.terminal_mode.alternate_screen = AlternateScreenState::Active;
+                self.terminal_mode.active_screen_buffer = ActiveScreenBuffer::Alternate;
 
                 // Clear the alternate screen buffer using BCE-compliant active style.
                 let empty_char = self.create_empty_pixel_char();
@@ -94,8 +104,8 @@ impl OfsBufVT100 {
                 }
             }
 
-            // Transition: Alternate -> Primary Screen
-            (AlternateScreenState::Active, RequestedScreenMode::Primary) => {
+            // Transition: Alternate -> Primary Screen.
+            (ActiveScreenBuffer::Alternate, RequestedScreenMode::Primary) => {
                 // Swap the screen buffer grids and their respective cursor positions.
                 swap(
                     &mut self.ofs_buf.buffer,
@@ -107,7 +117,7 @@ impl OfsBufVT100 {
                 );
 
                 // Update mode status.
-                self.terminal_mode.alternate_screen = AlternateScreenState::Inactive;
+                self.terminal_mode.active_screen_buffer = ActiveScreenBuffer::Primary;
             }
 
             // No-op: requested mode is already the active mode (e.g. Active -> Alternate)
@@ -134,13 +144,13 @@ mod tests_mode_ops {
         // Initially should be enabled by default.
         assert_eq!(
             buffer.parser_global_state.auto_wrap_mode,
-            AutoWrapState::Enabled
+            AutoWrapMode::Enabled
         );
 
-        buffer.set_requested_auto_wrap_mode(AutoWrapState::Enabled);
+        buffer.set_requested_auto_wrap_mode(AutoWrapMode::Enabled);
         assert_eq!(
             buffer.parser_global_state.auto_wrap_mode,
-            AutoWrapState::Enabled
+            AutoWrapMode::Enabled
         );
     }
 
@@ -148,10 +158,10 @@ mod tests_mode_ops {
     fn test_set_auto_wrap_mode_disabled() {
         let mut buffer = create_test_buffer();
 
-        buffer.set_requested_auto_wrap_mode(AutoWrapState::Disabled);
+        buffer.set_requested_auto_wrap_mode(AutoWrapMode::Disabled);
         assert_eq!(
             buffer.parser_global_state.auto_wrap_mode,
-            AutoWrapState::Disabled
+            AutoWrapMode::Disabled
         );
     }
 
@@ -160,24 +170,24 @@ mod tests_mode_ops {
         let mut buffer = create_test_buffer();
 
         // Start enabled.
-        buffer.set_requested_auto_wrap_mode(AutoWrapState::Enabled);
+        buffer.set_requested_auto_wrap_mode(AutoWrapMode::Enabled);
         assert_eq!(
             buffer.parser_global_state.auto_wrap_mode,
-            AutoWrapState::Enabled
+            AutoWrapMode::Enabled
         );
 
         // Disable.
-        buffer.set_requested_auto_wrap_mode(AutoWrapState::Disabled);
+        buffer.set_requested_auto_wrap_mode(AutoWrapMode::Disabled);
         assert_eq!(
             buffer.parser_global_state.auto_wrap_mode,
-            AutoWrapState::Disabled
+            AutoWrapMode::Disabled
         );
 
         // Enable again.
-        buffer.set_requested_auto_wrap_mode(AutoWrapState::Enabled);
+        buffer.set_requested_auto_wrap_mode(AutoWrapMode::Enabled);
         assert_eq!(
             buffer.parser_global_state.auto_wrap_mode,
-            AutoWrapState::Enabled
+            AutoWrapMode::Enabled
         );
     }
 
@@ -187,8 +197,8 @@ mod tests_mode_ops {
 
         // Initially should be Inactive.
         assert_eq!(
-            buffer.terminal_mode.alternate_screen,
-            AlternateScreenState::Inactive
+            buffer.terminal_mode.active_screen_buffer,
+            ActiveScreenBuffer::Primary
         );
         assert_eq!(buffer.cursor_pos, Pos::default());
 
@@ -202,8 +212,8 @@ mod tests_mode_ops {
         // Toggle to Alternate Screen.
         buffer.set_alt_screen_mode(RequestedScreenMode::Alternate);
         assert_eq!(
-            buffer.terminal_mode.alternate_screen,
-            AlternateScreenState::Active
+            buffer.terminal_mode.active_screen_buffer,
+            ActiveScreenBuffer::Alternate
         );
 
         // Cursor pos should be reset to default/alt state (0, 0).
@@ -237,8 +247,8 @@ mod tests_mode_ops {
         // Toggle back to Primary.
         buffer.set_alt_screen_mode(RequestedScreenMode::Primary);
         assert_eq!(
-            buffer.terminal_mode.alternate_screen,
-            AlternateScreenState::Inactive
+            buffer.terminal_mode.active_screen_buffer,
+            ActiveScreenBuffer::Primary
         );
 
         // Cursor pos should restore to (2, 3).
@@ -272,8 +282,8 @@ mod tests_mode_ops {
         // Toggle to Alternate Screen again.
         buffer.set_alt_screen_mode(RequestedScreenMode::Alternate);
         assert_eq!(
-            buffer.terminal_mode.alternate_screen,
-            AlternateScreenState::Active
+            buffer.terminal_mode.active_screen_buffer,
+            ActiveScreenBuffer::Alternate
         );
 
         // Saved hidden (primary) cursor should now be the new location (7, 8).

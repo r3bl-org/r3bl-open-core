@@ -104,6 +104,9 @@
 //! - [Type-safe bounds checking](#type-safe-bounds-checking)
 //!   - [The Problem](#the-problem)
 //!   - [The Solution](#the-solution)
+//! - [Zero-Allocation String Formatting](#zero-allocation-string-formatting)
+//!   - [The Performance Challenge](#the-performance-challenge)
+//!   - [The `fast_strings` Solution](#the-fast_strings-solution)
 //! - [Terminal Restoration: Panic, Drop, and Mutex
 //!   Poison-Safety](#terminal-restoration-panic-drop-and-mutex-poison-safety)
 //!   - [Panic vs. Drop handling](#panic-vs-drop-handling)
@@ -908,6 +911,41 @@
 //!
 //! See the extensive and detailed [`bounds_check` module
 //! documentation](mod@crate::bounds_check).
+//!
+//! # Zero-Allocation String Formatting
+//!
+//! When rendering terminal UIs, especially at high frame rates or when parsing
+//! high-volume `VT-100` PTY output, generating strings and formatting ANSI escape
+//! sequences can quickly become a performance bottleneck due to excessive heap
+//! allocations and the overhead of the [`std::fmt::Formatter`] state machine.
+//!
+//! ## The Performance Challenge
+//!
+//! Standard formatting mechanisms like `format!()` or implementations of
+//! [`std::fmt::Display`] are versatile but carry hidden costs:
+//! 1. **Heap Allocations**: They frequently allocate new `String` objects on the heap.
+//! 2. **Formatter Overhead**: They rely on [`std::fmt::Formatter`], which maintains
+//!    internal state (padding, alignment) and adds computational overhead even for simple
+//!    strings.
+//! 3. **Indirection**: Output is often written to intermediate buffers before hitting the
+//!    actual destination.
+//!
+//! ## The `fast_strings` Solution
+//!
+//! The `r3bl_tui` crate includes the [`fast_strings`] architecture, which completely
+//! eliminates these bottlenecks for hot-path rendering.
+//!
+//! - **[`format_no_alloc`]**: Provides a drop-in replacement for `format!()` that
+//!   evaluates and joins string slices entirely on the stack, returning a `String` only
+//!   at the very end.
+//! - **[`FastStringify`]**: A trait that bypasses [`std::fmt::Formatter`] entirely,
+//!   writing bytes directly to a pre-allocated, resizable buffer ([`BufTextStorage`]).
+//! - **[`generate_impl_display_for_fast_stringify!`]**: A macro that automatically
+//!   bridges `FastStringify` back to [`std::fmt::Display`] for API compatibility when
+//!   performance isn't critical.
+//!
+//! See the [`fast_strings`] module documentation for detailed performance analysis and
+//! usage patterns.
 //!
 //! # Terminal Restoration: Panic, Drop, and Mutex Poison-Safety
 //!
@@ -1789,7 +1827,7 @@
 //! │ │             │  │             │ │                          │
 //! │ │      ───────┼──┼─────────────┼─┼────⟩ RenderPipeline ─╮   │
 //! │ │             │  │             │ │                      │   │
-//! │ │             │  │             │ │                      ⎩ ✚ ⎩
+//! │ │             │  │             │ │                      ⎩ + ⎩
 //! │ │             │  │             │ │       ╭─────────────────────╮
 //! │ └─────────────┘  └─────────────┘ │       │                     │
 //! │                                  │       │  OffscreenBuffer    │
@@ -2730,6 +2768,13 @@
 //!
 //! <!-- Type references for documentation links -->
 //!
+//! [`fast_strings`]:
+//!     mod@crate::core::common::fast_strings#string-allocation-performance-strategy
+//! [`format_no_alloc`]: macro@crate::format_no_alloc
+//! [`FastStringify`]: crate::core::common::fast_strings::fast_stringify::FastStringify
+//! [`generate_impl_display_for_fast_stringify!`]:
+//!     macro@crate::generate_impl_display_for_fast_stringify
+//! [`BufTextStorage`]: crate::core::common::fast_strings::fast_stringify::BufTextStorage
 //! [`TTY`]: https://en.wikipedia.org/wiki/Tty_(Unix)
 //! [`TerminalModeController`]: crate::TerminalModeController
 //! [`FullScreenTuiModeGuard`]: crate::FullScreenTuiModeGuard

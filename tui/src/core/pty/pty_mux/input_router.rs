@@ -2,16 +2,31 @@
 
 //! Dynamic input event routing for the [`PTY`] multiplexer.
 //!
-//! This module handles keyboard input routing, including dynamic process switching
-//! shortcuts (F1 through F9 based on the number of processes) and terminal resize events.
+//! This module intercepts and routes all user input (keyboard, mouse, terminal resize) to
+//! either the multiplexer's control layer or the currently active background process.
 //!
+//! ## Core Responsibilities
+//!
+//! 1. _Multiplexer Control_: Handles global multiplexer management commands, such as
+//!    exiting the session and dynamically switching focus between concurrent processes.
+//! 2. _Keyboard Input_: Forwards all other keyboard inputs safely to the active [`PTY`]
+//!    session.
+//! 3. _Mouse Tracking_: Intercepts terminal mouse events, respects the active buffer's
+//!    [`MouseTrackingState`], and translates clicks, scrolls, and motion into [`VT-100`]
+//!    compliant [`SGR`] sequences via [`SgrMouseSequence`].
+//! 4. _Resize Events_: Propagates terminal resize events to the process manager to update
+//!    all underlying sessions.
+//!
+//! [`MouseTrackingState`]: crate::MouseTrackingState
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
+//! [`SGR`]: crate::SgrCode
+//! [`SgrMouseSequence`]: crate::SgrMouseSequence
+//! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 
-use super::{ProcessManager, show_notification_non_blocking};
-use crate::{Continuation, InputEvent, Key, KeyPress, KeyState, ModifierKeysMask,
-            PtyInputEvent, Size,
-            core::{osc::OscController, terminal_io::OutputDevice},
-            ok};
+use super::ProcessManager;
+use crate::{ArrayBoundsCheck, ArrayOverflowResult, ColIndex, Continuation,
+            DEBUG_TUI_PTY_MUX, InputEvent, MouseTrackingMode, RowHeight, RowIndex, Size,
+            TermCol, TermRow};
 
 /// Routes input events to appropriate handlers and manages dynamic keyboard shortcuts.
 #[derive(Debug)]
@@ -36,93 +51,20 @@ impl InputRouter {
         &mut self,
         event: InputEvent,
         process_manager: &mut ProcessManager,
-        osc: &mut OscController<'_>,
-        _output_device: &OutputDevice,
     ) -> miette::Result<Continuation> {
         match event {
             InputEvent::Keyboard(key) => {
-                match key {
-                    // Process switching: Handle F1 through F12 for switching processes
-                    KeyPress::Plain {
-                        key: Key::FunctionKey(fn_key),
-                    } => {
-                        let fn_number = u8::from(fn_key);
-                        let process_index = (fn_number - 1) as usize;
-
-                        tracing::debug!("Received F{} for process switching", fn_number);
-
-                        // Only switch if the process index is valid for current process
-                        // count.
-                        if process_index < process_manager.processes().len() {
-                            let old_index = process_manager.active_index();
-                            if old_index == process_index {
-                                tracing::debug!(
-                                    "F{} pressed but already on process {}",
-                                    fn_number,
-                                    process_index
-                                );
-                            } else {
-                                tracing::debug!(
-                                    "Process switch: {} -> {} (triggered by F{})",
-                                    old_index,
-                                    process_index,
-                                    fn_number
-                                );
-
-                                // Show notification for process switching.
-                                let process_name =
-                                    &process_manager.processes()[process_index].command;
-                                show_notification_non_blocking(
-                                    "PTY Mux - Process Switch",
-                                    &format!("Switching to {process_name}"),
-                                );
-
-                                process_manager.switch_to(process_index);
-                                Self::update_terminal_title(process_manager, osc)?;
-                                tracing::debug!("Process switch completed successfully");
-                            }
-                        } else {
-                            tracing::warn!(
-                                "Invalid process index {} for current process count {} (F{} pressed)",
-                                process_index,
-                                process_manager.processes().len(),
-                                fn_number
-                            );
-                        }
-                    }
-                    // Exit shortcut: Ctrl+Q
-                    KeyPress::WithModifiers {
-                        key: Key::Character('q'),
-                        mask:
-                            ModifierKeysMask {
-                                ctrl_key_state: KeyState::Pressed,
-                                shift_key_state: _, // Don't care about shift state
-                                alt_key_state: _,   // Don't care about alt state
-                            },
-                    } => {
-                        tracing::debug!("Exit requested (Ctrl+Q)");
-
-                        // Show notification for exit.
-                        show_notification_non_blocking(
-                            "PTY Mux - Exit",
-                            "Exiting PTY Mux",
-                        );
-
-                        return Ok(Continuation::Stop); // Exit requested
-                    }
-                    _ => {
-                        // Show notification for other key presses (useful for debugging)
-                        show_notification_non_blocking(
-                            "PTY Mux - Key Press",
-                            &format!("Key pressed: {key:?}"),
-                        );
-
-                        // Forward all other input to active PTY using proper conversion.
-                        if let Some(pty_event) = Option::<PtyInputEvent>::from(key) {
-                            tracing::debug!("Forwarding input to PTY: {:?}", pty_event);
-                            process_manager.send_input(pty_event)?;
-                        }
-                    }
+                // Forward all keyboard input to active PTY using proper conversion.
+                if let Some(pty_event) = key.into() {
+                    DEBUG_TUI_PTY_MUX.then(|| {
+                        // % is Display, ? is Debug.
+                        tracing::debug! {
+                            message = "InputRouter::handle_input",
+                            status = "Forwarding input to PTY",
+                            pty_event = ?pty_event,
+                        };
+                    });
+                    process_manager.send_input(pty_event)?;
                 }
             }
             InputEvent::Resize(new_size) => {
@@ -134,34 +76,61 @@ impl InputRouter {
                 // events that will never come.
                 return Ok(Continuation::Stop);
             }
+            InputEvent::Mouse(mouse_input) => {
+                let active_buffer = process_manager.get_active_buffer();
+
+                // We use a simplified "firehose" approach. If the app requested *any*
+                // tracking protocol (1000/1002/1003), `mouse.mode` becomes `Enabled`.
+                // When enabled, we unconditionally route all events (clicks, drags,
+                // motion) back to the app using the modern SGR (1006)
+                // format, ignoring `mouse.format`.
+                match active_buffer.terminal_mode.mouse_tracking {
+                    MouseTrackingMode::Enabled => {
+                        let mouse_col: ColIndex = mouse_input.pos.col_index;
+                        let mouse_row: RowIndex = mouse_input.pos.row_index;
+
+                        let pty_height: RowHeight = active_buffer.window_size.row_height;
+                        if mouse_row.overflows(pty_height)
+                            == ArrayOverflowResult::Overflowed
+                        {
+                            return Ok(Continuation::Continue);
+                        }
+
+                        let term_col: TermCol = mouse_col.into();
+                        let term_row: TermRow = mouse_row.into();
+
+                        let sgr_bytes: Option<Vec<u8>> =
+                            crate::SgrMouseSequence::generate(
+                                &mouse_input,
+                                term_col,
+                                term_row,
+                            );
+                        if let Some(bytes) = sgr_bytes {
+                            let _unused = process_manager
+                                .send_input(crate::PtyInputEvent::Write(bytes));
+                        } else {
+                            DEBUG_TUI_PTY_MUX.then(|| {
+                                // % is Display, ? is Debug.
+                                tracing::error! {
+                                    message = "InputRouter::handle_input",
+                                    status = "Unsupported mouse event for SGR translation",
+                                    mouse_event = ?mouse_input,
+                                };
+                            });
+                        }
+                    }
+                    MouseTrackingMode::Disabled => {
+                        // Do nothing.
+                    }
+                }
+            }
             _ => {
-                // Other input events (Mouse, Focus, BracketedPaste) are
+                // Other input events (Focus, BracketedPaste) are
                 // ignored for now.
             }
         }
 
         Ok(Continuation::Continue)
-    }
-
-    /// Updates the terminal title based on the currently active process.
-    fn update_terminal_title(
-        process_manager: &ProcessManager,
-        osc: &mut OscController<'_>,
-    ) -> miette::Result<()> {
-        // Check if the active process has set a custom terminal title.
-        let title = if let Some(custom_title) = process_manager.active_terminal_title() {
-            // Use the process's custom title.
-            format!(
-                "PTYMux - {} - {}",
-                process_manager.active_name(),
-                custom_title
-            )
-        } else {
-            // Use default title with just process name.
-            format!("PTYMux - {}", process_manager.active_name())
-        };
-        osc.set_title_and_tab(&title)?;
-        ok!()
     }
 
     /// Handles terminal resize events.

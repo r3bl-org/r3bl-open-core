@@ -54,15 +54,20 @@ pub const DEBUG_TUI_SHOW_DIRECT_TO_ANSI: bool = false;
 /// [`mio-poller`]: crate::terminal_lib_backends::direct_to_ansi::input::mio_poller
 pub const DEBUG_TUI_SHOW_MIO_POLLER: bool = false;
 
-/// Controls whether desktop notifications are displayed by the [PTY multiplexer].
-///
-/// [PTY multiplexer]: crate::pty::pty_mux::PTYMux
-pub const DEBUG_TUI_SHOW_PTY_MUX_NOTIFICATIONS: bool = false;
-
 /// Controls debug logging for the [PTY multiplexer], including adaptive rendering.
 ///
 /// [PTY multiplexer]: crate::pty::pty_mux::PTYMux
 pub const DEBUG_TUI_PTY_MUX: bool = true;
+
+/// Controls high-volume debug logging for the [`ProcessManager`].
+///
+/// Logs continuous data polling events, byte output yielding, and terminal resizing
+/// within the active [`PTY`] sessions. Because of the extreme volume of bytes being
+/// parsed from the PTY event loop, this is separated from [`DEBUG_TUI_PTY_MUX`].
+///
+/// [`ProcessManager`]: crate::core::pty::pty_mux::ProcessManager
+/// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
+pub const DEBUG_TUI_PTY_PROCESS_MANAGER: bool = false;
 
 /// Controls debug logging for the [VT100 PTY output parser].
 ///

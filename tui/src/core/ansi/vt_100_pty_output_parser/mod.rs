@@ -54,15 +54,15 @@
 pub mod ansi_parser_public_api;
 pub mod pty_response_event;
 pub mod ofs_buf_vt_100;
+pub mod hidden_screen_state;
 pub mod performer;
 pub mod protocols;
+mod modes;
 
 #[cfg(any(test, doc))]
 pub mod ops;
 #[cfg(not(any(test, doc)))]
 mod ops;
-
-
 
 #[cfg(any(test, doc))]
 pub mod ops_impl_ofs_buf;
@@ -78,5 +78,7 @@ pub mod vt_100_pty_output_conformance_tests;
 pub use ansi_parser_public_api::*;
 pub use pty_response_event::*;
 pub use ofs_buf_vt_100::*;
+pub use hidden_screen_state::*;
 pub use ops::*;
 pub use protocols::*;
+pub use modes::*;

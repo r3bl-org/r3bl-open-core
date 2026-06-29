@@ -13,6 +13,7 @@ pub mod test_fixtures;
 pub mod common;
 pub mod log;
 pub mod misc;
+pub mod notification;
 pub mod heap_alloc_types;
 pub mod ansi;
 
@@ -35,6 +36,7 @@ pub use graphemes::*;
 pub use heap_alloc_types::*;
 pub use log::*;
 pub use misc::*;
+pub use notification::*;
 pub use osc::*;
 pub use pty::*;
 pub use script::*;

@@ -26,6 +26,7 @@ mod dsr_sequence;
 mod esc_sequence;
 mod sgr_code;
 mod da_sequence;
+mod sgr_mouse_sequence;
 
 // Test/doc-only modules.
 #[cfg(any(test, doc))]
@@ -42,3 +43,4 @@ pub use dsr_sequence::*;
 pub use esc_sequence::*;
 pub use sgr_code::*;
 pub use da_sequence::*;
+pub use sgr_mouse_sequence::*;

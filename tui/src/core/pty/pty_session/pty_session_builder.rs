@@ -2,7 +2,7 @@
 
 use super::tasks::orchestrator::spawn_orchestrator_task;
 use crate::{CaptureFlag, ControlledChildTerminationHandle, DefaultPtySize, DefaultSize,
-            DetectFlag, InputEventSenderHalf, OutputEventReceiverHalf, PtyCommand,
+            InputEventSenderHalf, OutputEventReceiverHalf, PtyCommand,
             PtyInputEvent, PtyOrchestratorHandle, PtyOutputEvent, PtyPair, Size};
 use miette::{IntoDiagnostic, miette};
 use std::{collections::HashMap,
@@ -66,7 +66,7 @@ pub struct PtySessionBuilder {
     /// The executable command to run (e.g., [`bash`] or [`ls`]).
     ///
     /// [`bash`]: https://en.wikipedia.org/wiki/Bash_(Unix_shell)
-    /// [`ls`]: https://en.wikipedia.org/wiki/Ls_(command)
+    /// [`ls`]: https://en.wikipedia.org/wiki/ls
     pub command: String,
 
     /// Command-line arguments to pass to the executable.
@@ -438,10 +438,6 @@ pub struct PtySessionConfig {
     /// See [`PtySessionConfigOption::CaptureOutput`] for details.
     pub capture_output: CaptureFlag,
 
-    /// Whether to detect terminal cursor mode changes.
-    ///
-    /// See [`PtySessionConfigOption::DetectCursorMode`] for details.
-    pub detect_cursor_mode: DetectFlag,
 
     /// The initial window size for the [`PTY`].
     ///
@@ -477,7 +473,6 @@ mod impl_default_pty_session_config {
             PtySessionConfig {
                 capture_osc: CaptureFlag::NoCapture,
                 capture_output: CaptureFlag::Capture,
-                detect_cursor_mode: DetectFlag::Detect,
                 pty_size: DefaultPtySize.into(),
             }
         }
@@ -539,18 +534,6 @@ pub enum PtySessionConfigOption {
     /// [`Exit`]: crate::PtyOutputEvent::Exit
     NoCaptureOutput,
 
-    /// Enable detection of terminal cursor mode changes.
-    ///
-    /// Intercepts escape sequences that change the cursor's behavior (e.g.,
-    /// showing/hiding the cursor, or changing the blinking mode) and emits them
-    /// as [`PtyOutputEvent::CursorModeChange`].
-    DetectCursorMode,
-
-    /// Disable terminal cursor mode detection.
-    ///
-    /// When disabled, cursor mode escape sequences are delivered as raw output
-    /// bytes via [`PtyOutputEvent::Output`].
-    NoDetectCursorMode,
 
     /// Specify the initial window size ([`rows`] and [`columns`]) for the [`PTY`].
     ///
@@ -599,12 +582,7 @@ mod impl_elegant_constructor_dsl_pattern {
                 PtySessionConfigOption::NoCaptureOutput => {
                     self.capture_output = CaptureFlag::NoCapture;
                 }
-                PtySessionConfigOption::DetectCursorMode => {
-                    self.detect_cursor_mode = DetectFlag::Detect;
-                }
-                PtySessionConfigOption::NoDetectCursorMode => {
-                    self.detect_cursor_mode = DetectFlag::NoDetect;
-                }
+
                 PtySessionConfigOption::Size(size) => self.pty_size = size,
             }
         }
@@ -658,9 +636,7 @@ mod tests {
     fn test_default_config() {
         let config = PtySessionConfig::from(DefaultPtySessionConfig);
         assert_eq!(config.capture_osc, CaptureFlag::NoCapture);
-        assert_eq!(config.capture_output, CaptureFlag::Capture);
-        assert_eq!(config.detect_cursor_mode, DetectFlag::Detect);
-    }
+        assert_eq!(config.capture_output, CaptureFlag::Capture);    }
 
     #[test]
     fn test_option_combination() {
@@ -681,10 +657,6 @@ mod tests {
             + PtySessionConfigOption::NoCaptureOutput;
         assert_eq!(config.capture_osc, CaptureFlag::Capture);
         assert_eq!(config.capture_output, CaptureFlag::NoCapture);
-
-        // DefaultPtySessionConfig + NoDetectCursorMode.
-        let config = DefaultPtySessionConfig + PtySessionConfigOption::NoDetectCursorMode;
-        assert_eq!(config.detect_cursor_mode, DetectFlag::NoDetect);
 
         // DefaultPtySessionConfig + three options.
         let sz = size(width(80) + height(24));

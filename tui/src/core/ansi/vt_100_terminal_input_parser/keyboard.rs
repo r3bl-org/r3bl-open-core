@@ -152,6 +152,9 @@
 //!
 //! ### How Bitmask Encoding for Modifiers Works
 //!
+//! *(See also: [`mouse` module docs] for a contrasting example of where pure bitwise OR
+//! is required).*
+//!
 //! [`CSI`] sequences encode modifiers as a number after the semicolon: `ESC [ 1 ; <n> A`.
 //! The number `n` is calculated by adding the values of pressed modifiers to 1:
 //!
@@ -160,9 +163,10 @@
 //!
 //! Formula: n = 1 + (pressed modifiers)
 //!
-//! Examples:             (bitmask)
-//!                        ┌─ n ─┐   ┌─ offset (1-indexed, not 0-indexed)
-//!                        ▼     ▼   ▼
+//! Examples:
+//!                           n          offset (1-indexed, not 0-indexed)
+//!                           │          │
+//!                           ▼          ▼
 //! Ctrl+Up       : ESC [ 1 ; 5 A    5 = 1 + Ctrl(4)
 //! Alt+Down      : ESC [ 1 ; 3 B    3 = 1 + Alt(2)
 //! Ctrl+Shift+Up : ESC [ 1 ; 6 A    6 = 1 + Shift(1) + Ctrl(4)
@@ -459,6 +463,7 @@
 //! [`ESC`]: crate::EscSequence
 //! [`keyboard`]: mod@super
 //! [`Kitty`]: https://sw.kovidgoyal.net/kitty/
+//! [`mouse` module docs]: mod@crate::core::ansi::constants::mouse#bitmask-arithmetic-operations
 //! [`mouse`]: mod@super::mouse
 //! [`router`]: mod@super::router
 //! [`RXVT`]: https://en.wikipedia.org/wiki/Rxvt

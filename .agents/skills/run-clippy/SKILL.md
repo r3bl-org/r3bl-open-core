@@ -80,7 +80,25 @@ Each gets its own period:
 - Each line could stand alone as a complete thought
 - Separate sentences with distinct subjects
 
-### Step 3: Verify Module Organization
+### Step 3: Enforce Clean Imports (No Inline Absolute Paths)
+
+Scan the changed files for any inline absolute paths (e.g., `crate::Type`, `crate::function!`) and replace them with proper `use` statements at the top of the file.
+
+**✅ Good:**
+```rust
+use crate::{Size, Pos};
+
+pub fn render(size: Size) -> Pos { ... }
+```
+
+**❌ Bad:**
+```rust
+pub fn render(size: crate::Size) -> crate::Pos { ... }
+```
+
+*Note: Intra-doc links like `/// [`Type`]: crate::Type` are exempt from this rule and SHOULD use `crate::` paths.*
+
+### Step 4: Verify Module Organization
 
 Review all `mod.rs` files in the git working tree and ensure they follow the patterns from the `organize-modules` skill:
 
@@ -92,7 +110,7 @@ Review all `mod.rs` files in the git working tree and ensure they follow the pat
 
 If module organization doesn't follow patterns, invoke the `organize-modules` skill for guidance.
 
-### Step 4: Verify Documentation Quality
+### Step 5: Verify Documentation Quality
 
 If working with rustdoc comments (`///` or `//!`):
 

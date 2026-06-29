@@ -1,5 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+// cspell:words URXVT
+
 //! Mode setting operations (SM/RM).
 //!
 //! This module acts as a thin shim layer that delegates to the actual implementation.
@@ -58,10 +60,9 @@
 //! [ops module]: crate::core::ansi::vt_100_pty_output_parser::ops
 
 use super::super::{PrivateModeType, ansi_parser_public_api::AnsiToOfsBufPerformer};
-use crate::{APPLICATION_MOUSE_TRACKING, AutoWrapState, BRACKETED_PASTE_MODE,
-            CELL_MOTION_MOUSE_TRACKING, CursorVisibilityState, DEBUG_TUI_VT100_PARSER,
-            RequestedScreenMode, SGR_MOUSE_MODE, URXVT_MOUSE_EXTENSION,
-            UTF8_MOUSE_EXTENSION, X11_MOUSE_TRACKING,
+use crate::{AutoWrapMode, BRACKETED_PASTE_MODE, CursorVisibilityMode, DEBUG_TUI_VT100_PARSER,
+            RequestedScreenMode, URXVT_MOUSE_EXTENSION,
+            UTF8_MOUSE_EXTENSION, MouseTrackingMode,
             core::ansi::constants::CSI_PRIVATE_MODE_PREFIX};
 use vte::Params;
 
@@ -79,7 +80,7 @@ pub fn set_mode(
             PrivateModeType::AutoWrap => {
                 performer
                     .ofs_buf_vt_100
-                    .set_requested_auto_wrap_mode(AutoWrapState::Enabled);
+                    .set_requested_auto_wrap_mode(AutoWrapMode::Enabled);
             }
             PrivateModeType::AlternateScreenBuffer => {
                 performer
@@ -89,18 +90,25 @@ pub fn set_mode(
             PrivateModeType::ShowCursor => {
                 performer
                     .ofs_buf_vt_100
-                    .set_requested_cursor_visibility_mode(CursorVisibilityState::Visible);
+                    .set_requested_cursor_visibility_mode(CursorVisibilityMode::Visible);
             }
-            // Safely suppress/ignore modern TUI extensions (like mouse tracking and
-            // bracketed paste). Currently, the multiplexer does not support
-            // routing rich input events back into the PTY. Downgrading to
-            // debug prevents heavy log spam from interactive TUIs (like hx/gitui).
+            PrivateModeType::X11MouseTracking
+            | PrivateModeType::CellMotionMouseTracking
+            | PrivateModeType::ApplicationMouseTracking => {
+                performer
+                    .ofs_buf_vt_100
+                    .set_requested_mouse_tracking_mode(MouseTrackingMode::Enabled);
+            }
+            PrivateModeType::SgrMouseMode => {
+                // We always use SGR formatting internally, so we don't need to do
+                // anything here.
+            }
+            // Safely suppress/ignore other modern TUI extensions (like bracketed paste).
+            // Currently, the multiplexer does not support routing rich input events back
+            // into the PTY. Downgrading to debug prevents heavy log spam from interactive
+            // TUIs (like hx/gitui).
             PrivateModeType::Other(
-                X11_MOUSE_TRACKING
-                | CELL_MOTION_MOUSE_TRACKING
-                | APPLICATION_MOUSE_TRACKING
-                | UTF8_MOUSE_EXTENSION
-                | SGR_MOUSE_MODE
+                UTF8_MOUSE_EXTENSION
                 | URXVT_MOUSE_EXTENSION
                 | BRACKETED_PASTE_MODE,
             ) => {
@@ -138,7 +146,7 @@ pub fn reset_mode(
             PrivateModeType::AutoWrap => {
                 performer
                     .ofs_buf_vt_100
-                    .set_requested_auto_wrap_mode(AutoWrapState::Disabled);
+                    .set_requested_auto_wrap_mode(AutoWrapMode::Disabled);
             }
             PrivateModeType::AlternateScreenBuffer => {
                 performer
@@ -148,18 +156,24 @@ pub fn reset_mode(
             PrivateModeType::ShowCursor => {
                 performer
                     .ofs_buf_vt_100
-                    .set_requested_cursor_visibility_mode(CursorVisibilityState::Hidden);
+                    .set_requested_cursor_visibility_mode(CursorVisibilityMode::Hidden);
             }
-            // Safely suppress/ignore modern TUI extensions (like mouse tracking and
-            // bracketed paste). Currently, the multiplexer does not support
-            // routing rich input events back into the PTY. Downgrading to
-            // debug prevents heavy log spam from interactive TUIs (like hx/gitui).
+            PrivateModeType::X11MouseTracking
+            | PrivateModeType::CellMotionMouseTracking
+            | PrivateModeType::ApplicationMouseTracking => {
+                performer
+                    .ofs_buf_vt_100
+                    .set_requested_mouse_tracking_mode(MouseTrackingMode::Disabled);
+            }
+            PrivateModeType::SgrMouseMode => {
+                // We always use SGR formatting internally, so we don't need to do anything here.
+            }
+            // Safely suppress/ignore other modern TUI extensions (like bracketed paste).
+            // Currently, the multiplexer does not support routing rich input events back
+            // into the PTY. Downgrading to debug prevents heavy log spam from interactive
+            // TUIs (like hx/gitui).
             PrivateModeType::Other(
-                X11_MOUSE_TRACKING
-                | CELL_MOTION_MOUSE_TRACKING
-                | APPLICATION_MOUSE_TRACKING
-                | UTF8_MOUSE_EXTENSION
-                | SGR_MOUSE_MODE
+                UTF8_MOUSE_EXTENSION
                 | URXVT_MOUSE_EXTENSION
                 | BRACKETED_PASTE_MODE,
             ) => {

@@ -307,9 +307,7 @@ mod tests {
         let mut line = PixelCharLine::new_empty(width);
 
         // Fill with voids.
-        for pixel_char in &mut line.pixel_chars {
-            *pixel_char = PixelChar::Void;
-        }
+        line.pixel_chars.fill(PixelChar::Void);
 
         let debug_output = format!("{line:?}");
         assert!(debug_output.contains("void"));
