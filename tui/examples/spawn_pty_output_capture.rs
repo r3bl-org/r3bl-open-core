@@ -142,7 +142,7 @@ async fn run_build_with_osc_capture(run_number: u32) -> miette::Result<()> {
                             }
                         }
                     }
-                    PtyOutputEvent::Exit(_) | PtyOutputEvent::Output(_) | PtyOutputEvent::UnexpectedExit(_) | PtyOutputEvent::WriteError(_) | PtyOutputEvent::CursorModeChange(_) => {
+                    PtyOutputEvent::Exit(_) | PtyOutputEvent::Output(_) | PtyOutputEvent::UnexpectedExit(_) | PtyOutputEvent::WriteError(_) => {
                         // These events are ignored or handled by the completion logic.
                     }
                 }

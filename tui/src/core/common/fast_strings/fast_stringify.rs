@@ -3,8 +3,15 @@
 //! Trait for high-performance string building for complex types. See [`FastStringify`],
 //! [`BufTextStorage`] and [`generate_impl_display_for_fast_stringify!`] for details.
 //!
-//! [`generate_impl_display_for_fast_stringify!`]: crate::generate_impl_display_for_fast_stringify
+//! [`fast_strings`]: mod@fast_strings#string-allocation-performance-strategy
+//! [`generate_impl_display_for_fast_stringify!`]:
+//!     macro@crate::generate_impl_display_for_fast_stringify
 
+#[allow(
+    unused_imports,
+    reason = "For short import statements in link ref defs"
+)]
+use crate::core::common::fast_strings;
 use std::fmt::{Display, Formatter, Result};
 
 /// High-performance string building for complex types that avoids formatter overhead.
@@ -13,11 +20,15 @@ use std::fmt::{Display, Formatter, Result};
 /// [`FastStringify`] **must also implement** [`Display`]. This allows the trait to
 /// provide optimized string building while maintaining compatibility with Rust's standard
 /// formatting infrastructure.
+/// - You do not have to implement [`Display`] manually since we have a declarative macro
+///   ([`generate_impl_display_for_fast_stringify!`]) that will do this for you.
+/// - We chose not to write this as a derive proc macro to avoid slowing down the build
+///   process.
 ///
 /// # How to Implement
 ///
 /// Both [`FastStringify`] and [`Display`] must be implemented, but the [`Display`]
-/// implementation is always the same boilerplate. Use the
+/// implementation is always the same boilerplate and you can use the
 /// [`generate_impl_display_for_fast_stringify!`] macro to generate it automatically.
 ///
 /// 1. **Implement [`write_to_buf()`]** with your custom formatting logic
@@ -25,60 +36,29 @@ use std::fmt::{Display, Formatter, Result};
 ///    [`Display`] implementation
 ///
 /// ```rust
-///    # use r3bl_tui::{
-///    #    FastStringify, BufTextStorage, generate_impl_display_for_fast_stringify, ok
-///    # };
-///    # use std::fmt::{Result, Write};
-///    # struct MyType { value: i32 }
-///    impl FastStringify for MyType {
-///        fn write_to_buf(&self, acc: &mut BufTextStorage) -> Result {
-///            acc.push_str("MyType { value: ");
-///            write!(acc, "{}", self.value)?;  // Use write! only when formatting needed
-///            acc.push_str(" }");
-///            ok!()
-///        }
-///    }
-///
-///    // ✨ One line instead of 5-line Display impl!
-///    generate_impl_display_for_fast_stringify!(MyType);
-///    ```
-///
-/// # Why Use This?
-///
-/// The standard [`Display`] trait using [`Formatter`] has significant overhead for types
-/// that build strings from many pieces. Each [`write!`] call goes through the formatter's
-/// state machine, checking flags and doing bounds checks. [`FastStringify`] batches all
-/// content into a single buffer, then makes ONE write to the formatter using
-/// [`write_str`], reducing overhead from ~16% to ~5-8% in performance profiles.
-///
-/// # Performance Hierarchy (fastest to slowest)
-///
-/// 1. **Direct `push_str()`** - The absolute fastest when you have a `&str`
-///
-///    ```rust
-///    # let mut buffer = String::new();
-///    buffer.push_str("Hello, world!");  // Zero overhead, direct memory copy
-///    ```
-///
-/// 2. **[`FastStringify`] trait** - Fast batched writing for complex types. See
-///    [implementation example] above.
-///
-/// 3. **[`write!`] with [`FormatArgs`]** - Slowest due to formatting overhead
-///
-///    ```rust
-///    # use std::fmt::Write;
-///    # let mut buffer = String::new();
-///    # let value = 42;
-///    // Goes through formatter state machine
-///    write!(buffer, "Value: {}", value)?;
-///    # Ok::<(), std::fmt::Error>(())
-///    ```
+/// # use r3bl_tui::{
+/// #    FastStringify, BufTextStorage, generate_impl_display_for_fast_stringify, ok
+/// # };
+/// # use std::fmt::{Result, Write};
+/// # struct MyType { value: i32 }
+/// impl FastStringify for MyType {
+///     fn write_to_buf(&self, acc: &mut BufTextStorage) -> Result {
+///         acc.push_str("MyType { value: ");
+///         write!(acc, "{}", self.value)?;  // Use write! only when formatting needed
+///         acc.push_str(" }");
+///         ok!()
+///     }
+/// }
+/// 
+/// // ✨ One line instead of 5-line Display impl!
+/// generate_impl_display_for_fast_stringify!(MyType);
+/// ```
 ///
 /// [`Display`]: Display
 /// [`FormatArgs`]: std::fmt::Arguments
 /// [`Formatter`]: std::fmt::Formatter
 /// [`generate_impl_display_for_fast_stringify!`]:
-///     crate::generate_impl_display_for_fast_stringify
+///     macro@crate::generate_impl_display_for_fast_stringify
 /// [`push_str`]: String::push_str
 /// [`write!`]: std::write
 /// [`write_buf_to_fmt()`]: FastStringify::write_buf_to_fmt
@@ -229,9 +209,8 @@ macro_rules! generate_impl_display_for_fast_stringify {
 
 #[cfg(test)]
 mod tests {
-    use crate::ok;
-
     use super::*;
+    use crate::ok;
     use pretty_assertions::assert_eq;
     use std::fmt::Write;
 

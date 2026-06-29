@@ -10,8 +10,8 @@
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 
 use super::ProcessManager;
-use crate::{ArrayBoundsCheck, ArrayOverflowResult, CursorVisibilityState, FlushKind,
-            GCStringOwned, IndexOps, OffscreenBuffer, OutputDevice, PixelChar, RangeExt,
+use crate::{ArrayBoundsCheck, ArrayOverflowResult, CursorVisibilityMode, FlushKind,
+            GCStringOwned, IndexOps, OffscreenBuffer, OutputDevice, PixelChar, ProcessStatus, RangeExt,
             RenderOpsLocalData, SPACE_CHAR, Size, TuiStyle, col,
             core::coordinates::{idx, len},
             ok, print_text_with_attributes, row,
@@ -120,10 +120,10 @@ impl OutputRenderer {
     /// [segmentation]: crate::graphemes
     pub fn composite_virtual_cursor_into_buffer(
         ofs_buf: &mut OffscreenBuffer,
-        cursor_visibility: CursorVisibilityState,
+        cursor_visibility: CursorVisibilityMode,
     ) {
         // Only do something if the child process requested a visible cursor.
-        if cursor_visibility == CursorVisibilityState::Hidden {
+        if cursor_visibility == CursorVisibilityMode::Hidden {
             return;
         }
 
@@ -277,7 +277,8 @@ impl OutputRenderer {
 
         for (i, process) in process_manager.processes().iter().enumerate() {
             let is_active = i == process_manager.active_index();
-            let status_indicator = if process.is_running() { "🟢" } else { "🔴" };
+            let status_indicator =
+                if process.status() == ProcessStatus::Running { "🟢" } else { "🔴" };
 
             let tab_text = if is_active {
                 format!(" [{}:{}{}] ", i + 1, status_indicator, process.name)

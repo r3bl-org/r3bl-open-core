@@ -13,7 +13,7 @@
 //! - Interactions between scroll regions and cursor positioning
 
 use super::super::test_fixtures_vt_100_ansi_conformance::*;
-use crate::{AutoWrapState, EscSequence, TuiStyle, col,
+use crate::{AutoWrapMode, EscSequence, TuiStyle, col,
             core::ansi::{constants::{IND_INDEX_DOWN, RI_REVERSE_INDEX_UP},
                          vt_100_pty_output_parser::{CsiSequence, PrivateModeType,
                                                     ansi_parser_public_api::AnsiToOfsBufPerformer}},
@@ -65,7 +65,7 @@ pub mod auto_wrap {
         // Verify auto-wrap is enabled by default.
         assert!(
             performer.ofs_buf_vt_100.parser_global_state.auto_wrap_mode
-                == AutoWrapState::Enabled,
+                == AutoWrapMode::Enabled,
             "Auto-wrap mode should be enabled by default"
         );
 
@@ -131,7 +131,7 @@ pub mod auto_wrap {
         // Verify auto-wrap is now disabled.
         assert!(
             performer.ofs_buf_vt_100.parser_global_state.auto_wrap_mode
-                == AutoWrapState::Disabled,
+                == AutoWrapMode::Disabled,
             "Auto-wrap mode should be disabled after CSI ?7l"
         );
 
@@ -163,7 +163,7 @@ pub mod auto_wrap {
         // Start with default (enabled)
         assert_eq!(
             performer.ofs_buf_vt_100.parser_global_state.auto_wrap_mode,
-            AutoWrapState::Enabled
+            AutoWrapMode::Enabled
         );
 
         // Disable auto-wrap.
@@ -172,7 +172,7 @@ pub mod auto_wrap {
         performer.apply_ansi_bytes(disable_sequence);
         assert_eq!(
             performer.ofs_buf_vt_100.parser_global_state.auto_wrap_mode,
-            AutoWrapState::Disabled
+            AutoWrapMode::Disabled
         );
 
         // Re-enable auto-wrap using CSI `?7h`.
@@ -181,7 +181,7 @@ pub mod auto_wrap {
         performer.apply_ansi_bytes(enable_sequence);
         assert_eq!(
             performer.ofs_buf_vt_100.parser_global_state.auto_wrap_mode,
-            AutoWrapState::Enabled
+            AutoWrapMode::Enabled
         );
 
         // Test that wrapping works again.

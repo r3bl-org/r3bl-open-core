@@ -54,12 +54,13 @@
 //! [`PTYMux`]: r3bl_tui::core::pty_mux::PTYMux
 //! [`SIGWINCH`]: signal_hook::consts::SIGWINCH
 
-use r3bl_tui::{IntoErr, TuiAvailability, assert_terminal_is_interactive,
-               core::pty_mux::PTYMux, ok, set_mimalloc_in_main,
-               try_initialize_logging_global};
+use r3bl_tui::{EventPropagation, InputEvent, IntoErr, Key, KeyPress, KeyState, ModifierKeysMask, TuiAvailability, assert_terminal_is_interactive, core::pty_mux::{PTYMux, ProcessManager}, is_command_available, ok, set_mimalloc_in_main, show_notification_non_blocking, try_initialize_logging_global};
 use tracing_core::LevelFilter;
 
+const ENABLE_NOTIFICATIONS: bool = false;
+
 #[tokio::main]
+#[allow(clippy::too_many_lines)]
 async fn main() -> miette::Result<()> {
     set_mimalloc_in_main!();
     assert_terminal_is_interactive();
@@ -87,7 +88,7 @@ async fn main() -> miette::Result<()> {
     println!("📋 Available processes:");
     let mut current_f_key = 1;
     for (name, command, _args) in &processes {
-        if r3bl_tui::is_command_available(command) {
+        if is_command_available(command) {
             println!("   • F{current_f_key}: {name} ({command})");
             current_f_key += 1;
         }
@@ -101,7 +102,7 @@ async fn main() -> miette::Result<()> {
     let mut added_count = 0;
 
     for (name, command, args) in processes {
-        if r3bl_tui::is_command_available(command) {
+        if is_command_available(command) {
             builder = builder.add_process(name, command, args);
             added_count += 1;
         }
@@ -114,6 +115,8 @@ async fn main() -> miette::Result<()> {
             is installed and in PATH."
         );
     }
+
+    builder = builder.input_interceptor_fn(Box::new(interceptor_fn));
 
     let multiplexer = match builder.build() {
         TuiAvailability::Available(mux) => mux,
@@ -141,4 +144,76 @@ async fn main() -> miette::Result<()> {
     tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
 
     ok!()
+}
+
+fn interceptor_fn(
+    input_event: &InputEvent,
+    process_manager: &mut ProcessManager,
+) -> EventPropagation {
+    match input_event {
+        // 1. Handle F1-F12 keys to switch processes.
+        InputEvent::Keyboard(KeyPress::Plain {
+            key: Key::FunctionKey(fn_key),
+        }) => {
+            let fn_number = u8::from(*fn_key);
+            let process_index = (fn_number - 1) as usize;
+
+            if process_index < process_manager.processes().len() {
+                let old_index = process_manager.active_index();
+                if old_index != process_index {
+                    process_manager.switch_to(process_index);
+
+                    if ENABLE_NOTIFICATIONS {
+                        let process_name =
+                            &process_manager.processes()[process_index].command;
+                        show_notification_non_blocking(
+                            "PTY Mux - Process Switch",
+                            &format!("Switching to {process_name}"),
+                        );
+                    }
+                }
+                return EventPropagation::ConsumedRender;
+            }
+        }
+
+        // 2. Handle Ctrl+Q to exit.
+        InputEvent::Keyboard(KeyPress::WithModifiers {
+            key: Key::Character('q'),
+            mask:
+                ModifierKeysMask {
+                    ctrl_key_state: KeyState::Pressed,
+                    ..
+                },
+        }) => {
+            if ENABLE_NOTIFICATIONS {
+                show_notification_non_blocking("PTY Mux - Exit", "Exiting PTY Mux");
+            }
+            return EventPropagation::ExitMainEventLoop;
+        }
+
+        // 3. Log other unhandled keyboard events.
+        InputEvent::Keyboard(key) => {
+            if ENABLE_NOTIFICATIONS {
+                show_notification_non_blocking(
+                    "PTY Mux - Key Press",
+                    &format!("Key pressed: {key:?}"),
+                );
+            }
+        }
+
+        // 4. Log other non-mouse input events.
+        other_event
+            if ENABLE_NOTIFICATIONS && !matches!(other_event, InputEvent::Mouse(_)) =>
+        {
+            show_notification_non_blocking(
+                "PTY Mux - Input Event",
+                &format!("Input event received: {other_event:?}"),
+            );
+        }
+
+        // 5. Ignore everything else.
+        _ => {}
+    }
+
+    EventPropagation::Propagate
 }

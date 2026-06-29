@@ -80,6 +80,7 @@
     "conpty",
     "consoleapi",
     "consts",
+    "cooldown",
     "copypasta",
     "coreutils",
     "creds",

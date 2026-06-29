@@ -26,8 +26,26 @@
 //! `00100011` (Decimal `35`) : Final payload byte (`32 | 3`)
 //! ```
 //!
+//! ### Bitmask arithmetic operations
+//!
+//! *(See also: [`keyboard` module docs] for a contrasting example of where arithmetic
+//! addition is required by the VT100 spec).*
+//!
+//! When combining bitmasks (like applying a modifier to a button):
+//! - **always** use bitwise OR (`|` or `|=`)
+//! - **do not** use of arithmetic addition (`+` or `+=`).
+//!
+//! While `32 + 3 = 35` and `32 | 3 = 35` produce the same result when bits do not
+//! overlap, arithmetic addition is unsafe if a flag is accidentally applied twice. For
+//! example, applying the [`MOUSE_MOTION_FLAG`] (`32`) twice:
+//! - **Unsafe (`+`)**: `32 + 32 = 64`. This causes a binary carry-over into Bit 6,
+//!   corrupting the value and incorrectly triggering the [`MOUSE_SCROLL_THRESHOLD`].
+//! - **Safe (`|`)**: `32 | 32 = 32`. Bitwise OR guarantees the bit is simply turned on,
+//!   preventing state corruption and unintended side effects.
+//!
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`CSI`]: crate::CsiSequence
+//! [`keyboard` module docs]: mod@crate::core::ansi::vt_100_terminal_input_parser::keyboard#how-bitmask-encoding-for-modifiers-works
 //! [`RXVT`]: https://en.wikipedia.org/wiki/Rxvt
 //! [`SGR`]: crate::SgrCode
 //! [`X10`]: https://invisible-island.net/xterm/ctlseqs/ctlseqs.html#h2-Mouse-Tracking

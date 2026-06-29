@@ -6,7 +6,7 @@
 //! [`DeadlockPreventionPolicy`]: crate::DeadlockPreventionPolicy
 
 /// The maximum number of simultaneous locks that can be tracked in the [`SharedLedger`].
-/// 
+///
 /// [`SharedLedger`]: crate::SharedLedger
 pub const ADDRESS_SIZE: usize = 4;
 

@@ -68,10 +68,6 @@
 //! }
 //! ```
 //!
-//! [`OSC`]: crate::osc_codes::OscSequence
-//! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
-
-//!
 //! ## Underlying protocol parser
 //!
 //! - [`vt_100_pty_output_parser`]: The [`ANSI`] parser module that processes escape
@@ -93,15 +89,15 @@
 //! [`vt_100_pty_output_parser`]: mod@crate::core::ansi::vt_100_pty_output_parser
 
 // Attach.
+mod adaptive_render_budget;
 mod input_router;
 mod mux;
-mod notification;
 mod output_renderer;
 mod process_manager;
 
-// Re-export.
+// Public re-exports (flat API)
+pub use adaptive_render_budget::*;
 pub use input_router::*;
 pub use mux::*;
-pub use notification::*;
 pub use output_renderer::*;
 pub use process_manager::*;

@@ -35,9 +35,9 @@
 //! assert_eq!(cache.get(&"key".to_string()), Some(&42));
 //! ```
 
+use crate::StdMutex;
 use rustc_hash::{FxBuildHasher, FxHashMap};
 use std::{hash::Hash, sync::Arc};
-use crate::StdMutex;
 
 /// Entry in the LRU cache containing the value and access metadata.
 #[derive(Clone, Debug)]

@@ -5,10 +5,10 @@
 //!
 //! [`ScopedMutex`]: crate::ScopedMutex
 
+mod constants;
 mod policy;
 mod policy_impl;
-mod constants;
 
+pub use constants::*;
 pub use policy::*;
 pub use policy_impl::*;
-pub use constants::*;

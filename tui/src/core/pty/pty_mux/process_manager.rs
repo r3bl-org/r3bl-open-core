@@ -12,15 +12,30 @@
 //! [ANSI parser]: crate::AnsiToOfsBufPerformer
 
 use super::output_renderer::STATUS_BAR_HEIGHT;
-use crate::{OfsBufVT100, Size,
+use crate::{DEBUG_TUI_PTY_PROCESS_MANAGER, DefaultPtySessionConfig, OfsBufVT100,
+            PtyInputEvent, PtySessionConfigOption, Size,
             core::{osc::OscEvent,
-                   pty::{PtyInputEvent, PtyOutputEvent, PtySession, PtySessionBuilder}},
+                   pty::{PtyOutputEvent, PtySession, PtySessionBuilder}},
             height, ok};
 use std::fmt::{Debug, Formatter, Result};
 
 /// Manages multiple [`PTY`] processes and handles switching between them.
 ///
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum ProcessStatus {
+    Running,
+    #[default]
+    NotRunning,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum UnrenderedOutput {
+    Available,
+    #[default]
+    NotAvailable,
+}
+
 #[derive(Debug)]
 pub struct ProcessManager {
     processes: Vec<Process>,
@@ -36,24 +51,30 @@ pub struct ProcessManager {
 ///
 /// [`ANSI parser`]: vte::Parser
 pub struct Process {
-    /// Display name for this process (shown in status bar)
+    /// Display name for this process (shown in status bar).
     pub name: String,
-    /// Command to execute
+
+    /// Command to execute.
     pub command: String,
-    /// Command line arguments
+
+    /// Command line arguments.
     pub args: Vec<String>,
-    /// Optional [`PTY`] session (None if not yet spawned)
+
+    /// Optional [`PTY`] session ([`None`] if not yet spawned).
     ///
     /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
     session: Option<PtySession>,
-    /// Whether the process is currently running
-    is_running: bool,
-    /// Virtual terminal buffer for this process (per-process buffer architecture)
+
+    /// Virtual terminal buffer for this process (per-process buffer architecture).
     pub terminal_state: OfsBufVT100,
 
+    /// Whether the process is currently running
+    pub status: ProcessStatus,
+
     /// Tracks if this process has unrendered output since last render
-    has_unrendered_output: bool,
-    /// Terminal title set by [`OSC`] sequences (None if not set)
+    pub unrendered_output: UnrenderedOutput,
+
+    /// Terminal title set by [`OSC`] sequences ([`None`] if not set).
     ///
     /// [`OSC`]: crate::osc_codes::OscSequence
     pub terminal_title: Option<String>,
@@ -83,17 +104,16 @@ impl Process {
             command: command.into(),
             args,
             session: None,
-            is_running: false,
+            status: ProcessStatus::NotRunning,
             terminal_state: OfsBufVT100::new_empty(buffer_size),
-
-            has_unrendered_output: false,
+            unrendered_output: UnrenderedOutput::NotAvailable,
             terminal_title: None,
         }
     }
 
     /// Returns whether this process is currently running.
     #[must_use]
-    pub fn is_running(&self) -> bool { self.is_running }
+    pub fn status(&self) -> ProcessStatus { self.status }
 
     /// Updates the process's virtual terminal buffer with new [`PTY`] output.
     ///
@@ -119,11 +139,15 @@ impl Process {
                 match event {
                     OscEvent::SetTitleAndTab(title) => {
                         self.terminal_title = Some(title.clone());
-                        tracing::debug!(
-                            "Process '{}' set terminal title: {}",
-                            self.name,
-                            title
-                        );
+                        DEBUG_TUI_PTY_PROCESS_MANAGER.then(|| {
+                            // % is Display, ? is Debug.
+                            tracing::debug! {
+                                message = "PtyProcess::process_pty_output_and_update_buffer",
+                                process_name = %self.name,
+                                title = %title,
+                                "Process set terminal title"
+                            };
+                        });
                     }
                     _ => {
                         // Other OSC events can be handled here in the future.
@@ -137,25 +161,33 @@ impl Process {
             {
                 for response_event in pty_response_events {
                     let response_bytes = response_event.to_string().into_bytes();
-                    tracing::debug!(
-                        "Process '{}' sending DSR response: {:?}",
-                        self.name,
-                        response_event
-                    );
+                    DEBUG_TUI_PTY_PROCESS_MANAGER.then(|| {
+                        // % is Display, ? is Debug.
+                        tracing::debug! {
+                            message = "PtyProcess::process_pty_output_and_update_buffer",
+                            process_name = %self.name,
+                            response = ?response_event,
+                            "Sending DSR response"
+                        };
+                    });
                     // Send the response back through the PTY input channel.
                     let _unused = session
                         .tx_input_event
-                        .try_send(crate::PtyInputEvent::Write(response_bytes));
+                        .try_send(PtyInputEvent::Write(response_bytes));
                 }
             }
-            self.has_unrendered_output = true;
+            self.unrendered_output = UnrenderedOutput::Available;
 
-            tracing::trace!(
-                "Process '{}' updated buffer with {} bytes, cursor at {:?}",
-                self.name,
-                output.len(),
-                self.terminal_state.cursor_pos
-            );
+            DEBUG_TUI_PTY_PROCESS_MANAGER.then(|| {
+                // % is Display, ? is Debug.
+                tracing::trace! {
+                    message = "PtyProcess::process_pty_output_and_update_buffer",
+                    process_name = %self.name,
+                    bytes = output.len(),
+                    cursor = ?self.terminal_state.cursor_pos,
+                    "Process updated buffer"
+                };
+            });
         }
     }
 
@@ -174,16 +206,27 @@ impl Process {
         {
             match event {
                 PtyOutputEvent::Output(data) => {
-                    tracing::trace!(
-                        "Process '{}' received {} bytes of output",
-                        self.name,
-                        data.len()
-                    );
+                    DEBUG_TUI_PTY_PROCESS_MANAGER.then(|| {
+                        // % is Display, ? is Debug.
+                        tracing::trace! {
+                            message = "PtyProcess::try_get_output",
+                            process_name = %self.name,
+                            bytes = data.len(),
+                            "Yielding accumulated output bytes"
+                        };
+                    });
                     return Some(data);
                 }
                 PtyOutputEvent::Exit(_status) => {
-                    self.is_running = false;
-                    tracing::debug!("Process '{}' has exited", self.name);
+                    self.status = ProcessStatus::NotRunning;
+                    DEBUG_TUI_PTY_PROCESS_MANAGER.then(|| {
+                        // % is Display, ? is Debug.
+                        tracing::debug! {
+                            message = "PtyProcess::try_get_output",
+                            process_name = %self.name,
+                            "Process has exited"
+                        };
+                    });
                     return None;
                 }
                 _ => {}
@@ -193,7 +236,9 @@ impl Process {
     }
 
     /// Marks this process as having been rendered (clear unrendered output flag).
-    pub fn mark_as_rendered(&mut self) { self.has_unrendered_output = false; }
+    pub fn mark_as_rendered(&mut self) {
+        self.unrendered_output = UnrenderedOutput::NotAvailable;
+    }
 }
 
 impl Debug for Process {
@@ -203,9 +248,9 @@ impl Debug for Process {
             .field("command", &self.command)
             .field("args", &self.args)
             .field("session", &self.session)
-            .field("is_running", &self.is_running)
+            .field("status", &self.status)
             .field("terminal_state", &self.terminal_state)
-            .field("has_unrendered_output", &self.has_unrendered_output)
+            .field("unrendered_output", &self.unrendered_output)
             .field("terminal_title", &self.terminal_title)
             .finish()
     }
@@ -271,13 +316,17 @@ impl ProcessManager {
         let old_index = self.active_index;
         self.active_index = index;
 
-        tracing::debug!(
-            "Switched from process {} ('{}') to process {} ('{}') - instant switch with per-process buffers",
-            old_index,
-            self.processes[old_index].name,
-            index,
-            self.processes[index].name
-        );
+        DEBUG_TUI_PTY_PROCESS_MANAGER.then(|| {
+            // % is Display, ? is Debug.
+            tracing::debug! {
+                message = "ProcessManager::switch_to",
+                old_index = %old_index,
+                old_name = %self.processes[old_index].name,
+                new_index = %index,
+                new_name = %self.processes[index].name,
+                "Instant switch with per-process buffers"
+            };
+        });
 
         Some(old_index)
     }
@@ -285,7 +334,15 @@ impl ProcessManager {
     /// Spawns a process at the given index.
     fn spawn_process(&mut self, index: usize) -> miette::Result<()> {
         let process = &mut self.processes[index];
-        tracing::debug!("Spawning process: {} ({})", process.name, process.command);
+        DEBUG_TUI_PTY_PROCESS_MANAGER.then(|| {
+            // % is Display, ? is Debug.
+            tracing::debug! {
+                message = "ProcessManager::spawn_process",
+                process_name = %process.name,
+                command = %process.command,
+                "Spawning process"
+            };
+        });
 
         // Reserve bottom row for status bar - PTY gets reduced height.
         let pty_size = Size {
@@ -300,14 +357,11 @@ impl ProcessManager {
         // Use existing PtySessionBuilder with reduced size.
         let session = PtySessionBuilder::new(&process.command)
             .cli_args(&process.args)
-            .with_config(
-                crate::DefaultPtySessionConfig
-                    + crate::PtySessionConfigOption::Size(pty_size),
-            )
+            .with_config(DefaultPtySessionConfig + PtySessionConfigOption::Size(pty_size))
             .start()?;
 
         process.session = Some(session);
-        process.is_running = true;
+        process.status = ProcessStatus::Running;
         ok!()
     }
 
@@ -348,12 +402,16 @@ impl ProcessManager {
                     active_had_output = true;
                 }
 
-                tracing::trace!(
-                    "Process {} ('{}') updated its virtual terminal buffer (active: {})",
-                    i,
-                    process.name,
-                    i == self.active_index
-                );
+                DEBUG_TUI_PTY_PROCESS_MANAGER.then(|| {
+                    // % is Display, ? is Debug.
+                    tracing::trace! {
+                        message = "ProcessManager::poll_all_processes",
+                        process_index = %i,
+                        process_name = %process.name,
+                        active = %(i == self.active_index),
+                        "Updated virtual terminal buffer"
+                    };
+                });
             }
         }
 
@@ -417,11 +475,15 @@ impl ProcessManager {
             col_width: new_size.col_width,
         };
 
-        tracing::debug!(
-            "Handling terminal resize to {:?}, PTY size: {:?}",
-            new_size,
-            pty_size,
-        );
+        DEBUG_TUI_PTY_PROCESS_MANAGER.then(|| {
+            // % is Display, ? is Debug.
+            tracing::debug! {
+                message = "ProcessManager::handle_terminal_resize",
+                new_size = ?new_size,
+                pty_size = ?pty_size,
+                "Handling terminal resize"
+            };
+        });
 
         // Update all processes with new buffers and parsers.
         for (i, process) in self.processes.iter_mut().enumerate() {
@@ -429,7 +491,7 @@ impl ProcessManager {
             process.terminal_state = OfsBufVT100::new_empty(pty_size);
 
             // Clear unrendered output flag since we're starting fresh.
-            process.has_unrendered_output = false;
+            process.unrendered_output = UnrenderedOutput::NotAvailable;
 
             // Send resize event to PTY session.
             if let Some(session) = &process.session {
@@ -437,19 +499,27 @@ impl ProcessManager {
                     .tx_input_event
                     .try_send(PtyInputEvent::Resize(pty_size));
 
-                tracing::debug!(
-                    "Sent resize event to process {} ('{}') with PTY size {:?}",
-                    i,
-                    process.name,
-                    pty_size
-                );
+                DEBUG_TUI_PTY_PROCESS_MANAGER.then(|| {
+                    // % is Display, ? is Debug.
+                    tracing::debug! {
+                        message = "ProcessManager::handle_terminal_resize",
+                        process_index = %i,
+                        process_name = %process.name,
+                        pty_size = ?pty_size,
+                        "Sent resize event to process"
+                    };
+                });
             }
         }
 
-        tracing::debug!(
-            "Terminal resize handling completed for {} processes",
-            self.processes.len()
-        );
+        DEBUG_TUI_PTY_PROCESS_MANAGER.then(|| {
+            // % is Display, ? is Debug.
+            tracing::debug! {
+                message = "ProcessManager::handle_terminal_resize",
+                num_processes = %self.processes.len(),
+                "Terminal resize handling completed"
+            };
+        });
     }
 
     /// Shuts down all running processes.
@@ -458,70 +528,139 @@ impl ProcessManager {
     /// the multiplexer is shutting down.
     ///
     /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
+    #[allow(clippy::too_many_lines)]
     pub fn shutdown_all_processes(&mut self) {
-        tracing::debug!(
-            "Shutting down all processes - starting cleanup of {} processes",
-            self.processes.len()
-        );
+        DEBUG_TUI_PTY_PROCESS_MANAGER.then(|| {
+            // % is Display, ? is Debug.
+            tracing::debug! {
+                message = "ProcessManager::shutdown_all_processes",
+                num_processes = %self.processes.len(),
+                "Shutting down all processes - starting cleanup"
+            };
+        });
 
         for (index, process) in self.processes.iter_mut().enumerate() {
-            tracing::debug!(
-                "Processing shutdown for process {}: '{}' (running: {})",
-                index,
-                process.name,
-                process.is_running
-            );
+            DEBUG_TUI_PTY_PROCESS_MANAGER.then(|| {
+                // % is Display, ? is Debug.
+                tracing::debug! {
+                    message = "ProcessManager::shutdown_all_processes",
+                    process_index = %index,
+                    process_name = %process.name,
+                    running = %(process.status == ProcessStatus::Running),
+                    "Processing shutdown for process"
+                };
+            });
 
             if let Some(mut session) = process.session.take() {
-                tracing::debug!(
-                    "Process '{}' has active session, forcefully terminating",
-                    process.name
-                );
+                DEBUG_TUI_PTY_PROCESS_MANAGER.then(|| {
+                    // % is Display, ? is Debug.
+                    tracing::debug! {
+                        message = "ProcessManager::shutdown_all_processes",
+                        process_name = %process.name,
+                        "Process has active session, forcefully terminating"
+                    };
+                });
 
                 // CRITICAL SHUTDOWN PATTERN: Kill child process THEN send Close event
                 // 1. First, kill the child process to ensure immediate termination.
                 match session.child_process_termination_handle.kill() {
-                    Ok(()) => tracing::debug!(
-                        "Successfully killed child process for '{}'",
-                        process.name
-                    ),
-                    Err(e) => tracing::warn!(
-                        "Failed to kill child process for '{}': {:?}",
-                        process.name,
-                        e
-                    ),
+                    Ok(()) => {
+                        DEBUG_TUI_PTY_PROCESS_MANAGER.then(|| {
+                            // % is Display, ? is Debug.
+                            tracing::debug! {
+                                message = "ProcessManager::shutdown_all_processes",
+                                process_name = %process.name,
+                                "Successfully killed child process"
+                            };
+                        });
+                    }
+                    Err(e) => {
+                        DEBUG_TUI_PTY_PROCESS_MANAGER.then(|| {
+                            // % is Display, ? is Debug.
+                            tracing::warn! {
+                                message = "ProcessManager::shutdown_all_processes",
+                                process_name = %process.name,
+                                error = ?e,
+                                "Failed to kill child process"
+                            };
+                        });
+                    }
                 }
 
                 // 2. Then, send Close event to stop input writer and signal EOF.
                 // Note: Close alone is insufficient - it only stops input, doesn't kill
-                // the process
+                // the process.
                 match session.tx_input_event.try_send(PtyInputEvent::Close) {
-                    Ok(()) => tracing::debug!(
-                        "Successfully sent Close event to process '{}'",
-                        process.name
-                    ),
-                    Err(e) => tracing::warn!(
-                        "Failed to send Close event to process '{}': {:?}",
-                        process.name,
-                        e
-                    ),
+                    Ok(()) => {
+                        DEBUG_TUI_PTY_PROCESS_MANAGER.then(|| {
+                            // % is Display, ? is Debug.
+                            tracing::debug! {
+                                message = "ProcessManager::shutdown_all_processes",
+                                process_name = %process.name,
+                                "Successfully sent Close event"
+                            };
+                        });
+                    }
+                    Err(e) => {
+                        DEBUG_TUI_PTY_PROCESS_MANAGER.then(|| {
+                            // % is Display, ? is Debug.
+                            tracing::warn! {
+                                message = "ProcessManager::shutdown_all_processes",
+                                process_name = %process.name,
+                                error = ?e,
+                                "Failed to send Close event"
+                            };
+                        });
+                    }
                 }
 
-                tracing::debug!("Dropping PTY session for process '{}'", process.name);
                 // Drop the session to clean up resources.
+                DEBUG_TUI_PTY_PROCESS_MANAGER.then(|| {
+                    // % is Display, ? is Debug.
+                    tracing::debug! {
+                        message = "ProcessManager::shutdown_all_processes",
+                        process_name = %process.name,
+                        "Dropping PTY session"
+                    };
+                });
                 drop(session);
-                tracing::debug!("PTY session dropped for process '{}'", process.name);
+                DEBUG_TUI_PTY_PROCESS_MANAGER.then(|| {
+                    // % is Display, ? is Debug.
+                    tracing::debug! {
+                        message = "ProcessManager::shutdown_all_processes",
+                        process_name = %process.name,
+                        "PTY session dropped"
+                    };
+                });
 
-                process.is_running = false;
-                tracing::debug!("Process '{}' marked as not running", process.name);
+                // Mark process as not running.
+                process.status = ProcessStatus::NotRunning;
+                DEBUG_TUI_PTY_PROCESS_MANAGER.then(|| {
+                    // % is Display, ? is Debug.
+                    tracing::debug! {
+                        message = "ProcessManager::shutdown_all_processes",
+                        process_name = %process.name,
+                        "Process marked as not running"
+                    };
+                });
             } else {
-                tracing::debug!(
-                    "Process '{}' has no active session, skipping",
-                    process.name
-                );
+                DEBUG_TUI_PTY_PROCESS_MANAGER.then(|| {
+                    // % is Display, ? is Debug.
+                    tracing::debug! {
+                        message = "ProcessManager::shutdown_all_processes",
+                        process_name = %process.name,
+                        "Process has no active session, skipping"
+                    };
+                });
             }
         }
 
-        tracing::debug!("Finished shutting down all processes");
+        DEBUG_TUI_PTY_PROCESS_MANAGER.then(|| {
+            // % is Display, ? is Debug.
+            tracing::debug! {
+                message = "ProcessManager::shutdown_all_processes",
+                "Finished shutting down all processes"
+            };
+        });
     }
 }

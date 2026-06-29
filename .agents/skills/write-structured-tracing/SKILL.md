@@ -40,9 +40,11 @@ crate::DEBUG_TUI_MOD.then(|| {
 });
 ```
 
-## 4. Using `inline_string!` for Complex Formatting
+## 4. Using `inline_string!` vs `format!` for Complex Formatting
 
-When you need to format complex strings within a tracing field, use the `inline_string!` macro and bind it to a field using the `%` (Display) modifier.
+When you need to format complex strings within a tracing field, bind it to a field using the `%` (Display) modifier and follow this rule:
+- If the resulting string will be **<= 16 bytes**, use the `inline_string!` macro to stack-allocate it.
+- If the resulting string will be **> 16 bytes**, use the standard `format!` macro (since `inline_string!` would spill to the heap and allocate anyway).
 
 ```rust
 crate::DEBUG_TUI_MOD.then(|| {
@@ -71,7 +73,7 @@ crate::DEBUG_TUI_PTY_MUX.then(|| {
     // % is Display, ? is Debug.
     tracing::debug! {
         message = "PTYMux::run_event_loop",
-        input_event = %inline_string!("{:?}", input_event)
+        input_event = %format!("{:?}", input_event)
     };
 });
 ```

@@ -68,7 +68,7 @@
 //! 5. For repeated patterns, consider using the optimized macros in this module like
 //!    `pad_fmt!` which avoid formatting overhead
 //!
-//! [`fast_stringify`]: ../common/fast_stringify
+//! [`fast_stringify`]: mod@crate::core::common::fast_strings#string-allocation-performance-strategy
 //! [`FastStringify`]: crate::FastStringify
 
 use crate::{CommonResult, DEFAULT_READ_BUFFER_SIZE, ok};

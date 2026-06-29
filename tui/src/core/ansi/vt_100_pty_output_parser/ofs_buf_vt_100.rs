@@ -1,7 +1,8 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{PtyResponseEvent, GetMemSize, MemorySize, OffscreenBuffer,
-            PixelCharLines, Pos, Size, TermRow, TuiStyle, osc::OscEvent};
+use super::modes::{AutoWrapMode, CursorVisibilityMode, MouseTrackingMode,
+                   terminal_mode_state_todo};
+use crate::{ActiveScreenBuffer, GetMemSize, HiddenScreenState, OffscreenBuffer, Pos, PtyResponseEvent, Size, TermRow, TuiStyle, osc::OscEvent};
 use std::{fmt::Debug,
           mem::size_of,
           ops::{Deref, DerefMut}};
@@ -211,7 +212,7 @@ pub struct ParserGlobalState {
     /// [`AnsiToOfsBufPerformer`]: crate::AnsiToOfsBufPerformer
     /// [`DECAWM`]: https://vt100.net/docs/vt510-rm/DECAWM.html
     /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
-    pub auto_wrap_mode: AutoWrapState,
+    pub auto_wrap_mode: AutoWrapMode,
 
     /// Pending wrap state for deferred wrapping.
     ///
@@ -297,118 +298,19 @@ pub struct ParserGlobalState {
     /// Corresponds to the [`DECTCEM`] (`?25`) private mode.
     ///
     /// [`DECTCEM`]: https://vt100.net/docs/vt510-rm/DECTCEM.html
-    pub cursor_visibility: CursorVisibilityState,
+    pub cursor_visibility: CursorVisibilityMode,
 }
 
 impl ParserGlobalState {
     /// Puts the terminal into a pending wrap state.
-    pub fn set_pending_wrap(&mut self) {
-        self.pending_wrap = PendingWrap::Yes;
-    }
+    pub fn set_pending_wrap(&mut self) { self.pending_wrap = PendingWrap::Yes; }
 
     /// Clears the pending wrap state.
-    pub fn clear_pending_wrap(&mut self) {
-        self.pending_wrap = PendingWrap::No;
-    }
+    pub fn clear_pending_wrap(&mut self) { self.pending_wrap = PendingWrap::No; }
 
     /// Returns the current pending wrap state.
     #[must_use]
-    pub fn get_pending_wrap(&self) -> PendingWrap {
-        self.pending_wrap
-    }
-}
-
-/// Character set modes for terminal emulation.
-///
-/// Used by [`AnsiToOfsBufPerformer`] to handle `ESC ( <char>` sequences that switch
-/// between [`ASCII`] and [`DEC`] line-drawing graphics.
-///
-/// [`AnsiToOfsBufPerformer`]: crate::AnsiToOfsBufPerformer
-/// [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
-/// [`DEC`]: https://en.wikipedia.org/wiki/Digital_Equipment_Corporation
-/// [`ESC`]: crate::EscSequence
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub enum CharacterSet {
-    /// Normal [`ASCII`] character set:
-    /// - `ESC ( B`
-    /// - or `[27, 40, 66]` in decimal
-    ///
-    /// [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
-    /// [`ESC`]: crate::EscSequence
-    #[default]
-    Ascii,
-    /// [`DEC`] Special Graphics character set for line drawing:
-    /// - `ESC ( 0`
-    /// - or `[27, 40, 48]` in decimal
-    ///
-    /// Maps [`ASCII`] characters to box-drawing Unicode characters.
-    ///
-    /// [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
-    /// [`DEC`]: https://en.wikipedia.org/wiki/Digital_Equipment_Corporation
-    /// [`ESC`]: crate::EscSequence
-    DECGraphics,
-}
-
-/// Auto-wrap mode ([`DECAWM`]) state.
-///
-/// Controls line wrapping behavior when text reaches the right margin.
-///
-/// [`DECAWM`]: https://vt100.net/docs/vt510-rm/DECAWM.html
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub enum AutoWrapState {
-    /// Characters automatically wrap to the next line (DECAWM `?7h`)
-    #[default]
-    Enabled,
-    /// Characters overwrite at the right margin (DECAWM `?7l`)
-    Disabled,
-}
-
-/// Pending wrap state for deferred wrapping.
-///
-/// Controls whether a wrap to the next line is pending.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub enum PendingWrap {
-    Yes,
-    #[default]
-    No,
-}
-
-/// Terminal cursor visibility state.
-///
-/// Controls whether the terminal cursor is displayed or hidden. Corresponds to the
-/// [`DECTCEM`] (`?25`) private mode.
-///
-/// # Usage in [`PTY`] Mux
-///
-/// When used inside [`ParserGlobalState::cursor_visibility`], it stores the *requested*
-/// visibility state of the child process. The [`PTY Mux`] compositor
-/// ([`OutputRenderer::composite_virtual_cursor_into_buffer`]) reads this to determine if
-/// it needs to paint a simulated, virtual block cursor into the [`OffscreenBuffer`].
-///
-/// > Note: The host terminal emulator's actual cursor is permanently suppressed via
-/// > [`hide_cursor`] when the multiplexer is active. We rely exclusively
-/// > on the virtual block cursor rendering (which allows us to have multiple cursors).
-///
-/// [`DECTCEM`]: https://vt100.net/docs/vt510-rm/DECTCEM.html
-/// [`hide_cursor`]: crate::TerminalModeController::hide_cursor
-/// [`OffscreenBuffer`]: crate::OffscreenBuffer
-/// [`OutputRenderer::composite_virtual_cursor_into_buffer`]:
-///     crate::core::pty::OutputRenderer::composite_virtual_cursor_into_buffer
-/// [`ParserGlobalState::cursor_visibility`]: crate::ParserGlobalState::cursor_visibility
-/// [`PTY Mux`]: crate::PTYMux
-/// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub enum CursorVisibilityState {
-    /// Cursor is visible ([`DECTCEM`] `ESC [ ? 25 h`)
-    ///
-    /// [`DECTCEM`]: https://vt100.net/docs/vt510-rm/DECTCEM.html
-    #[default]
-    Visible,
-    /// Cursor is hidden ([`DECTCEM`] `ESC [ ? 25 l`)
-    ///
-    /// [`DECTCEM`]: https://vt100.net/docs/vt510-rm/DECTCEM.html
-    Hidden,
+    pub fn get_pending_wrap(&self) -> PendingWrap { self.pending_wrap }
 }
 
 /// State tracking for terminal operational modes.
@@ -432,20 +334,10 @@ pub struct TerminalModeState {
     /// and `ESC [ ? 1049 l` sequences.
     ///
     /// [`AnsiToOfsBufPerformer`]: crate::AnsiToOfsBufPerformer
-    pub alternate_screen: AlternateScreenState,
+    pub active_screen_buffer: ActiveScreenBuffer,
 
-    /// Mouse event tracking status.
-    ///
-    /// **TODO**: The parser currently ignores this [`VT-100`] sequence
-    /// (`vt_100_shim_mode_ops.rs`) because the [`PTY`] multiplexer does not yet route
-    /// complex input events. When supported, this field should be wired up to the
-    /// [`ANSI`] parser and the `dead_code` allowance removed.
-    ///
-    /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-    /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
-    /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
-    #[allow(dead_code)]
-    pub mouse_tracking: terminal_mode_state_todo::MouseTrackingState,
+    /// Mouse tracking state (mode and formatting).
+    pub mouse_tracking: MouseTrackingMode,
 
     /// Bracketed paste mode status.
     ///
@@ -458,136 +350,51 @@ pub struct TerminalModeState {
     /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
     /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
     #[allow(dead_code)]
-    pub bracketed_paste: terminal_mode_state_todo::BracketedPasteState,
+    pub bracketed_paste: terminal_mode_state_todo::BracketedPasteMode,
 }
 
-mod terminal_mode_state_todo {
-    #[allow(clippy::wildcard_imports)]
-    use super::*;
 
-    /// Mouse event tracking state.
-    ///
-    /// Controls whether the terminal captures mouse click, movement, and scroll events.
-    #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-    #[allow(dead_code)]
-    pub enum MouseTrackingState {
-        /// Mouse tracking enabled - terminal sends mouse events
-        Enabled,
-        /// Mouse tracking disabled
-        #[default]
-        Disabled,
-    }
-
-    /// Bracketed paste mode state.
-    ///
-    /// Controls whether text pasted from clipboard is wrapped with special escape
-    /// sequences (`OSC 52`), allowing applications to distinguish pasted text from
-    /// keyboard input.
-    ///
-    /// [`OSC`]: crate::osc_codes::OscSequence
-    #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-    #[allow(dead_code)]
-    pub enum BracketedPasteState {
-        /// Bracketed paste mode enabled
-        Enabled,
-        /// Bracketed paste mode disabled
-        #[default]
-        Disabled,
-    }
-}
-
-/// Alternate screen buffer state.
+/// Character set modes for terminal emulation.
 ///
-/// Controls whether terminal output is redirected to an alternate screen buffer,
-/// preserving the original screen content. This is used by full-screen applications
-/// (`vim`, `less`, etc.) to avoid cluttering the shell history.
+/// Used by [`AnsiToOfsBufPerformer`] to handle `ESC ( <char>` sequences that switch
+/// between [`ASCII`] and [`DEC`] line-drawing graphics.
+///
+/// [`AnsiToOfsBufPerformer`]: crate::AnsiToOfsBufPerformer
+/// [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
+/// [`DEC`]: https://en.wikipedia.org/wiki/Digital_Equipment_Corporation
+/// [`ESC`]: crate::EscSequence
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub enum AlternateScreenState {
-    /// Alternate screen buffer active
-    Active,
-    /// Alternate screen buffer inactive, using primary screen
+pub enum CharacterSet {
+    /// Normal [`ASCII`] character set:
+    /// - `ESC ( B`
+    /// - or `[27, 40, 66]` in decimal
+    ///
+    /// [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
+    /// [`ESC`]: crate::EscSequence
     #[default]
-    Inactive,
+    Ascii,
+
+    /// [`DEC`] Special Graphics character set for line drawing:
+    /// - `ESC ( 0`
+    /// - or `[27, 40, 48]` in decimal
+    ///
+    /// Maps [`ASCII`] characters to box-drawing Unicode characters.
+    ///
+    /// [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
+    /// [`DEC`]: https://en.wikipedia.org/wiki/Digital_Equipment_Corporation
+    /// [`ESC`]: crate::EscSequence
+    DECGraphics,
 }
 
-/// The requested screen buffer mode.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum RequestedScreenMode {
-    Primary,
-    Alternate,
-}
-
-/// Encapsulated state representing the alternate screen support and its independent
-/// cursor positions.
+/// Pending wrap state for deferred wrapping.
 ///
-/// # [`SGR`] Style Inheritance & [`BCE`] (Background Color Erase) Compliance
-///
-/// Under [`VT-100`], [`xterm`], and standard [`ANSI`] specifications, graphic rendition
-/// states (foreground/background colors, bold, italic) are globally shared and preserved
-/// across screen buffer switches.
-///
-/// This struct implements this specification by separating the alternate buffer
-/// ([`hidden_buffer`]) from the overall parser emulation state. When entering the
-/// alternate screen:
-/// - The alternate buffer inherits the active graphic style from the main buffer.
-/// - The buffer is cleared utilizing [`create_empty_pixel_char()`] to ensure that erased
-///   cells carry the active background color and attributes, fully complying with
-///   Background Color Erase ([`BCE`]) rules.
-///
-/// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-/// [`BCE`]: https://invisible-island.net/xterm/xterm.faq.html#what_is_bce
-/// [`create_empty_pixel_char()`]: crate::OfsBufVT100::create_empty_pixel_char
-/// [`hidden_buffer`]: HiddenScreenState::hidden_buffer
-/// [`SGR`]: crate::SgrCode
-/// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
-/// [`xterm`]: https://en.wikipedia.org/wiki/Xterm
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct HiddenScreenState {
-    /// The secondary buffer grid representing the alternate screen. Always allocated at
-    /// buffer creation time to avoid having to use [`Option`] which adds needless
-    /// complexity for a very small cost in terms of memory.
-    pub hidden_buffer: PixelCharLines,
+/// Controls whether a wrap to the next line is pending.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum PendingWrap {
+    Yes,
 
-    /// Saved cursor position for the hidden buffer.
-    pub hidden_cursor_pos: Pos,
-
-    /// Cached memory size of this struct to provide O(1) retrieval.
-    pub cached_memory_size: MemorySize,
-}
-
-mod hidden_screen_state_impl {
-    #[allow(clippy::wildcard_imports)]
-    use super::*;
-
-    impl HiddenScreenState {
-        #[must_use]
-        pub fn new_empty(arg_window_size: impl Into<Size>) -> Self {
-            let window_size = arg_window_size.into();
-            let hidden_buffer = PixelCharLines::new_empty(window_size);
-
-            let cached_memory_size = {
-                let primary_buffer_mem = hidden_buffer.get_mem_size();
-
-                MemorySize::new(
-                    primary_buffer_mem +
-                // hidden_cursor_pos
-                size_of::<Pos>(),
-                )
-            };
-
-            Self {
-                hidden_buffer,
-                hidden_cursor_pos: Pos::default(),
-                cached_memory_size,
-            }
-        }
-    }
-
-    impl GetMemSize for HiddenScreenState {
-        /// Acts as a fast O(1) getter for the cached memory size to avoid O(N) traversal
-        /// of the entire alternate screen buffer grid.
-        fn get_mem_size(&self) -> usize { self.cached_memory_size.size().unwrap_or(0) }
-    }
+    #[default]
+    No,
 }
 
 #[cfg(test)]
@@ -606,19 +413,6 @@ mod tests {
             // First we assert against a dummy value to see the real sizes in the test
             // output, then we will update it.
             assert_eq!(size_of::<OfsBufVT100>(), 928);
-        }
-    }
-
-    #[test]
-    fn test_hidden_screen_state_struct_size() {
-        // TRIPWIRE: If you add or remove a field from `HiddenScreenState`, this test will
-        // fail. This is intentional! It reminds you to:
-        // 1. Update the `GetMemSize` implementation for this struct to include your new
-        //    field.
-        // 2. Update this exact byte-size assertion.
-        #[cfg(target_pointer_width = "64")]
-        {
-            assert_eq!(size_of::<HiddenScreenState>(), 416);
         }
     }
 
@@ -642,23 +436,5 @@ mod tests {
         assert_eq!(calculated_size, expected_size);
         // Ensure consistency across calls
         assert_eq!(calculated_size, state.get_mem_size());
-    }
-
-    #[test]
-    fn test_hidden_screen_state_get_mem_size() {
-        // TRIPWIRE: This test verifies that `GetMemSize` actually sums up all the fields.
-        // If you added a field, you MUST add its memory size calculation to
-        // `expected_size` below, and ensure the actual `GetMemSize`
-        // implementation matches it.
-        use crate::{height, width};
-        let size = height(10) + width(20);
-        let support = HiddenScreenState::new_empty(size);
-
-        let calculated_size = support.get_mem_size();
-        let expected_size = support.hidden_buffer.get_mem_size() + size_of::<Pos>();
-
-        assert_eq!(calculated_size, expected_size);
-        // Ensure consistency across calls
-        assert_eq!(calculated_size, support.get_mem_size());
     }
 }
