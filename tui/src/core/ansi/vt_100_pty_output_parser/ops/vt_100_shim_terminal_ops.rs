@@ -81,6 +81,7 @@ fn reset_sgr_attributes(performer: &mut AnsiToOfsBufPerformer) {
 /// [`DECSTBM`]: https://vt100.net/docs/vt510-rm/DECSTBM.html
 pub fn reset_terminal(performer: &mut AnsiToOfsBufPerformer) {
     clear_buffer(performer);
+    let _unused = performer.ofs_buf_vt_100.erase_display_scrollback();
 
     // Reset cursor to home position.
     performer.ofs_buf_vt_100.cursor_pos = Pos::default();

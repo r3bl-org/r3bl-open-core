@@ -13,8 +13,9 @@ pub enum DialogEvent {
     None,
 }
 
-mod dialog_event_impl {
-    use super::{DialogEvent, InputEvent, Key, KeyPress, SpecialKey};
+mod impl_dialog_event {
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     impl DialogEvent {
         /// Tries to convert the given [`InputEvent`] into a

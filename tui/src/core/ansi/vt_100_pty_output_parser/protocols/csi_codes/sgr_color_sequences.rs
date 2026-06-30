@@ -93,14 +93,12 @@
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 //! [`VTE`]: mod@vte
 
-use crate::{AnsiValue, RgbValue, TuiColor,
-            core::{ansi::constants::{CSI_START, CSI_SUB_PARAM_SEPARATOR,
+use crate::{AnsiValue, RgbValue, TuiColor, convert_u16_to_ascii_str_slice, core::{ansi::constants::{CSI_START, CSI_SUB_PARAM_SEPARATOR,
                                      SGR_BG_EXTENDED, SGR_COLOR_MODE_256,
                                      SGR_COLOR_MODE_RGB, SGR_FG_EXTENDED,
                                      SGR_SET_GRAPHICS},
-                   common::fast_stringify::{BufTextStorage, FastStringify}},
-            generate_impl_display_for_fast_stringify, ok,
-            stack_alloc_types::usize_fmt::{convert_u16_to_string_slice, u16_to_u8_array}};
+                   common::fast_stringify::{BufTextStorage, FastStringify}}, generate_impl_display_for_fast_stringify, ok,
+            };
 use std::fmt::Result;
 
 /// Which layer (foreground or background) a color applies to.
@@ -400,56 +398,40 @@ impl FastStringify for SgrColorSequence {
         acc.push_str(CSI_START);
         match self {
             SgrColorSequence::SetForegroundAnsi256(index) => {
-                let fg_bytes = u16_to_u8_array(SGR_FG_EXTENDED);
-                acc.push_str(convert_u16_to_string_slice(&fg_bytes));
+                acc.push_str(convert_u16_to_ascii_str_slice!(SGR_FG_EXTENDED));
                 acc.push(CSI_SUB_PARAM_SEPARATOR);
-                let mode_bytes = u16_to_u8_array(SGR_COLOR_MODE_256);
-                acc.push_str(convert_u16_to_string_slice(&mode_bytes));
+                acc.push_str(convert_u16_to_ascii_str_slice!(SGR_COLOR_MODE_256));
                 acc.push(CSI_SUB_PARAM_SEPARATOR);
-                let index_bytes = u16_to_u8_array(u16::from(*index));
-                acc.push_str(convert_u16_to_string_slice(&index_bytes));
+                acc.push_str(convert_u16_to_ascii_str_slice!(u16::from(*index)));
             }
             SgrColorSequence::SetBackgroundAnsi256(index) => {
-                let bg_bytes = u16_to_u8_array(SGR_BG_EXTENDED);
-                acc.push_str(convert_u16_to_string_slice(&bg_bytes));
+                acc.push_str(convert_u16_to_ascii_str_slice!(SGR_BG_EXTENDED));
                 acc.push(CSI_SUB_PARAM_SEPARATOR);
-                let mode_bytes = u16_to_u8_array(SGR_COLOR_MODE_256);
-                acc.push_str(convert_u16_to_string_slice(&mode_bytes));
+                acc.push_str(convert_u16_to_ascii_str_slice!(SGR_COLOR_MODE_256));
                 acc.push(CSI_SUB_PARAM_SEPARATOR);
-                let index_bytes = u16_to_u8_array(u16::from(*index));
-                acc.push_str(convert_u16_to_string_slice(&index_bytes));
+                acc.push_str(convert_u16_to_ascii_str_slice!(u16::from(*index)));
             }
             SgrColorSequence::SetForegroundRgb(r, g, b) => {
-                let fg_bytes = u16_to_u8_array(SGR_FG_EXTENDED);
-                acc.push_str(convert_u16_to_string_slice(&fg_bytes));
+                acc.push_str(convert_u16_to_ascii_str_slice!(SGR_FG_EXTENDED));
                 acc.push(CSI_SUB_PARAM_SEPARATOR);
-                let mode_bytes = u16_to_u8_array(SGR_COLOR_MODE_RGB);
-                acc.push_str(convert_u16_to_string_slice(&mode_bytes));
+                acc.push_str(convert_u16_to_ascii_str_slice!(SGR_COLOR_MODE_RGB));
                 acc.push(CSI_SUB_PARAM_SEPARATOR);
-                let r_bytes = u16_to_u8_array(u16::from(*r));
-                acc.push_str(convert_u16_to_string_slice(&r_bytes));
+                acc.push_str(convert_u16_to_ascii_str_slice!(u16::from(*r)));
                 acc.push(CSI_SUB_PARAM_SEPARATOR);
-                let g_bytes = u16_to_u8_array(u16::from(*g));
-                acc.push_str(convert_u16_to_string_slice(&g_bytes));
+                acc.push_str(convert_u16_to_ascii_str_slice!(u16::from(*g)));
                 acc.push(CSI_SUB_PARAM_SEPARATOR);
-                let b_bytes = u16_to_u8_array(u16::from(*b));
-                acc.push_str(convert_u16_to_string_slice(&b_bytes));
+                acc.push_str(convert_u16_to_ascii_str_slice!(u16::from(*b)));
             }
             SgrColorSequence::SetBackgroundRgb(r, g, b) => {
-                let bg_bytes = u16_to_u8_array(SGR_BG_EXTENDED);
-                acc.push_str(convert_u16_to_string_slice(&bg_bytes));
+                acc.push_str(convert_u16_to_ascii_str_slice!(SGR_BG_EXTENDED));
                 acc.push(CSI_SUB_PARAM_SEPARATOR);
-                let mode_bytes = u16_to_u8_array(SGR_COLOR_MODE_RGB);
-                acc.push_str(convert_u16_to_string_slice(&mode_bytes));
+                acc.push_str(convert_u16_to_ascii_str_slice!(SGR_COLOR_MODE_RGB));
                 acc.push(CSI_SUB_PARAM_SEPARATOR);
-                let r_bytes = u16_to_u8_array(u16::from(*r));
-                acc.push_str(convert_u16_to_string_slice(&r_bytes));
+                acc.push_str(convert_u16_to_ascii_str_slice!(u16::from(*r)));
                 acc.push(CSI_SUB_PARAM_SEPARATOR);
-                let g_bytes = u16_to_u8_array(u16::from(*g));
-                acc.push_str(convert_u16_to_string_slice(&g_bytes));
+                acc.push_str(convert_u16_to_ascii_str_slice!(u16::from(*g)));
                 acc.push(CSI_SUB_PARAM_SEPARATOR);
-                let b_bytes = u16_to_u8_array(u16::from(*b));
-                acc.push_str(convert_u16_to_string_slice(&b_bytes));
+                acc.push_str(convert_u16_to_ascii_str_slice!(u16::from(*b)));
             }
         }
         acc.push(SGR_SET_GRAPHICS);

@@ -295,7 +295,7 @@ mod tests_chunked_input {
 }
 
 #[cfg(test)]
-mod tests_iterator_impl {
+mod impl_tests_iterator {
     use super::test_fixtures::*;
 
     #[test]

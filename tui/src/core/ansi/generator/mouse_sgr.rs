@@ -10,15 +10,12 @@ use crate::{Button, KeyState, MouseInput, MouseInputKind, TermCol, TermRow,
                                     MOUSE_SGR_PREFIX, MOUSE_SGR_PRESS,
                                     MOUSE_SGR_RELEASE}};
 
-#[derive(Debug)]
-pub struct SgrMouseSequence;
 
-impl SgrMouseSequence {
     /// Generates an [`ANSI`] [`SGR`] mouse sequence for the given `MouseInput`.
     ///
     /// The [`SGR`] mouse sequence format is:
-    /// `CSI < button_code ; x ; y M` (for press/scroll/drag/hover)
-    /// `CSI < button_code ; x ; y m` (for release)
+    /// - `CSI < button_code ; x ; y M` (for press/scroll/drag/hover)
+    /// - `CSI < button_code ; x ; y m` (for release)
     ///
     /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
     /// [`SGR`]: crate::SgrCode
@@ -27,13 +24,13 @@ impl SgrMouseSequence {
         let mut is_release = false;
 
         let mut button_code = match mouse_input.kind {
-            MouseInputKind::MouseDown(button) => Self::get_button_code(button),
+            MouseInputKind::MouseDown(button) => get_button_code(button),
             MouseInputKind::MouseUp(button) => {
                 is_release = true;
-                Self::get_button_code(button)
+                get_button_code(button)
             }
             MouseInputKind::MouseDrag(button) => {
-                Self::get_button_code(button) | MOUSE_MOTION_FLAG
+                get_button_code(button) | MOUSE_MOTION_FLAG
             }
             MouseInputKind::MouseMove => MOUSE_RELEASE_BUTTON_CODE | MOUSE_MOTION_FLAG,
             MouseInputKind::ScrollUp => MOUSE_SCROLL_UP_BUTTON,
@@ -78,7 +75,6 @@ impl SgrMouseSequence {
             Button::Right => MOUSE_RIGHT_BUTTON_CODE,
         }
     }
-}
 
 #[cfg(test)]
 mod tests {
@@ -101,7 +97,7 @@ mod tests {
             kind: MouseInputKind::MouseDown(Button::Left),
             maybe_modifier_keys: None,
         };
-        let bytes1 = SgrMouseSequence::generate(&input1, term_col, term_row).unwrap();
+        let bytes1 = generate(&input1, term_col, term_row).unwrap();
         assert_eq!(
             bytes1,
             format!(
@@ -117,7 +113,7 @@ mod tests {
             kind: MouseInputKind::MouseUp(Button::Left),
             maybe_modifier_keys: None,
         };
-        let bytes2 = SgrMouseSequence::generate(&input2, term_col, term_row).unwrap();
+        let bytes2 = generate(&input2, term_col, term_row).unwrap();
         assert_eq!(
             bytes2,
             format!(
@@ -135,7 +131,7 @@ mod tests {
             kind: MouseInputKind::MouseDown(Button::Right),
             maybe_modifier_keys: Some(modifiers),
         };
-        let bytes3 = SgrMouseSequence::generate(&input3, term_col, term_row).unwrap();
+        let bytes3 = generate(&input3, term_col, term_row).unwrap();
         assert_eq!(
             bytes3,
             format!(
@@ -153,7 +149,7 @@ mod tests {
             kind: MouseInputKind::ScrollUp,
             maybe_modifier_keys: None,
         };
-        let bytes4 = SgrMouseSequence::generate(&input4, term_col, term_row).unwrap();
+        let bytes4 = generate(&input4, term_col, term_row).unwrap();
         assert_eq!(
             bytes4,
             format!(
@@ -169,7 +165,7 @@ mod tests {
             kind: MouseInputKind::ScrollDown,
             maybe_modifier_keys: None,
         };
-        let bytes5 = SgrMouseSequence::generate(&input5, term_col, term_row).unwrap();
+        let bytes5 = generate(&input5, term_col, term_row).unwrap();
         assert_eq!(
             bytes5,
             format!(
@@ -185,7 +181,7 @@ mod tests {
             kind: MouseInputKind::MouseMove,
             maybe_modifier_keys: None,
         };
-        let bytes6 = SgrMouseSequence::generate(&input6, term_col, term_row).unwrap();
+        let bytes6 = generate(&input6, term_col, term_row).unwrap();
         assert_eq!(
             bytes6,
             format!(
@@ -203,7 +199,7 @@ mod tests {
             kind: MouseInputKind::MouseDrag(Button::Middle),
             maybe_modifier_keys: None,
         };
-        let bytes7 = SgrMouseSequence::generate(&input7, term_col, term_row).unwrap();
+        let bytes7 = generate(&input7, term_col, term_row).unwrap();
         assert_eq!(
             bytes7,
             format!(

@@ -7,25 +7,21 @@
 //!
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 
-use super::{InputRouter, OutputRenderer, Process, ProcessManager};
-use crate::{AnsiSequenceGenerator, Continuation, DEBUG_TUI_PTY_MUX, EventPropagation,
+use super::{MAX_PROCESSES, OUTPUT_POLL_INTERVAL_MS, OutputRenderer, Process,
+            ProcessManager, STATUS_BAR_UPDATE_INTERVAL_MS};
+use crate::{Continuation, DEBUG_TUI_PTY_MUX, EventPropagation,
             InputEvent, Size, TerminalInteractiveStatus, TuiAvailability, col,
             core::{check_is_terminal_interactive, emit_stderr_redirection_disclaimer,
                    get_size,
                    osc::OscController,
                    pty::pty_mux::{AdaptiveRenderResult::{Render, Skip},
-                                  Budget},
+                                  Budget, input_router},
                    terminal_io::{InputDevice, OutputDevice, TerminalModeController}},
-            format_no_alloc, ok,
-            pty_mux::output_renderer::MAX_PROCESSES,
-            row};
+            format_no_alloc, ok, row};
 use std::{fmt::Debug,
           thread::sleep,
           time::{Duration, Instant}};
 use tokio::time::interval;
-
-pub const STATUS_BAR_UPDATE_INTERVAL_MS: u64 = 500;
-pub const OUTPUT_POLL_INTERVAL_MS: u64 = 10;
 
 /// Builder for configuring and creating a [`PTYMux`] instance.
 ///
@@ -187,7 +183,6 @@ mod impl_pty_mux_builder {
                                 processes,
                                 terminal_size,
                             ),
-                            input_router: InputRouter::new(),
                             output_renderer: OutputRenderer::new(terminal_size),
                             terminal_size,
                             output_device,
@@ -210,7 +205,6 @@ mod impl_pty_mux_builder {
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 pub struct PTYMux {
     process_manager: ProcessManager,
-    input_router: InputRouter,
     output_renderer: OutputRenderer,
     terminal_size: Size,
     output_device: OutputDevice,
@@ -226,7 +220,6 @@ mod impl_pty_mux {
         fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
             f.debug_struct("PTYMux")
                 .field("process_manager", &self.process_manager)
-                .field("input_router", &self.input_router)
                 .field("output_renderer", &self.output_renderer)
                 .field("terminal_size", &self.terminal_size)
                 .field("output_device", &"<OutputDevice>")
@@ -311,9 +304,9 @@ mod impl_pty_mux {
             // Clear screen before showing first process.
             self.output_device.write(|out| {
                 let _unused =
-                    out.write_all(AnsiSequenceGenerator::clear_screen().as_bytes());
+                    out.write_all(crate::ansi_output::screen_clearing::clear_screen().as_bytes());
                 let _unused = out.write_all(
-                    AnsiSequenceGenerator::cursor_position(row(0), col(0)).as_bytes(),
+                    crate::ansi_output::cursor_movement::cursor_position(row(0), col(0)).as_bytes(),
                 );
                 let _unused = out.flush();
             });
@@ -335,12 +328,12 @@ mod impl_pty_mux {
             });
             let result = self.run_event_loop().await;
             DEBUG_TUI_PTY_MUX.then(|| {
-            // % is Display, ? is Debug.
-            tracing::debug! {
-                message = "PTYMux::run",
-                info = %format!("Main event loop exited with result: {result:?}")
-            };
-        });
+                // % is Display, ? is Debug.
+                tracing::debug! {
+                    message = "PTYMux::run",
+                    info = %format!("Main event loop exited with result: {result:?}")
+                };
+            });
 
             // Always cleanup regardless of error.
             self.cleanup_terminal();
@@ -433,11 +426,11 @@ mod impl_pty_mux {
                                 )
                             };
                         });
-                        let continuation = self.input_router.handle_input(
+
+                        let continuation = input_router::handle_input(
                             input_event,
                             &mut self.process_manager,
                         )?;
-
                         if continuation == Continuation::Stop {
                             DEBUG_TUI_PTY_MUX.then(|| {
                                 // % is Display, ? is Debug.
@@ -562,12 +555,12 @@ mod impl_pty_mux {
             });
             sleep(Duration::from_millis(100));
             DEBUG_TUI_PTY_MUX.then(|| {
-            // % is Display, ? is Debug.
-            tracing::debug! {
-                message = "PTYMux::cleanup_terminal",
-                info = %format!("Step 2 completed in {:?}", start_time.elapsed())
-            };
-        });
+                // % is Display, ? is Debug.
+                tracing::debug! {
+                    message = "PTYMux::cleanup_terminal",
+                    info = %format!("Step 2 completed in {:?}", start_time.elapsed())
+                };
+            });
 
             // Force flush any pending output.
             DEBUG_TUI_PTY_MUX.then(|| {
@@ -598,12 +591,12 @@ mod impl_pty_mux {
                 }
             });
             DEBUG_TUI_PTY_MUX.then(|| {
-            // % is Display, ? is Debug.
-            tracing::debug! {
-                message = "PTYMux::cleanup_terminal",
-                info = %format!("Step 3 completed in {:?}", start_time.elapsed())
-            };
-        });
+                // % is Display, ? is Debug.
+                tracing::debug! {
+                    message = "PTYMux::cleanup_terminal",
+                    info = %format!("Step 3 completed in {:?}", start_time.elapsed())
+                };
+            });
 
             // Clear screen
             DEBUG_TUI_PTY_MUX.then(|| {
@@ -615,19 +608,19 @@ mod impl_pty_mux {
             });
             self.output_device.write(|out| {
                 let _unused =
-                    out.write_all(AnsiSequenceGenerator::clear_screen().as_bytes());
+                    out.write_all(crate::ansi_output::screen_clearing::clear_screen().as_bytes());
                 let _unused = out.write_all(
-                    AnsiSequenceGenerator::cursor_position(row(0), col(0)).as_bytes(),
+                    crate::ansi_output::cursor_movement::cursor_position(row(0), col(0)).as_bytes(),
                 );
                 let _unused = out.flush();
             });
             DEBUG_TUI_PTY_MUX.then(|| {
-            // % is Display, ? is Debug.
-            tracing::debug! {
-                message = "PTYMux::cleanup_terminal",
-                info = %format!("Step 4 completed in {:?}", start_time.elapsed())
-            };
-        });
+                // % is Display, ? is Debug.
+                tracing::debug! {
+                    message = "PTYMux::cleanup_terminal",
+                    info = %format!("Step 4 completed in {:?}", start_time.elapsed())
+                };
+            });
 
             // Force flush after escape sequences.
             DEBUG_TUI_PTY_MUX.then(|| {
@@ -658,12 +651,12 @@ mod impl_pty_mux {
                 }
             });
             DEBUG_TUI_PTY_MUX.then(|| {
-            // % is Display, ? is Debug.
-            tracing::debug! {
-                message = "PTYMux::cleanup_terminal",
-                info = %format!("Step 5 completed in {:?}", start_time.elapsed())
-            };
-        });
+                // % is Display, ? is Debug.
+                tracing::debug! {
+                    message = "PTYMux::cleanup_terminal",
+                    info = %format!("Step 5 completed in {:?}", start_time.elapsed())
+                };
+            });
 
             // End raw mode
             DEBUG_TUI_PTY_MUX.then(|| {
@@ -684,12 +677,12 @@ mod impl_pty_mux {
 
             let total_time = start_time.elapsed();
             DEBUG_TUI_PTY_MUX.then(|| {
-            // % is Display, ? is Debug.
-            tracing::debug! {
-                message = "PTYMux::cleanup_terminal",
-                info = %format!("Cleanup completed successfully in {:?}", total_time)
-            };
-        });
+                // % is Display, ? is Debug.
+                tracing::debug! {
+                    message = "PTYMux::cleanup_terminal",
+                    info = %format!("Cleanup completed successfully in {:?}", total_time)
+                };
+            });
 
             if total_time > Duration::from_millis(500) {
                 DEBUG_TUI_PTY_MUX.then(|| {

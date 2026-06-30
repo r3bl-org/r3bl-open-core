@@ -54,7 +54,11 @@
 //! [`PTYMux`]: r3bl_tui::core::pty_mux::PTYMux
 //! [`SIGWINCH`]: signal_hook::consts::SIGWINCH
 
-use r3bl_tui::{EventPropagation, InputEvent, IntoErr, Key, KeyPress, KeyState, ModifierKeysMask, TuiAvailability, assert_terminal_is_interactive, core::pty_mux::{PTYMux, ProcessManager}, is_command_available, ok, set_mimalloc_in_main, show_notification_non_blocking, try_initialize_logging_global};
+use r3bl_tui::{EventPropagation, InputEvent, IntoErr, Key, KeyPress, KeyState,
+               ModifierKeysMask, TuiAvailability, assert_terminal_is_interactive,
+               core::pty_mux::{PTYMux, ProcessManager},
+               is_command_available, ok, set_mimalloc_in_main,
+               show_notification_non_blocking, try_initialize_logging_global};
 use tracing_core::LevelFilter;
 
 const ENABLE_NOTIFICATIONS: bool = false;

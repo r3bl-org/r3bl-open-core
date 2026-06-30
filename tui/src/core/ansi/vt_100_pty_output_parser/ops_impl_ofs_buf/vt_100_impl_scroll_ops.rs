@@ -3,9 +3,9 @@
 //! [`ANSI`] vertical scrolling operations for [`OfsBufVT100`].
 //!
 //! This module provides methods for vertical line-based scrolling operations, including
-//! index operations (`IND`/`RI`) and scroll operations (`SU`/`SD`). These operations
-//! respect [`DECSTBM`] scroll region margins and handle cursor positioning as required by
-//! [`ANSI`] terminal emulation standards.
+//! index operations ([`IND`]/[`RI`]) and scroll operations ([`SU`]/[`SD`]). These
+//! operations respect [`DECSTBM`] scroll region margins and handle cursor positioning as
+//! required by [`ANSI`] terminal emulation standards.
 //!
 //! This module implements the business logic for scroll operations delegated from the
 //! parser shim. The `impl_` prefix follows our naming convention for searchable code
@@ -14,14 +14,18 @@
 //!
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`DECSTBM`]: https://vt100.net/docs/vt510-rm/DECSTBM.html
+//! [`IND`]: https://vt100.net/docs/vt510-rm/IND.html
+//! [`RI`]: https://vt100.net/docs/vt510-rm/RI.html
+//! [`SD`]: https://vt100.net/docs/vt510-rm/SD.html
+//! [`SU`]: https://vt100.net/docs/vt510-rm/SU.html
 
-use crate::{ArrayBoundsCheck, ArrayUnderflowResult, OfsBufVT100, RowHeight,
-            core::coordinates::bounds_check::RangeConvertExt, ok};
+use crate::{ArrayBoundsCheck, ArrayUnderflowResult, LengthOps, OfsBufVT100, RowHeight,
+            core::coordinates::bounds_check::RangeConvertExt, ok, row};
 
 impl OfsBufVT100 {
     /// Move cursor down one line, scrolling the buffer if at bottom.
     ///
-    /// Implements the `ESC D` (`IND`) escape sequence. Respects [`DECSTBM`] scroll
+    /// Implements the `ESC D` ([`IND`]) escape sequence. Respects [`DECSTBM`] scroll
     /// region margins.
     ///
     /// Example - Index down at scroll region bottom triggers scroll
@@ -59,6 +63,7 @@ impl OfsBufVT100 {
     /// Returns an error if the scroll operation fails.
     ///
     /// [`DECSTBM`]: https://vt100.net/docs/vt510-rm/DECSTBM.html
+    /// [`IND`]: https://vt100.net/docs/vt510-rm/IND.html
     pub fn index_down(&mut self) -> miette::Result<()> {
         let current_row = self.cursor_pos.row_index;
 
@@ -80,7 +85,7 @@ impl OfsBufVT100 {
 
     /// Move cursor up one line, scrolling the buffer if at top.
     ///
-    /// Implements the `ESC M` (`RI`) escape sequence. Respects [`DECSTBM`] scroll
+    /// Implements the `ESC M` ([`RI`]) escape sequence. Respects [`DECSTBM`] scroll
     /// region margins.
     ///
     /// Example - Reverse index up at scroll region top triggers scroll
@@ -118,6 +123,7 @@ impl OfsBufVT100 {
     /// Returns an error if the scroll operation fails.
     ///
     /// [`DECSTBM`]: https://vt100.net/docs/vt510-rm/DECSTBM.html
+    /// [`RI`]: https://vt100.net/docs/vt510-rm/RI.html
     pub fn reverse_index_up(&mut self) -> miette::Result<()> {
         let current_row = self.cursor_pos.row_index;
 
@@ -125,23 +131,61 @@ impl OfsBufVT100 {
         let scroll_top_boundary = *self.get_scroll_range_inclusive().start();
 
         // Check if we're at the top of the scroll region.
-        if scroll_top_boundary.underflows(current_row)
-            == ArrayUnderflowResult::Underflowed
-        {
-            // Not at scroll region top - just move cursor up.
-            self.cursor_up(RowHeight::from(1));
-            ok!()
-        } else {
-            // At scroll region top - scroll buffer content down by one line.
-            self.scroll_buffer_down()
+        match scroll_top_boundary.underflows(current_row) {
+            ArrayUnderflowResult::Underflowed => {
+                // Not at scroll region top - just move cursor up.
+                self.cursor_up(RowHeight::from(1));
+                ok!()
+            }
+            ArrayUnderflowResult::Within => {
+                // At scroll region top - scroll buffer content down by one line.
+                self.scroll_buffer_down()
+            }
         }
     }
 
     /// Scroll buffer content up by one line (for `ESC D` at bottom).
     ///
-    /// The top line is lost, and a new empty line appears at bottom.
+    /// The top line is lost (or saved to scrollback), and a new empty line appears at
+    /// bottom.
     ///
     /// Respects [`DECSTBM`] scroll region margins.
+    ///
+    /// # Use Case
+    ///
+    /// This handles the "normal" scrolling behavior seen in daily terminal usage.
+    ///
+    /// ## 1. The Standard Terminal Emulator Story
+    ///
+    /// Imagine a user is running a standard terminal emulator (like `Wezterm`) and
+    /// running a shell like `fish` or `bash` inside it. They type `ls -la /etc`,
+    /// producing hundreds of lines of output. As `fish` or `bash` prints each new line
+    /// (via `\n` or the [`IND`] sequence), the cursor eventually hits the bottom of the
+    /// screen.
+    ///
+    /// The original hardware [`VT-100`] specification (1978) had no concept of a
+    /// "scrollback buffer". When a line scrolled off the top of the physical screen, it
+    /// was deleted from RAM forever. Shells like `bash` or `fish` still operate under
+    /// this assumption: they print text blindly, expecting the terminal to discard the
+    /// top line when the screen fills up.
+    ///
+    /// However, modern terminal emulators invented the scrollback buffer as a
+    /// quality-of-life UI feature. When the screen fills up, the terminal emulator shifts
+    /// all text up by one line, intercepting the evicted top line and saving it to a
+    /// private history buffer so the user can scroll up later.
+    ///
+    /// ## 2. How [`pty_mux`] Emulates This (the code here)
+    ///
+    /// When someone builds a TUI app using our [`pty_mux`] module, they are essentially
+    /// running our "headless" terminal emulator inside their app.
+    ///
+    /// When the child [`PTY`] process (like `fish` or `bash`) hits the bottom of the
+    /// virtual screen and requests a new line, it is **this output parser** that acts as
+    /// the terminal emulator. It shifts all text up by one line in its virtual memory
+    /// canvas to make room at the bottom. The parser then captures the line that was just
+    /// pushed off the top of the virtual screen and saves it into its own private
+    /// scrollback history, perfectly mimicking the behavior of a standard terminal
+    /// emulator.
     ///
     /// See [`shift_lines_up()`] for detailed behavior and examples.
     ///
@@ -150,11 +194,49 @@ impl OfsBufVT100 {
     /// Returns an error if the scroll operation fails.
     ///
     /// [`DECSTBM`]: https://vt100.net/docs/vt510-rm/DECSTBM.html
+    /// [`IND`]: https://vt100.net/docs/vt510-rm/IND.html
+    /// [`pty_mux`]: crate::core::pty::pty_mux
+    /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
     /// [`shift_lines_up()`]: crate::OfsBufVT100::shift_lines_up
+    /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
     pub fn scroll_buffer_up(&mut self) -> miette::Result<()> {
         // Get scroll region as an inclusive range and convert to
         // exclusive for iteration.
         let scroll_region = self.get_scroll_range_inclusive();
+
+        // Restricted Scrolling (Not Full Screen): Terminals support a feature called
+        // `DECSTBM` (Set Top and Bottom Margins), which lets a program restrict scrolling
+        // to a specific "window" or sub-region of the screen (e.g., only scrolling lines
+        // 5 through 15).
+        // - Complex TUI apps like vim, tmux, or htop use this heavily. They might keep a
+        //   status bar locked at the bottom and a file header locked at the top, while
+        //   only the text in the middle scrolls.
+        // - When a restricted region scrolls, a line is still pushed out of that region,
+        //   but we do not want to save it to your scrollback history. If we did, your
+        //   history would become polluted with random fragments of vim's UI!
+        let is_unrestricted_scroll = {
+            // 1) The scroll region must start at the absolute top of the terminal.
+            let region_starts_at_top = *scroll_region.start() == row(0);
+
+            // 2) The scroll region must end at the absolute bottom of the terminal.
+            let region_ends_at_bottom =
+                *scroll_region.end() == self.window_size.row_height.convert_to_index();
+
+            region_starts_at_top && region_ends_at_bottom
+        };
+
+        if is_unrestricted_scroll {
+            // Get the line that is about to be evicted from the top.
+            let row_index_at_top_pending_eviction = scroll_region.start().as_usize();
+
+            // Clone the evicted line because `shift_lines_up()` uses a zero-allocation
+            // `Slice::rotate_left()` optimization and wipes the original line memory to
+            // recycle it.
+            let evicted_line = self.buffer[row_index_at_top_pending_eviction].clone();
+
+            // Push it to our scrollback history, maintaining capacity limit.
+            self.scrollback_buffer.push_and_enforce_limit(evicted_line);
+        }
 
         // Use shift_lines_up to shift lines up within the scroll region.
         self.shift_lines_up(scroll_region.to_exclusive(), 1)
@@ -166,6 +248,37 @@ impl OfsBufVT100 {
     ///
     /// Respects [`DECSTBM`] scroll region margins.
     ///
+    /// # Use Case
+    ///
+    /// This handles "reverse" scrolling, most commonly used by full-screen TUI
+    /// applications.
+    ///
+    /// ## 1. The Standard Terminal Emulator Story
+    ///
+    /// Imagine a user is running a standard terminal emulator (like `Wezterm`) and
+    /// running a full-screen TUI app like `vim` or `less` inside it. If the user presses
+    /// the "Up Arrow" key to scroll up in a document while their cursor is already at the
+    /// very top of the screen, `vim` or `less` needs to make room at the top to draw the
+    /// new line.
+    ///
+    /// Instead of redrawing the entire screen, `vim` or `less` sends the `ESC M` ([`RI`]
+    /// (Reverse Index)) sequence. This tells the terminal emulator to efficiently shift
+    /// the entire screen down by one line. The line at the very bottom is pushed off the
+    /// screen and permanently lost (terminals do not have a "scroll-forward" history
+    /// buffer), leaving a fresh blank line at the top where `vim` or `less` can draw the
+    /// new text.
+    ///
+    /// ## 2. How [`pty_mux`] Emulates This (the code here)
+    ///
+    /// When someone builds a TUI app using our [`pty_mux`] module, they are essentially
+    /// running our "headless" terminal emulator inside their app.
+    ///
+    /// When the child [`PTY`] process (like `vim` or `less`) sends the `ESC M` sequence,
+    /// it is **this output parser** that acts as the terminal emulator. It shifts all
+    /// text down by one line in its virtual memory canvas. The bottom line is dropped
+    /// completely, and a blank line is made available at the top of the virtual screen
+    /// for the child process to use.
+    ///
     /// See [`shift_lines_down()`] for detailed behavior and examples.
     ///
     /// # Errors
@@ -173,17 +286,19 @@ impl OfsBufVT100 {
     /// Returns an error if the scroll operation fails.
     ///
     /// [`DECSTBM`]: https://vt100.net/docs/vt510-rm/DECSTBM.html
+    /// [`pty_mux`]: crate::core::pty::pty_mux
+    /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
+    /// [`RI`]: https://vt100.net/docs/vt510-rm/RI.html
     /// [`shift_lines_down()`]: crate::OfsBufVT100::shift_lines_down
     pub fn scroll_buffer_down(&mut self) -> miette::Result<()> {
-        // Get scroll region as an inclusive range and convert to
-        // exclusive for iteration.
+        // Get scroll region as an inclusive range and convert to exclusive for iteration.
         let scroll_region = self.get_scroll_range_inclusive();
 
         // Use shift_lines_down to shift lines down within the scroll region.
         self.shift_lines_down(scroll_region.to_exclusive(), 1)
     }
 
-    /// Handle `SU` (Scroll Up) - scroll display up by n lines.
+    /// Handle [`SU`] (Scroll Up) - scroll display up by n lines.
     ///
     /// Multiple lines at the top are lost, new empty lines appear at bottom. Respects
     /// [`DECSTBM`] scroll region margins.
@@ -223,6 +338,7 @@ impl OfsBufVT100 {
     /// Returns an error if the scroll operation fails.
     ///
     /// [`DECSTBM`]: https://vt100.net/docs/vt510-rm/DECSTBM.html
+    /// [`SU`]: https://vt100.net/docs/vt510-rm/SU.html
     pub fn scroll_up(&mut self, how_many: RowHeight) -> miette::Result<()> {
         for _ in 0..how_many.as_u16() {
             self.scroll_buffer_up()?;
@@ -230,7 +346,7 @@ impl OfsBufVT100 {
         ok!()
     }
 
-    /// Handle `SD` (Scroll Down) - scroll display down by n lines.
+    /// Handle [`SD`] (Scroll Down) - scroll display down by n lines.
     ///
     /// Multiple lines at the bottom are lost, new empty lines appear at top. Respects
     /// [`DECSTBM`] scroll region margins.
@@ -270,6 +386,7 @@ impl OfsBufVT100 {
     /// Returns an error if the scroll operation fails.
     ///
     /// [`DECSTBM`]: https://vt100.net/docs/vt510-rm/DECSTBM.html
+    /// [`SD`]: https://vt100.net/docs/vt510-rm/SD.html
     pub fn scroll_down(&mut self, how_many: RowHeight) -> miette::Result<()> {
         for _ in 0..how_many.as_u16() {
             self.scroll_buffer_down()?;
@@ -281,10 +398,11 @@ impl OfsBufVT100 {
 #[cfg(test)]
 mod tests_scroll_vert_ops {
     use super::*;
-    use crate::{OfsBufVT100, col, height, idx, row, term_row, width,
+    use crate::{OfsBufVT100, col, height, idx, row, term_row,
                 test_fixtures_ofs_buf::{assert_plain_char_at,
-                                        create_vt100_test_buffer_with_size}};
-    use crate::vt_100_pty_output_conformance_tests::nz;
+                                        create_vt100_test_buffer_with_size},
+                vt_100_pty_output_conformance_tests::nz,
+                width};
 
     fn create_test_buffer() -> OfsBufVT100 {
         create_vt100_test_buffer_with_size(width(10), height(6))

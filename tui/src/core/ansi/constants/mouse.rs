@@ -73,7 +73,7 @@ pub const MOUSE_SGR_PREFIX_LEN: usize = 3;
 /// [`SGR`]: crate::SgrCode
 pub const MOUSE_SGR_MIN_LEN: usize = 9;
 
-/// [`X10`]/Normal Mouse Protocol Prefix: Legacy mouse tracking prefix `ESC [ M`.
+/// [`X10`]/Legacy Mouse Protocol Prefix: Legacy mouse tracking prefix `ESC [ M`.
 ///
 /// Format: `CSI M Cb Cx Cy`
 ///

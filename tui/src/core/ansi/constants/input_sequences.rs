@@ -875,22 +875,36 @@ pub const CSI_PREFIX_LEN: usize = CSI_PREFIX.len();
 ///
 /// Sequence: `ESC [ ? 1 h`
 ///
-/// Byte representation of `CsiSequence::EnablePrivateMode(PrivateModeType::CursorKeys)`.
-/// See `DECCKM_CURSOR_KEYS` for the mode number.
+/// Byte representation of:
+/// ```rust
+/// use r3bl_tui::{CsiSequence, PrivateModeType};
+/// use smallvec::smallvec;
+/// CsiSequence::EnablePrivateMode(smallvec![PrivateModeType::CursorKeys]);
+/// ```
+///
+/// See [`DECCKM_CURSOR_KEYS`] for the mode number.
 ///
 /// [`CSI`]: crate::CsiSequence
 /// [`DEC`]: https://en.wikipedia.org/wiki/Digital_Equipment_Corporation
+/// [`DECCKM_CURSOR_KEYS`]: crate::core::ansi::DECCKM_CURSOR_KEYS
 pub const DECCKM_ENABLE_BYTES: &[u8] = b"\x1b[?1h";
 
 /// [`DEC`] Cursor Key Mode (DECCKM) Disable: Switch to normal mode cursor keys.
 ///
 /// Sequence: `ESC [ ? 1 l`
 ///
-/// Byte representation of `CsiSequence::DisablePrivateMode(PrivateModeType::CursorKeys)`.
-/// See `DECCKM_CURSOR_KEYS` for the mode number.
+/// Byte representation of:
+/// ```
+/// use r3bl_tui::{CsiSequence, PrivateModeType};
+/// use smallvec::smallvec;
+/// CsiSequence::DisablePrivateMode(smallvec![PrivateModeType::CursorKeys]);
+/// ```
+///
+/// See [`DECCKM_CURSOR_KEYS`] for the mode number.
 ///
 /// [`CSI`]: crate::CsiSequence
 /// [`DEC`]: https://en.wikipedia.org/wiki/Digital_Equipment_Corporation
+/// [`DECCKM_CURSOR_KEYS`]: crate::core::ansi::DECCKM_CURSOR_KEYS
 pub const DECCKM_DISABLE_BYTES: &[u8] = b"\x1b[?1l";
 
 /// DECCKM Sequence Length: Number of bytes in DECCKM enable/disable sequences.

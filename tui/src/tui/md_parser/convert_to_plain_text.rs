@@ -3,19 +3,15 @@
 //! This module is responsible for converting all the [`MdLineFragment`] into plain text
 //! w/out any formatting.
 
-use crate::{HeadingLevel, HyperlinkData, InlineString, List, MdDocument, MdElement,
-            MdLineFragment, ParseList, PrettyPrintDebug, convert_to_string_slice,
-            get_hashes, get_horiz_lines, get_spaces, inline_string, join, join_fmt,
-            join_with_index,
-            md_parser::md_parser_constants::{BACK_TICK, CHECKED, LEFT_BRACKET,
+use crate::{HeadingLevel, HyperlinkData, InlineString, List, MdDocument, MdElement, MdLineFragment, ParseList, PrettyPrintDebug, convert_usize_to_ascii_str_slice, get_hashes, get_horiz_lines, get_spaces, inline_string, join, join_fmt, join_with_index, md_parser::md_parser_constants::{BACK_TICK, CHECKED, LEFT_BRACKET,
                                              LEFT_IMAGE, LEFT_PARENTHESIS,
                                              LIST_SPACE_DISPLAY,
                                              LIST_SPACE_END_DISPLAY_FIRST_LINE,
                                              LIST_SPACE_END_DISPLAY_REST_LINE,
                                              NEW_LINE, PERIOD, RIGHT_BRACKET,
                                              RIGHT_IMAGE, RIGHT_PARENTHESIS, SPACE,
-                                             STAR, UNCHECKED, UNDERSCORE},
-            usize_to_u8_array};
+                                             STAR, UNCHECKED, UNDERSCORE}
+};
 
 impl PrettyPrintDebug for MdDocument<'_> {
     fn pretty_print_debug(&self) -> InlineString {
@@ -167,7 +163,7 @@ pub fn generate_ordered_list_item_bullet(
 
     if *is_first_line {
         acc.push_str(&get_spaces(*indent));
-        acc.push_str(&number.to_string());
+        acc.push_str(convert_usize_to_ascii_str_slice!(*number));
         acc.push_str(PERIOD);
         acc.push_str(LIST_SPACE_END_DISPLAY_REST_LINE);
     } else {
@@ -175,9 +171,7 @@ pub fn generate_ordered_list_item_bullet(
         acc.push_str(&get_spaces(*indent));
 
         // Padding for number.
-        let number_ray = usize_to_u8_array(*number);
-        let number_str = convert_to_string_slice(&number_ray);
-        let number_str_len = number_str.len();
+        let number_str_len = convert_usize_to_ascii_str_slice!(*number).len();
         acc.push_str(&get_spaces(number_str_len));
 
         // Write the reset rest of the line.

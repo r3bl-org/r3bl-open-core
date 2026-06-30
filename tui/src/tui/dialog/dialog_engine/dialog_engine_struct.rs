@@ -1,9 +1,8 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
-
 use crate::{Ansi256GradientIndex, ColorWheel, ColorWheelConfig, ColorWheelSpeed,
             DisplayConstants, EditorEngine, EditorEngineConfig, PartialFlexBox,
             RowHeight, RowIndex, Size, SurfaceBounds, TuiStyle,
-            get_terminal_width_no_default, row, u8, width};
+            get_terminal_width_no_default, height, row, u8, width};
 use smallvec::smallvec;
 use std::fmt::Debug;
 
@@ -112,9 +111,9 @@ pub struct DialogEngineConfigOptions {
     pub maybe_style_results_panel: Option<TuiStyle>,
 }
 
-mod dialog_engine_config_options_impl {
-    use super::{DialogEngineConfigOptions, DialogEngineMode, DisplayConstants};
-    use crate::height;
+mod impl_dialog_engine_config_options {
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     impl Default for DialogEngineConfigOptions {
         fn default() -> Self {

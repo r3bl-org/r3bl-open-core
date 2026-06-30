@@ -62,7 +62,7 @@ impl DialogEngineApi {
                 }
                 // Otherwise, calculate a new flex box & save it.
                 _ => {
-                    let it = internal_impl::make_flex_box_for_dialog(
+                    let it = impl_internal::make_flex_box_for_dialog(
                         self_id,
                         dialog_engine.dialog_options,
                         window_size,
@@ -85,7 +85,7 @@ impl DialogEngineApi {
 
             it.push(
                 ZOrder::Glass,
-                internal_impl::render_border(origin_pos, bounds_size, dialog_engine),
+                impl_internal::render_border(origin_pos, bounds_size, dialog_engine),
             );
 
             // Paint title.
@@ -97,7 +97,7 @@ impl DialogEngineApi {
             };
             it.push(
                 ZOrder::Glass,
-                internal_impl::render_title(
+                impl_internal::render_title(
                     origin_pos,
                     bounds_size,
                     title,
@@ -110,7 +110,7 @@ impl DialogEngineApi {
                 dialog_engine.dialog_options.mode,
                 DialogEngineMode::ModalAutocomplete
             ) {
-                let results_panel_ops = internal_impl::render_results_panel(
+                let results_panel_ops = impl_internal::render_results_panel(
                     origin_pos,
                     bounds_size,
                     dialog_engine,
@@ -122,7 +122,7 @@ impl DialogEngineApi {
                 }
             }
 
-            it += internal_impl::render_editor(
+            it += impl_internal::render_editor(
                 origin_pos,
                 bounds_size,
                 DialogEngineArgs {
@@ -161,7 +161,7 @@ impl DialogEngineApi {
         AS: Debug + Default + Clone + Sync + Send,
     {
         // Was a dialog choice made?
-        if let Some(choice) = internal_impl::try_handle_dialog_choice(
+        if let Some(choice) = impl_internal::try_handle_dialog_choice(
             &input_event,
             mut_state.get_mut_dialog_buffer(self_id),
             dialog_engine,
@@ -172,7 +172,7 @@ impl DialogEngineApi {
 
         // Was up / down pressed to select autocomplete results & vert scroll the results
         // panel?
-        if let EventPropagation::ConsumedRender = internal_impl::try_handle_up_down(
+        if let EventPropagation::ConsumedRender = impl_internal::try_handle_up_down(
             &input_event,
             mut_state.get_mut_dialog_buffer(self_id),
             dialog_engine,
@@ -220,7 +220,7 @@ pub enum DisplayConstants {
     DefaultResultsPanelRowCount = 5,
 }
 
-mod internal_impl {
+mod impl_internal {
     #[allow(clippy::wildcard_imports)]
     use super::*;
 
@@ -1031,7 +1031,7 @@ mod test_dialog_api_make_flex_box_for_dialog {
         //           "Window size is too small. Min size is 65 cols x 10 rows",
         //       ),
         //   },
-        let result_flex_box = dbg!(internal_impl::make_flex_box_for_dialog(
+        let result_flex_box = dbg!(impl_internal::make_flex_box_for_dialog(
             dialog_id,
             DialogEngineConfigOptions {
                 mode: DialogEngineMode::ModalSimple,
@@ -1075,7 +1075,7 @@ mod test_dialog_api_make_flex_box_for_dialog {
         //           "Window size is too small. Min size is 65 cols x 10 rows",
         //       ),
         //   },
-        let result_flex_box = dbg!(internal_impl::make_flex_box_for_dialog(
+        let result_flex_box = dbg!(impl_internal::make_flex_box_for_dialog(
             dialog_id,
             DialogEngineConfigOptions {
                 mode: DialogEngineMode::ModalAutocomplete,
@@ -1115,7 +1115,7 @@ mod test_dialog_api_make_flex_box_for_dialog {
         let self_id: FlexBoxId = FlexBoxId::from(0);
 
         // The dialog box should be centered inside the surface.
-        let result_flex_box = dbg!(internal_impl::make_flex_box_for_dialog(
+        let result_flex_box = dbg!(impl_internal::make_flex_box_for_dialog(
             self_id,
             DialogEngineConfigOptions {
                 mode: DialogEngineMode::ModalSimple,
@@ -1146,7 +1146,7 @@ mod test_dialog_api_make_flex_box_for_dialog {
         let self_id: FlexBoxId = FlexBoxId::from(0);
 
         // The dialog box should be centered inside the surface.
-        let result_flex_box = dbg!(internal_impl::make_flex_box_for_dialog(
+        let result_flex_box = dbg!(impl_internal::make_flex_box_for_dialog(
             self_id,
             DialogEngineConfigOptions {
                 mode: DialogEngineMode::ModalAutocomplete,

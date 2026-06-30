@@ -87,8 +87,9 @@ pub struct HyperlinkData<'a> {
     pub url: &'a str,
 }
 
-mod hyperlink_data_impl {
-    use super::HyperlinkData;
+mod impl_hyperlink_data {
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     impl<'a> HyperlinkData<'a> {
         #[must_use]

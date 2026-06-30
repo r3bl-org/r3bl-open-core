@@ -4,9 +4,8 @@
 //!
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 
-use r3bl_tui::{AnsiSequenceGenerator, InputEvent, Key, KeyPress, KeyState,
-               ModifierKeysMask, TerminalModeController, assert_terminal_is_interactive,
-               col,
+use r3bl_tui::{InputEvent, Key, KeyPress, KeyState, ModifierKeysMask,
+               TerminalModeController, assert_terminal_is_interactive, col,
                core::{get_size,
                       pty::{ControlSequence, CursorKeyMode, DefaultPtySessionConfig,
                             PtyInputEvent, PtyOutputEvent, PtySessionBuilder,
@@ -40,9 +39,12 @@ async fn main() -> miette::Result<()> {
 
     // Clear screen.
     output_device.write(|out| {
-        let _unused = out.write_all(AnsiSequenceGenerator::clear_screen().as_bytes());
         let _unused = out
-            .write_all(AnsiSequenceGenerator::cursor_position(row(0), col(0)).as_bytes());
+            .write_all(r3bl_tui::ansi_output::screen_clearing::clear_screen().as_bytes());
+        let _unused = out.write_all(
+            r3bl_tui::ansi_output::cursor_movement::cursor_position(row(0), col(0))
+                .as_bytes(),
+        );
         let _unused = out.flush();
     });
 

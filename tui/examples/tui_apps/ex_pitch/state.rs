@@ -103,7 +103,7 @@ pub mod state_mutator {
     }
 }
 
-mod state_impl {
+mod impl_state {
     use super::{EditorBuffer, FlexBoxId, HasEditorBuffers, State, state_mutator};
 
     impl Default for State {

@@ -7,7 +7,7 @@
 use super::{index_ops::IndexOps, numeric_value::NumericValue,
             result_enums::ArrayOverflowResult};
 use crate::{ArrayBoundsCheck, Length, len};
-use std::{cmp::min, ops::Sub};
+use std::{cmp::{max, min}, ops::Sub};
 
 /// Trait for 1-based size/length types, providing operations for working with sizes and
 /// measurements.
@@ -460,6 +460,38 @@ pub trait LengthOps: NumericValue {
         let max_length: Self = arg_max_length.into();
         min(*self, max_length)
     }
+
+    /// Enforces a minimum length bound on this length.
+    ///
+    /// # Arguments
+    ///
+    /// * `arg_min_length` - The minimum allowed length
+    ///
+    /// # Returns
+    ///
+    /// Returns the greater of:
+    /// - This length
+    /// - The provided minimum length
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use r3bl_tui::{LengthOps, len};
+    ///
+    /// // Length is smaller than minimum - gets clamped up
+    /// let small_length = len(5);
+    /// let min_allowed = len(10);
+    /// assert_eq!(small_length.clamp_to_min(min_allowed), len(10));
+    ///
+    /// // Length already exceeds minimum - remains unchanged
+    /// let large_length = len(15);
+    /// assert_eq!(large_length.clamp_to_min(len(10)), len(15));
+    /// ```
+    #[must_use]
+    fn clamp_to_min(&self, arg_min_length: impl Into<Self>) -> Self {
+        let min_length: Self = arg_min_length.into();
+        max(*self, min_length)
+    }
 }
 
 #[cfg(test)]
@@ -565,6 +597,27 @@ mod tests {
         // Zero length
         let zero_length = len(0);
         assert_eq!(zero_length.clamp_to_max(max_length), zero_length);
+    }
+
+    #[test]
+    fn test_clamp_to_min() {
+        let min_length = len(10);
+
+        // Length smaller than bounds
+        let small_length = len(5);
+        assert_eq!(small_length.clamp_to_min(min_length), min_length);
+
+        // Length at bounds
+        let equal_length = len(10);
+        assert_eq!(equal_length.clamp_to_min(min_length), min_length);
+
+        // Length exceeding bounds
+        let large_length = len(15);
+        assert_eq!(large_length.clamp_to_min(min_length), large_length);
+
+        // Zero length
+        let zero_length = len(0);
+        assert_eq!(zero_length.clamp_to_min(min_length), min_length);
     }
 
     #[test]

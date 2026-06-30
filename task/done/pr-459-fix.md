@@ -44,16 +44,18 @@ The architecture cleanly separates the PTY canvas from the historical log:
 
 - **`OffscreenBuffer` (Canvas):** A pure 2D bitblt grid. It has no concept of history or
   scrollback.
-- **`ScrollbackBuffer` (History):** We will use our existing, battle-tested
-  `RingBufferHeap<Vec<StyleAndText>, N>` (from `tui/src/core/common/ring_buffer_heap.rs`).
+- **`ScrollbackBuffer` (History):** We are using a `VecDeque`-backed `ScrollbackBuffer`
+  (in `tui/src/core/ansi/vt_100_pty_output_parser/parser_state/scrollback_buffer.rs`)
+  instead of the older `RingBufferHeap`. It explicitly tracks memory limits and evicts
+  older lines when the capacity is exceeded.
 - **`OfsBufVT100` (The Brain):** The terminal emulator state machine. It owns both the
-  `OffscreenBuffer` and the `RingBufferHeap`.
+  `OffscreenBuffer` and the `ScrollbackBuffer`.
 
 **The Flow:** When `OfsBufVT100` evaluates a `LineFeed` that causes a scroll at the bottom
 margin, it will:
 
 1. Grab Row 0 from `OffscreenBuffer`.
-2. Push that row into the `RingBufferHeap` scrollback.
+2. Push that row into the `ScrollbackBuffer` scrollback.
 3. Command `OffscreenBuffer` to shift rows up by 1.
 
 ## Phase 1: Backend & History State (`OfsBufVT100`)
@@ -65,46 +67,60 @@ We will process each of the action items iteratively using the following loop:
 3. **Mandatory Manual Review:** You (the user) will manually review the specifically
    touched files before the heading is marked as checked `[x]`.
 
-#### [ ] 1. Wire up `RingBufferHeap` to `OfsBufVT100`
+#### [x] 1. Wire up `ScrollbackBuffer` to `OfsBufVT100`
 
 - _Context:_ `OfsBufVT100` needs to hold the scrollback history state.
-- _The Fix:_ Add `pub scrollback: RingBufferHeap<Vec<StyleAndText>, CAPACITY>` to
-  `OfsBufVT100`. (e.g., `CAPACITY = 1000`).
-- _File(s) Touched:_ `tui/src/core/ansi/vt_100_pty_output_parser/ofs_buf_vt_100.rs`
+- _The Fix:_ Encapsulate the scrollback state in `ScrollbackBuffer` tracking its capacity,
+  lines (`VecDeque`), and cached memory size. Add it to `OfsBufVT100`.
+- _File(s) Touched:_ `tui/src/core/ansi/vt_100_pty_output_parser/ofs_buf_vt_100.rs`,
+  `tui/src/core/ansi/vt_100_pty_output_parser/parser_state/scrollback_buffer.rs`
 
-#### [ ] 2. Capture Evicted Lines on Scroll
+#### [x] 2. Capture Evicted Lines on Scroll
 
 - _Context:_ When the screen scrolls, the top line is normally discarded.
 - _The Fix:_ In the VT100 parser logic, extract row 0 from the `OffscreenBuffer` and push
   it to `OfsBufVT100.scrollback` before executing the `shift_up()` behavior.
 - _File(s) Touched:_
   `tui/src/core/ansi/vt_100_pty_output_parser/ops_impl_ofs_buf/vt_100_impl_scroll_ops.rs`
-  (or wherever `shift_up` is invoked).
 
-#### [ ] 3. Clearing Scrollback (`CSI 3 J`)
+#### [x] 3. Clearing Scrollback (`CSI 3 J`)
 
 - _Context:_ The terminal sequence `CSI 3 J` must clear the scrollback history.
-- _The Fix:_ Add handling for `EntireScreenAndScrollback` to call `.clear()` on the
-  `RingBufferHeap` in `OfsBufVT100`.
+- _The Fix:_ Add handling for `erase_display_scrollback` to call `.clear()` on the
+  `ScrollbackBuffer` in `OfsBufVT100`.
 - _File(s) Touched:_
   `tui/src/core/ansi/vt_100_pty_output_parser/ops_impl_ofs_buf/vt_100_impl_clear_ops.rs`
 
 ### Backend Testing
 
-- [ ] Write unit tests verifying that lines scrolled off the top are correctly pushed into
-      the `RingBufferHeap` with their styles intact.
-- [ ] Write unit tests verifying that `CSI 3 J` properly wipes the `RingBufferHeap`.
-- [ ] Add these to the existing `vt_100_pty_output_conformance_tests` suite.
+- [x] Write unit tests verifying that lines scrolled off the top are correctly pushed into
+      the `ScrollbackBuffer` with their styles intact.
+- [x] Write unit tests verifying that `CSI 3 J` properly wipes the `ScrollbackBuffer`.
+- [x] 3. MANUAL REVIEW
+
+- _Context:_ To prevent catastrophic failures or hallucinatory rewrites, the user MUST
+  manually review the changes made in Phase 1 before proceeding to Phase 2.
+- _The Fix:_ Provide the following checklist to the user and prompt them to open their
+  IDE:
+  - [x] `tui/src/core/ansi/vt_100_pty_output_parser/parser_state/scrollback_buffer.rs`
+  - [x] `tui/src/core/ansi/vt_100_pty_output_parser/ofs_buf_vt_100.rs`
+  - [x] `tui/src/core/ansi/vt_100_pty_output_parser/ops/vt_100_shim_clear_ops.rs`
+  - [x] `tui/src/core/ansi/vt_100_pty_output_parser/ops_impl_ofs_buf/vt_100_impl_clear_ops.rs`
+  - [x] `tui/src/core/ansi/vt_100_pty_output_parser/vt_100_pty_output_conformance_tests/tests/vt_100_test_clear_ops.rs`
+  - [x] `tui/src/core/ansi/constants/generic.rs`
+  - [x] `tui/src/core/ansi/vt_100_pty_output_parser/vt_100_pty_output_conformance_tests/tests/vt_100_test_terminal_ops.rs`
 
 ---
 
 ## Phase 2: UI Integration (`PTYMux`)
 
 Now that the backend is storing history, the engine needs to intercept inputs and render
-the scrollback. **Prerequisite:** This phase assumes `task/pr-458-fix.md` has been
-completed, meaning `OfsBufVT100` accurately tracks `mouse_tracking` mode.
+the scrollback.
 
-#### [ ] 1. Process State Tracking (`scroll_offset`)
+**Prerequisite:** This phase assumes `task/pr-458-fix.md` has been completed, meaning
+`OfsBufVT100` accurately tracks `mouse_tracking` mode.
+
+#### [x] 1. Process State Tracking (`scroll_offset`)
 
 - _Context:_ Each virtual terminal process must maintain its own scroll position.
 - _The Fix:_ Add `pub scroll_offset: usize` to the `Process` struct (in
@@ -112,7 +128,7 @@ completed, meaning `OfsBufVT100` accurately tracks `mouse_tracking` mode.
   between 0 and `scrollback.len()`).
 - _File(s) Touched:_ `tui/src/core/pty/pty_mux/process_manager.rs`
 
-#### [ ] 2. Input Interception (`InputRouter`)
+#### [x] 2. Input Interception (`InputRouter`)
 
 - _Context:_ We must intercept mouse wheel and Shift+PageUp/Down to scroll the buffer, but
   only when appropriate.
@@ -125,7 +141,7 @@ completed, meaning `OfsBufVT100` accurately tracks `mouse_tracking` mode.
     `Process`.
 - _File(s) Touched:_ `tui/src/core/pty/pty_mux/input_router.rs`
 
-#### [ ] 3. Rendering the Scrollback (`OutputRenderer`)
+#### [x] 3. Rendering the Scrollback (`OutputRenderer`)
 
 - _Context:_ The terminal component must read from the scrollback tape when offset.
 - _The Fix:_ Update `OutputRenderer::render_from_active_buffer`. If `scroll_offset > 0`,
@@ -134,25 +150,83 @@ completed, meaning `OfsBufVT100` accurately tracks `mouse_tracking` mode.
   `OutputDevice`.
 - _File(s) Touched:_ `tui/src/core/pty/pty_mux/output_renderer.rs`
 
+#### [x] 4. Mandatory code review
+
+- [x] **Mandatory manual review:** Verify every file modified in this task.
+  - [x] `tui/src/core/ansi/vt_100_pty_output_parser/ofs_buf_vt_100.rs`
+  - [x] `tui/src/core/ansi/vt_100_pty_output_parser/parser_state/scrollback_buffer.rs`
+  - [x] `tui/src/core/ansi/vt_100_pty_output_parser/ops_impl_ofs_buf/vt_100_impl_scroll_ops.rs`
+  - [x] `tui/src/core/ansi/vt_100_pty_output_parser/ops_impl_ofs_buf/vt_100_impl_clear_ops.rs`
+  - [x] `tui/src/core/pty/pty_mux/process_manager.rs`
+  - [x] `tui/src/core/pty/pty_mux/input_router.rs`
+  - [x] `tui/src/core/pty/pty_mux/output_renderer.rs`
+
 ---
 
 ## Phase 3: Examples & Visual Verification
 
-#### [ ] 1. Verify `pty_mux_example`
+#### [x] 1. Verify `pty_mux_example`
 
 - _Context:_ The existing example should automatically benefit from the engine upgrades.
 - _The Fix:_ Run `cargo run --example pty_mux_example`, switch to the `bash` or `fish`
   tabs, and run `ls -la /etc`. Verify that mouse scrolling and Shift+PageUp/Down correctly
   navigate the scrollback history, and that switching between tabs preserves their
   independent scroll states.
+- _Results:_ Verified manually. `bash` and `fish` (Primary Screen) successfully
+  intercepted mouse wheel and `Shift+PageUp/Down` to scroll the multiplexer history tape.
+  `hx` and `gitui` (Alt Screen + Mouse Enabled) correctly received SGR (1006) mouse
+  forwarding and responded natively. `less` (Alt Screen + Mouse Disabled) correctly
+  ignored mouse events. `htop` failed to scroll - the scroll wheel did nothing.
 
-#### [ ] 2. New Scrollback Example App
+  > Why `htop` fails: `htop` uses the older `ncurses` library for rendering. Based on its
+  > `terminfo` detection, it often requests legacy mouse formatting (where clicks are
+  > encoded as raw bytes like `\x1b[M...` ). However, our engine ignores what `htop` asked
+  > for and forcibly sends it the modern SGR (1006) sequence ( `\x1b[<...` ). `htop`
+  > receives those modern bytes, doesn't recognize them as a valid legacy mouse click, and
+  > silently drops them!
+  >
+  > In a fully-compliant, production-grade terminal emulator, you would actually have to
+  > store the specific `mouse.format` the app requested in the `TerminalModeState`, and
+  > dynamically change how you generate the ANSI bytes (Legacy vs UTF-8 vs SGR) depending
+  > on what the app asked for.
+  >
+  > But for our `pty_mux` engine, we opted for the "simplified firehose" approach because
+  > supporting legacy mouse byte-encoding protocols is a nightmare (they literally break
+  > if your terminal is wider than 223 columns).
 
-- _Context:_ We need a standalone example to visually test edge cases and high-volume
-  outputs specifically.
-- _The Fix:_ Create `tui/examples/pty_scrollback_example.rs` that streams highly verbose
-  output (like a mock log generator) and allows the user to scroll back up.
-- _File(s) Touched:_ `tui/examples/pty_scrollback_example.rs`
+#### [x] 2. Fix the firehose mouse tracking so ncurses apps work
+
+- _Context:_ ncurses apps like `htop` request legacy mouse sequences, but our multiplexer
+  force-feeds them modern SGR sequences, causing them to ignore the events. Additionally,
+  `htop` issues chained CSI private modes (e.g., `ESC [ ? 1000 ; 1006 h`) which exposed a
+  critical bug: our parser was only processing the very first parameter and ignoring all
+  subsequent chained parameters, causing important mode changes to be silently dropped.
+- _The Fix:_ Update the CSI parser (`vt_100_shim_mode_ops.rs`) to iterate through and
+  process every parameter in a sequence. Track the requested mouse encoding format
+  (`Normal` vs `SGR`) in `TerminalModeState` and generate the appropriate byte sequences
+  in the input router. Re-architect `CsiSequence::EnablePrivateMode` and
+  `DisablePrivateMode` to support chained modes using `SmallVec`. Refactor
+  `ansi_output.rs` and the `fast_int_fmt.rs` macros to safely generate and process complex
+  chained ANSI sequences without heap allocations.
+- [x] **Manual test:** Make sure that `cargo run --example pty_mux_example` `htop` works
+      as expected
+- [x] **Mandatory manual review:** Verify every file modified in this task.
+  - [x] `tui/src/core/ansi/generator/mod.rs`
+  - [x] `tui/src/core/ansi/generator/mouse_x10.rs`
+  - [x] `tui/src/core/ansi/generator/mouse_sgr.rs`
+  - [x] `tui/src/core/ansi/generator/ansi_output.rs`
+  - [x] `tui/src/core/ansi/vt_100_pty_output_parser/ops/vt_100_shim_mode_ops.rs`
+  - [x] `tui/src/core/ansi/vt_100_pty_output_parser/protocols/csi_codes/private_mode.rs`
+  - [x] `tui/src/core/pty/pty_mux/input_router/mouse_command.rs`
+  - [x] `tui/src/core/ansi/vt_100_pty_output_parser/ofs_buf_vt_100.rs`
+  - [x] `tui/src/core/stack_alloc_types/fast_int_fmt.rs`
+
+---
+
+## Phase 4: Rearchitect the OfsBufVT100 to use "Canvas and Viewport" architecture
+
+This future enhancement has been moved to its own task file:
+[`task/ofsbufvt100-change-algo-to-canvas-and-viewport.md`](file:///home/nazmul/github/roc/task/ofsbufvt100-change-algo-to-canvas-and-viewport.md)
 
 ---
 
@@ -169,15 +243,6 @@ completed, meaning `OfsBufVT100` accurately tracks `mouse_tracking` mode.
       trailer to all of the commits we make for this task to ensure she gets proper
       attribution for the feature!
 - [ ] Update the meta-task `task/prepare-v0.8.0-meta-task.md` to check off PR #459.
-- [ ] **Mandatory manual review:** Verify every file modified in this task.
-  - [ ] `tui/src/core/ansi/vt_100_pty_output_parser/ofs_buf_vt_100.rs`
-  - [ ] `tui/src/core/ansi/vt_100_pty_output_parser/ops_impl_ofs_buf/vt_100_impl_scroll_ops.rs`
-  - [ ] `tui/src/core/ansi/vt_100_pty_output_parser/ops_impl_ofs_buf/vt_100_impl_clear_ops.rs`
-  - [ ] `tui/src/core/pty/pty_mux/process_manager.rs`
-  - [ ] `tui/src/core/pty/pty_mux/input_router.rs`
-  - [ ] `tui/src/core/pty/pty_mux/output_renderer.rs`
-  - [ ] `tui/examples/pty_scrollback_example.rs`
-  - [ ] `task/prepare-v0.8.0-meta-task.md`
 
 ---
 
@@ -199,10 +264,13 @@ architecture has shifted fundamentally since then:
    `OfsBufVT100` struct. To maintain this new separation of concerns (where
    `OffscreenBuffer` is just a dumb 2D bitblt canvas), the scrollback history _must_ live
    in `OfsBufVT100`.
-2. **Pre-existing `RingBufferHeap`**: Cecile implemented over 200 lines of custom
-   ring-buffer logic (`ScrollbackBuffer`). Since our `core` module already provides a
-   battle-tested `RingBufferHeap<T, N>`, we can completely drop the custom implementation
-   and reuse our robust primitive.
+2. **Use of a lightweight `ScrollbackBuffer` vs. `RingBufferHeap`**: Cecile implemented
+   over 200 lines of custom ring-buffer logic (`ScrollbackBuffer`). While we initially
+   planned to use our existing `RingBufferHeap<T, N>`, we opted for an even simpler,
+   memory-bounded `VecDeque`-backed `ScrollbackBuffer`. It leverages `PixelCharLine`'s
+   memory tracking to cleanly evict older lines while staying within the configured
+   `ScrollbackCapacity` limits, completely removing the need for a complex custom
+   implementation.
 
 By implementing it this way, we respect and fulfill Cecile's exact feature request while
 strictly adhering to the new architectural boundaries of the codebase.

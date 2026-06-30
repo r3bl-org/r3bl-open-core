@@ -1,7 +1,7 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::core::LineState;
-use crate::{AnsiSequenceGenerator, CsiSequence, EraseDisplayMode, FunctionKey,
+use crate::{CsiSequence, EraseDisplayMode, FunctionKey,
             GCStringOwned, InputEvent, Key, KeyPress, KeyState, LineStateLiveness,
             NumericValue, ReadlineError, ReadlineEvent, SafeHistory, Size, SpecialKey,
             col, early_return_if_paused, find_next_word_end, find_next_word_start,
@@ -177,7 +177,7 @@ fn handle_ctrl_l(
             .to_string()
             .as_bytes(),
     )?;
-    term.write_all(AnsiSequenceGenerator::cursor_position(row(0), col(0)).as_bytes())?;
+    term.write_all(crate::ansi_output::cursor_movement::cursor_position(row(0), col(0)).as_bytes())?;
     line_state.clear_and_render_and_flush(term)?;
     Ok(None)
 }

@@ -703,7 +703,7 @@ pub mod access_and_mutate {
 }
 
 /// Efficient Display implementation for telemetry logging.
-mod display_impl {
+mod impl_display {
     #[allow(clippy::wildcard_imports)]
     use super::*;
 
@@ -771,7 +771,7 @@ mod display_impl {
     }
 }
 
-mod debug_impl {
+mod impl_debug {
     #[allow(clippy::wildcard_imports)]
     use super::*;
 

@@ -352,7 +352,7 @@ pub mod convert_key_event {
                         kind: KeyEventKind::Press,
                         .. /* ignore everything else: code, modifiers, etc */
                     } => {
-                        special_handling_impl::process_key_event(key_event)
+                        impl_special_handling::process_key_event(key_event)
                     }
                     _ => {
                         // Filter out Release and Repeat events.
@@ -362,7 +362,7 @@ pub mod convert_key_event {
         }
     }
 
-    pub mod special_handling_impl {
+    pub mod impl_special_handling {
         #[allow(clippy::wildcard_imports)]
         use super::*;
 

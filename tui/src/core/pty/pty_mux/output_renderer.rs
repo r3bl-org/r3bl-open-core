@@ -1,18 +1,10 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Dynamic display management for the [`PTY`] multiplexer. See [`OutputRenderer`] for
-//! details.
-//!
-//! This module handles rendering output from the active process using [`OffscreenBuffer`]
-//! as a compositor to eliminate visual artifacts. It maintains a dynamic status bar
-//! showing process information and keyboard shortcuts.
-//!
-//! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
-
-use super::ProcessManager;
+use super::{ProcessManager, ViewportRowMapping};
 use crate::{ArrayBoundsCheck, ArrayOverflowResult, CursorVisibilityMode, FlushKind,
-            GCStringOwned, IndexOps, OffscreenBuffer, OutputDevice, PixelChar, ProcessStatus, RangeExt,
-            RenderOpsLocalData, SPACE_CHAR, Size, TuiStyle, col,
+            GCStringOwned, IndexOps, OffscreenBuffer, OutputDevice, PixelChar,
+            ProcessStatus, RangeExt, RenderOpsLocalData, SPACE_CHAR, Size, TuiStyle,
+            col,
             core::coordinates::{idx, len},
             ok, print_text_with_attributes, row,
             tui::{DEBUG_TUI_PTY_MUX,
@@ -21,29 +13,20 @@ use crate::{ArrayBoundsCheck, ArrayOverflowResult, CursorVisibilityMode, FlushKi
             tui_color,
             tui_style_attrib::{self, Bold},
             tui_style_attribs, width};
+use std::fmt::Debug;
 
-/// [`RowHeight`] reserved for the status bar at the bottom of the terminal.
+/// Dynamic display management for the [`PTY`] multiplexer.
 ///
-/// [`RowHeight`]: crate::RowHeight
-pub const STATUS_BAR_HEIGHT: u16 = 1;
-
-/// Maximum number of processes supported (F1-F9).
-pub const MAX_PROCESSES: usize = 9;
-
-/// Manages display rendering and status bar for the multiplexer.
+/// - Manages rendering output from the active process's buffer from [`ProcessManager`] by
+///   using [`OffscreenBuffer`] as a compositor.
+/// - Maintains a dynamic status bar showing process information and keyboard shortcuts.
+/// - Handles scrollback buffer, see [`render_from_active_buffer()`] for details.
 ///
-/// Gets the active process's buffer from [`ProcessManager`] and composites the status bar
-/// into it for final rendering.
+/// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
+/// [`render_from_active_buffer()`]: Self::render_from_active_buffer()
+#[derive(Debug)]
 pub struct OutputRenderer {
     terminal_size: Size,
-}
-
-impl std::fmt::Debug for OutputRenderer {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("OutputRenderer")
-            .field("terminal_size", &self.terminal_size)
-            .finish()
-    }
 }
 
 impl OutputRenderer {
@@ -51,58 +34,124 @@ impl OutputRenderer {
     #[must_use]
     pub fn new(terminal_size: Size) -> Self { Self { terminal_size } }
 
-    /// Renders the active process's buffer with the status bar composited on top.
+    /// Renders the active process's terminal state, handles its scrollback history, and
+    /// composites the status bar.
     ///
-    /// **Buffer compositing**: This method demonstrates how the virtual terminal
-    /// architecture works:
-    /// 1. Get the active process's complete virtual terminal ([`OffscreenBuffer`])
-    /// 2. Clone it for compositing (preserves the original state)
-    /// 3. Composite the status bar into the last row
-    /// 4. Paint the entire composite to the real terminal all at once
+    /// This method safely overlays the multiplexer's chrome / UI (like the status bar)
+    /// onto the underlying process without modifying the process's actual terminal state.
+    /// It uses a double-buffering approach to eliminate visual artifacts:
     ///
-    /// **Key benefits**:
-    /// - The original process buffer is never modified (preserves state)
-    /// - Status bar is overlaid without affecting the process's virtual terminal
-    /// - Atomic painting eliminates visual artifacts
-    /// - Works universally with all program types
+    /// 1. Get the active process's current scrollback state and terminal size.
+    /// 2. Create a new, blank composite buffer ([`OffscreenBuffer`]).
+    /// 3. Fill the composite buffer's rows from the process's history and active buffers.
+    /// 4. Composite the virtual cursor (if currently visible).
+    /// 5. Composite the status bar onto the last row.
+    /// 6. Paint the entire composite buffer to the real terminal all at once.
+    ///
+    /// # Mental Model for Scrolling
+    ///
+    /// The `scrollback_amt` represents how many lines into the **past** the viewport has
+    /// been shifted.
+    ///
+    /// - **The Present (Live Boundary)**: When `scrollback_amt = 0`, you are locked to
+    ///   the absolute bottom of the terminal where new text is actively printed. This is
+    ///   the experience without scrolling back or forwards.
+    /// - **The Past (History)**: When scrolling back, `scrollback_amt` grows, meaning you
+    ///   are looking further back into the history buffer.
+    /// - **The Future (Does not exist!)**: `scrollback_amt` can never be negative. You
+    ///   can scroll back (if there is history). But you can't scroll forwards past the
+    ///   live boundary.
+    ///
+    /// For a visual diagram of how the viewport is split into history and live zones
+    /// on the physical screen during scrollback, see [`ViewportRowMapping::calculate`].
     ///
     /// # Errors
     ///
     /// Returns an error if terminal output operations fail.
+    ///
+    /// [`ScrollbackAmount`]: super::ScrollbackAmount
+    /// [`ViewportRowMapping::calculate`]: super::ViewportRowMapping::calculate
     pub fn render_from_active_buffer(
         &mut self,
         output_device: &OutputDevice,
         process_manager: &ProcessManager,
     ) -> miette::Result<()> {
         // Get the active process's buffer.
-        let active_buffer = process_manager.get_active_buffer();
+        let active_buffer = process_manager.active_buffer();
 
         // Create a new composite buffer sized for the full terminal height.
-        let mut composite_buffer = OffscreenBuffer::new_empty(self.terminal_size);
+        let mut new_ofs_buf = OffscreenBuffer::new_empty(self.terminal_size);
 
-        // Copy the active buffer (PTY output) into the top rows of the composite buffer.
-        let pty_rows = active_buffer.window_size.row_height.as_usize();
-        let pty_cols = active_buffer.window_size.col_width.as_usize();
-        for r in 0..pty_rows {
-            for c in 0..pty_cols {
-                composite_buffer[r][c] = active_buffer[r][c];
+        // Dimensions.
+        let (pty_max_rows, pty_max_cols) = (
+            active_buffer.window_size.row_height,
+            active_buffer.window_size.col_width,
+        );
+
+        // Scroll state.
+        let scrollback_amt = match process_manager.active_process().maybe_scroll_offset {
+            Some(it) => it,
+            None => 0.into(),
+        };
+
+        // Render the PTY output (either from history or the active buffer) into the
+        // composite buffer.
+        for row_idx in 0..pty_max_rows.as_usize() {
+            let mapped_viewport_idx = ViewportRowMapping::calculate(
+                scrollback_amt,
+                &active_buffer.scrollback_buffer,
+                row_idx,
+            );
+
+            let maybe_pixel_char_line = match mapped_viewport_idx {
+                ViewportRowMapping::History(history_row_idx) => {
+                    active_buffer.scrollback_buffer.lines.get(history_row_idx)
+                }
+                ViewportRowMapping::Live(active_buffer_row_idx) => {
+                    active_buffer.ofs_buf.buffer.get(active_buffer_row_idx)
+                }
+            };
+
+            let Some(line) = maybe_pixel_char_line else {
+                // This is mathematically guaranteed to be Some(...) under normal
+                // operation. However, during a terminal resize event, the window size may
+                // update before the underlying buffers are physically reallocated. If we
+                // hit this mid-resize race condition, simply skip drawing the
+                // out-of-bounds row for this frame.
+                continue;
+            };
+
+            // Copy the line of pixel chars into the offscreen buffer.
+            for col_idx in 0..pty_max_cols.as_usize() {
+                new_ofs_buf[row_idx][col_idx] =
+                    line.get(col_idx).copied().unwrap_or_default();
             }
         }
 
-        // Inherit the cursor.
-        composite_buffer.cursor_pos = active_buffer.cursor_pos;
+        // Calculate the shifted row index.
+        let adj_cursor_row_idx = active_buffer.cursor_pos.row_index + *scrollback_amt;
 
         // 1. Composite PTY virtual cursor if it's visible.
-        Self::composite_virtual_cursor_into_buffer(
-            &mut composite_buffer,
-            active_buffer.parser_global_state.cursor_visibility,
-        );
+        // Only render the cursor if it hasn't scrolled off the bottom of the screen.
+        let is_cursor_visible = adj_cursor_row_idx.as_usize() < pty_max_rows.as_usize();
+        if is_cursor_visible {
+            // Inherit the original cursor properties (column, shape, etc.) but with the
+            // shifted row.
+            new_ofs_buf.cursor_pos = active_buffer.cursor_pos;
+            new_ofs_buf.cursor_pos.row_index = adj_cursor_row_idx;
+
+            // Composite the cursor into the buffer.
+            Self::composite_virtual_cursor_into_buffer(
+                &mut new_ofs_buf,
+                active_buffer.parser_global_state.cursor_visibility,
+            );
+        }
 
         // 2. Composite status bar into the last row.
-        self.composite_status_bar_into_buffer(&mut composite_buffer, process_manager);
+        self.composite_status_bar_into_buffer(&mut new_ofs_buf, process_manager);
 
         // Paint the composite buffer to terminal.
-        paint_buffer(&composite_buffer, output_device);
+        paint_buffer(&new_ofs_buf, output_device);
 
         ok!()
     }
@@ -277,8 +326,11 @@ impl OutputRenderer {
 
         for (i, process) in process_manager.processes().iter().enumerate() {
             let is_active = i == process_manager.active_index();
-            let status_indicator =
-                if process.status() == ProcessStatus::Running { "🟢" } else { "🔴" };
+            let status_indicator = if process.status() == ProcessStatus::Running {
+                "🟢"
+            } else {
+                "🔴"
+            };
 
             let tab_text = if is_active {
                 format!(" [{}:{}{}] ", i + 1, status_indicator, process.name)

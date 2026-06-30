@@ -32,7 +32,7 @@ pub enum Id {
     DialogStyleNameResultsPanel = 8,
 }
 
-mod id_impl {
+mod impl_id {
     use super::{FlexBoxId, Id};
 
     impl From<Id> for u8 {

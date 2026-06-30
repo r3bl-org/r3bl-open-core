@@ -21,7 +21,7 @@
 //! ┌──▼───────────────────────────────────────┐  ┌──────────────────┐
 //! │  mouse.rs                                ◄──┤ **YOU ARE HERE** │
 //! │  • Parse `SGR` protocol (modern)         │  └──────────────────┘
-//! │  • Parse `X10`/Normal (legacy)           │
+//! │  • Parse `X10`/Legacy (legacy)           │
 //! │  • Parse `RXVT` protocol (legacy)        │
 //! │  • Detect clicks/drags/scroll/motion     │
 //! │  • Extract position & modifiers          │
@@ -47,7 +47,7 @@
 //! - Button detection (left=0, middle=1, right=2)
 //! - Drag detection (button with flag 32)
 //! - Scroll events (buttons 64/65 for vertical, 66/67 for horizontal)
-//! - **[`X10`]/Normal Protocol**: Legacy formats (Format: `ESC [ M Cb Cx Cy`)
+//! - **[`X10`]/Legacy Protocol**: Legacy formats (Format: `ESC [ M Cb Cx Cy`)
 //! - **[`RXVT`] Protocol**: Alternative legacy format (Format: `ESC [ Cb ; Cx ; Cy M`)
 //! - **Click Events**: Press (M) and Release (m)
 //! - **Drag Events**: Motion while button held
@@ -181,10 +181,9 @@ use crate::{ByteOffset, KeyState, TermPos, byte_offset,
                                     MOUSE_RIGHT_BUTTON_CODE, MOUSE_RXVT_MIN_LEN,
                                     MOUSE_SCROLL_THRESHOLD, MOUSE_SGR_MIN_LEN,
                                     MOUSE_SGR_PREFIX, MOUSE_SGR_PREFIX_LEN,
-                                    MOUSE_SGR_PRESS,
-                                    MOUSE_SGR_RELEASE, MOUSE_X10_COORD_OFFSET,
-                                    MOUSE_X10_MARKER, MOUSE_X10_MIN_LEN,
-                                    MOUSE_X10_PREFIX}};
+                                    MOUSE_SGR_PRESS, MOUSE_SGR_RELEASE,
+                                    MOUSE_X10_COORD_OFFSET, MOUSE_X10_MARKER,
+                                    MOUSE_X10_MIN_LEN, MOUSE_X10_PREFIX}};
 
 #[must_use]
 pub fn parse_mouse_sequence(buffer: &[u8]) -> Option<(VT100InputEventIR, ByteOffset)> {
@@ -194,7 +193,7 @@ pub fn parse_mouse_sequence(buffer: &[u8]) -> Option<(VT100InputEventIR, ByteOff
         return parse_sgr_mouse(buffer);
     }
 
-    // Check for X10/Normal protocol (legacy).
+    // Check for X10/Legacy protocol (legacy).
     if buffer.len() >= MOUSE_X10_MIN_LEN && buffer.starts_with(MOUSE_X10_PREFIX) {
         return parse_x10_mouse(buffer);
     }
@@ -321,7 +320,7 @@ fn parse_sgr_mouse(sequence: &[u8]) -> Option<(VT100InputEventIR, ByteOffset)> {
     ))
 }
 
-/// Parse [`X10`]/Normal mouse protocol: `CSI M Cb Cx Cy`.
+/// Parse [`X10`]/Legacy mouse protocol: `CSI M Cb Cx Cy`.
 ///
 /// # Returns
 ///
@@ -685,7 +684,7 @@ mod tests {
         generate_keyboard_sequence(&event).expect("Failed to generate SGR mouse sequence")
     }
 
-    // X10/Normal Mouse Protocol Tests
+    // X10/Legacy Mouse Protocol Tests
     // Format: ESC [ M Cb Cx Cy (5-6 bytes)
     // Where: Cb = button code, Cx = col (byte - 32), Cy = row (byte - 32)
 
@@ -953,7 +952,8 @@ mod tests {
             VT100KeyModifiersIR::default(),
         );
 
-        let (event, bytes_consumed) = parse_mouse_sequence(&seq).expect("Should parse X10");
+        let (event, bytes_consumed) =
+            parse_mouse_sequence(&seq).expect("Should parse X10");
         assert_eq!(bytes_consumed, byte_offset(MOUSE_X10_MIN_LEN));
 
         match event {
@@ -966,7 +966,10 @@ mod tests {
                 assert_eq!(button, VT100MouseButtonIR::Unknown);
                 assert_eq!(pos.col.as_u16(), 10);
                 assert_eq!(pos.row.as_u16(), 20);
-                assert_eq!(action, VT100MouseActionIR::Scroll(VT100ScrollDirectionIR::Up));
+                assert_eq!(
+                    action,
+                    VT100MouseActionIR::Scroll(VT100ScrollDirectionIR::Up)
+                );
                 assert_eq!(modifiers, VT100KeyModifiersIR::default());
             }
             _ => panic!("Expected Mouse event"),
@@ -983,12 +986,16 @@ mod tests {
             VT100KeyModifiersIR::default(),
         );
 
-        let (event, bytes_consumed) = parse_mouse_sequence(&seq).expect("Should parse X10");
+        let (event, bytes_consumed) =
+            parse_mouse_sequence(&seq).expect("Should parse X10");
         assert_eq!(bytes_consumed, byte_offset(MOUSE_X10_MIN_LEN));
 
         match event {
             VT100InputEventIR::Mouse { action, .. } => {
-                assert_eq!(action, VT100MouseActionIR::Scroll(VT100ScrollDirectionIR::Down));
+                assert_eq!(
+                    action,
+                    VT100MouseActionIR::Scroll(VT100ScrollDirectionIR::Down)
+                );
             }
             _ => panic!("Expected Mouse event"),
         }
@@ -1012,8 +1019,15 @@ mod tests {
 
         let (event, _) = parse_mouse_sequence(&seq).expect("Should parse X10");
         match event {
-            VT100InputEventIR::Mouse { action, modifiers: parsed_mods, .. } => {
-                assert_eq!(action, VT100MouseActionIR::Scroll(VT100ScrollDirectionIR::Up));
+            VT100InputEventIR::Mouse {
+                action,
+                modifiers: parsed_mods,
+                ..
+            } => {
+                assert_eq!(
+                    action,
+                    VT100MouseActionIR::Scroll(VT100ScrollDirectionIR::Up)
+                );
                 assert_eq!(parsed_mods, modifiers);
             }
             _ => panic!("Expected Mouse event"),
@@ -1331,7 +1345,10 @@ mod tests {
                 assert_eq!(button, VT100MouseButtonIR::Unknown);
                 assert_eq!(pos.col.as_u16(), 10);
                 assert_eq!(pos.row.as_u16(), 20);
-                assert_eq!(action, VT100MouseActionIR::Scroll(VT100ScrollDirectionIR::Up));
+                assert_eq!(
+                    action,
+                    VT100MouseActionIR::Scroll(VT100ScrollDirectionIR::Up)
+                );
                 assert_eq!(modifiers, VT100KeyModifiersIR::default());
             }
             _ => panic!("Expected Mouse event"),
@@ -1352,7 +1369,10 @@ mod tests {
 
         match event {
             VT100InputEventIR::Mouse { action, .. } => {
-                assert_eq!(action, VT100MouseActionIR::Scroll(VT100ScrollDirectionIR::Down));
+                assert_eq!(
+                    action,
+                    VT100MouseActionIR::Scroll(VT100ScrollDirectionIR::Down)
+                );
             }
             _ => panic!("Expected Mouse event"),
         }
@@ -1376,8 +1396,15 @@ mod tests {
 
         let (event, _) = parse_mouse_sequence(&seq).expect("Should parse RXVT");
         match event {
-            VT100InputEventIR::Mouse { action, modifiers: parsed_mods, .. } => {
-                assert_eq!(action, VT100MouseActionIR::Scroll(VT100ScrollDirectionIR::Up));
+            VT100InputEventIR::Mouse {
+                action,
+                modifiers: parsed_mods,
+                ..
+            } => {
+                assert_eq!(
+                    action,
+                    VT100MouseActionIR::Scroll(VT100ScrollDirectionIR::Up)
+                );
                 assert_eq!(parsed_mods, modifiers);
             }
             _ => panic!("Expected Mouse event"),
@@ -1551,8 +1578,15 @@ mod tests {
 
         let (event, _) = parse_mouse_sequence(&seq).expect("Should parse");
         match event {
-            VT100InputEventIR::Mouse { action, modifiers: parsed_mods, .. } => {
-                assert_eq!(action, VT100MouseActionIR::Scroll(VT100ScrollDirectionIR::Up));
+            VT100InputEventIR::Mouse {
+                action,
+                modifiers: parsed_mods,
+                ..
+            } => {
+                assert_eq!(
+                    action,
+                    VT100MouseActionIR::Scroll(VT100ScrollDirectionIR::Up)
+                );
                 assert_eq!(parsed_mods, modifiers);
             }
             _ => panic!("Expected Mouse event"),

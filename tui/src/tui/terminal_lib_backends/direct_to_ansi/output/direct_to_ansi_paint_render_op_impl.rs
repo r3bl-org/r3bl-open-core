@@ -37,41 +37,42 @@
 //! - Paints styled text
 //! - Manages raw mode, alternate screen, mouse tracking
 //! - Uses [`RenderOpsLocalData`] to avoid redundant commands
-//! - Generates [`ANSI`] sequences via [`AnsiSequenceGenerator`]
+//! - Generates [`ANSI`] sequences via [`ansi_output`]
 //!
 //! This is the final stage before terminal output. Unlike Crossterm, `DirectToAnsi`
 //! generates pure [`ANSI`] escape sequences without an external library.
 //!
 //! See [`RenderOpPaintImplDirectToAnsi`] for implementation details.
 //!
+//! [`ansi_output`]: crate::ansi_output
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`RenderOpOutput`]: crate::RenderOpOutput
 //! [`RenderOpOutputVec`]: crate::RenderOpOutputVec
 //! [`RenderOpsLocalData`]: crate::RenderOpsLocalData
 //! [rendering pipeline overview]: mod@crate::terminal_lib_backends#rendering-pipeline-architecture
 
-use crate::{AnsiSequenceGenerator, CliTextInline, ColIndex,
-            DEBUG_TUI_SHOW_DIRECT_TO_ANSI, GCStringOwned, InlineString,
-            LockedOutputDevice, Pos, RenderOpCommon, RenderOpFlush, RenderOpOutput,
-            RenderOpPaint, RenderOpsLocalData, RowHeight, Size, TermRowDelta, TuiColor,
-            TuiStyle, cli_text_inline_impl::CliTextConvertOptions, col,
-            sanitize_and_save_abs_pos,
+use crate::{CliTextInline, ColIndex, DEBUG_TUI_SHOW_DIRECT_TO_ANSI, GCStringOwned,
+            InlineString, LockedOutputDevice, Pos, RenderOpCommon, RenderOpFlush,
+            RenderOpOutput, RenderOpPaint, RenderOpsLocalData, RowHeight, Size,
+            TermRowDelta, TuiColor, TuiStyle, col,
+            impl_cli_text_inline::CliTextConvertOptions, sanitize_and_save_abs_pos,
             terminal_lib_backends::direct_to_ansi::PixelCharRenderer};
 
 /// Implements [`RenderOpPaint`] trait using direct [`ANSI`] sequence generation.
 ///
-/// The methods execute all [`RenderOpOutput`] variants using [`AnsiSequenceGenerator`].
-/// It tracks cursor position and colors to skip redundant [`ANSI`] sequences for
-/// optimization.
+/// The methods execute all [`RenderOpOutput`] variants using
+/// [`ansi_output`]. It tracks cursor position and colors to skip
+/// redundant [`ANSI`] sequences for optimization.
 ///
 /// This implementation executes all [`RenderOpOutput`] variants by generating [`ANSI`]
-/// escape sequences via [`AnsiSequenceGenerator`]. It tracks cursor position and
+/// escape sequences via [`ansi_output`]. It tracks cursor position and
 /// colors in [`RenderOpsLocalData`] to skip redundant operations for optimization.
 ///
 /// The [`paint()`] method dispatches to two helper methods:
 /// - [`paint_common()`]: Handles all 27 [`RenderOpCommon`] variants
 /// - [`paint_text_with_attributes()`]: Handles post-compositor text with optional styling
 ///
+/// [`ansi_output`]: crate::ansi_output
 /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 /// [`paint()`]: Self::paint
 /// [`paint_common()`]: Self::paint_common
@@ -119,7 +120,7 @@ impl RenderOpFlush for RenderOpPaintImplDirectToAnsi {
     }
 
     fn clear_before_flush(&mut self, locked_output_device: LockedOutputDevice<'_>) {
-        let clear_sequence = AnsiSequenceGenerator::clear_screen();
+        let clear_sequence = crate::ansi_output::screen_clearing::clear_screen();
         locked_output_device
             .write_all(clear_sequence.as_bytes())
             .expect("Failed to write clear screen sequence");
@@ -205,28 +206,28 @@ impl RenderOpPaintImplDirectToAnsi {
             }
 
             RenderOpCommon::ClearScreen => {
-                let ansi = AnsiSequenceGenerator::clear_screen();
+                let ansi = crate::ansi_output::screen_clearing::clear_screen();
                 locked_output_device
                     .write_all(ansi.as_bytes())
                     .expect("Failed to write clear screen ANSI");
             }
 
             RenderOpCommon::ClearCurrentLine => {
-                let ansi = AnsiSequenceGenerator::clear_current_line();
+                let ansi = crate::ansi_output::screen_clearing::clear_current_line();
                 locked_output_device
                     .write_all(ansi.as_bytes())
                     .expect("Failed to write clear current line ANSI");
             }
 
             RenderOpCommon::ClearToEndOfLine => {
-                let ansi = AnsiSequenceGenerator::clear_to_end_of_line();
+                let ansi = crate::ansi_output::screen_clearing::clear_to_end_of_line();
                 locked_output_device
                     .write_all(ansi.as_bytes())
                     .expect("Failed to write clear to end of line ANSI");
             }
 
             RenderOpCommon::ClearToStartOfLine => {
-                let ansi = AnsiSequenceGenerator::clear_to_start_of_line();
+                let ansi = crate::ansi_output::screen_clearing::clear_to_start_of_line();
                 locked_output_device
                     .write_all(ansi.as_bytes())
                     .expect("Failed to write clear to start of line ANSI");
@@ -241,7 +242,7 @@ impl RenderOpPaintImplDirectToAnsi {
             }
 
             RenderOpCommon::ResetColor => {
-                let ansi = AnsiSequenceGenerator::reset_color();
+                let ansi = crate::ansi_output::color_ops::reset_color();
                 locked_output_device
                     .write_all(ansi.as_bytes())
                     .expect("Failed to write reset color ANSI");
@@ -264,13 +265,15 @@ impl RenderOpPaintImplDirectToAnsi {
             }
 
             RenderOpCommon::SaveCursorPosition => {
-                let ansi = AnsiSequenceGenerator::save_cursor_position();
+                let ansi =
+                    crate::ansi_output::cursor_save_restore::save_cursor_position();
                 locked_output_device
                     .write_all(ansi.as_bytes())
                     .expect("Failed to write save cursor position ANSI");
             }
             RenderOpCommon::RestoreCursorPosition => {
-                let ansi = AnsiSequenceGenerator::restore_cursor_position();
+                let ansi =
+                    crate::ansi_output::cursor_save_restore::restore_cursor_position();
                 locked_output_device
                     .write_all(ansi.as_bytes())
                     .expect("Failed to write restore cursor position ANSI");
@@ -352,7 +355,8 @@ mod helpers {
             row_index,
         } = sanitize_and_save_abs_pos(abs_pos, window_size, render_local_data);
 
-        let ansi = AnsiSequenceGenerator::cursor_position(row_index, col_index);
+        let ansi =
+            crate::ansi_output::cursor_movement::cursor_position(row_index, col_index);
         locked_output_device
             .write_all(ansi.as_bytes())
             .expect("Failed to write cursor position ANSI");
@@ -364,7 +368,7 @@ mod helpers {
         locked_output_device: LockedOutputDevice<'_>,
     ) {
         render_local_data.cursor_pos.col_index = col_index;
-        let ansi = AnsiSequenceGenerator::cursor_to_column(col_index);
+        let ansi = crate::ansi_output::cursor_movement::cursor_to_column(col_index);
         locked_output_device
             .write_all(ansi.as_bytes())
             .expect("Failed to write cursor to column ANSI");
@@ -379,7 +383,7 @@ mod helpers {
         render_local_data.cursor_pos.col_index = col(0);
         // Convert RowHeight to TermRowDelta - only emit if non-zero.
         if let Some(delta) = TermRowDelta::new(row_height.as_u16()) {
-            let ansi = AnsiSequenceGenerator::cursor_next_line(delta);
+            let ansi = crate::ansi_output::cursor_movement::cursor_next_line(delta);
             locked_output_device
                 .write_all(ansi.as_bytes())
                 .expect("Failed to write cursor next line ANSI");
@@ -395,7 +399,7 @@ mod helpers {
         render_local_data.cursor_pos.col_index = col(0);
         // Convert RowHeight to TermRowDelta - only emit if non-zero.
         if let Some(delta) = TermRowDelta::new(row_height.as_u16()) {
-            let ansi = AnsiSequenceGenerator::cursor_previous_line(delta);
+            let ansi = crate::ansi_output::cursor_movement::cursor_previous_line(delta);
             locked_output_device
                 .write_all(ansi.as_bytes())
                 .expect("Failed to write cursor previous line ANSI");
@@ -411,7 +415,7 @@ mod helpers {
         if render_local_data.fg_color == Some(color) {
             return;
         }
-        let ansi = AnsiSequenceGenerator::fg_color(color);
+        let ansi = crate::ansi_output::color_ops::fg_color(color);
         locked_output_device
             .write_all(ansi.as_bytes())
             .expect("Failed to write fg color ANSI");
@@ -427,7 +431,7 @@ mod helpers {
         if render_local_data.bg_color == Some(color) {
             return;
         }
-        let ansi = AnsiSequenceGenerator::bg_color(color);
+        let ansi = crate::ansi_output::color_ops::bg_color(color);
         locked_output_device
             .write_all(ansi.as_bytes())
             .expect("Failed to write bg color ANSI");
@@ -494,7 +498,7 @@ mod tests {
     #[test]
     fn test_ansi_sequence_generator_clear_screen() {
         // ClearScreen should generate appropriate ANSI sequence
-        let ansi = AnsiSequenceGenerator::clear_screen();
+        let ansi = crate::ansi_output::screen_clearing::clear_screen();
         assert!(!ansi.is_empty());
         assert!(ansi.contains(ESC_START)); // Contains escape sequence
     }
@@ -502,7 +506,7 @@ mod tests {
     #[test]
     fn test_ansi_sequence_generator_clear_current_line() {
         // ClearCurrentLine should generate appropriate ANSI sequence
-        let ansi = AnsiSequenceGenerator::clear_current_line();
+        let ansi = crate::ansi_output::screen_clearing::clear_current_line();
         assert!(!ansi.is_empty());
         assert!(ansi.contains(ESC_START));
     }
@@ -510,7 +514,7 @@ mod tests {
     #[test]
     fn test_ansi_sequence_generator_clear_to_end_of_line() {
         // ClearToEndOfLine should generate appropriate ANSI sequence
-        let ansi = AnsiSequenceGenerator::clear_to_end_of_line();
+        let ansi = crate::ansi_output::screen_clearing::clear_to_end_of_line();
         assert!(!ansi.is_empty());
         assert!(ansi.contains(ESC_START));
     }
@@ -518,7 +522,7 @@ mod tests {
     #[test]
     fn test_ansi_sequence_generator_clear_to_start_of_line() {
         // ClearToStartOfLine should generate appropriate ANSI sequence
-        let ansi = AnsiSequenceGenerator::clear_to_start_of_line();
+        let ansi = crate::ansi_output::screen_clearing::clear_to_start_of_line();
         assert!(!ansi.is_empty());
         assert!(ansi.contains(ESC_START));
     }
@@ -528,7 +532,7 @@ mod tests {
         // MoveCursorPositionAbs should generate cursor positioning ANSI
         let row_idx = row(5);
         let col_idx = col(10);
-        let ansi = AnsiSequenceGenerator::cursor_position(row_idx, col_idx);
+        let ansi = crate::ansi_output::cursor_movement::cursor_position(row_idx, col_idx);
         assert!(!ansi.is_empty());
         assert!(ansi.contains(ESC_START)); // Contains escape sequence
         assert!(ansi.contains('H')); // Should end with H command
@@ -538,7 +542,7 @@ mod tests {
     fn test_ansi_sequence_generator_cursor_to_column() {
         // MoveCursorToColumn should generate column positioning ANSI
         let col_idx = col(15);
-        let ansi = AnsiSequenceGenerator::cursor_to_column(col_idx);
+        let ansi = crate::ansi_output::cursor_movement::cursor_to_column(col_idx);
         assert!(!ansi.is_empty());
         assert!(ansi.contains(ESC_START));
     }
@@ -549,7 +553,7 @@ mod tests {
         let row_height = height(3);
         // SAFETY: 3 is always non-zero
         let delta = TermRowDelta::new(row_height.as_u16()).unwrap();
-        let ansi = AnsiSequenceGenerator::cursor_next_line(delta);
+        let ansi = crate::ansi_output::cursor_movement::cursor_next_line(delta);
         assert!(!ansi.is_empty());
         assert!(ansi.contains(ESC_START));
         assert!(ansi.contains('E')); // Should use E command
@@ -561,7 +565,7 @@ mod tests {
         let row_height = height(2);
         // SAFETY: 2 is always non-zero
         let delta = TermRowDelta::new(row_height.as_u16()).unwrap();
-        let ansi = AnsiSequenceGenerator::cursor_previous_line(delta);
+        let ansi = crate::ansi_output::cursor_movement::cursor_previous_line(delta);
         assert!(!ansi.is_empty());
         assert!(ansi.contains(ESC_START));
         assert!(ansi.contains('F')); // Should use F command
@@ -570,7 +574,7 @@ mod tests {
     #[test]
     fn test_ansi_sequence_generator_show_cursor() {
         // show_cursor should generate appropriate ANSI sequence
-        let ansi = AnsiSequenceGenerator::show_cursor();
+        let ansi = crate::ansi_output::cursor_visibility::show_cursor();
         assert!(!ansi.is_empty());
         assert!(ansi.contains(ESC_START));
     }
@@ -578,7 +582,7 @@ mod tests {
     #[test]
     fn test_ansi_sequence_generator_hide_cursor() {
         // hide_cursor should generate appropriate ANSI sequence
-        let ansi = AnsiSequenceGenerator::hide_cursor();
+        let ansi = crate::ansi_output::cursor_visibility::hide_cursor();
         assert!(!ansi.is_empty());
         assert!(ansi.contains(ESC_START));
     }
@@ -586,7 +590,7 @@ mod tests {
     #[test]
     fn test_ansi_sequence_generator_save_cursor_position() {
         // save_cursor_position should generate DECSC ANSI sequence
-        let ansi = AnsiSequenceGenerator::save_cursor_position();
+        let ansi = crate::ansi_output::cursor_save_restore::save_cursor_position();
         assert!(!ansi.is_empty());
         assert!(ansi.contains(ESC_START));
     }
@@ -594,7 +598,7 @@ mod tests {
     #[test]
     fn test_ansi_sequence_generator_restore_cursor_position() {
         // restore_cursor_position should generate DECRC ANSI sequence
-        let ansi = AnsiSequenceGenerator::restore_cursor_position();
+        let ansi = crate::ansi_output::cursor_save_restore::restore_cursor_position();
         assert!(!ansi.is_empty());
         assert!(ansi.contains(ESC_START));
     }
@@ -602,7 +606,7 @@ mod tests {
     #[test]
     fn test_ansi_sequence_generator_enter_alternate_screen() {
         // enter_alternate_screen should generate appropriate ANSI sequence
-        let ansi = AnsiSequenceGenerator::enter_alternate_screen();
+        let ansi = crate::ansi_output::terminal_modes::enter_alternate_screen();
         assert!(!ansi.is_empty());
         assert!(ansi.contains(ESC_START));
     }
@@ -610,7 +614,7 @@ mod tests {
     #[test]
     fn test_ansi_sequence_generator_exit_alternate_screen() {
         // exit_alternate_screen should generate appropriate ANSI sequence
-        let ansi = AnsiSequenceGenerator::exit_alternate_screen();
+        let ansi = crate::ansi_output::terminal_modes::exit_alternate_screen();
         assert!(!ansi.is_empty());
         assert!(ansi.contains(ESC_START));
     }
@@ -618,7 +622,7 @@ mod tests {
     #[test]
     fn test_ansi_sequence_generator_enable_mouse_tracking() {
         // enable_mouse_tracking should generate appropriate ANSI sequences
-        let ansi = AnsiSequenceGenerator::enable_mouse_tracking();
+        let ansi = crate::ansi_output::terminal_modes::enable_mouse_tracking();
         assert!(!ansi.is_empty());
         assert!(ansi.contains(ESC_START));
     }
@@ -626,7 +630,7 @@ mod tests {
     #[test]
     fn test_ansi_sequence_generator_disable_mouse_tracking() {
         // disable_mouse_tracking should generate appropriate ANSI sequences
-        let ansi = AnsiSequenceGenerator::disable_mouse_tracking();
+        let ansi = crate::ansi_output::terminal_modes::disable_mouse_tracking();
         assert!(!ansi.is_empty());
         assert!(ansi.contains(ESC_START));
     }
@@ -634,7 +638,7 @@ mod tests {
     #[test]
     fn test_ansi_sequence_generator_enable_bracketed_paste() {
         // enable_bracketed_paste should generate appropriate ANSI sequence
-        let ansi = AnsiSequenceGenerator::enable_bracketed_paste();
+        let ansi = crate::ansi_output::terminal_modes::enable_bracketed_paste();
         assert!(!ansi.is_empty());
         assert!(ansi.contains(ESC_START));
     }
@@ -642,7 +646,7 @@ mod tests {
     #[test]
     fn test_ansi_sequence_generator_disable_bracketed_paste() {
         // disable_bracketed_paste should generate appropriate ANSI sequence
-        let ansi = AnsiSequenceGenerator::disable_bracketed_paste();
+        let ansi = crate::ansi_output::terminal_modes::disable_bracketed_paste();
         assert!(!ansi.is_empty());
         assert!(ansi.contains(ESC_START));
     }
@@ -650,7 +654,7 @@ mod tests {
     #[test]
     fn test_ansi_sequence_generator_reset_color() {
         // reset_color should generate SGR reset ANSI sequence
-        let ansi = AnsiSequenceGenerator::reset_color();
+        let ansi = crate::ansi_output::color_ops::reset_color();
         assert!(!ansi.is_empty());
         assert!(ansi.contains(ESC_START));
         assert!(ansi.contains("0m")); // Should reset all attributes
@@ -660,8 +664,8 @@ mod tests {
     fn test_color_caching_fg_color() {
         // Foreground color should be cached to skip redundant sequences
         let color1 = TuiColor::Ansi(AnsiValue::new(1)); // ANSI color index 1 (Red)
-        let ansi1 = AnsiSequenceGenerator::fg_color(color1);
-        let ansi2 = AnsiSequenceGenerator::fg_color(color1);
+        let ansi1 = crate::ansi_output::color_ops::fg_color(color1);
+        let ansi2 = crate::ansi_output::color_ops::fg_color(color1);
 
         // Both should generate valid sequences
         assert!(!ansi1.is_empty());
@@ -672,8 +676,8 @@ mod tests {
     fn test_color_caching_bg_color() {
         // Background color should be cached to skip redundant sequences
         let color1 = TuiColor::Ansi(AnsiValue::new(4)); // ANSI color index 4 (Blue)
-        let ansi1 = AnsiSequenceGenerator::bg_color(color1);
-        let ansi2 = AnsiSequenceGenerator::bg_color(color1);
+        let ansi1 = crate::ansi_output::color_ops::bg_color(color1);
+        let ansi2 = crate::ansi_output::color_ops::bg_color(color1);
 
         // Both should generate valid sequences
         assert!(!ansi1.is_empty());
@@ -685,7 +689,7 @@ mod tests {
         // ANSI sequences should use 1-based indexing (row, col)
         let row_idx = row(0); // 0-based index 0
         let col_idx = col(0); // 0-based index 0
-        let ansi = AnsiSequenceGenerator::cursor_position(row_idx, col_idx);
+        let ansi = crate::ansi_output::cursor_movement::cursor_position(row_idx, col_idx);
 
         // Should generate 1-based positioning (1,1)
         assert!(ansi.contains("1;1H")); // Position (1, 1) in 1-based
@@ -696,7 +700,7 @@ mod tests {
         // Test with higher row and column indices
         let row_idx = row(10);
         let col_idx = col(20);
-        let ansi = AnsiSequenceGenerator::cursor_position(row_idx, col_idx);
+        let ansi = crate::ansi_output::cursor_movement::cursor_position(row_idx, col_idx);
 
         // Should generate correct 1-based positioning (11,21)
         assert!(ansi.contains("11;21H"));

@@ -11,9 +11,11 @@
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [ANSI parser]: crate::AnsiToOfsBufPerformer
 
-use super::output_renderer::STATUS_BAR_HEIGHT;
-use crate::{DEBUG_TUI_PTY_PROCESS_MANAGER, DefaultPtySessionConfig, OfsBufVT100,
-            PtyInputEvent, PtySessionConfigOption, Size,
+use super::STATUS_BAR_HEIGHT;
+#[allow(unused_imports, reason = "Allows short rustdoc ref def links")]
+use crate::core::pty::pty_mux;
+use crate::{ArrayOverflowResult, DEBUG_TUI_PTY_PROCESS_MANAGER, DefaultPtySessionConfig,
+            OfsBufVT100, PtyInputEvent, PtySessionConfigOption, ScrollbackAmount, Size,
             core::{osc::OscEvent,
                    pty::{PtyOutputEvent, PtySession, PtySessionBuilder}},
             height, ok};
@@ -45,11 +47,15 @@ pub struct ProcessManager {
 
 /// Represents a single process that can be managed by the multiplexer.
 ///
-/// Each process maintains its own virtual terminal state through a [`OfsBufVT100`]
-/// and [`ANSI parser`], enabling true terminal multiplexing where switching between
-/// processes is instant and preserves the complete terminal state.
+/// Semantically, this is a **virtual tab**. For a detailed explanation of the
+/// architecture, see the [Virtual Tab Mental Model].
 ///
-/// [`ANSI parser`]: vte::Parser
+/// Each process maintains its own virtual terminal emulator through an [`OfsBufVT100`],
+/// enabling true terminal multiplexing where switching between processes is instant and
+/// preserves the complete terminal state (including scrollback).
+///
+/// [Virtual Tab Mental Model]:
+///     mod@pty_mux#virtual-terminal-architecture-the-virtual-tab-mental-model
 pub struct Process {
     /// Display name for this process (shown in status bar).
     pub name: String,
@@ -78,6 +84,12 @@ pub struct Process {
     ///
     /// [`OSC`]: crate::osc_codes::OscSequence
     pub terminal_title: Option<String>,
+
+    /// Optional vertical scroll offset.
+    ///
+    /// - [`None`] means the viewport is locked to the live output (bottom).
+    /// - [`Some`] means the user has detached and scrolled up into the history.
+    pub maybe_scroll_offset: Option<ScrollbackAmount>,
 }
 
 impl Process {
@@ -108,6 +120,50 @@ impl Process {
             terminal_state: OfsBufVT100::new_empty(buffer_size),
             unrendered_output: UnrenderedOutput::NotAvailable,
             terminal_title: None,
+            maybe_scroll_offset: None,
+        }
+    }
+
+    /// Scrolls the viewport back into the history buffer by the specified amount.
+    pub fn scroll_back_by(&mut self, amount: ScrollbackAmount) {
+        let history_len = self.terminal_state.scrollback_buffer.lines.len();
+        if history_len == 0 {
+            // Nowhere to scroll back to.
+            return;
+        }
+
+        let new_offset = match self.maybe_scroll_offset {
+            // If not scrolling yet, start by scrolling back by the specified amount.
+            None => amount,
+            // If already scrolling, add to the current offset.
+            Some(current_offset) => current_offset.saturating_add(amount),
+        };
+
+        self.maybe_scroll_offset = match new_offset.overflows(history_len) {
+            // Clip the scroll offset to the top of the history buffer.
+            ArrayOverflowResult::Overflowed => Some(history_len.into()),
+            // Otherwise, keep the new offset.
+            ArrayOverflowResult::Within => Some(new_offset),
+        };
+    }
+
+    /// Scrolls the viewport forward towards the live output by the specified amount.
+    pub fn scroll_forward_by(&mut self, amount: ScrollbackAmount) {
+        let Some(current_offset) = self.maybe_scroll_offset else {
+            // Already at the bottom.
+            return;
+        };
+
+        // Subtract the scroll amount from the current offset.
+        let new_offset = current_offset.saturating_sub(amount);
+
+        if *new_offset == 0 {
+            // If the result of subtracting is 0, then we've scrolled all the way forward
+            // to the live boundary.
+            self.maybe_scroll_offset = None;
+        } else {
+            // Otherwise, keep the new offset.
+            self.maybe_scroll_offset = Some(new_offset);
         }
     }
 
@@ -252,6 +308,7 @@ impl Debug for Process {
             .field("terminal_state", &self.terminal_state)
             .field("unrendered_output", &self.unrendered_output)
             .field("terminal_title", &self.terminal_title)
+            .field("maybe_scroll_offset", &self.maybe_scroll_offset)
             .finish()
     }
 }
@@ -419,15 +476,13 @@ impl ProcessManager {
     }
 
     /// Sends input to the currently active process.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if sending input to the process fails.
-    pub fn send_input(&mut self, event: PtyInputEvent) -> miette::Result<()> {
-        if let Some(session) = &self.processes[self.active_index].session {
-            let _unused = session.tx_input_event.try_send(event);
-        }
-        ok!()
+    pub fn send_input(&mut self, event: PtyInputEvent) {
+        if let Some(session) = &self.processes[self.active_index].session
+            && let Err(err) = session.tx_input_event.try_send(event) {
+                DEBUG_TUI_PTY_PROCESS_MANAGER.then(|| {
+                    tracing::warn!("Ignored input for dead process: {}", err);
+                });
+            }
     }
 
     /// Gets the name of the currently active process.
@@ -450,8 +505,17 @@ impl ProcessManager {
 
     /// Gets read-only access to the active process's virtual terminal buffer.
     #[must_use]
-    pub fn get_active_buffer(&self) -> &OfsBufVT100 {
+    pub fn active_buffer(&self) -> &OfsBufVT100 {
         &self.processes[self.active_index].terminal_state
+    }
+
+    /// Gets immutable access to the active process.
+    #[must_use]
+    pub fn active_process(&self) -> &Process { &self.processes[self.active_index] }
+
+    /// Gets mutable access to the active process.
+    pub fn active_process_mut(&mut self) -> &mut Process {
+        &mut self.processes[self.active_index]
     }
 
     /// Marks the active process as having been rendered.

@@ -45,7 +45,7 @@ pub enum Id {
     StyleDialogResultsPanel = 14,
 }
 
-mod id_impl {
+mod impl_id {
     use super::{FlexBoxId, Id};
 
     impl From<Id> for u8 {

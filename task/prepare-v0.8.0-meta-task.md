@@ -39,7 +39,8 @@ _Meta Task: Prepare v0.8.0 Release_
 - [x] [VT100 Pending Wrap fix](done/pr-456-fix.md) - https://github.com/r3bl-org/r3bl-open-core/pull/456
 - [x] [Mouse Event Forwarding](done/pr-458-fix.md) - https://github.com/r3bl-org/r3bl-open-core/pull/458
 - [x] [DECCKM Cursor Key Mode tracking & state refactor](https://github.com/r3bl-org/r3bl-open-core/pull/470)
-- [ ] [Scrollback Buffer for PTY](pr-459-fix.md) - https://github.com/r3bl-org/r3bl-open-core/pull/459
+- [x] [Scrollback Buffer for PTY](done/pr-459-fix.md) - https://github.com/r3bl-org/r3bl-open-core/pull/459
+- [ ] [Change algo for OfsBufVT100 to canvas and viewport](task/ofsbufvt100-change-algo-to-canvas-and-viewport.md)
 - [ ] **NEEDS RESEARCH & PLANNING** https://github.com/r3bl-org/r3bl-open-core/pull/472
 - [ ] [invert control and decouple UI in pty_mux](pty-mux-invert-control.md)
 - [ ] **NEEDS RESEARCH & PLANNING** https://github.com/r3bl-org/r3bl-open-core/pull/468

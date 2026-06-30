@@ -1,6 +1,8 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{ArrayBoundsCheck as _, ArrayOverflowResult, CursorBoundsCheck as _, OfsBufVT100, PixelChar, RangeBoundsExt as _, RangeExt as _, glyphs::SPACER_GLYPH_CHAR, height, ok, row, width};
+use crate::{ArrayBoundsCheck as _, ArrayOverflowResult, CursorBoundsCheck as _,
+            OfsBufVT100, PixelChar, RangeBoundsExt as _, RangeExt as _,
+            glyphs::SPACER_GLYPH_CHAR, height, ok, row, width};
 use std::cmp::min;
 
 impl OfsBufVT100 {
@@ -31,7 +33,10 @@ impl OfsBufVT100 {
     pub fn create_empty_pixel_char(&self) -> PixelChar {
         PixelChar::PlainText {
             display_char: SPACER_GLYPH_CHAR,
-            style: self.parser_global_state.current_style.retain_bg_color_only(),
+            style: self
+                .parser_global_state
+                .current_style
+                .retain_bg_color_only(),
         }
     }
 
@@ -320,6 +325,19 @@ impl OfsBufVT100 {
 
         ok!()
     }
+
+    /// Clears the entire scrollback buffer (for `ED 3` - Erase in Display).
+    ///
+    /// This is typically used by `clear` or `reset` commands in terminal emulators
+    /// to delete the history of lines that have scrolled off the top of the screen.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the operation fails.
+    pub fn erase_display_scrollback(&mut self) -> miette::Result<()> {
+        self.scrollback_buffer.clear();
+        ok!()
+    }
 }
 
 #[cfg(test)]
@@ -397,10 +415,11 @@ mod tests {
     #[test]
     fn test_bce_strips_attributes_but_keeps_bg_color() {
         use crate::{tui_color, tui_style_attrib};
-        
+
         let mut buf = create_test_buffer();
-        
-        // Simulate a state where the terminal has both background color and text attributes (like bold/underline).
+
+        // Simulate a state where the terminal has both background color and text
+        // attributes (like bold/underline).
         let active_style = TuiStyle {
             color_bg: Some(tui_color!(red)),
             color_fg: Some(tui_color!(blue)),
@@ -415,13 +434,17 @@ mod tests {
 
         let empty_char = buf.create_empty_pixel_char();
 
-        if let PixelChar::PlainText { display_char, style } = empty_char {
+        if let PixelChar::PlainText {
+            display_char,
+            style,
+        } = empty_char
+        {
             // Must be a blank space
             assert_eq!(display_char, ' ');
-            
+
             // BCE MANDATE: Must retain the background color
             assert_eq!(style.color_bg, Some(tui_color!(red)));
-            
+
             // BCE MANDATE: Must strip all foreground colors and text attributes
             assert_eq!(style.color_fg, None);
             assert!(style.attribs.bold.is_none());
@@ -429,5 +452,26 @@ mod tests {
         } else {
             panic!("Expected PlainText");
         }
+    }
+
+    #[test]
+    fn test_erase_display_scrollback() {
+        use crate::{GetMemSize, PixelCharLine, width};
+
+        let mut buf = create_test_buffer();
+
+        // Add some lines to the scrollback
+        buf.scrollback_buffer
+            .push_and_enforce_limit(PixelCharLine::new_empty(width(10)));
+        buf.scrollback_buffer
+            .push_and_enforce_limit(PixelCharLine::new_empty(width(10)));
+        assert_eq!(buf.scrollback_buffer.lines.len(), 2);
+        assert!(buf.scrollback_buffer.get_mem_size() > 0);
+
+        // Clear the scrollback
+        buf.erase_display_scrollback().unwrap();
+
+        assert_eq!(buf.scrollback_buffer.lines.len(), 0);
+        assert_eq!(buf.scrollback_buffer.cached_mem_size, 0);
     }
 }

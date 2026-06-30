@@ -78,7 +78,7 @@ pub fn tui_style_id(arg_val: impl Into<u8>) -> Option<TuiStyleId> {
     Some(TuiStyleId(arg_val.into()))
 }
 
-mod id_impl {
+mod impl_id {
     #[allow(clippy::wildcard_imports)]
     use super::*;
 
@@ -363,7 +363,7 @@ mod style_helper {
     }
 }
 
-mod style_impl {
+mod impl_style {
     #[allow(clippy::wildcard_imports)]
     use super::*;
 

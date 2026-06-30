@@ -8,15 +8,15 @@
 //! ## Architecture
 //!
 //! The module consists of:
-//! 1. [`AnsiSequenceGenerator`]: Generates raw [`ANSI`] escape sequence bytes
+//! 1. [`ansi_output`]: Generates raw [`ANSI`] escape sequence bytes
 //! 2. [`RenderOpPaintImplDirectToAnsi`]: Implements [`RenderOpPaint`] trait for executing
 //!    render operations: [`RenderOpOutput`] and [`RenderOpCommon`]
 //! 3. [`PixelCharRenderer`]: Converts styled text to [`ANSI`] with smart attribute
 //!    diffing
 //! 4. [`RenderToAnsi`]: Trait for rendering offscreen buffers to [`ANSI`]
 //!
+//! [`ansi_output`]: crate::ansi_output
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`AnsiSequenceGenerator`]: crate::AnsiSequenceGenerator
 //! [`PixelCharRenderer`]: crate::PixelCharRenderer
 //! [`RenderOpCommon`]: crate::RenderOpCommon
 //! [`RenderOpOutput`]: crate::RenderOpOutput

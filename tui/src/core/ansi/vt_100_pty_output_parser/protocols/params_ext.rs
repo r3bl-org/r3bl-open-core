@@ -328,6 +328,13 @@ pub trait ParamsExt {
     fn extract_nth_many_raw(&self, arg_nth_pos: impl Into<Index>) -> Option<&[u16]>;
 }
 
+/// Implements the [`ParamsExt`] trait for the [`vte`] crate's [`vte::Params`] type,
+/// providing ergonomic extraction of both scalar values and vector sequences from
+/// raw parsed [`ANSI`] / [`VT-100`] escape codes.
+///
+/// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+/// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+/// [`vte`]: https://docs.rs/vte
 impl ParamsExt for vte::Params {
     fn extract_nth_single_non_zero(&self, arg_nth_pos: impl Into<Index>) -> NonZeroU16 {
         let nth_pos: Index = arg_nth_pos.into();

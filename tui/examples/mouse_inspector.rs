@@ -44,18 +44,21 @@
 //! [`OutputDevice`]: r3bl_tui::OutputDevice
 //! [`RawMode`]: r3bl_tui::RawMode
 
-use r3bl_tui::{AnsiSequenceGenerator, InputDevice, InputEvent, Key, KeyPress, KeyState,
-               ModifierKeysMask, MouseInput, MouseInputKind, OutputDevice, PaintMode,
-               Pos, RowIndex, TermCol, TermRow, TerminalModeController,
-               assert_terminal_is_interactive, col, ok, row, set_mimalloc_in_main};
+use r3bl_tui::{InputDevice, InputEvent, Key, KeyPress, KeyState, ModifierKeysMask,
+               MouseInput, MouseInputKind, OutputDevice, PaintMode, Pos, RowIndex,
+               TermCol, TermRow, TerminalModeController, assert_terminal_is_interactive,
+               col, ok, row, set_mimalloc_in_main};
 use std::collections::VecDeque;
 
 /// Helper: Clear screen and position cursor at home (0,0).
 fn clear_screen_and_home(output: &OutputDevice) {
     output.write(|out| {
-        let _unused = out.write_all(AnsiSequenceGenerator::clear_screen().as_bytes());
         let _unused = out
-            .write_all(AnsiSequenceGenerator::cursor_position(row(0), col(0)).as_bytes());
+            .write_all(r3bl_tui::ansi_output::screen_clearing::clear_screen().as_bytes());
+        let _unused = out.write_all(
+            r3bl_tui::ansi_output::cursor_movement::cursor_position(row(0), col(0))
+                .as_bytes(),
+        );
         let _unused = out.flush();
     });
 }
@@ -63,9 +66,10 @@ fn clear_screen_and_home(output: &OutputDevice) {
 /// Helper: Move cursor to specified terminal position (1-based row, 1-based col).
 fn cursor_to(output: &OutputDevice, term_row: u16, term_col: u16) {
     output.write(|out| {
-        // Convert 1-based terminal coords to 0-based indices for AnsiSequenceGenerator.
+        // Convert 1-based terminal coords to 0-based indices for
+        // output.
         let _unused = out.write_all(
-            AnsiSequenceGenerator::cursor_position(
+            r3bl_tui::ansi_output::cursor_movement::cursor_position(
                 row(term_row.saturating_sub(1) as usize),
                 col(term_col.saturating_sub(1) as usize),
             )

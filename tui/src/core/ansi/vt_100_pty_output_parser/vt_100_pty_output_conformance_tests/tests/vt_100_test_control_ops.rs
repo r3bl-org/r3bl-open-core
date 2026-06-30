@@ -227,7 +227,7 @@ pub mod tab_edge_cases {
         // Disable auto-wrap mode
         let disable_wrap = format!(
             "{}",
-            crate::CsiSequence::DisablePrivateMode(crate::PrivateModeType::AutoWrap)
+            crate::CsiSequence::DisablePrivateMode(smallvec::smallvec![crate::PrivateModeType::AutoWrap])
         );
         let _result = ofs_buf_vt_100.apply_ansi_bytes(disable_wrap);
 

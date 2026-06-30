@@ -108,7 +108,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_esc_sequence_save_cursor() {
+    fn test_esc_save_cursor() {
         let sequence = EscSequence::SaveCursor;
         let result = sequence.to_string();
         let expected = "\x1b7";
@@ -116,7 +116,7 @@ mod tests {
     }
 
     #[test]
-    fn test_esc_sequence_restore_cursor() {
+    fn test_esc_restore_cursor() {
         let sequence = EscSequence::RestoreCursor;
         let result = sequence.to_string();
         let expected = "\x1b8";
@@ -124,7 +124,7 @@ mod tests {
     }
 
     #[test]
-    fn test_esc_sequence_index_down() {
+    fn test_esc_index_down() {
         let sequence = EscSequence::IndexDown;
         let result = sequence.to_string();
         let expected = "\x1bD";
@@ -132,7 +132,7 @@ mod tests {
     }
 
     #[test]
-    fn test_esc_sequence_reverse_index() {
+    fn test_esc_reverse_index() {
         let sequence = EscSequence::ReverseIndex;
         let result = sequence.to_string();
         let expected = "\x1bM";
@@ -140,7 +140,7 @@ mod tests {
     }
 
     #[test]
-    fn test_esc_sequence_reset_terminal() {
+    fn test_esc_reset_terminal() {
         let sequence = EscSequence::ResetTerminal;
         let result = sequence.to_string();
         let expected = "\x1bc";
@@ -148,7 +148,7 @@ mod tests {
     }
 
     #[test]
-    fn test_esc_sequence_select_ascii() {
+    fn test_esc_select_ascii() {
         let sequence = EscSequence::SelectAscii;
         let result = sequence.to_string();
         let expected = "\x1b(B";
@@ -156,7 +156,7 @@ mod tests {
     }
 
     #[test]
-    fn test_esc_sequence_select_dec_graphics() {
+    fn test_esc_select_dec_graphics() {
         let sequence = EscSequence::SelectDECGraphics;
         let result = sequence.to_string();
         let expected = "\x1b(0";
@@ -164,7 +164,7 @@ mod tests {
     }
 
     #[test]
-    fn test_esc_sequence_write_to_buf_save_cursor() {
+    fn test_esc_write_to_buf_save_cursor() {
         let sequence = EscSequence::SaveCursor;
         let mut buffer = BufTextStorage::new();
         let result = sequence.write_to_buf(&mut buffer);
@@ -174,7 +174,7 @@ mod tests {
     }
 
     #[test]
-    fn test_esc_sequence_write_to_buf_select_ascii() {
+    fn test_esc_write_to_buf_select_ascii() {
         let sequence = EscSequence::SelectAscii;
         let mut buffer = BufTextStorage::new();
         let result = sequence.write_to_buf(&mut buffer);
@@ -184,7 +184,7 @@ mod tests {
     }
 
     #[test]
-    fn test_esc_sequence_write_to_buf_select_dec_graphics() {
+    fn test_esc_write_to_buf_select_dec_graphics() {
         let sequence = EscSequence::SelectDECGraphics;
         let mut buffer = BufTextStorage::new();
         let result = sequence.write_to_buf(&mut buffer);
@@ -194,7 +194,7 @@ mod tests {
     }
 
     #[test]
-    fn test_esc_sequence_equality() {
+    fn test_esc_equality() {
         let seq1 = EscSequence::SaveCursor;
         let seq2 = EscSequence::SaveCursor;
         let seq3 = EscSequence::RestoreCursor;

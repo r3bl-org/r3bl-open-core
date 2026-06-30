@@ -2,7 +2,7 @@
 
 // cspell:words O_NONBLOCK
 
-use crate::{AnsiSequenceGenerator, RawModeGuard, SafeRawTerminal, SendRawTerminal,
+use crate::{RawModeGuard, SafeRawTerminal, SendRawTerminal,
             StdMutex, TERMINAL_LIB_BACKEND, TerminalLibBackend, col, ok, row};
 use crossterm::{QueueableCommand,
                 cursor::{Hide, Show},
@@ -246,10 +246,10 @@ impl OutputDevice {
                         .into_diagnostic()?;
                 }
                 TerminalLibBackend::DirectToAnsi => {
-                    let ansi = AnsiSequenceGenerator::cursor_position(row(0), col(0));
+                    let ansi = crate::ansi_output::cursor_movement::cursor_position(row(0), col(0));
                     writer.write_all(ansi.as_bytes()).into_diagnostic()?;
 
-                    let ansi2 = AnsiSequenceGenerator::clear_screen();
+                    let ansi2 = crate::ansi_output::screen_clearing::clear_screen();
                     writer.write_all(ansi2.as_bytes()).into_diagnostic()?;
                 }
             }
@@ -486,7 +486,7 @@ impl TerminalModeController for OutputDevice {
                     writer.flush().into_diagnostic()?;
                 }
                 TerminalLibBackend::DirectToAnsi => {
-                    let ansi = AnsiSequenceGenerator::enter_alternate_screen();
+                    let ansi = crate::ansi_output::terminal_modes::enter_alternate_screen();
                     writer.write_all(ansi.as_bytes()).into_diagnostic()?;
                     writer.flush().into_diagnostic()?;
                 }
@@ -506,7 +506,7 @@ impl TerminalModeController for OutputDevice {
                     writer.flush().into_diagnostic()?;
                 }
                 TerminalLibBackend::DirectToAnsi => {
-                    let ansi = AnsiSequenceGenerator::exit_alternate_screen();
+                    let ansi = crate::ansi_output::terminal_modes::exit_alternate_screen();
                     writer.write_all(ansi.as_bytes()).into_diagnostic()?;
                     writer.flush().into_diagnostic()?;
                 }
@@ -524,7 +524,7 @@ impl TerminalModeController for OutputDevice {
                     writer.flush().into_diagnostic()?;
                 }
                 TerminalLibBackend::DirectToAnsi => {
-                    let ansi = AnsiSequenceGenerator::hide_cursor();
+                    let ansi = crate::ansi_output::cursor_visibility::hide_cursor();
                     writer.write_all(ansi.as_bytes()).into_diagnostic()?;
                     writer.flush().into_diagnostic()?;
                 }
@@ -544,7 +544,7 @@ impl TerminalModeController for OutputDevice {
                     writer.flush().into_diagnostic()?;
                 }
                 TerminalLibBackend::DirectToAnsi => {
-                    let ansi = AnsiSequenceGenerator::show_cursor();
+                    let ansi = crate::ansi_output::cursor_visibility::show_cursor();
                     writer.write_all(ansi.as_bytes()).into_diagnostic()?;
                     writer.flush().into_diagnostic()?;
                 }
@@ -562,7 +562,7 @@ impl TerminalModeController for OutputDevice {
                     writer.flush().into_diagnostic()?;
                 }
                 TerminalLibBackend::DirectToAnsi => {
-                    let ansi = AnsiSequenceGenerator::enable_mouse_tracking();
+                    let ansi = crate::ansi_output::terminal_modes::enable_mouse_tracking();
                     writer.write_all(ansi.as_bytes()).into_diagnostic()?;
                     writer.flush().into_diagnostic()?;
                 }
@@ -582,7 +582,7 @@ impl TerminalModeController for OutputDevice {
                     writer.flush().into_diagnostic()?;
                 }
                 TerminalLibBackend::DirectToAnsi => {
-                    let ansi = AnsiSequenceGenerator::disable_mouse_tracking();
+                    let ansi = crate::ansi_output::terminal_modes::disable_mouse_tracking();
                     writer.write_all(ansi.as_bytes()).into_diagnostic()?;
                     writer.flush().into_diagnostic()?;
                 }
@@ -600,7 +600,7 @@ impl TerminalModeController for OutputDevice {
                     writer.flush().into_diagnostic()?;
                 }
                 TerminalLibBackend::DirectToAnsi => {
-                    let ansi = AnsiSequenceGenerator::enable_bracketed_paste();
+                    let ansi = crate::ansi_output::terminal_modes::enable_bracketed_paste();
                     writer.write_all(ansi.as_bytes()).into_diagnostic()?;
                     writer.flush().into_diagnostic()?;
                 }
@@ -620,7 +620,7 @@ impl TerminalModeController for OutputDevice {
                     writer.flush().into_diagnostic()?;
                 }
                 TerminalLibBackend::DirectToAnsi => {
-                    let ansi = AnsiSequenceGenerator::disable_bracketed_paste();
+                    let ansi = crate::ansi_output::terminal_modes::disable_bracketed_paste();
                     writer.write_all(ansi.as_bytes()).into_diagnostic()?;
                     writer.flush().into_diagnostic()?;
                 }

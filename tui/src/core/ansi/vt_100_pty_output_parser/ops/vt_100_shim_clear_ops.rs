@@ -60,8 +60,9 @@
 //! [ops module]: crate::core::ansi::vt_100_pty_output_parser::ops
 
 use super::super::ansi_parser_public_api::AnsiToOfsBufPerformer;
-use crate::{DEBUG_TUI_VT100_PARSER, ED_ERASE_ALL, ED_ERASE_FROM_START, ED_ERASE_TO_END,
-            EL_ERASE_ALL, EL_ERASE_FROM_START, EL_ERASE_TO_END, ParamsExt, ok};
+use crate::{DEBUG_TUI_VT100_PARSER, ED_ERASE_ALL, ED_ERASE_ALL_AND_SCROLLBACK,
+            ED_ERASE_FROM_START, ED_ERASE_TO_END, EL_ERASE_ALL, EL_ERASE_FROM_START,
+            EL_ERASE_TO_END, ParamsExt, ok};
 
 /// Handle ED (Erase in Display) - clear screen relative to cursor.
 ///
@@ -86,12 +87,20 @@ use crate::{DEBUG_TUI_VT100_PARSER, ED_ERASE_ALL, ED_ERASE_FROM_START, ED_ERASE_
 /// [module-level documentation]: self
 pub fn erase_in_display(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) {
     let mode = params.extract_nth_single_opt_raw(0).unwrap_or(0);
+
     let result = match mode {
         ED_ERASE_TO_END => performer.ofs_buf_vt_100.erase_display_from_cursor_to_end(),
+
         ED_ERASE_FROM_START => performer
             .ofs_buf_vt_100
             .erase_display_from_start_to_cursor(),
+
         ED_ERASE_ALL => performer.ofs_buf_vt_100.erase_display_entire(),
+
+        ED_ERASE_ALL_AND_SCROLLBACK => {
+            performer.ofs_buf_vt_100.erase_display_scrollback()
+        }
+
         _ => {
             DEBUG_TUI_VT100_PARSER.then(|| {
                 tracing::warn!("CSI {} J: Unsupported Erase Display mode", mode);
@@ -99,6 +108,7 @@ pub fn erase_in_display(performer: &mut AnsiToOfsBufPerformer, params: &vte::Par
             ok!()
         }
     };
+
     if let Err(err) = result {
         DEBUG_TUI_VT100_PARSER.then(|| {
             tracing::error!("Failed to erase display (mode {}): {:?}", mode, err);

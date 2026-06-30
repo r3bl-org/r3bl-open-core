@@ -21,8 +21,6 @@
 //! [`set_requested_auto_wrap_mode`]: crate::OfsBufVT100::set_requested_auto_wrap_mode
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 
-
-
 #[allow(clippy::wildcard_imports)]
 use super::super::*;
 use std::mem::swap;
@@ -48,12 +46,19 @@ impl OfsBufVT100 {
         self.parser_global_state.cursor_visibility = requested_state;
     }
 
-    /// Set the mouse tracking mode.
+    /// Set the mouse tracking mode (Enabled/Disabled).
     ///
     /// Controls whether the terminal captures and reports mouse events (e.g. click,
     /// scroll).
     pub fn set_requested_mouse_tracking_mode(&mut self, state: MouseTrackingMode) {
-        self.terminal_mode.mouse_tracking = state;
+        self.terminal_mode.mouse_tracking_mode = state;
+    }
+
+    /// Set the mouse tracking format ([`X10`] vs Sgr).
+    ///
+    /// [`X10`]: https://invisible-island.net/xterm/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
+    pub fn set_mouse_tracking_format(&mut self, format: MouseTrackingFormat) {
+        self.terminal_mode.mouse_tracking_format = format;
     }
 
     /// Toggle between the primary and alternate screen buffers.
@@ -79,7 +84,10 @@ impl OfsBufVT100 {
     /// [`self.buffer`]: field@crate::OfsBufVT100::ofs_buf
     /// [`self.hidden_screen_state.hidden_buffer`]: field@crate::HiddenScreenState::hidden_buffer
     pub fn set_alt_screen_mode(&mut self, requested_screen_mode: RequestedScreenMode) {
-        match (self.terminal_mode.active_screen_buffer, requested_screen_mode) {
+        match (
+            self.terminal_mode.active_screen_buffer,
+            requested_screen_mode,
+        ) {
             // Transition: Primary -> Alternate Screen.
             (ActiveScreenBuffer::Primary, RequestedScreenMode::Alternate) => {
                 // Swap the screen buffer grids and their respective cursor positions.

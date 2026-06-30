@@ -21,8 +21,8 @@
 //! [`RenderOpsLocalData`]: crate::RenderOpsLocalData
 
 use super::test_helpers::*;
-use crate::{AnsiSequenceGenerator, ColIndex, RowIndex, col, height, pos,
-            render_op::RenderOpCommon, row, term_row_delta, tui_color};
+use crate::{ColIndex, RowIndex, col, height, pos, render_op::RenderOpCommon, row,
+            term_row_delta, tui_color};
 
 #[test]
 fn test_move_cursor_absolute_origin() {
@@ -36,7 +36,7 @@ fn test_move_cursor_absolute_origin() {
     // CSI H with 1-based indexing: row 0 (0-based) = 1 (1-based), col 0 = 1
     assert_eq!(
         output,
-        AnsiSequenceGenerator::cursor_position(row(0), col(0))
+        crate::ansi_output::cursor_movement::cursor_position(row(0), col(0))
     );
     assert_eq!(state.cursor_pos, pos(row(0) + col(0)));
 }
@@ -53,7 +53,7 @@ fn test_move_cursor_absolute_5_10() {
     // CSI H with 1-based: row 5 (0-based) = 6 (1-based), col 10 = 11
     assert_eq!(
         output,
-        AnsiSequenceGenerator::cursor_position(row(5), col(10))
+        crate::ansi_output::cursor_movement::cursor_position(row(5), col(10))
     );
     assert_eq!(state.cursor_pos, pos(row(5) + col(10)));
 }
@@ -70,7 +70,7 @@ fn test_move_cursor_absolute_20_40() {
     // row 20 = 21, col 40 = 41 in 1-based
     assert_eq!(
         output,
-        AnsiSequenceGenerator::cursor_position(row(20), col(40))
+        crate::ansi_output::cursor_movement::cursor_position(row(20), col(40))
     );
     assert_eq!(state.cursor_pos, pos(row(20) + col(40)));
 }
@@ -90,7 +90,7 @@ fn test_move_cursor_relative_to() {
     // ANSI: row 7 = 8, col 10 = 11
     assert_eq!(
         output,
-        AnsiSequenceGenerator::cursor_position(row(7), col(10))
+        crate::ansi_output::cursor_movement::cursor_position(row(7), col(10))
     );
     assert_eq!(state.cursor_pos, pos(row(7) + col(10)));
 }
@@ -114,7 +114,7 @@ fn test_move_cursor_to_column() {
     // CSI 21G (1-based column index)
     assert_eq!(
         output,
-        AnsiSequenceGenerator::cursor_to_column(ColIndex::new(20))
+        crate::ansi_output::cursor_movement::cursor_to_column(ColIndex::new(20))
     );
     // Row should remain unchanged
     assert_eq!(state.cursor_pos.row_index, initial_row);
@@ -140,7 +140,7 @@ fn test_move_cursor_to_next_line() {
     // CSI 3E (move down 3 lines and to column 0)
     assert_eq!(
         output,
-        AnsiSequenceGenerator::cursor_next_line(term_row_delta(3).unwrap())
+        crate::ansi_output::cursor_movement::cursor_next_line(term_row_delta(3).unwrap())
     );
     assert_eq!(state.cursor_pos.row_index, RowIndex::new(8));
     assert_eq!(state.cursor_pos.col_index, ColIndex::new(0));
@@ -164,7 +164,9 @@ fn test_move_cursor_to_previous_line() {
     // CSI 3F (move up 3 lines and to column 0)
     assert_eq!(
         output,
-        AnsiSequenceGenerator::cursor_previous_line(term_row_delta(3).unwrap())
+        crate::ansi_output::cursor_movement::cursor_previous_line(
+            term_row_delta(3).unwrap()
+        )
     );
     assert_eq!(state.cursor_pos.row_index, RowIndex::new(7));
     assert_eq!(state.cursor_pos.col_index, ColIndex::new(0));
@@ -186,9 +188,24 @@ fn test_multiple_cursor_moves_sequence() {
         execute_sequence_and_capture(ops, &mut state, &output_device, &stdout_mock);
 
     // Should contain all three ANSI sequences
-    assert!(output.contains(&AnsiSequenceGenerator::cursor_position(row(5), col(5))));
-    assert!(output.contains(&AnsiSequenceGenerator::cursor_position(row(10), col(20))));
-    assert!(output.contains(&AnsiSequenceGenerator::cursor_position(row(0), col(0))));
+    assert!(
+        output.contains(&crate::ansi_output::cursor_movement::cursor_position(
+            row(5),
+            col(5)
+        ))
+    );
+    assert!(
+        output.contains(&crate::ansi_output::cursor_movement::cursor_position(
+            row(10),
+            col(20)
+        ))
+    );
+    assert!(
+        output.contains(&crate::ansi_output::cursor_movement::cursor_position(
+            row(0),
+            col(0)
+        ))
+    );
 
     // Final state should match last position
     assert_eq!(state.cursor_pos, pos(row(0) + col(0)));
@@ -233,7 +250,7 @@ fn test_cursor_overwrite_same_position() {
     // Both should generate same ANSI sequence
     assert_eq!(
         output,
-        AnsiSequenceGenerator::cursor_position(row(8), col(15))
+        crate::ansi_output::cursor_movement::cursor_position(row(8), col(15))
     );
     assert_eq!(state.cursor_pos, pos_val);
 }

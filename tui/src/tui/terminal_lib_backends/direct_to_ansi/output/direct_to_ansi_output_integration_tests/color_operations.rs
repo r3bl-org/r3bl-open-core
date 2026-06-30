@@ -23,7 +23,7 @@
 //! [`SGR`]: crate::SgrCode
 
 use super::test_helpers::*;
-use crate::{AnsiSequenceGenerator, render_op::RenderOpCommon, tui_color};
+use crate::{render_op::RenderOpCommon, tui_color};
 
 #[test]
 fn test_set_fg_color_basic_red() {
@@ -36,7 +36,7 @@ fn test_set_fg_color_basic_red() {
     let output = execute_and_capture(op, &mut state, &output_device, &stdout_mock);
 
     // Should generate SGR 38:5:1 for ANSI red in extended palette format
-    assert_eq!(output, AnsiSequenceGenerator::fg_color(color));
+    assert_eq!(output, crate::ansi_output::color_ops::fg_color(color));
     // State should track the foreground color
     assert_eq!(state.fg_color, Some(color));
 }
@@ -52,7 +52,7 @@ fn test_set_fg_color_basic_blue() {
     let output = execute_and_capture(op, &mut state, &output_device, &stdout_mock);
 
     // Should generate SGR 38:5:4 for ANSI blue
-    assert_eq!(output, AnsiSequenceGenerator::fg_color(color));
+    assert_eq!(output, crate::ansi_output::color_ops::fg_color(color));
     assert_eq!(state.fg_color, Some(color));
 }
 
@@ -67,7 +67,7 @@ fn test_set_fg_color_basic_green() {
     let output = execute_and_capture(op, &mut state, &output_device, &stdout_mock);
 
     // Should generate SGR 38:5:2 for ANSI green
-    assert_eq!(output, AnsiSequenceGenerator::fg_color(color));
+    assert_eq!(output, crate::ansi_output::color_ops::fg_color(color));
     assert_eq!(state.fg_color, Some(color));
 }
 
@@ -82,7 +82,7 @@ fn test_set_bg_color_basic_red() {
     let output = execute_and_capture(op, &mut state, &output_device, &stdout_mock);
 
     // Should generate SGR 48:5:1 for ANSI red background
-    assert_eq!(output, AnsiSequenceGenerator::bg_color(color));
+    assert_eq!(output, crate::ansi_output::color_ops::bg_color(color));
     // State should track the background color
     assert_eq!(state.bg_color, Some(color));
 }
@@ -98,7 +98,7 @@ fn test_set_bg_color_basic_green() {
     let output = execute_and_capture(op, &mut state, &output_device, &stdout_mock);
 
     // Should generate SGR 48:5:2 for ANSI green background
-    assert_eq!(output, AnsiSequenceGenerator::bg_color(color));
+    assert_eq!(output, crate::ansi_output::color_ops::bg_color(color));
     assert_eq!(state.bg_color, Some(color));
 }
 
@@ -114,7 +114,7 @@ fn test_set_bg_color_extended_palette_226() {
     let output = execute_and_capture(op, &mut state, &output_device, &stdout_mock);
 
     // Should generate SGR 48:5:226 for background extended palette
-    assert_eq!(output, AnsiSequenceGenerator::bg_color(color));
+    assert_eq!(output, crate::ansi_output::color_ops::bg_color(color));
     assert_eq!(state.bg_color, Some(color));
 }
 
@@ -129,7 +129,7 @@ fn test_set_fg_color_rgb_orange() {
     let output = execute_and_capture(op, &mut state, &output_device, &stdout_mock);
 
     // Should generate SGR 38:2:R:G:B format
-    assert_eq!(output, AnsiSequenceGenerator::fg_color(color));
+    assert_eq!(output, crate::ansi_output::color_ops::fg_color(color));
     assert_eq!(state.fg_color, Some(color));
 }
 
@@ -144,7 +144,7 @@ fn test_set_bg_color_rgb_cyan() {
     let output = execute_and_capture(op, &mut state, &output_device, &stdout_mock);
 
     // Should generate SGR 48:2:R:G:B format
-    assert_eq!(output, AnsiSequenceGenerator::bg_color(color));
+    assert_eq!(output, crate::ansi_output::color_ops::bg_color(color));
     assert_eq!(state.bg_color, Some(color));
 }
 
@@ -173,7 +173,7 @@ fn test_reset_color_clears_both_colors() {
         execute_and_capture(reset_op, &mut state, &output_device2, &stdout_mock2);
 
     // Should generate SGR 0 (reset all attributes)
-    assert_eq!(output, AnsiSequenceGenerator::reset_color());
+    assert_eq!(output, crate::ansi_output::color_ops::reset_color());
     // Both colors should be cleared
     assert!(state.fg_color.is_none());
     assert!(state.bg_color.is_none());
@@ -195,9 +195,9 @@ fn test_multiple_color_changes_sequence() {
         execute_sequence_and_capture(ops, &mut state, &output_device, &stdout_mock);
 
     // Should contain all three ANSI sequences
-    assert!(output.contains(&AnsiSequenceGenerator::fg_color(tui_color!(red))));
-    assert!(output.contains(&AnsiSequenceGenerator::bg_color(tui_color!(blue))));
-    assert!(output.contains(&AnsiSequenceGenerator::fg_color(tui_color!(green))));
+    assert!(output.contains(&crate::ansi_output::color_ops::fg_color(tui_color!(red))));
+    assert!(output.contains(&crate::ansi_output::color_ops::bg_color(tui_color!(blue))));
+    assert!(output.contains(&crate::ansi_output::color_ops::fg_color(tui_color!(green))));
 
     // Final state should have green foreground and blue background
     assert_eq!(state.fg_color, Some(tui_color!(green)));
@@ -219,7 +219,10 @@ fn test_fg_color_overwrite() {
     let blue_op = set_fg_color_op(tui_color!(blue));
     let output = execute_and_capture(blue_op, &mut state, &output_device2, &stdout_mock2);
 
-    assert_eq!(output, AnsiSequenceGenerator::fg_color(tui_color!(blue)));
+    assert_eq!(
+        output,
+        crate::ansi_output::color_ops::fg_color(tui_color!(blue))
+    );
     assert_eq!(state.fg_color, Some(tui_color!(blue)));
 }
 
@@ -234,7 +237,7 @@ fn test_dark_color_variants() {
     let output = execute_and_capture(op, &mut state, &output_device, &stdout_mock);
 
     // Dark red is ANSI index 9
-    assert_eq!(output, AnsiSequenceGenerator::fg_color(dark_red));
+    assert_eq!(output, crate::ansi_output::color_ops::fg_color(dark_red));
     assert_eq!(state.fg_color, Some(dark_red));
 }
 
@@ -248,7 +251,7 @@ fn test_pure_black_color() {
     let op = set_fg_color_op(black);
     let output = execute_and_capture(op, &mut state, &output_device, &stdout_mock);
 
-    assert_eq!(output, AnsiSequenceGenerator::fg_color(black));
+    assert_eq!(output, crate::ansi_output::color_ops::fg_color(black));
     assert_eq!(state.fg_color, Some(black));
 }
 
@@ -276,6 +279,9 @@ fn test_color_sequence_after_reset() {
         execute_and_capture(second_color, &mut state, &output_device3, &stdout_mock3);
 
     // Should produce correct ANSI sequence
-    assert_eq!(output, AnsiSequenceGenerator::fg_color(tui_color!(blue)));
+    assert_eq!(
+        output,
+        crate::ansi_output::color_ops::fg_color(tui_color!(blue))
+    );
     assert_eq!(state.fg_color, Some(tui_color!(blue)));
 }

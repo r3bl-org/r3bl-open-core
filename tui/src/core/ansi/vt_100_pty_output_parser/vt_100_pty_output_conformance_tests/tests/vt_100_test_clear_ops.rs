@@ -40,12 +40,11 @@ fn create_filled_5r_by_5c_buffer() -> OfsBufVT100 {
     buf
 }
 
-#[test]
-fn test_parameter_defaults() {
-    // Missing arguments should default to 0 (FromCursorToEnd).
+mod test_parameter_defaults {
+    use super::*;
 
-    // CSI J should be parsed as CSI 0 J (EraseDisplay FromCursorToEnd)
-    {
+    #[test]
+    fn csi_j_defaults_to_mode_0() {
         let mut ofs_buf_vt_100 = create_filled_5r_by_5c_buffer();
         ofs_buf_vt_100.cursor_pos = row(2) + col(2);
 
@@ -63,8 +62,8 @@ fn test_parameter_defaults() {
         assert_line_content(&ofs_buf_vt_100, 1, "XXXXX");
     }
 
-    // CSI K should be parsed as CSI 0 K (EraseLine FromCursorToEnd)
-    {
+    #[test]
+    fn csi_k_defaults_to_mode_0() {
         let mut ofs_buf_vt_100 = create_filled_5r_by_5c_buffer();
         ofs_buf_vt_100.cursor_pos = row(2) + col(2);
 
@@ -82,10 +81,11 @@ fn test_parameter_defaults() {
     }
 }
 
-#[test]
-fn test_erase_display_modes() {
-    // Mode 0: From Cursor to End
-    {
+mod test_erase_display {
+    use super::*;
+
+    #[test]
+    fn mode_0_from_cursor_to_end() {
         let mut ofs_buf_vt_100 = create_filled_5r_by_5c_buffer();
         ofs_buf_vt_100.cursor_pos = row(1) + col(3);
 
@@ -101,8 +101,8 @@ fn test_erase_display_modes() {
         assert_line_content(&ofs_buf_vt_100, 4, "     ");
     }
 
-    // Mode 1: From Start to Cursor
-    {
+    #[test]
+    fn mode_1_from_start_to_cursor() {
         let mut ofs_buf_vt_100 = create_filled_5r_by_5c_buffer();
         ofs_buf_vt_100.cursor_pos = row(2) + col(2);
 
@@ -118,8 +118,8 @@ fn test_erase_display_modes() {
         assert_line_content(&ofs_buf_vt_100, 4, "XXXXX");
     }
 
-    // Mode 2: Entire Screen
-    {
+    #[test]
+    fn mode_2_entire_screen() {
         let mut ofs_buf_vt_100 = create_filled_5r_by_5c_buffer();
         ofs_buf_vt_100.cursor_pos = row(2) + col(2);
 
@@ -134,12 +134,38 @@ fn test_erase_display_modes() {
         assert_line_content(&ofs_buf_vt_100, 3, "     ");
         assert_line_content(&ofs_buf_vt_100, 4, "     ");
     }
+
+    #[test]
+    fn mode_3_entire_screen_and_scrollback() {
+        let mut ofs_buf_vt_100 = create_filled_5r_by_5c_buffer();
+        ofs_buf_vt_100.cursor_pos = row(2) + col(2);
+
+        // Add some scrollback history
+        ofs_buf_vt_100.scrollback_buffer.push_and_enforce_limit(crate::PixelCharLine::new_empty(0));
+        assert_eq!(ofs_buf_vt_100.scrollback_buffer.lines.len(), 1);
+
+        // CSI 3 J
+        let sequence =
+            CsiSequence::EraseDisplay(EraseDisplayMode::EntireScreenAndScrollback).to_string();
+        let _result = ofs_buf_vt_100.apply_ansi_bytes(sequence);
+
+        // Buffer should be UNTOUCHED
+        assert_line_content(&ofs_buf_vt_100, 0, "XXXXX");
+        assert_line_content(&ofs_buf_vt_100, 1, "XXXXX");
+        assert_line_content(&ofs_buf_vt_100, 2, "XXXXX");
+        assert_line_content(&ofs_buf_vt_100, 3, "XXXXX");
+        assert_line_content(&ofs_buf_vt_100, 4, "XXXXX");
+
+        // Scrollback should be cleared
+        assert_eq!(ofs_buf_vt_100.scrollback_buffer.lines.len(), 0);
+    }
 }
 
-#[test]
-fn test_erase_line_modes() {
-    // Mode 0: From Cursor to End
-    {
+mod test_erase_line {
+    use super::*;
+
+    #[test]
+    fn mode_0_from_cursor_to_end() {
         let mut ofs_buf_vt_100 = create_filled_5r_by_5c_buffer();
         ofs_buf_vt_100.cursor_pos = row(2) + col(1);
 
@@ -151,8 +177,8 @@ fn test_erase_line_modes() {
         assert_line_content(&ofs_buf_vt_100, 1, "XXXXX");
     }
 
-    // Mode 1: From Start to Cursor
-    {
+    #[test]
+    fn mode_1_from_start_to_cursor() {
         let mut ofs_buf_vt_100 = create_filled_5r_by_5c_buffer();
         ofs_buf_vt_100.cursor_pos = row(2) + col(3);
 
@@ -165,8 +191,8 @@ fn test_erase_line_modes() {
         assert_line_content(&ofs_buf_vt_100, 1, "XXXXX");
     }
 
-    // Mode 2: Entire Line
-    {
+    #[test]
+    fn mode_2_entire_line() {
         let mut ofs_buf_vt_100 = create_filled_5r_by_5c_buffer();
         ofs_buf_vt_100.cursor_pos = row(2) + col(2);
 

@@ -53,6 +53,7 @@ use crate::{Pos, PtyResponseEvent, TermRow, TuiStyle, osc::OscEvent};
 /// [`DSR`]: crate::PtyResponseEvent
 /// [`hidden_buffer`]: crate::HiddenScreenState::hidden_buffer
 /// [`hidden_cursor_pos`]: crate::HiddenScreenState::hidden_cursor_pos
+/// [`HiddenScreenState`]: crate::HiddenScreenState
 /// [`OffscreenBuffer::cursor_pos`]: crate::OffscreenBuffer::cursor_pos
 /// [`OffscreenBuffer`]: crate::OffscreenBuffer
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
@@ -94,6 +95,7 @@ pub struct ParserGlobalState {
     /// [`CSI`]: crate::CsiSequence
     /// [`DECRC`]: https://vt100.net/docs/vt510-rm/DECRC.html
     /// [`DECSC`]: https://vt100.net/docs/vt510-rm/DECSC.html
+    /// [`OffscreenBuffer::cursor_pos`]: crate::OffscreenBuffer::cursor_pos
     pub cursor_pos_for_esc_save_and_restore: Option<Pos>,
 
     /// Active character set for [`ANSI`] escape sequence support.

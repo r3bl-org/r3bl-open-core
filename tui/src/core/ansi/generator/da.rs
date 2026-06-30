@@ -64,7 +64,7 @@ pub enum DaSequence {
     PrimaryDeviceAttributes,
 }
 
-mod da_sequence_impl {
+mod impl_da {
     #[allow(clippy::wildcard_imports)]
     use super::*;
 
@@ -95,7 +95,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_da_sequence_primary_device_attributes() {
+    fn test_da_primary_device_attributes() {
         let sequence = DaSequence::PrimaryDeviceAttributes;
         assert_eq!(sequence.to_string(), DA1_VT220_COLOR_RESPONSE_STR);
     }

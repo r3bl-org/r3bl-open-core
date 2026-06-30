@@ -36,7 +36,7 @@ pub fn spawn_blocking_writer_task(
             .map_err(|e| miette!("Failed to take PTY writer: {}", e))?;
 
         while let Some(input) = input_event_ch_rx_half.blocking_recv() {
-            match writer_task_impl::handle_pty_input_event(
+            match impl_writer_task::handle_pty_input_event(
                 input,
                 &mut writer,
                 &controller,
@@ -60,7 +60,7 @@ pub fn spawn_blocking_writer_task(
     })
 }
 
-mod writer_task_impl {
+mod impl_writer_task {
     #[allow(clippy::wildcard_imports)]
     use super::*;
 

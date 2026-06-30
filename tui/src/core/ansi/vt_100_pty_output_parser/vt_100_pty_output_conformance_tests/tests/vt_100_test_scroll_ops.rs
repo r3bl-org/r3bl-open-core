@@ -125,7 +125,7 @@ pub mod auto_wrap {
 
         // Disable auto-wrap mode using CSI `?7l`.
         let sequence =
-            CsiSequence::DisablePrivateMode(PrivateModeType::AutoWrap).to_string();
+            CsiSequence::DisablePrivateMode(smallvec::smallvec![PrivateModeType::AutoWrap]).to_string();
         performer.apply_ansi_bytes(sequence);
 
         // Verify auto-wrap is now disabled.
@@ -168,7 +168,7 @@ pub mod auto_wrap {
 
         // Disable auto-wrap.
         let disable_sequence =
-            CsiSequence::DisablePrivateMode(PrivateModeType::AutoWrap).to_string();
+            CsiSequence::DisablePrivateMode(smallvec::smallvec![PrivateModeType::AutoWrap]).to_string();
         performer.apply_ansi_bytes(disable_sequence);
         assert_eq!(
             performer.ofs_buf_vt_100.parser_global_state.auto_wrap_mode,
@@ -177,7 +177,7 @@ pub mod auto_wrap {
 
         // Re-enable auto-wrap using CSI `?7h`.
         let enable_sequence =
-            CsiSequence::EnablePrivateMode(PrivateModeType::AutoWrap).to_string();
+            CsiSequence::EnablePrivateMode(smallvec::smallvec![PrivateModeType::AutoWrap]).to_string();
         performer.apply_ansi_bytes(enable_sequence);
         assert_eq!(
             performer.ofs_buf_vt_100.parser_global_state.auto_wrap_mode,
@@ -251,7 +251,7 @@ pub mod auto_wrap {
 
         // Disable auto-wrap mode.
         let sequence =
-            CsiSequence::DisablePrivateMode(PrivateModeType::AutoWrap).to_string();
+            CsiSequence::DisablePrivateMode(smallvec::smallvec![PrivateModeType::AutoWrap]).to_string();
         performer.apply_ansi_bytes(sequence);
 
         // Move to end of line 2 and test clamping.
@@ -261,7 +261,7 @@ pub mod auto_wrap {
 
         // Re-enable auto-wrap mode.
         let sequence =
-            CsiSequence::EnablePrivateMode(PrivateModeType::AutoWrap).to_string();
+            CsiSequence::EnablePrivateMode(smallvec::smallvec![PrivateModeType::AutoWrap]).to_string();
         performer.apply_ansi_bytes(sequence);
 
         // Move to a new position and test wrapping again.

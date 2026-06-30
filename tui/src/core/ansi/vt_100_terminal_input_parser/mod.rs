@@ -54,7 +54,7 @@
 //!
 //! The [`VT-100`] terminal input parser uses **IO-free design** - it parses [`ANSI`]
 //! sequences independently of platform-specific I/O. This I/O-agnostic approach mirrors
-//! the output architecture ([`generator`] + [`output`]) and enables:
+//! the output architecture ([`generator`] + [`ansi_output`]) and enables:
 //!
 //! - **Testability**: Unit test parsers without I/O or async complexity
 //! - **Reusability**: Multiple backends can use the same protocol parsers
@@ -65,12 +65,12 @@
 //!
 //! The input parser is intentionally designed to parallel the output architecture:
 //!
-//! | Aspect           | Input                                 | Output                                   |
-//! | :--------------- | :------------------------------------ | :--------------------------------------- |
-//! | Protocol layer   | (this module)                         | [`generator`]                            |
-//! | Backend layer    | [`input`]                             | [`output`]                               |
-//! | Core API         | [`try_parse_input_event()`], etc.     | [`SgrCode`], [`AnsiSequenceGenerator`]   |
-//! | I/O device       | [`DirectToAnsiInputDevice`]           | [`OutputDevice`]                         |
+//! | Aspect           | Input                                 | Output                                          |
+//! | :--------------- | :------------------------------------ | :---------------------------------------------- |
+//! | Protocol layer   | (this module)                         | [`generator`]                                   |
+//! | Backend layer    | [`input`]                             | [`ansi_output`]                                 |
+//! | Core API         | [`try_parse_input_event()`], etc.     | [`SgrCode`], [`ansi_output`]                    |
+//! | I/O device       | [`DirectToAnsiInputDevice`]           | [`OutputDevice`]                                |
 //!
 //! Note: [`OutputDevice`] is shared across all backends (crossterm, `direct_to_ansi`),
 //! unlike [`DirectToAnsiInputDevice`] which is backend-specific. The closest
@@ -96,7 +96,7 @@
 //!
 //! ### [`mouse`]
 //! - Parse [`SGR`] mouse protocol (modern standard): `CSI < Cb ; Cx ; Cy M/m`
-//! - Parse [`X10`]/Normal protocol (legacy): `CSI M Cb Cx Cy`
+//! - Parse [`X10`]/Legacy protocol (legacy): `CSI M Cb Cx Cy`
 //! - Parse [`RXVT`] protocol (legacy): `CSI Cb ; Cx ; Cy M`
 //! - Detect buttons, clicks, drags, motion, scrolling
 //! - Extract modifier keys from mouse sequences
@@ -148,7 +148,7 @@
 //!   protocol misinterpretations.
 //!
 //! - **Generated sequences** (unit/integration tests): Created by our
-//!   [`AnsiSequenceGenerator`], these verify round-trip consistency—what we generate, we
+//!   [`ansi_output`], these verify round-trip consistency—what we generate, we
 //!   can parse. They're valuable for edge cases and keeping generator/parser synchronized.
 //!
 //! The [`generator`] module provides sequence builders shared between unit and integration
@@ -170,8 +170,8 @@
 //! | Unit          | Component contracts              | Generated   | Generator/parser desynchronization   |
 //! | Integration   | System behavior                  | Generated   | Real-world usage regressions         |
 //!
+//! [`ansi_output`]: crate::ansi_output
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`AnsiSequenceGenerator`]: crate::AnsiSequenceGenerator
 //! [`convert_input_event()`]: crate::direct_to_ansi::input::protocol_conversion::convert_input_event
 //! [`core::ansi`]: crate::core::ansi
 //! [`CSI`]: crate::CsiSequence

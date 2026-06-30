@@ -235,7 +235,9 @@ pub mod character_set_state_management {
         let combined_sequence = format!(
             "{}{}",
             "\x1b(0", // DEC Graphics
-            CsiSequence::DisablePrivateMode(PrivateModeType::AutoWrap)
+            CsiSequence::DisablePrivateMode(smallvec::smallvec![
+                PrivateModeType::AutoWrap
+            ])
         );
         let _result = ofs_buf_vt_100.apply_ansi_bytes(combined_sequence);
 
@@ -252,7 +254,9 @@ pub mod character_set_state_management {
         // Change modes but keep character set
         let mode_change = format!(
             "{}",
-            CsiSequence::EnablePrivateMode(PrivateModeType::AutoWrap)
+            CsiSequence::EnablePrivateMode(smallvec::smallvec![
+                PrivateModeType::AutoWrap
+            ])
         );
         let _result = ofs_buf_vt_100.apply_ansi_bytes(mode_change);
 
@@ -419,7 +423,9 @@ pub mod complex_state_combinations {
                 bottom: Some(term_row(nz(8)))
             },
             "\x1b(0", // DEC Graphics
-            CsiSequence::DisablePrivateMode(PrivateModeType::AutoWrap),
+            CsiSequence::DisablePrivateMode(smallvec::smallvec![
+                PrivateModeType::AutoWrap
+            ]),
             SgrCode::Bold,
             SgrCode::ForegroundBasic(ANSIBasicColor::Cyan),
             CsiSequence::CursorPosition {
@@ -441,7 +447,9 @@ pub mod complex_state_combinations {
                 bottom: Some(term_row(nz(10)))
             },
             "\x1b(B", // ASCII
-            CsiSequence::EnablePrivateMode(PrivateModeType::AutoWrap),
+            CsiSequence::EnablePrivateMode(smallvec::smallvec![
+                PrivateModeType::AutoWrap
+            ]),
             SgrCode::Reset,
             CsiSequence::CursorPosition {
                 row: term_row(nz(9)),
@@ -480,7 +488,9 @@ pub mod complex_state_combinations {
         let initial_state = format!(
             "{}{}{}",
             "\x1b(0", // DEC Graphics
-            CsiSequence::DisablePrivateMode(PrivateModeType::AutoWrap),
+            CsiSequence::DisablePrivateMode(smallvec::smallvec![
+                PrivateModeType::AutoWrap
+            ]),
             SgrCode::Bold
         );
         let _result = ofs_buf_vt_100.apply_ansi_bytes(initial_state);

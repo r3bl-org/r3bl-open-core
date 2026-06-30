@@ -2,8 +2,8 @@
 
 //! [`ANSI`] sequence generation engine.
 //!
-//! This module provides builders for converting styled text and terminal operations
-//! into [`ANSI`] escape sequences for output.
+//! This module provides builders for converting styled text and terminal operations into
+//! [`ANSI`] escape sequences for output.
 //!
 //! ## Key Types
 //!
@@ -21,26 +21,27 @@
 
 // Private modules (hide internal structure).
 mod cli_text;
-mod ansi_sequence_generator_output;
-mod dsr_sequence;
-mod esc_sequence;
+mod dsr;
+mod esc;
 mod sgr_code;
-mod da_sequence;
-mod sgr_mouse_sequence;
+mod da;
+
+// Public modules for mouse sequences
+pub mod mouse_sgr;
+pub mod mouse_x10;
+pub mod ansi_output;
+
+// Public re-exports (flat API).
+pub use cli_text::impl_cli_text_inline;
+pub use cli_text::*;
+pub use dsr::*;
+pub use esc::*;
+pub use sgr_code::*;
+pub use da::*;
 
 // Test/doc-only modules.
 #[cfg(any(test, doc))]
-mod ansi_sequence_generator_input;
-
-// Public re-exports (flat API).
-pub use ansi_sequence_generator_output::*;
-pub use cli_text::cli_text_inline_impl;
-
+mod ansi_input;
 #[cfg(any(test, doc))]
-pub use ansi_sequence_generator_input::*;
-pub use cli_text::*;
-pub use dsr_sequence::*;
-pub use esc_sequence::*;
-pub use sgr_code::*;
-pub use da_sequence::*;
-pub use sgr_mouse_sequence::*;
+pub use ansi_input::*;
+

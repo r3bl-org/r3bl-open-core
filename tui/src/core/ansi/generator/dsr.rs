@@ -47,7 +47,7 @@ pub enum DsrRequestType {
     Other(u16),
 }
 
-mod dsr_request_type_impl {
+mod impl_dsr_request_type {
     #[allow(clippy::wildcard_imports)]
     use super::*;
 
@@ -126,7 +126,7 @@ pub enum DsrSequence {
     CursorPositionResponse { row: TermRow, col: TermCol },
 }
 
-mod dsr_sequence_impl {
+mod impl_dsr {
     #[allow(clippy::wildcard_imports)]
     use super::*;
 
@@ -201,13 +201,13 @@ mod tests {
     use crate::{term_col, term_row};
 
     #[test]
-    fn test_dsr_sequence_status_ok_response() {
+    fn test_dsr_status_ok_response() {
         let sequence = DsrSequence::StatusOkResponse;
         assert_eq!(sequence.to_string(), DSR_STATUS_OK_FULL_RESPONSE);
     }
 
     #[test]
-    fn test_dsr_sequence_cursor_position_response() {
+    fn test_dsr_cursor_position_response() {
         let sequence = DsrSequence::CursorPositionResponse {
             row: term_row(nz(10)),
             col: term_col(nz(25)),

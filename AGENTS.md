@@ -235,20 +235,33 @@ in that skill's directory (e.g., `patterns.md`, `reference.md`, `examples.md`).
 
 ## Slash Commands
 
+**Rule:** When adding a new skill to `.agents/skills/`, you MUST add a corresponding slash command entry for that new skill in the table below. This ensures the command is available via autocomplete in the Antigravity CLI.
+
 | Command | Skill |
 |:--------|:------|
+| `/analyze-logs` | analyze-log-files |
+| `/check-regression` | analyze-performance |
+| `/batch-refactor` | batch-refactor-with-sub-agents |
+| `/check-bounds-safety` | check-bounds-safety |
 | `/check` | check-code-quality |
+| `/concurrency-safety` | concurrency-safety |
+| `/create-commit-message` | create-commit-message |
+| `/create-pr` | create-pr |
+| `/design-philosophy` | design-philosophy |
+| `/fast-string-allocations`| fast-string-allocations |
+| `/fix-issue` | fix-issue |
+| `/merge-pr` | merge-pr |
+| `/organize-modules` | organize-modules |
+| `/organize-tests` | organize-tests |
+| `/release` | release-crate |
+| `/remove-crate-prefix` | remove-crate-prefix |
+| `/review-pr` | review-pr |
 | `/clippy` | run-clippy |
 | `/docs` | write-documentation |
 | `/fix-intradoc-links` | write-documentation (focused on links) |
 | `/fix-comments` | write-documentation (constant conventions) |
 | `/fix-md-tables` | write-documentation (table formatting) |
-| `/check-regression` | analyze-performance |
-| `/analyze-logs` | analyze-log-files |
-| `/release` | release-crate |
-| `/review-pr` | review-pr |
-| `/create-pr` | create-pr |
-| `/merge-pr` | merge-pr |
+| `/write-structured-tracing` | write-structured-tracing |
 | `/r3bl-task` | Task management (see below) |
 | `/boxes` | Unicode box-drawing character set |
 
@@ -412,7 +425,7 @@ All tasks are stored in the `./task/` directory as individual Markdown files.
 
 ### Task File Formatting
 
-Always run `npx prettier --write <file>` on any `task/*.md` files after creating or updating them. This ensures markdown is correctly formatted and easy to review in the user's IDE.
+Always run `prettier --write <file>` on any `task/*.md` files after creating or updating them. This ensures markdown is correctly formatted and easy to review in the user's IDE.
 
 ### Folder Structure
 

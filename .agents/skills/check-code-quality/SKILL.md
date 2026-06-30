@@ -110,7 +110,11 @@ lychee fills that gap. Config in `lychee.toml` (repo root) excludes known false 
 If lychee reports 404s, fix the URL by finding the new location. See the task file
 `task/add-lychee-to-detect-link-rot.md` for the full categorization of findings.
 
-### 6. Linting
+### 6. Clean Inline Crate Prefixes
+
+Invoke the `remove-crate-prefix` skill to ensure the codebase follows the strict "Clean Imports over Inline Absolute Paths" rule before finalizing quality checks.
+
+### 7. Linting
 
 ```bash
 ./check.fish --clippy
@@ -119,7 +123,7 @@ If lychee reports 404s, fix the URL by finding the new location. See the task fi
 
 Runs clippy and enforces code style standards.
 
-### 7. Concurrency Safety Check
+### 8. Concurrency Safety Check
 
 Invoke the `concurrency-safety` skill to verify thread-safety patterns.
 
@@ -129,7 +133,7 @@ Invoke the `concurrency-safety` skill to verify thread-safety patterns.
 - **Ergonomic Atomics**: Is `AtomicU8Ext` used instead of raw `load`/`store`?
 - **No Deadlocks**: Are locks released before calling macros or long-running async blocks?
 
-### 8. Bounds Safety Check
+### 9. Bounds Safety Check
 
 Invoke the `check-bounds-safety` skill to verify index and length handling.
 
@@ -139,7 +143,7 @@ Invoke the `check-bounds-safety` skill to verify index and length handling.
 - **CSI Zero Prevention**: Are `TermRowDelta` and `TermColDelta` used for relative cursor movement?
 - **Off-by-One**: verify `index < length` for access and `index <= length` for cursor.
 
-### 9. Run All Tests
+### 10. Run All Tests
 
 ```bash
 ./check.fish --test
@@ -150,7 +154,7 @@ Runs all tests (unit, integration, doctests).
 
 If tests fail, use the Task tool with `subagent_type='test-runner'` to fix failures.
 
-### 8. Stress Test (Optional - After Major Refactors)
+### 11. Stress Test (Optional - After Major Refactors)
 
 After major refactors or changes that affect process spawning, PTY tests, or async
 infrastructure, run the full test suite 20 times back-to-back to detect flaky regressions:

@@ -50,7 +50,7 @@
 use crate::{CliTextInline, GCStringOwned, LockedOutputDevice, Pos,
             RCP_RESTORE_CURSOR_BYTES, RenderOpCommon, RenderOpFlush, RenderOpOutput,
             RenderOpPaint, RenderOpsLocalData, SCP_SAVE_CURSOR_BYTES, Size, TuiColor,
-            TuiStyle, cli_text_inline_impl::CliTextConvertOptions,
+            TuiStyle, impl_cli_text_inline::CliTextConvertOptions,
             sanitize_and_save_abs_pos,
             tui::terminal_lib_backends::direct_to_ansi::PixelCharRenderer};
 use crossterm::{cursor::MoveTo,

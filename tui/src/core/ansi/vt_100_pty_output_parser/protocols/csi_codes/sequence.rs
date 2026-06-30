@@ -10,9 +10,7 @@
 
 use super::{erase_mode::{EraseDisplayMode, EraseLineMode},
             private_mode::PrivateModeType};
-use crate::{BufTextStorage, CsiCount, FastStringify, NumericConversions, TermCol,
-            TermColDelta, TermRow, TermRowDelta,
-            core::ansi::{constants::{CHA_CURSOR_COLUMN, CNL_CURSOR_NEXT_LINE,
+use crate::{BufTextStorage, CsiCount, FastStringify, NumericConversions, TermCol, TermColDelta, TermRow, TermRowDelta, convert_u16_to_ascii_str_slice, core::ansi::{constants::{CHA_CURSOR_COLUMN, CNL_CURSOR_NEXT_LINE,
                                      CPL_CURSOR_PREV_LINE, CSI_PARAM_SEPARATOR,
                                      CSI_PRIVATE_MODE_PREFIX, CSI_START,
                                      CUB_CURSOR_BACKWARD, CUD_CURSOR_DOWN,
@@ -26,9 +24,9 @@ use crate::{BufTextStorage, CsiCount, FastStringify, NumericConversions, TermCol
                                      RM_RESET_PRIVATE_MODE, SCP_SAVE_CURSOR,
                                      SD_SCROLL_DOWN, SM_SET_PRIVATE_MODE,
                                      SU_SCROLL_UP, VPA_VERTICAL_POSITION},
-                         generator::DsrRequestType},
-            generate_impl_display_for_fast_stringify, ok,
-            stack_alloc_types::usize_fmt::{convert_u16_to_string_slice, u16_to_u8_array}};
+                         generator::DsrRequestType}, generate_impl_display_for_fast_stringify, ok,
+            };
+use smallvec::SmallVec;
 use std::fmt::{Formatter, Result};
 
 /// Builder for [`CSI`] (Control Sequence Introducer) sequences. Similar to `SgrCode` but
@@ -72,7 +70,7 @@ use std::fmt::{Formatter, Result};
 /// [`TermColDelta`]: crate::TermColDelta
 /// [`TermRow`]: crate::TermRow
 /// [`TermRowDelta`]: crate::TermRowDelta
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum CsiSequence {
     /// Cursor Up (CUU) - [`ESC`] [ n A.
     ///
@@ -81,6 +79,7 @@ pub enum CsiSequence {
     /// [`CSI`]: crate::CsiSequence
     /// [`ESC`]: crate::EscSequence
     CursorUp(TermRowDelta),
+
     /// Cursor Down (CUD) - [`ESC`] [ n B.
     ///
     /// Uses [`TermRowDelta`] to prevent [`CSI`] zero bug.
@@ -88,6 +87,7 @@ pub enum CsiSequence {
     /// [`CSI`]: crate::CsiSequence
     /// [`ESC`]: crate::EscSequence
     CursorDown(TermRowDelta),
+
     /// Cursor Forward (CUF) - [`ESC`] [ n C.
     ///
     /// Uses [`TermColDelta`] to prevent [`CSI`] zero bug.
@@ -95,6 +95,7 @@ pub enum CsiSequence {
     /// [`CSI`]: crate::CsiSequence
     /// [`ESC`]: crate::EscSequence
     CursorForward(TermColDelta),
+
     /// Cursor Backward (CUB) - [`ESC`] [ n D.
     ///
     /// Uses [`TermColDelta`] to prevent [`CSI`] zero bug.
@@ -102,34 +103,41 @@ pub enum CsiSequence {
     /// [`CSI`]: crate::CsiSequence
     /// [`ESC`]: crate::EscSequence
     CursorBackward(TermColDelta),
+
     /// Cursor Position (CUP) - [`ESC`] [ row ; col H.
     ///
     /// [`ESC`]: crate::EscSequence
     CursorPosition { row: TermRow, col: TermCol },
+
     /// Cursor Position alternate form (HVP) - [`ESC`] [ row ; col f.
     ///
     /// [`ESC`]: crate::EscSequence
     CursorPositionAlt { row: TermRow, col: TermCol },
+
     /// Erase Display (ED) - [`ESC`] [ n J.
     ///
     /// Uses [`EraseDisplayMode`] enum for type-safe mode selection.
     ///
     /// [`ESC`]: crate::EscSequence
     EraseDisplay(EraseDisplayMode),
+
     /// Erase Line (EL) - [`ESC`] [ n K.
     ///
     /// Uses [`EraseLineMode`] enum for type-safe mode selection.
     ///
     /// [`ESC`]: crate::EscSequence
     EraseLine(EraseLineMode),
+
     /// Save Cursor (SCP) - [`ESC`] [ s.
     ///
     /// [`ESC`]: crate::EscSequence
     SaveCursor,
+
     /// Restore Cursor (RCP) - [`ESC`] [ u.
     ///
     /// [`ESC`]: crate::EscSequence
     RestoreCursor,
+
     /// Cursor Next Line (CNL) - [`ESC`] [ n E.
     ///
     /// Uses [`TermRowDelta`] to prevent [`CSI`] zero bug.
@@ -137,6 +145,7 @@ pub enum CsiSequence {
     /// [`CSI`]: crate::CsiSequence
     /// [`ESC`]: crate::EscSequence
     CursorNextLine(TermRowDelta),
+
     /// Cursor Previous Line (CPL) - [`ESC`] [ n F.
     ///
     /// Uses [`TermRowDelta`] to prevent [`CSI`] zero bug.
@@ -144,12 +153,14 @@ pub enum CsiSequence {
     /// [`CSI`]: crate::CsiSequence
     /// [`ESC`]: crate::EscSequence
     CursorPrevLine(TermRowDelta),
+
     /// Cursor Horizontal Absolute (CHA) - [`ESC`] [ n G.
     ///
     /// Uses [`TermCol`] for type-safe 1-based column positioning.
     ///
     /// [`ESC`]: crate::EscSequence
     CursorHorizontalAbsolute(TermCol),
+
     /// Scroll Up (SU) - [`ESC`] [ n S.
     ///
     /// Uses [`TermRowDelta`] to prevent [`CSI`] zero bug.
@@ -157,6 +168,7 @@ pub enum CsiSequence {
     /// [`CSI`]: crate::CsiSequence
     /// [`ESC`]: crate::EscSequence
     ScrollUp(TermRowDelta),
+
     /// Scroll Down (SD) - [`ESC`] [ n T.
     ///
     /// Uses [`TermRowDelta`] to prevent [`CSI`] zero bug.
@@ -164,6 +176,7 @@ pub enum CsiSequence {
     /// [`CSI`]: crate::CsiSequence
     /// [`ESC`]: crate::EscSequence
     ScrollDown(TermRowDelta),
+
     /// Set Top and Bottom Margins ([`DECSTBM`]) - [`ESC`] [ top ; bottom r.
     ///
     /// [`DECSTBM`]: https://vt100.net/docs/vt510-rm/DECSTBM.html
@@ -172,23 +185,27 @@ pub enum CsiSequence {
         top: Option<TermRow>,
         bottom: Option<TermRow>,
     },
+
     /// Device Status Report ([`DSR`]) - [`ESC`] [ n n.
     ///
     /// [`DSR`]: crate::DsrSequence
     /// [`ESC`]: crate::EscSequence
     DeviceStatusReport(DsrRequestType),
+
     /// Enable Private Mode - [`ESC`] [ ? n h (n = mode number like `DECAWM_AUTO_WRAP`).
     /// See [`auto_wrap_mode`]
     ///
     /// [`auto_wrap_mode`]: crate::ParserGlobalState::auto_wrap_mode
     /// [`ESC`]: crate::EscSequence
-    EnablePrivateMode(PrivateModeType),
+    EnablePrivateMode(SmallVec<[PrivateModeType; MAX_CHAINED_PRIVATE_MODES]>),
+
     /// Disable Private Mode - [`ESC`] [ ? n l (n = mode number like `DECAWM_AUTO_WRAP`).
     /// See [`auto_wrap_mode`]
     ///
     /// [`auto_wrap_mode`]: crate::ParserGlobalState::auto_wrap_mode
     /// [`ESC`]: crate::EscSequence
-    DisablePrivateMode(PrivateModeType),
+    DisablePrivateMode(SmallVec<[PrivateModeType; MAX_CHAINED_PRIVATE_MODES]>),
+
     /// Insert Line (IL) - [`ESC`] [ n L.
     ///
     /// Uses [`CsiCount`] to prevent [`CSI`] zero bug.
@@ -196,6 +213,7 @@ pub enum CsiSequence {
     /// [`CSI`]: crate::CsiSequence
     /// [`ESC`]: crate::EscSequence
     InsertLine(CsiCount),
+
     /// Delete Line (DL) - [`ESC`] [ n M.
     ///
     /// Uses [`CsiCount`] to prevent [`CSI`] zero bug.
@@ -203,6 +221,7 @@ pub enum CsiSequence {
     /// [`CSI`]: crate::CsiSequence
     /// [`ESC`]: crate::EscSequence
     DeleteLine(CsiCount),
+
     /// Delete Character (DCH) - [`ESC`] [ n P.
     ///
     /// Uses [`CsiCount`] to prevent [`CSI`] zero bug.
@@ -210,6 +229,7 @@ pub enum CsiSequence {
     /// [`CSI`]: crate::CsiSequence
     /// [`ESC`]: crate::EscSequence
     DeleteChar(CsiCount),
+
     /// Insert Character (ICH) - [`ESC`] [ n @.
     ///
     /// Uses [`CsiCount`] to prevent [`CSI`] zero bug.
@@ -217,6 +237,7 @@ pub enum CsiSequence {
     /// [`CSI`]: crate::CsiSequence
     /// [`ESC`]: crate::EscSequence
     InsertChar(CsiCount),
+
     /// Erase Character (ECH) - [`ESC`] [ n X.
     ///
     /// Uses [`CsiCount`] to prevent [`CSI`] zero bug.
@@ -224,6 +245,7 @@ pub enum CsiSequence {
     /// [`CSI`]: crate::CsiSequence
     /// [`ESC`]: crate::EscSequence
     EraseChar(CsiCount),
+
     /// Vertical Position Absolute (VPA) - [`ESC`] [ n d.
     ///
     /// Uses [`TermRow`] for type-safe 1-based row positioning.
@@ -232,55 +254,51 @@ pub enum CsiSequence {
     VerticalPositionAbsolute(TermRow),
 }
 
+/// Maximum number of private modes we expect to be chained in a single [`CSI`] command
+/// (e.g., mouse modes `?1006;1015;1003h`).
+///
+/// [`CSI`]: crate::CsiSequence
+pub const MAX_CHAINED_PRIVATE_MODES: usize = 4;
+
 impl FastStringify for CsiSequence {
     #[allow(clippy::too_many_lines)]
     fn write_to_buf(&self, acc: &mut BufTextStorage) -> Result {
         acc.push_str(CSI_START);
         match self {
             CsiSequence::CursorUp(delta) => {
-                let n_bytes = u16_to_u8_array(delta.as_u16());
-                acc.push_str(convert_u16_to_string_slice(&n_bytes));
+                acc.push_str(convert_u16_to_ascii_str_slice!(delta.as_u16()));
                 acc.push(CUU_CURSOR_UP);
             }
             CsiSequence::CursorDown(delta) => {
-                let n_bytes = u16_to_u8_array(delta.as_u16());
-                acc.push_str(convert_u16_to_string_slice(&n_bytes));
+                acc.push_str(convert_u16_to_ascii_str_slice!(delta.as_u16()));
                 acc.push(CUD_CURSOR_DOWN);
             }
             CsiSequence::CursorForward(delta) => {
-                let n_bytes = u16_to_u8_array(delta.as_u16());
-                acc.push_str(convert_u16_to_string_slice(&n_bytes));
+                acc.push_str(convert_u16_to_ascii_str_slice!(delta.as_u16()));
                 acc.push(CUF_CURSOR_FORWARD);
             }
             CsiSequence::CursorBackward(delta) => {
-                let n_bytes = u16_to_u8_array(delta.as_u16());
-                acc.push_str(convert_u16_to_string_slice(&n_bytes));
+                acc.push_str(convert_u16_to_ascii_str_slice!(delta.as_u16()));
                 acc.push(CUB_CURSOR_BACKWARD);
             }
             CsiSequence::CursorPosition { row, col } => {
-                let row_bytes = u16_to_u8_array(row.as_u16());
-                acc.push_str(convert_u16_to_string_slice(&row_bytes));
+                acc.push_str(convert_u16_to_ascii_str_slice!(row.as_u16()));
                 acc.push(CSI_PARAM_SEPARATOR);
-                let col_bytes = u16_to_u8_array(col.as_u16());
-                acc.push_str(convert_u16_to_string_slice(&col_bytes));
+                acc.push_str(convert_u16_to_ascii_str_slice!(col.as_u16()));
                 acc.push(CUP_CURSOR_POSITION);
             }
             CsiSequence::CursorPositionAlt { row, col } => {
-                let row_bytes = u16_to_u8_array(row.as_u16());
-                acc.push_str(convert_u16_to_string_slice(&row_bytes));
+                acc.push_str(convert_u16_to_ascii_str_slice!(row.as_u16()));
                 acc.push(CSI_PARAM_SEPARATOR);
-                let col_bytes = u16_to_u8_array(col.as_u16());
-                acc.push_str(convert_u16_to_string_slice(&col_bytes));
+                acc.push_str(convert_u16_to_ascii_str_slice!(col.as_u16()));
                 acc.push(HVP_CURSOR_POSITION);
             }
             CsiSequence::EraseDisplay(mode) => {
-                let n_bytes = u16_to_u8_array(mode.as_u16());
-                acc.push_str(convert_u16_to_string_slice(&n_bytes));
+                acc.push_str(convert_u16_to_ascii_str_slice!(mode.as_u16()));
                 acc.push(ED_ERASE_DISPLAY);
             }
             CsiSequence::EraseLine(mode) => {
-                let n_bytes = u16_to_u8_array(mode.as_u16());
-                acc.push_str(convert_u16_to_string_slice(&n_bytes));
+                acc.push_str(convert_u16_to_ascii_str_slice!(mode.as_u16()));
                 acc.push(EL_ERASE_LINE);
             }
             CsiSequence::SaveCursor => {
@@ -290,87 +308,81 @@ impl FastStringify for CsiSequence {
                 acc.push(RCP_RESTORE_CURSOR);
             }
             CsiSequence::CursorNextLine(delta) => {
-                let n_bytes = u16_to_u8_array(delta.as_u16());
-                acc.push_str(convert_u16_to_string_slice(&n_bytes));
+                acc.push_str(convert_u16_to_ascii_str_slice!(delta.as_u16()));
                 acc.push(CNL_CURSOR_NEXT_LINE);
             }
             CsiSequence::CursorPrevLine(delta) => {
-                let n_bytes = u16_to_u8_array(delta.as_u16());
-                acc.push_str(convert_u16_to_string_slice(&n_bytes));
+                acc.push_str(convert_u16_to_ascii_str_slice!(delta.as_u16()));
                 acc.push(CPL_CURSOR_PREV_LINE);
             }
             CsiSequence::CursorHorizontalAbsolute(col) => {
-                let n_bytes = u16_to_u8_array(col.as_u16());
-                acc.push_str(convert_u16_to_string_slice(&n_bytes));
+                acc.push_str(convert_u16_to_ascii_str_slice!(col.as_u16()));
                 acc.push(CHA_CURSOR_COLUMN);
             }
             CsiSequence::ScrollUp(delta) => {
-                let n_bytes = u16_to_u8_array(delta.as_u16());
-                acc.push_str(convert_u16_to_string_slice(&n_bytes));
+                acc.push_str(convert_u16_to_ascii_str_slice!(delta.as_u16()));
                 acc.push(SU_SCROLL_UP);
             }
             CsiSequence::ScrollDown(delta) => {
-                let n_bytes = u16_to_u8_array(delta.as_u16());
-                acc.push_str(convert_u16_to_string_slice(&n_bytes));
+                acc.push_str(convert_u16_to_ascii_str_slice!(delta.as_u16()));
                 acc.push(SD_SCROLL_DOWN);
             }
             CsiSequence::SetScrollingMargins { top, bottom } => {
                 if let Some(top_row) = top {
-                    let top_bytes = u16_to_u8_array(top_row.as_u16());
-                    acc.push_str(convert_u16_to_string_slice(&top_bytes));
+                    acc.push_str(convert_u16_to_ascii_str_slice!(top_row.as_u16()));
                 }
                 acc.push(CSI_PARAM_SEPARATOR);
                 if let Some(bottom_row) = bottom {
-                    let bottom_bytes = u16_to_u8_array(bottom_row.as_u16());
-                    acc.push_str(convert_u16_to_string_slice(&bottom_bytes));
+                    acc.push_str(convert_u16_to_ascii_str_slice!(bottom_row.as_u16()));
                 }
                 acc.push(DECSTBM_SET_MARGINS);
             }
             CsiSequence::DeviceStatusReport(dsr_type) => {
-                let dsr_bytes = u16_to_u8_array(dsr_type.as_u16());
-                acc.push_str(convert_u16_to_string_slice(&dsr_bytes));
+                acc.push_str(convert_u16_to_ascii_str_slice!(dsr_type.as_u16()));
                 acc.push(DSR_DEVICE_STATUS);
             }
-            CsiSequence::EnablePrivateMode(mode) => {
+            CsiSequence::EnablePrivateMode(modes) => {
                 acc.push(CSI_PRIVATE_MODE_PREFIX);
-                let mode_bytes = u16_to_u8_array(mode.as_u16());
-                acc.push_str(convert_u16_to_string_slice(&mode_bytes));
+                for (idx, mode) in modes.iter().enumerate() {
+                    if idx > 0 {
+                        acc.push(CSI_PARAM_SEPARATOR);
+                    }
+                    acc.push_str(convert_u16_to_ascii_str_slice!(mode.as_u16()));
+                }
                 acc.push(SM_SET_PRIVATE_MODE);
             }
-            CsiSequence::DisablePrivateMode(mode) => {
+            CsiSequence::DisablePrivateMode(modes) => {
                 acc.push(CSI_PRIVATE_MODE_PREFIX);
-                let mode_bytes = u16_to_u8_array(mode.as_u16());
-                acc.push_str(convert_u16_to_string_slice(&mode_bytes));
+                for (idx, mode) in modes.iter().enumerate() {
+                    if idx > 0 {
+                        acc.push(CSI_PARAM_SEPARATOR);
+                    }
+                    acc.push_str(convert_u16_to_ascii_str_slice!(mode.as_u16()));
+                }
                 acc.push(RM_RESET_PRIVATE_MODE);
             }
             CsiSequence::InsertLine(count) => {
-                let n_bytes = u16_to_u8_array(count.as_u16());
-                acc.push_str(convert_u16_to_string_slice(&n_bytes));
+                acc.push_str(convert_u16_to_ascii_str_slice!(count.as_u16()));
                 acc.push(IL_INSERT_LINE);
             }
             CsiSequence::DeleteLine(count) => {
-                let n_bytes = u16_to_u8_array(count.as_u16());
-                acc.push_str(convert_u16_to_string_slice(&n_bytes));
+                acc.push_str(convert_u16_to_ascii_str_slice!(count.as_u16()));
                 acc.push(DL_DELETE_LINE);
             }
             CsiSequence::DeleteChar(count) => {
-                let n_bytes = u16_to_u8_array(count.as_u16());
-                acc.push_str(convert_u16_to_string_slice(&n_bytes));
+                acc.push_str(convert_u16_to_ascii_str_slice!(count.as_u16()));
                 acc.push(DCH_DELETE_CHAR);
             }
             CsiSequence::InsertChar(count) => {
-                let n_bytes = u16_to_u8_array(count.as_u16());
-                acc.push_str(convert_u16_to_string_slice(&n_bytes));
+                acc.push_str(convert_u16_to_ascii_str_slice!(count.as_u16()));
                 acc.push(ICH_INSERT_CHAR);
             }
             CsiSequence::EraseChar(count) => {
-                let n_bytes = u16_to_u8_array(count.as_u16());
-                acc.push_str(convert_u16_to_string_slice(&n_bytes));
+                acc.push_str(convert_u16_to_ascii_str_slice!(count.as_u16()));
                 acc.push(ECH_ERASE_CHAR);
             }
             CsiSequence::VerticalPositionAbsolute(row) => {
-                let n_bytes = u16_to_u8_array(row.as_u16());
-                acc.push_str(convert_u16_to_string_slice(&n_bytes));
+                acc.push_str(convert_u16_to_ascii_str_slice!(row.as_u16()));
                 acc.push(VPA_VERTICAL_POSITION);
             }
         }

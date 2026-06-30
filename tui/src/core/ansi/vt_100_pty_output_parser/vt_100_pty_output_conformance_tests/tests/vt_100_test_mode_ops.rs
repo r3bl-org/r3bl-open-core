@@ -48,7 +48,7 @@ pub mod auto_wrap_mode {
         // Disable first to test enable
         let disable_sequence = format!(
             "{}",
-            CsiSequence::DisablePrivateMode(PrivateModeType::AutoWrap)
+            CsiSequence::DisablePrivateMode(smallvec::smallvec![PrivateModeType::AutoWrap])
         );
         let _result = ofs_buf_vt_100.apply_ansi_bytes(disable_sequence);
         assert_eq!(
@@ -59,7 +59,7 @@ pub mod auto_wrap_mode {
         // Enable auto wrap mode
         let enable_sequence = format!(
             "{}",
-            CsiSequence::EnablePrivateMode(PrivateModeType::AutoWrap)
+            CsiSequence::EnablePrivateMode(smallvec::smallvec![PrivateModeType::AutoWrap])
         );
         let _result = ofs_buf_vt_100.apply_ansi_bytes(enable_sequence);
 
@@ -83,7 +83,7 @@ pub mod auto_wrap_mode {
         // Disable auto wrap mode
         let disable_sequence = format!(
             "{}",
-            CsiSequence::DisablePrivateMode(PrivateModeType::AutoWrap)
+            CsiSequence::DisablePrivateMode(smallvec::smallvec![PrivateModeType::AutoWrap])
         );
         let _result = ofs_buf_vt_100.apply_ansi_bytes(disable_sequence);
 
@@ -101,7 +101,7 @@ pub mod auto_wrap_mode {
         // Enable auto wrap (default)
         let enable_sequence = format!(
             "{}",
-            CsiSequence::EnablePrivateMode(PrivateModeType::AutoWrap)
+            CsiSequence::EnablePrivateMode(smallvec::smallvec![PrivateModeType::AutoWrap])
         );
         let _result = ofs_buf_vt_100.apply_ansi_bytes(enable_sequence);
 
@@ -121,7 +121,7 @@ pub mod auto_wrap_mode {
         // Disable auto wrap
         let disable_sequence = format!(
             "{}",
-            CsiSequence::DisablePrivateMode(PrivateModeType::AutoWrap)
+            CsiSequence::DisablePrivateMode(smallvec::smallvec![PrivateModeType::AutoWrap])
         );
         let _result = ofs_buf_vt_100.apply_ansi_bytes(disable_sequence);
 
@@ -141,7 +141,7 @@ pub mod auto_wrap_mode {
         // Disable auto wrap
         let disable_sequence = format!(
             "{}",
-            CsiSequence::DisablePrivateMode(PrivateModeType::AutoWrap)
+            CsiSequence::DisablePrivateMode(smallvec::smallvec![PrivateModeType::AutoWrap])
         );
         let _result = ofs_buf_vt_100.apply_ansi_bytes(disable_sequence);
         assert_eq!(
@@ -169,7 +169,7 @@ pub mod auto_wrap_mode {
         // Re-enable and verify
         let enable_sequence = format!(
             "{}",
-            CsiSequence::EnablePrivateMode(PrivateModeType::AutoWrap)
+            CsiSequence::EnablePrivateMode(smallvec::smallvec![PrivateModeType::AutoWrap])
         );
         let _result = ofs_buf_vt_100.apply_ansi_bytes(enable_sequence);
         assert_eq!(
@@ -197,7 +197,7 @@ pub mod mode_interactions {
         // Toggle auto wrap multiple times
         let disable_sequence = format!(
             "{}",
-            CsiSequence::DisablePrivateMode(PrivateModeType::AutoWrap)
+            CsiSequence::DisablePrivateMode(smallvec::smallvec![PrivateModeType::AutoWrap])
         );
         let _result = ofs_buf_vt_100.apply_ansi_bytes(disable_sequence);
         assert_eq!(
@@ -207,7 +207,7 @@ pub mod mode_interactions {
 
         let enable_sequence = format!(
             "{}",
-            CsiSequence::EnablePrivateMode(PrivateModeType::AutoWrap)
+            CsiSequence::EnablePrivateMode(smallvec::smallvec![PrivateModeType::AutoWrap])
         );
         let _result = ofs_buf_vt_100.apply_ansi_bytes(enable_sequence);
         assert_eq!(
@@ -217,7 +217,7 @@ pub mod mode_interactions {
 
         let disable_sequence2 = format!(
             "{}",
-            CsiSequence::DisablePrivateMode(PrivateModeType::AutoWrap)
+            CsiSequence::DisablePrivateMode(smallvec::smallvec![PrivateModeType::AutoWrap])
         );
         let _result = ofs_buf_vt_100.apply_ansi_bytes(disable_sequence2);
         assert_eq!(
@@ -233,7 +233,7 @@ pub mod mode_interactions {
         // Disable auto wrap
         let disable_sequence = format!(
             "{}",
-            CsiSequence::DisablePrivateMode(PrivateModeType::AutoWrap)
+            CsiSequence::DisablePrivateMode(smallvec::smallvec![PrivateModeType::AutoWrap])
         );
         let _result = ofs_buf_vt_100.apply_ansi_bytes(disable_sequence);
         assert_eq!(
@@ -248,7 +248,7 @@ pub mod mode_interactions {
         // Enable auto wrap
         let enable_sequence = format!(
             "{}",
-            CsiSequence::EnablePrivateMode(PrivateModeType::AutoWrap)
+            CsiSequence::EnablePrivateMode(smallvec::smallvec![PrivateModeType::AutoWrap])
         );
         let _result = ofs_buf_vt_100.apply_ansi_bytes(enable_sequence);
         assert_eq!(
@@ -286,7 +286,7 @@ pub mod alt_screen_mode {
         // Enable alternate screen buffer (`?1049h`)
         let enable_sequence = format!(
             "{}",
-            CsiSequence::EnablePrivateMode(PrivateModeType::AlternateScreenBuffer)
+            CsiSequence::EnablePrivateMode(smallvec::smallvec![PrivateModeType::AlternateScreenBuffer])
         );
         let _result = ofs_buf_vt_100.apply_ansi_bytes(enable_sequence);
         assert_eq!(
@@ -297,7 +297,7 @@ pub mod alt_screen_mode {
         // Disable alternate screen buffer (`?1049l`)
         let disable_sequence = format!(
             "{}",
-            CsiSequence::DisablePrivateMode(PrivateModeType::AlternateScreenBuffer)
+            CsiSequence::DisablePrivateMode(smallvec::smallvec![PrivateModeType::AlternateScreenBuffer])
         );
         let _result = ofs_buf_vt_100.apply_ansi_bytes(disable_sequence);
         assert_eq!(
@@ -310,49 +310,69 @@ pub mod alt_screen_mode {
 /// Tests for Mouse Tracking Mode operations.
 pub mod mouse_tracking_mode {
     use super::*;
-    use crate::MouseTrackingMode;
+    use crate::{MouseTrackingMode, MouseTrackingFormat};
 
     #[test]
     fn test_mouse_tracking_enable_and_disable() {
         let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
 
         // Initially disabled.
-        assert_eq!(ofs_buf.terminal_mode.mouse_tracking, MouseTrackingMode::Disabled);
+        assert_eq!(ofs_buf.terminal_mode.mouse_tracking_mode, MouseTrackingMode::Disabled);
 
         // Enable legacy mouse tracking (1000)
-        let enable_1000 = format!("{}", CsiSequence::EnablePrivateMode(PrivateModeType::X11MouseTracking));
+        let enable_1000 = format!("{}", CsiSequence::EnablePrivateMode(smallvec::smallvec![PrivateModeType::X11MouseTracking]));
         let _unused = ofs_buf.apply_ansi_bytes(enable_1000);
-        assert_eq!(ofs_buf.terminal_mode.mouse_tracking, MouseTrackingMode::Enabled);
+        assert_eq!(ofs_buf.terminal_mode.mouse_tracking_mode, MouseTrackingMode::Enabled);
 
         // Disable legacy mouse tracking
-        let disable_1000 = format!("{}", CsiSequence::DisablePrivateMode(PrivateModeType::X11MouseTracking));
+        let disable_1000 = format!("{}", CsiSequence::DisablePrivateMode(smallvec::smallvec![PrivateModeType::X11MouseTracking]));
         let _unused = ofs_buf.apply_ansi_bytes(disable_1000);
-        assert_eq!(ofs_buf.terminal_mode.mouse_tracking, MouseTrackingMode::Disabled);
+        assert_eq!(ofs_buf.terminal_mode.mouse_tracking_mode, MouseTrackingMode::Disabled);
 
         // Enable legacy mouse tracking (1002)
-        let enable_1002 = format!("{}", CsiSequence::EnablePrivateMode(PrivateModeType::CellMotionMouseTracking));
+        let enable_1002 = format!("{}", CsiSequence::EnablePrivateMode(smallvec::smallvec![PrivateModeType::CellMotionMouseTracking]));
         let _unused = ofs_buf.apply_ansi_bytes(enable_1002);
-        assert_eq!(ofs_buf.terminal_mode.mouse_tracking, MouseTrackingMode::Enabled);
-        let _unused = ofs_buf.apply_ansi_bytes(format!("{}", CsiSequence::DisablePrivateMode(PrivateModeType::CellMotionMouseTracking)));
+        assert_eq!(ofs_buf.terminal_mode.mouse_tracking_mode, MouseTrackingMode::Enabled);
+        let _unused = ofs_buf.apply_ansi_bytes(format!("{}", CsiSequence::DisablePrivateMode(smallvec::smallvec![PrivateModeType::CellMotionMouseTracking])));
 
         // Enable legacy mouse tracking (1003)
-        let enable_1003 = format!("{}", CsiSequence::EnablePrivateMode(PrivateModeType::ApplicationMouseTracking));
+        let enable_1003 = format!("{}", CsiSequence::EnablePrivateMode(smallvec::smallvec![PrivateModeType::ApplicationMouseTracking]));
         let _unused = ofs_buf.apply_ansi_bytes(enable_1003);
-        assert_eq!(ofs_buf.terminal_mode.mouse_tracking, MouseTrackingMode::Enabled);
+        assert_eq!(ofs_buf.terminal_mode.mouse_tracking_mode, MouseTrackingMode::Enabled);
         
         // Enable SGR mouse tracking (1006)
-        let enable_1006 = format!("{}", CsiSequence::EnablePrivateMode(PrivateModeType::SgrMouseMode));
+        let enable_1006 = format!("{}", CsiSequence::EnablePrivateMode(smallvec::smallvec![PrivateModeType::SgrMouseMode]));
         let _unused = ofs_buf.apply_ansi_bytes(enable_1006);
-        assert_eq!(ofs_buf.terminal_mode.mouse_tracking, MouseTrackingMode::Enabled);
+        assert_eq!(ofs_buf.terminal_mode.mouse_tracking_mode, MouseTrackingMode::Enabled);
 
         // Disable SGR mouse tracking
-        let disable_1006 = format!("{}", CsiSequence::DisablePrivateMode(PrivateModeType::SgrMouseMode));
+        let disable_1006 = format!("{}", CsiSequence::DisablePrivateMode(smallvec::smallvec![PrivateModeType::SgrMouseMode]));
         let _unused = ofs_buf.apply_ansi_bytes(disable_1006);
-        assert_eq!(ofs_buf.terminal_mode.mouse_tracking, MouseTrackingMode::Enabled);
+        assert_eq!(ofs_buf.terminal_mode.mouse_tracking_mode, MouseTrackingMode::Enabled);
 
         // Finally disable tracking
-        let _unused = ofs_buf.apply_ansi_bytes(format!("{}", CsiSequence::DisablePrivateMode(PrivateModeType::ApplicationMouseTracking)));
-        assert_eq!(ofs_buf.terminal_mode.mouse_tracking, MouseTrackingMode::Disabled);
+        let _unused = ofs_buf.apply_ansi_bytes(format!("{}", CsiSequence::DisablePrivateMode(smallvec::smallvec![PrivateModeType::ApplicationMouseTracking])));
+        assert_eq!(ofs_buf.terminal_mode.mouse_tracking_mode, MouseTrackingMode::Disabled);
+    }
+
+    #[test]
+    fn test_mouse_tracking_chained_modes() {
+        let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
+
+        assert_eq!(ofs_buf.terminal_mode.mouse_tracking_mode, MouseTrackingMode::Disabled);
+        assert_eq!(ofs_buf.terminal_mode.mouse_tracking_format, MouseTrackingFormat::X10);
+
+        // Test htop's chained initialization sequence: enable both SGR (1006) and X11 (1000)
+        let _unused = ofs_buf.apply_ansi_bytes("\x1b[?1006;1000h");
+
+        // Both mode AND format should be correctly updated
+        assert_eq!(ofs_buf.terminal_mode.mouse_tracking_mode, MouseTrackingMode::Enabled);
+        assert_eq!(ofs_buf.terminal_mode.mouse_tracking_format, MouseTrackingFormat::Sgr);
+
+        // Test chained de-initialization: disable both SGR (1006) and X11 (1000)
+        let _unused = ofs_buf.apply_ansi_bytes("\x1b[?1006;1000l");
+
+        assert_eq!(ofs_buf.terminal_mode.mouse_tracking_mode, MouseTrackingMode::Disabled);
     }
 }
 
@@ -366,17 +386,17 @@ pub mod cursor_key_mode {
         let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
 
         // Reset to normal mode first to ensure a known state
-        let disable = format!("{}", CsiSequence::DisablePrivateMode(PrivateModeType::CursorKeys));
+        let disable = format!("{}", CsiSequence::DisablePrivateMode(smallvec::smallvec![PrivateModeType::CursorKeys]));
         let _unused = ofs_buf.apply_ansi_bytes(disable);
         assert_eq!(ofs_buf.terminal_mode.cursor_key_mode, CursorKeyMode::Normal);
 
         // Enable cursor key application mode (?1h)
-        let enable = format!("{}", CsiSequence::EnablePrivateMode(PrivateModeType::CursorKeys));
+        let enable = format!("{}", CsiSequence::EnablePrivateMode(smallvec::smallvec![PrivateModeType::CursorKeys]));
         let _unused = ofs_buf.apply_ansi_bytes(enable);
         assert_eq!(ofs_buf.terminal_mode.cursor_key_mode, CursorKeyMode::Application);
 
         // Disable cursor key application mode (?1l)
-        let disable = format!("{}", CsiSequence::DisablePrivateMode(PrivateModeType::CursorKeys));
+        let disable = format!("{}", CsiSequence::DisablePrivateMode(smallvec::smallvec![PrivateModeType::CursorKeys]));
         let _unused = ofs_buf.apply_ansi_bytes(disable);
         assert_eq!(ofs_buf.terminal_mode.cursor_key_mode, CursorKeyMode::Normal);
     }

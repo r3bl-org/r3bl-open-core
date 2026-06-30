@@ -15,7 +15,7 @@
 //! [`CSI`]: crate::CsiSequence
 
 use super::test_helpers::*;
-use crate::{AnsiSequenceGenerator, col, pos, render_op::RenderOpCommon, row};
+use crate::{col, pos, render_op::RenderOpCommon, row};
 
 #[test]
 fn test_clear_screen() {
@@ -27,7 +27,7 @@ fn test_clear_screen() {
     let output = execute_and_capture(op, &mut state, &output_device, &stdout_mock);
 
     // CSI 2J clears entire screen
-    assert_eq!(output, AnsiSequenceGenerator::clear_screen());
+    assert_eq!(output, crate::ansi_output::screen_clearing::clear_screen());
 }
 
 #[test]
@@ -40,7 +40,10 @@ fn test_clear_current_line() {
     let output = execute_and_capture(op, &mut state, &output_device, &stdout_mock);
 
     // CSI 2K clears current line
-    assert_eq!(output, AnsiSequenceGenerator::clear_current_line());
+    assert_eq!(
+        output,
+        crate::ansi_output::screen_clearing::clear_current_line()
+    );
 }
 
 #[test]
@@ -53,7 +56,10 @@ fn test_clear_to_end_of_line() {
     let output = execute_and_capture(op, &mut state, &output_device, &stdout_mock);
 
     // CSI 0K clears to end of line
-    assert_eq!(output, AnsiSequenceGenerator::clear_to_end_of_line());
+    assert_eq!(
+        output,
+        crate::ansi_output::screen_clearing::clear_to_end_of_line()
+    );
 }
 
 #[test]
@@ -66,7 +72,10 @@ fn test_clear_to_start_of_line() {
     let output = execute_and_capture(op, &mut state, &output_device, &stdout_mock);
 
     // CSI 1K clears to start of line
-    assert_eq!(output, AnsiSequenceGenerator::clear_to_start_of_line());
+    assert_eq!(
+        output,
+        crate::ansi_output::screen_clearing::clear_to_start_of_line()
+    );
 }
 
 #[test]
@@ -105,6 +114,12 @@ fn test_save_and_restore_cursor_position() {
         execute_sequence_and_capture(ops, &mut state, &output_device, &stdout_mock);
 
     // Should contain both sequences (CSI format: ESC [ s and ESC [ u)
-    assert!(output.contains(&AnsiSequenceGenerator::save_cursor_position()));
-    assert!(output.contains(&AnsiSequenceGenerator::restore_cursor_position()));
+    assert!(
+        output.contains(&crate::ansi_output::cursor_save_restore::save_cursor_position())
+    );
+    assert!(
+        output.contains(
+            &crate::ansi_output::cursor_save_restore::restore_cursor_position()
+        )
+    );
 }

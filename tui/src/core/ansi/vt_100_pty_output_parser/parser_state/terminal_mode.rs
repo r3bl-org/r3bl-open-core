@@ -1,6 +1,7 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use super::super::modes::{terminal_mode_state_todo, MouseTrackingMode};
+use super::super::modes::{MouseTrackingFormat, MouseTrackingMode,
+                          terminal_mode_state_todo};
 use crate::{ActiveScreenBuffer, CursorKeyMode};
 
 /// State tracking for terminal operational modes.
@@ -17,8 +18,8 @@ use crate::{ActiveScreenBuffer, CursorKeyMode};
 pub struct TerminalModeState {
     /// Cursor key mode status ([`DECCKM`]).
     ///
-    /// Controls whether cursor keys (arrows, home, end) send normal or application escape
-    /// sequences.
+    /// Controls whether cursor keys (arrows, home, end) send normal or application
+    /// escape sequences.
     ///
     /// Toggled by the [`AnsiToOfsBufPerformer`] when processing the `ESC [ ? 1 h` and
     /// `ESC [ ? 1 l` sequences.
@@ -38,8 +39,19 @@ pub struct TerminalModeState {
     /// [`AnsiToOfsBufPerformer`]: crate::AnsiToOfsBufPerformer
     pub active_screen_buffer: ActiveScreenBuffer,
 
-    /// Mouse tracking state (mode and formatting).
-    pub mouse_tracking: MouseTrackingMode,
+    /// Mouse tracking enabled/disabled state.
+    pub mouse_tracking_mode: MouseTrackingMode,
+
+    /// Mouse tracking encoding format requested by the app - [X10] or [Sgr].
+    ///
+    /// See the [implementation note] in [`MouseTrackingFormat`] for exact details on how
+    /// events are routed and formatted based on the app's requested protocols.
+    ///
+    /// [`MouseTrackingFormat`]: crate::MouseTrackingFormat
+    /// [implementation note]: crate::MouseTrackingFormat#implementation-note
+    /// [Sgr]: MouseTrackingFormat::Sgr
+    /// [X10]: MouseTrackingFormat::X10
+    pub mouse_tracking_format: MouseTrackingFormat,
 
     /// Bracketed paste mode status.
     ///

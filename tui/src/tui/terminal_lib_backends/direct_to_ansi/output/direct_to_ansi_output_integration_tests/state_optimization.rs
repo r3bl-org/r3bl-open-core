@@ -17,7 +17,7 @@
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 
 use super::test_helpers::*;
-use crate::{AnsiSequenceGenerator, col, pos, render_op::RenderOpCommon, row, tui_color};
+use crate::{col, pos, render_op::RenderOpCommon, row, tui_color};
 
 #[test]
 fn test_duplicate_cursor_position_updates_state() {
@@ -35,7 +35,7 @@ fn test_duplicate_cursor_position_updates_state() {
     assert_eq!(state.cursor_pos, target_pos);
     assert_eq!(
         output1,
-        AnsiSequenceGenerator::cursor_position(row(5), col(10))
+        crate::ansi_output::cursor_movement::cursor_position(row(5), col(10))
     );
 
     // Clear buffer for second operation
@@ -126,12 +126,17 @@ fn test_mixed_operations_with_state_tracking() {
         execute_sequence_and_capture(ops, &mut state, &output_device, &stdout_mock);
 
     // Verify output contains the main sequences
-    assert!(output.contains(&AnsiSequenceGenerator::fg_color(tui_color!(red))));
-    assert!(output.contains(&AnsiSequenceGenerator::cursor_position(row(5), col(10))));
-    assert!(output.contains(&AnsiSequenceGenerator::fg_color(tui_color!(blue))));
+    assert!(output.contains(&crate::ansi_output::color_ops::fg_color(tui_color!(red))));
+    assert!(
+        output.contains(&crate::ansi_output::cursor_movement::cursor_position(
+            row(5),
+            col(10)
+        ))
+    );
+    assert!(output.contains(&crate::ansi_output::color_ops::fg_color(tui_color!(blue))));
 
     // Verify color optimization works (duplicate red doesn't appear twice)
-    let expected_red = AnsiSequenceGenerator::fg_color(tui_color!(red));
+    let expected_red = crate::ansi_output::color_ops::fg_color(tui_color!(red));
     let red_count = output.matches(&expected_red).count();
     assert_eq!(
         red_count, 1,
@@ -162,7 +167,10 @@ fn test_color_change_resets_optimization_cache() {
     let output2 = execute_and_capture(op2, &mut state, &output_device2, &stdout_mock2);
 
     // Should generate output (color changed)
-    assert_eq!(output2, AnsiSequenceGenerator::fg_color(tui_color!(blue)));
+    assert_eq!(
+        output2,
+        crate::ansi_output::color_ops::fg_color(tui_color!(blue))
+    );
     assert_eq!(state.fg_color, Some(tui_color!(blue)));
 
     // New device for third operation
@@ -228,7 +236,7 @@ fn test_reset_color_clears_optimization_state() {
     let output_reset =
         execute_and_capture(reset, &mut state, &output_device2, &stdout_mock2);
 
-    assert_eq!(output_reset, AnsiSequenceGenerator::reset_color());
+    assert_eq!(output_reset, crate::ansi_output::color_ops::reset_color());
     assert!(state.fg_color.is_none());
     assert!(state.bg_color.is_none());
 
@@ -243,7 +251,7 @@ fn test_reset_color_clears_optimization_state() {
     // Should generate output because reset cleared the cache
     assert_eq!(
         output_red2,
-        AnsiSequenceGenerator::fg_color(tui_color!(red))
+        crate::ansi_output::color_ops::fg_color(tui_color!(red))
     );
 }
 
@@ -277,10 +285,20 @@ fn test_complex_optimization_workflow() {
     assert_eq!(state.cursor_pos, pos(row(1) + col(5)));
 
     // Verify output contains necessary sequences but optimized
-    assert!(output.contains(&AnsiSequenceGenerator::fg_color(tui_color!(red))));
-    assert!(output.contains(&AnsiSequenceGenerator::bg_color(tui_color!(blue))));
-    assert!(output.contains(&AnsiSequenceGenerator::cursor_position(row(0), col(0))));
-    assert!(output.contains(&AnsiSequenceGenerator::fg_color(tui_color!(green))));
-    assert!(output.contains(&AnsiSequenceGenerator::cursor_position(row(1), col(5))));
-    assert!(output.contains(&AnsiSequenceGenerator::clear_current_line()));
+    assert!(output.contains(&crate::ansi_output::color_ops::fg_color(tui_color!(red))));
+    assert!(output.contains(&crate::ansi_output::color_ops::bg_color(tui_color!(blue))));
+    assert!(
+        output.contains(&crate::ansi_output::cursor_movement::cursor_position(
+            row(0),
+            col(0)
+        ))
+    );
+    assert!(output.contains(&crate::ansi_output::color_ops::fg_color(tui_color!(green))));
+    assert!(
+        output.contains(&crate::ansi_output::cursor_movement::cursor_position(
+            row(1),
+            col(5)
+        ))
+    );
+    assert!(output.contains(&crate::ansi_output::screen_clearing::clear_current_line()));
 }

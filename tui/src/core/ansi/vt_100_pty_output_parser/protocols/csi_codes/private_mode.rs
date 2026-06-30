@@ -58,6 +58,7 @@ pub enum PrivateModeType {
     AlternateScreenBuffer,
 
     /// X11 Mouse Tracking (1000).
+    ///
     /// Only sends mouse clicks and scroll wheel events to the app.
     ///
     /// **Note:** See [`MouseTrackingMode`] for how our engine handles this.
@@ -66,6 +67,7 @@ pub enum PrivateModeType {
     X11MouseTracking,
 
     /// Cell Motion Mouse Tracking (1002).
+    /// 
     /// Sends clicks and drag events (when the mouse moves while a button is held down).
     ///
     /// **Note:** See [`MouseTrackingMode`] for how our engine handles this.
@@ -74,6 +76,7 @@ pub enum PrivateModeType {
     CellMotionMouseTracking,
 
     /// Application Mouse Tracking (1003).
+    ///
     /// Sends everything—clicks, drags, and all raw mouse movement (hovering).
     ///
     /// **Note:** See [`MouseTrackingMode`] for how our engine handles this.

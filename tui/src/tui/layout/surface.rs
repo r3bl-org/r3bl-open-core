@@ -22,8 +22,9 @@ pub struct SurfaceBounds {
     pub box_size: Size,
 }
 
-mod surface_bounds_impl {
-    use super::{Surface, SurfaceBounds};
+mod impl_surface_bounds {
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     impl From<&Surface> for SurfaceBounds {
         fn from(surface: &Surface) -> Self {
@@ -757,9 +758,9 @@ mod test_surface_2_col_simple {
 
 #[cfg(test)]
 mod test_surface_offset_origin {
-    use crate::{assert_eq2, col, height, req_size_pc, row, throws, width,
-                CommonResult, FlexBoxId, FlexBoxProps, LayoutDirection,
-                LayoutManagement, Surface, SurfaceProps};
+    use crate::{CommonResult, FlexBoxId, FlexBoxProps, LayoutDirection,
+                LayoutManagement, Surface, SurfaceProps, assert_eq2, col, height,
+                req_size_pc, row, throws, width};
 
     #[test]
     fn test_surface_horizontal_non_zero_origin() -> CommonResult<()> {

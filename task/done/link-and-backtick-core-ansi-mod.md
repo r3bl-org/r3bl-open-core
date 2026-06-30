@@ -1,7 +1,4 @@
-<!-- START doctoc generated TOC please keep comment here to allow auto update -->
-<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
-
-<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+// Copyright (c) 2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 # Overview
 
@@ -137,10 +134,10 @@ Multiple files:
 
 - `sgr_code.rs` - ANSI linked, ESC backticked, `xterm` backtick+linked (lines 43, 51, 53),
   `RGB` backticked
-- `dsr_sequence.rs` - ANSI linked, ESC backticked
-- `ansi_sequence_generator_input.rs` - ANSI linked, ASCII backticked, SGR backticked,
+- `dsr.rs` - ANSI linked, ESC backticked
+- `input.rs` - ANSI linked, ASCII backticked, SGR backticked,
   VT-100 linked (lines 662, 664)
-- `esc_sequence.rs` - ESC backticked, ASCII backticked
+- `esc.rs` - ESC backticked, ASCII backticked
 - `mod.rs` - ESC backticked
 
 ## Step 11: Fix `color/` submodule [COMPLETE]

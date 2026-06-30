@@ -89,7 +89,7 @@ pub struct PtySessionBuilder {
     pub config: PtySessionConfig,
 }
 
-mod pty_session_builder_impl {
+mod impl_pty_session_builder {
     #[allow(clippy::wildcard_imports)]
     use super::*;
 
@@ -175,7 +175,7 @@ mod pty_session_builder_impl {
 
             // Use the config to enable OSC sequences on this builder.
             if config.capture_osc == CaptureFlag::Capture {
-                start_impl::enable_osc_sequences(&mut self);
+                impl_start::enable_osc_sequences(&mut self);
             }
 
             // Consume the builder.
@@ -258,11 +258,11 @@ mod pty_session_builder_impl {
         /// [Orchestrator Task]: crate::tasks::spawn_orchestrator_task
         /// [Reader Task]: crate::tasks::spawn_blocking_reader_task
         /// [Writer Task]: crate::tasks::spawn_blocking_writer_task
-        pub fn start(self) -> miette::Result<PtySession> { start_impl::start(self) }
+        pub fn start(self) -> miette::Result<PtySession> { impl_start::start(self) }
     }
 }
 
-pub mod start_impl {
+pub mod impl_start {
     #[allow(clippy::wildcard_imports)]
     use super::*;
 
@@ -500,7 +500,7 @@ pub enum PtySessionConfigOption {
     ///
     /// See [`enable_osc_sequences()`] for more details.
     ///
-    /// [`enable_osc_sequences()`]: super::start_impl::enable_osc_sequences()
+    /// [`enable_osc_sequences()`]: impl_start::enable_osc_sequences()
     /// [`OSC`]: crate::osc_codes::OscSequence
     /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
     CaptureOsc,
@@ -750,7 +750,7 @@ mod tests {
     #[test]
     fn test_enable_osc_sequences() {
         let mut builder = PtySessionBuilder::new("cargo");
-        start_impl::enable_osc_sequences(&mut builder);
+        impl_start::enable_osc_sequences(&mut builder);
 
         assert_eq!(
             builder.env_vars.get("CARGO_TERM_PROGRESS_WHEN").unwrap(),

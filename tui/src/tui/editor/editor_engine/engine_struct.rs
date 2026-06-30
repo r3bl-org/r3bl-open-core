@@ -80,7 +80,7 @@ pub struct EditorEngineConfig {
     pub edit_mode: EditMode,
 }
 
-mod editor_engine_config_options_impl {
+mod impl_editor_engine_config_options {
     #[allow(clippy::wildcard_imports)]
     use super::*;
 

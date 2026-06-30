@@ -2,7 +2,7 @@
 
 // cspell:words URXVT
 
-//! Mode setting operations (SM/RM).
+//! Mode setting operations ([`SM`] / [`RM`]).
 //!
 //! This module acts as a thin shim layer that delegates to the actual implementation.
 //! Refer to the module-level documentation in the ops module for details on the
@@ -53,35 +53,65 @@
 //! ```
 //!
 //! [`CSI`]: crate::CsiSequence
+//! [`RM`]: reset_mode
+//! [`SM`]: set_mode
 //! [`test_mode_ops`]: crate::vt_100_pty_output_conformance_tests::tests::vt_100_test_mode_ops
-//! [`vt_100_impl_mode_ops`]: crate::core::ansi::vt_100_pty_output_parser::ops_impl_ofs_buf::vt_100_impl_mode_ops
+//! [`vt_100_impl_mode_ops`]: vt_100_pty_output_parser::ops_impl_ofs_buf::vt_100_impl_mode_ops
 //! [module-level Architecture Overview]: super#architecture-overview
 //! [module-level documentation]: self
-//! [ops module]: crate::core::ansi::vt_100_pty_output_parser::ops
+//! [ops module]: vt_100_pty_output_parser::ops
 
 use super::super::{PrivateModeType, ansi_parser_public_api::AnsiToOfsBufPerformer};
+#[allow(unused_imports, reason = "Allows flat link ref defs in rustdocs")]
+use crate::core::ansi::vt_100_pty_output_parser;
 use crate::{AutoWrapMode, BRACKETED_PASTE_MODE, CursorKeyMode, CursorVisibilityMode,
-             DEBUG_TUI_VT100_PARSER, RequestedScreenMode, URXVT_MOUSE_EXTENSION,
-             UTF8_MOUSE_EXTENSION, MouseTrackingMode,
-             core::ansi::constants::CSI_PRIVATE_MODE_PREFIX};
+            DEBUG_TUI_VT100_PARSER, MouseTrackingFormat, MouseTrackingMode,
+            RequestedScreenMode, URXVT_MOUSE_EXTENSION, UTF8_MOUSE_EXTENSION,
+            core::ansi::constants::CSI_PRIVATE_MODE_PREFIX};
 use vte::Params;
 
-/// Handle Set Mode (`CSI h`) command.
-/// Supports both standard modes and private modes (with ? prefix).
+/// Handles the Set Mode (`CSI h`) escape sequence.
+///
+/// This method processes both standard [`ANSI`] modes and [`DEC`] private modes (which
+/// are indicated by the `?` prefix in the `intermediates` slice).
+///
+/// A single [`ANSI`] escape sequence can configure multiple modes at once. For example,
+/// `htop` sends `ESC [ ? 1006 ; 1000 h` to enable both [`SGR`] and `X11` mouse tracking
+/// simultaneously. This function iterates over all parameters in the sequence to ensure
+/// every requested mode is applied.
+///
+/// # Arguments
+///
+/// - `performer`: The [`AnsiToOfsBufPerformer`] that maintains the terminal state.
+/// - `params`: The [`Params`] parsed from the sequence, which may contain multiple mode
+///   numbers.
+/// - `intermediates`: The intermediate bytes of the sequence. If this contains `?`
+///   ([`CSI_PRIVATE_MODE_PREFIX`]), the sequence is treated as a [`DEC`] private mode.
+///
+/// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+/// [`AnsiToOfsBufPerformer`]:
+///     crate::core::ansi::vt_100_pty_output_parser::AnsiToOfsBufPerformer
+/// [`CSI_PRIVATE_MODE_PREFIX`]: crate::core::ansi::constants::CSI_PRIVATE_MODE_PREFIX
+/// [`DEC`]: https://en.wikipedia.org/wiki/Digital_Equipment_Corporation
+/// [`Params`]: vte::Params
+/// [`SGR`]: crate::SgrCode
 pub fn set_mode(
     performer: &mut AnsiToOfsBufPerformer,
     params: &Params,
     intermediates: &[u8],
 ) {
-    let is_private_mode = intermediates.contains(&(CSI_PRIVATE_MODE_PREFIX as u8));
-    if is_private_mode {
-        let mode = PrivateModeType::from(params);
+    let Some(modes) = parse_private_modes(params, intermediates) else {
+        DEBUG_TUI_VT100_PARSER.then(|| {
+            tracing::warn!("CSI h: Standard mode setting not implemented");
+        });
+        return;
+    };
+
+    for mode in modes {
         match mode {
             PrivateModeType::CursorKeys => {
-                performer
-                    .ofs_buf_vt_100
-                    .terminal_mode
-                    .cursor_key_mode = CursorKeyMode::Application;
+                performer.ofs_buf_vt_100.terminal_mode.cursor_key_mode =
+                    CursorKeyMode::Application;
             }
             PrivateModeType::AutoWrap => {
                 performer
@@ -96,7 +126,9 @@ pub fn set_mode(
             PrivateModeType::ShowCursor => {
                 performer
                     .ofs_buf_vt_100
-                    .set_requested_cursor_visibility_mode(CursorVisibilityMode::Visible);
+                    .set_requested_cursor_visibility_mode(
+                        CursorVisibilityMode::Visible,
+                    );
             }
             PrivateModeType::X11MouseTracking
             | PrivateModeType::CellMotionMouseTracking
@@ -106,17 +138,15 @@ pub fn set_mode(
                     .set_requested_mouse_tracking_mode(MouseTrackingMode::Enabled);
             }
             PrivateModeType::SgrMouseMode => {
-                // We always use SGR formatting internally, so we don't need to do
-                // anything here.
+                performer
+                    .ofs_buf_vt_100
+                    .set_mouse_tracking_format(MouseTrackingFormat::Sgr);
             }
-            // Safely suppress/ignore other modern TUI extensions (like bracketed paste).
-            // Currently, the multiplexer does not support routing rich input events back
-            // into the PTY. Downgrading to debug prevents heavy log spam from interactive
-            // TUIs (like hx/gitui).
+            // Safely suppress/ignore other modern TUI extensions (like bracketed
+            // paste). Currently, the multiplexer does not support
+            // routing rich input events back into the PTY.
             PrivateModeType::Other(
-                UTF8_MOUSE_EXTENSION
-                | URXVT_MOUSE_EXTENSION
-                | BRACKETED_PASTE_MODE,
+                UTF8_MOUSE_EXTENSION | URXVT_MOUSE_EXTENSION | BRACKETED_PASTE_MODE,
             ) => {
                 DEBUG_TUI_VT100_PARSER.then(|| {
                     tracing::debug!(
@@ -127,33 +157,57 @@ pub fn set_mode(
             }
             _ => {
                 DEBUG_TUI_VT100_PARSER.then(|| {
-                    tracing::warn!("CSI ?{}h: Unhandled private mode", mode.as_u16());
+                    tracing::debug!(
+                        "CSI ?{}h: Unimplemented/ignored private mode set",
+                        mode.as_u16()
+                    );
                 });
             }
         }
-    } else {
-        DEBUG_TUI_VT100_PARSER.then(|| {
-            tracing::warn!("CSI h: Standard mode setting not implemented");
-        });
     }
 }
 
-/// Handle Reset Mode (`CSI l`) command.
-/// Supports both standard modes and private modes (with ? prefix).
+/// Handles the Reset Mode (`CSI l`) escape sequence.
+///
+/// This method processes both standard [`ANSI`] modes and [`DEC`] private modes (which
+/// are indicated by the `?` prefix in the `intermediates` slice).
+///
+/// A single [`ANSI`] escape sequence can configure multiple modes at once. For example,
+/// `htop` sends `ESC [ ? 1006 ; 1000 l` to disable both [`SGR`] and `X11` mouse tracking
+/// simultaneously. This function iterates over all parameters in the sequence to ensure
+/// every requested mode is applied.
+///
+/// # Arguments
+///
+/// - `performer`: The [`AnsiToOfsBufPerformer`] that maintains the terminal state.
+/// - `params`: The [`Params`] parsed from the sequence, which may contain multiple mode
+///   numbers.
+/// - `intermediates`: The intermediate bytes of the sequence. If this contains `?`
+///   ([`CSI_PRIVATE_MODE_PREFIX`]), the sequence is treated as a [`DEC`] private mode.
+///
+/// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+/// [`AnsiToOfsBufPerformer`]: crate::core::ansi::vt_100_pty_output_parser::AnsiToOfsBufPerformer
+/// [`CSI_PRIVATE_MODE_PREFIX`]: crate::core::ansi::constants::CSI_PRIVATE_MODE_PREFIX
+/// [`DEC`]: https://en.wikipedia.org/wiki/Digital_Equipment_Corporation
+/// [`Params`]: vte::Params
+/// [`SGR`]: crate::SgrCode
 pub fn reset_mode(
     performer: &mut AnsiToOfsBufPerformer,
     params: &Params,
     intermediates: &[u8],
 ) {
-    let is_private_mode = intermediates.contains(&(CSI_PRIVATE_MODE_PREFIX as u8));
-    if is_private_mode {
-        let mode = PrivateModeType::from(params);
+    let Some(modes) = parse_private_modes(params, intermediates) else {
+        DEBUG_TUI_VT100_PARSER.then(|| {
+            tracing::warn!("CSI l: Standard mode reset not implemented");
+        });
+        return;
+    };
+
+    for mode in modes {
         match mode {
             PrivateModeType::CursorKeys => {
-                performer
-                    .ofs_buf_vt_100
-                    .terminal_mode
-                    .cursor_key_mode = CursorKeyMode::Normal;
+                performer.ofs_buf_vt_100.terminal_mode.cursor_key_mode =
+                    CursorKeyMode::Normal;
             }
             PrivateModeType::AutoWrap => {
                 performer
@@ -168,7 +222,9 @@ pub fn reset_mode(
             PrivateModeType::ShowCursor => {
                 performer
                     .ofs_buf_vt_100
-                    .set_requested_cursor_visibility_mode(CursorVisibilityMode::Hidden);
+                    .set_requested_cursor_visibility_mode(
+                        CursorVisibilityMode::Hidden,
+                    );
             }
             PrivateModeType::X11MouseTracking
             | PrivateModeType::CellMotionMouseTracking
@@ -178,33 +234,64 @@ pub fn reset_mode(
                     .set_requested_mouse_tracking_mode(MouseTrackingMode::Disabled);
             }
             PrivateModeType::SgrMouseMode => {
-                // We always use SGR formatting internally, so we don't need to do anything here.
+                performer
+                    .ofs_buf_vt_100
+                    .set_mouse_tracking_format(MouseTrackingFormat::X10);
             }
-            // Safely suppress/ignore other modern TUI extensions (like bracketed paste).
-            // Currently, the multiplexer does not support routing rich input events back
-            // into the PTY. Downgrading to debug prevents heavy log spam from interactive
-            // TUIs (like hx/gitui).
+            // Safely suppress/ignore other modern TUI extensions (like bracketed
+            // paste). Currently, the multiplexer does not support
+            // routing rich input events back into the PTY.
             PrivateModeType::Other(
-                UTF8_MOUSE_EXTENSION
-                | URXVT_MOUSE_EXTENSION
-                | BRACKETED_PASTE_MODE,
+                UTF8_MOUSE_EXTENSION | URXVT_MOUSE_EXTENSION | BRACKETED_PASTE_MODE,
             ) => {
                 DEBUG_TUI_VT100_PARSER.then(|| {
                     tracing::debug!(
-                        "CSI ?{}l: Suppressed/shimmed private mode",
+                        "CSI ?{}l: Suppressed/shimmed private mode reset",
                         mode.as_u16()
                     );
                 });
             }
             _ => {
                 DEBUG_TUI_VT100_PARSER.then(|| {
-                    tracing::warn!("CSI ?{}l: Unhandled private mode", mode.as_u16());
+                    tracing::debug!(
+                        "CSI ?{}l: Unimplemented/ignored private mode reset",
+                        mode.as_u16()
+                    );
                 });
             }
         }
+    }
+}
+
+/// Extracts [`DEC`] private modes from a parsed [`CSI`] sequence.
+///
+/// A single [`CSI`] sequence can configure multiple modes at once. For example, `htop`
+/// sends `ESC [ ? 1006 ; 1000 h` to enable both [`SGR`] and `X11` mouse tracking. This
+/// iterator processes all parameters in the sequence.
+///
+/// Returns an iterator over the parsed [`PrivateModeType`]s if the sequence is a
+/// private mode (indicated by `?`), or `None` if it is a standard [`ANSI`] mode.
+///
+/// # Arguments
+///
+/// - `params`: The parameters parsed from the sequence.
+/// - `intermediates`: The intermediate bytes of the sequence.
+///
+/// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+/// [`CSI`]: crate::CsiSequence
+/// [`DEC`]: https://en.wikipedia.org/wiki/Digital_Equipment_Corporation
+/// [`SGR`]: crate::SgrCode
+fn parse_private_modes<'a>(
+    params: &'a Params,
+    intermediates: &[u8],
+) -> Option<impl Iterator<Item = PrivateModeType> + 'a> {
+    let is_private_mode = intermediates.contains(&(CSI_PRIVATE_MODE_PREFIX as u8));
+    if is_private_mode {
+        Some(params.iter().map(|sub_params| {
+            let mode_num = sub_params.first().copied().unwrap_or(0);
+            PrivateModeType::from(mode_num)
+        }))
     } else {
-        DEBUG_TUI_VT100_PARSER.then(|| {
-            tracing::warn!("CSI l: Standard mode reset not implemented");
-        });
+        None
     }
 }

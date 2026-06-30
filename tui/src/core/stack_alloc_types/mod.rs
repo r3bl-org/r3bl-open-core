@@ -2,6 +2,7 @@
 
 // Attach.
 pub mod constructors;
+pub mod fast_int_fmt;
 pub mod into_existing;
 pub mod items;
 pub mod list_of;
@@ -9,11 +10,11 @@ pub mod make_new;
 pub mod memory_allocator;
 pub mod render_list;
 pub mod sizes;
-pub mod usize_fmt;
 
 // Re-export.
+pub use fast_int_fmt::*;
+pub use into_existing::*;
 pub use items::*;
 pub use list_of::*;
 pub use render_list::*;
 pub use sizes::*;
-pub use usize_fmt::*;

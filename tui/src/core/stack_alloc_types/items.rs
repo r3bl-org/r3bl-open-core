@@ -71,7 +71,7 @@ mod constructors {
     }
 }
 
-mod iter_impl {
+mod impl_iter {
     use super::{InlineString, InlineVec, ItemsOwned};
 
     /// [`FromIterator`] for [`ItemsOwned`] for [`collect()`].
@@ -206,7 +206,7 @@ mod convert_into_items_owned {
     }
 }
 
-mod deref_deref_mut_impl {
+mod impl_deref_deref_mut {
     use super::{Deref, DerefMut, InlineString, InlineVec, ItemsOwned};
 
     impl Deref for ItemsOwned {

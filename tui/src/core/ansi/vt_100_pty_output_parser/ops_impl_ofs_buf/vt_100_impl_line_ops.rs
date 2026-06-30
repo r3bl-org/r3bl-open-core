@@ -95,14 +95,21 @@ impl OfsBufVT100 {
     /// - Lines at the bottom of the range are filled with blank lines.
     /// - Returns true if the operation was successful.
     ///
-    /// Used by [`ANSI`] `DL` (Delete Line) and `SU` (Scroll Up) operations.
+    /// Used by [`ANSI`] [`DL`] (Delete Line) and [`SU`] (Scroll Up) operations.
+    ///
+    /// **Performance Note:** This method uses a zero-allocation [`rotate_left`] operation
+    /// to shift the lines in-place, and recycles the old top line into a blank line at
+    /// the bottom. This avoids memory reallocation churn during scrolling.
     ///
     /// # Errors
     ///
     /// Returns an error if the row range is invalid or out of bounds.
     ///
     /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+    /// [`DL`]: https://vt100.net/docs/vt510-rm/DL.html
     /// [`is_row_range_valid()`]: crate::OffscreenBuffer::is_row_range_valid
+    /// [`rotate_left`]: slice::rotate_left
+    /// [`SU`]: https://vt100.net/docs/vt510-rm/SU.html
     /// [`validate_row_range_mut()`]: crate::OffscreenBuffer::validate_row_range_mut
     pub fn shift_lines_up(
         &mut self,
@@ -138,17 +145,24 @@ impl OfsBufVT100 {
     /// - Lines at the top of the range are filled with blank lines.
     /// - Returns true if the operation was successful.
     ///
-    /// Used by [`ANSI`] `IL` (Insert Line) and `SD` (Scroll Down) operations.
+    /// Used by [`ANSI`] [`IL`] (Insert Line) and [`SD`] (Scroll Down) operations.
     ///
-    /// For scrolling operations, this is also used to scroll buffer content down.
-    /// The bottom line is lost, and a new empty line appears at top.
+    /// For scrolling operations, this is also used to scroll buffer content down. The
+    /// bottom line is lost, and a new empty line appears at top.
+    ///
+    /// **Performance Note:** This method uses a zero-allocation [`rotate_right`]
+    /// operation to shift the lines in-place, and recycles the old bottom line into a
+    /// blank line at the top. This avoids memory reallocation churn during scrolling.
     ///
     /// # Errors
     ///
     /// Returns an error if the row range is invalid or out of bounds.
     ///
     /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+    /// [`IL`]: https://vt100.net/docs/vt510-rm/IL.html
     /// [`is_row_range_valid()`]: crate::OffscreenBuffer::is_row_range_valid
+    /// [`rotate_right`]: slice::rotate_right
+    /// [`SD`]: https://vt100.net/docs/vt510-rm/SD.html
     /// [`validate_row_range_mut()`]: crate::OffscreenBuffer::validate_row_range_mut
     pub fn shift_lines_down(
         &mut self,

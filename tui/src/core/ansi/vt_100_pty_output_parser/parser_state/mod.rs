@@ -5,7 +5,9 @@
 // Attach.
 mod parser_global;
 mod terminal_mode;
+mod scrollback_buffer;
 
 // Re-exports.
 pub use parser_global::*;
 pub use terminal_mode::*;
+pub use scrollback_buffer::*;

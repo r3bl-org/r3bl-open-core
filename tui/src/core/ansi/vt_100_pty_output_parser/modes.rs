@@ -59,14 +59,17 @@ pub enum CursorVisibilityMode {
 ///
 /// # Implementation Note
 ///
-/// [`PTYMux`] uses a simplified "firehose" approach for mouse events:
+/// [`PTYMux`] routes mouse events using the following logic:
 ///
-/// - Rather than strictly adhering to the legacy [`1000`]/[`1002`]/[`1003`] protocols
-///   (which differ in event filtering and byte-encoded coordinates), we treat any request
-///   for mouse tracking identically.
-/// - If a sub-process requests *any* mouse tracking, we route all mouse events (clicks,
-///   drags, motion) using the modern `1006` [`SGR`] [`PrivateModeType::SgrMouseMode`]
-///   protocol format unconditionally. This satisfies 99% of modern TUI apps.
+/// - Rather than strictly adhering to the legacy [`1000`]/[`1002`]/[`1003`] protocols for
+///   event filtering (e.g. clicks only vs cell motion), we treat any request for mouse
+///   tracking identically and route all events (clicks, drags, motion).
+/// - If a child process requests *any* mouse tracking, we route those events back using
+///   precise byte sequence format requested by the app.
+///   - When an app requests basic tracking ([`1000`], [`1002`], or [`1003`]), it defaults
+///     to the [X10] format.
+///   - It will only use the modern [Sgr] format if the app explicitly requests
+///     [`PrivateModeType::SgrMouseMode`].
 ///
 /// [`1000`]: crate::PrivateModeType::X11MouseTracking
 /// [`1002`]: crate::PrivateModeType::CellMotionMouseTracking
@@ -74,16 +77,24 @@ pub enum CursorVisibilityMode {
 /// [`PrivateModeType::SgrMouseMode`]: crate::PrivateModeType::SgrMouseMode
 /// [`PTYMux`]: crate::PTYMux
 /// [`SGR`]: crate::SgrCode
+/// [Sgr]: MouseTrackingFormat::Sgr
+/// [X10]: MouseTrackingFormat::X10
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum MouseTrackingFormat {
+    /// [`X10`] format (e.g. `\x1b[M...`)
+    ///
+    /// [`X10`]: https://invisible-island.net/xterm/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
+    #[default]
+    X10,
+    /// Modern [`SGR`] format (e.g. `\x1b[<...`)
+    ///
+    /// [`SGR`]: crate::SgrCode
+    Sgr,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum MouseTrackingMode {
     /// Mouse tracking enabled.
-    ///
-    /// The multiplexer engine unconditionally formats all events as [`SGR`] extended
-    /// mouse tracking (`1006` protocol), which uses string coordinates. See
-    /// [`PrivateModeType::SgrMouseMode`].
-    ///
-    /// [`PrivateModeType::SgrMouseMode`]: crate::PrivateModeType::SgrMouseMode
-    /// [`SGR`]: crate::SgrCode
     Enabled,
 
     /// Mouse tracking disabled.

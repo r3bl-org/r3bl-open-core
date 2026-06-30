@@ -21,7 +21,7 @@ pub enum Id {
     Column2 = 3,
 }
 
-mod id_impl {
+mod impl_id {
     use super::{FlexBoxId, Id};
 
     impl From<Id> for u8 {

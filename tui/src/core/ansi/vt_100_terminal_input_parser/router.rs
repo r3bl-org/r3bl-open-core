@@ -484,7 +484,7 @@ mod tests_invalid_input {
     }
 
     #[test]
-    fn unknown_esc_sequence_emits_standalone_esc() {
+    fn unknown_esc_emits_standalone_esc() {
         // ESC + invalid byte → emit standalone ESC, leave invalid byte for next cycle.
         let buffer = &[0x1B, 0xFF];
         let (event, consumed) =

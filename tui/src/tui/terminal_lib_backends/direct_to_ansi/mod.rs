@@ -81,7 +81,7 @@
 //! # Architecture
 //!
 //! The module consists of:
-//! 1. [`AnsiSequenceGenerator`]: Generates raw [`ANSI`] escape sequence bytes
+//! 1. [`ansi_output`]: Generates raw [`ANSI`] escape sequence bytes
 //! 2. [`RenderOpPaintImplDirectToAnsi`]: Implements [`RenderOpPaint`] trait for executing
 //!    render operations: [`RenderOpOutput`] and [`RenderOpCommon`]
 //! 3. [`PixelCharRenderer`]: Converts styled text to [`ANSI`] with smart attribute
@@ -112,8 +112,8 @@
 //!   [`vt_100_terminal_input_parser::vt_100_parser_integration_tests`] (Linux-only).
 //!
 //! [`Alacritty`]: https://alacritty.org/
+//! [`ansi_output`]: crate::ansi_output
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`AnsiSequenceGenerator`]: crate::AnsiSequenceGenerator
 //! [`compositor_render_ops_to_ofs_buf` mod docs]:
 //!     mod@crate::compositor_render_ops_to_ofs_buf
 //! [`crossterm_backend::crossterm_paint_render_op_impl` mod docs]:

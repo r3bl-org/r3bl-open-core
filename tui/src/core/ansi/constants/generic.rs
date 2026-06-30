@@ -45,7 +45,9 @@
 //! ```rust
 //! use r3bl_tui::{CsiSequence, PrivateModeType, SGR_MOUSE_MODE};
 //!
-//! let seq = CsiSequence::EnablePrivateMode(PrivateModeType::Other(SGR_MOUSE_MODE));
+//! let seq = CsiSequence::EnablePrivateMode(
+//!     smallvec::smallvec![PrivateModeType::Other(SGR_MOUSE_MODE)]
+//! );
 //! ```
 //!
 //! ## References

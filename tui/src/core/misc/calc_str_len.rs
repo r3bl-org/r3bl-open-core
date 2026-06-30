@@ -1,7 +1,9 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 use crate::{GCStringOwned, u16};
 use sha2::{Digest, Sha256};
-use std::collections::{HashMap, hash_map::Entry};
+use std::{collections::{HashMap, hash_map::Entry},
+          fmt::{Display, Formatter},
+          str::FromStr};
 
 // cspell:words mfoo
 
@@ -92,10 +94,11 @@ impl StringLength {
     }
 }
 
-mod to_from_string_impl {
-    use super::StringLength;
+mod impl_to_from_string {
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
-    impl std::str::FromStr for StringLength {
+    impl FromStr for StringLength {
         type Err = String;
 
         fn from_str(s: &str) -> core::result::Result<Self, Self::Err> {
@@ -107,8 +110,8 @@ mod to_from_string_impl {
         }
     }
 
-    impl std::fmt::Display for StringLength {
-        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    impl Display for StringLength {
+        fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
             match self {
                 Self::StripAnsi => write!(f, "strip_ansi"),
                 Self::Unicode => write!(f, "unicode"),

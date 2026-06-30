@@ -3,8 +3,9 @@
 use crate::{BufTextStorage, ColIndex, ColWidth, FastStringify, GCStringOwned,
             InlineString, InlineVec, PixelChar, PixelCharRenderer, SgrCode, TuiColor,
             TuiStyle, TuiStyleAttribs, UNICODE_REPLACEMENT_CHAR,
-            cli_text_inline_impl::CliTextConvertOptions,
-            generate_impl_display_for_fast_stringify, inline_string, ok, tui_color,
+            generate_impl_display_for_fast_stringify,
+            impl_cli_text_inline::CliTextConvertOptions,
+            inline_string, ok, tui_color,
             tui_style_attrib::{Bold, Dim, Italic, Strikethrough, Underline}};
 use std::fmt::Result;
 use strum_macros::EnumCount;
@@ -151,7 +152,7 @@ macro_rules! cli_text_lines {
     }};
 }
 
-pub mod cli_text_inline_impl {
+pub mod impl_cli_text_inline {
     #[allow(clippy::wildcard_imports)]
     use super::*;
 
@@ -923,9 +924,9 @@ impl FastStringify for CliTextInline {
         // ansi_output is UTF-8 valid since it contains ANSI codes and UTF-8 characters
         acc.push_str(std::str::from_utf8(ansi_output).map_err(|_| std::fmt::Error)?);
 
-        // Final reset is now handled gracefully inside PixelCharRenderer 
+        // Final reset is now handled gracefully inside PixelCharRenderer
         // to avoid double resets or redundant resets when no style was applied.
-        
+
         ok!()
     }
 }
@@ -934,8 +935,10 @@ generate_impl_display_for_fast_stringify!(CliTextInline);
 
 #[cfg(test)]
 mod tests {
-    use super::{cli_text_inline_impl::CliTextConvertOptions, dim};
-    use crate::{CliTextInline, ColIndex, ColorSupport, InlineVec, PixelChar, TuiColor, TuiStyle, TuiStyleAttribs, global_color_support, ok, tui_color, tui_style::tui_style_attrib::Bold, tui_style_attribs, width};
+    use super::{dim, impl_cli_text_inline::CliTextConvertOptions};
+    use crate::{CliTextInline, ColIndex, ColorSupport, InlineVec, PixelChar, TuiColor,
+                TuiStyle, TuiStyleAttribs, global_color_support, ok, tui_color,
+                tui_style::tui_style_attrib::Bold, tui_style_attribs, width};
     use pretty_assertions::assert_eq;
     use serial_test::serial;
 

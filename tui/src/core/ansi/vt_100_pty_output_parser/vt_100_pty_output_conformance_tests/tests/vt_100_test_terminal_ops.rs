@@ -84,6 +84,22 @@ pub mod reset_initial_state {
         // Verify basic reset occurred
         assert_eq!(ofs_buf_vt_100.cursor_pos, Pos::default());
     }
+
+    #[test]
+    fn test_ris_clears_scrollback() {
+        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+        
+        // Add a line to the scrollback buffer
+        ofs_buf_vt_100.scrollback_buffer.push_and_enforce_limit(crate::PixelCharLine::new_empty(0));
+        assert_eq!(ofs_buf_vt_100.scrollback_buffer.lines.len(), 1);
+
+        // Send RIS sequence
+        let ris_sequence = format!("{}", EscSequence::ResetTerminal);
+        let _result = ofs_buf_vt_100.apply_ansi_bytes(ris_sequence.as_bytes());
+
+        // Verify scrollback was cleared
+        assert_eq!(ofs_buf_vt_100.scrollback_buffer.lines.len(), 0);
+    }
 }
 
 /// Tests for character set selection operations.

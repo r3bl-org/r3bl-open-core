@@ -5,7 +5,7 @@
 //! [`ANSI`] escape sequence generator for terminal INPUT (test fixtures).
 //!
 //! Provides input sequence generation for testing. Creates symmetry with
-//! [`ansi_sequence_generator_output`] for output sequences.
+//! [`ansi_output`] for output sequences.
 //!
 //! ## Purpose
 //!
@@ -25,7 +25,7 @@
 //! | Low-level builder functions   | [`csi`], [`ss3`], [`csi_tilde`], [`csi_modified`]                                                                                                         |
 //! | High-level generators         | [`generate_keyboard_sequence`], [`generate_mouse_sequence_bytes`], [`generate_resize_sequence`], [`generate_focus_sequence`], [`generate_paste_sequence`] |
 //!
-//! [`ansi_sequence_generator_output`]: super::ansi_sequence_generator_output
+//! [`ansi_output`]: super::ansi_output
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`InputEvent`]: crate::InputEvent
 
@@ -52,8 +52,7 @@ use crate::{KeyState,
                                      MOUSE_SCROLL_UP_BUTTON, MOUSE_SGR_PREFIX,
                                      MOUSE_SGR_PRESS, MOUSE_SGR_RELEASE,
                                      MOUSE_X10_COORD_OFFSET, MOUSE_X10_MARKER,
-                                     MOUSE_X10_PREFIX,
-                                     PASTE_END_GENERATE_CODE,
+                                     MOUSE_X10_PREFIX, PASTE_END_GENERATE_CODE,
                                      PASTE_START_GENERATE_CODE,
                                      RESIZE_EVENT_GENERATE_CODE, RESIZE_TERMINATOR,
                                      SPECIAL_DELETE_CODE, SPECIAL_INSERT_CODE,
@@ -221,7 +220,7 @@ pub fn generate_keyboard_sequence(event: &VT100InputEventIR) -> Option<Vec<u8>> 
     }
 }
 
-/// Generate [`ANSI`] bytes for a mouse event in [`X10`]/Normal format.
+/// Generate [`ANSI`] bytes for a mouse event in [`X10`] format.
 ///
 /// Generates sequences like: `ESC [ M Cb Cx Cy` (6 bytes)
 ///
@@ -523,7 +522,9 @@ mod mouse {
                 code |= MOUSE_MOTION_FLAG; // Motion/Drag flag (bit 5)
                 MOUSE_SGR_PRESS as char
             }
-            VT100MouseActionIR::Press | VT100MouseActionIR::Scroll(_) => MOUSE_SGR_PRESS as char,
+            VT100MouseActionIR::Press | VT100MouseActionIR::Scroll(_) => {
+                MOUSE_SGR_PRESS as char
+            }
         };
 
         code = apply_modifiers(code, modifiers);
