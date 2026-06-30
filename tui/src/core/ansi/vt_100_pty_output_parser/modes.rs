@@ -118,7 +118,6 @@ pub mod terminal_mode_state_todo {
     ///
     /// [`OSC`]: crate::osc_codes::OscSequence
     #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-    #[allow(dead_code)]
     pub enum BracketedPasteMode {
         /// Bracketed paste mode enabled
         Enabled,
