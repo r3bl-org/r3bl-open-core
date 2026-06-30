@@ -339,20 +339,24 @@ pub struct TerminalModeState {
     /// Mouse tracking state (mode and formatting).
     pub mouse_tracking: MouseTrackingMode,
 
-    /// Bracketed paste mode status.
+    /// Bracketed paste mode status (DECSET/DECRST 2004).
     ///
-    /// **TODO**: The parser currently ignores this [`VT-100`] sequence
-    /// (`vt_100_shim_mode_ops.rs`) because the [`PTY`] multiplexer does not yet route
-    /// complex input events. When supported, this field should be wired up to the
-    /// [`ANSI`] parser and the `dead_code` allowance removed.
+    /// Updated by [`vt_100_shim_mode_ops`] when processing `CSI ? 2004 h` / `l`.
+    /// When [`Enabled`], the app wraps pasted text in `\e[200~` and `\e[201~`
+    /// sequences so the PTY child can distinguish pasted input from typed input.
     ///
-    /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-    /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
-    /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
-    #[allow(dead_code)]
+    /// [`Enabled`]: terminal_mode_state_todo::BracketedPasteMode::Enabled
+    /// [`vt_100_shim_mode_ops`]: crate::core::ansi::vt_100_pty_output_parser::ops::vt_100_shim_mode_ops
     pub bracketed_paste: terminal_mode_state_todo::BracketedPasteMode,
 }
 
+impl TerminalModeState {
+    /// Whether the PTY child has enabled bracketed paste mode (DECSET 2004).
+    pub fn is_bracketed_paste_enabled(&self) -> bool {
+        self.bracketed_paste
+            == terminal_mode_state_todo::BracketedPasteMode::Enabled
+    }
+}
 
 /// Character set modes for terminal emulation.
 ///
