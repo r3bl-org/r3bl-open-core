@@ -72,18 +72,14 @@ pub struct TerminalModeState {
     /// [Sgr]: MouseTrackingFormat::Sgr
     pub mouse_tracking_format: MouseTrackingFormat,
 
-    /// [`Bracketed paste`] mode status.
+    /// [`Bracketed paste`] mode status (`CSI ? 2004 h` / `l`).
     ///
-    /// **TODO**: The parser currently ignores this [`VT-100`] sequence
-    /// (`vt_100_shim_mode_ops.rs`) because the [`PTY`] multiplexer does not yet route
-    /// complex input events. When supported, this field should be wired up to the
-    /// [`ANSI`] parser and the `dead_code` allowance removed.
+    /// When enabled, the app wraps pasted text in `CSI 200 ~` and `CSI 201 ~` so the
+    /// [`PTY`] child can tell pasted input from typed input. See
+    /// [`Self::is_bracketed_paste_enabled()`].
     ///
-    /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
     /// [`Bracketed paste`]: https://en.wikipedia.org/wiki/Bracketed-paste
     /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
-    /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
-    #[allow(dead_code)]
     pub bracketed_paste: terminal_mode_state_todo::BracketedPasteMode,
 
     /// Focus event reporting mode.
@@ -91,4 +87,14 @@ pub struct TerminalModeState {
     /// When enabled (by `CSI ? 1004 h`), the PTY child wants to receive
     /// `CSI I` / `CSI O` focus events from the terminal multiplexer.
     pub focus_events: bool,
+}
+
+impl TerminalModeState {
+    /// Whether the [`PTY`] child has enabled bracketed paste mode (`CSI ? 2004 h`).
+    ///
+    /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
+    #[must_use]
+    pub fn is_bracketed_paste_enabled(&self) -> bool {
+        self.bracketed_paste == terminal_mode_state_todo::BracketedPasteMode::Enabled
+    }
 }

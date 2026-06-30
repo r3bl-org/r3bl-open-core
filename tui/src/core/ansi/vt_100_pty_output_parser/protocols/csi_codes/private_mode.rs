@@ -12,7 +12,7 @@
 
 use crate::{ParamsExt,
             core::ansi::constants::{ALT_SCREEN_BUFFER, APPLICATION_MOUSE_TRACKING,
-                                    CELL_MOTION_MOUSE_TRACKING, DECANM_VT52_MODE,
+                                    BRACKETED_PASTE_MODE, CELL_MOTION_MOUSE_TRACKING, DECANM_VT52_MODE,
                                     DECAWM_AUTO_WRAP, DECCKM_CURSOR_KEYS,
                                     DECCOLM_132_COLUMN, DECOM_ORIGIN_MODE,
                                     DECSCLM_SMOOTH_SCROLL, DECSCNM_REVERSE_VIDEO,
@@ -106,6 +106,10 @@ pub enum PrivateModeType {
 
     /// Focus Events (1004)
     FocusEvents,
+
+    /// Bracketed Paste (2004)
+    BracketedPaste,
+
     /// Unknown/unsupported private mode
     Other(u16),
 }
@@ -128,6 +132,7 @@ impl crate::WideningCastToU16 for PrivateModeType {
             Self::ApplicationMouseTracking => APPLICATION_MOUSE_TRACKING,
             Self::SgrMouseMode => SGR_MOUSE_MODE,
             Self::FocusEvents => FOCUS_EVENTS,
+            Self::BracketedPaste => BRACKETED_PASTE_MODE,
             Self::Other(n) => n,
         }
     }
@@ -151,6 +156,7 @@ impl From<u16> for PrivateModeType {
             APPLICATION_MOUSE_TRACKING => PrivateModeType::ApplicationMouseTracking,
             SGR_MOUSE_MODE => PrivateModeType::SgrMouseMode,
             FOCUS_EVENTS => PrivateModeType::FocusEvents,
+            BRACKETED_PASTE_MODE => PrivateModeType::BracketedPaste,
             n => PrivateModeType::Other(n),
         }
     }
