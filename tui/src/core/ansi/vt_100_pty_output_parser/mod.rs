@@ -51,12 +51,16 @@
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 //! [`VTE`]: mod@vte
 
+#![rustfmt::skip]
+
+// Attach.
 pub mod ansi_parser_public_api;
-pub mod pty_response_event;
-pub mod ofs_buf_vt_100;
 pub mod hidden_screen_state;
+pub mod ofs_buf_vt_100;
+pub mod parser_state;
 pub mod performer;
 pub mod protocols;
+pub mod pty_response_event;
 mod modes;
 
 #[cfg(any(test, doc))]
@@ -69,16 +73,16 @@ pub mod ops_impl_ofs_buf;
 #[cfg(not(any(test, doc)))]
 mod ops_impl_ofs_buf;
 
-pub use ops_impl_ofs_buf::*;
-
 // `VT-100` conformance tests module
 pub mod vt_100_pty_output_conformance_tests;
 
-// Re-export public API
+// Re-export public API.
 pub use ansi_parser_public_api::*;
-pub use pty_response_event::*;
-pub use ofs_buf_vt_100::*;
 pub use hidden_screen_state::*;
-pub use ops::*;
-pub use protocols::*;
 pub use modes::*;
+pub use ofs_buf_vt_100::*;
+pub use ops::*;
+pub use ops_impl_ofs_buf::*;
+pub use parser_state::*;
+pub use protocols::*;
+pub use pty_response_event::*;

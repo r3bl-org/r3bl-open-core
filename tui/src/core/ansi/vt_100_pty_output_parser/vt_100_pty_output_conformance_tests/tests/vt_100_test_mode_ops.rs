@@ -355,3 +355,29 @@ pub mod mouse_tracking_mode {
         assert_eq!(ofs_buf.terminal_mode.mouse_tracking, MouseTrackingMode::Disabled);
     }
 }
+
+/// Tests for Cursor Key Mode operations.
+pub mod cursor_key_mode {
+    use super::*;
+    use crate::CursorKeyMode;
+
+    #[test]
+    fn test_cursor_key_mode_enable_and_disable() {
+        let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
+
+        // Reset to normal mode first to ensure a known state
+        let disable = format!("{}", CsiSequence::DisablePrivateMode(PrivateModeType::CursorKeys));
+        let _unused = ofs_buf.apply_ansi_bytes(disable);
+        assert_eq!(ofs_buf.terminal_mode.cursor_key_mode, CursorKeyMode::Normal);
+
+        // Enable cursor key application mode (?1h)
+        let enable = format!("{}", CsiSequence::EnablePrivateMode(PrivateModeType::CursorKeys));
+        let _unused = ofs_buf.apply_ansi_bytes(enable);
+        assert_eq!(ofs_buf.terminal_mode.cursor_key_mode, CursorKeyMode::Application);
+
+        // Disable cursor key application mode (?1l)
+        let disable = format!("{}", CsiSequence::DisablePrivateMode(PrivateModeType::CursorKeys));
+        let _unused = ofs_buf.apply_ansi_bytes(disable);
+        assert_eq!(ofs_buf.terminal_mode.cursor_key_mode, CursorKeyMode::Normal);
+    }
+}

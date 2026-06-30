@@ -38,15 +38,17 @@ _Meta Task: Prepare v0.8.0 Release_
 - [x] [DA1 Responses timeout fix](done/pr-455-fix.md) - https://github.com/r3bl-org/r3bl-open-core/pull/455
 - [x] [VT100 Pending Wrap fix](done/pr-456-fix.md) - https://github.com/r3bl-org/r3bl-open-core/pull/456
 - [x] [Mouse Event Forwarding](done/pr-458-fix.md) - https://github.com/r3bl-org/r3bl-open-core/pull/458
-- [ ] [invert control and decouple UI in pty_mux](pty-mux-invert-control.md)
+- [x] [DECCKM Cursor Key Mode tracking & state refactor](https://github.com/r3bl-org/r3bl-open-core/pull/470)
 - [ ] [Scrollback Buffer for PTY](pr-459-fix.md) - https://github.com/r3bl-org/r3bl-open-core/pull/459
+- [ ] **NEEDS RESEARCH & PLANNING** https://github.com/r3bl-org/r3bl-open-core/pull/472
+- [ ] [invert control and decouple UI in pty_mux](pty-mux-invert-control.md)
 - [ ] **NEEDS RESEARCH & PLANNING** https://github.com/r3bl-org/r3bl-open-core/pull/468
 - [ ] **NEEDS RESEARCH & PLANNING** https://github.com/r3bl-org/r3bl-open-core/pull/466
 - [ ] **NEEDS RESEARCH & PLANNING** https://github.com/r3bl-org/r3bl-open-core/pull/467
 - [ ] **NEEDS RESEARCH & PLANNING** https://github.com/r3bl-org/r3bl-open-core/pull/464
 - [ ] **NEEDS RESEARCH & PLANNING** https://github.com/r3bl-org/r3bl-open-core/pull/465
 - [ ] **NEEDS RESEARCH & PLANNING** https://github.com/r3bl-org/r3bl-open-core/pull/469
-- [ ] [wire up bracketed paste in pty_mux](pty-mux-bracketed-paste.md)
+- [ ] [wire up bracketed paste in pty_mux](pty-mux-bracketed-paste.md) https://github.com/r3bl-org/r3bl-open-core/pull/471
 - [ ] [fix fish shell issues in pty_mux module](task/fix-fish-in-pty-mux.md)
 
 # [TODO] Unify rendering

@@ -60,10 +60,10 @@
 //! [ops module]: crate::core::ansi::vt_100_pty_output_parser::ops
 
 use super::super::{PrivateModeType, ansi_parser_public_api::AnsiToOfsBufPerformer};
-use crate::{AutoWrapMode, BRACKETED_PASTE_MODE, CursorVisibilityMode, DEBUG_TUI_VT100_PARSER,
-            RequestedScreenMode, URXVT_MOUSE_EXTENSION,
-            UTF8_MOUSE_EXTENSION, MouseTrackingMode,
-            core::ansi::constants::CSI_PRIVATE_MODE_PREFIX};
+use crate::{AutoWrapMode, BRACKETED_PASTE_MODE, CursorKeyMode, CursorVisibilityMode,
+             DEBUG_TUI_VT100_PARSER, RequestedScreenMode, URXVT_MOUSE_EXTENSION,
+             UTF8_MOUSE_EXTENSION, MouseTrackingMode,
+             core::ansi::constants::CSI_PRIVATE_MODE_PREFIX};
 use vte::Params;
 
 /// Handle Set Mode (`CSI h`) command.
@@ -77,6 +77,12 @@ pub fn set_mode(
     if is_private_mode {
         let mode = PrivateModeType::from(params);
         match mode {
+            PrivateModeType::CursorKeys => {
+                performer
+                    .ofs_buf_vt_100
+                    .terminal_mode
+                    .cursor_key_mode = CursorKeyMode::Application;
+            }
             PrivateModeType::AutoWrap => {
                 performer
                     .ofs_buf_vt_100
@@ -143,6 +149,12 @@ pub fn reset_mode(
     if is_private_mode {
         let mode = PrivateModeType::from(params);
         match mode {
+            PrivateModeType::CursorKeys => {
+                performer
+                    .ofs_buf_vt_100
+                    .terminal_mode
+                    .cursor_key_mode = CursorKeyMode::Normal;
+            }
             PrivateModeType::AutoWrap => {
                 performer
                     .ofs_buf_vt_100
