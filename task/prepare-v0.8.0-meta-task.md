@@ -34,13 +34,18 @@ _Meta Task: Prepare v0.8.0 Release_
 
 # [WIP] Complete PRs from Cecile
 
-- [x] [LF scroll-up test fix](done/pr-462-fix.md) - https://github.com/r3bl-org/r3bl-open-core/pull/462
-- [x] [DA1 Responses timeout fix](done/pr-455-fix.md) - https://github.com/r3bl-org/r3bl-open-core/pull/455
-- [x] [VT100 Pending Wrap fix](done/pr-456-fix.md) - https://github.com/r3bl-org/r3bl-open-core/pull/456
-- [x] [Mouse Event Forwarding](done/pr-458-fix.md) - https://github.com/r3bl-org/r3bl-open-core/pull/458
+- [x] [LF scroll-up test fix](done/pr-462-fix.md) -
+      https://github.com/r3bl-org/r3bl-open-core/pull/462
+- [x] [DA1 Responses timeout fix](done/pr-455-fix.md) -
+      https://github.com/r3bl-org/r3bl-open-core/pull/455
+- [x] [VT100 Pending Wrap fix](done/pr-456-fix.md) -
+      https://github.com/r3bl-org/r3bl-open-core/pull/456
+- [x] [Mouse Event Forwarding](done/pr-458-fix.md) -
+      https://github.com/r3bl-org/r3bl-open-core/pull/458
 - [x] [DECCKM Cursor Key Mode tracking & state refactor](https://github.com/r3bl-org/r3bl-open-core/pull/470)
-- [x] [Scrollback Buffer for PTY](done/pr-459-fix.md) - https://github.com/r3bl-org/r3bl-open-core/pull/459
-- [ ] [Change algo for OfsBufVT100 to canvas and viewport](task/ofsbufvt100-change-algo-to-canvas-and-viewport.md)
+- [x] [Scrollback Buffer for PTY](done/pr-459-fix.md) -
+      https://github.com/r3bl-org/r3bl-open-core/pull/459
+- [ ] [OfsBufVT100 Canvas and Viewport Refactor](task/ofsbuf_vt100_canvas_and_viewport.md)
 - [ ] **NEEDS RESEARCH & PLANNING** https://github.com/r3bl-org/r3bl-open-core/pull/472
 - [ ] [invert control and decouple UI in pty_mux](pty-mux-invert-control.md)
 - [ ] **NEEDS RESEARCH & PLANNING** https://github.com/r3bl-org/r3bl-open-core/pull/468
@@ -49,14 +54,14 @@ _Meta Task: Prepare v0.8.0 Release_
 - [ ] **NEEDS RESEARCH & PLANNING** https://github.com/r3bl-org/r3bl-open-core/pull/464
 - [ ] **NEEDS RESEARCH & PLANNING** https://github.com/r3bl-org/r3bl-open-core/pull/465
 - [ ] **NEEDS RESEARCH & PLANNING** https://github.com/r3bl-org/r3bl-open-core/pull/469
-- [ ] [wire up bracketed paste in pty_mux](pty-mux-bracketed-paste.md) https://github.com/r3bl-org/r3bl-open-core/pull/471
+- [ ] [wire up bracketed paste in pty_mux](pty-mux-bracketed-paste.md)
+      https://github.com/r3bl-org/r3bl-open-core/pull/471
 - [ ] [fix fish shell issues in pty_mux module](task/fix-fish-in-pty-mux.md)
 
 # [TODO] Unify rendering
 
 - [ ] [unify the interactive entry points to alternate screen](task_refactor_interactive_apis_to_alternate_screen.md)
 - [ ] [unify styling](task_unify_cli_and_styled_text.md)
-- [ ] [ofs buf 1d array perf enhancement](task_ofs_buf_1d_array.md)
 
 # [TODO] Clean up tasks
 
@@ -93,4 +98,3 @@ _Meta Task: Prepare v0.8.0 Release_
     - [ ] Publish to crates.io.
     - [ ] Create and push git tag `v???`.
     - [ ] Draft and publish a GitHub Release using the updated changelog notes.
-
