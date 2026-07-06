@@ -4,22 +4,26 @@
 //!
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 
-use crate::{OfsBufVT100, TuiStyle, height, width};
+use crate::{OfsBufVT100, PixelChar, TuiStyle, height, width};
 use std::num::NonZeroU16;
 
 /// Creates a test `OfsBufVT100` with 10x10 dimensions.
 #[must_use]
-pub fn create_test_offscreen_buffer_10r_by_10c() -> OfsBufVT100 {
+pub fn create_test_ofs_buf_10r_by_10c() -> OfsBufVT100 {
     OfsBufVT100::new_empty(height(10) + width(10))
 }
 
 /// Creates a test `OfsBufVT100` with 20x20 dimensions for larger test scenarios.
 #[must_use]
-pub fn create_test_offscreen_buffer_20r_by_20c() -> OfsBufVT100 {
+pub fn create_test_ofs_buf_20r_by_20c() -> OfsBufVT100 {
     OfsBufVT100::new_empty(height(20) + width(20))
 }
 
 /// Creates a test buffer with numbered lines for easier test verification.
+///
+/// # Panics
+///
+/// Panics if the row index is out of bounds.
 #[must_use]
 pub fn create_numbered_buffer(rows: usize, cols: usize) -> OfsBufVT100 {
     let mut buf = OfsBufVT100::new_empty(height(rows) + width(cols));
@@ -27,7 +31,7 @@ pub fn create_numbered_buffer(rows: usize, cols: usize) -> OfsBufVT100 {
         let line_text = format!("Line{r:02}");
         for (c, ch) in line_text.chars().enumerate() {
             if c < cols {
-                buf.buffer[r][c] = crate::PixelChar::PlainText {
+                buf.ofs_buf.get_row_mut(r).unwrap()[c] = PixelChar::PlainText {
                     display_char: ch,
                     style: TuiStyle::default(),
                 };
@@ -35,7 +39,7 @@ pub fn create_numbered_buffer(rows: usize, cols: usize) -> OfsBufVT100 {
         }
         // Fill remaining columns with spaces.
         for c in line_text.len()..cols {
-            buf.buffer[r][c] = crate::PixelChar::Spacer;
+            buf.ofs_buf.get_row_mut(r).unwrap()[c] = PixelChar::Spacer;
         }
     }
     buf
@@ -46,12 +50,15 @@ pub fn create_numbered_buffer(rows: usize, cols: usize) -> OfsBufVT100 {
 /// # Panics
 /// Panics if `row` is out of bounds for the buffer.
 pub fn assert_line_content(buf: &OfsBufVT100, row: usize, expected: &str) {
-    let actual: String = buf.buffer[row]
+    let actual: String = buf
+        .ofs_buf
+        .get_row(row)
+        .unwrap()
         .iter()
         .take(expected.len())
         .map(|pixel_char| match pixel_char {
-            crate::PixelChar::PlainText { display_char, .. } => *display_char,
-            crate::PixelChar::Spacer | crate::PixelChar::Void => ' ',
+            PixelChar::PlainText { display_char, .. } => *display_char,
+            PixelChar::Spacer | PixelChar::Void => ' ',
         })
         .collect();
 
@@ -66,7 +73,10 @@ pub fn assert_line_content(buf: &OfsBufVT100, row: usize, expected: &str) {
 /// # Panics
 /// Panics if `row` is out of bounds for the buffer.
 pub fn assert_blank_line(buf: &OfsBufVT100, row: usize) {
-    let is_blank = buf.buffer[row]
+    let is_blank = buf
+        .ofs_buf
+        .get_row(row)
+        .unwrap()
         .iter()
         .all(|pixel_char| matches!(pixel_char, crate::PixelChar::Spacer));
 

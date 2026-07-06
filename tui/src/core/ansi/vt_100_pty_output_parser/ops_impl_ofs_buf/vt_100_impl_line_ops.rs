@@ -1,5 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+#![allow(clippy::needless_range_loop)]
+
 //! Line manipulation operations for [`VT-100`]/[`ANSI`] terminal emulation.
 //!
 //! This module implements line-level operations that correspond to [`ANSI`] line
@@ -79,11 +81,11 @@ impl OfsBufVT100 {
         };
 
         // Safe to clear the validated line.
-        lines[0].fill(PixelChar::Spacer);
+        lines.fill(PixelChar::Spacer);
 
         // Debug assertion to verify the line was actually cleared.
         debug_assert!(
-            lines[0].iter().all(|ch| *ch == PixelChar::Spacer),
+            lines.iter().all(|ch| *ch == PixelChar::Spacer),
             "Line clear operation failed at row {row:?}"
         );
 
@@ -107,10 +109,10 @@ impl OfsBufVT100 {
     ///
     /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
     /// [`DL`]: https://vt100.net/docs/vt510-rm/DL.html
-    /// [`is_row_range_valid()`]: crate::OffscreenBuffer::is_row_range_valid
+    /// [`is_row_range_valid()`]: crate::Flat2DArray::is_row_range_valid
     /// [`rotate_left`]: slice::rotate_left
     /// [`SU`]: https://vt100.net/docs/vt510-rm/SU.html
-    /// [`validate_row_range_mut()`]: crate::OffscreenBuffer::validate_row_range_mut
+    /// [`validate_row_range_mut()`]: crate::Flat2DArray::validate_row_range_mut
     pub fn shift_lines_up(
         &mut self,
         row_range: Range<RowIndex>,
@@ -130,11 +132,13 @@ impl OfsBufVT100 {
             // Use rotate_left to shift lines up efficiently
             let range_len = end_idx - start_idx;
             if range_len > 1 {
-                self.buffer[start_idx..end_idx].rotate_left(1);
+                self.ofs_buf.rotate_rows_left(start_idx, end_idx, 1);
             }
 
             // Clear the bottom line (which is now at the end after rotation).
-            self.buffer[end_idx.saturating_sub(1)].fill(PixelChar::Spacer);
+            if let Some(row) = self.get_row_mut(end_idx.saturating_sub(1)) {
+                row.fill(PixelChar::Spacer);
+            }
         }
 
         ok!()
@@ -160,10 +164,10 @@ impl OfsBufVT100 {
     ///
     /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
     /// [`IL`]: https://vt100.net/docs/vt510-rm/IL.html
-    /// [`is_row_range_valid()`]: crate::OffscreenBuffer::is_row_range_valid
+    /// [`is_row_range_valid()`]: crate::Flat2DArray::is_row_range_valid
     /// [`rotate_right`]: slice::rotate_right
     /// [`SD`]: https://vt100.net/docs/vt510-rm/SD.html
-    /// [`validate_row_range_mut()`]: crate::OffscreenBuffer::validate_row_range_mut
+    /// [`validate_row_range_mut()`]: crate::Flat2DArray::validate_row_range_mut
     pub fn shift_lines_down(
         &mut self,
         row_range: Range<RowIndex>,
@@ -183,11 +187,13 @@ impl OfsBufVT100 {
             // Use rotate_right to shift lines down efficiently
             let range_len = end_idx - start_idx;
             if range_len > 1 {
-                self.buffer[start_idx..end_idx].rotate_right(1);
+                self.ofs_buf.rotate_rows_right(start_idx, end_idx, 1);
             }
 
             // Clear the top line (which is now at the beginning after rotation).
-            self.buffer[start_idx].fill(PixelChar::Spacer);
+            if let Some(row) = self.ofs_buf.get_row_mut(start_idx) {
+                row.fill(PixelChar::Spacer);
+            }
         }
 
         ok!()
@@ -347,9 +353,9 @@ mod tests_line_ops {
         let mut buffer = create_test_buffer();
 
         // Set up initial lines.
-        let _unused = buffer.set_line(row(1), create_test_line(&['A', 'A', 'A', 'A']));
-        let _unused = buffer.set_line(row(2), create_test_line(&['B', 'B', 'B', 'B']));
-        let _unused = buffer.set_line(row(3), create_test_line(&['C', 'C', 'C', 'C']));
+        let _unused = buffer.set_line(row(1), &create_test_line(&['A', 'A', 'A', 'A']));
+        let _unused = buffer.set_line(row(2), &create_test_line(&['B', 'B', 'B', 'B']));
+        let _unused = buffer.set_line(row(3), &create_test_line(&['C', 'C', 'C', 'C']));
 
         // Shift lines 1-3 up by 1.
         let result = buffer.shift_lines_up(row(1)..row(4), len(1));
@@ -392,9 +398,9 @@ mod tests_line_ops {
         let mut buffer = create_test_buffer();
 
         // Set up initial lines.
-        let _unused = buffer.set_line(row(1), create_test_line(&['A', 'A', 'A', 'A']));
-        let _unused = buffer.set_line(row(2), create_test_line(&['B', 'B', 'B', 'B']));
-        let _unused = buffer.set_line(row(3), create_test_line(&['C', 'C', 'C', 'C']));
+        let _unused = buffer.set_line(row(1), &create_test_line(&['A', 'A', 'A', 'A']));
+        let _unused = buffer.set_line(row(2), &create_test_line(&['B', 'B', 'B', 'B']));
+        let _unused = buffer.set_line(row(3), &create_test_line(&['C', 'C', 'C', 'C']));
 
         // Shift lines 1-3 down by 1.
         let result = buffer.shift_lines_down(row(1)..row(4), len(1));
@@ -441,9 +447,9 @@ mod tests_line_ops {
         buffer.parser_global_state.scroll_region_bottom = Some(TermRow::from(row(3)));
 
         // Set up initial lines.
-        let _unused = buffer.set_line(row(1), create_test_line(&['A', 'A', 'A', 'A']));
-        let _unused = buffer.set_line(row(2), create_test_line(&['B', 'B', 'B', 'B']));
-        let _unused = buffer.set_line(row(3), create_test_line(&['C', 'C', 'C', 'C']));
+        let _unused = buffer.set_line(row(1), &create_test_line(&['A', 'A', 'A', 'A']));
+        let _unused = buffer.set_line(row(2), &create_test_line(&['B', 'B', 'B', 'B']));
+        let _unused = buffer.set_line(row(3), &create_test_line(&['C', 'C', 'C', 'C']));
 
         // Insert 1 line at row 1.
         let result = buffer.insert_lines_at(row(1), height(1));
@@ -470,8 +476,8 @@ mod tests_line_ops {
         buffer.parser_global_state.scroll_region_bottom = Some(TermRow::from(row(3)));
 
         // Set up initial lines.
-        let _unused = buffer.set_line(row(0), create_test_line(&['X', 'X', 'X', 'X']));
-        let _unused = buffer.set_line(row(4), create_test_line(&['Y', 'Y', 'Y', 'Y']));
+        let _unused = buffer.set_line(row(0), &create_test_line(&['X', 'X', 'X', 'X']));
+        let _unused = buffer.set_line(row(4), &create_test_line(&['Y', 'Y', 'Y', 'Y']));
 
         // Try to insert at row 0 (outside scroll region) - should be no-op.
         let result = buffer.insert_lines_at(row(0), height(1));
@@ -503,9 +509,9 @@ mod tests_line_ops {
         buffer.parser_global_state.scroll_region_bottom = Some(TermRow::from(row(3)));
 
         // Set up initial lines.
-        let _unused = buffer.set_line(row(1), create_test_line(&['A', 'A', 'A', 'A']));
-        let _unused = buffer.set_line(row(2), create_test_line(&['B', 'B', 'B', 'B']));
-        let _unused = buffer.set_line(row(3), create_test_line(&['C', 'C', 'C', 'C']));
+        let _unused = buffer.set_line(row(1), &create_test_line(&['A', 'A', 'A', 'A']));
+        let _unused = buffer.set_line(row(2), &create_test_line(&['B', 'B', 'B', 'B']));
+        let _unused = buffer.set_line(row(3), &create_test_line(&['C', 'C', 'C', 'C']));
 
         // Delete 1 line at row 1.
         let result = buffer.delete_lines_at(row(1), height(1));
@@ -532,8 +538,8 @@ mod tests_line_ops {
         buffer.parser_global_state.scroll_region_bottom = Some(TermRow::from(row(3)));
 
         // Set up initial lines.
-        let _unused = buffer.set_line(row(0), create_test_line(&['X', 'X', 'X', 'X']));
-        let _unused = buffer.set_line(row(4), create_test_line(&['Y', 'Y', 'Y', 'Y']));
+        let _unused = buffer.set_line(row(0), &create_test_line(&['X', 'X', 'X', 'X']));
+        let _unused = buffer.set_line(row(4), &create_test_line(&['Y', 'Y', 'Y', 'Y']));
 
         // Try to delete at row 0 (outside scroll region) - should be no-op.
         let result = buffer.delete_lines_at(row(0), height(1));
@@ -565,9 +571,9 @@ mod tests_line_ops {
         buffer.parser_global_state.scroll_region_bottom = Some(TermRow::from(row(4)));
 
         // Set up initial lines.
-        let _unused = buffer.set_line(row(0), create_test_line(&['A', 'A', 'A', 'A']));
-        let _unused = buffer.set_line(row(1), create_test_line(&['B', 'B', 'B', 'B']));
-        let _unused = buffer.set_line(row(2), create_test_line(&['C', 'C', 'C', 'C']));
+        let _unused = buffer.set_line(row(0), &create_test_line(&['A', 'A', 'A', 'A']));
+        let _unused = buffer.set_line(row(1), &create_test_line(&['B', 'B', 'B', 'B']));
+        let _unused = buffer.set_line(row(2), &create_test_line(&['C', 'C', 'C', 'C']));
 
         // Insert 2 lines at row 0.
         let result = buffer.insert_lines_at(row(0), height(2));
@@ -601,11 +607,11 @@ mod tests_line_ops {
         buffer.parser_global_state.scroll_region_bottom = Some(TermRow::from(row(4)));
 
         // Set up initial lines.
-        let _unused = buffer.set_line(row(0), create_test_line(&['A', 'A', 'A', 'A']));
-        let _unused = buffer.set_line(row(1), create_test_line(&['B', 'B', 'B', 'B']));
-        let _unused = buffer.set_line(row(2), create_test_line(&['C', 'C', 'C', 'C']));
-        let _unused = buffer.set_line(row(3), create_test_line(&['D', 'D', 'D', 'D']));
-        let _unused = buffer.set_line(row(4), create_test_line(&['E', 'E', 'E', 'E']));
+        let _unused = buffer.set_line(row(0), &create_test_line(&['A', 'A', 'A', 'A']));
+        let _unused = buffer.set_line(row(1), &create_test_line(&['B', 'B', 'B', 'B']));
+        let _unused = buffer.set_line(row(2), &create_test_line(&['C', 'C', 'C', 'C']));
+        let _unused = buffer.set_line(row(3), &create_test_line(&['D', 'D', 'D', 'D']));
+        let _unused = buffer.set_line(row(4), &create_test_line(&['E', 'E', 'E', 'E']));
 
         // Delete 2 lines at row 0.
         let result = buffer.delete_lines_at(row(0), height(2));

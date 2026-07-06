@@ -58,8 +58,8 @@
 //!
 //! ```text
 //! vt_100_impl_char_ops ──── Contains unit tests for:
-//!     ├── insert_chars_at_cursor_basic()
-//!     ├── delete_chars_at_cursor_overflow()
+//!     ├── insert_chars_basic()
+//!     ├── delete_chars_overflow()
 //!     ├── erase_chars_at_end_of_line()
 //!     └── ... (dozens of focused unit tests)
 //! ```

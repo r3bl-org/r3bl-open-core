@@ -1,7 +1,7 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{DisplayPreference, GlobalLogFileGuard, TracingConfig, ThreadLocalLogFileGuard, WriterConfig,
-            ok};
+use crate::{DisplayPreference, GlobalLogFileGuard, ThreadLocalLogFileGuard,
+            TracingConfig, WriterConfig, ok};
 use std::{fs::OpenOptions, io::Write, ops::Add, path::Path};
 
 pub const DEFAULT_LOG_FILE_NAME: &str = "/tmp/r3bl_tui/log.txt";
@@ -29,8 +29,8 @@ pub const DEFAULT_LOG_FILE_NAME: &str = "/tmp/r3bl_tui/log.txt";
 /// You can use the functions in this module or just use the [`mod@crate::log`] functions
 /// directly, along with using [`tracing::info`!], [`tracing::debug`!], etc. macros.
 ///
-/// If you don't want to use sophisticated logging, you can use the [`file_log`] function
-/// to log messages to a file.
+/// If you don't want to use sophisticated logging, you can use the
+/// [`try_fallback_file_log`] function to log messages to a file.
 ///
 /// # Examples
 ///
@@ -99,8 +99,8 @@ pub fn try_initialize_logging_global(
 /// per thread. This is useful when you want to have different log levels for different
 /// threads, eg in different tests.
 ///
-/// If you don't want to use sophisticated logging, you can use the [`file_log`] function
-/// to log messages to a file.
+/// If you don't want to use sophisticated logging, you can use the
+/// [`try_fallback_file_log`] function to log messages to a file.
 ///
 /// # Example
 ///
@@ -146,26 +146,16 @@ pub fn try_initialize_logging_thread_local(
 /// * `file_path` - The path to the file to log to. If `None`, the default path is
 ///   [`DEFAULT_LOG_FILE_NAME`].
 /// * `message` - The message to log.
-///
-/// # Panics
-/// This function will panic if:
-/// * The file cannot be created or opened (e.g., due to permission issues or invalid
-///   path)
-/// * The message cannot be written to the file (e.g., due to disk space issues or I/O
-///   errors)
-pub fn file_log(file_path: Option<&Path>, message: &str) {
+pub fn try_fallback_file_log(file_path: Option<&Path>, message: &str) {
     let file_path = file_path.unwrap_or(Path::new(DEFAULT_LOG_FILE_NAME));
     let message = if message.ends_with('\n') {
         message.to_string()
     } else {
         format!("{message}\n")
     };
-    let mut file = OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(file_path)
-        .unwrap();
-    file.write_all(message.as_bytes()).unwrap();
+    if let Ok(mut file) = OpenOptions::new().create(true).append(true).open(file_path) {
+        let _unused = file.write_all(message.as_bytes());
+    }
 }
 
 // XMARK: Clever Rust, use of `impl Into<ConfigStruct>` for elegant constructor config

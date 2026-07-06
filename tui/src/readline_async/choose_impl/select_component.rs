@@ -43,7 +43,7 @@ impl FunctionComponent<State> for SelectComponent {
 
     /// Allocates space and prints the lines. The bring the cursor back to the start of
     /// the lines.
-    fn render(&mut self, state: &mut State) -> CommonResult<()> {
+    fn render(&mut self, state: &mut State) -> CommonResult {
         let render_context = render_helper::RenderContext::new(self, state);
 
         render_helper::log_render_debug_info(state, &render_context);
@@ -152,7 +152,7 @@ mod render_helper {
         header_style: &TuiStyle,
         viewport_width: ChUnit,
         start_display_col_offset: usize,
-    ) -> CommonResult<()> {
+    ) -> CommonResult {
         match header {
             Header::SingleLine(header_text) => render_single_line_header(
                 output_device,
@@ -173,7 +173,7 @@ mod render_helper {
         header_style: &TuiStyle,
         viewport_width: ChUnit,
         start_display_col_offset: usize,
-    ) -> CommonResult<()> {
+    ) -> CommonResult {
         let mut header_text =
             format!("{}{}", get_spaces(start_display_col_offset), header_text);
 
@@ -207,7 +207,7 @@ mod render_helper {
         output_device: &mut OutputDevice,
         header_lines: &InlineVec<InlineVec<CliTextInline>>,
         viewport_width: ChUnit,
-    ) -> CommonResult<()> {
+    ) -> CommonResult {
         // Subtract 3 from viewport width because we need to add "..." to the
         // end of the line.
         let mut available_space_col_count: ChUnit = viewport_width - 3;
@@ -321,7 +321,7 @@ mod render_helper {
         state: &State,
         style: &StyleSheet,
         render_context: &RenderContext,
-    ) -> CommonResult<()> {
+    ) -> CommonResult {
         // Print each line in viewport.
         for viewport_row_index in 0..*render_context.items_viewport_height {
             let row_context = ItemRowContext::new(
@@ -476,7 +476,7 @@ mod render_helper {
         row_prefix: &str,
         data_style: &TuiStyle,
         viewport_width: ChUnit,
-    ) -> CommonResult<()> {
+    ) -> CommonResult {
         let data_item = format!("{row_prefix}{}", row_context.data_item);
         let data_item: String =
             clip_string_to_width_with_ellipsis(data_item, viewport_width);
@@ -520,7 +520,7 @@ mod render_helper {
         output_device: &mut OutputDevice,
         items_viewport_height: ChUnit,
         header_viewport_height: ChUnit,
-    ) -> CommonResult<()> {
+    ) -> CommonResult {
         queue_commands! {
             output_device,
             MoveToPreviousLine(*items_viewport_height + *header_viewport_height),

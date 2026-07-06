@@ -24,7 +24,7 @@
 //! [`screen_operations`]: super::screen_operations
 
 use super::test_helpers_rendered::*;
-use crate::{offscreen_buffer::test_fixtures_ofs_buf::*, render_op::RenderOpCommon};
+use crate::{ofs_buf::test_fixtures_ofs_buf::*, render_op::RenderOpCommon};
 
 /// Verify text can be painted at various positions and clear sequences work correctly.
 ///

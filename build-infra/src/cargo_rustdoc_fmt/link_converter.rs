@@ -79,9 +79,16 @@ pub fn convert_links(text: &str) -> String {
     let mut seen_urls: std::collections::HashSet<String> = std::collections::HashSet::new();
 
     for caps in INLINE_LINK_REGEX.captures_iter(&protected_text) {
+        #[allow(clippy::unwrap_used, reason = "Regex capture group 0 is guaranteed to exist")]
         let full_match = caps.get(0).unwrap();
-        let link_text = caps.get(1).map_or("", |m| m.as_str()).to_string();
-        let url = caps.get(2).map_or("", |m| m.as_str()).to_string();
+        let link_text = match caps.get(1) {
+            Some(m) => m.as_str().to_string(),
+            None => String::new(),
+        };
+        let url = match caps.get(2) {
+            Some(m) => m.as_str().to_string(),
+            None => String::new(),
+        };
 
         // Skip anchor links (URL starts with #).
         if url.starts_with('#') {
@@ -104,9 +111,16 @@ pub fn convert_links(text: &str) -> String {
     // Replace inline links with reference-style links in-place.
     // Skip anchor links (#...) and image links (![alt](url)).
     let result = INLINE_LINK_REGEX.replace_all(&protected_text, |caps: &regex::Captures| {
+        #[allow(clippy::unwrap_used, reason = "Regex capture group 0 is guaranteed to exist")]
         let full_match = caps.get(0).unwrap();
-        let link_text = caps.get(1).map_or("", |m| m.as_str());
-        let url = caps.get(2).map_or("", |m| m.as_str());
+        let link_text = match caps.get(1) {
+            Some(m) => m.as_str(),
+            None => "",
+        };
+        let url = match caps.get(2) {
+            Some(m) => m.as_str(),
+            None => "",
+        };
 
         // Skip anchor links.
         if url.starts_with('#') {
@@ -355,7 +369,10 @@ fn is_ref_definition_incomplete(line: &str) -> bool {
 fn protect_backtick_spans(text: &str) -> (String, Vec<String>) {
     let mut spans = Vec::new();
     let result = BACKTICK_SPAN_REGEX.replace_all(text, |caps: &regex::Captures| {
-        let original = caps.get(0).map_or("", |m| m.as_str()).to_string();
+        let original = match caps.get(0) {
+            Some(m) => m.as_str().to_string(),
+            None => String::new(),
+        };
         let index = spans.len();
         spans.push(original);
         format!("{BACKTICK_PLACEHOLDER_PREFIX}{index}{BACKTICK_PLACEHOLDER_SUFFIX}")

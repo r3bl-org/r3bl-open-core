@@ -46,7 +46,7 @@
 //!       - line_ops:: for lines (L,M)                        <- │THIS MODULE│
 //!       - char_ops:: for chars (@,P,X)                         ╰───────────╯
 //!         ↓
-//!     Update OffscreenBuffer state
+//!     Update OfsBuf state
 //! ```
 //!
 //! # [`VT-100`] Protocol Conventions
@@ -80,6 +80,7 @@
 //! [module-level documentation]: self
 //! [ops module]: crate::core::ansi::vt_100_pty_output_parser::ops
 
+use std::debug_assert_matches;
 use super::super::ansi_parser_public_api::AnsiToOfsBufPerformer;
 use crate::ParamsExt;
 
@@ -98,10 +99,11 @@ use crate::ParamsExt;
 /// [module-level documentation]: self
 pub fn insert_lines(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) {
     let how_many = params.extract_nth_single_non_zero(0).get().into();
-    let at = performer.ofs_buf_vt_100.cursor_pos.row_index;
+    let at = performer.ofs_buf_vt_100.get_cursor_pos().row_index;
     let result = performer.ofs_buf_vt_100.insert_lines_at(at, how_many);
-    debug_assert!(
-        result.is_ok(),
+    debug_assert_matches!(
+        result,
+        Ok(()),
         "Failed to insert {how_many:?} lines at row {at:?}",
     );
 }
@@ -122,10 +124,11 @@ pub fn insert_lines(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params)
 /// [module-level documentation]: self
 pub fn delete_lines(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) {
     let how_many = params.extract_nth_single_non_zero(0).get().into();
-    let at = performer.ofs_buf_vt_100.cursor_pos.row_index;
+    let at = performer.ofs_buf_vt_100.get_cursor_pos().row_index;
     let result = performer.ofs_buf_vt_100.delete_lines_at(at, how_many);
-    debug_assert!(
-        result.is_ok(),
+    debug_assert_matches!(
+        result,
+        Ok(()),
         "Failed to delete {how_many:?} lines at row {at:?}",
     );
 }

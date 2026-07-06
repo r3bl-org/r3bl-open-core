@@ -74,7 +74,7 @@ impl From<(&MouseInput, &OfsBufVT100)> for MouseCommand {
                 let mouse_col: ColIndex = mouse_input.pos.col_index;
                 let mouse_row: RowIndex = mouse_input.pos.row_index;
 
-                let pty_height: RowHeight = active_buffer.window_size.row_height;
+                let pty_height: RowHeight = active_buffer.ofs_buf.get_window_size().row_height;
                 if mouse_row.overflows(pty_height) == ArrayOverflowResult::Overflowed {
                     return MouseCommand::Ignore;
                 }

@@ -24,12 +24,9 @@ mod tests {
             RenderOpIR::Common(RenderOpCommon::ClearScreen),
             RenderOpIR::Common(RenderOpCommon::ResetColor)
         );
-        assert_eq2!(pipeline.len(), 1);
+        let _render_ops_set = pipeline.get(&ZOrder::Normal);
 
-        let render_ops_set = pipeline.get(&ZOrder::Normal).unwrap();
-        assert_eq2!(render_ops_set.len(), 1);
-
-        let render_op_count = pipeline.get_all_render_op_in(ZOrder::Normal).unwrap();
+        let render_op_count = pipeline.get_all_render_op_in(ZOrder::Normal);
 
         assert_eq2!(render_op_count, 2);
     }
@@ -48,9 +45,9 @@ mod tests {
               RenderOpIR::Common(RenderOpCommon::ResetColor)
             );
 
-            assert_eq2!(it.get_all_render_op_in(ZOrder::Normal).unwrap(), 2);
+            assert_eq2!(it.get_all_render_op_in(ZOrder::Normal), 2);
 
-            assert_eq2!(it.get_all_render_op_in(ZOrder::High).unwrap(), 1);
+            assert_eq2!(it.get_all_render_op_in(ZOrder::High), 1);
 
             it
         };
@@ -63,31 +60,18 @@ mod tests {
                 RenderOpIR::Common(RenderOpCommon::ResetColor)
             );
 
-            assert_eq2!(it.get_all_render_op_in(ZOrder::Normal).unwrap(), 2);
+            assert_eq2!(it.get_all_render_op_in(ZOrder::Normal), 2);
 
             it
         };
 
         let _pipeline_merged: RenderPipeline = {
             let pipeline_merged = render_pipeline!(@join_and_drop pipeline_1, pipeline_2);
-            assert_eq2!(pipeline_merged.len(), 2);
+            let _normal_set = pipeline_merged.get(&ZOrder::Normal);
+            let _caret_set = pipeline_merged.get(&ZOrder::High);
 
-            let normal_set = pipeline_merged.get(&ZOrder::Normal).unwrap();
-            let caret_set = pipeline_merged.get(&ZOrder::High).unwrap();
-
-            assert_eq2!(normal_set.len(), 2);
-            assert_eq2!(caret_set.len(), 1);
-
-            assert_eq2!(
-                pipeline_merged
-                    .get_all_render_op_in(ZOrder::Normal)
-                    .unwrap(),
-                4
-            );
-            assert_eq2!(
-                pipeline_merged.get_all_render_op_in(ZOrder::High).unwrap(),
-                1
-            );
+            assert_eq2!(pipeline_merged.get_all_render_op_in(ZOrder::Normal), 4);
+            assert_eq2!(pipeline_merged.get_all_render_op_in(ZOrder::High), 1);
 
             pipeline_merged
         };
@@ -104,8 +88,7 @@ mod tests {
 
         pipeline.hoist(ZOrder::Normal, ZOrder::Glass);
 
-        assert_eq2!(pipeline.len(), 1);
-        assert_eq2!(pipeline.get(&ZOrder::Normal), None);
-        assert_eq2!(pipeline.get_all_render_op_in(ZOrder::Glass).unwrap(), 2);
+        assert!(pipeline.get(&ZOrder::Normal).is_empty());
+        assert_eq2!(pipeline.get_all_render_op_in(ZOrder::Glass), 2);
     }
 }

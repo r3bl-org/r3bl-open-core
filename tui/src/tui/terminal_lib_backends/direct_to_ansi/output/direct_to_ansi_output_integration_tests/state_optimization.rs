@@ -300,5 +300,5 @@ fn test_complex_optimization_workflow() {
             col(5)
         ))
     );
-    assert!(output.contains(&crate::ansi_output::screen_clearing::clear_current_line()));
+    assert!(output.contains(crate::ansi_output::screen_clearing::clear_current_line()));
 }

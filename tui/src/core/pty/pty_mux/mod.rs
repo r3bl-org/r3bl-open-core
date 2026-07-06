@@ -7,7 +7,7 @@
 //! # Key Features
 //!
 //! - **Per-process virtual terminals**: Each process maintains its own
-//!   [`OffscreenBuffer`]
+//!   [`OfsBuf`]
 //! - **Universal compatibility**: Works with bash, TUI apps, CLI tools, and more
 //! - **Instant switching**: No delays or hacks needed - just display different buffers
 //! - **Dynamic keyboard-driven process switching**: F1 through F9 (based on process
@@ -19,7 +19,7 @@
 //! # Architecture
 //!
 //! The module is designed around a **per-process virtual terminal** architecture where
-//! each process maintains its own complete terminal state through an [`OffscreenBuffer`].
+//! each process maintains its own complete terminal state through an [`OfsBuf`].
 //! This enables true terminal multiplexing similar to tmux, but with enhanced support for
 //! truecolor and TUI apps that frequently re-render their UI, with instant switching and
 //! universal compatibility.
@@ -82,7 +82,7 @@
 //! [`ANSI Parser`]: crate::AnsiToOfsBufPerformer
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`core::ansi`]: mod@crate::core::ansi
-//! [`OffscreenBuffer`]: crate::OffscreenBuffer
+//! [`OfsBuf`]: crate::OfsBuf
 //! [`OfsBufVT100::apply_ansi_bytes`]: crate::OfsBufVT100::apply_ansi_bytes
 //! [`OfsBufVT100`]: crate::OfsBufVT100
 //! [`OSC`]: crate::osc_codes::OscSequence

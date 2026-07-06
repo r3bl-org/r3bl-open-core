@@ -2,8 +2,7 @@
 
 //! One-based character size measurements for terminal UI - see [`Length`] type.
 
-use crate::generate_length_type_impl;
-use crate::{ChUnit, ColWidth, Index, RowHeight};
+use crate::{ChUnit, ColWidth, Index, RowHeight, generate_length_type_impl};
 use std::hash::Hash;
 
 /// Represents a length measurement in character units.

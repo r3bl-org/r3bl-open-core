@@ -168,8 +168,10 @@ impl ReadlineAsyncContext {
                     let output_device = OutputDevice::new_stdout();
                     let input_device = InputDevice::default();
 
-                    let prompt = read_line_prompt
-                        .map_or_else(|| "> ".to_owned(), |p| p.as_ref().to_string());
+                    let prompt = match read_line_prompt {
+                        Some(ref p) => p.as_ref().to_string(),
+                        None => "> ".to_owned(),
+                    };
 
                     // Use the provided channel capacity or default to VeryLarge.
                     let capacity = channel_capacity.unwrap_or_default();
@@ -305,7 +307,7 @@ impl ReadlineAsyncContext {
     /// Returns an error if:
     /// - The shutdown signal cannot be sent to the readline loop
     /// - The final message cannot be written to the terminal
-    pub async fn request_shutdown(&self, message: Option<&str>) -> CommonResult<()> {
+    pub async fn request_shutdown(&self, message: Option<&str>) -> CommonResult {
         // Process the request_shutdown message (if some).
         if let Some(message) = message {
             // Prefix the message with `\r`.

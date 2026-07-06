@@ -97,7 +97,7 @@ impl From<(KeyPress, &OfsBufVT100)> for KeyboardCommand {
         let (key_press, active_buffer) = args;
 
         let is_in_primary_screen = active_buffer.is_in_primary_screen();
-        let row_height = active_buffer.window_size.row_height;
+        let row_height = active_buffer.ofs_buf.get_window_size().row_height;
 
         let kp_shift_page_up = key_press!(
             @special ModifierKeysMask::new().with_shift(), SpecialKey::PageUp

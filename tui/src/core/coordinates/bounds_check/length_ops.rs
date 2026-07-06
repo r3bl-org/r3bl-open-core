@@ -7,7 +7,8 @@
 use super::{index_ops::IndexOps, numeric_value::NumericValue,
             result_enums::ArrayOverflowResult};
 use crate::{ArrayBoundsCheck, Length, len};
-use std::{cmp::{max, min}, ops::Sub};
+use std::{cmp::{max, min},
+          ops::Sub};
 
 /// Trait for 1-based size/length types, providing operations for working with sizes and
 /// measurements.

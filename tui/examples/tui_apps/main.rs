@@ -29,7 +29,7 @@ use std::str::FromStr;
 use strum::IntoEnumIterator;
 use strum_macros::{AsRefStr, Display, EnumIter, EnumString};
 
-fn main() -> CommonResult<()> { run_with_safe_stack!(main_impl()) }
+fn main() -> CommonResult { run_with_safe_stack!(main_impl()) }
 
 /// Main event loop for the TUI demo application.
 ///
@@ -40,7 +40,7 @@ fn main() -> CommonResult<()> { run_with_safe_stack!(main_impl()) }
 /// [`InputDevice`]: r3bl_tui::InputDevice
 #[tokio::main]
 #[allow(clippy::needless_return)]
-async fn main_impl() -> CommonResult<()> {
+async fn main_impl() -> CommonResult {
     set_mimalloc_in_main!();
     assert_terminal_is_interactive();
 
@@ -169,7 +169,7 @@ async fn main_impl() -> CommonResult<()> {
 /// This function will take the terminal out of raw mode when it returns. This is because
 /// the examples below will use `r3bl_tui` which will put the terminal in raw mode, use
 /// alt screen, and then restore it all when it exits.
-async fn run_user_selected_example(selection: String) -> CommonResult<()> {
+async fn run_user_selected_example(selection: String) -> CommonResult {
     use AutoCompleteCommand::{Commander, Editor, Exit, NoLayout, OneColLayout, Slides,
                               TwoColLayout};
 

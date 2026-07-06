@@ -5,6 +5,8 @@
 //! See [`macro@crate::convert_u16_to_ascii_str_slice`] and
 //! [`macro@crate::convert_usize_to_ascii_str_slice`] for the primary public API.
 
+use std::debug_assert_matches;
+
 /// A highly optimized macro that takes a [`u16`] and returns a temporary `&str` slice
 /// pointing to its [`ASCII`] representation without any heap allocations.
 ///
@@ -136,12 +138,16 @@ pub mod usize_impl {
     #[must_use]
     pub fn convert_usize_to_str_slice(arg: &[u8; USIZE_FMT_MAX_DIGITS]) -> &str {
         let result_str = std::str::from_utf8(arg);
-        debug_assert!(
-            result_str.is_ok(),
-            // This should never happen!
-            "Failed to convert u8 array to string slice"
+        debug_assert_matches!(
+            result_str,
+            Ok(_),
+            "Failed to convert u8 array to string slice" // Should never happen!
         );
 
+        #[allow(
+            clippy::unwrap_used,
+            reason = "Numbers are mathematically guaranteed to be valid UTF-8"
+        )]
         result_str.unwrap().trim_start_matches(char::from(0))
     }
 
@@ -252,19 +258,23 @@ pub mod u16_impl {
     #[must_use]
     pub fn convert_u16_to_str_slice(arg: &[u8; U16_FMT_MAX_DIGITS]) -> &str {
         let result_str = std::str::from_utf8(arg);
-        debug_assert!(
-            result_str.is_ok(),
-            // This should never happen!
-            "Failed to convert u16 u8 array to string slice"
+        debug_assert_matches!(
+            result_str,
+            Ok(_),
+            "Failed to convert u16 u8 array to string slice" // Should never happen!
         );
 
+        #[allow(
+            clippy::unwrap_used,
+            reason = "Numbers are mathematically guaranteed to be valid UTF-8"
+        )]
         result_str.unwrap().trim_start_matches(char::from(0))
     }
 }
 
 /// Maximum number of decimal digits needed to represent a [usize] / [u64].
 ///
-/// This is 20 because `u64::MAX` is 18_446_744_073_709_551_615 (20 digits).
+/// This is 20 because `u64::MAX` is `18_446_744_073_709_551_615` (20 digits).
 /// - Even if [usize] is [u32] on some platforms, we just want to safely format an
 ///   [`ANSI`] sequence. 20 is needed for [std].
 /// - <https://doc.rust-lang.org/std/primitive.u64.html>

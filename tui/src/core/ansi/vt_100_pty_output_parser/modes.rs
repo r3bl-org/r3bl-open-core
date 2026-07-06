@@ -25,7 +25,7 @@ pub enum AutoWrapMode {
 /// When used inside [`ParserGlobalState::cursor_visibility`], it stores the *requested*
 /// visibility state of the child process. The [`PTY Mux`] compositor
 /// ([`OutputRenderer::composite_virtual_cursor_into_buffer`]) reads this to determine if
-/// it needs to paint a simulated, virtual block cursor into the [`OffscreenBuffer`].
+/// it needs to paint a simulated, virtual block cursor into the [`OfsBuf`].
 ///
 /// > Note: The host terminal emulator's actual cursor is permanently suppressed via
 /// > [`hide_cursor`] when the multiplexer is active. We rely exclusively
@@ -33,7 +33,7 @@ pub enum AutoWrapMode {
 ///
 /// [`DECTCEM`]: https://vt100.net/docs/vt510-rm/DECTCEM.html
 /// [`hide_cursor`]: crate::TerminalModeController::hide_cursor
-/// [`OffscreenBuffer`]: crate::OffscreenBuffer
+/// [`OfsBuf`]: crate::OfsBuf
 /// [`OutputRenderer::composite_virtual_cursor_into_buffer`]:
 ///     crate::core::pty::OutputRenderer::composite_virtual_cursor_into_buffer
 /// [`ParserGlobalState::cursor_visibility`]: crate::ParserGlobalState::cursor_visibility

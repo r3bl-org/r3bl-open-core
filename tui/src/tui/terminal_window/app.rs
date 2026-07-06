@@ -1,7 +1,7 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::{ComponentRegistryMap, EventPropagation, GlobalData, HasFocus};
-use crate::{CommonResult, InputEvent, RenderPipeline};
+use crate::{CommonResult, InputEvent};
 use std::fmt::Debug;
 
 /// An app is typically a holder for [`crate::ComponentRegistry`].
@@ -96,5 +96,5 @@ pub trait App {
         global_data: &mut GlobalData<Self::S, Self::AS>,
         component_registry_map: &mut ComponentRegistryMap<Self::S, Self::AS>,
         has_focus: &mut HasFocus,
-    ) -> CommonResult<RenderPipeline>;
+    ) -> CommonResult;
 }

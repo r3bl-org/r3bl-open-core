@@ -5,7 +5,7 @@
 //! This module provides assertion functions that are used by various test modules
 //! to verify the state of the offscreen buffer contents.
 
-use crate::{ColWidth, LengthOps, OffscreenBuffer, OfsBufVT100, PixelChar, PixelCharLine,
+use crate::{ColWidth, LengthOps, OfsBuf, OfsBufVT100, PixelChar, PixelCharLine,
             RowHeight, SPACER_GLYPH_CHAR, TuiStyle, col, row};
 
 /// Assert that a plain character exists at the given position.
@@ -19,13 +19,13 @@ use crate::{ColWidth, LengthOps, OffscreenBuffer, OfsBufVT100, PixelChar, PixelC
 /// Panics if the position is out of bounds or if the character doesn't match.
 #[cfg(test)]
 pub fn assert_plain_char_at(
-    buffer: &OffscreenBuffer,
+    buffer: &OfsBuf,
     row_idx: usize,
     col_idx: usize,
     expected_char: char,
 ) {
     let pos = row(row_idx) + col(col_idx);
-    let window_size = buffer.window_size;
+    let window_size = buffer.get_window_size();
 
     // Check bounds.
     assert!(
@@ -81,7 +81,7 @@ pub fn assert_plain_char_at(
 /// Panics if the position is out of bounds or if the character/style doesn't match.
 #[cfg(test)]
 pub fn assert_styled_char_at<F>(
-    buffer: &OffscreenBuffer,
+    buffer: &OfsBuf,
     row_idx: usize,
     col_idx: usize,
     expected_char: char,
@@ -91,7 +91,7 @@ pub fn assert_styled_char_at<F>(
     F: FnOnce(&TuiStyle) -> bool,
 {
     let pos = row(row_idx) + col(col_idx);
-    let window_size = buffer.window_size;
+    let window_size = buffer.get_window_size();
 
     // Check bounds.
     assert!(
@@ -144,9 +144,9 @@ pub fn assert_styled_char_at<F>(
 ///
 /// Panics if the position is out of bounds or if the character is not empty.
 #[cfg(test)]
-pub fn assert_empty_at(buffer: &OffscreenBuffer, row_idx: usize, col_idx: usize) {
+pub fn assert_empty_at(buffer: &OfsBuf, row_idx: usize, col_idx: usize) {
     let pos = row(row_idx) + col(col_idx);
-    let window_size = buffer.window_size;
+    let window_size = buffer.get_window_size();
 
     // Check bounds.
     assert!(
@@ -197,7 +197,7 @@ pub fn assert_empty_at(buffer: &OffscreenBuffer, row_idx: usize, col_idx: usize)
 /// 3. All characters are plain text (not styled)
 #[cfg(test)]
 pub fn assert_plain_text_at(
-    buffer: &OffscreenBuffer,
+    buffer: &OfsBuf,
     start_row: usize,
     start_col: usize,
     expected_text: &str,
@@ -215,8 +215,8 @@ pub fn assert_plain_text_at(
 pub fn create_test_buffer_with_size(
     buffer_width: ColWidth,
     buffer_height: RowHeight,
-) -> OffscreenBuffer {
-    OffscreenBuffer::new_empty(buffer_width + buffer_height)
+) -> OfsBuf {
+    OfsBuf::new_empty(buffer_width + buffer_height)
 }
 
 #[cfg(test)]

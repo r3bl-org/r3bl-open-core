@@ -72,12 +72,12 @@ impl Debug for PixelChar {
 mod tests {
     use super::*;
     use crate::{SPACER_GLYPH_CHAR, height, new_style,
-                tui::terminal_lib_backends::offscreen_buffer::OffscreenBuffer,
-                tui_color, tui_style_attrib::Underline, tui_style_attribs, width};
+                tui::terminal_lib_backends::ofs_buf::OfsBuf, tui_color,
+                tui_style_attrib::Underline, tui_style_attribs, width};
 
-    fn create_test_buffer() -> OffscreenBuffer {
+    fn create_test_buffer() -> OfsBuf {
         let window_size = width(4) + height(2);
-        OffscreenBuffer::new_empty(window_size)
+        OfsBuf::new_empty(window_size)
     }
 
     #[test]
@@ -88,7 +88,7 @@ mod tests {
 
         // Test that new buffer uses default.
         let window_size = width(1) + height(1);
-        let ofs_buf = OffscreenBuffer::new_empty(window_size);
+        let ofs_buf = OfsBuf::new_empty(window_size);
         assert!(matches!(ofs_buf.buffer[0][0], PixelChar::Spacer));
     }
 

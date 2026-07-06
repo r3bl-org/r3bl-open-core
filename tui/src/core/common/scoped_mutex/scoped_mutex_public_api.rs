@@ -497,6 +497,7 @@ impl<S: ?Sized, const POLICY: DeadlockPreventionPolicy> ScopedMutex<S, POLICY> {
         F: FnOnce(&S) -> R,
     {
         let _recursion_guard = DeadlockPreventionGuard::new(self);
+        #[allow(clippy::unwrap_used, reason = "Mutex poisoning is unrecoverable")]
         let state_guard = self.state.lock().unwrap();
         fun(&*state_guard)
     }
@@ -517,6 +518,7 @@ impl<S: ?Sized, const POLICY: DeadlockPreventionPolicy> ScopedMutex<S, POLICY> {
         F: FnOnce(&mut S) -> R,
     {
         let _recursion_guard = DeadlockPreventionGuard::new(self);
+        #[allow(clippy::unwrap_used, reason = "Mutex poisoning is unrecoverable")]
         let mut state_guard = self.state.lock().unwrap();
         fun(&mut *state_guard)
     }

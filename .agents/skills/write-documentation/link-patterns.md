@@ -827,6 +827,54 @@ When fixing links, ensure:
 
 When reference links fail despite correct syntax, check these hidden causes:
 
+### Angle Brackets in Link Reference Text
+
+**Symptom:** All reference links after a certain link definition fail with "unresolved link" warnings, but the links themselves look completely correct. `cargo doc` does not warn about the actual root cause.
+
+```rust
+// ❌ BROKEN - angle brackets in the definition name scrambles the parser
+/// [`Box<[T]>`]: std::boxed::Box  ← parser chokes here!
+/// [`Foo`]: crate::Foo            ← silently ignored/broken
+/// [`Bar`]: crate::Bar            ← silently ignored/broken
+```
+
+```rust
+// ✅ FIXED - remove generic angle brackets from the link reference text
+/// [`Box`]: std::boxed::Box       ← parser succeeds
+/// [`Foo`]: crate::Foo            ← works
+/// [`Bar`]: crate::Bar            ← works
+```
+
+**Why:** If you include generic angle brackets (`<`, `>`) inside the definition text (e.g. `/// [`Box<[T]>`]: ...`), the rustdoc Markdown parser becomes scrambled. Not only does that specific link fail, but rustdoc silently gives up on parsing **all subsequent reference links** in that block, causing a cascade of confusing "unresolved link" warnings that `cargo doc` blames on the other correctly-written links!
+
+**How to detect:** Look for any `<` or `>` characters inside the square brackets of your link definitions at the bottom of the comment block.
+
+**Solution:** Remove the generic parameters from the link text (e.g., use ``[`Box`]`` instead of ``[`Box<[T]>`]``). If you must display the generics in the inline text, place them outside the link brackets.
+
+### ✅ Excellent Real-World Example
+From `tui/src/core/common/flat_2d_array.rs`:
+
+**Inline Text (Generics Outside Brackets):**
+```rust
+/// This array uses a [`Box`]`<[T]>` instead of a [`Vec`]`<T>`. This is a deliberate
+/// design choice to make illegal states unrepresentable. A [`Vec`]`<T>` contains a
+/// capacity field and allows methods like [`Vec::push`] or [`Vec::pop`] which could
+/// silently change the length of the 1D buffer so it no longer perfectly matches `width *
+/// height`, scrambling the 2D grid mapping.
+///
+/// By converting the [`Vec`]`<T>` into a [`Box`]`<[T]>` (a wide pointer) upon
+/// initialization, we type-erase its ability to grow or shrink. [`Box`]`<[T]>` only
+/// contains the wide pointer:
+/// - the start address of the memory allocation, and the length,
+/// - but not the capacity (which [`Vec`]`<T>` stores).
+```
+
+**Reference Definitions (Clean Link Names):**
+```rust
+/// [`Box`]: std::boxed::Box
+/// [`Vec`]: std::vec::Vec
+```
+
 ### Trailing Whitespace in Blank Doc Lines
 
 **Symptom:** All reference links in a doc block fail with "unresolved link" warnings.

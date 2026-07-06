@@ -97,7 +97,7 @@ pub fn handle_regular_key(
 
         // Function keys F1-F12.
         // unwrap() is safe: literal values 1-12 are guaranteed non-zero.
-        #[allow(clippy::unwrap_in_result)]
+        #[allow(clippy::unwrap_in_result, clippy::unwrap_used, reason = "Hardcoded non-zero values")]
         Key::FunctionKey(fn_key) => Ok(Some(ReadlineEvent::FnKey(match fn_key {
             FunctionKey::F1 => NonZeroU8::new(1).unwrap(),
             FunctionKey::F2 => NonZeroU8::new(2).unwrap(),

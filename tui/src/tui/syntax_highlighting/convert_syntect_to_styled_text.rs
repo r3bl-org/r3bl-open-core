@@ -490,7 +490,7 @@ mod tests_convert_style_and_color {
     }
 
     #[test]
-    fn test_stylesheet_builder() -> CommonResult<()> {
+    fn test_stylesheet_builder() -> CommonResult {
         throws!({
             let id_2 = 2;
             let style1 = make_a_style(1);

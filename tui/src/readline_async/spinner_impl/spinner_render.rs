@@ -58,18 +58,24 @@ pub fn render_final_tick(
 }
 
 #[must_use]
-pub fn get_next_tick_glyph(style: &SpinnerStyle, count: usize) -> InlineString {
+pub fn get_next_tick_glyph_str(style: &SpinnerStyle, count: usize) -> &'static str {
     match style.template {
         SpinnerTemplate::Braille => {
             let index_to_use = count % BRAILLE_DOTS.len();
-            BRAILLE_DOTS[index_to_use].into()
+            BRAILLE_DOTS[index_to_use]
         }
         SpinnerTemplate::Block => {
             let index_to_use = count % BLOCK_DOTS.len();
-            BLOCK_DOTS[index_to_use].into()
+            BLOCK_DOTS[index_to_use]
         }
     }
 }
+
+#[must_use]
+pub fn get_next_tick_glyph(style: &SpinnerStyle, count: usize) -> InlineString {
+    get_next_tick_glyph_str(style, count).into()
+}
+
 fn apply_color(output: &str, color: &mut SpinnerColor) -> InlineString {
     if let SpinnerColor::ColorWheel(color_wheel) = color
         && let Some(tui_color) = color_wheel.next_color()

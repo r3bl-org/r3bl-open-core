@@ -4,7 +4,7 @@ use super::{AppMain, State};
 use r3bl_tui::{CommonResult, InputEvent, IntoErr, TerminalWindow, TuiAvailability,
                key_press, ok};
 
-pub async fn run_app() -> CommonResult<()> {
+pub async fn run_app() -> CommonResult {
     let app = AppMain::new_boxed();
     let exit_keys = &[InputEvent::Keyboard(key_press! { @char 'x' })];
 

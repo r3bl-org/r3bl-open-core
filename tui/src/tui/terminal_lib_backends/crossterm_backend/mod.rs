@@ -12,7 +12,7 @@
 //!   ↓
 //! [Stage 3: Compositor]
 //!   ↓
-//! [Stage 4: Backend Converter] ← Shared (in offscreen_buffer/paint_impl)
+//! [Stage 4: Backend Converter] ← Shared (in ofs_buf/paint_impl)
 //!   ↓
 //! [Stage 5: Backend Executor] ← Crossterm implementation here
 //!   ↓
@@ -29,8 +29,8 @@
 //!
 //! ### Stage 4: Backend Converter (Shared)
 //! - **Not in this module** - Stage 4 is shared across all backends
-//! - See [`offscreen_buffer::paint_impl`] for the [`OffscreenBufferPaintImpl`] converter
-//! - Converts [`OffscreenBuffer`] → [`RenderOpOutputVec`] (shared by both Crossterm and
+//! - See [`ofs_buf::paint_impl`] for the [`OfsBufPaintImpl`] converter
+//! - Converts [`OfsBuf`] → [`RenderOpOutputVec`] (shared by both Crossterm and
 //!   [`DirectToAnsi`])
 //!
 //! ### Stage 5: Backend Executor (`crossterm_paint_render_op_impl`)
@@ -42,10 +42,10 @@
 //! - Handles colors, cursor movement, and text output
 //!
 //! [`DirectToAnsi`]: crate::TerminalLibBackend::DirectToAnsi
-//! [`offscreen_buffer::paint_impl`]: mod@crate::offscreen_buffer::paint_impl
-//! [`OffscreenBuffer`]: crate::OffscreenBuffer
-//! [`OffscreenBufferPaint`]: crate::OffscreenBufferPaint
-//! [`OffscreenBufferPaintImpl`]: crate::OffscreenBufferPaintImpl
+//! [`ofs_buf::paint_impl`]: mod@crate::ofs_buf::paint_impl
+//! [`OfsBuf`]: crate::OfsBuf
+//! [`OfsBufPaint`]: crate::OfsBufPaint
+//! [`OfsBufPaintImpl`]: crate::OfsBufPaintImpl
 //! [`RenderOpOutputVec`]: crate::RenderOpOutputVec
 //! [`RenderOpPaint`]: crate::RenderOpPaint
 //! [`RenderOpsLocalData`]: crate::RenderOpsLocalData

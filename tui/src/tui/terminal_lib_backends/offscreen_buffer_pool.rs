@@ -1,35 +1,35 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use super::OffscreenBuffer;
+use super::OfsBuf;
 use crate::{RingBuffer, RingBufferStack, Size};
 
 const OFFSCREEN_BUFFER_POOL_SIZE: usize = 3;
 
-/// Creating [`OffscreenBuffer`]s is expensive, so we keep a pool of them to reuse. This
+/// Creating [`OfsBuf`]s is expensive, so we keep a pool of them to reuse. This
 /// struct manages the pool. When a buffer is needed, it can be taken from the pool. When
 /// a buffer is no longer needed, it can be given back to the pool. If you take a buffer
 /// and don't give it back, it is lost from the pool (and will be dropped).
 #[derive(Debug)]
-pub struct OffscreenBufferPool {
-    pub pool: RingBufferStack<OffscreenBuffer, OFFSCREEN_BUFFER_POOL_SIZE>,
+pub struct OfsBufPool {
+    pub pool: RingBufferStack<OfsBuf, OFFSCREEN_BUFFER_POOL_SIZE>,
     pub window_size: Size,
 }
 
-impl OffscreenBufferPool {
+impl OfsBufPool {
     #[must_use]
     pub fn new(window_size: Size) -> Self {
         let mut pool = RingBufferStack::new();
         for _ in 0..OFFSCREEN_BUFFER_POOL_SIZE {
-            pool.add(OffscreenBuffer::new_empty(window_size));
+            pool.add(OfsBuf::new_empty(window_size));
         }
 
         Self { pool, window_size }
     }
 
     /// Gets a buffer from the pool. If the pool is empty, a new buffer is created.
-    pub fn take(&mut self) -> Option<OffscreenBuffer> {
+    pub fn take(&mut self) -> Option<OfsBuf> {
         if self.pool.is_empty() {
-            Some(OffscreenBuffer::new_empty(self.window_size))
+            Some(OfsBuf::new_empty(self.window_size))
         } else {
             self.pool.pop()
         }
@@ -37,12 +37,12 @@ impl OffscreenBufferPool {
 
     /// Add a buffer back to the pool. If the pool is full, the buffer is dropped. Only
     /// take the buffer back if it is still the correct size, otherwise drop it.
-    pub fn give_back(&mut self, mut buffer: OffscreenBuffer) {
+    pub fn give_back(&mut self, mut buffer: OfsBuf) {
         buffer.clear();
         if self.pool.is_full() {
             self.pool.pop();
         }
-        if buffer.window_size == self.window_size {
+        if buffer.get_window_size() == self.window_size {
             self.pool.push(buffer);
         }
     }
@@ -59,7 +59,7 @@ impl OffscreenBufferPool {
     fn rebuild_pool(&mut self) {
         self.pool.clear();
         for _ in 0..OFFSCREEN_BUFFER_POOL_SIZE {
-            self.pool.push(OffscreenBuffer::new_empty(self.window_size));
+            self.pool.push(OfsBuf::new_empty(self.window_size));
         }
     }
 
@@ -77,17 +77,17 @@ mod tests {
     use crate::{height, width};
 
     #[test]
-    fn test_offscreen_buffer_pool_new() {
+    fn test_ofs_buf_pool_new() {
         let window_size = width(10) + height(5);
-        let pool = OffscreenBufferPool::new(window_size);
+        let pool = OfsBufPool::new(window_size);
         assert_eq!(pool.len(), OFFSCREEN_BUFFER_POOL_SIZE);
         assert_eq!(pool.window_size, window_size);
     }
 
     #[test]
-    fn test_offscreen_buffer_pool_take_give_back() {
+    fn test_ofs_buf_pool_take_give_back() {
         let window_size = width(10) + height(5);
-        let mut pool = OffscreenBufferPool::new(window_size);
+        let mut pool = OfsBufPool::new(window_size);
         assert_eq!(pool.len(), OFFSCREEN_BUFFER_POOL_SIZE);
 
         let buffer = pool.take().unwrap();
@@ -96,31 +96,31 @@ mod tests {
         pool.give_back(buffer);
         assert_eq!(pool.len(), OFFSCREEN_BUFFER_POOL_SIZE);
 
-        let _unused: OffscreenBuffer = pool.take().unwrap();
+        let _unused: OfsBuf = pool.take().unwrap();
         assert_eq!(pool.len(), OFFSCREEN_BUFFER_POOL_SIZE - 1);
     }
 
     #[test]
-    fn test_offscreen_buffer_pool_resize() {
+    fn test_ofs_buf_pool_resize() {
         let window_size = width(10) + height(5);
-        let mut pool = OffscreenBufferPool::new(window_size);
+        let mut pool = OfsBufPool::new(window_size);
         assert_eq!(pool.len(), OFFSCREEN_BUFFER_POOL_SIZE);
         assert_eq!(pool.window_size, window_size);
         let item = pool.take().unwrap();
-        assert_eq!(item.window_size, window_size);
+        assert_eq!(item.get_window_size(), window_size);
 
         let new_window_size = width(20) + height(10);
         pool.resize(new_window_size);
         assert_eq!(pool.window_size, new_window_size);
         assert_eq!(pool.len(), OFFSCREEN_BUFFER_POOL_SIZE);
         let item = pool.take().unwrap();
-        assert_eq!(item.window_size, new_window_size);
+        assert_eq!(item.get_window_size(), new_window_size);
     }
 
     #[test]
-    fn test_offscreen_buffer_pool_is_empty() {
+    fn test_ofs_buf_pool_is_empty() {
         let window_size = width(10) + height(5);
-        let mut pool = OffscreenBufferPool::new(window_size);
+        let mut pool = OfsBufPool::new(window_size);
         assert_eq!(pool.len(), OFFSCREEN_BUFFER_POOL_SIZE);
         assert!(!pool.is_empty());
         for _ in 0..OFFSCREEN_BUFFER_POOL_SIZE {
@@ -131,9 +131,9 @@ mod tests {
     }
 
     #[test]
-    fn test_offscreen_buffer_pool_give_back_when_full() {
+    fn test_ofs_buf_pool_give_back_when_full() {
         let window_size = width(10) + height(5);
-        let mut pool = OffscreenBufferPool::new(window_size);
+        let mut pool = OfsBufPool::new(window_size);
 
         // Take all buffers from the pool.
         let mut taken_buffers = Vec::new();
@@ -155,9 +155,9 @@ mod tests {
     }
 
     #[test]
-    fn test_offscreen_buffer_pool_take_returns_some_when_empty() {
+    fn test_ofs_buf_pool_take_returns_some_when_empty() {
         let window_size = width(10) + height(5);
-        let mut pool = OffscreenBufferPool::new(window_size);
+        let mut pool = OfsBufPool::new(window_size);
 
         // Take all buffers from the pool.
         for _ in 0..OFFSCREEN_BUFFER_POOL_SIZE {

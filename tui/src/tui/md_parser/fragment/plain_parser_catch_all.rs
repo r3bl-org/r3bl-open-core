@@ -199,6 +199,10 @@ fn get_sp_char_set_1<'a>() -> [&'a str; 3] { [UNDERSCORE, STAR, BACK_TICK] }
 /// 1. input is in [`get_sp_char_set_1()`] and,
 /// 2. count is 1.
 fn get_sp_char_set_2<'a>() -> [&'a str; 5] {
+    #[allow(
+        clippy::unwrap_used,
+        reason = "The Vec is guaranteed to be the exact same size as the target array"
+    )]
     get_sp_char_set_1()
         .iter()
         .chain([LEFT_IMAGE, LEFT_BRACKET].iter())
@@ -216,6 +220,10 @@ fn get_sp_char_set_2<'a>() -> [&'a str; 5] {
 /// character as [`crate::MdLineFragment::Plain`], and the remainder of the input gets a
 /// chance to be parsed by the specialized parsers.
 fn get_sp_char_set_3<'a>() -> [&'a str; 7] {
+    #[allow(
+        clippy::unwrap_used,
+        reason = "The Vec is guaranteed to be the exact same size as the target array"
+    )]
     get_sp_char_set_2()
         .iter()
         .chain([NEW_LINE, NULL_STR].iter())

@@ -65,8 +65,9 @@
 //! - 4.8x faster than `SmallVec` for random access patterns
 //! - 4.1x faster for building typical lines
 //! - Eliminates reallocation overhead
-//! - Perfect for `OffscreenBuffer` which knows terminal dimensions
+//! - Perfect for [`OfsBuf`] which knows terminal dimensions
 //!
+//! [`OfsBuf`]: crate::OfsBuf
 //! [`RenderOpIR`]: crate::RenderOpIR
 
 #[cfg(test)]

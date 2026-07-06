@@ -21,8 +21,13 @@ pub fn slice_size<T: GetMemSize>(slice: &[T]) -> usize {
 /// [`crate::RingBufferStack`]) that contains items that are [Option] of [`GetMemSize`].
 #[must_use]
 pub fn iter_size<T: GetMemSize, I: Iterator<Item = Option<T>>>(iter: I) -> usize {
-    iter.map(|item| item.as_ref().map_or(0, GetMemSize::get_mem_size))
-        .sum::<usize>()
+    let mut total = 0;
+    for item in iter {
+        if let Some(it) = item.as_ref() {
+            total += GetMemSize::get_mem_size(it);
+        }
+    }
+    total
 }
 
 #[must_use]

@@ -1,6 +1,7 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
-use crate::{Pc, RateLimitStatus, RateLimiter, RingBuffer, RingBufferStack, TimeDuration,
-            glyphs};
+
+use crate::{Pc, RIGHT_ARROW_DASHED_GLYPH, RateLimitStatus, RateLimiter, RingBuffer,
+            RingBufferStack, TimeDuration};
 use smallstr::SmallString;
 use std::{collections::HashMap,
           fmt::Display,
@@ -13,7 +14,7 @@ pub mod telemetry_sizing {
 
     pub type TelemetryReportLineStorage = SmallString<[u8; TELEMETRY_REPORT_STRING_SIZE]>;
 
-    pub const TELEMETRY_REPORT_STRING_SIZE: usize = 128;
+    pub const TELEMETRY_REPORT_STRING_SIZE: usize = 256;
 }
 
 /// These are the default constants for the telemetry module. They are reasonable
@@ -458,18 +459,23 @@ mod calculator {
                 count_map.into_iter().max_by_key(|&(_, count)| count)?;
 
             // Determine the most frequent hint for the max_key.
-            let most_frequent_hint_for_max_key = self
+            let filtered_hints = self
                 .ring_buffer
                 .iter()
                 .filter(|atom| atom.as_duration().as_micros() / range_micros == max_key)
-                .map(|atom| atom.hint)
-                .fold(HashMap::new(), |mut map, hint| {
-                    *map.entry(hint).or_insert(0) += 1;
-                    map
-                })
-                .into_iter()
-                .max_by_key(|&(_, count)| count)
-                .map_or(TelemetryAtomHint::None, |(hint, _)| hint);
+                .map(|atom| atom.hint);
+
+            let mut hint_counts = HashMap::new();
+            for hint in filtered_hints {
+                *hint_counts.entry(hint).or_insert(0) += 1;
+            }
+
+            let max_hint_entry = hint_counts.into_iter().max_by_key(|&(_, count)| count);
+
+            let most_frequent_hint_for_max_key = match max_hint_entry {
+                Some((hint, _count)) => hint,
+                None => TelemetryAtomHint::None,
+            };
 
             // Calculate percentage using integer arithmetic (avoiding floating point).
             let ring_buffer_len = **self.ring_buffer.len();
@@ -587,7 +593,7 @@ impl Display for TelemetryHudReport {
         }
 
         let st_ch = self.pc.as_glyph();
-        let sep = glyphs::RIGHT_ARROW_DASHED_GLYPH;
+        let sep = RIGHT_ARROW_DASHED_GLYPH;
         write!(
             f,
             "Latency ⣼ Avg{sep} {avg}, Min{sep} {min}, Max{sep} {max}, Med{sep} {med} ({fps}fps {st_ch} {pc:?} {hint})",
@@ -701,7 +707,7 @@ mod tests_display_format {
         println!("backing_store.capacity(): {}", backing_store.capacity());
 
         assert!(!backing_store.spilled());
-        assert_eq!(backing_store.capacity(), 128);
+        assert_eq!(backing_store.capacity(), TELEMETRY_REPORT_STRING_SIZE);
     }
 }
 

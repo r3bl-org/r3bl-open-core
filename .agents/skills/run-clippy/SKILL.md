@@ -149,6 +149,13 @@ This applies:
 
 Ensure that code does not use absolute inline paths like `crate::Type` or `crate::CONSTANT` inside function signatures or bodies. They must be cleanly imported via `use` statements at the top of the file.
 
+### Step 8: Handling Unwraps and Panics
+
+When addressing `clippy::unwrap_used` violations or manually reviewing code that can mathematically never fail:
+- **Avoid `.expect("...")`**. While `.expect()` provides a panic message at runtime, we prefer to keep string literals out of the logic flow for a cleaner aesthetic.
+- **Use `#[allow(clippy::unwrap_used, reason = "...")]`** instead of `.expect()`. The reason should explicitly state the mathematical or logical proof for why the `unwrap()` is safe.
+- **Fallbacks**: If the `unwrap()` is not mathematically proven safe and is truly fallible (e.g., file I/O), rewrite it using `if let Ok()` or propagate the error instead of panicking.
+
 ## Reporting Results
 
 After completing all steps, report concisely:

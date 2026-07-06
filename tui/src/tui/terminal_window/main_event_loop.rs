@@ -5,12 +5,12 @@ use crate::{Ansi256GradientIndex, BoxedSafeApp, ColorWheel, ColorWheelConfig,
             DEBUG_TUI_MOD, DISPLAY_LOG_TELEMETRY, DefaultInputEventHandler, DefaultSize,
             DefaultTiming, EventPropagation, FlushKind, GCStringOwned, GetMemSize,
             GlobalData, GradientGenerationPolicy, HasFocus, InputDevice, InputEvent,
-            LockedOutputDevice, MainEventLoopFuture, MinSize, OffscreenBufferPool,
-            OutputDevice, PaintMode, RenderOpCommon, RenderOpFlush, RenderOpIR,
-            RenderPipeline, Size, SufficientSize, TelemetryAtomHint,
-            TerminalModeController, TerminalWindowMainThreadSignal,
-            TextColorizationPolicy, ZOrder, ch, col, emit_stderr_redirection_disclaimer,
-            glyphs, height, inline_string, new_style, ok, render_pipeline, row,
+            LockedOutputDevice, MainEventLoopFuture, MinSize, OfsBufPool,
+            OutputDevice, PaintMode, RenderOpCommon, RenderOpFlush, RenderOpIR, Size,
+            SufficientSize, TelemetryAtomHint, TerminalModeController,
+            TerminalWindowMainThreadSignal, TextColorizationPolicy, ZOrder, ch, col,
+            emit_stderr_redirection_disclaimer, glyphs, height, inline_string,
+            new_style, ok, render_pipeline, row,
             telemetry::{Telemetry, telemetry_default_constants},
             telemetry_record, width};
 use smallvec::smallvec;
@@ -238,7 +238,7 @@ where
             state,
             initial_size,
             output_device.clone(),
-            OffscreenBufferPool::new(initial_size),
+            OfsBufPool::new(initial_size),
         )?;
 
         // Initialize other components.
@@ -268,7 +268,7 @@ where
         &mut self,
         app: &mut BoxedSafeApp<S, AS>,
         output_device: &OutputDevice,
-    ) -> CommonResult<()> {
+    ) -> CommonResult {
         // Initialize app and start background tasks before the first render. Both these
         // operations are not recorded in telemetry.
         app.app_init_components(&mut self.component_registry_map, &mut self.has_focus);
@@ -291,7 +291,7 @@ where
                 })?;
             },
             @after_block: {
-                self.global_data.set_hud_report(telemetry.report());
+                self.global_data.hud_data.set_report(telemetry.report());
             }
         );
 
@@ -340,18 +340,18 @@ where
                 ),
                 window_size = ?self.global_data.window_size,
                 state = %self.global_data.state,
-                report = %self.global_data.get_hud_report_no_spinner(),
+                report = %self.global_data.hud_data.get_report(),
             );
 
-            if let Some(ref mut offscreen_buffer) = self.global_data.maybe_saved_ofs_buf {
+            if let Some(ref mut ofs_buf) = self.global_data.maybe_saved_ofs_buf {
                 let mem_used = inline_string!(
                     "mem used: {size}",
-                    size = offscreen_buffer.get_mem_size()
+                    size = ofs_buf.get_mem_size()
                 );
                 // % is Display, ? is Debug.
                 tracing::info!(
                     message = %inline_string!(
-                        "AppManager::render_app() offscreen_buffer {mem_used} {ch}",
+                        "AppManager::render_app() ofs_buf {mem_used} {ch}",
                         mem_used = mem_used,
                         ch = glyphs::SCREEN_BUFFER_GLYPH
                     ),
@@ -448,7 +448,7 @@ fn handle_render_signal<S, AS>(
     event_loop_state: &mut EventLoopState<S, AS>,
     app: &mut BoxedSafeApp<S, AS>,
     output_device: &OutputDevice,
-) -> CommonResult<()>
+) -> CommonResult
 where
     S: Display + Debug + Default + Clone + Sync + Send,
     AS: Debug + Default + Clone + Sync + Send + 'static,
@@ -469,7 +469,7 @@ where
             })?;
         },
         @after_block: {
-            event_loop_state.global_data.set_hud_report(telemetry.report());
+            event_loop_state.global_data.hud_data.set_report(telemetry.report());
         }
     );
     ok!()
@@ -511,7 +511,7 @@ fn handle_app_signal<S, AS>(
             });
         },
         @after_block: {
-            event_loop_state.global_data.set_hud_report(telemetry.report());
+            event_loop_state.global_data.hud_data.set_report(telemetry.report());
         }
     );
 }
@@ -581,7 +581,7 @@ fn handle_resize_event<S, AS>(
             });
         },
         @after_block: {
-            event_loop_state.global_data.set_hud_report(telemetry.report());
+            event_loop_state.global_data.hud_data.set_report(telemetry.report());
         }
     );
 }
@@ -615,7 +615,7 @@ fn process_input_event<S, AS>(
             });
         },
         @after_block: {
-            event_loop_state.global_data.set_hud_report(telemetry.report());
+            event_loop_state.global_data.hud_data.set_report(telemetry.report());
         }
     );
 }
@@ -671,7 +671,7 @@ pub fn handle_resize<S, AS>(
 {
     global_data_mut_ref.set_size(new_size);
     global_data_mut_ref.maybe_saved_ofs_buf = None;
-    global_data_mut_ref.offscreen_buffer_pool.resize(new_size);
+    global_data_mut_ref.ofs_buf_pool.resize(new_size);
 
     // We don't care about the result of this operation.
     AppManager::render_app(
@@ -788,7 +788,7 @@ where
         component_registry_map: &mut ComponentRegistryMap<S, AS>,
         has_focus: &mut HasFocus,
         locked_output_device: LockedOutputDevice<'_>,
-    ) -> CommonResult<()> {
+    ) -> CommonResult {
         let window_size = global_data_mut_ref.window_size;
 
         // Check to see if the window_size is large enough to render.
@@ -800,7 +800,8 @@ where
             }
             SufficientSize::IsTooSmall => {
                 global_data_mut_ref.maybe_saved_ofs_buf = None;
-                Ok(render_window_too_small_error(window_size))
+                render_window_too_small_error(window_size, global_data_mut_ref);
+                ok!()
             }
         };
 
@@ -821,12 +822,15 @@ where
                 });
             }
 
-            Ok(render_pipeline) => {
-                render_pipeline.paint(
+            Ok(()) => {
+                let pipeline = std::mem::take(&mut global_data_mut_ref.pipeline);
+                pipeline.paint(
                     FlushKind::ClearBeforeFlush,
                     global_data_mut_ref,
                     locked_output_device,
                 );
+                global_data_mut_ref.pipeline = pipeline;
+                global_data_mut_ref.pipeline.clear();
             }
         }
 
@@ -834,7 +838,13 @@ where
     }
 }
 
-fn render_window_too_small_error(window_size: Size) -> RenderPipeline {
+fn render_window_too_small_error<S, AS>(
+    window_size: Size,
+    global_data: &mut GlobalData<S, AS>,
+) where
+    S: Debug + Default + Clone + Sync + Send,
+    AS: Debug + Default + Clone + Sync + Send,
+{
     // Show warning message that window_size is too small.
     let msg = inline_string!(
         "Window size is too small. Minimum size is {} cols x {} rows",
@@ -856,9 +866,9 @@ fn render_window_too_small_error(window_size: Size) -> RenderPipeline {
         *it
     });
 
-    let mut pipeline = render_pipeline!();
-
     let style_bold = new_style!(bold);
+
+    let pipeline = &mut global_data.pipeline;
 
     render_pipeline! {
         @push_into pipeline
@@ -882,6 +892,4 @@ fn render_window_too_small_error(window_size: Size) -> RenderPipeline {
                     TextColorizationPolicy::ColorEachCharacter(Some(style_bold)),
                 )
     }
-
-    pipeline
 }

@@ -63,7 +63,7 @@
 //! [`FastStringify`]: crate::fast_stringify::FastStringify
 //! [`SgrColorSequence`]: crate::SgrColorSequence
 //! [`vt_100_pty_output_parser`]: mod@crate::core::ansi::vt_100_pty_output_parser
-use crate::{ColIndex, ColorTarget, EraseDisplayMode, EraseLineMode, RowIndex,
+use crate::{ColIndex, ColorTarget, RowIndex,
             SgrColorSequence, TermRowDelta, TuiColor, TuiStyle,
             core::{ansi::{constants::{APPLICATION_MOUSE_TRACKING,
                                       BRACKETED_PASTE_MODE, CSI_PARAM_SEPARATOR,
@@ -71,7 +71,7 @@ use crate::{ColIndex, ColorTarget, EraseDisplayMode, EraseLineMode, RowIndex,
                                       SGR_MOUSE_MODE, SGR_RESET_STR,
                                       SGR_SET_GRAPHICS, SGR_STRIKETHROUGH,
                                       SGR_UNDERLINE, URXVT_MOUSE_EXTENSION},
-                          vt_100_pty_output_parser::{CsiSequence, PrivateModeType}},
+                          vt_100_pty_output_parser::CsiSequence},
                    coordinates::{TermCol, TermRow}}};
 
 pub mod cursor_movement {
@@ -141,8 +141,8 @@ pub mod screen_clearing {
     ///
     /// [`CSI`]: crate::CsiSequence
     #[must_use]
-    pub fn clear_screen() -> String {
-        CsiSequence::EraseDisplay(EraseDisplayMode::EntireScreen).to_string()
+    pub fn clear_screen() -> &'static str {
+        crate::core::ansi::constants::CSI_ERASE_DISPLAY_ALL
     }
 
     /// Clear current line
@@ -150,8 +150,8 @@ pub mod screen_clearing {
     ///
     /// [`CSI`]: crate::CsiSequence
     #[must_use]
-    pub fn clear_current_line() -> String {
-        CsiSequence::EraseLine(EraseLineMode::EntireLine).to_string()
+    pub fn clear_current_line() -> &'static str {
+        const_format::formatcp!("{CSI_START}2K")
     }
 
     /// Clear to end of line
@@ -159,8 +159,8 @@ pub mod screen_clearing {
     ///
     /// [`CSI`]: crate::CsiSequence
     #[must_use]
-    pub fn clear_to_end_of_line() -> String {
-        CsiSequence::EraseLine(EraseLineMode::FromCursorToEnd).to_string()
+    pub fn clear_to_end_of_line() -> &'static str {
+        const_format::formatcp!("{CSI_START}0K")
     }
 
     /// Clear to start of line
@@ -168,8 +168,8 @@ pub mod screen_clearing {
     ///
     /// [`CSI`]: crate::CsiSequence
     #[must_use]
-    pub fn clear_to_start_of_line() -> String {
-        CsiSequence::EraseLine(EraseLineMode::FromStartToCursor).to_string()
+    pub fn clear_to_start_of_line() -> &'static str {
+        const_format::formatcp!("{CSI_START}1K")
     }
 }
 
@@ -242,7 +242,7 @@ pub mod color_ops {
     /// [`CSI`]: crate::CsiSequence
     /// [`SGR`]: crate::SgrCode
     #[must_use]
-    pub fn reset_color() -> String { SGR_RESET_STR.to_string() }
+    pub fn reset_color() -> &'static str { SGR_RESET_STR }
 }
 
 pub mod cursor_visibility {
@@ -254,108 +254,97 @@ pub mod cursor_visibility {
     ///
     /// [`CSI`]: crate::CsiSequence
     /// [`DEC`]: https://en.wikipedia.org/wiki/Digital_Equipment_Corporation
-    pub fn show_cursor() -> String {
-        CsiSequence::EnablePrivateMode(smallvec::smallvec![PrivateModeType::ShowCursor])
-            .to_string()
+    #[must_use]
+    pub fn show_cursor() -> &'static str {
+        const_format::formatcp!("{CSI_START}?25h")
     }
 
     /// Hide cursor
     /// [`CSI`] ?25l (DECTCEM = reset)
     ///
     /// [`CSI`]: crate::CsiSequence
-    pub fn hide_cursor() -> String {
-        CsiSequence::DisablePrivateMode(smallvec::smallvec![PrivateModeType::ShowCursor])
-            .to_string()
+    #[must_use]
+    pub fn hide_cursor() -> &'static str {
+        const_format::formatcp!("{CSI_START}?25l")
     }
 }
 
 pub mod cursor_save_restore {
-    #[allow(clippy::wildcard_imports)]
-    use super::*;
 
     /// Save cursor position - [`CSI`] s (Save Cursor, i.e., [`DECSC`]).
     ///
     /// [`CSI`]: crate::CsiSequence
     /// [`DECSC`]: https://vt100.net/docs/vt510-rm/DECSC.html
     #[must_use]
-    pub fn save_cursor_position() -> String { CsiSequence::SaveCursor.to_string() }
+    pub fn save_cursor_position() -> &'static str { crate::core::ansi::constants::SCP_SAVE_CURSOR_STR }
 
     /// Restore cursor position - [`CSI`] u (Restore Cursor, i.e., [`DECRC`]).
     ///
     /// [`CSI`]: crate::CsiSequence
     /// [`DECRC`]: https://vt100.net/docs/vt510-rm/DECRC.html
     #[must_use]
-    pub fn restore_cursor_position() -> String { CsiSequence::RestoreCursor.to_string() }
+    pub fn restore_cursor_position() -> &'static str { crate::core::ansi::constants::RCP_RESTORE_CURSOR_STR }
 }
 
 pub mod terminal_modes {
     #[allow(clippy::wildcard_imports)]
     use super::*;
-    use smallvec::smallvec;
 
     /// Enter alternate screen buffer
     /// [`CSI`] ?1049h (`AlternateScreenBuffer`)
     ///
     /// [`CSI`]: crate::CsiSequence
-    pub fn enter_alternate_screen() -> String {
-        CsiSequence::EnablePrivateMode(smallvec![PrivateModeType::AlternateScreenBuffer])
-            .to_string()
+    #[must_use]
+    pub fn enter_alternate_screen() -> &'static str {
+        const_format::formatcp!("{CSI_START}?1049h")
     }
 
     /// Exit alternate screen buffer
     /// [`CSI`] ?1049l (`AlternateScreenBuffer`)
     ///
     /// [`CSI`]: crate::CsiSequence
-    pub fn exit_alternate_screen() -> String {
-        CsiSequence::DisablePrivateMode(smallvec![PrivateModeType::AlternateScreenBuffer])
-            .to_string()
+    #[must_use]
+    pub fn exit_alternate_screen() -> &'static str {
+        const_format::formatcp!("{CSI_START}?1049l")
     }
 
     /// Enable mouse tracking (all modes)
     /// [`CSI`] ?1003h [`CSI`] ?1015h [`CSI`] ?1006h
     ///
     /// [`CSI`]: crate::CsiSequence
-    pub fn enable_mouse_tracking() -> String {
-        CsiSequence::EnablePrivateMode(smallvec![
-            PrivateModeType::Other(APPLICATION_MOUSE_TRACKING),
-            PrivateModeType::Other(URXVT_MOUSE_EXTENSION),
-            PrivateModeType::Other(SGR_MOUSE_MODE),
-        ])
-        .to_string()
+    #[must_use]
+    pub fn enable_mouse_tracking() -> &'static str {
+        const_format::formatcp!(
+            "{CSI_START}?{APPLICATION_MOUSE_TRACKING}{CSI_PARAM_SEPARATOR}{URXVT_MOUSE_EXTENSION}{CSI_PARAM_SEPARATOR}{SGR_MOUSE_MODE}h"
+        )
     }
 
     /// Disable mouse tracking
     /// [`CSI`] ?1006l [`CSI`] ?1015l [`CSI`] ?1003l
     ///
     /// [`CSI`]: crate::CsiSequence
-    pub fn disable_mouse_tracking() -> String {
-        CsiSequence::DisablePrivateMode(smallvec![
-            PrivateModeType::Other(SGR_MOUSE_MODE),
-            PrivateModeType::Other(URXVT_MOUSE_EXTENSION),
-            PrivateModeType::Other(APPLICATION_MOUSE_TRACKING),
-        ])
-        .to_string()
+    #[must_use]
+    pub fn disable_mouse_tracking() -> &'static str {
+        const_format::formatcp!(
+            "{CSI_START}?{SGR_MOUSE_MODE}{CSI_PARAM_SEPARATOR}{URXVT_MOUSE_EXTENSION}{CSI_PARAM_SEPARATOR}{APPLICATION_MOUSE_TRACKING}l"
+        )
     }
 
     /// Enable bracketed paste mode
     /// [`CSI`] `?2004h`
     ///
     /// [`CSI`]: crate::CsiSequence
-    pub fn enable_bracketed_paste() -> String {
-        CsiSequence::EnablePrivateMode(smallvec![PrivateModeType::Other(
-            BRACKETED_PASTE_MODE
-        )])
-        .to_string()
+    #[must_use]
+    pub fn enable_bracketed_paste() -> &'static str {
+        const_format::formatcp!("{CSI_START}?{BRACKETED_PASTE_MODE}h")
     }
 
     /// Disable bracketed paste mode
     /// [`CSI`] `?2004l`
     ///
     /// [`CSI`]: crate::CsiSequence
-    pub fn disable_bracketed_paste() -> String {
-        CsiSequence::DisablePrivateMode(smallvec![PrivateModeType::Other(
-            BRACKETED_PASTE_MODE
-        )])
-        .to_string()
+    #[must_use]
+    pub fn disable_bracketed_paste() -> &'static str {
+        const_format::formatcp!("{CSI_START}?{BRACKETED_PASTE_MODE}l")
     }
 }

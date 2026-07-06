@@ -12,6 +12,7 @@
 
 use crate::{OutputDevice, PtyTestContext, PtyTestMode,
             TerminalModeController, generate_pty_test};
+use crate::ansi_output::{cursor_visibility, terminal_modes};
 use std::io::{Read, Write};
 
 generate_pty_test! {
@@ -66,37 +67,37 @@ fn controller(context: PtyTestContext) {
     eprintln!("Captured output:\n{output_str:?}");
 
     assert!(
-        output_str.contains(&crate::ansi_output::terminal_modes::enter_alternate_screen()),
+        output_str.contains(terminal_modes::enter_alternate_screen()),
         "Missing enter_alternate_screen"
     );
     assert!(
-        output_str.contains(&crate::ansi_output::terminal_modes::exit_alternate_screen()),
+        output_str.contains(terminal_modes::exit_alternate_screen()),
         "Missing exit_alternate_screen"
     );
     assert!(
-        output_str.contains(&crate::ansi_output::cursor_visibility::hide_cursor()),
+        output_str.contains(cursor_visibility::hide_cursor()),
         "Missing hide_cursor"
     );
     assert!(
-        output_str.contains(&crate::ansi_output::cursor_visibility::show_cursor()),
+        output_str.contains(cursor_visibility::show_cursor()),
         "Missing show_cursor"
     );
 
     assert!(
-        output_str.contains(&crate::ansi_output::terminal_modes::enable_mouse_tracking()),
+        output_str.contains(terminal_modes::enable_mouse_tracking()),
         "Missing mouse tracking"
     );
     assert!(
-        output_str.contains(&crate::ansi_output::terminal_modes::disable_mouse_tracking()),
+        output_str.contains(terminal_modes::disable_mouse_tracking()),
         "Missing mouse tracking disable"
     );
 
     assert!(
-        output_str.contains(&crate::ansi_output::terminal_modes::enable_bracketed_paste()),
+        output_str.contains(terminal_modes::enable_bracketed_paste()),
         "Missing bracketed paste enable"
     );
     assert!(
-        output_str.contains(&crate::ansi_output::terminal_modes::disable_bracketed_paste()),
+        output_str.contains(terminal_modes::disable_bracketed_paste()),
         "Missing bracketed paste disable"
     );
 

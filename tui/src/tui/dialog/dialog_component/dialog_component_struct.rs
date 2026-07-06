@@ -4,8 +4,9 @@ use crate::{Component, DEBUG_TUI_MOD, DialogEngine, DialogEngineApi,
             DialogEngineApplyResponse, DialogEngineArgs, DialogEngineConfigOptions,
             EditorEngineConfig, EventPropagation, FlexBox, FlexBoxId, GlobalData,
             HasDialogBuffers, HasFocus, InputEvent, OnDialogEditorChangeFn,
-            OnDialogPressFn, RenderPipeline, SurfaceBounds,
-            common::{CommonError, CommonErrorType, CommonResult}};
+            OnDialogPressFn, SurfaceBounds,
+            common::{CommonError, CommonErrorType, CommonResult},
+            ok};
 use std::fmt::Debug;
 
 /// This is a shim which allows the reusable [`DialogEngine`] to be used in the context of
@@ -66,7 +67,7 @@ where
         _current_box: FlexBox,         /* Ignore this. */
         surface_bounds: SurfaceBounds, /* Save this. */
         has_focus: &mut HasFocus,
-    ) -> CommonResult<RenderPipeline> {
+    ) -> CommonResult {
         // Unpack the global data.
         let GlobalData { state, .. } = global_data;
 
@@ -91,7 +92,7 @@ where
                 };
                 DialogEngineApi::render_engine(args)
             }
-            None => Ok(RenderPipeline::default()),
+            None => ok!(),
         }
     }
 

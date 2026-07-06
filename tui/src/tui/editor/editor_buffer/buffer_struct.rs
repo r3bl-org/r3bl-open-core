@@ -739,11 +739,10 @@ mod impl_display {
             let col = caret.col_index.as_usize() + 1; // 1-indexed for display
 
             // Get file info and format output.
-            let ext = self
-                .content
-                .maybe_file_extension
-                .as_ref()
-                .map_or("txt", |e| e.as_str());
+            let ext = match self.content.maybe_file_extension.as_ref() {
+                Some(e) => e.as_str(),
+                None => "txt",
+            };
 
             // Format editor identifier: extract filename from path for named buffers,
             // or use placeholder for new/unnamed buffers.

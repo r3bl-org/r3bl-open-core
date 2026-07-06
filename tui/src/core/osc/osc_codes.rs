@@ -39,16 +39,22 @@
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`ST`]: OSC_TERMINATOR_ST
 
-use crate::{generate_impl_display_for_fast_stringify, ok};
 use crate::{core::common::fast_stringify::{BufTextStorage, FastStringify},
-            define_ansi_const};
+            define_ansi_const, generate_impl_display_for_fast_stringify, ok};
 use std::fmt;
+use crate::core::ansi::constants;
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // OSC sequence components
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-define_ansi_const!(@osc_str : OSC_START = [""] => "OSC Start" : "Generic start: `ESC ]`." );
+/// [`OSC`] Start: Generic start: `ESC ]`.
+///
+/// [`OSC`]: crate::osc_codes::OscSequence
+pub const OSC_START: &str = const_format::formatcp!(
+    "{ESC_STR}]",
+    ESC_STR = constants::ESC_STR
+);
 
 define_ansi_const!(@osc_str : OSC_PROGRESS_START = ["9;4;"] =>
     "Progress Start (OSC 9;4)" : "Progress start: `ESC ] 9 ; 4 ;`."

@@ -35,8 +35,8 @@ use crate::{Pos, PtyResponseEvent, TermRow, TuiStyle, osc::OscEvent};
 ///   independent cursors.
 ///   - To keep primary and alternate screen drawing logic simple, we use
 ///     [`std::mem::swap()`] in [`set_alt_screen_mode()`] to physically swap the screen's
-///     underlying [`OffscreenBuffer`] data when switching to another screen.
-///   - Because of this, the [`OffscreenBuffer`] and its [`OffscreenBuffer::cursor_pos`]
+///     underlying [`OfsBuf`] data when switching to another screen.
+///   - Because of this, the [`OfsBuf`] and its [`OfsBuf::get_cursor_pos()`]
 ///     **always** represent the currently visible screen (regardless of whether it is
 ///     primary or alternate).
 ///   - The hidden screen's data and its specific cursor position are parked in
@@ -54,8 +54,8 @@ use crate::{Pos, PtyResponseEvent, TermRow, TuiStyle, osc::OscEvent};
 /// [`hidden_buffer`]: crate::HiddenScreenState::hidden_buffer
 /// [`hidden_cursor_pos`]: crate::HiddenScreenState::hidden_cursor_pos
 /// [`HiddenScreenState`]: crate::HiddenScreenState
-/// [`OffscreenBuffer::cursor_pos`]: crate::OffscreenBuffer::cursor_pos
-/// [`OffscreenBuffer`]: crate::OffscreenBuffer
+/// [`OfsBuf::get_cursor_pos()`]: crate::OfsBuf::get_cursor_pos
+/// [`OfsBuf`]: crate::OfsBuf
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 /// [`set_alt_screen_mode()`]: crate::OfsBufVT100::set_alt_screen_mode
 /// [`SGR`]: crate::SgrCode
@@ -69,7 +69,7 @@ pub struct ParserGlobalState {
     /// This field is ONLY used for `ESC 7` ([`DECSC`]) save and `ESC 8` ([`DECRC`])
     /// restore operations, as well as their [`CSI`] equivalents (`CSI s` and `CSI
     /// u`). It does NOT track the current cursor position - that's stored in
-    /// [`OffscreenBuffer::cursor_pos`].
+    /// [`OfsBuf::get_cursor_pos()`].
     ///
     /// Used by [`AnsiToOfsBufPerformer`] to implement the [`DECSC`] (`ESC 7`) and
     /// [`DECRC`] (`ESC 8`) escape sequences for saving and restoring cursor
@@ -95,7 +95,7 @@ pub struct ParserGlobalState {
     /// [`CSI`]: crate::CsiSequence
     /// [`DECRC`]: https://vt100.net/docs/vt510-rm/DECRC.html
     /// [`DECSC`]: https://vt100.net/docs/vt510-rm/DECSC.html
-    /// [`OffscreenBuffer::cursor_pos`]: crate::OffscreenBuffer::cursor_pos
+    /// [`OfsBuf::get_cursor_pos()`]: crate::OfsBuf::get_cursor_pos
     pub cursor_pos_for_esc_save_and_restore: Option<Pos>,
 
     /// Active character set for [`ANSI`] escape sequence support.

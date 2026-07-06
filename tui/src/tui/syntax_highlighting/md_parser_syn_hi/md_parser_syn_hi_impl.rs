@@ -108,7 +108,7 @@ mod tests_try_parse_and_highlight {
 
     #[test]
     #[serial]
-    fn from_gap_buffer() -> CommonResult<()> {
+    fn from_gap_buffer() -> CommonResult {
         let _guard = set_color_override();
         throws!({
             let gap_buffer = {

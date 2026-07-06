@@ -14,8 +14,8 @@
 use crate::{App, CommonResult, ComponentRegistryMap, EventPropagation, GlobalData,
             HasFocus, InputDevice, InputEvent, Key, KeyPress, MSG_CONTROLLED_READY,
             MSG_CONTROLLED_STARTING, MSG_SUCCESS, OutputDevice, PtyTestContext,
-            RenderPipeline, TerminalWindowMainThreadSignal, generate_pty_test, height,
-            key_press, main_event_loop_impl, throws_with_return, width};
+            TerminalWindowMainThreadSignal, generate_pty_test, height, key_press,
+            main_event_loop_impl, ok, send_signal, throws_with_return, width};
 use std::{fmt::{Debug, Display, Formatter},
           io::Write};
 
@@ -164,12 +164,12 @@ impl App for AppMainTest {
         _global_data: &mut GlobalData<State, AppSignal>,
         _component_registry_map: &mut ComponentRegistryMap<State, AppSignal>,
         _has_focus: &mut HasFocus,
-    ) -> CommonResult<RenderPipeline> {
+    ) -> CommonResult {
         assert!(
             self.data.start_called,
             "app_start must be called before app_render"
         );
-        throws_with_return!({ RenderPipeline::default() });
+        ok!()
     }
 
     /// Handles input events for the test application.
@@ -183,27 +183,26 @@ impl App for AppMainTest {
         _component_registry_map: &mut ComponentRegistryMap<State, AppSignal>,
         _has_focus: &mut HasFocus,
     ) -> CommonResult<EventPropagation> {
-        throws_with_return!({
-            if matches!(
-                input_event,
-                InputEvent::Keyboard(
-                    KeyPress::Plain {
-                        key: Key::SpecialKey(crate::SpecialKey::Up),
-                    } | KeyPress::WithModifiers {
-                        key: Key::SpecialKey(crate::SpecialKey::Up),
-                        ..
-                    }
-                )
-            ) {
-                crate::send_signal!(
-                    global_data.main_thread_channel_sender,
-                    TerminalWindowMainThreadSignal::ApplyAppSignal(AppSignal::Add,)
-                );
-                EventPropagation::ConsumedRender
-            } else {
-                EventPropagation::Propagate
-            }
-        });
+        let continuation = if matches!(
+            input_event,
+            InputEvent::Keyboard(
+                KeyPress::Plain {
+                    key: Key::SpecialKey(crate::SpecialKey::Up),
+                } | KeyPress::WithModifiers {
+                    key: Key::SpecialKey(crate::SpecialKey::Up),
+                    ..
+                }
+            )
+        ) {
+            send_signal!(
+                global_data.main_thread_channel_sender,
+                TerminalWindowMainThreadSignal::ApplyAppSignal(AppSignal::Add,)
+            );
+            EventPropagation::ConsumedRender
+        } else {
+            EventPropagation::Propagate
+        };
+        ok!(continuation)
     }
 
     fn app_handle_signal(
@@ -229,7 +228,10 @@ impl App for AppMainTest {
         self.data.init_called = true;
     }
 
-    fn app_start_background_services(&mut self, _global_data: &mut GlobalData<State, AppSignal>) {
+    fn app_start_background_services(
+        &mut self,
+        _global_data: &mut GlobalData<State, AppSignal>,
+    ) {
         assert!(
             self.data.init_called,
             "app_init_components must be called before app_start_background_services"

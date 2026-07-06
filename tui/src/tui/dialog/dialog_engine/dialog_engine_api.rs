@@ -9,8 +9,8 @@ use crate::{ColorWheel, CommonError, CommonErrorType, CommonResult, DialogBuffer
             RenderOpIR, RenderOpIRVec, RenderPipeline, Size, SpecialKey, SurfaceBounds,
             SystemClipboard, TextColorizationPolicy, TuiStyle, ZOrder, ch, col,
             editor_engine::engine_public_api,
-            height, inline_string, pc, render_pipeline, render_tui_styled_texts_into,
-            row, throws_with_return,
+            height, inline_string, ok, pc, render_tui_styled_texts_into, row,
+            throws_with_return,
             tui_style_attrib::{Dim, Underline},
             tui_style_attribs, u16, usize, width};
 use std::{borrow::Cow, fmt::Debug};
@@ -31,9 +31,7 @@ impl DialogEngineApi {
     /// # Errors
     ///
     /// Returns an error if the rendering operation fails.
-    pub fn render_engine<S, AS>(
-        args: DialogEngineArgs<'_, S, AS>,
-    ) -> CommonResult<RenderPipeline>
+    pub fn render_engine<S, AS>(args: DialogEngineArgs<'_, S, AS>) -> CommonResult
     where
         S: Debug + Default + Clone + Sync + Send + HasDialogBuffers,
         AS: Debug + Default + Clone + Sync + Send,
@@ -80,63 +78,51 @@ impl DialogEngineApi {
 
         let (origin_pos, bounds_size) = overlay_flex_box.get_style_adjusted_pos_and_dim();
 
-        let pipeline = {
-            let mut it = render_pipeline!();
+        global_data.pipeline.push(
+            ZOrder::Glass,
+            impl_internal::render_border(origin_pos, bounds_size, dialog_engine),
+        );
 
-            it.push(
-                ZOrder::Glass,
-                impl_internal::render_border(origin_pos, bounds_size, dialog_engine),
-            );
+        // Paint title.
+        let title = if let Some(dialog_buffer) = state.get_mut_dialog_buffer(self_id) {
+            &dialog_buffer.title
+        } else {
+            "N/A"
+        };
+        global_data.pipeline.push(
+            ZOrder::Glass,
+            impl_internal::render_title(origin_pos, bounds_size, title, dialog_engine),
+        );
 
-            // Paint title.
-            let title = if let Some(dialog_buffer) = state.get_mut_dialog_buffer(self_id)
-            {
-                &dialog_buffer.title
-            } else {
-                "N/A"
-            };
-            it.push(
-                ZOrder::Glass,
-                impl_internal::render_title(
-                    origin_pos,
-                    bounds_size,
-                    title,
-                    dialog_engine,
-                ),
-            );
-
-            // Call render_results_panel() if mode is autocomplete.
-            if matches!(
-                dialog_engine.dialog_options.mode,
-                DialogEngineMode::ModalAutocomplete
-            ) {
-                let results_panel_ops = impl_internal::render_results_panel(
-                    origin_pos,
-                    bounds_size,
-                    dialog_engine,
-                    self_id,
-                    state,
-                );
-                if !results_panel_ops.is_empty() {
-                    it.push(ZOrder::Glass, results_panel_ops);
-                }
-            }
-
-            it += impl_internal::render_editor(
+        // Call render_results_panel() if mode is autocomplete.
+        if matches!(
+            dialog_engine.dialog_options.mode,
+            DialogEngineMode::ModalAutocomplete
+        ) {
+            let results_panel_ops = impl_internal::render_results_panel(
                 origin_pos,
                 bounds_size,
-                DialogEngineArgs {
-                    self_id,
-                    global_data,
-                    engine: dialog_engine,
-                    has_focus,
-                },
-            )?;
+                dialog_engine,
+                self_id,
+                state,
+            );
+            if !results_panel_ops.is_empty() {
+                global_data.pipeline.push(ZOrder::Glass, results_panel_ops);
+            }
+        }
 
-            it
-        };
+        impl_internal::render_editor(
+            origin_pos,
+            bounds_size,
+            DialogEngineArgs {
+                self_id,
+                global_data,
+                engine: dialog_engine,
+                has_focus,
+            },
+        )?;
 
-        Ok(pipeline)
+        ok!()
     }
 
     /// Event based interface for the editor. This executes the [`InputEvent`] and returns
@@ -351,7 +337,7 @@ mod impl_internal {
         origin_pos: Pos,
         bounds_size: Size,
         args: DialogEngineArgs<'_, S, AS>,
-    ) -> CommonResult<RenderPipeline>
+    ) -> CommonResult
     where
         S: Debug + Default + Clone + Sync + Send + HasDialogBuffers,
         AS: Debug + Default + Clone + Sync + Send,
@@ -404,15 +390,18 @@ mod impl_internal {
             }
         };
 
-        let mut pipeline = engine_public_api::render_engine(
+        let mut temp_pipeline = RenderPipeline::default();
+        engine_public_api::render_engine(
             &mut dialog_engine.editor_engine,
             &mut dialog_buffer.editor_buffer,
             flex_box,
             has_focus,
             global_data.window_size,
+            &mut temp_pipeline,
         )?;
 
-        pipeline.hoist(ZOrder::Normal, ZOrder::Glass);
+        temp_pipeline.hoist(ZOrder::Normal, ZOrder::Glass);
+        global_data.pipeline.join_into(temp_pipeline);
 
         // Paint hint.
         if dialog_buffer.editor_buffer.is_empty()
@@ -442,10 +431,10 @@ mod impl_internal {
                 }),
             ));
 
-            pipeline.push(ZOrder::Glass, ops);
+            global_data.pipeline.push(ZOrder::Glass, ops);
         }
 
-        Ok(pipeline)
+        ok!()
     }
 
     pub fn render_results_panel<S>(
@@ -1002,9 +991,8 @@ mod test_dialog_engine_api_render_engine {
             engine: dialog_engine,
             has_focus,
         };
-        let pipeline = dbg!(DialogEngineApi::render_engine(args).unwrap());
-        assert_eq2!(pipeline.len(), 1);
-        let render_ops = pipeline.get(&ZOrder::Glass).unwrap();
+        DialogEngineApi::render_engine(args).unwrap();
+        let render_ops = global_data.pipeline.get(&ZOrder::Glass);
         assert!(!render_ops.is_empty());
     }
 }
@@ -1042,13 +1030,13 @@ mod test_dialog_api_make_flex_box_for_dialog {
         ));
 
         // Assert that a general `CommonError` is returned.
-        let my_err = result_flex_box.err().unwrap();
+        let my_err = result_flex_box.err();
         // More info on downcast_ref::<T>(): https://gemini.google.com/app/fd537ea573f1d1fb
-        assert_eq2!(my_err.is::<CommonError>(), true);
+        assert_eq2!(my_err.as_ref().unwrap().is::<CommonError>(), true);
 
         // Assert that this specific error is returned.
         let result = matches!(
-            my_err.downcast_ref::<CommonError>(),
+            my_err.as_ref().unwrap().downcast_ref::<CommonError>(),
             Some(CommonError {
                 error_type: CommonErrorType::DisplaySizeTooSmall,
                 error_message: _,
@@ -1086,13 +1074,13 @@ mod test_dialog_api_make_flex_box_for_dialog {
         ));
 
         // Assert that a general `CommonError` is returned.
-        let my_err = result_flex_box.err().unwrap();
+        let my_err = result_flex_box.err();
         // More info on downcast_ref::<T>(): https://gemini.google.com/app/fd537ea573f1d1fb
-        assert_eq2!(my_err.is::<CommonError>(), true);
+        assert_eq2!(my_err.as_ref().unwrap().is::<CommonError>(), true);
 
         // Assert that this specific error is returned.
         let result = matches!(
-            my_err.downcast_ref::<CommonError>(),
+            my_err.as_ref().unwrap().downcast_ref::<CommonError>(),
             Some(CommonError {
                 error_type: CommonErrorType::DisplaySizeTooSmall,
                 error_message: _,

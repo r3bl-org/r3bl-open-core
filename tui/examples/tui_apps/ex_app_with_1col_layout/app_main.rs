@@ -1,4 +1,5 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
+
 use super::{AppSignal, SingleColumnComponent, State};
 use r3bl_tui::{App, BoxedSafeApp, CommonResult, ComponentRegistry, ComponentRegistryMap,
                ContainsResult, EventPropagation, FlexBoxId, GlobalData, HasFocus,
@@ -6,8 +7,8 @@ use r3bl_tui::{App, BoxedSafeApp, CommonResult, ComponentRegistry, ComponentRegi
                PerformPositioningAndSizing, RenderOpCommon, RenderOpIR, RenderOpIRVec,
                RenderPipeline, SPACER_GLYPH, Size, Surface, SurfaceProps, SurfaceRender,
                TuiStylesheet, ZOrder, box_end, box_start, ch, col, height, new_style,
-               render_component_in_current_box, render_tui_styled_texts_into,
-               req_size_pc, row, surface, throws, throws_with_return, tui_color,
+               ok, render_component_in_current_box, render_tui_styled_texts_into,
+               req_size_pc, row, surface, throws_with_return, tui_color,
                tui_styled_text, tui_styled_texts, tui_stylesheet};
 
 // Constants for the ids.
@@ -117,51 +118,40 @@ mod app_main_impl_app_trait {
             global_data: &mut GlobalData<State, AppSignal>,
             component_registry_map: &mut ComponentRegistryMap<State, AppSignal>,
             has_focus: &mut HasFocus,
-        ) -> CommonResult<RenderPipeline> {
-            throws_with_return!({
-                let window_size = global_data.window_size;
+        ) -> CommonResult {
+            let window_size = global_data.window_size;
 
-                // Create a surface and then run the SurfaceRenderer.
-                // (ContainerSurfaceRender) on it.
-                let mut surface = {
-                    let mut it = surface!(stylesheet: stylesheet::create_stylesheet()?);
+            // Create a surface and then run the SurfaceRenderer.
+            // (ContainerSurfaceRender) on it.
+            let mut surface = surface!(stylesheet: stylesheet::create_stylesheet()?);
 
-                    it.surface_start(SurfaceProps {
-                        pos: col(0) + row(0),
-                        size: {
-                            let col_count = window_size.col_width;
-                            let row_count = window_size.row_height -
+            surface.surface_start(SurfaceProps {
+                pos: col(0) + row(0),
+                size: {
+                    let col_count = window_size.col_width;
+                    let row_count = window_size.row_height -
                                 height(2) /* Bottom row for for status bar & HUD. */;
-                            col_count + row_count
-                        },
-                    })?;
+                    col_count + row_count
+                },
+            })?;
 
-                    perform_layout::ContainerSurfaceRender { _app: self }
-                        .render_in_surface(
-                            &mut it,
-                            global_data,
-                            component_registry_map,
-                            has_focus,
-                        )?;
+            perform_layout::ContainerSurfaceRender { _app: self }.render_in_surface(
+                &mut surface,
+                global_data,
+                component_registry_map,
+                has_focus,
+            )?;
 
-                    it.surface_end()?;
+            surface.surface_end()?;
 
-                    it
-                };
+            // Render HUD.
+            let hud_report = global_data.hud_data.get_report();
+            hud::create_hud(&mut global_data.pipeline, window_size, hud_report);
 
-                // Render HUD.
-                hud::create_hud(
-                    &mut surface.render_pipeline,
-                    window_size,
-                    global_data.get_hud_report_with_spinner(),
-                );
+            // Render status bar.
+            status_bar::render_status_bar(&mut global_data.pipeline, window_size);
 
-                // Render status bar.
-                status_bar::render_status_bar(&mut surface.render_pipeline, window_size);
-
-                // Return RenderOps pipeline (which will actually be painted elsewhere).
-                surface.render_pipeline
-            });
+            ok!()
         }
     }
 }
@@ -181,27 +171,26 @@ mod perform_layout {
             global_data: &mut GlobalData<State, AppSignal>,
             component_registry_map: &mut ComponentRegistryMap<State, AppSignal>,
             has_focus: &mut HasFocus,
-        ) -> CommonResult<()> {
+        ) -> CommonResult {
             // Layout ColumnRenderComponent and render it.
-            throws!({
-                let component_id = FlexBoxId::from(Id::Column);
-                // Layout column component, and render it.
-                box_start! (
-                    in:                     surface,
-                    id:                     component_id,
-                    dir:                    LayoutDirection::Vertical,
-                    requested_size_percent: req_size_pc!(width: 100, height: 100),
-                    styles:                 [component_id]
-                );
-                render_component_in_current_box!(
-                    in:                 surface,
-                    component_id:       component_id,
-                    from:               component_registry_map,
-                    global_data:        global_data,
-                    has_focus:          has_focus
-                );
-                box_end!(in: surface);
-            })
+            let component_id = FlexBoxId::from(Id::Column);
+            // Layout column component, and render it.
+            box_start! (
+                in:                     surface,
+                id:                     component_id,
+                dir:                    LayoutDirection::Vertical,
+                requested_size_percent: req_size_pc!(width: 100, height: 100),
+                styles:                 [component_id]
+            );
+            render_component_in_current_box!(
+                in:                 surface,
+                component_id:       component_id,
+                from:               component_registry_map,
+                global_data:        global_data,
+                has_focus:          has_focus
+            );
+            box_end!(in: surface);
+            ok!()
         }
     }
 }

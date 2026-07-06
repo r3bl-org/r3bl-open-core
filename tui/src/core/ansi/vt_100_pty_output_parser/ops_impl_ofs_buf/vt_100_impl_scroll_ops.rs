@@ -19,8 +19,9 @@
 //! [`SD`]: https://vt100.net/docs/vt510-rm/SD.html
 //! [`SU`]: https://vt100.net/docs/vt510-rm/SU.html
 
-use crate::{ArrayBoundsCheck, ArrayUnderflowResult, LengthOps, OfsBufVT100, RowHeight,
-            core::coordinates::bounds_check::RangeConvertExt, ok, row};
+use crate::{ArrayBoundsCheck, ArrayUnderflowResult, LengthOps, OfsBufVT100,
+            PixelCharLine, RowHeight, core::coordinates::bounds_check::RangeConvertExt,
+            ok, row};
 
 impl OfsBufVT100 {
     /// Move cursor down one line, scrolling the buffer if at bottom.
@@ -65,7 +66,7 @@ impl OfsBufVT100 {
     /// [`DECSTBM`]: https://vt100.net/docs/vt510-rm/DECSTBM.html
     /// [`IND`]: https://vt100.net/docs/vt510-rm/IND.html
     pub fn index_down(&mut self) -> miette::Result<()> {
-        let current_row = self.cursor_pos.row_index;
+        let current_row = self.get_cursor_pos().row_index;
 
         // Get bottom boundary of scroll region from inclusive range.
         let scroll_bottom_boundary = *self.get_scroll_range_inclusive().end();
@@ -75,7 +76,7 @@ impl OfsBufVT100 {
             == ArrayUnderflowResult::Underflowed
         {
             // Not at scroll region bottom - just move cursor down.
-            self.cursor_down(RowHeight::from(1));
+            self.move_cursor_down(RowHeight::from(1));
             ok!()
         } else {
             // At scroll region bottom - scroll buffer content up by one line.
@@ -125,7 +126,7 @@ impl OfsBufVT100 {
     /// [`DECSTBM`]: https://vt100.net/docs/vt510-rm/DECSTBM.html
     /// [`RI`]: https://vt100.net/docs/vt510-rm/RI.html
     pub fn reverse_index_up(&mut self) -> miette::Result<()> {
-        let current_row = self.cursor_pos.row_index;
+        let current_row = self.get_cursor_pos().row_index;
 
         // Get top boundary of scroll region from inclusive range.
         let scroll_top_boundary = *self.get_scroll_range_inclusive().start();
@@ -134,7 +135,7 @@ impl OfsBufVT100 {
         match scroll_top_boundary.underflows(current_row) {
             ArrayUnderflowResult::Underflowed => {
                 // Not at scroll region top - just move cursor up.
-                self.cursor_up(RowHeight::from(1));
+                self.move_cursor_up(RowHeight::from(1));
                 ok!()
             }
             ArrayUnderflowResult::Within => {
@@ -219,8 +220,8 @@ impl OfsBufVT100 {
             let region_starts_at_top = *scroll_region.start() == row(0);
 
             // 2) The scroll region must end at the absolute bottom of the terminal.
-            let region_ends_at_bottom =
-                *scroll_region.end() == self.window_size.row_height.convert_to_index();
+            let region_ends_at_bottom = *scroll_region.end()
+                == self.ofs_buf.get_window_size().row_height.convert_to_index();
 
             region_starts_at_top && region_ends_at_bottom
         };
@@ -232,10 +233,15 @@ impl OfsBufVT100 {
             // Clone the evicted line because `shift_lines_up()` uses a zero-allocation
             // `Slice::rotate_left()` optimization and wipes the original line memory to
             // recycle it.
-            let evicted_line = self.buffer[row_index_at_top_pending_eviction].clone();
+            if let Some(row) = self.ofs_buf.get_row(row_index_at_top_pending_eviction) {
+                let evicted_line = row.to_vec();
 
-            // Push it to our scrollback history, maintaining capacity limit.
-            self.scrollback_buffer.push_and_enforce_limit(evicted_line);
+                // Push it to our scrollback history, maintaining capacity limit.
+                self.scrollback_buffer
+                    .push_and_enforce_limit(PixelCharLine {
+                        pixel_chars: evicted_line,
+                    });
+            }
         }
 
         // Use shift_lines_up to shift lines up within the scroll region.
@@ -433,13 +439,13 @@ mod tests_scroll_vert_ops {
         fill_buffer_with_test_content(&mut buffer);
 
         // Position cursor at row 2, col 5.
-        buffer.cursor_pos = row(2) + col(5);
+        buffer.set_cursor_pos(row(2) + col(5));
 
         let _unused = buffer.index_down();
 
         // Cursor should move down one row.
-        assert_eq!(buffer.cursor_pos.row_index, row(3));
-        assert_eq!(buffer.cursor_pos.col_index, col(5));
+        assert_eq!(buffer.get_cursor_pos().row_index, row(3));
+        assert_eq!(buffer.get_cursor_pos().col_index, col(5));
 
         // Content should remain unchanged.
         assert_plain_char_at(&buffer, 2, 0, '2');
@@ -452,13 +458,13 @@ mod tests_scroll_vert_ops {
         fill_buffer_with_test_content(&mut buffer);
 
         // Position cursor at bottom row (row 5).
-        buffer.cursor_pos = row(5) + col(3);
+        buffer.set_cursor_pos(row(5) + col(3));
 
         let _unused = buffer.index_down();
 
         // Cursor should stay at bottom row.
-        assert_eq!(buffer.cursor_pos.row_index, row(5));
-        assert_eq!(buffer.cursor_pos.col_index, col(3));
+        assert_eq!(buffer.get_cursor_pos().row_index, row(5));
+        assert_eq!(buffer.get_cursor_pos().col_index, col(3));
 
         // Buffer should have scrolled up - top line lost, new blank line at bottom.
         assert_plain_char_at(&buffer, 0, 0, '1'); // Row 1 moved to row 0
@@ -479,13 +485,13 @@ mod tests_scroll_vert_ops {
         fill_buffer_with_test_content(&mut buffer);
 
         // Position cursor at row 3, col 2.
-        buffer.cursor_pos = row(3) + col(2);
+        buffer.set_cursor_pos(row(3) + col(2));
 
         let _unused = buffer.reverse_index_up();
 
         // Cursor should move up one row.
-        assert_eq!(buffer.cursor_pos.row_index, row(2));
-        assert_eq!(buffer.cursor_pos.col_index, col(2));
+        assert_eq!(buffer.get_cursor_pos().row_index, row(2));
+        assert_eq!(buffer.get_cursor_pos().col_index, col(2));
 
         // Content should remain unchanged.
         assert_plain_char_at(&buffer, 2, 0, '2');
@@ -498,13 +504,13 @@ mod tests_scroll_vert_ops {
         fill_buffer_with_test_content(&mut buffer);
 
         // Position cursor at top row (row 0).
-        buffer.cursor_pos = row(0) + col(7);
+        buffer.set_cursor_pos(row(0) + col(7));
 
         let _unused = buffer.reverse_index_up();
 
         // Cursor should stay at top row.
-        assert_eq!(buffer.cursor_pos.row_index, row(0));
-        assert_eq!(buffer.cursor_pos.col_index, col(7));
+        assert_eq!(buffer.get_cursor_pos().row_index, row(0));
+        assert_eq!(buffer.get_cursor_pos().col_index, col(7));
 
         // Buffer should have scrolled down - bottom line lost, new blank line at top.
         // New blank line at top (row 0) should be empty.
@@ -578,7 +584,7 @@ mod tests_scroll_vert_ops {
         buffer.parser_global_state.scroll_region_bottom = Some(term_row(nz(5)));
 
         // Position cursor at scroll region bottom.
-        buffer.cursor_pos = row(4) + col(0);
+        buffer.set_cursor_pos(row(4) + col(0));
 
         let _unused = buffer.index_down();
 

@@ -18,6 +18,10 @@ pub async fn try_is_working_directory_clean() -> ResultAndCommand<RepoStatus> {
 
     let res_output = cmd.run().await;
     let Ok(output) = res_output else {
+        #[allow(
+            clippy::unwrap_used,
+            reason = "Error is already checked via let Ok() else"
+        )]
         let report = res_output.unwrap_err();
         let err = Err(report);
         return (err, cmd);

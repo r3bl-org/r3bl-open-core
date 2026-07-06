@@ -38,7 +38,7 @@
 //!    │
 //!    │ Updates buffer state
 //!    ▼
-//! OffscreenBuffer (cursor, text, styles)
+//! OfsBuf (cursor, text, styles)
 //! ```
 //!
 //! For terminal multiplexer architecture, see the [`pty_mux`] module.
@@ -55,6 +55,7 @@
 
 // Attach.
 pub mod ansi_parser_public_api;
+pub mod canvas;
 pub mod hidden_screen_state;
 pub mod ofs_buf_vt_100;
 pub mod parser_state;
@@ -78,6 +79,7 @@ pub mod vt_100_pty_output_conformance_tests;
 
 // Re-export public API.
 pub use ansi_parser_public_api::*;
+pub use canvas::*;
 pub use hidden_screen_state::*;
 pub use modes::*;
 pub use ofs_buf_vt_100::*;

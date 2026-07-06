@@ -47,15 +47,15 @@ impl OfsBufVT100 {
     /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
     #[must_use]
     pub fn get_scroll_range_inclusive(&self) -> std::ops::RangeInclusive<RowIndex> {
-        let scroll_top = self.parser_global_state.scroll_region_top.map_or(
-            /* None */ row(0),
-            /* Some */ |term_row| term_row.to_zero_based(),
-        );
+        let scroll_top = match self.parser_global_state.scroll_region_top {
+            Some(term_row) => term_row.to_zero_based(),
+            None => row(0),
+        };
 
-        let scroll_bottom = self.parser_global_state.scroll_region_bottom.map_or(
-            /* None */ self.window_size.row_height.convert_to_index(),
-            /* Some */ |term_row| term_row.to_zero_based(),
-        );
+        let scroll_bottom = match self.parser_global_state.scroll_region_bottom {
+            Some(term_row) => term_row.to_zero_based(),
+            None => self.ofs_buf.get_window_size().row_height.convert_to_index(),
+        };
 
         scroll_top..=scroll_bottom
     }

@@ -10,10 +10,10 @@
 //! The operation modules in this directory follow a consistent **thin shim pattern**:
 //!
 //! - Each operation module acts as a parameter translator from [`ANSI`] sequences to
-//!   [`OffscreenBuffer`] calls
+//!   [`OfsBuf`] calls
 //! - Operations contain minimal logic, primarily focused on parameter parsing and
 //!   delegation
-//! - All actual terminal buffer logic is implemented in dedicated [`OffscreenBuffer`]
+//! - All actual terminal buffer logic is implemented in dedicated [`OfsBuf`]
 //!   methods
 //! - This design ensures a clear separation between [`ANSI`] protocol handling and buffer
 //!   operations
@@ -54,10 +54,10 @@
 //! 1. **Pure Delegation**: These operations are thin delegation layers with no business
 //!    logic
 //! 2. **Parameter Translation Only**: They primarily translate [`ANSI`] parameters into
-//!    [`OffscreenBuffer`] method calls
+//!    [`OfsBuf`] method calls
 //! 3. **Minimal Risk**: Code simplicity means minimal risk of bugs
 //! 4. **Comprehensive Coverage**: Testing is handled by two complementary layers:
-//!    - **Unit Tests**: The underlying [`OffscreenBuffer`] methods have comprehensive
+//!    - **Unit Tests**: The underlying [`OfsBuf`] methods have comprehensive
 //!      unit tests
 //!    - **Integration Tests**: The [`VT-100`] conformance tests verify the complete
 //!      [`ANSI`] processing pipeline
@@ -123,7 +123,7 @@
 //! | [`vt_100_shim_terminal_ops`] | [`vt_100_impl_terminal_ops`] | [`vt_100_test_terminal_ops`] |
 //!
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`OffscreenBuffer`]: crate::OffscreenBuffer
+//! [`OfsBuf`]: crate::OfsBuf
 //! [`ops_impl_ofs_buf`]: crate::core::ansi::vt_100_pty_output_parser::ops_impl_ofs_buf
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 //! [`vt_100_impl_char_ops`]: crate::core::ansi::vt_100_pty_output_parser::ops_impl_ofs_buf::vt_100_impl_char_ops

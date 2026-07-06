@@ -6,11 +6,11 @@
 
 use super::super::test_fixtures_vt_100_ansi_conformance::*;
 use crate::{core::osc::{OscEvent, osc_codes::OscSequence},
-            offscreen_buffer::test_fixtures_ofs_buf::*};
+            ofs_buf::test_fixtures_ofs_buf::*};
 
 #[test]
 fn test_osc_title_sequences() {
-    let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+    let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
 
     // Test OSC 0 (set title and icon)
     let sequence1 = OscSequence::SetTitleAndIcon("Test Title".to_string()).to_string();
@@ -45,7 +45,7 @@ fn test_osc_title_sequences() {
 
 #[test]
 fn test_osc_hyperlink() {
-    let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+    let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
 
     // Test OSC 8 hyperlink.
     let hyperlink_start = OscSequence::HyperlinkStart {

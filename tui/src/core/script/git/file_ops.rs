@@ -45,6 +45,10 @@ pub async fn try_get_changed_files_by_ext(
     // First check for staged and unstaged files
     let (res_changed_files, cmd) = get_working_tree_changes(extensions).await;
     let Ok(changed_files) = res_changed_files else {
+        #[allow(
+            clippy::unwrap_used,
+            reason = "Error is already checked via let Ok() else"
+        )]
         let report = res_changed_files.unwrap_err();
         return (Err(report), cmd);
     };
@@ -66,6 +70,10 @@ async fn get_working_tree_changes(extensions: &[&str]) -> ResultAndCommand<Vec<P
 
     let res_output = cmd.run().await;
     let Ok(output) = res_output else {
+        #[allow(
+            clippy::unwrap_used,
+            reason = "Error is already checked via let Ok() else"
+        )]
         let report = res_output.unwrap_err();
         return (Err(report), cmd);
     };
@@ -103,6 +111,10 @@ async fn get_files_from_last_commit(
 
     let res_output = cmd.run().await;
     let Ok(output) = res_output else {
+        #[allow(
+            clippy::unwrap_used,
+            reason = "Error is already checked via let Ok() else"
+        )]
         let report = res_output.unwrap_err();
         return (Err(report), cmd);
     };

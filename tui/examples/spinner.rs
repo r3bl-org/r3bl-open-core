@@ -25,7 +25,7 @@ macro_rules! println_with_flush {
 // Note: The `tokio::main` macro internally calls `.expect("Failed building the Runtime")`
 // when initializing the Tokio runtime. This is unavoidable and safe, as runtime creation
 // failure is a fatal error that should panic. The lint must be suppressed here.
-pub async fn main() -> CommonResult<()> {
+pub async fn main() -> CommonResult {
     set_mimalloc_in_main!();
     assert_terminal_is_interactive();
 

@@ -13,11 +13,10 @@ use crate::{ColWidth, CommonResult, CursorBoundsCheck, CursorPositionBoundsStatu
             caret_scr_adj,
             clipboard_support::ClipboardService,
             col, convert_syntect_to_styled_text, fg_green, get_selection_style, glyphs,
-            height, inline_string, new_style,
+            height, inline_string, new_style, ok,
             render_cache::{RenderCache, UseRenderCache},
             render_pipeline, render_tui_styled_texts_into, row, throws,
-            throws_with_return, try_get_syntax_ref, try_parse_and_highlight, tui_color,
-            usize};
+            try_get_syntax_ref, try_parse_and_highlight, tui_color, usize};
 use syntect::easy::HighlightLines;
 
 /// Checks if we should stop rendering at this row index.
@@ -134,50 +133,52 @@ pub fn render_engine(
     current_box: FlexBox,
     has_focus: &mut HasFocus,
     window_size: Size,
-) -> CommonResult<RenderPipeline> {
-    throws_with_return!({
-        engine.current_box = current_box.into();
+    pipeline: &mut RenderPipeline,
+) -> CommonResult {
+    engine.current_box = current_box.into();
 
-        if buffer.is_empty() {
-            render_empty_state(RenderArgs {
+    if buffer.is_empty() {
+        render_empty_state(
+            RenderArgs {
                 engine,
                 buffer,
                 has_focus,
-            })
-        } else {
-            let mut render_ops = RenderOpIRVec::new();
+            },
+            pipeline,
+        );
+    } else {
+        let mut render_ops = RenderOpIRVec::new();
 
-            RenderCache::render_content(
-                buffer,
+        RenderCache::render_content(
+            buffer,
+            engine,
+            window_size,
+            has_focus,
+            &mut render_ops,
+            UseRenderCache::Yes,
+        );
+
+        render_selection(
+            RenderArgs {
                 engine,
-                window_size,
+                buffer,
                 has_focus,
-                &mut render_ops,
-                UseRenderCache::Yes,
-            );
+            },
+            &mut render_ops,
+        );
+        render_caret(
+            RenderArgs {
+                engine,
+                buffer,
+                has_focus,
+            },
+            &mut render_ops,
+        );
 
-            render_selection(
-                RenderArgs {
-                    engine,
-                    buffer,
-                    has_focus,
-                },
-                &mut render_ops,
-            );
-            render_caret(
-                RenderArgs {
-                    engine,
-                    buffer,
-                    has_focus,
-                },
-                &mut render_ops,
-            );
+        pipeline.push(ZOrder::Normal, render_ops);
+    }
 
-            let mut render_pipeline = render_pipeline!();
-            render_pipeline.push(ZOrder::Normal, render_ops);
-            render_pipeline
-        }
-    })
+    ok!()
 }
 
 pub fn render_content(render_args: RenderArgs<'_>, render_ops: &mut RenderOpIRVec) {
@@ -347,14 +348,12 @@ pub fn render_caret(render_args: RenderArgs<'_>, mut render_ops: &mut RenderOpIR
     }
 }
 
-#[must_use]
-pub fn render_empty_state(render_args: RenderArgs<'_>) -> RenderPipeline {
+pub fn render_empty_state(render_args: RenderArgs<'_>, pipeline: &mut RenderPipeline) {
     let RenderArgs {
-        has_focus,
         engine: editor_engine,
+        has_focus,
         ..
     } = render_args;
-    let mut pipeline = render_pipeline!();
 
     // Only when the editor has focus.
     if has_focus.does_id_have_focus(editor_engine.current_box.id) {
@@ -398,8 +397,6 @@ pub fn render_empty_state(render_args: RenderArgs<'_>) -> RenderPipeline {
             RenderOpIR::Common(RenderOpCommon::ResetColor)
         };
     }
-
-    pipeline
 }
 
 #[derive(Debug)]
@@ -451,7 +448,7 @@ mod syn_hi_r3bl_path {
         mut render_ops: &mut RenderOpIRVec,
         editor_engine: &mut EditorEngine,
         max_display_col_count: ColWidth,
-    ) -> CommonResult<()> {
+    ) -> CommonResult {
         throws!({
             // Save some values that are needed later. But are copied here to avoid.
             // multiple borrows.
@@ -471,6 +468,10 @@ mod syn_hi_r3bl_path {
 
             // Reuse the ast cache from engine.
             debug_assert!(!editor_engine.ast_cache_is_empty());
+            #[allow(
+                clippy::unwrap_used,
+                reason = "Cache presence verified by debug_assert"
+            )]
             let lines: &StyleUSSpanLines = editor_engine.get_ast_cache().unwrap();
 
             DEBUG_TUI_SYN_HI.then(|| {
@@ -943,12 +944,14 @@ mod tests {
         };
 
         // Execute: Render the editor
-        let pipeline = render_engine(
+        let mut pipeline = RenderPipeline::default();
+        render_engine(
             &mut engine,
             &mut buffer,
             current_box,
             &mut has_focus,
             window_size,
+            &mut pipeline,
         )
         .expect("render_engine should succeed");
 
@@ -956,8 +959,7 @@ mod tests {
         // The bug would cause row 20 to be missing, only rendering rows 0-19
         let has_row_20 = pipeline
             .pipeline_map
-            .values()
-            .flat_map(|render_ops_vec| render_ops_vec.iter())
+            .iter()
             .flat_map(|render_ops| render_ops.list.iter())
             .any(|op| {
                 matches!(op, RenderOpIR::Common(RenderOpCommon::MoveCursorPositionRelTo(_, pos))
@@ -975,8 +977,7 @@ mod tests {
         // viewport)
         let has_row_21 = pipeline
             .pipeline_map
-            .values()
-            .flat_map(|render_ops_vec| render_ops_vec.iter())
+            .iter()
             .flat_map(|render_ops| render_ops.list.iter())
             .any(|op| {
                 matches!(op, RenderOpIR::Common(RenderOpCommon::MoveCursorPositionRelTo(_, pos))

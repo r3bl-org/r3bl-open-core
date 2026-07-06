@@ -1,8 +1,7 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::{ComponentRegistryMap, EventPropagation, GlobalData, HasFocus};
-use crate::{CommonResult, FlexBox, FlexBoxId, InputEvent, RenderPipeline, Surface,
-            SurfaceBounds};
+use crate::{CommonResult, FlexBox, FlexBoxId, InputEvent, Surface, SurfaceBounds};
 use std::fmt::Debug;
 
 /// See [`crate::App`].
@@ -47,13 +46,15 @@ where
     /// # Errors
     ///
     /// Returns an error if the rendering operation fails.
+    ///
+    /// [`RenderPipeline`]: crate::RenderPipeline
     fn render(
         &mut self,
         global_data: &mut GlobalData<S, AS>,
         current_box: FlexBox,
         surface_bounds: SurfaceBounds,
         has_focus: &mut HasFocus,
-    ) -> CommonResult<RenderPipeline>;
+    ) -> CommonResult;
 
     /// If this component has focus [`HasFocus`] then this method will be called to handle
     /// input event that is meant for it.
@@ -96,5 +97,5 @@ where
         global_data: &mut GlobalData<S, AS>,
         component_registry_map: &mut ComponentRegistryMap<S, AS>,
         has_focus: &mut HasFocus,
-    ) -> CommonResult<()>;
+    ) -> CommonResult;
 }

@@ -1,6 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{InlineString, ItemsOwned, ResultAndCommand, Run, command, ok, script::git::types::{LocalBranchInfo,
+use crate::{InlineString, ItemsOwned, ResultAndCommand, Run, command, ok,
+            script::git::types::{LocalBranchInfo,
                                  git_command_args::{GIT_ARG_CREATE_BRANCH,
                                                     GIT_ARG_DELETE_FORCE,
                                                     GIT_ARG_FORMAT,
@@ -17,6 +18,10 @@ pub async fn try_get_current_branch_name() -> ResultAndCommand<InlineString> {
 
     let res_output = cmd.run().await;
     let Ok(output) = res_output else {
+        #[allow(
+            clippy::unwrap_used,
+            reason = "Error is already checked via let Ok() else"
+        )]
         let report = res_output.unwrap_err();
         let err = Err(report);
         return (err, cmd);
@@ -39,6 +44,10 @@ pub async fn try_checkout_existing_local_branch(
 
     let res_output = cmd.run().await;
     let Ok(_) = res_output else {
+        #[allow(
+            clippy::unwrap_used,
+            reason = "Error is already checked via let Ok() else"
+        )]
         let report = res_output.unwrap_err();
         let err = Err(report);
         return (err, cmd);
@@ -55,6 +64,10 @@ pub async fn try_create_and_switch_to_branch(branch_name: &str) -> ResultAndComm
 
     let res_output = cmd.run().await;
     let Ok(_) = res_output else {
+        #[allow(
+            clippy::unwrap_used,
+            reason = "Error is already checked via let Ok() else"
+        )]
         let report = res_output.unwrap_err();
         let err = Err(report);
         return (err, cmd);
@@ -72,6 +85,10 @@ pub async fn try_delete_branches(branches: &ItemsOwned) -> ResultAndCommand<()> 
 
     let res_output = cmd.run().await;
     let Ok(_) = res_output else {
+        #[allow(
+            clippy::unwrap_used,
+            reason = "Error is already checked via let Ok() else"
+        )]
         let report = res_output.unwrap_err();
         let err = Err(report);
         return (err, cmd);
@@ -96,6 +113,10 @@ pub async fn try_delete_branches(branches: &ItemsOwned) -> ResultAndCommand<()> 
 pub async fn try_get_local_branches() -> ResultAndCommand<(ItemsOwned, LocalBranchInfo)> {
     let (res, cmd) = try_get_branch_info().await;
     let Ok(info) = res else {
+        #[allow(
+            clippy::unwrap_used,
+            reason = "Error is already checked via let Ok() else"
+        )]
         let report = res.unwrap_err();
         return (Err(report), cmd);
     };
@@ -120,6 +141,10 @@ async fn try_get_branch_info() -> ResultAndCommand<LocalBranchInfo> {
     // Get all branches first.
     let (res, cmd) = try_execute_git_command_to_get_branches().await;
     let Ok(all_branches) = res else {
+        #[allow(
+            clippy::unwrap_used,
+            reason = "Error is already checked via let Ok() else"
+        )]
         let report = res.unwrap_err();
         return (Err(report), cmd);
     };
@@ -127,6 +152,10 @@ async fn try_get_branch_info() -> ResultAndCommand<LocalBranchInfo> {
     // Get current branch.
     let (res, _cmd) = try_get_current_branch_name().await;
     let Ok(current_branch) = res else {
+        #[allow(
+            clippy::unwrap_used,
+            reason = "Error is already checked via let Ok() else"
+        )]
         let report = res.unwrap_err();
         return (Err(report), cmd);
     };
@@ -154,6 +183,10 @@ pub(super) async fn try_execute_git_command_to_get_branches()
 
     let res_output = cmd.run().await;
     let Ok(output) = res_output else {
+        #[allow(
+            clippy::unwrap_used,
+            reason = "Error is already checked via let Ok() else"
+        )]
         let report = res_output.unwrap_err();
         let err = Err(report);
         return (err, cmd);

@@ -234,7 +234,7 @@ mod tests {
     /// Checks if the string contains a `CursorForward` sequence ([`CSI`] <n> C).
     ///
     /// [`CSI`]: crate::CsiSequence
-    fn contains_cursor_forward(s: &str) -> bool {
+    fn contains_move_cursor_right(s: &str) -> bool {
         // CSI sequences start with ESC [ and CursorForward ends with 'C'.
         // We look for patterns like "\x1b[5C" or "\x1b[10C".
         let mut chars = s.chars().peekable();
@@ -262,7 +262,7 @@ mod tests {
     /// Checks if the string contains a `CursorDown` sequence ([`CSI`] <n> B).
     ///
     /// [`CSI`]: crate::CsiSequence
-    fn contains_cursor_down(s: &str) -> bool {
+    fn contains_move_cursor_down(s: &str) -> bool {
         let mut chars = s.chars().peekable();
         while let Some(c) = chars.next() {
             if c == ESC_START && chars.next() == Some(ANSI_CSI_BRACKET as char) {
@@ -323,15 +323,15 @@ mod tests {
         let output_str = stdout_mock.get_copy_of_buffer_as_string();
 
         // Must emit CursorDown with correct row count.
-        let expected_cursor_down = format!("{CSI_START}{expected_rows}{CUD_CURSOR_DOWN}");
+        let expected_move_cursor_down = format!("{CSI_START}{expected_rows}{CUD_CURSOR_DOWN}");
         assert!(
-            output_str.contains(&expected_cursor_down),
+            output_str.contains(&expected_move_cursor_down),
             "position={position}: expected CursorDown({expected_rows}), got: {output_str:?}"
         );
 
         // Must NOT emit CursorForward (regression guard).
         assert!(
-            !contains_cursor_forward(&output_str),
+            !contains_move_cursor_right(&output_str),
             "position={position}: spurious CursorForward detected (off-by-one bug), got: {output_str:?}"
         );
     }
@@ -372,16 +372,16 @@ mod tests {
         let output_str = stdout_mock.get_copy_of_buffer_as_string();
 
         // Must emit CursorForward with correct column count.
-        let expected_cursor_forward =
+        let expected_move_cursor_right =
             format!("{CSI_START}{expected_cols}{CUF_CURSOR_FORWARD}");
         assert!(
-            output_str.contains(&expected_cursor_forward),
+            output_str.contains(&expected_move_cursor_right),
             "position={position}: expected CursorForward({expected_cols}), got: {output_str:?}"
         );
 
         // Must NOT emit CursorDown.
         assert!(
-            !contains_cursor_down(&output_str),
+            !contains_move_cursor_down(&output_str),
             "position={position}: unexpected CursorDown, got: {output_str:?}"
         );
     }
@@ -407,16 +407,16 @@ mod tests {
         let output_str = stdout_mock.get_copy_of_buffer_as_string();
 
         // Must emit both CursorDown and CursorForward.
-        let expected_cursor_down = format!("{CSI_START}{expected_rows}{CUD_CURSOR_DOWN}");
-        let expected_cursor_forward =
+        let expected_move_cursor_down = format!("{CSI_START}{expected_rows}{CUD_CURSOR_DOWN}");
+        let expected_move_cursor_right =
             format!("{CSI_START}{expected_cols}{CUF_CURSOR_FORWARD}");
 
         assert!(
-            output_str.contains(&expected_cursor_down),
+            output_str.contains(&expected_move_cursor_down),
             "position={position}: expected CursorDown({expected_rows}), got: {output_str:?}"
         );
         assert!(
-            output_str.contains(&expected_cursor_forward),
+            output_str.contains(&expected_move_cursor_right),
             "position={position}: expected CursorForward({expected_cols}), got: {output_str:?}"
         );
     }

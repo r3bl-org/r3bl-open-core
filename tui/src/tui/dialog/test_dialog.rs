@@ -3,10 +3,9 @@
 #[cfg(test)]
 pub mod mock_real_objects_for_dialog {
     use crate::{DefaultSize, DialogBuffer, DialogEngine, FlexBoxId, GlobalData,
-                HasDialogBuffers, OffscreenBufferPool, OutputDevice, OutputDeviceExt,
-                Size, SpinnerHelper, core::test_fixtures::StdoutMock,
-                editor::test_fixtures_editor::mock_real_objects_for_editor,
-                telemetry::telemetry_sizing::TelemetryReportLineStorage};
+                HasDialogBuffers, OfsBufPool, OutputDevice, OutputDeviceExt,
+                RenderPipeline, Size, core::test_fixtures::StdoutMock,
+                editor::test_fixtures_editor::mock_real_objects_for_editor};
     use std::{collections::HashMap, fmt::Debug};
     use tokio::sync::mpsc;
 
@@ -20,18 +19,17 @@ pub mod mock_real_objects_for_dialog {
         let window_size = window_size.unwrap_or_default();
         let maybe_saved_ofs_buf = Option::default();
         let (output_device, stdout_mock) = OutputDevice::new_mock();
-        let offscreen_buffer_pool = OffscreenBufferPool::new(window_size);
-        let spinner_helper = SpinnerHelper::default();
+        let ofs_buf_pool = OfsBufPool::new(window_size);
 
         let global_data = GlobalData {
+            pipeline: RenderPipeline::default(),
             state,
             window_size,
             maybe_saved_ofs_buf,
             main_thread_channel_sender,
             output_device,
-            offscreen_buffer_pool,
-            hud_report: TelemetryReportLineStorage::new(),
-            spinner_helper,
+            ofs_buf_pool,
+            hud_data: crate::HudData::default(),
             memoized_text_widths: HashMap::new(),
         };
 

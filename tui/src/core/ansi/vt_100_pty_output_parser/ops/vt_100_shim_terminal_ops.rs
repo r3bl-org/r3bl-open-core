@@ -44,7 +44,7 @@
 //!       - select_ascii_character_set() for `ESC ( B`
 //!       - select_dec_graphics_character_set() for `ESC ( 0`
 //!         ↓
-//!     Update OffscreenBuffer state
+//!     Update OfsBuf state
 //! ```
 //!
 //! Note: Cursor save/restore [`ESC`] sequences (`ESC 7`/`ESC 8`) are handled by
@@ -84,7 +84,7 @@ pub fn reset_terminal(performer: &mut AnsiToOfsBufPerformer) {
     let _unused = performer.ofs_buf_vt_100.erase_display_scrollback();
 
     // Reset cursor to home position.
-    performer.ofs_buf_vt_100.cursor_pos = Pos::default();
+    performer.ofs_buf_vt_100.set_cursor_pos(Pos::default());
 
     // Clear saved cursor state.
     performer

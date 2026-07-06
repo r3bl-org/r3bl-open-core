@@ -11,26 +11,26 @@ pub trait LayoutManagement {
     ///
     /// Returns `LayoutErrorType::MismatchedSurfaceStart` if the stack of boxes is not
     /// empty when this method is called.
-    fn surface_start(&mut self, bounds_props: SurfaceProps) -> CommonResult<()>;
+    fn surface_start(&mut self, bounds_props: SurfaceProps) -> CommonResult;
 
     /// # Errors
     ///
     /// Returns `LayoutErrorType::MismatchedSurfaceEnd` if the stack of boxes is not empty
     /// when this method is called.
-    fn surface_end(&mut self) -> CommonResult<()>;
+    fn surface_end(&mut self) -> CommonResult;
 
     /// Add a new layout on the stack w/ the direction & (width, height) percentages.
     ///
     /// # Errors
     ///
     /// Returns an error if adding the box fails due to invalid layout configuration.
-    fn box_start(&mut self, flex_box_props: FlexBoxProps) -> CommonResult<()>;
+    fn box_start(&mut self, flex_box_props: FlexBoxProps) -> CommonResult;
 
     /// # Errors
     ///
     /// Returns `LayoutErrorType::MismatchedBoxEnd` if the stack of boxes is empty
     /// when this method is called.
-    fn box_end(&mut self) -> CommonResult<()>;
+    fn box_end(&mut self) -> CommonResult;
 }
 
 /// Methods that actually perform the layout and positioning.
@@ -63,7 +63,7 @@ pub trait PerformPositioningAndSizing {
     ///
     /// Returns an error if the box properties are invalid or if adding the root box
     /// fails.
-    fn add_root_box(&mut self, props: FlexBoxProps) -> CommonResult<()>;
+    fn add_root_box(&mut self, props: FlexBoxProps) -> CommonResult;
 
     /// Add non-root [`FlexBox`].
     ///
@@ -71,5 +71,5 @@ pub trait PerformPositioningAndSizing {
     ///
     /// Returns `LayoutErrorType::BoxCursorPositionUndefined` if the container box's
     /// insertion position is undefined, or other errors if adding the box fails.
-    fn add_non_root_box(&mut self, props: FlexBoxProps) -> CommonResult<()>;
+    fn add_non_root_box(&mut self, props: FlexBoxProps) -> CommonResult;
 }

@@ -61,6 +61,7 @@ impl HasFocus {
         if self.id_vec.is_empty() {
             self.id_vec.push(id);
         } else {
+            #[allow(clippy::unwrap_used, reason = "Vec is empty checked above")]
             let it = self.id_vec.last_mut().unwrap();
             *it = id;
         }
@@ -78,6 +79,7 @@ impl HasFocus {
         if self.id_vec.is_empty() {
             false
         } else {
+            #[allow(clippy::unwrap_used, reason = "Vec is empty checked above")]
             let it = self.id_vec.last().unwrap();
             *it == id
         }
@@ -101,7 +103,7 @@ impl HasFocus {
     /// - A modal id is already set (cannot nest modal ids)
     ///
     /// [`reset_modal_id`]: HasFocus::reset_modal_id
-    pub fn try_set_modal_id(&mut self, id: FlexBoxId) -> CommonResult<()> {
+    pub fn try_set_modal_id(&mut self, id: FlexBoxId) -> CommonResult {
         throws!({
             // Must have a non modal id already set.
             if !self.is_set() {
@@ -113,10 +115,10 @@ impl HasFocus {
             if self.is_modal_set() {
                 let msg = inline_string!(
                     "Modal id is already set to {a}. Can't set it to {b}.",
-                    a = self.get_id().map_or_else(
-                        /* None */ || tiny_inline_string!("None"),
-                        /* Some */ |id| tiny_inline_string!("{id:?}")
-                    ),
+                    a = match self.get_id() {
+                        Some(id) => tiny_inline_string!("{id:?}"),
+                        None => tiny_inline_string!("None"),
+                    },
                     b = tiny_inline_string!("{id:?}")
                 );
                 return CommonError::new_error_result_with_only_msg(&msg);

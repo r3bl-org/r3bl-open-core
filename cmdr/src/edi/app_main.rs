@@ -88,7 +88,7 @@ mod app_main_impl_app_trait {
     #[allow(clippy::wildcard_imports)]
     use super::*;
     use crate::edi::file_utils;
-    use r3bl_tui::{CommonError, CommonResult, send_signal, throws_with_return};
+    use r3bl_tui::{CommonError, CommonResult, ok, send_signal};
 
     impl App for AppMain {
         type S = State;
@@ -245,40 +245,37 @@ mod app_main_impl_app_trait {
             global_data: &mut GlobalData<State, AppSignal>,
             component_registry_map: &mut ComponentRegistryMap<State, AppSignal>,
             has_focus: &mut HasFocus,
-        ) -> CommonResult<RenderPipeline> {
-            throws_with_return!({
-                let window_size = global_data.window_size;
+        ) -> CommonResult {
+            // Create a surface and then run the SurfaceRenderer.
+            // (ContainerSurfaceRender) on it.
+            let mut surface = surface!(stylesheet: stylesheet::create_stylesheet()?);
 
-                // Create a surface and then run the SurfaceRenderer.
-                // (ContainerSurfaceRender) on it.
-                let mut surface = {
-                    let mut it = surface!(stylesheet: stylesheet::create_stylesheet()?);
+            surface.surface_start(SurfaceProps {
+                pos: row(0) + col(0),
+                size: {
+                    let window_size = global_data.window_size;
+                    // Bottom row is reserved for status bar.
+                    let row_height = window_size.row_height - height(1);
+                    window_size.col_width + row_height
+                },
+            })?;
 
-                    it.surface_start(SurfaceProps {
-                        pos: row(0) + col(0),
-                        size: window_size.col_width
-                            + (window_size.row_height - height(1)), // Bottom row for for status bar.
-                    })?;
+            perform_layout::ContainerSurfaceRender { _app: self }.render_in_surface(
+                &mut surface,
+                global_data,
+                component_registry_map,
+                has_focus,
+            )?;
 
-                    perform_layout::ContainerSurfaceRender { _app: self }
-                        .render_in_surface(
-                            &mut it,
-                            global_data,
-                            component_registry_map,
-                            has_focus,
-                        )?;
+            surface.surface_end()?;
 
-                    it.surface_end()?;
+            // Render status bar.
+            status_bar::render_status_bar(
+                &mut global_data.pipeline,
+                global_data.window_size,
+            );
 
-                    it
-                };
-
-                // Render status bar.
-                status_bar::render_status_bar(&mut surface.render_pipeline, window_size);
-
-                // Return RenderOps pipeline (which will actually be painted elsewhere).
-                surface.render_pipeline
-            });
+            ok!()
         }
     }
 }
@@ -287,7 +284,7 @@ mod modal_dialog_ask_for_filename_to_save_file {
     #[allow(clippy::wildcard_imports)]
     use super::*;
     use crate::edi::file_utils;
-    use r3bl_tui::{CommonResult, InlineString, get_tui_style, send_signal, throws};
+    use r3bl_tui::{CommonResult, InlineString, get_tui_style, ok, send_signal};
 
     #[allow(clippy::needless_pass_by_value)]
     pub fn initialize(
@@ -309,35 +306,35 @@ mod modal_dialog_ask_for_filename_to_save_file {
         _component_registry_map: &mut ComponentRegistryMap<State, AppSignal>,
         has_focus: &mut HasFocus,
         state: &mut State,
-    ) -> CommonResult<()> {
-        throws!({
-            // Initialize the dialog buffer with title & text.
-            let title = "File name or path to save content to:";
-            let text = "";
+    ) -> CommonResult {
+        // Initialize the dialog buffer with title & text.
+        let title = "File name or path to save content to:";
+        let text = "";
 
-            // Setting the has_focus to Id::ComponentSimpleDialogAskForFilenameToSaveFile
-            // will cause the dialog to appear on the next render.
-            has_focus.try_set_modal_id(FlexBoxId::from(
-                Id::ComponentSimpleDialogAskForFilenameToSaveFile,
-            ))?;
+        // Setting the has_focus to Id::ComponentSimpleDialogAskForFilenameToSaveFile
+        // will cause the dialog to appear on the next render.
+        has_focus.try_set_modal_id(FlexBoxId::from(
+            Id::ComponentSimpleDialogAskForFilenameToSaveFile,
+        ))?;
 
-            // Change the state so that it will trigger a render. This will show the title
-            // & text on the next render.
-            initialize(
-                state,
-                FlexBoxId::from(Id::ComponentSimpleDialogAskForFilenameToSaveFile),
-                title.into(),
-                text.into(),
+        // Change the state so that it will trigger a render. This will show the title
+        // & text on the next render.
+        initialize(
+            state,
+            FlexBoxId::from(Id::ComponentSimpleDialogAskForFilenameToSaveFile),
+            title.into(),
+            text.into(),
+        );
+
+        DEBUG_TUI_MOD.then(|| {
+            // % is Display, ? is Debug.
+            tracing::debug!(
+                message = "📣 activate modal simple",
+                has_focus = ?has_focus
             );
-
-            DEBUG_TUI_MOD.then(|| {
-                // % is Display, ? is Debug.
-                tracing::debug!(
-                    message = "📣 activate modal simple",
-                    has_focus = ?has_focus
-                );
-            });
         });
+
+        ok!()
     }
 
     /// Inserts simple dialog component into registry if it's not already there.
@@ -466,7 +463,7 @@ mod modal_dialog_ask_for_filename_to_save_file {
 mod perform_layout {
     #[allow(clippy::wildcard_imports)]
     use super::*;
-    use r3bl_tui::{CommonResult, throws};
+    use r3bl_tui::{CommonResult, ok};
 
     pub struct ContainerSurfaceRender<'a> {
         pub _app: &'a mut AppMain,
@@ -479,42 +476,41 @@ mod perform_layout {
             global_data: &mut GlobalData<State, AppSignal>,
             component_registry_map: &mut ComponentRegistryMap<State, AppSignal>,
             has_focus: &mut HasFocus,
-        ) -> CommonResult<()> {
-            throws!({
-                // Layout editor component, and render it.
-                {
-                    box_start! (
-                        in:                     surface,
-                        id:                     FlexBoxId::from(Id::ComponentEditor),
-                        dir:                    LayoutDirection::Vertical,
-                        requested_size_percent: req_size_pc!(width: 100, height: 100),
-                        styles:                 [Id::StyleEditorDefault]
-                    );
-                    render_component_in_current_box!(
-                        in:                 surface,
-                        component_id:       FlexBoxId::from(Id::ComponentEditor),
-                        from:               component_registry_map,
-                        global_data:        global_data,
-                        has_focus:          has_focus
-                    );
-                    box_end!(in: surface);
-                }
+        ) -> CommonResult {
+            // Layout editor component, and render it.
+            {
+                box_start! (
+                    in:                     surface,
+                    id:                     FlexBoxId::from(Id::ComponentEditor),
+                    dir:                    LayoutDirection::Vertical,
+                    requested_size_percent: req_size_pc!(width: 100, height: 100),
+                    styles:                 [Id::StyleEditorDefault]
+                );
+                render_component_in_current_box!(
+                    in:                 surface,
+                    component_id:       FlexBoxId::from(Id::ComponentEditor),
+                    from:               component_registry_map,
+                    global_data:        global_data,
+                    has_focus:          has_focus
+                );
+                box_end!(in: surface);
+            }
 
-                // Then, render simple modal dialog (if it is active, on top of the editor
-                // component).
-                if has_focus.is_modal_id(FlexBoxId::from(
-                    Id::ComponentSimpleDialogAskForFilenameToSaveFile,
-                )) {
-                    render_component_in_given_box! {
-                      in:                 surface,
-                      box:                FlexBox::default(), /* This is not used as the modal breaks out of its box. */
-                      component_id:       FlexBoxId::from(Id::ComponentSimpleDialogAskForFilenameToSaveFile),
-                      from:               component_registry_map,
-                      global_data:        global_data,
-                      has_focus:          has_focus
-                    };
-                }
-            });
+            // Then, render simple modal dialog (if it is active, on top of the editor
+            // component).
+            let id = FlexBoxId::from(Id::ComponentSimpleDialogAskForFilenameToSaveFile);
+            if has_focus.is_modal_id(id) {
+                render_component_in_given_box! {
+                  in:           surface,
+                  box:          FlexBox::default(), /* This is not used as the modal breaks out of its box. */
+                  component_id: id,
+                  from:         component_registry_map,
+                  global_data:  global_data,
+                  has_focus:    has_focus
+                };
+            }
+
+            ok!()
         }
     }
 }

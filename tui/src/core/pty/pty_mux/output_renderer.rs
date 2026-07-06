@@ -2,14 +2,14 @@
 
 use super::{ProcessManager, ViewportRowMapping};
 use crate::{ArrayBoundsCheck, ArrayOverflowResult, CursorVisibilityMode, FlushKind,
-            GCStringOwned, IndexOps, OffscreenBuffer, OutputDevice, PixelChar,
+            GCStringOwned, IndexOps, OfsBuf, OutputDevice, PixelChar,
             ProcessStatus, RangeExt, RenderOpsLocalData, SPACE_CHAR, Size, TuiStyle,
             col,
             core::coordinates::{idx, len},
             ok, print_text_with_attributes, row,
             tui::{DEBUG_TUI_PTY_MUX,
-                  terminal_lib_backends::{OffscreenBufferPaint,
-                                          OffscreenBufferPaintImpl}},
+                  terminal_lib_backends::{OfsBufPaint,
+                                          OfsBufPaintImpl}},
             tui_color,
             tui_style_attrib::{self, Bold},
             tui_style_attribs, width};
@@ -18,7 +18,7 @@ use std::fmt::Debug;
 /// Dynamic display management for the [`PTY`] multiplexer.
 ///
 /// - Manages rendering output from the active process's buffer from [`ProcessManager`] by
-///   using [`OffscreenBuffer`] as a compositor.
+///   using [`OfsBuf`] as a compositor.
 /// - Maintains a dynamic status bar showing process information and keyboard shortcuts.
 /// - Handles scrollback buffer, see [`render_from_active_buffer()`] for details.
 ///
@@ -42,7 +42,7 @@ impl OutputRenderer {
     /// It uses a double-buffering approach to eliminate visual artifacts:
     ///
     /// 1. Get the active process's current scrollback state and terminal size.
-    /// 2. Create a new, blank composite buffer ([`OffscreenBuffer`]).
+    /// 2. Create a new, blank composite buffer ([`OfsBuf`]).
     /// 3. Fill the composite buffer's rows from the process's history and active buffers.
     /// 4. Composite the virtual cursor (if currently visible).
     /// 5. Composite the status bar onto the last row.
@@ -80,12 +80,12 @@ impl OutputRenderer {
         let active_buffer = process_manager.active_buffer();
 
         // Create a new composite buffer sized for the full terminal height.
-        let mut new_ofs_buf = OffscreenBuffer::new_empty(self.terminal_size);
+        let mut new_ofs_buf = OfsBuf::new_empty(self.terminal_size);
 
         // Dimensions.
         let (pty_max_rows, pty_max_cols) = (
-            active_buffer.window_size.row_height,
-            active_buffer.window_size.col_width,
+            active_buffer.ofs_buf.get_window_size().row_height,
+            active_buffer.ofs_buf.get_window_size().col_width,
         );
 
         // Scroll state.
@@ -105,10 +105,10 @@ impl OutputRenderer {
 
             let maybe_pixel_char_line = match mapped_viewport_idx {
                 ViewportRowMapping::History(history_row_idx) => {
-                    active_buffer.scrollback_buffer.lines.get(history_row_idx)
+                    active_buffer.scrollback_buffer.lines.get(history_row_idx).map(|l| l.pixel_chars.as_slice())
                 }
                 ViewportRowMapping::Live(active_buffer_row_idx) => {
-                    active_buffer.ofs_buf.buffer.get(active_buffer_row_idx)
+                    active_buffer.ofs_buf.get_row(active_buffer_row_idx)
                 }
             };
 
@@ -129,7 +129,7 @@ impl OutputRenderer {
         }
 
         // Calculate the shifted row index.
-        let adj_cursor_row_idx = active_buffer.cursor_pos.row_index + *scrollback_amt;
+        let adj_cursor_row_idx = active_buffer.get_cursor_pos().row_index + *scrollback_amt;
 
         // 1. Composite PTY virtual cursor if it's visible.
         // Only render the cursor if it hasn't scrolled off the bottom of the screen.
@@ -137,8 +137,9 @@ impl OutputRenderer {
         if is_cursor_visible {
             // Inherit the original cursor properties (column, shape, etc.) but with the
             // shifted row.
-            new_ofs_buf.cursor_pos = active_buffer.cursor_pos;
-            new_ofs_buf.cursor_pos.row_index = adj_cursor_row_idx;
+            let mut cursor_pos = active_buffer.get_cursor_pos();
+            cursor_pos.row_index = adj_cursor_row_idx;
+            new_ofs_buf.set_cursor_pos(cursor_pos);
 
             // Composite the cursor into the buffer.
             Self::composite_virtual_cursor_into_buffer(
@@ -159,7 +160,7 @@ impl OutputRenderer {
     /// Composites a virtual block cursor into the buffer.
     ///
     /// This framework handles [display widths] and [segmentation] prior to populating the
-    /// [`OffscreenBuffer`], allowing us to flip the [`Reverse`] attribute on the existing
+    /// [`OfsBuf`], allowing us to flip the [`Reverse`] attribute on the existing
     /// [`PixelChar`]. This inverts the colors without corrupting wide characters or
     /// disrupting alignment.
     ///
@@ -168,7 +169,7 @@ impl OutputRenderer {
     /// [display widths]: unicode-width
     /// [segmentation]: crate::graphemes
     pub fn composite_virtual_cursor_into_buffer(
-        ofs_buf: &mut OffscreenBuffer,
+        ofs_buf: &mut OfsBuf,
         cursor_visibility: CursorVisibilityMode,
     ) {
         // Only do something if the child process requested a visible cursor.
@@ -177,11 +178,11 @@ impl OutputRenderer {
         }
 
         // Locate the requested cursor position in the offscreen buffer.
-        let row_idx = ofs_buf.cursor_pos.row_index;
-        let col_idx = ofs_buf.cursor_pos.col_index;
+        let row_idx = ofs_buf.get_cursor_pos().row_index;
+        let col_idx = ofs_buf.get_cursor_pos().col_index;
 
         // Bounds check.
-        let buf_size = ofs_buf.window_size;
+        let buf_size = ofs_buf.get_window_size();
         if row_idx.overflows(buf_size.row_height) == ArrayOverflowResult::Overflowed
             || col_idx.overflows(buf_size.col_width) == ArrayOverflowResult::Overflowed
         {
@@ -248,7 +249,7 @@ impl OutputRenderer {
         ofs_buf[row_usize][col_usize] = pixel_char;
     }
 
-    /// Composite status bar into the last row of the given [`OffscreenBuffer`].
+    /// Composite status bar into the last row of the given [`OfsBuf`].
     ///
     /// This modifies the provided buffer by writing the status bar to its last row.
     ///
@@ -257,10 +258,10 @@ impl OutputRenderer {
     /// other processes.
     fn composite_status_bar_into_buffer(
         &mut self,
-        ofs_buf: &mut OffscreenBuffer,
+        ofs_buf: &mut OfsBuf,
         process_manager: &ProcessManager,
     ) {
-        let buf_size = ofs_buf.window_size;
+        let buf_size = ofs_buf.get_window_size();
         let last_row_idx = buf_size.row_height.as_usize().saturating_sub(1);
 
         let status_style = TuiStyle {
@@ -289,7 +290,7 @@ impl OutputRenderer {
         };
 
         // Position cursor at the start of the status bar row.
-        ofs_buf.cursor_pos = row(last_row_idx) + col(0);
+        ofs_buf.set_cursor_pos(row(last_row_idx) + col(0));
 
         match print_text_with_attributes(
             &status_text,
@@ -386,7 +387,7 @@ impl OutputRenderer {
         }
     }
 
-    /// Renders initial status bar on startup using [`OffscreenBuffer`] composition.
+    /// Renders initial status bar on startup using [`OfsBuf`] composition.
     ///
     /// # Errors
     ///
@@ -405,7 +406,7 @@ impl OutputRenderer {
     }
 }
 
-/// Paint the given [`OffscreenBuffer`] to terminal using existing paint infrastructure.
+/// Paint the given [`OfsBuf`] to terminal using existing paint infrastructure.
 ///
 /// # Note on Side Effects
 ///
@@ -418,14 +419,14 @@ impl OutputRenderer {
 /// the chrome in the future, they will be handled by compositing another virtual caret.
 ///
 /// [`hide_cursor`]: crate::TerminalModeController::hide_cursor
-fn paint_buffer(ofs_buf: &OffscreenBuffer, output_device: &OutputDevice) {
-    let mut ofs_buf_paint_impl = OffscreenBufferPaintImpl {};
+fn paint_buffer(ofs_buf: &OfsBuf, output_device: &OutputDevice) {
+    let mut ofs_buf_paint_impl = OfsBufPaintImpl {};
     let render_ops = ofs_buf_paint_impl.render(ofs_buf);
     output_device.write(|out| {
         ofs_buf_paint_impl.paint(
             render_ops,
             FlushKind::JustFlush,
-            ofs_buf.window_size,
+            ofs_buf.get_window_size(),
             out,
         );
     });

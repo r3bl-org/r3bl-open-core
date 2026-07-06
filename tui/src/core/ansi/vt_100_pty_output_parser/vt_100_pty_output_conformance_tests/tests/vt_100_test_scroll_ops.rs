@@ -17,15 +17,16 @@ use crate::{AutoWrapMode, EscSequence, TuiStyle, col,
             core::ansi::{constants::{IND_INDEX_DOWN, RI_REVERSE_INDEX_UP},
                          vt_100_pty_output_parser::{CsiSequence, PrivateModeType,
                                                     ansi_parser_public_api::AnsiToOfsBufPerformer}},
-            offscreen_buffer::test_fixtures_ofs_buf::*,
+            ofs_buf::test_fixtures_ofs_buf::*,
             row, term_col, term_row, term_row_delta};
 use vte::Perform;
+use crate::{OfsBufVT100, PendingWrap, PixelChar};
 
-fn fill_buffer_with_lines(ofs_buf_vt_100: &mut crate::OfsBufVT100) {
-    for r in 0..ofs_buf_vt_100.window_size.row_height.as_usize() {
+fn fill_buffer_with_lines(ofs_buf_vt_100: &mut OfsBufVT100) {
+    for r in 0..ofs_buf_vt_100.ofs_buf.get_window_size().row_height.as_usize() {
         let line_text = format!("Line-{r}");
         for (c, char) in line_text.chars().enumerate() {
-            ofs_buf_vt_100.buffer[r][c] = crate::PixelChar::PlainText {
+            ofs_buf_vt_100.ofs_buf.get_row_mut(r).unwrap()[c] = PixelChar::PlainText {
                 display_char: char,
                 style: TuiStyle::default(),
             };
@@ -39,7 +40,7 @@ pub mod auto_wrap {
 
     #[test]
     fn test_auto_wrap_enabled_by_default() {
-        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
 
         // Auto-wrap should be enabled by default.
         // This test verifies that characters wrap to the next line when reaching the
@@ -76,13 +77,13 @@ pub mod auto_wrap {
 
         // Verify cursor is clamped at right margin with pending wrap
         assert_eq!(
-            performer.ofs_buf_vt_100.cursor_pos,
+            performer.ofs_buf_vt_100.get_cursor_pos(),
             row(0) + col(9),
             "Cursor should be at (r:0,c:9) clamped after printing 10 characters"
         );
         assert_eq!(
             performer.ofs_buf_vt_100.parser_global_state.pending_wrap,
-            crate::PendingWrap::Yes,
+            PendingWrap::Yes,
         );
 
         // The 11th character (should be added to the next line)
@@ -90,7 +91,7 @@ pub mod auto_wrap {
 
         // Verify cursor wrapped to next line.
         assert_eq!(
-            performer.ofs_buf_vt_100.cursor_pos,
+            performer.ofs_buf_vt_100.get_cursor_pos(),
             row(1) + col(1),
             "Cursor should be at (r:1,c:1) after wrapping"
         );
@@ -102,7 +103,7 @@ pub mod auto_wrap {
 
     #[test]
     fn test_auto_wrap_can_be_disabled() {
-        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
 
         // When auto-wrap is disabled, characters beyond the right margin
         // should overwrite the last column instead of wrapping.
@@ -145,7 +146,7 @@ pub mod auto_wrap {
 
         // Verify cursor stays at right margin.
         assert_eq!(
-            performer.ofs_buf_vt_100.cursor_pos,
+            performer.ofs_buf_vt_100.get_cursor_pos(),
             row(0) + col(9),
             "Cursor should stay at (r:0,c:9) without wrapping"
         );
@@ -156,7 +157,7 @@ pub mod auto_wrap {
 
     #[test]
     fn test_auto_wrap_can_be_toggled() {
-        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
 
         let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf_vt_100);
 
@@ -192,7 +193,7 @@ pub mod auto_wrap {
 
         // Verify wrapping occurred.
         assert_eq!(
-            performer.ofs_buf_vt_100.cursor_pos,
+            performer.ofs_buf_vt_100.get_cursor_pos(),
             row(1) + col(1),
             "Cursor should be at (r:1,c:1) after wrapping"
         );
@@ -228,7 +229,7 @@ pub mod auto_wrap {
         //         │ … │ │ │ … │ … │ … │ … │ … │ … │ … │ … │
         //         └───┴─│─┴───┴───┴───┴───┴───┴───┴───┴───┘
         //               ╰─ cursor ends at (r:3,c:1)
-        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
 
         let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf_vt_100);
 
@@ -240,13 +241,13 @@ pub mod auto_wrap {
 
         // Now cursor should be clamped at (r:0,c:9) with pending wrap
         assert_eq!(
-            performer.ofs_buf_vt_100.cursor_pos,
+            performer.ofs_buf_vt_100.get_cursor_pos(),
             row(0) + col(9),
             "Cursor should be clamped at (r:0,c:9) after printing 10 characters"
         );
         assert_eq!(
             performer.ofs_buf_vt_100.parser_global_state.pending_wrap,
-            crate::PendingWrap::Yes,
+            PendingWrap::Yes,
         );
 
         // Disable auto-wrap mode.
@@ -255,7 +256,7 @@ pub mod auto_wrap {
         performer.apply_ansi_bytes(sequence);
 
         // Move to end of line 2 and test clamping.
-        performer.ofs_buf_vt_100.cursor_pos = row(2) + col(9);
+        performer.ofs_buf_vt_100.set_cursor_pos(row(2) + col(9));
         performer.print('X'); // At boundary
         performer.print('Y'); // Should clamp to (r:2,c:9) and overwrite 'X'
 
@@ -265,13 +266,13 @@ pub mod auto_wrap {
         performer.apply_ansi_bytes(sequence);
 
         // Move to a new position and test wrapping again.
-        performer.ofs_buf_vt_100.cursor_pos = row(2) + col(9);
+        performer.ofs_buf_vt_100.set_cursor_pos(row(2) + col(9));
         performer.print('A');
         performer.print('B'); // Should wrap to row 3
 
         // Verify final cursor position.
         assert_eq!(
-            performer.ofs_buf_vt_100.cursor_pos,
+            performer.ofs_buf_vt_100.get_cursor_pos(),
             row(3) + col(1),
             "Cursor should be at (r:3,c:1) after wrapping"
         );
@@ -290,7 +291,7 @@ pub mod line_wrapping {
 
     #[test]
     fn test_line_wrapping_behavior() {
-        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
 
         // Process characters that should wrap at column 10.
         //
@@ -321,7 +322,7 @@ pub mod line_wrapping {
 
         // Verify cursor wrapped to next line.
         assert_eq!(
-            performer.ofs_buf_vt_100.cursor_pos,
+            performer.ofs_buf_vt_100.get_cursor_pos(),
             row(1) + col(1),
             "Cursor should be at (r:1,c:1) after wrapping"
         );
@@ -345,7 +346,7 @@ pub mod scrolling {
 
     #[test]
     fn test_esc_d_index_scrolls_up_at_bottom() {
-        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
         fill_buffer_with_lines(&mut ofs_buf_vt_100);
 
         // ESC D (Index) at bottom row causes buffer to scroll up
@@ -365,7 +366,7 @@ pub mod scrolling {
 
         let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf_vt_100);
         // Move cursor to the last row.
-        performer.ofs_buf_vt_100.cursor_pos.row_index = row(9);
+        performer.ofs_buf_vt_100.update_cursor_pos(|pos| pos.row_index = row(9));
 
         // Execute Index (ESC D)
         performer.esc_dispatch(&[], false, IND_INDEX_DOWN);
@@ -380,7 +381,7 @@ pub mod scrolling {
 
     #[test]
     fn test_esc_m_reverse_index_scrolls_down_at_top() {
-        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
         fill_buffer_with_lines(&mut ofs_buf_vt_100);
 
         // ESC M (Reverse Index) at top row causes buffer to scroll down
@@ -400,7 +401,7 @@ pub mod scrolling {
 
         let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf_vt_100);
         // Move cursor to the first row.
-        performer.ofs_buf_vt_100.cursor_pos.row_index = row(0);
+        performer.ofs_buf_vt_100.update_cursor_pos(|pos| pos.row_index = row(0));
 
         // Execute Reverse Index (ESC M)
         performer.esc_dispatch(&[], false, RI_REVERSE_INDEX_UP);
@@ -417,7 +418,7 @@ pub mod scrolling {
 
     #[test]
     fn test_csi_s_scroll_up() {
-        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
         fill_buffer_with_lines(&mut ofs_buf_vt_100);
 
         // CSI 2 S (Scroll Up by 2 lines) removes top 2 lines, adds empty at bottom
@@ -453,7 +454,7 @@ pub mod scrolling {
 
     #[test]
     fn test_csi_t_scroll_down() {
-        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
         fill_buffer_with_lines(&mut ofs_buf_vt_100);
 
         // CSI 3 T (Scroll Down by 3 lines) adds empty at top, removes bottom 3 lines
@@ -492,7 +493,7 @@ pub mod scrolling {
 
     #[test]
     fn test_csi_s_scroll_up_more_than_height_clears_buffer() {
-        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
         fill_buffer_with_lines(&mut ofs_buf_vt_100);
 
         // CSI 20 S (Scroll Up by 20 lines) - more than buffer height clears everything
@@ -525,7 +526,7 @@ pub mod scrolling {
 
     #[test]
     fn test_csi_t_scroll_down_more_than_height_clears_buffer() {
-        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
         fill_buffer_with_lines(&mut ofs_buf_vt_100);
 
         let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf_vt_100);
@@ -543,7 +544,7 @@ pub mod scrolling {
 
     #[test]
     fn test_esc_d_and_esc_m_move_cursor_when_not_at_boundary() {
-        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
         fill_buffer_with_lines(&mut ofs_buf_vt_100);
 
         // This test ensures that ESC D (Index) and ESC M (Reverse Index) only move the
@@ -561,12 +562,12 @@ pub mod scrolling {
         // Row 7: │Line-7│
 
         let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf_vt_100);
-        performer.ofs_buf_vt_100.cursor_pos = row(5) + col(0);
+        performer.ofs_buf_vt_100.set_cursor_pos(row(5) + col(0));
 
         // Execute Index (ESC D) - should just move cursor down
         performer.esc_dispatch(&[], false, IND_INDEX_DOWN);
         assert_eq!(
-            performer.ofs_buf_vt_100.cursor_pos,
+            performer.ofs_buf_vt_100.get_cursor_pos(),
             row(6) + col(0),
             "Cursor should move down"
         );
@@ -575,7 +576,7 @@ pub mod scrolling {
         // Execute Reverse Index (ESC M) - should just move cursor up
         performer.esc_dispatch(&[], false, RI_REVERSE_INDEX_UP);
         assert_eq!(
-            performer.ofs_buf_vt_100.cursor_pos,
+            performer.ofs_buf_vt_100.get_cursor_pos(),
             row(5) + col(0),
             "Cursor should move up"
         );
@@ -587,7 +588,7 @@ pub mod scrolling {
         // Verifies that CSI S (Scroll Up) defaults to 1 line if no parameter is given.
         // Raw sequence "\x1b[S" should scroll by 1 line.
 
-        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
         fill_buffer_with_lines(&mut ofs_buf_vt_100);
 
         let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf_vt_100);
@@ -608,7 +609,7 @@ pub mod scrolling {
         // Verifies that CSI T (Scroll Down) defaults to 1 line if no parameter is given.
         // Raw sequence "\x1b[T" should scroll by 1 line.
 
-        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
         fill_buffer_with_lines(&mut ofs_buf_vt_100);
 
         let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf_vt_100);
@@ -630,45 +631,45 @@ pub mod scrolling {
         // This addresses the gap where cursor position verification after scrolling
         // was missing from existing tests.
 
-        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
         fill_buffer_with_lines(&mut ofs_buf_vt_100);
 
         let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf_vt_100);
 
         // Test ESC D (Index) at bottom - cursor should remain at bottom
-        performer.ofs_buf_vt_100.cursor_pos = row(9) + col(5);
+        performer.ofs_buf_vt_100.set_cursor_pos(row(9) + col(5));
         performer.esc_dispatch(&[], false, IND_INDEX_DOWN);
         assert_eq!(
-            performer.ofs_buf_vt_100.cursor_pos,
+            performer.ofs_buf_vt_100.get_cursor_pos(),
             row(9) + col(5),
             "Cursor should remain at bottom after ESC D scroll"
         );
 
         // Test ESC M (Reverse Index) at top - cursor should remain at top
-        performer.ofs_buf_vt_100.cursor_pos = row(0) + col(3);
+        performer.ofs_buf_vt_100.set_cursor_pos(row(0) + col(3));
         performer.esc_dispatch(&[], false, RI_REVERSE_INDEX_UP);
         assert_eq!(
-            performer.ofs_buf_vt_100.cursor_pos,
+            performer.ofs_buf_vt_100.get_cursor_pos(),
             row(0) + col(3),
             "Cursor should remain at top after ESC M scroll"
         );
 
         // Test CSI S (Scroll Up) - cursor position should be unchanged
-        performer.ofs_buf_vt_100.cursor_pos = row(4) + col(7);
+        performer.ofs_buf_vt_100.set_cursor_pos(row(4) + col(7));
         let sequence = CsiSequence::ScrollUp(term_row_delta(2).unwrap()).to_string();
         performer.apply_ansi_bytes(sequence);
         assert_eq!(
-            performer.ofs_buf_vt_100.cursor_pos,
+            performer.ofs_buf_vt_100.get_cursor_pos(),
             row(4) + col(7),
             "Cursor position should be unchanged after CSI S scroll"
         );
 
         // Test CSI T (Scroll Down) - cursor position should be unchanged
-        performer.ofs_buf_vt_100.cursor_pos = row(6) + col(2);
+        performer.ofs_buf_vt_100.set_cursor_pos(row(6) + col(2));
         let sequence = CsiSequence::ScrollDown(term_row_delta(1).unwrap()).to_string();
         performer.apply_ansi_bytes(sequence);
         assert_eq!(
-            performer.ofs_buf_vt_100.cursor_pos,
+            performer.ofs_buf_vt_100.get_cursor_pos(),
             row(6) + col(2),
             "Cursor position should be unchanged after CSI T scroll"
         );
@@ -683,7 +684,7 @@ pub mod scrolling {
         // operations should be treated as 1, just like cursor movement commands.
         // This is now correctly implemented.
 
-        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
         fill_buffer_with_lines(&mut ofs_buf_vt_100);
 
         let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf_vt_100);
@@ -743,20 +744,20 @@ pub mod line_wrap_scroll_interaction {
         // typically scroll when wrapping at the bottom, but this implementation
         // clamps the cursor position.
 
-        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
         fill_buffer_with_lines(&mut ofs_buf_vt_100);
 
         let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf_vt_100);
 
         // Fill the last line except for the last character.
-        performer.ofs_buf_vt_100.cursor_pos = row(9) + col(0);
+        performer.ofs_buf_vt_100.set_cursor_pos(row(9) + col(0));
         for c in "ABCDEFGHI".chars() {
             performer.print(c);
         }
 
         // Verify cursor is at the last position.
         assert_eq!(
-            performer.ofs_buf_vt_100.cursor_pos,
+            performer.ofs_buf_vt_100.get_cursor_pos(),
             row(9) + col(9),
             "Cursor should be at last position (9,9)"
         );
@@ -770,13 +771,13 @@ pub mod line_wrap_scroll_interaction {
 
         // J gets written at (9,9), cursor enters pending wrap state
         assert_eq!(
-            performer.ofs_buf_vt_100.cursor_pos,
+            performer.ofs_buf_vt_100.get_cursor_pos(),
             row(9) + col(9),
             "Cursor should clamp at (9,9) after printing J"
         );
         assert_eq!(
             performer.ofs_buf_vt_100.parser_global_state.pending_wrap,
-            crate::PendingWrap::Yes,
+            PendingWrap::Yes,
         );
 
         // The 'J' character should be at position (9,9) where it was printed
@@ -791,24 +792,24 @@ pub mod line_wrap_scroll_interaction {
         // Verifies that line wrapping doesn't cause scrolling when the cursor
         // is not on the last line of the buffer.
 
-        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
         let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf_vt_100);
 
         // Position cursor on row 5 (not the last row).
-        performer.ofs_buf_vt_100.cursor_pos = row(5) + col(9);
+        performer.ofs_buf_vt_100.set_cursor_pos(row(5) + col(9));
 
         // Print character that should wrap.
         performer.print('X');
 
         // X gets written at (5,9), cursor enters pending wrap state
         assert_eq!(
-            performer.ofs_buf_vt_100.cursor_pos,
+            performer.ofs_buf_vt_100.get_cursor_pos(),
             row(5) + col(9),
             "Cursor should clamp to (5,9) after printing"
         );
         assert_eq!(
             performer.ofs_buf_vt_100.parser_global_state.pending_wrap,
-            crate::PendingWrap::Yes,
+            PendingWrap::Yes,
         );
 
         // Verify 'X' is at position (5,9) where it was printed.
@@ -824,13 +825,13 @@ pub mod line_wrap_scroll_interaction {
         // Tests the current behavior where multiple wraps at bottom.
         // continue to clamp the cursor at the bottom row.
 
-        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
         fill_buffer_with_lines(&mut ofs_buf_vt_100);
 
         let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf_vt_100);
 
         // Position at bottom line, leave room for some characters.
-        performer.ofs_buf_vt_100.cursor_pos = row(9) + col(7);
+        performer.ofs_buf_vt_100.set_cursor_pos(row(9) + col(7));
 
         // Print characters that fill and wrap the line.
         performer.print('A'); // written at (9,7), cursor to (9,8)
@@ -839,13 +840,13 @@ pub mod line_wrap_scroll_interaction {
 
         // After wrap, cursor should be at (9,9) with pending wrap Yes
         assert_eq!(
-            performer.ofs_buf_vt_100.cursor_pos,
+            performer.ofs_buf_vt_100.get_cursor_pos(),
             row(9) + col(9),
             "Should clamp to column 9 after printing C"
         );
         assert_eq!(
             performer.ofs_buf_vt_100.parser_global_state.pending_wrap,
-            crate::PendingWrap::Yes,
+            PendingWrap::Yes,
         );
 
         // Verify no scrolling yet - Line-0 still at top.
@@ -880,7 +881,7 @@ pub mod decstbm_scroll_margins {
 
     #[test]
     fn test_set_scroll_margins_basic() {
-        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
         let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf_vt_100);
 
         // Set scroll region from row 3 to row 7 (1-based) - ESC [ 3 ; 7 r
@@ -910,7 +911,7 @@ pub mod decstbm_scroll_margins {
 
     #[test]
     fn test_reset_scroll_margins() {
-        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
         let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf_vt_100);
 
         // Set some margins first.
@@ -962,7 +963,7 @@ pub mod decstbm_scroll_margins {
 
     #[test]
     fn test_scrolling_within_margins() {
-        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
         let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf_vt_100);
         fill_buffer_with_lines(performer.ofs_buf_vt_100);
 
@@ -996,7 +997,7 @@ pub mod decstbm_scroll_margins {
 
     #[test]
     fn test_cursor_movement_respects_margins() {
-        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
         let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf_vt_100);
 
         // Set scroll region from row 3 to row 7 (1-based)
@@ -1014,12 +1015,12 @@ pub mod decstbm_scroll_margins {
         }
         .to_string();
         performer.apply_ansi_bytes(cursor_pos);
-        assert_eq!(performer.ofs_buf_vt_100.cursor_pos.row_index.as_usize(), 2); // 0-based row 2
+        assert_eq!(performer.ofs_buf_vt_100.get_cursor_pos().row_index.as_usize(), 2); // 0-based row 2
 
         // Try to move cursor up - should be clamped to scroll region top.
-        let cursor_up = CsiSequence::CursorUp(term_row_delta(5).unwrap()).to_string();
-        performer.apply_ansi_bytes(cursor_up);
-        assert_eq!(performer.ofs_buf_vt_100.cursor_pos.row_index.as_usize(), 2); // Still at top margin
+        let move_cursor_up = CsiSequence::CursorUp(term_row_delta(5).unwrap()).to_string();
+        performer.apply_ansi_bytes(move_cursor_up);
+        assert_eq!(performer.ofs_buf_vt_100.get_cursor_pos().row_index.as_usize(), 2); // Still at top margin
 
         // Move cursor to bottom of scroll region.
         let cursor_pos_bottom = CsiSequence::CursorPosition {
@@ -1028,17 +1029,17 @@ pub mod decstbm_scroll_margins {
         }
         .to_string();
         performer.apply_ansi_bytes(cursor_pos_bottom);
-        assert_eq!(performer.ofs_buf_vt_100.cursor_pos.row_index.as_usize(), 6); // 0-based row 6
+        assert_eq!(performer.ofs_buf_vt_100.get_cursor_pos().row_index.as_usize(), 6); // 0-based row 6
 
         // Try to move cursor down - should be clamped to scroll region bottom.
-        let cursor_down = CsiSequence::CursorDown(term_row_delta(5).unwrap()).to_string();
-        performer.apply_ansi_bytes(cursor_down);
-        assert_eq!(performer.ofs_buf_vt_100.cursor_pos.row_index.as_usize(), 6); // Still at bottom margin
+        let move_cursor_down = CsiSequence::CursorDown(term_row_delta(5).unwrap()).to_string();
+        performer.apply_ansi_bytes(move_cursor_down);
+        assert_eq!(performer.ofs_buf_vt_100.get_cursor_pos().row_index.as_usize(), 6); // Still at bottom margin
     }
 
     #[test]
     fn test_cursor_position_clamped_to_margins() {
-        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
         let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf_vt_100);
 
         // Set scroll region from row 3 to row 7 (1-based)
@@ -1056,7 +1057,7 @@ pub mod decstbm_scroll_margins {
         }
         .to_string();
         performer.apply_ansi_bytes(cursor_above);
-        assert_eq!(performer.ofs_buf_vt_100.cursor_pos.row_index.as_usize(), 2); // Clamped to top margin
+        assert_eq!(performer.ofs_buf_vt_100.get_cursor_pos().row_index.as_usize(), 2); // Clamped to top margin
 
         // Try to position cursor below scroll region.
         let cursor_below = CsiSequence::CursorPosition {
@@ -1065,7 +1066,7 @@ pub mod decstbm_scroll_margins {
         }
         .to_string();
         performer.apply_ansi_bytes(cursor_below);
-        assert_eq!(performer.ofs_buf_vt_100.cursor_pos.row_index.as_usize(), 6); // Clamped to bottom margin
+        assert_eq!(performer.ofs_buf_vt_100.get_cursor_pos().row_index.as_usize(), 6); // Clamped to bottom margin
 
         // Position within scroll region should work normally.
         let cursor_within = CsiSequence::CursorPosition {
@@ -1074,12 +1075,12 @@ pub mod decstbm_scroll_margins {
         }
         .to_string();
         performer.apply_ansi_bytes(cursor_within);
-        assert_eq!(performer.ofs_buf_vt_100.cursor_pos.row_index.as_usize(), 4); // 0-based row 4
+        assert_eq!(performer.ofs_buf_vt_100.get_cursor_pos().row_index.as_usize(), 4); // 0-based row 4
     }
 
     #[test]
     fn test_index_and_reverse_index_with_margins() {
-        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
         let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf_vt_100);
         fill_buffer_with_lines(performer.ofs_buf_vt_100);
 
@@ -1131,7 +1132,7 @@ pub mod decstbm_scroll_margins {
 
     #[test]
     fn test_terminal_reset_clears_margins() {
-        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
         let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf_vt_100);
 
         // Set scroll margins.
@@ -1172,7 +1173,7 @@ pub mod decstbm_scroll_margins {
 
     #[test]
     fn test_invalid_margins_ignored() {
-        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
         let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf_vt_100);
 
         // Try to set invalid margins (top >= bottom)
@@ -1231,7 +1232,7 @@ pub mod cursor_boundary_operations {
 
     #[test]
     fn test_cursor_next_line_within_scroll_region() {
-        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
 
         // Set scroll region (rows 3-7)
         let margins_sequence = format!(
@@ -1261,12 +1262,12 @@ pub mod cursor_boundary_operations {
         let _result = ofs_buf_vt_100.apply_ansi_bytes(next_line_sequence);
 
         // Should be at row 5, column 1 (within scroll region)
-        assert_eq!(ofs_buf_vt_100.cursor_pos, row(4) + col(0)); // 0-based
+        assert_eq!(ofs_buf_vt_100.get_cursor_pos(), row(4) + col(0)); // 0-based
     }
 
     #[test]
     fn test_cursor_next_line_at_scroll_region_bottom() {
-        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
 
         // Set scroll region (rows 3-7)
         let margins_sequence = format!(
@@ -1296,12 +1297,12 @@ pub mod cursor_boundary_operations {
         let _result = ofs_buf_vt_100.apply_ansi_bytes(next_line_sequence);
 
         // Should remain at row 7, column 1 (region boundary), but content should scroll
-        assert_eq!(ofs_buf_vt_100.cursor_pos, row(6) + col(0)); // 0-based row 6 = 1-based row 7
+        assert_eq!(ofs_buf_vt_100.get_cursor_pos(), row(6) + col(0)); // 0-based row 6 = 1-based row 7
     }
 
     #[test]
     fn test_cursor_prev_line_within_scroll_region() {
-        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
 
         // Set scroll region (rows 3-7)
         let margins_sequence = format!(
@@ -1331,12 +1332,12 @@ pub mod cursor_boundary_operations {
         let _result = ofs_buf_vt_100.apply_ansi_bytes(prev_line_sequence);
 
         // Should be at row 4, column 1 (within scroll region)
-        assert_eq!(ofs_buf_vt_100.cursor_pos, row(3) + col(0)); // 0-based
+        assert_eq!(ofs_buf_vt_100.get_cursor_pos(), row(3) + col(0)); // 0-based
     }
 
     #[test]
     fn test_cursor_prev_line_at_scroll_region_top() {
-        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
 
         // Set scroll region (rows 3-7)
         let margins_sequence = format!(
@@ -1366,12 +1367,12 @@ pub mod cursor_boundary_operations {
         let _result = ofs_buf_vt_100.apply_ansi_bytes(prev_line_sequence);
 
         // Should remain at row 3, column 1 (region boundary)
-        assert_eq!(ofs_buf_vt_100.cursor_pos, row(2) + col(0)); // 0-based row 2 = 1-based row 3
+        assert_eq!(ofs_buf_vt_100.get_cursor_pos(), row(2) + col(0)); // 0-based row 2 = 1-based row 3
     }
 
     #[test]
     fn test_cursor_operations_outside_scroll_region() {
-        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
 
         // Set scroll region (rows 4-8)
         let margins_sequence = format!(
@@ -1405,7 +1406,7 @@ pub mod cursor_boundary_operations {
         // column 0 From row 2 (1-based) to row 3 (1-based) = from row 1 (0-based)
         // to row 2 (0-based) But test shows cursor at row 4 (0-based), so
         // CursorNextLine(1) moved from row 1 to row 4
-        assert_eq!(ofs_buf_vt_100.cursor_pos, row(4) + col(0)); // 0-based - matches actual behavior
+        assert_eq!(ofs_buf_vt_100.get_cursor_pos(), row(4) + col(0)); // 0-based - matches actual behavior
     }
 }
 
@@ -1415,7 +1416,7 @@ pub mod boundary_validation {
 
     #[test]
     fn test_invalid_scroll_region_parameters() {
-        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
 
         // Try to set invalid scroll region (top > bottom)
         let invalid_margins = format!(
@@ -1440,7 +1441,7 @@ pub mod boundary_validation {
 
     #[test]
     fn test_scroll_region_beyond_buffer_bounds() {
-        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
 
         // Try to set scroll region beyond buffer bounds
         let invalid_margins = format!(
@@ -1461,7 +1462,7 @@ pub mod boundary_validation {
 
     #[test]
     fn test_single_line_scroll_region() {
-        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
 
         // Set single-line scroll region (top == bottom)
         let single_line_margins = format!(
@@ -1489,12 +1490,12 @@ pub mod boundary_validation {
 
         // Cursor should stay within or handle the single-line region appropriately
         // Exact behavior may vary by implementation
-        assert!(ofs_buf_vt_100.cursor_pos.row_index <= row(9)); // Within buffer bounds
+        assert!(ofs_buf_vt_100.get_cursor_pos().row_index <= row(9)); // Within buffer bounds
     }
 
     #[test]
     fn test_full_buffer_scroll_region() {
-        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
 
         // Set scroll region covering entire buffer
         let full_margins = format!(
@@ -1526,7 +1527,7 @@ pub mod boundary_validation {
         let _result = ofs_buf_vt_100.apply_ansi_bytes(scroll_ops);
 
         // Should handle full-buffer scrolling correctly
-        assert_eq!(ofs_buf_vt_100.cursor_pos.row_index, row(9)); // Should stay at bottom row
+        assert_eq!(ofs_buf_vt_100.get_cursor_pos().row_index, row(9)); // Should stay at bottom row
     }
 }
 
@@ -1536,7 +1537,7 @@ pub mod complex_interactions {
 
     #[test]
     fn test_nested_cursor_operations_with_scrolling() {
-        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
 
         // Set scroll region (rows 3-7)
         let margins_sequence = format!(
@@ -1590,13 +1591,13 @@ pub mod complex_interactions {
         let _result = ofs_buf_vt_100.apply_ansi_bytes(complex_ops);
 
         // Verify the cursor is within the scroll region bounds
-        assert!(ofs_buf_vt_100.cursor_pos.row_index >= row(2)); // >= row 3 (1-based)
-        assert!(ofs_buf_vt_100.cursor_pos.row_index <= row(6)); // <= row 7 (1-based)
+        assert!(ofs_buf_vt_100.get_cursor_pos().row_index >= row(2)); // >= row 3 (1-based)
+        assert!(ofs_buf_vt_100.get_cursor_pos().row_index <= row(6)); // <= row 7 (1-based)
     }
 
     #[test]
     fn test_scroll_region_with_line_feed_and_carriage_return() {
-        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
 
         // Set scroll region (rows 4-6)
         let margins_sequence = format!(
@@ -1625,20 +1626,20 @@ pub mod complex_interactions {
         // Based on actual behavior: line feed may move cursor beyond expected bounds
         // Current implementation may not fully respect scroll region boundaries for LF
         // Verify the cursor position is reasonable within the buffer bounds
-        assert!(ofs_buf_vt_100.cursor_pos.row_index < row(10)); // Within buffer bounds
+        assert!(ofs_buf_vt_100.get_cursor_pos().row_index < row(10)); // Within buffer bounds
 
         // Send carriage return + line feed combination
         let crlf_sequence = "\r\n";
         let _result = ofs_buf_vt_100.apply_ansi_bytes(crlf_sequence);
 
         // Should handle the combination and move to beginning of next line
-        assert!(ofs_buf_vt_100.cursor_pos.row_index < row(10)); // Within buffer bounds
-        assert_eq!(ofs_buf_vt_100.cursor_pos.col_index, col(0)); // Should be at column 1
+        assert!(ofs_buf_vt_100.get_cursor_pos().row_index < row(10)); // Within buffer bounds
+        assert_eq!(ofs_buf_vt_100.get_cursor_pos().col_index, col(0)); // Should be at column 1
     }
 
     #[test]
     fn test_scroll_region_boundary_with_text_overflow() {
-        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
 
         // Set narrow scroll region (rows 5-6, only 2 lines)
         let margins_sequence = format!(
@@ -1671,7 +1672,7 @@ pub mod complex_interactions {
         let _result = ofs_buf_vt_100.apply_ansi_bytes(text_overflow);
 
         // Final cursor position should be within the narrow scroll region
-        assert!(ofs_buf_vt_100.cursor_pos.row_index >= row(4)); // >= row 5 (1-based)
-        assert!(ofs_buf_vt_100.cursor_pos.row_index <= row(5)); // <= row 6 (1-based)
+        assert!(ofs_buf_vt_100.get_cursor_pos().row_index >= row(4)); // >= row 5 (1-based)
+        assert!(ofs_buf_vt_100.get_cursor_pos().row_index <= row(5)); // <= row 6 (1-based)
     }
 }

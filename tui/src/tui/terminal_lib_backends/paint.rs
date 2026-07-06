@@ -28,7 +28,7 @@
 //!
 //! The [`paint()`] function coordinates the final stages of rendering:
 //! 1. Takes [`RenderPipeline`] from the app (Stages 1-2)
-//! 2. Feeds it through the Compositor to create [`OffscreenBuffer`] (Stage 3)
+//! 2. Feeds it through the Compositor to create [`OfsBuf`] (Stage 3)
 //! 3. Performs diff calculations for selective redraw (Stage 4)
 //! 4. Routes operations to the appropriate backend (Crossterm/DirectToAnsi) (Stage 5)
 //! 5. Manages flushing and display synchronization (Stage 6)
@@ -40,9 +40,8 @@
 
 use super::{FlushKind, RenderOpsLocalData, RenderPipeline};
 use crate::{DEBUG_TUI_COMPOSITOR, DEBUG_TUI_SHOW_PIPELINE_EXPANDED, GlobalData,
-            LengthOps, LockedOutputDevice, OffscreenBuffer, OffscreenBufferPaint,
-            OffscreenBufferPaintImpl, PixelCharDiffChunks, Pos, Size,
-            TERMINAL_LIB_BACKEND, TerminalLibBackend};
+            LengthOps, LockedOutputDevice, OfsBuf, OfsBufPaint, OfsBufPaintImpl,
+            PixelCharDiffChunks, Pos, Size, TERMINAL_LIB_BACKEND, TerminalLibBackend};
 use std::fmt::Debug;
 
 /// Executes a selective redraw (diff) paint.
@@ -53,39 +52,31 @@ fn perform_diff_paint(
 ) {
     match TERMINAL_LIB_BACKEND {
         TerminalLibBackend::Crossterm => {
-            let mut crossterm_impl = OffscreenBufferPaintImpl {};
+            let mut crossterm_impl = OfsBufPaintImpl {};
             let render_ops = crossterm_impl.render_diff(diff_chunks);
-            crossterm_impl.paint_diff(
-                render_ops,
-                window_size,
-                locked_output_device,
-            );
+            crossterm_impl.paint_diff(render_ops, window_size, locked_output_device);
         }
         TerminalLibBackend::DirectToAnsi => {
             // DirectToAnsi uses the same converter as Crossterm
-            // (OffscreenBuffer → RenderOpOutput)
+            // (OfsBuf → RenderOpOutput)
             // The difference is only in execution (via routing in render_op_output.rs)
-            let mut converter = OffscreenBufferPaintImpl {};
+            let mut converter = OfsBufPaintImpl {};
             let render_ops = converter.render_diff(diff_chunks);
-            converter.paint_diff(
-                render_ops,
-                window_size,
-                locked_output_device,
-            );
+            converter.paint_diff(render_ops, window_size, locked_output_device);
         }
     }
 }
 
 /// Executes a complete redraw (full) paint.
 fn perform_full_paint(
-    ofs_buf: &OffscreenBuffer,
+    ofs_buf: &OfsBuf,
     flush_kind: FlushKind,
     window_size: Size,
     locked_output_device: LockedOutputDevice<'_>,
 ) {
     match TERMINAL_LIB_BACKEND {
         TerminalLibBackend::Crossterm => {
-            let mut crossterm_impl = OffscreenBufferPaintImpl {};
+            let mut crossterm_impl = OfsBufPaintImpl {};
             let render_ops = crossterm_impl.render(ofs_buf);
             crossterm_impl.paint(
                 render_ops,
@@ -96,16 +87,11 @@ fn perform_full_paint(
         }
         TerminalLibBackend::DirectToAnsi => {
             // DirectToAnsi uses the same converter as Crossterm
-            // (OffscreenBuffer → RenderOpOutput)
+            // (OfsBuf → RenderOpOutput)
             // The difference is only in execution (via routing in render_op_output.rs)
-            let mut converter = OffscreenBufferPaintImpl {};
+            let mut converter = OfsBufPaintImpl {};
             let render_ops = converter.render(ofs_buf);
-            converter.paint(
-                render_ops,
-                flush_kind,
-                window_size,
-                locked_output_device,
-            );
+            converter.paint(render_ops, flush_kind, window_size, locked_output_device);
         }
     }
 }
@@ -147,7 +133,7 @@ pub fn paint<S, AS>(
 
     let window_size = global_data.window_size;
 
-    let Some(mut buffer_from_pool) = global_data.offscreen_buffer_pool.take() else {
+    let Some(mut buffer_from_pool) = global_data.ofs_buf_pool.take() else {
         panic!("All offscreen buffers are currently taken. This should never happen.");
     };
 
@@ -166,9 +152,9 @@ pub fn paint<S, AS>(
                 locked_output_device,
             );
         }
-        Some(saved_offscreen_buffer) => {
+        Some(saved_ofs_buf) => {
             // Compare offscreen buffers & paint only the diff.
-            match saved_offscreen_buffer.diff(&buffer_from_pool) {
+            match saved_ofs_buf.diff(&buffer_from_pool) {
                 None => {
                     perform_full_paint(
                         &buffer_from_pool,
@@ -178,11 +164,7 @@ pub fn paint<S, AS>(
                     );
                 }
                 Some(ref diff_chunks) => {
-                    perform_diff_paint(
-                        diff_chunks,
-                        window_size,
-                        locked_output_device,
-                    );
+                    perform_diff_paint(diff_chunks, window_size, locked_output_device);
                 }
             }
         }
@@ -190,7 +172,7 @@ pub fn paint<S, AS>(
 
     // Give back the buffer to the pool.
     if let Some(old_buffer) = global_data.maybe_saved_ofs_buf.take() {
-        global_data.offscreen_buffer_pool.give_back(old_buffer);
+        global_data.ofs_buf_pool.give_back(old_buffer);
     }
 
     // Save the buffer to global_data.
@@ -208,7 +190,7 @@ pub fn paint<S, AS>(
 /// clipping the [Pos] to the nearest edge of the window. This is OK. This is because the
 /// spacer is painted at the very last column of the terminal window due to the way in
 /// which the spacers are repeated. No checks are supposed to be done when
-/// [`crate::OffscreenBuffer`] is painting, so there is no clean way to skip this clipping
+/// [`crate::OfsBuf`] is painting, so there is no clean way to skip this clipping
 /// check.
 ///
 /// See the `test_sanitize_and_save_abs_pos` for more details on the behavior of this

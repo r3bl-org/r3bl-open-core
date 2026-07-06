@@ -1,15 +1,22 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use super::{OffscreenBuffer, PixelCharLine};
+#![allow(clippy::needless_range_loop)]
+
+//! Implementation of line-level operations for [`OfsBuf`].
+//!
+//! This module provides methods for manipulating entire rows in the buffer, such as
+//! getting, setting, swapping, and shifting lines.
+
+use super::{OfsBuf, PixelChar};
 use crate::{RowIndex, ok, row};
 
 /// Line-level operations.
-impl OffscreenBuffer {
+impl OfsBuf {
     /// Gets a reference to a line at the specified row.
     /// Returns None if the row is out of bounds.
     #[must_use]
-    pub fn get_line(&self, row: RowIndex) -> Option<&PixelCharLine> {
-        self.buffer.get(row.as_usize())
+    pub fn get_line(&self, row: RowIndex) -> Option<&[PixelChar]> {
+        self.get_row(row.as_usize())
     }
 
     /// Set an entire line at the specified row.
@@ -18,42 +25,49 @@ impl OffscreenBuffer {
     /// # Errors
     ///
     /// Returns an error if the row is out of bounds.
-    pub fn set_line(&mut self, row: RowIndex, line: PixelCharLine) -> miette::Result<()> {
+    pub fn set_line(&mut self, row: RowIndex, line: &[PixelChar]) -> miette::Result<()> {
         let row_idx = row.as_usize();
-        let Some(target_line) = self.buffer.get_mut(row_idx) else {
+        let Some(target_line) = self.get_row_mut(row_idx) else {
             miette::bail!("Operation failed");
         };
-        *target_line = line;
+        target_line.copy_from_slice(line);
         ok!()
     }
 
-    /// Swap two lines in the buffer.
-    /// Returns true if both rows are valid and the swap was successful.
+    pub fn rotate_rows_left(&mut self, start_idx: usize, end_idx: usize, shift: usize) {
+        let width = self.get_width().as_usize();
+        self.buffer.data[start_idx * width..end_idx * width].rotate_left(shift * width);
+    }
+
+    pub fn rotate_rows_right(&mut self, start_idx: usize, end_idx: usize, shift: usize) {
+        let width = self.get_width().as_usize();
+        self.buffer.data[start_idx * width..end_idx * width].rotate_right(shift * width);
+    }
+
+    /// Swaps the entire content of two rows in the buffer.
+    ///
+    /// This method is highly optimized and delegates directly to the underlying
+    /// [`Flat1DSimdMut::swap_rows`] [SIMD] implementation, performing bulk memory
+    /// swapping rather than character-by-character iteration.
     ///
     /// # Errors
     ///
-    /// Returns an error if either row is out of bounds.
+    /// Returns an error if either `row_1` or `row_2` is out of bounds.
+    ///
+    /// [`Flat1DSimdMut::swap_rows`]: crate::Flat1DSimdMut::swap_rows
+    /// [SIMD]: https://en.wikipedia.org/wiki/SIMD
     pub fn swap_lines(&mut self, row_1: RowIndex, row_2: RowIndex) -> miette::Result<()> {
-        // Use type-safe validation for both rows.
         let range_1 = row_1..row(row_1.as_usize() + 1);
         let range_2 = row_2..row(row_2.as_usize() + 1);
 
         // Validate both rows exist using lightweight validation-only methods.
-        if !self.is_row_range_valid(range_1) || !self.is_row_range_valid(range_2) {
+        if !self.buffer.is_row_range_valid(range_1)
+            || !self.buffer.is_row_range_valid(range_2)
+        {
             miette::bail!("Operation failed");
         }
 
-        // Safe to perform swap - both rows have been validated.
-        let row_1_idx = row_1.as_usize();
-        let row_2_idx = row_2.as_usize();
-
-        // Debug assertion to verify indices are still valid.
-        debug_assert!(
-            row_1_idx < self.buffer.len() && row_2_idx < self.buffer.len(),
-            "Row indices became invalid between validation and swap: {row_1:?}, {row_2:?}"
-        );
-
-        self.buffer.swap(row_1_idx, row_2_idx);
+        self.buffer.as_simd_mut().swap_rows(row_1, row_2);
         ok!()
     }
 }
@@ -75,12 +89,12 @@ mod tests_line_level_ops {
         }
     }
 
-    fn create_test_line(chars: &[char]) -> PixelCharLine {
+    fn create_test_line(chars: &[char]) -> Vec<PixelChar> {
         let mut line = vec![PixelChar::Spacer; 4]; // Match buffer width
         for (i, &ch) in chars.iter().enumerate().take(4) {
             line[i] = create_test_char(ch);
         }
-        PixelCharLine { pixel_chars: line }
+        line
     }
 
     #[test]
@@ -135,7 +149,7 @@ mod tests_line_level_ops {
         let test_line = create_test_line(&['A', 'B', 'C', 'D']);
 
         // Set the line.
-        let result = buffer.set_line(test_row, test_line.clone());
+        let result = buffer.set_line(test_row, &test_line);
         assert!(result.is_ok());
 
         // Verify the line was set correctly.
@@ -167,7 +181,7 @@ mod tests_line_level_ops {
         let test_line = create_test_line(&['X', 'Y', 'Z']);
 
         // Try to set an invalid row.
-        let result = buffer.set_line(row(10), test_line);
+        let result = buffer.set_line(row(10), &test_line);
         assert!(result.is_err());
     }
 
@@ -181,8 +195,8 @@ mod tests_line_level_ops {
         let line2 = create_test_line(&['A', 'B', 'C', 'D']);
 
         // Set up the initial lines.
-        let _unused = buffer.set_line(row1, line1.clone());
-        let _unused = buffer.set_line(row2, line2.clone());
+        let _unused = buffer.set_line(row1, &line1);
+        let _unused = buffer.set_line(row2, &line2);
 
         // Swap the lines.
         let result = buffer.swap_lines(row1, row2);
@@ -216,9 +230,9 @@ mod tests_line_level_ops {
         let mut buffer = create_test_buffer();
 
         // Set up initial lines.
-        let _unused = buffer.set_line(row(1), create_test_line(&['A', 'A', 'A', 'A']));
-        let _unused = buffer.set_line(row(2), create_test_line(&['B', 'B', 'B', 'B']));
-        let _unused = buffer.set_line(row(3), create_test_line(&['C', 'C', 'C', 'C']));
+        let _unused = buffer.set_line(row(1), &create_test_line(&['A', 'A', 'A', 'A']));
+        let _unused = buffer.set_line(row(2), &create_test_line(&['B', 'B', 'B', 'B']));
+        let _unused = buffer.set_line(row(3), &create_test_line(&['C', 'C', 'C', 'C']));
 
         // Shift lines 1-3 up by 1.
         let result = buffer.shift_lines_up(row(1)..row(4), len(1));
@@ -261,9 +275,9 @@ mod tests_line_level_ops {
         let mut buffer = create_test_buffer();
 
         // Set up initial lines.
-        let _unused = buffer.set_line(row(1), create_test_line(&['A', 'A', 'A', 'A']));
-        let _unused = buffer.set_line(row(2), create_test_line(&['B', 'B', 'B', 'B']));
-        let _unused = buffer.set_line(row(3), create_test_line(&['C', 'C', 'C', 'C']));
+        let _unused = buffer.set_line(row(1), &create_test_line(&['A', 'A', 'A', 'A']));
+        let _unused = buffer.set_line(row(2), &create_test_line(&['B', 'B', 'B', 'B']));
+        let _unused = buffer.set_line(row(3), &create_test_line(&['C', 'C', 'C', 'C']));
 
         // Shift lines 1-3 down by 1.
         let result = buffer.shift_lines_down(row(1)..row(4), len(1));

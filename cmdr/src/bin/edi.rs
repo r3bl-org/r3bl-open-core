@@ -7,14 +7,14 @@ use r3bl_cmdr::{AnalyticsAction,
 use r3bl_tui::{CommonResult, log::try_initialize_logging_global, run_with_safe_stack,
                set_mimalloc_in_main, throws};
 
-fn main() -> CommonResult<()> { run_with_safe_stack!(main_impl()) }
+fn main() -> CommonResult { run_with_safe_stack!(main_impl()) }
 
 // Note: The `tokio::main` macro internally calls `.expect("Failed building the Runtime")`
 // when initializing the Tokio runtime. This is unavoidable and safe, as runtime creation
 // failure is a fatal error that should panic. The lint must be suppressed here.
 #[tokio::main]
 #[allow(clippy::unwrap_in_result)]
-async fn main_impl() -> CommonResult<()> {
+async fn main_impl() -> CommonResult {
     set_mimalloc_in_main!();
 
     throws!({

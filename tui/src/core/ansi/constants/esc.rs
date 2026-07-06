@@ -26,7 +26,6 @@ use crate::define_ansi_const;
 ///
 /// [`DECSC`]: https://vt100.net/docs/vt510-rm/DECSC.html
 /// [`ESC`]: crate::EscSequence
-/// [VT-100]: https://vt100.net/docs/vt100-ug/chapter3.html
 pub const DECSC_SAVE_CURSOR: u8 = b'7';
 
 /// Restore Cursor ([`DECRC`]): Restores the previously saved cursor position and
@@ -38,7 +37,6 @@ pub const DECSC_SAVE_CURSOR: u8 = b'7';
 ///
 /// [`DECRC`]: https://vt100.net/docs/vt510-rm/DECRC.html
 /// [`ESC`]: crate::EscSequence
-/// [VT-100]: https://vt100.net/docs/vt100-ug/chapter3.html
 pub const DECRC_RESTORE_CURSOR: u8 = b'8';
 
 // Scrolling Operations.
@@ -51,7 +49,6 @@ pub const DECRC_RESTORE_CURSOR: u8 = b'8';
 /// Sequence: `ESC D`.
 ///
 /// [`ESC`]: crate::EscSequence
-/// [VT-100]: https://vt100.net/docs/vt100-ug/chapter3.html
 pub const IND_INDEX_DOWN: u8 = b'D';
 
 /// Reverse Index (RI): Move cursor up one line.
@@ -62,7 +59,6 @@ pub const IND_INDEX_DOWN: u8 = b'D';
 /// Sequence: `ESC M`.
 ///
 /// [`ESC`]: crate::EscSequence
-/// [VT-100]: https://vt100.net/docs/vt100-ug/chapter3.html
 pub const RI_REVERSE_INDEX_UP: u8 = b'M';
 
 // Terminal Control.
@@ -75,7 +71,6 @@ pub const RI_REVERSE_INDEX_UP: u8 = b'M';
 /// Sequence: `ESC c`.
 ///
 /// [`ESC`]: crate::EscSequence
-/// [VT-100]: https://vt100.net/docs/vt100-ug/chapter3.html
 pub const RIS_RESET_TERMINAL: u8 = b'c';
 
 // Character Set Selection Intermediates.
@@ -227,11 +222,18 @@ pub const CARRIAGE_RETURN: u8 = b'\r';
 /// Value: `27` dec, `1B` hex.
 ///
 /// [`ESC`]: crate::ANSI_ESC
-pub const ESC_START: char = '\x1b';
+pub const ESC_START: char = ESC_STR.as_bytes()[0] as char;
 
-define_ansi_const!(@esc_str : ESC_STR = [""] =>
-    "Escape Start" : "Start string: the escape character (`27` dec, `1B` hex)."
-);
+/// Escape Start: Start string: the escape character (`27` dec, `1B` hex).
+///
+/// This is a [Tier 1] foundational constant. It is defined as a plain string slice
+/// without macros so that it can be used by the [`const_format`] crate (via
+/// [`define_ansi_const!`]) to construct complex [Tier 2] sequences at compile time.
+///
+/// [`define_ansi_const!`]: crate::define_ansi_const
+/// [Tier 1]: mod@crate::constants#tier-1---foundational-parts
+/// [Tier 2]: mod@crate::constants#tier-2---composed-sequences
+pub const ESC_STR: &str = "\x1b";
 
 define_ansi_const!(@esc_str : ESC_SAVE_CURSOR_STR = ["7"] =>
     "Save Cursor (DECSC)" : "Full string sequence."

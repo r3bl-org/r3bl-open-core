@@ -1,6 +1,6 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Implementation of bulk operations for `OffscreenBuffer`.
+//! Implementation of bulk operations for [`OfsBuf`].
 //!
 //! This module provides methods for applying multiple changes to the buffer
 //! in a single operation, which can be more efficient than individual changes.
@@ -9,14 +9,14 @@
 use super::*;
 use crate::Pos;
 
-impl OffscreenBuffer {
+impl OfsBuf {
     /// Apply multiple character changes at once.
     /// Returns the number of successful changes applied.
     pub fn apply_changes(&mut self, changes: Vec<(Pos, PixelChar)>) -> usize {
         let mut applied_count = 0;
 
         for (pos, char) in changes {
-            if self.set_char(pos, char).is_ok() {
+            if self.buffer.try_set(pos, char).is_ok() {
                 applied_count += 1;
             }
         }

@@ -49,7 +49,7 @@ impl OfsBufVT100 {
     ///
     /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
     pub fn set_scroll_margins(&mut self, top: TermRow, bottom: TermRow) {
-        let buffer_height = self.window_size.row_height;
+        let buffer_height = self.ofs_buf.get_window_size().row_height;
         let top_value = top.as_u16();
         let bottom_value = bottom.as_u16();
 

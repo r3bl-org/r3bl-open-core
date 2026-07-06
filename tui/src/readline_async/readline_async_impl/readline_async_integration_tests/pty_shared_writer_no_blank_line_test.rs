@@ -323,7 +323,7 @@ impl Write for CaptureOutputBytes {
 ///
 /// [`OfsBufVT100`]: crate::OfsBufVT100
 fn get_line_content(buf: &crate::OfsBufVT100, row: usize, max_cols: usize) -> String {
-    buf.buffer[row]
+    buf.ofs_buf.get_row(row).unwrap()
         .iter()
         .take(max_cols)
         .map(|pixel_char| match pixel_char {

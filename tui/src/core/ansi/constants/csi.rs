@@ -14,10 +14,17 @@
 //! [constants module design]: mod@crate::constants#design
 
 use crate::define_ansi_const;
+use crate::core::ansi;
 
 // CSI sequence components.
 
-define_ansi_const!(@csi_str : CSI_START = [""] => "CSI Start" : "Sequence start: `ESC [`");
+/// [`CSI`] Start: Sequence start: `ESC [`
+///
+/// [`CSI`]: crate::CsiSequence
+pub const CSI_START: &str = const_format::formatcp!(
+    "{ESC_STR}[",
+    ESC_STR = ansi::constants::ESC_STR
+);
 
 /// Private Mode Prefix ([`CSI`]): Introduces [`DEC`] private mode parameters in [`CSI`]
 /// sequences.

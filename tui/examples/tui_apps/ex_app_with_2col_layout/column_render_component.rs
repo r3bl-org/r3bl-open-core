@@ -1,13 +1,14 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
+
 use super::{AppSignal, State};
 use r3bl_tui::{Ansi256GradientIndex, BoxedSafeComponent, ColorWheel, ColorWheelConfig,
                ColorWheelSpeed, CommonResult, Component, DEBUG_TUI_MOD,
                EventPropagation, FlexBox, FlexBoxId, GCStringOwned, GlobalData,
                GradientGenerationPolicy, HasFocus, InputEvent, Key, KeyPress, LengthOps,
-               Pos, RenderOpCommon, RenderOpIR, RenderOpIRVec, RenderPipeline,
-               SpecialKey, SurfaceBounds, TerminalWindowMainThreadSignal,
-               TextColorizationPolicy, ZOrder, ch, col, glyphs, inline_string,
-               render_pipeline, row, send_signal, throws_with_return};
+               Pos, RenderOpCommon, RenderOpIR, RenderOpIRVec, SpecialKey,
+               SurfaceBounds, TerminalWindowMainThreadSignal, TextColorizationPolicy,
+               ZOrder, ch, col, glyphs, inline_string, ok, row, send_signal,
+               throws_with_return};
 use smallvec::smallvec;
 
 #[derive(Debug, Clone, Default)]
@@ -131,132 +132,122 @@ mod column_render_component_impl_component_trait {
 
         fn render(
             &mut self,
-            _global_data: &mut GlobalData<State, AppSignal>,
+            global_data: &mut GlobalData<State, AppSignal>,
             current_box: FlexBox,
             _surface_bounds: SurfaceBounds, /* Ignore this. */
             has_focus: &mut HasFocus,
-        ) -> CommonResult<RenderPipeline> {
-            throws_with_return!({
-                // Things from component scope.
-                let ColumnComponentData { color_wheel, .. } = &mut self.data;
+        ) -> CommonResult {
+            // Things from component scope.
+            let ColumnComponentData { color_wheel, .. } = &mut self.data;
 
-                // Fixed strings.
-                let line_1 = inline_string!("box.id:{a:?} - Hello", a = current_box.id);
-                let line_2 = inline_string!("box.id:{a:?} - World", a = current_box.id);
+            // Fixed strings.
+            let line_1 = inline_string!("box.id:{a:?} - Hello", a = current_box.id);
+            let line_2 = inline_string!("box.id:{a:?} - World", a = current_box.id);
 
-                // Setup intermediate vars.
-                // Adjusted for style margin (if any).
-                let box_origin_pos = current_box.style_adjusted_origin_pos;
-                // Adjusted for style margin (if any).
-                let box_bounds_size = current_box.style_adjusted_bounds_size;
+            // Setup intermediate vars.
+            // Adjusted for style margin (if any).
+            let box_origin_pos = current_box.style_adjusted_origin_pos;
+            // Adjusted for style margin (if any).
+            let box_bounds_size = current_box.style_adjusted_bounds_size;
 
-                let mut row_index = row(0);
-                let mut col_index = col(0);
+            let mut row_index = row(0);
+            let mut col_index = col(0);
 
-                let mut render_ops = RenderOpIRVec::new();
+            let mut render_ops = RenderOpIRVec::new();
 
-                let line_1_gcs = GCStringOwned::from(line_1);
-                let line_1_trunc_str = line_1_gcs.trunc_end_to_fit(box_bounds_size);
-                let line_1_trunc_gcs = GCStringOwned::from(line_1_trunc_str);
+            let line_1_gcs = GCStringOwned::from(line_1);
+            let line_1_trunc_str = line_1_gcs.trunc_end_to_fit(box_bounds_size);
+            let line_1_trunc_gcs = GCStringOwned::from(line_1_trunc_str);
 
-                let line_2_gcs = GCStringOwned::from(line_2);
-                let line_2_trunc_str = line_2_gcs.trunc_end_to_fit(box_bounds_size);
-                let line_2_trunc_gcs = GCStringOwned::from(line_2_trunc_str);
+            let line_2_gcs = GCStringOwned::from(line_2);
+            let line_2_trunc_str = line_2_gcs.trunc_end_to_fit(box_bounds_size);
+            let line_2_trunc_gcs = GCStringOwned::from(line_2_trunc_str);
 
-                // Line 1.
-                {
-                    render_ops += RenderOpCommon::ResetColor;
-                    render_ops += RenderOpCommon::MoveCursorPositionRelTo(
-                        box_origin_pos,
-                        col_index + row_index,
-                    );
-                    render_ops += RenderOpIR::Common(RenderOpCommon::ApplyColors(
+            // Line 1.
+            {
+                render_ops += RenderOpCommon::ResetColor;
+                render_ops += RenderOpCommon::MoveCursorPositionRelTo(
+                    box_origin_pos,
+                    col_index + row_index,
+                );
+                render_ops += RenderOpIR::Common(RenderOpCommon::ApplyColors(
+                    current_box.get_computed_style(),
+                ));
+
+                let styled_texts = color_wheel.colorize_into_styled_texts(
+                    &line_1_trunc_gcs,
+                    GradientGenerationPolicy::ReuseExistingGradientAndIndex,
+                    TextColorizationPolicy::ColorEachCharacter(
                         current_box.get_computed_style(),
-                    ));
+                    ),
+                );
+                r3bl_tui::render_tui_styled_texts_into(&styled_texts, &mut render_ops);
 
-                    let styled_texts = color_wheel.colorize_into_styled_texts(
-                        &line_1_trunc_gcs,
-                        GradientGenerationPolicy::ReuseExistingGradientAndIndex,
-                        TextColorizationPolicy::ColorEachCharacter(
-                            current_box.get_computed_style(),
-                        ),
-                    );
-                    r3bl_tui::render_tui_styled_texts_into(
-                        &styled_texts,
-                        &mut render_ops,
-                    );
+                render_ops += RenderOpCommon::ResetColor;
+            }
 
-                    render_ops += RenderOpCommon::ResetColor;
-                }
+            // Line 2.
+            {
+                *row_index += 1;
+                render_ops += RenderOpCommon::MoveCursorPositionRelTo(
+                    box_origin_pos,
+                    col_index + row_index,
+                );
+                render_ops += RenderOpIR::Common(RenderOpCommon::ApplyColors(
+                    current_box.get_computed_style(),
+                ));
 
-                // Line 2.
-                {
-                    *row_index += 1;
-                    render_ops += RenderOpCommon::MoveCursorPositionRelTo(
-                        box_origin_pos,
-                        col_index + row_index,
-                    );
-                    render_ops += RenderOpIR::Common(RenderOpCommon::ApplyColors(
+                let styled_texts = color_wheel.colorize_into_styled_texts(
+                    &line_2_trunc_gcs,
+                    GradientGenerationPolicy::ReuseExistingGradientAndIndex,
+                    TextColorizationPolicy::ColorEachCharacter(
                         current_box.get_computed_style(),
-                    ));
+                    ),
+                );
+                r3bl_tui::render_tui_styled_texts_into(&styled_texts, &mut render_ops);
 
-                    let styled_texts = color_wheel.colorize_into_styled_texts(
-                        &line_2_trunc_gcs,
-                        GradientGenerationPolicy::ReuseExistingGradientAndIndex,
-                        TextColorizationPolicy::ColorEachCharacter(
-                            current_box.get_computed_style(),
-                        ),
-                    );
-                    r3bl_tui::render_tui_styled_texts_into(
-                        &styled_texts,
-                        &mut render_ops,
-                    );
+                render_ops += RenderOpCommon::ResetColor;
+            }
 
-                    render_ops += RenderOpCommon::ResetColor;
+            // Paint is_focused.
+            {
+                *row_index += 1;
+                col_index = (line_2_trunc_gcs.display_width / ch(2)).convert_to_index();
+                render_ops += RenderOpCommon::ResetColor;
+                render_ops += RenderOpCommon::MoveCursorPositionRelTo(
+                    box_origin_pos,
+                    col_index + row_index,
+                );
+                if has_focus.does_current_box_have_focus(current_box) {
+                    render_ops
+                        .push(RenderOpIR::PaintTextWithAttributes("👀".into(), None));
+                } else {
+                    render_ops
+                        .push(RenderOpIR::PaintTextWithAttributes(" ".into(), None));
                 }
+            }
 
-                // Paint is_focused.
-                {
-                    *row_index += 1;
-                    col_index =
-                        (line_2_trunc_gcs.display_width / ch(2)).convert_to_index();
-                    render_ops += RenderOpCommon::ResetColor;
-                    render_ops += RenderOpCommon::MoveCursorPositionRelTo(
-                        box_origin_pos,
-                        col_index + row_index,
-                    );
-                    if has_focus.does_current_box_have_focus(current_box) {
-                        render_ops
-                            .push(RenderOpIR::PaintTextWithAttributes("👀".into(), None));
-                    } else {
-                        render_ops
-                            .push(RenderOpIR::PaintTextWithAttributes(" ".into(), None));
-                    }
-                }
+            // Add render_ops to pipeline.
+            let pipeline = &mut global_data.pipeline;
+            pipeline.push(ZOrder::Normal, render_ops);
 
-                // Add render_ops to pipeline.
-                let mut pipeline = render_pipeline!();
-                pipeline.push(ZOrder::Normal, render_ops);
-
-                // Log pipeline.
-                DEBUG_TUI_MOD.then(|| {
-                    // % is Display, ? is Debug.
-                    tracing::info!(
-                        message = %inline_string!(
-                            "ColumnComponent::render {ch}",
-                            ch = glyphs::RENDER_GLYPH
-                        ),
-                        current_box = ?current_box,
-                        box_origin_pos = ?box_origin_pos,
-                        box_bounds_size = ?box_bounds_size,
-                        content_pos = ?Pos { col_index, row_index },
-                        render_pipeline = ?pipeline,
-                    );
-                });
-
-                // Return the pipeline.
-                pipeline
+            // Log pipeline.
+            DEBUG_TUI_MOD.then(|| {
+                // % is Display, ? is Debug.
+                tracing::info!(
+                    message = %inline_string!(
+                        "ColumnComponent::render {ch}",
+                        ch = glyphs::RENDER_GLYPH
+                    ),
+                    current_box = ?current_box,
+                    box_origin_pos = ?box_origin_pos,
+                    box_bounds_size = ?box_bounds_size,
+                    content_pos = ?Pos { col_index, row_index },
+                    render_pipeline = ?pipeline,
+                );
             });
+
+            ok!()
         }
     }
 }

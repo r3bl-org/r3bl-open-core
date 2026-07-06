@@ -1,10 +1,9 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::TerminalWindowMainThreadSignal;
-use crate::ok;
-use crate::{ChUnit, CommonResult, DEBUG_TUI_COMPOSITOR, DEBUG_TUI_MOD, InlineString,
-            MemoizedLenMap, OffscreenBuffer, OffscreenBufferPool, OutputDevice, Size,
-            SpinnerStyle, TelemetryHudReport, spinner_impl,
+use crate::{CommonResult, DEBUG_TUI_COMPOSITOR, DEBUG_TUI_MOD, MemoizedLenMap,
+            OfsBuf, OfsBufPool, OutputDevice, RenderPipeline, Size,
+            SpinnerStyle, TelemetryHudReport, core::glyphs, ok, spinner_impl,
             telemetry::telemetry_sizing::TelemetryReportLineStorage};
 use std::{collections::HashMap,
           fmt::{Debug, Formatter}};
@@ -12,40 +11,104 @@ use tokio::sync::mpsc::Sender;
 
 /// This is a global data structure that holds state for the entire application
 /// [`crate::App`] and the terminal window [`crate::TerminalWindow`] itself.
-///
-/// # Fields
-/// - The `window_size` holds the [Size] of the terminal window.
-/// - The `maybe_saved_ofs_buf` holds the last rendered [`OffscreenBuffer`].
-/// - The `main_thread_channel_sender` is used to send [`TerminalWindowMainThreadSignal`]s
-/// - The `state` holds the application's state.
-/// - The `output_device` is the terminal's output device (anything that implements
-///   [`crate::SafeRawTerminal`] which can be [`std::io::stdout`] or
-///   [`crate::SharedWriter`], etc.).
 pub struct GlobalData<S, AS>
 where
     S: Debug + Default + Clone + Sync + Send,
     AS: Debug + Default + Clone + Sync + Send,
 {
+    /// The [Size] of the terminal window.
     pub window_size: Size,
-    pub maybe_saved_ofs_buf: Option<OffscreenBuffer>,
+
+    /// The last rendered [`OfsBuf`].
+    pub maybe_saved_ofs_buf: Option<OfsBuf>,
+
+    /// Channel used to send [`TerminalWindowMainThreadSignal`]s to the main thread.
     pub main_thread_channel_sender: Sender<TerminalWindowMainThreadSignal<AS>>,
+
+    /// Application's state.
     pub state: S,
+
+    /// The terminal's output device (anything that implements [`SafeRawTerminal`] which
+    /// can be [`stdout`] or [`SharedWriter`], etc.).
+    ///
+    /// [`SafeRawTerminal`]: crate::SafeRawTerminal
+    /// [`SharedWriter`]: crate::SharedWriter
+    /// [`stdout`]: std::io::stdout
     pub output_device: OutputDevice,
-    pub offscreen_buffer_pool: OffscreenBufferPool,
-    /// Stack allocated string buffer for the HUD report. This is re-used and
-    /// pre-allocated to avoid heap allocations.
-    pub hud_report: TelemetryReportLineStorage,
-    pub spinner_helper: SpinnerHelper,
+
+    /// Pool for reusing offscreen buffers across frames to avoid allocations.
+    pub ofs_buf_pool: OfsBufPool,
+
+    /// Data and animation state for the Heads Up Display (HUD) performance report.
+    pub hud_data: HudData,
+
     /// Memoized text width calculations for styled text (70x speedup for repeated text).
     /// Persists across frames to enable caching of repeated text patterns.
     pub memoized_text_widths: MemoizedLenMap,
+
+    /// Persistent render pipeline. Reused across frames via `.clear()` to retain heap
+    /// capacity.
+    pub pipeline: RenderPipeline,
 }
 
-#[derive(Debug, Default)]
-pub struct SpinnerHelper {
-    pub spinner_style: SpinnerStyle,
-    pub count: ChUnit,
-    pub empty_message: InlineString,
+#[derive(Debug)]
+pub struct HudData {
+    /// Pre-allocated string buffer for the full report (Zero-allocation)
+    text_buffer: TelemetryReportLineStorage,
+    /// Style template for the animated spinner
+    spinner_style: SpinnerStyle,
+    /// Animation frame counter
+    tick_count: usize,
+}
+
+impl Default for HudData {
+    fn default() -> Self {
+        Self {
+            text_buffer: TelemetryReportLineStorage::new(),
+            spinner_style: SpinnerStyle::default(),
+            tick_count: 0,
+        }
+    }
+}
+
+mod hud_constants {
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
+
+    pub const EMPTY_REPORT_MSG: &str = const_format::formatcp!(
+        "⮺ Collecting data - Waiting for your input {ch}",
+        ch = glyphs::SMILING_GLYPH
+    );
+}
+
+impl HudData {
+    /// Called by the event loop at the end of every frame to inject metrics
+    pub fn set_report(&mut self, new: TelemetryHudReport) {
+        use std::fmt::Write as _;
+
+        // Tick the spinner
+        self.tick_count = self.tick_count.wrapping_add(1);
+        let spinner_glyph = spinner_impl::spinner_render::get_next_tick_glyph_str(
+            &self.spinner_style,
+            self.tick_count,
+        );
+
+        // Zero-allocation write directly to the buffer
+        self.text_buffer.clear();
+        if !new.is_empty() {
+            write!(self.text_buffer, "{spinner_glyph} {new}").ok();
+        }
+    }
+
+    /// Called by the app to get the formatted text for rendering
+    #[must_use]
+    pub fn get_report(&self) -> &str {
+        if self.text_buffer.is_empty() {
+            hud_constants::EMPTY_REPORT_MSG
+        } else {
+            &self.text_buffer
+        }
+    }
 }
 
 impl<S, AS> Debug for GlobalData<S, AS>
@@ -58,12 +121,12 @@ where
         write!(f, "\n  - window_size: {:?}", self.window_size)?;
         write!(f, "\n  - ")?;
         match &self.maybe_saved_ofs_buf {
-            None => write!(f, "no saved offscreen_buffer")?,
-            Some(offscreen_buffer) => {
+            None => write!(f, "no saved ofs_buf")?,
+            Some(ofs_buf) => {
                 if DEBUG_TUI_COMPOSITOR {
-                    write!(f, "{offscreen_buffer:?}")?;
+                    write!(f, "{ofs_buf:?}")?;
                 } else {
-                    write!(f, "offscreen_buffer saved from previous render")?;
+                    write!(f, "ofs_buf saved from previous render")?;
                 }
             }
         }
@@ -86,7 +149,7 @@ where
         state: S,
         initial_size: Size,
         output_device: OutputDevice,
-        offscreen_buffer_pool: OffscreenBufferPool,
+        ofs_buf_pool: OfsBufPool,
     ) -> CommonResult<GlobalData<S, AS>>
     where
         AS: Debug + Default + Clone + Sync + Send,
@@ -97,10 +160,10 @@ where
             state,
             main_thread_channel_sender,
             output_device,
-            offscreen_buffer_pool,
-            hud_report: TelemetryReportLineStorage::new(),
-            spinner_helper: SpinnerHelper::default(),
+            ofs_buf_pool,
+            hud_data: HudData::default(),
             memoized_text_widths: HashMap::new(),
+            pipeline: RenderPipeline::default(),
         };
 
         it.set_size(initial_size);
@@ -120,61 +183,4 @@ where
     }
 
     pub fn get_size(&self) -> Size { self.window_size }
-
-    /// Generate display output for the HUD report by writing it to [`Self::hud_report`],
-    /// a pre-allocated (and re-used) string buffer [`TelemetryReportLineStorage`],
-    /// which is stack allocated.
-    ///
-    /// Look at the [`std::fmt::Display`] implementation of [`TelemetryHudReport`] for
-    /// details on how the report is formatted.
-    pub fn set_hud_report(&mut self, new: TelemetryHudReport) {
-        use std::fmt::Write;
-        self.hud_report.clear();
-        // We don't care about the result of this operation.
-        write!(self.hud_report, "{new}").ok();
-    }
-
-    const EMPTY_HUD_REPORT_STATIC: &str = "⮺ Collecting data ⠎";
-    const EMPTY_HUD_REPORT_PREFIX_SPINNER: &str = "⮺ Collecting data ";
-
-    /// If [`Self::set_hud_report()`] has not been called, this will return an empty
-    /// string with a static message.
-    pub fn get_hud_report_no_spinner(&self) -> &str {
-        if self.hud_report.is_empty() {
-            Self::EMPTY_HUD_REPORT_STATIC
-        } else {
-            &self.hud_report
-        }
-    }
-
-    /// If [`Self::set_hud_report()`] has not been called, this will return an empty
-    /// string with a "dynamic" message where a spinner glyph changes every time this
-    /// method is called.
-    pub fn get_hud_report_with_spinner(&mut self) -> &str {
-        use std::fmt::Write;
-        if self.hud_report.is_empty() {
-            let count = self.spinner_helper.count;
-            let style = &mut self.spinner_helper.spinner_style;
-            let spinner_glyph = spinner_impl::spinner_render::get_next_tick_glyph(
-                style,
-                count.as_usize(),
-            );
-
-            self.spinner_helper.empty_message.clear();
-            // We don't care about the result of this operation.
-            write!(
-                self.spinner_helper.empty_message,
-                "{a}{b}",
-                a = Self::EMPTY_HUD_REPORT_PREFIX_SPINNER,
-                b = spinner_glyph,
-            )
-            .ok();
-
-            self.spinner_helper.count += 1;
-
-            &self.spinner_helper.empty_message
-        } else {
-            &self.hud_report
-        }
-    }
 }

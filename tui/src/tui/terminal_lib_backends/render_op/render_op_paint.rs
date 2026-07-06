@@ -81,7 +81,7 @@ use crate::{LockedOutputDevice, RenderOpOutput, Size};
 /// <!-- It is ok to use ignore here -->
 ///
 /// ```ignore
-/// // In backend converter (e.g., OffscreenBufferPaintImpl):
+/// // In backend converter (e.g., OfsBufPaintImpl):
 /// for render_op_output in &render_ops_collection {
 ///     let mut painter = CrosstermPainter::new();
 ///     RenderOpPaintImplCrossterm {}.paint(

@@ -9,7 +9,7 @@ use r3bl_tui::{CommonResult, InputEvent, IntoErr, ModifierKeysMask, TerminalWind
 /// # Errors
 ///
 /// Returns an error if the terminal window fails to initialize or run.
-pub async fn run_app(maybe_file_path: Option<&str>) -> CommonResult<()> {
+pub async fn run_app(maybe_file_path: Option<&str>) -> CommonResult {
     let state = constructor::new(maybe_file_path);
     let app = AppMain::new_boxed();
     let exit_keys = &[InputEvent::Keyboard(

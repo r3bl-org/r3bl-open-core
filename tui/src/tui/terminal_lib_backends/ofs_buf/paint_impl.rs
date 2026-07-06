@@ -3,7 +3,7 @@
 //! # Stage 4: Backend Converter (Shared)
 //!
 //! This module implements **Stage 4 of the rendering pipeline**: converting the
-//! [`OffscreenBuffer`] (produced by the Compositor in Stage 3) into optimized
+//! [`OfsBuf`] (produced by the Compositor in Stage 3) into optimized
 //! [`RenderOpOutputVec`] operations for backend execution.
 //!
 //! <div class="warning">
@@ -13,9 +13,9 @@
 //!
 //! </div>
 //!
-//! ## Why This Lives in [`offscreen_buffer/`]
+//! ## Why This Lives in [`ofs_buf/`]
 //!
-//! Stage 4 is fundamentally an **`OffscreenBuffer` operation**:
+//! Stage 4 is fundamentally an **`OfsBuf` operation**:
 //! - It reads FROM the buffer (like other buffer operations)
 //! - It uses [`diff_chunks`] (also in this module) for selective redraw optimization
 //! - It's buffer-centric, not backend-specific
@@ -43,13 +43,13 @@
 //! [Stage 6: Terminal]
 //! ```
 //!
-//! **Input**: [`OffscreenBuffer`] (rendered pixels from compositor)
+//! **Input**: [`OfsBuf`] (rendered pixels from compositor)
 //! **Output**: [`RenderOpOutputVec`] (optimized terminal operations)
-//! **Role**: Convert [`OffscreenBuffer`] to backend-agnostic rendering operations
+//! **Role**: Convert [`OfsBuf`] to backend-agnostic rendering operations
 //!
 //! ## What This Stage Does
 //!
-//! The Backend Converter scans the [`OffscreenBuffer`] and generates optimized
+//! The Backend Converter scans the [`OfsBuf`] and generates optimized
 //! [`RenderOpOutputVec`] operations ready for terminal execution. It can:
 //! - Perform diff calculations against the previous buffer for selective redraw
 //! - Convert grid of styled characters to styled text painting operations
@@ -60,30 +60,29 @@
 //! rendered in subsequent frames, eliminating unnecessary terminal updates.
 //!
 //! [`crossterm_backend` mod docs]: mod@crate::crossterm_backend
-//! [`diff_chunks`]: mod@crate::offscreen_buffer::diff_chunks
+//! [`diff_chunks`]: mod@crate::ofs_buf::diff_chunks
 //! [`direct_to_ansi` mod docs]: mod@crate::direct_to_ansi
-//! [`offscreen_buffer/`]: mod@crate::offscreen_buffer
-//! [`OffscreenBuffer`]: crate::OffscreenBuffer
+//! [`ofs_buf/`]: mod@crate::ofs_buf
+//! [`OfsBuf`]: crate::OfsBuf
 //! [`RenderOpOutputVec`]: crate::RenderOpOutputVec
 //! [`RenderOpsLocalData`]: crate::RenderOpsLocalData
 //! [rendering pipeline overview]: mod@crate::terminal_lib_backends#rendering-pipeline-architecture
 
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 use crate::{ColIndex, DEBUG_TUI_COMPOSITOR, DEBUG_TUI_SHOW_PIPELINE, FlushKind,
-            GCStringOwned, InlineString, LockedOutputDevice, OffscreenBuffer,
-            OffscreenBufferPaint, PixelChar, PixelCharDiffChunks,
-            RenderOpCommon, RenderOpFlush, RenderOpOutput, RenderOpOutputVec,
-            RenderOpsExec, RowIndex, Size, TERMINAL_LIB_BACKEND, TerminalLibBackend,
-            TuiStyle, ch, col,
+            GCStringOwned, InlineString, LockedOutputDevice, OfsBuf, OfsBufPaint,
+            PixelChar, PixelCharDiffChunks, RenderOpCommon, RenderOpFlush,
+            RenderOpOutput, RenderOpOutputVec, RenderOpsExec, RowIndex, Size,
+            TERMINAL_LIB_BACKEND, TerminalLibBackend, TuiStyle, col,
             glyphs::SPACER_GLYPH,
             row,
             terminal_lib_backends::{crossterm_backend::PaintRenderOpImplCrossterm,
                                     direct_to_ansi::RenderOpPaintImplDirectToAnsi}};
 
 #[derive(Debug)]
-pub struct OffscreenBufferPaintImpl;
+pub struct OfsBufPaintImpl;
 
-impl OffscreenBufferPaint for OffscreenBufferPaintImpl {
+impl OfsBufPaint for OfsBufPaintImpl {
     fn paint(
         &mut self,
         render_ops: RenderOpOutputVec,
@@ -91,7 +90,6 @@ impl OffscreenBufferPaint for OffscreenBufferPaintImpl {
         window_size: Size,
         locked_output_device: LockedOutputDevice<'_>,
     ) {
-
         match TERMINAL_LIB_BACKEND {
             TerminalLibBackend::Crossterm => {
                 if let FlushKind::ClearBeforeFlush = flush_kind {
@@ -107,10 +105,7 @@ impl OffscreenBufferPaint for OffscreenBufferPaintImpl {
         }
 
         // Execute each RenderOpOutput using the ExecutableRenderOps trait.
-        render_ops.execute_all(
-            window_size,
-            locked_output_device,
-        );
+        render_ops.execute_all(window_size, locked_output_device);
 
         // Flush everything to the terminal.
         match TERMINAL_LIB_BACKEND {
@@ -126,7 +121,7 @@ impl OffscreenBufferPaint for OffscreenBufferPaintImpl {
         DEBUG_TUI_SHOW_PIPELINE.then(|| {
             // % is Display, ? is Debug.
             tracing::info!(
-                message = "🎨 OffscreenBufferPaintImpl::paint() ok 🟢",
+                message = "🎨 OfsBufPaintImpl::paint() ok 🟢",
                 render_ops = ?render_ops
             );
         });
@@ -139,10 +134,7 @@ impl OffscreenBufferPaint for OffscreenBufferPaintImpl {
         locked_output_device: LockedOutputDevice<'_>,
     ) {
         // Execute each RenderOpOutput using the ExecutableRenderOps trait.
-        render_ops.execute_all(
-            window_size,
-            locked_output_device,
-        );
+        render_ops.execute_all(window_size, locked_output_device);
 
         // Flush everything to the terminal.
         match TERMINAL_LIB_BACKEND {
@@ -158,48 +150,69 @@ impl OffscreenBufferPaint for OffscreenBufferPaintImpl {
         DEBUG_TUI_SHOW_PIPELINE.then(|| {
             // % is Display, ? is Debug.
             tracing::info!(
-                message = "🎨 OffscreenBufferPaintImpl::paint_diff() ok 🟢",
+                message = "🎨 OfsBufPaintImpl::paint_diff() ok 🟢",
                 render_ops = ?render_ops
             );
         });
     }
 
-    /// Processes each [`PixelChar`] and generates a [`RenderOpOutput`]
-    /// for it. Returns a [`RenderOpOutputVec`] containing all the [`RenderOpOutput`]s.
+    /// Processes each [`PixelChar`] and generates a [`RenderOpOutput`] for it. Returns a
+    /// [`RenderOpOutputVec`] containing all the [`RenderOpOutput`]s.
+    ///
+    /// This method is highly optimized to iterate over the [`Flat2DArray`] memory using
+    /// [`.chunks_exact()`], effectively creating a double loop over a single contiguous
+    /// 1D slice. This linear traversal dramatically improves cache locality while
+    /// explicitly eliminating the massive CPU pipeline stalls caused by division (`/`)
+    /// and modulo (`%`) math that would otherwise be required to calculate 2D coordinates
+    /// from a single 1D index.
+    ///
+    /// See the [Rule of Thumb for 1D vs 2D Memory Iteration] for more details.
     ///
     /// > Note that each [`PixelChar`] gets the full [`TuiStyle`] embedded in it (not just
     /// > a part of it that is different than the previous char). This means that it is
     /// > possible to quickly "diff" between 2 of them, since the [`TuiStyle`] is part of
-    /// > the [`PixelChar`]. This is important for selective re-rendering of the
-    /// > offscreen buffer.
+    /// > the [`PixelChar`]. This is important for selective re-rendering of the offscreen
+    /// > buffer.
     ///
     /// Here's the algorithm used in this function using pseudo-code:
-    /// - When going thru every [`PixelChar`] in a line:
+    /// - When iterating linearly through the memory slice:
     ///   - If the [`PixelChar`] is [`Void`], [`Spacer`], or [`PlainText`] then handle
     ///     (display character, [`TuiStyle`])
-    ///     - line buffer -  accumulates over loop iterations.
-    ///     - `render_helper::flush_all_buffers()` - flushes.
+    ///     - line buffer - accumulates over loop iterations.
+    ///     - [`render_helper::flush_all_buffers()`] - flushes.
     ///   - Make sure to flush at the:
-    ///     - End of line.
+    ///     - End of line (calculated using chunk bounds).
     ///     - When style changes.
     ///
+    /// [`.chunks_exact()`]: slice::chunks_exact
+    /// [`Flat2DArray`]: crate::Flat2DArray
     /// [`PlainText`]: PixelChar::PlainText
     /// [`RenderOpOutput`]: crate::RenderOpOutput
     /// [`RenderOpOutputVec`]: crate::RenderOpOutputVec
     /// [`Spacer`]: PixelChar::Spacer
     /// [`TuiStyle`]: crate::TuiStyle
     /// [`Void`]: PixelChar::Void
-    fn render(&mut self, ofs_buf: &OffscreenBuffer) -> RenderOpOutputVec {
-        use render_helper::Context;
+    /// [Rule of Thumb for 1D vs 2D Memory Iteration]:
+    ///     crate::Flat1DSimd#rule-of-thumb-for-1d-vs-2d-memory-iteration
+    /// [SIMD]: https://en.wikipedia.org/wiki/SIMD
+    fn render(&mut self, ofs_buf: &OfsBuf) -> RenderOpOutputVec {
+        let mut context = render_helper::Context::default();
 
-        let mut context = Context::new();
+        let width = ofs_buf.get_width().as_usize();
 
-        // For each line in the offscreen buffer.
-        for (row_index, line) in ofs_buf.buffer.iter().enumerate() {
-            context.clear_for_new_line(row(row_index));
+        // Iterate over the contiguous SIMD 1D slice, explicitly chunked by row width.
+        // This maintains the extreme cache locality of a 1D slice while completely
+        // eliminating the CPU pipeline stalls caused by division (/) and modulo (%).
+        for (row_idx, row_slice) in ofs_buf
+            .buffer
+            .as_simd()
+            .as_raw_slice()
+            .chunks_exact(width)
+            .enumerate()
+        {
+            context.clear_for_new_line(row(row_idx));
 
-            // For each pixel char in the line.
-            for (pixel_char_index, pixel_char) in line.iter().enumerate() {
+            for (col_idx, pixel_char) in row_slice.iter().enumerate() {
                 let (pixel_char_content, pixel_char_style): (String, Option<TuiStyle>) =
                     match pixel_char {
                         PixelChar::Void => continue,
@@ -214,8 +227,8 @@ impl OffscreenBufferPaint for OffscreenBufferPaintImpl {
                     pixel_char_style.as_ref(),
                     context.prev_style.as_ref(),
                 );
-                let is_at_end_of_line = ch(pixel_char_index) == (ch(line.len()) - ch(1));
-                let is_first_loop_iteration = row_index == 0 && pixel_char_index == 0;
+                let is_at_end_of_line = col_idx == width - 1;
+                let is_first_loop_iteration = row_idx == 0 && col_idx == 0;
 
                 // Deal w/: fg and bg colors | text attrib style | ANSI <-> PLAIN.
                 // switchover.
@@ -249,8 +262,8 @@ impl OffscreenBufferPaint for OffscreenBufferPaintImpl {
                 if is_at_end_of_line {
                     render_helper::flush_all_buffers(&mut context);
                 }
-            } // End for each pixel char in the line.
-        } // End for each line in the offscreen buffer.
+            } // End for each pixel char in the row chunk.
+        } // End for each row chunk in the contiguous buffer.
 
         // This handles the edge case when there is still something in the temp buffer,
         // but the loop has exited.
@@ -265,7 +278,7 @@ impl OffscreenBufferPaint for OffscreenBufferPaintImpl {
         DEBUG_TUI_COMPOSITOR.then(|| {
             // % is Display, ? is Debug.
             tracing::info!(
-                message = "🎨 offscreen_buffer_paint_impl_crossterm::render_diff() ok 🟢",
+                message = "🎨 ofs_buf_paint_impl_crossterm::render_diff() ok 🟢",
                 diff_chunks = ?diff_chunks
             );
         });
@@ -305,11 +318,11 @@ impl OffscreenBufferPaint for OffscreenBufferPaintImpl {
     }
 }
 
-mod render_helper {
+pub mod render_helper {
     #[allow(clippy::wildcard_imports)]
     use super::*;
 
-    #[derive(Debug, Clone)]
+    #[derive(Debug, Clone, Default)]
     pub struct Context {
         pub display_col_index_for_line: ColIndex,
         pub display_row_index: RowIndex,
@@ -319,16 +332,6 @@ mod render_helper {
     }
 
     impl Context {
-        pub fn new() -> Self {
-            Context {
-                display_col_index_for_line: col(0),
-                buffer_plain_text: InlineString::new(),
-                render_ops: RenderOpOutputVec::new(),
-                display_row_index: row(0),
-                prev_style: None,
-            }
-        }
-
         pub fn clear_for_new_line(&mut self, row_index: RowIndex) {
             self.buffer_plain_text.clear();
             self.display_col_index_for_line = col(0);
@@ -345,6 +348,7 @@ mod render_helper {
     /// - `reverse`
     /// - `hidden`
     /// - `strikethrough`
+    #[must_use]
     pub fn style_eq(this: Option<&TuiStyle>, other: Option<&TuiStyle>) -> bool {
         match (this, other) {
             (Some(this), Some(other)) => {
@@ -399,10 +403,10 @@ mod tests {
                 compositor_render_ops_to_ofs_buf::print_text_with_attributes, height,
                 new_style, tui_color, width};
 
-    /// Helper function to make an `OffscreenBuffer`.
-    fn make_offscreen_buffer_plain_text() -> OffscreenBuffer {
+    /// Helper function to make an `OfsBuf`.
+    fn make_ofs_buf_plain_text() -> OfsBuf {
         let window_size = width(10) + height(2);
-        let mut ofs_buf = OffscreenBuffer::new_empty(window_size);
+        let mut ofs_buf = OfsBuf::new_empty(window_size);
 
         // Input:  R0 "hello1234😃"
         //            C0123456789
@@ -431,7 +435,7 @@ mod tests {
         ofs_buf
 
         // Output:
-        // my_offscreen_buffer:
+        // my_ofs_buf:
         // window_size: [width:10, height:2],
         // row_index: [0]
         //   0: "h" Some(Style { _id + bold + dim | fg: Some(green) | bg: Some(blue) |
@@ -453,10 +457,10 @@ mod tests {
 
     #[test]
     fn test_render_plain_text() {
-        let my_offscreen_buffer = make_offscreen_buffer_plain_text();
-        // println!("my_offscreen_buffer: \n{:#?}", my_offscreen_buffer);
-        let mut paint = OffscreenBufferPaintImpl {};
-        let render_ops = paint.render(&my_offscreen_buffer);
+        let my_ofs_buf = make_ofs_buf_plain_text();
+        // println!("my_ofs_buf: \n{:#?}", my_ofs_buf);
+        let mut paint = OfsBufPaintImpl {};
+        let render_ops = paint.render(&my_ofs_buf);
         // println!("render_ops: {:#?}", render_ops);
 
         // Output:

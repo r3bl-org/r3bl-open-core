@@ -10,9 +10,8 @@ use r3bl_tui::{Animator, Ansi256GradientIndex, App, BoxedSafeApp, ColorChangeSpe
                RenderOpIR, RenderOpIRVec, RenderPipeline, SPACER_GLYPH, Size,
                SpecialKey, TerminalWindowMainThreadSignal, TextColorizationPolicy,
                ZOrder, ch, col, defaults::get_default_gradient_stops, glyphs, height,
-               inline_string, new_style, render_pipeline, render_tui_styled_texts_into,
-               row, send_signal, throws_with_return, tui_color, tui_styled_text,
-               tui_styled_texts, width};
+               inline_string, new_style, render_tui_styled_texts_into, row, send_signal,
+               throws_with_return, tui_color, tui_styled_text, tui_styled_texts, width};
 use smallvec::smallvec;
 use tokio::{sync::mpsc::Sender, time::Duration};
 
@@ -95,6 +94,7 @@ mod animator_task {
 mod app_main_impl_trait_app {
     #[allow(clippy::wildcard_imports)]
     use super::*;
+    use r3bl_tui::ok;
 
     impl App for AppMain {
         type S = State;
@@ -331,157 +331,151 @@ mod app_main_impl_trait_app {
             global_data: &mut GlobalData<State, AppSignal>,
             _component_registry_map: &mut ComponentRegistryMap<State, AppSignal>,
             _has_focus: &mut HasFocus,
-        ) -> CommonResult<RenderPipeline> {
-            throws_with_return!({
-                let state_string = inline_string!("{a:?}", a = global_data.state);
+        ) -> CommonResult {
+            let state_string = inline_string!("{a:?}", a = global_data.state);
 
-                let sample_line_of_text =
-                    format!("{state_string}, gradient: [index: X, len: Y]");
-                let content_size_col = width(sample_line_of_text.len());
-                let window_size = global_data.window_size;
-                let data = &mut self.data;
+            let sample_line_of_text =
+                format!("{state_string}, gradient: [index: X, len: Y]");
+            let content_size_col = width(sample_line_of_text.len());
+            let window_size = global_data.window_size;
+            let data = &mut self.data;
 
-                // Horizontal centering.
-                let col_idx = col({
-                    let it = *window_size.col_width - *content_size_col;
-                    it / 2
-                });
+            // Horizontal centering.
+            let col_idx = col({
+                let it = *window_size.col_width - *content_size_col;
+                it / 2
+            });
 
-                // Vertical centering.
-                let mut row_idx = row({
-                    // Shift up by 2 rows (adjust for extra status & HUD rows).
-                    let vertical_offset = 2;
-                    let content_height = ch(data.color_wheel_ansi_vec.len());
-                    (*window_size.row_height - content_height) / 2 - vertical_offset
-                });
-                let mut pipeline = render_pipeline!();
+            // Vertical centering.
+            let mut row_idx = row({
+                // Shift up by 2 rows (adjust for extra status & HUD rows).
+                let vertical_offset = 2;
+                let content_height = ch(data.color_wheel_ansi_vec.len());
+                (*window_size.row_height - content_height) / 2 - vertical_offset
+            });
+            let hud_report = global_data.hud_data.get_report();
+            let pipeline = &mut global_data.pipeline;
 
-                pipeline.push(ZOrder::Normal, {
-                    let mut acc_render_ops = RenderOpIRVec::new();
-                    acc_render_ops += RenderOpCommon::ResetColor;
+            pipeline.push(ZOrder::Normal, {
+                let mut acc_render_ops = RenderOpIRVec::new();
+                acc_render_ops += RenderOpCommon::ResetColor;
 
-                    // Render many rows using color_wheel_ansi_vec.
-                    for color_wheel_index in 0..data.color_wheel_ansi_vec.len() {
-                        let color_wheel =
-                            &mut data.color_wheel_ansi_vec[color_wheel_index];
+                // Render many rows using color_wheel_ansi_vec.
+                for color_wheel_index in 0..data.color_wheel_ansi_vec.len() {
+                    let color_wheel = &mut data.color_wheel_ansi_vec[color_wheel_index];
 
-                        let text = {
-                            let index = color_wheel.get_index();
-                            let len = match color_wheel.get_gradient_len() {
-                                GradientLengthKind::ColorWheel(len) => len,
-                                _ => 0,
-                            };
-                            inline_string!(
-                                "{state_string}, gradient: [index: {index:?}, len: {len}]"
-                            )
+                    let text = {
+                        let index = color_wheel.get_index();
+                        let len = match color_wheel.get_gradient_len() {
+                            GradientLengthKind::ColorWheel(len) => len,
+                            _ => 0,
                         };
+                        inline_string!(
+                            "{state_string}, gradient: [index: {index:?}, len: {len}]"
+                        )
+                    };
 
-                        let text_gcs = text.into();
+                    let text_gcs = text.into();
 
-                        acc_render_ops +=
-                            RenderOpCommon::MoveCursorPositionAbs(col_idx + row_idx);
+                    acc_render_ops +=
+                        RenderOpCommon::MoveCursorPositionAbs(col_idx + row_idx);
 
-                        let texts = color_wheel.colorize_into_styled_texts(
-                            &text_gcs,
-                            GradientGenerationPolicy::ReuseExistingGradientAndIndex,
-                            TextColorizationPolicy::ColorEachWord(None),
-                        );
-                        render_tui_styled_texts_into(&texts, &mut acc_render_ops);
-
-                        row_idx += row(1);
-                    }
-
-                    // Render 1 row using color_wheel_rgb.
-                    {
-                        acc_render_ops +=
-                            RenderOpCommon::MoveCursorPositionAbs(col_idx + row_idx);
-
-                        let text = {
-                            let index = data.color_wheel_rgb.get_index();
-                            let len = match data.color_wheel_rgb.get_gradient_len() {
-                                GradientLengthKind::ColorWheel(len) => len,
-                                _ => 0,
-                            };
-                            inline_string!(
-                                "{state_string}, gradient: [index: {index:?}, len: {len}]"
-                            )
-                        };
-
-                        let text_gcs = text.into();
-
-                        let texts = data.color_wheel_rgb.colorize_into_styled_texts(
-                            &text_gcs,
-                            GradientGenerationPolicy::ReuseExistingGradientAndIndex,
-                            TextColorizationPolicy::ColorEachWord(None),
-                        );
-                        render_tui_styled_texts_into(&texts, &mut acc_render_ops);
-
-                        row_idx += row(1);
-                    }
-
-                    // Render 1 row using lolcat_fg.
-                    {
-                        acc_render_ops +=
-                            RenderOpCommon::MoveCursorPositionAbs(col_idx + row_idx);
-
-                        let text = {
-                            inline_string!("{state_string}, gradient: [index: _, len: _]")
-                        };
-
-                        let text_gcs = GCStringOwned::from(text);
-
-                        let texts = data.lolcat_fg.colorize_into_styled_texts(
-                            &text_gcs,
-                            GradientGenerationPolicy::ReuseExistingGradientAndIndex,
-                            TextColorizationPolicy::ColorEachCharacter(None),
-                        );
-                        render_tui_styled_texts_into(&texts, &mut acc_render_ops);
-
-                        row_idx += row(1);
-                    }
-
-                    // Render 1 row using lolcat_bg.
-                    {
-                        acc_render_ops +=
-                            RenderOpCommon::MoveCursorPositionAbs(col_idx + row_idx);
-
-                        let text = {
-                            inline_string!("{state_string}, gradient: [index: _, len: _]")
-                        };
-
-                        let text_gcs = GCStringOwned::from(text);
-
-                        let texts = data.lolcat_bg.colorize_into_styled_texts(
-                            &text_gcs,
-                            GradientGenerationPolicy::ReuseExistingGradientAndIndex,
-                            TextColorizationPolicy::ColorEachCharacter(None),
-                        );
-                        render_tui_styled_texts_into(&texts, &mut acc_render_ops);
-
-                        row_idx += row(1);
-                    }
-
-                    acc_render_ops
-                });
-
-                status_bar::render_status_bar(&mut pipeline, window_size);
-
-                hud::create_hud(
-                    &mut pipeline,
-                    window_size,
-                    global_data.get_hud_report_with_spinner(),
-                );
-
-                // Handle animation.
-                if data.animator.is_animation_not_started() {
-                    data.animator.start(
-                        global_data.main_thread_channel_sender.clone(),
-                        start_animator_task,
+                    let texts = color_wheel.colorize_into_styled_texts(
+                        &text_gcs,
+                        GradientGenerationPolicy::ReuseExistingGradientAndIndex,
+                        TextColorizationPolicy::ColorEachWord(None),
                     );
+                    render_tui_styled_texts_into(&texts, &mut acc_render_ops);
+
+                    row_idx += row(1);
                 }
 
-                pipeline
+                // Render 1 row using color_wheel_rgb.
+                {
+                    acc_render_ops +=
+                        RenderOpCommon::MoveCursorPositionAbs(col_idx + row_idx);
+
+                    let text = {
+                        let index = data.color_wheel_rgb.get_index();
+                        let len = match data.color_wheel_rgb.get_gradient_len() {
+                            GradientLengthKind::ColorWheel(len) => len,
+                            _ => 0,
+                        };
+                        inline_string!(
+                            "{state_string}, gradient: [index: {index:?}, len: {len}]"
+                        )
+                    };
+
+                    let text_gcs = text.into();
+
+                    let texts = data.color_wheel_rgb.colorize_into_styled_texts(
+                        &text_gcs,
+                        GradientGenerationPolicy::ReuseExistingGradientAndIndex,
+                        TextColorizationPolicy::ColorEachWord(None),
+                    );
+                    render_tui_styled_texts_into(&texts, &mut acc_render_ops);
+
+                    row_idx += row(1);
+                }
+
+                // Render 1 row using lolcat_fg.
+                {
+                    acc_render_ops +=
+                        RenderOpCommon::MoveCursorPositionAbs(col_idx + row_idx);
+
+                    let text = {
+                        inline_string!("{state_string}, gradient: [index: _, len: _]")
+                    };
+
+                    let text_gcs = GCStringOwned::from(text);
+
+                    let texts = data.lolcat_fg.colorize_into_styled_texts(
+                        &text_gcs,
+                        GradientGenerationPolicy::ReuseExistingGradientAndIndex,
+                        TextColorizationPolicy::ColorEachCharacter(None),
+                    );
+                    render_tui_styled_texts_into(&texts, &mut acc_render_ops);
+
+                    row_idx += row(1);
+                }
+
+                // Render 1 row using lolcat_bg.
+                {
+                    acc_render_ops +=
+                        RenderOpCommon::MoveCursorPositionAbs(col_idx + row_idx);
+
+                    let text = {
+                        inline_string!("{state_string}, gradient: [index: _, len: _]")
+                    };
+
+                    let text_gcs = GCStringOwned::from(text);
+
+                    let texts = data.lolcat_bg.colorize_into_styled_texts(
+                        &text_gcs,
+                        GradientGenerationPolicy::ReuseExistingGradientAndIndex,
+                        TextColorizationPolicy::ColorEachCharacter(None),
+                    );
+                    render_tui_styled_texts_into(&texts, &mut acc_render_ops);
+
+                    row_idx += row(1);
+                }
+
+                acc_render_ops
             });
+
+            status_bar::render_status_bar(pipeline, window_size);
+
+            hud::create_hud(pipeline, window_size, hud_report);
+
+            // Handle animation.
+            if data.animator.is_animation_not_started() {
+                data.animator.start(
+                    global_data.main_thread_channel_sender.clone(),
+                    start_animator_task,
+                );
+            }
+
+            ok!()
         }
     }
 }

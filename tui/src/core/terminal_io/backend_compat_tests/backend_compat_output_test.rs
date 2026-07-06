@@ -173,7 +173,7 @@ pub fn test_backend_compat_output_compare() {
     }
 
     eprintln!(
-        "Output Compatibility Test: Running both backends and comparing OffscreenBuffers..."
+        "Output Compatibility Test: Running both backends and comparing OfsBufs..."
     );
 
     retry_until_success_test!({ run_single_test_attempt() });
@@ -206,7 +206,7 @@ fn run_single_test_attempt() -> Result<(), String> {
     let crossterm_bytes = controller::run((name, pty_pair, &child))?;
     eprintln!("  Captured {} bytes", crossterm_bytes.len());
 
-    // Create OffscreenBuffers and apply the captured ANSI bytes.
+    // Create OfsBufs and apply the captured ANSI bytes.
     let buffer_size = height(TEST_HEIGHT) + width(TEST_WIDTH);
     let mut buffer_direct = OfsBufVT100::new_empty(buffer_size);
     let mut buffer_crossterm = OfsBufVT100::new_empty(buffer_size);
@@ -214,14 +214,14 @@ fn run_single_test_attempt() -> Result<(), String> {
     drop(buffer_direct.apply_ansi_bytes(&direct_bytes));
     drop(buffer_crossterm.apply_ansi_bytes(&crossterm_bytes));
 
-    // Compare the OffscreenBuffers.
-    eprintln!("\nComparing OffscreenBuffers...");
+    // Compare the OfsBufs.
+    eprintln!("\nComparing OfsBufs...");
     if buffer_direct == buffer_crossterm {
-        eprintln!("  OffscreenBuffers are IDENTICAL!");
+        eprintln!("  OfsBufs are IDENTICAL!");
         eprintln!("  Both backends produce the same terminal state.");
         ok!()
     } else {
-        let mut msg = String::from("OffscreenBuffers DIFFER!\n");
+        let mut msg = String::from("OfsBufs DIFFER!\n");
 
         // Show detailed diff.
         if let Some(diff) = buffer_direct.diff(&buffer_crossterm) {

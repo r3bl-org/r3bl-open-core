@@ -39,7 +39,7 @@
 //!
 //! ## Relationship to Rendering Pipeline
 //!
-//! - **Input Source**: Two consecutive [`OffscreenBuffer`] frames
+//! - **Input Source**: Two consecutive [`OfsBuf`] frames
 //! - **Processing**: Identifies only the changed pixel positions (optimized redraw)
 //! - **Used by**: The `render_diff()` method in [`paint_impl`]
 //! - **Output**: [`RenderOpOutputVec`] containing only operations for changed cells
@@ -47,8 +47,8 @@
 //! This selective redraw optimization significantly improves rendering performance by
 //! avoiding unnecessary terminal updates for unchanged regions.
 //!
-//! [`OffscreenBuffer`]: crate::OffscreenBuffer
-//! [`paint_impl`]: crate::offscreen_buffer::paint_impl
+//! [`OfsBuf`]: crate::OfsBuf
+//! [`paint_impl`]: crate::ofs_buf::paint_impl
 //! [`RenderOpOutputVec`]: crate::RenderOpOutputVec
 //! [rendering pipeline overview]: mod@crate::terminal_lib_backends#rendering-pipeline-architecture
 

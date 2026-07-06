@@ -15,10 +15,10 @@ pub fn create_client_with_user_agent(
     user_agent: Option<&str>,
 ) -> miette::Result<reqwest::Client> {
     let it = reqwest::Client::builder()
-        .user_agent(user_agent.map_or_else(
-            /* none */ || constants::USER_AGENT.to_owned(),
-            /* some */ ToOwned::to_owned,
-        ))
+        .user_agent(match user_agent {
+            Some(ua) => ua.to_owned(),
+            None => constants::USER_AGENT.to_owned(),
+        })
         .build();
     it.into_diagnostic()
 }

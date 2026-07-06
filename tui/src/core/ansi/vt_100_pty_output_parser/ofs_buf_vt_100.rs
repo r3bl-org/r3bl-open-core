@@ -1,7 +1,7 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::{ParserGlobalState, TerminalModeState};
-use crate::{ActiveScreenBuffer, GetMemSize, HiddenScreenState, OffscreenBuffer,
+use crate::{ActiveScreenBuffer, GetMemSize, HiddenScreenState, OfsBuf,
             ScrollbackBuffer, ScrollbackBufferLimit, Size};
 use std::{fmt::Debug,
           mem::size_of,
@@ -10,7 +10,7 @@ use std::{fmt::Debug,
 /// State for the [`VT-100`] [`ANSI`] parser, which is used by the [`PTY`] multiplexer.
 ///
 /// This struct composites:
-/// 1. The screen buffer [`OffscreenBuffer`].
+/// 1. The screen buffer [`OfsBuf`].
 /// 2. The [`VT-100`] [`ANSI`] [parser] state machine, which includes:
 ///    - The [`ANSI`] parser state - [`ParserGlobalState`].
 ///    - The terminal mode flags - [`TerminalModeState`].
@@ -23,14 +23,14 @@ use std::{fmt::Debug,
 ///
 /// This struct is composed of the following:
 /// 1. _Live buffer_: A [`bitblt`] 2D buffer (an array of [`PixelCharLines`] in
-///    [`ofs_buf`] field of type [`OffscreenBuffer`]), and this is fixed in size to match
+///    [`ofs_buf`] field of type [`OfsBuf`]), and this is fixed in size to match
 ///    the viewport (or the size of the physical screen/display).
 /// 2. _History buffer_: A field of type [`VecDeque`] ([`ScrollbackBuffer`]) that handles
 ///    the scrollback history. These are the [`PixelCharLines`] that have scrolled off the
 ///    [`ofs_buf`] viewport.
 ///
 /// While this works, it is tricky to stitch [`PixelCharLine`]s from the "history" and the
-/// "live" buffer into the final composited [`OffscreenBuffer`] which is [`bitblt`]'d to
+/// "live" buffer into the final composited [`OfsBuf`] which is [`bitblt`]'d to
 /// [`stdout`] (the screen/display) whenever the compositor is painted. See the
 /// [`OutputRenderer`] for the stitching implementation.
 ///
@@ -52,7 +52,7 @@ use std::{fmt::Debug,
 pub struct OfsBufVT100 {
     /// The physical screen viewport that the user currently sees. This buffer receives
     /// all character writes and styling.
-    pub ofs_buf: OffscreenBuffer,
+    pub ofs_buf: OfsBuf,
 
     /// High-level runtime state tracking active graphic renditions ([`SGR`], colors,
     /// styling), character set mappings, and protocol requests ([`DSR`], [`OSC`]) that
@@ -138,7 +138,7 @@ mod impl_ofs_buf_vt_100 {
     }
 
     impl Deref for OfsBufVT100 {
-        type Target = OffscreenBuffer;
+        type Target = OfsBuf;
         fn deref(&self) -> &Self::Target { &self.ofs_buf }
     }
 
@@ -150,7 +150,7 @@ mod impl_ofs_buf_vt_100 {
         /// Fast `O(1)` memory footprint calculation.
         ///
         /// This avoids expensive `O(rows * columns)` calculations by relying on the
-        /// `O(1)` cached memory retrieval of both the primary [`OffscreenBuffer`] and
+        /// `O(1)` cached memory retrieval of both the primary [`OfsBuf`] and
         /// the alternate screen buffer ([`HiddenScreenState`]).
         fn get_mem_size(&self) -> usize {
             self.ofs_buf.get_mem_size()
@@ -184,10 +184,10 @@ pub struct OfsBufVT100Config {
 ///
 /// This module provides [`From`] trait implementations to build an [`OfsBufVT100Config`]
 /// from a [`Size`] or tuple, and to convert that configuration into the various terminal
-/// states ([`OffscreenBuffer`], [`HiddenScreenState`], and [`ScrollbackBuffer`]).
+/// states ([`OfsBuf`], [`HiddenScreenState`], and [`ScrollbackBuffer`]).
 ///
 /// [`HiddenScreenState`]: super::HiddenScreenState
-/// [`OffscreenBuffer`]: crate::OffscreenBuffer
+/// [`OfsBuf`]: crate::OfsBuf
 /// [`OfsBufVT100`]: crate::OfsBufVT100
 /// [`OfsBufVT100Config`]: crate::OfsBufVT100Config
 /// [`ScrollbackBuffer`]: super::ScrollbackBuffer
@@ -222,7 +222,7 @@ mod impl_ofs_buf_vt_100_config {
         }
     }
 
-    impl From<OfsBufVT100Config> for OffscreenBuffer {
+    impl From<OfsBufVT100Config> for OfsBuf {
         fn from(config: OfsBufVT100Config) -> Self { Self::new_empty(config.window_size) }
     }
 
@@ -246,7 +246,7 @@ mod tests {
         {
             // First we assert against a dummy value to see the real sizes in the test
             // output, then we will update it.
-            assert_eq!(size_of::<OfsBufVT100>(), 976);
+            assert_eq!(std::mem::size_of::<OfsBufVT100>(), 224);
         }
     }
 
@@ -305,15 +305,15 @@ mod tests {
             scrollback_buffer_limit: limit,
         };
 
-        // Test Into<OffscreenBuffer>
-        let _ofs_buf: OffscreenBuffer = config.into();
-        // Since OffscreenBuffer does not derive PartialEq, we can just check if
+        // Test Into<OfsBuf>
+        let _ofs_buf: OfsBuf = config.into();
+        // Since OfsBuf does not derive PartialEq, we can just check if
         // get_mem_size doesn't panic and size gets set (indirectly tested by dimensions).
         // Let's just test that we can convert.
 
         // Test Into<HiddenScreenState>
         let hidden: HiddenScreenState = config.into();
-        assert_eq!(hidden.hidden_buffer.len(), 10); // height is 10
+        assert_eq!(hidden.hidden_buffer.get_height().as_usize(), 10); // height is 10
 
         // Test Into<ScrollbackBuffer>
         let scrollback_buffer: ScrollbackBuffer = config.into();

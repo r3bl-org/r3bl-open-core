@@ -370,7 +370,7 @@ pub mod write_to_file {
     /// Returns an error if:
     /// - The file cannot be created (invalid path, permissions)
     /// - Writing to the file fails
-    pub fn try_write_str_to_file(path: &PathBuf, contents: &str) -> CommonResult<()> {
+    pub fn try_write_str_to_file(path: &PathBuf, contents: &str) -> CommonResult {
         let mut file = File::create(path).into_diagnostic()?;
         file.write_all(contents.as_bytes()).into_diagnostic()?;
         ok!()

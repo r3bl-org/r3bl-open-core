@@ -79,6 +79,10 @@ fn parse_comma_separated_list(input: &str) -> IResult<&str, InlineVec<&str>> {
             // 2. 2nd item onwards must be prefixed by at least 1 space, may have more.
             let mut my_iter = acc.iter();
 
+            #[allow(
+                clippy::unwrap_used,
+                reason = "Length is guaranteed to be > 1 by the match arm"
+            )]
             let first_item = my_iter.next().unwrap();
 
             // First item must not be prefixed with a space.

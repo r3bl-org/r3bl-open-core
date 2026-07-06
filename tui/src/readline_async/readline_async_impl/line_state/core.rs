@@ -3,7 +3,7 @@
 // cspell:words testx
 
 use crate::{ColIndex, ColWidth, GCStringOwned, MemoizedLenMap, SegIndex, Size,
-            StringLength, ok, width};
+            StringLength, col, ok, width};
 use std::io::{self, Write};
 
 /// This struct actually handles the line editing, and rendering. This works hand in hand
@@ -129,7 +129,7 @@ impl LineState {
             prompt,
             last_line_completed: true,
             term_size,
-            current_column: crate::col(current_column),
+            current_column: col(current_column),
             should_print_line_on_enter: true,
             should_print_line_on_control_c: false,
             line: GCStringOwned::new(""),

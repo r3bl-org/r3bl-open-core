@@ -49,8 +49,10 @@ use tracing::debug;
 pub fn setup_default_miette_global_report_handler(issues_url: &'static str) {
     miette::set_hook(Box::new(|_report| {
         let terminal_width = {
-            let it = crossterm::terminal::size().map_or(80, |(columns, _rows)| columns)
-                as usize;
+            let it = match crossterm::terminal::size() {
+                Ok((columns, _rows)) => columns,
+                Err(_) => 80,
+            } as usize;
             debug!("miette::set_hook -> terminal_width: {}", it);
             it
         };

@@ -10,8 +10,7 @@
 //!
 //! [`PixelCharLine`]: crate::PixelCharLine
 
-use super::PixelChar;
-use crate::{ColWidth, GetMemSize, InlineVec, TinyInlineString, dim_underline,
+use crate::{ColWidth, GetMemSize, InlineVec, PixelChar, TinyInlineString, dim_underline,
             get_mem_size, ok, tiny_inline_string};
 use smallvec::smallvec;
 use std::{fmt::{self, Debug},

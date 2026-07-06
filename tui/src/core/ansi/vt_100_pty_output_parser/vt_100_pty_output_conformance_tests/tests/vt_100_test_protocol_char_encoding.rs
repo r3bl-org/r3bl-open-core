@@ -5,12 +5,12 @@
 //! [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
 
 use super::super::test_fixtures_vt_100_ansi_conformance::*;
-use crate::{AnsiToOfsBufPerformer, offscreen_buffer::test_fixtures_ofs_buf::*};
+use crate::{AnsiToOfsBufPerformer, ofs_buf::test_fixtures_ofs_buf::*};
 use vte::Perform;
 
 #[test]
 fn test_utf8_characters() {
-    let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+    let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
 
     // Process UTF-8 characters including emojis.
     let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf_vt_100);

@@ -4,6 +4,7 @@
 // allowed to use .unwrap() (workspace `Cargo.toml` config allows it). The cfg_attr
 // ensures test code within the library can also use .unwrap() freely.
 #![cfg_attr(not(test), deny(clippy::unwrap_in_result))]
+#![cfg_attr(not(test), deny(clippy::unwrap_used))]
 
 // XMARK: Prevent rustfmt from reformatting entire file.
 // The `custom_inner_attributes` nightly feature enables `#![rustfmt::skip]`.

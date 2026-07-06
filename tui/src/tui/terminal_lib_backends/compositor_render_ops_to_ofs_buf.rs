@@ -19,7 +19,7 @@
 //! ```
 //!
 //! **Input**: [`RenderPipeline`] organized by Z-order
-//! **Output**: [`OffscreenBuffer`] (virtual 2D terminal grid with styled pixels)
+//! **Output**: [`OfsBuf`] (virtual 2D terminal grid with styled pixels)
 //! **Role**: Execute rendering operations to create a frame-sized virtual terminal buffer
 //!
 //! <div class="warning">
@@ -31,7 +31,7 @@
 //!
 //! ## Navigation
 //! - **Previous stage**: [`render_pipeline`] (Stage 2: Organization)
-//! - **Next stage (Stage 4: Shared)**: [`offscreen_buffer::paint_impl` mod docs] (Backend
+//! - **Next stage (Stage 4: Shared)**: [`ofs_buf::paint_impl` mod docs] (Backend
 //!   Converter - shared by both Crossterm and `DirectToAnsi`)
 //! - **Stage 5 options**:
 //!   - [`crossterm_backend::crossterm_paint_render_op_impl` mod docs] (Crossterm
@@ -50,7 +50,7 @@
 //! - **Apply Clipping**: Respect bounds to prevent off-screen writes
 //! - **Handle Unicode**: Correctly calculate display width for emoji and wide characters
 //! - **Manage State**: Track cursor position, colors, and terminal modes
-//! - **Write Pixels**: Store styled characters in the [`OffscreenBuffer`]
+//! - **Write Pixels**: Store styled characters in the [`OfsBuf`]
 //!
 //! ### The Offscreen Buffer
 //! The output is a 2D grid (not a stream) where each cell contains:
@@ -66,17 +66,13 @@
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`crossterm_backend::crossterm_paint_render_op_impl` mod docs]: mod@crate::crossterm_backend::crossterm_paint_render_op_impl
 //! [`direct_to_ansi` mod docs]: mod@crate::direct_to_ansi
-//! [`offscreen_buffer::paint_impl` mod docs]: mod@crate::offscreen_buffer::paint_impl
+//! [`ofs_buf::paint_impl` mod docs]: mod@crate::ofs_buf::paint_impl
 //! [`render_pipeline`]: mod@crate::render_pipeline
 //! [rendering pipeline overview]: mod@crate::terminal_lib_backends#rendering-pipeline-architecture
 
-use super::{OffscreenBuffer, RenderOpCommon, RenderOpIR, RenderPipeline,
+use super::{OfsBuf, RenderOpCommon, RenderOpIR, RenderPipeline,
             sanitize_and_save_abs_pos};
-use crate::{ColWidth, CommonError, CommonErrorType, CommonResult, DEBUG_TUI_COMPOSITOR,
-            GCStringOwned, MemoizedLenMap, PixelChar, PixelCharLine, Pos,
-            RenderOpsLocalData, Size, StringLength, TuiStyle, ZOrder, ch,
-            glyphs::{self, SPACER_GLYPH},
-            inline_string, usize, width};
+use crate::{ChUnit, ColWidth, CommonError, CommonErrorType, CommonResult, DEBUG_TUI_COMPOSITOR, GCStringOwned, MemoizedLenMap, PixelChar, Pos, RenderOpsLocalData, Size, StringLength, TuiStyle, UNICODE_REPLACEMENT_CHAR, ZOrder, ch, col, glyphs::{self, SPACER_GLYPH}, inline_string, usize, width};
 
 impl RenderPipeline {
     /// Converts the render pipeline to an offscreen buffer.
@@ -84,36 +80,33 @@ impl RenderPipeline {
     /// 1. This does not require any specific implementation of crossterm or termion.
     /// 2. This is the intermediate representation (IR) of a [`RenderPipeline`]. In order
     ///    to turn this IR into actual paint commands for the terminal, you must use the
-    ///    [`crate::OffscreenBufferPaint`] trait implementations.
+    ///    [`crate::OfsBufPaint`] trait implementations.
     pub fn compose_render_ops_into_ofs_buf(
         &self,
         window_size: Size,
-        ofs_buf: &mut OffscreenBuffer, /* Pass in the locked buffer. */
+        ofs_buf: &mut OfsBuf, /* Pass in the locked buffer. */
         memoized_len_map: &mut MemoizedLenMap, /* Memoized text width calculations. */
     ) {
         let mut render_local_data = RenderOpsLocalData::default();
 
         for z_order in &ZOrder::get_render_order() {
-            if let Some(render_ops_vec) = self.get(z_order) {
-                for render_ops in render_ops_vec {
-                    for render_op in render_ops.iter() {
-                        process_render_op(
-                            render_op,
-                            window_size,
-                            ofs_buf,
-                            &mut render_local_data,
-                            memoized_len_map,
-                        );
-                    }
-                }
+            let render_ops = self.get(z_order);
+            for render_op in render_ops.iter() {
+                process_render_op(
+                    render_op,
+                    window_size,
+                    ofs_buf,
+                    &mut render_local_data,
+                    memoized_len_map,
+                );
             }
         }
 
         DEBUG_TUI_COMPOSITOR.then(|| {
             // % is Display, ? is Debug.
             tracing::info!(
-                message = %inline_string!("offscreen_buffer {ch}", ch = glyphs::SCREEN_BUFFER_GLYPH),
-                offscreen_buffer = ?ofs_buf
+                message = %inline_string!("ofs_buf {ch}", ch = glyphs::SCREEN_BUFFER_GLYPH),
+                ofs_buf = ?ofs_buf
             );
         });
     }
@@ -123,7 +116,7 @@ impl RenderPipeline {
 pub fn process_render_op(
     render_op_ir: &RenderOpIR,
     window_size: Size,
-    ofs_buf: &mut OffscreenBuffer,
+    ofs_buf: &mut OfsBuf,
     render_local_data: &mut RenderOpsLocalData,
     memoized_len_map: &mut MemoizedLenMap,
 ) {
@@ -138,8 +131,11 @@ pub fn process_render_op(
                 render_local_data,
             );
             if let Ok(new_pos) = result_new_pos {
-                ofs_buf.cursor_pos =
-                    sanitize_and_save_abs_pos(new_pos, window_size, render_local_data);
+                ofs_buf.set_cursor_pos(sanitize_and_save_abs_pos(
+                    new_pos,
+                    window_size,
+                    render_local_data,
+                ));
             }
         }
         // Common operations: shared between IR and Output
@@ -162,35 +158,39 @@ pub fn process_render_op(
 fn process_common_render_op(
     common_op: &RenderOpCommon,
     window_size: Size,
-    ofs_buf: &mut OffscreenBuffer,
+    ofs_buf: &mut OfsBuf,
     render_local_data: &mut RenderOpsLocalData,
     memoized_len_map: &mut MemoizedLenMap,
 ) {
     match common_op {
         // ===== Terminal Mode State Operations =====
         // These operations update the terminal mode state in the backend, but the
-        // OffscreenBuffer no longer tracks terminal mode state (since the refactor to
+        // OfsBuf no longer tracks terminal mode state (since the refactor to
         // OfsBufVT100). They are just passed through here to the backend during diffing.
 
         // ===== Incremental Rendering Operations - Complete implementation
         // These operations are executed both by the backend AND need to update buffer
         // state for consistency and future extensibility (e.g., if choose() or
-        // readline_async migrates to use OffscreenBuffer).
+        // readline_async migrates to use OfsBuf).
         RenderOpCommon::MoveCursorToColumn(col_index) => {
-            ofs_buf.cursor_pos.col_index = *col_index;
+            ofs_buf.update_cursor_pos(|p| p.col_index = *col_index);
         }
         RenderOpCommon::MoveCursorToNextLine(row_height) => {
-            ofs_buf.cursor_pos.row_index += *row_height;
-            ofs_buf.cursor_pos.col_index = crate::col(0);
+            ofs_buf.update_cursor_pos(|p| {
+                p.row_index += *row_height;
+                p.col_index = col(0);
+            });
         }
         RenderOpCommon::MoveCursorToPreviousLine(row_height) => {
-            ofs_buf.cursor_pos.row_index -= *row_height;
-            ofs_buf.cursor_pos.col_index = crate::col(0);
+            ofs_buf.update_cursor_pos(|p| {
+                p.row_index -= *row_height;
+                p.col_index = col(0);
+            });
         }
         RenderOpCommon::ClearCurrentLine => {
             // Clear the current line in the buffer
-            let row_idx = ofs_buf.cursor_pos.row_index.as_usize();
-            if let Some(line) = ofs_buf.buffer.get_mut(row_idx) {
+            let row_idx = ofs_buf.get_cursor_pos().row_index.as_usize();
+            if let Some(line) = ofs_buf.get_row_mut(row_idx) {
                 for pixel_char in line.iter_mut() {
                     *pixel_char = PixelChar::Spacer;
                 }
@@ -198,9 +198,9 @@ fn process_common_render_op(
         }
         RenderOpCommon::ClearToEndOfLine => {
             // Clear from cursor position to end of current line
-            let row_idx = ofs_buf.cursor_pos.row_index.as_usize();
-            let col_idx = ofs_buf.cursor_pos.col_index.as_usize();
-            if let Some(line) = ofs_buf.buffer.get_mut(row_idx) {
+            let row_idx = ofs_buf.get_cursor_pos().row_index.as_usize();
+            let col_idx = ofs_buf.get_cursor_pos().col_index.as_usize();
+            if let Some(line) = ofs_buf.get_row_mut(row_idx) {
                 for col in col_idx..line.len() {
                     if let Some(pixel_char) = line.get_mut(col) {
                         *pixel_char = PixelChar::Spacer;
@@ -210,9 +210,9 @@ fn process_common_render_op(
         }
         RenderOpCommon::ClearToStartOfLine => {
             // Clear from start of current line to cursor position (inclusive)
-            let row_idx = ofs_buf.cursor_pos.row_index.as_usize();
-            let col_idx = ofs_buf.cursor_pos.col_index.as_usize();
-            if let Some(line) = ofs_buf.buffer.get_mut(row_idx) {
+            let row_idx = ofs_buf.get_cursor_pos().row_index.as_usize();
+            let col_idx = ofs_buf.get_cursor_pos().col_index.as_usize();
+            if let Some(line) = ofs_buf.get_row_mut(row_idx) {
                 for col in 0..=col_idx {
                     if let Some(pixel_char) = line.get_mut(col) {
                         *pixel_char = PixelChar::Spacer;
@@ -230,17 +230,22 @@ fn process_common_render_op(
             //
             // This approach ensures the cursor position stays in sync with actual output,
             // which is important for consistency and future use cases (e.g., if choose()
-            // or readline_async migrates to use OffscreenBuffer).
+            // or readline_async migrates to use OfsBuf).
 
             // Calculate visible text width using memoized ANSI stripping (70x speedup).
             // StringLength::StripAnsi strips ANSI codes and calculates Unicode width,
             // with memoization for repeated text patterns.
             let text_width =
                 StringLength::StripAnsi.calculate(text.as_str(), memoized_len_map);
-            ofs_buf.cursor_pos.col_index += text_width;
+            ofs_buf.update_cursor_pos(|p| p.col_index += text_width);
 
-            // Validate and clamp cursor position to window bounds
-            sanitize_and_save_abs_pos(ofs_buf.cursor_pos, window_size, render_local_data);
+            // Sanitize `ofs_buf.cursor_pos`.
+            let pos = sanitize_and_save_abs_pos(
+                ofs_buf.get_cursor_pos(),
+                window_size,
+                render_local_data,
+            );
+            ofs_buf.set_cursor_pos(pos);
         }
         // Terminal-only state operations and no-op operations - no buffer effect needed
         RenderOpCommon::Noop
@@ -251,16 +256,22 @@ fn process_common_render_op(
             ofs_buf.clear();
         }
         RenderOpCommon::MoveCursorPositionAbs(new_abs_pos) => {
-            ofs_buf.cursor_pos =
-                sanitize_and_save_abs_pos(*new_abs_pos, window_size, render_local_data);
+            ofs_buf.set_cursor_pos(sanitize_and_save_abs_pos(
+                *new_abs_pos,
+                window_size,
+                render_local_data,
+            ));
         }
         RenderOpCommon::MoveCursorPositionRelTo(
             box_origin_pos_ref,
             content_rel_pos_ref,
         ) => {
             let new_abs_pos = *box_origin_pos_ref + *content_rel_pos_ref;
-            ofs_buf.cursor_pos =
-                sanitize_and_save_abs_pos(new_abs_pos, window_size, render_local_data);
+            ofs_buf.set_cursor_pos(sanitize_and_save_abs_pos(
+                new_abs_pos,
+                window_size,
+                render_local_data,
+            ));
         }
         RenderOpCommon::SetFgColor(fg_color_ref) => {
             render_local_data.fg_color = Some(*fg_color_ref);
@@ -300,14 +311,14 @@ fn process_common_render_op(
 ///
 /// # Arguments
 ///
-/// This will modify the `my_offscreen_buffer` argument. For plain text it supports
+/// This will modify the `my_ofs_buf` argument. For plain text it supports
 /// counting [`crate::Seg`]s. The display width of each segment is
 /// taken into account when filling the offscreen buffer.
 ///
 /// # Clipping behavior
 ///
 /// This diagram shows what happens per line of text. Each line can be found here:
-/// `my_offscreen_buffer[my_pos.row_index]`.
+/// `my_ofs_buf[my_pos.row_index]`.
 ///
 /// The function uses a two-stage clipping system:
 ///
@@ -336,30 +347,30 @@ fn process_common_render_op(
 /// Returns [`CommonErrorType::DisplaySizeTooSmall`] if the target row index exceeds
 /// the offscreen buffer's available rows (i.e., when
 /// `ofs_buf.my_pos.row_index` is greater than or equal to the number of rows
-/// in `ofs_buf.buffer`).
+/// in `ofs_buf`).
 pub fn print_text_with_attributes(
     string: &str,
     maybe_style_ref: Option<&TuiStyle>,
-    ofs_buf: &mut OffscreenBuffer,
+    ofs_buf: &mut OfsBuf,
     maybe_max_display_col_count: Option<ColWidth>,
     render_local_data: &RenderOpsLocalData,
 ) -> CommonResult<Pos> {
     // Get col and row index from `my_pos`.
-    let display_col_index = usize(ofs_buf.cursor_pos.col_index);
-    let display_row_index = usize(ofs_buf.cursor_pos.row_index);
+    let display_col_index = usize::from(ofs_buf.get_cursor_pos().col_index);
+    let display_row_index = usize::from(ofs_buf.get_cursor_pos().row_index);
 
     // Clip text to bounds using helper function.
     let text_gcs = print_text_with_attributes_helper::clip_text_to_bounds(
         string,
         display_col_index,
         maybe_max_display_col_count,
-        ofs_buf.window_size.col_width,
+        ofs_buf.get_window_size().col_width,
     );
 
     // Try to get the line at `row_index`.
     let mut line_copy = {
-        if let Some(line) = ofs_buf.buffer.get(display_row_index) {
-            Ok(line.clone())
+        if let Some(line) = ofs_buf.get_row(display_row_index) {
+            Ok(line.to_vec())
         } else {
             // Clip vertically.
             CommonError::new_error_result_with_only_type(
@@ -382,7 +393,7 @@ pub fn print_text_with_attributes(
                 width: {e:?}",
                 a = display_row_index,
                 b = display_col_index,
-                c = ofs_buf.window_size,
+                c = ofs_buf.get_window_size(),
                 d = text_gcs.string,
                 e = text_gcs.display_width,
             )
@@ -446,10 +457,14 @@ pub fn print_text_with_attributes(
 
     // Mimic what stdout does and move the position.col_index forward by the width of
     // the text that was added to display.
-    let new_pos = ofs_buf.cursor_pos.add_col(already_inserted_display_width);
+    let new_pos = ofs_buf
+        .get_cursor_pos()
+        .add_col(already_inserted_display_width);
 
-    // Replace the line in `my_offscreen_buffer` with the new line.
-    ofs_buf.buffer[display_row_index] = line_copy;
+    // Replace the line in `my_ofs_buf` with the new line.
+    if let Some(line) = ofs_buf.get_row_mut(display_row_index) {
+        line.copy_from_slice(&line_copy);
+    }
 
     Ok(new_pos)
 }
@@ -501,8 +516,10 @@ mod print_text_with_attributes_helper {
         let string_width = GCStringOwned::from(string).width();
 
         // Calculate the effective max width considering parameter and window constraints.
-        let param_max = maybe_max_display_col_count
-            .map_or(*string_width, |max| *max - ch(display_col_index));
+        let param_max = match maybe_max_display_col_count {
+            Some(max) => *max - ch(display_col_index),
+            None => *string_width,
+        };
         let window_max = *window_max_display_col_count - ch(display_col_index);
         let effective_max = param_max.min(window_max);
 
@@ -547,9 +564,9 @@ mod print_text_with_attributes_helper {
     pub fn process_character_segments(
         text_gcs: &GCStringOwned,
         maybe_style: Option<TuiStyle>,
-        line_copy: &mut PixelCharLine,
+        line_copy: &mut [PixelChar],
         mut insertion_col_index: usize,
-    ) -> (usize, crate::ChUnit) {
+    ) -> (usize, ChUnit) {
         let mut already_inserted_display_width = ch(0);
 
         // Loop over each grapheme cluster segment (the character) in `text_ref_gcs` (text
@@ -569,13 +586,17 @@ mod print_text_with_attributes_helper {
                     } else {
                         // Convert the segment text to a single char.
                         let display_char = if seg_text.chars().count() == 1 {
+                            #[allow(
+                                clippy::unwrap_used,
+                                reason = "Count == 1 check mathematically proves it has a next char"
+                            )]
                             seg_text.chars().next().unwrap()
                         } else {
                             // For multi-char segments, use the first char.
                             seg_text
                                 .chars()
                                 .next()
-                                .unwrap_or(crate::UNICODE_REPLACEMENT_CHAR)
+                                .unwrap_or(UNICODE_REPLACEMENT_CHAR)
                         };
                         PixelChar::PlainText {
                             display_char,
@@ -640,12 +661,12 @@ mod print_text_with_attributes_helper {
     /// Adds spacer padding to the end of the line if max display column count is
     /// specified.
     pub fn add_spacer_padding(
-        line_copy: &mut PixelCharLine,
+        line_copy: &mut [PixelChar],
         mut insertion_col_index: usize,
-        mut already_inserted_display_width: crate::ChUnit,
+        mut already_inserted_display_width: ChUnit,
         display_col_index: usize,
         maybe_max_display_col_count: Option<ColWidth>,
-    ) -> crate::ChUnit {
+    ) -> ChUnit {
         // 🥊Deal w/ padding SPACERs padding to end of line (if
         // `maybe_max_display_col_count` is some).
         if let Some(max_display_col_count) = maybe_max_display_col_count {
@@ -674,7 +695,7 @@ mod tests {
     #[test]
     fn test_print_plain_text_render_path_reuse_buffer() {
         let window_size = width(10) + height(2);
-        let mut ofs_buf = OffscreenBuffer::new_empty(window_size);
+        let mut ofs_buf = OfsBuf::new_empty(window_size);
 
         // Input:  R0 "hello12345😃"
         //            C0123456789
@@ -686,7 +707,7 @@ mod tests {
             let maybe_style = Some(
                 new_style!(dim bold italic color_fg:{tui_color!(cyan)} color_bg:{tui_color!(cyan)}),
             );
-            ofs_buf.cursor_pos = col(0) + row(0);
+            ofs_buf.set_cursor_pos(col(0) + row(0));
             let render_local_data = RenderOpsLocalData {
                 fg_color: Some(tui_color!(green)),
                 bg_color: Some(tui_color!(blue)),
@@ -703,31 +724,31 @@ mod tests {
             )
             .ok();
 
-            // println!("my_offscreen_buffer: \n{:#?}", my_offscreen_buffer);
+            // println!("my_ofs_buf: \n{:#?}", my_ofs_buf);
 
             assert_eq2!(
-                ofs_buf.buffer[0][0],
+                ofs_buf.get_row(0).unwrap()[0],
                 PixelChar::PlainText {
                     display_char: 'h',
                     style: new_style!(dim bold italic color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)}),
                 }
             );
             assert_eq2!(
-                ofs_buf.buffer[0][4],
+                ofs_buf.get_row(0).unwrap()[4],
                 PixelChar::PlainText {
                     display_char: 'o',
                     style: new_style!(dim bold italic color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)}),
                 }
             );
             assert_eq2!(
-                ofs_buf.buffer[0][5],
+                ofs_buf.get_row(0).unwrap()[5],
                 PixelChar::PlainText {
                     display_char: '1',
                     style: new_style!(dim bold italic color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)}),
                 }
             );
             assert_eq2!(
-                ofs_buf.buffer[0][9],
+                ofs_buf.get_row(0).unwrap()[9],
                 PixelChar::PlainText {
                     display_char: '5',
                     style: new_style!(dim bold italic color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)}),
@@ -745,7 +766,7 @@ mod tests {
             let maybe_style = Some(
                 new_style!(dim bold color_fg:{tui_color!(cyan)} color_bg:{tui_color!(cyan)}),
             );
-            ofs_buf.cursor_pos = col(0) + row(0);
+            ofs_buf.set_cursor_pos(col(0) + row(0));
             let render_local_data = RenderOpsLocalData {
                 fg_color: Some(tui_color!(green)),
                 bg_color: Some(tui_color!(blue)),
@@ -762,30 +783,30 @@ mod tests {
             )
             .ok();
 
-            // println!("my_offscreen_buffer: \n{:#?}", my_offscreen_buffer);
+            // println!("my_ofs_buf: \n{:#?}", my_ofs_buf);
 
             assert_eq2!(
-                ofs_buf.buffer[0][0],
+                ofs_buf.get_row(0).unwrap()[0],
                 PixelChar::PlainText {
                     display_char: 'h',
                     style: new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)}),
                 }
             );
             assert_eq2!(
-                ofs_buf.buffer[0][4],
+                ofs_buf.get_row(0).unwrap()[4],
                 PixelChar::PlainText {
                     display_char: 'o',
                     style: new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)}),
                 }
             );
             assert_eq2!(
-                ofs_buf.buffer[0][5],
+                ofs_buf.get_row(0).unwrap()[5],
                 PixelChar::PlainText {
                     display_char: '1',
                     style: new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)}),
                 }
             );
-            assert_eq2!(ofs_buf.buffer[0][9], PixelChar::Spacer);
+            assert_eq2!(ofs_buf.get_row(0).unwrap()[9], PixelChar::Spacer);
         }
     }
 
@@ -799,13 +820,13 @@ mod tests {
         // Output: R0 "hello12345"
         //            C0123456789
         {
-            let mut ofs_buf = OffscreenBuffer::new_empty(window_size);
+            let mut ofs_buf = OfsBuf::new_empty(window_size);
             let text = "hello12345😃";
             // The style colors should be overwritten by fg_color and bg_color.
             let maybe_style = Some(
                 new_style!(dim bold color_fg:{tui_color!(cyan)} color_bg:{tui_color!(cyan)}),
             );
-            ofs_buf.cursor_pos = col(0) + row(0);
+            ofs_buf.set_cursor_pos(col(0) + row(0));
             let render_local_data = RenderOpsLocalData {
                 fg_color: Some(tui_color!(green)),
                 bg_color: Some(tui_color!(blue)),
@@ -822,31 +843,31 @@ mod tests {
             )
             .ok();
 
-            // println!("my_offscreen_buffer: \n{:#?}", my_offscreen_buffer);
+            // println!("my_ofs_buf: \n{:#?}", my_ofs_buf);
 
             assert_eq2!(
-                ofs_buf.buffer[0][0],
+                ofs_buf.get_row(0).unwrap()[0],
                 PixelChar::PlainText {
                     display_char: 'h',
                     style: new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)}),
                 }
             );
             assert_eq2!(
-                ofs_buf.buffer[0][4],
+                ofs_buf.get_row(0).unwrap()[4],
                 PixelChar::PlainText {
                     display_char: 'o',
                     style: new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)}),
                 }
             );
             assert_eq2!(
-                ofs_buf.buffer[0][5],
+                ofs_buf.get_row(0).unwrap()[5],
                 PixelChar::PlainText {
                     display_char: '1',
                     style: new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)}),
                 }
             );
             assert_eq2!(
-                ofs_buf.buffer[0][9],
+                ofs_buf.get_row(0).unwrap()[9],
                 PixelChar::PlainText {
                     display_char: '5',
                     style: new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)}),
@@ -859,13 +880,13 @@ mod tests {
         // Output: R0 "hello1234╳"
         //            C0123456789
         {
-            let mut ofs_buf = OffscreenBuffer::new_empty(window_size);
+            let mut ofs_buf = OfsBuf::new_empty(window_size);
             let text = "hello1234😃";
             // The style colors should be overwritten by fg_color and bg_color.
             let maybe_style = Some(
                 new_style!(dim bold color_fg:{tui_color!(cyan)} color_bg:{tui_color!(cyan)}),
             );
-            ofs_buf.cursor_pos = col(0) + row(0);
+            ofs_buf.set_cursor_pos(col(0) + row(0));
             let render_local_data = RenderOpsLocalData {
                 fg_color: Some(tui_color!(green)),
                 bg_color: Some(tui_color!(blue)),
@@ -882,42 +903,42 @@ mod tests {
             )
             .ok();
 
-            // println!("my_offscreen_buffer: \n{:#?}", my_offscreen_buffer);
+            // println!("my_ofs_buf: \n{:#?}", my_ofs_buf);
 
             assert_eq2!(
-                ofs_buf.buffer[0][0],
+                ofs_buf.get_row(0).unwrap()[0],
                 PixelChar::PlainText {
                     display_char: 'h',
                     style: new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)}),
                 }
             );
             assert_eq2!(
-                ofs_buf.buffer[0][4],
+                ofs_buf.get_row(0).unwrap()[4],
                 PixelChar::PlainText {
                     display_char: 'o',
                     style: new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)}),
                 }
             );
             assert_eq2!(
-                ofs_buf.buffer[0][5],
+                ofs_buf.get_row(0).unwrap()[5],
                 PixelChar::PlainText {
                     display_char: '1',
                     style: new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)}),
                 }
             );
-            assert_eq2!(ofs_buf.buffer[0][9], PixelChar::Spacer);
+            assert_eq2!(ofs_buf.get_row(0).unwrap()[9], PixelChar::Spacer);
         }
 
         // R0 "hello123😃"
         //    C0123456789
         {
-            let mut ofs_buf = OffscreenBuffer::new_empty(window_size);
+            let mut ofs_buf = OfsBuf::new_empty(window_size);
             let text = "hello123😃";
             // The style colors should be overwritten by fg_color and bg_color.
             let maybe_style = Some(
                 new_style!( dim bold color_fg:{tui_color!(cyan)} color_bg:{tui_color!(cyan)}),
             );
-            ofs_buf.cursor_pos = col(0) + row(0);
+            ofs_buf.set_cursor_pos(col(0) + row(0));
             let render_local_data = RenderOpsLocalData {
                 fg_color: Some(tui_color!(green)),
                 bg_color: Some(tui_color!(blue)),
@@ -934,49 +955,49 @@ mod tests {
             )
             .ok();
 
-            // println!("my_offscreen_buffer: \n{:#?}", my_offscreen_buffer);
+            // println!("my_ofs_buf: \n{:#?}", my_ofs_buf);
 
             assert_eq2!(
-                ofs_buf.buffer[0][0],
+                ofs_buf.get_row(0).unwrap()[0],
                 PixelChar::PlainText {
                     display_char: 'h',
                     style: new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)}),
                 }
             );
             assert_eq2!(
-                ofs_buf.buffer[0][4],
+                ofs_buf.get_row(0).unwrap()[4],
                 PixelChar::PlainText {
                     display_char: 'o',
                     style: new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)}),
                 }
             );
             assert_eq2!(
-                ofs_buf.buffer[0][5],
+                ofs_buf.get_row(0).unwrap()[5],
                 PixelChar::PlainText {
                     display_char: '1',
                     style: new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)}),
                 }
             );
             assert_eq2!(
-                ofs_buf.buffer[0][8],
+                ofs_buf.get_row(0).unwrap()[8],
                 PixelChar::PlainText {
                     display_char: '😃',
                     style: new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)}),
                 }
             );
-            assert_eq2!(ofs_buf.buffer[0][9], PixelChar::Void);
+            assert_eq2!(ofs_buf.get_row(0).unwrap()[9], PixelChar::Void);
         }
 
         // R0 "hello12😃"
         //    C0123456789
         {
-            let mut ofs_buf = OffscreenBuffer::new_empty(window_size);
+            let mut ofs_buf = OfsBuf::new_empty(window_size);
             let text = "hello12😃";
             // The style colors should be overwritten by fg_color and bg_color.
             let maybe_style = Some(
                 new_style!(dim bold color_fg:{tui_color!(cyan)} color_bg:{tui_color!(cyan)}),
             );
-            ofs_buf.cursor_pos = col(0) + row(0);
+            ofs_buf.set_cursor_pos(col(0) + row(0));
             let render_local_data = RenderOpsLocalData {
                 fg_color: Some(tui_color!(green)),
                 bg_color: Some(tui_color!(blue)),
@@ -993,7 +1014,7 @@ mod tests {
             )
             .ok();
 
-            // my_offscreen_buffer:
+            // my_ofs_buf:
             // window_size: [width:10, height:2],
             // row_index: [0]
             // 	0: "h" Some(Style { _id + bold + dim | fg: Some(green) | bg: Some(blue) |
@@ -1012,38 +1033,38 @@ mod tests {
             // 	0: ╳.
             // 	9: ╳
 
-            // println!("my_offscreen_buffer: \n{:#?}", my_offscreen_buffer);
+            // println!("my_ofs_buf: \n{:#?}", my_ofs_buf);
 
             assert_eq2!(
-                ofs_buf.buffer[0][0],
+                ofs_buf.get_row(0).unwrap()[0],
                 PixelChar::PlainText {
                     display_char: 'h',
                     style: new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)}),
                 }
             );
             assert_eq2!(
-                ofs_buf.buffer[0][4],
+                ofs_buf.get_row(0).unwrap()[4],
                 PixelChar::PlainText {
                     display_char: 'o',
                     style: new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)}),
                 }
             );
             assert_eq2!(
-                ofs_buf.buffer[0][5],
+                ofs_buf.get_row(0).unwrap()[5],
                 PixelChar::PlainText {
                     display_char: '1',
                     style: new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)}),
                 }
             );
             assert_eq2!(
-                ofs_buf.buffer[0][7],
+                ofs_buf.get_row(0).unwrap()[7],
                 PixelChar::PlainText {
                     display_char: '😃',
                     style: new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)}),
                 }
             );
-            assert_eq2!(ofs_buf.buffer[0][8], PixelChar::Void);
-            assert_eq2!(ofs_buf.buffer[0][9], PixelChar::Spacer);
+            assert_eq2!(ofs_buf.get_row(0).unwrap()[8], PixelChar::Void);
+            assert_eq2!(ofs_buf.get_row(0).unwrap()[9], PixelChar::Spacer);
         }
     }
 
@@ -1075,8 +1096,8 @@ mod tests {
         );
         // println!("pipeline: \n{:#?}", pipeline.get_all_render_op_in(ZOrder::Normal));
 
-        // Convert it into an OffscreenBuffer.
-        // my_offscreen_buffer:
+        // Convert it into an OfsBuf.
+        // my_ofs_buf:
         // window_size: [width:10, height:2],
         // row_index: [0]
         //     0: "h" Some(Style { _id + bold + dim | fg: Some(green) | bg: Some(blue) | \
@@ -1095,7 +1116,7 @@ mod tests {
         //     0: ╳ .
         //     9: ╳
 
-        let mut ofs_buf = OffscreenBuffer::new_empty(window_size);
+        let mut ofs_buf = OfsBuf::new_empty(window_size);
         let mut memoized_len_map = HashMap::new();
         pipeline.compose_render_ops_into_ofs_buf(
             window_size,
@@ -1103,24 +1124,24 @@ mod tests {
             &mut memoized_len_map,
         );
 
-        // println!("my_offscreen_buffer: \n{:#?}", my_offscreen_buffer);
-        assert_eq2!(ofs_buf.buffer.len(), 2);
+        // println!("my_ofs_buf: \n{:#?}", my_ofs_buf);
+        assert_eq2!(ofs_buf.get_height().as_usize(), 2);
         assert_eq2!(
-            ofs_buf.buffer[0][0],
+            ofs_buf.get_row(0).unwrap()[0],
             PixelChar::PlainText {
                 display_char: 'h',
                 style: new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)}),
             }
         );
         assert_eq2!(
-            ofs_buf.buffer[0][7],
+            ofs_buf.get_row(0).unwrap()[7],
             PixelChar::PlainText {
                 display_char: '😃',
                 style: new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)}),
             }
         );
-        assert_eq2!(ofs_buf.buffer[0][8], PixelChar::Void);
-        assert_eq2!(ofs_buf.buffer[0][9], PixelChar::Spacer);
+        assert_eq2!(ofs_buf.get_row(0).unwrap()[8], PixelChar::Void);
+        assert_eq2!(ofs_buf.get_row(0).unwrap()[9], PixelChar::Spacer);
     }
 
     #[test]
@@ -1164,14 +1185,14 @@ mod tests {
         );
         // println!("pipeline: \n{:#?}", pipeline.get_all_render_op_in(ZOrder::Normal));
 
-        let mut ofs_buf = OffscreenBuffer::new_empty(window_size);
+        let mut ofs_buf = OfsBuf::new_empty(window_size);
         let mut memoized_len_map = HashMap::new();
         pipeline.compose_render_ops_into_ofs_buf(
             window_size,
             &mut ofs_buf,
             &mut memoized_len_map,
         );
-        // my_offscreen_buffer:
+        // my_ofs_buf:
         // window_size: [width:10, height:2],
         // row_index: [0]
         //   0: ╳
@@ -1198,54 +1219,54 @@ mod tests {
         //   8: "d" Some(Style { _id + bold + dim | fg: Some(green) | bg: Some(blue) |
         // padding: 0 })   9: ╳
 
-        // println!("my_offscreen_buffer: \n{:#?}", my_offscreen_buffer);
+        // println!("my_ofs_buf: \n{:#?}", my_ofs_buf);
 
         // Contains 2 lines.
-        assert_eq2!(ofs_buf.buffer.len(), 2);
+        assert_eq2!(ofs_buf.get_height().as_usize(), 2);
 
         // Line 1 (row_index = 0).
         {
-            assert_eq2!(ofs_buf.buffer[0][0], PixelChar::Spacer);
-            assert_eq2!(ofs_buf.buffer[0][1], PixelChar::Spacer);
+            assert_eq2!(ofs_buf.get_row(0).unwrap()[0], PixelChar::Spacer);
+            assert_eq2!(ofs_buf.get_row(0).unwrap()[1], PixelChar::Spacer);
             assert_eq2!(
-                ofs_buf.buffer[0][2],
+                ofs_buf.get_row(0).unwrap()[2],
                 PixelChar::PlainText {
                     display_char: 'h',
                     style: new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)}),
                 }
             );
             assert_eq2!(
-                ofs_buf.buffer[0][7],
+                ofs_buf.get_row(0).unwrap()[7],
                 PixelChar::PlainText {
                     display_char: '😃',
                     style: new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)}),
                 }
             );
-            assert_eq2!(ofs_buf.buffer[0][8], PixelChar::Void);
-            assert_eq2!(ofs_buf.buffer[0][9], PixelChar::Spacer);
+            assert_eq2!(ofs_buf.get_row(0).unwrap()[8], PixelChar::Void);
+            assert_eq2!(ofs_buf.get_row(0).unwrap()[9], PixelChar::Spacer);
         }
 
         // Line 2 (row_index = 1)
         {
-            assert_eq2!(ofs_buf.buffer[1][0], PixelChar::Spacer);
-            assert_eq2!(ofs_buf.buffer[1][1], PixelChar::Spacer);
-            assert_eq2!(ofs_buf.buffer[1][2], PixelChar::Spacer);
-            assert_eq2!(ofs_buf.buffer[1][3], PixelChar::Spacer);
+            assert_eq2!(ofs_buf.get_row_mut(1).unwrap()[0], PixelChar::Spacer);
+            assert_eq2!(ofs_buf.get_row_mut(1).unwrap()[1], PixelChar::Spacer);
+            assert_eq2!(ofs_buf.get_row_mut(1).unwrap()[2], PixelChar::Spacer);
+            assert_eq2!(ofs_buf.get_row_mut(1).unwrap()[3], PixelChar::Spacer);
             assert_eq2!(
-                ofs_buf.buffer[1][4],
+                ofs_buf.get_row_mut(1).unwrap()[4],
                 PixelChar::PlainText {
                     display_char: 'w',
                     style: new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)}),
                 }
             );
             assert_eq2!(
-                ofs_buf.buffer[1][8],
+                ofs_buf.get_row_mut(1).unwrap()[8],
                 PixelChar::PlainText {
                     display_char: 'd',
                     style: new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)}),
                 }
             );
-            assert_eq2!(ofs_buf.buffer[1][9], PixelChar::Spacer);
+            assert_eq2!(ofs_buf.get_row_mut(1).unwrap()[9], PixelChar::Spacer);
         }
     }
 
@@ -1271,7 +1292,7 @@ mod tests {
             pipeline.get_all_render_op_in(ZOrder::Normal)
         );
 
-        let mut ofs_buf = OffscreenBuffer::new_empty(window_size);
+        let mut ofs_buf = OfsBuf::new_empty(window_size);
         let mut memoized_len_map = HashMap::new();
         pipeline.compose_render_ops_into_ofs_buf(
             window_size,
@@ -1286,7 +1307,7 @@ mod tests {
         // Line 1 (row_index = 7)
         {
             assert_eq2!(
-                ofs_buf.buffer[0][max_col - 1],
+                ofs_buf.get_row(0).unwrap()[max_col - 1],
                 PixelChar::PlainText {
                     display_char: 'h',
                     style: new_style! ( dim bold ),
@@ -1296,7 +1317,7 @@ mod tests {
         // Line 2 (row_index = 7)
         {
             assert_eq2!(
-                ofs_buf.buffer[1][max_col - 1],
+                ofs_buf.get_row_mut(1).unwrap()[max_col - 1],
                 PixelChar::PlainText {
                     display_char: 'i',
                     style: new_style! ( dim bold ),

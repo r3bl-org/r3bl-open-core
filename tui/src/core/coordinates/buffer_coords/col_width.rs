@@ -1,8 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::ColIndex;
-use crate::generate_length_type_impl;
-use crate::ChUnit;
+use crate::{ChUnit, generate_length_type_impl};
 use std::hash::Hash;
 
 /// [`ColWidth`] is column count, i.e., the number of columns that a UI component

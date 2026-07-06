@@ -9,11 +9,11 @@
 //!   ↓
 //! [Stage 2: Pipeline]
 //!   ↓
-//! [Stage 3: Compositor] ← Writes to OffscreenBuffer
+//! [Stage 3: Compositor] ← Writes to OfsBuf
 //!   ↓
-//! OffscreenBuffer (2D grid) ← YOU ARE HERE
+//! OfsBuf (2D grid) ← YOU ARE HERE
 //!   ↓
-//! [Stage 4: Backend Converter] ← Reads from OffscreenBuffer
+//! [Stage 4: Backend Converter] ← Reads from OfsBuf
 //!   ↓
 //! [Stage 5: Backend Executor]
 //!   ↓
@@ -33,7 +33,7 @@
 //!
 //! ## What This Structure Is
 //!
-//! The `OffscreenBuffer` is a **2D grid representing the entire terminal screen**. Each
+//! The [`OfsBuf`] is a **2D grid representing the entire terminal screen**. Each
 //! cell contains a styled character. This is not a stream of escape sequences (like
 //! traditional terminal output), but a 2D array that can be easily compared
 //! frame-to-frame to determine what changed.
@@ -111,7 +111,7 @@
 //! mapping:
 //!
 //! ```text
-//! vt_100_pty_output_parser/ops/   offscreen_buffer/ofs_buf_vt_100/
+//! vt_100_pty_output_parser/ops/   ofs_buf/ofs_buf_vt_100/
 //! ├── vt_100_shim_char_ops      → ├── impl_char_ops    (print_char, ICH, DCH, ECH)
 //! ├── vt_100_shim_control_ops   → ├── impl_control_ops (BS, TAB, LF, CR)
 //! ├── vt_100_shim_cursor_ops    → ├── impl_cursor_ops  (movement, positioning)
@@ -128,7 +128,7 @@
 //!
 //! # API Design Philosophy
 //!
-//! The [`OffscreenBuffer`] API follows a consistent design philosophy for method return
+//! The [`OfsBuf`] API follows a consistent design philosophy for method return
 //! types and error handling that balances terminal emulation resilience with development
 //! safety.
 //!
@@ -143,12 +143,12 @@
 //! **Examples:**
 //! - [`set_char()`], [`fill_char_range()`], [`copy_chars_within_line()`]
 //! - [`clear_line()`], [`shift_lines_up()`], [`shift_lines_down()`]
-//! - [`insert_chars_at_cursor()`], [`delete_chars_at_cursor()`]
+//! - [`insert_chars()`], [`delete_chars()`]
 //!
 //! **Usage Pattern:**
 //! ```rust
 //! # use r3bl_tui::*;
-//! # let mut buffer = OffscreenBuffer::new_empty(Size { col_width: width(10), row_height: height(5) });
+//! # let mut buffer = OfsBuf::new_empty(Size { col_width: width(10), row_height: height(5) });
 //! # let pos = Pos { row_index: row(1), col_index: col(1) };
 //! # let pixel_char = PixelChar::default();
 //! // In production code, failures are often ignored for terminal resilience
@@ -173,7 +173,7 @@
 //! **Usage Pattern:**
 //! ```rust
 //! # use r3bl_tui::*;
-//! # let buffer = OffscreenBuffer::new_empty(Size { col_width: width(10), row_height: height(5) });
+//! # let buffer = OfsBuf::new_empty(Size { col_width: width(10), row_height: height(5) });
 //! # let pos = Pos { row_index: row(1), col_index: col(1) };
 //! if let Some(char) = buffer.get_char(pos) {
 //!     // Process the character
@@ -186,7 +186,8 @@
 //!
 //! **Categories:**
 //! - **Cursor operations**: Always clamp to valid bounds (VT100 behavior)
-//!   - [`cursor_up()`], [`cursor_down()`], [`cursor_forward()`], [`cursor_backward()`]
+//!   - [`move_cursor_up()`], [`move_cursor_down()`], [`move_cursor_right()`],
+//!     [`move_cursor_left()`]
 //! - **Style operations**: No failure mode for attribute changes
 //!   - [`set_foreground_color()`], [`reset_all_style_attributes()`]
 //! - **Control operations**: Terminal emulation resilience
@@ -208,18 +209,21 @@
 //!
 //! Debug assertions catch issues during development:
 //! ```rust
-//! # use r3bl_tui::*;
-//! # let mut vt100 = OfsBufVT100::new_empty(Size { col_width: width(10), row_height: height(5) });
-//! # vt100.ofs_buf.cursor_pos = Pos { row_index: row(1), col_index: col(1) };
-//! # let count = Length::from(1);
+//! use r3bl_tui::{len, row, col, Pos, OfsBufVT100, width, height};
+//!
+//! let mut vt100 = OfsBufVT100::new_empty(width(10) + height(5));
+//! vt100.set_cursor_pos(Pos { row_index: row(1), col_index: col(1) });
+//! let count = len(1);
+//!
 //! // In parser operations
-//! let success = vt100.delete_chars_at_cursor(count);
+//! let success = vt100.delete_chars(count);
 //! debug_assert!(success.is_ok(), "Failed to delete {:?} chars at cursor", count);
 //!
-//! # let row = RowIndex::from(1);
-//! # let source = ColIndex::from(0);
-//! # let end = ColIndex::from(1);
-//! # let dest = ColIndex::from(2);
+//! let row = row(1);
+//! let source = col(0);
+//! let end = col(1);
+//! let dest = col(2);
+//!
 //! // In internal operations with edge case awareness
 //! let success = vt100.ofs_buf.copy_chars_within_line(row, source..end, dest);
 //! debug_assert!(success.is_ok() || source >= end,
@@ -252,7 +256,7 @@
 //! ### Validation Helpers - Preferred Pattern
 //!
 //! All buffer operations **should use** the standardized validation helper methods from
-//! [`ofs_buf_range_validation`] rather than performing manual bounds checking. These
+//! [`Flat2DArray`] rather than performing manual bounds checking. These
 //! helpers provide consistent, type-safe validation that prevents off-by-one errors and
 //! ensures correct handling of ranges and positions.
 //!
@@ -261,7 +265,7 @@
 //! See actual implementations in the codebase for usage patterns:
 //! - [`fill_char_range()`] (column range operation)
 //! - [`copy_chars_within_line()`] (column range operation)
-//! - Tests in [`mod@ofs_buf_range_validation`] (comprehensive examples)
+//! - Tests in [`Flat2DArray`] (comprehensive examples)
 //!
 //! #### Core Validation Methods
 //! - [`validate_col_range_mut()`] for column range validation
@@ -282,24 +286,24 @@
 //! [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
 //! [`bounds_check`]: crate::bounds_check
 //! [`clear_line()`]: crate::OfsBufVT100::clear_line
-//! [`copy_chars_within_line()`]: crate::OffscreenBuffer::copy_chars_within_line
-//! [`cursor_backward()`]: crate::OfsBufVT100::cursor_backward
-//! [`cursor_down()`]: crate::OfsBufVT100::cursor_down
-//! [`cursor_forward()`]: crate::OfsBufVT100::cursor_forward
-//! [`cursor_up()`]: crate::OfsBufVT100::cursor_up
+//! [`copy_chars_within_line()`]: crate::OfsBuf::copy_chars_within_line
 //! [`DEC`]: https://en.wikipedia.org/wiki/Digital_Equipment_Corporation
-//! [`delete_chars_at_cursor()`]: crate::OfsBufVT100::delete_chars_at_cursor
-//! [`diff()`]: crate::OffscreenBuffer::diff
-//! [`fill_char_range()`]: crate::OffscreenBuffer::fill_char_range
-//! [`get_char()`]: crate::OffscreenBuffer::get_char
-//! [`get_line()`]: crate::OffscreenBuffer::get_line
+//! [`delete_chars()`]: crate::OfsBufVT100::delete_chars
+//! [`diff()`]: crate::OfsBuf::diff
+//! [`fill_char_range()`]: crate::OfsBuf::fill_char_range
+//! [`Flat2DArray`]: crate::Flat2DArray
+//! [`get_char()`]: crate::OfsBuf::get_char
+//! [`get_line()`]: crate::OfsBuf::get_line
 //! [`handle_backspace()`]: crate::OfsBufVT100::handle_backspace
 //! [`handle_line_feed()`]: crate::OfsBufVT100::handle_line_feed
 //! [`handle_tab()`]: crate::OfsBufVT100::handle_tab
 //! [`IndexOps`]: crate::bounds_check::IndexOps
-//! [`insert_chars_at_cursor()`]: crate::OfsBufVT100::insert_chars_at_cursor
+//! [`insert_chars()`]: crate::OfsBufVT100::insert_chars
 //! [`LengthOps`]: crate::bounds_check::LengthOps
-//! [`ofs_buf_range_validation`]: mod@crate::offscreen_buffer::ofs_buf_range_validation
+//! [`move_cursor_down()`]: crate::OfsBufVT100::move_cursor_down
+//! [`move_cursor_left()`]: crate::OfsBufVT100::move_cursor_left
+//! [`move_cursor_right()`]: crate::OfsBufVT100::move_cursor_right
+//! [`move_cursor_up()`]: crate::OfsBufVT100::move_cursor_up
 //! [`ofs_buf_vt_100`]: crate::core::ansi::vt_100_pty_output_parser::ops_impl_ofs_buf
 //! [`Option<&PixelCharLine>`]: std::option::Option
 //! [`Option<PixelChar>`]: std::option::Option
@@ -310,13 +314,13 @@
 //! [`RangeBoundsExt`]: crate::bounds_check::RangeBoundsExt
 //! [`RenderPipeline::paint()`]: crate::RenderPipeline::paint
 //! [`reset_all_style_attributes()`]: crate::OfsBufVT100::reset_all_style_attributes
-//! [`set_char()`]: crate::OffscreenBuffer::set_char
+//! [`set_char()`]: crate::OfsBuf::set_char
 //! [`set_foreground_color()`]: crate::OfsBufVT100::set_foreground_color
 //! [`shift_lines_down()`]: crate::OfsBufVT100::shift_lines_down
 //! [`shift_lines_up()`]: crate::OfsBufVT100::shift_lines_up
 //! [`TuiStyle`]: crate::TuiStyle
-//! [`validate_col_range_mut()`]: crate::OffscreenBuffer::validate_col_range_mut
-//! [`validate_row_range_mut()`]: crate::OffscreenBuffer::validate_row_range_mut
+//! [`validate_col_range_mut()`]: crate::Flat2DArray::validate_col_range_mut
+//! [`validate_row_range_mut()`]: crate::Flat2DArray::validate_row_range_mut
 //! [rendering pipeline overview]: mod@crate::terminal_lib_backends#rendering-pipeline-architecture
 
 // Attach private modules (hide internal structure).
@@ -337,25 +341,19 @@ mod ofs_buf_core;
 mod ofs_buf_line_level_ops;
 
 #[cfg(any(test, doc))]
-pub mod ofs_buf_range_validation;
-#[cfg(not(any(test, doc)))]
-mod ofs_buf_range_validation;
-
-#[cfg(any(test, doc))]
 pub mod paint_impl;
 #[cfg(not(any(test, doc)))]
 mod paint_impl;
 
+mod growable;
 mod pixel_char;
-mod pixel_char_line;
-mod pixel_char_lines;
 
 // Re-export public API (flat, ergonomic surface).
 pub use diff_chunks::*;
+pub use growable::*;
 pub use ofs_buf_core::*;
 pub use paint_impl::*;
 pub use pixel_char::*;
-pub use pixel_char_line::*;
-pub use pixel_char_lines::*;
+
 #[cfg(any(test, doc))]
 pub mod test_fixtures_ofs_buf;

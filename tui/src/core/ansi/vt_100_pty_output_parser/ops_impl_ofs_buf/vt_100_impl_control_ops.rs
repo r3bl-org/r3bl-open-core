@@ -36,9 +36,9 @@ impl OfsBufVT100 {
     ///
     /// Moves cursor left one position if not at leftmost column.
     pub fn handle_backspace(&mut self) {
-        let current_col = self.cursor_pos.col_index;
+        let current_col = self.get_cursor_pos().col_index;
         if !current_col.is_zero() {
-            self.cursor_pos.col_index = current_col - 1;
+            self.update_cursor_pos(|pos| pos.col_index = current_col - 1);
         }
         self.parser_global_state.clear_pending_wrap();
     }
@@ -47,8 +47,8 @@ impl OfsBufVT100 {
     ///
     /// Moves cursor to next 8-column tab stop boundary.
     pub fn handle_tab(&mut self) {
-        let current_col = self.cursor_pos.col_index;
-        let max_col = self.window_size.col_width;
+        let current_col = self.get_cursor_pos().col_index;
+        let max_col = self.ofs_buf.get_window_size().col_width;
 
         // Calculate next tab stop using type-safe operations
         let current_col_usize = current_col.as_usize(); // Convert only for division
@@ -60,12 +60,15 @@ impl OfsBufVT100 {
         let next_col_index = col(next_tab_col_usize);
 
         // Use type-safe overflow checking and clamping
-        self.cursor_pos.col_index =
-            if next_col_index.overflows(max_col) == ArrayOverflowResult::Overflowed {
-                max_col.convert_to_index()
-            } else {
-                next_col_index
-            };
+        self.update_cursor_pos(|pos| {
+            pos.col_index = {
+                if next_col_index.overflows(max_col) == ArrayOverflowResult::Overflowed {
+                    max_col.convert_to_index()
+                } else {
+                    next_col_index
+                }
+            }
+        });
         self.parser_global_state.clear_pending_wrap();
     }
 
@@ -82,7 +85,7 @@ impl OfsBufVT100 {
     ///
     /// Moves cursor to start of current line (column 0).
     pub fn handle_carriage_return(&mut self) {
-        self.cursor_pos.col_index = col(0);
+        self.update_cursor_pos(|pos| pos.col_index = col(0));
         self.parser_global_state.clear_pending_wrap();
     }
 }
@@ -100,72 +103,72 @@ mod tests_control_ops {
     #[test]
     fn test_handle_backspace_within_line() {
         let mut ofs_buf_vt_100 = create_test_buffer();
-        ofs_buf_vt_100.cursor_pos = row(2) + col(5);
+        ofs_buf_vt_100.set_cursor_pos(row(2) + col(5));
 
         ofs_buf_vt_100.handle_backspace();
 
-        assert_eq!(ofs_buf_vt_100.cursor_pos.row_index, row(2));
-        assert_eq!(ofs_buf_vt_100.cursor_pos.col_index, col(4));
+        assert_eq!(ofs_buf_vt_100.get_cursor_pos().row_index, row(2));
+        assert_eq!(ofs_buf_vt_100.get_cursor_pos().col_index, col(4));
     }
 
     #[test]
     fn test_handle_backspace_at_start_of_line() {
         let mut ofs_buf_vt_100 = create_test_buffer();
-        ofs_buf_vt_100.cursor_pos = row(2) + col(0);
+        ofs_buf_vt_100.set_cursor_pos(row(2) + col(0));
 
         ofs_buf_vt_100.handle_backspace();
 
         // Should not move when already at leftmost column.
-        assert_eq!(ofs_buf_vt_100.cursor_pos.row_index, row(2));
-        assert_eq!(ofs_buf_vt_100.cursor_pos.col_index, col(0));
+        assert_eq!(ofs_buf_vt_100.get_cursor_pos().row_index, row(2));
+        assert_eq!(ofs_buf_vt_100.get_cursor_pos().col_index, col(0));
     }
 
     #[test]
     fn test_handle_tab_to_next_stop() {
         let mut ofs_buf_vt_100 = create_test_buffer();
-        ofs_buf_vt_100.cursor_pos = row(1) + col(3);
+        ofs_buf_vt_100.set_cursor_pos(row(1) + col(3));
 
         ofs_buf_vt_100.handle_tab();
 
         // Should move to next 8-column tab stop (column 8).
-        assert_eq!(ofs_buf_vt_100.cursor_pos.row_index, row(1));
-        assert_eq!(ofs_buf_vt_100.cursor_pos.col_index, col(8));
+        assert_eq!(ofs_buf_vt_100.get_cursor_pos().row_index, row(1));
+        assert_eq!(ofs_buf_vt_100.get_cursor_pos().col_index, col(8));
     }
 
     #[test]
     fn test_handle_tab_at_tab_stop() {
         let mut ofs_buf_vt_100 = create_test_buffer();
-        ofs_buf_vt_100.cursor_pos = row(1) + col(8);
+        ofs_buf_vt_100.set_cursor_pos(row(1) + col(8));
 
         ofs_buf_vt_100.handle_tab();
 
         // Should move to next tab stop, but clamp to window width (10 cols = index 9
         // max).
-        assert_eq!(ofs_buf_vt_100.cursor_pos.row_index, row(1));
-        assert_eq!(ofs_buf_vt_100.cursor_pos.col_index, col(9)); // max index for width 10
+        assert_eq!(ofs_buf_vt_100.get_cursor_pos().row_index, row(1));
+        assert_eq!(ofs_buf_vt_100.get_cursor_pos().col_index, col(9)); // max index for width 10
     }
 
     #[test]
     fn test_handle_tab_near_right_edge() {
         let mut ofs_buf_vt_100 = create_test_buffer();
-        ofs_buf_vt_100.cursor_pos = row(1) + col(9); // at right edge
+        ofs_buf_vt_100.set_cursor_pos(row(1) + col(9)); // at right edge
 
         ofs_buf_vt_100.handle_tab();
 
         // Should clamp to window boundary.
-        assert_eq!(ofs_buf_vt_100.cursor_pos.row_index, row(1));
-        assert_eq!(ofs_buf_vt_100.cursor_pos.col_index, col(9)); // stays at max valid index
+        assert_eq!(ofs_buf_vt_100.get_cursor_pos().row_index, row(1));
+        assert_eq!(ofs_buf_vt_100.get_cursor_pos().col_index, col(9)); // stays at max valid index
     }
 
     #[test]
     fn test_handle_line_feed_within_bounds() {
         let mut ofs_buf_vt_100 = create_test_buffer();
-        ofs_buf_vt_100.cursor_pos = row(2) + col(5);
+        ofs_buf_vt_100.set_cursor_pos(row(2) + col(5));
 
         ofs_buf_vt_100.handle_line_feed();
 
-        assert_eq!(ofs_buf_vt_100.cursor_pos.row_index, row(3));
-        assert_eq!(ofs_buf_vt_100.cursor_pos.col_index, col(5)); // column preserved
+        assert_eq!(ofs_buf_vt_100.get_cursor_pos().row_index, row(3));
+        assert_eq!(ofs_buf_vt_100.get_cursor_pos().col_index, col(5)); // column preserved
     }
 
     #[test]
@@ -183,7 +186,7 @@ mod tests_control_ops {
             },
         );
 
-        ofs_buf_vt_100.cursor_pos = bottom + col(3);
+        ofs_buf_vt_100.set_cursor_pos(bottom + col(3));
 
         ofs_buf_vt_100.handle_line_feed();
 
@@ -196,30 +199,30 @@ mod tests_control_ops {
         }
 
         // Cursor stays at bottom row, column preserved.
-        assert_eq!(ofs_buf_vt_100.cursor_pos.row_index, bottom);
-        assert_eq!(ofs_buf_vt_100.cursor_pos.col_index, col(3));
+        assert_eq!(ofs_buf_vt_100.get_cursor_pos().row_index, bottom);
+        assert_eq!(ofs_buf_vt_100.get_cursor_pos().col_index, col(3));
     }
 
     #[test]
     fn test_handle_carriage_return() {
         let mut ofs_buf_vt_100 = create_test_buffer();
-        ofs_buf_vt_100.cursor_pos = row(3) + col(7);
+        ofs_buf_vt_100.set_cursor_pos(row(3) + col(7));
 
         ofs_buf_vt_100.handle_carriage_return();
 
-        assert_eq!(ofs_buf_vt_100.cursor_pos.row_index, row(3)); // row preserved
-        assert_eq!(ofs_buf_vt_100.cursor_pos.col_index, col(0)); // moved to start of line
+        assert_eq!(ofs_buf_vt_100.get_cursor_pos().row_index, row(3)); // row preserved
+        assert_eq!(ofs_buf_vt_100.get_cursor_pos().col_index, col(0)); // moved to start of line
     }
 
     #[test]
     fn test_handle_carriage_return_already_at_start() {
         let mut ofs_buf_vt_100 = create_test_buffer();
-        ofs_buf_vt_100.cursor_pos = row(3) + col(0);
+        ofs_buf_vt_100.set_cursor_pos(row(3) + col(0));
 
         ofs_buf_vt_100.handle_carriage_return();
 
         // Should work correctly when already at start.
-        assert_eq!(ofs_buf_vt_100.cursor_pos.row_index, row(3));
-        assert_eq!(ofs_buf_vt_100.cursor_pos.col_index, col(0));
+        assert_eq!(ofs_buf_vt_100.get_cursor_pos().row_index, row(3));
+        assert_eq!(ofs_buf_vt_100.get_cursor_pos().col_index, col(0));
     }
 }

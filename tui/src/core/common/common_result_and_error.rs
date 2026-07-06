@@ -36,7 +36,7 @@ use std::{error::Error,
 ///   }
 /// }
 /// ```
-pub type CommonResult<R> = miette::Result<R>;
+pub type CommonResult<R = ()> = miette::Result<R>;
 
 pub type CommonResultWithError<R, E> = miette::Result<R, E>;
 

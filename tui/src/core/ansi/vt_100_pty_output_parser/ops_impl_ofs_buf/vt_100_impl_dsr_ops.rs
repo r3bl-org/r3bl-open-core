@@ -45,8 +45,8 @@ impl OfsBufVT100 {
     pub fn handle_cursor_position_request(&mut self) {
         // Convert 0-based internal position to 1-based terminal position.
         // Uses type-safe From<RowIndex>/From<ColIndex> conversions.
-        let row = TermRow::from(self.cursor_pos.row_index);
-        let col = TermCol::from(self.cursor_pos.col_index);
+        let row = TermRow::from(self.get_cursor_pos().row_index);
+        let col = TermCol::from(self.get_cursor_pos().col_index);
         self.parser_global_state
             .pending_pty_response_events
             .push(PtyResponseEvent::CursorPosition { row, col });
@@ -83,7 +83,7 @@ mod tests_dsr_ops {
     #[test]
     fn test_handle_cursor_position_request() {
         let mut buffer = create_test_buffer();
-        buffer.cursor_pos = row(2) + col(5);
+        buffer.set_cursor_pos(row(2) + col(5));
 
         buffer.handle_cursor_position_request();
 

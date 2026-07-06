@@ -37,7 +37,7 @@ pub mod auto_wrap_mode {
 
     #[test]
     fn test_decawm_enable() {
-        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
 
         // Auto wrap is enabled by default
         assert_eq!(
@@ -72,7 +72,7 @@ pub mod auto_wrap_mode {
 
     #[test]
     fn test_decawm_disable() {
-        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
 
         // Auto wrap is enabled by default
         assert_eq!(
@@ -96,7 +96,7 @@ pub mod auto_wrap_mode {
 
     #[test]
     fn test_decawm_behavior_with_text_wrapping() {
-        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
 
         // Enable auto wrap (default)
         let enable_sequence = format!(
@@ -116,7 +116,7 @@ pub mod auto_wrap_mode {
 
     #[test]
     fn test_decawm_behavior_without_wrapping() {
-        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
 
         // Disable auto wrap
         let disable_sequence = format!(
@@ -136,7 +136,7 @@ pub mod auto_wrap_mode {
 
     #[test]
     fn test_decawm_mode_persistence() {
-        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
 
         // Disable auto wrap
         let disable_sequence = format!(
@@ -186,7 +186,7 @@ pub mod mode_interactions {
 
     #[test]
     fn test_multiple_mode_changes() {
-        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
 
         // Start with defaults
         assert_eq!(
@@ -228,7 +228,7 @@ pub mod mode_interactions {
 
     #[test]
     fn test_mode_with_cursor_save_restore() {
-        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
 
         // Disable auto wrap
         let disable_sequence = format!(
@@ -275,7 +275,7 @@ pub mod alt_screen_mode {
 
     #[test]
     fn test_alt_screen_enable_and_disable_via_ansi() {
-        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
 
         // Initially inactive.
         assert_eq!(
@@ -314,7 +314,7 @@ pub mod mouse_tracking_mode {
 
     #[test]
     fn test_mouse_tracking_enable_and_disable() {
-        let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf = create_test_ofs_buf_10r_by_10c();
 
         // Initially disabled.
         assert_eq!(ofs_buf.terminal_mode.mouse_tracking_mode, MouseTrackingMode::Disabled);
@@ -357,7 +357,7 @@ pub mod mouse_tracking_mode {
 
     #[test]
     fn test_mouse_tracking_chained_modes() {
-        let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf = create_test_ofs_buf_10r_by_10c();
 
         assert_eq!(ofs_buf.terminal_mode.mouse_tracking_mode, MouseTrackingMode::Disabled);
         assert_eq!(ofs_buf.terminal_mode.mouse_tracking_format, MouseTrackingFormat::X10);
@@ -383,7 +383,7 @@ pub mod cursor_key_mode {
 
     #[test]
     fn test_cursor_key_mode_enable_and_disable() {
-        let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf = create_test_ofs_buf_10r_by_10c();
 
         // Reset to normal mode first to ensure a known state
         let disable = format!("{}", CsiSequence::DisablePrivateMode(smallvec::smallvec![PrivateModeType::CursorKeys]));

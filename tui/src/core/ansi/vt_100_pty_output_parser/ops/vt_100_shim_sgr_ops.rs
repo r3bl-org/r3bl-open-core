@@ -46,7 +46,7 @@
 //!       - line_ops:: for lines (L,M)                           ╰───────────╯
 //!       - char_ops:: for chars (@,P,X)
 //!         ↓
-//!     Update OffscreenBuffer state
+//!     Update OfsBuf state
 //! ```
 //!
 //! [`CSI`]: crate::CsiSequence

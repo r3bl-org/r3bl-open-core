@@ -28,7 +28,7 @@
 //!
 //! ## Navigation
 //! - **See complete architecture**: [`terminal_lib_backends` mod docs] (source of truth)
-//! - **Previous stage**: [`offscreen_buffer::paint_impl` mod docs] (Stage 4: Backend
+//! - **Previous stage**: [`ofs_buf::paint_impl` mod docs] (Stage 4: Backend
 //!   Converter - shared by both Crossterm and `DirectToAnsi`)
 //! - **Alternative Stage 5**: [`crossterm_backend::crossterm_paint_render_op_impl` mod
 //!   docs] (Crossterm-based executor)
@@ -127,7 +127,7 @@
 //! [`kqueue`]: https://man.freebsd.org/cgi/man.cgi?query=kqueue&sektion=2
 //! [`libc`]: https://crates.io/crates/libc
 //! [`ncurses`]: https://en.wikipedia.org/wiki/Ncurses
-//! [`offscreen_buffer::paint_impl` mod docs]: mod@crate::offscreen_buffer::paint_impl
+//! [`ofs_buf::paint_impl` mod docs]: mod@crate::ofs_buf::paint_impl
 //! [`output::direct_to_ansi_output_integration_tests`]:
 //!     mod@crate::terminal_lib_backends::direct_to_ansi::output::direct_to_ansi_output_integration_tests
 //! [`PixelCharRenderer`]: crate::PixelCharRenderer

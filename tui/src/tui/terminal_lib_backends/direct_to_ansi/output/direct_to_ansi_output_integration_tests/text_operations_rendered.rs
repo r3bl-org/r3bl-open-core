@@ -36,9 +36,9 @@
 //! [`text_operations`]: super::text_operations
 
 use super::test_helpers_rendered::*;
-use crate::{ANSIBasicColor, ColorSupport, RgbValue, TuiColor,
+use crate::{ANSIBasicColor, ColorSupport, RgbValue, TuiColor, col, row,
             generate_isolated_process_test, global_color_support,
-            offscreen_buffer::test_fixtures_ofs_buf::*};
+            ofs_buf::test_fixtures_ofs_buf::*};
 
 /// Verify styled text with foreground color renders correct characters and color.
 fn test_paint_text_with_foreground_color_rendered() {
@@ -189,7 +189,7 @@ fn test_paint_unicode_text_rendered() {
     // Note: These are full-width characters, so they may occupy 2 columns each.
     // The exact behavior depends on OfsBufVT100's Unicode handling.
     // For now, just verify the first character exists.
-    let pos = crate::row(0) + crate::col(0);
+    let pos = row(0) + col(0);
     let pixel_char = buffer.get_char(pos);
     assert!(
         pixel_char.is_some(),
@@ -210,7 +210,7 @@ fn test_paint_text_with_emoji_rendered() {
     // The emoji '👋' should be at column 1 (possibly spanning to column 2).
     // 'B' should appear after the emoji.
     // Note: Exact column depends on wide character handling.
-    let pos_a = crate::row(0) + crate::col(0);
+    let pos_a = row(0) + col(0);
     let pixel_char_a = buffer.get_char(pos_a);
     assert!(pixel_char_a.is_some(), "'A' should exist at (0,0)");
 }

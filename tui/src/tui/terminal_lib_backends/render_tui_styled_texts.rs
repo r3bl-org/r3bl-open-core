@@ -20,11 +20,11 @@ pub fn render_tui_styled_texts_into(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{CommonResult, InlineVec, TuiStylesheet, ZOrder, assert_eq2, console_log,
+    use crate::{CommonResult, TuiStylesheet, ZOrder, assert_eq2, console_log,
                 render_pipeline, throws};
 
     #[test]
-    fn test_styled_text_renders_correctly() -> CommonResult<()> {
+    fn test_styled_text_renders_correctly() -> CommonResult {
         throws!({
             let texts = test_helper::create_styled_text()?;
             let mut render_ops = RenderOpIRVec::new();
@@ -34,15 +34,10 @@ mod tests {
             pipeline.push(ZOrder::Normal, render_ops);
 
             console_log!(pipeline);
-            assert_eq2!(pipeline.len(), 1);
-
-            let set: &InlineVec<RenderOpIRVec> = pipeline.get(&ZOrder::Normal).unwrap();
-
-            // "Hello" and "World" together.
-            assert_eq2!(set.len(), 1);
+            let _set: &RenderOpIRVec = pipeline.get(&ZOrder::Normal);
 
             // 3 RenderOpIR each for "Hello" & "World".
-            assert_eq2!(pipeline.get_all_render_op_in(ZOrder::Normal).unwrap(), 6);
+            assert_eq2!(pipeline.get_all_render_op_in(ZOrder::Normal), 6);
         })
     }
 

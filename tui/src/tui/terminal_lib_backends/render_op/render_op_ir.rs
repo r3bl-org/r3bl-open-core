@@ -33,7 +33,7 @@
 //! pipeline overview.
 //!
 //! Components produce [`RenderOpIR`] operations with built-in clipping info.
-//! These get processed by the Compositor (Stage 3) to populate the `OffscreenBuffer`.
+//! These get processed by the Compositor (Stage 3) to populate the [`OfsBuf`].
 //!
 //! # Type Safety & Semantic Boundary
 //!
@@ -60,14 +60,14 @@
 //! - Applying style information correctly
 //!
 //! [`compositor_render_ops_to_ofs_buf` mod docs]: mod@crate::compositor_render_ops_to_ofs_buf
+//! [`OfsBuf`]: crate::OfsBuf
 //! [`render_op_ir` mod docs]: mod@crate::render_op::render_op_ir
 //! [`render_op` mod docs]: mod@crate::render_op
 //! [`render_pipeline`]: mod@crate::render_pipeline
 //! [rendering pipeline overview]: mod@crate::terminal_lib_backends#rendering-pipeline-architecture
 
 use super::RenderOpCommon;
-use crate::ok;
-use crate::{InlineString, InlineVec, TuiStyle};
+use crate::{InlineString, TuiStyle, ok};
 use std::{fmt::{Debug, Formatter, Result},
           ops::{AddAssign, Deref, DerefMut}};
 
@@ -108,17 +108,13 @@ pub enum RenderOpIR {
 /// Used throughout the app/component layer and passed to the compositor.
 #[derive(Clone, Default, PartialEq, Eq)]
 pub struct RenderOpIRVec {
-    pub list: InlineVec<RenderOpIR>,
+    pub list: Vec<RenderOpIR>,
 }
 
 impl RenderOpIRVec {
     /// Creates a new empty collection of IR operations.
     #[must_use]
-    pub fn new() -> Self {
-        Self {
-            list: InlineVec::new(),
-        }
-    }
+    pub fn new() -> Self { Self { list: Vec::new() } }
 
     /// Add a single operation to the collection.
     pub fn push(&mut self, arg_op: impl Into<RenderOpIR>) {
@@ -147,7 +143,7 @@ impl From<RenderOpCommon> for RenderOpIR {
 }
 
 impl Deref for RenderOpIRVec {
-    type Target = InlineVec<RenderOpIR>;
+    type Target = Vec<RenderOpIR>;
 
     fn deref(&self) -> &Self::Target { &self.list }
 }
@@ -225,7 +221,7 @@ impl Debug for RenderOpIRVec {
 }
 
 impl From<Vec<RenderOpIR>> for RenderOpIRVec {
-    fn from(ops: Vec<RenderOpIR>) -> Self { Self { list: ops.into() } }
+    fn from(ops: Vec<RenderOpIR>) -> Self { Self { list: ops } }
 }
 
 impl FromIterator<RenderOpIR> for RenderOpIRVec {

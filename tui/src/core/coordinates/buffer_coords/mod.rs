@@ -3,7 +3,7 @@
 //! 0-based buffer coordinates for internal application logic.
 //!
 //! This module provides coordinate types used for:
-//! - Indexing into [`OffscreenBuffer`] and [`ZeroCopyGapBuffer`]
+//! - Indexing into [`OfsBuf`] and [`ZeroCopyGapBuffer`]
 //! - Internal TUI framework logic
 //! - Crossterm terminal operations (0-based, converts to [`u16`])
 //!
@@ -38,15 +38,15 @@
 //! [`ChUnit`]: crate::ChUnit
 //! [`generate_index_type_impl!`]: crate::generate_index_type_impl
 //! [`generate_length_type_impl!`]: crate::generate_length_type_impl
-//! [`OffscreenBuffer`]: crate::OffscreenBuffer
+//! [`OfsBuf`]: crate::OfsBuf
 //! [`ZeroCopyGapBuffer`]: crate::ZeroCopyGapBuffer
 
 // Attach source files.
-pub mod index_and_length_impl_macros;
 pub mod caret;
 pub mod col_index;
 pub mod col_width;
 pub mod index;
+pub mod index_and_length_impl_macros;
 pub mod length;
 pub mod pos;
 pub mod row_height;

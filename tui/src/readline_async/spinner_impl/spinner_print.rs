@@ -1,7 +1,7 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{CommonResult, LockedOutputDevice, OutputDevice, SharedWriter, SpinnerStyle, ok,
-            queue_commands, queue_commands_no_lock};
+use crate::{CommonResult, LockedOutputDevice, OutputDevice, SharedWriter, SpinnerStyle,
+            ok, queue_commands, queue_commands_no_lock};
 use crossterm::{cursor::{Hide, MoveToColumn, MoveToNextLine, MoveToPreviousLine, Show},
                 style::Print,
                 terminal::{Clear, ClearType}};
@@ -13,7 +13,7 @@ use miette::IntoDiagnostic;
 fn clear_lines_for_spinner(
     output_device: OutputDevice,
     num_lines_to_clear: u16,
-) -> CommonResult<()> {
+) -> CommonResult {
     if num_lines_to_clear == 0 {
         return ok!();
     }
@@ -24,7 +24,11 @@ fn clear_lines_for_spinner(
         // Clear subsequent lines by moving down and clearing. This loop runs
         // (num_lines_to_clear - 1) times.
         for _ in 1..num_lines_to_clear {
-            queue_commands_no_lock!(writer, MoveToNextLine(1), Clear(ClearType::CurrentLine));
+            queue_commands_no_lock!(
+                writer,
+                MoveToNextLine(1),
+                Clear(ClearType::CurrentLine)
+            );
         }
 
         // Move cursor back to the start of the first line that was cleared. If
@@ -52,7 +56,7 @@ fn clear_lines_for_spinner(
 pub fn print_start_if_standalone(
     output_device: OutputDevice,
     maybe_shared_writer: &Option<SharedWriter>,
-) -> CommonResult<()> {
+) -> CommonResult {
     if maybe_shared_writer.is_none() {
         clear_lines_for_spinner(output_device, 2)?;
     }
@@ -70,7 +74,7 @@ pub fn print_tick_interval_msg(
     _style: &SpinnerStyle,
     output: &str,
     output_device: OutputDevice,
-) -> CommonResult<()> {
+) -> CommonResult {
     // Print the output. And make sure to terminate w/ a newline, so that the
     // output is printed for ReadlineAsyncContext.
     queue_commands!(
@@ -108,17 +112,18 @@ pub fn print_tick_final_msg(
     output: &str,
     output_device: OutputDevice,
     maybe_shared_writer: &Option<SharedWriter>,
-) -> CommonResult<()> {
+) -> CommonResult {
     output_device.write(|writer| {
         queue_commands_no_lock!(
             writer,
-            // Ensure cursor is at the beginning of the spinner line. This is usually true
-            // if called after print_tick_interval_msg, but it's safer to be explicit.
+            // Ensure cursor is at the beginning of the spinner line. This is usually
+            // true if called after print_tick_interval_msg, but it's safer
+            // to be explicit.
             MoveToColumn(0),
             // Clear the current line (where the spinner interval message was).
             Clear(ClearType::CurrentLine),
-            // Print the final output on this cleared line. The \n will move the cursor to
-            // the beginning of the next line.
+            // Print the final output on this cleared line. The \n will move the cursor
+            // to the beginning of the next line.
             Print(format!("{output}\n")),
             // Now, from the current cursor position (start of the line after the final
             // message), clear downwards. This is to clean up any other concurrent output
@@ -126,7 +131,8 @@ pub fn print_tick_final_msg(
             Clear(ClearType::FromCursorDown)
         );
 
-        // Only run this if the spinner is not running in a `ReadlineAsyncContext` context.
+        // Only run this if the spinner is not running in a `ReadlineAsyncContext`
+        // context.
         if maybe_shared_writer.is_none() {
             // We don't care about the result of this operation.
             drop(print_end_if_standalone(writer));
@@ -147,7 +153,7 @@ pub fn print_tick_final_msg(
 /// "out of sequence" issues with the output that is printed, that might result from
 /// having to wait to acquire a lock.
 #[allow(clippy::missing_errors_doc)]
-fn print_end_if_standalone(writer: LockedOutputDevice<'_>) -> CommonResult<()> {
+fn print_end_if_standalone(writer: LockedOutputDevice<'_>) -> CommonResult {
     queue_commands_no_lock!(
         writer,
         // Move the cursor to the beginning of the current line.

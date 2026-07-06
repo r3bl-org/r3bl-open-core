@@ -20,13 +20,12 @@ macro_rules! render_component_in_current_box {
         if let Some(component_ref) = maybe_component_ref {
             let surface_bounds = $crate::SurfaceBounds::from(&*($arg_surface));
             let current_box = $arg_surface.current_box()?;
-            let queue = component_ref.render(
+            component_ref.render(
                 $arg_global_data,
                 *current_box,
                 surface_bounds,
                 $arg_has_focus,
             )?;
-            $arg_surface.render_pipeline += queue;
         }
     };
 }
@@ -52,13 +51,12 @@ macro_rules! render_component_in_given_box {
 
         if let Some(component_ref) = maybe_component_ref {
             let surface_bounds = $crate::SurfaceBounds::from(&*($arg_surface));
-            let queue: $crate::RenderPipeline = component_ref.render(
+            component_ref.render(
                 $arg_global_data,
                 $arg_box,
                 surface_bounds,
                 $arg_has_focus,
             )?;
-            $arg_surface.render_pipeline += queue;
         }
     }};
 }

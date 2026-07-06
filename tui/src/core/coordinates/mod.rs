@@ -86,15 +86,15 @@
 //!
 //! ## Coordinate Type Selection
 //!
-//! | Your Task                                                      | Use These Types                                   |
-//! | -------------------------------------------------------------- | ------------------------------------------------- |
-//! | **Index into [`OffscreenBuffer`] or [`ZeroCopyGapBuffer`]**    | [`ColIndex`], [`RowIndex`], [`Pos`]               |
-//! | **Send cursor commands via crossterm**                         | [`ColIndex`], [`RowIndex`] (convert to [`u16`])   |
-//! | **Parse [`VT-100`] [`ANSI`] escape sequences**                 | [`TermRow`], [`TermCol`]                          |
-//! | **Work with [`UTF-8`] byte positions in strings**              | [`ByteIndex`], [`ByteLength`], [`ByteOffset`]     |
-//! | **Store dimensions/sizes**                                     | [`ColWidth`], [`RowHeight`], [`Size`]             |
-//! | **Track cursor or caret position**                             | [`Pos`], [`CaretRaw`], [`CaretScrAdj`]            |
-//! | **Specify layout constraints or percentage metrics**           | [`Pc`], [`ReqSizePc`]                             |
+//! | Your Task                                             | Use These Types                                 |
+//! | ----------------------------------------------------- | ----------------------------------------------- |
+//! | **Index into [`OfsBuf`] or [`ZeroCopyGapBuffer`]**    | [`ColIndex`], [`RowIndex`], [`Pos`]             |
+//! | **Send cursor commands via crossterm**                | [`ColIndex`], [`RowIndex`] (convert to [`u16`]) |
+//! | **Parse [`VT-100`] [`ANSI`] escape sequences**        | [`TermRow`], [`TermCol`]                        |
+//! | **Work with [`UTF-8`] byte positions in strings**     | [`ByteIndex`], [`ByteLength`], [`ByteOffset`]   |
+//! | **Store dimensions/sizes**                            | [`ColWidth`], [`RowHeight`], [`Size`]           |
+//! | **Track cursor or caret position**                    | [`Pos`], [`CaretRaw`], [`CaretScrAdj`]          |
+//! | **Specify layout constraints or percentage metrics**  | [`Pc`], [`ReqSizePc`]                           |
 //!
 //! # Common Workflows
 //!
@@ -102,13 +102,13 @@
 //! systems. For detailed API usage and type-specific examples, consult the individual
 //! type and module documentation:
 //!
-//! | Workflow                                        | Primary Types                                           | Documentation Links          |
-//! | ----------------------------------------------- | ------------------------------------------------------- | ---------------------------- |
-//! | **[`VT-100`] [`ANSI`] parsing → buffer access** | [`TermRow`], [`TermCol`] → [`RowIndex`], [`ColIndex`]   | [`vt_100_ansi_coords`]       |
-//! | **Buffer positioning & manipulation**           | [`Pos`], [`Size`], [`RowIndex`], [`ColIndex`]           | [`buffer_coords`]            |
-//! | **Type-safe bounds checking**                   | [`ArrayBoundsCheck`], [`CursorBoundsCheck`]             | [`bounds_check`]             |
-//! | **[`UTF-8`] byte-level operations**             | [`ByteIndex`], [`ByteLength`], [`ByteOffset`]           | [`byte`]                     |
-//! | **Terminal output (crossterm)**                 | [`RowIndex::as_u16()`], [`ColIndex::as_u16()`]          | [`Pos`], [`buffer_coords`]   |
+//! | Workflow                                        | Primary Types                                         | Documentation Links          |
+//! | ----------------------------------------------- | ----------------------------------------------------- | ---------------------------- |
+//! | **[`VT-100`] [`ANSI`] parsing → buffer access** | [`TermRow`], [`TermCol`] → [`RowIndex`], [`ColIndex`] | [`vt_100_ansi_coords`]       |
+//! | **Buffer positioning & manipulation**           | [`Pos`], [`Size`], [`RowIndex`], [`ColIndex`]         | [`buffer_coords`]            |
+//! | **Type-safe bounds checking**                   | [`ArrayBoundsCheck`], [`CursorBoundsCheck`]           | [`bounds_check`]             |
+//! | **[`UTF-8`] byte-level operations**             | [`ByteIndex`], [`ByteLength`], [`ByteOffset`]         | [`byte`]                     |
+//! | **Terminal output (crossterm)**                 | [`RowIndex::as_u16()`], [`ColIndex::as_u16()`]        | [`Pos`], [`buffer_coords`]   |
 //!
 //! **Example: Complete [`VT-100`] to buffer workflow**
 //! ```rust
@@ -184,7 +184,7 @@
 //! [`Length::check_cursor_position_bounds()`]: bounds_check::CursorBoundsCheck::check_cursor_position_bounds
 //! [`Length`]: buffer_coords::Length
 //! [`NonZeroU16`]: std::num::NonZeroU16
-//! [`OffscreenBuffer`]: crate::OffscreenBuffer
+//! [`OfsBuf`]: crate::OfsBuf
 //! [`Pc`]: crate::Pc
 //! [`percent_spec`]: percent_spec
 //! [`Pos`]: buffer_coords::Pos

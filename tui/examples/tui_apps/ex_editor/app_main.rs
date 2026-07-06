@@ -14,7 +14,7 @@ use r3bl_tui::{App, BoxedSafeApp, CommonError, CommonResult, ComponentRegistry,
                ZOrder, box_end, box_start, col, get_tui_style, glyphs, height,
                inline_string, new_style, ok, render_component_in_current_box,
                render_component_in_given_box, render_tui_styled_texts_into, req_size_pc,
-               row, send_signal, surface, throws, throws_with_return, tui_color,
+               row, send_signal, surface, throws_with_return, tui_color,
                tui_styled_text, tui_styled_texts, tui_stylesheet, width};
 use tokio::sync::mpsc::Sender;
 
@@ -133,51 +133,40 @@ mod app_main_impl_app_trait {
             global_data: &mut GlobalData<State, AppSignal>,
             component_registry_map: &mut ComponentRegistryMap<State, AppSignal>,
             has_focus: &mut HasFocus,
-        ) -> CommonResult<RenderPipeline> {
-            throws_with_return!({
-                let window_size = global_data.window_size;
+        ) -> CommonResult {
+            let window_size = global_data.window_size;
 
-                // Create a surface and then run the SurfaceRenderer
-                // (ContainerSurfaceRender) on it.
-                let mut surface = {
-                    let mut it = surface!(stylesheet: stylesheet::create_stylesheet()?);
+            // Create a surface and then run the SurfaceRenderer
+            // (ContainerSurfaceRender) on it.
+            let mut surface = surface!(stylesheet: stylesheet::create_stylesheet()?);
 
-                    it.surface_start(SurfaceProps {
-                        pos: col(0) + row(0),
-                        size: {
-                            let col_count = window_size.col_width;
-                            let row_count = window_size.row_height -
+            surface.surface_start(SurfaceProps {
+                pos: col(0) + row(0),
+                size: {
+                    let col_count = window_size.col_width;
+                    let row_count = window_size.row_height -
                                 height(2) /* Bottom row for for status bar & HUD. */;
-                            col_count + row_count
-                        },
-                    })?;
+                    col_count + row_count
+                },
+            })?;
 
-                    perform_layout::ContainerSurfaceRender { _app: self }
-                        .render_in_surface(
-                            &mut it,
-                            global_data,
-                            component_registry_map,
-                            has_focus,
-                        )?;
+            perform_layout::ContainerSurfaceRender { _app: self }.render_in_surface(
+                &mut surface,
+                global_data,
+                component_registry_map,
+                has_focus,
+            )?;
 
-                    it.surface_end()?;
+            surface.surface_end()?;
 
-                    it
-                };
+            // Render HUD.
+            let hud_report = global_data.hud_data.get_report();
+            hud::create_hud(&mut global_data.pipeline, window_size, hud_report);
 
-                // Render HUD.
-                hud::create_hud(
-                    &mut surface.render_pipeline,
-                    window_size,
-                    global_data.get_hud_report_with_spinner(),
-                );
+            // Render status bar.
+            status_bar::render_status_bar(&mut global_data.pipeline, window_size);
 
-                // Render status bar.
-                status_bar::render_status_bar(&mut surface.render_pipeline, window_size);
-
-                // Return RenderOps pipeline (which will actually be painted elsewhere).
-                surface.render_pipeline
-            });
+            ok!()
         }
     }
 }
@@ -366,47 +355,47 @@ mod modal_dialogs {
         _component_registry_map: &mut ComponentRegistryMap<State, AppSignal>,
         has_focus: &mut HasFocus,
         state: &mut State,
-    ) -> CommonResult<()> {
-        throws!({
-            // Initialize the dialog buffer with title & text.
-            let title = "Simple Modal Dialog Title";
-            let text = {
-                match state.get_mut_editor_buffer(FlexBoxId::from(Id::Editor)) {
-                    Some(editor_buffer) => {
-                        editor_buffer.get_as_string_with_comma_instead_of_newlines()
-                    }
-                    None => "".into(),
+    ) -> CommonResult {
+        // Initialize the dialog buffer with title & text.
+        let title = "Simple Modal Dialog Title";
+        let text = {
+            match state.get_mut_editor_buffer(FlexBoxId::from(Id::Editor)) {
+                Some(editor_buffer) => {
+                    editor_buffer.get_as_string_with_comma_instead_of_newlines()
                 }
-            };
+                None => "".into(),
+            }
+        };
 
-            // Setting the has_focus to ComponentId::SimpleDialog will cause the dialog to
-            // appear on the next render.
-            has_focus.try_set_modal_id(FlexBoxId::from(Id::SimpleDialog))?;
+        // Setting the has_focus to ComponentId::SimpleDialog will cause the dialog to
+        // appear on the next render.
+        has_focus.try_set_modal_id(FlexBoxId::from(Id::SimpleDialog))?;
 
-            // Change the state so that it will trigger a render. This will show the title
-            // & text on the next render.
-            dialog_component_initialize_focused(
-                state,
-                FlexBoxId::from(Id::SimpleDialog),
-                title.into(),
-                text,
+        // Change the state so that it will trigger a render. This will show the title
+        // & text on the next render.
+        dialog_component_initialize_focused(
+            state,
+            FlexBoxId::from(Id::SimpleDialog),
+            title.into(),
+            text,
+        );
+
+        DEBUG_TUI_MOD.then(|| {
+            // % is Display, ? is Debug.
+            tracing::debug!(
+                message = "📣 activate modal simple",
+                has_focus = ?has_focus
             );
-
-            DEBUG_TUI_MOD.then(|| {
-                // % is Display, ? is Debug.
-                tracing::debug!(
-                    message = "📣 activate modal simple",
-                    has_focus = ?has_focus
-                );
-            });
         });
+
+        ok!()
     }
 
     fn activate_autocomplete_modal(
         _component_registry_map: &mut ComponentRegistryMap<State, AppSignal>,
         has_focus: &mut HasFocus,
         state: &mut State,
-    ) -> CommonResult<()> {
+    ) -> CommonResult {
         // Initialize the dialog buffer with title & text.
         let title = "Autocomplete Modal Dialog Title";
         let text = {
@@ -458,53 +447,52 @@ mod perform_layout {
             global_data: &mut GlobalData<State, AppSignal>,
             component_registry_map: &mut ComponentRegistryMap<State, AppSignal>,
             has_focus: &mut HasFocus,
-        ) -> CommonResult<()> {
-            throws!({
-                // Layout editor component, and render it.
-                {
-                    box_start! (
-                        in:                     surface,
-                        id:                     FlexBoxId::from(Id::Editor),
-                        dir:                    LayoutDirection::Vertical,
-                        requested_size_percent: req_size_pc!(width: 100, height: 100),
-                        styles:                 [Id::EditorStyleNameDefault]
-                    );
-                    render_component_in_current_box!(
-                        in:                 surface,
-                        component_id:       FlexBoxId::from(Id::Editor),
-                        from:               component_registry_map,
-                        global_data:        global_data,
-                        has_focus:          has_focus
-                    );
-                    box_end!(in: surface);
-                }
+        ) -> CommonResult {
+            // Layout editor component, and render it.
+            {
+                box_start! (
+                    in:                     surface,
+                    id:                     FlexBoxId::from(Id::Editor),
+                    dir:                    LayoutDirection::Vertical,
+                    requested_size_percent: req_size_pc!(width: 100, height: 100),
+                    styles:                 [Id::EditorStyleNameDefault]
+                );
+                render_component_in_current_box!(
+                    in:                 surface,
+                    component_id:       FlexBoxId::from(Id::Editor),
+                    from:               component_registry_map,
+                    global_data:        global_data,
+                    has_focus:          has_focus
+                );
+                box_end!(in: surface);
+            }
 
-                // Then, render simple modal dialog (if it is active, on top of the editor
-                // component).
-                if has_focus.is_modal_id(FlexBoxId::from(Id::SimpleDialog)) {
-                    render_component_in_given_box! {
-                      in:                 surface,
-                      box:                FlexBox::default(), /* This is not used as the modal breaks out of its box. */
-                      component_id:       FlexBoxId::from(Id::SimpleDialog),
-                      from:               component_registry_map,
-                      global_data:        global_data,
-                      has_focus:          has_focus
-                    };
-                }
+            // Then, render simple modal dialog (if it is active, on top of the editor
+            // component).
+            if has_focus.is_modal_id(FlexBoxId::from(Id::SimpleDialog)) {
+                render_component_in_given_box! {
+                  in:           surface,
+                  box:          FlexBox::default(), /* This is not used as the modal breaks out of its box. */
+                  component_id: FlexBoxId::from(Id::SimpleDialog),
+                  from:         component_registry_map,
+                  global_data:  global_data,
+                  has_focus:    has_focus
+                };
+            }
 
-                // Or, render autocomplete modal dialog (if it is active, on top of the
-                // editor component).
-                if has_focus.is_modal_id(FlexBoxId::from(Id::AutocompleteDialog)) {
-                    render_component_in_given_box! {
-                      in:                 surface,
-                      box:                FlexBox::default(), /* This is not used as the modal breaks out of its box. */
-                      component_id:       FlexBoxId::from(Id::AutocompleteDialog),
-                      from:               component_registry_map,
-                      global_data:        global_data,
-                      has_focus:          has_focus
-                    };
-                }
-            });
+            // Or, render autocomplete modal dialog (if it is active, on top of the
+            // editor component).
+            if has_focus.is_modal_id(FlexBoxId::from(Id::AutocompleteDialog)) {
+                render_component_in_given_box! {
+                  in:           surface,
+                  box:          FlexBox::default(), /* This is not used as the modal breaks out of its box. */
+                  component_id: FlexBoxId::from(Id::AutocompleteDialog),
+                  from:         component_registry_map,
+                  global_data:  global_data,
+                  has_focus:    has_focus
+                };
+            }
+            ok!()
         }
     }
 }

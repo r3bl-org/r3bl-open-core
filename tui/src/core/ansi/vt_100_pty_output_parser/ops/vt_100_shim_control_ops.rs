@@ -42,7 +42,7 @@
 //!     Route to control operations:                             ╭───────────╮
 //!       - control_ops:: for control chars (BS,TAB,LF,CR)    <- │THIS MODULE│
 //!         ↓                                                    ╰───────────╯
-//!     Update OffscreenBuffer state
+//!     Update OfsBuf state
 //! ```
 //!
 //! # Supported Control Characters

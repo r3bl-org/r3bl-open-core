@@ -6,15 +6,15 @@
 //!
 //! ## Key Subsystems
 //!
-//! - **Output Parser** ([`VTE`]-based): Parse incoming [`PTY`] output ([`ANSI`] sequences from child
-//!   processes) → terminal state updates → [`OffscreenBuffer`] storage (via
+//! - **Output Parser** ([`VTE`]-based): Parse incoming [`PTY`] output ([`ANSI`] sequences
+//!   from child processes) → terminal state updates → [`OfsBuf`] storage (via
 //!   [`vt_100_pty_output_parser`] and [`AnsiToOfsBufPerformer`])
 //! - **Input Parser** (custom): Parse terminal input (keyboard/mouse) → structured
 //!   [`VT100InputEventIR`] → application logic (via [`vt_100_terminal_input_parser`])
-//! - **Generator**: Convert application styling → outgoing [`ANSI`] sequences → real terminal
-//!   display (via [`RenderOpOutput`], [`SgrCode`], [`CliTextInline`])
-//! - **Constants & Color**: Shared [`ANSI`] specifications - color types (`RGB` ↔ ANSI256),
-//!   escape sequence definitions, used by all subsystems
+//! - **Generator**: Convert application styling → outgoing [`ANSI`] sequences → real
+//!   terminal display (via [`RenderOpOutput`], [`SgrCode`], [`CliTextInline`])
+//! - **Constants & Color**: Shared [`ANSI`] specifications - color types (`RGB` ↔
+//!   ANSI256), escape sequence definitions, used by all subsystems
 //!
 //! ## Architecture Overview
 //!
@@ -32,7 +32,7 @@
 //!  (cursor/color/text changes)     (keyboard/mouse/terminal)
 //!            │                              │
 //!   ┌────────▼─────────┐             ┌──────▼───────┐
-//!   │ OffscreenBuffer  │             │ Application  │
+//!   │ OfsBuf           │             │ Application  │
 //!   │ (emulator state) │             │ Logic        │
 //!   └──────────────────┘             └──────┬───────┘
 //!                                           │
@@ -138,8 +138,8 @@
 //! **Architecture**: Uses the [`VTE`] crate - a battle-tested state machine from the
 //! [`Alacritty`] terminal emulator project.
 //!
-//! **Why stateful parsing?** [`PTY`] output is **non-contiguous**. Child processes can write
-//! partial sequences that span multiple buffer reads:
+//! **Why stateful parsing?** [`PTY`] output is **non-contiguous**. Child processes can
+//! write partial sequences that span multiple buffer reads:
 //! ```text
 //! PTY Read 1: [0x1B, 0x5B, 0x31]        // ESC [ 1
 //! PTY Read 2: [0x3B, 0x35, 0x41]        // ; 5 A
@@ -178,8 +178,8 @@
 //!    - `ESC [ < 0 ; 10 ; 20 M` = Mouse click at (10,20)
 //!    - `ESC [ ? 1049 h` = Terminal entered alternate buffer mode
 //!
-//! 3. **Simpler logic**: Input patterns are predictable - no need for full state
-//!    machine overhead
+//! 3. **Simpler logic**: Input patterns are predictable - no need for full state machine
+//!    overhead
 //!
 //! **Benefits**:
 //! - ✅ Zero-latency [`ESC`] key detection (instant emit when buffer = `[0x1B]`)
@@ -202,12 +202,14 @@
 //! - [`CliTextInline`] - Styled inline text for output
 //!
 //! **Output Parsing** ([`PTY`] escape sequences):
-//! - [`AnsiToOfsBufPerformer`] - [`VTE`] [`Perform`] trait implementation for [`PTY`] parsing
+//! - [`AnsiToOfsBufPerformer`] - [`VTE`] [`Perform`] trait implementation for [`PTY`]
+//!   parsing
 //! - [`CsiSequence`] - [`CSI`] escape sequence types
 //!
 //! **Input Parsing** (keyboard/mouse events):
-//! - `VT100InputEventIR` - Keyboard, mouse, and terminal events (see [`vt_100_terminal_input_parser`])
-//! - `VT100KeyCodeIR` - Keyboard event key codes
+//! - [`VT100InputEventIR`] - Keyboard, mouse, and terminal events (see
+//!   [`vt_100_terminal_input_parser`])
+//! - [`VT100KeyCodeIR`] - Keyboard event key codes
 //!
 //! **Terminal I/O:**
 //! - Color detection and support queries
@@ -218,7 +220,7 @@
 //! [`CSI`]: crate::CsiSequence
 //! [`ESC`]: crate::EscSequence
 //! [`Kitty`]: https://sw.kovidgoyal.net/kitty/
-//! [`OffscreenBuffer`]: crate::OffscreenBuffer
+//! [`OfsBuf`]: crate::OfsBuf
 //! [`Perform`]: vte::Perform
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`RenderOpOutput`]: crate::RenderOpOutput
@@ -226,6 +228,7 @@
 //! [`SgrCode`]: crate::SgrCode
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 //! [`VT100InputEventIR`]: crate::vt_100_terminal_input_parser::VT100InputEventIR
+//! [`VT100KeyCodeIR`]: crate::vt_100_terminal_input_parser::VT100KeyCodeIR
 //! [`vt_100_pty_output_parser`]: mod@crate::core::ansi::vt_100_pty_output_parser
 //! [`vt_100_terminal_input_parser`]: mod@crate::vt_100_terminal_input_parser
 //! [`VTE`]: mod@vte

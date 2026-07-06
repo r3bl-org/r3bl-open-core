@@ -63,7 +63,7 @@ use crate::{PtyCommand, PtyPair, PtyTestChild, height, size, width};
 ///
 /// For complete implementations using this helper, see:
 /// - [`backend_compat_output_test`] - Output backend comparison using **snapshot
-///   testing** (captures rendered terminal state via [`OffscreenBuffer`]).
+///   testing** (captures rendered terminal state via [`OfsBuf`]).
 /// - [`backend_compat_input_test`] - Input backend comparison (compares parsed
 ///   [`InputEvent`]s).
 ///
@@ -75,7 +75,7 @@ use crate::{PtyCommand, PtyPair, PtyTestChild, height, size, width};
 /// [`EOF`]: https://en.wikipedia.org/wiki/End-of-file
 /// [`generate_pty_test!`]: crate::generate_pty_test
 /// [`InputEvent`]: crate::InputEvent
-/// [`OffscreenBuffer`]: crate::OffscreenBuffer
+/// [`OfsBuf`]: crate::OfsBuf
 /// [`PTY`]: crate::core::pty::pty_engine::pty_pair#what-is-a-pty
 #[must_use]
 pub fn spawn_controlled_in_pty<'a>(

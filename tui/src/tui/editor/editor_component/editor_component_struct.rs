@@ -4,7 +4,7 @@ use super::HasEditorBuffers;
 use crate::{BoxedSafeComponent, CommonResult, Component, DEFAULT_SYN_HI_FILE_EXT,
             EditorBuffer, EditorEngine, EditorEngineApplyEventResult,
             EditorEngineConfig, EventPropagation, FlexBox, FlexBoxId, GlobalData,
-            HasFocus, InputEvent, RenderPipeline, SurfaceBounds, SystemClipboard,
+            HasFocus, InputEvent, SurfaceBounds, SystemClipboard,
             TerminalWindowMainThreadSignal, editor_engine::engine_public_api, ok};
 use std::fmt::Debug;
 use tokio::sync::mpsc::Sender;
@@ -54,7 +54,11 @@ pub mod editor_component_impl_component_trait {
             let it = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT), None);
             mut_state.insert_editor_buffer(self_id, it);
         }
-        // Safe to call unwrap here, since we are guaranteed to have an editor buffer.
+
+        #[allow(
+            clippy::unwrap_used,
+            reason = "Guaranteed to have an editor buffer because of the if block above"
+        )]
         mut_state.get_mut_editor_buffer(self_id).unwrap()
     }
 
@@ -78,7 +82,7 @@ pub mod editor_component_impl_component_trait {
             current_box: FlexBox,
             _surface_bounds: SurfaceBounds, /* Ignore this. */
             has_focus: &mut HasFocus,
-        ) -> CommonResult<RenderPipeline> {
+        ) -> CommonResult {
             let GlobalData { state, .. } = global_data;
 
             let EditorComponentData {
@@ -98,6 +102,7 @@ pub mod editor_component_impl_component_trait {
                 current_box,
                 has_focus,
                 global_data.window_size,
+                &mut global_data.pipeline,
             )
         }
 

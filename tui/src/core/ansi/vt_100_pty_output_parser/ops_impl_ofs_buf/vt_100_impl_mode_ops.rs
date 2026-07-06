@@ -92,37 +92,34 @@ impl OfsBufVT100 {
             (ActiveScreenBuffer::Primary, RequestedScreenMode::Alternate) => {
                 // Swap the screen buffer grids and their respective cursor positions.
                 swap(
-                    &mut self.ofs_buf.buffer,
+                    &mut *self.ofs_buf,
                     &mut self.hidden_screen_state.hidden_buffer,
                 );
-                swap(
-                    &mut self.ofs_buf.cursor_pos,
-                    &mut self.hidden_screen_state.hidden_cursor_pos,
-                );
+                let current_cursor = self.ofs_buf.get_cursor_pos();
+                self.ofs_buf
+                    .set_cursor_pos(self.hidden_screen_state.hidden_cursor_pos);
+                self.hidden_screen_state.hidden_cursor_pos = current_cursor;
+
+                // Alternate screen must be cleared when entered, as it doesn't
+                // preserve state from previous alternate sessions.
+                let empty_char = self.create_empty_pixel_char();
+                self.ofs_buf.clear_with(empty_char);
 
                 // Update mode status.
                 self.terminal_mode.active_screen_buffer = ActiveScreenBuffer::Alternate;
-
-                // Clear the alternate screen buffer using BCE-compliant active style.
-                let empty_char = self.create_empty_pixel_char();
-                for line in self.buffer.iter_mut() {
-                    for pixel_char in line.iter_mut() {
-                        *pixel_char = empty_char;
-                    }
-                }
             }
 
             // Transition: Alternate -> Primary Screen.
             (ActiveScreenBuffer::Alternate, RequestedScreenMode::Primary) => {
-                // Swap the screen buffer grids and their respective cursor positions.
+                // Restore the primary buffer and cursor position.
                 swap(
-                    &mut self.ofs_buf.buffer,
+                    &mut *self.ofs_buf,
                     &mut self.hidden_screen_state.hidden_buffer,
                 );
-                swap(
-                    &mut self.ofs_buf.cursor_pos,
-                    &mut self.hidden_screen_state.hidden_cursor_pos,
-                );
+                let current_cursor = self.ofs_buf.get_cursor_pos();
+                self.ofs_buf
+                    .set_cursor_pos(self.hidden_screen_state.hidden_cursor_pos);
+                self.hidden_screen_state.hidden_cursor_pos = current_cursor;
 
                 // Update mode status.
                 self.terminal_mode.active_screen_buffer = ActiveScreenBuffer::Primary;
@@ -137,8 +134,7 @@ impl OfsBufVT100 {
 #[cfg(test)]
 mod tests_mode_ops {
     use super::*;
-    use crate::{OfsBufVT100, Pos, RequestedScreenMode, col, height, new_style, row,
-                width};
+    use crate::{OfsBufVT100, RequestedScreenMode, col, height, new_style, row, width};
 
     fn create_test_buffer() -> OfsBufVT100 {
         let size = width(10) + height(6);
@@ -208,14 +204,14 @@ mod tests_mode_ops {
             buffer.terminal_mode.active_screen_buffer,
             ActiveScreenBuffer::Primary
         );
-        assert_eq!(buffer.cursor_pos, Pos::default());
+        assert_eq!(buffer.get_cursor_pos(), crate::Pos::default());
 
         // Set a styled current_style to verify BCE clearing.
         let custom_style = new_style!(bold);
         buffer.parser_global_state.current_style = custom_style;
 
         // Move primary cursor.
-        buffer.cursor_pos = col(2) + row(3);
+        buffer.set_cursor_pos(col(2) + row(3));
 
         // Toggle to Alternate Screen.
         buffer.set_alt_screen_mode(RequestedScreenMode::Alternate);
@@ -225,7 +221,7 @@ mod tests_mode_ops {
         );
 
         // Cursor pos should be reset to default/alt state (0, 0).
-        assert_eq!(buffer.cursor_pos, Pos::default());
+        assert_eq!(buffer.get_cursor_pos(), crate::Pos::default());
         // Saved hidden (primary) cursor should be (2, 3).
         assert_eq!(
             buffer.hidden_screen_state.hidden_cursor_pos,
@@ -234,8 +230,9 @@ mod tests_mode_ops {
 
         // Alternate screen should be cleared using custom_style (BCE).
         let expected_empty_char = buffer.create_empty_pixel_char();
-        for line in buffer.buffer.iter() {
-            for pixel_char in line.iter() {
+        let height = buffer.get_height().as_usize();
+        for line in (0..height).map(|i| buffer.get_row(i).unwrap()) {
+            for pixel_char in line {
                 assert_eq!(pixel_char, &expected_empty_char);
             }
         }
@@ -246,11 +243,11 @@ mod tests_mode_ops {
         let mut buffer = create_test_buffer();
 
         // Setup: Primary -> Alternate
-        buffer.cursor_pos = col(2) + row(3);
+        buffer.set_cursor_pos(col(2) + row(3));
         buffer.set_alt_screen_mode(RequestedScreenMode::Alternate);
 
         // Move alt cursor.
-        buffer.cursor_pos = col(4) + row(5);
+        buffer.set_cursor_pos(col(4) + row(5));
 
         // Toggle back to Primary.
         buffer.set_alt_screen_mode(RequestedScreenMode::Primary);
@@ -260,7 +257,7 @@ mod tests_mode_ops {
         );
 
         // Cursor pos should restore to (2, 3).
-        assert_eq!(buffer.cursor_pos, col(2) + row(3));
+        assert_eq!(buffer.get_cursor_pos(), col(2) + row(3));
         // Saved hidden (alternate) cursor should be (4, 5).
         assert_eq!(
             buffer.hidden_screen_state.hidden_cursor_pos,
@@ -273,15 +270,15 @@ mod tests_mode_ops {
         let mut buffer = create_test_buffer();
 
         // Setup: Primary -> Alternate -> Primary
-        buffer.cursor_pos = col(2) + row(3);
+        buffer.set_cursor_pos(col(2) + row(3));
         buffer.set_alt_screen_mode(RequestedScreenMode::Alternate);
-        buffer.cursor_pos = col(4) + row(5);
+        buffer.set_cursor_pos(col(4) + row(5));
         buffer.set_alt_screen_mode(RequestedScreenMode::Primary);
 
         // --- SECOND CYCLE: Primary -> Alternate ---
 
         // Move primary cursor to a new location.
-        buffer.cursor_pos = col(7) + row(8);
+        buffer.set_cursor_pos(col(7) + row(8));
 
         // Change the active style to verify the second BCE clear.
         let new_style = new_style!(italic);
@@ -301,12 +298,13 @@ mod tests_mode_ops {
         );
 
         // Cursor pos should restore to where we left it in the Alt screen (4, 5).
-        assert_eq!(buffer.cursor_pos, col(4) + row(5));
+        assert_eq!(buffer.get_cursor_pos(), col(4) + row(5));
 
         // Alternate screen should be cleared AGAIN, using the new italic style (BCE).
         let expected_empty_char_italic = buffer.create_empty_pixel_char();
-        for line in buffer.buffer.iter() {
-            for pixel_char in line.iter() {
+        let height = buffer.get_height().as_usize();
+        for line in (0..height).map(|i| buffer.get_row(i).unwrap()) {
+            for pixel_char in line {
                 assert_eq!(pixel_char, &expected_empty_char_italic);
             }
         }

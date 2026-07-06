@@ -76,7 +76,7 @@ complex or long-running tasks, you MUST follow these loop-in-the-user rules:
      and sub-phase you create or update.
    - **Review Workflow:** When the user prompts for a manual review at the end of a
      task/phase/sub-phase:
-     1. Ask the user: "choose your ide: 1: antigravity-ide, 2: code, 3: codium, if you press enter we will default to 1". (Note: if the user types "agy-ide" or similar, map it to "antigravity-ide").
+     1. Ask the user: "choose your ide: 1: antigravity-ide, 2: code, 3: codium, 4: code-insiders, 5: codium-insiders, if you press enter we will default to 1". (Note: if the user types "agy-ide" or similar, map it to "antigravity-ide").
      2. Then use `<IDE> <file_path>` to open the first file with a checkbox.
      3. Ask the user to manually review it.
      4. Once the user confirms ("good" or similar), check the box in the task file.
@@ -98,23 +98,21 @@ unrepresentable. See `design-philosophy` skill for principles and patterns.
 
 ## Tooling & Capabilities
 
-**A. Semantic Rust Tools (MCP):** When connected to a Rust MCP server (`rust-refactor`), use its
-tools for code navigation (go-to-definition, finding references), deep architectural analysis
-(call graphs), and precise compiler-driven refactoring. Always provide precise `file_path`,
-`line`, and `character` coordinates.
+**A. Semantic Rust Tools (AST-Aware MCP):** Priority #1. When connected to a Rust MCP server (`rust-refactor`), aggressively use its tools for precise compiler-driven refactoring (`rename_symbol`, `change_signature`, `extract_function`) and code navigation (go-to-definition, finding references). These AST-level operations are the safest way to modify code.
 
-**B. Local Workflows (.agents/):** For repo-specific workflows (clippy, formatting, log analysis),
+**B. Native File Replacements:** Priority #2. For structural changes that fall outside the MCP's capabilities, use native file-editing tools like `multi_replace_file_content`. Combine these with semantic tools (like `find_references`) to ensure you are modifying the correct call sites. Do NOT write Python scripts.
+
+**C. Bulk String Replacements (Shell):** Priority #3 (Fallback). When performing massive bulk find-and-replace operations that native tools struggle to batch, **always use `perl -pi -e`** instead of `sed` or `python`.
+Do NOT write or execute `python` scripts or use Python commands/libraries for find-replace tasks.
+`perl` handles regex, special character escaping, and capturing groups significantly more reliably
+than `sed` or `python` in cross-platform environments.
+
+**D. Local Workflows (.agents/):** For repo-specific workflows (clippy, formatting, log analysis),
 capabilities are defined in the `.agents/` directory. When a task matches a skill, agent, or
 command:
 1. Look inside the `.agents/` directory.
 2. Read the markdown instructions inside that folder.
 3. Execute the underlying shell/scripts exactly as instructed.
-
-**C. Bulk String Replacements (Shell):** When performing bulk find-and-replace operations across
-multiple files or any find-and-replace tasks using shell commands, **always use `perl -pi -e`** instead of `sed` or `python`.
-Do NOT write or execute `python` scripts or use Python commands/libraries for find-replace tasks.
-`perl` handles regex, special character escaping, and capturing groups significantly more reliably
-than `sed` or `python` in cross-platform environments.
 
 ## Context Guardrail
 

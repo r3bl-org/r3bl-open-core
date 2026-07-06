@@ -833,9 +833,12 @@ function run_example_with_flamegraph_profiling_perf_fold
         # Wait a moment for the build to complete
         sleep 1
 
-        # Get the binary path - target is in parent directory
-        set binary_path "../target/profiling-detailed/examples/$selection"
-
+        # Get the binary path - respecting CARGO_TARGET_DIR if set
+        if set -q CARGO_TARGET_DIR; and test -n "$CARGO_TARGET_DIR"
+            set binary_path "$CARGO_TARGET_DIR/profiling-detailed/examples/$selection"
+        else
+            set binary_path "../target/profiling-detailed/examples/$selection"
+        end
         # Check if the binary exists
         if not test -f $binary_path
             echo "Error: Binary not found at $binary_path"

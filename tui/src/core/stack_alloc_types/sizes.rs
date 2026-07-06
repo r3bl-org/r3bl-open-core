@@ -78,7 +78,35 @@ pub const DEFAULT_DOCUMENT_SIZE: usize = 131_072;
 // memory, physical memory, and memory mapped files.
 pub const DEFAULT_READ_BUFFER_SIZE: usize = 16384;
 
-/// Stack allocated list, that can [`smallvec::SmallVec::spilled`] into the heap if it
-/// gets larger than [`INLINE_VEC_SIZE`].
+/// Stack allocated list, that can [spill] into the heap if it gets larger than
+/// [`INLINE_VEC_SIZE`].
+///
+/// # ⚠️ Warning: Do not use this as a default replacement for [`Vec`]!
+///
+/// [`InlineVec`] is specifically optimized for small collections that will *almost
+/// always* stay under [`16`] items. Excellent use cases include:
+/// - Editor component state (e.g., tracking a few selected rows in [`SelectionList`], or
+///   storing 1-3 lines for bulk deletion in [`EditorEngine`]).
+/// - UI choice lists (e.g., `["Yes", "No"]`)
+/// - Styling collections (e.g., [`TuiStylesheet`] which usually holds a handful of
+///   [`TuiStyle`]s).
+/// - Log formatting buffers (e.g., assembling short text segments before writing to disk
+///   in [`CustomEventFormatter`]).
+///
+/// If a collection regularly exceeds [`16`] items (e.g., render operations, log buffers,
+/// rows), using [`InlineVec`] will severely degrade performance:
+/// 1. It will instantly spill to the heap (providing no stack benefits).
+/// 2. While continuing to force the CPU to perform [spill] checks (to see if it needs to
+///    spill from stack to heap) on every single iteration and mutation.
+///
+/// For collections that reliably grow large, always use a standard [`Vec`] instead.
+///
+/// [`16`]: INLINE_VEC_SIZE
+/// [`CustomEventFormatter`]: crate::CustomEventFormatter
+/// [`EditorEngine`]: crate::EditorEngine
+/// [`SelectionList`]: crate::SelectionList
+/// [`TuiStyle`]: crate::TuiStyle
+/// [`TuiStylesheet`]: crate::TuiStylesheet
+/// [spill]: smallvec::SmallVec::spilled
 pub type InlineVec<T> = SmallVec<[T; INLINE_VEC_SIZE]>;
 pub const INLINE_VEC_SIZE: usize = 16;

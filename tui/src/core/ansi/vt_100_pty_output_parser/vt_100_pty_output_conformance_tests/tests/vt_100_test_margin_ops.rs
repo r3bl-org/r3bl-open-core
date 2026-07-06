@@ -22,7 +22,7 @@ pub mod decstbm_margins {
 
     #[test]
     fn test_set_margins_valid_range() {
-        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
 
         // Set margins from row 3 to 7 (1-based)
         let csi_sequence = format!(
@@ -40,7 +40,7 @@ pub mod decstbm_margins {
 
     #[test]
     fn test_basic_margin_functionality() {
-        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
 
         // Verify initial state - no margins set
         assert_eq!(ofs_buf_vt_100.parser_global_state.scroll_region_top, None);
@@ -65,7 +65,7 @@ pub mod decstbm_margins {
 
     #[test]
     fn test_margin_edge_cases() {
-        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
 
         // Test setting margins to full buffer
         let full_buffer = format!(

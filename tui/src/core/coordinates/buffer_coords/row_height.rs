@@ -1,8 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::RowIndex;
-use crate::generate_length_type_impl;
-use crate::ChUnit;
+use crate::{ChUnit, generate_length_type_impl};
 use std::hash::Hash;
 
 /// [`RowHeight`] is row count, i.e., the number of rows that a UI component occupies.

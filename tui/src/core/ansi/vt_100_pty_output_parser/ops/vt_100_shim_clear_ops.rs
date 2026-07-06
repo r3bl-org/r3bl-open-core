@@ -3,7 +3,7 @@
 //! # [`VT-100`] Clear and Erase Operations
 //!
 //! This module translates [`VT-100`] [`CSI`] escape sequences for erasing text on the
-//! display into operations on the [`OffscreenBuffer`].
+//! display into operations on the [`OfsBuf`].
 //!
 //! These functions are called by the [`vte`] parser's [`csi_dispatch`] method when
 //! specific sequence characters are encountered (e.g., `J` for Erase in Display, `K` for
@@ -32,28 +32,28 @@
 //!        ↓
 //! csi_dispatch() [routes to modules below]
 //!        ↓
-//! [This Module: erase_in_display(params: [2])]
+//! [This Module: clear_canvas(params: [2])]
 //!        ↓
-//! [OffscreenBuffer: erase_display_entire()]
+//! [OfsBuf: erase_display_entire()]
 //! ```
 //!
 //! ## Erase in Display (`ED` / `CSI n J`)
 //!
-//! Handled by [`erase_in_display`]. Clears parts of the screen relative to the cursor:
+//! Handled by [`clear_canvas`]. Clears parts of the screen relative to the cursor:
 //! - `CSI 0 J` (or just `CSI J`): Clear from cursor to the end of the screen.
 //! - `CSI 1 J`: Clear from the beginning of the screen to the cursor.
 //! - `CSI 2 J`: Clear the entire screen.
 //!
 //! ## Erase in Line (`EL` / `CSI n K`)
 //!
-//! Handled by [`erase_in_line`]. Clears parts of the current line relative to the cursor:
+//! Handled by [`clear_line`]. Clears parts of the current line relative to the cursor:
 //! - `CSI 0 K` (or just `CSI K`): Clear from cursor to the end of the line.
 //! - `CSI 1 K`: Clear from the beginning of the line to the cursor.
 //! - `CSI 2 K`: Clear the entire line.
 //!
 //! [`csi_dispatch`]: crate::AnsiToOfsBufPerformer#method.csi_dispatch
 //! [`CSI`]: crate::CsiSequence
-//! [`OffscreenBuffer`]: crate::OffscreenBuffer
+//! [`OfsBuf`]: crate::OfsBuf
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 //! [`vte`]: https://docs.rs/vte
 //! [module-level Architecture Overview]: super#architecture-overview
@@ -85,7 +85,7 @@ use crate::{DEBUG_TUI_VT100_PARSER, ED_ERASE_ALL, ED_ERASE_ALL_AND_SCROLLBACK,
 ///     crate::OfsBufVT100::erase_display_from_start_to_cursor
 /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 /// [module-level documentation]: self
-pub fn erase_in_display(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) {
+pub fn clear_canvas(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) {
     let mode = params.extract_nth_single_opt_raw(0).unwrap_or(0);
 
     let result = match mode {
@@ -136,7 +136,7 @@ pub fn erase_in_display(performer: &mut AnsiToOfsBufPerformer, params: &vte::Par
 ///     crate::OfsBufVT100::erase_line_from_start_to_cursor
 /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 /// [module-level documentation]: self
-pub fn erase_in_line(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) {
+pub fn clear_line(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) {
     let mode = params
         .extract_nth_single_opt_raw(0)
         .unwrap_or(EL_ERASE_TO_END);

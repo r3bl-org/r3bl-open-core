@@ -49,7 +49,7 @@
 //!       - char_ops:: for chars (@,P,X)                         ╭───────────╮
 //!       - mode_ops:: for modes (h,l)                        <- │THIS MODULE│
 //!         ↓                                                    ╰───────────╯
-//!     Update OffscreenBuffer state
+//!     Update OfsBuf state
 //! ```
 //!
 //! [`CSI`]: crate::CsiSequence

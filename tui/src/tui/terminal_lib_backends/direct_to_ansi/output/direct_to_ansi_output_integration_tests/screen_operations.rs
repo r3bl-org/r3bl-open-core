@@ -16,6 +16,7 @@
 
 use super::test_helpers::*;
 use crate::{col, pos, render_op::RenderOpCommon, row};
+use crate::ansi_output::{cursor_save_restore, screen_clearing};
 
 #[test]
 fn test_clear_screen() {
@@ -27,7 +28,7 @@ fn test_clear_screen() {
     let output = execute_and_capture(op, &mut state, &output_device, &stdout_mock);
 
     // CSI 2J clears entire screen
-    assert_eq!(output, crate::ansi_output::screen_clearing::clear_screen());
+    assert_eq!(output, screen_clearing::clear_screen());
 }
 
 #[test]
@@ -42,7 +43,7 @@ fn test_clear_current_line() {
     // CSI 2K clears current line
     assert_eq!(
         output,
-        crate::ansi_output::screen_clearing::clear_current_line()
+        screen_clearing::clear_current_line()
     );
 }
 
@@ -58,7 +59,7 @@ fn test_clear_to_end_of_line() {
     // CSI 0K clears to end of line
     assert_eq!(
         output,
-        crate::ansi_output::screen_clearing::clear_to_end_of_line()
+        screen_clearing::clear_to_end_of_line()
     );
 }
 
@@ -74,7 +75,7 @@ fn test_clear_to_start_of_line() {
     // CSI 1K clears to start of line
     assert_eq!(
         output,
-        crate::ansi_output::screen_clearing::clear_to_start_of_line()
+        screen_clearing::clear_to_start_of_line()
     );
 }
 
@@ -115,11 +116,11 @@ fn test_save_and_restore_cursor_position() {
 
     // Should contain both sequences (CSI format: ESC [ s and ESC [ u)
     assert!(
-        output.contains(&crate::ansi_output::cursor_save_restore::save_cursor_position())
+        output.contains(cursor_save_restore::save_cursor_position())
     );
     assert!(
         output.contains(
-            &crate::ansi_output::cursor_save_restore::restore_cursor_position()
+            cursor_save_restore::restore_cursor_position()
         )
     );
 }

@@ -20,6 +20,7 @@ use unicode_width::UnicodeWidthStr;
 #[must_use]
 pub fn format_tables(text: &str) -> String {
     // Match table lines with optional leading whitespace.
+    #[allow(clippy::unwrap_used, reason = "Hardcoded regex is known to be valid")]
     let table_regex = Regex::new(r"(?m)^[ \t]*\|.+\|[ \t]*$").unwrap();
 
     if !table_regex.is_match(text) {

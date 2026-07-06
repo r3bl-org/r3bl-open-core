@@ -17,7 +17,7 @@
 //! [`OfsBufVT100`]: crate::OfsBufVT100
 
 use super::test_helpers_rendered::*;
-use crate::{col, offscreen_buffer::test_fixtures_ofs_buf::*, pos,
+use crate::{col, ofs_buf::test_fixtures_ofs_buf::*, pos,
             render_op::RenderOpCommon, row};
 
 /// Verify cursor at origin (0,0) places character at top-left of buffer.

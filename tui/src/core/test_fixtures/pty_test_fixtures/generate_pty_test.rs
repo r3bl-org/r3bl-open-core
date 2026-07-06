@@ -128,7 +128,7 @@
 ///    I/O integration testing** (no mocks), this [`DI`] pattern allows you to pass a
 ///    'mock' or manually-controlled [`pty`] pair to the controller function to test its
 ///    logic without the overhead of a real subprocess. Examples of mocks include
-///    memory-backed buffers like [`OffscreenBuffer`].
+///    memory-backed buffers like [`OfsBuf`].
 ///
 /// # Notes
 ///
@@ -220,7 +220,7 @@
 /// [`mode: PtyTestMode::Cooked`]: PtyTestMode::Cooked
 /// [`mode: PtyTestMode::Raw`]: PtyTestMode::Raw
 /// [`MSG_CONTROLLED_READY`]: crate::pty_test_fixtures::MSG_CONTROLLED_READY
-/// [`OffscreenBuffer`]: crate::OffscreenBuffer
+/// [`OfsBuf`]: crate::OfsBuf
 /// [`println!()`]: std::println
 /// [`pty_pair.controller().try_clone_reader()`]:
 ///     portable_pty::MasterPty::try_clone_reader

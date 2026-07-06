@@ -52,14 +52,14 @@ impl OfsBufVT100 {
     /// ```
     ///
     /// [`DECSTBM`]: https://vt100.net/docs/vt510-rm/DECSTBM.html
-    pub fn cursor_up(&mut self, how_many: RowHeight) {
-        let current_row = self.cursor_pos.row_index;
+    pub fn move_cursor_up(&mut self, how_many: RowHeight) {
+        let current_row = self.get_cursor_pos().row_index;
         let scroll_top_boundary = *self.get_scroll_range_inclusive().start();
 
         // Move cursor up but don't go above scroll region boundary.
         let potential_new_row = current_row - how_many;
         let new_row = potential_new_row.clamp(scroll_top_boundary, current_row);
-        self.cursor_pos.row_index = new_row;
+        self.update_cursor_pos(|pos| pos.row_index = new_row);
         self.parser_global_state.clear_pending_wrap();
     }
 
@@ -68,14 +68,14 @@ impl OfsBufVT100 {
     /// Respects [`DECSTBM`] scroll region margins.
     ///
     /// [`DECSTBM`]: https://vt100.net/docs/vt510-rm/DECSTBM.html
-    pub fn cursor_down(&mut self, how_many: RowHeight) {
-        let current_row = self.cursor_pos.row_index;
+    pub fn move_cursor_down(&mut self, how_many: RowHeight) {
+        let current_row = self.get_cursor_pos().row_index;
         let scroll_bottom_boundary = *self.get_scroll_range_inclusive().end();
 
         // Move cursor down but don't go below scroll region boundary.
         let potential_new_row = current_row + how_many;
         let new_row = potential_new_row.clamp(current_row, scroll_bottom_boundary);
-        self.cursor_pos.row_index = new_row;
+        self.update_cursor_pos(|pos| pos.row_index = new_row);
         self.parser_global_state.clear_pending_wrap();
     }
 
@@ -101,17 +101,18 @@ impl OfsBufVT100 {
     ///
     /// Result: Cursor moved forward 3 columns, clamped to screen width
     /// ```
-    pub fn cursor_forward(&mut self, how_many: ColWidth) {
-        let new_col = self.cursor_pos.col_index + how_many;
-        self.cursor_pos.col_index =
-            new_col.clamp_to_max_length(self.window_size.col_width);
+    pub fn move_cursor_right(&mut self, how_many: ColWidth) {
+        let new_col = self.get_cursor_pos().col_index + how_many;
+        let max_col = self.ofs_buf.get_window_size().col_width;
+        let clamped = new_col.clamp_to_max_length(max_col);
+        self.update_cursor_pos(|pos| pos.col_index = clamped);
         self.parser_global_state.clear_pending_wrap();
     }
 
     /// Move cursor backward by n columns.
-    pub fn cursor_backward(&mut self, how_many: ColWidth) {
-        let current_col = self.cursor_pos.col_index;
-        self.cursor_pos.col_index = current_col - how_many;
+    pub fn move_cursor_left(&mut self, how_many: ColWidth) {
+        let current_col = self.get_cursor_pos().col_index;
+        self.update_cursor_pos(|pos| pos.col_index = current_col - how_many);
         self.parser_global_state.clear_pending_wrap();
     }
 
@@ -125,40 +126,41 @@ impl OfsBufVT100 {
         let clamped_row = row.clamp_to_range(scroll_region);
 
         // Clamp column to screen width.
-        let new_col = col.clamp_to_max_length(self.window_size.col_width);
+        let new_col = col.clamp_to_max_length(self.ofs_buf.get_window_size().col_width);
 
-        self.cursor_pos = Pos {
+        self.set_cursor_pos(Pos {
             row_index: clamped_row,
             col_index: new_col,
-        };
+        });
         self.parser_global_state.clear_pending_wrap();
     }
 
     /// Move cursor to beginning of current line.
     pub fn cursor_to_line_start(&mut self) {
-        self.cursor_pos.col_index = col(0);
+        self.update_cursor_pos(|pos| pos.col_index = col(0));
         self.parser_global_state.clear_pending_wrap();
     }
 
     /// Move cursor to beginning of next line.
     pub fn cursor_to_next_line_start(&mut self) {
-        self.cursor_pos.col_index = col(0);
-        self.cursor_down(crate::RowHeight::from(1));
+        self.update_cursor_pos(|pos| pos.col_index = col(0));
+        self.move_cursor_down(crate::RowHeight::from(1));
         self.parser_global_state.clear_pending_wrap();
     }
 
     /// Move cursor to specific column on current line.
     pub fn cursor_to_column(&mut self, target_col: ColIndex) {
         // Convert from 1-based to 0-based, clamp to buffer width.
-        self.cursor_pos.col_index =
-            target_col.clamp_to_max_length(self.window_size.col_width);
+        let max_col = self.ofs_buf.get_window_size().col_width;
+        let clamped = target_col.clamp_to_max_length(max_col);
+        self.update_cursor_pos(|pos| pos.col_index = clamped);
         self.parser_global_state.clear_pending_wrap();
     }
 
     /// Save current cursor position for later restoration.
     pub fn save_cursor_position(&mut self) {
         self.parser_global_state.cursor_pos_for_esc_save_and_restore =
-            Some(self.cursor_pos);
+            Some(self.get_cursor_pos());
     }
 
     /// Restore previously saved cursor position.
@@ -166,16 +168,17 @@ impl OfsBufVT100 {
         if let Some(saved_pos) =
             self.parser_global_state.cursor_pos_for_esc_save_and_restore
         {
-            self.cursor_pos = saved_pos;
+            self.set_cursor_pos(saved_pos);
         }
     }
 
     /// Move cursor to specific row on current column.
     pub fn cursor_to_row(&mut self, target_row: RowIndex) {
+        let row_height = self.ofs_buf.get_window_size().row_height;
         // Clamp to valid range (conversion from 1-based to 0-based already done).
-        let new_row = target_row.clamp_to_max_length(self.window_size.row_height);
+        let clamped = target_row.clamp_to_max_length(row_height);
         // Update only the row, preserve column.
-        self.cursor_pos.row_index = new_row;
+        self.update_cursor_pos(|pos| pos.row_index = clamped);
         self.parser_global_state.clear_pending_wrap();
     }
 }
@@ -191,57 +194,57 @@ mod tests_cursor_ops {
     }
 
     #[test]
-    fn test_cursor_up_within_bounds() {
+    fn test_move_cursor_up_within_bounds() {
         let mut buffer = create_test_buffer();
-        buffer.cursor_pos = row(3) + col(2);
+        buffer.set_cursor_pos(row(3) + col(2));
 
-        buffer.cursor_up(crate::RowHeight::from(2));
+        buffer.move_cursor_up(crate::RowHeight::from(2));
 
-        assert_eq!(buffer.cursor_pos.row_index, row(1));
-        assert_eq!(buffer.cursor_pos.col_index, col(2));
+        assert_eq!(buffer.get_cursor_pos().row_index, row(1));
+        assert_eq!(buffer.get_cursor_pos().col_index, col(2));
     }
 
     #[test]
-    fn test_cursor_up_clamped_at_top() {
+    fn test_move_cursor_up_clamped_at_top() {
         let mut buffer = create_test_buffer();
-        buffer.cursor_pos = row(1) + col(2);
+        buffer.set_cursor_pos(row(1) + col(2));
 
-        buffer.cursor_up(crate::RowHeight::from(5));
+        buffer.move_cursor_up(crate::RowHeight::from(5));
 
-        assert_eq!(buffer.cursor_pos.row_index, row(0));
+        assert_eq!(buffer.get_cursor_pos().row_index, row(0));
     }
 
     #[test]
-    fn test_cursor_down_within_bounds() {
+    fn test_move_cursor_down_within_bounds() {
         let mut buffer = create_test_buffer();
-        buffer.cursor_pos = row(1) + col(2);
+        buffer.set_cursor_pos(row(1) + col(2));
 
-        buffer.cursor_down(crate::RowHeight::from(2));
+        buffer.move_cursor_down(crate::RowHeight::from(2));
 
-        assert_eq!(buffer.cursor_pos.row_index, row(3));
-        assert_eq!(buffer.cursor_pos.col_index, col(2));
+        assert_eq!(buffer.get_cursor_pos().row_index, row(3));
+        assert_eq!(buffer.get_cursor_pos().col_index, col(2));
     }
 
     #[test]
-    fn test_cursor_forward_within_bounds() {
+    fn test_move_cursor_right_within_bounds() {
         let mut buffer = create_test_buffer();
-        buffer.cursor_pos = row(1) + col(2);
+        buffer.set_cursor_pos(row(1) + col(2));
 
-        buffer.cursor_forward(crate::ColWidth::from(3));
+        buffer.move_cursor_right(crate::ColWidth::from(3));
 
-        assert_eq!(buffer.cursor_pos.col_index, col(5));
-        assert_eq!(buffer.cursor_pos.row_index, row(1));
+        assert_eq!(buffer.get_cursor_pos().col_index, col(5));
+        assert_eq!(buffer.get_cursor_pos().row_index, row(1));
     }
 
     #[test]
-    fn test_cursor_forward_clamped_at_right() {
+    fn test_move_cursor_right_clamped_at_right() {
         let mut buffer = create_test_buffer();
-        buffer.cursor_pos = row(1) + col(8);
+        buffer.set_cursor_pos(row(1) + col(8));
 
-        buffer.cursor_forward(crate::ColWidth::from(5));
+        buffer.move_cursor_right(crate::ColWidth::from(5));
 
         // Should be clamped to max column (9 for 0-based, width 10).
-        assert_eq!(buffer.cursor_pos.col_index, col(9));
+        assert_eq!(buffer.get_cursor_pos().col_index, col(9));
     }
 
     #[test]
@@ -250,21 +253,21 @@ mod tests_cursor_ops {
 
         buffer.cursor_to_position(row(2), col(5));
 
-        assert_eq!(buffer.cursor_pos.row_index, row(2));
-        assert_eq!(buffer.cursor_pos.col_index, col(5));
+        assert_eq!(buffer.get_cursor_pos().row_index, row(2));
+        assert_eq!(buffer.get_cursor_pos().col_index, col(5));
     }
 
     #[test]
     fn test_cursor_save_restore() {
         let mut buffer = create_test_buffer();
         let initial_pos = row(2) + col(5);
-        buffer.cursor_pos = initial_pos;
+        buffer.set_cursor_pos(initial_pos);
 
         buffer.save_cursor_position();
-        buffer.cursor_pos = row(4) + col(8);
+        buffer.set_cursor_pos(row(4) + col(8));
 
         buffer.restore_cursor_position();
 
-        assert_eq!(buffer.cursor_pos, initial_pos);
+        assert_eq!(buffer.get_cursor_pos(), initial_pos);
     }
 }

@@ -4,7 +4,7 @@
 //!
 //! [`DSR`]: crate::DsrSequence
 
-use super::super::test_fixtures_vt_100_ansi_conformance::{create_test_offscreen_buffer_10r_by_10c, nz};
+use super::super::test_fixtures_vt_100_ansi_conformance::{create_test_ofs_buf_10r_by_10c, nz};
 use crate::{
     PtyResponseEvent, DsrRequestType, col,
             core::ansi::{
@@ -16,7 +16,7 @@ use crate::{
 
 #[test]
 fn test_dsr_status_report() {
-    let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+    let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
 
     // Send CSI 5n (status report request)
     let dsr_request = format!(
@@ -49,10 +49,10 @@ fn test_dsr_status_report() {
 
 #[test]
 fn test_dsr_cursor_position_report() {
-    let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+    let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
 
     // Move cursor to position (3, 5) - 0-based internally
-    ofs_buf_vt_100.cursor_pos = row(3) + col(5);
+    ofs_buf_vt_100.set_cursor_pos(row(3) + col(5));
 
     // Send CSI 6n (cursor position report request)
     let dsr_request = format!(
@@ -89,10 +89,10 @@ fn test_dsr_cursor_position_report() {
 
 #[test]
 fn test_dsr_cursor_position_at_origin() {
-    let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+    let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
 
     // Cursor starts at (0, 0) - 0-based internally
-    assert_eq!(ofs_buf_vt_100.cursor_pos, row(0) + col(0));
+    assert_eq!(ofs_buf_vt_100.get_cursor_pos(), row(0) + col(0));
 
     // Send CSI 6n (cursor position report request)
     let dsr_request = format!(
@@ -123,7 +123,7 @@ fn test_dsr_cursor_position_at_origin() {
 
 #[test]
 fn test_dsr_unknown_request() {
-    let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+    let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
 
     // Send CSI 99n (unknown DSR request)
     let dsr_request = format!(
@@ -143,10 +143,10 @@ fn test_dsr_unknown_request() {
 
 #[test]
 fn test_multiple_dsr_requests() {
-    let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+    let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
 
     // Move cursor to (2, 3)
-    ofs_buf_vt_100.cursor_pos = row(2) + col(3);
+    ofs_buf_vt_100.set_cursor_pos(row(2) + col(3));
 
     // Send multiple DSR requests in one sequence.
     let dsr_requests = format!(
@@ -173,7 +173,7 @@ fn test_multiple_dsr_requests() {
 
 #[test]
 fn test_dsr_events_are_cleared_after_processing() {
-    let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+    let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
 
     // First DSR request.
     let dsr_request = format!(

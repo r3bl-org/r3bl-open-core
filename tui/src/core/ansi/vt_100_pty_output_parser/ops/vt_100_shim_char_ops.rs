@@ -46,7 +46,7 @@
 //!       - line_ops:: for lines (L,M)                           ╭───────────╮
 //!       - char_ops:: for chars (@,P,X)                      <- │THIS MODULE│
 //!         ↓                                                    ╰───────────╯
-//!     Update OffscreenBuffer state
+//!     Update OfsBuf state
 //! ```
 //!
 //! # [`VT-100`] Protocol Conventions
@@ -75,6 +75,7 @@
 
 use super::super::ansi_parser_public_api::AnsiToOfsBufPerformer;
 use crate::ParamsExt;
+use std::debug_assert_matches;
 
 /// Handle ICH (Insert Character) - insert n blank characters at cursor position.
 ///
@@ -83,20 +84,20 @@ use crate::ParamsExt;
 /// **Behavior**: Characters to the right of cursor shift right, characters beyond margin
 /// are lost.
 ///
-/// See [`OfsBufVT100::insert_chars_at_cursor`] for the implementation of this
+/// See [`OfsBufVT100::insert_chars`] for the implementation of this
 /// shim.
 ///
-/// [`OfsBufVT100::insert_chars_at_cursor`]: crate::OfsBufVT100::insert_chars_at_cursor
+/// [`OfsBufVT100::insert_chars`]: crate::OfsBufVT100::insert_chars
 /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 /// [module-level documentation]: self
 pub fn insert_chars(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) {
     let how_many = params.extract_nth_single_non_zero(0).get().into();
-    let result = performer.ofs_buf_vt_100.insert_chars_at_cursor(how_many);
-    debug_assert!(
-        result.is_ok(),
-        "Failed to insert {:?} chars at cursor position {:?}",
-        how_many,
-        performer.ofs_buf_vt_100.cursor_pos
+    let result = performer.ofs_buf_vt_100.insert_chars(how_many);
+    debug_assert_matches!(
+        result,
+        Ok(()),
+        "Failed to insert {how_many:?} chars at cursor position {:?}",
+        performer.ofs_buf_vt_100.get_cursor_pos()
     );
 }
 
@@ -107,20 +108,20 @@ pub fn insert_chars(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params)
 /// **Behavior**: Characters to the right of cursor shift left, blanks are inserted at
 /// line end.
 ///
-/// See [`OfsBufVT100::delete_chars_at_cursor`] for the implementation of this
+/// See [`OfsBufVT100::delete_chars`] for the implementation of this
 /// shim.
 ///
-/// [`OfsBufVT100::delete_chars_at_cursor`]: crate::OfsBufVT100::delete_chars_at_cursor
+/// [`OfsBufVT100::delete_chars`]: crate::OfsBufVT100::delete_chars
 /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 /// [module-level documentation]: self
 pub fn delete_chars(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) {
     let how_many = params.extract_nth_single_non_zero(0).get().into();
-    let result = performer.ofs_buf_vt_100.delete_chars_at_cursor(how_many);
-    debug_assert!(
-        result.is_ok(),
-        "Failed to delete {:?} chars at cursor position {:?}",
-        how_many,
-        performer.ofs_buf_vt_100.cursor_pos
+    let result = performer.ofs_buf_vt_100.delete_chars(how_many);
+    debug_assert_matches!(
+        result,
+        Ok(()),
+        "Failed to delete {how_many:?} chars at cursor position {:?}",
+        performer.ofs_buf_vt_100.get_cursor_pos()
     );
 }
 
@@ -130,19 +131,19 @@ pub fn delete_chars(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params)
 ///
 /// **Behavior**: Characters are replaced with blanks, no shifting occurs (unlike DCH).
 ///
-/// See [`OfsBufVT100::erase_chars_at_cursor`] for the implementation of this shim.
+/// See [`OfsBufVT100::clear_chars`] for the implementation of this shim.
 ///
-/// [`OfsBufVT100::erase_chars_at_cursor`]: crate::OfsBufVT100::erase_chars_at_cursor
+/// [`OfsBufVT100::clear_chars`]: crate::OfsBufVT100::clear_chars
 /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 /// [module-level documentation]: self
 pub fn erase_chars(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) {
     let how_many = params.extract_nth_single_non_zero(0).get().into();
-    let result = performer.ofs_buf_vt_100.erase_chars_at_cursor(how_many);
-    debug_assert!(
-        result.is_ok(),
-        "Failed to erase {:?} chars at cursor position {:?}",
-        how_many,
-        performer.ofs_buf_vt_100.cursor_pos
+    let result = performer.ofs_buf_vt_100.clear_chars(how_many);
+    debug_assert_matches!(
+        result,
+        Ok(()),
+        "Failed to erase {how_many:?} chars at cursor position {:?}",
+        performer.ofs_buf_vt_100.get_cursor_pos()
     );
 }
 
@@ -158,10 +159,10 @@ pub fn erase_chars(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) 
 /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 pub fn print_char(performer: &mut AnsiToOfsBufPerformer, ch: char) {
     let result = performer.ofs_buf_vt_100.print_char(ch);
-    debug_assert!(
-        result.is_ok(),
-        "Failed to print char {:?} at cursor position {:?}",
-        ch,
-        performer.ofs_buf_vt_100.cursor_pos
+    debug_assert_matches!(
+        result,
+        Ok(()),
+        "Failed to print char {ch:?} at cursor position {:?}",
+        performer.ofs_buf_vt_100.get_cursor_pos()
     );
 }

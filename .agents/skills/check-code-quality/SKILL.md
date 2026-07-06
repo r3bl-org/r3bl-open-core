@@ -121,7 +121,7 @@ Invoke the `remove-crate-prefix` skill to ensure the codebase follows the strict
 # or invoke the `run-clippy` skill
 ```
 
-Runs clippy and enforces code style standards.
+Runs clippy and enforces code style standards. **You MUST fix all warnings.** Do not just report them. If `./check.fish --clippy` reports warnings, use `cargo clippy --all-targets --fix --allow-dirty` to auto-fix where possible, and manually fix any remaining warnings. Never ignore warnings during a quality check.
 
 ### 8. Concurrency Safety Check
 

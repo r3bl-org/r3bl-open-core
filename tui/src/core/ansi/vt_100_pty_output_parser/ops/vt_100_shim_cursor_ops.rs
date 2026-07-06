@@ -46,7 +46,7 @@
 //!       - line_ops:: for lines (L,M)
 //!       - char_ops:: for chars (@,P,X)
 //!         ↓
-//!     Update OffscreenBuffer state
+//!     Update OfsBuf state
 //! ```
 //!
 //! # [`VT-100`] Protocol Conventions
@@ -107,15 +107,15 @@ use vte::Params;
 ///
 /// **Behavior**: Respects [`DECSTBM`] scroll region margins.
 ///
-/// **Implementation**: See [`OfsBufVT100::cursor_up`] for detailed behavior.
+/// **Implementation**: See [`OfsBufVT100::move_cursor_up`] for detailed behavior.
 ///
 /// [`DECSTBM`]: https://vt100.net/docs/vt510-rm/DECSTBM.html
-/// [`OfsBufVT100::cursor_up`]: crate::OfsBufVT100::cursor_up
+/// [`OfsBufVT100::move_cursor_up`]: crate::OfsBufVT100::move_cursor_up
 /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 /// [module-level documentation]: self
-pub fn cursor_up(performer: &mut AnsiToOfsBufPerformer, params: &Params) {
+pub fn move_cursor_up(performer: &mut AnsiToOfsBufPerformer, params: &Params) {
     let how_many = params.extract_nth_single_non_zero(0).get().into();
-    performer.ofs_buf_vt_100.cursor_up(how_many);
+    performer.ofs_buf_vt_100.move_cursor_up(how_many);
 }
 
 /// Move cursor down by n lines.
@@ -125,15 +125,15 @@ pub fn cursor_up(performer: &mut AnsiToOfsBufPerformer, params: &Params) {
 ///
 /// **Behavior**: Respects [`DECSTBM`] scroll region margins.
 ///
-/// **Implementation**: See [`OfsBufVT100::cursor_down`] for detailed behavior.
+/// **Implementation**: See [`OfsBufVT100::move_cursor_down`] for detailed behavior.
 ///
 /// [`DECSTBM`]: https://vt100.net/docs/vt510-rm/DECSTBM.html
-/// [`OfsBufVT100::cursor_down`]: crate::OfsBufVT100::cursor_down
+/// [`OfsBufVT100::move_cursor_down`]: crate::OfsBufVT100::move_cursor_down
 /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 /// [module-level documentation]: self
-pub fn cursor_down(performer: &mut AnsiToOfsBufPerformer, params: &Params) {
+pub fn move_cursor_down(performer: &mut AnsiToOfsBufPerformer, params: &Params) {
     let how_many = params.extract_nth_single_non_zero(0).get().into();
-    performer.ofs_buf_vt_100.cursor_down(how_many);
+    performer.ofs_buf_vt_100.move_cursor_down(how_many);
 }
 
 /// Move cursor forward by n columns.
@@ -141,14 +141,14 @@ pub fn cursor_down(performer: &mut AnsiToOfsBufPerformer, params: &Params) {
 /// **[`VT-100`] Protocol**: See [module-level documentation] for parameter handling
 /// (missing/zero parameters default to 1).
 ///
-/// **Implementation**: See [`OfsBufVT100::cursor_forward`] for detailed behavior.
+/// **Implementation**: See [`OfsBufVT100::move_cursor_right`] for detailed behavior.
 ///
-/// [`OfsBufVT100::cursor_forward`]: crate::OfsBufVT100::cursor_forward
+/// [`OfsBufVT100::move_cursor_right`]: crate::OfsBufVT100::move_cursor_right
 /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 /// [module-level documentation]: self
-pub fn cursor_forward(performer: &mut AnsiToOfsBufPerformer, params: &Params) {
+pub fn move_cursor_right(performer: &mut AnsiToOfsBufPerformer, params: &Params) {
     let how_many = params.extract_nth_single_non_zero(0).get().into();
-    performer.ofs_buf_vt_100.cursor_forward(how_many);
+    performer.ofs_buf_vt_100.move_cursor_right(how_many);
 }
 
 /// Move cursor backward by n columns.
@@ -156,14 +156,14 @@ pub fn cursor_forward(performer: &mut AnsiToOfsBufPerformer, params: &Params) {
 /// **[`VT-100`] Protocol**: See [module-level documentation] for parameter handling
 /// (missing/zero parameters default to 1).
 ///
-/// **Implementation**: See [`OfsBufVT100::cursor_backward`] for detailed behavior.
+/// **Implementation**: See [`OfsBufVT100::move_cursor_left`] for detailed behavior.
 ///
-/// [`OfsBufVT100::cursor_backward`]: crate::OfsBufVT100::cursor_backward
+/// [`OfsBufVT100::move_cursor_left`]: crate::OfsBufVT100::move_cursor_left
 /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 /// [module-level documentation]: self
-pub fn cursor_backward(performer: &mut AnsiToOfsBufPerformer, params: &Params) {
+pub fn move_cursor_left(performer: &mut AnsiToOfsBufPerformer, params: &Params) {
     let how_many = params.extract_nth_single_non_zero(0).get().into();
-    performer.ofs_buf_vt_100.cursor_backward(how_many);
+    performer.ofs_buf_vt_100.move_cursor_left(how_many);
 }
 
 /// Sets cursor position to (row, column).
@@ -192,7 +192,7 @@ pub fn cursor_position(performer: &mut AnsiToOfsBufPerformer, params: &Params) {
 /// [module-level documentation]: self
 pub fn cursor_next_line(performer: &mut AnsiToOfsBufPerformer, params: &Params) {
     let how_many = params.extract_nth_single_non_zero(0).get().into();
-    performer.ofs_buf_vt_100.cursor_down(how_many);
+    performer.ofs_buf_vt_100.move_cursor_down(how_many);
     performer.ofs_buf_vt_100.cursor_to_line_start();
 }
 
@@ -205,7 +205,7 @@ pub fn cursor_next_line(performer: &mut AnsiToOfsBufPerformer, params: &Params) 
 /// [module-level documentation]: self
 pub fn cursor_prev_line(performer: &mut AnsiToOfsBufPerformer, params: &Params) {
     let how_many = params.extract_nth_single_non_zero(0).get().into();
-    performer.ofs_buf_vt_100.cursor_up(how_many);
+    performer.ofs_buf_vt_100.move_cursor_up(how_many);
     performer.ofs_buf_vt_100.cursor_to_line_start();
 }
 

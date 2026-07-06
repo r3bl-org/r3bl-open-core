@@ -35,7 +35,7 @@ mod tests {
     }
 
     #[test]
-    fn test_flex_box_props_custom() -> CommonResult<()> {
+    fn test_flex_box_props_custom() -> CommonResult {
         let props = FlexBoxProps {
             id: FlexBoxId::from(10),
             dir: LayoutDirection::Horizontal,

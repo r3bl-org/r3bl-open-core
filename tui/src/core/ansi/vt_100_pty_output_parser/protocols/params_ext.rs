@@ -338,17 +338,17 @@ pub trait ParamsExt {
 impl ParamsExt for vte::Params {
     fn extract_nth_single_non_zero(&self, arg_nth_pos: impl Into<Index>) -> NonZeroU16 {
         let nth_pos: Index = arg_nth_pos.into();
-        let value = self
+        let value = match self
             .iter()
             .nth(nth_pos.as_usize())
             .and_then(|params_at_nth_pos| params_at_nth_pos.first())
             .copied()
-            .map_or(
-                /* None -> 1 */ 1,
-                /* Some(x) -> max(1, x) */ |it| max(1, it),
-            );
+        {
+            Some(it) => max(1, it),
+            None => 1,
+        };
 
-        // SAFETY: value is guaranteed >= 1 by map_or logic (None->1, Some(x)->max(1,x))
+        // SAFETY: value is guaranteed >= 1 by match logic (None->1, Some(x)->max(1,x))
         debug_assert!(value >= 1);
         unsafe { NonZeroU16::new_unchecked(value) }
     }

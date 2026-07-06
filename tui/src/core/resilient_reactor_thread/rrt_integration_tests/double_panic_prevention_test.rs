@@ -169,8 +169,8 @@ fn controlled() {
             "{GLYPH_CONTROLLED} Controlled: Caught second panic. Exiting with code 0."
         );
         exit(0);
-    } else {
-        eprintln!("{GLYPH_FAILURE} Controlled: Second panic was NOT triggered!");
-        exit(1);
     }
+
+    eprintln!("{GLYPH_FAILURE} Controlled: Second panic was NOT triggered!");
+    exit(1);
 }

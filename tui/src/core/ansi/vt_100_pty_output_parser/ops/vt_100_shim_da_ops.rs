@@ -48,7 +48,7 @@
 //!       - dsr_ops:: for device status (n)                      ╭───────────╮
 //!       - da_ops:: for device attributes (c)                <- │THIS MODULE│
 //!         ↓                                                    ╰───────────╯
-//!     Update OffscreenBuffer state
+//!     Update OfsBuf state
 //! ```
 //!
 //! [`CSI`]: crate::CsiSequence

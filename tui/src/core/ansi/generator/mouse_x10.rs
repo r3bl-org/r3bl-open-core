@@ -1,5 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+#![allow(clippy::cast_possible_truncation)]
+
 use crate::{Button, KeyState, MouseInput, MouseInputKind, TermCol, TermRow,
             core::ansi::constants::{MOUSE_LEFT_BUTTON_CODE, MOUSE_MIDDLE_BUTTON_CODE,
                                     MOUSE_MODIFIER_ALT, MOUSE_MODIFIER_CTRL,

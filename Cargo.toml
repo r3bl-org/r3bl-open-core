@@ -59,9 +59,11 @@ match_same_arms = "warn"
 # - Examples (no lib.rs to override)
 # - Binaries (no lib.rs to override)
 # - Test code (when cfg_attr disables the lint)
-# Production library code overrides this with `#![cfg_attr(not(test), deny(clippy::unwrap_in_result))]`
-# in each lib.rs, which enforces strict error handling in production code only.
+# Production library code overrides this with
+# `#![cfg_attr(not(test), deny(clippy::unwrap_in_result))]` in lib.rs (for each crate),
+# which enforces strict error handling in production code only.
 unwrap_in_result = "allow"
+unwrap_used = "allow"
 doc_markdown = "warn"
 redundant_closure = "warn"
 redundant_closure_for_method_calls = "warn"

@@ -70,15 +70,12 @@ impl OfsBufVT100 {
     ///
     /// Returns an error if the operation fails (though bounded safely).
     pub fn erase_line_from_cursor_to_end(&mut self) -> miette::Result<()> {
-        let cursor_row = self.cursor_pos.row_index;
-        let cursor_col = self.cursor_pos.col_index;
+        let cursor_row = self.get_cursor_pos().row_index;
+        let cursor_col = self.get_cursor_pos().col_index;
         let empty_char = self.create_empty_pixel_char();
 
-        let buffer_height = height(self.buffer.len() /* 1-based */);
-        if cursor_row.overflows(buffer_height) == ArrayOverflowResult::Within {
-            let row_idx_usize = cursor_row.as_usize();
-            let row = &mut self.buffer[row_idx_usize];
-
+        let row_idx_usize = cursor_row.as_usize();
+        if let Some(row) = self.ofs_buf.get_row_mut(row_idx_usize) {
             let row_width = width(row.len() /* 1-based */);
             if cursor_col.overflows(row_width) == ArrayOverflowResult::Within {
                 row[(cursor_col..).as_usize_range()].fill(empty_char);
@@ -116,15 +113,12 @@ impl OfsBufVT100 {
     ///
     /// Returns an error if the operation fails (though bounded safely).
     pub fn erase_line_from_start_to_cursor(&mut self) -> miette::Result<()> {
-        let cursor_row = self.cursor_pos.row_index;
-        let cursor_col = self.cursor_pos.col_index;
+        let cursor_row = self.get_cursor_pos().row_index;
+        let cursor_col = self.get_cursor_pos().col_index;
         let empty_char = self.create_empty_pixel_char();
 
-        let buffer_height = height(self.buffer.len() /* 1-based */);
-        if cursor_row.overflows(buffer_height) == ArrayOverflowResult::Within {
-            let row_idx_usize = cursor_row.as_usize();
-            let row = &mut self.buffer[row_idx_usize];
-
+        let row_idx_usize = cursor_row.as_usize();
+        if let Some(row) = self.ofs_buf.get_row_mut(row_idx_usize) {
             let row_width = width(row.len() /* 1-based */);
             let end_col = min(cursor_col.convert_to_length(), row_width);
             row[(..end_col).as_usize_range()].fill(empty_char);
@@ -160,13 +154,12 @@ impl OfsBufVT100 {
     ///
     /// Returns an error if the operation fails (though bounded safely).
     pub fn erase_line_entire(&mut self) -> miette::Result<()> {
-        let cursor_row = self.cursor_pos.row_index;
+        let cursor_row = self.get_cursor_pos().row_index;
         let empty_char = self.create_empty_pixel_char();
 
-        let buffer_height = height(self.buffer.len() /* 1-based */);
-        if cursor_row.overflows(buffer_height) == ArrayOverflowResult::Within {
-            let row_idx_usize = cursor_row.as_usize();
-            self.buffer[row_idx_usize].fill(empty_char);
+        let row_idx_usize = cursor_row.as_usize();
+        if let Some(row) = self.ofs_buf.get_row_mut(row_idx_usize) {
+            row.fill(empty_char);
         }
 
         ok!()
@@ -211,16 +204,17 @@ impl OfsBufVT100 {
     pub fn erase_display_from_cursor_to_end(&mut self) -> miette::Result<()> {
         self.erase_line_from_cursor_to_end()?;
 
-        let cursor_row = self.cursor_pos.row_index;
+        let cursor_row = self.get_cursor_pos().row_index;
         let empty_char = self.create_empty_pixel_char();
 
-        let buffer_height = height(self.buffer.len() /* 1-based */);
-        if cursor_row.overflows(buffer_height) == ArrayOverflowResult::Within {
-            let start_row = cursor_row + 1;
-            let end_row = buffer_height.eol_cursor_position();
-            let range_to_clear = (start_row..end_row).clamp_range_to(buffer_height);
+        let buffer_height =
+            height(self.ofs_buf.get_height().as_usize() /* 1-based */);
+        let start_row = cursor_row + 1;
+        let end_row = buffer_height.eol_cursor_position();
+        let range_to_clear = (start_row..end_row).clamp_range_to(buffer_height);
 
-            for row in &mut self.buffer[range_to_clear.as_usize_range()] {
+        for row_idx in range_to_clear.as_usize_range() {
+            if let Some(row) = self.ofs_buf.get_row_mut(row_idx) {
                 row.fill(empty_char);
             }
         }
@@ -266,14 +260,17 @@ impl OfsBufVT100 {
     ///
     /// Returns an error if the operation fails.
     pub fn erase_display_from_start_to_cursor(&mut self) -> miette::Result<()> {
-        let cursor_row = self.cursor_pos.row_index;
+        let cursor_row = self.get_cursor_pos().row_index;
         let empty_char = self.create_empty_pixel_char();
 
-        let buffer_height = height(self.buffer.len() /* 1-based */);
+        let buffer_height =
+            height(self.ofs_buf.get_height().as_usize() /* 1-based */);
         let range_to_clear = (row(0)..cursor_row).clamp_range_to(buffer_height);
 
-        for row in &mut self.buffer[range_to_clear.as_usize_range()] {
-            row.fill(empty_char);
+        for row_idx in range_to_clear.as_usize_range() {
+            if let Some(row) = self.ofs_buf.get_row_mut(row_idx) {
+                row.fill(empty_char);
+            }
         }
 
         self.erase_line_from_start_to_cursor()?;
@@ -319,8 +316,11 @@ impl OfsBufVT100 {
     /// Returns an error if the operation fails.
     pub fn erase_display_entire(&mut self) -> miette::Result<()> {
         let empty_char = self.create_empty_pixel_char();
-        for row in self.buffer.iter_mut() {
-            row.fill(empty_char);
+        let height = self.ofs_buf.get_height().as_usize();
+        for row_idx in 0..height {
+            if let Some(row) = self.ofs_buf.get_row_mut(row_idx) {
+                row.fill(empty_char);
+            }
         }
 
         ok!()
@@ -336,6 +336,7 @@ impl OfsBufVT100 {
     /// Returns an error if the operation fails.
     pub fn erase_display_scrollback(&mut self) -> miette::Result<()> {
         self.scrollback_buffer.clear();
+
         ok!()
     }
 }
@@ -360,12 +361,12 @@ mod tests {
         // Fill buffer with 'x'
         for r in 0..3 {
             for c in 0..4 {
-                buf.buffer[r][c] = char_x;
+                buf.ofs_buf.get_row_mut(r).unwrap()[c] = char_x;
             }
         }
 
         // Set cursor to middle
-        buf.cursor_pos = row(1) + col(2);
+        buf.ofs_buf.set_cursor_pos(row(1) + col(2));
         buf
     }
 
@@ -384,9 +385,9 @@ mod tests {
         let mut buf = create_test_buffer();
         buf.erase_line_from_cursor_to_end().unwrap();
 
-        assert_char_eq(&buf.buffer[1][1], 'x');
-        assert_char_eq(&buf.buffer[1][2], ' ');
-        assert_char_eq(&buf.buffer[1][3], ' ');
+        assert_char_eq(&buf.ofs_buf.get_row_mut(1).unwrap()[1], 'x');
+        assert_char_eq(&buf.ofs_buf.get_row_mut(1).unwrap()[2], ' ');
+        assert_char_eq(&buf.ofs_buf.get_row_mut(1).unwrap()[3], ' ');
     }
 
     #[test]
@@ -394,10 +395,10 @@ mod tests {
         let mut buf = create_test_buffer();
         buf.erase_line_from_start_to_cursor().unwrap();
 
-        assert_char_eq(&buf.buffer[1][0], ' ');
-        assert_char_eq(&buf.buffer[1][1], ' ');
-        assert_char_eq(&buf.buffer[1][2], ' ');
-        assert_char_eq(&buf.buffer[1][3], 'x');
+        assert_char_eq(&buf.ofs_buf.get_row_mut(1).unwrap()[0], ' ');
+        assert_char_eq(&buf.ofs_buf.get_row_mut(1).unwrap()[1], ' ');
+        assert_char_eq(&buf.ofs_buf.get_row_mut(1).unwrap()[2], ' ');
+        assert_char_eq(&buf.ofs_buf.get_row_mut(1).unwrap()[3], 'x');
     }
 
     #[test]
@@ -405,11 +406,11 @@ mod tests {
         let mut buf = create_test_buffer();
         buf.erase_display_from_cursor_to_end().unwrap();
 
-        assert_char_eq(&buf.buffer[0][3], 'x');
-        assert_char_eq(&buf.buffer[1][1], 'x');
-        assert_char_eq(&buf.buffer[1][2], ' ');
-        assert_char_eq(&buf.buffer[2][0], ' ');
-        assert_char_eq(&buf.buffer[2][3], ' ');
+        assert_char_eq(&buf.ofs_buf.get_row_mut(0).unwrap()[3], 'x');
+        assert_char_eq(&buf.ofs_buf.get_row_mut(1).unwrap()[1], 'x');
+        assert_char_eq(&buf.ofs_buf.get_row_mut(1).unwrap()[2], ' ');
+        assert_char_eq(&buf.ofs_buf.get_row_mut(2).unwrap()[0], ' ');
+        assert_char_eq(&buf.ofs_buf.get_row_mut(2).unwrap()[3], ' ');
     }
 
     #[test]

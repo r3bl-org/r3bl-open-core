@@ -1061,7 +1061,7 @@
 //!   zero-copy editor implementation. Unlike [`ByteIndex`] and [`ByteLength`] which form
 //!   a standard index/length pair, [`ByteOffset`] is intentionally separate from the
 //!   bounds checking system.
-//! 
+//!
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`array_bounds_check.rs`]: mod@crate::array_bounds_check
 //! [`ArrayBoundsCheck`]: crate::ArrayBoundsCheck

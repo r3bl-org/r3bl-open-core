@@ -1,8 +1,7 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::TuiStyle;
-use crate::throws;
-use crate::{CommonError, CommonResult, InlineVec, TuiStyleId};
+use crate::{CommonError, CommonResult, InlineVec, TuiStyleId, throws};
 
 #[derive(Default, Debug, Clone)]
 pub struct TuiStylesheet {
@@ -58,7 +57,7 @@ impl TuiStylesheet {
     /// # Errors
     ///
     /// Returns an error if the style id is not defined.
-    pub fn add_style(&mut self, style: TuiStyle) -> CommonResult<()> {
+    pub fn add_style(&mut self, style: TuiStyle) -> CommonResult {
         throws!({
             if style.id.is_none() {
                 return CommonError::new_error_result_with_only_msg(
@@ -72,7 +71,7 @@ impl TuiStylesheet {
     /// # Errors
     ///
     /// Returns an error if any of the styles have undefined ids.
-    pub fn add_styles(&mut self, styles: InlineVec<TuiStyle>) -> CommonResult<()> {
+    pub fn add_styles(&mut self, styles: InlineVec<TuiStyle>) -> CommonResult {
         throws!({
             for style in styles {
                 self.add_style(style)?;
@@ -185,17 +184,17 @@ pub trait TryAdd<OtherType = Self> {
     /// # Errors
     ///
     /// Returns an error if the operation fails (e.g., invalid style data).
-    fn try_add(&mut self, other: OtherType) -> CommonResult<()>;
+    fn try_add(&mut self, other: OtherType) -> CommonResult;
 }
 
 impl TryAdd<TuiStyle> for TuiStylesheet {
     #[allow(clippy::missing_errors_doc)]
-    fn try_add(&mut self, other: TuiStyle) -> CommonResult<()> { self.add_style(other) }
+    fn try_add(&mut self, other: TuiStyle) -> CommonResult { self.add_style(other) }
 }
 
 impl TryAdd<InlineVec<TuiStyle>> for TuiStylesheet {
     #[allow(clippy::missing_errors_doc)]
-    fn try_add(&mut self, other: InlineVec<TuiStyle>) -> CommonResult<()> {
+    fn try_add(&mut self, other: InlineVec<TuiStyle>) -> CommonResult {
         self.add_styles(other)
     }
 }

@@ -79,7 +79,7 @@
 //! the [`TUI`] or [`readline_async`] app's output.
 //!
 //! All output goes through [`SharedWriter`] (for [`readline_async`] apps) or
-//! [`OffscreenBuffer`] (for [`TUI`] apps), which route content to [`stdout`] in a
+//! [`OfsBuf`] (for [`TUI`] apps), which route content to [`stdout`] in a
 //! terminal-safe way.
 //!
 //! Logging is handled internally via [`TracingConfig`] - [`install_thread_local()`] or
@@ -113,7 +113,7 @@
 //! [`install_thread_local()`]: crate::TracingConfig::install_thread_local
 //! [`isatty`]: https://man7.org/linux/man-pages/man3/isatty.3.html
 //! [`IsTerminal`]: std::io::IsTerminal
-//! [`OffscreenBuffer`]: crate::OffscreenBuffer
+//! [`OfsBuf`]: crate::OfsBuf
 //! [`PTYMux`]: crate::pty_mux::PTYMux
 //! [`PTYMuxBuilder::build()`]: crate::pty_mux::PTYMuxBuilder::build
 //! [`readline_async`]: mod@crate::readline_async

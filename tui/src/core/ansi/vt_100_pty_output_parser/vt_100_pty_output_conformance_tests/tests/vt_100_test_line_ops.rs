@@ -116,7 +116,7 @@ pub mod insert_line {
             .scroll_region_bottom = Some(term_row(nz(4)));
 
         // Move cursor to row 0 (outside margins)
-        performer.ofs_buf_vt_100.cursor_pos = row(0) + col(0);
+        performer.ofs_buf_vt_100.set_cursor_pos(row(0) + col(0));
 
         // Try to insert line: ESC[L (should be ignored)
         let insert_line_sequence = format!("{}", CsiSequence::InsertLine(CsiCount::ONE));
@@ -227,7 +227,7 @@ pub mod delete_line {
             .scroll_region_bottom = Some(term_row(nz(4)));
 
         // Move cursor to row 4 (outside margins)
-        performer.ofs_buf_vt_100.cursor_pos = row(4) + col(0);
+        performer.ofs_buf_vt_100.set_cursor_pos(row(4) + col(0));
 
         // Try to delete line: ESC[M (should be ignored)
         let delete_line_sequence = format!("{}", CsiSequence::DeleteLine(CsiCount::ONE));

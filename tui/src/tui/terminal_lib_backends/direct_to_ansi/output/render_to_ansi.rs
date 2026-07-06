@@ -89,15 +89,16 @@ impl RenderToAnsi for OfsBufVT100 {
         let mut output = Vec::new();
         let mut renderer = PixelCharRenderer::new();
 
-        // Iterate through each line in the buffer
-        for (row_idx, line) in self.buffer.iter().enumerate() {
+        let height = self.ofs_buf.get_height().as_usize();
+        for row_idx in 0..height {
+            let Some(line) = self.ofs_buf.get_row(row_idx) else { continue; };
             // Add line separator for all lines except the first
             if row_idx > 0 {
                 output.extend_from_slice(CRLF_BYTES);
             }
 
             // Render this line's pixels to ANSI bytes
-            let ansi_line = renderer.render_line(&line.pixel_chars);
+            let ansi_line = renderer.render_line(line);
             output.extend_from_slice(ansi_line);
         }
 
@@ -122,7 +123,7 @@ mod tests {
         let ansi = buffer.render_to_ansi();
 
         // Empty buffer (all spacers) should still produce output (spaces + line separator
-        // + spaces) The pattern is: spaces, \r\n, spaces, SGR reset
+        // + spaces). The pattern is: spaces, \r\n, spaces, SGR reset
         assert!(!ansi.is_empty());
         // Should contain spaces (from Spacer pixels)
         assert!(ansi.contains(&b' '));
@@ -136,21 +137,18 @@ mod tests {
     fn test_render_to_ansi_single_line() {
         let mut buffer = OfsBufVT100::new_empty(height(1) + width(5));
 
-        // Add some plain text
-        if let Some(first_line) = buffer.buffer.first_mut() {
-            first_line.pixel_chars.clear();
-            first_line.pixel_chars.push(PixelChar::PlainText {
+        if let Some(first_line) = buffer.ofs_buf.get_row_mut(0) {
+            first_line[0] = PixelChar::PlainText {
                 display_char: 'H',
                 style: TuiStyle::default(),
-            });
-            first_line.pixel_chars.push(PixelChar::PlainText {
+            };
+            first_line[1] = PixelChar::PlainText {
                 display_char: 'i',
                 style: TuiStyle::default(),
-            });
+            };
         }
 
         let ansi = buffer.render_to_ansi();
-
         // Should contain 'H' and 'i'
         assert!(ansi.contains(&b'H'));
         assert!(ansi.contains(&b'i'));
@@ -162,29 +160,22 @@ mod tests {
     fn test_render_to_ansi_multi_line() {
         let mut buffer = OfsBufVT100::new_empty(height(2) + width(3));
 
-        // Populate two lines
-        if buffer.buffer.len() >= 2 {
-            // First line
-            if let Some(first_line) = buffer.buffer.get_mut(0) {
-                first_line.pixel_chars.clear();
-                first_line.pixel_chars.push(PixelChar::PlainText {
+        if buffer.ofs_buf.get_height().as_usize() >= 2 {
+            if let Some(first_line) = buffer.ofs_buf.get_row_mut(0) {
+                first_line[0] = PixelChar::PlainText {
                     display_char: 'A',
                     style: TuiStyle::default(),
-                });
+                };
             }
-
-            // Second line
-            if let Some(second_line) = buffer.buffer.get_mut(1) {
-                second_line.pixel_chars.clear();
-                second_line.pixel_chars.push(PixelChar::PlainText {
+            if let Some(second_line) = buffer.ofs_buf.get_row_mut(1) {
+                second_line[0] = PixelChar::PlainText {
                     display_char: 'B',
                     style: TuiStyle::default(),
-                });
+                };
             }
         }
 
         let ansi = buffer.render_to_ansi();
-
         // Should contain both 'A' and 'B'
         assert!(ansi.contains(&b'A'));
         assert!(ansi.contains(&b'B'));
@@ -198,21 +189,19 @@ mod tests {
     fn test_render_to_ansi_with_spacers() {
         let mut buffer = OfsBufVT100::new_empty(height(1) + width(5));
 
-        if let Some(first_line) = buffer.buffer.first_mut() {
-            first_line.pixel_chars.clear();
-            first_line.pixel_chars.push(PixelChar::PlainText {
+        if let Some(first_line) = buffer.ofs_buf.get_row_mut(0) {
+            first_line[0] = PixelChar::PlainText {
                 display_char: 'X',
                 style: TuiStyle::default(),
-            });
-            first_line.pixel_chars.push(PixelChar::Spacer);
-            first_line.pixel_chars.push(PixelChar::PlainText {
+            };
+            first_line[1] = PixelChar::Spacer;
+            first_line[2] = PixelChar::PlainText {
                 display_char: 'Y',
                 style: TuiStyle::default(),
-            });
+            };
         }
 
         let ansi = buffer.render_to_ansi();
-
         // Should contain X, space, and Y
         let expected = b"X Y";
         assert!(ansi.windows(3).any(|w| w == expected));
@@ -222,23 +211,21 @@ mod tests {
     fn test_render_to_ansi_with_void() {
         let mut buffer = OfsBufVT100::new_empty(height(1) + width(5));
 
-        if let Some(first_line) = buffer.buffer.first_mut() {
-            first_line.pixel_chars.clear();
-            first_line.pixel_chars.push(PixelChar::PlainText {
+        if let Some(first_line) = buffer.ofs_buf.get_row_mut(0) {
+            first_line[0] = PixelChar::PlainText {
                 display_char: 'Z',
                 style: TuiStyle::default(),
-            });
-            first_line.pixel_chars.push(PixelChar::Void);
-            first_line.pixel_chars.push(PixelChar::PlainText {
+            };
+            first_line[1] = PixelChar::Void;
+            first_line[2] = PixelChar::PlainText {
                 display_char: 'W',
                 style: TuiStyle::default(),
-            });
+            };
         }
 
         let ansi = buffer.render_to_ansi();
-
         // Should contain Z and W (Void should be skipped)
-        assert!(ansi.contains(&b'Z'));
-        assert!(ansi.contains(&b'W'));
+        let expected = b"ZW";
+        assert!(ansi.windows(2).any(|w| w == expected));
     }
 }

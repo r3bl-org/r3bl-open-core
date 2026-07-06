@@ -7,9 +7,9 @@ use r3bl_tui::{App, BoxedSafeApp, CommonResult, ComponentRegistry, ComponentRegi
                LengthOps, PerformPositioningAndSizing, RenderOpCommon, RenderOpIR,
                RenderOpIRVec, RenderPipeline, SPACER_GLYPH, Size, SpecialKey, Surface,
                SurfaceProps, SurfaceRender, TuiStylesheet, ZOrder, box_end, box_start,
-               col, glyphs, height, inline_string, new_style,
+               col, glyphs, height, inline_string, new_style, ok,
                render_component_in_current_box, render_tui_styled_texts_into,
-               req_size_pc, row, surface, throws, throws_with_return, tui_color,
+               req_size_pc, row, surface, throws_with_return, tui_color,
                tui_styled_text, tui_styled_texts, tui_stylesheet};
 
 // Constants for the ids.
@@ -77,7 +77,7 @@ mod app_main_impl_app_trait {
             if let Continuation::Stop =
                 handle_focus::handle_focus_switch(input_event.clone(), has_focus)
             {
-                return Ok(EventPropagation::ConsumedRender);
+                return ok!(EventPropagation::ConsumedRender);
             }
 
             // Route any unhandled event to the component that has focus.
@@ -128,51 +128,45 @@ mod app_main_impl_app_trait {
             global_data: &mut GlobalData<State, AppSignal>,
             component_registry_map: &mut ComponentRegistryMap<State, AppSignal>,
             has_focus: &mut HasFocus,
-        ) -> CommonResult<RenderPipeline> {
-            throws_with_return!({
-                let window_size = global_data.window_size;
+        ) -> CommonResult {
+            let window_size = global_data.window_size;
 
-                // Create a surface and then run the SurfaceRenderer.
-                // (ContainerSurfaceRender) on it.
-                let mut surface = {
-                    let mut it = surface!(stylesheet: stylesheet::create_stylesheet()?);
+            // Create a surface and then run the SurfaceRenderer.
+            // (ContainerSurfaceRender) on it.
+            let _surface = {
+                let mut it = surface!(stylesheet: stylesheet::create_stylesheet()?);
 
-                    it.surface_start(SurfaceProps {
-                        pos: col(0) + row(0),
-                        size: {
-                            let col_count = window_size.col_width;
-                            let row_count = window_size.row_height -
+                it.surface_start(SurfaceProps {
+                    pos: col(0) + row(0),
+                    size: {
+                        let col_count = window_size.col_width;
+                        let row_count = window_size.row_height -
                                 height(2) /* Bottom row for for status bar & HUD. */;
-                            col_count + row_count
-                        },
-                    })?;
+                        col_count + row_count
+                    },
+                })?;
 
-                    perform_layout::ContainerSurfaceRenderer { _app: self }
-                        .render_in_surface(
-                            &mut it,
-                            global_data,
-                            component_registry_map,
-                            has_focus,
-                        )?;
+                perform_layout::ContainerSurfaceRenderer { _app: self }
+                    .render_in_surface(
+                        &mut it,
+                        global_data,
+                        component_registry_map,
+                        has_focus,
+                    )?;
 
-                    it.surface_end()?;
+                it.surface_end()?;
 
-                    it
-                };
+                it
+            };
 
-                // Render HUD.
-                hud::create_hud(
-                    &mut surface.render_pipeline,
-                    window_size,
-                    global_data.get_hud_report_with_spinner(),
-                );
+            // Render HUD.
+            let hud_report = global_data.hud_data.get_report();
+            hud::create_hud(&mut global_data.pipeline, window_size, hud_report);
 
-                // Render status bar.
-                status_bar::render_status_bar(&mut surface.render_pipeline, window_size);
+            // Render status bar.
+            status_bar::render_status_bar(&mut global_data.pipeline, window_size);
 
-                // Return RenderOps pipeline (which will actually be painted elsewhere).
-                surface.render_pipeline
-            });
+            ok!()
         }
     }
 }
@@ -192,62 +186,61 @@ mod perform_layout {
             global_data: &mut GlobalData<State, AppSignal>,
             component_registry_map: &mut ComponentRegistryMap<State, AppSignal>,
             has_focus: &mut HasFocus,
-        ) -> CommonResult<()> {
+        ) -> CommonResult {
             // Layout and render the container.
-            throws!({
-                // Container - start.
-                let id_container = FlexBoxId::from(Id::Container);
+            // Container - start.
+            let id_container = FlexBoxId::from(Id::Container);
+            box_start!(
+                in: surface,
+                id: id_container,
+                dir: LayoutDirection::Horizontal,
+                requested_size_percent: req_size_pc!(width: 100, height: 100),
+                styles:                 [id_container],
+            );
+
+            // Col1.
+            let id_column_1 = FlexBoxId::from(Id::Column1);
+            {
                 box_start!(
-                    in: surface,
-                    id: id_container,
-                    dir: LayoutDirection::Horizontal,
-                    requested_size_percent: req_size_pc!(width: 100, height: 100),
-                    styles:                 [id_container],
+                  in:                     surface,
+                  id:                     id_column_1,
+                  dir:                    LayoutDirection::Vertical,
+                  requested_size_percent: req_size_pc!(width: 50, height: 100),
+                  styles:                 [id_column_1],
                 );
-
-                // Col1.
-                let id_column_1 = FlexBoxId::from(Id::Column1);
-                {
-                    box_start!(
-                      in:                     surface,
-                      id:                     id_column_1,
-                      dir:                    LayoutDirection::Vertical,
-                      requested_size_percent: req_size_pc!(width: 50, height: 100),
-                      styles:                 [id_column_1],
-                    );
-                    render_component_in_current_box!(
-                    in:                 surface,
-                    component_id:       id_column_1,
-                    from:               component_registry_map,
-                    global_data:        global_data,
-                    has_focus:          has_focus
-                    );
-                    box_end!(in: surface);
-                }
-
-                // Col2.
-                let id_column_2 = FlexBoxId::from(Id::Column2);
-                {
-                    box_start!(
-                      in:                     surface,
-                      id:                     id_column_2,
-                      dir:                    LayoutDirection::Vertical,
-                      requested_size_percent: req_size_pc!(width: 50, height: 100),
-                      styles:                 [id_column_2],
-                    );
-                    render_component_in_current_box!(
-                    in:                 surface,
-                    component_id:       id_column_2,
-                    from:               component_registry_map,
-                    global_data:        global_data,
-                    has_focus:          has_focus
-                    );
-                    box_end!(in: surface);
-                }
-
-                // Container - end.
+                render_component_in_current_box!(
+                in:                 surface,
+                component_id:       id_column_1,
+                from:               component_registry_map,
+                global_data:        global_data,
+                has_focus:          has_focus
+                );
                 box_end!(in: surface);
-            });
+            }
+
+            // Col2.
+            let id_column_2 = FlexBoxId::from(Id::Column2);
+            {
+                box_start!(
+                  in:                     surface,
+                  id:                     id_column_2,
+                  dir:                    LayoutDirection::Vertical,
+                  requested_size_percent: req_size_pc!(width: 50, height: 100),
+                  styles:                 [id_column_2],
+                );
+                render_component_in_current_box!(
+                in:                 surface,
+                component_id:       id_column_2,
+                from:               component_registry_map,
+                global_data:        global_data,
+                has_focus:          has_focus
+                );
+                box_end!(in: surface);
+            }
+
+            // Container - end.
+            box_end!(in: surface);
+            ok!()
         }
     }
 }

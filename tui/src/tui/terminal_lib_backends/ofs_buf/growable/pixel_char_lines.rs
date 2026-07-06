@@ -8,8 +8,7 @@
 //! [`PixelCharLine`]: crate::PixelCharLine
 //! [`PixelCharLines`]: crate::PixelCharLines
 
-use super::PixelCharLine;
-use crate::{GetMemSize, InlineVec, Size, get_mem_size};
+use crate::{GetMemSize, InlineVec, PixelCharLine, Size, get_mem_size};
 use smallvec::smallvec;
 use std::ops::{Deref, DerefMut};
 

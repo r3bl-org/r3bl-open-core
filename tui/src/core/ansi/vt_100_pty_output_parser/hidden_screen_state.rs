@@ -1,6 +1,6 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{GetMemSize, MemorySize, PixelCharLines, Pos, Size};
+use crate::{GetMemSize, MemorySize, Flat2DArray, PixelChar, Pos, Size};
 
 /// Internal offscreen buffer state for the alternate screen.
 ///
@@ -60,7 +60,7 @@ pub struct HiddenScreenState {
     /// The secondary buffer grid representing the alternate screen. Always allocated at
     /// buffer creation time to avoid having to use [`Option`] which adds needless
     /// complexity for a very small cost in terms of memory.
-    pub hidden_buffer: PixelCharLines,
+    pub hidden_buffer: Flat2DArray<PixelChar>,
 
     /// Saved cursor position for the hidden buffer.
     pub hidden_cursor_pos: Pos,
@@ -73,7 +73,7 @@ impl HiddenScreenState {
     #[must_use]
     pub fn new_empty(arg_window_size: impl Into<Size>) -> Self {
         let window_size = arg_window_size.into();
-        let hidden_buffer = PixelCharLines::new_empty(window_size);
+        let hidden_buffer = Flat2DArray::new_empty(window_size, PixelChar::Spacer); // window_size);
 
         let cached_memory_size = {
             let primary_buffer_mem = hidden_buffer.get_mem_size();
@@ -112,7 +112,7 @@ mod tests {
         // 2. Update this exact byte-size assertion.
         #[cfg(target_pointer_width = "64")]
         {
-            assert_eq!(size_of::<HiddenScreenState>(), 416);
+            assert_eq!(std::mem::size_of::<HiddenScreenState>(), 48);
         }
     }
 

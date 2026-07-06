@@ -11,7 +11,7 @@
 //! [`SGR`]: crate::SgrCode
 
 use super::super::test_fixtures_vt_100_ansi_conformance::*;
-use crate::{ANSIBasicColor, AutoWrapMode, EraseDisplayMode, SgrCode, col,
+use crate::{CharacterSet, PixelChar, ANSIBasicColor, AutoWrapMode, EraseDisplayMode, SgrCode, col,
             core::ansi::vt_100_pty_output_parser::{CsiSequence, PrivateModeType},
             row, term_col, term_row};
 
@@ -23,7 +23,7 @@ pub mod cursor_save_restore_with_attributes {
 
     #[test]
     fn test_cursor_save_restore_preserves_position_only() {
-        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
 
         // Move cursor to specific position
         let move_sequence = format!(
@@ -70,7 +70,7 @@ pub mod cursor_save_restore_with_attributes {
         let _result = ofs_buf_vt_100.apply_ansi_bytes(restore_sequence);
 
         // Position should be restored
-        assert_eq!(ofs_buf_vt_100.cursor_pos, row(2) + col(4)); // 0-based
+        assert_eq!(ofs_buf_vt_100.get_cursor_pos(), row(2) + col(4)); // 0-based
 
         // Attributes should remain as they were changed (not restored)
         // Current style should be green foreground from the change above
@@ -80,7 +80,7 @@ pub mod cursor_save_restore_with_attributes {
 
     #[test]
     fn test_cursor_save_restore_multiple_times() {
-        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
 
         // First save at origin
         let save1_sequence = format!("{}", CsiSequence::SaveCursor);
@@ -114,12 +114,12 @@ pub mod cursor_save_restore_with_attributes {
         let restore_sequence = format!("{}", CsiSequence::RestoreCursor);
         let _result = ofs_buf_vt_100.apply_ansi_bytes(restore_sequence);
 
-        assert_eq!(ofs_buf_vt_100.cursor_pos, row(1) + col(2)); // 0-based position 1
+        assert_eq!(ofs_buf_vt_100.get_cursor_pos(), row(1) + col(2)); // 0-based position 1
     }
 
     #[test]
     fn test_cursor_save_restore_with_styling_operations() {
-        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
 
         // Position cursor and set initial style
         let move_sequence = format!(
@@ -156,14 +156,14 @@ pub mod cursor_save_restore_with_attributes {
         let _result = ofs_buf_vt_100.apply_ansi_bytes(restore_sequence);
 
         // Verify cursor position restored
-        assert_eq!(ofs_buf_vt_100.cursor_pos, row(1) + col(3)); // 0-based
+        assert_eq!(ofs_buf_vt_100.get_cursor_pos(), row(1) + col(3)); // 0-based
 
         // Write text to verify current attributes are maintained
         let _result = ofs_buf_vt_100.apply_ansi_bytes("Test");
 
         // Should be written with the complex styling (red on yellow, underlined)
-        let char_at_restore_pos = &ofs_buf_vt_100.buffer[1][3];
-        if let crate::PixelChar::PlainText { style, .. } = char_at_restore_pos {
+        let char_at_restore_pos = &ofs_buf_vt_100.ofs_buf.get_row(1).unwrap()[3];
+        if let PixelChar::PlainText { style, .. } = char_at_restore_pos {
             assert_eq!(style.color_fg, Some(ANSIBasicColor::Red.into()));
             assert_eq!(style.color_bg, Some(ANSIBasicColor::Yellow.into()));
             assert!(style.attribs.underline.is_some());
@@ -179,7 +179,7 @@ pub mod character_set_state_management {
 
     #[test]
     fn test_character_set_persistence_across_cursor_operations() {
-        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
 
         // Switch to DEC Graphics character set (ESC ( 0)
         let graphics_mode = b"\x1b(0";
@@ -188,7 +188,7 @@ pub mod character_set_state_management {
         // Verify DEC Graphics mode is active
         assert_eq!(
             ofs_buf_vt_100.parser_global_state.character_set,
-            crate::CharacterSet::DECGraphics
+            CharacterSet::DECGraphics
         );
 
         // Perform cursor save/restore operations
@@ -206,15 +206,15 @@ pub mod character_set_state_management {
         // Character set should persist
         assert_eq!(
             ofs_buf_vt_100.parser_global_state.character_set,
-            crate::CharacterSet::DECGraphics
+            CharacterSet::DECGraphics
         );
 
         // Print a character that gets translated in DEC Graphics mode
         let _result = ofs_buf_vt_100.apply_ansi_bytes("q"); // Should become horizontal line
 
         // Verify the character was translated
-        let char_at_cursor = &ofs_buf_vt_100.buffer[0][0];
-        if let crate::PixelChar::PlainText { display_char, .. } = char_at_cursor {
+        let char_at_cursor = &ofs_buf_vt_100.ofs_buf.get_row(0).unwrap()[0];
+        if let PixelChar::PlainText { display_char, .. } = char_at_cursor {
             assert_eq!(*display_char, '─'); // DEC Graphics 'q' → horizontal line
         } else {
             panic!("Expected translated DEC Graphics character");
@@ -223,12 +223,12 @@ pub mod character_set_state_management {
 
     #[test]
     fn test_character_set_switching_with_mode_changes() {
-        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
 
         // Start in ASCII mode (default)
         assert_eq!(
             ofs_buf_vt_100.parser_global_state.character_set,
-            crate::CharacterSet::Ascii
+            CharacterSet::Ascii
         );
 
         // Switch to DEC Graphics and disable auto-wrap
@@ -244,7 +244,7 @@ pub mod character_set_state_management {
         // Both states should be active
         assert_eq!(
             ofs_buf_vt_100.parser_global_state.character_set,
-            crate::CharacterSet::DECGraphics
+            CharacterSet::DECGraphics
         );
         assert_eq!(
             ofs_buf_vt_100.parser_global_state.auto_wrap_mode,
@@ -267,7 +267,7 @@ pub mod character_set_state_management {
         );
         assert_eq!(
             ofs_buf_vt_100.parser_global_state.character_set,
-            crate::CharacterSet::DECGraphics
+            CharacterSet::DECGraphics
         );
 
         // Switch back to ASCII
@@ -276,7 +276,7 @@ pub mod character_set_state_management {
 
         assert_eq!(
             ofs_buf_vt_100.parser_global_state.character_set,
-            crate::CharacterSet::Ascii
+            CharacterSet::Ascii
         );
     }
 }
@@ -287,7 +287,7 @@ pub mod scroll_region_state_interactions {
 
     #[test]
     fn test_cursor_save_restore_with_scroll_regions() {
-        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
 
         // Set scroll region (rows 3-7)
         let margins_sequence = format!(
@@ -338,7 +338,7 @@ pub mod scroll_region_state_interactions {
         let _result = ofs_buf_vt_100.apply_ansi_bytes(restore_sequence);
 
         // Should restore to original absolute position (5,6)
-        assert_eq!(ofs_buf_vt_100.cursor_pos, row(4) + col(5)); // 0-based
+        assert_eq!(ofs_buf_vt_100.get_cursor_pos(), row(4) + col(5)); // 0-based
 
         // Verify scroll region changed
         assert_eq!(
@@ -353,7 +353,7 @@ pub mod scroll_region_state_interactions {
 
     #[test]
     fn test_scroll_region_reset_with_saved_cursor() {
-        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
 
         // Set initial scroll region and position cursor
         let setup_sequence = format!(
@@ -402,7 +402,7 @@ pub mod scroll_region_state_interactions {
         let _result = ofs_buf_vt_100.apply_ansi_bytes(restore_sequence);
 
         // Should restore to saved position (6,3)
-        assert_eq!(ofs_buf_vt_100.cursor_pos, row(5) + col(2)); // 0-based
+        assert_eq!(ofs_buf_vt_100.get_cursor_pos(), row(5) + col(2)); // 0-based
     }
 }
 
@@ -413,7 +413,7 @@ pub mod complex_state_combinations {
 
     #[test]
     fn test_full_state_combination() {
-        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
 
         // Set up complex state: scroll region + DEC graphics + auto-wrap off + styling
         let complex_setup = format!(
@@ -463,7 +463,7 @@ pub mod complex_state_combinations {
         let _result = ofs_buf_vt_100.apply_ansi_bytes(restore_sequence);
 
         // Verify cursor position restored
-        assert_eq!(ofs_buf_vt_100.cursor_pos, row(4) + col(3)); // 0-based
+        assert_eq!(ofs_buf_vt_100.get_cursor_pos(), row(4) + col(3)); // 0-based
 
         // Verify other states changed (not restored)
         assert_eq!(
@@ -472,7 +472,7 @@ pub mod complex_state_combinations {
         );
         assert_eq!(
             ofs_buf_vt_100.parser_global_state.character_set,
-            crate::CharacterSet::Ascii
+            CharacterSet::Ascii
         );
         assert_eq!(
             ofs_buf_vt_100.parser_global_state.auto_wrap_mode,
@@ -482,7 +482,7 @@ pub mod complex_state_combinations {
 
     #[test]
     fn test_state_persistence_across_buffer_operations() {
-        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
 
         // Set up initial state
         let initial_state = format!(
@@ -512,7 +512,7 @@ pub mod complex_state_combinations {
         // States should persist through buffer operations
         assert_eq!(
             ofs_buf_vt_100.parser_global_state.character_set,
-            crate::CharacterSet::DECGraphics
+            CharacterSet::DECGraphics
         );
         assert_eq!(
             ofs_buf_vt_100.parser_global_state.auto_wrap_mode,

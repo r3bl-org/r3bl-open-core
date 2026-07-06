@@ -128,7 +128,7 @@ mod tests {
                 tui_stylesheet};
 
     #[test]
-    fn test_create_styled_text_with_dsl() -> CommonResult<()> {
+    fn test_create_styled_text_with_dsl() -> CommonResult {
         throws!({
             let st_vec = helpers::create_styled_text()?;
             assert_eq2!(st_vec.is_empty(), false);

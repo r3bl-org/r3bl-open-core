@@ -9,7 +9,7 @@
 //! **[`apply_ansi_bytes`]** is the main entry point for processing [`ANSI`] sequences
 //! from [`PTY`] output. This method is called by the [`PTY`] multiplexer after receiving
 //! bytes from a child process (like vim, bash, etc.) and updates the
-//! [`OffscreenBuffer`]'s display content, cursor position, and text styles accordingly.
+//! [`OfsBuf`]'s display content, cursor position, and text styles accordingly.
 //!
 //! ```rust
 //! use r3bl_tui::{*, height, width};
@@ -126,7 +126,7 @@
 //! [`CSI`]: crate::CsiSequence
 //! [`DSR`]: crate::DsrSequence
 //! [`ESC`]: crate::EscSequence
-//! [`OffscreenBuffer`]: crate::OffscreenBuffer
+//! [`OfsBuf`]: crate::OfsBuf
 //! [`OSC`]: crate::osc_codes::OscSequence
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
@@ -239,15 +239,15 @@ impl OfsBufVT100 {
     ///   [`parser_global_state`] field for persistence.
     /// - Cursor position is read from and written directly to the buffer's [`cursor_pos`]
     ///   field during processing - no copying or synchronization is needed.
-    /// - All persistent state lives in the [`OffscreenBuffer`], accessed directly by the
+    /// - All persistent state lives in the [`OfsBuf`], accessed directly by the
     ///   performer through mutable references.
     /// - The [`VTE Parser`] (which must maintain state across reads for split sequences)
     ///   is kept separately in the [`Process`] struct.
     ///
     /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-    /// [`cursor_pos`]: crate::OffscreenBuffer::cursor_pos
+    /// [`cursor_pos`]: crate::OfsBuf::get_cursor_pos
     /// [`DSR response events`]: crate::PtyResponseEvent
-    /// [`OffscreenBuffer`]: crate::OffscreenBuffer
+    /// [`OfsBuf`]: crate::OfsBuf
     /// [`OSC events`]: crate::core::osc::OscEvent
     /// [`parser_global_state`]: OfsBufVT100::parser_global_state
     /// [`PixelChar`]: crate::PixelChar
@@ -290,7 +290,7 @@ mod tests {
         ANSIBasicColor, CARRIAGE_RETURN, CsiSequence, DSR_CURSOR_POSITION_REQUEST,
         DSR_STATUS_REQUEST, OscEvent, PtyResponseEvent::{self, TerminalStatus},
         SgrCode, col,
-        offscreen_buffer::test_fixtures_ofs_buf::{
+        ofs_buf::test_fixtures_ofs_buf::{
             assert_empty_at, assert_plain_char_at, assert_plain_text_at,
             assert_styled_char_at,
         },
@@ -298,7 +298,7 @@ mod tests {
         vt_100_pty_output_conformance_tests::{
             nz,
             conformance_data::cursor_sequences::move_left,
-            test_fixtures_vt_100_ansi_conformance::create_test_offscreen_buffer_10r_by_10c,
+            test_fixtures_vt_100_ansi_conformance::create_test_ofs_buf_10r_by_10c,
             test_sequence_generators::csi_builders::csi_seq_cursor_pos,
         }
     };
@@ -306,11 +306,11 @@ mod tests {
     #[test]
     #[allow(clippy::items_after_statements)]
     fn test_public_api_plain_text() {
-        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
 
         const TEXT: &str = "Hello";
 
-        // Note: OffscreenBuffer uses 0-based index, and terminal (CSI, ESC seq, etc) uses
+        // Note: OfsBuf uses 0-based index, and terminal (CSI, ESC seq, etc) uses
         // 1-based index.
         //
         // Buffer layout with plain text:
@@ -333,7 +333,7 @@ mod tests {
 
         // Verify cursor position is updated correctly.
         assert_eq!(
-            ofs_buf_vt_100.cursor_pos,
+            ofs_buf_vt_100.get_cursor_pos(),
             row(0) + col(TEXT.len()),
             "cursor should be at end of text"
         );
@@ -342,11 +342,11 @@ mod tests {
     #[test]
     #[allow(clippy::items_after_statements)]
     fn test_public_api_with_colors() {
-        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
 
         const TEXT: &str = "Red Text";
 
-        // Note: OffscreenBuffer uses 0-based index, and terminal (CSI, ESC seq, etc) uses
+        // Note: OfsBuf uses 0-based index, and terminal (CSI, ESC seq, etc) uses
         // 1-based index.
         //
         // Buffer layout with colored text:
@@ -388,7 +388,7 @@ mod tests {
 
         // Verify cursor position is updated correctly.
         assert_eq!(
-            ofs_buf_vt_100.cursor_pos,
+            ofs_buf_vt_100.get_cursor_pos(),
             row(0) + col(TEXT.len()),
             "cursor should be at end of text"
         );
@@ -396,9 +396,9 @@ mod tests {
 
     #[test]
     fn test_public_api_cursor_movement() {
-        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
 
-        // Note: OffscreenBuffer uses 0-based index, and terminal (CSI, ESC seq, etc) uses
+        // Note: OfsBuf uses 0-based index, and terminal (CSI, ESC seq, etc) uses
         // 1-based index.
         //
         // Buffer layout after cursor movements:
@@ -430,7 +430,7 @@ mod tests {
 
         // Verify cursor position after all operations.
         assert_eq!(
-            ofs_buf_vt_100.cursor_pos,
+            ofs_buf_vt_100.get_cursor_pos(),
             row(0) + col(5),
             "cursor should be at (0,5) after writing 'D'"
         );
@@ -444,7 +444,7 @@ mod tests {
 
     #[test]
     fn test_osc_events_are_drained_not_accumulated() {
-        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
 
         // First call with OSC sequence (set title).
         let osc_title = OscSequence::SetTitleAndIcon("First Title".into()).to_string();
@@ -495,7 +495,7 @@ mod tests {
 
     #[test]
     fn test_dsr_events_are_drained_in_public_api() {
-        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
 
         // First DSR request (status report).
         let dsr_status = DSR_STATUS_REQUEST.to_string();
@@ -548,7 +548,7 @@ mod tests {
 
     #[test]
     fn test_mixed_osc_and_dsr_events() {
-        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
 
         // Send a mix of OSC and DSR sequences in one call.
         let mixed_sequence = format!(
@@ -591,7 +591,7 @@ mod tests {
 
     #[test]
     fn test_multiple_osc_events_in_one_call() {
-        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
 
         // Send multiple OSC sequences in one call.
         let multi_osc = format!(
@@ -621,7 +621,7 @@ mod tests {
         assert_eq!(dsr_responses2.len(), 0, "DSR responses should be drained");
     }
 
-    /// Note: [`OffscreenBuffer`] uses 0-based index, and terminal ([`CSI`], [`ESC`] seq,
+    /// Note: [`OfsBuf`] uses 0-based index, and terminal ([`CSI`], [`ESC`] seq,
     /// etc) uses 1-based index.
     ///
     /// Buffer layout after cursor position changes:
@@ -646,10 +646,10 @@ mod tests {
     ///
     /// [`CSI`]: crate::CsiSequence
     /// [`ESC`]: crate::EscSequence
-    /// [`OffscreenBuffer`]: crate::OffscreenBuffer
+    /// [`OfsBuf`]: crate::OfsBuf
     #[test]
     fn test_public_api_csi_position_change() {
-        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
 
         let (osc_events, dsr_responses) = ofs_buf_vt_100.apply_ansi_bytes(format!(
             "Start{move_to_r2_c3}Mid{move_to_r1_c1}Home{move_to_r8_c8}End",
@@ -668,7 +668,7 @@ mod tests {
 
         // Cursor clamps at (7,9) because of deferred wrap.
         assert_eq!(
-            ofs_buf_vt_100.cursor_pos,
+            ofs_buf_vt_100.get_cursor_pos(),
             row(7) + col(9),
             "cursor should be clamped at (7,9) after 'End'"
         );
@@ -681,11 +681,11 @@ mod tests {
 
     #[test]
     fn test_public_api_csi_clears_pending_wrap() {
-        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
 
         // 1. Fill the line up to right margin -> creates pending wrap.
         let _unused = ofs_buf_vt_100.apply_ansi_bytes("0123456789");
-        assert_eq!(ofs_buf_vt_100.cursor_pos, row(0) + col(9));
+        assert_eq!(ofs_buf_vt_100.get_cursor_pos(), row(0) + col(9));
         assert_eq!(
             ofs_buf_vt_100.parser_global_state.pending_wrap,
             crate::PendingWrap::Yes
@@ -700,7 +700,7 @@ mod tests {
             ofs_buf_vt_100.parser_global_state.pending_wrap,
             crate::PendingWrap::No
         );
-        assert_eq!(ofs_buf_vt_100.cursor_pos, row(0) + col(8));
+        assert_eq!(ofs_buf_vt_100.get_cursor_pos(), row(0) + col(8));
 
         // 4. Print 'A'. It should overwrite '8' and not wrap.
         let _unused = ofs_buf_vt_100.apply_ansi_bytes("A");
@@ -713,11 +713,11 @@ mod tests {
 
     #[test]
     fn test_public_api_control_char_clears_pending_wrap() {
-        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
 
         // 1. Fill the line up to right margin -> creates pending wrap.
         let _unused = ofs_buf_vt_100.apply_ansi_bytes("0123456789");
-        assert_eq!(ofs_buf_vt_100.cursor_pos, row(0) + col(9));
+        assert_eq!(ofs_buf_vt_100.get_cursor_pos(), row(0) + col(9));
         assert_eq!(
             ofs_buf_vt_100.parser_global_state.pending_wrap,
             crate::PendingWrap::Yes
@@ -731,12 +731,12 @@ mod tests {
             ofs_buf_vt_100.parser_global_state.pending_wrap,
             crate::PendingWrap::No
         );
-        assert_eq!(ofs_buf_vt_100.cursor_pos, row(0) + col(0));
+        assert_eq!(ofs_buf_vt_100.get_cursor_pos(), row(0) + col(0));
     }
 
     #[test]
     fn test_da1_query_parsing() {
-        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
 
         // CSI c
         let (_, responses) = ofs_buf_vt_100

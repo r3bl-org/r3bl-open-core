@@ -167,8 +167,7 @@ pub const fn term_col(value: NonZeroU16) -> TermCol {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::vt_100_pty_output_conformance_tests::nz;
-    use crate::term_row;
+    use crate::{term_row, vt_100_pty_output_conformance_tests::nz};
     use std::hash::{DefaultHasher, Hash, Hasher};
 
     #[test]

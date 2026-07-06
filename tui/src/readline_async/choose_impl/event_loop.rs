@@ -108,7 +108,7 @@ pub fn enter_event_loop_sync<S: CalculateResizeHint>(
 fn run_before_event_loop<S: CalculateResizeHint>(
     state: &mut S,
     function_component: &mut impl FunctionComponent<S>,
-) -> CommonResult<()> {
+) -> CommonResult {
     execute_commands!(function_component.get_output_device(), Hide);
     crate::enable_raw_mode()?;
 
@@ -120,7 +120,7 @@ fn run_before_event_loop<S: CalculateResizeHint>(
 
 fn run_after_event_loop<S: CalculateResizeHint>(
     function_component: &mut impl FunctionComponent<S>,
-) -> CommonResult<()> {
+) -> CommonResult {
     execute_commands!(function_component.get_output_device(), Show);
     crate::disable_raw_mode()?;
     ok!()

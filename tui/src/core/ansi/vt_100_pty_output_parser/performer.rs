@@ -6,7 +6,7 @@
 //!
 //! This parser is based on the [`vte`] crate's [`Perform`] trait, and is [`VT-100` spec]
 //! compliant. It provides support to parse [`ANSI`] escape sequences and update an
-//! [`OffscreenBuffer`] accordingly.
+//! [`OfsBuf`] accordingly.
 //!
 //! # [`PTY`] Output Processing Pipeline
 //!
@@ -21,7 +21,7 @@
 //!         ↓
 //!     Perform trait methods [THIS MODULE]
 //!         ↓
-//!     Update OffscreenBuffer state
+//!     Update OfsBuf state
 //! ```
 //!
 //! # Sequence Types & Dispatch Routing
@@ -119,29 +119,29 @@
 //! # Design Architecture
 //!
 //! The [`AnsiToOfsBufPerformer`] is deliberately designed as a **thin shim** that
-//! delegates all operations to dedicated methods in [`OffscreenBuffer`]. This design
+//! delegates all operations to dedicated methods in [`OfsBuf`]. This design
 //! pattern is consistently implemented throughout the module:
 //!
 //! - The performer contains minimal logic and acts purely as a translation layer
 //! - [`ANSI`] sequence parameters are parsed and translated into appropriate
-//!   [`OffscreenBuffer`] method calls
+//!   [`OfsBuf`] method calls
 //! - All actual terminal buffer operations (cursor movement, scrolling, text rendering)
-//!   are implemented in [`OffscreenBuffer`] methods
+//!   are implemented in [`OfsBuf`] methods
 //! - This separation ensures clear boundaries between [`ANSI`] protocol handling and
 //!   buffer management
 //!
 //! This thin shim pattern provides clean separation of concerns: the performer handles
-//! [`ANSI`]/[`VT-100`] protocol specifics while [`OffscreenBuffer`] handles terminal
+//! [`ANSI`]/[`VT-100`] protocol specifics while [`OfsBuf`] handles terminal
 //! buffer semantics.
 //!
 //! # Implementation Architecture - 1:1 File Mapping
 //!
 //! The parser operations follow a **perfect 1:1 mapping** between the parser layer (this
-//! module) and the implementation layer in [`OffscreenBuffer`]. This provides clear
+//! module) and the implementation layer in [`OfsBuf`]. This provides clear
 //! organization and predictable code navigation:
 //!
 //! ```text
-//! vt_100_pty_output_parser/ops/             offscreen_buffer/ofs_buf_vt_100/
+//! vt_100_pty_output_parser/ops/             ofs_buf/ofs_buf_vt_100/
 //! ├── vt_100_shim_char_ops         →         ├── impl_char_ops
 //! ├── vt_100_shim_control_ops      →         ├── impl_control_ops
 //! ├── vt_100_shim_cursor_ops       →         ├── impl_cursor_ops
@@ -158,11 +158,11 @@
 //! Each operations file contains **thin shim functions** that:
 //! 1. Parse [`ANSI`] sequence parameters, and act as the protocol boundary layer (using
 //!    [`vte::Params`] and [`ParamsExt`])
-//! 2. Delegate to the corresponding [`OffscreenBuffer`] implementation (which are not
+//! 2. Delegate to the corresponding [`OfsBuf`] implementation (which are not
 //!    aware of [`vte::Params`])
 //! 3. Provide clear documentation about the [`ANSI`] specification
 //!
-//! The [`OffscreenBuffer`] implementation files contain the **actual terminal logic**:
+//! The [`OfsBuf`] implementation files contain the **actual terminal logic**:
 //! 1. Full [`VT-100`]-compliant behavior implementation
 //! 2. Comprehensive unit tests
 //! 3. Detailed examples and edge case handling
@@ -174,14 +174,14 @@
 //!
 //! This module uses a delegation-based testing approach that differs from the codebase
 //! norm:
-//! - The operations in this module are thin wrappers that delegate to [`OffscreenBuffer`]
+//! - The operations in this module are thin wrappers that delegate to [`OfsBuf`]
 //!   methods
-//! - [`OffscreenBuffer`] methods have comprehensive unit tests (following codebase
+//! - [`OfsBuf`] methods have comprehensive unit tests (following codebase
 //!   convention)
 //! - [`VT-100`] conformance tests in the conformance tests verify end-to-end behavior
 //!
 //! This approach avoids redundant testing while ensuring both unit-level correctness (in
-//! [`OffscreenBuffer`]) and system-level behavior (in conformance tests).
+//! [`OfsBuf`]) and system-level behavior (in conformance tests).
 //!
 //! For architecture details for more details on the architecture and testing strategy.
 //!
@@ -196,7 +196,7 @@
 //! [`GNOME VTE`]: https://gitlab.gnome.org/GNOME/vte
 //! [`hook()`]: AnsiToOfsBufPerformer::hook
 //! [`kitty`]: https://sw.kovidgoyal.net/kitty/
-//! [`OffscreenBuffer`]: crate::OffscreenBuffer
+//! [`OfsBuf`]: crate::OfsBuf
 //! [`osc_dispatch()`]: AnsiToOfsBufPerformer::osc_dispatch
 //! [`OSC`]: crate::osc_codes::OscSequence
 //! [`ParamsExt`]: crate::ParamsExt
@@ -376,7 +376,7 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
     ///       - line_ops:: for lines (L,M)
     ///       - char_ops:: for chars (@,P,X)
     ///         ↓
-    ///     Update OffscreenBuffer state
+    ///     Update OfsBuf state
     /// ```
     ///
     /// ## [`CSI`] Dispatch Flow
@@ -458,15 +458,15 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
         #[allow(clippy::match_same_arms)]
         match dispatch_char {
             // Cursor movement operations.
-            CUU_CURSOR_UP => vt_100_shim_cursor_ops::cursor_up(self, params),
+            CUU_CURSOR_UP => vt_100_shim_cursor_ops::move_cursor_up(self, params),
             CUD_CURSOR_DOWN => {
-                vt_100_shim_cursor_ops::cursor_down(self, params);
+                vt_100_shim_cursor_ops::move_cursor_down(self, params);
             }
             CUF_CURSOR_FORWARD => {
-                vt_100_shim_cursor_ops::cursor_forward(self, params);
+                vt_100_shim_cursor_ops::move_cursor_right(self, params);
             }
             CUB_CURSOR_BACKWARD => {
-                vt_100_shim_cursor_ops::cursor_backward(self, params);
+                vt_100_shim_cursor_ops::move_cursor_left(self, params);
             }
             CUP_CURSOR_POSITION | HVP_CURSOR_POSITION => {
                 vt_100_shim_cursor_ops::cursor_position(self, params);
@@ -539,10 +539,10 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
 
             // Display control operations.
             ED_ERASE_DISPLAY => {
-                vt_100_shim_clear_ops::erase_in_display(self, params);
+                vt_100_shim_clear_ops::clear_canvas(self, params);
             }
             EL_ERASE_LINE => {
-                vt_100_shim_clear_ops::erase_in_line(self, params);
+                vt_100_shim_clear_ops::clear_line(self, params);
             }
 
             // Other unimplemented CSI sequences.
@@ -826,7 +826,7 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
     ///         ↓
     ///     esc_dispatch() [THIS METHOD]
     ///         ↓
-    ///     Updates OffscreenBuffer state
+    ///     Updates OfsBuf state
     ///         ↓
     ///     OutputRenderer (paints final result)
     /// ```
@@ -835,9 +835,9 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
     ///
     /// ### Cursor Save/Restore (Requires Persistent State)
     /// - **[`ESC`] 7 ([`DECSC`])**: Save cursor position to
-    ///   `ofs_buf_vt_100.cursor_pos_for_esc_save_and_restore`
+    ///   `ofs_buf_vt_100.get_cursor_pos()_for_esc_save_and_restore`
     /// - **[`ESC`] 8 ([`DECRC`])**: Restore cursor from
-    ///   `ofs_buf_vt_100.cursor_pos_for_esc_save_and_restore`
+    ///   `ofs_buf_vt_100.get_cursor_pos()_for_esc_save_and_restore`
     ///
     /// ### Character Set Selection (Requires Persistent State)
     /// - **`ESC ( B`**: Select [`ASCII`] character set (normal text)
@@ -854,14 +854,14 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
     ///
     /// ```text
     /// Session 1: vim at position (5,10) sends ESC 7
-    ///   → AnsiToOfsBufPerformer::new() with ofs_buf_vt_100.cursor_pos = (5,10)
+    ///   → AnsiToOfsBufPerformer::new() with ofs_buf_vt_100.get_cursor_pos() = (5,10)
     ///   → esc_dispatch() handles ESC 7
     ///   → Saves ofs_buf_vt_100.parser_global_state.cursor_pos_for_esc_save_and_restore = Some((5,10))
     ///
     /// Session 2: vim moves cursor to (20,30), then sends ESC 8
-    ///   → AnsiToOfsBufPerformer::new() with ofs_buf_vt_100.cursor_pos = (20,30)
+    ///   → AnsiToOfsBufPerformer::new() with ofs_buf_vt_100.get_cursor_pos() = (20,30)
     ///   → esc_dispatch() handles ESC 8
-    ///   → Restores ofs_buf_vt_100.cursor_pos = cursor_pos_for_esc_save_and_restore.unwrap_or() // (5,10)
+    ///   → Restores ofs_buf_vt_100.get_cursor_pos() = cursor_pos_for_esc_save_and_restore.unwrap_or() // (5,10)
     /// ```
     ///
     /// ## Malformed Sequence Handling

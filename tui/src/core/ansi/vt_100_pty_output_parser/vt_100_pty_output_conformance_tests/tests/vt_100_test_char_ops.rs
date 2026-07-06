@@ -1,5 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+// cspell:words EFGHIJ ABCEFGHIJ FGHIJ ABFGHIJ CDEFG DEFGHI
+
 //! Tests for character insertion, deletion, and erasure operations (ICH/DCH/ECH).
 //!
 //! Tests the complete pipeline from [`ANSI`] sequences through the shim to implementation
@@ -19,15 +21,15 @@
 //! [parser module docs]: super::super
 
 use super::super::test_fixtures_vt_100_ansi_conformance::*;
-use crate::{CsiCount, TermCol, TuiStyle,
+use crate::{CsiCount, OfsBufVT100, PixelChar, TermCol, TuiStyle,
             core::ansi::vt_100_pty_output_parser::CsiSequence};
 
 /// Helper to create a buffer with "ABCDEFGHIJ" in the first row.
-fn create_alphabet_buffer() -> crate::OfsBufVT100 {
-    let mut buf = create_test_offscreen_buffer_10r_by_10c();
+fn create_alphabet_buffer() -> OfsBufVT100 {
+    let mut buf = create_test_ofs_buf_10r_by_10c();
     let alphabet = "ABCDEFGHIJ";
     for (i, ch) in alphabet.chars().enumerate() {
-        buf.buffer[0][i] = crate::PixelChar::PlainText {
+        buf.ofs_buf.get_row_mut(0).unwrap()[i] = PixelChar::PlainText {
             display_char: ch,
             style: TuiStyle::default(),
         };

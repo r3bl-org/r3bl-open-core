@@ -19,14 +19,14 @@
 //! [parser module docs]: super::super
 
 use super::super::test_fixtures_vt_100_ansi_conformance::*;
-use crate::{EraseDisplayMode, EraseLineMode, OfsBufVT100, PixelChar, TuiStyle, col,
+use crate::{EraseDisplayMode, EraseLineMode, OfsBufVT100, PixelChar, TuiStyle, col, height, width, PixelCharLine,
             core::ansi::{constants::{CSI_START, ED_ERASE_DISPLAY, EL_ERASE_LINE},
                          vt_100_pty_output_parser::CsiSequence},
             row};
 
 /// Helper to create a fully filled 5x5 offscreen buffer with 'X' characters.
 fn create_filled_5r_by_5c_buffer() -> OfsBufVT100 {
-    let mut buf = OfsBufVT100::new_empty(crate::height(5) + crate::width(5));
+    let mut buf = OfsBufVT100::new_empty(height(5) + width(5));
     let style = TuiStyle::default();
     let char_x = PixelChar::PlainText {
         display_char: 'X',
@@ -34,7 +34,7 @@ fn create_filled_5r_by_5c_buffer() -> OfsBufVT100 {
     };
     for r in 0..5 {
         for c in 0..5 {
-            buf.buffer[r][c] = char_x;
+            buf.ofs_buf.get_row_mut(r).unwrap()[c] = char_x;
         }
     }
     buf
@@ -46,7 +46,7 @@ mod test_parameter_defaults {
     #[test]
     fn csi_j_defaults_to_mode_0() {
         let mut ofs_buf_vt_100 = create_filled_5r_by_5c_buffer();
-        ofs_buf_vt_100.cursor_pos = row(2) + col(2);
+        ofs_buf_vt_100.set_cursor_pos(row(2) + col(2));
 
         // Apply CSI J (no param)
         let csi_j_no_param = format!("{CSI_START}{ED_ERASE_DISPLAY}");
@@ -65,7 +65,7 @@ mod test_parameter_defaults {
     #[test]
     fn csi_k_defaults_to_mode_0() {
         let mut ofs_buf_vt_100 = create_filled_5r_by_5c_buffer();
-        ofs_buf_vt_100.cursor_pos = row(2) + col(2);
+        ofs_buf_vt_100.set_cursor_pos(row(2) + col(2));
 
         // Apply CSI K (no param)
         let csi_k_no_param = format!("{CSI_START}{EL_ERASE_LINE}");
@@ -87,7 +87,7 @@ mod test_erase_display {
     #[test]
     fn mode_0_from_cursor_to_end() {
         let mut ofs_buf_vt_100 = create_filled_5r_by_5c_buffer();
-        ofs_buf_vt_100.cursor_pos = row(1) + col(3);
+        ofs_buf_vt_100.set_cursor_pos(row(1) + col(3));
 
         // CSI 0 J
         let sequence =
@@ -104,7 +104,7 @@ mod test_erase_display {
     #[test]
     fn mode_1_from_start_to_cursor() {
         let mut ofs_buf_vt_100 = create_filled_5r_by_5c_buffer();
-        ofs_buf_vt_100.cursor_pos = row(2) + col(2);
+        ofs_buf_vt_100.set_cursor_pos(row(2) + col(2));
 
         // CSI 1 J
         let sequence =
@@ -121,7 +121,7 @@ mod test_erase_display {
     #[test]
     fn mode_2_entire_screen() {
         let mut ofs_buf_vt_100 = create_filled_5r_by_5c_buffer();
-        ofs_buf_vt_100.cursor_pos = row(2) + col(2);
+        ofs_buf_vt_100.set_cursor_pos(row(2) + col(2));
 
         // CSI 2 J
         let sequence =
@@ -138,10 +138,10 @@ mod test_erase_display {
     #[test]
     fn mode_3_entire_screen_and_scrollback() {
         let mut ofs_buf_vt_100 = create_filled_5r_by_5c_buffer();
-        ofs_buf_vt_100.cursor_pos = row(2) + col(2);
+        ofs_buf_vt_100.set_cursor_pos(row(2) + col(2));
 
         // Add some scrollback history
-        ofs_buf_vt_100.scrollback_buffer.push_and_enforce_limit(crate::PixelCharLine::new_empty(0));
+        ofs_buf_vt_100.scrollback_buffer.push_and_enforce_limit(PixelCharLine::new_empty(0));
         assert_eq!(ofs_buf_vt_100.scrollback_buffer.lines.len(), 1);
 
         // CSI 3 J
@@ -167,7 +167,7 @@ mod test_erase_line {
     #[test]
     fn mode_0_from_cursor_to_end() {
         let mut ofs_buf_vt_100 = create_filled_5r_by_5c_buffer();
-        ofs_buf_vt_100.cursor_pos = row(2) + col(1);
+        ofs_buf_vt_100.set_cursor_pos(row(2) + col(1));
 
         // CSI 0 K
         let sequence = CsiSequence::EraseLine(EraseLineMode::FromCursorToEnd).to_string();
@@ -180,7 +180,7 @@ mod test_erase_line {
     #[test]
     fn mode_1_from_start_to_cursor() {
         let mut ofs_buf_vt_100 = create_filled_5r_by_5c_buffer();
-        ofs_buf_vt_100.cursor_pos = row(2) + col(3);
+        ofs_buf_vt_100.set_cursor_pos(row(2) + col(3));
 
         // CSI 1 K
         let sequence =
@@ -194,7 +194,7 @@ mod test_erase_line {
     #[test]
     fn mode_2_entire_line() {
         let mut ofs_buf_vt_100 = create_filled_5r_by_5c_buffer();
-        ofs_buf_vt_100.cursor_pos = row(2) + col(2);
+        ofs_buf_vt_100.set_cursor_pos(row(2) + col(2));
 
         // CSI 2 K
         let sequence = CsiSequence::EraseLine(EraseLineMode::EntireLine).to_string();

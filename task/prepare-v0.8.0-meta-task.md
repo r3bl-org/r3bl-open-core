@@ -45,7 +45,10 @@ _Meta Task: Prepare v0.8.0 Release_
 - [x] [DECCKM Cursor Key Mode tracking & state refactor](https://github.com/r3bl-org/r3bl-open-core/pull/470)
 - [x] [Scrollback Buffer for PTY](done/pr-459-fix.md) -
       https://github.com/r3bl-org/r3bl-open-core/pull/459
-- [ ] [OfsBufVT100 Canvas and Viewport Refactor](task/ofsbuf_vt100_canvas_and_viewport.md)
+- [ ] OfsBufVT100 Canvas and Viewport Refactor
+    - [x] [OfsBuf backing store change to Flat2DArray](done/ofsbuf_flat2darray_backing_store.md)
+    - [x] [Script for YT Video on Flat2DArray and SIMD](done/yt_script_flat2darray_plan.md)
+    - [ ] [OfsBuf Growable, Canvas and Viewport](ofsbuf_trait_growable_impl.md)
 - [ ] **NEEDS RESEARCH & PLANNING** https://github.com/r3bl-org/r3bl-open-core/pull/472
 - [ ] [invert control and decouple UI in pty_mux](pty-mux-invert-control.md)
 - [ ] **NEEDS RESEARCH & PLANNING** https://github.com/r3bl-org/r3bl-open-core/pull/468
@@ -75,26 +78,28 @@ _Meta Task: Prepare v0.8.0 Release_
 
 # [TODO] Release Verification & Publication
 
+- [ ] [Mirror docs](mirror-3-ext-sites-to-docs-specs.md)
 - [ ] **Code Quality & Documentation**
-  - [ ] Run `./check.fish --full` to verify Linux builds, tests, clippy, and rustdoc
-        generation.
-  - [ ] Update `CHANGELOG.md` to comprehensively reflect this massive & breaking release
-        (e.g., PTY multiplexer, VT100 parser extraction, scrollback, timeout fixes).
+    - [ ] Run `./check.fish --full` to verify Linux builds, tests, clippy, and rustdoc
+          generation.
+    - [ ] Update `CHANGELOG.md` to comprehensively reflect this massive & breaking release
+          (e.g., PTY multiplexer, VT100 parser extraction, scrollback, timeout fixes).
 - [ ] **Cross-Platform Manual Verification**
-  - [ ] macOS: Run interactive PTY examples (e.g., `cargo run --example pty_mux_example`)
-        and verify mouse input, scrollback, and DA1 timeout fixes.
-  - [ ] Windows: Boot Windows VM/environment, verify compilation, and test interactive
-        TUI/PTY examples.
+    - [ ] macOS: Run interactive PTY examples (e.g.,
+          `cargo run --example pty_mux_example`) and verify mouse input, scrollback, and
+          DA1 timeout fixes.
+    - [ ] Windows: Boot Windows VM/environment, verify compilation, and test interactive
+          TUI/PTY examples.
 - [ ] **Publication Workflow (via `/release` skill)**
-  - [ ] `r3bl_tui`
-    - [ ] Bump version numbers to `0.8.0` in `Cargo.toml` (workspace and/or crates).
-    - [ ] Run `cargo publish --dry-run`.
-    - [ ] Publish to crates.io.
-    - [ ] Create and push git tag `v0.8.0`.
-    - [ ] Draft and publish a GitHub Release using the updated changelog notes.
-  - [ ] `r3bl-build-infra`
-    - [ ] Bump version numbers to `???` in `Cargo.toml` (workspace and/or crates).
-    - [ ] Run `cargo publish --dry-run`.
-    - [ ] Publish to crates.io.
-    - [ ] Create and push git tag `v???`.
-    - [ ] Draft and publish a GitHub Release using the updated changelog notes.
+    - [ ] `r3bl_tui`
+        - [ ] Bump version numbers to `0.8.0` in `Cargo.toml` (workspace and/or crates).
+        - [ ] Run `cargo publish --dry-run`.
+        - [ ] Publish to crates.io.
+        - [ ] Create and push git tag `v0.8.0`.
+        - [ ] Draft and publish a GitHub Release using the updated changelog notes.
+    - [ ] `r3bl-build-infra`
+        - [ ] Bump version numbers to `???` in `Cargo.toml` (workspace and/or crates).
+        - [ ] Run `cargo publish --dry-run`.
+        - [ ] Publish to crates.io.
+        - [ ] Create and push git tag `v???`.
+        - [ ] Draft and publish a GitHub Release using the updated changelog notes.

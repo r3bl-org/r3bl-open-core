@@ -1,53 +1,40 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use super::{OffscreenBuffer, PixelChar};
-use crate::{ArrayOverflowResult, ColIndex, LengthOps, Pos, RowIndex, ok, row};
-use std::ops::Range;
+//! Implementation of character-level operations for [`OfsBuf`].
+//!
+//! This module provides methods for reading, writing, filling, and copying individual
+//! characters or ranges of characters within the buffer.
+
+use super::{OfsBuf, PixelChar};
+use crate::{ArrayOverflowResult, ColIndex, LengthOps, Pos, RowIndex, ok};
+use std::{debug_assert_matches, ops::Range};
 
 /// Buffer manipulation methods - provides encapsulated access to buffer data.
-impl OffscreenBuffer {
-    /// Gets character at position, returns None if position is out of bounds.
+impl OfsBuf {
+    /// Gets character at position, returns [`None`] if position is out of bounds.
     #[must_use]
     pub fn get_char(&self, pos: Pos) -> Option<PixelChar> {
-        // Use type-safe bounds checking before converting to usize.
-        let buffer_height = crate::height(self.buffer.len());
-        if buffer_height.is_overflowed_by(pos) == ArrayOverflowResult::Overflowed {
-            return None;
-        }
-
-        // Convert to usize only at Vec access boundary.
-        let row_idx = pos.row_index.as_usize();
-        let col_idx = pos.col_index.as_usize();
-
-        self.buffer.get(row_idx)?.get(col_idx).copied()
+        self.buffer.try_get(pos).copied().ok()
     }
 
-    /// Set character at position. Automatically handles cache invalidation.
-    /// Returns true if the position was valid and the character was set.
+    /// Set character at position.
     ///
     /// # Errors
     ///
     /// Returns an error if the position is out of bounds.
+    ///
+    /// # Panics
+    ///
+    /// Panics in debug builds if the character assignment fails despite being in bounds.
     pub fn set_char(&mut self, pos: Pos, char: PixelChar) -> miette::Result<()> {
-        // Use type-safe row validation via validation helpers
-        let row_range = pos.row_index..row(pos.row_index.as_usize() + 1);
-        let Some((_, _, lines)) = self.validate_row_range_mut(row_range) else {
-            miette::bail!("Position out of bounds");
-        };
-
-        // Validate column within the selected line using type-safe bounds checking.
-        let line_width = crate::width(lines[0].len());
-        if line_width.is_overflowed_by(pos.col_index) == ArrayOverflowResult::Overflowed {
+        if self.buffer.try_set(pos, char).is_err() {
             miette::bail!("Position out of bounds");
         }
 
-        // Safe assignment - both row and column have been validated.
-        let col_idx = pos.col_index.as_usize();
-        lines[0][col_idx] = char;
-
         // Debug assertion to verify the character was actually set.
-        debug_assert_eq!(
-            lines[0][col_idx], char,
+        debug_assert_matches!(
+            self.buffer.try_get(pos),
+            Ok(&c) if c == char,
             "Character assignment failed at position {pos:?}"
         );
 
@@ -55,7 +42,6 @@ impl OffscreenBuffer {
     }
 
     /// Fill a range of characters in a line with the specified character.
-    /// Returns true if the operation was successful.
     ///
     /// # Errors
     ///
@@ -78,7 +64,6 @@ impl OffscreenBuffer {
     }
 
     /// Copy characters within a line from source range to destination position.
-    /// Returns true if the operation was successful.
     ///
     /// # Errors
     ///
@@ -112,7 +97,7 @@ impl OffscreenBuffer {
 #[cfg(test)]
 mod tests_char_ops {
     use super::*;
-    use crate::{OfsBufVT100, TuiStyle, col, height, width};
+    use crate::{OfsBufVT100, TuiStyle, col, height, row, width};
 
     fn create_test_buffer() -> OfsBufVT100 {
         let size = width(5) + height(3);
@@ -159,7 +144,7 @@ mod tests_char_ops {
     }
 
     #[test]
-    fn test_set_char_with_cache_invalidation() {
+    fn test_set_char_valid_position() {
         let mut buffer = create_test_buffer();
         let pos = row(0) + col(1);
         let test_char = create_test_char('B');

@@ -31,5 +31,7 @@ pub fn render(size: crate::Size) -> crate::Pos { ... }
 When invoked:
 1. Scan the targeted file(s) for instances of inline `crate::` usage for types.
 2. Group the required imports into a single `use crate::{...};` statement.
+   - **For production code**: Place the `use` statement at or near the top of the file, joining existing file-level imports (even if the `crate::` usage is inside an inner module).
+   - **For test code**: The `use` statement can be added to the closest inner test module where the other test imports are located.
 3. Remove the `crate::` prefix from the inline usages.
 4. Verify the changes compile successfully using `./check.fish --check`.

@@ -47,7 +47,7 @@
 //!       - char_ops:: for chars (@,P,X)                         ╭───────────╮
 //!       - margin_ops:: for margins (r)                      <- │THIS MODULE│
 //!         ↓                                                    ╰───────────╯
-//!     Update OffscreenBuffer state
+//!     Update OfsBuf state
 //! ```
 //!
 //! [`CSI`]: crate::CsiSequence

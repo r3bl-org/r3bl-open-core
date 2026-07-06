@@ -54,7 +54,7 @@ pub mod malformed_csi_sequences {
     /// syntax.
     #[test]
     fn test_invalid_cursor_position_parameters() {
-        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
 
         // Send CSI sequences with invalid parameters
         let malformed_sequences: Vec<&[u8]> = vec![
@@ -71,12 +71,12 @@ pub mod malformed_csi_sequences {
 
             // Cursor should remain within valid bounds
             assert!(
-                ofs_buf_vt_100.cursor_pos.row_index < row(10),
+                ofs_buf_vt_100.get_cursor_pos().row_index < row(10),
                 "Cursor row out of bounds after sequence: {:?}",
                 std::str::from_utf8(sequence).unwrap_or("invalid UTF-8")
             );
             assert!(
-                ofs_buf_vt_100.cursor_pos.col_index < col(10),
+                ofs_buf_vt_100.get_cursor_pos().col_index < col(10),
                 "Cursor column out of bounds after sequence: {:?}",
                 std::str::from_utf8(sequence).unwrap_or("invalid UTF-8")
             );
@@ -85,7 +85,7 @@ pub mod malformed_csi_sequences {
 
     #[test]
     fn test_invalid_sgr_parameters() {
-        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
 
         // Test SGR sequences with invalid parameters
         let malformed_sgr: Vec<&[u8]> = vec![
@@ -110,7 +110,7 @@ pub mod malformed_csi_sequences {
 
     #[test]
     fn test_incomplete_csi_sequences() {
-        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
 
         // Test incomplete sequences that might be split across buffer boundaries
         let incomplete_sequences: Vec<&[u8]> = vec![
@@ -132,20 +132,20 @@ pub mod malformed_csi_sequences {
 
     #[test]
     fn test_csi_with_excessive_parameters() {
-        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
 
         // CSI sequence with many parameters (stress test parameter parsing)
         let excessive_params = b"\x1b[1;2;3;4;5;6;7;8;9;10;11;12;13;14;15H";
         let _unused = ofs_buf_vt_100.apply_ansi_bytes(excessive_params);
 
         // Should not crash and cursor should remain in bounds
-        assert!(ofs_buf_vt_100.cursor_pos.row_index < row(10));
-        assert!(ofs_buf_vt_100.cursor_pos.col_index < col(10));
+        assert!(ofs_buf_vt_100.get_cursor_pos().row_index < row(10));
+        assert!(ofs_buf_vt_100.get_cursor_pos().col_index < col(10));
     }
 
     #[test]
     fn test_unknown_csi_commands() {
-        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
 
         // Test unknown CSI command characters
         let unknown_commands: Vec<&[u8]> = vec![
@@ -172,7 +172,7 @@ pub mod malformed_osc_sequences {
 
     #[test]
     fn test_incomplete_osc_sequences() {
-        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
 
         // Test incomplete OSC sequences
         let incomplete_osc: Vec<&[u8]> = vec![
@@ -192,7 +192,7 @@ pub mod malformed_osc_sequences {
 
     #[test]
     fn test_osc_with_invalid_codes() {
-        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
 
         // Test OSC sequences with invalid codes
         let invalid_osc: Vec<&[u8]> = vec![
@@ -212,7 +212,7 @@ pub mod malformed_osc_sequences {
 
     #[test]
     fn test_osc_with_malformed_parameters() {
-        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
 
         // Test OSC hyperlinks with malformed parameters
         let malformed_hyperlinks: Vec<&[u8]> = vec![
@@ -239,7 +239,7 @@ pub mod invalid_character_handling {
 
     #[test]
     fn test_invalid_control_characters() {
-        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
 
         // Test invalid or unsupported control characters
         let invalid_controls: Vec<&[u8]> = vec![
@@ -260,7 +260,7 @@ pub mod invalid_character_handling {
 
     #[test]
     fn test_mixed_valid_invalid_sequences() {
-        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
 
         // Mix valid and invalid sequences
         let mixed_sequence = format!(
@@ -275,13 +275,13 @@ pub mod invalid_character_handling {
         let _unused = ofs_buf_vt_100.apply_ansi_bytes(mixed_sequence);
 
         // Should handle mixture gracefully
-        assert!(ofs_buf_vt_100.cursor_pos.row_index < row(10));
-        assert!(ofs_buf_vt_100.cursor_pos.col_index < col(10));
+        assert!(ofs_buf_vt_100.get_cursor_pos().row_index < row(10));
+        assert!(ofs_buf_vt_100.get_cursor_pos().col_index < col(10));
     }
 
     #[test]
     fn test_rapid_malformed_sequence_stream() {
-        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
 
         // Send many malformed sequences rapidly
         for _ in 0..50 {
@@ -296,8 +296,8 @@ pub mod invalid_character_handling {
         }
 
         // Should maintain stability under stress
-        assert!(ofs_buf_vt_100.cursor_pos.row_index < row(10));
-        assert!(ofs_buf_vt_100.cursor_pos.col_index < col(10));
+        assert!(ofs_buf_vt_100.get_cursor_pos().row_index < row(10));
+        assert!(ofs_buf_vt_100.get_cursor_pos().col_index < col(10));
 
         // Should still accept valid input
         let _unused = ofs_buf_vt_100.apply_ansi_bytes("FINAL");
@@ -318,7 +318,7 @@ pub mod boundary_edge_cases {
     /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
     #[test]
     fn test_zero_parameter_treated_as_one() {
-        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
 
         // Test `VT-100`-compliant behavior: zero parameters are treated as 1
         // Using raw ANSI bytes since type-safe API prevents zero deltas
@@ -380,11 +380,11 @@ pub mod boundary_edge_cases {
 
             // Per `VT-100` spec: parameter 0 is treated as 1 (minimum movement)
             assert_eq!(
-                ofs_buf_vt_100.cursor_pos.row_index, expected_row,
+                ofs_buf_vt_100.get_cursor_pos().row_index, expected_row,
                 "VT-100 spec: {description} should move by 1 (row)"
             );
             assert_eq!(
-                ofs_buf_vt_100.cursor_pos.col_index, expected_col,
+                ofs_buf_vt_100.get_cursor_pos().col_index, expected_col,
                 "VT-100 spec: {description} should move by 1 (col)"
             );
         }
@@ -392,7 +392,7 @@ pub mod boundary_edge_cases {
 
     #[test]
     fn test_maximum_parameter_values() {
-        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
 
         // Test with very large parameter values
         let large_params: Vec<&[u8]> = vec![
@@ -405,14 +405,14 @@ pub mod boundary_edge_cases {
             let _unused = ofs_buf_vt_100.apply_ansi_bytes(sequence);
 
             // Should clamp to valid ranges
-            assert!(ofs_buf_vt_100.cursor_pos.row_index < row(10));
-            assert!(ofs_buf_vt_100.cursor_pos.col_index < col(10));
+            assert!(ofs_buf_vt_100.get_cursor_pos().row_index < row(10));
+            assert!(ofs_buf_vt_100.get_cursor_pos().col_index < col(10));
         }
     }
 
     #[test]
     fn test_buffer_position_clamping() {
-        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
 
         // Test positions beyond buffer boundaries
         let beyond_bounds = vec![
@@ -444,16 +444,16 @@ pub mod boundary_edge_cases {
 
             // Positions should be clamped to buffer bounds
             assert!(
-                ofs_buf_vt_100.cursor_pos.row_index <= row(9), /* 0-based, so max is 9
+                ofs_buf_vt_100.get_cursor_pos().row_index <= row(9), /* 0-based, so max is 9
                                                                 * for 10-row buffer */
                 "Row not clamped properly: {:?}",
-                ofs_buf_vt_100.cursor_pos
+                ofs_buf_vt_100.get_cursor_pos()
             );
             assert!(
-                ofs_buf_vt_100.cursor_pos.col_index <= col(9), /* 0-based, so max is 9
+                ofs_buf_vt_100.get_cursor_pos().col_index <= col(9), /* 0-based, so max is 9
                                                                 * for 10-col buffer */
                 "Column not clamped properly: {:?}",
-                ofs_buf_vt_100.cursor_pos
+                ofs_buf_vt_100.get_cursor_pos()
             );
         }
     }
@@ -465,7 +465,7 @@ pub mod parser_resilience {
 
     #[test]
     fn test_recovery_after_malformed_sequences() {
-        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
 
         // Send malformed sequences followed by valid ones
         let recovery_test = format!(
@@ -486,13 +486,13 @@ pub mod parser_resilience {
         let _unused = ofs_buf_vt_100.apply_ansi_bytes("Final test");
 
         // Parser should be in a valid state
-        assert!(ofs_buf_vt_100.cursor_pos.row_index < row(10));
-        assert!(ofs_buf_vt_100.cursor_pos.col_index < col(10));
+        assert!(ofs_buf_vt_100.get_cursor_pos().row_index < row(10));
+        assert!(ofs_buf_vt_100.get_cursor_pos().col_index < col(10));
     }
 
     #[test]
     fn test_partial_sequence_handling() {
-        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
 
         // Simulate partial sequences arriving in separate chunks
         let partial_chunks: Vec<&[u8]> = vec![
@@ -511,13 +511,13 @@ pub mod parser_resilience {
         }
 
         // Should eventually process complete sequence
-        assert!(ofs_buf_vt_100.cursor_pos.row_index < row(10));
-        assert!(ofs_buf_vt_100.cursor_pos.col_index < col(10));
+        assert!(ofs_buf_vt_100.get_cursor_pos().row_index < row(10));
+        assert!(ofs_buf_vt_100.get_cursor_pos().col_index < col(10));
     }
 
     #[test]
     fn test_state_corruption_prevention() {
-        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
 
         // Try to corrupt parser state with adversarial input
         let adversarial_input = format!(
@@ -534,8 +534,8 @@ pub mod parser_resilience {
         let _unused = ofs_buf_vt_100.apply_ansi_bytes(adversarial_input);
 
         // State should remain consistent
-        assert!(ofs_buf_vt_100.cursor_pos.row_index < row(10));
-        assert!(ofs_buf_vt_100.cursor_pos.col_index < col(10));
+        assert!(ofs_buf_vt_100.get_cursor_pos().row_index < row(10));
+        assert!(ofs_buf_vt_100.get_cursor_pos().col_index < col(10));
 
         // Should still respond to valid commands
         let move_sequence = format!(
@@ -547,8 +547,8 @@ pub mod parser_resilience {
         );
         let _unused = ofs_buf_vt_100.apply_ansi_bytes(move_sequence);
 
-        assert_eq!(ofs_buf_vt_100.cursor_pos.row_index, row(2)); // 0-based
-        assert_eq!(ofs_buf_vt_100.cursor_pos.col_index, col(2)); // 0-based
+        assert_eq!(ofs_buf_vt_100.get_cursor_pos().row_index, row(2)); // 0-based
+        assert_eq!(ofs_buf_vt_100.get_cursor_pos().col_index, col(2)); // 0-based
     }
 }
 
@@ -577,7 +577,7 @@ pub mod vte_parser_limit_exceeded {
 
     #[test]
     fn test_csi_excessive_parameters_ignored() {
-        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
 
         // Set cursor to known position
         let initial_pos = format!(
@@ -588,8 +588,8 @@ pub mod vte_parser_limit_exceeded {
             }
         );
         let _unused = ofs_buf_vt_100.apply_ansi_bytes(initial_pos);
-        assert_eq!(ofs_buf_vt_100.cursor_pos.row_index, row(4));
-        assert_eq!(ofs_buf_vt_100.cursor_pos.col_index, col(4));
+        assert_eq!(ofs_buf_vt_100.get_cursor_pos().row_index, row(4));
+        assert_eq!(ofs_buf_vt_100.get_cursor_pos().col_index, col(4));
 
         // Send CSI sequence with many parameters (exceeds VTE's internal limit)
         // VTE will collect up to its limit, set ignore=true, and call csi_dispatch()
@@ -600,12 +600,12 @@ pub mod vte_parser_limit_exceeded {
 
         // Cursor should NOT have moved - sequence was discarded
         assert_eq!(
-            ofs_buf_vt_100.cursor_pos.row_index,
+            ofs_buf_vt_100.get_cursor_pos().row_index,
             row(4),
             "Cursor should not move when CSI sequence exceeds parameter limit"
         );
         assert_eq!(
-            ofs_buf_vt_100.cursor_pos.col_index,
+            ofs_buf_vt_100.get_cursor_pos().col_index,
             col(4),
             "Cursor should not move when CSI sequence exceeds parameter limit"
         );
@@ -620,12 +620,12 @@ pub mod vte_parser_limit_exceeded {
         );
         let _unused = ofs_buf_vt_100.apply_ansi_bytes(valid_move);
         assert_eq!(
-            ofs_buf_vt_100.cursor_pos.row_index,
+            ofs_buf_vt_100.get_cursor_pos().row_index,
             row(1),
             "Parser should recover and process valid sequences"
         );
         assert_eq!(
-            ofs_buf_vt_100.cursor_pos.col_index,
+            ofs_buf_vt_100.get_cursor_pos().col_index,
             col(1),
             "Parser should recover and process valid sequences"
         );
@@ -633,7 +633,7 @@ pub mod vte_parser_limit_exceeded {
 
     #[test]
     fn test_csi_excessive_intermediates_ignored() {
-        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
 
         // Set cursor to known position
         let initial_pos = format!(
@@ -644,8 +644,8 @@ pub mod vte_parser_limit_exceeded {
             }
         );
         let _unused = ofs_buf_vt_100.apply_ansi_bytes(initial_pos);
-        assert_eq!(ofs_buf_vt_100.cursor_pos.row_index, row(2));
-        assert_eq!(ofs_buf_vt_100.cursor_pos.col_index, col(2));
+        assert_eq!(ofs_buf_vt_100.get_cursor_pos().row_index, row(2));
+        assert_eq!(ofs_buf_vt_100.get_cursor_pos().col_index, col(2));
 
         // Send CSI sequence with too many intermediate bytes (>2)
         // Format: ESC [ intermediates... final_char
@@ -656,12 +656,12 @@ pub mod vte_parser_limit_exceeded {
 
         // Cursor should NOT have moved - sequence was discarded
         assert_eq!(
-            ofs_buf_vt_100.cursor_pos.row_index,
+            ofs_buf_vt_100.get_cursor_pos().row_index,
             row(2),
             "Cursor should not move when CSI has too many intermediates"
         );
         assert_eq!(
-            ofs_buf_vt_100.cursor_pos.col_index,
+            ofs_buf_vt_100.get_cursor_pos().col_index,
             col(2),
             "Cursor should not move when CSI has too many intermediates"
         );
@@ -669,7 +669,7 @@ pub mod vte_parser_limit_exceeded {
 
     #[test]
     fn test_esc_excessive_intermediates_ignored() {
-        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
 
         // Get initial character set state (should be ASCII by default)
         let initial_charset = matches!(
@@ -696,7 +696,7 @@ pub mod vte_parser_limit_exceeded {
 
     #[test]
     fn test_dcs_ignored_regardless_of_limits() {
-        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
 
         // DCS sequences are not implemented in the multiplexer, so they're ignored
         // whether well-formed or malformed. This test verifies that excessive parameters
@@ -713,14 +713,14 @@ pub mod vte_parser_limit_exceeded {
 
         // Cursor should have advanced for the printable text
         assert!(
-            ofs_buf_vt_100.cursor_pos.col_index >= col(4),
+            ofs_buf_vt_100.get_cursor_pos().col_index >= col(4),
             "Parser should continue working after ignored DCS"
         );
     }
 
     #[test]
     fn test_parser_recovery_after_ignore() {
-        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
 
         // Send sequence that will be ignored, followed by valid sequences
         let mixed_sequence = format!(
@@ -737,12 +737,12 @@ pub mod vte_parser_limit_exceeded {
 
         // Parser should have recovered and processed the valid cursor position
         assert_eq!(
-            ofs_buf_vt_100.cursor_pos.row_index,
+            ofs_buf_vt_100.get_cursor_pos().row_index,
             row(6),
             "Parser should recover and process valid sequences after ignored one"
         );
         assert_eq!(
-            ofs_buf_vt_100.cursor_pos.col_index,
+            ofs_buf_vt_100.get_cursor_pos().col_index,
             col(2),
             "Parser should recover and process valid sequences after ignored one"
         );
@@ -750,7 +750,7 @@ pub mod vte_parser_limit_exceeded {
 
     #[test]
     fn test_mixed_valid_and_ignored_sequences() {
-        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
 
         // Interleave valid and ignored sequences
         let sequence = format!(
@@ -774,12 +774,12 @@ pub mod vte_parser_limit_exceeded {
         // Final position should be (5,5) from last valid cursor position
         // (TEXT would have moved cursor but then final position overrides)
         assert_eq!(
-            ofs_buf_vt_100.cursor_pos.row_index,
+            ofs_buf_vt_100.get_cursor_pos().row_index,
             row(4),
             "Only valid sequences should execute, ignored ones discarded"
         );
         assert_eq!(
-            ofs_buf_vt_100.cursor_pos.col_index,
+            ofs_buf_vt_100.get_cursor_pos().col_index,
             col(4),
             "Only valid sequences should execute, ignored ones discarded"
         );
@@ -787,7 +787,7 @@ pub mod vte_parser_limit_exceeded {
 
     #[test]
     fn test_excessive_params_different_csi_commands() {
-        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
 
         // Test that ignore parameter works for different CSI command types
         // Using 50 params to ensure we exceed VTE's limit
@@ -827,12 +827,12 @@ pub mod vte_parser_limit_exceeded {
             // (For SGR/IL, we just verify no crash)
             if description.contains("Cursor") || description.contains("CUP") {
                 assert_eq!(
-                    ofs_buf_vt_100.cursor_pos.row_index,
+                    ofs_buf_vt_100.get_cursor_pos().row_index,
                     row(4),
                     "{description} should be ignored when params exceed limit"
                 );
                 assert_eq!(
-                    ofs_buf_vt_100.cursor_pos.col_index,
+                    ofs_buf_vt_100.get_cursor_pos().col_index,
                     col(4),
                     "{description} should be ignored when params exceed limit"
                 );

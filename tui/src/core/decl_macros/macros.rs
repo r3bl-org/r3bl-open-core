@@ -8,7 +8,7 @@
 /// ```
 /// use r3bl_tui::{CommonResult, throws};
 ///
-/// fn test_simple_2_col_layout() -> CommonResult<()> {
+/// fn test_simple_2_col_layout() -> CommonResult {
 ///     let input_event = Some("a");
 ///     throws! {
 ///         match input_event {
@@ -24,7 +24,7 @@
 /// ```
 /// use r3bl_tui::{CommonResult, throws};
 ///
-/// fn test_simple_2_col_layout() -> CommonResult<()> {
+/// fn test_simple_2_col_layout() -> CommonResult {
 ///     throws!({
 ///         let result: miette::Result<&str> = Ok("foo bar");
 ///         _ = result?;

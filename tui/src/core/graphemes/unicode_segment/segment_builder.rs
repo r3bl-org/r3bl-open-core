@@ -93,14 +93,15 @@ fn build_ascii_segments(input: &str) -> SegmentArray {
 /// when rendered in a terminal.
 #[must_use]
 pub fn calculate_display_width(segments: &SegmentArray) -> ColWidth {
-    segments
-        .last()
-        .map_or(/* None */ width(0), /* Some */ |seg| {
+    match segments.last() {
+        Some(seg) => {
             let start_col: ColIndex = seg.start_display_col_index;
             let seg_width: ColWidth = seg.display_width;
             let end_col = *start_col + *seg_width;
             width(end_col)
-        })
+        }
+        None => width(0),
+    }
 }
 
 #[cfg(test)]

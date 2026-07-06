@@ -7,7 +7,7 @@
 use super::super::test_fixtures_vt_100_ansi_conformance::*;
 use crate::{ANSIBasicColor, CharacterSet, EscSequence, SgrCode,
             core::ansi::vt_100_pty_output_parser::ansi_parser_public_api::AnsiToOfsBufPerformer,
-            offscreen_buffer::test_fixtures_ofs_buf::*,
+            ofs_buf::test_fixtures_ofs_buf::*,
             tui_style_attrib::{self}};
 use vte::Perform;
 
@@ -20,7 +20,7 @@ pub mod sgr_styling {
 
     #[test]
     fn test_sgr_reset_behavior() {
-        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
 
         #[allow(clippy::items_after_statements)]
         const RED: &str = "RED";
@@ -74,7 +74,7 @@ pub mod sgr_styling {
 
         // Verify final cursor position in ofs_buf_vt_100.my_pos.
         assert_eq!(
-            ofs_buf_vt_100.cursor_pos,
+            ofs_buf_vt_100.get_cursor_pos(),
             row(0) + col(RED.len() + NORM.len()),
             "final cursor position after writing RED and NORM should be at row 0, col 7",
         );
@@ -82,7 +82,7 @@ pub mod sgr_styling {
 
     #[test]
     fn test_sgr_partial_reset() {
-        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
 
         // SGR partial reset test (SGR 22 resets bold/dim only):
         //
@@ -142,7 +142,7 @@ pub mod sgr_styling {
 
         // Verify final cursor position in ofs_buf_vt_100.my_pos.
         assert_eq!(
-            ofs_buf_vt_100.cursor_pos,
+            ofs_buf_vt_100.get_cursor_pos(),
             row(0) + col(2),
             "final cursor position after writing AB should be at row 0, col 2",
         );
@@ -151,7 +151,7 @@ pub mod sgr_styling {
     #[test]
     #[allow(clippy::too_many_lines)]
     fn test_sgr_color_attributes() {
-        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
 
         // SGR color attributes test:
         //
@@ -271,7 +271,7 @@ pub mod sgr_styling {
 
     #[test]
     fn test_sgr_slow_blink() {
-        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
         let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf_vt_100);
 
         // Test ESC[5m (slow blink)
@@ -299,7 +299,7 @@ pub mod sgr_styling {
 
     #[test]
     fn test_sgr_rapid_blink() {
-        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
         let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf_vt_100);
 
         // Test ESC[6m (rapid blink) - this tests our bug fix!
@@ -327,8 +327,8 @@ pub mod sgr_styling {
 
     #[test]
     fn test_sgr_both_blink_types_equivalent() {
-        let mut ofs_buf1 = create_test_offscreen_buffer_10r_by_10c();
-        let mut ofs_buf2 = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf1 = create_test_ofs_buf_10r_by_10c();
+        let mut ofs_buf2 = create_test_ofs_buf_10r_by_10c();
 
         // Test that both SGR 5 and SGR 6 produce the same result.
         let mut performer1 = AnsiToOfsBufPerformer::new(&mut ofs_buf1);
@@ -371,7 +371,7 @@ pub mod sgr_styling {
 
     #[test]
     fn test_sgr_blink_reset() {
-        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
         let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf_vt_100);
 
         // Set blink, write char, reset blink, write char.
@@ -403,7 +403,7 @@ pub mod sgr_styling {
     fn test_sgr_extended_256_colors() {
         use crate::core::ansi::vt_100_pty_output_parser::vt_100_pty_output_conformance_tests::test_sequence_generators::extended_color_builders::*;
 
-        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
         let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf_vt_100);
 
         // Test 256-color sequences (both colon and semicolon formats)
@@ -468,7 +468,7 @@ pub mod sgr_styling {
     fn test_sgr_extended_rgb_colors() {
         use crate::core::ansi::vt_100_pty_output_parser::vt_100_pty_output_conformance_tests::test_sequence_generators::extended_color_builders::*;
 
-        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
         let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf_vt_100);
 
         // Test RGB color sequences (colon-separated format)
@@ -527,7 +527,7 @@ pub mod sgr_styling {
     fn test_sgr_extended_colors_mixed() {
         use crate::core::ansi::vt_100_pty_output_parser::vt_100_pty_output_conformance_tests::test_sequence_generators::extended_color_builders::*;
 
-        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
         let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf_vt_100);
 
         // Test mixing basic ANSI, 256-color, and RGB sequences
@@ -595,7 +595,7 @@ pub mod sgr_styling {
     /// [196]]`.
     #[test]
     fn test_sgr_extended_256_colors_semicolon_format() {
-        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
         let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf_vt_100);
 
         // Test 256-color sequences with semicolon format (legacy)
@@ -646,7 +646,7 @@ pub mod sgr_styling {
     /// Test semicolon-separated RGB color sequences (legacy format).
     #[test]
     fn test_sgr_extended_rgb_colors_semicolon_format() {
-        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
         let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf_vt_100);
 
         // Test RGB color sequences with semicolon format (legacy)
@@ -699,7 +699,7 @@ pub mod sgr_styling {
     /// [`SGR`]: crate::SgrCode
     #[test]
     fn test_sgr_semicolon_extended_colors_with_attributes() {
-        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
 
         // Test: bold + semicolon 256-color fg
         // Sequence: ESC[1;38;5;196m (bold + fg index 196)
@@ -745,7 +745,7 @@ pub mod character_sets {
 
     #[test]
     fn test_esc_character_set_switching() {
-        let mut ofs_buf_vt_100 = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
 
         let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf_vt_100);
 

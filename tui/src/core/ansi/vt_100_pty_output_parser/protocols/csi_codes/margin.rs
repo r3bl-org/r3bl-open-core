@@ -29,8 +29,14 @@ impl From<(Option<u16>, Option<u16>)> for MarginRequest {
             (None | Some(0), None) | (Some(0), Some(0)) => Self::Reset,
             _ => {
                 // Convert to 1-based terminal coordinates (`VT-100` spec uses 1-based).
-                let top_row = maybe_top.map_or(1, |v| max(v, 1));
-                let bottom_row = maybe_bottom.map_or(24, |v| max(v, 1)); // Default to 24
+                let top_row = match maybe_top {
+                    Some(v) => max(v, 1),
+                    None => 1,
+                };
+                let bottom_row = match maybe_bottom {
+                    Some(v) => max(v, 1),
+                    None => 24, // Default to 24
+                };
 
                 // SAFETY: max(v, 1) guarantees values >= 1
                 debug_assert!(top_row > 0 && bottom_row > 0);

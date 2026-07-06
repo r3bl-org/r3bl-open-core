@@ -2,8 +2,8 @@
 
 use super::{FlexBox, FlexBoxProps, LayoutDirection, LayoutError, LayoutErrorType,
             LayoutManagement, PerformPositioningAndSizing, SurfaceProps};
-use crate::{CommonResult, InlineVec, Pos, RenderPipeline, ReqSizePc, Size, TuiStyle,
-            TuiStylesheet, height, throws, unwrap_or_err, width};
+use crate::{CommonResult, InlineVec, Pos, ReqSizePc, Size, TuiStyle, TuiStylesheet,
+            height, throws, unwrap_or_err, width};
 
 /// Represents a rectangular area of the terminal screen, and not necessarily the full
 /// terminal screen.
@@ -13,7 +13,6 @@ pub struct Surface {
     pub box_size: Size,
     pub stack_of_boxes: Vec<FlexBox>,
     pub stylesheet: TuiStylesheet,
-    pub render_pipeline: RenderPipeline,
 }
 
 #[derive(Copy, Clone, Debug, Default)]
@@ -65,7 +64,7 @@ impl LayoutManagement for Surface {
     fn surface_start(
         &mut self,
         SurfaceProps { pos, size }: SurfaceProps,
-    ) -> CommonResult<()> {
+    ) -> CommonResult {
         throws!({
             // Expect stack to be empty!
             if !self.no_boxes_added() {
@@ -82,7 +81,7 @@ impl LayoutManagement for Surface {
         });
     }
 
-    fn surface_end(&mut self) -> CommonResult<()> {
+    fn surface_end(&mut self) -> CommonResult {
         throws!({
             // Expect stack to be empty!
             if !self.no_boxes_added() {
@@ -97,7 +96,7 @@ impl LayoutManagement for Surface {
         });
     }
 
-    fn box_start(&mut self, flex_box_props: FlexBoxProps) -> CommonResult<()> {
+    fn box_start(&mut self, flex_box_props: FlexBoxProps) -> CommonResult {
         throws!({
             if self.no_boxes_added() {
                 self.add_root_box(flex_box_props)
@@ -107,7 +106,7 @@ impl LayoutManagement for Surface {
         });
     }
 
-    fn box_end(&mut self) -> CommonResult<()> {
+    fn box_end(&mut self) -> CommonResult {
         throws!({
             // Expect stack not to be empty!
             if self.no_boxes_added() {
@@ -210,7 +209,7 @@ impl PerformPositioningAndSizing for Surface {
 
     /// 🍀 Handle non-root box to add to stack of boxes. [Pos] and [Size] will be
     /// calculated. `insertion_pos_for_next_box` will also be updated.
-    fn add_non_root_box(&mut self, flex_box_props: FlexBoxProps) -> CommonResult<()> {
+    fn add_non_root_box(&mut self, flex_box_props: FlexBoxProps) -> CommonResult {
         throws!({
             let container_box = self.current_box()?;
             let container_bounds = container_box.bounds_size;
@@ -247,7 +246,7 @@ impl PerformPositioningAndSizing for Surface {
 
     /// 🌳 Handle root (first) box to add to stack of boxes, explicitly sized &
     /// positioned.
-    fn add_root_box(&mut self, flex_box_props: FlexBoxProps) -> CommonResult<()> {
+    fn add_root_box(&mut self, flex_box_props: FlexBoxProps) -> CommonResult {
         throws!({
             let ReqSizePc {
                 width_pc,
@@ -393,7 +392,7 @@ mod test_surface_2_col_complex {
                 tui_stylesheet, width};
 
     #[test]
-    fn test_surface_2_col_complex() -> CommonResult<()> {
+    fn test_surface_2_col_complex() -> CommonResult {
         throws!({
             let mut surface = Surface {
                 stylesheet: dsl_stylesheet()?,
@@ -408,14 +407,12 @@ mod test_surface_2_col_complex {
             create_main_container(&mut surface)?;
 
             surface.surface_end()?;
-
-            println!("{:?}", surface.render_pipeline);
         });
     }
 
     /// Main container "container".
-    fn create_main_container(surface: &mut Surface) -> CommonResult<()> {
-        fn make_container_assertions(surface: &Surface) -> CommonResult<()> {
+    fn create_main_container(surface: &mut Surface) -> CommonResult {
+        fn make_container_assertions(surface: &Surface) -> CommonResult {
             throws!({
                 let layout_item = surface.stack_of_boxes.first().unwrap();
                 assert_eq2!(layout_item.id, FlexBoxId::from(0));
@@ -466,8 +463,8 @@ mod test_surface_2_col_complex {
     }
 
     /// Left column 1.
-    fn create_left_col(surface: &mut Surface) -> CommonResult<()> {
-        fn make_left_col_assertions(surface: &Surface) -> CommonResult<()> {
+    fn create_left_col(surface: &mut Surface) -> CommonResult {
+        fn make_left_col_assertions(surface: &Surface) -> CommonResult {
             throws!({
                 let layout_item = surface.stack_of_boxes.last().unwrap();
                 assert_eq2!(layout_item.id, FlexBoxId::from(1));
@@ -512,8 +509,8 @@ mod test_surface_2_col_complex {
     }
 
     /// Right column 2.
-    fn create_right_col(surface: &mut Surface) -> CommonResult<()> {
-        fn make_right_col_assertions(surface: &Surface) -> CommonResult<()> {
+    fn create_right_col(surface: &mut Surface) -> CommonResult {
+        fn make_right_col_assertions(surface: &Surface) -> CommonResult {
             throws!({
                 let current_box = surface.stack_of_boxes.last().unwrap();
                 assert_eq2!(current_box.id, FlexBoxId::from(2));
@@ -589,7 +586,7 @@ mod test_surface_2_col_simple {
                 row, throws, throws_with_return, tui_color, tui_stylesheet, width};
 
     #[test]
-    fn test_surface_2_col_simple() -> CommonResult<()> {
+    fn test_surface_2_col_simple() -> CommonResult {
         throws!({
             let mut surface = Surface {
                 stylesheet: dsl_stylesheet()?,
@@ -604,14 +601,12 @@ mod test_surface_2_col_simple {
             create_main_container(&mut surface)?;
 
             surface.surface_end()?;
-
-            println!("{:?}", surface.render_pipeline);
         });
     }
 
     /// Main container 0.
-    fn create_main_container(surface: &mut Surface) -> CommonResult<()> {
-        fn make_container_assertions(surface: &Surface) -> CommonResult<()> {
+    fn create_main_container(surface: &mut Surface) -> CommonResult {
+        fn make_container_assertions(surface: &Surface) -> CommonResult {
             throws!({
                 let layout_item = surface.stack_of_boxes.first().unwrap();
                 assert_eq2!(layout_item.id, FlexBoxId::from(0));
@@ -648,8 +643,8 @@ mod test_surface_2_col_simple {
     }
 
     /// Left column 1.
-    fn create_left_col(surface: &mut Surface) -> CommonResult<()> {
-        fn make_left_col_assertions(surface: &Surface) -> CommonResult<()> {
+    fn create_left_col(surface: &mut Surface) -> CommonResult {
+        fn make_left_col_assertions(surface: &Surface) -> CommonResult {
             throws!({
                 let layout_item = surface.stack_of_boxes.last().unwrap();
                 assert_eq2!(layout_item.id, FlexBoxId::from(1));
@@ -692,8 +687,8 @@ mod test_surface_2_col_simple {
     }
 
     /// Right column 2.
-    fn create_right_col(surface: &mut Surface) -> CommonResult<()> {
-        fn make_right_col_assertions(surface: &Surface) -> CommonResult<()> {
+    fn create_right_col(surface: &mut Surface) -> CommonResult {
+        fn make_right_col_assertions(surface: &Surface) -> CommonResult {
             throws!({
                 let current_box = surface.stack_of_boxes.last().unwrap();
                 assert_eq2!(current_box.id, FlexBoxId::from(2));
@@ -763,8 +758,8 @@ mod test_surface_offset_origin {
                 req_size_pc, row, throws, width};
 
     #[test]
-    fn test_surface_horizontal_non_zero_origin() -> CommonResult<()> {
-        fn make_container_assertions(surface: &Surface) -> CommonResult<()> {
+    fn test_surface_horizontal_non_zero_origin() -> CommonResult {
+        fn make_container_assertions(surface: &Surface) -> CommonResult {
             throws!({
                 let container = surface.stack_of_boxes.first().unwrap();
                 assert_eq2!(container.origin_pos, col(0) + row(5));
@@ -772,7 +767,7 @@ mod test_surface_offset_origin {
             });
         }
 
-        fn make_child1_assertions(surface: &Surface) -> CommonResult<()> {
+        fn make_child1_assertions(surface: &Surface) -> CommonResult {
             throws!({
                 let child = surface.stack_of_boxes.last().unwrap();
                 // First child starts at the container's insertion start = (0, 5).
@@ -780,7 +775,7 @@ mod test_surface_offset_origin {
             });
         }
 
-        fn make_child2_assertions(surface: &Surface) -> CommonResult<()> {
+        fn make_child2_assertions(surface: &Surface) -> CommonResult {
             throws!({
                 let child = surface.stack_of_boxes.last().unwrap();
                 // Second child row must equal the container's row (5), NOT 0.
@@ -833,8 +828,8 @@ mod test_surface_offset_origin {
     }
 
     #[test]
-    fn test_surface_vertical_non_zero_origin() -> CommonResult<()> {
-        fn make_container_assertions(surface: &Surface) -> CommonResult<()> {
+    fn test_surface_vertical_non_zero_origin() -> CommonResult {
+        fn make_container_assertions(surface: &Surface) -> CommonResult {
             throws!({
                 let container = surface.stack_of_boxes.first().unwrap();
                 assert_eq2!(container.origin_pos, col(5) + row(0));
@@ -842,14 +837,14 @@ mod test_surface_offset_origin {
             });
         }
 
-        fn make_child1_assertions(surface: &Surface) -> CommonResult<()> {
+        fn make_child1_assertions(surface: &Surface) -> CommonResult {
             throws!({
                 let child = surface.stack_of_boxes.last().unwrap();
                 assert_eq2!(child.origin_pos, col(5) + row(0));
             });
         }
 
-        fn make_child2_assertions(surface: &Surface) -> CommonResult<()> {
+        fn make_child2_assertions(surface: &Surface) -> CommonResult {
             throws!({
                 let child = surface.stack_of_boxes.last().unwrap();
                 // Second child column must equal the container's column (5), NOT 0.

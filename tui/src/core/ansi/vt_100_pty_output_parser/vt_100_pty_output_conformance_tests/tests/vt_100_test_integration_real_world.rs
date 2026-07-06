@@ -11,14 +11,13 @@ use super::super::{conformance_data::{basic_sequences, cursor_sequences,
                                       tmux_sequences, vim_sequences},
                    test_fixtures_vt_100_ansi_conformance::nz};
 use crate::{ANSIBasicColor, CsiCount, PixelChar, TermCol, col,
-            offscreen_buffer::test_fixtures_ofs_buf::*, row, tui_style_attrib};
+            ofs_buf::test_fixtures_ofs_buf::*, row, tui_style_attrib, OfsBufVT100, height, width};
 use std::cmp::min;
 
 /// Creates a realistic terminal buffer for real-world scenario testing.
 /// Uses standard 80x25 dimensions typical of actual terminal usage.
-fn create_realistic_terminal_buffer() -> crate::OfsBufVT100 {
-    use crate::{height, width};
-    crate::OfsBufVT100::new_empty(height(25) + width(80))
+fn create_realistic_terminal_buffer() -> OfsBufVT100 {
+    OfsBufVT100::new_empty(height(25) + width(80))
 }
 
 /// Test vim status line functionality using builder patterns.
@@ -78,7 +77,7 @@ fn test_terminal_initialization_pattern() {
     );
 
     // Verify cursor position
-    assert_eq!(ofs_buf_vt_100.cursor_pos, row(2) + col(0));
+    assert_eq!(ofs_buf_vt_100.get_cursor_pos(), row(2) + col(0));
 }
 
 /// Test cursor save/restore patterns using both [`ESC`] and [`CSI`] variants.
@@ -113,7 +112,7 @@ fn test_cursor_save_restore_variants() {
     assert_plain_text_at(&ofs_buf_vt_100, 4, 4, "CSI");
 
     // Cursor should be back at origin after save/restore operations
-    assert_eq!(ofs_buf_vt_100.cursor_pos, row(0) + col(0));
+    assert_eq!(ofs_buf_vt_100.get_cursor_pos(), row(0) + col(0));
 }
 
 /// Test complex styling combinations using the styling sequences.
@@ -368,8 +367,8 @@ fn test_text_editor_workflow() {
     );
 
     // Cursor should be at end of second line
-    assert_eq!(ofs_buf_vt_100.cursor_pos.row_index, row(1));
-    assert!(ofs_buf_vt_100.cursor_pos.col_index.as_usize() > 15);
+    assert_eq!(ofs_buf_vt_100.get_cursor_pos().row_index, row(1));
+    assert!(ofs_buf_vt_100.get_cursor_pos().col_index.as_usize() > 15);
 }
 
 /// Test shell prompt with command editing simulation.
@@ -394,7 +393,7 @@ fn test_shell_prompt_workflow() {
     // Simulate backspace editing - move cursor left and delete
     let backspace_pos = cursor_sequences::move_left(1); // Move back 1 char
     let delete_char = basic_sequences::move_and_delete_chars(
-        TermCol::from_zero_based(ofs_buf_vt_100.cursor_pos.col_index),
+        TermCol::from_zero_based(ofs_buf_vt_100.get_cursor_pos().col_index),
         CsiCount::ONE,
     );
     let new_char = basic_sequences::insert_text("a");
@@ -436,7 +435,7 @@ fn test_shell_prompt_workflow() {
     // Verify command was correctly modified to "ls -la"
     // Note: The text may retain styling from the prompt, so just check characters exist
     // without asserting they have no styling
-    let row = &ofs_buf_vt_100.buffer[0];
+    let row = &ofs_buf_vt_100.ofs_buf.get_row(0).unwrap();
 
     // Extract characters around where command should be
     let mut command_chars = Vec::new();
@@ -455,12 +454,12 @@ fn test_shell_prompt_workflow() {
     // Verify output formatting (may be on a different row due to text flow)
     // Just check that we have some cyan styled text somewhere in the buffer
     let mut found_cyan_text = false;
-    for row_idx in 0..min(5, ofs_buf_vt_100.buffer.len()) {
-        for col_idx in 0..min(20, ofs_buf_vt_100.buffer[row_idx].len()) {
+    for row_idx in 0..min(5, ofs_buf_vt_100.ofs_buf.get_height().as_usize()) {
+        for col_idx in 0..min(20, ofs_buf_vt_100.ofs_buf.get_row(row_idx).unwrap().len()) {
             if let PixelChar::PlainText {
                 display_char: _,
                 style,
-            } = ofs_buf_vt_100.buffer[row_idx][col_idx]
+            } = ofs_buf_vt_100.ofs_buf.get_row(row_idx).unwrap()[col_idx]
                 && style.color_fg == Some(ANSIBasicColor::Cyan.into())
             {
                 found_cyan_text = true;
@@ -608,10 +607,10 @@ fn test_interface_drawing_with_cursor_ops() {
     // Verify box drawing was attempted (may not be exactly at expected coordinates)
     // Just check that some characters were drawn by the box sequence
     let mut found_box_chars = false;
-    for row_idx in 0..min(10, ofs_buf_vt_100.buffer.len()) {
-        for col_idx in 0..min(20, ofs_buf_vt_100.buffer[row_idx].len()) {
+    for row_idx in 0..min(10, ofs_buf_vt_100.ofs_buf.get_height().as_usize()) {
+        for col_idx in 0..min(20, ofs_buf_vt_100.ofs_buf.get_row(row_idx).unwrap().len()) {
             if let PixelChar::PlainText { display_char, .. } =
-                ofs_buf_vt_100.buffer[row_idx][col_idx]
+                ofs_buf_vt_100.ofs_buf.get_row(row_idx).unwrap()[col_idx]
                 && (display_char == '+' || display_char == '-' || display_char == '|')
             {
                 found_box_chars = true;
@@ -696,11 +695,11 @@ fn test_practical_vim_editing_patterns() {
 
     // Verify line numbers are displayed (may have styling from vim functions)
     // Just check that the characters are present, regardless of styling
-    let first_char = match ofs_buf_vt_100.buffer[0][0] {
+    let first_char = match ofs_buf_vt_100.ofs_buf.get_row(0).unwrap()[0] {
         PixelChar::PlainText { display_char, .. } => display_char,
         _ => ' ',
     };
-    let third_line_char = match ofs_buf_vt_100.buffer[2][0] {
+    let third_line_char = match ofs_buf_vt_100.ofs_buf.get_row(2).unwrap()[0] {
         PixelChar::PlainText { display_char, .. } => display_char,
         _ => ' ',
     };
@@ -711,8 +710,8 @@ fn test_practical_vim_editing_patterns() {
 
     // Verify file content (may have styling from vim functions, so just check characters
     // exist)
-    let row0 = &ofs_buf_vt_100.buffer[0];
-    let row2 = &ofs_buf_vt_100.buffer[2];
+    let row0 = &ofs_buf_vt_100.ofs_buf.get_row(0).unwrap();
+    let row2 = &ofs_buf_vt_100.ofs_buf.get_row(2).unwrap();
 
     // Extract text from row 0 starting at column 2
     let mut row0_text = String::new();
@@ -789,7 +788,7 @@ fn test_text_manipulation_operations() {
 
     // Verify the complete sentence was built correctly
     // Character insertion operations may not work as expected - verify actual result
-    let first_row = &ofs_buf_vt_100.buffer[0];
+    let first_row = &ofs_buf_vt_100.ofs_buf.get_row(0).unwrap();
     let mut actual_text = String::new();
     for i in 0..min(40, first_row.len()) {
         let ch = match first_row[i] {
@@ -820,7 +819,7 @@ fn test_text_manipulation_operations() {
 
     // Verify that text editing operations were applied
     // The exact result may differ based on how character operations work
-    let final_row = &ofs_buf_vt_100.buffer[0];
+    let final_row = &ofs_buf_vt_100.ofs_buf.get_row(0).unwrap();
     let mut final_text = String::new();
     for i in 0..min(40, final_row.len()) {
         let ch = match final_row[i] {

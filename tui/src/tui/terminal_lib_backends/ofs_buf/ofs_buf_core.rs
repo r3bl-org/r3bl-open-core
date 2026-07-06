@@ -1,16 +1,20 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+//! Core types and implementation for [`OfsBuf`].
+//!
+//! This module defines the main `OfsBuf` struct, its core properties, lifecycle
+//! methods, and primary delegation down to its `Flat2DArray` backing store.
+
 use super::{super::{FlushKind, RenderOpOutputVec},
             PixelCharDiffChunks,
-            pixel_char::PixelChar,
-            pixel_char_lines::PixelCharLines};
-use crate::{GetMemSize, List, LockedOutputDevice, MemorySize, Pos, Size, col,
-            fg_green, inline_string, ok, row};
-use std::{fmt::{Debug, {self}},
+            pixel_char::PixelChar};
+use crate::{ColIndex, Flat2DArray, GetMemSize, List, LockedOutputDevice, Pos, RowIndex,
+            Size, fg_green, inline_string, ok};
+use std::{fmt::{self, Debug},
           mem::size_of,
           ops::{Deref, DerefMut}};
 
-/// Core terminal screen buffer structure with VT100/[`ANSI`] support.
+/// Core terminal screen buffer structure with [`VT-100`]/[`ANSI`] support.
 ///
 /// For comprehensive architectural overview and integration details, see the [module
 /// documentation].
@@ -23,7 +27,7 @@ use std::{fmt::{Debug, {self}},
 /// - **Dual Integration**: Works with both render pipeline and [`ANSI`] terminal
 ///   emulation
 /// - **Variable-ColWidth Support**: Proper handling of emoji and Unicode characters
-/// - **VT100 Compliance**: Full terminal specification compliance
+/// - **[`VT-100`] Compliance**: Full terminal specification compliance
 /// - **Performance Optimized**: Pre-calculated memory sizes and efficient operations
 ///
 /// ## Field Organization
@@ -46,71 +50,22 @@ use std::{fmt::{Debug, {self}},
 /// [`OfsBufVT100`]: crate::OfsBufVT100
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 /// [`RenderOpCommon`]: enum@crate::RenderOpCommon
+/// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 /// [`vt_100_pty_output_parser`]: mod@crate::core::ansi::vt_100_pty_output_parser
 /// [module documentation]: super
 #[derive(Clone, PartialEq)]
-pub struct OffscreenBuffer {
-    // The actual 2D grid of pixel characters representing the terminal screen.
-    pub buffer: PixelCharLines,
-
-    // Size of the terminal window in rows and columns (1-based).
-    pub window_size: Size,
-
-    /// The current active cursor position in the buffer.
-    ///
-    /// This is the primary cursor position tracker for the entire offscreen buffer
-    /// system, used by multiple subsystems:
-    /// - **Render pipeline**: Updated when processing [`RenderOpCommon`] variants
-    ///   [`MoveCursorPositionAbs`] and [`MoveCursorPositionRelTo`]
-    /// - **Text rendering**: Starting position for [`print_text_with_attributes()`]
-    /// - **[`ANSI`] parser**: Directly reads from and writes to this position during
-    ///   sequence processing
-    /// - **Terminal emulation**: Tracks where the next character should be rendered
-    ///
-    /// Note: This is different from [`cursor_pos_for_esc_save_and_restore`] which is
-    /// only used for [`DECSC`]/[`DECRC`] (`ESC 7` / `ESC 8`) save/restore operations.
-    ///
-    /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-    /// [`cursor_pos_for_esc_save_and_restore`]:
-    ///     crate::ParserGlobalState::cursor_pos_for_esc_save_and_restore
-    /// [`DECRC`]: https://vt100.net/docs/vt510-rm/contents.html
-    /// [`DECSC`]: https://vt100.net/docs/vt510-rm/contents.html
-    /// [`MoveCursorPositionAbs`]: crate::RenderOpCommon::MoveCursorPositionAbs
-    /// [`MoveCursorPositionRelTo`]: crate::RenderOpCommon::MoveCursorPositionRelTo
-    /// [`print_text_with_attributes()`]: crate::print_text_with_attributes
-    /// [`RenderOpCommon`]: crate::RenderOpCommon
-    pub cursor_pos: Pos,
-
-    /// Cached memory size of this buffer to provide O(1) retrieval.
-    ///
-    /// Because the buffer grid dimensions are strictly fixed upon creation (resizing the
-    /// terminal creates a brand new buffer), we can safely calculate its total memory
-    /// cost exactly once during [`new_empty()`] and cache it here. This avoids expensive
-    /// O(N) traversal recalculations later.
-    ///
-    /// Used in [`log_telemetry_info`] which is called in a hot loop on every render.
-    ///
-    /// [`log_telemetry_info`]:
-    ///     crate::main_event_loop::EventLoopState::log_telemetry_info()
-    /// [`new_empty()`]: Self::new_empty()
-    pub cached_memory_size: MemorySize,
+pub struct OfsBuf {
+    pub(super) buffer: Flat2DArray<PixelChar>,
+    pub(super) cursor_pos: Pos,
 }
 
-impl GetMemSize for OffscreenBuffer {
-    /// Acts as a fast O(1) getter for the cached memory size.
-    ///
-    /// Instead of iterating through all internal vectors and states on the fly, this
-    /// method returns the value that was pre-calculated during [`new_empty()`]. This
-    /// caching pattern is an optimization for performance, as this method is called
-    /// frequently during hot-loop render cycles.
-    ///
-    /// [`new_empty()`]: Self::new_empty()
-    fn get_mem_size(&self) -> usize { self.cached_memory_size.size().unwrap_or(0) }
+impl GetMemSize for OfsBuf {
+    fn get_mem_size(&self) -> usize { self.buffer.get_mem_size() + size_of::<Pos>() }
 }
 
 /// Trait for painting offscreen buffer content to terminal output.
 ///
-/// This trait converts an [`OffscreenBuffer`] (post-Compositor) into
+/// This trait converts an [`OfsBuf`] (post-Compositor) into
 /// [`RenderOpOutputVec`] (terminal-executable operations), then executes them on the
 /// terminal.
 ///
@@ -121,9 +76,9 @@ impl GetMemSize for OffscreenBuffer {
 /// (clipping, Unicode handling, etc.) when these methods are called.
 ///
 /// [`RenderOpIRVec`]: crate::RenderOpIRVec
-pub trait OffscreenBufferPaint {
+pub trait OfsBufPaint {
     /// Converts offscreen buffer to terminal operations.
-    fn render(&mut self, offscreen_buffer: &OffscreenBuffer) -> RenderOpOutputVec;
+    fn render(&mut self, ofs_buf: &OfsBuf) -> RenderOpOutputVec;
 
     /// Converts diff chunks to terminal operations (for selective redraw).
     fn render_diff(
@@ -158,13 +113,13 @@ impl Debug for PixelCharDiffChunks {
     }
 }
 
-impl Deref for OffscreenBuffer {
-    type Target = PixelCharLines;
+impl Deref for OfsBuf {
+    type Target = Flat2DArray<PixelChar>;
 
     fn deref(&self) -> &Self::Target { &self.buffer }
 }
 
-impl DerefMut for OffscreenBuffer {
+impl DerefMut for OfsBuf {
     /// Returns a mutable reference to the buffer.
     ///
     /// Code like the following will call this method:
@@ -174,13 +129,13 @@ impl DerefMut for OffscreenBuffer {
     fn deref_mut(&mut self) -> &mut Self::Target { &mut self.buffer }
 }
 
-impl Debug for OffscreenBuffer {
+impl Debug for OfsBuf {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        writeln!(f, "window_size: {:?}, ", self.window_size)?;
+        writeln!(f, "window_size: {:?}, ", self.get_window_size())?;
 
-        let height = self.window_size.row_height.as_usize();
+        let height = self.buffer.height.as_usize();
         for row_index in 0..height {
-            if let Some(row) = self.buffer.get(row_index) {
+            if let Some(row) = self.buffer.get_row(row_index) {
                 // Print row separator if needed (not the first item).
                 if row_index > 0 {
                     writeln!(f)?;
@@ -202,84 +157,129 @@ impl Debug for OffscreenBuffer {
     }
 }
 
-impl OffscreenBuffer {
-    /// Checks for differences between self and other. Returns a list of positions and
-    /// pixel chars if there are differences (from other).
+impl OfsBuf {
+    /// Returns the current cursor position.
+    #[must_use]
+    pub fn get_cursor_pos(&self) -> Pos { self.cursor_pos }
+
+    /// Sets the current cursor position.
+    pub fn set_cursor_pos(&mut self, pos: Pos) { self.cursor_pos = pos; }
+
+    /// Updates the current cursor position using a closure. This is useful if you just
+    /// want to update the row or column index without needing to create a new [`Pos`].
+    pub fn update_cursor_pos<F>(&mut self, f: F)
+    where
+        F: FnOnce(&mut Pos),
+    {
+        f(&mut self.cursor_pos);
+    }
+
+    /// Returns the current window size of the offscreen buffer.
+    #[must_use]
+    pub fn get_window_size(&self) -> Size {
+        Size {
+            col_width: self.buffer.width,
+            row_height: self.buffer.height,
+        }
+    }
+
+    /// Identifies all pixel differences between two offscreen buffers.
+    ///
+    /// This method is highly optimized to use [SIMD] array operations to compare the
+    /// internal [`Flat2DArray`] memory linearly, bypassing coordinate calculations during
+    /// the scanning phase.
+    ///
+    /// # Behavior
+    ///
+    /// 1. Verifies both buffers have identical dimensions.
+    /// 2. Chunks the 1D arrays row by row using [`.chunks_exact()`].
+    /// 3. Returns [`None`] if dimensions mismatch, or a [`PixelCharDiffChunks`]
+    ///    containing only the modified characters (from `other`).
+    ///
+    /// See the [Rule of Thumb for 1D vs 2D Memory Iteration] and the [Deep Dive: The
+    /// Magic of SIMD Diffing] for a detailed breakdown of how this linear traversal
+    /// eliminates CPU pipeline stalls and leverages multi-stream hardware prefetching.
+    ///
+    /// [`.chunks_exact()`]: slice::chunks_exact
+    /// [`Flat2DArray`]: crate::Flat2DArray
+    /// [Deep Dive: The Magic of SIMD Diffing]:
+    ///     crate::Flat1DSimd#deep-dive-the-magic-of-simd-diffing
+    /// [Rule of Thumb for 1D vs 2D Memory Iteration]:
+    ///     crate::Flat1DSimd#rule-of-thumb-for-1d-vs-2d-memory-iteration
+    /// [SIMD]: https://en.wikipedia.org/wiki/SIMD
     #[must_use]
     pub fn diff(&self, other: &Self) -> Option<PixelCharDiffChunks> {
-        if self.window_size != other.window_size {
+        if self.buffer.width != other.buffer.width
+            || self.buffer.height != other.buffer.height
+        {
             return None;
         }
 
         let mut acc = List::default();
+        let self_simd = self.buffer.as_simd();
+        let other_simd = other.buffer.as_simd();
+        let width = self.buffer.width.as_usize();
 
-        for (row_idx, (self_row, other_row)) in
-            self.buffer.iter().zip(other.buffer.iter()).enumerate()
-        {
-            for (col_idx, (self_pixel_char, other_pixel_char)) in
-                self_row.iter().zip(other_row.iter()).enumerate()
-            {
-                if self_pixel_char != other_pixel_char {
-                    let pos = col(col_idx) + row(row_idx);
-                    acc.push((pos, *other_pixel_char));
+        let self_rows_iter = self_simd.as_raw_slice().chunks_exact(width);
+        debug_assert!(
+            self_rows_iter.remainder().is_empty(),
+            "The data length should be a multiple of the number of columns."
+        );
+
+        let other_rows_iter = other_simd.as_raw_slice().chunks_exact(width);
+        debug_assert!(
+            other_rows_iter.remainder().is_empty(),
+            "The data length should be a multiple of the number of columns."
+        );
+
+        let zipped_rows_iter = self_rows_iter.zip(other_rows_iter).enumerate();
+        for (row_idx, (self_row_chunk, other_row_chunk)) in zipped_rows_iter {
+            if self_row_chunk != other_row_chunk {
+                let cols_iter = self_row_chunk
+                    .iter()
+                    .zip(other_row_chunk.iter())
+                    .enumerate();
+                for (col_idx, (self_pixel_char, other_pixel_char)) in cols_iter {
+                    if self_pixel_char != other_pixel_char {
+                        let pos = Pos {
+                            row_index: RowIndex::from(row_idx),
+                            col_index: ColIndex::from(col_idx),
+                        };
+                        acc.push((pos, *other_pixel_char));
+                    }
                 }
             }
         }
+
         Some(PixelCharDiffChunks::from(acc))
     }
 
-    /// Creates a new buffer and fills it with empty chars.
-    ///
-    /// This constructor also pre-calculates the exact memory footprint of the buffer
-    /// and caches it in [`cached_memory_size`]. Because the buffer's grid dimensions
-    /// are fixed at creation time, calculating this upfront provides an O(1) getter
-    /// for memory metrics without requiring expensive recursive traversals later.
-    ///
-    /// [`cached_memory_size`]: Self::cached_memory_size
-    #[must_use]
+    /// Creates a new empty offscreen buffer with the specified window size.
     pub fn new_empty(arg_window_size: impl Into<Size>) -> Self {
         let window_size = arg_window_size.into();
-        let buffer = PixelCharLines::new_empty(window_size);
-
-        let cached_memory_size = {
-            // Calculate memory size once - it will never change since buffer dimensions
-            // are fixed.
-            let primary_buffer_mem = buffer.get_mem_size();
-            MemorySize::new(
-                primary_buffer_mem
-                + size_of::<Size>() // window_size
-                + size_of::<Pos>(), // cursor_pos
-            )
-        };
-
         Self {
-            buffer,
-            window_size,
+            buffer: Flat2DArray::new_empty(window_size, PixelChar::Spacer),
             cursor_pos: Pos::default(),
-            cached_memory_size,
         }
     }
 
-    // Make sure each line is full of empty chars.
-    pub fn clear(&mut self) {
-        for line in self.buffer.iter_mut() {
-            for pixel_char in line.iter_mut() {
-                if pixel_char != &PixelChar::Spacer {
-                    *pixel_char = PixelChar::Spacer;
-                }
-            }
-        }
+    /// Make sure each line is full of empty chars.
+    pub fn clear(&mut self) { self.clear_with(PixelChar::Spacer); }
+
+    /// Make sure each line is full of the given char.
+    pub fn clear_with(&mut self, char: PixelChar) {
+        self.buffer.as_simd_mut().fill_all(char);
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{TuiStyle, height, width};
+    use crate::{TuiStyle, col, height, row, width};
 
-    fn create_test_buffer() -> OffscreenBuffer {
+    fn create_test_buffer() -> OfsBuf {
         let size = height(3) + width(4);
-        OffscreenBuffer::new_empty(size)
+        OfsBuf::new_empty(size)
     }
 
     fn create_test_pixel_char(ch: char) -> PixelChar {
@@ -290,76 +290,78 @@ mod tests {
     }
 
     #[test]
-    fn test_offscreen_buffer_new_empty() {
+    fn test_ofs_buf_new_empty() {
         let size = height(2) + width(3);
-        let buffer = OffscreenBuffer::new_empty(size);
+        let buffer = OfsBuf::new_empty(size);
 
-        assert_eq!(buffer.window_size, size);
-        assert_eq!(buffer.buffer.len(), 2);
+        assert_eq!(buffer.get_window_size(), size);
+        assert_eq!(buffer.buffer.height.as_usize(), 2);
+        assert_eq!(buffer.buffer.width.as_usize(), 3);
 
         // Check that all positions are initialized with spacers.
-        for line in &buffer.buffer.lines {
-            assert_eq!(line.len(), 3);
-            for pixel_char in &line.pixel_chars {
-                assert!(matches!(pixel_char, PixelChar::Spacer));
-            }
+        for pixel_char in buffer.buffer.as_simd().as_raw_slice() {
+            assert!(matches!(pixel_char, PixelChar::Spacer));
         }
     }
 
     #[test]
-    fn test_offscreen_buffer_new_empty_zero_size() {
+    fn test_ofs_buf_new_empty_zero_size() {
         let size = height(0) + width(0);
-        let buffer = OffscreenBuffer::new_empty(size);
+        let buffer = OfsBuf::new_empty(size);
 
-        assert_eq!(buffer.window_size, size);
-        assert_eq!(buffer.buffer.len(), 0);
-        assert!(buffer.buffer.is_empty());
+        assert_eq!(buffer.get_window_size(), size);
+        assert_eq!(buffer.get_height().as_usize(), 0);
+        assert!(
+            (buffer.get_height().as_usize() == 0 || buffer.get_width().as_usize() == 0)
+        );
     }
 
     #[test]
-    fn test_offscreen_buffer_clear() {
+    fn test_ofs_buf_clear() {
         let mut buffer = create_test_buffer();
 
         // Modify some characters.
-        buffer.buffer[0][0] = create_test_pixel_char('A');
-        buffer.buffer[1][2] = create_test_pixel_char('B');
-        buffer.buffer[2][1] = PixelChar::Void;
+        buffer.get_row_mut(0).unwrap()[0] = create_test_pixel_char('A');
+        buffer.get_row_mut(1).unwrap()[2] = create_test_pixel_char('B');
+        buffer.get_row_mut(2).unwrap()[1] = PixelChar::Void;
 
         // Verify characters were set.
         assert!(matches!(
-            buffer.buffer[0][0],
+            buffer.get_row_mut(0).unwrap()[0],
             PixelChar::PlainText {
                 display_char: 'A',
                 ..
             }
         ));
         assert!(matches!(
-            buffer.buffer[1][2],
+            buffer.get_row_mut(1).unwrap()[2],
             PixelChar::PlainText {
                 display_char: 'B',
                 ..
             }
         ));
-        assert!(matches!(buffer.buffer[2][1], PixelChar::Void));
+        assert!(matches!(buffer.get_row_mut(2).unwrap()[1], PixelChar::Void));
 
         // Clear the buffer.
         buffer.clear();
 
         // Verify all characters are now spacers.
-        for line in &buffer.buffer.lines {
-            for pixel_char in &line.pixel_chars {
+        let height = buffer.get_height().as_usize();
+        for line in (0..height).map(|i| buffer.get_row(i).unwrap()) {
+            for pixel_char in line {
                 assert!(matches!(pixel_char, PixelChar::Spacer));
             }
         }
     }
 
     #[test]
-    fn test_offscreen_buffer_clear_already_empty() {
+    fn test_ofs_buf_clear_already_empty() {
         let mut buffer = create_test_buffer();
 
         // Buffer should already be empty (all spacers).
-        for line in &buffer.buffer.lines {
-            for pixel_char in &line.pixel_chars {
+        let height = buffer.get_height().as_usize();
+        for line in (0..height).map(|i| buffer.get_row(i).unwrap()) {
+            for pixel_char in line {
                 assert!(matches!(pixel_char, PixelChar::Spacer));
             }
         }
@@ -368,15 +370,16 @@ mod tests {
         buffer.clear();
 
         // Verify still all spacers.
-        for line in &buffer.buffer.lines {
-            for pixel_char in &line.pixel_chars {
+        let height = buffer.get_height().as_usize();
+        for line in (0..height).map(|i| buffer.get_row(i).unwrap()) {
+            for pixel_char in line {
                 assert!(matches!(pixel_char, PixelChar::Spacer));
             }
         }
     }
 
     #[test]
-    fn test_offscreen_buffer_diff_identical() {
+    fn test_ofs_buf_diff_identical() {
         let buffer1 = create_test_buffer();
         let buffer2 = create_test_buffer();
 
@@ -393,23 +396,23 @@ mod tests {
     }
 
     #[test]
-    fn test_offscreen_buffer_diff_different_sizes() {
-        let buffer1 = OffscreenBuffer::new_empty(height(2) + width(3));
-        let buffer2 = OffscreenBuffer::new_empty(height(3) + width(2));
+    fn test_ofs_buf_diff_different_sizes() {
+        let buffer1 = OfsBuf::new_empty(height(2) + width(3));
+        let buffer2 = OfsBuf::new_empty(height(3) + width(2));
 
         let diff = buffer1.diff(&buffer2);
         assert_eq!(diff, None);
     }
 
     #[test]
-    fn test_offscreen_buffer_diff_with_changes() {
+    fn test_ofs_buf_diff_with_changes() {
         let buffer1 = create_test_buffer();
         let mut buffer2 = create_test_buffer();
 
         // Make some changes to buffer2.
-        buffer2.buffer[0][0] = create_test_pixel_char('A');
-        buffer2.buffer[1][2] = create_test_pixel_char('B');
-        buffer2.buffer[2][1] = PixelChar::Void;
+        buffer2.get_row_mut(0).unwrap()[0] = create_test_pixel_char('A');
+        buffer2.get_row_mut(1).unwrap()[2] = create_test_pixel_char('B');
+        buffer2.get_row_mut(2).unwrap()[1] = PixelChar::Void;
 
         let diff = buffer1.diff(&buffer2);
         assert!(diff.is_some());
@@ -425,12 +428,12 @@ mod tests {
     }
 
     #[test]
-    fn test_offscreen_buffer_diff_single_change() {
+    fn test_ofs_buf_diff_single_change() {
         let buffer1 = create_test_buffer();
         let mut buffer2 = create_test_buffer();
 
         // Make a single change.
-        buffer2.buffer[1][1] = create_test_pixel_char('X');
+        buffer2.get_row_mut(1).unwrap()[1] = create_test_pixel_char('X');
 
         let diff = buffer1.diff(&buffer2);
         assert!(diff.is_some());
@@ -450,9 +453,9 @@ mod tests {
     }
 
     #[test]
-    fn test_offscreen_buffer_cached_memory_size() {
+    fn test_ofs_buf_cached_memory_size() {
         // TRIPWIRE: This test verifies that `GetMemSize` returns a consistent value.
-        // If you added a field, ensure that `OffscreenBuffer::new_empty` correctly
+        // If you added a field, ensure that `OfsBuf::new_empty` correctly
         // includes its memory size in the `cached_memory_size` calculation block!
         let buffer = create_test_buffer();
 
@@ -465,31 +468,31 @@ mod tests {
     }
 
     #[test]
-    fn test_offscreen_buffer_struct_size() {
-        // TRIPWIRE: If you add or remove a field from `OffscreenBuffer`, this test will
+    fn test_ofs_buf_struct_size() {
+        // TRIPWIRE: If you add or remove a field from `OfsBuf`, this test will
         // fail. This is intentional! It reminds you to:
-        // 1. Update `OffscreenBuffer::new_empty` to include your new field's size in
+        // 1. Update `OfsBuf::new_empty` to include your new field's size in
         //    `cached_memory_size`.
         // 2. Update this exact byte-size assertion.
         #[cfg(target_pointer_width = "64")]
         {
-            assert_eq!(std::mem::size_of::<OffscreenBuffer>(), 416);
+            assert_eq!(std::mem::size_of::<OfsBuf>(), 32);
         }
     }
 
     #[test]
-    fn test_offscreen_buffer_deref() {
+    fn test_ofs_buf_deref() {
         let buffer = create_test_buffer();
 
         // Test deref functionality.
-        assert_eq!(buffer.len(), 3);
+        assert_eq!(buffer.get_height().as_usize(), 3);
         assert_eq!(buffer[0].len(), 4);
         assert_eq!(buffer[1].len(), 4);
         assert_eq!(buffer[2].len(), 4);
     }
 
     #[test]
-    fn test_offscreen_buffer_deref_mut() {
+    fn test_ofs_buf_deref_mut() {
         let mut buffer = create_test_buffer();
 
         // Test deref_mut functionality.
@@ -507,14 +510,15 @@ mod tests {
     }
 
     #[test]
-    fn test_offscreen_buffer_large_size() {
+    fn test_ofs_buf_large_size() {
         let large_size = height(100) + width(200);
-        let buffer = OffscreenBuffer::new_empty(large_size);
+        let buffer = OfsBuf::new_empty(large_size);
 
-        assert_eq!(buffer.window_size, large_size);
-        assert_eq!(buffer.buffer.len(), 100);
+        assert_eq!(buffer.get_window_size(), large_size);
+        assert_eq!(buffer.get_height().as_usize(), 100);
 
-        for line in &buffer.buffer.lines {
+        let height = buffer.get_height().as_usize();
+        for line in (0..height).map(|i| buffer.get_row(i).unwrap()) {
             assert_eq!(line.len(), 200);
         }
 
@@ -524,16 +528,16 @@ mod tests {
     }
 
     #[test]
-    fn test_offscreen_buffer_diff_performance() {
+    fn test_ofs_buf_diff_performance() {
         // Test diff with larger buffers to ensure it performs reasonably.
         let size = height(50) + width(100);
-        let buffer1 = OffscreenBuffer::new_empty(size);
-        let mut buffer2 = OffscreenBuffer::new_empty(size);
+        let buffer1 = OfsBuf::new_empty(size);
+        let mut buffer2 = OfsBuf::new_empty(size);
 
         // Make a few scattered changes.
-        buffer2.buffer[0][0] = create_test_pixel_char('1');
-        buffer2.buffer[25][50] = create_test_pixel_char('2');
-        buffer2.buffer[49][99] = create_test_pixel_char('3');
+        buffer2.get_row_mut(0).unwrap()[0] = create_test_pixel_char('1');
+        buffer2.get_row_mut(25).unwrap()[50] = create_test_pixel_char('2');
+        buffer2.get_row_mut(49).unwrap()[99] = create_test_pixel_char('3');
 
         let diff = buffer1.diff(&buffer2);
         assert!(diff.is_some());

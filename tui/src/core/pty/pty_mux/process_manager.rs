@@ -3,11 +3,11 @@
 //! Process lifecycle management for the [`PTY`] multiplexer. See [`ProcessManager`] and
 //! [`Process`].
 //!
-//! Each process maintains its own virtual terminal ([`OffscreenBuffer`]) and [[`ANSI`]
+//! Each process maintains its own virtual terminal ([`OfsBuf`]) and [[`ANSI`]
 //! parser]. Process switching is instant - just display a different buffer.
 //!
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`OffscreenBuffer`]: crate::OffscreenBuffer
+//! [`OfsBuf`]: crate::OfsBuf
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [ANSI parser]: crate::AnsiToOfsBufPerformer
 
@@ -240,7 +240,7 @@ impl Process {
                     message = "PtyProcess::process_pty_output_and_update_buffer",
                     process_name = %self.name,
                     bytes = output.len(),
-                    cursor = ?self.terminal_state.cursor_pos,
+                    cursor = ?self.terminal_state.get_cursor_pos(),
                     "Process updated buffer"
                 };
             });

@@ -55,12 +55,11 @@
 //! [rendering pipeline overview]: mod@crate::terminal_lib_backends#rendering-pipeline-architecture
 
 use super::{ZOrder, paint::paint};
-use crate::{FlushKind, GlobalData, InlineVec, LockedOutputDevice,
-            RenderOpIRVec, ok, tui::DEBUG_TUI_SHOW_PIPELINE_EXPANDED};
-use smallvec::smallvec;
-use std::{collections::{HashMap, hash_map::Entry},
-          fmt::Debug,
+use crate::{FlushKind, GlobalData, LockedOutputDevice, RenderOpIRVec, ok,
+            tui::DEBUG_TUI_SHOW_PIPELINE_EXPANDED};
+use std::{fmt::Debug,
           ops::{AddAssign, Deref, DerefMut}};
+use strum::EnumCount;
 
 /// Macro to make it easier to create a [`RenderPipeline`]. It works w/ [`RenderOpIR`]
 /// items. It allows them to be added in sequence, and then flushed at the end.
@@ -183,30 +182,10 @@ macro_rules! render_pipeline {
       };
 }
 
-type PipelineMap = HashMap<ZOrder, InlineVec<RenderOpIRVec>>;
+type PipelineMap = [RenderOpIRVec; ZOrder::COUNT];
 
 /// See [`render_pipeline`!] for the documentation. Also consider using it instead of this
 /// struct directly for convenience.
-///
-/// Here's an example.
-///
-/// ```
-/// use r3bl_tui::*;
-///
-/// let mut pipeline = render_pipeline!();
-/// pipeline.push(ZOrder::Normal, {
-///     let mut ops = RenderOpIRVec::new();
-///     ops  += (RenderOpCommon::ClearScreen);
-///     ops
-/// });
-/// pipeline.push(ZOrder::Glass, {
-///     let mut ops = RenderOpIRVec::new();
-///     ops  += (RenderOpCommon::ClearScreen);
-///     ops
-/// });
-/// let len = pipeline.len();
-/// let iter = pipeline.iter();
-/// ```
 #[derive(Default, Clone, PartialEq, Eq)]
 pub struct RenderPipeline {
     /// [`RenderOpIRVec`] to paint for each [`ZOrder`].
@@ -216,49 +195,28 @@ pub struct RenderPipeline {
 impl RenderPipeline {
     /// This will add `rhs` to `self`.
     pub fn join_into(&mut self, mut rhs: RenderPipeline) {
-        for (z_order, mut rhs_render_ops_vec) in rhs.drain() {
-            // Insert rhs_render_ops_vec into self_render_ops_vec.
-            match self.entry(z_order) {
-                Entry::Occupied(mut self_existing_entry) => {
-                    let self_render_ops_vec = self_existing_entry.get_mut();
-                    rhs_render_ops_vec.drain(..).for_each(|render_ops| {
-                        self_render_ops_vec.push(render_ops);
-                    });
-                }
-                Entry::Vacant(self_new_entry) => {
-                    self_new_entry.insert(rhs_render_ops_vec);
-                }
-            }
+        for z_order in ZOrder::get_render_order() {
+            let rhs_render_ops = std::mem::take(&mut rhs.pipeline_map[z_order]);
+            self.pipeline_map[z_order].list.extend(rhs_render_ops.list);
         }
     }
 
     /// Add the given [`RenderOpIRVec`] to the pipeline at the given [`ZOrder`].
-    pub fn push(&mut self, z_order: ZOrder, render_ops: RenderOpIRVec) {
-        match self.pipeline_map.entry(z_order) {
-            // Insert render_ops into existing set.
-            Entry::Occupied(mut existing_entry) => {
-                let render_ops_vec = existing_entry.get_mut();
-                render_ops_vec.push(render_ops);
-            }
-            // Create new set & insert render_ops in it.
-            Entry::Vacant(new_entry) => {
-                new_entry.insert(smallvec![render_ops]);
-            }
-        }
+    pub fn push(&mut self, z_order: ZOrder, mut render_ops: RenderOpIRVec) {
+        self.pipeline_map[z_order].list.append(&mut render_ops.list);
     }
 
-    /// At the given [`ZOrder`] there can be a [`InlineVec`] of [`RenderOpIRVec`]. Grab
-    /// Count all the render operations in the set for the given `z_order`.
-    /// Returns the total count of all individual `RenderOpIR` operations across all
-    /// collections.
+    /// Returns a reference to the operations for the given [`ZOrder`].
     #[must_use]
-    pub fn get_all_render_op_in(&self, z_order: ZOrder) -> Option<usize> {
-        let vec_render_ops = self.pipeline_map.get(&z_order)?;
-        let mut total_count = 0;
-        for render_ops in vec_render_ops {
-            total_count += render_ops.len();
-        }
-        Some(total_count)
+    pub fn get(&self, z_order: &ZOrder) -> &RenderOpIRVec { &self.pipeline_map[*z_order] }
+
+    /// Returns the total count of all individual [`RenderOpIR`] operations in the
+    /// [`ZOrder`].
+    ///
+    /// [`RenderOpIR`]: crate::RenderOpIR
+    #[must_use]
+    pub fn get_all_render_op_in(&self, z_order: ZOrder) -> usize {
+        self.pipeline_map[z_order].len()
     }
 
     pub fn paint<S, AS>(
@@ -270,35 +228,23 @@ impl RenderPipeline {
         S: Debug + Default + Clone + Sync + Send,
         AS: Debug + Default + Clone + Sync + Send,
     {
-        paint(
-            self,
-            flush_kind,
-            global_data,
-            locked_output_device,
-        );
+        paint(self, flush_kind, global_data, locked_output_device);
     }
 
     /// Move the [`RenderOpIRVec`] in the 'from' [`ZOrder`] (in self) to the 'to'
     /// [`ZOrder`] (in self).
     pub fn hoist(&mut self, z_order_from: ZOrder, z_order_to: ZOrder) {
-        // If the 'from' [ZOrder] is not in the pipeline, then there's nothing to do.
-        if !self.pipeline_map.contains_key(&z_order_from) {
+        if z_order_from == z_order_to {
             return;
         }
+        let mut from = std::mem::take(&mut self.pipeline_map[z_order_from]);
+        self.pipeline_map[z_order_to].list.append(&mut from.list);
+    }
 
-        // Move the [RenderOpIRVec] from the 'from' [ZOrder] to the 'to' [ZOrder].
-        let mut from = self.pipeline_map.remove(&z_order_from).unwrap_or_default();
-
-        match self.pipeline_map.entry(z_order_to) {
-            Entry::Occupied(mut to_existing_entry) => {
-                let to = to_existing_entry.get_mut();
-                from.drain(..).for_each(|render_ops| {
-                    to.push(render_ops);
-                });
-            }
-            Entry::Vacant(to_new_entry) => {
-                to_new_entry.insert(from);
-            }
+    /// Clear all operations from the pipeline, but retain their heap capacities.
+    pub fn clear(&mut self) {
+        for render_ops in &mut self.pipeline_map {
+            render_ops.list.clear();
         }
     }
 }
@@ -320,7 +266,13 @@ impl Debug for RenderPipeline {
 
         let map = &**self;
 
-        for (count, (z_order, vec_render_ops)) in map.iter().enumerate() {
+        for (count, z_order) in ZOrder::get_render_order().into_iter().enumerate() {
+            let vec_render_ops = &map[z_order];
+
+            if vec_render_ops.is_empty() {
+                continue;
+            }
+
             if count > 0 {
                 write!(f, "{DELIM}")?;
             }

@@ -59,7 +59,7 @@ impl Animator {
     /// # Errors
     ///
     /// Returns an error if the animation cannot be stopped.
-    pub fn stop(&mut self) -> CommonResult<()> {
+    pub fn stop(&mut self) -> CommonResult {
         throws!({
             if let Some(kill_channel) = &self.animator_kill_channel {
                 let kill_channel_clone = kill_channel.clone();

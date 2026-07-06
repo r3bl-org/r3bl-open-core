@@ -46,7 +46,7 @@
 //!       - line_ops:: for lines (L,M)
 //!       - char_ops:: for chars (@,P,X)
 //!         ↓
-//!     Update OffscreenBuffer state
+//!     Update OfsBuf state
 //! ```
 //!
 //! # [`VT-100`] Protocol Conventions
@@ -67,14 +67,14 @@
 //! ## Scroll Region ([`DECSTBM`])
 //!
 //! Scroll operations respect the scrolling region set by [`DECSTBM`]. The region bounds
-//! are maintained internally by [`OffscreenBuffer`] and applied automatically to all
+//! are maintained internally by [`OfsBuf`] and applied automatically to all
 //! scroll operations.
 //!
 //! [`CSI`]: crate::CsiSequence
 //! [`DECSTBM`]: https://vt100.net/docs/vt510-rm/DECSTBM.html
 //! [`extract_nth_single_non_zero()`]: crate::ParamsExt::extract_nth_single_non_zero
 //! [`NonZeroU16`]: std::num::NonZeroU16
-//! [`OffscreenBuffer`]: crate::OffscreenBuffer
+//! [`OfsBuf`]: crate::OfsBuf
 //! [`test_scroll_ops`]: crate::vt_100_pty_output_conformance_tests::tests::vt_100_test_scroll_ops
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 //! [`vt_100_impl_scroll_ops`]: crate::core::ansi::vt_100_pty_output_parser::ops_impl_ofs_buf::vt_100_impl_scroll_ops
@@ -84,6 +84,7 @@
 
 use super::super::ansi_parser_public_api::AnsiToOfsBufPerformer;
 use crate::ParamsExt;
+use std::debug_assert_matches;
 
 /// Move cursor down one line, scrolling the buffer if at bottom.
 ///
@@ -98,10 +99,11 @@ use crate::ParamsExt;
 /// [module-level documentation]: self
 pub fn index_down(performer: &mut AnsiToOfsBufPerformer) {
     let result = performer.ofs_buf_vt_100.index_down();
-    debug_assert!(
-        result.is_ok(),
+    debug_assert_matches!(
+        result,
+        Ok(()),
         "Failed to index down at cursor position {:?}",
-        performer.ofs_buf_vt_100.cursor_pos
+        performer.ofs_buf_vt_100.get_cursor_pos()
     );
 }
 
@@ -118,10 +120,11 @@ pub fn index_down(performer: &mut AnsiToOfsBufPerformer) {
 /// [module-level documentation]: self
 pub fn reverse_index_up(performer: &mut AnsiToOfsBufPerformer) {
     let result = performer.ofs_buf_vt_100.reverse_index_up();
-    debug_assert!(
-        result.is_ok(),
+    debug_assert_matches!(
+        result,
+        Ok(()),
         "Failed to reverse index up at cursor position {:?}",
-        performer.ofs_buf_vt_100.cursor_pos
+        performer.ofs_buf_vt_100.get_cursor_pos()
     );
 }
 
@@ -137,10 +140,11 @@ pub fn reverse_index_up(performer: &mut AnsiToOfsBufPerformer) {
 /// [module-level documentation]: self
 pub fn scroll_buffer_up(performer: &mut AnsiToOfsBufPerformer) {
     let result = performer.ofs_buf_vt_100.scroll_buffer_up();
-    debug_assert!(
-        result.is_ok(),
+    debug_assert_matches!(
+        result,
+        Ok(()),
         "Failed to scroll buffer up at cursor position {:?}",
-        performer.ofs_buf_vt_100.cursor_pos
+        performer.ofs_buf_vt_100.get_cursor_pos()
     );
 }
 
@@ -156,10 +160,11 @@ pub fn scroll_buffer_up(performer: &mut AnsiToOfsBufPerformer) {
 /// [module-level documentation]: self
 pub fn scroll_buffer_down(performer: &mut AnsiToOfsBufPerformer) {
     let result = performer.ofs_buf_vt_100.scroll_buffer_down();
-    debug_assert!(
-        result.is_ok(),
+    debug_assert_matches!(
+        result,
+        Ok(()),
         "Failed to scroll buffer down at cursor position {:?}",
-        performer.ofs_buf_vt_100.cursor_pos
+        performer.ofs_buf_vt_100.get_cursor_pos()
     );
 }
 
@@ -173,11 +178,11 @@ pub fn scroll_buffer_down(performer: &mut AnsiToOfsBufPerformer) {
 pub fn scroll_up(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) {
     let how_many = params.extract_nth_single_non_zero(0).get().into();
     let result = performer.ofs_buf_vt_100.scroll_up(how_many);
-    debug_assert!(
-        result.is_ok(),
-        "Failed to scroll up {:?} lines at cursor position {:?}",
-        how_many,
-        performer.ofs_buf_vt_100.cursor_pos
+    debug_assert_matches!(
+        result,
+        Ok(()),
+        "Failed to scroll up {how_many:?} lines at cursor position {:?}",
+        performer.ofs_buf_vt_100.get_cursor_pos()
     );
 }
 
@@ -191,10 +196,10 @@ pub fn scroll_up(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) {
 pub fn scroll_down(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) {
     let how_many = params.extract_nth_single_non_zero(0).get().into();
     let result = performer.ofs_buf_vt_100.scroll_down(how_many);
-    debug_assert!(
-        result.is_ok(),
-        "Failed to scroll down {:?} lines at cursor position {:?}",
-        how_many,
-        performer.ofs_buf_vt_100.cursor_pos
+    debug_assert_matches!(
+        result,
+        Ok(()),
+        "Failed to scroll down {how_many:?} lines at cursor position {:?}",
+        performer.ofs_buf_vt_100.get_cursor_pos()
     );
 }

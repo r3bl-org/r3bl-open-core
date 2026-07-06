@@ -2,10 +2,9 @@
 
 #[cfg(test)]
 pub mod mock_real_objects_for_editor {
-    use crate::{DefaultSize, EditorEngine, FlexBox, GlobalData, OffscreenBufferPool,
-                OutputDevice, OutputDeviceExt, PartialFlexBox, Size, SpinnerHelper, col,
-                core::test_fixtures::StdoutMock, height, row,
-                telemetry::telemetry_sizing::TelemetryReportLineStorage, width};
+    use crate::{DefaultSize, EditorEngine, FlexBox, GlobalData, OfsBufPool,
+                OutputDevice, OutputDeviceExt, PartialFlexBox, RenderPipeline, Size,
+                col, core::test_fixtures::StdoutMock, height, row, width};
     use std::{collections::HashMap, fmt::Debug};
     use tokio::sync::mpsc;
 
@@ -20,18 +19,18 @@ pub mod mock_real_objects_for_editor {
         let (sender, _) =
             mpsc::channel::<_>(DefaultSize::MainThreadSignalChannelBufferSize.into());
         let (output_device, stdout_mock) = OutputDevice::new_mock();
-        let offscreen_buffer_pool =
-            OffscreenBufferPool::new(window_size.unwrap_or_default());
+        let ofs_buf_pool =
+            OfsBufPool::new(window_size.unwrap_or_default());
 
         let global_data = GlobalData {
+            pipeline: RenderPipeline::default(),
             window_size: window_size.unwrap_or_default(),
             maybe_saved_ofs_buf: Option::default(),
             main_thread_channel_sender: sender,
             state: Default::default(),
             output_device,
-            offscreen_buffer_pool,
-            hud_report: TelemetryReportLineStorage::new(),
-            spinner_helper: SpinnerHelper::default(),
+            ofs_buf_pool,
+            hud_data: crate::HudData::default(),
             memoized_text_widths: HashMap::new(),
         };
 

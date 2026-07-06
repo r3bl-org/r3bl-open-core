@@ -190,7 +190,10 @@ impl<S> Monitor<S> {
     /// [Terminal Restoration: Panic, Drop, and Mutex Poison-Safety]:
     ///     crate#terminal-restoration-panic-drop-and-mutex-poison-safety
     #[allow(clippy::elidable_lifetime_names)]
-    pub fn lock<'this>(&'this self) -> MutexGuard<'this, S> { self.state.lock().unwrap() }
+    pub fn lock<'this>(&'this self) -> MutexGuard<'this, S> {
+        #[allow(clippy::unwrap_used, reason = "Mutex poisoning is unrecoverable")]
+        self.state.lock().unwrap()
+    }
 
     /// Locks the internal mutex guarding the state, returning the raw
     /// [`std::sync::LockResult`].
@@ -254,6 +257,7 @@ impl<S> Monitor<S> {
     /// [Terminal Restoration: Panic, Drop, and Mutex Poison-Safety]:
     ///     crate#terminal-restoration-panic-drop-and-mutex-poison-safety
     pub fn wait<'this>(&'this self, guard: MutexGuard<'this, S>) -> MutexGuard<'this, S> {
+        #[allow(clippy::unwrap_used, reason = "Mutex poisoning is unrecoverable")]
         self.condvar.wait(guard).unwrap()
     }
 
@@ -287,6 +291,7 @@ impl<S> Monitor<S> {
     where
         F: FnMut(&mut S) -> bool,
     {
+        #[allow(clippy::unwrap_used, reason = "Mutex poisoning is unrecoverable")]
         self.condvar
             .wait_while(guard, |state| !condition(state))
             .unwrap()
