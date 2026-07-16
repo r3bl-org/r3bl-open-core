@@ -310,7 +310,7 @@ fn make_non_root_box_with_style(
             height_pc,
         },
         maybe_computed_style: maybe_cascaded_style,
-        insertion_pos_for_next_box: None,
+        insertion_pos_for_next_box: Some(origin_pos),
     }
 }
 
@@ -485,7 +485,10 @@ mod test_surface_2_col_complex {
                     layout_item.requested_size_percent,
                     req_size_pc!(width:50, height:100)
                 );
-                assert_eq2!(layout_item.insertion_pos_for_next_box, None);
+                assert_eq2!(
+                    layout_item.insertion_pos_for_next_box,
+                    Some(col(0) + row(0))
+                );
 
                 assert_ne!(
                     layout_item.get_computed_style(),
@@ -529,7 +532,10 @@ mod test_surface_2_col_complex {
                     current_box.requested_size_percent,
                     req_size_pc!(width:50, height:100)
                 );
-                assert_eq2!(current_box.insertion_pos_for_next_box, None);
+                assert_eq2!(
+                    current_box.insertion_pos_for_next_box,
+                    Some(col(250) + row(0))
+                );
 
                 assert_ne!(
                     current_box.get_computed_style(),
@@ -663,7 +669,10 @@ mod test_surface_2_col_simple {
                     layout_item.requested_size_percent,
                     req_size_pc!(width:50, height:100)
                 );
-                assert_eq2!(layout_item.insertion_pos_for_next_box, None);
+                assert_eq2!(
+                    layout_item.insertion_pos_for_next_box,
+                    Some(col(0) + row(0))
+                );
                 assert_eq2!(
                     layout_item.get_computed_style(),
                     TuiStylesheet::compute(&surface.stylesheet.find_styles_by_ids(&[1]))
@@ -707,7 +716,10 @@ mod test_surface_2_col_simple {
                     current_box.requested_size_percent,
                     req_size_pc!(width: 50, height: 100)
                 );
-                assert_eq2!(current_box.insertion_pos_for_next_box, None);
+                assert_eq2!(
+                    current_box.insertion_pos_for_next_box,
+                    Some(col(250) + row(0))
+                );
                 assert_eq2!(
                     current_box.get_computed_style(),
                     TuiStylesheet::compute(&surface.stylesheet.find_styles_by_ids(&[2]))
