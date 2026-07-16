@@ -135,6 +135,18 @@ impl<T: Clone> Flat2DArray<T> {
 }
 
 impl<T> Flat2DArray<T> {
+    /// Returns the total number of elements in the flat array.
+    #[must_use]
+    pub fn len(&self) -> usize { self.data.len() }
+
+    /// Returns `true` if the array contains no elements.
+    #[must_use]
+    pub fn is_empty(&self) -> bool { self.data.is_empty() }
+
+    /// Returns a reference to an element by flat index, or `None` if out of bounds.
+    #[must_use]
+    pub fn get(&self, index: usize) -> Option<&T> { self.data.get(index) }
+
     /// Gets a reference to the element at the specified 2D coordinates.
     ///
     /// # Errors
